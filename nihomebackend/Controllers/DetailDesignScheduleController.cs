@@ -39,7 +39,7 @@ public sealed class DetailDesignScheduleController(
     }
 
     [HttpPost("initialize")]
-    [RequirePermission("operations.projects", "manage")]
+    [RequirePermission("design.schedule", "manage")]
     [Idempotency("operations.projects.design-schedule.initialize", requireKey: true)]
     public async Task<ActionResult<DesignScheduleResponse>> Initialize(
         int projectId,
@@ -48,7 +48,7 @@ public sealed class DetailDesignScheduleController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
-        if (!await access.CanManageTeamAsync(userId.Value, projectId, ct)) return NotFound();
+        if (!await access.CanManageDesignScheduleAsync(userId.Value, projectId, ct)) return NotFound();
         try
         {
             var result = await service.InitializeAsync(projectId, request, userId.Value, ct);
@@ -62,7 +62,7 @@ public sealed class DetailDesignScheduleController(
     }
 
     [HttpPut("phases/{phaseId:int}")]
-    [RequirePermission("operations.projects", "manage")]
+    [RequirePermission("design.schedule", "manage")]
     [Idempotency("operations.projects.design-schedule.phases.update", requireKey: true)]
     public async Task<ActionResult<DesignSchedulePhaseResponse>> UpdatePhase(
         int projectId,
@@ -72,8 +72,8 @@ public sealed class DetailDesignScheduleController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
-        if (!await access.CanManageTeamAsync(userId.Value, projectId, ct)) return NotFound();
-        request.RowVersion = CrmConcurrency.ResolveRequestToken(Request, request.RowVersion);
+        if (!await access.CanManageDesignScheduleAsync(userId.Value, projectId, ct)) return NotFound();
+        request.RowVersion = CrmConcurrency.ResolveRequiredRequestToken(Request, request.RowVersion);
         try
         {
             var result = await service.UpdatePhaseAsync(projectId, phaseId, request, userId.Value, ct);
@@ -89,7 +89,7 @@ public sealed class DetailDesignScheduleController(
     }
 
     [HttpPost("phases/{phaseId:int}/tasks")]
-    [RequirePermission("operations.projects", "manage")]
+    [RequirePermission("design.schedule", "manage")]
     [Idempotency("operations.projects.design-schedule.tasks.create", requireKey: true)]
     public async Task<ActionResult<DesignScheduleTaskResponse>> CreateTask(
         int projectId,
@@ -99,7 +99,7 @@ public sealed class DetailDesignScheduleController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
-        if (!await access.CanManageTeamAsync(userId.Value, projectId, ct)) return NotFound();
+        if (!await access.CanManageDesignScheduleAsync(userId.Value, projectId, ct)) return NotFound();
         try
         {
             var result = await service.CreateTaskAsync(projectId, phaseId, request, userId.Value, ct);
@@ -115,7 +115,7 @@ public sealed class DetailDesignScheduleController(
     }
 
     [HttpPut("tasks/{taskId:int}")]
-    [RequirePermission("operations.projects", "manage")]
+    [RequirePermission("design.schedule", "manage")]
     [Idempotency("operations.projects.design-schedule.tasks.update", requireKey: true)]
     public async Task<ActionResult<DesignScheduleTaskResponse>> UpdateTask(
         int projectId,
@@ -125,8 +125,8 @@ public sealed class DetailDesignScheduleController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
-        if (!await access.CanManageTeamAsync(userId.Value, projectId, ct)) return NotFound();
-        request.RowVersion = CrmConcurrency.ResolveRequestToken(Request, request.RowVersion);
+        if (!await access.CanManageDesignScheduleAsync(userId.Value, projectId, ct)) return NotFound();
+        request.RowVersion = CrmConcurrency.ResolveRequiredRequestToken(Request, request.RowVersion);
         try
         {
             var result = await service.UpdateTaskAsync(projectId, taskId, request, userId.Value, ct);

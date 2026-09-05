@@ -112,6 +112,15 @@ internal static class AggregateDeletionService
             .Where(task => foundIds.Contains(task.DesignProjectId))
             .Select(task => task.Id)
             .ToListAsync(ct);
+        var scheduleTasks = await db.DesignScheduleTasks
+            .Where(task => foundIds.Contains(task.DesignProjectId))
+            .ToListAsync(ct);
+        var schedulePhases = await db.DesignSchedulePhases
+            .Where(phase => foundIds.Contains(phase.DesignProjectId))
+            .ToListAsync(ct);
+        var scheduleHistory = await db.DesignScheduleHistory
+            .Where(history => foundIds.Contains(history.DesignProjectId))
+            .ToListAsync(ct);
         var siteDiaryIds = await db.SiteDiaries
             .Where(diary => foundIds.Contains(diary.DesignProjectId))
             .Select(diary => diary.Id)
@@ -164,6 +173,9 @@ internal static class AggregateDeletionService
         db.IfcReleaseRecipients.RemoveRange(releaseRecipients);
         db.ConstructionTaskDependencies.RemoveRange(taskDependencies);
         db.DesignScheduleTaskDependencies.RemoveRange(scheduleTaskDependencies);
+        db.DesignScheduleHistory.RemoveRange(scheduleHistory);
+        db.DesignScheduleTasks.RemoveRange(scheduleTasks);
+        db.DesignSchedulePhases.RemoveRange(schedulePhases);
         db.AcceptanceRecords.RemoveRange(acceptanceRecords);
         db.HandoverStatusHistory.RemoveRange(handoverHistory);
         db.HandoverRecords.RemoveRange(handoverRecords);

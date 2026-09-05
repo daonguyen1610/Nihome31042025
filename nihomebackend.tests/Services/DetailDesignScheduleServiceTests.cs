@@ -155,7 +155,7 @@ public sealed class DetailDesignScheduleServiceTests : IDisposable
         activeMemberId = member.Id;
         otherProjectTaskId = otherTask.Id;
         var access = new Mock<IProjectAccessService>();
-        access.Setup(item => item.CanManageTeamAsync(callerId, projectId, It.IsAny<CancellationToken>()))
+        access.Setup(item => item.CanManageDesignScheduleAsync(callerId, projectId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
         service = new DetailDesignScheduleService(db, access.Object);
     }

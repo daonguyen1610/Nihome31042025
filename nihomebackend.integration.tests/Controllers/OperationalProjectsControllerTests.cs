@@ -397,6 +397,152 @@ public class OperationalProjectsControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task Delete_ProjectWithDesignSchedule_DisclosesAndDeletesCompleteScheduleGraph()
+    {
+        await AuthTestHelper.AuthenticateAsync(
+            Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "SUPER_ADMIN"));
+        var customerId = await CreateCustomerAsync("Schedule deletion");
+        var seeded = await WithDbAsync(async db =>
+        {
+            var userId = await db.Users
+                .Where(user => user.PhoneNumber == TestDataSeeder.SuperAdminPhone)
+                .Select(user => user.Id)
+                .SingleAsync();
+            var project = new OperationalProject
+            {
+                Code = $"PJ-SCHEDULE-DEL-{Guid.NewGuid():N}"[..30],
+                Name = "Schedule deletion project",
+                CustomerId = customerId,
+                ProjectManagerUserId = userId,
+                CreatedByUserId = userId,
+                UpdatedByUserId = userId,
+            };
+            db.OperationalProjects.Add(project);
+            await db.SaveChangesAsync();
+            var designProject = new DesignProject
+            {
+                OperationalProjectId = project.Id,
+                ProjectCode = $"DP-SCHEDULE-DEL-{Guid.NewGuid():N}"[..30],
+                Name = "Schedule deletion design",
+                CustomerId = customerId,
+                StartDate = new DateTime(2026, 9, 1, 0, 0, 0, DateTimeKind.Utc),
+                Deadline = new DateTime(2026, 12, 1, 0, 0, 0, DateTimeKind.Utc),
+                CreatedByUserId = userId,
+                UpdatedByUserId = userId,
+            };
+            var member = new OperationalProjectMember
+            {
+                OperationalProjectId = project.Id,
+                UserId = userId,
+                Position = "Project manager",
+                StartedAt = DateTime.UtcNow.AddDays(-1),
+                CreatedByUserId = userId,
+                UpdatedByUserId = userId,
+            };
+            db.AddRange(designProject, member);
+            await db.SaveChangesAsync();
+            var phase = new DesignSchedulePhase
+            {
+                OperationalProjectId = project.Id,
+                DesignProjectId = designProject.Id,
+                Code = DesignSchedulePhaseCode.Concept,
+                PlannedStart = new DateOnly(2026, 9, 1),
+                PlannedEnd = new DateOnly(2026, 10, 1),
+                Status = DesignScheduleStatus.NotStarted,
+                Weight = 100,
+                CreatedByUserId = userId,
+                UpdatedByUserId = userId,
+            };
+            db.DesignSchedulePhases.Add(phase);
+            await db.SaveChangesAsync();
+            var predecessor = new DesignScheduleTask
+            {
+                OperationalProjectId = project.Id,
+                DesignProjectId = designProject.Id,
+                PhaseId = phase.Id,
+                Code = "DELETE-A",
+                Name = "Schedule predecessor",
+                DepartmentCode = "design",
+                AssigneeMemberId = member.Id,
+                PlannedStart = new DateOnly(2026, 9, 1),
+                PlannedEnd = new DateOnly(2026, 9, 2),
+                Status = DesignScheduleStatus.NotStarted,
+                Weight = 50,
+                CreatedByUserId = userId,
+                UpdatedByUserId = userId,
+            };
+            var successor = new DesignScheduleTask
+            {
+                OperationalProjectId = project.Id,
+                DesignProjectId = designProject.Id,
+                PhaseId = phase.Id,
+                Code = "DELETE-B",
+                Name = "Schedule successor",
+                DepartmentCode = "design",
+                AssigneeMemberId = member.Id,
+                PlannedStart = new DateOnly(2026, 9, 3),
+                PlannedEnd = new DateOnly(2026, 9, 4),
+                Status = DesignScheduleStatus.NotStarted,
+                Weight = 50,
+                CreatedByUserId = userId,
+                UpdatedByUserId = userId,
+            };
+            db.AddRange(predecessor, successor);
+            await db.SaveChangesAsync();
+            db.DesignScheduleTaskDependencies.Add(new DesignScheduleTaskDependency
+            {
+                OperationalProjectId = project.Id,
+                TaskId = successor.Id,
+                PredecessorTaskId = predecessor.Id,
+            });
+            db.DesignScheduleHistory.Add(new DesignScheduleHistory
+            {
+                OperationalProjectId = project.Id,
+                DesignProjectId = designProject.Id,
+                EntityType = "Task",
+                EntityId = successor.Id,
+                Action = "Created",
+                SnapshotJson = "{}",
+                ChangedByUserId = userId,
+            });
+            await db.SaveChangesAsync();
+            return new
+            {
+                project.Id,
+                RowVersion = CrmConcurrency.Encode(project.RowVersion),
+            };
+        });
+        var projectDetail = JsonDocument.Parse(JsonSerializer.Serialize(new
+        {
+            rowVersion = seeded.RowVersion,
+        })).RootElement.Clone();
+
+        var impact = await ReadJsonAsync(
+            await Client.GetAsync($"/api/operational-projects/{seeded.Id}/deletion-impact"));
+        var impactCounts = impact.GetProperty("items").EnumerateArray().ToDictionary(
+            item => item.GetProperty("key").GetString()!,
+            item => item.GetProperty("count").GetInt32());
+
+        impactCounts["design.schedulePhases"].Should().Be(1);
+        impactCounts["design.scheduleTasks"].Should().Be(2);
+        impactCounts["design.scheduleTaskDependencies"].Should().Be(1);
+        impactCounts["design.scheduleHistory"].Should().Be(1);
+        (await ConfirmDeleteAsync(seeded.Id, projectDetail, impact)).StatusCode
+            .Should().Be(HttpStatusCode.NoContent);
+        (await WithDbAsync(db => db.DesignSchedulePhases.CountAsync(item =>
+            item.OperationalProjectId == seeded.Id))).Should().Be(0);
+        (await WithDbAsync(db => db.DesignScheduleTasks.CountAsync(item =>
+            item.OperationalProjectId == seeded.Id))).Should().Be(0);
+        (await WithDbAsync(db => db.DesignScheduleTaskDependencies.CountAsync(item =>
+            item.OperationalProjectId == seeded.Id))).Should().Be(0);
+        (await WithDbAsync(db => db.DesignScheduleHistory.CountAsync(item =>
+            item.OperationalProjectId == seeded.Id))).Should().Be(0);
+        (await WithDbAsync(db => db.OperationalProjects.AnyAsync(item =>
+            item.Id == seeded.Id))).Should().BeFalse();
+    }
+
+    [Fact]
     public async Task ActiveMember_CanReadPortfolioDetailAndTimeline_ButCannotMutate()
     {
         await AuthTestHelper.AuthenticateAsync(

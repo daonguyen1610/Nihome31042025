@@ -111,6 +111,7 @@
 
     { "module": "design.projects", "action": "view" },
     { "module": "design.projects", "action": "manage" },
+    { "module": "design.schedule", "action": "manage" },
     { "module": "design.concepts", "action": "view" },
     { "module": "design.concepts", "action": "manage" },
     { "module": "design.concepts", "action": "finalize" },
@@ -337,6 +338,7 @@
         "crm.surveys.view",
         "proc.vendors.view",
         "design.projects.view",
+        "design.schedule.manage",
         "design.basic.view",
         "design.shop.view",
         "design.revisions.view",
