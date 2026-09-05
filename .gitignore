@@ -1,3 +1,4 @@
+.vscode/
 # Ignore backend build artifacts
 nihomebackend/bin/**
 nihomebackend/obj/**
