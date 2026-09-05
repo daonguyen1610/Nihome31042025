@@ -906,19 +906,19 @@ public sealed class DetailDesignScheduleControllerTests : IntegrationTestBase
         string status = "NotStarted",
         DateOnly? actualStart = null,
         string? rowVersion = null) => new()
-    {
-        Code = code,
-        Name = "Design package",
-        DepartmentCode = "design",
-        AssigneeMemberId = memberId,
-        PlannedStart = new DateOnly(2026, 9, 1),
-        PlannedEnd = new DateOnly(2026, 9, 3),
-        ActualStart = actualStart,
-        Status = status,
-        ProgressPercent = progress,
-        Weight = 100,
-        RowVersion = rowVersion,
-    };
+        {
+            Code = code,
+            Name = "Design package",
+            DepartmentCode = "design",
+            AssigneeMemberId = memberId,
+            PlannedStart = new DateOnly(2026, 9, 1),
+            PlannedEnd = new DateOnly(2026, 9, 3),
+            ActualStart = actualStart,
+            Status = status,
+            ProgressPercent = progress,
+            Weight = 100,
+            RowVersion = rowVersion,
+        };
 
     private sealed record Fixture(int ProjectId, int MemberId);
     private sealed record PhaseView(int Id, string RowVersion);
