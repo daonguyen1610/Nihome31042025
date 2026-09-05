@@ -405,6 +405,82 @@ public class DesignProjectServiceTests : IDisposable
         createdEntity!.OperationalProjectId = operationalProject.Id;
         await _db.SaveChangesAsync();
         createdEntity.CurrentStage = DesignProjectStage.BasicDesign;
+        var scheduleMember = new OperationalProjectMember
+        {
+            OperationalProjectId = operationalProject.Id,
+            UserId = _userId,
+            Position = "Designer",
+            StartedAt = DateTime.UtcNow.AddDays(-1),
+            CreatedByUserId = _userId,
+            UpdatedByUserId = _userId,
+        };
+        _db.OperationalProjectMembers.Add(scheduleMember);
+        await _db.SaveChangesAsync();
+        var schedulePhase = new DesignSchedulePhase
+        {
+            OperationalProjectId = operationalProject.Id,
+            DesignProjectId = created.Id,
+            Code = DesignSchedulePhaseCode.Concept,
+            PlannedStart = new DateOnly(2026, 8, 1),
+            PlannedEnd = new DateOnly(2026, 8, 31),
+            Status = DesignScheduleStatus.NotStarted,
+            Weight = 100,
+            CreatedByUserId = _userId,
+            UpdatedByUserId = _userId,
+        };
+        _db.DesignSchedulePhases.Add(schedulePhase);
+        await _db.SaveChangesAsync();
+        var schedulePredecessor = new DesignScheduleTask
+        {
+            OperationalProjectId = operationalProject.Id,
+            DesignProjectId = created.Id,
+            PhaseId = schedulePhase.Id,
+            Code = "DS-DELETE-001",
+            Name = "Schedule predecessor",
+            DepartmentCode = "design",
+            AssigneeMemberId = scheduleMember.Id,
+            PlannedStart = new DateOnly(2026, 8, 1),
+            PlannedEnd = new DateOnly(2026, 8, 2),
+            Status = DesignScheduleStatus.NotStarted,
+            Weight = 50,
+            CreatedByUserId = _userId,
+            UpdatedByUserId = _userId,
+        };
+        var scheduleSuccessor = new DesignScheduleTask
+        {
+            OperationalProjectId = operationalProject.Id,
+            DesignProjectId = created.Id,
+            PhaseId = schedulePhase.Id,
+            Code = "DS-DELETE-002",
+            Name = "Schedule successor",
+            DepartmentCode = "design",
+            AssigneeMemberId = scheduleMember.Id,
+            PlannedStart = new DateOnly(2026, 8, 3),
+            PlannedEnd = new DateOnly(2026, 8, 4),
+            Status = DesignScheduleStatus.NotStarted,
+            Weight = 50,
+            CreatedByUserId = _userId,
+            UpdatedByUserId = _userId,
+        };
+        _db.AddRange(schedulePredecessor, scheduleSuccessor);
+        await _db.SaveChangesAsync();
+        _db.AddRange(
+            new DesignScheduleTaskDependency
+            {
+                OperationalProjectId = operationalProject.Id,
+                TaskId = scheduleSuccessor.Id,
+                PredecessorTaskId = schedulePredecessor.Id,
+            },
+            new DesignScheduleHistory
+            {
+                OperationalProjectId = operationalProject.Id,
+                DesignProjectId = created.Id,
+                EntityType = "Task",
+                EntityId = scheduleSuccessor.Id,
+                Action = "Created",
+                SnapshotJson = "{}",
+                ChangedByUserId = _userId,
+            });
         await _db.SaveChangesAsync();
         var basicDoc = new BasicDesignDoc
         {
@@ -560,10 +636,18 @@ public class DesignProjectServiceTests : IDisposable
         await _db.SaveChangesAsync();
 
         var impact = await _sut.GetDeletionImpactAsync(created.Id);
+        Assert.Contains(impact!.Items, item => item.Key == "design.schedulePhases" && item.Count == 1);
+        Assert.Contains(impact.Items, item => item.Key == "design.scheduleTasks" && item.Count == 2);
+        Assert.Contains(impact.Items, item => item.Key == "design.scheduleTaskDependencies" && item.Count == 1);
+        Assert.Contains(impact.Items, item => item.Key == "design.scheduleHistory" && item.Count == 1);
         var removed = await _sut.DeleteAsync(created.Id, Confirm(impact!), _userId);
 
         Assert.True(removed!.IsComplete);
         Assert.Null(await _db.DesignProjects.FindAsync(created.Id));
+        Assert.Empty(await _db.DesignSchedulePhases.ToListAsync());
+        Assert.Empty(await _db.DesignScheduleTasks.ToListAsync());
+        Assert.Empty(await _db.DesignScheduleTaskDependencies.ToListAsync());
+        Assert.Empty(await _db.DesignScheduleHistory.ToListAsync());
         Assert.Empty(await _db.DrawingRevisions.ToListAsync());
         Assert.Empty(await _db.AcceptanceRecords.ToListAsync());
         Assert.Empty(await _db.HandoverRecords.ToListAsync());

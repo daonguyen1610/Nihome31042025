@@ -1,0 +1,478 @@
+using System.Net;
+using System.Net.Http.Json;
+using Microsoft.EntityFrameworkCore;
+using NihomeBackend.Models;
+
+namespace NihomeBackend.IntegrationTests.Controllers;
+
+public sealed class DetailDesignScheduleControllerTests : IntegrationTestBase
+{
+    public DetailDesignScheduleControllerTests(NihomeWebApplicationFactory factory) : base(factory) { }
+
+    [Fact]
+    public async Task Get_EnforcesAuthenticationPermissionAndProjectMembership()
+    {
+        var projectId = await CreateProjectAsync(await UserIdAsync("DESIGN_LEAD"));
+
+        (await Client.GetAsync($"/api/operational-projects/{projectId}/design-schedule"))
+            .StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        await AuthenticateAsync("USER");
+        (await Client.GetAsync($"/api/operational-projects/{projectId}/design-schedule"))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        await AuthenticateAsync("PM");
+        (await Client.GetAsync($"/api/operational-projects/{projectId}/design-schedule"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task Mutations_EnforceAuthenticationPermissionAndProjectManagement()
+    {
+        await AuthenticateAsync("SUPER_ADMIN");
+        var fixture = await CreateFixtureAsync("DESIGN_LEAD");
+        using var initializedResponse = await SendJsonWithKeyAsync(HttpMethod.Post,
+            $"/api/operational-projects/{fixture.ProjectId}/design-schedule/initialize",
+            InitializePayload(), $"authorization-init-{Guid.NewGuid():N}");
+        initializedResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var phase = await GetPhaseAsync(fixture.ProjectId, "Concept");
+        using var createdResponse = await SendJsonWithKeyAsync(HttpMethod.Post,
+            $"/api/operational-projects/{fixture.ProjectId}/design-schedule/phases/{phase.Id}/tasks",
+            TaskPayload("AUTH-001", fixture.MemberId, 0), $"authorization-create-{Guid.NewGuid():N}");
+        createdResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var task = await GetTaskAsync(fixture.ProjectId, "AUTH-001");
+        var historyCount = await WithDbAsync(db => db.DesignScheduleHistory.CountAsync(item =>
+            item.OperationalProjectId == fixture.ProjectId));
+
+        Client.DefaultRequestHeaders.Authorization = null;
+        await AssertMutationStatusesAsync(HttpStatusCode.Unauthorized, fixture, phase, task);
+        await AuthenticateAsync("USER");
+        await AssertMutationStatusesAsync(HttpStatusCode.Forbidden, fixture, phase, task);
+        await AuthenticateAsync("PM");
+        await AssertMutationStatusesAsync(HttpStatusCode.NotFound, fixture, phase, task);
+
+        (await WithDbAsync(db => db.DesignScheduleHistory.CountAsync(item =>
+            item.OperationalProjectId == fixture.ProjectId))).Should().Be(historyCount);
+    }
+
+    [Fact]
+    public async Task InitializeCreateUpdateAndFilter_ReturnsTraceableWeightedRollup()
+    {
+        await AuthenticateAsync("SUPER_ADMIN");
+        var fixture = await CreateFixtureAsync();
+        using var initializedResponse = await SendJsonWithKeyAsync(HttpMethod.Post,
+            $"/api/operational-projects/{fixture.ProjectId}/design-schedule/initialize",
+            InitializePayload(), $"schedule-init-{Guid.NewGuid():N}");
+        initializedResponse.StatusCode.Should().Be(HttpStatusCode.OK,
+            await initializedResponse.Content.ReadAsStringAsync());
+        var initialized = await ReadJsonAsync(initializedResponse);
+        initialized.GetProperty("phases").GetArrayLength().Should().Be(3);
+        var initializedPhases = initialized.GetProperty("phases").EnumerateArray().ToList();
+        initializedPhases[0].GetProperty("plannedStart").GetString().Should().Be("2026-09-01");
+        initializedPhases[^1].GetProperty("plannedEnd").GetString().Should().Be("2026-12-01");
+        for (var index = 1; index < initializedPhases.Count; index++)
+        {
+            var previousEnd = DateOnly.Parse(initializedPhases[index - 1].GetProperty("plannedEnd").GetString()!);
+            var currentStart = DateOnly.Parse(initializedPhases[index].GetProperty("plannedStart").GetString()!);
+            currentStart.Should().Be(previousEnd.AddDays(1));
+        }
+
+        var phases = initialized.GetProperty("phases").EnumerateArray().ToDictionary(
+            item => item.GetProperty("code").GetString()!, item => item.GetProperty("id").GetInt32());
+        foreach (var phase in phases)
+        {
+            using var created = await SendJsonWithKeyAsync(HttpMethod.Post,
+                $"/api/operational-projects/{fixture.ProjectId}/design-schedule/phases/{phase.Value}/tasks",
+                TaskPayload($"{phase.Key}-001", fixture.MemberId, 0),
+                $"schedule-task-{Guid.NewGuid():N}");
+            created.StatusCode.Should().Be(HttpStatusCode.Created,
+                await created.Content.ReadAsStringAsync());
+        }
+
+        var conceptTask = await GetTaskAsync(fixture.ProjectId, "Concept-001");
+        using var updatedResponse = await SendJsonWithKeyAsync(HttpMethod.Put,
+            $"/api/operational-projects/{fixture.ProjectId}/design-schedule/tasks/{conceptTask.Id}",
+            TaskPayload("Concept-001", fixture.MemberId, 75, "InProgress",
+                new DateOnly(2026, 9, 1), conceptTask.RowVersion),
+            $"schedule-update-{Guid.NewGuid():N}");
+        updatedResponse.StatusCode.Should().Be(HttpStatusCode.OK,
+            await updatedResponse.Content.ReadAsStringAsync());
+
+        var filteredResponse = await Client.GetAsync(
+            $"/api/operational-projects/{fixture.ProjectId}/design-schedule" +
+            "?phase=Concept&departmentCode=design&status=InProgress" +
+            "&plannedFrom=2026-09-02&plannedTo=2026-09-03&page=1&pageSize=10");
+        filteredResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var filtered = await ReadJsonAsync(filteredResponse);
+        filtered.GetProperty("baselineReady").GetBoolean().Should().BeTrue();
+        filtered.GetProperty("progressPercent").GetDecimal().Should().Be(25.5m);
+        filtered.GetProperty("rollupPolicyVersion").GetString().Should().Be("design-schedule-weighted-v1");
+        filtered.GetProperty("rollupSources").GetArrayLength().Should().Be(3);
+        filtered.GetProperty("rollupSources")[0].GetProperty("taskSources")[0]
+            .GetProperty("taskId").GetInt32().Should().Be(conceptTask.Id);
+        filtered.GetProperty("tasks").GetProperty("totalCount").GetInt32().Should().Be(1);
+        filtered.GetProperty("tasks").GetProperty("items")[0].GetProperty("code")
+            .GetString().Should().Be("Concept-001");
+        var history = await WithDbAsync(db => db.DesignScheduleHistory.AsNoTracking()
+            .Where(item => item.OperationalProjectId == fixture.ProjectId)
+            .Select(item => new { item.EntityType, item.Action })
+            .ToListAsync());
+        history.Should().HaveCount(7);
+        history.Should().ContainEquivalentOf(new { EntityType = "Phase", Action = "Initialized" });
+        history.Should().ContainEquivalentOf(new { EntityType = "Task", Action = "Created" });
+        history.Should().ContainEquivalentOf(new { EntityType = "Task", Action = "Updated" });
+    }
+
+    [Fact]
+    public async Task CreateTask_InvalidPayloadAndCrossProjectDependency_LeaveStateUnchanged()
+    {
+        await AuthenticateAsync("SUPER_ADMIN");
+        var first = await CreateInitializedFixtureAsync();
+        var second = await CreateInitializedFixtureAsync();
+        var secondPhaseId = await PhaseIdAsync(second.ProjectId, "Concept");
+        using var otherCreated = await SendJsonWithKeyAsync(HttpMethod.Post,
+            $"/api/operational-projects/{second.ProjectId}/design-schedule/phases/{secondPhaseId}/tasks",
+            TaskPayload("OTHER-001", second.MemberId, 0), $"other-task-{Guid.NewGuid():N}");
+        var otherTaskId = (await ReadJsonAsync(otherCreated)).GetProperty("id").GetInt32();
+        var firstPhaseId = await PhaseIdAsync(first.ProjectId, "Concept");
+        var before = await WithDbAsync(db => db.DesignScheduleTasks.CountAsync(item =>
+            item.OperationalProjectId == first.ProjectId));
+
+        var invalidMilestone = TaskPayload("BAD-MILESTONE", first.MemberId, 0) with
+        {
+            IsMilestone = true,
+            PlannedEnd = new DateOnly(2026, 9, 3),
+        };
+        using var invalidResponse = await SendJsonWithKeyAsync(HttpMethod.Post,
+            $"/api/operational-projects/{first.ProjectId}/design-schedule/phases/{firstPhaseId}/tasks",
+            invalidMilestone, $"bad-milestone-{Guid.NewGuid():N}");
+        using var crossProjectResponse = await SendJsonWithKeyAsync(HttpMethod.Post,
+            $"/api/operational-projects/{first.ProjectId}/design-schedule/phases/{firstPhaseId}/tasks",
+            TaskPayload("BAD-CROSS", first.MemberId, 0) with { PredecessorTaskIds = [otherTaskId] },
+            $"bad-cross-{Guid.NewGuid():N}");
+        using var missingDatesResponse = await SendJsonWithKeyAsync(HttpMethod.Post,
+            $"/api/operational-projects/{first.ProjectId}/design-schedule/phases/{firstPhaseId}/tasks",
+            new
+            {
+                code = "BAD-DATES",
+                name = "Missing planned dates",
+                departmentCode = "design",
+                assigneeMemberId = first.MemberId,
+                status = "NotStarted",
+                progressPercent = 0,
+                weight = 100,
+                predecessorTaskIds = Array.Empty<int>(),
+            }, $"bad-dates-{Guid.NewGuid():N}");
+        using var nullPredecessorsResponse = await SendJsonWithKeyAsync(HttpMethod.Post,
+            $"/api/operational-projects/{first.ProjectId}/design-schedule/phases/{firstPhaseId}/tasks",
+            TaskPayload("BAD-PREDECESSORS", first.MemberId, 0) with { PredecessorTaskIds = null },
+            $"bad-predecessors-{Guid.NewGuid():N}");
+
+        invalidResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        crossProjectResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        missingDatesResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        nullPredecessorsResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.DesignScheduleTasks.CountAsync(item =>
+            item.OperationalProjectId == first.ProjectId))).Should().Be(before);
+        (await WithDbAsync(db => db.DesignScheduleTaskDependencies.CountAsync(item =>
+            item.OperationalProjectId == first.ProjectId))).Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Mutations_RequireValidIdempotencyKey()
+    {
+        await AuthenticateAsync("SUPER_ADMIN");
+        var fixture = await CreateFixtureAsync();
+        var uri = $"/api/operational-projects/{fixture.ProjectId}/design-schedule/initialize";
+
+        using var missing = await Client.PostAsJsonAsync(uri, InitializePayload());
+        using var oversizedRequest = new HttpRequestMessage(HttpMethod.Post, uri)
+        {
+            Content = JsonContent.Create(InitializePayload()),
+        };
+        oversizedRequest.Headers.Add("Idempotency-Key", new string('x', 121));
+        using var oversized = await Client.SendAsync(oversizedRequest);
+
+        missing.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        oversized.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.DesignSchedulePhases.CountAsync(item =>
+            item.OperationalProjectId == fixture.ProjectId))).Should().Be(0);
+    }
+
+    [Fact]
+    public async Task CreateTask_IdempotentReplayAndKeyConflict_DoNotDuplicate()
+    {
+        await AuthenticateAsync("SUPER_ADMIN");
+        var fixture = await CreateInitializedFixtureAsync();
+        var phaseId = await PhaseIdAsync(fixture.ProjectId, "Concept");
+        var key = $"schedule-create-{Guid.NewGuid():N}";
+        var payload = TaskPayload("IDEMPOTENT-001", fixture.MemberId, 0);
+
+        using var first = await SendJsonWithKeyAsync(HttpMethod.Post,
+            $"/api/operational-projects/{fixture.ProjectId}/design-schedule/phases/{phaseId}/tasks",
+            payload, key);
+        using var replay = await SendJsonWithKeyAsync(HttpMethod.Post,
+            $"/api/operational-projects/{fixture.ProjectId}/design-schedule/phases/{phaseId}/tasks",
+            payload, key);
+        using var conflict = await SendJsonWithKeyAsync(HttpMethod.Post,
+            $"/api/operational-projects/{fixture.ProjectId}/design-schedule/phases/{phaseId}/tasks",
+            payload with { Name = "Different payload" }, key);
+
+        first.StatusCode.Should().Be(HttpStatusCode.Created);
+        replay.StatusCode.Should().Be(HttpStatusCode.Created);
+        replay.Headers.GetValues("Idempotency-Replayed").Should().ContainSingle("true");
+        conflict.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await WithDbAsync(db => db.DesignScheduleTasks.CountAsync(item =>
+            item.OperationalProjectId == fixture.ProjectId && item.Code == "IDEMPOTENT-001"))).Should().Be(1);
+    }
+
+    [Fact]
+    public async Task UpdateTask_StaleRowVersionCanRetryWithSameIdempotencyKey()
+    {
+        await AuthenticateAsync("SUPER_ADMIN");
+        var fixture = await CreateInitializedFixtureAsync();
+        var phaseId = await PhaseIdAsync(fixture.ProjectId, "Concept");
+        using var createdResponse = await SendJsonWithKeyAsync(HttpMethod.Post,
+            $"/api/operational-projects/{fixture.ProjectId}/design-schedule/phases/{phaseId}/tasks",
+            TaskPayload("STALE-001", fixture.MemberId, 0), $"stale-create-{Guid.NewGuid():N}");
+        var created = await ReadJsonAsync(createdResponse);
+        var taskId = created.GetProperty("id").GetInt32();
+        var staleVersion = created.GetProperty("rowVersion").GetString();
+        await WithDbAsync(async db =>
+        {
+            var task = await db.DesignScheduleTasks.FindAsync(taskId);
+            task!.Name = "Competing update";
+            await db.SaveChangesAsync();
+        });
+        var key = $"stale-update-{Guid.NewGuid():N}";
+        using var stale = await SendJsonWithKeyAsync(HttpMethod.Put,
+            $"/api/operational-projects/{fixture.ProjectId}/design-schedule/tasks/{taskId}",
+            TaskPayload("STALE-001", fixture.MemberId, 20, "InProgress",
+                new DateOnly(2026, 9, 1), staleVersion), key);
+
+        stale.StatusCode.Should().Be(HttpStatusCode.Conflict, await stale.Content.ReadAsStringAsync());
+        var current = await GetTaskAsync(fixture.ProjectId, "STALE-001");
+        current.Name.Should().Be("Competing update");
+        using var retry = await SendJsonWithKeyAsync(HttpMethod.Put,
+            $"/api/operational-projects/{fixture.ProjectId}/design-schedule/tasks/{taskId}",
+            TaskPayload("STALE-001", fixture.MemberId, 20, "InProgress",
+                new DateOnly(2026, 9, 1), current.RowVersion), key);
+        retry.StatusCode.Should().Be(HttpStatusCode.OK, await retry.Content.ReadAsStringAsync());
+    }
+
+    private Task AuthenticateAsync(string roleCode) => AuthTestHelper.AuthenticateAsync(
+        Client, client => AuthTestHelper.LoginAsRoleAsync(client, roleCode));
+
+    private async Task<Fixture> CreateInitializedFixtureAsync()
+    {
+        var fixture = await CreateFixtureAsync();
+        using var response = await SendJsonWithKeyAsync(HttpMethod.Post,
+            $"/api/operational-projects/{fixture.ProjectId}/design-schedule/initialize",
+            InitializePayload(), $"schedule-init-{Guid.NewGuid():N}");
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
+        return fixture;
+    }
+
+    private async Task<Fixture> CreateFixtureAsync(string managerRoleCode = "PM")
+    {
+        var managerId = await UserIdAsync(managerRoleCode);
+        var memberUserId = await UserIdAsync("ARCHITECT");
+        return await WithDbAsync(async db =>
+        {
+            var customer = new Customer
+            {
+                Name = $"Schedule customer {Guid.NewGuid():N}",
+                Type = CustomerType.Company,
+                SourceCode = "referral",
+            };
+            db.Customers.Add(customer);
+            await db.SaveChangesAsync();
+            var project = new OperationalProject
+            {
+                Code = $"PJ-DS-{Guid.NewGuid():N}"[..30],
+                Name = "Detail design schedule fixture",
+                CustomerId = customer.Id,
+                ProjectManagerUserId = managerId,
+            };
+            db.OperationalProjects.Add(project);
+            await db.SaveChangesAsync();
+            var designProject = new DesignProject
+            {
+                OperationalProjectId = project.Id,
+                ProjectCode = $"DP-DS-{Guid.NewGuid():N}"[..30],
+                Name = "Detail design schedule",
+                CustomerId = customer.Id,
+                StartDate = new DateTime(2026, 9, 1, 0, 0, 0, DateTimeKind.Utc),
+                Deadline = new DateTime(2026, 12, 1, 0, 0, 0, DateTimeKind.Utc),
+            };
+            db.DesignProjects.Add(designProject);
+            var member = new OperationalProjectMember
+            {
+                OperationalProjectId = project.Id,
+                UserId = memberUserId,
+                Position = "Architect",
+                StartedAt = DateTime.UtcNow.AddDays(-1),
+                CreatedByUserId = managerId,
+                UpdatedByUserId = managerId,
+            };
+            db.OperationalProjectMembers.Add(member);
+            await db.SaveChangesAsync();
+            return new Fixture(project.Id, member.Id);
+        });
+    }
+
+    private async Task<int> CreateProjectAsync(int managerUserId) => (await WithDbAsync(async db =>
+    {
+        var customer = new Customer
+        {
+            Name = $"Restricted schedule customer {Guid.NewGuid():N}",
+            Type = CustomerType.Company,
+            SourceCode = "referral",
+        };
+        db.Customers.Add(customer);
+        await db.SaveChangesAsync();
+        var project = new OperationalProject
+        {
+            Code = $"PJ-RESTRICT-{Guid.NewGuid():N}"[..30],
+            Name = "Restricted schedule project",
+            CustomerId = customer.Id,
+            ProjectManagerUserId = managerUserId,
+        };
+        db.OperationalProjects.Add(project);
+        await db.SaveChangesAsync();
+        return project;
+    })).Id;
+
+    private async Task<int> UserIdAsync(string roleCode)
+    {
+        var phone = roleCode == "USER"
+            ? TestDataSeeder.CustomerPhone
+            : TestDataSeeder.BusinessRolePhonesByCode[roleCode];
+        return await WithDbAsync(db => db.Users.Where(user => user.PhoneNumber == phone)
+            .Select(user => user.Id).SingleAsync());
+    }
+
+    private async Task<int> PhaseIdAsync(int projectId, string code)
+    {
+        return (await GetPhaseAsync(projectId, code)).Id;
+    }
+
+    private async Task<PhaseView> GetPhaseAsync(int projectId, string code)
+    {
+        var response = await Client.GetAsync($"/api/operational-projects/{projectId}/design-schedule");
+        var body = await ReadJsonAsync(response);
+        var phase = body.GetProperty("phases").EnumerateArray()
+            .Single(item => item.GetProperty("code").GetString() == code);
+        return new PhaseView(
+            phase.GetProperty("id").GetInt32(),
+            phase.GetProperty("rowVersion").GetString()!);
+    }
+
+    private async Task<TaskView> GetTaskAsync(int projectId, string code)
+    {
+        var response = await Client.GetAsync($"/api/operational-projects/{projectId}/design-schedule?pageSize=100");
+        var body = await ReadJsonAsync(response);
+        var task = body.GetProperty("tasks").GetProperty("items").EnumerateArray()
+            .Single(item => item.GetProperty("code").GetString() == code);
+        return new TaskView(
+            task.GetProperty("id").GetInt32(),
+            task.GetProperty("name").GetString()!,
+            task.GetProperty("rowVersion").GetString()!);
+    }
+
+    private async Task<HttpResponseMessage> SendJsonWithKeyAsync(
+        HttpMethod method,
+        string uri,
+        object payload,
+        string key)
+    {
+        using var request = new HttpRequestMessage(method, uri) { Content = JsonContent.Create(payload) };
+        request.Headers.Add("Idempotency-Key", key);
+        return await Client.SendAsync(request);
+    }
+
+    private async Task AssertMutationStatusesAsync(
+        HttpStatusCode expected,
+        Fixture fixture,
+        PhaseView phase,
+        TaskView task)
+    {
+        using var initialize = await SendJsonWithKeyAsync(HttpMethod.Post,
+            $"/api/operational-projects/{fixture.ProjectId}/design-schedule/initialize",
+            InitializePayload(), $"authorization-init-{Guid.NewGuid():N}");
+        using var updatePhase = await SendJsonWithKeyAsync(HttpMethod.Put,
+            $"/api/operational-projects/{fixture.ProjectId}/design-schedule/phases/{phase.Id}",
+            new
+            {
+                plannedStart = new DateOnly(2026, 9, 1),
+                plannedEnd = new DateOnly(2026, 10, 1),
+                status = "NotStarted",
+                progressPercent = 0,
+                weight = 34,
+                rowVersion = phase.RowVersion,
+            }, $"authorization-phase-{Guid.NewGuid():N}");
+        using var createTask = await SendJsonWithKeyAsync(HttpMethod.Post,
+            $"/api/operational-projects/{fixture.ProjectId}/design-schedule/phases/{phase.Id}/tasks",
+            TaskPayload("AUTH-002", fixture.MemberId, 0), $"authorization-create-{Guid.NewGuid():N}");
+        using var updateTask = await SendJsonWithKeyAsync(HttpMethod.Put,
+            $"/api/operational-projects/{fixture.ProjectId}/design-schedule/tasks/{task.Id}",
+            TaskPayload("AUTH-001", fixture.MemberId, 0, rowVersion: task.RowVersion),
+            $"authorization-update-{Guid.NewGuid():N}");
+
+        initialize.StatusCode.Should().Be(expected);
+        updatePhase.StatusCode.Should().Be(expected);
+        createTask.StatusCode.Should().Be(expected);
+        updateTask.StatusCode.Should().Be(expected);
+    }
+
+    private static object InitializePayload() => new
+    {
+        phases = new[]
+        {
+            new { code = "Concept", weight = 34 },
+            new { code = "BasicDesign", weight = 33 },
+            new { code = "ShopDrawing", weight = 33 },
+        },
+    };
+
+    private static TaskPayloadModel TaskPayload(
+        string code,
+        int memberId,
+        int progress,
+        string status = "NotStarted",
+        DateOnly? actualStart = null,
+        string? rowVersion = null) => new()
+    {
+        Code = code,
+        Name = "Design package",
+        DepartmentCode = "design",
+        AssigneeMemberId = memberId,
+        PlannedStart = new DateOnly(2026, 9, 1),
+        PlannedEnd = new DateOnly(2026, 9, 3),
+        ActualStart = actualStart,
+        Status = status,
+        ProgressPercent = progress,
+        Weight = 100,
+        RowVersion = rowVersion,
+    };
+
+    private sealed record Fixture(int ProjectId, int MemberId);
+    private sealed record PhaseView(int Id, string RowVersion);
+    private sealed record TaskView(int Id, string Name, string RowVersion);
+
+    private sealed record TaskPayloadModel
+    {
+        public string Code { get; init; } = string.Empty;
+        public string Name { get; init; } = string.Empty;
+        public string DepartmentCode { get; init; } = string.Empty;
+        public int AssigneeMemberId { get; init; }
+        public bool IsMilestone { get; init; }
+        public DateOnly PlannedStart { get; init; }
+        public DateOnly PlannedEnd { get; init; }
+        public DateOnly? ActualStart { get; init; }
+        public DateOnly? ActualEnd { get; init; }
+        public string Status { get; init; } = string.Empty;
+        public int ProgressPercent { get; init; }
+        public int Weight { get; init; }
+        public List<int>? PredecessorTaskIds { get; init; } = new();
+        public string? RowVersion { get; init; }
+    }
+}

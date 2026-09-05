@@ -8,7 +8,10 @@ public sealed class IdempotencyHeaderOperationFilter : IOperationFilter
 {
     public void Apply(OpenApiOperation operation, OperationFilterContext context)
     {
-        if (!context.MethodInfo.IsDefined(typeof(IdempotencyAttribute), inherit: true))
+        var attribute = context.MethodInfo.GetCustomAttributes(typeof(IdempotencyAttribute), inherit: true)
+            .OfType<IdempotencyAttribute>()
+            .SingleOrDefault();
+        if (attribute is null)
         {
             return;
         }
@@ -25,7 +28,7 @@ public sealed class IdempotencyHeaderOperationFilter : IOperationFilter
         {
             Name = "Idempotency-Key",
             In = ParameterLocation.Header,
-            Required = false,
+            Required = attribute.RequireKey,
             Description = "Unique key used to safely replay this mutation.",
             Schema = new OpenApiSchema { Type = "string", MaxLength = IdempotencyService.MaxKeyLength },
         });

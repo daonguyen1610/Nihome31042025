@@ -186,6 +186,17 @@
     },
 
     {
+      "category": "project-department",
+      "options": [
+        { "code": "design",       "name": "Thiết kế",  "sortOrder": 1 },
+        { "code": "architecture", "name": "Kiến trúc", "sortOrder": 2 },
+        { "code": "structural",   "name": "Kết cấu",   "sortOrder": 3 },
+        { "code": "mep",          "name": "MEP",       "sortOrder": 4 },
+        { "code": "interior",     "name": "Nội thất",  "sortOrder": 5 }
+      ]
+    },
+
+    {
       "category": "drawing_revision_reason",
       "options": [
         { "code": "client-request",      "name": "Yêu cầu khách hàng", "sortOrder": 1 },

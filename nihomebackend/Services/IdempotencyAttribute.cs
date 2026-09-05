@@ -12,17 +12,31 @@ namespace NihomeBackend.Services;
 /// when the second payload would otherwise fail validation.
 /// </summary>
 [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
-public sealed class IdempotencyAttribute(string scope, Type? requestGuardType = null)
+public sealed class IdempotencyAttribute(
+    string scope,
+    Type? requestGuardType = null,
+    bool requireKey = false)
     : Attribute, IAsyncResourceFilter
 {
     public string Scope { get; } = scope;
     public Type? RequestGuardType { get; } = requestGuardType;
+    public bool RequireKey { get; } = requireKey;
 
     public async Task OnResourceExecutionAsync(
         ResourceExecutingContext context,
         ResourceExecutionDelegate next)
     {
         var key = context.HttpContext.Request.Headers["Idempotency-Key"].FirstOrDefault();
+        if (RequireKey && !IdempotencyService.IsValidKey(key))
+        {
+            context.Result = new BadRequestObjectResult(new ProblemDetails
+            {
+                Status = StatusCodes.Status400BadRequest,
+                Title = "Invalid Idempotency-Key.",
+                Detail = $"Idempotency-Key is required and must contain between 1 and {IdempotencyService.MaxKeyLength} characters.",
+            });
+            return;
+        }
         if (IdempotencyService.IsValidKey(key))
         {
             if (RequestGuardType is not null)

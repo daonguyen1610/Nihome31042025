@@ -2313,6 +2313,141 @@ export interface UpdateDesignProjectRequest extends CreateDesignProjectRequest {
   status?: DesignProjectStatus;
 }
 
+export type DesignSchedulePhaseCode = "Concept" | "BasicDesign" | "ShopDrawing";
+export type DesignScheduleStatus =
+  | "NotStarted"
+  | "InProgress"
+  | "Completed"
+  | "OnHold"
+  | "WaitingForDepartment";
+
+export const DESIGN_SCHEDULE_PHASE_CODES: DesignSchedulePhaseCode[] = [
+  "Concept",
+  "BasicDesign",
+  "ShopDrawing",
+];
+
+export const DESIGN_SCHEDULE_STATUSES: DesignScheduleStatus[] = [
+  "NotStarted",
+  "InProgress",
+  "Completed",
+  "OnHold",
+  "WaitingForDepartment",
+];
+
+export interface InitializeDesignSchedulePhaseRequest {
+  code: DesignSchedulePhaseCode;
+  weight: number;
+}
+
+export interface InitializeDesignScheduleRequest {
+  phases: InitializeDesignSchedulePhaseRequest[];
+}
+
+export interface UpsertDesignSchedulePhaseRequest {
+  plannedStart: string;
+  plannedEnd: string;
+  actualStart?: string | null;
+  actualEnd?: string | null;
+  status: DesignScheduleStatus;
+  progressPercent: number;
+  weight: number;
+  rowVersion?: string;
+}
+
+export interface UpsertDesignScheduleTaskRequest extends UpsertDesignSchedulePhaseRequest {
+  code: string;
+  name: string;
+  departmentCode: string;
+  assigneeMemberId: number;
+  isMilestone: boolean;
+  predecessorTaskIds: number[];
+}
+
+export interface DesignScheduleQuery {
+  phase?: DesignSchedulePhaseCode;
+  assigneeMemberId?: number;
+  departmentCode?: string;
+  status?: DesignScheduleStatus;
+  plannedFrom?: string;
+  plannedTo?: string;
+  overdueOnly?: boolean;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface DesignSchedulePhaseResponse {
+  id: number;
+  code: DesignSchedulePhaseCode;
+  plannedStart: string;
+  plannedEnd: string;
+  actualStart?: string | null;
+  actualEnd?: string | null;
+  status: DesignScheduleStatus;
+  progressPercent: number;
+  weight: number;
+  overdue: boolean;
+  baselineReady: boolean;
+  rolledUpProgressPercent?: number | null;
+  rowVersion: string;
+}
+
+export interface DesignScheduleTaskResponse {
+  id: number;
+  phaseId: number;
+  phaseCode: DesignSchedulePhaseCode;
+  code: string;
+  name: string;
+  departmentCode: string;
+  assigneeMemberId: number;
+  isMilestone: boolean;
+  plannedStart: string;
+  plannedEnd: string;
+  actualStart?: string | null;
+  actualEnd?: string | null;
+  status: DesignScheduleStatus;
+  progressPercent: number;
+  weight: number;
+  overdue: boolean;
+  predecessorTaskIds: number[];
+  rowVersion: string;
+}
+
+export interface DesignScheduleTaskRollupSourceResponse {
+  taskId: number;
+  weight: number;
+  progressPercent: number;
+  weightedValue: number;
+}
+
+export interface DesignSchedulePhaseRollupResponse {
+  phaseId: number;
+  weight: number;
+  baselineReady: boolean;
+  progressPercent?: number | null;
+  weightedValue?: number | null;
+  taskSources: DesignScheduleTaskRollupSourceResponse[];
+}
+
+export interface PagedDesignScheduleTasksResponse {
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  items: DesignScheduleTaskResponse[];
+}
+
+export interface DesignScheduleResponse {
+  operationalProjectId: number;
+  designProjectId: number;
+  canManage: boolean;
+  baselineReady: boolean;
+  progressPercent?: number | null;
+  rollupPolicyVersion: string;
+  phases: DesignSchedulePhaseResponse[];
+  rollupSources: DesignSchedulePhaseRollupResponse[];
+  tasks: PagedDesignScheduleTasksResponse;
+}
+
 export type ProjectAssignmentStatus = "Planned" | "InProgress" | "Completed" | "Cancelled";
 
 export interface ProjectRoleDefinitionResponse {
@@ -4368,6 +4503,54 @@ export const adminApi = {
     api.get<DeletionImpactResponse>(`/design-projects/${id}/deletion-impact`),
   deleteDesignProject: (id: number, body: ConfirmDeletionRequest) =>
     api.delete<HardDeleteOperationResult | null>(`/design-projects/${id}`, { data: body }),
+
+  getDesignSchedule: (projectId: number, params: DesignScheduleQuery = {}) =>
+    api.get<DesignScheduleResponse>(`/operational-projects/${projectId}/design-schedule`, { params }),
+  initializeDesignSchedule: (
+    projectId: number,
+    body: InitializeDesignScheduleRequest,
+    idempotencyKey: string,
+  ) => api.post<DesignScheduleResponse>(
+    `/operational-projects/${projectId}/design-schedule/initialize`,
+    body,
+    withIdempotencyKey(idempotencyKey),
+  ),
+  updateDesignSchedulePhase: (
+    projectId: number,
+    phaseId: number,
+    body: UpsertDesignSchedulePhaseRequest,
+    idempotencyKey: string,
+  ) => api.put<DesignSchedulePhaseResponse>(
+    `/operational-projects/${projectId}/design-schedule/phases/${phaseId}`,
+    body,
+    { headers: {
+      ...withIdempotencyKey(idempotencyKey).headers,
+      ...withIfMatch(body.rowVersion).headers,
+    } },
+  ),
+  createDesignScheduleTask: (
+    projectId: number,
+    phaseId: number,
+    body: UpsertDesignScheduleTaskRequest,
+    idempotencyKey: string,
+  ) => api.post<DesignScheduleTaskResponse>(
+    `/operational-projects/${projectId}/design-schedule/phases/${phaseId}/tasks`,
+    body,
+    withIdempotencyKey(idempotencyKey),
+  ),
+  updateDesignScheduleTask: (
+    projectId: number,
+    taskId: number,
+    body: UpsertDesignScheduleTaskRequest,
+    idempotencyKey: string,
+  ) => api.put<DesignScheduleTaskResponse>(
+    `/operational-projects/${projectId}/design-schedule/tasks/${taskId}`,
+    body,
+    { headers: {
+      ...withIdempotencyKey(idempotencyKey).headers,
+      ...withIfMatch(body.rowVersion).headers,
+    } },
+  ),
 
   getHardDeleteOperation: (operationId: string) =>
     api.get<HardDeleteOperationResult>(`/hard-delete-operations/${operationId}`),

@@ -95,6 +95,15 @@ internal static class DeletionImpactPlanner
         await AddAsync(items, "design.constructionTasks", DeletionImpactActions.Delete,
             db.ConstructionTasks.Where(item => projectIds.Contains(item.DesignProjectId)), item => item.Id,
             item => item.Name, ct);
+        await AddAsync(items, "design.schedulePhases", DeletionImpactActions.Delete,
+            db.DesignSchedulePhases.Where(item => projectIds.Contains(item.DesignProjectId)), item => item.Id,
+            item => item.Code.ToString(), ct);
+        await AddAsync(items, "design.scheduleTasks", DeletionImpactActions.Delete,
+            db.DesignScheduleTasks.Where(item => projectIds.Contains(item.DesignProjectId)), item => item.Id,
+            item => item.Name, ct);
+        await AddAsync(items, "design.scheduleHistory", DeletionImpactActions.Delete,
+            db.DesignScheduleHistory.Where(item => projectIds.Contains(item.DesignProjectId)), item => item.Id,
+            item => item.EntityType, ct);
         await AddAsync(items, "design.siteDiaries", DeletionImpactActions.Delete,
             db.SiteDiaries.Where(item => projectIds.Contains(item.DesignProjectId)), item => item.Id,
             item => item.WorkPerformed, ct);
@@ -126,6 +135,9 @@ internal static class DeletionImpactPlanner
         var constructionTaskIds = db.ConstructionTasks
             .Where(item => projectIds.Contains(item.DesignProjectId))
             .Select(item => item.Id);
+        var scheduleTaskIds = db.DesignScheduleTasks
+            .Where(item => projectIds.Contains(item.DesignProjectId))
+            .Select(item => item.Id);
         var handoverRecordIds = db.HandoverRecords
             .Where(item => projectIds.Contains(item.DesignProjectId))
             .Select(item => item.Id);
@@ -144,6 +156,10 @@ internal static class DeletionImpactPlanner
         await AddAsync(items, "design.taskDependencies", DeletionImpactActions.Delete,
             db.ConstructionTaskDependencies.Where(item => constructionTaskIds.Contains(item.TaskId) ||
                 constructionTaskIds.Contains(item.PredecessorTaskId)),
+            item => item.Id, item => item.Task.Name, ct);
+        await AddAsync(items, "design.scheduleTaskDependencies", DeletionImpactActions.Delete,
+            db.DesignScheduleTaskDependencies.Where(item => scheduleTaskIds.Contains(item.TaskId) ||
+                scheduleTaskIds.Contains(item.PredecessorTaskId)),
             item => item.Id, item => item.Task.Name, ct);
         await AddAsync(items, "design.handoverHistory", DeletionImpactActions.Delete,
             db.HandoverStatusHistory.Where(item => handoverRecordIds.Contains(item.HandoverRecordId)),

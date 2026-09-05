@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, CalendarClock, PenTool } from "lucide-react";
+import { ArrowLeft, PenTool } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -25,6 +25,7 @@ import { ShopDrawingTab } from "./design/ShopDrawingTab";
 import { IfcReleasesTab } from "./design/IfcReleasesTab";
 import { DesignProjectTeamTab } from "./design/DesignProjectTeamTab";
 import { DesignProjectDocumentsTab } from "./design/DesignProjectDocumentsTab";
+import { DesignScheduleTab } from "./design/DesignScheduleTab";
 
 const STAGE_BADGE: Record<DesignProjectStage, string> = {
   Concept: "border-sky-200 bg-sky-50 text-sky-700",
@@ -266,21 +267,7 @@ const AdminDesignProjectDetail = () => {
               ) : tab === "team" ? (
                 <DesignProjectTeamTab project={project} />
               ) : tab === "schedule" ? (
-                <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-                  <div className="flex items-start gap-3">
-                    <CalendarClock className="mt-0.5 h-5 w-5 text-slate-600" />
-                    <div>
-                      <h2 className="font-semibold text-slate-900">{t("designProjects.schedule.title")}</h2>
-                      <p className="mt-1 text-sm text-slate-600">{t("designProjects.schedule.description")}</p>
-                      <Link
-                        className="mt-3 inline-flex text-sm font-medium text-primary underline"
-                        to={`/admin/construction/tasks?projectId=${project.id}`}
-                      >
-                        {t("designProjects.schedule.open")}
-                      </Link>
-                    </div>
-                  </div>
-                </div>
+                <DesignScheduleTab project={project} />
               ) : (
                 <DesignProjectDocumentsTab project={project} />
               )}

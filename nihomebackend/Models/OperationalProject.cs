@@ -42,6 +42,8 @@ public class OperationalProject : IConcurrencyTracked
     public List<ProjectDriveFolder> DriveFolders { get; set; } = new();
     public List<OperationalProjectMember> TeamMembers { get; set; } = new();
     public List<OperationalProjectAssignment> TeamAssignments { get; set; } = new();
+    public List<DesignSchedulePhase> DesignSchedulePhases { get; set; } = new();
+    public List<DesignScheduleTask> DesignScheduleTasks { get; set; } = new();
 }
 
 public enum OperationalProjectStatus

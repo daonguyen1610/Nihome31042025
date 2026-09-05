@@ -1118,5 +1118,53 @@
     "en": "Preliminary legal constraints",
     "zh": "初步法律限制",
     "ja": "予備的な法的制約"
+  },
+  {
+    "key": "masterData.category.project-department.title",
+    "category": "masterData",
+    "vi": "Phòng ban dự án",
+    "en": "Project department",
+    "zh": "项目部门",
+    "ja": "プロジェクト部門"
+  },
+  {
+    "key": "masterData.project-department.design.label",
+    "category": "masterData",
+    "vi": "Thiết kế",
+    "en": "Design",
+    "zh": "设计",
+    "ja": "設計"
+  },
+  {
+    "key": "masterData.project-department.architecture.label",
+    "category": "masterData",
+    "vi": "Kiến trúc",
+    "en": "Architecture",
+    "zh": "建筑",
+    "ja": "建築"
+  },
+  {
+    "key": "masterData.project-department.structural.label",
+    "category": "masterData",
+    "vi": "Kết cấu",
+    "en": "Structural",
+    "zh": "结构",
+    "ja": "構造"
+  },
+  {
+    "key": "masterData.project-department.mep.label",
+    "category": "masterData",
+    "vi": "MEP",
+    "en": "MEP",
+    "zh": "机电",
+    "ja": "設備"
+  },
+  {
+    "key": "masterData.project-department.interior.label",
+    "category": "masterData",
+    "vi": "Nội thất",
+    "en": "Interior",
+    "zh": "室内",
+    "ja": "インテリア"
   }
 ]

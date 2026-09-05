@@ -687,6 +687,12 @@ contract, opportunity, and quote relationships before adding their foreign
 keys. The operational hierarchy and user workflow are documented in
 `docs/user_guide.md`.
 
+The Module 2 schedule is exposed beneath
+`/api/operational-projects/{id}/design-schedule` and remains separate from
+Module 4 construction tasks. Its lifecycle, validation, weighted roll-up,
+filter, concurrency, migration, and deletion contracts are documented in
+`docs/detail-design-schedule.md`.
+
 The read-only timeline endpoint derives its entries from existing Contract
 payment milestones and does not copy or synchronize data. Each entry identifies
 its Contract, source, status, planned due date, latest update time, and amount.
