@@ -270,6 +270,31 @@ internal static class AggregateDeletionService
             .ToListAsync(ct);
         db.HseViolations.RemoveRange(hseViolations);
 
+        project.FinalProjectBoqRevisionId = null;
+        var draftReceipts = await db.WarehouseReceipts
+            .Where(item => item.OperationalProjectId == projectId && item.Status == WarehouseLedgerStatus.Draft)
+            .ToListAsync(ct);
+        db.WarehouseReceipts.RemoveRange(draftReceipts);
+        var draftIssues = await db.WarehouseIssues
+            .Where(item => item.OperationalProjectId == projectId && item.Status == WarehouseLedgerStatus.Draft)
+            .ToListAsync(ct);
+        db.WarehouseIssues.RemoveRange(draftIssues);
+        var removableRequests = await db.MaterialRequests
+            .Where(item => item.OperationalProjectId == projectId &&
+                (item.Status == MaterialRequestStatus.Draft || item.Status == MaterialRequestStatus.Rejected ||
+                 item.Status == MaterialRequestStatus.Cancelled))
+            .ToListAsync(ct);
+        db.MaterialRequests.RemoveRange(removableRequests);
+        var removableRatings = await db.VendorRatings
+            .Where(item => item.OperationalProjectId == projectId &&
+                (item.Status == VendorRatingStatus.Draft || item.Status == VendorRatingStatus.Rejected))
+            .ToListAsync(ct);
+        db.VendorRatings.RemoveRange(removableRatings);
+        var removableBoqs = await db.ProjectBoqRevisions
+            .Where(item => item.OperationalProjectId == projectId && item.Status != ProjectBoqRevisionStatus.Approved)
+            .ToListAsync(ct);
+        db.ProjectBoqRevisions.RemoveRange(removableBoqs);
+
         var deletedDocuments = await db.ProjectDocuments
             .Where(item => item.OperationalProjectId == projectId)
             .ToListAsync(ct);

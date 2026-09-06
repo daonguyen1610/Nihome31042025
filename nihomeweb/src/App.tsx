@@ -40,6 +40,7 @@ import AdminLeads from "./pages/admin/Leads.tsx";
 import AdminCustomers from "./pages/admin/Customers.tsx";
 import VendorPage from "./pages/admin/procurement/VendorPage.tsx";
 import VendorDetail from "./pages/admin/procurement/VendorDetail.tsx";
+import ProcurementControlPage from "./pages/admin/procurement/ProcurementControlPage.tsx";
 import AdminOpportunities from "./pages/admin/Opportunities.tsx";
 import AdminQuotes from "./pages/admin/Quotes.tsx";
 import AdminQuoteDetail from "./pages/admin/QuoteDetail.tsx";
@@ -173,6 +174,9 @@ const App = () => (
               <Route element={<RequirePermission code={ADMIN_PERMS.vendors} />}>
                 <Route path="/admin/vendors" element={<VendorPage />} />
                 <Route path="/admin/vendors/:id" element={<VendorDetail />} />
+              </Route>
+              <Route element={<RequirePermission code={ADMIN_PERMS.procurement} />}>
+                <Route path="/admin/procurement-control" element={<ProcurementControlPage />} />
               </Route>
               <Route element={<RequirePermission code={ADMIN_PERMS.opportunities} />}>
                 <Route path="/admin/opportunities" element={<AdminOpportunities />} />

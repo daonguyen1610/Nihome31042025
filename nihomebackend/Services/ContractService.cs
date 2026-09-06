@@ -295,6 +295,21 @@ public class ContractService(
         if (entity == null) return null;
         if (!canSeeAll && entity.OwnerUserId != callerUserId) return null;
 
+        var hasProcurementLines = await db.ContractLines.AsNoTracking()
+            .AnyAsync(item => item.ContractId == id, ct);
+        if (hasProcurementLines && entity.Status != ContractStatus.Draft)
+        {
+            throw new ContractValidationException(
+                "Hợp đồng đã ký có dòng mua sắm bất biến và không thể chỉnh sửa trực tiếp.");
+        }
+        if (hasProcurementLines &&
+            (req.Status != entity.Status || req.Direction != entity.Direction || req.Type != entity.Type ||
+             req.VendorId != entity.VendorId || req.OperationalProjectId != entity.OperationalProjectId))
+        {
+            throw new ContractValidationException(
+                "Không được đổi trạng thái, phân loại, đối tác hoặc dự án khi Hợp đồng đã có dòng mua sắm.");
+        }
+
         CrmConcurrency.Apply(db, entity, req.RowVersion);
         if (req.PaymentMilestones is not null)
         {

@@ -12,6 +12,8 @@ public class OperationalProjectListItemResponse
     public string Status { get; set; } = string.Empty;
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }
+    public DateTime? CompletedAt { get; set; }
+    public int? FinalProjectBoqRevisionId { get; set; }
     public int OpportunityCount { get; set; }
     public int QuoteCount { get; set; }
     public int ContractCount { get; set; }

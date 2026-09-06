@@ -256,12 +256,17 @@ public sealed class KpiService(AppDbContext db, INotificationService notificatio
             "SalesFirstInteractionHours" => await SalesFirstResponseAsync(definition, userId, period, ct),
             "TenderWinRate" => await TenderWinRateAsync(userId, period, ct),
             "TenderOnTimePreparationRate" => await TenderOnTimeAsync(userId, period, ct),
+            "TenderEstimateAccuracy" => await TenderEstimateAccuracyAsync(userId, period, ct),
             "DesignReleaseOnTimeRate" => await DesignOnTimeAsync(userId, period, ct),
             "DesignFirstPassRate" => await DesignFirstPassAsync(userId, period, ct),
             "DesignSiteErrorCount" => await DesignSiteErrorCountAsync(definition, userId, period, ct),
             "SiteProgressVariance" => await SiteProgressVarianceAsync(definition, userId, period, ct),
             "FirstAcceptanceRate" => await FirstAcceptanceAsync(userId, period, ct),
             "HseViolationCount" => await HseViolationCountAsync(definition, userId, period, ct),
+            "MaterialWasteRate" => await MaterialWasteRateAsync(definition, userId, period, ct),
+            "ProcurementCostOptimization" => await ProcurementCostOptimizationAsync(userId, period, ct),
+            "ProcurementDeliveryHours" => await ProcurementDeliveryHoursAsync(definition, userId, period, ct),
+            "VendorRating" => await VendorRatingAsync(userId, period, ct),
             "ReceivableOnTimeRate" => await ReceivableOnTimeRateAsync(userId, period, ct),
             _ => MissingData(definition, "The required source event is not implemented in the current module."),
         };
@@ -328,6 +333,38 @@ public sealed class KpiService(AppDbContext db, INotificationService notificatio
             .Select(item => new { item.Id, item.InternalDeadline, item.UpdatedAt })
             .ToListAsync(ct);
         return Ratio("TenderChecklistItem", items.Select(item => item.Id), items.Count(item => item.UpdatedAt <= item.InternalDeadline), items.Count);
+    }
+
+    private async Task<MetricResult> TenderEstimateAccuracyAsync(int userId, KpiPeriod period, CancellationToken ct)
+    {
+        var rows = await db.OperationalProjects.AsNoTracking()
+            .Where(project => project.CompletedAt >= period.PeriodStartUtc && project.CompletedAt < period.PeriodEndUtc &&
+                project.FinalProjectBoqRevisionId != null &&
+                project.FinalProjectBoqRevision!.SourceTenderEstimateRevisionId != null &&
+                project.FinalProjectBoqRevision.SourceTenderEstimateRevision!.Tender.PreparerUserId == userId)
+            .Select(project => new
+            {
+                project.Id,
+                RevisionId = project.FinalProjectBoqRevisionId!.Value,
+                ExecutionValue = project.FinalProjectBoqRevision!.CostTotal,
+                TenderValue = project.FinalProjectBoqRevision.SourceTenderEstimateRevision!.CostSubtotal,
+            })
+            .ToListAsync(ct);
+        if (rows.Count == 0)
+            return Missing("OperationalProject", [], "No completed project with a final execution BOQ in the period.");
+        if (rows.Any(item => item.TenderValue <= 0))
+            return Missing("OperationalProject", rows.Select(item => item.Id), "Approved tender CostSubtotal must be greater than zero.");
+        var values = rows.Select(item => Math.Max(0m,
+            100m - Math.Abs(item.ExecutionValue - item.TenderValue) / item.TenderValue * 100m)).ToList();
+        var score = Math.Round(values.Average(), 4);
+        return new MetricResult(score, null, rows.Count, score, KpiScoreStatus.Available,
+            JsonSerializer.Serialize(new
+            {
+                EntityType = "OperationalProject",
+                RecordIds = rows.Select(item => item.Id),
+                RevisionIds = rows.Select(item => item.RevisionId),
+                Reason = (string?)null,
+            }));
     }
 
     private async Task<MetricResult> DesignOnTimeAsync(int userId, KpiPeriod period, CancellationToken ct)
@@ -441,6 +478,119 @@ public sealed class KpiService(AppDbContext db, INotificationService notificatio
             .Select(item => item.Id)
             .ToListAsync(ct);
         return AgainstTarget(definition, ids.Count, ids, "HseViolation");
+    }
+
+    private async Task<MetricResult> MaterialWasteRateAsync(
+        KpiDefinition definition,
+        int userId,
+        KpiPeriod period,
+        CancellationToken ct)
+    {
+        var rows = await db.WarehouseIssueLines.AsNoTracking()
+            .Where(line => line.WarehouseIssue.ResponsibleSiteUserId == userId &&
+                line.WarehouseIssue.PostedAt >= period.PeriodStartUtc && line.WarehouseIssue.PostedAt < period.PeriodEndUtc &&
+                (line.WarehouseIssue.Status == WarehouseLedgerStatus.Posted || line.WarehouseIssue.Status == WarehouseLedgerStatus.Reversed))
+            .Select(line => new
+            {
+                line.WarehouseIssueId,
+                line.WarehouseIssue.OperationalProjectId,
+                line.ProjectBoqLine.ItemCode,
+                Quantity = line.WarehouseIssue.ReversalOfIssueId.HasValue ? -line.IssuedQuantity : line.IssuedQuantity,
+            })
+            .ToListAsync(ct);
+        if (rows.Count == 0) return Missing("WarehouseIssue", [], "No posted warehouse issues in the period.");
+
+        decimal excess = 0m;
+        decimal allowanceTotal = 0m;
+        foreach (var projectGroup in rows.GroupBy(item => item.OperationalProjectId))
+        {
+            var finalRevisionId = await db.OperationalProjects.AsNoTracking()
+                .Where(item => item.Id == projectGroup.Key && item.CompletedAt < period.PeriodEndUtc)
+                .Select(item => item.FinalProjectBoqRevisionId)
+                .SingleOrDefaultAsync(ct);
+            var revisionId = finalRevisionId ?? await db.ProjectBoqRevisions.AsNoTracking()
+                .Where(item => item.OperationalProjectId == projectGroup.Key && item.Status == ProjectBoqRevisionStatus.Approved &&
+                    item.ApprovedAt < period.PeriodEndUtc)
+                .OrderByDescending(item => item.ApprovedAt).ThenByDescending(item => item.RevisionNumber)
+                .Select(item => (int?)item.Id).FirstOrDefaultAsync(ct);
+            if (!revisionId.HasValue)
+                return Missing("WarehouseIssue", projectGroup.Select(item => item.WarehouseIssueId), "No approved BOQ allowance exists for an issued item.");
+            var codes = projectGroup.Select(item => item.ItemCode).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            var allowances = await db.ProjectBoqLines.AsNoTracking().Where(item =>
+                    item.ProjectBoqRevisionId == revisionId && codes.Contains(item.ItemCode))
+                .ToDictionaryAsync(item => item.ItemCode, item => item.ApprovedQuantity, StringComparer.OrdinalIgnoreCase, ct);
+            foreach (var itemGroup in projectGroup.GroupBy(item => item.ItemCode, StringComparer.OrdinalIgnoreCase))
+            {
+                var issued = Math.Max(itemGroup.Sum(item => item.Quantity), 0m);
+                var allowance = allowances.GetValueOrDefault(itemGroup.Key);
+                if (issued > 0 && allowance <= 0)
+                    return Missing("WarehouseIssue", itemGroup.Select(item => item.WarehouseIssueId),
+                        $"BOQ allowance for item '{itemGroup.Key}' is zero or missing while issues exist.");
+                excess += Math.Max(issued - allowance, 0m);
+                allowanceTotal += allowance;
+            }
+        }
+        if (allowanceTotal <= 0)
+            return Missing("WarehouseIssue", rows.Select(item => item.WarehouseIssueId), "BOQ allowance denominator is zero.");
+        var raw = Math.Round(excess / allowanceTotal * 100m, 4);
+        return AgainstTarget(definition, raw, rows.Select(item => item.WarehouseIssueId), "WarehouseIssue");
+    }
+
+    private async Task<MetricResult> ProcurementCostOptimizationAsync(int userId, KpiPeriod period, CancellationToken ct)
+    {
+        var rows = await db.ContractLines.AsNoTracking()
+            .Where(item => item.ProcurementOwnerUserId == userId &&
+                item.Contract.Direction == ContractDirection.Downstream && item.Contract.SignedDate >= period.PeriodStartUtc &&
+                item.Contract.SignedDate < period.PeriodEndUtc && item.Contract.Status != ContractStatus.Draft &&
+                item.Contract.Status != ContractStatus.Cancelled)
+            .Select(item => new
+            {
+                item.Id,
+                item.Quantity,
+                item.NegotiatedUnitPrice,
+                item.ProjectBoqLine.BudgetUnitPrice,
+            })
+            .ToListAsync(ct);
+        var budget = rows.Sum(item => item.BudgetUnitPrice * item.Quantity);
+        if (rows.Count == 0 || budget <= 0)
+            return Missing("ContractLine", rows.Select(item => item.Id), "No signed downstream contract-line budget in the period.");
+        var savings = rows.Sum(item => (item.BudgetUnitPrice - item.NegotiatedUnitPrice) * item.Quantity);
+        var raw = Math.Round(100m * savings / budget, 4);
+        var score = Math.Round(Math.Clamp(raw, 0m, 100m), 4);
+        return new MetricResult(raw, savings, budget, score, KpiScoreStatus.Available,
+            Evidence("ContractLine", rows.Select(item => item.Id), null));
+    }
+
+    private async Task<MetricResult> ProcurementDeliveryHoursAsync(
+        KpiDefinition definition,
+        int userId,
+        KpiPeriod period,
+        CancellationToken ct)
+    {
+        var rows = await db.MaterialRequests.AsNoTracking()
+            .Where(item => item.AssignedProcurementUserId == userId && item.Status == MaterialRequestStatus.Fulfilled &&
+                item.FulfilledAt >= period.PeriodStartUtc && item.FulfilledAt < period.PeriodEndUtc)
+            .Select(item => new { item.Id, item.ApprovedAt, item.FulfilledAt })
+            .ToListAsync(ct);
+        if (rows.Count == 0) return Missing("MaterialRequest", [], "No fulfilled material requests in the period.");
+        if (rows.Any(item => item.ApprovedAt == null || item.FulfilledAt < item.ApprovedAt))
+            return Missing("MaterialRequest", rows.Select(item => item.Id), "A fulfilled request has invalid approval or receipt timestamps.");
+        var raw = Math.Round((decimal)rows.Average(item => (item.FulfilledAt!.Value - item.ApprovedAt!.Value).TotalHours), 4);
+        return AgainstTarget(definition, raw, rows.Select(item => item.Id), "MaterialRequest");
+    }
+
+    private async Task<MetricResult> VendorRatingAsync(int userId, KpiPeriod period, CancellationToken ct)
+    {
+        var rows = await db.VendorRatings.AsNoTracking()
+            .Where(item => item.ProcurementOwnerUserId == userId && item.ApprovedAt >= period.PeriodStartUtc &&
+                item.ApprovedAt < period.PeriodEndUtc &&
+                (item.Status == VendorRatingStatus.Approved || item.Status == VendorRatingStatus.Superseded))
+            .Select(item => new { item.Id, item.OverallScore })
+            .ToListAsync(ct);
+        if (rows.Count == 0) return Missing("VendorRating", [], "No approved vendor ratings in the period.");
+        var raw = Math.Round(rows.Average(item => item.OverallScore), 4);
+        return new MetricResult(raw, null, rows.Count, raw, KpiScoreStatus.Available,
+            Evidence("VendorRating", rows.Select(item => item.Id), null));
     }
 
     private async Task<MetricResult> ReceivableOnTimeRateAsync(int userId, KpiPeriod period, CancellationToken ct)
