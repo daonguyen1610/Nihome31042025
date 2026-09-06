@@ -29,36 +29,38 @@ candidates, cross-customer mappings, broken foreign keys, chain mismatches, and
 deterministic code collisions block the migration instead of being guessed.
 The stable codes and `NOT EXISTS` guards make the data statements rerunnable.
 
-## Pre-Deployment Dry Run
+## Pre-Deployment Rehearsal
 
-Back up the target database, then run the read-only report from the repository
-root. Replace the container name only when `docker compose ps` reports a
-different SQL Server container.
+Back up the target database and restore it under a temporary database name.
+Generate the migration script, review it, and apply it to that copy before the
+production maintenance window. This rehearses the exact migration instead of
+maintaining a separate SQL implementation that can drift from it.
 
-```bash
-docker compose ps
-read -s SQLCMDPASSWORD
-export SQLCMDPASSWORD
-docker exec -i -e SQLCMDPASSWORD="$SQLCMDPASSWORD" \
-   nihome31042025-sqlserver \
-  /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -C -d NihomeDB -b \
-  -i /dev/stdin < tools/sql/operational-project-migration-report.sql
-unset SQLCMDPASSWORD
+The migration itself is the validation boundary. It aborts and rolls back when
+it finds broken source references, cross-customer relationships, multiple
+project candidates, deterministic-code collisions, changed source counts,
+unmapped rows, or post-migration chain inconsistencies. Save the migration output
+and before/after source counts as deployment evidence. Resolve any reported
+`THROW 51020` through `THROW 51029` condition in the source data; do not disable
+the checks or edit the migration to skip affected rows.
+
+After a successful rehearsal, verify that all historical rows are mapped:
+
+```sql
+SELECT 'DesignProject' EntityType, COUNT(*) TotalRows,
+   COUNT(OperationalProjectId) MappedRows FROM design_projects
+UNION ALL
+SELECT 'Contract', COUNT(*), COUNT(OperationalProjectId) FROM contracts
+UNION ALL
+SELECT 'Opportunity', COUNT(*), COUNT(OperationalProjectId) FROM opportunities
+UNION ALL
+SELECT 'Quote', COUNT(*), COUNT(OperationalProjectId) FROM quotes;
 ```
 
-Type the SQL Server password at the silent prompt. Do not place production
-credentials in shell history or repository files.
-
-The final result must be `ExceptionCount = 0` and
-`MigrationReadiness = READY`. Save the summary, planned-operation counts, and
-empty exception result as deployment evidence. Any `BLOCKED` result requires a
-reviewed data correction; do not disable constraints or edit the migration to
-skip the affected rows.
-
-Run the deployment in a maintenance window with application writes stopped.
-Take a second backup immediately after the post-migration report passes. If
-writes resume, prefer a reviewed forward correction; restoring the earlier
-backup would discard every later business transaction.
+For each row, `TotalRows` and `MappedRows` must match. Run production deployment
+with application writes stopped, and take a second backup immediately after the
+post-migration check passes. If writes resume, prefer a reviewed forward
+correction; restoring the earlier backup would discard later transactions.
 
 ## Deployment
 
@@ -75,8 +77,8 @@ EF Core runs the migration in a transaction. The migration records source row
 counts, performs the backfill, and aborts if source counts change, any historical
 row remains unmapped, or post-migration customer and chain integrity fails.
 
-Run the dry-run report again after deployment. All four source groups must have
-zero unmapped rows and the report must remain `READY`.
+Run the source-count query again after deployment. All four source groups must
+have matching total and mapped counts.
 
 ## Rollback and Compatibility
 
