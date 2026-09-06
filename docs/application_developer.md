@@ -40,6 +40,7 @@ This guide covers development setup, configuration, database management, build a
 | Frontend Runtime | Node.js                           | 20 in CI; 22 in the development image |
 | Database         | Microsoft SQL Server              | 2022      |
 | Containerization | Docker and Docker Compose         | Latest    |
+| PDF fonts        | Noto Sans and Noto Sans CJK       | OS package or configured path |
 
 ### Backend Packages
 
@@ -166,6 +167,15 @@ To rebuild containers after dependency changes:
 ```bash
 docker compose up --build
 ```
+
+The backend image installs and verifies the Latin and CJK Noto fonts used by
+PDF exports. Non-container deployments can override font discovery with
+`NIHOME_PDF_FONT_LATIN_PATH`, `NIHOME_PDF_FONT_JA_PATH`, and
+`NIHOME_PDF_FONT_ZH_PATH`. For TTC files, set the corresponding `_INDEX`
+variable to the required non-negative collection index. The defaults cover the
+Docker image, Windows IIS, and common macOS font locations. Backend startup
+fails before serving traffic when any required language font is unavailable or
+misconfigured.
 
 To remove all volumes and start fresh:
 
@@ -1010,6 +1020,7 @@ Before deploying to production:
 9. Review migration scripts and account for the current startup behavior, which automatically runs `Database.Migrate()` and seeding outside `IntegrationTests`.
 10. Build the release with `auto-deployment.sh`; it publishes the backend and compiled SPA into `deployment-config/output/publish-release.zip` for IIS hosting.
 11. Confirm the CI publish job is gated by required build, test, E2E, and security jobs before relying on its release artifact; the current workflow does not declare those dependencies.
+12. Verify PDF fonts before switching traffic. Docker builds enforce Noto Sans and Noto Sans CJK automatically. On Windows IIS, install Arial, Microsoft YaHei, and Meiryo for the application-pool account, or configure the `NIHOME_PDF_FONT_LATIN_PATH`, `NIHOME_PDF_FONT_ZH_PATH`, and `NIHOME_PDF_FONT_JA_PATH` environment variables. Set the matching `_INDEX` variable when a configured file is a TrueType collection.
 
 The production artifact includes `web.config` for the ASP.NET Core Module and serves the compiled SPA from `wwwroot`. `NIHOMEWEB_DIST_PATH` can override the frontend distribution directory at runtime; startup fails if the configured directory does not exist. Swagger is Development-only and should not be enabled by switching production to the Development environment.
 

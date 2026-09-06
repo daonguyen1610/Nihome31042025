@@ -76,6 +76,8 @@ builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
 var app = builder.Build();
 
+SimplePdfWriter.ValidateFonts();
+
 // UseExceptionHandler must run before any middleware that may throw, so the
 // handler can catch failures from auth, MVC, static files, etc.
 app.UseExceptionHandler();

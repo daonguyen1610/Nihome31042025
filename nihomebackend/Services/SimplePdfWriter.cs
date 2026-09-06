@@ -6,6 +6,15 @@ internal static class SimplePdfWriter
 {
     private const int LinesPerPage = 48;
 
+    internal static void ValidateFonts()
+    {
+        foreach (var languageCode in new[] { "vi", "ja", "zh" })
+        {
+            var font = ResolveFont(languageCode);
+            _ = TrueTypeFont.Load(font.Path, font.CollectionIndex);
+        }
+    }
+
     public static byte[] Create(IEnumerable<string> sourceLines, string languageCode)
     {
         var lines = sourceLines.ToList();
@@ -31,16 +40,22 @@ internal static class SimplePdfWriter
 
     private static FontSource ResolveFont(string languageCode)
     {
+        var configured = ResolveConfiguredFont(languageCode);
+        if (configured is not null) return configured;
+
         if (OperatingSystem.IsLinux())
         {
             return languageCode switch
             {
-                "ja" => RequiredFont(
-                    "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc", 0),
-                "zh" => RequiredFont(
-                    "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc", 2),
-                _ => RequiredFont(
-                    "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf", 0),
+                "ja" => FirstAvailableFont(
+                    new("/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc", 0),
+                    new("/usr/share/fonts/opentype/noto/NotoSansCJKjp-Regular.otf", 0)),
+                "zh" => FirstAvailableFont(
+                    new("/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc", 2),
+                    new("/usr/share/fonts/opentype/noto/NotoSansCJKsc-Regular.otf", 0)),
+                _ => FirstAvailableFont(
+                    new("/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf", 0),
+                    new("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 0)),
             };
         }
 
@@ -55,8 +70,54 @@ internal static class SimplePdfWriter
             };
         }
 
+        if (OperatingSystem.IsMacOS())
+        {
+            return languageCode switch
+            {
+                "ja" or "zh" => FirstAvailableFont(
+                    new("/System/Library/Fonts/Supplemental/Arial Unicode.ttf", 0),
+                    new("/Library/Fonts/Arial Unicode.ttf", 0)),
+                _ => FirstAvailableFont(
+                    new("/System/Library/Fonts/Supplemental/Arial.ttf", 0),
+                    new("/System/Library/Fonts/Supplemental/Arial Unicode.ttf", 0)),
+            };
+        }
+
         throw new InvalidOperationException(
-            "PDF export is supported only in the configured Linux container or Windows IIS environment.");
+            "PDF export requires a configured TrueType font on this operating system.");
+    }
+
+    private static FontSource? ResolveConfiguredFont(string languageCode)
+    {
+        var suffix = languageCode switch
+        {
+            "ja" => "JA",
+            "zh" => "ZH",
+            _ => "LATIN",
+        };
+        var pathVariable = $"NIHOME_PDF_FONT_{suffix}_PATH";
+        var path = Environment.GetEnvironmentVariable(pathVariable);
+        if (string.IsNullOrWhiteSpace(path)) return null;
+
+        var indexVariable = $"NIHOME_PDF_FONT_{suffix}_INDEX";
+        var rawIndex = Environment.GetEnvironmentVariable(indexVariable);
+        var collectionIndex = 0;
+        if (!string.IsNullOrWhiteSpace(rawIndex) &&
+            (!int.TryParse(rawIndex, out collectionIndex) || collectionIndex < 0))
+        {
+            throw new InvalidOperationException($"{indexVariable} must be a non-negative integer.");
+        }
+
+        return RequiredFont(path, collectionIndex);
+    }
+
+    private static FontSource FirstAvailableFont(params FontSource[] candidates)
+    {
+        var font = candidates.FirstOrDefault(candidate => File.Exists(candidate.Path));
+        if (font is not null) return font;
+
+        throw new InvalidOperationException(
+            $"No supported PDF font is installed. Checked: {string.Join(", ", candidates.Select(candidate => candidate.Path))}.");
     }
 
     private static FontSource RequiredFont(string path, int collectionIndex)
