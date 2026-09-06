@@ -576,6 +576,30 @@
     "ja": "ステータス"
   },
   {
+    "key": "contracts.milestone.responsibleAccountant",
+    "category": "contracts",
+    "vi": "Kế toán phụ trách",
+    "en": "Responsible accountant",
+    "zh": "负责会计",
+    "ja": "担当経理"
+  },
+  {
+    "key": "contracts.milestoneAccountantRequired",
+    "category": "contracts",
+    "vi": "Vui lòng chọn kế toán phụ trách.",
+    "en": "Select the responsible accountant.",
+    "zh": "请选择负责会计。",
+    "ja": "担当経理を選択してください。"
+  },
+  {
+    "key": "contracts.schedule.requestDialogTitle",
+    "category": "contracts",
+    "vi": "Gửi yêu cầu thanh toán",
+    "en": "Request payment",
+    "zh": "申请付款",
+    "ja": "支払を依頼"
+  },
+  {
     "key": "contracts.milestoneStatus.Pending",
     "category": "contracts",
     "vi": "Chưa yêu cầu",

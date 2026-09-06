@@ -240,6 +240,88 @@ public class KpiControllerTests : IntegrationTestBase
         site.GetProperty("isComplete").GetBoolean().Should().BeFalse();
     }
 
+    [Fact]
+    public async Task Calculate_AccountingCollection_UsesDueMonthAndResponsibleAccountant()
+    {
+        await AuthTestHelper.AuthenticateAsync(
+            Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "SUPER_ADMIN"));
+        var accountantUserId = await WithDbAsync(async db =>
+        {
+            KpiSeeder.Seed(db);
+            var accountantId = await db.Users
+                .Where(user => user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["ACCOUNTANT"])
+                .Select(user => user.Id)
+                .SingleAsync();
+            var saleUserId = await db.Users
+                .Where(user => user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["SALE"])
+                .Select(user => user.Id)
+                .SingleAsync();
+            var customer = new Customer { Type = CustomerType.Individual, Name = "KPI Receivable Customer", SourceCode = "referral" };
+            db.Customers.Add(customer);
+            await db.SaveChangesAsync();
+            var contract = new Contract
+            {
+                ContractNumber = $"HD-KPI-AR-{Guid.NewGuid():N}"[..30],
+                CustomerId = customer.Id,
+                Direction = ContractDirection.Upstream,
+                Type = ContractType.Design,
+                Status = ContractStatus.InProgress,
+                Value = 100_000_000m,
+            };
+            db.Contracts.Add(contract);
+            await db.SaveChangesAsync();
+            db.ContractPaymentMilestones.AddRange(
+                new ContractPaymentMilestone
+                {
+                    ContractId = contract.Id,
+                    Order = 1,
+                    Name = "Paid on time",
+                    PercentValue = 50m,
+                    DueDate = new DateTime(2026, 8, 15),
+                    ActualPaymentDate = new DateTime(2026, 8, 15),
+                    ResponsibleAccountantUserId = accountantId,
+                    Status = PaymentMilestoneStatus.Paid,
+                },
+                new ContractPaymentMilestone
+                {
+                    ContractId = contract.Id,
+                    Order = 2,
+                    Name = "Overdue unpaid",
+                    PercentValue = 40m,
+                    DueDate = new DateTime(2026, 8, 20),
+                    ResponsibleAccountantUserId = accountantId,
+                    Status = PaymentMilestoneStatus.Requested,
+                },
+                new ContractPaymentMilestone
+                {
+                    ContractId = contract.Id,
+                    Order = 3,
+                    Name = "Different owner",
+                    PercentValue = 10m,
+                    DueDate = new DateTime(2026, 8, 25),
+                    ActualPaymentDate = new DateTime(2026, 8, 25),
+                    ResponsibleAccountantUserId = saleUserId,
+                    Status = PaymentMilestoneStatus.Paid,
+                });
+            await db.SaveChangesAsync();
+            return accountantId;
+        });
+
+        using var response = await SendWithIdempotencyAsync(
+            HttpMethod.Post,
+            "/api/kpi/calculate",
+            new { year = 2026, month = 8, userId = accountantUserId });
+        response.EnsureSuccessStatusCode();
+        var dashboard = await ReadJsonAsync(response);
+        var collection = dashboard.GetProperty("scores").EnumerateArray()
+            .Single(item => item.GetProperty("code").GetString() == "ACCOUNTING_COLLECTION");
+        collection.GetProperty("status").GetString().Should().Be("Available");
+        collection.GetProperty("numerator").GetInt32().Should().Be(1);
+        collection.GetProperty("denominator").GetInt32().Should().Be(2);
+        collection.GetProperty("score").GetDecimal().Should().Be(50m);
+    }
+
     private async Task<int> SeedSalesDataAsync()
     {
         return await WithDbAsync(async db =>

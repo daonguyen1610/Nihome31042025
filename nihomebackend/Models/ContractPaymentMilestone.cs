@@ -32,12 +32,29 @@ public class ContractPaymentMilestone
     /// <summary>User-confirmed date on which this milestone was paid.</summary>
     public DateTime? ActualPaymentDate { get; set; }
 
+    public int? ResponsibleAccountantUserId { get; set; }
+    public ApplicationUser? ResponsibleAccountant { get; set; }
+    public DateTime? RequestedAt { get; set; }
+
     public PaymentMilestoneStatus Status { get; set; } = PaymentMilestoneStatus.Pending;
 
     public string? Note { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+}
+
+public class ContractPaymentMilestoneEvent
+{
+    public long Id { get; set; }
+    public int ContractPaymentMilestoneId { get; set; }
+    public ContractPaymentMilestone Milestone { get; set; } = null!;
+    public PaymentMilestoneStatus FromStatus { get; set; }
+    public PaymentMilestoneStatus ToStatus { get; set; }
+    public DateTime ChangedAt { get; set; } = DateTime.UtcNow;
+    public int ChangedByUserId { get; set; }
+    public ApplicationUser ChangedByUser { get; set; } = null!;
+    public string? Note { get; set; }
 }
 
 public enum PaymentMilestoneStatus

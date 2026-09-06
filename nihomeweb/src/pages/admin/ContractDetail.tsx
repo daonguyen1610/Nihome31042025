@@ -69,6 +69,7 @@ import {
   type CustomerResponse,
   type ContractTimelineEvent,
   type PaymentMilestoneStatus,
+  type KpiUserOptionResponse,
   type UpsertContractRequest,
   type UpsertContractAppendixRequest,
 } from "@/services/adminApi";
@@ -1584,7 +1585,13 @@ const ContractDetail = () => {
   const [tab, setTab] = useState<TabId>("info");
   const [transitionBusy, setTransitionBusy] = useState<ContractStatus | null>(null);
   const [busyMilestoneId, setBusyMilestoneId] = useState<number | null>(null);
-  const [paidDateDraft, setPaidDateDraft] = useState<{ milestoneId: number; value: string } | null>(null);
+  const [milestoneActionDraft, setMilestoneActionDraft] = useState<{
+    milestoneId: number;
+    status: "Requested" | "Paid";
+    value: string;
+    accountantUserId: number | null;
+  } | null>(null);
+  const [accountants, setAccountants] = useState<KpiUserOptionResponse[]>([]);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<ContractEditForm | null>(null);
@@ -1632,6 +1639,10 @@ const ContractDetail = () => {
       setAttachments(atts.data);
       setTimeline(tl.data);
       setClassification(options.data);
+      try {
+        const eligible = await adminApi.listKpiEligibleUsers();
+        setAccountants(eligible.data.filter((user) => user.positionCode === "PROJECT_ACCOUNTING"));
+      } catch { /* milestone actions remain server-protected */ }
     } catch (err) {
       setLoadError(getErrorMessage(err) ?? String(err));
     } finally {
@@ -1703,9 +1714,19 @@ const ContractDetail = () => {
   const handleMilestoneStatus = useCallback(
     async (milestoneId: number, nextStatus: PaymentMilestoneStatus) => {
       if (!contract) return;
+      if (nextStatus === "Requested") {
+        const milestone = contract.paymentMilestones.find((item) => item.id === milestoneId);
+        setMilestoneActionDraft({
+          milestoneId,
+          status: "Requested",
+          value: "",
+          accountantUserId: milestone?.responsibleAccountantUserId ?? null,
+        });
+        return;
+      }
       setBusyMilestoneId(milestoneId);
       try {
-        await adminApi.updateMilestoneStatus(contract.id, milestoneId, nextStatus, null, contract.rowVersion);
+        await adminApi.updateMilestoneStatus(contract.id, milestoneId, nextStatus, null, null, null, contract.rowVersion);
         await refreshContract();
       } catch (err) {
         toast({ variant: "destructive", title: getErrorMessage(err) ?? String(err) });
@@ -1718,28 +1739,37 @@ const ContractDetail = () => {
   );
 
   const openPaidDateDialog = useCallback((milestoneId: number, actualPaymentDate?: string | null) => {
-    setPaidDateDraft({
+    const milestone = contract?.paymentMilestones.find((item) => item.id === milestoneId);
+    setMilestoneActionDraft({
       milestoneId,
+      status: "Paid",
       value: toIsoDate(actualPaymentDate) || getLocalIsoDate(),
+      accountantUserId: milestone?.responsibleAccountantUserId ?? null,
     });
-  }, []);
+  }, [contract]);
 
   const confirmPaidDate = useCallback(async () => {
-    if (!contract || !paidDateDraft) return;
-    if (!paidDateDraft.value) {
+    if (!contract || !milestoneActionDraft) return;
+    if (!milestoneActionDraft.accountantUserId) {
+      toast({ variant: "destructive", title: t("contracts.milestoneAccountantRequired") });
+      return;
+    }
+    if (milestoneActionDraft.status === "Paid" && !milestoneActionDraft.value) {
       toast({ variant: "destructive", title: t("contracts.milestoneActualPaymentDateRequired") });
       return;
     }
-    setBusyMilestoneId(paidDateDraft.milestoneId);
+    setBusyMilestoneId(milestoneActionDraft.milestoneId);
     try {
       await adminApi.updateMilestoneStatus(
         contract.id,
-        paidDateDraft.milestoneId,
-        "Paid",
-        toIsoTimestamp(paidDateDraft.value),
+        milestoneActionDraft.milestoneId,
+        milestoneActionDraft.status,
+        milestoneActionDraft.status === "Paid" ? toIsoTimestamp(milestoneActionDraft.value) : null,
+        milestoneActionDraft.accountantUserId,
+        null,
         contract.rowVersion,
       );
-      setPaidDateDraft(null);
+      setMilestoneActionDraft(null);
       await refreshContract();
     } catch (err) {
       toast({ variant: "destructive", title: getErrorMessage(err) ?? String(err) });
@@ -1747,7 +1777,7 @@ const ContractDetail = () => {
     } finally {
       setBusyMilestoneId(null);
     }
-  }, [contract, paidDateDraft, refreshContract, t, toast]);
+  }, [contract, milestoneActionDraft, refreshContract, t, toast]);
 
   const beginEdit = useCallback(async () => {
     if (!contract) return;
@@ -1994,27 +2024,45 @@ const ContractDetail = () => {
           </TabsContent>
         </Tabs>
 
-        <Dialog open={paidDateDraft !== null} onOpenChange={(open) => (!open ? setPaidDateDraft(null) : null)}>
+        <Dialog open={milestoneActionDraft !== null} onOpenChange={(open) => (!open ? setMilestoneActionDraft(null) : null)}>
           <DialogContent className="w-[95vw] max-w-md">
             <DialogHeader>
-              <DialogTitle>{t("contracts.schedule.paidDateDialogTitle")}</DialogTitle>
+              <DialogTitle>{milestoneActionDraft?.status === "Paid" ? t("contracts.schedule.paidDateDialogTitle") : t("contracts.schedule.requestDialogTitle")}</DialogTitle>
               <DialogDescription>{t("contracts.schedule.paidDateDialogDescription")}</DialogDescription>
             </DialogHeader>
-            <div className="space-y-1.5 py-2">
+            <div className="space-y-3 py-2">
+              <div className="space-y-1.5">
+                <Label>{t("contracts.milestone.responsibleAccountant")} *</Label>
+                <Select
+                  value={milestoneActionDraft?.accountantUserId ? String(milestoneActionDraft.accountantUserId) : ""}
+                  onValueChange={(value) => setMilestoneActionDraft((current) => current
+                    ? { ...current, accountantUserId: Number(value) }
+                    : current)}
+                >
+                  <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                  <SelectContent>
+                    {accountants.map((accountant) => (
+                      <SelectItem key={accountant.userId} value={String(accountant.userId)}>{accountant.userName}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {milestoneActionDraft?.status === "Paid" && <div className="space-y-1.5">
               <Label htmlFor="contract-actual-payment-date">
                 {t("contracts.milestone.actualPaymentDate")} *
               </Label>
               <Input
                 id="contract-actual-payment-date"
                 type="date"
-                value={paidDateDraft?.value ?? ""}
-                onChange={(event) => setPaidDateDraft((current) => current
+                value={milestoneActionDraft?.value ?? ""}
+                onChange={(event) => setMilestoneActionDraft((current) => current
                   ? { ...current, value: event.target.value }
                   : current)}
               />
+              </div>}
             </div>
             <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
-              <Button type="button" variant="outline" onClick={() => setPaidDateDraft(null)}>
+              <Button type="button" variant="outline" onClick={() => setMilestoneActionDraft(null)}>
                 {t("common.cancel")}
               </Button>
               <Button

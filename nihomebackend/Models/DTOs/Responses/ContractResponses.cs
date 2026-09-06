@@ -84,6 +84,9 @@ public class ContractPaymentMilestoneResponse
     public decimal Amount { get; set; }
     public DateTime? DueDate { get; set; }
     public DateTime? ActualPaymentDate { get; set; }
+    public int? ResponsibleAccountantUserId { get; set; }
+    public string? ResponsibleAccountantName { get; set; }
+    public DateTime? RequestedAt { get; set; }
     public PaymentMilestoneStatus Status { get; set; }
     public string? Note { get; set; }
     public DateTime CreatedAt { get; set; }
