@@ -75,8 +75,8 @@ public sealed class KpiCalculationBackgroundService(
         return nextUtc - utcNow.UtcDateTime;
     }
 
-    private static bool HasKpiPosition(string roleCode) => roleCode is
+    internal static bool HasKpiPosition(string roleCode) => roleCode is
         "SALE" or "SALES_MANAGER" or
         "DESIGN" or "DESIGN_LEAD" or "ARCHITECT" or "MEP_ENGINEER" or "STRUCT_ENGINEER" or
-        "PM" or "QS" or "ACCOUNTANT";
+        "PM" or "QS" or "PROCUREMENT" or "ACCOUNTANT";
 }

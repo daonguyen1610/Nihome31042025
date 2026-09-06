@@ -72,7 +72,7 @@ public class RbacSeedDataTests
         "DESIGN", "DESIGN_LEAD",
         "ARCHITECT", "MEP_ENGINEER", "STRUCT_ENGINEER",
         "PM", "LEGAL_OFFICER",
-        "QS", "ACCOUNTANT", "WAREHOUSE", "BGD",
+        "QS", "PROCUREMENT", "ACCOUNTANT", "WAREHOUSE", "BGD",
     };
 
     [Theory]
