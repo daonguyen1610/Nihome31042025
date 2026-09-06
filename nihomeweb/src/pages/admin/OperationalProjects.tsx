@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, BriefcaseBusiness, CalendarClock, ExternalLink, FileText, Pencil, Plus, RefreshCcw, Search, ShoppingCart, Trash2 } from "lucide-react";
+import { ArrowLeft, BriefcaseBusiness, CalendarClock, ExternalLink, FileText, Pencil, Plus, RefreshCcw, RotateCcw, Search, ShoppingCart, Trash2, Users } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
 import ProjectDocumentsPanel from "@/pages/admin/ProjectDocumentsPanel";
+import { OperationalProjectTeamPanel } from "@/pages/admin/design/DesignProjectTeamTab";
 import { PageError, PageLoading } from "@/components/PageState";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useToast } from "@/hooks/use-toast";
 import { extractApiError } from "@/lib/apiError";
+import { newIdempotencyKey } from "@/lib/api";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { useI18n } from "@/lib/i18n";
 import {
@@ -93,6 +95,10 @@ const OperationalProjects = () => {
   const [deleteImpactLoading, setDeleteImpactLoading] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [reopenOpen, setReopenOpen] = useState(false);
+  const [reopenReason, setReopenReason] = useState("");
+  const [reopenError, setReopenError] = useState<string | null>(null);
+  const [reopening, setReopening] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -246,6 +252,30 @@ const OperationalProjects = () => {
     navigate("/admin/operational-projects");
   };
 
+  const reopen = async () => {
+    if (!detail) return;
+    if (reopenReason.trim().length < 3) {
+      setReopenError(t("operationalProjects.reopen.validation"));
+      return;
+    }
+    setReopening(true);
+    setReopenError(null);
+    try {
+      const response = await adminApi.reopenOperationalProject(detail.id, {
+        rowVersion: detail.rowVersion,
+        reason: reopenReason.trim(),
+      }, newIdempotencyKey());
+      setDetail(response.data);
+      setReopenOpen(false);
+      setReopenReason("");
+      toast({ title: t("operationalProjects.reopen.success") });
+    } catch (reason) {
+      setReopenError(extractApiError(reason));
+    } finally {
+      setReopening(false);
+    }
+  };
+
   const dateFormat = useMemo(() => new Intl.DateTimeFormat(lang), [lang]);
   const currencyFormat = useMemo(() => new Intl.NumberFormat(lang, {
     style: "currency",
@@ -270,6 +300,11 @@ const OperationalProjects = () => {
               <p className="mt-1 text-sm text-muted-foreground">{detail.customerName}</p>
             </div>
             {canManage && <div className="flex gap-2">
+              {detail.status === "Completed" && (
+                <Button variant="outline" onClick={() => { setReopenReason(""); setReopenError(null); setReopenOpen(true); }}>
+                  <RotateCcw className="mr-2 h-4 w-4" />{t("operationalProjects.reopen.action")}
+                </Button>
+              )}
               <Button variant="outline" onClick={() => openEdit(detail)}><Pencil className="mr-2 h-4 w-4" />{t("common.edit")}</Button>
               <Button variant="destructive" onClick={() => void openDelete()}><Trash2 className="mr-2 h-4 w-4" />{t("common.delete")}</Button>
             </div>}
@@ -284,7 +319,18 @@ const OperationalProjects = () => {
 
           {detail.note && <section className="rounded-lg border bg-card p-4"><h2 className="mb-2 font-medium">{t("operationalProjects.field.note")}</h2><p className="whitespace-pre-wrap text-sm text-muted-foreground">{detail.note}</p></section>}
 
-          <Accordion type="multiple" defaultValue={["documents", "timeline", "opportunities", "quotes", "contracts"]} className="space-y-3">
+          <Accordion type="multiple" defaultValue={["team", "documents", "timeline", "opportunities", "quotes", "contracts"]} className="space-y-3">
+            <AccordionItem value="team" className="rounded-lg border bg-card px-4">
+              <AccordionTrigger className="py-4 hover:no-underline">
+                <div className="flex items-center gap-3">
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-semibold">{t("designProjects.tabs.team")}</span>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="pb-4">
+                <OperationalProjectTeamPanel operationalProjectId={detail.id} />
+              </AccordionContent>
+            </AccordionItem>
             <AccordionItem id="project-documents" value="documents" className="scroll-mt-4 rounded-lg border bg-card px-4">
               <AccordionTrigger className="py-4 hover:no-underline" data-testid="project-documents-trigger">
                 <div className="flex items-center gap-3">
@@ -735,6 +781,29 @@ const OperationalProjects = () => {
         onConfirm={remove}
         onCompleted={completeDelete}
       />
+
+      <Dialog open={reopenOpen} onOpenChange={(open) => { if (!reopening) setReopenOpen(open); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{t("operationalProjects.reopen.title")}</DialogTitle>
+            <DialogDescription>{t("operationalProjects.reopen.description")}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="project-reopen-reason">{t("operationalProjects.reopen.reason")}</Label>
+            <Textarea
+              id="project-reopen-reason"
+              maxLength={1000}
+              value={reopenReason}
+              onChange={(event) => setReopenReason(event.target.value)}
+            />
+            {reopenError && <p role="alert" className="text-sm text-destructive">{reopenError}</p>}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReopenOpen(false)} disabled={reopening}>{t("common.cancel")}</Button>
+            <Button onClick={() => void reopen()} disabled={reopening}>{reopening ? t("common.saving") : t("operationalProjects.reopen.action")}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 };

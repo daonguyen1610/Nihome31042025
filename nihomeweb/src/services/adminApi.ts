@@ -1031,6 +1031,11 @@ export interface UpdateOperationalProjectRequest extends CreateOperationalProjec
   rowVersion?: string;
 }
 
+export interface ReopenOperationalProjectRequest {
+  rowVersion: string;
+  reason: string;
+}
+
 export interface ProjectDocumentCategoryResponse {
   value: string;
   folderPath: string;
@@ -5078,6 +5083,13 @@ export const adminApi = {
     api.post<OperationalProjectResponse>("/operational-projects", body),
   updateOperationalProject: (id: number, body: UpdateOperationalProjectRequest) =>
     api.put<OperationalProjectResponse>(`/operational-projects/${id}`, body),
+  reopenOperationalProject: (id: number, body: ReopenOperationalProjectRequest, idempotencyKey: string) =>
+    api.post<OperationalProjectResponse>(`/operational-projects/${id}/reopen`, body, {
+      headers: {
+        ...withIfMatch(body.rowVersion).headers,
+        ...withIdempotencyKey(idempotencyKey).headers,
+      },
+    }),
   getOperationalProjectDeletionImpact: (id: number) =>
     api.get<DeletionImpactResponse>(`/operational-projects/${id}/deletion-impact`),
   deleteOperationalProject: (id: number, body: ConfirmDeletionRequest) =>

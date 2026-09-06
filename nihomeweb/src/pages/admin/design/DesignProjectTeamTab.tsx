@@ -13,7 +13,6 @@ import { extractApiError } from "@/lib/apiError";
 import { useI18n } from "@/lib/i18n";
 import {
   adminApi,
-  type DesignProjectResponse,
   type OperationalProjectAssignmentResponse,
   type OperationalProjectMemberResponse,
   type OperationalProjectTeamHistoryResponse,
@@ -25,7 +24,7 @@ import {
   type UpsertOperationalProjectMemberRequest,
 } from "@/services/adminApi";
 
-interface Props { project: DesignProjectResponse }
+interface Props { operationalProjectId?: number | null }
 type MemberDialogMode = "add" | "edit" | "end";
 type AssignmentDialogMode = "add" | "edit";
 type TerminalAssignmentStatus = "Completed" | "Cancelled";
@@ -45,7 +44,7 @@ const assignmentBadge: Record<ProjectAssignmentStatus, string> = {
   Cancelled: "border-rose-200 bg-rose-50 text-rose-700",
 };
 
-export const DesignProjectTeamTab = ({ project }: Props) => {
+export const OperationalProjectTeamPanel = ({ operationalProjectId }: Props) => {
   const { t, lang } = useI18n();
   const { toast } = useToast();
   const [team, setTeam] = useState<OperationalProjectTeamResponse | null>(null);
@@ -64,8 +63,6 @@ export const DesignProjectTeamTab = ({ project }: Props) => {
   const [saving, setSaving] = useState(false);
   const memberIdempotencyKey = useRef("");
   const assignmentIdempotencyKey = useRef("");
-  const operationalProjectId = project.operationalProjectId;
-
   const load = useCallback(async () => {
     if (!operationalProjectId) { setLoading(false); setTeam(null); return; }
     setLoading(true);
