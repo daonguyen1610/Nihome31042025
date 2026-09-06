@@ -31,19 +31,6 @@ The prior Next.js and Materialize starter sources are no longer present. New fea
 - `src/index.css`: global Tailwind layers, tokens, and utilities
 - `tailwind.config.ts`: Tailwind theme extension
 
-## Agent Workflow
-
-Before non-trivial work, read:
-
-1. `AGENTS.md`
-2. `docs/ai/working-procedure.md`
-3. `docs/ai/frontend-playbook.md`
-4. `docs/ai/project-brief.md`
-5. `docs/ai/memory-bank/README.md`
-6. the relevant memory-bank files
-
-Repo-facing AI docs stay in English so Claude, Codex, and Vercel skill guidance share the same source of truth.
-
 ## Commands
 
 ```bash
