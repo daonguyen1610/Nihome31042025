@@ -437,7 +437,7 @@ const AdminPunchList = () => {
       try {
         const { data } = await adminApi.getOperationalProjectTeam(project.operationalProjectId);
         setVerifyCandidates(data.members
-          .filter((member) => member.isActive && member.roles.some((role) => role.isActive && DESIGN_TEAM_ROLES.has(role.roleCode)))
+          .filter((member) => member.isActive && member.roles.some((role) => !role.endedAt && DESIGN_TEAM_ROLES.has(role.roleCode)))
           .map((member) => ({ id: member.userId, fullName: member.userName })));
       } catch { /* server validation remains authoritative */ }
     }
@@ -1045,7 +1045,7 @@ const AdminPunchList = () => {
                           {t("punch.action.verify")}
                         </Button>
                       )}
-                      {canManage && (detail.status === "Fixed" || detail.status === "Verified" || detail.status === "InProgress") && detail.status !== "Cancelled" && (
+                      {canManage && (detail.status === "Fixed" || detail.status === "Verified" || detail.status === "InProgress") && (
                         <Button variant="outline" size="sm" onClick={() => setConfirmAction({ kind: "reopen", row: detail })} data-testid="punch-reopen">
                           <RotateCcw className="mr-2 h-4 w-4" />
                           {t("punch.action.reopen")}
