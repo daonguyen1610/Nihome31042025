@@ -163,6 +163,7 @@ public class ContractService(
 
         var milestones = await db.ContractPaymentMilestones
             .AsNoTracking()
+            .Include(m => m.ResponsibleAccountant)
             .Where(m => m.ContractId == id)
             .OrderBy(m => m.Order)
             .ToListAsync(ct);
@@ -202,6 +203,7 @@ public class ContractService(
         if (req.PaymentMilestones is not null)
         {
             ValidatePaymentMilestones(req.PaymentMilestones);
+            await ValidateMilestoneAccountantsAsync(req.PaymentMilestones, ct);
         }
 
         await using var transaction = db.Database.IsRelational()
@@ -297,6 +299,7 @@ public class ContractService(
         if (req.PaymentMilestones is not null)
         {
             ValidatePaymentMilestones(req.PaymentMilestones);
+            await ValidateMilestoneAccountantsAsync(req.PaymentMilestones, ct);
         }
 
         await closureInvariant.EnsureContractMutationPreservesWonAsync(
@@ -537,7 +540,8 @@ public class ContractService(
 
     public async Task<ContractResponse?> UpdateMilestoneStatusAsync(
         int contractId, int milestoneId, PaymentMilestoneStatus newStatus, DateTime? actualPaymentDate,
-        int callerUserId, bool canSeeAll, CancellationToken ct = default, string? rowVersion = null)
+        int? responsibleAccountantUserId, string? note, int callerUserId, bool canSeeAll,
+        CancellationToken ct = default, string? rowVersion = null)
     {
         var contract = await db.Contracts.FindAsync(new object?[] { contractId }, ct);
         if (contract == null) return null;
@@ -551,13 +555,34 @@ public class ContractService(
 
         ValidateActualPaymentDate(newStatus, actualPaymentDate);
 
+        var accountantUserId = responsibleAccountantUserId ?? milestone.ResponsibleAccountantUserId;
+        if (newStatus != PaymentMilestoneStatus.Pending && !accountantUserId.HasValue)
+            throw new ContractValidationException("Phải gán kế toán phụ trách trước khi yêu cầu hoặc ghi nhận thanh toán.");
+        if (accountantUserId.HasValue && !await db.Users.AsNoTracking().AnyAsync(user =>
+            user.Id == accountantUserId && user.IsActive && user.RoleEntity != null &&
+            user.RoleEntity.Code == "ACCOUNTANT", ct))
+            throw new ContractValidationException("Kế toán phụ trách không tồn tại hoặc không còn hoạt động.");
+
+        var previousStatus = milestone.Status;
         milestone.Status = newStatus;
+        milestone.ResponsibleAccountantUserId = accountantUserId;
+        milestone.RequestedAt = newStatus == PaymentMilestoneStatus.Requested
+            ? milestone.RequestedAt ?? DateTime.UtcNow
+            : milestone.RequestedAt;
         milestone.ActualPaymentDate = newStatus == PaymentMilestoneStatus.Paid
             ? actualPaymentDate!.Value.Date
             : null;
         milestone.UpdatedAt = DateTime.UtcNow;
         contract.UpdatedAt = DateTime.UtcNow;
         contract.UpdatedByUserId = callerUserId;
+        db.ContractPaymentMilestoneEvents.Add(new ContractPaymentMilestoneEvent
+        {
+            ContractPaymentMilestoneId = milestone.Id,
+            FromStatus = previousStatus,
+            ToStatus = newStatus,
+            ChangedByUserId = callerUserId,
+            Note = string.IsNullOrWhiteSpace(note) ? null : note.Trim(),
+        });
         await CrmConcurrency.SaveChangesAsync(db, ct);
         logger.LogInformation(
             "Milestone {Milestone} of contract {Contract} → {Status}",
@@ -911,6 +936,11 @@ public class ContractService(
         foreach (var m in milestones)
         {
             ValidateActualPaymentDate(m.Status, m.ActualPaymentDate);
+            if (m.Status != PaymentMilestoneStatus.Pending && !m.ResponsibleAccountantUserId.HasValue)
+            {
+                throw new ContractValidationException(
+                    "Phải gán kế toán phụ trách cho mốc đã yêu cầu hoặc đã thanh toán.");
+            }
             if (!orderSet.Add(m.Order))
             {
                 throw new ContractValidationException(
@@ -926,6 +956,26 @@ public class ContractService(
         {
             throw new ContractValidationException(
                 $"Payment milestones must sum to 100% (got {sum}).");
+        }
+    }
+
+    private async Task ValidateMilestoneAccountantsAsync(
+        IEnumerable<ContractPaymentMilestoneRequest> milestones,
+        CancellationToken ct)
+    {
+        var accountantIds = milestones
+            .Where(item => item.ResponsibleAccountantUserId.HasValue)
+            .Select(item => item.ResponsibleAccountantUserId!.Value)
+            .Distinct()
+            .ToList();
+        if (accountantIds.Count == 0) return;
+        var validCount = await db.Users.AsNoTracking().CountAsync(user =>
+            accountantIds.Contains(user.Id) && user.IsActive &&
+            user.RoleEntity != null && user.RoleEntity.Code == "ACCOUNTANT", ct);
+        if (validCount != accountantIds.Count)
+        {
+            throw new ContractValidationException(
+                "Một hoặc nhiều kế toán phụ trách không tồn tại hoặc không còn hoạt động.");
         }
     }
 
@@ -968,6 +1018,10 @@ public class ContractService(
                 ActualPaymentDate = m.Status == PaymentMilestoneStatus.Paid
                     ? m.ActualPaymentDate!.Value.Date
                     : null,
+                ResponsibleAccountantUserId = m.ResponsibleAccountantUserId,
+                RequestedAt = m.Status == PaymentMilestoneStatus.Requested
+                    ? m.RequestedAt ?? DateTime.UtcNow
+                    : m.RequestedAt,
                 Status = m.Status,
                 Note = string.IsNullOrWhiteSpace(m.Note) ? null : m.Note.Trim(),
             })
@@ -1052,6 +1106,11 @@ public class ContractService(
                     Amount = Math.Round(entity.Value * m.PercentValue / 100m, 2),
                     DueDate = m.DueDate,
                     ActualPaymentDate = m.ActualPaymentDate,
+                    ResponsibleAccountantUserId = m.ResponsibleAccountantUserId,
+                    ResponsibleAccountantName = m.ResponsibleAccountant != null
+                        ? m.ResponsibleAccountant.FullName ?? m.ResponsibleAccountant.Email
+                        : null,
+                    RequestedAt = m.RequestedAt,
                     Status = m.Status,
                     Note = m.Note,
                     CreatedAt = m.CreatedAt,

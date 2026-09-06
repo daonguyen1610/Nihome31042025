@@ -71,6 +71,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<MaterialRateLine> MaterialRateLines => Set<MaterialRateLine>();
     public DbSet<Contract> Contracts => Set<Contract>();
     public DbSet<ContractPaymentMilestone> ContractPaymentMilestones => Set<ContractPaymentMilestone>();
+    public DbSet<ContractPaymentMilestoneEvent> ContractPaymentMilestoneEvents => Set<ContractPaymentMilestoneEvent>();
     public DbSet<ContractAppendix> ContractAppendices => Set<ContractAppendix>();
     public DbSet<ContractAttachment> ContractAttachments => Set<ContractAttachment>();
     public DbSet<CapabilityDocument> CapabilityDocuments => Set<CapabilityDocument>();
@@ -869,8 +870,31 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .WithMany()
                 .HasForeignKey(m => m.ContractId)
                 .OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(m => m.ResponsibleAccountant)
+                .WithMany()
+                .HasForeignKey(m => m.ResponsibleAccountantUserId)
+                .OnDelete(DeleteBehavior.NoAction);
             b.HasIndex(m => m.ContractId);
             b.HasIndex(m => new { m.ContractId, m.Order }).IsUnique();
+            b.HasIndex(m => new { m.ResponsibleAccountantUserId, m.DueDate });
+        });
+
+        modelBuilder.Entity<ContractPaymentMilestoneEvent>(b =>
+        {
+            b.ToTable("contract_payment_milestone_events");
+            b.HasKey(item => item.Id);
+            b.Property(item => item.FromStatus).HasConversion<string>().HasMaxLength(20);
+            b.Property(item => item.ToStatus).HasConversion<string>().HasMaxLength(20);
+            b.Property(item => item.Note).HasMaxLength(500);
+            b.HasOne(item => item.Milestone)
+                .WithMany()
+                .HasForeignKey(item => item.ContractPaymentMilestoneId)
+                .OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(item => item.ChangedByUser)
+                .WithMany()
+                .HasForeignKey(item => item.ChangedByUserId)
+                .OnDelete(DeleteBehavior.NoAction);
+            b.HasIndex(item => new { item.ContractPaymentMilestoneId, item.ChangedAt });
         });
 
         modelBuilder.Entity<ContractAppendix>(b =>

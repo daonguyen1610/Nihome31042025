@@ -48,7 +48,8 @@ public interface IContractService
     /// the contract or milestone is not found / not owned.</summary>
     Task<ContractResponse?> UpdateMilestoneStatusAsync(
         int contractId, int milestoneId, PaymentMilestoneStatus newStatus, DateTime? actualPaymentDate,
-        int callerUserId, bool canSeeAll, CancellationToken ct = default, string? rowVersion = null);
+        int? responsibleAccountantUserId, string? note, int callerUserId, bool canSeeAll,
+        CancellationToken ct = default, string? rowVersion = null);
 }
 
 /// <summary>Thrown when the caller submits a contract number that already

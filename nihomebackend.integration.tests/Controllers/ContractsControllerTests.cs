@@ -694,6 +694,10 @@ public class ContractsControllerTests : IntegrationTestBase
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
         var customerId = await CreateCustomerAsync();
+        var accountantUserId = await WithDbAsync(db => db.Users
+            .Where(user => user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["ACCOUNTANT"])
+            .Select(user => user.Id)
+            .SingleAsync());
 
         var body = new
         {
@@ -720,12 +724,24 @@ public class ContractsControllerTests : IntegrationTestBase
 
         var paid = await Client.PatchAsJsonAsync(
             $"/api/contracts/{contractId}/milestones/{milestoneId}/status",
-            new { status = "Paid", actualPaymentDate = "2026-08-30T15:45:00Z" });
+            new
+            {
+                status = "Paid",
+                actualPaymentDate = "2026-08-30T15:45:00Z",
+                responsibleAccountantUserId = accountantUserId,
+                note = "Payment confirmed",
+            });
         paid.StatusCode.Should().Be(HttpStatusCode.OK);
         var paidMilestone = (await ReadJsonAsync(paid)).GetProperty("paymentMilestones")[0];
         paidMilestone.GetProperty("status").GetString().Should().Be("Paid");
         paidMilestone.GetProperty("actualPaymentDate").GetDateTime()
             .Should().Be(new DateTime(2026, 8, 30));
+        paidMilestone.GetProperty("responsibleAccountantUserId").GetInt32().Should().Be(accountantUserId);
+        var paymentEvent = await WithDbAsync(db => db.ContractPaymentMilestoneEvents.AsNoTracking()
+            .SingleAsync(item => item.ContractPaymentMilestoneId == milestoneId));
+        paymentEvent.FromStatus.Should().Be(PaymentMilestoneStatus.Pending);
+        paymentEvent.ToStatus.Should().Be(PaymentMilestoneStatus.Paid);
+        paymentEvent.Note.Should().Be("Payment confirmed");
 
         var pending = await Client.PatchAsJsonAsync(
             $"/api/contracts/{contractId}/milestones/{milestoneId}/status",

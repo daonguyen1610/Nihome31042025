@@ -348,6 +348,8 @@ public class ContractsController(
                 milestoneId,
                 req.Status,
                 req.ActualPaymentDate,
+                req.ResponsibleAccountantUserId,
+                req.Note,
                 userId.Value,
                 canSeeAll,
                 ct,
