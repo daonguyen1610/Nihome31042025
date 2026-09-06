@@ -59,6 +59,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<CustomerContact> CustomerContacts => Set<CustomerContact>();
     public DbSet<CustomerActivity> CustomerActivities => Set<CustomerActivity>();
     public DbSet<CustomerDocument> CustomerDocuments => Set<CustomerDocument>();
+    public DbSet<VendorDocumentUpload> VendorDocumentUploads => Set<VendorDocumentUpload>();
     public DbSet<Opportunity> Opportunities => Set<Opportunity>();
     public DbSet<OpportunityActivity> OpportunityActivities => Set<OpportunityActivity>();
     public DbSet<Quote> Quotes => Set<Quote>();
@@ -596,12 +597,31 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.Property(v => v.CapabilityFileUrl).HasMaxLength(1000);
             b.Property(v => v.DriveFolder).HasMaxLength(1000);
             b.HasIndex(v => v.VendorCode).IsUnique();
+            b.HasIndex(v => v.CompanyName).IsUnique();
             b.HasIndex(v => v.VendorType);
             b.HasIndex(v => v.IsActive);
             b.HasIndex(v => v.CreatedAt);
             b.HasOne(v => v.CreatedBy)
                 .WithMany()
                 .HasForeignKey(v => v.CreatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(v => v.UpdatedBy)
+                .WithMany()
+                .HasForeignKey(v => v.UpdatedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+            b.Property(v => v.RowVersion).IsRowVersion();
+        });
+
+        modelBuilder.Entity<VendorDocumentUpload>(b =>
+        {
+            b.ToTable("vendor_document_uploads");
+            b.HasKey(item => item.Token);
+            b.Property(item => item.Path).HasMaxLength(1000).IsRequired();
+            b.HasIndex(item => item.Path).IsUnique();
+            b.HasIndex(item => item.VendorId).IsUnique().HasFilter("[VendorId] IS NOT NULL");
+            b.HasOne(item => item.Vendor).WithMany().HasForeignKey(item => item.VendorId)
+                .OnDelete(DeleteBehavior.Cascade);
+            b.HasOne<ApplicationUser>().WithMany().HasForeignKey(item => item.CreatedByUserId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
 

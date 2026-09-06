@@ -8,6 +8,7 @@ using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Models.DTOs.Responses;
 using NihomeBackend.Services;
 using NihomeBackend.Services.Audit;
+using NihomeBackend.Services.HardDelete;
 
 namespace NihomeBackend.Controllers;
 
@@ -18,7 +19,8 @@ namespace NihomeBackend.Controllers;
 public class VendorsController(
     IVendorService service,
     IBusinessDocumentStorageService documentStorage,
-    IAuditLogger audit) : ControllerBase
+    IAuditLogger audit,
+    IBusinessRootHardDeleteService hardDelete) : ControllerBase
 {
     [HttpGet]
     [RequirePermission("proc.vendors", "view")]
@@ -37,15 +39,19 @@ public class VendorsController(
     [RequirePermission("proc.vendors", "view")]
     public async Task<ActionResult<VendorResponse>> Get(int id, CancellationToken ct)
     {
-        var vendor = await service.GetAsync(id, ct);
-        return vendor is null ? NotFound() : Ok(vendor);
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        var vendor = await service.GetAsync(id, userId.Value, ct);
+        if (vendor is null) return NotFound();
+        CrmConcurrency.SetResponseEntityTag(Response, vendor.RowVersion);
+        return Ok(vendor);
     }
 
     [HttpGet("{id:int}/capability-file/content")]
     [RequirePermission("proc.vendors", "view")]
     public async Task<IActionResult> GetCapabilityFile(int id, CancellationToken ct)
     {
-        var vendor = await service.GetAsync(id, ct);
+        var vendor = await service.GetAsync(id, null, ct);
         var content = GetReferencedContent(vendor?.CapabilityFileUrl, BusinessDocumentArea.Vendors);
         return content is null
             ? NotFound()
@@ -78,6 +84,7 @@ public class VendorsController(
                 Message = $"Vendor #{vendor.Id} '{vendor.CompanyName}' created.",
                 NewValue = vendor,
             });
+            CrmConcurrency.SetResponseEntityTag(Response, vendor.RowVersion);
             return CreatedAtAction(nameof(Get), new { id = vendor.Id }, vendor);
         }
         catch (VendorDuplicateException ex)
@@ -99,6 +106,7 @@ public class VendorsController(
 
         try
         {
+            request.RowVersion = CrmConcurrency.ResolveRequestToken(Request, request.RowVersion);
             var vendor = await service.UpdateAsync(id, request, userId.Value, ct);
             if (vendor is null) return NotFound();
 
@@ -110,6 +118,7 @@ public class VendorsController(
                 Message = $"Vendor #{vendor.Id} updated.",
                 NewValue = vendor,
             });
+            CrmConcurrency.SetResponseEntityTag(Response, vendor.RowVersion);
             return Ok(vendor);
         }
         catch (VendorDuplicateException ex)
@@ -120,32 +129,59 @@ public class VendorsController(
         {
             return BadRequest(new { message = ex.Message });
         }
+        catch (CrmConcurrencyTokenException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (CrmConcurrencyException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
     }
 
     [HttpDelete("{id:int}")]
     [RequirePermission("proc.vendors", "manage")]
-    public async Task<IActionResult> Delete(int id, CancellationToken ct)
+    public async Task<IActionResult> Delete(int id, [FromBody] ConfirmDeletionRequest request, CancellationToken ct)
     {
-        VendorResponse? vendor;
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
         try
         {
-            vendor = await service.DeleteAsync(id, ct);
-            if (vendor is null) return NotFound();
+            request.RowVersion = CrmConcurrency.ResolveRequestToken(Request, request.RowVersion);
+            var result = await hardDelete.DeleteVendorAsync(id, request, userId.Value, ct);
+            if (result is null) return NotFound();
+            return result.IsComplete ? NoContent() : AcceptedAtAction(
+                nameof(HardDeleteOperationsController.GetStatus), "HardDeleteOperations",
+                new { operationId = result.OperationId }, result);
         }
-        catch (VendorOperationException ex)
+        catch (CrmConcurrencyTokenException ex)
         {
             return BadRequest(new { message = ex.Message });
         }
-
-        audit.Log(new AuditEvent
+        catch (CrmConcurrencyException ex)
         {
-            Action = "vendor.delete",
-            ResourceType = EntityTypes.Vendor,
-            ResourceId = vendor.Id.ToString(),
-            Message = $"Vendor #{vendor.Id} '{vendor.CompanyName}' deleted.",
-            OldValue = vendor,
-        });
-        return NoContent();
+            return Conflict(new { message = ex.Message });
+        }
+        catch (BusinessRootDeleteException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (DeletionPlanChangedException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+        catch (HardDeleteOperationConflictException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+    }
+
+    [HttpGet("{id:int}/deletion-impact")]
+    [RequirePermission("proc.vendors", "manage")]
+    public async Task<ActionResult<DeletionImpactResponse>> GetDeletionImpact(int id, CancellationToken ct)
+    {
+        var impact = await hardDelete.GetVendorImpactAsync(id, ct);
+        return impact is null ? NotFound() : Ok(impact);
     }
 
     private int? GetUserId()

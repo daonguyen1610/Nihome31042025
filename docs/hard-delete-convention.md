@@ -191,8 +191,8 @@ typed confirmation, blocker visibility, and successful UI refresh.
 
 The durable operation, local quarantine, verified Drive deletion, registry, and
 retry foundation is available for domain adoption. Design Project, Operational
-Project, Lead, Customer, Tender, Quote, Opportunity, Contract, Survey, and
-Capability Document use the durable backend flow and shared frontend polling
+Project, Lead, Customer, Tender, Quote, Opportunity, Contract, Survey, Vendor,
+and Capability Document use the durable backend flow and shared frontend polling
 dialog. Owner-scoped resources also enforce scope again during finalization.
 Bulk deletion is disabled on these root pages until a server-side batch
 preview-and-confirm contract is available. Other root pages must still be

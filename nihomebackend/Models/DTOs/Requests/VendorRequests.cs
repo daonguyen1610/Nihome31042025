@@ -39,6 +39,7 @@ public class CreateVendorRequest
 
     [StringLength(1000)]
     public string? CapabilityFileUrl { get; set; }
+    public Guid? CapabilityUploadToken { get; set; }
 
     [StringLength(1000)]
     public string? DriveFolder { get; set; }
@@ -47,4 +48,12 @@ public class CreateVendorRequest
 public class UpdateVendorRequest : CreateVendorRequest
 {
     public bool IsActive { get; set; } = true;
+
+    public string? RowVersion { get; set; }
+}
+
+public sealed class DiscardVendorDocumentRequest
+{
+    [Required]
+    public Guid? ClaimToken { get; set; }
 }

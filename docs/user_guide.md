@@ -564,7 +564,9 @@ Open **Admin > Procurement > Vendors / Subcontractors** or navigate to `/admin/v
 
 Select a company name or the view action to open its detail page. The page shows company, contact, document, active-status, creator, and timestamp information. Set a vendor to inactive when its identity must remain available for historical reporting. Delete is permanent, requires confirmation, and is intended for obsolete, duplicate, or test records whose history is not required.
 
-The current NIH-165 scope does not include file upload, project cooperation history, partner evaluations, bid comparisons, subcontracts, or warehouse transactions. Those capabilities remain planned procurement work.
+At least one valid phone number or email address is required, and vendor codes and company names must be unique. The detail page also shows the last responsible editor, linked Contracts and Operational Projects, Vendor Ratings, and the Vendor change timeline. Capability documents can be uploaded and previewed; cancelling a form discards its unassigned upload, and abandoned unassigned uploads expire automatically after 24 hours.
+
+Before permanent deletion, the system shows an impact preview and requires the exact vendor code. Linked Contracts, Vendor Ratings, Payment Requests, shared files, or unsafe file references block deletion. Use the links in the impact dialog to resolve dependencies, or keep the Vendor inactive when its identity is required for historical reporting. Bid comparison, warehouse transactions, and creation of procurement ratings remain in their dedicated Module 5 workspaces.
 
 | Page | Functions | Estimate |
 |------|-----------|----------|

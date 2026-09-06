@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Loader2, Save } from "lucide-react";
 import AdminDocumentUpload from "@/components/admin/AdminDocumentUpload";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import { useI18n } from "@/lib/i18n";
 import { extractApiError } from "@/lib/apiError";
 import { isManagedDocumentPath } from "@/lib/url";
+import { validateContact } from "@/lib/validation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -45,6 +46,16 @@ export default function VendorForm({ vendor, onSubmit, onCancel }: VendorFormPro
   const [form, setForm] = useState<VendorFormValue>(() => initialValue(vendor));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pendingUpload, setPendingUpload] = useState<{ path: string; token: string } | null>(null);
+  const pendingUploadRef = useRef<{ path: string; token: string } | null>(null);
+  const uploadTokensRef = useRef(new Map<string, string>());
+
+  useEffect(() => () => {
+    if (pendingUploadRef.current) {
+      void adminApi.discardVendorDocument(pendingUploadRef.current.token)
+        .catch((cleanupError) => console.warn("Unable to discard pending Vendor upload", cleanupError));
+    }
+  }, []);
 
   const update = <K extends keyof VendorFormValue>(key: K, value: VendorFormValue[K]) =>
     setForm((current) => ({ ...current, [key]: value }));
@@ -54,6 +65,11 @@ export default function VendorForm({ vendor, onSubmit, onCancel }: VendorFormPro
     setError(null);
     if (!form.vendorCode.trim() || !form.companyName.trim()) {
       setError(t("proc.vendors.validation.required"));
+      return;
+    }
+    const contactIssue = validateContact(form.phone, form.email);
+    if (contactIssue) {
+      setError(t(`proc.vendors.validation.${contactIssue}`));
       return;
     }
 
@@ -71,15 +87,35 @@ export default function VendorForm({ vendor, onSubmit, onCancel }: VendorFormPro
         licenseNo: optional(form.licenseNo),
         tradeCategory: optional(form.tradeCategory),
         capabilityFileUrl: optional(form.capabilityFileUrl),
+        capabilityUploadToken: pendingUpload?.token,
         driveFolder: optional(form.driveFolder),
-        ...(vendor ? { isActive: form.isActive } : {}),
+        ...(vendor ? { isActive: form.isActive, rowVersion: vendor.rowVersion } : {}),
       };
       await onSubmit(request);
+      pendingUploadRef.current = null;
+      setPendingUpload(null);
     } catch (submitError) {
       setError(extractApiError(submitError));
     } finally {
       setSaving(false);
     }
+  };
+
+  const uploaded = async (path: string) => {
+    const token = uploadTokensRef.current.get(path);
+    if (!token) throw new Error(t("common.error"));
+    if (pendingUpload && pendingUpload.path !== path) await adminApi.discardVendorDocument(pendingUpload.token);
+    pendingUploadRef.current = { path, token };
+    setPendingUpload({ path, token });
+    update("capabilityFileUrl", path);
+  };
+
+  const cancel = async () => {
+    if (pendingUpload) {
+      await adminApi.discardVendorDocument(pendingUpload.token);
+      pendingUploadRef.current = null;
+    }
+    onCancel();
   };
 
   const field = (key: keyof VendorFormValue, labelKey: string, props: React.ComponentProps<typeof Input> = {}) => (
@@ -120,8 +156,13 @@ export default function VendorForm({ vendor, onSubmit, onCancel }: VendorFormPro
         <div className="space-y-2">
           <Label htmlFor="vendor-capabilityFileUrl">{t("proc.vendors.field.capabilityFileUrl")}</Label>
           <AdminDocumentUpload
-            uploadFile={async (file) => (await adminApi.uploadVendorDocument(file)).data.path}
-            onUploaded={([path]) => update("capabilityFileUrl", path)}
+            uploadFile={async (file) => {
+              const data = (await adminApi.uploadVendorDocument(file)).data;
+              if (!data.claimToken) throw new Error(t("common.error"));
+              uploadTokensRef.current.set(data.path, data.claimToken);
+              return data.path;
+            }}
+            onUploaded={([path]) => void uploaded(path)}
             disabled={saving}
             testId="vendor-capability-file-upload"
           />
@@ -152,7 +193,7 @@ export default function VendorForm({ vendor, onSubmit, onCancel }: VendorFormPro
         </div>
       )}
       <div className="flex justify-end gap-2">
-        <Button type="button" variant="outline" onClick={onCancel} disabled={saving}>{t("common.cancel")}</Button>
+        <Button type="button" variant="outline" onClick={() => void cancel()} disabled={saving}>{t("common.cancel")}</Button>
         <Button type="submit" disabled={saving} className="gap-2">
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
           {t("common.save")}

@@ -24,7 +24,7 @@ public interface IBusinessDocumentStorageService
 
     ManagedDocumentContent? GetContent(BusinessDocumentArea area, string fileName);
 
-    void Delete(string? path, BusinessDocumentArea area);
+    bool Delete(string? path, BusinessDocumentArea area);
 }
 
 public class BusinessDocumentStorageService(IWebHostEnvironment env) : IBusinessDocumentStorageService
@@ -121,23 +121,27 @@ public class BusinessDocumentStorageService(IWebHostEnvironment env) : IBusiness
         return new ManagedDocumentContent(fullPath, safeFileName, GetContentType(extension));
     }
 
-    public void Delete(string? path, BusinessDocumentArea area)
+    public bool Delete(string? path, BusinessDocumentArea area)
     {
-        if (string.IsNullOrWhiteSpace(path) || !AreaFolders.TryGetValue(area, out var areaFolder)) return;
+        if (string.IsNullOrWhiteSpace(path)) return true;
+        if (!AreaFolders.TryGetValue(area, out var areaFolder)) return false;
         var expectedPrefix = $"/files/business-documents/{areaFolder}/";
-        if (!path.StartsWith(expectedPrefix, StringComparison.Ordinal)) return;
+        if (!path.StartsWith(expectedPrefix, StringComparison.Ordinal)) return false;
         var fileName = Path.GetFileName(path);
         var fullPath = Path.Combine(
             env.ContentRootPath, "wwwroot", "files", "business-documents", areaFolder, fileName);
         try
         {
             if (File.Exists(fullPath)) File.Delete(fullPath);
+            return true;
         }
         catch (IOException)
         {
+            return false;
         }
         catch (UnauthorizedAccessException)
         {
+            return false;
         }
     }
 

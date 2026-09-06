@@ -28,6 +28,8 @@ public interface IBusinessRootHardDeleteService
     Task<HardDeleteOperationResult?> DeleteSurveyAsync(int id, ConfirmDeletionRequest request, int callerUserId, bool canManageAll, CancellationToken ct = default);
     Task<DeletionImpactResponse?> GetCapabilityImpactAsync(int id, CancellationToken ct = default);
     Task<HardDeleteOperationResult?> DeleteCapabilityAsync(int id, ConfirmDeletionRequest request, int callerUserId, CancellationToken ct = default);
+    Task<DeletionImpactResponse?> GetVendorImpactAsync(int id, CancellationToken ct = default);
+    Task<HardDeleteOperationResult?> DeleteVendorAsync(int id, ConfirmDeletionRequest request, int callerUserId, CancellationToken ct = default);
 }
 
 public interface IBusinessRootHardDeletePlanService
@@ -36,6 +38,7 @@ public interface IBusinessRootHardDeletePlanService
     Task<BusinessRootHardDeletePlan?> ForContractAsync(int id, CancellationToken ct = default);
     Task<BusinessRootHardDeletePlan?> ForSurveyAsync(int id, CancellationToken ct = default);
     Task<BusinessRootHardDeletePlan?> ForCapabilityAsync(int id, CancellationToken ct = default);
+    Task<BusinessRootHardDeletePlan?> ForVendorAsync(int id, CancellationToken ct = default);
     Task<bool> CanAccessOpportunityAsync(int id, int callerUserId, bool canSeeAll, CancellationToken ct = default);
     Task<bool> CanAccessContractAsync(int id, int callerUserId, bool canSeeAll, CancellationToken ct = default);
     Task<bool> CanAccessSurveyAsync(int id, int callerUserId, bool canManageAll, CancellationToken ct = default);
@@ -104,6 +107,14 @@ public sealed class BusinessRootHardDeleteService(
         int id, ConfirmDeletionRequest request, int callerUserId, CancellationToken ct = default) =>
         StartAsync(() => plans.ForCapabilityAsync(id, ct), EntityTypes.CapabilityDocument, id,
             request, callerUserId, requireConcurrency: false, ct);
+
+    public async Task<DeletionImpactResponse?> GetVendorImpactAsync(int id, CancellationToken ct = default) =>
+        (await plans.ForVendorAsync(id, ct))?.Impact;
+
+    public Task<HardDeleteOperationResult?> DeleteVendorAsync(
+        int id, ConfirmDeletionRequest request, int callerUserId, CancellationToken ct = default) =>
+        StartAsync(() => plans.ForVendorAsync(id, ct), EntityTypes.Vendor, id,
+            request, callerUserId, requireConcurrency: true, ct);
 
     private async Task<HardDeleteOperationResult?> StartAsync(
         Func<Task<BusinessRootHardDeletePlan?>> createPlan,
@@ -196,6 +207,70 @@ public sealed class BusinessRootHardDeletePlanService(
         };
         return Plan(EntityTypes.Opportunity, id, root.Name, $"OPPORTUNITY-{id}",
             root.RowVersion, quotes.Count == 0, items, identities, []);
+    }
+
+    public async Task<BusinessRootHardDeletePlan?> ForVendorAsync(int id, CancellationToken ct = default)
+    {
+        var root = await db.Vendors.AsNoTracking().Where(item => item.Id == id)
+            .Select(item => new { item.Id, item.VendorCode, item.CompanyName, item.CapabilityFileUrl, item.DriveFolder, item.RowVersion })
+            .SingleOrDefaultAsync(ct);
+        if (root is null) return null;
+
+        var contracts = await db.Contracts.AsNoTracking().Where(item => item.VendorId == id)
+            .OrderBy(item => item.Id).Select(item => new { item.Id, item.ContractNumber }).ToListAsync(ct);
+        var ratings = await db.VendorRatings.AsNoTracking().Where(item => item.VendorId == id)
+            .OrderBy(item => item.Id).Select(item => new { item.Id, item.ContractId }).ToListAsync(ct);
+        var payments = await db.PaymentRequests.AsNoTracking().Where(item => item.VendorId == id)
+            .OrderBy(item => item.Id).Select(item => new { item.Id, item.Code }).ToListAsync(ct);
+
+        var localPaths = new List<string>();
+        var fileBlockers = new List<string>();
+        var externalLinks = new List<string>();
+        if (!string.IsNullOrWhiteSpace(root.CapabilityFileUrl) && root.CapabilityFileUrl.StartsWith("/", StringComparison.Ordinal))
+        {
+            try
+            {
+                var path = files.ValidateManagedPath(root.CapabilityFileUrl);
+                if (!path.StartsWith("/files/business-documents/vendors/", StringComparison.Ordinal)) fileBlockers.Add($"outside-root:{path}");
+                else localPaths.Add(path);
+            }
+            catch (HardDeleteFileException)
+            {
+                fileBlockers.Add($"invalid:{root.CapabilityFileUrl}");
+            }
+        }
+        else if (!string.IsNullOrWhiteSpace(root.CapabilityFileUrl)) externalLinks.Add(root.CapabilityFileUrl);
+        if (!string.IsNullOrWhiteSpace(root.DriveFolder)) externalLinks.Add(root.DriveFolder);
+        var sharedPaths = await db.Vendors.AsNoTracking()
+            .Where(item => item.Id != id && item.CapabilityFileUrl != null && localPaths.Contains(item.CapabilityFileUrl))
+            .Select(item => item.CapabilityFileUrl!).Distinct().OrderBy(path => path).ToListAsync(ct);
+        fileBlockers.AddRange(sharedPaths.Select(path => $"shared:{path}"));
+        localPaths = localPaths.Except(sharedPaths, StringComparer.Ordinal).ToList();
+
+        var detail = $"/admin/vendors/{id}";
+        var items = new List<DeletionImpactItemResponse>();
+        Add(items, "vendor.contracts", contracts.Select(item => Id(item.Id)).ToList(), DeletionImpactActions.Block,
+            "/admin/contracts", contracts.Select(item => Link(item.ContractNumber, $"/admin/contracts/{item.Id}")).ToList());
+        Add(items, "vendor.ratings", ratings.Select(item => Id(item.Id)).ToList(), DeletionImpactActions.Block,
+            "/admin/procurement-control", [Link(root.CompanyName, detail)]);
+        Add(items, "vendor.paymentRequests", payments.Select(item => Id(item.Id)).ToList(), DeletionImpactActions.Block,
+            "/admin/finance-control", payments.Select(item => Link(item.Code, "/admin/finance-control")).ToList());
+        Add(items, "vendor.capabilityFile", localPaths, DeletionImpactActions.Delete, detail, [Link(root.CompanyName, detail)]);
+        Add(items, "vendor.externalLinks", externalLinks.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToList(),
+            DeletionImpactActions.Unlink, detail, [Link(root.CompanyName, detail)]);
+        Add(items, "vendor.fileBlockers", fileBlockers, DeletionImpactActions.Block, detail, [Link(root.CompanyName, detail)]);
+
+        var identities = new[]
+        {
+            Part("contracts", contracts.Select(item => item.Id)), Part("ratings", ratings.Select(item => item.Id)),
+            Part("payments", payments.Select(item => item.Id)), Part("paths", localPaths), Part("external-links", externalLinks),
+            Part("file-blockers", fileBlockers),
+        };
+        var definitions = localPaths.Select((path, index) =>
+            new HardDeleteItemDefinition(HardDeleteItemKind.LocalFile, path, index)).ToList();
+        return Plan(EntityTypes.Vendor, id, $"{root.VendorCode} · {root.CompanyName}", root.VendorCode,
+            root.RowVersion, contracts.Count == 0 && ratings.Count == 0 && payments.Count == 0 && fileBlockers.Count == 0,
+            items, identities, definitions);
     }
 
     public async Task<BusinessRootHardDeletePlan?> ForContractAsync(int id, CancellationToken ct = default)
@@ -781,6 +856,23 @@ public sealed class SurveyHardDeleteHandler(
         await AddSeedTombstoneAsync(EntityTypes.Survey, root.Code,
             root.Code.StartsWith("SV-SAMPLE-", StringComparison.Ordinal), requestedBy, ct);
         Db.Surveys.Remove(root);
+    }
+}
+
+public sealed class VendorHardDeleteHandler(
+    AppDbContext db, IBusinessRootHardDeletePlanService plans, IPermissionService permissions)
+    : BusinessRootHardDeleteHandler(db, plans, permissions)
+{
+    public override string ResourceType => EntityTypes.Vendor;
+    protected override string PermissionResource => "proc.vendors";
+    protected override Task<BusinessRootHardDeletePlan?> CurrentPlanAsync(int id, CancellationToken ct) =>
+        Plans.ForVendorAsync(id, ct);
+    protected override Task<bool> HasScopeAsync(int id, int requestedBy, CancellationToken ct) =>
+        Db.Vendors.AnyAsync(item => item.Id == id, ct);
+    protected override async Task FinalizeRootAsync(int id, int requestedBy, CancellationToken ct)
+    {
+        var root = await Db.Vendors.SingleAsync(item => item.Id == id, ct);
+        Db.Vendors.Remove(root);
     }
 }
 
