@@ -171,11 +171,15 @@ test.describe("NIH-146 — Punch list (real-user flow)", () => {
 
     // Permanent Delete completes the CRUD flow and removes the record.
     await page.getByTestId("punch-detail-delete").click();
+    const deleteDialog = page.getByRole("alertdialog", {
+      name: /Xoá lỗi|Delete punch|删除缺陷|パンチを削除/i,
+    });
+    await expect(deleteDialog).toBeVisible();
     await Promise.all([
       page.waitForResponse(
         (r) => /\/api\/punch-items\/\d+$/.test(r.url()) && r.request().method() === "DELETE" && r.status() === 204,
       ),
-      page.getByTestId("punch-action-confirm").click({ force: true }),
+      deleteDialog.getByTestId("punch-action-confirm").click(),
     ]);
     await expect
       .poll(
