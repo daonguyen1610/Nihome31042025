@@ -165,6 +165,10 @@ A new project starts in **Planning**. It can move to **Active**, **On hold**,
 **Completed**, or **Cancelled** according to the displayed lifecycle. Only an
 empty Planning project can be deleted; cancel a project that already contains
 business history. The customer cannot be changed after records are linked.
+Operational Projects are not archived or restored as a whole. **Completed** and
+**Cancelled** projects remain visible to authorized users so their Contracts,
+transactions, files, and audit history stay traceable. Archive actions within a
+document workflow affect only that document and do not archive its project.
 
 Users normally see projects they created or manage. Portfolio roles with the
 `operations.projects.view.all` permission see all projects. Creating or editing

@@ -690,6 +690,13 @@ it must not be confused with public portfolio content or the three-phase
 | `PUT` | `/api/operational-projects/{id}` | `operations.projects.manage` | Update metadata or perform an allowed lifecycle transition |
 | `DELETE` | `/api/operational-projects/{id}` | `operations.projects.manage` | Delete an empty Planning project only |
 
+Operational Projects do not expose aggregate archive or restore operations.
+The approved DEC-08 lifecycle decision retains the preview-and-confirm hard-delete
+convention as the only aggregate removal flow; `Completed` and `Cancelled` retain
+business history without hiding it as archived data. Document-level archive
+states, such as the As-Built lifecycle, remain independent and do not archive the
+owning Operational Project, its Contracts, audit records, or managed files.
+
 `operations.projects.view.all` removes owner scope but does not grant mutation
 permission. Update and delete requests use `rowversion`; the detail response
 also emits an ETag. `AddOperationalProjects` backfills existing design,
