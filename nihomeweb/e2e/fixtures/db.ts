@@ -1,4 +1,4 @@
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 
 /**
  * Minimal SQL helper for E2E setup/teardown.
@@ -16,18 +16,18 @@ const SQL_PASSWORD = "Nihome@31042025";
 const SQL_DATABASE = "NihomeDB";
 
 export function execSql(sql: string): string {
-  const cmd = [
-    "docker exec",
+  const args = [
+    "exec",
     SQL_CONTAINER,
     "/opt/mssql-tools18/bin/sqlcmd",
-    "-S localhost",
+    "-S", "localhost",
     "-U", SQL_USER,
-    "-P", `'${SQL_PASSWORD}'`,
+    "-P", SQL_PASSWORD,
     "-d", SQL_DATABASE,
     "-C",
-    "-h -1",
+    "-h", "-1",
     "-W",
-    "-Q", JSON.stringify(sql),
-  ].join(" ");
-  return execSync(cmd, { encoding: "utf-8" });
+    "-Q", sql,
+  ];
+  return execFileSync("docker", args, { encoding: "utf-8" });
 }

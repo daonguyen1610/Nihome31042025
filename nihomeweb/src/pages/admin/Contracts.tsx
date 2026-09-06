@@ -197,6 +197,7 @@ const Contracts = () => {
   const { has } = usePermissions();
   const navigate = useNavigate();
   const canManage = has(ADMIN_PERMS.contractsManage);
+  const canViewOperationalProjects = has(ADMIN_PERMS.operationalProjects);
   const [searchParams] = useSearchParams();
 
   // Number(null) is 0 and Number.isFinite(0) is true, so parsing straight from
@@ -286,7 +287,7 @@ const Contracts = () => {
         classification === null
           ? adminApi.getContractClassificationOptions()
           : Promise.resolve({ data: classification }),
-        projects.length === 0
+        canViewOperationalProjects && projects.length === 0
           ? adminApi.listOperationalProjects({ pageSize: 100 })
           : Promise.resolve({ data: { total: projects.length, page: 1, pageSize: projects.length, items: projects } }),
       ]);
@@ -304,7 +305,7 @@ const Contracts = () => {
       setInitialLoaded(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter, directionFilter, typeFilter, vendorFilter, customerFilter, projectFilter, signedFrom, signedTo, valueMin, valueMax, debouncedSearch, t]);
+  }, [canViewOperationalProjects, statusFilter, directionFilter, typeFilter, vendorFilter, customerFilter, projectFilter, signedFrom, signedTo, valueMin, valueMax, debouncedSearch, t]);
 
   useEffect(() => {
     void load();
@@ -666,7 +667,7 @@ const Contracts = () => {
               </SelectContent>
             </Select>
           </div>
-          <div className="min-w-0 space-y-1">
+          {canViewOperationalProjects && <div className="min-w-0 space-y-1">
             <Label className="text-xs" htmlFor="c-project">{t("contracts.field.operationalProject")}</Label>
             <Select
               value={projectFilter === "all" ? "all" : String(projectFilter)}
@@ -682,7 +683,7 @@ const Contracts = () => {
                   ))}
               </SelectContent>
             </Select>
-          </div>
+          </div>}
           <div className="min-w-0 space-y-1">
             <Label className="text-xs" htmlFor="c-direction">{t("contracts.field.direction")}</Label>
             <Select value={directionFilter} onValueChange={(value) => setDirectionFilter(value as ContractDirection | "all")}>
