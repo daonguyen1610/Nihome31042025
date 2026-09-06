@@ -16,4 +16,13 @@ public class KpiCalculationBackgroundServiceTests
 
         Assert.Equal(TimeSpan.FromSeconds(expectedSeconds), delay);
     }
+
+    [Theory]
+    [InlineData("PROCUREMENT", "PROCUREMENT")]
+    [InlineData("QS", "TENDERING")]
+    public void KpiPosition_MapsApprovedBusinessRoles(string roleCode, string expectedPosition)
+    {
+        Assert.True(KpiCalculationBackgroundService.HasKpiPosition(roleCode));
+        Assert.Equal(expectedPosition, KpiService.KpiPosition(roleCode));
+    }
 }

@@ -176,6 +176,7 @@
     { "code": "PM", "name": "Project Manager" },
     { "code": "LEGAL_OFFICER", "name": "Legal Officer" },
     { "code": "QS", "name": "Quantity Surveyor" },
+    { "code": "PROCUREMENT", "name": "Procurement" },
     { "code": "ACCOUNTANT", "name": "Accountant" },
     { "code": "WAREHOUSE", "name": "Warehouse" },
     { "code": "BGD", "name": "Board of Directors" }
@@ -394,6 +395,18 @@
         "proc.vendors.*",
         "design.basic.view",
         "design.shop.view",
+        "profile.me.*"
+      ]
+    },
+    "PROCUREMENT": {
+      "patterns": [
+        "dashboard.view",
+        "master-data.view",
+        "workflow.view",
+        "operations.projects.view",
+        "analytics.kpi.view",
+        "crm.contracts.view",
+        "proc.vendors.*",
         "profile.me.*"
       ]
     },

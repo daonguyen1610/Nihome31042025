@@ -19,6 +19,7 @@ public class PermissionCatalogExpansionTests
     [InlineData("DESIGN")]
     [InlineData("PM")]
     [InlineData("QS")]
+    [InlineData("PROCUREMENT")]
     [InlineData("ACCOUNTANT")]
     [InlineData("WAREHOUSE")]
     [InlineData("BGD")]

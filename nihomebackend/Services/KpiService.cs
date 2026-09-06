@@ -470,12 +470,13 @@ public sealed class KpiService(AppDbContext db, INotificationService notificatio
                 KpiPosition(user.RoleEntity != null ? user.RoleEntity.Code : user.Role.ToString())))
             .SingleOrDefaultAsync(ct);
 
-    private static string KpiPosition(string roleCode) => roleCode switch
+    internal static string KpiPosition(string roleCode) => roleCode switch
     {
         "SALE" or "SALES_MANAGER" => "SALES",
         "DESIGN" or "DESIGN_LEAD" or "ARCHITECT" or "MEP_ENGINEER" or "STRUCT_ENGINEER" => "DESIGN",
         "PM" => "SITE",
         "QS" => "TENDERING",
+        "PROCUREMENT" => "PROCUREMENT",
         "ACCOUNTANT" => "PROJECT_ACCOUNTING",
         _ => roleCode,
     };

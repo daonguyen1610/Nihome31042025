@@ -872,6 +872,22 @@
     "ja": "経理"
   },
   {
+    "key": "rbac.role.PROCUREMENT.label",
+    "category": "rbac",
+    "vi": "Mua hàng",
+    "en": "Procurement",
+    "zh": "采购",
+    "ja": "調達"
+  },
+  {
+    "key": "rbac.role.PROCUREMENT.description",
+    "category": "rbac",
+    "vi": "Quản lý nhà cung cấp và hoạt động mua hàng được phân công.",
+    "en": "Manages assigned vendors and procurement activities.",
+    "zh": "管理分配的供应商和采购活动。",
+    "ja": "割り当てられた取引先と調達業務を管理します。"
+  },
+  {
     "key": "rbac.role.ACCOUNTANT.description",
     "category": "rbac",
     "vi": "Xem liên hệ khách hàng và nhật ký kiểm toán.",
