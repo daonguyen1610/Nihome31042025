@@ -15,6 +15,7 @@ public interface IContractService
         int? vendorId = null,
         int? ownerUserId = null,
         int? customerId = null,
+        int? operationalProjectId = null,
         string? search = null,
         DateTime? signedFrom = null,
         DateTime? signedTo = null,

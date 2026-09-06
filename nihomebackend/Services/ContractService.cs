@@ -34,6 +34,7 @@ public class ContractService(
         int? vendorId = null,
         int? ownerUserId = null,
         int? customerId = null,
+        int? operationalProjectId = null,
         string? search = null,
         DateTime? signedFrom = null,
         DateTime? signedTo = null,
@@ -63,6 +64,7 @@ public class ContractService(
         if (type.HasValue) query = query.Where(c => c.Type == type.Value);
         if (vendorId.HasValue) query = query.Where(c => c.VendorId == vendorId.Value);
         if (customerId.HasValue) query = query.Where(c => c.CustomerId == customerId.Value);
+        if (operationalProjectId.HasValue) query = query.Where(c => c.OperationalProjectId == operationalProjectId.Value);
         if (signedFrom.HasValue) query = query.Where(c => c.SignedDate != null && c.SignedDate >= signedFrom.Value);
         if (signedTo.HasValue)
         {
@@ -100,6 +102,8 @@ public class ContractService(
                 OpportunityTitle = c.Opportunity != null ? c.Opportunity.Name : null,
                 QuoteCode = c.Quote != null ? c.Quote.Code : null,
                 OwnerName = c.Owner != null ? c.Owner.FullName : null,
+                OperationalProjectCode = c.OperationalProject != null ? c.OperationalProject.Code : null,
+                OperationalProjectName = c.OperationalProject != null ? c.OperationalProject.Name : null,
                 ApprovedVoTotal = db.ContractAppendices
                     .Where(v => v.ContractId == c.Id && v.Status == ContractAppendixStatus.Approved)
                     .Sum(v => (decimal?)v.ValueDelta) ?? 0m,
@@ -122,6 +126,7 @@ public class ContractService(
             Items = rows.Select(r => MapToResponse(
                 r.Contract, r.CustomerName, r.VendorCode, r.VendorName,
                 r.OpportunityTitle, r.QuoteCode, r.OwnerName,
+                r.OperationalProjectCode, r.OperationalProjectName,
                 milestones: null,
                 approvedVoTotal: r.ApprovedVoTotal,
                 hasSignedScan: r.HasSignedScan,
@@ -148,6 +153,8 @@ public class ContractService(
                 OpportunityTitle = c.Opportunity != null ? c.Opportunity.Name : null,
                 QuoteCode = c.Quote != null ? c.Quote.Code : null,
                 OwnerName = c.Owner != null ? c.Owner.FullName : null,
+                OperationalProjectCode = c.OperationalProject != null ? c.OperationalProject.Code : null,
+                OperationalProjectName = c.OperationalProject != null ? c.OperationalProject.Name : null,
                 // Contract has no navigation to DesignProject — the foreign key
                 // lives on the other side — so this reads as a correlated subquery,
                 // the same shape the list projection already uses.
@@ -188,6 +195,7 @@ public class ContractService(
         return MapToResponse(
             row.Contract, row.CustomerName, row.VendorCode, row.VendorName,
             row.OpportunityTitle, row.QuoteCode, row.OwnerName,
+            row.OperationalProjectCode, row.OperationalProjectName,
             milestones, approvedVoTotal, hasSignedScan, attachmentCount, appendixCount,
             designProjectId: row.DesignProject?.Id,
             designProjectCode: row.DesignProject?.ProjectCode,
@@ -326,6 +334,20 @@ public class ContractService(
             entity.OperationalProjectId,
             ct);
         var previousProjectId = entity.OperationalProjectId;
+        if (previousProjectId != operationalProjectId)
+        {
+            var linkedDesignProject = await db.DesignProjects
+                .AsNoTracking()
+                .Where(project => project.ContractId == id)
+                .Select(project => new { project.Id, project.OperationalProjectId })
+                .SingleOrDefaultAsync(ct);
+            if (linkedDesignProject is not null &&
+                linkedDesignProject.OperationalProjectId != operationalProjectId)
+            {
+                throw new ContractValidationException(
+                    "Không thể đổi Dự án của Hợp đồng khi Dự án thiết kế liên kết đang thuộc Dự án khác.");
+            }
+        }
 
         var newNumber = string.IsNullOrWhiteSpace(req.ContractNumber)
             ? entity.ContractNumber
@@ -881,7 +903,22 @@ public class ContractService(
             throw new ContractValidationException(
                 "Hợp đồng, Cơ hội và Báo giá phải thuộc cùng một Dự án.");
         }
-        if (!selectedId.HasValue) return null;
+        if (!selectedId.HasValue)
+        {
+            var customerProjectIds = await db.OperationalProjects
+                .AsNoTracking()
+                .Where(project => project.CustomerId == request.CustomerId)
+                .OrderBy(project => project.Id)
+                .Select(project => project.Id)
+                .Take(2)
+                .ToListAsync(ct);
+            if (customerProjectIds.Count == 1)
+            {
+                return customerProjectIds[0];
+            }
+            throw new ContractValidationException(
+                "Dự án vận hành là bắt buộc cho Hợp đồng.");
+        }
 
         var projectCustomerId = await db.OperationalProjects
             .AsNoTracking()
@@ -1056,6 +1093,8 @@ public class ContractService(
         string? opportunityTitle,
         string? quoteCode,
         string? ownerName,
+        string? operationalProjectCode,
+        string? operationalProjectName,
         IReadOnlyList<ContractPaymentMilestone>? milestones = null,
         decimal approvedVoTotal = 0m,
         bool hasSignedScan = false,
@@ -1083,6 +1122,8 @@ public class ContractService(
             VendorCode = vendorCode,
             VendorName = vendorName,
             OperationalProjectId = entity.OperationalProjectId,
+            OperationalProjectCode = operationalProjectCode,
+            OperationalProjectName = operationalProjectName,
             OpportunityId = entity.OpportunityId,
             OpportunityTitle = opportunityTitle,
             QuoteId = entity.QuoteId,

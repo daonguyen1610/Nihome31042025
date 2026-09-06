@@ -929,6 +929,16 @@ export interface OperationalProjectResponse extends OperationalProjectListItemRe
   designProjectCode?: string | null;
   rowVersion: string;
   createdAt: string;
+  contractSummary: {
+    activeContractCount: number;
+    upstreamContractCount: number;
+    upstreamCurrentValue: number;
+    downstreamContractCount: number;
+    downstreamCurrentValue: number;
+    scheduledPaymentAmount: number;
+    paidPaymentAmount: number;
+    paymentProgressPercent: number;
+  };
   opportunities: Array<{
     id: number;
     name: string;
@@ -982,6 +992,13 @@ export interface OperationalProjectResponse extends OperationalProjectListItemRe
     vendorName?: string | null;
     status: ContractStatus;
     value: number;
+    approvedVoTotal: number;
+    currentValue: number;
+    paymentMilestoneCount: number;
+    paidMilestoneCount: number;
+    scheduledPaymentAmount: number;
+    paidPaymentAmount: number;
+    paymentProgressPercent: number;
     signedDate?: string | null;
     startDate?: string | null;
     endDate?: string | null;
@@ -1287,6 +1304,8 @@ export interface ContractResponse {
   opportunityTitle?: string | null;
   quoteId?: number | null;
   operationalProjectId?: number | null;
+  operationalProjectCode?: string | null;
+  operationalProjectName?: string | null;
   /** Derived from design_projects; present when a design project is attached. */
   designProjectId?: number | null;
   designProjectCode?: string | null;
@@ -1367,6 +1386,7 @@ export interface ContractListParams {
   vendorId?: number;
   ownerUserId?: number;
   customerId?: number;
+  operationalProjectId?: number;
   search?: string;
   signedFrom?: string;
   signedTo?: string;

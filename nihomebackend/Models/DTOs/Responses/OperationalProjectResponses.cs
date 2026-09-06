@@ -35,9 +35,22 @@ public class OperationalProjectResponse : OperationalProjectListItemResponse
     public string? DesignProjectCode { get; set; }
     public string RowVersion { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
+    public OperationalProjectContractSummaryResponse ContractSummary { get; set; } = new();
     public List<OperationalProjectOpportunityResponse> Opportunities { get; set; } = new();
     public List<OperationalProjectQuoteResponse> Quotes { get; set; } = new();
     public List<OperationalProjectContractResponse> Contracts { get; set; } = new();
+}
+
+public class OperationalProjectContractSummaryResponse
+{
+    public int ActiveContractCount { get; set; }
+    public int UpstreamContractCount { get; set; }
+    public decimal UpstreamCurrentValue { get; set; }
+    public int DownstreamContractCount { get; set; }
+    public decimal DownstreamCurrentValue { get; set; }
+    public decimal ScheduledPaymentAmount { get; set; }
+    public decimal PaidPaymentAmount { get; set; }
+    public decimal PaymentProgressPercent { get; set; }
 }
 
 public class OperationalProjectOpportunityResponse
@@ -101,6 +114,13 @@ public class OperationalProjectContractResponse
     public string? VendorName { get; set; }
     public string Status { get; set; } = string.Empty;
     public decimal Value { get; set; }
+    public decimal ApprovedVoTotal { get; set; }
+    public decimal CurrentValue { get; set; }
+    public int PaymentMilestoneCount { get; set; }
+    public int PaidMilestoneCount { get; set; }
+    public decimal ScheduledPaymentAmount { get; set; }
+    public decimal PaidPaymentAmount { get; set; }
+    public decimal PaymentProgressPercent { get; set; }
     public DateTime? SignedDate { get; set; }
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }

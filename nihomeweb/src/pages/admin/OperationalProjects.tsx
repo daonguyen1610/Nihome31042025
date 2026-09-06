@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, BriefcaseBusiness, CalendarClock, ExternalLink, FileText, Pencil, Plus, RefreshCcw, RotateCcw, Search, ShoppingCart, Trash2, Users } from "lucide-react";
+import { ArrowDownToLine, ArrowLeft, ArrowUpFromLine, BriefcaseBusiness, CalendarClock, CircleDollarSign, ExternalLink, FileText, Pencil, Plus, RefreshCcw, RotateCcw, Search, ShoppingCart, Trash2, Users } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
 import ProjectDocumentsPanel from "@/pages/admin/ProjectDocumentsPanel";
@@ -630,6 +630,41 @@ const OperationalProjects = () => {
                   <p className="py-2 text-sm text-muted-foreground">{t("operationalProjects.related.empty")}</p>
                 ) : (
                   <div className="space-y-4">
+                    <div className="grid gap-4 border-y bg-muted/20 px-1 py-4 sm:grid-cols-2 xl:grid-cols-4">
+                      <ContractMetric
+                        icon={ArrowDownToLine}
+                        label={t("operationalProjects.contractSummary.upstream")}
+                        value={currencyFormat.format(detail.contractSummary.upstreamCurrentValue)}
+                        detail={t("operationalProjects.count.contractsWithValue", { count: detail.contractSummary.upstreamContractCount })}
+                      />
+                      <ContractMetric
+                        icon={ArrowUpFromLine}
+                        label={t("operationalProjects.contractSummary.downstream")}
+                        value={currencyFormat.format(detail.contractSummary.downstreamCurrentValue)}
+                        detail={t("operationalProjects.count.contractsWithValue", { count: detail.contractSummary.downstreamContractCount })}
+                      />
+                      <ContractMetric
+                        icon={CircleDollarSign}
+                        label={t("operationalProjects.contractSummary.paid")}
+                        value={`${detail.contractSummary.paymentProgressPercent}%`}
+                        detail={`${currencyFormat.format(detail.contractSummary.paidPaymentAmount)} / ${currencyFormat.format(detail.contractSummary.scheduledPaymentAmount)}`}
+                      />
+                      <ContractMetric
+                        icon={ShoppingCart}
+                        label={t("operationalProjects.contractSummary.active")}
+                        value={String(detail.contractSummary.activeContractCount)}
+                        detail={t("operationalProjects.related.contracts")}
+                      />
+                    </div>
+                    {canViewContracts && (
+                      <div className="flex justify-end">
+                        <Button variant="outline" size="sm" asChild>
+                          <Link to={`/admin/contracts?operationalProjectId=${detail.id}`}>
+                            {t("operationalProjects.contractSummary.viewAll")}<ExternalLink className="ml-2 h-3.5 w-3.5" />
+                          </Link>
+                        </Button>
+                      </div>
+                    )}
                     {detail.contracts.map(item => (
                       <div key={item.id} className="rounded-md border p-4">
                         <div className="flex items-start justify-between gap-3 mb-3">
@@ -639,14 +674,14 @@ const OperationalProjects = () => {
                             <Badge variant="secondary" className="text-xs">{t(`contracts.type.${item.type}`)}</Badge>
                           </div>
                           <Button variant="ghost" size="sm" asChild>
-                            <Link to={`/admin/contracts/${item.id}`}><ExternalLink className="h-4 w-4" /></Link>
+                            <Link to={`/admin/contracts/${item.id}`} aria-label={`${t("common.view")} ${item.contractNumber}`}><ExternalLink className="h-4 w-4" /></Link>
                           </Button>
                         </div>
 
                         <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                           <div>
                             <dt className="text-muted-foreground text-xs">{t("contracts.field.value")}</dt>
-                            <dd className="font-semibold text-primary">{currencyFormat.format(item.value)}</dd>
+                            <dd className="font-semibold text-primary">{currencyFormat.format(item.currentValue)}</dd>
                           </div>
                           {item.signedDate && (
                             <div>
@@ -681,6 +716,18 @@ const OperationalProjects = () => {
                             <dd>{item.vendorName ?? item.customerName ?? "—"}</dd>
                           </div>
                         </dl>
+
+                        <div className="mt-3 border-t pt-3">
+                          <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                            <span className="font-medium">{t("operationalProjects.contractSummary.paymentProgress")}</span>
+                            <span className="text-muted-foreground">
+                              {item.paymentProgressPercent}% · {item.paidMilestoneCount}/{item.paymentMilestoneCount}
+                            </span>
+                          </div>
+                          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+                            <div className="h-full rounded-full bg-emerald-500" style={{ width: `${Math.min(Math.max(item.paymentProgressPercent, 0), 100)}%` }} />
+                          </div>
+                        </div>
 
                         {item.scopeOfWork && (
                           <div className="mt-3 border-t pt-3 text-sm">
@@ -809,6 +856,17 @@ const OperationalProjects = () => {
 };
 
 const Summary = ({ label, value, href }: { label: string; value: string; href?: string }) => <div className="rounded-lg border bg-card p-4"><p className="text-xs text-muted-foreground">{label}</p>{href ? <Link className="mt-1 block font-medium text-primary hover:underline" to={href}>{value}</Link> : <p className="mt-1 font-medium">{value}</p>}</div>;
+
+const ContractMetric = ({ icon: Icon, label, value, detail }: { icon: typeof ShoppingCart; label: string; value: string; detail: string }) => (
+  <div className="flex min-w-0 gap-3 px-3">
+    <Icon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+    <div className="min-w-0">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="mt-1 break-words text-base font-semibold">{value}</p>
+      <p className="mt-0.5 text-xs text-muted-foreground">{detail}</p>
+    </div>
+  </div>
+);
 const Count = ({ value, label }: { value: number; label: string }) => <div><strong className="block text-base">{value}</strong><span className="text-muted-foreground">{label}</span></div>;
 
 export default OperationalProjects;

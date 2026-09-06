@@ -27,6 +27,19 @@ test("SPA renders /admin/contracts without console errors for SUPER_ADMIN", asyn
     await expect(page.locator("#c-direction")).toBeVisible();
     await expect(page.locator("#c-type")).toBeVisible();
     await expect(page.locator("#c-vendor")).toBeVisible();
+    await expect(page.locator("#c-project")).toBeVisible();
+
+    await page.locator("#c-project").click();
+    const projectOption = page.getByRole("option").filter({ hasText: /PJ-/ }).first();
+    const filteredResponse = page.waitForResponse((response) =>
+        response.request().method() === "GET"
+        && response.url().includes("/api/contracts")
+        && /[?&]operationalProjectId=\d+/.test(response.url()),
+    );
+    await projectOption.click();
+    expect((await filteredResponse).ok()).toBe(true);
+    await page.locator("#c-project").click();
+    await page.getByRole("option", { name: /Tất cả dự án vận hành|All operational projects|全部运营项目|すべての運用プロジェクト/i }).click();
 
     await page.getByRole("button", { name: /Thêm hợp đồng|New contract|新增合同|新規契約/i }).click();
     await page.locator("#c-direction-form").click();
@@ -49,7 +62,7 @@ test("SPA renders /admin/contracts without console errors for SUPER_ADMIN", asyn
     const detailResponse = page.waitForResponse((response) =>
         response.request().method() === "GET" && new RegExp(`/api/(?:v1/)?contracts/${contractId?.replace("contract-row-", "")}$`).test(response.url()),
     );
-    await row.locator("td").nth(2).click();
+    await row.locator("td").nth(1).click();
     expect((await detailResponse).ok()).toBe(true);
 
     await expect(page).toHaveURL(new RegExp(`/admin/contracts/${contractId?.replace("contract-row-", "")}$`));
@@ -67,6 +80,8 @@ test("SPA renders /admin/contracts without console errors for SUPER_ADMIN", asyn
     await expect(page.getByRole("heading", { level: 1 })).toContainText(contractNumber?.trim() ?? "");
 
     await editButton.click();
+    await editForm.locator("#contract-detail-project").click();
+    await page.getByRole("option").first().click();
     const updateResponse = page.waitForResponse((response) =>
         response.request().method() === "PUT" && /\/api\/contracts\/\d+$/.test(response.url()),
     );

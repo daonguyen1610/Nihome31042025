@@ -18,6 +18,7 @@ import {
   type ContractType,
   type CustomerResponse,
   type DeletionImpactResponse,
+  type OperationalProjectListItemResponse,
   type PaymentMilestoneStatus,
   type UpsertContractRequest,
 } from "@/services/adminApi";
@@ -76,6 +77,7 @@ type FormData = {
   direction: ContractDirection;
   type: Exclude<ContractType, "Unclassified">;
   vendorId: number | null;
+  operationalProjectId: number | null;
   /** Set when the contract is raised from an approved quote; null otherwise. */
   opportunityId: number | null;
   quoteId: number | null;
@@ -103,6 +105,7 @@ const emptyForm: FormData = {
   direction: "Upstream",
   type: "DesignAndBuild",
   vendorId: null,
+  operationalProjectId: null,
   opportunityId: null,
   quoteId: null,
   ownerUserId: null,
@@ -209,6 +212,7 @@ const Contracts = () => {
   const fromQuoteId = readPositiveParam("fromQuote");
   const prefillOpportunityId = readPositiveParam("opportunityId");
   const prefillCustomerId = readPositiveParam("customerId");
+  const prefillOperationalProjectId = readPositiveParam("operationalProjectId");
   const prefillValue = readPositiveParam("value");
 
   const customerIdParam = Number(searchParams.get("customerId"));
@@ -221,6 +225,7 @@ const Contracts = () => {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [total, setTotal] = useState(0);
   const [customers, setCustomers] = useState<CustomerResponse[]>([]);
+  const [projects, setProjects] = useState<OperationalProjectListItemResponse[]>([]);
   const [classification, setClassification] = useState<ContractClassificationOptions | null>(null);
   const [hoveredContractId, setHoveredContractId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -236,6 +241,9 @@ const Contracts = () => {
   const [vendorFilter, setVendorFilter] = useState<number | "all">("all");
   const [customerFilter, setCustomerFilter] = useState<number | "all">(
     Number.isInteger(customerIdParam) && customerIdParam > 0 ? customerIdParam : "all",
+  );
+  const [projectFilter, setProjectFilter] = useState<number | "all">(
+    prefillOperationalProjectId ?? "all",
   );
   const [signedFrom, setSignedFrom] = useState("");
   const [signedTo, setSignedTo] = useState("");
@@ -261,6 +269,7 @@ const Contracts = () => {
       if (typeFilter !== "all") params.type = typeFilter;
       if (vendorFilter !== "all") params.vendorId = vendorFilter;
       if (customerFilter !== "all") params.customerId = customerFilter;
+      if (projectFilter !== "all") params.operationalProjectId = projectFilter;
       if (signedFrom) params.signedFrom = toIsoTimestamp(signedFrom) ?? undefined;
       if (signedTo) params.signedTo = toIsoTimestamp(signedTo) ?? undefined;
       const minNum = Number(valueMin);
@@ -269,7 +278,7 @@ const Contracts = () => {
       if (valueMax && !Number.isNaN(maxNum)) params.valueMax = maxNum;
       if (debouncedSearch.trim()) params.search = debouncedSearch.trim();
 
-      const [contractsRes, customersRes, classificationRes] = await Promise.all([
+      const [contractsRes, customersRes, classificationRes, projectsRes] = await Promise.all([
         adminApi.listContracts(params),
         customers.length === 0
           ? adminApi.listCustomers({ pageSize: 200 })
@@ -277,6 +286,9 @@ const Contracts = () => {
         classification === null
           ? adminApi.getContractClassificationOptions()
           : Promise.resolve({ data: classification }),
+        projects.length === 0
+          ? adminApi.listOperationalProjects({ pageSize: 100 })
+          : Promise.resolve({ data: { total: projects.length, page: 1, pageSize: projects.length, items: projects } }),
       ]);
       setContracts(contractsRes.data.items);
       setTotal(contractsRes.data.total);
@@ -284,6 +296,7 @@ const Contracts = () => {
         setCustomers(customersRes.data.items);
       }
       if (classification === null) setClassification(classificationRes.data);
+      if (projects.length === 0) setProjects(projectsRes.data.items);
     } catch (err) {
       setError(getErrorMessage(err) ?? t("common.error"));
     } finally {
@@ -291,7 +304,7 @@ const Contracts = () => {
       setInitialLoaded(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter, directionFilter, typeFilter, vendorFilter, customerFilter, signedFrom, signedTo, valueMin, valueMax, debouncedSearch, t]);
+  }, [statusFilter, directionFilter, typeFilter, vendorFilter, customerFilter, projectFilter, signedFrom, signedTo, valueMin, valueMax, debouncedSearch, t]);
 
   useEffect(() => {
     void load();
@@ -303,6 +316,7 @@ const Contracts = () => {
     setTypeFilter("all");
     setVendorFilter("all");
     setCustomerFilter("all");
+    setProjectFilter("all");
     setSignedFrom("");
     setSignedTo("");
     setValueMin("");
@@ -316,6 +330,7 @@ const Contracts = () => {
     typeFilter !== "all" ||
     vendorFilter !== "all" ||
     customerFilter !== "all" ||
+    projectFilter !== "all" ||
     signedFrom !== "" ||
     signedTo !== "" ||
     valueMin !== "" ||
@@ -343,7 +358,14 @@ const Contracts = () => {
   }, []);
 
   const openCreate = () => {
-    setForm({ ...emptyForm });
+    const selectedProject = projectFilter === "all"
+      ? null
+      : projects.find((project) => project.id === projectFilter) ?? null;
+    setForm({
+      ...emptyForm,
+      customerId: selectedProject?.customerId ?? null,
+      operationalProjectId: selectedProject?.id ?? null,
+    });
     setFormError(null);
     setDialogOpen(true);
     void loadSuggestedContractNumber();
@@ -357,6 +379,7 @@ const Contracts = () => {
     setForm({
       ...emptyForm,
       customerId: prefillCustomerId,
+      operationalProjectId: prefillOperationalProjectId,
       opportunityId: prefillOpportunityId,
       quoteId: fromQuoteId,
       value: prefillValue ?? 0,
@@ -365,7 +388,7 @@ const Contracts = () => {
     setDialogOpen(true);
     void loadSuggestedContractNumber();
     // Runs once per navigation carrying the parameters.
-  }, [fromQuoteId, loadSuggestedContractNumber, prefillCustomerId, prefillOpportunityId, prefillValue]);
+  }, [fromQuoteId, loadSuggestedContractNumber, prefillCustomerId, prefillOperationalProjectId, prefillOpportunityId, prefillValue]);
   const patchMilestone = (index: number, patch: Partial<MilestoneDraft>) => {
     setForm((prev) => ({
       ...prev,
@@ -419,6 +442,10 @@ const Contracts = () => {
       setFormError(t("form.required"));
       return;
     }
+    if (form.operationalProjectId == null) {
+      setFormError(t("contracts.validation.operationalProjectRequired"));
+      return;
+    }
     if (form.direction === "Downstream" && form.vendorId == null) {
       setFormError(t("contracts.validation.vendorRequired"));
       return;
@@ -466,6 +493,7 @@ const Contracts = () => {
       direction: form.direction,
       type: form.type,
       vendorId: form.direction === "Downstream" ? form.vendorId : null,
+      operationalProjectId: form.operationalProjectId,
       opportunityId: form.opportunityId,
       quoteId: form.quoteId,
       status: form.status,
@@ -620,7 +648,14 @@ const Contracts = () => {
             <Label className="text-xs" htmlFor="c-customer">{t("contracts.field.customer")}</Label>
             <Select
               value={customerFilter === "all" ? "all" : String(customerFilter)}
-              onValueChange={(v) => setCustomerFilter(v === "all" ? "all" : Number(v))}
+              onValueChange={(value) => {
+                const customerId = value === "all" ? "all" : Number(value);
+                setCustomerFilter(customerId);
+                if (projectFilter !== "all" &&
+                    (customerId === "all" || projects.find((project) => project.id === projectFilter)?.customerId !== customerId)) {
+                  setProjectFilter("all");
+                }
+              }}
             >
               <SelectTrigger id="c-customer" className="h-9"><SelectValue /></SelectTrigger>
               <SelectContent className="max-h-72">
@@ -628,6 +663,23 @@ const Contracts = () => {
                 {customers.map((c) => (
                   <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="min-w-0 space-y-1">
+            <Label className="text-xs" htmlFor="c-project">{t("contracts.field.operationalProject")}</Label>
+            <Select
+              value={projectFilter === "all" ? "all" : String(projectFilter)}
+              onValueChange={(value) => setProjectFilter(value === "all" ? "all" : Number(value))}
+            >
+              <SelectTrigger id="c-project" className="h-9"><SelectValue /></SelectTrigger>
+              <SelectContent className="max-h-72">
+                <SelectItem value="all">{t("contracts.filter.allOperationalProjects")}</SelectItem>
+                {projects
+                  .filter((project) => customerFilter === "all" || project.customerId === customerFilter)
+                  .map((project) => (
+                  <SelectItem key={project.id} value={String(project.id)}>{project.code} · {project.name}</SelectItem>
+                  ))}
               </SelectContent>
             </Select>
           </div>
@@ -773,6 +825,8 @@ const Contracts = () => {
                     <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
                       <dt className="text-muted-foreground">{t("contracts.field.type")}</dt>
                       <dd>{t(`contracts.type.${row.type}`)}</dd>
+                      <dt className="text-muted-foreground">{t("contracts.field.operationalProject")}</dt>
+                      <dd>{row.operationalProjectCode ? `${row.operationalProjectCode} · ${row.operationalProjectName ?? ""}` : "—"}</dd>
                       <dt className="text-muted-foreground">{t("contracts.field.counterparty")}</dt>
                       <dd>{row.vendorName ?? row.customerName ?? "—"}</dd>
                       <dt className="text-muted-foreground">{t("contracts.field.value")}</dt>
@@ -817,6 +871,7 @@ const Contracts = () => {
                   <tr>
                     <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("contracts.field.number")}</th>
                     <th className="min-w-[220px] px-3 py-3 text-left font-medium">{t("contracts.field.customer")}</th>
+                    <th className="min-w-[180px] px-3 py-3 text-left font-medium">{t("contracts.field.operationalProject")}</th>
                     <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("contracts.field.type")}</th>
                     <th className="min-w-[180px] px-3 py-3 text-left font-medium">{t("contracts.field.counterparty")}</th>
                     <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("contracts.field.signedDate")}</th>
@@ -849,6 +904,13 @@ const Contracts = () => {
                           </Link>
                         </td>
                         <td className="min-w-[220px] px-3 py-3 font-medium">{row.customerName ?? "—"}</td>
+                        <td className="min-w-[180px] px-3 py-3">
+                          {row.operationalProjectId ? (
+                            <Link to={`/admin/operational-projects/${row.operationalProjectId}`} className="text-primary hover:underline" onClick={(event) => event.stopPropagation()}>
+                              {row.operationalProjectCode ?? `#${row.operationalProjectId}`}
+                            </Link>
+                          ) : "—"}
+                        </td>
                         <td className="whitespace-nowrap px-3 py-3">{t(`contracts.type.${row.type}`)}</td>
                         <td className="min-w-[180px] px-3 py-3">{row.vendorName ?? row.customerName ?? "—"}</td>
                         <td className="whitespace-nowrap px-3 py-3">{formatDate(row.signedDate)}</td>
@@ -963,6 +1025,9 @@ const Contracts = () => {
                   setForm({
                     ...form,
                     customerId,
+                    operationalProjectId: projects.some((project) => project.id === form.operationalProjectId && project.customerId === customerId)
+                      ? form.operationalProjectId
+                      : null,
                     ownerUserId: customer?.ownerUserId ?? null,
                     ownerName: customer?.ownerName ?? "",
                   });
@@ -972,6 +1037,22 @@ const Contracts = () => {
                 <SelectContent className="max-h-72">
                   {customers.map((c) => (
                     <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="c-project-form" className="text-xs">{t("contracts.field.operationalProject")} *</Label>
+              <Select
+                value={form.operationalProjectId == null ? "" : String(form.operationalProjectId)}
+                onValueChange={(value) => setForm({ ...form, operationalProjectId: Number(value) })}
+                disabled={form.customerId == null}
+              >
+                <SelectTrigger id="c-project-form" className="h-9"><SelectValue placeholder={t("contracts.selectOperationalProject")} /></SelectTrigger>
+                <SelectContent className="max-h-72">
+                  {projects.filter((project) => project.customerId === form.customerId).map((project) => (
+                    <SelectItem key={project.id} value={String(project.id)}>{project.code} · {project.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

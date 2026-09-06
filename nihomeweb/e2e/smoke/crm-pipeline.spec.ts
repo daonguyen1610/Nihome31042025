@@ -34,6 +34,7 @@ test.describe("CRM Pipeline: Lead → Opportunity → Quote → Contract", () =>
     // Cleanup IDs to delete at end
     let leadId = 0;
     let customerId = 0;
+    let operationalProjectId = 0;
     let opportunityId = 0;
     let quoteId = 0;
     let contractId = 0;
@@ -90,11 +91,19 @@ test.describe("CRM Pipeline: Lead → Opportunity → Quote → Contract", () =>
       expect(customer.name).toBe(`Pipeline Corp ${unique}`); // Uses companyName
       expect(customer.sourceCode).toBe("marketing");
 
+      const projectRes = await c.post("/api/operational-projects", {
+        name: `Pipeline Project ${unique}`,
+        customerId,
+      });
+      expect(projectRes.status(), await projectRes.text()).toBe(201);
+      operationalProjectId = (await projectRes.json()).id as number;
+
       // ====== STEP 4: Create Opportunity ======
       console.log("Step 4: Creating opportunity...");
       const opportunityRes = await c.post("/api/opportunities", {
         name: `Pipeline Deal ${unique}`,
         customerId,
+        operationalProjectId,
         estimatedValue: 500_000_000, // 500 million VND
         winProbability: 50,
       });
@@ -176,6 +185,7 @@ test.describe("CRM Pipeline: Lead → Opportunity → Quote → Contract", () =>
 
       const contractRes = await c.post("/api/contracts", {
         customerId,
+        operationalProjectId,
         opportunityId,
         quoteId,
         direction: "Upstream",

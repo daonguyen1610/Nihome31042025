@@ -524,6 +524,7 @@ const AdminQuoteDetail = () => {
     const params = new URLSearchParams({ fromQuote: String(quote.id) });
     if (quote.opportunityId) params.set("opportunityId", String(quote.opportunityId));
     if (quote.customerId) params.set("customerId", String(quote.customerId));
+    if (quote.operationalProjectId) params.set("operationalProjectId", String(quote.operationalProjectId));
     if (quote.grandTotal > 0) params.set("value", String(quote.grandTotal));
     navigate(`/admin/contracts?${params.toString()}`);
   };

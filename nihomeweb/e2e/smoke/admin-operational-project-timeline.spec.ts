@@ -24,6 +24,16 @@ const detail = {
   designProjectCode: null,
   rowVersion: "AAAAAAAAB9M=",
   createdAt: "2026-08-01T00:00:00Z",
+  contractSummary: {
+    activeContractCount: 0,
+    upstreamContractCount: 0,
+    upstreamCurrentValue: 0,
+    downstreamContractCount: 0,
+    downstreamCurrentValue: 0,
+    scheduledPaymentAmount: 0,
+    paidPaymentAmount: 0,
+    paymentProgressPercent: 0,
+  },
   opportunities: [],
   quotes: [],
   contracts: [],
@@ -136,4 +146,94 @@ test("project viewer without Contract permission sees a non-clickable Contract n
 
   await expect(page.getByText("HD-2026-LONG-CONTRACT-NUMBER-0455", { exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: /HD-2026-LONG-CONTRACT-NUMBER-0455/ })).toHaveCount(0);
+});
+
+test("project contract summary drills down to multiple contract types", async ({
+  page,
+  loginInBrowserAs,
+  baseURL,
+}) => {
+  await loginInBrowserAs(page, TEST_USERS.superAdmin);
+  const projectDetail = {
+    ...detail,
+    contractSummary: {
+      activeContractCount: 2,
+      upstreamContractCount: 1,
+      upstreamCurrentValue: 110_000_000,
+      downstreamContractCount: 1,
+      downstreamCurrentValue: 40_000_000,
+      scheduledPaymentAmount: 150_000_000,
+      paidPaymentAmount: 75_000_000,
+      paymentProgressPercent: 50,
+    },
+    contracts: [
+      {
+        id: 701,
+        contractNumber: "HD-MULTI-DESIGN",
+        direction: "Upstream",
+        type: "Design",
+        vendorId: null,
+        vendorCode: null,
+        vendorName: null,
+        status: "InProgress",
+        value: 100_000_000,
+        approvedVoTotal: 10_000_000,
+        currentValue: 110_000_000,
+        paymentMilestoneCount: 2,
+        paidMilestoneCount: 1,
+        scheduledPaymentAmount: 100_000_000,
+        paidPaymentAmount: 50_000_000,
+        paymentProgressPercent: 50,
+        signedDate: "2026-08-01T00:00:00Z",
+        startDate: "2026-08-05T00:00:00Z",
+        endDate: "2026-12-31T00:00:00Z",
+        scopeOfWork: null,
+        note: null,
+        customerName: "NICON",
+        ownerName: "Sales Manager",
+        createdAt: "2026-08-01T00:00:00Z",
+      },
+      {
+        id: 702,
+        contractNumber: "HD-MULTI-SUPPLY",
+        direction: "Downstream",
+        type: "Supply",
+        vendorId: 9,
+        vendorCode: "V-009",
+        vendorName: "Material Partner",
+        status: "Signed",
+        value: 40_000_000,
+        approvedVoTotal: 0,
+        currentValue: 40_000_000,
+        paymentMilestoneCount: 1,
+        paidMilestoneCount: 1,
+        scheduledPaymentAmount: 50_000_000,
+        paidPaymentAmount: 25_000_000,
+        paymentProgressPercent: 50,
+        signedDate: "2026-08-02T00:00:00Z",
+        startDate: null,
+        endDate: null,
+        scopeOfWork: null,
+        note: null,
+        customerName: "NICON",
+        ownerName: "Procurement",
+        createdAt: "2026-08-02T00:00:00Z",
+      },
+    ],
+  };
+  await page.route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}$`), route =>
+    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(projectDetail) }));
+  await page.route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/timeline$`), route =>
+    route.fulfill({ status: 200, contentType: "application/json", body: "[]" }));
+
+  await page.goto(`${baseURL}/admin/operational-projects/${projectId}`, { waitUntil: "networkidle" });
+
+  await expect(page.getByText(/Giá trị hợp đồng đầu ra|Upstream contract value/i)).toBeVisible();
+  await expect(page.getByText(/Giá trị hợp đồng đầu vào|Downstream contract value/i)).toBeVisible();
+  await expect(page.getByText("HD-MULTI-DESIGN", { exact: true })).toBeVisible();
+  await expect(page.getByText("HD-MULTI-SUPPLY", { exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Mở danh sách hợp đồng|Open contract list/i }))
+    .toHaveAttribute("href", `/admin/contracts?operationalProjectId=${projectId}`);
+  await expect(page.getByRole("link", { name: /HD-MULTI-DESIGN/ }))
+    .toHaveAttribute("href", "/admin/contracts/701");
 });
