@@ -802,6 +802,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasKey(c => c.Id);
             b.Property(c => c.ContractNumber).HasMaxLength(40).IsRequired();
             b.HasIndex(c => c.ContractNumber).IsUnique();
+            b.Property(c => c.Direction)
+                .HasConversion<string>()
+                .HasMaxLength(20)
+                .HasDefaultValue(ContractDirection.Upstream);
+            b.Property(c => c.Type)
+                .HasConversion<string>()
+                .HasMaxLength(30)
+                .HasDefaultValue(ContractType.Unclassified);
             b.Property(c => c.Status).HasConversion<string>().HasMaxLength(30);
             b.Property(c => c.Value).HasColumnType("decimal(18,2)");
             b.Property(c => c.ScopeOfWork).HasColumnType("nvarchar(max)");
@@ -809,6 +817,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasOne(c => c.Customer)
                 .WithMany()
                 .HasForeignKey(c => c.CustomerId)
+                .OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(c => c.Vendor)
+                .WithMany()
+                .HasForeignKey(c => c.VendorId)
                 .OnDelete(DeleteBehavior.Restrict);
             b.HasOne(c => c.OperationalProject)
                 .WithMany(p => p.Contracts)
@@ -827,6 +839,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .HasForeignKey(c => c.OwnerUserId)
                 .OnDelete(DeleteBehavior.SetNull);
             b.HasIndex(c => c.CustomerId);
+            b.HasIndex(c => c.VendorId);
+            b.HasIndex(c => new { c.Direction, c.Type });
             b.HasIndex(c => c.OperationalProjectId);
             b.HasIndex(c => c.OwnerUserId);
             b.HasIndex(c => c.Status);

@@ -37,7 +37,15 @@ public class ContractsControllerTests : IntegrationTestBase
     }
 
     private static object ContractBody(int customerId, string status = "Draft", decimal value = 100_000_000)
-        => new { customerId, status, value, signedDate = "2026-06-01T00:00:00Z" };
+        => new
+        {
+            customerId,
+            direction = "Upstream",
+            type = "DesignAndBuild",
+            status,
+            value,
+            signedDate = "2026-06-01T00:00:00Z",
+        };
 
     [Fact]
     public async Task List_WithoutAuth_ReturnsUnauthorized()
@@ -55,6 +63,26 @@ public class ContractsControllerTests : IntegrationTestBase
         var body = await ReadJsonAsync(res);
         body.GetProperty("items").ValueKind.Should().Be(System.Text.Json.JsonValueKind.Array);
         body.GetProperty("total").ValueKind.Should().Be(System.Text.Json.JsonValueKind.Number);
+    }
+
+    [Fact]
+    public async Task ClassificationOptions_ExcludeLegacyValue_AndDefineAllowedTypes()
+    {
+        await AuthTestHelper.AuthenticateAsync(
+            Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "SALES_MANAGER"));
+
+        var response = await Client.GetAsync("/api/contracts/classification-options");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await ReadJsonAsync(response);
+        body.GetProperty("directions").EnumerateArray().Select(item => item.GetString())
+            .Should().BeEquivalentTo("Upstream", "Downstream");
+        body.GetProperty("types").EnumerateArray().Select(item => item.GetString())
+            .Should().NotContain("Unclassified");
+        body.GetProperty("allowedTypes").GetProperty("Downstream")
+            .EnumerateArray().Select(item => item.GetString())
+            .Should().BeEquivalentTo("Supply", "Subcontract");
     }
 
     [Fact]
@@ -98,11 +126,15 @@ public class ContractsControllerTests : IntegrationTestBase
         var id = body.GetProperty("id").GetInt32();
         body.GetProperty("contractNumber").GetString().Should().StartWith("HD-");
         body.GetProperty("customerId").GetInt32().Should().Be(customerId);
+        body.GetProperty("direction").GetString().Should().Be("Upstream");
+        body.GetProperty("type").GetString().Should().Be("DesignAndBuild");
         body.GetProperty("status").GetString().Should().Be("Draft");
 
         var update = await Client.PutAsJsonAsync($"/api/contracts/{id}", new
         {
             customerId,
+            direction = "Upstream",
+            type = "DesignAndBuild",
             status = "Signed",
             value = 500_000_000,
             signedDate = "2026-06-15T00:00:00Z",
@@ -202,6 +234,8 @@ public class ContractsControllerTests : IntegrationTestBase
         {
             customerId,
             contractNumber = number,
+            direction = "Upstream",
+            type = "DesignAndBuild",
             status = "Draft",
             value = 100,
         });
@@ -212,6 +246,8 @@ public class ContractsControllerTests : IntegrationTestBase
         {
             customerId,
             contractNumber = number,
+            direction = "Upstream",
+            type = "DesignAndBuild",
             status = "Draft",
             value = 100,
         });
@@ -224,6 +260,123 @@ public class ContractsControllerTests : IntegrationTestBase
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
         var res = await Client.PostAsJsonAsync("/api/contracts", ContractBody(9_999_999));
         res.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Create_WithoutClassification_ReturnsBadRequest()
+    {
+        await AuthTestHelper.AuthenticateAsync(
+            Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "SALES_MANAGER"));
+        var customerId = await CreateCustomerAsync();
+
+        var response = await Client.PostAsJsonAsync("/api/contracts", new
+        {
+            customerId,
+            status = "Draft",
+            value = 100,
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Create_DownstreamContract_RequiresCompatibleActiveVendor()
+    {
+        await AuthTestHelper.AuthenticateAsync(
+            Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "SALES_MANAGER"));
+        var customerId = await CreateCustomerAsync();
+        var vendor = await WithDbAsync(async db =>
+        {
+            var userId = await db.Users.Select(user => user.Id).FirstAsync();
+            var entity = new Vendor
+            {
+                VendorCode = $"SUB-{Guid.NewGuid():N}"[..20],
+                CompanyName = "Approved subcontractor",
+                VendorType = VendorType.SubContractor,
+                CreatedByUserId = userId,
+            };
+            db.Vendors.Add(entity);
+            await db.SaveChangesAsync();
+            return entity;
+        });
+
+        var missingVendor = await Client.PostAsJsonAsync("/api/contracts", new
+        {
+            customerId,
+            direction = "Downstream",
+            type = "Subcontract",
+            status = "Draft",
+            value = 100,
+        });
+        missingVendor.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        var upstreamWithVendor = await Client.PostAsJsonAsync("/api/contracts", new
+        {
+            customerId,
+            direction = "Upstream",
+            type = "DesignAndBuild",
+            vendorId = vendor.Id,
+            status = "Draft",
+            value = 100,
+        });
+        upstreamWithVendor.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        var incompatibleType = await Client.PostAsJsonAsync("/api/contracts", new
+        {
+            customerId,
+            direction = "Downstream",
+            type = "Supply",
+            vendorId = vendor.Id,
+            status = "Draft",
+            value = 100,
+        });
+        incompatibleType.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        await WithDbAsync(async db =>
+        {
+            var persisted = await db.Vendors.SingleAsync(item => item.Id == vendor.Id);
+            persisted.IsActive = false;
+            await db.SaveChangesAsync();
+        });
+        var inactiveVendor = await Client.PostAsJsonAsync("/api/contracts", new
+        {
+            customerId,
+            direction = "Downstream",
+            type = "Subcontract",
+            vendorId = vendor.Id,
+            status = "Draft",
+            value = 100,
+        });
+        inactiveVendor.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        await WithDbAsync(async db =>
+        {
+            var persisted = await db.Vendors.SingleAsync(item => item.Id == vendor.Id);
+            persisted.IsActive = true;
+            await db.SaveChangesAsync();
+        });
+
+        var created = await Client.PostAsJsonAsync("/api/contracts", new
+        {
+            customerId,
+            direction = "Downstream",
+            type = "Subcontract",
+            vendorId = vendor.Id,
+            status = "Draft",
+            value = 100,
+        });
+        created.StatusCode.Should().Be(HttpStatusCode.Created);
+        var body = await ReadJsonAsync(created);
+        body.GetProperty("direction").GetString().Should().Be("Downstream");
+        body.GetProperty("type").GetString().Should().Be("Subcontract");
+        body.GetProperty("vendorId").GetInt32().Should().Be(vendor.Id);
+        body.GetProperty("vendorName").GetString().Should().Be(vendor.CompanyName);
+
+        var filtered = await ReadJsonAsync(await Client.GetAsync(
+            $"/api/contracts?direction=Downstream&type=Subcontract&vendorId={vendor.Id}"));
+        filtered.GetProperty("items").EnumerateArray()
+            .Should().Contain(item => item.GetProperty("id").GetInt32() == body.GetProperty("id").GetInt32());
     }
 
     [Fact]
@@ -241,6 +394,8 @@ public class ContractsControllerTests : IntegrationTestBase
         {
             customerId,
             ownerUserId = 9_999_999,
+            direction = "Upstream",
+            type = "DesignAndBuild",
             status = "Draft",
             value = 100,
         });
@@ -263,6 +418,8 @@ public class ContractsControllerTests : IntegrationTestBase
         var res = await Client.PostAsJsonAsync("/api/contracts", new
         {
             customerId,
+            direction = "Upstream",
+            type = "DesignAndBuild",
             status = "Signed",
             value = 1_000_000_000,
             signedDate = "2026-06-01T00:00:00Z",
@@ -291,6 +448,8 @@ public class ContractsControllerTests : IntegrationTestBase
         var res = await Client.PostAsJsonAsync("/api/contracts", new
         {
             customerId,
+            direction = "Upstream",
+            type = "DesignAndBuild",
             status = "Draft",
             value = 100_000_000,
             paymentMilestones = new object[]
@@ -426,6 +585,37 @@ public class ContractsControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task Transition_LegacyUnclassifiedContract_ReturnsBadRequestWithoutMutation()
+    {
+        await AuthTestHelper.AuthenticateAsync(
+            Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "SALES_MANAGER"));
+        var customerId = await CreateCustomerAsync();
+        var contractId = await WithDbAsync(async db =>
+        {
+            var entity = new Contract
+            {
+                ContractNumber = $"HD-LEGACY-{Guid.NewGuid():N}"[..30],
+                CustomerId = customerId,
+                Direction = ContractDirection.Upstream,
+                Type = ContractType.Unclassified,
+                Status = ContractStatus.Draft,
+            };
+            db.Contracts.Add(entity);
+            await db.SaveChangesAsync();
+            return entity.Id;
+        });
+
+        var response = await Client.PostAsJsonAsync(
+            $"/api/contracts/{contractId}/transition",
+            new { newStatus = "Signed" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.Contracts.SingleAsync(item => item.Id == contractId)))
+            .Status.Should().Be(ContractStatus.Draft);
+    }
+
+    [Fact]
     public async Task Milestone_StatusUpdate_RequiresPersistsAndClearsActualPaymentDate()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
@@ -434,6 +624,8 @@ public class ContractsControllerTests : IntegrationTestBase
         var body = new
         {
             customerId,
+            direction = "Upstream",
+            type = "DesignAndBuild",
             status = "Signed",
             value = 100_000_000,
             paymentMilestones = new object[]
@@ -478,6 +670,8 @@ public class ContractsControllerTests : IntegrationTestBase
         var created = await Client.PostAsJsonAsync("/api/contracts", new
         {
             customerId,
+            direction = "Upstream",
+            type = "DesignAndBuild",
             status = "Signed",
             value = 100_000_000,
             paymentMilestones = new object[]

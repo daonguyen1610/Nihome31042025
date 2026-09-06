@@ -590,6 +590,7 @@ const OperationalProjects = () => {
                           <div className="flex items-center gap-2 flex-wrap">
                             <p className="font-medium font-mono">{item.contractNumber}</p>
                             <Badge variant="outline" className="text-xs">{t(`contracts.status.${item.status}`)}</Badge>
+                            <Badge variant="secondary" className="text-xs">{t(`contracts.type.${item.type}`)}</Badge>
                           </div>
                           <Button variant="ghost" size="sm" asChild>
                             <Link to={`/admin/contracts/${item.id}`}><ExternalLink className="h-4 w-4" /></Link>
@@ -629,6 +630,10 @@ const OperationalProjects = () => {
                               <dd>{item.customerName}</dd>
                             </div>
                           )}
+                          <div>
+                            <dt className="text-muted-foreground text-xs">{t("contracts.field.counterparty")}</dt>
+                            <dd>{item.vendorName ?? item.customerName ?? "—"}</dd>
+                          </div>
                         </dl>
 
                         {item.scopeOfWork && (

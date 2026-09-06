@@ -51,6 +51,9 @@ public class ContractsController(
     [RequirePermission("crm.contracts", "view")]
     public async Task<ActionResult<ContractListResponse>> List(
         [FromQuery] ContractStatus? status,
+        [FromQuery] ContractDirection? direction,
+        [FromQuery] ContractType? type,
+        [FromQuery] int? vendorId,
         [FromQuery] int? ownerUserId,
         [FromQuery] int? customerId,
         [FromQuery] string? search,
@@ -67,10 +70,47 @@ public class ContractsController(
 
         var canSeeAll = await permissions.HasAsync(userId.Value, "crm.contracts.view.all", ct);
         var result = await svc.ListAsync(
-            userId.Value, canSeeAll, status, ownerUserId, customerId, search,
+            userId.Value, canSeeAll, status, direction, type, vendorId,
+            ownerUserId, customerId, search,
             signedFrom, signedTo, valueMin, valueMax, page, pageSize, ct);
         return Ok(result);
     }
+
+    [HttpGet("classification-options")]
+    [RequirePermission("crm.contracts", "view")]
+    public async Task<ActionResult<object>> ClassificationOptions(CancellationToken ct) => Ok(new
+    {
+        directions = Enum.GetNames<ContractDirection>(),
+        types = Enum.GetValues<ContractType>()
+            .Where(value => value != ContractType.Unclassified)
+            .Select(value => value.ToString()),
+        allowedTypes = new Dictionary<string, string[]>
+        {
+            [ContractDirection.Upstream.ToString()] =
+            [
+                ContractType.Design.ToString(),
+                ContractType.Construction.ToString(),
+                ContractType.DesignAndBuild.ToString(),
+            ],
+            [ContractDirection.Downstream.ToString()] =
+            [
+                ContractType.Supply.ToString(),
+                ContractType.Subcontract.ToString(),
+            ],
+        },
+        vendors = await db.Vendors.AsNoTracking()
+            .Where(vendor => vendor.IsActive)
+            .OrderBy(vendor => vendor.CompanyName)
+            .ThenBy(vendor => vendor.VendorCode)
+            .Select(vendor => new
+            {
+                vendor.Id,
+                vendor.VendorCode,
+                vendor.CompanyName,
+                vendor.VendorType,
+            })
+            .ToListAsync(ct),
+    });
 
     [HttpGet("{id:int}")]
     [RequirePermission("crm.contracts", "view")]

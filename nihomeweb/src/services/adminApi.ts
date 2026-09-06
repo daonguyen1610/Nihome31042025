@@ -957,6 +957,11 @@ export interface OperationalProjectResponse extends OperationalProjectListItemRe
   contracts: Array<{
     id: number;
     contractNumber: string;
+    direction: ContractDirection;
+    type: ContractType;
+    vendorId?: number | null;
+    vendorCode?: string | null;
+    vendorName?: string | null;
     status: ContractStatus;
     value: number;
     signedDate?: string | null;
@@ -1073,6 +1078,11 @@ export interface ContractResponse {
   contractNumber: string;
   customerId: number;
   customerName?: string;
+  direction: ContractDirection;
+  type: ContractType;
+  vendorId?: number | null;
+  vendorCode?: string | null;
+  vendorName?: string | null;
   opportunityId?: number | null;
   opportunityTitle?: string | null;
   quoteId?: number | null;
@@ -1147,6 +1157,9 @@ export interface ContractListResponse {
 
 export interface ContractListParams {
   status?: ContractStatus;
+  direction?: ContractDirection;
+  type?: ContractType;
+  vendorId?: number;
   ownerUserId?: number;
   customerId?: number;
   search?: string;
@@ -1162,6 +1175,9 @@ export interface UpsertContractRequest {
   rowVersion?: string;
   contractNumber?: string | null;
   customerId: number;
+  direction: ContractDirection;
+  type: Exclude<ContractType, "Unclassified">;
+  vendorId?: number | null;
   opportunityId?: number | null;
   quoteId?: number | null;
   operationalProjectId?: number | null;
@@ -1179,6 +1195,23 @@ export interface UpsertContractRequest {
    * must sum to 100.
    */
   paymentMilestones?: ContractPaymentMilestoneRequest[] | null;
+}
+
+export type ContractDirection = "Upstream" | "Downstream";
+
+export type ContractType =
+  | "Unclassified"
+  | "Design"
+  | "Construction"
+  | "DesignAndBuild"
+  | "Supply"
+  | "Subcontract";
+
+export interface ContractClassificationOptions {
+  directions: ContractDirection[];
+  types: Exclude<ContractType, "Unclassified">[];
+  allowedTypes: Record<ContractDirection, Exclude<ContractType, "Unclassified">[]>;
+  vendors: Pick<VendorResponse, "id" | "vendorCode" | "companyName" | "vendorType">[];
 }
 
 // -------- NIH-104: appendices (VO), attachments, timeline --------
@@ -5074,6 +5107,8 @@ export const adminApi = {
   // Contracts (NIH-102)
   listContracts: (params?: ContractListParams) =>
     api.get<ContractListResponse>("/contracts", { params }),
+  getContractClassificationOptions: () =>
+    api.get<ContractClassificationOptions>("/contracts/classification-options"),
   getContract: (id: number) =>
     api.get<ContractResponse>(`/contracts/${id}`),
   previewNextContractNumber: () =>

@@ -804,19 +804,19 @@ public static class SampleCrmDataSeeder
         // (opportunityIdx, status, signedOffsetDays, durationDays, value, label)
         // The InProgress row uses a short remaining window on purpose so
         // the FE red badge (endDate - now ≤ 30 days) has a live example.
-        var seeds = new (int CustIdx, ContractStatus Status, int SignedOffset, int DurationDays, decimal Value, string Label)[]
+        var seeds = new (int CustIdx, ContractType Type, ContractStatus Status, int SignedOffset, int DurationDays, decimal Value, string Label)[]
         {
-            (0, ContractStatus.Draft,       0,   180, 250_000_000m, "Bản nháp — chờ 2 bên chốt"),
-            (1, ContractStatus.Signed,     -20, 200,  850_000_000m, "Đã ký — chuẩn bị khởi công"),
-            (2, ContractStatus.InProgress, -90, 100, 1_500_000_000m, "Đang thi công — sắp kết thúc"),
-            (3, ContractStatus.InProgress, -30, 240,  620_000_000m, "Đang thi công — mới bắt đầu"),
-            (3, ContractStatus.OnHold,     -60, 180,  480_000_000m, "Tạm dừng theo yêu cầu KH"),
-            (4, ContractStatus.Completed, -240, 180,  980_000_000m, "Hoàn thành, đã bàn giao"),
+            (0, ContractType.Design, ContractStatus.Draft, 0, 180, 250_000_000m, "Bản nháp — chờ 2 bên chốt"),
+            (1, ContractType.DesignAndBuild, ContractStatus.Signed, -20, 200, 850_000_000m, "Đã ký — chuẩn bị khởi công"),
+            (2, ContractType.Construction, ContractStatus.InProgress, -90, 100, 1_500_000_000m, "Đang thi công — sắp kết thúc"),
+            (3, ContractType.DesignAndBuild, ContractStatus.InProgress, -30, 240, 620_000_000m, "Đang thi công — mới bắt đầu"),
+            (3, ContractType.Construction, ContractStatus.OnHold, -60, 180, 480_000_000m, "Tạm dừng theo yêu cầu KH"),
+            (4, ContractType.DesignAndBuild, ContractStatus.Completed, -240, 180, 980_000_000m, "Hoàn thành, đã bàn giao"),
         };
 
         for (var index = 0; index < seeds.Length; index++)
         {
-            var (opportunityIdx, status, signedOffset, durationDays, value, label) = seeds[index];
+            var (opportunityIdx, type, status, signedOffset, durationDays, value, label) = seeds[index];
             var opportunity = sampleOpportunities[opportunityIdx % sampleOpportunities.Count];
             sampleQuotes.TryGetValue(opportunity.Id, out var quote);
             var signedDate = status == ContractStatus.Draft ? (DateTime?)null : now.AddDays(signedOffset);
@@ -825,13 +825,24 @@ public static class SampleCrmDataSeeder
             var number = $"HD-SAMPLE-{index + 1:D3}";
             if (deletedContractNumbers.Contains(number)) continue;
             var sampleNote = $"{SampleContractMarker} {label}";
-            if (db.Contracts.Any(contract => contract.ContractNumber == number
-                || contract.Note == sampleNote)) continue;
+            var existing = db.Contracts.FirstOrDefault(contract =>
+                contract.ContractNumber == number || contract.Note == sampleNote);
+            if (existing is not null)
+            {
+                if (existing.Type == ContractType.Unclassified)
+                {
+                    existing.Direction = ContractDirection.Upstream;
+                    existing.Type = type;
+                }
+                continue;
+            }
 
             db.Contracts.Add(new Contract
             {
                 ContractNumber = number,
                 CustomerId = opportunity.CustomerId,
+                Direction = ContractDirection.Upstream,
+                Type = type,
                 OpportunityId = opportunity.Id,
                 QuoteId = quote?.Id,
                 OwnerUserId = owner.Id,

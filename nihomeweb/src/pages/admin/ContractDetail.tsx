@@ -56,13 +56,16 @@ import { useBulkSelection } from "@/hooks/useBulkSelection";
 import {
   adminApi,
   PAYMENT_MILESTONE_STATUSES,
+  type ContractClassificationOptions,
   type ContractAppendixResponse,
   type ContractAppendixStatus,
   type ContractAttachmentKind,
   type ContractAttachmentResponse,
   type ContractPaymentMilestoneRequest,
   type ContractResponse,
+  type ContractDirection,
   type ContractStatus,
+  type ContractType,
   type CustomerResponse,
   type ContractTimelineEvent,
   type PaymentMilestoneStatus,
@@ -129,6 +132,9 @@ interface MilestoneDraft {
 interface ContractEditForm {
   contractNumber: string;
   customerId: number;
+  direction: ContractDirection;
+  type: ContractType;
+  vendorId: number | null;
   ownerName: string;
   signedDate: string;
   startDate: string;
@@ -158,6 +164,9 @@ const toIsoTimestamp = (value: string): string | null => {
 const toEditForm = (contract: ContractResponse): ContractEditForm => ({
   contractNumber: contract.contractNumber,
   customerId: contract.customerId,
+  direction: contract.direction,
+  type: contract.type,
+  vendorId: contract.vendorId ?? null,
   ownerName: contract.ownerName ?? "",
   signedDate: toIsoDate(contract.signedDate),
   startDate: toIsoDate(contract.startDate),
@@ -246,7 +255,9 @@ const ContractHeader = ({
 }: HeaderProps) => {
   const { t } = useI18n();
 
-  const transitions = AVAILABLE_TRANSITIONS[contract.status] ?? [];
+  const transitions = contract.type === "Unclassified"
+    ? []
+    : AVAILABLE_TRANSITIONS[contract.status] ?? [];
   const label = (target: ContractStatus): string => {
     // Signed -> InProgress on the Signed row = "Move to In progress",
     // OnHold -> InProgress = "Resume". Same icon, clearer wording.
@@ -352,6 +363,11 @@ const ContractHeader = ({
           ))}
         </div>
       ) : null}
+      {!editing && contract.type === "Unclassified" ? (
+        <p className="mt-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+          {t("contracts.validation.classifyBeforeTransition")}
+        </p>
+      ) : null}
     </div>
   );
 };
@@ -370,6 +386,9 @@ const InfoTab = ({ contract, onEnsureDesignProject, ensuringDesignProject }: Inf
   const rows: [string, React.ReactNode][] = [
     [t("contracts.field.number"), contract.contractNumber],
     [t("contracts.field.customer"), contract.customerName ?? "—"],
+    [t("contracts.field.direction"), t(`contracts.direction.${contract.direction}`)],
+    [t("contracts.field.type"), t(`contracts.type.${contract.type}`)],
+    [t("contracts.field.counterparty"), contract.vendorName ?? contract.customerName ?? "—"],
     [t("contracts.field.owner"), contract.ownerName ?? "—"],
     [t("contracts.field.status"), t(`contracts.status.${contract.status}`)],
     [t("contracts.field.signedDate"), formatDate(contract.signedDate)],
@@ -482,11 +501,12 @@ const InfoTab = ({ contract, onEnsureDesignProject, ensuringDesignProject }: Inf
 interface EditInfoTabProps {
   form: ContractEditForm;
   customers: CustomerResponse[];
+  classification: ContractClassificationOptions | null;
   error: string | null;
   onChange: (next: ContractEditForm) => void;
 }
 
-const EditInfoTab = ({ form, customers, error, onChange }: EditInfoTabProps) => {
+const EditInfoTab = ({ form, customers, classification, error, onChange }: EditInfoTabProps) => {
   const { t } = useI18n();
 
   return (
@@ -520,6 +540,56 @@ const EditInfoTab = ({ form, customers, error, onChange }: EditInfoTabProps) => 
           </Select>
         </div>
       </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-1.5">
+          <Label htmlFor="contract-detail-direction">{t("contracts.field.direction")} *</Label>
+          <Select
+            value={form.direction}
+            onValueChange={(value) => {
+              const direction = value as ContractDirection;
+              const type = classification?.allowedTypes[direction]?.[0];
+              if (type) onChange({ ...form, direction, type, vendorId: null });
+            }}
+          >
+            <SelectTrigger id="contract-detail-direction"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {(classification?.directions ?? []).map((direction) => (
+                <SelectItem key={direction} value={direction}>{t(`contracts.direction.${direction}`)}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="contract-detail-type">{t("contracts.field.type")} *</Label>
+          <Select value={form.type} onValueChange={(value) => onChange({ ...form, type: value as ContractType, vendorId: null })}>
+            <SelectTrigger id="contract-detail-type"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {(classification?.allowedTypes[form.direction] ?? []).map((type) => (
+                <SelectItem key={type} value={type}>{t(`contracts.type.${type}`)}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {form.direction === "Downstream" ? (
+        <div className="space-y-1.5">
+          <Label htmlFor="contract-detail-vendor">{t("contracts.field.vendor")} *</Label>
+          <Select value={form.vendorId == null ? "" : String(form.vendorId)} onValueChange={(value) => onChange({ ...form, vendorId: Number(value) })}>
+            <SelectTrigger id="contract-detail-vendor"><SelectValue placeholder={t("contracts.selectVendor")} /></SelectTrigger>
+            <SelectContent className="max-h-72">
+              {(classification?.vendors ?? [])
+                .filter((vendor) => form.type === "Supply"
+                  ? vendor.vendorType !== "SubContractor"
+                  : vendor.vendorType !== "Supplier")
+                .map((vendor) => (
+                  <SelectItem key={vendor.id} value={String(vendor.id)}>{vendor.vendorCode} · {vendor.companyName}</SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+        </div>
+      ) : null}
 
       <div className="space-y-1.5 rounded-md border bg-slate-50 px-3 py-2.5">
         <Label>{t("contracts.field.owner")}</Label>
@@ -1520,6 +1590,7 @@ const ContractDetail = () => {
   const [form, setForm] = useState<ContractEditForm | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [customers, setCustomers] = useState<CustomerResponse[]>([]);
+  const [classification, setClassification] = useState<ContractClassificationOptions | null>(null);
 
   const handleEnsureDesignProject = async () => {
     if (!contract) return;
@@ -1545,7 +1616,7 @@ const ContractDetail = () => {
     setLoadError(null);
     setAttachmentsError(null);
     try {
-      const [c, vos, atts, tl] = await Promise.all([
+      const [c, vos, atts, tl, options] = await Promise.all([
         adminApi.getContract(idNum),
         adminApi.listContractAppendices(idNum).catch(() => ({ data: [] as ContractAppendixResponse[] })),
         adminApi.listContractAttachments(idNum).catch((error) => {
@@ -1553,12 +1624,14 @@ const ContractDetail = () => {
           return { data: [] as ContractAttachmentResponse[] };
         }),
         adminApi.getContractTimeline(idNum).catch(() => ({ data: [] as ContractTimelineEvent[] })),
+        adminApi.getContractClassificationOptions(),
       ]);
       setContract(c.data);
       setForm(toEditForm(c.data));
       setAppendices(vos.data);
       setAttachments(atts.data);
       setTimeline(tl.data);
+      setClassification(options.data);
     } catch (err) {
       setLoadError(getErrorMessage(err) ?? String(err));
     } finally {
@@ -1710,6 +1783,16 @@ const ContractDetail = () => {
   const saveEdit = useCallback(async () => {
     if (!contract || !form) return;
     setFormError(null);
+    if (form.type === "Unclassified") {
+      setFormError(t("contracts.validation.typeRequired"));
+      setTab("info");
+      return;
+    }
+    if (form.direction === "Downstream" && form.vendorId == null) {
+      setFormError(t("contracts.validation.vendorRequired"));
+      setTab("info");
+      return;
+    }
     const scheduleChanged = hasScheduleChanges(contract, form.milestones);
     if (form.signedDate && form.startDate && form.startDate < form.signedDate) {
       setFormError(t("form.invalidDateRange"));
@@ -1754,6 +1837,9 @@ const ContractDetail = () => {
       rowVersion: contract.rowVersion,
       contractNumber: form.contractNumber.trim() || null,
       customerId: form.customerId,
+      direction: form.direction,
+      type: form.type,
+      vendorId: form.direction === "Downstream" ? form.vendorId : null,
       opportunityId: contract.opportunityId,
       quoteId: contract.quoteId,
       status: contract.status,
@@ -1853,7 +1939,13 @@ const ContractDetail = () => {
           <TabsContent value="info" className="mt-4">
             {editing && form ? (
               <div data-testid="contract-inline-edit-form">
-                <EditInfoTab form={form} customers={customers} error={formError} onChange={setForm} />
+                <EditInfoTab
+                  form={form}
+                  customers={customers}
+                  classification={classification}
+                  error={formError}
+                  onChange={setForm}
+                />
               </div>
             ) : (
               <InfoTab

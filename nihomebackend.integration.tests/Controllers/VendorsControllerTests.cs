@@ -1,6 +1,8 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using Microsoft.EntityFrameworkCore;
+using NihomeBackend.Models;
 
 namespace NihomeBackend.IntegrationTests.Controllers;
 
@@ -139,6 +141,49 @@ public class VendorsControllerTests : IntegrationTestBase
         (await content.Content.ReadAsStringAsync()).Should().Be("vendor capability");
         (await Client.GetAsync("/api/vendors/2147483647/capability-file/content"))
             .StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task Delete_VendorReferencedByDownstreamContract_IsRejectedWithoutMutation()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "ADMIN"));
+        var vendorId = await WithDbAsync(async db =>
+        {
+            var userId = await db.Users.Select(user => user.Id).FirstAsync();
+            var customer = new Customer
+            {
+                Name = "Contract customer",
+                Type = CustomerType.Individual,
+                SourceCode = "marketing",
+            };
+            var vendor = new Vendor
+            {
+                VendorCode = $"LINK-{Guid.NewGuid():N}"[..20],
+                CompanyName = "Linked vendor",
+                VendorType = VendorType.SubContractor,
+                CreatedByUserId = userId,
+            };
+            db.AddRange(customer, vendor);
+            await db.SaveChangesAsync();
+            db.Contracts.Add(new Contract
+            {
+                ContractNumber = $"HD-LINK-{Guid.NewGuid():N}"[..30],
+                CustomerId = customer.Id,
+                Direction = ContractDirection.Downstream,
+                Type = ContractType.Subcontract,
+                VendorId = vendor.Id,
+            });
+            await db.SaveChangesAsync();
+            return vendor.Id;
+        });
+
+        var response = await Client.DeleteAsync($"/api/vendors/{vendorId}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.Vendors.AnyAsync(vendor => vendor.Id == vendorId)))
+            .Should().BeTrue();
+        (await WithDbAsync(db => db.Contracts.AnyAsync(contract => contract.VendorId == vendorId)))
+            .Should().BeTrue();
     }
 
     private static MultipartFormDataContent FileForm(string content, string fileName)

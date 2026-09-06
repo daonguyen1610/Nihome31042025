@@ -126,8 +126,16 @@ public class VendorsController(
     [RequirePermission("proc.vendors", "manage")]
     public async Task<IActionResult> Delete(int id, CancellationToken ct)
     {
-        var vendor = await service.DeleteAsync(id, ct);
-        if (vendor is null) return NotFound();
+        VendorResponse? vendor;
+        try
+        {
+            vendor = await service.DeleteAsync(id, ct);
+            if (vendor is null) return NotFound();
+        }
+        catch (VendorOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
 
         audit.Log(new AuditEvent
         {

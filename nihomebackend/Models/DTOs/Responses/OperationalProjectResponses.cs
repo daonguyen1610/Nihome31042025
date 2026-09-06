@@ -92,6 +92,11 @@ public class OperationalProjectContractResponse
 {
     public int Id { get; set; }
     public string ContractNumber { get; set; } = string.Empty;
+    public ContractDirection Direction { get; set; }
+    public ContractType Type { get; set; }
+    public int? VendorId { get; set; }
+    public string? VendorCode { get; set; }
+    public string? VendorName { get; set; }
     public string Status { get; set; } = string.Empty;
     public decimal Value { get; set; }
     public DateTime? SignedDate { get; set; }

@@ -9,10 +9,13 @@ import {
   adminApi,
   CONTRACT_STATUSES,
   PAYMENT_MILESTONE_STATUSES,
+  type ContractClassificationOptions,
+  type ContractDirection,
   type ContractListParams,
   type ContractPaymentMilestoneRequest,
   type ContractResponse,
   type ContractStatus,
+  type ContractType,
   type CustomerResponse,
   type DeletionImpactResponse,
   type PaymentMilestoneStatus,
@@ -70,6 +73,9 @@ type MilestoneDraft = {
 type FormData = {
   contractNumber: string;
   customerId: number | null;
+  direction: ContractDirection;
+  type: Exclude<ContractType, "Unclassified">;
+  vendorId: number | null;
   /** Set when the contract is raised from an approved quote; null otherwise. */
   opportunityId: number | null;
   quoteId: number | null;
@@ -94,6 +100,9 @@ const DATE_MAX = "2099-12-31";
 const emptyForm: FormData = {
   contractNumber: "",
   customerId: null,
+  direction: "Upstream",
+  type: "DesignAndBuild",
+  vendorId: null,
   opportunityId: null,
   quoteId: null,
   ownerUserId: null,
@@ -212,6 +221,7 @@ const Contracts = () => {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [total, setTotal] = useState(0);
   const [customers, setCustomers] = useState<CustomerResponse[]>([]);
+  const [classification, setClassification] = useState<ContractClassificationOptions | null>(null);
   const [hoveredContractId, setHoveredContractId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   // Only the very first load may replace the whole page. Every later refresh
@@ -221,6 +231,9 @@ const Contracts = () => {
   const [error, setError] = useState<string | null>(null);
 
   const [statusFilter, setStatusFilter] = useState<ContractStatus | "all">("all");
+  const [directionFilter, setDirectionFilter] = useState<ContractDirection | "all">("all");
+  const [typeFilter, setTypeFilter] = useState<ContractType | "all">("all");
+  const [vendorFilter, setVendorFilter] = useState<number | "all">("all");
   const [customerFilter, setCustomerFilter] = useState<number | "all">(
     Number.isInteger(customerIdParam) && customerIdParam > 0 ? customerIdParam : "all",
   );
@@ -244,6 +257,9 @@ const Contracts = () => {
     try {
       const params: ContractListParams = { page: 1, pageSize: 100 };
       if (statusFilter !== "all") params.status = statusFilter;
+      if (directionFilter !== "all") params.direction = directionFilter;
+      if (typeFilter !== "all") params.type = typeFilter;
+      if (vendorFilter !== "all") params.vendorId = vendorFilter;
       if (customerFilter !== "all") params.customerId = customerFilter;
       if (signedFrom) params.signedFrom = toIsoTimestamp(signedFrom) ?? undefined;
       if (signedTo) params.signedTo = toIsoTimestamp(signedTo) ?? undefined;
@@ -253,17 +269,21 @@ const Contracts = () => {
       if (valueMax && !Number.isNaN(maxNum)) params.valueMax = maxNum;
       if (debouncedSearch.trim()) params.search = debouncedSearch.trim();
 
-      const [contractsRes, customersRes] = await Promise.all([
+      const [contractsRes, customersRes, classificationRes] = await Promise.all([
         adminApi.listContracts(params),
         customers.length === 0
           ? adminApi.listCustomers({ pageSize: 200 })
           : Promise.resolve({ data: { total: customers.length, page: 1, pageSize: customers.length, items: customers } }),
+        classification === null
+          ? adminApi.getContractClassificationOptions()
+          : Promise.resolve({ data: classification }),
       ]);
       setContracts(contractsRes.data.items);
       setTotal(contractsRes.data.total);
       if (customers.length === 0) {
         setCustomers(customersRes.data.items);
       }
+      if (classification === null) setClassification(classificationRes.data);
     } catch (err) {
       setError(getErrorMessage(err) ?? t("common.error"));
     } finally {
@@ -271,7 +291,7 @@ const Contracts = () => {
       setInitialLoaded(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter, customerFilter, signedFrom, signedTo, valueMin, valueMax, debouncedSearch, t]);
+  }, [statusFilter, directionFilter, typeFilter, vendorFilter, customerFilter, signedFrom, signedTo, valueMin, valueMax, debouncedSearch, t]);
 
   useEffect(() => {
     void load();
@@ -279,6 +299,9 @@ const Contracts = () => {
 
   const resetFilters = () => {
     setStatusFilter("all");
+    setDirectionFilter("all");
+    setTypeFilter("all");
+    setVendorFilter("all");
     setCustomerFilter("all");
     setSignedFrom("");
     setSignedTo("");
@@ -289,6 +312,9 @@ const Contracts = () => {
 
   const filtersActive =
     statusFilter !== "all" ||
+    directionFilter !== "all" ||
+    typeFilter !== "all" ||
+    vendorFilter !== "all" ||
     customerFilter !== "all" ||
     signedFrom !== "" ||
     signedTo !== "" ||
@@ -393,6 +419,10 @@ const Contracts = () => {
       setFormError(t("form.required"));
       return;
     }
+    if (form.direction === "Downstream" && form.vendorId == null) {
+      setFormError(t("contracts.validation.vendorRequired"));
+      return;
+    }
     if (form.signedDate && form.startDate && form.startDate < form.signedDate) {
       // Sanity check: start date shouldn't be before signed date.
       setFormError(t("form.invalidDateRange"));
@@ -433,6 +463,9 @@ const Contracts = () => {
         ? null
         : enteredContractNumber || null,
       customerId: form.customerId,
+      direction: form.direction,
+      type: form.type,
+      vendorId: form.direction === "Downstream" ? form.vendorId : null,
       opportunityId: form.opportunityId,
       quoteId: form.quoteId,
       status: form.status,
@@ -507,6 +540,9 @@ const Contracts = () => {
       columns: [
         { header: t("contracts.field.number"), value: "contractNumber" },
         { header: t("contracts.field.customer"), value: (r) => r.customerName ?? "" },
+        { header: t("contracts.field.direction"), value: (r) => t(`contracts.direction.${r.direction}`) },
+        { header: t("contracts.field.type"), value: (r) => t(`contracts.type.${r.type}`) },
+        { header: t("contracts.field.counterparty"), value: (r) => r.vendorName ?? r.customerName ?? "" },
         { header: t("contracts.field.status"), value: (r) => t(`contracts.status.${r.status}`) },
         { header: t("contracts.field.signedDate"), value: (r) => r.signedDate ?? "" },
         { header: t("contracts.field.startDate"), value: (r) => r.startDate ?? "" },
@@ -591,6 +627,43 @@ const Contracts = () => {
                 <SelectItem value="all">{t("contracts.filter.allCustomers")}</SelectItem>
                 {customers.map((c) => (
                   <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="min-w-0 space-y-1">
+            <Label className="text-xs" htmlFor="c-direction">{t("contracts.field.direction")}</Label>
+            <Select value={directionFilter} onValueChange={(value) => setDirectionFilter(value as ContractDirection | "all")}>
+              <SelectTrigger id="c-direction" className="h-9"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t("contracts.filter.allDirections")}</SelectItem>
+                {(classification?.directions ?? []).map((direction) => (
+                  <SelectItem key={direction} value={direction}>{t(`contracts.direction.${direction}`)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="min-w-0 space-y-1">
+            <Label className="text-xs" htmlFor="c-type">{t("contracts.field.type")}</Label>
+            <Select value={typeFilter} onValueChange={(value) => setTypeFilter(value as ContractType | "all")}>
+              <SelectTrigger id="c-type" className="h-9"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t("contracts.filter.allTypes")}</SelectItem>
+                <SelectItem value="Unclassified">{t("contracts.type.Unclassified")}</SelectItem>
+                {(classification?.types ?? []).map((type) => (
+                  <SelectItem key={type} value={type}>{t(`contracts.type.${type}`)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="min-w-0 space-y-1">
+            <Label className="text-xs" htmlFor="c-vendor">{t("contracts.field.vendor")}</Label>
+            <Select value={vendorFilter === "all" ? "all" : String(vendorFilter)} onValueChange={(value) => setVendorFilter(value === "all" ? "all" : Number(value))}>
+              <SelectTrigger id="c-vendor" className="h-9"><SelectValue /></SelectTrigger>
+              <SelectContent className="max-h-72">
+                <SelectItem value="all">{t("contracts.filter.allVendors")}</SelectItem>
+                {(classification?.vendors ?? []).map((vendor) => (
+                  <SelectItem key={vendor.id} value={String(vendor.id)}>{vendor.vendorCode} · {vendor.companyName}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -698,6 +771,10 @@ const Contracts = () => {
                       </div>
                     </div>
                     <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+                      <dt className="text-muted-foreground">{t("contracts.field.type")}</dt>
+                      <dd>{t(`contracts.type.${row.type}`)}</dd>
+                      <dt className="text-muted-foreground">{t("contracts.field.counterparty")}</dt>
+                      <dd>{row.vendorName ?? row.customerName ?? "—"}</dd>
                       <dt className="text-muted-foreground">{t("contracts.field.value")}</dt>
                       <dd className="font-semibold">{formatVnd(row.value)}</dd>
                       <dt className="text-muted-foreground">{t("contracts.field.signedDate")}</dt>
@@ -740,6 +817,8 @@ const Contracts = () => {
                   <tr>
                     <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("contracts.field.number")}</th>
                     <th className="min-w-[220px] px-3 py-3 text-left font-medium">{t("contracts.field.customer")}</th>
+                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("contracts.field.type")}</th>
+                    <th className="min-w-[180px] px-3 py-3 text-left font-medium">{t("contracts.field.counterparty")}</th>
                     <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("contracts.field.signedDate")}</th>
                     <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("contracts.field.endDate")}</th>
                     <th className="whitespace-nowrap px-3 py-3 text-right font-medium">{t("contracts.field.value")}</th>
@@ -770,6 +849,8 @@ const Contracts = () => {
                           </Link>
                         </td>
                         <td className="min-w-[220px] px-3 py-3 font-medium">{row.customerName ?? "—"}</td>
+                        <td className="whitespace-nowrap px-3 py-3">{t(`contracts.type.${row.type}`)}</td>
+                        <td className="min-w-[180px] px-3 py-3">{row.vendorName ?? row.customerName ?? "—"}</td>
                         <td className="whitespace-nowrap px-3 py-3">{formatDate(row.signedDate)}</td>
                         <td className="whitespace-nowrap px-3 py-3">
                           <div className="flex items-center gap-2">
@@ -895,6 +976,62 @@ const Contracts = () => {
                 </SelectContent>
               </Select>
             </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="c-direction-form" className="text-xs">{t("contracts.field.direction")} *</Label>
+                <Select
+                  value={form.direction}
+                  onValueChange={(value) => {
+                    const direction = value as ContractDirection;
+                    const nextType = classification?.allowedTypes[direction]?.[0];
+                    if (!nextType) return;
+                    setForm({ ...form, direction, type: nextType, vendorId: null });
+                  }}
+                >
+                  <SelectTrigger id="c-direction-form" className="h-9"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {(classification?.directions ?? []).map((direction) => (
+                      <SelectItem key={direction} value={direction}>{t(`contracts.direction.${direction}`)}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="c-type-form" className="text-xs">{t("contracts.field.type")} *</Label>
+                <Select value={form.type} onValueChange={(value) => setForm({ ...form, type: value as FormData["type"] })}>
+                  <SelectTrigger id="c-type-form" className="h-9"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {(classification?.allowedTypes[form.direction] ?? []).map((type) => (
+                      <SelectItem key={type} value={type}>{t(`contracts.type.${type}`)}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {form.direction === "Downstream" ? (
+              <div className="space-y-1.5">
+                <Label htmlFor="c-vendor-form" className="text-xs">{t("contracts.field.vendor")} *</Label>
+                <Select
+                  value={form.vendorId == null ? "" : String(form.vendorId)}
+                  onValueChange={(value) => setForm({ ...form, vendorId: Number(value) })}
+                >
+                  <SelectTrigger id="c-vendor-form" className="h-9"><SelectValue placeholder={t("contracts.selectVendor")} /></SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    {(classification?.vendors ?? [])
+                      .filter((vendor) => form.type === "Supply"
+                        ? vendor.vendorType !== "SubContractor"
+                        : vendor.vendorType !== "Supplier")
+                      .map((vendor) => (
+                        <SelectItem key={vendor.id} value={String(vendor.id)}>
+                          {vendor.vendorCode} · {vendor.companyName}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : null}
 
             <div className="space-y-1.5 rounded-md border bg-muted/30 px-3 py-2.5">
               <Label className="text-xs">{t("contracts.field.owner")}</Label>

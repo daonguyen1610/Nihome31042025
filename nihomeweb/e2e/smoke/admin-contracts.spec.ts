@@ -24,6 +24,19 @@ test("SPA renders /admin/contracts without console errors for SUPER_ADMIN", asyn
     // Filters row (status select + search input) always renders.
     await expect(page.locator("#c-search")).toBeVisible();
     await expect(page.locator("#c-status")).toBeVisible();
+    await expect(page.locator("#c-direction")).toBeVisible();
+    await expect(page.locator("#c-type")).toBeVisible();
+    await expect(page.locator("#c-vendor")).toBeVisible();
+
+    await page.getByRole("button", { name: /Thêm hợp đồng|New contract|新增合同|新規契約/i }).click();
+    await page.locator("#c-direction-form").click();
+    await page.getByRole("option", { name: /Đầu vào - Đối tác|Downstream - Partner|下游 - 合作方|下流 - パートナー/i }).click();
+    await expect(page.locator("#c-type-form")).toContainText(/Cung ứng|Supply|供应|供給/i);
+    await expect(page.locator("#c-vendor-form")).toBeVisible();
+    await page.locator("#c-direction-form").click();
+    await page.getByRole("option", { name: /Đầu ra - Khách hàng|Upstream - Customer|上游 - 客户|上流 - 顧客/i }).click();
+    await expect(page.locator("#c-vendor-form")).toBeHidden();
+    await page.getByRole("button", { name: /Huỷ|Hủy|Cancel|取消|キャンセル/i }).click();
 
     // Sample seeder inserts at least one row for freshly booted stacks.
     const row = page.locator('[data-testid^="contract-row-"]').first();
@@ -110,6 +123,11 @@ test("paid milestone date is suggested, customizable, and displayed", async ({
         contractNumber: "HD-2026-4551",
         customerId: 1,
         customerName: "NICON",
+        direction: "Upstream",
+        type: "DesignAndBuild",
+        vendorId: null,
+        vendorCode: null,
+        vendorName: null,
         operationalProjectId: null,
         opportunityId: null,
         opportunityTitle: null,
