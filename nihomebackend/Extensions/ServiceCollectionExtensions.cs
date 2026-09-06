@@ -177,6 +177,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IPunchItemService, PunchItemService>();
         services.AddScoped<IHseViolationService, HseViolationService>();
         services.AddScoped<IProcurementService, ProcurementService>();
+        services.AddScoped<IFinanceService, FinanceService>();
         services.AddScoped<IAcceptanceRecordService, AcceptanceRecordService>();
         services.AddScoped<IAsBuiltDocumentService, AsBuiltDocumentService>();
         services.AddScoped<IHandoverRecordService, HandoverRecordService>();

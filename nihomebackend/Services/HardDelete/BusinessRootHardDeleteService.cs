@@ -231,6 +231,12 @@ public sealed class BusinessRootHardDeletePlanService(
             .OrderBy(item => item.Id).Select(item => new { item.Id, item.ProjectBoqLine.ItemCode }).ToListAsync(ct);
         var vendorRatings = await db.VendorRatings.AsNoTracking().Where(item => item.ContractId == id)
             .OrderBy(item => item.Id).Select(item => item.Id).ToListAsync(ct);
+        var openPayments = await db.PaymentRequests.AsNoTracking().Where(item => item.ContractId == id &&
+                item.Status != PaymentRequestStatus.Approved && item.Status != PaymentRequestStatus.Paid)
+            .OrderBy(item => item.Id).Select(item => new { item.Id, item.Code }).ToListAsync(ct);
+        var committedPayments = await db.PaymentRequests.AsNoTracking().Where(item => item.ContractId == id &&
+                (item.Status == PaymentRequestStatus.Approved || item.Status == PaymentRequestStatus.Paid))
+            .OrderBy(item => item.Id).Select(item => new { item.Id, item.Code }).ToListAsync(ct);
         var boqRevisions = await db.ProjectBoqRevisions.AsNoTracking().Where(item =>
                 item.SourceContractAppendixId.HasValue && item.SourceContractAppendix!.ContractId == id)
             .OrderBy(item => item.Id).Select(item => item.Id).ToListAsync(ct);
@@ -352,6 +358,10 @@ public sealed class BusinessRootHardDeletePlanService(
             detail, procurementLines.Select(item => Link(item.ItemCode, detail)).ToList());
         Add(items, "contract.vendorRatings", vendorRatings.Select(Id).ToList(), DeletionImpactActions.Block,
             detail, [Link(root.ContractNumber, detail)]);
+        Add(items, "contract.financeOpenPayments", openPayments.Select(item => Id(item.Id)).ToList(), DeletionImpactActions.Delete,
+            detail, openPayments.Select(item => Link(item.Code, "/admin/finance-control")).ToList());
+        Add(items, "contract.financeCommittedPayments", committedPayments.Select(item => Id(item.Id)).ToList(), DeletionImpactActions.Block,
+            "/admin/finance-control", committedPayments.Select(item => Link(item.Code, "/admin/finance-control")).ToList());
         Add(items, "contract.boqRevisions", boqRevisions.Select(Id).ToList(), DeletionImpactActions.Block,
             detail, [Link(root.ContractNumber, detail)]);
         Add(items, "contract.wonOpportunity", lifecycleBlockers.Select(item => Id(item.Id)).ToList(), DeletionImpactActions.Block,
@@ -366,14 +376,15 @@ public sealed class BusinessRootHardDeletePlanService(
             Part("drive-files", driveIdentifiers), Part("sidecars", sidecarIdentifiers),
             Part("sidecar-blockers", sidecarBlockers),
             Part("procurement-lines", procurementLines.Select(item => item.Id)),
-            Part("vendor-ratings", vendorRatings), Part("boq-revisions", boqRevisions),
+            Part("vendor-ratings", vendorRatings), Part("finance-open-payments", openPayments.Select(item => item.Id)),
+            Part("finance-committed-payments", committedPayments.Select(item => item.Id)), Part("boq-revisions", boqRevisions),
         };
         var definitions = localPaths.Select((path, index) =>
                 new HardDeleteItemDefinition(HardDeleteItemKind.LocalFile, path, index))
             .Concat(driveDefinitions).ToList();
         return Plan(EntityTypes.Contract, id, root.ContractNumber, root.ContractNumber,
             root.RowVersion, blockers.Count == 0 && lifecycleBlockers.Count == 0 && sidecarBlockers.Count == 0 &&
-                procurementLines.Count == 0 && vendorRatings.Count == 0 && boqRevisions.Count == 0,
+                procurementLines.Count == 0 && vendorRatings.Count == 0 && committedPayments.Count == 0 && boqRevisions.Count == 0,
             items, identities, definitions);
     }
 
@@ -712,6 +723,9 @@ public sealed class ContractHardDeleteHandler(
     protected override async Task FinalizeRootAsync(int id, int requestedBy, CancellationToken ct)
     {
         var root = await Db.Contracts.SingleAsync(item => item.Id == id, ct);
+        var removablePayments = await Db.PaymentRequests.Where(item => item.ContractId == id &&
+            item.Status != PaymentRequestStatus.Approved && item.Status != PaymentRequestStatus.Paid).ToListAsync(ct);
+        Db.PaymentRequests.RemoveRange(removablePayments);
         var attachmentIds = await Db.ContractAttachments.Where(item => item.ContractId == id)
             .Select(item => (long)item.Id).ToListAsync(ct);
         var appendixIds = await Db.ContractAppendices.Where(item => item.ContractId == id)

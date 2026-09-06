@@ -10,7 +10,8 @@ public static class KpiSeeder
         string SourceModule,
         string MetricCode,
         decimal Weight,
-        KpiTargetDirection Direction = KpiTargetDirection.HigherIsBetter);
+        KpiTargetDirection Direction = KpiTargetDirection.HigherIsBetter,
+        decimal? TargetValue = null);
 
     private static readonly DefinitionSeed[] Definitions =
     [
@@ -31,8 +32,8 @@ public static class KpiSeeder
         new("PROCUREMENT_ON_TIME", "PROCUREMENT", "M5", "ProcurementDeliveryHours", 0.30m, KpiTargetDirection.LowerIsBetter),
         new("PROCUREMENT_VENDOR_RATING", "PROCUREMENT", "M5", "VendorRating", 0.30m),
         new("ACCOUNTING_COLLECTION", "PROJECT_ACCOUNTING", "M6", "ReceivableOnTimeRate", 0.40m),
-        new("ACCOUNTING_PAYMENT_SPEED", "PROJECT_ACCOUNTING", "M6", "PartnerPaymentHours", 0.30m, KpiTargetDirection.LowerIsBetter),
-        new("ACCOUNTING_ACCURACY", "PROJECT_ACCOUNTING", "M6", "AccountingCorrectionCount", 0.30m, KpiTargetDirection.LowerIsBetter),
+        new("ACCOUNTING_PAYMENT_SPEED", "PROJECT_ACCOUNTING", "M6", "PartnerPaymentHours", 0.30m, KpiTargetDirection.LowerIsBetter, 72m),
+        new("ACCOUNTING_ACCURACY", "PROJECT_ACCOUNTING", "M6", "AccountingCorrectionCount", 0.30m, KpiTargetDirection.LowerIsBetter, 1m),
     ];
 
     public static void Seed(AppDbContext db)
@@ -49,6 +50,7 @@ public static class KpiSeeder
                 definition.NameKey = $"kpi.definition.{seed.Code}";
                 definition.SourceModule = seed.SourceModule;
                 definition.MetricCode = seed.MetricCode;
+                definition.TargetValue ??= seed.TargetValue;
                 continue;
             }
             db.KpiDefinitions.Add(new KpiDefinition
@@ -60,6 +62,7 @@ public static class KpiSeeder
                 MetricCode = seed.MetricCode,
                 Weight = seed.Weight,
                 TargetDirection = seed.Direction,
+                TargetValue = seed.TargetValue,
                 EffectiveFrom = now,
                 CreatedAt = now,
                 UpdatedAt = now,

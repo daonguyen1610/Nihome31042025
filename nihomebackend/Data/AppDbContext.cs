@@ -116,6 +116,13 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<WarehouseIssueLine> WarehouseIssueLines => Set<WarehouseIssueLine>();
     public DbSet<VendorRating> VendorRatings => Set<VendorRating>();
 
+    // Finance
+    public DbSet<PaymentRequest> PaymentRequests => Set<PaymentRequest>();
+    public DbSet<PaymentRequestAttachment> PaymentRequestAttachments => Set<PaymentRequestAttachment>();
+    public DbSet<PaymentRequestEvent> PaymentRequestEvents => Set<PaymentRequestEvent>();
+    public DbSet<AccountingPeriod> AccountingPeriods => Set<AccountingPeriod>();
+    public DbSet<AccountingCorrection> AccountingCorrections => Set<AccountingCorrection>();
+
     public DbSet<DesignProject> DesignProjects => Set<DesignProject>();
 
     public DbSet<PermitChecklistItem> PermitChecklistItems => Set<PermitChecklistItem>();
@@ -1422,6 +1429,99 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasIndex(item => new { item.ContractId, item.VersionNumber }).IsUnique();
             b.HasIndex(item => item.ContractId).IsUnique().HasFilter("[Status] = 'Approved'");
             b.HasIndex(item => new { item.ProcurementOwnerUserId, item.ApprovedAt, item.Status });
+        });
+
+        modelBuilder.Entity<PaymentRequest>(b =>
+        {
+            b.ToTable("payment_requests");
+            b.HasKey(item => item.Id);
+            b.Property(item => item.Code).HasMaxLength(60).IsRequired();
+            b.Property(item => item.SupplierInvoiceNumber).HasMaxLength(120).IsRequired();
+            b.Property(item => item.InvoiceAmount).HasPrecision(18, 2);
+            b.Property(item => item.Currency).HasMaxLength(3).IsRequired();
+            b.Property(item => item.Status).HasConversion<string>().HasMaxLength(30);
+            b.Property(item => item.DecisionReason).HasMaxLength(2000);
+            b.Property(item => item.RowVersion).IsRowVersion();
+            b.HasOne(item => item.Contract).WithMany().HasForeignKey(item => item.ContractId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(item => item.Vendor).WithMany().HasForeignKey(item => item.VendorId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(item => item.ContractPaymentMilestone).WithMany().HasForeignKey(item => item.ContractPaymentMilestoneId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(item => item.AssignedAccountant).WithMany().HasForeignKey(item => item.AssignedAccountantUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(item => item.ValidatedBy).WithMany().HasForeignKey(item => item.ValidatedByUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(item => item.SubmittedBy).WithMany().HasForeignKey(item => item.SubmittedByUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(item => item.ApprovedBy).WithMany().HasForeignKey(item => item.ApprovedByUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(item => item.PaidBy).WithMany().HasForeignKey(item => item.PaidByUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(item => item.RejectedBy).WithMany().HasForeignKey(item => item.RejectedByUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(item => item.CancelledBy).WithMany().HasForeignKey(item => item.CancelledByUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(item => item.CreatedBy).WithMany().HasForeignKey(item => item.CreatedByUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasIndex(item => item.Code).IsUnique();
+            b.HasIndex(item => new { item.VendorId, item.SupplierInvoiceNumber }).IsUnique();
+            b.HasIndex(item => new { item.AssignedAccountantUserId, item.PaidAt, item.Status });
+        });
+
+        modelBuilder.Entity<PaymentRequestAttachment>(b =>
+        {
+            b.ToTable("payment_request_attachments");
+            b.HasKey(item => item.Id);
+            b.Property(item => item.FileName).HasMaxLength(260).IsRequired();
+            b.Property(item => item.FilePath).HasMaxLength(500).IsRequired();
+            b.HasOne(item => item.PaymentRequest).WithMany(request => request.Attachments)
+                .HasForeignKey(item => item.PaymentRequestId).OnDelete(DeleteBehavior.Cascade);
+            b.HasIndex(item => new { item.PaymentRequestId, item.FilePath }).IsUnique();
+        });
+
+        modelBuilder.Entity<PaymentRequestEvent>(b =>
+        {
+            b.ToTable("payment_request_events");
+            b.HasKey(item => item.Id);
+            b.Property(item => item.FromStatus).HasConversion<string>().HasMaxLength(30);
+            b.Property(item => item.ToStatus).HasConversion<string>().HasMaxLength(30);
+            b.Property(item => item.Reason).HasMaxLength(2000);
+            b.HasOne(item => item.PaymentRequest).WithMany(request => request.Events)
+                .HasForeignKey(item => item.PaymentRequestId).OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(item => item.ChangedByUser).WithMany()
+                .HasForeignKey(item => item.ChangedByUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasIndex(item => new { item.PaymentRequestId, item.ChangedAt });
+        });
+
+        modelBuilder.Entity<AccountingPeriod>(b =>
+        {
+            b.ToTable("accounting_periods");
+            b.HasKey(item => item.Id);
+            b.Property(item => item.Status).HasConversion<string>().HasMaxLength(20);
+            b.Property(item => item.CloseReason).HasMaxLength(2000);
+            b.Property(item => item.RowVersion).IsRowVersion();
+            b.HasOne(item => item.ClosingBy).WithMany().HasForeignKey(item => item.ClosingByUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(item => item.ClosedBy).WithMany().HasForeignKey(item => item.ClosedByUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasIndex(item => new { item.Year, item.Month }).IsUnique();
+        });
+
+        modelBuilder.Entity<AccountingCorrection>(b =>
+        {
+            b.ToTable("accounting_corrections");
+            b.HasKey(item => item.Id);
+            b.Property(item => item.Code).HasMaxLength(60).IsRequired();
+            b.Property(item => item.SourceEntityType).HasMaxLength(100).IsRequired();
+            b.Property(item => item.ReasonCode).HasMaxLength(80).IsRequired();
+            b.Property(item => item.OriginalValue).HasPrecision(18, 2);
+            b.Property(item => item.CorrectedValue).HasPrecision(18, 2);
+            b.Property(item => item.Currency).HasMaxLength(3).IsRequired();
+            b.Property(item => item.Note).HasMaxLength(4000);
+            b.Property(item => item.Status).HasConversion<string>().HasMaxLength(20);
+            b.Property(item => item.DecisionReason).HasMaxLength(2000);
+            b.Property(item => item.RowVersion).IsRowVersion();
+            b.HasOne(item => item.OperationalProject).WithMany().HasForeignKey(item => item.OperationalProjectId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(item => item.AccountingPeriod).WithMany(period => period.Corrections).HasForeignKey(item => item.AccountingPeriodId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(item => item.ResponsibleAccountant).WithMany().HasForeignKey(item => item.ResponsibleAccountantUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(item => item.RecordedBy).WithMany().HasForeignKey(item => item.RecordedByUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(item => item.SubmittedBy).WithMany().HasForeignKey(item => item.SubmittedByUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(item => item.ApprovedBy).WithMany().HasForeignKey(item => item.ApprovedByUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(item => item.RejectedBy).WithMany().HasForeignKey(item => item.RejectedByUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(item => item.ReversedBy).WithMany().HasForeignKey(item => item.ReversedByUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(item => item.ReversalOfCorrection).WithMany().HasForeignKey(item => item.ReversalOfCorrectionId).OnDelete(DeleteBehavior.NoAction);
+            b.HasIndex(item => item.Code).IsUnique();
+            b.HasIndex(item => item.ReversalOfCorrectionId).IsUnique().HasFilter("[ReversalOfCorrectionId] IS NOT NULL");
+            b.HasIndex(item => new { item.ResponsibleAccountantUserId, item.ApprovedAt, item.Status });
+            b.HasIndex(item => new { item.SourceEntityType, item.SourceEntityId });
         });
 
         modelBuilder.Entity<ProjectDocument>(b =>

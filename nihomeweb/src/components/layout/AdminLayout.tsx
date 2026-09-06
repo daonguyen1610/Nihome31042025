@@ -52,6 +52,7 @@ import {
   BriefcaseBusiness,
   ChartNoAxesCombined,
   ShoppingCart,
+  Landmark,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { logout } from "@/lib/auth";
@@ -80,7 +81,7 @@ type NavItem = {
   icon: LucideIcon;
   end?: boolean;
   /** Permission code required to see this entry. Omitted = always visible. */
-  permission?: string;
+  permission?: string | readonly string[];
 };
 type NavGroup = { id: string; label: string; icon: LucideIcon; items: NavItem[] };
 
@@ -177,6 +178,14 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
         items: [
           { to: "/admin/procurement-control", label: t("nav.procurementControl"), icon: ShoppingCart, permission: ADMIN_PERMS.procurement },
           { to: "/admin/vendors", label: t("nav.vendors"), icon: Truck, permission: ADMIN_PERMS.vendors },
+        ],
+      },
+      {
+        id: "finance",
+        label: t("nav.finance"),
+        icon: Landmark,
+        items: [
+          { to: "/admin/finance-control", label: t("nav.financeControl"), icon: Landmark, permission: [ADMIN_PERMS.financePayments, ADMIN_PERMS.financePeriods, ADMIN_PERMS.financeCorrections] },
         ],
       },
       {
@@ -283,16 +292,18 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
       rawGroups
         .map((g) => ({
           ...g,
-          items: g.items.filter((it) => !it.permission || permissions.has(it.permission)),
+          items: g.items.filter((it) => !it.permission || (Array.isArray(it.permission)
+            ? it.permission.some((permission) => permissions.has(permission))
+            : permissions.has(it.permission as string))),
         }))
         .filter((g) => g.items.length > 0),
     [rawGroups, permissions],
   );
 
   const showDashboard =
-    !dashboardItem.permission || permissions.has(dashboardItem.permission);
+    !dashboardItem.permission || permissions.has(dashboardItem.permission as string);
   const showNotifications =
-    !notificationsItem.permission || permissions.has(notificationsItem.permission);
+    !notificationsItem.permission || permissions.has(notificationsItem.permission as string);
 
   // Group expand/collapse: keep group containing active route open
   const initialOpen = useMemo(() => {

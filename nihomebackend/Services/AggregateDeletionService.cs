@@ -290,6 +290,12 @@ internal static class AggregateDeletionService
                 (item.Status == VendorRatingStatus.Draft || item.Status == VendorRatingStatus.Rejected))
             .ToListAsync(ct);
         db.VendorRatings.RemoveRange(removableRatings);
+        var removableCorrections = await db.AccountingCorrections
+            .Where(item => item.OperationalProjectId == projectId &&
+                (item.Status == AccountingCorrectionStatus.Draft || item.Status == AccountingCorrectionStatus.Submitted ||
+                 item.Status == AccountingCorrectionStatus.Rejected))
+            .ToListAsync(ct);
+        db.AccountingCorrections.RemoveRange(removableCorrections);
         var removableBoqs = await db.ProjectBoqRevisions
             .Where(item => item.OperationalProjectId == projectId && item.Status != ProjectBoqRevisionStatus.Approved)
             .ToListAsync(ct);
