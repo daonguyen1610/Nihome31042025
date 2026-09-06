@@ -50,6 +50,7 @@ import {
   PackageCheck,
   User as UserIcon,
   BriefcaseBusiness,
+  ChartNoAxesCombined,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { logout } from "@/lib/auth";
@@ -196,6 +197,14 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
           { to: "/admin/construction/asbuilt", label: t("nav.constructionAsBuilt"), icon: FolderArchive, permission: ADMIN_PERMS.constructionAsBuilt },
           { to: "/admin/construction/asbuilt-categories", label: t("nav.constructionAsBuiltCategories"), icon: FolderTree, permission: ADMIN_PERMS.constructionAsBuiltCategories },
           { to: "/admin/construction/handover", label: t("nav.constructionHandover"), icon: PackageCheck, permission: ADMIN_PERMS.constructionHandover },
+        ],
+      },
+      {
+        id: "analytics",
+        label: t("nav.analytics"),
+        icon: ChartNoAxesCombined,
+        items: [
+          { to: "/admin/kpi", label: t("nav.kpi"), icon: ChartNoAxesCombined, permission: ADMIN_PERMS.kpi },
         ],
       },
       {

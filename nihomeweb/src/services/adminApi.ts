@@ -1001,6 +1001,72 @@ export interface OperationalProjectTimelineItem {
   updatedAt: string;
 }
 
+export type KpiTargetDirection = "HigherIsBetter" | "LowerIsBetter";
+export type KpiPeriodStatus = "Open" | "Locked";
+export type KpiScoreStatus = "Available" | "MissingData" | "MissingConfiguration";
+
+export interface KpiDefinitionResponse {
+  id: number;
+  code: string;
+  roleCode: string;
+  nameKey: string;
+  sourceModule: string;
+  metricCode: string;
+  weight: number;
+  targetValue?: number | null;
+  minimumAcceptableScore?: number | null;
+  targetDirection: KpiTargetDirection;
+  version: number;
+  isActive: boolean;
+  rowVersion: string;
+}
+
+export interface KpiUserOptionResponse {
+  userId: number;
+  userName: string;
+  positionCode: string;
+}
+
+export interface KpiScoreResponse {
+  id: number;
+  definitionId: number;
+  code: string;
+  nameKey: string;
+  sourceModule: string;
+  weight: number;
+  targetValue?: number | null;
+  minimumAcceptableScore?: number | null;
+  rawValue?: number | null;
+  numerator?: number | null;
+  denominator?: number | null;
+  score?: number | null;
+  weightedScore?: number | null;
+  status: KpiScoreStatus;
+  evidenceJson: string;
+  definitionVersion: number;
+  calculatedAt: string;
+}
+
+export interface KpiDashboardResponse {
+  periodId: number;
+  year: number;
+  month: number;
+  timeZoneId: string;
+  periodStatus: KpiPeriodStatus;
+  periodRowVersion: string;
+  lockedAt?: string | null;
+  lockedByName?: string | null;
+  lockNote?: string | null;
+  userId: number;
+  userName: string;
+  roleCode: string;
+  totalScore?: number | null;
+  availableWeight: number;
+  isComplete: boolean;
+  lastCalculatedAt?: string | null;
+  scores: KpiScoreResponse[];
+}
+
 export interface OperationalProjectListResponse {
   total: number;
   page: number;
@@ -5097,6 +5163,28 @@ export const adminApi = {
       ...withIfMatch(body.rowVersion),
       data: body,
     }),
+  listKpiDefinitions: () => api.get<KpiDefinitionResponse[]>("/kpi/definitions"),
+  listKpiEligibleUsers: () => api.get<KpiUserOptionResponse[]>("/kpi/eligible-users"),
+  updateKpiDefinition: (id: number, body: {
+    weight: number;
+    targetValue?: number | null;
+    minimumAcceptableScore?: number | null;
+    targetDirection: KpiTargetDirection;
+    isActive: boolean;
+    rowVersion: string;
+  }) => api.put<KpiDefinitionResponse>(`/kpi/definitions/${id}`, body, {
+    headers: withIfMatch(body.rowVersion).headers,
+  }),
+  calculateKpi: (body: { year: number; month: number; userId?: number }, idempotencyKey: string) =>
+    api.post<KpiDashboardResponse>("/kpi/calculate", body, withIdempotencyKey(idempotencyKey)),
+  getKpiDashboard: (params: { year: number; month: number; userId?: number }) =>
+    api.get<KpiDashboardResponse>("/kpi/dashboard", { params }),
+  lockKpiPeriod: (year: number, month: number, body: { userId?: number; note: string; rowVersion: string }) =>
+    api.post<KpiDashboardResponse>(`/kpi/periods/${year}/${month}/lock`, body, {
+      headers: withIfMatch(body.rowVersion).headers,
+    }),
+  exportKpi: (params: { year: number; month: number; userId?: number }) =>
+    api.get<Blob>("/kpi/export", { params, responseType: "blob" }),
   listProjectDocumentCategories: () =>
     api.get<ProjectDocumentCategoryResponse[]>("/operational-projects/document-categories"),
   listProjectDocuments: (projectId: number) =>

@@ -143,4 +143,20 @@
     "zh": "项目 {{projectName}} 的许可 {{permitName}} 将在 {{daysLeft}} 天后（{{expiryDate}}）到期，请办理续期。",
     "ja": "プロジェクト {{projectName}} の許可 {{permitName}} は {{daysLeft}} 日後（{{expiryDate}}）に失効します。更新手続きをお願いします。"
   }
+  ,{
+    "key": "notification.kpi.low-score.title",
+    "category": "notification",
+    "vi": "KPI kỳ {{period}} có chỉ số cần chú ý",
+    "en": "KPI period {{period}} has metrics requiring attention",
+    "zh": "KPI 期间 {{period}} 有需要关注的指标",
+    "ja": "KPI期間 {{period}} に注意が必要な指標があります"
+  },
+  {
+    "key": "notification.kpi.low-score.body",
+    "category": "notification",
+    "vi": "Có {{count}} chỉ số KPI thấp hơn ngưỡng đã cấu hình. Mở dashboard để xem dữ liệu nguồn.",
+    "en": "{{count}} KPI metrics are below their configured thresholds. Open the dashboard to review source evidence.",
+    "zh": "有 {{count}} 个 KPI 指标低于配置阈值。请打开仪表板查看源证据。",
+    "ja": "{{count}} 件のKPI指標が設定しきい値を下回っています。ダッシュボードで根拠データを確認してください。"
+  }
 ]

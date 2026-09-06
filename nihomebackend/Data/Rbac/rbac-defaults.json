@@ -68,6 +68,10 @@
     { "module": "operations.projects", "action": "view" },
     { "module": "operations.projects", "action": "view.all" },
     { "module": "operations.projects", "action": "manage" },
+    { "module": "analytics.kpi", "action": "view" },
+    { "module": "analytics.kpi", "action": "view.all" },
+    { "module": "analytics.kpi", "action": "manage" },
+    { "module": "analytics.kpi", "action": "export" },
 
     { "module": "crm.leads", "action": "view" },
     { "module": "crm.leads", "action": "view.all" },
@@ -201,6 +205,7 @@
         "crm.surveys.view", "crm.surveys.manage",
         "crm.contracts.view", "crm.contracts.manage",
         "operations.projects.view", "operations.projects.manage",
+        "analytics.kpi.view",
         "profile.me.*"
       ]
     },
@@ -213,6 +218,7 @@
         "workflow.view",
         "crm.**",
         "operations.projects.**",
+        "analytics.kpi.**",
         "profile.me.*"
       ]
     },
@@ -225,6 +231,7 @@
         "master-data.view",
         "workflow.view",
         "operations.projects.view",
+        "analytics.kpi.view",
         "design.projects.view",
         "design.concepts.view", "design.concepts.manage",
         "design.basic.view", "design.basic.manage",
@@ -249,6 +256,7 @@
         "master-data.view",
         "workflow.view",
         "operations.projects.view",
+        "analytics.kpi.view",
         "design.**",
         "construction.tasks.**",
         "construction.diary.**",
@@ -266,6 +274,7 @@
         "master-data.view",
         "workflow.view",
         "operations.projects.view",
+        "analytics.kpi.view",
         "design.projects.view",
         "design.concepts.view",
         "design.basic.view", "design.basic.manage",
@@ -288,6 +297,7 @@
         "master-data.view",
         "workflow.view",
         "operations.projects.view",
+        "analytics.kpi.view",
         "design.projects.view",
         "design.basic.view", "design.basic.manage",
         "design.shop.view", "design.shop.manage",
@@ -309,6 +319,7 @@
         "master-data.view",
         "workflow.view",
         "operations.projects.view",
+        "analytics.kpi.view",
         "design.projects.view",
         "design.basic.view", "design.basic.manage",
         "design.shop.view", "design.shop.manage",
@@ -334,6 +345,7 @@
         "master-data.view",
         "workflow.view",
         "operations.projects.view", "operations.projects.manage",
+        "analytics.kpi.view",
         "crm.contracts.view",
         "crm.surveys.view",
         "proc.vendors.view",
@@ -360,6 +372,7 @@
         "master-data.view",
         "workflow.view",
         "operations.projects.view",
+        "analytics.kpi.view",
         "crm.contracts.view",
         "design.projects.view",
         "design.basic.view",
@@ -392,6 +405,7 @@
         "master-data.view",
         "workflow.view",
         "operations.projects.view", "operations.projects.view.all",
+        "analytics.kpi.view", "analytics.kpi.view.all", "analytics.kpi.manage", "analytics.kpi.export",
         "crm.customers.view",
         "crm.customers.view.all",
         "crm.contracts.view",
@@ -403,7 +417,7 @@
       "patterns": ["dashboard.view", "processes.view", "master-data.view", "workflow.view", "operations.projects.view", "proc.vendors.view", "profile.me.*"]
     },
     "BGD": {
-      "patterns": ["dashboard.view", "**.view", "**.view.all", "crm.tenders.approve-estimate", "system.audit.view", "profile.me.*"]
+      "patterns": ["dashboard.view", "**.view", "**.view.all", "analytics.kpi.manage", "analytics.kpi.export", "crm.tenders.approve-estimate", "system.audit.view", "profile.me.*"]
     }
   }
 }

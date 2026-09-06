@@ -73,6 +73,7 @@ import WorkflowsPage from "./pages/admin/Workflows.tsx";
 import ContractsPage from "./pages/admin/Contracts.tsx";
 import ContractDetailPage from "./pages/admin/ContractDetail.tsx";
 import OperationalProjects from "./pages/admin/OperationalProjects.tsx";
+import KpiDashboard from "./pages/admin/KpiDashboard.tsx";
 import AdminDesignProjects from "./pages/admin/DesignProjects.tsx";
 import AdminDesignProjectDetail from "./pages/admin/DesignProjectDetail.tsx";
 import AdminPermits from "./pages/admin/Permits.tsx";
@@ -203,6 +204,9 @@ const App = () => (
               <Route element={<RequirePermission code={ADMIN_PERMS.operationalProjects} />}>
                 <Route path="/admin/operational-projects" element={<OperationalProjects />} />
                 <Route path="/admin/operational-projects/:id" element={<OperationalProjects />} />
+              </Route>
+              <Route element={<RequirePermission code={ADMIN_PERMS.kpi} />}>
+                <Route path="/admin/kpi" element={<KpiDashboard />} />
               </Route>
               <Route element={<RequirePermission code={ADMIN_PERMS.designProjects} />}>
                 <Route path="/admin/design-projects" element={<AdminDesignProjects />} />
