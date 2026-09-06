@@ -13,6 +13,13 @@ public class PunchItemResponse
     public string? Location { get; set; }
     public string Severity { get; set; } = "Medium";
     public string Status { get; set; } = "Open";
+    public string RootCause { get; set; } = "Unclassified";
+    public int? ResponsibleDesignUserId { get; set; }
+    public string? ResponsibleDesignUserName { get; set; }
+    public string? RootCauseNote { get; set; }
+    public DateTime? RootCauseConfirmedAt { get; set; }
+    public int? RootCauseConfirmedByUserId { get; set; }
+    public string? RootCauseConfirmedByName { get; set; }
 
     public int? AssigneeUserId { get; set; }
     public string? AssigneeName { get; set; }

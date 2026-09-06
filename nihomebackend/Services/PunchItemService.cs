@@ -29,6 +29,8 @@ public class PunchItemService(
             .Include(pi => pi.DesignProject)
             .Include(pi => pi.Assignee)
             .Include(pi => pi.VerifiedBy)
+            .Include(pi => pi.ResponsibleDesignUser)
+            .Include(pi => pi.RootCauseConfirmedBy)
             .AsQueryable();
 
         if (p.DesignProjectId.HasValue) q = q.Where(pi => pi.DesignProjectId == p.DesignProjectId.Value);
@@ -111,6 +113,8 @@ public class PunchItemService(
             .Include(pi => pi.DesignProject)
             .Include(pi => pi.Assignee)
             .Include(pi => pi.VerifiedBy)
+            .Include(pi => pi.ResponsibleDesignUser)
+            .Include(pi => pi.RootCauseConfirmedBy)
             .FirstOrDefaultAsync(pi => pi.Id == id, ct);
         return entity is null ? null : Map(entity, DateOnly.FromDateTime(DateTime.UtcNow));
     }
@@ -126,6 +130,7 @@ public class PunchItemService(
         {
             throw new PunchItemOperationException($"Mức độ '{request.Severity}' không hợp lệ.");
         }
+        var rootCause = ParseRootCause(request.RootCause);
         var project = await db.DesignProjects.FirstOrDefaultAsync(dp => dp.Id == request.DesignProjectId, ct);
         if (project is null)
         {
@@ -136,6 +141,7 @@ public class PunchItemService(
         {
             throw new PunchItemOperationException($"Người xử lý #{request.AssigneeUserId} không tồn tại.");
         }
+        await ValidateRootCauseAsync(project, rootCause, request.ResponsibleDesignUserId, request.RootCauseNote, ct);
 
         var code = (request.PunchCode ?? string.Empty).Trim();
         if (string.IsNullOrEmpty(code))
@@ -155,6 +161,9 @@ public class PunchItemService(
             Description = TrimOrNull(request.Description),
             Location = TrimOrNull(request.Location),
             Severity = severity,
+            RootCause = rootCause,
+            ResponsibleDesignUserId = request.ResponsibleDesignUserId,
+            RootCauseNote = TrimOrNull(request.RootCauseNote),
             AssigneeUserId = request.AssigneeUserId,
             Deadline = request.Deadline,
             Note = TrimOrNull(request.Note),
@@ -190,16 +199,22 @@ public class PunchItemService(
         {
             throw new PunchItemOperationException($"Mức độ '{request.Severity}' không hợp lệ.");
         }
+        var rootCause = ParseRootCause(request.RootCause);
         if (request.AssigneeUserId.HasValue &&
             !await db.Users.AnyAsync(u => u.Id == request.AssigneeUserId.Value, ct))
         {
             throw new PunchItemOperationException($"Người xử lý #{request.AssigneeUserId} không tồn tại.");
         }
+        var project = await db.DesignProjects.FirstAsync(item => item.Id == entity.DesignProjectId, ct);
+        await ValidateRootCauseAsync(project, rootCause, request.ResponsibleDesignUserId, request.RootCauseNote, ct);
 
         entity.Title = title;
         entity.Description = TrimOrNull(request.Description);
         entity.Location = TrimOrNull(request.Location);
         entity.Severity = severity;
+        entity.RootCause = rootCause;
+        entity.ResponsibleDesignUserId = request.ResponsibleDesignUserId;
+        entity.RootCauseNote = TrimOrNull(request.RootCauseNote);
         entity.AssigneeUserId = request.AssigneeUserId;
         entity.Deadline = request.Deadline;
         entity.ResolutionNote = TrimOrNull(request.ResolutionNote);
@@ -228,11 +243,29 @@ public class PunchItemService(
             entity.ReopenCount += 1;
             entity.VerifiedAt = null;
             entity.VerifiedByUserId = null;
+            entity.RootCauseConfirmedAt = null;
+            entity.RootCauseConfirmedByUserId = null;
         }
         if (next == PunchStatus.Verified)
         {
+            if (!string.IsNullOrWhiteSpace(request.RootCause))
+            {
+                entity.RootCause = ParseRootCause(request.RootCause);
+                entity.ResponsibleDesignUserId = request.ResponsibleDesignUserId;
+                entity.RootCauseNote = TrimOrNull(request.RootCauseNote);
+            }
+            var project = await db.DesignProjects.FirstAsync(item => item.Id == entity.DesignProjectId, ct);
+            await ValidateRootCauseAsync(
+                project,
+                entity.RootCause,
+                entity.ResponsibleDesignUserId,
+                entity.RootCauseNote,
+                ct,
+                requireClassification: true);
             entity.VerifiedAt = DateTime.UtcNow;
             entity.VerifiedByUserId = callerUserId;
+            entity.RootCauseConfirmedAt = entity.VerifiedAt;
+            entity.RootCauseConfirmedByUserId = callerUserId;
         }
 
         if (!string.IsNullOrWhiteSpace(request.ResolutionNote))
@@ -347,6 +380,48 @@ public class PunchItemService(
 
     private static string? TrimOrNull(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
 
+    private static PunchRootCause ParseRootCause(string? value)
+    {
+        if (Enum.TryParse<PunchRootCause>(value, true, out var rootCause)) return rootCause;
+        throw new PunchItemOperationException($"Nguyên nhân lỗi '{value}' không hợp lệ.");
+    }
+
+    private async Task ValidateRootCauseAsync(
+        DesignProject project,
+        PunchRootCause rootCause,
+        int? responsibleDesignUserId,
+        string? rootCauseNote,
+        CancellationToken ct,
+        bool requireClassification = false)
+    {
+        if (requireClassification && rootCause == PunchRootCause.Unclassified)
+            throw new PunchItemOperationException("Phải phân loại nguyên nhân trước khi xác nhận lỗi.");
+        if (rootCause == PunchRootCause.Other && string.IsNullOrWhiteSpace(rootCauseNote))
+            throw new PunchItemOperationException("Phải nhập ghi chú khi nguyên nhân lỗi là Khác.");
+        if (rootCause != PunchRootCause.Design)
+        {
+            if (responsibleDesignUserId.HasValue)
+                throw new PunchItemOperationException("Chỉ gán người thiết kế chịu trách nhiệm cho lỗi Thiết kế.");
+            return;
+        }
+        if (!responsibleDesignUserId.HasValue)
+            throw new PunchItemOperationException("Phải chọn người thiết kế chịu trách nhiệm cho lỗi Thiết kế.");
+        var isActiveUser = await db.Users.AsNoTracking()
+            .AnyAsync(user => user.Id == responsibleDesignUserId && user.IsActive, ct);
+        var isDesignMember = isActiveUser && (project.DesignLeadUserId == responsibleDesignUserId ||
+            (project.OperationalProjectId.HasValue && await db.OperationalProjectMembers.AsNoTracking()
+                .AnyAsync(member => member.OperationalProjectId == project.OperationalProjectId &&
+                    member.UserId == responsibleDesignUserId && member.EndedAt == null &&
+                    member.Roles.Any(role => role.EndedAt == null &&
+                        (role.RoleCode == ProjectTeamRoleCode.DesignLead ||
+                         role.RoleCode == ProjectTeamRoleCode.Architect ||
+                         role.RoleCode == ProjectTeamRoleCode.StructuralEngineer ||
+                         role.RoleCode == ProjectTeamRoleCode.MepEngineer ||
+                         role.RoleCode == ProjectTeamRoleCode.InteriorDesigner)), ct)));
+        if (!isDesignMember)
+            throw new PunchItemOperationException("Người chịu trách nhiệm phải là thành viên thiết kế đang hoạt động của dự án.");
+    }
+
     private static PunchItemResponse Map(PunchItem pi, DateOnly today) => new()
     {
         Id = pi.Id,
@@ -359,6 +434,13 @@ public class PunchItemService(
         Location = pi.Location,
         Severity = pi.Severity.ToString(),
         Status = pi.Status.ToString(),
+        RootCause = pi.RootCause.ToString(),
+        ResponsibleDesignUserId = pi.ResponsibleDesignUserId,
+        ResponsibleDesignUserName = pi.ResponsibleDesignUser?.FullName,
+        RootCauseNote = pi.RootCauseNote,
+        RootCauseConfirmedAt = pi.RootCauseConfirmedAt,
+        RootCauseConfirmedByUserId = pi.RootCauseConfirmedByUserId,
+        RootCauseConfirmedByName = pi.RootCauseConfirmedBy?.FullName,
         AssigneeUserId = pi.AssigneeUserId,
         AssigneeName = pi.Assignee?.FullName,
         Deadline = pi.Deadline,

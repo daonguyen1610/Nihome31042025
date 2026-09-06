@@ -1797,6 +1797,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.Property(p => p.Title).HasMaxLength(300).IsRequired();
             b.Property(p => p.Description).HasMaxLength(4000);
             b.Property(p => p.Location).HasMaxLength(300);
+            b.Property(p => p.RootCause).HasConversion<string>().HasMaxLength(30);
+            b.Property(p => p.RootCauseNote).HasMaxLength(2000);
             b.Property(p => p.ResolutionNote).HasMaxLength(2000);
             b.Property(p => p.Note).HasMaxLength(2000);
             b.Property(p => p.Severity).HasConversion<string>().HasMaxLength(30);
@@ -1814,11 +1816,20 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .WithMany()
                 .HasForeignKey(p => p.VerifiedByUserId)
                 .OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(p => p.ResponsibleDesignUser)
+                .WithMany()
+                .HasForeignKey(p => p.ResponsibleDesignUserId)
+                .OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(p => p.RootCauseConfirmedBy)
+                .WithMany()
+                .HasForeignKey(p => p.RootCauseConfirmedByUserId)
+                .OnDelete(DeleteBehavior.NoAction);
 
             b.HasIndex(p => p.DesignProjectId);
             b.HasIndex(p => new { p.DesignProjectId, p.PunchCode }).IsUnique();
             b.HasIndex(p => p.Status);
             b.HasIndex(p => p.Severity);
+            b.HasIndex(p => new { p.RootCause, p.ResponsibleDesignUserId, p.VerifiedAt });
         });
 
         modelBuilder.Entity<AcceptanceRecord>(b =>

@@ -3380,6 +3380,7 @@ export interface SiteDiaryBulkDeleteResponse {
 
 export type PunchStatus = "Open" | "InProgress" | "Fixed" | "Verified" | "Cancelled";
 export type PunchSeverity = "Low" | "Medium" | "High" | "Critical";
+export type PunchRootCause = "Unclassified" | "Design" | "Construction" | "Material" | "ClientChange" | "Other";
 
 export interface PunchItemResponse {
   id: number;
@@ -3392,6 +3393,13 @@ export interface PunchItemResponse {
   location?: string | null;
   severity: PunchSeverity;
   status: PunchStatus;
+  rootCause: PunchRootCause;
+  responsibleDesignUserId?: number | null;
+  responsibleDesignUserName?: string | null;
+  rootCauseNote?: string | null;
+  rootCauseConfirmedAt?: string | null;
+  rootCauseConfirmedByUserId?: number | null;
+  rootCauseConfirmedByName?: string | null;
   assigneeUserId?: number | null;
   assigneeName?: string | null;
   deadline?: string | null;
@@ -3453,6 +3461,9 @@ export interface UpdatePunchItemRequest {
 export interface TransitionPunchStatusRequest {
   status: PunchStatus;
   resolutionNote?: string | null;
+  rootCause?: PunchRootCause | null;
+  responsibleDesignUserId?: number | null;
+  rootCauseNote?: string | null;
 }
 
 export interface BulkDeletePunchItemsRequest {

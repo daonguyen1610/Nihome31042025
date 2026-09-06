@@ -24,6 +24,9 @@ public class CreatePunchItemRequest
     public string? Description { get; set; }
     public string? Location { get; set; }
     public string Severity { get; set; } = "Medium";
+    public string RootCause { get; set; } = "Unclassified";
+    public int? ResponsibleDesignUserId { get; set; }
+    public string? RootCauseNote { get; set; }
     public int? AssigneeUserId { get; set; }
     public DateOnly? Deadline { get; set; }
     public string? Note { get; set; }
@@ -35,6 +38,9 @@ public class UpdatePunchItemRequest
     public string? Description { get; set; }
     public string? Location { get; set; }
     public string Severity { get; set; } = "Medium";
+    public string RootCause { get; set; } = "Unclassified";
+    public int? ResponsibleDesignUserId { get; set; }
+    public string? RootCauseNote { get; set; }
     public int? AssigneeUserId { get; set; }
     public DateOnly? Deadline { get; set; }
     public string? ResolutionNote { get; set; }
@@ -46,6 +52,9 @@ public class TransitionPunchStatusRequest
     public string Status { get; set; } = string.Empty;
     /// <summary>Optional note captured with the transition (audit trail).</summary>
     public string? ResolutionNote { get; set; }
+    public string? RootCause { get; set; }
+    public int? ResponsibleDesignUserId { get; set; }
+    public string? RootCauseNote { get; set; }
 }
 
 public class BulkDeletePunchItemsRequest
