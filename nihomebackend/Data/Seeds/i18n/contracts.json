@@ -128,6 +128,14 @@
     "ja": "全ての顧客"
   },
   {
+    "key": "contracts.filter.allOperationalProjects",
+    "category": "contracts",
+    "vi": "Tất cả dự án vận hành",
+    "en": "All operational projects",
+    "zh": "全部运营项目",
+    "ja": "すべての運用プロジェクト"
+  },
+  {
     "key": "contracts.filter.allDirections",
     "category": "contracts",
     "vi": "Tất cả hướng hợp đồng",
@@ -182,6 +190,14 @@
     "en": "Customer",
     "zh": "客户",
     "ja": "顧客"
+  },
+  {
+    "key": "contracts.field.operationalProject",
+    "category": "contracts",
+    "vi": "Dự án vận hành",
+    "en": "Operational project",
+    "zh": "运营项目",
+    "ja": "運用プロジェクト"
   },
   {
     "key": "contracts.field.direction",
@@ -1258,5 +1274,21 @@
     "en": "Source opportunity",
     "zh": "来源商机",
     "ja": "元の商談"
+  },
+  {
+    "key": "contracts.selectOperationalProject",
+    "category": "contracts",
+    "vi": "Chọn dự án vận hành",
+    "en": "Select an operational project",
+    "zh": "选择运营项目",
+    "ja": "運用プロジェクトを選択"
+  },
+  {
+    "key": "contracts.validation.operationalProjectRequired",
+    "category": "contracts",
+    "vi": "Vui lòng chọn dự án vận hành cho hợp đồng.",
+    "en": "Select an operational project for the contract.",
+    "zh": "请为合同选择运营项目。",
+    "ja": "契約の運用プロジェクトを選択してください。"
   }
 ]

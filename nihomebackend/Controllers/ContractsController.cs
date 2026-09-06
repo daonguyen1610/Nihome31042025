@@ -56,6 +56,7 @@ public class ContractsController(
         [FromQuery] int? vendorId,
         [FromQuery] int? ownerUserId,
         [FromQuery] int? customerId,
+        [FromQuery] int? operationalProjectId,
         [FromQuery] string? search,
         [FromQuery] DateTime? signedFrom,
         [FromQuery] DateTime? signedTo,
@@ -71,7 +72,7 @@ public class ContractsController(
         var canSeeAll = await permissions.HasAsync(userId.Value, "crm.contracts.view.all", ct);
         var result = await svc.ListAsync(
             userId.Value, canSeeAll, status, direction, type, vendorId,
-            ownerUserId, customerId, search,
+            ownerUserId, customerId, operationalProjectId, search,
             signedFrom, signedTo, valueMin, valueMax, page, pageSize, ct);
         return Ok(result);
     }

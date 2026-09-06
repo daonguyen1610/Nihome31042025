@@ -17,7 +17,7 @@ public class ContractsControllerTests : IntegrationTestBase
 {
     public ContractsControllerTests(NihomeWebApplicationFactory factory) : base(factory) { }
 
-    private async Task<int> CreateCustomerAsync()
+    private async Task<int> CreateCustomerAsync(bool createOperationalProject = true)
     {
         var payload = new
         {
@@ -33,7 +33,21 @@ public class ContractsControllerTests : IntegrationTestBase
         };
         var res = await Client.PostAsJsonAsync("/api/customers", payload);
         res.StatusCode.Should().Be(HttpStatusCode.Created, await res.Content.ReadAsStringAsync());
-        return (await ReadJsonAsync(res)).GetProperty("id").GetInt32();
+        var customerId = (await ReadJsonAsync(res)).GetProperty("id").GetInt32();
+        if (createOperationalProject)
+        {
+            await WithDbAsync(async db =>
+            {
+                db.OperationalProjects.Add(new OperationalProject
+                {
+                    Code = $"PJ-CT-{Guid.NewGuid():N}"[..20],
+                    Name = $"Contract project {Guid.NewGuid():N}",
+                    CustomerId = customerId,
+                });
+                await db.SaveChangesAsync();
+            });
+        }
+        return customerId;
     }
 
     private static object ContractBody(int customerId, string status = "Draft", decimal value = 100_000_000)
@@ -83,6 +97,128 @@ public class ContractsControllerTests : IntegrationTestBase
         body.GetProperty("allowedTypes").GetProperty("Downstream")
             .EnumerateArray().Select(item => item.GetString())
             .Should().BeEquivalentTo("Supply", "Subcontract");
+    }
+
+    [Fact]
+    public async Task List_ByOperationalProject_ReturnsMultipleContractTypesForOnlyThatProject()
+    {
+        await AuthTestHelper.AuthenticateAsync(
+            Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "SALES_MANAGER"));
+        var customerId = await CreateCustomerAsync();
+
+        async Task<int> CreateProjectAsync(string name)
+        {
+            var response = await Client.PostAsJsonAsync("/api/operational-projects", new
+            {
+                name,
+                customerId,
+            });
+            response.StatusCode.Should().Be(HttpStatusCode.Created, await response.Content.ReadAsStringAsync());
+            return (await ReadJsonAsync(response)).GetProperty("id").GetInt32();
+        }
+
+        async Task<(int Id, string Type)> CreateContractAsync(int operationalProjectId, string type)
+        {
+            var response = await Client.PostAsJsonAsync("/api/contracts", new
+            {
+                customerId,
+                operationalProjectId,
+                direction = "Upstream",
+                type,
+                status = "Draft",
+                value = 100_000_000,
+            });
+            response.StatusCode.Should().Be(HttpStatusCode.Created, await response.Content.ReadAsStringAsync());
+            var body = await ReadJsonAsync(response);
+            return (body.GetProperty("id").GetInt32(), body.GetProperty("type").GetString()!);
+        }
+
+        var selectedProjectId = await CreateProjectAsync($"Multi-contract {Guid.NewGuid():N}");
+        var otherProjectId = await CreateProjectAsync($"Other project {Guid.NewGuid():N}");
+        var design = await CreateContractAsync(selectedProjectId, "Design");
+        var construction = await CreateContractAsync(selectedProjectId, "Construction");
+        await CreateContractAsync(otherProjectId, "DesignAndBuild");
+
+        var response = await Client.GetAsync($"/api/contracts?operationalProjectId={selectedProjectId}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await ReadJsonAsync(response);
+        body.GetProperty("total").GetInt32().Should().Be(2);
+        var items = body.GetProperty("items").EnumerateArray().ToList();
+        items.Select(item => item.GetProperty("id").GetInt32())
+            .Should().BeEquivalentTo([design.Id, construction.Id]);
+        items.Select(item => item.GetProperty("type").GetString())
+            .Should().BeEquivalentTo("Design", "Construction");
+        items.Should().OnlyContain(item =>
+            item.GetProperty("operationalProjectId").GetInt32() == selectedProjectId);
+        items.Should().OnlyContain(item =>
+            !string.IsNullOrWhiteSpace(item.GetProperty("operationalProjectCode").GetString()) &&
+            !string.IsNullOrWhiteSpace(item.GetProperty("operationalProjectName").GetString()));
+    }
+
+    [Fact]
+    public async Task Create_WithoutOperationalProject_ReturnsBadRequest()
+    {
+        await AuthTestHelper.AuthenticateAsync(
+            Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "SALES_MANAGER"));
+        var customerId = await CreateCustomerAsync(createOperationalProject: false);
+
+        var response = await Client.PostAsJsonAsync("/api/contracts", ContractBody(customerId));
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await response.Content.ReadAsStringAsync()).Should().Contain("Dự án vận hành");
+    }
+
+    [Fact]
+    public async Task Create_WithoutOperationalProject_WhenCustomerHasMultipleProjects_ReturnsBadRequest()
+    {
+        await AuthTestHelper.AuthenticateAsync(
+            Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "SALES_MANAGER"));
+        var customerId = await CreateCustomerAsync();
+        var secondProject = await Client.PostAsJsonAsync("/api/operational-projects", new
+        {
+            name = $"Second project {Guid.NewGuid():N}",
+            customerId,
+        });
+        secondProject.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var response = await Client.PostAsJsonAsync("/api/contracts", ContractBody(customerId));
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await response.Content.ReadAsStringAsync()).Should().Contain("Dự án vận hành");
+    }
+
+    [Fact]
+    public async Task Create_WithProjectOwnedByDifferentCustomer_ReturnsBadRequest()
+    {
+        await AuthTestHelper.AuthenticateAsync(
+            Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "SALES_MANAGER"));
+        var contractCustomerId = await CreateCustomerAsync();
+        var projectCustomerId = await CreateCustomerAsync();
+        var projectResponse = await Client.PostAsJsonAsync("/api/operational-projects", new
+        {
+            name = $"Cross-customer {Guid.NewGuid():N}",
+            customerId = projectCustomerId,
+        });
+        projectResponse.EnsureSuccessStatusCode();
+        var projectId = (await ReadJsonAsync(projectResponse)).GetProperty("id").GetInt32();
+
+        var response = await Client.PostAsJsonAsync("/api/contracts", new
+        {
+            customerId = contractCustomerId,
+            operationalProjectId = projectId,
+            direction = "Upstream",
+            type = "Design",
+            status = "Draft",
+            value = 100,
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await response.Content.ReadAsStringAsync()).Should().Contain("cùng một Khách hàng");
     }
 
     [Fact]
@@ -576,6 +712,13 @@ public class ContractsControllerTests : IntegrationTestBase
                 ],
             };
             db.Customers.Add(customer);
+            await db.SaveChangesAsync();
+            db.OperationalProjects.Add(new OperationalProject
+            {
+                Code = $"PJ-SIGN-{Guid.NewGuid():N}"[..20],
+                Name = "Signing gate project",
+                CustomerId = customer.Id,
+            });
             await db.SaveChangesAsync();
             return customer.Id;
         });

@@ -18,6 +18,8 @@ public class ContractServiceTests : IDisposable
     private readonly string _contentRoot;
     private int _customerA;
     private int _customerB;
+    private int _projectA;
+    private int _projectB;
     private int _accountantId;
 
     public ContractServiceTests()
@@ -68,6 +70,12 @@ public class ContractServiceTests : IDisposable
         _db.SaveChanges();
         _customerA = _db.Customers.Single(c => c.Name == "Customer A").Id;
         _customerB = _db.Customers.Single(c => c.Name == "Customer B").Id;
+        _db.OperationalProjects.AddRange(
+            new OperationalProject { Code = "PJ-CONTRACT-A", Name = "Contract Project A", CustomerId = _customerA },
+            new OperationalProject { Code = "PJ-CONTRACT-B", Name = "Contract Project B", CustomerId = _customerB });
+        _db.SaveChanges();
+        _projectA = _db.OperationalProjects.Single(project => project.Code == "PJ-CONTRACT-A").Id;
+        _projectB = _db.OperationalProjects.Single(project => project.Code == "PJ-CONTRACT-B").Id;
         _accountantId = accountant.Id;
     }
 
@@ -90,6 +98,7 @@ public class ContractServiceTests : IDisposable
         {
             ContractNumber = number,
             CustomerId = customerId ?? _customerA,
+            OperationalProjectId = (customerId ?? _customerA) == _customerB ? _projectB : _projectA,
             Direction = ContractDirection.Upstream,
             Type = ContractType.DesignAndBuild,
             Status = status,
@@ -482,6 +491,98 @@ public class ContractServiceTests : IDisposable
                 files.All(file => file.Category == ProjectDocumentCategory.FinanceContracts &&
                     file.ContractId == contract.Id)),
             1, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Update_ProjectChange_WithLinkedDesignProject_Throws()
+    {
+        var contract = await _sut.CreateAsync(Req(number: "HD-DESIGN-LINK"), 1, canReassignOwner: true);
+        var otherProject = new OperationalProject
+        {
+            Code = "OP-DESIGN-OTHER",
+            Name = "Other design project root",
+            CustomerId = _customerA,
+        };
+        _db.OperationalProjects.Add(otherProject);
+        await _db.SaveChangesAsync();
+        _db.DesignProjects.Add(new DesignProject
+        {
+            ProjectCode = "DP-CONTRACT-LINK",
+            Name = "Linked design project",
+            CustomerId = _customerA,
+            ContractId = contract.Id,
+            OperationalProjectId = _projectA,
+        });
+        await _db.SaveChangesAsync();
+        var update = Req(number: contract.ContractNumber);
+        update.OperationalProjectId = otherProject.Id;
+
+        var exception = await Assert.ThrowsAsync<ContractValidationException>(() =>
+            _sut.UpdateAsync(contract.Id, update, 1, canSeeAll: true, canReassignOwner: true));
+
+        Assert.Contains("Dự án thiết kế", exception.Message);
+        Assert.Equal(_projectA, (await _db.Contracts.FindAsync(contract.Id))!.OperationalProjectId);
+    }
+
+    [Fact]
+    public async Task Update_ProjectChange_WithLegacyUnassignedDesignProject_Throws()
+    {
+        var contract = await _sut.CreateAsync(Req(number: "HD-LEGACY-DESIGN"), 1, canReassignOwner: true);
+        var otherProject = new OperationalProject
+        {
+            Code = "OP-LEGACY-TARGET",
+            Name = "Legacy target project",
+            CustomerId = _customerA,
+        };
+        _db.OperationalProjects.Add(otherProject);
+        await _db.SaveChangesAsync();
+        _db.DesignProjects.Add(new DesignProject
+        {
+            ProjectCode = "DP-LEGACY-UNASSIGNED",
+            Name = "Legacy unassigned design project",
+            CustomerId = _customerA,
+            ContractId = contract.Id,
+            OperationalProjectId = null,
+        });
+        await _db.SaveChangesAsync();
+        var update = Req(number: contract.ContractNumber);
+        update.OperationalProjectId = otherProject.Id;
+
+        await Assert.ThrowsAsync<ContractValidationException>(() =>
+            _sut.UpdateAsync(contract.Id, update, 1, canSeeAll: true, canReassignOwner: true));
+
+        Assert.Equal(_projectA, (await _db.Contracts.FindAsync(contract.Id))!.OperationalProjectId);
+    }
+
+    [Fact]
+    public async Task Update_ProjectChange_WithProcurementLine_Throws()
+    {
+        var contract = await _sut.CreateAsync(Req(number: "HD-PROCUREMENT-LINK"), 1, canReassignOwner: true);
+        var otherProject = new OperationalProject
+        {
+            Code = "OP-PROC-OTHER",
+            Name = "Other procurement project root",
+            CustomerId = _customerA,
+        };
+        _db.OperationalProjects.Add(otherProject);
+        await _db.SaveChangesAsync();
+        _db.ContractLines.Add(new ContractLine
+        {
+            ContractId = contract.Id,
+            ProjectBoqLineId = 999,
+            ProcurementOwnerUserId = 1,
+            Quantity = 1,
+            NegotiatedUnitPrice = 100,
+        });
+        await _db.SaveChangesAsync();
+        var update = Req(number: contract.ContractNumber);
+        update.OperationalProjectId = otherProject.Id;
+
+        var exception = await Assert.ThrowsAsync<ContractValidationException>(() =>
+            _sut.UpdateAsync(contract.Id, update, 1, canSeeAll: true, canReassignOwner: true));
+
+        Assert.Contains("dòng mua sắm", exception.Message);
+        Assert.Equal(_projectA, (await _db.Contracts.FindAsync(contract.Id))!.OperationalProjectId);
     }
 
     [Fact]

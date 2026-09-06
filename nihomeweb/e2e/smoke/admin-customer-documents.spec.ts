@@ -33,6 +33,7 @@ test("customer related records, documents, and contract owner inheritance work i
   const customerName = `NIH-428 Browser ${unique}`;
   const fileName = `nih-428-${unique}.pdf`;
   let customerId = 0;
+  let operationalProjectId = 0;
   let opportunityId = 0;
   let quoteId = 0;
   let contractId = 0;
@@ -65,12 +66,21 @@ test("customer related records, documents, and contract owner inheritance work i
     expect(ownerUserId).toBeTruthy();
     expect(ownerName).toBeTruthy();
 
+    const projectResponse = await api.post("/api/operational-projects", {
+      headers,
+      data: { name: `NIH-428 Project ${unique}`, customerId },
+    });
+    expect(projectResponse.status(), await projectResponse.text()).toBe(201);
+    const operationalProject = await projectResponse.json();
+    operationalProjectId = operationalProject.id as number;
+
     const opportunityName = `NIH-428 Opportunity ${unique}`;
     const opportunityResponse = await api.post("/api/opportunities", {
       headers,
       data: {
         name: opportunityName,
         customerId,
+        operationalProjectId,
         estimatedValue: 428_000_000,
         winProbability: 60,
       },
@@ -172,6 +182,8 @@ test("customer related records, documents, and contract owner inheritance work i
     const contractDialog = page.getByRole("dialog").filter({ hasText: /Thêm hợp đồng|New contract|新增合同|新規契約/i });
     await contractDialog.locator("#c-customer-form").click();
     await page.getByRole("option", { name: customerName, exact: true }).click();
+    await contractDialog.locator("#c-project-form").click();
+    await page.getByRole("option", { name: new RegExp(`NIH-428 Project ${unique}`) }).click();
     await expect(contractDialog.getByText(ownerName, { exact: true })).toBeVisible();
     await expect(contractDialog.getByText(/Tự động lấy|Automatically inherited|自动继承|自動的に/i)).toBeVisible();
     await contractDialog.locator("#c-value").fill("428000000");
@@ -186,6 +198,7 @@ test("customer related records, documents, and contract owner inheritance work i
     const contract = await response.json();
     contractId = contract.id as number;
     expect(contract.customerId).toBe(customerId);
+    expect(contract.operationalProjectId).toBe(operationalProjectId);
     expect(contract.ownerUserId).toBe(ownerUserId);
     expect(contract.ownerName).toBe(ownerName);
     await expect(contractDialog).toBeHidden();
@@ -239,6 +252,7 @@ test("customer related records, documents, and contract owner inheritance work i
     if (contractId) await hardDeleteBusinessRoot(api, headers, `/api/contracts/${contractId}`);
     if (quoteId) await hardDeleteBusinessRoot(api, headers, `/api/quotes/${quoteId}`);
     if (opportunityId) await hardDeleteBusinessRoot(api, headers, `/api/opportunities/${opportunityId}`);
+    if (operationalProjectId) await hardDeleteBusinessRoot(api, headers, `/api/operational-projects/${operationalProjectId}`);
     if (customerId) await hardDeleteBusinessRoot(api, headers, `/api/customers/${customerId}`);
     if (investmentRate) await retireInvestmentRate(api, headers, investmentRate);
   }

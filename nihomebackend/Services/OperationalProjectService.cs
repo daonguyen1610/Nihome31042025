@@ -129,7 +129,44 @@ public class OperationalProjectService(
             .FirstOrDefaultAsync(item => item.Id == id, ct);
 
         if (project is null || !CanView(project, callerUserId, canSeeAll)) return null;
-        return Map(project);
+        var contractIds = project.Contracts.Select(contract => contract.Id).ToList();
+        var approvedVoTotals = await db.ContractAppendices
+            .AsNoTracking()
+            .Where(appendix => contractIds.Contains(appendix.ContractId) &&
+                appendix.Status == ContractAppendixStatus.Approved)
+            .GroupBy(appendix => appendix.ContractId)
+            .Select(group => new { ContractId = group.Key, Total = group.Sum(appendix => appendix.ValueDelta) })
+            .ToDictionaryAsync(item => item.ContractId, item => item.Total, ct);
+        var milestoneRows = await db.ContractPaymentMilestones
+            .AsNoTracking()
+            .Where(milestone => contractIds.Contains(milestone.ContractId))
+            .Select(milestone => new
+            {
+                milestone.ContractId,
+                milestone.PercentValue,
+                milestone.Status,
+                ContractValue = milestone.Contract.Value,
+            })
+            .ToListAsync(ct);
+        var milestoneSummaries = milestoneRows
+            .GroupBy(milestone => milestone.ContractId)
+            .ToDictionary(
+                group => group.Key,
+                group => new ContractPaymentSummary(
+                    group.Count(),
+                    group.Count(milestone => milestone.Status == PaymentMilestoneStatus.Paid),
+                    group.Sum(milestone => Math.Round(
+                        milestone.ContractValue * milestone.PercentValue / 100m,
+                        2,
+                        MidpointRounding.AwayFromZero)),
+                    group.Where(milestone => milestone.Status == PaymentMilestoneStatus.Paid)
+                        .Sum(milestone => Math.Round(
+                            milestone.ContractValue * milestone.PercentValue / 100m,
+                            2,
+                            MidpointRounding.AwayFromZero)),
+                    group.Where(milestone => milestone.Status == PaymentMilestoneStatus.Paid)
+                        .Sum(milestone => milestone.PercentValue)));
+        return Map(project, approvedVoTotals, milestoneSummaries);
     }
 
     public async Task<IReadOnlyList<OperationalProjectTimelineItemResponse>?> GetTimelineAsync(
@@ -602,30 +639,60 @@ public class OperationalProjectService(
         bool canSeeAll) => CanManage(project, callerUserId, canSeeAll) ||
             project.TeamMembers.Any(member => member.UserId == callerUserId && member.EndedAt == null);
 
-    private static OperationalProjectResponse Map(OperationalProject project) => new()
+    private static OperationalProjectResponse Map(
+        OperationalProject project,
+        IReadOnlyDictionary<int, decimal> approvedVoTotals,
+        IReadOnlyDictionary<int, ContractPaymentSummary> milestoneSummaries)
     {
-        Id = project.Id,
-        Code = project.Code,
-        Name = project.Name,
-        CustomerId = project.CustomerId,
-        CustomerName = project.Customer.Name,
-        ProjectManagerUserId = project.ProjectManagerUserId,
-        ProjectManagerName = project.ProjectManager?.FullName,
-        Status = project.Status.ToString(),
-        StartDate = project.StartDate,
-        EndDate = project.EndDate,
-        CompletedAt = project.CompletedAt,
-        FinalProjectBoqRevisionId = project.FinalProjectBoqRevisionId,
-        Note = project.Note,
-        OpportunityCount = project.Opportunities.Count,
-        QuoteCount = project.Quotes.Count,
-        ContractCount = project.Contracts.Count,
-        DesignProjectId = project.DesignProject?.Id,
-        DesignProjectCode = project.DesignProject?.ProjectCode,
-        RowVersion = CrmConcurrency.Encode(project.RowVersion),
-        CreatedAt = project.CreatedAt,
-        UpdatedAt = project.UpdatedAt,
-        Opportunities = project.Opportunities
+        var activeContracts = project.Contracts
+            .Where(contract => contract.Status != ContractStatus.Cancelled)
+            .ToList();
+        var scheduledPaymentAmount = activeContracts.Sum(contract =>
+            milestoneSummaries.GetValueOrDefault(contract.Id)?.ScheduledAmount ?? 0m);
+        var paidPaymentAmount = activeContracts.Sum(contract =>
+            milestoneSummaries.GetValueOrDefault(contract.Id)?.PaidAmount ?? 0m);
+
+        return new OperationalProjectResponse
+        {
+            Id = project.Id,
+            Code = project.Code,
+            Name = project.Name,
+            CustomerId = project.CustomerId,
+            CustomerName = project.Customer.Name,
+            ProjectManagerUserId = project.ProjectManagerUserId,
+            ProjectManagerName = project.ProjectManager?.FullName,
+            Status = project.Status.ToString(),
+            StartDate = project.StartDate,
+            EndDate = project.EndDate,
+            CompletedAt = project.CompletedAt,
+            FinalProjectBoqRevisionId = project.FinalProjectBoqRevisionId,
+            Note = project.Note,
+            OpportunityCount = project.Opportunities.Count,
+            QuoteCount = project.Quotes.Count,
+            ContractCount = project.Contracts.Count,
+            DesignProjectId = project.DesignProject?.Id,
+            DesignProjectCode = project.DesignProject?.ProjectCode,
+            RowVersion = CrmConcurrency.Encode(project.RowVersion),
+            CreatedAt = project.CreatedAt,
+            UpdatedAt = project.UpdatedAt,
+            ContractSummary = new OperationalProjectContractSummaryResponse
+            {
+                ActiveContractCount = activeContracts.Count,
+                UpstreamContractCount = activeContracts.Count(contract => contract.Direction == ContractDirection.Upstream),
+                UpstreamCurrentValue = activeContracts
+                .Where(contract => contract.Direction == ContractDirection.Upstream)
+                .Sum(contract => CurrentContractValue(contract, approvedVoTotals)),
+                DownstreamContractCount = activeContracts.Count(contract => contract.Direction == ContractDirection.Downstream),
+                DownstreamCurrentValue = activeContracts
+                .Where(contract => contract.Direction == ContractDirection.Downstream)
+                .Sum(contract => CurrentContractValue(contract, approvedVoTotals)),
+                ScheduledPaymentAmount = scheduledPaymentAmount,
+                PaidPaymentAmount = paidPaymentAmount,
+                PaymentProgressPercent = scheduledPaymentAmount == 0m
+                ? 0m
+                : Math.Round(paidPaymentAmount / scheduledPaymentAmount * 100m, 2, MidpointRounding.AwayFromZero),
+            },
+            Opportunities = project.Opportunities
             .OrderByDescending(item => item.UpdatedAt)
             .Select(item => new OperationalProjectOpportunityResponse
             {
@@ -640,7 +707,7 @@ public class OperationalProjectService(
                 LostReasonCode = item.LostReasonCode,
             })
             .ToList(),
-        Quotes = project.Quotes
+            Quotes = project.Quotes
             .OrderByDescending(item => item.UpdatedAt)
             .Select(item => new OperationalProjectQuoteResponse
             {
@@ -680,10 +747,16 @@ public class OperationalProjectService(
                     .ToList(),
             })
             .ToList(),
-        Contracts = project.Contracts
+            Contracts = project.Contracts
             .OrderByDescending(item => item.UpdatedAt)
             .Select(item => new OperationalProjectContractResponse
             {
+                ApprovedVoTotal = approvedVoTotals.GetValueOrDefault(item.Id),
+                CurrentValue = CurrentContractValue(item, approvedVoTotals),
+                PaymentMilestoneCount = milestoneSummaries.GetValueOrDefault(item.Id)?.Count ?? 0,
+                PaidMilestoneCount = milestoneSummaries.GetValueOrDefault(item.Id)?.PaidCount ?? 0,
+                ScheduledPaymentAmount = milestoneSummaries.GetValueOrDefault(item.Id)?.ScheduledAmount ?? 0m,
+                PaidPaymentAmount = milestoneSummaries.GetValueOrDefault(item.Id)?.PaidAmount ?? 0m,
                 Id = item.Id,
                 ContractNumber = item.ContractNumber,
                 Direction = item.Direction,
@@ -701,9 +774,26 @@ public class OperationalProjectService(
                 CustomerName = item.Customer?.Name,
                 OwnerName = item.Owner?.FullName,
                 CreatedAt = item.CreatedAt,
+                PaymentProgressPercent = Math.Round(
+                    milestoneSummaries.GetValueOrDefault(item.Id)?.PaidPercent ?? 0m,
+                    2,
+                    MidpointRounding.AwayFromZero),
             })
             .ToList(),
-    };
+        };
+    }
+
+    private static decimal CurrentContractValue(
+        Contract contract,
+        IReadOnlyDictionary<int, decimal> approvedVoTotals) =>
+        contract.Value + approvedVoTotals.GetValueOrDefault(contract.Id);
+
+    private sealed record ContractPaymentSummary(
+        int Count,
+        int PaidCount,
+        decimal ScheduledAmount,
+        decimal PaidAmount,
+        decimal PaidPercent);
 
     private static string? TrimOrNull(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();

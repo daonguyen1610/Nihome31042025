@@ -357,6 +357,23 @@ Every Survey persists an Operational Project and stores media in that project's 
 
 Create contracts or generate from approved quotations. Manage contract value, scope, and terms. Track payment milestones (advance, stage-based, completion). Manage appendices and variation orders. Track contract status: in-progress, paused, completed. Manage customer care history and contract renewal.
 
+Every new or edited contract must belong to one Operational Project. The
+selected project must belong to the same customer as the contract; contracts
+created from an opportunity or quotation inherit that source project's identity.
+When a customer has exactly one project, the API may resolve that project for a
+legacy client that omits the field. It rejects an omitted project when the
+customer has no project or multiple possible projects. A project can contain
+any number of upstream and downstream contracts of compatible types.
+
+The Contract List can be filtered by Operational Project. Operational Project
+detail shows separate upstream and downstream current values, excluding
+cancelled contracts and including approved VO adjustments. Payment progress is
+the paid milestone amount divided by the total scheduled milestone amount.
+Each summary drills down to the contributing contracts and their payment
+milestones. Access to the aggregate remains governed by Operational Project
+manager, creator, team-member, and global-view permissions; opening the full
+Contract detail additionally requires the normal Contract permission.
+
 When opening **New contract**, the system suggests the next Contract Number in
 `HD-YYYY-NNNN` format. The number remains editable for an authorized user who
 needs to follow an external numbering convention. An unchanged suggestion is

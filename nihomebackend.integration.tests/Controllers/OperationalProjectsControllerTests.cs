@@ -1195,6 +1195,8 @@ public class OperationalProjectsControllerTests : IntegrationTestBase
                     ContractNumber = $"HD-TL-A-{Guid.NewGuid():N}"[..24],
                     CustomerId = customerId,
                     OperationalProjectId = project.Id,
+                    Direction = ContractDirection.Upstream,
+                    Type = ContractType.Design,
                     Value = 10_000,
                 },
                 new Contract
@@ -1202,6 +1204,8 @@ public class OperationalProjectsControllerTests : IntegrationTestBase
                     ContractNumber = $"HD-TL-B-{Guid.NewGuid():N}"[..24],
                     CustomerId = customerId,
                     OperationalProjectId = project.Id,
+                    Direction = ContractDirection.Downstream,
+                    Type = ContractType.Supply,
                     Value = 20_000,
                 },
             };
@@ -1230,12 +1234,40 @@ public class OperationalProjectsControllerTests : IntegrationTestBase
                 },
             };
             db.ContractPaymentMilestones.AddRange(milestones);
+            db.ContractAppendices.Add(new ContractAppendix
+            {
+                ContractId = contracts[0].Id,
+                VoNumber = 1,
+                Title = "Approved scope increase",
+                Reason = "Additional work",
+                ValueDelta = 1_000,
+                Status = ContractAppendixStatus.Approved,
+            });
             await db.SaveChangesAsync();
             return project.Id;
         });
 
+        var projectResponse = await Client.GetAsync($"/api/operational-projects/{projectId}");
         var first = await Client.GetAsync($"/api/operational-projects/{projectId}/timeline");
         var second = await Client.GetAsync($"/api/operational-projects/{projectId}/timeline");
+
+        projectResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var project = await ReadJsonAsync(projectResponse);
+        var summary = project.GetProperty("contractSummary");
+        summary.GetProperty("activeContractCount").GetInt32().Should().Be(2);
+        summary.GetProperty("upstreamContractCount").GetInt32().Should().Be(1);
+        summary.GetProperty("upstreamCurrentValue").GetDecimal().Should().Be(11_000);
+        summary.GetProperty("downstreamContractCount").GetInt32().Should().Be(1);
+        summary.GetProperty("downstreamCurrentValue").GetDecimal().Should().Be(20_000);
+        summary.GetProperty("scheduledPaymentAmount").GetDecimal().Should().Be(12_000);
+        summary.GetProperty("paidPaymentAmount").GetDecimal().Should().Be(10_000);
+        summary.GetProperty("paymentProgressPercent").GetDecimal().Should().Be(83.33m);
+        var projectContracts = project.GetProperty("contracts").EnumerateArray().ToList();
+        projectContracts.Should().HaveCount(2);
+        projectContracts.Single(item => item.GetProperty("direction").GetString() == "Upstream")
+            .GetProperty("currentValue").GetDecimal().Should().Be(11_000);
+        projectContracts.Single(item => item.GetProperty("direction").GetString() == "Downstream")
+            .GetProperty("paymentProgressPercent").GetDecimal().Should().Be(50);
 
         first.StatusCode.Should().Be(HttpStatusCode.OK);
         second.StatusCode.Should().Be(HttpStatusCode.OK);

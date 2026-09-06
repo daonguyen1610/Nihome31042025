@@ -17,6 +17,8 @@ public class ContractResponse
     public string? VendorName { get; set; }
 
     public int? OperationalProjectId { get; set; }
+    public string? OperationalProjectCode { get; set; }
+    public string? OperationalProjectName { get; set; }
 
     public int? OpportunityId { get; set; }
     public string? OpportunityTitle { get; set; }

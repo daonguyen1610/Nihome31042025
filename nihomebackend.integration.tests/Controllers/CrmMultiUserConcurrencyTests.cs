@@ -233,9 +233,17 @@ public class CrmMultiUserConcurrencyTests : IntegrationTestBase
         var (manager, admin) = await CreateActorClientsAsync();
         var customer = await CreateCustomerAsync(manager);
         var customerId = customer.GetProperty("id").GetInt32();
+        using var projectResponse = await manager.PostAsJsonAsync("/api/operational-projects", new
+        {
+            name = $"Concurrent contract project {Guid.NewGuid():N}",
+            customerId,
+        });
+        projectResponse.EnsureSuccessStatusCode();
+        var operationalProjectId = (await ReadJsonAsync(projectResponse)).GetProperty("id").GetInt32();
         using var created = await manager.PostAsJsonAsync("/api/contracts", new
         {
             customerId,
+            operationalProjectId,
             direction = "Upstream",
             type = "DesignAndBuild",
             status = "Draft",
@@ -256,6 +264,7 @@ public class CrmMultiUserConcurrencyTests : IntegrationTestBase
                 rowVersion,
                 contractNumber,
                 customerId,
+                operationalProjectId,
                 direction = "Upstream",
                 type = "DesignAndBuild",
                 status = "Draft",
@@ -266,6 +275,7 @@ public class CrmMultiUserConcurrencyTests : IntegrationTestBase
             {
                 contractNumber,
                 customerId,
+                operationalProjectId,
                 direction = "Upstream",
                 type = "DesignAndBuild",
                 status = "Draft",

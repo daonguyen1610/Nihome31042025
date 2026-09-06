@@ -70,6 +70,7 @@ import {
   type ContractTimelineEvent,
   type PaymentMilestoneStatus,
   type KpiUserOptionResponse,
+  type OperationalProjectListItemResponse,
   type UpsertContractRequest,
   type UpsertContractAppendixRequest,
 } from "@/services/adminApi";
@@ -136,6 +137,7 @@ interface ContractEditForm {
   direction: ContractDirection;
   type: ContractType;
   vendorId: number | null;
+  operationalProjectId: number | null;
   ownerName: string;
   signedDate: string;
   startDate: string;
@@ -168,6 +170,7 @@ const toEditForm = (contract: ContractResponse): ContractEditForm => ({
   direction: contract.direction,
   type: contract.type,
   vendorId: contract.vendorId ?? null,
+  operationalProjectId: contract.operationalProjectId ?? null,
   ownerName: contract.ownerName ?? "",
   signedDate: toIsoDate(contract.signedDate),
   startDate: toIsoDate(contract.startDate),
@@ -387,6 +390,11 @@ const InfoTab = ({ contract, onEnsureDesignProject, ensuringDesignProject }: Inf
   const rows: [string, React.ReactNode][] = [
     [t("contracts.field.number"), contract.contractNumber],
     [t("contracts.field.customer"), contract.customerName ?? "—"],
+    [t("contracts.field.operationalProject"), contract.operationalProjectId ? (
+      <Link className="text-primary hover:underline" to={`/admin/operational-projects/${contract.operationalProjectId}`}>
+        {contract.operationalProjectCode ?? `#${contract.operationalProjectId}`} · {contract.operationalProjectName ?? ""}
+      </Link>
+    ) : "—"],
     [t("contracts.field.direction"), t(`contracts.direction.${contract.direction}`)],
     [t("contracts.field.type"), t(`contracts.type.${contract.type}`)],
     [t("contracts.field.counterparty"), contract.vendorName ?? contract.customerName ?? "—"],
@@ -502,12 +510,13 @@ const InfoTab = ({ contract, onEnsureDesignProject, ensuringDesignProject }: Inf
 interface EditInfoTabProps {
   form: ContractEditForm;
   customers: CustomerResponse[];
+  projects: OperationalProjectListItemResponse[];
   classification: ContractClassificationOptions | null;
   error: string | null;
   onChange: (next: ContractEditForm) => void;
 }
 
-const EditInfoTab = ({ form, customers, classification, error, onChange }: EditInfoTabProps) => {
+const EditInfoTab = ({ form, customers, projects, classification, error, onChange }: EditInfoTabProps) => {
   const { t } = useI18n();
 
   return (
@@ -529,7 +538,14 @@ const EditInfoTab = ({ form, customers, classification, error, onChange }: EditI
             onValueChange={(value) => {
               const customerId = Number(value);
               const customer = customers.find((item) => item.id === customerId);
-              onChange({ ...form, customerId, ownerName: customer?.ownerName ?? "" });
+              onChange({
+                ...form,
+                customerId,
+                operationalProjectId: projects.some((project) => project.id === form.operationalProjectId && project.customerId === customerId)
+                  ? form.operationalProjectId
+                  : null,
+                ownerName: customer?.ownerName ?? "",
+              });
             }}
           >
             <SelectTrigger id="contract-detail-customer"><SelectValue /></SelectTrigger>
@@ -540,6 +556,21 @@ const EditInfoTab = ({ form, customers, classification, error, onChange }: EditI
             </SelectContent>
           </Select>
         </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="contract-detail-project">{t("contracts.field.operationalProject")} *</Label>
+        <Select
+          value={form.operationalProjectId == null ? "" : String(form.operationalProjectId)}
+          onValueChange={(value) => onChange({ ...form, operationalProjectId: Number(value) })}
+        >
+          <SelectTrigger id="contract-detail-project"><SelectValue placeholder={t("contracts.selectOperationalProject")} /></SelectTrigger>
+          <SelectContent className="max-h-72">
+            {projects.filter((project) => project.customerId === form.customerId).map((project) => (
+              <SelectItem key={project.id} value={String(project.id)}>{project.code} · {project.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
@@ -1597,6 +1628,7 @@ const ContractDetail = () => {
   const [form, setForm] = useState<ContractEditForm | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [customers, setCustomers] = useState<CustomerResponse[]>([]);
+  const [projects, setProjects] = useState<OperationalProjectListItemResponse[]>([]);
   const [classification, setClassification] = useState<ContractClassificationOptions | null>(null);
 
   const handleEnsureDesignProject = async () => {
@@ -1784,17 +1816,21 @@ const ContractDetail = () => {
     setForm(toEditForm(contract));
     setFormError(null);
     setTab("info");
-    if (customers.length === 0) {
+    if (customers.length === 0 || projects.length === 0) {
       try {
-        const { data } = await adminApi.listCustomers({ pageSize: 200 });
-        setCustomers(data.items);
+        const [customersResponse, projectsResponse] = await Promise.all([
+          customers.length === 0 ? adminApi.listCustomers({ pageSize: 200 }) : null,
+          projects.length === 0 ? adminApi.listOperationalProjects({ pageSize: 100 }) : null,
+        ]);
+        if (customersResponse) setCustomers(customersResponse.data.items);
+        if (projectsResponse) setProjects(projectsResponse.data.items);
       } catch (err) {
         toast({ variant: "destructive", title: getErrorMessage(err) ?? t("common.error") });
         return;
       }
     }
     setEditing(true);
-  }, [contract, customers.length, t, toast]);
+  }, [contract, customers.length, projects.length, t, toast]);
 
   useEffect(() => {
     if (searchParams.get("edit") !== "true" || !contract || !canManage || editing) return;
@@ -1815,6 +1851,11 @@ const ContractDetail = () => {
     setFormError(null);
     if (form.type === "Unclassified") {
       setFormError(t("contracts.validation.typeRequired"));
+      setTab("info");
+      return;
+    }
+    if (form.operationalProjectId == null) {
+      setFormError(t("contracts.validation.operationalProjectRequired"));
       setTab("info");
       return;
     }
@@ -1870,6 +1911,7 @@ const ContractDetail = () => {
       direction: form.direction,
       type: form.type,
       vendorId: form.direction === "Downstream" ? form.vendorId : null,
+      operationalProjectId: form.operationalProjectId,
       opportunityId: contract.opportunityId,
       quoteId: contract.quoteId,
       status: contract.status,
@@ -1972,6 +2014,7 @@ const ContractDetail = () => {
                 <EditInfoTab
                   form={form}
                   customers={customers}
+                  projects={projects}
                   classification={classification}
                   error={formError}
                   onChange={setForm}
