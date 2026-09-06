@@ -284,7 +284,19 @@ public sealed class ProjectTeamService(
         if (request.EndedAt.HasValue && request.EndedAt.Value < request.StartedAt)
             throw new ProjectTeamOperationException("Ngày kết thúc phân công không được trước ngày bắt đầu.");
         await NormalizeRoleScopeValuesAsync(request.Roles, ct);
-        _ = ParseRoles(request.Roles, request.StartedAt, request.EndedAt);
+        var roles = ParseRoles(request.Roles, request.StartedAt, request.EndedAt);
+        if (roles.Any(role => role.RoleCode == ProjectTeamRoleCode.ProjectManager))
+        {
+            var primaryManagerUserId = await db.OperationalProjects.AsNoTracking()
+                .Where(project => project.Id == projectId)
+                .Select(project => project.ProjectManagerUserId)
+                .SingleAsync(ct);
+            if (primaryManagerUserId != request.UserId)
+            {
+                throw new ProjectTeamOperationException(
+                    "Chỉ PM chính của Dự án được giữ vai trò Accountable Project Manager.");
+            }
+        }
         if (memberId.HasValue && request.ReportsToMemberId == memberId)
             throw new ProjectTeamOperationException("Thành viên không thể tự quản lý chính mình.");
         if (request.ReportsToMemberId.HasValue)

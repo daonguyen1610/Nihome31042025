@@ -1,4 +1,5 @@
 using System.Data;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using NihomeBackend.Constants;
@@ -238,6 +239,9 @@ public class OperationalProjectService(
         bool canSeeAll,
         CancellationToken ct = default)
     {
+        await using var transaction = db.Database.IsRelational()
+            ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct)
+            : null;
         var project = await db.OperationalProjects.FirstOrDefaultAsync(item => item.Id == id, ct);
         if (project is null || !CanManage(project, callerUserId, canSeeAll)) return null;
 
@@ -249,6 +253,11 @@ public class OperationalProjectService(
                 "Không thể đổi Khách hàng khi Dự án đã có dữ liệu nghiệp vụ.");
         }
         ValidateTransition(project.Status, request.Status);
+        if (project.Status != OperationalProjectStatus.Completed &&
+            request.Status == OperationalProjectStatus.Completed)
+        {
+            await ValidateCompletionAsync(project.Id, ct);
+        }
         CrmConcurrency.Apply(db, project, request.RowVersion);
 
         project.Name = request.Name.Trim();
@@ -264,7 +273,58 @@ public class OperationalProjectService(
         await projectTeamSync.SyncOperationalProjectManagerAsync(
             project.Id, project.ProjectManagerUserId, callerUserId, ct);
         await CrmConcurrency.SaveChangesAsync(db, ct);
+        if (transaction is not null) await transaction.CommitAsync(ct);
         return await GetAsync(id, callerUserId, canSeeAll, ct);
+    }
+
+    public async Task<OperationalProjectResponse?> ReopenAsync(
+        int id,
+        ReopenOperationalProjectRequest request,
+        int callerUserId,
+        bool canSeeAll,
+        CancellationToken ct = default)
+    {
+        await using var transaction = db.Database.IsRelational()
+            ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct)
+            : null;
+        var project = await db.OperationalProjects.FirstOrDefaultAsync(item => item.Id == id, ct);
+        if (project is null || !CanManage(project, callerUserId, canSeeAll)) return null;
+        if (project.Status != OperationalProjectStatus.Completed)
+        {
+            throw new OperationalProjectOperationException(
+                "Chỉ Dự án đã hoàn thành mới có thể mở lại.");
+        }
+        if (string.IsNullOrWhiteSpace(request.Reason) || request.Reason.Trim().Length < 3)
+        {
+            throw new OperationalProjectOperationException(
+                "Lý do mở lại Dự án phải có ít nhất 3 ký tự.");
+        }
+
+        CrmConcurrency.Apply(db, project, request.RowVersion);
+        project.Status = OperationalProjectStatus.Active;
+        project.Note = string.IsNullOrWhiteSpace(project.Note)
+            ? $"[Reopened] {request.Reason.Trim()}"
+            : $"{project.Note.TrimEnd()}\n[Reopened] {request.Reason.Trim()}";
+        project.UpdatedAt = DateTime.UtcNow;
+        project.UpdatedByUserId = callerUserId;
+        db.OperationalProjectTeamHistory.Add(new OperationalProjectTeamHistory
+        {
+            OperationalProjectId = project.Id,
+            EntityType = "Project",
+            EntityId = project.Id,
+            Action = "Reopened",
+            SnapshotJson = JsonSerializer.Serialize(new
+            {
+                FromStatus = OperationalProjectStatus.Completed.ToString(),
+                ToStatus = OperationalProjectStatus.Active.ToString(),
+                Reason = request.Reason.Trim(),
+            }),
+            ChangedAt = project.UpdatedAt,
+            ChangedByUserId = callerUserId,
+        });
+        await CrmConcurrency.SaveChangesAsync(db, ct);
+        if (transaction is not null) await transaction.CommitAsync(ct);
+        return await GetAsync(id, callerUserId, canSeeAll: true, ct);
     }
 
     public async Task<DeletionImpactResponse?> GetDeletionImpactAsync(
@@ -322,6 +382,66 @@ public class OperationalProjectService(
         await db.OperationalProjectMembers.AnyAsync(item => item.OperationalProjectId == projectId, ct) ||
         await db.OperationalProjectAssignments.AnyAsync(item => item.OperationalProjectId == projectId, ct) ||
         await db.OperationalProjectTeamHistory.AnyAsync(item => item.OperationalProjectId == projectId, ct);
+
+    private async Task ValidateCompletionAsync(int projectId, CancellationToken ct)
+    {
+        var contracts = await db.Contracts.AsNoTracking()
+            .Where(item => item.OperationalProjectId == projectId)
+            .Select(item => item.Status)
+            .ToListAsync(ct);
+        if (contracts.Count == 0 || !contracts.Contains(ContractStatus.Completed) ||
+            contracts.Any(status => status is not (ContractStatus.Completed or ContractStatus.Cancelled)))
+        {
+            throw new OperationalProjectOperationException(
+                "Dự án cần ít nhất một Hợp đồng hoàn thành và không còn Hợp đồng đang xử lý.");
+        }
+
+        if (await db.OperationalProjectAssignments.AsNoTracking().AnyAsync(item =>
+            item.OperationalProjectId == projectId &&
+            item.Status != ProjectAssignmentStatus.Completed &&
+            item.Status != ProjectAssignmentStatus.Cancelled, ct))
+        {
+            throw new OperationalProjectOperationException(
+                "Dự án còn công việc phân công chưa hoàn tất.");
+        }
+        if (await db.DesignSchedulePhases.AsNoTracking().AnyAsync(item =>
+            item.OperationalProjectId == projectId &&
+            item.Status != DesignScheduleStatus.Completed, ct) ||
+            await db.DesignScheduleTasks.AsNoTracking().AnyAsync(item =>
+                item.OperationalProjectId == projectId &&
+                item.Status != DesignScheduleStatus.Completed, ct))
+        {
+            throw new OperationalProjectOperationException(
+                "Tiến độ thiết kế của Dự án chưa hoàn tất.");
+        }
+
+        var designProject = await db.DesignProjects.AsNoTracking()
+            .Where(item => item.OperationalProjectId == projectId)
+            .Select(item => new { item.Id, item.Status })
+            .SingleOrDefaultAsync(ct);
+        if (designProject is null) return;
+        if (designProject.Status is not (DesignProjectStatus.Completed or DesignProjectStatus.Cancelled))
+        {
+            throw new OperationalProjectOperationException(
+                "Dự án thiết kế chưa ở trạng thái hoàn tất.");
+        }
+        if (await db.ConstructionTasks.AsNoTracking().AnyAsync(item =>
+            item.DesignProjectId == designProject.Id &&
+            item.Status != ConstructionTaskStatus.Completed &&
+            item.Status != ConstructionTaskStatus.Cancelled, ct))
+        {
+            throw new OperationalProjectOperationException(
+                "Dự án còn công việc thi công chưa hoàn tất.");
+        }
+        if (await db.HandoverRecords.AsNoTracking().AnyAsync(item =>
+            item.DesignProjectId == designProject.Id &&
+            item.Status != HandoverStatus.HandedOver &&
+            item.Status != HandoverStatus.Cancelled, ct))
+        {
+            throw new OperationalProjectOperationException(
+                "Hồ sơ bàn giao của Dự án chưa hoàn tất.");
+        }
+    }
 
     private async Task ValidateAsync(
         CreateOperationalProjectRequest request,

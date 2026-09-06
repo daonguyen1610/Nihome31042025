@@ -65,6 +65,147 @@ public class OperationalProjectsControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task Complete_RequiresTerminalModules_AndReopenRequiresReasonWithAudit()
+    {
+        await AuthTestHelper.AuthenticateAsync(
+            Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "SUPER_ADMIN"));
+        var customerId = await CreateCustomerAsync("Lifecycle gate");
+        var createdResponse = await Client.PostAsJsonAsync("/api/operational-projects", new
+        {
+            name = $"Lifecycle {Guid.NewGuid():N}",
+            customerId,
+        });
+        createdResponse.EnsureSuccessStatusCode();
+        var created = await ReadJsonAsync(createdResponse);
+        var projectId = created.GetProperty("id").GetInt32();
+        var activeResponse = await Client.PutAsJsonAsync($"/api/operational-projects/{projectId}", new
+        {
+            name = created.GetProperty("name").GetString(),
+            customerId,
+            projectManagerUserId = created.GetProperty("projectManagerUserId").GetInt32(),
+            status = "Active",
+            rowVersion = created.GetProperty("rowVersion").GetString(),
+        });
+        activeResponse.EnsureSuccessStatusCode();
+        var active = await ReadJsonAsync(activeResponse);
+
+        var invalid = await Client.PutAsJsonAsync($"/api/operational-projects/{projectId}", new
+        {
+            name = active.GetProperty("name").GetString(),
+            customerId,
+            projectManagerUserId = active.GetProperty("projectManagerUserId").GetInt32(),
+            status = "Planning",
+            rowVersion = active.GetProperty("rowVersion").GetString(),
+        });
+        invalid.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var afterInvalid = await WithDbAsync(db => db.OperationalProjects.AsNoTracking()
+            .SingleAsync(item => item.Id == projectId));
+        afterInvalid.Status.Should().Be(OperationalProjectStatus.Active);
+        var unchangedUpdatedAt = afterInvalid.UpdatedAt;
+        var unchangedRowVersion = afterInvalid.RowVersion.ToArray();
+
+        var blocked = await Client.PutAsJsonAsync($"/api/operational-projects/{projectId}", new
+        {
+            name = active.GetProperty("name").GetString(),
+            customerId,
+            projectManagerUserId = active.GetProperty("projectManagerUserId").GetInt32(),
+            status = "Completed",
+            rowVersion = active.GetProperty("rowVersion").GetString(),
+        });
+        blocked.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.OperationalProjects.SingleAsync(item => item.Id == projectId)))
+            .Status.Should().Be(OperationalProjectStatus.Active);
+        var afterBlocked = await WithDbAsync(db => db.OperationalProjects.AsNoTracking()
+            .SingleAsync(item => item.Id == projectId));
+        afterBlocked.UpdatedAt.Should().Be(unchangedUpdatedAt);
+        afterBlocked.RowVersion.Should().Equal(unchangedRowVersion);
+
+        await WithDbAsync(async db =>
+        {
+            db.Contracts.Add(new Contract
+            {
+                ContractNumber = $"HD-COMPLETE-{Guid.NewGuid():N}"[..35],
+                CustomerId = customerId,
+                OperationalProjectId = projectId,
+                Direction = ContractDirection.Upstream,
+                Type = ContractType.DesignAndBuild,
+                Status = ContractStatus.Completed,
+            });
+            await db.SaveChangesAsync();
+        });
+        var completedResponse = await Client.PutAsJsonAsync($"/api/operational-projects/{projectId}", new
+        {
+            name = active.GetProperty("name").GetString(),
+            customerId,
+            projectManagerUserId = active.GetProperty("projectManagerUserId").GetInt32(),
+            status = "Completed",
+            rowVersion = active.GetProperty("rowVersion").GetString(),
+        });
+        completedResponse.EnsureSuccessStatusCode();
+        var completed = await ReadJsonAsync(completedResponse);
+
+        (await Client.PostAsJsonAsync($"/api/operational-projects/{projectId}/reopen", new
+        {
+            reason = " ",
+            rowVersion = completed.GetProperty("rowVersion").GetString(),
+        })).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        var reopenedResponse = await Client.PostAsJsonAsync(
+            $"/api/operational-projects/{projectId}/reopen",
+            new
+            {
+                reason = "Customer approved additional execution scope",
+                rowVersion = completed.GetProperty("rowVersion").GetString(),
+            });
+        reopenedResponse.EnsureSuccessStatusCode();
+        (await ReadJsonAsync(reopenedResponse)).GetProperty("status").GetString().Should().Be("Active");
+        var history = await WithDbAsync(db => db.OperationalProjectTeamHistory.AsNoTracking()
+            .SingleAsync(item => item.OperationalProjectId == projectId && item.Action == "Reopened"));
+        history.ChangedByUserId.Should().BeGreaterThan(0);
+        history.SnapshotJson.Should().Contain("Customer approved additional execution scope");
+    }
+
+    [Fact]
+    public async Task Reopen_WithoutManagePermission_IsForbiddenWithoutMutation()
+    {
+        var seeded = await WithDbAsync(async db =>
+        {
+            var customer = new Customer
+            {
+                Name = "Reopen authorization customer",
+                Type = CustomerType.Individual,
+                SourceCode = "marketing",
+            };
+            db.Customers.Add(customer);
+            await db.SaveChangesAsync();
+            var project = new OperationalProject
+            {
+                Code = $"PJ-REOPEN-{Guid.NewGuid():N}"[..30],
+                Name = "Restricted completed project",
+                CustomerId = customer.Id,
+                Status = OperationalProjectStatus.Completed,
+            };
+            db.OperationalProjects.Add(project);
+            await db.SaveChangesAsync();
+            return new { project.Id, RowVersion = CrmConcurrency.Encode(project.RowVersion) };
+        });
+        await AuthTestHelper.AuthenticateAsync(
+            Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "WAREHOUSE"));
+
+        var response = await Client.PostAsJsonAsync(
+            $"/api/operational-projects/{seeded.Id}/reopen",
+            new { reason = "Unauthorized reopen", rowVersion = seeded.RowVersion });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await WithDbAsync(db => db.OperationalProjects.SingleAsync(item => item.Id == seeded.Id)))
+            .Status.Should().Be(OperationalProjectStatus.Completed);
+        (await WithDbAsync(db => db.OperationalProjectTeamHistory.AnyAsync(item =>
+            item.OperationalProjectId == seeded.Id && item.Action == "Reopened"))).Should().BeFalse();
+    }
+
+    [Fact]
     public async Task Opportunity_ProjectFromDifferentCustomer_IsRejected()
     {
         await AuthTestHelper.AuthenticateAsync(

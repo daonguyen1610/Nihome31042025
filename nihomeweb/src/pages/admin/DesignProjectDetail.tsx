@@ -23,7 +23,7 @@ import { ConceptOptionsTab } from "./design/ConceptOptionsTab";
 import { BasicDesignTab } from "./design/BasicDesignTab";
 import { ShopDrawingTab } from "./design/ShopDrawingTab";
 import { IfcReleasesTab } from "./design/IfcReleasesTab";
-import { DesignProjectTeamTab } from "./design/DesignProjectTeamTab";
+import { OperationalProjectTeamPanel } from "./design/DesignProjectTeamTab";
 import { DesignProjectDocumentsTab } from "./design/DesignProjectDocumentsTab";
 import { DesignScheduleTab } from "./design/DesignScheduleTab";
 
@@ -265,7 +265,7 @@ const AdminDesignProjectDetail = () => {
               ) : tab === "ifc" ? (
                 <IfcReleasesTab project={project} />
               ) : tab === "team" ? (
-                <DesignProjectTeamTab project={project} />
+                <OperationalProjectTeamPanel operationalProjectId={project.operationalProjectId} />
               ) : tab === "schedule" ? (
                 <DesignScheduleTab project={project} />
               ) : (

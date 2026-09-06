@@ -145,6 +145,39 @@ public class OperationalProjectsController(
         }
     }
 
+    [HttpPost("{id:int}/reopen")]
+    [RequirePermission("operations.projects", "manage")]
+    [Idempotency("operations.projects.reopen")]
+    public async Task<ActionResult<OperationalProjectResponse>> Reopen(
+        int id,
+        [FromBody] ReopenOperationalProjectRequest request,
+        CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        var canSeeAll = await permissions.HasAsync(userId.Value, "operations.projects.view.all", ct);
+        request.RowVersion = CrmConcurrency.ResolveRequestToken(Request, request.RowVersion);
+        try
+        {
+            var result = await service.ReopenAsync(id, request, userId.Value, canSeeAll, ct);
+            if (result is null) return NotFound();
+            audit.Log(new AuditEvent
+            {
+                Action = "operational-project.reopen",
+                ResourceType = EntityTypes.OperationalProject,
+                ResourceId = id.ToString(),
+                Message = $"Operational project #{id} reopened: {request.Reason.Trim()}",
+                NewValue = result,
+            });
+            CrmConcurrency.SetResponseEntityTag(Response, result.RowVersion);
+            return Ok(result);
+        }
+        catch (OperationalProjectOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
     [HttpDelete("{id:int}")]
     [RequirePermission("operations.projects", "manage")]
     public async Task<IActionResult> Delete(

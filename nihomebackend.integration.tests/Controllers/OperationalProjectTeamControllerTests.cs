@@ -109,6 +109,26 @@ public sealed class OperationalProjectTeamControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task AddMember_ProjectManagerRole_IsReservedForPrimaryProjectManager()
+    {
+        var primaryManagerId = await UserIdAsync("PM");
+        var otherUserId = await UserIdAsync("ARCHITECT");
+        var projectId = await CreateProjectAsync(primaryManagerId);
+        await AuthenticateAsync("SUPER_ADMIN");
+
+        var rejected = await PostMemberAsync(
+            projectId,
+            otherUserId,
+            "Additional project manager",
+            "ProjectManager");
+
+        rejected.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.OperationalProjectMembers.AnyAsync(member =>
+            member.OperationalProjectId == projectId && member.UserId == otherUserId)))
+            .Should().BeFalse();
+    }
+
+    [Fact]
     public async Task UpdateAssignment_WithStaleRowVersionAndIdempotencyKey_ReturnsConflictThenAllowsRetry()
     {
         await AuthenticateAsync("SUPER_ADMIN");

@@ -27,6 +27,15 @@ public class UpdateOperationalProjectRequest : CreateOperationalProjectRequest, 
     public string? RowVersion { get; set; }
 }
 
+public class ReopenOperationalProjectRequest : IConcurrencyRequest
+{
+    public string? RowVersion { get; set; }
+
+    [Required]
+    [StringLength(1000, MinimumLength = 3)]
+    public string Reason { get; set; } = string.Empty;
+}
+
 public class OperationalProjectListParams
 {
     public int? CustomerId { get; set; }

@@ -39,6 +39,13 @@ public interface IOperationalProjectService
         bool canSeeAll,
         CancellationToken ct = default);
 
+    Task<OperationalProjectResponse?> ReopenAsync(
+        int id,
+        ReopenOperationalProjectRequest request,
+        int callerUserId,
+        bool canSeeAll,
+        CancellationToken ct = default);
+
     Task<DeletionImpactResponse?> GetDeletionImpactAsync(
         int id,
         int callerUserId,
