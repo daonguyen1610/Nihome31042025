@@ -178,6 +178,8 @@ test.describe("CRM Pipeline: Lead → Opportunity → Quote → Contract", () =>
         customerId,
         opportunityId,
         quoteId,
+        direction: "Upstream",
+        type: "DesignAndBuild",
         startDate,
         endDate,
         value: approvedQuote.grandTotal,

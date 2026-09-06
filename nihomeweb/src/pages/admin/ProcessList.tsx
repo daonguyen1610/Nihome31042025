@@ -18,6 +18,7 @@ import {
 import AdminLayout from "@/components/layout/AdminLayout";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import { useI18n } from "@/lib/i18n";
+import { resolveAssetUrl } from "@/lib/url";
 import { useToast } from "@/hooks/use-toast";
 import { useProcesses } from "@/hooks/useContentApi";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
@@ -96,7 +97,6 @@ function ImageLightbox({
   const { t } = useI18n();
   const [idx, setIdx] = useState(startIndex);
   const img = images[idx];
-  const apiBase = import.meta.env.VITE_API_BASE_URL ?? "";
 
   return (
     <div
@@ -115,7 +115,7 @@ function ImageLightbox({
         </button>
 
         <img
-          src={`${apiBase}${img.url}`}
+          src={resolveAssetUrl(img.url)}
           alt={img.displayName}
           className="max-h-[80vh] max-w-full object-contain rounded-lg shadow-2xl"
         />
@@ -188,7 +188,7 @@ function AssetPanel({ process }: { process: ProcessResponse }) {
                   title={img.displayName}
                 >
                   <img
-                    src={`${apiBase}${img.url}`}
+                    src={resolveAssetUrl(img.url)}
                     alt={img.displayName}
                     className="h-auto w-full object-contain transition-opacity group-hover:opacity-90"
                     onError={(e) => {
@@ -213,7 +213,7 @@ function AssetPanel({ process }: { process: ProcessResponse }) {
                   title={img.displayName}
                 >
                   <img
-                    src={`${apiBase}${img.url}`}
+                    src={resolveAssetUrl(img.url)}
                     alt={img.displayName}
                     className="h-full w-full object-cover transition-opacity group-hover:opacity-90"
                     onError={(e) => {
@@ -357,7 +357,6 @@ const ProcessList = ({ groupKey, titleKey }: Props) => {
   const [uploadingFiles, setUploadingFiles] = useState(false);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const apiBase = import.meta.env.VITE_API_BASE_URL ?? "";
 
   const { data, loading, error, refetch } = useProcesses();
   const items = useMemo(() => (data?.[groupKey] ?? []) as ProcessResponse[], [data, groupKey]);
@@ -724,7 +723,7 @@ const ProcessList = ({ groupKey, titleKey }: Props) => {
                       {form.images.map((img, i) => (
                         <div key={i} className="relative group rounded-xl overflow-hidden border border-slate-200 bg-white">
                           <img
-                            src={`${apiBase}${img.url}`}
+                            src={resolveAssetUrl(img.url)}
                             alt={img.displayName}
                             className="w-full h-24 object-cover"
                           />

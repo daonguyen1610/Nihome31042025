@@ -2067,7 +2067,11 @@ const ContractDetail = () => {
               </Button>
               <Button
                 type="button"
-                disabled={!paidDateDraft?.value || busyMilestoneId !== null}
+                disabled={
+                  !milestoneActionDraft?.accountantUserId ||
+                  (milestoneActionDraft.status === "Paid" && !milestoneActionDraft.value) ||
+                  busyMilestoneId !== null
+                }
                 onClick={() => void confirmPaidDate()}
               >
                 {busyMilestoneId !== null ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : null}

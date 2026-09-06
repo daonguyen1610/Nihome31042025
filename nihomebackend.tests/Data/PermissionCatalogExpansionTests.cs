@@ -78,6 +78,8 @@ public class PermissionCatalogExpansionTests
         Assert.Contains("processes.view", codes);
         Assert.DoesNotContain("content.projects.manage", codes);
         Assert.DoesNotContain("processes.manage", codes);
+        Assert.Contains("analytics.kpi.view", codes);
+        Assert.DoesNotContain("analytics.kpi.manage", codes);
     }
 
     [Fact]

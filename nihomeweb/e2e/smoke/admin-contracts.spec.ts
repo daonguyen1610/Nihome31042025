@@ -46,12 +46,16 @@ test("SPA renders /admin/contracts without console errors for SUPER_ADMIN", asyn
     await expect(row).toHaveAttribute("data-navigation-active", "true");
     await row.locator("[data-contract-actions]").getByRole("button", { name: /Sửa|Edit|编辑|編集/i }).hover();
     await expect(row).toHaveAttribute("data-navigation-active", "false");
+    const detailResponse = page.waitForResponse((response) =>
+        response.request().method() === "GET" && new RegExp(`/api/(?:v1/)?contracts/${contractId?.replace("contract-row-", "")}$`).test(response.url()),
+    );
     await row.locator("td").nth(2).click();
+    expect((await detailResponse).ok()).toBe(true);
 
     await expect(page).toHaveURL(new RegExp(`/admin/contracts/${contractId?.replace("contract-row-", "")}$`));
 
     const editButton = page.getByRole("button", { name: /Sửa|Edit|编辑|編集/i }).first();
-    await expect(editButton).toBeVisible();
+    await expect(editButton).toBeVisible({ timeout: 15_000 });
     const contractNumber = await page.getByRole("heading", { level: 1 }).textContent();
     await editButton.click();
     const editForm = page.getByTestId("contract-inline-edit-form");
@@ -104,7 +108,11 @@ test("mobile contract card opens the complete contract detail", async ({
     expect(Math.abs((linkBox?.height ?? 0) - (cardBox?.height ?? 0))).toBeLessThanOrEqual(2);
     await card.getByRole("button", { name: /Sửa|Edit|编辑|編集/i }).hover();
     expect(await cardLink.evaluate((element) => element.matches(":hover"))).toBe(false);
+    const detailResponse = page.waitForResponse((response) =>
+        response.request().method() === "GET" && new RegExp(`/api/(?:v1/)?contracts/${contractId?.replace("contract-card-", "")}$`).test(response.url()),
+    );
     await cardLink.click();
+    expect((await detailResponse).ok()).toBe(true);
 
     await expect(page).toHaveURL(new RegExp(`/admin/contracts/${contractId?.replace("contract-card-", "")}$`));
     await expect(page.getByRole("link", { name: /Hợp đồng|Contracts|销售合同|販売契約/i })).toBeVisible();
@@ -163,6 +171,9 @@ test("paid milestone date is suggested, customizable, and displayed", async ({
             dueDate: "2026-08-20T00:00:00Z",
             actualPaymentDate,
             status,
+            responsibleAccountantUserId: 77,
+            responsibleAccountantName: "E2E Accountant",
+            requestedAt: null,
             note: null,
             createdAt: "2026-08-01T00:00:00Z",
             updatedAt: "2026-08-30T00:00:00Z",
@@ -170,13 +181,19 @@ test("paid milestone date is suggested, customizable, and displayed", async ({
     });
 
     await loginInBrowserAs(page, TEST_USERS.superAdmin);
+    await page.route(/\/api\/(?:v1\/)?kpi\/eligible-users$/, route => route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify([{ userId: 77, userName: "E2E Accountant", positionCode: "PROJECT_ACCOUNTING" }]),
+    }));
     await page.route(new RegExp(`/api/(?:v1/)?contracts/${contractId}(?:/.*)?$`), async route => {
         const request = route.request();
         const path = new URL(request.url()).pathname;
         if (request.method() === "PATCH" && path.endsWith("/milestones/1/status")) {
-            const payload = request.postDataJSON() as { status: string; actualPaymentDate: string | null };
+            const payload = request.postDataJSON() as { status: string; actualPaymentDate: string | null; responsibleAccountantUserId: number };
             status = payload.status;
             actualPaymentDate = payload.actualPaymentDate;
+            expect(payload.responsibleAccountantUserId).toBe(77);
             await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(contract()) });
             return;
         }

@@ -17,6 +17,7 @@ export const TEST_USERS = {
   pm: { phoneNumber: "0911000005", password: "Admin@123", role: "PM" },
   legalOfficer: { phoneNumber: "0911000015", password: "Admin@123", role: "LEGAL_OFFICER" },
   qs: { phoneNumber: "0911000006", password: "Admin@123", role: "QS" },
+  procurement: { phoneNumber: "0911000016", password: "Admin@123", role: "PROCUREMENT" },
   accountant: { phoneNumber: "0911000007", password: "Admin@123", role: "ACCOUNTANT" },
   warehouse: { phoneNumber: "0911000008", password: "Admin@123", role: "WAREHOUSE" },
   bgd: { phoneNumber: "0911000009", password: "Admin@123", role: "BGD" },

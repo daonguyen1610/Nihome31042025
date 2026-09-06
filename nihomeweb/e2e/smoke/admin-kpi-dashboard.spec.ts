@@ -43,15 +43,16 @@ test("KPI dashboard calculates, distinguishes missing data, and locks a period",
   await expect(page.getByRole("heading", { name: /Cấu hình KPI|KPI configuration|KPI 配置|KPI設定/i })).toBeHidden();
   await expect(page.getByText(/Cách sử dụng|How to use this page|使用方法|このページの使い方/i)).toBeVisible();
   await expect(page.getByText(/Khóa kỳ là chốt chính thức|Locking makes the period final|锁定表示期间正式确定|ロックすると期間が確定します/i)).toBeVisible();
-  await page.getByRole("button", { name: /Tính KPI|Calculate KPI|计算 KPI|KPIを計算/i }).click();
+  await page.getByRole("button", { name: /Tính KPI|Calculate KPI|计算 KPI|KPIを計算/i }).first().click();
   await expect(page.getByText(/Tỷ lệ chuyển đổi Lead thành Hợp đồng|Lead-to-contract conversion rate|线索转合同率|リードから契約への転換率/i)).toBeVisible();
-  await expect(page.getByText(/Thiếu cấu hình mục tiêu|Missing target configuration|缺少目标配置|目標設定不足/i)).toBeVisible();
-  await expect(page.getByText(/Thiếu dữ liệu nguồn|Missing source data|缺少源数据|ソースデータ不足/i)).toBeVisible();
+  const results = page.getByRole("table");
+  await expect(results.getByText(/Thiếu cấu hình mục tiêu|Missing target configuration|缺少目标配置|目標設定不足/i)).toBeVisible();
+  await expect(results.getByText(/Thiếu dữ liệu nguồn|Missing source data|缺少源数据|ソースデータ不足/i)).toBeVisible();
   await expect(page.getByText(/Chưa đủ dữ liệu|Incomplete data|数据不完整|データ不足/i)).toBeVisible();
 
   await page.locator("#kpi-lock-note").fill("Monthly HR close");
   await page.getByRole("button", { name: /Khóa kỳ|Lock period|锁定期间|期間をロック/i }).click();
-  await expect(page.getByText(/Đã khóa|Locked|已锁定|ロック済み/i)).toBeVisible();
+  await expect(page.getByText(/^(Đã khóa|Locked|已锁定|ロック済み)$/i)).toBeVisible();
   await expect(page.getByRole("button", { name: /Tính KPI|Calculate KPI|计算 KPI|KPIを計算/i })).toBeHidden();
 });
 
@@ -97,8 +98,12 @@ test("KPI configuration is a separate management page", async ({
   await expect(page.getByText(/Cách sử dụng|How to use this page|使用方法|このページの使い方/i)).toBeVisible();
   await expect(page.getByText(/Trọng số 40% · Thiếu 0 mục tiêu|Weight 40% · 0 targets missing|权重 40% · 缺少 0 个目标|重み 40%・目標不足 0 件/i)).toBeVisible();
   await expect(page.getByText(/Tỷ lệ chuyển đổi Lead thành Hợp đồng|Lead-to-contract conversion rate|线索转合同率|リードから契約への転換率/i)).toBeVisible();
+  const updateResponse = page.waitForResponse((response) =>
+    response.request().method() === "PUT" && /\/api\/(?:v1\/)?kpi\/definitions\/1$/.test(response.url()),
+  );
   await page.getByRole("button", { name: /Lưu|Save|保存/i }).click();
-  await expect(page.getByText(/Đã lưu cấu hình KPI|KPI configuration saved|KPI 配置已保存|KPI設定を保存しました/i)).toBeVisible();
+  expect((await updateResponse).ok()).toBe(true);
+  await expect(page.getByRole("row").filter({ hasText: /SALES_CONVERSION|Tỷ lệ chuyển đổi Lead|Lead-to-contract conversion/i }).getByText("v2")).toBeVisible();
 });
 
 test("KPI configuration rejects an evaluation-only user", async ({
