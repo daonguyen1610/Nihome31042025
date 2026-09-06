@@ -81,6 +81,18 @@ test.describe("NIH-461 — Project operational reports", () => {
     await expect(secondProjectContent).toBeHidden();
     await expect(projectContent.getByText(/Tài chính theo hợp đồng|Contractual finance/i)).toBeVisible();
     await expect(projectContent.getByText(/không phải dòng tiền|not cash, revenue/i)).toBeVisible();
+    await expect(projectContent).not.toContainText("historicalSCurve");
+    await expect(projectContent).not.toContainText("ACTUAL_FINANCE_LEDGER_UNAVAILABLE");
+    await expect(projectContent.getByText(/Mở hồ sơ dự án|Open project record/i)).toBeVisible();
+    await expect(projectContent.getByText(/Không có dữ liệu theo trạng thái|No status data is available/i).first()).toBeVisible();
+    const unavailableGroups = projectContent.getByTestId(`project-report-unavailable-groups-${project.id}`);
+    await expect(unavailableGroups.locator("li")).toHaveCount(7);
+    await expect(unavailableGroups.getByText(/Dòng tiền thực tế|Actual cashflow/i)).toBeVisible();
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await test.info().attach("project-report-portfolio-desktop", {
+      body: await page.screenshot(),
+      contentType: "image/png",
+    });
 
     await projectTrigger.focus();
     await page.keyboard.press("Enter");
@@ -96,6 +108,7 @@ test.describe("NIH-461 — Project operational reports", () => {
     await expect.poll(() => new URL(page.url()).searchParams.get("to")).toBe("2026-09-30");
     await expect(reportsPage.getByTestId(`project-report-trigger-${project.id}`)).toHaveAttribute("aria-expanded", "true");
     await expect(reportsPage.getByTestId(`project-report-content-${project.id}`)).toBeVisible();
+    await expect(reportsPage).not.toContainText("2026-09-01 – 2026-12-31");
 
     const [download] = await Promise.all([
       page.waitForEvent("download"),
@@ -103,8 +116,31 @@ test.describe("NIH-461 — Project operational reports", () => {
     ]);
     expect(download.suggestedFilename()).toMatch(/project-operational-report-.*\.xlsx$/);
 
+    await page.setViewportSize({ width: 820, height: 1180 });
+    await page.keyboard.press("Escape");
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await expect.poll(() => page.locator("aside").evaluate(
+      (sidebar) => sidebar.getBoundingClientRect().right <= 0,
+    )).toBe(true);
+    await expect.poll(() => page.evaluate(
+      () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+    )).toBe(true);
+    await test.info().attach("project-report-tablet", {
+      body: await page.screenshot(),
+      contentType: "image/png",
+    });
+
     await page.setViewportSize({ width: 390, height: 844 });
+    await page.keyboard.press("Escape");
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await expect.poll(() => page.locator("aside").evaluate(
+      (sidebar) => sidebar.getBoundingClientRect().right <= 0,
+    )).toBe(true);
     await expect(reportsPage).toBeVisible();
+    await test.info().attach("project-report-mobile-expanded", {
+      body: await page.screenshot(),
+      contentType: "image/png",
+    });
     await reportsPage.getByTestId(`project-report-trigger-${project.id}`).click();
     await expect(reportsPage.getByTestId(`project-report-content-${project.id}`)).toBeHidden();
     await expect(reportsPage.getByText(projectName, { exact: true })).toBeVisible();

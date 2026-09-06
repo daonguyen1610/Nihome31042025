@@ -35,11 +35,23 @@ import type {
   ProjectReportDrillDownResponse,
   ProjectReportExportParams,
   ProjectReportFilters,
+  ProjectReportUnavailableMetricResponse,
 } from "@/types/projectReports";
 
 const ALL_PROJECTS = "all";
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const LOCALES: Record<Lang, string> = { vi: "vi-VN", en: "en-US", zh: "zh-CN", ja: "ja-JP" };
+
+const metricLabelKey = (metricCode: string) => `projectReports.metric.${metricCode}`;
+const reasonLabelKey = (reasonCode: string) => `projectReports.reason.${reasonCode}`;
+
+const formatReportDate = (value: string | null | undefined, lang: Lang) => {
+  if (!value) return "—";
+  const parsed = new Date(`${value.slice(0, 10)}T00:00:00Z`);
+  return Number.isNaN(parsed.getTime())
+    ? value
+    : new Intl.DateTimeFormat(LOCALES[lang], { dateStyle: "medium", timeZone: "UTC" }).format(parsed);
+};
 
 const statusKey = (area: "project" | "construction" | "acceptance" | "permit" | "quote" | "milestone", status: string) => {
   switch (area) {
@@ -79,16 +91,16 @@ function AvailabilityNotice({ availability, reasonCode }: { availability: Projec
   const { t } = useI18n();
   if (availability === "Available") return null;
   return (
-    <div className="rounded-md border border-dashed bg-muted/30 p-4 text-sm text-muted-foreground" role="status">
+    <div className="border-l-2 border-amber-400 bg-amber-50/60 px-3 py-2.5 text-sm text-amber-950 dark:bg-amber-950/20 dark:text-amber-100" role="status">
       <p className="font-medium text-foreground">{t("projectReports.unavailable")}</p>
-      <p className="mt-1 break-all">{reasonCode ? t("projectReports.reasonWithCode", { code: reasonCode }) : t("projectReports.noSource")}</p>
+      <p className="mt-1 text-muted-foreground">{reasonCode ? t(reasonLabelKey(reasonCode)) : t("projectReports.noSource")}</p>
     </div>
   );
 }
 
 function Metric({ label, value, tone = "default" }: { label: string; value: string | number; tone?: "default" | "danger" }) {
   return (
-    <div className="rounded-lg border bg-background p-3">
+    <div className="min-w-0 border-l-2 border-border pl-3">
       <p className="text-xs text-muted-foreground">{label}</p>
       <p className={tone === "danger" ? "mt-1 text-xl font-semibold text-destructive" : "mt-1 text-xl font-semibold"}>{value}</p>
     </div>
@@ -101,12 +113,12 @@ function DictionaryMetrics({ values, emptyLabel, valueFormatter, labelFormatter 
   valueFormatter?: (value: number) => string;
   labelFormatter?: (key: string) => string;
 }) {
-  const entries = Object.entries(values);
+  const entries = Object.entries(values).filter(([, value]) => value !== 0);
   if (entries.length === 0) return <p className="text-sm text-muted-foreground">{emptyLabel}</p>;
   return (
     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
       {entries.map(([key, value]) => (
-        <div key={key} className="rounded-md bg-muted/40 p-2.5">
+        <div key={key} className="min-w-0 border-b border-border/70 pb-2">
           <p className="truncate text-xs text-muted-foreground" title={labelFormatter ? labelFormatter(key) : key}>
             {labelFormatter ? labelFormatter(key) : key}
           </p>
@@ -133,7 +145,7 @@ function ReportSection({ title, icon: Icon, children }: {
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-xl border bg-card p-4 shadow-sm sm:p-5">
+    <section className="min-w-0 border-t border-border/70 pt-4">
       <h3 className="mb-4 flex items-center gap-2 font-semibold">
         <Icon className="h-4 w-4 text-primary" aria-hidden />{title}
       </h3>
@@ -143,16 +155,23 @@ function ReportSection({ title, icon: Icon, children }: {
 }
 
 function ProjectReportCard({ report }: { report: ProjectOperationalReportResponse }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const projectLink = safeDrillDown(report.project.drillDown);
   const projectValue = String(report.project.operationalProjectId);
   const partial = [report.design, report.construction, report.acceptance, report.permits]
     .some((section) => section.availability !== "Available") || report.unavailableMetrics.length > 0;
+  const unavailableGroups = Object.entries(report.unavailableMetrics.reduce<Record<string, ProjectReportUnavailableMetricResponse[]>>(
+    (groups, metric) => {
+      (groups[metric.reasonCode] ??= []).push(metric);
+      return groups;
+    },
+    {},
+  ));
 
   return (
     <AccordionItem
       value={projectValue}
-      className="rounded-xl border bg-muted/10 px-3 shadow-sm sm:px-5"
+      className="rounded-lg border bg-card px-3 shadow-sm sm:px-5"
       data-testid={`project-report-${projectValue}`}
     >
       <AccordionTrigger
@@ -170,7 +189,10 @@ function ProjectReportCard({ report }: { report: ProjectOperationalReportRespons
             {t("projectReports.customer")}: {report.project.customerName} · {t("projectReports.manager")}: {report.project.projectManagerName || t("projectReports.notAssigned")}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
-            {t("projectReports.projectDates", { start: report.project.startDate || "—", end: report.project.endDate || "—" })}
+            {t("projectReports.projectDates", {
+              start: formatReportDate(report.project.startDate, lang),
+              end: formatReportDate(report.project.endDate, lang),
+            })}
           </p>
         </div>
       </AccordionTrigger>
@@ -178,7 +200,7 @@ function ProjectReportCard({ report }: { report: ProjectOperationalReportRespons
       <AccordionContent className="space-y-4 pb-4 sm:pb-5" data-testid={`project-report-content-${projectValue}`}>
         {projectLink && (
           <Link to={projectLink} className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
-            {report.project.name}<ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
+            {t("projectReports.openProject")}<ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
           </Link>
         )}
 
@@ -217,7 +239,7 @@ function ProjectReportCard({ report }: { report: ProjectOperationalReportRespons
                     {report.construction.overdueItems.map((item) => (
                       <li key={item.id} className="flex flex-col gap-1 rounded-md border p-2.5 text-sm sm:flex-row sm:items-center sm:justify-between">
                         <DrillDownLink drillDown={item.drillDown}>{item.taskCode} · {item.name}</DrillDownLink>
-                        <span className="text-xs text-muted-foreground">{t(statusKey("construction", item.status))} · {item.plannedEnd}</span>
+                        <span className="text-xs text-muted-foreground">{t(statusKey("construction", item.status))} · {formatReportDate(item.plannedEnd, lang)}</span>
                       </li>
                     ))}
                   </ul>
@@ -267,7 +289,7 @@ function ProjectReportCard({ report }: { report: ProjectOperationalReportRespons
                     <li key={item.id} className="flex flex-col gap-1 rounded-md border p-2.5 text-sm sm:flex-row sm:items-center sm:justify-between">
                       <DrillDownLink drillDown={item.drillDown}>{item.permitTypeCode}</DrillDownLink>
                       <span className="text-xs text-muted-foreground">
-                        {t(statusKey("permit", item.status))} · {item.targetDeadline || item.expiresAt || "—"}
+                        {t(statusKey("permit", item.status))} · {formatReportDate(item.targetDeadline || item.expiresAt, lang)}
                       </span>
                     </li>
                   ))}
@@ -317,24 +339,30 @@ function ProjectReportCard({ report }: { report: ProjectOperationalReportRespons
         )}
         </ReportSection>
 
-        {report.unavailableMetrics.length > 0 && (
-          <Accordion type="single" collapsible className="rounded-xl border bg-card px-4">
-            <AccordionItem value="unavailable" className="border-0">
-              <AccordionTrigger className="text-sm">
-                <span className="flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-amber-600" aria-hidden />{t("projectReports.unavailableMetrics", { count: report.unavailableMetrics.length })}</span>
-              </AccordionTrigger>
-              <AccordionContent>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {report.unavailableMetrics.map((metric) => (
-                    <div key={`${metric.metricCode}-${metric.reasonCode}`} className="rounded-md bg-muted/40 p-2.5 text-xs">
-                      <p className="font-medium break-all">{metric.metricCode}</p>
-                      <p className="mt-1 break-all text-muted-foreground">{metric.reasonCode}</p>
-                    </div>
-                  ))}
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
+        {unavailableGroups.length > 0 && (
+          <section className="border-t border-amber-200 pt-4 dark:border-amber-900" aria-labelledby={`project-report-data-quality-${projectValue}`}>
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" aria-hidden />
+              <div>
+                <h3 id={`project-report-data-quality-${projectValue}`} className="font-semibold">
+                  {t("projectReports.unavailableMetrics", { count: report.unavailableMetrics.length })}
+                </h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {t("projectReports.dataQuality.summary", { count: unavailableGroups.length })}
+                </p>
+              </div>
+            </div>
+            <ul className="mt-4 divide-y divide-border/70" data-testid={`project-report-unavailable-groups-${projectValue}`}>
+              {unavailableGroups.map(([reasonCode, metrics]) => (
+                <li key={reasonCode} className="grid gap-1 py-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] sm:gap-6">
+                  <p className="text-sm font-medium">{t(reasonLabelKey(reasonCode))}</p>
+                  <p className="text-sm leading-6 text-muted-foreground">
+                    {metrics.map((metric) => t(metricLabelKey(metric.metricCode))).join(", ")}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </section>
         )}
       </AccordionContent>
     </AccordionItem>
