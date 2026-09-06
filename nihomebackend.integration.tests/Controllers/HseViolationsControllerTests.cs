@@ -167,6 +167,13 @@ public sealed class HseViolationsControllerTests : IntegrationTestBase
         visible.GetProperty("code").GetString().Should().StartWith("HSE-");
         visible.GetProperty("penaltyReference").ValueKind.Should().Be(JsonValueKind.Null);
         visible.GetProperty("penaltyAmount").ValueKind.Should().Be(JsonValueKind.Null);
+
+        using var listResponse = await Client.GetAsync($"/api/operational-projects/{fixture.ProjectId}/hse-violations");
+        listResponse.EnsureSuccessStatusCode();
+        var listed = (await ReadJsonAsync(listResponse)).GetProperty("items").EnumerateArray()
+            .Single(item => item.GetProperty("id").GetInt32() == id);
+        listed.GetProperty("penaltyReference").ValueKind.Should().Be(JsonValueKind.Null);
+        listed.GetProperty("penaltyAmount").ValueKind.Should().Be(JsonValueKind.Null);
     }
 
     private async Task<(int ProjectId, int PmUserId, int DesignUserId)> CreateProjectAsync()

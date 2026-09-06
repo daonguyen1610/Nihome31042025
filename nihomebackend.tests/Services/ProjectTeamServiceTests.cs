@@ -51,8 +51,8 @@ public sealed class ProjectTeamServiceTests : IDisposable
                 IsActive = true,
             });
         _db.SaveChanges();
-        var project = AddProject(customer.Id, "PJ-TEAM-1");
-        var otherProject = AddProject(customer.Id, "PJ-TEAM-2");
+        var project = AddProject(customer.Id, "PJ-TEAM-1", manager.Id);
+        var otherProject = AddProject(customer.Id, "PJ-TEAM-2", manager.Id);
 
         _callerId = caller.Id;
         _managerUserId = manager.Id;
@@ -433,13 +433,14 @@ public sealed class ProjectTeamServiceTests : IDisposable
         return user;
     }
 
-    private OperationalProject AddProject(int customerId, string code)
+    private OperationalProject AddProject(int customerId, string code, int projectManagerUserId)
     {
         var project = new OperationalProject
         {
             Code = code,
             Name = code,
             CustomerId = customerId,
+            ProjectManagerUserId = projectManagerUserId,
             CreatedByUserId = _callerId == 0 ? null : _callerId,
         };
         _db.OperationalProjects.Add(project);

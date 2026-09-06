@@ -250,11 +250,10 @@ public class OperationalProjectServiceTests : IDisposable
             ValidUpdate(created, OperationalProjectStatus.Active),
             _managerId,
             false);
-        var completed = await _service.UpdateAsync(
-            created.Id,
-            ValidUpdate(activated!, OperationalProjectStatus.Completed),
-            _managerId,
-            false);
+        var persisted = await _db.OperationalProjects.SingleAsync(item => item.Id == created.Id);
+        persisted.Status = OperationalProjectStatus.Completed;
+        await _db.SaveChangesAsync();
+        var completed = await _service.GetAsync(created.Id, _managerId, false);
 
         await Assert.ThrowsAsync<OperationalProjectOperationException>(() =>
             _service.UpdateAsync(
