@@ -41,6 +41,8 @@ test("KPI dashboard calculates, distinguishes missing data, and locks a period",
   await page.goto(`${baseURL}/admin/kpi`, { waitUntil: "networkidle" });
   await expect(page.getByRole("heading", { name: /Đánh giá KPI|KPI performance|KPI 绩效|KPI評価/i })).toBeVisible();
   await expect(page.getByRole("heading", { name: /Cấu hình KPI|KPI configuration|KPI 配置|KPI設定/i })).toBeHidden();
+  await expect(page.getByText(/Cách sử dụng|How to use this page|使用方法|このページの使い方/i)).toBeVisible();
+  await expect(page.getByText(/Khóa kỳ là chốt chính thức|Locking makes the period final|锁定表示期间正式确定|ロックすると期間が確定します/i)).toBeVisible();
   await page.getByRole("button", { name: /Tính KPI|Calculate KPI|计算 KPI|KPIを計算/i }).click();
   await expect(page.getByText(/Tỷ lệ chuyển đổi Lead thành Hợp đồng|Lead-to-contract conversion rate|线索转合同率|リードから契約への転換率/i)).toBeVisible();
   await expect(page.getByText(/Thiếu cấu hình mục tiêu|Missing target configuration|缺少目标配置|目標設定不足/i)).toBeVisible();
@@ -66,6 +68,7 @@ test("KPI configuration is a separate management page", async ({
     sourceModule: "M1",
     metricCode: "SalesLeadConversionRate",
     weight: 0.4,
+    requiresTarget: false,
     targetValue: null,
     minimumAcceptableScore: 60,
     targetDirection: "HigherIsBetter",
@@ -91,6 +94,8 @@ test("KPI configuration is a separate management page", async ({
   await page.goto(`${baseURL}/admin/kpi/configuration`, { waitUntil: "networkidle" });
   await expect(page.getByRole("heading", { name: /Cấu hình KPI|KPI configuration|KPI 配置|KPI設定/i })).toBeVisible();
   await expect(page.getByRole("button", { name: /Tính KPI|Calculate KPI|计算 KPI|KPIを計算/i })).toBeHidden();
+  await expect(page.getByText(/Cách sử dụng|How to use this page|使用方法|このページの使い方/i)).toBeVisible();
+  await expect(page.getByText(/Trọng số 40% · Thiếu 0 mục tiêu|Weight 40% · 0 targets missing|权重 40% · 缺少 0 个目标|重み 40%・目標不足 0 件/i)).toBeVisible();
   await expect(page.getByText(/Tỷ lệ chuyển đổi Lead thành Hợp đồng|Lead-to-contract conversion rate|线索转合同率|リードから契約への転換率/i)).toBeVisible();
   await page.getByRole("button", { name: /Lưu|Save|保存/i }).click();
   await expect(page.getByText(/Đã lưu cấu hình KPI|KPI configuration saved|KPI 配置已保存|KPI設定を保存しました/i)).toBeVisible();

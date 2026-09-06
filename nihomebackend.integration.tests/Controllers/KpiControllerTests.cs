@@ -35,6 +35,9 @@ public class KpiControllerTests : IntegrationTestBase
             item.GetProperty("positionCode").GetString() == "SUPER_ADMIN" ||
             item.GetProperty("positionCode").GetString() == "ADMIN");
         var revenue = definitions.Single(item => item.GetProperty("code").GetString() == "SALES_REVENUE");
+        var conversionDefinition = definitions.Single(item => item.GetProperty("code").GetString() == "SALES_CONVERSION");
+        revenue.GetProperty("requiresTarget").GetBoolean().Should().BeTrue();
+        conversionDefinition.GetProperty("requiresTarget").GetBoolean().Should().BeFalse();
         var responseTime = definitions.Single(item => item.GetProperty("code").GetString() == "SALES_FIRST_RESPONSE");
 
         var invalidWeight = await Client.PutAsJsonAsync(
