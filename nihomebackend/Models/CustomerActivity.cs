@@ -31,4 +31,6 @@ public enum CustomerActivityType
     Email = 1,
     Meeting = 2,
     Note = 3,
+    LegalRepresentativeAssigned = 4,
+    LegalRepresentativeCleared = 5,
 }

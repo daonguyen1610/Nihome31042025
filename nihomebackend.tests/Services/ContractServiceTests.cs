@@ -34,7 +34,24 @@ public class ContractServiceTests : IDisposable
             environment.Object);
 
         _db.Customers.AddRange(
-            new Customer { Name = "Customer A", Type = CustomerType.Company },
+            new Customer
+            {
+                Name = "Customer A",
+                Type = CustomerType.Company,
+                TaxId = "TAX-CUSTOMER-A",
+                Address = "1 Nguyen Trai",
+                RepresentativeName = "Customer A Representative",
+                Contacts =
+                [
+                    new CustomerContact
+                    {
+                        FullName = "Customer A Representative",
+                        IsPrimary = true,
+                        IsLegalRepresentative = true,
+                        LegalRepresentativeSince = DateTime.UtcNow,
+                    },
+                ],
+            },
             new Customer { Name = "Customer B", Type = CustomerType.Individual });
         _db.SaveChanges();
         _customerA = _db.Customers.Single(c => c.Name == "Customer A").Id;

@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
+using NihomeBackend.Models;
 
 namespace NihomeBackend.IntegrationTests.Controllers;
 
@@ -336,7 +337,10 @@ public class LeadsControllerTests : IntegrationTestBase
 
         var links = await WithDbAsync(async db =>
         {
-            var customer = await db.Customers.FirstAsync(c => c.Id == customerId);
+            var customer = await db.Customers
+                .Include(item => item.Contacts)
+                .Include(item => item.Activities)
+                .FirstAsync(c => c.Id == customerId);
             var opportunity = await db.Opportunities.FirstAsync(o => o.Id == opportunityId);
             return new
             {
@@ -344,6 +348,12 @@ public class LeadsControllerTests : IntegrationTestBase
                 CustomerOwnerUserId = customer.OwnerUserId,
                 opportunity.CustomerId,
                 OpportunityOwnerUserId = opportunity.OwnerUserId,
+                LegalRepresentatives = customer.Contacts
+                    .Where(contact => contact.IsLegalRepresentative)
+                    .Select(contact => contact.FullName)
+                    .ToList(),
+                HasRepresentativeAudit = customer.Activities.Any(activity =>
+                    activity.Type == CustomerActivityType.LegalRepresentativeAssigned),
             };
         });
 
@@ -351,6 +361,8 @@ public class LeadsControllerTests : IntegrationTestBase
         links.CustomerOwnerUserId.Should().Be(ownerId);
         links.CustomerId.Should().Be(customerId);
         links.OpportunityOwnerUserId.Should().Be(ownerId);
+        links.LegalRepresentatives.Should().Equal("Ms. Nga");
+        links.HasRepresentativeAudit.Should().BeTrue();
     }
 
     [Fact]

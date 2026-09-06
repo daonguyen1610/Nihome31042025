@@ -460,6 +460,20 @@ public class LeadService(
         // belongs to the customer it became, otherwise it is stranded.
         if (createdCustomer is not null)
         {
+            var representative = createdCustomer.Contacts.SingleOrDefault(contact =>
+                contact.IsLegalRepresentative);
+            if (representative is not null)
+            {
+                db.CustomerActivities.Add(new CustomerActivity
+                {
+                    CustomerId = createdCustomer.Id,
+                    Type = CustomerActivityType.LegalRepresentativeAssigned,
+                    Content = representative.FullName,
+                    OccurredAt = now,
+                    CreatedByUserId = callerUserId,
+                    CreatedAt = now,
+                });
+            }
             foreach (var leadActivity in lead.Activities)
             {
                 db.CustomerActivities.Add(new CustomerActivity
@@ -662,6 +676,37 @@ public class LeadService(
                 "Company leads require Address and RepresentativeName to convert.");
         }
 
+        var primaryContact = new CustomerContact
+        {
+            FullName = lead.Name.Trim(),
+            Phone = lead.Phone,
+            Email = lead.Email,
+            IsPrimary = true,
+            CreatedAt = now,
+            UpdatedAt = now,
+        };
+        var contacts = new List<CustomerContact> { primaryContact };
+        if (isCompany)
+        {
+            var representativeName = request.RepresentativeName!.Trim();
+            if (string.Equals(primaryContact.FullName, representativeName, StringComparison.OrdinalIgnoreCase))
+            {
+                primaryContact.IsLegalRepresentative = true;
+                primaryContact.LegalRepresentativeSince = now;
+            }
+            else
+            {
+                contacts.Add(new CustomerContact
+                {
+                    FullName = representativeName,
+                    IsLegalRepresentative = true,
+                    LegalRepresentativeSince = now,
+                    CreatedAt = now,
+                    UpdatedAt = now,
+                });
+            }
+        }
+
         return new Customer
         {
             Type = isCompany ? CustomerType.Company : CustomerType.Individual,
@@ -676,18 +721,7 @@ public class LeadService(
             CreatedByUserId = callerUserId,
             UpdatedAt = now,
             UpdatedByUserId = callerUserId,
-            Contacts = new List<CustomerContact>
-            {
-                new()
-                {
-                    FullName = lead.Name.Trim(),
-                    Phone = lead.Phone,
-                    Email = lead.Email,
-                    IsPrimary = true,
-                    CreatedAt = now,
-                    UpdatedAt = now,
-                },
-            },
+            Contacts = contacts,
         };
     }
 

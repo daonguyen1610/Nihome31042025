@@ -88,6 +88,7 @@ const emptyContact: UpsertCustomerContactRequest = {
   phone: "",
   email: "",
   isPrimary: true,
+  isLegalRepresentative: false,
 };
 
 const emptyCreate: CreateCustomerRequest = {
@@ -394,6 +395,7 @@ const AdminCustomers = () => {
           phone: primary.phone?.trim() || undefined,
           email: primary.email?.trim() || undefined,
           isPrimary: true,
+          isLegalRepresentative: type === "Company",
         },
         duplicateOverrideReason: opts?.overrideReason,
       });
@@ -513,6 +515,7 @@ const AdminCustomers = () => {
         phone: contactForm.phone?.trim() || undefined,
         email: contactForm.email?.trim() || undefined,
         isPrimary: contactForm.isPrimary,
+        isLegalRepresentative: contactForm.isLegalRepresentative,
       });
       const { data } = await adminApi.getCustomer(detail.id);
       setDetail(data);
@@ -529,6 +532,10 @@ const AdminCustomers = () => {
     if (!detail) return;
     if (detail.contacts.length <= 1) {
       toast({ title: t("customers.contact.lastOneCannotDelete"), variant: "destructive" });
+      return;
+    }
+    if (detail.type === "Company" && contact.isLegalRepresentative) {
+      toast({ title: t("customers.contact.legalRepresentativeCannotDelete"), variant: "destructive" });
       return;
     }
     try {
@@ -1436,6 +1443,11 @@ const AdminCustomers = () => {
                                 <Star className="mr-1 h-3 w-3" />{t("customers.contact.primaryBadge")}
                               </Badge>
                             )}
+                            {c.isLegalRepresentative && (
+                              <Badge variant="outline" className="border-amber-300 bg-amber-50 text-[10px] text-amber-800">
+                                {t("customers.contact.legalRepresentativeBadge")}
+                              </Badge>
+                            )}
                           </div>
                           {c.position && (
                             <div className="text-xs text-muted-foreground">{c.position}</div>
@@ -1458,7 +1470,7 @@ const AdminCustomers = () => {
                             <Button
                               variant="ghost"
                               size="icon"
-                              disabled={detail.contacts.length <= 1}
+                              disabled={detail.contacts.length <= 1 || (detail.type === "Company" && c.isLegalRepresentative)}
                               onClick={() => void handleDeleteContact(c)}
                               title={t("common.delete")}
                               aria-label={t("common.delete")}
@@ -1525,6 +1537,18 @@ const AdminCustomers = () => {
                         />
                         {t("customers.contact.isPrimary")}
                       </label>
+                      {detail.type === "Company" && (
+                        <label className="flex items-center gap-2 text-xs">
+                          <Checkbox
+                            checked={!!contactForm.isLegalRepresentative}
+                            onCheckedChange={(value) => setContactForm({
+                              ...contactForm,
+                              isLegalRepresentative: value === true,
+                            })}
+                          />
+                          {t("customers.contact.isLegalRepresentative")}
+                        </label>
+                      )}
                       <Button size="sm" onClick={() => void handleSaveContact()} disabled={savingContact}>
                         {savingContact ? "…" : t("customers.save")}
                       </Button>

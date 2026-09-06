@@ -20,6 +20,10 @@ public class CustomerContact
 
     public bool IsPrimary { get; set; }
 
+    /// <summary>True for the one contact currently authorized to represent a Company customer.</summary>
+    public bool IsLegalRepresentative { get; set; }
+    public DateTime? LegalRepresentativeSince { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }

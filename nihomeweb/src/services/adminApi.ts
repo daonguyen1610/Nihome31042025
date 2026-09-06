@@ -588,7 +588,13 @@ export interface UpsertWorkflowConfigRequest {
 
 export type CustomerType = "Individual" | "Company";
 export type CustomerRelationshipStatus = "Prospect" | "InProgress" | "Signed" | "Suspended";
-export type CustomerActivityType = "Call" | "Email" | "Meeting" | "Note";
+export type CustomerActivityType =
+  | "Call"
+  | "Email"
+  | "Meeting"
+  | "Note"
+  | "LegalRepresentativeAssigned"
+  | "LegalRepresentativeCleared";
 
 export interface CustomerContactResponse {
   id: number;
@@ -597,6 +603,8 @@ export interface CustomerContactResponse {
   phone?: string;
   email?: string;
   isPrimary: boolean;
+  isLegalRepresentative: boolean;
+  legalRepresentativeSince?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -631,6 +639,7 @@ export interface CustomerResponse {
   taxId?: string;
   address?: string;
   representativeName?: string;
+  legalRepresentativeContactId?: number | null;
   sourceCode: string;
   relationshipStatus: CustomerRelationshipStatus;
   ownerUserId?: number;
@@ -657,6 +666,7 @@ export interface UpsertCustomerContactRequest {
   phone?: string;
   email?: string;
   isPrimary?: boolean;
+  isLegalRepresentative?: boolean;
 }
 
 export interface CreateCustomerRequest {
