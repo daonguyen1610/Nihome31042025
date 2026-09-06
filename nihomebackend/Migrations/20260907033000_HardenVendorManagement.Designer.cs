@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NihomeBackend.Data;
 
@@ -11,9 +12,11 @@ using NihomeBackend.Data;
 namespace nihomebackend.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260907033000_HardenVendorManagement")]
+    partial class HardenVendorManagement
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -7551,43 +7554,6 @@ namespace nihomebackend.Migrations
                     b.ToTable("procurement_vendors", (string)null);
                 });
 
-            modelBuilder.Entity("NihomeBackend.Models.VendorDocumentUpload", b =>
-                {
-                    b.Property<Guid>("Token")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime?>("ClaimedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("CreatedByUserId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Path")
-                        .IsRequired()
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<int?>("VendorId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Token");
-
-                    b.HasIndex("CreatedByUserId");
-
-                    b.HasIndex("Path")
-                        .IsUnique();
-
-                    b.HasIndex("VendorId")
-                        .IsUnique()
-                        .HasFilter("[VendorId] IS NOT NULL");
-
-                    b.ToTable("vendor_document_uploads", (string)null);
-                });
-
             modelBuilder.Entity("NihomeBackend.Models.VendorRating", b =>
                 {
                     b.Property<int>("Id")
@@ -9726,22 +9692,6 @@ namespace nihomebackend.Migrations
                     b.Navigation("CreatedBy");
 
                     b.Navigation("UpdatedBy");
-                });
-
-            modelBuilder.Entity("NihomeBackend.Models.VendorDocumentUpload", b =>
-                {
-                    b.HasOne("NihomeBackend.Models.ApplicationUser", null)
-                        .WithMany()
-                        .HasForeignKey("CreatedByUserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("NihomeBackend.Models.Vendor", "Vendor")
-                        .WithMany()
-                        .HasForeignKey("VendorId")
-                        .OnDelete(DeleteBehavior.Cascade);
-
-                    b.Navigation("Vendor");
                 });
 
             modelBuilder.Entity("NihomeBackend.Models.VendorRating", b =>

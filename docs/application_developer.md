@@ -573,7 +573,7 @@ To add a new content entity:
 
 ### 7.5 Procurement Vendor API
 
-The procurement vendor slice stores supplier and subcontractor profiles in `procurement_vendors`. Vendor codes are trimmed, normalized to uppercase, and protected by a unique database index. Use `IsActive` to retain a vendor for historical reporting while preventing new use. `DELETE` permanently removes obsolete, duplicate, or test records and should only be used when historical retention is not required.
+The procurement vendor slice stores supplier and subcontractor profiles in `procurement_vendors`. Vendor codes are trimmed and normalized to uppercase; vendor codes and normalized company names are unique. A vendor requires at least one valid phone number or email address. Use `IsActive` to retain a vendor for historical reporting while preventing new downstream Contracts. Detail responses include related Contracts, Operational Projects, Vendor Ratings, responsible update metadata, and the Vendor-scoped audit timeline.
 
 Both `/api/vendors` and `/api/v1/vendors` expose the same controller:
 
@@ -583,9 +583,17 @@ Both `/api/vendors` and `/api/v1/vendors` expose the same controller:
 | `GET` | `/api/vendors/{id}` | `proc.vendors.view` | Read vendor details and audit metadata |
 | `POST` | `/api/vendors` | `proc.vendors.manage` | Create an active vendor |
 | `PUT` | `/api/vendors/{id}` | `proc.vendors.manage` | Update profile data or active status |
-| `DELETE` | `/api/vendors/{id}` | `proc.vendors.manage` | Permanently delete a vendor |
+| `GET` | `/api/vendors/{id}/deletion-impact` | `proc.vendors.manage` | Preview Contract, Rating, Payment Request, and file impact |
+| `DELETE` | `/api/vendors/{id}` | `proc.vendors.manage` | Start the confirmed durable hard-delete operation |
+| `DELETE` | `/api/business-documents/vendors` | `proc.vendors.manage` | Discard an uploaded document only while no Vendor references it |
 
-Duplicate normalized codes return `409`; invalid request data returns `400`; missing records return `404`. Create, update, and delete operations write `vendor.create`, `vendor.update`, and `vendor.delete` audit events. Delete returns `204` and records the removed vendor snapshot in the audit event. `proc.vendors.export` controls the frontend export action but does not grant API read access by itself.
+Duplicate normalized codes or company names return `409`; invalid contact or file references return `400`; missing records return `404`. Create and update operations write `vendor.create` and `vendor.update` audit events. Vendor deletion follows the repository hard-delete convention: Contracts, Vendor Ratings, Payment Requests, shared files, and unsafe files block deletion; an owned managed capability file is quarantined and purged by the durable operation. `proc.vendors.export` controls the frontend export action but does not grant API read access by itself.
+
+Vendor capability uploads return an opaque claim token. A create or update that
+uses the managed path must submit the matching token; the server claims the file
+in the same database write as the Vendor. Cancelled forms discard pending tokens,
+and the cleanup worker removes unclaimed uploads older than 24 hours. Claimed
+uploads cannot be discarded or claimed by another Vendor.
 
 ### 7.6 Permit Checklist API
 

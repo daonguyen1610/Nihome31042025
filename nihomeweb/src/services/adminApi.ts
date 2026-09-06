@@ -753,7 +753,41 @@ export interface VendorResponse {
   createdByName?: string;
   createdAt: string;
   updatedByUserId?: number;
+  updatedByName?: string;
   updatedAt: string;
+  rowVersion: string;
+  contracts: VendorContractSummary[];
+  ratings: VendorRatingSummary[];
+  history: VendorHistorySummary[];
+}
+
+export interface VendorContractSummary {
+  id: number;
+  contractNumber: string;
+  status: string;
+  operationalProjectId?: number | null;
+  operationalProjectCode?: string | null;
+  operationalProjectName?: string | null;
+}
+
+export interface VendorRatingSummary {
+  id: number;
+  contractId: number;
+  contractNumber: string;
+  operationalProjectId: number;
+  operationalProjectCode: string;
+  status: string;
+  overallScore: number;
+  approvedAt?: string | null;
+}
+
+export interface VendorHistorySummary {
+  id: number;
+  action: string;
+  message: string;
+  actorUserId?: number | null;
+  actorName?: string | null;
+  createdAt: string;
 }
 
 export interface VendorListResponse {
@@ -775,11 +809,13 @@ export interface CreateVendorRequest {
   licenseNo?: string;
   tradeCategory?: string;
   capabilityFileUrl?: string;
+  capabilityUploadToken?: string;
   driveFolder?: string;
 }
 
 export interface UpdateVendorRequest extends CreateVendorRequest {
   isActive: boolean;
+  rowVersion?: string;
 }
 
 export interface VendorListParams {
@@ -797,6 +833,7 @@ export interface BusinessDocumentUploadResponse {
   originalFileName: string;
   fileSize: number;
   contentType: string;
+  claimToken?: string;
 }
 
 export type PermitDocumentKind = "SubmittedPackage" | "IssuedPermit";
@@ -4426,8 +4463,14 @@ export const adminApi = {
   getVendor: (id: number) => api.get<VendorResponse>(`/vendors/${id}`),
   createVendor: (body: CreateVendorRequest) => api.post<VendorResponse>("/vendors", body),
   updateVendor: (id: number, body: UpdateVendorRequest) => api.put<VendorResponse>(`/vendors/${id}`, body),
-  deleteVendor: (id: number) => api.delete(`/vendors/${id}`),
+  getVendorDeletionImpact: (id: number) => api.get<DeletionImpactResponse>(`/vendors/${id}/deletion-impact`),
+  deleteVendor: (id: number, body: ConfirmDeletionRequest) =>
+    api.delete<HardDeleteOperationResult | null>(`/vendors/${id}`, {
+      ...withIfMatch(body.rowVersion),
+      data: body,
+    }),
   uploadVendorDocument: (file: File) => uploadBusinessDocument("vendors", file),
+  discardVendorDocument: (claimToken: string) => api.delete("/business-documents/vendors", { data: { claimToken } }),
 
   // CRM opportunities (NIH-83)
   listOpportunities: (params: OpportunityListParams = {}) => {
