@@ -29,6 +29,9 @@ public class ContractService(
         int callerUserId,
         bool canSeeAll,
         ContractStatus? status = null,
+        ContractDirection? direction = null,
+        ContractType? type = null,
+        int? vendorId = null,
         int? ownerUserId = null,
         int? customerId = null,
         string? search = null,
@@ -56,6 +59,9 @@ public class ContractService(
         }
 
         if (status.HasValue) query = query.Where(c => c.Status == status.Value);
+        if (direction.HasValue) query = query.Where(c => c.Direction == direction.Value);
+        if (type.HasValue) query = query.Where(c => c.Type == type.Value);
+        if (vendorId.HasValue) query = query.Where(c => c.VendorId == vendorId.Value);
         if (customerId.HasValue) query = query.Where(c => c.CustomerId == customerId.Value);
         if (signedFrom.HasValue) query = query.Where(c => c.SignedDate != null && c.SignedDate >= signedFrom.Value);
         if (signedTo.HasValue)
@@ -89,6 +95,8 @@ public class ContractService(
             {
                 Contract = c,
                 CustomerName = c.Customer.Name,
+                VendorCode = c.Vendor != null ? c.Vendor.VendorCode : null,
+                VendorName = c.Vendor != null ? c.Vendor.CompanyName : null,
                 OpportunityTitle = c.Opportunity != null ? c.Opportunity.Name : null,
                 QuoteCode = c.Quote != null ? c.Quote.Code : null,
                 OwnerName = c.Owner != null ? c.Owner.FullName : null,
@@ -112,7 +120,8 @@ public class ContractService(
             Page = page,
             PageSize = pageSize,
             Items = rows.Select(r => MapToResponse(
-                r.Contract, r.CustomerName, r.OpportunityTitle, r.QuoteCode, r.OwnerName,
+                r.Contract, r.CustomerName, r.VendorCode, r.VendorName,
+                r.OpportunityTitle, r.QuoteCode, r.OwnerName,
                 milestones: null,
                 approvedVoTotal: r.ApprovedVoTotal,
                 hasSignedScan: r.HasSignedScan,
@@ -134,6 +143,8 @@ public class ContractService(
             {
                 Contract = c,
                 CustomerName = c.Customer.Name,
+                VendorCode = c.Vendor != null ? c.Vendor.VendorCode : null,
+                VendorName = c.Vendor != null ? c.Vendor.CompanyName : null,
                 OpportunityTitle = c.Opportunity != null ? c.Opportunity.Name : null,
                 QuoteCode = c.Quote != null ? c.Quote.Code : null,
                 OwnerName = c.Owner != null ? c.Owner.FullName : null,
@@ -174,7 +185,8 @@ public class ContractService(
             .CountAsync(v => v.ContractId == id, ct);
 
         return MapToResponse(
-            row.Contract, row.CustomerName, row.OpportunityTitle, row.QuoteCode, row.OwnerName,
+            row.Contract, row.CustomerName, row.VendorCode, row.VendorName,
+            row.OpportunityTitle, row.QuoteCode, row.OwnerName,
             milestones, approvedVoTotal, hasSignedScan, attachmentCount, appendixCount,
             designProjectId: row.DesignProject?.Id,
             designProjectCode: row.DesignProject?.ProjectCode,
@@ -235,6 +247,9 @@ public class ContractService(
         {
             ContractNumber = number,
             CustomerId = req.CustomerId,
+            Direction = req.Direction,
+            Type = req.Type,
+            VendorId = req.VendorId,
             OperationalProjectId = operationalProjectId,
             OpportunityId = req.OpportunityId,
             QuoteId = req.QuoteId,
@@ -312,6 +327,9 @@ public class ContractService(
             throw new ContractValidationException("Customer is outside the caller's ownership scope.");
         }
         entity.CustomerId = req.CustomerId;
+        entity.Direction = req.Direction;
+        entity.Type = req.Type;
+        entity.VendorId = req.VendorId;
         entity.OperationalProjectId = operationalProjectId;
         entity.OpportunityId = req.OpportunityId;
         entity.QuoteId = req.QuoteId;
@@ -458,6 +476,11 @@ public class ContractService(
         if (!canSeeAll && entity.OwnerUserId != callerUserId) return null;
 
         CrmConcurrency.Apply(db, entity, rowVersion);
+        if (entity.Type == ContractType.Unclassified)
+        {
+            throw new ContractValidationException(
+                "Vui lòng phân loại Hợp đồng trước khi chuyển trạng thái.");
+        }
 
         if (entity.Status == newStatus)
         {
@@ -615,6 +638,7 @@ public class ContractService(
 
     private async Task<int?> ValidateReferencesAsync(UpsertContractRequest req, CancellationToken ct)
     {
+        await ValidateClassificationAsync(req, ct);
         var customer = await db.Customers.AsNoTracking()
             .Where(customer => customer.Id == req.CustomerId)
             .Select(customer => new { customer.OwnerUserId })
@@ -665,6 +689,64 @@ public class ContractService(
             throw new ContractValidationException("End date must be on or after start date.");
         }
         return customer.OwnerUserId;
+    }
+
+    private async Task ValidateClassificationAsync(
+        UpsertContractRequest request,
+        CancellationToken ct)
+    {
+        if (request.Type == ContractType.Unclassified)
+        {
+            throw new ContractValidationException("Loại Hợp đồng là bắt buộc.");
+        }
+
+        if (request.Direction == ContractDirection.Upstream)
+        {
+            if (request.VendorId.HasValue)
+            {
+                throw new ContractValidationException(
+                    "Hợp đồng đầu ra không được chọn đối tác nhà cung cấp/thầu phụ.");
+            }
+            if (request.Type is ContractType.Supply or ContractType.Subcontract)
+            {
+                throw new ContractValidationException(
+                    "Loại Cung ứng/Thầu phụ chỉ áp dụng cho Hợp đồng đầu vào.");
+            }
+            return;
+        }
+
+        if (request.Type is not (ContractType.Supply or ContractType.Subcontract))
+        {
+            throw new ContractValidationException(
+                "Hợp đồng đầu vào phải có loại Cung ứng hoặc Thầu phụ.");
+        }
+        if (!request.VendorId.HasValue)
+        {
+            throw new ContractValidationException(
+                "Đối tác là bắt buộc cho Hợp đồng đầu vào.");
+        }
+
+        var vendor = await db.Vendors.AsNoTracking()
+            .Where(item => item.Id == request.VendorId.Value)
+            .Select(item => new { item.VendorType, item.IsActive })
+            .SingleOrDefaultAsync(ct);
+        if (vendor is null || !vendor.IsActive)
+        {
+            throw new ContractValidationException(
+                "Đối tác không tồn tại hoặc đã ngừng hoạt động.");
+        }
+        if (request.Type == ContractType.Supply &&
+            vendor.VendorType is not (VendorType.Supplier or VendorType.Both))
+        {
+            throw new ContractValidationException(
+                "Đối tác không được phân loại là Nhà cung cấp.");
+        }
+        if (request.Type == ContractType.Subcontract &&
+            vendor.VendorType is not (VendorType.SubContractor or VendorType.Both))
+        {
+            throw new ContractValidationException(
+                "Đối tác không được phân loại là Thầu phụ.");
+        }
     }
 
     private async Task<bool> NumberExistsAsync(string number, int? excludeId, CancellationToken ct) =>
@@ -857,6 +939,8 @@ public class ContractService(
     private static ContractResponse MapToResponse(
         Contract entity,
         string? customerName,
+        string? vendorCode,
+        string? vendorName,
         string? opportunityTitle,
         string? quoteCode,
         string? ownerName,
@@ -881,6 +965,11 @@ public class ContractService(
             ContractNumber = entity.ContractNumber,
             CustomerId = entity.CustomerId,
             CustomerName = customerName,
+            Direction = entity.Direction,
+            Type = entity.Type,
+            VendorId = entity.VendorId,
+            VendorCode = vendorCode,
+            VendorName = vendorName,
             OperationalProjectId = entity.OperationalProjectId,
             OpportunityId = entity.OpportunityId,
             OpportunityTitle = opportunityTitle,

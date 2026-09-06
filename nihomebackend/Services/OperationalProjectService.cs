@@ -122,6 +122,8 @@ public class OperationalProjectService(
                 .ThenInclude(c => c.Customer)
             .Include(item => item.Contracts)
                 .ThenInclude(c => c.Owner)
+            .Include(item => item.Contracts)
+                .ThenInclude(c => c.Vendor)
             .Include(item => item.TeamMembers)
             .FirstOrDefaultAsync(item => item.Id == id, ct);
 
@@ -526,6 +528,11 @@ public class OperationalProjectService(
             {
                 Id = item.Id,
                 ContractNumber = item.ContractNumber,
+                Direction = item.Direction,
+                Type = item.Type,
+                VendorId = item.VendorId,
+                VendorCode = item.Vendor?.VendorCode,
+                VendorName = item.Vendor?.CompanyName,
                 Status = item.Status.ToString(),
                 Value = item.Value,
                 SignedDate = item.SignedDate,

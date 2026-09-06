@@ -194,6 +194,8 @@ public class CrmMultiUserConcurrencyTests : IntegrationTestBase
         using var created = await manager.PostAsJsonAsync("/api/contracts", new
         {
             customerId,
+            direction = "Upstream",
+            type = "DesignAndBuild",
             status = "Draft",
             value = 100_000_000m,
         });
@@ -212,6 +214,8 @@ public class CrmMultiUserConcurrencyTests : IntegrationTestBase
                 rowVersion,
                 contractNumber,
                 customerId,
+                direction = "Upstream",
+                type = "DesignAndBuild",
                 status = "Draft",
                 value = 200_000_000m,
                 scopeOfWork = "Contract manager winner",
@@ -220,6 +224,8 @@ public class CrmMultiUserConcurrencyTests : IntegrationTestBase
             {
                 contractNumber,
                 customerId,
+                direction = "Upstream",
+                type = "DesignAndBuild",
                 status = "Draft",
                 value = 300_000_000m,
                 scopeOfWork = "Contract admin winner",

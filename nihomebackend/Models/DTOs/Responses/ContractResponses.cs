@@ -10,6 +10,12 @@ public class ContractResponse
     public int CustomerId { get; set; }
     public string? CustomerName { get; set; }
 
+    public ContractDirection Direction { get; set; }
+    public ContractType Type { get; set; }
+    public int? VendorId { get; set; }
+    public string? VendorCode { get; set; }
+    public string? VendorName { get; set; }
+
     public int? OperationalProjectId { get; set; }
 
     public int? OpportunityId { get; set; }

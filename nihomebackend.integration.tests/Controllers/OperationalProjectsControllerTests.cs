@@ -127,13 +127,21 @@ public class OperationalProjectsControllerTests : IntegrationTestBase
         {
             customerId,
             opportunityId,
+            direction = "Upstream",
+            type = "DesignAndBuild",
             status = "Draft",
             value = 1000,
         });
 
         contractResponse.StatusCode.Should().Be(HttpStatusCode.Created);
-        (await ReadJsonAsync(contractResponse))
-            .GetProperty("operationalProjectId").GetInt32().Should().Be(projectId);
+        var contract = await ReadJsonAsync(contractResponse);
+        contract.GetProperty("operationalProjectId").GetInt32().Should().Be(projectId);
+        contract.GetProperty("type").GetString().Should().Be("DesignAndBuild");
+
+        var project = await ReadJsonAsync(await Client.GetAsync($"/api/operational-projects/{projectId}"));
+        var projectContract = project.GetProperty("contracts").EnumerateArray().Single();
+        projectContract.GetProperty("direction").GetString().Should().Be("Upstream");
+        projectContract.GetProperty("type").GetString().Should().Be("DesignAndBuild");
     }
 
     [Fact]
@@ -204,6 +212,8 @@ public class OperationalProjectsControllerTests : IntegrationTestBase
         {
             customerId,
             operationalProjectId = projectId,
+            direction = "Upstream",
+            type = "DesignAndBuild",
             status = "Draft",
             value = 1000,
         });

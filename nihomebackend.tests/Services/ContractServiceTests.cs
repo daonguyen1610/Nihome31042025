@@ -60,6 +60,8 @@ public class ContractServiceTests : IDisposable
         {
             ContractNumber = number,
             CustomerId = customerId ?? _customerA,
+            Direction = ContractDirection.Upstream,
+            Type = ContractType.DesignAndBuild,
             Status = status,
             Value = value,
             SignedDate = signed,
@@ -86,6 +88,60 @@ public class ContractServiceTests : IDisposable
         Assert.StartsWith("HD-", result.ContractNumber);
         Assert.EndsWith("-0001", result.ContractNumber);
         Assert.Equal(42, result.OwnerUserId);
+    }
+
+    [Fact]
+    public async Task Create_RejectsMissingOrDirectionIncompatibleClassification()
+    {
+        var missingType = Req();
+        missingType.Type = ContractType.Unclassified;
+        await Assert.ThrowsAsync<ContractValidationException>(
+            () => _sut.CreateAsync(missingType, 1, canReassignOwner: true));
+
+        var upstreamSupply = Req();
+        upstreamSupply.Type = ContractType.Supply;
+        await Assert.ThrowsAsync<ContractValidationException>(
+            () => _sut.CreateAsync(upstreamSupply, 1, canReassignOwner: true));
+
+        var downstreamWithoutVendor = Req();
+        downstreamWithoutVendor.Direction = ContractDirection.Downstream;
+        downstreamWithoutVendor.Type = ContractType.Subcontract;
+        await Assert.ThrowsAsync<ContractValidationException>(
+            () => _sut.CreateAsync(downstreamWithoutVendor, 1, canReassignOwner: true));
+
+        Assert.Empty(_db.Contracts);
+    }
+
+    [Fact]
+    public async Task Create_DownstreamContract_RequiresCompatibleActiveVendor()
+    {
+        var supplier = new Vendor
+        {
+            VendorCode = "SUP-UNIT",
+            CompanyName = "Unit supplier",
+            VendorType = VendorType.Supplier,
+            IsActive = true,
+        };
+        _db.Vendors.Add(supplier);
+        await _db.SaveChangesAsync();
+
+        var incompatible = Req();
+        incompatible.Direction = ContractDirection.Downstream;
+        incompatible.Type = ContractType.Subcontract;
+        incompatible.VendorId = supplier.Id;
+        await Assert.ThrowsAsync<ContractValidationException>(
+            () => _sut.CreateAsync(incompatible, 1, canReassignOwner: true));
+
+        var valid = Req();
+        valid.Direction = ContractDirection.Downstream;
+        valid.Type = ContractType.Supply;
+        valid.VendorId = supplier.Id;
+        var created = await _sut.CreateAsync(valid, 1, canReassignOwner: true);
+
+        Assert.Equal(ContractDirection.Downstream, created.Direction);
+        Assert.Equal(ContractType.Supply, created.Type);
+        Assert.Equal(supplier.Id, created.VendorId);
+        Assert.Equal(supplier.CompanyName, created.VendorName);
     }
 
     [Fact]

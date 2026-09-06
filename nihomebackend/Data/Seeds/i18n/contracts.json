@@ -128,6 +128,30 @@
     "ja": "全ての顧客"
   },
   {
+    "key": "contracts.filter.allDirections",
+    "category": "contracts",
+    "vi": "Tất cả hướng hợp đồng",
+    "en": "All directions",
+    "zh": "全部合同方向",
+    "ja": "全ての契約区分"
+  },
+  {
+    "key": "contracts.filter.allTypes",
+    "category": "contracts",
+    "vi": "Tất cả loại hợp đồng",
+    "en": "All contract types",
+    "zh": "全部合同类型",
+    "ja": "全ての契約タイプ"
+  },
+  {
+    "key": "contracts.filter.allVendors",
+    "category": "contracts",
+    "vi": "Tất cả nhà cung cấp / thầu phụ",
+    "en": "All suppliers / subcontractors",
+    "zh": "全部供应商 / 分包商",
+    "ja": "全ての仕入先 / 下請業者"
+  },
+  {
     "key": "contracts.filter.signedRange",
     "category": "contracts",
     "vi": "Ngày ký (từ - đến)",
@@ -158,6 +182,134 @@
     "en": "Customer",
     "zh": "客户",
     "ja": "顧客"
+  },
+  {
+    "key": "contracts.field.direction",
+    "category": "contracts",
+    "vi": "Hướng hợp đồng",
+    "en": "Contract direction",
+    "zh": "合同方向",
+    "ja": "契約区分"
+  },
+  {
+    "key": "contracts.field.type",
+    "category": "contracts",
+    "vi": "Loại hợp đồng",
+    "en": "Contract type",
+    "zh": "合同类型",
+    "ja": "契約タイプ"
+  },
+  {
+    "key": "contracts.field.counterparty",
+    "category": "contracts",
+    "vi": "Đối tác hợp đồng",
+    "en": "Counterparty",
+    "zh": "合同相对方",
+    "ja": "契約相手"
+  },
+  {
+    "key": "contracts.field.vendor",
+    "category": "contracts",
+    "vi": "Nhà cung cấp / Thầu phụ",
+    "en": "Supplier / Subcontractor",
+    "zh": "供应商 / 分包商",
+    "ja": "仕入先 / 下請業者"
+  },
+  {
+    "key": "contracts.direction.Upstream",
+    "category": "contracts",
+    "vi": "Đầu ra - Khách hàng",
+    "en": "Upstream - Customer",
+    "zh": "上游 - 客户",
+    "ja": "上流 - 顧客"
+  },
+  {
+    "key": "contracts.direction.Downstream",
+    "category": "contracts",
+    "vi": "Đầu vào - Đối tác",
+    "en": "Downstream - Partner",
+    "zh": "下游 - 合作方",
+    "ja": "下流 - パートナー"
+  },
+  {
+    "key": "contracts.type.Unclassified",
+    "category": "contracts",
+    "vi": "Chưa phân loại",
+    "en": "Unclassified",
+    "zh": "未分类",
+    "ja": "未分類"
+  },
+  {
+    "key": "contracts.type.Design",
+    "category": "contracts",
+    "vi": "Thiết kế",
+    "en": "Design",
+    "zh": "设计",
+    "ja": "設計"
+  },
+  {
+    "key": "contracts.type.Construction",
+    "category": "contracts",
+    "vi": "Thi công",
+    "en": "Construction",
+    "zh": "施工",
+    "ja": "施工"
+  },
+  {
+    "key": "contracts.type.DesignAndBuild",
+    "category": "contracts",
+    "vi": "Thiết kế và Thi công",
+    "en": "Design & Build",
+    "zh": "设计与施工",
+    "ja": "設計・施工"
+  },
+  {
+    "key": "contracts.type.Supply",
+    "category": "contracts",
+    "vi": "Cung ứng",
+    "en": "Supply",
+    "zh": "供应",
+    "ja": "供給"
+  },
+  {
+    "key": "contracts.type.Subcontract",
+    "category": "contracts",
+    "vi": "Thầu phụ",
+    "en": "Subcontract",
+    "zh": "分包",
+    "ja": "下請"
+  },
+  {
+    "key": "contracts.selectVendor",
+    "category": "contracts",
+    "vi": "Chọn nhà cung cấp hoặc thầu phụ",
+    "en": "Select a supplier or subcontractor",
+    "zh": "选择供应商或分包商",
+    "ja": "仕入先または下請業者を選択"
+  },
+  {
+    "key": "contracts.validation.typeRequired",
+    "category": "contracts",
+    "vi": "Vui lòng chọn loại hợp đồng trước khi lưu.",
+    "en": "Select a contract type before saving.",
+    "zh": "保存前请选择合同类型。",
+    "ja": "保存する前に契約タイプを選択してください。"
+  },
+  {
+    "key": "contracts.validation.vendorRequired",
+    "category": "contracts",
+    "vi": "Hợp đồng đầu vào phải chọn nhà cung cấp hoặc thầu phụ.",
+    "en": "A downstream contract requires a supplier or subcontractor.",
+    "zh": "下游合同必须选择供应商或分包商。",
+    "ja": "下流契約には仕入先または下請業者が必要です。"
+  },
+  {
+    "key": "contracts.validation.classifyBeforeTransition",
+    "category": "contracts",
+    "vi": "Hãy chỉnh sửa và phân loại hợp đồng trước khi chuyển trạng thái.",
+    "en": "Edit and classify this contract before changing its status.",
+    "zh": "更改状态前，请先编辑并分类此合同。",
+    "ja": "ステータスを変更する前に、契約を編集して分類してください。"
   },
   {
     "key": "contracts.field.owner",

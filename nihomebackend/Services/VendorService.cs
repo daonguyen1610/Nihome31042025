@@ -155,6 +155,11 @@ public class VendorService(
             .Include(item => item.CreatedBy)
             .FirstOrDefaultAsync(item => item.Id == id, ct);
         if (vendor is null) return null;
+        if (await db.Contracts.AsNoTracking().AnyAsync(contract => contract.VendorId == id, ct))
+        {
+            throw new VendorOperationException(
+                "Không thể xoá đối tác đang được sử dụng bởi Hợp đồng đầu vào.");
+        }
 
         var deleted = Map(vendor, vendor.CreatedBy?.FullName);
         var capabilityFileUrl = vendor.CapabilityFileUrl;

@@ -21,6 +21,18 @@ public class Contract : IConcurrencyTracked
     public int CustomerId { get; set; }
     public Customer Customer { get; set; } = null!;
 
+    public ContractDirection Direction { get; set; } = ContractDirection.Upstream;
+
+    /// <summary>
+    /// Legacy rows remain Unclassified until an authorized user reviews them.
+    /// New writes must use a business type compatible with <see cref="Direction"/>.
+    /// </summary>
+    public ContractType Type { get; set; } = ContractType.Unclassified;
+
+    /// <summary>Required counterparty for downstream supplier/subcontract contracts.</summary>
+    public int? VendorId { get; set; }
+    public Vendor? Vendor { get; set; }
+
     /// <summary>Operational project that groups this contract with all M1-M8 work.</summary>
     public int? OperationalProjectId { get; set; }
     public OperationalProject? OperationalProject { get; set; }
@@ -76,4 +88,20 @@ public enum ContractStatus
     Completed = 4,
     /// <summary>Cancelled before or during execution.</summary>
     Cancelled = 5,
+}
+
+public enum ContractDirection
+{
+    Upstream = 0,
+    Downstream = 1,
+}
+
+public enum ContractType
+{
+    Unclassified = 0,
+    Design = 1,
+    Construction = 2,
+    DesignAndBuild = 3,
+    Supply = 4,
+    Subcontract = 5,
 }

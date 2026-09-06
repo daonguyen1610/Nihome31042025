@@ -17,6 +17,12 @@ public class UpsertContractRequest : IConcurrencyRequest
     [Required]
     public int CustomerId { get; set; }
 
+    public ContractDirection Direction { get; set; } = ContractDirection.Upstream;
+
+    public ContractType Type { get; set; } = ContractType.Unclassified;
+
+    public int? VendorId { get; set; }
+
     public int? OperationalProjectId { get; set; }
 
     public int? OpportunityId { get; set; }
