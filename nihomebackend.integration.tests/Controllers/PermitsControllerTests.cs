@@ -175,6 +175,34 @@ public class PermitsControllerTests : IntegrationTestBase
             .Should().Be(HttpStatusCode.Forbidden);
     }
 
+    [Fact]
+    public async Task Pm_ListDetailAndMutation_AreRestrictedToAccessibleProjects()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var accessibleProject = await CreateDesignProjectForPmAsync(assignToPm: true);
+        var inaccessibleProject = await CreateDesignProjectForPmAsync(assignToPm: false);
+        var accessiblePermit = await FirstPermitIdAsync(accessibleProject);
+        var inaccessiblePermit = await FirstPermitIdAsync(inaccessibleProject);
+
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "PM"));
+
+        var list = await Client.GetAsync("/api/permits?pageSize=200");
+        list.StatusCode.Should().Be(HttpStatusCode.OK);
+        var ids = (await ReadJsonAsync(list)).GetProperty("items").EnumerateArray()
+            .Select(item => item.GetProperty("id").GetInt32());
+        ids.Should().Contain(accessiblePermit).And.NotContain(inaccessiblePermit);
+        (await Client.GetAsync($"/api/permits/{inaccessiblePermit}"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await Client.PatchAsJsonAsync($"/api/permits/{inaccessiblePermit}", new
+        {
+            status = "Submitted",
+        })).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await WithDbAsync(db => db.PermitChecklistItems
+            .Where(item => item.Id == inaccessiblePermit)
+            .Select(item => item.Status)
+            .SingleAsync())).Should().NotBe(PermitStatus.Submitted);
+    }
+
     // -------- helpers --------
 
     private async Task<int> CreateDesignProjectAsync()
@@ -189,6 +217,43 @@ public class PermitsControllerTests : IntegrationTestBase
         });
         res.EnsureSuccessStatusCode();
         return (await ReadJsonAsync(res)).GetProperty("id").GetInt32();
+    }
+
+    private async Task<int> CreateDesignProjectForPmAsync(bool assignToPm)
+    {
+        var customerId = await FirstCustomerIdAsync();
+        var pmId = await WithDbAsync(db => db.Users
+            .Where(item => item.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["PM"])
+            .Select(item => item.Id)
+            .SingleAsync());
+        var operationalProjectId = await WithDbAsync<int>(async db =>
+        {
+            var project = new OperationalProject
+            {
+                Code = $"PJ-PERMIT-SCOPE-{Guid.NewGuid():N}"[..40],
+                Name = "Permit scope fixture",
+                CustomerId = customerId,
+                ProjectManagerUserId = assignToPm ? pmId : null,
+            };
+            db.OperationalProjects.Add(project);
+            await db.SaveChangesAsync();
+            return project.Id;
+        });
+        var response = await Client.PostAsJsonAsync("/api/design-projects", new
+        {
+            name = $"Permit scope {Guid.NewGuid():N}",
+            customerId,
+            operationalProjectId,
+        });
+        response.EnsureSuccessStatusCode();
+        return (await ReadJsonAsync(response)).GetProperty("id").GetInt32();
+    }
+
+    private async Task<int> FirstPermitIdAsync(int projectId)
+    {
+        var response = await Client.GetAsync($"/api/permits?designProjectId={projectId}&pageSize=100");
+        response.EnsureSuccessStatusCode();
+        return (await ReadJsonAsync(response)).GetProperty("items")[0].GetProperty("id").GetInt32();
     }
 
     private async Task<int> CreateOperationalProjectAsync(int customerId)

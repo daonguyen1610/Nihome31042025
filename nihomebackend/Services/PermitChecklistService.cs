@@ -64,7 +64,10 @@ public class PermitChecklistService(
             missing.Count, designProjectId);
     }
 
-    public async Task<PermitChecklistListResponse> ListAsync(PermitChecklistListParams p, CancellationToken ct = default)
+    public async Task<PermitChecklistListResponse> ListAsync(
+        PermitChecklistListParams p,
+        CancellationToken ct = default,
+        IReadOnlySet<int>? accessibleDesignProjectIds = null)
     {
         var page = p.Page < 1 ? 1 : p.Page;
         var pageSize = Math.Clamp(p.PageSize <= 0 ? 20 : p.PageSize, 1, MaxPageSize);
@@ -75,6 +78,8 @@ public class PermitChecklistService(
             .Include(x => x.Owner)
             .AsQueryable();
 
+        if (accessibleDesignProjectIds is not null)
+            q = q.Where(x => accessibleDesignProjectIds.Contains(x.DesignProjectId));
         if (p.DesignProjectId.HasValue) q = q.Where(x => x.DesignProjectId == p.DesignProjectId.Value);
         if (p.OwnerUserId.HasValue) q = q.Where(x => x.OwnerUserId == p.OwnerUserId.Value);
 
@@ -150,7 +155,8 @@ public class PermitChecklistService(
             Page = page,
             PageSize = pageSize,
             Items = rows.Select(r => Map(r, labelByCode, now, dueSoonCutoff, expiringSoonCutoff)).ToList(),
-            Risk = await ComputeRiskAsync(now, dueSoonCutoff, expiringSoonCutoff, ct),
+            Risk = await ComputeRiskAsync(
+                now, dueSoonCutoff, expiringSoonCutoff, ct, accessibleDesignProjectIds),
         };
         return response;
     }
@@ -388,10 +394,16 @@ public class PermitChecklistService(
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private async Task<PermitChecklistRiskSummary> ComputeRiskAsync(
-        DateTime now, DateTime dueSoonCutoff, DateTime expiringSoonCutoff, CancellationToken ct)
+        DateTime now,
+        DateTime dueSoonCutoff,
+        DateTime expiringSoonCutoff,
+        CancellationToken ct,
+        IReadOnlySet<int>? accessibleDesignProjectIds)
     {
         var openBase = db.PermitChecklistItems.AsNoTracking()
             .Where(x => x.Status != PermitStatus.Issued);
+        if (accessibleDesignProjectIds is not null)
+            openBase = openBase.Where(x => accessibleDesignProjectIds.Contains(x.DesignProjectId));
 
         var overdue = await openBase
             .CountAsync(x => x.TargetDeadline != null && x.TargetDeadline < now, ct);
@@ -400,9 +412,12 @@ public class PermitChecklistService(
                           && x.TargetDeadline >= now
                           && x.TargetDeadline <= dueSoonCutoff, ct);
         var totalOpen = await openBase.CountAsync(ct);
-        var expiringSoon = await db.PermitChecklistItems.AsNoTracking()
-            .CountAsync(x => x.Status == PermitStatus.Issued
-                          && x.ExpiresAt != null
+        var expiringBase = db.PermitChecklistItems.AsNoTracking()
+            .Where(x => x.Status == PermitStatus.Issued);
+        if (accessibleDesignProjectIds is not null)
+            expiringBase = expiringBase.Where(x => accessibleDesignProjectIds.Contains(x.DesignProjectId));
+        var expiringSoon = await expiringBase
+            .CountAsync(x => x.ExpiresAt != null
                           && x.ExpiresAt >= now
                           && x.ExpiresAt <= expiringSoonCutoff, ct);
 

@@ -54,6 +54,30 @@ public class RbacSeederTests : IDisposable
     }
 
     [Fact]
+    public void Seed_ProjectReportPermissionsMatchApprovedRoleMatrix()
+    {
+        RbacSeeder.Seed(_db);
+        var permissionCodesByRole = _db.Roles.ToDictionary(
+            role => role.Code,
+            role => _db.RolePermissions.Where(item => item.RoleId == role.Id)
+                .Select(item => item.Permission.Module + "." + item.Permission.Action)
+                .ToHashSet());
+
+        foreach (var roleCode in new[] { "SUPER_ADMIN", "ADMIN", "BGD", "ACCOUNTANT" })
+        {
+            Assert.Contains("reports.projects.view", permissionCodesByRole[roleCode]);
+            Assert.Contains("reports.projects.export", permissionCodesByRole[roleCode]);
+        }
+        Assert.Contains("reports.projects.view", permissionCodesByRole["PM"]);
+        Assert.DoesNotContain("reports.projects.export", permissionCodesByRole["PM"]);
+        foreach (var roleCode in new[] { "SALE", "DESIGN", "LEGAL_OFFICER", "QS", "WAREHOUSE" })
+        {
+            Assert.DoesNotContain("reports.projects.view", permissionCodesByRole[roleCode]);
+            Assert.DoesNotContain("reports.projects.export", permissionCodesByRole[roleCode]);
+        }
+    }
+
+    [Fact]
     public void Seed_TopsUpNewlyDeclaredBusinessRolePermissions_ButPreservesAdminGrants()
     {
         // Boot 1 — seed the whole default matrix.

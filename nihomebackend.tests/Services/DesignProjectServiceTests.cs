@@ -769,7 +769,9 @@ public class DesignProjectServiceTests : IDisposable
             => Task.CompletedTask;
 
         public Task<NihomeBackend.Models.DTOs.Responses.PermitChecklistListResponse> ListAsync(
-            NihomeBackend.Models.DTOs.Requests.PermitChecklistListParams parameters, CancellationToken ct = default)
+            NihomeBackend.Models.DTOs.Requests.PermitChecklistListParams parameters,
+            CancellationToken ct = default,
+            IReadOnlySet<int>? accessibleDesignProjectIds = null)
             => Task.FromResult(new NihomeBackend.Models.DTOs.Responses.PermitChecklistListResponse());
 
         public Task<NihomeBackend.Models.DTOs.Responses.PermitChecklistItemResponse?> GetAsync(int id, CancellationToken ct = default)

@@ -16,6 +16,7 @@ public interface IProjectAccessService
     Task<bool> CanApproveDesignResourceAsync(int userId, DesignProjectResourceType resourceType, int resourceId, CancellationToken ct = default);
     Task<bool> HasAdministrativeBypassAsync(int userId, CancellationToken ct = default);
     Task<IReadOnlySet<int>> GetAccessibleOperationalProjectIdsAsync(int userId, CancellationToken ct = default);
+    Task<IReadOnlySet<int>> GetAccessibleDesignProjectIdsAsync(int userId, CancellationToken ct = default);
     Task<int?> ResolveDesignCreateOperationalProjectIdAsync(int? operationalProjectId, int? contractId, CancellationToken ct = default);
     Task<int?> ResolveDesignProjectIdAsync(DesignProjectResourceType resourceType, int resourceId, CancellationToken ct = default);
     Task<IReadOnlyDictionary<int, int>> ResolveDesignProjectIdsAsync(DesignProjectResourceType resourceType, IEnumerable<int> resourceIds, CancellationToken ct = default);
@@ -32,6 +33,8 @@ public enum DesignProjectResourceType
     IfcRelease,
     IfcReleaseItem,
     IfcReleaseRecipient,
+    ConstructionTask,
+    PermitChecklistItem,
 }
 
 public interface IProjectTeamService

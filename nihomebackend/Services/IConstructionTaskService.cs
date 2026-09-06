@@ -10,7 +10,10 @@ namespace NihomeBackend.Services;
 /// </summary>
 public interface IConstructionTaskService
 {
-    Task<ConstructionTaskListResponse> ListAsync(ConstructionTaskListParams parameters, CancellationToken ct = default);
+    Task<ConstructionTaskListResponse> ListAsync(
+        ConstructionTaskListParams parameters,
+        CancellationToken ct = default,
+        IReadOnlySet<int>? accessibleDesignProjectIds = null);
     Task<ConstructionTaskResponse?> GetAsync(int id, CancellationToken ct = default);
     Task<ConstructionTaskResponse> CreateAsync(CreateConstructionTaskRequest request, int callerUserId, CancellationToken ct = default);
     Task<ConstructionTaskResponse?> UpdateAsync(int id, UpdateConstructionTaskRequest request, int callerUserId, CancellationToken ct = default);

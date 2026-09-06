@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, Fragment } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, Fragment } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   AlertTriangle,
@@ -206,8 +206,11 @@ const AdminConstructionTasks = () => {
   const [error, setError] = useState<string | null>(null);
 
   // filters
-  const projectIdParam = Number(searchParams.get("projectId"));
+  const projectIdParam = Number(searchParams.get("designProjectId") ?? searchParams.get("projectId"));
   const initialProjectId = Number.isInteger(projectIdParam) && projectIdParam > 0 ? projectIdParam : null;
+  const taskIdParam = Number(searchParams.get("taskId"));
+  const requestedTaskId = Number.isInteger(taskIdParam) && taskIdParam > 0 ? taskIdParam : null;
+  const openedTaskIdRef = useRef<number | null>(null);
   const [projectId, setProjectId] = useState<number | null>(initialProjectId);
   const [status, setStatus] = useState<ConstructionTaskStatus | "">("");
   const [ownerUserId, setOwnerUserId] = useState<number | null>(null);
@@ -394,7 +397,7 @@ const AdminConstructionTasks = () => {
   };
 
   // -------- detail / edit --------
-  const openDetail = async (row: ConstructionTaskResponse) => {
+  const openDetail = useCallback(async (row: ConstructionTaskResponse) => {
     setDetail(row);
     setDetailForm(editFormFrom(row));
     setDetailPreds(row.predecessors.map((p) => p.predecessorTaskId));
@@ -411,7 +414,19 @@ const AdminConstructionTasks = () => {
     } catch {
       setDetailSiblings([]);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (requestedTaskId == null || openedTaskIdRef.current === requestedTaskId) return;
+    openedTaskIdRef.current = requestedTaskId;
+    void adminApi.getConstructionTask(requestedTaskId)
+      .then(({ data }) => openDetail(data))
+      .catch((err) => toast({
+        title: t("common.error"),
+        description: extractApiError(err),
+        variant: "destructive",
+      }));
+  }, [openDetail, requestedTaskId, t, toast]);
   const closeDetail = () => {
     setDetail(null);
     setDetailForm(null);

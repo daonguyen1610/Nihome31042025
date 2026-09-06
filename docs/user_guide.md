@@ -728,6 +728,22 @@ Overview of leads, opportunities, contracts, and projects. Construction progress
 
 Progress reports comparing planned vs. actual (S-Curve). Acceptance reports showing pass/fail/pending ratios. Financial reports on revenue, receivables, and expenditures. Procurement reports on material distribution and vendor performance. Risk alerts for overdue tasks, expiring permits, budget overruns, BOQ exceedances, and failed acceptance items.
 
+**Current delivered scope:** users with `reports.projects.view` can open
+**CRM → Project Reports** (`/admin/reports/projects`) to review accessible
+projects as a portfolio or select one project. The project and inclusive date
+filters are stored in the URL so a filtered view can be reloaded or shared.
+The page shows current weighted design progress when its baseline is complete,
+construction and acceptance status counts, overdue work, permit warnings, and
+contractual quote/contract/milestone values. Users with
+`reports.projects.export` can download the same filters as XLSX or PDF in the
+current interface language.
+
+Milestone amounts are contractual schedule values, not cash, revenue, or
+receivables. Historical S-Curve, acceptance ratios, actual-ledger finance,
+inventory, BOQ usage, and vendor performance remain explicitly unavailable
+until their source data exists; the page displays their stable reason codes
+instead of calculating substitutes.
+
 | Page | Functions | Estimate |
 |------|-----------|----------|
 | Business Reports | Acceptance, risk, cost, permit, task reports | 3.5 days |

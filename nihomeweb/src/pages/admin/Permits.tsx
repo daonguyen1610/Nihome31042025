@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { AlertTriangle, Clock, Eye, FileCheck2, Filter, Pencil, Plus, RefreshCcw, Search, ShieldAlert, Trash2 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
@@ -278,11 +278,25 @@ const AdminPermits = () => {
   const [dialogMode, setDialogMode] = useState<"create" | "edit" | null>(null);
   const [editing, setEditing] = useState<PermitChecklistItemResponse | null>(null);
   const [viewing, setViewing] = useState<PermitChecklistItemResponse | null>(null);
+  const openedPermitIdRef = useRef<number | null>(null);
   const [pendingDelete, setPendingDelete] = useState<PermitChecklistItemResponse | null>(null);
   const [form, setForm] = useState<PermitForm | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const permitId = Number(searchParams.get("permitId"));
+    if (!Number.isInteger(permitId) || permitId <= 0 || openedPermitIdRef.current === permitId) return;
+    openedPermitIdRef.current = permitId;
+    void adminApi.getPermit(permitId)
+      .then(({ data }) => setViewing(data))
+      .catch((err) => toast({
+        title: t("common.error"),
+        description: extractApiError(err),
+        variant: "destructive",
+      }));
+  }, [searchParams, t, toast]);
 
   const openCreate = () => {
     setEditing(null);
