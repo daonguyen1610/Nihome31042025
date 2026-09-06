@@ -8,6 +8,8 @@ public class CustomerContactResponse
     public string? Phone { get; set; }
     public string? Email { get; set; }
     public bool IsPrimary { get; set; }
+    public bool IsLegalRepresentative { get; set; }
+    public DateTime? LegalRepresentativeSince { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 }
@@ -45,6 +47,7 @@ public class CustomerResponse
     public string? TaxId { get; set; }
     public string? Address { get; set; }
     public string? RepresentativeName { get; set; }
+    public int? LegalRepresentativeContactId { get; set; }
     public string SourceCode { get; set; } = string.Empty;
     public CustomerRelationshipStatus RelationshipStatus { get; set; }
     public int? OwnerUserId { get; set; }

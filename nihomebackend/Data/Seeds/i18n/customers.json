@@ -44,6 +44,9 @@
   { "key": "customers.contact.email", "category": "customers", "vi": "Email", "en": "Email", "zh": "邮箱", "ja": "メール" },
   { "key": "customers.contact.isPrimary", "category": "customers", "vi": "Là liên hệ chính", "en": "Primary contact", "zh": "主要联系人", "ja": "主要担当者" },
   { "key": "customers.contact.primaryBadge", "category": "customers", "vi": "Chính", "en": "Primary", "zh": "主要", "ja": "主要" },
+  { "key": "customers.contact.isLegalRepresentative", "category": "customers", "vi": "Là người đại diện pháp luật", "en": "Legal representative", "zh": "法定代表人", "ja": "法定代表者" },
+  { "key": "customers.contact.legalRepresentativeBadge", "category": "customers", "vi": "Đại diện pháp luật", "en": "Legal representative", "zh": "法定代表人", "ja": "法定代表者" },
+  { "key": "customers.contact.legalRepresentativeCannotDelete", "category": "customers", "vi": "Hãy chỉ định người đại diện pháp luật khác trước khi xoá liên hệ này.", "en": "Assign another legal representative before deleting this contact.", "zh": "删除此联系人前，请先指定其他法定代表人。", "ja": "この連絡先を削除する前に、別の法定代表者を指定してください。" },
   { "key": "customers.contact.lastOneCannotDelete", "category": "customers", "vi": "Khách hàng cần ít nhất 1 liên hệ.", "en": "A customer must keep at least one contact.", "zh": "客户至少需要保留一位联系人。", "ja": "顧客には少なくとも1名の担当者が必要です。" },
 
   { "key": "customers.tab.general", "category": "customers", "vi": "Thông tin chung", "en": "General", "zh": "基本信息", "ja": "基本情報" },
@@ -81,6 +84,8 @@
   { "key": "customers.activity.Email", "category": "customers", "vi": "Email", "en": "Email", "zh": "邮件", "ja": "メール" },
   { "key": "customers.activity.Meeting", "category": "customers", "vi": "Gặp mặt", "en": "Meeting", "zh": "会面", "ja": "会議" },
   { "key": "customers.activity.Note", "category": "customers", "vi": "Ghi chú", "en": "Note", "zh": "备注", "ja": "メモ" },
+  { "key": "customers.activity.LegalRepresentativeAssigned", "category": "customers", "vi": "Chỉ định đại diện pháp luật", "en": "Legal representative assigned", "zh": "指定法定代表人", "ja": "法定代表者を指定" },
+  { "key": "customers.activity.LegalRepresentativeCleared", "category": "customers", "vi": "Kết thúc vai trò đại diện pháp luật", "en": "Legal representative cleared", "zh": "取消法定代表人", "ja": "法定代表者を解除" },
 
   { "key": "customers.save", "category": "customers", "vi": "Lưu", "en": "Save", "zh": "保存", "ja": "保存" },
   { "key": "customers.created", "category": "customers", "vi": "Đã tạo khách hàng.", "en": "Customer created.", "zh": "客户已创建。", "ja": "顧客を作成しました。" },

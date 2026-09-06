@@ -548,6 +548,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .HasForeignKey(c => c.CustomerId)
                 .OnDelete(DeleteBehavior.Cascade);
             b.HasIndex(c => c.CustomerId);
+            b.HasIndex(c => c.CustomerId)
+                .IsUnique()
+                .HasFilter("[IsLegalRepresentative] = 1")
+                .HasDatabaseName("UX_customer_contacts_LegalRepresentative");
             b.HasIndex(c => c.Phone); // used for duplicate detection on Individual
         });
 

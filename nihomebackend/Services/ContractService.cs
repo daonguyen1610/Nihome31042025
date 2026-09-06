@@ -492,6 +492,10 @@ public class ContractService(
         }
 
         EnsureTransitionAllowed(entity.Status, newStatus);
+        if (RequiresSignedCustomer(newStatus))
+        {
+            await EnsureCustomerReadyForSignatureAsync(entity.CustomerId, ct);
+        }
         await EnsureTransitionPreconditionsAsync(entity, newStatus, ct);
 
         // Signed → InProgress: stamp SignedDate if the caller forgot.
@@ -641,11 +645,24 @@ public class ContractService(
         await ValidateClassificationAsync(req, ct);
         var customer = await db.Customers.AsNoTracking()
             .Where(customer => customer.Id == req.CustomerId)
-            .Select(customer => new { customer.OwnerUserId })
+            .Select(customer => new
+            {
+                customer.OwnerUserId,
+                customer.Type,
+                customer.TaxId,
+                HasLegalRepresentative = customer.Contacts.Any(contact =>
+                    contact.IsLegalRepresentative),
+            })
             .SingleOrDefaultAsync(ct);
         if (customer is null)
         {
             throw new ContractValidationException($"Customer {req.CustomerId} does not exist.");
+        }
+        if (RequiresSignedCustomer(req.Status) && customer.Type == CustomerType.Company &&
+            (string.IsNullOrWhiteSpace(customer.TaxId) || !customer.HasLegalRepresentative))
+        {
+            throw new ContractValidationException(
+                "Khách hàng doanh nghiệp phải có mã số thuế và người đại diện hợp pháp trước khi ký Hợp đồng.");
         }
 
         if (req.OpportunityId.HasValue)
@@ -690,6 +707,32 @@ public class ContractService(
         }
         return customer.OwnerUserId;
     }
+
+    private async Task EnsureCustomerReadyForSignatureAsync(
+        int customerId,
+        CancellationToken ct)
+    {
+        var customer = await db.Customers.AsNoTracking()
+            .Where(item => item.Id == customerId)
+            .Select(item => new
+            {
+                item.Type,
+                item.TaxId,
+                HasLegalRepresentative = item.Contacts.Any(contact =>
+                    contact.IsLegalRepresentative),
+            })
+            .SingleAsync(ct);
+        if (customer.Type == CustomerType.Company &&
+            (string.IsNullOrWhiteSpace(customer.TaxId) || !customer.HasLegalRepresentative))
+        {
+            throw new ContractValidationException(
+                "Khách hàng doanh nghiệp phải có mã số thuế và người đại diện hợp pháp trước khi ký Hợp đồng.");
+        }
+    }
+
+    private static bool RequiresSignedCustomer(ContractStatus status) =>
+        status is ContractStatus.Signed or ContractStatus.InProgress or
+            ContractStatus.OnHold or ContractStatus.Completed;
 
     private async Task ValidateClassificationAsync(
         UpsertContractRequest request,

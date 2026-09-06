@@ -22,6 +22,8 @@ public class UpsertCustomerContactRequest
     public string? Email { get; set; }
 
     public bool IsPrimary { get; set; }
+
+    public bool IsLegalRepresentative { get; set; }
 }
 
 public class CreateCustomerRequest

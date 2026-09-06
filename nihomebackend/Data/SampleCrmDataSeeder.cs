@@ -287,6 +287,8 @@ public static class SampleCrmDataSeeder
                     });
                 }
                 db.SaveChanges();
+                EnsureSampleLegalRepresentative(db, existing, owner.Id, now);
+                db.SaveChanges();
                 continue;
             }
 
@@ -315,7 +317,50 @@ public static class SampleCrmDataSeeder
             });
 
             db.SaveChanges();
+            EnsureSampleLegalRepresentative(db, customer, owner.Id, now);
+            db.SaveChanges();
         }
+    }
+
+    private static void EnsureSampleLegalRepresentative(
+        AppDbContext db,
+        Customer customer,
+        int ownerUserId,
+        DateTime now)
+    {
+        if (customer.Type != CustomerType.Company ||
+            string.IsNullOrWhiteSpace(customer.RepresentativeName) ||
+            db.CustomerContacts.Any(contact =>
+                contact.CustomerId == customer.Id && contact.IsLegalRepresentative))
+        {
+            return;
+        }
+
+        var representativeName = customer.RepresentativeName.Trim();
+        var representative = db.CustomerContacts.FirstOrDefault(contact =>
+            contact.CustomerId == customer.Id && contact.FullName == representativeName);
+        if (representative is null)
+        {
+            representative = new CustomerContact
+            {
+                CustomerId = customer.Id,
+                FullName = representativeName,
+                CreatedAt = now,
+                UpdatedAt = now,
+            };
+            db.CustomerContacts.Add(representative);
+        }
+        representative.IsLegalRepresentative = true;
+        representative.LegalRepresentativeSince = now;
+        db.CustomerActivities.Add(new CustomerActivity
+        {
+            CustomerId = customer.Id,
+            Type = CustomerActivityType.LegalRepresentativeAssigned,
+            OccurredAt = now,
+            Content = representativeName,
+            CreatedByUserId = ownerUserId,
+            CreatedAt = now,
+        });
     }
 
     private static void SeedOpportunities(AppDbContext db, ApplicationUser owner, DateTime now)

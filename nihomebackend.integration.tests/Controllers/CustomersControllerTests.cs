@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
+using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -443,6 +444,108 @@ public class CustomersControllerTests : IntegrationTestBase
         contacts.Count(c => c.GetProperty("isPrimary").GetBoolean()).Should().Be(1);
         contacts.First(c => c.GetProperty("isPrimary").GetBoolean())
             .GetProperty("fullName").GetString().Should().Be("Anh Backup");
+    }
+
+    [Fact]
+    public async Task Company_LegalRepresentative_IsUniqueAuditedAndCannotBeDeleted()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
+        var created = await Client.PostAsJsonAsync("/api/customers", new
+        {
+            type = "Company",
+            name = "Structured company " + Guid.NewGuid().ToString("N")[..6],
+            taxId = "TAX-" + Guid.NewGuid().ToString("N")[..8],
+            address = "1 Nguyen Trai",
+            representativeName = "Original Representative",
+            sourceCode = "marketing",
+            primaryContact = new
+            {
+                fullName = "Original Representative",
+                phone = "0911" + Random.Shared.Next(100000, 999999),
+            },
+        });
+        created.EnsureSuccessStatusCode();
+        var customer = await ReadJsonAsync(created);
+        var customerId = customer.GetProperty("id").GetInt32();
+        customer.GetProperty("contacts").EnumerateArray()
+            .Single().GetProperty("isLegalRepresentative").GetBoolean().Should().BeTrue();
+
+        var replacement = await Client.PostAsJsonAsync($"/api/customers/{customerId}/contacts", new
+        {
+            fullName = "Replacement Representative",
+            phone = "0900" + Random.Shared.Next(100000, 999999),
+            isLegalRepresentative = true,
+        });
+        replacement.EnsureSuccessStatusCode();
+        var replacementId = (await ReadJsonAsync(replacement)).GetProperty("id").GetInt32();
+
+        var detail = await ReadJsonAsync(await Client.GetAsync($"/api/customers/{customerId}"));
+        var contacts = detail.GetProperty("contacts").EnumerateArray().ToList();
+        contacts.Count(item => item.GetProperty("isLegalRepresentative").GetBoolean())
+            .Should().Be(1);
+        detail.GetProperty("legalRepresentativeContactId").GetInt32().Should().Be(replacementId);
+        detail.GetProperty("representativeName").GetString()
+            .Should().Be("Replacement Representative");
+        detail.GetProperty("activities").EnumerateArray()
+            .Count(item => item.GetProperty("type").GetString() is
+                "LegalRepresentativeAssigned" or "LegalRepresentativeCleared")
+            .Should().BeGreaterThanOrEqualTo(2);
+
+        var delete = await Client.DeleteAsync(
+            $"/api/customers/{customerId}/contacts/{replacementId}");
+        delete.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.CustomerContacts.AnyAsync(item => item.Id == replacementId)))
+            .Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task CustomerTypeChange_ClearsAndRestoresLegalRepresentative()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var created = await Client.PostAsJsonAsync("/api/customers", new
+        {
+            type = "Company",
+            name = "Type switch company " + Guid.NewGuid().ToString("N")[..6],
+            taxId = "TAX-" + Guid.NewGuid().ToString("N")[..8],
+            address = "1 Nguyen Trai",
+            representativeName = "Switch Representative",
+            sourceCode = "marketing",
+            primaryContact = new { fullName = "Switch Representative", phone = "0911" + Random.Shared.Next(100000, 999999) },
+        });
+        created.EnsureSuccessStatusCode();
+        var company = await ReadJsonAsync(created);
+        var customerId = company.GetProperty("id").GetInt32();
+
+        var individual = await Client.PutAsJsonAsync($"/api/customers/{customerId}", new
+        {
+            rowVersion = company.GetProperty("rowVersion").GetString(),
+            type = "Individual",
+            name = "Type switch individual",
+            sourceCode = "marketing",
+            relationshipStatus = "Prospect",
+        });
+        individual.EnsureSuccessStatusCode();
+        var individualBody = await ReadJsonAsync(individual);
+        individualBody.GetProperty("legalRepresentativeContactId").ValueKind.Should().Be(JsonValueKind.Null);
+        individualBody.GetProperty("contacts").EnumerateArray()
+            .Should().OnlyContain(item => !item.GetProperty("isLegalRepresentative").GetBoolean());
+
+        var restored = await Client.PutAsJsonAsync($"/api/customers/{customerId}", new
+        {
+            rowVersion = individualBody.GetProperty("rowVersion").GetString(),
+            type = "Company",
+            name = "Type switch company restored",
+            taxId = "TAX-RESTORED",
+            address = "2 Nguyen Trai",
+            representativeName = "Switch Representative",
+            sourceCode = "marketing",
+            relationshipStatus = "Prospect",
+        });
+        restored.EnsureSuccessStatusCode();
+        var restoredBody = await ReadJsonAsync(restored);
+        restoredBody.GetProperty("legalRepresentativeContactId").GetInt32().Should().BeGreaterThan(0);
+        restoredBody.GetProperty("contacts").EnumerateArray()
+            .Count(item => item.GetProperty("isLegalRepresentative").GetBoolean()).Should().Be(1);
     }
 
     [Fact]

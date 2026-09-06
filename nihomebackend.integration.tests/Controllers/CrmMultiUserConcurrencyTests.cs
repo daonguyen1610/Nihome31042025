@@ -83,6 +83,48 @@ public class CrmMultiUserConcurrencyTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task Customer_TwoActorsAssigningLegalRepresentative_PreservesSingleRepresentative()
+    {
+        var (manager, admin) = await CreateActorClientsAsync();
+        using var created = await manager.PostAsJsonAsync("/api/customers", new
+        {
+            type = "Company",
+            name = "Concurrent company " + Guid.NewGuid().ToString("N")[..6],
+            taxId = "TAX-" + Guid.NewGuid().ToString("N")[..8],
+            address = "1 Nguyen Trai",
+            representativeName = "Original Representative",
+            sourceCode = "marketing",
+            primaryContact = new { fullName = "Original Representative", phone = "0911" + Random.Shared.Next(100000, 999999) },
+        });
+        created.EnsureSuccessStatusCode();
+        var customerId = (await ReadJsonAsync(created)).GetProperty("id").GetInt32();
+
+        var responses = await Task.WhenAll(
+            manager.PostAsJsonAsync($"/api/customers/{customerId}/contacts", new
+            {
+                fullName = "Manager Representative",
+                phone = "0901000001",
+                isLegalRepresentative = true,
+            }),
+            admin.PostAsJsonAsync($"/api/customers/{customerId}/contacts", new
+            {
+                fullName = "Admin Representative",
+                phone = "0901000002",
+                isLegalRepresentative = true,
+            }));
+
+        responses.Should().OnlyContain(response =>
+            response.StatusCode == HttpStatusCode.OK ||
+            response.StatusCode == HttpStatusCode.Conflict);
+        using var currentResponse = await manager.GetAsync($"/api/customers/{customerId}");
+        currentResponse.EnsureSuccessStatusCode();
+        var current = await ReadJsonAsync(currentResponse);
+        current.GetProperty("contacts").EnumerateArray()
+            .Count(item => item.GetProperty("isLegalRepresentative").GetBoolean()).Should().Be(1);
+        foreach (var response in responses) response.Dispose();
+    }
+
+    [Fact]
     public async Task Opportunity_TwoActorsUpdatingSameVersion_OneWinsWithoutLostUpdate()
     {
         var (manager, admin) = await CreateActorClientsAsync();

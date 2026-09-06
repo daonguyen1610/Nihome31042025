@@ -550,6 +550,80 @@ public class ContractsControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task Transition_CompanyContract_RequiresTaxIdAndLegalRepresentative()
+    {
+        await AuthTestHelper.AuthenticateAsync(
+            Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "SALES_MANAGER"));
+        var customerId = await WithDbAsync(async db =>
+        {
+            var customer = new Customer
+            {
+                Type = CustomerType.Company,
+                Name = "Signing gate company",
+                Address = "1 Nguyen Trai",
+                RepresentativeName = "Legal Representative",
+                SourceCode = "marketing",
+                Contacts =
+                [
+                    new CustomerContact
+                    {
+                        FullName = "Legal Representative",
+                        IsPrimary = true,
+                        IsLegalRepresentative = true,
+                        LegalRepresentativeSince = DateTime.UtcNow,
+                    },
+                ],
+            };
+            db.Customers.Add(customer);
+            await db.SaveChangesAsync();
+            return customer.Id;
+        });
+        var contractId = await CreateContractAsync(customerId);
+
+        var missingTax = await Client.PostAsJsonAsync(
+            $"/api/contracts/{contractId}/transition",
+            new { newStatus = "Signed" });
+        missingTax.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var afterMissingTax = await WithDbAsync(db => db.Contracts.AsNoTracking()
+            .SingleAsync(item => item.Id == contractId));
+        afterMissingTax.Status.Should().Be(ContractStatus.Draft);
+        var unchangedRowVersion = afterMissingTax.RowVersion.ToArray();
+        var unchangedUpdatedAt = afterMissingTax.UpdatedAt;
+
+        await WithDbAsync(async db =>
+        {
+            var customer = await db.Customers.SingleAsync(item => item.Id == customerId);
+            customer.TaxId = "TAX-SIGNING";
+            var representative = await db.CustomerContacts.SingleAsync(item => item.CustomerId == customerId);
+            representative.IsLegalRepresentative = false;
+            representative.LegalRepresentativeSince = null;
+            await db.SaveChangesAsync();
+        });
+        var missingRepresentative = await Client.PostAsJsonAsync(
+            $"/api/contracts/{contractId}/transition",
+            new { newStatus = "Signed" });
+        missingRepresentative.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var afterMissingRepresentative = await WithDbAsync(db => db.Contracts.AsNoTracking()
+            .SingleAsync(item => item.Id == contractId));
+        afterMissingRepresentative.Status.Should().Be(ContractStatus.Draft);
+        afterMissingRepresentative.RowVersion.Should().Equal(unchangedRowVersion);
+        afterMissingRepresentative.UpdatedAt.Should().Be(unchangedUpdatedAt);
+
+        await WithDbAsync(async db =>
+        {
+            var representative = await db.CustomerContacts.SingleAsync(item => item.CustomerId == customerId);
+            representative.IsLegalRepresentative = true;
+            representative.LegalRepresentativeSince = DateTime.UtcNow;
+            await db.SaveChangesAsync();
+        });
+        var signed = await Client.PostAsJsonAsync(
+            $"/api/contracts/{contractId}/transition",
+            new { newStatus = "Signed" });
+        signed.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
     public async Task Transition_SignedToInProgress_WithoutScan_ReturnsBadRequest()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));

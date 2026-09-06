@@ -1,3 +1,4 @@
+using System.Data;
 using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Constants;
 using NihomeBackend.Data;
@@ -81,6 +82,10 @@ public class CustomerService(
                 Customer = c,
                 OwnerName = c.Owner != null ? c.Owner.FullName : null,
                 PrimaryContact = c.Contacts.Where(ct2 => ct2.IsPrimary).FirstOrDefault(),
+                LegalRepresentativeContactId = c.Contacts
+                    .Where(contact => contact.IsLegalRepresentative)
+                    .Select(contact => (int?)contact.Id)
+                    .SingleOrDefault(),
             })
             .ToListAsync(ct);
 
@@ -92,6 +97,7 @@ public class CustomerService(
             Items = rows.Select(r =>
             {
                 var mapped = MapCustomer(r.Customer, r.OwnerName, contacts: null, activities: null);
+                mapped.LegalRepresentativeContactId = r.LegalRepresentativeContactId;
                 if (r.PrimaryContact != null)
                 {
                     // List view surfaces just the primary contact so callers
@@ -173,11 +179,19 @@ public class CustomerService(
                     Phone = TrimOrNull(request.PrimaryContact.Phone),
                     Email = TrimOrNull(request.PrimaryContact.Email),
                     IsPrimary = true, // forced true — Create requires one primary contact
+                    IsLegalRepresentative = request.Type == CustomerType.Company,
+                    LegalRepresentativeSince = request.Type == CustomerType.Company ? now : null,
                     CreatedAt = now,
                     UpdatedAt = now,
                 },
             },
         };
+
+        if (request.Type == CustomerType.Company)
+        {
+            customer.Activities.Add(LegalRepresentativeActivity(
+                request.PrimaryContact.FullName.Trim(), callerUserId, now, "assigned"));
+        }
 
         db.Customers.Add(customer);
         await db.SaveChangesAsync(ct);
@@ -231,11 +245,50 @@ public class CustomerService(
             callerUserId,
             ct);
 
+        var previousRepresentative = customer.Contacts.SingleOrDefault(contact => contact.IsLegalRepresentative);
+        var previousRepresentativeName = previousRepresentative?.FullName;
         customer.Type = request.Type;
         customer.Name = request.Name.Trim();
         customer.TaxId = TrimOrNull(request.TaxId);
         customer.Address = TrimOrNull(request.Address);
-        customer.RepresentativeName = TrimOrNull(request.RepresentativeName);
+        if (request.Type == CustomerType.Company)
+        {
+            var requestedName = request.RepresentativeName!.Trim();
+            var representative = previousRepresentative
+                ?? customer.Contacts.FirstOrDefault(contact =>
+                    string.Equals(contact.FullName, requestedName, StringComparison.OrdinalIgnoreCase))
+                ?? customer.Contacts.First(contact => contact.IsPrimary);
+            foreach (var contact in customer.Contacts)
+            {
+                contact.IsLegalRepresentative = contact == representative;
+                contact.LegalRepresentativeSince = contact == representative
+                    ? contact.LegalRepresentativeSince ?? DateTime.UtcNow
+                    : null;
+            }
+            representative.FullName = requestedName;
+            representative.UpdatedAt = DateTime.UtcNow;
+            customer.RepresentativeName = representative.FullName;
+            if (previousRepresentative?.Id != representative.Id ||
+                !string.Equals(previousRepresentativeName, representative.FullName, StringComparison.Ordinal))
+            {
+                db.CustomerActivities.Add(LegalRepresentativeActivity(
+                    representative.FullName, callerUserId, DateTime.UtcNow, "assigned", customer.Id));
+            }
+        }
+        else
+        {
+            foreach (var contact in customer.Contacts)
+            {
+                contact.IsLegalRepresentative = false;
+                contact.LegalRepresentativeSince = null;
+            }
+            customer.RepresentativeName = null;
+            if (previousRepresentative is not null)
+            {
+                db.CustomerActivities.Add(LegalRepresentativeActivity(
+                    previousRepresentative.FullName, callerUserId, DateTime.UtcNow, "cleared", customer.Id));
+            }
+        }
         customer.SourceCode = sourceCode;
         customer.RelationshipStatus = request.RelationshipStatus;
         customer.OwnerUserId = request.OwnerUserId;
@@ -321,8 +374,13 @@ public class CustomerService(
         if (!canManage) throw new CustomerOperationException("Caller does not have permission to modify contacts.");
 
         ValidateContactContact(request.Phone, request.Email);
+        await using var transaction = db.Database.IsRelational()
+            ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct)
+            : null;
 
         var now = DateTime.UtcNow;
+        var previousRepresentative = customer.Contacts.SingleOrDefault(item => item.IsLegalRepresentative);
+        var previousRepresentativeName = previousRepresentative?.FullName;
         CustomerContact contact;
         if (request.Id is int id)
         {
@@ -349,6 +407,31 @@ public class CustomerService(
             customer.Contacts.Add(contact);
         }
 
+        if (customer.Type == CustomerType.Company && request.IsLegalRepresentative)
+        {
+            var representativeChanged = previousRepresentative is not null && previousRepresentative != contact;
+            foreach (var other in customer.Contacts.Where(item => item != contact))
+            {
+                other.IsLegalRepresentative = false;
+                other.LegalRepresentativeSince = null;
+            }
+            if (representativeChanged)
+            {
+                await CrmConcurrency.SaveChangesAsync(db, ct);
+            }
+            contact.IsLegalRepresentative = true;
+            contact.LegalRepresentativeSince ??= now;
+        }
+        else if (customer.Type == CustomerType.Company && previousRepresentative == contact)
+        {
+            contact.IsLegalRepresentative = true;
+        }
+        else if (customer.Type == CustomerType.Individual)
+        {
+            contact.IsLegalRepresentative = false;
+            contact.LegalRepresentativeSince = null;
+        }
+
         if (request.IsPrimary)
         {
             // Exactly one primary. Demote every other contact first.
@@ -371,8 +454,26 @@ public class CustomerService(
 
         customer.UpdatedAt = now;
         customer.UpdatedByUserId = callerUserId;
+        var currentRepresentative = customer.Contacts.SingleOrDefault(item => item.IsLegalRepresentative);
+        if (customer.Type == CustomerType.Company && currentRepresentative is null)
+        {
+            throw new CustomerOperationException(
+                "Company customers must have exactly one legal representative contact.");
+        }
+        customer.RepresentativeName = currentRepresentative?.FullName;
+        if (previousRepresentative?.Id != currentRepresentative?.Id ||
+            !string.Equals(previousRepresentativeName, currentRepresentative?.FullName, StringComparison.Ordinal))
+        {
+            db.CustomerActivities.Add(LegalRepresentativeActivity(
+                currentRepresentative?.FullName ?? previousRepresentativeName ?? string.Empty,
+                callerUserId,
+                now,
+                currentRepresentative is null ? "cleared" : "assigned",
+                customer.Id));
+        }
 
-        await db.SaveChangesAsync(ct);
+        await CrmConcurrency.SaveChangesAsync(db, ct);
+        if (transaction is not null) await transaction.CommitAsync(ct);
         return MapContact(contact);
     }
 
@@ -398,6 +499,11 @@ public class CustomerService(
         if (customer.Contacts.Count == 1)
         {
             throw new CustomerOperationException("A customer must have at least one contact — delete the customer instead.");
+        }
+        if (customer.Type == CustomerType.Company && contact.IsLegalRepresentative)
+        {
+            throw new CustomerOperationException(
+                "Assign another legal representative before deleting this contact.");
         }
 
         var wasPrimary = contact.IsPrimary;
@@ -467,6 +573,23 @@ public class CustomerService(
 
     private static string? TrimOrNull(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static CustomerActivity LegalRepresentativeActivity(
+        string representativeName,
+        int callerUserId,
+        DateTime occurredAt,
+        string action,
+        int customerId = 0) => new()
+        {
+            CustomerId = customerId,
+            Type = action == "cleared"
+                ? CustomerActivityType.LegalRepresentativeCleared
+                : CustomerActivityType.LegalRepresentativeAssigned,
+            OccurredAt = occurredAt,
+            Content = representativeName,
+            CreatedByUserId = callerUserId,
+            CreatedAt = occurredAt,
+        };
 
     private static void ValidateForType(CustomerType type, string? taxId, string? address, string? representative)
     {
@@ -572,6 +695,8 @@ public class CustomerService(
             TaxId = customer.TaxId,
             Address = customer.Address,
             RepresentativeName = customer.RepresentativeName,
+            LegalRepresentativeContactId = contacts?
+                .SingleOrDefault(contact => contact.IsLegalRepresentative)?.Id,
             SourceCode = customer.SourceCode,
             RelationshipStatus = customer.RelationshipStatus,
             OwnerUserId = customer.OwnerUserId,
@@ -613,6 +738,8 @@ public class CustomerService(
         Phone = contact.Phone,
         Email = contact.Email,
         IsPrimary = contact.IsPrimary,
+        IsLegalRepresentative = contact.IsLegalRepresentative,
+        LegalRepresentativeSince = contact.LegalRepresentativeSince,
         CreatedAt = contact.CreatedAt,
         UpdatedAt = contact.UpdatedAt,
     };
