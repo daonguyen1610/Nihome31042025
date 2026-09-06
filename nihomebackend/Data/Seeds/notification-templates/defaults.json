@@ -55,6 +55,12 @@
       "module": "permit.checklists",
       "channel": "Both",
       "adminDescription": "PM/BGĐ được cảnh báo giấy phép sắp hết hạn."
+    },
+    {
+      "code": "kpi.low-score",
+      "module": "analytics.kpi",
+      "channel": "InApp",
+      "adminDescription": "Nhân sự được cảnh báo khi KPI có dữ liệu thấp hơn ngưỡng cấu hình."
     }
   ]
 }

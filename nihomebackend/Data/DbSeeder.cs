@@ -139,6 +139,7 @@ public static class DbSeeder
         WorkflowConfigSeeder.Seed(db);
         NotificationTemplateSeeder.Seed(db);
         SeedBusinessRoleUsers(db);
+        KpiSeeder.Seed(db);
         SampleCrmDataSeeder.Seed(db, webRootPath);
     }
 

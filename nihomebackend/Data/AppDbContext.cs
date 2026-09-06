@@ -91,6 +91,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<OperationalProjectMemberRole> OperationalProjectMemberRoles => Set<OperationalProjectMemberRole>();
     public DbSet<OperationalProjectAssignment> OperationalProjectAssignments => Set<OperationalProjectAssignment>();
     public DbSet<OperationalProjectTeamHistory> OperationalProjectTeamHistory => Set<OperationalProjectTeamHistory>();
+    public DbSet<KpiDefinition> KpiDefinitions => Set<KpiDefinition>();
+    public DbSet<KpiPeriod> KpiPeriods => Set<KpiPeriod>();
+    public DbSet<KpiScoreSnapshot> KpiScoreSnapshots => Set<KpiScoreSnapshot>();
     public DbSet<DesignSchedulePhase> DesignSchedulePhases => Set<DesignSchedulePhase>();
     public DbSet<DesignScheduleTask> DesignScheduleTasks => Set<DesignScheduleTask>();
     public DbSet<DesignScheduleTaskDependency> DesignScheduleTaskDependencies => Set<DesignScheduleTaskDependency>();
@@ -1465,6 +1468,68 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.Property(item => item.ResourceType).HasMaxLength(80).IsRequired();
             b.Property(item => item.ResourceKey).HasMaxLength(120).IsRequired();
             b.HasIndex(item => new { item.ResourceType, item.ResourceKey }).IsUnique();
+        });
+
+        modelBuilder.Entity<KpiDefinition>(b =>
+        {
+            b.ToTable("kpi_definitions");
+            b.HasKey(item => item.Id);
+            b.Property(item => item.Code).HasMaxLength(80).IsRequired();
+            b.Property(item => item.RoleCode).HasMaxLength(50).IsRequired();
+            b.Property(item => item.NameKey).HasMaxLength(160).IsRequired();
+            b.Property(item => item.SourceModule).HasMaxLength(30).IsRequired();
+            b.Property(item => item.MetricCode).HasMaxLength(100).IsRequired();
+            b.Property(item => item.Weight).HasColumnType("decimal(5,4)");
+            b.Property(item => item.TargetValue).HasColumnType("decimal(18,4)");
+            b.Property(item => item.MinimumAcceptableScore).HasColumnType("decimal(8,4)");
+            b.Property(item => item.TargetDirection).HasConversion<string>().HasMaxLength(30);
+            b.Property(item => item.RowVersion).IsRowVersion();
+            b.HasIndex(item => item.Code).IsUnique();
+            b.HasIndex(item => new { item.RoleCode, item.IsActive });
+        });
+
+        modelBuilder.Entity<KpiPeriod>(b =>
+        {
+            b.ToTable("kpi_periods");
+            b.HasKey(item => item.Id);
+            b.Property(item => item.TimeZoneId).HasMaxLength(80).IsRequired();
+            b.Property(item => item.Status).HasConversion<string>().HasMaxLength(20);
+            b.Property(item => item.LockNote).HasMaxLength(1000);
+            b.Property(item => item.RowVersion).IsRowVersion();
+            b.HasOne(item => item.User).WithMany()
+                .HasForeignKey(item => item.UserId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(item => item.LockedByUser).WithMany()
+                .HasForeignKey(item => item.LockedByUserId).OnDelete(DeleteBehavior.SetNull);
+            b.HasIndex(item => new { item.Year, item.Month, item.UserId }).IsUnique();
+        });
+
+        modelBuilder.Entity<KpiScoreSnapshot>(b =>
+        {
+            b.ToTable("kpi_score_snapshots");
+            b.HasKey(item => item.Id);
+            b.Property(item => item.RawValue).HasColumnType("decimal(18,4)");
+            b.Property(item => item.DefinitionCode).HasMaxLength(80).IsRequired();
+            b.Property(item => item.DefinitionNameKey).HasMaxLength(160).IsRequired();
+            b.Property(item => item.SourceModule).HasMaxLength(30).IsRequired();
+            b.Property(item => item.MetricCode).HasMaxLength(100).IsRequired();
+            b.Property(item => item.DefinitionWeight).HasColumnType("decimal(5,4)");
+            b.Property(item => item.TargetValue).HasColumnType("decimal(18,4)");
+            b.Property(item => item.MinimumAcceptableScore).HasColumnType("decimal(8,4)");
+            b.Property(item => item.TargetDirection).HasConversion<string>().HasMaxLength(30);
+            b.Property(item => item.Numerator).HasColumnType("decimal(18,4)");
+            b.Property(item => item.Denominator).HasColumnType("decimal(18,4)");
+            b.Property(item => item.Score).HasColumnType("decimal(8,4)");
+            b.Property(item => item.WeightedScore).HasColumnType("decimal(8,4)");
+            b.Property(item => item.Status).HasConversion<string>().HasMaxLength(30);
+            b.Property(item => item.EvidenceJson).HasColumnType("nvarchar(max)");
+            b.HasOne(item => item.KpiPeriod).WithMany(period => period.ScoreSnapshots)
+                .HasForeignKey(item => item.KpiPeriodId).OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(item => item.KpiDefinition).WithMany(definition => definition.ScoreSnapshots)
+                .HasForeignKey(item => item.KpiDefinitionId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(item => item.User).WithMany()
+                .HasForeignKey(item => item.UserId).OnDelete(DeleteBehavior.Restrict);
+            b.HasIndex(item => new { item.KpiPeriodId, item.KpiDefinitionId, item.UserId }).IsUnique();
+            b.HasIndex(item => new { item.UserId, item.CalculatedAt });
         });
 
         modelBuilder.Entity<PermitChecklistItem>(b =>
