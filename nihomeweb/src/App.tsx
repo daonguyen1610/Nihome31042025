@@ -80,6 +80,7 @@ import AdminPermits from "./pages/admin/Permits.tsx";
 import AdminConstructionTasks from "./pages/admin/construction/ConstructionTasksPage.tsx";
 import AdminSiteDiary from "./pages/admin/construction/SiteDiaryPage.tsx";
 import AdminPunchList from "./pages/admin/construction/PunchListPage.tsx";
+import AdminHseViolations from "./pages/admin/construction/HseViolationsPage.tsx";
 import AdminAcceptanceRecords from "./pages/admin/construction/AcceptanceRecordsPage.tsx";
 import AdminAsBuiltDocuments from "./pages/admin/construction/AsBuiltDocumentsPage.tsx";
 import AdminAsBuiltDocumentCategories from "./pages/admin/construction/AsBuiltDocumentCategoriesPage.tsx";
@@ -223,6 +224,9 @@ const App = () => (
               </Route>
               <Route element={<RequirePermission code={ADMIN_PERMS.constructionPunch} />}>
                 <Route path="/admin/construction/punchlist" element={<AdminPunchList />} />
+              </Route>
+              <Route element={<RequirePermission code={ADMIN_PERMS.constructionHse} />}>
+                <Route path="/admin/construction/hse" element={<AdminHseViolations />} />
               </Route>
               <Route element={<RequirePermission code={ADMIN_PERMS.constructionAcceptance} />}>
                 <Route path="/admin/construction/acceptance" element={<AdminAcceptanceRecords />} />

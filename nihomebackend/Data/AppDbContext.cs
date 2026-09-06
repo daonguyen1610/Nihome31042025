@@ -130,6 +130,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
     public DbSet<PunchItem> PunchItems => Set<PunchItem>();
 
+    public DbSet<HseViolation> HseViolations => Set<HseViolation>();
+    public DbSet<HseViolationEvent> HseViolationEvents => Set<HseViolationEvent>();
+
     public DbSet<AsBuiltDocument> AsBuiltDocuments => Set<AsBuiltDocument>();
     public DbSet<AsBuiltDocumentCategory> AsBuiltDocumentCategories => Set<AsBuiltDocumentCategory>();
     public DbSet<HandoverRecord> HandoverRecords => Set<HandoverRecord>();
@@ -1854,6 +1857,63 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasIndex(p => p.Status);
             b.HasIndex(p => p.Severity);
             b.HasIndex(p => new { p.RootCause, p.ResponsibleDesignUserId, p.VerifiedAt });
+        });
+
+        modelBuilder.Entity<HseViolation>(b =>
+        {
+            b.ToTable("hse_violations");
+            b.HasKey(item => item.Id);
+            b.Property(item => item.Code).HasMaxLength(60).IsRequired();
+            b.Property(item => item.OfflineClientId).HasMaxLength(100).IsRequired();
+            b.Property(item => item.Location).HasMaxLength(300).IsRequired();
+            b.Property(item => item.Category).HasMaxLength(100).IsRequired();
+            b.Property(item => item.Severity).HasConversion<string>().HasMaxLength(30);
+            b.Property(item => item.Description).HasMaxLength(4000).IsRequired();
+            b.Property(item => item.RegulatoryReference).HasMaxLength(500);
+            b.Property(item => item.EvidenceDocumentsJson).HasMaxLength(12000).IsRequired();
+            b.Property(item => item.RemediationNote).HasMaxLength(4000);
+            b.Property(item => item.PenaltyReference).HasMaxLength(200);
+            b.Property(item => item.PenaltyAmount).HasPrecision(18, 2);
+            b.Property(item => item.Status).HasConversion<string>().HasMaxLength(30);
+            b.Property(item => item.DecisionReason).HasMaxLength(2000);
+            b.Property(item => item.RowVersion).IsRowVersion();
+
+            b.HasOne(item => item.OperationalProject).WithMany()
+                .HasForeignKey(item => item.OperationalProjectId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(item => item.ResponsibleSiteUser).WithMany()
+                .HasForeignKey(item => item.ResponsibleSiteUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(item => item.RemediationOwnerUser).WithMany()
+                .HasForeignKey(item => item.RemediationOwnerUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(item => item.ReportedBy).WithMany()
+                .HasForeignKey(item => item.ReportedByUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(item => item.ConfirmedBy).WithMany()
+                .HasForeignKey(item => item.ConfirmedByUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(item => item.ClosedBy).WithMany()
+                .HasForeignKey(item => item.ClosedByUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(item => item.CreatedBy).WithMany()
+                .HasForeignKey(item => item.CreatedByUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(item => item.UpdatedBy).WithMany()
+                .HasForeignKey(item => item.UpdatedByUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasMany(item => item.Events).WithOne(entry => entry.HseViolation)
+                .HasForeignKey(entry => entry.HseViolationId).OnDelete(DeleteBehavior.Cascade);
+
+            b.HasIndex(item => new { item.OperationalProjectId, item.Code }).IsUnique();
+            b.HasIndex(item => new { item.OperationalProjectId, item.OfflineClientId }).IsUnique();
+            b.HasIndex(item => new { item.ResponsibleSiteUserId, item.ConfirmedAt, item.Status });
+        });
+
+        modelBuilder.Entity<HseViolationEvent>(b =>
+        {
+            b.ToTable("hse_violation_events");
+            b.HasKey(entry => entry.Id);
+            b.Property(entry => entry.Type).HasConversion<string>().HasMaxLength(30);
+            b.Property(entry => entry.FromStatus).HasConversion<string>().HasMaxLength(30);
+            b.Property(entry => entry.ToStatus).HasConversion<string>().HasMaxLength(30);
+            b.Property(entry => entry.Reason).HasMaxLength(2000);
+            b.Property(entry => entry.SnapshotJson).HasMaxLength(12000).IsRequired();
+            b.HasOne(entry => entry.CreatedBy).WithMany()
+                .HasForeignKey(entry => entry.CreatedByUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasIndex(entry => new { entry.HseViolationId, entry.CreatedAt });
         });
 
         modelBuilder.Entity<AcceptanceRecord>(b =>

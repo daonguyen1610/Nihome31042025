@@ -261,6 +261,7 @@ public sealed class KpiService(AppDbContext db, INotificationService notificatio
             "DesignSiteErrorCount" => await DesignSiteErrorCountAsync(definition, userId, period, ct),
             "SiteProgressVariance" => await SiteProgressVarianceAsync(definition, userId, period, ct),
             "FirstAcceptanceRate" => await FirstAcceptanceAsync(userId, period, ct),
+            "HseViolationCount" => await HseViolationCountAsync(definition, userId, period, ct),
             "ReceivableOnTimeRate" => await ReceivableOnTimeRateAsync(userId, period, ct),
             _ => MissingData(definition, "The required source event is not implemented in the current module."),
         };
@@ -422,6 +423,24 @@ public sealed class KpiService(AppDbContext db, INotificationService notificatio
             .ToListAsync(ct);
         return Ratio("AcceptanceRecord", records.Select(item => item.Id),
             records.Count(item => item.RevisionCount == 0), records.Count);
+    }
+
+    private async Task<MetricResult> HseViolationCountAsync(
+        KpiDefinition definition,
+        int userId,
+        KpiPeriod period,
+        CancellationToken ct)
+    {
+        var ids = await db.HseViolations.AsNoTracking()
+            .Where(item => item.ResponsibleSiteUserId == userId &&
+                item.ConfirmedAt >= period.PeriodStartUtc &&
+                item.ConfirmedAt < period.PeriodEndUtc &&
+                (item.Status == HseViolationStatus.Confirmed ||
+                 item.Status == HseViolationStatus.Remediated ||
+                 item.Status == HseViolationStatus.Closed))
+            .Select(item => item.Id)
+            .ToListAsync(ct);
+        return AgainstTarget(definition, ids.Count, ids, "HseViolation");
     }
 
     private async Task<MetricResult> ReceivableOnTimeRateAsync(int userId, KpiPeriod period, CancellationToken ct)
