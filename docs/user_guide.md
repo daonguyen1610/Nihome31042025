@@ -741,8 +741,10 @@ current interface language.
 Milestone amounts are contractual schedule values, not cash, revenue, or
 receivables. Historical S-Curve, acceptance ratios, actual-ledger finance,
 inventory, BOQ usage, and vendor performance remain explicitly unavailable
-until their source data exists; the page displays their stable reason codes
-instead of calculating substitutes.
+until their source data exists. The page groups these gaps by data source and
+explains them in the selected interface language instead of calculating
+substitutes. Stable reason codes remain available in the API and exports for
+audit and integration use.
 
 | Page | Functions | Estimate |
 |------|-----------|----------|

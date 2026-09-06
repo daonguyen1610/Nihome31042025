@@ -84,5 +84,46 @@ public sealed class TranslationSeederTests : IDisposable
         Assert.All(first, pair => Assert.Equal(pair.Value, second[pair.Key]));
     }
 
+    [Fact]
+    public void Seed_ProjectReportPresentationKeysHaveAllSupportedLanguages()
+    {
+        TranslationSeeder.Seed(_db);
+        var requiredKeys = new[]
+        {
+            "projectReports.openProject",
+            "projectReports.dataQuality.summary",
+            "projectReports.reason.SOURCE_NOT_CONFIGURED",
+            "projectReports.reason.DESIGN_BASELINE_INCOMPLETE",
+            "projectReports.reason.HISTORICAL_SNAPSHOTS_UNAVAILABLE",
+            "projectReports.reason.CONSTRUCTION_WEIGHTS_UNAVAILABLE",
+            "projectReports.reason.ACCEPTANCE_OUTCOME_DATA_UNAVAILABLE",
+            "projectReports.reason.ACTUAL_FINANCE_LEDGER_UNAVAILABLE",
+            "projectReports.reason.INVENTORY_LEDGER_UNAVAILABLE",
+            "projectReports.reason.BOQ_USAGE_DATA_UNAVAILABLE",
+            "projectReports.reason.VENDOR_PERFORMANCE_DATA_UNAVAILABLE",
+            "projectReports.metric.historicalSCurve",
+            "projectReports.metric.weightedConstructionProgress",
+            "projectReports.metric.acceptanceRatios",
+            "projectReports.metric.acceptanceFirstPass",
+            "projectReports.metric.actualCashflow",
+            "projectReports.metric.actualRevenue",
+            "projectReports.metric.actualExpenditure",
+            "projectReports.metric.profitAndLoss",
+            "projectReports.metric.receivables",
+            "projectReports.metric.inventory",
+            "projectReports.metric.boqUsage",
+            "projectReports.metric.vendorPerformance",
+        };
+
+        foreach (var key in requiredKeys)
+        {
+            var translations = _db.Translations.Where(item => item.Key == key).ToList();
+            Assert.Equal(4, translations.Count);
+            Assert.Equal(new[] { "en", "ja", "vi", "zh" },
+                translations.Select(item => item.LanguageCode).OrderBy(code => code));
+            Assert.All(translations, item => Assert.False(string.IsNullOrWhiteSpace(item.Value)));
+        }
+    }
+
     public void Dispose() => _db.Dispose();
 }
