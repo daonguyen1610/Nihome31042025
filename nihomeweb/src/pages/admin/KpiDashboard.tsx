@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, BookOpen, Calculator, CheckCircle2, Download, LockKeyhole, RefreshCw, Save, ShieldAlert } from "lucide-react";
+import { AlertTriangle, BookOpen, Calculator, CheckCircle2, Download, LockKeyhole, RefreshCw, Save, ShieldAlert, SlidersHorizontal, Target, UserRoundSearch } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { PageError, PageLoading } from "@/components/PageState";
@@ -269,47 +269,77 @@ const Metric = ({ label, value }: { label: string; value: string }) => <div clas
 const KpiUsageGuide = ({ mode }: { mode: "evaluation" | "configuration" }) => {
   const { t } = useI18n();
   const isEvaluation = mode === "evaluation";
-  const items = isEvaluation
-    ? ["select", "calculate", "review", "lock"]
-    : ["weight", "target", "direction", "threshold", "active"];
+  const steps = isEvaluation
+    ? [
+        { key: "select", icon: UserRoundSearch },
+        { key: "calculate", icon: Calculator },
+        { key: "review", icon: CheckCircle2 },
+        { key: "lock", icon: LockKeyhole },
+      ]
+    : [
+        { key: "weight", icon: SlidersHorizontal },
+        { key: "target", icon: Target },
+        { key: "direction", icon: RefreshCw },
+        { key: "threshold", icon: ShieldAlert },
+        { key: "active", icon: CheckCircle2 },
+      ];
+  const statusIcons = {
+    Available: CheckCircle2,
+    MissingData: AlertTriangle,
+    MissingConfiguration: ShieldAlert,
+  } satisfies Record<KpiScoreStatus, typeof CheckCircle2>;
 
   return (
-    <Accordion type="single" collapsible defaultValue="usage" className="border-y">
+    <Accordion type="single" collapsible defaultValue="usage" className="border-y border-slate-200 bg-slate-50/70 px-4 sm:px-5">
       <AccordionItem value="usage" className="border-0">
-        <AccordionTrigger className="py-3 text-left hover:no-underline">
-          <span className="flex items-center gap-2">
-            <BookOpen className="h-4 w-4 text-primary" />
+        <AccordionTrigger className="py-4 text-left hover:no-underline">
+          <span className="flex items-center gap-3">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-primary/20 bg-primary/10 text-primary">
+              <BookOpen className="h-4 w-4" />
+            </span>
             <span>
-              <span className="block font-semibold">{t("kpi.guide.title")}</span>
-              <span className="block text-xs font-normal text-muted-foreground">
+              <span className="block text-sm font-semibold">{t("kpi.guide.title")}</span>
+              <span className="mt-0.5 block text-xs font-normal leading-5 text-muted-foreground">
                 {t(isEvaluation ? "kpi.guide.evaluation.summary" : "kpi.guide.config.summary")}
               </span>
             </span>
           </span>
         </AccordionTrigger>
-        <AccordionContent>
-          <div className={isEvaluation ? "grid gap-4 pb-4 md:grid-cols-2 xl:grid-cols-4" : "grid gap-4 pb-4 md:grid-cols-2 xl:grid-cols-5"}>
-            {items.map((item, index) => (
-              <div key={item} className="border-l-2 border-primary/50 px-3">
-                <div className="flex items-center gap-2">
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">{index + 1}</span>
-                  <p className="text-sm font-medium">{t(`kpi.guide.${isEvaluation ? "evaluation" : "config"}.${item}.title`)}</p>
+        <AccordionContent className="pb-5">
+          <div className={isEvaluation ? "grid gap-3 md:grid-cols-2 xl:grid-cols-4" : "grid gap-3 md:grid-cols-2 xl:grid-cols-5"}>
+            {steps.map(({ key, icon: StepIcon }, index) => (
+              <div key={key} className="min-h-36 rounded-md border border-slate-200 bg-background p-4 shadow-sm">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10 text-primary">
+                    <StepIcon className="h-4 w-4" />
+                  </span>
+                  <span className="text-xs font-semibold text-slate-400">{String(index + 1).padStart(2, "0")}</span>
                 </div>
-                <p className="mt-2 text-xs leading-5 text-muted-foreground">{t(`kpi.guide.${isEvaluation ? "evaluation" : "config"}.${item}.body`)}</p>
+                <p className="mt-3 text-sm font-semibold leading-5">{t(`kpi.guide.${isEvaluation ? "evaluation" : "config"}.${key}.title`)}</p>
+                <p className="mt-1.5 text-xs leading-5 text-muted-foreground">{t(`kpi.guide.${isEvaluation ? "evaluation" : "config"}.${key}.body`)}</p>
               </div>
             ))}
           </div>
           {isEvaluation && (
-            <div className="grid gap-3 border-t pt-4 md:grid-cols-3">
-              {(["Available", "MissingData", "MissingConfiguration"] as KpiScoreStatus[]).map((status) => (
-                <div key={status} className="flex items-start gap-2">
-                  <Badge variant="outline" className={statusStyle[status]}>{t(`kpi.scoreStatus.${status}`)}</Badge>
-                  <p className="text-xs leading-5 text-muted-foreground">{t(`kpi.guide.status.${status}`)}</p>
-                </div>
-              ))}
-              <p className="text-xs leading-5 text-muted-foreground md:col-span-3">
-                <strong className="text-foreground">{t("kpi.guide.lock.title")}:</strong> {t("kpi.guide.lock.body")}
-              </p>
+            <div className="mt-4 border-t border-slate-200 pt-4">
+              <div className="grid gap-3 md:grid-cols-3">
+              {(["Available", "MissingData", "MissingConfiguration"] as KpiScoreStatus[]).map((status) => {
+                const StatusIcon = statusIcons[status];
+                return (
+                  <div key={status} className="flex min-w-0 items-start gap-3 rounded-md border border-slate-200 bg-background p-3">
+                    <StatusIcon className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" />
+                    <div className="min-w-0">
+                      <Badge variant="outline" className={statusStyle[status]}>{t(`kpi.scoreStatus.${status}`)}</Badge>
+                      <p className="mt-1.5 text-xs leading-5 text-muted-foreground">{t(`kpi.guide.status.${status}`)}</p>
+                    </div>
+                  </div>
+                );
+              })}
+              </div>
+              <div className="mt-3 flex items-start gap-3 border-l-2 border-slate-400 bg-slate-100/80 px-3 py-2.5 text-xs leading-5 text-muted-foreground">
+                <LockKeyhole className="mt-0.5 h-4 w-4 shrink-0 text-slate-600" />
+                <p><strong className="text-foreground">{t("kpi.guide.lock.title")}:</strong> {t("kpi.guide.lock.body")}</p>
+              </div>
             </div>
           )}
         </AccordionContent>
