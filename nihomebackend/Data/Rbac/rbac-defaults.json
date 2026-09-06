@@ -126,6 +126,17 @@
     { "module": "proc.vendor-ratings", "action": "manage" },
     { "module": "proc.vendor-ratings", "action": "approve" },
 
+    { "module": "finance.payments", "action": "view" },
+    { "module": "finance.payments", "action": "manage" },
+    { "module": "finance.payments", "action": "approve" },
+    { "module": "finance.payments", "action": "pay" },
+    { "module": "finance.periods", "action": "view" },
+    { "module": "finance.periods", "action": "close" },
+    { "module": "finance.corrections", "action": "view" },
+    { "module": "finance.corrections", "action": "manage" },
+    { "module": "finance.corrections", "action": "approve" },
+    { "module": "finance.corrections", "action": "reverse" },
+
     { "module": "design.projects", "action": "view" },
     { "module": "design.projects", "action": "manage" },
     { "module": "design.schedule", "action": "manage" },
@@ -454,6 +465,9 @@
         "crm.customers.view.all",
         "crm.contracts.view",
         "proc.vendors.view",
+        "finance.payments.view", "finance.payments.manage", "finance.payments.pay",
+        "finance.periods.view", "finance.periods.close",
+        "finance.corrections.view", "finance.corrections.manage",
         "profile.me.*"
       ]
     },
@@ -461,7 +475,7 @@
       "patterns": ["dashboard.view", "processes.view", "master-data.view", "workflow.view", "operations.projects.view", "proc.vendors.view", "proc.boq.view", "proc.material-requests.view", "proc.warehouse.*", "profile.me.*"]
     },
     "BGD": {
-      "patterns": ["dashboard.view", "**.view", "**.view.all", "analytics.kpi.manage", "analytics.kpi.export", "crm.tenders.approve-estimate", "proc.boq.approve", "proc.material-requests.approve", "proc.vendor-ratings.approve", "system.audit.view", "profile.me.*"]
+      "patterns": ["dashboard.view", "**.view", "**.view.all", "analytics.kpi.manage", "analytics.kpi.export", "crm.tenders.approve-estimate", "proc.boq.approve", "proc.material-requests.approve", "proc.vendor-ratings.approve", "finance.payments.approve", "finance.periods.close", "finance.corrections.approve", "finance.corrections.reverse", "system.audit.view", "profile.me.*"]
     }
   }
 }

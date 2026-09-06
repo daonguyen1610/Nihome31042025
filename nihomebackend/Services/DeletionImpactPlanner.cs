@@ -375,6 +375,22 @@ internal static class DeletionImpactPlanner
             db.VendorRatings.Where(item => item.OperationalProjectId == projectId &&
                 item.Status != VendorRatingStatus.Draft && item.Status != VendorRatingStatus.Rejected), item => item.Id,
             item => item.Contract.ContractNumber, ct);
+        await AddAsync(items, "operations.financeOpenPayments", DeletionImpactActions.Unlink,
+            db.PaymentRequests.Where(item => item.Contract.OperationalProjectId == projectId &&
+                item.Status != PaymentRequestStatus.Approved && item.Status != PaymentRequestStatus.Paid), item => item.Id,
+            item => item.Code, ct);
+        await AddAsync(items, "operations.financeCommittedPayments", DeletionImpactActions.Block,
+            db.PaymentRequests.Where(item => item.Contract.OperationalProjectId == projectId &&
+                (item.Status == PaymentRequestStatus.Approved || item.Status == PaymentRequestStatus.Paid)), item => item.Id,
+            item => item.Code, ct);
+        await AddAsync(items, "operations.financeDraftCorrections", DeletionImpactActions.Delete,
+            db.AccountingCorrections.Where(item => item.OperationalProjectId == projectId &&
+                (item.Status == AccountingCorrectionStatus.Draft || item.Status == AccountingCorrectionStatus.Submitted ||
+                 item.Status == AccountingCorrectionStatus.Rejected)), item => item.Id, item => item.Code, ct);
+        await AddAsync(items, "operations.financePostedCorrections", DeletionImpactActions.Block,
+            db.AccountingCorrections.Where(item => item.OperationalProjectId == projectId &&
+                (item.Status == AccountingCorrectionStatus.Approved || item.Status == AccountingCorrectionStatus.Reversed)),
+            item => item.Id, item => item.Code, ct);
         await AddAsync(items, "operations.opportunities", DeletionImpactActions.Unlink,
             db.Opportunities.Where(item => item.OperationalProjectId == projectId), item => item.Id,
             item => item.Name, ct);

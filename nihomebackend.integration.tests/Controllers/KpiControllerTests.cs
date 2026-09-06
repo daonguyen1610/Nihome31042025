@@ -481,6 +481,128 @@ public class KpiControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task Calculate_AccountingPaymentSpeed_UsesPaidBoundaryAndAssignedAccountant()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "SUPER_ADMIN"));
+        var accountantUserId = await WithDbAsync(async db =>
+        {
+            KpiSeeder.Seed(db);
+            var accountantId = await db.Users.Where(user => user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["ACCOUNTANT"])
+                .Select(user => user.Id).SingleAsync();
+            var otherUserId = await db.Users.Where(user => user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["SALE"])
+                .Select(user => user.Id).SingleAsync();
+            var customer = new Customer { Type = CustomerType.Company, Name = "Payment KPI Customer", SourceCode = "referral" };
+            var vendor = new Vendor { VendorCode = $"KPI-{Guid.NewGuid():N}"[..16], CompanyName = "Payment KPI Vendor", VendorType = VendorType.Supplier };
+            db.AddRange(customer, vendor);
+            await db.SaveChangesAsync();
+            var contract = new Contract
+            {
+                ContractNumber = $"HD-KPI-PAY-{Guid.NewGuid():N}"[..30],
+                CustomerId = customer.Id,
+                VendorId = vendor.Id,
+                Direction = ContractDirection.Downstream,
+                Type = ContractType.Supply,
+                Status = ContractStatus.InProgress,
+            };
+            db.Contracts.Add(contract);
+            await db.SaveChangesAsync();
+            db.PaymentRequests.AddRange(
+                PaidRequest("PAY-KPI-1", "KPI-INV-1", contract.Id, vendor.Id, accountantId,
+                    new DateTime(2026, 7, 30, 17, 0, 0, DateTimeKind.Utc), new DateTime(2026, 7, 31, 17, 0, 0, DateTimeKind.Utc)),
+                PaidRequest("PAY-KPI-2", "KPI-INV-2", contract.Id, vendor.Id, accountantId,
+                    new DateTime(2026, 8, 8, 17, 0, 0, DateTimeKind.Utc), new DateTime(2026, 8, 10, 17, 0, 0, DateTimeKind.Utc)),
+                PaidRequest("PAY-KPI-3", "KPI-INV-3", contract.Id, vendor.Id, accountantId,
+                    new DateTime(2026, 8, 30, 17, 0, 0, DateTimeKind.Utc), new DateTime(2026, 8, 31, 17, 0, 0, DateTimeKind.Utc)),
+                PaidRequest("PAY-KPI-4", "KPI-INV-4", contract.Id, vendor.Id, otherUserId,
+                    new DateTime(2026, 8, 1, 17, 0, 0, DateTimeKind.Utc), new DateTime(2026, 8, 11, 17, 0, 0, DateTimeKind.Utc)));
+            await db.SaveChangesAsync();
+            return accountantId;
+        });
+
+        using var response = await SendWithIdempotencyAsync(HttpMethod.Post, "/api/kpi/calculate",
+            new { year = 2026, month = 8, userId = accountantUserId });
+        response.EnsureSuccessStatusCode();
+        var score = (await ReadJsonAsync(response)).GetProperty("scores").EnumerateArray()
+            .Single(item => item.GetProperty("code").GetString() == "ACCOUNTING_PAYMENT_SPEED");
+        score.GetProperty("status").GetString().Should().Be("Available");
+        score.GetProperty("rawValue").GetDecimal().Should().Be(36m);
+        score.GetProperty("score").GetDecimal().Should().Be(100m);
+    }
+
+    [Fact]
+    public async Task Calculate_AccountingAccuracy_CountsOriginalPostCloseCorrectionOnceAfterReversal()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "SUPER_ADMIN"));
+        var accountantUserId = await WithDbAsync(async db =>
+        {
+            KpiSeeder.Seed(db);
+            var accountantId = await db.Users.Where(user => user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["ACCOUNTANT"])
+                .Select(user => user.Id).SingleAsync();
+            var otherUserId = await db.Users.Where(user => user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["SALE"])
+                .Select(user => user.Id).SingleAsync();
+            var pmId = await db.Users.Where(user => user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["PM"])
+                .Select(user => user.Id).SingleAsync();
+            var customer = new Customer { Type = CustomerType.Company, Name = "Correction KPI Customer", SourceCode = "referral" };
+            db.Customers.Add(customer);
+            await db.SaveChangesAsync();
+            var project = new OperationalProject
+            {
+                Code = $"PJ-KPI-AC-{Guid.NewGuid():N}"[..30],
+                Name = "Correction KPI Project",
+                CustomerId = customer.Id,
+                ProjectManagerUserId = pmId,
+            };
+            var accountingPeriod = new AccountingPeriod
+            {
+                Year = 2031,
+                Month = 6,
+                PeriodStartUtc = new DateTime(2031, 5, 31, 17, 0, 0, DateTimeKind.Utc),
+                PeriodEndUtc = new DateTime(2031, 6, 30, 17, 0, 0, DateTimeKind.Utc),
+                Status = AccountingPeriodStatus.Closed,
+                ClosedAt = new DateTime(2031, 7, 2),
+                CloseReason = "June close",
+            };
+            db.AddRange(project, accountingPeriod);
+            await db.SaveChangesAsync();
+            var original = Correction("AC-KPI-1", project.Id, accountingPeriod.Id, accountantId,
+                AccountingCorrectionStatus.Reversed, new DateTime(2026, 7, 31, 17, 0, 0, DateTimeKind.Utc));
+            var differentOwner = Correction("AC-KPI-2", project.Id, accountingPeriod.Id, otherUserId,
+                AccountingCorrectionStatus.Approved, new DateTime(2026, 8, 5, 0, 0, 0, DateTimeKind.Utc));
+            var endBoundary = Correction("AC-KPI-3", project.Id, accountingPeriod.Id, accountantId,
+                AccountingCorrectionStatus.Approved, new DateTime(2026, 8, 31, 17, 0, 0, DateTimeKind.Utc));
+            db.AddRange(original, differentOwner, endBoundary);
+            await db.SaveChangesAsync();
+            db.AccountingCorrections.Add(new AccountingCorrection
+            {
+                Code = "AC-KPI-REV",
+                OperationalProjectId = project.Id,
+                AccountingPeriodId = accountingPeriod.Id,
+                SourceEntityType = nameof(Contract),
+                SourceEntityId = 1,
+                ReasonCode = "REVERSAL",
+                OriginalValue = 90m,
+                CorrectedValue = 100m,
+                ResponsibleAccountantUserId = accountantId,
+                RecordedByUserId = accountantId,
+                Status = AccountingCorrectionStatus.Approved,
+                ApprovedAt = new DateTime(2026, 8, 10, 0, 0, 0, DateTimeKind.Utc),
+                ReversalOfCorrectionId = original.Id,
+            });
+            await db.SaveChangesAsync();
+            return accountantId;
+        });
+
+        using var response = await SendWithIdempotencyAsync(HttpMethod.Post, "/api/kpi/calculate",
+            new { year = 2026, month = 8, userId = accountantUserId });
+        response.EnsureSuccessStatusCode();
+        var score = (await ReadJsonAsync(response)).GetProperty("scores").EnumerateArray()
+            .Single(item => item.GetProperty("code").GetString() == "ACCOUNTING_ACCURACY");
+        score.GetProperty("status").GetString().Should().Be("Available");
+        score.GetProperty("rawValue").GetDecimal().Should().Be(1m);
+        score.GetProperty("score").GetDecimal().Should().Be(100m);
+    }
+
+    [Fact]
     public async Task Calculate_SiteHse_UsesConfirmedAtAttributionStatusAndPeriodBoundary()
     {
         await AuthTestHelper.AuthenticateAsync(
@@ -559,6 +681,52 @@ public class KpiControllerTests : IntegrationTestBase
             ConfirmedByUserId = responsibleUserId,
             CreatedByUserId = responsibleUserId,
             UpdatedByUserId = responsibleUserId,
+        };
+
+    private static PaymentRequest PaidRequest(
+        string code,
+        string invoice,
+        int contractId,
+        int vendorId,
+        int accountantId,
+        DateTime validatedAt,
+        DateTime paidAt) => new()
+        {
+            Code = code,
+            ContractId = contractId,
+            VendorId = vendorId,
+            SupplierInvoiceNumber = invoice,
+            InvoiceDate = DateOnly.FromDateTime(validatedAt),
+            InvoiceAmount = 100m,
+            Status = PaymentRequestStatus.Paid,
+            ReceivedAt = validatedAt.AddDays(-1),
+            ValidatedAt = validatedAt,
+            AssignedAccountantUserId = accountantId,
+            PaidAt = paidAt,
+            PaidByUserId = accountantId,
+            CreatedByUserId = accountantId,
+        };
+
+    private static AccountingCorrection Correction(
+        string code,
+        int projectId,
+        int periodId,
+        int accountantId,
+        AccountingCorrectionStatus status,
+        DateTime approvedAt) => new()
+        {
+            Code = code,
+            OperationalProjectId = projectId,
+            AccountingPeriodId = periodId,
+            SourceEntityType = nameof(Contract),
+            SourceEntityId = 1,
+            ReasonCode = "AMOUNT_ERROR",
+            OriginalValue = 100m,
+            CorrectedValue = 90m,
+            ResponsibleAccountantUserId = accountantId,
+            RecordedByUserId = accountantId,
+            Status = status,
+            ApprovedAt = approvedAt,
         };
 
     private async Task<int> SeedSalesDataAsync()

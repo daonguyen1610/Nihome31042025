@@ -268,6 +268,8 @@ public sealed class KpiService(AppDbContext db, INotificationService notificatio
             "ProcurementDeliveryHours" => await ProcurementDeliveryHoursAsync(definition, userId, period, ct),
             "VendorRating" => await VendorRatingAsync(userId, period, ct),
             "ReceivableOnTimeRate" => await ReceivableOnTimeRateAsync(userId, period, ct),
+            "PartnerPaymentHours" => await PartnerPaymentHoursAsync(definition, userId, period, ct),
+            "AccountingCorrectionCount" => await AccountingCorrectionCountAsync(definition, userId, period, ct),
             _ => MissingData(definition, "The required source event is not implemented in the current module."),
         };
     }
@@ -610,6 +612,41 @@ public sealed class KpiService(AppDbContext db, INotificationService notificatio
             rows.Count(item => item.Status == PaymentMilestoneStatus.Paid &&
                 item.ActualPaymentDate <= item.DueDate),
             rows.Count);
+    }
+
+    private async Task<MetricResult> PartnerPaymentHoursAsync(
+        KpiDefinition definition,
+        int userId,
+        KpiPeriod period,
+        CancellationToken ct)
+    {
+        var rows = await db.PaymentRequests.AsNoTracking()
+            .Where(item => item.AssignedAccountantUserId == userId && item.Status == PaymentRequestStatus.Paid &&
+                item.PaidAt >= period.PeriodStartUtc && item.PaidAt < period.PeriodEndUtc)
+            .Select(item => new { item.Id, item.ValidatedAt, item.PaidAt })
+            .ToListAsync(ct);
+        if (rows.Count == 0)
+            return Missing("PaymentRequest", [], "No paid payment requests in the period.");
+        if (rows.Any(item => item.ValidatedAt == null || item.PaidAt < item.ValidatedAt))
+            return Missing("PaymentRequest", rows.Select(item => item.Id), "A paid request has invalid validation or payment timestamps.");
+        var raw = Math.Round((decimal)rows.Average(item => (item.PaidAt!.Value - item.ValidatedAt!.Value).TotalHours), 4);
+        return AgainstTarget(definition, raw, rows.Select(item => item.Id), "PaymentRequest");
+    }
+
+    private async Task<MetricResult> AccountingCorrectionCountAsync(
+        KpiDefinition definition,
+        int userId,
+        KpiPeriod period,
+        CancellationToken ct)
+    {
+        var ids = await db.AccountingCorrections.AsNoTracking()
+            .Where(item => item.ResponsibleAccountantUserId == userId && item.ReversalOfCorrectionId == null &&
+                item.AccountingPeriod.Status == AccountingPeriodStatus.Closed &&
+                (item.Status == AccountingCorrectionStatus.Approved || item.Status == AccountingCorrectionStatus.Reversed) &&
+                item.ApprovedAt >= period.PeriodStartUtc && item.ApprovedAt < period.PeriodEndUtc)
+            .Select(item => item.Id)
+            .ToListAsync(ct);
+        return AgainstTarget(definition, ids.Count, ids, "AccountingCorrection");
     }
 
     private static (DateOnly Start, DateOnly End) LocalDateRange(KpiPeriod period) =>

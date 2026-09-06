@@ -3615,6 +3615,17 @@ export interface MaterialRequestUpsertRequest { responsibleSiteUserId: number; a
 export interface ProcurementContractLineRequest { contractId: number; projectBoqLineId: number; procurementOwnerUserId: number; quantity: number; negotiatedUnitPrice: number; rowVersion?: string }
 export interface VendorRatingUpsertRequest { contractId: number; qualityScore: number; scheduleScore: number; costScore: number; hseScore: number; comments?: string | null; rowVersion?: string }
 
+// --- Finance control workflows ---------------------------------------
+
+export interface PaymentAttachmentRequest { fileName: string; filePath: string }
+export interface PaymentAttachmentResponse extends PaymentAttachmentRequest { id: number }
+export interface PaymentRequestEventResponse { id: number; fromStatus?: string | null; toStatus: string; reason?: string | null; changedByUserId: number; changedByName?: string | null; changedAt: string }
+export interface PaymentRequestResponse { id: number; code: string; contractId: number; contractNumber: string; vendorId: number; vendorName: string; contractPaymentMilestoneId?: number | null; supplierInvoiceNumber: string; invoiceDate: string; invoiceAmount: number; currency: string; status: string; receivedAt: string; validatedAt?: string | null; assignedAccountantUserId: number; assignedAccountantName?: string | null; submittedAt?: string | null; submittedByUserId?: number | null; approvedAt?: string | null; approvedByUserId?: number | null; paidAt?: string | null; paidByUserId?: number | null; rejectedAt?: string | null; cancelledAt?: string | null; decisionReason?: string | null; rowVersion: string; attachments: PaymentAttachmentResponse[]; events: PaymentRequestEventResponse[] }
+export interface PaymentRequestUpsertRequest { contractId: number; vendorId: number; contractPaymentMilestoneId?: number | null; supplierInvoiceNumber: string; invoiceDate: string; invoiceAmount: number; currency: string; receivedAt: string; assignedAccountantUserId: number; attachments: PaymentAttachmentRequest[]; rowVersion?: string }
+export interface AccountingPeriodResponse { id: number; year: number; month: number; periodStartUtc: string; periodEndUtc: string; status: string; closingAt?: string | null; closedAt?: string | null; closeReason?: string | null; rowVersion: string }
+export interface AccountingCorrectionResponse { id: number; code: string; operationalProjectId: number; projectName: string; accountingPeriodId: number; periodLabel: string; sourceEntityType: string; sourceEntityId: number; reasonCode: string; originalValue: number; correctedValue: number; currency: string; note?: string | null; responsibleAccountantUserId: number; responsibleAccountantName?: string | null; status: string; recordedByUserId: number; submittedAt?: string | null; approvedAt?: string | null; rejectedAt?: string | null; decisionReason?: string | null; reversalOfCorrectionId?: number | null; reversedAt?: string | null; rowVersion: string }
+export interface AccountingCorrectionUpsertRequest { operationalProjectId: number; accountingPeriodId: number; sourceEntityType: string; sourceEntityId: number; reasonCode: string; originalValue: number; correctedValue: number; currency: string; note?: string | null; responsibleAccountantUserId: number; rowVersion?: string }
+
 // Partial acceptance (Nghiệm thu từng phần / NIH-143)
 export type AcceptanceStatus = "Draft" | "Submitted" | "Approved" | "Rejected" | "Cancelled";
 
@@ -5110,6 +5121,36 @@ export const adminApi = {
     postIdempotent<VendorRatingResponse>(`/operational-projects/${projectId}/procurement/vendor-ratings/${id}/submit`, { rowVersion }),
   decideVendorRating: (projectId: number, id: number, approved: boolean, rowVersion: string, reason?: string) =>
     postIdempotent<VendorRatingResponse>(`/operational-projects/${projectId}/procurement/vendor-ratings/${id}/decision`, { approved, rowVersion, reason }),
+
+  listPaymentRequests: () => api.get<PaymentRequestResponse[]>("/finance/payment-requests"),
+  createPaymentRequest: (body: PaymentRequestUpsertRequest) =>
+    postIdempotent<PaymentRequestResponse>("/finance/payment-requests", body),
+  submitPaymentRequest: (id: number, rowVersion: string, reason?: string) =>
+    postIdempotent<PaymentRequestResponse>(`/finance/payment-requests/${id}/submit`, { rowVersion, reason }),
+  validatePaymentRequest: (id: number, rowVersion: string, reason?: string) =>
+    postIdempotent<PaymentRequestResponse>(`/finance/payment-requests/${id}/validate`, { rowVersion, reason }),
+  decidePaymentRequest: (id: number, approved: boolean, rowVersion: string, reason?: string) =>
+    postIdempotent<PaymentRequestResponse>(`/finance/payment-requests/${id}/decision`, { approved, rowVersion, reason }),
+  payPaymentRequest: (id: number, rowVersion: string, reason?: string) =>
+    postIdempotent<PaymentRequestResponse>(`/finance/payment-requests/${id}/pay`, { rowVersion, reason }),
+  cancelPaymentRequest: (id: number, rowVersion: string, reason?: string) =>
+    postIdempotent<PaymentRequestResponse>(`/finance/payment-requests/${id}/cancel`, { rowVersion, reason }),
+  listAccountingPeriods: () => api.get<AccountingPeriodResponse[]>("/finance/periods"),
+  createAccountingPeriod: (year: number, month: number) =>
+    postIdempotent<AccountingPeriodResponse>("/finance/periods", { year, month }),
+  startClosingAccountingPeriod: (id: number, rowVersion: string, reason?: string) =>
+    postIdempotent<AccountingPeriodResponse>(`/finance/periods/${id}/start-closing`, { rowVersion, reason }),
+  closeAccountingPeriod: (id: number, rowVersion: string, reason?: string) =>
+    postIdempotent<AccountingPeriodResponse>(`/finance/periods/${id}/close`, { rowVersion, reason }),
+  listAccountingCorrections: () => api.get<AccountingCorrectionResponse[]>("/finance/corrections"),
+  createAccountingCorrection: (body: AccountingCorrectionUpsertRequest) =>
+    postIdempotent<AccountingCorrectionResponse>("/finance/corrections", body),
+  submitAccountingCorrection: (id: number, rowVersion: string, reason?: string) =>
+    postIdempotent<AccountingCorrectionResponse>(`/finance/corrections/${id}/submit`, { rowVersion, reason }),
+  decideAccountingCorrection: (id: number, approved: boolean, rowVersion: string, reason?: string) =>
+    postIdempotent<AccountingCorrectionResponse>(`/finance/corrections/${id}/decision`, { approved, rowVersion, reason }),
+  reverseAccountingCorrection: (id: number, rowVersion: string, reason: string) =>
+    postIdempotent<AccountingCorrectionResponse>(`/finance/corrections/${id}/reverse`, { rowVersion, reason }),
 
   // Partial acceptance (NIH-143)
   listAcceptanceRecords: (params: AcceptanceRecordListParams = {}) => {
