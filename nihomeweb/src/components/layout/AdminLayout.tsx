@@ -216,7 +216,8 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
         label: t("nav.analytics"),
         icon: ChartNoAxesCombined,
         items: [
-          { to: "/admin/kpi", label: t("nav.kpi"), icon: ChartNoAxesCombined, permission: ADMIN_PERMS.kpi },
+          { to: "/admin/kpi", label: t("nav.kpi"), icon: ChartNoAxesCombined, permission: ADMIN_PERMS.kpi, end: true },
+          { to: "/admin/kpi/configuration", label: t("nav.kpiConfiguration"), icon: SlidersHorizontal, permission: ADMIN_PERMS.kpiManage },
         ],
       },
       {

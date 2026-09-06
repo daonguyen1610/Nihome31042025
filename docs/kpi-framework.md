@@ -24,6 +24,19 @@ reported as `MissingData`; it is never converted to a zero score.
 - `analytics.kpi.view` is own-scope. `view.all`, `manage`, and `export` grant
   cross-user viewing, definition/period management, and export respectively.
 
+## User interface routes
+
+- `/admin/kpi` is the KPI evaluation workspace. It selects the employee and
+  period, calculates scores, displays source evidence, exports results, and
+  locks complete periods.
+- `/admin/kpi/configuration` is the KPI definition workspace. It edits weights,
+  targets, direction, alert thresholds, and active state, and requires
+  `analytics.kpi.manage`.
+
+The evaluation route does not render or load definition configuration. The
+configuration route does not load employee dashboards or expose calculate,
+export, or period-lock actions.
+
 ## Metric traceability
 
 | Position | Metric | Weight | Source | Status |
