@@ -2466,5 +2466,9 @@
   {"key":"rbac.perm.crm.material-rates.approve.label","category":"rbac","vi":"Duyệt đơn giá vật liệu","en":"Approve material rates","zh":"批准材料单价","ja":"材料単価を承認"},
   {"key":"rbac.perm.crm.material-rates.approve.description","category":"rbac","vi":"Phê duyệt, từ chối hoặc ngừng áp dụng phiên bản đơn giá vật liệu.","en":"Approve, reject, or retire material-rate revisions.","zh":"批准、拒绝或停用材料单价版本。","ja":"材料単価の版を承認、却下、または適用終了します。"},
   {"key":"rbac.perm.crm.quotes.rate-override.label","category":"rbac","vi":"Ghi đè đơn giá báo giá","en":"Override quote rate","zh":"覆盖报价单价","ja":"見積単価を上書き"},
-  {"key":"rbac.perm.crm.quotes.rate-override.description","category":"rbac","vi":"Cho phép áp dụng đơn giá khác danh mục khi có lý do tiếng Việt hợp lệ.","en":"Apply a rate different from the catalog with a valid Vietnamese reason.","zh":"在提供有效越南语原因时应用不同于目录的单价。","ja":"有効なベトナム語理由によりカタログと異なる単価を適用します。"}
+  {"key":"rbac.perm.crm.quotes.rate-override.description","category":"rbac","vi":"Cho phép áp dụng đơn giá khác danh mục khi có lý do tiếng Việt hợp lệ.","en":"Apply a rate different from the catalog with a valid Vietnamese reason.","zh":"在提供有效越南语原因时应用不同于目录的单价。","ja":"有効なベトナム語理由によりカタログと異なる単価を適用します。"},
+  {"key":"rbac.perm.reports.projects.view.label","category":"rbac","vi":"Xem báo cáo dự án","en":"View project reports","zh":"查看项目报告","ja":"プロジェクトレポートを表示"},
+  {"key":"rbac.perm.reports.projects.view.description","category":"rbac","vi":"Xem báo cáo vận hành trong phạm vi dự án được phép truy cập.","en":"View operational reports for accessible projects.","zh":"查看有权访问项目的运营报告。","ja":"アクセス可能なプロジェクトの運用レポートを表示します。"},
+  {"key":"rbac.perm.reports.projects.export.label","category":"rbac","vi":"Xuất báo cáo dự án","en":"Export project reports","zh":"导出项目报告","ja":"プロジェクトレポートをエクスポート"},
+  {"key":"rbac.perm.reports.projects.export.description","category":"rbac","vi":"Xuất báo cáo vận hành dự án sang XLSX hoặc PDF.","en":"Export project operational reports as XLSX or PDF.","zh":"将项目运营报告导出为 XLSX 或 PDF。","ja":"プロジェクト運用レポートをXLSXまたはPDFで出力します。"}
 ]

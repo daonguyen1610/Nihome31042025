@@ -3,6 +3,11 @@ import api, { withIdempotencyKey, withIfMatch } from "@/lib/api";
 const postIdempotent = <T>(url: string, body: unknown) =>
   api.post<T>(url, body, withIdempotencyKey(crypto.randomUUID()));
 import type { ContentItem, ServiceResponse } from "@/services/contentApi";
+import type {
+  ProjectReportExportParams,
+  ProjectReportFilters,
+  ProjectReportResponse,
+} from "@/types/projectReports";
 
 const uploadBusinessDocument = (area: "vendors" | "acceptance" | "as-built" | "handover", file: File) => {
   const formData = new FormData();
@@ -5309,6 +5314,10 @@ export const adminApi = {
   // Central operational projects (NIH-460)
   listOperationalProjects: (params: OperationalProjectListParams = {}) =>
     api.get<OperationalProjectListResponse>("/operational-projects", { params }),
+  getProjectReports: (params: ProjectReportFilters = {}) =>
+    api.get<ProjectReportResponse>("/reports/projects", { params }),
+  exportProjectReports: (params: ProjectReportExportParams) =>
+    api.get<Blob>("/reports/projects/export", { params, responseType: "blob" }),
   getOperationalProject: (id: number) =>
     api.get<OperationalProjectResponse>(`/operational-projects/${id}`),
   getOperationalProjectTimeline: (id: number) =>

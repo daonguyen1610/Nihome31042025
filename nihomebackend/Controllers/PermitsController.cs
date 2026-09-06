@@ -21,6 +21,7 @@ namespace NihomeBackend.Controllers;
 [Authorize]
 public class PermitsController(
     IPermitChecklistService svc,
+    IProjectAccessService projectAccess,
     IBusinessDocumentStorageService documentStorage,
     IAuditLogger audit) : ControllerBase
 {
@@ -29,7 +30,12 @@ public class PermitsController(
     public async Task<ActionResult<PermitChecklistListResponse>> List(
         [FromQuery] PermitChecklistListParams parameters, CancellationToken ct)
     {
-        var result = await svc.ListAsync(parameters, ct);
+        var userId = GetUserId();
+        if (!userId.HasValue) return Unauthorized();
+        var accessibleIds = await projectAccess.GetAccessibleDesignProjectIdsAsync(userId.Value, ct);
+        if (parameters.DesignProjectId.HasValue && !accessibleIds.Contains(parameters.DesignProjectId.Value))
+            return NotFound();
+        var result = await svc.ListAsync(parameters, ct, accessibleIds);
         return Ok(result);
     }
 
@@ -37,6 +43,8 @@ public class PermitsController(
     [RequirePermission("permit.checklists", "view")]
     public async Task<ActionResult<PermitChecklistItemResponse>> Get(int id, CancellationToken ct)
     {
+        var userId = GetUserId();
+        if (!userId.HasValue || !await CanAccessResourceAsync(userId.Value, id, ct)) return NotFound();
         var found = await svc.GetAsync(id, ct);
         return found is null ? NotFound() : Ok(found);
     }
@@ -45,6 +53,8 @@ public class PermitsController(
     [RequirePermission("permit.checklists", "view")]
     public async Task<IActionResult> GetDocumentContent(int id, string fileName, CancellationToken ct)
     {
+        var userId = GetUserId();
+        if (!userId.HasValue || !await CanAccessResourceAsync(userId.Value, id, ct)) return NotFound();
         var permit = await svc.GetAsync(id, ct);
         if (permit is null || !new[] { permit.SubmittedFilePath, permit.IssuedFilePath }.Any(path => string.Equals(
             path,
@@ -63,6 +73,7 @@ public class PermitsController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
+        if (!await projectAccess.CanViewDesignProjectAsync(userId.Value, request.DesignProjectId, ct)) return NotFound();
         try
         {
             var response = await svc.CreateAsync(request, userId.Value, ct);
@@ -93,6 +104,7 @@ public class PermitsController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
+        if (!await CanAccessResourceAsync(userId.Value, id, ct)) return NotFound();
         try
         {
             var response = await svc.UpdateAsync(id, request, userId.Value, ct);
@@ -132,6 +144,7 @@ public class PermitsController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
+        if (!await CanAccessResourceAsync(userId.Value, id, ct)) return NotFound();
         try
         {
             var response = await svc.UploadDocumentAsync(id, kind, file, userId.Value, ct);
@@ -172,6 +185,7 @@ public class PermitsController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
+        if (!await projectAccess.CanViewDesignProjectAsync(userId.Value, projectId, ct)) return NotFound();
         try
         {
             await svc.EnsureForProjectAsync(projectId, userId.Value, ct);
@@ -186,7 +200,7 @@ public class PermitsController(
             {
                 DesignProjectId = projectId,
                 PageSize = 200,
-            }, ct);
+            }, ct, new HashSet<int> { projectId });
             return Ok(listing);
         }
         catch (PermitChecklistOperationException ex)
@@ -199,6 +213,8 @@ public class PermitsController(
     [RequirePermission("permit.checklists", "manage")]
     public async Task<IActionResult> Delete(int id, CancellationToken ct)
     {
+        var userId = GetUserId();
+        if (!userId.HasValue || !await CanAccessResourceAsync(userId.Value, id, ct)) return NotFound();
         var response = await svc.DeleteAsync(id, ct);
         if (response is null) return NotFound();
 
@@ -217,5 +233,13 @@ public class PermitsController(
     {
         var raw = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
         return int.TryParse(raw, out var id) ? id : null;
+    }
+
+    private async Task<bool> CanAccessResourceAsync(int userId, int resourceId, CancellationToken ct)
+    {
+        var projectId = await projectAccess.ResolveDesignProjectIdAsync(
+            DesignProjectResourceType.PermitChecklistItem, resourceId, ct);
+        return projectId.HasValue &&
+            await projectAccess.CanViewDesignProjectAsync(userId, projectId.Value, ct);
     }
 }

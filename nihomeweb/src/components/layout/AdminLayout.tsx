@@ -152,6 +152,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
         icon: UserPlus,
         items: [
           { to: "/admin/operational-projects", label: t("nav.operationalProjects"), icon: BriefcaseBusiness, permission: ADMIN_PERMS.operationalProjects },
+          { to: "/admin/reports/projects", label: t("nav.projectReports"), icon: ChartNoAxesCombined, permission: ADMIN_PERMS.projectReports },
           { to: "/admin/leads", label: t("nav.leads"), icon: UserPlus, permission: ADMIN_PERMS.leads },
           { to: "/admin/customers", label: t("nav.customers"), icon: UserRound, permission: ADMIN_PERMS.customers },
           { to: "/admin/opportunities", label: t("nav.opportunities"), icon: Target, permission: ADMIN_PERMS.opportunities },

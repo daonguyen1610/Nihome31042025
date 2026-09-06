@@ -19,7 +19,10 @@ public class ConstructionTaskService(
     private const int MaxPageSize = 200;
     private const int MaxBulkDelete = 100;
 
-    public async Task<ConstructionTaskListResponse> ListAsync(ConstructionTaskListParams p, CancellationToken ct = default)
+    public async Task<ConstructionTaskListResponse> ListAsync(
+        ConstructionTaskListParams p,
+        CancellationToken ct = default,
+        IReadOnlySet<int>? accessibleDesignProjectIds = null)
     {
         var page = p.Page < 1 ? 1 : p.Page;
         var pageSize = Math.Clamp(p.PageSize <= 0 ? 50 : p.PageSize, 1, MaxPageSize);
@@ -32,6 +35,8 @@ public class ConstructionTaskService(
                 .ThenInclude(pd => pd.PredecessorTask)
             .AsQueryable();
 
+        if (accessibleDesignProjectIds is not null)
+            q = q.Where(t => accessibleDesignProjectIds.Contains(t.DesignProjectId));
         if (p.DesignProjectId.HasValue) q = q.Where(t => t.DesignProjectId == p.DesignProjectId.Value);
         if (p.OwnerUserId.HasValue) q = q.Where(t => t.OwnerUserId == p.OwnerUserId.Value);
         if (!string.IsNullOrWhiteSpace(p.Status))
@@ -71,6 +76,8 @@ public class ConstructionTaskService(
         // OverdueOnly flag) so the header pills line up with the visible
         // filter set even when pagination is in play.
         var scope = db.ConstructionTasks.AsNoTracking();
+        if (accessibleDesignProjectIds is not null)
+            scope = scope.Where(t => accessibleDesignProjectIds.Contains(t.DesignProjectId));
         if (p.DesignProjectId.HasValue) scope = scope.Where(t => t.DesignProjectId == p.DesignProjectId.Value);
         if (p.OwnerUserId.HasValue) scope = scope.Where(t => t.OwnerUserId == p.OwnerUserId.Value);
         var statusCounts = await scope

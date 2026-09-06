@@ -59,6 +59,8 @@ export const ADMIN_PERMS = {
   kpiViewAll: "analytics.kpi.view.all",
   kpiManage: "analytics.kpi.manage",
   kpiExport: "analytics.kpi.export",
+  projectReports: "reports.projects.view",
+  projectReportsExport: "reports.projects.export",
   vendors: "proc.vendors.view",
   vendorsManage: "proc.vendors.manage",
   vendorsExport: "proc.vendors.export",

@@ -22,6 +22,7 @@ namespace NihomeBackend.Controllers;
 [Authorize]
 public class ConstructionTasksController(
     IConstructionTaskService svc,
+    IProjectAccessService projectAccess,
     IAuditLogger audit) : ControllerBase
 {
     [HttpGet]
@@ -29,7 +30,12 @@ public class ConstructionTasksController(
     public async Task<ActionResult<ConstructionTaskListResponse>> List(
         [FromQuery] ConstructionTaskListParams parameters, CancellationToken ct)
     {
-        var result = await svc.ListAsync(parameters, ct);
+        var userId = GetUserId();
+        if (!userId.HasValue) return Unauthorized();
+        var accessibleIds = await projectAccess.GetAccessibleDesignProjectIdsAsync(userId.Value, ct);
+        if (parameters.DesignProjectId.HasValue && !accessibleIds.Contains(parameters.DesignProjectId.Value))
+            return NotFound();
+        var result = await svc.ListAsync(parameters, ct, accessibleIds);
         return Ok(result);
     }
 
@@ -37,6 +43,8 @@ public class ConstructionTasksController(
     [RequirePermission("construction.tasks", "view")]
     public async Task<ActionResult<ConstructionTaskResponse>> Get(int id, CancellationToken ct)
     {
+        var userId = GetUserId();
+        if (!userId.HasValue || !await CanAccessResourceAsync(userId.Value, id, ct)) return NotFound();
         var found = await svc.GetAsync(id, ct);
         return found is null ? NotFound() : Ok(found);
     }
@@ -48,6 +56,7 @@ public class ConstructionTasksController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
+        if (!await projectAccess.CanViewDesignProjectAsync(userId.Value, request.DesignProjectId, ct)) return NotFound();
         try
         {
             var response = await svc.CreateAsync(request, userId.Value, ct);
@@ -74,6 +83,7 @@ public class ConstructionTasksController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
+        if (!await CanAccessResourceAsync(userId.Value, id, ct)) return NotFound();
         try
         {
             var response = await svc.UpdateAsync(id, request, userId.Value, ct);
@@ -101,6 +111,7 @@ public class ConstructionTasksController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
+        if (!await CanAccessResourceAsync(userId.Value, id, ct)) return NotFound();
         try
         {
             var response = await svc.UpdateProgressAsync(id, request, userId.Value, ct);
@@ -128,6 +139,7 @@ public class ConstructionTasksController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
+        if (!await CanAccessResourceAsync(userId.Value, id, ct)) return NotFound();
         try
         {
             var response = await svc.SetPredecessorsAsync(id, request, userId.Value, ct);
@@ -151,6 +163,8 @@ public class ConstructionTasksController(
     [RequirePermission("construction.tasks", "manage")]
     public async Task<IActionResult> Delete(int id, CancellationToken ct)
     {
+        var userId = GetUserId();
+        if (!userId.HasValue || !await CanAccessResourceAsync(userId.Value, id, ct)) return NotFound();
         try
         {
             var removed = await svc.DeleteAsync(id, ct);
@@ -175,6 +189,14 @@ public class ConstructionTasksController(
     public async Task<ActionResult<ConstructionTaskBulkDeleteResponse>> BulkDelete(
         [FromBody] BulkDeleteConstructionTasksRequest request, CancellationToken ct)
     {
+        var userId = GetUserId();
+        if (!userId.HasValue) return Unauthorized();
+        var projectIds = await projectAccess.ResolveDesignProjectIdsAsync(
+            DesignProjectResourceType.ConstructionTask, request.Ids ?? [], ct);
+        foreach (var projectId in projectIds.Values.Distinct())
+        {
+            if (!await projectAccess.CanViewDesignProjectAsync(userId.Value, projectId, ct)) return NotFound();
+        }
         try
         {
             var result = await svc.BulkDeleteAsync(request.Ids ?? new List<int>(), ct);
@@ -197,5 +219,13 @@ public class ConstructionTasksController(
     {
         var raw = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
         return int.TryParse(raw, out var id) ? id : null;
+    }
+
+    private async Task<bool> CanAccessResourceAsync(int userId, int resourceId, CancellationToken ct)
+    {
+        var projectId = await projectAccess.ResolveDesignProjectIdAsync(
+            DesignProjectResourceType.ConstructionTask, resourceId, ct);
+        return projectId.HasValue &&
+            await projectAccess.CanViewDesignProjectAsync(userId, projectId.Value, ct);
     }
 }

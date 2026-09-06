@@ -39,7 +39,10 @@ public interface IPermitChecklistService
     /// </summary>
     Task EnsureForProjectAsync(int designProjectId, int? callerUserId, CancellationToken ct = default);
 
-    Task<PermitChecklistListResponse> ListAsync(PermitChecklistListParams parameters, CancellationToken ct = default);
+    Task<PermitChecklistListResponse> ListAsync(
+        PermitChecklistListParams parameters,
+        CancellationToken ct = default,
+        IReadOnlySet<int>? accessibleDesignProjectIds = null);
 
     Task<PermitChecklistItemResponse?> GetAsync(int id, CancellationToken ct = default);
 

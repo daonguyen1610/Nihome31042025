@@ -199,6 +199,30 @@ public sealed class ProjectAccessService(AppDbContext db, IPermissionService per
             .ToHashSet();
     }
 
+    public async Task<IReadOnlySet<int>> GetAccessibleDesignProjectIdsAsync(
+        int userId,
+        CancellationToken ct = default)
+    {
+        if (await HasAdministrativeBypassAsync(userId, ct))
+        {
+            return (await db.DesignProjects.AsNoTracking()
+                .Select(project => project.Id)
+                .ToListAsync(ct))
+                .ToHashSet();
+        }
+
+        var operationalProjectIds = await GetAccessibleOperationalProjectIdsAsync(userId, ct);
+        return (await db.DesignProjects.AsNoTracking()
+            .Where(project =>
+                project.ProjectManagerUserId == userId ||
+                project.DesignLeadUserId == userId ||
+                project.OperationalProjectId.HasValue &&
+                    operationalProjectIds.Contains(project.OperationalProjectId.Value))
+            .Select(project => project.Id)
+            .ToListAsync(ct))
+            .ToHashSet();
+    }
+
     public async Task<int?> ResolveDesignCreateOperationalProjectIdAsync(
         int? operationalProjectId,
         int? contractId,
@@ -260,6 +284,12 @@ public sealed class ProjectAccessService(AppDbContext db, IPermissionService per
                         on recipient.IfcReleaseId equals release.Id
                     where ids.Contains(recipient.Id)
                     select new { recipient.Id, release.DesignProjectId })
+                .ToDictionaryAsync(item => item.Id, item => item.DesignProjectId, ct),
+            DesignProjectResourceType.ConstructionTask => await db.ConstructionTasks.AsNoTracking()
+                .Where(item => ids.Contains(item.Id))
+                .ToDictionaryAsync(item => item.Id, item => item.DesignProjectId, ct),
+            DesignProjectResourceType.PermitChecklistItem => await db.PermitChecklistItems.AsNoTracking()
+                .Where(item => ids.Contains(item.Id))
                 .ToDictionaryAsync(item => item.Id, item => item.DesignProjectId, ct),
             _ => throw new ArgumentOutOfRangeException(nameof(resourceType), resourceType, null),
         };

@@ -73,6 +73,9 @@
     { "module": "analytics.kpi", "action": "manage" },
     { "module": "analytics.kpi", "action": "export" },
 
+    { "module": "reports.projects", "action": "view" },
+    { "module": "reports.projects", "action": "export" },
+
     { "module": "crm.leads", "action": "view" },
     { "module": "crm.leads", "action": "view.all" },
     { "module": "crm.leads", "action": "manage" },
@@ -378,6 +381,7 @@
         "workflow.view",
         "operations.projects.view", "operations.projects.manage",
         "analytics.kpi.view",
+        "reports.projects.view",
         "crm.contracts.view",
         "crm.surveys.view",
         "proc.vendors.view",
@@ -462,6 +466,7 @@
         "workflow.view",
         "operations.projects.view", "operations.projects.view.all",
         "analytics.kpi.view", "analytics.kpi.view.all", "analytics.kpi.manage", "analytics.kpi.export",
+        "reports.projects.view", "reports.projects.export",
         "crm.customers.view",
         "crm.customers.view.all",
         "crm.contracts.view",
@@ -476,7 +481,7 @@
       "patterns": ["dashboard.view", "processes.view", "master-data.view", "workflow.view", "operations.projects.view", "proc.vendors.view", "proc.boq.view", "proc.material-requests.view", "proc.warehouse.*", "profile.me.*"]
     },
     "BGD": {
-      "patterns": ["dashboard.view", "**.view", "**.view.all", "analytics.kpi.manage", "analytics.kpi.export", "crm.tenders.approve-estimate", "proc.boq.approve", "proc.material-requests.approve", "proc.vendor-ratings.approve", "finance.payments.approve", "finance.periods.close", "finance.corrections.approve", "finance.corrections.reverse", "system.audit.view", "profile.me.*"]
+      "patterns": ["dashboard.view", "**.view", "**.view.all", "analytics.kpi.manage", "analytics.kpi.export", "reports.projects.export", "crm.tenders.approve-estimate", "proc.boq.approve", "proc.material-requests.approve", "proc.vendor-ratings.approve", "finance.payments.approve", "finance.periods.close", "finance.corrections.approve", "finance.corrections.reverse", "system.audit.view", "profile.me.*"]
     }
   }
 }

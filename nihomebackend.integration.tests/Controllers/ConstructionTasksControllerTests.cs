@@ -246,6 +246,38 @@ public class ConstructionTasksControllerTests : IntegrationTestBase
         (await Client.GetAsync("/api/construction-tasks/999999")).StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
+    [Fact]
+    public async Task Pm_ListAndDetail_AreRestrictedToAccessibleProjects()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var accessible = await CreateProjectForPmAsync(assignToPm: true);
+        var inaccessible = await CreateProjectForPmAsync(assignToPm: false);
+        var accessibleTask = await CreateTaskAsync(accessible, "2026-06-01", "2026-06-05");
+        var inaccessibleTask = await CreateTaskAsync(inaccessible, "2026-06-01", "2026-06-05");
+
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "PM"));
+
+        var list = await Client.GetAsync("/api/construction-tasks?pageSize=200");
+        list.StatusCode.Should().Be(HttpStatusCode.OK);
+        var ids = (await ReadJsonAsync(list)).GetProperty("items").EnumerateArray()
+            .Select(item => item.GetProperty("id").GetInt32());
+        ids.Should().Contain(accessibleTask).And.NotContain(inaccessibleTask);
+        (await Client.GetAsync($"/api/construction-tasks/{inaccessibleTask}"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await Client.PutAsJsonAsync($"/api/construction-tasks/{inaccessibleTask}", new
+        {
+            name = "Unauthorized update",
+            plannedStart = "2026-06-01",
+            plannedEnd = "2026-06-05",
+            progressPercent = 0,
+            status = "Planned",
+        })).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await WithDbAsync(db => db.ConstructionTasks
+            .Where(item => item.Id == inaccessibleTask)
+            .Select(item => item.Name)
+            .SingleAsync())).Should().NotBe("Unauthorized update");
+    }
+
     // -------- helpers --------
 
     private async Task<int> CreateProjectAsync()
@@ -260,6 +292,36 @@ public class ConstructionTasksControllerTests : IntegrationTestBase
         });
         res.EnsureSuccessStatusCode();
         return (await ReadJsonAsync(res)).GetProperty("id").GetInt32();
+    }
+
+    private async Task<int> CreateProjectForPmAsync(bool assignToPm)
+    {
+        var customerId = await FirstCustomerIdAsync();
+        var pmId = await WithDbAsync(db => db.Users
+            .Where(item => item.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["PM"])
+            .Select(item => item.Id)
+            .SingleAsync());
+        var operationalProjectId = await WithDbAsync<int>(async db =>
+        {
+            var project = new OperationalProject
+            {
+                Code = $"PJ-GANTT-SCOPE-{Guid.NewGuid():N}"[..40],
+                Name = "Construction scope fixture",
+                CustomerId = customerId,
+                ProjectManagerUserId = assignToPm ? pmId : null,
+            };
+            db.OperationalProjects.Add(project);
+            await db.SaveChangesAsync();
+            return project.Id;
+        });
+        var response = await Client.PostAsJsonAsync("/api/design-projects", new
+        {
+            name = $"Gantt scope {Guid.NewGuid():N}",
+            customerId,
+            operationalProjectId,
+        });
+        response.EnsureSuccessStatusCode();
+        return (await ReadJsonAsync(response)).GetProperty("id").GetInt32();
     }
 
     private async Task<int> CreateOperationalProjectAsync(int customerId)
