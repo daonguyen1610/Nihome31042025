@@ -702,7 +702,9 @@ permission. Update and delete requests use `rowversion`; the detail response
 also emits an ETag. `AddOperationalProjects` backfills existing design,
 contract, opportunity, and quote relationships before adding their foreign
 keys. The operational hierarchy and user workflow are documented in
-`docs/user_guide.md`.
+`docs/user_guide.md`. The deterministic historical reconciliation, dry-run,
+deployment checks, rollback plan, and API compatibility contract are documented
+in `docs/operational-project-migration.md`.
 
 The Module 2 schedule is exposed beneath
 `/api/operational-projects/{id}/design-schedule` and remains separate from
