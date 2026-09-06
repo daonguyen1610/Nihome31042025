@@ -50,15 +50,19 @@ reported as `MissingData`; it is never converted to a zero score.
 
 ## Missing-source implementation order
 
-1. Add Punch Item error-source classification for design-attributed defects.
-2. Implement structured material requests, warehouse receipts, issues, and
-   waste records.
-3. Implement per-project Vendor Rating with quality, schedule, price, and HSE
-   dimensions.
-4. Implement downstream contract or purchase-order line items linked to BOQ.
-5. Implement invoice/payment-request approval and accounting correction logs.
-6. Add accountant attribution to receivable collection events.
-7. Add final actual BOQ snapshots before enabling tender-estimate accuracy.
+The detailed data contracts, lifecycle proposals, permission boundaries, and
+decision gates are defined in [KPI Source Workflow Design](kpi-source-workflows.md).
+
+1. Approve and add the Procurement position mapping.
+2. Add Punch Item error-source classification and accountant attribution to
+  existing receivable milestones.
+3. Add structured HSE violation events.
+4. Add approved execution BOQ revisions.
+5. Add downstream contract lines, Material Requests, warehouse receipts, and
+  warehouse issues linked to the execution BOQ.
+6. Add per-project Vendor Rating with quality, schedule, cost, and HSE scores.
+7. Add Payment Request approval and payment evidence.
+8. Add Accounting Period close and Accounting Correction workflows.
 
 Each source workflow requires its own authorization, audit, migration,
 multilingual UI, integration tests, and unchanged-state checks before the
