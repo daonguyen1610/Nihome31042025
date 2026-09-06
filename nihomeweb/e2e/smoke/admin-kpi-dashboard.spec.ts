@@ -40,6 +40,7 @@ test("KPI dashboard calculates, distinguishes missing data, and locks a period",
 
   await page.goto(`${baseURL}/admin/kpi`, { waitUntil: "networkidle" });
   await expect(page.getByRole("heading", { name: /Đánh giá KPI|KPI performance|KPI 绩效|KPI評価/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Cấu hình KPI|KPI configuration|KPI 配置|KPI設定/i })).toBeHidden();
   await page.getByRole("button", { name: /Tính KPI|Calculate KPI|计算 KPI|KPIを計算/i }).click();
   await expect(page.getByText(/Tỷ lệ chuyển đổi Lead thành Hợp đồng|Lead-to-contract conversion rate|线索转合同率|リードから契約への転換率/i)).toBeVisible();
   await expect(page.getByText(/Thiếu cấu hình mục tiêu|Missing target configuration|缺少目标配置|目標設定不足/i)).toBeVisible();
@@ -50,4 +51,59 @@ test("KPI dashboard calculates, distinguishes missing data, and locks a period",
   await page.getByRole("button", { name: /Khóa kỳ|Lock period|锁定期间|期間をロック/i }).click();
   await expect(page.getByText(/Đã khóa|Locked|已锁定|ロック済み/i)).toBeVisible();
   await expect(page.getByRole("button", { name: /Tính KPI|Calculate KPI|计算 KPI|KPIを計算/i })).toBeHidden();
+});
+
+test("KPI configuration is a separate management page", async ({
+  page,
+  loginInBrowserAs,
+  baseURL,
+}) => {
+  const definition = {
+    id: 1,
+    code: "SALES_CONVERSION",
+    roleCode: "SALES",
+    nameKey: "kpi.definition.SALES_CONVERSION",
+    sourceModule: "M1",
+    metricCode: "SalesLeadConversionRate",
+    weight: 0.4,
+    targetValue: null,
+    minimumAcceptableScore: 60,
+    targetDirection: "HigherIsBetter",
+    version: 1,
+    isActive: true,
+    rowVersion: "AAAAAAAAB9M=",
+  };
+
+  await loginInBrowserAs(page, TEST_USERS.superAdmin);
+  await page.route(/\/api\/(?:v1\/)?kpi\/definitions(?:\/\d+)?$/, async route => {
+    if (route.request().method() === "PUT") {
+      const body = route.request().postDataJSON();
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ ...definition, ...body, version: 2, rowVersion: "AAAAAAAAB9Q=" }),
+      });
+      return;
+    }
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify([definition]) });
+  });
+
+  await page.goto(`${baseURL}/admin/kpi/configuration`, { waitUntil: "networkidle" });
+  await expect(page.getByRole("heading", { name: /Cấu hình KPI|KPI configuration|KPI 配置|KPI設定/i })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Tính KPI|Calculate KPI|计算 KPI|KPIを計算/i })).toBeHidden();
+  await expect(page.getByText(/Tỷ lệ chuyển đổi Lead thành Hợp đồng|Lead-to-contract conversion rate|线索转合同率|リードから契約への転換率/i)).toBeVisible();
+  await page.getByRole("button", { name: /Lưu|Save|保存/i }).click();
+  await expect(page.getByText(/Đã lưu cấu hình KPI|KPI configuration saved|KPI 配置已保存|KPI設定を保存しました/i)).toBeVisible();
+});
+
+test("KPI configuration rejects an evaluation-only user", async ({
+  page,
+  loginInBrowserAs,
+  baseURL,
+}) => {
+  await loginInBrowserAs(page, TEST_USERS.sale);
+  await page.goto(`${baseURL}/admin/kpi/configuration`, { waitUntil: "networkidle" });
+
+  await expect(page.getByRole("heading", { name: "403" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Cấu hình KPI|KPI configuration|KPI 配置|KPI設定/i })).toBeHidden();
 });

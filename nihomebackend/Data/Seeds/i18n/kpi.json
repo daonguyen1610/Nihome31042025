@@ -1,6 +1,7 @@
 [
   {"key":"nav.analytics","category":"nav","vi":"Phân tích","en":"Analytics","zh":"分析","ja":"分析"},
   {"key":"nav.kpi","category":"nav","vi":"Đánh giá KPI","en":"KPI performance","zh":"KPI 绩效","ja":"KPI評価"},
+  {"key":"nav.kpiConfiguration","category":"nav","vi":"Cấu hình KPI","en":"KPI configuration","zh":"KPI 配置","ja":"KPI設定"},
   {"key":"kpi.title","category":"kpi","vi":"Đánh giá KPI","en":"KPI performance","zh":"KPI 绩效","ja":"KPI評価"},
   {"key":"kpi.subtitle","category":"kpi","vi":"Điểm định lượng theo dữ liệu nguồn, có phiên bản, bằng chứng và khóa kỳ.","en":"Source-based scores with versions, evidence, and period locking.","zh":"基于源数据的评分，包含版本、证据和期间锁定。","ja":"ソースデータに基づく、版・根拠・期間ロック付きの評価です。"},
   {"key":"kpi.user","category":"kpi","vi":"Nhân sự","en":"Employee","zh":"员工","ja":"従業員"},
@@ -41,6 +42,7 @@
   {"key":"kpi.lock.success","category":"kpi","vi":"Kỳ KPI đã được khóa.","en":"KPI period locked.","zh":"KPI 期间已锁定。","ja":"KPI期間をロックしました。"},
   {"key":"kpi.lock.lockedBy","category":"kpi","vi":"Đã khóa bởi {name}","en":"Locked by {name}","zh":"由 {name} 锁定","ja":"{name} がロック"},
   {"key":"kpi.definition.title","category":"kpi","vi":"Cấu hình KPI","en":"KPI configuration","zh":"KPI 配置","ja":"KPI設定"},
+  {"key":"kpi.definition.listTitle","category":"kpi","vi":"Danh sách chỉ số","en":"Metric definitions","zh":"指标定义","ja":"指標定義"},
   {"key":"kpi.definition.description","category":"kpi","vi":"Mỗi lần lưu tăng phiên bản; snapshot cũ giữ nguyên phiên bản đã tính.","en":"Each save creates a new version; historical snapshots keep their calculation version.","zh":"每次保存都会生成新版本；历史快照保留计算时的版本。","ja":"保存ごとに版が増え、過去のスナップショットは計算時の版を保持します。"},
   {"key":"kpi.definition.saved","category":"kpi","vi":"Đã lưu phiên bản cấu hình KPI mới.","en":"New KPI configuration version saved.","zh":"已保存新的 KPI 配置版本。","ja":"新しいKPI設定版を保存しました。"},
   {"key":"kpi.definition.SALES_CONVERSION","category":"kpi","vi":"Tỷ lệ chuyển đổi Lead thành Hợp đồng","en":"Lead-to-contract conversion rate","zh":"线索转合同率","ja":"リードから契約への転換率"},

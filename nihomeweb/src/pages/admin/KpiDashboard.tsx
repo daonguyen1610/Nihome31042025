@@ -30,7 +30,11 @@ const statusStyle: Record<KpiScoreStatus, string> = {
   MissingConfiguration: "border-rose-200 bg-rose-50 text-rose-700",
 };
 
-const KpiDashboard = () => {
+export interface KpiDashboardProps {
+  mode?: "evaluation" | "configuration";
+}
+
+const KpiDashboard = ({ mode = "evaluation" }: KpiDashboardProps) => {
   const { t, lang } = useI18n();
   const { has } = usePermissions();
   const { toast } = useToast();
@@ -56,18 +60,29 @@ const KpiDashboard = () => {
   const number = useMemo(() => new Intl.NumberFormat(lang, { maximumFractionDigits: 2 }), [lang]);
 
   const load = useCallback(async () => {
+    if (mode === "configuration") {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await adminApi.listKpiDefinitions();
+        setDefinitions(response.data);
+      } catch (reason) {
+        setError(extractApiError(reason));
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
     if (!userId) return;
     setLoading(true);
     setError(null);
     try {
       const requests = [
         adminApi.getKpiDashboard({ year, month, userId }).catch(() => ({ data: null })),
-        canManage ? adminApi.listKpiDefinitions() : Promise.resolve({ data: [] as KpiDefinitionResponse[] }),
         canViewAll ? adminApi.listKpiEligibleUsers() : Promise.resolve({ data: [] as KpiUserOptionResponse[] }),
       ] as const;
-      const [dashboardResponse, definitionsResponse, usersResponse] = await Promise.all(requests);
+      const [dashboardResponse, usersResponse] = await Promise.all(requests);
       setDashboard(dashboardResponse.data);
-      setDefinitions(definitionsResponse.data);
       setUsers(usersResponse.data ?? []);
       if (canViewAll && !usersResponse.data.some((user) => user.userId === userId) && usersResponse.data[0]) {
         setUserId(usersResponse.data[0].userId);
@@ -77,7 +92,7 @@ const KpiDashboard = () => {
     } finally {
       setLoading(false);
     }
-  }, [canManage, canViewAll, month, userId, year]);
+  }, [canViewAll, mode, month, userId, year]);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -148,15 +163,16 @@ const KpiDashboard = () => {
       <div className="space-y-5 p-4 sm:p-6">
         <header className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-semibold">{t("kpi.title")}</h1>
-            <p className="mt-1 text-sm text-muted-foreground">{t("kpi.subtitle")}</p>
+            <h1 className="text-2xl font-semibold">{t(mode === "configuration" ? "kpi.definition.title" : "kpi.title")}</h1>
+            <p className="mt-1 text-sm text-muted-foreground">{t(mode === "configuration" ? "kpi.definition.description" : "kpi.subtitle")}</p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          {mode === "evaluation" && <div className="flex flex-wrap gap-2">
             {canExport && dashboard && <Button variant="outline" onClick={() => void exportCsv()}><Download className="mr-2 h-4 w-4" />{t("kpi.export")}</Button>}
             {dashboard?.periodStatus !== "Locked" && <Button onClick={() => void calculate()} disabled={busy}><Calculator className="mr-2 h-4 w-4" />{t("kpi.calculate.action")}</Button>}
-          </div>
+          </div>}
         </header>
 
+        {mode === "evaluation" && <>
         <section className="grid gap-3 border-y py-4 sm:grid-cols-2 lg:grid-cols-4">
           <div><Label>{t("kpi.period.year")}</Label><Input type="number" min={2020} max={2100} value={year} onChange={(event) => setYear(Number(event.target.value))} /></div>
           <div><Label>{t("kpi.period.month")}</Label><Select value={String(month)} onValueChange={(value) => setMonth(Number(value))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{Array.from({ length: 12 }, (_, index) => index + 1).map((value) => <SelectItem key={value} value={String(value)}>{value}</SelectItem>)}</SelectContent></Select></div>
@@ -195,10 +211,11 @@ const KpiDashboard = () => {
             {canManage && dashboard.periodStatus === "Open" && <section className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-end"><div className="flex-1"><Label htmlFor="kpi-lock-note">{t("kpi.lock.note")}</Label><Input id="kpi-lock-note" maxLength={1000} value={lockNote} onChange={(event) => setLockNote(event.target.value)} /></div><Button variant="outline" onClick={() => void lock()} disabled={busy}><LockKeyhole className="mr-2 h-4 w-4" />{t("kpi.lock.action")}</Button></section>}
           </>
         )}
+        </>}
 
-        {canManage && definitions.length > 0 && (
+        {mode === "configuration" && canManage && definitions.length > 0 && (
           <section className="space-y-3 border-t pt-5">
-            <div><h2 className="text-lg font-semibold">{t("kpi.definition.title")}</h2><p className="text-sm text-muted-foreground">{t("kpi.definition.description")}</p></div>
+            <div><h2 className="text-lg font-semibold">{t("kpi.definition.listTitle")}</h2><p className="text-sm text-muted-foreground">{t("kpi.definition.description")}</p></div>
             <div className="overflow-x-auto"><table className="w-full min-w-[1200px] text-sm"><thead><tr className="border-b text-left text-xs uppercase text-muted-foreground"><th className="px-3 py-3">{t("kpi.metric")}</th><th className="px-3 py-3">{t("kpi.role")}</th><th className="px-3 py-3">{t("kpi.weight")}</th><th className="px-3 py-3">{t("kpi.target")}</th><th className="px-3 py-3">{t("kpi.direction")}</th><th className="px-3 py-3">{t("kpi.threshold")}</th><th className="px-3 py-3">{t("kpi.active")}</th><th className="px-3 py-3">{t("kpi.version")}</th><th /></tr></thead><tbody>{definitions.map((definition) => <tr key={definition.id} className="border-b"><td className="px-3 py-3">{t(definition.nameKey)}</td><td className="px-3 py-3">{definition.roleCode}</td><td className="px-3 py-3"><Input className="w-24" type="number" min={0.01} max={1} step={0.01} value={definition.weight} onChange={(event) => setDefinitions((current) => current.map((item) => item.id === definition.id ? { ...item, weight: Number(event.target.value) } : item))} /></td><td className="px-3 py-3"><Input className="w-36" type="number" min={0} value={definition.targetValue ?? ""} onChange={(event) => setDefinitions((current) => current.map((item) => item.id === definition.id ? { ...item, targetValue: event.target.value === "" ? null : Number(event.target.value) } : item))} /></td><td className="px-3 py-3"><Select value={definition.targetDirection} onValueChange={(value) => setDefinitions((current) => current.map((item) => item.id === definition.id ? { ...item, targetDirection: value as KpiDefinitionResponse["targetDirection"] } : item))}><SelectTrigger className="w-44"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="HigherIsBetter">{t("kpi.direction.HigherIsBetter")}</SelectItem><SelectItem value="LowerIsBetter">{t("kpi.direction.LowerIsBetter")}</SelectItem></SelectContent></Select></td><td className="px-3 py-3"><Input className="w-28" type="number" min={0} max={100} value={definition.minimumAcceptableScore ?? ""} onChange={(event) => setDefinitions((current) => current.map((item) => item.id === definition.id ? { ...item, minimumAcceptableScore: event.target.value === "" ? null : Number(event.target.value) } : item))} /></td><td className="px-3 py-3"><Checkbox checked={definition.isActive} onCheckedChange={(value) => setDefinitions((current) => current.map((item) => item.id === definition.id ? { ...item, isActive: value === true } : item))} /></td><td className="px-3 py-3">v{definition.version}</td><td className="px-3 py-3 text-right"><Button size="sm" variant="ghost" onClick={() => void saveDefinition(definition)} disabled={busy}><Save className="mr-1 h-4 w-4" />{t("common.save")}</Button></td></tr>)}</tbody></table></div>
           </section>
         )}
