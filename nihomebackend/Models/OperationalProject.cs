@@ -26,6 +26,9 @@ public class OperationalProject : IConcurrencyTracked
     public OperationalProjectStatus Status { get; set; } = OperationalProjectStatus.Planning;
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }
+    public DateTime? CompletedAt { get; set; }
+    public int? FinalProjectBoqRevisionId { get; set; }
+    public ProjectBoqRevision? FinalProjectBoqRevision { get; set; }
     public string? Note { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
@@ -44,6 +47,11 @@ public class OperationalProject : IConcurrencyTracked
     public List<OperationalProjectAssignment> TeamAssignments { get; set; } = new();
     public List<DesignSchedulePhase> DesignSchedulePhases { get; set; } = new();
     public List<DesignScheduleTask> DesignScheduleTasks { get; set; } = new();
+    public List<ProjectBoqRevision> BoqRevisions { get; set; } = new();
+    public List<MaterialRequest> MaterialRequests { get; set; } = new();
+    public List<WarehouseReceipt> WarehouseReceipts { get; set; } = new();
+    public List<WarehouseIssue> WarehouseIssues { get; set; } = new();
+    public List<VendorRating> VendorRatings { get; set; } = new();
 }
 
 public enum OperationalProjectStatus

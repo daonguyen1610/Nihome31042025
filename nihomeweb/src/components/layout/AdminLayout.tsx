@@ -51,6 +51,7 @@ import {
   User as UserIcon,
   BriefcaseBusiness,
   ChartNoAxesCombined,
+  ShoppingCart,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { logout } from "@/lib/auth";
@@ -174,6 +175,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
         label: t("nav.procurement"),
         icon: Truck,
         items: [
+          { to: "/admin/procurement-control", label: t("nav.procurementControl"), icon: ShoppingCart, permission: ADMIN_PERMS.procurement },
           { to: "/admin/vendors", label: t("nav.vendors"), icon: Truck, permission: ADMIN_PERMS.vendors },
         ],
       },

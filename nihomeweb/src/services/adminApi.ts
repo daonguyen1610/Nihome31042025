@@ -1,4 +1,7 @@
 import api, { withIdempotencyKey, withIfMatch } from "@/lib/api";
+
+const postIdempotent = <T>(url: string, body: unknown) =>
+  api.post<T>(url, body, withIdempotencyKey(crypto.randomUUID()));
 import type { ContentItem, ServiceResponse } from "@/services/contentApi";
 
 const uploadBusinessDocument = (area: "vendors" | "acceptance" | "as-built" | "handover", file: File) => {
@@ -3596,6 +3599,22 @@ export interface PunchItemBulkDeleteResponse {
   failures: PunchItemBulkDeleteFailure[];
 }
 
+// --- Procurement control chain ---------------------------------------
+
+export interface ProjectBoqLineResponse { id: number; itemCode: string; description: string; unit: string; approvedQuantity: number; budgetUnitPrice: number; amount: number }
+export interface ProjectBoqRevisionResponse { id: number; operationalProjectId: number; revisionNumber: number; currency: string; status: string; sourceTenderEstimateRevisionId?: number | null; sourceContractAppendixId?: number | null; costTotal: number; preparedByUserId: number; preparedByName?: string | null; submittedAt?: string | null; approvedAt?: string | null; rejectedAt?: string | null; decisionReason?: string | null; isFinal: boolean; createdAt: string; rowVersion: string; lines: ProjectBoqLineResponse[] }
+export interface MaterialRequestLineResponse { id: number; projectBoqLineId: number; itemCode: string; description: string; unit: string; requestedQuantity: number; receivedQuantity: number }
+export interface MaterialRequestResponse { id: number; operationalProjectId: number; code: string; status: string; siteRequesterUserId: number; siteRequesterName?: string | null; responsibleSiteUserId: number; responsibleSiteUserName?: string | null; assignedProcurementUserId: number; assignedProcurementUserName?: string | null; requiredAt: string; note?: string | null; submittedAt?: string | null; approvedAt?: string | null; fulfilledAt?: string | null; decisionReason?: string | null; rowVersion: string; lines: MaterialRequestLineResponse[] }
+export interface ProcurementContractLineResponse { id: number; contractId: number; contractNumber: string; projectBoqLineId: number; itemCode: string; procurementOwnerUserId: number; procurementOwnerName?: string | null; quantity: number; budgetUnitPrice: number; negotiatedUnitPrice: number; rowVersion: string }
+export interface WarehouseReceiptResponse { id: number; code: string; status: string; reversalOfReceiptId?: number | null; inspectedAt: string; postedAt?: string | null; reversalReason?: string | null; rowVersion: string; lines: Array<{ id: number; materialRequestLineId: number; contractLineId?: number | null; itemCode: string; receivedQuantity: number }> }
+export interface WarehouseIssueResponse { id: number; code: string; status: string; reversalOfIssueId?: number | null; responsibleSiteUserId: number; responsibleSiteUserName?: string | null; issuedAt: string; postedAt?: string | null; workItemCode?: string | null; reversalReason?: string | null; rowVersion: string; lines: Array<{ id: number; projectBoqLineId: number; itemCode: string; issuedQuantity: number }> }
+export interface VendorRatingResponse { id: number; operationalProjectId: number; contractId: number; contractNumber: string; vendorId: number; vendorName: string; versionNumber: number; status: string; procurementOwnerUserId: number; procurementOwnerName?: string | null; qualityScore: number; scheduleScore: number; costScore: number; hseScore: number; overallScore: number; comments?: string | null; preparedByUserId: number; submittedAt?: string | null; approvedAt?: string | null; decisionReason?: string | null; supersedesVendorRatingId?: number | null; rowVersion: string }
+export interface ProcurementWorkspaceResponse { boqRevisions: ProjectBoqRevisionResponse[]; materialRequests: MaterialRequestResponse[]; contractLines: ProcurementContractLineResponse[]; receipts: WarehouseReceiptResponse[]; issues: WarehouseIssueResponse[]; vendorRatings: VendorRatingResponse[] }
+export interface ProjectBoqRevisionRequest { currency: string; sourceTenderEstimateRevisionId?: number | null; sourceContractAppendixId?: number | null; lines: Array<{ itemCode: string; description: string; unit: string; approvedQuantity: number; budgetUnitPrice: number }>; rowVersion?: string }
+export interface MaterialRequestUpsertRequest { responsibleSiteUserId: number; assignedProcurementUserId: number; requiredAt: string; note?: string | null; lines: Array<{ projectBoqLineId: number; requestedQuantity: number }>; rowVersion?: string }
+export interface ProcurementContractLineRequest { contractId: number; projectBoqLineId: number; procurementOwnerUserId: number; quantity: number; negotiatedUnitPrice: number; rowVersion?: string }
+export interface VendorRatingUpsertRequest { contractId: number; qualityScore: number; scheduleScore: number; costScore: number; hseScore: number; comments?: string | null; rowVersion?: string }
+
 // Partial acceptance (Nghiệm thu từng phần / NIH-143)
 export type AcceptanceStatus = "Draft" | "Submitted" | "Approved" | "Rejected" | "Cancelled";
 
@@ -5060,6 +5079,37 @@ export const adminApi = {
     api.delete(`/punch-items/${id}`),
   bulkDeletePunchItems: (body: BulkDeletePunchItemsRequest) =>
     api.post<PunchItemBulkDeleteResponse>("/punch-items/bulk-delete", body),
+
+  getProcurementWorkspace: (projectId: number) =>
+    api.get<ProcurementWorkspaceResponse>(`/operational-projects/${projectId}/procurement`),
+  createProjectBoqRevision: (projectId: number, body: ProjectBoqRevisionRequest) =>
+    postIdempotent<ProjectBoqRevisionResponse>(`/operational-projects/${projectId}/procurement/boq-revisions`, body),
+  submitProjectBoqRevision: (projectId: number, id: number, rowVersion: string) =>
+    postIdempotent<ProjectBoqRevisionResponse>(`/operational-projects/${projectId}/procurement/boq-revisions/${id}/submit`, { rowVersion }),
+  decideProjectBoqRevision: (projectId: number, id: number, approved: boolean, rowVersion: string, reason?: string) =>
+    postIdempotent<ProjectBoqRevisionResponse>(`/operational-projects/${projectId}/procurement/boq-revisions/${id}/decision`, { approved, rowVersion, reason }),
+  createMaterialRequest: (projectId: number, body: MaterialRequestUpsertRequest) =>
+    postIdempotent<MaterialRequestResponse>(`/operational-projects/${projectId}/procurement/material-requests`, body),
+  submitMaterialRequest: (projectId: number, id: number, rowVersion: string) =>
+    postIdempotent<MaterialRequestResponse>(`/operational-projects/${projectId}/procurement/material-requests/${id}/submit`, { rowVersion }),
+  decideMaterialRequest: (projectId: number, id: number, approved: boolean, rowVersion: string, reason?: string) =>
+    postIdempotent<MaterialRequestResponse>(`/operational-projects/${projectId}/procurement/material-requests/${id}/decision`, { approved, rowVersion, reason }),
+  createProcurementContractLine: (projectId: number, body: ProcurementContractLineRequest) =>
+    postIdempotent<ProcurementContractLineResponse>(`/operational-projects/${projectId}/procurement/contract-lines`, body),
+  createWarehouseReceipt: (projectId: number, body: { inspectedAt: string; receivedByUserId: number; lines: Array<{ materialRequestLineId: number; contractLineId?: number | null; receivedQuantity: number }> }) =>
+    postIdempotent<WarehouseReceiptResponse>(`/operational-projects/${projectId}/procurement/receipts`, body),
+  postWarehouseReceipt: (projectId: number, id: number, rowVersion: string) =>
+    postIdempotent<WarehouseReceiptResponse>(`/operational-projects/${projectId}/procurement/receipts/${id}/post`, { rowVersion }),
+  createWarehouseIssue: (projectId: number, body: { issuedAt: string; responsibleSiteUserId: number; issuedByUserId: number; workItemCode?: string; lines: Array<{ projectBoqLineId: number; issuedQuantity: number }> }) =>
+    postIdempotent<WarehouseIssueResponse>(`/operational-projects/${projectId}/procurement/issues`, body),
+  postWarehouseIssue: (projectId: number, id: number, rowVersion: string) =>
+    postIdempotent<WarehouseIssueResponse>(`/operational-projects/${projectId}/procurement/issues/${id}/post`, { rowVersion }),
+  createVendorRating: (projectId: number, body: VendorRatingUpsertRequest) =>
+    postIdempotent<VendorRatingResponse>(`/operational-projects/${projectId}/procurement/vendor-ratings`, body),
+  submitVendorRating: (projectId: number, id: number, rowVersion: string) =>
+    postIdempotent<VendorRatingResponse>(`/operational-projects/${projectId}/procurement/vendor-ratings/${id}/submit`, { rowVersion }),
+  decideVendorRating: (projectId: number, id: number, approved: boolean, rowVersion: string, reason?: string) =>
+    postIdempotent<VendorRatingResponse>(`/operational-projects/${projectId}/procurement/vendor-ratings/${id}/decision`, { approved, rowVersion, reason }),
 
   // Partial acceptance (NIH-143)
   listAcceptanceRecords: (params: AcceptanceRecordListParams = {}) => {

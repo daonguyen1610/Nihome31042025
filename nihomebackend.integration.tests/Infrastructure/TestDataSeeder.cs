@@ -35,6 +35,7 @@ public static class TestDataSeeder
             ["PM"] = "0911000005",
             ["LEGAL_OFFICER"] = "0911000015",
             ["QS"] = "0911000006",
+            ["PROCUREMENT"] = "0911000016",
             ["ACCOUNTANT"] = "0911000007",
             ["WAREHOUSE"] = "0911000008",
             ["BGD"] = "0911000009",

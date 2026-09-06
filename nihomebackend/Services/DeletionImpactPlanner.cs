@@ -336,6 +336,45 @@ internal static class DeletionImpactPlanner
         await AddAsync(items, "operations.hseViolationEvents", DeletionImpactActions.Delete,
             db.HseViolationEvents.Where(item => item.HseViolation.OperationalProjectId == projectId), item => item.Id,
             item => item.Type.ToString(), ct);
+        await AddAsync(items, "operations.procurementDraftBoqs", DeletionImpactActions.Delete,
+            db.ProjectBoqRevisions.Where(item => item.OperationalProjectId == projectId &&
+                item.Status != ProjectBoqRevisionStatus.Approved), item => item.Id,
+            item => $"BOQ-{item.RevisionNumber}", ct);
+        await AddAsync(items, "operations.procurementApprovedBoqs", DeletionImpactActions.Block,
+            db.ProjectBoqRevisions.Where(item => item.OperationalProjectId == projectId &&
+                item.Status == ProjectBoqRevisionStatus.Approved), item => item.Id,
+            item => $"BOQ-{item.RevisionNumber}", ct);
+        await AddAsync(items, "operations.procurementContractLines", DeletionImpactActions.Block,
+            db.ContractLines.Where(item => item.Contract.OperationalProjectId == projectId), item => item.Id,
+            item => item.ProjectBoqLine.ItemCode, ct);
+        await AddAsync(items, "operations.procurementOpenRequests", DeletionImpactActions.Delete,
+            db.MaterialRequests.Where(item => item.OperationalProjectId == projectId &&
+                (item.Status == MaterialRequestStatus.Draft || item.Status == MaterialRequestStatus.Rejected ||
+                 item.Status == MaterialRequestStatus.Cancelled)), item => item.Id, item => item.Code, ct);
+        await AddAsync(items, "operations.procurementCommittedRequests", DeletionImpactActions.Block,
+            db.MaterialRequests.Where(item => item.OperationalProjectId == projectId &&
+                item.Status != MaterialRequestStatus.Draft && item.Status != MaterialRequestStatus.Rejected &&
+                item.Status != MaterialRequestStatus.Cancelled), item => item.Id, item => item.Code, ct);
+        await AddAsync(items, "operations.procurementDraftReceipts", DeletionImpactActions.Delete,
+            db.WarehouseReceipts.Where(item => item.OperationalProjectId == projectId &&
+                item.Status == WarehouseLedgerStatus.Draft), item => item.Id, item => item.Code, ct);
+        await AddAsync(items, "operations.procurementPostedReceipts", DeletionImpactActions.Block,
+            db.WarehouseReceipts.Where(item => item.OperationalProjectId == projectId &&
+                item.Status != WarehouseLedgerStatus.Draft), item => item.Id, item => item.Code, ct);
+        await AddAsync(items, "operations.procurementDraftIssues", DeletionImpactActions.Delete,
+            db.WarehouseIssues.Where(item => item.OperationalProjectId == projectId &&
+                item.Status == WarehouseLedgerStatus.Draft), item => item.Id, item => item.Code, ct);
+        await AddAsync(items, "operations.procurementPostedIssues", DeletionImpactActions.Block,
+            db.WarehouseIssues.Where(item => item.OperationalProjectId == projectId &&
+                item.Status != WarehouseLedgerStatus.Draft), item => item.Id, item => item.Code, ct);
+        await AddAsync(items, "operations.procurementDraftRatings", DeletionImpactActions.Delete,
+            db.VendorRatings.Where(item => item.OperationalProjectId == projectId &&
+                (item.Status == VendorRatingStatus.Draft || item.Status == VendorRatingStatus.Rejected)), item => item.Id,
+            item => item.Contract.ContractNumber, ct);
+        await AddAsync(items, "operations.procurementApprovedRatings", DeletionImpactActions.Block,
+            db.VendorRatings.Where(item => item.OperationalProjectId == projectId &&
+                item.Status != VendorRatingStatus.Draft && item.Status != VendorRatingStatus.Rejected), item => item.Id,
+            item => item.Contract.ContractNumber, ct);
         await AddAsync(items, "operations.opportunities", DeletionImpactActions.Unlink,
             db.Opportunities.Where(item => item.OperationalProjectId == projectId), item => item.Id,
             item => item.Name, ct);

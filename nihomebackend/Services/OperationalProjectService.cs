@@ -257,6 +257,14 @@ public class OperationalProjectService(
             request.Status == OperationalProjectStatus.Completed)
         {
             await ValidateCompletionAsync(project.Id, ct);
+            project.FinalProjectBoqRevisionId = await db.ProjectBoqRevisions
+                .Where(item => item.OperationalProjectId == project.Id &&
+                    item.Status == ProjectBoqRevisionStatus.Approved)
+                .OrderByDescending(item => item.ApprovedAt)
+                .ThenByDescending(item => item.RevisionNumber)
+                .Select(item => (int?)item.Id)
+                .FirstOrDefaultAsync(ct);
+            project.CompletedAt = DateTime.UtcNow;
         }
         CrmConcurrency.Apply(db, project, request.RowVersion);
 
@@ -302,6 +310,8 @@ public class OperationalProjectService(
 
         CrmConcurrency.Apply(db, project, request.RowVersion);
         project.Status = OperationalProjectStatus.Active;
+        project.CompletedAt = null;
+        project.FinalProjectBoqRevisionId = null;
         project.Note = string.IsNullOrWhiteSpace(project.Note)
             ? $"[Reopened] {request.Reason.Trim()}"
             : $"{project.Note.TrimEnd()}\n[Reopened] {request.Reason.Trim()}";
@@ -403,6 +413,32 @@ public class OperationalProjectService(
         {
             throw new OperationalProjectOperationException(
                 "Dự án còn công việc phân công chưa hoàn tất.");
+        }
+        if (await db.ProjectBoqRevisions.AsNoTracking().AnyAsync(item =>
+                item.OperationalProjectId == projectId, ct) &&
+            !await db.ProjectBoqRevisions.AsNoTracking().AnyAsync(item =>
+                item.OperationalProjectId == projectId && item.Status == ProjectBoqRevisionStatus.Approved, ct))
+        {
+            throw new OperationalProjectOperationException(
+                "Dự án có BOQ thi công nhưng chưa có phiên bản được duyệt.");
+        }
+        if (await db.MaterialRequests.AsNoTracking().AnyAsync(item =>
+            item.OperationalProjectId == projectId &&
+            (item.Status == MaterialRequestStatus.Draft ||
+             item.Status == MaterialRequestStatus.Submitted ||
+             item.Status == MaterialRequestStatus.Approved ||
+             item.Status == MaterialRequestStatus.PartiallyFulfilled), ct))
+        {
+            throw new OperationalProjectOperationException(
+                "Dự án còn yêu cầu vật tư chưa hoàn tất hoặc chưa hủy.");
+        }
+        if (await db.WarehouseReceipts.AsNoTracking().AnyAsync(item =>
+                item.OperationalProjectId == projectId && item.Status == WarehouseLedgerStatus.Draft, ct) ||
+            await db.WarehouseIssues.AsNoTracking().AnyAsync(item =>
+                item.OperationalProjectId == projectId && item.Status == WarehouseLedgerStatus.Draft, ct))
+        {
+            throw new OperationalProjectOperationException(
+                "Dự án còn phiếu nhập hoặc xuất kho chưa ghi sổ.");
         }
         if (await db.DesignSchedulePhases.AsNoTracking().AnyAsync(item =>
             item.OperationalProjectId == projectId &&
@@ -578,6 +614,8 @@ public class OperationalProjectService(
         Status = project.Status.ToString(),
         StartDate = project.StartDate,
         EndDate = project.EndDate,
+        CompletedAt = project.CompletedAt,
+        FinalProjectBoqRevisionId = project.FinalProjectBoqRevisionId,
         Note = project.Note,
         OpportunityCount = project.Opportunities.Count,
         QuoteCount = project.Quotes.Count,

@@ -16,6 +16,7 @@ const PAGES = [
   "/admin/quotes",
   "/admin/material-rates",
   "/admin/contracts",
+  "/admin/procurement-control",
   "/admin/design-projects",
   "/admin/tenders",
   "/admin/surveys",
@@ -48,6 +49,22 @@ for (const path of PAGES) {
     expect(errors, `${path} logged: ${errors.join(" | ")}`).toEqual([]);
   });
 }
+
+test("procurement control renders at mobile width without horizontal page overflow", async ({
+  page,
+  loginInBrowserAs,
+}) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await loginInBrowserAs(page, TEST_USERS.superAdmin);
+  await page.goto("/admin/procurement-control");
+
+  await expect(page.locator("h1")).toBeVisible({ timeout: 15_000 });
+  const dimensions = await page.locator("html").evaluate((element) => ({
+    clientWidth: element.clientWidth,
+    scrollWidth: element.scrollWidth,
+  }));
+  expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth);
+});
 
 /**
  * NIH-444 — the matrix is long, and scrolling used to carry the role names off

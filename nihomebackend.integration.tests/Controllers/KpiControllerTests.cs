@@ -106,6 +106,164 @@ public class KpiControllerTests : IntegrationTestBase
             .Single(item => item.GetProperty("code").GetString() == "SALES_REVENUE");
         revenueScore.GetProperty("rawValue").GetDecimal().Should().Be(100_000_000m);
         revenueScore.GetProperty("score").GetDecimal().Should().Be(50m);
+
+        async Task ValidateProcurementAndMaterialMetricsAsync()
+        {
+            await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "SUPER_ADMIN"));
+            var users = await WithDbAsync(async db =>
+            {
+                KpiSeeder.Seed(db);
+                var procurementUserId = await db.Users
+                    .Where(user => user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["PROCUREMENT"])
+                    .Select(user => user.Id).SingleAsync();
+                var pmUserId = await db.Users
+                    .Where(user => user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["PM"])
+                    .Select(user => user.Id).SingleAsync();
+                var tenderUserId = await db.Users
+                    .Where(user => user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["QS"])
+                    .Select(user => user.Id).SingleAsync();
+                var customer = new Customer { Type = CustomerType.Company, Name = "KPI Procurement Customer", SourceCode = "referral" };
+                var vendor = new Vendor { VendorCode = $"KPI-{Guid.NewGuid():N}"[..20], CompanyName = "KPI Supplier", VendorType = VendorType.Supplier, CreatedByUserId = procurementUserId };
+                db.AddRange(customer, vendor);
+                await db.SaveChangesAsync();
+                var project = new OperationalProject { Code = $"PJ-KPI-PROC-{Guid.NewGuid():N}"[..32], Name = "KPI Procurement", CustomerId = customer.Id, ProjectManagerUserId = pmUserId };
+                db.OperationalProjects.Add(project);
+                await db.SaveChangesAsync();
+                var tender = new Tender
+                {
+                    Code = $"TD-KPI-{Guid.NewGuid():N}"[..24],
+                    Name = "KPI Tender",
+                    CustomerId = customer.Id,
+                    SubmissionDeadline = new DateTime(2026, 7, 1),
+                    PreparerUserId = tenderUserId,
+                    Status = TenderStatus.Won,
+                    ClosedAt = new DateTime(2026, 7, 2, 0, 0, 0, DateTimeKind.Utc),
+                };
+                db.Tenders.Add(tender);
+                await db.SaveChangesAsync();
+                var estimate = new TenderEstimateRevision
+                {
+                    TenderId = tender.Id,
+                    VersionNumber = 1,
+                    Status = TenderEstimateRevisionStatus.Approved,
+                    Currency = "VND",
+                    CostSubtotal = 10_000m,
+                    BidSubtotal = 11_000m,
+                    GrandBidTotal = 11_000m,
+                    SourceFileName = "kpi.xlsx",
+                    SourceSha256 = new string('a', 64),
+                    ImportedByUserId = tenderUserId,
+                    ImportedAt = new DateTime(2026, 7, 1, 0, 0, 0, DateTimeKind.Utc),
+                    ApprovedByUserId = pmUserId,
+                    ApprovedAt = new DateTime(2026, 7, 2, 0, 0, 0, DateTimeKind.Utc),
+                };
+                db.TenderEstimateRevisions.Add(estimate);
+                await db.SaveChangesAsync();
+                var boq = new ProjectBoqRevision
+                {
+                    OperationalProjectId = project.Id,
+                    RevisionNumber = 1,
+                    Status = ProjectBoqRevisionStatus.Approved,
+                    Currency = "VND",
+                    CostTotal = 10_000m,
+                    PreparedByUserId = procurementUserId,
+                    ApprovedByUserId = pmUserId,
+                    ApprovedAt = new DateTime(2026, 7, 25, 0, 0, 0, DateTimeKind.Utc),
+                    SourceTenderEstimateRevisionId = estimate.Id,
+                    Lines = [new ProjectBoqLine { ItemCode = "MAT-1", Description = "Material", Unit = "kg", ApprovedQuantity = 100m, BudgetUnitPrice = 100m, Amount = 10_000m }],
+                };
+                db.ProjectBoqRevisions.Add(boq);
+                await db.SaveChangesAsync();
+                project.FinalProjectBoqRevisionId = boq.Id;
+                project.Status = OperationalProjectStatus.Completed;
+                project.CompletedAt = new DateTime(2026, 8, 28, 0, 0, 0, DateTimeKind.Utc);
+                var contract = new Contract
+                {
+                    ContractNumber = $"HD-KPI-PROC-{Guid.NewGuid():N}"[..30],
+                    CustomerId = customer.Id,
+                    VendorId = vendor.Id,
+                    OperationalProjectId = project.Id,
+                    Direction = ContractDirection.Downstream,
+                    Type = ContractType.Supply,
+                    Status = ContractStatus.Signed,
+                    SignedDate = new DateTime(2026, 8, 5, 0, 0, 0, DateTimeKind.Utc),
+                    Value = 9_000m,
+                };
+                db.Contracts.Add(contract);
+                await db.SaveChangesAsync();
+                db.ContractLines.Add(new ContractLine { ContractId = contract.Id, ProjectBoqLineId = boq.Lines[0].Id, ProcurementOwnerUserId = procurementUserId, Quantity = 100m, NegotiatedUnitPrice = 90m });
+                db.MaterialRequests.Add(new MaterialRequest
+                {
+                    OperationalProjectId = project.Id,
+                    Code = "MR-KPI-1",
+                    SiteRequesterUserId = pmUserId,
+                    ResponsibleSiteUserId = pmUserId,
+                    AssignedProcurementUserId = procurementUserId,
+                    RequiredAt = new DateTime(2026, 8, 10, 0, 0, 0, DateTimeKind.Utc),
+                    Status = MaterialRequestStatus.Fulfilled,
+                    ApprovedAt = new DateTime(2026, 8, 1, 0, 0, 0, DateTimeKind.Utc),
+                    FulfilledAt = new DateTime(2026, 8, 2, 0, 0, 0, DateTimeKind.Utc),
+                    Lines = [new MaterialRequestLine { ProjectBoqLineId = boq.Lines[0].Id, RequestedQuantity = 100m }],
+                });
+                db.WarehouseIssues.Add(new WarehouseIssue
+                {
+                    OperationalProjectId = project.Id,
+                    Code = "WI-KPI-1",
+                    ResponsibleSiteUserId = pmUserId,
+                    IssuedByUserId = procurementUserId,
+                    IssuedAt = new DateTime(2026, 8, 8, 0, 0, 0, DateTimeKind.Utc),
+                    PostedAt = new DateTime(2026, 8, 8, 1, 0, 0, DateTimeKind.Utc),
+                    PostedByUserId = procurementUserId,
+                    Status = WarehouseLedgerStatus.Posted,
+                    Lines = [new WarehouseIssueLine { ProjectBoqLineId = boq.Lines[0].Id, IssuedQuantity = 110m }],
+                });
+                db.VendorRatings.Add(new VendorRating
+                {
+                    OperationalProjectId = project.Id,
+                    ContractId = contract.Id,
+                    VendorId = vendor.Id,
+                    VersionNumber = 1,
+                    Status = VendorRatingStatus.Approved,
+                    ProcurementOwnerUserId = procurementUserId,
+                    QualityScore = 80m,
+                    ScheduleScore = 80m,
+                    CostScore = 80m,
+                    HseScore = 80m,
+                    OverallScore = 80m,
+                    PreparedByUserId = procurementUserId,
+                    ApprovedByUserId = pmUserId,
+                    ApprovedAt = new DateTime(2026, 8, 20, 0, 0, 0, DateTimeKind.Utc),
+                });
+                var delivery = await db.KpiDefinitions.SingleAsync(item => item.Code == "PROCUREMENT_ON_TIME");
+                delivery.TargetValue = 48m;
+                var waste = await db.KpiDefinitions.SingleAsync(item => item.Code == "SITE_MATERIAL_WASTE");
+                waste.TargetValue = 10m;
+                await db.SaveChangesAsync();
+                return new { procurementUserId, pmUserId, tenderUserId };
+            });
+
+            using var procurementResponse = await SendWithIdempotencyAsync(HttpMethod.Post, "/api/kpi/calculate", new { year = 2026, month = 8, userId = users.procurementUserId });
+            procurementResponse.EnsureSuccessStatusCode();
+            var procurement = await ReadJsonAsync(procurementResponse);
+            var procurementScores = procurement.GetProperty("scores").EnumerateArray().ToList();
+            procurementScores.Single(item => item.GetProperty("code").GetString() == "PROCUREMENT_COST").GetProperty("score").GetDecimal().Should().Be(10m);
+            procurementScores.Single(item => item.GetProperty("code").GetString() == "PROCUREMENT_ON_TIME").GetProperty("rawValue").GetDecimal().Should().Be(24m);
+            procurementScores.Single(item => item.GetProperty("code").GetString() == "PROCUREMENT_VENDOR_RATING").GetProperty("score").GetDecimal().Should().Be(80m);
+
+            using var siteResponse = await SendWithIdempotencyAsync(HttpMethod.Post, "/api/kpi/calculate", new { year = 2026, month = 8, userId = users.pmUserId });
+            siteResponse.EnsureSuccessStatusCode();
+            var site = await ReadJsonAsync(siteResponse);
+            var wasteScore = site.GetProperty("scores").EnumerateArray().Single(item => item.GetProperty("code").GetString() == "SITE_MATERIAL_WASTE");
+            wasteScore.GetProperty("rawValue").GetDecimal().Should().Be(10m);
+            wasteScore.GetProperty("score").GetDecimal().Should().Be(100m);
+
+            using var tenderResponse = await SendWithIdempotencyAsync(HttpMethod.Post, "/api/kpi/calculate", new { year = 2026, month = 8, userId = users.tenderUserId });
+            tenderResponse.EnsureSuccessStatusCode();
+            var tenderDashboard = await ReadJsonAsync(tenderResponse);
+            var accuracy = tenderDashboard.GetProperty("scores").EnumerateArray().Single(item => item.GetProperty("code").GetString() == "TENDER_ESTIMATE_ACCURACY");
+            accuracy.GetProperty("score").GetDecimal().Should().Be(100m);
+        }
+        await ValidateProcurementAndMaterialMetricsAsync();
         revenueScore.GetProperty("status").GetString().Should().Be("Available");
         (await WithDbAsync(db => db.Notifications.CountAsync(item =>
             item.UserId == saleUserId && item.Module == "analytics.kpi" &&

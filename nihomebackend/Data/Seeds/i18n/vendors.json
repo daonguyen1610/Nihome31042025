@@ -1,5 +1,6 @@
 [
   { "key": "nav.procurement", "category": "proc", "vi": "Mua sắm", "en": "Procurement", "zh": "采购", "ja": "調達" },
+  { "key": "nav.procurementControl", "category": "proc", "vi": "Kiểm soát mua sắm", "en": "Procurement control", "zh": "采购管控", "ja": "調達管理" },
   { "key": "nav.vendors", "category": "proc", "vi": "Nhà cung cấp / Thầu phụ", "en": "Vendors / Subcontractors", "zh": "供应商 / 分包商", "ja": "仕入先 / 下請業者" },
   { "key": "proc.vendors.title", "category": "proc", "vi": "Nhà cung cấp / Thầu phụ", "en": "Vendors / Subcontractors", "zh": "供应商 / 分包商", "ja": "仕入先 / 下請業者" },
   { "key": "proc.vendors.subtitle", "category": "proc", "vi": "Quản lý hồ sơ và trạng thái đối tác mua sắm.", "en": "Manage procurement partner profiles and status.", "zh": "管理采购合作伙伴资料和状态。", "ja": "調達パートナーの情報と状態を管理します。" },

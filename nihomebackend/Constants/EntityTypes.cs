@@ -21,6 +21,12 @@ public static class EntityTypes
     public const string CustomerActivity = "CustomerActivity";
     public const string CustomerDocument = "CustomerDocument";
     public const string Vendor = "Vendor";
+    public const string ProjectBoqRevision = "ProjectBoqRevision";
+    public const string MaterialRequest = "MaterialRequest";
+    public const string ContractLine = "ContractLine";
+    public const string WarehouseReceipt = "WarehouseReceipt";
+    public const string WarehouseIssue = "WarehouseIssue";
+    public const string VendorRating = "VendorRating";
     public const string Opportunity = "Opportunity";
     public const string OpportunityActivity = "OpportunityActivity";
     public const string Quote = "Quote";

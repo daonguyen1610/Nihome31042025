@@ -112,6 +112,19 @@
     { "module": "proc.vendors", "action": "view" },
     { "module": "proc.vendors", "action": "manage" },
     { "module": "proc.vendors", "action": "export" },
+    { "module": "proc.boq", "action": "view" },
+    { "module": "proc.boq", "action": "manage" },
+    { "module": "proc.boq", "action": "approve" },
+    { "module": "proc.material-requests", "action": "view" },
+    { "module": "proc.material-requests", "action": "manage" },
+    { "module": "proc.material-requests", "action": "approve" },
+    { "module": "proc.contract-lines", "action": "view" },
+    { "module": "proc.contract-lines", "action": "manage" },
+    { "module": "proc.warehouse", "action": "view" },
+    { "module": "proc.warehouse", "action": "post" },
+    { "module": "proc.vendor-ratings", "action": "view" },
+    { "module": "proc.vendor-ratings", "action": "manage" },
+    { "module": "proc.vendor-ratings", "action": "approve" },
 
     { "module": "design.projects", "action": "view" },
     { "module": "design.projects", "action": "manage" },
@@ -357,6 +370,11 @@
         "crm.contracts.view",
         "crm.surveys.view",
         "proc.vendors.view",
+        "proc.boq.view", "proc.boq.approve",
+        "proc.material-requests.*",
+        "proc.contract-lines.view",
+        "proc.warehouse.view",
+        "proc.vendor-ratings.view", "proc.vendor-ratings.approve",
         "design.projects.view",
         "design.schedule.manage",
         "design.basic.view",
@@ -415,6 +433,11 @@
         "analytics.kpi.view",
         "crm.contracts.view",
         "proc.vendors.*",
+        "proc.boq.view", "proc.boq.manage",
+        "proc.material-requests.*",
+        "proc.contract-lines.*",
+        "proc.warehouse.view",
+        "proc.vendor-ratings.view", "proc.vendor-ratings.manage",
         "profile.me.*"
       ]
     },
@@ -435,10 +458,10 @@
       ]
     },
     "WAREHOUSE": {
-      "patterns": ["dashboard.view", "processes.view", "master-data.view", "workflow.view", "operations.projects.view", "proc.vendors.view", "profile.me.*"]
+      "patterns": ["dashboard.view", "processes.view", "master-data.view", "workflow.view", "operations.projects.view", "proc.vendors.view", "proc.boq.view", "proc.material-requests.view", "proc.warehouse.*", "profile.me.*"]
     },
     "BGD": {
-      "patterns": ["dashboard.view", "**.view", "**.view.all", "analytics.kpi.manage", "analytics.kpi.export", "crm.tenders.approve-estimate", "system.audit.view", "profile.me.*"]
+      "patterns": ["dashboard.view", "**.view", "**.view.all", "analytics.kpi.manage", "analytics.kpi.export", "crm.tenders.approve-estimate", "proc.boq.approve", "proc.material-requests.approve", "proc.vendor-ratings.approve", "system.audit.view", "profile.me.*"]
     }
   }
 }

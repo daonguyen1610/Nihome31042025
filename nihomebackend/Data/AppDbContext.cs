@@ -105,6 +105,16 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
     // Procurement
     public DbSet<Vendor> Vendors => Set<Vendor>();
+    public DbSet<ProjectBoqRevision> ProjectBoqRevisions => Set<ProjectBoqRevision>();
+    public DbSet<ProjectBoqLine> ProjectBoqLines => Set<ProjectBoqLine>();
+    public DbSet<MaterialRequest> MaterialRequests => Set<MaterialRequest>();
+    public DbSet<MaterialRequestLine> MaterialRequestLines => Set<MaterialRequestLine>();
+    public DbSet<ContractLine> ContractLines => Set<ContractLine>();
+    public DbSet<WarehouseReceipt> WarehouseReceipts => Set<WarehouseReceipt>();
+    public DbSet<WarehouseReceiptLine> WarehouseReceiptLines => Set<WarehouseReceiptLine>();
+    public DbSet<WarehouseIssue> WarehouseIssues => Set<WarehouseIssue>();
+    public DbSet<WarehouseIssueLine> WarehouseIssueLines => Set<WarehouseIssueLine>();
+    public DbSet<VendorRating> VendorRatings => Set<VendorRating>();
 
     public DbSet<DesignProject> DesignProjects => Set<DesignProject>();
 
@@ -1201,10 +1211,217 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .WithMany()
                 .HasForeignKey(p => p.ProjectManagerUserId)
                 .OnDelete(DeleteBehavior.SetNull);
+            b.HasOne(p => p.FinalProjectBoqRevision)
+                .WithMany()
+                .HasForeignKey(p => p.FinalProjectBoqRevisionId)
+                .OnDelete(DeleteBehavior.NoAction);
             b.HasIndex(p => p.CustomerId);
             b.HasIndex(p => p.ProjectManagerUserId);
             b.HasIndex(p => p.Status);
             b.HasIndex(p => p.UpdatedAt);
+        });
+
+        modelBuilder.Entity<ProjectBoqRevision>(b =>
+        {
+            b.ToTable("project_boq_revisions");
+            b.HasKey(item => item.Id);
+            b.Property(item => item.Currency).HasMaxLength(3).IsRequired();
+            b.Property(item => item.Status).HasConversion<string>().HasMaxLength(20);
+            b.Property(item => item.CostTotal).HasPrecision(18, 4);
+            b.Property(item => item.DecisionReason).HasMaxLength(2000);
+            b.Property(item => item.RowVersion).IsRowVersion();
+            b.HasOne(item => item.OperationalProject).WithMany(project => project.BoqRevisions)
+                .HasForeignKey(item => item.OperationalProjectId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(item => item.SourceTenderEstimateRevision).WithMany()
+                .HasForeignKey(item => item.SourceTenderEstimateRevisionId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(item => item.SourceContractAppendix).WithMany()
+                .HasForeignKey(item => item.SourceContractAppendixId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(item => item.PreparedBy).WithMany()
+                .HasForeignKey(item => item.PreparedByUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(item => item.SubmittedBy).WithMany()
+                .HasForeignKey(item => item.SubmittedByUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(item => item.ApprovedBy).WithMany()
+                .HasForeignKey(item => item.ApprovedByUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(item => item.RejectedBy).WithMany()
+                .HasForeignKey(item => item.RejectedByUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasIndex(item => new { item.OperationalProjectId, item.RevisionNumber }).IsUnique();
+            b.HasIndex(item => new { item.OperationalProjectId, item.Status, item.ApprovedAt });
+        });
+
+        modelBuilder.Entity<ProjectBoqLine>(b =>
+        {
+            b.ToTable("project_boq_lines");
+            b.HasKey(item => item.Id);
+            b.Property(item => item.ItemCode).HasMaxLength(80).IsRequired();
+            b.Property(item => item.Description).HasMaxLength(500).IsRequired();
+            b.Property(item => item.Unit).HasMaxLength(50).IsRequired();
+            b.Property(item => item.ApprovedQuantity).HasPrecision(18, 6);
+            b.Property(item => item.BudgetUnitPrice).HasPrecision(18, 4);
+            b.Property(item => item.Amount).HasPrecision(18, 4);
+            b.HasOne(item => item.ProjectBoqRevision).WithMany(revision => revision.Lines)
+                .HasForeignKey(item => item.ProjectBoqRevisionId).OnDelete(DeleteBehavior.Cascade);
+            b.HasIndex(item => new { item.ProjectBoqRevisionId, item.ItemCode }).IsUnique();
+            b.HasIndex(item => new { item.ProjectBoqRevisionId, item.SortOrder });
+        });
+
+        modelBuilder.Entity<MaterialRequest>(b =>
+        {
+            b.ToTable("material_requests");
+            b.HasKey(item => item.Id);
+            b.Property(item => item.Code).HasMaxLength(60).IsRequired();
+            b.Property(item => item.Status).HasConversion<string>().HasMaxLength(30);
+            b.Property(item => item.Note).HasMaxLength(2000);
+            b.Property(item => item.DecisionReason).HasMaxLength(2000);
+            b.Property(item => item.RowVersion).IsRowVersion();
+            b.HasOne(item => item.OperationalProject).WithMany(project => project.MaterialRequests)
+                .HasForeignKey(item => item.OperationalProjectId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(item => item.SiteRequester).WithMany()
+                .HasForeignKey(item => item.SiteRequesterUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(item => item.ResponsibleSiteUser).WithMany()
+                .HasForeignKey(item => item.ResponsibleSiteUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(item => item.AssignedProcurementUser).WithMany()
+                .HasForeignKey(item => item.AssignedProcurementUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(item => item.ApprovedBy).WithMany()
+                .HasForeignKey(item => item.ApprovedByUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(item => item.RejectedBy).WithMany()
+                .HasForeignKey(item => item.RejectedByUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasIndex(item => new { item.OperationalProjectId, item.Code }).IsUnique();
+            b.HasIndex(item => new { item.AssignedProcurementUserId, item.FulfilledAt });
+        });
+
+        modelBuilder.Entity<MaterialRequestLine>(b =>
+        {
+            b.ToTable("material_request_lines");
+            b.HasKey(item => item.Id);
+            b.Property(item => item.RequestedQuantity).HasPrecision(18, 6);
+            b.HasOne(item => item.MaterialRequest).WithMany(request => request.Lines)
+                .HasForeignKey(item => item.MaterialRequestId).OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(item => item.ProjectBoqLine).WithMany()
+                .HasForeignKey(item => item.ProjectBoqLineId).OnDelete(DeleteBehavior.Restrict);
+            b.HasIndex(item => new { item.MaterialRequestId, item.ProjectBoqLineId }).IsUnique();
+        });
+
+        modelBuilder.Entity<ContractLine>(b =>
+        {
+            b.ToTable("contract_lines");
+            b.HasKey(item => item.Id);
+            b.Property(item => item.Quantity).HasPrecision(18, 6);
+            b.Property(item => item.NegotiatedUnitPrice).HasPrecision(18, 4);
+            b.Property(item => item.RowVersion).IsRowVersion();
+            b.HasOne(item => item.Contract).WithMany()
+                .HasForeignKey(item => item.ContractId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(item => item.ProjectBoqLine).WithMany()
+                .HasForeignKey(item => item.ProjectBoqLineId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(item => item.ProcurementOwner).WithMany()
+                .HasForeignKey(item => item.ProcurementOwnerUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasIndex(item => new { item.ContractId, item.ProjectBoqLineId }).IsUnique();
+            b.HasIndex(item => item.ProcurementOwnerUserId);
+        });
+
+        modelBuilder.Entity<WarehouseReceipt>(b =>
+        {
+            b.ToTable("warehouse_receipts");
+            b.HasKey(item => item.Id);
+            b.Property(item => item.Code).HasMaxLength(60).IsRequired();
+            b.Property(item => item.Status).HasConversion<string>().HasMaxLength(20);
+            b.Property(item => item.ReversalReason).HasMaxLength(2000);
+            b.Property(item => item.RowVersion).IsRowVersion();
+            b.HasOne(item => item.OperationalProject).WithMany(project => project.WarehouseReceipts)
+                .HasForeignKey(item => item.OperationalProjectId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(item => item.ReversalOfReceipt).WithMany()
+                .HasForeignKey(item => item.ReversalOfReceiptId).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(item => item.ReceivedBy).WithMany()
+                .HasForeignKey(item => item.ReceivedByUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(item => item.PostedBy).WithMany()
+                .HasForeignKey(item => item.PostedByUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasIndex(item => new { item.OperationalProjectId, item.Code }).IsUnique();
+            b.HasIndex(item => item.ReversalOfReceiptId).IsUnique()
+                .HasFilter("[ReversalOfReceiptId] IS NOT NULL");
+        });
+
+        modelBuilder.Entity<WarehouseReceiptLine>(b =>
+        {
+            b.ToTable("warehouse_receipt_lines");
+            b.HasKey(item => item.Id);
+            b.Property(item => item.ReceivedQuantity).HasPrecision(18, 6);
+            b.HasOne(item => item.WarehouseReceipt).WithMany(receipt => receipt.Lines)
+                .HasForeignKey(item => item.WarehouseReceiptId).OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(item => item.MaterialRequestLine).WithMany()
+                .HasForeignKey(item => item.MaterialRequestLineId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(item => item.ContractLine).WithMany()
+                .HasForeignKey(item => item.ContractLineId).OnDelete(DeleteBehavior.Restrict);
+            b.HasIndex(item => new { item.WarehouseReceiptId, item.MaterialRequestLineId }).IsUnique();
+        });
+
+        modelBuilder.Entity<WarehouseIssue>(b =>
+        {
+            b.ToTable("warehouse_issues");
+            b.HasKey(item => item.Id);
+            b.Property(item => item.Code).HasMaxLength(60).IsRequired();
+            b.Property(item => item.Status).HasConversion<string>().HasMaxLength(20);
+            b.Property(item => item.WorkItemCode).HasMaxLength(100);
+            b.Property(item => item.ReversalReason).HasMaxLength(2000);
+            b.Property(item => item.RowVersion).IsRowVersion();
+            b.HasOne(item => item.OperationalProject).WithMany(project => project.WarehouseIssues)
+                .HasForeignKey(item => item.OperationalProjectId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(item => item.ReversalOfIssue).WithMany()
+                .HasForeignKey(item => item.ReversalOfIssueId).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(item => item.ResponsibleSiteUser).WithMany()
+                .HasForeignKey(item => item.ResponsibleSiteUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(item => item.IssuedBy).WithMany()
+                .HasForeignKey(item => item.IssuedByUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(item => item.PostedBy).WithMany()
+                .HasForeignKey(item => item.PostedByUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasIndex(item => new { item.OperationalProjectId, item.Code }).IsUnique();
+            b.HasIndex(item => item.ReversalOfIssueId).IsUnique()
+                .HasFilter("[ReversalOfIssueId] IS NOT NULL");
+            b.HasIndex(item => new { item.ResponsibleSiteUserId, item.PostedAt, item.Status });
+        });
+
+        modelBuilder.Entity<WarehouseIssueLine>(b =>
+        {
+            b.ToTable("warehouse_issue_lines");
+            b.HasKey(item => item.Id);
+            b.Property(item => item.IssuedQuantity).HasPrecision(18, 6);
+            b.HasOne(item => item.WarehouseIssue).WithMany(issue => issue.Lines)
+                .HasForeignKey(item => item.WarehouseIssueId).OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(item => item.ProjectBoqLine).WithMany()
+                .HasForeignKey(item => item.ProjectBoqLineId).OnDelete(DeleteBehavior.Restrict);
+            b.HasIndex(item => new { item.WarehouseIssueId, item.ProjectBoqLineId }).IsUnique();
+        });
+
+        modelBuilder.Entity<VendorRating>(b =>
+        {
+            b.ToTable("vendor_ratings");
+            b.HasKey(item => item.Id);
+            b.Property(item => item.Status).HasConversion<string>().HasMaxLength(20);
+            b.Property(item => item.QualityScore).HasPrecision(5, 2);
+            b.Property(item => item.ScheduleScore).HasPrecision(5, 2);
+            b.Property(item => item.CostScore).HasPrecision(5, 2);
+            b.Property(item => item.HseScore).HasPrecision(5, 2);
+            b.Property(item => item.OverallScore).HasPrecision(5, 2);
+            b.Property(item => item.Comments).HasMaxLength(4000);
+            b.Property(item => item.DecisionReason).HasMaxLength(2000);
+            b.Property(item => item.RowVersion).IsRowVersion();
+            b.HasOne(item => item.OperationalProject).WithMany(project => project.VendorRatings)
+                .HasForeignKey(item => item.OperationalProjectId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(item => item.Contract).WithMany()
+                .HasForeignKey(item => item.ContractId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(item => item.Vendor).WithMany()
+                .HasForeignKey(item => item.VendorId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(item => item.ProcurementOwner).WithMany()
+                .HasForeignKey(item => item.ProcurementOwnerUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(item => item.PreparedBy).WithMany()
+                .HasForeignKey(item => item.PreparedByUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(item => item.ApprovedBy).WithMany()
+                .HasForeignKey(item => item.ApprovedByUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(item => item.RejectedBy).WithMany()
+                .HasForeignKey(item => item.RejectedByUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(item => item.SupersedesVendorRating).WithMany()
+                .HasForeignKey(item => item.SupersedesVendorRatingId).OnDelete(DeleteBehavior.NoAction);
+            b.HasIndex(item => new { item.ContractId, item.VersionNumber }).IsUnique();
+            b.HasIndex(item => item.ContractId).IsUnique().HasFilter("[Status] = 'Approved'");
+            b.HasIndex(item => new { item.ProcurementOwnerUserId, item.ApprovedAt, item.Status });
         });
 
         modelBuilder.Entity<ProjectDocument>(b =>
