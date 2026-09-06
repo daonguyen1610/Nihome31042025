@@ -130,13 +130,15 @@ public class OperationalProjectService(
 
         if (project is null || !CanView(project, callerUserId, canSeeAll)) return null;
         var contractIds = project.Contracts.Select(contract => contract.Id).ToList();
-        var approvedVoTotals = await db.ContractAppendices
+        var approvedVoRows = await db.ContractAppendices
             .AsNoTracking()
             .Where(appendix => contractIds.Contains(appendix.ContractId) &&
                 appendix.Status == ContractAppendixStatus.Approved)
+            .Select(appendix => new { appendix.ContractId, appendix.ValueDelta })
+            .ToListAsync(ct);
+        var approvedVoTotals = approvedVoRows
             .GroupBy(appendix => appendix.ContractId)
-            .Select(group => new { ContractId = group.Key, Total = group.Sum(appendix => appendix.ValueDelta) })
-            .ToDictionaryAsync(item => item.ContractId, item => item.Total, ct);
+            .ToDictionary(group => group.Key, group => group.Sum(appendix => appendix.ValueDelta));
         var milestoneRows = await db.ContractPaymentMilestones
             .AsNoTracking()
             .Where(milestone => contractIds.Contains(milestone.ContractId))

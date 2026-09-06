@@ -655,7 +655,8 @@ public class CustomersControllerTests : IntegrationTestBase
         var documentPath = uploadedDocument.GetProperty("filePath").GetString()!;
         var environment = Factory.Services.GetRequiredService<IWebHostEnvironment>();
         var documentFullPath = Path.Combine(
-            environment.WebRootPath ?? Path.Combine(environment.ContentRootPath, "wwwroot"),
+            environment.ContentRootPath,
+            "wwwroot",
             documentPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
         File.Exists(documentFullPath).Should().BeTrue();
         var linked = await WithDbAsync(async db =>
@@ -822,7 +823,8 @@ public class CustomersControllerTests : IntegrationTestBase
         var documentPath = document.GetProperty("filePath").GetString()!;
         var environment = Factory.Services.GetRequiredService<IWebHostEnvironment>();
         var fullPath = Path.Combine(
-            environment.WebRootPath ?? Path.Combine(environment.ContentRootPath, "wwwroot"),
+            environment.ContentRootPath,
+            "wwwroot",
             documentPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
         var projectDocumentId = await WithDbAsync(async db =>
         {
