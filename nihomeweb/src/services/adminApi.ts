@@ -1083,6 +1083,116 @@ export interface OperationalProjectListParams {
   pageSize?: number;
 }
 
+export type HseViolationStatus =
+  | "Draft"
+  | "Reported"
+  | "Confirmed"
+  | "Remediated"
+  | "Closed"
+  | "Rejected"
+  | "Cancelled";
+
+export type HseViolationSeverity = "Low" | "Medium" | "High" | "Critical";
+
+export interface HseViolationEventResponse {
+  id: number;
+  type: "Created" | "Transition" | "Correction";
+  fromStatus?: HseViolationStatus | null;
+  toStatus: HseViolationStatus;
+  reason?: string | null;
+  createdByUserId: number;
+  createdByName?: string | null;
+  createdAt: string;
+}
+
+export interface HseViolationResponse {
+  id: number;
+  operationalProjectId: number;
+  operationalProjectCode: string;
+  operationalProjectName: string;
+  code: string;
+  offlineClientId: string;
+  occurredAt: string;
+  location: string;
+  category: string;
+  severity: HseViolationSeverity;
+  description: string;
+  regulatoryReference?: string | null;
+  evidenceDocuments: string[];
+  responsibleSiteUserId: number;
+  responsibleSiteUserName?: string | null;
+  remediationOwnerUserId?: number | null;
+  remediationOwnerUserName?: string | null;
+  remediationDeadline?: string | null;
+  remediationNote?: string | null;
+  penaltyReference?: string | null;
+  penaltyAmount?: number | null;
+  status: HseViolationStatus;
+  reportedAt?: string | null;
+  reportedByUserId?: number | null;
+  reportedByName?: string | null;
+  confirmedAt?: string | null;
+  confirmedByUserId?: number | null;
+  confirmedByName?: string | null;
+  closedAt?: string | null;
+  closedByUserId?: number | null;
+  closedByName?: string | null;
+  decisionReason?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  rowVersion: string;
+  events: HseViolationEventResponse[];
+}
+
+export interface HseViolationListResponse {
+  total: number;
+  page: number;
+  pageSize: number;
+  items: HseViolationResponse[];
+  statusCounts: Partial<Record<HseViolationStatus, number>>;
+}
+
+export interface HseViolationListParams {
+  status?: HseViolationStatus;
+  severity?: HseViolationSeverity;
+  search?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface HseViolationFieldsRequest {
+  offlineClientId: string;
+  occurredAt: string;
+  location: string;
+  category: string;
+  severity: HseViolationSeverity;
+  description: string;
+  regulatoryReference?: string | null;
+  evidenceDocuments: string[];
+  responsibleSiteUserId: number;
+  remediationOwnerUserId?: number | null;
+  remediationDeadline?: string | null;
+  remediationNote?: string | null;
+  penaltyReference?: string | null;
+  penaltyAmount?: number | null;
+}
+
+export interface UpdateHseViolationRequest extends HseViolationFieldsRequest {
+  rowVersion: string;
+}
+
+export interface TransitionHseViolationRequest {
+  reason?: string | null;
+  remediationNote?: string | null;
+  remediationOwnerUserId?: number | null;
+  remediationDeadline?: string | null;
+  rowVersion: string;
+}
+
+export interface CorrectHseViolationRequest extends UpdateHseViolationRequest {
+  reason: string;
+}
+
 export interface CreateOperationalProjectRequest {
   name: string;
   customerId: number;
@@ -5117,6 +5227,48 @@ export const adminApi = {
     api.get<OperationalProjectTeamHistoryResponse[]>(`/operational-projects/${projectId}/team/history`),
   getOperationalProjectTeamCandidates: (projectId: number) =>
     api.get<ProjectMemberCandidateResponse[]>(`/operational-projects/${projectId}/team/candidates`),
+  listHseViolations: (projectId: number, params: HseViolationListParams = {}) =>
+    api.get<HseViolationListResponse>(`/operational-projects/${projectId}/hse-violations`, { params }),
+  getHseViolation: (projectId: number, id: number) =>
+    api.get<HseViolationResponse>(`/operational-projects/${projectId}/hse-violations/${id}`),
+  createHseViolation: (projectId: number, body: HseViolationFieldsRequest, idempotencyKey: string) =>
+    api.post<HseViolationResponse>(
+      `/operational-projects/${projectId}/hse-violations`,
+      body,
+      withIdempotencyKey(idempotencyKey),
+    ),
+  updateHseViolation: (projectId: number, id: number, body: UpdateHseViolationRequest, idempotencyKey: string) =>
+    api.put<HseViolationResponse>(
+      `/operational-projects/${projectId}/hse-violations/${id}`,
+      body,
+      { headers: {
+        ...withIdempotencyKey(idempotencyKey).headers,
+        ...withIfMatch(body.rowVersion).headers,
+      } },
+    ),
+  transitionHseViolation: (
+    projectId: number,
+    id: number,
+    action: "report" | "confirm" | "reject" | "remediate" | "cancel" | "close",
+    body: TransitionHseViolationRequest,
+    idempotencyKey: string,
+  ) => api.post<HseViolationResponse>(
+    `/operational-projects/${projectId}/hse-violations/${id}/${action}`,
+    body,
+    { headers: {
+      ...withIdempotencyKey(idempotencyKey).headers,
+      ...withIfMatch(body.rowVersion).headers,
+    } },
+  ),
+  correctHseViolation: (projectId: number, id: number, body: CorrectHseViolationRequest, idempotencyKey: string) =>
+    api.post<HseViolationResponse>(
+      `/operational-projects/${projectId}/hse-violations/${id}/corrections`,
+      body,
+      { headers: {
+        ...withIdempotencyKey(idempotencyKey).headers,
+        ...withIfMatch(body.rowVersion).headers,
+      } },
+    ),
   addOperationalProjectMember: (
     projectId: number,
     body: UpsertOperationalProjectMemberRequest,

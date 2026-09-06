@@ -322,6 +322,87 @@ public class KpiControllerTests : IntegrationTestBase
         collection.GetProperty("score").GetDecimal().Should().Be(50m);
     }
 
+    [Fact]
+    public async Task Calculate_SiteHse_UsesConfirmedAtAttributionStatusAndPeriodBoundary()
+    {
+        await AuthTestHelper.AuthenticateAsync(
+            Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "SUPER_ADMIN"));
+        var pmUserId = await WithDbAsync(async db =>
+        {
+            KpiSeeder.Seed(db);
+            var pmId = await db.Users
+                .Where(user => user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["PM"])
+                .Select(user => user.Id)
+                .SingleAsync();
+            var otherUserId = await db.Users
+                .Where(user => user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["SALE"])
+                .Select(user => user.Id)
+                .SingleAsync();
+            var customer = new Customer { Type = CustomerType.Company, Name = "KPI HSE Customer", SourceCode = "referral" };
+            db.Customers.Add(customer);
+            await db.SaveChangesAsync();
+            var project = new OperationalProject
+            {
+                Code = $"PJ-KPI-HSE-{Guid.NewGuid():N}"[..30],
+                Name = "KPI HSE Project",
+                CustomerId = customer.Id,
+                ProjectManagerUserId = pmId,
+            };
+            db.OperationalProjects.Add(project);
+            await db.SaveChangesAsync();
+            var start = new DateTime(2026, 7, 31, 17, 0, 0, DateTimeKind.Utc);
+            var end = new DateTime(2026, 8, 31, 17, 0, 0, DateTimeKind.Utc);
+            db.HseViolations.AddRange(
+                Hse(project.Id, pmId, HseViolationStatus.Confirmed, start, "START"),
+                Hse(project.Id, pmId, HseViolationStatus.Remediated, end.AddTicks(-1), "END-MINUS"),
+                Hse(project.Id, pmId, HseViolationStatus.Closed, new DateTime(2026, 8, 15, 0, 0, 0, DateTimeKind.Utc), "CLOSED"),
+                Hse(project.Id, pmId, HseViolationStatus.Cancelled, new DateTime(2026, 8, 16, 0, 0, 0, DateTimeKind.Utc), "CANCELLED"),
+                Hse(project.Id, otherUserId, HseViolationStatus.Confirmed, new DateTime(2026, 8, 17, 0, 0, 0, DateTimeKind.Utc), "OTHER"),
+                Hse(project.Id, pmId, HseViolationStatus.Confirmed, end, "NEXT"));
+            var definition = await db.KpiDefinitions.SingleAsync(item => item.Code == "SITE_HSE");
+            definition.TargetValue = 2m;
+            await db.SaveChangesAsync();
+            return pmId;
+        });
+
+        using var response = await SendWithIdempotencyAsync(
+            HttpMethod.Post,
+            "/api/kpi/calculate",
+            new { year = 2026, month = 8, userId = pmUserId });
+        response.EnsureSuccessStatusCode();
+        var dashboard = await ReadJsonAsync(response);
+        var hse = dashboard.GetProperty("scores").EnumerateArray()
+            .Single(item => item.GetProperty("code").GetString() == "SITE_HSE");
+        hse.GetProperty("status").GetString().Should().Be("Available");
+        hse.GetProperty("rawValue").GetDecimal().Should().Be(3m);
+        hse.GetProperty("score").GetDecimal().Should().BeApproximately(66.6667m, 0.0001m);
+        hse.GetProperty("evidenceJson").GetString().Should().Contain("HseViolation");
+    }
+
+    private static HseViolation Hse(
+        int projectId,
+        int responsibleUserId,
+        HseViolationStatus status,
+        DateTime confirmedAt,
+        string suffix) => new()
+        {
+            OperationalProjectId = projectId,
+            Code = $"HSE-KPI-{suffix}",
+            OfflineClientId = Guid.NewGuid().ToString(),
+            OccurredAt = confirmedAt.AddHours(-1),
+            Location = "Site",
+            Category = "General",
+            Severity = HseViolationSeverity.Low,
+            Description = suffix,
+            ResponsibleSiteUserId = responsibleUserId,
+            Status = status,
+            ConfirmedAt = confirmedAt,
+            ConfirmedByUserId = responsibleUserId,
+            CreatedByUserId = responsibleUserId,
+            UpdatedByUserId = responsibleUserId,
+        };
+
     private async Task<int> SeedSalesDataAsync()
     {
         return await WithDbAsync(async db =>
