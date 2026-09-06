@@ -237,20 +237,37 @@ const KpiDashboard = ({ mode = "evaluation" }: KpiDashboardProps) => {
         {mode === "configuration" && canManage && definitions.length > 0 && (
           <section className="space-y-3 border-t pt-5">
             <div><h2 className="text-lg font-semibold">{t("kpi.definition.listTitle")}</h2><p className="text-sm text-muted-foreground">{t("kpi.definition.description")}</p></div>
-            <div className="grid gap-3 border-y py-4 sm:grid-cols-2 xl:grid-cols-5">
+            <div className="grid gap-3 border-y border-slate-200 py-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
               {definitionReadiness.map((item) => (
-                <div key={item.roleCode} className={item.ready ? "border-l-2 border-emerald-500 px-3" : "border-l-2 border-amber-500 px-3"}>
-                  <div className="flex items-center gap-2">
-                    {item.ready ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : <AlertTriangle className="h-4 w-4 text-amber-600" />}
-                    <span className="font-medium">{item.roleCode}</span>
+                <div
+                  key={item.roleCode}
+                  className={`flex min-h-40 flex-col rounded-md border p-3 shadow-sm ${item.ready
+                    ? "border-emerald-200 bg-emerald-50/40"
+                    : "border-amber-200 bg-amber-50/40"
+                  }`}
+                >
+                  <div>
+                    <span className={`flex h-8 w-8 items-center justify-center rounded-md ${item.ready
+                      ? "bg-emerald-100 text-emerald-700"
+                      : "bg-amber-100 text-amber-700"
+                    }`}>
+                      {item.ready ? <CheckCircle2 className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
+                    </span>
                   </div>
-                  <p className="mt-1 text-xs text-muted-foreground">
+                  <p className="mt-3 min-h-8 text-xs font-semibold leading-4">{item.roleCode.replace(/_/g, " ")}</p>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
                     {t("kpi.guide.config.readiness", {
                       weight: number.format(item.weight * 100),
                       missing: item.missingTargets,
                     })}
                   </p>
-                  <Badge variant="outline" className={item.ready ? "mt-2 border-emerald-200 bg-emerald-50 text-emerald-700" : "mt-2 border-amber-200 bg-amber-50 text-amber-800"}>
+                  <div className="mb-3 mt-2 h-1.5 overflow-hidden rounded-full bg-white/80">
+                    <div
+                      className={`h-full rounded-full ${item.ready ? "bg-emerald-500" : "bg-amber-500"}`}
+                      style={{ width: `${Math.min(Math.max(item.weight * 100, 0), 100)}%` }}
+                    />
+                  </div>
+                  <Badge variant="outline" className={item.ready ? "mt-auto w-fit border-emerald-200 bg-white text-emerald-700" : "mt-auto w-fit border-amber-200 bg-white text-amber-800"}>
                     {t(item.ready ? "kpi.guide.config.ready" : "kpi.guide.config.needsAttention")}
                   </Badge>
                 </div>
