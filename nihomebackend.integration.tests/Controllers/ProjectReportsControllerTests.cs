@@ -129,6 +129,28 @@ public sealed class ProjectReportsControllerTests : IntegrationTestBase
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
+    [Theory]
+    [InlineData("vi", "BÁO CÁO VẬN HÀNH DỰ ÁN NICON")]
+    [InlineData("en", "NICON PROJECT OPERATIONAL REPORT")]
+    [InlineData("zh", "NICON 项目运营报告")]
+    [InlineData("ja", "NICON プロジェクト運用レポート")]
+    public async Task Export_PdfSupportsEveryLanguage(string language, string expectedTitle)
+    {
+        var fixture = await SeedFixtureAsync();
+        await AuthenticateAsync("BGD");
+
+        var response = await Client.GetAsync(
+            $"/api/reports/projects/export?format=pdf&language={language}&projectId={fixture.AccessibleProjectId}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var pdfBytes = await response.Content.ReadAsByteArrayAsync();
+        pdfBytes.Take(4).Should().Equal("%PDF"u8.ToArray());
+        using var document = PdfDocument.Open(pdfBytes);
+        var text = string.Join('\n', document.GetPages()
+            .Select(page => ContentOrderTextExtractor.GetText(page)));
+        text.Should().Contain(expectedTitle);
+    }
+
     [Fact]
     public async Task Export_RequiresExportPermissionAndProducesAuditedXlsxAndPdf()
     {

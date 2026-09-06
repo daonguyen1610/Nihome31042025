@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Navigate, Route, Routes, useParams } from "react-router-dom";
 import { Provider } from "react-redux";
@@ -9,87 +10,89 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { I18nProvider } from "@/lib/i18n";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import RequirePermission from "@/components/auth/RequirePermission";
+import { PageLoading } from "@/components/PageState";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import Forbidden from "./pages/Forbidden.tsx";
-import Index from "./pages/Index.tsx";
-import Profile from "./pages/Profile.tsx";
-import Services from "./pages/Services.tsx";
-import ServiceDetail from "./pages/ServiceDetail.tsx";
-import Projects from "./pages/Projects.tsx";
-import ProjectDetail from "./pages/ProjectDetail.tsx";
-import News from "./pages/News.tsx";
-import NewsDetail from "./pages/NewsDetail.tsx";
-import Activities from "./pages/Activities.tsx";
-import ActivityDetail from "./pages/ActivityDetail.tsx";
-import Clients from "./pages/Clients.tsx";
-import Recruitment from "./pages/Recruitment.tsx";
-import Contact from "./pages/Contact.tsx";
-import Login from "./pages/Login.tsx";
-import Register from "./pages/Register.tsx";
-import ForgotPassword from "./pages/ForgotPassword.tsx";
-import MyProfile from "./pages/MyProfile.tsx";
-import AdminDashboard from "./pages/admin/Dashboard.tsx";
-import AdminNotifications from "./pages/admin/Notifications.tsx";
-import AdminUsers from "./pages/admin/users/UserList.tsx";
-import AdminRoles from "./pages/admin/users/RoleList.tsx";
-import AdminActivities from "./pages/admin/Activities.tsx";
-import AdminNews from "./pages/admin/News.tsx";
-import AdminProjects from "./pages/admin/Projects.tsx";
-import AdminContacts from "./pages/admin/Contacts.tsx";
-import AdminLeads from "./pages/admin/Leads.tsx";
-import AdminCustomers from "./pages/admin/Customers.tsx";
-import VendorPage from "./pages/admin/procurement/VendorPage.tsx";
-import VendorDetail from "./pages/admin/procurement/VendorDetail.tsx";
-import ProcurementControlPage from "./pages/admin/procurement/ProcurementControlPage.tsx";
-import FinanceControlPage from "./pages/admin/finance/FinanceControlPage.tsx";
-import AdminOpportunities from "./pages/admin/Opportunities.tsx";
-import AdminQuotes from "./pages/admin/Quotes.tsx";
-import AdminQuoteDetail from "./pages/admin/QuoteDetail.tsx";
-import AdminMaterialRates from "./pages/admin/MaterialRates.tsx";
-import AdminCapabilityDocuments from "./pages/admin/CapabilityDocuments.tsx";
-import AdminTenders from "./pages/admin/Tenders.tsx";
-import AdminTenderDetail from "./pages/admin/TenderDetail.tsx";
-import AdminSurveys from "./pages/admin/Surveys.tsx";
-import AdminSurveyDetail from "./pages/admin/SurveyDetail.tsx";
-import AdminRecruitment from "./pages/admin/Recruitment.tsx";
-import EmploymentTypes from "./pages/admin/EmploymentTypes.tsx";
-import SettingsCenter from "./pages/admin/SettingsCenter.tsx";
-import JobPositionForm from "./pages/admin/JobPositionForm.tsx";
-import EmailTemplateConfig from "./pages/admin/EmailTemplateConfig.tsx";
-import ProjectForm from "./pages/admin/ProjectForm.tsx";
-import ProjectView from "./pages/admin/ProjectView.tsx";
-import ActivityForm from "./pages/admin/ActivityForm.tsx";
-import ActivityView from "./pages/admin/ActivityView.tsx";
-import NewsForm from "./pages/admin/NewsForm.tsx";
-import NewsView from "./pages/admin/NewsView.tsx";
-import AdminCategories from "./pages/admin/Categories.tsx";
-import AdminActivityLog from "./pages/admin/ActivityLog.tsx";
-import AdminServices from "./pages/admin/Services.tsx";
-import AdminLogosManager from "./pages/admin/LogosManager.tsx";
-import AboutContent from "./pages/admin/AboutContent.tsx";
-import ProcessList from "./pages/admin/ProcessList.tsx";
-import LanguagesPage from "./pages/admin/settings/Languages.tsx";
-import TranslationsPage from "./pages/admin/settings/Translations.tsx";
-import MasterDataPage from "./pages/admin/MasterData.tsx";
-import WorkflowsPage from "./pages/admin/Workflows.tsx";
-import ContractsPage from "./pages/admin/Contracts.tsx";
-import ContractDetailPage from "./pages/admin/ContractDetail.tsx";
-import OperationalProjects from "./pages/admin/OperationalProjects.tsx";
-import KpiDashboard from "./pages/admin/KpiDashboard.tsx";
-import KpiConfiguration from "./pages/admin/KpiConfiguration.tsx";
-import ProjectReports from "@/pages/admin/ProjectReports";
-import AdminDesignProjects from "./pages/admin/DesignProjects.tsx";
-import AdminDesignProjectDetail from "./pages/admin/DesignProjectDetail.tsx";
-import AdminPermits from "./pages/admin/Permits.tsx";
-import AdminConstructionTasks from "./pages/admin/construction/ConstructionTasksPage.tsx";
-import AdminSiteDiary from "./pages/admin/construction/SiteDiaryPage.tsx";
-import AdminPunchList from "./pages/admin/construction/PunchListPage.tsx";
-import AdminHseViolations from "./pages/admin/construction/HseViolationsPage.tsx";
-import AdminAcceptanceRecords from "./pages/admin/construction/AcceptanceRecordsPage.tsx";
-import AdminAsBuiltDocuments from "./pages/admin/construction/AsBuiltDocumentsPage.tsx";
-import AdminAsBuiltDocumentCategories from "./pages/admin/construction/AsBuiltDocumentCategoriesPage.tsx";
-import AdminHandoverRecords from "./pages/admin/construction/HandoverRecordsPage.tsx";
-import NotFound from "./pages/NotFound.tsx";
+
+const Index = lazy(() => import("./pages/Index.tsx"));
+const Profile = lazy(() => import("./pages/Profile.tsx"));
+const Services = lazy(() => import("./pages/Services.tsx"));
+const ServiceDetail = lazy(() => import("./pages/ServiceDetail.tsx"));
+const Projects = lazy(() => import("./pages/Projects.tsx"));
+const ProjectDetail = lazy(() => import("./pages/ProjectDetail.tsx"));
+const News = lazy(() => import("./pages/News.tsx"));
+const NewsDetail = lazy(() => import("./pages/NewsDetail.tsx"));
+const Activities = lazy(() => import("./pages/Activities.tsx"));
+const ActivityDetail = lazy(() => import("./pages/ActivityDetail.tsx"));
+const Clients = lazy(() => import("./pages/Clients.tsx"));
+const Recruitment = lazy(() => import("./pages/Recruitment.tsx"));
+const Contact = lazy(() => import("./pages/Contact.tsx"));
+const Login = lazy(() => import("./pages/Login.tsx"));
+const Register = lazy(() => import("./pages/Register.tsx"));
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword.tsx"));
+const MyProfile = lazy(() => import("./pages/MyProfile.tsx"));
+const AdminDashboard = lazy(() => import("./pages/admin/Dashboard.tsx"));
+const AdminNotifications = lazy(() => import("./pages/admin/Notifications.tsx"));
+const AdminUsers = lazy(() => import("./pages/admin/users/UserList.tsx"));
+const AdminRoles = lazy(() => import("./pages/admin/users/RoleList.tsx"));
+const AdminActivities = lazy(() => import("./pages/admin/Activities.tsx"));
+const AdminNews = lazy(() => import("./pages/admin/News.tsx"));
+const AdminProjects = lazy(() => import("./pages/admin/Projects.tsx"));
+const AdminContacts = lazy(() => import("./pages/admin/Contacts.tsx"));
+const AdminLeads = lazy(() => import("./pages/admin/Leads.tsx"));
+const AdminCustomers = lazy(() => import("./pages/admin/Customers.tsx"));
+const VendorPage = lazy(() => import("./pages/admin/procurement/VendorPage.tsx"));
+const VendorDetail = lazy(() => import("./pages/admin/procurement/VendorDetail.tsx"));
+const ProcurementControlPage = lazy(() => import("./pages/admin/procurement/ProcurementControlPage.tsx"));
+const FinanceControlPage = lazy(() => import("./pages/admin/finance/FinanceControlPage.tsx"));
+const AdminOpportunities = lazy(() => import("./pages/admin/Opportunities.tsx"));
+const AdminQuotes = lazy(() => import("./pages/admin/Quotes.tsx"));
+const AdminQuoteDetail = lazy(() => import("./pages/admin/QuoteDetail.tsx"));
+const AdminMaterialRates = lazy(() => import("./pages/admin/MaterialRates.tsx"));
+const AdminCapabilityDocuments = lazy(() => import("./pages/admin/CapabilityDocuments.tsx"));
+const AdminTenders = lazy(() => import("./pages/admin/Tenders.tsx"));
+const AdminTenderDetail = lazy(() => import("./pages/admin/TenderDetail.tsx"));
+const AdminSurveys = lazy(() => import("./pages/admin/Surveys.tsx"));
+const AdminSurveyDetail = lazy(() => import("./pages/admin/SurveyDetail.tsx"));
+const AdminRecruitment = lazy(() => import("./pages/admin/Recruitment.tsx"));
+const EmploymentTypes = lazy(() => import("./pages/admin/EmploymentTypes.tsx"));
+const SettingsCenter = lazy(() => import("./pages/admin/SettingsCenter.tsx"));
+const JobPositionForm = lazy(() => import("./pages/admin/JobPositionForm.tsx"));
+const EmailTemplateConfig = lazy(() => import("./pages/admin/EmailTemplateConfig.tsx"));
+const ProjectForm = lazy(() => import("./pages/admin/ProjectForm.tsx"));
+const ProjectView = lazy(() => import("./pages/admin/ProjectView.tsx"));
+const ActivityForm = lazy(() => import("./pages/admin/ActivityForm.tsx"));
+const ActivityView = lazy(() => import("./pages/admin/ActivityView.tsx"));
+const NewsForm = lazy(() => import("./pages/admin/NewsForm.tsx"));
+const NewsView = lazy(() => import("./pages/admin/NewsView.tsx"));
+const AdminCategories = lazy(() => import("./pages/admin/Categories.tsx"));
+const AdminActivityLog = lazy(() => import("./pages/admin/ActivityLog.tsx"));
+const AdminServices = lazy(() => import("./pages/admin/Services.tsx"));
+const AdminLogosManager = lazy(() => import("./pages/admin/LogosManager.tsx"));
+const AboutContent = lazy(() => import("./pages/admin/AboutContent.tsx"));
+const ProcessList = lazy(() => import("./pages/admin/ProcessList.tsx"));
+const LanguagesPage = lazy(() => import("./pages/admin/settings/Languages.tsx"));
+const TranslationsPage = lazy(() => import("./pages/admin/settings/Translations.tsx"));
+const MasterDataPage = lazy(() => import("./pages/admin/MasterData.tsx"));
+const WorkflowsPage = lazy(() => import("./pages/admin/Workflows.tsx"));
+const ContractsPage = lazy(() => import("./pages/admin/Contracts.tsx"));
+const ContractDetailPage = lazy(() => import("./pages/admin/ContractDetail.tsx"));
+const OperationalProjects = lazy(() => import("./pages/admin/OperationalProjects.tsx"));
+const KpiDashboard = lazy(() => import("./pages/admin/KpiDashboard.tsx"));
+const KpiConfiguration = lazy(() => import("./pages/admin/KpiConfiguration.tsx"));
+const ProjectReports = lazy(() => import("@/pages/admin/ProjectReports"));
+const AdminDesignProjects = lazy(() => import("./pages/admin/DesignProjects.tsx"));
+const AdminDesignProjectDetail = lazy(() => import("./pages/admin/DesignProjectDetail.tsx"));
+const AdminPermits = lazy(() => import("./pages/admin/Permits.tsx"));
+const AdminConstructionTasks = lazy(() => import("./pages/admin/construction/ConstructionTasksPage.tsx"));
+const AdminSiteDiary = lazy(() => import("./pages/admin/construction/SiteDiaryPage.tsx"));
+const AdminPunchList = lazy(() => import("./pages/admin/construction/PunchListPage.tsx"));
+const AdminHseViolations = lazy(() => import("./pages/admin/construction/HseViolationsPage.tsx"));
+const AdminAcceptanceRecords = lazy(() => import("./pages/admin/construction/AcceptanceRecordsPage.tsx"));
+const AdminAsBuiltDocuments = lazy(() => import("./pages/admin/construction/AsBuiltDocumentsPage.tsx"));
+const AdminAsBuiltDocumentCategories = lazy(() => import("./pages/admin/construction/AsBuiltDocumentCategoriesPage.tsx"));
+const AdminHandoverRecords = lazy(() => import("./pages/admin/construction/HandoverRecordsPage.tsx"));
+const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 
 const LegacyPostRedirect = ({ edit = false }: { edit?: boolean }) => {
   const { slug } = useParams();
@@ -104,7 +107,8 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
-            <Routes>
+            <Suspense fallback={<PageLoading />}>
+              <Routes>
               <Route path="/" element={<Index />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/services" element={<Services />} />
@@ -336,7 +340,8 @@ const App = () => (
             </Route>
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
-          </Routes>
+              </Routes>
+            </Suspense>
         </BrowserRouter>
       </TooltipProvider>
     </I18nProvider>
