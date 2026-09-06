@@ -44,6 +44,7 @@ const ALL_ADMIN_PATHS = [
   "/admin/finance-control",
   "/admin/design-projects",
   "/admin/operational-projects",
+  "/admin/reports/projects",
   "/admin/kpi",
   "/admin/kpi/configuration",
   "/admin/permits",
@@ -173,6 +174,7 @@ const matrix: RoleExpectation[] = [
       "/admin/procurement-control",
       "/admin/design-projects",
       "/admin/operational-projects",
+      "/admin/reports/projects",
       "/admin/kpi",
       "/admin/permits",
       "/admin/construction/tasks",
@@ -236,7 +238,7 @@ const matrix: RoleExpectation[] = [
   {
     // ACCOUNTANT: contacts.view + system.audit.view + crm.customers.view (+ view.all)
     user: TEST_USERS.accountant,
-    allowed: ["/admin", "/admin/notifications", "/admin/customers", "/admin/contracts", "/admin/vendors", "/admin/finance-control", "/admin/operational-projects", "/admin/kpi", "/admin/kpi/configuration", "/admin/contacts", "/admin/activity-log", "/admin/master-data", "/admin/workflows"],
+    allowed: ["/admin", "/admin/notifications", "/admin/customers", "/admin/contracts", "/admin/vendors", "/admin/finance-control", "/admin/operational-projects", "/admin/reports/projects", "/admin/kpi", "/admin/kpi/configuration", "/admin/contacts", "/admin/activity-log", "/admin/master-data", "/admin/workflows"],
   },
   {
     // WAREHOUSE: processes.view only (plus dashboard)
