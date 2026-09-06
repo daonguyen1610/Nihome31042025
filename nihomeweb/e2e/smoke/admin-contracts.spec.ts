@@ -41,7 +41,7 @@ test("SPA renders /admin/contracts without console errors for SUPER_ADMIN", asyn
     await page.locator("#c-project").click();
     await page.getByRole("option", { name: /Tất cả dự án vận hành|All operational projects|全部运营项目|すべての運用プロジェクト/i }).click();
 
-    await page.getByRole("button", { name: /Thêm hợp đồng|New contract|新增合同|新規契約/i }).click();
+    await page.locator("header").getByRole("button", { name: /Thêm hợp đồng|New contract|新增合同|新規契約/i }).click();
     await page.locator("#c-direction-form").click();
     await page.getByRole("option", { name: /Đầu vào - Đối tác|Downstream - Partner|下游 - 合作方|下流 - パートナー/i }).click();
     await expect(page.locator("#c-type-form")).toContainText(/Cung ứng|Supply|供应|供給/i);
@@ -80,8 +80,7 @@ test("SPA renders /admin/contracts without console errors for SUPER_ADMIN", asyn
     await expect(page.getByRole("heading", { level: 1 })).toContainText(contractNumber?.trim() ?? "");
 
     await editButton.click();
-    await editForm.locator("#contract-detail-project").click();
-    await page.getByRole("option").first().click();
+    await expect(editForm.locator("#contract-detail-project")).not.toHaveText(/Chọn dự án vận hành|Select operational project|选择运营项目|運用プロジェクトを選択/i);
     const updateResponse = page.waitForResponse((response) =>
         response.request().method() === "PUT" && /\/api\/contracts\/\d+$/.test(response.url()),
     );

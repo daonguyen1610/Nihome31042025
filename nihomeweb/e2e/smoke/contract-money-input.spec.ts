@@ -22,6 +22,8 @@ test("the new contract form proposes an editable date for a Paid milestone", asy
 }) => {
   await loginInBrowserAs(page, TEST_USERS.superAdmin);
   await page.goto("/admin/contracts");
+  await page.locator("#c-project").click();
+  await page.getByRole("option").filter({ hasText: /PJ-/ }).first().click();
   await page.getByRole("button", { name: /Thêm hợp đồng|New contract|新增合同|契約を追加/i }).click();
   await page.getByRole("button", { name: /Thêm đợt|Add milestone|添加里程碑|マイルストーンを追加/i }).click();
 
@@ -42,8 +44,7 @@ test("the new contract form proposes an editable date for a Paid milestone", asy
 
   await milestone.locator("input").nth(0).fill("Paid milestone");
   await milestone.locator('input[type="number"]').fill("100");
-  await page.locator("#c-customer-form").click();
-  await page.getByRole("option").first().click();
+  await expect(page.locator("#c-project-form")).not.toHaveText(/Chọn dự án vận hành|Select operational project|选择运营项目|運用プロジェクトを選択/i);
   await actualDate.fill("");
   let createRequests = 0;
   await page.route(new RegExp("/api/(?:v1/)?contracts$"), async route => {
