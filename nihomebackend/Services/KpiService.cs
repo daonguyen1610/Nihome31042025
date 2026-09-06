@@ -258,6 +258,7 @@ public sealed class KpiService(AppDbContext db, INotificationService notificatio
             "TenderOnTimePreparationRate" => await TenderOnTimeAsync(userId, period, ct),
             "DesignReleaseOnTimeRate" => await DesignOnTimeAsync(userId, period, ct),
             "DesignFirstPassRate" => await DesignFirstPassAsync(userId, period, ct),
+            "DesignSiteErrorCount" => await DesignSiteErrorCountAsync(definition, userId, period, ct),
             "SiteProgressVariance" => await SiteProgressVarianceAsync(definition, userId, period, ct),
             "FirstAcceptanceRate" => await FirstAcceptanceAsync(userId, period, ct),
             _ => MissingData(definition, "The required source event is not implemented in the current module."),
@@ -392,6 +393,24 @@ public sealed class KpiService(AppDbContext db, INotificationService notificatio
             return Math.Abs((decimal)(actualDays - plannedDays) / plannedDays * 100m);
         });
         return AgainstTarget(definition, Math.Round(variances.Average(), 4), tasks.Select(item => item.Id), "ConstructionTask");
+    }
+
+    private async Task<MetricResult> DesignSiteErrorCountAsync(
+        KpiDefinition definition,
+        int userId,
+        KpiPeriod period,
+        CancellationToken ct)
+    {
+        var rows = await db.PunchItems.AsNoTracking()
+            .Where(item => item.Status == PunchStatus.Verified &&
+                item.RootCause == PunchRootCause.Design &&
+                item.ResponsibleDesignUserId == userId &&
+                item.RootCauseConfirmedAt != null &&
+                item.VerifiedAt >= period.PeriodStartUtc &&
+                item.VerifiedAt < period.PeriodEndUtc)
+            .Select(item => item.Id)
+            .ToListAsync(ct);
+        return AgainstTarget(definition, rows.Count, rows, "PunchItem");
     }
 
     private async Task<MetricResult> FirstAcceptanceAsync(int userId, KpiPeriod period, CancellationToken ct)

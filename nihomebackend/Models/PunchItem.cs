@@ -31,6 +31,14 @@ public class PunchItem
 
     public PunchSeverity Severity { get; set; } = PunchSeverity.Medium;
 
+    public PunchRootCause RootCause { get; set; } = PunchRootCause.Unclassified;
+    public int? ResponsibleDesignUserId { get; set; }
+    public ApplicationUser? ResponsibleDesignUser { get; set; }
+    public string? RootCauseNote { get; set; }
+    public DateTime? RootCauseConfirmedAt { get; set; }
+    public int? RootCauseConfirmedByUserId { get; set; }
+    public ApplicationUser? RootCauseConfirmedBy { get; set; }
+
     public int? AssigneeUserId { get; set; }
     public ApplicationUser? Assignee { get; set; }
 
@@ -65,6 +73,16 @@ public enum PunchSeverity
     Medium = 1,
     High = 2,
     Critical = 3,
+}
+
+public enum PunchRootCause
+{
+    Unclassified = 0,
+    Design = 1,
+    Construction = 2,
+    Material = 3,
+    ClientChange = 4,
+    Other = 5,
 }
 
 /// <summary>Lifecycle of a <see cref="PunchItem"/>.</summary>

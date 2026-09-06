@@ -62,6 +62,7 @@ import {
   type DesignProjectListItemResponse,
   type PunchItemListParams,
   type PunchItemResponse,
+  type PunchRootCause,
   type PunchSeverity,
   type PunchStatus,
   type UpdatePunchItemRequest,
@@ -69,6 +70,8 @@ import {
 
 const PUNCH_STATUSES: PunchStatus[] = ["Open", "InProgress", "Fixed", "Verified", "Cancelled"];
 const PUNCH_SEVERITIES: PunchSeverity[] = ["Low", "Medium", "High", "Critical"];
+const PUNCH_ROOT_CAUSES: PunchRootCause[] = ["Design", "Construction", "Material", "ClientChange", "Other"];
+const DESIGN_TEAM_ROLES = new Set(["DesignLead", "Architect", "StructuralEngineer", "MepEngineer", "InteriorDesigner"]);
 
 const STATUS_BADGE: Record<PunchStatus, string> = {
   Open: "border-slate-200 bg-slate-50 text-slate-700",
@@ -181,6 +184,10 @@ const AdminPunchList = () => {
     kind: null, row: null,
   });
   const [actionBusy, setActionBusy] = useState(false);
+  const [verifyRootCause, setVerifyRootCause] = useState<PunchRootCause>("Construction");
+  const [verifyResponsibleUserId, setVerifyResponsibleUserId] = useState<number | null>(null);
+  const [verifyRootCauseNote, setVerifyRootCauseNote] = useState("");
+  const [verifyCandidates, setVerifyCandidates] = useState<UserOption[]>([]);
 
   // lookups
   const [projects, setProjects] = useState<DesignProjectListItemResponse[]>([]);
@@ -386,7 +393,19 @@ const AdminPunchList = () => {
     try {
       let updated: PunchItemResponse | null = null;
       if (kind === "verify") {
-        const { data } = await adminApi.verifyPunchItem(row.id);
+        if (verifyRootCause === "Design" && verifyResponsibleUserId == null) {
+          toast({ title: t("common.error"), description: t("punch.form.responsibleDesignerRequired"), variant: "destructive" });
+          return;
+        }
+        if (verifyRootCause === "Other" && !verifyRootCauseNote.trim()) {
+          toast({ title: t("common.error"), description: t("punch.form.rootCauseNoteRequired"), variant: "destructive" });
+          return;
+        }
+        const { data } = await adminApi.verifyPunchItem(row.id, {
+          rootCause: verifyRootCause,
+          responsibleDesignUserId: verifyRootCause === "Design" ? verifyResponsibleUserId : undefined,
+          rootCauseNote: verifyRootCauseNote.trim() || undefined,
+        });
         updated = data;
         toast({ title: t("punch.verified") });
       } else if (kind === "reopen") {
@@ -406,6 +425,23 @@ const AdminPunchList = () => {
     } finally {
       setActionBusy(false);
     }
+  };
+
+  const openVerify = async (row: PunchItemResponse) => {
+    setVerifyRootCause(row.rootCause === "Unclassified" ? "Construction" : row.rootCause);
+    setVerifyResponsibleUserId(row.responsibleDesignUserId ?? null);
+    setVerifyRootCauseNote(row.rootCauseNote ?? "");
+    setVerifyCandidates([]);
+    const project = projects.find((item) => item.id === row.designProjectId);
+    if (project?.operationalProjectId) {
+      try {
+        const { data } = await adminApi.getOperationalProjectTeam(project.operationalProjectId);
+        setVerifyCandidates(data.members
+          .filter((member) => member.isActive && member.roles.some((role) => role.isActive && DESIGN_TEAM_ROLES.has(role.roleCode)))
+          .map((member) => ({ id: member.userId, fullName: member.userName })));
+      } catch { /* server validation remains authoritative */ }
+    }
+    setConfirmAction({ kind: "verify", row });
   };
 
   // ---- bulk delete ----
@@ -973,6 +1009,13 @@ const AdminPunchList = () => {
                       <div>{detail.verifiedByName} · {detail.verifiedAt && new Date(detail.verifiedAt).toLocaleString(lang)}</div>
                     </div>
                   )}
+                  {detail.rootCause !== "Unclassified" && (
+                    <div className="rounded-md border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
+                      <div className="font-semibold">{t("punch.field.rootCause")}: {t(`punch.rootCause.${detail.rootCause}`)}</div>
+                      {detail.responsibleDesignUserName && <div>{t("punch.field.responsibleDesigner")}: {detail.responsibleDesignUserName}</div>}
+                      {detail.rootCauseNote && <div>{detail.rootCauseNote}</div>}
+                    </div>
+                  )}
 
                   {detailError && <div className="text-sm text-rose-600">{detailError}</div>}
 
@@ -997,7 +1040,7 @@ const AdminPunchList = () => {
                         </Button>
                       )}
                       {canVerify && detail.status === "Fixed" && (
-                        <Button variant="outline" size="sm" onClick={() => setConfirmAction({ kind: "verify", row: detail })} data-testid="punch-verify">
+                        <Button variant="outline" size="sm" onClick={() => void openVerify(detail)} data-testid="punch-verify">
                           <ShieldCheck className="mr-2 h-4 w-4" />
                           {t("punch.action.verify")}
                         </Button>
@@ -1046,6 +1089,41 @@ const AdminPunchList = () => {
               <AlertDialogTitle>{confirmTitle()}</AlertDialogTitle>
               <AlertDialogDescription>{confirmMessage()}</AlertDialogDescription>
             </AlertDialogHeader>
+            {confirmAction.kind === "verify" && (
+              <div className="space-y-3">
+                <div>
+                  <Label>{t("punch.field.rootCause")}</Label>
+                  <Select value={verifyRootCause} onValueChange={(value) => {
+                    setVerifyRootCause(value as PunchRootCause);
+                    if (value !== "Design") setVerifyResponsibleUserId(null);
+                  }}>
+                    <SelectTrigger data-testid="punch-verify-root-cause"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {PUNCH_ROOT_CAUSES.map((cause) => (
+                        <SelectItem key={cause} value={cause}>{t(`punch.rootCause.${cause}`)}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {verifyRootCause === "Design" && (
+                  <div>
+                    <Label>{t("punch.field.responsibleDesigner")}</Label>
+                    <SearchableSelect
+                      value={verifyResponsibleUserId == null ? "" : String(verifyResponsibleUserId)}
+                      onChange={(value) => setVerifyResponsibleUserId(value ? Number(value) : null)}
+                      options={verifyCandidates.map((candidate) => ({ value: String(candidate.id), label: candidate.fullName }))}
+                      placeholder="—"
+                    />
+                  </div>
+                )}
+                {(verifyRootCause === "Design" || verifyRootCause === "Other") && (
+                  <div>
+                    <Label>{t("punch.field.rootCauseNote")}</Label>
+                    <Textarea value={verifyRootCauseNote} onChange={(event) => setVerifyRootCauseNote(event.target.value)} rows={2} />
+                  </div>
+                )}
+              </div>
+            )}
             <AlertDialogFooter>
               <AlertDialogCancel disabled={actionBusy}>{t("common.cancel")}</AlertDialogCancel>
               <AlertDialogAction onClick={runConfirmAction} disabled={actionBusy} data-testid="punch-action-confirm">

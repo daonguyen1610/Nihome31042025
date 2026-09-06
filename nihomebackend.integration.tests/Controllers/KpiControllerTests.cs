@@ -213,9 +213,12 @@ public class KpiControllerTests : IntegrationTestBase
             db.DesignScheduleTasks.Add(new DesignScheduleTask { OperationalProjectId = project.Id, DesignProjectId = designProject.Id, PhaseId = phase.Id, Code = "KPI-DES-1", Name = "Issue drawing", DepartmentCode = "design", AssigneeMemberId = designMember.Id, PlannedStart = new DateOnly(2026, 8, 1), PlannedEnd = new DateOnly(2026, 8, 15), ActualStart = new DateOnly(2026, 8, 1), ActualEnd = new DateOnly(2026, 8, 14), Status = DesignScheduleStatus.Completed, Weight = 100, CreatedByUserId = pmUserId, UpdatedByUserId = pmUserId });
             db.BasicDesignDocs.Add(new BasicDesignDoc { DesignProjectId = designProject.Id, DisciplineCode = "architecture", DocumentCode = "KPI-BD-1", Title = "First pass", OwnerUserId = designUserId, Status = BasicDesignDocStatus.InternallyApproved, CreatedAt = new DateTime(2026, 8, 1, 0, 0, 0, DateTimeKind.Utc), UpdatedAt = new DateTime(2026, 8, 18, 0, 0, 0, DateTimeKind.Utc) });
             db.ConstructionTasks.Add(new ConstructionTask { DesignProjectId = designProject.Id, TaskCode = "KPI-SITE-1", Name = "Site work", PlannedStart = new DateOnly(2026, 8, 1), PlannedEnd = new DateOnly(2026, 8, 10), ActualStart = new DateOnly(2026, 8, 1), ActualEnd = new DateOnly(2026, 8, 11), OwnerUserId = pmUserId, Status = ConstructionTaskStatus.Completed, ProgressPercent = 100 });
+            db.PunchItems.Add(new PunchItem { DesignProjectId = designProject.Id, PunchCode = "KPI-P-1", Title = "Design error", RootCause = PunchRootCause.Design, ResponsibleDesignUserId = designUserId, RootCauseConfirmedAt = new DateTime(2026, 8, 21, 0, 0, 0, DateTimeKind.Utc), RootCauseConfirmedByUserId = pmUserId, Status = PunchStatus.Verified, VerifiedAt = new DateTime(2026, 8, 21, 0, 0, 0, DateTimeKind.Utc), VerifiedByUserId = pmUserId });
             db.AcceptanceRecords.Add(new AcceptanceRecord { DesignProjectId = designProject.Id, AcceptanceCode = "KPI-ACC-1", Title = "First acceptance", AcceptanceDate = new DateOnly(2026, 8, 20), Status = AcceptanceStatus.Approved, ApprovedAt = new DateTime(2026, 8, 20, 0, 0, 0, DateTimeKind.Utc), CreatedByUserId = pmUserId, RevisionCount = 0 });
             var progress = await db.KpiDefinitions.SingleAsync(item => item.Code == "SITE_PROGRESS");
             progress.TargetValue = 10m;
+            var designErrors = await db.KpiDefinitions.SingleAsync(item => item.Code == "DESIGN_SITE_ERRORS");
+            designErrors.TargetValue = 1m;
             await db.SaveChangesAsync();
             return new { designUserId, pmUserId };
         });
@@ -225,7 +228,9 @@ public class KpiControllerTests : IntegrationTestBase
         var design = await ReadJsonAsync(designResponse);
         design.GetProperty("scores").EnumerateArray().Single(item => item.GetProperty("code").GetString() == "DESIGN_ON_TIME").GetProperty("score").GetDecimal().Should().Be(100m);
         design.GetProperty("scores").EnumerateArray().Single(item => item.GetProperty("code").GetString() == "DESIGN_FIRST_PASS").GetProperty("score").GetDecimal().Should().Be(100m);
-        design.GetProperty("scores").EnumerateArray().Single(item => item.GetProperty("code").GetString() == "DESIGN_SITE_ERRORS").GetProperty("status").GetString().Should().Be("MissingData");
+        var designErrors = design.GetProperty("scores").EnumerateArray().Single(item => item.GetProperty("code").GetString() == "DESIGN_SITE_ERRORS");
+        designErrors.GetProperty("status").GetString().Should().Be("Available");
+        designErrors.GetProperty("rawValue").GetDecimal().Should().Be(1m);
 
         using var siteResponse = await SendWithIdempotencyAsync(HttpMethod.Post, "/api/kpi/calculate", new { year = 2026, month = 8, userId = users.pmUserId });
         siteResponse.EnsureSuccessStatusCode();

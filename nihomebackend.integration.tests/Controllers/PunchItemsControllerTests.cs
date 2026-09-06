@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Models;
 
@@ -109,7 +110,7 @@ public class PunchItemsControllerTests : IntegrationTestBase
 
         // PM has construction.punch.** from wildcards.
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "PM"));
-        var res = await Client.PostAsJsonAsync($"/api/punch-items/{id}/verify", new { resolutionNote = "checked on site" });
+        var res = await Client.PostAsJsonAsync($"/api/punch-items/{id}/verify", new { resolutionNote = "checked on site", rootCause = "Construction" });
         res.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await ReadJsonAsync(res);
         body.GetProperty("status").GetString().Should().Be("Verified");
@@ -123,7 +124,7 @@ public class PunchItemsControllerTests : IntegrationTestBase
         var id = await CreatePunchAsync(projectId);
         (await Client.PostAsJsonAsync($"/api/punch-items/{id}/status", new { status = "InProgress" })).EnsureSuccessStatusCode();
         (await Client.PostAsJsonAsync($"/api/punch-items/{id}/status", new { status = "Fixed" })).EnsureSuccessStatusCode();
-        (await Client.PostAsJsonAsync($"/api/punch-items/{id}/verify", new { })).EnsureSuccessStatusCode();
+        (await Client.PostAsJsonAsync($"/api/punch-items/{id}/verify", new { rootCause = "Construction" })).EnsureSuccessStatusCode();
 
         var reopen = await Client.PostAsJsonAsync($"/api/punch-items/{id}/status", new { status = "Open" });
         reopen.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -140,7 +141,7 @@ public class PunchItemsControllerTests : IntegrationTestBase
         var id = await CreatePunchAsync(projectId);
         (await Client.PostAsJsonAsync($"/api/punch-items/{id}/status", new { status = "InProgress" })).EnsureSuccessStatusCode();
         (await Client.PostAsJsonAsync($"/api/punch-items/{id}/status", new { status = "Fixed" })).EnsureSuccessStatusCode();
-        (await Client.PostAsJsonAsync($"/api/punch-items/{id}/verify", new { })).EnsureSuccessStatusCode();
+        (await Client.PostAsJsonAsync($"/api/punch-items/{id}/verify", new { rootCause = "Construction" })).EnsureSuccessStatusCode();
 
         var res = await Client.PutAsJsonAsync($"/api/punch-items/{id}", new
         {
@@ -148,6 +149,34 @@ public class PunchItemsControllerTests : IntegrationTestBase
             severity = "Low",
         });
         res.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Verify_DesignRootCause_RequiresResponsibleDesignMember()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var projectId = await CreateProjectAsync();
+        var id = await CreatePunchAsync(projectId);
+        (await Client.PostAsJsonAsync($"/api/punch-items/{id}/status", new { status = "InProgress" })).EnsureSuccessStatusCode();
+        (await Client.PostAsJsonAsync($"/api/punch-items/{id}/status", new { status = "Fixed" })).EnsureSuccessStatusCode();
+
+        var missing = await Client.PostAsJsonAsync($"/api/punch-items/{id}/verify", new { rootCause = "Design" });
+        missing.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        var designUserId = await WithDbAsync(db => db.DesignProjects
+            .Where(project => project.Id == projectId)
+            .Select(project => project.DesignLeadUserId!.Value)
+            .SingleAsync());
+        var verified = await Client.PostAsJsonAsync($"/api/punch-items/{id}/verify", new
+        {
+            rootCause = "Design",
+            responsibleDesignUserId = designUserId,
+        });
+        verified.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await ReadJsonAsync(verified);
+        body.GetProperty("rootCause").GetString().Should().Be("Design");
+        body.GetProperty("responsibleDesignUserId").GetInt32().Should().Be(designUserId);
+        body.GetProperty("rootCauseConfirmedAt").ValueKind.Should().Be(JsonValueKind.String);
     }
 
     [Fact]
@@ -200,12 +229,17 @@ public class PunchItemsControllerTests : IntegrationTestBase
             .Where(user => user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["PM"])
             .Select(user => user.Id)
             .SingleAsync());
+        var designLeadUserId = await WithDbAsync(db => db.Users
+            .Where(user => user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["DESIGN"])
+            .Select(user => user.Id)
+            .SingleAsync());
         var res = await Client.PostAsJsonAsync("/api/design-projects", new
         {
             name = $"Punch fixture {Guid.NewGuid():N}",
             customerId,
             operationalProjectId,
             projectManagerUserId,
+            designLeadUserId,
         });
         res.EnsureSuccessStatusCode();
         return (await ReadJsonAsync(res)).GetProperty("id").GetInt32();
