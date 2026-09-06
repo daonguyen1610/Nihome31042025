@@ -127,7 +127,11 @@ public class PunchItemServiceTests : IDisposable
         var fixedRow = await _sut.TransitionStatusAsync(p.Id, new TransitionPunchStatusRequest { Status = "Fixed" }, _userId);
         Assert.Equal("Fixed", fixedRow!.Status);
 
-        var verified = await _sut.TransitionStatusAsync(p.Id, new TransitionPunchStatusRequest { Status = "Verified" }, _userId);
+        var verified = await _sut.TransitionStatusAsync(p.Id, new TransitionPunchStatusRequest
+        {
+            Status = "Verified",
+            RootCause = "Construction",
+        }, _userId);
         Assert.Equal("Verified", verified!.Status);
         Assert.NotNull(verified.VerifiedAt);
 
@@ -162,7 +166,11 @@ public class PunchItemServiceTests : IDisposable
         var p = await _sut.CreateAsync(Req(), _userId);
         await _sut.TransitionStatusAsync(p.Id, new TransitionPunchStatusRequest { Status = "InProgress" }, _userId);
         await _sut.TransitionStatusAsync(p.Id, new TransitionPunchStatusRequest { Status = "Fixed" }, _userId);
-        await _sut.TransitionStatusAsync(p.Id, new TransitionPunchStatusRequest { Status = "Verified" }, _userId);
+        await _sut.TransitionStatusAsync(p.Id, new TransitionPunchStatusRequest
+        {
+            Status = "Verified",
+            RootCause = "Construction",
+        }, _userId);
 
         var body = new UpdatePunchItemRequest
         {

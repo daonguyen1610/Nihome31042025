@@ -2,10 +2,10 @@
 
 ## Status and objective
 
-This document designs the operational source workflows required by the ten KPI
-definitions that currently return `MissingData`. It does not mark those metrics
-as delivered. Rules labelled **Decision required** must be approved by the
-Product Owner or NICON business owner before implementation.
+This document records the operational source workflows delivered for the ten
+KPI definitions that previously returned `MissingData`. The requester approved
+the decision package below on 06/09/2026 before implementation. Numeric target
+values not present in the source documents remain administrator configuration.
 
 The objective is to produce auditable business events for KPI calculation,
 without treating free text, mutable current state, generic audit logs, or
@@ -74,9 +74,8 @@ Proposed grants:
 | PM / Site lead | Create requests; view project material transactions; confirm site responsibility |
 | BGD / authorized manager | Approve BOQ revisions and vendor ratings; cross-user KPI management remains separate |
 
-**Decision required D-01:** Confirm whether `PROCUREMENT` is a new system role,
-an existing custom role, or a project-team assignment. A user with only `QS`
-must remain `TENDERING` unless the business explicitly approves dual positions.
+**Decision D-01 — Approved:** `PROCUREMENT` is a distinct business role. A user
+with only `QS` remains `TENDERING`; `WAREHOUSE` remains a separate control role.
 Implementation must also add the approved role to `KpiPosition` and
 `KpiCalculationBackgroundService.HasKpiPosition`; adding RBAC data alone does
 not make the user eligible for scheduled calculation.
@@ -110,10 +109,9 @@ API surface:
 This source unlocks tender estimate accuracy and supplies the budget quantity
 and unit-cost ceiling for procurement and material metrics.
 
-**Decision required D-02:** Define which approved execution revision is the
-"final actual BOQ" for Tender KPI: first approved construction baseline, last
-approved revision before completion, or the final approved revision at project
-completion. Also approve whether approved Variation Orders change that baseline.
+**Decision D-02 — Approved:** the final actual BOQ is the latest approved
+execution revision selected atomically when the Operational Project completes.
+Variation Orders affect it only through an explicit approved BOQ revision.
 
 ### SW-02: Design-error attribution on Punch Items
 
@@ -139,9 +137,8 @@ bucketed by `VerifiedAt` and attributed to `ResponsibleDesignUserId`.
 Proposed raw value: count of qualifying items. Scoring remains
 `LowerIsBetter` against the configured target.
 
-**Decision required D-03:** Confirm whether severity weights the metric or all
-confirmed design errors count equally. The source document specifies a count,
-so equal counting is the safest default.
+**Decision D-03 — Approved:** all verified, confirmed Design-root-cause Punch
+Items count equally; severity remains evidence but does not weight the KPI.
 
 ### SW-03: HSE violation workflow
 
@@ -172,9 +169,9 @@ KPI source event: confirmed violations attributed to `ResponsibleSiteUserId`,
 bucketed by `ConfirmedAt`. Raw value is the count; scoring is
 `LowerIsBetter` against the configured target.
 
-**Decision required D-04:** Confirm whether rejected/cancelled records and
-severity affect the KPI. The source document says confirmed, penalized events;
-therefore drafts and unconfirmed diary text cannot count.
+**Decision D-04 — Approved:** confirmed violations count equally. Draft,
+Reported, Rejected, and Cancelled records do not count; diary text is not a
+source event.
 
 ### SW-04: Material and procurement transaction chain
 
@@ -207,16 +204,12 @@ This chain supports three KPI definitions:
 | Procurement delivery time | Fulfilled approved requests attributed to the assigned procurement user. Raw value is average elapsed hours from `ApprovedAt` to the final posted receipt that satisfies the approved quantity. |
 | Site material waste | Posted issue quantity attributed to the responsible site user and compared with the effective approved BOQ quantity for the same lines. |
 
-**Decision required D-05:** The source document describes
-`issued quantity / BOQ maximum`, while the metric name says waste. Approve either
-utilization percentage or excess-waste percentage
-`max(issued - allowance, 0) / allowance`. They produce materially different
-scores.
+**Decision D-05 — Approved:** material waste is excess-waste percentage
+`100 * max(net posted issues - final BOQ allowance, 0) / allowance`.
 
-**Decision required D-06:** Confirm whether procurement delivery time uses
-calendar hours or working hours, and whether partial receipts stop the clock.
-The proposed default uses calendar hours and stops only when the request is
-fully received.
+**Decision D-06 — Approved:** Procurement delivery uses calendar hours from MR
+approval to the final posted receipt that fully satisfies the request. Partial
+receipts do not stop the clock.
 
 ### SW-05: Vendor rating
 
@@ -238,9 +231,10 @@ KPI source event: approved ratings bucketed by `ApprovedAt` and attributed to
 the captured procurement owner. Raw value is the average approved overall
 score, with the source component scores retained in evidence.
 
-**Decision required D-07:** Approve rating cadence, component weights, minimum
-sample size, and approver. The source only requires a periodic average and does
-not define these controls.
+**Decision D-07 — Approved:** one scorecard version per completed downstream
+Contract; quality, schedule, cost, and HSE have equal weights. Procurement
+prepares it and the project's PM approves it. One approved rating is a valid
+sample.
 
 ### SW-06: Receivable ownership and collection evidence
 
@@ -262,9 +256,9 @@ and have a responsible accountant. Numerator is those paid on or before
 `DueDate`. The responsible accountant receives the result even if another user
 records the payment.
 
-**Decision required D-08:** Confirm denominator behavior for unpaid milestones
-whose due date has passed, partial payments, reassignment during a period, and
-payments received before the due month.
+**Decision D-08 — Approved:** the denominator is upstream milestones due in the
+month. An unpaid overdue milestone fails; attribution uses the responsible
+accountant stored on the milestone. Only full `Paid` status qualifies on time.
 
 ### SW-07: Partner Payment Request
 
@@ -292,9 +286,9 @@ KPI source event: paid requests attributed to the assigned accountant and
 bucketed by `PaidAt`. Proposed raw value is average elapsed hours from
 `ValidatedAt` to `PaidAt`.
 
-**Decision required D-09:** Confirm whether the clock ends at approval or bank
-payment, and whether weekends, holidays, rejected requests, and requests waiting
-for missing vendor documents are excluded.
+**Decision D-09 — Approved:** elapsed time is calendar hours from `ValidatedAt`
+to `PaidAt`. Time before validation, rejected requests, and incomplete vendor
+documents do not enter the sample.
 
 ### SW-08: Accounting period and correction log
 
@@ -321,10 +315,9 @@ KPI source event: approved post-close corrections attributed to the responsible
 accountant and bucketed by `ApprovedAt`. Raw value is count; scoring is
 `LowerIsBetter` against the configured target.
 
-**Decision required D-10:** Define which correction reasons count, whether a
-reversal counts again, and whether attribution belongs to the original entry
-owner or the employee who records the correction. The proposed default assigns
-the correction to the original entry owner.
+**Decision D-10 — Approved:** every approved post-close correction counts once
+against the responsible accountant on the original entry. A reversal preserves
+the original count and does not count as a second correction.
 
 ## Metric contract summary
 
@@ -425,8 +418,9 @@ of these explicit strategies:
   that position, then supersede it atomically when the remaining sources ship.
 
 Do not silently deactivate one metric and leave weights below 100 percent.
-**Decision required D-11:** Approve the rollout strategy per position and the
-effective month of each definition version.
+**Decision D-11 — Approved:** deploy complete source workflows together and
+keep numeric targets as explicit administrator configuration. A period remains
+non-lockable while any active metric is missing source data or configuration.
 
 ## Migration and legacy-data policy
 
@@ -495,7 +489,6 @@ source workflow and affects only an explicitly reopened or later period. Adding
 reopen requires authorization, reason, audit, notification, optimistic
 concurrency, and preservation of the previous locked snapshot version.
 
-**Decision required D-12:** Approve whether KPI periods may be reopened. If not,
-late approved events never alter a locked score. If yes, define who may reopen,
-the allowed age, employee notification, and how prior snapshot versions remain
-visible.
+**Decision D-12 — Approved:** KPI periods cannot be reopened. Late approved
+events never alter a locked snapshot and affect only an unlocked or later
+period according to their qualifying timestamp.

@@ -67,6 +67,25 @@ public class ProcurementControllerTests : IntegrationTestBase
             .StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
+    [Fact]
+    public async Task VendorRating_ComponentAboveOneHundred_IsRejectedByApiContract()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "SUPER_ADMIN"));
+        var projectId = await CreateProjectAsync();
+
+        var response = await SendAsync(HttpMethod.Post, $"/api/operational-projects/{projectId}/procurement/vendor-ratings", new
+        {
+            contractId = 1,
+            qualityScore = 101m,
+            scheduleScore = 80m,
+            costScore = 80m,
+            hseScore = 80m,
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.VendorRatings.CountAsync())).Should().Be(0);
+    }
+
     private async Task<int> CreateProjectAsync() => await WithDbAsync(async db =>
     {
         var pmUserId = await db.Users

@@ -33,36 +33,32 @@ reported as `MissingData`; it is never converted to a zero score.
 | Sales | First customer interaction time | 20% | Lead creation and first non-note activity | Implemented; target required |
 | Tendering | Tender win rate | 40% | Tender preparer, close date and result | Implemented |
 | Tendering | On-time tender preparation | 30% | Tender checklist owner/deadline/completion | Implemented |
-| Tendering | Tender estimate accuracy | 30% | Approved tender BOQ versus final actual BOQ | Blocked: no final actual BOQ source |
+| Tendering | Tender estimate accuracy | 30% | Approved tender estimate versus final execution BOQ | Implemented |
 | Design | On-time drawing delivery | 40% | Design schedule task assignee, planned/actual end | Implemented |
 | Design | First-pass drawing approval | 30% | Drawing owner, approval/release and revision count | Implemented |
-| Design | Site-reported design errors | 30% | Design-attributed site defects | Blocked: Punch Item has no error-source classification |
+| Design | Site-reported design errors | 30% | Verified Punch Items with confirmed Design root cause | Implemented; target required |
 | Site | Construction progress variance | 30% | Construction task owner and planned/actual duration | Implemented; target required |
-| Site | Material waste rate | 30% | BOQ allowance versus warehouse issue quantity | Blocked: no material ledger or issue workflow |
+| Site | Material waste rate | 30% | Excess posted warehouse issue quantity versus final BOQ allowance | Implemented; target required |
 | Site | First-pass acceptance | 20% | Acceptance creator, approval and revision count | Implemented |
-| Site | HSE violation count | 20% | Structured HSE violation events | Blocked: no HSE violation entity |
-| Procurement | Purchase cost optimization | 40% | BOQ unit allowance versus purchased unit price | Blocked: no PO/contract line-item source |
-| Procurement | Delivery time | 30% | Approved material request to warehouse receipt | Blocked: no MR or warehouse receipt workflow |
-| Procurement | Vendor quality rating | 30% | Per-project vendor scorecard | Blocked: no Vendor Rating workflow |
-| Project Accounting | On-time receivable collection | 40% | Payment milestone due and actual paid date | Blocked: no accountant attribution on receipt event |
-| Project Accounting | Partner payment processing time | 30% | Invoice receipt to approved disbursement | Blocked: no Payment Request workflow |
-| Project Accounting | Financial data accuracy | 30% | Post-close accounting corrections | Blocked: no Accounting Correction workflow |
+| Site | HSE violation count | 20% | Confirmed HSE violations attributed to the responsible site user | Implemented; target required |
+| Procurement | Purchase cost optimization | 40% | Final BOQ unit ceiling versus signed downstream Contract line cost | Implemented |
+| Procurement | Delivery time | 30% | Approved Material Request to final posted Warehouse Receipt | Implemented; target required |
+| Procurement | Vendor quality rating | 30% | PM-approved per-contract Vendor Rating | Implemented |
+| Project Accounting | On-time receivable collection | 40% | Due-month upstream milestones attributed to an accountant | Implemented |
+| Project Accounting | Partner payment processing time | 30% | Validated Payment Request to paid timestamp | Implemented; default target 72 hours |
+| Project Accounting | Financial data accuracy | 30% | Approved post-close Accounting Corrections | Implemented; default target 1 correction |
 
-## Missing-source implementation order
+## Source-workflow delivery
 
 The detailed data contracts, lifecycle proposals, permission boundaries, and
 decision gates are defined in [KPI Source Workflow Design](kpi-source-workflows.md).
 
-1. Approve and add the Procurement position mapping.
-2. Add Punch Item error-source classification and accountant attribution to
-  existing receivable milestones.
-3. Add structured HSE violation events.
-4. Add approved execution BOQ revisions.
-5. Add downstream contract lines, Material Requests, warehouse receipts, and
-  warehouse issues linked to the execution BOQ.
-6. Add per-project Vendor Rating with quality, schedule, cost, and HSE scores.
-7. Add Payment Request approval and payment evidence.
-8. Add Accounting Period close and Accounting Correction workflows.
+The source workflows are delivered in migrations
+`AddPunchRootCauseAttribution`, `AddReceivableAccountability`,
+`AddHseViolations`, `AddProcurementControlChain`, and
+`AddFinanceControlWorkflows`. Numeric targets without an approved value remain
+administrator configuration; source availability and target configuration are
+reported separately.
 
 Each source workflow requires its own authorization, audit, migration,
 multilingual UI, integration tests, and unchanged-state checks before the
