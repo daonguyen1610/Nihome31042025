@@ -1016,6 +1016,7 @@ export interface KpiDefinitionResponse {
   sourceModule: string;
   metricCode: string;
   weight: number;
+  requiresTarget: boolean;
   targetValue?: number | null;
   minimumAcceptableScore?: number | null;
   targetDirection: KpiTargetDirection;

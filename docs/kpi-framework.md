@@ -37,6 +37,13 @@ The evaluation route does not render or load definition configuration. The
 configuration route does not load employee dashboards or expose calculate,
 export, or period-lock actions.
 
+Both routes include an expandable, four-language usage guide. Evaluation
+explains the four-step workflow, data statuses, and irreversible period lock.
+Configuration explains each field and shows live readiness per role: active
+weight total, missing required targets, and whether the role is ready to score.
+The `RequiresTarget` flag is supplied by the backend definition contract so the
+frontend does not duplicate formula rules.
+
 ## Metric traceability
 
 | Position | Metric | Weight | Source | Status |

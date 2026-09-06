@@ -18,6 +18,7 @@ public class KpiDefinitionResponse
     public string SourceModule { get; set; } = string.Empty;
     public string MetricCode { get; set; } = string.Empty;
     public decimal Weight { get; set; }
+    public bool RequiresTarget { get; set; }
     public decimal? TargetValue { get; set; }
     public decimal? MinimumAcceptableScore { get; set; }
     public KpiTargetDirection TargetDirection { get; set; }

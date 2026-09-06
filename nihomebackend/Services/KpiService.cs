@@ -747,6 +747,7 @@ public sealed class KpiService(AppDbContext db, INotificationService notificatio
         SourceModule = item.SourceModule,
         MetricCode = item.MetricCode,
         Weight = item.Weight,
+        RequiresTarget = RequiresTarget(item.MetricCode),
         TargetValue = item.TargetValue,
         MinimumAcceptableScore = item.MinimumAcceptableScore,
         TargetDirection = item.TargetDirection,
@@ -754,6 +755,17 @@ public sealed class KpiService(AppDbContext db, INotificationService notificatio
         IsActive = item.IsActive,
         RowVersion = CrmConcurrency.Encode(item.RowVersion),
     };
+
+    private static bool RequiresTarget(string metricCode) => metricCode is
+        "SalesNewContractRevenue" or
+        "SalesFirstInteractionHours" or
+        "DesignSiteErrorCount" or
+        "SiteProgressVariance" or
+        "MaterialWasteRate" or
+        "HseViolationCount" or
+        "ProcurementDeliveryHours" or
+        "PartnerPaymentHours" or
+        "AccountingCorrectionCount";
 
     private static KpiScoreResponse MapScore(KpiScoreSnapshot item) => new()
     {
