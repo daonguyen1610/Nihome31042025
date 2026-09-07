@@ -1,4 +1,34 @@
+using NihomeBackend.Models;
+
 namespace NihomeBackend.Models.DTOs.Responses;
+
+public sealed class ProjectBoqRevisionListResponse
+{
+    public int Total { get; set; }
+    public int Page { get; set; }
+    public int PageSize { get; set; }
+    public List<ProjectBoqRevisionListItemResponse> Items { get; set; } = [];
+}
+
+public sealed class ProjectBoqRevisionListItemResponse
+{
+    public int Id { get; set; }
+    public int OperationalProjectId { get; set; }
+    public int RevisionNumber { get; set; }
+    public string Currency { get; set; } = string.Empty;
+    public ProjectBoqRevisionStatus Status { get; set; }
+    public decimal CostTotal { get; set; }
+    public int LineCount { get; set; }
+    public List<string> ItemCodes { get; set; } = [];
+    public int PreparedByUserId { get; set; }
+    public string? PreparedByName { get; set; }
+    public DateTime? SubmittedAt { get; set; }
+    public DateTime? ApprovedAt { get; set; }
+    public DateTime? RejectedAt { get; set; }
+    public bool IsFinal { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
+}
 
 public sealed class ProjectBoqRevisionResponse
 {

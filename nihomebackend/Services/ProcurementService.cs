@@ -10,6 +10,38 @@ namespace NihomeBackend.Services;
 
 public sealed class ProcurementService(AppDbContext db) : IProcurementService
 {
+    public async Task<ProjectBoqRevisionListResponse> ListBoqRevisionsAsync(
+        int projectId,
+        ProjectBoqRevisionListQuery query,
+        CancellationToken ct = default)
+    {
+        await EnsureProjectAsync(projectId, mutable: false, ct);
+        var filtered = ApplyBoqListFilters(projectId, query);
+        var total = await filtered.CountAsync(ct);
+        var items = await SelectBoqListItems(ApplyBoqListSort(filtered, query)
+            .Skip((query.Page - 1) * query.PageSize)
+            .Take(query.PageSize))
+            .ToListAsync(ct);
+        return new ProjectBoqRevisionListResponse
+        {
+            Total = total,
+            Page = query.Page,
+            PageSize = query.PageSize,
+            Items = items,
+        };
+    }
+
+    public async Task<IReadOnlyList<ProjectBoqRevisionListItemResponse>> ExportBoqRevisionsAsync(
+        int projectId,
+        ProjectBoqRevisionListQuery query,
+        CancellationToken ct = default)
+    {
+        await EnsureProjectAsync(projectId, mutable: false, ct);
+        return await SelectBoqListItems(
+            ApplyBoqListSort(ApplyBoqListFilters(projectId, query), query))
+            .ToListAsync(ct);
+    }
+
     public async Task<ProcurementWorkspaceResponse> GetWorkspaceAsync(int projectId, CancellationToken ct = default)
     {
         await EnsureProjectAsync(projectId, mutable: false, ct);
@@ -947,6 +979,61 @@ public sealed class ProcurementService(AppDbContext db) : IProcurementService
 
     private IQueryable<ProjectBoqRevision> BoqQuery() => db.ProjectBoqRevisions.AsNoTracking()
         .Include(item => item.PreparedBy).Include(item => item.Lines.OrderBy(line => line.SortOrder));
+
+    private IQueryable<ProjectBoqRevision> ApplyBoqListFilters(
+        int projectId,
+        ProjectBoqRevisionListQuery query)
+    {
+        var result = db.ProjectBoqRevisions.AsNoTracking()
+            .Where(item => item.OperationalProjectId == projectId);
+        if (query.Status.HasValue) result = result.Where(item => item.Status == query.Status.Value);
+        if (!string.IsNullOrWhiteSpace(query.Search))
+        {
+            var term = query.Search.Trim();
+            result = result.Where(item =>
+                item.RevisionNumber.ToString().Contains(term) ||
+                item.PreparedBy != null && item.PreparedBy.FullName.Contains(term) ||
+                item.Lines.Any(line => line.ItemCode.Contains(term) || line.Description.Contains(term)));
+        }
+        return result;
+    }
+
+    private static IOrderedQueryable<ProjectBoqRevision> ApplyBoqListSort(
+        IQueryable<ProjectBoqRevision> query,
+        ProjectBoqRevisionListQuery parameters)
+    {
+        var descending = string.Equals(parameters.SortDirection, "desc", StringComparison.OrdinalIgnoreCase);
+        return parameters.SortBy switch
+        {
+            "status" => descending ? query.OrderByDescending(item => item.Status).ThenByDescending(item => item.Id) : query.OrderBy(item => item.Status).ThenBy(item => item.Id),
+            "total" => descending ? query.OrderByDescending(item => item.CostTotal).ThenByDescending(item => item.Id) : query.OrderBy(item => item.CostTotal).ThenBy(item => item.Id),
+            "preparedBy" => descending ? query.OrderByDescending(item => item.PreparedBy.FullName).ThenByDescending(item => item.Id) : query.OrderBy(item => item.PreparedBy.FullName).ThenBy(item => item.Id),
+            "createdAt" => descending ? query.OrderByDescending(item => item.CreatedAt).ThenByDescending(item => item.Id) : query.OrderBy(item => item.CreatedAt).ThenBy(item => item.Id),
+            "updatedAt" => descending ? query.OrderByDescending(item => item.UpdatedAt).ThenByDescending(item => item.Id) : query.OrderBy(item => item.UpdatedAt).ThenBy(item => item.Id),
+            _ => descending ? query.OrderByDescending(item => item.RevisionNumber).ThenByDescending(item => item.Id) : query.OrderBy(item => item.RevisionNumber).ThenBy(item => item.Id),
+        };
+    }
+
+    private static IQueryable<ProjectBoqRevisionListItemResponse> SelectBoqListItems(
+        IQueryable<ProjectBoqRevision> query) => query.Select(item => new ProjectBoqRevisionListItemResponse
+        {
+            Id = item.Id,
+            OperationalProjectId = item.OperationalProjectId,
+            RevisionNumber = item.RevisionNumber,
+            Currency = item.Currency,
+            Status = item.Status,
+            CostTotal = item.CostTotal,
+            LineCount = item.Lines.Count,
+            ItemCodes = item.Lines.OrderBy(line => line.SortOrder).Select(line => line.ItemCode).ToList(),
+            PreparedByUserId = item.PreparedByUserId,
+            PreparedByName = item.PreparedBy.FullName,
+            SubmittedAt = item.SubmittedAt,
+            ApprovedAt = item.ApprovedAt,
+            RejectedAt = item.RejectedAt,
+            IsFinal = item.OperationalProject != null && item.OperationalProject.FinalProjectBoqRevisionId == item.Id,
+            CreatedAt = item.CreatedAt,
+            UpdatedAt = item.UpdatedAt,
+        });
     private IQueryable<MaterialRequest> RequestQuery() => db.MaterialRequests.AsNoTracking()
         .Include(item => item.SiteRequester).Include(item => item.ResponsibleSiteUser).Include(item => item.AssignedProcurementUser)
         .Include(item => item.Lines.OrderBy(line => line.SortOrder)).ThenInclude(line => line.ProjectBoqLine);
