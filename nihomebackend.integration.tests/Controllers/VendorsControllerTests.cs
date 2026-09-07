@@ -250,14 +250,18 @@ public class VendorsControllerTests : IntegrationTestBase
         var company = $"Unique Company {Guid.NewGuid():N}";
         var first = await Client.PostAsJsonAsync("/api/vendors", new
         {
-            vendorCode = $"COMP-A-{Guid.NewGuid():N}"[..20], companyName = company,
-            vendorType = "Supplier", phone = "0901234567",
+            vendorCode = $"COMP-A-{Guid.NewGuid():N}"[..20],
+            companyName = company,
+            vendorType = "Supplier",
+            phone = "0901234567",
         });
         first.EnsureSuccessStatusCode();
         var second = await Client.PostAsJsonAsync("/api/vendors", new
         {
-            vendorCode = $"COMP-B-{Guid.NewGuid():N}"[..20], companyName = company.ToUpperInvariant(),
-            vendorType = "Supplier", phone = "0901234567",
+            vendorCode = $"COMP-B-{Guid.NewGuid():N}"[..20],
+            companyName = company.ToUpperInvariant(),
+            vendorType = "Supplier",
+            phone = "0901234567",
         });
         second.StatusCode.Should().Be(HttpStatusCode.Conflict);
     }
@@ -315,8 +319,10 @@ public class VendorsControllerTests : IntegrationTestBase
         var suffix = Guid.NewGuid().ToString("N")[..8];
         var create = await Client.PostAsJsonAsync("/api/vendors", new
         {
-            vendorCode = $"STALE-{suffix}", companyName = $"Stale vendor {suffix}",
-            vendorType = "Supplier", phone = "0901234567",
+            vendorCode = $"STALE-{suffix}",
+            companyName = $"Stale vendor {suffix}",
+            vendorType = "Supplier",
+            phone = "0901234567",
         });
         create.EnsureSuccessStatusCode();
         var created = await ReadJsonAsync(create);
@@ -355,8 +361,11 @@ public class VendorsControllerTests : IntegrationTestBase
         var claimToken = uploadBody.GetProperty("claimToken").GetGuid();
         var create = await Client.PostAsJsonAsync("/api/vendors", new
         {
-            vendorCode = $"OWNED-{Guid.NewGuid():N}"[..20], companyName = $"Owned vendor {Guid.NewGuid():N}",
-            vendorType = "Supplier", phone = "0901234567", capabilityFileUrl = path,
+            vendorCode = $"OWNED-{Guid.NewGuid():N}"[..20],
+            companyName = $"Owned vendor {Guid.NewGuid():N}",
+            vendorType = "Supplier",
+            phone = "0901234567",
+            capabilityFileUrl = path,
             capabilityUploadToken = claimToken,
         });
         create.EnsureSuccessStatusCode();
@@ -381,7 +390,8 @@ public class VendorsControllerTests : IntegrationTestBase
         var claimToken = uploadBody.GetProperty("claimToken").GetGuid();
 
         async Task<HttpResponseMessage> Discard() => await Client.SendAsync(new HttpRequestMessage(
-            HttpMethod.Delete, "/api/business-documents/vendors")
+            HttpMethod.Delete,
+            "/api/business-documents/vendors")
         {
             Content = JsonContent.Create(new { claimToken }),
         });
@@ -401,8 +411,11 @@ public class VendorsControllerTests : IntegrationTestBase
         var firstCompany = $"Claim owner {Guid.NewGuid():N}";
         var first = await Client.PostAsJsonAsync("/api/vendors", new
         {
-            vendorCode = $"CLAIM-A-{Guid.NewGuid():N}"[..20], companyName = firstCompany,
-            vendorType = "Supplier", phone = "0901234567", capabilityFileUrl = path,
+            vendorCode = $"CLAIM-A-{Guid.NewGuid():N}"[..20],
+            companyName = firstCompany,
+            vendorType = "Supplier",
+            phone = "0901234567",
+            capabilityFileUrl = path,
             capabilityUploadToken = claimToken,
         });
         first.EnsureSuccessStatusCode();
@@ -410,8 +423,11 @@ public class VendorsControllerTests : IntegrationTestBase
         var secondCompany = $"Claim reuse {Guid.NewGuid():N}";
         var second = await Client.PostAsJsonAsync("/api/vendors", new
         {
-            vendorCode = $"CLAIM-B-{Guid.NewGuid():N}"[..20], companyName = secondCompany,
-            vendorType = "Supplier", phone = "0901234567", capabilityFileUrl = path,
+            vendorCode = $"CLAIM-B-{Guid.NewGuid():N}"[..20],
+            companyName = secondCompany,
+            vendorType = "Supplier",
+            phone = "0901234567",
+            capabilityFileUrl = path,
             capabilityUploadToken = claimToken,
         });
         second.StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -433,8 +449,11 @@ public class VendorsControllerTests : IntegrationTestBase
         var claimedPath = claimed.GetProperty("path").GetString()!;
         var create = await Client.PostAsJsonAsync("/api/vendors", new
         {
-            vendorCode = $"CLEAN-{Guid.NewGuid():N}"[..20], companyName = $"Cleanup vendor {Guid.NewGuid():N}",
-            vendorType = "Supplier", phone = "0901234567", capabilityFileUrl = claimedPath,
+            vendorCode = $"CLEAN-{Guid.NewGuid():N}"[..20],
+            companyName = $"Cleanup vendor {Guid.NewGuid():N}",
+            vendorType = "Supplier",
+            phone = "0901234567",
+            capabilityFileUrl = claimedPath,
             capabilityUploadToken = claimedToken,
         });
         create.EnsureSuccessStatusCode();
