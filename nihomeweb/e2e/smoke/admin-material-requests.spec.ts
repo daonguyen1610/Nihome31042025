@@ -39,6 +39,7 @@ test("material request list filters and exports within the selected project on m
 }) => {
   const appUrl = baseURL ?? "http://localhost:5043";
   const listQueries: URL[] = [];
+  let workspaceRequests = 0;
   const errors: string[] = [];
   page.on("pageerror", error => errors.push(error.message));
   page.on("console", message => {
@@ -60,10 +61,12 @@ test("material request list filters and exports within the selected project on m
       items: [{ id: projectId, code: "PJ-0180", name: "Foundation Project" }],
     }),
   }));
-  await page.route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/procurement$`), route => route.fulfill({
-    status: 200,
-    contentType: "application/json",
-    body: JSON.stringify({
+  await page.route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/procurement$`), route => {
+    workspaceRequests += 1;
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
       boqRevisions: [{
         id: 180401,
         operationalProjectId: projectId,
@@ -91,8 +94,9 @@ test("material request list filters and exports within the selected project on m
       receipts: [],
       issues: [],
       vendorRatings: [],
-    }),
-  }));
+      }),
+    });
+  });
   await page.route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/team$`), route => route.fulfill({
     status: 200,
     contentType: "application/json",
@@ -169,6 +173,20 @@ test("material request list filters and exports within the selected project on m
   await page.getByRole("button", { name: /Export/i }).click();
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toContain(`material-requests-project-${projectId}`);
+
+  const requestsBeforeRefresh = listQueries.length;
+  const workspaceRequestsBeforeRefresh = workspaceRequests;
+  await page.getByRole("button", { name: "Refresh data" }).click();
+  await expect.poll(() => listQueries.length).toBeGreaterThan(requestsBeforeRefresh);
+  await expect.poll(() => workspaceRequests).toBeGreaterThan(workspaceRequestsBeforeRefresh);
+  expect(Object.fromEntries(listQueries.at(-1)?.searchParams ?? [])).toMatchObject({
+    search: "cement",
+    status: "Submitted",
+    assignedProcurementUserId: String(request.assignedProcurementUserId),
+    requiredFrom: "2026-09-10",
+    requiredTo: "2026-09-20",
+    page: "2",
+  });
 
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
   expect(overflow).toBe(false);

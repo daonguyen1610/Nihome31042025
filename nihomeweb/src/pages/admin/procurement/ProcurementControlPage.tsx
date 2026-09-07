@@ -236,6 +236,10 @@ const ProcurementControlPage = () => {
 
   useEffect(() => { void loadMaterialRequests(); }, [loadMaterialRequests]);
 
+  const refreshData = async () => {
+    await Promise.all([loadWorkspace(), loadMaterialRequests()]);
+  };
+
   const exportMaterialRequests = async () => {
     if (!projectId) return;
     setRequestExporting(true);
@@ -464,8 +468,8 @@ const ProcurementControlPage = () => {
               size="icon"
               title={t("procurement.refresh")}
               aria-label={t("procurement.refresh")}
-              disabled={!projectId || loading}
-              onClick={() => void loadWorkspace()}
+              disabled={!projectId || loading || requestListLoading}
+              onClick={() => void refreshData()}
             >
               <RefreshCw
                 className={loading ? "h-4 w-4 animate-spin" : "h-4 w-4"}
