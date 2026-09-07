@@ -12,6 +12,7 @@ Follow instructions in this order:
 2. User instructions for the current task.
 3. This file and repository documentation.
 4. Existing code conventions and local defaults.
+5. Divine and conquer technique. Break into smaller things, test carefully, evaluate risks.
 
 When repository instructions conflict, use the more specific and recent instruction, document the conflict, and ask the user when the choice could affect business behavior or data.
 
