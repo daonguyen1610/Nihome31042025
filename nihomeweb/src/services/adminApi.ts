@@ -3666,6 +3666,9 @@ export interface PunchItemBulkDeleteResponse {
 
 export interface ProjectBoqLineResponse { id: number; itemCode: string; description: string; unit: string; approvedQuantity: number; budgetUnitPrice: number; amount: number }
 export interface ProjectBoqRevisionResponse { id: number; operationalProjectId: number; revisionNumber: number; currency: string; status: string; sourceTenderEstimateRevisionId?: number | null; sourceContractAppendixId?: number | null; costTotal: number; preparedByUserId: number; preparedByName?: string | null; submittedAt?: string | null; approvedAt?: string | null; rejectedAt?: string | null; decisionReason?: string | null; isFinal: boolean; createdAt: string; rowVersion: string; lines: ProjectBoqLineResponse[] }
+export interface ProjectBoqRevisionListItemResponse { id: number; operationalProjectId: number; revisionNumber: number; currency: string; status: string; costTotal: number; lineCount: number; itemCodes: string[]; preparedByUserId: number; preparedByName?: string | null; submittedAt?: string | null; approvedAt?: string | null; rejectedAt?: string | null; isFinal: boolean; createdAt: string; updatedAt: string; rowVersion: string }
+export interface ProjectBoqRevisionListResponse { total: number; page: number; pageSize: number; items: ProjectBoqRevisionListItemResponse[] }
+export interface ProjectBoqRevisionListParams { search?: string; status?: string; sortBy?: "revision" | "status" | "total" | "preparedBy" | "createdAt" | "updatedAt"; sortDirection?: "asc" | "desc"; page?: number; pageSize?: number }
 export interface MaterialRequestLineResponse { id: number; projectBoqLineId: number; itemCode: string; description: string; unit: string; requestedQuantity: number; receivedQuantity: number; boqApprovedQuantity: number; boqRemainingQuantity: number }
 export interface MaterialRequestResponse { id: number; operationalProjectId: number; code: string; status: string; siteRequesterUserId: number; siteRequesterName?: string | null; responsibleSiteUserId: number; responsibleSiteUserName?: string | null; assignedProcurementUserId: number; assignedProcurementUserName?: string | null; requiredAt: string; note?: string | null; submittedAt?: string | null; approvedAt?: string | null; fulfilledAt?: string | null; decisionReason?: string | null; rowVersion: string; lines: MaterialRequestLineResponse[] }
 export interface MaterialRequestListResponse { total: number; page: number; pageSize: number; items: MaterialRequestResponse[] }
@@ -5172,6 +5175,10 @@ export const adminApi = {
     const suffix = query.toString();
     return api.get<MaterialRequestListResponse>(`/operational-projects/${projectId}/procurement/material-requests${suffix ? `?${suffix}` : ""}`);
   },
+  listProjectBoqRevisions: (projectId: number, params: ProjectBoqRevisionListParams = {}) =>
+    api.get<ProjectBoqRevisionListResponse>(`/operational-projects/${projectId}/procurement/boq-revisions`, { params }),
+  exportProjectBoqRevisions: (projectId: number, params: ProjectBoqRevisionListParams = {}) =>
+    api.get<Blob>(`/operational-projects/${projectId}/procurement/boq-revisions/export`, { params, responseType: "blob" }),
   createProjectBoqRevision: (projectId: number, body: ProjectBoqRevisionRequest) =>
     postIdempotent<ProjectBoqRevisionResponse>(`/operational-projects/${projectId}/procurement/boq-revisions`, body),
   submitProjectBoqRevision: (projectId: number, id: number, rowVersion: string) =>

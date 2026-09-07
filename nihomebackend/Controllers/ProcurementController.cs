@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NihomeBackend.Authorization;
@@ -20,6 +21,52 @@ public sealed class ProcurementController(
     IPermissionService permissions,
     IAuditLogger audit) : ControllerBase
 {
+    [HttpGet("boq-revisions")]
+    [RequirePermission("proc.boq", "view")]
+    public async Task<ActionResult<ProjectBoqRevisionListResponse>> ListBoqRevisions(
+        int projectId,
+        [FromQuery] ProjectBoqRevisionListQuery query,
+        CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        if (!await access.CanViewOperationalProjectAsync(userId.Value, projectId, ct)) return NotFound();
+        return Ok(await service.ListBoqRevisionsAsync(projectId, query, ct));
+    }
+
+    [HttpGet("boq-revisions/export")]
+    [RequirePermission("proc.boq", "view")]
+    public async Task<IActionResult> ExportBoqRevisions(
+        int projectId,
+        [FromQuery] ProjectBoqRevisionListQuery query,
+        CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        if (!await access.CanViewOperationalProjectAsync(userId.Value, projectId, ct)) return NotFound();
+        var rows = await service.ExportBoqRevisionsAsync(projectId, query, ct);
+        var csv = new StringBuilder("Revision,Status,Currency,LineCount,ItemCodes,BudgetTotal,PreparedBy,SubmittedAt,ApprovedAt,RejectedAt,IsFinal,CreatedAt,UpdatedAt\r\n");
+        foreach (var row in rows)
+        {
+            csv.Append(row.RevisionNumber).Append(',')
+                .Append(Csv(row.Status.ToString())).Append(',')
+                .Append(Csv(row.Currency)).Append(',')
+                .Append(row.LineCount).Append(',')
+                .Append(Csv(string.Join("; ", row.ItemCodes))).Append(',')
+                .Append(row.CostTotal.ToString(System.Globalization.CultureInfo.InvariantCulture)).Append(',')
+                .Append(Csv(row.PreparedByName)).Append(',')
+                .Append(Csv(row.SubmittedAt?.ToString("O"))).Append(',')
+                .Append(Csv(row.ApprovedAt?.ToString("O"))).Append(',')
+                .Append(Csv(row.RejectedAt?.ToString("O"))).Append(',')
+                .Append(row.IsFinal).Append(',')
+                .Append(Csv(row.CreatedAt.ToString("O"))).Append(',')
+                .Append(Csv(row.UpdatedAt.ToString("O"))).Append("\r\n");
+        }
+        audit.Log("proc.boq.export", EntityTypes.ProjectBoqRevision, projectId.ToString(), $"Exported {rows.Count} BOQ revisions for project #{projectId}.");
+        return File(Encoding.UTF8.GetPreamble().Concat(Encoding.UTF8.GetBytes(csv.ToString())).ToArray(),
+            "text/csv; charset=utf-8", $"project-{projectId}-boq-{DateTime.UtcNow:yyyy-MM-dd}.csv");
+    }
+
     [HttpGet]
     [RequirePermission("proc.boq", "view")]
     public async Task<ActionResult<ProcurementWorkspaceResponse>> GetWorkspace(int projectId, CancellationToken ct)
@@ -320,4 +367,6 @@ public sealed class ProcurementController(
         var raw = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
         return int.TryParse(raw, out var id) ? id : null;
     }
+
+    private static string Csv(string? value) => $"\"{(value ?? string.Empty).Replace("\"", "\"\"")}\"";
 }

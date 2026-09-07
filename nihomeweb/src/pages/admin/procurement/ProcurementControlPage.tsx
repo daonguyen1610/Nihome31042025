@@ -3,11 +3,13 @@ import {
   Boxes,
   Check,
   ClipboardCheck,
+  Download,
   FilePlus2,
   PackageCheck,
   PackageMinus,
   Plus,
   RefreshCw,
+  Search,
   Send,
   ShoppingCart,
   Star,
@@ -40,6 +42,8 @@ import {
   type ProcurementContractLineResponse,
   type ProcurementWorkspaceResponse,
   type ProjectBoqLineResponse,
+  type ProjectBoqRevisionListParams,
+  type ProjectBoqRevisionListResponse,
   type ProjectBoqRevisionResponse,
   type VendorRatingResponse,
   type WarehouseIssueResponse,
@@ -133,6 +137,15 @@ const ProcurementControlPage = () => {
 
   const [boqCurrency, setBoqCurrency] = useState("VND");
   const [boqLines, setBoqLines] = useState<BoqLineDraft[]>([emptyBoqLine()]);
+  const [boqList, setBoqList] = useState<ProjectBoqRevisionListResponse>({ total: 0, page: 1, pageSize: 10, items: [] });
+  const [boqSearch, setBoqSearch] = useState("");
+  const [boqDebouncedSearch, setBoqDebouncedSearch] = useState("");
+  const [boqStatus, setBoqStatus] = useState("all");
+  const [boqSortBy, setBoqSortBy] = useState<ProjectBoqRevisionListParams["sortBy"]>("revision");
+  const [boqSortDirection, setBoqSortDirection] = useState<ProjectBoqRevisionListParams["sortDirection"]>("desc");
+  const [boqPage, setBoqPage] = useState(1);
+  const [boqListLoading, setBoqListLoading] = useState(false);
+  const [boqListError, setBoqListError] = useState<string | null>(null);
   const [requestForm, setRequestForm] = useState({ responsibleSiteUserId: 0, assignedProcurementUserId: 0, requiredAt: localDateTime(), note: "" });
   const [requestLines, setRequestLines] = useState<RequestLineDraft[]>([emptyRequestLine()]);
   const [contractForm, setContractForm] = useState({ contractId: 0, projectBoqLineId: 0, procurementOwnerUserId: 0, quantity: 1, negotiatedUnitPrice: 0 });
@@ -176,6 +189,14 @@ const ProcurementControlPage = () => {
   useEffect(() => {
     if (!canViewBoq && canViewRequests) setActiveTab("requests");
   }, [canViewBoq, canViewRequests]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setBoqDebouncedSearch(boqSearch.trim());
+      setBoqPage(1);
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [boqSearch]);
 
   const loadWorkspace = useCallback(async () => {
     if (!projectId) return;
@@ -280,12 +301,49 @@ const ProcurementControlPage = () => {
 
   useEffect(() => { void loadWorkspace(); }, [loadWorkspace]);
 
+  const boqListParams = useMemo<ProjectBoqRevisionListParams>(() => ({
+    search: boqDebouncedSearch || undefined,
+    status: boqStatus === "all" ? undefined : boqStatus,
+    sortBy: boqSortBy,
+    sortDirection: boqSortDirection,
+    page: boqPage,
+    pageSize: boqList.pageSize,
+  }), [boqDebouncedSearch, boqList.pageSize, boqPage, boqSortBy, boqSortDirection, boqStatus]);
+
+  const loadBoqList = useCallback(async () => {
+    if (!projectId) {
+      setBoqList((current) => ({ ...current, total: 0, page: 1, items: [] }));
+      return;
+    }
+    setBoqListLoading(true);
+    setBoqListError(null);
+    try {
+      const response = await adminApi.listProjectBoqRevisions(projectId, boqListParams);
+      setBoqList(response.data);
+    } catch (reason) {
+      setBoqListError(extractApiError(reason));
+    } finally {
+      setBoqListLoading(false);
+    }
+  }, [boqListParams, projectId]);
+
+  useEffect(() => { void loadBoqList(); }, [loadBoqList]);
+
+  useEffect(() => { setBoqPage(1); }, [projectId]);
+
   const approvedBoq = useMemo(
     () => workspace?.boqRevisions.find((revision) => revision.isFinal)
       ?? workspace?.boqRevisions.find((revision) => revision.status === "Approved"),
     [workspace],
   );
   const approvedBoqLines = approvedBoq?.lines ?? [];
+  const visibleBoqRows = useMemo(() => {
+    const byId = new Map((workspace?.boqRevisions ?? []).map((revision) => [revision.id, revision]));
+    return boqList.items.flatMap((item) => {
+      const revision = byId.get(item.id);
+      return revision ? [revision] : [];
+    });
+  }, [boqList.items, workspace?.boqRevisions]);
   const receivableLines = useMemo(() => (workspace?.materialRequests ?? [])
     .filter((request) => ["Approved", "PartiallyFulfilled"].includes(request.status))
     .flatMap((request) => request.lines.map((line) => ({ ...line, requestCode: request.code })))
@@ -320,8 +378,7 @@ const ProcurementControlPage = () => {
       setDecision(null);
       setDecisionReason("");
       toast({ title: t(successKey) });
-      await loadWorkspace();
-      await loadMaterialRequests();
+      await Promise.all([loadWorkspace(), loadMaterialRequests(), loadBoqList()]);
     } catch (reason) {
       const message = extractApiError(reason);
       setFormError(message);
@@ -419,6 +476,21 @@ const ProcurementControlPage = () => {
     void runMutation(operation, decision.approved ? "procurement.success.approved" : "procurement.success.rejected", false);
   };
 
+  const exportBoq = async () => {
+    if (!projectId) return;
+    try {
+      const response = await adminApi.exportProjectBoqRevisions(projectId, { ...boqListParams, page: undefined, pageSize: undefined });
+      const url = URL.createObjectURL(response.data);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `project-${projectId}-boq.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (reason) {
+      toast({ title: t("common.error"), description: extractApiError(reason), variant: "destructive" });
+    }
+  };
+
   if (projectsLoading) return <AdminLayout><PageLoading /></AdminLayout>;
   if (!projectId && error) return <AdminLayout><PageError message={error} /></AdminLayout>;
 
@@ -510,7 +582,7 @@ const ProcurementControlPage = () => {
               <TabsList className="h-auto w-max min-w-full justify-start">
                 {canViewBoq && <TabsTrigger value="boq">
                   <ClipboardCheck className="mr-2 h-4 w-4" />
-                  {t("procurement.tabs.boq")} ({workspace.boqRevisions.length})
+                  {t("procurement.tabs.boq")} ({boqList.total})
                 </TabsTrigger>}
                 {canViewRequests && (
                   <TabsTrigger value="requests">
@@ -586,29 +658,23 @@ const ProcurementControlPage = () => {
               />
             )}
 
-            {canViewBoq && <TabsContent value="boq">
-              <BoqPanel
-                rows={workspace.boqRevisions}
-                canManage={canManageBoq}
-                canApprove={canApproveBoq}
-                status={status}
-                money={money}
-                t={t}
-                onCreate={() => openDialog("boq")}
-                onSubmit={(row) => submit("boq", row)}
-                onDecision={(row, approved) => {
-                  setFormError(null);
-                  setDecisionReason("");
-                  setDecision({
-                    kind: "boq",
-                    id: row.id,
-                    rowVersion: row.rowVersion,
-                    approved,
-                  });
-                }}
-                busy={busy}
-              />
-            </TabsContent>}
+            {canViewBoq && (
+              <TabsContent value="boq" className="space-y-4">
+                <div className="grid gap-3 border-y py-4 sm:grid-cols-2 lg:grid-cols-[minmax(220px,1fr)_180px_180px_150px_auto]">
+                  <div className="space-y-1.5"><Label htmlFor="boq-search">{t("procurement.boq.filter.search")}</Label><div className="relative"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input id="boq-search" className="pl-9" value={boqSearch} onChange={(event) => setBoqSearch(event.target.value)} placeholder={t("procurement.boq.filter.searchPlaceholder")} /></div></div>
+                  <div className="space-y-1.5"><Label htmlFor="boq-status">{t("procurement.field.status")}</Label><Select value={boqStatus} onValueChange={(value) => { setBoqStatus(value); setBoqPage(1); }}><SelectTrigger id="boq-status"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">{t("procurement.boq.filter.allStatuses")}</SelectItem>{["Draft", "Submitted", "Approved", "Rejected"].map((value) => <SelectItem value={value} key={value}>{t(`procurement.status.${value}`)}</SelectItem>)}</SelectContent></Select></div>
+                  <div className="space-y-1.5"><Label htmlFor="boq-sort">{t("procurement.boq.filter.sort")}</Label><Select value={boqSortBy} onValueChange={(value) => { setBoqSortBy(value as ProjectBoqRevisionListParams["sortBy"]); setBoqPage(1); }}><SelectTrigger id="boq-sort"><SelectValue /></SelectTrigger><SelectContent>{["revision", "status", "total", "preparedBy", "createdAt", "updatedAt"].map((value) => <SelectItem value={value} key={value}>{t(`procurement.boq.sort.${value}`)}</SelectItem>)}</SelectContent></Select></div>
+                  <div className="space-y-1.5"><Label htmlFor="boq-direction">{t("procurement.boq.filter.direction")}</Label><Select value={boqSortDirection} onValueChange={(value) => { setBoqSortDirection(value as "asc" | "desc"); setBoqPage(1); }}><SelectTrigger id="boq-direction"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="desc">{t("procurement.boq.sort.desc")}</SelectItem><SelectItem value="asc">{t("procurement.boq.sort.asc")}</SelectItem></SelectContent></Select></div>
+                  <div className="flex items-end"><Button variant="outline" onClick={() => void exportBoq()} disabled={boqListLoading || boqList.total === 0}><Download className="mr-2 h-4 w-4" />{t("procurement.boq.export")}</Button></div>
+                </div>
+                {boqListLoading ? <PageLoading /> : boqListError ? <PageError message={boqListError} onRetry={() => void loadBoqList()} /> : (
+                  <>
+                    <BoqPanel rows={visibleBoqRows} canManage={canManageBoq} canApprove={canApproveBoq} status={status} money={money} t={t} onCreate={() => openDialog("boq")} onSubmit={(row) => submit("boq", row)} onDecision={(row, approved) => { setFormError(null); setDecisionReason(""); setDecision({ kind: "boq", id: row.id, rowVersion: row.rowVersion, approved }); }} busy={busy} />
+                    {boqList.total > boqList.pageSize && <div className="flex items-center justify-between gap-3"><p className="text-sm text-muted-foreground">{t("procurement.boq.pagination", { page: boqList.page, pages: Math.ceil(boqList.total / boqList.pageSize), total: boqList.total })}</p><div className="flex gap-2"><Button variant="outline" size="sm" disabled={boqPage <= 1} onClick={() => setBoqPage((current) => current - 1)}>{t("common.prev")}</Button><Button variant="outline" size="sm" disabled={boqPage >= Math.ceil(boqList.total / boqList.pageSize)} onClick={() => setBoqPage((current) => current + 1)}>{t("common.next")}</Button></div></div>}
+                  </>
+                )}
+              </TabsContent>
+            )}
             {canViewRequests && (
               <TabsContent value="requests">
                 {requestListLoading &&

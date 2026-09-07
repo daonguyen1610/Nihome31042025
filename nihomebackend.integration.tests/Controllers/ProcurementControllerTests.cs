@@ -63,6 +63,68 @@ public class ProcurementControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task BoqList_FiltersSortsPaginatesAndExportsWithinProject()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "SUPER_ADMIN"));
+        var projectId = await CreateProjectAsync();
+        var otherProjectId = await CreateProjectAsync();
+
+        async Task CreateRevisionAsync(int targetProjectId, string code, decimal quantity, decimal unitPrice)
+        {
+            var response = await SendAsync(HttpMethod.Post,
+                $"/api/operational-projects/{targetProjectId}/procurement/boq-revisions",
+                new
+                {
+                    currency = "VND",
+                    lines = new[] { new { itemCode = code, description = $"Description {code}", unit = "m2", approvedQuantity = quantity, budgetUnitPrice = unitPrice } },
+                });
+            response.StatusCode.Should().Be(HttpStatusCode.Created, await response.Content.ReadAsStringAsync());
+        }
+
+        await CreateRevisionAsync(projectId, "MAT-LOW", 2, 100);
+        await CreateRevisionAsync(projectId, "MAT-HIGH", 3, 500);
+        await CreateRevisionAsync(otherProjectId, "MAT-OTHER-PROJECT", 9, 999);
+
+        var firstPage = await Client.GetAsync(
+            $"/api/operational-projects/{projectId}/procurement/boq-revisions?status=Draft&search=MAT&sortBy=total&sortDirection=desc&page=1&pageSize=1");
+
+        firstPage.StatusCode.Should().Be(HttpStatusCode.OK);
+        var page = await ReadJsonAsync(firstPage);
+        page.GetProperty("total").GetInt32().Should().Be(2);
+        page.GetProperty("page").GetInt32().Should().Be(1);
+        page.GetProperty("pageSize").GetInt32().Should().Be(1);
+        var item = page.GetProperty("items").EnumerateArray().Single();
+        item.GetProperty("operationalProjectId").GetInt32().Should().Be(projectId);
+        item.GetProperty("costTotal").GetDecimal().Should().Be(1_500m);
+        item.GetProperty("lineCount").GetInt32().Should().Be(1);
+
+        var noMatch = await ReadJsonAsync(await Client.GetAsync(
+            $"/api/operational-projects/{projectId}/procurement/boq-revisions?search=MAT-OTHER-PROJECT"));
+        noMatch.GetProperty("total").GetInt32().Should().Be(0);
+
+        var export = await Client.GetAsync(
+            $"/api/operational-projects/{projectId}/procurement/boq-revisions/export?search=MAT&sortBy=total&sortDirection=desc");
+        export.StatusCode.Should().Be(HttpStatusCode.OK);
+        export.Content.Headers.ContentType!.MediaType.Should().Be("text/csv");
+        var csv = await export.Content.ReadAsStringAsync();
+        csv.Should().Contain("MAT-HIGH").And.Contain("MAT-LOW").And.NotContain("MAT-OTHER-PROJECT");
+    }
+
+    [Fact]
+    public async Task BoqList_ProjectOutsideCallerScope_ReturnsNotFound()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "SUPER_ADMIN"));
+        var projectId = await CreateProjectAsync();
+        Client.DefaultRequestHeaders.Authorization = null;
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "PROCUREMENT"));
+
+        var response = await Client.GetAsync(
+            $"/api/operational-projects/{projectId}/procurement/boq-revisions");
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
     public async Task Workspace_WithoutAuthentication_ReturnsUnauthorized()
     {
         (await Client.GetAsync("/api/operational-projects/1/procurement"))

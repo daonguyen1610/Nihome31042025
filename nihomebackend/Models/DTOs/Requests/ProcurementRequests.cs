@@ -1,6 +1,22 @@
 using System.ComponentModel.DataAnnotations;
+using NihomeBackend.Models;
 
 namespace NihomeBackend.Models.DTOs.Requests;
+
+public sealed class ProjectBoqRevisionListQuery
+{
+    [StringLength(200)]
+    public string? Search { get; set; }
+    public ProjectBoqRevisionStatus? Status { get; set; }
+    [RegularExpression("^(revision|status|total|preparedBy|createdAt|updatedAt)$")]
+    public string SortBy { get; set; } = "revision";
+    [RegularExpression("^(asc|desc)$")]
+    public string SortDirection { get; set; } = "desc";
+    [Range(1, int.MaxValue)]
+    public int Page { get; set; } = 1;
+    [Range(1, 100)]
+    public int PageSize { get; set; } = 20;
+}
 
 public sealed class ProjectBoqRevisionRequest : IConcurrencyRequest
 {
