@@ -177,7 +177,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
         label: t("nav.procurement"),
         icon: Truck,
         items: [
-          { to: "/admin/procurement-control", label: t("nav.procurementControl"), icon: ShoppingCart, permission: ADMIN_PERMS.procurement },
+          { to: "/admin/procurement-control", label: t("nav.procurementControl"), icon: ShoppingCart, permission: [ADMIN_PERMS.procurement, ADMIN_PERMS.procurementMaterialRequests, ADMIN_PERMS.procurementContractLines, ADMIN_PERMS.procurementWarehouse, ADMIN_PERMS.procurementRatings] },
           { to: "/admin/vendors", label: t("nav.vendors"), icon: Truck, permission: ADMIN_PERMS.vendors },
         ],
       },

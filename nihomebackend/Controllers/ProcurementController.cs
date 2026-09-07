@@ -17,6 +17,7 @@ namespace NihomeBackend.Controllers;
 public sealed class ProcurementController(
     IProcurementService service,
     IProjectAccessService access,
+    IPermissionService permissions,
     IAuditLogger audit) : ControllerBase
 {
     [HttpGet]
@@ -26,7 +27,36 @@ public sealed class ProcurementController(
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
         if (!await access.CanViewOperationalProjectAsync(userId.Value, projectId, ct)) return NotFound();
-        try { return Ok(await service.GetWorkspaceAsync(projectId, ct)); }
+        try
+        {
+            var result = await service.GetWorkspaceAsync(projectId, ct);
+            if (!await permissions.HasAsync(userId.Value, "proc.material-requests.view", ct))
+                result.MaterialRequests = [];
+            if (!await permissions.HasAsync(userId.Value, "proc.contract-lines.view", ct))
+                result.ContractLines = [];
+            if (!await permissions.HasAsync(userId.Value, "proc.warehouse.view", ct))
+            {
+                result.Receipts = [];
+                result.Issues = [];
+            }
+            if (!await permissions.HasAsync(userId.Value, "proc.vendor-ratings.view", ct))
+                result.VendorRatings = [];
+            return Ok(result);
+        }
+        catch (ProcurementOperationException exception) { return BadRequest(new { message = exception.Message }); }
+    }
+
+    [HttpGet("material-requests")]
+    [RequirePermission("proc.material-requests", "view")]
+    public async Task<ActionResult<MaterialRequestListResponse>> ListMaterialRequests(
+        int projectId,
+        [FromQuery] MaterialRequestListParams parameters,
+        CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        if (!await access.CanViewOperationalProjectAsync(userId.Value, projectId, ct)) return NotFound();
+        try { return Ok(await service.ListMaterialRequestsAsync(projectId, parameters, ct)); }
         catch (ProcurementOperationException exception) { return BadRequest(new { message = exception.Message }); }
     }
 

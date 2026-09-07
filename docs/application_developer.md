@@ -826,6 +826,24 @@ another owner's opportunity. `Idempotency-Key` replay returns the original
 create response without inserting another quotation, and BOQ version snapshots
 preserve the source line set after post-approval edits.
 
+### 7.12 Project Material Request List
+
+`GET /api/operational-projects/{projectId}/procurement/material-requests`
+requires `proc.material-requests.view` and returns `404` when the caller cannot
+access the Operational Project. The endpoint never returns requests from another
+project. It supports `search`, `status`, `siteRequesterUserId`,
+`responsibleSiteUserId`, `assignedProcurementUserId`, `requiredFrom`,
+`requiredTo`, `sortBy`, `sortDirection`, `page`, and `pageSize`; page size is
+limited to 100. Search covers request code, note, assigned users, and BOQ item
+code or description. Reversed date ranges are rejected.
+
+Each line includes requested quantity, net received quantity from posted and
+reversed warehouse receipts, approved BOQ quantity, and remaining BOQ quantity.
+Remaining quantity uses the same committed statuses as approval validation:
+Approved, Partially Fulfilled, and Fulfilled. The frontend exports all filtered
+pages through this endpoint, so exported data retains the selected project and
+filter scope.
+
 ---
 
 ## 8. Frontend Development

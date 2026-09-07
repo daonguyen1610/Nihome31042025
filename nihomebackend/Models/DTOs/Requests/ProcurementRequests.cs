@@ -44,6 +44,29 @@ public sealed class ProcurementTransitionRequest : IConcurrencyRequest
     public string? RowVersion { get; set; }
 }
 
+public sealed class MaterialRequestListParams
+{
+    [MaxLength(200)]
+    public string? Search { get; set; }
+    public MaterialRequestStatus? Status { get; set; }
+    [Range(1, int.MaxValue)]
+    public int? SiteRequesterUserId { get; set; }
+    [Range(1, int.MaxValue)]
+    public int? ResponsibleSiteUserId { get; set; }
+    [Range(1, int.MaxValue)]
+    public int? AssignedProcurementUserId { get; set; }
+    public DateOnly? RequiredFrom { get; set; }
+    public DateOnly? RequiredTo { get; set; }
+    [MaxLength(30)]
+    public string? SortBy { get; set; }
+    [MaxLength(4)]
+    public string? SortDirection { get; set; }
+    [Range(1, int.MaxValue)]
+    public int Page { get; set; } = 1;
+    [Range(1, 100)]
+    public int PageSize { get; set; } = 20;
+}
+
 public sealed class MaterialRequestUpsertRequest : IConcurrencyRequest
 {
     [Range(1, int.MaxValue)]
