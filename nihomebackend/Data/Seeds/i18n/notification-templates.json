@@ -158,5 +158,53 @@
     "en": "{{count}} KPI metrics are below their configured thresholds. Open the dashboard to review source evidence.",
     "zh": "有 {{count}} 个 KPI 指标低于配置阈值。请打开仪表板查看源证据。",
     "ja": "{{count}} 件のKPI指標が設定しきい値を下回っています。ダッシュボードで根拠データを確認してください。"
+  },
+  {
+    "key": "notification.procurement.boq.submitted.title",
+    "category": "notification",
+    "vi": "BOQ {{revision}} chờ phê duyệt",
+    "en": "BOQ {{revision}} awaits approval",
+    "zh": "BOQ {{revision}} 等待审批",
+    "ja": "BOQ {{revision}} の承認待ち"
+  },
+  {
+    "key": "notification.procurement.boq.submitted.body",
+    "category": "notification",
+    "vi": "BOQ {{revision}} của dự án {{projectCode}} vừa được trình duyệt.",
+    "en": "BOQ {{revision}} for project {{projectCode}} was submitted for approval.",
+    "zh": "项目 {{projectCode}} 的 BOQ {{revision}} 已提交审批。",
+    "ja": "プロジェクト {{projectCode}} のBOQ {{revision}} が承認申請されました。"
+  },
+  {
+    "key": "notification.procurement.boq.approved.title",
+    "category": "notification",
+    "vi": "BOQ {{revision}} đã được phê duyệt",
+    "en": "BOQ {{revision}} approved",
+    "zh": "BOQ {{revision}} 已批准",
+    "ja": "BOQ {{revision}} が承認されました"
+  },
+  {
+    "key": "notification.procurement.boq.approved.body",
+    "category": "notification",
+    "vi": "BOQ {{revision}} của dự án {{projectCode}} đã được phê duyệt.",
+    "en": "BOQ {{revision}} for project {{projectCode}} was approved.",
+    "zh": "项目 {{projectCode}} 的 BOQ {{revision}} 已批准。",
+    "ja": "プロジェクト {{projectCode}} のBOQ {{revision}} が承認されました。"
+  },
+  {
+    "key": "notification.procurement.boq.rejected.title",
+    "category": "notification",
+    "vi": "BOQ {{revision}} bị từ chối",
+    "en": "BOQ {{revision}} rejected",
+    "zh": "BOQ {{revision}} 已拒绝",
+    "ja": "BOQ {{revision}} が却下されました"
+  },
+  {
+    "key": "notification.procurement.boq.rejected.body",
+    "category": "notification",
+    "vi": "BOQ {{revision}} của dự án {{projectCode}} bị từ chối. Lý do: {{reason}}.",
+    "en": "BOQ {{revision}} for project {{projectCode}} was rejected. Reason: {{reason}}.",
+    "zh": "项目 {{projectCode}} 的 BOQ {{revision}} 已被拒绝。原因：{{reason}}。",
+    "ja": "プロジェクト {{projectCode}} のBOQ {{revision}} が却下されました。理由: {{reason}}。"
   }
 ]

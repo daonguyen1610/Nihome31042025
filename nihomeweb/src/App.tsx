@@ -44,6 +44,7 @@ const AdminCustomers = lazy(() => import("./pages/admin/Customers.tsx"));
 const VendorPage = lazy(() => import("./pages/admin/procurement/VendorPage.tsx"));
 const VendorDetail = lazy(() => import("./pages/admin/procurement/VendorDetail.tsx"));
 const ProcurementControlPage = lazy(() => import("./pages/admin/procurement/ProcurementControlPage.tsx"));
+const BoqRevisionDetailPage = lazy(() => import("./pages/admin/procurement/BoqRevisionDetailPage.tsx"));
 const FinanceControlPage = lazy(() => import("./pages/admin/finance/FinanceControlPage.tsx"));
 const AdminOpportunities = lazy(() => import("./pages/admin/Opportunities.tsx"));
 const AdminQuotes = lazy(() => import("./pages/admin/Quotes.tsx"));
@@ -184,6 +185,7 @@ const App = () => (
               </Route>
               <Route element={<RequirePermission code={[ADMIN_PERMS.procurement, ADMIN_PERMS.procurementMaterialRequests]} />}>
                 <Route path="/admin/procurement-control" element={<ProcurementControlPage />} />
+                <Route path="/admin/procurement-control/projects/:projectId/boq/:boqId" element={<BoqRevisionDetailPage />} />
               </Route>
               <Route element={<RequirePermission code={[ADMIN_PERMS.financePayments, ADMIN_PERMS.financePeriods, ADMIN_PERMS.financeCorrections]} />}>
                 <Route path="/admin/finance-control" element={<FinanceControlPage />} />

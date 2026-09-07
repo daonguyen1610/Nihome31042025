@@ -28,6 +28,7 @@ public sealed class ProjectBoqRevisionListItemResponse
     public bool IsFinal { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
+    public string RowVersion { get; set; } = string.Empty;
 }
 
 public sealed class ProjectBoqRevisionResponse
@@ -48,6 +49,7 @@ public sealed class ProjectBoqRevisionResponse
     public string? DecisionReason { get; set; }
     public bool IsFinal { get; set; }
     public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
     public string RowVersion { get; set; } = string.Empty;
     public List<ProjectBoqLineResponse> Lines { get; set; } = [];
 }

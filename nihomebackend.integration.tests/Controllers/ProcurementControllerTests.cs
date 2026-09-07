@@ -41,6 +41,28 @@ public class ProcurementControllerTests : IntegrationTestBase
         });
         submitted.EnsureSuccessStatusCode();
         var submittedJson = await ReadJsonAsync(submitted);
+        var projectManagerUserId = await WithDbAsync(db => db.OperationalProjects.AsNoTracking()
+            .Where(item => item.Id == projectId)
+            .Select(item => item.ProjectManagerUserId!.Value)
+            .SingleAsync());
+        (await WithDbAsync(db => db.Notifications.AsNoTracking().AnyAsync(item =>
+            item.UserId == projectManagerUserId &&
+            item.TemplateCode == "procurement.boq.submitted" &&
+            item.RefEntityType == "ProjectBoqRevision" &&
+            item.RefEntityId == id))).Should().BeTrue();
+
+        var shortRejection = await SendAsync(HttpMethod.Post,
+            $"/api/operational-projects/{projectId}/procurement/boq-revisions/{id}/decision",
+            new
+            {
+                approved = false,
+                reason = "No",
+                rowVersion = submittedJson.GetProperty("rowVersion").GetString(),
+            });
+        shortRejection.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.ProjectBoqRevisions.AsNoTracking().SingleAsync(item => item.Id == id)))
+            .Status.Should().Be(ProjectBoqRevisionStatus.Submitted);
+
         var approved = await SendAsync(HttpMethod.Post, $"/api/operational-projects/{projectId}/procurement/boq-revisions/{id}/decision", new
         {
             approved = true,
@@ -122,6 +144,102 @@ public class ProcurementControllerTests : IntegrationTestBase
             $"/api/operational-projects/{projectId}/procurement/boq-revisions");
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task BoqDetail_ReturnsLinesAndRejectsCrossProjectLookup()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "SUPER_ADMIN"));
+        var projectId = await CreateProjectAsync();
+        var otherProjectId = await CreateProjectAsync();
+        var created = await SendAsync(HttpMethod.Post,
+            $"/api/operational-projects/{projectId}/procurement/boq-revisions",
+            new
+            {
+                currency = "VND",
+                lines = new[]
+                {
+                    new { itemCode = "MAT-DETAIL", description = "Detail material", unit = "m2", approvedQuantity = 4m, budgetUnitPrice = 250m },
+                },
+            });
+        created.EnsureSuccessStatusCode();
+        var id = (await ReadJsonAsync(created)).GetProperty("id").GetInt32();
+
+        var detail = await Client.GetAsync(
+            $"/api/operational-projects/{projectId}/procurement/boq-revisions/{id}");
+
+        detail.StatusCode.Should().Be(HttpStatusCode.OK);
+        var json = await ReadJsonAsync(detail);
+        json.GetProperty("operationalProjectId").GetInt32().Should().Be(projectId);
+        json.GetProperty("status").GetString().Should().Be("Draft");
+        json.GetProperty("costTotal").GetDecimal().Should().Be(1_000m);
+        json.GetProperty("updatedAt").GetDateTime().Should().NotBe(default);
+        json.GetProperty("rowVersion").GetString().Should().NotBeNullOrWhiteSpace();
+        json.GetProperty("lines").EnumerateArray().Single()
+            .GetProperty("itemCode").GetString().Should().Be("MAT-DETAIL");
+
+        (await Client.GetAsync(
+            $"/api/operational-projects/{otherProjectId}/procurement/boq-revisions/{id}"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task BoqUpdate_ValidatesDuplicateCodesAndPreservesRejectedInput()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "SUPER_ADMIN"));
+        var projectId = await CreateProjectAsync();
+        var created = await SendAsync(HttpMethod.Post,
+            $"/api/operational-projects/{projectId}/procurement/boq-revisions",
+            new
+            {
+                currency = "VND",
+                lines = new[]
+                {
+                    new { itemCode = "MAT-ORIGINAL", description = "Original material", unit = "m2", approvedQuantity = 2m, budgetUnitPrice = 100m },
+                },
+            });
+        created.EnsureSuccessStatusCode();
+        var createdJson = await ReadJsonAsync(created);
+        var id = createdJson.GetProperty("id").GetInt32();
+        var rowVersion = createdJson.GetProperty("rowVersion").GetString();
+
+        var duplicate = await SendAsync(HttpMethod.Put,
+            $"/api/operational-projects/{projectId}/procurement/boq-revisions/{id}",
+            new
+            {
+                currency = "VND",
+                rowVersion,
+                lines = new[]
+                {
+                    new { itemCode = "MAT-DUP", description = "First", unit = "m2", approvedQuantity = 2m, budgetUnitPrice = 100m },
+                    new { itemCode = "mat-dup", description = "Second", unit = "m2", approvedQuantity = 3m, budgetUnitPrice = 200m },
+                },
+            });
+
+        duplicate.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var unchanged = await WithDbAsync(db => db.ProjectBoqRevisions.AsNoTracking()
+            .Include(item => item.Lines).SingleAsync(item => item.Id == id));
+        unchanged.Lines.Should().ContainSingle().Which.ItemCode.Should().Be("MAT-ORIGINAL");
+        unchanged.CostTotal.Should().Be(200m);
+
+        var updated = await SendAsync(HttpMethod.Put,
+            $"/api/operational-projects/{projectId}/procurement/boq-revisions/{id}",
+            new
+            {
+                currency = "USD",
+                rowVersion,
+                lines = new[]
+                {
+                    new { itemCode = "MAT-UPDATED", description = "Updated material", unit = "item", approvedQuantity = 4m, budgetUnitPrice = 300m },
+                },
+            });
+
+        updated.StatusCode.Should().Be(HttpStatusCode.OK, await updated.Content.ReadAsStringAsync());
+        var updatedJson = await ReadJsonAsync(updated);
+        updatedJson.GetProperty("currency").GetString().Should().Be("USD");
+        updatedJson.GetProperty("costTotal").GetDecimal().Should().Be(1_200m);
+        updatedJson.GetProperty("lines").EnumerateArray().Single()
+            .GetProperty("itemCode").GetString().Should().Be("MAT-UPDATED");
     }
 
     [Fact]

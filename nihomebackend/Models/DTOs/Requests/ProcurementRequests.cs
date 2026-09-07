@@ -48,7 +48,7 @@ public sealed class ProjectBoqLineRequest
 public sealed class ProcurementDecisionRequest : IConcurrencyRequest
 {
     public bool Approved { get; set; }
-    [MaxLength(2000)]
+    [MinLength(3), MaxLength(2000)]
     public string? Reason { get; set; }
     public string? RowVersion { get; set; }
 }

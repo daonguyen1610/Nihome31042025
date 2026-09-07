@@ -67,6 +67,18 @@ public sealed class ProcurementController(
             "text/csv; charset=utf-8", $"project-{projectId}-boq-{DateTime.UtcNow:yyyy-MM-dd}.csv");
     }
 
+    [HttpGet("boq-revisions/{id:int}")]
+    [RequirePermission("proc.boq", "view")]
+    public async Task<ActionResult<ProjectBoqRevisionResponse>> GetBoqRevision(
+        int projectId, int id, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        if (!await access.CanViewOperationalProjectAsync(userId.Value, projectId, ct)) return NotFound();
+        var result = await service.GetBoqRevisionAsync(projectId, id, ct);
+        return result is null ? NotFound() : Ok(result);
+    }
+
     [HttpGet]
     [RequirePermission("proc.boq", "view")]
     public async Task<ActionResult<ProcurementWorkspaceResponse>> GetWorkspace(int projectId, CancellationToken ct)
@@ -357,10 +369,22 @@ public sealed class ProcurementController(
     {
         Action = action,
         ResourceType = resourceType,
-        ResourceId = projectId.ToString(System.Globalization.CultureInfo.InvariantCulture),
+        ResourceId = ResolveResourceId(value),
         Message = $"{resourceType} changed in operational project #{projectId}.",
         NewValue = value,
+        Metadata = new { operationalProjectId = projectId },
     });
+
+    private static string? ResolveResourceId(object value) => value switch
+    {
+        ProjectBoqRevisionResponse item => item.Id.ToString(System.Globalization.CultureInfo.InvariantCulture),
+        MaterialRequestResponse item => item.Id.ToString(System.Globalization.CultureInfo.InvariantCulture),
+        ContractLineResponse item => item.Id.ToString(System.Globalization.CultureInfo.InvariantCulture),
+        WarehouseReceiptResponse item => item.Id.ToString(System.Globalization.CultureInfo.InvariantCulture),
+        WarehouseIssueResponse item => item.Id.ToString(System.Globalization.CultureInfo.InvariantCulture),
+        VendorRatingResponse item => item.Id.ToString(System.Globalization.CultureInfo.InvariantCulture),
+        _ => null,
+    };
 
     private int? GetUserId()
     {
