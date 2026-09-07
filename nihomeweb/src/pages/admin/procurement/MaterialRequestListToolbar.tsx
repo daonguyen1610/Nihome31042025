@@ -61,49 +61,50 @@ export default function MaterialRequestListToolbar({
 
   return (
     <section className="space-y-3 border-y py-4" data-testid="material-request-list-toolbar">
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(220px,1fr)_180px_220px_160px_160px_auto_auto]">
+      <div className="grid items-end gap-3 md:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-[minmax(220px,1fr)_180px_220px_160px_160px_auto_auto]">
         <div className="relative">
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             value={search}
             onChange={(event) => onSearch(event.target.value)}
             placeholder={t("procurement.request.searchPlaceholder")}
-            className="pl-9"
+            className="h-11 pl-9"
           />
         </div>
         <Select value={statusValue} onValueChange={onStatus}>
-          <SelectTrigger aria-label={t("procurement.field.status")}><SelectValue /></SelectTrigger>
+          <SelectTrigger aria-label={t("procurement.field.status")} className="h-11"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">{t("procurement.request.filter.allStatuses")}</SelectItem>
             {STATUSES.map((status) => <SelectItem key={status} value={status}>{t(`procurement.status.${status}`)}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={owner} onValueChange={onOwner}>
-          <SelectTrigger aria-label={t("procurement.field.procurementOwner")}><SelectValue /></SelectTrigger>
+          <SelectTrigger aria-label={t("procurement.field.procurementOwner")} className="h-11"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">{t("procurement.request.filter.allOwners")}</SelectItem>
             {users.map((user) => <SelectItem key={user.userId} value={String(user.userId)}>{user.userName}</SelectItem>)}
           </SelectContent>
         </Select>
-        <div>
-          <Label htmlFor="request-required-from" className="sr-only">{t("procurement.request.filter.requiredFrom")}</Label>
-          <Input id="request-required-from" type="date" value={requiredFrom} onChange={(event) => onRequiredFrom(event.target.value)} title={t("procurement.request.filter.requiredFrom")} />
+        <div className="space-y-1.5">
+          <Label htmlFor="request-required-from" className="text-xs text-muted-foreground">{t("procurement.request.filter.requiredFrom")}</Label>
+          <Input id="request-required-from" type="date" value={requiredFrom} onChange={(event) => onRequiredFrom(event.target.value)} title={t("procurement.request.filter.requiredFrom")} className="h-11" />
         </div>
-        <div>
-          <Label htmlFor="request-required-to" className="sr-only">{t("procurement.request.filter.requiredTo")}</Label>
-          <Input id="request-required-to" type="date" value={requiredTo} onChange={(event) => onRequiredTo(event.target.value)} title={t("procurement.request.filter.requiredTo")} />
+        <div className="space-y-1.5">
+          <Label htmlFor="request-required-to" className="text-xs text-muted-foreground">{t("procurement.request.filter.requiredTo")}</Label>
+          <Input id="request-required-to" type="date" value={requiredTo} onChange={(event) => onRequiredTo(event.target.value)} title={t("procurement.request.filter.requiredTo")} className="h-11" />
         </div>
-        <Button type="button" variant="outline" size="icon" onClick={onToggleSort} title={t("procurement.request.sort.requiredAt")} aria-label={t("procurement.request.sort.requiredAt")}>
+        <Button type="button" variant="outline" onClick={onToggleSort} title={t("procurement.request.sort.requiredAt")} aria-label={t("procurement.request.sort.requiredAt")} className="h-11 gap-2">
           {sortDirection === "asc" ? <ArrowDownAZ className="h-4 w-4" /> : <ArrowUpAZ className="h-4 w-4" />}
+          <span>{t("procurement.field.requiredAt")}</span>
         </Button>
-        <AdminExportButton onClick={onExport} disabled={loading || exporting || total === 0} />
+        <AdminExportButton onClick={onExport} disabled={loading || exporting || total === 0} className="h-11" />
       </div>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">{t("procurement.request.total", { count: total })}</p>
         <div className="flex items-center gap-2">
-          <Button type="button" variant="outline" size="sm" disabled={loading || page <= 1} onClick={() => onPage(page - 1)}>{t("common.prev")}</Button>
+          <Button type="button" variant="outline" size="sm" className="h-11" disabled={loading || page <= 1} onClick={() => onPage(page - 1)}>{t("common.prev")}</Button>
           <span className="text-sm">{page} / {pages}</span>
-          <Button type="button" variant="outline" size="sm" disabled={loading || page >= pages} onClick={() => onPage(page + 1)}>{t("common.next")}</Button>
+          <Button type="button" variant="outline" size="sm" className="h-11" disabled={loading || page >= pages} onClick={() => onPage(page + 1)}>{t("common.next")}</Button>
         </div>
       </div>
     </section>

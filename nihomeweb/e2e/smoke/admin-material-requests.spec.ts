@@ -40,27 +40,35 @@ test("material request list filters and exports within the selected project on m
   const appUrl = baseURL ?? "http://localhost:5043";
   const listQueries: URL[] = [];
   let workspaceRequests = 0;
+  let listFails = false;
   const errors: string[] = [];
+  const warnings: string[] = [];
   page.on("pageerror", error => errors.push(error.message));
   page.on("console", message => {
     const text = message.text();
     if (message.type() === "error" && !text.includes("WebSocket") && !text.includes("status of 404")) errors.push(text);
+    if (message.type() === "warning" && text.includes("uncontrolled to controlled")) warnings.push(text);
   });
   await page.setViewportSize({ width: 390, height: 844 });
   await loginInBrowserAs(page, TEST_USERS.superAdmin);
   if (page.url() === "about:blank") await page.goto(appUrl, { waitUntil: "domcontentloaded" });
   await page.evaluate(() => localStorage.setItem("nicon_lang", "en"));
 
-  await page.route(/\/api\/(?:v1\/)?operational-projects\?.*/, route => route.fulfill({
-    status: 200,
-    contentType: "application/json",
-    body: JSON.stringify({
-      total: 1,
-      page: 1,
-      pageSize: 200,
-      items: [{ id: projectId, code: "PJ-0180", name: "Foundation Project" }],
-    }),
-  }));
+  await page.route(/\/api\/(?:v1\/)?operational-projects\?.*/, route => {
+    const requestedPage = Number(new URL(route.request().url()).searchParams.get("page") ?? 1);
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        total: 101,
+        page: requestedPage,
+        pageSize: 100,
+        items: requestedPage === 1
+          ? [{ id: projectId, code: "PJ-0180", name: "Foundation Project" }]
+          : [{ id: 180002, code: "PJ-0181", name: "Second Page Project" }],
+      }),
+    });
+  });
   await page.route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/procurement$`), route => {
     workspaceRequests += 1;
     return route.fulfill({
@@ -131,6 +139,7 @@ test("material request list filters and exports within the selected project on m
   }));
   await page.route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/procurement/material-requests.*`), route => {
     listQueries.push(new URL(route.request().url()));
+    if (listFails) return route.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ message: "Material request list unavailable" }) });
     return route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -140,11 +149,16 @@ test("material request list filters and exports within the selected project on m
 
   await page.goto(`${appUrl}/admin/procurement-control`, { waitUntil: "networkidle" });
   await page.getByRole("combobox").first().click();
+  await expect(page.getByRole("option", { name: "PJ-0181 · Second Page Project" })).toBeVisible();
   await page.getByRole("option", { name: "PJ-0180 · Foundation Project" }).click();
   await page.getByRole("tab", { name: /Material requests/ }).click();
 
   expect(errors).toEqual([]);
+  expect(warnings).toEqual([]);
   await expect(page.getByTestId("material-request-list-toolbar")).toBeVisible();
+  await expect(page.getByText("Required from", { exact: true })).toBeVisible();
+  await expect(page.getByText("Required to", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Toggle required-date order" })).toContainText("Required at");
   const requestCard = page.locator("article").filter({ hasText: "MR-0180" });
   await expect(requestCard.getByRole("heading", { name: "MR-0180" })).toBeVisible();
   await expect(requestCard.getByText(/Received quantity: 15.*BOQ remaining: 60/)).toBeVisible();
@@ -188,6 +202,18 @@ test("material request list filters and exports within the selected project on m
     page: "2",
   });
 
+  listFails = true;
+  await page.getByRole("button", { name: "Refresh data" }).click();
+  await expect(page.getByRole("button", { name: "Retry" })).toBeVisible();
+  listFails = false;
+  await page.getByRole("button", { name: "Retry" }).click();
+  await expect(requestCard.getByRole("heading", { name: "MR-0180" })).toBeVisible();
+
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
   expect(overflow).toBe(false);
+  await page.setViewportSize({ width: 768, height: 1024 });
+  const tabletOverflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
+  expect(tabletOverflow).toBe(false);
+  await expect(page.getByText("Required from", { exact: true })).toBeVisible();
+  await expect(page.getByText("Required to", { exact: true })).toBeVisible();
 });
