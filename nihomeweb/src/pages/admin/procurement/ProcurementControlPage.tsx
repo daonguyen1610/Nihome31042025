@@ -149,8 +149,17 @@ const ProcurementControlPage = () => {
   useEffect(() => {
     let cancelled = false;
     setProjectsLoading(true);
-    adminApi.listOperationalProjects({ page: 1, pageSize: 200 })
-      .then((response) => { if (!cancelled) setProjects(response.data.items ?? []); })
+    const loadProjects = async () => {
+      const pageSize = 100;
+      const first = (await adminApi.listOperationalProjects({ page: 1, pageSize })).data;
+      const items = [...(first.items ?? [])];
+      for (let page = 2; page <= Math.ceil(first.total / pageSize); page += 1) {
+        items.push(...((await adminApi.listOperationalProjects({ page, pageSize })).data.items ?? []));
+      }
+      return items;
+    };
+    loadProjects()
+      .then((items) => { if (!cancelled) setProjects(items); })
       .catch((reason) => { if (!cancelled) setError(extractApiError(reason)); })
       .finally(() => { if (!cancelled) setProjectsLoading(false); });
     return () => { cancelled = true; };
@@ -431,12 +440,12 @@ const ProcurementControlPage = () => {
               {t("procurement.subtitle")}
             </p>
           </div>
-          <div className="flex w-full flex-col gap-2 sm:flex-row lg:max-w-xl">
+          <div className="grid w-full grid-cols-[minmax(0,1fr)_44px] items-end gap-2 lg:max-w-xl">
             <Label htmlFor="procurement-project" className="sr-only">
               {t("procurement.project.label")}
             </Label>
             <Select
-              value={projectId ? String(projectId) : undefined}
+              value={projectId ? String(projectId) : ""}
               onValueChange={(value) => {
                 projectIdRef.current = Number(value);
                 requestLoadIdRef.current += 1;
@@ -449,7 +458,7 @@ const ProcurementControlPage = () => {
             >
               <SelectTrigger
                 id="procurement-project"
-                className="min-w-0 flex-1"
+                className="h-11 min-w-0"
               >
                 <SelectValue
                   placeholder={t("procurement.project.placeholder")}
@@ -466,6 +475,7 @@ const ProcurementControlPage = () => {
             <Button
               variant="outline"
               size="icon"
+              className="h-11 w-11"
               title={t("procurement.refresh")}
               aria-label={t("procurement.refresh")}
               disabled={!projectId || loading || requestListLoading}
@@ -950,8 +960,8 @@ const RequestPanel = ({
       title={t("procurement.request.title")}
       description={t("procurement.request.description")}
       action={
-        canManage && (
-          <Button onClick={onCreate} disabled={!approvedBoq}>
+        canManage && approvedBoq && (
+          <Button onClick={onCreate}>
             <Plus className="mr-2 h-4 w-4" />
             {t("procurement.request.create")}
           </Button>
