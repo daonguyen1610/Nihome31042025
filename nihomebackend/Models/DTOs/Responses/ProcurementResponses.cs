@@ -55,6 +55,14 @@ public sealed class MaterialRequestResponse
     public List<MaterialRequestLineResponse> Lines { get; set; } = [];
 }
 
+public sealed class MaterialRequestListResponse
+{
+    public int Total { get; set; }
+    public int Page { get; set; }
+    public int PageSize { get; set; }
+    public List<MaterialRequestResponse> Items { get; set; } = [];
+}
+
 public sealed class MaterialRequestLineResponse
 {
     public int Id { get; set; }
@@ -64,6 +72,8 @@ public sealed class MaterialRequestLineResponse
     public string Unit { get; set; } = string.Empty;
     public decimal RequestedQuantity { get; set; }
     public decimal ReceivedQuantity { get; set; }
+    public decimal BoqApprovedQuantity { get; set; }
+    public decimal BoqRemainingQuantity { get; set; }
 }
 
 public sealed class ContractLineResponse

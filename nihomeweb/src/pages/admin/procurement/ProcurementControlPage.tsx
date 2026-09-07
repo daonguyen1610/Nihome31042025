@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   Boxes,
   Check,
@@ -28,11 +28,13 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { useToast } from "@/hooks/use-toast";
 import { extractApiError } from "@/lib/apiError";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
+import { createCsvFilename, downloadCsv } from "@/lib/exportCsv";
 import { useI18n } from "@/lib/i18n";
 import {
   adminApi,
   type ContractResponse,
   type KpiUserOptionResponse,
+  type MaterialRequestListParams,
   type MaterialRequestResponse,
   type OperationalProjectListItemResponse,
   type ProcurementContractLineResponse,
@@ -44,6 +46,7 @@ import {
   type WarehouseReceiptResponse,
 } from "@/services/adminApi";
 import { useAppSelector } from "@/store";
+import MaterialRequestListToolbar from "./MaterialRequestListToolbar";
 
 type DialogKind = "boq" | "request" | "contract" | "receipt" | "issue" | "rating" | null;
 type DecisionKind = "boq" | "request" | "rating";
@@ -82,6 +85,7 @@ const ProcurementControlPage = () => {
   const { has } = usePermissions();
   const { toast } = useToast();
   const currentUser = useAppSelector((state) => state.auth.user);
+  const canViewBoq = has(ADMIN_PERMS.procurement);
   const canManageBoq = has(ADMIN_PERMS.procurementManage);
   const canApproveBoq = has(ADMIN_PERMS.procurementApprove);
   const canViewRequests = has(ADMIN_PERMS.procurementMaterialRequests);
@@ -97,6 +101,8 @@ const ProcurementControlPage = () => {
 
   const [projects, setProjects] = useState<OperationalProjectListItemResponse[]>([]);
   const [projectId, setProjectId] = useState(0);
+  const projectIdRef = useRef(0);
+  const requestLoadIdRef = useRef(0);
   const [workspace, setWorkspace] = useState<ProcurementWorkspaceResponse | null>(null);
   const [users, setUsers] = useState<UserOption[]>([]);
   const [contracts, setContracts] = useState<ContractResponse[]>([]);
@@ -109,6 +115,21 @@ const ProcurementControlPage = () => {
   const [busy, setBusy] = useState(false);
   const [decision, setDecision] = useState<{ kind: DecisionKind; id: number; rowVersion: string; approved: boolean } | null>(null);
   const [decisionReason, setDecisionReason] = useState("");
+  const [activeTab, setActiveTab] = useState("boq");
+  const [requestSearchInput, setRequestSearchInput] = useState("");
+  const [requestSearch, setRequestSearch] = useState("");
+  const [requestStatus, setRequestStatus] = useState("all");
+  const [requestOwner, setRequestOwner] = useState("all");
+  const [requestRequiredFrom, setRequestRequiredFrom] = useState("");
+  const [requestRequiredTo, setRequestRequiredTo] = useState("");
+  const [requestSortDirection, setRequestSortDirection] = useState<"asc" | "desc">("asc");
+  const [requestPage, setRequestPage] = useState(1);
+  const [requestTotal, setRequestTotal] = useState(0);
+  const [requestRows, setRequestRows] = useState<MaterialRequestResponse[]>([]);
+  const [requestListLoading, setRequestListLoading] = useState(false);
+  const [requestListError, setRequestListError] = useState<string | null>(null);
+  const [requestExporting, setRequestExporting] = useState(false);
+  const [workspaceProjectId, setWorkspaceProjectId] = useState(0);
 
   const [boqCurrency, setBoqCurrency] = useState("VND");
   const [boqLines, setBoqLines] = useState<BoqLineDraft[]>([emptyBoqLine()]);
@@ -135,18 +156,35 @@ const ProcurementControlPage = () => {
     return () => { cancelled = true; };
   }, []);
 
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      setRequestSearch(requestSearchInput.trim());
+      setRequestPage(1);
+    }, 300);
+    return () => window.clearTimeout(timeout);
+  }, [requestSearchInput]);
+
+  useEffect(() => {
+    if (!canViewBoq && canViewRequests) setActiveTab("requests");
+  }, [canViewBoq, canViewRequests]);
+
   const loadWorkspace = useCallback(async () => {
     if (!projectId) return;
+    const requestedProjectId = projectId;
     setLoading(true);
     setError(null);
     try {
       const [workspaceResult, teamResult, kpiUsersResult, contractsResult] = await Promise.all([
-        adminApi.getProcurementWorkspace(projectId),
+        canViewBoq
+          ? adminApi.getProcurementWorkspace(projectId)
+          : Promise.resolve({ data: { boqRevisions: [], materialRequests: [], contractLines: [], receipts: [], issues: [], vendorRatings: [] } as ProcurementWorkspaceResponse }),
         adminApi.getOperationalProjectTeam(projectId).catch(() => ({ data: null })),
         adminApi.listKpiEligibleUsers().catch(() => ({ data: [] as KpiUserOptionResponse[] })),
         adminApi.listContracts({ page: 1, pageSize: 200 }).catch(() => null),
       ]);
+      if (projectIdRef.current !== requestedProjectId) return;
       setWorkspace(workspaceResult.data);
+      setWorkspaceProjectId(projectId);
       const teamUsers: UserOption[] = (teamResult.data?.members ?? [])
         .filter((member) => member.isActive)
         .map((member) => ({ userId: member.userId, userName: member.userName }));
@@ -157,12 +195,75 @@ const ProcurementControlPage = () => {
       setContractsLookupAvailable(contractsResult != null);
       setContracts((contractsResult?.data.items ?? []).filter((contract) => contract.operationalProjectId === projectId));
     } catch (reason) {
+      if (projectIdRef.current !== requestedProjectId) return;
       setWorkspace(null);
       setError(extractApiError(reason));
     } finally {
-      setLoading(false);
+      if (projectIdRef.current === requestedProjectId) setLoading(false);
     }
-  }, [currentUser, projectId]);
+  }, [canViewBoq, currentUser, projectId]);
+
+  const requestParams = useCallback((page = requestPage, pageSize = 20): MaterialRequestListParams => ({
+    page,
+    pageSize,
+    sortBy: "requiredAt",
+    sortDirection: requestSortDirection,
+    ...(requestSearch ? { search: requestSearch } : {}),
+    ...(requestStatus !== "all" ? { status: requestStatus } : {}),
+    ...(requestOwner !== "all" ? { assignedProcurementUserId: Number(requestOwner) } : {}),
+    ...(requestRequiredFrom ? { requiredFrom: requestRequiredFrom } : {}),
+    ...(requestRequiredTo ? { requiredTo: requestRequiredTo } : {}),
+  }), [requestOwner, requestPage, requestRequiredFrom, requestRequiredTo, requestSearch, requestSortDirection, requestStatus]);
+
+  const loadMaterialRequests = useCallback(async () => {
+    if (!projectId || workspaceProjectId !== projectId || !canViewRequests) return;
+    const requestedProjectId = projectId;
+    const requestLoadId = ++requestLoadIdRef.current;
+    setRequestListLoading(true);
+    setRequestListError(null);
+    try {
+      const { data } = await adminApi.listMaterialRequests(projectId, requestParams());
+      if (projectIdRef.current !== requestedProjectId || requestLoadIdRef.current !== requestLoadId) return;
+      setRequestTotal(data.total);
+      setRequestRows(data.items);
+    } catch (reason) {
+      if (projectIdRef.current !== requestedProjectId || requestLoadIdRef.current !== requestLoadId) return;
+      setRequestListError(extractApiError(reason));
+    } finally {
+      if (projectIdRef.current === requestedProjectId && requestLoadIdRef.current === requestLoadId) setRequestListLoading(false);
+    }
+  }, [canViewRequests, projectId, requestParams, workspaceProjectId]);
+
+  useEffect(() => { void loadMaterialRequests(); }, [loadMaterialRequests]);
+
+  const exportMaterialRequests = async () => {
+    if (!projectId) return;
+    setRequestExporting(true);
+    try {
+      const first = (await adminApi.listMaterialRequests(projectId, requestParams(1, 100))).data;
+      const rows = [...first.items];
+      for (let page = 2; page <= Math.ceil(first.total / first.pageSize); page += 1) {
+        rows.push(...(await adminApi.listMaterialRequests(projectId, requestParams(page, 100))).data.items);
+      }
+      downloadCsv({
+        filename: createCsvFilename(`material-requests-project-${projectId}`),
+        rows,
+        columns: [
+          { header: t("procurement.field.code"), value: "code" },
+          { header: t("procurement.field.status"), value: (row) => t(`procurement.status.${row.status}`) },
+          { header: t("procurement.field.requester"), value: (row) => row.siteRequesterName ?? `#${row.siteRequesterUserId}` },
+          { header: t("procurement.field.responsibleSite"), value: (row) => row.responsibleSiteUserName ?? `#${row.responsibleSiteUserId}` },
+          { header: t("procurement.field.procurementOwner"), value: (row) => row.assignedProcurementUserName ?? `#${row.assignedProcurementUserId}` },
+          { header: t("procurement.field.requiredAt"), value: (row) => formatDate(row.requiredAt) },
+          { header: t("procurement.field.lines"), value: (row) => row.lines.map((line) => `${line.itemCode}: ${line.requestedQuantity}`).join(" | ") },
+        ],
+      });
+    } catch (reason) {
+      toast({ variant: "destructive", title: extractApiError(reason) || t("common.error") });
+    } finally {
+      setRequestExporting(false);
+    }
+  };
 
   useEffect(() => { void loadWorkspace(); }, [loadWorkspace]);
 
@@ -207,6 +308,7 @@ const ProcurementControlPage = () => {
       setDecisionReason("");
       toast({ title: t(successKey) });
       await loadWorkspace();
+      await loadMaterialRequests();
     } catch (reason) {
       const message = extractApiError(reason);
       setFormError(message);
@@ -312,70 +414,483 @@ const ProcurementControlPage = () => {
       <div className="space-y-5 p-4 sm:p-6">
         <header className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <div className="flex items-center gap-2 text-primary"><ShoppingCart className="h-5 w-5" /><span className="text-xs font-semibold uppercase">{t("nav.procurement")}</span></div>
-            <h1 className="mt-1 text-2xl font-semibold">{t("procurement.title")}</h1>
-            <p className="mt-1 text-sm text-muted-foreground">{t("procurement.subtitle")}</p>
+            <div className="flex items-center gap-2 text-primary">
+              <ShoppingCart className="h-5 w-5" />
+              <span className="text-xs font-semibold uppercase">
+                {t("nav.procurement")}
+              </span>
+            </div>
+            <h1 className="mt-1 text-2xl font-semibold">
+              {t("procurement.title")}
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {t("procurement.subtitle")}
+            </p>
           </div>
           <div className="flex w-full flex-col gap-2 sm:flex-row lg:max-w-xl">
-            <Label htmlFor="procurement-project" className="sr-only">{t("procurement.project.label")}</Label>
-            <Select value={projectId ? String(projectId) : undefined} onValueChange={(value) => setProjectId(Number(value))}>
-              <SelectTrigger id="procurement-project" className="min-w-0 flex-1"><SelectValue placeholder={t("procurement.project.placeholder")} /></SelectTrigger>
+            <Label htmlFor="procurement-project" className="sr-only">
+              {t("procurement.project.label")}
+            </Label>
+            <Select
+              value={projectId ? String(projectId) : undefined}
+              onValueChange={(value) => {
+                projectIdRef.current = Number(value);
+                requestLoadIdRef.current += 1;
+                setRequestRows([]);
+                setRequestTotal(0);
+                setRequestPage(1);
+                setWorkspaceProjectId(0);
+                setProjectId(Number(value));
+              }}
+            >
+              <SelectTrigger
+                id="procurement-project"
+                className="min-w-0 flex-1"
+              >
+                <SelectValue
+                  placeholder={t("procurement.project.placeholder")}
+                />
+              </SelectTrigger>
               <SelectContent className="max-h-80">
-                {projects.map((project) => <SelectItem key={project.id} value={String(project.id)}>{project.code} · {project.name}</SelectItem>)}
+                {projects.map((project) => (
+                  <SelectItem key={project.id} value={String(project.id)}>
+                    {project.code} · {project.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
-            <Button variant="outline" size="icon" title={t("procurement.refresh")} aria-label={t("procurement.refresh")} disabled={!projectId || loading} onClick={() => void loadWorkspace()}>
-              <RefreshCw className={loading ? "h-4 w-4 animate-spin" : "h-4 w-4"} />
+            <Button
+              variant="outline"
+              size="icon"
+              title={t("procurement.refresh")}
+              aria-label={t("procurement.refresh")}
+              disabled={!projectId || loading}
+              onClick={() => void loadWorkspace()}
+            >
+              <RefreshCw
+                className={loading ? "h-4 w-4 animate-spin" : "h-4 w-4"}
+              />
             </Button>
           </div>
         </header>
 
         {!projectId ? (
-          <PageEmpty message={projects.length ? t("procurement.project.emptySelection") : t("procurement.project.empty")} />
-        ) : loading ? <PageLoading /> : error ? <PageError message={error} onRetry={() => void loadWorkspace()} /> : workspace ? (
-          <Tabs defaultValue="boq" className="space-y-4">
+          <PageEmpty
+            message={
+              projects.length
+                ? t("procurement.project.emptySelection")
+                : t("procurement.project.empty")
+            }
+          />
+        ) : loading ? (
+          <PageLoading />
+        ) : error ? (
+          <PageError message={error} onRetry={() => void loadWorkspace()} />
+        ) : workspace ? (
+          <Tabs
+            value={activeTab}
+            onValueChange={setActiveTab}
+            className="space-y-4"
+          >
             <div className="overflow-x-auto pb-1">
               <TabsList className="h-auto w-max min-w-full justify-start">
-                <TabsTrigger value="boq"><ClipboardCheck className="mr-2 h-4 w-4" />{t("procurement.tabs.boq")} ({workspace.boqRevisions.length})</TabsTrigger>
-                {canViewRequests && <TabsTrigger value="requests"><ShoppingCart className="mr-2 h-4 w-4" />{t("procurement.tabs.requests")} ({workspace.materialRequests.length})</TabsTrigger>}
-                {canViewContracts && <TabsTrigger value="contracts"><FilePlus2 className="mr-2 h-4 w-4" />{t("procurement.tabs.contracts")} ({workspace.contractLines.length})</TabsTrigger>}
-                {canViewWarehouse && <TabsTrigger value="warehouse"><Boxes className="mr-2 h-4 w-4" />{t("procurement.tabs.warehouse")} ({workspace.receipts.length + workspace.issues.length})</TabsTrigger>}
-                {canViewRatings && <TabsTrigger value="ratings"><Star className="mr-2 h-4 w-4" />{t("procurement.tabs.ratings")} ({workspace.vendorRatings.length})</TabsTrigger>}
+                {canViewBoq && <TabsTrigger value="boq">
+                  <ClipboardCheck className="mr-2 h-4 w-4" />
+                  {t("procurement.tabs.boq")} ({workspace.boqRevisions.length})
+                </TabsTrigger>}
+                {canViewRequests && (
+                  <TabsTrigger value="requests">
+                    <ShoppingCart className="mr-2 h-4 w-4" />
+                    {t("procurement.tabs.requests")} (
+                    {requestTotal})
+                  </TabsTrigger>
+                )}
+                {canViewContracts && (
+                  <TabsTrigger value="contracts">
+                    <FilePlus2 className="mr-2 h-4 w-4" />
+                    {t("procurement.tabs.contracts")} (
+                    {workspace.contractLines.length})
+                  </TabsTrigger>
+                )}
+                {canViewWarehouse && (
+                  <TabsTrigger value="warehouse">
+                    <Boxes className="mr-2 h-4 w-4" />
+                    {t("procurement.tabs.warehouse")} (
+                    {workspace.receipts.length + workspace.issues.length})
+                  </TabsTrigger>
+                )}
+                {canViewRatings && (
+                  <TabsTrigger value="ratings">
+                    <Star className="mr-2 h-4 w-4" />
+                    {t("procurement.tabs.ratings")} (
+                    {workspace.vendorRatings.length})
+                  </TabsTrigger>
+                )}
               </TabsList>
             </div>
 
-            <TabsContent value="boq"><BoqPanel rows={workspace.boqRevisions} canManage={canManageBoq} canApprove={canApproveBoq} status={status} money={money} t={t} onCreate={() => openDialog("boq")} onSubmit={(row) => submit("boq", row)} onDecision={(row, approved) => { setFormError(null); setDecisionReason(""); setDecision({ kind: "boq", id: row.id, rowVersion: row.rowVersion, approved }); }} busy={busy} /></TabsContent>
-            {canViewRequests && <TabsContent value="requests"><RequestPanel rows={workspace.materialRequests} canManage={canManageRequests} canApprove={canApproveRequests} status={status} number={number} formatDate={formatDate} t={t} onCreate={() => openDialog("request")} onSubmit={(row) => submit("request", row)} onDecision={(row, approved) => { setFormError(null); setDecisionReason(""); setDecision({ kind: "request", id: row.id, rowVersion: row.rowVersion, approved }); }} busy={busy} approvedBoq={approvedBoq} /></TabsContent>}
-            {canViewContracts && <TabsContent value="contracts"><ContractLinesPanel rows={workspace.contractLines} canManage={canManageContracts} money={money} number={number} t={t} onCreate={() => openDialog("contract")} hasDependencies={Boolean(approvedBoqLines.length && (contracts.length || !contractsLookupAvailable))} /></TabsContent>}
-            {canViewWarehouse && <TabsContent value="warehouse"><WarehousePanel receipts={workspace.receipts} issues={workspace.issues} canPost={canPostWarehouse} status={status} number={number} formatDate={formatDate} t={t} onCreateReceipt={() => openDialog("receipt")} onCreateIssue={() => openDialog("issue")} onPostReceipt={(row) => void runMutation(() => adminApi.postWarehouseReceipt(projectId, row.id, row.rowVersion), "procurement.success.receiptPosted", false)} onPostIssue={(row) => void runMutation(() => adminApi.postWarehouseIssue(projectId, row.id, row.rowVersion), "procurement.success.issuePosted", false)} busy={busy} canCreateReceipt={receivableLines.length > 0} canCreateIssue={approvedBoqLines.length > 0} /></TabsContent>}
-            {canViewRatings && <TabsContent value="ratings"><RatingsPanel rows={workspace.vendorRatings} canManage={canManageRatings} canApprove={canApproveRatings} status={status} number={number} t={t} onCreate={() => openDialog("rating")} onSubmit={(row) => submit("rating", row)} onDecision={(row, approved) => { setFormError(null); setDecisionReason(""); setDecision({ kind: "rating", id: row.id, rowVersion: row.rowVersion, approved }); }} busy={busy} hasContracts={ratingContracts.length > 0 || !contractsLookupAvailable} /></TabsContent>}
+            {canViewRequests && activeTab === "requests" && (
+              <MaterialRequestListToolbar
+                search={requestSearchInput}
+                statusValue={requestStatus}
+                owner={requestOwner}
+                requiredFrom={requestRequiredFrom}
+                requiredTo={requestRequiredTo}
+                sortDirection={requestSortDirection}
+                users={users}
+                total={requestTotal}
+                page={requestPage}
+                pageSize={20}
+                loading={requestListLoading}
+                exporting={requestExporting}
+                t={t}
+                onSearch={setRequestSearchInput}
+                onStatus={(value) => {
+                  setRequestStatus(value);
+                  setRequestPage(1);
+                }}
+                onOwner={(value) => {
+                  setRequestOwner(value);
+                  setRequestPage(1);
+                }}
+                onRequiredFrom={(value) => {
+                  setRequestRequiredFrom(value);
+                  setRequestPage(1);
+                }}
+                onRequiredTo={(value) => {
+                  setRequestRequiredTo(value);
+                  setRequestPage(1);
+                }}
+                onToggleSort={() => {
+                  setRequestSortDirection((current) =>
+                    current === "asc" ? "desc" : "asc",
+                  );
+                  setRequestPage(1);
+                }}
+                onPage={setRequestPage}
+                onExport={() => void exportMaterialRequests()}
+              />
+            )}
+
+            {canViewBoq && <TabsContent value="boq">
+              <BoqPanel
+                rows={workspace.boqRevisions}
+                canManage={canManageBoq}
+                canApprove={canApproveBoq}
+                status={status}
+                money={money}
+                t={t}
+                onCreate={() => openDialog("boq")}
+                onSubmit={(row) => submit("boq", row)}
+                onDecision={(row, approved) => {
+                  setFormError(null);
+                  setDecisionReason("");
+                  setDecision({
+                    kind: "boq",
+                    id: row.id,
+                    rowVersion: row.rowVersion,
+                    approved,
+                  });
+                }}
+                busy={busy}
+              />
+            </TabsContent>}
+            {canViewRequests && (
+              <TabsContent value="requests">
+                {requestListLoading &&
+                requestRows.length === 0 ? (
+                  <PageLoading />
+                ) : requestListError ? (
+                  <PageError
+                    message={requestListError}
+                    onRetry={() => void loadMaterialRequests()}
+                  />
+                ) : (
+                  <RequestPanel
+                    rows={requestRows}
+                    canManage={canManageRequests}
+                    canApprove={canApproveRequests}
+                    status={status}
+                    number={number}
+                    formatDate={formatDate}
+                    t={t}
+                    onCreate={() => openDialog("request")}
+                    onSubmit={(row) => submit("request", row)}
+                    onDecision={(row, approved) => {
+                      setFormError(null);
+                      setDecisionReason("");
+                      setDecision({
+                        kind: "request",
+                        id: row.id,
+                        rowVersion: row.rowVersion,
+                        approved,
+                      });
+                    }}
+                    busy={busy}
+                    approvedBoq={approvedBoq}
+                  />
+                )}
+              </TabsContent>
+            )}
+            {canViewContracts && (
+              <TabsContent value="contracts">
+                <ContractLinesPanel
+                  rows={workspace.contractLines}
+                  canManage={canManageContracts}
+                  money={money}
+                  number={number}
+                  t={t}
+                  onCreate={() => openDialog("contract")}
+                  hasDependencies={Boolean(
+                    approvedBoqLines.length &&
+                    (contracts.length || !contractsLookupAvailable),
+                  )}
+                />
+              </TabsContent>
+            )}
+            {canViewWarehouse && (
+              <TabsContent value="warehouse">
+                <WarehousePanel
+                  receipts={workspace.receipts}
+                  issues={workspace.issues}
+                  canPost={canPostWarehouse}
+                  status={status}
+                  number={number}
+                  formatDate={formatDate}
+                  t={t}
+                  onCreateReceipt={() => openDialog("receipt")}
+                  onCreateIssue={() => openDialog("issue")}
+                  onPostReceipt={(row) =>
+                    void runMutation(
+                      () =>
+                        adminApi.postWarehouseReceipt(
+                          projectId,
+                          row.id,
+                          row.rowVersion,
+                        ),
+                      "procurement.success.receiptPosted",
+                      false,
+                    )
+                  }
+                  onPostIssue={(row) =>
+                    void runMutation(
+                      () =>
+                        adminApi.postWarehouseIssue(
+                          projectId,
+                          row.id,
+                          row.rowVersion,
+                        ),
+                      "procurement.success.issuePosted",
+                      false,
+                    )
+                  }
+                  busy={busy}
+                  canCreateReceipt={receivableLines.length > 0}
+                  canCreateIssue={approvedBoqLines.length > 0}
+                />
+              </TabsContent>
+            )}
+            {canViewRatings && (
+              <TabsContent value="ratings">
+                <RatingsPanel
+                  rows={workspace.vendorRatings}
+                  canManage={canManageRatings}
+                  canApprove={canApproveRatings}
+                  status={status}
+                  number={number}
+                  t={t}
+                  onCreate={() => openDialog("rating")}
+                  onSubmit={(row) => submit("rating", row)}
+                  onDecision={(row, approved) => {
+                    setFormError(null);
+                    setDecisionReason("");
+                    setDecision({
+                      kind: "rating",
+                      id: row.id,
+                      rowVersion: row.rowVersion,
+                      approved,
+                    });
+                  }}
+                  busy={busy}
+                  hasContracts={
+                    ratingContracts.length > 0 || !contractsLookupAvailable
+                  }
+                />
+              </TabsContent>
+            )}
           </Tabs>
         ) : null}
       </div>
 
-      <Dialog open={dialog != null} onOpenChange={(open) => { if (!open && !busy) setDialog(null); }}>
+      <Dialog
+        open={dialog != null}
+        onOpenChange={(open) => {
+          if (!open && !busy) setDialog(null);
+        }}
+      >
         <DialogContent className="max-h-[92vh] w-[95vw] max-w-4xl overflow-y-auto">
-          <DialogHeader><DialogTitle>{dialog ? t(`procurement.dialog.${dialog}.title`) : ""}</DialogTitle><DialogDescription>{dialog ? t(`procurement.dialog.${dialog}.description`) : ""}</DialogDescription></DialogHeader>
-          {dialog === "boq" && <BoqForm currency={boqCurrency} setCurrency={setBoqCurrency} lines={boqLines} setLines={setBoqLines} t={t} />}
-          {dialog === "request" && <RequestForm form={requestForm} setForm={setRequestForm} lines={requestLines} setLines={setRequestLines} users={users} boqLines={approvedBoqLines} t={t} />}
-          {dialog === "contract" && <ContractLineForm form={contractForm} setForm={setContractForm} users={users} contracts={contracts} contractsLookupAvailable={contractsLookupAvailable} boqLines={approvedBoqLines} t={t} />}
-          {dialog === "receipt" && <ReceiptForm inspectedAt={receiptAt} setInspectedAt={setReceiptAt} lines={receiptLines} setLines={setReceiptLines} requestLines={receivableLines} contractLines={workspace?.contractLines ?? []} t={t} number={number} />}
-          {dialog === "issue" && <IssueForm form={issueForm} setForm={setIssueForm} lines={issueLines} setLines={setIssueLines} users={users} boqLines={approvedBoqLines} t={t} />}
-          {dialog === "rating" && <RatingForm form={ratingForm} setForm={setRatingForm} contracts={ratingContracts} contractsLookupAvailable={contractsLookupAvailable} t={t} />}
-          {formError && <p className="text-sm text-destructive" role="alert">{formError}</p>}
+          <DialogHeader>
+            <DialogTitle>
+              {dialog ? t(`procurement.dialog.${dialog}.title`) : ""}
+            </DialogTitle>
+            <DialogDescription>
+              {dialog ? t(`procurement.dialog.${dialog}.description`) : ""}
+            </DialogDescription>
+          </DialogHeader>
+          {dialog === "boq" && (
+            <BoqForm
+              currency={boqCurrency}
+              setCurrency={setBoqCurrency}
+              lines={boqLines}
+              setLines={setBoqLines}
+              t={t}
+            />
+          )}
+          {dialog === "request" && (
+            <RequestForm
+              form={requestForm}
+              setForm={setRequestForm}
+              lines={requestLines}
+              setLines={setRequestLines}
+              users={users}
+              boqLines={approvedBoqLines}
+              t={t}
+            />
+          )}
+          {dialog === "contract" && (
+            <ContractLineForm
+              form={contractForm}
+              setForm={setContractForm}
+              users={users}
+              contracts={contracts}
+              contractsLookupAvailable={contractsLookupAvailable}
+              boqLines={approvedBoqLines}
+              t={t}
+            />
+          )}
+          {dialog === "receipt" && (
+            <ReceiptForm
+              inspectedAt={receiptAt}
+              setInspectedAt={setReceiptAt}
+              lines={receiptLines}
+              setLines={setReceiptLines}
+              requestLines={receivableLines}
+              contractLines={workspace?.contractLines ?? []}
+              t={t}
+              number={number}
+            />
+          )}
+          {dialog === "issue" && (
+            <IssueForm
+              form={issueForm}
+              setForm={setIssueForm}
+              lines={issueLines}
+              setLines={setIssueLines}
+              users={users}
+              boqLines={approvedBoqLines}
+              t={t}
+            />
+          )}
+          {dialog === "rating" && (
+            <RatingForm
+              form={ratingForm}
+              setForm={setRatingForm}
+              contracts={ratingContracts}
+              contractsLookupAvailable={contractsLookupAvailable}
+              t={t}
+            />
+          )}
+          {formError && (
+            <p className="text-sm text-destructive" role="alert">
+              {formError}
+            </p>
+          )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialog(null)} disabled={busy}>{t("common.cancel")}</Button>
-            <Button onClick={dialog === "boq" ? createBoq : dialog === "request" ? createRequest : dialog === "contract" ? createContractLine : dialog === "receipt" ? createReceipt : dialog === "issue" ? createIssue : createRating} disabled={busy}>{busy ? t("common.saving") : t("procurement.action.create")}</Button>
+            <Button
+              variant="outline"
+              onClick={() => setDialog(null)}
+              disabled={busy}
+            >
+              {t("common.cancel")}
+            </Button>
+            <Button
+              onClick={
+                dialog === "boq"
+                  ? createBoq
+                  : dialog === "request"
+                    ? createRequest
+                    : dialog === "contract"
+                      ? createContractLine
+                      : dialog === "receipt"
+                        ? createReceipt
+                        : dialog === "issue"
+                          ? createIssue
+                          : createRating
+              }
+              disabled={busy}
+            >
+              {busy ? t("common.saving") : t("procurement.action.create")}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={decision != null} onOpenChange={(open) => { if (!open && !busy) setDecision(null); }}>
+      <Dialog
+        open={decision != null}
+        onOpenChange={(open) => {
+          if (!open && !busy) setDecision(null);
+        }}
+      >
         <DialogContent>
-          <DialogHeader><DialogTitle>{t(decision?.approved ? "procurement.decision.approveTitle" : "procurement.decision.rejectTitle")}</DialogTitle><DialogDescription>{t("procurement.decision.description")}</DialogDescription></DialogHeader>
-          <div className="space-y-2"><Label htmlFor="procurement-decision-reason">{t("procurement.field.decisionReason")}</Label><Textarea id="procurement-decision-reason" maxLength={2000} value={decisionReason} onChange={(event) => setDecisionReason(event.target.value)} placeholder={t("procurement.decision.reasonPlaceholder")} /></div>
-          {formError && <p className="text-sm text-destructive" role="alert">{formError}</p>}
-          <DialogFooter><Button variant="outline" onClick={() => setDecision(null)} disabled={busy}>{t("common.cancel")}</Button><Button variant={decision?.approved ? "default" : "destructive"} onClick={decide} disabled={busy}>{t(decision?.approved ? "procurement.action.approve" : "procurement.action.reject")}</Button></DialogFooter>
+          <DialogHeader>
+            <DialogTitle>
+              {t(
+                decision?.approved
+                  ? "procurement.decision.approveTitle"
+                  : "procurement.decision.rejectTitle",
+              )}
+            </DialogTitle>
+            <DialogDescription>
+              {t("procurement.decision.description")}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="procurement-decision-reason">
+              {t("procurement.field.decisionReason")}
+            </Label>
+            <Textarea
+              id="procurement-decision-reason"
+              maxLength={2000}
+              value={decisionReason}
+              onChange={(event) => setDecisionReason(event.target.value)}
+              placeholder={t("procurement.decision.reasonPlaceholder")}
+            />
+          </div>
+          {formError && (
+            <p className="text-sm text-destructive" role="alert">
+              {formError}
+            </p>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDecision(null)}
+              disabled={busy}
+            >
+              {t("common.cancel")}
+            </Button>
+            <Button
+              variant={decision?.approved ? "default" : "destructive"}
+              onClick={decide}
+              disabled={busy}
+            >
+              {t(
+                decision?.approved
+                  ? "procurement.action.approve"
+                  : "procurement.action.reject",
+              )}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </AdminLayout>
@@ -399,9 +914,260 @@ const RecordActions = ({ statusValue, canManage, canApprove, busy, t, onSubmit, 
 
 const BoqPanel = ({ rows, canManage, canApprove, status, money, t, onCreate, onSubmit, onDecision, busy }: { rows: ProjectBoqRevisionResponse[]; canManage: boolean; canApprove: boolean; status: (value: string) => ReactNode; money: Intl.NumberFormat; t: Translate; onCreate: () => void; onSubmit: (row: ProjectBoqRevisionResponse) => void; onDecision: (row: ProjectBoqRevisionResponse, approved: boolean) => void; busy: boolean }) => <section><PanelHeader title={t("procurement.boq.title")} description={t("procurement.boq.description")} action={canManage && <Button onClick={onCreate}><Plus className="mr-2 h-4 w-4" />{t("procurement.boq.create")}</Button>} />{rows.length === 0 ? <Empty>{t("procurement.boq.empty")}</Empty> : <><TableShell><Table headers={[t("procurement.field.revision"), t("procurement.field.status"), t("procurement.field.lines"), t("procurement.field.total"), t("procurement.field.preparedBy"), t("procurement.field.actions")] }><>{rows.map((row) => <tr className="border-b" key={row.id}><td className="px-3 py-3 font-medium">R{row.revisionNumber}{row.isFinal && <Badge className="ml-2" variant="secondary">{t("procurement.boq.final")}</Badge>}</td><td className="px-3 py-3">{status(row.status)}</td><td className="px-3 py-3">{row.lines.length}</td><td className="px-3 py-3">{money.format(row.costTotal)} {row.currency}</td><td className="px-3 py-3">{row.preparedByName ?? `#${row.preparedByUserId}`}</td><td className="px-3 py-3"><RecordActions statusValue={row.status} canManage={canManage} canApprove={canApprove} busy={busy} t={t} onSubmit={() => onSubmit(row)} onDecision={(approved) => onDecision(row, approved)} allowRejectedSubmit /></td></tr>)}</></Table></TableShell><MobileList>{rows.map((row) => <MobileCard key={row.id} title={`R${row.revisionNumber}`} badge={status(row.status)} actions={<RecordActions statusValue={row.status} canManage={canManage} canApprove={canApprove} busy={busy} t={t} onSubmit={() => onSubmit(row)} onDecision={(approved) => onDecision(row, approved)} allowRejectedSubmit />}><Datum label={t("procurement.field.lines")}>{row.lines.length}</Datum><Datum label={t("procurement.field.total")}>{money.format(row.costTotal)} {row.currency}</Datum><Datum label={t("procurement.field.preparedBy")}>{row.preparedByName ?? `#${row.preparedByUserId}`}</Datum><Datum label={t("procurement.field.revision")}>{row.isFinal ? t("procurement.boq.final") : `R${row.revisionNumber}`}</Datum></MobileCard>)}</MobileList></>}</section>;
 
-const RequestPanel = ({ rows, canManage, canApprove, status, number, formatDate, t, onCreate, onSubmit, onDecision, busy, approvedBoq }: { rows: MaterialRequestResponse[]; canManage: boolean; canApprove: boolean; status: (value: string) => ReactNode; number: Intl.NumberFormat; formatDate: (value?: string | null) => string; t: Translate; onCreate: () => void; onSubmit: (row: MaterialRequestResponse) => void; onDecision: (row: MaterialRequestResponse, approved: boolean) => void; busy: boolean; approvedBoq?: ProjectBoqRevisionResponse }) => <section><PanelHeader title={t("procurement.request.title")} description={t("procurement.request.description")} action={canManage && <Button onClick={onCreate} disabled={!approvedBoq}><Plus className="mr-2 h-4 w-4" />{t("procurement.request.create")}</Button>} />{!approvedBoq && <p className="mb-4 border-l-2 border-amber-400 px-3 text-sm text-amber-800">{t("procurement.request.requiresBoq")}</p>}{rows.length === 0 ? <Empty>{t("procurement.request.empty")}</Empty> : <><TableShell><Table headers={[t("procurement.field.code"), t("procurement.field.status"), t("procurement.field.requiredAt"), t("procurement.field.responsibleSite"), t("procurement.field.procurementOwner"), t("procurement.field.lines"), t("procurement.field.actions")]} minWidth="min-w-[1050px]"><>{rows.map((row) => <tr className="border-b" key={row.id}><td className="px-3 py-3 font-medium">{row.code}</td><td className="px-3 py-3">{status(row.status)}</td><td className="px-3 py-3">{formatDate(row.requiredAt)}</td><td className="px-3 py-3">{row.responsibleSiteUserName ?? `#${row.responsibleSiteUserId}`}</td><td className="px-3 py-3">{row.assignedProcurementUserName ?? `#${row.assignedProcurementUserId}`}</td><td className="px-3 py-3">{row.lines.map((line) => `${line.itemCode}: ${number.format(line.requestedQuantity)}`).join(", ")}</td><td className="px-3 py-3"><RecordActions statusValue={row.status} canManage={canManage} canApprove={canApprove} busy={busy} t={t} onSubmit={() => onSubmit(row)} onDecision={(approved) => onDecision(row, approved)} /></td></tr>)}</></Table></TableShell><MobileList>{rows.map((row) => <MobileCard key={row.id} title={row.code} badge={status(row.status)} actions={<RecordActions statusValue={row.status} canManage={canManage} canApprove={canApprove} busy={busy} t={t} onSubmit={() => onSubmit(row)} onDecision={(approved) => onDecision(row, approved)} />}><Datum label={t("procurement.field.requiredAt")}>{formatDate(row.requiredAt)}</Datum><Datum label={t("procurement.field.responsibleSite")}>{row.responsibleSiteUserName ?? `#${row.responsibleSiteUserId}`}</Datum><Datum label={t("procurement.field.procurementOwner")}>{row.assignedProcurementUserName ?? `#${row.assignedProcurementUserId}`}</Datum><Datum label={t("procurement.field.lines")}>{row.lines.length}</Datum></MobileCard>)}</MobileList></>}</section>;
+const RequestPanel = ({
+  rows,
+  canManage,
+  canApprove,
+  status,
+  number,
+  formatDate,
+  t,
+  onCreate,
+  onSubmit,
+  onDecision,
+  busy,
+  approvedBoq,
+}: {
+  rows: MaterialRequestResponse[];
+  canManage: boolean;
+  canApprove: boolean;
+  status: (value: string) => ReactNode;
+  number: Intl.NumberFormat;
+  formatDate: (value?: string | null) => string;
+  t: Translate;
+  onCreate: () => void;
+  onSubmit: (row: MaterialRequestResponse) => void;
+  onDecision: (row: MaterialRequestResponse, approved: boolean) => void;
+  busy: boolean;
+  approvedBoq?: ProjectBoqRevisionResponse;
+}) => (
+  <section>
+    <PanelHeader
+      title={t("procurement.request.title")}
+      description={t("procurement.request.description")}
+      action={
+        canManage && (
+          <Button onClick={onCreate} disabled={!approvedBoq}>
+            <Plus className="mr-2 h-4 w-4" />
+            {t("procurement.request.create")}
+          </Button>
+        )
+      }
+    />
+    {!approvedBoq && (
+      <p className="mb-4 border-l-2 border-amber-400 px-3 text-sm text-amber-800">
+        {t("procurement.request.requiresBoq")}
+      </p>
+    )}
+    {rows.length === 0 ? (
+      <Empty>{t("procurement.request.empty")}</Empty>
+    ) : (
+      <>
+        <TableShell>
+          <Table
+            headers={[
+              t("procurement.field.code"),
+              t("procurement.field.status"),
+              t("procurement.field.requiredAt"),
+              t("procurement.field.requester"),
+              t("procurement.field.responsibleSite"),
+              t("procurement.field.procurementOwner"),
+              t("procurement.field.lines"),
+              t("procurement.field.actions"),
+            ]}
+            minWidth="min-w-[1240px]"
+          >
+            <>
+              {rows.map((row) => (
+                <tr className="border-b" key={row.id}>
+                  <td className="px-3 py-3 font-medium">{row.code}</td>
+                  <td className="px-3 py-3">{status(row.status)}</td>
+                  <td className="px-3 py-3">{formatDate(row.requiredAt)}</td>
+                  <td className="px-3 py-3">
+                    {row.siteRequesterName ?? `#${row.siteRequesterUserId}`}
+                  </td>
+                  <td className="px-3 py-3">
+                    {row.responsibleSiteUserName ??
+                      `#${row.responsibleSiteUserId}`}
+                  </td>
+                  <td className="px-3 py-3">
+                    {row.assignedProcurementUserName ??
+                      `#${row.assignedProcurementUserId}`}
+                  </td>
+                  <td className="px-3 py-3">
+                    <div className="space-y-1">
+                      {row.lines.map((line) => (
+                        <p key={line.id} className="whitespace-nowrap">
+                          <span className="font-medium">{line.itemCode}</span>: {number.format(line.requestedQuantity)} {line.unit}
+                          <span className="ml-2 text-xs text-muted-foreground">
+                            {t("procurement.field.receivedQuantity")}: {number.format(line.receivedQuantity)} · {t("procurement.field.boqRemainingQuantity")}: {number.format(line.boqRemainingQuantity)}
+                          </span>
+                        </p>
+                      ))}
+                    </div>
+                  </td>
+                  <td className="px-3 py-3">
+                    <RecordActions
+                      statusValue={row.status}
+                      canManage={canManage}
+                      canApprove={canApprove}
+                      busy={busy}
+                      t={t}
+                      onSubmit={() => onSubmit(row)}
+                      onDecision={(approved) => onDecision(row, approved)}
+                    />
+                  </td>
+                </tr>
+              ))}
+            </>
+          </Table>
+        </TableShell>
+        <MobileList>
+          {rows.map((row) => (
+            <MobileCard
+              key={row.id}
+              title={row.code}
+              badge={status(row.status)}
+              actions={
+                <RecordActions
+                  statusValue={row.status}
+                  canManage={canManage}
+                  canApprove={canApprove}
+                  busy={busy}
+                  t={t}
+                  onSubmit={() => onSubmit(row)}
+                  onDecision={(approved) => onDecision(row, approved)}
+                />
+              }
+            >
+              <Datum label={t("procurement.field.requiredAt")}>
+                {formatDate(row.requiredAt)}
+              </Datum>
+              <Datum label={t("procurement.field.requester")}>
+                {row.siteRequesterName ?? `#${row.siteRequesterUserId}`}
+              </Datum>
+              <Datum label={t("procurement.field.responsibleSite")}>
+                {row.responsibleSiteUserName ?? `#${row.responsibleSiteUserId}`}
+              </Datum>
+              <Datum label={t("procurement.field.procurementOwner")}>
+                {row.assignedProcurementUserName ??
+                  `#${row.assignedProcurementUserId}`}
+              </Datum>
+              <Datum label={t("procurement.field.lines")}>
+                <span className="space-y-1">
+                  {row.lines.map((line) => (
+                    <span key={line.id} className="block">
+                      {line.itemCode}: {number.format(line.requestedQuantity)} {line.unit} · {t("procurement.field.receivedQuantity")}: {number.format(line.receivedQuantity)} · {t("procurement.field.boqRemainingQuantity")}: {number.format(line.boqRemainingQuantity)}
+                    </span>
+                  ))}
+                </span>
+              </Datum>
+            </MobileCard>
+          ))}
+        </MobileList>
+      </>
+    )}
+  </section>
+);
 
-const ContractLinesPanel = ({ rows, canManage, money, number, t, onCreate, hasDependencies }: { rows: ProcurementContractLineResponse[]; canManage: boolean; money: Intl.NumberFormat; number: Intl.NumberFormat; t: Translate; onCreate: () => void; hasDependencies: boolean }) => <section><PanelHeader title={t("procurement.contractLine.title")} description={t("procurement.contractLine.description")} action={canManage && <Button onClick={onCreate} disabled={!hasDependencies}><Plus className="mr-2 h-4 w-4" />{t("procurement.contractLine.create")}</Button>} />{!hasDependencies && <p className="mb-4 border-l-2 border-amber-400 px-3 text-sm text-amber-800">{t("procurement.contractLine.requiresData")}</p>}{rows.length === 0 ? <Empty>{t("procurement.contractLine.empty")}</Empty> : <><TableShell><Table headers={[t("procurement.field.contract"), t("procurement.field.item"), t("procurement.field.owner"), t("procurement.field.quantity"), t("procurement.field.budgetPrice"), t("procurement.field.negotiatedPrice")]}><>{rows.map((row) => <tr className="border-b" key={row.id}><td className="px-3 py-3 font-medium">{row.contractNumber}</td><td className="px-3 py-3">{row.itemCode}</td><td className="px-3 py-3">{row.procurementOwnerName ?? `#${row.procurementOwnerUserId}`}</td><td className="px-3 py-3">{number.format(row.quantity)}</td><td className="px-3 py-3">{money.format(row.budgetUnitPrice)}</td><td className="px-3 py-3">{money.format(row.negotiatedUnitPrice)}</td></tr>)}</></Table></TableShell><MobileList>{rows.map((row) => <MobileCard key={row.id} title={`${row.contractNumber} · ${row.itemCode}`}><Datum label={t("procurement.field.owner")}>{row.procurementOwnerName ?? `#${row.procurementOwnerUserId}`}</Datum><Datum label={t("procurement.field.quantity")}>{number.format(row.quantity)}</Datum><Datum label={t("procurement.field.budgetPrice")}>{money.format(row.budgetUnitPrice)}</Datum><Datum label={t("procurement.field.negotiatedPrice")}>{money.format(row.negotiatedUnitPrice)}</Datum></MobileCard>)}</MobileList></>}</section>;
+const ContractLinesPanel = ({
+  rows,
+  canManage,
+  money,
+  number,
+  t,
+  onCreate,
+  hasDependencies,
+}: {
+  rows: ProcurementContractLineResponse[];
+  canManage: boolean;
+  money: Intl.NumberFormat;
+  number: Intl.NumberFormat;
+  t: Translate;
+  onCreate: () => void;
+  hasDependencies: boolean;
+}) => (
+  <section>
+    <PanelHeader
+      title={t("procurement.contractLine.title")}
+      description={t("procurement.contractLine.description")}
+      action={
+        canManage && (
+          <Button onClick={onCreate} disabled={!hasDependencies}>
+            <Plus className="mr-2 h-4 w-4" />
+            {t("procurement.contractLine.create")}
+          </Button>
+        )
+      }
+    />
+    {!hasDependencies && (
+      <p className="mb-4 border-l-2 border-amber-400 px-3 text-sm text-amber-800">
+        {t("procurement.contractLine.requiresData")}
+      </p>
+    )}
+    {rows.length === 0 ? (
+      <Empty>{t("procurement.contractLine.empty")}</Empty>
+    ) : (
+      <>
+        <TableShell>
+          <Table
+            headers={[
+              t("procurement.field.contract"),
+              t("procurement.field.item"),
+              t("procurement.field.owner"),
+              t("procurement.field.quantity"),
+              t("procurement.field.budgetPrice"),
+              t("procurement.field.negotiatedPrice"),
+            ]}
+          >
+            <>
+              {rows.map((row) => (
+                <tr className="border-b" key={row.id}>
+                  <td className="px-3 py-3 font-medium">
+                    {row.contractNumber}
+                  </td>
+                  <td className="px-3 py-3">{row.itemCode}</td>
+                  <td className="px-3 py-3">
+                    {row.procurementOwnerName ??
+                      `#${row.procurementOwnerUserId}`}
+                  </td>
+                  <td className="px-3 py-3">{number.format(row.quantity)}</td>
+                  <td className="px-3 py-3">
+                    {money.format(row.budgetUnitPrice)}
+                  </td>
+                  <td className="px-3 py-3">
+                    {money.format(row.negotiatedUnitPrice)}
+                  </td>
+                </tr>
+              ))}
+            </>
+          </Table>
+        </TableShell>
+        <MobileList>
+          {rows.map((row) => (
+            <MobileCard
+              key={row.id}
+              title={`${row.contractNumber} · ${row.itemCode}`}
+            >
+              <Datum label={t("procurement.field.owner")}>
+                {row.procurementOwnerName ?? `#${row.procurementOwnerUserId}`}
+              </Datum>
+              <Datum label={t("procurement.field.quantity")}>
+                {number.format(row.quantity)}
+              </Datum>
+              <Datum label={t("procurement.field.budgetPrice")}>
+                {money.format(row.budgetUnitPrice)}
+              </Datum>
+              <Datum label={t("procurement.field.negotiatedPrice")}>
+                {money.format(row.negotiatedUnitPrice)}
+              </Datum>
+            </MobileCard>
+          ))}
+        </MobileList>
+      </>
+    )}
+  </section>
+);
 
 const WarehousePanel = ({ receipts, issues, canPost, status, number, formatDate, t, onCreateReceipt, onCreateIssue, onPostReceipt, onPostIssue, busy, canCreateReceipt, canCreateIssue }: { receipts: WarehouseReceiptResponse[]; issues: WarehouseIssueResponse[]; canPost: boolean; status: (value: string) => ReactNode; number: Intl.NumberFormat; formatDate: (value?: string | null) => string; t: Translate; onCreateReceipt: () => void; onCreateIssue: () => void; onPostReceipt: (row: WarehouseReceiptResponse) => void; onPostIssue: (row: WarehouseIssueResponse) => void; busy: boolean; canCreateReceipt: boolean; canCreateIssue: boolean }) => <section className="space-y-7"><div><PanelHeader title={t("procurement.receipt.title")} description={t("procurement.receipt.description")} action={canPost && <Button onClick={onCreateReceipt} disabled={!canCreateReceipt}><PackageCheck className="mr-2 h-4 w-4" />{t("procurement.receipt.create")}</Button>} />{receipts.length === 0 ? <Empty>{t("procurement.receipt.empty")}</Empty> : <><TableShell><Table headers={[t("procurement.field.code"), t("procurement.field.status"), t("procurement.field.inspectedAt"), t("procurement.field.lines"), t("procurement.field.actions")]}><>{receipts.map((row) => <tr className="border-b" key={row.id}><td className="px-3 py-3 font-medium">{row.code}</td><td className="px-3 py-3">{status(row.status)}</td><td className="px-3 py-3">{formatDate(row.inspectedAt)}</td><td className="px-3 py-3">{row.lines.map((line) => `${line.itemCode}: ${number.format(line.receivedQuantity)}`).join(", ")}</td><td className="px-3 py-3">{canPost && row.status === "Draft" && <ActionButton onClick={() => onPostReceipt(row)} disabled={busy} icon={<PackageCheck className="mr-2 h-4 w-4" />}>{t("procurement.action.post")}</ActionButton>}</td></tr>)}</></Table></TableShell><MobileList>{receipts.map((row) => <MobileCard key={row.id} title={row.code} badge={status(row.status)} actions={canPost && row.status === "Draft" ? <ActionButton onClick={() => onPostReceipt(row)} disabled={busy} icon={<PackageCheck className="mr-2 h-4 w-4" />}>{t("procurement.action.post")}</ActionButton> : undefined}><Datum label={t("procurement.field.inspectedAt")}>{formatDate(row.inspectedAt)}</Datum><Datum label={t("procurement.field.lines")}>{row.lines.length}</Datum></MobileCard>)}</MobileList></>}</div><div className="border-t pt-6"><PanelHeader title={t("procurement.issue.title")} description={t("procurement.issue.description")} action={canPost && <Button onClick={onCreateIssue} disabled={!canCreateIssue}><PackageMinus className="mr-2 h-4 w-4" />{t("procurement.issue.create")}</Button>} />{issues.length === 0 ? <Empty>{t("procurement.issue.empty")}</Empty> : <><TableShell><Table headers={[t("procurement.field.code"), t("procurement.field.status"), t("procurement.field.issuedAt"), t("procurement.field.responsibleSite"), t("procurement.field.workItem"), t("procurement.field.lines"), t("procurement.field.actions")]} minWidth="min-w-[980px]"><>{issues.map((row) => <tr className="border-b" key={row.id}><td className="px-3 py-3 font-medium">{row.code}</td><td className="px-3 py-3">{status(row.status)}</td><td className="px-3 py-3">{formatDate(row.issuedAt)}</td><td className="px-3 py-3">{row.responsibleSiteUserName ?? `#${row.responsibleSiteUserId}`}</td><td className="px-3 py-3">{row.workItemCode ?? "—"}</td><td className="px-3 py-3">{row.lines.map((line) => `${line.itemCode}: ${number.format(line.issuedQuantity)}`).join(", ")}</td><td className="px-3 py-3">{canPost && row.status === "Draft" && <ActionButton onClick={() => onPostIssue(row)} disabled={busy} icon={<PackageMinus className="mr-2 h-4 w-4" />}>{t("procurement.action.post")}</ActionButton>}</td></tr>)}</></Table></TableShell><MobileList>{issues.map((row) => <MobileCard key={row.id} title={row.code} badge={status(row.status)} actions={canPost && row.status === "Draft" ? <ActionButton onClick={() => onPostIssue(row)} disabled={busy} icon={<PackageMinus className="mr-2 h-4 w-4" />}>{t("procurement.action.post")}</ActionButton> : undefined}><Datum label={t("procurement.field.issuedAt")}>{formatDate(row.issuedAt)}</Datum><Datum label={t("procurement.field.responsibleSite")}>{row.responsibleSiteUserName ?? `#${row.responsibleSiteUserId}`}</Datum><Datum label={t("procurement.field.workItem")}>{row.workItemCode ?? "—"}</Datum><Datum label={t("procurement.field.lines")}>{row.lines.length}</Datum></MobileCard>)}</MobileList></>}</div></section>;
 

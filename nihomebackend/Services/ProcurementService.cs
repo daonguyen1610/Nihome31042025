@@ -21,6 +21,7 @@ public sealed class ProcurementService(AppDbContext db) : IProcurementService
             .OrderByDescending(item => item.RevisionNumber).ToListAsync(ct);
         var requests = await RequestQuery().Where(item => item.OperationalProjectId == projectId)
             .OrderByDescending(item => item.CreatedAt).ToListAsync(ct);
+        var requestQuantities = await GetMaterialRequestQuantitiesAsync(requests, ct);
         var contractLines = await ContractLineQuery().Where(item => item.Contract.OperationalProjectId == projectId)
             .OrderByDescending(item => item.Id).ToListAsync(ct);
         var receipts = await ReceiptQuery().Where(item => item.OperationalProjectId == projectId)
@@ -32,11 +33,81 @@ public sealed class ProcurementService(AppDbContext db) : IProcurementService
         return new ProcurementWorkspaceResponse
         {
             BoqRevisions = boq.Select(item => MapBoq(item, finalRevisionId)).ToList(),
-            MaterialRequests = requests.Select(MapRequest).ToList(),
+            MaterialRequests = requests.Select(item => MapRequest(item, requestQuantities)).ToList(),
             ContractLines = contractLines.Select(MapContractLine).ToList(),
             Receipts = receipts.Select(MapReceipt).ToList(),
             Issues = issues.Select(MapIssue).ToList(),
             VendorRatings = ratings.Select(MapRating).ToList(),
+        };
+    }
+
+    public async Task<MaterialRequestListResponse> ListMaterialRequestsAsync(
+        int projectId,
+        MaterialRequestListParams parameters,
+        CancellationToken ct = default)
+    {
+        await EnsureProjectAsync(projectId, mutable: false, ct);
+        if (parameters.RequiredFrom > parameters.RequiredTo)
+            throw new ProcurementOperationException("Ngày bắt đầu không được sau ngày kết thúc.");
+        parameters.Page = Math.Max(parameters.Page, 1);
+        parameters.PageSize = Math.Clamp(parameters.PageSize, 1, 100);
+        var query = RequestQuery().Where(item => item.OperationalProjectId == projectId);
+        if (parameters.Status.HasValue)
+            query = query.Where(item => item.Status == parameters.Status.Value);
+        if (parameters.SiteRequesterUserId.HasValue)
+            query = query.Where(item => item.SiteRequesterUserId == parameters.SiteRequesterUserId.Value);
+        if (parameters.ResponsibleSiteUserId.HasValue)
+            query = query.Where(item => item.ResponsibleSiteUserId == parameters.ResponsibleSiteUserId.Value);
+        if (parameters.AssignedProcurementUserId.HasValue)
+            query = query.Where(item => item.AssignedProcurementUserId == parameters.AssignedProcurementUserId.Value);
+        if (parameters.RequiredFrom.HasValue)
+        {
+            var requiredFrom = parameters.RequiredFrom.Value.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+            query = query.Where(item => item.RequiredAt >= requiredFrom);
+        }
+        if (parameters.RequiredTo.HasValue)
+        {
+            var requiredTo = parameters.RequiredTo.Value.ToDateTime(TimeOnly.MaxValue, DateTimeKind.Utc);
+            query = query.Where(item => item.RequiredAt <= requiredTo);
+        }
+        if (!string.IsNullOrWhiteSpace(parameters.Search))
+        {
+            var pattern = $"%{parameters.Search.Trim()}%";
+            query = query.Where(item =>
+                EF.Functions.Like(item.Code, pattern) ||
+                (item.Note != null && EF.Functions.Like(item.Note, pattern)) ||
+                EF.Functions.Like(item.SiteRequester.FullName, pattern) ||
+                EF.Functions.Like(item.ResponsibleSiteUser.FullName, pattern) ||
+                EF.Functions.Like(item.AssignedProcurementUser.FullName, pattern) ||
+                item.Lines.Any(line =>
+                    EF.Functions.Like(line.ProjectBoqLine.ItemCode, pattern) ||
+                    EF.Functions.Like(line.ProjectBoqLine.Description, pattern)));
+        }
+
+        var descending = string.Equals(parameters.SortDirection, "desc", StringComparison.OrdinalIgnoreCase);
+        IOrderedQueryable<MaterialRequest> ordered = (parameters.SortBy?.Trim().ToLowerInvariant(), descending) switch
+        {
+            ("code", false) => query.OrderBy(item => item.Code),
+            ("code", true) => query.OrderByDescending(item => item.Code),
+            ("status", false) => query.OrderBy(item => item.Status),
+            ("status", true) => query.OrderByDescending(item => item.Status),
+            ("requiredat", false) => query.OrderBy(item => item.RequiredAt),
+            ("requiredat", true) => query.OrderByDescending(item => item.RequiredAt),
+            ("updatedat", false) => query.OrderBy(item => item.UpdatedAt),
+            _ => query.OrderByDescending(item => item.UpdatedAt),
+        };
+
+        var items = await ordered.ThenByDescending(item => item.Id)
+            .Skip((parameters.Page - 1) * parameters.PageSize)
+            .Take(parameters.PageSize)
+            .ToListAsync(ct);
+        var quantities = await GetMaterialRequestQuantitiesAsync(items, ct);
+        return new MaterialRequestListResponse
+        {
+            Total = await query.CountAsync(ct),
+            Page = parameters.Page,
+            PageSize = parameters.PageSize,
+            Items = items.Select(item => MapRequest(item, quantities)).ToList(),
         };
     }
 
@@ -898,7 +969,9 @@ public sealed class ProcurementService(AppDbContext db) : IProcurementService
     private async Task<MaterialRequestResponse?> GetRequestAsync(int projectId, int id, CancellationToken ct)
     {
         var item = await RequestQuery().SingleOrDefaultAsync(item => item.Id == id && item.OperationalProjectId == projectId, ct);
-        return item is null ? null : MapRequest(item);
+        if (item is null) return null;
+        var quantities = await GetMaterialRequestQuantitiesAsync([item], ct);
+        return MapRequest(item, quantities);
     }
     private async Task<ContractLineResponse?> GetContractLineAsync(int projectId, int id, CancellationToken ct)
     {
@@ -952,35 +1025,79 @@ public sealed class ProcurementService(AppDbContext db) : IProcurementService
         }).ToList(),
     };
 
-    private static MaterialRequestResponse MapRequest(MaterialRequest item) => new()
+    private async Task<Dictionary<int, (decimal Received, decimal Approved, decimal Remaining)>> GetMaterialRequestQuantitiesAsync(
+        IReadOnlyCollection<MaterialRequest> requests,
+        CancellationToken ct)
     {
-        Id = item.Id,
-        OperationalProjectId = item.OperationalProjectId,
-        Code = item.Code,
-        Status = item.Status.ToString(),
-        SiteRequesterUserId = item.SiteRequesterUserId,
-        SiteRequesterName = item.SiteRequester.FullName,
-        ResponsibleSiteUserId = item.ResponsibleSiteUserId,
-        ResponsibleSiteUserName = item.ResponsibleSiteUser.FullName,
-        AssignedProcurementUserId = item.AssignedProcurementUserId,
-        AssignedProcurementUserName = item.AssignedProcurementUser.FullName,
-        RequiredAt = item.RequiredAt,
-        Note = item.Note,
-        SubmittedAt = item.SubmittedAt,
-        ApprovedAt = item.ApprovedAt,
-        FulfilledAt = item.FulfilledAt,
-        DecisionReason = item.DecisionReason,
-        RowVersion = CrmConcurrency.Encode(item.RowVersion),
-        Lines = item.Lines.Select(line => new MaterialRequestLineResponse
+        var lineIds = requests.SelectMany(item => item.Lines).Select(line => line.Id).ToList();
+        var boqLineIds = requests.SelectMany(item => item.Lines).Select(line => line.ProjectBoqLineId).Distinct().ToList();
+        var received = await db.WarehouseReceiptLines.AsNoTracking()
+            .Where(line => lineIds.Contains(line.MaterialRequestLineId) &&
+                (line.WarehouseReceipt.Status == WarehouseLedgerStatus.Posted ||
+                 line.WarehouseReceipt.Status == WarehouseLedgerStatus.Reversed))
+            .GroupBy(line => line.MaterialRequestLineId)
+            .Select(group => new
+            {
+                LineId = group.Key,
+                Quantity = group.Sum(line => line.WarehouseReceipt.ReversalOfReceiptId.HasValue
+                    ? -line.ReceivedQuantity
+                    : line.ReceivedQuantity),
+            }).ToDictionaryAsync(item => item.LineId, item => item.Quantity, ct);
+        var committed = await db.MaterialRequestLines.AsNoTracking()
+            .Where(line => boqLineIds.Contains(line.ProjectBoqLineId) &&
+                (line.MaterialRequest.Status == MaterialRequestStatus.Approved ||
+                 line.MaterialRequest.Status == MaterialRequestStatus.PartiallyFulfilled ||
+                 line.MaterialRequest.Status == MaterialRequestStatus.Fulfilled))
+            .GroupBy(line => line.ProjectBoqLineId)
+            .Select(group => new { BoqLineId = group.Key, Quantity = group.Sum(line => line.RequestedQuantity) })
+            .ToDictionaryAsync(item => item.BoqLineId, item => item.Quantity, ct);
+
+        return requests.SelectMany(item => item.Lines).ToDictionary(
+            line => line.Id,
+            line =>
+            {
+                var approved = line.ProjectBoqLine.ApprovedQuantity;
+                return (
+                    received.GetValueOrDefault(line.Id),
+                    approved,
+                    Math.Max(approved - committed.GetValueOrDefault(line.ProjectBoqLineId), 0m));
+            });
+    }
+
+    private static MaterialRequestResponse MapRequest(
+        MaterialRequest item,
+        IReadOnlyDictionary<int, (decimal Received, decimal Approved, decimal Remaining)> quantities) => new()
         {
-            Id = line.Id,
-            ProjectBoqLineId = line.ProjectBoqLineId,
-            ItemCode = line.ProjectBoqLine.ItemCode,
-            Description = line.ProjectBoqLine.Description,
-            Unit = line.ProjectBoqLine.Unit,
-            RequestedQuantity = line.RequestedQuantity,
-        }).ToList(),
-    };
+            Id = item.Id,
+            OperationalProjectId = item.OperationalProjectId,
+            Code = item.Code,
+            Status = item.Status.ToString(),
+            SiteRequesterUserId = item.SiteRequesterUserId,
+            SiteRequesterName = item.SiteRequester.FullName,
+            ResponsibleSiteUserId = item.ResponsibleSiteUserId,
+            ResponsibleSiteUserName = item.ResponsibleSiteUser.FullName,
+            AssignedProcurementUserId = item.AssignedProcurementUserId,
+            AssignedProcurementUserName = item.AssignedProcurementUser.FullName,
+            RequiredAt = item.RequiredAt,
+            Note = item.Note,
+            SubmittedAt = item.SubmittedAt,
+            ApprovedAt = item.ApprovedAt,
+            FulfilledAt = item.FulfilledAt,
+            DecisionReason = item.DecisionReason,
+            RowVersion = CrmConcurrency.Encode(item.RowVersion),
+            Lines = item.Lines.Select(line => new MaterialRequestLineResponse
+            {
+                Id = line.Id,
+                ProjectBoqLineId = line.ProjectBoqLineId,
+                ItemCode = line.ProjectBoqLine.ItemCode,
+                Description = line.ProjectBoqLine.Description,
+                Unit = line.ProjectBoqLine.Unit,
+                RequestedQuantity = line.RequestedQuantity,
+                ReceivedQuantity = quantities.GetValueOrDefault(line.Id).Received,
+                BoqApprovedQuantity = quantities.GetValueOrDefault(line.Id).Approved,
+                BoqRemainingQuantity = quantities.GetValueOrDefault(line.Id).Remaining,
+            }).ToList(),
+        };
 
     private static ContractLineResponse MapContractLine(ContractLine item) => new()
     {

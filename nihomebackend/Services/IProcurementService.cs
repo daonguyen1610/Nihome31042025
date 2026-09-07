@@ -6,6 +6,7 @@ namespace NihomeBackend.Services;
 public interface IProcurementService
 {
     Task<ProcurementWorkspaceResponse> GetWorkspaceAsync(int projectId, CancellationToken ct = default);
+    Task<MaterialRequestListResponse> ListMaterialRequestsAsync(int projectId, MaterialRequestListParams parameters, CancellationToken ct = default);
     Task<ProjectBoqRevisionResponse> CreateBoqRevisionAsync(int projectId, ProjectBoqRevisionRequest request, int userId, CancellationToken ct = default);
     Task<ProjectBoqRevisionResponse?> UpdateBoqRevisionAsync(int projectId, int id, ProjectBoqRevisionRequest request, int userId, CancellationToken ct = default);
     Task<ProjectBoqRevisionResponse?> SubmitBoqRevisionAsync(int projectId, int id, ProcurementTransitionRequest request, int userId, CancellationToken ct = default);

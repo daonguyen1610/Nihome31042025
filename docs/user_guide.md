@@ -131,7 +131,7 @@ The platform is being developed incrementally. The following components are curr
 | Acceptance and handover | Implemented |
 | Punchlist management | Implemented |
 | Procurement vendor management | Implemented |
-| Procurement BOQ, material requests, and warehouse | Not yet implemented |
+| Procurement BOQ, material requests, and warehouse | Partially implemented — project-scoped MR list and core procurement workflow are live; dedicated create/edit, detail, and warehouse screens remain pending |
 | Finance module | Partially implemented — contracts and variation orders are live; cash flow and P&L are pending |
 | Google Drive integration | Implemented for current Operational Project file sources; deployment activation and live credentials are required |
 | Dashboard and analytics | Partially implemented — operational dashboard exists; full cross-module reporting is pending |
@@ -600,9 +600,22 @@ Create material BOQ by project and construction work item. Define maximum allowa
 
 Site engineers submit material requests referencing the BOQ. Specify quantities and required delivery dates. Route requests to the office for approval. Track request status: pending approval, approved, rejected. Maintain request history.
 
+Open **Procurement control**, choose an Operational Project, and select
+**Material requests**. The list is always restricted to the selected project.
+Use the keyword field to search request codes, notes, assigned users, and BOQ
+items. Status, procurement owner, and required-date filters can be combined;
+the required-date button switches ascending and descending order. The list is
+paginated and can be exported to CSV with the same project and filters.
+
+Each request shows the requester, responsible site user, procurement owner,
+required date, requested quantity, net quantity received through posted warehouse
+receipts, and the remaining approved BOQ allowance. Users outside the project
+scope receive no record visibility, and create/submit/approve actions remain
+hidden unless their role has the corresponding permission.
+
 | Page | Functions | Estimate |
 |------|-----------|----------|
-| MR List | Material requests by project | 1.5 days |
+| MR List | Project-scoped search, filters, sorting, pagination, export, quantities, and permission-aware actions | Implemented |
 | MR Create/Edit | Create and update request | 2 days |
 | MR Detail | Material info, BOQ comparison, approval workflow | 2.5 days |
 

@@ -182,7 +182,7 @@ const App = () => (
                 <Route path="/admin/vendors" element={<VendorPage />} />
                 <Route path="/admin/vendors/:id" element={<VendorDetail />} />
               </Route>
-              <Route element={<RequirePermission code={ADMIN_PERMS.procurement} />}>
+              <Route element={<RequirePermission code={[ADMIN_PERMS.procurement, ADMIN_PERMS.procurementMaterialRequests, ADMIN_PERMS.procurementContractLines, ADMIN_PERMS.procurementWarehouse, ADMIN_PERMS.procurementRatings]} />}>
                 <Route path="/admin/procurement-control" element={<ProcurementControlPage />} />
               </Route>
               <Route element={<RequirePermission code={[ADMIN_PERMS.financePayments, ADMIN_PERMS.financePeriods, ADMIN_PERMS.financeCorrections]} />}>
