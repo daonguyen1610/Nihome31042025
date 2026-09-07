@@ -1067,7 +1067,7 @@ public sealed class ProcurementService(
             var term = query.Search.Trim();
             result = result.Where(item =>
                 item.RevisionNumber.ToString().Contains(term) ||
-                item.PreparedBy != null && item.PreparedBy.FullName.Contains(term) ||
+                item.PreparedBy != null && item.PreparedBy.FullName != null && item.PreparedBy.FullName.Contains(term) ||
                 item.Lines.Any(line => line.ItemCode.Contains(term) || line.Description.Contains(term)));
         }
         return result;
@@ -1082,7 +1082,9 @@ public sealed class ProcurementService(
         {
             "status" => descending ? query.OrderByDescending(item => item.Status).ThenByDescending(item => item.Id) : query.OrderBy(item => item.Status).ThenBy(item => item.Id),
             "total" => descending ? query.OrderByDescending(item => item.CostTotal).ThenByDescending(item => item.Id) : query.OrderBy(item => item.CostTotal).ThenBy(item => item.Id),
-            "preparedBy" => descending ? query.OrderByDescending(item => item.PreparedBy.FullName).ThenByDescending(item => item.Id) : query.OrderBy(item => item.PreparedBy.FullName).ThenBy(item => item.Id),
+            "preparedBy" => descending
+                ? query.OrderByDescending(item => item.PreparedBy == null ? string.Empty : item.PreparedBy.FullName).ThenByDescending(item => item.Id)
+                : query.OrderBy(item => item.PreparedBy == null ? string.Empty : item.PreparedBy.FullName).ThenBy(item => item.Id),
             "createdAt" => descending ? query.OrderByDescending(item => item.CreatedAt).ThenByDescending(item => item.Id) : query.OrderBy(item => item.CreatedAt).ThenBy(item => item.Id),
             "updatedAt" => descending ? query.OrderByDescending(item => item.UpdatedAt).ThenByDescending(item => item.Id) : query.OrderBy(item => item.UpdatedAt).ThenBy(item => item.Id),
             _ => descending ? query.OrderByDescending(item => item.RevisionNumber).ThenByDescending(item => item.Id) : query.OrderBy(item => item.RevisionNumber).ThenBy(item => item.Id),
