@@ -1,6 +1,7 @@
 using System.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using NihomeBackend.Constants;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
@@ -8,8 +9,15 @@ using NihomeBackend.Models.DTOs.Responses;
 
 namespace NihomeBackend.Services;
 
-public sealed class ProcurementService(AppDbContext db) : IProcurementService
+public sealed class ProcurementService(
+    AppDbContext db,
+    INotificationService notifications,
+    ILogger<ProcurementService> logger) : IProcurementService
 {
+    private const string BoqSubmittedTemplate = "procurement.boq.submitted";
+    private const string BoqApprovedTemplate = "procurement.boq.approved";
+    private const string BoqRejectedTemplate = "procurement.boq.rejected";
+
     public async Task<ProjectBoqRevisionListResponse> ListBoqRevisionsAsync(
         int projectId,
         ProjectBoqRevisionListQuery query,
@@ -40,6 +48,13 @@ public sealed class ProcurementService(AppDbContext db) : IProcurementService
         return await SelectBoqListItems(
             ApplyBoqListSort(ApplyBoqListFilters(projectId, query), query))
             .ToListAsync(ct);
+    }
+
+    public async Task<ProjectBoqRevisionResponse?> GetBoqRevisionAsync(
+        int projectId, int id, CancellationToken ct = default)
+    {
+        await EnsureProjectAsync(projectId, mutable: false, ct);
+        return await GetBoqAsync(projectId, id, ct);
     }
 
     public async Task<ProcurementWorkspaceResponse> GetWorkspaceAsync(int projectId, CancellationToken ct = default)
@@ -162,8 +177,9 @@ public sealed class ProcurementService(AppDbContext db) : IProcurementService
         ApplyBoq(entity, request);
         db.ProjectBoqRevisions.Add(entity);
         await CrmConcurrency.SaveChangesAsync(db, ct);
+        var response = (await GetBoqAsync(projectId, entity.Id, ct))!;
         if (transaction is not null) await transaction.CommitAsync(ct);
-        return (await GetBoqAsync(projectId, entity.Id, ct))!;
+        return response;
     }
 
     public async Task<ProjectBoqRevisionResponse?> UpdateBoqRevisionAsync(
@@ -208,6 +224,7 @@ public sealed class ProcurementService(AppDbContext db) : IProcurementService
         entity.DecisionReason = null;
         entity.UpdatedAt = DateTime.UtcNow;
         await CrmConcurrency.SaveChangesAsync(db, ct);
+        await NotifyBoqSubmittedAsync(entity, userId, ct);
         return await GetBoqAsync(projectId, id, ct);
     }
 
@@ -222,8 +239,8 @@ public sealed class ProcurementService(AppDbContext db) : IProcurementService
             return await GetBoqAsync(projectId, id, ct);
         if (entity.Status != ProjectBoqRevisionStatus.Submitted)
             throw new ProcurementOperationException("Chỉ BOQ đã gửi mới có thể được phê duyệt hoặc từ chối.");
-        if (!request.Approved && string.IsNullOrWhiteSpace(request.Reason))
-            throw new ProcurementOperationException("Lý do từ chối BOQ là bắt buộc.");
+        if (!request.Approved && (request.Reason?.Trim().Length ?? 0) < 3)
+            throw new ProcurementOperationException("Lý do từ chối BOQ phải có ít nhất 3 ký tự.");
         CrmConcurrency.Apply(db, entity, request.RowVersion);
         var now = DateTime.UtcNow;
         entity.Status = request.Approved ? ProjectBoqRevisionStatus.Approved : ProjectBoqRevisionStatus.Rejected;
@@ -234,7 +251,65 @@ public sealed class ProcurementService(AppDbContext db) : IProcurementService
         entity.DecisionReason = TrimOrNull(request.Reason);
         entity.UpdatedAt = now;
         await CrmConcurrency.SaveChangesAsync(db, ct);
+        await NotifyBoqDecisionAsync(entity, userId, ct);
         return await GetBoqAsync(projectId, id, ct);
+    }
+
+    private async Task NotifyBoqSubmittedAsync(ProjectBoqRevision entity, int submittingUserId, CancellationToken ct)
+    {
+        var project = await db.OperationalProjects.AsNoTracking()
+            .Where(item => item.Id == entity.OperationalProjectId)
+            .Select(item => new { item.Code, item.ProjectManagerUserId })
+            .SingleAsync(ct);
+        if (!project.ProjectManagerUserId.HasValue || project.ProjectManagerUserId == submittingUserId) return;
+
+        try
+        {
+            await notifications.NotifyFromTemplateAsync(
+                project.ProjectManagerUserId.Value,
+                BoqSubmittedTemplate,
+                new Dictionary<string, string>
+                {
+                    ["revision"] = $"R{entity.RevisionNumber}",
+                    ["projectCode"] = project.Code,
+                },
+                refEntityType: EntityTypes.ProjectBoqRevision,
+                refEntityId: entity.Id,
+                linkUrl: $"/admin/procurement-control/projects/{entity.OperationalProjectId}/boq/{entity.Id}");
+        }
+        catch (Exception exception)
+        {
+            logger.LogWarning(exception, "BOQ {BoqId} was submitted but notification dispatch failed.", entity.Id);
+        }
+    }
+
+    private async Task NotifyBoqDecisionAsync(ProjectBoqRevision entity, int decidingUserId, CancellationToken ct)
+    {
+        if (entity.PreparedByUserId == decidingUserId) return;
+        var projectCode = await db.OperationalProjects.AsNoTracking()
+            .Where(item => item.Id == entity.OperationalProjectId)
+            .Select(item => item.Code)
+            .SingleAsync(ct);
+
+        try
+        {
+            await notifications.NotifyFromTemplateAsync(
+                entity.PreparedByUserId,
+                entity.Status == ProjectBoqRevisionStatus.Approved ? BoqApprovedTemplate : BoqRejectedTemplate,
+                new Dictionary<string, string>
+                {
+                    ["revision"] = $"R{entity.RevisionNumber}",
+                    ["projectCode"] = projectCode,
+                    ["reason"] = entity.DecisionReason ?? "-",
+                },
+                refEntityType: EntityTypes.ProjectBoqRevision,
+                refEntityId: entity.Id,
+                linkUrl: $"/admin/procurement-control/projects/{entity.OperationalProjectId}/boq/{entity.Id}");
+        }
+        catch (Exception exception)
+        {
+            logger.LogWarning(exception, "BOQ {BoqId} was decided but notification dispatch failed.", entity.Id);
+        }
     }
 
     public async Task<MaterialRequestResponse> CreateMaterialRequestAsync(
@@ -791,7 +866,7 @@ public sealed class ProcurementService(AppDbContext db) : IProcurementService
         var currentRevisionId = await CurrentApprovedRevisionIdAsync(projectId, ct);
         if (!await db.ProjectBoqLines.AnyAsync(item => item.Id == request.ProjectBoqLineId && item.ProjectBoqRevisionId == currentRevisionId, ct))
             throw new ProcurementOperationException("Dòng hợp đồng phải tham chiếu BOQ đang được duyệt.");
-        await ValidateActiveRoleAsync(request.ProcurementOwnerUserId, "PROCUREMENT", "Chủ sở hữu mua hàng", ct);
+        await ValidateProjectUserAsync(projectId, request.ProcurementOwnerUserId, "PROCUREMENT", "Chủ sở hữu mua hàng", ct);
         if (await db.ContractLines.AnyAsync(item => item.ContractId == request.ContractId &&
             item.ProjectBoqLineId == request.ProjectBoqLineId && item.Id != excludeId, ct))
             throw new ProcurementOperationException("Hợp đồng đã có dòng cho mã BOQ này.");
@@ -1033,6 +1108,7 @@ public sealed class ProcurementService(AppDbContext db) : IProcurementService
             IsFinal = item.OperationalProject != null && item.OperationalProject.FinalProjectBoqRevisionId == item.Id,
             CreatedAt = item.CreatedAt,
             UpdatedAt = item.UpdatedAt,
+            RowVersion = CrmConcurrency.Encode(item.RowVersion),
         });
     private IQueryable<MaterialRequest> RequestQuery() => db.MaterialRequests.AsNoTracking()
         .Include(item => item.SiteRequester).Include(item => item.ResponsibleSiteUser).Include(item => item.AssignedProcurementUser)
@@ -1099,6 +1175,7 @@ public sealed class ProcurementService(AppDbContext db) : IProcurementService
         DecisionReason = item.DecisionReason,
         IsFinal = finalId == item.Id,
         CreatedAt = item.CreatedAt,
+        UpdatedAt = item.UpdatedAt,
         RowVersion = CrmConcurrency.Encode(item.RowVersion),
         Lines = item.Lines.Select(line => new ProjectBoqLineResponse
         {

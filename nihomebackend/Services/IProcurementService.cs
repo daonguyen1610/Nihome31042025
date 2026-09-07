@@ -9,6 +9,7 @@ public interface IProcurementService
     Task<MaterialRequestListResponse> ListMaterialRequestsAsync(int projectId, MaterialRequestListParams parameters, CancellationToken ct = default);
     Task<ProjectBoqRevisionListResponse> ListBoqRevisionsAsync(int projectId, ProjectBoqRevisionListQuery query, CancellationToken ct = default);
     Task<IReadOnlyList<ProjectBoqRevisionListItemResponse>> ExportBoqRevisionsAsync(int projectId, ProjectBoqRevisionListQuery query, CancellationToken ct = default);
+    Task<ProjectBoqRevisionResponse?> GetBoqRevisionAsync(int projectId, int id, CancellationToken ct = default);
     Task<ProjectBoqRevisionResponse> CreateBoqRevisionAsync(int projectId, ProjectBoqRevisionRequest request, int userId, CancellationToken ct = default);
     Task<ProjectBoqRevisionResponse?> UpdateBoqRevisionAsync(int projectId, int id, ProjectBoqRevisionRequest request, int userId, CancellationToken ct = default);
     Task<ProjectBoqRevisionResponse?> SubmitBoqRevisionAsync(int projectId, int id, ProcurementTransitionRequest request, int userId, CancellationToken ct = default);

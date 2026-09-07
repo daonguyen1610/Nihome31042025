@@ -61,6 +61,24 @@
       "module": "analytics.kpi",
       "channel": "InApp",
       "adminDescription": "Nhân sự được cảnh báo khi KPI có dữ liệu thấp hơn ngưỡng cấu hình."
+    },
+    {
+      "code": "procurement.boq.submitted",
+      "module": "procurement.boq",
+      "channel": "InApp",
+      "adminDescription": "PM được thông báo khi một phiên bản BOQ được trình duyệt."
+    },
+    {
+      "code": "procurement.boq.approved",
+      "module": "procurement.boq",
+      "channel": "InApp",
+      "adminDescription": "Người lập được thông báo khi phiên bản BOQ được phê duyệt."
+    },
+    {
+      "code": "procurement.boq.rejected",
+      "module": "procurement.boq",
+      "channel": "InApp",
+      "adminDescription": "Người lập được thông báo khi phiên bản BOQ bị từ chối."
     }
   ]
 }

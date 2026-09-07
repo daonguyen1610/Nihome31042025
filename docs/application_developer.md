@@ -844,6 +844,44 @@ Approved, Partially Fulfilled, and Fulfilled. The frontend exports all filtered
 pages through this endpoint, so exported data retains the selected project and
 filter scope.
 
+### 7.13 Project Procurement BOQ
+
+Project procurement BOQs are revisioned operational records and are distinct
+from the reusable `Boq` material-rate catalogs described above. Every revision
+belongs to one Operational Project, contains case-insensitively unique material
+codes, and follows `Draft -> Submitted -> Approved | Rejected`. Only Draft and
+Rejected revisions are editable; editing a Rejected revision returns it to
+Draft. Approved revisions remain immutable because material requests and
+contract lines can use them as allowance evidence.
+
+All endpoints require the corresponding `proc.boq` permission and verify the
+caller's Operational Project scope before returning whether a revision exists:
+
+| Method | Route | Purpose |
+|--------|-------|---------|
+| `GET` | `/api/operational-projects/{projectId}/procurement/boq-revisions` | Search, filter, sort, and page project revisions |
+| `GET` | `/api/operational-projects/{projectId}/procurement/boq-revisions/{id}` | Read one revision and its ordered material lines |
+| `GET` | `/api/operational-projects/{projectId}/procurement/boq-revisions/export` | Export the current project-scoped filter as CSV |
+| `POST` | `/api/operational-projects/{projectId}/procurement/boq-revisions` | Create the next Draft revision |
+| `PUT` | `/api/operational-projects/{projectId}/procurement/boq-revisions/{id}` | Replace Draft or Rejected revision content |
+| `POST` | `/api/operational-projects/{projectId}/procurement/boq-revisions/{id}/submit` | Submit a revision for approval |
+| `POST` | `/api/operational-projects/{projectId}/procurement/boq-revisions/{id}/decision` | Approve or reject a Submitted revision |
+
+Mutation requests use an `Idempotency-Key`; update and transition requests also
+carry the current row version and `If-Match` header. The server calculates each
+line amount as `approved quantity x budget unit price`, rounded to four decimal
+places away from zero, and persists the sum as the revision total. A submitted
+revision notifies the Project Manager. Approval or rejection notifies the
+preparer. Notification delivery is best effort and never rolls back a saved
+workflow transition.
+
+The list UI is `/admin/procurement-control`. Detail links use
+`/admin/procurement-control/projects/{projectId}/boq/{boqId}` and show the
+Customer, Operational Project, every related Contract, source references,
+ordered material lines, and lifecycle timestamps. Edit and transition actions
+are hidden unless the caller has the matching permission and the current state
+allows the action.
+
 ---
 
 ## 8. Frontend Development

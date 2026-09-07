@@ -4,6 +4,7 @@ import {
   Check,
   ClipboardCheck,
   Download,
+  Eye,
   FilePlus2,
   PackageCheck,
   PackageMinus,
@@ -16,6 +17,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
+import { Link } from "react-router-dom";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { PageEmpty, PageError, PageLoading } from "@/components/PageState";
 import { Badge } from "@/components/ui/badge";
@@ -42,6 +44,7 @@ import {
   type ProcurementContractLineResponse,
   type ProcurementWorkspaceResponse,
   type ProjectBoqLineResponse,
+  type ProjectBoqRevisionListItemResponse,
   type ProjectBoqRevisionListParams,
   type ProjectBoqRevisionListResponse,
   type ProjectBoqRevisionResponse,
@@ -337,13 +340,6 @@ const ProcurementControlPage = () => {
     [workspace],
   );
   const approvedBoqLines = approvedBoq?.lines ?? [];
-  const visibleBoqRows = useMemo(() => {
-    const byId = new Map((workspace?.boqRevisions ?? []).map((revision) => [revision.id, revision]));
-    return boqList.items.flatMap((item) => {
-      const revision = byId.get(item.id);
-      return revision ? [revision] : [];
-    });
-  }, [boqList.items, workspace?.boqRevisions]);
   const receivableLines = useMemo(() => (workspace?.materialRequests ?? [])
     .filter((request) => ["Approved", "PartiallyFulfilled"].includes(request.status))
     .flatMap((request) => request.lines.map((line) => ({ ...line, requestCode: request.code })))
@@ -389,6 +385,11 @@ const ProcurementControlPage = () => {
   };
 
   const createBoq = () => {
+    const normalizedCodes = boqLines.map((line) => line.itemCode.trim().toUpperCase());
+    if (normalizedCodes.length !== new Set(normalizedCodes).size) {
+      setFormError(t("procurement.validation.duplicateItemCode"));
+      return;
+    }
     const valid = /^[A-Z]{3}$/.test(boqCurrency)
       && boqLines.length > 0
       && boqLines.every((line) => /^[A-Za-z0-9][A-Za-z0-9._/-]*$/.test(line.itemCode.trim()) && line.description.trim() && line.unit.trim() && line.approvedQuantity >= 0 && line.budgetUnitPrice >= 0);
@@ -669,7 +670,7 @@ const ProcurementControlPage = () => {
                 </div>
                 {boqListLoading ? <PageLoading /> : boqListError ? <PageError message={boqListError} onRetry={() => void loadBoqList()} /> : (
                   <>
-                    <BoqPanel rows={visibleBoqRows} canManage={canManageBoq} canApprove={canApproveBoq} status={status} money={money} t={t} onCreate={() => openDialog("boq")} onSubmit={(row) => submit("boq", row)} onDecision={(row, approved) => { setFormError(null); setDecisionReason(""); setDecision({ kind: "boq", id: row.id, rowVersion: row.rowVersion, approved }); }} busy={busy} />
+                    <BoqPanel rows={boqList.items} canManage={canManageBoq} canApprove={canApproveBoq} status={status} money={money} t={t} onCreate={() => openDialog("boq")} onSubmit={(row) => submit("boq", row)} onDecision={(row, approved) => { setFormError(null); setDecisionReason(""); setDecision({ kind: "boq", id: row.id, rowVersion: row.rowVersion, approved }); }} busy={busy} />
                     {boqList.total > boqList.pageSize && <div className="flex items-center justify-between gap-3"><p className="text-sm text-muted-foreground">{t("procurement.boq.pagination", { page: boqList.page, pages: Math.ceil(boqList.total / boqList.pageSize), total: boqList.total })}</p><div className="flex gap-2"><Button variant="outline" size="sm" disabled={boqPage <= 1} onClick={() => setBoqPage((current) => current - 1)}>{t("common.prev")}</Button><Button variant="outline" size="sm" disabled={boqPage >= Math.ceil(boqList.total / boqList.pageSize)} onClick={() => setBoqPage((current) => current + 1)}>{t("common.next")}</Button></div></div>}
                   </>
                 )}
@@ -992,7 +993,26 @@ const RemoveButton = ({ onClick, label, disabled }: { onClick: () => void; label
 
 const RecordActions = ({ statusValue, canManage, canApprove, busy, t, onSubmit, onDecision, allowRejectedSubmit = false }: { statusValue: string; canManage: boolean; canApprove: boolean; busy: boolean; t: Translate; onSubmit: () => void; onDecision: (approved: boolean) => void; allowRejectedSubmit?: boolean }) => <div className="flex flex-wrap gap-2">{canManage && (statusValue === "Draft" || (allowRejectedSubmit && statusValue === "Rejected")) && <ActionButton variant="outline" disabled={busy} onClick={onSubmit} icon={<Send className="mr-2 h-4 w-4" />}>{t("procurement.action.submit")}</ActionButton>}{canApprove && statusValue === "Submitted" && <><ActionButton disabled={busy} onClick={() => onDecision(true)} icon={<Check className="mr-2 h-4 w-4" />}>{t("procurement.action.approve")}</ActionButton><ActionButton variant="destructive" disabled={busy} onClick={() => onDecision(false)} icon={<X className="mr-2 h-4 w-4" />}>{t("procurement.action.reject")}</ActionButton></>}</div>;
 
-const BoqPanel = ({ rows, canManage, canApprove, status, money, t, onCreate, onSubmit, onDecision, busy }: { rows: ProjectBoqRevisionResponse[]; canManage: boolean; canApprove: boolean; status: (value: string) => ReactNode; money: Intl.NumberFormat; t: Translate; onCreate: () => void; onSubmit: (row: ProjectBoqRevisionResponse) => void; onDecision: (row: ProjectBoqRevisionResponse, approved: boolean) => void; busy: boolean }) => <section><PanelHeader title={t("procurement.boq.title")} description={t("procurement.boq.description")} action={canManage && <Button onClick={onCreate}><Plus className="mr-2 h-4 w-4" />{t("procurement.boq.create")}</Button>} />{rows.length === 0 ? <Empty>{t("procurement.boq.empty")}</Empty> : <><TableShell><Table headers={[t("procurement.field.revision"), t("procurement.field.status"), t("procurement.field.lines"), t("procurement.field.total"), t("procurement.field.preparedBy"), t("procurement.field.actions")] }><>{rows.map((row) => <tr className="border-b" key={row.id}><td className="px-3 py-3 font-medium">R{row.revisionNumber}{row.isFinal && <Badge className="ml-2" variant="secondary">{t("procurement.boq.final")}</Badge>}</td><td className="px-3 py-3">{status(row.status)}</td><td className="px-3 py-3">{row.lines.length}</td><td className="px-3 py-3">{money.format(row.costTotal)} {row.currency}</td><td className="px-3 py-3">{row.preparedByName ?? `#${row.preparedByUserId}`}</td><td className="px-3 py-3"><RecordActions statusValue={row.status} canManage={canManage} canApprove={canApprove} busy={busy} t={t} onSubmit={() => onSubmit(row)} onDecision={(approved) => onDecision(row, approved)} allowRejectedSubmit /></td></tr>)}</></Table></TableShell><MobileList>{rows.map((row) => <MobileCard key={row.id} title={`R${row.revisionNumber}`} badge={status(row.status)} actions={<RecordActions statusValue={row.status} canManage={canManage} canApprove={canApprove} busy={busy} t={t} onSubmit={() => onSubmit(row)} onDecision={(approved) => onDecision(row, approved)} allowRejectedSubmit />}><Datum label={t("procurement.field.lines")}>{row.lines.length}</Datum><Datum label={t("procurement.field.total")}>{money.format(row.costTotal)} {row.currency}</Datum><Datum label={t("procurement.field.preparedBy")}>{row.preparedByName ?? `#${row.preparedByUserId}`}</Datum><Datum label={t("procurement.field.revision")}>{row.isFinal ? t("procurement.boq.final") : `R${row.revisionNumber}`}</Datum></MobileCard>)}</MobileList></>}</section>;
+const BoqPanel = ({ rows, canManage, canApprove, status, money, t, onCreate, onSubmit, onDecision, busy }: { rows: ProjectBoqRevisionListItemResponse[]; canManage: boolean; canApprove: boolean; status: (value: string) => ReactNode; money: Intl.NumberFormat; t: Translate; onCreate: () => void; onSubmit: (row: ProjectBoqRevisionListItemResponse) => void; onDecision: (row: ProjectBoqRevisionListItemResponse, approved: boolean) => void; busy: boolean }) => (
+  <section>
+    <PanelHeader title={t("procurement.boq.title")} description={t("procurement.boq.description")} action={canManage && <Button onClick={onCreate}><Plus className="mr-2 h-4 w-4" />{t("procurement.boq.create")}</Button>} />
+    {rows.length === 0 ? <Empty>{t("procurement.boq.empty")}</Empty> : <>
+      <TableShell>
+        <Table headers={[t("procurement.field.revision"), t("procurement.field.status"), t("procurement.field.lines"), t("procurement.field.total"), t("procurement.field.preparedBy"), t("procurement.field.actions")]}>
+          <>{rows.map((row) => <tr className="border-b" key={row.id}>
+            <td className="px-3 py-3 font-medium">R{row.revisionNumber}{row.isFinal && <Badge className="ml-2" variant="secondary">{t("procurement.boq.final")}</Badge>}</td>
+            <td className="px-3 py-3">{status(row.status)}</td>
+            <td className="px-3 py-3">{row.lineCount}</td>
+            <td className="px-3 py-3">{money.format(row.costTotal)} {row.currency}</td>
+            <td className="px-3 py-3">{row.preparedByName ?? `#${row.preparedByUserId}`}</td>
+            <td className="px-3 py-3"><div className="flex flex-wrap gap-2"><Button asChild variant="outline" size="sm"><Link to={`/admin/procurement-control/projects/${row.operationalProjectId}/boq/${row.id}`}><Eye className="mr-2 h-4 w-4" />{t("procurement.action.view")}</Link></Button><RecordActions statusValue={row.status} canManage={canManage} canApprove={canApprove} busy={busy} t={t} onSubmit={() => onSubmit(row)} onDecision={(approved) => onDecision(row, approved)} allowRejectedSubmit /></div></td>
+          </tr>)}</>
+        </Table>
+      </TableShell>
+      <MobileList>{rows.map((row) => <MobileCard key={row.id} title={`R${row.revisionNumber}`} badge={status(row.status)} actions={<><Button asChild variant="outline" size="sm"><Link to={`/admin/procurement-control/projects/${row.operationalProjectId}/boq/${row.id}`}><Eye className="mr-2 h-4 w-4" />{t("procurement.action.view")}</Link></Button><RecordActions statusValue={row.status} canManage={canManage} canApprove={canApprove} busy={busy} t={t} onSubmit={() => onSubmit(row)} onDecision={(approved) => onDecision(row, approved)} allowRejectedSubmit /></>}><Datum label={t("procurement.field.lines")}>{row.lineCount}</Datum><Datum label={t("procurement.field.total")}>{money.format(row.costTotal)} {row.currency}</Datum><Datum label={t("procurement.field.preparedBy")}>{row.preparedByName ?? `#${row.preparedByUserId}`}</Datum><Datum label={t("procurement.field.revision")}>{row.isFinal ? t("procurement.boq.final") : `R${row.revisionNumber}`}</Datum></MobileCard>)}</MobileList>
+    </>}
+  </section>
+);
 
 const RequestPanel = ({
   rows,

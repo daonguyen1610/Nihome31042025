@@ -3665,7 +3665,7 @@ export interface PunchItemBulkDeleteResponse {
 // --- Procurement control chain ---------------------------------------
 
 export interface ProjectBoqLineResponse { id: number; itemCode: string; description: string; unit: string; approvedQuantity: number; budgetUnitPrice: number; amount: number }
-export interface ProjectBoqRevisionResponse { id: number; operationalProjectId: number; revisionNumber: number; currency: string; status: string; sourceTenderEstimateRevisionId?: number | null; sourceContractAppendixId?: number | null; costTotal: number; preparedByUserId: number; preparedByName?: string | null; submittedAt?: string | null; approvedAt?: string | null; rejectedAt?: string | null; decisionReason?: string | null; isFinal: boolean; createdAt: string; rowVersion: string; lines: ProjectBoqLineResponse[] }
+export interface ProjectBoqRevisionResponse { id: number; operationalProjectId: number; revisionNumber: number; currency: string; status: string; sourceTenderEstimateRevisionId?: number | null; sourceContractAppendixId?: number | null; costTotal: number; preparedByUserId: number; preparedByName?: string | null; submittedAt?: string | null; approvedAt?: string | null; rejectedAt?: string | null; decisionReason?: string | null; isFinal: boolean; createdAt: string; updatedAt: string; rowVersion: string; lines: ProjectBoqLineResponse[] }
 export interface ProjectBoqRevisionListItemResponse { id: number; operationalProjectId: number; revisionNumber: number; currency: string; status: string; costTotal: number; lineCount: number; itemCodes: string[]; preparedByUserId: number; preparedByName?: string | null; submittedAt?: string | null; approvedAt?: string | null; rejectedAt?: string | null; isFinal: boolean; createdAt: string; updatedAt: string; rowVersion: string }
 export interface ProjectBoqRevisionListResponse { total: number; page: number; pageSize: number; items: ProjectBoqRevisionListItemResponse[] }
 export interface ProjectBoqRevisionListParams { search?: string; status?: string; sortBy?: "revision" | "status" | "total" | "preparedBy" | "createdAt" | "updatedAt"; sortDirection?: "asc" | "desc"; page?: number; pageSize?: number }
@@ -5179,8 +5179,19 @@ export const adminApi = {
     api.get<ProjectBoqRevisionListResponse>(`/operational-projects/${projectId}/procurement/boq-revisions`, { params }),
   exportProjectBoqRevisions: (projectId: number, params: ProjectBoqRevisionListParams = {}) =>
     api.get<Blob>(`/operational-projects/${projectId}/procurement/boq-revisions/export`, { params, responseType: "blob" }),
+  getProjectBoqRevision: (projectId: number, id: number) =>
+    api.get<ProjectBoqRevisionResponse>(`/operational-projects/${projectId}/procurement/boq-revisions/${id}`),
   createProjectBoqRevision: (projectId: number, body: ProjectBoqRevisionRequest) =>
     postIdempotent<ProjectBoqRevisionResponse>(`/operational-projects/${projectId}/procurement/boq-revisions`, body),
+  updateProjectBoqRevision: (projectId: number, id: number, body: ProjectBoqRevisionRequest) =>
+    api.put<ProjectBoqRevisionResponse>(
+      `/operational-projects/${projectId}/procurement/boq-revisions/${id}`,
+      body,
+      { headers: {
+        ...withIdempotencyKey(crypto.randomUUID()).headers,
+        ...withIfMatch(body.rowVersion).headers,
+      } },
+    ),
   submitProjectBoqRevision: (projectId: number, id: number, rowVersion: string) =>
     postIdempotent<ProjectBoqRevisionResponse>(`/operational-projects/${projectId}/procurement/boq-revisions/${id}/submit`, { rowVersion }),
   decideProjectBoqRevision: (projectId: number, id: number, approved: boolean, rowVersion: string, reason?: string) =>
