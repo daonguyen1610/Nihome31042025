@@ -119,6 +119,18 @@ public sealed class ProcurementController(
         catch (ProcurementOperationException exception) { return BadRequest(new { message = exception.Message }); }
     }
 
+    [HttpGet("material-requests/{id:int}")]
+    [RequirePermission("proc.material-requests", "view")]
+    public async Task<ActionResult<MaterialRequestDetailResponse>> GetMaterialRequest(
+        int projectId, int id, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        if (!await access.CanViewOperationalProjectAsync(userId.Value, projectId, ct)) return NotFound();
+        var result = await service.GetMaterialRequestAsync(projectId, id, ct);
+        return result is null ? NotFound() : Ok(result);
+    }
+
     [HttpPost("boq-revisions")]
     [RequirePermission("proc.boq", "manage")]
     [Idempotency("proc.boq.create", requireKey: true)]

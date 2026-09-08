@@ -851,6 +851,30 @@ expose budget unit prices or BOQ totals, so a caller with Material Request
 permissions but without `proc.boq.view` can select valid items without gaining
 access to restricted BOQ financial data or revision history.
 
+`GET /api/operational-projects/{projectId}/procurement/material-requests/{id}`
+returns one project-scoped request with lifecycle timestamps and actors, net
+received quantities, BOQ allowance evidence, and least-privilege
+Customer/Project/Contract context. Contract context contains identity,
+classification, vendor, and status only; it does not expose contract values.
+This allows an MR-only role to use the detail page without requiring BOQ or
+Contract read permissions.
+
+Material Requests follow `Draft -> Submitted -> Approved | Rejected`, with
+Approved requests moving to `PartiallyFulfilled` or `Fulfilled` through posted
+warehouse receipts. Drafts are editable only by their requester. Create and
+update reject duplicate BOQ items, past required dates, non-project users,
+non-procurement assignees, obsolete BOQ revisions, non-positive quantities, and
+quantities above the remaining approved allowance. Approval repeats the
+allowance check inside a serializable transaction. Non-terminal requests may be
+cancelled with a reason of at least three characters.
+
+Mutations require an `Idempotency-Key`; update and transitions also carry the
+current row version and `If-Match`. Submit notifies the assigned procurement
+owner, decisions notify the requester, and cancellation notifies the other
+party. Audit entries use the Material Request ID and retain the Operational
+Project ID as metadata. The detail UI route is
+`/admin/procurement-control/projects/{projectId}/material-requests/{requestId}`.
+
 ### 7.13 Project Procurement BOQ
 
 Project procurement BOQs are revisioned operational records and are distinct

@@ -65,7 +65,7 @@ public sealed class ProjectBoqLineResponse
     public decimal Amount { get; set; }
 }
 
-public sealed class MaterialRequestResponse
+public class MaterialRequestResponse
 {
     public int Id { get; set; }
     public int OperationalProjectId { get; set; }
@@ -80,11 +80,41 @@ public sealed class MaterialRequestResponse
     public DateTime RequiredAt { get; set; }
     public string? Note { get; set; }
     public DateTime? SubmittedAt { get; set; }
+    public int? SubmittedByUserId { get; set; }
+    public string? SubmittedByName { get; set; }
     public DateTime? ApprovedAt { get; set; }
+    public int? ApprovedByUserId { get; set; }
+    public string? ApprovedByName { get; set; }
+    public DateTime? RejectedAt { get; set; }
+    public int? RejectedByUserId { get; set; }
+    public string? RejectedByName { get; set; }
     public DateTime? FulfilledAt { get; set; }
+    public DateTime? CancelledAt { get; set; }
     public string? DecisionReason { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
     public string RowVersion { get; set; } = string.Empty;
     public List<MaterialRequestLineResponse> Lines { get; set; } = [];
+}
+
+public sealed class MaterialRequestDetailResponse : MaterialRequestResponse
+{
+    public string OperationalProjectCode { get; set; } = string.Empty;
+    public string OperationalProjectName { get; set; } = string.Empty;
+    public int CustomerId { get; set; }
+    public string CustomerName { get; set; } = string.Empty;
+    public List<MaterialRequestContractContextResponse> Contracts { get; set; } = [];
+}
+
+public sealed class MaterialRequestContractContextResponse
+{
+    public int Id { get; set; }
+    public string ContractNumber { get; set; } = string.Empty;
+    public string Direction { get; set; } = string.Empty;
+    public string Type { get; set; } = string.Empty;
+    public int? VendorId { get; set; }
+    public string? VendorName { get; set; }
+    public string Status { get; set; } = string.Empty;
 }
 
 public sealed class MaterialRequestListResponse

@@ -7,6 +7,7 @@ public interface IProcurementService
 {
     Task<ProcurementWorkspaceResponse> GetWorkspaceAsync(int projectId, CancellationToken ct = default);
     Task<MaterialRequestListResponse> ListMaterialRequestsAsync(int projectId, MaterialRequestListParams parameters, CancellationToken ct = default);
+    Task<MaterialRequestDetailResponse?> GetMaterialRequestAsync(int projectId, int id, CancellationToken ct = default);
     Task<ProjectBoqRevisionListResponse> ListBoqRevisionsAsync(int projectId, ProjectBoqRevisionListQuery query, CancellationToken ct = default);
     Task<IReadOnlyList<ProjectBoqRevisionListItemResponse>> ExportBoqRevisionsAsync(int projectId, ProjectBoqRevisionListQuery query, CancellationToken ct = default);
     Task<ProjectBoqRevisionResponse?> GetBoqRevisionAsync(int projectId, int id, CancellationToken ct = default);
