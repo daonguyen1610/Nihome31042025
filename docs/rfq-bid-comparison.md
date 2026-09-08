@@ -116,15 +116,6 @@ so they do not inherit a stronger isolation level from a reused connection.
 The tradeoff is serialized warehouse writes across projects; the validation below
 proves the tested workflow, not peak throughput or every possible database race.
 
-The opt-in `tools/qa/rfq_concurrency.py` probe runs real HTTP operations against a
-SQL-backed validation stack: concurrent creation across projects, creation
-overlapping issue, two bid revisions, parallel evaluation/award and competing
-decisions on the same RFQ. It checks one
-award event, complete decision history and distinct contract IDs. Provide the
-base URL, approved test-project IDs and a private credentials JSON file described
-by `--help`. It creates retained test RFQs/contracts and must run only on an
-isolated validation stack; it does not exercise live Drive or fault injection.
-
 ## Files and notifications
 
 Files use the existing ProjectDocument upload validation and Google Drive
