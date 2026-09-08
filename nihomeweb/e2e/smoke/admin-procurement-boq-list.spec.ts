@@ -137,6 +137,14 @@ test("BOQ list filters, sorts, paginates, and exports within the selected projec
   await page.locator("#procurement-project").click();
   await page.getByRole("option", { name: /PJ-BOQ-001/ }).click();
 
+  const createButton = page.getByRole("button", { name: /Tạo phiên bản BOQ|Create BOQ revision|创建 BOQ 版本|BOQ改訂を作成/i });
+  await createButton.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toBeHidden();
+  await expect(createButton).toBeFocused();
+
   const table = page.getByRole("table");
   await expect(page.locator("#boq-search")).toBeVisible();
   await expect(page.getByText(/Trang 1\/2|Page 1\/2|第 1\/2 页|1\/2 ページ/i)).toBeVisible();
