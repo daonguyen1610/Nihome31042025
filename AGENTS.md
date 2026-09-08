@@ -139,6 +139,7 @@ Choose the lowest test layer that can prove the behavior. Do not duplicate the s
 - Unit tests ('nihomebackend.tests'): isolated services, validation, branching, JSON handling, cache invalidation, and file-resolution helpers. Use InMemory EF and Moq where appropriate; no HTTP or Docker.
 - Integration tests ('nihomebackend.integration.tests'): the real ASP.NET pipeline through 'WebApplicationFactory', including middleware, auth, model binding, EF persistence, API contracts, CRUD, validation, and authorization.
 - E2E tests ('nihomeweb/e2e/smoke'): narrow real-browser rendering, SPA mounting, JavaScript errors, route rendering, and deployed-stack wiring such as CORS and health checks. API-only behavior belongs in integration tests.
+- E2E and Integration tests validate fully business pipeline test. Not only feature level.
 - Covers Happy path, Negative path testing. Ensure all test cases to cover business scenarios of the customers.
 - Use high quality data for testing with the real use cases.
 
