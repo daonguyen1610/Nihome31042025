@@ -271,6 +271,15 @@ internal static class AggregateDeletionService
         db.HseViolations.RemoveRange(hseViolations);
 
         project.FinalProjectBoqRevisionId = null;
+        var materialAlerts = await db.MaterialAlerts
+            .Where(item => item.OperationalProjectId == projectId)
+            .ToListAsync(ct);
+        var materialAlertIds = materialAlerts.Select(item => item.Id).ToList();
+        var materialAlertEvents = await db.MaterialAlertEvents
+            .Where(item => materialAlertIds.Contains(item.MaterialAlertId))
+            .ToListAsync(ct);
+        db.MaterialAlertEvents.RemoveRange(materialAlertEvents);
+        db.MaterialAlerts.RemoveRange(materialAlerts);
         var draftReceipts = await db.WarehouseReceipts
             .Where(item => item.OperationalProjectId == projectId && item.Status == WarehouseLedgerStatus.Draft)
             .ToListAsync(ct);

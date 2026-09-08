@@ -658,9 +658,32 @@ traceable to the receiving team or activity.
 
 Monitor actual material usage against BOQ norms. Alert when usage exceeds allocated quantities. Alert on low inventory levels. Notify project managers on discrepancies. Track alert history. Report budget overruns by project.
 
+Open **Procurement control**, select an Operational Project, and choose
+**Material alerts**. The tab count shows unresolved alerts. By default the list
+shows items that have not been handled; use the status summary or filters to
+review acknowledged and automatically resolved history. Search by alert code,
+material code, description, or assignee. Type, status, severity, assignee,
+sorting, pagination, and CSV export can be combined.
+
+**Usage over BOQ** means net posted warehouse issues exceed the current approved
+BOQ allowance. **Material shortage** means posted receipts are insufficient for
+approved Material Request demand. Alerts update automatically after BOQ
+approval, Material Request approval/cancellation, and warehouse posting or
+reversal. Users with management permission can use **Recheck source data** after
+a transient system failure; it does not edit the warehouse or BOQ source.
+
+Open an alert to compare approved demand or BOQ allowance with received, issued,
+on-hand, and variance quantities. The detail also shows Customer, Project,
+related Contracts without financial values, the source document, assigned user,
+and immutable event history. The assigned user or Project Manager can select
+**Acknowledge**, then record the owner, action, and expected timing. This records
+responsibility but does not close the alert. The system closes it only after the
+source discrepancy is corrected and reopens it if the condition returns.
+
 | Page | Functions | Estimate |
 |------|-----------|----------|
-| Material Alerts | Overrun alerts and reports | 1.5 days |
+| Material Alerts | Project-scoped exceptions, filters, status summary, source reconciliation, and CSV export | Implemented |
+| Material Alert Detail | Source metrics, Customer/Project/Contract context, acknowledgement, and lifecycle history | Implemented |
 
 ### 3.6 Module 6: Finance and Contract
 

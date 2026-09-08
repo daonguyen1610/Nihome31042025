@@ -270,5 +270,21 @@
     "en": "Material request {{requestCode}} for project {{projectCode}} was cancelled. Reason: {{reason}}.",
     "zh": "项目 {{projectCode}} 的材料申请 {{requestCode}} 已取消。原因：{{reason}}。",
     "ja": "プロジェクト {{projectCode}} の資材依頼 {{requestCode}} がキャンセルされました。理由: {{reason}}。"
+  },
+  {
+    "key": "notification.procurement.material-alert.detected.title",
+    "category": "notification",
+    "vi": "Cảnh báo vật tư {{alertCode}} cần xử lý",
+    "en": "Material alert {{alertCode}} requires action",
+    "zh": "材料预警 {{alertCode}} 需要处理",
+    "ja": "資材アラート {{alertCode}} の対応が必要です"
+  },
+  {
+    "key": "notification.procurement.material-alert.detected.body",
+    "category": "notification",
+    "vi": "Vật tư {{itemCode}} tại dự án {{projectCode}} phát sinh cảnh báo {{alertType}}, chênh lệch {{variance}}.",
+    "en": "Item {{itemCode}} in project {{projectCode}} triggered {{alertType}} with variance {{variance}}.",
+    "zh": "项目 {{projectCode}} 的物料 {{itemCode}} 触发 {{alertType}} 预警，差异为 {{variance}}。",
+    "ja": "プロジェクト {{projectCode}} の品目 {{itemCode}} で {{alertType}} アラートが発生しました。差異は {{variance}} です。"
   }
 ]

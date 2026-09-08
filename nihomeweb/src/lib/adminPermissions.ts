@@ -74,6 +74,8 @@ export const ADMIN_PERMS = {
   procurementContractLinesManage: "proc.contract-lines.manage",
   procurementWarehouse: "proc.warehouse.view",
   procurementWarehousePost: "proc.warehouse.post",
+  procurementMaterialAlerts: "proc.material-alerts.view",
+  procurementMaterialAlertsManage: "proc.material-alerts.manage",
   procurementRatings: "proc.vendor-ratings.view",
   procurementRatingsManage: "proc.vendor-ratings.manage",
   procurementRatingsApprove: "proc.vendor-ratings.approve",

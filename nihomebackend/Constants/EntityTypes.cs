@@ -26,6 +26,7 @@ public static class EntityTypes
     public const string ContractLine = "ContractLine";
     public const string WarehouseReceipt = "WarehouseReceipt";
     public const string WarehouseIssue = "WarehouseIssue";
+    public const string MaterialAlert = "MaterialAlert";
     public const string VendorRating = "VendorRating";
     public const string PaymentRequest = "PaymentRequest";
     public const string AccountingPeriod = "AccountingPeriod";

@@ -183,6 +183,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<RfqService>();
         services.AddScoped<RfqIdempotencyGuard>();
         services.AddHostedService<RfqOverdueWorker>();
+        services.AddScoped<IMaterialAlertService, MaterialAlertService>();
         services.AddScoped<IFinanceService, FinanceService>();
         services.AddScoped<IAcceptanceRecordService, AcceptanceRecordService>();
         services.AddScoped<IAsBuiltDocumentService, AsBuiltDocumentService>();

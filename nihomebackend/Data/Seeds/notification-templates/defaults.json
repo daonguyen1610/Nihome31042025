@@ -106,6 +106,12 @@
     },
     {"code": "procurement.rfq.issued", "module": "procurement.rfqs", "channel": "InApp", "adminDescription": "Notify RFQ owner and project manager: issued"},
     {"code": "procurement.rfq.awarded", "module": "procurement.rfqs", "channel": "InApp", "adminDescription": "Notify RFQ owner and project manager: awarded"},
-    {"code": "procurement.rfq.overdue", "module": "procurement.rfqs", "channel": "InApp", "adminDescription": "Notify RFQ owner and project manager: overdue"}
+    {"code": "procurement.rfq.overdue", "module": "procurement.rfqs", "channel": "InApp", "adminDescription": "Notify RFQ owner and project manager: overdue"},
+    {
+      "code": "procurement.material-alert.detected",
+      "module": "procurement.material-alerts",
+      "channel": "InApp",
+      "adminDescription": "PM và người phụ trách được cảnh báo khi vật tư vượt BOQ hoặc thiếu so với nhu cầu đã duyệt."
+    }
   ]
 }

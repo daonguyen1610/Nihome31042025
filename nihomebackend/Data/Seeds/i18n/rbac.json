@@ -2447,6 +2447,10 @@
     "zh": "将当前筛选的供应商列表导出为 CSV。",
     "ja": "現在絞り込まれている仕入先一覧をCSVに出力します。"
   },
+  {"key":"rbac.perm.proc.material-alerts.view.label","category":"rbac","vi":"Xem cảnh báo vật tư","en":"View material alerts","zh":"查看材料预警","ja":"資材アラートを表示"},
+  {"key":"rbac.perm.proc.material-alerts.view.description","category":"rbac","vi":"Xem cảnh báo vượt BOQ, thiếu vật tư và lịch sử xử lý trong phạm vi dự án được phép.","en":"View BOQ overrun and material shortage alerts with response history for accessible projects.","zh":"查看有权访问项目的 BOQ 超量、材料短缺预警及处理历史。","ja":"アクセス可能なプロジェクトのBOQ超過・資材不足アラートと対応履歴を表示します。"},
+  {"key":"rbac.perm.proc.material-alerts.manage.label","category":"rbac","vi":"Tiếp nhận cảnh báo vật tư","en":"Manage material alerts","zh":"处理材料预警","ja":"資材アラートを管理"},
+  {"key":"rbac.perm.proc.material-alerts.manage.description","category":"rbac","vi":"Đối chiếu nguồn và ghi nhận tiếp nhận cảnh báo được giao; hệ thống tự động đóng khi hết vi phạm.","en":"Evaluate source data and acknowledge assigned alerts; resolution remains automatic when the violation clears.","zh":"核对来源数据并确认已分配预警；违规消除后由系统自动解决。","ja":"参照元を評価し、担当アラートを確認します。違反解消時の解決は自動です。"},
   { "key": "rbac.perm.operations.projects.view.label", "category": "rbac", "vi": "Xem dự án vận hành", "en": "View operational projects", "zh": "查看运营项目", "ja": "運用プロジェクトを表示" },
   { "key": "rbac.perm.operations.projects.view.description", "category": "rbac", "vi": "Xem dự án do người dùng tạo hoặc phụ trách.", "en": "View operational projects created by or assigned to the user.", "zh": "查看由用户创建或负责的运营项目。", "ja": "ユーザーが作成または担当する運用プロジェクトを表示します。" },
   { "key": "rbac.perm.operations.projects.view.all.label", "category": "rbac", "vi": "Xem toàn bộ dự án vận hành", "en": "View all operational projects", "zh": "查看全部运营项目", "ja": "すべての運用プロジェクトを表示" },

@@ -15,6 +15,7 @@ import {
   ShoppingCart,
   Star,
   Trash2,
+  TriangleAlert,
   X,
 } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
@@ -58,6 +59,7 @@ import {
 } from "@/services/adminApi";
 import { useAppSelector } from "@/store";
 import MaterialRequestListToolbar from "./MaterialRequestListToolbar";
+import MaterialAlertsWorkspace from "./MaterialAlertsWorkspace";
 import WarehouseWorkspace from "./WarehouseWorkspace";
 
 type DialogKind = "boq" | "request" | "contract" | "receipt" | "issue" | "rating" | null;
@@ -67,7 +69,7 @@ type BoqLineDraft = { itemCode: string; description: string; unit: string; appro
 type RequestLineDraft = { projectBoqLineId: number; requestedQuantity: number };
 type ReceiptLineDraft = { materialRequestLineId: number; contractLineId: number | null; receivedQuantity: number };
 type IssueLineDraft = { projectBoqLineId: number; issuedQuantity: number };
-const procurementTabs = ["boq", "requests", "contracts", "warehouse", "ratings"] as const;
+const procurementTabs = ["alerts", "boq", "requests", "contracts", "warehouse", "ratings"] as const;
 
 const emptyBoqLine = (): BoqLineDraft => ({ itemCode: "", description: "", unit: "", approvedQuantity: 1, budgetUnitPrice: 0 });
 const emptyRequestLine = (): RequestLineDraft => ({ projectBoqLineId: 0, requestedQuantity: 1 });
@@ -109,6 +111,8 @@ const ProcurementControlPage = () => {
   const canManageContracts = has(ADMIN_PERMS.procurementContractLinesManage);
   const canViewWarehouse = has(ADMIN_PERMS.procurementWarehouse);
   const canPostWarehouse = has(ADMIN_PERMS.procurementWarehousePost);
+  const canViewAlerts = has(ADMIN_PERMS.procurementMaterialAlerts);
+  const canManageAlerts = has(ADMIN_PERMS.procurementMaterialAlertsManage);
   const canViewRatings = has(ADMIN_PERMS.procurementRatings);
   const canManageRatings = has(ADMIN_PERMS.procurementRatingsManage);
   const canApproveRatings = has(ADMIN_PERMS.procurementRatingsApprove);
@@ -118,7 +122,8 @@ const ProcurementControlPage = () => {
   const requestedProjectId = Number(searchParams.get("projectId") ?? 0);
   const projectId = Number.isInteger(requestedProjectId) && requestedProjectId > 0 ? requestedProjectId : 0;
   const availableTabs = procurementTabs.filter((tab) =>
-    (tab === "boq" && canViewBoq)
+    (tab === "alerts" && canViewAlerts)
+    || (tab === "boq" && canViewBoq)
     || (tab === "requests" && canViewRequests)
     || (tab === "contracts" && canViewContracts)
     || (tab === "warehouse" && canViewWarehouse)
@@ -174,6 +179,8 @@ const ProcurementControlPage = () => {
   const [warehouseLoading, setWarehouseLoading] = useState(false);
   const [warehouseError, setWarehouseError] = useState<string | null>(null);
   const [warehouseExporting, setWarehouseExporting] = useState(false);
+  const [alertTotal, setAlertTotal] = useState(0);
+  const [alertRefreshToken, setAlertRefreshToken] = useState(0);
 
   const [boqCurrency, setBoqCurrency] = useState("VND");
   const [boqLines, setBoqLines] = useState<BoqLineDraft[]>([emptyBoqLine()]);
@@ -366,6 +373,7 @@ const ProcurementControlPage = () => {
   useEffect(() => { void loadWarehouseTransactions(); }, [loadWarehouseTransactions]);
 
   const refreshData = async () => {
+    setAlertRefreshToken((value) => value + 1);
     await Promise.all([loadWorkspace(), loadMaterialRequests(), loadBoqList(), loadWarehouseTransactions()]);
   };
 
@@ -726,6 +734,10 @@ const ProcurementControlPage = () => {
           >
             <div className="overflow-x-auto pb-1 [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-track]:bg-transparent">
               <TabsList className="h-auto w-max min-w-full justify-start">
+                {canViewAlerts && <TabsTrigger value="alerts">
+                  <TriangleAlert className="mr-2 h-4 w-4" />
+                  {t("procurement.tabs.alerts")} ({alertTotal})
+                </TabsTrigger>}
                 {canViewBoq && <TabsTrigger value="boq">
                   <ClipboardCheck className="mr-2 h-4 w-4" />
                   {t("procurement.tabs.boq")} ({boqList.total})
@@ -760,6 +772,21 @@ const ProcurementControlPage = () => {
                 )}
               </TabsList>
             </div>
+
+            {canViewAlerts && (
+              <TabsContent value="alerts">
+                <MaterialAlertsWorkspace
+                  projectId={projectId}
+                  users={users}
+                  t={t}
+                  formatDate={formatDate}
+                  formatNumber={(value) => number.format(value)}
+                  refreshToken={alertRefreshToken}
+                  canManage={canManageAlerts}
+                  onTotalChange={setAlertTotal}
+                />
+              </TabsContent>
+            )}
 
             {canViewRequests && activeTab === "requests" && (
               <MaterialRequestListToolbar

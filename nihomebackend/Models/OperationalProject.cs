@@ -51,6 +51,7 @@ public class OperationalProject : IConcurrencyTracked
     public List<MaterialRequest> MaterialRequests { get; set; } = new();
     public List<WarehouseReceipt> WarehouseReceipts { get; set; } = new();
     public List<WarehouseIssue> WarehouseIssues { get; set; } = new();
+    public List<MaterialAlert> MaterialAlerts { get; set; } = new();
     public List<VendorRating> VendorRatings { get; set; } = new();
 }
 
