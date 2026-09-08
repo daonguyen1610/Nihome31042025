@@ -261,3 +261,106 @@ test("warehouse receipt detail edits, posts, reverses, and preserves context", a
   }
   await expect(page.getByRole("link", { name: "Back" })).toHaveAttribute("href", `/admin/procurement-control?projectId=${projectId}&tab=warehouse`);
 });
+
+test("warehouse issue detail preserves allocation and enforces stock and permissions", async ({ page, loginInBrowserAs, baseURL }) => {
+  const appUrl = baseURL ?? "http://localhost:5043";
+  let failUpdate = true;
+  let detail = {
+    id: issueId,
+    operationalProjectId: projectId,
+    code: "WI-0001",
+    status: "Draft",
+    reversalOfIssueId: null,
+    reversalTransactionId: null as number | null,
+    responsibleSiteUserId: 1,
+    responsibleSiteUserName: "Super Admin",
+    issuedByUserId: 1,
+    issuedByName: "Super Admin",
+    issuedAt: "2026-09-08T08:00:00Z",
+    postedAt: null as string | null,
+    postedByUserId: null as number | null,
+    postedByName: null as string | null,
+    workItemCode: "FOUNDATION-A",
+    reversalReason: null as string | null,
+    createdAt: "2026-09-08T08:00:00Z",
+    updatedAt: "2026-09-08T08:00:00Z",
+    rowVersion: "issue-row-1",
+    operationalProjectCode: "PJ-0169",
+    operationalProjectName: "Warehouse Project",
+    customerId: 1,
+    customerName: "NICON",
+    contracts: [],
+    lines: [{ id: 169702, projectBoqLineId: boqLineId, itemCode: "MAT-CEMENT", description: "Portland cement", unit: "kg", boqApprovedQuantity: 100, stockOnHand: 30, issuedQuantity: 20 }],
+  };
+
+  await loginInBrowserAs(page, TEST_USERS.superAdmin);
+  if (page.url() === "about:blank") await page.goto(appUrl, { waitUntil: "domcontentloaded" });
+  await page.evaluate(() => localStorage.setItem("nicon_lang", "en"));
+  await mockProjectContext(page);
+  await page.route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/procurement/warehouse-transactions(?:\\?.*)?$`), route => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ total: 1, page: 1, pageSize: 1, items: [issueListItem], stock }) }));
+  await page.route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/procurement/issues/${issueId}$`), async route => {
+    if (route.request().method() === "PUT") {
+      if (failUpdate) return route.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ message: "Issue update unavailable" }) });
+      const payload = route.request().postDataJSON() as { responsibleSiteUserId: number; workItemCode: string; lines: Array<{ issuedQuantity: number }> };
+      expect(route.request().headers()["idempotency-key"]).toBeTruthy();
+      expect(route.request().headers()["if-match"]).toContain(detail.rowVersion);
+      detail = { ...detail, responsibleSiteUserId: payload.responsibleSiteUserId, workItemCode: payload.workItemCode, rowVersion: "issue-row-2", lines: [{ ...detail.lines[0], issuedQuantity: payload.lines[0].issuedQuantity }] };
+    }
+    return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(detail) });
+  });
+  await page.route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/procurement/issues/${issueId}/post$`), async route => {
+    detail = { ...detail, status: "Posted", postedAt: "2026-09-08T09:00:00Z", postedByUserId: 1, postedByName: "Super Admin", rowVersion: "issue-row-3" };
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(detail) });
+  });
+  await page.route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/procurement/issues/${issueId}/reverse$`), async route => {
+    const payload = route.request().postDataJSON() as { reason: string };
+    detail = { ...detail, status: "Reversed", reversalTransactionId: 169398, reversalReason: payload.reason, updatedAt: "2026-09-08T10:00:00Z", rowVersion: "issue-row-4" };
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ...detail, id: 169398, code: "WI-0002", status: "Posted", reversalOfIssueId: issueId }) });
+  });
+
+  await page.goto(`${appUrl}/admin/procurement-control/projects/${projectId}/warehouse/issue/${issueId}`, { waitUntil: "networkidle" });
+  await expect(page.getByRole("heading", { level: 1, name: "WI-0001" })).toBeVisible();
+  await expect(page.getByText("FOUNDATION-A", { exact: true }).first()).toBeVisible();
+  await page.getByRole("button", { name: "Edit" }).click();
+  const quantity = page.locator("#warehouse-issue-quantity-0");
+  await quantity.fill("31");
+  await page.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByRole("alert")).toContainText(/on-hand stock/i);
+  await expect(quantity).toHaveValue("31");
+  await quantity.fill("18");
+  await page.locator("#warehouse-work-item").fill("FOUNDATION-B");
+  await page.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByRole("alert")).toContainText("Issue update unavailable");
+  await expect(quantity).toHaveValue("18");
+  await expect(page.locator("#warehouse-work-item")).toHaveValue("FOUNDATION-B");
+  failUpdate = false;
+  await page.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByRole("dialog")).toBeHidden();
+  await expect(page.getByText("FOUNDATION-B", { exact: true }).first()).toBeVisible();
+
+  await page.getByRole("button", { name: "Post" }).click();
+  await expect(page.getByText("Posted", { exact: true }).first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "Edit" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Reverse transaction" }).click();
+  await page.locator("#warehouse-reversal-reason").fill("Wrong receiving crew");
+  await page.getByRole("dialog").getByRole("button", { name: "Reverse transaction" }).click();
+  await expect(page.getByText("Reversed", { exact: true }).first()).toBeVisible();
+  await expect(page.getByRole("link", { name: "View reversal transaction" })).toHaveAttribute("href", `/admin/procurement-control/projects/${projectId}/warehouse/issue/169398`);
+
+  detail = { ...detail, status: "Draft", reversalTransactionId: null, reversalReason: null };
+  await page.route(/\/api\/(?:v1\/)?users\/me\/permissions$/, route => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({ role: "WAREHOUSE_VIEWER", roleId: 170, permissions: ["proc.warehouse.view"] }),
+  }));
+  await page.reload({ waitUntil: "networkidle" });
+  await expect(page.getByRole("button", { name: "Edit" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Post" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Reverse transaction" })).toHaveCount(0);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.reload({ waitUntil: "networkidle" });
+  await expect(page.locator("article").filter({ hasText: "MAT-CEMENT" })).toBeVisible();
+  await expect(page.getByRole("table")).toBeHidden();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+});
