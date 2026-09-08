@@ -177,6 +177,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
         label: t("nav.procurement"),
         icon: Truck,
         items: [
+          { to: "/admin/procurement-control/rfqs", label: t("rfq.title"), icon: ShoppingCart, permission: "proc.rfqs.view" },
           { to: "/admin/procurement-control", label: t("nav.procurementControl"), icon: ShoppingCart, permission: [ADMIN_PERMS.procurement, ADMIN_PERMS.procurementMaterialRequests] },
           { to: "/admin/vendors", label: t("nav.vendors"), icon: Truck, permission: ADMIN_PERMS.vendors },
         ],
@@ -369,9 +370,11 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
   }, [flatItems, location.pathname, t]);
 
   const renderItem = (item: NavItem) => {
-    const active = item.end
+    const matches = item.end
       ? location.pathname === item.to
       : location.pathname === item.to || location.pathname.startsWith(`${item.to}/`);
+    const active = matches && !flatItems.some(other => other.to.length > item.to.length &&
+      (location.pathname === other.to || location.pathname.startsWith(`${other.to}/`)));
     return (
       <Link
         key={item.to}

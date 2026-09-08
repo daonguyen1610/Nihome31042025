@@ -216,6 +216,8 @@ public sealed class BusinessRootHardDeletePlanService(
             .SingleOrDefaultAsync(ct);
         if (root is null) return null;
 
+        var rfqs = await db.RfqInvitations.AsNoTracking().Where(item => item.VendorId == id)
+            .Select(item => item.RfqId).Distinct().OrderBy(item => item).ToListAsync(ct);
         var contracts = await db.Contracts.AsNoTracking().Where(item => item.VendorId == id)
             .OrderBy(item => item.Id).Select(item => new { item.Id, item.ContractNumber }).ToListAsync(ct);
         var ratings = await db.VendorRatings.AsNoTracking().Where(item => item.VendorId == id)
@@ -249,6 +251,8 @@ public sealed class BusinessRootHardDeletePlanService(
 
         var detail = $"/admin/vendors/{id}";
         var items = new List<DeletionImpactItemResponse>();
+        Add(items, "vendor.rfqs", rfqs.Select(Id).ToList(), DeletionImpactActions.Block,
+            "/admin/procurement-control/rfqs", [Link(root.CompanyName, detail)]);
         Add(items, "vendor.contracts", contracts.Select(item => Id(item.Id)).ToList(), DeletionImpactActions.Block,
             "/admin/contracts", contracts.Select(item => Link(item.ContractNumber, $"/admin/contracts/{item.Id}")).ToList());
         Add(items, "vendor.ratings", ratings.Select(item => Id(item.Id)).ToList(), DeletionImpactActions.Block,
@@ -262,14 +266,14 @@ public sealed class BusinessRootHardDeletePlanService(
 
         var identities = new[]
         {
-            Part("contracts", contracts.Select(item => item.Id)), Part("ratings", ratings.Select(item => item.Id)),
+            Part("rfqs", rfqs), Part("contracts", contracts.Select(item => item.Id)), Part("ratings", ratings.Select(item => item.Id)),
             Part("payments", payments.Select(item => item.Id)), Part("paths", localPaths), Part("external-links", externalLinks),
             Part("file-blockers", fileBlockers),
         };
         var definitions = localPaths.Select((path, index) =>
             new HardDeleteItemDefinition(HardDeleteItemKind.LocalFile, path, index)).ToList();
         return Plan(EntityTypes.Vendor, id, $"{root.VendorCode} · {root.CompanyName}", root.VendorCode,
-            root.RowVersion, contracts.Count == 0 && ratings.Count == 0 && payments.Count == 0 && fileBlockers.Count == 0,
+            root.RowVersion, rfqs.Count == 0 && contracts.Count == 0 && ratings.Count == 0 && payments.Count == 0 && fileBlockers.Count == 0,
             items, identities, definitions);
     }
 
@@ -289,6 +293,8 @@ public sealed class BusinessRootHardDeletePlanService(
                 item.OperationalProjectId,
             }).SingleOrDefaultAsync(ct);
         if (root is null) return null;
+        var rfqs = await db.Rfqs.AsNoTracking().Where(item => item.ContractId == id)
+            .OrderBy(item => item.Id).Select(item => item.Id).ToListAsync(ct);
         var driveOptions = await settingsStore.GetRuntimeAsync(ct);
 
         var milestones = await db.ContractPaymentMilestones.AsNoTracking()
@@ -419,6 +425,8 @@ public sealed class BusinessRootHardDeletePlanService(
 
         var detail = $"/admin/contracts/{id}";
         var items = new List<DeletionImpactItemResponse>();
+        Add(items, "contract.rfqs", rfqs.Select(Id).ToList(), DeletionImpactActions.Block,
+            "/admin/procurement-control/rfqs", [Link(root.ContractNumber, detail)]);
         Add(items, "contract.paymentMilestones", milestones.Select(Id).ToList(), DeletionImpactActions.Delete, detail, [Link(root.ContractNumber, detail)]);
         Add(items, "contract.attachments", attachments.Select(item => Id(item.Id)).ToList(), DeletionImpactActions.Delete, detail, [Link(root.ContractNumber, detail)]);
         Add(items, "contract.appendices", appendices.Select(item => Id(item.Id)).ToList(), DeletionImpactActions.Delete, detail, [Link(root.ContractNumber, detail)]);
@@ -451,14 +459,14 @@ public sealed class BusinessRootHardDeletePlanService(
             Part("drive-files", driveIdentifiers), Part("sidecars", sidecarIdentifiers),
             Part("sidecar-blockers", sidecarBlockers),
             Part("procurement-lines", procurementLines.Select(item => item.Id)),
-            Part("vendor-ratings", vendorRatings), Part("finance-open-payments", openPayments.Select(item => item.Id)),
+            Part("rfqs", rfqs), Part("vendor-ratings", vendorRatings), Part("finance-open-payments", openPayments.Select(item => item.Id)),
             Part("finance-committed-payments", committedPayments.Select(item => item.Id)), Part("boq-revisions", boqRevisions),
         };
         var definitions = localPaths.Select((path, index) =>
                 new HardDeleteItemDefinition(HardDeleteItemKind.LocalFile, path, index))
             .Concat(driveDefinitions).ToList();
         return Plan(EntityTypes.Contract, id, root.ContractNumber, root.ContractNumber,
-            root.RowVersion, blockers.Count == 0 && lifecycleBlockers.Count == 0 && sidecarBlockers.Count == 0 &&
+            root.RowVersion, rfqs.Count == 0 && blockers.Count == 0 && lifecycleBlockers.Count == 0 && sidecarBlockers.Count == 0 &&
                 procurementLines.Count == 0 && vendorRatings.Count == 0 && committedPayments.Count == 0 && boqRevisions.Count == 0,
             items, identities, definitions);
     }

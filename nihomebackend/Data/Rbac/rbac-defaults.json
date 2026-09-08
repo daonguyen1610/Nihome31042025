@@ -115,6 +115,10 @@
     { "module": "proc.vendors", "action": "view" },
     { "module": "proc.vendors", "action": "manage" },
     { "module": "proc.vendors", "action": "export" },
+    { "module": "proc.rfqs", "action": "view" },
+    { "module": "proc.rfqs", "action": "manage" },
+    { "module": "proc.rfqs", "action": "export" },
+    { "module": "proc.rfqs", "action": "award" },
     { "module": "proc.boq", "action": "view" },
     { "module": "proc.boq", "action": "manage" },
     { "module": "proc.boq", "action": "approve" },
@@ -385,7 +389,7 @@
         "crm.contracts.view",
         "crm.surveys.view",
         "proc.vendors.view",
-        "proc.boq.view", "proc.boq.approve",
+        "proc.boq.view", "proc.boq.approve", "proc.rfqs.view",
         "proc.material-requests.*",
         "proc.contract-lines.view",
         "proc.warehouse.view",
@@ -450,6 +454,7 @@
         "crm.contracts.view",
         "proc.vendors.*",
         "proc.boq.view", "proc.boq.manage",
+        "proc.rfqs.view", "proc.rfqs.manage", "proc.rfqs.export",
         "proc.material-requests.*",
         "proc.contract-lines.*",
         "proc.warehouse.view",
@@ -481,7 +486,7 @@
       "patterns": ["dashboard.view", "processes.view", "master-data.view", "workflow.view", "operations.projects.view", "proc.vendors.view", "proc.boq.view", "proc.material-requests.view", "proc.warehouse.*", "profile.me.*"]
     },
     "BGD": {
-      "patterns": ["dashboard.view", "**.view", "**.view.all", "analytics.kpi.manage", "analytics.kpi.export", "reports.projects.export", "crm.tenders.approve-estimate", "proc.boq.approve", "proc.material-requests.approve", "proc.vendor-ratings.approve", "finance.payments.approve", "finance.periods.close", "finance.corrections.approve", "finance.corrections.reverse", "system.audit.view", "profile.me.*"]
+      "patterns": ["dashboard.view", "**.view", "**.view.all", "analytics.kpi.manage", "analytics.kpi.export", "reports.projects.export", "proc.rfqs.award", "proc.rfqs.export", "crm.tenders.approve-estimate", "proc.boq.approve", "proc.material-requests.approve", "proc.vendor-ratings.approve", "finance.payments.approve", "finance.periods.close", "finance.corrections.approve", "finance.corrections.reverse", "system.audit.view", "profile.me.*"]
     }
   }
 }

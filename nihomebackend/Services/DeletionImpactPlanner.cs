@@ -336,6 +336,8 @@ internal static class DeletionImpactPlanner
         await AddAsync(items, "operations.hseViolationEvents", DeletionImpactActions.Delete,
             db.HseViolationEvents.Where(item => item.HseViolation.OperationalProjectId == projectId), item => item.Id,
             item => item.Type.ToString(), ct);
+        await AddAsync(items, "operations.rfqs", DeletionImpactActions.Block,
+            db.Rfqs.Where(item => item.OperationalProjectId == projectId), item => item.Id, item => item.Code, ct);
         await AddAsync(items, "operations.procurementDraftBoqs", DeletionImpactActions.Delete,
             db.ProjectBoqRevisions.Where(item => item.OperationalProjectId == projectId &&
                 item.Status != ProjectBoqRevisionStatus.Approved), item => item.Id,

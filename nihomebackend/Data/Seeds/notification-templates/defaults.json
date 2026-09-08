@@ -103,6 +103,9 @@
       "module": "procurement.material-requests",
       "channel": "InApp",
       "adminDescription": "Bên liên quan được thông báo khi yêu cầu vật tư bị hủy."
-    }
+    },
+    {"code": "procurement.rfq.issued", "module": "procurement.rfqs", "channel": "InApp", "adminDescription": "Notify RFQ owner and project manager: issued"},
+    {"code": "procurement.rfq.awarded", "module": "procurement.rfqs", "channel": "InApp", "adminDescription": "Notify RFQ owner and project manager: awarded"},
+    {"code": "procurement.rfq.overdue", "module": "procurement.rfqs", "channel": "InApp", "adminDescription": "Notify RFQ owner and project manager: overdue"}
   ]
 }
