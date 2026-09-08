@@ -150,13 +150,11 @@ test("switching Google Drive account disconnects before popup authorization", as
   await expect(page.getByText(/\.apps\.googleusercontent\.com/)).toBeVisible();
 
   page.once("dialog", dialog => dialog.accept());
-  const popupPromise = page.waitForEvent("popup");
   await page.getByRole("button", { name: /Switch Google account|Đổi tài khoản Google|切换 Google 帐户|Google アカウントを切り替え/i }).click();
-  const popup = await popupPromise;
-  await expect.poll(() => popup.isClosed()).toBe(true);
 
   await expect(page.getByText("replacement@nicon.test")).toBeVisible();
-  expect(operations).toEqual(["disconnect", "start", "google"]);
+  await expect.poll(() => operations).toEqual(["disconnect", "start", "google"]);
+  await expect.poll(() => page.context().pages().length).toBe(1);
 });
 
 test("closing replacement popup refreshes the disconnected status", async ({
@@ -206,13 +204,11 @@ test("closing replacement popup refreshes the disconnected status", async ({
   await expect(page.getByText("current@nicon.test")).toBeVisible();
 
   page.once("dialog", dialog => dialog.accept());
-  const popupPromise = page.waitForEvent("popup");
   await page.getByRole("button", { name: /Switch Google account|Đổi tài khoản Google|切换 Google 帐户|Google アカウントを切り替え/i }).click();
-  const popup = await popupPromise;
-  await expect.poll(() => popup.isClosed()).toBe(true);
 
   await expect(page.getByText("current@nicon.test")).not.toBeVisible();
   await expect(page.getByRole("button", { name: /Connect Google Drive|Kết nối Google Drive|连接 Google Drive|Google Drive に接続/i })).toBeVisible();
+  await expect.poll(() => page.context().pages().length).toBe(1);
 });
 
 test("manual disconnect warns when Google does not confirm revocation", async ({
