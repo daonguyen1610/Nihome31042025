@@ -791,6 +791,351 @@ public class ProcurementControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task WarehouseTransactions_ListFiltersAndReturnsProjectStock()
+    {
+        var fixture = await CreateWarehouseProjectAsync();
+        var other = await CreateWarehouseProjectAsync();
+        await WithDbAsync(async db =>
+        {
+            db.WarehouseReceipts.AddRange(
+                new WarehouseReceipt
+                {
+                    OperationalProjectId = fixture.ProjectId,
+                    Code = "WR-MATCH-01",
+                    Status = WarehouseLedgerStatus.Posted,
+                    ReceivedByUserId = fixture.WarehouseUserId,
+                    InspectedAt = new DateTime(2026, 9, 5, 8, 0, 0, DateTimeKind.Utc),
+                    PostedAt = new DateTime(2026, 9, 5, 9, 0, 0, DateTimeKind.Utc),
+                    PostedByUserId = fixture.WarehouseUserId,
+                    Lines = [new WarehouseReceiptLine { MaterialRequestLineId = fixture.MaterialRequestLineId, ReceivedQuantity = 60m }],
+                },
+                new WarehouseReceipt
+                {
+                    OperationalProjectId = other.ProjectId,
+                    Code = "WR-MATCH-OTHER",
+                    Status = WarehouseLedgerStatus.Posted,
+                    ReceivedByUserId = other.WarehouseUserId,
+                    InspectedAt = new DateTime(2026, 9, 6, 8, 0, 0, DateTimeKind.Utc),
+                    PostedAt = new DateTime(2026, 9, 6, 9, 0, 0, DateTimeKind.Utc),
+                    PostedByUserId = other.WarehouseUserId,
+                    Lines = [new WarehouseReceiptLine { MaterialRequestLineId = other.MaterialRequestLineId, ReceivedQuantity = 90m }],
+                });
+            db.WarehouseIssues.Add(new WarehouseIssue
+            {
+                OperationalProjectId = fixture.ProjectId,
+                Code = "WI-MATCH-01",
+                Status = WarehouseLedgerStatus.Posted,
+                ResponsibleSiteUserId = fixture.ProjectManagerUserId,
+                IssuedByUserId = fixture.WarehouseUserId,
+                IssuedAt = new DateTime(2026, 9, 7, 8, 0, 0, DateTimeKind.Utc),
+                PostedAt = new DateTime(2026, 9, 7, 9, 0, 0, DateTimeKind.Utc),
+                PostedByUserId = fixture.WarehouseUserId,
+                WorkItemCode = "FOUNDATION-A",
+                Lines = [new WarehouseIssueLine { ProjectBoqLineId = fixture.BoqLineId, IssuedQuantity = 20m }],
+            });
+            await db.SaveChangesAsync();
+        });
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "WAREHOUSE"));
+
+        var response = await Client.GetAsync(
+            $"/api/operational-projects/{fixture.ProjectId}/procurement/warehouse-transactions" +
+            "?search=MATCH&status=Posted&sortBy=occurredAt&sortDirection=desc&page=1&pageSize=1");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var json = await ReadJsonAsync(response);
+        json.GetProperty("total").GetInt32().Should().Be(2);
+        json.GetProperty("items")[0].GetProperty("code").GetString().Should().Be("WI-MATCH-01");
+        json.GetProperty("items")[0].GetProperty("operationalProjectId").GetInt32().Should().Be(fixture.ProjectId);
+        var stock = json.GetProperty("stock").EnumerateArray().Single(item => item.GetProperty("itemCode").GetString() == "MAT-MR");
+        stock.GetProperty("receivedQuantity").GetDecimal().Should().Be(60m);
+        stock.GetProperty("issuedQuantity").GetDecimal().Should().Be(20m);
+        stock.GetProperty("onHandQuantity").GetDecimal().Should().Be(40m);
+        json.ToString().Should().NotContain("WR-MATCH-OTHER");
+
+        var receiptsOnly = await ReadJsonAsync(await Client.GetAsync(
+            $"/api/operational-projects/{fixture.ProjectId}/procurement/warehouse-transactions?type=receipt&search=MATCH"));
+        receiptsOnly.GetProperty("total").GetInt32().Should().Be(1);
+        receiptsOnly.GetProperty("items")[0].GetProperty("type").GetString().Should().Be("Receipt");
+    }
+
+    [Fact]
+    public async Task WarehouseDrafts_UpdateDetailAndLockAfterPosting()
+    {
+        var fixture = await CreateWarehouseProjectAsync();
+        var otherProjectId = await CreateProjectAsync();
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "WAREHOUSE"));
+
+        var created = await SendAsync(HttpMethod.Post,
+            $"/api/operational-projects/{fixture.ProjectId}/procurement/receipts",
+            new
+            {
+                inspectedAt = DateTime.UtcNow,
+                receivedByUserId = fixture.WarehouseUserId,
+                lines = new[] { new { materialRequestLineId = fixture.MaterialRequestLineId, receivedQuantity = 10m } },
+            });
+        created.StatusCode.Should().Be(HttpStatusCode.Created, await created.Content.ReadAsStringAsync());
+        var createdJson = await ReadJsonAsync(created);
+        var receiptId = createdJson.GetProperty("id").GetInt32();
+
+        var updated = await SendAsync(HttpMethod.Put,
+            $"/api/operational-projects/{fixture.ProjectId}/procurement/receipts/{receiptId}",
+            new
+            {
+                inspectedAt = DateTime.UtcNow.AddMinutes(-1),
+                receivedByUserId = fixture.WarehouseUserId,
+                rowVersion = createdJson.GetProperty("rowVersion").GetString(),
+                lines = new[] { new { materialRequestLineId = fixture.MaterialRequestLineId, receivedQuantity = 15m } },
+            });
+        updated.StatusCode.Should().Be(HttpStatusCode.OK, await updated.Content.ReadAsStringAsync());
+        var updatedJson = await ReadJsonAsync(updated);
+        updatedJson.GetProperty("lines")[0].GetProperty("receivedQuantity").GetDecimal().Should().Be(15m);
+
+        Client.DefaultRequestHeaders.Authorization = null;
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "SUPER_ADMIN"));
+        var otherUserId = await WithDbAsync(db => db.Users.Where(user => user.PhoneNumber == "0335240370")
+            .Select(user => user.Id).SingleAsync());
+        var nonOwnerUpdate = await SendAsync(HttpMethod.Put,
+            $"/api/operational-projects/{fixture.ProjectId}/procurement/receipts/{receiptId}",
+            new
+            {
+                inspectedAt = DateTime.UtcNow.AddMinutes(-1),
+                receivedByUserId = otherUserId,
+                rowVersion = updatedJson.GetProperty("rowVersion").GetString(),
+                lines = new[] { new { materialRequestLineId = fixture.MaterialRequestLineId, receivedQuantity = 20m } },
+            });
+        nonOwnerUpdate.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.WarehouseReceiptLines.AsNoTracking()
+            .SingleAsync(item => item.WarehouseReceiptId == receiptId))).ReceivedQuantity.Should().Be(15m);
+
+        Client.DefaultRequestHeaders.Authorization = null;
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "WAREHOUSE"));
+
+        var detail = await Client.GetAsync(
+            $"/api/operational-projects/{fixture.ProjectId}/procurement/receipts/{receiptId}");
+        detail.StatusCode.Should().Be(HttpStatusCode.OK);
+        var detailJson = await ReadJsonAsync(detail);
+        detailJson.GetProperty("operationalProjectCode").GetString().Should().StartWith("PJ-MR-");
+        detailJson.GetProperty("customerName").GetString().Should().Be("MR Lifecycle Customer");
+        detailJson.GetProperty("receivedByName").GetString().Should().NotBeNullOrWhiteSpace();
+        detailJson.GetProperty("lines")[0].GetProperty("materialRequestCode").GetString().Should().Be("MR-WAREHOUSE");
+        detailJson.GetProperty("lines")[0].GetProperty("requestedQuantity").GetDecimal().Should().Be(100m);
+        (await Client.GetAsync($"/api/operational-projects/{otherProjectId}/procurement/receipts/{receiptId}"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+        var posted = await SendAsync(HttpMethod.Post,
+            $"/api/operational-projects/{fixture.ProjectId}/procurement/receipts/{receiptId}/post",
+            new { rowVersion = updatedJson.GetProperty("rowVersion").GetString() });
+        posted.StatusCode.Should().Be(HttpStatusCode.OK, await posted.Content.ReadAsStringAsync());
+        var postedJson = await ReadJsonAsync(posted);
+        postedJson.GetProperty("status").GetString().Should().Be("Posted");
+
+        var rejectedUpdate = await SendAsync(HttpMethod.Put,
+            $"/api/operational-projects/{fixture.ProjectId}/procurement/receipts/{receiptId}",
+            new
+            {
+                inspectedAt = DateTime.UtcNow.AddHours(2),
+                receivedByUserId = fixture.WarehouseUserId,
+                rowVersion = postedJson.GetProperty("rowVersion").GetString(),
+                lines = new[] { new { materialRequestLineId = fixture.MaterialRequestLineId, receivedQuantity = 25m } },
+            });
+        rejectedUpdate.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.WarehouseReceiptLines.AsNoTracking()
+            .SingleAsync(item => item.WarehouseReceiptId == receiptId))).ReceivedQuantity.Should().Be(15m);
+    }
+
+    [Fact]
+    public async Task WarehouseLifecycle_BlocksNegativeStockAndReversesSafely()
+    {
+        var fixture = await CreateWarehouseProjectAsync();
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "WAREHOUSE"));
+
+        var futureReceipt = await SendAsync(HttpMethod.Post,
+            $"/api/operational-projects/{fixture.ProjectId}/procurement/receipts",
+            new
+            {
+                inspectedAt = DateTime.UtcNow.AddHours(1),
+                receivedByUserId = fixture.WarehouseUserId,
+                lines = new[] { new { materialRequestLineId = fixture.MaterialRequestLineId, receivedQuantity = 10m } },
+            });
+        futureReceipt.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var excessiveReceipt = await SendAsync(HttpMethod.Post,
+            $"/api/operational-projects/{fixture.ProjectId}/procurement/receipts",
+            new
+            {
+                inspectedAt = DateTime.UtcNow,
+                receivedByUserId = fixture.WarehouseUserId,
+                lines = new[] { new { materialRequestLineId = fixture.MaterialRequestLineId, receivedQuantity = 101m } },
+            });
+        excessiveReceipt.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.WarehouseReceipts.CountAsync(item => item.OperationalProjectId == fixture.ProjectId)))
+            .Should().Be(0);
+
+        async Task<System.Text.Json.JsonElement> CreateAndPostReceipt(decimal quantity)
+        {
+            var created = await SendAsync(HttpMethod.Post,
+                $"/api/operational-projects/{fixture.ProjectId}/procurement/receipts",
+                new
+                {
+                    inspectedAt = DateTime.UtcNow,
+                    receivedByUserId = fixture.WarehouseUserId,
+                    lines = new[] { new { materialRequestLineId = fixture.MaterialRequestLineId, receivedQuantity = quantity } },
+                });
+            var draft = await ReadJsonAsync(created);
+            var posted = await SendAsync(HttpMethod.Post,
+                $"/api/operational-projects/{fixture.ProjectId}/procurement/receipts/{draft.GetProperty("id").GetInt32()}/post",
+                new { rowVersion = draft.GetProperty("rowVersion").GetString() });
+            posted.StatusCode.Should().Be(HttpStatusCode.OK, await posted.Content.ReadAsStringAsync());
+            return await ReadJsonAsync(posted);
+        }
+
+        var receipt = await CreateAndPostReceipt(60m);
+        (await WithDbAsync(db => db.MaterialRequests.AsNoTracking()
+            .SingleAsync(item => item.Id == fixture.MaterialRequestId))).Status.Should().Be(MaterialRequestStatus.PartiallyFulfilled);
+        var excessiveIssue = await SendAsync(HttpMethod.Post,
+            $"/api/operational-projects/{fixture.ProjectId}/procurement/issues",
+            new
+            {
+                issuedAt = DateTime.UtcNow,
+                responsibleSiteUserId = fixture.ProjectManagerUserId,
+                issuedByUserId = fixture.WarehouseUserId,
+                workItemCode = "CREW-EXCESS",
+                lines = new[] { new { projectBoqLineId = fixture.BoqLineId, issuedQuantity = 61m } },
+            });
+        excessiveIssue.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.WarehouseIssues.CountAsync(item => item.OperationalProjectId == fixture.ProjectId)))
+            .Should().Be(0);
+        var issueDraftResponse = await SendAsync(HttpMethod.Post,
+            $"/api/operational-projects/{fixture.ProjectId}/procurement/issues",
+            new
+            {
+                issuedAt = DateTime.UtcNow,
+                responsibleSiteUserId = fixture.ProjectManagerUserId,
+                issuedByUserId = fixture.WarehouseUserId,
+                workItemCode = "CREW-A",
+                lines = new[] { new { projectBoqLineId = fixture.BoqLineId, issuedQuantity = 25m } },
+            });
+        issueDraftResponse.StatusCode.Should().Be(HttpStatusCode.Created, await issueDraftResponse.Content.ReadAsStringAsync());
+        var issueDraft = await ReadJsonAsync(issueDraftResponse);
+        var issueDetail = await Client.GetAsync(
+            $"/api/operational-projects/{fixture.ProjectId}/procurement/issues/{issueDraft.GetProperty("id").GetInt32()}");
+        issueDetail.StatusCode.Should().Be(HttpStatusCode.OK);
+        var issueDetailJson = await ReadJsonAsync(issueDetail);
+        issueDetailJson.GetProperty("operationalProjectCode").GetString().Should().StartWith("PJ-MR-");
+        issueDetailJson.GetProperty("lines")[0].GetProperty("stockOnHand").GetDecimal().Should().Be(60m);
+        var issueUpdatedResponse = await SendAsync(HttpMethod.Put,
+            $"/api/operational-projects/{fixture.ProjectId}/procurement/issues/{issueDraft.GetProperty("id").GetInt32()}",
+            new
+            {
+                issuedAt = DateTime.UtcNow.AddMinutes(-1),
+                responsibleSiteUserId = fixture.ProjectManagerUserId,
+                issuedByUserId = fixture.WarehouseUserId,
+                workItemCode = "CREW-B",
+                rowVersion = issueDraft.GetProperty("rowVersion").GetString(),
+                lines = new[] { new { projectBoqLineId = fixture.BoqLineId, issuedQuantity = 20m } },
+            });
+        issueUpdatedResponse.StatusCode.Should().Be(HttpStatusCode.OK, await issueUpdatedResponse.Content.ReadAsStringAsync());
+        var issueUpdated = await ReadJsonAsync(issueUpdatedResponse);
+        issueUpdated.GetProperty("workItemCode").GetString().Should().Be("CREW-B");
+        issueUpdated.GetProperty("lines")[0].GetProperty("issuedQuantity").GetDecimal().Should().Be(20m);
+        var issuePostedResponse = await SendAsync(HttpMethod.Post,
+            $"/api/operational-projects/{fixture.ProjectId}/procurement/issues/{issueDraft.GetProperty("id").GetInt32()}/post",
+            new { rowVersion = issueUpdated.GetProperty("rowVersion").GetString() });
+        issuePostedResponse.StatusCode.Should().Be(HttpStatusCode.OK, await issuePostedResponse.Content.ReadAsStringAsync());
+        var issuePosted = await ReadJsonAsync(issuePostedResponse);
+
+        var blockedReceiptReverse = await SendAsync(HttpMethod.Post,
+            $"/api/operational-projects/{fixture.ProjectId}/procurement/receipts/{receipt.GetProperty("id").GetInt32()}/reverse",
+            new { reason = "Receipt entered in error", rowVersion = receipt.GetProperty("rowVersion").GetString() });
+        blockedReceiptReverse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.WarehouseReceipts.AsNoTracking()
+            .SingleAsync(item => item.Id == receipt.GetProperty("id").GetInt32()))).Status.Should().Be(WarehouseLedgerStatus.Posted);
+
+        var reversedIssue = await SendAsync(HttpMethod.Post,
+            $"/api/operational-projects/{fixture.ProjectId}/procurement/issues/{issuePosted.GetProperty("id").GetInt32()}/reverse",
+            new { reason = "Wrong allocation", rowVersion = issuePosted.GetProperty("rowVersion").GetString() });
+        reversedIssue.StatusCode.Should().Be(HttpStatusCode.OK, await reversedIssue.Content.ReadAsStringAsync());
+        (await WithDbAsync(db => db.MaterialRequests.AsNoTracking()
+            .SingleAsync(item => item.Id == fixture.MaterialRequestId))).Status.Should().Be(MaterialRequestStatus.PartiallyFulfilled);
+        var reversedIssueJson = await ReadJsonAsync(reversedIssue);
+        var originalIssueDetail = await ReadJsonAsync(await Client.GetAsync(
+            $"/api/operational-projects/{fixture.ProjectId}/procurement/issues/{issuePosted.GetProperty("id").GetInt32()}"));
+        originalIssueDetail.GetProperty("reversalTransactionId").GetInt32()
+            .Should().Be(reversedIssueJson.GetProperty("id").GetInt32());
+        originalIssueDetail.GetProperty("reversalReason").GetString().Should().Be("Wrong allocation");
+        var reversedReceipt = await SendAsync(HttpMethod.Post,
+            $"/api/operational-projects/{fixture.ProjectId}/procurement/receipts/{receipt.GetProperty("id").GetInt32()}/reverse",
+            new { reason = "Receipt entered in error", rowVersion = receipt.GetProperty("rowVersion").GetString() });
+        reversedReceipt.StatusCode.Should().Be(HttpStatusCode.OK, await reversedReceipt.Content.ReadAsStringAsync());
+        var reversedReceiptJson = await ReadJsonAsync(reversedReceipt);
+        var originalReceiptDetail = await ReadJsonAsync(await Client.GetAsync(
+            $"/api/operational-projects/{fixture.ProjectId}/procurement/receipts/{receipt.GetProperty("id").GetInt32()}"));
+        originalReceiptDetail.GetProperty("reversalTransactionId").GetInt32()
+            .Should().Be(reversedReceiptJson.GetProperty("id").GetInt32());
+        originalReceiptDetail.GetProperty("reversalReason").GetString().Should().Be("Receipt entered in error");
+
+        var list = await ReadJsonAsync(await Client.GetAsync(
+            $"/api/operational-projects/{fixture.ProjectId}/procurement/warehouse-transactions"));
+        var stock = list.GetProperty("stock").EnumerateArray().Single(item => item.GetProperty("itemCode").GetString() == "MAT-MR");
+        stock.GetProperty("onHandQuantity").GetDecimal().Should().Be(0m);
+        (await WithDbAsync(db => db.MaterialRequests.AsNoTracking()
+            .SingleAsync(item => item.Id == fixture.MaterialRequestId))).Status.Should().Be(MaterialRequestStatus.Approved);
+    }
+
+    [Fact]
+    public async Task WarehouseReceipts_TransitionMaterialRequestFulfillmentAndReversal()
+    {
+        var fixture = await CreateWarehouseProjectAsync();
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "WAREHOUSE"));
+
+        async Task<System.Text.Json.JsonElement> CreateAndPostAsync(decimal quantity)
+        {
+            var created = await SendAsync(HttpMethod.Post,
+                $"/api/operational-projects/{fixture.ProjectId}/procurement/receipts",
+                new
+                {
+                    inspectedAt = DateTime.UtcNow,
+                    receivedByUserId = fixture.WarehouseUserId,
+                    lines = new[] { new { materialRequestLineId = fixture.MaterialRequestLineId, receivedQuantity = quantity } },
+                });
+            created.StatusCode.Should().Be(HttpStatusCode.Created, await created.Content.ReadAsStringAsync());
+            var draft = await ReadJsonAsync(created);
+            var posted = await SendAsync(HttpMethod.Post,
+                $"/api/operational-projects/{fixture.ProjectId}/procurement/receipts/{draft.GetProperty("id").GetInt32()}/post",
+                new { rowVersion = draft.GetProperty("rowVersion").GetString() });
+            posted.StatusCode.Should().Be(HttpStatusCode.OK, await posted.Content.ReadAsStringAsync());
+            return await ReadJsonAsync(posted);
+        }
+
+        async Task ReverseAsync(System.Text.Json.JsonElement receipt, string reason)
+        {
+            var reversed = await SendAsync(HttpMethod.Post,
+                $"/api/operational-projects/{fixture.ProjectId}/procurement/receipts/{receipt.GetProperty("id").GetInt32()}/reverse",
+                new { reason, rowVersion = receipt.GetProperty("rowVersion").GetString() });
+            reversed.StatusCode.Should().Be(HttpStatusCode.OK, await reversed.Content.ReadAsStringAsync());
+        }
+
+        var first = await CreateAndPostAsync(40m);
+        (await WithDbAsync(db => db.MaterialRequests.AsNoTracking()
+            .SingleAsync(item => item.Id == fixture.MaterialRequestId))).Status.Should().Be(MaterialRequestStatus.PartiallyFulfilled);
+
+        var second = await CreateAndPostAsync(60m);
+        var fulfilled = await WithDbAsync(db => db.MaterialRequests.AsNoTracking()
+            .SingleAsync(item => item.Id == fixture.MaterialRequestId));
+        fulfilled.Status.Should().Be(MaterialRequestStatus.Fulfilled);
+        fulfilled.FulfilledAt.Should().NotBeNull();
+
+        await ReverseAsync(second, "Second delivery was duplicated");
+        var partial = await WithDbAsync(db => db.MaterialRequests.AsNoTracking()
+            .SingleAsync(item => item.Id == fixture.MaterialRequestId));
+        partial.Status.Should().Be(MaterialRequestStatus.PartiallyFulfilled);
+        partial.FulfilledAt.Should().BeNull();
+
+        await ReverseAsync(first, "First delivery was duplicated");
+        (await WithDbAsync(db => db.MaterialRequests.AsNoTracking()
+            .SingleAsync(item => item.Id == fixture.MaterialRequestId))).Status.Should().Be(MaterialRequestStatus.Approved);
+    }
+
+    [Fact]
     public async Task VendorRating_ComponentAboveOneHundred_IsRejectedByApiContract()
     {
         await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "SUPER_ADMIN"));
@@ -880,6 +1225,39 @@ public class ProcurementControllerTests : IntegrationTestBase
             await db.SaveChangesAsync();
             return (project.Id, projectManagerUserId, procurementUserId, revision.Lines.Single().Id);
         });
+
+    private async Task<(int ProjectId, int ProjectManagerUserId, int WarehouseUserId, int BoqLineId,
+        int MaterialRequestId, int MaterialRequestLineId)> CreateWarehouseProjectAsync()
+    {
+        var fixture = await CreateMaterialRequestProjectAsync(100m);
+        return await WithDbAsync(async db =>
+        {
+            var warehouseUserId = await db.Users
+                .Where(user => user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["WAREHOUSE"])
+                .Select(user => user.Id).SingleAsync();
+            db.OperationalProjectMembers.Add(new OperationalProjectMember
+            {
+                OperationalProjectId = fixture.ProjectId,
+                UserId = warehouseUserId,
+                Position = "WAREHOUSE",
+                StartedAt = DateTime.UtcNow,
+                CreatedByUserId = fixture.ProjectManagerUserId,
+                UpdatedByUserId = fixture.ProjectManagerUserId,
+            });
+            var request = NewMaterialRequest(fixture.ProjectId, "MR-WAREHOUSE", MaterialRequestStatus.Approved,
+                fixture.ProjectManagerUserId, fixture.ProcurementUserId, DateTime.UtcNow.AddDays(2));
+            request.ApprovedAt = DateTime.UtcNow;
+            request.Lines.Add(new MaterialRequestLine
+            {
+                ProjectBoqLineId = fixture.BoqLineId,
+                RequestedQuantity = 100m,
+            });
+            db.MaterialRequests.Add(request);
+            await db.SaveChangesAsync();
+            return (fixture.ProjectId, fixture.ProjectManagerUserId, warehouseUserId, fixture.BoqLineId,
+                request.Id, request.Lines.Single().Id);
+        });
+    }
 
     private static MaterialRequest NewMaterialRequest(
         int projectId,

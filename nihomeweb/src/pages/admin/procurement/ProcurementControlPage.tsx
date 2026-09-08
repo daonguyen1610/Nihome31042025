@@ -52,9 +52,13 @@ import {
   type VendorRatingResponse,
   type WarehouseIssueResponse,
   type WarehouseReceiptResponse,
+  type WarehouseStockItemResponse,
+  type WarehouseTransactionListItemResponse,
+  type WarehouseTransactionListParams,
 } from "@/services/adminApi";
 import { useAppSelector } from "@/store";
 import MaterialRequestListToolbar from "./MaterialRequestListToolbar";
+import WarehouseWorkspace from "./WarehouseWorkspace";
 
 type DialogKind = "boq" | "request" | "contract" | "receipt" | "issue" | "rating" | null;
 type DecisionKind = "boq" | "request" | "rating";
@@ -108,6 +112,8 @@ const ProcurementControlPage = () => {
   const canViewRatings = has(ADMIN_PERMS.procurementRatings);
   const canManageRatings = has(ADMIN_PERMS.procurementRatingsManage);
   const canApproveRatings = has(ADMIN_PERMS.procurementRatingsApprove);
+  const canReadContracts = has(ADMIN_PERMS.contracts);
+  const canReadKpiUsers = has(ADMIN_PERMS.kpi);
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedProjectId = Number(searchParams.get("projectId") ?? 0);
   const projectId = Number.isInteger(requestedProjectId) && requestedProjectId > 0 ? requestedProjectId : 0;
@@ -153,6 +159,21 @@ const ProcurementControlPage = () => {
   const [requestListLoading, setRequestListLoading] = useState(false);
   const [requestListError, setRequestListError] = useState<string | null>(null);
   const [requestExporting, setRequestExporting] = useState(false);
+  const [warehouseSearchInput, setWarehouseSearchInput] = useState("");
+  const [warehouseSearch, setWarehouseSearch] = useState("");
+  const [warehouseType, setWarehouseType] = useState("all");
+  const [warehouseStatus, setWarehouseStatus] = useState("all");
+  const [warehouseResponsibleUser, setWarehouseResponsibleUser] = useState("all");
+  const [warehouseOccurredFrom, setWarehouseOccurredFrom] = useState("");
+  const [warehouseOccurredTo, setWarehouseOccurredTo] = useState("");
+  const [warehouseSortDirection, setWarehouseSortDirection] = useState<"asc" | "desc">("desc");
+  const [warehousePage, setWarehousePage] = useState(1);
+  const [warehouseTotal, setWarehouseTotal] = useState(0);
+  const [warehouseRows, setWarehouseRows] = useState<WarehouseTransactionListItemResponse[]>([]);
+  const [warehouseStock, setWarehouseStock] = useState<WarehouseStockItemResponse[]>([]);
+  const [warehouseLoading, setWarehouseLoading] = useState(false);
+  const [warehouseError, setWarehouseError] = useState<string | null>(null);
+  const [warehouseExporting, setWarehouseExporting] = useState(false);
 
   const [boqCurrency, setBoqCurrency] = useState("VND");
   const [boqLines, setBoqLines] = useState<BoqLineDraft[]>([emptyBoqLine()]);
@@ -215,6 +236,14 @@ const ProcurementControlPage = () => {
   }, [requestSearchInput]);
 
   useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      setWarehouseSearch(warehouseSearchInput.trim());
+      setWarehousePage(1);
+    }, 300);
+    return () => window.clearTimeout(timeout);
+  }, [warehouseSearchInput]);
+
+  useEffect(() => {
     const timer = window.setTimeout(() => {
       setBoqDebouncedSearch(boqSearch.trim());
       setBoqPage(1);
@@ -233,8 +262,12 @@ const ProcurementControlPage = () => {
           ? adminApi.getProcurementWorkspace(projectId)
           : Promise.resolve({ data: { boqRevisions: [], materialRequests: [], contractLines: [], receipts: [], issues: [], vendorRatings: [] } as ProcurementWorkspaceResponse }),
         adminApi.getOperationalProjectTeam(projectId).catch(() => ({ data: null })),
-        adminApi.listKpiEligibleUsers().catch(() => ({ data: [] as KpiUserOptionResponse[] })),
-        adminApi.listContracts({ page: 1, pageSize: 200 }).catch(() => null),
+        canReadKpiUsers
+          ? adminApi.listKpiEligibleUsers().catch(() => ({ data: [] as KpiUserOptionResponse[] }))
+          : Promise.resolve({ data: [] as KpiUserOptionResponse[] }),
+        canReadContracts
+          ? adminApi.listContracts({ page: 1, pageSize: 200 }).catch(() => null)
+          : Promise.resolve(null),
       ]);
       if (projectIdRef.current !== requestedProjectId) return;
       setWorkspace(workspaceResult.data);
@@ -264,7 +297,7 @@ const ProcurementControlPage = () => {
     } finally {
       if (projectIdRef.current === requestedProjectId) setLoading(false);
     }
-  }, [canViewBoq, currentUser, projectId]);
+  }, [canReadContracts, canReadKpiUsers, canViewBoq, currentUser, projectId]);
 
   const requestParams = useCallback((page = requestPage, pageSize = 20): MaterialRequestListParams => ({
     page,
@@ -300,8 +333,69 @@ const ProcurementControlPage = () => {
 
   useEffect(() => { void loadMaterialRequests(); }, [loadMaterialRequests]);
 
+  const warehouseParams = useCallback((page = warehousePage, pageSize = 20): WarehouseTransactionListParams => ({
+    page,
+    pageSize,
+    sortBy: "occurredAt",
+    sortDirection: warehouseSortDirection,
+    ...(warehouseSearch ? { search: warehouseSearch } : {}),
+    ...(warehouseType !== "all" ? { type: warehouseType as "receipt" | "issue" } : {}),
+    ...(warehouseStatus !== "all" ? { status: warehouseStatus } : {}),
+    ...(warehouseResponsibleUser !== "all" ? { responsibleUserId: Number(warehouseResponsibleUser) } : {}),
+    ...(warehouseOccurredFrom ? { occurredFrom: warehouseOccurredFrom } : {}),
+    ...(warehouseOccurredTo ? { occurredTo: warehouseOccurredTo } : {}),
+  }), [warehouseOccurredFrom, warehouseOccurredTo, warehousePage, warehouseResponsibleUser, warehouseSearch, warehouseSortDirection, warehouseStatus, warehouseType]);
+
+  const loadWarehouseTransactions = useCallback(async () => {
+    if (!projectId || !canViewWarehouse) return;
+    setWarehouseLoading(true);
+    setWarehouseError(null);
+    try {
+      const { data } = await adminApi.listWarehouseTransactions(projectId, warehouseParams());
+      if (projectIdRef.current !== projectId) return;
+      setWarehouseTotal(data.total);
+      setWarehouseRows(data.items);
+      setWarehouseStock(data.stock);
+    } catch (reason) {
+      if (projectIdRef.current === projectId) setWarehouseError(extractApiError(reason));
+    } finally {
+      if (projectIdRef.current === projectId) setWarehouseLoading(false);
+    }
+  }, [canViewWarehouse, projectId, warehouseParams]);
+
+  useEffect(() => { void loadWarehouseTransactions(); }, [loadWarehouseTransactions]);
+
   const refreshData = async () => {
-    await Promise.all([loadWorkspace(), loadMaterialRequests(), loadBoqList()]);
+    await Promise.all([loadWorkspace(), loadMaterialRequests(), loadBoqList(), loadWarehouseTransactions()]);
+  };
+
+  const exportWarehouseTransactions = async () => {
+    if (!projectId) return;
+    setWarehouseExporting(true);
+    try {
+      const first = (await adminApi.listWarehouseTransactions(projectId, warehouseParams(1, 100))).data;
+      const rows = [...first.items];
+      for (let page = 2; page <= Math.ceil(first.total / first.pageSize); page += 1) {
+        rows.push(...(await adminApi.listWarehouseTransactions(projectId, warehouseParams(page, 100))).data.items);
+      }
+      downloadCsv({
+        filename: createCsvFilename(`warehouse-transactions-project-${projectId}`),
+        rows,
+        columns: [
+          { header: t("procurement.warehouse.type"), value: (row) => t(`procurement.warehouse.${row.type.toLowerCase()}`) },
+          { header: t("procurement.field.code"), value: "code" },
+          { header: t("procurement.field.status"), value: (row) => t(`procurement.status.${row.status}`) },
+          { header: t("procurement.warehouse.occurredAt"), value: (row) => formatDate(row.occurredAt) },
+          { header: t("procurement.warehouse.responsibleUser"), value: (row) => row.responsibleUserName ?? row.actorName ?? `#${row.actorUserId}` },
+          { header: t("procurement.field.lines"), value: (row) => row.itemCodes.join(" | ") },
+          { header: t("procurement.field.quantity"), value: "totalQuantity" },
+        ],
+      });
+    } catch (reason) {
+      toast({ variant: "destructive", title: extractApiError(reason) || t("common.error") });
+    } finally {
+      setWarehouseExporting(false);
+    }
   };
 
   const exportMaterialRequests = async () => {
@@ -407,7 +501,7 @@ const ProcurementControlPage = () => {
       setDecision(null);
       setDecisionReason("");
       toast({ title: t(successKey) });
-      await Promise.all([loadWorkspace(), loadMaterialRequests(), loadBoqList()]);
+      await Promise.all([loadWorkspace(), loadMaterialRequests(), loadBoqList(), loadWarehouseTransactions()]);
     } catch (reason) {
       const message = extractApiError(reason);
       setFormError(message);
@@ -461,7 +555,10 @@ const ProcurementControlPage = () => {
 
   const createReceipt = () => {
     const valid = currentUser?.userId && receiptAt && receiptLines.length > 0
-      && receiptLines.every((line) => line.materialRequestLineId > 0 && line.receivedQuantity > 0);
+      && receiptLines.every((line) => {
+        const source = receivableLines.find((item) => item.id === line.materialRequestLineId);
+        return source && line.receivedQuantity > 0 && line.receivedQuantity <= source.requestedQuantity - source.receivedQuantity;
+      });
     if (!valid) { setFormError(t("procurement.validation.receipt")); return; }
     void runMutation(() => adminApi.createWarehouseReceipt(projectId, {
       inspectedAt: apiDateTime(receiptAt),
@@ -472,7 +569,10 @@ const ProcurementControlPage = () => {
 
   const createIssue = () => {
     const valid = currentUser?.userId && issueForm.issuedAt && issueForm.responsibleSiteUserId > 0
-      && issueLines.length > 0 && issueLines.every((line) => line.projectBoqLineId > 0 && line.issuedQuantity > 0);
+      && issueLines.length > 0 && issueLines.every((line) => {
+        const stock = warehouseStock.find((item) => item.projectBoqLineId === line.projectBoqLineId)?.onHandQuantity ?? 0;
+        return line.issuedQuantity > 0 && line.issuedQuantity <= stock;
+      });
     if (!valid) { setFormError(t("procurement.validation.issue")); return; }
     void runMutation(() => adminApi.createWarehouseIssue(projectId, {
       issuedAt: apiDateTime(issueForm.issuedAt),
@@ -648,7 +748,7 @@ const ProcurementControlPage = () => {
                   <TabsTrigger value="warehouse">
                     <Boxes className="mr-2 h-4 w-4" />
                     {t("procurement.tabs.warehouse")} (
-                    {workspace.receipts.length + workspace.issues.length})
+                    {warehouseTotal})
                   </TabsTrigger>
                 )}
                 {canViewRatings && (
@@ -777,43 +877,42 @@ const ProcurementControlPage = () => {
             )}
             {canViewWarehouse && (
               <TabsContent value="warehouse">
-                <WarehousePanel
-                  receipts={workspace.receipts}
-                  issues={workspace.issues}
+                <WarehouseWorkspace
+                  projectId={projectId}
+                  rows={warehouseRows}
+                  stock={warehouseStock}
+                  total={warehouseTotal}
+                  page={warehousePage}
+                  pageSize={20}
+                  loading={warehouseLoading}
+                  error={warehouseError}
+                  search={warehouseSearchInput}
+                  type={warehouseType}
+                  status={warehouseStatus}
+                  responsibleUserId={warehouseResponsibleUser}
+                  occurredFrom={warehouseOccurredFrom}
+                  occurredTo={warehouseOccurredTo}
+                  sortDirection={warehouseSortDirection}
+                  users={users}
                   canPost={canPostWarehouse}
-                  status={status}
-                  number={number}
-                  formatDate={formatDate}
+                  canCreateReceipt={receivableLines.length > 0}
+                  canCreateIssue={warehouseStock.some((item) => item.onHandQuantity > 0)}
+                  exporting={warehouseExporting}
                   t={t}
+                  formatDate={formatDate}
+                  formatNumber={(value) => number.format(value)}
+                  onSearch={setWarehouseSearchInput}
+                  onType={(value) => { setWarehouseType(value); setWarehousePage(1); }}
+                  onStatus={(value) => { setWarehouseStatus(value); setWarehousePage(1); }}
+                  onResponsibleUser={(value) => { setWarehouseResponsibleUser(value); setWarehousePage(1); }}
+                  onOccurredFrom={(value) => { setWarehouseOccurredFrom(value); setWarehousePage(1); }}
+                  onOccurredTo={(value) => { setWarehouseOccurredTo(value); setWarehousePage(1); }}
+                  onToggleSort={() => { setWarehouseSortDirection((current) => current === "asc" ? "desc" : "asc"); setWarehousePage(1); }}
+                  onPage={setWarehousePage}
+                  onExport={() => void exportWarehouseTransactions()}
+                  onRetry={() => void loadWarehouseTransactions()}
                   onCreateReceipt={() => openDialog("receipt")}
                   onCreateIssue={() => openDialog("issue")}
-                  onPostReceipt={(row) =>
-                    void runMutation(
-                      () =>
-                        adminApi.postWarehouseReceipt(
-                          projectId,
-                          row.id,
-                          row.rowVersion,
-                        ),
-                      "procurement.success.receiptPosted",
-                      false,
-                    )
-                  }
-                  onPostIssue={(row) =>
-                    void runMutation(
-                      () =>
-                        adminApi.postWarehouseIssue(
-                          projectId,
-                          row.id,
-                          row.rowVersion,
-                        ),
-                      "procurement.success.issuePosted",
-                      false,
-                    )
-                  }
-                  busy={busy}
-                  canCreateReceipt={receivableLines.length > 0}
-                  canCreateIssue={approvedBoqLines.length > 0}
                 />
               </TabsContent>
             )}
@@ -1344,7 +1443,7 @@ const RequestForm = ({ form, setForm, lines, setLines, users, procurementUsers, 
 
 const ContractLineForm = ({ form, setForm, users, contracts, contractsLookupAvailable, boqLines, t }: { form: { contractId: number; projectBoqLineId: number; procurementOwnerUserId: number; quantity: number; negotiatedUnitPrice: number }; setForm: React.Dispatch<React.SetStateAction<typeof form>>; users: UserOption[]; contracts: ContractResponse[]; contractsLookupAvailable: boolean; boqLines: ProjectBoqLineResponse[]; t: Translate }) => <div className="grid gap-4 sm:grid-cols-2"><div className="space-y-2"><Label htmlFor="contract-id">{contractsLookupAvailable ? t("procurement.field.contract") : t("procurement.field.contractId")}</Label>{contractsLookupAvailable ? <Select value={form.contractId ? String(form.contractId) : undefined} onValueChange={(value) => setForm((current) => ({ ...current, contractId: Number(value) }))}><SelectTrigger id="contract-id"><SelectValue placeholder={t("procurement.lookup.contractPlaceholder")} /></SelectTrigger><SelectContent>{contracts.map((contract) => <SelectItem value={String(contract.id)} key={contract.id}>{contract.contractNumber}{contract.vendorName ? ` · ${contract.vendorName}` : ""}</SelectItem>)}</SelectContent></Select> : <Input id="contract-id" type="number" min={1} value={form.contractId || ""} onChange={(event) => setForm((current) => ({ ...current, contractId: Number(event.target.value) }))} placeholder={t("procurement.lookup.contractIdPlaceholder")} />}</div><div className="space-y-2"><Label>{t("procurement.field.item")}</Label><Select value={form.projectBoqLineId ? String(form.projectBoqLineId) : undefined} onValueChange={(value) => setForm((current) => ({ ...current, projectBoqLineId: Number(value) }))}><SelectTrigger><SelectValue placeholder={t("procurement.lookup.boqLinePlaceholder")} /></SelectTrigger><SelectContent>{boqLines.map((line) => <SelectItem value={String(line.id)} key={line.id}>{line.itemCode} · {line.description}</SelectItem>)}</SelectContent></Select></div><UserField id="contract-owner" label={t("procurement.field.owner")} value={form.procurementOwnerUserId} onChange={(value) => setForm((current) => ({ ...current, procurementOwnerUserId: value }))} users={users} t={t} /><div className="space-y-2"><Label htmlFor="contract-quantity">{t("procurement.field.quantity")}</Label><Input id="contract-quantity" type="number" min={0.000001} step="any" value={form.quantity} onChange={(event) => setForm((current) => ({ ...current, quantity: Number(event.target.value) }))} /></div><div className="space-y-2"><Label htmlFor="contract-price">{t("procurement.field.negotiatedPrice")}</Label><Input id="contract-price" type="number" min={0} step="any" value={form.negotiatedUnitPrice} onChange={(event) => setForm((current) => ({ ...current, negotiatedUnitPrice: Number(event.target.value) }))} /></div></div>;
 
-const ReceiptForm = ({ inspectedAt, setInspectedAt, lines, setLines, requestLines, contractLines, t, number }: { inspectedAt: string; setInspectedAt: (value: string) => void; lines: ReceiptLineDraft[]; setLines: React.Dispatch<React.SetStateAction<ReceiptLineDraft[]>>; requestLines: Array<{ id: number; projectBoqLineId: number; itemCode: string; requestedQuantity: number; receivedQuantity: number; requestCode: string }>; contractLines: ProcurementContractLineResponse[]; t: Translate; number: Intl.NumberFormat }) => <div className="space-y-4"><div className="max-w-sm space-y-2"><Label htmlFor="receipt-at">{t("procurement.field.inspectedAt")}</Label><Input id="receipt-at" type="datetime-local" value={inspectedAt} onChange={(event) => setInspectedAt(event.target.value)} /></div><div className="space-y-3"><div className="flex items-center justify-between"><Label>{t("procurement.field.lines")}</Label><AddButton onClick={() => setLines((current) => [...current, emptyReceiptLine()])}>{t("procurement.action.addLine")}</AddButton></div>{lines.map((line, index) => { const selectedRequestLine = requestLines.find((item) => item.id === line.materialRequestLineId); const matchingContracts = contractLines.filter((item) => !selectedRequestLine || item.projectBoqLineId === selectedRequestLine.projectBoqLineId); return <div className="grid gap-3 border-t pt-3 sm:grid-cols-[2fr_2fr_1fr_auto]" key={index}><div className="space-y-2"><Label>{t("procurement.field.requestLine")}</Label><Select value={line.materialRequestLineId ? String(line.materialRequestLineId) : undefined} onValueChange={(value) => setLines((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, materialRequestLineId: Number(value), contractLineId: null } : item))}><SelectTrigger><SelectValue placeholder={t("procurement.lookup.requestLinePlaceholder")} /></SelectTrigger><SelectContent>{requestLines.map((item) => <SelectItem value={String(item.id)} key={item.id}>{item.requestCode} · {item.itemCode} · {number.format(item.requestedQuantity - item.receivedQuantity)} {t("procurement.receipt.remaining")}</SelectItem>)}</SelectContent></Select></div><div className="space-y-2"><Label>{t("procurement.field.contractLine")}</Label><Select value={line.contractLineId ? String(line.contractLineId) : "none"} onValueChange={(value) => setLines((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, contractLineId: value === "none" ? null : Number(value) } : item))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">{t("procurement.lookup.noContractLine")}</SelectItem>{matchingContracts.map((item) => <SelectItem value={String(item.id)} key={item.id}>{item.contractNumber} · {item.itemCode}</SelectItem>)}</SelectContent></Select></div><div className="space-y-2"><Label>{t("procurement.field.receivedQuantity")}</Label><Input type="number" min={0.000001} step="any" value={line.receivedQuantity} onChange={(event) => setLines((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, receivedQuantity: Number(event.target.value) } : item))} /></div><div className="self-end"><RemoveButton label={t("procurement.action.removeLine")} disabled={lines.length === 1} onClick={() => setLines((current) => current.filter((_, itemIndex) => itemIndex !== index))} /></div></div>; })}</div></div>;
+const ReceiptForm = ({ inspectedAt, setInspectedAt, lines, setLines, requestLines, contractLines, t, number }: { inspectedAt: string; setInspectedAt: (value: string) => void; lines: ReceiptLineDraft[]; setLines: React.Dispatch<React.SetStateAction<ReceiptLineDraft[]>>; requestLines: Array<{ id: number; projectBoqLineId: number; itemCode: string; requestedQuantity: number; receivedQuantity: number; requestCode: string }>; contractLines: ProcurementContractLineResponse[]; t: Translate; number: Intl.NumberFormat }) => <div className="space-y-4"><div className="max-w-sm space-y-2"><Label htmlFor="receipt-at">{t("procurement.field.inspectedAt")}</Label><Input id="receipt-at" type="datetime-local" value={inspectedAt} onChange={(event) => setInspectedAt(event.target.value)} /></div><div className="space-y-3"><div className="flex items-center justify-between"><Label>{t("procurement.field.lines")}</Label><AddButton onClick={() => setLines((current) => [...current, emptyReceiptLine()])}>{t("procurement.action.addLine")}</AddButton></div>{lines.map((line, index) => { const selectedRequestLine = requestLines.find((item) => item.id === line.materialRequestLineId); const matchingContracts = contractLines.filter((item) => !selectedRequestLine || item.projectBoqLineId === selectedRequestLine.projectBoqLineId); return <div className="grid gap-3 border-t pt-3 sm:grid-cols-[2fr_2fr_1fr_auto]" key={index}><div className="space-y-2"><Label>{t("procurement.field.requestLine")}</Label><Select value={line.materialRequestLineId ? String(line.materialRequestLineId) : ""} onValueChange={(value) => setLines((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, materialRequestLineId: Number(value), contractLineId: null } : item))}><SelectTrigger><SelectValue placeholder={t("procurement.lookup.requestLinePlaceholder")} /></SelectTrigger><SelectContent>{requestLines.map((item) => <SelectItem value={String(item.id)} key={item.id}>{item.requestCode} · {item.itemCode} · {number.format(item.requestedQuantity - item.receivedQuantity)} {t("procurement.receipt.remaining")}</SelectItem>)}</SelectContent></Select></div><div className="space-y-2"><Label>{t("procurement.field.contractLine")}</Label><Select value={line.contractLineId ? String(line.contractLineId) : "none"} onValueChange={(value) => setLines((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, contractLineId: value === "none" ? null : Number(value) } : item))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">{t("procurement.lookup.noContractLine")}</SelectItem>{matchingContracts.map((item) => <SelectItem value={String(item.id)} key={item.id}>{item.contractNumber} · {item.itemCode}</SelectItem>)}</SelectContent></Select></div><div className="space-y-2"><Label>{t("procurement.field.receivedQuantity")}</Label><Input type="number" min={0.000001} step="any" value={line.receivedQuantity} onChange={(event) => setLines((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, receivedQuantity: Number(event.target.value) } : item))} /></div><div className="self-end"><RemoveButton label={t("procurement.action.removeLine")} disabled={lines.length === 1} onClick={() => setLines((current) => current.filter((_, itemIndex) => itemIndex !== index))} /></div></div>; })}</div></div>;
 
 const IssueForm = ({ form, setForm, lines, setLines, users, boqLines, t }: { form: { issuedAt: string; responsibleSiteUserId: number; workItemCode: string }; setForm: React.Dispatch<React.SetStateAction<typeof form>>; lines: IssueLineDraft[]; setLines: React.Dispatch<React.SetStateAction<IssueLineDraft[]>>; users: UserOption[]; boqLines: ProjectBoqLineResponse[]; t: Translate }) => <div className="space-y-4"><div className="grid gap-4 sm:grid-cols-2"><div className="space-y-2"><Label htmlFor="issue-at">{t("procurement.field.issuedAt")}</Label><Input id="issue-at" type="datetime-local" value={form.issuedAt} onChange={(event) => setForm((current) => ({ ...current, issuedAt: event.target.value }))} /></div><UserField id="issue-site-user" label={t("procurement.field.responsibleSite")} value={form.responsibleSiteUserId} onChange={(value) => setForm((current) => ({ ...current, responsibleSiteUserId: value }))} users={users} t={t} /><div className="space-y-2 sm:col-span-2"><Label htmlFor="issue-work-item">{t("procurement.field.workItem")}</Label><Input id="issue-work-item" maxLength={100} value={form.workItemCode} onChange={(event) => setForm((current) => ({ ...current, workItemCode: event.target.value }))} /></div></div><DynamicChoiceLines lines={lines} setLines={setLines} choices={boqLines.map((line) => ({ id: line.id, label: `${line.itemCode} · ${line.description}` }))} idKey="projectBoqLineId" quantityKey="issuedQuantity" add={emptyIssueLine} t={t} /></div>;
 

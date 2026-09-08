@@ -22,10 +22,15 @@ public interface IProcurementService
     Task<MaterialRequestResponse?> CancelMaterialRequestAsync(int projectId, int id, ProcurementTransitionRequest request, int userId, CancellationToken ct = default);
     Task<ContractLineResponse> CreateContractLineAsync(int projectId, ContractLineUpsertRequest request, CancellationToken ct = default);
     Task<ContractLineResponse?> UpdateContractLineAsync(int projectId, int id, ContractLineUpsertRequest request, CancellationToken ct = default);
+    Task<WarehouseTransactionListResponse> ListWarehouseTransactionsAsync(int projectId, WarehouseTransactionListParams parameters, CancellationToken ct = default);
+    Task<WarehouseReceiptDetailResponse?> GetWarehouseReceiptAsync(int projectId, int id, CancellationToken ct = default);
     Task<WarehouseReceiptResponse> CreateReceiptAsync(int projectId, WarehouseReceiptCreateRequest request, int userId, CancellationToken ct = default);
+    Task<WarehouseReceiptResponse?> UpdateReceiptAsync(int projectId, int id, WarehouseReceiptCreateRequest request, int userId, CancellationToken ct = default);
     Task<WarehouseReceiptResponse?> PostReceiptAsync(int projectId, int id, ProcurementTransitionRequest request, int userId, CancellationToken ct = default);
     Task<WarehouseReceiptResponse?> ReverseReceiptAsync(int projectId, int id, WarehouseReversalRequest request, int userId, CancellationToken ct = default);
+    Task<WarehouseIssueDetailResponse?> GetWarehouseIssueAsync(int projectId, int id, CancellationToken ct = default);
     Task<WarehouseIssueResponse> CreateIssueAsync(int projectId, WarehouseIssueCreateRequest request, int userId, CancellationToken ct = default);
+    Task<WarehouseIssueResponse?> UpdateIssueAsync(int projectId, int id, WarehouseIssueCreateRequest request, int userId, CancellationToken ct = default);
     Task<WarehouseIssueResponse?> PostIssueAsync(int projectId, int id, ProcurementTransitionRequest request, int userId, CancellationToken ct = default);
     Task<WarehouseIssueResponse?> ReverseIssueAsync(int projectId, int id, WarehouseReversalRequest request, int userId, CancellationToken ct = default);
     Task<VendorRatingResponse> CreateVendorRatingAsync(int projectId, VendorRatingUpsertRequest request, int userId, CancellationToken ct = default);
