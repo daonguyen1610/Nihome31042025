@@ -186,6 +186,29 @@ are local temporary artifacts. The independent reviewer evaluated the business
 contract and source before QA; browser execution and visual inspection were
 performed by the implementing agent, limiting review independence.
 
+## Rebase compatibility — 8 September 2026
+
+Rebased the four RFQ commits onto `9ded3c0` (`Cover complete procurement
+pipeline`). The route conflict preserves both the separately guarded RFQ route
+and upstream Warehouse access to the procurement workspace. Git range comparison
+confirms the other three commits replayed without patch changes.
+
+Upstream validates excessive receipt/issue quantities during draft creation.
+The RFQ integration journey now expects those create requests to fail and proves
+no draft is persisted, before continuing with valid receipt and issue quantities.
+Upstream also moved posting into warehouse transaction detail pages; the browser
+journey now opens each transaction, posts it and returns to the warehouse list.
+These changes align tests with upstream behavior; they do not change production
+business rules.
+
+Post-rebase checks: seven focused integration cases pass, including both RFQ and
+upstream procurement pipelines and finance reference authorization. Three
+warehouse browser cases and all eight RFQ/finance browser cases pass, including
+the complete journey through Paid. Frontend lint, application/E2E TypeScript checks,
+production build and targeted backend formatting pass. The original full-suite
+counts above describe the pre-rebase run; full suites were not repeated for this
+route resolution and test compatibility adjustment.
+
 ## Boundaries and follow-up
 
 - Live Google Drive transport remains untested without credentials. Finance

@@ -113,9 +113,10 @@ public sealed class RfqProcurementPipelineTests(NihomeWebApplicationFactory fact
         var requestLineId = Id(materialRequest.GetProperty("lines")[0]);
 
         await LoginAsync("WAREHOUSE");
-        var overReceipt = await PostAsync(procurement + "/receipts", Receipt(fixture, requestLineId, contractLine.Id, 11m));
-        await RejectAsync(procurement + $"/receipts/{Id(overReceipt)}/post", new { rowVersion = Version(overReceipt) }, HttpStatusCode.BadRequest);
-        (await WithDbAsync(db => db.WarehouseReceipts.SingleAsync(x => x.Id == Id(overReceipt)))).Status.Should().Be(WarehouseLedgerStatus.Draft);
+        // Warehouse validation now rejects excess quantities before a draft
+        // is persisted, as well as rechecking quantities when posting.
+        await RejectAsync(procurement + "/receipts", Receipt(fixture, requestLineId, contractLine.Id, 11m), HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.WarehouseReceipts.CountAsync(x => x.OperationalProjectId == fixture.ProjectId))).Should().Be(0);
         (await WithDbAsync(db => db.MaterialRequests.SingleAsync(x => x.Id == Id(materialRequest)))).Status.Should().Be(MaterialRequestStatus.Approved);
         var receipt = await PostAsync(procurement + "/receipts", Receipt(fixture, requestLineId, contractLine.Id, 10m));
         receipt = await MoveAsync(procurement + $"/receipts/{Id(receipt)}", receipt, "post");
@@ -126,9 +127,8 @@ public sealed class RfqProcurementPipelineTests(NihomeWebApplicationFactory fact
         storedReceipt.MaterialRequestLineId.Should().Be(requestLineId);
         storedReceipt.ReceivedQuantity.Should().Be(10m);
 
-        var overIssue = await PostAsync(procurement + "/issues", Issue(fixture, boqLineId, 11m));
-        await RejectAsync(procurement + $"/issues/{Id(overIssue)}/post", new { rowVersion = Version(overIssue) }, HttpStatusCode.BadRequest);
-        (await WithDbAsync(db => db.WarehouseIssues.SingleAsync(x => x.Id == Id(overIssue)))).Status.Should().Be(WarehouseLedgerStatus.Draft);
+        await RejectAsync(procurement + "/issues", Issue(fixture, boqLineId, 11m), HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.WarehouseIssues.CountAsync(x => x.OperationalProjectId == fixture.ProjectId))).Should().Be(0);
         var issue = await PostAsync(procurement + "/issues", Issue(fixture, boqLineId, 10m));
         issue = await MoveAsync(procurement + $"/issues/{Id(issue)}", issue, "post");
         issue.GetProperty("status").GetString().Should().Be("Posted");
