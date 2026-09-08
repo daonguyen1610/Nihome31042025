@@ -3677,8 +3677,19 @@ export interface MaterialRequestBoqContextResponse { revisionId: number; revisio
 export interface MaterialRequestListResponse { total: number; page: number; pageSize: number; items: MaterialRequestResponse[]; currentApprovedBoq?: MaterialRequestBoqContextResponse | null }
 export interface MaterialRequestListParams { search?: string; status?: string; siteRequesterUserId?: number; responsibleSiteUserId?: number; assignedProcurementUserId?: number; requiredFrom?: string; requiredTo?: string; sortBy?: "code" | "status" | "requiredAt" | "updatedAt"; sortDirection?: "asc" | "desc"; page?: number; pageSize?: number }
 export interface ProcurementContractLineResponse { id: number; contractId: number; contractNumber: string; projectBoqLineId: number; itemCode: string; procurementOwnerUserId: number; procurementOwnerName?: string | null; quantity: number; budgetUnitPrice: number; negotiatedUnitPrice: number; rowVersion: string }
-export interface WarehouseReceiptResponse { id: number; code: string; status: string; reversalOfReceiptId?: number | null; inspectedAt: string; postedAt?: string | null; reversalReason?: string | null; rowVersion: string; lines: Array<{ id: number; materialRequestLineId: number; contractLineId?: number | null; itemCode: string; receivedQuantity: number }> }
-export interface WarehouseIssueResponse { id: number; code: string; status: string; reversalOfIssueId?: number | null; responsibleSiteUserId: number; responsibleSiteUserName?: string | null; issuedAt: string; postedAt?: string | null; workItemCode?: string | null; reversalReason?: string | null; rowVersion: string; lines: Array<{ id: number; projectBoqLineId: number; itemCode: string; issuedQuantity: number }> }
+export interface WarehouseReceiptLineResponse { id: number; materialRequestLineId: number; contractLineId?: number | null; materialRequestCode: string; itemCode: string; description: string; unit: string; requestedQuantity: number; netReceivedQuantity: number; contractNumber?: string | null; vendorName?: string | null; receivedQuantity: number }
+export interface WarehouseReceiptResponse { id: number; operationalProjectId: number; code: string; status: string; reversalOfReceiptId?: number | null; reversalTransactionId?: number | null; receivedByUserId: number; receivedByName?: string | null; inspectedAt: string; postedAt?: string | null; postedByUserId?: number | null; postedByName?: string | null; reversalReason?: string | null; createdAt: string; updatedAt: string; rowVersion: string; lines: WarehouseReceiptLineResponse[] }
+export interface WarehouseIssueLineResponse { id: number; projectBoqLineId: number; itemCode: string; description: string; unit: string; boqApprovedQuantity: number; stockOnHand: number; issuedQuantity: number }
+export interface WarehouseIssueResponse { id: number; operationalProjectId: number; code: string; status: string; reversalOfIssueId?: number | null; reversalTransactionId?: number | null; responsibleSiteUserId: number; responsibleSiteUserName?: string | null; issuedByUserId: number; issuedByName?: string | null; issuedAt: string; postedAt?: string | null; postedByUserId?: number | null; postedByName?: string | null; workItemCode?: string | null; reversalReason?: string | null; createdAt: string; updatedAt: string; rowVersion: string; lines: WarehouseIssueLineResponse[] }
+export interface WarehouseBusinessContext { operationalProjectCode: string; operationalProjectName: string; customerId: number; customerName: string; contracts: MaterialRequestDetailResponse["contracts"] }
+export interface WarehouseReceiptDetailResponse extends WarehouseReceiptResponse, WarehouseBusinessContext {}
+export interface WarehouseIssueDetailResponse extends WarehouseIssueResponse, WarehouseBusinessContext {}
+export interface WarehouseTransactionListItemResponse { id: number; operationalProjectId: number; type: "Receipt" | "Issue"; code: string; status: string; occurredAt: string; postedAt?: string | null; actorUserId: number; actorName?: string | null; responsibleUserId?: number | null; responsibleUserName?: string | null; workItemCode?: string | null; reversalOfId?: number | null; reversalReason?: string | null; lineCount: number; totalQuantity: number; itemCodes: string[]; createdAt: string; updatedAt: string; rowVersion: string }
+export interface WarehouseStockItemResponse { projectBoqLineId: number; itemCode: string; description: string; unit: string; boqApprovedQuantity: number; receivedQuantity: number; issuedQuantity: number; onHandQuantity: number }
+export interface WarehouseTransactionListResponse { total: number; page: number; pageSize: number; items: WarehouseTransactionListItemResponse[]; stock: WarehouseStockItemResponse[] }
+export interface WarehouseTransactionListParams { search?: string; status?: string; type?: "receipt" | "issue"; responsibleUserId?: number; occurredFrom?: string; occurredTo?: string; sortBy?: "occurredAt" | "code" | "status" | "type" | "updatedAt"; sortDirection?: "asc" | "desc"; page?: number; pageSize?: number }
+export interface WarehouseReceiptUpsertRequest { inspectedAt: string; receivedByUserId: number; lines: Array<{ materialRequestLineId: number; contractLineId?: number | null; receivedQuantity: number }>; rowVersion?: string }
+export interface WarehouseIssueUpsertRequest { issuedAt: string; responsibleSiteUserId: number; issuedByUserId: number; workItemCode?: string | null; lines: Array<{ projectBoqLineId: number; issuedQuantity: number }>; rowVersion?: string }
 export interface VendorRatingResponse { id: number; operationalProjectId: number; contractId: number; contractNumber: string; vendorId: number; vendorName: string; versionNumber: number; status: string; procurementOwnerUserId: number; procurementOwnerName?: string | null; qualityScore: number; scheduleScore: number; costScore: number; hseScore: number; overallScore: number; comments?: string | null; preparedByUserId: number; submittedAt?: string | null; approvedAt?: string | null; decisionReason?: string | null; supersedesVendorRatingId?: number | null; rowVersion: string }
 export interface ProcurementWorkspaceResponse { boqRevisions: ProjectBoqRevisionResponse[]; materialRequests: MaterialRequestResponse[]; contractLines: ProcurementContractLineResponse[]; receipts: WarehouseReceiptResponse[]; issues: WarehouseIssueResponse[]; vendorRatings: VendorRatingResponse[] }
 export interface ProjectBoqRevisionRequest { currency: string; sourceTenderEstimateRevisionId?: number | null; sourceContractAppendixId?: number | null; lines: Array<{ itemCode: string; description: string; unit: string; approvedQuantity: number; budgetUnitPrice: number }>; rowVersion?: string }
@@ -5220,14 +5231,36 @@ export const adminApi = {
     postIdempotent<MaterialRequestResponse>(`/operational-projects/${projectId}/procurement/material-requests/${id}/cancel`, { rowVersion, reason }),
   createProcurementContractLine: (projectId: number, body: ProcurementContractLineRequest) =>
     postIdempotent<ProcurementContractLineResponse>(`/operational-projects/${projectId}/procurement/contract-lines`, body),
-  createWarehouseReceipt: (projectId: number, body: { inspectedAt: string; receivedByUserId: number; lines: Array<{ materialRequestLineId: number; contractLineId?: number | null; receivedQuantity: number }> }) =>
+  listWarehouseTransactions: (projectId: number, params: WarehouseTransactionListParams = {}) =>
+    api.get<WarehouseTransactionListResponse>(`/operational-projects/${projectId}/procurement/warehouse-transactions`, { params }),
+  getWarehouseReceipt: (projectId: number, id: number) =>
+    api.get<WarehouseReceiptDetailResponse>(`/operational-projects/${projectId}/procurement/receipts/${id}`),
+  createWarehouseReceipt: (projectId: number, body: WarehouseReceiptUpsertRequest) =>
     postIdempotent<WarehouseReceiptResponse>(`/operational-projects/${projectId}/procurement/receipts`, body),
+  updateWarehouseReceipt: (projectId: number, id: number, body: WarehouseReceiptUpsertRequest) =>
+    api.put<WarehouseReceiptResponse>(
+      `/operational-projects/${projectId}/procurement/receipts/${id}`,
+      body,
+      { headers: { ...withIdempotencyKey(crypto.randomUUID()).headers, ...withIfMatch(body.rowVersion).headers } },
+    ),
   postWarehouseReceipt: (projectId: number, id: number, rowVersion: string) =>
     postIdempotent<WarehouseReceiptResponse>(`/operational-projects/${projectId}/procurement/receipts/${id}/post`, { rowVersion }),
-  createWarehouseIssue: (projectId: number, body: { issuedAt: string; responsibleSiteUserId: number; issuedByUserId: number; workItemCode?: string; lines: Array<{ projectBoqLineId: number; issuedQuantity: number }> }) =>
+  reverseWarehouseReceipt: (projectId: number, id: number, rowVersion: string, reason: string) =>
+    postIdempotent<WarehouseReceiptResponse>(`/operational-projects/${projectId}/procurement/receipts/${id}/reverse`, { rowVersion, reason }),
+  getWarehouseIssue: (projectId: number, id: number) =>
+    api.get<WarehouseIssueDetailResponse>(`/operational-projects/${projectId}/procurement/issues/${id}`),
+  createWarehouseIssue: (projectId: number, body: WarehouseIssueUpsertRequest) =>
     postIdempotent<WarehouseIssueResponse>(`/operational-projects/${projectId}/procurement/issues`, body),
+  updateWarehouseIssue: (projectId: number, id: number, body: WarehouseIssueUpsertRequest) =>
+    api.put<WarehouseIssueResponse>(
+      `/operational-projects/${projectId}/procurement/issues/${id}`,
+      body,
+      { headers: { ...withIdempotencyKey(crypto.randomUUID()).headers, ...withIfMatch(body.rowVersion).headers } },
+    ),
   postWarehouseIssue: (projectId: number, id: number, rowVersion: string) =>
     postIdempotent<WarehouseIssueResponse>(`/operational-projects/${projectId}/procurement/issues/${id}/post`, { rowVersion }),
+  reverseWarehouseIssue: (projectId: number, id: number, rowVersion: string, reason: string) =>
+    postIdempotent<WarehouseIssueResponse>(`/operational-projects/${projectId}/procurement/issues/${id}/reverse`, { rowVersion, reason }),
   createVendorRating: (projectId: number, body: VendorRatingUpsertRequest) =>
     postIdempotent<VendorRatingResponse>(`/operational-projects/${projectId}/procurement/vendor-ratings`, body),
   submitVendorRating: (projectId: number, id: number, rowVersion: string) =>

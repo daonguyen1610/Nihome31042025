@@ -129,6 +129,7 @@ public sealed class WarehouseReceiptCreateRequest
     public int ReceivedByUserId { get; set; }
     [Required, MinLength(1), MaxLength(500)]
     public List<WarehouseReceiptLineRequest> Lines { get; set; } = [];
+    public string? RowVersion { get; set; }
 }
 
 public sealed class WarehouseReceiptLineRequest
@@ -153,6 +154,7 @@ public sealed class WarehouseIssueCreateRequest
     public string? WorkItemCode { get; set; }
     [Required, MinLength(1), MaxLength(500)]
     public List<WarehouseIssueLineRequest> Lines { get; set; } = [];
+    public string? RowVersion { get; set; }
 }
 
 public sealed class WarehouseIssueLineRequest
@@ -168,6 +170,27 @@ public sealed class WarehouseReversalRequest : IConcurrencyRequest
     [Required, MinLength(3), MaxLength(2000)]
     public string Reason { get; set; } = string.Empty;
     public string? RowVersion { get; set; }
+}
+
+public sealed class WarehouseTransactionListParams
+{
+    [MaxLength(200)]
+    public string? Search { get; set; }
+    public WarehouseLedgerStatus? Status { get; set; }
+    [RegularExpression("^(receipt|issue)$", ErrorMessage = "Type must be receipt or issue.")]
+    public string? Type { get; set; }
+    [Range(1, int.MaxValue)]
+    public int? ResponsibleUserId { get; set; }
+    public DateOnly? OccurredFrom { get; set; }
+    public DateOnly? OccurredTo { get; set; }
+    [RegularExpression("^(occurredAt|code|status|type|updatedAt)$")]
+    public string SortBy { get; set; } = "occurredAt";
+    [RegularExpression("^(asc|desc)$")]
+    public string SortDirection { get; set; } = "desc";
+    [Range(1, int.MaxValue)]
+    public int Page { get; set; } = 1;
+    [Range(1, 100)]
+    public int PageSize { get; set; } = 20;
 }
 
 public sealed class VendorRatingUpsertRequest : IConcurrencyRequest

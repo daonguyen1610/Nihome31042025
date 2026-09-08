@@ -243,6 +243,43 @@ public sealed class ProcurementController(
         Execute(projectId, EntityTypes.WarehouseReceipt, "proc.receipt.create", userId =>
             service.CreateReceiptAsync(projectId, request, userId, ct), true, ct);
 
+    [HttpGet("warehouse-transactions")]
+    [RequirePermission("proc.warehouse", "view")]
+    public async Task<ActionResult<WarehouseTransactionListResponse>> ListWarehouseTransactions(
+        int projectId,
+        [FromQuery] WarehouseTransactionListParams parameters,
+        CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        if (!await access.CanViewOperationalProjectAsync(userId.Value, projectId, ct)) return NotFound();
+        try { return Ok(await service.ListWarehouseTransactionsAsync(projectId, parameters, ct)); }
+        catch (ProcurementOperationException exception) { return BadRequest(new { message = exception.Message }); }
+    }
+
+    [HttpGet("receipts/{id:int}")]
+    [RequirePermission("proc.warehouse", "view")]
+    public async Task<ActionResult<WarehouseReceiptDetailResponse>> GetReceipt(
+        int projectId, int id, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        if (!await access.CanViewOperationalProjectAsync(userId.Value, projectId, ct)) return NotFound();
+        var result = await service.GetWarehouseReceiptAsync(projectId, id, ct);
+        return result is null ? NotFound() : Ok(result);
+    }
+
+    [HttpPut("receipts/{id:int}")]
+    [RequirePermission("proc.warehouse", "post")]
+    [Idempotency("proc.warehouse.receipt.update", requireKey: true)]
+    public Task<ActionResult<WarehouseReceiptResponse>> UpdateReceipt(
+        int projectId, int id, [FromBody] WarehouseReceiptCreateRequest request, CancellationToken ct)
+    {
+        request.RowVersion = CrmConcurrency.ResolveRequiredRequestToken(Request, request.RowVersion);
+        return ExecuteNullable(projectId, id, EntityTypes.WarehouseReceipt, "proc.receipt.update", userId =>
+            service.UpdateReceiptAsync(projectId, id, request, userId, ct), ct);
+    }
+
     [HttpPost("receipts/{id:int}/post")]
     [RequirePermission("proc.warehouse", "post")]
     [Idempotency("proc.warehouse.receipt.post", requireKey: true)]
@@ -272,6 +309,29 @@ public sealed class ProcurementController(
         int projectId, [FromBody] WarehouseIssueCreateRequest request, CancellationToken ct) =>
         Execute(projectId, EntityTypes.WarehouseIssue, "proc.issue.create", userId =>
             service.CreateIssueAsync(projectId, request, userId, ct), true, ct);
+
+    [HttpGet("issues/{id:int}")]
+    [RequirePermission("proc.warehouse", "view")]
+    public async Task<ActionResult<WarehouseIssueDetailResponse>> GetIssue(
+        int projectId, int id, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        if (!await access.CanViewOperationalProjectAsync(userId.Value, projectId, ct)) return NotFound();
+        var result = await service.GetWarehouseIssueAsync(projectId, id, ct);
+        return result is null ? NotFound() : Ok(result);
+    }
+
+    [HttpPut("issues/{id:int}")]
+    [RequirePermission("proc.warehouse", "post")]
+    [Idempotency("proc.warehouse.issue.update", requireKey: true)]
+    public Task<ActionResult<WarehouseIssueResponse>> UpdateIssue(
+        int projectId, int id, [FromBody] WarehouseIssueCreateRequest request, CancellationToken ct)
+    {
+        request.RowVersion = CrmConcurrency.ResolveRequiredRequestToken(Request, request.RowVersion);
+        return ExecuteNullable(projectId, id, EntityTypes.WarehouseIssue, "proc.issue.update", userId =>
+            service.UpdateIssueAsync(projectId, id, request, userId, ct), ct);
+    }
 
     [HttpPost("issues/{id:int}/post")]
     [RequirePermission("proc.warehouse", "post")]

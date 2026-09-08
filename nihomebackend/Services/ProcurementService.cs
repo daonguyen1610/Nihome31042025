@@ -588,9 +588,12 @@ public sealed class ProcurementService(
         int projectId, WarehouseReceiptCreateRequest request, int userId, CancellationToken ct = default)
     {
         await EnsureProjectAsync(projectId, mutable: true, ct);
+        if (request.InspectedAt > DateTime.UtcNow)
+            throw new ProcurementOperationException("Thời điểm kiểm nhận không được ở tương lai.");
         if (request.ReceivedByUserId != userId)
             throw new ProcurementOperationException("Người nhận kho phải là người dùng đang thực hiện thao tác.");
         await ValidateReceiptLinesAsync(projectId, request.Lines, ct);
+        await ValidateReceiptQuantitiesAsync(request.Lines, null, ct);
         await using var transaction = await BeginSerializableAsync(ct);
         var entity = new WarehouseReceipt
         {
@@ -611,6 +614,144 @@ public sealed class ProcurementService(
         await CrmConcurrency.SaveChangesAsync(db, ct);
         if (transaction is not null) await transaction.CommitAsync(ct);
         return (await GetReceiptAsync(projectId, entity.Id, ct))!;
+    }
+
+    public async Task<WarehouseTransactionListResponse> ListWarehouseTransactionsAsync(
+        int projectId,
+        WarehouseTransactionListParams parameters,
+        CancellationToken ct = default)
+    {
+        await EnsureProjectAsync(projectId, mutable: false, ct);
+        if (parameters.OccurredFrom > parameters.OccurredTo)
+            throw new ProcurementOperationException("Ngày bắt đầu không được sau ngày kết thúc.");
+
+        var normalizedType = parameters.Type?.Trim().ToLowerInvariant();
+        var rows = new List<WarehouseTransactionListItemResponse>();
+        if (normalizedType is null or "receipt")
+        {
+            var query = ReceiptQuery().Where(item => item.OperationalProjectId == projectId);
+            if (parameters.Status.HasValue) query = query.Where(item => item.Status == parameters.Status.Value);
+            if (parameters.ResponsibleUserId.HasValue) query = query.Where(item => item.ReceivedByUserId == parameters.ResponsibleUserId.Value);
+            if (parameters.OccurredFrom.HasValue)
+            {
+                var from = parameters.OccurredFrom.Value.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+                query = query.Where(item => item.InspectedAt >= from);
+            }
+            if (parameters.OccurredTo.HasValue)
+            {
+                var to = parameters.OccurredTo.Value.ToDateTime(TimeOnly.MaxValue, DateTimeKind.Utc);
+                query = query.Where(item => item.InspectedAt <= to);
+            }
+            if (!string.IsNullOrWhiteSpace(parameters.Search))
+            {
+                var pattern = $"%{parameters.Search.Trim()}%";
+                query = query.Where(item => EF.Functions.Like(item.Code, pattern) ||
+                    EF.Functions.Like(item.ReceivedBy.FullName, pattern) ||
+                    item.Lines.Any(line => EF.Functions.Like(line.MaterialRequestLine.ProjectBoqLine.ItemCode, pattern) ||
+                        EF.Functions.Like(line.MaterialRequestLine.ProjectBoqLine.Description, pattern)));
+            }
+            rows.AddRange((await query.ToListAsync(ct)).Select(item => MapWarehouseTransaction(item)));
+        }
+        if (normalizedType is null or "issue")
+        {
+            var query = IssueQuery().Where(item => item.OperationalProjectId == projectId);
+            if (parameters.Status.HasValue) query = query.Where(item => item.Status == parameters.Status.Value);
+            if (parameters.ResponsibleUserId.HasValue) query = query.Where(item => item.ResponsibleSiteUserId == parameters.ResponsibleUserId.Value);
+            if (parameters.OccurredFrom.HasValue)
+            {
+                var from = parameters.OccurredFrom.Value.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+                query = query.Where(item => item.IssuedAt >= from);
+            }
+            if (parameters.OccurredTo.HasValue)
+            {
+                var to = parameters.OccurredTo.Value.ToDateTime(TimeOnly.MaxValue, DateTimeKind.Utc);
+                query = query.Where(item => item.IssuedAt <= to);
+            }
+            if (!string.IsNullOrWhiteSpace(parameters.Search))
+            {
+                var pattern = $"%{parameters.Search.Trim()}%";
+                query = query.Where(item => EF.Functions.Like(item.Code, pattern) ||
+                    (item.WorkItemCode != null && EF.Functions.Like(item.WorkItemCode, pattern)) ||
+                    EF.Functions.Like(item.IssuedBy.FullName, pattern) ||
+                    EF.Functions.Like(item.ResponsibleSiteUser.FullName, pattern) ||
+                    item.Lines.Any(line => EF.Functions.Like(line.ProjectBoqLine.ItemCode, pattern) ||
+                        EF.Functions.Like(line.ProjectBoqLine.Description, pattern)));
+            }
+            rows.AddRange((await query.ToListAsync(ct)).Select(item => MapWarehouseTransaction(item)));
+        }
+
+        var descending = string.Equals(parameters.SortDirection, "desc", StringComparison.OrdinalIgnoreCase);
+        Func<WarehouseTransactionListItemResponse, object> sort = parameters.SortBy switch
+        {
+            "code" => item => item.Code,
+            "status" => item => item.Status,
+            "type" => item => item.Type,
+            "updatedAt" => item => item.UpdatedAt,
+            _ => item => item.OccurredAt,
+        };
+        var ordered = descending
+            ? rows.OrderByDescending(sort).ThenByDescending(item => item.Id)
+            : rows.OrderBy(sort).ThenBy(item => item.Id);
+        return new WarehouseTransactionListResponse
+        {
+            Total = rows.Count,
+            Page = parameters.Page,
+            PageSize = parameters.PageSize,
+            Items = ordered.Skip((parameters.Page - 1) * parameters.PageSize).Take(parameters.PageSize).ToList(),
+            Stock = await GetWarehouseStockAsync(projectId, ct),
+        };
+    }
+
+    public async Task<WarehouseReceiptDetailResponse?> GetWarehouseReceiptAsync(
+        int projectId, int id, CancellationToken ct = default)
+    {
+        await EnsureProjectAsync(projectId, mutable: false, ct);
+        var item = await ReceiptQuery().SingleOrDefaultAsync(entity => entity.Id == id && entity.OperationalProjectId == projectId, ct);
+        if (item is null) return null;
+        var netReceived = new Dictionary<int, decimal>();
+        foreach (var line in item.Lines)
+            netReceived[line.MaterialRequestLineId] = await NetReceivedAsync(line.MaterialRequestLineId, null, ct);
+        var result = MapReceiptDetail(item, netReceived);
+        if (item.Status == WarehouseLedgerStatus.Reversed)
+        {
+            var reversal = await db.WarehouseReceipts.AsNoTracking()
+                .Where(entity => entity.ReversalOfReceiptId == item.Id)
+                .Select(entity => new { entity.Id, entity.ReversalReason })
+                .SingleOrDefaultAsync(ct);
+            result.ReversalTransactionId = reversal?.Id;
+            result.ReversalReason = reversal?.ReversalReason;
+        }
+        await PopulateWarehouseContextAsync(projectId, result, ct);
+        return result;
+    }
+
+    public async Task<WarehouseReceiptResponse?> UpdateReceiptAsync(
+        int projectId, int id, WarehouseReceiptCreateRequest request, int userId, CancellationToken ct = default)
+    {
+        await EnsureProjectAsync(projectId, mutable: true, ct);
+        var entity = await db.WarehouseReceipts.Include(item => item.Lines)
+            .SingleOrDefaultAsync(item => item.Id == id && item.OperationalProjectId == projectId, ct);
+        if (entity is null) return null;
+        if (entity.Status != WarehouseLedgerStatus.Draft)
+            throw new ProcurementOperationException("Chỉ phiếu nhập kho ở trạng thái Nháp mới được chỉnh sửa.");
+        if (entity.ReceivedByUserId != userId || request.ReceivedByUserId != userId)
+            throw new ProcurementOperationException("Người nhận kho phải là người dùng đang thực hiện thao tác.");
+        if (request.InspectedAt > DateTime.UtcNow)
+            throw new ProcurementOperationException("Thời điểm kiểm nhận không được ở tương lai.");
+        await ValidateReceiptLinesAsync(projectId, request.Lines, ct);
+        await ValidateReceiptQuantitiesAsync(request.Lines, id, ct);
+        CrmConcurrency.Apply(db, entity, request.RowVersion);
+        db.WarehouseReceiptLines.RemoveRange(entity.Lines);
+        entity.Lines = request.Lines.Select(line => new WarehouseReceiptLine
+        {
+            MaterialRequestLineId = line.MaterialRequestLineId,
+            ContractLineId = line.ContractLineId,
+            ReceivedQuantity = line.ReceivedQuantity,
+        }).ToList();
+        entity.InspectedAt = request.InspectedAt!.Value.ToUniversalTime();
+        entity.UpdatedAt = DateTime.UtcNow;
+        await CrmConcurrency.SaveChangesAsync(db, ct);
+        return await GetReceiptAsync(projectId, id, ct);
     }
 
     public async Task<WarehouseReceiptResponse?> PostReceiptAsync(
@@ -693,10 +834,13 @@ public sealed class ProcurementService(
         int projectId, WarehouseIssueCreateRequest request, int userId, CancellationToken ct = default)
     {
         await EnsureProjectAsync(projectId, mutable: true, ct);
+        if (request.IssuedAt > DateTime.UtcNow)
+            throw new ProcurementOperationException("Thời điểm xuất kho không được ở tương lai.");
         if (request.IssuedByUserId != userId)
             throw new ProcurementOperationException("Người xuất kho phải là người dùng đang thực hiện thao tác.");
         await ValidateProjectUserAsync(projectId, request.ResponsibleSiteUserId, null, "Người chịu trách nhiệm tại công trường", ct);
         await ValidateIssueLinesAsync(projectId, request.Lines, ct);
+        await ValidateIssueQuantitiesAsync(projectId, request.Lines, ct);
         await using var transaction = await BeginSerializableAsync(ct);
         var entity = new WarehouseIssue
         {
@@ -718,6 +862,58 @@ public sealed class ProcurementService(
         await CrmConcurrency.SaveChangesAsync(db, ct);
         if (transaction is not null) await transaction.CommitAsync(ct);
         return (await GetIssueAsync(projectId, entity.Id, ct))!;
+    }
+
+    public async Task<WarehouseIssueDetailResponse?> GetWarehouseIssueAsync(
+        int projectId, int id, CancellationToken ct = default)
+    {
+        await EnsureProjectAsync(projectId, mutable: false, ct);
+        var item = await IssueQuery().SingleOrDefaultAsync(entity => entity.Id == id && entity.OperationalProjectId == projectId, ct);
+        if (item is null) return null;
+        var stock = await StockByItemCodeAsync(projectId, ct);
+        var result = MapIssueDetail(item, stock);
+        if (item.Status == WarehouseLedgerStatus.Reversed)
+        {
+            var reversal = await db.WarehouseIssues.AsNoTracking()
+                .Where(entity => entity.ReversalOfIssueId == item.Id)
+                .Select(entity => new { entity.Id, entity.ReversalReason })
+                .SingleOrDefaultAsync(ct);
+            result.ReversalTransactionId = reversal?.Id;
+            result.ReversalReason = reversal?.ReversalReason;
+        }
+        await PopulateWarehouseContextAsync(projectId, result, ct);
+        return result;
+    }
+
+    public async Task<WarehouseIssueResponse?> UpdateIssueAsync(
+        int projectId, int id, WarehouseIssueCreateRequest request, int userId, CancellationToken ct = default)
+    {
+        await EnsureProjectAsync(projectId, mutable: true, ct);
+        var entity = await db.WarehouseIssues.Include(item => item.Lines)
+            .SingleOrDefaultAsync(item => item.Id == id && item.OperationalProjectId == projectId, ct);
+        if (entity is null) return null;
+        if (entity.Status != WarehouseLedgerStatus.Draft)
+            throw new ProcurementOperationException("Chỉ phiếu xuất kho ở trạng thái Nháp mới được chỉnh sửa.");
+        if (entity.IssuedByUserId != userId || request.IssuedByUserId != userId)
+            throw new ProcurementOperationException("Người xuất kho phải là người dùng đang thực hiện thao tác.");
+        if (request.IssuedAt > DateTime.UtcNow)
+            throw new ProcurementOperationException("Thời điểm xuất kho không được ở tương lai.");
+        await ValidateProjectUserAsync(projectId, request.ResponsibleSiteUserId, null, "Người chịu trách nhiệm tại công trường", ct);
+        await ValidateIssueLinesAsync(projectId, request.Lines, ct);
+        await ValidateIssueQuantitiesAsync(projectId, request.Lines, ct);
+        CrmConcurrency.Apply(db, entity, request.RowVersion);
+        db.WarehouseIssueLines.RemoveRange(entity.Lines);
+        entity.Lines = request.Lines.Select(line => new WarehouseIssueLine
+        {
+            ProjectBoqLineId = line.ProjectBoqLineId,
+            IssuedQuantity = line.IssuedQuantity,
+        }).ToList();
+        entity.ResponsibleSiteUserId = request.ResponsibleSiteUserId;
+        entity.IssuedAt = request.IssuedAt!.Value.ToUniversalTime();
+        entity.WorkItemCode = TrimOrNull(request.WorkItemCode);
+        entity.UpdatedAt = DateTime.UtcNow;
+        await CrmConcurrency.SaveChangesAsync(db, ct);
+        return await GetIssueAsync(projectId, id, ct);
     }
 
     public async Task<WarehouseIssueResponse?> PostIssueAsync(
@@ -1064,6 +1260,22 @@ public sealed class ProcurementService(
         }
     }
 
+    private async Task ValidateReceiptQuantitiesAsync(
+        IReadOnlyCollection<WarehouseReceiptLineRequest> lines,
+        int? excludeReceiptId,
+        CancellationToken ct)
+    {
+        foreach (var line in lines)
+        {
+            var requested = await db.MaterialRequestLines.AsNoTracking()
+                .Where(item => item.Id == line.MaterialRequestLineId)
+                .Select(item => item.RequestedQuantity).SingleAsync(ct);
+            var received = await NetReceivedAsync(line.MaterialRequestLineId, excludeReceiptId, ct);
+            if (received + line.ReceivedQuantity > requested)
+                throw new ProcurementOperationException("Số lượng nhập vượt quá số lượng còn lại của yêu cầu vật tư.");
+        }
+    }
+
     private async Task RefreshRequestStatusesAsync(IEnumerable<int> requestLineIds, DateTime eventAt, CancellationToken ct)
     {
         var requestIds = await db.MaterialRequestLines.Where(item => requestLineIds.Contains(item.Id))
@@ -1111,6 +1323,23 @@ public sealed class ProcurementService(
         if (count != ids.Count) throw new ProcurementOperationException("Dòng xuất kho phải tham chiếu BOQ đã được duyệt của dự án.");
     }
 
+    private async Task ValidateIssueQuantitiesAsync(
+        int projectId,
+        IReadOnlyCollection<WarehouseIssueLineRequest> lines,
+        CancellationToken ct)
+    {
+        var stock = await StockByItemCodeAsync(projectId, ct);
+        var codes = await db.ProjectBoqLines.AsNoTracking()
+            .Where(item => lines.Select(line => line.ProjectBoqLineId).Contains(item.Id))
+            .Select(item => new { item.Id, item.ItemCode }).ToDictionaryAsync(item => item.Id, item => item.ItemCode, ct);
+        foreach (var line in lines)
+        {
+            var code = codes[line.ProjectBoqLineId];
+            if (line.IssuedQuantity > stock.GetValueOrDefault(code))
+                throw new ProcurementOperationException($"Số lượng xuất vượt tồn kho hiện tại của mã '{code}'.");
+        }
+    }
+
     private async Task<Dictionary<string, decimal>> StockByItemCodeAsync(int projectId, CancellationToken ct)
     {
         var receipts = await db.WarehouseReceiptLines.AsNoTracking().Where(line =>
@@ -1129,6 +1358,98 @@ public sealed class ProcurementService(
         foreach (var line in issues)
             stock[line.ItemCode] = stock.GetValueOrDefault(line.ItemCode) + (line.ReversalOfIssueId.HasValue ? line.IssuedQuantity : -line.IssuedQuantity);
         return stock;
+    }
+
+    private async Task<List<WarehouseStockItemResponse>> GetWarehouseStockAsync(int projectId, CancellationToken ct)
+    {
+        var lines = await db.ProjectBoqLines.AsNoTracking()
+            .Where(line => line.ProjectBoqRevision.OperationalProjectId == projectId &&
+                line.ProjectBoqRevision.Status == ProjectBoqRevisionStatus.Approved)
+            .OrderBy(line => line.SortOrder)
+            .Select(line => new
+            {
+                line.Id,
+                line.ItemCode,
+                line.Description,
+                line.Unit,
+                line.ApprovedQuantity,
+            }).ToListAsync(ct);
+        var receipts = await db.WarehouseReceiptLines.AsNoTracking().Where(line =>
+                line.WarehouseReceipt.OperationalProjectId == projectId &&
+                (line.WarehouseReceipt.Status == WarehouseLedgerStatus.Posted || line.WarehouseReceipt.Status == WarehouseLedgerStatus.Reversed))
+            .Select(line => new
+            {
+                line.MaterialRequestLine.ProjectBoqLine.ItemCode,
+                Quantity = line.WarehouseReceipt.ReversalOfReceiptId.HasValue ? -line.ReceivedQuantity : line.ReceivedQuantity,
+            }).ToListAsync(ct);
+        var issues = await db.WarehouseIssueLines.AsNoTracking().Where(line =>
+                line.WarehouseIssue.OperationalProjectId == projectId &&
+                (line.WarehouseIssue.Status == WarehouseLedgerStatus.Posted || line.WarehouseIssue.Status == WarehouseLedgerStatus.Reversed))
+            .Select(line => new
+            {
+                line.ProjectBoqLine.ItemCode,
+                Quantity = line.WarehouseIssue.ReversalOfIssueId.HasValue ? -line.IssuedQuantity : line.IssuedQuantity,
+            }).ToListAsync(ct);
+        var receivedByCode = receipts.GroupBy(item => item.ItemCode, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.Sum(item => item.Quantity), StringComparer.OrdinalIgnoreCase);
+        var issuedByCode = issues.GroupBy(item => item.ItemCode, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.Sum(item => item.Quantity), StringComparer.OrdinalIgnoreCase);
+        return lines.Select(line => new WarehouseStockItemResponse
+        {
+            ProjectBoqLineId = line.Id,
+            ItemCode = line.ItemCode,
+            Description = line.Description,
+            Unit = line.Unit,
+            BoqApprovedQuantity = line.ApprovedQuantity,
+            ReceivedQuantity = receivedByCode.GetValueOrDefault(line.ItemCode),
+            IssuedQuantity = issuedByCode.GetValueOrDefault(line.ItemCode),
+            OnHandQuantity = receivedByCode.GetValueOrDefault(line.ItemCode) - issuedByCode.GetValueOrDefault(line.ItemCode),
+        }).ToList();
+    }
+
+    private async Task PopulateWarehouseContextAsync(
+        int projectId, WarehouseReceiptDetailResponse response, CancellationToken ct)
+    {
+        var context = await GetWarehouseContextAsync(projectId, ct);
+        response.OperationalProjectCode = context.ProjectCode;
+        response.OperationalProjectName = context.ProjectName;
+        response.CustomerId = context.CustomerId;
+        response.CustomerName = context.CustomerName;
+        response.Contracts = context.Contracts;
+    }
+
+    private async Task PopulateWarehouseContextAsync(
+        int projectId, WarehouseIssueDetailResponse response, CancellationToken ct)
+    {
+        var context = await GetWarehouseContextAsync(projectId, ct);
+        response.OperationalProjectCode = context.ProjectCode;
+        response.OperationalProjectName = context.ProjectName;
+        response.CustomerId = context.CustomerId;
+        response.CustomerName = context.CustomerName;
+        response.Contracts = context.Contracts;
+    }
+
+    private async Task<(string ProjectCode, string ProjectName, int CustomerId, string CustomerName,
+        List<MaterialRequestContractContextResponse> Contracts)> GetWarehouseContextAsync(int projectId, CancellationToken ct)
+    {
+        var project = await db.OperationalProjects.AsNoTracking()
+            .Where(item => item.Id == projectId)
+            .Select(item => new { item.Code, item.Name, item.CustomerId, CustomerName = item.Customer.Name })
+            .SingleAsync(ct);
+        var contracts = await db.Contracts.AsNoTracking()
+            .Where(item => item.OperationalProjectId == projectId)
+            .OrderBy(item => item.ContractNumber)
+            .Select(item => new MaterialRequestContractContextResponse
+            {
+                Id = item.Id,
+                ContractNumber = item.ContractNumber,
+                Direction = item.Direction.ToString(),
+                Type = item.Type.ToString(),
+                VendorId = item.VendorId,
+                VendorName = item.Vendor != null ? item.Vendor.CompanyName : null,
+                Status = item.Status.ToString(),
+            }).ToListAsync(ct);
+        return (project.Code, project.Name, project.CustomerId, project.CustomerName, contracts);
     }
 
     private async Task<(int VendorId, int ProcurementOwnerUserId)> ValidateRatingAsync(
@@ -1270,9 +1591,13 @@ public sealed class ProcurementService(
     private IQueryable<ContractLine> ContractLineQuery() => db.ContractLines.AsNoTracking()
         .Include(item => item.Contract).Include(item => item.ProjectBoqLine).Include(item => item.ProcurementOwner);
     private IQueryable<WarehouseReceipt> ReceiptQuery() => db.WarehouseReceipts.AsNoTracking()
-        .Include(item => item.Lines).ThenInclude(line => line.MaterialRequestLine).ThenInclude(line => line.ProjectBoqLine);
+        .Include(item => item.ReceivedBy).Include(item => item.PostedBy)
+        .Include(item => item.Lines).ThenInclude(line => line.MaterialRequestLine).ThenInclude(line => line.MaterialRequest)
+        .Include(item => item.Lines).ThenInclude(line => line.MaterialRequestLine).ThenInclude(line => line.ProjectBoqLine)
+        .Include(item => item.Lines).ThenInclude(line => line.ContractLine).ThenInclude(line => line!.Contract).ThenInclude(contract => contract.Vendor);
     private IQueryable<WarehouseIssue> IssueQuery() => db.WarehouseIssues.AsNoTracking()
-        .Include(item => item.ResponsibleSiteUser).Include(item => item.Lines).ThenInclude(line => line.ProjectBoqLine);
+        .Include(item => item.ResponsibleSiteUser).Include(item => item.IssuedBy).Include(item => item.PostedBy)
+        .Include(item => item.Lines).ThenInclude(line => line.ProjectBoqLine);
     private IQueryable<VendorRating> RatingQuery() => db.VendorRatings.AsNoTracking()
         .Include(item => item.Contract).Include(item => item.Vendor).Include(item => item.ProcurementOwner);
 
@@ -1483,43 +1808,172 @@ public sealed class ProcurementService(
     private static WarehouseReceiptResponse MapReceipt(WarehouseReceipt item) => new()
     {
         Id = item.Id,
+        OperationalProjectId = item.OperationalProjectId,
         Code = item.Code,
         Status = item.Status.ToString(),
         ReversalOfReceiptId = item.ReversalOfReceiptId,
+        ReceivedByUserId = item.ReceivedByUserId,
+        ReceivedByName = item.ReceivedBy.FullName,
         InspectedAt = item.InspectedAt,
         PostedAt = item.PostedAt,
+        PostedByUserId = item.PostedByUserId,
+        PostedByName = item.PostedBy?.FullName,
         ReversalReason = item.ReversalReason,
+        CreatedAt = item.CreatedAt,
+        UpdatedAt = item.UpdatedAt,
         RowVersion = CrmConcurrency.Encode(item.RowVersion),
         Lines = item.Lines.Select(line => new WarehouseReceiptLineResponse
         {
             Id = line.Id,
             MaterialRequestLineId = line.MaterialRequestLineId,
             ContractLineId = line.ContractLineId,
+            MaterialRequestCode = line.MaterialRequestLine.MaterialRequest.Code,
             ItemCode = line.MaterialRequestLine.ProjectBoqLine.ItemCode,
+            Description = line.MaterialRequestLine.ProjectBoqLine.Description,
+            Unit = line.MaterialRequestLine.ProjectBoqLine.Unit,
+            RequestedQuantity = line.MaterialRequestLine.RequestedQuantity,
+            ContractNumber = line.ContractLine?.Contract.ContractNumber,
+            VendorName = line.ContractLine?.Contract.Vendor?.CompanyName,
             ReceivedQuantity = line.ReceivedQuantity,
         }).ToList(),
     };
 
+    private static WarehouseReceiptDetailResponse MapReceiptDetail(
+        WarehouseReceipt item,
+        IReadOnlyDictionary<int, decimal> netReceived)
+    {
+        var source = MapReceipt(item);
+        foreach (var line in source.Lines)
+            line.NetReceivedQuantity = netReceived.GetValueOrDefault(line.MaterialRequestLineId);
+        return new WarehouseReceiptDetailResponse
+        {
+            Id = source.Id,
+            OperationalProjectId = source.OperationalProjectId,
+            Code = source.Code,
+            Status = source.Status,
+            ReversalOfReceiptId = source.ReversalOfReceiptId,
+            ReversalTransactionId = source.ReversalTransactionId,
+            ReceivedByUserId = source.ReceivedByUserId,
+            ReceivedByName = source.ReceivedByName,
+            InspectedAt = source.InspectedAt,
+            PostedAt = source.PostedAt,
+            PostedByUserId = source.PostedByUserId,
+            PostedByName = source.PostedByName,
+            ReversalReason = source.ReversalReason,
+            CreatedAt = source.CreatedAt,
+            UpdatedAt = source.UpdatedAt,
+            RowVersion = source.RowVersion,
+            Lines = source.Lines,
+        };
+    }
+
     private static WarehouseIssueResponse MapIssue(WarehouseIssue item) => new()
     {
         Id = item.Id,
+        OperationalProjectId = item.OperationalProjectId,
         Code = item.Code,
         Status = item.Status.ToString(),
         ReversalOfIssueId = item.ReversalOfIssueId,
         ResponsibleSiteUserId = item.ResponsibleSiteUserId,
         ResponsibleSiteUserName = item.ResponsibleSiteUser.FullName,
+        IssuedByUserId = item.IssuedByUserId,
+        IssuedByName = item.IssuedBy.FullName,
         IssuedAt = item.IssuedAt,
         PostedAt = item.PostedAt,
+        PostedByUserId = item.PostedByUserId,
+        PostedByName = item.PostedBy?.FullName,
         WorkItemCode = item.WorkItemCode,
         ReversalReason = item.ReversalReason,
+        CreatedAt = item.CreatedAt,
+        UpdatedAt = item.UpdatedAt,
         RowVersion = CrmConcurrency.Encode(item.RowVersion),
         Lines = item.Lines.Select(line => new WarehouseIssueLineResponse
         {
             Id = line.Id,
             ProjectBoqLineId = line.ProjectBoqLineId,
             ItemCode = line.ProjectBoqLine.ItemCode,
+            Description = line.ProjectBoqLine.Description,
+            Unit = line.ProjectBoqLine.Unit,
+            BoqApprovedQuantity = line.ProjectBoqLine.ApprovedQuantity,
             IssuedQuantity = line.IssuedQuantity,
         }).ToList(),
+    };
+
+    private static WarehouseIssueDetailResponse MapIssueDetail(
+        WarehouseIssue item,
+        IReadOnlyDictionary<string, decimal> stock)
+    {
+        var source = MapIssue(item);
+        foreach (var line in source.Lines)
+            line.StockOnHand = stock.GetValueOrDefault(line.ItemCode);
+        return new WarehouseIssueDetailResponse
+        {
+            Id = source.Id,
+            OperationalProjectId = source.OperationalProjectId,
+            Code = source.Code,
+            Status = source.Status,
+            ReversalOfIssueId = source.ReversalOfIssueId,
+            ReversalTransactionId = source.ReversalTransactionId,
+            ResponsibleSiteUserId = source.ResponsibleSiteUserId,
+            ResponsibleSiteUserName = source.ResponsibleSiteUserName,
+            IssuedByUserId = source.IssuedByUserId,
+            IssuedByName = source.IssuedByName,
+            IssuedAt = source.IssuedAt,
+            PostedAt = source.PostedAt,
+            PostedByUserId = source.PostedByUserId,
+            PostedByName = source.PostedByName,
+            WorkItemCode = source.WorkItemCode,
+            ReversalReason = source.ReversalReason,
+            CreatedAt = source.CreatedAt,
+            UpdatedAt = source.UpdatedAt,
+            RowVersion = source.RowVersion,
+            Lines = source.Lines,
+        };
+    }
+
+    private static WarehouseTransactionListItemResponse MapWarehouseTransaction(WarehouseReceipt item) => new()
+    {
+        Id = item.Id,
+        OperationalProjectId = item.OperationalProjectId,
+        Type = "Receipt",
+        Code = item.Code,
+        Status = item.Status.ToString(),
+        OccurredAt = item.InspectedAt,
+        PostedAt = item.PostedAt,
+        ActorUserId = item.ReceivedByUserId,
+        ActorName = item.ReceivedBy.FullName,
+        ReversalOfId = item.ReversalOfReceiptId,
+        ReversalReason = item.ReversalReason,
+        LineCount = item.Lines.Count,
+        TotalQuantity = item.Lines.Sum(line => line.ReceivedQuantity),
+        ItemCodes = item.Lines.Select(line => line.MaterialRequestLine.ProjectBoqLine.ItemCode).Distinct().ToList(),
+        CreatedAt = item.CreatedAt,
+        UpdatedAt = item.UpdatedAt,
+        RowVersion = CrmConcurrency.Encode(item.RowVersion),
+    };
+
+    private static WarehouseTransactionListItemResponse MapWarehouseTransaction(WarehouseIssue item) => new()
+    {
+        Id = item.Id,
+        OperationalProjectId = item.OperationalProjectId,
+        Type = "Issue",
+        Code = item.Code,
+        Status = item.Status.ToString(),
+        OccurredAt = item.IssuedAt,
+        PostedAt = item.PostedAt,
+        ActorUserId = item.IssuedByUserId,
+        ActorName = item.IssuedBy.FullName,
+        ResponsibleUserId = item.ResponsibleSiteUserId,
+        ResponsibleUserName = item.ResponsibleSiteUser.FullName,
+        WorkItemCode = item.WorkItemCode,
+        ReversalOfId = item.ReversalOfIssueId,
+        ReversalReason = item.ReversalReason,
+        LineCount = item.Lines.Count,
+        TotalQuantity = item.Lines.Sum(line => line.IssuedQuantity),
+        ItemCodes = item.Lines.Select(line => line.ProjectBoqLine.ItemCode).Distinct().ToList(),
+        CreatedAt = item.CreatedAt,
+        UpdatedAt = item.UpdatedAt,
+        RowVersion = CrmConcurrency.Encode(item.RowVersion),
     };
 
     private static VendorRatingResponse MapRating(VendorRating item) => new()

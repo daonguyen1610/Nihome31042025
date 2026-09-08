@@ -875,7 +875,38 @@ party. Audit entries use the Material Request ID and retain the Operational
 Project ID as metadata. The detail UI route is
 `/admin/procurement-control/projects/{projectId}/material-requests/{requestId}`.
 
-### 7.13 Project Procurement BOQ
+### 7.13 Project Warehouse Transactions
+
+Warehouse inventory remains a derived ledger under one Operational Project.
+`WarehouseReceipt` records inspected material against approved Material Request
+lines, while `WarehouseIssue` records allocation to a responsible site user and
+optional work-item code. Posted records are immutable; corrections create an
+offsetting reversal linked to the original record.
+
+`GET /api/operational-projects/{projectId}/procurement/warehouse-transactions`
+requires `proc.warehouse.view` and supports project-scoped search, receipt/issue
+type, status, responsible user, occurred-date range, sorting, and pagination.
+The response also returns current approved-BOQ stock rows with posted receipt,
+posted issue, and on-hand quantities after reversals. Client CSV export retrieves
+all pages using the same filter contract.
+
+Receipt and issue detail endpoints expose Customer, Operational Project, and
+least-privilege Contract context without contract values. Receipt lines include
+their Material Request and optional Contract source; issue lines include BOQ
+allowance and current stock evidence. Draft documents support idempotent `PUT`
+updates with row-version/`If-Match` concurrency. `POST .../post` affects stock;
+`POST .../reverse` requires a reason of at least three characters and creates an
+offsetting record. Every endpoint verifies Operational Project scope, and every
+mutation records the actual receipt or issue ID in the audit log.
+
+The current warehouse workflow is online-first. The customer requirement for
+offline field capture and automatic synchronization needs a shared application
+shell cache, durable client queue, stable offline identifiers, conflict policy,
+and sync observability. Those capabilities do not yet exist as a reusable web
+platform service; do not represent ordinary browser storage as completed
+offline support.
+
+### 7.14 Project Procurement BOQ
 
 Project procurement BOQs are revisioned operational records and are distinct
 from the reusable `Boq` material-rate catalogs described above. Every revision

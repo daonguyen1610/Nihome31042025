@@ -171,17 +171,34 @@ public sealed class ContractLineResponse
     public string RowVersion { get; set; } = string.Empty;
 }
 
-public sealed class WarehouseReceiptResponse
+public class WarehouseReceiptResponse
 {
     public int Id { get; set; }
+    public int OperationalProjectId { get; set; }
     public string Code { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
     public int? ReversalOfReceiptId { get; set; }
+    public int? ReversalTransactionId { get; set; }
+    public int ReceivedByUserId { get; set; }
+    public string? ReceivedByName { get; set; }
     public DateTime InspectedAt { get; set; }
     public DateTime? PostedAt { get; set; }
+    public int? PostedByUserId { get; set; }
+    public string? PostedByName { get; set; }
     public string? ReversalReason { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
     public string RowVersion { get; set; } = string.Empty;
     public List<WarehouseReceiptLineResponse> Lines { get; set; } = [];
+}
+
+public sealed class WarehouseReceiptDetailResponse : WarehouseReceiptResponse
+{
+    public string OperationalProjectCode { get; set; } = string.Empty;
+    public string OperationalProjectName { get; set; } = string.Empty;
+    public int CustomerId { get; set; }
+    public string CustomerName { get; set; } = string.Empty;
+    public List<MaterialRequestContractContextResponse> Contracts { get; set; } = [];
 }
 
 public sealed class WarehouseReceiptLineResponse
@@ -189,24 +206,48 @@ public sealed class WarehouseReceiptLineResponse
     public int Id { get; set; }
     public int MaterialRequestLineId { get; set; }
     public int? ContractLineId { get; set; }
+    public string MaterialRequestCode { get; set; } = string.Empty;
     public string ItemCode { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public string Unit { get; set; } = string.Empty;
+    public decimal RequestedQuantity { get; set; }
+    public decimal NetReceivedQuantity { get; set; }
+    public string? ContractNumber { get; set; }
+    public string? VendorName { get; set; }
     public decimal ReceivedQuantity { get; set; }
 }
 
-public sealed class WarehouseIssueResponse
+public class WarehouseIssueResponse
 {
     public int Id { get; set; }
+    public int OperationalProjectId { get; set; }
     public string Code { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
     public int? ReversalOfIssueId { get; set; }
+    public int? ReversalTransactionId { get; set; }
     public int ResponsibleSiteUserId { get; set; }
     public string? ResponsibleSiteUserName { get; set; }
+    public int IssuedByUserId { get; set; }
+    public string? IssuedByName { get; set; }
     public DateTime IssuedAt { get; set; }
     public DateTime? PostedAt { get; set; }
+    public int? PostedByUserId { get; set; }
+    public string? PostedByName { get; set; }
     public string? WorkItemCode { get; set; }
     public string? ReversalReason { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
     public string RowVersion { get; set; } = string.Empty;
     public List<WarehouseIssueLineResponse> Lines { get; set; } = [];
+}
+
+public sealed class WarehouseIssueDetailResponse : WarehouseIssueResponse
+{
+    public string OperationalProjectCode { get; set; } = string.Empty;
+    public string OperationalProjectName { get; set; } = string.Empty;
+    public int CustomerId { get; set; }
+    public string CustomerName { get; set; } = string.Empty;
+    public List<MaterialRequestContractContextResponse> Contracts { get; set; } = [];
 }
 
 public sealed class WarehouseIssueLineResponse
@@ -214,7 +255,56 @@ public sealed class WarehouseIssueLineResponse
     public int Id { get; set; }
     public int ProjectBoqLineId { get; set; }
     public string ItemCode { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public string Unit { get; set; } = string.Empty;
+    public decimal BoqApprovedQuantity { get; set; }
+    public decimal StockOnHand { get; set; }
     public decimal IssuedQuantity { get; set; }
+}
+
+public sealed class WarehouseTransactionListResponse
+{
+    public int Total { get; set; }
+    public int Page { get; set; }
+    public int PageSize { get; set; }
+    public List<WarehouseTransactionListItemResponse> Items { get; set; } = [];
+    public List<WarehouseStockItemResponse> Stock { get; set; } = [];
+}
+
+public sealed class WarehouseTransactionListItemResponse
+{
+    public int Id { get; set; }
+    public int OperationalProjectId { get; set; }
+    public string Type { get; set; } = string.Empty;
+    public string Code { get; set; } = string.Empty;
+    public string Status { get; set; } = string.Empty;
+    public DateTime OccurredAt { get; set; }
+    public DateTime? PostedAt { get; set; }
+    public int ActorUserId { get; set; }
+    public string? ActorName { get; set; }
+    public int? ResponsibleUserId { get; set; }
+    public string? ResponsibleUserName { get; set; }
+    public string? WorkItemCode { get; set; }
+    public int? ReversalOfId { get; set; }
+    public string? ReversalReason { get; set; }
+    public int LineCount { get; set; }
+    public decimal TotalQuantity { get; set; }
+    public List<string> ItemCodes { get; set; } = [];
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
+    public string RowVersion { get; set; } = string.Empty;
+}
+
+public sealed class WarehouseStockItemResponse
+{
+    public int ProjectBoqLineId { get; set; }
+    public string ItemCode { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public string Unit { get; set; } = string.Empty;
+    public decimal BoqApprovedQuantity { get; set; }
+    public decimal ReceivedQuantity { get; set; }
+    public decimal IssuedQuantity { get; set; }
+    public decimal OnHandQuantity { get; set; }
 }
 
 public sealed class VendorRatingResponse

@@ -46,6 +46,7 @@ const VendorDetail = lazy(() => import("./pages/admin/procurement/VendorDetail.t
 const ProcurementControlPage = lazy(() => import("./pages/admin/procurement/ProcurementControlPage.tsx"));
 const BoqRevisionDetailPage = lazy(() => import("./pages/admin/procurement/BoqRevisionDetailPage.tsx"));
 const MaterialRequestDetailPage = lazy(() => import("./pages/admin/procurement/MaterialRequestDetailPage.tsx"));
+const WarehouseTransactionDetailPage = lazy(() => import("./pages/admin/procurement/WarehouseTransactionDetailPage.tsx"));
 const FinanceControlPage = lazy(() => import("./pages/admin/finance/FinanceControlPage.tsx"));
 const AdminOpportunities = lazy(() => import("./pages/admin/Opportunities.tsx"));
 const AdminQuotes = lazy(() => import("./pages/admin/Quotes.tsx"));
@@ -184,11 +185,14 @@ const App = () => (
                 <Route path="/admin/vendors" element={<VendorPage />} />
                 <Route path="/admin/vendors/:id" element={<VendorDetail />} />
               </Route>
-              <Route element={<RequirePermission code={[ADMIN_PERMS.procurement, ADMIN_PERMS.procurementMaterialRequests]} />}>
+              <Route element={<RequirePermission code={[ADMIN_PERMS.procurement, ADMIN_PERMS.procurementMaterialRequests, ADMIN_PERMS.procurementWarehouse]} />}>
                 <Route path="/admin/procurement-control" element={<ProcurementControlPage />} />
               </Route>
               <Route element={<RequirePermission code={ADMIN_PERMS.procurementMaterialRequests} />}>
                 <Route path="/admin/procurement-control/projects/:projectId/material-requests/:requestId" element={<MaterialRequestDetailPage />} />
+              </Route>
+              <Route element={<RequirePermission code={ADMIN_PERMS.procurementWarehouse} />}>
+                <Route path="/admin/procurement-control/projects/:projectId/warehouse/:transactionType/:transactionId" element={<WarehouseTransactionDetailPage />} />
               </Route>
               <Route element={<RequirePermission code={ADMIN_PERMS.procurement} />}>
                 <Route path="/admin/procurement-control/projects/:projectId/boq/:boqId" element={<BoqRevisionDetailPage />} />

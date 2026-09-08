@@ -131,7 +131,7 @@ The platform is being developed incrementally. The following components are curr
 | Acceptance and handover | Implemented |
 | Punchlist management | Implemented |
 | Procurement vendor management | Implemented |
-| Procurement BOQ, material requests, and warehouse | Partially implemented — project BOQ and the full Material Request create/edit/detail lifecycle are live; dedicated warehouse screens remain pending |
+| Procurement BOQ, material requests, and warehouse | Implemented for connected use — BOQ, Material Request, warehouse list/create/edit/detail, stock, allocation, posting, and reversal are live; offline queue/synchronization remains a cross-cutting platform dependency |
 | Finance module | Partially implemented — contracts and variation orders are live; cash flow and P&L are pending |
 | Google Drive integration | Implemented for current Operational Project file sources; deployment activation and live credentials are required |
 | Dashboard and analytics | Partially implemented — operational dashboard exists; full cross-module reporting is pending |
@@ -634,9 +634,21 @@ Manage warehouse receipts (inbound) and issue slips (outbound). Track inventory 
 
 | Page | Functions | Estimate |
 |------|-----------|----------|
-| Warehouse List | Inbound/outbound/stock by site | 2 days |
-| Receipt/Issue Create/Edit | Create warehouse transactions | 2 days |
-| Warehouse Detail | Transaction details, crew distribution, inventory audit | 2.5 days |
+| Warehouse List | Project-scoped inbound/outbound/stock, filters, pagination, and CSV export | Implemented |
+| Receipt/Issue Create/Edit | Create and update Draft warehouse transactions with source and stock validation | Implemented |
+| Warehouse Detail | Business context, transaction lines, allocation evidence, posting, and reversal | Implemented |
+
+Open **Procurement control**, select an Operational Project, and choose
+**Warehouse receipts / issues**. The stock section shows posted receipt, issue,
+and on-hand quantities after reversal records. Use the filters to find a document
+by code, material, responsible user, work item, type, status, or occurred date.
+
+Warehouse users may create receipt and issue Drafts. Only the creator may edit a
+Draft. Posting makes the document immutable and updates inventory; correct a
+posted document with **Reverse transaction** and a recorded reason. Receipt
+reversal is blocked when it would make stock negative. Issue documents retain
+the responsible site user and work-item code so material distribution remains
+traceable to the receiving team or activity.
 
 #### 3.5.6 Material Alerts
 
