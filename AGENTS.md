@@ -95,7 +95,7 @@ All implementation decisions that affect business behavior must comply with 'doc
 
 ## Hard-delete policy
 
-Hard delete is a business operation, not a direct 'DbSet.Remove' call. Every user-facing root delete must follow 'docs/hard-delete-convention.md'.
+Hard delete is a business operation, not a direct 'DbSet.Remove' call. Every user-facing root delete must follow the Permanent Aggregate Deletion section in 'docs/application_developer.md'.
 
 - Add an authorized 'GET .../{id}/deletion-impact' endpoint. Classify every dependent group as 'Delete', 'Unlink', or 'Block', including files and external bindings.
 - Require a typed resource code and deterministic plan token in the 'DELETE' body. Recompute the plan inside the delete transaction and return '409 Conflict' if it changed.
@@ -147,7 +147,23 @@ Use this rule: pure logic → unit; HTTP/auth/persistence contract → integrati
 
 ## Documentation and quality checks
 
-- Update 'docs/' when behavior, configuration, API contracts, workflows, or operations change.
+Keep `docs/` limited to these six canonical files:
+
+- `application_developer.md` — setup, architecture, API contracts, migrations, operations, and testing guidance.
+- `Nicon_BreakTask_v1.xlsx` — authoritative customer task breakdown.
+- `Nicon-QLVH.md` — authoritative customer business requirements.
+- `Nicon-workflow.md` — authoritative customer workflows.
+- `user_guide.md` — delivered user workflows and operating instructions.
+- `users-rbac.md` — roles, permissions, and access behavior.
+
+During every change:
+
+- Update the relevant canonical file in place when behavior, configuration, API contracts, workflows, or operations change.
+- Do not add other files or subdirectories under `docs/` unless the user explicitly changes this allowlist.
+- Do not create separate ticket notes, feature documents, review reports, scenario matrices, or dated validation reports in `docs/`. Put reusable guidance in the appropriate canonical guide; report run-specific evidence, defects, and residual risks in the task response, PR description, or test artifacts.
+- Consolidate overlapping guidance and replace obsolete sections instead of appending duplicate histories. Preserve current business and safety contracts when cleaning up documentation.
+- Do not rewrite the three customer source documents merely for housekeeping; update them only for confirmed requirement changes.
+- Before committing, verify that `docs/` contains only the six allowed files and that documentation links and references still resolve.
 - Update seed/demo data when needed to demonstrate normal, empty, error, and edge states.
 - Keep manual API examples accurate and environment-appropriate.
 - Run checks relevant to the changed area.
@@ -273,4 +289,3 @@ Checks run, plus failures or skipped checks and their reasons.
 ### Assumptions and risks
 
 Unresolved ambiguity, compatibility concerns, migration risk, or required follow-up.
-

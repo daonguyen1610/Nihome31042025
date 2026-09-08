@@ -2,7 +2,7 @@
 
 Version 1.0
 
-Last Updated: 12 August 2026
+Last Updated: 9 September 2026
 
 ---
 
@@ -500,6 +500,104 @@ GO
 
 ---
 
+### 6.7 Operational Project Historical Migration
+
+#### Scope
+
+NIH-465 reconciles historical `DesignProject`, `Contract`, `Opportunity`, and
+`Quote` rows into the internal `OperationalProject` aggregate. Public website
+`Project` content is explicitly outside this migration.
+
+The migration preserves source rows and history. It updates only missing
+`OperationalProjectId` values and creates an Operational Project only when no
+existing project can be inherited from the same business chain. It does not
+merge or delete existing Operational Projects.
+
+#### Mapping Rules
+
+The migration uses deterministic source precedence:
+
+1. A Design Project inherits its Contract's existing Operational Project.
+2. A missing Design Project project is created as `PJ-MIG-DP-{id}`; its Contract
+   then inherits that project.
+3. An Opportunity inherits the single project already used by its Contracts or
+   Quotes.
+4. A missing Opportunity project is created as `PJ-MIG-OP-{id}`; its Quotes and
+   Contracts then inherit that project.
+5. A direct Contract with no project source is created as `PJ-MIG-CT-{id}`.
+
+Every inherited project must belong to the same Customer. Multiple project
+candidates, cross-customer mappings, broken foreign keys, chain mismatches, and
+deterministic code collisions block the migration instead of being guessed.
+The stable codes and `NOT EXISTS` guards make the data statements rerunnable.
+
+#### Pre-Deployment Rehearsal
+
+Back up the target database and restore it under a temporary database name.
+Generate the migration script, review it, and apply it to that copy before the
+production maintenance window. This rehearses the exact migration instead of
+maintaining a separate SQL implementation that can drift from it.
+
+The migration itself is the validation boundary. It aborts and rolls back when
+it finds broken source references, cross-customer relationships, multiple
+project candidates, deterministic-code collisions, changed source counts,
+unmapped rows, or post-migration chain inconsistencies. Save the migration output
+and before/after source counts as deployment evidence. Resolve any reported
+`THROW 51020` through `THROW 51029` condition in the source data; do not disable
+the checks or edit the migration to skip affected rows.
+
+After a successful rehearsal, verify that all historical rows are mapped:
+
+```sql
+SELECT 'DesignProject' EntityType, COUNT(*) TotalRows,
+   COUNT(OperationalProjectId) MappedRows FROM design_projects
+UNION ALL
+SELECT 'Contract', COUNT(*), COUNT(OperationalProjectId) FROM contracts
+UNION ALL
+SELECT 'Opportunity', COUNT(*), COUNT(OperationalProjectId) FROM opportunities
+UNION ALL
+SELECT 'Quote', COUNT(*), COUNT(OperationalProjectId) FROM quotes;
+```
+
+For each row, `TotalRows` and `MappedRows` must match. Run production deployment
+with application writes stopped, and take a second backup immediately after the
+post-migration check passes. If writes resume, prefer a reviewed forward
+correction; restoring the earlier backup would discard later transactions.
+
+#### Deployment
+
+Confirm the backend container with `docker compose ps`, then generate and review
+the idempotent SQL script before applying it:
+
+```bash
+docker exec <backend-container> dotnet ef migrations script \
+  20260906150351_AddFinanceControlWorkflows \
+  20260907021500_ReconcileOperationalProjectBackfill --idempotent
+docker exec <backend-container> dotnet ef database update
+```
+
+EF Core runs the migration in a transaction. The migration records source row
+counts, performs the backfill, and aborts if source counts change, any historical
+row remains unmapped, or post-migration customer and chain integrity fails.
+
+Run the source-count query again after deployment. All four source groups must
+have matching total and mapped counts.
+
+#### Rollback and Compatibility
+
+The migration has no destructive schema operation, but its data links cannot be
+removed safely after downstream modules begin using them. If deployment fails,
+the migration transaction rolls back automatically. If a rollback is required
+after a successful deployment, stop writes and restore the pre-deployment
+database backup; do not null project IDs or delete generated projects manually.
+
+Existing API routes and DTO fields are unchanged. Nullable project fields remain
+wire-compatible for current clients; this historical migration does not impose
+new runtime `NOT NULL` constraints. Runtime enforcement for every new Contract
+to belong to exactly one Operational Project remains owned by NIH-466.
+
+---
+
 ## 7. Backend Development
 
 ### 7.1 Code Organization
@@ -614,9 +712,203 @@ Duplicate project/type pairs return `409`; invalid projects, permit types, owner
 
 ### 7.7 Permanent Aggregate Deletion
 
-Authorized ADMIN `DELETE` operations are permanent and are not limited by workflow status. Status rules still govern editing and lifecycle transitions. Root deletion removes the selected record plus rows that cannot exist independently: Customer deletion removes its Documents, Opportunities, Quotes, Contracts, Tenders, Design Projects, design documents, and construction records; Opportunity deletion removes its Quotes. Nullable references from preserved Leads, Surveys, Contracts, and Tenders are cleared rather than deleting those shared records. Design deletion also removes polymorphic drawing revisions and entity translations.
+#### Objective
 
-Do not replace this orchestration with blanket database cascades across shared relationships. Users, unrelated customers/projects, audit logs, and other shared principals remain intact. Database file metadata is removed with its owning row. Physical files are retained unless the feature owns a dedicated unshared path; customer documents use `wwwroot/files/customers/{customerId}/`, while quote documents use `wwwroot/files/quotes/{quoteId}/`. Deleting a managed document removes its file, while deleting its owning customer or quote removes the dedicated directory. Every destructive frontend action must require an explicit irreversible-delete confirmation.
+Allow authorized users to permanently remove aggregate roots, including seeded
+or demo records, without hiding dependent data or causing partial deletion.
+
+#### API Contract
+
+Each supported aggregate exposes:
+
+1. `GET /api/{resource}/{id}/deletion-impact`
+2. `DELETE /api/{resource}/{id}` with `planToken`, `confirmation`, and a
+  mandatory `rowVersion` when the root supports optimistic concurrency
+
+The preview returns the root label and confirmation code, a deterministic plan
+token, the total affected count, whether deletion is currently allowed, and
+dependent groups classified as:
+
+- `Delete`: aggregate-owned records removed with the root.
+- `Unlink`: independent records or external resources preserved after their
+  binding to the root is removed.
+- `Block`: data that must be safely cleaned before the root can be deleted.
+
+The server recomputes the impact and creates the durable operation in one
+serializable transaction, commits it, and only then starts processing. For
+Opportunity, Quote, and Contract, `rowVersion` is mandatory: a missing or malformed
+token returns `400 Bad Request`, while a stale token or changed plan returns
+`409 Conflict`. Invalid confirmation or an active blocker returns
+`400 Bad Request`. Rejected requests must leave the root and all dependencies
+unchanged and must not emit a success/request audit.
+
+The deterministic plan includes every business-significant direct and nested
+dependent identifier. Adding or removing a nested child after preview therefore
+invalidates the submitted token.
+
+When execution includes managed local files or Nicon-owned Google Drive items,
+the delete endpoint creates a durable hard-delete operation. The operation and
+its items are independent records identified by a GUID; they do not hold foreign
+keys to the aggregate root. Only one unresolved operation may exist for a
+resource type and resource ID.
+
+The endpoint returns:
+
+- `204 No Content` only after external cleanup, the registered database
+  finalizer, and quarantine purge have all completed.
+- `202 Accepted` with the operation ID and current status when durable work is
+  still pending, retrying, or requires manual action.
+
+Clients may safely poll the operation result. A durable operation is not proof
+that the root has been deleted until its status is `Completed`.
+
+#### Execution Rules
+
+- Controllers authorize and translate domain outcomes to HTTP responses.
+- Services validate the plan, confirmation, concurrency, and blockers.
+- Aggregate deletion services own dependency ordering and file staging.
+- Managed files are cleaned through the project-document workflow before their
+  parent project can be removed.
+- Local managed files must use host-relative paths under an explicit private
+  storage root. Execution moves them atomically to a same-volume hard-delete
+  quarantine before any irreversible step when the parent durable operation
+  owns their deletion. Project-dependent files are the exception below and are
+  deleted only by their source module's manual cleanup workflow.
+- Design and Operational Project deletion never removes dependent local or Drive
+  files automatically. Every remaining file blocks parent deletion and includes
+  a link to its owning detail or document page. The user must delete the source
+  record or project document through that module's authorized workflow; its
+  existing synchronization service then removes the Drive replica safely. The
+  parent can be deleted only after those file dependencies are fully cleaned.
+  Failed Drive-delete sidecars remain blockers and can be manually retried by
+  an authorized Operational Project manager even after automatic retries are
+  exhausted.
+- Existing domain flows continue to unlink external Google Drive folder
+  bindings until they are migrated to the durable operation foundation.
+- A migrated plan may permanently delete a Drive file or folder only when its
+  metadata proves current Nicon `InstanceId` ownership, every caller-supplied
+  expected app property matches, the expected parent matches when supplied,
+  and Drive reports that the connected account owns and can delete the item.
+  Imported, shared, mismatched, or unknown-origin items are blockers and must
+  never be permanently deleted. A missing Drive item is an idempotent success.
+- Independent CRM records such as opportunities, quotes, and contracts are
+  unlinked rather than deleted with an Operational Project. Their local and
+  Drive files are preserved; only project-bound synchronization metadata is
+  removed with the deleted Operational Project.
+- Tender checklist uploads under `/files/tenders` are aggregate-owned and are
+  quarantined and purged with the Tender. Checklist references to Capability
+  Documents are unlinked while the shared document and file survive. Any
+  non-library checklist file outside `/files/tenders` blocks deletion rather
+  than being silently orphaned.
+- Quote documents under `/files/quotes` are aggregate-owned and are quarantined
+  and purged with the Quote. Opportunities and Contracts that reference the
+  Quote are unlinked and preserved. A Quote project-document sidecar is eligible
+  only when it is an exact CRM `QuoteDocument`/`file` binding to the normalized
+  Quote path, has stable Nicon ownership with no conflict or active processing
+  lease, and is either fully synced with complete Drive ownership metadata or
+  already terminally deleted without a Drive file ID. The durable operation
+  permanently deletes eligible Drive replicas using verified app properties,
+  then preserves and terminalizes their sidecar records. Imported, shared,
+  ambiguous, incomplete, mismatched, or unstable sidecars block deletion.
+- Opportunity activities and translations are aggregate-owned. Quotes block
+  Opportunity deletion; Contracts, Surveys, converted Leads, and winning
+  Tenders are independent roots that are unlinked and preserved.
+- Contract milestones, attachments, appendices, and files under
+  `/files/contracts/` are aggregate-owned. Linked Design Projects are unlinked
+  and preserved. Deletion is blocked when a path is unsafe or shared, or when
+  the Contract is the last qualifying contract for a Won Opportunity. Exact
+  Nicon-owned CRM sidecars for `ContractAttachment` and `ContractAppendix` use
+  the same safety checks as Quote sidecars: ambiguous, conflicting, claimed,
+  pending, mismatched, imported, or duplicate Drive identities block deletion.
+  The durable operation verifies ownership metadata and permanently deletes
+  safe synced Drive replicas before the finalizer terminalizes and preserves
+  their sidecars; the finalizer never queues a background Drive delete.
+- Survey checklist results and site conditions are aggregate-owned. Survey
+  Media must be removed through its own managed-file workflow before the Survey
+  can be deleted. An external Drive folder binding is unlinked and preserved.
+  Survey management scope is `crm.surveys.manage.all`, assigned surveyor,
+  survey creator, Operational Project manager, or Operational Project creator.
+- Capability Document versions and files under `/files/capability/` are
+  aggregate-owned. Unsafe or shared paths block deletion. Tender checklist
+  references block deletion until the shared document is detached explicitly.
+- Customer contacts, activities, documents, translations, and files under the
+  exact `/files/customers/{customerId}/` root are aggregate-owned. Converted
+  Lead and Project Document metadata links are cleared while those records are
+  preserved. Opportunities, Tenders, Contracts, Design Projects, and
+  Operational Projects are independent required roots and block Customer
+  deletion until handled through their own authorized workflows. Undoing a
+  Lead conversion always preserves its Customer; Customers can only be
+  permanently removed through this preview-and-confirm contract.
+- Exactly one success audit is written by the durable operation processor in
+  the same save that marks the operation `Completed`, after database
+  finalization and quarantine purge. Request, validation-failure, and
+  pre-completion success audits are not emitted.
+- Hard-deleted seeded roots write a durable tombstone. Opportunity uses its
+  `[SAMPLE]` name, Contract its `HD-SAMPLE-` number, Survey its `SV-SAMPLE-`
+  code, Tender its exact `TD-SAMPLE-` code, and Capability Document its managed
+  path when the description begins `[SAMPLE_CAP]`. Seed reruns filter roots and
+  dependents before insertion and skip Capability physical-file self-healing
+  for tombstoned paths.
+
+#### Durable Operation Lifecycle
+
+Operations move through `Preparing`, `Ready`, `Processing`, `Completed`,
+`Failed`, or `ManualActionRequired`:
+
+1. A domain service validates authorization, confirmation, concurrency,
+  blockers, and the current deterministic plan before creating the operation.
+2. The processor quarantines local files, then permanently deletes only verified
+  owned Drive items.
+3. After external cleanup, a resource handler registered by resource type runs
+  the idempotent database finalizer. Delegate-only finalizers are not allowed
+  because they cannot survive application restart.
+4. The processor purges quarantined local files, then atomically writes the
+  idempotent completion audit and marks the operation `Completed`.
+
+Failures before the first Drive deletion restore quarantined files and may be
+retried with conservative backoff. Once a Drive deletion or database finalizer
+begins, rollback is no longer safe: the operation remains in forward recovery
+until remaining idempotent steps complete. Ownership mismatches and exhausted
+retries move to `ManualActionRequired`; operators must resolve the blocker and
+explicitly retry. Resource handlers must use the operation ID as an idempotency
+key because a restart can occur after the database commit but before the item is
+marked complete.
+
+#### Frontend Rules
+
+Use the shared deletion-impact dialog to load the preview, show categorized
+counts and examples, disable deletion while blockers exist, and require the
+exact typed confirmation. Refresh the relevant list/detail state after success.
+Do not implement aggregate deletion as parallel per-row API calls.
+
+Business-data blockers should include an internal resolution URL when a filtered
+ADMIN list exists and internal detail links for the displayed blocker examples.
+The shared dialog opens those destinations in a new tab so the user can resolve
+dependencies without losing the current deletion preview. The filtered list link
+is shown only when additional blockers are not represented by the detail links.
+The link is a navigation convenience only; access, record scope, and available
+actions on the destination page follow the existing RBAC matrix for that module.
+
+All display text and dependency labels are backend-seeded content translations
+with Vietnamese, English, Chinese, and Japanese values.
+
+#### Verification
+
+Use integration tests for HTTP authorization, model binding, preview accuracy,
+stale plans, row-version conflicts, blockers, persistence, unlinking, and
+unchanged state after rejection. Use browser tests only for dialog rendering,
+typed confirmation, blocker visibility, and successful UI refresh.
+
+#### Current Rollout
+
+The durable operation, local quarantine, verified Drive deletion, registry, and
+retry foundation is available for domain adoption. Design Project, Operational
+Project, Lead, Customer, Tender, Quote, Opportunity, Contract, Survey, Vendor,
+and Capability Document use the durable backend flow and shared frontend polling
+dialog. Owner-scoped resources also enforce scope again during finalization.
+Bulk deletion is disabled on these root pages until a server-side batch
+preview-and-confirm contract is available. Other root pages must still be
+migrated separately before the repository-wide hard-delete rollout is complete.
 
 ### 7.8 Customer Documents and Contract Ownership
 
@@ -712,13 +1004,13 @@ contract, opportunity, and quote relationships before adding their foreign
 keys. The operational hierarchy and user workflow are documented in
 `docs/user_guide.md`. The deterministic historical reconciliation, dry-run,
 deployment checks, rollback plan, and API compatibility contract are documented
-in `docs/operational-project-migration.md`.
+in [Operational Project Historical Migration](#67-operational-project-historical-migration).
 
 The Module 2 schedule is exposed beneath
 `/api/operational-projects/{id}/design-schedule` and remains separate from
 Module 4 construction tasks. Its lifecycle, validation, weighted roll-up,
 filter, concurrency, migration, and deletion contracts are documented in
-`docs/detail-design-schedule.md`.
+[Detail Design Schedule](#716-detail-design-schedule).
 
 The read-only timeline endpoint derives its entries from existing Contract
 payment milestones and does not copy or synchronize data. Each entry identifies
@@ -748,10 +1040,9 @@ source module. The Survey folder correction migration reclassifies existing mana
 Survey sidecars, but no migration discovers or stages historical files that never had a sidecar.
 
 The current implementation is a supported hybrid subset, not completion of the
-expanded customer-wide Google Drive contract. See
-`docs/google-drive-acceptance-review.md` for the requirement-by-requirement
-status, tested upload coverage, live verification evidence, unresolved business
-decisions, and delivery blockers.
+expanded customer-wide Google Drive contract. Validate live upload, download,
+reconciliation, ownership and cleanup against the configured environment before
+claiming external transport works; metadata or mocked tests are insufficient.
 
 Relationship changes are reconciled only on an explicit update that changes the
 resolved Operational Project. Linking or reassigning an Opportunity, Contract,
@@ -989,6 +1280,562 @@ owned aggregate data.
 
 ---
 
+### 7.16 Detail Design Schedule
+
+#### Business Objective
+
+The detail-design schedule provides a project-scoped plan for the three design
+phases without changing or reusing Module 4 construction tasks. It records
+planned and actual dates, ownership, department, progress, milestones, and
+Finish-to-Start predecessor relationships, then derives traceable weighted
+progress for each phase and the complete design schedule.
+
+#### Actors and Permissions
+
+- A caller with `operations.projects.view` may read only an Operational Project
+  visible through `IProjectAccessService.CanViewOperationalProjectAsync`.
+- A caller with `design.schedule.manage` may initialize or mutate a schedule
+  only when `IProjectAccessService.CanManageDesignScheduleAsync` confirms that
+  the caller is the Operational or Design Project Manager, the Design Lead, or
+  has an active Project-wide or Design-module Project Manager/Design Lead team
+  assignment for that project. Discipline-only assignments remain read-only.
+- Administrative roles that hold both `design.schedule.manage` and
+  `operations.projects.view.all` may manage any existing project only when the
+  active system role is `ADMIN` or `SUPER_ADMIN`. Custom roles and portfolio
+  visibility by itself never enable schedule mutation or mutation controls.
+- Inaccessible projects, phases, and tasks return `404` to avoid disclosing
+  project existence. Missing authentication returns `401`; missing global
+  permission returns `403`.
+
+#### Lifecycle and Validation
+
+Initialization is explicit and idempotent. It requires a Design Project with a
+start date and deadline spanning at least three calendar days and exactly the
+canonical `Concept`, `BasicDesign`, and `ShopDrawing` phases. Phase weights must
+total 100. The service partitions the inclusive Design Project date interval
+deterministically into three contiguous, non-overlapping ranges. A partial or
+non-canonical existing baseline is rejected instead of being treated as
+initialized; the migration does not invent schedules for existing projects.
+
+Persisted statuses are `NotStarted`, `InProgress`, `Completed`, `OnHold`, and
+`WaitingForDepartment`. Allowed transitions are:
+
+| From | Allowed destinations |
+|---|---|
+| `NotStarted` | `InProgress`, `OnHold`, `WaitingForDepartment` |
+| `InProgress` | `Completed`, `OnHold`, `WaitingForDepartment` |
+| `OnHold` | `InProgress`, `WaitingForDepartment` |
+| `WaitingForDepartment` | `InProgress`, `OnHold` |
+| `Completed` | None |
+
+Repeating the current status is allowed. `NotStarted` requires zero progress and
+no actual dates. `InProgress` requires an actual start. `Completed` requires
+both actual dates and 100 percent progress. An actual end is forbidden for all
+other statuses. Planned and actual end dates cannot precede their corresponding
+start dates. Weights range from 1 through 100 and progress from 0 through 100.
+A phase update is rejected when its resulting three-phase weight total would no
+longer equal 100; weight redistribution requires an atomic contract and is not
+performed through separate phase updates.
+A milestone has `IsMilestone = true` and equal planned start and end dates.
+Overdue is derived at read time when planned end is before the current UTC date
+and status is not `Completed`; it is never persisted.
+
+Task departments must be active options in the `project-department` master-data
+category. The seeded options are Design, Architecture, Structural, MEP, and
+Interior, with Vietnamese, English, Chinese, and Japanese labels. An assignee
+must be an active user represented by a non-ended `OperationalProjectMember` in
+the same project. Every predecessor must be a task in the same project;
+self-dependencies and cycles are rejected before persistence.
+
+#### Progress Policy
+
+The policy identifier is `design-schedule-weighted-v1`. A phase baseline is
+ready only when it contains at least one task and task weights total exactly
+100. Its progress is:
+
+$$
+P_{phase} = \frac{\sum_i w_i p_i}{100}
+$$
+
+The project baseline is ready only when exactly three canonical phases exist,
+phase weights total 100, and every phase baseline is ready. Project progress is:
+
+$$
+P_{project} = \frac{\sum_j W_j P_j}{100}
+$$
+
+When a baseline is not ready, its rolled-up progress is `null`. Responses expose
+phase IDs, task IDs, weights, source progress values, and weighted values so the
+calculation is auditable. Filters affect the paged task list only; roll-up uses
+the complete schedule and therefore remains stable while browsing filtered
+results.
+
+#### API Contract
+
+Both `/api/operational-projects/{projectId}/design-schedule` and its `/api/v1`
+alias expose the same controller.
+
+| Method | Relative route | Permission | Purpose |
+|---|---|---|---|
+| `GET` | `/` | `operations.projects.view` | Read phases, roll-up sources, and paged tasks |
+| `POST` | `/initialize` | `design.schedule.manage` plus project leadership | Create the canonical phase baseline |
+| `PUT` | `/phases/{phaseId}` | `design.schedule.manage` plus project leadership | Update phase dates, status, progress, and weight |
+| `POST` | `/phases/{phaseId}/tasks` | `design.schedule.manage` plus project leadership | Create a task or milestone in a phase |
+| `PUT` | `/tasks/{taskId}` | `design.schedule.manage` plus project leadership | Update a task and replace predecessor links |
+
+Mutations require an `Idempotency-Key` containing 1 through 120 characters.
+Missing, blank, or oversized keys return `400`. Reusing a key with the same
+request replays the stored response; reusing it with a different request returns
+`409`.
+Updates require row version through the request body or `If-Match` header and
+emit an ETag. Missing or malformed tokens return `400`; conflicting body and
+header tokens return `400`. A stale write returns `409` and may be retried with the same
+idempotency key after obtaining the current row version. Successful mutations
+write both the standard audit event and a scalar schedule-history snapshot.
+
+The task query supports `phase`, `assigneeMemberId`, `departmentCode`, `status`,
+`plannedFrom`, `plannedTo`, `overdueOnly`, `page`, and `pageSize`. Date filtering
+uses inclusive interval overlap: a task matches when its planned end is on or
+after `plannedFrom` and its planned start is on or before `plannedTo`.
+
+#### Compatibility and Deletion
+
+The schedule uses dedicated `design_schedule_*` tables and does not alter,
+backfill, or reinterpret `construction_tasks` or its API. Deleting a Design
+Project reports schedule phases, tasks, dependencies, and history in the
+deletion-impact plan. Aggregate deletion removes dependency edges explicitly;
+the remaining schedule-owned rows are removed with their Design Project.
+
+Migration `AddDetailDesignSchedule` is additive: it creates four new tables,
+their foreign keys, indexes, row versions, and check constraints. It contains no
+data update or migration-time initialization and must be applied through the
+normal deployment gate only after backup and migration-script review.
+
+### 7.17 Project Operational Reports
+
+#### Purpose and scope
+
+Project reports are operational summaries bounded by `OperationalProjectId`.
+They do not calculate employee KPI scores. The API returns only projects that
+the caller can access through `IProjectAccessService`.
+
+- `GET /api/reports/projects` returns a portfolio when `projectId` is omitted.
+- `GET /api/reports/projects?projectId={id}` returns one accessible project and
+  returns `404` when that project does not exist or is inaccessible.
+- `GET /api/reports/projects/export?format=xlsx|pdf&language=vi|en|zh|ja` uses
+  the same project and date filters, renders complete filtered results on the
+  server, and records an audit event with the filters and project count.
+- `from` and `to` are optional inclusive `DateOnly` values. A reversed range is
+  rejected with `400`.
+
+The response includes server-generated `generatedAtUtc` and `asOfUtc` values.
+Drill-downs contain only relative frontend routes and query strings.
+
+#### Permissions
+
+| Role | View | Export |
+| --- | --- | --- |
+| `SUPER_ADMIN`, `ADMIN` | Yes, through system-role wildcard defaults | Yes, through system-role wildcard defaults |
+| `BGD`, `ACCOUNTANT` | Yes, explicitly seeded | Yes, explicitly seeded |
+| `PM` | Yes, explicitly seeded and project-scoped | No |
+| Other business roles | No default grant | No default grant |
+
+`BGD` already has the broad `**.view` pattern, which covers
+`reports.projects.view`; it also receives an explicit
+`reports.projects.export` grant because export is deliberately separate.
+
+#### Available metrics
+
+- Project identity and manager/customer context.
+- Design weighted progress using `design-schedule-weighted-v1`. The value is
+  unavailable with `DESIGN_BASELINE_INCOMPLETE` until all three phase and task
+  baselines satisfy the existing weight rules.
+- Construction task counts by exact persisted status, overdue count, and
+  overdue rows. No averaged construction percentage is calculated.
+- Acceptance counts by exact persisted status and revision count, plus overdue
+  count. No acceptance ratio or first-pass rate is calculated.
+- Permit overdue, due-soon, and expiring counts and rows. Due soon and expiring
+  use a 30-day inclusive warning window from `asOfUtc`.
+- Quote totals, contract base value, approved VO delta, current contract value,
+  and milestone scheduled values by status. Milestone values use the signed
+  base contract value, matching existing contract semantics. They are labeled
+  **Contractual schedule** and are not cash, revenue, or receivables.
+
+#### Date filter bases
+
+The inclusive date range applies independently to each source date rather than
+the project identity: construction planned end, acceptance date, permit target
+deadline or expiry, quote creation, contract signed date (or creation date when
+unsigned), approved VO decision date (or update date), and milestone due date.
+An in-range VO or milestone remains visible when its parent contract was signed
+before the range. Design progress is current-as-of because no historical
+baseline snapshots exist.
+
+#### Explicitly unavailable metrics
+
+The API and exports expose stable reason codes instead of synthetic zeroes:
+
+| Metric | Reason code |
+| --- | --- |
+| Historical S-curve | `HISTORICAL_SNAPSHOTS_UNAVAILABLE` |
+| Weighted construction progress | `CONSTRUCTION_WEIGHTS_UNAVAILABLE` |
+| Acceptance ratios / first-pass | `ACCEPTANCE_OUTCOME_DATA_UNAVAILABLE` |
+| Actual cashflow, revenue, expenditure, P&L, receivables | `ACTUAL_FINANCE_LEDGER_UNAVAILABLE` |
+| Inventory | `INVENTORY_LEDGER_UNAVAILABLE` |
+| BOQ usage | `BOQ_USAGE_DATA_UNAVAILABLE` |
+| Vendor performance | `VENDOR_PERFORMANCE_DATA_UNAVAILABLE` |
+
+A project without its design-linked construction, acceptance, or permit source
+returns the affected section as `Unavailable` with `SOURCE_NOT_CONFIGURED`.
+No schema migration or report snapshot table is introduced.
+
+### 7.18 RFQ and Supplier Comparison
+
+#### Business contract
+
+Sources: NIH-166 and NIH-174/175/176, including their September 7 acceptance
+comments; `Nicon-QLVH.md` Modules 5–6; `Nicon-workflow.md`;
+`Nicon_BreakTask_v1.xlsx` (RFQ list, create/edit, and comparison detail).
+
+The approved RFQ MVP uses the following contract:
+
+- Each RFQ belongs to one Operational Project and retains that project's
+  Customer. A project can have many RFQs, vendors, and contracts.
+- Procurement selects lines and quantities from an approved VND Project BOQ.
+  Each quantity must fit its source line. RFQs do not reserve stock or consume
+  Material Request quantities. MR linkage is deferred.
+- Each RFQ invites one or more active suppliers/subcontractors. The vendor
+  directory is shared master data; invitations and quotations belong to the RFQ.
+- Lowest valid prices are highlighted, including ties. There is no weighted
+  score or automatic selection. One complete quotation wins the entire RFQ;
+  split awards are deferred.
+- Procurement records quotes on behalf of vendors. Vendor portal and outgoing
+  vendor email delivery are deferred. Bid form drafts are local until submitted.
+- An explicit award creates one **Draft Downstream Supply/Subcontract contract**
+  and its BOQ lines. The existing contract workflow handles signing, execution,
+  and payment; an RFQ award does not sign the contract.
+- Award-derived contract value, customer, project, vendor and classification
+  cannot be changed through the generic contract editor. Awarded lines cannot
+  be edited, appended or moved through procurement endpoints, including while
+  the contract is Draft. Draft coordination notes and the existing signing and
+  payment workflows remain available. Ordinary contracts without an RFQ award
+  retain their existing draft-editing behavior.
+- VND is the supported currency because the existing contract value has no
+  currency field. Unit prices and line totals use four decimal places; quantity
+  uses six. Line amounts round halfway away from zero. Comparison totals sum
+  those rounded amounts. Contract header value rounds the winning total to two
+  decimals to match the existing contract schema; contract line prices retain
+  four decimals. There is no tax, freight, discount, or currency-conversion
+  calculation in this MVP; commercial qualifications belong in quote notes.
+
+The application route is `/admin/procurement-control/rfqs`, with `projectId`
+and optional `rfqId` query parameters. Customer → Project → RFQ → Contract
+context remains visible. List export is CSV; detail export is a JSON evidence
+bundle containing matrix lines, all quote revisions, commercial terms, files,
+history, and the award comparison snapshot.
+
+#### Actors and access
+
+| Capability | Default role grants |
+|---|---|
+| `proc.rfqs.view` | Procurement, PM, BGD, ADMIN, SUPER_ADMIN |
+| `proc.rfqs.manage` | Procurement, ADMIN, SUPER_ADMIN |
+| `proc.rfqs.export` | Procurement, BGD, ADMIN, SUPER_ADMIN |
+| `proc.rfqs.award` | BGD, ADMIN, SUPER_ADMIN |
+
+Every endpoint additionally checks existing project access rules. Missing or
+out-of-scope resources return 404; unauthenticated and functionally unauthorized
+requests return 401 and 403 respectively. Cached idempotency responses recheck
+project scope, so removing membership also revokes replay access. The UI hides
+unavailable actions; the server independently enforces them. New role grants
+are added by migration without resetting unrelated role customizations.
+
+The RFQ owner must be an active Procurement user and current project member.
+Creation, issue, and award validate that relationship. Completed/cancelled
+projects reject writes. Award rechecks vendor activity, bid revision/expiry,
+project state, owner, and current approved BOQ inside its transaction. A newer
+approved BOQ requires cancelling the old RFQ and preparing a new one.
+
+#### Lifecycle and concurrency
+
+| State | Permitted actions |
+|---|---|
+| Draft | Edit scope, attach package files, issue, cancel with reason |
+| Issued | Submit quote revisions until deadline, withdraw current quote with reason, start evaluation, cancel with reason |
+| UnderEvaluation | Award an eligible quotation, cancel with reason |
+| Awarded | View evidence and contract; close RFQ |
+| Closed / Cancelled | Read/export evidence |
+
+Issue freezes BOQ line descriptions, quantities, units, and invitations.
+Starting evaluation explicitly stops further quote submissions, including when
+done before the deadline. A quote revision never overwrites an earlier one.
+The latest revision is current even if withdrawn; withdrawing it does not revive
+an older revision. Missing price cells remain missing, while zero means a quoted
+free item. Partial, expired, withdrawn, inactive-vendor, and superseded quotes
+cannot be awarded. Quote validity must cover the RFQ deadline.
+
+Vendor responses include the read-only `isActive` flag. An inactive vendor's
+quoted amounts remain visible as historical evidence, but receive no lowest-price
+highlight even when tied with an active vendor. Valid lines in an active partial
+quotation still participate in line-price comparison; whole-package award
+eligibility remains separate.
+
+Mutations require `Idempotency-Key`; updates, transitions, bids, award, and file
+attachment also require `rowVersion` or matching `If-Match`. Reusing a key with
+another payload or submitting stale state returns 409. Root changes, quotation
+history, award snapshot, and generated contract/lines commit transactionally.
+Rejected business operations leave them unchanged. Audit records include actor,
+project, RFQ, action, and resulting status. RFQ activity history is persisted
+alongside the operation.
+
+SQL Server mutations take update locks on the RFQ root and its owned collections
+in a fixed order. Serializable isolation remains in place for dependency checks.
+This prevents two RFQs from sharing an index gap while reading child history and
+then deadlocking when both append records. BOQ revision and MR/receipt/issue code
+allocation similarly reserve their ranges for update before reading the next
+number, as does the downstream payment-request code allocator. A transaction-owned
+SQL application lock excludes RFQ creation from concurrent RFQ mutations because
+EF inserts new children in a different order from existing-graph reads. Creation
+is serialized across projects; existing RFQ mutations share the gate and retain
+their root/child locks. Ordinary detail reads retain their existing query behavior.
+
+The joined warehouse flow also serializes its transactional writes with a
+transaction-owned SQL application lock. This prevents stock scans and document
+writes from taking conflicting root/child locks across projects while preserving
+Serializable stock validation. Warehouse list reads explicitly use ReadCommitted
+so they do not inherit a stronger isolation level from a reused connection.
+The tradeoff is serialized warehouse writes across projects; the validation below
+proves the tested workflow, not peak throughput or every possible database race.
+
+#### Files and notifications
+
+Files use the existing ProjectDocument upload validation and Google Drive
+lifecycle under category `Procurement`. Uploads first become project documents;
+selecting a file attaches it to a draft RFQ package or a submitted quote revision.
+An abandoned form does not delete an uploaded project document: it remains
+available in the project's document library. Each linked file records RFQ source
+identity and package or vendor/revision slot. Cross-project, already-bound, and
+pending-deletion files cannot be attached. Downloads recheck RFQ/project scope.
+Linked evidence cannot be deleted through the generic document endpoint.
+
+Google Drive must be configured to upload; failures use the existing document
+service's cleanup behavior. No replacement file storage or vendor messaging
+integration is introduced.
+
+Issue and award notify the active RFQ owner and project PM through seeded in-app
+notification templates. A five-minute worker marks overdue issued/evaluating
+RFQs and notifies these recipients once. This marker is transactional with the
+notifications and does not invent another RFQ lifecycle state. Standard
+notification-template administration remains available.
+
+RFQs retain purchasing evidence through cancellation rather than exposing a
+hard-delete operation. Project, invited vendor, and awarded contract deletion
+previews explicitly classify RFQs as blockers. These rules also apply to demo
+records. Removing the source project/vendor/contract must not erase RFQ history.
+
+#### API and field validation
+
+Base: `/api/operational-projects/{projectId}/procurement/rfqs`
+(also available under `/api/v1`).
+
+| Operation | Method / suffix |
+|---|---|
+| List / references / CSV export | GET `/`, `/references`, `/export` |
+| Detail / evidence export | GET `/{id}`, `/{id}/export` |
+| Create / edit | POST `/`, PUT `/{id}` |
+| Lifecycle | POST `/{id}/issue`, `/evaluate`, `/cancel`, `/close` |
+| Submit quote revision / withdraw | POST `/{id}/bids`, `/{id}/bids/{bidId}/withdraw` |
+| Award | POST `/{id}/award` |
+| Upload / attach existing file | POST `/documents/upload`, `/{id}/documents` |
+| Download RFQ file | GET `/{id}/documents/{documentId}/download` |
+
+`RfqRequests.cs` enforces shape, required fields, lengths, enums, and numeric
+ranges. `RfqService.cs` enforces the following business relationships. Forms
+mirror the editable constraints for feedback.
+
+| Field | Rule |
+|---|---|
+| Code, currency, project/customer, totals | Server generated or derived; not writable in RFQ requests |
+| Title | Required after trimming, maximum 200 characters |
+| BOQ revision | Approved VND revision in the selected project; award requires current approved revision |
+| Owner | Active Procurement member of the same project |
+| Due date | Future timestamp with timezone; issue requires it still be in the future |
+| Vendor IDs | 1–100 unique, active Supplier/SubContractor/Both IDs |
+| BOQ lines | 1–500 unique source lines from selected revision |
+| Quantity | Positive, ≤ approved quantity, ≤ 6 decimal places |
+| RFQ / quotation notes | Optional, trimmed, maximum 2000 characters |
+| Quote vendor | Active invited vendor of the same RFQ |
+| Quote lines | 1–500 unique RFQ line IDs; omitted lines remain missing |
+| Unit price | 0–999999999999.9999, ≤ 4 decimal places |
+| Line / quotation total | ≤ 99999999999999.9999 VND |
+| Delivery lead time | Whole days, 0–3650 |
+| Payment terms | Required after trimming, maximum 1000 characters |
+| Quote validity | Zoned timestamp, unexpired, on/after RFQ deadline |
+| Quote file IDs | 0–20 unique, unbound, available Procurement files in same project |
+| Award bid | Current, complete, unwithdrawn, unexpired, active vendor |
+| Contract type | Supply/Subcontract compatible with the selected vendor type |
+| Award/cancel/withdraw reason | 3–2000 characters after trimming |
+| Row version | Required existing 8-byte concurrency token for changes |
+| List query | Search ≤ 200 chars; valid status/owner/date range; whitelisted sort; page 1–1000000; page size 1–100 |
+
+Deadlines are stored and returned as UTC. UI date filters convert local start/end
+of day to UTC. CSV cells neutralize formula prefixes.
+
+#### Migration and demonstration
+
+`20260908134224_AddRfqBidComparison` adds seven tables, indexes, restrictive
+cross-aggregate foreign keys, and RFQ permission grants. It does not rewrite
+existing business data. Review deployment backups before rollback: `Down` drops
+RFQ evidence and removes this capability's permission assignments.
+
+`RfqSampleDataSeeder` creates only its dedicated `PJ-SAMPLE-RFQ` project and
+respects project deletion tombstones. It provides a draft, an issued comparison
+with complete/partial quotes, and an overdue RFQ. Re-running does not overwrite
+user edits or resurrect the project. Production reference options come from
+the API, not hardcoded React values.
+
+### 7.19 KPI Framework and Source Evidence
+
+#### Scope
+
+The KPI platform implements the approved NICON framework from the NIH-447
+customer attachment and `docs/Nicon_BreakTask_v1.xlsx`. It calculates only
+metrics backed by structured source events. A missing source workflow is
+reported as `MissingData`; it is never converted to a zero score.
+
+#### Platform contract
+
+- One period exists per employee, year, and month.
+- Period boundaries use `Asia/Ho_Chi_Minh` and are stored as UTC.
+- Active definition weights cannot exceed 100% for a KPI position.
+- A period can be locked only when every active metric is `Available` and the
+  snapshot weights equal 100%.
+- Snapshots freeze the definition code, version, weight, target, scoring
+  direction, threshold, result, and source evidence.
+- A locked period is immutable and cannot be recalculated.
+- Automatic calculation runs daily at 01:00 Vietnam time. Authorized users may
+  also calculate manually.
+- A configured low-score threshold produces at most one notification per
+  employee and period.
+- `analytics.kpi.view` is own-scope. `view.all`, `manage`, and `export` grant
+  cross-user viewing, definition/period management, and export respectively.
+
+#### User interface routes
+
+- `/admin/kpi` is the KPI evaluation workspace. It selects the employee and
+  period, calculates scores, displays source evidence, exports results, and
+  locks complete periods.
+- `/admin/kpi/configuration` is the KPI definition workspace. It edits weights,
+  targets, direction, alert thresholds, and active state, and requires
+  `analytics.kpi.manage`.
+
+The evaluation route does not render or load definition configuration. The
+configuration route does not load employee dashboards or expose calculate,
+export, or period-lock actions.
+
+Both routes include an expandable, four-language usage guide. Evaluation
+explains the four-step workflow, data statuses, and irreversible period lock.
+Configuration explains each field and shows live readiness per role: active
+weight total, missing required targets, and whether the role is ready to score.
+The `RequiresTarget` flag is supplied by the backend definition contract so the
+frontend does not duplicate formula rules.
+
+#### Metric traceability
+
+| Position | Metric | Weight | Source | Status |
+| --- | --- | ---: | --- | --- |
+| Sales | Lead-to-contract conversion | 40% | Lead owner, creation and conversion events | Implemented |
+| Sales | New signed contract revenue | 40% | Upstream customer Contract owner, signed date and value | Implemented; target required |
+| Sales | First customer interaction time | 20% | Lead creation and first non-note activity | Implemented; target required |
+| Tendering | Tender win rate | 40% | Tender preparer, close date and result | Implemented |
+| Tendering | On-time tender preparation | 30% | Tender checklist owner/deadline/completion | Implemented |
+| Tendering | Tender estimate accuracy | 30% | Approved tender estimate versus final execution BOQ | Implemented |
+| Design | On-time drawing delivery | 40% | Design schedule task assignee, planned/actual end | Implemented |
+| Design | First-pass drawing approval | 30% | Drawing owner, approval/release and revision count | Implemented |
+| Design | Site-reported design errors | 30% | Verified Punch Items with confirmed Design root cause | Implemented; target required |
+| Site | Construction progress variance | 30% | Construction task owner and planned/actual duration | Implemented; target required |
+| Site | Material waste rate | 30% | Excess posted warehouse issue quantity versus final BOQ allowance | Implemented; target required |
+| Site | First-pass acceptance | 20% | Acceptance creator, approval and revision count | Implemented |
+| Site | HSE violation count | 20% | Confirmed HSE violations attributed to the responsible site user | Implemented; target required |
+| Procurement | Purchase cost optimization | 40% | Final BOQ unit ceiling versus signed downstream Contract line cost | Implemented |
+| Procurement | Delivery time | 30% | Approved Material Request to final posted Warehouse Receipt | Implemented; target required |
+| Procurement | Vendor quality rating | 30% | PM-approved per-contract Vendor Rating | Implemented |
+| Project Accounting | On-time receivable collection | 40% | Due-month upstream milestones attributed to an accountant | Implemented |
+| Project Accounting | Partner payment processing time | 30% | Validated Payment Request to paid timestamp | Implemented; default target 72 hours |
+| Project Accounting | Financial data accuracy | 30% | Approved post-close Accounting Corrections | Implemented; default target 1 correction |
+
+#### KPI Source Evidence
+
+KPI sources must satisfy these rules:
+
+1. Store an explicit `OperationalProjectId`, responsible employee ID, event
+   timestamp, lifecycle status, creator/updater, and row version.
+2. Capture responsibility on the source event. Do not derive historical KPI
+   ownership from the employee's current role or the project's current team.
+3. Count only terminal business events such as `Approved`, `Confirmed`,
+   `Posted`, or `Paid`. Draft, rejected, cancelled, and deleted records are not
+   KPI evidence.
+4. Use a half-open Vietnam-time interval: event timestamp is greater than or
+   equal to period start and less than period end after conversion to UTC.
+5. Make approved or posted financial and inventory records immutable. Correct
+   them through a linked reversal or a new version, not an in-place edit.
+6. Require `Idempotency-Key` on creates and transitions, and row version or
+   `If-Match` on updates. Replayed requests return the original response;
+   conflicting payloads return `409`.
+7. Apply project visibility through `IProjectAccessService` in addition to the
+   global permission. An inaccessible project returns `404`.
+8. Write standard audit events for every transition. Evidence JSON stores the
+   source entity type, record IDs, source version, responsible user, and event
+   timestamp used by the calculation.
+9. A period with no qualifying denominator or no approved source records stays
+   `MissingData`. It is never scored as zero.
+10. A locked KPI snapshot remains immutable even if source records are later
+    corrected. Recalculation of locked periods requires a separately approved
+    reopen workflow.
+
+The approved source decisions are retained below. Earlier design proposals and
+pre-delivery inventories are not an alternative API specification; consult the
+current controllers/DTOs and the module contracts in this guide.
+
+| Decision | Approved contract |
+| --- | --- |
+| D-01 | `PROCUREMENT` is a distinct business role and KPI position; `QS` remains Tendering and `WAREHOUSE` remains a control role. Scheduled KPI eligibility must include Procurement. |
+| D-02 | The latest approved execution BOQ is selected atomically as final when the Operational Project completes. VOs affect it only through an explicitly approved BOQ revision. |
+| D-03 | Verified Punch Items with confirmed Design root cause count equally against the responsible designer; severity is evidence, not a KPI weight. The fixer is not automatically the responsible designer. |
+| D-04 | Confirmed HSE violations count equally against the responsible site user. Draft, Reported, Rejected and Cancelled records and diary text do not count. |
+| D-05 | Material waste is `100 * max(net posted issues - final BOQ allowance, 0) / allowance`. Missing or zero allowance must not become a synthetic score. |
+| D-06 | Procurement delivery measures calendar hours from MR approval to the final posted receipt that completely fulfills the request. Partial receipts do not stop the clock. |
+| D-07 | One scorecard version per completed downstream contract; quality, schedule, cost and HSE have equal weights. Procurement prepares it; the project's PM approves it. One approved rating is a valid sample. |
+| D-08 | Receivable collection uses upstream milestones due in the month, attributed to the stored responsible accountant. Only full Paid status on/before the due date qualifies; unpaid overdue milestones fail. |
+| D-09 | Payment processing measures calendar hours from ValidatedAt to PaidAt, attributed to the assigned accountant. Time before validation, rejected requests and incomplete documents are excluded. |
+| D-10 | Each approved post-close accounting correction counts once against the original entry's responsible accountant. Reversing it preserves that count and adds no second count. |
+| D-11 | Deploy complete source workflows together. Numeric targets remain administrator configuration; periods cannot lock while any active metric lacks source data or configuration. |
+
+Sources retain explicit project, employee, actor, timestamp, status and version
+identities. HSE is separate from Punch Items. Receivable evidence extends
+`ContractPaymentMilestone` and its append-only events. Payables use
+`PaymentRequest`; post-close corrections use `AccountingPeriod` and
+`AccountingCorrection`, not generic audit rows. Procurement ratings require
+independent PM approval. Do not infer historical responsibility from current
+roles, teams or the user who happens to record a payment.
+
+Source migrations include `AddPunchRootCauseAttribution`,
+`AddReceivableAccountability`, `AddHseViolations`, `AddProcurementControlChain`
+and `AddFinanceControlWorkflows`. Existing unattributed Punch Items and
+milestones remain excluded until explicitly classified or assigned. Do not
+synthesize approved events or split historical contract values into lines.
+Opening-balance imports require source hash, importer, timestamp, preview,
+validation and explicit confirmation. A partial historical month is not a
+complete sample. KPI definitions/periods/snapshots have no user-facing hard-delete
+operation; deactivation preserves definitions and locked evidence.
+
+Validate source authorization, project scope, role separation, idempotency,
+stale writes, duplicate keys, immutable approvals, reversals and unchanged state
+after rejection through integration tests. Pure formulas, zero denominators,
+targets, weights, precision and Vietnam-time boundaries belong in unit tests.
+
+---
+
 ## 8. Frontend Development
 
 ### 8.1 Technology Stack
@@ -1163,6 +2010,55 @@ npm run lint
 | Backend lint       | `docker exec nihome31042025-backend dotnet format --verify-no-changes` |
 | Frontend lint      | `cd nihomeweb && npm run lint`       |
 | Docker full build  | `docker compose up --build`          |
+
+---
+
+### 9.7 Business Pipeline Validation
+
+Validate all eight business modules and public/identity/shared operations.
+Customer entry paths include Design & Build, design-first with later construction,
+competitive tender and consultation/quotation. Preserve Customer → Operational
+Project → Contract/Design Project identity through each supported handoff; do not
+seed unrelated intermediate records and call that a complete pipeline.
+
+| Area | Joined behavior to validate | Existing test entry points |
+| --- | --- | --- |
+| CRM | Qualification/conversion, quotation approval, tender outcomes, signing and project inheritance | `CrmBusinessPipelineTests`, `crm-business-pipeline.spec.ts` |
+| Design and permits | Concept → Basic → Shop Drawing → IFC release/acknowledgment, scoped legal checklist | `DesignPermitIfcPipelineTests`, `DetailDesignScheduleControllerTests` |
+| Construction | Tasks/diaries, acceptance rejection/revision, punch verification, as-built readiness, handover completion/reopen | `ConstructionHandoverPipelineTests`, `construction-handover-pipeline.spec.ts` |
+| Procurement | Approved BOQ → demand approval → receipts/issues/reversals → source evidence | `ProcurementBusinessPipelineTests` |
+| RFQ and finance | Tender/BOQ provenance → quote revisions/withdrawals → award → signed downstream contract → warehouse → Paid/Rejected/Cancelled invoice | `RfqProcurementPipelineTests`, `rfq-business-pipeline.spec.ts` |
+| RFQ display | Active/inactive vendors, zero versus missing prices, responsive comparison and translated counts | `RfqsControllerTests`, `rfq-active-vendor-highlighting.spec.ts`, `admin-rfqs.spec.ts` |
+| Reports and KPI | Created business events appear in read models; missing sources remain unavailable; frozen snapshots and supported reversals are respected | Project report, KPI and source-workflow tests |
+| Shared/public | Public enquiry/application → authorized staff handling; permission revocation, file access and aggregate cleanup | Contact, recruitment, RBAC, document and hard-delete tests |
+
+Integration classes live under `nihomebackend.integration.tests/Controllers`;
+browser scenarios live under `nihomeweb/e2e/smoke`. These are starting points for
+review, not a claim that every possible scenario has executable coverage.
+
+For each workflow, test wrong role/project/owner, invalid fields, denied state
+skips, required reasons, stale versions, idempotent replay and conflicting
+payloads. Change dependencies after form load (membership, vendor activity, BOQ
+approval or required evidence) and verify rejection leaves state, history and
+bindings unchanged. Use ordinary business roles to prove handoffs. In browsers,
+check error/empty/loading/retry states, retained form values, keyboard access,
+mobile/tablet layout, translations and persistence after reload.
+
+Pure logic belongs in unit tests; HTTP/auth/persistence belongs in integration;
+rendering and deployed-stack wiring belong in browser E2E. API-only Playwright
+requests are not proof of browser interaction. InMemory EF does not prove SQL
+constraints, locking or transaction rollback. Concurrent awards, warehouse
+posting/reversal and failure recovery need isolated SQL execution. Live Drive,
+email and external ownership/cleanup require configured services; mocks cannot
+prove transport. Record actual run results and blockers in the task/PR or test
+artifacts rather than adding dated reports under `docs/`.
+
+Do not infer unsupported behavior from conceptual workflow diagrams: automatic
+RFQ-to-MR reservation, split awards, currency conversion, invoice matching,
+actual finance ledgers, offline synchronization, automatic permit approval and
+public-contact-to-CRM conversion require their own implemented contracts and
+verification. Passing a global suite proves its assertions, not exhaustive
+customer-scenario coverage.
 
 ---
 

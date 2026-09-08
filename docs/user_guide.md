@@ -2,7 +2,7 @@
 
 Version 1.0
 
-Last Updated: 12 August 2026
+Last Updated: 9 September 2026
 
 ---
 
@@ -552,7 +552,21 @@ Record defects at the construction site with location and description. Upload de
 
 #### 3.4.7 Permanent Delete Behavior
 
-Users with the relevant management permission can permanently delete records in any workflow status after confirming the destructive action. Edit and workflow-transition buttons may remain locked by status. Deleting a Customer also removes its dependent sales, contract, design, permit, drawing, and construction records; deleting an Opportunity removes its Quotes. Shared users and unrelated records remain, while preserved records such as linked Leads, Surveys, Contracts, or Tenders have the deleted reference cleared. Audit history and physical uploaded files are retained for traceability and storage safety.
+Permanent deletion requires the relevant permission and record scope, a current
+deletion-impact preview, the exact typed resource code, and concurrency
+confirmation. The preview distinguishes records that will be deleted, independent
+records that will be unlinked and preserved, and blockers that must be resolved.
+Customer deletion is blocked by independent opportunities, tenders, contracts
+and projects; quotes block Opportunity deletion. Resolve each through its own
+authorized workflow rather than assuming a cascading delete.
+
+Project-dependent files must be removed through their owning module before the
+parent project can be deleted. Managed file cleanup may return a pending durable
+operation; wait for Completed before treating the record as deleted. Ownership
+conflicts or failed cleanup require resolution and retry. Audit history remains;
+physical file treatment follows the preview and verified ownership rules.
+See [Permanent Aggregate Deletion](application_developer.md#77-permanent-aggregate-deletion)
+for the full dependency and recovery contract.
 
 ### 3.5 Module 5: Procurement
 
@@ -577,10 +591,18 @@ Before permanent deletion, the system shows an impact preview and requires the e
 #### 3.5.2 Bid Comparison (Bid Tabulation)
 
 Implemented at **Procurement → RFQs & bid comparison**. See the
-[RFQ workflow and operating contract](rfq-bid-comparison.md) for roles,
+[RFQ workflow and operating contract](application_developer.md#718-rfq-and-supplier-comparison) for roles,
 BOQ prerequisites, quotation revisions, award rules, and current MVP limits.
 
-Create requests for quotation (RFQ). Collect quotes from multiple vendors. Compare prices by BOQ line item in a matrix (rows = work items, columns = vendors). Automatically highlight the lowest prices. Evaluate and recommend the optimal vendor. Store vendor selection history.
+Procurement selects lines and quantities from an approved project BOQ, invites
+active vendors and issues the RFQ. Record quotations as immutable revisions;
+missing prices differ from zero and inactive vendors receive no lowest-price
+highlight. BGD or an explicitly authorized award role selects one complete,
+current, eligible quotation with a reason. Award creates one Draft downstream
+Supply/Subcontract contract in the same project/customer. Awarded values and
+lines remain protected while coordination notes and signing remain available.
+Signing, warehouse operations and manual payable processing continue through
+their existing workflows. The MVP uses VND and whole-package awards.
 
 | Page | Functions | Estimate |
 |------|-----------|----------|
@@ -835,6 +857,24 @@ audit and integration use.
 | Business Reports | Acceptance, risk, cost, permit, task reports | 3.5 days |
 | Advanced Report Filters | Multi-condition filters, date range, saved presets | 2 days |
 | Report Export | Excel and PDF export with progress indicator | 1.5 days |
+
+#### 3.8.3 Employee KPI Evaluation
+
+Use `/admin/kpi` to select an employee/month, calculate results, inspect source
+evidence and export. Configuration is separate at `/admin/kpi/configuration`
+and requires `analytics.kpi.manage`; it controls targets, weights, scoring
+direction and alert thresholds. Own-scope viewing and cross-user access follow
+the granted KPI permissions.
+
+Calculations use Vietnam calendar months and run automatically at 01:00 Vietnam
+time, with authorized manual calculation also available. Missing source events
+remain MissingData rather than a zero score; missing target configuration also
+prevents a metric from becoming Available. A period can lock only
+when every active metric is Available and weights total exactly 100%; locking
+freezes definitions and evidence and prevents recalculation. The four-language
+usage guide explains readiness and the irreversible lock operation.
+See [KPI Framework and Source Evidence](application_developer.md#719-kpi-framework-and-source-evidence)
+for metric sources, accountability and approved calculation decisions.
 
 ### 3.9 Cross-Cutting Capabilities
 
