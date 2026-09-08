@@ -10,7 +10,27 @@ test("SPA renders /admin/contracts without console errors for SUPER_ADMIN", asyn
     page,
     loginInBrowserAs,
     baseURL,
+    api,
+    loginAs,
 }) => {
+    const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const token = await loginAs(TEST_USERS.superAdmin);
+    const headers = { Authorization: `Bearer ${token}` };
+    const customerResponse = await api.post("/api/customers", { headers, data: {
+        name: `Contract editor customer ${suffix}`, type: "Individual", sourceCode: "marketing",
+        primaryContact: { fullName: "Factory investor", phone: `09${Math.floor(10_000_000 + Math.random() * 89_999_999)}`, isPrimary: true },
+    } });
+    expect(customerResponse.status(), await customerResponse.text()).toBe(201);
+    const customerId = (await customerResponse.json()).id;
+    const projectResponse = await api.post("/api/operational-projects", { headers, data: { name: `Contract editor project ${suffix}`, customerId } });
+    expect(projectResponse.status(), await projectResponse.text()).toBe(201);
+    const contractResponse = await api.post("/api/contracts", { headers, data: {
+        customerId, operationalProjectId: (await projectResponse.json()).id,
+        direction: "Upstream", type: "DesignAndBuild", value: 1_000_000,
+        scopeOfWork: "Editable draft for contract form regression",
+    } });
+    expect(contractResponse.status(), await contractResponse.text()).toBe(201);
+    const editableContract = await contractResponse.json();
     const jsErrors: string[] = [];
     page.on("pageerror", (err) => jsErrors.push(err.message));
 
@@ -51,8 +71,10 @@ test("SPA renders /admin/contracts without console errors for SUPER_ADMIN", asyn
     await expect(page.locator("#c-vendor-form")).toBeHidden();
     await page.getByRole("button", { name: /Huỷ|Hủy|Cancel|取消|キャンセル/i }).click();
 
-    // Sample seeder inserts at least one row for freshly booted stacks.
-    const row = page.locator('[data-testid^="contract-row-"]').first();
+    // Own the editable fixture: the newest shared row may be an immutable
+    // RFQ-awarded contract created by another business pipeline.
+    await page.locator("#c-search").fill(editableContract.contractNumber);
+    const row = page.getByTestId(`contract-row-${editableContract.id}`);
     await expect(row).toBeVisible();
     const contractId = await row.getAttribute("data-testid");
     await row.locator("td").nth(2).hover();

@@ -1,30 +1,28 @@
 import { execFileSync } from "node:child_process";
 
 /**
- * Minimal SQL helper for E2E setup/teardown.
- *
- * Runs sqlcmd inside the docker-compose stack's MSSQL container so the test
- * file doesn't need a Node SQL driver. Only used to wire test fixtures that
- * the public API does not expose (e.g. assigning a user to a business role
- * via users.RoleEntityId).
- *
- * Container name + sa password are pinned to docker-compose.yaml.
+ * SQL access for isolated E2E fixture setup/teardown that has no public API.
+ * Configure E2E_SQL_CONTAINER and E2E_SQL_DATABASE alongside BASE_URL when
+ * running a separate validation stack. The password stays inside the SQL
+ * container, using SQLCMDPASSWORD or its existing MSSQL_SA_PASSWORD/SA_PASSWORD.
  */
-const SQL_CONTAINER = "nihome31042025-sqlserver";
-const SQL_USER = "sa";
-const SQL_PASSWORD = "Nihome@31042025";
-const SQL_DATABASE = "NihomeDB";
+const SQL_CONTAINER = process.env.E2E_SQL_CONTAINER ?? "nihome31042025-sqlserver";
+const SQL_USER = process.env.E2E_SQL_USER ?? "sa";
+const SQL_DATABASE = process.env.E2E_SQL_DATABASE ?? "NihomeDB";
 
 export function execSql(sql: string): string {
   const args = [
     "exec",
     SQL_CONTAINER,
+    "sh", "-c",
+    'export SQLCMDPASSWORD="${SQLCMDPASSWORD:-${MSSQL_SA_PASSWORD:-$SA_PASSWORD}}"; exec "$@"',
+    "e2e-sql",
     "/opt/mssql-tools18/bin/sqlcmd",
     "-S", "localhost",
     "-U", SQL_USER,
-    "-P", SQL_PASSWORD,
     "-d", SQL_DATABASE,
     "-C",
+    "-b",
     "-h", "-1",
     "-W",
     "-Q", sql,

@@ -3,7 +3,8 @@ import { test, expect, TEST_USERS } from "../fixtures/auth";
 
 // Real stack and seeded business roles. APIs establish only the project/team
 // foundation; every procurement, contract and payment state below comes from UI.
-test("business roles carry an approved BOQ through RFQ award, signing and supplier payment", async ({ page, api, loginAs, loginInBrowserAs }, testInfo) => {
+for (const outcome of ["Paid", "Rejected", "Cancelled"] as const) {
+test(`business roles carry an approved BOQ through RFQ, warehouse and invoice ${outcome}`, async ({ page, api, loginAs, loginInBrowserAs }, testInfo) => {
   test.setTimeout(180_000);
   const suffix = randomUUID().slice(0, 8);
   const adminToken = await loginAs(TEST_USERS.superAdmin);
@@ -190,11 +191,45 @@ test("business roles carry an approved BOQ through RFQ award, signing and suppli
     await expect(invoice()).toContainText("Ready for approval");
     await loginInBrowserAs(page, TEST_USERS.bgd);
     await page.goto("/admin/finance-control");
+    if (outcome === "Rejected") {
+      await invoice().getByRole("button", { name: "Reject", exact: true }).click();
+      const decision = page.getByRole("dialog");
+      await decision.getByRole("button", { name: "Reject", exact: true }).click();
+      await expect(decision.getByRole("alert")).toBeVisible();
+      await expect(invoice()).toContainText("Ready for approval");
+      await decision.getByLabel("Reason / note", { exact: true }).fill("Invoice scope requires supplier correction");
+      await decision.getByRole("button", { name: "Reject", exact: true }).click();
+      await expect(decision).not.toBeVisible();
+      await expect(invoice()).toContainText("Rejected");
+    } else {
     await invoice().getByRole("button", { name: "Approve", exact: true }).click();
     await page.getByRole("dialog").getByRole("button", { name: "Approve", exact: true }).click();
     await expect(invoice()).toContainText("Approved");
+      if (outcome === "Cancelled") {
+        await invoice().getByRole("button", { name: "Cancel request", exact: true }).click();
+        const decision = page.getByRole("dialog");
+        await decision.getByRole("button", { name: "Cancel request", exact: true }).click();
+        await expect(decision.getByRole("alert")).toBeVisible();
+        await expect(invoice()).toContainText("Approved");
+        await decision.getByLabel("Reason / note", { exact: true }).fill("Supplier invoice replaced before payment");
+        await decision.getByRole("button", { name: "Cancel request", exact: true }).click();
+        await expect(decision).not.toBeVisible();
+        await expect(invoice()).toContainText("Cancelled");
+      }
+    }
     await loginInBrowserAs(page, TEST_USERS.accountant);
     await page.goto("/admin/finance-control");
+    if (outcome !== "Paid") {
+      await expect(invoice()).toContainText(outcome);
+      await expect(invoice().getByRole("button", { name: "Mark paid", exact: true })).toHaveCount(0);
+      await expect(invoice().getByRole("button", { name: "Submit", exact: true })).toHaveCount(0);
+      await page.reload();
+      await expect(invoice()).toContainText(outcome);
+      await expect(invoice()).toContainText(contractNumber);
+      await expect(invoice()).toContainText("3,600,000");
+      await page.screenshot({ path: testInfo.outputPath(`04-invoice-${outcome}.png`), fullPage: true });
+      return;
+    }
     await invoice().getByRole("button", { name: "Mark paid", exact: true }).click();
     await page.getByRole("dialog").getByRole("button", { name: "Confirm paid", exact: true }).click();
     await expect(invoice()).toContainText("Paid");
@@ -206,3 +241,4 @@ test("business roles carry an approved BOQ through RFQ award, signing and suppli
   });
   expect(errors).toEqual([]);
 });
+}
