@@ -141,6 +141,7 @@ public static class DbSeeder
         SeedBusinessRoleUsers(db);
         KpiSeeder.Seed(db);
         SampleCrmDataSeeder.Seed(db, webRootPath);
+        RfqSampleDataSeeder.Seed(db);
     }
 
     private static readonly (string Phone, string FullName, string Email, UserRole Role)[] _canonicalAdminUsers =

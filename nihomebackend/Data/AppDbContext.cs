@@ -105,6 +105,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<GoogleDriveCredential> GoogleDriveCredentials => Set<GoogleDriveCredential>();
 
     // Procurement
+    public DbSet<Rfq> Rfqs => Set<Rfq>();
+    public DbSet<RfqBid> RfqBids => Set<RfqBid>();
+    public DbSet<RfqInvitation> RfqInvitations => Set<RfqInvitation>();
+    public DbSet<RfqDocument> RfqDocuments => Set<RfqDocument>();
     public DbSet<Vendor> Vendors => Set<Vendor>();
     public DbSet<ProjectBoqRevision> ProjectBoqRevisions => Set<ProjectBoqRevision>();
     public DbSet<ProjectBoqLine> ProjectBoqLines => Set<ProjectBoqLine>();
@@ -1247,6 +1251,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasIndex(p => p.Status);
             b.HasIndex(p => p.UpdatedAt);
         });
+
+        RfqModelConfiguration.Configure(modelBuilder);
 
         modelBuilder.Entity<ProjectBoqRevision>(b =>
         {

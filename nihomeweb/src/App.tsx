@@ -43,6 +43,7 @@ const AdminLeads = lazy(() => import("./pages/admin/Leads.tsx"));
 const AdminCustomers = lazy(() => import("./pages/admin/Customers.tsx"));
 const VendorPage = lazy(() => import("./pages/admin/procurement/VendorPage.tsx"));
 const VendorDetail = lazy(() => import("./pages/admin/procurement/VendorDetail.tsx"));
+const RfqPage = lazy(() => import("./pages/admin/procurement/RfqPage.tsx"));
 const ProcurementControlPage = lazy(() => import("./pages/admin/procurement/ProcurementControlPage.tsx"));
 const BoqRevisionDetailPage = lazy(() => import("./pages/admin/procurement/BoqRevisionDetailPage.tsx"));
 const MaterialRequestDetailPage = lazy(() => import("./pages/admin/procurement/MaterialRequestDetailPage.tsx"));
@@ -184,6 +185,9 @@ const App = () => (
               <Route element={<RequirePermission code={ADMIN_PERMS.vendors} />}>
                 <Route path="/admin/vendors" element={<VendorPage />} />
                 <Route path="/admin/vendors/:id" element={<VendorDetail />} />
+              </Route>
+              <Route element={<RequirePermission code="proc.rfqs.view" />}>
+                <Route path="/admin/procurement-control/rfqs" element={<RfqPage />} />
               </Route>
               <Route element={<RequirePermission code={[ADMIN_PERMS.procurement, ADMIN_PERMS.procurementMaterialRequests, ADMIN_PERMS.procurementWarehouse]} />}>
                 <Route path="/admin/procurement-control" element={<ProcurementControlPage />} />

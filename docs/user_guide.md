@@ -576,6 +576,10 @@ Before permanent deletion, the system shows an impact preview and requires the e
 
 #### 3.5.2 Bid Comparison (Bid Tabulation)
 
+Implemented at **Procurement → RFQs & bid comparison**. See the
+[RFQ workflow and operating contract](rfq-bid-comparison.md) for roles,
+BOQ prerequisites, quotation revisions, award rules, and current MVP limits.
+
 Create requests for quotation (RFQ). Collect quotes from multiple vendors. Compare prices by BOQ line item in a matrix (rows = work items, columns = vendors). Automatically highlight the lowest prices. Evaluate and recommend the optimal vendor. Store vendor selection history.
 
 | Page | Functions | Estimate |

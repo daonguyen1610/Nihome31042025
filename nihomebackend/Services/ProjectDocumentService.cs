@@ -304,6 +304,8 @@ public sealed class ProjectDocumentService(
         if (!await CanAccessProjectAsync(projectId, callerUserId, canSeeAll, ct)) return false;
         var document = await FindAsync(projectId, documentId, ct);
         if (document is null) return false;
+        if (await db.RfqDocuments.AnyAsync(link => link.ProjectDocumentId == documentId, ct))
+            throw new ProjectDocumentValidationException("Tệp là bằng chứng RFQ/báo giá; không thể xoá tài liệu đã liên kết.");
         if (document.SourceType == ProjectDocumentSourceType.ExistingManagedFile)
             throw new ProjectDocumentValidationException(
                 "Tệp thuộc bản ghi nghiệp vụ nguồn; vui lòng xoá hoặc thay thế tệp tại chức năng đã tạo tệp.");

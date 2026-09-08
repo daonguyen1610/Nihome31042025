@@ -1,0 +1,874 @@
+[
+  {
+    "key": "rfq.title",
+    "category": "rfq",
+    "en": "RFQs & bid comparison",
+    "vi": "RFQ & so sánh giá",
+    "zh": "询价与比价",
+    "ja": "見積依頼・比較"
+  },
+  {
+    "key": "rfq.subtitle",
+    "category": "rfq",
+    "en": "Compare supplier quotations and record project purchasing decisions.",
+    "vi": "So sánh báo giá nhà cung cấp và lưu quyết định mua sắm theo dự án.",
+    "zh": "比较供应商报价并记录项目采购决策。",
+    "ja": "仕入先の見積を比較し、プロジェクトの調達決定を記録します。"
+  },
+  {
+    "key": "rfq.choose",
+    "category": "rfq",
+    "en": "Choose…",
+    "vi": "Chọn…",
+    "zh": "请选择…",
+    "ja": "選択…"
+  },
+  {
+    "key": "rfq.all",
+    "category": "rfq",
+    "en": "All",
+    "vi": "Tất cả",
+    "zh": "全部",
+    "ja": "すべて"
+  },
+  {
+    "key": "rfq.save",
+    "category": "rfq",
+    "en": "Save draft",
+    "vi": "Lưu nháp",
+    "zh": "保存草稿",
+    "ja": "下書きを保存"
+  },
+  {
+    "key": "rfq.saved",
+    "category": "rfq",
+    "en": "Saved successfully.",
+    "vi": "Đã lưu thành công.",
+    "zh": "保存成功。",
+    "ja": "保存しました。"
+  },
+  {
+    "key": "rfq.create",
+    "category": "rfq",
+    "en": "Create RFQ",
+    "vi": "Tạo RFQ",
+    "zh": "新建询价",
+    "ja": "見積依頼を作成"
+  },
+  {
+    "key": "rfq.edit",
+    "category": "rfq",
+    "en": "Edit draft",
+    "vi": "Sửa bản nháp",
+    "zh": "编辑草稿",
+    "ja": "下書きを編集"
+  },
+  {
+    "key": "rfq.refresh",
+    "category": "rfq",
+    "en": "Refresh",
+    "vi": "Tải lại",
+    "zh": "刷新",
+    "ja": "更新"
+  },
+  {
+    "key": "rfq.export",
+    "category": "rfq",
+    "en": "Export",
+    "vi": "Xuất dữ liệu",
+    "zh": "导出",
+    "ja": "エクスポート"
+  },
+  {
+    "key": "rfq.back",
+    "category": "rfq",
+    "en": "RFQ list",
+    "vi": "Danh sách RFQ",
+    "zh": "询价列表",
+    "ja": "見積依頼一覧"
+  },
+  {
+    "key": "rfq.search",
+    "category": "rfq",
+    "en": "Search code, title or vendor",
+    "vi": "Tìm mã, tiêu đề hoặc nhà cung cấp",
+    "zh": "搜索编号、标题或供应商",
+    "ja": "番号・件名・仕入先で検索"
+  },
+  {
+    "key": "rfq.overdue",
+    "category": "rfq",
+    "en": "Overdue",
+    "vi": "Quá hạn",
+    "zh": "已逾期",
+    "ja": "期限超過"
+  },
+  {
+    "key": "rfq.sort",
+    "category": "rfq",
+    "en": "Sort",
+    "vi": "Sắp xếp",
+    "zh": "排序",
+    "ja": "並べ替え"
+  },
+  {
+    "key": "rfq.sort.updated",
+    "category": "rfq",
+    "en": "Recently updated",
+    "vi": "Cập nhật gần nhất",
+    "zh": "最近更新",
+    "ja": "更新順"
+  },
+  {
+    "key": "rfq.sort.due",
+    "category": "rfq",
+    "en": "Earliest deadline",
+    "vi": "Hạn sớm nhất",
+    "zh": "截止日期升序",
+    "ja": "期限が近い順"
+  },
+  {
+    "key": "rfq.sort.code",
+    "category": "rfq",
+    "en": "RFQ code",
+    "vi": "Mã RFQ",
+    "zh": "询价编号",
+    "ja": "見積依頼番号"
+  },
+  {
+    "key": "rfq.dueFrom",
+    "category": "rfq",
+    "en": "Deadline from",
+    "vi": "Hạn từ ngày",
+    "zh": "截止日期自",
+    "ja": "期限の開始日"
+  },
+  {
+    "key": "rfq.dueTo",
+    "category": "rfq",
+    "en": "Deadline to",
+    "vi": "Hạn đến ngày",
+    "zh": "截止日期至",
+    "ja": "期限の終了日"
+  },
+  {
+    "key": "rfq.empty",
+    "category": "rfq",
+    "en": "No RFQs match this selection.",
+    "vi": "Không có RFQ phù hợp bộ lọc.",
+    "zh": "没有符合条件的询价。",
+    "ja": "条件に一致する見積依頼がありません。"
+  },
+  {
+    "key": "rfq.totalRecords",
+    "category": "rfq",
+    "en": "Total records",
+    "vi": "Tổng bản ghi",
+    "zh": "记录总数",
+    "ja": "合計件数"
+  },
+  {
+    "key": "rfq.previous",
+    "category": "rfq",
+    "en": "Previous",
+    "vi": "Trước",
+    "zh": "上一页",
+    "ja": "前へ"
+  },
+  {
+    "key": "rfq.next",
+    "category": "rfq",
+    "en": "Next",
+    "vi": "Sau",
+    "zh": "下一页",
+    "ja": "次へ"
+  },
+  {
+    "key": "rfq.projectUnavailable",
+    "category": "rfq",
+    "en": "Project unavailable or outside your access scope.",
+    "vi": "Dự án không tồn tại hoặc ngoài quyền truy cập.",
+    "zh": "项目不存在或无访问权限。",
+    "ja": "プロジェクトが存在しないか、アクセス権がありません。"
+  },
+  {
+    "key": "rfq.context",
+    "category": "rfq",
+    "en": "Customer and project",
+    "vi": "Khách hàng và dự án",
+    "zh": "客户与项目",
+    "ja": "顧客とプロジェクト"
+  },
+  {
+    "key": "rfq.issue",
+    "category": "rfq",
+    "en": "Issue RFQ",
+    "vi": "Phát hành RFQ",
+    "zh": "发布询价",
+    "ja": "見積依頼を発行"
+  },
+  {
+    "key": "rfq.evaluate",
+    "category": "rfq",
+    "en": "Start evaluation / stop bids",
+    "vi": "Bắt đầu đánh giá / ngừng nhận giá",
+    "zh": "开始评估并停止接收报价",
+    "ja": "評価を開始・見積受付を終了"
+  },
+  {
+    "key": "rfq.close",
+    "category": "rfq",
+    "en": "Close RFQ",
+    "vi": "Đóng RFQ",
+    "zh": "关闭询价",
+    "ja": "見積依頼を完了"
+  },
+  {
+    "key": "rfq.submitBid",
+    "category": "rfq",
+    "en": "Submit quote revision",
+    "vi": "Gửi phiên bản báo giá",
+    "zh": "提交报价版本",
+    "ja": "見積改訂を提出"
+  },
+  {
+    "key": "rfq.cancelRfq",
+    "category": "rfq",
+    "en": "Cancel RFQ",
+    "vi": "Hủy RFQ",
+    "zh": "取消询价",
+    "ja": "見積依頼をキャンセル"
+  },
+  {
+    "key": "rfq.award",
+    "category": "rfq",
+    "en": "Award and create draft contract",
+    "vi": "Chọn NCC và tạo hợp đồng nháp",
+    "zh": "定标并创建合同草稿",
+    "ja": "発注先を決定し契約草案を作成"
+  },
+  {
+    "key": "rfq.awardResult",
+    "category": "rfq",
+    "en": "Award decision",
+    "vi": "Quyết định lựa chọn NCC",
+    "zh": "定标决定",
+    "ja": "発注先の決定"
+  },
+  {
+    "key": "rfq.supply",
+    "category": "rfq",
+    "en": "Supply",
+    "vi": "Cung ứng",
+    "zh": "供货",
+    "ja": "供給"
+  },
+  {
+    "key": "rfq.subcontract",
+    "category": "rfq",
+    "en": "Subcontract",
+    "vi": "Thầu phụ",
+    "zh": "分包",
+    "ja": "下請"
+  },
+  {
+    "key": "rfq.matrix",
+    "category": "rfq",
+    "en": "Bid comparison matrix",
+    "vi": "Ma trận so sánh báo giá",
+    "zh": "报价比较矩阵",
+    "ja": "見積比較表"
+  },
+  {
+    "key": "rfq.matrixHelp",
+    "category": "rfq",
+    "en": "Lowest valid prices are highlighted. Missing lines are not zero. Only complete, current, unexpired bids can win the whole package.",
+    "vi": "Giá hợp lệ thấp nhất được tô sáng. Dòng thiếu không phải giá 0. Chỉ báo giá hiện hành, đủ dòng và còn hiệu lực được chọn cho toàn gói.",
+    "zh": "突出显示最低有效价格。缺项不等于零。只有完整、当前且未过期的报价才可获得整包定标。",
+    "ja": "有効な最低価格を強調表示します。未見積項目はゼロではありません。全項目を含む有効な最新版のみ一括発注の対象です。"
+  },
+  {
+    "key": "rfq.missing",
+    "category": "rfq",
+    "en": "Not quoted",
+    "vi": "Chưa báo giá",
+    "zh": "未报价",
+    "ja": "未見積"
+  },
+  {
+    "key": "rfq.partial",
+    "category": "rfq",
+    "en": "Partial quote",
+    "vi": "Báo giá chưa đủ dòng",
+    "zh": "部分报价",
+    "ja": "一部見積"
+  },
+  {
+    "key": "rfq.ineligible",
+    "category": "rfq",
+    "en": "Not eligible for award",
+    "vi": "Chưa đủ điều kiện chọn",
+    "zh": "不满足定标条件",
+    "ja": "発注先選定の対象外"
+  },
+  {
+    "key": "rfq.documents",
+    "category": "rfq",
+    "en": "RFQ and quotation files",
+    "vi": "Tệp RFQ và báo giá",
+    "zh": "询价及报价文件",
+    "ja": "見積依頼・見積書ファイル"
+  },
+  {
+    "key": "rfq.noDocuments",
+    "category": "rfq",
+    "en": "No linked files.",
+    "vi": "Chưa có tệp liên kết.",
+    "zh": "暂无关联文件。",
+    "ja": "関連ファイルはありません。"
+  },
+  {
+    "key": "rfq.attach",
+    "category": "rfq",
+    "en": "Attach project document",
+    "vi": "Gắn tài liệu dự án",
+    "zh": "关联项目文件",
+    "ja": "プロジェクト資料を添付"
+  },
+  {
+    "key": "rfq.upload",
+    "category": "rfq",
+    "en": "Upload Procurement document",
+    "vi": "Tải tài liệu cung ứng",
+    "zh": "上传采购文件",
+    "ja": "調達資料をアップロード"
+  },
+  {
+    "key": "rfq.uploadHelp",
+    "category": "rfq",
+    "en": "Uploads are kept in project documents. Select the uploaded file to attach it. Google Drive must be configured.",
+    "vi": "Tệp tải lên được giữ trong tài liệu dự án. Chọn tệp đã tải để đính kèm. Cần cấu hình Google Drive.",
+    "zh": "上传文件保存在项目文件中。请选择已上传文件进行关联。须配置 Google Drive。",
+    "ja": "アップロードはプロジェクト資料に保存されます。保存後に添付するファイルを選択してください。Google Drive の設定が必要です。"
+  },
+  {
+    "key": "rfq.history",
+    "category": "rfq",
+    "en": "Activity history",
+    "vi": "Lịch sử thao tác",
+    "zh": "操作历史",
+    "ja": "操作履歴"
+  },
+  {
+    "key": "rfq.bidHistory",
+    "category": "rfq",
+    "en": "Quotation revisions",
+    "vi": "Các phiên bản báo giá",
+    "zh": "报价版本历史",
+    "ja": "見積改訂履歴"
+  },
+  {
+    "key": "rfq.current",
+    "category": "rfq",
+    "en": "Current revision",
+    "vi": "Phiên bản hiện hành",
+    "zh": "当前版本",
+    "ja": "最新版"
+  },
+  {
+    "key": "rfq.superseded",
+    "category": "rfq",
+    "en": "Previous revision",
+    "vi": "Phiên bản cũ",
+    "zh": "旧版本",
+    "ja": "旧版"
+  },
+  {
+    "key": "rfq.withdrawn",
+    "category": "rfq",
+    "en": "Withdrawn",
+    "vi": "Đã rút",
+    "zh": "已撤回",
+    "ja": "撤回済み"
+  },
+  {
+    "key": "rfq.withdraw",
+    "category": "rfq",
+    "en": "Withdraw quote (reason above)",
+    "vi": "Rút báo giá (nhập lý do ở trên)",
+    "zh": "撤回报价（填写上方原因）",
+    "ja": "見積を撤回（上記の理由が必要）"
+  },
+  {
+    "key": "rfq.scopeHelp",
+    "category": "rfq",
+    "en": "Use an approved VND BOQ. Enter quantities for the lines to request; leave other lines blank. Each RFQ is awarded to one vendor.",
+    "vi": "Chọn BOQ VND đã duyệt. Nhập số lượng cho dòng cần chào giá; để trống dòng khác. Mỗi RFQ chọn một nhà cung cấp.",
+    "zh": "使用已批准的越南盾 BOQ。填写所需行数量，其他行留空。每份询价选择一家供应商。",
+    "ja": "承認済みVNDのBOQを使用します。対象項目に数量を入力し、対象外は空欄にします。見積依頼ごとに1社を選定します。"
+  },
+  {
+    "key": "rfq.bidHelp",
+    "category": "rfq",
+    "en": "Each submission preserves a new revision. Leave unquoted lines blank; zero is an explicit free item. Prices use up to 4 decimal places.",
+    "vi": "Mỗi lần gửi lưu một phiên bản mới. Để trống dòng chưa báo giá; 0 là miễn phí. Giá tối đa 4 chữ số thập phân.",
+    "zh": "每次提交保留新版本。未报价行留空，零表示免费。价格最多4位小数。",
+    "ja": "提出ごとに新しい版を保存します。未見積は空欄、無償は0と入力します。単価は小数4桁までです。"
+  },
+  {
+    "key": "rfq.validation.scope",
+    "category": "rfq",
+    "en": "Enter a title, approved BOQ, project Procurement owner, 1–100 vendors and 1–500 BOQ lines.",
+    "vi": "Nhập tiêu đề, BOQ đã duyệt, phụ trách mua hàng dự án, 1–100 NCC và 1–500 dòng BOQ.",
+    "zh": "请输入标题、已批准BOQ、项目采购负责人、1–100家供应商及1–500行BOQ。",
+    "ja": "件名、承認済みBOQ、調達担当者、仕入先1～100社、BOQ項目1～500件を指定してください。"
+  },
+  {
+    "key": "rfq.validation.due",
+    "category": "rfq",
+    "en": "Deadline must be in the future.",
+    "vi": "Hạn chào giá phải ở tương lai.",
+    "zh": "截止日期必须在将来。",
+    "ja": "期限は現在より後にしてください。"
+  },
+  {
+    "key": "rfq.validation.quantity",
+    "category": "rfq",
+    "en": "Quantity must be positive and within the approved BOQ limit; use at most 6 decimal places.",
+    "vi": "Số lượng phải dương, không vượt BOQ đã duyệt và tối đa 6 chữ số thập phân.",
+    "zh": "数量必须大于零且不超过批准的BOQ限额，最多6位小数。",
+    "ja": "数量は正の数で承認済みBOQの上限以下、小数6桁以内にしてください。"
+  },
+  {
+    "key": "rfq.validation.bid",
+    "category": "rfq",
+    "en": "Choose an invited vendor, quote at least one line, enter payment terms and whole delivery days, and select at most 20 files.",
+    "vi": "Chọn NCC được mời, báo ít nhất một dòng, nhập điều khoản thanh toán, số ngày giao nguyên và tối đa 20 tệp.",
+    "zh": "请选择受邀供应商，填写至少一项报价、付款条件及整数交付天数，最多20个文件。",
+    "ja": "招待済み仕入先、1項目以上の見積、支払条件、整数の納期日数を指定してください。ファイルは20件までです。"
+  },
+  {
+    "key": "rfq.validation.validity",
+    "category": "rfq",
+    "en": "Quote validity must cover the RFQ deadline and must not be expired.",
+    "vi": "Hiệu lực báo giá phải bao phủ hạn RFQ và chưa hết hạn.",
+    "zh": "报价有效期须覆盖询价截止日期且未过期。",
+    "ja": "見積有効期限は依頼期限以降かつ現在より後にしてください。"
+  },
+  {
+    "key": "rfq.validation.price",
+    "category": "rfq",
+    "en": "Unit price must be non-negative and use at most 4 decimal places, e.g. 125000.5000 VND.",
+    "vi": "Đơn giá không âm, tối đa 4 chữ số thập phân, ví dụ 125000.5000 VND.",
+    "zh": "单价必须非负且最多4位小数，例如125000.5000 VND。",
+    "ja": "単価は0以上、小数4桁以内にしてください（例：125000.5000 VND）。"
+  },
+  {
+    "key": "rfq.validation.reason",
+    "category": "rfq",
+    "en": "Enter a reason with 3–2000 characters.",
+    "vi": "Nhập lý do từ 3–2000 ký tự.",
+    "zh": "请输入3–2000字符的原因。",
+    "ja": "理由を3～2000文字で入力してください。"
+  },
+  {
+    "key": "rfq.validation.award",
+    "category": "rfq",
+    "en": "Select an eligible bid and enter an award reason with at least 3 characters.",
+    "vi": "Chọn báo giá hợp lệ và nhập lý do lựa chọn ít nhất 3 ký tự.",
+    "zh": "请选择符合条件的报价并输入至少3字符的定标原因。",
+    "ja": "有効な見積を選択し、選定理由を3文字以上で入力してください。"
+  },
+  {
+    "key": "rfq.field.title",
+    "category": "rfq",
+    "en": "Package title",
+    "vi": "Tiêu đề gói",
+    "zh": "采购包标题",
+    "ja": "案件名"
+  },
+  {
+    "key": "rfq.field.boq",
+    "category": "rfq",
+    "en": "Source BOQ",
+    "vi": "BOQ nguồn",
+    "zh": "来源BOQ",
+    "ja": "参照BOQ"
+  },
+  {
+    "key": "rfq.field.owner",
+    "category": "rfq",
+    "en": "Procurement owner",
+    "vi": "Phụ trách mua hàng",
+    "zh": "采购负责人",
+    "ja": "調達担当者"
+  },
+  {
+    "key": "rfq.field.due",
+    "category": "rfq",
+    "en": "Quotation deadline",
+    "vi": "Hạn chào giá",
+    "zh": "报价截止日期",
+    "ja": "見積期限"
+  },
+  {
+    "key": "rfq.field.note",
+    "category": "rfq",
+    "en": "Notes / deviations",
+    "vi": "Ghi chú / sai khác",
+    "zh": "备注／偏差",
+    "ja": "備考・相違点"
+  },
+  {
+    "key": "rfq.field.vendors",
+    "category": "rfq",
+    "en": "Invited vendors",
+    "vi": "Nhà cung cấp được mời",
+    "zh": "受邀供应商",
+    "ja": "招待する仕入先"
+  },
+  {
+    "key": "rfq.field.vendor",
+    "category": "rfq",
+    "en": "Vendor",
+    "vi": "Nhà cung cấp",
+    "zh": "供应商",
+    "ja": "仕入先"
+  },
+  {
+    "key": "rfq.field.quantity",
+    "category": "rfq",
+    "en": "Quantity",
+    "vi": "Số lượng",
+    "zh": "数量",
+    "ja": "数量"
+  },
+  {
+    "key": "rfq.field.unitPrice",
+    "category": "rfq",
+    "en": "Unit price",
+    "vi": "Đơn giá",
+    "zh": "单价",
+    "ja": "単価"
+  },
+  {
+    "key": "rfq.field.leadTime",
+    "category": "rfq",
+    "en": "Delivery lead time (days)",
+    "vi": "Thời gian giao (ngày)",
+    "zh": "交付周期（天）",
+    "ja": "納期（日）"
+  },
+  {
+    "key": "rfq.field.validity",
+    "category": "rfq",
+    "en": "Quote valid until",
+    "vi": "Báo giá có hiệu lực đến",
+    "zh": "报价有效期至",
+    "ja": "見積有効期限"
+  },
+  {
+    "key": "rfq.field.paymentTerms",
+    "category": "rfq",
+    "en": "Payment terms",
+    "vi": "Điều khoản thanh toán",
+    "zh": "付款条件",
+    "ja": "支払条件"
+  },
+  {
+    "key": "rfq.field.status",
+    "category": "rfq",
+    "en": "Status",
+    "vi": "Trạng thái",
+    "zh": "状态",
+    "ja": "状態"
+  },
+  {
+    "key": "rfq.field.bids",
+    "category": "rfq",
+    "en": "Received / invited",
+    "vi": "Đã nhận / đã mời",
+    "zh": "已收／已邀请",
+    "ja": "受領／招待"
+  },
+  {
+    "key": "rfq.field.issued",
+    "category": "rfq",
+    "en": "Issued at",
+    "vi": "Ngày phát hành",
+    "zh": "发布日期",
+    "ja": "発行日"
+  },
+  {
+    "key": "rfq.field.updated",
+    "category": "rfq",
+    "en": "Updated at",
+    "vi": "Cập nhật lúc",
+    "zh": "更新时间",
+    "ja": "更新日時"
+  },
+  {
+    "key": "rfq.field.total",
+    "category": "rfq",
+    "en": "Quoted total",
+    "vi": "Tổng báo giá",
+    "zh": "报价总额",
+    "ja": "見積合計"
+  },
+  {
+    "key": "rfq.field.reason",
+    "category": "rfq",
+    "en": "Decision / withdrawal reason",
+    "vi": "Lý do quyết định / rút giá",
+    "zh": "决定／撤回原因",
+    "ja": "決定・撤回理由"
+  },
+  {
+    "key": "rfq.field.contractType",
+    "category": "rfq",
+    "en": "Contract type",
+    "vi": "Loại hợp đồng",
+    "zh": "合同类型",
+    "ja": "契約種別"
+  },
+  {
+    "key": "rfq.field.bid",
+    "category": "rfq",
+    "en": "Quote ID",
+    "vi": "Mã báo giá",
+    "zh": "报价编号",
+    "ja": "見積ID"
+  },
+  {
+    "key": "rfq.status.Draft",
+    "category": "rfq",
+    "en": "Draft",
+    "vi": "Nháp",
+    "zh": "草稿",
+    "ja": "下書き"
+  },
+  {
+    "key": "rfq.status.Issued",
+    "category": "rfq",
+    "en": "Issued",
+    "vi": "Đã phát hành",
+    "zh": "已发布",
+    "ja": "発行済み"
+  },
+  {
+    "key": "rfq.status.UnderEvaluation",
+    "category": "rfq",
+    "en": "Under evaluation",
+    "vi": "Đang đánh giá",
+    "zh": "评估中",
+    "ja": "評価中"
+  },
+  {
+    "key": "rfq.status.Awarded",
+    "category": "rfq",
+    "en": "Awarded",
+    "vi": "Đã chọn NCC",
+    "zh": "已定标",
+    "ja": "選定済み"
+  },
+  {
+    "key": "rfq.status.Closed",
+    "category": "rfq",
+    "en": "Closed",
+    "vi": "Đã đóng",
+    "zh": "已关闭",
+    "ja": "完了"
+  },
+  {
+    "key": "rfq.status.Cancelled",
+    "category": "rfq",
+    "en": "Cancelled",
+    "vi": "Đã hủy",
+    "zh": "已取消",
+    "ja": "キャンセル済み"
+  },
+  {
+    "key": "rfq.event.created",
+    "category": "rfq",
+    "en": "RFQ created",
+    "vi": "Tạo RFQ",
+    "zh": "创建询价",
+    "ja": "見積依頼を作成"
+  },
+  {
+    "key": "rfq.event.updated",
+    "category": "rfq",
+    "en": "Draft updated",
+    "vi": "Cập nhật nháp",
+    "zh": "更新草稿",
+    "ja": "下書きを更新"
+  },
+  {
+    "key": "rfq.event.issue",
+    "category": "rfq",
+    "en": "RFQ issued",
+    "vi": "Phát hành RFQ",
+    "zh": "发布询价",
+    "ja": "見積依頼を発行"
+  },
+  {
+    "key": "rfq.event.evaluate",
+    "category": "rfq",
+    "en": "Evaluation started",
+    "vi": "Bắt đầu đánh giá",
+    "zh": "开始评估",
+    "ja": "評価を開始"
+  },
+  {
+    "key": "rfq.event.cancel",
+    "category": "rfq",
+    "en": "RFQ cancelled",
+    "vi": "Hủy RFQ",
+    "zh": "取消询价",
+    "ja": "見積依頼をキャンセル"
+  },
+  {
+    "key": "rfq.event.close",
+    "category": "rfq",
+    "en": "RFQ closed",
+    "vi": "Đóng RFQ",
+    "zh": "关闭询价",
+    "ja": "見積依頼を完了"
+  },
+  {
+    "key": "rfq.event.bid-submitted",
+    "category": "rfq",
+    "en": "Quote submitted",
+    "vi": "Gửi báo giá",
+    "zh": "提交报价",
+    "ja": "見積を提出"
+  },
+  {
+    "key": "rfq.event.bid-withdrawn",
+    "category": "rfq",
+    "en": "Quote withdrawn",
+    "vi": "Rút báo giá",
+    "zh": "撤回报价",
+    "ja": "見積を撤回"
+  },
+  {
+    "key": "rfq.event.awarded",
+    "category": "rfq",
+    "en": "Vendor selected",
+    "vi": "Chọn nhà cung cấp",
+    "zh": "选择供应商",
+    "ja": "仕入先を選定"
+  },
+  {
+    "key": "rfq.event.document-attached",
+    "category": "rfq",
+    "en": "Document attached",
+    "vi": "Gắn tài liệu",
+    "zh": "关联文件",
+    "ja": "資料を添付"
+  },
+  {
+    "key": "rbac.perm.proc.rfqs.view",
+    "category": "rfq",
+    "en": "View project RFQs",
+    "vi": "Xem RFQ dự án",
+    "zh": "查看项目询价",
+    "ja": "プロジェクト見積依頼の閲覧"
+  },
+  {
+    "key": "rbac.perm.proc.rfqs.manage",
+    "category": "rfq",
+    "en": "Manage project RFQs and bids",
+    "vi": "Quản lý RFQ và báo giá dự án",
+    "zh": "管理项目询价和报价",
+    "ja": "見積依頼・見積の管理"
+  },
+  {
+    "key": "rbac.perm.proc.rfqs.export",
+    "category": "rfq",
+    "en": "Export project RFQs",
+    "vi": "Xuất RFQ dự án",
+    "zh": "导出项目询价",
+    "ja": "見積依頼のエクスポート"
+  },
+  {
+    "key": "rbac.perm.proc.rfqs.award",
+    "category": "rfq",
+    "en": "Approve RFQ vendor awards",
+    "vi": "Duyệt lựa chọn nhà cung cấp RFQ",
+    "zh": "审批询价定标",
+    "ja": "見積依頼の仕入先選定を承認"
+  },
+  {
+    "key": "deletionImpact.item.vendor.rfqs",
+    "category": "rfq",
+    "en": "RFQ invitations",
+    "vi": "Lời mời RFQ",
+    "zh": "询价邀请",
+    "ja": "見積依頼の招待"
+  },
+  {
+    "key": "deletionImpact.item.operations.rfqs",
+    "category": "rfq",
+    "en": "Project RFQs",
+    "vi": "RFQ dự án",
+    "zh": "项目询价",
+    "ja": "プロジェクトの見積依頼"
+  },
+  {
+    "key": "notification.procurement.rfq.issued.title",
+    "category": "rfq",
+    "en": "RFQ issued",
+    "vi": "RFQ đã phát hành",
+    "zh": "询价已发布",
+    "ja": "見積依頼を発行しました"
+  },
+  {
+    "key": "notification.procurement.rfq.issued.body",
+    "category": "rfq",
+    "en": "RFQ {{code}}: {{title}}. Open the project to review.",
+    "vi": "RFQ {{code}}: {{title}}. Mở dự án để xem.",
+    "zh": "询价 {{code}}：{{title}}。请打开项目查看。",
+    "ja": "見積依頼 {{code}}：{{title}}。プロジェクトで確認してください。"
+  },
+  {
+    "key": "notification.procurement.rfq.awarded.title",
+    "category": "rfq",
+    "en": "RFQ awarded",
+    "vi": "RFQ đã chọn NCC",
+    "zh": "询价已定标",
+    "ja": "見積依頼の仕入先を選定しました"
+  },
+  {
+    "key": "notification.procurement.rfq.awarded.body",
+    "category": "rfq",
+    "en": "RFQ {{code}}: {{title}}. Open the project to review.",
+    "vi": "RFQ {{code}}: {{title}}. Mở dự án để xem.",
+    "zh": "询价 {{code}}：{{title}}。请打开项目查看。",
+    "ja": "見積依頼 {{code}}：{{title}}。プロジェクトで確認してください。"
+  },
+  {
+    "key": "notification.procurement.rfq.overdue.title",
+    "category": "rfq",
+    "en": "RFQ overdue",
+    "vi": "RFQ quá hạn",
+    "zh": "询价已逾期",
+    "ja": "見積依頼の期限を超過しました"
+  },
+  {
+    "key": "notification.procurement.rfq.overdue.body",
+    "category": "rfq",
+    "en": "RFQ {{code}}: {{title}}. Open the project to review.",
+    "vi": "RFQ {{code}}: {{title}}. Mở dự án để xem.",
+    "zh": "询价 {{code}}：{{title}}。请打开项目查看。",
+    "ja": "見積依頼 {{code}}：{{title}}。プロジェクトで確認してください。"
+  },
+  {
+    "key": "deletionImpact.item.contract.rfqs",
+    "category": "deletionImpact",
+    "en": "RFQ awards",
+    "vi": "Quyết định lựa chọn RFQ",
+    "zh": "询价定标",
+    "ja": "見積依頼の選定記録"
+  }
+]
