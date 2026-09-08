@@ -93,6 +93,24 @@ public sealed class MaterialRequestListResponse
     public int Page { get; set; }
     public int PageSize { get; set; }
     public List<MaterialRequestResponse> Items { get; set; } = [];
+    public MaterialRequestBoqContextResponse? CurrentApprovedBoq { get; set; }
+}
+
+public sealed class MaterialRequestBoqContextResponse
+{
+    public int RevisionId { get; set; }
+    public int RevisionNumber { get; set; }
+    public List<MaterialRequestBoqLineOptionResponse> Lines { get; set; } = [];
+}
+
+public sealed class MaterialRequestBoqLineOptionResponse
+{
+    public int Id { get; set; }
+    public string ItemCode { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public string Unit { get; set; } = string.Empty;
+    public decimal ApprovedQuantity { get; set; }
+    public decimal RemainingQuantity { get; set; }
 }
 
 public sealed class MaterialRequestLineResponse

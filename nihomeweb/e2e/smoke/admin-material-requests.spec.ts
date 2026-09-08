@@ -143,7 +143,24 @@ test("material request list filters and exports within the selected project on m
     return route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({ total: 21, page: Number(new URL(route.request().url()).searchParams.get("page") ?? 1), pageSize: 20, items: [request] }),
+      body: JSON.stringify({
+        total: 21,
+        page: Number(new URL(route.request().url()).searchParams.get("page") ?? 1),
+        pageSize: 20,
+        items: [request],
+        currentApprovedBoq: {
+          revisionId: 180401,
+          revisionNumber: 1,
+          lines: [{
+            id: request.lines[0].projectBoqLineId,
+            itemCode: request.lines[0].itemCode,
+            description: request.lines[0].description,
+            unit: request.lines[0].unit,
+            approvedQuantity: request.lines[0].boqApprovedQuantity,
+            remainingQuantity: request.lines[0].boqRemainingQuantity,
+          }],
+        },
+      }),
     });
   });
 
@@ -162,6 +179,11 @@ test("material request list filters and exports within the selected project on m
   const requestCard = page.locator("article").filter({ hasText: "MR-0180" });
   await expect(requestCard.getByRole("heading", { name: "MR-0180" })).toBeVisible();
   await expect(requestCard.getByText(/Received quantity: 15.*BOQ remaining: 60/)).toBeVisible();
+  await page.getByRole("button", { name: "Create request" }).click();
+  await page.getByText("BOQ item", { exact: true }).locator("..").getByRole("combobox").click();
+  await expect(page.getByRole("option", { name: /MAT-CEMENT.*60 remaining/ })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "Cancel" }).click();
   await page.getByPlaceholder("Search code, note, user, or BOQ item...").fill("cement");
   await page.getByRole("combobox", { name: "Status" }).click();
   await page.getByRole("option", { name: "Submitted" }).click();
@@ -216,4 +238,65 @@ test("material request list filters and exports within the selected project on m
   expect(tabletOverflow).toBe(false);
   await expect(page.getByText("Required from", { exact: true })).toBeVisible();
   await expect(page.getByText("Required to", { exact: true })).toBeVisible();
+});
+
+test("MR-only user creates from limited BOQ context without BOQ access", async ({
+  page,
+  loginInBrowserAs,
+  baseURL,
+}) => {
+  const appUrl = baseURL ?? "http://localhost:5043";
+  let boqEndpointRequests = 0;
+  await loginInBrowserAs(page, TEST_USERS.superAdmin);
+  await page.route(/\/api\/(?:v1\/)?users\/me\/permissions$/, route => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({
+      role: "MR_ONLY",
+      roleId: 901,
+      permissions: ["proc.material-requests.view", "proc.material-requests.manage"],
+    }),
+  }));
+  await page.route(/\/api\/(?:v1\/)?operational-projects\?.*/, route => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({ total: 1, page: 1, pageSize: 100, items: [{ id: projectId, code: "PJ-0180", name: "Foundation Project" }] }),
+  }));
+  await page.route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/procurement/boq-revisions`), route => {
+    boqEndpointRequests += 1;
+    return route.fulfill({ status: 403, contentType: "application/json", body: JSON.stringify({ message: "Forbidden" }) });
+  });
+  await page.route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/team$`), route => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({ operationalProjectId: projectId, canManage: false, roleDefinitions: [], moduleOptions: [], disciplineOptions: [], members: [], assignments: [] }),
+  }));
+  await page.route(/\/api\/(?:v1\/)?kpi\/eligible-users$/, route => route.fulfill({ status: 200, contentType: "application/json", body: "[]" }));
+  await page.route(/\/api\/(?:v1\/)?contracts(?:\?.*)?$/, route => route.fulfill({ status: 403, contentType: "application/json", body: "{}" }));
+  await page.route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/procurement/material-requests.*`), route => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({
+      total: 0,
+      page: 1,
+      pageSize: 20,
+      items: [],
+      currentApprovedBoq: {
+        revisionId: 180401,
+        revisionNumber: 1,
+        lines: [{ id: 180301, itemCode: "MAT-CEMENT", description: "Portland cement", unit: "kg", approvedQuantity: 100, remainingQuantity: 60 }],
+      },
+    }),
+  }));
+
+  await page.goto(`${appUrl}/admin/procurement-control`, { waitUntil: "networkidle" });
+  await page.locator("#procurement-project").click();
+  await page.getByRole("option", { name: "PJ-0180 · Foundation Project" }).click();
+
+  await expect(page.getByRole("tab", { name: /Yêu cầu vật tư|Material requests|材料申请|資材依頼/i })).toHaveAttribute("data-state", "active");
+  await expect(page.getByRole("tab", { name: /Phiên bản BOQ|BOQ revisions|BOQ 版本|BOQ改訂/i })).toHaveCount(0);
+  await page.getByRole("button", { name: /Tạo yêu cầu|Create request|创建申请|依頼を作成/i }).click();
+  await page.getByText(/Hạng mục BOQ|BOQ item|BOQ 项目|BOQ品目/i, { exact: true }).locator("..").getByRole("combobox").click();
+  await expect(page.getByRole("option", { name: /MAT-CEMENT.*(?:Còn 60|60 remaining|剩余 60|残り 60)/i })).toBeVisible();
+  expect(boqEndpointRequests).toBe(0);
 });

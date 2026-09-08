@@ -473,11 +473,98 @@ public class ProcurementControllerTests : IntegrationTestBase
             $"/api/operational-projects/{projectId}/procurement/material-requests?search=MR-QTY-01");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var line = (await ReadJsonAsync(response)).GetProperty("items")[0].GetProperty("lines")[0];
+        var body = await ReadJsonAsync(response);
+        var line = body.GetProperty("items")[0].GetProperty("lines")[0];
         line.GetProperty("requestedQuantity").GetDecimal().Should().Be(40m);
         line.GetProperty("receivedQuantity").GetDecimal().Should().Be(0m);
         line.GetProperty("boqApprovedQuantity").GetDecimal().Should().Be(100m);
         line.GetProperty("boqRemainingQuantity").GetDecimal().Should().Be(40m);
+        var boqContextLine = body.GetProperty("currentApprovedBoq").GetProperty("lines")[0];
+        boqContextLine.GetProperty("itemCode").GetString().Should().Be("MAT-QTY");
+        boqContextLine.GetProperty("approvedQuantity").GetDecimal().Should().Be(100m);
+        boqContextLine.GetProperty("remainingQuantity").GetDecimal().Should().Be(40m);
+        boqContextLine.TryGetProperty("budgetUnitPrice", out _).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task MaterialRequests_List_WithMrOnlyPermission_ReturnsBoqContextWithoutBoqAccess()
+    {
+        var suffix = Guid.NewGuid().ToString("N")[..8];
+        var phone = $"06{Random.Shared.Next(10000000, 99999999)}";
+        var projectId = await WithDbAsync(async db =>
+        {
+            var role = new Role
+            {
+                Code = $"MR_ONLY_{suffix}",
+                Name = $"MR only {suffix}",
+                IsActive = true,
+                InitialPermissionsSeeded = true,
+            };
+            db.Roles.Add(role);
+            await db.SaveChangesAsync();
+            var permissionIds = await db.Permissions
+                .Where(permission => permission.Module == "proc.material-requests" &&
+                    (permission.Action == "view" || permission.Action == "manage"))
+                .Select(permission => permission.Id)
+                .ToListAsync();
+            db.RolePermissions.AddRange(permissionIds.Select(permissionId =>
+                new RolePermission { RoleId = role.Id, PermissionId = permissionId }));
+            var user = new ApplicationUser
+            {
+                PhoneNumber = phone,
+                FullName = "MR only tester",
+                Email = $"mr-only-{suffix}@nihome.test",
+                Role = UserRole.USER,
+                RoleEntityId = role.Id,
+                IsActive = true,
+            };
+            user.PasswordHash = new PasswordService().Hash(user, TestDataSeeder.DefaultPassword);
+            db.Users.Add(user);
+            var customer = new Customer { Type = CustomerType.Company, Name = "MR permission customer", SourceCode = "referral" };
+            db.Customers.Add(customer);
+            await db.SaveChangesAsync();
+            var project = new OperationalProject
+            {
+                Code = $"PJ-MR-{suffix}",
+                Name = "MR Permission Project",
+                CustomerId = customer.Id,
+                ProjectManagerUserId = user.Id,
+            };
+            db.OperationalProjects.Add(project);
+            await db.SaveChangesAsync();
+            db.ProjectBoqRevisions.Add(new ProjectBoqRevision
+            {
+                OperationalProjectId = project.Id,
+                RevisionNumber = 1,
+                Status = ProjectBoqRevisionStatus.Approved,
+                ApprovedAt = DateTime.UtcNow,
+                PreparedByUserId = user.Id,
+                Lines = [new ProjectBoqLine
+                {
+                    ItemCode = "MR-CONTEXT",
+                    Description = "Context material",
+                    Unit = "item",
+                    ApprovedQuantity = 25m,
+                    BudgetUnitPrice = 999m,
+                    Amount = 24_975m,
+                }],
+            });
+            await db.SaveChangesAsync();
+            return project.Id;
+        });
+        await AuthTestHelper.AuthenticateAsync(
+            Client,
+            client => AuthTestHelper.LoginAsync(client, phone, TestDataSeeder.DefaultPassword));
+
+        var list = await Client.GetAsync($"/api/operational-projects/{projectId}/procurement/material-requests");
+
+        list.StatusCode.Should().Be(HttpStatusCode.OK);
+        var contextLine = (await ReadJsonAsync(list)).GetProperty("currentApprovedBoq").GetProperty("lines")[0];
+        contextLine.GetProperty("itemCode").GetString().Should().Be("MR-CONTEXT");
+        contextLine.GetProperty("remainingQuantity").GetDecimal().Should().Be(25m);
+        contextLine.TryGetProperty("budgetUnitPrice", out _).Should().BeFalse();
+        (await Client.GetAsync($"/api/operational-projects/{projectId}/procurement/boq-revisions"))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Fact]

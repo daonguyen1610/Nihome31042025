@@ -844,6 +844,13 @@ Approved, Partially Fulfilled, and Fulfilled. The frontend exports all filtered
 pages through this endpoint, so exported data retains the selected project and
 filter scope.
 
+The response also includes `currentApprovedBoq`, a least-privilege context used
+to create Material Requests. It contains the current approved revision number
+and item identity, unit, approved quantity, and remaining quantity. It does not
+expose budget unit prices or BOQ totals, so a caller with Material Request
+permissions but without `proc.boq.view` can select valid items without gaining
+access to restricted BOQ financial data or revision history.
+
 ### 7.13 Project Procurement BOQ
 
 Project procurement BOQs are revisioned operational records and are distinct

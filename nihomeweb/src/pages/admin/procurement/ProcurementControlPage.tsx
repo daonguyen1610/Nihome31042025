@@ -38,6 +38,7 @@ import {
   adminApi,
   type ContractResponse,
   type KpiUserOptionResponse,
+  type MaterialRequestBoqContextResponse,
   type MaterialRequestListParams,
   type MaterialRequestResponse,
   type OperationalProjectListItemResponse,
@@ -133,10 +134,10 @@ const ProcurementControlPage = () => {
   const [requestPage, setRequestPage] = useState(1);
   const [requestTotal, setRequestTotal] = useState(0);
   const [requestRows, setRequestRows] = useState<MaterialRequestResponse[]>([]);
+  const [requestBoqContext, setRequestBoqContext] = useState<MaterialRequestBoqContextResponse | null>(null);
   const [requestListLoading, setRequestListLoading] = useState(false);
   const [requestListError, setRequestListError] = useState<string | null>(null);
   const [requestExporting, setRequestExporting] = useState(false);
-  const [workspaceProjectId, setWorkspaceProjectId] = useState(0);
 
   const [boqCurrency, setBoqCurrency] = useState("VND");
   const [boqLines, setBoqLines] = useState<BoqLineDraft[]>([emptyBoqLine()]);
@@ -217,7 +218,6 @@ const ProcurementControlPage = () => {
       ]);
       if (projectIdRef.current !== requestedProjectId) return;
       setWorkspace(workspaceResult.data);
-      setWorkspaceProjectId(projectId);
       const teamUsers: UserOption[] = (teamResult.data?.members ?? [])
         .filter((member) => member.isActive)
         .map((member) => ({ userId: member.userId, userName: member.userName }));
@@ -249,7 +249,7 @@ const ProcurementControlPage = () => {
   }), [requestOwner, requestPage, requestRequiredFrom, requestRequiredTo, requestSearch, requestSortDirection, requestStatus]);
 
   const loadMaterialRequests = useCallback(async () => {
-    if (!projectId || workspaceProjectId !== projectId || !canViewRequests) return;
+    if (!projectId || !canViewRequests) return;
     const requestedProjectId = projectId;
     const requestLoadId = ++requestLoadIdRef.current;
     setRequestListLoading(true);
@@ -259,18 +259,19 @@ const ProcurementControlPage = () => {
       if (projectIdRef.current !== requestedProjectId || requestLoadIdRef.current !== requestLoadId) return;
       setRequestTotal(data.total);
       setRequestRows(data.items);
+      setRequestBoqContext(data.currentApprovedBoq ?? null);
     } catch (reason) {
       if (projectIdRef.current !== requestedProjectId || requestLoadIdRef.current !== requestLoadId) return;
       setRequestListError(extractApiError(reason));
     } finally {
       if (projectIdRef.current === requestedProjectId && requestLoadIdRef.current === requestLoadId) setRequestListLoading(false);
     }
-  }, [canViewRequests, projectId, requestParams, workspaceProjectId]);
+  }, [canViewRequests, projectId, requestParams]);
 
   useEffect(() => { void loadMaterialRequests(); }, [loadMaterialRequests]);
 
   const refreshData = async () => {
-    await Promise.all([loadWorkspace(), loadMaterialRequests()]);
+    await Promise.all([loadWorkspace(), loadMaterialRequests(), loadBoqList()]);
   };
 
   const exportMaterialRequests = async () => {
@@ -314,7 +315,7 @@ const ProcurementControlPage = () => {
   }), [boqDebouncedSearch, boqList.pageSize, boqPage, boqSortBy, boqSortDirection, boqStatus]);
 
   const loadBoqList = useCallback(async () => {
-    if (!projectId) {
+    if (!projectId || !canViewBoq) {
       setBoqList((current) => ({ ...current, total: 0, page: 1, items: [] }));
       return;
     }
@@ -328,7 +329,7 @@ const ProcurementControlPage = () => {
     } finally {
       setBoqListLoading(false);
     }
-  }, [boqListParams, projectId]);
+  }, [boqListParams, canViewBoq, projectId]);
 
   useEffect(() => { void loadBoqList(); }, [loadBoqList]);
 
@@ -340,6 +341,7 @@ const ProcurementControlPage = () => {
     [workspace],
   );
   const approvedBoqLines = approvedBoq?.lines ?? [];
+  const requestBoqLines = requestBoqContext?.lines ?? [];
   const receivableLines = useMemo(() => (workspace?.materialRequests ?? [])
     .filter((request) => ["Approved", "PartiallyFulfilled"].includes(request.status))
     .flatMap((request) => request.lines.map((line) => ({ ...line, requestCode: request.code })))
@@ -523,9 +525,9 @@ const ProcurementControlPage = () => {
                 projectIdRef.current = Number(value);
                 requestLoadIdRef.current += 1;
                 setRequestRows([]);
+                setRequestBoqContext(null);
                 setRequestTotal(0);
                 setRequestPage(1);
-                setWorkspaceProjectId(0);
                 setProjectId(Number(value));
               }}
             >
@@ -708,7 +710,7 @@ const ProcurementControlPage = () => {
                       });
                     }}
                     busy={busy}
-                    approvedBoq={approvedBoq}
+                    hasApprovedBoq={requestBoqContext != null}
                   />
                 )}
               </TabsContent>
@@ -834,7 +836,7 @@ const ProcurementControlPage = () => {
               lines={requestLines}
               setLines={setRequestLines}
               users={users}
-              boqLines={approvedBoqLines}
+              boqLines={requestBoqLines}
               t={t}
             />
           )}
@@ -1026,7 +1028,7 @@ const RequestPanel = ({
   onSubmit,
   onDecision,
   busy,
-  approvedBoq,
+  hasApprovedBoq,
 }: {
   rows: MaterialRequestResponse[];
   canManage: boolean;
@@ -1039,14 +1041,14 @@ const RequestPanel = ({
   onSubmit: (row: MaterialRequestResponse) => void;
   onDecision: (row: MaterialRequestResponse, approved: boolean) => void;
   busy: boolean;
-  approvedBoq?: ProjectBoqRevisionResponse;
+  hasApprovedBoq: boolean;
 }) => (
   <section>
     <PanelHeader
       title={t("procurement.request.title")}
       description={t("procurement.request.description")}
       action={
-        canManage && approvedBoq && (
+        canManage && hasApprovedBoq && (
           <Button onClick={onCreate}>
             <Plus className="mr-2 h-4 w-4" />
             {t("procurement.request.create")}
@@ -1054,7 +1056,7 @@ const RequestPanel = ({
         )
       }
     />
-    {!approvedBoq && (
+    {!hasApprovedBoq && (
       <p className="mb-4 border-l-2 border-amber-400 px-3 text-sm text-amber-800">
         {t("procurement.request.requiresBoq")}
       </p>
@@ -1278,7 +1280,7 @@ const BoqLineField = ({ value, onChange, t }: { value: number; onChange: (value:
 
 const BoqForm = ({ currency, setCurrency, lines, setLines, t }: { currency: string; setCurrency: (value: string) => void; lines: BoqLineDraft[]; setLines: React.Dispatch<React.SetStateAction<BoqLineDraft[]>>; t: Translate }) => <div className="space-y-4"><div className="max-w-xs space-y-2"><Label htmlFor="boq-currency">{t("procurement.field.currency")}</Label><Input id="boq-currency" maxLength={3} value={currency} onChange={(event) => setCurrency(event.target.value.toUpperCase())} /></div><div className="space-y-3"><div className="flex items-center justify-between"><Label>{t("procurement.field.lines")}</Label><AddButton onClick={() => setLines((current) => [...current, emptyBoqLine()])}>{t("procurement.action.addLine")}</AddButton></div>{lines.map((line, index) => <div className="grid gap-3 border-t pt-3 sm:grid-cols-2 lg:grid-cols-[1fr_2fr_0.8fr_1fr_1fr_auto]" key={index}><div><Label>{t("procurement.field.itemCode")}</Label><Input maxLength={80} value={line.itemCode} onChange={(event) => setLines((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, itemCode: event.target.value } : item))} /></div><div><Label>{t("procurement.field.description")}</Label><Input maxLength={500} value={line.description} onChange={(event) => setLines((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, description: event.target.value } : item))} /></div><div><Label>{t("procurement.field.unit")}</Label><Input maxLength={50} value={line.unit} onChange={(event) => setLines((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, unit: event.target.value } : item))} /></div><div><Label>{t("procurement.field.quantity")}</Label><BoqLineField value={line.approvedQuantity} onChange={(value) => setLines((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, approvedQuantity: value } : item))} t={t} /></div><div><Label>{t("procurement.field.budgetPrice")}</Label><Input type="number" min={0} step="any" value={line.budgetUnitPrice} onChange={(event) => setLines((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, budgetUnitPrice: Number(event.target.value) } : item))} /></div><div className="self-end"><RemoveButton label={t("procurement.action.removeLine")} disabled={lines.length === 1} onClick={() => setLines((current) => current.filter((_, itemIndex) => itemIndex !== index))} /></div></div>)}</div></div>;
 
-const RequestForm = ({ form, setForm, lines, setLines, users, boqLines, t }: { form: { responsibleSiteUserId: number; assignedProcurementUserId: number; requiredAt: string; note: string }; setForm: React.Dispatch<React.SetStateAction<typeof form>>; lines: RequestLineDraft[]; setLines: React.Dispatch<React.SetStateAction<RequestLineDraft[]>>; users: UserOption[]; boqLines: ProjectBoqLineResponse[]; t: Translate }) => <div className="space-y-4"><div className="grid gap-4 sm:grid-cols-2"><UserField id="request-site-user" label={t("procurement.field.responsibleSite")} value={form.responsibleSiteUserId} onChange={(value) => setForm((current) => ({ ...current, responsibleSiteUserId: value }))} users={users} t={t} /><UserField id="request-proc-user" label={t("procurement.field.procurementOwner")} value={form.assignedProcurementUserId} onChange={(value) => setForm((current) => ({ ...current, assignedProcurementUserId: value }))} users={users} t={t} /><div className="space-y-2"><Label htmlFor="request-required-at">{t("procurement.field.requiredAt")}</Label><Input id="request-required-at" type="datetime-local" value={form.requiredAt} onChange={(event) => setForm((current) => ({ ...current, requiredAt: event.target.value }))} /></div><div className="space-y-2"><Label htmlFor="request-note">{t("procurement.field.note")}</Label><Input id="request-note" maxLength={2000} value={form.note} onChange={(event) => setForm((current) => ({ ...current, note: event.target.value }))} /></div></div><DynamicChoiceLines lines={lines} setLines={setLines} choices={boqLines.map((line) => ({ id: line.id, label: `${line.itemCode} · ${line.description}` }))} idKey="projectBoqLineId" quantityKey="requestedQuantity" add={emptyRequestLine} t={t} /></div>;
+const RequestForm = ({ form, setForm, lines, setLines, users, boqLines, t }: { form: { responsibleSiteUserId: number; assignedProcurementUserId: number; requiredAt: string; note: string }; setForm: React.Dispatch<React.SetStateAction<typeof form>>; lines: RequestLineDraft[]; setLines: React.Dispatch<React.SetStateAction<RequestLineDraft[]>>; users: UserOption[]; boqLines: Array<{ id: number; itemCode: string; description: string; remainingQuantity: number }>; t: Translate }) => <div className="space-y-4"><div className="grid gap-4 sm:grid-cols-2"><UserField id="request-site-user" label={t("procurement.field.responsibleSite")} value={form.responsibleSiteUserId} onChange={(value) => setForm((current) => ({ ...current, responsibleSiteUserId: value }))} users={users} t={t} /><UserField id="request-proc-user" label={t("procurement.field.procurementOwner")} value={form.assignedProcurementUserId} onChange={(value) => setForm((current) => ({ ...current, assignedProcurementUserId: value }))} users={users} t={t} /><div className="space-y-2"><Label htmlFor="request-required-at">{t("procurement.field.requiredAt")}</Label><Input id="request-required-at" type="datetime-local" value={form.requiredAt} onChange={(event) => setForm((current) => ({ ...current, requiredAt: event.target.value }))} /></div><div className="space-y-2"><Label htmlFor="request-note">{t("procurement.field.note")}</Label><Input id="request-note" maxLength={2000} value={form.note} onChange={(event) => setForm((current) => ({ ...current, note: event.target.value }))} /></div></div><DynamicChoiceLines lines={lines} setLines={setLines} choices={boqLines.map((line) => ({ id: line.id, label: `${line.itemCode} · ${line.description} · ${t("procurement.request.remaining", { quantity: line.remainingQuantity })}` }))} idKey="projectBoqLineId" quantityKey="requestedQuantity" add={emptyRequestLine} t={t} /></div>;
 
 const ContractLineForm = ({ form, setForm, users, contracts, contractsLookupAvailable, boqLines, t }: { form: { contractId: number; projectBoqLineId: number; procurementOwnerUserId: number; quantity: number; negotiatedUnitPrice: number }; setForm: React.Dispatch<React.SetStateAction<typeof form>>; users: UserOption[]; contracts: ContractResponse[]; contractsLookupAvailable: boolean; boqLines: ProjectBoqLineResponse[]; t: Translate }) => <div className="grid gap-4 sm:grid-cols-2"><div className="space-y-2"><Label htmlFor="contract-id">{contractsLookupAvailable ? t("procurement.field.contract") : t("procurement.field.contractId")}</Label>{contractsLookupAvailable ? <Select value={form.contractId ? String(form.contractId) : undefined} onValueChange={(value) => setForm((current) => ({ ...current, contractId: Number(value) }))}><SelectTrigger id="contract-id"><SelectValue placeholder={t("procurement.lookup.contractPlaceholder")} /></SelectTrigger><SelectContent>{contracts.map((contract) => <SelectItem value={String(contract.id)} key={contract.id}>{contract.contractNumber}{contract.vendorName ? ` · ${contract.vendorName}` : ""}</SelectItem>)}</SelectContent></Select> : <Input id="contract-id" type="number" min={1} value={form.contractId || ""} onChange={(event) => setForm((current) => ({ ...current, contractId: Number(event.target.value) }))} placeholder={t("procurement.lookup.contractIdPlaceholder")} />}</div><div className="space-y-2"><Label>{t("procurement.field.item")}</Label><Select value={form.projectBoqLineId ? String(form.projectBoqLineId) : undefined} onValueChange={(value) => setForm((current) => ({ ...current, projectBoqLineId: Number(value) }))}><SelectTrigger><SelectValue placeholder={t("procurement.lookup.boqLinePlaceholder")} /></SelectTrigger><SelectContent>{boqLines.map((line) => <SelectItem value={String(line.id)} key={line.id}>{line.itemCode} · {line.description}</SelectItem>)}</SelectContent></Select></div><UserField id="contract-owner" label={t("procurement.field.owner")} value={form.procurementOwnerUserId} onChange={(value) => setForm((current) => ({ ...current, procurementOwnerUserId: value }))} users={users} t={t} /><div className="space-y-2"><Label htmlFor="contract-quantity">{t("procurement.field.quantity")}</Label><Input id="contract-quantity" type="number" min={0.000001} step="any" value={form.quantity} onChange={(event) => setForm((current) => ({ ...current, quantity: Number(event.target.value) }))} /></div><div className="space-y-2"><Label htmlFor="contract-price">{t("procurement.field.negotiatedPrice")}</Label><Input id="contract-price" type="number" min={0} step="any" value={form.negotiatedUnitPrice} onChange={(event) => setForm((current) => ({ ...current, negotiatedUnitPrice: Number(event.target.value) }))} /></div></div>;
 
