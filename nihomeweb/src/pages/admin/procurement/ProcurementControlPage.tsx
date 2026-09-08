@@ -111,6 +111,7 @@ const ProcurementControlPage = () => {
   const [projectId, setProjectId] = useState(0);
   const projectIdRef = useRef(0);
   const requestLoadIdRef = useRef(0);
+  const dialogTriggerRef = useRef<HTMLElement | null>(null);
   const [workspace, setWorkspace] = useState<ProcurementWorkspaceResponse | null>(null);
   const [users, setUsers] = useState<UserOption[]>([]);
   const [contracts, setContracts] = useState<ContractResponse[]>([]);
@@ -354,6 +355,7 @@ const ProcurementControlPage = () => {
   const formatDate = (value?: string | null) => value ? date.format(new Date(value)) : "—";
 
   const openDialog = (kind: Exclude<DialogKind, null>) => {
+    dialogTriggerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setFormError(null);
     if (kind === "boq") { setBoqCurrency("VND"); setBoqLines([emptyBoqLine()]); }
     if (kind === "request") {
@@ -811,7 +813,14 @@ const ProcurementControlPage = () => {
           if (!open && !busy) setDialog(null);
         }}
       >
-        <DialogContent className="max-h-[92vh] w-[95vw] max-w-4xl overflow-y-auto">
+        <DialogContent
+          className="max-h-[92vh] w-[95vw] max-w-4xl overflow-y-auto"
+          onCloseAutoFocus={(event) => {
+            if (!dialogTriggerRef.current) return;
+            event.preventDefault();
+            dialogTriggerRef.current.focus();
+          }}
+        >
           <DialogHeader>
             <DialogTitle>
               {dialog ? t(`procurement.dialog.${dialog}.title`) : ""}
