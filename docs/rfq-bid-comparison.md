@@ -195,8 +195,9 @@ external Drive availability.
 
 ## Validation evidence — 8 September 2026
 
-**Expanded business-pipeline QA subsequently failed at the Accountant contract
-lookup.** See [the pipeline findings and coverage](rfq-business-pipeline-validation.md).
+**The expanded business pipeline now passes through Paid.** Its Accountant
+contract-lookup defect was fixed with a scoped finance reference endpoint. See
+[the pipeline findings, correction and coverage](rfq-business-pipeline-validation.md).
 The results below establish feature-level coverage, not a complete browser
 payment journey.
 

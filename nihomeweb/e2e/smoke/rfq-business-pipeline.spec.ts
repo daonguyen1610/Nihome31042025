@@ -20,7 +20,7 @@ test("business roles carry an approved BOQ through RFQ award, signing and suppli
   }
   const pmId = await userId("PM");
   const procurementId = await userId("PROCUREMENT");
-  const accountantId = await userId("ACCOUNTANT");
+  await userId("ACCOUNTANT");
   const warehouseId = await userId("WAREHOUSE");
   const created = await api.post("/api/operational-projects", { headers, data: { name: `RFQ pipeline ${suffix}`, customerId, projectManagerUserId: pmId } });
   expect(created.status(), await created.text()).toBe(201);
@@ -170,7 +170,8 @@ test("business roles carry an approved BOQ through RFQ award, signing and suppli
     await page.getByRole("option", { name: new RegExp(contractNumber) }).click();
     await dialog.getByLabel("Supplier invoice number", { exact: true }).fill(`INV-PIPE-${suffix}`);
     await dialog.getByLabel("Amount", { exact: true }).fill("3600000");
-    await dialog.getByLabel("Assigned accountant", { exact: true }).fill(String(accountantId));
+    await dialog.getByRole("combobox", { name: "Assigned accountant", exact: true }).click();
+    await page.getByRole("option", { name: userNames.get("ACCOUNTANT")!, exact: true }).click();
     await dialog.locator('input[maxlength="260"]').fill("supplier-invoice.pdf");
     await dialog.getByPlaceholder("/documents/invoice.pdf").fill("/documents/supplier-invoice.pdf");
     await dialog.getByRole("button", { name: "Create draft", exact: true }).click();

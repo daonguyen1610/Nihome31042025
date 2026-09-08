@@ -5,6 +5,7 @@ namespace NihomeBackend.Services;
 
 public interface IFinanceService
 {
+    Task<PaymentReferencesResponse> GetPaymentReferencesAsync(CancellationToken ct = default);
     Task<IReadOnlyList<PaymentRequestResponse>> ListPaymentRequestsAsync(CancellationToken ct = default);
     Task<IReadOnlyList<AccountingPeriodResponse>> ListPeriodsAsync(CancellationToken ct = default);
     Task<IReadOnlyList<AccountingCorrectionResponse>> ListCorrectionsAsync(CancellationToken ct = default);

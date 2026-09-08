@@ -47,6 +47,7 @@ test("finance control renders payments, periods, corrections, and payment histor
         "finance.tabs.corrections": "Corrections",
         "finance.payments.create": "Create request",
         "finance.field.timeline": "Status timeline",
+        "finance.payments.referencesEmpty": "A signed downstream contract and an active accountant are required to create a payment request.",
       },
     }),
   }));
@@ -94,6 +95,24 @@ test("finance control renders payments, periods, corrections, and payment histor
   await page.route(/\/api\/(?:v1\/)?operational-projects(?:\?.*)?$/, (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ total: 0, page: 1, pageSize: 200, items: [] }) }));
   await page.route(/\/api\/(?:v1\/)?users(?:\?.*)?$/, (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ total: 0, items: [] }) }));
 
+  // Deliberate lookup failure exercises recovery separately from the unmocked
+  // RFQ business pipeline. General CRM/user lists remain empty above.
+  let referencesAttempt = 0;
+  await page.route(/\/api\/(?:v1\/)?finance\/payment-references$/, (route) => {
+    referencesAttempt += 1;
+    return route.fulfill(referencesAttempt === 1 ? {
+      status: 503, contentType: "application/json",
+      body: JSON.stringify({ message: "Payment references temporarily unavailable" }),
+    } : {
+      status: 200, contentType: "application/json",
+      body: JSON.stringify({
+        contracts: [{ id: 10, contractNumber: "CT-2026-010", vendorId: 20, vendorName: "Nicon Materials", paymentMilestones: [] }],
+        vendors: [{ id: 20, vendorCode: "V-020", companyName: "Nicon Materials" }],
+        accountants: [{ id: 7, fullName: "Finance Accountant" }],
+      }),
+    });
+  });
+
   await page.goto(`${baseURL}/admin/finance-control`, { waitUntil: "networkidle" });
 
   await expect(page.getByRole("heading", { name: /Kiểm soát tài chính|Finance control|财务管控|財務管理/i })).toBeVisible();
@@ -108,6 +127,22 @@ test("finance control renders payments, periods, corrections, and payment histor
 
   await page.getByRole("tab", { name: /Thanh toán|Payments|付款|支払/i }).click();
   await page.getByRole("button", { name: /Tạo đề nghị|Create request|创建申请|申請を作成/i }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByRole("alert")).toBeVisible();
+  await expect(dialog.locator("#finance-invoice-number")).toHaveCount(0);
+  await expect(dialog.getByRole("button", { name: /Tạo bản nháp|Create draft|finance.action.create/i })).toBeDisabled();
+  await dialog.getByRole("button", { name: /Thử lại|Retry|common.retry/i }).click();
   await expect(page.locator("#finance-invoice-number")).toBeVisible();
   await expect(page.locator("#finance-received")).toBeVisible();
+
+  await page.keyboard.press("Escape");
+  await expect(dialog).not.toBeVisible();
+  await page.route(/\/api\/(?:v1\/)?finance\/payment-references$/, (route) => route.fulfill({
+    status: 200, contentType: "application/json",
+    body: JSON.stringify({ contracts: [], vendors: [], accountants: [] }),
+  }));
+  await page.getByRole("button", { name: /Tạo đề nghị|Create request|创建申请|申請を作成/i }).click();
+  await expect(dialog.getByText("A signed downstream contract and an active accountant are required to create a payment request.")).toBeVisible();
+  await expect(dialog.getByRole("button", { name: /Tạo bản nháp|Create draft|finance.action.create/i })).toBeDisabled();
+  await expect(dialog.locator("#finance-contract")).toHaveCount(0);
 });

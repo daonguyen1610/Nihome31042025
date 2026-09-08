@@ -133,5 +133,6 @@
   {"key":"finance.success.periodClose","category":"finance","vi":"Đã đóng kỳ kế toán.","en":"Accounting period closed.","zh":"会计期间已关闭。","ja":"会計期間を締めました。"},
   {"key":"finance.success.correctionApprove","category":"finance","vi":"Đã phê duyệt bút toán điều chỉnh.","en":"Accounting correction approved.","zh":"会计调整已批准。","ja":"会計修正を承認しました。"},
   {"key":"finance.success.correctionReject","category":"finance","vi":"Đã từ chối bút toán điều chỉnh.","en":"Accounting correction rejected.","zh":"会计调整已拒绝。","ja":"会計修正を却下しました。"},
-  {"key":"finance.success.correctionReverse","category":"finance","vi":"Đã đảo bút toán điều chỉnh.","en":"Accounting correction reversed.","zh":"会计调整已冲销。","ja":"会計修正を取り消しました。"}
+  {"key":"finance.success.correctionReverse","category":"finance","vi":"Đã đảo bút toán điều chỉnh.","en":"Accounting correction reversed.","zh":"会计调整已冲销。","ja":"会計修正を取り消しました。"},
+  {"key": "finance.payments.referencesEmpty", "category": "finance", "vi": "Cần có hợp đồng đối tác đã ký và kế toán đang hoạt động để tạo đề nghị thanh toán.", "en": "A signed downstream contract and an active accountant are required to create a payment request.", "zh": "创建付款申请需要已签署的下游合同和在职会计。", "ja": "支払申請には署名済みの下流契約と有効な会計担当者が必要です。"}
 ]

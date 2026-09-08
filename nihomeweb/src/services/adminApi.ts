@@ -3702,6 +3702,11 @@ export interface VendorRatingUpsertRequest { contractId: number; qualityScore: n
 export interface PaymentAttachmentRequest { fileName: string; filePath: string }
 export interface PaymentAttachmentResponse extends PaymentAttachmentRequest { id: number }
 export interface PaymentRequestEventResponse { id: number; fromStatus?: string | null; toStatus: string; reason?: string | null; changedByUserId: number; changedByName?: string | null; changedAt: string }
+export interface PaymentReferencesResponse {
+  contracts: Array<{ id: number; contractNumber: string; vendorId: number; vendorName: string; paymentMilestones: Array<{ id: number; order: number; name: string }> }>;
+  vendors: Array<{ id: number; vendorCode: string; companyName: string }>;
+  accountants: Array<{ id: number; fullName: string | null }>;
+}
 export interface PaymentRequestResponse { id: number; code: string; contractId: number; contractNumber: string; vendorId: number; vendorName: string; contractPaymentMilestoneId?: number | null; supplierInvoiceNumber: string; invoiceDate: string; invoiceAmount: number; currency: string; status: string; receivedAt: string; validatedAt?: string | null; assignedAccountantUserId: number; assignedAccountantName?: string | null; submittedAt?: string | null; submittedByUserId?: number | null; approvedAt?: string | null; approvedByUserId?: number | null; paidAt?: string | null; paidByUserId?: number | null; rejectedAt?: string | null; cancelledAt?: string | null; decisionReason?: string | null; rowVersion: string; attachments: PaymentAttachmentResponse[]; events: PaymentRequestEventResponse[] }
 export interface PaymentRequestUpsertRequest { contractId: number; vendorId: number; contractPaymentMilestoneId?: number | null; supplierInvoiceNumber: string; invoiceDate: string; invoiceAmount: number; currency: string; receivedAt: string; assignedAccountantUserId: number; attachments: PaymentAttachmentRequest[]; rowVersion?: string }
 export interface AccountingPeriodResponse { id: number; year: number; month: number; periodStartUtc: string; periodEndUtc: string; status: string; closingAt?: string | null; closedAt?: string | null; closeReason?: string | null; rowVersion: string }
@@ -5268,6 +5273,7 @@ export const adminApi = {
   decideVendorRating: (projectId: number, id: number, approved: boolean, rowVersion: string, reason?: string) =>
     postIdempotent<VendorRatingResponse>(`/operational-projects/${projectId}/procurement/vendor-ratings/${id}/decision`, { approved, rowVersion, reason }),
 
+  getPaymentReferences: () => api.get<PaymentReferencesResponse>("/finance/payment-references"),
   listPaymentRequests: () => api.get<PaymentRequestResponse[]>("/finance/payment-requests"),
   createPaymentRequest: (body: PaymentRequestUpsertRequest) =>
     postIdempotent<PaymentRequestResponse>("/finance/payment-requests", body),
