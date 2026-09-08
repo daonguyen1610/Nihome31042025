@@ -999,6 +999,75 @@ public class OperationalProjectsControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task Delete_WithMaterialAlert_PreviewsAndDeletesAlertHistory()
+    {
+        await AuthTestHelper.AuthenticateAsync(
+            Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "SUPER_ADMIN"));
+        var customerId = await CreateCustomerAsync();
+        var create = await Client.PostAsJsonAsync("/api/operational-projects", new
+        {
+            name = $"Alert deletion {Guid.NewGuid():N}",
+            customerId,
+        });
+        create.EnsureSuccessStatusCode();
+        var project = await ReadJsonAsync(create);
+        var projectId = project.GetProperty("id").GetInt32();
+        var managerId = project.GetProperty("projectManagerUserId").GetInt32();
+        var alertId = await WithDbAsync<int>(async db =>
+        {
+            var now = DateTime.UtcNow;
+            var alert = new MaterialAlert
+            {
+                OperationalProjectId = projectId,
+                Code = "MA-0001",
+                Type = MaterialAlertType.Shortage,
+                Status = MaterialAlertStatus.Resolved,
+                Severity = MaterialAlertSeverity.Warning,
+                ItemCode = "DELETE-MAT",
+                Description = "Deletion dependency",
+                Unit = "kg",
+                RequiredQuantity = 10m,
+                VarianceQuantity = 10m,
+                SourceEntityType = "MaterialRequest",
+                SourceEntityId = 999,
+                AssignedToUserId = managerId,
+                DetectedAt = now,
+                ResolvedAt = now,
+                LastEvaluatedAt = now,
+                Events =
+                [
+                    new MaterialAlertEvent
+                    {
+                        Type = MaterialAlertEventType.AutoResolved,
+                        ToStatus = MaterialAlertStatus.Resolved,
+                        ChangedByUserId = managerId,
+                        ChangedAt = now,
+                    },
+                ],
+            };
+            db.MaterialAlerts.Add(alert);
+            await db.SaveChangesAsync();
+            return alert.Id;
+        });
+
+        var impact = await ReadJsonAsync(
+            await Client.GetAsync($"/api/operational-projects/{projectId}/deletion-impact"));
+
+        impact.GetProperty("canDelete").GetBoolean().Should().BeTrue();
+        impact.GetProperty("items").EnumerateArray().Should().Contain(item =>
+            item.GetProperty("key").GetString() == "operations.materialAlerts" &&
+            item.GetProperty("action").GetString() == "Delete" &&
+            item.GetProperty("count").GetInt32() == 1);
+        (await ConfirmDeleteAsync(projectId, project, impact)).StatusCode
+            .Should().Be(HttpStatusCode.NoContent);
+        (await WithDbAsync(db => db.MaterialAlerts.AnyAsync(item => item.Id == alertId)))
+            .Should().BeFalse();
+        (await WithDbAsync(db => db.MaterialAlertEvents.AnyAsync(item => item.MaterialAlertId == alertId)))
+            .Should().BeFalse();
+    }
+
+    [Fact]
     public async Task Delete_WithStaleRowVersion_ReturnsConflictAndPreservesProject()
     {
         await AuthTestHelper.AuthenticateAsync(

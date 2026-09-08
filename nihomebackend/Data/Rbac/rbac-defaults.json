@@ -129,6 +129,8 @@
     { "module": "proc.contract-lines", "action": "manage" },
     { "module": "proc.warehouse", "action": "view" },
     { "module": "proc.warehouse", "action": "post" },
+    { "module": "proc.material-alerts", "action": "view" },
+    { "module": "proc.material-alerts", "action": "manage" },
     { "module": "proc.vendor-ratings", "action": "view" },
     { "module": "proc.vendor-ratings", "action": "manage" },
     { "module": "proc.vendor-ratings", "action": "approve" },
@@ -393,6 +395,7 @@
         "proc.material-requests.*",
         "proc.contract-lines.view",
         "proc.warehouse.view",
+        "proc.material-alerts.*",
         "proc.vendor-ratings.view", "proc.vendor-ratings.approve",
         "design.projects.view",
         "design.schedule.manage",
@@ -458,6 +461,7 @@
         "proc.material-requests.*",
         "proc.contract-lines.*",
         "proc.warehouse.view",
+        "proc.material-alerts.*",
         "proc.vendor-ratings.view", "proc.vendor-ratings.manage",
         "profile.me.*"
       ]
@@ -483,7 +487,7 @@
       ]
     },
     "WAREHOUSE": {
-      "patterns": ["dashboard.view", "processes.view", "master-data.view", "workflow.view", "operations.projects.view", "proc.vendors.view", "proc.boq.view", "proc.material-requests.view", "proc.warehouse.*", "profile.me.*"]
+      "patterns": ["dashboard.view", "processes.view", "master-data.view", "workflow.view", "operations.projects.view", "proc.vendors.view", "proc.boq.view", "proc.material-requests.view", "proc.warehouse.*", "proc.material-alerts.view", "profile.me.*"]
     },
     "BGD": {
       "patterns": ["dashboard.view", "**.view", "**.view.all", "analytics.kpi.manage", "analytics.kpi.export", "reports.projects.export", "proc.rfqs.award", "proc.rfqs.export", "crm.tenders.approve-estimate", "proc.boq.approve", "proc.material-requests.approve", "proc.vendor-ratings.approve", "finance.payments.approve", "finance.periods.close", "finance.corrections.approve", "finance.corrections.reverse", "system.audit.view", "profile.me.*"]

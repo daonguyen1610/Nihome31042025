@@ -3688,6 +3688,13 @@ export interface WarehouseTransactionListItemResponse { id: number; operationalP
 export interface WarehouseStockItemResponse { projectBoqLineId: number; itemCode: string; description: string; unit: string; boqApprovedQuantity: number; receivedQuantity: number; issuedQuantity: number; onHandQuantity: number }
 export interface WarehouseTransactionListResponse { total: number; page: number; pageSize: number; items: WarehouseTransactionListItemResponse[]; stock: WarehouseStockItemResponse[] }
 export interface WarehouseTransactionListParams { search?: string; status?: string; type?: "receipt" | "issue"; responsibleUserId?: number; occurredFrom?: string; occurredTo?: string; sortBy?: "occurredAt" | "code" | "status" | "type" | "updatedAt"; sortDirection?: "asc" | "desc"; page?: number; pageSize?: number }
+export type MaterialAlertType = "OverBoq" | "Shortage";
+export type MaterialAlertStatus = "Open" | "Acknowledged" | "Resolved";
+export type MaterialAlertSeverity = "Warning" | "Critical";
+export interface MaterialAlertEventResponse { id: number; type: string; fromStatus?: string | null; toStatus: MaterialAlertStatus; reason?: string | null; changedByUserId: number; changedByName?: string | null; changedAt: string }
+export interface MaterialAlertResponse { id: number; operationalProjectId: number; operationalProjectCode: string; operationalProjectName: string; customerId: number; customerName: string; projectBoqLineId?: number | null; code: string; type: MaterialAlertType; status: MaterialAlertStatus; severity: MaterialAlertSeverity; itemCode: string; description: string; unit: string; boqAllowance: number; requiredQuantity: number; receivedQuantity: number; issuedQuantity: number; onHandQuantity: number; varianceQuantity: number; sourceEntityType: string; sourceEntityId: number; assignedToUserId: number; assignedToUserName?: string | null; detectedAt: string; acknowledgedAt?: string | null; acknowledgedByUserId?: number | null; acknowledgedByName?: string | null; acknowledgementNote?: string | null; resolvedAt?: string | null; lastEvaluatedAt: string; createdAt: string; updatedAt: string; rowVersion: string; contracts: MaterialRequestDetailResponse["contracts"]; events: MaterialAlertEventResponse[] }
+export interface MaterialAlertListResponse { total: number; page: number; pageSize: number; statusCounts: Partial<Record<MaterialAlertStatus, number>>; items: MaterialAlertResponse[] }
+export interface MaterialAlertListParams { search?: string; type?: MaterialAlertType; status?: MaterialAlertStatus; severity?: MaterialAlertSeverity; assignedToUserId?: number; sortBy?: "detectedAt" | "updatedAt" | "severity" | "variance" | "itemCode"; sortDirection?: "asc" | "desc"; page?: number; pageSize?: number }
 export interface WarehouseReceiptUpsertRequest { inspectedAt: string; receivedByUserId: number; lines: Array<{ materialRequestLineId: number; contractLineId?: number | null; receivedQuantity: number }>; rowVersion?: string }
 export interface WarehouseIssueUpsertRequest { issuedAt: string; responsibleSiteUserId: number; issuedByUserId: number; workItemCode?: string | null; lines: Array<{ projectBoqLineId: number; issuedQuantity: number }>; rowVersion?: string }
 export interface VendorRatingResponse { id: number; operationalProjectId: number; contractId: number; contractNumber: string; vendorId: number; vendorName: string; versionNumber: number; status: string; procurementOwnerUserId: number; procurementOwnerName?: string | null; qualityScore: number; scheduleScore: number; costScore: number; hseScore: number; overallScore: number; comments?: string | null; preparedByUserId: number; submittedAt?: string | null; approvedAt?: string | null; decisionReason?: string | null; supersedesVendorRatingId?: number | null; rowVersion: string }
@@ -5234,6 +5241,14 @@ export const adminApi = {
     postIdempotent<MaterialRequestResponse>(`/operational-projects/${projectId}/procurement/material-requests/${id}/decision`, { approved, rowVersion, reason }),
   cancelMaterialRequest: (projectId: number, id: number, rowVersion: string, reason: string) =>
     postIdempotent<MaterialRequestResponse>(`/operational-projects/${projectId}/procurement/material-requests/${id}/cancel`, { rowVersion, reason }),
+  listMaterialAlerts: (projectId: number, params: MaterialAlertListParams = {}) =>
+    api.get<MaterialAlertListResponse>(`/operational-projects/${projectId}/procurement/material-alerts`, { params }),
+  getMaterialAlert: (projectId: number, id: number) =>
+    api.get<MaterialAlertResponse>(`/operational-projects/${projectId}/procurement/material-alerts/${id}`),
+  evaluateMaterialAlerts: (projectId: number) =>
+    postIdempotent<MaterialAlertResponse[]>(`/operational-projects/${projectId}/procurement/material-alerts/evaluate`, {}),
+  acknowledgeMaterialAlert: (projectId: number, id: number, note: string, rowVersion: string) =>
+    postIdempotent<MaterialAlertResponse>(`/operational-projects/${projectId}/procurement/material-alerts/${id}/acknowledge`, { note, rowVersion }),
   createProcurementContractLine: (projectId: number, body: ProcurementContractLineRequest) =>
     postIdempotent<ProcurementContractLineResponse>(`/operational-projects/${projectId}/procurement/contract-lines`, body),
   listWarehouseTransactions: (projectId: number, params: WarehouseTransactionListParams = {}) =>

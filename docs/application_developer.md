@@ -944,6 +944,49 @@ ordered material lines, and lifecycle timestamps. Edit and transition actions
 are hidden unless the caller has the matching permission and the current state
 allows the action.
 
+### 7.15 Project Material Alerts
+
+Material alerts are a persistent projection of the approved BOQ, approved
+Material Request demand, and posted warehouse ledger. Users cannot create or
+manually resolve an alert. The service evaluates two rules by case-insensitive
+material code:
+
+- `OverBoq`: net posted issue quantity exceeds the current approved BOQ
+  allowance. The variance is `issued - BOQ allowance` and severity is Critical.
+- `Shortage`: approved demand not yet issued exceeds on-hand stock. Because
+  on-hand is `received - issued`, the shortage variance is equivalent to
+  `approved demand - received`. It is Critical when on-hand is zero or negative,
+  otherwise Warning.
+
+An alert follows `Open -> Acknowledged -> Resolved`. The assigned procurement
+user or Project Manager may acknowledge an Open alert with a 3–2,000 character
+response note. Acknowledgement does not clear the discrepancy. Resolution is
+automatic when source data no longer violates the rule, and a Resolved alert
+reopens automatically if the violation returns. Every detection, metric update,
+acknowledgement, resolution, and reopening appends a `MaterialAlertEvent`.
+
+BOQ approval, Material Request approval/cancellation, and warehouse
+post/reversal mutations evaluate alerts after the source transaction commits.
+Evaluation and notification delivery are best effort so projection failures do
+not roll back a valid procurement ledger mutation. Authorized users can run the
+idempotent `POST .../material-alerts/evaluate` endpoint to reconcile the
+projection after a transient failure.
+
+| Method | Route | Permission and purpose |
+|--------|-------|------------------------|
+| `GET` | `/api/operational-projects/{projectId}/procurement/material-alerts` | `proc.material-alerts.view`; project-scoped search, filters, sorting, counts, and pagination |
+| `GET` | `/api/operational-projects/{projectId}/procurement/material-alerts/{id}` | `proc.material-alerts.view`; detail, least-privilege contract context, and event history |
+| `POST` | `/api/operational-projects/{projectId}/procurement/material-alerts/evaluate` | `proc.material-alerts.manage`; reconcile source data idempotently |
+| `POST` | `/api/operational-projects/{projectId}/procurement/material-alerts/{id}/acknowledge` | `proc.material-alerts.manage`; acknowledge with row-version concurrency and idempotency |
+
+PM and Procurement roles can view and manage alerts. Warehouse can view them;
+BGD receives view through the existing view pattern. All endpoints also enforce
+Operational Project access and return 404 outside scope. Alert responses do not
+contain BOQ prices, negotiated prices, or Contract values. Detection notifies
+the assignee and Project Manager without duplicate delivery when they are the
+same user. Project hard-delete previews and removes alerts and their history as
+owned aggregate data.
+
 ---
 
 ## 8. Frontend Development

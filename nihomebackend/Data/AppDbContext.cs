@@ -119,6 +119,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<WarehouseReceiptLine> WarehouseReceiptLines => Set<WarehouseReceiptLine>();
     public DbSet<WarehouseIssue> WarehouseIssues => Set<WarehouseIssue>();
     public DbSet<WarehouseIssueLine> WarehouseIssueLines => Set<WarehouseIssueLine>();
+    public DbSet<MaterialAlert> MaterialAlerts => Set<MaterialAlert>();
+    public DbSet<MaterialAlertEvent> MaterialAlertEvents => Set<MaterialAlertEvent>();
     public DbSet<VendorRating> VendorRatings => Set<VendorRating>();
 
     // Finance
@@ -1421,6 +1423,56 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasOne(item => item.ProjectBoqLine).WithMany()
                 .HasForeignKey(item => item.ProjectBoqLineId).OnDelete(DeleteBehavior.Restrict);
             b.HasIndex(item => new { item.WarehouseIssueId, item.ProjectBoqLineId }).IsUnique();
+        });
+
+        modelBuilder.Entity<MaterialAlert>(b =>
+        {
+            b.ToTable("material_alerts");
+            b.HasKey(item => item.Id);
+            b.Property(item => item.Code).HasMaxLength(60).IsRequired();
+            b.Property(item => item.Type).HasConversion<string>().HasMaxLength(20);
+            b.Property(item => item.Status).HasConversion<string>().HasMaxLength(20);
+            b.Property(item => item.Severity).HasConversion<string>().HasMaxLength(20);
+            b.Property(item => item.ItemCode).HasMaxLength(80).IsRequired();
+            b.Property(item => item.Description).HasMaxLength(500).IsRequired();
+            b.Property(item => item.Unit).HasMaxLength(50).IsRequired();
+            b.Property(item => item.BoqAllowance).HasPrecision(18, 6);
+            b.Property(item => item.RequiredQuantity).HasPrecision(18, 6);
+            b.Property(item => item.ReceivedQuantity).HasPrecision(18, 6);
+            b.Property(item => item.IssuedQuantity).HasPrecision(18, 6);
+            b.Property(item => item.OnHandQuantity).HasPrecision(18, 6);
+            b.Property(item => item.VarianceQuantity).HasPrecision(18, 6);
+            b.Property(item => item.SourceEntityType).HasMaxLength(80).IsRequired();
+            b.Property(item => item.AcknowledgementNote).HasMaxLength(2000);
+            b.Property(item => item.RowVersion).IsRowVersion();
+            b.HasOne(item => item.OperationalProject).WithMany(project => project.MaterialAlerts)
+                .HasForeignKey(item => item.OperationalProjectId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(item => item.ProjectBoqLine).WithMany()
+                .HasForeignKey(item => item.ProjectBoqLineId).OnDelete(DeleteBehavior.SetNull);
+            b.HasOne(item => item.AssignedToUser).WithMany()
+                .HasForeignKey(item => item.AssignedToUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(item => item.AcknowledgedBy).WithMany()
+                .HasForeignKey(item => item.AcknowledgedByUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasIndex(item => new { item.OperationalProjectId, item.Code }).IsUnique();
+            b.HasIndex(item => new { item.OperationalProjectId, item.Type, item.ItemCode }).IsUnique();
+            b.HasIndex(item => new { item.OperationalProjectId, item.Status, item.Severity });
+            b.HasIndex(item => new { item.AssignedToUserId, item.Status });
+        });
+
+        modelBuilder.Entity<MaterialAlertEvent>(b =>
+        {
+            b.ToTable("material_alert_events");
+            b.HasKey(item => item.Id);
+            b.Property(item => item.Type).HasConversion<string>().HasMaxLength(30);
+            b.Property(item => item.FromStatus).HasConversion<string>().HasMaxLength(20);
+            b.Property(item => item.ToStatus).HasConversion<string>().HasMaxLength(20);
+            b.Property(item => item.Reason).HasMaxLength(2000);
+            b.Property(item => item.SnapshotJson).HasColumnType("nvarchar(max)").IsRequired();
+            b.HasOne(item => item.MaterialAlert).WithMany(alert => alert.Events)
+                .HasForeignKey(item => item.MaterialAlertId).OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(item => item.ChangedBy).WithMany()
+                .HasForeignKey(item => item.ChangedByUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasIndex(item => new { item.MaterialAlertId, item.ChangedAt });
         });
 
         modelBuilder.Entity<VendorRating>(b =>

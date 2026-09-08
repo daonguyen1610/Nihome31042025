@@ -116,6 +116,7 @@
   {"key":"deletionImpact.item.operations.teamHistory","category":"deletionImpact","vi":"Lịch sử đội dự án","en":"Project team history","zh":"项目团队历史","ja":"プロジェクトチーム履歴"},
   {"key":"deletionImpact.item.operations.hseViolations","category":"deletionImpact","vi":"Biên bản vi phạm HSE","en":"HSE violation records","zh":"HSE违规记录","ja":"HSE違反記録"},
   {"key":"deletionImpact.item.operations.hseViolationEvents","category":"deletionImpact","vi":"Lịch sử vi phạm HSE","en":"HSE violation history","zh":"HSE违规历史","ja":"HSE違反履歴"},
+  {"key":"deletionImpact.item.operations.materialAlerts","category":"deletionImpact","vi":"Cảnh báo vật tư và lịch sử","en":"Material alerts and history","zh":"材料预警及历史","ja":"資材アラートと履歴"},
   {"key":"deletionImpact.item.operations.opportunities","category":"deletionImpact","vi":"Cơ hội","en":"Opportunities","zh":"商机","ja":"商談"},
   {"key":"deletionImpact.item.operations.quotes","category":"deletionImpact","vi":"Báo giá","en":"Quotes","zh":"报价","ja":"見積"},
   {"key":"deletionImpact.item.operations.contracts","category":"deletionImpact","vi":"Hợp đồng","en":"Contracts","zh":"合同","ja":"契約"},

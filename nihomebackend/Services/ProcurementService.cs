@@ -12,6 +12,7 @@ namespace NihomeBackend.Services;
 public sealed class ProcurementService(
     AppDbContext db,
     INotificationService notifications,
+    IMaterialAlertService materialAlerts,
     ILogger<ProcurementService> logger) : IProcurementService
 {
     private const string BoqSubmittedTemplate = "procurement.boq.submitted";
@@ -344,6 +345,7 @@ public sealed class ProcurementService(
         entity.UpdatedAt = now;
         await CrmConcurrency.SaveChangesAsync(db, ct);
         await NotifyBoqDecisionAsync(entity, userId, ct);
+        if (request.Approved) await EvaluateAlertsBestEffortAsync(projectId, userId, ct);
         return await GetBoqAsync(projectId, id, ct);
     }
 
@@ -494,6 +496,7 @@ public sealed class ProcurementService(
         await NotifyMaterialRequestAsync(entity, userId,
             request.Approved ? MaterialRequestApprovedTemplate : MaterialRequestRejectedTemplate,
             entity.SiteRequesterUserId, ct);
+        await EvaluateAlertsBestEffortAsync(projectId, userId, ct);
         return await GetRequestAsync(projectId, id, ct);
     }
 
@@ -518,6 +521,7 @@ public sealed class ProcurementService(
             ? entity.AssignedProcurementUserId
             : entity.SiteRequesterUserId;
         await NotifyMaterialRequestAsync(entity, userId, MaterialRequestCancelledTemplate, recipientUserId, ct);
+        await EvaluateAlertsBestEffortAsync(projectId, userId, ct);
         return await GetRequestAsync(projectId, id, ct);
     }
 
@@ -552,6 +556,23 @@ public sealed class ProcurementService(
         {
             logger.LogWarning(exception,
                 "Material request {MaterialRequestId} changed state but notification dispatch failed.", entity.Id);
+        }
+    }
+
+    private async Task EvaluateAlertsBestEffortAsync(
+        int projectId,
+        int actorUserId,
+        CancellationToken ct)
+    {
+        try
+        {
+            await materialAlerts.EvaluateProjectAsync(projectId, actorUserId, ct);
+        }
+        catch (Exception exception)
+        {
+            logger.LogWarning(exception,
+                "Procurement mutation committed but material-alert evaluation failed for project {ProjectId}.",
+                projectId);
         }
     }
 
@@ -775,6 +796,7 @@ public sealed class ProcurementService(
         await RefreshRequestStatusesAsync(entity.Lines.Select(item => item.MaterialRequestLineId), entity.PostedAt.Value, ct);
         await CrmConcurrency.SaveChangesAsync(db, ct);
         if (transaction is not null) await transaction.CommitAsync(ct);
+        await EvaluateAlertsBestEffortAsync(projectId, userId, ct);
         return await GetReceiptAsync(projectId, id, ct);
     }
 
@@ -827,6 +849,7 @@ public sealed class ProcurementService(
         await RefreshRequestStatusesAsync(original.Lines.Select(item => item.MaterialRequestLineId), reversal.PostedAt.Value, ct);
         await CrmConcurrency.SaveChangesAsync(db, ct);
         if (transaction is not null) await transaction.CommitAsync(ct);
+        await EvaluateAlertsBestEffortAsync(projectId, userId, ct);
         return await GetReceiptAsync(projectId, reversal.Id, ct);
     }
 
@@ -941,6 +964,7 @@ public sealed class ProcurementService(
         entity.UpdatedAt = DateTime.UtcNow;
         await CrmConcurrency.SaveChangesAsync(db, ct);
         if (transaction is not null) await transaction.CommitAsync(ct);
+        await EvaluateAlertsBestEffortAsync(projectId, userId, ct);
         return await GetIssueAsync(projectId, id, ct);
     }
 
@@ -983,6 +1007,7 @@ public sealed class ProcurementService(
         db.WarehouseIssues.Add(reversal);
         await CrmConcurrency.SaveChangesAsync(db, ct);
         if (transaction is not null) await transaction.CommitAsync(ct);
+        await EvaluateAlertsBestEffortAsync(projectId, userId, ct);
         return await GetIssueAsync(projectId, reversal.Id, ct);
     }
 

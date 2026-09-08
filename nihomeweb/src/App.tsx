@@ -47,6 +47,7 @@ const RfqPage = lazy(() => import("./pages/admin/procurement/RfqPage.tsx"));
 const ProcurementControlPage = lazy(() => import("./pages/admin/procurement/ProcurementControlPage.tsx"));
 const BoqRevisionDetailPage = lazy(() => import("./pages/admin/procurement/BoqRevisionDetailPage.tsx"));
 const MaterialRequestDetailPage = lazy(() => import("./pages/admin/procurement/MaterialRequestDetailPage.tsx"));
+const MaterialAlertDetailPage = lazy(() => import("./pages/admin/procurement/MaterialAlertDetailPage.tsx"));
 const WarehouseTransactionDetailPage = lazy(() => import("./pages/admin/procurement/WarehouseTransactionDetailPage.tsx"));
 const FinanceControlPage = lazy(() => import("./pages/admin/finance/FinanceControlPage.tsx"));
 const AdminOpportunities = lazy(() => import("./pages/admin/Opportunities.tsx"));
@@ -189,8 +190,11 @@ const App = () => (
               <Route element={<RequirePermission code="proc.rfqs.view" />}>
                 <Route path="/admin/procurement-control/rfqs" element={<RfqPage />} />
               </Route>
-              <Route element={<RequirePermission code={[ADMIN_PERMS.procurement, ADMIN_PERMS.procurementMaterialRequests, ADMIN_PERMS.procurementWarehouse]} />}>
+              <Route element={<RequirePermission code={[ADMIN_PERMS.procurement, ADMIN_PERMS.procurementMaterialRequests, ADMIN_PERMS.procurementWarehouse, ADMIN_PERMS.procurementMaterialAlerts]} />}>
                 <Route path="/admin/procurement-control" element={<ProcurementControlPage />} />
+              </Route>
+              <Route element={<RequirePermission code={ADMIN_PERMS.procurementMaterialAlerts} />}>
+                <Route path="/admin/procurement-control/projects/:projectId/material-alerts/:alertId" element={<MaterialAlertDetailPage />} />
               </Route>
               <Route element={<RequirePermission code={ADMIN_PERMS.procurementMaterialRequests} />}>
                 <Route path="/admin/procurement-control/projects/:projectId/material-requests/:requestId" element={<MaterialRequestDetailPage />} />
