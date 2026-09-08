@@ -155,6 +155,57 @@ public sealed class ProcurementService(
             Page = parameters.Page,
             PageSize = parameters.PageSize,
             Items = items.Select(item => MapRequest(item, quantities)).ToList(),
+            CurrentApprovedBoq = await GetMaterialRequestBoqContextAsync(projectId, ct),
+        };
+    }
+
+    private async Task<MaterialRequestBoqContextResponse?> GetMaterialRequestBoqContextAsync(
+        int projectId,
+        CancellationToken ct)
+    {
+        var revision = await db.ProjectBoqRevisions.AsNoTracking()
+            .Where(item => item.OperationalProjectId == projectId && item.Status == ProjectBoqRevisionStatus.Approved)
+            .OrderByDescending(item => item.ApprovedAt)
+            .ThenByDescending(item => item.RevisionNumber)
+            .Select(item => new
+            {
+                item.Id,
+                item.RevisionNumber,
+                Lines = item.Lines.OrderBy(line => line.SortOrder).Select(line => new
+                {
+                    line.Id,
+                    line.ItemCode,
+                    line.Description,
+                    line.Unit,
+                    line.ApprovedQuantity,
+                }).ToList(),
+            })
+            .FirstOrDefaultAsync(ct);
+        if (revision is null) return null;
+
+        var lineIds = revision.Lines.Select(line => line.Id).ToList();
+        var committed = await db.MaterialRequestLines.AsNoTracking()
+            .Where(line => lineIds.Contains(line.ProjectBoqLineId) &&
+                (line.MaterialRequest.Status == MaterialRequestStatus.Approved ||
+                 line.MaterialRequest.Status == MaterialRequestStatus.PartiallyFulfilled ||
+                 line.MaterialRequest.Status == MaterialRequestStatus.Fulfilled))
+            .GroupBy(line => line.ProjectBoqLineId)
+            .Select(group => new { BoqLineId = group.Key, Quantity = group.Sum(line => line.RequestedQuantity) })
+            .ToDictionaryAsync(item => item.BoqLineId, item => item.Quantity, ct);
+
+        return new MaterialRequestBoqContextResponse
+        {
+            RevisionId = revision.Id,
+            RevisionNumber = revision.RevisionNumber,
+            Lines = revision.Lines.Select(line => new MaterialRequestBoqLineOptionResponse
+            {
+                Id = line.Id,
+                ItemCode = line.ItemCode,
+                Description = line.Description,
+                Unit = line.Unit,
+                ApprovedQuantity = line.ApprovedQuantity,
+                RemainingQuantity = Math.Max(line.ApprovedQuantity - committed.GetValueOrDefault(line.Id), 0m),
+            }).ToList(),
         };
     }
 

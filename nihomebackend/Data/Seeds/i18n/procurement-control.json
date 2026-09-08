@@ -116,6 +116,7 @@
   {"key":"procurement.request.description","category":"procurement","vi":"Yêu cầu vật tư theo các hạng mục của BOQ đã duyệt.","en":"Request materials against approved BOQ items.","zh":"根据已批准的 BOQ 项目申请材料。","ja":"承認済みBOQ品目に基づいて資材を依頼します。"},
   {"key":"procurement.request.create","category":"procurement","vi":"Tạo yêu cầu","en":"Create request","zh":"创建申请","ja":"依頼を作成"},
   {"key":"procurement.request.requiresBoq","category":"procurement","vi":"Cần có BOQ đã duyệt trước khi tạo yêu cầu vật tư.","en":"An approved BOQ is required before creating a material request.","zh":"创建材料申请前必须有已批准的 BOQ。","ja":"資材依頼を作成する前に承認済みBOQが必要です。"},
+  {"key":"procurement.request.remaining","category":"procurement","vi":"Còn {quantity}","en":"{quantity} remaining","zh":"剩余 {quantity}","ja":"残り {quantity}"},
   {"key":"procurement.request.empty","category":"procurement","vi":"Chưa có yêu cầu vật tư.","en":"No material requests exist.","zh":"尚无材料申请。","ja":"資材依頼はありません。"},
   {"key":"procurement.request.searchPlaceholder","category":"procurement","vi":"Tìm mã, ghi chú, nhân sự hoặc vật tư...","en":"Search code, note, user, or BOQ item...","zh":"搜索编码、备注、人员或 BOQ 项目...","ja":"コード、備考、担当者、BOQ品目を検索..."},
   {"key":"procurement.request.filter.allStatuses","category":"procurement","vi":"Tất cả trạng thái","en":"All statuses","zh":"全部状态","ja":"すべてのステータス"},
