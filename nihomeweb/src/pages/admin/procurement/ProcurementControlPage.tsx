@@ -581,7 +581,7 @@ const ProcurementControlPage = () => {
             onValueChange={setActiveTab}
             className="space-y-4"
           >
-            <div className="overflow-x-auto pb-1">
+            <div className="overflow-x-auto pb-1 [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-track]:bg-transparent">
               <TabsList className="h-auto w-max min-w-full justify-start">
                 {canViewBoq && <TabsTrigger value="boq">
                   <ClipboardCheck className="mr-2 h-4 w-4" />
