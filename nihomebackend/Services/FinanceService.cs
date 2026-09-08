@@ -485,8 +485,15 @@ public sealed class FinanceService(AppDbContext db) : IFinanceService
         return (TimeZoneInfo.ConvertTimeToUtc(localStart, zone), TimeZoneInfo.ConvertTimeToUtc(localStart.AddMonths(1), zone));
     }
 
-    private async Task<string> AllocatePaymentCodeAsync(CancellationToken ct) =>
-        $"PAY-{(await db.PaymentRequests.MaxAsync(item => (int?)item.Id, ct) ?? 0) + 1:D6}";
+    private async Task<string> AllocatePaymentCodeAsync(CancellationToken ct)
+    {
+        // Reserve the sequence range before reading it. Concurrent Serializable
+        // creators must not both hold shared ranges before inserting a request.
+        var requests = db.Database.IsSqlServer()
+            ? db.PaymentRequests.FromSqlRaw("SELECT * FROM [payment_requests] WITH (UPDLOCK)")
+            : db.PaymentRequests;
+        return $"PAY-{(await requests.MaxAsync(item => (int?)item.Id, ct) ?? 0) + 1:D6}";
+    }
 
     private async Task<string> AllocateCorrectionCodeAsync(CancellationToken ct) =>
         $"AC-{(await db.AccountingCorrections.MaxAsync(item => (int?)item.Id, ct) ?? 0) + 1:D6}";

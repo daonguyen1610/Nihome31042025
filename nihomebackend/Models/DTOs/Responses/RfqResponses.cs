@@ -14,7 +14,7 @@ public sealed record RfqDetailResponse(RfqListItemResponse Header, string Curren
 
 public sealed record RfqLineResponse(int Id, int ProjectBoqLineId, string ItemCode, string Description,
     string Unit, decimal Quantity, decimal BudgetUnitPrice, decimal? LowestUnitPrice);
-public sealed record RfqVendorResponse(int Id, string Name, VendorType Type);
+public sealed record RfqVendorResponse(int Id, string Name, VendorType Type, bool IsActive);
 public sealed record RfqBidResponse(int Id, int VendorId, int Revision, int LeadTimeDays,
     string PaymentTerms, DateTime ValidUntil, string? Note, DateTime SubmittedAt, string SubmittedBy,
     DateTime? WithdrawnAt, bool IsCurrent, bool IsComplete, bool IsEligible, bool IsLowest,

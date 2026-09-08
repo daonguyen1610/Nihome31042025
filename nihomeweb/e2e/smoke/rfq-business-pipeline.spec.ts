@@ -108,6 +108,16 @@ test(`business roles carry an approved BOQ through RFQ, warehouse and invoice ${
     await page.goto(contractUrl);
     await expect(page.getByRole("heading", { name: contractNumber, exact: true })).toBeVisible();
     await expect(page.getByRole("main")).toContainText(/3[.,]600[.,]000/);
+    if (outcome === "Paid") {
+      await page.getByRole("button", { name: "Edit", exact: true }).click();
+      await page.locator("#contract-detail-value").fill("3500000");
+      await page.getByRole("button", { name: "Save changes", exact: true }).click();
+      await expect(page.getByText("Không được thay đổi giá trị, khách hàng, phân loại, đối tác hoặc dự án của hợp đồng đã được chọn qua RFQ.", { exact: true })).toBeVisible();
+      await expect(page.locator("#contract-detail-value")).toHaveValue("3500000");
+      await page.getByRole("button", { name: "Cancel", exact: true }).click();
+      await page.reload();
+      await expect(page.getByRole("main")).toContainText(/3[.,]600[.,]000/);
+    }
     await page.getByRole("button", { name: "Mark as Signed", exact: true }).click();
     await expect(page.getByRole("button", { name: "Move to In progress", exact: true })).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath("02-signed-contract.png"), fullPage: true });

@@ -303,6 +303,18 @@ public class ContractService(
         if (entity == null) return null;
         if (!canSeeAll && entity.OwnerUserId != callerUserId) return null;
 
+        // An RFQ award is the authority for this contract's commercial terms.
+        // Check the RFQ binding independently of the current line collection.
+        var isRfqAward = await db.Rfqs.AsNoTracking().AnyAsync(rfq => rfq.ContractId == id, ct);
+        if (isRfqAward &&
+            (req.Value != entity.Value || req.CustomerId != entity.CustomerId ||
+             req.Direction != entity.Direction || req.Type != entity.Type ||
+             req.VendorId != entity.VendorId || req.OperationalProjectId != entity.OperationalProjectId))
+        {
+            throw new ContractValidationException(
+                "Không được thay đổi giá trị, khách hàng, phân loại, đối tác hoặc dự án của hợp đồng đã được chọn qua RFQ.");
+        }
+
         var hasProcurementLines = await db.ContractLines.AsNoTracking()
             .AnyAsync(item => item.ContractId == id, ct);
         if (hasProcurementLines && entity.Status != ContractStatus.Draft)

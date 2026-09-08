@@ -8,7 +8,7 @@ export interface RfqHeader {
   updatedAt: string; overdue: boolean; rowVersion: string;
 }
 export interface RfqLine { id: number; projectBoqLineId: number; itemCode: string; description: string; unit: string; quantity: number; budgetUnitPrice: number; lowestUnitPrice: number | null }
-export interface RfqVendor { id: number; name: string; type: "Supplier" | "SubContractor" | "Both" }
+export interface RfqVendor { id: number; name: string; type: "Supplier" | "SubContractor" | "Both"; isActive: boolean }
 export interface RfqFile { id: number; bidId: number | null; name: string }
 export interface RfqBid {
   id: number; vendorId: number; revision: number; leadTimeDays: number; paymentTerms: string; validUntil: string;

@@ -1,5 +1,6 @@
 using System.Data;
 using System.Text.Json;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using NihomeBackend.Data;
@@ -92,7 +93,7 @@ public sealed class RfqService(AppDbContext db, INotificationService notificatio
         var revisions = await ApprovedBoqs(projectId).Include(x => x.Lines).OrderByDescending(x => x.RevisionNumber).ToListAsync(ct);
         var vendors = await db.Vendors.AsNoTracking().Where(x => x.IsActive &&
             (x.VendorType == VendorType.Supplier || x.VendorType == VendorType.SubContractor || x.VendorType == VendorType.Both))
-            .OrderBy(x => x.CompanyName).Select(x => new RfqVendorResponse(x.Id, x.CompanyName, x.VendorType)).ToListAsync(ct);
+            .OrderBy(x => x.CompanyName).Select(x => new RfqVendorResponse(x.Id, x.CompanyName, x.VendorType, x.IsActive)).ToListAsync(ct);
         var owners = await Owners(projectId).OrderBy(x => x.FullName).Select(x => new RfqUserOption(x.Id, x.FullName ?? x.PhoneNumber)).ToListAsync(ct);
         var documents = await db.ProjectDocuments.AsNoTracking().Where(x => x.OperationalProjectId == projectId &&
             x.Category == ProjectDocumentCategory.Procurement && x.DeletedAt == null &&
@@ -106,7 +107,7 @@ public sealed class RfqService(AppDbContext db, INotificationService notificatio
 
     public async Task<RfqDetailResponse?> SaveAsync(int projectId, int? id, RfqUpsertRequest request, int actor, CancellationToken ct)
     {
-        await using var transaction = await BeginAsync(ct);
+        await using var transaction = await BeginAsync(ct, creating: !id.HasValue);
         await EnsureMutableProjectAsync(projectId, ct);
         var entity = id.HasValue ? await LoadMutableAsync(projectId, id.Value, request.RowVersion, ct) : new Rfq
         {
@@ -403,17 +404,90 @@ public sealed class RfqService(AppDbContext db, INotificationService notificatio
 
     private async Task<Rfq?> LoadMutableAsync(int projectId, int id, string? token, CancellationToken ct)
     {
-        var entity = await Query(forUpdate: true).SingleOrDefaultAsync(x => x.Id == id && x.OperationalProjectId == projectId, ct);
+        // A root update lock serializes changes to one RFQ, but Serializable
+        // collection scans can still share an empty index range with another
+        // RFQ. Both writers then deadlock while converting that shared range
+        // for a child insert. Lock owned children for update in one fixed order,
+        // without weakening the isolation of external eligibility dependencies.
+        IQueryable<Rfq> query = db.Database.IsSqlServer()
+            ? MutableRoots()
+                .Include(x => x.OperationalProject).ThenInclude(x => x.Customer)
+                .Include(x => x.SourceBoqRevision).Include(x => x.Owner)
+                .Include(x => x.Contract).Include(x => x.AwardedBy)
+            : Query(forUpdate: true);
+        var entity = await query.SingleOrDefaultAsync(x => x.Id == id && x.OperationalProjectId == projectId, ct);
         if (entity is not null)
         {
             CrmConcurrency.EnsureMatches(entity.RowVersion, token);
             CrmConcurrency.Apply(db, entity, token);
+            if (db.Database.IsSqlServer()) await LoadMutableChildrenAsync(id, ct);
         }
         return entity;
     }
 
-    private async Task<IDbContextTransaction?> BeginAsync(CancellationToken ct) => db.Database.IsRelational()
-        ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct) : null;
+    private async Task LoadMutableChildrenAsync(int id, CancellationToken ct)
+    {
+        // Tracking fixup fills the root collections and bid-line relationships.
+        // Explicit predicates avoid rejoining/locking unrelated RFQ roots in
+        // EF's split Includes. Keep this order consistent for every mutation.
+        await db.Set<RfqLine>().FromSqlInterpolated(
+            $"SELECT * FROM [rfq_lines] WITH (UPDLOCK) WHERE [RfqId] = {id}")
+            .LoadAsync(ct);
+        await db.RfqInvitations.FromSqlInterpolated(
+            $"SELECT * FROM [rfq_invitations] WITH (UPDLOCK) WHERE [RfqId] = {id}")
+            .Include(x => x.Vendor).LoadAsync(ct);
+        await db.RfqBids.FromSqlInterpolated(
+            $"SELECT * FROM [rfq_bids] WITH (UPDLOCK) WHERE [RfqId] = {id}")
+            .Include(x => x.SubmittedBy).LoadAsync(ct);
+        await db.Set<RfqBidLine>().FromSqlInterpolated($"""
+            SELECT line.* FROM [rfq_bid_lines] AS line WITH (UPDLOCK)
+            INNER JOIN [rfq_bids] AS bid WITH (UPDLOCK) ON bid.[Id] = line.[RfqBidId]
+            WHERE bid.[RfqId] = {id}
+            """).LoadAsync(ct);
+        await db.Set<RfqEvent>().FromSqlInterpolated(
+            $"SELECT * FROM [rfq_events] WITH (UPDLOCK) WHERE [RfqId] = {id}")
+            .Include(x => x.Actor).LoadAsync(ct);
+        await db.RfqDocuments.FromSqlInterpolated(
+            $"SELECT * FROM [rfq_documents] WITH (UPDLOCK) WHERE [RfqId] = {id}")
+            .Include(x => x.ProjectDocument).LoadAsync(ct);
+    }
+
+    private async Task<IDbContextTransaction?> BeginAsync(CancellationToken ct, bool creating = false)
+    {
+        if (!db.Database.IsRelational()) return null;
+        var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+        if (!db.Database.IsSqlServer()) return transaction;
+        try
+        {
+            // EF inserts a new aggregate's children in dependency order, which
+            // differs from the existing-aggregate read-lock order. Creation must
+            // not interleave those inserts with another RFQ's empty-range reads.
+            // Only creation takes Exclusive; mutations (including overdue jobs)
+            // share this gate and retain their per-root/child update locks.
+            // Acquire before any database reads, and release with the transaction.
+            var resource = "rfqs:creation-and-mutation";
+            var mode = creating ? "Exclusive" : "Shared";
+            var result = new SqlParameter("@lockResult", SqlDbType.Int)
+            {
+                Direction = ParameterDirection.Output,
+            };
+            await db.Database.ExecuteSqlInterpolatedAsync($"""
+                EXEC {result} = sys.sp_getapplock
+                    @Resource = {resource},
+                    @LockMode = {mode},
+                    @LockOwner = 'Transaction',
+                    @LockTimeout = 15000;
+                """, ct);
+            if ((int)result.Value < 0)
+                throw new CrmConcurrencyException("RFQ creation is busy. Reload and retry the operation.");
+            return transaction;
+        }
+        catch
+        {
+            await transaction.DisposeAsync();
+            throw;
+        }
+    }
     private async Task SaveAsync(IDbContextTransaction? transaction, CancellationToken ct)
     {
         await CrmConcurrency.SaveChangesAsync(db, ct);
@@ -457,7 +531,7 @@ public sealed class RfqService(AppDbContext db, INotificationService notificatio
         return new(header, entity.Currency, entity.Note,
             entity.Lines.OrderBy(x => x.Id).Select(x => new RfqLineResponse(x.Id, x.ProjectBoqLineId, x.ItemCode, x.Description, x.Unit,
                 x.Quantity, x.BudgetUnitPrice, validLines.Where(l => l.RfqLineId == x.Id).Select(l => (decimal?)l.UnitPrice).Min())).ToList(),
-            entity.Invitations.OrderBy(x => x.Id).Select(x => new RfqVendorResponse(x.VendorId, x.VendorName, x.Vendor.VendorType)).ToList(),
+            entity.Invitations.OrderBy(x => x.Id).Select(x => new RfqVendorResponse(x.VendorId, x.VendorName, x.Vendor.VendorType, x.Vendor.IsActive)).ToList(),
             entity.Bids.OrderByDescending(x => x.SubmittedAt).ThenByDescending(x => x.Id).Select(x => new RfqBidResponse(x.Id, x.VendorId, x.Revision,
                 x.LeadTimeDays, x.PaymentTerms, Utc(x.ValidUntil), x.Note, Utc(x.SubmittedAt), x.SubmittedBy.FullName ?? x.SubmittedBy.PhoneNumber, Utc(x.WithdrawnAt),
                 current.Contains(x), x.Lines.Count == entity.Lines.Count, eligible.Contains(x), eligible.Contains(x) && x.Total == lowest,
