@@ -31,9 +31,18 @@ test("sales follows a new lead through conversion, negotiation and a reasoned lo
   const opportunityUrl = await opportunityLink.getAttribute("href");
   await opportunityLink.click();
   const detail = page.getByRole("dialog");
-  for (const stage of ["Survey", "Quotation / Tender", "Negotiation"]) {
-    await detail.getByRole("button", { name: stage, exact: true }).click();
-    await expect(detail.getByRole("button", { name: stage, exact: true })).toBeDisabled();
+  const stages = ["Survey", "Quotation / Tender", "Negotiation"] as const;
+  for (const [index, stage] of stages.entries()) {
+    const stageButton = detail.getByRole("button", { name: stage, exact: true });
+    await stageButton.click();
+    await expect(stageButton).toHaveCount(0);
+    await expect(page.getByRole("row").filter({ hasText: name })).toContainText(stage);
+    if (index < stages.length - 1)
+      await expect(detail.getByRole("button", { name: stages[index + 1], exact: true })).toBeEnabled();
+  }
+  if (!await detail.isVisible()) {
+    await page.goto(opportunityUrl!);
+    await expect(detail).toBeVisible();
   }
   await detail.getByRole("button", { name: "Lost", exact: true }).click();
   const decision = page.getByRole("dialog", { name: "Move to Lost", exact: true });
