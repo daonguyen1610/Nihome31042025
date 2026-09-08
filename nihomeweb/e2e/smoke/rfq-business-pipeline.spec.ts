@@ -1,6 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { test, expect, TEST_USERS } from "../fixtures/auth";
 
+test.describe.configure({ mode: "serial" });
+
 // Real stack and seeded business roles. APIs establish only the project/team
 // foundation; every procurement, contract and payment state below comes from UI.
 for (const outcome of ["Paid", "Rejected", "Cancelled"] as const) {
@@ -42,7 +44,7 @@ test(`business roles carry an approved BOQ through RFQ, warehouse and invoice ${
 
   await test.step("Procurement prepares the BOQ and BGD approves its budget", async () => {
     await loginInBrowserAs(page, TEST_USERS.procurement);
-    await page.goto(workspace);
+    await page.goto(`${workspace}&tab=boq`);
     await page.getByRole("button", { name: "Create BOQ revision", exact: true }).click();
     const dialog = page.getByRole("dialog");
     await dialog.getByLabel("Item code", { exact: true }).fill("PIPE-CABLE");
@@ -55,7 +57,7 @@ test(`business roles carry an approved BOQ through RFQ, warehouse and invoice ${
     await page.getByRole("button", { name: "Submit", exact: true }).click();
     await expect(page.getByRole("cell", { name: "Submitted", exact: true })).toBeVisible();
     await loginInBrowserAs(page, TEST_USERS.bgd);
-    await page.goto(workspace);
+    await page.goto(`${workspace}&tab=boq`);
     await page.getByRole("button", { name: "Approve", exact: true }).click();
     await page.getByRole("dialog").getByRole("button", { name: "Approve", exact: true }).click();
     await expect(page.getByRole("cell", { name: /Approved/ })).toBeVisible();
