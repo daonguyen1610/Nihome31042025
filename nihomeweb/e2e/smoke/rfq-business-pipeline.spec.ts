@@ -142,7 +142,10 @@ test("business roles carry an approved BOQ through RFQ award, signing and suppli
     await dialog.getByRole("spinbutton").fill("20");
     await dialog.getByRole("button", { name: "Create draft", exact: true }).click();
     await expect(dialog).not.toBeVisible();
+    await page.locator('a[href*="/warehouse/receipt/"]:visible').click();
     await page.getByRole("button", { name: "Post", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Reverse transaction", exact: true })).toBeVisible();
+    await page.getByRole("link", { name: "Back", exact: true }).click();
     await expect(page.getByRole("cell", { name: "Posted", exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Create issue", exact: true }).click();
     await dialog.getByRole("combobox", { name: "Responsible site user", exact: true }).click();
@@ -153,7 +156,10 @@ test("business roles carry an approved BOQ through RFQ award, signing and suppli
     await dialog.getByLabel("Quantity", { exact: true }).fill("20");
     await dialog.getByRole("button", { name: "Create draft", exact: true }).click();
     await expect(dialog).not.toBeVisible();
+    await page.locator('a[href*="/warehouse/issue/"]:visible').click();
     await page.getByRole("button", { name: "Post", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Reverse transaction", exact: true })).toBeVisible();
+    await page.getByRole("link", { name: "Back", exact: true }).click();
     await expect(page.getByRole("cell", { name: "Posted", exact: true })).toHaveCount(2);
     await page.screenshot({ path: testInfo.outputPath("03-received-and-issued.png"), fullPage: true });
   });
