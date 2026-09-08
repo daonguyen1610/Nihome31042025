@@ -1,4 +1,5 @@
 using System.Data;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using NihomeBackend.Constants;
@@ -257,7 +258,10 @@ public sealed class ProcurementService(
         await EnsureProjectAsync(projectId, mutable: true, ct);
         await ValidateBoqAsync(projectId, request, ct);
         await using var transaction = await BeginSerializableAsync(ct);
-        var nextRevision = (await db.ProjectBoqRevisions.Where(item => item.OperationalProjectId == projectId)
+        var revisions = db.Database.IsSqlServer()
+            ? db.ProjectBoqRevisions.FromSqlRaw("SELECT * FROM [project_boq_revisions] WITH (UPDLOCK)")
+            : db.ProjectBoqRevisions;
+        var nextRevision = (await revisions.Where(item => item.OperationalProjectId == projectId)
             .MaxAsync(item => (int?)item.RevisionNumber, ct) ?? 0) + 1;
         var entity = new ProjectBoqRevision
         {
@@ -597,6 +601,9 @@ public sealed class ProcurementService(
         if (entity is null) return null;
         if (entity.Contract.Status != ContractStatus.Draft)
             throw new ProcurementOperationException("Dòng hợp đồng đã ký là bất biến.");
+        // Check the source as well as the requested destination: otherwise a
+        // caller could move awarded lines out to an ordinary draft contract.
+        await EnsureContractNotAwardedAsync(entity.ContractId, ct);
         await ValidateContractLineAsync(projectId, request, id, ct);
         CrmConcurrency.Apply(db, entity, request.RowVersion);
         ApplyContractLine(entity, request);
@@ -608,6 +615,7 @@ public sealed class ProcurementService(
     public async Task<WarehouseReceiptResponse> CreateReceiptAsync(
         int projectId, WarehouseReceiptCreateRequest request, int userId, CancellationToken ct = default)
     {
+        await using var transaction = await BeginWarehouseAsync(ct);
         await EnsureProjectAsync(projectId, mutable: true, ct);
         if (request.InspectedAt > DateTime.UtcNow)
             throw new ProcurementOperationException("Thời điểm kiểm nhận không được ở tương lai.");
@@ -615,7 +623,6 @@ public sealed class ProcurementService(
             throw new ProcurementOperationException("Người nhận kho phải là người dùng đang thực hiện thao tác.");
         await ValidateReceiptLinesAsync(projectId, request.Lines, ct);
         await ValidateReceiptQuantitiesAsync(request.Lines, null, ct);
-        await using var transaction = await BeginSerializableAsync(ct);
         var entity = new WarehouseReceipt
         {
             OperationalProjectId = projectId,
@@ -642,6 +649,12 @@ public sealed class ProcurementService(
         WarehouseTransactionListParams parameters,
         CancellationToken ct = default)
     {
+        // This list has no snapshot contract. Set its isolation explicitly so
+        // pooled sessions cannot leave its split reads holding Serializable
+        // ranges against concurrent ledger root/line inserts.
+        await using var readTransaction = db.Database.IsRelational() && db.Database.CurrentTransaction is null
+            ? await db.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, ct)
+            : null;
         await EnsureProjectAsync(projectId, mutable: false, ct);
         if (parameters.OccurredFrom > parameters.OccurredTo)
             throw new ProcurementOperationException("Ngày bắt đầu không được sau ngày kết thúc.");
@@ -713,7 +726,7 @@ public sealed class ProcurementService(
         var ordered = descending
             ? rows.OrderByDescending(sort).ThenByDescending(item => item.Id)
             : rows.OrderBy(sort).ThenBy(item => item.Id);
-        return new WarehouseTransactionListResponse
+        var response = new WarehouseTransactionListResponse
         {
             Total = rows.Count,
             Page = parameters.Page,
@@ -721,6 +734,8 @@ public sealed class ProcurementService(
             Items = ordered.Skip((parameters.Page - 1) * parameters.PageSize).Take(parameters.PageSize).ToList(),
             Stock = await GetWarehouseStockAsync(projectId, ct),
         };
+        if (readTransaction is not null) await readTransaction.CommitAsync(ct);
+        return response;
     }
 
     public async Task<WarehouseReceiptDetailResponse?> GetWarehouseReceiptAsync(
@@ -749,6 +764,7 @@ public sealed class ProcurementService(
     public async Task<WarehouseReceiptResponse?> UpdateReceiptAsync(
         int projectId, int id, WarehouseReceiptCreateRequest request, int userId, CancellationToken ct = default)
     {
+        await using var transaction = await BeginWarehouseAsync(ct);
         await EnsureProjectAsync(projectId, mutable: true, ct);
         var entity = await db.WarehouseReceipts.Include(item => item.Lines)
             .SingleOrDefaultAsync(item => item.Id == id && item.OperationalProjectId == projectId, ct);
@@ -772,14 +788,15 @@ public sealed class ProcurementService(
         entity.InspectedAt = request.InspectedAt!.Value.ToUniversalTime();
         entity.UpdatedAt = DateTime.UtcNow;
         await CrmConcurrency.SaveChangesAsync(db, ct);
+        if (transaction is not null) await transaction.CommitAsync(ct);
         return await GetReceiptAsync(projectId, id, ct);
     }
 
     public async Task<WarehouseReceiptResponse?> PostReceiptAsync(
         int projectId, int id, ProcurementTransitionRequest request, int userId, CancellationToken ct = default)
     {
+        await using var transaction = await BeginWarehouseAsync(ct);
         await EnsureProjectAsync(projectId, mutable: true, ct);
-        await using var transaction = await BeginSerializableAsync(ct);
         var entity = await db.WarehouseReceipts.Include(item => item.Lines)
             .SingleOrDefaultAsync(item => item.Id == id && item.OperationalProjectId == projectId, ct);
         if (entity is null) return null;
@@ -803,8 +820,8 @@ public sealed class ProcurementService(
     public async Task<WarehouseReceiptResponse?> ReverseReceiptAsync(
         int projectId, int id, WarehouseReversalRequest request, int userId, CancellationToken ct = default)
     {
+        await using var transaction = await BeginWarehouseAsync(ct);
         await EnsureProjectAsync(projectId, mutable: true, ct);
-        await using var transaction = await BeginSerializableAsync(ct);
         var original = await db.WarehouseReceipts.Include(item => item.Lines)
             .ThenInclude(line => line.MaterialRequestLine).ThenInclude(line => line.ProjectBoqLine)
             .SingleOrDefaultAsync(item => item.Id == id && item.OperationalProjectId == projectId, ct);
@@ -856,6 +873,7 @@ public sealed class ProcurementService(
     public async Task<WarehouseIssueResponse> CreateIssueAsync(
         int projectId, WarehouseIssueCreateRequest request, int userId, CancellationToken ct = default)
     {
+        await using var transaction = await BeginWarehouseAsync(ct);
         await EnsureProjectAsync(projectId, mutable: true, ct);
         if (request.IssuedAt > DateTime.UtcNow)
             throw new ProcurementOperationException("Thời điểm xuất kho không được ở tương lai.");
@@ -864,7 +882,6 @@ public sealed class ProcurementService(
         await ValidateProjectUserAsync(projectId, request.ResponsibleSiteUserId, null, "Người chịu trách nhiệm tại công trường", ct);
         await ValidateIssueLinesAsync(projectId, request.Lines, ct);
         await ValidateIssueQuantitiesAsync(projectId, request.Lines, ct);
-        await using var transaction = await BeginSerializableAsync(ct);
         var entity = new WarehouseIssue
         {
             OperationalProjectId = projectId,
@@ -911,6 +928,7 @@ public sealed class ProcurementService(
     public async Task<WarehouseIssueResponse?> UpdateIssueAsync(
         int projectId, int id, WarehouseIssueCreateRequest request, int userId, CancellationToken ct = default)
     {
+        await using var transaction = await BeginWarehouseAsync(ct);
         await EnsureProjectAsync(projectId, mutable: true, ct);
         var entity = await db.WarehouseIssues.Include(item => item.Lines)
             .SingleOrDefaultAsync(item => item.Id == id && item.OperationalProjectId == projectId, ct);
@@ -936,14 +954,15 @@ public sealed class ProcurementService(
         entity.WorkItemCode = TrimOrNull(request.WorkItemCode);
         entity.UpdatedAt = DateTime.UtcNow;
         await CrmConcurrency.SaveChangesAsync(db, ct);
+        if (transaction is not null) await transaction.CommitAsync(ct);
         return await GetIssueAsync(projectId, id, ct);
     }
 
     public async Task<WarehouseIssueResponse?> PostIssueAsync(
         int projectId, int id, ProcurementTransitionRequest request, int userId, CancellationToken ct = default)
     {
+        await using var transaction = await BeginWarehouseAsync(ct);
         await EnsureProjectAsync(projectId, mutable: true, ct);
-        await using var transaction = await BeginSerializableAsync(ct);
         var entity = await db.WarehouseIssues.Include(item => item.Lines).ThenInclude(line => line.ProjectBoqLine)
             .SingleOrDefaultAsync(item => item.Id == id && item.OperationalProjectId == projectId, ct);
         if (entity is null) return null;
@@ -971,8 +990,8 @@ public sealed class ProcurementService(
     public async Task<WarehouseIssueResponse?> ReverseIssueAsync(
         int projectId, int id, WarehouseReversalRequest request, int userId, CancellationToken ct = default)
     {
+        await using var transaction = await BeginWarehouseAsync(ct);
         await EnsureProjectAsync(projectId, mutable: true, ct);
-        await using var transaction = await BeginSerializableAsync(ct);
         var original = await db.WarehouseIssues.Include(item => item.Lines)
             .SingleOrDefaultAsync(item => item.Id == id && item.OperationalProjectId == projectId, ct);
         if (original is null) return null;
@@ -1227,6 +1246,12 @@ public sealed class ProcurementService(
         }
     }
 
+    private async Task EnsureContractNotAwardedAsync(int contractId, CancellationToken ct)
+    {
+        if (await db.Rfqs.AsNoTracking().AnyAsync(rfq => rfq.ContractId == contractId, ct))
+            throw new ProcurementOperationException("Các dòng hợp đồng đã được chọn qua RFQ là bất biến; không được thêm, sửa hoặc chuyển sang hợp đồng khác.");
+    }
+
     private async Task ValidateContractLineAsync(int projectId, ContractLineUpsertRequest request, int? excludeId, CancellationToken ct)
     {
         var contract = await db.Contracts.AsNoTracking().SingleOrDefaultAsync(item => item.Id == request.ContractId, ct);
@@ -1235,6 +1260,7 @@ public sealed class ProcurementService(
             throw new ProcurementOperationException("Dòng mua sắm chỉ được gắn với hợp đồng cung ứng hoặc thầu phụ của dự án.");
         if (contract.Status != ContractStatus.Draft)
             throw new ProcurementOperationException("Chỉ được sửa dòng mua sắm khi hợp đồng còn ở trạng thái Nháp.");
+        await EnsureContractNotAwardedAsync(contract.Id, ct);
         var currentRevisionId = await CurrentApprovedRevisionIdAsync(projectId, ct);
         if (!await db.ProjectBoqLines.AnyAsync(item => item.Id == request.ProjectBoqLineId && item.ProjectBoqRevisionId == currentRevisionId, ct))
             throw new ProcurementOperationException("Dòng hợp đồng phải tham chiếu BOQ đang được duyệt.");
@@ -1535,15 +1561,55 @@ public sealed class ProcurementService(
 
     private async Task<string> AllocateCodeAsync<TEntity>(int projectId, string prefix, CancellationToken ct) where TEntity : class
     {
+        // A new project's empty code range can share an index gap with another
+        // project. Reserve it for update before reading, so parallel inserts do
+        // not both hold shared ranges and then deadlock while converting them.
         List<string> codes = typeof(TEntity) == typeof(MaterialRequest)
-            ? await db.MaterialRequests.Where(item => item.OperationalProjectId == projectId).Select(item => item.Code).ToListAsync(ct)
+            ? await (db.Database.IsSqlServer() ? db.MaterialRequests.FromSqlRaw("SELECT * FROM [material_requests] WITH (UPDLOCK)") : db.MaterialRequests)
+                .Where(item => item.OperationalProjectId == projectId).Select(item => item.Code).ToListAsync(ct)
             : typeof(TEntity) == typeof(WarehouseReceipt)
-                ? await db.WarehouseReceipts.Where(item => item.OperationalProjectId == projectId).Select(item => item.Code).ToListAsync(ct)
-                : await db.WarehouseIssues.Where(item => item.OperationalProjectId == projectId).Select(item => item.Code).ToListAsync(ct);
+                ? await (db.Database.IsSqlServer() ? db.WarehouseReceipts.FromSqlRaw("SELECT * FROM [warehouse_receipts] WITH (UPDLOCK)") : db.WarehouseReceipts)
+                    .Where(item => item.OperationalProjectId == projectId).Select(item => item.Code).ToListAsync(ct)
+                : await (db.Database.IsSqlServer() ? db.WarehouseIssues.FromSqlRaw("SELECT * FROM [warehouse_issues] WITH (UPDLOCK)") : db.WarehouseIssues)
+                    .Where(item => item.OperationalProjectId == projectId).Select(item => item.Code).ToListAsync(ct);
         var marker = prefix + "-";
         var sequence = codes.Select(code => code.StartsWith(marker, StringComparison.OrdinalIgnoreCase) &&
             int.TryParse(code[marker.Length..], out var value) ? value : 0).DefaultIfEmpty(0).Max() + 1;
         return $"{prefix}-{sequence:D4}";
+    }
+
+    private async Task<IDbContextTransaction?> BeginWarehouseAsync(CancellationToken ct)
+    {
+        var transaction = await BeginSerializableAsync(ct);
+        if (transaction is null || !db.Database.IsSqlServer()) return transaction;
+        try
+        {
+            // Stock/receipt totals can scan ledger roots from other projects.
+            // Serialize only warehouse writes before their first read so those
+            // shared ranges cannot deadlock with another ledger root/line write.
+            // This deliberately trades cross-project warehouse write throughput
+            // for atomic stock checks; other procurement mutations are unaffected.
+            var resource = "warehouse:ledger-mutation";
+            var result = new SqlParameter("@lockResult", SqlDbType.Int)
+            {
+                Direction = ParameterDirection.Output,
+            };
+            await db.Database.ExecuteSqlInterpolatedAsync($"""
+                EXEC {result} = sys.sp_getapplock
+                    @Resource = {resource},
+                    @LockMode = 'Exclusive',
+                    @LockOwner = 'Transaction',
+                    @LockTimeout = 15000;
+                """, ct);
+            if ((int)result.Value < 0)
+                throw new CrmConcurrencyException("Warehouse transactions are busy. Reload and retry the operation.");
+            return transaction;
+        }
+        catch
+        {
+            await transaction.DisposeAsync();
+            throw;
+        }
     }
 
     private async Task<IDbContextTransaction?> BeginSerializableAsync(CancellationToken ct) =>

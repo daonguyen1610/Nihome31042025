@@ -23,6 +23,12 @@ The September 8 implementation request proceeds with the proposed MVP:
 - An explicit award creates one **Draft Downstream Supply/Subcontract contract**
   and its BOQ lines. The existing contract workflow handles signing, execution,
   and payment; an RFQ award does not sign the contract.
+- Award-derived contract value, customer, project, vendor and classification
+  cannot be changed through the generic contract editor. Awarded lines cannot
+  be edited, appended or moved through procurement endpoints, including while
+  the contract is Draft. Draft coordination notes and the existing signing and
+  payment workflows remain available. Ordinary contracts without an RFQ award
+  retain their existing draft-editing behavior.
 - VND is the supported currency because the existing contract value has no
   currency field. Unit prices and line totals use four decimal places; quantity
   uses six. Line amounts round halfway away from zero. Comparison totals sum
@@ -77,6 +83,12 @@ an older revision. Missing price cells remain missing, while zero means a quoted
 free item. Partial, expired, withdrawn, inactive-vendor, and superseded quotes
 cannot be awarded. Quote validity must cover the RFQ deadline.
 
+Vendor responses include the read-only `isActive` flag. An inactive vendor's
+quoted amounts remain visible as historical evidence, but receive no lowest-price
+highlight even when tied with an active vendor. Valid lines in an active partial
+quotation still participate in line-price comparison; whole-package award
+eligibility remains separate.
+
 Mutations require `Idempotency-Key`; updates, transitions, bids, award, and file
 attachment also require `rowVersion` or matching `If-Match`. Reusing a key with
 another payload or submitting stale state returns 409. Root changes, quotation
@@ -84,6 +96,34 @@ history, award snapshot, and generated contract/lines commit transactionally.
 Rejected business operations leave them unchanged. Audit records include actor,
 project, RFQ, action, and resulting status. RFQ activity history is persisted
 alongside the operation.
+
+SQL Server mutations take update locks on the RFQ root and its owned collections
+in a fixed order. Serializable isolation remains in place for dependency checks.
+This prevents two RFQs from sharing an index gap while reading child history and
+then deadlocking when both append records. BOQ revision and MR/receipt/issue code
+allocation similarly reserve their ranges for update before reading the next
+number, as does the downstream payment-request code allocator. A transaction-owned
+SQL application lock excludes RFQ creation from concurrent RFQ mutations because
+EF inserts new children in a different order from existing-graph reads. Creation
+is serialized across projects; existing RFQ mutations share the gate and retain
+their root/child locks. Ordinary detail reads retain their existing query behavior.
+
+The joined warehouse flow also serializes its transactional writes with a
+transaction-owned SQL application lock. This prevents stock scans and document
+writes from taking conflicting root/child locks across projects while preserving
+Serializable stock validation. Warehouse list reads explicitly use ReadCommitted
+so they do not inherit a stronger isolation level from a reused connection.
+The tradeoff is serialized warehouse writes across projects; the validation below
+proves the tested workflow, not peak throughput or every possible database race.
+
+The opt-in `tools/qa/rfq_concurrency.py` probe runs real HTTP operations against a
+SQL-backed validation stack: concurrent creation across projects, creation
+overlapping issue, two bid revisions, parallel evaluation/award and competing
+decisions on the same RFQ. It checks one
+award event, complete decision history and distinct contract IDs. Provide the
+base URL, approved test-project IDs and a private credentials JSON file described
+by `--help`. It creates retained test RFQs/contracts and must run only on an
+isolated validation stack; it does not exercise live Drive or fault injection.
 
 ## Files and notifications
 
@@ -186,6 +226,8 @@ the API, not hardcoded React values.
 | RFQ-08 | Notifications and closed-project protection | `Overdue_NotificationsAreOncePerRfq_AndClosedProjectsRejectWrites` |
 | RFQ-09 | Decimal rounding and database range | `RfqPricingTests` |
 | RFQ-10 | Browser rendering and responsive interaction | `e2e/smoke/admin-rfqs.spec.ts` |
+| RFQ-11 | Preserve awarded commercial terms through contract editing, signing and payment | `RfqProcurementPipelineTests.AssertAwardCommercialIntegrityAsync`, Paid branch of `e2e/smoke/rfq-business-pipeline.spec.ts` |
+| RFQ-12 | Exclude inactive tied vendors without losing partial/zero line comparison | `Comparison_ReportsInactiveVendor_WithoutLosingPartialZeroPriceMinimum`, `e2e/smoke/rfq-active-vendor-highlighting.spec.ts` |
 
 Integration tests exercise the ASP.NET pipeline with InMemory EF, which does not
 prove SQL foreign keys or transaction rollback. Migration and deployed browser
@@ -194,6 +236,10 @@ is an existing integration; RFQ file isolation is tested separately from live
 external Drive availability.
 
 ## Validation evidence — 8 September 2026
+
+These are historical results. The [9 September ticket review](nih-166-review-2026-09-09.md)
+records the subsequent award-integrity and comparison corrections with current
+validation evidence against NIH-166 and all three subtasks.
 
 **The expanded business pipeline now passes through Paid.** Its Accountant
 contract-lookup defect was fixed with a scoped finance reference endpoint. See

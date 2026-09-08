@@ -92,6 +92,36 @@ public sealed class RfqsControllerTests(NihomeWebApplicationFactory factory) : I
         (await ReadAsync(closed)).Events.Should().HaveCount(closed.Events.Count);
     }
 
+    [Fact]
+    public async Task Comparison_ReportsInactiveVendor_WithoutLosingPartialZeroPriceMinimum()
+    {
+        var fixture = await SeedAsync();
+        await LoginAsync("PROCUREMENT");
+        var detail = await TransitionAsync(await CreateAsync(fixture), "issue");
+        detail = await SubmitAsync(detail, fixture.VendorId, 0m, 20m);
+        detail = await SubmitAsync(detail, fixture.OtherVendorId, 0m, null);
+        detail.Vendors.Should().OnlyContain(vendor => vendor.IsActive);
+        detail.Lines[0].LowestUnitPrice.Should().Be(0m);
+
+        await WithDbAsync(async db =>
+        {
+            (await db.Vendors.FindAsync(fixture.VendorId))!.IsActive = false;
+            await db.SaveChangesAsync();
+        });
+        detail = await ReadAsync(detail);
+        detail.Vendors.Single(vendor => vendor.Id == fixture.VendorId).IsActive.Should().BeFalse();
+        detail.Vendors.Single(vendor => vendor.Id == fixture.OtherVendorId).IsActive.Should().BeTrue();
+        detail.Lines[0].LowestUnitPrice.Should().Be(0m);
+        detail.Lines[1].LowestUnitPrice.Should().BeNull();
+        detail.Bids.Should().OnlyContain(bid => !bid.IsEligible && !bid.IsLowest);
+        detail.Bids.Single(bid => bid.VendorId == fixture.OtherVendorId).IsComplete.Should().BeFalse();
+        var references = await Client.GetAsync(Base(fixture.ProjectId) + "/references");
+        references.EnsureSuccessStatusCode();
+        var vendors = (await ReadJsonAsync(references)).GetProperty("vendors").EnumerateArray().ToList();
+        vendors.Should().NotContain(vendor => vendor.GetProperty("id").GetInt32() == fixture.VendorId);
+        vendors.Should().OnlyContain(vendor => vendor.GetProperty("isActive").GetBoolean());
+    }
+
     [Theory]
     [InlineData("title")]
     [InlineData("long-title")]

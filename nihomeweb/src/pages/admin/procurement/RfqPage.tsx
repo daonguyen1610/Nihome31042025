@@ -188,6 +188,7 @@ function RfqWorkspace({ project, rfqId, onSelect }: { project: OperationalProjec
         <div className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
           <span>{t("rfq.field.owner")}: {detail.header.ownerName}</span><span>BOQ #{detail.header.boqRevision} · {detail.currency}</span>
           <span>{t("rfq.field.issued")}: {date(detail.header.issuedAt)}</span><span>{t("rfq.field.due")}: {date(detail.header.dueAt)}</span>
+          <span>{t("rfq.field.bids")}: {detail.header.receivedCount}/{detail.header.invitedCount}</span>
         </div>{detail.note && <p className="whitespace-pre-wrap text-sm">{detail.note}</p>}
         {canManage && <div className="flex flex-wrap gap-2">
           {detail.header.status === "Draft" && <><Button disabled={busy} variant="outline" onClick={() => { setActionError(""); setDialog("edit"); }}>{t("rfq.edit")}</Button><Button disabled={busy} onClick={() => transition("issue")}>{t("rfq.issue")}</Button></>}
@@ -201,7 +202,7 @@ function RfqWorkspace({ project, rfqId, onSelect }: { project: OperationalProjec
           <table className="w-full min-w-[640px] text-left text-sm"><thead className="bg-muted"><tr><th className="min-w-52 p-3">{t("rfq.field.boq")}</th>{detail.vendors.map(v => <th key={v.id} className="min-w-52 p-3">{v.name}</th>)}</tr></thead>
             <tbody>{detail.lines.map(line => <tr key={line.id} className="border-t"><th className="p-3 font-medium">{line.itemCode}<div className="text-xs font-normal">{line.description}<br />{quantity.format(line.quantity)} {line.unit}</div></th>
               {detail.vendors.map(v => { const bid = detail.bids.find(b => b.vendorId === v.id && b.isCurrent && !b.withdrawnAt); const cell = bid?.lines.find(l => l.rfqLineId === line.id);
-                return <td key={v.id} className={`p-3 ${cell && Date.parse(bid!.validUntil) >= Date.now() && cell.unitPrice === line.lowestUnitPrice ? "bg-emerald-50 text-emerald-900" : ""}`}>
+                return <td key={v.id} className={`p-3 ${v.isActive && cell && Date.parse(bid!.validUntil) >= Date.now() && cell.unitPrice === line.lowestUnitPrice ? "bg-emerald-50 text-emerald-900" : ""}`}>
                   {cell ? <><div>{number.format(cell.unitPrice)} {detail.currency}</div><div className="text-xs">{t("rfq.field.total")}: {number.format(cell.amount)}</div></> : t("rfq.missing")}
                 </td>; })}</tr>)}
               <tr className="border-t bg-muted/30"><th className="p-3">{t("rfq.field.total")}</th>{detail.vendors.map(v => { const bid = detail.bids.find(b => b.vendorId === v.id && b.isCurrent && !b.withdrawnAt); return <td key={v.id} className={`p-3 ${bid?.isLowest ? "bg-emerald-50" : ""}`}>

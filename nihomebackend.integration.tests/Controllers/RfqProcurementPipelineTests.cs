@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Models;
 
@@ -37,20 +38,24 @@ public sealed class RfqProcurementPipelineTests(NihomeWebApplicationFactory fact
         {
             currency = "VND",
             sourceTenderEstimateRevisionId = estimateId,
-            lines = new[] { new { itemCode = "CABLE-PIPELINE", description = "Factory power cable", unit = "m", approvedQuantity = 10m, budgetUnitPrice = 120m } },
+            lines = new[]
+            {
+                new { itemCode = "CABLE-PIPELINE", description = "Factory power cable", unit = "m", approvedQuantity = 10m, budgetUnitPrice = 120m },
+                new { itemCode = "SPARE-PIPELINE", description = "Spare cable conduit", unit = "m", approvedQuantity = 5m, budgetUnitPrice = 50m },
+            },
         });
         var boqId = Id(boq);
         var storedBoq = await WithDbAsync(db => db.ProjectBoqRevisions.SingleAsync(x => x.Id == boqId));
         storedBoq.SourceTenderEstimateRevisionId.Should().Be(estimateId);
         storedBoq.OperationalProjectId.Should().Be(fixture.ProjectId);
-        var boqLineId = Id(boq.GetProperty("lines")[0]);
+        var boqLineId = Id(boq.GetProperty("lines").EnumerateArray().Single(x => x.GetProperty("itemCode").GetString() == "CABLE-PIPELINE"));
         await RejectAsync(procurement + $"/boq-revisions/{boqId}/decision", new { approved = true, rowVersion = Version(boq) }, HttpStatusCode.Forbidden);
         (await WithDbAsync(db => db.ProjectBoqRevisions.SingleAsync(x => x.Id == boqId))).Status.Should().Be(ProjectBoqRevisionStatus.Draft);
         boq = await MoveAsync(procurement + $"/boq-revisions/{boqId}", boq, "submit");
         await LoginAsync("BGD");
         boq = await PostAsync(procurement + $"/boq-revisions/{boqId}/decision", new { approved = true, rowVersion = Version(boq) });
         boq.GetProperty("status").GetString().Should().Be("Approved");
-        boq.GetProperty("costTotal").GetDecimal().Should().Be(1200m);
+        boq.GetProperty("costTotal").GetDecimal().Should().Be(1450m);
 
         await LoginAsync("PROCUREMENT");
         var rfq = await PostAsync(rfqs, new
@@ -125,6 +130,13 @@ public sealed class RfqProcurementPipelineTests(NihomeWebApplicationFactory fact
         contractLine.Quantity.Should().Be(10m);
         contractLine.NegotiatedUnitPrice.Should().Be(100m);
         contractLine.ProcurementOwnerUserId.Should().Be(fixture.ProcurementId);
+
+        if (vendorType == VendorType.Supplier && outcome == "Paid")
+        {
+            var spareLineId = Id(boq.GetProperty("lines").EnumerateArray().Single(x => x.GetProperty("itemCode").GetString() == "SPARE-PIPELINE"));
+            await AssertAwardCommercialIntegrityAsync(fixture, rfq, contract, contractLine, spareLineId);
+            contract = await WithDbAsync(db => db.Contracts.AsNoTracking().SingleAsync(x => x.Id == contractId));
+        }
 
         var invoiceNumber = UniqueSlug("INV-PIPELINE");
         await LoginAsync("ACCOUNTANT");
@@ -286,6 +298,104 @@ public sealed class RfqProcurementPipelineTests(NihomeWebApplicationFactory fact
         (await WithDbAsync(db => db.PaymentRequests.SingleAsync(x => x.Id == paymentId))).Status.Should().Be(PaymentRequestStatus.Paid);
     }
 
+    private async Task AssertAwardCommercialIntegrityAsync(Foundation fixture, JsonElement rfq,
+        Contract contract, ContractLine line, int spareBoqLineId)
+    {
+        await LoginAsync("SALES_MANAGER");
+        var contractPath = $"/api/contracts/{contract.Id}";
+        using var beforeResponse = await Client.GetAsync(contractPath);
+        beforeResponse.EnsureSuccessStatusCode();
+        var before = await ReadJsonAsync(beforeResponse);
+        var changed = JsonNode.Parse(before.GetRawText())!.AsObject();
+        changed["value"] = 900m;
+        using (var rejected = await PutAsync(contractPath, changed))
+            rejected.StatusCode.Should().Be(HttpStatusCode.BadRequest, await rejected.Content.ReadAsStringAsync());
+        var unchanged = await WithDbAsync(db => db.Contracts.AsNoTracking().SingleAsync(x => x.Id == contract.Id));
+        unchanged.Value.Should().Be(1000m);
+        unchanged.RowVersion.Should().Equal(contract.RowVersion);
+        unchanged.UpdatedAt.Should().Be(contract.UpdatedAt);
+
+        // Administrative draft notes remain editable without changing the award.
+        changed["value"] = 1000m;
+        changed["note"] = "Delivery coordination recorded without changing awarded prices";
+        using (var saved = await PutAsync(contractPath, changed))
+            saved.IsSuccessStatusCode.Should().BeTrue(await saved.Content.ReadAsStringAsync());
+        var ordinary = await PostAsync("/api/contracts", new
+        {
+            customerId = fixture.CustomerId,
+            operationalProjectId = fixture.ProjectId,
+            direction = "Downstream",
+            type = "Supply",
+            vendorId = fixture.OtherVendorId,
+            value = 250m,
+            scopeOfWork = "Separate unawarded spare-conduit package",
+        });
+        var ordinaryId = Id(ordinary);
+        var ordinaryUpdate = JsonNode.Parse(ordinary.GetRawText())!.AsObject();
+        ordinaryUpdate["value"] = 300m;
+        using (var saved = await PutAsync($"/api/contracts/{ordinaryId}", ordinaryUpdate))
+            saved.IsSuccessStatusCode.Should().BeTrue(await saved.Content.ReadAsStringAsync());
+
+        await LoginAsync("PROCUREMENT");
+        var linesPath = $"/api/operational-projects/{fixture.ProjectId}/procurement/contract-lines";
+        var otherLine = await PostAsync(linesPath, new
+        {
+            contractId = ordinaryId,
+            projectBoqLineId = spareBoqLineId,
+            procurementOwnerUserId = fixture.ProcurementId,
+            quantity = 5m,
+            negotiatedUnitPrice = 50m,
+        });
+        var editableLine = JsonNode.Parse(otherLine.GetRawText())!.AsObject();
+        editableLine["negotiatedUnitPrice"] = 60m;
+        using (var saved = await PutAsync(linesPath + $"/{Id(otherLine)}", editableLine))
+        {
+            saved.IsSuccessStatusCode.Should().BeTrue(await saved.Content.ReadAsStringAsync());
+            otherLine = await ReadJsonAsync(saved);
+        }
+        foreach (var partition in new[] { "quantity", "price", "move-out", "move-in", "append" })
+        {
+            var payload = partition == "move-in" ? JsonNode.Parse(otherLine.GetRawText())!.AsObject() : JsonSerializer.SerializeToNode(new
+            {
+                contractId = contract.Id,
+                projectBoqLineId = line.ProjectBoqLineId,
+                procurementOwnerUserId = fixture.ProcurementId,
+                quantity = line.Quantity,
+                negotiatedUnitPrice = line.NegotiatedUnitPrice,
+                rowVersion = Convert.ToBase64String(line.RowVersion),
+            })!.AsObject();
+            if (partition == "quantity") payload["quantity"] = 9m;
+            if (partition == "price") payload["negotiatedUnitPrice"] = 90m;
+            if (partition == "move-out") payload["contractId"] = ordinaryId;
+            if (partition == "move-in") payload["contractId"] = contract.Id;
+            if (partition == "append") { payload["projectBoqLineId"] = spareBoqLineId; payload["quantity"] = 5m; }
+            using var rejected = partition == "append"
+                ? await SendAsync(linesPath, payload)
+                : await PutAsync(linesPath + $"/{(partition == "move-in" ? Id(otherLine) : line.Id)}", payload);
+            rejected.StatusCode.Should().Be(HttpStatusCode.BadRequest, $"{partition}: {await rejected.Content.ReadAsStringAsync()}");
+            var storedLine = await WithDbAsync(db => db.ContractLines.AsNoTracking().SingleAsync(x => x.Id == line.Id));
+            storedLine.ContractId.Should().Be(contract.Id);
+            storedLine.Quantity.Should().Be(10m);
+            storedLine.NegotiatedUnitPrice.Should().Be(100m);
+            storedLine.RowVersion.Should().Equal(line.RowVersion);
+            (await WithDbAsync(db => db.ContractLines.CountAsync(x => x.ContractId == contract.Id))).Should().Be(1);
+            (await WithDbAsync(db => db.ContractLines.SingleAsync(x => x.Id == Id(otherLine)))).ContractId.Should().Be(ordinaryId);
+        }
+        using var rfqResponse = await Client.GetAsync($"/api/operational-projects/{fixture.ProjectId}/procurement/rfqs/{Id(rfq.GetProperty("header"))}");
+        rfqResponse.EnsureSuccessStatusCode();
+        var final = await ReadJsonAsync(rfqResponse);
+        final.GetProperty("awardSnapshotJson").GetString().Should().Be(rfq.GetProperty("awardSnapshotJson").GetString());
+        final.GetProperty("selectedBidId").GetInt32().Should().Be(rfq.GetProperty("selectedBidId").GetInt32());
+        final.GetProperty("events").GetArrayLength().Should().Be(rfq.GetProperty("events").GetArrayLength());
+    }
+
+    private async Task<HttpResponseMessage> PutAsync(string path, object body)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Put, path) { Content = JsonContent.Create(body) };
+        request.Headers.Add("Idempotency-Key", Guid.NewGuid().ToString());
+        return await Client.SendAsync(request);
+    }
+
     private async Task AssertRfqCancellationAsync(Foundation fixture, string path, JsonElement rfq)
     {
         var originalState = rfq.GetProperty("header").GetProperty("status").GetString();
@@ -322,7 +432,7 @@ public sealed class RfqProcurementPipelineTests(NihomeWebApplicationFactory fact
         await RejectAsync(tenderPath + "/transition", new { status = "Submitted" }, HttpStatusCode.BadRequest);
         (await WithDbAsync(db => db.Tenders.SingleAsync(x => x.Id == Id(tender)))).Status.Should().Be(TenderStatus.Preparing);
         using var form = new MultipartFormDataContent();
-        var file = new ByteArrayContent(System.Text.Encoding.UTF8.GetBytes("ItemCode,Description,Unit,Quantity,UnitCost,BidUnitPrice,VatPercent,Note\r\nCABLE-PIPELINE,Factory power cable,m,10,120,150,0,Factory delivery\r\n"));
+        var file = new ByteArrayContent(System.Text.Encoding.UTF8.GetBytes("ItemCode,Description,Unit,Quantity,UnitCost,BidUnitPrice,VatPercent,Note\r\nCABLE-PIPELINE,Factory power cable,m,10,120,150,0,Factory delivery\r\nSPARE-PIPELINE,Spare cable conduit,m,5,50,60,0,Separate package\r\n"));
         file.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("text/csv");
         form.Add(file, "file", "factory-estimate.csv");
         using var imported = await Client.PostAsync(tenderPath + "/estimates/import", form);
