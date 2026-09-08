@@ -206,5 +206,69 @@
     "en": "BOQ {{revision}} for project {{projectCode}} was rejected. Reason: {{reason}}.",
     "zh": "项目 {{projectCode}} 的 BOQ {{revision}} 已被拒绝。原因：{{reason}}。",
     "ja": "プロジェクト {{projectCode}} のBOQ {{revision}} が却下されました。理由: {{reason}}。"
+  },
+  {
+    "key": "notification.procurement.material-request.submitted.title",
+    "category": "notification",
+    "vi": "Yêu cầu vật tư {{requestCode}} chờ xử lý",
+    "en": "Material request {{requestCode}} awaits action",
+    "zh": "材料申请 {{requestCode}} 等待处理",
+    "ja": "資材依頼 {{requestCode}} の対応待ち"
+  },
+  {
+    "key": "notification.procurement.material-request.submitted.body",
+    "category": "notification",
+    "vi": "Yêu cầu vật tư {{requestCode}} của dự án {{projectCode}} vừa được trình duyệt.",
+    "en": "Material request {{requestCode}} for project {{projectCode}} was submitted for approval.",
+    "zh": "项目 {{projectCode}} 的材料申请 {{requestCode}} 已提交审批。",
+    "ja": "プロジェクト {{projectCode}} の資材依頼 {{requestCode}} が承認申請されました。"
+  },
+  {
+    "key": "notification.procurement.material-request.approved.title",
+    "category": "notification",
+    "vi": "Yêu cầu vật tư {{requestCode}} đã được duyệt",
+    "en": "Material request {{requestCode}} approved",
+    "zh": "材料申请 {{requestCode}} 已批准",
+    "ja": "資材依頼 {{requestCode}} が承認されました"
+  },
+  {
+    "key": "notification.procurement.material-request.approved.body",
+    "category": "notification",
+    "vi": "Yêu cầu vật tư {{requestCode}} của dự án {{projectCode}} đã được phê duyệt.",
+    "en": "Material request {{requestCode}} for project {{projectCode}} was approved.",
+    "zh": "项目 {{projectCode}} 的材料申请 {{requestCode}} 已批准。",
+    "ja": "プロジェクト {{projectCode}} の資材依頼 {{requestCode}} が承認されました。"
+  },
+  {
+    "key": "notification.procurement.material-request.rejected.title",
+    "category": "notification",
+    "vi": "Yêu cầu vật tư {{requestCode}} bị từ chối",
+    "en": "Material request {{requestCode}} rejected",
+    "zh": "材料申请 {{requestCode}} 已拒绝",
+    "ja": "資材依頼 {{requestCode}} が却下されました"
+  },
+  {
+    "key": "notification.procurement.material-request.rejected.body",
+    "category": "notification",
+    "vi": "Yêu cầu vật tư {{requestCode}} của dự án {{projectCode}} bị từ chối. Lý do: {{reason}}.",
+    "en": "Material request {{requestCode}} for project {{projectCode}} was rejected. Reason: {{reason}}.",
+    "zh": "项目 {{projectCode}} 的材料申请 {{requestCode}} 已被拒绝。原因：{{reason}}。",
+    "ja": "プロジェクト {{projectCode}} の資材依頼 {{requestCode}} が却下されました。理由: {{reason}}。"
+  },
+  {
+    "key": "notification.procurement.material-request.cancelled.title",
+    "category": "notification",
+    "vi": "Yêu cầu vật tư {{requestCode}} đã bị hủy",
+    "en": "Material request {{requestCode}} cancelled",
+    "zh": "材料申请 {{requestCode}} 已取消",
+    "ja": "資材依頼 {{requestCode}} がキャンセルされました"
+  },
+  {
+    "key": "notification.procurement.material-request.cancelled.body",
+    "category": "notification",
+    "vi": "Yêu cầu vật tư {{requestCode}} của dự án {{projectCode}} đã bị hủy. Lý do: {{reason}}.",
+    "en": "Material request {{requestCode}} for project {{projectCode}} was cancelled. Reason: {{reason}}.",
+    "zh": "项目 {{projectCode}} 的材料申请 {{requestCode}} 已取消。原因：{{reason}}。",
+    "ja": "プロジェクト {{projectCode}} の資材依頼 {{requestCode}} がキャンセルされました。理由: {{reason}}。"
   }
 ]

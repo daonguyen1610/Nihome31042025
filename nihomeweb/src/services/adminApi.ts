@@ -3670,7 +3670,8 @@ export interface ProjectBoqRevisionListItemResponse { id: number; operationalPro
 export interface ProjectBoqRevisionListResponse { total: number; page: number; pageSize: number; items: ProjectBoqRevisionListItemResponse[] }
 export interface ProjectBoqRevisionListParams { search?: string; status?: string; sortBy?: "revision" | "status" | "total" | "preparedBy" | "createdAt" | "updatedAt"; sortDirection?: "asc" | "desc"; page?: number; pageSize?: number }
 export interface MaterialRequestLineResponse { id: number; projectBoqLineId: number; itemCode: string; description: string; unit: string; requestedQuantity: number; receivedQuantity: number; boqApprovedQuantity: number; boqRemainingQuantity: number }
-export interface MaterialRequestResponse { id: number; operationalProjectId: number; code: string; status: string; siteRequesterUserId: number; siteRequesterName?: string | null; responsibleSiteUserId: number; responsibleSiteUserName?: string | null; assignedProcurementUserId: number; assignedProcurementUserName?: string | null; requiredAt: string; note?: string | null; submittedAt?: string | null; approvedAt?: string | null; fulfilledAt?: string | null; decisionReason?: string | null; rowVersion: string; lines: MaterialRequestLineResponse[] }
+export interface MaterialRequestResponse { id: number; operationalProjectId: number; code: string; status: string; siteRequesterUserId: number; siteRequesterName?: string | null; responsibleSiteUserId: number; responsibleSiteUserName?: string | null; assignedProcurementUserId: number; assignedProcurementUserName?: string | null; requiredAt: string; note?: string | null; submittedAt?: string | null; submittedByUserId?: number | null; submittedByName?: string | null; approvedAt?: string | null; approvedByUserId?: number | null; approvedByName?: string | null; rejectedAt?: string | null; rejectedByUserId?: number | null; rejectedByName?: string | null; fulfilledAt?: string | null; cancelledAt?: string | null; decisionReason?: string | null; createdAt: string; updatedAt: string; rowVersion: string; lines: MaterialRequestLineResponse[] }
+export interface MaterialRequestDetailResponse extends MaterialRequestResponse { operationalProjectCode: string; operationalProjectName: string; customerId: number; customerName: string; contracts: Array<{ id: number; contractNumber: string; direction: ContractDirection; type: ContractType; vendorId?: number | null; vendorName?: string | null; status: ContractStatus }> }
 export interface MaterialRequestBoqLineOptionResponse { id: number; itemCode: string; description: string; unit: string; approvedQuantity: number; remainingQuantity: number }
 export interface MaterialRequestBoqContextResponse { revisionId: number; revisionNumber: number; lines: MaterialRequestBoqLineOptionResponse[] }
 export interface MaterialRequestListResponse { total: number; page: number; pageSize: number; items: MaterialRequestResponse[]; currentApprovedBoq?: MaterialRequestBoqContextResponse | null }
@@ -5200,10 +5201,23 @@ export const adminApi = {
     postIdempotent<ProjectBoqRevisionResponse>(`/operational-projects/${projectId}/procurement/boq-revisions/${id}/decision`, { approved, rowVersion, reason }),
   createMaterialRequest: (projectId: number, body: MaterialRequestUpsertRequest) =>
     postIdempotent<MaterialRequestResponse>(`/operational-projects/${projectId}/procurement/material-requests`, body),
+  getMaterialRequest: (projectId: number, id: number) =>
+    api.get<MaterialRequestDetailResponse>(`/operational-projects/${projectId}/procurement/material-requests/${id}`),
+  updateMaterialRequest: (projectId: number, id: number, body: MaterialRequestUpsertRequest) =>
+    api.put<MaterialRequestResponse>(
+      `/operational-projects/${projectId}/procurement/material-requests/${id}`,
+      body,
+      { headers: {
+        ...withIdempotencyKey(crypto.randomUUID()).headers,
+        ...withIfMatch(body.rowVersion).headers,
+      } },
+    ),
   submitMaterialRequest: (projectId: number, id: number, rowVersion: string) =>
     postIdempotent<MaterialRequestResponse>(`/operational-projects/${projectId}/procurement/material-requests/${id}/submit`, { rowVersion }),
   decideMaterialRequest: (projectId: number, id: number, approved: boolean, rowVersion: string, reason?: string) =>
     postIdempotent<MaterialRequestResponse>(`/operational-projects/${projectId}/procurement/material-requests/${id}/decision`, { approved, rowVersion, reason }),
+  cancelMaterialRequest: (projectId: number, id: number, rowVersion: string, reason: string) =>
+    postIdempotent<MaterialRequestResponse>(`/operational-projects/${projectId}/procurement/material-requests/${id}/cancel`, { rowVersion, reason }),
   createProcurementContractLine: (projectId: number, body: ProcurementContractLineRequest) =>
     postIdempotent<ProcurementContractLineResponse>(`/operational-projects/${projectId}/procurement/contract-lines`, body),
   createWarehouseReceipt: (projectId: number, body: { inspectedAt: string; receivedByUserId: number; lines: Array<{ materialRequestLineId: number; contractLineId?: number | null; receivedQuantity: number }> }) =>

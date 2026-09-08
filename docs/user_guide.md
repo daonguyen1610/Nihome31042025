@@ -131,7 +131,7 @@ The platform is being developed incrementally. The following components are curr
 | Acceptance and handover | Implemented |
 | Punchlist management | Implemented |
 | Procurement vendor management | Implemented |
-| Procurement BOQ, material requests, and warehouse | Partially implemented — project-scoped MR list and core procurement workflow are live; dedicated create/edit, detail, and warehouse screens remain pending |
+| Procurement BOQ, material requests, and warehouse | Partially implemented — project BOQ and the full Material Request create/edit/detail lifecycle are live; dedicated warehouse screens remain pending |
 | Finance module | Partially implemented — contracts and variation orders are live; cash flow and P&L are pending |
 | Google Drive integration | Implemented for current Operational Project file sources; deployment activation and live credentials are required |
 | Dashboard and analytics | Partially implemented — operational dashboard exists; full cross-module reporting is pending |
@@ -613,11 +613,20 @@ receipts, and the remaining approved BOQ allowance. Users outside the project
 scope receive no record visibility, and create/submit/approve actions remain
 hidden unless their role has the corresponding permission.
 
+Select **View details** to review Customer and Project context, all related
+Contracts, requested and received quantities, remaining BOQ allowance, notes,
+and lifecycle history. The requester may edit a Draft without losing entered
+data when validation or an API call fails. Draft requests can be submitted for
+approval; authorized reviewers may approve or reject them, and non-terminal
+requests may be cancelled with a recorded reason. Submitted and decided records
+are locked against editing. The assigned procurement owner and requester receive
+notifications when responsibility changes through the workflow.
+
 | Page | Functions | Estimate |
 |------|-----------|----------|
 | MR List | Project-scoped search, filters, sorting, pagination, export, quantities, and permission-aware actions | Implemented |
-| MR Create/Edit | Create and update request | 2 days |
-| MR Detail | Material info, BOQ comparison, approval workflow | 2.5 days |
+| MR Create/Edit | Create/update Drafts with project users, future required date, unique current-BOQ items, and remaining-allowance validation | Implemented |
+| MR Detail | Customer/Project/Contract context, BOQ comparison, lifecycle, edit, submit, approve/reject, and cancel | Implemented |
 
 #### 3.5.5 Warehouse and Material Distribution
 

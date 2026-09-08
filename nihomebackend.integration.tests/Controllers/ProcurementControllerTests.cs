@@ -392,6 +392,213 @@ public class ProcurementControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task MaterialRequestDetail_ReturnsLifecycleAndRejectsCrossProjectLookup()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "PM"));
+        var projectId = await CreateProjectAsync();
+        var otherProjectId = await CreateProjectAsync();
+        var requestId = await WithDbAsync(async db =>
+        {
+            var siteUserId = await db.Users.Where(user => user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["PM"])
+                .Select(user => user.Id).SingleAsync();
+            var procurementUserId = await db.Users.Where(user => user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["PROCUREMENT"])
+                .Select(user => user.Id).SingleAsync();
+            var revision = new ProjectBoqRevision
+            {
+                OperationalProjectId = projectId,
+                RevisionNumber = 1,
+                Status = ProjectBoqRevisionStatus.Approved,
+                ApprovedAt = DateTime.UtcNow,
+                PreparedByUserId = siteUserId,
+                Lines = [new ProjectBoqLine { ItemCode = "MAT-DETAIL", Description = "Detail material", Unit = "kg", ApprovedQuantity = 100m, BudgetUnitPrice = 10m, Amount = 1_000m }],
+            };
+            db.ProjectBoqRevisions.Add(revision);
+            var customerId = await db.OperationalProjects.Where(item => item.Id == projectId)
+                .Select(item => item.CustomerId).SingleAsync();
+            db.Contracts.AddRange(
+                new Contract
+                {
+                    ContractNumber = $"HD-MR-{Guid.NewGuid():N}"[..24],
+                    CustomerId = customerId,
+                    OperationalProjectId = projectId,
+                    Direction = ContractDirection.Upstream,
+                    Type = ContractType.DesignAndBuild,
+                    Status = ContractStatus.InProgress,
+                    Value = 1_000_000m,
+                },
+                new Contract
+                {
+                    ContractNumber = $"PO-MR-{Guid.NewGuid():N}"[..24],
+                    CustomerId = customerId,
+                    OperationalProjectId = projectId,
+                    Direction = ContractDirection.Downstream,
+                    Type = ContractType.Supply,
+                    Status = ContractStatus.Draft,
+                    Value = 500_000m,
+                });
+            await db.SaveChangesAsync();
+            var request = NewMaterialRequest(projectId, "MR-DETAIL", MaterialRequestStatus.Submitted,
+                siteUserId, procurementUserId, DateTime.UtcNow.AddDays(2));
+            request.SubmittedAt = DateTime.UtcNow;
+            request.Lines.Add(new MaterialRequestLine { ProjectBoqLineId = revision.Lines.Single().Id, RequestedQuantity = 25m });
+            db.MaterialRequests.Add(request);
+            await db.SaveChangesAsync();
+            return request.Id;
+        });
+
+        var detail = await Client.GetAsync(
+            $"/api/operational-projects/{projectId}/procurement/material-requests/{requestId}");
+
+        detail.StatusCode.Should().Be(HttpStatusCode.OK);
+        var json = await ReadJsonAsync(detail);
+        json.GetProperty("code").GetString().Should().Be("MR-DETAIL");
+        json.GetProperty("submittedAt").GetDateTime().Should().NotBe(default);
+        json.GetProperty("submittedByName").GetString().Should().NotBeNullOrWhiteSpace();
+        json.GetProperty("createdAt").GetDateTime().Should().NotBe(default);
+        json.GetProperty("updatedAt").GetDateTime().Should().NotBe(default);
+        json.GetProperty("operationalProjectCode").GetString().Should().StartWith("PJ-PROC-");
+        json.GetProperty("customerName").GetString().Should().Be("Procurement Customer");
+        json.GetProperty("contracts").GetArrayLength().Should().Be(2);
+        json.GetProperty("contracts")[0].TryGetProperty("value", out _).Should().BeFalse();
+        json.GetProperty("lines")[0].GetProperty("boqApprovedQuantity").GetDecimal().Should().Be(100m);
+        json.GetProperty("lines")[0].GetProperty("boqRemainingQuantity").GetDecimal().Should().Be(100m);
+
+        (await Client.GetAsync(
+            $"/api/operational-projects/{otherProjectId}/procurement/material-requests/{requestId}"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task MaterialRequestLifecycle_UpdatesNotifiesAndLocksApprovedRequest()
+    {
+        var fixture = await CreateMaterialRequestProjectAsync(100m);
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "PM"));
+
+        var created = await SendAsync(HttpMethod.Post,
+            $"/api/operational-projects/{fixture.ProjectId}/procurement/material-requests",
+            new
+            {
+                responsibleSiteUserId = fixture.ProjectManagerUserId,
+                assignedProcurementUserId = fixture.ProcurementUserId,
+                requiredAt = DateTime.UtcNow.AddDays(5),
+                note = "Foundation materials",
+                lines = new[] { new { projectBoqLineId = fixture.BoqLineId, requestedQuantity = 20m } },
+            });
+        created.StatusCode.Should().Be(HttpStatusCode.Created, await created.Content.ReadAsStringAsync());
+        var createdJson = await ReadJsonAsync(created);
+        var requestId = createdJson.GetProperty("id").GetInt32();
+
+        var updated = await SendAsync(HttpMethod.Put,
+            $"/api/operational-projects/{fixture.ProjectId}/procurement/material-requests/{requestId}",
+            new
+            {
+                responsibleSiteUserId = fixture.ProjectManagerUserId,
+                assignedProcurementUserId = fixture.ProcurementUserId,
+                requiredAt = DateTime.UtcNow.AddDays(6),
+                note = "Updated foundation materials",
+                rowVersion = createdJson.GetProperty("rowVersion").GetString(),
+                lines = new[] { new { projectBoqLineId = fixture.BoqLineId, requestedQuantity = 30m } },
+            });
+        updated.StatusCode.Should().Be(HttpStatusCode.OK, await updated.Content.ReadAsStringAsync());
+        var updatedJson = await ReadJsonAsync(updated);
+        updatedJson.GetProperty("lines")[0].GetProperty("requestedQuantity").GetDecimal().Should().Be(30m);
+
+        var submitted = await SendAsync(HttpMethod.Post,
+            $"/api/operational-projects/{fixture.ProjectId}/procurement/material-requests/{requestId}/submit",
+            new { rowVersion = updatedJson.GetProperty("rowVersion").GetString() });
+        submitted.StatusCode.Should().Be(HttpStatusCode.OK);
+        var submittedJson = await ReadJsonAsync(submitted);
+        submittedJson.GetProperty("status").GetString().Should().Be("Submitted");
+        (await WithDbAsync(db => db.Notifications.AsNoTracking().AnyAsync(item =>
+            item.UserId == fixture.ProcurementUserId &&
+            item.TemplateCode == "procurement.material-request.submitted" &&
+            item.RefEntityId == requestId))).Should().BeTrue();
+
+        Client.DefaultRequestHeaders.Authorization = null;
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "PROCUREMENT"));
+        var approved = await SendAsync(HttpMethod.Post,
+            $"/api/operational-projects/{fixture.ProjectId}/procurement/material-requests/{requestId}/decision",
+            new { approved = true, rowVersion = submittedJson.GetProperty("rowVersion").GetString() });
+        approved.StatusCode.Should().Be(HttpStatusCode.OK, await approved.Content.ReadAsStringAsync());
+        var approvedJson = await ReadJsonAsync(approved);
+        approvedJson.GetProperty("status").GetString().Should().Be("Approved");
+        (await WithDbAsync(db => db.Notifications.AsNoTracking().AnyAsync(item =>
+            item.UserId == fixture.ProjectManagerUserId &&
+            item.TemplateCode == "procurement.material-request.approved" &&
+            item.RefEntityId == requestId))).Should().BeTrue();
+
+        var updateApproved = await SendAsync(HttpMethod.Put,
+            $"/api/operational-projects/{fixture.ProjectId}/procurement/material-requests/{requestId}",
+            new
+            {
+                responsibleSiteUserId = fixture.ProjectManagerUserId,
+                assignedProcurementUserId = fixture.ProcurementUserId,
+                requiredAt = DateTime.UtcNow.AddDays(7),
+                rowVersion = approvedJson.GetProperty("rowVersion").GetString(),
+                lines = new[] { new { projectBoqLineId = fixture.BoqLineId, requestedQuantity = 40m } },
+            });
+        updateApproved.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.MaterialRequests.AsNoTracking().SingleAsync(item => item.Id == requestId)))
+            .Status.Should().Be(MaterialRequestStatus.Approved);
+    }
+
+    [Fact]
+    public async Task MaterialRequestCreate_RejectsExcessAllowanceWithoutPersistence()
+    {
+        var fixture = await CreateMaterialRequestProjectAsync(10m);
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "PM"));
+
+        var response = await SendAsync(HttpMethod.Post,
+            $"/api/operational-projects/{fixture.ProjectId}/procurement/material-requests",
+            new
+            {
+                responsibleSiteUserId = fixture.ProjectManagerUserId,
+                assignedProcurementUserId = fixture.ProcurementUserId,
+                requiredAt = DateTime.UtcNow.AddDays(2),
+                lines = new[] { new { projectBoqLineId = fixture.BoqLineId, requestedQuantity = 11m } },
+            });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.MaterialRequests.CountAsync(item => item.OperationalProjectId == fixture.ProjectId)))
+            .Should().Be(0);
+    }
+
+    [Fact]
+    public async Task MaterialRequestCancel_RequiresReasonAndNotifiesAssignedOwner()
+    {
+        var fixture = await CreateMaterialRequestProjectAsync(50m);
+        var requestId = await WithDbAsync(async db =>
+        {
+            var request = NewMaterialRequest(fixture.ProjectId, "MR-CANCEL", MaterialRequestStatus.Draft,
+                fixture.ProjectManagerUserId, fixture.ProcurementUserId, DateTime.UtcNow.AddDays(2));
+            request.Lines.Add(new MaterialRequestLine { ProjectBoqLineId = fixture.BoqLineId, RequestedQuantity = 5m });
+            db.MaterialRequests.Add(request);
+            await db.SaveChangesAsync();
+            return request.Id;
+        });
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "PM"));
+        var detail = await ReadJsonAsync(await Client.GetAsync(
+            $"/api/operational-projects/{fixture.ProjectId}/procurement/material-requests/{requestId}"));
+
+        var invalid = await SendAsync(HttpMethod.Post,
+            $"/api/operational-projects/{fixture.ProjectId}/procurement/material-requests/{requestId}/cancel",
+            new { reason = "No", rowVersion = detail.GetProperty("rowVersion").GetString() });
+        invalid.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.MaterialRequests.AsNoTracking().SingleAsync(item => item.Id == requestId)))
+            .Status.Should().Be(MaterialRequestStatus.Draft);
+
+        var cancelled = await SendAsync(HttpMethod.Post,
+            $"/api/operational-projects/{fixture.ProjectId}/procurement/material-requests/{requestId}/cancel",
+            new { reason = "Scope changed", rowVersion = detail.GetProperty("rowVersion").GetString() });
+        cancelled.StatusCode.Should().Be(HttpStatusCode.OK, await cancelled.Content.ReadAsStringAsync());
+        (await ReadJsonAsync(cancelled)).GetProperty("status").GetString().Should().Be("Cancelled");
+        (await WithDbAsync(db => db.Notifications.AsNoTracking().AnyAsync(item =>
+            item.UserId == fixture.ProcurementUserId &&
+            item.TemplateCode == "procurement.material-request.cancelled" &&
+            item.RefEntityId == requestId))).Should().BeTrue();
+    }
+
+    [Fact]
     public async Task MaterialRequests_List_ReturnsPostedReceiptAndRemainingBoqQuantities()
     {
         await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "PM"));
@@ -491,7 +698,7 @@ public class ProcurementControllerTests : IntegrationTestBase
     {
         var suffix = Guid.NewGuid().ToString("N")[..8];
         var phone = $"06{Random.Shared.Next(10000000, 99999999)}";
-        var projectId = await WithDbAsync(async db =>
+        var fixture = await WithDbAsync(async db =>
         {
             var role = new Role
             {
@@ -532,7 +739,7 @@ public class ProcurementControllerTests : IntegrationTestBase
             };
             db.OperationalProjects.Add(project);
             await db.SaveChangesAsync();
-            db.ProjectBoqRevisions.Add(new ProjectBoqRevision
+            var revision = new ProjectBoqRevision
             {
                 OperationalProjectId = project.Id,
                 RevisionNumber = 1,
@@ -548,22 +755,38 @@ public class ProcurementControllerTests : IntegrationTestBase
                     BudgetUnitPrice = 999m,
                     Amount = 24_975m,
                 }],
-            });
+            };
+            db.ProjectBoqRevisions.Add(revision);
             await db.SaveChangesAsync();
-            return project.Id;
+            var request = NewMaterialRequest(project.Id, $"MR-{suffix}", MaterialRequestStatus.Draft,
+                user.Id, user.Id, DateTime.UtcNow.AddDays(2));
+            request.Lines.Add(new MaterialRequestLine
+            {
+                ProjectBoqLineId = revision.Lines.Single().Id,
+                RequestedQuantity = 5m,
+            });
+            db.MaterialRequests.Add(request);
+            await db.SaveChangesAsync();
+            return (ProjectId: project.Id, RequestId: request.Id);
         });
         await AuthTestHelper.AuthenticateAsync(
             Client,
             client => AuthTestHelper.LoginAsync(client, phone, TestDataSeeder.DefaultPassword));
 
-        var list = await Client.GetAsync($"/api/operational-projects/{projectId}/procurement/material-requests");
+        var list = await Client.GetAsync($"/api/operational-projects/{fixture.ProjectId}/procurement/material-requests");
 
         list.StatusCode.Should().Be(HttpStatusCode.OK);
         var contextLine = (await ReadJsonAsync(list)).GetProperty("currentApprovedBoq").GetProperty("lines")[0];
         contextLine.GetProperty("itemCode").GetString().Should().Be("MR-CONTEXT");
         contextLine.GetProperty("remainingQuantity").GetDecimal().Should().Be(25m);
         contextLine.TryGetProperty("budgetUnitPrice", out _).Should().BeFalse();
-        (await Client.GetAsync($"/api/operational-projects/{projectId}/procurement/boq-revisions"))
+        var detail = await Client.GetAsync(
+            $"/api/operational-projects/{fixture.ProjectId}/procurement/material-requests/{fixture.RequestId}");
+        detail.StatusCode.Should().Be(HttpStatusCode.OK);
+        var detailJson = await ReadJsonAsync(detail);
+        detailJson.GetProperty("operationalProjectCode").GetString().Should().StartWith("PJ-MR-");
+        detailJson.TryGetProperty("costTotal", out _).Should().BeFalse();
+        (await Client.GetAsync($"/api/operational-projects/{fixture.ProjectId}/procurement/boq-revisions"))
             .StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
@@ -605,6 +828,58 @@ public class ProcurementControllerTests : IntegrationTestBase
         await db.SaveChangesAsync();
         return project.Id;
     });
+
+    private async Task<(int ProjectId, int ProjectManagerUserId, int ProcurementUserId, int BoqLineId)>
+        CreateMaterialRequestProjectAsync(decimal approvedQuantity) => await WithDbAsync(async db =>
+        {
+            var projectManagerUserId = await db.Users
+                .Where(user => user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["PM"])
+                .Select(user => user.Id).SingleAsync();
+            var procurementUserId = await db.Users
+                .Where(user => user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["PROCUREMENT"])
+                .Select(user => user.Id).SingleAsync();
+            var customer = new Customer { Type = CustomerType.Company, Name = "MR Lifecycle Customer", SourceCode = "referral" };
+            db.Customers.Add(customer);
+            await db.SaveChangesAsync();
+            var project = new OperationalProject
+            {
+                Code = $"PJ-MR-{Guid.NewGuid():N}"[..30],
+                Name = "MR Lifecycle Project",
+                CustomerId = customer.Id,
+                ProjectManagerUserId = projectManagerUserId,
+            };
+            db.OperationalProjects.Add(project);
+            await db.SaveChangesAsync();
+            db.OperationalProjectMembers.Add(new OperationalProjectMember
+            {
+                OperationalProjectId = project.Id,
+                UserId = procurementUserId,
+                Position = "Procurement",
+                StartedAt = DateTime.UtcNow,
+                CreatedByUserId = projectManagerUserId,
+                UpdatedByUserId = projectManagerUserId,
+            });
+            var revision = new ProjectBoqRevision
+            {
+                OperationalProjectId = project.Id,
+                RevisionNumber = 1,
+                Status = ProjectBoqRevisionStatus.Approved,
+                ApprovedAt = DateTime.UtcNow,
+                PreparedByUserId = projectManagerUserId,
+                Lines = [new ProjectBoqLine
+                {
+                    ItemCode = "MAT-MR",
+                    Description = "Lifecycle material",
+                    Unit = "item",
+                    ApprovedQuantity = approvedQuantity,
+                    BudgetUnitPrice = 100m,
+                    Amount = approvedQuantity * 100m,
+                }],
+            };
+            db.ProjectBoqRevisions.Add(revision);
+            await db.SaveChangesAsync();
+            return (project.Id, projectManagerUserId, procurementUserId, revision.Lines.Single().Id);
+        });
 
     private static MaterialRequest NewMaterialRequest(
         int projectId,

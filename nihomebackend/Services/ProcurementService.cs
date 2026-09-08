@@ -17,6 +17,10 @@ public sealed class ProcurementService(
     private const string BoqSubmittedTemplate = "procurement.boq.submitted";
     private const string BoqApprovedTemplate = "procurement.boq.approved";
     private const string BoqRejectedTemplate = "procurement.boq.rejected";
+    private const string MaterialRequestSubmittedTemplate = "procurement.material-request.submitted";
+    private const string MaterialRequestApprovedTemplate = "procurement.material-request.approved";
+    private const string MaterialRequestRejectedTemplate = "procurement.material-request.rejected";
+    private const string MaterialRequestCancelledTemplate = "procurement.material-request.cancelled";
 
     public async Task<ProjectBoqRevisionListResponse> ListBoqRevisionsAsync(
         int projectId,
@@ -157,6 +161,43 @@ public sealed class ProcurementService(
             Items = items.Select(item => MapRequest(item, quantities)).ToList(),
             CurrentApprovedBoq = await GetMaterialRequestBoqContextAsync(projectId, ct),
         };
+    }
+
+    public async Task<MaterialRequestDetailResponse?> GetMaterialRequestAsync(
+        int projectId, int id, CancellationToken ct = default)
+    {
+        await EnsureProjectAsync(projectId, mutable: false, ct);
+        var request = await RequestQuery().SingleOrDefaultAsync(item => item.Id == id && item.OperationalProjectId == projectId, ct);
+        if (request is null) return null;
+        var quantities = await GetMaterialRequestQuantitiesAsync([request], ct);
+        var response = MapRequestDetail(request, quantities);
+        var project = await db.OperationalProjects.AsNoTracking()
+            .Where(item => item.Id == projectId)
+            .Select(item => new
+            {
+                item.Code,
+                item.Name,
+                item.CustomerId,
+                CustomerName = item.Customer.Name,
+            }).SingleAsync(ct);
+        response.OperationalProjectCode = project.Code;
+        response.OperationalProjectName = project.Name;
+        response.CustomerId = project.CustomerId;
+        response.CustomerName = project.CustomerName;
+        response.Contracts = await db.Contracts.AsNoTracking()
+            .Where(item => item.OperationalProjectId == projectId)
+            .OrderBy(item => item.ContractNumber)
+            .Select(item => new MaterialRequestContractContextResponse
+            {
+                Id = item.Id,
+                ContractNumber = item.ContractNumber,
+                Direction = item.Direction.ToString(),
+                Type = item.Type.ToString(),
+                VendorId = item.VendorId,
+                VendorName = item.Vendor != null ? item.Vendor.CompanyName : null,
+                Status = item.Status.ToString(),
+            }).ToListAsync(ct);
+        return response;
     }
 
     private async Task<MaterialRequestBoqContextResponse?> GetMaterialRequestBoqContextAsync(
@@ -419,6 +460,7 @@ public sealed class ProcurementService(
         entity.SubmittedAt = DateTime.UtcNow;
         entity.UpdatedAt = DateTime.UtcNow;
         await CrmConcurrency.SaveChangesAsync(db, ct);
+        await NotifyMaterialRequestAsync(entity, userId, MaterialRequestSubmittedTemplate, entity.AssignedProcurementUserId, ct);
         return await GetRequestAsync(projectId, id, ct);
     }
 
@@ -449,6 +491,9 @@ public sealed class ProcurementService(
         entity.UpdatedAt = now;
         await CrmConcurrency.SaveChangesAsync(db, ct);
         if (transaction is not null) await transaction.CommitAsync(ct);
+        await NotifyMaterialRequestAsync(entity, userId,
+            request.Approved ? MaterialRequestApprovedTemplate : MaterialRequestRejectedTemplate,
+            entity.SiteRequesterUserId, ct);
         return await GetRequestAsync(projectId, id, ct);
     }
 
@@ -461,15 +506,53 @@ public sealed class ProcurementService(
         if (entity.Status == MaterialRequestStatus.Cancelled) return await GetRequestAsync(projectId, id, ct);
         if (entity.Status is MaterialRequestStatus.Fulfilled or MaterialRequestStatus.Rejected)
             throw new ProcurementOperationException("Yêu cầu đã hoàn tất hoặc bị từ chối không thể hủy.");
-        if (string.IsNullOrWhiteSpace(request.Reason))
-            throw new ProcurementOperationException("Lý do hủy yêu cầu vật tư là bắt buộc.");
+        if ((request.Reason?.Trim().Length ?? 0) < 3)
+            throw new ProcurementOperationException("Lý do hủy yêu cầu vật tư phải có ít nhất 3 ký tự.");
         CrmConcurrency.Apply(db, entity, request.RowVersion);
         entity.Status = MaterialRequestStatus.Cancelled;
         entity.CancelledAt = DateTime.UtcNow;
-        entity.DecisionReason = request.Reason.Trim();
+        entity.DecisionReason = request.Reason!.Trim();
         entity.UpdatedAt = DateTime.UtcNow;
         await CrmConcurrency.SaveChangesAsync(db, ct);
+        var recipientUserId = userId == entity.SiteRequesterUserId
+            ? entity.AssignedProcurementUserId
+            : entity.SiteRequesterUserId;
+        await NotifyMaterialRequestAsync(entity, userId, MaterialRequestCancelledTemplate, recipientUserId, ct);
         return await GetRequestAsync(projectId, id, ct);
+    }
+
+    private async Task NotifyMaterialRequestAsync(
+        MaterialRequest entity,
+        int actorUserId,
+        string templateCode,
+        int recipientUserId,
+        CancellationToken ct)
+    {
+        if (recipientUserId == actorUserId) return;
+        var projectCode = await db.OperationalProjects.AsNoTracking()
+            .Where(item => item.Id == entity.OperationalProjectId)
+            .Select(item => item.Code)
+            .SingleAsync(ct);
+        try
+        {
+            await notifications.NotifyFromTemplateAsync(
+                recipientUserId,
+                templateCode,
+                new Dictionary<string, string>
+                {
+                    ["requestCode"] = entity.Code,
+                    ["projectCode"] = projectCode,
+                    ["reason"] = entity.DecisionReason ?? "-",
+                },
+                refEntityType: EntityTypes.MaterialRequest,
+                refEntityId: entity.Id,
+                linkUrl: $"/admin/procurement-control/projects/{entity.OperationalProjectId}/material-requests/{entity.Id}");
+        }
+        catch (Exception exception)
+        {
+            logger.LogWarning(exception,
+                "Material request {MaterialRequestId} changed state but notification dispatch failed.", entity.Id);
+        }
     }
 
     public async Task<ContractLineResponse> CreateContractLineAsync(
@@ -869,9 +952,26 @@ public sealed class ProcurementService(
         var currentRevisionId = await CurrentApprovedRevisionIdAsync(projectId, ct);
         if (!currentRevisionId.HasValue)
             throw new ProcurementOperationException("Dự án chưa có BOQ thi công được duyệt.");
-        var count = await db.ProjectBoqLines.CountAsync(item => ids.Contains(item.Id) && item.ProjectBoqRevisionId == currentRevisionId, ct);
-        if (count != ids.Count)
+        var boqLines = await db.ProjectBoqLines.AsNoTracking()
+            .Where(item => ids.Contains(item.Id) && item.ProjectBoqRevisionId == currentRevisionId)
+            .Select(item => new { item.Id, item.ItemCode, item.ApprovedQuantity })
+            .ToListAsync(ct);
+        if (boqLines.Count != ids.Count)
             throw new ProcurementOperationException("Tất cả dòng yêu cầu phải thuộc phiên bản BOQ đang được duyệt của dự án.");
+        var committed = await db.MaterialRequestLines.AsNoTracking()
+            .Where(item => ids.Contains(item.ProjectBoqLineId) &&
+                (item.MaterialRequest.Status == MaterialRequestStatus.Approved ||
+                 item.MaterialRequest.Status == MaterialRequestStatus.PartiallyFulfilled ||
+                 item.MaterialRequest.Status == MaterialRequestStatus.Fulfilled))
+            .GroupBy(item => item.ProjectBoqLineId)
+            .Select(group => new { BoqLineId = group.Key, Quantity = group.Sum(item => item.RequestedQuantity) })
+            .ToDictionaryAsync(item => item.BoqLineId, item => item.Quantity, ct);
+        foreach (var line in request.Lines)
+        {
+            var boqLine = boqLines.Single(item => item.Id == line.ProjectBoqLineId);
+            if (line.RequestedQuantity > boqLine.ApprovedQuantity - committed.GetValueOrDefault(line.ProjectBoqLineId))
+                throw new ProcurementOperationException($"Số lượng yêu cầu vượt hạn mức BOQ còn lại của mã '{boqLine.ItemCode}'.");
+        }
     }
 
     private static void ApplyMaterialRequest(MaterialRequest entity, MaterialRequestUpsertRequest request)
@@ -1165,6 +1265,7 @@ public sealed class ProcurementService(
         });
     private IQueryable<MaterialRequest> RequestQuery() => db.MaterialRequests.AsNoTracking()
         .Include(item => item.SiteRequester).Include(item => item.ResponsibleSiteUser).Include(item => item.AssignedProcurementUser)
+        .Include(item => item.ApprovedBy).Include(item => item.RejectedBy)
         .Include(item => item.Lines.OrderBy(line => line.SortOrder)).ThenInclude(line => line.ProjectBoqLine);
     private IQueryable<ContractLine> ContractLineQuery() => db.ContractLines.AsNoTracking()
         .Include(item => item.Contract).Include(item => item.ProjectBoqLine).Include(item => item.ProcurementOwner);
@@ -1298,9 +1399,19 @@ public sealed class ProcurementService(
             RequiredAt = item.RequiredAt,
             Note = item.Note,
             SubmittedAt = item.SubmittedAt,
+            SubmittedByUserId = item.SubmittedAt.HasValue ? item.SiteRequesterUserId : null,
+            SubmittedByName = item.SubmittedAt.HasValue ? item.SiteRequester.FullName : null,
             ApprovedAt = item.ApprovedAt,
+            ApprovedByUserId = item.ApprovedByUserId,
+            ApprovedByName = item.ApprovedBy?.FullName,
+            RejectedAt = item.RejectedAt,
+            RejectedByUserId = item.RejectedByUserId,
+            RejectedByName = item.RejectedBy?.FullName,
             FulfilledAt = item.FulfilledAt,
+            CancelledAt = item.CancelledAt,
             DecisionReason = item.DecisionReason,
+            CreatedAt = item.CreatedAt,
+            UpdatedAt = item.UpdatedAt,
             RowVersion = CrmConcurrency.Encode(item.RowVersion),
             Lines = item.Lines.Select(line => new MaterialRequestLineResponse
             {
@@ -1315,6 +1426,44 @@ public sealed class ProcurementService(
                 BoqRemainingQuantity = quantities.GetValueOrDefault(line.Id).Remaining,
             }).ToList(),
         };
+
+    private static MaterialRequestDetailResponse MapRequestDetail(
+        MaterialRequest item,
+        IReadOnlyDictionary<int, (decimal Received, decimal Approved, decimal Remaining)> quantities)
+    {
+        var source = MapRequest(item, quantities);
+        return new MaterialRequestDetailResponse
+        {
+            Id = source.Id,
+            OperationalProjectId = source.OperationalProjectId,
+            Code = source.Code,
+            Status = source.Status,
+            SiteRequesterUserId = source.SiteRequesterUserId,
+            SiteRequesterName = source.SiteRequesterName,
+            ResponsibleSiteUserId = source.ResponsibleSiteUserId,
+            ResponsibleSiteUserName = source.ResponsibleSiteUserName,
+            AssignedProcurementUserId = source.AssignedProcurementUserId,
+            AssignedProcurementUserName = source.AssignedProcurementUserName,
+            RequiredAt = source.RequiredAt,
+            Note = source.Note,
+            SubmittedAt = source.SubmittedAt,
+            SubmittedByUserId = source.SubmittedByUserId,
+            SubmittedByName = source.SubmittedByName,
+            ApprovedAt = source.ApprovedAt,
+            ApprovedByUserId = source.ApprovedByUserId,
+            ApprovedByName = source.ApprovedByName,
+            RejectedAt = source.RejectedAt,
+            RejectedByUserId = source.RejectedByUserId,
+            RejectedByName = source.RejectedByName,
+            FulfilledAt = source.FulfilledAt,
+            CancelledAt = source.CancelledAt,
+            DecisionReason = source.DecisionReason,
+            CreatedAt = source.CreatedAt,
+            UpdatedAt = source.UpdatedAt,
+            RowVersion = source.RowVersion,
+            Lines = source.Lines,
+        };
+    }
 
     private static ContractLineResponse MapContractLine(ContractLine item) => new()
     {
