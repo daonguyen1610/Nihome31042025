@@ -69,7 +69,7 @@ type BoqLineDraft = { itemCode: string; description: string; unit: string; appro
 type RequestLineDraft = { projectBoqLineId: number; requestedQuantity: number };
 type ReceiptLineDraft = { materialRequestLineId: number; contractLineId: number | null; receivedQuantity: number };
 type IssueLineDraft = { projectBoqLineId: number; issuedQuantity: number };
-const procurementTabs = ["alerts", "boq", "requests", "contracts", "warehouse", "ratings"] as const;
+const procurementTabs = ["boq", "alerts", "requests", "contracts", "warehouse", "ratings"] as const;
 
 const emptyBoqLine = (): BoqLineDraft => ({ itemCode: "", description: "", unit: "", approvedQuantity: 1, budgetUnitPrice: 0 });
 const emptyRequestLine = (): RequestLineDraft => ({ projectBoqLineId: 0, requestedQuantity: 1 });
