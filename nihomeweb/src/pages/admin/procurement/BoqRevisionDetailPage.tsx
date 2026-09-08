@@ -256,7 +256,20 @@ const BoqRevisionDetailPage = () => {
 
         <section aria-labelledby="boq-lines-heading" className="space-y-3">
           <div><h2 id="boq-lines-heading" className="text-lg font-semibold">{t("procurement.boq.detail.linesTitle")}</h2><p className="text-sm text-muted-foreground">{t("procurement.boq.detail.linesDescription")}</p></div>
-          <div className="overflow-x-auto border-y">
+          <div className="grid gap-3 xl:hidden">
+            {boq.lines.map((line) => <article className="rounded-md border p-4" data-testid={`boq-line-card-${line.id}`} key={line.id}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0"><h3 className="break-words font-semibold">{line.itemCode}</h3><p className="mt-1 break-words text-sm text-muted-foreground">{line.description}</p></div>
+                <Badge variant="outline" className="shrink-0">{line.unit}</Badge>
+              </div>
+              <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3">
+                <Datum label={t("procurement.field.quantity")} value={String(line.approvedQuantity)} />
+                <Datum label={t("procurement.field.budgetPrice")} value={money(line.budgetUnitPrice, boq.currency)} />
+                <div className="col-span-2 border-t pt-3"><Datum label={t("procurement.field.total")} value={money(line.amount, boq.currency)} /></div>
+              </dl>
+            </article>)}
+          </div>
+          <div className="hidden overflow-x-auto border-y xl:block">
             <table className="w-full min-w-[760px] text-sm">
               <thead><tr className="border-b text-left text-xs uppercase text-muted-foreground"><th className="px-3 py-3 font-medium">{t("procurement.field.itemCode")}</th><th className="px-3 py-3 font-medium">{t("procurement.field.description")}</th><th className="px-3 py-3 font-medium">{t("procurement.field.unit")}</th><th className="px-3 py-3 text-right font-medium">{t("procurement.field.quantity")}</th><th className="px-3 py-3 text-right font-medium">{t("procurement.field.budgetPrice")}</th><th className="px-3 py-3 text-right font-medium">{t("procurement.field.total")}</th></tr></thead>
               <tbody>{boq.lines.map((line) => <tr key={line.id} className="border-b"><td className="px-3 py-3 font-medium">{line.itemCode}</td><td className="px-3 py-3">{line.description}</td><td className="px-3 py-3">{line.unit}</td><td className="px-3 py-3 text-right">{line.approvedQuantity}</td><td className="px-3 py-3 text-right">{money(line.budgetUnitPrice, boq.currency)}</td><td className="px-3 py-3 text-right font-medium">{money(line.amount, boq.currency)}</td></tr>)}</tbody>

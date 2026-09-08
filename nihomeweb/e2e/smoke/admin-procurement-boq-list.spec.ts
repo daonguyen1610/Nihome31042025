@@ -198,6 +198,7 @@ test("BOQ detail keeps project context and safely edits a draft", async ({
   await expect(page.getByRole("link", { name: "PO-SUPPLIER-002" })).toBeVisible();
   await expect(page.getByText("contracts.status.InProgress")).toHaveCount(0);
   await expect(page.getByText("contracts.status.Draft")).toHaveCount(0);
+  await expect(page.getByRole("table")).toBeVisible();
 
   await page.getByRole("button", { name: /Sửa|Edit|编辑|編集/i }).click();
   await page.getByRole("button", { name: /Thêm dòng|Add line|添加明细|明細を追加/i }).click();
@@ -231,6 +232,8 @@ test("BOQ detail keeps project context and safely edits a draft", async ({
     await page.reload({ waitUntil: "networkidle" });
     await expect(page.getByRole("heading", { name: /Chi tiết BOQ R1|BOQ R1 details|BOQ R1 详情|BOQ R1 詳細/i })).toBeVisible();
     await expect(page.getByRole("navigation", { name: /Ngữ cảnh BOQ|BOQ context|BOQ 上下文|BOQコンテキスト/i })).toBeVisible();
+    await expect(page.locator('[data-testid^="boq-line-card-"]').first()).toBeVisible();
+    await expect(page.getByRole("table")).toBeHidden();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
   }
 });
