@@ -41,6 +41,7 @@ const ALL_ADMIN_PATHS = [
   "/admin/contracts",
   "/admin/vendors",
   "/admin/procurement-control",
+  "/admin/procurement-control/rfqs",
   "/admin/finance-control",
   "/admin/design-projects",
   "/admin/operational-projects",
@@ -172,6 +173,7 @@ const matrix: RoleExpectation[] = [
       "/admin/surveys",
       "/admin/vendors",
       "/admin/procurement-control",
+      "/admin/procurement-control/rfqs",
       "/admin/design-projects",
       "/admin/operational-projects",
       "/admin/reports/projects",
@@ -233,7 +235,7 @@ const matrix: RoleExpectation[] = [
   },
   {
     user: TEST_USERS.procurement,
-    allowed: ["/admin", "/admin/notifications", "/admin/contracts", "/admin/vendors", "/admin/procurement-control", "/admin/operational-projects", "/admin/kpi", "/admin/master-data", "/admin/workflows"],
+    allowed: ["/admin", "/admin/notifications", "/admin/contracts", "/admin/vendors", "/admin/procurement-control", "/admin/procurement-control/rfqs", "/admin/operational-projects", "/admin/kpi", "/admin/master-data", "/admin/workflows"],
   },
   {
     // ACCOUNTANT: contacts.view + system.audit.view + crm.customers.view (+ view.all)
