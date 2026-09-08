@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { test, expect, TEST_USERS } from "../fixtures/auth";
 
 // Real stack and seeded business roles. APIs establish only the project/team
-// foundation; every BOQ, RFQ, contract and payment state below comes from UI.
+// foundation; every procurement, contract and payment state below comes from UI.
 test("business roles carry an approved BOQ through RFQ award, signing and supplier payment", async ({ page, api, loginAs, loginInBrowserAs }, testInfo) => {
   test.setTimeout(180_000);
   const suffix = randomUUID().slice(0, 8);
@@ -10,22 +10,28 @@ test("business roles carry an approved BOQ through RFQ award, signing and suppli
   const headers = { Authorization: `Bearer ${adminToken}`, "Idempotency-Key": randomUUID() };
   const projects = await api.get("/api/operational-projects?pageSize=100", { headers });
   const customerId = (await projects.json()).items.find((x: { code: string }) => x.code === "PJ-SAMPLE-RFQ").customerId;
+  const userNames = new Map<string, string>();
   async function userId(role: string) {
     const response = await api.get(`/api/users?role=${role}&skip=0&take=100`, { headers });
     expect(response.ok()).toBe(true);
-    return (await response.json()).items.find((x: { isActive: boolean }) => x.isActive).id as number;
+    const user = (await response.json()).items.find((x: { isActive: boolean }) => x.isActive);
+    userNames.set(role, user.fullName);
+    return user.id as number;
   }
   const pmId = await userId("PM");
   const procurementId = await userId("PROCUREMENT");
   const accountantId = await userId("ACCOUNTANT");
+  const warehouseId = await userId("WAREHOUSE");
   const created = await api.post("/api/operational-projects", { headers, data: { name: `RFQ pipeline ${suffix}`, customerId, projectManagerUserId: pmId } });
   expect(created.status(), await created.text()).toBe(201);
   const project = await created.json();
-  const member = await api.post(`/api/operational-projects/${project.id}/team/members`, {
-    headers: { ...headers, "Idempotency-Key": randomUUID() },
-    data: { userId: procurementId, position: "Procurement", startedAt: new Date().toISOString(), roles: [{ roleCode: "Observer", scope: "Project" }] },
-  });
-  expect(member.status(), await member.text()).toBe(201);
+  for (const [userId, position] of [[procurementId, "Procurement"], [warehouseId, "Warehouse"]] as const) {
+    const member = await api.post(`/api/operational-projects/${project.id}/team/members`, {
+      headers: { ...headers, "Idempotency-Key": randomUUID() },
+      data: { userId, position, startedAt: new Date().toISOString(), roles: [{ roleCode: "Observer", scope: "Project" }] },
+    });
+    expect(member.status(), await member.text()).toBe(201);
+  }
   await page.addInitScript(() => localStorage.setItem("nicon_lang", "en"));
   const errors: string[] = [];
   page.on("pageerror", error => errors.push(error.message));
@@ -98,10 +104,58 @@ test("business roles carry an approved BOQ through RFQ award, signing and suppli
     await loginInBrowserAs(page, TEST_USERS.salesManager);
     await page.goto(contractUrl);
     await expect(page.getByRole("heading", { name: contractNumber, exact: true })).toBeVisible();
-    await expect(page.getByRole("main")).toContainText("3,600,000");
+    await expect(page.getByRole("main")).toContainText(/3[.,]600[.,]000/);
     await page.getByRole("button", { name: "Mark as Signed", exact: true }).click();
     await expect(page.getByRole("button", { name: "Move to In progress", exact: true })).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath("02-signed-contract.png"), fullPage: true });
+  });
+
+  await test.step("Site demand is approved and Warehouse receives and issues the cable", async () => {
+    const dialog = page.getByRole("dialog");
+    await loginInBrowserAs(page, TEST_USERS.pm);
+    await page.goto(`${workspace}&tab=requests`);
+    await page.getByRole("button", { name: "Create request", exact: true }).click();
+    await dialog.getByRole("combobox", { name: "Responsible site user", exact: true }).click();
+    await page.getByRole("option", { name: userNames.get("PM")!, exact: true }).click();
+    await dialog.getByRole("combobox", { name: "Procurement owner", exact: true }).click();
+    await page.getByRole("option", { name: userNames.get("PROCUREMENT")!, exact: true }).click();
+    await dialog.getByLabel("Required at", { exact: true }).fill("2035-01-01T09:00");
+    await dialog.getByRole("combobox", { name: "BOQ item", exact: true }).click();
+    await page.getByRole("option", { name: /PIPE-CABLE/ }).click();
+    await dialog.getByLabel("Quantity", { exact: true }).fill("20");
+    await dialog.getByRole("button", { name: "Create draft", exact: true }).click();
+    await expect(dialog).not.toBeVisible();
+    await page.getByRole("button", { name: "Submit", exact: true }).click();
+    await expect(page.getByRole("cell", { name: "Submitted", exact: true })).toBeVisible();
+    await loginInBrowserAs(page, TEST_USERS.procurement);
+    await page.goto(`${workspace}&tab=requests`);
+    await page.getByRole("button", { name: "Approve", exact: true }).click();
+    await dialog.getByRole("button", { name: "Approve", exact: true }).click();
+    await expect(page.getByRole("cell", { name: "Approved", exact: true })).toBeVisible();
+    await loginInBrowserAs(page, TEST_USERS.warehouse);
+    await page.goto(`${workspace}&tab=warehouse`);
+    await page.getByRole("button", { name: "Create receipt", exact: true }).click();
+    // Existing receipt fields lack accessible label associations. Scope by the
+    // displayed form and native role; this test does not bypass the form/API.
+    await dialog.getByRole("combobox").nth(0).click();
+    await page.getByRole("option", { name: /PIPE-CABLE/ }).click();
+    await dialog.getByRole("spinbutton").fill("20");
+    await dialog.getByRole("button", { name: "Create draft", exact: true }).click();
+    await expect(dialog).not.toBeVisible();
+    await page.getByRole("button", { name: "Post", exact: true }).click();
+    await expect(page.getByRole("cell", { name: "Posted", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Create issue", exact: true }).click();
+    await dialog.getByRole("combobox", { name: "Responsible site user", exact: true }).click();
+    await page.getByRole("option", { name: userNames.get("PM")!, exact: true }).click();
+    await dialog.getByLabel("Work item code", { exact: true }).fill("FACTORY-ELECTRICAL");
+    await dialog.getByRole("combobox", { name: "BOQ item", exact: true }).click();
+    await page.getByRole("option", { name: /PIPE-CABLE/ }).click();
+    await dialog.getByLabel("Quantity", { exact: true }).fill("20");
+    await dialog.getByRole("button", { name: "Create draft", exact: true }).click();
+    await expect(dialog).not.toBeVisible();
+    await page.getByRole("button", { name: "Post", exact: true }).click();
+    await expect(page.getByRole("cell", { name: "Posted", exact: true })).toHaveCount(2);
+    await page.screenshot({ path: testInfo.outputPath("03-received-and-issued.png"), fullPage: true });
   });
 
   await test.step("Accountant receives the signed vendor contract and prepares the invoice", async () => {

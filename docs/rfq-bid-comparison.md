@@ -195,6 +195,11 @@ external Drive availability.
 
 ## Validation evidence — 8 September 2026
 
+**Expanded business-pipeline QA subsequently failed at the Accountant contract
+lookup.** See [the pipeline findings and coverage](rfq-business-pipeline-validation.md).
+The results below establish feature-level coverage, not a complete browser
+payment journey.
+
 Validated on the task branch using an isolated SQL Server 2022 database and
 ASP.NET Core 8 application on port 5044. Existing containers belonging to another
 checkout were left unchanged. The migration applied successfully to the fresh

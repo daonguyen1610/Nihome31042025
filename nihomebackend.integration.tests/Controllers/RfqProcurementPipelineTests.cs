@@ -172,6 +172,18 @@ public sealed class RfqProcurementPipelineTests(NihomeWebApplicationFactory fact
         storedPayment.ApprovedByUserId.Should().Be(fixture.BgdId);
         storedPayment.Attachments.Single().FilePath.Should().Be($"/files/finance/{invoiceNumber}.pdf");
         storedPayment.Events.Count(x => x.ToStatus == PaymentRequestStatus.Paid).Should().Be(1);
+        // The finance list is the delivered payment read model. Project reports
+        // explicitly mark actual cashflow/ledger finance unavailable; a Paid
+        // request must not be presented as a bank transaction or a P&L posting.
+        using var paymentListResponse = await Client.GetAsync("/api/finance/payment-requests");
+        paymentListResponse.EnsureSuccessStatusCode();
+        var listedPayment = (await ReadJsonAsync(paymentListResponse)).EnumerateArray().Single(x => Id(x) == paymentId);
+        listedPayment.GetProperty("status").GetString().Should().Be("Paid");
+        listedPayment.GetProperty("contractNumber").GetString().Should().Be(contract.ContractNumber);
+        listedPayment.GetProperty("supplierInvoiceNumber").GetString().Should().Be(invoiceNumber);
+        listedPayment.GetProperty("invoiceAmount").GetDecimal().Should().Be(1000m);
+        listedPayment.GetProperty("currency").GetString().Should().Be("VND");
+        listedPayment.GetProperty("paidAt").ValueKind.Should().Be(JsonValueKind.String);
         await LoginAsync("BGD");
         await RejectAsync(paymentPath + "/cancel", new { rowVersion = Version(payment), reason = "Paid invoice cannot be cancelled" }, HttpStatusCode.BadRequest);
         (await WithDbAsync(db => db.PaymentRequests.SingleAsync(x => x.Id == paymentId))).Status.Should().Be(PaymentRequestStatus.Paid);
