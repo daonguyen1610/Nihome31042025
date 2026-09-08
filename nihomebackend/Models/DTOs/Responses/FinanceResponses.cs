@@ -98,3 +98,13 @@ public sealed class FinanceWorkspaceResponse
     public List<AccountingPeriodResponse> Periods { get; set; } = [];
     public List<AccountingCorrectionResponse> Corrections { get; set; } = [];
 }
+// Only identities needed to prepare a payment; no general contract/user data.
+public sealed record PaymentReferencesResponse(
+    IReadOnlyList<PaymentContractOption> Contracts,
+    IReadOnlyList<PaymentVendorOption> Vendors,
+    IReadOnlyList<PaymentAccountantOption> Accountants);
+public sealed record PaymentContractOption(int Id, string ContractNumber, int VendorId,
+    string VendorName, IReadOnlyList<PaymentMilestoneOption> PaymentMilestones);
+public sealed record PaymentMilestoneOption(int Id, int Order, string Name);
+public sealed record PaymentVendorOption(int Id, string VendorCode, string CompanyName);
+public sealed record PaymentAccountantOption(int Id, string? FullName);

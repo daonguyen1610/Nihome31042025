@@ -16,6 +16,11 @@ namespace NihomeBackend.Controllers;
 [Authorize]
 public sealed class FinanceController(IFinanceService service, IAuditLogger audit) : ControllerBase
 {
+    [HttpGet("payment-references")]
+    [RequirePermission("finance.payments", "manage")]
+    public async Task<ActionResult<PaymentReferencesResponse>> PaymentReferences(CancellationToken ct) =>
+        Ok(await service.GetPaymentReferencesAsync(ct));
+
     [HttpGet("payment-requests")]
     [RequirePermission("finance.payments", "view")]
     public async Task<ActionResult<IReadOnlyList<PaymentRequestResponse>>> ListPayments(CancellationToken ct) =>

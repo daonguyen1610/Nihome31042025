@@ -13,6 +13,28 @@ public sealed class FinanceService(AppDbContext db) : IFinanceService
     private static readonly HashSet<string> CorrectionSourceTypes =
         [nameof(PaymentRequest), nameof(ContractPaymentMilestone), nameof(Contract)];
 
+    // Payment preparation already authorizes these downstream contracts across
+    // owners. Share its eligibility filter without exposing the CRM read model.
+    private IQueryable<Contract> PaymentContracts() => db.Contracts.AsNoTracking().Where(item =>
+        item.Direction == ContractDirection.Downstream && item.VendorId != null &&
+        item.Status != ContractStatus.Draft && item.Status != ContractStatus.Cancelled);
+
+    public async Task<PaymentReferencesResponse> GetPaymentReferencesAsync(CancellationToken ct = default)
+    {
+        var eligibleContracts = PaymentContracts();
+        var contracts = await eligibleContracts.OrderBy(item => item.ContractNumber).ThenBy(item => item.Id)
+            .Select(item => new PaymentContractOption(item.Id, item.ContractNumber, item.VendorId!.Value,
+                item.Vendor!.CompanyName, db.ContractPaymentMilestones.Where(m => m.ContractId == item.Id).OrderBy(m => m.Order).ThenBy(m => m.Id)
+                    .Select(m => new PaymentMilestoneOption(m.Id, m.Order, m.Name)).ToList())).ToListAsync(ct);
+        var vendors = await db.Vendors.AsNoTracking().Where(vendor => eligibleContracts.Any(contract => contract.VendorId == vendor.Id))
+            .OrderBy(vendor => vendor.CompanyName).ThenBy(vendor => vendor.Id)
+            .Select(vendor => new PaymentVendorOption(vendor.Id, vendor.VendorCode, vendor.CompanyName)).ToListAsync(ct);
+        var accountants = await db.Users.AsNoTracking().Where(user => user.IsActive && user.RoleEntity != null && user.RoleEntity.Code.ToUpper() == AccountantRole)
+            .OrderBy(user => user.FullName).ThenBy(user => user.Id)
+            .Select(user => new PaymentAccountantOption(user.Id, user.FullName)).ToListAsync(ct);
+        return new(contracts, vendors, accountants);
+    }
+
     public async Task<IReadOnlyList<PaymentRequestResponse>> ListPaymentRequestsAsync(CancellationToken ct = default) =>
         (await PaymentQuery().OrderByDescending(item => item.CreatedAt).ToListAsync(ct)).Select(MapPayment).ToList();
 
@@ -362,9 +384,8 @@ public sealed class FinanceService(AppDbContext db) : IFinanceService
 
     private async Task ValidatePaymentAsync(PaymentRequestUpsertRequest request, int? excludeId, CancellationToken ct)
     {
-        var contract = await db.Contracts.AsNoTracking().SingleOrDefaultAsync(item => item.Id == request.ContractId, ct);
-        if (contract is null || contract.Direction != ContractDirection.Downstream || contract.VendorId != request.VendorId ||
-            contract.Status is ContractStatus.Draft or ContractStatus.Cancelled)
+        var contract = await PaymentContracts().SingleOrDefaultAsync(item => item.Id == request.ContractId, ct);
+        if (contract is null || contract.VendorId != request.VendorId)
             throw new FinanceOperationException("Đề nghị thanh toán phải liên kết với hợp đồng đầu ra đang hiệu lực và đúng nhà cung cấp.");
         if (request.ContractPaymentMilestoneId.HasValue && !await db.ContractPaymentMilestones.AsNoTracking().AnyAsync(item =>
                 item.Id == request.ContractPaymentMilestoneId && item.ContractId == request.ContractId, ct))

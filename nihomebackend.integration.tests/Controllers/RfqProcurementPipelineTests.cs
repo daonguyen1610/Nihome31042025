@@ -139,8 +139,15 @@ public sealed class RfqProcurementPipelineTests(NihomeWebApplicationFactory fact
         // Payables are entered manually. Current domain has no typed receipt /
         // acceptance foreign key or three-way match; do not invent one here.
         await LoginAsync("ACCOUNTANT");
+        using var referencesResponse = await Client.GetAsync("/api/finance/payment-references");
+        referencesResponse.IsSuccessStatusCode.Should().BeTrue(await referencesResponse.Content.ReadAsStringAsync());
+        var referenceContract = (await ReadJsonAsync(referencesResponse)).GetProperty("contracts").EnumerateArray()
+            .Single(x => x.GetProperty("contractNumber").GetString() == contract.ContractNumber);
+        var payableContractId = Id(referenceContract);
+        payableContractId.Should().Be(contractId);
+        referenceContract.GetProperty("vendorId").GetInt32().Should().Be(fixture.VendorId);
         await RejectAsync("/api/finance/payment-requests", Invoice(fixture with { VendorId = fixture.OtherVendorId }, contractId, invoiceNumber), HttpStatusCode.BadRequest);
-        var payment = await PostAsync("/api/finance/payment-requests", Invoice(fixture, contractId, invoiceNumber));
+        var payment = await PostAsync("/api/finance/payment-requests", Invoice(fixture, payableContractId, invoiceNumber));
         var paymentId = Id(payment);
         var paymentPath = $"/api/finance/payment-requests/{paymentId}";
         await RejectAsync("/api/finance/payment-requests", Invoice(fixture, contractId, invoiceNumber), HttpStatusCode.BadRequest);
