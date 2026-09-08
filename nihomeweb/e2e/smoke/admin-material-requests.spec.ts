@@ -191,6 +191,8 @@ test("material request list filters and exports within the selected project on m
   await expect(page.getByRole("option", { name: "PJ-0181 · Second Page Project" })).toBeVisible();
   await page.getByRole("option", { name: "PJ-0180 · Foundation Project" }).click();
   await page.getByRole("tab", { name: /Material requests/ }).click();
+  expect(new URL(page.url()).searchParams.get("projectId")).toBe(String(projectId));
+  expect(new URL(page.url()).searchParams.get("tab")).toBe("requests");
 
   expect(errors).toEqual([]);
   expect(warnings).toEqual([]);
@@ -207,7 +209,7 @@ test("material request list filters and exports within the selected project on m
   );
   await expect(requestCard.getByRole("button", { name: "Submit" })).toHaveCount(0);
   await page.getByRole("button", { name: "Create request" }).click();
-  await page.getByText("BOQ item", { exact: true }).locator("..").getByRole("combobox").click();
+  await page.getByRole("dialog").getByRole("combobox", { name: "BOQ item" }).click();
   await expect(page.getByRole("option", { name: /MAT-CEMENT.*60 remaining/ })).toBeVisible();
   await page.getByRole("option", { name: /MAT-CEMENT.*60 remaining/ }).click();
   await page.locator("#request-site-user").click();
@@ -218,7 +220,7 @@ test("material request list filters and exports within the selected project on m
   await procurementOwnerOptions.getByRole("option", { name: "Procurement Owner", exact: true }).click();
   const requiredAt = page.locator("#request-required-at");
   expect(new Date(await requiredAt.inputValue()).getTime()).toBeGreaterThan(Date.now());
-  const createQuantity = page.getByRole("dialog").getByRole("spinbutton");
+  const createQuantity = page.getByRole("dialog").getByRole("spinbutton", { name: "Quantity" });
   await createQuantity.fill("61");
   await page.getByRole("button", { name: "Create draft" }).click();
   await expect(page.getByRole("alert")).toContainText(/not exceed the remaining BOQ allowance/i);
@@ -232,6 +234,7 @@ test("material request list filters and exports within the selected project on m
     lines: [{ projectBoqLineId: request.lines[0].projectBoqLineId, requestedQuantity: 30 }],
   });
   await expect(page.getByRole("dialog")).toBeHidden();
+  expect(warnings).toEqual([]);
   await page.getByPlaceholder("Search code, note, user, or BOQ item...").fill("cement");
   await page.getByRole("combobox", { name: "Status" }).click();
   await page.getByRole("option", { name: "Submitted" }).click();
@@ -429,6 +432,11 @@ test("material request detail edits safely and completes its workflow", async ({
     body: JSON.stringify({ operationalProjectId: projectId, members: [], assignments: [] }),
   }));
   await page.route(/\/api\/(?:v1\/)?kpi\/eligible-users$/, route => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify([{ userId: 13, userName: "Procurement Owner" }]) }));
+  await page.route(/\/api\/(?:v1\/)?operational-projects\?.*/, route => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({ total: 1, page: 1, pageSize: 100, items: [{ id: projectId, code: "PJ-0180", name: "Foundation Project" }] }),
+  }));
 
   await page.goto(`${baseURL}/admin/procurement-control/projects/${projectId}/material-requests/${requestId}`, { waitUntil: "networkidle" });
   await expect(page.getByRole("heading", { level: 1, name: "MR-DETAIL-0180" })).toBeVisible();
@@ -459,6 +467,7 @@ test("material request detail edits safely and completes its workflow", async ({
   await expect(page.getByText(/Đã duyệt|Approved|已批准|承認済み/i).first()).toBeVisible();
 
   await page.getByRole("button", { name: /Hủy yêu cầu|Cancel request|取消申请|依頼をキャンセル/i }).click();
+  await expect(page.locator("#material-request-reason")).toHaveAttribute("placeholder", /lý do hủy|cancellation reason|取消原因|キャンセル理由/i);
   await page.locator("#material-request-reason").fill("No");
   await page.getByRole("dialog").getByRole("button", { name: /Hủy yêu cầu|Cancel request|取消申请|依頼をキャンセル/i }).click();
   await expect(page.getByRole("alert")).toContainText(/ít nhất 3|at least 3|至少需要 3|3文字以上/i);
@@ -486,4 +495,9 @@ test("material request detail edits safely and completes its workflow", async ({
     await expect(page.getByRole("table")).toBeHidden();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
   }
+
+  await page.getByRole("link", { name: /Quay lại|Back|返回|戻る/i }).click();
+  await expect(page).toHaveURL(new RegExp(`/admin/procurement-control\\?projectId=${projectId}&tab=requests$`));
+  await expect(page.getByRole("combobox", { name: /Dự án vận hành|Operational Project|运营项目|運用プロジェクト/i })).toContainText("PJ-0180");
+  await expect(page.getByRole("tab", { selected: true })).toContainText(/Yêu cầu vật tư|Material requests|材料申请|資材依頼/i);
 });
