@@ -17,7 +17,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { PageEmpty, PageError, PageLoading } from "@/components/PageState";
 import { Badge } from "@/components/ui/badge";
@@ -63,6 +63,7 @@ type BoqLineDraft = { itemCode: string; description: string; unit: string; appro
 type RequestLineDraft = { projectBoqLineId: number; requestedQuantity: number };
 type ReceiptLineDraft = { materialRequestLineId: number; contractLineId: number | null; receivedQuantity: number };
 type IssueLineDraft = { projectBoqLineId: number; issuedQuantity: number };
+const procurementTabs = ["boq", "requests", "contracts", "warehouse", "ratings"] as const;
 
 const emptyBoqLine = (): BoqLineDraft => ({ itemCode: "", description: "", unit: "", approvedQuantity: 1, budgetUnitPrice: 0 });
 const emptyRequestLine = (): RequestLineDraft => ({ projectBoqLineId: 0, requestedQuantity: 1 });
@@ -107,10 +108,22 @@ const ProcurementControlPage = () => {
   const canViewRatings = has(ADMIN_PERMS.procurementRatings);
   const canManageRatings = has(ADMIN_PERMS.procurementRatingsManage);
   const canApproveRatings = has(ADMIN_PERMS.procurementRatingsApprove);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedProjectId = Number(searchParams.get("projectId") ?? 0);
+  const projectId = Number.isInteger(requestedProjectId) && requestedProjectId > 0 ? requestedProjectId : 0;
+  const availableTabs = procurementTabs.filter((tab) =>
+    (tab === "boq" && canViewBoq)
+    || (tab === "requests" && canViewRequests)
+    || (tab === "contracts" && canViewContracts)
+    || (tab === "warehouse" && canViewWarehouse)
+    || (tab === "ratings" && canViewRatings));
+  const requestedTab = searchParams.get("tab");
+  const activeTab = requestedTab && availableTabs.includes(requestedTab as typeof procurementTabs[number])
+    ? requestedTab
+    : availableTabs[0] ?? "boq";
 
   const [projects, setProjects] = useState<OperationalProjectListItemResponse[]>([]);
-  const [projectId, setProjectId] = useState(0);
-  const projectIdRef = useRef(0);
+  const projectIdRef = useRef(projectId);
   const requestLoadIdRef = useRef(0);
   const dialogTriggerRef = useRef<HTMLElement | null>(null);
   const [workspace, setWorkspace] = useState<ProcurementWorkspaceResponse | null>(null);
@@ -126,7 +139,6 @@ const ProcurementControlPage = () => {
   const [busy, setBusy] = useState(false);
   const [decision, setDecision] = useState<{ kind: DecisionKind; id: number; rowVersion: string; approved: boolean } | null>(null);
   const [decisionReason, setDecisionReason] = useState("");
-  const [activeTab, setActiveTab] = useState("boq");
   const [requestSearchInput, setRequestSearchInput] = useState("");
   const [requestSearch, setRequestSearch] = useState("");
   const [requestStatus, setRequestStatus] = useState("all");
@@ -167,6 +179,15 @@ const ProcurementControlPage = () => {
   const date = useMemo(() => new Intl.DateTimeFormat(lang, { dateStyle: "medium" }), [lang]);
 
   useEffect(() => {
+    projectIdRef.current = projectId;
+    requestLoadIdRef.current += 1;
+    setRequestRows([]);
+    setRequestBoqContext(null);
+    setRequestTotal(0);
+    setRequestPage(1);
+  }, [projectId]);
+
+  useEffect(() => {
     let cancelled = false;
     setProjectsLoading(true);
     const loadProjects = async () => {
@@ -192,10 +213,6 @@ const ProcurementControlPage = () => {
     }, 300);
     return () => window.clearTimeout(timeout);
   }, [requestSearchInput]);
-
-  useEffect(() => {
-    if (!canViewBoq && canViewRequests) setActiveTab("requests");
-  }, [canViewBoq, canViewRequests]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -543,13 +560,12 @@ const ProcurementControlPage = () => {
             <Select
               value={projectId ? String(projectId) : ""}
               onValueChange={(value) => {
-                projectIdRef.current = Number(value);
-                requestLoadIdRef.current += 1;
-                setRequestRows([]);
-                setRequestBoqContext(null);
-                setRequestTotal(0);
-                setRequestPage(1);
-                setProjectId(Number(value));
+                setSearchParams((current) => {
+                  const next = new URLSearchParams(current);
+                  next.set("projectId", value);
+                  next.set("tab", activeTab);
+                  return next;
+                }, { replace: true });
               }}
             >
               <SelectTrigger
@@ -599,7 +615,13 @@ const ProcurementControlPage = () => {
         ) : workspace ? (
           <Tabs
             value={activeTab}
-            onValueChange={setActiveTab}
+            onValueChange={(value) => {
+              setSearchParams((current) => {
+                const next = new URLSearchParams(current);
+                next.set("tab", value);
+                return next;
+              }, { replace: true });
+            }}
             className="space-y-4"
           >
             <div className="overflow-x-auto pb-1 [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-track]:bg-transparent">
@@ -1313,10 +1335,10 @@ const WarehousePanel = ({ receipts, issues, canPost, status, number, formatDate,
 
 const RatingsPanel = ({ rows, canManage, canApprove, status, number, t, onCreate, onSubmit, onDecision, busy, hasContracts }: { rows: VendorRatingResponse[]; canManage: boolean; canApprove: boolean; status: (value: string) => ReactNode; number: Intl.NumberFormat; t: Translate; onCreate: () => void; onSubmit: (row: VendorRatingResponse) => void; onDecision: (row: VendorRatingResponse, approved: boolean) => void; busy: boolean; hasContracts: boolean }) => <section><PanelHeader title={t("procurement.rating.title")} description={t("procurement.rating.description")} action={canManage && <Button onClick={onCreate} disabled={!hasContracts}><Star className="mr-2 h-4 w-4" />{t("procurement.rating.create")}</Button>} />{!hasContracts && <p className="mb-4 border-l-2 border-amber-400 px-3 text-sm text-amber-800">{t("procurement.rating.requiresContract")}</p>}{rows.length === 0 ? <Empty>{t("procurement.rating.empty")}</Empty> : <><TableShell><Table headers={[t("procurement.field.vendor"), t("procurement.field.contract"), t("procurement.field.version"), t("procurement.field.status"), t("procurement.field.overallScore"), t("procurement.field.owner"), t("procurement.field.actions")]} minWidth="min-w-[980px]"><>{rows.map((row) => <tr className="border-b" key={row.id}><td className="px-3 py-3 font-medium">{row.vendorName}</td><td className="px-3 py-3">{row.contractNumber}</td><td className="px-3 py-3">v{row.versionNumber}</td><td className="px-3 py-3">{status(row.status)}</td><td className="px-3 py-3 font-semibold">{number.format(row.overallScore)}</td><td className="px-3 py-3">{row.procurementOwnerName ?? `#${row.procurementOwnerUserId}`}</td><td className="px-3 py-3"><RecordActions statusValue={row.status} canManage={canManage} canApprove={canApprove} busy={busy} t={t} onSubmit={() => onSubmit(row)} onDecision={(approved) => onDecision(row, approved)} /></td></tr>)}</></Table></TableShell><MobileList>{rows.map((row) => <MobileCard key={row.id} title={row.vendorName} badge={status(row.status)} actions={<RecordActions statusValue={row.status} canManage={canManage} canApprove={canApprove} busy={busy} t={t} onSubmit={() => onSubmit(row)} onDecision={(approved) => onDecision(row, approved)} />}><Datum label={t("procurement.field.contract")}>{row.contractNumber}</Datum><Datum label={t("procurement.field.version")}>v{row.versionNumber}</Datum><Datum label={t("procurement.field.overallScore")}>{number.format(row.overallScore)}</Datum><Datum label={t("procurement.field.owner")}>{row.procurementOwnerName ?? `#${row.procurementOwnerUserId}`}</Datum></MobileCard>)}</MobileList></>}</section>;
 
-const UserField = ({ id, label, value, onChange, users, t }: { id: string; label: string; value: number; onChange: (value: number) => void; users: UserOption[]; t: Translate }) => <div className="space-y-2"><Label htmlFor={id}>{label}</Label>{users.length ? <Select value={value ? String(value) : undefined} onValueChange={(next) => onChange(Number(next))}><SelectTrigger id={id}><SelectValue placeholder={t("procurement.lookup.userPlaceholder")} /></SelectTrigger><SelectContent>{users.map((user) => <SelectItem value={String(user.userId)} key={user.userId}>{user.userName}</SelectItem>)}</SelectContent></Select> : <Input id={id} type="number" min={1} value={value || ""} onChange={(event) => onChange(Number(event.target.value))} placeholder={t("procurement.lookup.userIdPlaceholder")} />}</div>;
+const UserField = ({ id, label, value, onChange, users, t }: { id: string; label: string; value: number; onChange: (value: number) => void; users: UserOption[]; t: Translate }) => <div className="space-y-2"><Label htmlFor={id}>{label}</Label>{users.length ? <Select value={value ? String(value) : ""} onValueChange={(next) => onChange(Number(next))}><SelectTrigger id={id}><SelectValue placeholder={t("procurement.lookup.userPlaceholder")} /></SelectTrigger><SelectContent>{users.map((user) => <SelectItem value={String(user.userId)} key={user.userId}>{user.userName}</SelectItem>)}</SelectContent></Select> : <Input id={id} type="number" min={1} value={value || ""} onChange={(event) => onChange(Number(event.target.value))} placeholder={t("procurement.lookup.userIdPlaceholder")} />}</div>;
 const BoqLineField = ({ value, onChange, t }: { value: number; onChange: (value: number) => void; t: Translate }) => <Input type="number" min={0} step="any" value={value} onChange={(event) => onChange(Number(event.target.value))} aria-label={t("procurement.field.quantity")} />;
 
-const BoqForm = ({ currency, setCurrency, lines, setLines, t }: { currency: string; setCurrency: (value: string) => void; lines: BoqLineDraft[]; setLines: React.Dispatch<React.SetStateAction<BoqLineDraft[]>>; t: Translate }) => <div className="space-y-4"><div className="max-w-xs space-y-2"><Label htmlFor="boq-currency">{t("procurement.field.currency")}</Label><Input id="boq-currency" maxLength={3} value={currency} onChange={(event) => setCurrency(event.target.value.toUpperCase())} /></div><div className="space-y-3"><div className="flex items-center justify-between"><Label>{t("procurement.field.lines")}</Label><AddButton onClick={() => setLines((current) => [...current, emptyBoqLine()])}>{t("procurement.action.addLine")}</AddButton></div>{lines.map((line, index) => <div className="grid gap-3 border-t pt-3 sm:grid-cols-2 lg:grid-cols-[1fr_2fr_0.8fr_1fr_1fr_auto]" key={index}><div><Label>{t("procurement.field.itemCode")}</Label><Input maxLength={80} value={line.itemCode} onChange={(event) => setLines((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, itemCode: event.target.value } : item))} /></div><div><Label>{t("procurement.field.description")}</Label><Input maxLength={500} value={line.description} onChange={(event) => setLines((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, description: event.target.value } : item))} /></div><div><Label>{t("procurement.field.unit")}</Label><Input maxLength={50} value={line.unit} onChange={(event) => setLines((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, unit: event.target.value } : item))} /></div><div><Label>{t("procurement.field.quantity")}</Label><BoqLineField value={line.approvedQuantity} onChange={(value) => setLines((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, approvedQuantity: value } : item))} t={t} /></div><div><Label>{t("procurement.field.budgetPrice")}</Label><Input type="number" min={0} step="any" value={line.budgetUnitPrice} onChange={(event) => setLines((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, budgetUnitPrice: Number(event.target.value) } : item))} /></div><div className="self-end"><RemoveButton label={t("procurement.action.removeLine")} disabled={lines.length === 1} onClick={() => setLines((current) => current.filter((_, itemIndex) => itemIndex !== index))} /></div></div>)}</div></div>;
+const BoqForm = ({ currency, setCurrency, lines, setLines, t }: { currency: string; setCurrency: (value: string) => void; lines: BoqLineDraft[]; setLines: React.Dispatch<React.SetStateAction<BoqLineDraft[]>>; t: Translate }) => <div className="space-y-4"><div className="max-w-xs space-y-2"><Label htmlFor="boq-currency">{t("procurement.field.currency")}</Label><Input id="boq-currency" maxLength={3} value={currency} onChange={(event) => setCurrency(event.target.value.toUpperCase())} /></div><div className="space-y-3"><div className="flex items-center justify-between"><Label>{t("procurement.field.lines")}</Label><AddButton onClick={() => setLines((current) => [...current, emptyBoqLine()])}>{t("procurement.action.addLine")}</AddButton></div>{lines.map((line, index) => <div className="grid gap-3 border-t pt-3 sm:grid-cols-2 lg:grid-cols-[1fr_2fr_0.8fr_1fr_1fr_auto]" key={index}><div><Label>{t("procurement.field.itemCode")}</Label><Input aria-label={t("procurement.field.itemCode")} maxLength={80} value={line.itemCode} onChange={(event) => setLines((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, itemCode: event.target.value } : item))} /></div><div><Label>{t("procurement.field.description")}</Label><Input aria-label={t("procurement.field.description")} maxLength={500} value={line.description} onChange={(event) => setLines((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, description: event.target.value } : item))} /></div><div><Label>{t("procurement.field.unit")}</Label><Input aria-label={t("procurement.field.unit")} maxLength={50} value={line.unit} onChange={(event) => setLines((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, unit: event.target.value } : item))} /></div><div><Label>{t("procurement.field.quantity")}</Label><BoqLineField value={line.approvedQuantity} onChange={(value) => setLines((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, approvedQuantity: value } : item))} t={t} /></div><div><Label>{t("procurement.field.budgetPrice")}</Label><Input aria-label={t("procurement.field.budgetPrice")} type="number" min={0} step="any" value={line.budgetUnitPrice} onChange={(event) => setLines((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, budgetUnitPrice: Number(event.target.value) } : item))} /></div><div className="self-end"><RemoveButton label={t("procurement.action.removeLine")} disabled={lines.length === 1} onClick={() => setLines((current) => current.filter((_, itemIndex) => itemIndex !== index))} /></div></div>)}</div></div>;
 
 const RequestForm = ({ form, setForm, lines, setLines, users, procurementUsers, boqLines, t }: { form: { responsibleSiteUserId: number; assignedProcurementUserId: number; requiredAt: string; note: string }; setForm: React.Dispatch<React.SetStateAction<typeof form>>; lines: RequestLineDraft[]; setLines: React.Dispatch<React.SetStateAction<RequestLineDraft[]>>; users: UserOption[]; procurementUsers: UserOption[]; boqLines: Array<{ id: number; itemCode: string; description: string; remainingQuantity: number }>; t: Translate }) => <div className="space-y-4"><div className="grid gap-4 sm:grid-cols-2"><UserField id="request-site-user" label={t("procurement.field.responsibleSite")} value={form.responsibleSiteUserId} onChange={(value) => setForm((current) => ({ ...current, responsibleSiteUserId: value }))} users={users} t={t} /><UserField id="request-proc-user" label={t("procurement.field.procurementOwner")} value={form.assignedProcurementUserId} onChange={(value) => setForm((current) => ({ ...current, assignedProcurementUserId: value }))} users={procurementUsers} t={t} /><div className="space-y-2"><Label htmlFor="request-required-at">{t("procurement.field.requiredAt")}</Label><Input id="request-required-at" type="datetime-local" value={form.requiredAt} onChange={(event) => setForm((current) => ({ ...current, requiredAt: event.target.value }))} /></div><div className="space-y-2"><Label htmlFor="request-note">{t("procurement.field.note")}</Label><Input id="request-note" maxLength={2000} value={form.note} onChange={(event) => setForm((current) => ({ ...current, note: event.target.value }))} /></div></div><DynamicChoiceLines lines={lines} setLines={setLines} choices={boqLines.map((line) => ({ id: line.id, label: `${line.itemCode} · ${line.description} · ${t("procurement.request.remaining", { quantity: line.remainingQuantity })}` }))} idKey="projectBoqLineId" quantityKey="requestedQuantity" add={emptyRequestLine} t={t} /></div>;
 
@@ -1328,6 +1350,6 @@ const IssueForm = ({ form, setForm, lines, setLines, users, boqLines, t }: { for
 
 const RatingForm = ({ form, setForm, contracts, contractsLookupAvailable, t }: { form: { contractId: number; qualityScore: number; scheduleScore: number; costScore: number; hseScore: number; comments: string }; setForm: React.Dispatch<React.SetStateAction<typeof form>>; contracts: ContractResponse[]; contractsLookupAvailable: boolean; t: Translate }) => <div className="space-y-4"><div className="space-y-2"><Label htmlFor="rating-contract-id">{contractsLookupAvailable ? t("procurement.field.contract") : t("procurement.field.contractId")}</Label>{contractsLookupAvailable ? <Select value={form.contractId ? String(form.contractId) : undefined} onValueChange={(value) => setForm((current) => ({ ...current, contractId: Number(value) }))}><SelectTrigger id="rating-contract-id"><SelectValue placeholder={t("procurement.lookup.contractPlaceholder")} /></SelectTrigger><SelectContent>{contracts.map((contract) => <SelectItem value={String(contract.id)} key={contract.id}>{contract.contractNumber} · {contract.vendorName}</SelectItem>)}</SelectContent></Select> : <Input id="rating-contract-id" type="number" min={1} value={form.contractId || ""} onChange={(event) => setForm((current) => ({ ...current, contractId: Number(event.target.value) }))} placeholder={t("procurement.lookup.contractIdPlaceholder")} />}</div><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{(["qualityScore", "scheduleScore", "costScore", "hseScore"] as const).map((field) => <div className="space-y-2" key={field}><Label htmlFor={`rating-${field}`}>{t(`procurement.field.${field}`)}</Label><Input id={`rating-${field}`} type="number" min={0} max={100} step="any" value={form[field]} onChange={(event) => setForm((current) => ({ ...current, [field]: Number(event.target.value) }))} /></div>)}</div><div className="space-y-2"><Label htmlFor="rating-comments">{t("procurement.field.comments")}</Label><Textarea id="rating-comments" maxLength={4000} value={form.comments} onChange={(event) => setForm((current) => ({ ...current, comments: event.target.value }))} /></div></div>;
 
-const DynamicChoiceLines = <T extends Record<I | Q, number>, I extends keyof T, Q extends keyof T>({ lines, setLines, choices, idKey, quantityKey, add, t }: { lines: T[]; setLines: React.Dispatch<React.SetStateAction<T[]>>; choices: Array<{ id: number; label: string }>; idKey: I; quantityKey: Q; add: () => T; t: Translate }) => <div className="space-y-3"><div className="flex items-center justify-between"><Label>{t("procurement.field.lines")}</Label><AddButton onClick={() => setLines((current) => [...current, add()])}>{t("procurement.action.addLine")}</AddButton></div>{lines.map((line, index) => <div className="grid gap-3 border-t pt-3 sm:grid-cols-[2fr_1fr_auto]" key={index}><div className="space-y-2"><Label>{t("procurement.field.item")}</Label><Select value={line[idKey] ? String(line[idKey]) : undefined} onValueChange={(value) => setLines((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, [idKey]: Number(value) } : item))}><SelectTrigger><SelectValue placeholder={t("procurement.lookup.boqLinePlaceholder")} /></SelectTrigger><SelectContent>{choices.map((choice) => <SelectItem value={String(choice.id)} key={choice.id}>{choice.label}</SelectItem>)}</SelectContent></Select></div><div className="space-y-2"><Label>{t("procurement.field.quantity")}</Label><Input type="number" min={0.000001} step="any" value={line[quantityKey]} onChange={(event) => setLines((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, [quantityKey]: Number(event.target.value) } : item))} /></div><div className="self-end"><RemoveButton label={t("procurement.action.removeLine")} disabled={lines.length === 1} onClick={() => setLines((current) => current.filter((_, itemIndex) => itemIndex !== index))} /></div></div>)}</div>;
+const DynamicChoiceLines = <T extends Record<I | Q, number>, I extends keyof T, Q extends keyof T>({ lines, setLines, choices, idKey, quantityKey, add, t }: { lines: T[]; setLines: React.Dispatch<React.SetStateAction<T[]>>; choices: Array<{ id: number; label: string }>; idKey: I; quantityKey: Q; add: () => T; t: Translate }) => <div className="space-y-3"><div className="flex items-center justify-between"><Label>{t("procurement.field.lines")}</Label><AddButton onClick={() => setLines((current) => [...current, add()])}>{t("procurement.action.addLine")}</AddButton></div>{lines.map((line, index) => <div className="grid gap-3 border-t pt-3 sm:grid-cols-[2fr_1fr_auto]" key={index}><div className="space-y-2"><Label>{t("procurement.field.item")}</Label><Select value={line[idKey] ? String(line[idKey]) : ""} onValueChange={(value) => setLines((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, [idKey]: Number(value) } : item))}><SelectTrigger aria-label={t("procurement.field.item")}><SelectValue placeholder={t("procurement.lookup.boqLinePlaceholder")} /></SelectTrigger><SelectContent>{choices.map((choice) => <SelectItem value={String(choice.id)} key={choice.id}>{choice.label}</SelectItem>)}</SelectContent></Select></div><div className="space-y-2"><Label>{t("procurement.field.quantity")}</Label><Input aria-label={t("procurement.field.quantity")} type="number" min={0.000001} step="any" value={line[quantityKey]} onChange={(event) => setLines((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, [quantityKey]: Number(event.target.value) } : item))} /></div><div className="self-end"><RemoveButton label={t("procurement.action.removeLine")} disabled={lines.length === 1} onClick={() => setLines((current) => current.filter((_, itemIndex) => itemIndex !== index))} /></div></div>)}</div>;
 
 export default ProcurementControlPage;

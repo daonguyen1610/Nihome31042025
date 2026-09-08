@@ -144,6 +144,7 @@
   {"key":"procurement.request.edit.description","category":"procurement","vi":"Chỉ người yêu cầu được chỉnh sửa bản nháp; các dòng phải thuộc BOQ hiện hành.","en":"Only the requester can edit a draft; every line must use the current BOQ.","zh":"仅申请人可编辑草稿；所有明细必须使用当前 BOQ。","ja":"依頼者のみ下書きを編集でき、全明細は現行BOQを使用する必要があります。"},
   {"key":"procurement.request.cancel.title","category":"procurement","vi":"Hủy yêu cầu vật tư?","en":"Cancel material request?","zh":"取消材料申请？","ja":"資材依頼をキャンセルしますか？"},
   {"key":"procurement.request.cancel.description","category":"procurement","vi":"Yêu cầu sẽ ngừng được xử lý. Lý do hủy được lưu vào lịch sử.","en":"The request will stop processing. The cancellation reason is retained in its history.","zh":"该申请将停止处理，取消原因会保留在历史记录中。","ja":"依頼の処理を停止し、キャンセル理由を履歴に保存します。"},
+  {"key":"procurement.request.cancel.reasonPlaceholder","category":"procurement","vi":"Nhập lý do hủy (ít nhất 3 ký tự)","en":"Enter the cancellation reason (at least 3 characters)","zh":"输入取消原因（至少 3 个字符）","ja":"キャンセル理由を入力（3文字以上）"},
   {"key":"procurement.request.history.created","category":"procurement","vi":"Tạo bản nháp","en":"Draft created","zh":"已创建草稿","ja":"下書きを作成"},
   {"key":"procurement.request.history.submitted","category":"procurement","vi":"Trình duyệt","en":"Submitted for approval","zh":"已提交审批","ja":"承認申請"},
   {"key":"procurement.request.history.approved","category":"procurement","vi":"Phê duyệt","en":"Approved","zh":"已批准","ja":"承認"},
