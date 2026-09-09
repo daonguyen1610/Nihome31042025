@@ -116,11 +116,16 @@ public class CrmMultiUserConcurrencyTests : IntegrationTestBase
         responses.Should().OnlyContain(response =>
             response.StatusCode == HttpStatusCode.OK ||
             response.StatusCode == HttpStatusCode.Conflict);
+        responses.Should().Contain(response => response.StatusCode == HttpStatusCode.OK);
         using var currentResponse = await manager.GetAsync($"/api/customers/{customerId}");
         currentResponse.EnsureSuccessStatusCode();
         var current = await ReadJsonAsync(currentResponse);
-        current.GetProperty("contacts").EnumerateArray()
-            .Count(item => item.GetProperty("isLegalRepresentative").GetBoolean()).Should().Be(1);
+        var representative = current.GetProperty("contacts").EnumerateArray()
+            .Single(item => item.GetProperty("isLegalRepresentative").GetBoolean());
+        representative.GetProperty("fullName").GetString().Should().BeOneOf(
+            "Manager Representative", "Admin Representative");
+        current.GetProperty("representativeName").GetString().Should().Be(
+            representative.GetProperty("fullName").GetString());
         foreach (var response in responses) response.Dispose();
     }
 
