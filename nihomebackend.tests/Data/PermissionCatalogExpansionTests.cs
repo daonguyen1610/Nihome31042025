@@ -83,13 +83,17 @@ public class PermissionCatalogExpansionTests
     }
 
     [Fact]
-    public void AccountantCanReadContactsAndAudit()
+    public void AccountantCanReadContactsAuditAndAllPrimaryContracts()
     {
         var codes = Expand("ACCOUNTANT");
         Assert.Contains("contacts.view", codes);
         Assert.Contains("system.audit.view", codes);
+        Assert.Contains("crm.contracts.view", codes);
+        Assert.Contains("crm.contracts.view.upstream.all", codes);
         Assert.DoesNotContain("contacts.manage", codes);
         Assert.DoesNotContain("system.audit.manage", codes);
+        Assert.DoesNotContain("crm.contracts.manage", codes);
+        Assert.DoesNotContain("crm.contracts.view.all", codes);
     }
 
     [Fact]

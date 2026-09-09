@@ -21,6 +21,8 @@ namespace NihomeBackend.Controllers;
 /// * Sales users (<c>crm.contracts.view</c>) see only rows they own.
 /// * Sales Manager / Legal / BOD / Admin gain <c>view.all</c> via the
 ///   RBAC bundle (through <c>crm.**</c>, <c>**.view</c>, etc.).
+/// * Finance can read contracts across owners only when the requested or
+///   resolved contract direction is Upstream.
 /// * VO approve/reject requires the same manager-tier permission.
 /// </summary>
 [ApiController]
@@ -64,16 +66,19 @@ public class ContractsController(
         [FromQuery] decimal? valueMax,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
+        [FromQuery] string? sortBy = null,
+        [FromQuery] string? sortDirection = null,
         CancellationToken ct = default)
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
 
-        var canSeeAll = await permissions.HasAsync(userId.Value, "crm.contracts.view.all", ct);
+        var canSeeAll = await CanListAcrossOwnersAsync(userId.Value, direction, ct);
         var result = await svc.ListAsync(
             userId.Value, canSeeAll, status, direction, type, vendorId,
             ownerUserId, customerId, operationalProjectId, search,
-            signedFrom, signedTo, valueMin, valueMax, page, pageSize, ct);
+            signedFrom, signedTo, valueMin, valueMax, page, pageSize,
+            sortBy, sortDirection, ct);
         return Ok(result);
     }
 
@@ -120,7 +125,7 @@ public class ContractsController(
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
 
-        var canSeeAll = await permissions.HasAsync(userId.Value, "crm.contracts.view.all", ct);
+        var canSeeAll = await CanReadContractAcrossOwnersAsync(userId.Value, id, ct);
         var found = await svc.GetAsync(id, userId.Value, canSeeAll, ct);
         if (found is null) return NotFound();
         CrmConcurrency.SetResponseEntityTag(Response, found.RowVersion);
@@ -382,7 +387,7 @@ public class ContractsController(
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
 
-        var canSeeAll = await permissions.HasAsync(userId.Value, "crm.contracts.view.all", ct);
+        var canSeeAll = await CanReadContractAcrossOwnersAsync(userId.Value, id, ct);
         var rows = await voSvc.ListAsync(id, userId.Value, canSeeAll, ct);
         return rows == null ? NotFound() : Ok(rows);
     }
@@ -587,7 +592,7 @@ public class ContractsController(
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
 
-        var canSeeAll = await permissions.HasAsync(userId.Value, "crm.contracts.view.all", ct);
+        var canSeeAll = await CanReadContractAcrossOwnersAsync(userId.Value, id, ct);
         var rows = await attSvc.ListAsync(id, userId.Value, canSeeAll, ct);
         return rows == null ? NotFound() : Ok(rows);
     }
@@ -599,7 +604,7 @@ public class ContractsController(
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
 
-        var canSeeAll = await permissions.HasAsync(userId.Value, "crm.contracts.view.all", ct);
+        var canSeeAll = await CanReadContractAcrossOwnersAsync(userId.Value, id, ct);
         var content = await attSvc.GetContentAsync(id, attachmentId, userId.Value, canSeeAll, ct);
         return content is null
             ? NotFound()
@@ -612,7 +617,7 @@ public class ContractsController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
-        var canSeeAll = await permissions.HasAsync(userId.Value, "crm.contracts.view.all", ct);
+        var canSeeAll = await CanReadContractAcrossOwnersAsync(userId.Value, id, ct);
         if (!await ContractExistsForCallerAsync(id, userId.Value, canSeeAll, ct)) return NotFound();
 
         var safeFileName = Path.GetFileName(fileName);
@@ -718,7 +723,7 @@ public class ContractsController(
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
 
-        var canSeeAll = await permissions.HasAsync(userId.Value, "crm.contracts.view.all", ct);
+        var canSeeAll = await CanReadContractAcrossOwnersAsync(userId.Value, id, ct);
         var owns = await ContractExistsForCallerAsync(id, userId.Value, canSeeAll, ct);
         if (!owns) return NotFound();
 
@@ -798,6 +803,27 @@ public class ContractsController(
                 file.Length,
                 string.IsNullOrWhiteSpace(file.ContentType) ? "application/octet-stream" : file.ContentType),
         };
+    }
+
+    private async Task<bool> CanListAcrossOwnersAsync(
+        int userId,
+        ContractDirection? direction,
+        CancellationToken ct)
+    {
+        if (await permissions.HasAsync(userId, "crm.contracts.view.all", ct)) return true;
+        return direction == ContractDirection.Upstream &&
+            await permissions.HasAsync(userId, "crm.contracts.view.upstream.all", ct);
+    }
+
+    private async Task<bool> CanReadContractAcrossOwnersAsync(
+        int userId,
+        int contractId,
+        CancellationToken ct)
+    {
+        if (await permissions.HasAsync(userId, "crm.contracts.view.all", ct)) return true;
+        if (!await permissions.HasAsync(userId, "crm.contracts.view.upstream.all", ct)) return false;
+        return await db.Contracts.AsNoTracking()
+            .AnyAsync(contract => contract.Id == contractId && contract.Direction == ContractDirection.Upstream, ct);
     }
 
     private async Task<bool> ContractExistsForCallerAsync(int contractId, int callerUserId, bool canSeeAll, CancellationToken ct)

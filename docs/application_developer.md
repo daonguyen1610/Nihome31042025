@@ -941,6 +941,27 @@ Each Tender checklist row retains one current file. Users with `crm.tenders.mana
 
 Contract creation derives `OwnerUserId` from the selected customer's `OwnerUserId`. An authorized explicit owner takes precedence; if the customer is unassigned, the caller is used as the fallback. Sales users cannot create or move a contract into another salesperson's customer scope. Opportunity and quote references must belong to the selected customer, and a supplied quote must belong to the supplied opportunity.
 
+`GET /api/contracts` and its `/api/v1` alias require
+`crm.contracts.view`. The list accepts `status`, `direction`, `type`,
+`vendorId`, `ownerUserId`, `customerId`, `operationalProjectId`, `search`,
+`signedFrom`, `signedTo`, `valueMin`, `valueMax`, `page`, `pageSize`, `sortBy`,
+and `sortDirection`. Supported sort fields are `signedDate` (default),
+`endDate`, `value`, `contractNumber`, and `updatedAt`; an unknown field falls
+back to signed date, and direction defaults to descending. Callers without
+`crm.contracts.view.all` remain owner-scoped. The Accountant role has read-only
+`crm.contracts.view.upstream.all` access because Finance must reconcile primary
+contracts across the same complete Operational Project portfolio exposed by
+`operations.projects.view.all`. The scoped permission bypasses ownership only
+when the list explicitly requests `direction=Upstream` or a read-only detail
+endpoint resolves to an upstream contract. It neither exposes downstream
+contracts across owners nor grants mutation permissions.
+
+The shared frontend list is available at `/admin/contracts`. The Finance entry
+`/admin/finance/contracts` fixes the same list to `direction=Upstream`. Both
+surfaces use server pagination and fetch every filtered API page before
+producing CSV, so export cannot silently truncate at the current page or the
+100-row API limit.
+
 ### 7.9 Operational Business Documents
 
 Permit, procurement vendor, partial acceptance, as-built dossier, and project handover forms support local document selection in addition to their existing external URL fields. Managed files are stored under `wwwroot/files/business-documents/{area}/` with generated names. Each file is limited to 20 MB and must use `.pdf`, `.doc`, `.docx`, `.xls`, `.xlsx`, `.png`, `.jpg`, or `.jpeg`.

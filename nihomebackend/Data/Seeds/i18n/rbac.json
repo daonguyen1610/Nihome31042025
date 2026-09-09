@@ -1610,10 +1610,26 @@
   {
     "key": "rbac.perm.crm.contracts.view.all.description",
     "category": "rbac",
-    "vi": "Bỏ qua bộ lọc chủ sở hữu — Sales Manager / Kế toán / BGĐ / Admin thấy hợp đồng của mọi Sales.",
-    "en": "Bypasses owner filtering — Sales Manager / Accountant / BOD / Admin can see contracts owned by any user.",
-    "zh": "忽略负责人过滤 — 销售经理 / 会计 / 董事会 / 管理员可查看所有销售的合同。",
-    "ja": "担当者フィルタを無視 — セールスマネージャー・経理・役員・管理者は全担当者の契約を閲覧可能。"
+    "vi": "Bỏ qua bộ lọc chủ sở hữu — Sales Manager / BGĐ / Admin thấy hợp đồng của mọi Sales.",
+    "en": "Bypasses owner filtering — Sales Manager / BOD / Admin can see contracts owned by any user.",
+    "zh": "忽略负责人过滤 — 销售经理 / 董事会 / 管理员可查看所有销售的合同。",
+    "ja": "担当者フィルタを無視 — セールスマネージャー・役員・管理者は全担当者の契約を閲覧可能。"
+  },
+  {
+    "key": "rbac.perm.crm.contracts.view.upstream.all.label",
+    "category": "rbac",
+    "vi": "Xem toàn bộ hợp đồng chính",
+    "en": "View all primary contracts",
+    "zh": "查看全部主合同",
+    "ja": "すべての主要契約を表示"
+  },
+  {
+    "key": "rbac.perm.crm.contracts.view.upstream.all.description",
+    "category": "rbac",
+    "vi": "Cho phép xem hợp đồng đầu ra của mọi chủ sở hữu khi lọc theo hướng đầu ra; không cấp quyền xem toàn bộ hợp đồng đầu vào.",
+    "en": "Allows viewing upstream contracts across owners when the upstream scope is requested; it does not grant portfolio-wide access to downstream contracts.",
+    "zh": "允许在请求上游范围时跨负责人查看上游合同；不授予对全部下游合同的访问权限。",
+    "ja": "上流スコープの指定時に担当者をまたいで上流契約を閲覧できます。下流契約全体へのアクセスは付与されません。"
   },
   {
     "key": "rbac.perm.crm.contracts.manage.label",

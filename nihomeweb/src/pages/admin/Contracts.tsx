@@ -51,6 +51,16 @@ import { createCsvFilename, downloadCsv } from "@/lib/exportCsv";
 
 // Number of days before end-date that triggers the red "ending soon" badge.
 const ENDING_SOON_DAYS = 30;
+const PAGE_SIZE = 20;
+const EXPORT_PAGE_SIZE = 100;
+
+type ContractListMode = "all" | "upstream";
+type ContractSortBy = NonNullable<ContractListParams["sortBy"]>;
+type SortDirection = NonNullable<ContractListParams["sortDirection"]>;
+
+type ContractsProps = {
+  mode?: ContractListMode;
+};
 
 const STATUS_VARIANT: Record<ContractStatus, string> = {
   Draft: "border-slate-200 bg-slate-50 text-slate-700",
@@ -191,7 +201,7 @@ const getErrorMessage = (error: unknown): string | undefined => {
   return undefined;
 };
 
-const Contracts = () => {
+const Contracts = ({ mode = "all" }: ContractsProps) => {
   const { t } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
@@ -237,7 +247,10 @@ const Contracts = () => {
   const [error, setError] = useState<string | null>(null);
 
   const [statusFilter, setStatusFilter] = useState<ContractStatus | "all">("all");
-  const [directionFilter, setDirectionFilter] = useState<ContractDirection | "all">("all");
+  const fixedDirection: ContractDirection | null = mode === "upstream" ? "Upstream" : null;
+  const [directionFilter, setDirectionFilter] = useState<ContractDirection | "all">(
+    fixedDirection ?? "all",
+  );
   const [typeFilter, setTypeFilter] = useState<ContractType | "all">("all");
   const [vendorFilter, setVendorFilter] = useState<number | "all">("all");
   const [customerFilter, setCustomerFilter] = useState<number | "all">(
@@ -251,36 +264,52 @@ const Contracts = () => {
   const [valueMin, setValueMin] = useState("");
   const [valueMax, setValueMax] = useState("");
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [sortBy, setSortBy] = useState<ContractSortBy>("signedDate");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+  const [exporting, setExporting] = useState(false);
   // The input stays bound to `search` for instant feedback; only this debounced
   // copy drives the query, so typing no longer fires a request per keystroke.
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
   useEffect(() => {
-    const timer = window.setTimeout(() => setDebouncedSearch(search), 300);
+    const timer = window.setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+    }, 300);
     return () => window.clearTimeout(timer);
   }, [search]);
+
+  const buildListParams = useCallback((requestedPage = page, requestedPageSize = PAGE_SIZE) => {
+    const params: ContractListParams = {
+      page: requestedPage,
+      pageSize: requestedPageSize,
+      sortBy,
+      sortDirection,
+    };
+    if (statusFilter !== "all") params.status = statusFilter;
+    const effectiveDirection = fixedDirection ?? directionFilter;
+    if (effectiveDirection !== "all") params.direction = effectiveDirection;
+    if (typeFilter !== "all") params.type = typeFilter;
+    if (vendorFilter !== "all") params.vendorId = vendorFilter;
+    if (customerFilter !== "all") params.customerId = customerFilter;
+    if (projectFilter !== "all") params.operationalProjectId = projectFilter;
+    if (signedFrom) params.signedFrom = toIsoTimestamp(signedFrom) ?? undefined;
+    if (signedTo) params.signedTo = toIsoTimestamp(signedTo) ?? undefined;
+    const minNum = Number(valueMin);
+    if (valueMin && !Number.isNaN(minNum)) params.valueMin = minNum;
+    const maxNum = Number(valueMax);
+    if (valueMax && !Number.isNaN(maxNum)) params.valueMax = maxNum;
+    if (debouncedSearch.trim()) params.search = debouncedSearch.trim();
+    return params;
+  }, [page, sortBy, sortDirection, statusFilter, fixedDirection, directionFilter, typeFilter, vendorFilter, customerFilter, projectFilter, signedFrom, signedTo, valueMin, valueMax, debouncedSearch]);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const params: ContractListParams = { page: 1, pageSize: 100 };
-      if (statusFilter !== "all") params.status = statusFilter;
-      if (directionFilter !== "all") params.direction = directionFilter;
-      if (typeFilter !== "all") params.type = typeFilter;
-      if (vendorFilter !== "all") params.vendorId = vendorFilter;
-      if (customerFilter !== "all") params.customerId = customerFilter;
-      if (projectFilter !== "all") params.operationalProjectId = projectFilter;
-      if (signedFrom) params.signedFrom = toIsoTimestamp(signedFrom) ?? undefined;
-      if (signedTo) params.signedTo = toIsoTimestamp(signedTo) ?? undefined;
-      const minNum = Number(valueMin);
-      if (valueMin && !Number.isNaN(minNum)) params.valueMin = minNum;
-      const maxNum = Number(valueMax);
-      if (valueMax && !Number.isNaN(maxNum)) params.valueMax = maxNum;
-      if (debouncedSearch.trim()) params.search = debouncedSearch.trim();
-
       const [contractsRes, customersRes, classificationRes, projectsRes] = await Promise.all([
-        adminApi.listContracts(params),
+        adminApi.listContracts(buildListParams()),
         customers.length === 0
           ? adminApi.listCustomers({ pageSize: 200 })
           : Promise.resolve({ data: { total: customers.length, page: 1, pageSize: customers.length, items: customers } }),
@@ -305,7 +334,7 @@ const Contracts = () => {
       setInitialLoaded(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [canViewOperationalProjects, statusFilter, directionFilter, typeFilter, vendorFilter, customerFilter, projectFilter, signedFrom, signedTo, valueMin, valueMax, debouncedSearch, t]);
+  }, [buildListParams, canViewOperationalProjects, t]);
 
   useEffect(() => {
     void load();
@@ -313,7 +342,7 @@ const Contracts = () => {
 
   const resetFilters = () => {
     setStatusFilter("all");
-    setDirectionFilter("all");
+    setDirectionFilter(fixedDirection ?? "all");
     setTypeFilter("all");
     setVendorFilter("all");
     setCustomerFilter("all");
@@ -323,11 +352,12 @@ const Contracts = () => {
     setValueMin("");
     setValueMax("");
     setSearch("");
+    setPage(1);
   };
 
   const filtersActive =
     statusFilter !== "all" ||
-    directionFilter !== "all" ||
+    (fixedDirection === null && directionFilter !== "all") ||
     typeFilter !== "all" ||
     vendorFilter !== "all" ||
     customerFilter !== "all" ||
@@ -337,6 +367,8 @@ const Contracts = () => {
     valueMin !== "" ||
     valueMax !== "" ||
     search !== "";
+
+  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   // -------- dialog / form --------
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -560,27 +592,44 @@ const Contracts = () => {
     setDeletingContract(null);
     setDeleteImpact(null);
     toast({ title: t("form.deleted") });
-    await load();
+    if (contracts.length === 1 && page > 1) setPage((current) => current - 1);
+    else await load();
   };
 
-  const exportCsv = () => {
-    downloadCsv({
-      filename: createCsvFilename("contracts"),
-      columns: [
-        { header: t("contracts.field.number"), value: "contractNumber" },
-        { header: t("contracts.field.customer"), value: (r) => r.customerName ?? "" },
-        { header: t("contracts.field.direction"), value: (r) => t(`contracts.direction.${r.direction}`) },
-        { header: t("contracts.field.type"), value: (r) => t(`contracts.type.${r.type}`) },
-        { header: t("contracts.field.counterparty"), value: (r) => r.vendorName ?? r.customerName ?? "" },
-        { header: t("contracts.field.status"), value: (r) => t(`contracts.status.${r.status}`) },
-        { header: t("contracts.field.signedDate"), value: (r) => r.signedDate ?? "" },
-        { header: t("contracts.field.startDate"), value: (r) => r.startDate ?? "" },
-        { header: t("contracts.field.endDate"), value: (r) => r.endDate ?? "" },
-        { header: t("contracts.field.value"), value: "value" },
-        { header: t("contracts.field.owner"), value: (r) => r.ownerName ?? "" },
-      ],
-      rows: contracts,
-    });
+  const exportCsv = async () => {
+    setExporting(true);
+    try {
+      const firstPage = (await adminApi.listContracts(buildListParams(1, EXPORT_PAGE_SIZE))).data;
+      const rows = [...firstPage.items];
+      const exportPages = Math.ceil(firstPage.total / firstPage.pageSize);
+      for (let exportPage = 2; exportPage <= exportPages; exportPage += 1) {
+        const response = await adminApi.listContracts(buildListParams(exportPage, EXPORT_PAGE_SIZE));
+        rows.push(...response.data.items);
+      }
+
+      downloadCsv({
+        filename: createCsvFilename(mode === "upstream" ? "primary-contracts" : "contracts"),
+        columns: [
+          { header: t("contracts.field.number"), value: "contractNumber" },
+          { header: t("contracts.field.customer"), value: (r) => r.customerName ?? "" },
+          { header: t("contracts.field.operationalProject"), value: (r) => r.operationalProjectCode ?? "" },
+          { header: t("contracts.field.direction"), value: (r) => t(`contracts.direction.${r.direction}`) },
+          { header: t("contracts.field.type"), value: (r) => t(`contracts.type.${r.type}`) },
+          { header: t("contracts.field.counterparty"), value: (r) => r.vendorName ?? r.customerName ?? "" },
+          { header: t("contracts.field.status"), value: (r) => t(`contracts.status.${r.status}`) },
+          { header: t("contracts.field.signedDate"), value: (r) => r.signedDate ?? "" },
+          { header: t("contracts.field.startDate"), value: (r) => r.startDate ?? "" },
+          { header: t("contracts.field.endDate"), value: (r) => r.endDate ?? "" },
+          { header: t("contracts.field.value"), value: "value" },
+          { header: t("contracts.field.owner"), value: (r) => r.ownerName ?? "" },
+        ],
+        rows,
+      });
+    } catch (exportError) {
+      toast({ variant: "destructive", title: getErrorMessage(exportError) ?? t("common.error") });
+    } finally {
+      setExporting(false);
+    }
   };
 
   if (!initialLoaded && loading) {
@@ -603,11 +652,11 @@ const Contracts = () => {
       <div className="space-y-4 p-4 sm:p-6">
         <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
-            <h1 className="text-2xl font-semibold">{t("contracts.title")}</h1>
-            <p className="mt-1 text-sm text-muted-foreground">{t("contracts.subtitle")}</p>
+            <h1 className="text-2xl font-semibold">{t(mode === "upstream" ? "contracts.primary.title" : "contracts.title")}</h1>
+            <p className="mt-1 text-sm text-muted-foreground">{t(mode === "upstream" ? "contracts.primary.subtitle" : "contracts.subtitle")}</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" onClick={exportCsv} disabled={contracts.length === 0}>
+            <Button variant="outline" onClick={() => void exportCsv()} disabled={total === 0 || loading || exporting}>
               <Download className="mr-1.5 h-4 w-4" /> {t("contracts.exportCsv")}
             </Button>
             {canManage && (
@@ -635,7 +684,10 @@ const Contracts = () => {
           </div>
           <div className="min-w-0 space-y-1">
             <Label className="text-xs" htmlFor="c-status">{t("contracts.filter.status")}</Label>
-            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as ContractStatus | "all")}>
+            <Select value={statusFilter} onValueChange={(v) => {
+              setStatusFilter(v as ContractStatus | "all");
+              setPage(1);
+            }}>
               <SelectTrigger id="c-status" className="h-9"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{t("contracts.filter.allStatuses")}</SelectItem>
@@ -652,6 +704,7 @@ const Contracts = () => {
               onValueChange={(value) => {
                 const customerId = value === "all" ? "all" : Number(value);
                 setCustomerFilter(customerId);
+                setPage(1);
                 if (projectFilter !== "all" &&
                     (customerId === "all" || projects.find((project) => project.id === projectFilter)?.customerId !== customerId)) {
                   setProjectFilter("all");
@@ -671,7 +724,10 @@ const Contracts = () => {
             <Label className="text-xs" htmlFor="c-project">{t("contracts.field.operationalProject")}</Label>
             <Select
               value={projectFilter === "all" ? "all" : String(projectFilter)}
-              onValueChange={(value) => setProjectFilter(value === "all" ? "all" : Number(value))}
+              onValueChange={(value) => {
+                setProjectFilter(value === "all" ? "all" : Number(value));
+                setPage(1);
+              }}
             >
               <SelectTrigger id="c-project" className="h-9"><SelectValue /></SelectTrigger>
               <SelectContent className="max-h-72">
@@ -684,9 +740,12 @@ const Contracts = () => {
               </SelectContent>
             </Select>
           </div>}
-          <div className="min-w-0 space-y-1">
+          {fixedDirection === null && <div className="min-w-0 space-y-1">
             <Label className="text-xs" htmlFor="c-direction">{t("contracts.field.direction")}</Label>
-            <Select value={directionFilter} onValueChange={(value) => setDirectionFilter(value as ContractDirection | "all")}>
+            <Select value={directionFilter} onValueChange={(value) => {
+              setDirectionFilter(value as ContractDirection | "all");
+              setPage(1);
+            }}>
               <SelectTrigger id="c-direction" className="h-9"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{t("contracts.filter.allDirections")}</SelectItem>
@@ -695,23 +754,31 @@ const Contracts = () => {
                 ))}
               </SelectContent>
             </Select>
-          </div>
+          </div>}
           <div className="min-w-0 space-y-1">
             <Label className="text-xs" htmlFor="c-type">{t("contracts.field.type")}</Label>
-            <Select value={typeFilter} onValueChange={(value) => setTypeFilter(value as ContractType | "all")}>
+            <Select value={typeFilter} onValueChange={(value) => {
+              setTypeFilter(value as ContractType | "all");
+              setPage(1);
+            }}>
               <SelectTrigger id="c-type" className="h-9"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{t("contracts.filter.allTypes")}</SelectItem>
                 <SelectItem value="Unclassified">{t("contracts.type.Unclassified")}</SelectItem>
-                {(classification?.types ?? []).map((type) => (
+                {(classification?.types ?? [])
+                  .filter((type) => fixedDirection === null || classification?.allowedTypes[fixedDirection].includes(type))
+                  .map((type) => (
                   <SelectItem key={type} value={type}>{t(`contracts.type.${type}`)}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-          <div className="min-w-0 space-y-1">
+          {fixedDirection === null && <div className="min-w-0 space-y-1">
             <Label className="text-xs" htmlFor="c-vendor">{t("contracts.field.vendor")}</Label>
-            <Select value={vendorFilter === "all" ? "all" : String(vendorFilter)} onValueChange={(value) => setVendorFilter(value === "all" ? "all" : Number(value))}>
+            <Select value={vendorFilter === "all" ? "all" : String(vendorFilter)} onValueChange={(value) => {
+              setVendorFilter(value === "all" ? "all" : Number(value));
+              setPage(1);
+            }}>
               <SelectTrigger id="c-vendor" className="h-9"><SelectValue /></SelectTrigger>
               <SelectContent className="max-h-72">
                 <SelectItem value="all">{t("contracts.filter.allVendors")}</SelectItem>
@@ -720,12 +787,12 @@ const Contracts = () => {
                 ))}
               </SelectContent>
             </Select>
-          </div>
+          </div>}
           <div className="min-w-0 space-y-1">
             <Label className="text-xs">{t("contracts.filter.signedRange")}</Label>
             <div className="flex gap-1">
-              <Input type="date" value={signedFrom} onChange={(e) => setSignedFrom(e.target.value)} className="h-9 min-w-0 flex-1" />
-              <Input type="date" value={signedTo} onChange={(e) => setSignedTo(e.target.value)} className="h-9 min-w-0 flex-1" />
+              <Input type="date" value={signedFrom} onChange={(e) => { setSignedFrom(e.target.value); setPage(1); }} className="h-9 min-w-0 flex-1" />
+              <Input type="date" value={signedTo} onChange={(e) => { setSignedTo(e.target.value); setPage(1); }} className="h-9 min-w-0 flex-1" />
             </div>
           </div>
           <div className="min-w-0 space-y-1 sm:col-span-2 lg:col-span-2">
@@ -733,15 +800,42 @@ const Contracts = () => {
             <div className="flex gap-1">
               <Input
                 type="number" min={0} value={valueMin}
-                onChange={(e) => setValueMin(e.target.value)}
+                onChange={(e) => { setValueMin(e.target.value); setPage(1); }}
                 placeholder="min" className="h-9 min-w-0 flex-1"
               />
               <Input
                 type="number" min={0} value={valueMax}
-                onChange={(e) => setValueMax(e.target.value)}
+                onChange={(e) => { setValueMax(e.target.value); setPage(1); }}
                 placeholder="max" className="h-9 min-w-0 flex-1"
               />
             </div>
+          </div>
+          <div className="min-w-0 space-y-1">
+            <Label className="text-xs" htmlFor="c-sort-by">{t("contracts.sort.label")}</Label>
+            <Select value={sortBy} onValueChange={(value) => {
+              setSortBy(value as ContractSortBy);
+              setPage(1);
+            }}>
+              <SelectTrigger id="c-sort-by" className="h-9"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {(["signedDate", "endDate", "value", "contractNumber", "updatedAt"] as const).map((field) => (
+                  <SelectItem key={field} value={field}>{t(`contracts.sort.${field}`)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="min-w-0 space-y-1">
+            <Label className="text-xs" htmlFor="c-sort-direction">{t("contracts.sort.direction")}</Label>
+            <Select value={sortDirection} onValueChange={(value) => {
+              setSortDirection(value as SortDirection);
+              setPage(1);
+            }}>
+              <SelectTrigger id="c-sort-direction" className="h-9"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="desc">{t("contracts.sort.desc")}</SelectItem>
+                <SelectItem value="asc">{t("contracts.sort.asc")}</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div className="flex items-end gap-2">
             <p className="text-xs italic text-muted-foreground">{contracts.length} / {total}</p>
@@ -966,6 +1060,34 @@ const Contracts = () => {
                   })}
                 </tbody>
               </table>
+            </div>
+            <div className="flex flex-col items-center justify-between gap-3 pt-2 sm:flex-row">
+              <p className="text-sm text-muted-foreground">
+                {t("contracts.pagination.summary", {
+                  from: (page - 1) * PAGE_SIZE + 1,
+                  to: Math.min(page * PAGE_SIZE, total),
+                  total,
+                })}
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page <= 1 || loading}
+                  onClick={() => setPage((current) => current - 1)}
+                >
+                  {t("common.prev")}
+                </Button>
+                <span className="min-w-16 text-center text-sm tabular-nums">{page} / {pages}</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page >= pages || loading}
+                  onClick={() => setPage((current) => current + 1)}
+                >
+                  {t("common.next")}
+                </Button>
+              </div>
             </div>
           </div>
         )}

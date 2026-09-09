@@ -12,7 +12,8 @@ namespace NihomeBackend.Services;
 /// milestones and variation orders belong to follow-up stories.
 ///
 /// Sales users see only rows they own; roles with
-/// <c>crm.contracts.view.all</c> (or the wildcard set) see everything.
+/// <c>crm.contracts.view.all</c> (or an endpoint-authorized Upstream scope)
+/// can read across owners.
 /// </summary>
 public class ContractService(
     AppDbContext db,
@@ -42,6 +43,8 @@ public class ContractService(
         decimal? valueMax = null,
         int page = 1,
         int pageSize = 20,
+        string? sortBy = null,
+        string? sortDirection = null,
         CancellationToken ct = default)
     {
         if (page < 1) page = 1;
@@ -87,9 +90,29 @@ public class ContractService(
 
         var total = await query.CountAsync(ct);
 
-        var rows = await query
-            .OrderByDescending(c => c.SignedDate ?? DateTime.MinValue)
-            .ThenByDescending(c => c.CreatedAt)
+        var descending = !string.Equals(sortDirection, "asc", StringComparison.OrdinalIgnoreCase);
+        var orderedQuery = (sortBy?.Trim().ToLowerInvariant()) switch
+        {
+            "contractnumber" => descending
+                ? query.OrderByDescending(c => c.ContractNumber)
+                : query.OrderBy(c => c.ContractNumber),
+            "enddate" => descending
+                ? query.OrderByDescending(c => c.EndDate ?? DateTime.MinValue)
+                : query.OrderBy(c => c.EndDate ?? DateTime.MaxValue),
+            "value" => descending
+                ? query.OrderByDescending(c => c.Value)
+                : query.OrderBy(c => c.Value),
+            "updatedat" => descending
+                ? query.OrderByDescending(c => c.UpdatedAt)
+                : query.OrderBy(c => c.UpdatedAt),
+            _ => descending
+                ? query.OrderByDescending(c => c.SignedDate ?? DateTime.MinValue)
+                    .ThenByDescending(c => c.CreatedAt)
+                : query.OrderBy(c => c.SignedDate ?? DateTime.MaxValue)
+                    .ThenBy(c => c.CreatedAt),
+        };
+
+        var rows = await orderedQuery
             .ThenByDescending(c => c.Id)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)

@@ -8,6 +8,14 @@
     "ja": "契約"
   },
   {
+    "key": "nav.primaryContracts",
+    "category": "nav",
+    "vi": "Hợp đồng chính",
+    "en": "Primary contracts",
+    "zh": "主合同",
+    "ja": "主要契約"
+  },
+  {
     "key": "contracts.title",
     "category": "contracts",
     "vi": "Hợp đồng",
@@ -22,6 +30,22 @@
     "en": "Sales contracts filtered by owner, customer and execution timeline.",
     "zh": "按负责人、客户和执行时间线过滤的销售合同列表。",
     "ja": "担当者・顧客・進行状況で絞り込む販売契約一覧。"
+  },
+  {
+    "key": "contracts.primary.title",
+    "category": "contracts",
+    "vi": "Hợp đồng chính",
+    "en": "Primary contracts",
+    "zh": "主合同",
+    "ja": "主要契約"
+  },
+  {
+    "key": "contracts.primary.subtitle",
+    "category": "contracts",
+    "vi": "Hợp đồng đầu ra với chủ đầu tư, theo dự án vận hành và phạm vi quyền được cấp.",
+    "en": "Upstream client contracts by operational project and authorized scope.",
+    "zh": "按运营项目和授权范围管理与业主签订的上游合同。",
+    "ja": "運用プロジェクトと権限範囲別の顧客向け上流契約。"
   },
   {
     "key": "contracts.newContract",
@@ -174,6 +198,86 @@
     "en": "Value (min - max)",
     "zh": "金额（最小 - 最大）",
     "ja": "金額（最小 - 最大）"
+  },
+  {
+    "key": "contracts.sort.label",
+    "category": "contracts",
+    "vi": "Sắp xếp theo",
+    "en": "Sort by",
+    "zh": "排序字段",
+    "ja": "並び替え"
+  },
+  {
+    "key": "contracts.sort.direction",
+    "category": "contracts",
+    "vi": "Thứ tự",
+    "en": "Order",
+    "zh": "顺序",
+    "ja": "順序"
+  },
+  {
+    "key": "contracts.sort.signedDate",
+    "category": "contracts",
+    "vi": "Ngày ký",
+    "en": "Signed date",
+    "zh": "签约日期",
+    "ja": "契約日"
+  },
+  {
+    "key": "contracts.sort.endDate",
+    "category": "contracts",
+    "vi": "Ngày kết thúc",
+    "en": "End date",
+    "zh": "结束日期",
+    "ja": "終了日"
+  },
+  {
+    "key": "contracts.sort.value",
+    "category": "contracts",
+    "vi": "Giá trị hợp đồng",
+    "en": "Contract value",
+    "zh": "合同金额",
+    "ja": "契約金額"
+  },
+  {
+    "key": "contracts.sort.contractNumber",
+    "category": "contracts",
+    "vi": "Số hợp đồng",
+    "en": "Contract number",
+    "zh": "合同编号",
+    "ja": "契約番号"
+  },
+  {
+    "key": "contracts.sort.updatedAt",
+    "category": "contracts",
+    "vi": "Lần cập nhật",
+    "en": "Last updated",
+    "zh": "最后更新",
+    "ja": "最終更新"
+  },
+  {
+    "key": "contracts.sort.desc",
+    "category": "contracts",
+    "vi": "Giảm dần",
+    "en": "Descending",
+    "zh": "降序",
+    "ja": "降順"
+  },
+  {
+    "key": "contracts.sort.asc",
+    "category": "contracts",
+    "vi": "Tăng dần",
+    "en": "Ascending",
+    "zh": "升序",
+    "ja": "昇順"
+  },
+  {
+    "key": "contracts.pagination.summary",
+    "category": "contracts",
+    "vi": "Hiển thị {from}–{to} trong {total} hợp đồng",
+    "en": "Showing {from}–{to} of {total} contracts",
+    "zh": "显示第 {from}–{to} 条，共 {total} 份合同",
+    "ja": "{total} 件中 {from}–{to} 件を表示"
   },
   {
     "key": "contracts.field.number",

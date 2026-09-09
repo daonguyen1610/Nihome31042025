@@ -1431,6 +1431,8 @@ export interface ContractListParams {
   valueMax?: number;
   page?: number;
   pageSize?: number;
+  sortBy?: "signedDate" | "endDate" | "value" | "contractNumber" | "updatedAt";
+  sortDirection?: "asc" | "desc";
 }
 
 export interface UpsertContractRequest {

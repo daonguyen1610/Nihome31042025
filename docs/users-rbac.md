@@ -1,6 +1,6 @@
 # Users Section RBAC
 
-Date: 2026-05-16 (updated 2026-08-10 for current platform RBAC and project handover authorization)
+Date: 2026-05-16 (updated 2026-09-09 for primary-contract reconciliation access)
 
 ## Overview
 
@@ -34,6 +34,13 @@ Quotation management remains owner-scoped. `crm.quotes.manage` allows a Sales
 user to create and edit quotations only for opportunities in that user's
 scope; `crm.quotes.view.all` is required to operate across owners. Approval and
 sending continue to require their dedicated `approve` and `send` permissions.
+
+The `ACCOUNTANT` role has `crm.contracts.view` and the scoped
+`crm.contracts.view.upstream.all` permission for read-only reconciliation of
+primary contracts across the operational-project portfolio. Portfolio-wide
+access is server-enforced only for explicitly upstream lists and upstream
+details; downstream contracts remain owner-scoped. This does not grant contract
+create, edit, transition, attachment, appendix, or delete capabilities.
 
 ### Project handover permissions
 
