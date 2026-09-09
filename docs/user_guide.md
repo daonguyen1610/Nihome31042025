@@ -592,17 +592,26 @@ Before permanent deletion, the system shows an impact preview and requires the e
 
 Implemented at **Procurement → RFQs & bid comparison**. See the
 [RFQ workflow and operating contract](application_developer.md#718-rfq-and-supplier-comparison) for roles,
-BOQ prerequisites, quotation revisions, award rules, and current MVP limits.
+BOQ prerequisites, quotation revisions, scoring, allocation, and award rules.
 
 Procurement selects lines and quantities from an approved project BOQ, invites
-active vendors and issues the RFQ. Record quotations as immutable revisions;
-missing prices differ from zero and inactive vendors receive no lowest-price
-highlight. BGD or an explicitly authorized award role selects one complete,
-current, eligible quotation with a reason. Award creates one Draft downstream
-Supply/Subcontract contract in the same project/customer. Awarded values and
-lines remain protected while coordination notes and signing remain available.
-Signing, warehouse operations and manual payable processing continue through
-their existing workflows. The MVP uses VND and whole-package awards.
+active vendors and issues the RFQ. Vendors with an email receive an expiring
+secure portal link and may submit revised quotations until the deadline;
+Procurement may still record a quotation on their behalf. Quotations retain
+currency, manual exchange rate to VND, freight, discount, VAT and immutable
+revision history. Missing prices differ from zero and inactive vendors receive
+no lowest-price highlight.
+
+During evaluation, Procurement records the commercial score and evidence. The
+matrix combines it with price, delivery time and approved vendor-rating weights.
+The score is advisory; selecting a lower-scored bid requires a reason. BGD or an
+explicitly authorized award role allocates every RFQ line and quantity across
+one or more valid vendors. Supply quantities must reference approved Material
+Requests; Subcontract quantities do not. The system blocks incomplete allocation
+and Supply demand over-allocation, then atomically creates one
+Draft downstream Supply/Subcontract contract per selected vendor. Awarded values
+and lines remain protected while signing, warehouse operations and payable
+processing continue through their existing workflows.
 
 | Page | Functions | Estimate |
 |------|-----------|----------|

@@ -293,8 +293,11 @@ public sealed class BusinessRootHardDeletePlanService(
                 item.OperationalProjectId,
             }).SingleOrDefaultAsync(ct);
         if (root is null) return null;
-        var rfqs = await db.Rfqs.AsNoTracking().Where(item => item.ContractId == id)
-            .OrderBy(item => item.Id).Select(item => item.Id).ToListAsync(ct);
+        var rfqs = (await db.Rfqs.AsNoTracking().Where(item => item.ContractId == id)
+                .Select(item => item.Id).ToListAsync(ct))
+            .Concat(await db.RfqAwards.AsNoTracking().Where(item => item.ContractId == id)
+                .Select(item => item.RfqId).ToListAsync(ct))
+            .Distinct().OrderBy(item => item).ToList();
         var driveOptions = await settingsStore.GetRuntimeAsync(ct);
 
         var milestones = await db.ContractPaymentMilestones.AsNoTracking()

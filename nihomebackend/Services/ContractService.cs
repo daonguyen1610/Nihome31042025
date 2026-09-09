@@ -305,7 +305,8 @@ public class ContractService(
 
         // An RFQ award is the authority for this contract's commercial terms.
         // Check the RFQ binding independently of the current line collection.
-        var isRfqAward = await db.Rfqs.AsNoTracking().AnyAsync(rfq => rfq.ContractId == id, ct);
+        var isRfqAward = await db.Rfqs.AsNoTracking().AnyAsync(rfq => rfq.ContractId == id, ct) ||
+            await db.RfqAwards.AsNoTracking().AnyAsync(award => award.ContractId == id, ct);
         if (isRfqAward &&
             (req.Value != entity.Value || req.CustomerId != entity.CustomerId ||
              req.Direction != entity.Direction || req.Type != entity.Type ||

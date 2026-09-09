@@ -91,15 +91,47 @@ test(`business roles carry an approved BOQ through RFQ, warehouse and invoice ${
     await expect(page.getByRole("region", { name: "Bid comparison matrix", exact: true })).toContainText("3,600,000 VND");
     await page.getByRole("button", { name: "Start evaluation / stop bids", exact: true }).click();
     await expect(page.getByRole("button", { name: "Submit quote revision", exact: true })).toHaveCount(0);
+    await page.getByRole("button", { name: "Evaluate bids", exact: true }).click();
+    await dialog.getByLabel("Commercial score (0-100)", { exact: true }).fill("85");
+    await dialog.getByLabel("Evaluation evidence", { exact: true }).fill("Commercial and delivery evidence reviewed.");
+    await dialog.getByRole("button", { name: "Save evaluation", exact: true }).click();
+    await expect(dialog).not.toBeVisible();
     await page.screenshot({ path: testInfo.outputPath("01-quote-comparison.png"), fullPage: true });
+  });
+
+  await test.step("Site demand is approved before the Supply award", async () => {
+    const dialog = page.getByRole("dialog");
+    await loginInBrowserAs(page, TEST_USERS.pm);
+    await page.goto(`${workspace}&tab=requests`);
+    await page.getByRole("button", { name: "Create request", exact: true }).click();
+    await dialog.getByRole("combobox", { name: "Responsible site user", exact: true }).click();
+    await page.getByRole("option", { name: userNames.get("PM")!, exact: true }).click();
+    await dialog.getByRole("combobox", { name: "Procurement owner", exact: true }).click();
+    await page.getByRole("option", { name: userNames.get("PROCUREMENT")!, exact: true }).click();
+    await dialog.getByLabel("Required at", { exact: true }).fill("2035-01-01T09:00");
+    await dialog.getByRole("combobox", { name: "BOQ item", exact: true }).click();
+    await page.getByRole("option", { name: /PIPE-CABLE/ }).click();
+    await dialog.getByLabel("Quantity", { exact: true }).fill("20");
+    await dialog.getByRole("button", { name: "Create draft", exact: true }).click();
+    await expect(dialog).not.toBeVisible();
+    await page.getByRole("button", { name: "Submit", exact: true }).click();
+    await expect(page.getByRole("cell", { name: "Submitted", exact: true })).toBeVisible();
+    await loginInBrowserAs(page, TEST_USERS.procurement);
+    await page.goto(`${workspace}&tab=requests`);
+    await page.getByRole("button", { name: "Approve", exact: true }).click();
+    await dialog.getByRole("button", { name: "Approve", exact: true }).click();
+    await expect(page.getByRole("cell", { name: "Approved", exact: true })).toBeVisible();
   });
 
   await test.step("BGD awards the package and Sales Manager signs the generated contract", async () => {
     await loginInBrowserAs(page, TEST_USERS.bgd);
     await page.goto(rfqUrl);
-    await page.getByLabel("Decision / withdrawal reason", { exact: true }).fill("Revised price meets budget, full scope and delivery confirmed");
-    await page.getByRole("combobox", { name: "Vendor", exact: true }).selectOption({ index: 1 });
     await page.getByRole("button", { name: "Award and create draft contract", exact: true }).click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog.getByRole("combobox").nth(1)).not.toHaveValue("");
+    await dialog.getByRole("textbox").first().fill("Revised price meets budget, full scope and delivery confirmed");
+    await dialog.getByRole("button", { name: "Award and create draft contract", exact: true }).click();
+    await expect(dialog).not.toBeVisible();
     const contractLink = page.locator("section").getByRole("link", { name: /^PO-RFQ-/ });
     await expect(contractLink).toBeVisible();
     contractNumber = (await contractLink.textContent())!;
@@ -123,28 +155,8 @@ test(`business roles carry an approved BOQ through RFQ, warehouse and invoice ${
     await page.screenshot({ path: testInfo.outputPath("02-signed-contract.png"), fullPage: true });
   });
 
-  await test.step("Site demand is approved and Warehouse receives and issues the cable", async () => {
+  await test.step("Warehouse receives and issues the awarded demand", async () => {
     const dialog = page.getByRole("dialog");
-    await loginInBrowserAs(page, TEST_USERS.pm);
-    await page.goto(`${workspace}&tab=requests`);
-    await page.getByRole("button", { name: "Create request", exact: true }).click();
-    await dialog.getByRole("combobox", { name: "Responsible site user", exact: true }).click();
-    await page.getByRole("option", { name: userNames.get("PM")!, exact: true }).click();
-    await dialog.getByRole("combobox", { name: "Procurement owner", exact: true }).click();
-    await page.getByRole("option", { name: userNames.get("PROCUREMENT")!, exact: true }).click();
-    await dialog.getByLabel("Required at", { exact: true }).fill("2035-01-01T09:00");
-    await dialog.getByRole("combobox", { name: "BOQ item", exact: true }).click();
-    await page.getByRole("option", { name: /PIPE-CABLE/ }).click();
-    await dialog.getByLabel("Quantity", { exact: true }).fill("20");
-    await dialog.getByRole("button", { name: "Create draft", exact: true }).click();
-    await expect(dialog).not.toBeVisible();
-    await page.getByRole("button", { name: "Submit", exact: true }).click();
-    await expect(page.getByRole("cell", { name: "Submitted", exact: true })).toBeVisible();
-    await loginInBrowserAs(page, TEST_USERS.procurement);
-    await page.goto(`${workspace}&tab=requests`);
-    await page.getByRole("button", { name: "Approve", exact: true }).click();
-    await dialog.getByRole("button", { name: "Approve", exact: true }).click();
-    await expect(page.getByRole("cell", { name: "Approved", exact: true })).toBeVisible();
     await loginInBrowserAs(page, TEST_USERS.warehouse);
     await page.goto(`${workspace}&tab=warehouse`);
     await page.getByRole("button", { name: "Create receipt", exact: true }).click();

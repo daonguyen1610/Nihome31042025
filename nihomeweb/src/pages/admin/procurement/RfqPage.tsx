@@ -12,7 +12,7 @@ import { useI18n } from "@/lib/i18n";
 import { extractApiError } from "@/lib/apiError";
 import { adminApi, type OperationalProjectListItemResponse } from "@/services/adminApi";
 import { rfqApi, saveRfqDownload, type RfqDetail, type RfqFilter, type RfqHeader, type RfqReferences, type RfqStatus } from "@/services/rfqApi";
-import { RfqBidForm, RfqDraftForm, RfqField, rfqSelectClass } from "./RfqForms";
+import { RfqBatchAwardForm, RfqBidForm, RfqDraftForm, RfqEvaluationForm, RfqField, rfqSelectClass } from "./RfqForms";
 
 const statuses: RfqStatus[] = ["Draft", "Issued", "UnderEvaluation", "Awarded", "Closed", "Cancelled"];
 const emptyReferences: RfqReferences = { revisions: [], vendors: [], owners: [], documents: [] };
@@ -77,10 +77,8 @@ function RfqWorkspace({ project, rfqId, onSelect }: { project: OperationalProjec
   const [success, setSuccess] = useState("");
   const [refresh, setRefresh] = useState(0);
   const [busy, setBusy] = useState(false);
-  const [dialog, setDialog] = useState<"create" | "edit" | "bid" | null>(null);
+  const [dialog, setDialog] = useState<"create" | "edit" | "bid" | "evaluate" | "award" | null>(null);
   const [reason, setReason] = useState("");
-  const [selectedBid, setSelectedBid] = useState(0);
-  const [contractType, setContractType] = useState("Supply");
   const [documentId, setDocumentId] = useState(0);
   const filterJson = JSON.stringify(filter);
   const number = new Intl.NumberFormat(lang, { maximumFractionDigits: 4 });
@@ -99,7 +97,7 @@ function RfqWorkspace({ project, rfqId, onSelect }: { project: OperationalProjec
       }).catch(e => { if (!cancelled) setError(extractApiError(e)); }).finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [projectId, rfqId, filterJson, refresh]);
-  useEffect(() => { setReason(""); setSelectedBid(0); setDocumentId(0); setDialog(null); setActionError(""); }, [rfqId]);
+  useEffect(() => { setReason(""); setDocumentId(0); setDialog(null); setActionError(""); }, [rfqId]);
   function changeFilter(value: Partial<RfqFilter>) { setFilter(previous => ({ ...previous, ...value, page: 1 })); }
   async function mutate(operation: () => Promise<{ data: RfqDetail }>) {
     if (busy) return;
@@ -107,7 +105,7 @@ function RfqWorkspace({ project, rfqId, onSelect }: { project: OperationalProjec
     try {
       const result = await operation();
       if (!mounted.current) return;
-      setDetail(result.data); setDialog(null); setReason(""); setSelectedBid(0); setDocumentId(0);
+      setDetail(result.data); setDialog(null); setReason(""); setDocumentId(0);
       setSuccess(t("rfq.saved")); onSelect(result.data.header.id); setRefresh(x => x + 1);
     } catch (e) { if (mounted.current) setActionError(extractApiError(e)); }
     finally { if (mounted.current) setBusy(false); }
@@ -120,6 +118,17 @@ function RfqWorkspace({ project, rfqId, onSelect }: { project: OperationalProjec
       const refs = (await rfqApi.references(projectId)).data;
       if (mounted.current) setReferences(refs);
     } catch (e) { if (mounted.current) setActionError(extractApiError(e)); }
+    finally { if (mounted.current) setBusy(false); }
+  }
+  async function openAward() {
+    if (!detail || busy) return;
+    setBusy(true); setActionError("");
+    try {
+      const fresh = (await rfqApi.detail(projectId, detail.header.id)).data;
+      if (!mounted.current) return;
+      setDetail(fresh);
+      setDialog("award");
+    } catch (reason) { if (mounted.current) setActionError(extractApiError(reason)); }
     finally { if (mounted.current) setBusy(false); }
   }
   async function download(operation: () => Promise<{ data: Blob }>, filename: string) {
@@ -193,39 +202,35 @@ function RfqWorkspace({ project, rfqId, onSelect }: { project: OperationalProjec
         {canManage && <div className="flex flex-wrap gap-2">
           {detail.header.status === "Draft" && <><Button disabled={busy} variant="outline" onClick={() => { setActionError(""); setDialog("edit"); }}>{t("rfq.edit")}</Button><Button disabled={busy} onClick={() => transition("issue")}>{t("rfq.issue")}</Button></>}
           {detail.header.status === "Issued" && <><Button disabled={busy || Date.parse(detail.header.dueAt) < Date.now()} onClick={() => { setActionError(""); setDialog("bid"); }}>{t("rfq.submitBid")}</Button>
-            <Button variant="outline" disabled={busy || !detail.bids.some(b => b.isCurrent && !b.withdrawnAt)} onClick={() => transition("evaluate")}>{t("rfq.evaluate")}</Button></>}
+            <Button variant="outline" disabled={busy || !detail.bids.some(b => b.isCurrent && !b.withdrawnAt)} onClick={() => transition("evaluate")}>{t("rfq.evaluate")}</Button>
+            <Button variant="outline" disabled={busy} onClick={() => void mutate(() => rfqApi.resendInvitations(projectId, rfqId, detail.header.rowVersion))}>{t("rfq.portal.resend")}</Button></>}
+          {detail.header.status === "UnderEvaluation" && <Button variant="outline" disabled={busy} onClick={() => { setActionError(""); setDialog("evaluate"); }}>{t("rfq.scoring.action")}</Button>}
           {detail.header.status === "Awarded" && <Button disabled={busy} onClick={() => transition("close")}>{t("rfq.close")}</Button>}
         </div>}
+        {canAward && detail.header.status === "UnderEvaluation" && <Button disabled={busy} onClick={() => void openAward()}>{t("rfq.award")}</Button>}
       </div>
       <section className="space-y-3"><h2 className="text-lg font-semibold">{t("rfq.matrix")}</h2><p className="text-sm text-muted-foreground">{t("rfq.matrixHelp")}</p>
         <div className="max-w-full overflow-x-auto rounded-lg border" role="region" aria-label={t("rfq.matrix")} tabIndex={0}>
-          <table className="w-full min-w-[640px] text-left text-sm"><thead className="bg-muted"><tr><th className="min-w-52 p-3">{t("rfq.field.boq")}</th>{detail.vendors.map(v => <th key={v.id} className="min-w-52 p-3">{v.name}</th>)}</tr></thead>
+          <table className="w-full min-w-[640px] text-left text-sm"><thead className="bg-muted"><tr><th className="min-w-52 p-3">{t("rfq.field.boq")}</th>{detail.vendors.map(v => <th key={v.id} className="min-w-52 p-3">{v.name}<small className="mt-1 block font-normal text-muted-foreground">{v.invitationDeliveryError ? t("rfq.portal.deliveryFailed") : v.invitationSentAt ? t("rfq.portal.sent") : ""}</small></th>)}</tr></thead>
             <tbody>{detail.lines.map(line => <tr key={line.id} className="border-t"><th className="p-3 font-medium">{line.itemCode}<div className="text-xs font-normal">{line.description}<br />{quantity.format(line.quantity)} {line.unit}</div></th>
               {detail.vendors.map(v => { const bid = detail.bids.find(b => b.vendorId === v.id && b.isCurrent && !b.withdrawnAt); const cell = bid?.lines.find(l => l.rfqLineId === line.id);
                 return <td key={v.id} className={`p-3 ${v.isActive && cell && Date.parse(bid!.validUntil) >= Date.now() && cell.unitPrice === line.lowestUnitPrice ? "bg-emerald-50 text-emerald-900" : ""}`}>
-                  {cell ? <><div>{number.format(cell.unitPrice)} {detail.currency}</div><div className="text-xs">{t("rfq.field.total")}: {number.format(cell.amount)}</div></> : t("rfq.missing")}
+                  {cell ? <><div>{number.format(cell.unitPrice)} {bid!.currency}</div><div className="text-xs">{number.format(cell.unitPriceVnd)} VND</div><div className="text-xs">{t("rfq.field.total")}: {number.format(cell.amountVnd)} VND</div></> : t("rfq.missing")}
                 </td>; })}</tr>)}
               <tr className="border-t bg-muted/30"><th className="p-3">{t("rfq.field.total")}</th>{detail.vendors.map(v => { const bid = detail.bids.find(b => b.vendorId === v.id && b.isCurrent && !b.withdrawnAt); return <td key={v.id} className={`p-3 ${bid?.isLowest ? "bg-emerald-50" : ""}`}>
-                {bid ? <><strong>{number.format(bid.total)} {detail.currency}</strong><p>{!bid.isComplete && t("rfq.partial")}</p><p>{!bid.isEligible && t("rfq.ineligible")}</p>
-                  <p className="mt-2">{t("rfq.field.leadTime")}: {bid.leadTimeDays}</p><p className="whitespace-pre-wrap">{bid.paymentTerms}</p><p>{t("rfq.field.validity")}: {date(bid.validUntil)}</p>{bid.note && <p className="whitespace-pre-wrap">{bid.note}</p>}</> : t("rfq.missing")}
+                {bid ? <><strong>{number.format(bid.totalOriginal)} {bid.currency}</strong><p className="text-xs">{number.format(bid.total)} VND</p><p>{!bid.isComplete && t("rfq.partial")}</p><p>{!bid.isEligible && t("rfq.ineligible")}</p>
+                  <p className="mt-2">{t("rfq.field.leadTime")}: {bid.leadTimeDays}</p><p>{t("rfq.scoring.total")}: {bid.weightedScore ?? "—"}</p><p className="whitespace-pre-wrap">{bid.paymentTerms}</p><p>{t("rfq.field.validity")}: {date(bid.validUntil)}</p>{bid.note && <p className="whitespace-pre-wrap">{bid.note}</p>}</> : t("rfq.missing")}
               </td>; })}</tr>
             </tbody></table>
         </div>
       </section>
-      {detail.contractId && <section className="space-y-2 rounded-lg border border-emerald-200 bg-emerald-50 p-4"><h2 className="font-semibold">{t("rfq.awardResult")}</h2>
-        <Link className="underline" to={`/admin/contracts/${detail.contractId}`}>{detail.contractNumber}</Link><p>{detail.awardedBy} · {date(detail.awardedAt)}</p><p className="whitespace-pre-wrap">{detail.awardReason}</p>
+      {(detail.awards.length > 0 || detail.contractId) && <section className="space-y-2 rounded-lg border border-emerald-200 bg-emerald-50 p-4"><h2 className="font-semibold">{t("rfq.awardResult")}</h2>
+        {detail.awards.length ? detail.awards.map(award => <div key={award.id}><Link className="underline" to={`/admin/contracts/${award.contractId}`}>{award.contractNumber}</Link><span> · {award.vendorName} · {number.format(award.originalValue)} {award.currency} / {number.format(award.valueVnd)} VND</span></div>) :
+          <Link className="underline" to={`/admin/contracts/${detail.contractId}`}>{detail.contractNumber}</Link>}
+        <p>{detail.awardedBy} · {date(detail.awardedAt)}</p><p className="whitespace-pre-wrap">{detail.awardReason}</p>
       </section>}
-      {(canAward && detail.header.status === "UnderEvaluation" || canManage && ["Draft", "Issued", "UnderEvaluation"].includes(detail.header.status)) &&
+      {canManage && ["Draft", "Issued", "UnderEvaluation"].includes(detail.header.status) &&
         <section className="space-y-3 rounded-lg border p-4"><RfqField label={t("rfq.field.reason")}><Textarea maxLength={2000} disabled={busy} value={reason} onChange={e => setReason(e.target.value)} /></RfqField>
-          {canAward && detail.header.status === "UnderEvaluation" && <form className="grid gap-3 sm:grid-cols-3" onSubmit={e => { e.preventDefault();
-            if (!selectedBid || reason.trim().length < 3) { setActionError(t("rfq.validation.award")); return; }
-            void mutate(() => rfqApi.award(projectId, rfqId, selectedBid, contractType, reason.trim(), detail.header.rowVersion)); }}>
-            <RfqField label={t("rfq.field.vendor")}><select required className={rfqSelectClass} value={selectedBid || ""} disabled={busy} onChange={e => { setSelectedBid(Number(e.target.value)); const bid = detail.bids.find(b => b.id === Number(e.target.value)); setContractType(detail.vendors.find(v => v.id === bid?.vendorId)?.type === "SubContractor" ? "Subcontract" : "Supply"); }}>
-              <option value="">{t("rfq.choose")}</option>{detail.bids.filter(b => b.isEligible).map(b => <option key={b.id} value={b.id}>{detail.vendors.find(v => v.id === b.vendorId)?.name} · #{b.revision}</option>)}
-            </select></RfqField>
-            <RfqField label={t("rfq.field.contractType")}><select disabled={busy} className={rfqSelectClass} value={contractType} onChange={e => setContractType(e.target.value)}><option value="Supply">{t("rfq.supply")}</option><option value="Subcontract">{t("rfq.subcontract")}</option></select></RfqField>
-            <Button type="submit" disabled={busy} className="self-end">{t("rfq.award")}</Button>
-          </form>}
           {canManage && <Button variant="destructive" disabled={busy} onClick={() => transition("cancel")}>{t("rfq.cancelRfq")}</Button>}
         </section>}
       <section className="space-y-3"><h2 className="text-lg font-semibold">{t("rfq.documents")}</h2>
@@ -250,9 +255,11 @@ function RfqWorkspace({ project, rfqId, onSelect }: { project: OperationalProjec
       <section className="space-y-3"><h2 className="text-lg font-semibold">{t("rfq.history")}</h2>{detail.events.map((event, index) => <div key={index} className="border-l-2 pl-3 text-sm"><p className="font-medium">{t(`rfq.event.${event.action}`)} · {event.actor}</p><p className="text-muted-foreground">{date(event.at)}</p>{event.reason && <p className="whitespace-pre-wrap">{event.reason}</p>}</div>)}</section>
     </>}
     <Dialog open={dialog !== null} onOpenChange={open => { if (!open && !busy) setDialog(null); }}><DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
-      <DialogHeader><DialogTitle>{t(dialog === "bid" ? "rfq.submitBid" : dialog === "edit" ? "rfq.edit" : "rfq.create")}</DialogTitle><DialogDescription>{project.customerName} → {project.code} · {project.name}</DialogDescription></DialogHeader>
+      <DialogHeader><DialogTitle>{t(dialog === "bid" ? "rfq.submitBid" : dialog === "edit" ? "rfq.edit" : dialog === "evaluate" ? "rfq.scoring.action" : dialog === "award" ? "rfq.award" : "rfq.create")}</DialogTitle><DialogDescription>{project.customerName} → {project.code} · {project.name}</DialogDescription></DialogHeader>
       {actionError && <p role="alert" className="text-sm text-destructive">{actionError}</p>}
       {dialog === "bid" && detail ? <RfqBidForm detail={detail} references={references} busy={busy} onSave={draft => void mutate(() => rfqApi.bid(projectId, rfqId, draft))} onUpload={upload} /> :
+        dialog === "evaluate" && detail ? <RfqEvaluationForm detail={detail} busy={busy} onSave={(bidId, score, note) => void mutate(() => rfqApi.evaluateBid(projectId, rfqId, bidId, score, note, detail.header.rowVersion))} /> :
+        dialog === "award" && detail ? <RfqBatchAwardForm detail={detail} busy={busy} onSave={draft => void mutate(() => rfqApi.batchAward(projectId, rfqId, draft))} /> :
         dialog && <RfqDraftForm detail={dialog === "edit" ? detail : null} references={references} busy={busy} onSave={draft => void mutate(() => rfqApi.save(projectId, dialog === "edit" ? rfqId : null, draft))} />}
     </DialogContent></Dialog>
   </div>;

@@ -1497,36 +1497,51 @@ Sources: NIH-166 and NIH-174/175/176, including their September 7 acceptance
 comments; `Nicon-QLVH.md` Modules 5–6; `Nicon-workflow.md`;
 `Nicon_BreakTask_v1.xlsx` (RFQ list, create/edit, and comparison detail).
 
-The approved RFQ MVP uses the following contract:
+The completed RFQ workflow uses the following contract:
 
 - Each RFQ belongs to one Operational Project and retains that project's
   Customer. A project can have many RFQs, vendors, and contracts.
 - Procurement selects lines and quantities from an approved VND Project BOQ.
-  Each quantity must fit its source line. RFQs do not reserve stock or consume
-  Material Request quantities. MR linkage is deferred.
+  Each quantity must fit its source line. At award, every Supply quantity is
+  manually allocated to approved, unfulfilled Material Request demand for the
+  same BOQ line. Subcontract allocations do not use Material Requests. The
+  transaction rejects incomplete RFQ coverage and Supply allocations above the
+  remaining requested quantity.
 - Each RFQ invites one or more active suppliers/subcontractors. The vendor
   directory is shared master data; invitations and quotations belong to the RFQ.
-- Lowest valid prices are highlighted, including ties. There is no weighted
-  score or automatic selection. One complete quotation wins the entire RFQ;
-  split awards are deferred.
-- Procurement records quotes on behalf of vendors. Vendor portal and outgoing
-  vendor email delivery are deferred. Bid form drafts are local until submitted.
-- An explicit award creates one **Draft Downstream Supply/Subcontract contract**
-  and its BOQ lines. The existing contract workflow handles signing, execution,
-  and payment; an RFQ award does not sign the contract.
+- Lowest valid VND-normalized prices are highlighted, including ties. Each RFQ
+  defines price, lead-time, approved vendor-rating and manually assessed
+  commercial weights totaling 100%. The score is advisory; selecting below the
+  highest score requires an override reason.
+- Procurement can record quotes, while vendors with valid email receive an
+  expiring random-token portal link. The public portal exposes only that
+  invitation's scope and accepts immutable quote revisions until the deadline.
+  Only a SHA-256 token hash is persisted. Failed email delivery is recorded and
+  authorized users can rotate tokens and resend invitations. The existing RFQ
+  owner remains the technical user FK for portal writes, while the bid read model
+  and `portal-bid-submitted` event attribute the action to the invited vendor.
+  `LastPortalAccessAt` is audit telemetry only; it does not extend token expiry.
+- An explicit atomic batch award allocates each RFQ line and quantity across one
+  or more eligible quotations. It creates one **Draft Downstream
+  Supply/Subcontract contract** per selected vendor and all corresponding BOQ
+  lines. Every RFQ quantity must be covered exactly; partial commits are not
+  allowed. The existing contract workflow handles signing, execution, and
+  payment; an RFQ award does not sign a contract.
 - Award-derived contract value, customer, project, vendor and classification
   cannot be changed through the generic contract editor. Awarded lines cannot
   be edited, appended or moved through procurement endpoints, including while
   the contract is Draft. Draft coordination notes and the existing signing and
   payment workflows remain available. Ordinary contracts without an RFQ award
   retain their existing draft-editing behavior.
-- VND is the supported currency because the existing contract value has no
-  currency field. Unit prices and line totals use four decimal places; quantity
-  uses six. Line amounts round halfway away from zero. Comparison totals sum
-  those rounded amounts. Contract header value rounds the winning total to two
-  decimals to match the existing contract schema; contract line prices retain
-  four decimals. There is no tax, freight, discount, or currency-conversion
-  calculation in this MVP; commercial qualifications belong in quote notes.
+- Each bid records a three-letter currency and a manually entered, immutable
+  exchange rate to VND. VND requires rate 1. Commercial totals apply either a
+  percentage or fixed discount, then add freight, then calculate VAT. Original
+  and converted totals are retained for evidence. Unit prices and line totals
+  use four decimals; quantity uses six; converted contract values round to two
+  decimals while contract line prices retain four decimals. Contract lines keep
+  the converted base negotiated unit price; the contract header also includes
+  proportional freight, discount and VAT. Reconcile that expected difference
+  through the immutable award commercial snapshot, not by editing awarded lines.
 
 The application route is `/admin/procurement-control/rfqs`, with `projectId`
 and optional `rfqId` query parameters. Customer → Project → RFQ → Contract
@@ -1556,17 +1571,22 @@ projects reject writes. Award rechecks vendor activity, bid revision/expiry,
 project state, owner, and current approved BOQ inside its transaction. A newer
 approved BOQ requires cancelling the old RFQ and preparing a new one.
 
+RFQ-to-MR allocation is a purchasing reservation/coverage record, not physical
+fulfillment. It does not change Material Request status; posted Warehouse
+Receipts remain the only source for `PartiallyFulfilled` and `Fulfilled`.
+
 #### Lifecycle and concurrency
 
 | State | Permitted actions |
 |---|---|
 | Draft | Edit scope, attach package files, issue, cancel with reason |
 | Issued | Submit quote revisions until deadline, withdraw current quote with reason, start evaluation, cancel with reason |
-| UnderEvaluation | Award an eligible quotation, cancel with reason |
-| Awarded | View evidence and contract; close RFQ |
+| UnderEvaluation | Score quotations, batch-allocate eligible lines to approved MR demand, award, cancel with reason |
+| Awarded | View evidence and all generated contracts; close RFQ |
 | Closed / Cancelled | Read/export evidence |
 
-Issue freezes BOQ line descriptions, quantities, units, and invitations.
+Issue freezes BOQ line descriptions, quantities, units, and invitations, creates
+portal tokens, and attempts vendor email delivery after persistence commits.
 Starting evaluation explicitly stops further quote submissions, including when
 done before the deadline. A quote revision never overwrites an earlier one.
 The latest revision is current even if withdrawn; withdrawing it does not revive
@@ -1606,6 +1626,9 @@ Serializable stock validation. Warehouse list reads explicitly use ReadCommitted
 so they do not inherit a stronger isolation level from a reused connection.
 The tradeoff is serialized warehouse writes across projects; the validation below
 proves the tested workflow, not peak throughput or every possible database race.
+RFQ creation/mutation and project MR-allocation application locks use a 15-second
+timeout. A timeout returns a concurrency conflict; clients must reload current
+availability and retry instead of replaying stale quantities.
 
 #### Files and notifications
 
@@ -1626,7 +1649,11 @@ Issue and award notify the active RFQ owner and project PM through seeded in-app
 notification templates. A five-minute worker marks overdue issued/evaluating
 RFQs and notifies these recipients once. This marker is transactional with the
 notifications and does not invent another RFQ lifecycle state. Standard
-notification-template administration remains available.
+notification-template administration remains available. Issue and award
+delivery is best effort after the business transaction commits; delivery failure
+is logged and never reports that the persisted transition failed. The overdue
+worker keeps its marker and notification in one transaction so a failed delivery
+can retry on the next interval.
 
 RFQs retain purchasing evidence through cancellation rather than exposing a
 hard-delete operation. Project, invited vendor, and awarded contract deletion
@@ -1645,9 +1672,21 @@ Base: `/api/operational-projects/{projectId}/procurement/rfqs`
 | Create / edit | POST `/`, PUT `/{id}` |
 | Lifecycle | POST `/{id}/issue`, `/evaluate`, `/cancel`, `/close` |
 | Submit quote revision / withdraw | POST `/{id}/bids`, `/{id}/bids/{bidId}/withdraw` |
-| Award | POST `/{id}/award` |
+| Score / batch award | POST `/{id}/bids/evaluate`, `/{id}/award-batch` |
+| Resend portal invitations | POST `/{id}/invitations/resend` |
 | Upload / attach existing file | POST `/documents/upload`, `/{id}/documents` |
 | Download RFQ file | GET `/{id}/documents/{documentId}/download` |
+
+Public vendor portal endpoints are `GET /api/vendor-rfqs` and
+`POST /api/vendor-rfqs/bids`. The email URL stores the secret in the browser
+fragment; the SPA sends it in `X-RFQ-Portal-Token`, keeping it out of server URL
+logs and referrers. Tokens expire at the RFQ deadline and responses use
+`Cache-Control: no-store`. Public responses omit Customer, BOQ budget, competing
+quotations, users and internal history. Portal submissions require an idempotency
+key and revalidate RFQ state, deadline, vendor activity and commercial fields.
+The former `POST /{id}/award` whole-package endpoint returns 410 in deployed
+configuration. It can be enabled only in isolated compatibility test settings;
+production awards must use the batch endpoint and MR allocation contract.
 
 `RfqRequests.cs` enforces shape, required fields, lengths, enums, and numeric
 ranges. `RfqService.cs` enforces the following business relationships. Forms
@@ -1672,7 +1711,12 @@ mirror the editable constraints for feedback.
 | Payment terms | Required after trimming, maximum 1000 characters |
 | Quote validity | Zoned timestamp, unexpired, on/after RFQ deadline |
 | Quote file IDs | 0–20 unique, unbound, available Procurement files in same project |
-| Award bid | Current, complete, unwithdrawn, unexpired, active vendor |
+| Scoring weights | Four values from 0–100 totaling exactly 100 |
+| Commercial score | 0–100 with 3–2,000 character evidence note |
+| Bid currency / FX | Three-letter code; positive manual rate; VND rate is 1 |
+| Commercial totals | Non-negative freight and VAT; discount is percentage or amount, not both |
+| Batch award | Current unwithdrawn bid line; every RFQ quantity covered exactly |
+| MR allocation | Required for Supply only; approved/partially fulfilled MR, same project and BOQ line, no over-allocation |
 | Contract type | Supply/Subcontract compatible with the selected vendor type |
 | Award/cancel/withdraw reason | 3–2000 characters after trimming |
 | Row version | Required existing 8-byte concurrency token for changes |
@@ -1687,6 +1731,13 @@ of day to UTC. CSV cells neutralize formula prefixes.
 cross-aggregate foreign keys, and RFQ permission grants. It does not rewrite
 existing business data. Review deployment backups before rollback: `Down` drops
 RFQ evidence and removes this capability's permission assignments.
+
+`20260909050114_CompleteRfqWorkflow` adds scoring, invitation delivery metadata,
+commercial snapshots, split-award records and MR allocation records. Existing
+RFQs are backfilled with 50/20/20/10 scoring weights; existing bids are preserved
+as VND at rate 1 with their previous total copied to subtotal and original total.
+Rollback drops only the extension tables and columns, so back up split-award and
+portal-delivery evidence before downgrade.
 
 `RfqSampleDataSeeder` creates only its dedicated `PJ-SAMPLE-RFQ` project and
 respects project deletion tombstones. It provides a draft, an issued comparison
@@ -2054,7 +2105,7 @@ prove transport. Record actual run results and blockers in the task/PR or test
 artifacts rather than adding dated reports under `docs/`.
 
 Do not infer unsupported behavior from conceptual workflow diagrams: automatic
-RFQ-to-MR reservation, split awards, currency conversion, invoice matching,
+exchange-rate feeds, invoice matching,
 actual finance ledgers, offline synchronization, automatic permit approval and
 public-contact-to-CRM conversion require their own implemented contracts and
 verification. Passing a global suite proves its assertions, not exhaustive

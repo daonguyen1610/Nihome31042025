@@ -30,6 +30,7 @@ const Contact = lazy(() => import("./pages/Contact.tsx"));
 const Login = lazy(() => import("./pages/Login.tsx"));
 const Register = lazy(() => import("./pages/Register.tsx"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword.tsx"));
+const VendorRfqPortal = lazy(() => import("./pages/VendorRfqPortal.tsx"));
 const MyProfile = lazy(() => import("./pages/MyProfile.tsx"));
 const AdminDashboard = lazy(() => import("./pages/admin/Dashboard.tsx"));
 const AdminNotifications = lazy(() => import("./pages/admin/Notifications.tsx"));
@@ -130,6 +131,7 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/vendor/rfqs" element={<VendorRfqPortal />} />
             <Route element={<ProtectedRoute />}>
               <Route path="/my-profile" element={<MyProfile />} />
             </Route>

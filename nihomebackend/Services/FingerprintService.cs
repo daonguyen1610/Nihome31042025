@@ -33,10 +33,15 @@ public sealed class FingerprintService
             request.QueryString,
             request.ContentType ?? string.Empty,
             request.Headers.AcceptLanguage.ToString(),
+            HashSensitiveHeader(request.Headers["X-RFQ-Portal-Token"].FirstOrDefault()),
             body);
         var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(payload));
         return Convert.ToHexString(bytes).ToLowerInvariant();
     }
+
+    private static string HashSensitiveHeader(string? value) => string.IsNullOrWhiteSpace(value)
+        ? string.Empty
+        : Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value))).ToLowerInvariant();
 
     private static async Task<string> ComputeFormAsync(HttpRequest request, CancellationToken ct)
     {

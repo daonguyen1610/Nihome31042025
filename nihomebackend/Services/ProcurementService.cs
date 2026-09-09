@@ -1248,7 +1248,8 @@ public sealed class ProcurementService(
 
     private async Task EnsureContractNotAwardedAsync(int contractId, CancellationToken ct)
     {
-        if (await db.Rfqs.AsNoTracking().AnyAsync(rfq => rfq.ContractId == contractId, ct))
+        if (await db.Rfqs.AsNoTracking().AnyAsync(rfq => rfq.ContractId == contractId, ct) ||
+            await db.RfqAwards.AsNoTracking().AnyAsync(award => award.ContractId == contractId, ct))
             throw new ProcurementOperationException("Các dòng hợp đồng đã được chọn qua RFQ là bất biến; không được thêm, sửa hoặc chuyển sang hợp đồng khác.");
     }
 

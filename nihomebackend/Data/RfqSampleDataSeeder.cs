@@ -131,6 +131,10 @@ public static class RfqSampleDataSeeder
                     SubmittedByUserId = owner.Id,
                     Note = vendorIndex == 0 ? "Complete scope" : "Panel not quoted",
                     Lines = lines,
+                    Currency = "VND",
+                    ExchangeRateToVnd = 1m,
+                    Subtotal = lines.Sum(x => x.Amount),
+                    TotalOriginal = lines.Sum(x => x.Amount),
                     Total = lines.Sum(x => x.Amount),
                 });
                 rfq.Events.Add(new RfqEvent { Action = "bid-submitted", ActorUserId = owner.Id, At = now.AddDays(-2) });
