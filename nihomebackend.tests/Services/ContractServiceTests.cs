@@ -386,6 +386,36 @@ public class ContractServiceTests : IDisposable
         Assert.Equal("Customer B", byCustomer.Items[0].CustomerName);
     }
 
+    [Fact]
+    public async Task List_AppliesRequestedSortAndStablePagination()
+    {
+        var low = await _sut.CreateAsync(
+            Req(number: "HD-SORT-LOW", value: 100), 1, canReassignOwner: true);
+        var high = await _sut.CreateAsync(
+            Req(customerId: _customerB, number: "HD-SORT-HIGH", value: 900),
+            1,
+            canReassignOwner: true);
+
+        var firstPage = await _sut.ListAsync(
+            1,
+            true,
+            page: 1,
+            pageSize: 1,
+            sortBy: "value",
+            sortDirection: "asc");
+        var secondPage = await _sut.ListAsync(
+            1,
+            true,
+            page: 2,
+            pageSize: 1,
+            sortBy: "value",
+            sortDirection: "asc");
+
+        Assert.Equal(2, firstPage.Total);
+        Assert.Equal(low.Id, Assert.Single(firstPage.Items).Id);
+        Assert.Equal(high.Id, Assert.Single(secondPage.Items).Id);
+    }
+
     // ---------------- Update / Delete ----------------
 
     [Fact]

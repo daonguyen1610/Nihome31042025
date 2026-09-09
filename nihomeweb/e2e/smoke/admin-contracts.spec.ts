@@ -1,5 +1,107 @@
 import { test, expect, TEST_USERS } from "../fixtures/auth";
 
+test("Finance primary-contract list is upstream-only and server-paginated", async ({
+    page,
+    loginInBrowserAs,
+    baseURL,
+}) => {
+    await page.setViewportSize({ width: 768, height: 1024 });
+    await loginInBrowserAs(page, TEST_USERS.accountant);
+    const listResponse = page.waitForResponse((response) => {
+        if (response.request().method() !== "GET") return false;
+        const url = new URL(response.url());
+        return url.pathname.endsWith("/api/contracts")
+            && url.searchParams.get("direction") === "Upstream"
+            && url.searchParams.get("page") === "1"
+            && url.searchParams.get("pageSize") === "20";
+    });
+
+    await page.goto(`${baseURL}/admin/finance/contracts`, { waitUntil: "networkidle" });
+
+    expect((await listResponse).ok()).toBe(true);
+    await expect(page.getByRole("heading", { name: /Hợp đồng chính|Primary contracts|主合同|主要契約/i })).toBeVisible();
+    await expect(page.locator("#c-direction")).toHaveCount(0);
+    await expect(page.locator("#c-vendor")).toHaveCount(0);
+    await expect(page.locator("#c-sort-by")).toBeVisible();
+    await expect(page.locator("#c-sort-direction")).toBeVisible();
+});
+
+test("Contract pagination and CSV export use every filtered API page", async ({
+    page,
+    loginInBrowserAs,
+    baseURL,
+}) => {
+    await loginInBrowserAs(page, TEST_USERS.superAdmin);
+    const exportRequests: number[] = [];
+    const exportSearches: string[] = [];
+    await page.route(/\/api\/(?:v1\/)?contracts\?.*$/, async route => {
+        const url = new URL(route.request().url());
+        const requestedPage = Number(url.searchParams.get("page") ?? "1");
+        const pageSize = Number(url.searchParams.get("pageSize") ?? "20");
+        const total = pageSize === 100 ? 101 : 21;
+        if (pageSize === 100) {
+            exportRequests.push(requestedPage);
+            exportSearches.push(url.searchParams.get("search") ?? "");
+        }
+        const from = (requestedPage - 1) * pageSize;
+        const count = Math.max(0, Math.min(pageSize, total - from));
+        const items = Array.from({ length: count }, (_, index) => {
+            const id = 700_000 + from + index + 1;
+            return {
+                id,
+                contractNumber: `HD-PAGE-${String(id).padStart(6, "0")}`,
+                customerId: 1,
+                customerName: "Pagination customer",
+                direction: "Upstream",
+                type: "DesignAndBuild",
+                operationalProjectId: 1,
+                operationalProjectCode: "PJ-PAGE",
+                operationalProjectName: "Pagination project",
+                ownerUserId: 1,
+                ownerName: "Pagination owner",
+                status: "Draft",
+                signedDate: null,
+                startDate: null,
+                endDate: null,
+                value: id,
+                approvedVoTotal: 0,
+                currentValue: id,
+                hasSignedScan: false,
+                attachmentCount: 0,
+                appendixCount: 0,
+                createdAt: "2026-09-09T00:00:00Z",
+                updatedAt: "2026-09-09T00:00:00Z",
+                rowVersion: "AAAAAAAAB9M=",
+                paymentMilestones: [],
+            };
+        });
+        await route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: JSON.stringify({ total, page: requestedPage, pageSize, items }),
+        });
+    });
+
+    await page.goto(`${baseURL}/admin/contracts`, { waitUntil: "networkidle" });
+    await expect(page.getByTestId("contract-row-700001")).toBeVisible();
+    const filteredListResponse = page.waitForResponse((response) => {
+        const url = new URL(response.url());
+        return url.pathname.endsWith("/api/contracts")
+            && url.searchParams.get("search") === "HD-PAGE"
+            && url.searchParams.get("pageSize") === "20";
+    });
+    await page.locator("#c-search").fill("HD-PAGE");
+    await filteredListResponse;
+    await page.getByRole("button", { name: /Sau|Next|下一个|次へ/i }).last().click();
+    await expect(page.getByTestId("contract-row-700021")).toBeVisible();
+
+    const download = page.waitForEvent("download");
+    await page.getByRole("button", { name: /Xuất CSV|Export CSV|导出 CSV|CSV エクスポート/i }).click();
+    expect((await download).suggestedFilename()).toMatch(/^contracts-\d{4}-\d{2}-\d{2}\.csv$/);
+    expect(exportRequests).toEqual([1, 2]);
+    expect(exportSearches).toEqual(["HD-PAGE", "HD-PAGE"]);
+});
+
 /**
  * SPA smoke for NIH-102 — /admin/contracts list page. Full API + RBAC
  * behaviour is covered by nihomebackend.integration.tests/ContractsControllerTests.

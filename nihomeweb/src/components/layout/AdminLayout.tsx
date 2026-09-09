@@ -187,6 +187,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
         label: t("nav.finance"),
         icon: Landmark,
         items: [
+          { to: "/admin/finance/contracts", label: t("nav.primaryContracts"), icon: FileText, permission: ADMIN_PERMS.contracts },
           { to: "/admin/finance-control", label: t("nav.financeControl"), icon: Landmark, permission: [ADMIN_PERMS.financePayments, ADMIN_PERMS.financePeriods, ADMIN_PERMS.financeCorrections] },
         ],
       },

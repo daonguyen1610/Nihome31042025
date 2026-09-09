@@ -80,6 +80,49 @@ public class ContractsControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task List_AsAccountant_ReturnsContractsAcrossSalesOwners()
+    {
+        await AuthTestHelper.AuthenticateAsync(
+            Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "SUPER_ADMIN"));
+        var customerId = await CreateCustomerAsync();
+        var projectId = await WithDbAsync(db => db.OperationalProjects
+            .Where(project => project.CustomerId == customerId)
+            .Select(project => project.Id)
+            .SingleAsync());
+        var create = await Client.PostAsJsonAsync("/api/contracts", new
+        {
+            customerId,
+            operationalProjectId = projectId,
+            direction = "Upstream",
+            type = "DesignAndBuild",
+            status = "Draft",
+            value = 250_000_000,
+        });
+        create.StatusCode.Should().Be(HttpStatusCode.Created, await create.Content.ReadAsStringAsync());
+        var contractId = (await ReadJsonAsync(create)).GetProperty("id").GetInt32();
+
+        await AuthTestHelper.AuthenticateAsync(
+            Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "ACCOUNTANT"));
+        var response = await Client.GetAsync(
+            $"/api/contracts?direction=Upstream&operationalProjectId={projectId}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await ReadJsonAsync(response);
+        body.GetProperty("items").EnumerateArray()
+            .Should().Contain(item => item.GetProperty("id").GetInt32() == contractId);
+
+        var detail = await Client.GetAsync($"/api/contracts/{contractId}");
+        detail.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var unscoped = await Client.GetAsync("/api/contracts");
+        unscoped.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await ReadJsonAsync(unscoped)).GetProperty("items").EnumerateArray()
+            .Should().NotContain(item => item.GetProperty("id").GetInt32() == contractId);
+    }
+
+    [Fact]
     public async Task ClassificationOptions_ExcludeLegacyValue_AndDefineAllowedTypes()
     {
         await AuthTestHelper.AuthenticateAsync(

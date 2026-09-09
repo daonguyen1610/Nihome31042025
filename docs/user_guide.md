@@ -365,7 +365,11 @@ legacy client that omits the field. It rejects an omitted project when the
 customer has no project or multiple possible projects. A project can contain
 any number of upstream and downstream contracts of compatible types.
 
-The Contract List can be filtered by Operational Project. Operational Project
+The Contract List can be filtered by Operational Project, customer, status,
+direction, type, signed-date range, and value range, and can be sorted by
+contract number, signed date, end date, value, or last update. Results are
+paginated; CSV export includes every matching row across all pages while using
+the same access scope as the list. Operational Project
 detail shows separate upstream and downstream current values, excluding
 cancelled contracts and including approved VO adjustments. Payment progress is
 the paid milestone amount divided by the total scheduled milestone amount.
@@ -727,7 +731,7 @@ Manage primary contracts linked to projects and customers. Define contract value
 
 | Page | Functions | Estimate |
 |------|-----------|----------|
-| Primary Contract List | Contracts with clients/owners | 1.5 days |
+| Primary Contract List | Finance > Primary contracts; upstream contracts with filtering, sorting, pagination, detail links, and complete filtered CSV export | Implemented |
 | Primary Contract Create/Edit | Create and update contracts | 2.5 days |
 | Primary Contract Detail | Value, payment milestones, receivables | 2.5 days |
 

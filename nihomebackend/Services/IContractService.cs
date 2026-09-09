@@ -23,6 +23,8 @@ public interface IContractService
         decimal? valueMax = null,
         int page = 1,
         int pageSize = 20,
+        string? sortBy = null,
+        string? sortDirection = null,
         CancellationToken ct = default);
 
     Task<ContractResponse?> GetAsync(int id, int callerUserId, bool canSeeAll, CancellationToken ct = default);
