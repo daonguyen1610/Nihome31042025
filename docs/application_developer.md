@@ -912,6 +912,14 @@ migrated separately before the repository-wide hard-delete rollout is complete.
 
 ### 7.8 Customer Documents and Contract Ownership
 
+Legal-representative assignments through the Customer contact upsert are
+serialized per Customer aggregate. An in-process gate covers concurrent
+requests handled by one application instance, while a transaction-owned SQL
+Server application lock coordinates multiple instances. This keeps the
+filtered unique index and the Company invariant aligned: a Company always has
+exactly one legal-representative contact when two authorized actors assign
+replacements concurrently.
+
 Customer document metadata is stored in `customer_documents`; files are stored under the owning customer's dedicated web-root directory. The endpoints reuse customer owner scoping and existing CRM permissions:
 
 | Method | Route | Permission | Purpose |

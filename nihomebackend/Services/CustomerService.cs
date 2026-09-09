@@ -1,4 +1,6 @@
+using System.Collections.Concurrent;
 using System.Data;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Constants;
 using NihomeBackend.Data;
@@ -17,6 +19,7 @@ public class CustomerService(
 {
     private const int MaxPageSize = 100;
     private const string SourceCategory = "customer_source";
+    private static readonly ConcurrentDictionary<int, SemaphoreSlim> ContactMutationGates = new();
 
     public async Task<CustomerListResponse> ListAsync(
         int callerUserId,
@@ -365,6 +368,32 @@ public class CustomerService(
         bool canSeeAll,
         CancellationToken ct = default)
     {
+        var gate = ContactMutationGates.GetOrAdd(customerId, static _ => new SemaphoreSlim(1, 1));
+        await gate.WaitAsync(ct);
+        try
+        {
+            return await UpsertContactCoreAsync(
+                customerId, request, callerUserId, canManage, canSeeAll, ct);
+        }
+        finally
+        {
+            gate.Release();
+        }
+    }
+
+    private async Task<CustomerContactResponse?> UpsertContactCoreAsync(
+        int customerId,
+        UpsertCustomerContactRequest request,
+        int callerUserId,
+        bool canManage,
+        bool canSeeAll,
+        CancellationToken ct)
+    {
+        await using var transaction = db.Database.IsRelational()
+            ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct)
+            : null;
+        await AcquireContactMutationLockAsync(customerId, transaction is not null, ct);
+
         var customer = await db.Customers
             .Include(c => c.Contacts)
             .FirstOrDefaultAsync(c => c.Id == customerId, ct);
@@ -374,9 +403,6 @@ public class CustomerService(
         if (!canManage) throw new CustomerOperationException("Caller does not have permission to modify contacts.");
 
         ValidateContactContact(request.Phone, request.Email);
-        await using var transaction = db.Database.IsRelational()
-            ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct)
-            : null;
 
         var now = DateTime.UtcNow;
         var previousRepresentative = customer.Contacts.SingleOrDefault(item => item.IsLegalRepresentative);
@@ -475,6 +501,29 @@ public class CustomerService(
         await CrmConcurrency.SaveChangesAsync(db, ct);
         if (transaction is not null) await transaction.CommitAsync(ct);
         return MapContact(contact);
+    }
+
+    private async Task AcquireContactMutationLockAsync(
+        int customerId,
+        bool hasTransaction,
+        CancellationToken ct)
+    {
+        if (!hasTransaction || !db.Database.IsSqlServer()) return;
+        var resource = $"customer-contacts:{customerId}";
+        var result = new SqlParameter("@lockResult", SqlDbType.Int)
+        {
+            Direction = ParameterDirection.Output,
+        };
+        await db.Database.ExecuteSqlInterpolatedAsync($"""
+            EXEC {result} = sys.sp_getapplock
+                @Resource = {resource},
+                @LockMode = 'Exclusive',
+                @LockOwner = 'Transaction',
+                @LockTimeout = 10000;
+            """, ct);
+        if ((int)result.Value < 0)
+            throw new CrmConcurrencyException(
+                "Customer contacts are busy. Reload and retry the operation.");
     }
 
     public async Task<bool> DeleteContactAsync(
