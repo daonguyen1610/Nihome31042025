@@ -26,6 +26,8 @@ public sealed class RfqProcurementPipelineTests(NihomeWebApplicationFactory fact
         var fixture = await SeedFoundationAsync(vendorType);
         var procurement = $"/api/operational-projects/{fixture.ProjectId}/procurement";
         var rfqs = procurement + "/rfqs";
+        JsonElement? materialRequest = null;
+        int? materialRequestLineId = null;
 
         int? estimateId = null;
         if (vendorType == VendorType.Supplier && outcome == "Paid")
@@ -105,16 +107,65 @@ public sealed class RfqProcurementPipelineTests(NihomeWebApplicationFactory fact
             rfq.GetProperty("bids").EnumerateArray().Count(x => x.GetProperty("isLowest").GetBoolean()).Should().Be(2);
         var winningBid = rfq.GetProperty("bids").EnumerateArray().Single(x => x.GetProperty("vendorId").GetInt32() == fixture.VendorId && x.GetProperty("isCurrent").GetBoolean());
         winningBid.GetProperty("isLowest").GetBoolean().Should().Be(alternativePrice >= 100m);
-        var award = new { bidId = Id(winningBid), reason = "Complete scope, inspected delivery and best price", contractType = contractType.ToString(), rowVersion = RfqVersion(rfq) };
-        await RejectAsync(rfqPath + "/award", award, HttpStatusCode.Forbidden);
+
+        if (contractType == ContractType.Supply)
+        {
+            await LoginAsync("PM");
+            materialRequest = await PostAsync(procurement + "/material-requests", new
+            {
+                responsibleSiteUserId = fixture.PmId,
+                assignedProcurementUserId = fixture.ProcurementId,
+                requiredAt = DateTime.UtcNow.AddDays(3),
+                note = "Power cable installation",
+                lines = new[] { new { projectBoqLineId = boqLineId, requestedQuantity = 10m } },
+            });
+            var requestPath = procurement + $"/material-requests/{Id(materialRequest.Value)}";
+            materialRequest = await MoveAsync(requestPath, materialRequest.Value, "submit");
+            await LoginAsync("PROCUREMENT");
+            materialRequest = await PostAsync(requestPath + "/decision", new { approved = true, rowVersion = Version(materialRequest.Value) });
+            materialRequestLineId = Id(materialRequest.Value.GetProperty("lines")[0]);
+        }
+
+        await LoginAsync("PROCUREMENT");
+        foreach (var bid in rfq.GetProperty("bids").EnumerateArray()
+            .Where(x => x.GetProperty("isCurrent").GetBoolean() && x.GetProperty("isComplete").GetBoolean()).ToArray())
+        {
+            rfq = await PostAsync(rfqPath + "/bids/evaluate", new
+            {
+                bidId = Id(bid),
+                commercialScore = 80m,
+                note = "Commercial terms and delivery evidence reviewed.",
+                rowVersion = RfqVersion(rfq),
+            });
+        }
+        winningBid = rfq.GetProperty("bids").EnumerateArray().Single(x =>
+            x.GetProperty("vendorId").GetInt32() == fixture.VendorId && x.GetProperty("isCurrent").GetBoolean());
+        var mrAllocations = materialRequestLineId.HasValue
+            ? new object[] { new { materialRequestLineId = materialRequestLineId.Value, quantity = 10m } }
+            : Array.Empty<object>();
+        object AwardRequest(ContractType selectedType) => new
+        {
+            reason = "Complete scope, inspected delivery and best price",
+            overrideReason = "Selected vendor provides the required combined commercial and delivery outcome.",
+            rowVersion = RfqVersion(rfq),
+            lines = new[]
+            {
+                new { bidId = Id(winningBid), rfqLineId, quantity = 10m,
+                    contractType = selectedType.ToString(), materialRequestAllocations = mrAllocations },
+            },
+        };
+        var award = AwardRequest(contractType);
+        await RejectAsync(rfqPath + "/award-batch", award, HttpStatusCode.Forbidden);
         (await WithDbAsync(db => db.Contracts.CountAsync(x => x.OperationalProjectId == fixture.ProjectId))).Should().Be(0);
         await LoginAsync("BGD");
         if (vendorType != VendorType.Both)
         {
-            await RejectAsync(rfqPath + "/award", new { bidId = Id(winningBid), reason = "Wrong commercial contract type", contractType = contractType == ContractType.Supply ? "Subcontract" : "Supply", rowVersion = RfqVersion(rfq) }, HttpStatusCode.BadRequest);
+            await RejectAsync(rfqPath + "/award-batch",
+                AwardRequest(contractType == ContractType.Supply ? ContractType.Subcontract : ContractType.Supply),
+                HttpStatusCode.BadRequest);
             (await WithDbAsync(db => db.Contracts.CountAsync(x => x.OperationalProjectId == fixture.ProjectId))).Should().Be(0);
         }
-        rfq = await PostAsync(rfqPath + "/award", award);
+        rfq = await PostAsync(rfqPath + "/award-batch", award);
         var contractId = rfq.GetProperty("contractId").GetInt32();
         rfq.GetProperty("awardSnapshotJson").GetString().Should().NotBeNullOrWhiteSpace();
         var contract = await WithDbAsync(db => db.Contracts.AsNoTracking().SingleAsync(x => x.Id == contractId));
@@ -160,41 +211,27 @@ public sealed class RfqProcurementPipelineTests(NihomeWebApplicationFactory fact
         // the existing signed-contract contract; acceptance integration is absent.
         if (contractType == ContractType.Supply)
         {
-            // RFQs do not create/reserve Material Requests. The site raises its own
-            // demand against the same approved BOQ, then Procurement approves it.
-            await LoginAsync("PM");
-            var materialRequest = await PostAsync(procurement + "/material-requests", new
-            {
-                responsibleSiteUserId = fixture.PmId,
-                assignedProcurementUserId = fixture.ProcurementId,
-                requiredAt = DateTime.UtcNow.AddDays(3),
-                note = "Power cable installation",
-                lines = new[] { new { projectBoqLineId = boqLineId, requestedQuantity = 10m } },
-            });
-            var requestPath = procurement + $"/material-requests/{Id(materialRequest)}";
-            materialRequest = await MoveAsync(requestPath, materialRequest, "submit");
-            await LoginAsync("PROCUREMENT");
-            materialRequest = await PostAsync(requestPath + "/decision", new { approved = true, rowVersion = Version(materialRequest) });
-            var requestLineId = Id(materialRequest.GetProperty("lines")[0]);
+            var approvedMaterialRequest = materialRequest!.Value;
+            var requestLineId = materialRequestLineId!.Value;
 
             await LoginAsync("WAREHOUSE");
             // Warehouse validation now rejects excess quantities before a draft
             // is persisted, as well as rechecking quantities when posting.
             await RejectAsync(procurement + "/receipts", Receipt(fixture, requestLineId, contractLine.Id, 11m), HttpStatusCode.BadRequest);
             (await WithDbAsync(db => db.WarehouseReceipts.CountAsync(x => x.OperationalProjectId == fixture.ProjectId))).Should().Be(0);
-            (await WithDbAsync(db => db.MaterialRequests.SingleAsync(x => x.Id == Id(materialRequest)))).Status.Should().Be(MaterialRequestStatus.Approved);
+            (await WithDbAsync(db => db.MaterialRequests.SingleAsync(x => x.Id == Id(approvedMaterialRequest)))).Status.Should().Be(MaterialRequestStatus.Approved);
             var partialReceipt = await PostAsync(procurement + "/receipts", Receipt(fixture, requestLineId, contractLine.Id, 4m));
             partialReceipt = await MoveAsync(procurement + $"/receipts/{Id(partialReceipt)}", partialReceipt, "post");
-            (await WithDbAsync(db => db.MaterialRequests.SingleAsync(x => x.Id == Id(materialRequest)))).Status.Should().Be(MaterialRequestStatus.PartiallyFulfilled);
+            (await WithDbAsync(db => db.MaterialRequests.SingleAsync(x => x.Id == Id(approvedMaterialRequest)))).Status.Should().Be(MaterialRequestStatus.PartiallyFulfilled);
             var correctedReceipt = await PostAsync(procurement + "/receipts", Receipt(fixture, requestLineId, contractLine.Id, 6m));
             correctedReceipt = await MoveAsync(procurement + $"/receipts/{Id(correctedReceipt)}", correctedReceipt, "post");
-            (await WithDbAsync(db => db.MaterialRequests.SingleAsync(x => x.Id == Id(materialRequest)))).Status.Should().Be(MaterialRequestStatus.Fulfilled);
+            (await WithDbAsync(db => db.MaterialRequests.SingleAsync(x => x.Id == Id(approvedMaterialRequest)))).Status.Should().Be(MaterialRequestStatus.Fulfilled);
             await PostAsync(procurement + $"/receipts/{Id(correctedReceipt)}/reverse", new { reason = "Correct delivery inspection record", rowVersion = Version(correctedReceipt) });
-            (await WithDbAsync(db => db.MaterialRequests.SingleAsync(x => x.Id == Id(materialRequest)))).Status.Should().Be(MaterialRequestStatus.PartiallyFulfilled);
+            (await WithDbAsync(db => db.MaterialRequests.SingleAsync(x => x.Id == Id(approvedMaterialRequest)))).Status.Should().Be(MaterialRequestStatus.PartiallyFulfilled);
             var receipt = await PostAsync(procurement + "/receipts", Receipt(fixture, requestLineId, contractLine.Id, 6m));
             receipt = await MoveAsync(procurement + $"/receipts/{Id(receipt)}", receipt, "post");
             receipt.GetProperty("status").GetString().Should().Be("Posted");
-            (await WithDbAsync(db => db.MaterialRequests.SingleAsync(x => x.Id == Id(materialRequest)))).Status.Should().Be(MaterialRequestStatus.Fulfilled);
+            (await WithDbAsync(db => db.MaterialRequests.SingleAsync(x => x.Id == Id(approvedMaterialRequest)))).Status.Should().Be(MaterialRequestStatus.Fulfilled);
             var storedReceipt = await WithDbAsync(db => db.WarehouseReceiptLines.SingleAsync(x => x.WarehouseReceiptId == Id(receipt)));
             storedReceipt.ContractLineId.Should().Be(contractLine.Id);
             storedReceipt.MaterialRequestLineId.Should().Be(requestLineId);

@@ -109,6 +109,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<RfqBid> RfqBids => Set<RfqBid>();
     public DbSet<RfqInvitation> RfqInvitations => Set<RfqInvitation>();
     public DbSet<RfqDocument> RfqDocuments => Set<RfqDocument>();
+    public DbSet<RfqAward> RfqAwards => Set<RfqAward>();
+    public DbSet<RfqAwardLine> RfqAwardLines => Set<RfqAwardLine>();
+    public DbSet<RfqAwardMaterialRequestAllocation> RfqAwardMaterialRequestAllocations => Set<RfqAwardMaterialRequestAllocation>();
     public DbSet<Vendor> Vendors => Set<Vendor>();
     public DbSet<ProjectBoqRevision> ProjectBoqRevisions => Set<ProjectBoqRevision>();
     public DbSet<ProjectBoqLine> ProjectBoqLines => Set<ProjectBoqLine>();

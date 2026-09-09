@@ -870,5 +870,113 @@
     "vi": "Quyết định lựa chọn RFQ",
     "zh": "询价定标",
     "ja": "見積依頼の選定記録"
+  },
+  {
+    "key": "rfq.field.currency", "category": "rfq", "en": "Currency", "vi": "Tiền tệ", "zh": "币种", "ja": "通貨"
+  },
+  {
+    "key": "rfq.field.exchangeRate", "category": "rfq", "en": "Exchange rate to VND", "vi": "Tỷ giá sang VND", "zh": "兑越南盾汇率", "ja": "VND換算レート"
+  },
+  {
+    "key": "rfq.field.freight", "category": "rfq", "en": "Freight", "vi": "Phí vận chuyển", "zh": "运费", "ja": "運賃"
+  },
+  {
+    "key": "rfq.field.discountPercent", "category": "rfq", "en": "Discount (%)", "vi": "Chiết khấu (%)", "zh": "折扣 (%)", "ja": "割引 (%)"
+  },
+  {
+    "key": "rfq.field.discountAmount", "category": "rfq", "en": "Discount amount", "vi": "Số tiền chiết khấu", "zh": "折扣金额", "ja": "割引額"
+  },
+  {
+    "key": "rfq.field.vatPercent", "category": "rfq", "en": "VAT (%)", "vi": "VAT (%)", "zh": "增值税 (%)", "ja": "VAT (%)"
+  },
+  {
+    "key": "rfq.scoring.weights", "category": "rfq", "en": "Evaluation weights (total 100%)", "vi": "Trọng số đánh giá (tổng 100%)", "zh": "评估权重（合计 100%）", "ja": "評価ウェイト（合計100%）"
+  },
+  {
+    "key": "rfq.scoring.priceWeight", "category": "rfq", "en": "Price", "vi": "Giá", "zh": "价格", "ja": "価格"
+  },
+  {
+    "key": "rfq.scoring.leadTimeWeight", "category": "rfq", "en": "Delivery time", "vi": "Tiến độ giao", "zh": "交付时间", "ja": "納期"
+  },
+  {
+    "key": "rfq.scoring.vendorRatingWeight", "category": "rfq", "en": "Vendor rating", "vi": "Đánh giá NCC", "zh": "供应商评级", "ja": "仕入先評価"
+  },
+  {
+    "key": "rfq.scoring.commercialWeight", "category": "rfq", "en": "Commercial terms", "vi": "Điều kiện thương mại", "zh": "商务条款", "ja": "取引条件"
+  },
+  {
+    "key": "rfq.scoring.commercialScore", "category": "rfq", "en": "Commercial score (0-100)", "vi": "Điểm thương mại (0-100)", "zh": "商务评分 (0-100)", "ja": "取引条件スコア (0-100)"
+  },
+  {
+    "key": "rfq.scoring.note", "category": "rfq", "en": "Evaluation evidence", "vi": "Căn cứ đánh giá", "zh": "评估依据", "ja": "評価根拠"
+  },
+  {
+    "key": "rfq.scoring.total", "category": "rfq", "en": "Weighted score", "vi": "Điểm tổng hợp", "zh": "加权得分", "ja": "加重スコア"
+  },
+  {
+    "key": "rfq.scoring.action", "category": "rfq", "en": "Evaluate bids", "vi": "Chấm điểm báo giá", "zh": "评估报价", "ja": "見積を評価"
+  },
+  {
+    "key": "rfq.scoring.save", "category": "rfq", "en": "Save evaluation", "vi": "Lưu đánh giá", "zh": "保存评估", "ja": "評価を保存"
+  },
+  {
+    "key": "rfq.award.addSplit", "category": "rfq", "en": "Add allocation", "vi": "Thêm phân bổ", "zh": "添加分配", "ja": "配分を追加"
+  },
+  {
+    "key": "rfq.award.materialRequest", "category": "rfq", "en": "Material Request demand", "vi": "Nhu cầu vật tư", "zh": "物料需求", "ja": "資材要求"
+  },
+  {
+    "key": "rfq.award.notApplicable", "category": "rfq", "en": "Not applicable", "vi": "Không áp dụng", "zh": "不适用", "ja": "対象外"
+  },
+  {
+    "key": "rfq.award.overrideReason", "category": "rfq", "en": "Reason for not selecting the highest score", "vi": "Lý do không chọn điểm cao nhất", "zh": "未选择最高分的原因", "ja": "最高得点を選択しない理由"
+  },
+  {
+    "key": "rfq.validation.weights", "category": "rfq", "en": "Evaluation weights must total exactly 100%.", "vi": "Tổng trọng số đánh giá phải bằng đúng 100%.", "zh": "评估权重合计必须正好为 100%。", "ja": "評価ウェイトの合計は100%である必要があります。"
+  },
+  {
+    "key": "rfq.validation.commercial", "category": "rfq", "en": "Enter a valid currency and exchange rate; use either a discount percentage or amount.", "vi": "Nhập tiền tệ và tỷ giá hợp lệ; chỉ dùng phần trăm hoặc số tiền chiết khấu.", "zh": "请输入有效币种和汇率；折扣百分比与金额只能选择一种。", "ja": "有効な通貨と為替レートを入力し、割引率または割引額のいずれかを使用してください。"
+  },
+  {
+    "key": "rfq.validation.evaluation", "category": "rfq", "en": "Select a bid, enter a score from 0 to 100, and provide evidence.", "vi": "Chọn báo giá, nhập điểm từ 0 đến 100 và ghi căn cứ.", "zh": "请选择报价，输入 0 至 100 分并填写评估依据。", "ja": "見積を選択し、0～100点と評価根拠を入力してください。"
+  },
+  {
+    "key": "rfq.validation.batchAward", "category": "rfq", "en": "Allocate every RFQ quantity to valid bids and approved Material Requests.", "vi": "Phân bổ đủ mọi số lượng RFQ cho báo giá hợp lệ và Material Request đã duyệt.", "zh": "请将全部询价数量分配给有效报价和已批准的物料需求。", "ja": "すべてのRFQ数量を有効な見積と承認済み資材要求に配分してください。"
+  },
+  {
+    "key": "rfq.validation.overrideReason", "category": "rfq", "en": "Explain why an allocation does not use the highest-scored quotation.", "vi": "Giải thích lý do phân bổ không chọn báo giá có điểm cao nhất.", "zh": "请说明未选择最高评分报价的原因。", "ja": "最高得点の見積を選択しない理由を入力してください。"
+  },
+  {
+    "key": "rfq.portal.prices", "category": "rfq", "en": "Quotation lines", "vi": "Các dòng báo giá", "zh": "报价明细", "ja": "見積明細"
+  },
+  {
+    "key": "rfq.portal.submit", "category": "rfq", "en": "Submit quotation", "vi": "Gửi báo giá", "zh": "提交报价", "ja": "見積を送信"
+  },
+  {
+    "key": "rfq.portal.success", "category": "rfq", "en": "Quotation submitted", "vi": "Đã gửi báo giá", "zh": "报价已提交", "ja": "見積を送信しました"
+  },
+  {
+    "key": "rfq.portal.validation", "category": "rfq", "en": "Complete the quotation, commercial terms, validity, currency, and exchange rate.", "vi": "Hoàn tất báo giá, điều kiện thương mại, hiệu lực, tiền tệ và tỷ giá.", "zh": "请完整填写报价、商务条款、有效期、币种和汇率。", "ja": "見積、取引条件、有効期限、通貨、為替レートを入力してください。"
+  },
+  {
+    "key": "rfq.portal.resend", "category": "rfq", "en": "Resend invitations", "vi": "Gửi lại thư mời", "zh": "重新发送邀请", "ja": "招待を再送"
+  },
+  {
+    "key": "rfq.portal.sent", "category": "rfq", "en": "Portal invitation sent", "vi": "Đã gửi link portal", "zh": "门户邀请已发送", "ja": "ポータル招待を送信済み"
+  },
+  {
+    "key": "rfq.portal.deliveryFailed", "category": "rfq", "en": "Portal delivery needs attention", "vi": "Cần xử lý gửi link portal", "zh": "门户发送需要处理", "ja": "ポータル送信の確認が必要"
+  },
+  {
+    "key": "rfq.event.bid-evaluated", "category": "rfq", "en": "Bid evaluated", "vi": "Đã chấm điểm báo giá", "zh": "报价已评估", "ja": "見積を評価しました"
+  },
+  {
+    "key": "rfq.event.batch-awarded", "category": "rfq", "en": "Split award completed", "vi": "Đã hoàn tất phân bổ chọn thầu", "zh": "拆分定标已完成", "ja": "分割発注を完了しました"
+  },
+  {
+    "key": "rfq.event.invitations-resent", "category": "rfq", "en": "Vendor invitations resent", "vi": "Đã gửi lại thư mời NCC", "zh": "已重新发送供应商邀请", "ja": "仕入先招待を再送しました"
+  },
+  {
+    "key": "rfq.event.portal-bid-submitted", "category": "rfq", "en": "Vendor submitted through secure portal", "vi": "NCC gửi báo giá qua portal bảo mật", "zh": "供应商通过安全门户提交报价", "ja": "仕入先がセキュアポータルから見積を送信しました"
   }
 ]

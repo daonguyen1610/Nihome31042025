@@ -1,5 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
@@ -48,14 +50,27 @@ public sealed class RfqsControllerTests(NihomeWebApplicationFactory factory) : I
         winningBid.Total.Should().Be(14.1543m); // 1.25 × 8.1234 rounded to 4dp, plus 2 × 2.
         winningBid.IsLowest.Should().BeTrue();
         detail = await TransitionAsync(detail, "evaluate");
-        var award = new RfqAwardRequest { BidId = winningBid.Id, Reason = "Complete scope and delivery confirmed", RowVersion = detail.Header.RowVersion };
-        (await SendAsync(fixture.ProjectId, $"/{detail.Header.Id}/award", award)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        detail = await DetailAsync(await SendAsync(fixture.ProjectId, $"/{detail.Header.Id}/bids/evaluate",
+            new RfqBidEvaluationRequest
+            {
+                BidId = winningBid.Id,
+                CommercialScore = 90m,
+                Note = "Commercial terms and delivery evidence reviewed.",
+                RowVersion = detail.Header.RowVersion
+            }));
+        var materialRequestLineIds = await CreateApprovedMaterialRequestLinesAsync(fixture);
+        var award = BatchAward(detail, winningBid.Id, materialRequestLineIds,
+            "Complete scope and delivery confirmed");
+        (await SendAsync(fixture.ProjectId, $"/{detail.Header.Id}/award-batch", award)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
         await LoginAsync("BGD");
+        (await SendAsync(fixture.ProjectId, $"/{detail.Header.Id}/award",
+            new RfqAwardRequest { BidId = winningBid.Id, Reason = award.Reason, RowVersion = detail.Header.RowVersion }))
+            .StatusCode.Should().Be(HttpStatusCode.Gone);
         var awardKey = Guid.NewGuid().ToString();
-        var awarded = await DetailAsync(await SendAsync(fixture.ProjectId, $"/{detail.Header.Id}/award", award, awardKey));
+        var awarded = await DetailAsync(await SendAsync(fixture.ProjectId, $"/{detail.Header.Id}/award-batch", award, awardKey));
         awarded.Header.Status.Should().Be(RfqStatus.Awarded);
         awarded.SelectedBidId.Should().Be(winningBid.Id);
-        JsonDocument.Parse(awarded.AwardSnapshotJson!).RootElement.GetProperty("Header").GetProperty("Status").GetInt32().Should().Be(2);
+        JsonDocument.Parse(awarded.AwardSnapshotJson!).RootElement.GetProperty("comparison").GetProperty("Header").GetProperty("Status").GetInt32().Should().Be(2);
         var contract = await WithDbAsync(db => db.Contracts.AsNoTracking().SingleAsync(x => x.Id == awarded.ContractId));
         contract.Direction.Should().Be(ContractDirection.Downstream);
         contract.Type.Should().Be(ContractType.Supply);
@@ -65,10 +80,10 @@ public sealed class RfqsControllerTests(NihomeWebApplicationFactory factory) : I
         contract.Value.Should().Be(14.15m);
         contract.Status.Should().Be(ContractStatus.Draft);
         (await WithDbAsync(db => db.ContractLines.CountAsync(x => x.ContractId == contract.Id))).Should().Be(2);
-        var awardReplay = await SendAsync(fixture.ProjectId, $"/{detail.Header.Id}/award", award, awardKey);
+        var awardReplay = await SendAsync(fixture.ProjectId, $"/{detail.Header.Id}/award-batch", award, awardKey);
         (await DetailAsync(awardReplay)).ContractId.Should().Be(contract.Id);
         (await WithDbAsync(db => db.Contracts.CountAsync(x => x.OperationalProjectId == fixture.ProjectId))).Should().Be(1);
-        (await SendAsync(fixture.ProjectId, $"/{detail.Header.Id}/award", award)).StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await SendAsync(fixture.ProjectId, $"/{detail.Header.Id}/award-batch", award)).StatusCode.Should().Be(HttpStatusCode.Conflict);
         var notified = await WithDbAsync(db => db.Notifications.Where(x => x.RefEntityType == "Rfq" && x.RefEntityId == detail.Header.Id)
             .Select(x => new { x.TemplateCode, x.UserId }).ToListAsync());
         notified.Count(x => x.TemplateCode == "procurement.rfq.issued").Should().Be(2);
@@ -308,8 +323,19 @@ public sealed class RfqsControllerTests(NihomeWebApplicationFactory factory) : I
         await WithDbAsync(async db => { (await db.RfqBids.FindAsync(currentId))!.ValidUntil = DateTime.UtcNow.AddSeconds(-1); await db.SaveChangesAsync(); });
         await LoginAsync("BGD");
         foreach (var rejectedId in new[] { bidId, currentId })
-            (await SendAsync(fixture.ProjectId, $"/{detail.Header.Id}/award", new RfqAwardRequest
-            { BidId = rejectedId, RowVersion = detail.Header.RowVersion, Reason = "Attempt invalid award" })).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            (await SendAsync(fixture.ProjectId, $"/{detail.Header.Id}/award-batch", new RfqBatchAwardRequest
+            {
+                RowVersion = detail.Header.RowVersion,
+                Reason = "Attempt invalid award",
+                Lines = detail.Lines.Select(line => new RfqBatchAwardLineRequest
+                {
+                    BidId = rejectedId,
+                    RfqLineId = line.Id,
+                    Quantity = line.Quantity,
+                    ContractType = ContractType.Supply,
+                    MaterialRequestAllocations = [new() { MaterialRequestLineId = int.MaxValue, Quantity = line.Quantity }],
+                }).ToList(),
+            })).StatusCode.Should().Be(HttpStatusCode.BadRequest);
         (await WithDbAsync(db => db.Contracts.CountAsync(x => x.OperationalProjectId == fixture.ProjectId))).Should().Be(0);
         (await ReadAsync(detail)).Header.RowVersion.Should().Be(detail.Header.RowVersion);
     }
@@ -375,6 +401,17 @@ public sealed class RfqsControllerTests(NihomeWebApplicationFactory factory) : I
         await LoginAsync("PROCUREMENT");
         var detail = await SubmitAsync(await TransitionAsync(await CreateAsync(fixture), "issue"), fixture.VendorId, 10, 20);
         detail = await TransitionAsync(detail, "evaluate");
+        detail = await DetailAsync(await SendAsync(fixture.ProjectId, $"/{detail.Header.Id}/bids/evaluate",
+            new RfqBidEvaluationRequest
+            {
+                BidId = detail.Bids.Single().Id,
+                CommercialScore = 80m,
+                Note = "Commercial evidence reviewed before award.",
+                RowVersion = detail.Header.RowVersion
+            }));
+        var materialRequestLineIds = await CreateApprovedMaterialRequestLinesAsync(fixture);
+        var award = BatchAward(detail, detail.Bids.Single().Id, materialRequestLineIds,
+            "Selected after evaluation");
         await WithDbAsync(async db =>
         {
             if (change == "owner-left")
@@ -395,8 +432,7 @@ public sealed class RfqsControllerTests(NihomeWebApplicationFactory factory) : I
         try
         {
             await LoginAsync("BGD");
-            (await SendAsync(fixture.ProjectId, $"/{detail.Header.Id}/award", new RfqAwardRequest
-            { BidId = detail.Bids.Single().Id, Reason = "Selected after evaluation", RowVersion = detail.Header.RowVersion }))
+            (await SendAsync(fixture.ProjectId, $"/{detail.Header.Id}/award-batch", award))
                 .StatusCode.Should().Be(HttpStatusCode.BadRequest);
             var unchanged = await ReadAsync(detail);
             unchanged.Header.RowVersion.Should().Be(detail.Header.RowVersion);
@@ -408,6 +444,218 @@ public sealed class RfqsControllerTests(NihomeWebApplicationFactory factory) : I
         {
             if (change == "owner-inactive") await WithDbAsync(async db => { (await db.Users.FindAsync(fixture.OwnerId))!.IsActive = true; await db.SaveChangesAsync(); });
         }
+    }
+
+    [Fact]
+    public async Task VendorPortal_TokenScopesReadAndCreatesImmutableForeignCurrencyRevision()
+    {
+        var fixture = await SeedAsync();
+        await LoginAsync("PROCUREMENT");
+        var detail = await TransitionAsync(await CreateAsync(fixture), "issue");
+        const string token = "rfq-portal-test-token";
+        await WithDbAsync(async db =>
+        {
+            var invitation = await db.RfqInvitations.SingleAsync(x =>
+                x.RfqId == detail.Header.Id && x.VendorId == fixture.OtherVendorId);
+            invitation.PortalTokenHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token)));
+            invitation.PortalTokenExpiresAt = DateTime.UtcNow.AddDays(2);
+            await db.SaveChangesAsync();
+        });
+
+        Client.DefaultRequestHeaders.Authorization = null;
+        using var portalRequest = new HttpRequestMessage(HttpMethod.Get, "/api/vendor-rfqs");
+        portalRequest.Headers.Add("X-RFQ-Portal-Token", token);
+        var portalResponse = await Client.SendAsync(portalRequest);
+        portalResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var portalJson = await portalResponse.Content.ReadAsStringAsync();
+        portalJson.Should().Contain(detail.Header.Code)
+            .And.NotContain("budgetUnitPrice")
+            .And.NotContain("customerName")
+            .And.NotContain("bids");
+
+        var portalKey = Guid.NewGuid().ToString();
+        using var submit = new HttpRequestMessage(HttpMethod.Post, "/api/vendor-rfqs/bids")
+        {
+            Content = JsonContent.Create(new VendorPortalBidRequest
+            {
+                LeadTimeDays = 5,
+                PaymentTerms = "Net 30 after delivery",
+                ValidUntil = detail.Header.DueAt.AddDays(2),
+                Currency = "USD",
+                ExchangeRateToVnd = 25_000m,
+                FreightAmount = 10m,
+                DiscountPercent = 5m,
+                VatPercent = 10m,
+                Lines = detail.Lines.Select(x => new RfqBidLineRequest { RfqLineId = x.Id, UnitPrice = 2m }).ToList(),
+            })
+        };
+        submit.Headers.Add("X-RFQ-Portal-Token", token);
+        submit.Headers.Add("Idempotency-Key", portalKey);
+        var submitted = await Client.SendAsync(submit);
+        submitted.StatusCode.Should().Be(HttpStatusCode.OK, await submitted.Content.ReadAsStringAsync());
+        var stored = await WithDbAsync(db => db.RfqBids.AsNoTracking().SingleAsync(x =>
+            x.RfqId == detail.Header.Id && x.VendorId == fixture.OtherVendorId));
+        stored.SubmittedViaPortal.Should().BeTrue();
+        stored.Currency.Should().Be("USD");
+        stored.ExchangeRateToVnd.Should().Be(25_000m);
+        stored.TotalOriginal.Should().BeGreaterThan(stored.Subtotal);
+        stored.Total.Should().Be(stored.TotalOriginal * 25_000m);
+        (await WithDbAsync(db => db.Set<RfqEvent>().AsNoTracking().AnyAsync(x =>
+            x.RfqId == detail.Header.Id && x.Action == "portal-bid-submitted"))).Should().BeTrue();
+        await LoginAsync("PROCUREMENT");
+        var internalDetail = await ReadAsync(detail);
+        var portalBid = internalDetail.Bids.Single(x => x.VendorId == fixture.OtherVendorId);
+        portalBid.SubmittedViaPortal.Should().BeTrue();
+        portalBid.SubmittedBy.Should().Contain("Alternative supplier").And.Contain("vendor portal");
+        Client.DefaultRequestHeaders.Authorization = null;
+
+        const string otherToken = "other-rfq-portal-token";
+        await WithDbAsync(async db =>
+        {
+            var invitation = await db.RfqInvitations.SingleAsync(x =>
+                x.RfqId == detail.Header.Id && x.VendorId == fixture.VendorId);
+            invitation.PortalTokenHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(otherToken)));
+            invitation.PortalTokenExpiresAt = DateTime.UtcNow.AddDays(2);
+            await db.SaveChangesAsync();
+        });
+        using var crossTokenReplay = new HttpRequestMessage(HttpMethod.Post, "/api/vendor-rfqs/bids")
+        {
+            Content = JsonContent.Create(new VendorPortalBidRequest
+            {
+                LeadTimeDays = 5,
+                PaymentTerms = "Net 30 after delivery",
+                ValidUntil = detail.Header.DueAt.AddDays(2),
+                Currency = "USD",
+                ExchangeRateToVnd = 25_000m,
+                FreightAmount = 10m,
+                DiscountPercent = 5m,
+                VatPercent = 10m,
+                Lines = detail.Lines.Select(x => new RfqBidLineRequest { RfqLineId = x.Id, UnitPrice = 2m }).ToList(),
+            })
+        };
+        crossTokenReplay.Headers.Add("X-RFQ-Portal-Token", otherToken);
+        crossTokenReplay.Headers.Add("Idempotency-Key", portalKey);
+        (await Client.SendAsync(crossTokenReplay)).StatusCode.Should().Be(HttpStatusCode.Conflict);
+
+        using var invalidRequest = new HttpRequestMessage(HttpMethod.Get, "/api/vendor-rfqs");
+        invalidRequest.Headers.Add("X-RFQ-Portal-Token", "invalid-token");
+        (await Client.SendAsync(invalidRequest)).StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task BatchAward_SplitsLinesCreatesContractsAndBlocksMaterialRequestOverAllocation()
+    {
+        var fixture = await SeedAsync();
+        var materialRequestLineIds = await WithDbAsync(async db =>
+        {
+            var request = new MaterialRequest
+            {
+                OperationalProjectId = fixture.ProjectId,
+                Code = UniqueSlug("MR-RFQ-AWARD"),
+                Status = MaterialRequestStatus.Approved,
+                SiteRequesterUserId = fixture.PmId,
+                ResponsibleSiteUserId = fixture.PmId,
+                AssignedProcurementUserId = fixture.OwnerId,
+                RequiredAt = DateTime.UtcNow.AddDays(5),
+                ApprovedAt = DateTime.UtcNow,
+                Lines =
+                [
+                    new() { ProjectBoqLineId = fixture.LineIds[0], RequestedQuantity = 1.25m },
+                    new() { ProjectBoqLineId = fixture.LineIds[1], RequestedQuantity = 2m },
+                ],
+            };
+            db.MaterialRequests.Add(request);
+            await db.SaveChangesAsync();
+            return request.Lines.Select(x => x.Id).ToArray();
+        });
+
+        await LoginAsync("PROCUREMENT");
+        var detail = await TransitionAsync(await CreateAsync(fixture), "issue");
+        detail = await SubmitAsync(detail, fixture.VendorId, 10m, 20m);
+        detail = await SubmitAsync(detail, fixture.OtherVendorId, 8m, 22m);
+        detail = await TransitionAsync(detail, "evaluate");
+        var unevaluatedAward = new RfqBatchAwardRequest
+        {
+            Reason = "Must not award before commercial evaluation.",
+            RowVersion = detail.Header.RowVersion,
+            Lines =
+            [
+                new() { BidId = detail.Bids.Single(x => x.VendorId == fixture.VendorId).Id, RfqLineId = detail.Lines[0].Id, Quantity = 1.25m,
+                    ContractType = ContractType.Supply, MaterialRequestAllocations = [new() { MaterialRequestLineId = materialRequestLineIds[0], Quantity = 1.25m }] },
+                new() { BidId = detail.Bids.Single(x => x.VendorId == fixture.VendorId).Id, RfqLineId = detail.Lines[1].Id, Quantity = 2m,
+                    ContractType = ContractType.Supply, MaterialRequestAllocations = [new() { MaterialRequestLineId = materialRequestLineIds[1], Quantity = 2m }] },
+            ],
+        };
+        await LoginAsync("BGD");
+        (await SendAsync(fixture.ProjectId, $"/{detail.Header.Id}/award-batch", unevaluatedAward)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.Contracts.CountAsync(x => x.OperationalProjectId == fixture.ProjectId))).Should().Be(0);
+        await LoginAsync("PROCUREMENT");
+        foreach (var bid in detail.Bids.Where(x => x.IsCurrent))
+            detail = await DetailAsync(await SendAsync(fixture.ProjectId, $"/{detail.Header.Id}/bids/evaluate",
+                new RfqBidEvaluationRequest
+                {
+                    BidId = bid.Id,
+                    CommercialScore = bid.VendorId == fixture.VendorId ? 90m : 70m,
+                    Note = "Commercial terms reviewed by Procurement.",
+                    RowVersion = detail.Header.RowVersion
+                }));
+
+        var vendorBid = detail.Bids.Single(x => x.VendorId == fixture.VendorId && x.IsCurrent);
+        var otherBid = detail.Bids.Single(x => x.VendorId == fixture.OtherVendorId && x.IsCurrent);
+        var request = new RfqBatchAwardRequest
+        {
+            Reason = "Split delivery capacity and commercial risk.",
+            OverrideReason = "Two suppliers are required to meet the delivery window.",
+            RowVersion = detail.Header.RowVersion,
+            Lines =
+            [
+                new() { BidId = vendorBid.Id, RfqLineId = detail.Lines[0].Id, Quantity = .5m,
+                    ContractType = ContractType.Supply, MaterialRequestAllocations = [new() { MaterialRequestLineId = materialRequestLineIds[0], Quantity = .5m }] },
+                new() { BidId = otherBid.Id, RfqLineId = detail.Lines[0].Id, Quantity = .75m,
+                    ContractType = ContractType.Supply, MaterialRequestAllocations = [new() { MaterialRequestLineId = materialRequestLineIds[0], Quantity = .75m }] },
+                new() { BidId = vendorBid.Id, RfqLineId = detail.Lines[1].Id, Quantity = 2m,
+                    ContractType = ContractType.Supply, MaterialRequestAllocations = [new() { MaterialRequestLineId = materialRequestLineIds[1], Quantity = 2m }] },
+            ],
+        };
+
+        await LoginAsync("BGD");
+        var awarded = await DetailAsync(await SendAsync(fixture.ProjectId,
+            $"/{detail.Header.Id}/award-batch", request));
+        awarded.Header.Status.Should().Be(RfqStatus.Awarded);
+        awarded.Awards.Should().HaveCount(2);
+        var awards = awarded.Awards!;
+        awards.Select(x => x.ContractId).Should().OnlyHaveUniqueItems();
+        awards.SelectMany(x => x.Lines).Sum(x => x.MaterialRequestAllocations.Sum(a => a.Quantity)).Should().Be(3.25m);
+        (await WithDbAsync(db => db.Contracts.AsNoTracking().CountAsync(x => x.OperationalProjectId == fixture.ProjectId))).Should().Be(2);
+        (await WithDbAsync(db => db.RfqAwardMaterialRequestAllocations.AsNoTracking()
+            .Where(x => materialRequestLineIds.Contains(x.MaterialRequestLineId)).SumAsync(x => x.Quantity))).Should().Be(3.25m);
+
+        var secondFixture = await SeedAsync();
+        var secondDetail = await LoginCreateIssueBidEvaluateAsync(secondFixture);
+        var invalid = new RfqBatchAwardRequest
+        {
+            Reason = "Invalid over-allocation attempt.",
+            RowVersion = secondDetail.Header.RowVersion,
+            Lines = secondDetail.Lines.Select((line, index) => new RfqBatchAwardLineRequest
+            {
+                BidId = secondDetail.Bids.Single().Id,
+                RfqLineId = line.Id,
+                Quantity = line.Quantity,
+                ContractType = ContractType.Supply,
+                MaterialRequestAllocations = [new() { MaterialRequestLineId = materialRequestLineIds[Math.Min(index, 1)], Quantity = line.Quantity }],
+            }).ToList(),
+        };
+        await LoginAsync("BGD");
+        (await SendAsync(secondFixture.ProjectId, $"/{secondDetail.Header.Id}/award-batch", invalid)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.Contracts.CountAsync(x => x.OperationalProjectId == secondFixture.ProjectId))).Should().Be(0);
+    }
+
+    private async Task<RfqDetailResponse> LoginCreateIssueBidEvaluateAsync(Fixture fixture)
+    {
+        await LoginAsync("PROCUREMENT");
+        var detail = await TransitionAsync(await CreateAsync(fixture), "issue");
+        detail = await SubmitAsync(detail, fixture.VendorId, 10m, 20m);
+        return await TransitionAsync(detail, "evaluate");
     }
 
     private sealed record Fixture(int ProjectId, int CustomerId, int OwnerId, int PmId, int RevisionId, int[] LineIds, int VendorId, int OtherVendorId);
@@ -485,6 +733,48 @@ public sealed class RfqsControllerTests(NihomeWebApplicationFactory factory) : I
         await db.SaveChangesAsync();
         return document.Id;
     });
+
+    private Task<int[]> CreateApprovedMaterialRequestLinesAsync(Fixture fixture) => WithDbAsync(async db =>
+    {
+        var request = new MaterialRequest
+        {
+            OperationalProjectId = fixture.ProjectId,
+            Code = UniqueSlug("MR-RFQ-COVERAGE"),
+            Status = MaterialRequestStatus.Approved,
+            SiteRequesterUserId = fixture.PmId,
+            ResponsibleSiteUserId = fixture.PmId,
+            AssignedProcurementUserId = fixture.OwnerId,
+            RequiredAt = DateTime.UtcNow.AddDays(5),
+            ApprovedAt = DateTime.UtcNow,
+            Lines =
+            [
+                new() { ProjectBoqLineId = fixture.LineIds[0], RequestedQuantity = 1.25m },
+                new() { ProjectBoqLineId = fixture.LineIds[1], RequestedQuantity = 2m },
+            ],
+        };
+        db.MaterialRequests.Add(request);
+        await db.SaveChangesAsync();
+        return request.Lines.Select(x => x.Id).ToArray();
+    });
+
+    private static RfqBatchAwardRequest BatchAward(RfqDetailResponse detail, int bidId,
+        IReadOnlyList<int> materialRequestLineIds, string reason) => new()
+        {
+            Reason = reason,
+            RowVersion = detail.Header.RowVersion,
+            Lines = detail.Lines.Select((line, index) => new RfqBatchAwardLineRequest
+            {
+                BidId = bidId,
+                RfqLineId = line.Id,
+                ContractType = ContractType.Supply,
+                Quantity = line.Quantity,
+                MaterialRequestAllocations =
+                [
+                    new() { MaterialRequestLineId = materialRequestLineIds[index], Quantity = line.Quantity },
+            ],
+            }).ToList(),
+        };
+
     private static RfqUpsertRequest Draft(Fixture fixture) => new()
     {
         Title = "Concrete and steel package",

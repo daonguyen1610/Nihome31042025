@@ -1,4 +1,8 @@
 using System.Data;
+using System.Globalization;
+using System.Net;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
@@ -10,8 +14,12 @@ using NihomeBackend.Models.DTOs.Responses;
 
 namespace NihomeBackend.Services;
 
-public sealed class RfqService(AppDbContext db, INotificationService notifications)
+public sealed class RfqService(AppDbContext db, INotificationService notifications,
+    IEmailService email, IConfiguration configuration, ILogger<RfqService> logger)
 {
+    private static readonly HashSet<string> SupportedCurrencyCodes = CultureInfo.GetCultures(CultureTypes.SpecificCultures)
+        .Select(culture => new RegionInfo(culture.Name).ISOCurrencySymbol)
+        .Append("VND").ToHashSet(StringComparer.Ordinal);
     // Take an update lock before reading mutable state to avoid shared-lock
     // conversion deadlocks between concurrent awards or bid transitions.
     private IQueryable<Rfq> MutableRoots() => db.Database.IsSqlServer()
@@ -23,6 +31,12 @@ public sealed class RfqService(AppDbContext db, INotificationService notificatio
         .Include(x => x.Lines).Include(x => x.Invitations).ThenInclude(x => x.Vendor)
         .Include(x => x.Bids).ThenInclude(x => x.Lines)
         .Include(x => x.Bids).ThenInclude(x => x.SubmittedBy)
+        .Include(x => x.Bids).ThenInclude(x => x.EvaluatedBy)
+        .Include(x => x.Awards).ThenInclude(x => x.Contract)
+        .Include(x => x.Awards).ThenInclude(x => x.Vendor)
+        .Include(x => x.Awards).ThenInclude(x => x.RfqBid)
+        .Include(x => x.Awards).ThenInclude(x => x.Lines).ThenInclude(x => x.RfqBidLine)
+        .Include(x => x.Awards).ThenInclude(x => x.Lines).ThenInclude(x => x.MaterialRequestAllocations).ThenInclude(x => x.MaterialRequestLine).ThenInclude(x => x.MaterialRequest)
         .Include(x => x.Events).ThenInclude(x => x.Actor)
         .Include(x => x.Documents).ThenInclude(x => x.ProjectDocument)
         .Include(x => x.Contract).Include(x => x.AwardedBy).AsSplitQuery();
@@ -78,7 +92,15 @@ public sealed class RfqService(AppDbContext db, INotificationService notificatio
     public async Task<RfqDetailResponse?> GetAsync(int projectId, int id, CancellationToken ct)
     {
         var entity = await Query().AsNoTracking().SingleOrDefaultAsync(x => x.OperationalProjectId == projectId && x.Id == id, ct);
-        return entity is null ? null : Map(entity);
+        if (entity is null) return null;
+        var vendorIds = entity.Invitations.Select(x => x.VendorId).ToList();
+        var ratings = await db.VendorRatings.AsNoTracking()
+            .Where(x => vendorIds.Contains(x.VendorId) && x.Status == VendorRatingStatus.Approved)
+            .GroupBy(x => x.VendorId)
+            .Select(group => new { VendorId = group.Key, Score = group.Average(x => x.OverallScore) })
+            .ToDictionaryAsync(x => x.VendorId, x => x.Score, ct);
+        var materialRequests = await MaterialRequestOptionsAsync(entity, ct);
+        return Map(entity, ratings, materialRequests);
     }
 
     private IQueryable<ApplicationUser> Owners(int projectId) => db.Users.AsNoTracking().Where(u => u.IsActive &&
@@ -93,7 +115,8 @@ public sealed class RfqService(AppDbContext db, INotificationService notificatio
         var revisions = await ApprovedBoqs(projectId).Include(x => x.Lines).OrderByDescending(x => x.RevisionNumber).ToListAsync(ct);
         var vendors = await db.Vendors.AsNoTracking().Where(x => x.IsActive &&
             (x.VendorType == VendorType.Supplier || x.VendorType == VendorType.SubContractor || x.VendorType == VendorType.Both))
-            .OrderBy(x => x.CompanyName).Select(x => new RfqVendorResponse(x.Id, x.CompanyName, x.VendorType, x.IsActive)).ToListAsync(ct);
+            .OrderBy(x => x.CompanyName).Select(x => new RfqVendorResponse(x.Id, x.CompanyName,
+                x.VendorType, x.IsActive, false, null, null)).ToListAsync(ct);
         var owners = await Owners(projectId).OrderBy(x => x.FullName).Select(x => new RfqUserOption(x.Id, x.FullName ?? x.PhoneNumber)).ToListAsync(ct);
         var documents = await db.ProjectDocuments.AsNoTracking().Where(x => x.OperationalProjectId == projectId &&
             x.Category == ProjectDocumentCategory.Procurement && x.DeletedAt == null &&
@@ -128,6 +151,8 @@ public sealed class RfqService(AppDbContext db, INotificationService notificatio
         Require(vendors.Count == request.VendorIds.Count, "All invited vendors must be active suppliers or subcontractors.");
         Require(request.Lines.Count is > 0 and <= 500 && request.Lines.Select(x => x.ProjectBoqLineId).Distinct().Count() == request.Lines.Count,
             "Select 1 to 500 different BOQ lines.");
+        Require(request.PriceWeight + request.LeadTimeWeight + request.VendorRatingWeight + request.CommercialWeight == 100m,
+            "RFQ scoring weights must total exactly 100 percent.");
         var source = revision!.Lines.ToDictionary(x => x.Id);
         foreach (var line in request.Lines)
             Require(source.TryGetValue(line.ProjectBoqLineId, out var boq) && line.Quantity > 0 &&
@@ -139,6 +164,10 @@ public sealed class RfqService(AppDbContext db, INotificationService notificatio
         entity.DueAt = request.DueAt.ToUniversalTime();
         entity.Currency = revision.Currency;
         entity.Note = Trim(request.Note);
+        entity.PriceWeight = request.PriceWeight;
+        entity.LeadTimeWeight = request.LeadTimeWeight;
+        entity.VendorRatingWeight = request.VendorRatingWeight;
+        entity.CommercialWeight = request.CommercialWeight;
         // Keep retained child IDs stable and remove only draft-owned rows.
         foreach (var line in entity.Lines.Where(x => !request.Lines.Any(l => l.ProjectBoqLineId == x.ProjectBoqLineId)).ToList())
         {
@@ -176,6 +205,7 @@ public sealed class RfqService(AppDbContext db, INotificationService notificatio
     public async Task<RfqDetailResponse?> TransitionAsync(int projectId, int id, string action,
         ProcurementTransitionRequest request, int actor, CancellationToken ct)
     {
+        var portalDeliveries = new List<(RfqInvitation Invitation, string Token, string Email)>();
         await using var transaction = await BeginAsync(ct);
         await EnsureMutableProjectAsync(projectId, ct);
         var entity = await LoadMutableAsync(projectId, id, request.RowVersion, ct);
@@ -189,6 +219,19 @@ public sealed class RfqService(AppDbContext db, INotificationService notificatio
                 Require(entity.Invitations.All(x => x.Vendor.IsActive), "All invited vendors must still be active.");
                 entity.Status = RfqStatus.Issued;
                 entity.IssuedAt = DateTime.UtcNow;
+                foreach (var invitation in entity.Invitations)
+                {
+                    if (!ContactValidation.IsValidEmail(invitation.Vendor.Email))
+                    {
+                        invitation.InvitationDeliveryError = "Vendor email is missing or invalid; Procurement must record this quotation manually.";
+                        continue;
+                    }
+                    var token = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
+                    invitation.PortalTokenHash = HashPortalToken(token);
+                    invitation.PortalTokenExpiresAt = entity.DueAt;
+                    invitation.InvitationDeliveryError = null;
+                    portalDeliveries.Add((invitation, token, invitation.Vendor.Email!));
+                }
                 break;
             case "evaluate":
                 Require(entity.Status == RfqStatus.Issued && CurrentBids(entity).Any(x => x.WithdrawnAt == null), "Evaluation requires an issued RFQ with at least one submitted bid.");
@@ -207,8 +250,125 @@ public sealed class RfqService(AppDbContext db, INotificationService notificatio
         }
         Event(entity, action, actor, Trim(request.Reason));
         await CrmConcurrency.SaveChangesAsync(db, ct);
-        if (action == "issue") await NotifyAsync(entity, "issued", ct);
         if (transaction is not null) await transaction.CommitAsync(ct);
+        if (action == "issue")
+        {
+            await NotifyBestEffortAsync(entity, "issued", ct);
+            await DeliverInvitationsAsync(entity, portalDeliveries, ct);
+        }
+        return await GetAsync(projectId, id, ct);
+    }
+
+    public async Task<VendorPortalRfqResponse?> GetPortalAsync(string token, CancellationToken ct)
+    {
+        var hash = HashPortalToken(token);
+        var invitation = await db.RfqInvitations.Include(x => x.Vendor)
+            .Include(x => x.Rfq).ThenInclude(x => x.Lines)
+            .SingleOrDefaultAsync(x => x.PortalTokenHash == hash, ct);
+        if (invitation is null || invitation.PortalTokenExpiresAt < DateTime.UtcNow ||
+            invitation.Rfq.Status != RfqStatus.Issued || !invitation.Vendor.IsActive) return null;
+        invitation.LastPortalAccessAt = DateTime.UtcNow;
+        await db.SaveChangesAsync(ct);
+        return new VendorPortalRfqResponse(invitation.Rfq.Code, invitation.Rfq.Title,
+            Utc(invitation.Rfq.DueAt), invitation.VendorName,
+            invitation.Rfq.Lines.OrderBy(x => x.Id).Select(x =>
+                new VendorPortalRfqLineResponse(x.Id, x.ItemCode, x.Description, x.Unit, x.Quantity)).ToList(),
+            invitation.Rfq.DueAt >= DateTime.UtcNow);
+    }
+
+    public async Task<VendorPortalRfqResponse?> SubmitPortalBidAsync(string token,
+        VendorPortalBidRequest request, CancellationToken ct)
+    {
+        var hash = HashPortalToken(token);
+        var invitation = await db.RfqInvitations.AsNoTracking().Include(x => x.Rfq)
+            .SingleOrDefaultAsync(x => x.PortalTokenHash == hash, ct);
+        if (invitation is null || invitation.PortalTokenExpiresAt < DateTime.UtcNow ||
+            invitation.Rfq.Status != RfqStatus.Issued) return null;
+        var bidRequest = new RfqBidRequest
+        {
+            VendorId = invitation.VendorId,
+            LeadTimeDays = request.LeadTimeDays,
+            PaymentTerms = request.PaymentTerms,
+            ValidUntil = request.ValidUntil,
+            Note = request.Note,
+            Lines = request.Lines,
+            DocumentIds = [],
+            RowVersion = CrmConcurrency.Encode(invitation.Rfq.RowVersion),
+            Currency = request.Currency,
+            ExchangeRateToVnd = request.ExchangeRateToVnd,
+            FreightAmount = request.FreightAmount,
+            DiscountPercent = request.DiscountPercent,
+            DiscountAmount = request.DiscountAmount,
+            VatPercent = request.VatPercent,
+        };
+        var result = await SubmitBidAsync(invitation.Rfq.OperationalProjectId, invitation.RfqId,
+            bidRequest, invitation.Rfq.OwnerUserId, ct);
+        if (result is null) return null;
+        var submitted = await db.RfqBids.Where(x => x.RfqId == invitation.RfqId && x.VendorId == invitation.VendorId)
+            .OrderByDescending(x => x.Revision).FirstAsync(ct);
+        submitted.SubmittedViaPortal = true;
+        var trackedRfq = await db.Rfqs.Include(x => x.Events).SingleAsync(x => x.Id == invitation.RfqId, ct);
+        Event(trackedRfq, "portal-bid-submitted", trackedRfq.OwnerUserId,
+            $"Vendor #{invitation.VendorId} submitted revision {submitted.Revision} through the secure portal.");
+        await db.SaveChangesAsync(ct);
+        return await GetPortalAsync(token, ct);
+    }
+
+    private async Task DeliverInvitationsAsync(Rfq entity,
+        IReadOnlyList<(RfqInvitation Invitation, string Token, string Email)> deliveries, CancellationToken ct)
+    {
+        var origin = configuration.GetValue<string>("Frontend:PublicBaseUrl") ??
+            configuration.GetSection("Frontend:AllowedOrigins").Get<string[]>()?.FirstOrDefault();
+        foreach (var delivery in deliveries)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(origin)) throw new InvalidOperationException("Frontend public URL is not configured.");
+                var link = $"{origin.TrimEnd('/')}/vendor/rfqs#token={delivery.Token}";
+                await email.SendEmailAsync(delivery.Email, $"RFQ {entity.Code}: {entity.Title}",
+                    $"<p>{WebUtility.HtmlEncode(delivery.Invitation.VendorName)},</p>" +
+                    $"<p>You are invited to quote for <strong>{WebUtility.HtmlEncode(entity.Title)}</strong>.</p>" +
+                    $"<p>Deadline: {entity.DueAt:O}</p><p><a href=\"{WebUtility.HtmlEncode(link)}\">Open secure quotation form</a></p>");
+                delivery.Invitation.InvitationSentAt = DateTime.UtcNow;
+                delivery.Invitation.InvitationDeliveryError = null;
+            }
+            catch (Exception exception)
+            {
+                delivery.Invitation.InvitationDeliveryError = exception.Message[..Math.Min(exception.Message.Length, 1000)];
+                logger.LogWarning(exception, "RFQ invitation delivery failed for invitation {InvitationId}.", delivery.Invitation.Id);
+            }
+        }
+        await db.SaveChangesAsync(ct);
+    }
+
+    private static string HashPortalToken(string token) =>
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token)));
+
+    public async Task<RfqDetailResponse?> ResendInvitationsAsync(int projectId, int id,
+        ProcurementTransitionRequest request, int actor, CancellationToken ct)
+    {
+        var deliveries = new List<(RfqInvitation Invitation, string Token, string Email)>();
+        await using var transaction = await BeginAsync(ct);
+        var entity = await LoadMutableAsync(projectId, id, request.RowVersion, ct);
+        if (entity is null) return null;
+        Require(entity.Status == RfqStatus.Issued && entity.DueAt > DateTime.UtcNow,
+            "Invitations can be resent only for an issued RFQ before its deadline.");
+        foreach (var invitation in entity.Invitations)
+        {
+            if (!ContactValidation.IsValidEmail(invitation.Vendor.Email))
+            {
+                invitation.InvitationDeliveryError = "Vendor email is missing or invalid; Procurement must record this quotation manually.";
+                continue;
+            }
+            var token = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
+            invitation.PortalTokenHash = HashPortalToken(token);
+            invitation.PortalTokenExpiresAt = entity.DueAt;
+            invitation.InvitationDeliveryError = null;
+            deliveries.Add((invitation, token, invitation.Vendor.Email!));
+        }
+        Event(entity, "invitations-resent", actor);
+        await SaveAsync(transaction, ct);
+        await DeliverInvitationsAsync(entity, deliveries, ct);
         return await GetAsync(projectId, id, ct);
     }
 
@@ -228,6 +388,12 @@ public sealed class RfqService(AppDbContext db, INotificationService notificatio
         foreach (var line in request.Lines)
             Require(sources.ContainsKey(line.RfqLineId) && line.UnitPrice >= 0 && decimal.Round(line.UnitPrice, 4) == line.UnitPrice,
                 "Unit price must be non-negative, use at most 4 decimal places, and refer to a line in this RFQ.");
+        var currency = request.Currency.Trim().ToUpperInvariant();
+        Require(SupportedCurrencyCodes.Contains(currency), "Bid currency must be a supported ISO 4217 code, for example VND or USD.");
+        Require(currency != "VND" || request.ExchangeRateToVnd == 1m,
+            "The VND exchange rate must equal 1.");
+        Require(request.DiscountPercent == 0m || request.DiscountAmount == 0m,
+            "Use either a discount percent or a discount amount, not both.");
         var bid = new RfqBid
         {
             VendorId = request.VendorId,
@@ -237,6 +403,12 @@ public sealed class RfqService(AppDbContext db, INotificationService notificatio
             ValidUntil = request.ValidUntil.ToUniversalTime(),
             Note = Trim(request.Note),
             SubmittedByUserId = actor,
+            Currency = currency,
+            ExchangeRateToVnd = request.ExchangeRateToVnd,
+            FreightAmount = request.FreightAmount,
+            DiscountPercent = request.DiscountPercent,
+            DiscountAmount = request.DiscountAmount,
+            VatPercent = request.VatPercent,
             Lines = request.Lines.Select(x => new RfqBidLine
             {
                 RfqLineId = x.RfqLineId,
@@ -244,7 +416,12 @@ public sealed class RfqService(AppDbContext db, INotificationService notificatio
                 Amount = CalculateLineAmount(sources[x.RfqLineId].Quantity, x.UnitPrice),
             }).ToList(),
         };
-        bid.Total = bid.Lines.Sum(x => x.Amount);
+        bid.Subtotal = bid.Lines.Sum(x => x.Amount);
+        var totals = CalculateCommercialTotals(bid.Subtotal, bid.FreightAmount,
+            bid.DiscountPercent, bid.DiscountAmount, bid.VatPercent, bid.ExchangeRateToVnd);
+        bid.DiscountAmount = totals.DiscountAmount;
+        bid.TotalOriginal = totals.TotalOriginal;
+        bid.Total = totals.TotalVnd;
         Require(bid.Total <= 99999999999999.9999m, "Quoted total exceeds the supported amount (99,999,999,999,999.9999 VND).");
         var documents = await ValidateDocumentsAsync(projectId, request.DocumentIds, ct);
         entity.Bids.Add(bid);
@@ -271,70 +448,210 @@ public sealed class RfqService(AppDbContext db, INotificationService notificatio
         return await GetAsync(projectId, id, ct);
     }
 
-    public async Task<RfqDetailResponse?> AwardAsync(int projectId, int id, RfqAwardRequest request, int actor, CancellationToken ct)
+    public async Task<RfqDetailResponse?> EvaluateBidAsync(int projectId, int id,
+        RfqBidEvaluationRequest request, int actor, CancellationToken ct)
     {
         await using var transaction = await BeginAsync(ct);
         await EnsureMutableProjectAsync(projectId, ct);
         var entity = await LoadMutableAsync(projectId, id, request.RowVersion, ct);
         if (entity is null) return null;
-        Require(entity.Status == RfqStatus.UnderEvaluation, "The RFQ must be under evaluation before award.");
-        Require(Trim(request.Reason)?.Length >= 3, "Award reason must contain at least 3 characters.");
+        Require(entity.Status == RfqStatus.UnderEvaluation,
+            "Bid scoring is available only while the RFQ is under evaluation.");
         var bid = CurrentBids(entity).SingleOrDefault(x => x.Id == request.BidId);
-        Require(bid is not null && Eligible(entity, bid), "Select a current, complete, unwithdrawn and unexpired bid from an active vendor.");
-        var vendor = entity.Invitations.Single(x => x.VendorId == bid!.VendorId).Vendor;
-        Require(request.ContractType is ContractType.Supply or ContractType.Subcontract &&
-            (vendor.VendorType == VendorType.Both || request.ContractType == ContractType.Supply && vendor.VendorType == VendorType.Supplier ||
-                request.ContractType == ContractType.Subcontract && vendor.VendorType == VendorType.SubContractor),
-            "Contract type must match the selected supplier or subcontractor.");
-        Require(entity.Currency == "VND", "Downstream contracts currently support VND only.");
-        Require(await Owners(projectId).AnyAsync(x => x.Id == entity.OwnerUserId, ct), "The RFQ owner is no longer an active Procurement member of this project.");
+        Require(bid is not null && bid.WithdrawnAt is null && bid.ValidUntil >= DateTime.UtcNow,
+            "Only a current, active quotation can be evaluated.");
+        bid!.CommercialScore = request.CommercialScore;
+        bid.EvaluationNote = request.Note.Trim();
+        bid.EvaluatedByUserId = actor;
+        bid.EvaluatedAt = DateTime.UtcNow;
+        Event(entity, "bid-evaluated", actor, $"Bid #{bid.Id}: {bid.CommercialScore:0.##}/100. {bid.EvaluationNote}");
+        await SaveAsync(transaction, ct);
+        return await GetAsync(projectId, id, ct);
+    }
+
+    public async Task<RfqDetailResponse?> BatchAwardAsync(int projectId, int id,
+        RfqBatchAwardRequest request, int actor, CancellationToken ct)
+    {
+        await using var transaction = await BeginAsync(ct);
+        await AcquireMaterialRequestAllocationLockAsync(projectId, ct);
+        await EnsureMutableProjectAsync(projectId, ct);
+        var entity = await LoadMutableAsync(projectId, id, request.RowVersion, ct);
+        if (entity is null) return null;
+        Require(entity.Status == RfqStatus.UnderEvaluation, "The RFQ must be under evaluation before award.");
+        Require(request.Lines.Count > 0, "At least one award allocation is required.");
+        Require(request.Lines.All(x => decimal.Round(x.Quantity, 6) == x.Quantity),
+            "Award quantities support at most 6 decimal places.");
+        Require(await Owners(projectId).AnyAsync(x => x.Id == entity.OwnerUserId, ct),
+            "The RFQ owner is no longer an active Procurement member of this project.");
         var currentBoqId = await db.ProjectBoqRevisions.AsNoTracking()
             .Where(x => x.OperationalProjectId == projectId && x.Status == ProjectBoqRevisionStatus.Approved)
             .OrderByDescending(x => x.ApprovedAt).ThenByDescending(x => x.RevisionNumber)
             .Select(x => (int?)x.Id).FirstOrDefaultAsync(ct);
-        Require(currentBoqId == entity.SourceBoqRevisionId, "The approved BOQ has changed. Cancel this RFQ and prepare a new request against the current BOQ.");
-        // Store the entire comparison as it existed at decision time, including non-selected revisions.
-        entity.AwardSnapshotJson = JsonSerializer.Serialize(Map(entity));
-        var contract = new Contract
+        Require(currentBoqId == entity.SourceBoqRevisionId,
+            "The approved BOQ has changed. Cancel this RFQ and prepare a new request against the current BOQ.");
+
+        var currentBids = CurrentBids(entity).ToDictionary(x => x.Id);
+        var rfqLines = entity.Lines.ToDictionary(x => x.Id);
+        foreach (var allocation in request.Lines)
         {
-            ContractNumber = $"PO-{entity.Code}",
-            CustomerId = entity.OperationalProject.CustomerId,
-            OperationalProjectId = projectId,
-            Direction = ContractDirection.Downstream,
-            Type = request.ContractType,
-            VendorId = bid!.VendorId,
-            OwnerUserId = entity.OwnerUserId,
-            Status = ContractStatus.Draft,
-            Value = decimal.Round(bid.Total, 2, MidpointRounding.AwayFromZero),
-            ScopeOfWork = entity.Title,
-            Note = bid.PaymentTerms,
-            CreatedByUserId = actor,
-            UpdatedByUserId = actor,
-        };
-        db.Contracts.Add(contract);
-        foreach (var line in bid.Lines)
-        {
-            var source = entity.Lines.Single(x => x.Id == line.RfqLineId);
-            db.ContractLines.Add(new ContractLine
-            {
-                Contract = contract,
-                ProjectBoqLineId = source.ProjectBoqLineId,
-                ProcurementOwnerUserId = entity.OwnerUserId,
-                Quantity = source.Quantity,
-                NegotiatedUnitPrice = line.UnitPrice,
-            });
+            Require(rfqLines.ContainsKey(allocation.RfqLineId), "Every award allocation must reference a line in this RFQ.");
+            Require(currentBids.TryGetValue(allocation.BidId, out var bid) &&
+                bid.WithdrawnAt is null && bid.ValidUntil >= DateTime.UtcNow &&
+                entity.Invitations.Any(x => x.VendorId == bid.VendorId && x.Vendor.IsActive) &&
+                bid.Lines.Any(x => x.RfqLineId == allocation.RfqLineId),
+                "Every award allocation must use a current, unexpired quote for that RFQ line.");
+            var vendor = entity.Invitations.Single(x => x.VendorId == bid!.VendorId).Vendor;
+            Require(allocation.ContractType is ContractType.Supply or ContractType.Subcontract &&
+                (vendor.VendorType == VendorType.Both || allocation.ContractType == ContractType.Supply && vendor.VendorType == VendorType.Supplier ||
+                 allocation.ContractType == ContractType.Subcontract && vendor.VendorType == VendorType.SubContractor),
+                "Contract type must match the selected supplier or subcontractor.");
+            if (allocation.ContractType == ContractType.Supply)
+                Require(allocation.MaterialRequestAllocations.Count > 0 &&
+                    allocation.MaterialRequestAllocations.Sum(x => x.Quantity) == allocation.Quantity,
+                    "Each supplied quantity must be fully allocated to approved Material Request demand.");
+            else
+                Require(allocation.MaterialRequestAllocations.Count == 0,
+                    "Subcontract allocations do not use Material Request demand.");
         }
-        entity.Contract = contract;
-        entity.SelectedBidId = bid.Id;
-        entity.AwardedAt = DateTime.UtcNow;
+        foreach (var line in entity.Lines)
+            Require(request.Lines.Where(x => x.RfqLineId == line.Id).Sum(x => x.Quantity) == line.Quantity,
+                $"Award allocations for {line.ItemCode} must equal the RFQ quantity {line.Quantity}.");
+
+        var requestedMrIds = request.Lines.SelectMany(x => x.MaterialRequestAllocations)
+            .Select(x => x.MaterialRequestLineId).Distinct().ToList();
+        var mrLines = await db.MaterialRequestLines.Include(x => x.MaterialRequest)
+            .Where(x => requestedMrIds.Contains(x.Id) && x.MaterialRequest.OperationalProjectId == projectId &&
+                (x.MaterialRequest.Status == MaterialRequestStatus.Approved ||
+                 x.MaterialRequest.Status == MaterialRequestStatus.PartiallyFulfilled))
+            .ToDictionaryAsync(x => x.Id, ct);
+        Require(mrLines.Count == requestedMrIds.Count,
+            "Material Request allocations must reference approved, unfulfilled demand in this project.");
+        var alreadyAllocated = await db.RfqAwardMaterialRequestAllocations.AsNoTracking()
+            .Where(x => requestedMrIds.Contains(x.MaterialRequestLineId))
+            .GroupBy(x => x.MaterialRequestLineId)
+            .Select(group => new { Id = group.Key, Quantity = group.Sum(x => x.Quantity) })
+            .ToDictionaryAsync(x => x.Id, x => x.Quantity, ct);
+        foreach (var group in request.Lines.SelectMany(x => x.MaterialRequestAllocations)
+            .GroupBy(x => x.MaterialRequestLineId))
+        {
+            var mrLine = mrLines[group.Key];
+            Require(alreadyAllocated.GetValueOrDefault(group.Key) + group.Sum(x => x.Quantity) <= mrLine.RequestedQuantity,
+                $"Award allocation exceeds remaining demand for Material Request {mrLine.MaterialRequest.Code}.");
+        }
+        foreach (var allocation in request.Lines)
+            foreach (var mr in allocation.MaterialRequestAllocations)
+                Require(mrLines[mr.MaterialRequestLineId].ProjectBoqLineId == rfqLines[allocation.RfqLineId].ProjectBoqLineId,
+                    "Material Request allocation must reference the same BOQ line as the RFQ allocation.");
+
+        var ratings = await VendorRatingsAsync(entity, ct);
+        var scores = CalculateScores(entity, ratings);
+        Require(request.Lines.Select(x => x.BidId).Distinct().All(id => scores.GetValueOrDefault(id).HasValue),
+            "Every selected quotation must have a complete commercial evaluation before award.");
+        var selectedScores = request.Lines.Select(x => scores.GetValueOrDefault(x.BidId)).Where(x => x.HasValue).Select(x => x!.Value).ToList();
+        var bestScore = scores.Values.Where(x => x.HasValue).Select(x => x!.Value).DefaultIfEmpty().Max();
+        if (selectedScores.Count > 0 && selectedScores.Any(x => x < bestScore))
+            Require(Trim(request.OverrideReason)?.Length >= 3,
+                "Selecting a quotation below the highest weighted score requires an override reason.");
+
+        entity.AwardSnapshotJson = JsonSerializer.Serialize(new { comparison = Map(entity, ratings), request.Lines, request.OverrideReason });
+        var now = DateTime.UtcNow;
+        foreach (var group in request.Lines.GroupBy(x => x.BidId))
+        {
+            var bid = currentBids[group.Key];
+            var vendor = entity.Invitations.Single(x => x.VendorId == bid.VendorId).Vendor;
+            var contractTypes = group.Select(x => x.ContractType).Distinct().ToList();
+            Require(contractTypes.Count == 1, "All allocations for one vendor must use the same contract type.");
+            var contractType = contractTypes.Single();
+            var originalBase = group.Sum(x => CalculateLineAmount(x.Quantity,
+                bid.Lines.Single(line => line.RfqLineId == x.RfqLineId).UnitPrice));
+            var originalValue = bid.Subtotal == 0m ? bid.TotalOriginal :
+                decimal.Round(bid.TotalOriginal * originalBase / bid.Subtotal, 4, MidpointRounding.AwayFromZero);
+            var valueVnd = decimal.Round(originalValue * bid.ExchangeRateToVnd, 4, MidpointRounding.AwayFromZero);
+            var contract = new Contract
+            {
+                ContractNumber = $"PO-{entity.Code}-{vendor.Id}",
+                CustomerId = entity.OperationalProject.CustomerId,
+                OperationalProjectId = projectId,
+                Direction = ContractDirection.Downstream,
+                Type = contractType,
+                VendorId = vendor.Id,
+                OwnerUserId = entity.OwnerUserId,
+                Status = ContractStatus.Draft,
+                Value = decimal.Round(valueVnd, 2, MidpointRounding.AwayFromZero),
+                ScopeOfWork = entity.Title,
+                Note = $"{bid.PaymentTerms}\n{bid.Currency} @ {bid.ExchangeRateToVnd:0.########} VND",
+                CreatedByUserId = actor,
+                UpdatedByUserId = actor,
+            };
+            var award = new RfqAward
+            {
+                Rfq = entity,
+                RfqBid = bid,
+                Vendor = vendor,
+                Contract = contract,
+                Currency = bid.Currency,
+                ExchangeRateToVnd = bid.ExchangeRateToVnd,
+                OriginalValue = originalValue,
+                ValueVnd = valueVnd,
+                AwardedAt = now,
+                AwardedByUserId = actor,
+            };
+            foreach (var allocation in group)
+            {
+                var bidLine = bid.Lines.Single(x => x.RfqLineId == allocation.RfqLineId);
+                var source = rfqLines[allocation.RfqLineId];
+                var amountOriginal = CalculateLineAmount(allocation.Quantity, bidLine.UnitPrice);
+                var amountVnd = decimal.Round(amountOriginal * bid.ExchangeRateToVnd, 4, MidpointRounding.AwayFromZero);
+                var contractLine = new ContractLine
+                {
+                    Contract = contract,
+                    ProjectBoqLineId = source.ProjectBoqLineId,
+                    ProcurementOwnerUserId = entity.OwnerUserId,
+                    Quantity = allocation.Quantity,
+                    NegotiatedUnitPrice = decimal.Round(bidLine.UnitPrice * bid.ExchangeRateToVnd, 4, MidpointRounding.AwayFromZero),
+                };
+                db.ContractLines.Add(contractLine);
+                award.Lines.Add(new RfqAwardLine
+                {
+                    RfqLine = source,
+                    RfqBidLine = bidLine,
+                    Quantity = allocation.Quantity,
+                    UnitPrice = bidLine.UnitPrice,
+                    AmountOriginal = amountOriginal,
+                    AmountVnd = amountVnd,
+                    MaterialRequestAllocations = allocation.MaterialRequestAllocations.Select(x =>
+                        new RfqAwardMaterialRequestAllocation
+                        { MaterialRequestLineId = x.MaterialRequestLineId, Quantity = x.Quantity }).ToList(),
+                });
+            }
+            db.RfqAwards.Add(award);
+            if (entity.Contract is null) { entity.Contract = contract; entity.SelectedBid = bid; }
+        }
+        entity.AwardedAt = now;
         entity.AwardedByUserId = actor;
         entity.AwardReason = request.Reason.Trim();
         entity.Status = RfqStatus.Awarded;
-        Event(entity, "awarded", actor, entity.AwardReason);
+        Event(entity, "batch-awarded", actor, string.Join(" ", new[] { entity.AwardReason, Trim(request.OverrideReason) }.Where(x => x is not null)));
         await CrmConcurrency.SaveChangesAsync(db, ct);
-        await NotifyAsync(entity, "awarded", ct);
         if (transaction is not null) await transaction.CommitAsync(ct);
+        await NotifyBestEffortAsync(entity, "awarded", ct);
         return await GetAsync(projectId, id, ct);
+    }
+
+    private async Task AcquireMaterialRequestAllocationLockAsync(int projectId, CancellationToken ct)
+    {
+        if (!db.Database.IsSqlServer()) return;
+        var resource = $"rfq-mr-allocation:project:{projectId}";
+        var result = new SqlParameter("@lockResult", SqlDbType.Int) { Direction = ParameterDirection.Output };
+        await db.Database.ExecuteSqlInterpolatedAsync($"""
+            EXEC {result} = sys.sp_getapplock
+                @Resource = {resource},
+                @LockMode = 'Exclusive',
+                @LockOwner = 'Transaction',
+                @LockTimeout = 15000;
+            """, ct);
+        if ((int)result.Value < 0)
+            throw new CrmConcurrencyException("Material Request allocation is busy. Reload and retry the award.");
     }
 
     public async Task<RfqDetailResponse?> AttachDocumentAsync(int projectId, int id, RfqAttachDocumentRequest request, int actor, CancellationToken ct)
@@ -394,6 +711,19 @@ public sealed class RfqService(AppDbContext db, INotificationService notificatio
         await notifications.NotifyManyFromTemplateAsync(active, $"procurement.rfq.{action}",
             new Dictionary<string, string> { ["code"] = entity.Code, ["title"] = entity.Title },
             "Rfq", entity.Id, $"/admin/procurement-control/rfqs?projectId={entity.OperationalProjectId}&rfqId={entity.Id}");
+    }
+
+    private async Task NotifyBestEffortAsync(Rfq entity, string action, CancellationToken ct)
+    {
+        try
+        {
+            await NotifyAsync(entity, action, ct);
+        }
+        catch (Exception exception)
+        {
+            logger.LogWarning(exception,
+                "RFQ {RfqId} {Action} committed but notification delivery failed.", entity.Id, action);
+        }
     }
 
     private async Task EnsureMutableProjectAsync(int projectId, CancellationToken ct)
@@ -500,6 +830,79 @@ public sealed class RfqService(AppDbContext db, INotificationService notificatio
         return amount;
     }
 
+    internal static (decimal DiscountAmount, decimal TotalOriginal, decimal TotalVnd) CalculateCommercialTotals(
+        decimal subtotal, decimal freight, decimal discountPercent, decimal discountAmount,
+        decimal vatPercent, decimal exchangeRateToVnd)
+    {
+        Require(subtotal >= 0 && freight >= 0 && discountPercent is >= 0 and <= 100 &&
+            discountAmount >= 0 && vatPercent is >= 0 and <= 100 && exchangeRateToVnd > 0,
+            "Commercial values and exchange rate are outside the supported range.");
+        Require(discountPercent == 0 || discountAmount == 0,
+            "Use either a discount percent or a discount amount, not both.");
+        var appliedDiscount = discountPercent > 0
+            ? decimal.Round(subtotal * discountPercent / 100m, 4, MidpointRounding.AwayFromZero)
+            : discountAmount;
+        var taxable = subtotal + freight - appliedDiscount;
+        Require(taxable >= 0, "Discount cannot exceed subtotal plus freight.");
+        var vat = decimal.Round(taxable * vatPercent / 100m, 4, MidpointRounding.AwayFromZero);
+        var original = decimal.Round(taxable + vat, 4, MidpointRounding.AwayFromZero);
+        var vnd = decimal.Round(original * exchangeRateToVnd, 4, MidpointRounding.AwayFromZero);
+        Require(original <= 99999999999999.9999m && vnd <= 99999999999999.9999m,
+            "Commercial total exceeds the supported amount.");
+        return (appliedDiscount, original, vnd);
+    }
+
+    private async Task<Dictionary<int, decimal>> VendorRatingsAsync(Rfq entity, CancellationToken ct)
+    {
+        var vendorIds = entity.Invitations.Select(x => x.VendorId).ToList();
+        return await db.VendorRatings.AsNoTracking()
+            .Where(x => vendorIds.Contains(x.VendorId) && x.Status == VendorRatingStatus.Approved)
+            .GroupBy(x => x.VendorId)
+            .Select(group => new { VendorId = group.Key, Score = group.Average(x => x.OverallScore) })
+            .ToDictionaryAsync(x => x.VendorId, x => x.Score, ct);
+    }
+
+    private async Task<IReadOnlyList<RfqMaterialRequestOptionResponse>> MaterialRequestOptionsAsync(
+        Rfq entity, CancellationToken ct)
+    {
+        var projectBoqLineIds = entity.Lines.Select(x => x.ProjectBoqLineId).ToList();
+        var lines = await db.MaterialRequestLines.AsNoTracking().Include(x => x.MaterialRequest)
+            .Where(x => projectBoqLineIds.Contains(x.ProjectBoqLineId) &&
+                x.MaterialRequest.OperationalProjectId == entity.OperationalProjectId &&
+                (x.MaterialRequest.Status == MaterialRequestStatus.Approved ||
+                 x.MaterialRequest.Status == MaterialRequestStatus.PartiallyFulfilled))
+            .OrderBy(x => x.MaterialRequest.RequiredAt).ThenBy(x => x.Id).ToListAsync(ct);
+        var ids = lines.Select(x => x.Id).ToList();
+        var allocated = await db.RfqAwardMaterialRequestAllocations.AsNoTracking()
+            .Where(x => ids.Contains(x.MaterialRequestLineId))
+            .GroupBy(x => x.MaterialRequestLineId)
+            .Select(group => new { Id = group.Key, Quantity = group.Sum(x => x.Quantity) })
+            .ToDictionaryAsync(x => x.Id, x => x.Quantity, ct);
+        return lines.Select(x => new RfqMaterialRequestOptionResponse(x.Id, x.MaterialRequestId,
+            x.MaterialRequest.Code, x.ProjectBoqLineId, x.RequestedQuantity,
+            allocated.GetValueOrDefault(x.Id), x.RequestedQuantity - allocated.GetValueOrDefault(x.Id))).ToList();
+    }
+
+    private static Dictionary<int, decimal?> CalculateScores(Rfq entity,
+        IReadOnlyDictionary<int, decimal>? vendorRatings)
+    {
+        var current = CurrentBids(entity).ToList();
+        var eligible = current.Where(x => Eligible(entity, x)).ToList();
+        var lowest = eligible.Select(x => (decimal?)x.Total).Min();
+        var minimumLeadTime = eligible.Select(x => (int?)x.LeadTimeDays).Min();
+        return current.ToDictionary(x => x.Id, x =>
+        {
+            if (!eligible.Contains(x) || entity.CommercialWeight > 0 && !x.CommercialScore.HasValue) return (decimal?)null;
+            var price = lowest == 0 ? x.Total == 0 ? 100m : 0m : decimal.Round(lowest!.Value / x.Total * 100m, 2);
+            var lead = minimumLeadTime == 0 ? x.LeadTimeDays == 0 ? 100m : 0m :
+                decimal.Round((decimal)minimumLeadTime!.Value / x.LeadTimeDays * 100m, 2);
+            var rating = vendorRatings?.GetValueOrDefault(x.VendorId) ?? 50m;
+            return decimal.Round((price * entity.PriceWeight + lead * entity.LeadTimeWeight +
+                rating * entity.VendorRatingWeight + (x.CommercialScore ?? 0m) * entity.CommercialWeight) / 100m,
+                2, MidpointRounding.AwayFromZero);
+        });
+    }
+
     private static void Require(bool condition, string message)
     {
         if (!condition) throw new ProcurementOperationException(message);
@@ -516,11 +919,13 @@ public sealed class RfqService(AppDbContext db, INotificationService notificatio
     private static bool Eligible(Rfq entity, RfqBid bid) => bid.WithdrawnAt is null && bid.ValidUntil >= DateTime.UtcNow &&
         bid.Lines.Count == entity.Lines.Count && entity.Invitations.Any(x => x.VendorId == bid.VendorId && x.Vendor.IsActive);
 
-    private static RfqDetailResponse Map(Rfq entity)
+    private static RfqDetailResponse Map(Rfq entity, IReadOnlyDictionary<int, decimal>? vendorRatings = null,
+        IReadOnlyList<RfqMaterialRequestOptionResponse>? materialRequests = null)
     {
         var current = CurrentBids(entity).ToList();
         var eligible = current.Where(x => Eligible(entity, x)).ToList();
         var lowest = eligible.Select(x => (decimal?)x.Total).Min();
+        var scores = CalculateScores(entity, vendorRatings);
         var header = new RfqListItemResponse(entity.Id, entity.OperationalProjectId, entity.Code, entity.Title,
             entity.OperationalProject.Code, entity.OperationalProject.Name, entity.OperationalProject.Customer.Name,
             entity.SourceBoqRevisionId, entity.SourceBoqRevision.RevisionNumber, entity.Status, entity.OwnerUserId, entity.Owner.FullName ?? entity.Owner.PhoneNumber,
@@ -530,15 +935,37 @@ public sealed class RfqService(AppDbContext db, INotificationService notificatio
             entity.Invitations.Any(v => v.VendorId == x.VendorId && v.Vendor.IsActive)).SelectMany(x => x.Lines).ToList();
         return new(header, entity.Currency, entity.Note,
             entity.Lines.OrderBy(x => x.Id).Select(x => new RfqLineResponse(x.Id, x.ProjectBoqLineId, x.ItemCode, x.Description, x.Unit,
-                x.Quantity, x.BudgetUnitPrice, validLines.Where(l => l.RfqLineId == x.Id).Select(l => (decimal?)l.UnitPrice).Min())).ToList(),
-            entity.Invitations.OrderBy(x => x.Id).Select(x => new RfqVendorResponse(x.VendorId, x.VendorName, x.Vendor.VendorType, x.Vendor.IsActive)).ToList(),
+                x.Quantity, x.BudgetUnitPrice, validLines.Where(l => l.RfqLineId == x.Id).Select(l => (decimal?)(l.UnitPrice * l.RfqBid.ExchangeRateToVnd)).Min())).ToList(),
+            entity.Invitations.OrderBy(x => x.Id).Select(x => new RfqVendorResponse(x.VendorId, x.VendorName,
+                x.Vendor.VendorType, x.Vendor.IsActive, x.PortalTokenHash != null, Utc(x.InvitationSentAt),
+                x.InvitationDeliveryError)).ToList(),
             entity.Bids.OrderByDescending(x => x.SubmittedAt).ThenByDescending(x => x.Id).Select(x => new RfqBidResponse(x.Id, x.VendorId, x.Revision,
-                x.LeadTimeDays, x.PaymentTerms, Utc(x.ValidUntil), x.Note, Utc(x.SubmittedAt), x.SubmittedBy.FullName ?? x.SubmittedBy.PhoneNumber, Utc(x.WithdrawnAt),
+                x.LeadTimeDays, x.PaymentTerms, Utc(x.ValidUntil), x.Note, Utc(x.SubmittedAt),
+                x.SubmittedViaPortal
+                    ? $"{entity.Invitations.Single(invitation => invitation.VendorId == x.VendorId).VendorName} (vendor portal)"
+                    : x.SubmittedBy.FullName ?? x.SubmittedBy.PhoneNumber,
+                Utc(x.WithdrawnAt),
                 current.Contains(x), x.Lines.Count == entity.Lines.Count, eligible.Contains(x), eligible.Contains(x) && x.Total == lowest,
-                x.Total, x.Lines.Select(l => new RfqBidLineResponse(l.RfqLineId, l.UnitPrice, l.Amount)).ToList())).ToList(),
+                x.Total, x.Lines.Select(l => new RfqBidLineResponse(l.RfqLineId, l.UnitPrice, l.Amount,
+                    decimal.Round(l.UnitPrice * x.ExchangeRateToVnd, 4, MidpointRounding.AwayFromZero),
+                    decimal.Round(l.Amount * x.ExchangeRateToVnd, 4, MidpointRounding.AwayFromZero))).ToList(),
+                x.Currency, x.ExchangeRateToVnd, x.Subtotal, x.FreightAmount, x.DiscountPercent,
+                x.DiscountAmount, x.VatPercent, x.TotalOriginal, x.CommercialScore, scores.GetValueOrDefault(x.Id),
+                x.EvaluationNote, x.SubmittedViaPortal)).ToList(),
             entity.Events.OrderByDescending(x => x.At).ThenByDescending(x => x.Id).Select(x => new RfqEventResponse(x.Action, x.Actor.FullName ?? x.Actor.PhoneNumber, Utc(x.At), x.Reason)).ToList(),
             entity.Documents.Select(x => new RfqFileResponse(x.ProjectDocumentId, x.RfqBidId, x.ProjectDocument.OriginalFileName)).ToList(),
             entity.SelectedBidId, entity.ContractId, entity.Contract?.ContractNumber, Utc(entity.AwardedAt), entity.AwardedBy?.FullName,
-            entity.AwardReason, entity.AwardSnapshotJson);
+            entity.AwardReason, entity.AwardSnapshotJson,
+            new RfqScoringResponse(entity.PriceWeight, entity.LeadTimeWeight,
+                entity.VendorRatingWeight, entity.CommercialWeight),
+            entity.Awards.OrderBy(x => x.Id).Select(x => new RfqAwardResponse(x.Id, x.RfqBidId,
+                x.VendorId, x.Vendor.CompanyName, x.ContractId, x.Contract.ContractNumber, x.Currency,
+                x.ExchangeRateToVnd, x.OriginalValue, x.ValueVnd, Utc(x.AwardedAt),
+                x.Lines.Select(line => new RfqAwardLineResponse(line.RfqLineId, line.Quantity,
+                    line.UnitPrice, line.AmountOriginal, line.AmountVnd,
+                    line.MaterialRequestAllocations.Select(allocation =>
+                        new RfqMaterialRequestAllocationResponse(allocation.MaterialRequestLineId,
+                            allocation.MaterialRequestLine.MaterialRequest.Code, allocation.Quantity)).ToList())).ToList())).ToList(),
+            materialRequests ?? []);
     }
 }

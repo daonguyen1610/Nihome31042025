@@ -9,12 +9,17 @@ internal static class RfqModelConfiguration
     {
         model.Entity<Rfq>(b =>
         {
-            b.ToTable("rfqs");
+            b.ToTable("rfqs", table => table.HasCheckConstraint("CK_rfqs_scoring_weights",
+                "[PriceWeight] + [LeadTimeWeight] + [VendorRatingWeight] + [CommercialWeight] = 100"));
             b.Property(x => x.Code).HasMaxLength(60);
             b.Property(x => x.Title).HasMaxLength(200);
             b.Property(x => x.Currency).HasMaxLength(3);
             b.Property(x => x.Note).HasMaxLength(2000);
             b.Property(x => x.AwardReason).HasMaxLength(2000);
+            b.Property(x => x.PriceWeight).HasPrecision(5, 2);
+            b.Property(x => x.LeadTimeWeight).HasPrecision(5, 2);
+            b.Property(x => x.VendorRatingWeight).HasPrecision(5, 2);
+            b.Property(x => x.CommercialWeight).HasPrecision(5, 2);
             b.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
             b.Property(x => x.RowVersion).IsRowVersion();
             b.HasIndex(x => x.Code).IsUnique();
@@ -42,19 +47,38 @@ internal static class RfqModelConfiguration
         {
             b.ToTable("rfq_invitations");
             b.Property(x => x.VendorName).HasMaxLength(300);
+            b.Property(x => x.PortalTokenHash).HasMaxLength(64);
+            b.Property(x => x.InvitationDeliveryError).HasMaxLength(1000);
             b.HasOne(x => x.Rfq).WithMany(x => x.Invitations).HasForeignKey(x => x.RfqId).OnDelete(DeleteBehavior.Cascade);
             b.HasOne(x => x.Vendor).WithMany().HasForeignKey(x => x.VendorId).OnDelete(DeleteBehavior.Restrict);
             b.HasIndex(x => new { x.RfqId, x.VendorId }).IsUnique();
+            b.HasIndex(x => x.PortalTokenHash).IsUnique().HasFilter("[PortalTokenHash] IS NOT NULL");
         });
         model.Entity<RfqBid>(b =>
         {
-            b.ToTable("rfq_bids");
+            b.ToTable("rfq_bids", table =>
+            {
+                table.HasCheckConstraint("CK_rfq_bids_exchange_rate", "[ExchangeRateToVnd] > 0");
+                table.HasCheckConstraint("CK_rfq_bids_commercial_values",
+                    "[FreightAmount] >= 0 AND [DiscountPercent] >= 0 AND [DiscountPercent] <= 100 AND [DiscountAmount] >= 0 AND [VatPercent] >= 0 AND [VatPercent] <= 100");
+            });
             b.Property(x => x.PaymentTerms).HasMaxLength(1000);
             b.Property(x => x.Note).HasMaxLength(2000);
+            b.Property(x => x.Currency).HasMaxLength(3);
+            b.Property(x => x.ExchangeRateToVnd).HasPrecision(20, 8);
+            b.Property(x => x.Subtotal).HasPrecision(18, 4);
+            b.Property(x => x.FreightAmount).HasPrecision(18, 4);
+            b.Property(x => x.DiscountPercent).HasPrecision(5, 2);
+            b.Property(x => x.DiscountAmount).HasPrecision(18, 4);
+            b.Property(x => x.VatPercent).HasPrecision(5, 2);
+            b.Property(x => x.TotalOriginal).HasPrecision(18, 4);
+            b.Property(x => x.CommercialScore).HasPrecision(5, 2);
+            b.Property(x => x.EvaluationNote).HasMaxLength(2000);
             b.Property(x => x.Total).HasPrecision(18, 4);
             b.HasOne(x => x.Rfq).WithMany(x => x.Bids).HasForeignKey(x => x.RfqId).OnDelete(DeleteBehavior.Restrict);
             b.HasOne(x => x.Vendor).WithMany().HasForeignKey(x => x.VendorId).OnDelete(DeleteBehavior.Restrict);
             b.HasOne(x => x.SubmittedBy).WithMany().HasForeignKey(x => x.SubmittedByUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(x => x.EvaluatedBy).WithMany().HasForeignKey(x => x.EvaluatedByUserId).OnDelete(DeleteBehavior.NoAction);
             b.HasIndex(x => new { x.RfqId, x.VendorId, x.Revision }).IsUnique();
         });
         model.Entity<RfqBidLine>(b =>
@@ -81,6 +105,41 @@ internal static class RfqModelConfiguration
             b.HasOne(x => x.RfqBid).WithMany().HasForeignKey(x => x.RfqBidId).OnDelete(DeleteBehavior.Restrict);
             b.HasOne(x => x.ProjectDocument).WithMany().HasForeignKey(x => x.ProjectDocumentId).OnDelete(DeleteBehavior.Restrict);
             b.HasIndex(x => x.ProjectDocumentId).IsUnique();
+        });
+        model.Entity<RfqAward>(b =>
+        {
+            b.ToTable("rfq_awards");
+            b.Property(x => x.Currency).HasMaxLength(3);
+            b.Property(x => x.ExchangeRateToVnd).HasPrecision(20, 8);
+            b.Property(x => x.OriginalValue).HasPrecision(18, 4);
+            b.Property(x => x.ValueVnd).HasPrecision(18, 4);
+            b.HasOne(x => x.Rfq).WithMany(x => x.Awards).HasForeignKey(x => x.RfqId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(x => x.RfqBid).WithMany().HasForeignKey(x => x.RfqBidId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(x => x.Vendor).WithMany().HasForeignKey(x => x.VendorId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(x => x.Contract).WithMany().HasForeignKey(x => x.ContractId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(x => x.AwardedBy).WithMany().HasForeignKey(x => x.AwardedByUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasIndex(x => new { x.RfqId, x.VendorId }).IsUnique();
+            b.HasIndex(x => x.ContractId).IsUnique();
+        });
+        model.Entity<RfqAwardLine>(b =>
+        {
+            b.ToTable("rfq_award_lines");
+            b.Property(x => x.Quantity).HasPrecision(18, 6);
+            b.Property(x => x.UnitPrice).HasPrecision(18, 4);
+            b.Property(x => x.AmountOriginal).HasPrecision(18, 4);
+            b.Property(x => x.AmountVnd).HasPrecision(18, 4);
+            b.HasOne(x => x.RfqAward).WithMany(x => x.Lines).HasForeignKey(x => x.RfqAwardId).OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(x => x.RfqLine).WithMany().HasForeignKey(x => x.RfqLineId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(x => x.RfqBidLine).WithMany().HasForeignKey(x => x.RfqBidLineId).OnDelete(DeleteBehavior.Restrict);
+            b.HasIndex(x => new { x.RfqAwardId, x.RfqLineId });
+        });
+        model.Entity<RfqAwardMaterialRequestAllocation>(b =>
+        {
+            b.ToTable("rfq_award_material_request_allocations");
+            b.Property(x => x.Quantity).HasPrecision(18, 6);
+            b.HasOne(x => x.RfqAwardLine).WithMany(x => x.MaterialRequestAllocations).HasForeignKey(x => x.RfqAwardLineId).OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(x => x.MaterialRequestLine).WithMany().HasForeignKey(x => x.MaterialRequestLineId).OnDelete(DeleteBehavior.Restrict);
+            b.HasIndex(x => new { x.RfqAwardLineId, x.MaterialRequestLineId }).IsUnique();
         });
     }
 }

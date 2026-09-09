@@ -132,8 +132,29 @@ public sealed class RfqsController(RfqService service, IProjectAccessService acc
     [HttpPost("{id:int}/award"), RequirePermission("proc.rfqs", "award"), Idempotency("proc.rfqs.award", requireKey: true, requestGuardType: typeof(RfqIdempotencyGuard))]
     public Task<IActionResult> Award(int projectId, int id, RfqAwardRequest request, CancellationToken ct)
     {
+        return Task.FromResult<IActionResult>(StatusCode(StatusCodes.Status410Gone,
+            new { message = "The legacy whole-package award endpoint is retired. Use award-batch." }));
+    }
+
+    [HttpPost("{id:int}/bids/evaluate"), RequirePermission("proc.rfqs", "manage"), Idempotency("proc.rfqs.bid-evaluate", requireKey: true, requestGuardType: typeof(RfqIdempotencyGuard))]
+    public Task<IActionResult> EvaluateBid(int projectId, int id, RfqBidEvaluationRequest request, CancellationToken ct)
+    {
         request.RowVersion = CrmConcurrency.ResolveRequiredRequestToken(Request, request.RowVersion);
-        return Execute(projectId, "awarded", () => service.AwardAsync(projectId, id, request, UserId, ct), ct);
+        return Execute(projectId, "bid-evaluated", () => service.EvaluateBidAsync(projectId, id, request, UserId, ct), ct);
+    }
+
+    [HttpPost("{id:int}/award-batch"), RequirePermission("proc.rfqs", "award"), Idempotency("proc.rfqs.award-batch", requireKey: true, requestGuardType: typeof(RfqIdempotencyGuard))]
+    public Task<IActionResult> BatchAward(int projectId, int id, RfqBatchAwardRequest request, CancellationToken ct)
+    {
+        request.RowVersion = CrmConcurrency.ResolveRequiredRequestToken(Request, request.RowVersion);
+        return Execute(projectId, "batch-awarded", () => service.BatchAwardAsync(projectId, id, request, UserId, ct), ct);
+    }
+
+    [HttpPost("{id:int}/invitations/resend"), RequirePermission("proc.rfqs", "manage"), Idempotency("proc.rfqs.invitation-resend", requireKey: true, requestGuardType: typeof(RfqIdempotencyGuard))]
+    public Task<IActionResult> ResendInvitations(int projectId, int id, ProcurementTransitionRequest request, CancellationToken ct)
+    {
+        request.RowVersion = CrmConcurrency.ResolveRequiredRequestToken(Request, request.RowVersion);
+        return Execute(projectId, "invitations-resent", () => service.ResendInvitationsAsync(projectId, id, request, UserId, ct), ct);
     }
 
     [HttpPost("{id:int}/documents"), RequirePermission("proc.rfqs", "manage"), Idempotency("proc.rfqs.attach", requireKey: true, requestGuardType: typeof(RfqIdempotencyGuard))]

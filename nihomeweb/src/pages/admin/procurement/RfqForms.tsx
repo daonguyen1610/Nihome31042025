@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useI18n } from "@/lib/i18n";
-import type { RfqBidDraft, RfqDetail, RfqDraft, RfqReferences } from "@/services/rfqApi";
+import type { RfqBatchAwardDraft, RfqBidDraft, RfqDetail, RfqDraft, RfqReferences } from "@/services/rfqApi";
 
 export const rfqSelectClass = "h-11 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm";
 export function RfqField({ label, children }: { label: string; children: ReactNode }) {
@@ -25,6 +25,12 @@ export function RfqDraftForm({ detail, references, busy, onSave }: {
   const [dueAt, setDueAt] = useState(detail ? rfqLocalDate(detail.header.dueAt) : "");
   const [note, setNote] = useState(detail?.note ?? "");
   const [vendors, setVendors] = useState(detail?.vendors.map(x => x.id) ?? []);
+  const [weights, setWeights] = useState({
+    priceWeight: detail?.scoring?.priceWeight ?? 50,
+    leadTimeWeight: detail?.scoring?.leadTimeWeight ?? 20,
+    vendorRatingWeight: detail?.scoring?.vendorRatingWeight ?? 20,
+    commercialWeight: detail?.scoring?.commercialWeight ?? 10,
+  });
   const [quantities, setQuantities] = useState<Record<number, string>>(Object.fromEntries(detail?.lines.map(x => [x.projectBoqLineId, String(x.quantity)]) ?? []));
   const [error, setError] = useState("");
   const revision = references.revisions.find(x => x.id === revisionId);
@@ -39,9 +45,12 @@ export function RfqDraftForm({ detail, references, busy, onSave }: {
       x.quantity > (revision.lines.find(l => l.id === x.projectBoqLineId)?.quantity ?? 0))) {
       setError(t("rfq.validation.quantity")); return;
     }
+    if (Object.values(weights).some(value => value < 0 || value > 100) || Object.values(weights).reduce((sum, value) => sum + value, 0) !== 100) {
+      setError(t("rfq.validation.weights")); return;
+    }
     setError("");
     onSave({ title: title.trim(), sourceBoqRevisionId: revisionId, ownerUserId: ownerId, dueAt: new Date(dueAt).toISOString(),
-      note: note.trim(), vendorIds: vendors, lines, rowVersion: detail?.header.rowVersion });
+      note: note.trim(), vendorIds: vendors, lines, ...weights, rowVersion: detail?.header.rowVersion });
   }
   return <form onSubmit={submit} className="space-y-5">
     {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
@@ -71,6 +80,13 @@ export function RfqDraftForm({ detail, references, busy, onSave }: {
             onChange={e => setVendors(e.target.checked ? [...vendors, v.id] : vendors.filter(id => id !== v.id))} />{v.name}</label>)}
         </div>
       </fieldset>
+      <fieldset className="space-y-2"><legend className="text-sm font-medium">{t("rfq.scoring.weights")}</legend>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {(["priceWeight", "leadTimeWeight", "vendorRatingWeight", "commercialWeight"] as const).map(key =>
+            <RfqField key={key} label={t(`rfq.scoring.${key}`)}><Input type="number" min="0" max="100" step="0.01" value={weights[key]}
+              onChange={event => setWeights(current => ({ ...current, [key]: Number(event.target.value) }))} /></RfqField>)}
+        </div>
+      </fieldset>
       <RfqField label={t("rfq.field.note")}><Textarea maxLength={2000} value={note} onChange={e => setNote(e.target.value)} /></RfqField>
       <Button type="submit" disabled={busy}>{t("rfq.save")}</Button>
     </fieldset>
@@ -89,6 +105,12 @@ export function RfqBidForm({ detail, references, busy, onSave, onUpload }: {
   const [note, setNote] = useState("");
   const [prices, setPrices] = useState<Record<number, string>>({});
   const [documentIds, setDocumentIds] = useState<number[]>([]);
+  const [currency, setCurrency] = useState("VND");
+  const [exchangeRateToVnd, setExchangeRateToVnd] = useState("1");
+  const [freightAmount, setFreightAmount] = useState("0");
+  const [discountPercent, setDiscountPercent] = useState("0");
+  const [discountAmount, setDiscountAmount] = useState("0");
+  const [vatPercent, setVatPercent] = useState("0");
   const [error, setError] = useState("");
   function submit(event: FormEvent) {
     event.preventDefault();
@@ -96,9 +118,13 @@ export function RfqBidForm({ detail, references, busy, onSave, onUpload }: {
     if (!vendorId || !lines.length || !paymentTerms.trim() || !Number.isInteger(Number(leadTimeDays)) || documentIds.length > 20) { setError(t("rfq.validation.bid")); return; }
     if (new Date(validUntil).getTime() < new Date(detail.header.dueAt).getTime() || new Date(validUntil).getTime() <= Date.now()) { setError(t("rfq.validation.validity")); return; }
     if (lines.some(x => !Number.isFinite(x.unitPrice) || x.unitPrice < 0 || x.unitPrice > 999999999999.9999)) { setError(t("rfq.validation.price")); return; }
+    if (!/^[A-Z]{3}$/.test(currency) || Number(exchangeRateToVnd) <= 0 || currency === "VND" && Number(exchangeRateToVnd) !== 1 ||
+      Number(discountPercent) > 0 && Number(discountAmount) > 0) { setError(t("rfq.validation.commercial")); return; }
     setError("");
     onSave({ vendorId, leadTimeDays: Number(leadTimeDays), paymentTerms: paymentTerms.trim(), validUntil: new Date(validUntil).toISOString(),
-      note: note.trim(), lines, documentIds, rowVersion: detail.header.rowVersion });
+      note: note.trim(), lines, documentIds, currency, exchangeRateToVnd: Number(exchangeRateToVnd),
+      freightAmount: Number(freightAmount), discountPercent: Number(discountPercent),
+      discountAmount: Number(discountAmount), vatPercent: Number(vatPercent), rowVersion: detail.header.rowVersion });
   }
   return <form onSubmit={submit} className="space-y-5">
     {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
@@ -116,6 +142,14 @@ export function RfqBidForm({ detail, references, busy, onSave, onUpload }: {
         <RfqField label={t("rfq.field.leadTime")}><Input required type="number" min="0" max="3650" step="1" value={leadTimeDays} onChange={e => setLeadTimeDays(e.target.value)} /></RfqField>
         <RfqField label={t("rfq.field.validity")}><Input required type="datetime-local" value={validUntil} onChange={e => setValidUntil(e.target.value)} /></RfqField>
       </div>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <RfqField label={t("rfq.field.currency")}><Input required maxLength={3} value={currency} onChange={e => { const value = e.target.value.toUpperCase(); setCurrency(value); if (value === "VND") setExchangeRateToVnd("1"); }} /></RfqField>
+        <RfqField label={t("rfq.field.exchangeRate")}><Input required type="number" min="0.00000001" step="0.00000001" disabled={currency === "VND"} value={exchangeRateToVnd} onChange={e => setExchangeRateToVnd(e.target.value)} /></RfqField>
+        <RfqField label={t("rfq.field.freight")}><Input type="number" min="0" step="0.0001" value={freightAmount} onChange={e => setFreightAmount(e.target.value)} /></RfqField>
+        <RfqField label={t("rfq.field.discountPercent")}><Input type="number" min="0" max="100" step="0.01" value={discountPercent} onChange={e => setDiscountPercent(e.target.value)} /></RfqField>
+        <RfqField label={t("rfq.field.discountAmount")}><Input type="number" min="0" step="0.0001" value={discountAmount} onChange={e => setDiscountAmount(e.target.value)} /></RfqField>
+        <RfqField label={t("rfq.field.vatPercent")}><Input type="number" min="0" max="100" step="0.01" value={vatPercent} onChange={e => setVatPercent(e.target.value)} /></RfqField>
+      </div>
       <RfqField label={t("rfq.field.paymentTerms")}><Textarea required maxLength={1000} value={paymentTerms} onChange={e => setPaymentTerms(e.target.value)} /></RfqField>
       <RfqField label={t("rfq.field.note")}><Textarea maxLength={2000} value={note} onChange={e => setNote(e.target.value)} /></RfqField>
       <fieldset><legend className="mb-2 text-sm font-medium">{t("rfq.documents")}</legend>
@@ -126,5 +160,101 @@ export function RfqBidForm({ detail, references, busy, onSave, onUpload }: {
       </fieldset>
       <Button type="submit" disabled={busy}>{t("rfq.submitBid")}</Button>
     </fieldset>
+  </form>;
+}
+
+export function RfqEvaluationForm({ detail, busy, onSave }: {
+  detail: RfqDetail; busy: boolean; onSave: (bidId: number, score: number, note: string) => void;
+}) {
+  const { t } = useI18n();
+  const candidates = detail.bids.filter(bid => bid.isCurrent && !bid.withdrawnAt);
+  const [bidId, setBidId] = useState(candidates[0]?.id ?? 0);
+  const selected = candidates.find(bid => bid.id === bidId);
+  const [score, setScore] = useState(String(selected?.commercialScore ?? 50));
+  const [note, setNote] = useState(selected?.evaluationNote ?? "");
+  const [error, setError] = useState("");
+  return <form className="space-y-4" onSubmit={event => {
+    event.preventDefault();
+    const value = Number(score);
+    if (!bidId || value < 0 || value > 100 || note.trim().length < 3) { setError(t("rfq.validation.evaluation")); return; }
+    onSave(bidId, value, note.trim());
+  }}>
+    {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+    <RfqField label={t("rfq.field.bid")}><select className={rfqSelectClass} value={bidId} onChange={event => {
+      const next = candidates.find(bid => bid.id === Number(event.target.value));
+      setBidId(Number(event.target.value)); setScore(String(next?.commercialScore ?? 50)); setNote(next?.evaluationNote ?? "");
+    }}>{candidates.map(bid => <option key={bid.id} value={bid.id}>{detail.vendors.find(vendor => vendor.id === bid.vendorId)?.name} · #{bid.revision}</option>)}</select></RfqField>
+    <RfqField label={t("rfq.scoring.commercialScore")}><Input type="number" min="0" max="100" step="0.01" value={score} onChange={event => setScore(event.target.value)} /></RfqField>
+    <RfqField label={t("rfq.scoring.note")}><Textarea minLength={3} maxLength={2000} value={note} onChange={event => setNote(event.target.value)} /></RfqField>
+    <Button type="submit" disabled={busy}>{t("rfq.scoring.save")}</Button>
+  </form>;
+}
+
+type AwardRow = { key: number; rfqLineId: number; bidId: number; quantity: string; materialRequestLineId: number; contractType: "Supply" | "Subcontract" };
+
+export function RfqBatchAwardForm({ detail, busy, onSave }: {
+  detail: RfqDetail; busy: boolean; onSave: (draft: RfqBatchAwardDraft) => void;
+}) {
+  const { t } = useI18n();
+  const [nextKey, setNextKey] = useState(detail.lines.length + 1);
+  const initialRows = detail.lines.map((line, index) => {
+    const bid = detail.bids.find(item => item.isCurrent && !item.withdrawnAt &&
+      (detail.scoring.commercialWeight === 0 || item.weightedScore !== null) &&
+      item.lines.some(value => value.rfqLineId === line.id));
+    const request = detail.materialRequests.find(item => item.projectBoqLineId === line.projectBoqLineId && item.remainingQuantity > 0);
+    const vendor = detail.vendors.find(item => item.id === bid?.vendorId);
+    return { key: index + 1, rfqLineId: line.id, bidId: bid?.id ?? 0, quantity: String(line.quantity),
+      materialRequestLineId: request?.lineId ?? 0, contractType: vendor?.type === "SubContractor" ? "Subcontract" as const : "Supply" as const };
+  });
+  const [rows, setRows] = useState<AwardRow[]>(initialRows);
+  const [reason, setReason] = useState("");
+  const [overrideReason, setOverrideReason] = useState("");
+  const [error, setError] = useState("");
+  const update = (key: number, value: Partial<AwardRow>) => setRows(current => current.map(row => row.key === key ? { ...row, ...value } : row));
+  const add = (lineId: number) => { setRows(current => [...current, { key: nextKey, rfqLineId: lineId, bidId: 0, quantity: "", materialRequestLineId: 0, contractType: "Supply" }]); setNextKey(value => value + 1); };
+  return <form className="space-y-5" onSubmit={event => {
+    event.preventDefault();
+    const invalidCoverage = detail.lines.some(line => rows.filter(row => row.rfqLineId === line.id).reduce((sum, row) => sum + Number(row.quantity || 0), 0) !== line.quantity);
+    const selectedScores = rows.map(row => detail.bids.find(bid => bid.id === row.bidId)?.weightedScore).filter((score): score is number => score !== null && score !== undefined);
+    const bestScore = Math.max(...detail.bids.map(bid => bid.weightedScore ?? -1));
+    const needsOverride = selectedScores.some(score => score < bestScore);
+    if (reason.trim().length < 3 || invalidCoverage || rows.some(row => !row.bidId ||
+      row.contractType === "Supply" && !row.materialRequestLineId || Number(row.quantity) <= 0)) {
+      setError(t("rfq.validation.batchAward")); return;
+    }
+    if (needsOverride && overrideReason.trim().length < 3) { setError(t("rfq.validation.overrideReason")); return; }
+    onSave({ reason: reason.trim(), overrideReason: overrideReason.trim() || undefined, rowVersion: detail.header.rowVersion,
+      lines: rows.map(row => ({ bidId: row.bidId, rfqLineId: row.rfqLineId, contractType: row.contractType,
+        quantity: Number(row.quantity), materialRequestAllocations: row.contractType === "Supply"
+          ? [{ materialRequestLineId: row.materialRequestLineId, quantity: Number(row.quantity) }] : [] })) });
+  }}>
+    {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+    {detail.lines.map(line => <section key={line.id} className="space-y-3 border-y py-4">
+      <div className="flex items-center justify-between gap-3"><h3 className="font-medium">{line.itemCode} · {line.description} ({line.quantity} {line.unit})</h3>
+        <Button type="button" variant="outline" size="sm" onClick={() => add(line.id)}>{t("rfq.award.addSplit")}</Button></div>
+      {rows.filter(row => row.rfqLineId === line.id).map(row => {
+        const bid = detail.bids.find(item => item.id === row.bidId);
+        const vendor = detail.vendors.find(item => item.id === bid?.vendorId);
+        const bids = detail.bids.filter(item => item.isCurrent && !item.withdrawnAt &&
+          (detail.scoring.commercialWeight === 0 || item.weightedScore !== null) &&
+          item.lines.some(value => value.rfqLineId === line.id));
+        const requests = detail.materialRequests.filter(item => item.projectBoqLineId === line.projectBoqLineId && item.remainingQuantity > 0);
+        return <div key={row.key} className="grid gap-3 rounded-md border p-3 lg:grid-cols-[1.4fr_120px_1fr_150px_auto]">
+          <RfqField label={t("rfq.field.vendor")}><select className={rfqSelectClass} value={row.bidId || ""} onChange={event => {
+            const selectedBid = bids.find(item => item.id === Number(event.target.value));
+            const selectedVendor = detail.vendors.find(item => item.id === selectedBid?.vendorId);
+            update(row.key, { bidId: Number(event.target.value), contractType: selectedVendor?.type === "SubContractor" ? "Subcontract" : "Supply" });
+          }}><option value="">{t("rfq.choose")}</option>{bids.map(item => <option key={item.id} value={item.id}>{detail.vendors.find(v => v.id === item.vendorId)?.name} · #{item.revision}</option>)}</select></RfqField>
+          <RfqField label={t("rfq.field.quantity")}><Input type="number" min="0.000001" step="0.000001" value={row.quantity} onChange={event => update(row.key, { quantity: event.target.value })} /></RfqField>
+          <RfqField label={t("rfq.award.materialRequest")}><select disabled={row.contractType === "Subcontract"} className={rfqSelectClass} value={row.contractType === "Subcontract" ? "" : row.materialRequestLineId || ""} onChange={event => update(row.key, { materialRequestLineId: Number(event.target.value) })}><option value="">{row.contractType === "Subcontract" ? t("rfq.award.notApplicable") : t("rfq.choose")}</option>{requests.map(item => <option key={item.lineId} value={item.lineId}>{item.materialRequestCode} · {item.remainingQuantity}</option>)}</select></RfqField>
+          <RfqField label={t("rfq.field.contractType")}><select className={rfqSelectClass} value={row.contractType} onChange={event => { const contractType = event.target.value as AwardRow["contractType"]; update(row.key, { contractType, materialRequestLineId: contractType === "Subcontract" ? 0 : row.materialRequestLineId }); }}><option value="Supply">{t("rfq.supply")}</option><option value="Subcontract">{t("rfq.subcontract")}</option></select></RfqField>
+          <Button type="button" variant="outline" disabled={rows.filter(item => item.rfqLineId === line.id).length === 1} onClick={() => setRows(current => current.filter(item => item.key !== row.key))}>{t("common.delete")}</Button>
+          {vendor && <p className="text-xs text-muted-foreground lg:col-span-5">{vendor.name} · {bid?.currency} · {t("rfq.scoring.total")}: {bid?.weightedScore ?? "—"}</p>}
+        </div>;
+      })}
+    </section>)}
+    <RfqField label={t("rfq.field.reason")}><Textarea minLength={3} maxLength={2000} value={reason} onChange={event => setReason(event.target.value)} /></RfqField>
+    <RfqField label={t("rfq.award.overrideReason")}><Textarea minLength={3} maxLength={2000} value={overrideReason} onChange={event => setOverrideReason(event.target.value)} /></RfqField>
+    <Button type="submit" disabled={busy}>{t("rfq.award")}</Button>
   </form>;
 }
