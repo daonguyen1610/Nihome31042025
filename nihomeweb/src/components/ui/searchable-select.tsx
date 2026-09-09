@@ -33,6 +33,7 @@ export interface SearchableSelectProps {
   placeholder?: string;
   searchPlaceholder?: string;
   emptyText?: string;
+  ariaLabel?: string;
   disabled?: boolean;
   className?: string;
   /** Fixed pixel width for the popover; defaults to the trigger width. */
@@ -52,6 +53,7 @@ export function SearchableSelect({
   placeholder = "—",
   searchPlaceholder,
   emptyText,
+  ariaLabel,
   disabled,
   className,
   popoverWidthPx,
@@ -69,6 +71,7 @@ export function SearchableSelect({
           type="button"
           variant="outline"
           role="combobox"
+          aria-label={ariaLabel}
           aria-expanded={open}
           disabled={disabled}
           className={cn(

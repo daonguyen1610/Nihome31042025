@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type MouseEvent } from "react";
+import { MoveHorizontal } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { PageEmpty, PageError, PageLoading } from "@/components/PageState";
@@ -6,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useI18n } from "@/lib/i18n";
@@ -44,11 +46,15 @@ export default function RfqPage() {
     <div className="space-y-6">
       <header><h1 className="text-2xl font-semibold">{t("rfq.title")}</h1><p className="mt-2 text-sm text-muted-foreground">{t("rfq.subtitle")}</p></header>
       {loading ? <PageLoading /> : error ? <PageError message={error} onRetry={() => setRetry(x => x + 1)} /> : <>
-        <RfqField label={t("procurement.project.label")}><select className={`${rfqSelectClass} max-w-xl`} value={projectId || ""}
-          onChange={e => setParams({ projectId: e.target.value })}>
-          <option value="">{t("procurement.project.placeholder")}</option>
-          {projects.map(p => <option key={p.id} value={p.id}>{p.code} · {p.name} · {p.customerName}</option>)}
-        </select></RfqField>
+        <div className="max-w-xl space-y-1.5"><p className="text-sm font-medium">{t("procurement.project.label")}</p><SearchableSelect
+          ariaLabel={t("procurement.project.label")}
+          value={projectId ? String(projectId) : null}
+          onChange={value => setParams(value ? { projectId: value } : {})}
+          options={projects.map(projectOption => ({ value: String(projectOption.id), label: `${projectOption.code} · ${projectOption.name}`, hint: projectOption.customerName }))}
+          placeholder={t("procurement.project.placeholder")}
+          searchPlaceholder={t("rfq.projectSearch")}
+          emptyText={t("procurement.project.empty")}
+        /></div>
         {!projectId ? <PageEmpty message={t("procurement.project.emptySelection")} /> : !project ? <PageError message={t("rfq.projectUnavailable")} /> :
           <RfqWorkspace key={projectId} project={project} rfqId={rfqId} onSelect={id => setParams(id ? { projectId: String(projectId), rfqId: String(id) } : { projectId: String(projectId) })} />}
       </>}
@@ -61,6 +67,8 @@ function RfqWorkspace({ project, rfqId, onSelect }: { project: OperationalProjec
   const { has } = usePermissions();
   const projectId = project.id;
   const mounted = useRef(false);
+  const dialogTriggerNameRef = useRef<"create" | "edit" | "bid" | "evaluate" | "award" | null>(null);
+  const dialogClosedRef = useRef(true);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   const mutable = project.status !== "Completed" && project.status !== "Cancelled";
   const canManage = has("proc.rfqs.manage") && mutable;
@@ -98,6 +106,18 @@ function RfqWorkspace({ project, rfqId, onSelect }: { project: OperationalProjec
     return () => { cancelled = true; };
   }, [projectId, rfqId, filterJson, refresh]);
   useEffect(() => { setReason(""); setDocumentId(0); setDialog(null); setActionError(""); }, [rfqId]);
+  useEffect(() => {
+    if (dialog !== null || loading || !dialogClosedRef.current || !dialogTriggerNameRef.current) return;
+    const frame = requestAnimationFrame(() => {
+      const trigger = document.querySelector<HTMLButtonElement>(
+        `[data-rfq-dialog-trigger="${dialogTriggerNameRef.current}"]`);
+      if (trigger) {
+        trigger.focus();
+        dialogTriggerNameRef.current = null;
+      }
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [dialog, loading]);
   function changeFilter(value: Partial<RfqFilter>) { setFilter(previous => ({ ...previous, ...value, page: 1 })); }
   async function mutate(operation: () => Promise<{ data: RfqDetail }>) {
     if (busy) return;
@@ -120,8 +140,10 @@ function RfqWorkspace({ project, rfqId, onSelect }: { project: OperationalProjec
     } catch (e) { if (mounted.current) setActionError(extractApiError(e)); }
     finally { if (mounted.current) setBusy(false); }
   }
-  async function openAward() {
+  async function openAward(event: MouseEvent<HTMLButtonElement>) {
     if (!detail || busy) return;
+    dialogTriggerNameRef.current = "award";
+    dialogClosedRef.current = false;
     setBusy(true); setActionError("");
     try {
       const fresh = (await rfqApi.detail(projectId, detail.header.id)).data;
@@ -143,6 +165,12 @@ function RfqWorkspace({ project, rfqId, onSelect }: { project: OperationalProjec
     void mutate(() => rfqApi.transition(projectId, detail.header.id, action, detail.header.rowVersion, reason.trim()));
   };
   const statusBadge = (row: RfqHeader) => <span className="flex flex-wrap gap-2"><Badge variant="outline">{t(`rfq.status.${row.status}`)}</Badge>{row.overdue && <Badge variant="destructive">{t("rfq.overdue")}</Badge>}</span>;
+  const openDialog = (event: MouseEvent<HTMLButtonElement>, value: "create" | "edit" | "bid" | "evaluate") => {
+    dialogTriggerNameRef.current = value;
+    dialogClosedRef.current = false;
+    setActionError("");
+    setDialog(value);
+  };
 
   return <div className="space-y-5">
     <nav aria-label={t("rfq.context")} className="flex flex-wrap gap-2 text-sm text-muted-foreground">
@@ -151,7 +179,7 @@ function RfqWorkspace({ project, rfqId, onSelect }: { project: OperationalProjec
       {detail?.contractId && <><span>→</span><Link to={`/admin/contracts/${detail.contractId}`}>{detail.contractNumber}</Link></>}
     </nav>
     <div className="flex flex-wrap gap-2">
-      {rfqId ? <Button variant="outline" disabled={busy} onClick={() => onSelect(0)}>{t("rfq.back")}</Button> : canManage && <Button disabled={loading || busy} onClick={() => { setActionError(""); setDialog("create"); }}>{t("rfq.create")}</Button>}
+      {rfqId ? <Button variant="outline" disabled={busy} onClick={() => onSelect(0)}>{t("rfq.back")}</Button> : canManage && <Button data-rfq-dialog-trigger="create" disabled={loading || busy} onClick={event => openDialog(event, "create")}>{t("rfq.create")}</Button>}
       <Button variant="outline" disabled={busy} onClick={() => setRefresh(x => x + 1)}>{t("rfq.refresh")}</Button>
       {canExport && <Button variant="outline" disabled={busy || loading || !!error} onClick={() => void download(
         () => rfqId ? rfqApi.exportDetail(projectId, rfqId) : rfqApi.exportList(projectId, filter), rfqId ? `${detail?.header.code}-comparison.json` : `rfqs-${project.code}.csv`)}>{t("rfq.export")}</Button>}
@@ -200,16 +228,16 @@ function RfqWorkspace({ project, rfqId, onSelect }: { project: OperationalProjec
           <span>{t("rfq.field.bids")}: {detail.header.receivedCount}/{detail.header.invitedCount}</span>
         </div>{detail.note && <p className="whitespace-pre-wrap text-sm">{detail.note}</p>}
         {canManage && <div className="flex flex-wrap gap-2">
-          {detail.header.status === "Draft" && <><Button disabled={busy} variant="outline" onClick={() => { setActionError(""); setDialog("edit"); }}>{t("rfq.edit")}</Button><Button disabled={busy} onClick={() => transition("issue")}>{t("rfq.issue")}</Button></>}
-          {detail.header.status === "Issued" && <><Button disabled={busy || Date.parse(detail.header.dueAt) < Date.now()} onClick={() => { setActionError(""); setDialog("bid"); }}>{t("rfq.submitBid")}</Button>
+          {detail.header.status === "Draft" && <><Button data-rfq-dialog-trigger="edit" disabled={busy} variant="outline" onClick={event => openDialog(event, "edit")}>{t("rfq.edit")}</Button><Button disabled={busy} onClick={() => transition("issue")}>{t("rfq.issue")}</Button></>}
+          {detail.header.status === "Issued" && <><Button data-rfq-dialog-trigger="bid" disabled={busy || Date.parse(detail.header.dueAt) < Date.now()} onClick={event => openDialog(event, "bid")}>{t("rfq.submitBid")}</Button>
             <Button variant="outline" disabled={busy || !detail.bids.some(b => b.isCurrent && !b.withdrawnAt)} onClick={() => transition("evaluate")}>{t("rfq.evaluate")}</Button>
             <Button variant="outline" disabled={busy} onClick={() => void mutate(() => rfqApi.resendInvitations(projectId, rfqId, detail.header.rowVersion))}>{t("rfq.portal.resend")}</Button></>}
-          {detail.header.status === "UnderEvaluation" && <Button variant="outline" disabled={busy} onClick={() => { setActionError(""); setDialog("evaluate"); }}>{t("rfq.scoring.action")}</Button>}
+          {detail.header.status === "UnderEvaluation" && <Button data-rfq-dialog-trigger="evaluate" variant="outline" disabled={busy} onClick={event => openDialog(event, "evaluate")}>{t("rfq.scoring.action")}</Button>}
           {detail.header.status === "Awarded" && <Button disabled={busy} onClick={() => transition("close")}>{t("rfq.close")}</Button>}
         </div>}
-        {canAward && detail.header.status === "UnderEvaluation" && <Button disabled={busy} onClick={() => void openAward()}>{t("rfq.award")}</Button>}
+        {canAward && detail.header.status === "UnderEvaluation" && <Button data-rfq-dialog-trigger="award" disabled={busy} onClick={event => void openAward(event)}>{t("rfq.award")}</Button>}
       </div>
-      <section className="space-y-3"><h2 className="text-lg font-semibold">{t("rfq.matrix")}</h2><p className="text-sm text-muted-foreground">{t("rfq.matrixHelp")}</p>
+      <section className="space-y-3"><h2 className="text-lg font-semibold">{t("rfq.matrix")}</h2><p className="text-sm text-muted-foreground">{t("rfq.matrixHelp")}</p><p className="flex items-center gap-2 text-xs text-muted-foreground md:hidden"><MoveHorizontal className="h-4 w-4" />{t("rfq.matrixScrollHint")}</p>
         <div className="max-w-full overflow-x-auto rounded-lg border" role="region" aria-label={t("rfq.matrix")} tabIndex={0}>
           <table className="w-full min-w-[640px] text-left text-sm"><thead className="bg-muted"><tr><th className="min-w-52 p-3">{t("rfq.field.boq")}</th>{detail.vendors.map(v => <th key={v.id} className="min-w-52 p-3">{v.name}<small className="mt-1 block font-normal text-muted-foreground">{v.invitationDeliveryError ? t("rfq.portal.deliveryFailed") : v.invitationSentAt ? t("rfq.portal.sent") : ""}</small></th>)}</tr></thead>
             <tbody>{detail.lines.map(line => <tr key={line.id} className="border-t"><th className="p-3 font-medium">{line.itemCode}<div className="text-xs font-normal">{line.description}<br />{quantity.format(line.quantity)} {line.unit}</div></th>
@@ -254,8 +282,17 @@ function RfqWorkspace({ project, rfqId, onSelect }: { project: OperationalProjec
       </details>)}</section>
       <section className="space-y-3"><h2 className="text-lg font-semibold">{t("rfq.history")}</h2>{detail.events.map((event, index) => <div key={index} className="border-l-2 pl-3 text-sm"><p className="font-medium">{t(`rfq.event.${event.action}`)} · {event.actor}</p><p className="text-muted-foreground">{date(event.at)}</p>{event.reason && <p className="whitespace-pre-wrap">{event.reason}</p>}</div>)}</section>
     </>}
-    <Dialog open={dialog !== null} onOpenChange={open => { if (!open && !busy) setDialog(null); }}><DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
-      <DialogHeader><DialogTitle>{t(dialog === "bid" ? "rfq.submitBid" : dialog === "edit" ? "rfq.edit" : dialog === "evaluate" ? "rfq.scoring.action" : dialog === "award" ? "rfq.award" : "rfq.create")}</DialogTitle><DialogDescription>{project.customerName} → {project.code} · {project.name}</DialogDescription></DialogHeader>
+    <Dialog open={dialog !== null} onOpenChange={open => { if (!open && !busy) setDialog(null); }}><DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto" onCloseAutoFocus={event => {
+      event.preventDefault();
+      dialogClosedRef.current = true;
+      const trigger = document.querySelector<HTMLButtonElement>(
+        `[data-rfq-dialog-trigger="${dialogTriggerNameRef.current}"]`);
+      if (trigger) {
+        trigger.focus();
+        dialogTriggerNameRef.current = null;
+      }
+    }}>
+      <DialogHeader><DialogTitle>{t(dialog === "bid" ? "rfq.submitBid" : dialog === "edit" ? "rfq.edit" : dialog === "evaluate" ? "rfq.scoring.action" : dialog === "award" ? "rfq.award" : "rfq.create")}</DialogTitle><DialogDescription>{project.customerName} → {project.code} · {project.name}{dialog === "create" && <span className="mt-2 block">{t("rfq.createHelp")}</span>}</DialogDescription></DialogHeader>
       {actionError && <p role="alert" className="text-sm text-destructive">{actionError}</p>}
       {dialog === "bid" && detail ? <RfqBidForm detail={detail} references={references} busy={busy} onSave={draft => void mutate(() => rfqApi.bid(projectId, rfqId, draft))} onUpload={upload} /> :
         dialog === "evaluate" && detail ? <RfqEvaluationForm detail={detail} busy={busy} onSave={(bidId, score, note) => void mutate(() => rfqApi.evaluateBid(projectId, rfqId, bidId, score, note, detail.header.rowVersion))} /> :

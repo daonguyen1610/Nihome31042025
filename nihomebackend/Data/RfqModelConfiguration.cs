@@ -94,6 +94,7 @@ internal static class RfqModelConfiguration
         {
             b.ToTable("rfq_events");
             b.Property(x => x.Action).HasMaxLength(40);
+            b.Property(x => x.ActorLabel).HasMaxLength(300);
             b.Property(x => x.Reason).HasMaxLength(2000);
             b.HasOne(x => x.Rfq).WithMany(x => x.Events).HasForeignKey(x => x.RfqId).OnDelete(DeleteBehavior.Cascade);
             b.HasOne(x => x.Actor).WithMany().HasForeignKey(x => x.ActorUserId).OnDelete(DeleteBehavior.NoAction);

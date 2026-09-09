@@ -600,7 +600,8 @@ secure portal link and may submit revised quotations until the deadline;
 Procurement may still record a quotation on their behalf. Quotations retain
 currency, manual exchange rate to VND, freight, discount, VAT and immutable
 revision history. Missing prices differ from zero and inactive vendors receive
-no lowest-price highlight.
+no lowest-price highlight. Vendors can download attached RFQ package documents;
+partial quotations can participate only for the lines they actually quote.
 
 During evaluation, Procurement records the commercial score and evidence. The
 matrix combines it with price, delivery time and approved vendor-rating weights.

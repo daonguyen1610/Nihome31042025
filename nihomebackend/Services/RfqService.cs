@@ -15,7 +15,8 @@ using NihomeBackend.Models.DTOs.Responses;
 namespace NihomeBackend.Services;
 
 public sealed class RfqService(AppDbContext db, INotificationService notifications,
-    IEmailService email, IConfiguration configuration, ILogger<RfqService> logger)
+    IEmailService email, IConfiguration configuration, ILogger<RfqService> logger,
+    IProjectDocumentService documents)
 {
     private static readonly HashSet<string> SupportedCurrencyCodes = CultureInfo.GetCultures(CultureTypes.SpecificCultures)
         .Select(culture => new RegionInfo(culture.Name).ISOCurrencySymbol)
@@ -269,11 +270,30 @@ public sealed class RfqService(AppDbContext db, INotificationService notificatio
             invitation.Rfq.Status != RfqStatus.Issued || !invitation.Vendor.IsActive) return null;
         invitation.LastPortalAccessAt = DateTime.UtcNow;
         await db.SaveChangesAsync(ct);
+        var packageDocuments = await db.RfqDocuments.AsNoTracking()
+            .Where(x => x.RfqId == invitation.RfqId && x.RfqBidId == null)
+            .OrderBy(x => x.Id)
+            .Select(x => new VendorPortalRfqDocumentResponse(x.ProjectDocumentId, x.ProjectDocument.OriginalFileName))
+            .ToListAsync(ct);
         return new VendorPortalRfqResponse(invitation.Rfq.Code, invitation.Rfq.Title,
             Utc(invitation.Rfq.DueAt), invitation.VendorName,
             invitation.Rfq.Lines.OrderBy(x => x.Id).Select(x =>
                 new VendorPortalRfqLineResponse(x.Id, x.ItemCode, x.Description, x.Unit, x.Quantity)).ToList(),
-            invitation.Rfq.DueAt >= DateTime.UtcNow);
+            packageDocuments, invitation.Rfq.DueAt >= DateTime.UtcNow);
+    }
+
+    public async Task<ProjectDocumentDownload?> DownloadPortalDocumentAsync(string token, long documentId,
+        CancellationToken ct)
+    {
+        var hash = HashPortalToken(token);
+        var invitation = await db.RfqInvitations.AsNoTracking().Include(x => x.Rfq)
+            .SingleOrDefaultAsync(x => x.PortalTokenHash == hash, ct);
+        if (invitation is null || invitation.PortalTokenExpiresAt < DateTime.UtcNow ||
+            invitation.Rfq.Status != RfqStatus.Issued ||
+            !await db.RfqDocuments.AsNoTracking().AnyAsync(x => x.RfqId == invitation.RfqId &&
+                x.RfqBidId == null && x.ProjectDocumentId == documentId, ct)) return null;
+        return await documents.DownloadAsync(invitation.Rfq.OperationalProjectId, documentId,
+            invitation.Rfq.OwnerUserId, canSeeAll: true, ct);
     }
 
     public async Task<VendorPortalRfqResponse?> SubmitPortalBidAsync(string token,
@@ -302,15 +322,9 @@ public sealed class RfqService(AppDbContext db, INotificationService notificatio
             VatPercent = request.VatPercent,
         };
         var result = await SubmitBidAsync(invitation.Rfq.OperationalProjectId, invitation.RfqId,
-            bidRequest, invitation.Rfq.OwnerUserId, ct);
+            bidRequest, invitation.Rfq.OwnerUserId, ct, submittedViaPortal: true,
+            portalActorLabel: $"{invitation.VendorName} (vendor portal)");
         if (result is null) return null;
-        var submitted = await db.RfqBids.Where(x => x.RfqId == invitation.RfqId && x.VendorId == invitation.VendorId)
-            .OrderByDescending(x => x.Revision).FirstAsync(ct);
-        submitted.SubmittedViaPortal = true;
-        var trackedRfq = await db.Rfqs.Include(x => x.Events).SingleAsync(x => x.Id == invitation.RfqId, ct);
-        Event(trackedRfq, "portal-bid-submitted", trackedRfq.OwnerUserId,
-            $"Vendor #{invitation.VendorId} submitted revision {submitted.Revision} through the secure portal.");
-        await db.SaveChangesAsync(ct);
         return await GetPortalAsync(token, ct);
     }
 
@@ -372,7 +386,8 @@ public sealed class RfqService(AppDbContext db, INotificationService notificatio
         return await GetAsync(projectId, id, ct);
     }
 
-    public async Task<RfqDetailResponse?> SubmitBidAsync(int projectId, int id, RfqBidRequest request, int actor, CancellationToken ct)
+    public async Task<RfqDetailResponse?> SubmitBidAsync(int projectId, int id, RfqBidRequest request,
+        int actor, CancellationToken ct, bool submittedViaPortal = false, string? portalActorLabel = null)
     {
         await using var transaction = await BeginAsync(ct);
         await EnsureMutableProjectAsync(projectId, ct);
@@ -409,6 +424,7 @@ public sealed class RfqService(AppDbContext db, INotificationService notificatio
             DiscountPercent = request.DiscountPercent,
             DiscountAmount = request.DiscountAmount,
             VatPercent = request.VatPercent,
+            SubmittedViaPortal = submittedViaPortal,
             Lines = request.Lines.Select(x => new RfqBidLine
             {
                 RfqLineId = x.RfqLineId,
@@ -426,7 +442,10 @@ public sealed class RfqService(AppDbContext db, INotificationService notificatio
         var documents = await ValidateDocumentsAsync(projectId, request.DocumentIds, ct);
         entity.Bids.Add(bid);
         foreach (var document in documents) Attach(entity, document, bid);
-        Event(entity, "bid-submitted", actor, $"Vendor #{bid.VendorId}, revision {bid.Revision}.");
+        Event(entity, submittedViaPortal ? "portal-bid-submitted" : "bid-submitted", actor,
+            submittedViaPortal
+                ? $"Vendor #{bid.VendorId} submitted revision {bid.Revision} through the secure portal."
+            : $"Vendor #{bid.VendorId}, revision {bid.Revision}.", portalActorLabel);
         await SaveAsync(transaction, ct);
         return await GetAsync(projectId, id, ct);
     }
@@ -544,12 +563,17 @@ public sealed class RfqService(AppDbContext db, INotificationService notificatio
                     "Material Request allocation must reference the same BOQ line as the RFQ allocation.");
 
         var ratings = await VendorRatingsAsync(entity, ct);
-        var scores = CalculateScores(entity, ratings);
-        Require(request.Lines.Select(x => x.BidId).Distinct().All(id => scores.GetValueOrDefault(id).HasValue),
-            "Every selected quotation must have a complete commercial evaluation before award.");
-        var selectedScores = request.Lines.Select(x => scores.GetValueOrDefault(x.BidId)).Where(x => x.HasValue).Select(x => x!.Value).ToList();
-        var bestScore = scores.Values.Where(x => x.HasValue).Select(x => x!.Value).DefaultIfEmpty().Max();
-        if (selectedScores.Count > 0 && selectedScores.Any(x => x < bestScore))
+        var lineScores = CalculateLineScores(entity, ratings);
+        Require(request.Lines.All(x => lineScores.GetValueOrDefault((x.BidId, x.RfqLineId))?.Weighted.HasValue == true),
+            "Every selected quotation line must have a commercial evaluation before award.");
+        var selectsLowerScore = request.Lines.Any(allocation =>
+        {
+            var selected = lineScores[(allocation.BidId, allocation.RfqLineId)].Weighted!.Value;
+            var best = lineScores.Where(x => x.Key.RfqLineId == allocation.RfqLineId && x.Value.Weighted.HasValue)
+                .Select(x => x.Value.Weighted!.Value).DefaultIfEmpty().Max();
+            return selected < best;
+        });
+        if (selectsLowerScore)
             Require(Trim(request.OverrideReason)?.Length >= 3,
                 "Selecting a quotation below the highest weighted score requires an override reason.");
 
@@ -883,24 +907,43 @@ public sealed class RfqService(AppDbContext db, INotificationService notificatio
             allocated.GetValueOrDefault(x.Id), x.RequestedQuantity - allocated.GetValueOrDefault(x.Id))).ToList();
     }
 
-    private static Dictionary<int, decimal?> CalculateScores(Rfq entity,
+    private sealed record ScoreComponents(decimal? Price, decimal? LeadTime, decimal? VendorRating,
+        decimal? Commercial, decimal? Weighted);
+
+    private static Dictionary<(int BidId, int RfqLineId), ScoreComponents> CalculateLineScores(Rfq entity,
         IReadOnlyDictionary<int, decimal>? vendorRatings)
     {
         var current = CurrentBids(entity).ToList();
-        var eligible = current.Where(x => Eligible(entity, x)).ToList();
-        var lowest = eligible.Select(x => (decimal?)x.Total).Min();
-        var minimumLeadTime = eligible.Select(x => (int?)x.LeadTimeDays).Min();
-        return current.ToDictionary(x => x.Id, x =>
+        var active = current.Where(x => x.WithdrawnAt is null && x.ValidUntil >= DateTime.UtcNow &&
+            entity.Invitations.Any(invitation => invitation.VendorId == x.VendorId && invitation.Vendor.IsActive)).ToList();
+        var result = new Dictionary<(int BidId, int RfqLineId), ScoreComponents>();
+        foreach (var line in entity.Lines)
         {
-            if (!eligible.Contains(x) || entity.CommercialWeight > 0 && !x.CommercialScore.HasValue) return (decimal?)null;
-            var price = lowest == 0 ? x.Total == 0 ? 100m : 0m : decimal.Round(lowest!.Value / x.Total * 100m, 2);
-            var lead = minimumLeadTime == 0 ? x.LeadTimeDays == 0 ? 100m : 0m :
-                decimal.Round((decimal)minimumLeadTime!.Value / x.LeadTimeDays * 100m, 2);
-            var rating = vendorRatings?.GetValueOrDefault(x.VendorId) ?? 50m;
-            return decimal.Round((price * entity.PriceWeight + lead * entity.LeadTimeWeight +
-                rating * entity.VendorRatingWeight + (x.CommercialScore ?? 0m) * entity.CommercialWeight) / 100m,
-                2, MidpointRounding.AwayFromZero);
-        });
+            var quoted = active.Where(bid => bid.Lines.Any(value => value.RfqLineId == line.Id)).ToList();
+            var lowest = quoted.Select(bid => bid.Lines.Single(value => value.RfqLineId == line.Id).UnitPrice * bid.ExchangeRateToVnd)
+                .Select(value => (decimal?)value).Min();
+            var minimumLeadTime = quoted.Select(bid => (int?)bid.LeadTimeDays).Min();
+            foreach (var bid in current)
+            {
+                var bidLine = bid.Lines.SingleOrDefault(value => value.RfqLineId == line.Id);
+                if (bidLine is null || !quoted.Contains(bid) || entity.CommercialWeight > 0 && !bid.CommercialScore.HasValue)
+                {
+                    result[(bid.Id, line.Id)] = new(null, null, null, bid.CommercialScore, null);
+                    continue;
+                }
+                var convertedUnitPrice = bidLine.UnitPrice * bid.ExchangeRateToVnd;
+                var price = lowest == 0 ? convertedUnitPrice == 0 ? 100m : 0m :
+                    decimal.Round(lowest!.Value / convertedUnitPrice * 100m, 2);
+                var lead = minimumLeadTime == 0 ? bid.LeadTimeDays == 0 ? 100m : 0m :
+                    decimal.Round((decimal)minimumLeadTime!.Value / bid.LeadTimeDays * 100m, 2);
+                var rating = vendorRatings?.GetValueOrDefault(bid.VendorId) ?? 50m;
+                var weighted = decimal.Round((price * entity.PriceWeight + lead * entity.LeadTimeWeight +
+                    rating * entity.VendorRatingWeight + (bid.CommercialScore ?? 0m) * entity.CommercialWeight) / 100m,
+                    2, MidpointRounding.AwayFromZero);
+                result[(bid.Id, line.Id)] = new(price, lead, rating, bid.CommercialScore, weighted);
+            }
+        }
+        return result;
     }
 
     private static void Require(bool condition, string message)
@@ -910,10 +953,10 @@ public sealed class RfqService(AppDbContext db, INotificationService notificatio
     private static DateTime Utc(DateTime value) => DateTime.SpecifyKind(value, DateTimeKind.Utc);
     private static DateTime? Utc(DateTime? value) => value.HasValue ? Utc(value.Value) : null;
     private static string? Trim(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
-    private static void Event(Rfq entity, string action, int actor, string? reason = null)
+    private static void Event(Rfq entity, string action, int actor, string? reason = null, string? actorLabel = null)
     {
         entity.UpdatedAt = DateTime.UtcNow;
-        entity.Events.Add(new RfqEvent { Action = action, ActorUserId = actor, Reason = reason });
+        entity.Events.Add(new RfqEvent { Action = action, ActorUserId = actor, ActorLabel = actorLabel, Reason = reason });
     }
     private static IEnumerable<RfqBid> CurrentBids(Rfq entity) => entity.Bids.GroupBy(x => x.VendorId).Select(x => x.MaxBy(b => b.Revision)!);
     private static bool Eligible(Rfq entity, RfqBid bid) => bid.WithdrawnAt is null && bid.ValidUntil >= DateTime.UtcNow &&
@@ -925,7 +968,19 @@ public sealed class RfqService(AppDbContext db, INotificationService notificatio
         var current = CurrentBids(entity).ToList();
         var eligible = current.Where(x => Eligible(entity, x)).ToList();
         var lowest = eligible.Select(x => (decimal?)x.Total).Min();
-        var scores = CalculateScores(entity, vendorRatings);
+        var lineScores = CalculateLineScores(entity, vendorRatings);
+        var scores = current.ToDictionary(bid => bid.Id, bid =>
+        {
+            var values = bid.Lines.Select(line => lineScores.GetValueOrDefault((bid.Id, line.RfqLineId)))
+                .Where(value => value?.Weighted.HasValue == true).Select(value => value!).ToList();
+            return values.Count == bid.Lines.Count && values.Count > 0 ? new ScoreComponents(
+                decimal.Round(values.Average(value => value.Price!.Value), 2, MidpointRounding.AwayFromZero),
+                decimal.Round(values.Average(value => value.LeadTime!.Value), 2, MidpointRounding.AwayFromZero),
+                decimal.Round(values.Average(value => value.VendorRating!.Value), 2, MidpointRounding.AwayFromZero),
+                bid.CommercialScore,
+                decimal.Round(values.Average(value => value.Weighted!.Value), 2, MidpointRounding.AwayFromZero))
+                : new ScoreComponents(null, null, null, bid.CommercialScore, null);
+        });
         var header = new RfqListItemResponse(entity.Id, entity.OperationalProjectId, entity.Code, entity.Title,
             entity.OperationalProject.Code, entity.OperationalProject.Name, entity.OperationalProject.Customer.Name,
             entity.SourceBoqRevisionId, entity.SourceBoqRevision.RevisionNumber, entity.Status, entity.OwnerUserId, entity.Owner.FullName ?? entity.Owner.PhoneNumber,
@@ -948,11 +1003,18 @@ public sealed class RfqService(AppDbContext db, INotificationService notificatio
                 current.Contains(x), x.Lines.Count == entity.Lines.Count, eligible.Contains(x), eligible.Contains(x) && x.Total == lowest,
                 x.Total, x.Lines.Select(l => new RfqBidLineResponse(l.RfqLineId, l.UnitPrice, l.Amount,
                     decimal.Round(l.UnitPrice * x.ExchangeRateToVnd, 4, MidpointRounding.AwayFromZero),
-                    decimal.Round(l.Amount * x.ExchangeRateToVnd, 4, MidpointRounding.AwayFromZero))).ToList(),
+                    decimal.Round(l.Amount * x.ExchangeRateToVnd, 4, MidpointRounding.AwayFromZero),
+                    lineScores.GetValueOrDefault((x.Id, l.RfqLineId))?.Price,
+                    lineScores.GetValueOrDefault((x.Id, l.RfqLineId))?.LeadTime,
+                    lineScores.GetValueOrDefault((x.Id, l.RfqLineId))?.VendorRating,
+                    lineScores.GetValueOrDefault((x.Id, l.RfqLineId))?.Weighted)).ToList(),
                 x.Currency, x.ExchangeRateToVnd, x.Subtotal, x.FreightAmount, x.DiscountPercent,
-                x.DiscountAmount, x.VatPercent, x.TotalOriginal, x.CommercialScore, scores.GetValueOrDefault(x.Id),
+                x.DiscountAmount, x.VatPercent, x.TotalOriginal, scores.GetValueOrDefault(x.Id)?.Price,
+                scores.GetValueOrDefault(x.Id)?.LeadTime, scores.GetValueOrDefault(x.Id)?.VendorRating,
+                x.CommercialScore, scores.GetValueOrDefault(x.Id)?.Weighted,
                 x.EvaluationNote, x.SubmittedViaPortal)).ToList(),
-            entity.Events.OrderByDescending(x => x.At).ThenByDescending(x => x.Id).Select(x => new RfqEventResponse(x.Action, x.Actor.FullName ?? x.Actor.PhoneNumber, Utc(x.At), x.Reason)).ToList(),
+            entity.Events.OrderByDescending(x => x.At).ThenByDescending(x => x.Id).Select(x => new RfqEventResponse(x.Action,
+                x.ActorLabel ?? x.Actor.FullName ?? x.Actor.PhoneNumber, Utc(x.At), x.Reason)).ToList(),
             entity.Documents.Select(x => new RfqFileResponse(x.ProjectDocumentId, x.RfqBidId, x.ProjectDocument.OriginalFileName)).ToList(),
             entity.SelectedBidId, entity.ContractId, entity.Contract?.ContractNumber, Utc(entity.AwardedAt), entity.AwardedBy?.FullName,
             entity.AwardReason, entity.AwardSnapshotJson,

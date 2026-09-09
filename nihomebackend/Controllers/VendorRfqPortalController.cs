@@ -46,4 +46,19 @@ public sealed class VendorRfqPortalController(RfqService service, IAuditLogger a
             return Conflict(new { message = "The RFQ changed. Reload the secure link and submit again." });
         }
     }
+
+    [HttpGet("documents/{documentId:long}/download")]
+    public async Task<IActionResult> Download(long documentId, CancellationToken ct)
+    {
+        var token = Request.Headers["X-RFQ-Portal-Token"].FirstOrDefault();
+        if (string.IsNullOrWhiteSpace(token)) return NotFound();
+        Response.Headers.CacheControl = "no-store";
+        var file = await service.DownloadPortalDocumentAsync(token, documentId, ct);
+        if (file is null) return NotFound();
+        Response.ContentType = file.ContentType;
+        Response.Headers.ContentDisposition = new System.Net.Http.Headers.ContentDispositionHeaderValue("attachment")
+        { FileNameStar = file.OriginalFileName }.ToString();
+        await file.WriteToAsync(Response.Body, ct);
+        return new EmptyResult();
+    }
 }

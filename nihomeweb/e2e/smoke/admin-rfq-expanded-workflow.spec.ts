@@ -18,8 +18,8 @@ test("authorized users score bids and submit a split award plan", async ({ page,
     lines: [{ id: 11, projectBoqLineId: 21, itemCode: "CABLE-01", description: "Power cable", unit: "m", quantity: 100, budgetUnitPrice: 200000, lowestUnitPrice: 175000 }],
     vendors: [{ id: 31, name: "Vendor A", type: "Supplier", isActive: true }, { id: 32, name: "Vendor B", type: "Supplier", isActive: true }],
     bids: [
-      { id: 41, vendorId: 31, revision: 1, leadTimeDays: 7, paymentTerms: "Net 30", validUntil: "2035-01-02T00:00:00Z", note: null, submittedAt: "2026-09-01T00:00:00Z", submittedBy: "Procurement Owner", withdrawnAt: null, isCurrent: true, isComplete: true, isEligible: true, isLowest: false, total: 18000000, currency: "VND", exchangeRateToVnd: 1, subtotal: 18000000, freightAmount: 0, discountPercent: 0, discountAmount: 0, vatPercent: 0, totalOriginal: 18000000, commercialScore: null, weightedScore: null, evaluationNote: null, submittedViaPortal: false, lines: [{ rfqLineId: 11, unitPrice: 180000, amount: 18000000, unitPriceVnd: 180000, amountVnd: 18000000 }] },
-      { id: 42, vendorId: 32, revision: 1, leadTimeDays: 10, paymentTerms: "Net 15", validUntil: "2035-01-02T00:00:00Z", note: null, submittedAt: "2026-09-01T00:00:00Z", submittedBy: "Procurement Owner", withdrawnAt: null, isCurrent: true, isComplete: true, isEligible: true, isLowest: true, total: 17500000, currency: "VND", exchangeRateToVnd: 1, subtotal: 17500000, freightAmount: 0, discountPercent: 0, discountAmount: 0, vatPercent: 0, totalOriginal: 17500000, commercialScore: 80, weightedScore: 84, evaluationNote: "Commercial review", submittedViaPortal: false, lines: [{ rfqLineId: 11, unitPrice: 175000, amount: 17500000, unitPriceVnd: 175000, amountVnd: 17500000 }] },
+      { id: 41, vendorId: 31, revision: 1, leadTimeDays: 7, paymentTerms: "Net 30", validUntil: "2035-01-02T00:00:00Z", note: null, submittedAt: "2026-09-01T00:00:00Z", submittedBy: "Procurement Owner", withdrawnAt: null, isCurrent: true, isComplete: true, isEligible: true, isLowest: false, total: 18000000, currency: "VND", exchangeRateToVnd: 1, subtotal: 18000000, freightAmount: 0, discountPercent: 0, discountAmount: 0, vatPercent: 0, totalOriginal: 18000000, priceScore: 97.22, leadTimeScore: 100, vendorRatingScore: 80, commercialScore: 90, weightedScore: 91.61, evaluationNote: "Commercial review", submittedViaPortal: false, lines: [{ rfqLineId: 11, unitPrice: 180000, amount: 18000000, unitPriceVnd: 180000, amountVnd: 18000000, priceScore: 97.22, leadTimeScore: 100, vendorRatingScore: 80, weightedScore: 91.61 }] },
+      { id: 42, vendorId: 32, revision: 1, leadTimeDays: 10, paymentTerms: "Net 15", validUntil: "2035-01-02T00:00:00Z", note: null, submittedAt: "2026-09-01T00:00:00Z", submittedBy: "Procurement Owner", withdrawnAt: null, isCurrent: true, isComplete: true, isEligible: true, isLowest: true, total: 17500000, currency: "VND", exchangeRateToVnd: 1, subtotal: 17500000, freightAmount: 0, discountPercent: 0, discountAmount: 0, vatPercent: 0, totalOriginal: 17500000, priceScore: 100, leadTimeScore: 70, vendorRatingScore: 75, commercialScore: 80, weightedScore: 87, evaluationNote: "Commercial review", submittedViaPortal: false, lines: [{ rfqLineId: 11, unitPrice: 175000, amount: 17500000, unitPriceVnd: 175000, amountVnd: 17500000, priceScore: 100, leadTimeScore: 70, vendorRatingScore: 75, weightedScore: 87 }] },
     ], events: [], documents: [], selectedBidId: null, contractId: null, contractNumber: null, awardedAt: null, awardedBy: null, awardReason: null, awardSnapshotJson: null,
     scoring: { priceWeight: 50, leadTimeWeight: 20, vendorRatingWeight: 20, commercialWeight: 10 }, awards: [],
     materialRequests: [{ lineId: 51, materialRequestId: 52, materialRequestCode: "MR-001", projectBoqLineId: 21, requestedQuantity: 100, alreadyAllocatedQuantity: 0, remainingQuantity: 100 }],
@@ -38,10 +38,13 @@ test("authorized users score bids and submit a split award plan", async ({ page,
   await page.goto(`${baseURL ?? "http://localhost:5043"}/admin/procurement-control/rfqs?projectId=${projectId}&rfqId=${rfqId}`);
   await page.getByRole("button", { name: "Evaluate bids" }).click();
   const evaluation = page.getByRole("dialog");
+  await expect(evaluation.getByRole("region", { name: "Score breakdown and weights" })).toContainText("50%");
+  await expect(evaluation.getByText(/Projected weighted score/)).toBeVisible();
   await evaluation.getByLabel("Commercial score (0-100)").fill("88");
   await evaluation.getByLabel("Evaluation evidence").fill("Commercial terms and delivery evidence reviewed.");
   await evaluation.getByRole("button", { name: "Save evaluation" }).click();
   await expect.poll(() => captured.evaluation).toBeDefined();
+  await expect(page.getByRole("button", { name: "Evaluate bids" })).toBeFocused();
 
   await page.getByRole("button", { name: "Award and create draft contract" }).click();
   const award = page.getByRole("dialog");

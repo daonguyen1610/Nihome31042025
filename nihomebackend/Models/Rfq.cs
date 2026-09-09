@@ -126,6 +126,7 @@ public sealed class RfqEvent
     public string Action { get; set; } = string.Empty;
     public int ActorUserId { get; set; }
     public ApplicationUser Actor { get; set; } = null!;
+    public string? ActorLabel { get; set; }
     public DateTime At { get; set; } = DateTime.UtcNow;
     public string? Reason { get; set; }
 }
