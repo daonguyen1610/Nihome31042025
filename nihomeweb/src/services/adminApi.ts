@@ -1360,6 +1360,10 @@ export interface ContractResponse {
   approvedVoTotal: number;
   /** value + approvedVoTotal. Server-computed. */
   currentValue: number;
+  nextPaymentDueDate?: string | null;
+  nextPaymentAmount?: number | null;
+  outstandingScheduledAmount: number;
+  overduePaymentMilestoneCount: number;
   /** At least one attachment of kind SignedScan exists. */
   hasSignedScan: boolean;
   attachmentCount: number;
@@ -1414,6 +1418,15 @@ export interface ContractListResponse {
   page: number;
   pageSize: number;
   items: ContractResponse[];
+  totalCurrentValue: number;
+  overdueContractCount: number;
+  dueSoonContractCount: number;
+}
+
+export interface ContractFilterOptionsResponse {
+  owners: { id: number; name: string }[];
+  customers: { id: number; name: string }[];
+  projects: { id: number; code: string; name: string; customerId: number }[];
 }
 
 export interface ContractListParams {
@@ -1427,6 +1440,8 @@ export interface ContractListParams {
   search?: string;
   signedFrom?: string;
   signedTo?: string;
+  endFrom?: string;
+  endTo?: string;
   valueMin?: number;
   valueMax?: number;
   page?: number;
@@ -5649,6 +5664,10 @@ export const adminApi = {
   // Contracts (NIH-102)
   listContracts: (params?: ContractListParams) =>
     api.get<ContractListResponse>("/contracts", { params }),
+  exportContracts: (params?: ContractListParams) =>
+    api.get<ContractListResponse>("/contracts/export-data", { params }),
+  getContractFilterOptions: (direction?: ContractDirection) =>
+    api.get<ContractFilterOptionsResponse>("/contracts/filter-options", { params: { direction } }),
   getContractClassificationOptions: () =>
     api.get<ContractClassificationOptions>("/contracts/classification-options"),
   getContract: (id: number) =>

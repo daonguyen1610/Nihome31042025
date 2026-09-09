@@ -187,7 +187,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
         label: t("nav.finance"),
         icon: Landmark,
         items: [
-          { to: "/admin/finance/contracts", label: t("nav.primaryContracts"), icon: FileText, permission: ADMIN_PERMS.contracts },
+          { to: "/admin/finance/contracts", label: t("nav.primaryContracts"), icon: FileText, permission: [ADMIN_PERMS.contractsViewAll, ADMIN_PERMS.contractsViewUpstreamAll] },
           { to: "/admin/finance-control", label: t("nav.financeControl"), icon: Landmark, permission: [ADMIN_PERMS.financePayments, ADMIN_PERMS.financePeriods, ADMIN_PERMS.financeCorrections] },
         ],
       },
@@ -296,9 +296,15 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
       rawGroups
         .map((g) => ({
           ...g,
-          items: g.items.filter((it) => !it.permission || (Array.isArray(it.permission)
-            ? it.permission.some((permission) => permissions.has(permission))
-            : permissions.has(it.permission as string))),
+          items: g.items.filter((it) => {
+            const scopedFinanceReader = permissions.has(ADMIN_PERMS.contractsViewUpstreamAll) &&
+              !permissions.has(ADMIN_PERMS.contractsViewAll) &&
+              !permissions.has(ADMIN_PERMS.contractsManage);
+            if (it.to === "/admin/contracts" && scopedFinanceReader) return false;
+            return !it.permission || (Array.isArray(it.permission)
+              ? it.permission.some((permission) => permissions.has(permission))
+              : permissions.has(it.permission as string));
+          }),
         }))
         .filter((g) => g.items.length > 0),
     [rawGroups, permissions],

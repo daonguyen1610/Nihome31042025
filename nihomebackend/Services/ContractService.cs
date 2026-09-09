@@ -39,17 +39,23 @@ public class ContractService(
         string? search = null,
         DateTime? signedFrom = null,
         DateTime? signedTo = null,
+        DateTime? endFrom = null,
+        DateTime? endTo = null,
         decimal? valueMin = null,
         decimal? valueMax = null,
         int page = 1,
         int pageSize = 20,
         string? sortBy = null,
         string? sortDirection = null,
+        bool includeAll = false,
         CancellationToken ct = default)
     {
         if (page < 1) page = 1;
-        if (pageSize < 1) pageSize = 1;
-        if (pageSize > MaxPageSize) pageSize = MaxPageSize;
+        if (!includeAll)
+        {
+            if (pageSize < 1) pageSize = 1;
+            if (pageSize > MaxPageSize) pageSize = MaxPageSize;
+        }
 
         var query = db.Contracts.AsNoTracking().AsQueryable();
 
@@ -77,8 +83,24 @@ public class ContractService(
             var upperBound = signedTo.Value.Date.AddDays(1);
             query = query.Where(c => c.SignedDate != null && c.SignedDate < upperBound);
         }
-        if (valueMin.HasValue) query = query.Where(c => c.Value >= valueMin.Value);
-        if (valueMax.HasValue) query = query.Where(c => c.Value <= valueMax.Value);
+        if (endFrom.HasValue) query = query.Where(c => c.EndDate != null && c.EndDate >= endFrom.Value);
+        if (endTo.HasValue)
+        {
+            var upperBound = endTo.Value.Date.AddDays(1);
+            query = query.Where(c => c.EndDate != null && c.EndDate < upperBound);
+        }
+        if (valueMin.HasValue)
+        {
+            query = query.Where(c => c.Value + (db.ContractAppendices
+                .Where(v => v.ContractId == c.Id && v.Status == ContractAppendixStatus.Approved)
+                .Sum(v => (decimal?)v.ValueDelta) ?? 0m) >= valueMin.Value);
+        }
+        if (valueMax.HasValue)
+        {
+            query = query.Where(c => c.Value + (db.ContractAppendices
+                .Where(v => v.ContractId == c.Id && v.Status == ContractAppendixStatus.Approved)
+                .Sum(v => (decimal?)v.ValueDelta) ?? 0m) <= valueMax.Value);
+        }
 
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -89,6 +111,18 @@ public class ContractService(
         }
 
         var total = await query.CountAsync(ct);
+        var today = DateTime.UtcNow.Date;
+        var dueSoonUpperBound = today.AddDays(EndingSoonDays + 1);
+        var totalBaseValue = total == 0 ? 0m : await query.SumAsync(c => c.Value, ct);
+        var totalApprovedVoValue = await db.ContractAppendices
+            .Where(v => v.Status == ContractAppendixStatus.Approved && query.Any(c => c.Id == v.ContractId))
+            .SumAsync(v => (decimal?)v.ValueDelta, ct) ?? 0m;
+        var totalCurrentValue = totalBaseValue + totalApprovedVoValue;
+        var overdueContractCount = await query.CountAsync(c => db.ContractPaymentMilestones.Any(m =>
+            m.ContractId == c.Id && m.Status != PaymentMilestoneStatus.Paid && m.DueDate != null && m.DueDate < today), ct);
+        var dueSoonContractCount = await query.CountAsync(c => db.ContractPaymentMilestones.Any(m =>
+            m.ContractId == c.Id && m.Status != PaymentMilestoneStatus.Paid && m.DueDate != null &&
+            m.DueDate >= today && m.DueDate < dueSoonUpperBound), ct);
 
         var descending = !string.Equals(sortDirection, "asc", StringComparison.OrdinalIgnoreCase);
         var orderedQuery = (sortBy?.Trim().ToLowerInvariant()) switch
@@ -100,8 +134,12 @@ public class ContractService(
                 ? query.OrderByDescending(c => c.EndDate ?? DateTime.MinValue)
                 : query.OrderBy(c => c.EndDate ?? DateTime.MaxValue),
             "value" => descending
-                ? query.OrderByDescending(c => c.Value)
-                : query.OrderBy(c => c.Value),
+                ? query.OrderByDescending(c => c.Value + (db.ContractAppendices
+                    .Where(v => v.ContractId == c.Id && v.Status == ContractAppendixStatus.Approved)
+                    .Sum(v => (decimal?)v.ValueDelta) ?? 0m))
+                : query.OrderBy(c => c.Value + (db.ContractAppendices
+                    .Where(v => v.ContractId == c.Id && v.Status == ContractAppendixStatus.Approved)
+                    .Sum(v => (decimal?)v.ValueDelta) ?? 0m)),
             "updatedat" => descending
                 ? query.OrderByDescending(c => c.UpdatedAt)
                 : query.OrderBy(c => c.UpdatedAt),
@@ -112,10 +150,13 @@ public class ContractService(
                     .ThenBy(c => c.CreatedAt),
         };
 
-        var rows = await orderedQuery
-            .ThenByDescending(c => c.Id)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
+        IQueryable<Contract> resultQuery = orderedQuery.ThenByDescending(c => c.Id);
+        if (!includeAll)
+        {
+            resultQuery = resultQuery.Skip((page - 1) * pageSize).Take(pageSize);
+        }
+
+        var rows = await resultQuery
             .Select(c => new
             {
                 Contract = c,
@@ -134,6 +175,20 @@ public class ContractService(
                     .Any(a => a.ContractId == c.Id && a.Kind == ContractAttachmentKind.SignedScan),
                 AttachmentCount = db.ContractAttachments.Count(a => a.ContractId == c.Id),
                 AppendixCount = db.ContractAppendices.Count(v => v.ContractId == c.Id),
+                NextPaymentDueDate = db.ContractPaymentMilestones
+                    .Where(m => m.ContractId == c.Id && m.Status != PaymentMilestoneStatus.Paid && m.DueDate != null)
+                    .OrderBy(m => m.DueDate).ThenBy(m => m.Order)
+                    .Select(m => m.DueDate).FirstOrDefault(),
+                NextPaymentPercent = db.ContractPaymentMilestones
+                    .Where(m => m.ContractId == c.Id && m.Status != PaymentMilestoneStatus.Paid && m.DueDate != null)
+                    .OrderBy(m => m.DueDate).ThenBy(m => m.Order)
+                    .Select(m => (decimal?)m.PercentValue).FirstOrDefault(),
+                OutstandingPercent = db.ContractPaymentMilestones
+                    .Where(m => m.ContractId == c.Id && m.Status != PaymentMilestoneStatus.Paid)
+                    .Sum(m => (decimal?)m.PercentValue) ?? 0m,
+                OverduePaymentMilestoneCount = db.ContractPaymentMilestones.Count(m =>
+                    m.ContractId == c.Id && m.Status != PaymentMilestoneStatus.Paid &&
+                    m.DueDate != null && m.DueDate < today),
                 DesignProject = db.DesignProjects
                     .Where(dp => dp.ContractId == c.Id)
                     .Select(dp => new { dp.Id, dp.ProjectCode, dp.Name, dp.CurrentStage })
@@ -145,7 +200,10 @@ public class ContractService(
         {
             Total = total,
             Page = page,
-            PageSize = pageSize,
+            PageSize = includeAll ? total : pageSize,
+            TotalCurrentValue = totalCurrentValue,
+            OverdueContractCount = overdueContractCount,
+            DueSoonContractCount = dueSoonContractCount,
             Items = rows.Select(r => MapToResponse(
                 r.Contract, r.CustomerName, r.VendorCode, r.VendorName,
                 r.OpportunityTitle, r.QuoteCode, r.OwnerName,
@@ -158,7 +216,52 @@ public class ContractService(
                 designProjectId: r.DesignProject?.Id,
                 designProjectCode: r.DesignProject?.ProjectCode,
                 designProjectName: r.DesignProject?.Name,
-                designProjectStage: r.DesignProject?.CurrentStage)).ToList(),
+                designProjectStage: r.DesignProject?.CurrentStage,
+                nextPaymentDueDate: r.NextPaymentDueDate,
+                nextPaymentAmount: r.NextPaymentPercent.HasValue
+                    ? Math.Round(r.Contract.Value * r.NextPaymentPercent.Value / 100m, 2)
+                    : null,
+                outstandingScheduledAmount: Math.Round(r.Contract.Value * r.OutstandingPercent / 100m, 2),
+                overduePaymentMilestoneCount: r.OverduePaymentMilestoneCount)).ToList(),
+        };
+    }
+
+    private const int EndingSoonDays = 30;
+
+    public async Task<ContractFilterOptionsResponse> GetFilterOptionsAsync(
+        int callerUserId,
+        bool canSeeAll,
+        ContractDirection? direction,
+        CancellationToken ct = default)
+    {
+        var query = db.Contracts.AsNoTracking().AsQueryable();
+        if (!canSeeAll) query = query.Where(c => c.OwnerUserId == callerUserId);
+        if (direction.HasValue) query = query.Where(c => c.Direction == direction.Value);
+
+        return new ContractFilterOptionsResponse
+        {
+            Owners = await query.Where(c => c.OwnerUserId != null)
+                .Select(c => new ContractFilterOwnerOption
+                {
+                    Id = c.OwnerUserId!.Value,
+                    Name = c.Owner != null ? c.Owner.FullName ?? c.Owner.Email ?? "" : "",
+                })
+                .Distinct().OrderBy(option => option.Name).ToListAsync(ct),
+            Customers = await query.Select(c => new ContractFilterCustomerOption
+            {
+                Id = c.CustomerId,
+                Name = c.Customer.Name,
+            })
+                .Distinct().OrderBy(option => option.Name).ToListAsync(ct),
+            Projects = await query.Where(c => c.OperationalProjectId != null)
+                .Select(c => new ContractFilterProjectOption
+                {
+                    Id = c.OperationalProjectId!.Value,
+                    Code = c.OperationalProject!.Code,
+                    Name = c.OperationalProject.Name,
+                    CustomerId = c.OperationalProject.CustomerId,
+                })
+                .Distinct().OrderBy(option => option.Code).ToListAsync(ct),
         };
     }
 
@@ -1139,13 +1242,34 @@ public class ContractService(
         int? designProjectId = null,
         string? designProjectCode = null,
         string? designProjectName = null,
-        DesignProjectStage? designProjectStage = null)
+        DesignProjectStage? designProjectStage = null,
+        DateTime? nextPaymentDueDate = null,
+        decimal? nextPaymentAmount = null,
+        decimal outstandingScheduledAmount = 0m,
+        int overduePaymentMilestoneCount = 0)
     {
         // CurrentValue = base value + approved VO deltas. Milestone Amount
         // still divides the base <c>entity.Value</c> — % refer to the
         // signed contract before amendments; VO settlements happen out of
         // band per the ops flow.
         var currentValue = entity.Value + approvedVoTotal;
+        if (milestones is not null)
+        {
+            var unpaid = milestones.Where(m => m.Status != PaymentMilestoneStatus.Paid).ToList();
+            var next = unpaid.Where(m => m.DueDate.HasValue)
+                .OrderBy(m => m.DueDate)
+                .ThenBy(m => m.Order)
+                .FirstOrDefault();
+            nextPaymentDueDate = next?.DueDate;
+            nextPaymentAmount = next is null
+                ? null
+                : Math.Round(entity.Value * next.PercentValue / 100m, 2);
+            outstandingScheduledAmount = Math.Round(
+                entity.Value * unpaid.Sum(m => m.PercentValue) / 100m,
+                2);
+            overduePaymentMilestoneCount = unpaid.Count(m =>
+                m.DueDate.HasValue && m.DueDate.Value < DateTime.UtcNow.Date);
+        }
         return new ContractResponse
         {
             Id = entity.Id,
@@ -1179,6 +1303,10 @@ public class ContractService(
             Value = entity.Value,
             ApprovedVoTotal = approvedVoTotal,
             CurrentValue = currentValue,
+            NextPaymentDueDate = nextPaymentDueDate,
+            NextPaymentAmount = nextPaymentAmount,
+            OutstandingScheduledAmount = outstandingScheduledAmount,
+            OverduePaymentMilestoneCount = overduePaymentMilestoneCount,
             HasSignedScan = hasSignedScan,
             AttachmentCount = attachmentCount,
             AppendixCount = appendixCount,

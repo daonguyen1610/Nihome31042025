@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { Plus, Pencil, Trash2, Search as SearchIcon, Download, AlertTriangle, ArrowUp, ArrowDown, ExternalLink } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { Plus, Pencil, Trash2, Search as SearchIcon, Download, AlertTriangle, ArrowUp, ArrowDown, ExternalLink, SlidersHorizontal } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { formatVnd, formatVndWithSymbol } from "@/lib/numberFormat";
@@ -11,6 +11,7 @@ import {
   PAYMENT_MILESTONE_STATUSES,
   type ContractClassificationOptions,
   type ContractDirection,
+  type ContractFilterOptionsResponse,
   type ContractListParams,
   type ContractPaymentMilestoneRequest,
   type ContractResponse,
@@ -52,7 +53,7 @@ import { createCsvFilename, downloadCsv } from "@/lib/exportCsv";
 // Number of days before end-date that triggers the red "ending soon" badge.
 const ENDING_SOON_DAYS = 30;
 const PAGE_SIZE = 20;
-const EXPORT_PAGE_SIZE = 100;
+const CONTRACT_TYPES: ContractType[] = ["Unclassified", "Design", "Construction", "DesignAndBuild", "Supply", "Subcontract"];
 
 type ContractListMode = "all" | "upstream";
 type ContractSortBy = NonNullable<ContractListParams["sortBy"]>;
@@ -162,7 +163,7 @@ const toIsoTimestamp = (value: string): string | null => {
   return Number.isNaN(d.getTime()) ? null : d.toISOString();
 };
 
-const formatDate = (value?: string | null): string => {
+const formatDate = (value: string | null | undefined, locale: string): string => {
   if (!value) return "—";
   // Backend returns bare `YYYY-MM-DDTHH:mm:ss` (no Z). Constructing a JS Date
   // then reading `.getUTCDate()` would fold the local-timezone conversion in
@@ -171,16 +172,21 @@ const formatDate = (value?: string | null): string => {
   const iso = value.slice(0, 10);
   const parts = iso.split("-");
   if (parts.length !== 3) return iso;
-  const [yyyy, mm, dd] = parts;
-  return `${dd}/${mm}/${yyyy}`;
+  const [yyyy, mm, dd] = parts.map(Number);
+  const parsed = new Date(Date.UTC(yyyy, mm - 1, dd));
+  return Number.isNaN(parsed.getTime())
+    ? iso
+    : new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeZone: "UTC" }).format(parsed);
 };
 
-const isEndingSoon = (contract: ContractResponse): boolean => {
-  if (contract.status !== "InProgress" || !contract.endDate) return false;
-  const end = new Date(contract.endDate).getTime();
-  if (Number.isNaN(end)) return false;
-  const diffDays = (end - Date.now()) / (1000 * 60 * 60 * 24);
-  return diffDays <= ENDING_SOON_DAYS;
+const getDeadlineState = (contract: ContractResponse): "overdue" | "endingSoon" | null => {
+  if (contract.status !== "InProgress" || !contract.endDate) return null;
+  const end = new Date(`${contract.endDate.slice(0, 10)}T00:00:00Z`).getTime();
+  if (Number.isNaN(end)) return null;
+  const today = new Date(`${getLocalIsoDate()}T00:00:00Z`).getTime();
+  const diffDays = Math.floor((end - today) / (1000 * 60 * 60 * 24));
+  if (diffDays < 0) return "overdue";
+  return diffDays <= ENDING_SOON_DAYS ? "endingSoon" : null;
 };
 
 const getErrorMessage = (error: unknown): string | undefined => {
@@ -202,13 +208,14 @@ const getErrorMessage = (error: unknown): string | undefined => {
 };
 
 const Contracts = ({ mode = "all" }: ContractsProps) => {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
   const navigate = useNavigate();
+  const location = useLocation();
   const canManage = has(ADMIN_PERMS.contractsManage);
   const canViewOperationalProjects = has(ADMIN_PERMS.operationalProjects);
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // Number(null) is 0 and Number.isFinite(0) is true, so parsing straight from
   // searchParams turns a missing parameter into id zero. Read the raw string and
@@ -235,9 +242,13 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [total, setTotal] = useState(0);
+  const [summary, setSummary] = useState({ totalCurrentValue: 0, overdueContractCount: 0, dueSoonContractCount: 0 });
+  const [filterOptions, setFilterOptions] = useState<ContractFilterOptionsResponse>({ owners: [], customers: [], projects: [] });
   const [customers, setCustomers] = useState<CustomerResponse[]>([]);
   const [projects, setProjects] = useState<OperationalProjectListItemResponse[]>([]);
   const [classification, setClassification] = useState<ContractClassificationOptions | null>(null);
+  const [metadataError, setMetadataError] = useState<string | null>(null);
+  const [referenceError, setReferenceError] = useState<string | null>(null);
   const [hoveredContractId, setHoveredContractId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   // Only the very first load may replace the whole page. Every later refresh
@@ -246,33 +257,54 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
   const [initialLoaded, setInitialLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [statusFilter, setStatusFilter] = useState<ContractStatus | "all">("all");
+  const [statusFilter, setStatusFilter] = useState<ContractStatus | "all">(
+    CONTRACT_STATUSES.includes(searchParams.get("status") as ContractStatus)
+      ? searchParams.get("status") as ContractStatus
+      : "all",
+  );
   const fixedDirection: ContractDirection | null = mode === "upstream" ? "Upstream" : null;
   const [directionFilter, setDirectionFilter] = useState<ContractDirection | "all">(
     fixedDirection ?? "all",
   );
-  const [typeFilter, setTypeFilter] = useState<ContractType | "all">("all");
+  const [typeFilter, setTypeFilter] = useState<ContractType | "all">(
+    CONTRACT_TYPES.includes(searchParams.get("type") as ContractType)
+      ? searchParams.get("type") as ContractType
+      : "all",
+  );
   const [vendorFilter, setVendorFilter] = useState<number | "all">("all");
   const [customerFilter, setCustomerFilter] = useState<number | "all">(
-    Number.isInteger(customerIdParam) && customerIdParam > 0 ? customerIdParam : "all",
+    Number.isInteger(customerIdParam) && customerIdParam > 0 ? customerIdParam : (readPositiveParam("customer") ?? "all"),
   );
   const [projectFilter, setProjectFilter] = useState<number | "all">(
-    prefillOperationalProjectId ?? "all",
+    prefillOperationalProjectId ?? readPositiveParam("project") ?? "all",
   );
-  const [signedFrom, setSignedFrom] = useState("");
-  const [signedTo, setSignedTo] = useState("");
-  const [valueMin, setValueMin] = useState("");
-  const [valueMax, setValueMax] = useState("");
-  const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
-  const [sortBy, setSortBy] = useState<ContractSortBy>("signedDate");
-  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+  const [ownerFilter, setOwnerFilter] = useState<number | "all">(readPositiveParam("owner") ?? "all");
+  const [signedFrom, setSignedFrom] = useState(searchParams.get("signedFrom") ?? "");
+  const [signedTo, setSignedTo] = useState(searchParams.get("signedTo") ?? "");
+  const [endFrom, setEndFrom] = useState(searchParams.get("endFrom") ?? "");
+  const [endTo, setEndTo] = useState(searchParams.get("endTo") ?? "");
+  const [valueMin, setValueMin] = useState(searchParams.get("valueMin") ?? "");
+  const [valueMax, setValueMax] = useState(searchParams.get("valueMax") ?? "");
+  const [search, setSearch] = useState(searchParams.get("search") ?? "");
+  const [page, setPage] = useState(readPositiveParam("page") ?? 1);
+  const [sortBy, setSortBy] = useState<ContractSortBy>((searchParams.get("sortBy") as ContractSortBy) || "signedDate");
+  const [sortDirection, setSortDirection] = useState<SortDirection>(searchParams.get("sortDirection") === "asc" ? "asc" : "desc");
   const [exporting, setExporting] = useState(false);
+  const [exportProgress, setExportProgress] = useState({ current: 0, total: 0 });
+  const [advancedOpen, setAdvancedOpen] = useState(() =>
+    ["type", "signedFrom", "signedTo", "valueMin", "valueMax", "sortBy"].some((key) => searchParams.has(key)),
+  );
+  const latestRequest = useRef(0);
+  const searchEffectReady = useRef(false);
   // The input stays bound to `search` for instant feedback; only this debounced
   // copy drives the query, so typing no longer fires a request per keystroke.
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState(search);
 
   useEffect(() => {
+    if (!searchEffectReady.current) {
+      searchEffectReady.current = true;
+      return;
+    }
     const timer = window.setTimeout(() => {
       setDebouncedSearch(search);
       setPage(1);
@@ -294,51 +326,119 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
     if (vendorFilter !== "all") params.vendorId = vendorFilter;
     if (customerFilter !== "all") params.customerId = customerFilter;
     if (projectFilter !== "all") params.operationalProjectId = projectFilter;
+    if (ownerFilter !== "all") params.ownerUserId = ownerFilter;
     if (signedFrom) params.signedFrom = toIsoTimestamp(signedFrom) ?? undefined;
     if (signedTo) params.signedTo = toIsoTimestamp(signedTo) ?? undefined;
+    if (endFrom) params.endFrom = toIsoTimestamp(endFrom) ?? undefined;
+    if (endTo) params.endTo = toIsoTimestamp(endTo) ?? undefined;
     const minNum = Number(valueMin);
     if (valueMin && !Number.isNaN(minNum)) params.valueMin = minNum;
     const maxNum = Number(valueMax);
     if (valueMax && !Number.isNaN(maxNum)) params.valueMax = maxNum;
     if (debouncedSearch.trim()) params.search = debouncedSearch.trim();
     return params;
-  }, [page, sortBy, sortDirection, statusFilter, fixedDirection, directionFilter, typeFilter, vendorFilter, customerFilter, projectFilter, signedFrom, signedTo, valueMin, valueMax, debouncedSearch]);
+  }, [page, sortBy, sortDirection, statusFilter, fixedDirection, directionFilter, typeFilter, vendorFilter, customerFilter, projectFilter, ownerFilter, signedFrom, signedTo, endFrom, endTo, valueMin, valueMax, debouncedSearch]);
 
   const load = useCallback(async () => {
+    const requestId = latestRequest.current + 1;
+    latestRequest.current = requestId;
     setLoading(true);
     setError(null);
     try {
-      const [contractsRes, customersRes, classificationRes, projectsRes] = await Promise.all([
-        adminApi.listContracts(buildListParams()),
-        customers.length === 0
-          ? adminApi.listCustomers({ pageSize: 200 })
-          : Promise.resolve({ data: { total: customers.length, page: 1, pageSize: customers.length, items: customers } }),
-        classification === null
-          ? adminApi.getContractClassificationOptions()
-          : Promise.resolve({ data: classification }),
-        canViewOperationalProjects && projects.length === 0
-          ? adminApi.listOperationalProjects({ pageSize: 100 })
-          : Promise.resolve({ data: { total: projects.length, page: 1, pageSize: projects.length, items: projects } }),
-      ]);
+      const contractsRes = await adminApi.listContracts(buildListParams());
+      if (requestId !== latestRequest.current) return;
       setContracts(contractsRes.data.items);
       setTotal(contractsRes.data.total);
-      if (customers.length === 0) {
-        setCustomers(customersRes.data.items);
-      }
-      if (classification === null) setClassification(classificationRes.data);
-      if (projects.length === 0) setProjects(projectsRes.data.items);
+      setSummary({
+        totalCurrentValue: contractsRes.data.totalCurrentValue ?? 0,
+        overdueContractCount: contractsRes.data.overdueContractCount ?? 0,
+        dueSoonContractCount: contractsRes.data.dueSoonContractCount ?? 0,
+      });
     } catch (err) {
+      if (requestId !== latestRequest.current) return;
       setError(getErrorMessage(err) ?? t("common.error"));
     } finally {
-      setLoading(false);
-      setInitialLoaded(true);
+      if (requestId === latestRequest.current) {
+        setLoading(false);
+        setInitialLoaded(true);
+      }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [buildListParams, canViewOperationalProjects, t]);
+  }, [buildListParams, t]);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    const direction = fixedDirection ?? (directionFilter === "all" ? undefined : directionFilter);
+    setMetadataError(null);
+    void adminApi.getContractFilterOptions(direction)
+      .then((response) => setFilterOptions(response.data))
+      .catch(() => setMetadataError(t("contracts.filterOptionsLoadError")));
+    if (classification === null) {
+      void adminApi.getContractClassificationOptions()
+        .then((response) => setClassification(response.data))
+        .catch(() => setMetadataError(t("contracts.filterOptionsLoadError")));
+    }
+  }, [classification, directionFilter, fixedDirection, t]);
+
+  useEffect(() => {
+    if (!canManage || customers.length > 0) return;
+    const loadCreateReferences = async () => {
+      setReferenceError(null);
+      try {
+        const allCustomers: CustomerResponse[] = [];
+        const allProjects: OperationalProjectListItemResponse[] = [];
+        let nextPage = 1;
+        let expectedCustomers = 1;
+        while (allCustomers.length < expectedCustomers) {
+          const response = await adminApi.listCustomers({ page: nextPage, pageSize: 100 });
+          allCustomers.push(...response.data.items);
+          expectedCustomers = response.data.total;
+          if (response.data.items.length === 0) break;
+          nextPage += 1;
+        }
+        if (canViewOperationalProjects) {
+          nextPage = 1;
+          let expectedProjects = 1;
+          while (allProjects.length < expectedProjects) {
+            const response = await adminApi.listOperationalProjects({ page: nextPage, pageSize: 100 });
+            allProjects.push(...response.data.items);
+            expectedProjects = response.data.total;
+            if (response.data.items.length === 0) break;
+            nextPage += 1;
+          }
+        }
+        setCustomers(allCustomers);
+        setProjects(allProjects);
+      } catch {
+        // Reference-data failure must not blank the read-only contract list.
+        setReferenceError(t("contracts.referenceLoadError"));
+      }
+    };
+    void loadCreateReferences();
+  }, [canManage, canViewOperationalProjects, customers.length, t]);
+
+  useEffect(() => {
+    if (mode !== "upstream") return;
+    const params = new URLSearchParams();
+    if (search) params.set("search", search);
+    if (statusFilter !== "all") params.set("status", statusFilter);
+    if (customerFilter !== "all") params.set("customer", String(customerFilter));
+    if (projectFilter !== "all") params.set("project", String(projectFilter));
+    if (ownerFilter !== "all") params.set("owner", String(ownerFilter));
+    if (endFrom) params.set("endFrom", endFrom);
+    if (endTo) params.set("endTo", endTo);
+    if (typeFilter !== "all") params.set("type", typeFilter);
+    if (signedFrom) params.set("signedFrom", signedFrom);
+    if (signedTo) params.set("signedTo", signedTo);
+    if (valueMin) params.set("valueMin", valueMin);
+    if (valueMax) params.set("valueMax", valueMax);
+    if (sortBy !== "signedDate") params.set("sortBy", sortBy);
+    if (sortDirection !== "desc") params.set("sortDirection", sortDirection);
+    if (page > 1) params.set("page", String(page));
+    setSearchParams(params, { replace: true });
+  }, [mode, search, statusFilter, customerFilter, projectFilter, ownerFilter, endFrom, endTo, typeFilter, signedFrom, signedTo, valueMin, valueMax, sortBy, sortDirection, page, setSearchParams]);
 
   const resetFilters = () => {
     setStatusFilter("all");
@@ -347,8 +447,11 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
     setVendorFilter("all");
     setCustomerFilter("all");
     setProjectFilter("all");
+    setOwnerFilter("all");
     setSignedFrom("");
     setSignedTo("");
+    setEndFrom("");
+    setEndTo("");
     setValueMin("");
     setValueMax("");
     setSearch("");
@@ -362,13 +465,22 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
     vendorFilter !== "all" ||
     customerFilter !== "all" ||
     projectFilter !== "all" ||
+    ownerFilter !== "all" ||
     signedFrom !== "" ||
     signedTo !== "" ||
+    endFrom !== "" ||
+    endTo !== "" ||
     valueMin !== "" ||
     valueMax !== "" ||
     search !== "";
 
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const detailUrl = useCallback((id: number, edit = false) => {
+    const params = new URLSearchParams();
+    if (edit) params.set("edit", "true");
+    params.set("returnTo", `${location.pathname}${location.search}`);
+    return `/admin/contracts/${id}?${params.toString()}`;
+  }, [location.pathname, location.search]);
 
   // -------- dialog / form --------
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -396,6 +508,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
       : projects.find((project) => project.id === projectFilter) ?? null;
     setForm({
       ...emptyForm,
+      direction: fixedDirection ?? emptyForm.direction,
       customerId: selectedProject?.customerId ?? null,
       operationalProjectId: selectedProject?.id ?? null,
     });
@@ -411,6 +524,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
     if (fromQuoteId === null) return;
     setForm({
       ...emptyForm,
+      direction: fixedDirection ?? emptyForm.direction,
       customerId: prefillCustomerId,
       operationalProjectId: prefillOperationalProjectId,
       opportunityId: prefillOpportunityId,
@@ -421,7 +535,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
     setDialogOpen(true);
     void loadSuggestedContractNumber();
     // Runs once per navigation carrying the parameters.
-  }, [fromQuoteId, loadSuggestedContractNumber, prefillCustomerId, prefillOperationalProjectId, prefillOpportunityId, prefillValue]);
+  }, [fixedDirection, fromQuoteId, loadSuggestedContractNumber, prefillCustomerId, prefillOperationalProjectId, prefillOpportunityId, prefillValue]);
   const patchMilestone = (index: number, patch: Partial<MilestoneDraft>) => {
     setForm((prev) => ({
       ...prev,
@@ -471,6 +585,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
 
   const submit = async () => {
     setFormError(null);
+    const effectiveDirection = fixedDirection ?? form.direction;
     if (form.customerId == null) {
       setFormError(t("form.required"));
       return;
@@ -479,7 +594,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
       setFormError(t("contracts.validation.operationalProjectRequired"));
       return;
     }
-    if (form.direction === "Downstream" && form.vendorId == null) {
+    if (effectiveDirection === "Downstream" && form.vendorId == null) {
       setFormError(t("contracts.validation.vendorRequired"));
       return;
     }
@@ -523,9 +638,9 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
         ? null
         : enteredContractNumber || null,
       customerId: form.customerId,
-      direction: form.direction,
+      direction: effectiveDirection,
       type: form.type,
-      vendorId: form.direction === "Downstream" ? form.vendorId : null,
+      vendorId: effectiveDirection === "Downstream" ? form.vendorId : null,
       operationalProjectId: form.operationalProjectId,
       opportunityId: form.opportunityId,
       quoteId: form.quoteId,
@@ -598,14 +713,14 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
 
   const exportCsv = async () => {
     setExporting(true);
+    setExportProgress({ current: 0, total });
     try {
-      const firstPage = (await adminApi.listContracts(buildListParams(1, EXPORT_PAGE_SIZE))).data;
-      const rows = [...firstPage.items];
-      const exportPages = Math.ceil(firstPage.total / firstPage.pageSize);
-      for (let exportPage = 2; exportPage <= exportPages; exportPage += 1) {
-        const response = await adminApi.listContracts(buildListParams(exportPage, EXPORT_PAGE_SIZE));
-        rows.push(...response.data.items);
-      }
+      const exportParams = buildListParams(1, PAGE_SIZE);
+      delete exportParams.page;
+      delete exportParams.pageSize;
+      const exportData = (await adminApi.exportContracts(exportParams)).data;
+      const rows = exportData.items;
+      setExportProgress({ current: rows.length, total: exportData.total });
 
       downloadCsv({
         filename: createCsvFilename(mode === "upstream" ? "primary-contracts" : "contracts"),
@@ -620,7 +735,12 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
           { header: t("contracts.field.signedDate"), value: (r) => r.signedDate ?? "" },
           { header: t("contracts.field.startDate"), value: (r) => r.startDate ?? "" },
           { header: t("contracts.field.endDate"), value: (r) => r.endDate ?? "" },
-          { header: t("contracts.field.value"), value: "value" },
+          { header: t("contracts.field.originalValue"), value: "value" },
+          { header: t("contracts.field.approvedVoTotal"), value: "approvedVoTotal" },
+          { header: t("contracts.field.currentValue"), value: "currentValue" },
+          { header: t("contracts.field.nextPaymentDueDate"), value: (r) => r.nextPaymentDueDate ?? "" },
+          { header: t("contracts.field.nextPaymentAmount"), value: (r) => r.nextPaymentAmount ?? "" },
+          { header: t("contracts.field.outstandingScheduledAmount"), value: "outstandingScheduledAmount" },
           { header: t("contracts.field.owner"), value: (r) => r.ownerName ?? "" },
         ],
         rows,
@@ -629,6 +749,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
       toast({ variant: "destructive", title: getErrorMessage(exportError) ?? t("common.error") });
     } finally {
       setExporting(false);
+      setExportProgress({ current: 0, total: 0 });
     }
   };
 
@@ -657,7 +778,9 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
           </div>
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={() => void exportCsv()} disabled={total === 0 || loading || exporting}>
-              <Download className="mr-1.5 h-4 w-4" /> {t("contracts.exportCsv")}
+              <Download className="mr-1.5 h-4 w-4" /> {exporting
+                ? t("contracts.exportProgress", exportProgress)
+                : t("contracts.exportCsv")}
             </Button>
             {canManage && (
               <Button onClick={openCreate}>
@@ -666,6 +789,27 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
             )}
           </div>
         </header>
+
+        {mode === "upstream" && (
+          <section className="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label={t("contracts.summary.label")}>
+            <div className="rounded-lg border bg-card p-3">
+              <p className="text-xs text-muted-foreground">{t("contracts.summary.contracts")}</p>
+              <p className="mt-1 text-xl font-semibold tabular-nums">{total}</p>
+            </div>
+            <div className="rounded-lg border bg-card p-3">
+              <p className="text-xs text-muted-foreground">{t("contracts.summary.currentValue")}</p>
+              <p className="mt-1 truncate text-xl font-semibold tabular-nums">{formatVnd(summary.totalCurrentValue)}</p>
+            </div>
+            <div className="rounded-lg border border-rose-200 bg-rose-50/60 p-3">
+              <p className="text-xs text-rose-700">{t("contracts.summary.overdueCollection")}</p>
+              <p className="mt-1 text-xl font-semibold tabular-nums text-rose-800">{summary.overdueContractCount}</p>
+            </div>
+            <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-3">
+              <p className="text-xs text-amber-700">{t("contracts.summary.dueSoonCollection")}</p>
+              <p className="mt-1 text-xl font-semibold tabular-nums text-amber-800">{summary.dueSoonContractCount}</p>
+            </div>
+          </section>
+        )}
 
         {/* Filters */}
         <section className="grid gap-3 rounded-lg border bg-card p-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -706,7 +850,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                 setCustomerFilter(customerId);
                 setPage(1);
                 if (projectFilter !== "all" &&
-                    (customerId === "all" || projects.find((project) => project.id === projectFilter)?.customerId !== customerId)) {
+                    (customerId === "all" || filterOptions.projects.find((project) => project.id === projectFilter)?.customerId !== customerId)) {
                   setProjectFilter("all");
                 }
               }}
@@ -714,7 +858,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
               <SelectTrigger id="c-customer" className="h-9"><SelectValue /></SelectTrigger>
               <SelectContent className="max-h-72">
                 <SelectItem value="all">{t("contracts.filter.allCustomers")}</SelectItem>
-                {customers.map((c) => (
+                {filterOptions.customers.map((c) => (
                   <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
                 ))}
               </SelectContent>
@@ -732,7 +876,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
               <SelectTrigger id="c-project" className="h-9"><SelectValue /></SelectTrigger>
               <SelectContent className="max-h-72">
                 <SelectItem value="all">{t("contracts.filter.allOperationalProjects")}</SelectItem>
-                {projects
+                {filterOptions.projects
                   .filter((project) => customerFilter === "all" || project.customerId === customerFilter)
                   .map((project) => (
                   <SelectItem key={project.id} value={String(project.id)}>{project.code} · {project.name}</SelectItem>
@@ -740,6 +884,35 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
               </SelectContent>
             </Select>
           </div>}
+          <div className="min-w-0 space-y-1">
+            <Label className="text-xs" htmlFor="c-owner">{t("contracts.field.owner")}</Label>
+            <Select value={ownerFilter === "all" ? "all" : String(ownerFilter)} onValueChange={(value) => {
+              setOwnerFilter(value === "all" ? "all" : Number(value));
+              setPage(1);
+            }}>
+              <SelectTrigger id="c-owner" className="h-9"><SelectValue /></SelectTrigger>
+              <SelectContent className="max-h-72">
+                <SelectItem value="all">{t("contracts.filter.allOwners")}</SelectItem>
+                {filterOptions.owners.map((owner) => (
+                  <SelectItem key={owner.id} value={String(owner.id)}>{owner.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="min-w-0 space-y-1 sm:col-span-2">
+            <Label className="text-xs">{t("contracts.filter.endRange")}</Label>
+            <div className="flex gap-1">
+              <Input id="c-end-from" aria-label={t("contracts.filter.endFrom")} type="date" min={DATE_MIN} max={DATE_MAX} value={endFrom} onChange={(e) => { setEndFrom(e.target.value); setPage(1); }} className="h-9 min-w-0 flex-1" />
+              <Input id="c-end-to" aria-label={t("contracts.filter.endTo")} type="date" min={DATE_MIN} max={DATE_MAX} value={endTo} onChange={(e) => { setEndTo(e.target.value); setPage(1); }} className="h-9 min-w-0 flex-1" />
+            </div>
+          </div>
+          <div className="flex items-end">
+            <Button type="button" variant="outline" size="sm" onClick={() => setAdvancedOpen((open) => !open)} aria-expanded={advancedOpen}>
+              <SlidersHorizontal className="mr-1.5 h-4 w-4" />
+              {t(advancedOpen ? "contracts.filter.hideAdvanced" : "contracts.filter.showAdvanced")}
+            </Button>
+          </div>
+          {advancedOpen && <>
           {fixedDirection === null && <div className="min-w-0 space-y-1">
             <Label className="text-xs" htmlFor="c-direction">{t("contracts.field.direction")}</Label>
             <Select value={directionFilter} onValueChange={(value) => {
@@ -791,8 +964,8 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
           <div className="min-w-0 space-y-1">
             <Label className="text-xs">{t("contracts.filter.signedRange")}</Label>
             <div className="flex gap-1">
-              <Input type="date" value={signedFrom} onChange={(e) => { setSignedFrom(e.target.value); setPage(1); }} className="h-9 min-w-0 flex-1" />
-              <Input type="date" value={signedTo} onChange={(e) => { setSignedTo(e.target.value); setPage(1); }} className="h-9 min-w-0 flex-1" />
+              <Input aria-label={t("contracts.filter.signedFrom")} type="date" min={DATE_MIN} max={DATE_MAX} value={signedFrom} onChange={(e) => { setSignedFrom(e.target.value); setPage(1); }} className="h-9 min-w-0 flex-1" />
+              <Input aria-label={t("contracts.filter.signedTo")} type="date" min={DATE_MIN} max={DATE_MAX} value={signedTo} onChange={(e) => { setSignedTo(e.target.value); setPage(1); }} className="h-9 min-w-0 flex-1" />
             </div>
           </div>
           <div className="min-w-0 space-y-1 sm:col-span-2 lg:col-span-2">
@@ -801,12 +974,12 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
               <Input
                 type="number" min={0} value={valueMin}
                 onChange={(e) => { setValueMin(e.target.value); setPage(1); }}
-                placeholder="min" className="h-9 min-w-0 flex-1"
+                aria-label={t("contracts.filter.valueMin")} placeholder={t("contracts.filter.min")} className="h-9 min-w-0 flex-1"
               />
               <Input
                 type="number" min={0} value={valueMax}
                 onChange={(e) => { setValueMax(e.target.value); setPage(1); }}
-                placeholder="max" className="h-9 min-w-0 flex-1"
+                aria-label={t("contracts.filter.valueMax")} placeholder={t("contracts.filter.max")} className="h-9 min-w-0 flex-1"
               />
             </div>
           </div>
@@ -837,6 +1010,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
               </SelectContent>
             </Select>
           </div>
+          </>}
           <div className="flex items-end gap-2">
             <p className="text-xs italic text-muted-foreground">{contracts.length} / {total}</p>
             {filtersActive && (
@@ -846,6 +1020,12 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
             )}
           </div>
         </section>
+
+        {metadataError && (
+          <div role="status" className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            {metadataError}
+          </div>
+        )}
 
         {/* Refreshes announce themselves here rather than replacing the page. */}
         {loading && initialLoaded ? (
@@ -879,7 +1059,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
             {/* Mobile / tablet cards (<lg) */}
             <ul className="grid gap-3 lg:hidden">
               {contracts.map((row) => {
-                const endingSoon = isEndingSoon(row);
+                const deadlineState = getDeadlineState(row);
                 return (
                   <li
                     key={row.id}
@@ -887,7 +1067,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                     className="relative rounded-lg border bg-card p-3 shadow-sm"
                   >
                     <Link
-                      to={`/admin/contracts/${row.id}`}
+                      to={detailUrl(row.id)}
                       className="absolute inset-0 z-0 rounded-lg transition-colors hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                       aria-label={`${t("common.view")} ${row.contractNumber}`}
                     />
@@ -897,7 +1077,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                         <div className="min-w-0">
                           <h3 className="break-words text-sm font-semibold leading-tight">{row.customerName ?? "—"}</h3>
                           <Link
-                            to={`/admin/contracts/${row.id}`}
+                            to={detailUrl(row.id)}
                             className="pointer-events-auto mt-0.5 inline-flex items-center gap-1 break-all font-mono text-xs text-primary hover:underline"
                           >
                             {row.contractNumber}
@@ -909,10 +1089,10 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                         <Badge variant="outline" className={STATUS_VARIANT[row.status]}>
                           {t(`contracts.status.${row.status}`)}
                         </Badge>
-                        {endingSoon && (
-                          <Badge variant="outline" className="border-rose-300 bg-rose-50 text-rose-700" title={t("contracts.deadlineBadgeTitle")}>
+                        {deadlineState && (
+                          <Badge variant="outline" className={deadlineState === "overdue" ? "border-rose-300 bg-rose-50 text-rose-700" : "border-amber-300 bg-amber-50 text-amber-800"} title={t(deadlineState === "overdue" ? "contracts.overdueBadgeTitle" : "contracts.deadlineBadgeTitle")}>
                             <AlertTriangle className="mr-1 h-3 w-3" />
-                            {t("contracts.deadlineBadge")}
+                            {t(deadlineState === "overdue" ? "contracts.overdueBadge" : "contracts.deadlineBadge")}
                           </Badge>
                         )}
                       </div>
@@ -922,14 +1102,27 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                       <dd>{t(`contracts.type.${row.type}`)}</dd>
                       <dt className="text-muted-foreground">{t("contracts.field.operationalProject")}</dt>
                       <dd>{row.operationalProjectCode ? `${row.operationalProjectCode} · ${row.operationalProjectName ?? ""}` : "—"}</dd>
-                      <dt className="text-muted-foreground">{t("contracts.field.counterparty")}</dt>
-                      <dd>{row.vendorName ?? row.customerName ?? "—"}</dd>
-                      <dt className="text-muted-foreground">{t("contracts.field.value")}</dt>
-                      <dd className="font-semibold">{formatVnd(row.value)}</dd>
+                      {mode === "all" && <>
+                        <dt className="text-muted-foreground">{t("contracts.field.counterparty")}</dt>
+                        <dd>{row.vendorName ?? row.customerName ?? "—"}</dd>
+                      </>}
+                      <dt className="text-muted-foreground">{t("contracts.field.currentValue")}</dt>
+                      <dd className="font-semibold">
+                        {formatVnd(row.currentValue)}
+                        {row.approvedVoTotal !== 0 && <span className="ml-1 font-normal text-muted-foreground">({t("contracts.field.voShort")} {formatVnd(row.approvedVoTotal)})</span>}
+                      </dd>
                       <dt className="text-muted-foreground">{t("contracts.field.signedDate")}</dt>
-                      <dd>{formatDate(row.signedDate)}</dd>
+                      <dd>{formatDate(row.signedDate, lang)}</dd>
                       <dt className="text-muted-foreground">{t("contracts.field.endDate")}</dt>
-                      <dd>{formatDate(row.endDate)}</dd>
+                      <dd>{formatDate(row.endDate, lang)}</dd>
+                      {mode === "upstream" && <>
+                        <dt className="text-muted-foreground">{t("contracts.field.nextCollection")}</dt>
+                        <dd>{row.nextPaymentDueDate
+                          ? `${formatDate(row.nextPaymentDueDate, lang)} · ${formatVnd(row.nextPaymentAmount ?? 0)}`
+                          : "—"}</dd>
+                        <dt className="text-muted-foreground">{t("contracts.field.outstandingScheduledAmount")}</dt>
+                        <dd>{formatVnd(row.outstandingScheduledAmount)}</dd>
+                      </>}
                       {row.ownerName && (
                         <>
                           <dt className="text-muted-foreground">{t("contracts.field.owner")}</dt>
@@ -941,7 +1134,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                       <div
                         className="pointer-events-auto mt-3 flex flex-wrap items-center justify-end gap-1 border-t pt-2"
                       >
-                        <Button variant="ghost" size="sm" onClick={() => navigate(`/admin/contracts/${row.id}?edit=true`)}>
+                        <Button variant="ghost" size="sm" onClick={() => navigate(detailUrl(row.id, true))}>
                           <Pencil className="mr-1 h-3.5 w-3.5" /> {t("common.edit")}
                         </Button>
                         <Button
@@ -968,10 +1161,11 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                     <th className="min-w-[220px] px-3 py-3 text-left font-medium">{t("contracts.field.customer")}</th>
                     <th className="min-w-[180px] px-3 py-3 text-left font-medium">{t("contracts.field.operationalProject")}</th>
                     <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("contracts.field.type")}</th>
-                    <th className="min-w-[180px] px-3 py-3 text-left font-medium">{t("contracts.field.counterparty")}</th>
+                    {mode === "all" && <th className="min-w-[180px] px-3 py-3 text-left font-medium">{t("contracts.field.counterparty")}</th>}
                     <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("contracts.field.signedDate")}</th>
                     <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("contracts.field.endDate")}</th>
-                    <th className="whitespace-nowrap px-3 py-3 text-right font-medium">{t("contracts.field.value")}</th>
+                    <th className="whitespace-nowrap px-3 py-3 text-right font-medium">{t("contracts.field.currentValue")}</th>
+                    {mode === "upstream" && <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("contracts.field.nextCollection")}</th>}
                     <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("contracts.field.status")}</th>
                     <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("contracts.field.owner")}</th>
                     {canManage && (
@@ -981,19 +1175,19 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                 </thead>
                 <tbody className="divide-y">
                   {contracts.map((row) => {
-                    const endingSoon = isEndingSoon(row);
+                    const deadlineState = getDeadlineState(row);
                     return (
                       <tr
                         key={row.id}
                         data-testid={`contract-row-${row.id}`}
                         data-navigation-active={hoveredContractId === row.id ? "true" : "false"}
                         className={`cursor-pointer transition ${hoveredContractId === row.id ? "bg-muted/40" : ""}`}
-                        onClick={() => navigate(`/admin/contracts/${row.id}`)}
+                        onClick={() => navigate(detailUrl(row.id))}
                         onMouseEnter={() => setHoveredContractId(row.id)}
                         onMouseLeave={() => setHoveredContractId(null)}
                       >
                         <td className="whitespace-nowrap px-3 py-3 font-mono text-xs" onClick={(event) => event.stopPropagation()}>
-                          <Link to={`/admin/contracts/${row.id}`} className="inline-flex items-center gap-1 text-primary hover:underline">
+                          <Link to={detailUrl(row.id)} className="inline-flex items-center gap-1 text-primary hover:underline">
                             {row.contractNumber}
                             <ExternalLink className="h-3 w-3 opacity-70" />
                           </Link>
@@ -1007,26 +1201,33 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                           ) : "—"}
                         </td>
                         <td className="whitespace-nowrap px-3 py-3">{t(`contracts.type.${row.type}`)}</td>
-                        <td className="min-w-[180px] px-3 py-3">{row.vendorName ?? row.customerName ?? "—"}</td>
-                        <td className="whitespace-nowrap px-3 py-3">{formatDate(row.signedDate)}</td>
+                        {mode === "all" && <td className="min-w-[180px] px-3 py-3">{row.vendorName ?? row.customerName ?? "—"}</td>}
+                        <td className="whitespace-nowrap px-3 py-3">{formatDate(row.signedDate, lang)}</td>
                         <td className="whitespace-nowrap px-3 py-3">
                           <div className="flex items-center gap-2">
-                            {formatDate(row.endDate)}
-                            {endingSoon && (
+                            {formatDate(row.endDate, lang)}
+                            {deadlineState && (
                               <Badge
                                 variant="outline"
-                                className="border-rose-300 bg-rose-50 text-rose-700"
-                                title={t("contracts.deadlineBadgeTitle")}
+                                className={deadlineState === "overdue" ? "border-rose-300 bg-rose-50 text-rose-700" : "border-amber-300 bg-amber-50 text-amber-800"}
+                                title={t(deadlineState === "overdue" ? "contracts.overdueBadgeTitle" : "contracts.deadlineBadgeTitle")}
                               >
                                 <AlertTriangle className="mr-1 h-3 w-3" />
-                                {t("contracts.deadlineBadge")}
+                                {t(deadlineState === "overdue" ? "contracts.overdueBadge" : "contracts.deadlineBadge")}
                               </Badge>
                             )}
                           </div>
                         </td>
                         <td className="whitespace-nowrap px-3 py-3 text-right font-semibold">
-                          {formatVnd(row.value)}
+                          <div>{formatVnd(row.currentValue)}</div>
+                          {row.approvedVoTotal !== 0 && <div className="text-[11px] font-normal text-muted-foreground">{t("contracts.field.voShort")} {formatVnd(row.approvedVoTotal)}</div>}
                         </td>
+                        {mode === "upstream" && <td className="whitespace-nowrap px-3 py-3 text-xs">
+                          {row.nextPaymentDueDate ? <>
+                            <div>{formatDate(row.nextPaymentDueDate, lang)}</div>
+                            <div className={row.overduePaymentMilestoneCount > 0 ? "font-semibold text-rose-700" : "text-muted-foreground"}>{formatVnd(row.nextPaymentAmount ?? 0)}</div>
+                          </> : "—"}
+                        </td>}
                         <td className="whitespace-nowrap px-3 py-3">
                           <Badge variant="outline" className={STATUS_VARIANT[row.status]}>
                             {t(`contracts.status.${row.status}`)}
@@ -1042,7 +1243,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                             onMouseLeave={() => setHoveredContractId(row.id)}
                           >
                             <div className="inline-flex items-center gap-1">
-                              <Button variant="ghost" size="sm" onClick={() => navigate(`/admin/contracts/${row.id}?edit=true`)}>
+                              <Button variant="ghost" size="sm" onClick={() => navigate(detailUrl(row.id, true))}>
                                 <Pencil className="mr-1 h-3.5 w-3.5" /> {t("common.edit")}
                               </Button>
                               <Button
@@ -1113,6 +1314,11 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
           </DialogHeader>
 
           <div className="space-y-3">
+            {referenceError && (
+              <div role="alert" className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                {referenceError}
+              </div>
+            )}
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="c-number" className="text-xs">{t("contracts.field.number")}</Label>
@@ -1182,7 +1388,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
+              {fixedDirection === null ? <div className="space-y-1.5">
                 <Label htmlFor="c-direction-form" className="text-xs">{t("contracts.field.direction")} *</Label>
                 <Select
                   value={form.direction}
@@ -1200,7 +1406,11 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
+              </div> : <div className="space-y-1.5 rounded-md border bg-muted/30 px-3 py-2">
+                <Label className="text-xs">{t("contracts.field.direction")}</Label>
+                <p className="text-sm font-medium">{t("contracts.direction.Upstream")}</p>
+                <p className="text-xs text-muted-foreground">{t("contracts.primary.directionLockedHint")}</p>
+              </div>}
               <div className="space-y-1.5">
                 <Label htmlFor="c-type-form" className="text-xs">{t("contracts.field.type")} *</Label>
                 <Select value={form.type} onValueChange={(value) => setForm({ ...form, type: value as FormData["type"] })}>

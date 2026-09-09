@@ -66,6 +66,8 @@ public class ContractsControllerTests : IntegrationTestBase
     {
         (await Client.GetAsync("/api/contracts")).StatusCode
             .Should().Be(HttpStatusCode.Unauthorized);
+        (await Client.GetAsync("/api/contracts/export-data?direction=Upstream")).StatusCode
+            .Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -98,6 +100,7 @@ public class ContractsControllerTests : IntegrationTestBase
             type = "DesignAndBuild",
             status = "Draft",
             value = 250_000_000,
+            endDate = "2026-12-31T18:00:00Z",
         });
         create.StatusCode.Should().Be(HttpStatusCode.Created, await create.Content.ReadAsStringAsync());
         var contractId = (await ReadJsonAsync(create)).GetProperty("id").GetInt32();
@@ -111,6 +114,23 @@ public class ContractsControllerTests : IntegrationTestBase
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await ReadJsonAsync(response);
         body.GetProperty("items").EnumerateArray()
+            .Should().Contain(item => item.GetProperty("id").GetInt32() == contractId);
+
+        var endDateFiltered = await Client.GetAsync(
+            $"/api/contracts?direction=Upstream&endFrom=2026-12-31&endTo=2026-12-31&operationalProjectId={projectId}");
+        endDateFiltered.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await ReadJsonAsync(endDateFiltered)).GetProperty("items").EnumerateArray()
+            .Should().Contain(item => item.GetProperty("id").GetInt32() == contractId);
+
+        var options = await Client.GetAsync("/api/contracts/filter-options?direction=Upstream");
+        options.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await ReadJsonAsync(options)).GetProperty("projects").EnumerateArray()
+            .Should().Contain(item => item.GetProperty("id").GetInt32() == projectId);
+
+        var export = await Client.GetAsync(
+            $"/api/contracts/export-data?direction=Upstream&operationalProjectId={projectId}");
+        export.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await ReadJsonAsync(export)).GetProperty("items").EnumerateArray()
             .Should().Contain(item => item.GetProperty("id").GetInt32() == contractId);
 
         var detail = await Client.GetAsync($"/api/contracts/{contractId}");

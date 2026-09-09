@@ -19,12 +19,21 @@ public interface IContractService
         string? search = null,
         DateTime? signedFrom = null,
         DateTime? signedTo = null,
+        DateTime? endFrom = null,
+        DateTime? endTo = null,
         decimal? valueMin = null,
         decimal? valueMax = null,
         int page = 1,
         int pageSize = 20,
         string? sortBy = null,
         string? sortDirection = null,
+        bool includeAll = false,
+        CancellationToken ct = default);
+
+    Task<ContractFilterOptionsResponse> GetFilterOptionsAsync(
+        int callerUserId,
+        bool canSeeAll,
+        ContractDirection? direction,
         CancellationToken ct = default);
 
     Task<ContractResponse?> GetAsync(int id, int callerUserId, bool canSeeAll, CancellationToken ct = default);

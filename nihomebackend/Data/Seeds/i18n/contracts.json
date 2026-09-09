@@ -1394,5 +1394,133 @@
     "en": "Select an operational project for the contract.",
     "zh": "请为合同选择运营项目。",
     "ja": "契約の運用プロジェクトを選択してください。"
+  },
+  {
+    "key": "contracts.overdueBadge", "category": "contracts",
+    "vi": "Đã quá hạn", "en": "Overdue", "zh": "已逾期", "ja": "期限超過"
+  },
+  {
+    "key": "contracts.overdueBadgeTitle", "category": "contracts",
+    "vi": "Ngày kết thúc dự kiến đã qua", "en": "The planned end date has passed", "zh": "计划结束日期已过", "ja": "予定終了日を過ぎています"
+  },
+  {
+    "key": "contracts.exportProgress", "category": "contracts",
+    "vi": "Đang xuất {current}/{total}", "en": "Exporting {current}/{total}", "zh": "正在导出 {current}/{total}", "ja": "エクスポート中 {current}/{total}"
+  },
+  {
+    "key": "contracts.filter.allOwners", "category": "contracts",
+    "vi": "Tất cả phụ trách", "en": "All owners", "zh": "全部负责人", "ja": "全担当者"
+  },
+  {
+    "key": "contracts.filter.endRange", "category": "contracts",
+    "vi": "Khoảng ngày kết thúc", "en": "End date range", "zh": "结束日期范围", "ja": "終了日の範囲"
+  },
+  {
+    "key": "contracts.filter.endFrom", "category": "contracts",
+    "vi": "Ngày kết thúc từ", "en": "End date from", "zh": "结束日期起", "ja": "終了日（開始）"
+  },
+  {
+    "key": "contracts.filter.endTo", "category": "contracts",
+    "vi": "Ngày kết thúc đến", "en": "End date to", "zh": "结束日期止", "ja": "終了日（終了）"
+  },
+  {
+    "key": "contracts.filter.signedFrom", "category": "contracts",
+    "vi": "Ngày ký từ", "en": "Signed date from", "zh": "签署日期起", "ja": "署名日（開始）"
+  },
+  {
+    "key": "contracts.filter.signedTo", "category": "contracts",
+    "vi": "Ngày ký đến", "en": "Signed date to", "zh": "签署日期止", "ja": "署名日（終了）"
+  },
+  {
+    "key": "contracts.filter.valueMin", "category": "contracts",
+    "vi": "Giá trị hiện hành tối thiểu", "en": "Minimum current value", "zh": "最低当前价值", "ja": "現在価値の最小値"
+  },
+  {
+    "key": "contracts.filter.valueMax", "category": "contracts",
+    "vi": "Giá trị hiện hành tối đa", "en": "Maximum current value", "zh": "最高当前价值", "ja": "現在価値の最大値"
+  },
+  {
+    "key": "contracts.filter.min", "category": "contracts",
+    "vi": "Tối thiểu", "en": "Minimum", "zh": "最小", "ja": "最小"
+  },
+  {
+    "key": "contracts.filter.max", "category": "contracts",
+    "vi": "Tối đa", "en": "Maximum", "zh": "最大", "ja": "最大"
+  },
+  {
+    "key": "contracts.filter.showAdvanced", "category": "contracts",
+    "vi": "Bộ lọc nâng cao", "en": "Advanced filters", "zh": "高级筛选", "ja": "詳細フィルター"
+  },
+  {
+    "key": "contracts.filter.hideAdvanced", "category": "contracts",
+    "vi": "Ẩn bộ lọc nâng cao", "en": "Hide advanced filters", "zh": "隐藏高级筛选", "ja": "詳細フィルターを隠す"
+  },
+  {
+    "key": "contracts.field.originalValue", "category": "contracts",
+    "vi": "Giá trị gốc", "en": "Original value", "zh": "原始价值", "ja": "当初価値"
+  },
+  {
+    "key": "contracts.field.approvedVoTotal", "category": "contracts",
+    "vi": "VO đã duyệt", "en": "Approved VO", "zh": "已批准变更", "ja": "承認済みVO"
+  },
+  {
+    "key": "contracts.field.currentValue", "category": "contracts",
+    "vi": "Giá trị hiện hành", "en": "Current value", "zh": "当前价值", "ja": "現在価値"
+  },
+  {
+    "key": "contracts.field.voShort", "category": "contracts",
+    "vi": "VO", "en": "VO", "zh": "变更", "ja": "VO"
+  },
+  {
+    "key": "contracts.field.nextCollection", "category": "contracts",
+    "vi": "Đợt thu tiếp theo", "en": "Next collection", "zh": "下次收款", "ja": "次回回収"
+  },
+  {
+    "key": "contracts.field.nextPaymentDueDate", "category": "contracts",
+    "vi": "Hạn thu tiếp theo", "en": "Next payment due", "zh": "下次付款到期日", "ja": "次回支払期限"
+  },
+  {
+    "key": "contracts.field.nextPaymentAmount", "category": "contracts",
+    "vi": "Số tiền đợt thu tiếp theo", "en": "Next collection amount", "zh": "下次收款金额", "ja": "次回回収額"
+  },
+  {
+    "key": "contracts.field.outstandingScheduledAmount", "category": "contracts",
+    "vi": "Giá trị theo lịch chưa thu", "en": "Scheduled amount outstanding", "zh": "计划未收金额", "ja": "未回収予定額"
+  },
+  {
+    "key": "contracts.summary.label", "category": "contracts",
+    "vi": "Tổng quan danh mục", "en": "Portfolio summary", "zh": "组合概览", "ja": "ポートフォリオ概要"
+  },
+  {
+    "key": "contracts.summary.contracts", "category": "contracts",
+    "vi": "Hợp đồng", "en": "Contracts", "zh": "合同", "ja": "契約"
+  },
+  {
+    "key": "contracts.summary.currentValue", "category": "contracts",
+    "vi": "Tổng giá trị hiện hành", "en": "Total current value", "zh": "当前总价值", "ja": "現在価値合計"
+  },
+  {
+    "key": "contracts.summary.overdueCollection", "category": "contracts",
+    "vi": "Có đợt thu quá hạn", "en": "Collections overdue", "zh": "收款逾期", "ja": "回収期限超過"
+  },
+  {
+    "key": "contracts.summary.dueSoonCollection", "category": "contracts",
+    "vi": "Đến hạn trong 30 ngày", "en": "Due within 30 days", "zh": "30天内到期", "ja": "30日以内に期限"
+  },
+  {
+    "key": "contracts.primary.directionLockedHint", "category": "contracts",
+    "vi": "Màn hình Finance chỉ tạo hợp đồng chính với chủ đầu tư.", "en": "Finance creates upstream client contracts on this screen only.", "zh": "财务在此页面仅创建上游业主合同。", "ja": "Financeはこの画面で上流顧客契約のみ作成します。"
+  },
+  {
+    "key": "contracts.detail.partialLoadError", "category": "contracts",
+    "vi": "Một phần dữ liệu liên quan chưa tải được. Hãy thử tải lại trước khi ra quyết định.", "en": "Some related data could not be loaded. Retry before making a decision.", "zh": "部分相关数据无法加载。请在做出决定前重试。", "ja": "一部の関連データを読み込めませんでした。判断する前に再読み込みしてください。"
+  },
+  {
+    "key": "contracts.filterOptionsLoadError", "category": "contracts",
+    "vi": "Chưa tải được một số lựa chọn bộ lọc; danh sách hợp đồng vẫn có thể sử dụng.", "en": "Some filter choices could not be loaded; the contract list remains available.", "zh": "部分筛选选项无法加载；合同列表仍可使用。", "ja": "一部のフィルター候補を読み込めませんでした。契約一覧は引き続き利用できます。"
+  },
+  {
+    "key": "contracts.referenceLoadError", "category": "contracts",
+    "vi": "Chưa tải đủ khách hàng hoặc dự án. Hãy đóng biểu mẫu và thử lại.", "en": "Customers or projects could not be fully loaded. Close the form and retry.", "zh": "客户或项目未能完整加载。请关闭表单后重试。", "ja": "顧客またはプロジェクトを完全に読み込めませんでした。フォームを閉じて再試行してください。"
   }
 ]

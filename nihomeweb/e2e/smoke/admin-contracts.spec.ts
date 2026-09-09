@@ -20,10 +20,82 @@ test("Finance primary-contract list is upstream-only and server-paginated", asyn
 
     expect((await listResponse).ok()).toBe(true);
     await expect(page.getByRole("heading", { name: /Hợp đồng chính|Primary contracts|主合同|主要契約/i })).toBeVisible();
+    await expect(page.locator("#c-owner")).toBeVisible();
+    await expect(page.locator("#c-end-from")).toHaveAttribute("aria-label", /Ngày kết thúc từ|End date from|结束日期起|終了日/);
+    await expect(page.locator("#c-end-to")).toHaveAttribute("aria-label", /Ngày kết thúc đến|End date to|结束日期止|終了日/);
     await expect(page.locator("#c-direction")).toHaveCount(0);
     await expect(page.locator("#c-vendor")).toHaveCount(0);
+    await page.getByRole("button", { name: /Bộ lọc nâng cao|Advanced filters|高级筛选|詳細フィルター/i }).click();
     await expect(page.locator("#c-sort-by")).toBeVisible();
     await expect(page.locator("#c-sort-direction")).toBeVisible();
+});
+
+test("Finance create and detail navigation stay in the primary-contract context", async ({
+    page,
+    loginInBrowserAs,
+    baseURL,
+}) => {
+    await loginInBrowserAs(page, TEST_USERS.superAdmin);
+    await page.goto(`${baseURL}/admin/finance/contracts`, { waitUntil: "networkidle" });
+
+    await page.locator("header").getByRole("button", { name: /Thêm hợp đồng|New contract|新增合同|新規契約/i }).click();
+    await expect(page.locator("#c-direction-form")).toHaveCount(0);
+    await expect(page.getByText(/Đầu ra - Khách hàng|Upstream - Customer|上游 - 客户|上流 - 顧客/i).last()).toBeVisible();
+    await page.getByRole("button", { name: /Huỷ|Hủy|Cancel|取消|キャンセル/i }).click();
+
+    const filteredResponse = page.waitForResponse((response) => {
+        const url = new URL(response.url());
+        return url.pathname.endsWith("/api/contracts") && url.searchParams.get("search") === "HD";
+    });
+    await page.locator("#c-search").fill("HD");
+    expect((await filteredResponse).ok()).toBe(true);
+    const endDateResponse = page.waitForResponse((response) => {
+        const url = new URL(response.url());
+        return url.pathname.endsWith("/api/contracts") && url.searchParams.get("endFrom")?.startsWith("2026-01-01");
+    });
+    await page.locator("#c-end-from").fill("2026-01-01");
+    expect((await endDateResponse).ok()).toBe(true);
+    await expect(page).toHaveURL(/search=HD/);
+
+    const row = page.locator('[data-testid^="contract-row-"]').first();
+    await expect(row).toBeVisible();
+    await row.locator("td").nth(1).click();
+    const returnLink = page.locator('main a[href^="/admin/finance/contracts?"]').first();
+    await expect(returnLink).toBeVisible();
+    await returnLink.click();
+    await expect(page).toHaveURL(/\/admin\/finance\/contracts\?search=HD.*endFrom=2026-01-01/);
+    await expect(page.locator("#c-search")).toHaveValue("HD");
+});
+
+test("Finance scope denies Sales and recovers from list API errors", async ({
+    page,
+    loginInBrowserAs,
+    baseURL,
+}) => {
+    await loginInBrowserAs(page, TEST_USERS.sale);
+    await page.goto(`${baseURL}/admin/finance/contracts`, { waitUntil: "networkidle" });
+    await expect(page.getByRole("heading", { name: "403" })).toBeVisible();
+
+    await loginInBrowserAs(page, TEST_USERS.superAdmin);
+    let attempts = 0;
+    await page.route(/\/api\/(?:v1\/)?contracts\?.*$/, async route => {
+        attempts += 1;
+        if (attempts === 1) {
+            await route.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ detail: "List unavailable" }) });
+            return;
+        }
+        await route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: JSON.stringify({ total: 0, page: 1, pageSize: 20, items: [], totalCurrentValue: 0, overdueContractCount: 0, dueSoonContractCount: 0 }),
+        });
+    });
+    await page.goto(`${baseURL}/admin/finance/contracts`, { waitUntil: "networkidle" });
+    await expect(page.getByText("List unavailable")).toBeVisible();
+    await page.getByRole("button", { name: /Thử lại|Retry|重试|再試行/i }).click();
+    await expect(page.getByText(/Chưa có hợp đồng nào|No contracts yet|暂无合同|契約がありません/i)).toBeVisible();
+    await page.locator("#c-search").fill("NO-MATCH");
+    await expect(page.getByText(/Không có hợp đồng nào khớp|No contracts match|没有符合|一致する契約はありません/i)).toBeVisible();
 });
 
 test("Contract pagination and CSV export use every filtered API page", async ({
@@ -32,19 +104,20 @@ test("Contract pagination and CSV export use every filtered API page", async ({
     baseURL,
 }) => {
     await loginInBrowserAs(page, TEST_USERS.superAdmin);
-    const exportRequests: number[] = [];
+    const exportRequests: string[] = [];
     const exportSearches: string[] = [];
-    await page.route(/\/api\/(?:v1\/)?contracts\?.*$/, async route => {
+    await page.route(/\/api\/(?:v1\/)?contracts(?:\/export-data)?\?.*$/, async route => {
         const url = new URL(route.request().url());
         const requestedPage = Number(url.searchParams.get("page") ?? "1");
         const pageSize = Number(url.searchParams.get("pageSize") ?? "20");
-        const total = pageSize === 100 ? 101 : 21;
-        if (pageSize === 100) {
-            exportRequests.push(requestedPage);
+        const isExport = url.pathname.endsWith("/export-data");
+        const total = isExport ? 101 : 21;
+        if (isExport) {
+            exportRequests.push(url.pathname);
             exportSearches.push(url.searchParams.get("search") ?? "");
         }
-        const from = (requestedPage - 1) * pageSize;
-        const count = Math.max(0, Math.min(pageSize, total - from));
+        const from = isExport ? 0 : (requestedPage - 1) * pageSize;
+        const count = isExport ? total : Math.max(0, Math.min(pageSize, total - from));
         const items = Array.from({ length: count }, (_, index) => {
             const id = 700_000 + from + index + 1;
             return {
@@ -59,13 +132,17 @@ test("Contract pagination and CSV export use every filtered API page", async ({
                 operationalProjectName: "Pagination project",
                 ownerUserId: 1,
                 ownerName: "Pagination owner",
-                status: "Draft",
+                status: index === 0 ? "InProgress" : "Draft",
                 signedDate: null,
                 startDate: null,
-                endDate: null,
+                endDate: index === 0 ? "2020-01-01T00:00:00Z" : null,
                 value: id,
-                approvedVoTotal: 0,
-                currentValue: id,
+                approvedVoTotal: index === 0 ? 45 : 0,
+                currentValue: index === 0 ? id + 45 : id,
+                nextPaymentDueDate: null,
+                nextPaymentAmount: null,
+                outstandingScheduledAmount: 0,
+                overduePaymentMilestoneCount: 0,
                 hasSignedScan: false,
                 attachmentCount: 0,
                 appendixCount: 0,
@@ -78,12 +155,15 @@ test("Contract pagination and CSV export use every filtered API page", async ({
         await route.fulfill({
             status: 200,
             contentType: "application/json",
-            body: JSON.stringify({ total, page: requestedPage, pageSize, items }),
+            body: JSON.stringify({ total, page: requestedPage, pageSize: isExport ? total : pageSize, items }),
         });
     });
 
     await page.goto(`${baseURL}/admin/contracts`, { waitUntil: "networkidle" });
     await expect(page.getByTestId("contract-row-700001")).toBeVisible();
+    await expect(page.getByTestId("contract-row-700001")).toContainText("700.046");
+    await expect(page.getByTestId("contract-row-700001")).toContainText(/Đã quá hạn|Overdue|已逾期|期限超過/i);
+    await expect(page.getByTestId("contract-row-700001")).not.toContainText(/Sắp hết hạn|Ending soon|即将到期|終了間近/i);
     const filteredListResponse = page.waitForResponse((response) => {
         const url = new URL(response.url());
         return url.pathname.endsWith("/api/contracts")
@@ -98,8 +178,9 @@ test("Contract pagination and CSV export use every filtered API page", async ({
     const download = page.waitForEvent("download");
     await page.getByRole("button", { name: /Xuất CSV|Export CSV|导出 CSV|CSV エクスポート/i }).click();
     expect((await download).suggestedFilename()).toMatch(/^contracts-\d{4}-\d{2}-\d{2}\.csv$/);
-    expect(exportRequests).toEqual([1, 2]);
-    expect(exportSearches).toEqual(["HD-PAGE", "HD-PAGE"]);
+    expect(exportRequests).toHaveLength(1);
+    expect(exportRequests[0]).toMatch(/\/contracts\/export-data$/);
+    expect(exportSearches).toEqual(["HD-PAGE"]);
 });
 
 /**
@@ -146,10 +227,11 @@ test("SPA renders /admin/contracts without console errors for SUPER_ADMIN", asyn
     // Filters row (status select + search input) always renders.
     await expect(page.locator("#c-search")).toBeVisible();
     await expect(page.locator("#c-status")).toBeVisible();
+    await expect(page.locator("#c-project")).toBeVisible();
+    await page.getByRole("button", { name: /Bộ lọc nâng cao|Advanced filters|高级筛选|詳細フィルター/i }).click();
     await expect(page.locator("#c-direction")).toBeVisible();
     await expect(page.locator("#c-type")).toBeVisible();
     await expect(page.locator("#c-vendor")).toBeVisible();
-    await expect(page.locator("#c-project")).toBeVisible();
 
     await page.locator("#c-project").click();
     const projectOption = page.getByRole("option").filter({ hasText: /PJ-/ }).first();
@@ -189,7 +271,7 @@ test("SPA renders /admin/contracts without console errors for SUPER_ADMIN", asyn
     await row.locator("td").nth(1).click();
     expect((await detailResponse).ok()).toBe(true);
 
-    await expect(page).toHaveURL(new RegExp(`/admin/contracts/${contractId?.replace("contract-row-", "")}$`));
+    await expect(page).toHaveURL(new RegExp(`/admin/contracts/${contractId?.replace("contract-row-", "")}\\?`));
 
     const editButton = page.getByRole("button", { name: /Sửa|Edit|编辑|編集/i }).first();
     await expect(editButton).toBeVisible({ timeout: 15_000 });
@@ -252,7 +334,7 @@ test("mobile contract card opens the complete contract detail", async ({
     await cardLink.click();
     expect((await detailResponse).ok()).toBe(true);
 
-    await expect(page).toHaveURL(new RegExp(`/admin/contracts/${contractId?.replace("contract-card-", "")}$`));
+    await expect(page).toHaveURL(new RegExp(`/admin/contracts/${contractId?.replace("contract-card-", "")}\\?`));
     await expect(page.getByRole("link", { name: /Hợp đồng|Contracts|销售合同|販売契約/i })).toBeVisible();
 });
 

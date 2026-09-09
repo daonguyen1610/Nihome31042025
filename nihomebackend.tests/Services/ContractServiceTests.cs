@@ -360,6 +360,76 @@ public class ContractServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task List_UsesCurrentValueAndExposesCollectionRisk()
+    {
+        var request = Req(value: 1_000m, end: new DateTime(2026, 9, 30), owner: 100);
+        request.PaymentMilestones =
+        [
+            new ContractPaymentMilestoneRequest
+            {
+                Order = 1,
+                Name = "Overdue collection",
+                PercentValue = 40,
+                DueDate = DateTime.UtcNow.Date.AddDays(-1),
+                Status = PaymentMilestoneStatus.Requested,
+                ResponsibleAccountantUserId = _accountantId,
+            },
+            new ContractPaymentMilestoneRequest
+            {
+                Order = 2,
+                Name = "Next collection",
+                PercentValue = 60,
+                DueDate = DateTime.UtcNow.Date.AddDays(10),
+                Status = PaymentMilestoneStatus.Pending,
+            },
+        ];
+        var contract = await _sut.CreateAsync(request, 1, canReassignOwner: true);
+        _db.ContractAppendices.Add(new ContractAppendix
+        {
+            ContractId = contract.Id,
+            VoNumber = 1,
+            Title = "Approved change",
+            Reason = "Scope increase",
+            ValueDelta = 250m,
+            Status = ContractAppendixStatus.Approved,
+        });
+        await _db.SaveChangesAsync();
+
+        var list = await _sut.ListAsync(
+            1,
+            true,
+            ownerUserId: 100,
+            endFrom: new DateTime(2026, 9, 1),
+            endTo: new DateTime(2026, 9, 30),
+            valueMin: 1_200m);
+
+        var row = Assert.Single(list.Items);
+        Assert.Equal(1_250m, row.CurrentValue);
+        Assert.Equal(400m, row.NextPaymentAmount);
+        Assert.Equal(1_000m, row.OutstandingScheduledAmount);
+        Assert.Equal(1, row.OverduePaymentMilestoneCount);
+        Assert.Equal(1_250m, list.TotalCurrentValue);
+        Assert.Equal(1, list.OverdueContractCount);
+        Assert.Equal(1, list.DueSoonContractCount);
+    }
+
+    [Fact]
+    public async Task GetFilterOptions_ReturnsOnlyOptionsInCallerScope()
+    {
+        await _sut.CreateAsync(Req(owner: 100), 100, canReassignOwner: true);
+        await _sut.CreateAsync(Req(customerId: _customerB, owner: 200), 200, canReassignOwner: true);
+
+        var options = await _sut.GetFilterOptionsAsync(100, canSeeAll: false, ContractDirection.Upstream);
+
+        Assert.Single(options.Owners);
+        Assert.Equal(100, options.Owners[0].Id);
+        Assert.Single(options.Customers);
+        Assert.Equal(_customerA, options.Customers[0].Id);
+        Assert.Single(options.Projects);
+        Assert.Equal(_projectA, options.Projects[0].Id);
+    }
+
+    [Fact]
     public async Task List_SignedToFilter_IsEndOfDayInclusive()
     {
         // Row signed later on the same UTC day the caller filtered up to.

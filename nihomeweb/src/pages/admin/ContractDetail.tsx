@@ -236,6 +236,7 @@ const TRANSITION_LABEL_KEY: Record<ContractStatus, string> = {
 
 interface HeaderProps {
   contract: ContractResponse;
+  returnTo: string;
   canEdit: boolean;
   editing: boolean;
   saving: boolean;
@@ -248,6 +249,7 @@ interface HeaderProps {
 
 const ContractHeader = ({
   contract,
+  returnTo,
   canEdit,
   editing,
   saving,
@@ -276,7 +278,7 @@ const ContractHeader = ({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2 text-sm text-slate-500">
-            <Link to="/admin/contracts" className="inline-flex items-center gap-1 hover:text-slate-800">
+            <Link to={returnTo} className="inline-flex items-center gap-1 hover:text-slate-800">
               <ArrowLeft className="h-4 w-4" />
               {t("contracts.detail.back")}
             </Link>
@@ -512,11 +514,12 @@ interface EditInfoTabProps {
   customers: CustomerResponse[];
   projects: OperationalProjectListItemResponse[];
   classification: ContractClassificationOptions | null;
+  lockDirection: boolean;
   error: string | null;
   onChange: (next: ContractEditForm) => void;
 }
 
-const EditInfoTab = ({ form, customers, projects, classification, error, onChange }: EditInfoTabProps) => {
+const EditInfoTab = ({ form, customers, projects, classification, lockDirection, error, onChange }: EditInfoTabProps) => {
   const { t } = useI18n();
 
   return (
@@ -578,6 +581,7 @@ const EditInfoTab = ({ form, customers, projects, classification, error, onChang
           <Label htmlFor="contract-detail-direction">{t("contracts.field.direction")} *</Label>
           <Select
             value={form.direction}
+            disabled={lockDirection}
             onValueChange={(value) => {
               const direction = value as ContractDirection;
               const type = classification?.allowedTypes[direction]?.[0];
@@ -1601,6 +1605,12 @@ const ContractDetail = () => {
   const params = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const requestedReturnTo = searchParams.get("returnTo");
+  const requestedReturnPath = requestedReturnTo?.split("?", 1)[0];
+  const returnTo = requestedReturnPath === "/admin/contracts" || requestedReturnPath === "/admin/finance/contracts"
+    ? requestedReturnTo
+    : "/admin/contracts";
+  const financeContext = returnTo.startsWith("/admin/finance/contracts");
   const idNum = Number(params.id);
   const canManage = has(ADMIN_PERMS.contractsManage);
   const canDecideVo = has(ADMIN_PERMS.contractsViewAll);
@@ -1610,6 +1620,7 @@ const ContractDetail = () => {
   const [appendices, setAppendices] = useState<ContractAppendixResponse[]>([]);
   const [attachments, setAttachments] = useState<ContractAttachmentResponse[]>([]);
   const [attachmentsError, setAttachmentsError] = useState<string | null>(null);
+  const [supplementalError, setSupplementalError] = useState<string | null>(null);
   const [timeline, setTimeline] = useState<ContractTimelineEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -1654,15 +1665,22 @@ const ContractDetail = () => {
     setLoading(true);
     setLoadError(null);
     setAttachmentsError(null);
+    setSupplementalError(null);
     try {
       const [c, vos, atts, tl, options] = await Promise.all([
         adminApi.getContract(idNum),
-        adminApi.listContractAppendices(idNum).catch(() => ({ data: [] as ContractAppendixResponse[] })),
+        adminApi.listContractAppendices(idNum).catch(() => {
+          setSupplementalError(t("contracts.detail.partialLoadError"));
+          return { data: [] as ContractAppendixResponse[] };
+        }),
         adminApi.listContractAttachments(idNum).catch((error) => {
           setAttachmentsError(getErrorMessage(error) ?? String(error));
           return { data: [] as ContractAttachmentResponse[] };
         }),
-        adminApi.getContractTimeline(idNum).catch(() => ({ data: [] as ContractTimelineEvent[] })),
+        adminApi.getContractTimeline(idNum).catch(() => {
+          setSupplementalError(t("contracts.detail.partialLoadError"));
+          return { data: [] as ContractTimelineEvent[] };
+        }),
         adminApi.getContractClassificationOptions(),
       ]);
       setContract(c.data);
@@ -1680,7 +1698,7 @@ const ContractDetail = () => {
     } finally {
       setLoading(false);
     }
-  }, [idNum]);
+  }, [idNum, t]);
 
   useEffect(() => {
     void load();
@@ -1848,6 +1866,9 @@ const ContractDetail = () => {
 
   const saveEdit = useCallback(async () => {
     if (!contract || !form) return;
+    const effectiveDirection = financeContext && contract.direction === "Upstream"
+      ? "Upstream"
+      : form.direction;
     setFormError(null);
     if (form.type === "Unclassified") {
       setFormError(t("contracts.validation.typeRequired"));
@@ -1859,7 +1880,7 @@ const ContractDetail = () => {
       setTab("info");
       return;
     }
-    if (form.direction === "Downstream" && form.vendorId == null) {
+    if (effectiveDirection === "Downstream" && form.vendorId == null) {
       setFormError(t("contracts.validation.vendorRequired"));
       setTab("info");
       return;
@@ -1908,9 +1929,9 @@ const ContractDetail = () => {
       rowVersion: contract.rowVersion,
       contractNumber: form.contractNumber.trim() || null,
       customerId: form.customerId,
-      direction: form.direction,
+      direction: effectiveDirection,
       type: form.type,
-      vendorId: form.direction === "Downstream" ? form.vendorId : null,
+      vendorId: effectiveDirection === "Downstream" ? form.vendorId : null,
       operationalProjectId: form.operationalProjectId,
       opportunityId: contract.opportunityId,
       quoteId: contract.quoteId,
@@ -1937,7 +1958,7 @@ const ContractDetail = () => {
     } finally {
       setSaving(false);
     }
-  }, [contract, form, refreshContract, t, toast]);
+  }, [contract, financeContext, form, refreshContract, t, toast]);
 
   if (!Number.isFinite(idNum)) {
     return (
@@ -1968,6 +1989,7 @@ const ContractDetail = () => {
       <div className="space-y-4">
         <ContractHeader
           contract={contract}
+          returnTo={returnTo}
           canEdit={canManage}
           editing={editing}
           saving={saving}
@@ -1977,6 +1999,12 @@ const ContractDetail = () => {
           onTransition={handleTransition}
           transitionBusy={transitionBusy}
         />
+
+        {supplementalError && (
+          <div role="alert" className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            {supplementalError}
+          </div>
+        )}
 
         <Tabs value={tab} onValueChange={(v) => setTab(v as TabId)}>
           {/* Horizontal scroll on narrow viewports keeps the 5 tabs in one
@@ -2016,6 +2044,7 @@ const ContractDetail = () => {
                   customers={customers}
                   projects={projects}
                   classification={classification}
+                  lockDirection={financeContext && contract.direction === "Upstream"}
                   error={formError}
                   onChange={setForm}
                 />
