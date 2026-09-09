@@ -450,8 +450,13 @@ public sealed class RfqsControllerTests(NihomeWebApplicationFactory factory) : I
     public async Task VendorPortal_TokenScopesReadAndCreatesImmutableForeignCurrencyRevision()
     {
         var fixture = await SeedAsync();
+        var fileId = await AddDocumentAsync(fixture.ProjectId);
+        var wrongFileId = await AddDocumentAsync(fixture.ProjectId);
         await LoginAsync("PROCUREMENT");
-        var detail = await TransitionAsync(await CreateAsync(fixture), "issue");
+        var detail = await CreateAsync(fixture);
+        detail = await DetailAsync(await SendAsync(fixture.ProjectId, $"/{detail.Header.Id}/documents",
+            new RfqAttachDocumentRequest { DocumentId = fileId, RowVersion = detail.Header.RowVersion }));
+        detail = await TransitionAsync(detail, "issue");
         const string token = "rfq-portal-test-token";
         await WithDbAsync(async db =>
         {
@@ -469,9 +474,14 @@ public sealed class RfqsControllerTests(NihomeWebApplicationFactory factory) : I
         portalResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         var portalJson = await portalResponse.Content.ReadAsStringAsync();
         portalJson.Should().Contain(detail.Header.Code)
+            .And.Contain("supplier-quotation.pdf")
             .And.NotContain("budgetUnitPrice")
             .And.NotContain("customerName")
             .And.NotContain("bids");
+        using var wrongDownload = new HttpRequestMessage(HttpMethod.Get,
+            $"/api/vendor-rfqs/documents/{wrongFileId}/download");
+        wrongDownload.Headers.Add("X-RFQ-Portal-Token", token);
+        (await Client.SendAsync(wrongDownload)).StatusCode.Should().Be(HttpStatusCode.NotFound);
 
         var portalKey = Guid.NewGuid().ToString();
         using var submit = new HttpRequestMessage(HttpMethod.Post, "/api/vendor-rfqs/bids")
@@ -500,13 +510,17 @@ public sealed class RfqsControllerTests(NihomeWebApplicationFactory factory) : I
         stored.ExchangeRateToVnd.Should().Be(25_000m);
         stored.TotalOriginal.Should().BeGreaterThan(stored.Subtotal);
         stored.Total.Should().Be(stored.TotalOriginal * 25_000m);
-        (await WithDbAsync(db => db.Set<RfqEvent>().AsNoTracking().AnyAsync(x =>
-            x.RfqId == detail.Header.Id && x.Action == "portal-bid-submitted"))).Should().BeTrue();
+        (await WithDbAsync(db => db.Set<RfqEvent>().AsNoTracking().CountAsync(x =>
+            x.RfqId == detail.Header.Id && x.Action == "portal-bid-submitted"))).Should().Be(1);
+        (await WithDbAsync(db => db.Set<RfqEvent>().AsNoTracking().CountAsync(x =>
+            x.RfqId == detail.Header.Id && x.Action == "bid-submitted"))).Should().Be(0);
         await LoginAsync("PROCUREMENT");
         var internalDetail = await ReadAsync(detail);
         var portalBid = internalDetail.Bids.Single(x => x.VendorId == fixture.OtherVendorId);
         portalBid.SubmittedViaPortal.Should().BeTrue();
         portalBid.SubmittedBy.Should().Contain("Alternative supplier").And.Contain("vendor portal");
+        internalDetail.Events.Single(x => x.Action == "portal-bid-submitted").Actor
+            .Should().StartWith("Alternative supplier").And.EndWith("(vendor portal)");
         Client.DefaultRequestHeaders.Authorization = null;
 
         const string otherToken = "other-rfq-portal-token";
@@ -572,7 +586,7 @@ public sealed class RfqsControllerTests(NihomeWebApplicationFactory factory) : I
         await LoginAsync("PROCUREMENT");
         var detail = await TransitionAsync(await CreateAsync(fixture), "issue");
         detail = await SubmitAsync(detail, fixture.VendorId, 10m, 20m);
-        detail = await SubmitAsync(detail, fixture.OtherVendorId, 8m, 22m);
+        detail = await SubmitAsync(detail, fixture.OtherVendorId, 8m, null);
         detail = await TransitionAsync(detail, "evaluate");
         var unevaluatedAward = new RfqBatchAwardRequest
         {
@@ -602,6 +616,8 @@ public sealed class RfqsControllerTests(NihomeWebApplicationFactory factory) : I
 
         var vendorBid = detail.Bids.Single(x => x.VendorId == fixture.VendorId && x.IsCurrent);
         var otherBid = detail.Bids.Single(x => x.VendorId == fixture.OtherVendorId && x.IsCurrent);
+        otherBid.IsComplete.Should().BeFalse();
+        otherBid.WeightedScore.Should().NotBeNull("a partial quotation must be scoreable for its quoted split-award line");
         var request = new RfqBatchAwardRequest
         {
             Reason = "Split delivery capacity and commercial risk.",

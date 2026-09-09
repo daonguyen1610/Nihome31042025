@@ -16,8 +16,10 @@ export interface RfqBid {
   isComplete: boolean; isEligible: boolean; isLowest: boolean; total: number;
   currency: string; exchangeRateToVnd: number; subtotal: number; freightAmount: number; discountPercent: number;
   discountAmount: number; vatPercent: number; totalOriginal: number; commercialScore: number | null;
+  priceScore: number | null; leadTimeScore: number | null; vendorRatingScore: number | null;
   weightedScore: number | null; evaluationNote: string | null; submittedViaPortal: boolean;
-  lines: { rfqLineId: number; unitPrice: number; amount: number; unitPriceVnd: number; amountVnd: number }[];
+  lines: { rfqLineId: number; unitPrice: number; amount: number; unitPriceVnd: number; amountVnd: number;
+    priceScore: number | null; leadTimeScore: number | null; vendorRatingScore: number | null; weightedScore: number | null }[];
 }
 export interface RfqAwardLine { rfqLineId: number; quantity: number; unitPrice: number; amountOriginal: number; amountVnd: number; materialRequestAllocations: { materialRequestLineId: number; materialRequestCode: string; quantity: number }[] }
 export interface RfqAward { id: number; bidId: number; vendorId: number; vendorName: string; contractId: number; contractNumber: string; currency: string; exchangeRateToVnd: number; originalValue: number; valueVnd: number; awardedAt: string; lines: RfqAwardLine[] }
@@ -37,7 +39,7 @@ export interface RfqReferences {
 export interface RfqDraft { title: string; sourceBoqRevisionId: number; ownerUserId: number; dueAt: string; note: string; vendorIds: number[]; lines: { projectBoqLineId: number; quantity: number }[]; priceWeight: number; leadTimeWeight: number; vendorRatingWeight: number; commercialWeight: number; rowVersion?: string }
 export interface RfqBidDraft { vendorId: number; leadTimeDays: number; paymentTerms: string; validUntil: string; note: string; lines: { rfqLineId: number; unitPrice: number }[]; documentIds: number[]; currency: string; exchangeRateToVnd: number; freightAmount: number; discountPercent: number; discountAmount: number; vatPercent: number; rowVersion: string }
 export interface RfqBatchAwardDraft { reason: string; overrideReason?: string; rowVersion: string; lines: { bidId: number; rfqLineId: number; contractType: "Supply" | "Subcontract"; quantity: number; materialRequestAllocations: { materialRequestLineId: number; quantity: number }[] }[] }
-export interface VendorPortalRfq { code: string; title: string; dueAt: string; vendorName: string; canSubmit: boolean; lines: { id: number; itemCode: string; description: string; unit: string; quantity: number }[] }
+export interface VendorPortalRfq { code: string; title: string; dueAt: string; vendorName: string; canSubmit: boolean; lines: { id: number; itemCode: string; description: string; unit: string; quantity: number }[]; documents: { id: number; name: string }[] }
 export interface RfqFilter { search?: string; status?: string; ownerUserId?: number; dueFrom?: string; dueTo?: string; overdue?: boolean; sortBy?: string; sortDirection?: string; page?: number; pageSize?: number }
 const base = (projectId: number) => `/operational-projects/${projectId}/procurement/rfqs`;
 export const rfqApi = {
@@ -72,6 +74,9 @@ export const rfqApi = {
   portal: (token: string) => api.get<VendorPortalRfq>("/vendor-rfqs", { headers: { "X-RFQ-Portal-Token": token } }),
   portalBid: (token: string, draft: Omit<RfqBidDraft, "vendorId" | "documentIds" | "rowVersion">) =>
     api.post<VendorPortalRfq>("/vendor-rfqs/bids", draft, { headers: { "X-RFQ-Portal-Token": token } }),
+  portalDocument: (token: string, documentId: number) => api.get<Blob>(`/vendor-rfqs/documents/${documentId}/download`, {
+    headers: { "X-RFQ-Portal-Token": token }, responseType: "blob",
+  }),
 };
 
 export function saveRfqDownload(blob: Blob, name: string) {

@@ -282,10 +282,10 @@
   {
     "key": "rfq.matrixHelp",
     "category": "rfq",
-    "en": "Lowest valid prices are highlighted. Missing lines are not zero. Only complete, current, unexpired bids can win the whole package.",
-    "vi": "Giá hợp lệ thấp nhất được tô sáng. Dòng thiếu không phải giá 0. Chỉ báo giá hiện hành, đủ dòng và còn hiệu lực được chọn cho toàn gói.",
-    "zh": "突出显示最低有效价格。缺项不等于零。只有完整、当前且未过期的报价才可获得整包定标。",
-    "ja": "有効な最低価格を強調表示します。未見積項目はゼロではありません。全項目を含む有効な最新版のみ一括発注の対象です。"
+    "en": "Lowest valid prices are highlighted. Missing lines are not zero. Current, unexpired quoted lines can participate in split awards.",
+    "vi": "Giá hợp lệ thấp nhất được tô sáng. Dòng thiếu không phải giá 0. Dòng đã báo giá, hiện hành và còn hiệu lực có thể tham gia phân bổ chọn thầu.",
+    "zh": "突出显示最低有效价格。缺项不等于零。当前且未过期的已报价明细可参与拆分定标。",
+    "ja": "有効な最低価格を強調表示します。未見積項目はゼロではありません。最新版で有効な見積済み明細は分割発注の対象です。"
   },
   {
     "key": "rfq.missing",
@@ -306,10 +306,10 @@
   {
     "key": "rfq.ineligible",
     "category": "rfq",
-    "en": "Not eligible for award",
-    "vi": "Chưa đủ điều kiện chọn",
-    "zh": "不满足定标条件",
-    "ja": "発注先選定の対象外"
+    "en": "Not eligible for whole-package award",
+    "vi": "Chưa đủ điều kiện chọn toàn gói",
+    "zh": "不满足整包定标条件",
+    "ja": "一括発注の対象外"
   },
   {
     "key": "rfq.documents",
@@ -402,10 +402,10 @@
   {
     "key": "rfq.scopeHelp",
     "category": "rfq",
-    "en": "Use an approved VND BOQ. Enter quantities for the lines to request; leave other lines blank. Each RFQ is awarded to one vendor.",
-    "vi": "Chọn BOQ VND đã duyệt. Nhập số lượng cho dòng cần chào giá; để trống dòng khác. Mỗi RFQ chọn một nhà cung cấp.",
-    "zh": "使用已批准的越南盾 BOQ。填写所需行数量，其他行留空。每份询价选择一家供应商。",
-    "ja": "承認済みVNDのBOQを使用します。対象項目に数量を入力し、対象外は空欄にします。見積依頼ごとに1社を選定します。"
+    "en": "Use an approved VND BOQ. Enter quantities for requested lines and invite one or more vendors. Award can later be split by line and quantity.",
+    "vi": "Chọn BOQ VND đã duyệt, nhập số lượng cần chào giá và mời một hoặc nhiều NCC. Khi chọn thầu có thể chia theo dòng và số lượng.",
+    "zh": "使用已批准的越南盾 BOQ，填写询价数量并邀请一家或多家供应商。定标时可按明细和数量拆分。",
+    "ja": "承認済みVNDのBOQを使用し、見積数量を入力して1社以上を招待します。発注時に明細・数量ごとに分割できます。"
   },
   {
     "key": "rfq.bidHelp",
@@ -978,5 +978,86 @@
   },
   {
     "key": "rfq.event.portal-bid-submitted", "category": "rfq", "en": "Vendor submitted through secure portal", "vi": "NCC gửi báo giá qua portal bảo mật", "zh": "供应商通过安全门户提交报价", "ja": "仕入先がセキュアポータルから見積を送信しました"
+  },
+  {
+    "key": "rfq.projectSearch", "category": "rfq", "en": "Search project code, name, or customer", "vi": "Tìm mã, tên dự án hoặc khách hàng", "zh": "搜索项目编号、名称或客户", "ja": "プロジェクト番号・名称・顧客を検索"
+  },
+  {
+    "key": "rfq.createHelp", "category": "rfq", "en": "Define scope, invited vendors, and evaluation weights now. After quotations arrive, award can be split by line and quantity.", "vi": "Xác định phạm vi, NCC được mời và trọng số đánh giá. Sau khi nhận báo giá, có thể chia chọn thầu theo dòng và số lượng.", "zh": "现在定义范围、受邀供应商和评估权重。收到报价后，可按明细和数量拆分定标。", "ja": "範囲、招待先、評価ウェイトを設定します。見積受領後、明細・数量ごとに分割発注できます。"
+  },
+  {
+    "key": "rfq.matrixScrollHint", "category": "rfq", "en": "Scroll horizontally to compare all vendors.", "vi": "Vuốt ngang để so sánh tất cả nhà cung cấp.", "zh": "横向滚动以比较所有供应商。", "ja": "横にスクロールして全仕入先を比較できます。"
+  },
+  {
+    "key": "rfq.scoring.breakdown", "category": "rfq", "en": "Score breakdown and weights", "vi": "Thành phần điểm và trọng số", "zh": "评分构成与权重", "ja": "スコア内訳とウェイト"
+  },
+  {
+    "key": "rfq.scoring.projectedTotal", "category": "rfq", "en": "Projected weighted score", "vi": "Điểm tổng hợp dự kiến", "zh": "预计加权得分", "ja": "予測加重スコア"
+  },
+  {
+    "key": "rfq.commercial.preview", "category": "rfq", "en": "Commercial total preview", "vi": "Xem trước tổng giá trị thương mại", "zh": "商务总额预览", "ja": "取引総額プレビュー"
+  },
+  {
+    "key": "rfq.commercial.subtotal", "category": "rfq", "en": "Line subtotal", "vi": "Tạm tính dòng", "zh": "明细小计", "ja": "明細小計"
+  },
+  {
+    "key": "rfq.commercial.discount", "category": "rfq", "en": "Discount", "vi": "Chiết khấu", "zh": "折扣", "ja": "割引"
+  },
+  {
+    "key": "rfq.commercial.vat", "category": "rfq", "en": "VAT amount", "vi": "Tiền VAT", "zh": "增值税额", "ja": "VAT額"
+  },
+  {
+    "key": "rfq.commercial.totalOriginal", "category": "rfq", "en": "Total in quotation currency", "vi": "Tổng theo nguyên tệ", "zh": "报价币种总额", "ja": "見積通貨合計"
+  },
+  {
+    "key": "rfq.commercial.totalVnd", "category": "rfq", "en": "Converted total", "vi": "Tổng quy đổi", "zh": "折算总额", "ja": "換算合計"
+  },
+  {
+    "key": "rfq.award.requestedShort", "category": "rfq", "en": "requested", "vi": "yêu cầu", "zh": "申请", "ja": "要求"
+  },
+  {
+    "key": "rfq.award.allocatedShort", "category": "rfq", "en": "allocated", "vi": "đã phân bổ", "zh": "已分配", "ja": "配分済み"
+  },
+  {
+    "key": "rfq.award.remainingShort", "category": "rfq", "en": "remaining", "vi": "còn lại", "zh": "剩余", "ja": "残り"
+  },
+  {
+    "key": "rfq.award.lineSummary", "category": "rfq", "en": "Allocated {{allocated}} / {{total}}; remaining {{remaining}}.", "vi": "Đã phân bổ {{allocated}} / {{total}}; còn lại {{remaining}}.", "zh": "已分配 {{allocated}} / {{total}}；剩余 {{remaining}}。", "ja": "配分済み {{allocated}} / {{total}}、残り {{remaining}}。"
+  },
+  {
+    "key": "rfq.award.overrideWarning", "category": "rfq", "en": "This plan uses a quotation below the best line score. Record the business justification.", "vi": "Phương án có dòng không chọn báo giá đạt điểm cao nhất. Cần ghi rõ căn cứ nghiệp vụ.", "zh": "该方案有明细未选择最高评分报价，请记录业务理由。", "ja": "最高得点ではない見積を含むため、業務上の理由を記録してください。"
+  },
+  {
+    "key": "rfq.validation.reasonRequired", "category": "rfq", "en": "Explain the award decision in at least 3 characters.", "vi": "Nhập lý do quyết định chọn thầu tối thiểu 3 ký tự.", "zh": "请输入至少3个字符的定标理由。", "ja": "3文字以上で発注理由を入力してください。"
+  },
+  {
+    "key": "rfq.validation.coverage", "category": "rfq", "en": "Each RFQ line must be allocated exactly to its requested quantity.", "vi": "Mỗi dòng RFQ phải được phân bổ đúng bằng số lượng yêu cầu.", "zh": "每条询价明细必须准确分配至询价数量。", "ja": "各RFQ明細を要求数量どおりに配分してください。"
+  },
+  {
+    "key": "rfq.validation.allocation", "category": "rfq", "en": "Select a valid quotation, positive quantity, and approved Material Request for each Supply allocation.", "vi": "Chọn báo giá hợp lệ, số lượng dương và Material Request đã duyệt cho mỗi phân bổ Cung ứng.", "zh": "每个供应分配请选择有效报价、正数数量和已批准的物料申请。", "ja": "各供給配分に有効な見積、正の数量、承認済み資材依頼を選択してください。"
+  },
+  {
+    "key": "rfq.portal.documents", "category": "rfq", "en": "RFQ package documents", "vi": "Tài liệu hồ sơ mời chào giá", "zh": "询价资料", "ja": "見積依頼資料"
+  },
+  {
+    "key": "rfq.portal.expiredTitle", "category": "rfq", "en": "Quotation link unavailable", "vi": "Link báo giá không còn hiệu lực", "zh": "报价链接不可用", "ja": "見積リンクを利用できません"
+  },
+  {
+    "key": "rfq.portal.expiredMessage", "category": "rfq", "en": "This invitation is invalid, expired, or has been replaced by a newer link.", "vi": "Thư mời không hợp lệ, đã hết hạn hoặc đã được thay bằng link mới.", "zh": "该邀请无效、已过期或已被新链接替换。", "ja": "招待が無効、期限切れ、または新しいリンクに更新されています。"
+  },
+  {
+    "key": "rfq.portal.loadErrorTitle", "category": "rfq", "en": "Unable to open quotation", "vi": "Không thể mở báo giá", "zh": "无法打开报价", "ja": "見積を開けません"
+  },
+  {
+    "key": "rfq.portal.loadErrorMessage", "category": "rfq", "en": "The quotation service is temporarily unavailable. Try again later.", "vi": "Dịch vụ báo giá đang tạm thời gián đoạn. Vui lòng thử lại sau.", "zh": "报价服务暂时不可用，请稍后重试。", "ja": "見積サービスを一時的に利用できません。後でもう一度お試しください。"
+  },
+  {
+    "key": "rfq.portal.contactProcurement", "category": "rfq", "en": "Contact the Procurement owner if you need a new invitation.", "vi": "Liên hệ phụ trách mua hàng nếu cần gửi lại thư mời.", "zh": "如需新邀请，请联系采购负责人。", "ja": "新しい招待が必要な場合は調達担当者に連絡してください。"
+  },
+  {
+    "key": "rfq.portal.submittedAt", "category": "rfq", "en": "Submitted at", "vi": "Thời điểm gửi", "zh": "提交时间", "ja": "送信日時"
+  },
+  {
+    "key": "rfq.portal.successNote", "category": "rfq", "en": "Your quotation is recorded as a new immutable revision. Procurement will contact you about the next step.", "vi": "Báo giá đã được lưu thành một phiên bản mới không thể sửa. Bộ phận mua hàng sẽ liên hệ về bước tiếp theo.", "zh": "报价已保存为不可更改的新版本，采购人员将联系后续事项。", "ja": "見積は変更不可の新しい版として記録されました。次の手順は調達担当者から連絡します。"
   }
 ]

@@ -24,10 +24,12 @@ public sealed record RfqBidResponse(int Id, int VendorId, int Revision, int Lead
     decimal Total, IReadOnlyList<RfqBidLineResponse> Lines, string Currency = "VND",
     decimal ExchangeRateToVnd = 1m, decimal Subtotal = 0m, decimal FreightAmount = 0m,
     decimal DiscountPercent = 0m, decimal DiscountAmount = 0m, decimal VatPercent = 0m,
-    decimal TotalOriginal = 0m, decimal? CommercialScore = null, decimal? WeightedScore = null,
+    decimal TotalOriginal = 0m, decimal? PriceScore = null, decimal? LeadTimeScore = null,
+    decimal? VendorRatingScore = null, decimal? CommercialScore = null, decimal? WeightedScore = null,
     string? EvaluationNote = null, bool SubmittedViaPortal = false);
 public sealed record RfqBidLineResponse(int RfqLineId, decimal UnitPrice, decimal Amount,
-    decimal UnitPriceVnd = 0m, decimal AmountVnd = 0m);
+    decimal UnitPriceVnd = 0m, decimal AmountVnd = 0m, decimal? PriceScore = null,
+    decimal? LeadTimeScore = null, decimal? VendorRatingScore = null, decimal? WeightedScore = null);
 public sealed record RfqEventResponse(string Action, string Actor, DateTime At, string? Reason);
 public sealed record RfqFileResponse(long Id, int? BidId, string Name);
 public sealed record RfqUserOption(int Id, string Name);
@@ -52,6 +54,8 @@ public sealed record RfqMaterialRequestOptionResponse(int LineId, int MaterialRe
     string MaterialRequestCode, int ProjectBoqLineId, decimal RequestedQuantity,
     decimal AlreadyAllocatedQuantity, decimal RemainingQuantity);
 public sealed record VendorPortalRfqResponse(string Code, string Title, DateTime DueAt,
-    string VendorName, IReadOnlyList<VendorPortalRfqLineResponse> Lines, bool CanSubmit);
+    string VendorName, IReadOnlyList<VendorPortalRfqLineResponse> Lines,
+    IReadOnlyList<VendorPortalRfqDocumentResponse> Documents, bool CanSubmit);
 public sealed record VendorPortalRfqLineResponse(int Id, string ItemCode, string Description,
     string Unit, decimal Quantity);
+public sealed record VendorPortalRfqDocumentResponse(long Id, string Name);

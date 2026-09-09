@@ -1515,7 +1515,8 @@ The completed RFQ workflow uses the following contract:
   highest score requires an override reason.
 - Procurement can record quotes, while vendors with valid email receive an
   expiring random-token portal link. The public portal exposes only that
-  invitation's scope and accepts immutable quote revisions until the deadline.
+  invitation's scope, provides secure downloads for RFQ package documents, and
+  accepts immutable quote revisions until the deadline.
   Only a SHA-256 token hash is persisted. Failed email delivery is recorded and
   authorized users can rotate tokens and resend invitations. The existing RFQ
   owner remains the technical user FK for portal writes, while the bid read model
@@ -1591,8 +1592,10 @@ Starting evaluation explicitly stops further quote submissions, including when
 done before the deadline. A quote revision never overwrites an earlier one.
 The latest revision is current even if withdrawn; withdrawing it does not revive
 an older revision. Missing price cells remain missing, while zero means a quoted
-free item. Partial, expired, withdrawn, inactive-vendor, and superseded quotes
-cannot be awarded. Quote validity must cover the RFQ deadline.
+free item. A partial current quotation can be scored and selected only for lines
+it quoted; whole-package selection still requires a complete quotation. Expired,
+withdrawn, inactive-vendor and superseded quotations cannot be awarded. Quote
+validity must cover the RFQ deadline.
 
 Vendor responses include the read-only `isActive` flag. An inactive vendor's
 quoted amounts remain visible as historical evidence, but receive no lowest-price
@@ -1677,8 +1680,9 @@ Base: `/api/operational-projects/{projectId}/procurement/rfqs`
 | Upload / attach existing file | POST `/documents/upload`, `/{id}/documents` |
 | Download RFQ file | GET `/{id}/documents/{documentId}/download` |
 
-Public vendor portal endpoints are `GET /api/vendor-rfqs` and
-`POST /api/vendor-rfqs/bids`. The email URL stores the secret in the browser
+Public vendor portal endpoints are `GET /api/vendor-rfqs`,
+`POST /api/vendor-rfqs/bids`, and
+`GET /api/vendor-rfqs/documents/{documentId}/download`. The email URL stores the secret in the browser
 fragment; the SPA sends it in `X-RFQ-Portal-Token`, keeping it out of server URL
 logs and referrers. Tokens expire at the RFQ deadline and responses use
 `Cache-Control: no-store`. Public responses omit Customer, BOQ budget, competing
