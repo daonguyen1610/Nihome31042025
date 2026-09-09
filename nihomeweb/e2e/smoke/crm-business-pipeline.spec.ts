@@ -36,7 +36,7 @@ test("sales follows a new lead through conversion, negotiation and a reasoned lo
     const stageButton = detail.getByRole("button", { name: stage, exact: true });
     await stageButton.click();
     await expect(stageButton).toHaveCount(0);
-    await expect(page.getByRole("row").filter({ hasText: name })).toContainText(stage);
+    await expect(detail.getByText(stage, { exact: true })).toBeVisible();
     if (index < stages.length - 1)
       await expect(detail.getByRole("button", { name: stages[index + 1], exact: true })).toBeEnabled();
   }

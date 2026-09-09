@@ -21,9 +21,12 @@ test("RFQ matrix keeps active partial zero-price ties but removes inactive vendo
   const suffix = randomUUID().slice(0, 8);
   const vendors: { id: number; vendorCode: string; companyName: string; vendorType: string; rowVersion: string }[] = [];
   for (const label of ["Complete", "Partial"]) {
+    const phone = `090${randomUUID().replace(/\D/g, "").padEnd(7, "0").slice(0, 7)}`;
     const response = await api.post("/api/vendors", {
       headers: { ...headers, "Idempotency-Key": randomUUID() },
-      data: { vendorCode: `HL-${label}-${suffix}`, companyName: `${label} highlight supplier ${suffix}`, vendorType: "Supplier", email: `${label.toLowerCase()}-${suffix}@example.com` },
+      // Email delivery is outside this matrix regression. Leaving it unset
+      // keeps RFQ issue deterministic and avoids a synchronous SMTP call.
+      data: { vendorCode: `HL-${label}-${suffix}`, companyName: `${label} highlight supplier ${suffix}`, vendorType: "Supplier", phone },
     });
     expect(response.status(), await response.text()).toBe(201);
     vendors.push(await response.json());
