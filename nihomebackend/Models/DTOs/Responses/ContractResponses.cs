@@ -56,6 +56,12 @@ public class ContractResponse
     /// header and used everywhere "current" contract value is needed.</summary>
     public decimal CurrentValue { get; set; }
 
+    /// <summary>Nearest unpaid collection milestone, derived for list views.</summary>
+    public DateTime? NextPaymentDueDate { get; set; }
+    public decimal? NextPaymentAmount { get; set; }
+    public decimal OutstandingScheduledAmount { get; set; }
+    public int OverduePaymentMilestoneCount { get; set; }
+
     /// <summary>Convenience flag for the FE gate:
     /// Signed → InProgress requires at least one SignedScan attachment.</summary>
     public bool HasSignedScan { get; set; }
@@ -101,4 +107,34 @@ public class ContractListResponse
     public int Page { get; set; }
     public int PageSize { get; set; }
     public List<ContractResponse> Items { get; set; } = new();
+    public decimal TotalCurrentValue { get; set; }
+    public int OverdueContractCount { get; set; }
+    public int DueSoonContractCount { get; set; }
+}
+
+public class ContractFilterOptionsResponse
+{
+    public List<ContractFilterOwnerOption> Owners { get; set; } = new();
+    public List<ContractFilterCustomerOption> Customers { get; set; } = new();
+    public List<ContractFilterProjectOption> Projects { get; set; } = new();
+}
+
+public class ContractFilterOwnerOption
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+}
+
+public class ContractFilterCustomerOption
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+}
+
+public class ContractFilterProjectOption
+{
+    public int Id { get; set; }
+    public string Code { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public int CustomerId { get; set; }
 }

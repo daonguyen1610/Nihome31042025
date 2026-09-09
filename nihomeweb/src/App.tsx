@@ -210,7 +210,7 @@ const App = () => (
               <Route element={<RequirePermission code={[ADMIN_PERMS.financePayments, ADMIN_PERMS.financePeriods, ADMIN_PERMS.financeCorrections]} />}>
                 <Route path="/admin/finance-control" element={<FinanceControlPage />} />
               </Route>
-              <Route element={<RequirePermission code={ADMIN_PERMS.contracts} />}>
+              <Route element={<RequirePermission code={[ADMIN_PERMS.contractsViewAll, ADMIN_PERMS.contractsViewUpstreamAll]} />}>
                 <Route path="/admin/finance/contracts" element={<ContractsPage mode="upstream" />} />
               </Route>
               <Route element={<RequirePermission code={ADMIN_PERMS.opportunities} />}>

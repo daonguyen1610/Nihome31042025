@@ -38,7 +38,8 @@ sending continue to require their dedicated `approve` and `send` permissions.
 The `ACCOUNTANT` role has `crm.contracts.view` and the scoped
 `crm.contracts.view.upstream.all` permission for read-only reconciliation of
 primary contracts across the operational-project portfolio. Portfolio-wide
-access is server-enforced only for explicitly upstream lists and upstream
+access requires both that permission and `operations.projects.view.all`, and is
+server-enforced only for explicitly upstream lists and upstream
 details; downstream contracts remain owner-scoped. This does not grant contract
 create, edit, transition, attachment, appendix, or delete capabilities.
 

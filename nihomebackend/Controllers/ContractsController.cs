@@ -62,6 +62,8 @@ public class ContractsController(
         [FromQuery] string? search,
         [FromQuery] DateTime? signedFrom,
         [FromQuery] DateTime? signedTo,
+        [FromQuery] DateTime? endFrom,
+        [FromQuery] DateTime? endTo,
         [FromQuery] decimal? valueMin,
         [FromQuery] decimal? valueMax,
         [FromQuery] int page = 1,
@@ -77,9 +79,55 @@ public class ContractsController(
         var result = await svc.ListAsync(
             userId.Value, canSeeAll, status, direction, type, vendorId,
             ownerUserId, customerId, operationalProjectId, search,
-            signedFrom, signedTo, valueMin, valueMax, page, pageSize,
-            sortBy, sortDirection, ct);
+            signedFrom, signedTo, endFrom, endTo, valueMin, valueMax, page, pageSize,
+            sortBy, sortDirection, includeAll: false, ct: ct);
         return Ok(result);
+    }
+
+    [HttpGet("export-data")]
+    [RequirePermission("crm.contracts", "view")]
+    public async Task<ActionResult<ContractListResponse>> ExportData(
+        [FromQuery] ContractStatus? status,
+        [FromQuery] ContractDirection? direction,
+        [FromQuery] ContractType? type,
+        [FromQuery] int? vendorId,
+        [FromQuery] int? ownerUserId,
+        [FromQuery] int? customerId,
+        [FromQuery] int? operationalProjectId,
+        [FromQuery] string? search,
+        [FromQuery] DateTime? signedFrom,
+        [FromQuery] DateTime? signedTo,
+        [FromQuery] DateTime? endFrom,
+        [FromQuery] DateTime? endTo,
+        [FromQuery] decimal? valueMin,
+        [FromQuery] decimal? valueMax,
+        [FromQuery] string? sortBy = null,
+        [FromQuery] string? sortDirection = null,
+        CancellationToken ct = default)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+
+        var canSeeAll = await CanListAcrossOwnersAsync(userId.Value, direction, ct);
+        return Ok(await svc.ListAsync(
+            userId.Value, canSeeAll, status, direction, type, vendorId,
+            ownerUserId, customerId, operationalProjectId, search,
+            signedFrom, signedTo, endFrom, endTo, valueMin, valueMax,
+            page: 1, pageSize: 1, sortBy: sortBy, sortDirection: sortDirection,
+            includeAll: true, ct: ct));
+    }
+
+    [HttpGet("filter-options")]
+    [RequirePermission("crm.contracts", "view")]
+    public async Task<ActionResult<ContractFilterOptionsResponse>> FilterOptions(
+        [FromQuery] ContractDirection? direction,
+        CancellationToken ct = default)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+
+        var canSeeAll = await CanListAcrossOwnersAsync(userId.Value, direction, ct);
+        return Ok(await svc.GetFilterOptionsAsync(userId.Value, canSeeAll, direction, ct));
     }
 
     [HttpGet("classification-options")]
@@ -812,7 +860,8 @@ public class ContractsController(
     {
         if (await permissions.HasAsync(userId, "crm.contracts.view.all", ct)) return true;
         return direction == ContractDirection.Upstream &&
-            await permissions.HasAsync(userId, "crm.contracts.view.upstream.all", ct);
+            await permissions.HasAsync(userId, "crm.contracts.view.upstream.all", ct) &&
+            await permissions.HasAsync(userId, "operations.projects.view.all", ct);
     }
 
     private async Task<bool> CanReadContractAcrossOwnersAsync(
@@ -821,7 +870,8 @@ public class ContractsController(
         CancellationToken ct)
     {
         if (await permissions.HasAsync(userId, "crm.contracts.view.all", ct)) return true;
-        if (!await permissions.HasAsync(userId, "crm.contracts.view.upstream.all", ct)) return false;
+        if (!await permissions.HasAsync(userId, "crm.contracts.view.upstream.all", ct) ||
+            !await permissions.HasAsync(userId, "operations.projects.view.all", ct)) return false;
         return await db.Contracts.AsNoTracking()
             .AnyAsync(contract => contract.Id == contractId && contract.Direction == ContractDirection.Upstream, ct);
     }

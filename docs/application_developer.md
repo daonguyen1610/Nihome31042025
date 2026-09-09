@@ -944,23 +944,35 @@ Contract creation derives `OwnerUserId` from the selected customer's `OwnerUserI
 `GET /api/contracts` and its `/api/v1` alias require
 `crm.contracts.view`. The list accepts `status`, `direction`, `type`,
 `vendorId`, `ownerUserId`, `customerId`, `operationalProjectId`, `search`,
-`signedFrom`, `signedTo`, `valueMin`, `valueMax`, `page`, `pageSize`, `sortBy`,
+`signedFrom`, `signedTo`, `endFrom`, `endTo`, `valueMin`, `valueMax`, `page`, `pageSize`, `sortBy`,
 and `sortDirection`. Supported sort fields are `signedDate` (default),
 `endDate`, `value`, `contractNumber`, and `updatedAt`; an unknown field falls
-back to signed date, and direction defaults to descending. Callers without
+back to signed date, and direction defaults to descending. Value filters and
+the `value` sort use current value (`Value + approved VO deltas`). The response
+adds portfolio totals, collection-risk counts, and each row's next unpaid
+milestone and scheduled outstanding amount. `GET /api/contracts/filter-options`
+returns complete owner, customer, and Operational Project choices from the
+caller's visible contract scope; it is not capped by unrelated list pagination.
+`GET /api/contracts/export-data` applies the same filters, sorting, and scope in
+one server query so CSV export is not assembled from a changing set of pages.
+Callers without
 `crm.contracts.view.all` remain owner-scoped. The Accountant role has read-only
 `crm.contracts.view.upstream.all` access because Finance must reconcile primary
 contracts across the same complete Operational Project portfolio exposed by
-`operations.projects.view.all`. The scoped permission bypasses ownership only
+`operations.projects.view.all`. Both permissions are required before the
+scoped contract permission bypasses ownership, and only
 when the list explicitly requests `direction=Upstream` or a read-only detail
 endpoint resolves to an upstream contract. It neither exposes downstream
 contracts across owners nor grants mutation permissions.
 
 The shared frontend list is available at `/admin/contracts`. The Finance entry
-`/admin/finance/contracts` fixes the same list to `direction=Upstream`. Both
-surfaces use server pagination and fetch every filtered API page before
-producing CSV, so export cannot silently truncate at the current page or the
-100-row API limit.
+`/admin/finance/contracts` fixes the same list and create form to
+`direction=Upstream`. Its URL retains filters, sort, and page while users inspect
+a detail. The Finance view shows current value, approved VO impact, next
+collection, and overdue/due-soon summary; secondary filters are collapsible for
+tablet/mobile use. Both surfaces use server pagination and the dedicated
+server-side export query, so CSV cannot silently truncate at the current page or
+the 100-row API limit.
 
 ### 7.9 Operational Business Documents
 
