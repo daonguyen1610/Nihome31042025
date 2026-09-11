@@ -16,7 +16,7 @@ test("the new contract form suggests an editable contract number", async ({
   await expect(contractNumber).toHaveValue("HD-CUSTOM-EDITABLE");
 });
 
-test("the new contract form proposes an editable date for a Paid milestone", async ({
+test("the new contract form keeps new milestones Pending", async ({
   page,
   loginInBrowserAs,
 }) => {
@@ -28,36 +28,8 @@ test("the new contract form proposes an editable date for a Paid milestone", asy
   await page.getByRole("button", { name: /Thêm đợt|Add milestone|添加里程碑|マイルストーンを追加/i }).click();
 
   const milestone = page.getByTestId("c-milestone-0");
-  await milestone.getByRole("combobox").click();
-  await page.getByRole("option", { name: /Đã thanh toán|Paid|已付款|支払済/i }).click();
-
-  const actualDate = milestone.locator('input[type="date"]').last();
-  const localToday = await page.evaluate(() => {
-    const now = new Date();
-    const month = String(now.getMonth() + 1).padStart(2, "0");
-    const day = String(now.getDate()).padStart(2, "0");
-    return `${now.getFullYear()}-${month}-${day}`;
-  });
-  await expect(actualDate).toHaveValue(localToday);
-  await actualDate.fill("2026-08-30");
-  await expect(actualDate).toHaveValue("2026-08-30");
-
-  await milestone.locator("input").nth(0).fill("Paid milestone");
-  await milestone.locator('input[type="number"]').fill("100");
-  await expect(page.locator("#c-project-form")).not.toHaveText(/Chọn dự án vận hành|Select operational project|选择运营项目|運用プロジェクトを選択/i);
-  await actualDate.fill("");
-  let createRequests = 0;
-  await page.route(new RegExp("/api/(?:v1/)?contracts$"), async route => {
-    if (route.request().method() === "POST") createRequests += 1;
-    await route.continue();
-  });
-  await page.getByRole("button", { name: /Lưu|Save|保存/i }).click();
-  await expect(page.getByText(/Ngày thanh toán thực tế là bắt buộc|actual payment date is required|必须填写实际付款日期|実際の支払日が必要/i)).toBeVisible();
-  await expect(page.getByRole("dialog")).toBeVisible();
-  expect(createRequests).toBe(0);
-
-  await milestone.getByRole("combobox").click();
-  await page.getByRole("option", { name: /Chưa yêu cầu|Pending|待处理|未請求/i }).click();
+  await expect(milestone.getByText(/Chưa yêu cầu|Pending|待处理|未請求/i)).toBeVisible();
+  await expect(milestone.getByRole("combobox")).toHaveCount(0);
   await expect(milestone.locator('input[type="date"]')).toHaveCount(1);
 });
 

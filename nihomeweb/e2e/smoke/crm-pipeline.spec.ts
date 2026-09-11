@@ -179,7 +179,6 @@ test.describe("CRM Pipeline: Lead → Opportunity → Quote → Contract", () =>
 
       // ====== STEP 10: Create Contract from Quote ======
       console.log("Step 10: Creating contract...");
-      const today = new Date().toISOString().split("T")[0];
       const startDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]; // +7 days
       const endDate = new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]; // +180 days
 
@@ -204,10 +203,9 @@ test.describe("CRM Pipeline: Lead → Opportunity → Quote → Contract", () =>
 
       // ====== STEP 11: Sign Contract (activate) ======
       console.log("Step 11: Signing contract...");
-      const signRes = await c.put(`/api/contracts/${contractId}`, {
-        ...contract,
-        status: "Signed",
-        signedDate: today,
+      const signRes = await c.post(`/api/contracts/${contractId}/transition`, {
+        newStatus: "Signed",
+        rowVersion: contract.rowVersion,
       });
       expect(signRes.status(), await signRes.text()).toBe(200);
       const signedContract = await signRes.json();
