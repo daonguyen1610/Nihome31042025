@@ -119,6 +119,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IMaterialRateSpreadsheetService, MaterialRateSpreadsheetService>();
         services.AddScoped<IMaterialRateService, MaterialRateService>();
         services.AddScoped<IContractService, ContractService>();
+        services.AddScoped<ContractMilestoneNotificationService>();
+        services.AddHostedService<ContractMilestoneDueWorker>();
         services.AddScoped<IContractAppendixService, ContractAppendixService>();
         services.AddScoped<IContractAttachmentService, ContractAttachmentService>();
         services.AddScoped<ICapabilityDocumentService, CapabilityDocumentService>();

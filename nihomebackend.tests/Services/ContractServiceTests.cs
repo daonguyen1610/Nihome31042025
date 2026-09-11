@@ -239,6 +239,28 @@ public class ContractServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Create_NonDraftStatusThrowsWithoutPersisting()
+    {
+        var request = Req(status: ContractStatus.Completed, signed: DateTime.UtcNow);
+
+        await Assert.ThrowsAsync<ContractValidationException>(
+            () => _sut.CreateAsync(request, 1, canReassignOwner: true));
+
+        Assert.Empty(_db.Contracts);
+    }
+
+    [Fact]
+    public async Task Create_StartBeforeSignedDateThrows()
+    {
+        var request = Req(
+            signed: new DateTime(2026, 6, 2),
+            start: new DateTime(2026, 6, 1));
+
+        await Assert.ThrowsAsync<ContractValidationException>(
+            () => _sut.CreateAsync(request, 1, canReassignOwner: true));
+    }
+
+    [Fact]
     public async Task Create_SalesCallerCannotReassignOwner()
     {
         // Sales user (canReassignOwner=false) tries to pin the contract to
@@ -349,7 +371,10 @@ public class ContractServiceTests : IDisposable
     public async Task List_AppliesStatusAndValueFilters()
     {
         await _sut.CreateAsync(Req(status: ContractStatus.Draft, value: 100), 1, canReassignOwner: true);
-        await _sut.CreateAsync(Req(customerId: _customerB, status: ContractStatus.Signed, value: 1000), 1, canReassignOwner: true);
+        var signed = await _sut.CreateAsync(Req(customerId: _customerB, value: 1000), 1, canReassignOwner: true);
+        _db.Contracts.Find(signed.Id)!.Status = ContractStatus.Signed;
+        _db.Contracts.Find(signed.Id)!.SignedDate = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
 
         var draft = await _sut.ListAsync(1, true, status: ContractStatus.Draft);
         Assert.Single(draft.Items);
@@ -371,8 +396,7 @@ public class ContractServiceTests : IDisposable
                 Name = "Overdue collection",
                 PercentValue = 40,
                 DueDate = DateTime.UtcNow.Date.AddDays(-1),
-                Status = PaymentMilestoneStatus.Requested,
-                ResponsibleAccountantUserId = _accountantId,
+                Status = PaymentMilestoneStatus.Pending,
             },
             new ContractPaymentMilestoneRequest
             {
@@ -384,6 +408,9 @@ public class ContractServiceTests : IDisposable
             },
         ];
         var contract = await _sut.CreateAsync(request, 1, canReassignOwner: true);
+        await _sut.UpdateMilestoneStatusAsync(
+            contract.Id, contract.PaymentMilestones[0].Id, PaymentMilestoneStatus.Requested,
+            null, _accountantId, null, 1, true);
         _db.ContractAppendices.Add(new ContractAppendix
         {
             ContractId = contract.Id,
@@ -758,7 +785,7 @@ public class ContractServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task Create_PaidMilestonePersistsActualPaymentDate()
+    public async Task Create_NonPendingMilestoneThrows()
     {
         var req = Req(value: 100m);
         var milestone = Milestone(1, 100m, "Paid in full");
@@ -767,9 +794,9 @@ public class ContractServiceTests : IDisposable
         milestone.ResponsibleAccountantUserId = _accountantId;
         req.PaymentMilestones = new() { milestone };
 
-        var result = await _sut.CreateAsync(req, 1, canReassignOwner: true);
-
-        Assert.Equal(new DateTime(2026, 8, 30), result.PaymentMilestones.Single().ActualPaymentDate);
+        await Assert.ThrowsAsync<ContractValidationException>(
+            () => _sut.CreateAsync(req, 1, canReassignOwner: true));
+        Assert.Empty(_db.Contracts);
     }
 
     [Fact]
@@ -869,6 +896,93 @@ public class ContractServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Update_ExistingMilestonePreservesIdentityAndStatusHistory()
+    {
+        var initial = Req();
+        initial.PaymentMilestones = [Milestone(1, 100m, "Original")];
+        var contract = await _sut.CreateAsync(initial, 1, canReassignOwner: true);
+        var milestoneId = contract.PaymentMilestones.Single().Id;
+        await _sut.UpdateMilestoneStatusAsync(
+            contract.Id, milestoneId, PaymentMilestoneStatus.Requested, null,
+            _accountantId, "Requested", 1, true);
+
+        var persisted = (await _sut.GetAsync(contract.Id, 1, true))!.PaymentMilestones.Single();
+        var update = Req();
+        update.PaymentMilestones =
+        [
+            new ContractPaymentMilestoneRequest
+            {
+                Id = milestoneId,
+                Order = 1,
+                Name = "Updated",
+                PercentValue = 100m,
+                DueDate = new DateTime(2026, 9, 30),
+                Status = persisted.Status,
+                ResponsibleAccountantUserId = persisted.ResponsibleAccountantUserId,
+                RequestedAt = persisted.RequestedAt,
+            },
+        ];
+
+        var refreshed = await _sut.UpdateAsync(
+            contract.Id, update, 1, canSeeAll: true, canReassignOwner: true);
+
+        Assert.Equal(milestoneId, refreshed!.PaymentMilestones.Single().Id);
+        Assert.Equal("Updated", refreshed.PaymentMilestones.Single().Name);
+        Assert.Single(_db.ContractPaymentMilestoneEvents.Where(
+            item => item.ContractPaymentMilestoneId == milestoneId));
+    }
+
+    [Fact]
+    public async Task Update_CannotDeleteProcessedMilestone()
+    {
+        var initial = Req();
+        initial.PaymentMilestones = [Milestone(1, 100m)];
+        var contract = await _sut.CreateAsync(initial, 1, canReassignOwner: true);
+        await _sut.UpdateMilestoneStatusAsync(
+            contract.Id, contract.PaymentMilestones.Single().Id,
+            PaymentMilestoneStatus.Requested, null, _accountantId, null, 1, true);
+        var update = Req();
+        update.PaymentMilestones = [];
+
+        await Assert.ThrowsAsync<ContractValidationException>(() => _sut.UpdateAsync(
+            contract.Id, update, 1, canSeeAll: true, canReassignOwner: true));
+
+        Assert.Single(_db.ContractPaymentMilestones);
+        Assert.Single(_db.ContractPaymentMilestoneEvents);
+    }
+
+    [Fact]
+    public async Task Update_CannotDeleteMilestoneReferencedByPaymentRequest()
+    {
+        var initial = Req();
+        initial.PaymentMilestones = [Milestone(1, 100m)];
+        var contract = await _sut.CreateAsync(initial, 1, canReassignOwner: true);
+        var milestoneId = contract.PaymentMilestones.Single().Id;
+        _db.PaymentRequests.Add(new PaymentRequest
+        {
+            Code = "PAY-CONTRACT-MILESTONE",
+            ContractId = contract.Id,
+            VendorId = 1,
+            ContractPaymentMilestoneId = milestoneId,
+            SupplierInvoiceNumber = "INV-CONTRACT-MILESTONE",
+            InvoiceDate = new DateOnly(2026, 9, 1),
+            InvoiceAmount = 100m,
+            ReceivedAt = DateTime.UtcNow,
+            AssignedAccountantUserId = _accountantId,
+            CreatedByUserId = _accountantId,
+        });
+        await _db.SaveChangesAsync();
+        var update = Req();
+        update.PaymentMilestones = [];
+
+        await Assert.ThrowsAsync<ContractValidationException>(() => _sut.UpdateAsync(
+            contract.Id, update, 1, canSeeAll: true, canReassignOwner: true));
+
+        Assert.Single(_db.ContractPaymentMilestones);
+        Assert.Equal(milestoneId, _db.PaymentRequests.Single().ContractPaymentMilestoneId);
+    }
+
+    [Fact]
     public async Task Update_InvalidMilestones_DoesNotMutateContractHeader()
     {
         var contract = await _sut.CreateAsync(Req(value: 100m), 1, canReassignOwner: true);
@@ -911,6 +1025,22 @@ public class ContractServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Update_SignedContractCannotClearSignedDate()
+    {
+        var contract = await _sut.CreateAsync(Req(), 1, canReassignOwner: true);
+        var signed = (await _sut.TransitionStatusAsync(
+            contract.Id, ContractStatus.Signed, 1, canSeeAll: true))!;
+        var update = Req(number: signed.ContractNumber, status: ContractStatus.Signed);
+        update.SignedDate = null;
+
+        await Assert.ThrowsAsync<ContractValidationException>(() => _sut.UpdateAsync(
+            contract.Id, update, 1, canSeeAll: true, canReassignOwner: true));
+
+        _db.ChangeTracker.Clear();
+        Assert.NotNull((await _db.Contracts.FindAsync(contract.Id))!.SignedDate);
+    }
+
+    [Fact]
     public async Task Transition_DraftToInProgress_IsRejected()
     {
         var contract = await _sut.CreateAsync(Req(), 1, canReassignOwner: true);
@@ -922,7 +1052,9 @@ public class ContractServiceTests : IDisposable
     [Fact]
     public async Task Transition_SignedToInProgress_RequiresSignedScan()
     {
-        var contract = await _sut.CreateAsync(Req(status: ContractStatus.Signed), 1, canReassignOwner: true);
+        var contract = await _sut.CreateAsync(Req(), 1, canReassignOwner: true);
+        contract = (await _sut.TransitionStatusAsync(
+            contract.Id, ContractStatus.Signed, 1, canSeeAll: true))!;
         var ex = await Assert.ThrowsAsync<ContractValidationException>(
             () => _sut.TransitionStatusAsync(contract.Id, ContractStatus.InProgress, 1, canSeeAll: true));
         Assert.Contains("scan", ex.Message);
@@ -945,13 +1077,25 @@ public class ContractServiceTests : IDisposable
     [Fact]
     public async Task Transition_InProgressToCompleted_RequiresAllMilestonesPaid()
     {
-        var initial = Req(status: ContractStatus.InProgress, value: 100m);
+        var initial = Req(value: 100m);
         initial.PaymentMilestones = new()
         {
             Milestone(1, 50m, "A"),
             Milestone(2, 50m, "B"),
         };
         var contract = await _sut.CreateAsync(initial, 1, canReassignOwner: true);
+        await _sut.TransitionStatusAsync(contract.Id, ContractStatus.Signed, 1, canSeeAll: true);
+        _db.ContractAttachments.Add(new ContractAttachment
+        {
+            ContractId = contract.Id,
+            Kind = ContractAttachmentKind.SignedScan,
+            FilePath = "/files/contracts/completion-scan.pdf",
+            OriginalFileName = "completion-scan.pdf",
+            FileSize = 1,
+            ContentType = "application/pdf",
+        });
+        await _db.SaveChangesAsync();
+        await _sut.TransitionStatusAsync(contract.Id, ContractStatus.InProgress, 1, canSeeAll: true);
 
         // Not all paid yet
         var ex = await Assert.ThrowsAsync<ContractValidationException>(
@@ -971,7 +1115,8 @@ public class ContractServiceTests : IDisposable
     [Fact]
     public async Task Transition_NoOp_ReturnsCurrentState()
     {
-        var contract = await _sut.CreateAsync(Req(status: ContractStatus.Signed, signed: DateTime.UtcNow), 1, canReassignOwner: true);
+        var contract = await _sut.CreateAsync(Req(signed: DateTime.UtcNow), 1, canReassignOwner: true);
+        await _sut.TransitionStatusAsync(contract.Id, ContractStatus.Signed, 1, canSeeAll: true);
         var updated = await _sut.TransitionStatusAsync(contract.Id, ContractStatus.Signed, 1, canSeeAll: true);
         Assert.NotNull(updated);
         Assert.Equal(ContractStatus.Signed, updated!.Status);
@@ -1205,21 +1350,20 @@ public class ContractServiceTests : IDisposable
     [InlineData("unlink")]
     [InlineData("customer")]
     [InlineData("signed-date")]
-    [InlineData("draft")]
-    [InlineData("cancelled")]
     public async Task UpdateAsync_LastQualifyingContract_CannotBeInvalidated(string mutation)
     {
         var opportunity = SeedWonOpportunity();
-        var request = Req(status: ContractStatus.Signed, signed: DateTime.UtcNow);
+        var request = Req(signed: DateTime.UtcNow);
         request.OpportunityId = opportunity.Id;
         var contract = await _sut.CreateAsync(request, 1, canReassignOwner: true);
+        _db.Contracts.Find(contract.Id)!.Status = ContractStatus.Signed;
+        await _db.SaveChangesAsync();
+        request.Status = ContractStatus.Signed;
         switch (mutation)
         {
             case "unlink": request.OpportunityId = null; break;
             case "customer": request.CustomerId = _customerB; break;
             case "signed-date": request.SignedDate = null; break;
-            case "draft": request.Status = ContractStatus.Draft; break;
-            case "cancelled": request.Status = ContractStatus.Cancelled; break;
         }
 
         var exception = await Assert.ThrowsAsync<ContractValidationException>(() => _sut.UpdateAsync(
@@ -1237,9 +1381,11 @@ public class ContractServiceTests : IDisposable
     public async Task DeleteAsync_LastQualifyingContract_IsRejected()
     {
         var opportunity = SeedWonOpportunity();
-        var request = Req(status: ContractStatus.Signed, signed: DateTime.UtcNow);
+        var request = Req(signed: DateTime.UtcNow);
         request.OpportunityId = opportunity.Id;
         var contract = await _sut.CreateAsync(request, 1, canReassignOwner: true);
+        _db.Contracts.Find(contract.Id)!.Status = ContractStatus.Signed;
+        await _db.SaveChangesAsync();
 
         await Assert.ThrowsAsync<ContractValidationException>(() =>
             _sut.DeleteAsync(contract.Id, 1, canSeeAll: true));
@@ -1250,9 +1396,11 @@ public class ContractServiceTests : IDisposable
     public async Task TransitionStatusAsync_LastQualifyingContract_CannotBeCancelled()
     {
         var opportunity = SeedWonOpportunity();
-        var request = Req(status: ContractStatus.Signed, signed: DateTime.UtcNow);
+        var request = Req(signed: DateTime.UtcNow);
         request.OpportunityId = opportunity.Id;
         var contract = await _sut.CreateAsync(request, 1, canReassignOwner: true);
+        _db.Contracts.Find(contract.Id)!.Status = ContractStatus.Signed;
+        await _db.SaveChangesAsync();
 
         await Assert.ThrowsAsync<ContractValidationException>(() => _sut.TransitionStatusAsync(
             contract.Id, ContractStatus.Cancelled, 1, canSeeAll: true));
@@ -1263,12 +1411,15 @@ public class ContractServiceTests : IDisposable
     public async Task DeleteAsync_WhenAnotherQualifyingContractRemains_IsAllowed()
     {
         var opportunity = SeedWonOpportunity();
-        var firstRequest = Req(number: "HD-WON-1", status: ContractStatus.Signed, signed: DateTime.UtcNow);
+        var firstRequest = Req(number: "HD-WON-1", signed: DateTime.UtcNow);
         firstRequest.OpportunityId = opportunity.Id;
-        var secondRequest = Req(number: "HD-WON-2", status: ContractStatus.InProgress, signed: DateTime.UtcNow);
+        var secondRequest = Req(number: "HD-WON-2", signed: DateTime.UtcNow);
         secondRequest.OpportunityId = opportunity.Id;
         var first = await _sut.CreateAsync(firstRequest, 1, canReassignOwner: true);
-        await _sut.CreateAsync(secondRequest, 1, canReassignOwner: true);
+        var second = await _sut.CreateAsync(secondRequest, 1, canReassignOwner: true);
+        _db.Contracts.Find(first.Id)!.Status = ContractStatus.Signed;
+        _db.Contracts.Find(second.Id)!.Status = ContractStatus.InProgress;
+        await _db.SaveChangesAsync();
 
         Assert.True(await _sut.DeleteAsync(first.Id, 1, canSeeAll: true));
     }
@@ -1277,12 +1428,16 @@ public class ContractServiceTests : IDisposable
     public async Task UpdateAsync_WhenAnotherQualifyingContractRemains_CanUnlinkCurrentContract()
     {
         var opportunity = SeedWonOpportunity();
-        var firstRequest = Req(number: "HD-WON-UPDATE-1", status: ContractStatus.Signed, signed: DateTime.UtcNow);
+        var firstRequest = Req(number: "HD-WON-UPDATE-1", signed: DateTime.UtcNow);
         firstRequest.OpportunityId = opportunity.Id;
-        var secondRequest = Req(number: "HD-WON-UPDATE-2", status: ContractStatus.InProgress, signed: DateTime.UtcNow);
+        var secondRequest = Req(number: "HD-WON-UPDATE-2", signed: DateTime.UtcNow);
         secondRequest.OpportunityId = opportunity.Id;
         var first = await _sut.CreateAsync(firstRequest, 1, canReassignOwner: true);
-        await _sut.CreateAsync(secondRequest, 1, canReassignOwner: true);
+        var second = await _sut.CreateAsync(secondRequest, 1, canReassignOwner: true);
+        _db.Contracts.Find(first.Id)!.Status = ContractStatus.Signed;
+        _db.Contracts.Find(second.Id)!.Status = ContractStatus.InProgress;
+        await _db.SaveChangesAsync();
+        firstRequest.Status = ContractStatus.Signed;
         firstRequest.OpportunityId = null;
 
         var updated = await _sut.UpdateAsync(

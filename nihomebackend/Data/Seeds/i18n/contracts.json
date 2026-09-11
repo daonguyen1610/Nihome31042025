@@ -616,6 +616,38 @@
     "ja": "プリセットを適用すると現在のスケジュールが上書きされます。続行しますか？"
   },
   {
+    "key": "contracts.milestonePreset.item1",
+    "category": "contracts",
+    "vi": "Đợt 1 - Tạm ứng khi ký HĐ",
+    "en": "Milestone 1 - Advance on signing",
+    "zh": "第 1 期 - 签约预付款",
+    "ja": "第1回 - 契約締結時の前払金"
+  },
+  {
+    "key": "contracts.milestonePreset.item2",
+    "category": "contracts",
+    "vi": "Đợt 2 - Nghiệm thu 50%",
+    "en": "Milestone 2 - 50% acceptance",
+    "zh": "第 2 期 - 50% 验收",
+    "ja": "第2回 - 50% 検収"
+  },
+  {
+    "key": "contracts.milestonePreset.item3",
+    "category": "contracts",
+    "vi": "Đợt 3 - Bàn giao",
+    "en": "Milestone 3 - Handover",
+    "zh": "第 3 期 - 移交",
+    "ja": "第3回 - 引渡し"
+  },
+  {
+    "key": "contracts.milestonePreset.item4",
+    "category": "contracts",
+    "vi": "Đợt 4 - Quyết toán bảo hành",
+    "en": "Milestone 4 - Warranty settlement",
+    "zh": "第 4 期 - 质保结算",
+    "ja": "第4回 - 保証精算"
+  },
+  {
     "key": "contracts.milestonesEmpty",
     "category": "contracts",
     "vi": "Chưa có đợt thanh toán nào. Nhấn \"Thêm đợt\" hoặc áp dụng preset.",
@@ -742,6 +774,22 @@
     "en": "Paid",
     "zh": "已付款",
     "ja": "支払済"
+  },
+  {
+    "key": "notification.crm.contract.milestone-due.title",
+    "category": "contracts",
+    "vi": "Đợt thu hợp đồng đã đến hạn",
+    "en": "Contract collection milestone due",
+    "zh": "合同收款里程碑已到期",
+    "ja": "契約回収マイルストーンの期限です"
+  },
+  {
+    "key": "notification.crm.contract.milestone-due.body",
+    "category": "contracts",
+    "vi": "Hợp đồng {{contractNumber}} - {{milestoneName}} đến hạn ngày {{dueDate}}. Vui lòng kiểm tra và xử lý.",
+    "en": "Contract {{contractNumber}} - {{milestoneName}} is due on {{dueDate}}. Review and take action.",
+    "zh": "合同 {{contractNumber}} - {{milestoneName}} 于 {{dueDate}} 到期。请检查并处理。",
+    "ja": "契約 {{contractNumber}} - {{milestoneName}} は {{dueDate}} が期限です。確認して対応してください。"
   },
   {
     "key": "contracts.detail.title",

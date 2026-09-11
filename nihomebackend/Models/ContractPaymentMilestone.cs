@@ -36,6 +36,9 @@ public class ContractPaymentMilestone
     public ApplicationUser? ResponsibleAccountant { get; set; }
     public DateTime? RequestedAt { get; set; }
 
+    /// <summary>Set atomically after the one-time due-date reminder is emitted.</summary>
+    public DateTime? DueNotificationSentAt { get; set; }
+
     public PaymentMilestoneStatus Status { get; set; } = PaymentMilestoneStatus.Pending;
 
     public string? Note { get; set; }

@@ -107,6 +107,7 @@
     {"code": "procurement.rfq.issued", "module": "procurement.rfqs", "channel": "InApp", "adminDescription": "Notify RFQ owner and project manager: issued"},
     {"code": "procurement.rfq.awarded", "module": "procurement.rfqs", "channel": "InApp", "adminDescription": "Notify RFQ owner and project manager: awarded"},
     {"code": "procurement.rfq.overdue", "module": "procurement.rfqs", "channel": "InApp", "adminDescription": "Notify RFQ owner and project manager: overdue"},
+    {"code": "crm.contract.milestone-due", "module": "crm.contracts", "channel": "InApp", "adminDescription": "Notify the contract owner and responsible accountant once when an upstream collection milestone reaches its due date."},
     {
       "code": "procurement.material-alert.detected",
       "module": "procurement.material-alerts",

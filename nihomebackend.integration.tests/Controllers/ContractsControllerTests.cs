@@ -176,6 +176,49 @@ public class ContractsControllerTests : IntegrationTestBase
         body.GetProperty("allowedTypes").GetProperty("Downstream")
             .EnumerateArray().Select(item => item.GetString())
             .Should().BeEquivalentTo("Supply", "Subcontract");
+
+        var upstream = await Client.GetAsync("/api/contracts/classification-options?direction=Upstream");
+        upstream.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await ReadJsonAsync(upstream)).GetProperty("vendors").GetArrayLength().Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Create_AndUpdate_CannotBypassContractStateMachine()
+    {
+        await AuthTestHelper.AuthenticateAsync(
+            Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "SALES_MANAGER"));
+        var customerId = await CreateCustomerAsync();
+
+        var invalidCreate = await Client.PostAsJsonAsync("/api/contracts", new
+        {
+            customerId,
+            direction = "Upstream",
+            type = "DesignAndBuild",
+            status = "Completed",
+            signedDate = "2026-06-01T00:00:00Z",
+            value = 100m,
+        });
+        invalidCreate.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        var created = await Client.PostAsJsonAsync("/api/contracts", ContractBody(customerId));
+        created.StatusCode.Should().Be(HttpStatusCode.Created);
+        var createdBody = await ReadJsonAsync(created);
+        var contractId = createdBody.GetProperty("id").GetInt32();
+        var invalidUpdate = await Client.PutAsJsonAsync($"/api/contracts/{contractId}", new
+        {
+            customerId,
+            direction = "Upstream",
+            type = "DesignAndBuild",
+            status = "Completed",
+            signedDate = "2026-06-01T00:00:00Z",
+            value = 100m,
+            rowVersion = createdBody.GetProperty("rowVersion").GetString(),
+        });
+
+        invalidUpdate.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.Contracts.AsNoTracking().SingleAsync(item => item.Id == contractId)))
+            .Status.Should().Be(ContractStatus.Draft);
     }
 
     [Fact]
@@ -350,14 +393,18 @@ public class ContractsControllerTests : IntegrationTestBase
             customerId,
             direction = "Upstream",
             type = "DesignAndBuild",
-            status = "Signed",
+            status = "Draft",
             value = 500_000_000,
             signedDate = "2026-06-15T00:00:00Z",
             startDate = "2026-07-01T00:00:00Z",
             endDate = "2026-12-31T00:00:00Z",
         });
         update.StatusCode.Should().Be(HttpStatusCode.OK);
-        (await ReadJsonAsync(update)).GetProperty("status").GetString().Should().Be("Signed");
+        var transition = await Client.PostAsJsonAsync(
+            $"/api/contracts/{id}/transition",
+            new { newStatus = "Signed", rowVersion = (await ReadJsonAsync(update)).GetProperty("rowVersion").GetString() });
+        transition.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await ReadJsonAsync(transition)).GetProperty("status").GetString().Should().Be("Signed");
 
         var impact = await GetDeletionImpactAsync(id);
         impact.GetProperty("resourceType").GetString().Should().Be("Contract");
@@ -635,7 +682,7 @@ public class ContractsControllerTests : IntegrationTestBase
             customerId,
             direction = "Upstream",
             type = "DesignAndBuild",
-            status = "Signed",
+            status = "Draft",
             value = 1_000_000_000,
             signedDate = "2026-06-01T00:00:00Z",
             paymentMilestones = new object[]
@@ -679,9 +726,20 @@ public class ContractsControllerTests : IntegrationTestBase
 
     private async Task<int> CreateContractAsync(int customerId, string status = "Draft", decimal value = 100_000_000m)
     {
-        var res = await Client.PostAsJsonAsync("/api/contracts", ContractBody(customerId, status, value));
+        var res = await Client.PostAsJsonAsync("/api/contracts", ContractBody(customerId, "Draft", value));
         res.StatusCode.Should().Be(HttpStatusCode.Created);
-        return (await ReadJsonAsync(res)).GetProperty("id").GetInt32();
+        var body = await ReadJsonAsync(res);
+        var id = body.GetProperty("id").GetInt32();
+        if (status == "Signed")
+        {
+            var transition = await Client.PostAsJsonAsync($"/api/contracts/{id}/transition", new
+            {
+                newStatus = "Signed",
+                rowVersion = body.GetProperty("rowVersion").GetString(),
+            });
+            transition.StatusCode.Should().Be(HttpStatusCode.OK, await transition.Content.ReadAsStringAsync());
+        }
+        return id;
     }
 
     [Fact]
@@ -926,7 +984,7 @@ public class ContractsControllerTests : IntegrationTestBase
             customerId,
             direction = "Upstream",
             type = "DesignAndBuild",
-            status = "Signed",
+            status = "Draft",
             value = 100_000_000,
             paymentMilestones = new object[]
             {
@@ -984,7 +1042,7 @@ public class ContractsControllerTests : IntegrationTestBase
             customerId,
             direction = "Upstream",
             type = "DesignAndBuild",
-            status = "Signed",
+            status = "Draft",
             value = 100_000_000,
             paymentMilestones = new object[]
             {

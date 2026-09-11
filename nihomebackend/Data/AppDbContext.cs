@@ -926,6 +926,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasIndex(m => m.ContractId);
             b.HasIndex(m => new { m.ContractId, m.Order }).IsUnique();
             b.HasIndex(m => new { m.ResponsibleAccountantUserId, m.DueDate });
+            b.HasIndex(m => new { m.DueNotificationSentAt, m.DueDate });
         });
 
         modelBuilder.Entity<ContractPaymentMilestoneEvent>(b =>

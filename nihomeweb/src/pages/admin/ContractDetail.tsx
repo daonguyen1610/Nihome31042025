@@ -55,7 +55,6 @@ import { BulkActionBar } from "@/components/admin/BulkActionBar";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
 import {
   adminApi,
-  PAYMENT_MILESTONE_STATUSES,
   type ContractClassificationOptions,
   type ContractAppendixResponse,
   type ContractAppendixStatus,
@@ -122,12 +121,15 @@ const getErrorMessage = (err: unknown): string | undefined => {
 };
 
 interface MilestoneDraft {
+  id?: number;
   order: number;
   name: string;
   percentValue: number;
   dueDate: string;
   actualPaymentDate: string;
   status: PaymentMilestoneStatus;
+  responsibleAccountantUserId: number | null;
+  requestedAt: string | null;
   note: string;
 }
 
@@ -179,12 +181,15 @@ const toEditForm = (contract: ContractResponse): ContractEditForm => ({
   scopeOfWork: contract.scopeOfWork ?? "",
   note: contract.note ?? "",
   milestones: contract.paymentMilestones.map((milestone) => ({
+    id: milestone.id,
     order: milestone.order,
     name: milestone.name,
     percentValue: milestone.percentValue,
     dueDate: toIsoDate(milestone.dueDate),
     actualPaymentDate: toIsoDate(milestone.actualPaymentDate),
     status: milestone.status,
+    responsibleAccountantUserId: milestone.responsibleAccountantUserId ?? null,
+    requestedAt: milestone.requestedAt ?? null,
     note: milestone.note ?? "",
   })),
 });
@@ -791,7 +796,7 @@ const EditScheduleTab = ({ value, milestones, onChange }: EditScheduleTabProps) 
   return (
     <div className="space-y-3">
       <div className="flex justify-end">
-        <Button type="button" size="sm" variant="outline" onClick={() => onChange([...milestones, { order: milestones.length + 1, name: "", percentValue: 0, dueDate: "", actualPaymentDate: "", status: "Pending", note: "" }])}>
+        <Button type="button" size="sm" variant="outline" onClick={() => onChange([...milestones, { order: milestones.length + 1, name: "", percentValue: 0, dueDate: "", actualPaymentDate: "", status: "Pending", responsibleAccountantUserId: null, requestedAt: null, note: "" }])}>
           <Plus className="mr-1 h-4 w-4" />
           {t("contracts.addMilestone")}
         </Button>
@@ -805,13 +810,13 @@ const EditScheduleTab = ({ value, milestones, onChange }: EditScheduleTabProps) 
             <div className="flex items-center justify-between gap-2">
               <span className="text-sm font-semibold text-slate-500">#{index + 1}</span>
               <div className="flex gap-1">
-                <Button type="button" size="icon" variant="ghost" className="h-8 w-8" disabled={index === 0} onClick={() => move(index, -1)} aria-label={t("workflow.moveUp")}><ArrowUp className="h-4 w-4" /></Button>
-                <Button type="button" size="icon" variant="ghost" className="h-8 w-8" disabled={index === milestones.length - 1} onClick={() => move(index, 1)} aria-label={t("workflow.moveDown")}><ArrowDown className="h-4 w-4" /></Button>
+                <Button type="button" size="icon" variant="ghost" className="h-11 w-11 sm:h-8 sm:w-8" disabled={index === 0} onClick={() => move(index, -1)} aria-label={t("workflow.moveUp")}><ArrowUp className="h-4 w-4" /></Button>
+                <Button type="button" size="icon" variant="ghost" className="h-11 w-11 sm:h-8 sm:w-8" disabled={index === milestones.length - 1} onClick={() => move(index, 1)} aria-label={t("workflow.moveDown")}><ArrowDown className="h-4 w-4" /></Button>
                 <Button
                   type="button"
                   size="icon"
                   variant="ghost"
-                  className="h-8 w-8 text-destructive hover:text-destructive"
+                  className="h-11 w-11 text-destructive hover:text-destructive sm:h-8 sm:w-8"
                   onClick={() => onChange(
                     milestones
                       .filter((_, current) => current !== index)
@@ -824,40 +829,23 @@ const EditScheduleTab = ({ value, milestones, onChange }: EditScheduleTabProps) 
               </div>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5"><Label>{t("contracts.milestone.name")} *</Label><Input value={milestone.name} onChange={(event) => patch(index, { name: event.target.value })} /></div>
-              <div className="space-y-1.5"><Label>{t("contracts.milestone.percent")} *</Label><Input type="number" min={0} max={100} step="0.01" value={milestone.percentValue} onChange={(event) => patch(index, { percentValue: Number(event.target.value) || 0 })} /><p className="text-xs text-slate-500">≈ {formatVndWithSymbol(amount)}</p></div>
-              <div className="space-y-1.5"><Label>{t("contracts.milestone.dueDate")}</Label><Input type="date" value={milestone.dueDate} onChange={(event) => patch(index, { dueDate: event.target.value })} /></div>
+              <div className="space-y-1.5"><Label htmlFor={`milestone-name-${index}`}>{t("contracts.milestone.name")} *</Label><Input id={`milestone-name-${index}`} value={milestone.name} onChange={(event) => patch(index, { name: event.target.value })} /></div>
+              <div className="space-y-1.5"><Label htmlFor={`milestone-percent-${index}`}>{t("contracts.milestone.percent")} *</Label><Input id={`milestone-percent-${index}`} type="number" min={0} max={100} step="0.01" value={milestone.percentValue} onChange={(event) => patch(index, { percentValue: Number(event.target.value) || 0 })} /><p className="text-xs text-slate-500">≈ {formatVndWithSymbol(amount)}</p></div>
+              <div className="space-y-1.5"><Label htmlFor={`milestone-due-${index}`}>{t("contracts.milestone.dueDate")}</Label><Input id={`milestone-due-${index}`} type="date" value={milestone.dueDate} onChange={(event) => patch(index, { dueDate: event.target.value })} /></div>
               <div className="space-y-1.5">
                 <Label>{t("contracts.milestone.status")}</Label>
-                <Select
-                  value={milestone.status}
-                  onValueChange={(value) => {
-                    const status = value as PaymentMilestoneStatus;
-                    patch(index, {
-                      status,
-                      actualPaymentDate: status === "Paid"
-                        ? milestone.actualPaymentDate || getLocalIsoDate()
-                        : "",
-                    });
-                  }}
-                >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {PAYMENT_MILESTONE_STATUSES.map((status) => (
-                      <SelectItem key={status} value={status}>
-                        {t(`contracts.milestoneStatus.${status}`)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex h-10 items-center">
+                  <Badge variant="outline">{t(`contracts.milestoneStatus.${milestone.status}`)}</Badge>
+                </div>
               </div>
               {milestone.status === "Paid" ? (
                 <div className="space-y-1.5">
-                  <Label>{t("contracts.milestone.actualPaymentDate")} *</Label>
+                  <Label htmlFor={`milestone-actual-${index}`}>{t("contracts.milestone.actualPaymentDate")} *</Label>
                   <Input
+                    id={`milestone-actual-${index}`}
                     type="date"
                     value={milestone.actualPaymentDate}
-                    onChange={(event) => patch(index, { actualPaymentDate: event.target.value })}
+                    readOnly
                   />
                 </div>
               ) : null}
@@ -1687,7 +1675,7 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
           setSupplementalError(t("contracts.detail.partialLoadError"));
           return { data: [] as ContractTimelineEvent[] };
         }),
-        adminApi.getContractClassificationOptions(),
+        adminApi.getContractClassificationOptions(scopedDirection),
       ]);
       setContract(c.data);
       setForm(toEditForm(c.data));
@@ -1920,6 +1908,7 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
     }
     const paymentMilestones: ContractPaymentMilestoneRequest[] | null = scheduleChanged
       ? form.milestones.map((milestone, index) => ({
+          id: milestone.id ?? null,
           order: index + 1,
           name: milestone.name.trim(),
           percentValue: milestone.percentValue,
@@ -1928,6 +1917,8 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
             ? toIsoTimestamp(milestone.actualPaymentDate)
             : null,
           status: milestone.status,
+          responsibleAccountantUserId: milestone.responsibleAccountantUserId,
+          requestedAt: milestone.requestedAt,
           note: milestone.note.trim() || null,
         }))
       : null;
