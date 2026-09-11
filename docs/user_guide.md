@@ -732,8 +732,8 @@ Manage primary contracts linked to projects and customers. Define contract value
 | Page | Functions | Estimate |
 |------|-----------|----------|
 | Primary Contract List | Finance > Primary contracts; upstream contracts with owner/project/status/end-date filters, current value after approved VO, collection-risk summary, next receivable, pagination, contextual detail return, and complete filtered CSV export | Implemented |
-| Primary Contract Create/Edit | Create and update contracts | 2.5 days |
-| Primary Contract Detail | Value, payment milestones, receivables | 2.5 days |
+| Primary Contract Create/Edit | Create Upstream contracts from the Finance list and edit accessible records in the Finance detail workflow, with Project/reference/date/value/payment-schedule validation | Implemented |
+| Primary Contract Detail | Finance-scoped route with value and approved VO reconciliation, payment milestones/receivables, files, appendices, status transitions, and audit timeline | Implemented |
 
 #### 3.6.2 Subcontractor and Supplier Contract Management
 

@@ -5670,8 +5670,8 @@ export const adminApi = {
     api.get<ContractFilterOptionsResponse>("/contracts/filter-options", { params: { direction } }),
   getContractClassificationOptions: () =>
     api.get<ContractClassificationOptions>("/contracts/classification-options"),
-  getContract: (id: number) =>
-    api.get<ContractResponse>(`/contracts/${id}`),
+  getContract: (id: number, direction?: ContractDirection) =>
+    api.get<ContractResponse>(`/contracts/${id}`, { params: { direction } }),
   previewNextContractNumber: () =>
     api.get<{ contractNumber: string }>("/contracts/next-number"),
   createContract: (body: UpsertContractRequest) =>

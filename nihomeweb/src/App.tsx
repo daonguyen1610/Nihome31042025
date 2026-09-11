@@ -212,6 +212,7 @@ const App = () => (
               </Route>
               <Route element={<RequirePermission code={[ADMIN_PERMS.contractsViewAll, ADMIN_PERMS.contractsViewUpstreamAll]} />}>
                 <Route path="/admin/finance/contracts" element={<ContractsPage mode="upstream" />} />
+                <Route path="/admin/finance/contracts/:id" element={<ContractDetailPage mode="upstream" />} />
               </Route>
               <Route element={<RequirePermission code={ADMIN_PERMS.opportunities} />}>
                 <Route path="/admin/opportunities" element={<AdminOpportunities />} />

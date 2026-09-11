@@ -1598,7 +1598,11 @@ const TimelineTab = ({ events }: { events: ContractTimelineEvent[] }) => {
 
 type TabId = "info" | "schedule" | "appendices" | "documents" | "timeline";
 
-const ContractDetail = () => {
+type ContractDetailProps = {
+  mode?: "all" | "upstream";
+};
+
+const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
   const { t } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
@@ -1607,10 +1611,12 @@ const ContractDetail = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedReturnTo = searchParams.get("returnTo");
   const requestedReturnPath = requestedReturnTo?.split("?", 1)[0];
+  const defaultReturnTo = mode === "upstream" ? "/admin/finance/contracts" : "/admin/contracts";
   const returnTo = requestedReturnPath === "/admin/contracts" || requestedReturnPath === "/admin/finance/contracts"
     ? requestedReturnTo
-    : "/admin/contracts";
-  const financeContext = returnTo.startsWith("/admin/finance/contracts");
+    : defaultReturnTo;
+  const financeContext = mode === "upstream" || returnTo.startsWith("/admin/finance/contracts");
+  const scopedDirection: ContractDirection | undefined = mode === "upstream" ? "Upstream" : undefined;
   const idNum = Number(params.id);
   const canManage = has(ADMIN_PERMS.contractsManage);
   const canDecideVo = has(ADMIN_PERMS.contractsViewAll);
@@ -1668,7 +1674,7 @@ const ContractDetail = () => {
     setSupplementalError(null);
     try {
       const [c, vos, atts, tl, options] = await Promise.all([
-        adminApi.getContract(idNum),
+        adminApi.getContract(idNum, scopedDirection),
         adminApi.listContractAppendices(idNum).catch(() => {
           setSupplementalError(t("contracts.detail.partialLoadError"));
           return { data: [] as ContractAppendixResponse[] };
@@ -1698,7 +1704,7 @@ const ContractDetail = () => {
     } finally {
       setLoading(false);
     }
-  }, [idNum, t]);
+  }, [idNum, scopedDirection, t]);
 
   useEffect(() => {
     void load();
@@ -1708,7 +1714,7 @@ const ContractDetail = () => {
     if (!Number.isFinite(idNum)) return;
     setAttachmentsError(null);
     const [c, vos, tl] = await Promise.all([
-      adminApi.getContract(idNum),
+      adminApi.getContract(idNum, scopedDirection),
       adminApi.listContractAppendices(idNum),
       adminApi.getContractTimeline(idNum),
     ]);
@@ -1721,7 +1727,7 @@ const ContractDetail = () => {
     } catch (error) {
       setAttachmentsError(getErrorMessage(error) ?? String(error));
     }
-  }, [idNum]);
+  }, [idNum, scopedDirection]);
 
   const handleTransition = useCallback(
     async (next: ContractStatus) => {

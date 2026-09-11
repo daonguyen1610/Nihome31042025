@@ -479,8 +479,9 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
     const params = new URLSearchParams();
     if (edit) params.set("edit", "true");
     params.set("returnTo", `${location.pathname}${location.search}`);
-    return `/admin/contracts/${id}?${params.toString()}`;
-  }, [location.pathname, location.search]);
+    const detailBase = mode === "upstream" ? "/admin/finance/contracts" : "/admin/contracts";
+    return `${detailBase}/${id}?${params.toString()}`;
+  }, [location.pathname, location.search, mode]);
 
   // -------- dialog / form --------
   const [dialogOpen, setDialogOpen] = useState(false);

@@ -975,12 +975,13 @@ contracts across owners nor grants mutation permissions.
 
 The shared frontend list is available at `/admin/contracts`. The Finance entry
 `/admin/finance/contracts` fixes the same list and create form to
-`direction=Upstream`. Its URL retains filters, sort, and page while users inspect
-a detail. The Finance view shows current value, approved VO impact, next
-collection, and overdue/due-soon summary; secondary filters are collapsible for
-tablet/mobile use. Both surfaces use server pagination and the dedicated
-server-side export query, so CSV cannot silently truncate at the current page or
-the 100-row API limit.
+`direction=Upstream`; `/admin/finance/contracts/{id}` reuses the complete edit
+and detail workflow while requesting the same Upstream API scope. Its URL retains
+filters, sort, and page while users inspect a detail. The Finance view shows
+current value, approved VO impact, next collection, and overdue/due-soon summary;
+secondary filters are collapsible for tablet/mobile use. Both surfaces use server
+pagination and the dedicated server-side export query, so CSV cannot silently
+truncate at the current page or the 100-row API limit.
 
 ### 7.9 Operational Business Documents
 

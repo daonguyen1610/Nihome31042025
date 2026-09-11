@@ -59,7 +59,16 @@ test("Finance create and detail navigation stay in the primary-contract context"
 
     const row = page.locator('[data-testid^="contract-row-"]').first();
     await expect(row).toBeVisible();
+    const contractId = (await row.getAttribute("data-testid"))?.replace("contract-row-", "");
+    const detailResponse = page.waitForResponse((response) => {
+        const url = new URL(response.url());
+        return response.request().method() === "GET"
+            && url.pathname.endsWith(`/api/contracts/${contractId}`)
+            && url.searchParams.get("direction") === "Upstream";
+    });
     await row.locator("td").nth(1).click();
+    expect((await detailResponse).ok()).toBe(true);
+    await expect(page).toHaveURL(/\/admin\/finance\/contracts\/\d+\?/);
     const returnLink = page.locator('main a[href^="/admin/finance/contracts?"]').first();
     await expect(returnLink).toBeVisible();
     await returnLink.click();
