@@ -132,39 +132,41 @@ public class ContractsController(
 
     [HttpGet("classification-options")]
     [RequirePermission("crm.contracts", "view")]
-    public async Task<ActionResult<object>> ClassificationOptions(CancellationToken ct) => Ok(new
-    {
-        directions = Enum.GetNames<ContractDirection>(),
-        types = Enum.GetValues<ContractType>()
-            .Where(value => value != ContractType.Unclassified)
-            .Select(value => value.ToString()),
-        allowedTypes = new Dictionary<string, string[]>
+    public async Task<ActionResult<object>> ClassificationOptions(
+        [FromQuery] ContractDirection? direction,
+        CancellationToken ct) => Ok(new
         {
-            [ContractDirection.Upstream.ToString()] =
-            [
-                ContractType.Design.ToString(),
-                ContractType.Construction.ToString(),
-                ContractType.DesignAndBuild.ToString(),
-            ],
-            [ContractDirection.Downstream.ToString()] =
-            [
-                ContractType.Supply.ToString(),
-                ContractType.Subcontract.ToString(),
-            ],
-        },
-        vendors = await db.Vendors.AsNoTracking()
-            .Where(vendor => vendor.IsActive)
-            .OrderBy(vendor => vendor.CompanyName)
-            .ThenBy(vendor => vendor.VendorCode)
-            .Select(vendor => new
+            directions = Enum.GetNames<ContractDirection>(),
+            types = Enum.GetValues<ContractType>()
+                .Where(value => value != ContractType.Unclassified)
+                .Select(value => value.ToString()),
+            allowedTypes = new Dictionary<string, string[]>
             {
-                vendor.Id,
-                vendor.VendorCode,
-                vendor.CompanyName,
-                vendor.VendorType,
-            })
-            .ToListAsync(ct),
-    });
+                [ContractDirection.Upstream.ToString()] =
+                [
+                    ContractType.Design.ToString(),
+                    ContractType.Construction.ToString(),
+                    ContractType.DesignAndBuild.ToString(),
+                ],
+                [ContractDirection.Downstream.ToString()] =
+                [
+                    ContractType.Supply.ToString(),
+                    ContractType.Subcontract.ToString(),
+                ],
+            },
+            vendors = await db.Vendors.AsNoTracking()
+                .Where(vendor => direction != ContractDirection.Upstream && vendor.IsActive)
+                .OrderBy(vendor => vendor.CompanyName)
+                .ThenBy(vendor => vendor.VendorCode)
+                .Select(vendor => new
+                {
+                    vendor.Id,
+                    vendor.VendorCode,
+                    vendor.CompanyName,
+                    vendor.VendorType,
+                })
+                .ToListAsync(ct),
+        });
 
     [HttpGet("{id:int}")]
     [RequirePermission("crm.contracts", "view")]

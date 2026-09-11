@@ -8,7 +8,6 @@ import { useToast } from "@/hooks/use-toast";
 import {
   adminApi,
   CONTRACT_STATUSES,
-  PAYMENT_MILESTONE_STATUSES,
   type ContractClassificationOptions,
   type ContractDirection,
   type ContractFilterOptionsResponse,
@@ -140,14 +139,6 @@ const blankMilestone = (order: number): MilestoneDraft => ({
   status: "Pending",
   note: "",
 });
-
-// Canonical preset used by NIH-103 spec.
-const PRESET_30_30_30_10: MilestoneDraft[] = [
-  { order: 1, name: "Đợt 1 - Tạm ứng khi ký HĐ", percentValue: 30, dueDate: "", actualPaymentDate: "", status: "Pending", note: "" },
-  { order: 2, name: "Đợt 2 - Nghiệm thu 50%", percentValue: 30, dueDate: "", actualPaymentDate: "", status: "Pending", note: "" },
-  { order: 3, name: "Đợt 3 - Bàn giao", percentValue: 30, dueDate: "", actualPaymentDate: "", status: "Pending", note: "" },
-  { order: 4, name: "Đợt 4 - Quyết toán bảo hành", percentValue: 10, dueDate: "", actualPaymentDate: "", status: "Pending", note: "" },
-];
 
 const getLocalIsoDate = (): string => {
   const now = new Date();
@@ -376,7 +367,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
       .then((response) => setFilterOptions(response.data))
       .catch(() => setMetadataError(t("contracts.filterOptionsLoadError")));
     if (classification === null) {
-      void adminApi.getContractClassificationOptions()
+      void adminApi.getContractClassificationOptions(fixedDirection)
         .then((response) => setClassification(response.data))
         .catch(() => setMetadataError(t("contracts.filterOptionsLoadError")));
     }
@@ -571,7 +562,15 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
     // filling in the schedule should be asked before wiping it.
     const hasWork = form.milestones.some((m) => m.name.trim() !== "" || m.percentValue > 0);
     if (hasWork && !window.confirm(t("contracts.milestonePresetConfirm"))) return;
-    setForm((prev) => ({ ...prev, milestones: PRESET_30_30_30_10.map((m) => ({ ...m })) }));
+    const percentages = [30, 30, 30, 10];
+    setForm((prev) => ({
+      ...prev,
+      milestones: percentages.map((percentValue, index) => ({
+        ...blankMilestone(index + 1),
+        name: t(`contracts.milestonePreset.item${index + 1}`),
+        percentValue,
+      })),
+    }));
   };
 
   const milestoneSum = useMemo(
@@ -1333,15 +1332,10 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="c-status-form" className="text-xs">{t("contracts.field.status")} *</Label>
-                <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v as ContractStatus })}>
-                  <SelectTrigger id="c-status-form" className="h-9"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {CONTRACT_STATUSES.map((s) => (
-                      <SelectItem key={s} value={s}>{t(`contracts.status.${s}`)}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label className="text-xs">{t("contracts.field.status")}</Label>
+                <div className="flex h-9 items-center">
+                  <Badge variant="outline">{t("contracts.status.Draft")}</Badge>
+                </div>
               </div>
             </div>
 
@@ -1536,7 +1530,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                               onClick={() => moveMilestone(idx, -1)}
                               disabled={idx === 0}
                               aria-label={t("workflow.moveUp")}
-                              className="h-7 w-7"
+                              className="h-11 w-11 sm:h-7 sm:w-7"
                             >
                               <ArrowUp className="h-3.5 w-3.5" />
                             </Button>
@@ -1545,7 +1539,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                               onClick={() => moveMilestone(idx, 1)}
                               disabled={idx === form.milestones.length - 1}
                               aria-label={t("workflow.moveDown")}
-                              className="h-7 w-7"
+                              className="h-11 w-11 sm:h-7 sm:w-7"
                             >
                               <ArrowDown className="h-3.5 w-3.5" />
                             </Button>
@@ -1553,7 +1547,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                               type="button" size="icon" variant="ghost"
                               onClick={() => removeMilestone(idx)}
                               aria-label={t("common.delete")}
-                              className="h-7 w-7 text-destructive hover:text-destructive"
+                              className="h-11 w-11 text-destructive hover:text-destructive sm:h-7 sm:w-7"
                             >
                               <Trash2 className="h-3.5 w-3.5" />
                             </Button>
@@ -1561,17 +1555,19 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                         </div>
                         <div className="grid gap-2 sm:grid-cols-2">
                           <div className="min-w-0 space-y-1">
-                            <Label className="text-xs">{t("contracts.milestone.name")} *</Label>
+                            <Label htmlFor={`c-milestone-name-${idx}`} className="text-xs">{t("contracts.milestone.name")} *</Label>
                             <Input
+                              id={`c-milestone-name-${idx}`}
                               value={m.name}
                               onChange={(e) => patchMilestone(idx, { name: e.target.value })}
                               className="h-8"
                             />
                           </div>
                           <div className="min-w-0 space-y-1">
-                            <Label className="text-xs">{t("contracts.milestone.percent")} *</Label>
+                            <Label htmlFor={`c-milestone-percent-${idx}`} className="text-xs">{t("contracts.milestone.percent")} *</Label>
                             <div className="flex items-center gap-2">
                               <Input
+                                id={`c-milestone-percent-${idx}`}
                                 type="number" min={0} max={100} step="0.01"
                                 value={m.percentValue}
                                 onChange={(e) => patchMilestone(idx, { percentValue: Number(e.target.value) || 0 })}
@@ -1583,8 +1579,9 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                             </div>
                           </div>
                           <div className="min-w-0 space-y-1">
-                            <Label className="text-xs">{t("contracts.milestone.dueDate")}</Label>
+                            <Label htmlFor={`c-milestone-due-${idx}`} className="text-xs">{t("contracts.milestone.dueDate")}</Label>
                             <Input
+                              id={`c-milestone-due-${idx}`}
                               type="date" value={m.dueDate}
                               onChange={(e) => patchMilestone(idx, { dueDate: e.target.value })}
                               className="h-8"
@@ -1592,39 +1589,10 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                           </div>
                           <div className="min-w-0 space-y-1">
                             <Label className="text-xs">{t("contracts.milestone.status")}</Label>
-                            <Select
-                              value={m.status}
-                              onValueChange={(value) => {
-                                const status = value as PaymentMilestoneStatus;
-                                patchMilestone(idx, {
-                                  status,
-                                  actualPaymentDate: status === "Paid"
-                                    ? m.actualPaymentDate || getLocalIsoDate()
-                                    : "",
-                                });
-                              }}
-                            >
-                              <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
-                              <SelectContent>
-                                {PAYMENT_MILESTONE_STATUSES.map((s) => (
-                                  <SelectItem key={s} value={s}>{t(`contracts.milestoneStatus.${s}`)}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          {m.status === "Paid" ? (
-                            <div className="min-w-0 space-y-1">
-                              <Label className="text-xs">{t("contracts.milestone.actualPaymentDate")} *</Label>
-                              <Input
-                                type="date"
-                                min={DATE_MIN}
-                                max={DATE_MAX}
-                                value={m.actualPaymentDate}
-                                onChange={(e) => patchMilestone(idx, { actualPaymentDate: e.target.value })}
-                                className="h-8"
-                              />
+                            <div className="flex h-8 items-center">
+                              <Badge variant="outline">{t("contracts.milestoneStatus.Pending")}</Badge>
                             </div>
-                          ) : null}
+                          </div>
                         </div>
                       </div>
                     );

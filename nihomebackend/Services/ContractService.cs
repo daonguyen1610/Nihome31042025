@@ -334,9 +334,15 @@ public class ContractService(
 
     public async Task<ContractResponse> CreateAsync(UpsertContractRequest req, int callerUserId, bool canReassignOwner, CancellationToken ct = default)
     {
+        if (req.Status != ContractStatus.Draft)
+        {
+            throw new ContractValidationException(
+                "Hợp đồng mới phải ở trạng thái Nháp. Hãy dùng thao tác chuyển trạng thái sau khi tạo.");
+        }
         if (req.PaymentMilestones is not null)
         {
             ValidatePaymentMilestones(req.PaymentMilestones);
+            EnsureNewMilestonesArePending(req.PaymentMilestones);
             await ValidateMilestoneAccountantsAsync(req.PaymentMilestones, ct);
         }
 
@@ -428,6 +434,11 @@ public class ContractService(
         var entity = await db.Contracts.FindAsync(new object?[] { id }, ct);
         if (entity == null) return null;
         if (!canSeeAll && entity.OwnerUserId != callerUserId) return null;
+        if (req.Status != entity.Status)
+        {
+            throw new ContractValidationException(
+                "Không được đổi trạng thái qua thao tác chỉnh sửa. Hãy dùng thao tác chuyển trạng thái của Hợp đồng.");
+        }
 
         // An RFQ award is the authority for this contract's commercial terms.
         // Check the RFQ binding independently of the current line collection.
@@ -567,11 +578,11 @@ public class ContractService(
 
         await CrmConcurrency.SaveChangesAsync(db, ct);
 
-        // Milestone list is only replaced when the caller sent a value.
+        // Milestone list is only synchronized when the caller sent a value.
         // Null == leave alone, empty == wipe the schedule.
         if (req.PaymentMilestones != null)
         {
-            await ReplaceMilestonesAsync(entity.Id, req.PaymentMilestones, ct);
+            await SynchronizeMilestonesAsync(entity.Id, req.PaymentMilestones, ct);
         }
 
         if (transaction is not null)
@@ -682,6 +693,8 @@ public class ContractService(
         {
             entity.SignedDate = DateTime.UtcNow;
         }
+
+        ValidateContractDates(newStatus, entity.SignedDate, entity.StartDate, entity.EndDate);
 
         await closureInvariant.EnsureContractMutationPreservesWonAsync(
             entity, entity.OpportunityId, entity.CustomerId, newStatus, entity.SignedDate, deleting: false, ct: ct);
@@ -902,11 +915,29 @@ public class ContractService(
             }
         }
 
-        if (req.StartDate.HasValue && req.EndDate.HasValue && req.EndDate.Value < req.StartDate.Value)
-        {
-            throw new ContractValidationException("End date must be on or after start date.");
-        }
+        ValidateContractDates(req.Status, req.SignedDate, req.StartDate, req.EndDate);
         return customer.OwnerUserId;
+    }
+
+    private static void ValidateContractDates(
+        ContractStatus status,
+        DateTime? signedDate,
+        DateTime? startDate,
+        DateTime? endDate)
+    {
+        if (RequiresSignedCustomer(status) && !signedDate.HasValue)
+        {
+            throw new ContractValidationException(
+                "Ngày ký là bắt buộc khi Hợp đồng đã ký hoặc đang thực hiện.");
+        }
+        if (signedDate.HasValue && startDate.HasValue && startDate.Value.Date < signedDate.Value.Date)
+        {
+            throw new ContractValidationException("Ngày bắt đầu phải cùng hoặc sau ngày ký.");
+        }
+        if (startDate.HasValue && endDate.HasValue && endDate.Value.Date < startDate.Value.Date)
+        {
+            throw new ContractValidationException("Ngày kết thúc phải cùng hoặc sau ngày bắt đầu.");
+        }
     }
 
     private async Task EnsureCustomerReadyForSignatureAsync(
@@ -1150,6 +1181,16 @@ public class ContractService(
         }
     }
 
+    private static void EnsureNewMilestonesArePending(IEnumerable<ContractPaymentMilestoneRequest> milestones)
+    {
+        if (milestones.Any(item => item.Id.HasValue || item.Status != PaymentMilestoneStatus.Pending ||
+                item.RequestedAt.HasValue || item.ActualPaymentDate.HasValue))
+        {
+            throw new ContractValidationException(
+                "Mốc thanh toán mới phải ở trạng thái Chờ. Hãy cập nhật trạng thái sau khi tạo Hợp đồng.");
+        }
+    }
+
     private async Task ValidateMilestoneAccountantsAsync(
         IEnumerable<ContractPaymentMilestoneRequest> milestones,
         CancellationToken ct)
@@ -1220,6 +1261,96 @@ public class ContractService(
         if (normalised.Count > 0)
         {
             db.ContractPaymentMilestones.AddRange(normalised);
+        }
+        await db.SaveChangesAsync(ct);
+    }
+
+    private async Task SynchronizeMilestonesAsync(
+        int contractId, List<ContractPaymentMilestoneRequest> milestones, CancellationToken ct)
+    {
+        var existing = await db.ContractPaymentMilestones
+            .Where(item => item.ContractId == contractId)
+            .ToListAsync(ct);
+        var existingById = existing.ToDictionary(item => item.Id);
+        var suppliedIds = milestones.Where(item => item.Id.HasValue)
+            .Select(item => item.Id!.Value).ToList();
+
+        if (suppliedIds.Count != suppliedIds.Distinct().Count() ||
+            suppliedIds.Any(id => !existingById.ContainsKey(id)))
+        {
+            throw new ContractValidationException(
+                "Lịch thanh toán chứa mốc trùng lặp hoặc không thuộc Hợp đồng này.");
+        }
+
+        var removed = existing.Where(item => !suppliedIds.Contains(item.Id)).ToList();
+        var removedIds = removed.Select(item => item.Id).ToList();
+        if (removed.Any(item => item.Status != PaymentMilestoneStatus.Pending) ||
+            await db.PaymentRequests.AsNoTracking().AnyAsync(
+                item => item.ContractPaymentMilestoneId.HasValue &&
+                    removedIds.Contains(item.ContractPaymentMilestoneId.Value), ct) ||
+            await db.ContractPaymentMilestoneEvents.AsNoTracking().AnyAsync(
+                item => removedIds.Contains(item.ContractPaymentMilestoneId), ct))
+        {
+            throw new ContractValidationException(
+                "Không thể xóa mốc đã xử lý hoặc đang được đề nghị thanh toán tham chiếu.");
+        }
+
+        foreach (var request in milestones)
+        {
+            if (!request.Id.HasValue)
+            {
+                EnsureNewMilestonesArePending([request]);
+                continue;
+            }
+
+            var persisted = existingById[request.Id.Value];
+            if (request.Status != persisted.Status ||
+                request.ResponsibleAccountantUserId != persisted.ResponsibleAccountantUserId ||
+                request.RequestedAt != persisted.RequestedAt ||
+                request.ActualPaymentDate?.Date != persisted.ActualPaymentDate?.Date)
+            {
+                throw new ContractValidationException(
+                    "Không được đổi trạng thái hoặc thông tin xử lý mốc qua chỉnh sửa lịch. Hãy dùng thao tác cập nhật trạng thái mốc.");
+            }
+        }
+
+        db.ContractPaymentMilestones.RemoveRange(removed);
+        foreach (var persisted in existing.Except(removed))
+        {
+            persisted.Order = -persisted.Id;
+        }
+        await db.SaveChangesAsync(ct);
+
+        foreach (var request in milestones.OrderBy(item => item.Order))
+        {
+            if (request.Id.HasValue)
+            {
+                var persisted = existingById[request.Id.Value];
+                persisted.Order = request.Order;
+                persisted.Name = request.Name.Trim();
+                persisted.PercentValue = request.PercentValue;
+                if (persisted.DueDate?.Date != request.DueDate?.Date)
+                {
+                    persisted.DueNotificationSentAt = null;
+                }
+                persisted.DueDate = request.DueDate;
+                persisted.Note = string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim();
+                persisted.UpdatedAt = DateTime.UtcNow;
+            }
+            else
+            {
+                db.ContractPaymentMilestones.Add(new ContractPaymentMilestone
+                {
+                    ContractId = contractId,
+                    Order = request.Order,
+                    Name = request.Name.Trim(),
+                    PercentValue = request.PercentValue,
+                    DueDate = request.DueDate,
+                    ResponsibleAccountantUserId = request.ResponsibleAccountantUserId,
+                    Status = PaymentMilestoneStatus.Pending,
+                    Note = string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim(),
+                });
+            }
         }
         await db.SaveChangesAsync(ct);
     }

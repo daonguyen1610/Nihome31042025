@@ -735,6 +735,18 @@ Manage primary contracts linked to projects and customers. Define contract value
 | Primary Contract Create/Edit | Create Upstream contracts from the Finance list and edit accessible records in the Finance detail workflow, with Project/reference/date/value/payment-schedule validation | Implemented |
 | Primary Contract Detail | Finance-scoped route with value and approved VO reconciliation, payment milestones/receivables, files, appendices, status transitions, and audit timeline | Implemented |
 
+Every new primary contract starts as **Draft**. Use the explicit status actions
+on the detail page to sign, start, pause, complete, or cancel it; editing general
+information cannot skip lifecycle checks. Signed and active contracts require a
+signed date, and contract dates must follow signing → start → end order.
+Milestone status and accounting responsibility are changed through the milestone
+action, while schedule editing preserves the milestone identity and its history.
+Processed milestones or milestones already referenced by a payment request
+cannot be deleted. When an unpaid primary-contract collection milestone reaches
+its due date, the active contract owner and assigned accountant receive one
+notification; changing its due date schedules a new reminder for the revised
+date.
+
 #### 3.6.2 Subcontractor and Supplier Contract Management
 
 Manage input contracts with subcontractors and material suppliers. Define contract value, terms, and payment schedules. Track contract execution progress. Monitor payment history. Upload contract files.

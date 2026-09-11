@@ -1402,6 +1402,7 @@ export interface ContractPaymentMilestoneResponse {
 }
 
 export interface ContractPaymentMilestoneRequest {
+  id?: number | null;
   order: number;
   name: string;
   percentValue: number;
@@ -5668,8 +5669,8 @@ export const adminApi = {
     api.get<ContractListResponse>("/contracts/export-data", { params }),
   getContractFilterOptions: (direction?: ContractDirection) =>
     api.get<ContractFilterOptionsResponse>("/contracts/filter-options", { params: { direction } }),
-  getContractClassificationOptions: () =>
-    api.get<ContractClassificationOptions>("/contracts/classification-options"),
+  getContractClassificationOptions: (direction?: ContractDirection) =>
+    api.get<ContractClassificationOptions>("/contracts/classification-options", { params: { direction } }),
   getContract: (id: number, direction?: ContractDirection) =>
     api.get<ContractResponse>(`/contracts/${id}`, { params: { direction } }),
   previewNextContractNumber: () =>

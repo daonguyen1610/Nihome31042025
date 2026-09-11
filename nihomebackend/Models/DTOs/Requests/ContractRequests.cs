@@ -57,6 +57,13 @@ public class UpsertContractRequest : IConcurrencyRequest
 /// <summary>One line in a contract's payment schedule.</summary>
 public class ContractPaymentMilestoneRequest
 {
+    /// <summary>
+    /// Existing milestone identity on update. Omit when creating a new line.
+    /// Preserving this identity keeps finance references and status history intact.
+    /// </summary>
+    [Range(1, int.MaxValue)]
+    public int? Id { get; set; }
+
     [Range(1, 99)]
     public int Order { get; set; }
 

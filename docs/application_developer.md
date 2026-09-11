@@ -973,6 +973,23 @@ when the list explicitly requests `direction=Upstream` or a read-only detail
 endpoint resolves to an upstream contract. It neither exposes downstream
 contracts across owners nor grants mutation permissions.
 
+New contracts are always created as `Draft`; create and update reject attempts
+to bypass the contract state machine. Status changes must use
+`POST /api/contracts/{id}/transition`. Signed and later active states require a
+signed date, the planned start cannot precede signing, and the end cannot
+precede the start. Payment-schedule updates round-trip milestone IDs and patch
+editable schedule fields in place, preserving finance references and milestone
+history. Processed milestones and milestones referenced by payment requests
+cannot be removed through schedule editing; status, accountant, request time,
+and actual payment date remain controlled by the milestone-status endpoint.
+
+The five-minute contract milestone worker emits the one-time
+`crm.contract.milestone-due` notification when an unpaid Upstream collection
+milestone reaches its due date. It notifies the active contract owner and
+responsible accountant, stores `DueNotificationSentAt` atomically, and clears
+that marker when the due date changes. Upstream-only classification metadata
+omits the downstream vendor catalogue.
+
 The shared frontend list is available at `/admin/contracts`. The Finance entry
 `/admin/finance/contracts` fixes the same list and create form to
 `direction=Upstream`; `/admin/finance/contracts/{id}` reuses the complete edit

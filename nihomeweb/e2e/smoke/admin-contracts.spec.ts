@@ -16,7 +16,7 @@ test("Finance primary-contract list is upstream-only and server-paginated", asyn
             && url.searchParams.get("pageSize") === "20";
     });
 
-    await page.goto(`${baseURL}/admin/finance/contracts`, { waitUntil: "networkidle" });
+    await page.goto(`${baseURL}/admin/finance/contracts`, { waitUntil: "domcontentloaded" });
 
     expect((await listResponse).ok()).toBe(true);
     await expect(page.getByRole("heading", { name: /Hợp đồng chính|Primary contracts|主合同|主要契約/i })).toBeVisible();
@@ -36,10 +36,13 @@ test("Finance create and detail navigation stay in the primary-contract context"
     baseURL,
 }) => {
     await loginInBrowserAs(page, TEST_USERS.superAdmin);
-    await page.goto(`${baseURL}/admin/finance/contracts`, { waitUntil: "networkidle" });
+    await page.goto(`${baseURL}/admin/finance/contracts`, { waitUntil: "domcontentloaded" });
 
     await page.locator("header").getByRole("button", { name: /Thêm hợp đồng|New contract|新增合同|新規契約/i }).click();
+    const createDialog = page.getByRole("dialog");
     await expect(page.locator("#c-direction-form")).toHaveCount(0);
+    await expect(page.locator("#c-status-form")).toHaveCount(0);
+    await expect(createDialog.getByText(/Nháp|Draft|草稿|下書き/i)).toBeVisible();
     await expect(page.getByText(/Đầu ra - Khách hàng|Upstream - Customer|上游 - 客户|上流 - 顧客/i).last()).toBeVisible();
     await page.getByRole("button", { name: /Huỷ|Hủy|Cancel|取消|キャンセル/i }).click();
 
@@ -82,7 +85,7 @@ test("Finance scope denies Sales and recovers from list API errors", async ({
     baseURL,
 }) => {
     await loginInBrowserAs(page, TEST_USERS.sale);
-    await page.goto(`${baseURL}/admin/finance/contracts`, { waitUntil: "networkidle" });
+    await page.goto(`${baseURL}/admin/finance/contracts`, { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: "403" })).toBeVisible();
 
     await loginInBrowserAs(page, TEST_USERS.superAdmin);
@@ -99,7 +102,7 @@ test("Finance scope denies Sales and recovers from list API errors", async ({
             body: JSON.stringify({ total: 0, page: 1, pageSize: 20, items: [], totalCurrentValue: 0, overdueContractCount: 0, dueSoonContractCount: 0 }),
         });
     });
-    await page.goto(`${baseURL}/admin/finance/contracts`, { waitUntil: "networkidle" });
+    await page.goto(`${baseURL}/admin/finance/contracts`, { waitUntil: "domcontentloaded" });
     await expect(page.getByText("List unavailable")).toBeVisible();
     await page.getByRole("button", { name: /Thử lại|Retry|重试|再試行/i }).click();
     await expect(page.getByText(/Chưa có hợp đồng nào|No contracts yet|暂无合同|契約がありません/i)).toBeVisible();
@@ -168,7 +171,7 @@ test("Contract pagination and CSV export use every filtered API page", async ({
         });
     });
 
-    await page.goto(`${baseURL}/admin/contracts`, { waitUntil: "networkidle" });
+    await page.goto(`${baseURL}/admin/contracts`, { waitUntil: "domcontentloaded" });
     await expect(page.getByTestId("contract-row-700001")).toBeVisible();
     await expect(page.getByTestId("contract-row-700001")).toContainText("700.046");
     await expect(page.getByTestId("contract-row-700001")).toContainText(/Đã quá hạn|Overdue|已逾期|期限超過/i);
@@ -227,7 +230,7 @@ test("SPA renders /admin/contracts without console errors for SUPER_ADMIN", asyn
     page.on("pageerror", (err) => jsErrors.push(err.message));
 
     await loginInBrowserAs(page, TEST_USERS.superAdmin);
-    await page.goto(`${baseURL}/admin/contracts`, { waitUntil: "networkidle" });
+    await page.goto(`${baseURL}/admin/contracts`, { waitUntil: "domcontentloaded" });
 
     await expect(
         page.getByRole("heading", { name: /Hợp đồng|Contracts|销售合同|販売契約/i }),
@@ -325,7 +328,7 @@ test("mobile contract card opens the complete contract detail", async ({
 }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await loginInBrowserAs(page, TEST_USERS.superAdmin);
-    await page.goto(`${baseURL}/admin/contracts`, { waitUntil: "networkidle" });
+    await page.goto(`${baseURL}/admin/contracts`, { waitUntil: "domcontentloaded" });
 
     const card = page.locator('[data-testid^="contract-card-"]').first();
     await expect(card).toBeVisible();
@@ -441,7 +444,7 @@ test("paid milestone date is suggested, customizable, and displayed", async ({
         await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(contract()) });
     });
 
-    await page.goto(`${baseURL}/admin/contracts/${contractId}`, { waitUntil: "networkidle" });
+    await page.goto(`${baseURL}/admin/contracts/${contractId}`, { waitUntil: "domcontentloaded" });
     await page.getByRole("tab", { name: /Lịch thanh toán|Payment schedule|付款计划|支払スケジュール/i }).click();
     await page.getByRole("button", { name: /Đánh dấu Đã thanh toán|Mark as Paid|标记为已付款|支払済にする/i }).click();
 
@@ -465,7 +468,7 @@ test("paid milestone date is suggested, customizable, and displayed", async ({
             contentType: "application/json",
             body: JSON.stringify({ role: "CONTRACT_VIEWER", roleId: null, permissions: ["crm.contracts.view"] }),
         }));
-    await page.reload({ waitUntil: "networkidle" });
+    await page.reload({ waitUntil: "domcontentloaded" });
     await page.getByRole("tab", { name: /Lịch thanh toán|Payment schedule|付款计划|支払スケジュール/i }).click();
     await expect(page.getByRole("button", { name: /Sửa ngày thanh toán|Edit payment date|编辑付款日期|支払日を編集/i })).toHaveCount(0);
     await expect(page.getByRole("button", { name: /Trả về Chưa yêu cầu|Revert to Pending|退回为待处理|未請求に戻す/i })).toHaveCount(0);
@@ -477,7 +480,7 @@ test("contract documents accept and upload multiple local files", async ({
     baseURL,
 }) => {
     await loginInBrowserAs(page, TEST_USERS.superAdmin);
-    await page.goto(`${baseURL}/admin/contracts`, { waitUntil: "networkidle" });
+    await page.goto(`${baseURL}/admin/contracts`, { waitUntil: "domcontentloaded" });
 
     const row = page.locator('[data-testid^="contract-row-"]').first();
     await expect(row).toBeVisible();
@@ -516,7 +519,7 @@ test("contract documents accept and upload multiple local files", async ({
         await route.fulfill({ status: 201, contentType: "application/json", body: JSON.stringify(attachment) });
     });
 
-    await page.goto(`${baseURL}/admin/contracts/${contractId}`, { waitUntil: "networkidle" });
+    await page.goto(`${baseURL}/admin/contracts/${contractId}`, { waitUntil: "domcontentloaded" });
     await page.getByRole("tab", { name: /Tài liệu|Documents|文档|資料/i }).click();
 
     const fileInput = page.locator("#contract-attachment-files");
