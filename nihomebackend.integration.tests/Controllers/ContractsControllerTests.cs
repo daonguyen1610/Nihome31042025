@@ -133,13 +133,29 @@ public class ContractsControllerTests : IntegrationTestBase
         (await ReadJsonAsync(export)).GetProperty("items").EnumerateArray()
             .Should().Contain(item => item.GetProperty("id").GetInt32() == contractId);
 
-        var detail = await Client.GetAsync($"/api/contracts/{contractId}");
+        var detail = await Client.GetAsync($"/api/contracts/{contractId}?direction=Upstream");
         detail.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var unscoped = await Client.GetAsync("/api/contracts");
         unscoped.StatusCode.Should().Be(HttpStatusCode.OK);
         (await ReadJsonAsync(unscoped)).GetProperty("items").EnumerateArray()
             .Should().NotContain(item => item.GetProperty("id").GetInt32() == contractId);
+    }
+
+    [Fact]
+    public async Task Get_WithMismatchedDirectionScope_ReturnsNotFound()
+    {
+        await AuthTestHelper.AuthenticateAsync(
+            Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "SUPER_ADMIN"));
+        var customerId = await CreateCustomerAsync();
+        var create = await Client.PostAsJsonAsync("/api/contracts", ContractBody(customerId));
+        create.StatusCode.Should().Be(HttpStatusCode.Created, await create.Content.ReadAsStringAsync());
+        var contractId = (await ReadJsonAsync(create)).GetProperty("id").GetInt32();
+
+        var response = await Client.GetAsync($"/api/contracts/{contractId}?direction=Downstream");
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]

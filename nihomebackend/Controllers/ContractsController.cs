@@ -168,14 +168,17 @@ public class ContractsController(
 
     [HttpGet("{id:int}")]
     [RequirePermission("crm.contracts", "view")]
-    public async Task<ActionResult<ContractResponse>> Get(int id, CancellationToken ct)
+    public async Task<ActionResult<ContractResponse>> Get(
+        int id,
+        [FromQuery] ContractDirection? direction,
+        CancellationToken ct)
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
 
         var canSeeAll = await CanReadContractAcrossOwnersAsync(userId.Value, id, ct);
         var found = await svc.GetAsync(id, userId.Value, canSeeAll, ct);
-        if (found is null) return NotFound();
+        if (found is null || direction.HasValue && found.Direction != direction.Value) return NotFound();
         CrmConcurrency.SetResponseEntityTag(Response, found.RowVersion);
         return Ok(found);
     }
