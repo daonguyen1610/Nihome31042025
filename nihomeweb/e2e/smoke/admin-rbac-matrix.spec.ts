@@ -40,6 +40,7 @@ const ALL_ADMIN_PATHS = [
   "/admin/surveys",
   "/admin/contracts",
   "/admin/finance/contracts",
+  "/admin/finance/input-contracts",
   "/admin/vendors",
   "/admin/procurement-control",
   "/admin/procurement-control/rfqs",
@@ -119,7 +120,7 @@ const matrix: RoleExpectation[] = [
     // as SALE plus view.all across CRM entities; routes rendered are
     // identical (server enforces scope).
     user: TEST_USERS.salesManager,
-    allowed: ["/admin", "/admin/notifications", "/admin/leads", "/admin/customers", "/admin/opportunities", "/admin/quotes", "/admin/material-rates", "/admin/capability-documents", "/admin/tenders", "/admin/surveys", "/admin/contracts", "/admin/finance/contracts", "/admin/operational-projects", "/admin/kpi", "/admin/kpi/configuration", "/admin/contacts", "/admin/recruitment", "/admin/master-data", "/admin/workflows"],
+    allowed: ["/admin", "/admin/notifications", "/admin/leads", "/admin/customers", "/admin/opportunities", "/admin/quotes", "/admin/material-rates", "/admin/capability-documents", "/admin/tenders", "/admin/surveys", "/admin/contracts", "/admin/finance/contracts", "/admin/finance/input-contracts", "/admin/operational-projects", "/admin/kpi", "/admin/kpi/configuration", "/admin/contacts", "/admin/recruitment", "/admin/master-data", "/admin/workflows"],
   },
   {
     // DESIGN: content.** + processes.view + dashboard.view + design.projects.view
@@ -240,9 +241,9 @@ const matrix: RoleExpectation[] = [
   },
   {
     // ACCOUNTANT: contacts.view + system.audit.view + crm.customers.view (+ view.all)
-    // + scoped cross-owner access to upstream contracts.
+    // + scoped cross-owner access to upstream and downstream contracts.
     user: TEST_USERS.accountant,
-    allowed: ["/admin", "/admin/notifications", "/admin/customers", "/admin/contracts", "/admin/finance/contracts", "/admin/vendors", "/admin/finance-control", "/admin/operational-projects", "/admin/reports/projects", "/admin/kpi", "/admin/kpi/configuration", "/admin/contacts", "/admin/activity-log", "/admin/master-data", "/admin/workflows"],
+    allowed: ["/admin", "/admin/notifications", "/admin/customers", "/admin/contracts", "/admin/finance/contracts", "/admin/finance/input-contracts", "/admin/vendors", "/admin/finance-control", "/admin/operational-projects", "/admin/reports/projects", "/admin/kpi", "/admin/kpi/configuration", "/admin/contacts", "/admin/activity-log", "/admin/master-data", "/admin/workflows"],
   },
   {
     // WAREHOUSE: processes.view only (plus dashboard)

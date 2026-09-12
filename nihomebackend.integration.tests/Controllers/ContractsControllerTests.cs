@@ -5,6 +5,8 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Constants;
 using NihomeBackend.Models;
+using NihomeBackend.Models.Rbac;
+using NihomeBackend.Services;
 
 namespace NihomeBackend.IntegrationTests.Controllers;
 
@@ -140,6 +142,183 @@ public class ContractsControllerTests : IntegrationTestBase
         unscoped.StatusCode.Should().Be(HttpStatusCode.OK);
         (await ReadJsonAsync(unscoped)).GetProperty("items").EnumerateArray()
             .Should().NotContain(item => item.GetProperty("id").GetInt32() == contractId);
+    }
+
+    [Fact]
+    public async Task DownstreamPortfolio_AsAccountant_IsScopedAndReadOnly()
+    {
+        await AuthTestHelper.AuthenticateAsync(
+            Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "SUPER_ADMIN"));
+        var customerId = await CreateCustomerAsync();
+        var projectId = await WithDbAsync(db => db.OperationalProjects
+            .Where(project => project.CustomerId == customerId)
+            .Select(project => project.Id)
+            .SingleAsync());
+        var vendor = await WithDbAsync(async db =>
+        {
+            var userId = await db.Users.Select(user => user.Id).FirstAsync();
+            var entity = new Vendor
+            {
+                VendorCode = $"INPUT-{Guid.NewGuid():N}"[..20],
+                CompanyName = "Portfolio supplier and subcontractor",
+                VendorType = VendorType.Both,
+                CreatedByUserId = userId,
+            };
+            db.Vendors.Add(entity);
+            await db.SaveChangesAsync();
+            return entity;
+        });
+
+        async Task<int> CreateAsync(string type, decimal value)
+        {
+            var response = await Client.PostAsJsonAsync("/api/contracts", new
+            {
+                customerId,
+                operationalProjectId = projectId,
+                direction = "Downstream",
+                type,
+                vendorId = vendor.Id,
+                status = "Draft",
+                value,
+                endDate = "2026-12-31T00:00:00Z",
+            });
+            response.StatusCode.Should().Be(HttpStatusCode.Created, await response.Content.ReadAsStringAsync());
+            return (await ReadJsonAsync(response)).GetProperty("id").GetInt32();
+        }
+
+        var supplyId = await CreateAsync("Supply", 125_000_000);
+        var subcontractId = await CreateAsync("Subcontract", 275_000_000);
+
+        await AuthTestHelper.AuthenticateAsync(
+            Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "ACCOUNTANT"));
+        var list = await Client.GetAsync(
+            $"/api/contracts?direction=Downstream&operationalProjectId={projectId}&vendorId={vendor.Id}");
+        list.StatusCode.Should().Be(HttpStatusCode.OK);
+        var items = (await ReadJsonAsync(list)).GetProperty("items").EnumerateArray().ToList();
+        items.Select(item => item.GetProperty("id").GetInt32())
+            .Should().Contain([supplyId, subcontractId]);
+        items.Should().OnlyContain(item =>
+            item.GetProperty("direction").GetString() == "Downstream" &&
+            item.GetProperty("operationalProjectId").GetInt32() == projectId);
+
+        var options = await Client.GetAsync("/api/contracts/filter-options?direction=Downstream");
+        options.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await ReadJsonAsync(options)).GetProperty("projects").EnumerateArray()
+            .Should().Contain(item => item.GetProperty("id").GetInt32() == projectId);
+
+        var export = await Client.GetAsync(
+            $"/api/contracts/export-data?direction=Downstream&operationalProjectId={projectId}&vendorId={vendor.Id}");
+        export.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await ReadJsonAsync(export)).GetProperty("items").EnumerateArray()
+            .Select(item => item.GetProperty("id").GetInt32())
+            .Should().Contain([supplyId, subcontractId]);
+
+        (await Client.GetAsync($"/api/contracts/{supplyId}?direction=Downstream"))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+        (await Client.GetAsync($"/api/contracts/{supplyId}?direction=Upstream"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+        var unscoped = await Client.GetAsync("/api/contracts");
+        unscoped.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await ReadJsonAsync(unscoped)).GetProperty("items").EnumerateArray()
+            .Should().NotContain(item => item.GetProperty("id").GetInt32() == supplyId);
+
+        var forbiddenCreate = await Client.PostAsJsonAsync("/api/contracts", new
+        {
+            customerId,
+            operationalProjectId = projectId,
+            direction = "Downstream",
+            type = "Supply",
+            vendorId = vendor.Id,
+            status = "Draft",
+            value = 10,
+        });
+        forbiddenCreate.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task DownstreamPortfolioPermission_WithoutProjectPortfolioPermission_RemainsOwnerScoped()
+    {
+        await AuthTestHelper.AuthenticateAsync(
+            Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "SUPER_ADMIN"));
+        var customerId = await CreateCustomerAsync();
+        var projectId = await WithDbAsync(db => db.OperationalProjects
+            .Where(project => project.CustomerId == customerId)
+            .Select(project => project.Id)
+            .SingleAsync());
+        var vendorId = await WithDbAsync(async db =>
+        {
+            var entity = new Vendor
+            {
+                VendorCode = $"SCOPE-{Guid.NewGuid():N}"[..20],
+                CompanyName = "Project permission boundary supplier",
+                VendorType = VendorType.Supplier,
+            };
+            db.Vendors.Add(entity);
+            await db.SaveChangesAsync();
+            return entity.Id;
+        });
+        var create = await Client.PostAsJsonAsync("/api/contracts", new
+        {
+            customerId,
+            operationalProjectId = projectId,
+            direction = "Downstream",
+            type = "Supply",
+            vendorId,
+            status = "Draft",
+            value = 50_000_000,
+        });
+        create.StatusCode.Should().Be(HttpStatusCode.Created, await create.Content.ReadAsStringAsync());
+        var contractId = (await ReadJsonAsync(create)).GetProperty("id").GetInt32();
+
+        var phone = $"08{Random.Shared.Next(10_000_000, 99_999_999)}";
+        await WithDbAsync(async db =>
+        {
+            var role = new Role
+            {
+                Code = $"INPUT_SCOPE_{Guid.NewGuid():N}"[..30],
+                Name = "Input contract scope boundary",
+                IsActive = true,
+                InitialPermissionsSeeded = true,
+            };
+            db.Roles.Add(role);
+            await db.SaveChangesAsync();
+            var permissionIds = await db.Permissions
+                .Where(permission => permission.Module == "crm.contracts" &&
+                    (permission.Action == "view" || permission.Action == "view.downstream.all"))
+                .Select(permission => permission.Id)
+                .ToListAsync();
+            db.RolePermissions.AddRange(permissionIds.Select(permissionId => new RolePermission
+            {
+                RoleId = role.Id,
+                PermissionId = permissionId,
+            }));
+            var user = new ApplicationUser
+            {
+                PhoneNumber = phone,
+                FullName = "Input contract scope boundary user",
+                Email = $"input-scope-{Guid.NewGuid():N}@nihome.test",
+                Role = UserRole.USER,
+                RoleEntityId = role.Id,
+                IsActive = true,
+            };
+            user.PasswordHash = new PasswordService().Hash(user, TestDataSeeder.DefaultPassword);
+            db.Users.Add(user);
+            await db.SaveChangesAsync();
+        });
+
+        await AuthTestHelper.AuthenticateAsync(
+            Client,
+            client => AuthTestHelper.LoginAsync(client, phone, TestDataSeeder.DefaultPassword));
+        var list = await Client.GetAsync($"/api/contracts?direction=Downstream&operationalProjectId={projectId}");
+        list.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await ReadJsonAsync(list)).GetProperty("items").EnumerateArray()
+            .Should().NotContain(item => item.GetProperty("id").GetInt32() == contractId);
+        (await Client.GetAsync($"/api/contracts/{contractId}?direction=Downstream"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]

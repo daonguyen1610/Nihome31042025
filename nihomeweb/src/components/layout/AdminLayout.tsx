@@ -188,6 +188,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
         icon: Landmark,
         items: [
           { to: "/admin/finance/contracts", label: t("nav.primaryContracts"), icon: FileText, permission: [ADMIN_PERMS.contractsViewAll, ADMIN_PERMS.contractsViewUpstreamAll] },
+          { to: "/admin/finance/input-contracts", label: t("nav.inputContracts"), icon: FileText, permission: [ADMIN_PERMS.contractsViewAll, ADMIN_PERMS.contractsViewDownstreamAll] },
           { to: "/admin/finance-control", label: t("nav.financeControl"), icon: Landmark, permission: [ADMIN_PERMS.financePayments, ADMIN_PERMS.financePeriods, ADMIN_PERMS.financeCorrections] },
         ],
       },
@@ -297,7 +298,8 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
         .map((g) => ({
           ...g,
           items: g.items.filter((it) => {
-            const scopedFinanceReader = permissions.has(ADMIN_PERMS.contractsViewUpstreamAll) &&
+            const scopedFinanceReader = (permissions.has(ADMIN_PERMS.contractsViewUpstreamAll) ||
+                permissions.has(ADMIN_PERMS.contractsViewDownstreamAll)) &&
               !permissions.has(ADMIN_PERMS.contractsViewAll) &&
               !permissions.has(ADMIN_PERMS.contractsManage);
             if (it.to === "/admin/contracts" && scopedFinanceReader) return false;
