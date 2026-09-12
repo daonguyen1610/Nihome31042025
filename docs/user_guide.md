@@ -753,9 +753,24 @@ Manage input contracts with subcontractors and material suppliers. Define contra
 
 | Page | Functions | Estimate |
 |------|-----------|----------|
-| Input Contract List | Subcontractor and supplier contracts | 1.5 days |
-| Input Contract Create/Edit | Create and update contracts | 2.5 days |
-| Input Contract Detail | Value, terms, payments, payables | 2.5 days |
+| Input Contract List | Finance > Input contracts; Downstream supplier/subcontractor contracts with vendor/project/owner/status/date/value filters, payment-obligation summary, pagination, and complete filtered CSV export | Implemented |
+| Input Contract Create/Edit | Create Downstream Supply/Subcontract contracts with an active compatible Vendor and Operational Project; edit accessible records with lifecycle, date, value, and payment-schedule validation | Implemented |
+| Input Contract Detail | Value and VO reconciliation, terms/scope, payable milestones, files, appendices, status actions, responsible owner, and audit timeline | Implemented |
+
+The Input contracts workspace is fixed to **Downstream**. More than one supplier
+or subcontractor contract may belong to the same Operational Project. Choose an
+active Vendor compatible with the contract type: Supplier or Both for Supply,
+and Subcontractor or Both for Subcontract. Payment milestones represent payable
+obligations; the next unpaid milestone and overdue/due-within-30-days counts are
+calculated from the current filtered result. CSV export uses the same server-side
+direction, filters, sorting, and access scope as the screen.
+
+Accountants can review input contracts across the full Operational Project
+portfolio but cannot create, edit, transition, attach files, manage appendices,
+or delete them. Users who already hold contract-management permission can use
+those actions. Lifecycle rules, immutable processed payment milestones, API
+error handling, and concurrency protection are the same as for primary
+contracts.
 
 #### 3.6.3 Variation Order (VO) Management
 

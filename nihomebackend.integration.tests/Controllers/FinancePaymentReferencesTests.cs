@@ -8,7 +8,7 @@ namespace NihomeBackend.IntegrationTests.Controllers;
 public sealed class FinancePaymentReferencesTests(NihomeWebApplicationFactory factory) : IntegrationTestBase(factory)
 {
     [Fact]
-    public async Task Accountant_DiscoversEligibleProcurementContract_WithoutGainingCrmAccessOrSensitiveFields()
+    public async Task Accountant_DiscoversEligibleContract_WithoutReferenceDataOverexposure()
     {
         var fixture = await SeedAsync();
         await LoginAsync("ACCOUNTANT");
@@ -39,13 +39,16 @@ public sealed class FinancePaymentReferencesTests(NihomeWebApplicationFactory fa
         var allowedAccountants = await WithDbAsync(db => db.Users.Where(x => x.IsActive && x.RoleEntity != null && x.RoleEntity.Code == "ACCOUNTANT").Select(x => x.Id).ToListAsync());
         accountants.Select(Id).Should().BeEquivalentTo(allowedAccountants);
 
-        // This narrow financial lookup must not grant general contract access,
-        // customer data, negotiated values, or vendor/user contact details.
+        // The narrow financial lookup must not expose customer data, negotiated
+        // values, or vendor/user contact details. NIH-188 separately grants
+        // read-only drill-down to the matching Downstream contract scope.
         using var generalList = await Client.GetAsync($"/api/contracts?search={Uri.EscapeDataString(fixture.Number)}");
         generalList.EnsureSuccessStatusCode();
         (await ReadJsonAsync(generalList)).GetProperty("items").EnumerateArray().Should().BeEmpty();
-        using var generalDetail = await Client.GetAsync($"/api/contracts/{fixture.SignedId}");
-        generalDetail.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        using var downstreamDetail = await Client.GetAsync($"/api/contracts/{fixture.SignedId}?direction=Downstream");
+        downstreamDetail.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var mismatchedDetail = await Client.GetAsync($"/api/contracts/{fixture.SignedId}?direction=Upstream");
+        mismatchedDetail.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Theory]

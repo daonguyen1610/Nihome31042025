@@ -56,7 +56,7 @@ public class ContractResponse
     /// header and used everywhere "current" contract value is needed.</summary>
     public decimal CurrentValue { get; set; }
 
-    /// <summary>Nearest unpaid collection milestone, derived for list views.</summary>
+    /// <summary>Nearest unpaid payment milestone, derived for list views.</summary>
     public DateTime? NextPaymentDueDate { get; set; }
     public decimal? NextPaymentAmount { get; set; }
     public decimal OutstandingScheduledAmount { get; set; }

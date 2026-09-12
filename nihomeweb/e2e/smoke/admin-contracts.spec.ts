@@ -110,6 +110,98 @@ test("Finance scope denies Sales and recovers from list API errors", async ({
     await expect(page.getByText(/Không có hợp đồng nào khớp|No contracts match|没有符合|一致する契約はありません/i)).toBeVisible();
 });
 
+test("Finance input-contract workspace keeps downstream scope and read-only accounting access", async ({
+    page,
+    loginInBrowserAs,
+    baseURL,
+    api,
+    loginAs,
+}) => {
+    const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const token = await loginAs(TEST_USERS.superAdmin);
+    const headers = { Authorization: `Bearer ${token}` };
+    const customerResponse = await api.post("/api/customers", { headers, data: {
+        name: `Input contract customer ${suffix}`,
+        type: "Individual",
+        sourceCode: "referral",
+        primaryContact: { fullName: "Project owner", phone: `09${Math.floor(10_000_000 + Math.random() * 89_999_999)}`, isPrimary: true },
+    } });
+    expect(customerResponse.status(), await customerResponse.text()).toBe(201);
+    const customerId = (await customerResponse.json()).id;
+    const projectResponse = await api.post("/api/operational-projects", {
+        headers,
+        data: { name: `Input contract project ${suffix}`, customerId },
+    });
+    expect(projectResponse.status(), await projectResponse.text()).toBe(201);
+    const vendorResponse = await api.post("/api/vendors", { headers, data: {
+        vendorCode: `IN-${suffix}`.slice(0, 50),
+        companyName: `Input contract supplier ${suffix}`,
+        vendorType: "Supplier",
+        phone: `08${Math.floor(10_000_000 + Math.random() * 89_999_999)}`,
+    } });
+    expect(vendorResponse.status(), await vendorResponse.text()).toBe(201);
+    const vendor = await vendorResponse.json();
+    const contractResponse = await api.post("/api/contracts", { headers, data: {
+        customerId,
+        operationalProjectId: (await projectResponse.json()).id,
+        direction: "Downstream",
+        type: "Supply",
+        vendorId: vendor.id,
+        value: 75_000_000,
+        paymentMilestones: [
+            { order: 1, name: "30% advance", percentValue: 30, dueDate: "2026-12-01T00:00:00Z", status: "Pending" },
+            { order: 2, name: "70% on delivery", percentValue: 70, dueDate: "2027-01-15T00:00:00Z", status: "Pending" },
+        ],
+    } });
+    expect(contractResponse.status(), await contractResponse.text()).toBe(201);
+    const contract = await contractResponse.json();
+
+    await page.setViewportSize({ width: 768, height: 1024 });
+    await loginInBrowserAs(page, TEST_USERS.accountant);
+    const listResponse = page.waitForResponse((response) => {
+        const url = new URL(response.url());
+        return response.request().method() === "GET"
+            && url.pathname.endsWith("/api/contracts")
+            && url.searchParams.get("direction") === "Downstream"
+            && url.searchParams.get("pageSize") === "20";
+    });
+    await page.goto(`${baseURL}/admin/finance/input-contracts`, { waitUntil: "domcontentloaded" });
+    expect((await listResponse).ok()).toBe(true);
+    await expect(page.getByRole("heading", { name: /Hợp đồng đầu vào|Input contracts|下游合同/i })).toBeVisible();
+    await expect(page.locator("#c-direction")).toHaveCount(0);
+    await page.getByRole("button", { name: /Bộ lọc nâng cao|Advanced filters|高级筛选|詳細フィルター/i }).click();
+    await expect(page.locator("#c-vendor")).toBeVisible();
+    await expect(page.locator("header").getByRole("button", { name: /Thêm hợp đồng|New contract|新增合同|新規契約/i })).toHaveCount(0);
+
+    const filteredResponse = page.waitForResponse((response) => {
+        const url = new URL(response.url());
+        return url.pathname.endsWith("/api/contracts")
+            && url.searchParams.get("direction") === "Downstream"
+            && url.searchParams.get("search") === contract.contractNumber;
+    });
+    await page.locator("#c-search").fill(contract.contractNumber);
+    expect((await filteredResponse).ok()).toBe(true);
+    const card = page.getByTestId(`contract-card-${contract.id}`);
+    await expect(card).toContainText(vendor.companyName);
+    const detailResponse = page.waitForResponse((response) => {
+        const url = new URL(response.url());
+        return url.pathname.endsWith(`/api/contracts/${contract.id}`)
+            && url.searchParams.get("direction") === "Downstream";
+    });
+    await card.locator(":scope > a").click();
+    expect((await detailResponse).ok()).toBe(true);
+    await expect(page).toHaveURL(new RegExp(`/admin/finance/input-contracts/${contract.id}\\?`));
+    await expect(page.locator('main a[href^="/admin/finance/input-contracts?"]').first()).toBeVisible();
+
+    await loginInBrowserAs(page, TEST_USERS.superAdmin);
+    await page.goto(`${baseURL}/admin/finance/input-contracts`, { waitUntil: "domcontentloaded" });
+    await page.locator("header").getByRole("button", { name: /Thêm hợp đồng|New contract|新增合同|新規契約/i }).click();
+    await expect(page.locator("#c-direction-form")).toHaveCount(0);
+    await expect(page.getByText(/Đầu vào - Đối tác|Downstream - Partner|下游 - 合作方|下流 - パートナー/i).last()).toBeVisible();
+    await expect(page.locator("#c-type-form")).toContainText(/Cung ứng|Supply|供应|供給/i);
+    await expect(page.locator("#c-vendor-form")).toBeVisible();
+});
+
 test("Contract pagination and CSV export use every filtered API page", async ({
     page,
     loginInBrowserAs,

@@ -22,7 +22,7 @@ namespace NihomeBackend.Controllers;
 /// * Sales Manager / Legal / BOD / Admin gain <c>view.all</c> via the
 ///   RBAC bundle (through <c>crm.**</c>, <c>**.view</c>, etc.).
 /// * Finance can read contracts across owners only when the requested or
-///   resolved contract direction is Upstream.
+///   resolved direction matches its dedicated Upstream/Downstream permission.
 /// * VO approve/reject requires the same manager-tier permission.
 /// </summary>
 [ApiController]
@@ -864,8 +864,9 @@ public class ContractsController(
         CancellationToken ct)
     {
         if (await permissions.HasAsync(userId, "crm.contracts.view.all", ct)) return true;
-        return direction == ContractDirection.Upstream &&
-            await permissions.HasAsync(userId, "crm.contracts.view.upstream.all", ct) &&
+        var scopedPermission = DirectionPortfolioPermission(direction);
+        return scopedPermission is not null &&
+            await permissions.HasAsync(userId, scopedPermission, ct) &&
             await permissions.HasAsync(userId, "operations.projects.view.all", ct);
     }
 
@@ -875,11 +876,23 @@ public class ContractsController(
         CancellationToken ct)
     {
         if (await permissions.HasAsync(userId, "crm.contracts.view.all", ct)) return true;
-        if (!await permissions.HasAsync(userId, "crm.contracts.view.upstream.all", ct) ||
-            !await permissions.HasAsync(userId, "operations.projects.view.all", ct)) return false;
-        return await db.Contracts.AsNoTracking()
-            .AnyAsync(contract => contract.Id == contractId && contract.Direction == ContractDirection.Upstream, ct);
+        if (!await permissions.HasAsync(userId, "operations.projects.view.all", ct)) return false;
+
+        var direction = await db.Contracts.AsNoTracking()
+            .Where(contract => contract.Id == contractId)
+            .Select(contract => (ContractDirection?)contract.Direction)
+            .SingleOrDefaultAsync(ct);
+        var scopedPermission = DirectionPortfolioPermission(direction);
+        return scopedPermission is not null &&
+            await permissions.HasAsync(userId, scopedPermission, ct);
     }
+
+    private static string? DirectionPortfolioPermission(ContractDirection? direction) => direction switch
+    {
+        ContractDirection.Upstream => "crm.contracts.view.upstream.all",
+        ContractDirection.Downstream => "crm.contracts.view.downstream.all",
+        _ => null,
+    };
 
     private async Task<bool> ContractExistsForCallerAsync(int contractId, int callerUserId, bool canSeeAll, CancellationToken ct)
     {

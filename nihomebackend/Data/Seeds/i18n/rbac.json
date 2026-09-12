@@ -1632,6 +1632,22 @@
     "ja": "上流スコープの指定時に担当者をまたいで上流契約を閲覧できます。下流契約全体へのアクセスは付与されません。"
   },
   {
+    "key": "rbac.perm.crm.contracts.view.downstream.all.label",
+    "category": "rbac",
+    "vi": "Xem toàn bộ hợp đồng đầu vào",
+    "en": "View all input contracts",
+    "zh": "查看全部下游合同",
+    "ja": "すべての下流契約を表示"
+  },
+  {
+    "key": "rbac.perm.crm.contracts.view.downstream.all.description",
+    "category": "rbac",
+    "vi": "Cho phép xem hợp đồng nhà cung cấp và thầu phụ của mọi chủ sở hữu khi lọc theo hướng đầu vào; không cấp quyền sửa hợp đồng.",
+    "en": "Allows viewing supplier and subcontractor contracts across owners when the downstream scope is requested; it does not grant contract mutation rights.",
+    "zh": "允许在请求下游范围时跨负责人查看供应商和分包合同；不授予合同修改权限。",
+    "ja": "下流スコープの指定時に担当者をまたいで仕入先・下請契約を閲覧できます。契約の変更権限は付与されません。"
+  },
+  {
     "key": "rbac.perm.crm.contracts.manage.label",
     "category": "rbac",
     "vi": "Quản lý hợp đồng",

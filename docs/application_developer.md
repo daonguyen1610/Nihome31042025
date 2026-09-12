@@ -957,21 +957,25 @@ and `sortDirection`. Supported sort fields are `signedDate` (default),
 `endDate`, `value`, `contractNumber`, and `updatedAt`; an unknown field falls
 back to signed date, and direction defaults to descending. Value filters and
 the `value` sort use current value (`Value + approved VO deltas`). The response
-adds portfolio totals, collection-risk counts, and each row's next unpaid
-milestone and scheduled outstanding amount. `GET /api/contracts/filter-options`
+adds portfolio totals, direction-neutral overdue/due-soon milestone counts,
+and each row's next unpaid milestone and scheduled outstanding amount. In an
+Upstream scope these amounts are receivables; in a Downstream scope they are
+payment obligations. `GET /api/contracts/filter-options`
 returns complete owner, customer, and Operational Project choices from the
 caller's visible contract scope; it is not capped by unrelated list pagination.
 `GET /api/contracts/export-data` applies the same filters, sorting, and scope in
 one server query so CSV export is not assembled from a changing set of pages.
 Callers without
 `crm.contracts.view.all` remain owner-scoped. The Accountant role has read-only
-`crm.contracts.view.upstream.all` access because Finance must reconcile primary
-contracts across the same complete Operational Project portfolio exposed by
-`operations.projects.view.all`. Both permissions are required before the
-scoped contract permission bypasses ownership, and only
-when the list explicitly requests `direction=Upstream` or a read-only detail
-endpoint resolves to an upstream contract. It neither exposes downstream
-contracts across owners nor grants mutation permissions.
+`crm.contracts.view.upstream.all` and `crm.contracts.view.downstream.all` access
+because Finance must reconcile both receivables and payables across the same
+complete Operational Project portfolio exposed by
+`operations.projects.view.all`. That project permission and the matching
+direction permission are both required before ownership is bypassed. The
+bypass applies only when the list explicitly requests `direction=Upstream` or
+`direction=Downstream`, or when a read-only detail endpoint resolves to the
+matching direction. An unscoped list remains owner-scoped, and neither scoped
+permission grants contract mutation rights.
 
 New contracts are always created as `Draft`; create and update reject attempts
 to bypass the contract state machine. Status changes must use
@@ -990,15 +994,18 @@ responsible accountant, stores `DueNotificationSentAt` atomically, and clears
 that marker when the due date changes. Upstream-only classification metadata
 omits the downstream vendor catalogue.
 
-The shared frontend list is available at `/admin/contracts`. The Finance entry
-`/admin/finance/contracts` fixes the same list and create form to
-`direction=Upstream`; `/admin/finance/contracts/{id}` reuses the complete edit
-and detail workflow while requesting the same Upstream API scope. Its URL retains
-filters, sort, and page while users inspect a detail. The Finance view shows
-current value, approved VO impact, next collection, and overdue/due-soon summary;
-secondary filters are collapsible for tablet/mobile use. Both surfaces use server
-pagination and the dedicated server-side export query, so CSV cannot silently
-truncate at the current page or the 100-row API limit.
+The shared frontend list is available at `/admin/contracts`. Finance exposes two
+direction-locked workspaces: `/admin/finance/contracts` for Upstream primary
+contracts and `/admin/finance/input-contracts` for Downstream supplier and
+subcontractor contracts. Their `/{id}` routes reuse the complete edit/detail,
+documents, appendices, payment-schedule, lifecycle, and timeline workflows while
+requesting the same fixed API direction. List URLs retain filters, sort, page,
+and the Downstream vendor filter while users inspect a detail. Both Finance views
+show current value, approved VO impact, the next unpaid milestone, and
+overdue/due-soon summaries with receivable/payable wording appropriate to their
+direction. Server pagination and the dedicated server-side export query keep CSV
+scope and filters identical to the screen without truncating at the current page
+or the 100-row API limit.
 
 ### 7.9 Operational Business Documents
 

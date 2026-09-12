@@ -54,7 +54,7 @@ const ENDING_SOON_DAYS = 30;
 const PAGE_SIZE = 20;
 const CONTRACT_TYPES: ContractType[] = ["Unclassified", "Design", "Construction", "DesignAndBuild", "Supply", "Subcontract"];
 
-type ContractListMode = "all" | "upstream";
+type ContractListMode = "all" | "upstream" | "downstream";
 type ContractSortBy = NonNullable<ContractListParams["sortBy"]>;
 type SortDirection = NonNullable<ContractListParams["sortDirection"]>;
 
@@ -253,7 +253,9 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
       ? searchParams.get("status") as ContractStatus
       : "all",
   );
-  const fixedDirection: ContractDirection | null = mode === "upstream" ? "Upstream" : null;
+  const fixedDirection: ContractDirection | null = mode === "upstream"
+    ? "Upstream"
+    : mode === "downstream" ? "Downstream" : null;
   const [directionFilter, setDirectionFilter] = useState<ContractDirection | "all">(
     fixedDirection ?? "all",
   );
@@ -262,7 +264,9 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
       ? searchParams.get("type") as ContractType
       : "all",
   );
-  const [vendorFilter, setVendorFilter] = useState<number | "all">("all");
+  const [vendorFilter, setVendorFilter] = useState<number | "all">(
+    fixedDirection === "Upstream" ? "all" : readPositiveParam("vendor") ?? "all",
+  );
   const [customerFilter, setCustomerFilter] = useState<number | "all">(
     Number.isInteger(customerIdParam) && customerIdParam > 0 ? customerIdParam : (readPositiveParam("customer") ?? "all"),
   );
@@ -283,7 +287,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
   const [exporting, setExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState({ current: 0, total: 0 });
   const [advancedOpen, setAdvancedOpen] = useState(() =>
-    ["type", "signedFrom", "signedTo", "valueMin", "valueMax", "sortBy"].some((key) => searchParams.has(key)),
+    ["type", "vendor", "signedFrom", "signedTo", "valueMin", "valueMax", "sortBy"].some((key) => searchParams.has(key)),
   );
   const latestRequest = useRef(0);
   const searchEffectReady = useRef(false);
@@ -314,7 +318,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
     const effectiveDirection = fixedDirection ?? directionFilter;
     if (effectiveDirection !== "all") params.direction = effectiveDirection;
     if (typeFilter !== "all") params.type = typeFilter;
-    if (vendorFilter !== "all") params.vendorId = vendorFilter;
+    if (vendorFilter !== "all" && fixedDirection !== "Upstream") params.vendorId = vendorFilter;
     if (customerFilter !== "all") params.customerId = customerFilter;
     if (projectFilter !== "all") params.operationalProjectId = projectFilter;
     if (ownerFilter !== "all") params.ownerUserId = ownerFilter;
@@ -411,7 +415,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
   }, [canManage, canViewOperationalProjects, customers.length, t]);
 
   useEffect(() => {
-    if (mode !== "upstream") return;
+    if (mode === "all") return;
     const params = new URLSearchParams();
     if (search) params.set("search", search);
     if (statusFilter !== "all") params.set("status", statusFilter);
@@ -421,6 +425,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
     if (endFrom) params.set("endFrom", endFrom);
     if (endTo) params.set("endTo", endTo);
     if (typeFilter !== "all") params.set("type", typeFilter);
+    if (vendorFilter !== "all") params.set("vendor", String(vendorFilter));
     if (signedFrom) params.set("signedFrom", signedFrom);
     if (signedTo) params.set("signedTo", signedTo);
     if (valueMin) params.set("valueMin", valueMin);
@@ -429,7 +434,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
     if (sortDirection !== "desc") params.set("sortDirection", sortDirection);
     if (page > 1) params.set("page", String(page));
     setSearchParams(params, { replace: true });
-  }, [mode, search, statusFilter, customerFilter, projectFilter, ownerFilter, endFrom, endTo, typeFilter, signedFrom, signedTo, valueMin, valueMax, sortBy, sortDirection, page, setSearchParams]);
+  }, [mode, search, statusFilter, customerFilter, projectFilter, ownerFilter, endFrom, endTo, typeFilter, vendorFilter, signedFrom, signedTo, valueMin, valueMax, sortBy, sortDirection, page, setSearchParams]);
 
   const resetFilters = () => {
     setStatusFilter("all");
@@ -470,7 +475,9 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
     const params = new URLSearchParams();
     if (edit) params.set("edit", "true");
     params.set("returnTo", `${location.pathname}${location.search}`);
-    const detailBase = mode === "upstream" ? "/admin/finance/contracts" : "/admin/contracts";
+    const detailBase = mode === "upstream"
+      ? "/admin/finance/contracts"
+      : mode === "downstream" ? "/admin/finance/input-contracts" : "/admin/contracts";
     return `${detailBase}/${id}?${params.toString()}`;
   }, [location.pathname, location.search, mode]);
 
@@ -501,6 +508,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
     setForm({
       ...emptyForm,
       direction: fixedDirection ?? emptyForm.direction,
+      type: fixedDirection === "Downstream" ? "Supply" : emptyForm.type,
       customerId: selectedProject?.customerId ?? null,
       operationalProjectId: selectedProject?.id ?? null,
     });
@@ -517,6 +525,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
     setForm({
       ...emptyForm,
       direction: fixedDirection ?? emptyForm.direction,
+      type: fixedDirection === "Downstream" ? "Supply" : emptyForm.type,
       customerId: prefillCustomerId,
       operationalProjectId: prefillOperationalProjectId,
       opportunityId: prefillOpportunityId,
@@ -723,7 +732,9 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
       setExportProgress({ current: rows.length, total: exportData.total });
 
       downloadCsv({
-        filename: createCsvFilename(mode === "upstream" ? "primary-contracts" : "contracts"),
+        filename: createCsvFilename(mode === "upstream"
+          ? "primary-contracts"
+          : mode === "downstream" ? "input-contracts" : "contracts"),
         columns: [
           { header: t("contracts.field.number"), value: "contractNumber" },
           { header: t("contracts.field.customer"), value: (r) => r.customerName ?? "" },
@@ -738,9 +749,9 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
           { header: t("contracts.field.originalValue"), value: "value" },
           { header: t("contracts.field.approvedVoTotal"), value: "approvedVoTotal" },
           { header: t("contracts.field.currentValue"), value: "currentValue" },
-          { header: t("contracts.field.nextPaymentDueDate"), value: (r) => r.nextPaymentDueDate ?? "" },
-          { header: t("contracts.field.nextPaymentAmount"), value: (r) => r.nextPaymentAmount ?? "" },
-          { header: t("contracts.field.outstandingScheduledAmount"), value: "outstandingScheduledAmount" },
+          { header: t(mode === "downstream" ? "contracts.input.nextPaymentDueDate" : "contracts.field.nextPaymentDueDate"), value: (r) => r.nextPaymentDueDate ?? "" },
+          { header: t(mode === "downstream" ? "contracts.input.nextPaymentAmount" : "contracts.field.nextPaymentAmount"), value: (r) => r.nextPaymentAmount ?? "" },
+          { header: t(mode === "downstream" ? "contracts.input.outstandingScheduledAmount" : "contracts.field.outstandingScheduledAmount"), value: "outstandingScheduledAmount" },
           { header: t("contracts.field.owner"), value: (r) => r.ownerName ?? "" },
         ],
         rows,
@@ -773,8 +784,12 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
       <div className="space-y-4 p-4 sm:p-6">
         <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
-            <h1 className="text-2xl font-semibold">{t(mode === "upstream" ? "contracts.primary.title" : "contracts.title")}</h1>
-            <p className="mt-1 text-sm text-muted-foreground">{t(mode === "upstream" ? "contracts.primary.subtitle" : "contracts.subtitle")}</p>
+            <h1 className="text-2xl font-semibold">{t(mode === "upstream"
+              ? "contracts.primary.title"
+              : mode === "downstream" ? "contracts.input.title" : "contracts.title")}</h1>
+            <p className="mt-1 text-sm text-muted-foreground">{t(mode === "upstream"
+              ? "contracts.primary.subtitle"
+              : mode === "downstream" ? "contracts.input.subtitle" : "contracts.subtitle")}</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={() => void exportCsv()} disabled={total === 0 || loading || exporting}>
@@ -790,7 +805,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
           </div>
         </header>
 
-        {mode === "upstream" && (
+        {mode !== "all" && (
           <section className="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label={t("contracts.summary.label")}>
             <div className="rounded-lg border bg-card p-3">
               <p className="text-xs text-muted-foreground">{t("contracts.summary.contracts")}</p>
@@ -801,11 +816,11 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
               <p className="mt-1 truncate text-xl font-semibold tabular-nums">{formatVnd(summary.totalCurrentValue)}</p>
             </div>
             <div className="rounded-lg border border-rose-200 bg-rose-50/60 p-3">
-              <p className="text-xs text-rose-700">{t("contracts.summary.overdueCollection")}</p>
+              <p className="text-xs text-rose-700">{t(mode === "downstream" ? "contracts.summary.overduePayment" : "contracts.summary.overdueCollection")}</p>
               <p className="mt-1 text-xl font-semibold tabular-nums text-rose-800">{summary.overdueContractCount}</p>
             </div>
             <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-3">
-              <p className="text-xs text-amber-700">{t("contracts.summary.dueSoonCollection")}</p>
+              <p className="text-xs text-amber-700">{t(mode === "downstream" ? "contracts.summary.dueSoonPayment" : "contracts.summary.dueSoonCollection")}</p>
               <p className="mt-1 text-xl font-semibold tabular-nums text-amber-800">{summary.dueSoonContractCount}</p>
             </div>
           </section>
@@ -946,7 +961,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
               </SelectContent>
             </Select>
           </div>
-          {fixedDirection === null && <div className="min-w-0 space-y-1">
+          {fixedDirection !== "Upstream" && <div className="min-w-0 space-y-1">
             <Label className="text-xs" htmlFor="c-vendor">{t("contracts.field.vendor")}</Label>
             <Select value={vendorFilter === "all" ? "all" : String(vendorFilter)} onValueChange={(value) => {
               setVendorFilter(value === "all" ? "all" : Number(value));
@@ -1102,7 +1117,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                       <dd>{t(`contracts.type.${row.type}`)}</dd>
                       <dt className="text-muted-foreground">{t("contracts.field.operationalProject")}</dt>
                       <dd>{row.operationalProjectCode ? `${row.operationalProjectCode} · ${row.operationalProjectName ?? ""}` : "—"}</dd>
-                      {mode === "all" && <>
+                      {mode !== "upstream" && <>
                         <dt className="text-muted-foreground">{t("contracts.field.counterparty")}</dt>
                         <dd>{row.vendorName ?? row.customerName ?? "—"}</dd>
                       </>}
@@ -1115,12 +1130,12 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                       <dd>{formatDate(row.signedDate, lang)}</dd>
                       <dt className="text-muted-foreground">{t("contracts.field.endDate")}</dt>
                       <dd>{formatDate(row.endDate, lang)}</dd>
-                      {mode === "upstream" && <>
-                        <dt className="text-muted-foreground">{t("contracts.field.nextCollection")}</dt>
+                      {mode !== "all" && <>
+                        <dt className="text-muted-foreground">{t(mode === "downstream" ? "contracts.input.nextPayment" : "contracts.field.nextCollection")}</dt>
                         <dd>{row.nextPaymentDueDate
                           ? `${formatDate(row.nextPaymentDueDate, lang)} · ${formatVnd(row.nextPaymentAmount ?? 0)}`
                           : "—"}</dd>
-                        <dt className="text-muted-foreground">{t("contracts.field.outstandingScheduledAmount")}</dt>
+                        <dt className="text-muted-foreground">{t(mode === "downstream" ? "contracts.input.outstandingScheduledAmount" : "contracts.field.outstandingScheduledAmount")}</dt>
                         <dd>{formatVnd(row.outstandingScheduledAmount)}</dd>
                       </>}
                       {row.ownerName && (
@@ -1161,11 +1176,11 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                     <th className="min-w-[220px] px-3 py-3 text-left font-medium">{t("contracts.field.customer")}</th>
                     <th className="min-w-[180px] px-3 py-3 text-left font-medium">{t("contracts.field.operationalProject")}</th>
                     <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("contracts.field.type")}</th>
-                    {mode === "all" && <th className="min-w-[180px] px-3 py-3 text-left font-medium">{t("contracts.field.counterparty")}</th>}
+                    {mode !== "upstream" && <th className="min-w-[180px] px-3 py-3 text-left font-medium">{t("contracts.field.counterparty")}</th>}
                     <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("contracts.field.signedDate")}</th>
                     <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("contracts.field.endDate")}</th>
                     <th className="whitespace-nowrap px-3 py-3 text-right font-medium">{t("contracts.field.currentValue")}</th>
-                    {mode === "upstream" && <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("contracts.field.nextCollection")}</th>}
+                    {mode !== "all" && <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t(mode === "downstream" ? "contracts.input.nextPayment" : "contracts.field.nextCollection")}</th>}
                     <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("contracts.field.status")}</th>
                     <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("contracts.field.owner")}</th>
                     {canManage && (
@@ -1201,7 +1216,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                           ) : "—"}
                         </td>
                         <td className="whitespace-nowrap px-3 py-3">{t(`contracts.type.${row.type}`)}</td>
-                        {mode === "all" && <td className="min-w-[180px] px-3 py-3">{row.vendorName ?? row.customerName ?? "—"}</td>}
+                        {mode !== "upstream" && <td className="min-w-[180px] px-3 py-3">{row.vendorName ?? row.customerName ?? "—"}</td>}
                         <td className="whitespace-nowrap px-3 py-3">{formatDate(row.signedDate, lang)}</td>
                         <td className="whitespace-nowrap px-3 py-3">
                           <div className="flex items-center gap-2">
@@ -1222,7 +1237,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                           <div>{formatVnd(row.currentValue)}</div>
                           {row.approvedVoTotal !== 0 && <div className="text-[11px] font-normal text-muted-foreground">{t("contracts.field.voShort")} {formatVnd(row.approvedVoTotal)}</div>}
                         </td>
-                        {mode === "upstream" && <td className="whitespace-nowrap px-3 py-3 text-xs">
+                        {mode !== "all" && <td className="whitespace-nowrap px-3 py-3 text-xs">
                           {row.nextPaymentDueDate ? <>
                             <div>{formatDate(row.nextPaymentDueDate, lang)}</div>
                             <div className={row.overduePaymentMilestoneCount > 0 ? "font-semibold text-rose-700" : "text-muted-foreground"}>{formatVnd(row.nextPaymentAmount ?? 0)}</div>
@@ -1403,8 +1418,8 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                 </Select>
               </div> : <div className="space-y-1.5 rounded-md border bg-muted/30 px-3 py-2">
                 <Label className="text-xs">{t("contracts.field.direction")}</Label>
-                <p className="text-sm font-medium">{t("contracts.direction.Upstream")}</p>
-                <p className="text-xs text-muted-foreground">{t("contracts.primary.directionLockedHint")}</p>
+                <p className="text-sm font-medium">{t(`contracts.direction.${fixedDirection}`)}</p>
+                <p className="text-xs text-muted-foreground">{t(mode === "downstream" ? "contracts.input.directionLockedHint" : "contracts.primary.directionLockedHint")}</p>
               </div>}
               <div className="space-y-1.5">
                 <Label htmlFor="c-type-form" className="text-xs">{t("contracts.field.type")} *</Label>

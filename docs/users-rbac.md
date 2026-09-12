@@ -35,13 +35,15 @@ user to create and edit quotations only for opportunities in that user's
 scope; `crm.quotes.view.all` is required to operate across owners. Approval and
 sending continue to require their dedicated `approve` and `send` permissions.
 
-The `ACCOUNTANT` role has `crm.contracts.view` and the scoped
-`crm.contracts.view.upstream.all` permission for read-only reconciliation of
-primary contracts across the operational-project portfolio. Portfolio-wide
-access requires both that permission and `operations.projects.view.all`, and is
-server-enforced only for explicitly upstream lists and upstream
-details; downstream contracts remain owner-scoped. This does not grant contract
-create, edit, transition, attachment, appendix, or delete capabilities.
+The `ACCOUNTANT` role has `crm.contracts.view` plus the scoped
+`crm.contracts.view.upstream.all` and `crm.contracts.view.downstream.all`
+permissions for read-only reconciliation of primary and input contracts across
+the operational-project portfolio. Portfolio-wide access requires
+`operations.projects.view.all` and the permission matching the explicitly
+requested direction. It is server-enforced for Upstream/Downstream lists,
+filter options, exports, and matching details; an unscoped contract list remains
+owner-scoped. These permissions do not grant contract create, edit, transition,
+attachment, appendix, or delete capabilities.
 
 ### Project handover permissions
 

@@ -16,6 +16,14 @@
     "ja": "主要契約"
   },
   {
+    "key": "nav.inputContracts",
+    "category": "nav",
+    "vi": "Hợp đồng đầu vào",
+    "en": "Input contracts",
+    "zh": "下游合同",
+    "ja": "下流契約"
+  },
+  {
     "key": "contracts.title",
     "category": "contracts",
     "vi": "Hợp đồng",
@@ -46,6 +54,22 @@
     "en": "Upstream client contracts by operational project and authorized scope.",
     "zh": "按运营项目和授权范围管理与业主签订的上游合同。",
     "ja": "運用プロジェクトと権限範囲別の顧客向け上流契約。"
+  },
+  {
+    "key": "contracts.input.title",
+    "category": "contracts",
+    "vi": "Hợp đồng đầu vào",
+    "en": "Input contracts",
+    "zh": "下游合同",
+    "ja": "下流契約"
+  },
+  {
+    "key": "contracts.input.subtitle",
+    "category": "contracts",
+    "vi": "Hợp đồng nhà cung cấp và thầu phụ, nghĩa vụ thanh toán theo dự án vận hành và phạm vi quyền được cấp.",
+    "en": "Supplier and subcontractor contracts and payment obligations by operational project and authorized scope.",
+    "zh": "按运营项目和授权范围管理供应商、分包合同及付款义务。",
+    "ja": "運用プロジェクトと権限範囲別の仕入先・下請契約および支払義務。"
   },
   {
     "key": "contracts.newContract",
@@ -1536,6 +1560,22 @@
     "vi": "Giá trị theo lịch chưa thu", "en": "Scheduled amount outstanding", "zh": "计划未收金额", "ja": "未回収予定額"
   },
   {
+    "key": "contracts.input.nextPayment", "category": "contracts",
+    "vi": "Đợt chi tiếp theo", "en": "Next payment", "zh": "下次付款", "ja": "次回支払"
+  },
+  {
+    "key": "contracts.input.nextPaymentDueDate", "category": "contracts",
+    "vi": "Hạn chi tiếp theo", "en": "Next payment due", "zh": "下次付款到期日", "ja": "次回支払期限"
+  },
+  {
+    "key": "contracts.input.nextPaymentAmount", "category": "contracts",
+    "vi": "Số tiền đợt chi tiếp theo", "en": "Next payment amount", "zh": "下次付款金额", "ja": "次回支払額"
+  },
+  {
+    "key": "contracts.input.outstandingScheduledAmount", "category": "contracts",
+    "vi": "Giá trị theo lịch chưa chi", "en": "Scheduled payable outstanding", "zh": "计划未付金额", "ja": "未払予定額"
+  },
+  {
     "key": "contracts.summary.label", "category": "contracts",
     "vi": "Tổng quan danh mục", "en": "Portfolio summary", "zh": "组合概览", "ja": "ポートフォリオ概要"
   },
@@ -1556,8 +1596,20 @@
     "vi": "Đến hạn trong 30 ngày", "en": "Due within 30 days", "zh": "30天内到期", "ja": "30日以内に期限"
   },
   {
+    "key": "contracts.summary.overduePayment", "category": "contracts",
+    "vi": "Có đợt chi quá hạn", "en": "Payments overdue", "zh": "付款逾期", "ja": "支払期限超過"
+  },
+  {
+    "key": "contracts.summary.dueSoonPayment", "category": "contracts",
+    "vi": "Đợt chi đến hạn trong 30 ngày", "en": "Payments due within 30 days", "zh": "30天内到期的付款", "ja": "30日以内に期限の支払"
+  },
+  {
     "key": "contracts.primary.directionLockedHint", "category": "contracts",
     "vi": "Màn hình Finance chỉ tạo hợp đồng chính với chủ đầu tư.", "en": "Finance creates upstream client contracts on this screen only.", "zh": "财务在此页面仅创建上游业主合同。", "ja": "Financeはこの画面で上流顧客契約のみ作成します。"
+  },
+  {
+    "key": "contracts.input.directionLockedHint", "category": "contracts",
+    "vi": "Màn hình này chỉ tạo hợp đồng đầu vào với nhà cung cấp hoặc thầu phụ.", "en": "This screen creates downstream supplier or subcontractor contracts only.", "zh": "此页面仅创建下游供应商或分包合同。", "ja": "この画面では仕入先または下請の下流契約のみ作成します。"
   },
   {
     "key": "contracts.detail.partialLoadError", "category": "contracts",

@@ -1587,7 +1587,7 @@ const TimelineTab = ({ events }: { events: ContractTimelineEvent[] }) => {
 type TabId = "info" | "schedule" | "appendices" | "documents" | "timeline";
 
 type ContractDetailProps = {
-  mode?: "all" | "upstream";
+  mode?: "all" | "upstream" | "downstream";
 };
 
 const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
@@ -1599,12 +1599,17 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedReturnTo = searchParams.get("returnTo");
   const requestedReturnPath = requestedReturnTo?.split("?", 1)[0];
-  const defaultReturnTo = mode === "upstream" ? "/admin/finance/contracts" : "/admin/contracts";
-  const returnTo = requestedReturnPath === "/admin/contracts" || requestedReturnPath === "/admin/finance/contracts"
+  const defaultReturnTo = mode === "upstream"
+    ? "/admin/finance/contracts"
+    : mode === "downstream" ? "/admin/finance/input-contracts" : "/admin/contracts";
+  const returnTo = requestedReturnPath === "/admin/contracts" ||
+      requestedReturnPath === "/admin/finance/contracts" ||
+      requestedReturnPath === "/admin/finance/input-contracts"
     ? requestedReturnTo
     : defaultReturnTo;
-  const financeContext = mode === "upstream" || returnTo.startsWith("/admin/finance/contracts");
-  const scopedDirection: ContractDirection | undefined = mode === "upstream" ? "Upstream" : undefined;
+  const scopedDirection: ContractDirection | undefined = mode === "upstream"
+    ? "Upstream"
+    : mode === "downstream" ? "Downstream" : undefined;
   const idNum = Number(params.id);
   const canManage = has(ADMIN_PERMS.contractsManage);
   const canDecideVo = has(ADMIN_PERMS.contractsViewAll);
@@ -1860,9 +1865,7 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
 
   const saveEdit = useCallback(async () => {
     if (!contract || !form) return;
-    const effectiveDirection = financeContext && contract.direction === "Upstream"
-      ? "Upstream"
-      : form.direction;
+    const effectiveDirection = scopedDirection ?? form.direction;
     setFormError(null);
     if (form.type === "Unclassified") {
       setFormError(t("contracts.validation.typeRequired"));
@@ -1955,7 +1958,7 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
     } finally {
       setSaving(false);
     }
-  }, [contract, financeContext, form, refreshContract, t, toast]);
+  }, [contract, form, refreshContract, scopedDirection, t, toast]);
 
   if (!Number.isFinite(idNum)) {
     return (
@@ -2041,7 +2044,7 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
                   customers={customers}
                   projects={projects}
                   classification={classification}
-                  lockDirection={financeContext && contract.direction === "Upstream"}
+                  lockDirection={scopedDirection !== undefined}
                   error={formError}
                   onChange={setForm}
                 />
