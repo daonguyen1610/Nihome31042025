@@ -1,4 +1,5 @@
 using OpenPdf.Fonts;
+using Microsoft.Extensions.Logging;
 
 namespace NihomeBackend.Services;
 
@@ -6,20 +7,24 @@ internal static class SimplePdfWriter
 {
     private const int LinesPerPage = 48;
 
-    internal static void ValidateFonts()
-    {
-        foreach (var languageCode in new[] { "vi", "ja", "zh" })
-        {
-            var font = ResolveFont(languageCode);
-            _ = TrueTypeFont.Load(font.Path, font.CollectionIndex);
-        }
-    }
-
-    public static byte[] Create(IEnumerable<string> sourceLines, string languageCode)
+    public static byte[] Create(
+        IEnumerable<string> sourceLines,
+        string languageCode,
+        ILogger? logger = null)
     {
         var lines = sourceLines.ToList();
         if (lines.Count == 0) lines.Add(string.Empty);
-        var fontSource = ResolveFont(languageCode);
+        var normalizedLanguage = languageCode?.Trim().ToLowerInvariant() ?? string.Empty;
+        var supportedLanguage = normalizedLanguage is "vi" or "en" or "ja" or "zh";
+        if (!supportedLanguage)
+        {
+            logger?.LogWarning(
+                "Unsupported PDF language code {LanguageCode}; using the default font.",
+                languageCode);
+            normalizedLanguage = "en";
+        }
+
+        var fontSource = ResolveFont(normalizedLanguage, logger);
 
         using var stream = new MemoryStream();
         using var document = OpenPdf.Document.PdfDocument.Create(stream);
@@ -38,7 +43,7 @@ internal static class SimplePdfWriter
         return stream.ToArray();
     }
 
-    private static FontSource ResolveFont(string languageCode)
+    private static FontSource ResolveFont(string languageCode, ILogger? logger)
     {
         var configured = ResolveConfiguredFont(languageCode);
         if (configured is not null) return configured;
@@ -64,9 +69,13 @@ internal static class SimplePdfWriter
             var fonts = Environment.GetFolderPath(Environment.SpecialFolder.Fonts);
             return languageCode switch
             {
-                "ja" => RequiredFont(Path.Combine(fonts, "meiryo.ttc"), 0),
-                "zh" => RequiredFont(Path.Combine(fonts, "msyh.ttc"), 0),
-                _ => RequiredFont(Path.Combine(fonts, "arial.ttf"), 0),
+                "ja" => FirstAvailableFont(
+                    new(Path.Combine(fonts, "meiryo.ttc"), 0),
+                    DefaultWindowsFont(fonts, logger)),
+                "zh" => FirstAvailableFont(
+                    new(Path.Combine(fonts, "msyh.ttc"), 0),
+                    DefaultWindowsFont(fonts, logger)),
+                _ => DefaultWindowsFont(fonts, logger),
             };
         }
 
@@ -85,6 +94,19 @@ internal static class SimplePdfWriter
 
         throw new InvalidOperationException(
             "PDF export requires a configured TrueType font on this operating system.");
+    }
+
+    private static FontSource DefaultWindowsFont(string fonts, ILogger? logger)
+    {
+        var defaultFont = new FontSource(Path.Combine(fonts, "arial.ttf"), 0);
+        if (!File.Exists(defaultFont.Path))
+        {
+            logger?.LogWarning(
+                "The default PDF font was not found at {FontPath}; PDF export may fail.",
+                defaultFont.Path);
+        }
+
+        return defaultFont;
     }
 
     private static FontSource? ResolveConfiguredFont(string languageCode)

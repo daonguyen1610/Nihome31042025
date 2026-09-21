@@ -398,7 +398,7 @@ public sealed class SurveyMediaService(
         lines.Add(Translate("surveys.pdf.media", "MEDIA"));
         lines.AddRange(survey.Media.OrderBy(m => m.CreatedAt).Select(m =>
             $"- {m.OriginalFileName} ({m.Size} bytes), {Translate("surveys.pdf.syncStatus", "Đồng bộ")}: {SyncStatus(m.SyncStatus)}{(string.IsNullOrWhiteSpace(m.Note) ? "" : $" - {m.Note}")}"));
-        return SimplePdfWriter.Create(lines, language);
+        return SimplePdfWriter.Create(lines, language, logger);
     }
 
     public async Task RecalculateAggregateAsync(int surveyId, CancellationToken ct = default)
@@ -456,13 +456,15 @@ public sealed class SurveyMediaService(
         UpdatedAt = result.UpdatedAt,
     };
 
-    private static string NormalizeLanguage(string languageCode)
+    private string NormalizeLanguage(string? languageCode)
     {
-        var normalized = languageCode.Trim().ToLowerInvariant();
+        var normalized = languageCode?.Trim().ToLowerInvariant() ?? string.Empty;
         if (!SupportedLanguages.Contains(normalized))
         {
-            throw new SurveyMediaValidationException(
-                "Ngôn ngữ xuất PDF không hợp lệ. Chỉ chấp nhận vi, en, zh hoặc ja.");
+            logger?.LogWarning(
+                "Unsupported survey PDF language code {LanguageCode}; using the default language and font.",
+                languageCode);
+            return "en";
         }
         return normalized;
     }

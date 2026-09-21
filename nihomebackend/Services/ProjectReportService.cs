@@ -1,5 +1,6 @@
 using ClosedXML.Excel;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
@@ -70,7 +71,8 @@ public static class ProjectReportCalculations
 
 public sealed class ProjectReportService(
     AppDbContext db,
-    IProjectAccessService projectAccess) : IProjectReportService
+    IProjectAccessService projectAccess,
+    ILogger<ProjectReportService> logger) : IProjectReportService
 {
     private const int PermitWarningWindowDays = 30;
 
@@ -190,7 +192,7 @@ public sealed class ProjectReportService(
         var report = await GetAsync(query.ToReportQuery(), callerUserId, ct);
         if (report is null) return null;
         return string.Equals(query.Format, "pdf", StringComparison.OrdinalIgnoreCase)
-            ? BuildPdf(report, query.Language)
+            ? BuildPdf(report, query.Language, logger)
             : BuildWorkbook(report, query.Language);
     }
 
@@ -525,7 +527,10 @@ public sealed class ProjectReportService(
             report.Projects.Count);
     }
 
-    private static ProjectReportExportFile BuildPdf(ProjectReportResponse report, string language)
+    private static ProjectReportExportFile BuildPdf(
+        ProjectReportResponse report,
+        string language,
+        ILogger<ProjectReportService> logger)
     {
         var labels = ExportLabels.For(language);
         var lines = new List<string>
@@ -564,7 +569,7 @@ public sealed class ProjectReportService(
         }
 
         return new ProjectReportExportFile(
-            SimplePdfWriter.Create(lines, language),
+            SimplePdfWriter.Create(lines, language, logger),
             "application/pdf",
             $"project-reports-{report.GeneratedAtUtc:yyyy-MM-dd-HHmmss}.pdf",
             report.Projects.Count);

@@ -1,4 +1,5 @@
 using System.Globalization;
+using Microsoft.Extensions.Logging;
 using NihomeBackend.Models.DTOs.Responses;
 
 namespace NihomeBackend.Services;
@@ -8,16 +9,23 @@ public interface IQuotePdfService
     Task<byte[]> CreateAsync(QuoteResponse quote, string languageCode, CancellationToken ct = default);
 }
 
-public sealed class QuotePdfService(TranslationService translations) : IQuotePdfService
+public sealed class QuotePdfService(
+    TranslationService translations,
+    ILogger<QuotePdfService> logger) : IQuotePdfService
 {
     private static readonly HashSet<string> SupportedLanguages = ["vi", "en", "zh", "ja"];
 
     public async Task<byte[]> CreateAsync(QuoteResponse quote, string languageCode, CancellationToken ct = default)
     {
         _ = ct;
-        var language = languageCode.Trim().ToLowerInvariant();
+        var language = languageCode?.Trim().ToLowerInvariant() ?? string.Empty;
         if (!SupportedLanguages.Contains(language))
-            throw new QuoteOperationException("Ngôn ngữ xuất PDF không hợp lệ. Chỉ chấp nhận vi, en, zh hoặc ja.");
+        {
+            logger.LogWarning(
+                "Unsupported quote PDF language code {LanguageCode}; using the default language and font.",
+                languageCode);
+            language = "en";
+        }
 
         var text = await translations.GetTranslationMapAsync(language);
         string T(string key, string fallback) => text.GetValueOrDefault(key, fallback);
@@ -52,6 +60,6 @@ public sealed class QuotePdfService(TranslationService translations) : IQuotePdf
         lines.Add($"{T("quotes.pdf.vat", "VAT")}: {quote.VatPercent:N2}%");
         lines.Add($"{T("quotes.pdf.grandTotal", "TỔNG CỘNG")}: {Money(quote.GrandTotal)}");
         if (preliminary) lines.Add($"***** {preliminaryWatermark} *****");
-        return SimplePdfWriter.Create(lines, language);
+        return SimplePdfWriter.Create(lines, language, logger);
     }
 }
