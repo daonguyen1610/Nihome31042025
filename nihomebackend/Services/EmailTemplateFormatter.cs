@@ -187,7 +187,9 @@ public static partial class EmailTemplateFormatter
 
     private static string? NormalizeTemplate(string? template)
     {
-        return template?.Replace("\r\n", "\n").Trim();
+        return template is null
+            ? null
+            : Regex.Replace(template, @"\r+\n", "\n").Replace("\r", "\n").Trim();
     }
 
     public static (string subject, string body) BuildOtpEmail(

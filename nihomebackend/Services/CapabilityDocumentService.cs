@@ -472,6 +472,11 @@ public class CapabilityDocumentService(
             return null;
         }
         // Guard against traversal — segment must be a single filename.
+        if (trimmed.Split(['/', '\\'], StringSplitOptions.RemoveEmptyEntries)
+            .Any(segment => segment is "." or ".."))
+        {
+            return null;
+        }
         var fileName = Path.GetFileName(trimmed);
         if (string.IsNullOrWhiteSpace(fileName) || fileName.Contains("..", StringComparison.Ordinal))
         {

@@ -71,6 +71,8 @@ internal static class SimplePdfWriter
             {
                 "ja" => FirstAvailableFont(
                     new(Path.Combine(fonts, "meiryo.ttc"), 0),
+                    new(Path.Combine(fonts, "msgothic.ttc"), 0),
+                    new(Path.Combine(fonts, "YuGothM.ttc"), 0),
                     DefaultWindowsFont(fonts, logger)),
                 "zh" => FirstAvailableFont(
                     new(Path.Combine(fonts, "msyh.ttc"), 0),
