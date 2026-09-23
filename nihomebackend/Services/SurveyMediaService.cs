@@ -461,10 +461,8 @@ public sealed class SurveyMediaService(
         var normalized = languageCode?.Trim().ToLowerInvariant() ?? string.Empty;
         if (!SupportedLanguages.Contains(normalized))
         {
-            logger?.LogWarning(
-                "Unsupported survey PDF language code {LanguageCode}; using the default language and font.",
-                languageCode);
-            return "en";
+            throw new SurveyMediaValidationException(
+                "Ngôn ngữ xuất PDF không hợp lệ. Chỉ chấp nhận vi, en, zh hoặc ja.");
         }
         return normalized;
     }

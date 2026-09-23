@@ -31,17 +31,40 @@ internal static class SimplePdfWriter
         foreach (var pageLines in lines.Chunk(LinesPerPage))
         {
             var page = document.AddPage(595, 842);
-            var font = page.AddTrueTypeFont(TrueTypeFont.Load(fontSource.Path, fontSource.CollectionIndex));
+            var cjkFont = page.AddTrueTypeFont(TrueTypeFont.Load(fontSource.Path, fontSource.CollectionIndex));
+            var latinSource = ResolveFont("en", logger);
+            var latinFont = page.AddTrueTypeFont(TrueTypeFont.Load(latinSource.Path, latinSource.CollectionIndex));
             var y = 790d;
             foreach (var line in pageLines)
             {
-                page.DrawText(font, 10, 50, y, line);
+                if (line.Length > 0)
+                {
+                    var start = 0;
+                    var useCjk = IsCjk(line[0]);
+                    var x = 50d;
+                    for (var index = 1; index <= line.Length; index++)
+                    {
+                        if (index < line.Length && IsCjk(line[index]) == useCjk) continue;
+
+                        var run = line[start..index];
+                        page.DrawText(useCjk ? cjkFont : latinFont, 10, x, y, run);
+                        x += run.Length * (useCjk ? 10d : 5.5d);
+                        if (index < line.Length)
+                        {
+                            start = index;
+                            useCjk = IsCjk(line[index]);
+                        }
+                    }
+                }
                 y -= 15;
             }
         }
         document.Save();
         return stream.ToArray();
     }
+
+    private static bool IsCjk(char character) =>
+        character is >= '\u2E80' and <= '\u9FFF' or >= '\uAC00' and <= '\uD7AF';
 
     private static FontSource ResolveFont(string languageCode, ILogger? logger)
     {
