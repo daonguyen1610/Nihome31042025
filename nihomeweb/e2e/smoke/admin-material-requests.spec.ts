@@ -366,7 +366,7 @@ test("material request detail edits safely and completes its workflow", async ({
     status: "Draft",
     siteRequesterUserId: 1,
     siteRequesterName: "Super Admin",
-    requiredAt: "2026-09-20T08:00:00Z",
+    requiredAt: "2099-09-20T08:00:00Z",
     submittedAt: null as string | null,
     submittedByUserId: null as number | null,
     submittedByName: null as string | null,

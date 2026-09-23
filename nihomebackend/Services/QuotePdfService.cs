@@ -21,10 +21,8 @@ public sealed class QuotePdfService(
         var language = languageCode?.Trim().ToLowerInvariant() ?? string.Empty;
         if (!SupportedLanguages.Contains(language))
         {
-            logger.LogWarning(
-                "Unsupported quote PDF language code {LanguageCode}; using the default language and font.",
-                languageCode);
-            language = "en";
+            throw new QuoteOperationException(
+                "Ngôn ngữ xuất PDF không hợp lệ. Chỉ chấp nhận vi, en, zh hoặc ja.");
         }
 
         var text = await translations.GetTranslationMapAsync(language);
