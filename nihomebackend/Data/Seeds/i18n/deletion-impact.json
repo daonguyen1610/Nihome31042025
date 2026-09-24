@@ -86,7 +86,7 @@
   {"key":"deletionImpact.item.design.conceptOptions","category":"deletionImpact","vi":"Phương án ý tưởng","en":"Concept options","zh":"概念方案","ja":"コンセプト案"},
   {"key":"deletionImpact.item.design.permits","category":"deletionImpact","vi":"Hồ sơ giấy phép","en":"Permit records","zh":"许可证记录","ja":"許可記録"},
   {"key":"deletionImpact.item.design.basicDocuments","category":"deletionImpact","vi":"Tài liệu thiết kế cơ sở","en":"Basic design documents","zh":"基础设计文档","ja":"基本設計文書"},
-  {"key":"deletionImpact.item.design.shopDrawings","category":"deletionImpact","vi":"Shop Drawing","en":"Shop drawings","zh":"施工图","ja":"施工図"},
+  {"key":"deletionImpact.item.design.shopDrawings","category":"deletionImpact","vi":"Tài liệu thiết kế chi tiết","en":"Detail design documents","zh":"详细设计文档","ja":"詳細設計文書"},
   {"key":"deletionImpact.item.design.ifcReleases","category":"deletionImpact","vi":"Bộ phát hành IFC","en":"IFC releases","zh":"IFC 发布包","ja":"IFC リリース"},
   {"key":"deletionImpact.item.design.constructionTasks","category":"deletionImpact","vi":"Công việc thi công","en":"Construction tasks","zh":"施工任务","ja":"施工タスク"},
   {"key":"deletionImpact.item.design.schedulePhases","category":"deletionImpact","vi":"Giai đoạn tiến độ thiết kế","en":"Design schedule phases","zh":"设计进度阶段","ja":"設計スケジュール工程"},

@@ -1,5 +1,5 @@
 [
-  {"key":"nav.operationalProjects","category":"nav","vi":"Dự án vận hành","en":"Operational projects","zh":"运营项目","ja":"運用プロジェクト"},
+  {"key":"nav.operationalProjects","category":"nav","vi":"Dự án","en":"Projects","zh":"项目","ja":"プロジェクト"},
   {"key":"operationalProjects.title","category":"operationalProjects","vi":"Quản lý dự án vận hành","en":"Operational project management","zh":"运营项目管理","ja":"運用プロジェクト管理"},
   {"key":"operationalProjects.subtitle","category":"operationalProjects","vi":"Một mã dự án xuyên suốt khách hàng, cơ hội, báo giá, hợp đồng, thiết kế và thi công.","en":"One project identity across customer, opportunity, quote, contract, design, and construction workflows.","zh":"以统一项目标识贯通客户、商机、报价、合同、设计和施工流程。","ja":"顧客、商談、見積、契約、設計、施工を一つのプロジェクトIDで管理します。"},
   {"key":"operationalProjects.new","category":"operationalProjects","vi":"Tạo dự án vận hành","en":"New operational project","zh":"新建运营项目","ja":"運用プロジェクトを作成"},
