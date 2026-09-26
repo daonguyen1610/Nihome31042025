@@ -8,6 +8,7 @@ type TranslationMap = Record<string, string>;
 // --- Backend error message -> i18n key mapping ---
 const backendErrorMap: Record<string, string> = {
   "Invalid credentials.": "auth.err.invalidCredentials",
+  "Enter a valid phone number (example: 0987654321) or email (example: user@example.com).": "auth.err.invalidLoginIdentifier",
   "Account is inactive.": "auth.err.accountInactive",
   "Phone number already registered.": "auth.err.phoneRegistered",
   "Email already registered.": "auth.err.emailRegistered",

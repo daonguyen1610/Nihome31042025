@@ -4,9 +4,12 @@ namespace NihomeBackend.Models.DTOs.Requests.Auth;
 
 public class LoginRequest
 {
-    [Required(ErrorMessage = "Phone number is required")]
-    [StringLength(20, MinimumLength = 8, ErrorMessage = "Phone number must be between 8 and 20 characters")]
-    [RegularExpression(@"^[\d\+\-\s]+$", ErrorMessage = "Invalid phone number format")]
+    /// <summary>
+    /// Phone number or email. The JSON name stays <c>phoneNumber</c> so existing
+    /// clients keep working.
+    /// </summary>
+    [Required(ErrorMessage = "Phone number or email is required")]
+    [StringLength(150, ErrorMessage = "Phone number or email must be at most 150 characters")]
     public string PhoneNumber { get; set; } = string.Empty;
 
     [Required(ErrorMessage = "Password is required")]

@@ -37,6 +37,62 @@ public class AuthControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task Login_WithValidSuperAdminEmail_ReturnsAccessToken()
+    {
+        var response = await Client.PostAsJsonAsync("/api/auth/login", new
+        {
+            phoneNumber = TestDataSeeder.SuperAdminEmail,
+            password = TestDataSeeder.DefaultPassword,
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var body = await response.Content.ReadAsStringAsync();
+        using var doc = JsonDocument.Parse(body);
+        doc.RootElement.GetProperty("accessToken").GetString().Should().NotBeNullOrEmpty();
+        doc.RootElement.GetProperty("role").GetString().Should().Be("SUPER_ADMIN");
+        doc.RootElement.GetProperty("phoneNumber").GetString().Should().Be(TestDataSeeder.SuperAdminPhone);
+    }
+
+    [Fact]
+    public async Task Login_WithMixedCaseEmail_ReturnsAccessToken()
+    {
+        var response = await Client.PostAsJsonAsync("/api/auth/login", new
+        {
+            phoneNumber = "SuperAdmin@Nihome.test",
+            password = TestDataSeeder.DefaultPassword,
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task Login_WithMalformedIdentifier_ReturnsBadRequest()
+    {
+        var response = await Client.PostAsJsonAsync("/api/auth/login", new
+        {
+            phoneNumber = "not-a-phone-or-email",
+            password = TestDataSeeder.DefaultPassword,
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task ForgotStart_WithSuperAdminEmail_ReturnsAccountPhone()
+    {
+        var response = await Client.PostAsJsonAsync("/api/auth/forgot/start", new
+        {
+            phoneNumber = TestDataSeeder.SuperAdminEmail,
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadAsStringAsync();
+        using var doc = JsonDocument.Parse(body);
+        doc.RootElement.GetProperty("phone").GetString().Should().Be(TestDataSeeder.SuperAdminPhone);
+    }
+
+    [Fact]
     public async Task Login_WithUnknownPhone_ReturnsUnauthorized()
     {
         var response = await Client.PostAsJsonAsync("/api/auth/login", new

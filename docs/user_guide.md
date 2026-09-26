@@ -1441,7 +1441,7 @@ Most newer controllers also expose the same contract below `/api/v1`; use the co
 | POST   | `/api/auth/register/verify-otp`   | Public   | Verify OTP during registration           |
 | POST   | `/api/auth/register/complete`     | Public   | Complete registration after OTP          |
 | POST   | `/api/auth/register/resend-otp`   | Public   | Resend registration OTP                  |
-| POST   | `/api/auth/login`                 | Public   | Login with phone and password            |
+| POST   | `/api/auth/login`                 | Public   | Login with phone number or email and password; send the identifier in the existing `phoneNumber` field |
 | POST   | `/api/auth/refresh`               | Public   | Refresh access token                     |
 | POST   | `/api/auth/logout`                | Public   | Revoke refresh token                     |
 | POST   | `/api/auth/forgot/start`          | Public   | Start password reset                     |
