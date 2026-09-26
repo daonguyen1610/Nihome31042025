@@ -325,7 +325,7 @@ export default function RoleList() {
                 >
                   <option value="">{t("adminRbac.filter.allModules")}</option>
                   {modules.map((m) => (
-                    <option key={m} value={m}>{m}</option>
+                    <option key={m} value={m}>{t(`adminRbac.module.${m}`)}</option>
                   ))}
                 </select>
               </div>
@@ -600,7 +600,7 @@ export default function RoleList() {
                 id="rbac-name"
                 value={createName}
                 onChange={(e) => setCreateName(e.target.value)}
-                placeholder="Marketing"
+                placeholder={t("adminRbac.namePlaceholder")}
                 data-testid="rbac-create-name"
               />
             </div>
