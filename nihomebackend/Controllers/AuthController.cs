@@ -208,9 +208,15 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("login")]
-    public async Task<IActionResult> Login(LoginRequest request)
+    public async Task<IActionResult> Login(LoginRequest request, CancellationToken ct = default)
     {
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.PhoneNumber == request.PhoneNumber);
+        var identifierError = ContactValidation.ValidateLoginIdentifier(request.PhoneNumber);
+        if (identifierError != null)
+        {
+            return BadRequest(new { message = identifierError });
+        }
+
+        var user = await AuthIdentifier.FindUserAsync(_db, request.PhoneNumber, ct);
         if (user == null || !_passwordService.Verify(user, request.Password))
         {
             _audit.Log(new AuditEvent
@@ -292,9 +298,15 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("forgot/start")]
-    public async Task<IActionResult> ForgotPasswordStart(ForgotPasswordStartRequest request)
+    public async Task<IActionResult> ForgotPasswordStart(ForgotPasswordStartRequest request, CancellationToken ct = default)
     {
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.PhoneNumber == request.PhoneNumber);
+        var identifierError = ContactValidation.ValidateLoginIdentifier(request.PhoneNumber);
+        if (identifierError != null)
+        {
+            return BadRequest(new { message = identifierError });
+        }
+
+        var user = await AuthIdentifier.FindUserAsync(_db, request.PhoneNumber, ct);
         if (user == null)
         {
             return BadRequest(new { message = "Account not found." });
@@ -322,7 +334,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("forgot/reset-direct")]
-    public async Task<IActionResult> ForgotPasswordResetDirect(ForgotPasswordCompleteRequest request)
+    public async Task<IActionResult> ForgotPasswordResetDirect(ForgotPasswordCompleteRequest request, CancellationToken ct = default)
     {
         var settings = await GetSiteSettingsAsync();
         if (settings.EnableOtpForForgotPassword)
@@ -330,7 +342,13 @@ public class AuthController : ControllerBase
             return BadRequest(new { message = "OTP verification is required. Please use the standard forgot password flow." });
         }
 
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.PhoneNumber == request.PhoneNumber);
+        var identifierError = ContactValidation.ValidateLoginIdentifier(request.PhoneNumber);
+        if (identifierError != null)
+        {
+            return BadRequest(new { message = identifierError });
+        }
+
+        var user = await AuthIdentifier.FindUserAsync(_db, request.PhoneNumber, ct);
         if (user == null)
         {
             return BadRequest(new { message = "Account not found." });
@@ -342,9 +360,10 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("forgot/verify-otp")]
-    public async Task<IActionResult> ForgotPasswordVerifyOtp(VerifyOtpRequest request)
+    public async Task<IActionResult> ForgotPasswordVerifyOtp(VerifyOtpRequest request, CancellationToken ct = default)
     {
-        var otpEntry = await _otpService.VerifyOtp(request.PhoneNumber, request.OtpCode);
+        var phone = await ResolveExistingUserPhoneAsync(request.PhoneNumber, ct);
+        var otpEntry = await _otpService.VerifyOtp(phone, request.OtpCode);
         if (otpEntry == null)
         {
             return BadRequest(new { message = "Invalid OTP." });
@@ -354,9 +373,15 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("forgot/complete")]
-    public async Task<IActionResult> ForgotPasswordComplete(ForgotPasswordCompleteRequest request)
+    public async Task<IActionResult> ForgotPasswordComplete(ForgotPasswordCompleteRequest request, CancellationToken ct = default)
     {
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.PhoneNumber == request.PhoneNumber);
+        var identifierError = ContactValidation.ValidateLoginIdentifier(request.PhoneNumber);
+        if (identifierError != null)
+        {
+            return BadRequest(new { message = identifierError });
+        }
+
+        var user = await AuthIdentifier.FindUserAsync(_db, request.PhoneNumber, ct);
         if (user == null)
         {
             return BadRequest(new { message = "Account not found." });
@@ -365,7 +390,7 @@ public class AuthController : ControllerBase
         var settings = await GetSiteSettingsAsync();
         if (settings.EnableOtpForForgotPassword)
         {
-            var otpEntry = await _otpService.GetLatestOtp(request.PhoneNumber);
+            var otpEntry = await _otpService.GetLatestOtp(user.PhoneNumber);
             if (otpEntry == null || otpEntry.IsUsed || otpEntry.ExpiresAt < DateTime.UtcNow)
             {
                 return BadRequest(new { message = "OTP session not found or expired." });
@@ -380,7 +405,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("forgot/resend-otp")]
-    public async Task<IActionResult> ResendForgotOtp(ResendOtpRequest request)
+    public async Task<IActionResult> ResendForgotOtp(ResendOtpRequest request, CancellationToken ct = default)
     {
         var settings = await GetSiteSettingsAsync();
         if (!settings.EnableOtpForForgotPassword)
@@ -388,7 +413,7 @@ public class AuthController : ControllerBase
             return BadRequest(new { message = "OTP verification is disabled for forgot password." });
         }
 
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.PhoneNumber == request.PhoneNumber);
+        var user = await AuthIdentifier.FindUserAsync(_db, request.PhoneNumber, ct);
         if (user == null)
         {
             return BadRequest(new { message = "Account not found." });
@@ -397,7 +422,7 @@ public class AuthController : ControllerBase
         string? otp;
         try
         {
-            otp = await _otpService.ResendOtp(request.PhoneNumber);
+            otp = await _otpService.ResendOtp(user.PhoneNumber);
         }
         catch (InvalidOperationException)
         {
@@ -415,6 +440,17 @@ public class AuthController : ControllerBase
     private async Task<SiteSettings> GetSiteSettingsAsync() =>
         await _db.SiteSettings.AsNoTracking().FirstOrDefaultAsync()
         ?? new SiteSettings();
+
+    /// <summary>
+    /// Password-reset OTP is stored against the account phone. If the client
+    /// sent an email identifier, use the account phone; otherwise keep the
+    /// submitted value.
+    /// </summary>
+    private async Task<string> ResolveExistingUserPhoneAsync(string? identifier, CancellationToken ct)
+    {
+        var user = await AuthIdentifier.FindUserAsync(_db, identifier, ct);
+        return user?.PhoneNumber ?? (identifier ?? string.Empty).Trim();
+    }
 
     private async Task<AuthResponse> BuildAuthResponseAsync(ApplicationUser user)
     {

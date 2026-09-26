@@ -187,10 +187,11 @@ const ForgotPassword = () => {
                   <Phone className="w-4 h-4 absolute left-5 top-1/2 -translate-y-1/2 text-muted-foreground" />
                   <input
                     required
-                    type="tel"
+                    type="text"
+                    autoComplete="username"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    placeholder={t("auth.phone")}
+                    placeholder={t("auth.phoneWithEmail")}
                     className={inputClass}
                   />
                 </div>

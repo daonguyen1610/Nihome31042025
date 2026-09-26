@@ -55,10 +55,11 @@ const Login = () => {
                 <Phone className="w-4 h-4 absolute left-5 top-1/2 -translate-y-1/2 text-muted-foreground" />
                 <input
                   required
-                  type="tel"
+                  type="text"
+                  autoComplete="username"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  placeholder={t("auth.phone")}
+                  placeholder={t("auth.phoneWithEmail")}
                   className="w-full bg-secondary rounded-full pl-12 pr-5 py-3.5 text-sm border border-transparent focus:border-primary focus:bg-background outline-none transition"
                 />
               </div>

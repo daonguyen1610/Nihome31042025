@@ -11,6 +11,7 @@ namespace NihomeBackend.IntegrationTests.Infrastructure;
 public static class TestDataSeeder
 {
     public const string SuperAdminPhone = "0335240370";
+    public const string SuperAdminEmail = "superadmin@nihome.test";
     public const string AdminPhone = "0911111111";
     public const string CustomerPhone = "0900000001";
     public const string DefaultPassword = "Admin@123";

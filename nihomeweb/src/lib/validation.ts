@@ -31,6 +31,14 @@ export const isValidEmail = (email?: string | null): boolean => {
   return trimmed.length <= 150 && EMAIL_SHAPE.test(trimmed);
 };
 
+/** Login/reset identifier: required, and either a valid phone or a valid email. */
+export const isValidLoginIdentifier = (value?: string | null): boolean => {
+  if (!value || !value.trim()) return false;
+  const trimmed = value.trim();
+  if (trimmed.includes("@")) return isValidEmail(trimmed);
+  return isValidPhone(trimmed);
+};
+
 export type ContactIssue = "missing" | "phone" | "email" | null;
 
 /**

@@ -71,4 +71,24 @@ public class ContactValidationTests
         Assert.NotNull(ContactValidation.Validate("ewrt", "a@b.vn"));
         Assert.NotNull(ContactValidation.Validate("0987654321", "345@434"));
     }
+
+    [Fact]
+    public void ValidateLoginIdentifier_AcceptsPhoneOrEmail()
+    {
+        Assert.Null(ContactValidation.ValidateLoginIdentifier("0987654321"));
+        Assert.Null(ContactValidation.ValidateLoginIdentifier("user@example.com"));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("ewrt")]
+    [InlineData("345@434")]
+    [InlineData("not-a-phone")]
+    public void ValidateLoginIdentifier_RejectsMissingOrMalformed(string? identifier)
+    {
+        Assert.Equal(
+            ContactValidation.LoginIdentifierInvalidMessage,
+            ContactValidation.ValidateLoginIdentifier(identifier));
+    }
 }

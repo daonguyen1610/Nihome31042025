@@ -54,6 +54,33 @@ public static partial class ContactValidation
     }
 
     /// <summary>
+    /// Stable auth-API message when the login/reset identifier is missing or
+    /// neither a valid Vietnamese phone number nor a valid email.
+    /// </summary>
+    public const string LoginIdentifierInvalidMessage =
+        "Enter a valid phone number (example: 0987654321) or email (example: user@example.com).";
+
+    /// <summary>
+    /// Login and password-reset identifier: one value that is either a phone
+    /// number or an email, and it must be well formed. Presence is required.
+    /// </summary>
+    public static string? ValidateLoginIdentifier(string? identifier)
+    {
+        if (string.IsNullOrWhiteSpace(identifier))
+        {
+            return LoginIdentifierInvalidMessage;
+        }
+
+        var trimmed = identifier.Trim();
+        if (trimmed.Contains('@'))
+        {
+            return IsValidEmail(trimmed) ? null : LoginIdentifierInvalidMessage;
+        }
+
+        return IsValidPhone(trimmed) ? null : LoginIdentifierInvalidMessage;
+    }
+
+    /// <summary>
     /// The rule every CRM contact shares: at least one way to reach the person,
     /// and whatever was supplied has to be well formed.
     /// </summary>

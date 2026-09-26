@@ -224,7 +224,7 @@ public class AuthControllerTests : IDisposable
     {
         var result = await _sut.Login(new LoginRequest
         {
-            PhoneNumber = "9999999999",
+            PhoneNumber = "0987654999",
             Password = "Pass1!"
         });
 
@@ -243,6 +243,35 @@ public class AuthControllerTests : IDisposable
         });
 
         Assert.IsType<UnauthorizedObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task Login_ValidEmail_ReturnsAuthResponse()
+    {
+        await SeedUser("0123456789", password: "SecurePass1!", email: "user@test.com");
+
+        var result = await _sut.Login(new LoginRequest
+        {
+            PhoneNumber = "USER@test.com",
+            Password = "SecurePass1!"
+        });
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var response = Assert.IsType<AuthResponse>(ok.Value);
+        Assert.False(string.IsNullOrWhiteSpace(response.AccessToken));
+        Assert.Equal("0123456789", response.PhoneNumber);
+    }
+
+    [Fact]
+    public async Task Login_MalformedIdentifier_ReturnsBadRequest()
+    {
+        var result = await _sut.Login(new LoginRequest
+        {
+            PhoneNumber = "not-a-phone-or-email",
+            Password = "SecurePass1!"
+        });
+
+        Assert.IsType<BadRequestObjectResult>(result);
     }
 
     // --- Refresh ---
@@ -311,7 +340,7 @@ public class AuthControllerTests : IDisposable
     {
         var result = await _sut.ForgotPasswordStart(new ForgotPasswordStartRequest
         {
-            PhoneNumber = "9999999999"
+            PhoneNumber = "0987654999"
         });
 
         Assert.IsType<BadRequestObjectResult>(result);
@@ -332,6 +361,25 @@ public class AuthControllerTests : IDisposable
         var json = ok.Value;
         var otpRequired = json?.GetType().GetProperty("otpRequired")?.GetValue(json);
         Assert.Equal(false, otpRequired);
+    }
+
+    [Fact]
+    public async Task ForgotPasswordStart_ByEmail_ReturnsDirectResetOption()
+    {
+        await SeedUser("0123456789", email: "reset@test.com");
+        await SeedSettings(enableOtpForForgotPassword: false);
+
+        var result = await _sut.ForgotPasswordStart(new ForgotPasswordStartRequest
+        {
+            PhoneNumber = "RESET@test.com"
+        });
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var json = ok.Value;
+        var otpRequired = json?.GetType().GetProperty("otpRequired")?.GetValue(json);
+        var phone = json?.GetType().GetProperty("phone")?.GetValue(json);
+        Assert.Equal(false, otpRequired);
+        Assert.Equal("0123456789", phone);
     }
 
     [Fact]
@@ -383,11 +431,28 @@ public class AuthControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task ForgotPasswordResetDirect_ByEmail_ResetsPassword()
+    {
+        var user = await SeedUser("0123456789", password: "OldPass1!", email: "reset@test.com");
+        await SeedSettings(enableOtpForForgotPassword: false);
+
+        var result = await _sut.ForgotPasswordResetDirect(new ForgotPasswordCompleteRequest
+        {
+            PhoneNumber = "reset@test.com",
+            NewPassword = "NewPass1!"
+        });
+
+        Assert.IsType<OkObjectResult>(result);
+        await _db.Entry(user).ReloadAsync();
+        Assert.True(_passwordService.Verify(user, "NewPass1!"));
+    }
+
+    [Fact]
     public async Task ForgotPasswordComplete_UserNotFound_ReturnsBadRequest()
     {
         var result = await _sut.ForgotPasswordComplete(new ForgotPasswordCompleteRequest
         {
-            PhoneNumber = "9999999999",
+            PhoneNumber = "0987654999",
             NewPassword = "NewPass1!"
         });
 
@@ -443,7 +508,7 @@ public class AuthControllerTests : IDisposable
 
         var result = await _sut.ResendForgotOtp(new ResendOtpRequest
         {
-            PhoneNumber = "9999999999"
+            PhoneNumber = "0987654999"
         });
 
         Assert.IsType<BadRequestObjectResult>(result);
