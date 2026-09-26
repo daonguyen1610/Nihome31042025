@@ -24,7 +24,7 @@ public static class AuthIdentifier
             return await db.Users.FirstOrDefaultAsync(u => u.Email == email, ct);
         }
 
-        var phone = ContactValidation.NormalizePhone(trimmed);
-        return await db.Users.FirstOrDefaultAsync(u => u.PhoneNumber == phone, ct);
+        var normalizedPhone = ContactValidation.NormalizePhone(trimmed);
+        return await db.Users.FirstOrDefaultAsync(u => u.PhoneNumber == normalizedPhone, ct);
     }
 }
