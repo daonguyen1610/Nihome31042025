@@ -231,6 +231,10 @@ legacy workflow or reconciliation queue. The final qualifying Contract of a
 Contract-signed Opportunity cannot be cancelled, unlinked, invalidated, or
 deleted unless another qualifying Contract remains.
 
+The Opportunity detail shows each linked Contract to users who can view that
+Contract. Select a Contract number to open its detail page and upload the
+signed scan or update its status.
+
 | Page | Functions | Estimate |
 |------|-----------|----------|
 | Opportunity List | Filter by stage, sales, status | 1.5 days |

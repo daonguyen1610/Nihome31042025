@@ -129,6 +129,8 @@ public class OpportunityService(
         int id,
         int callerUserId,
         bool canSeeAll,
+        bool canViewContracts = false,
+        bool canViewAllContracts = false,
         CancellationToken ct = default)
     {
         var op = await db.Opportunities
@@ -142,7 +144,25 @@ public class OpportunityService(
         if (op is null) return null;
         if (!canSeeAll && op.OwnerUserId != callerUserId) return null;
 
-        return Map(op, op.Customer.Name, op.Owner?.FullName, op.Activities);
+        var contracts = canViewContracts
+            ? await db.Contracts
+                .AsNoTracking()
+                .Where(contract => contract.OpportunityId == op.Id &&
+                    (canViewAllContracts || contract.OwnerUserId == callerUserId))
+                .OrderByDescending(contract => contract.SignedDate)
+                .ThenByDescending(contract => contract.UpdatedAt)
+                .ThenByDescending(contract => contract.Id)
+                .Select(contract => new OpportunityContractLinkResponse
+                {
+                    Id = contract.Id,
+                    ContractNumber = contract.ContractNumber,
+                    Status = contract.Status,
+                    SignedDate = contract.SignedDate,
+                })
+                .ToListAsync(ct)
+            : [];
+
+        return Map(op, op.Customer.Name, op.Owner?.FullName, op.Activities, contracts);
     }
 
     // -------- Create / Update --------
@@ -206,7 +226,7 @@ public class OpportunityService(
             await FireAssignedAsync(op, customer.Name, ownerId);
         }
 
-        return await GetAsync(op.Id, callerUserId, canSeeAll: true, ct)
+        return await GetAsync(op.Id, callerUserId, canSeeAll: true, ct: ct)
             ?? throw new InvalidOperationException("Newly created opportunity missing.");
     }
 
@@ -300,7 +320,7 @@ public class OpportunityService(
             await FireAssignedAsync(op, customer.Name, op.OwnerUserId.Value);
         }
 
-        return await GetAsync(op.Id, callerUserId, canSeeAll: true, ct);
+        return await GetAsync(op.Id, callerUserId, canSeeAll: true, ct: ct);
     }
 
     // -------- Stage change --------
@@ -328,7 +348,7 @@ public class OpportunityService(
         var to = request.TargetStage;
         if (from == to)
         {
-            return await GetAsync(op.Id, callerUserId, canSeeAll: true, ct);
+            return await GetAsync(op.Id, callerUserId, canSeeAll: true, ct: ct);
         }
 
         // Terminal stages (Won/Lost) cannot revert to earlier stages nor swap sideways.
@@ -426,7 +446,7 @@ public class OpportunityService(
             await FireStageChangedAsync(op, customerName, op.OwnerUserId.Value, to);
         }
 
-        return await GetAsync(op.Id, callerUserId, canSeeAll: true, ct);
+        return await GetAsync(op.Id, callerUserId, canSeeAll: true, ct: ct);
     }
 
     private async Task ValidateWinningReferencesAsync(
@@ -663,7 +683,8 @@ public class OpportunityService(
         Opportunity op,
         string? customerName,
         string? ownerName,
-        IEnumerable<OpportunityActivity>? activities)
+        IEnumerable<OpportunityActivity>? activities,
+        IEnumerable<OpportunityContractLinkResponse>? contracts = null)
     {
         return new OpportunityResponse
         {
@@ -703,6 +724,7 @@ public class OpportunityService(
                         CreatedAt = a.CreatedAt,
                     })
                     .ToList(),
+            Contracts = contracts?.ToList() ?? [],
         };
     }
 

@@ -1596,6 +1596,13 @@ export interface OpportunityActivityResponse {
   createdAt: string;
 }
 
+export interface OpportunityContractLinkResponse {
+  id: number;
+  contractNumber: string;
+  status: ContractStatus;
+  signedDate?: string | null;
+}
+
 export interface OpportunityResponse {
   id: number;
   name: string;
@@ -1618,6 +1625,7 @@ export interface OpportunityResponse {
   updatedAt: string;
   rowVersion: string;
   activities: OpportunityActivityResponse[];
+  contracts: OpportunityContractLinkResponse[];
 }
 
 export interface OpportunityListResponse {

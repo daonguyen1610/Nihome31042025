@@ -42,7 +42,13 @@ public interface IOpportunityService
         decimal? maxValue = null,
         CancellationToken ct = default);
 
-    Task<OpportunityResponse?> GetAsync(int id, int callerUserId, bool canSeeAll, CancellationToken ct = default);
+    Task<OpportunityResponse?> GetAsync(
+        int id,
+        int callerUserId,
+        bool canSeeAll,
+        bool canViewContracts = false,
+        bool canViewAllContracts = false,
+        CancellationToken ct = default);
 
     Task<OpportunityResponse> CreateAsync(
         CreateOpportunityRequest request,

@@ -603,6 +603,36 @@ public class OpportunitiesControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task GetDetail_ReturnsLinkedContractsForContractManagers()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var opId = await CreateOpportunityAsync();
+
+        await WithDbAsync(async db =>
+        {
+            var opportunity = await db.Opportunities.SingleAsync(item => item.Id == opId);
+            db.Contracts.Add(new Contract
+            {
+                ContractNumber = UniqueSlug("HD-OP-LINK"),
+                CustomerId = opportunity.CustomerId,
+                OpportunityId = opportunity.Id,
+                Status = ContractStatus.Signed,
+                SignedDate = DateTime.UtcNow,
+                Value = 1_000_000m,
+            });
+            await db.SaveChangesAsync();
+        });
+
+        var detail = await Client.GetAsync($"/api/opportunities/{opId}");
+        detail.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var body = await ReadJsonAsync(detail);
+        body.GetProperty("contracts").EnumerateArray().Should().ContainSingle();
+        body.GetProperty("contracts").EnumerateArray().Single()
+            .GetProperty("contractNumber").GetString().Should().StartWith("HD-OP-LINK");
+    }
+
+    [Fact]
     public async Task ChangeStage_ForwardTransition_AutoAppendsStageChangeActivity()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));

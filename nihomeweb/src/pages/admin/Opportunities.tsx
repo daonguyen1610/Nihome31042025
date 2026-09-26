@@ -105,6 +105,7 @@ const AdminOpportunities = () => {
 
   const canManage = has(ADMIN_PERMS.opportunitiesManage);
   const canSeeAll = has(ADMIN_PERMS.opportunitiesViewAll);
+  const canViewContracts = has(ADMIN_PERMS.contracts);
 
   // ---------- data ----------
   const [rows, setRows] = useState<OpportunityResponse[]>([]);
@@ -469,6 +470,7 @@ const AdminOpportunities = () => {
       setStageTarget(null);
       toast({ title: t("opportunities.updated") });
       await fetchList();
+      await openDetail(data.id);
     } catch (err) {
       toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
       if (isConcurrencyConflict(err)) await openDetail(detail.id);
@@ -1080,6 +1082,26 @@ const AdminOpportunities = () => {
                             {detail.wonQuoteId ? t("opportunities.field.wonQuote") : t("opportunities.field.wonTender")}
                           </div>
                           <div>#{detail.wonQuoteId ?? detail.wonTenderId}</div>
+                        </div>
+                      )}
+                      {canViewContracts && detail.contracts.length > 0 && (
+                        <div className="col-span-2">
+                          <div className="text-xs text-muted-foreground">
+                            {t("opportunities.field.contracts")}
+                          </div>
+                          <div className="mt-1 flex flex-wrap gap-2">
+                            {detail.contracts.map((contract) => (
+                              <Button
+                                key={contract.id}
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => navigate(`/admin/contracts/${contract.id}`)}
+                              >
+                                {contract.contractNumber}
+                              </Button>
+                            ))}
+                          </div>
                         </div>
                       )}
                       {detail.stage === "Lost" && detail.lostReasonCode && (

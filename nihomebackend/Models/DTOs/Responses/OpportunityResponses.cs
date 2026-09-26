@@ -11,6 +11,14 @@ public class OpportunityActivityResponse
     public DateTime CreatedAt { get; set; }
 }
 
+public class OpportunityContractLinkResponse
+{
+    public int Id { get; set; }
+    public string ContractNumber { get; set; } = string.Empty;
+    public ContractStatus Status { get; set; }
+    public DateTime? SignedDate { get; set; }
+}
+
 public class OpportunityResponse
 {
     public int Id { get; set; }
@@ -34,6 +42,7 @@ public class OpportunityResponse
     public DateTime UpdatedAt { get; set; }
     public string RowVersion { get; set; } = string.Empty;
     public List<OpportunityActivityResponse> Activities { get; set; } = new();
+    public List<OpportunityContractLinkResponse> Contracts { get; set; } = new();
 }
 
 public class OpportunityListResponse

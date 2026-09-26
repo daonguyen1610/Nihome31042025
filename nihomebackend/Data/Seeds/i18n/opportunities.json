@@ -31,6 +31,7 @@
   { "key": "opportunities.field.lostNote", "category": "opportunities", "vi": "Ghi chú thua", "en": "Lost note", "zh": "失败备注", "ja": "失注メモ" },
   { "key": "opportunities.field.wonQuote", "category": "opportunities", "vi": "Báo giá thắng", "en": "Winning quote", "zh": "获胜报价", "ja": "受注見積" },
   { "key": "opportunities.field.wonTender", "category": "opportunities", "vi": "Gói thầu thắng", "en": "Winning tender", "zh": "获胜标段", "ja": "受注入札" },
+  { "key": "opportunities.field.contracts", "category": "opportunities", "vi": "Hợp đồng liên kết", "en": "Linked contracts", "zh": "关联合同", "ja": "関連契約" },
 
   { "key": "opportunities.filter.stage", "category": "opportunities", "vi": "Giai đoạn", "en": "Stage", "zh": "阶段", "ja": "フェーズ" },
   { "key": "opportunities.filter.search", "category": "opportunities", "vi": "Tìm kiếm", "en": "Search", "zh": "搜索", "ja": "検索" },

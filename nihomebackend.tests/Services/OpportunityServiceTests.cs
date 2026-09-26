@@ -249,6 +249,44 @@ public class OpportunityServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task GetAsync_WithContractView_ReturnsOnlyVisibleLinkedContracts()
+    {
+        var owner = await SeedUserAsync();
+        var otherOwner = await SeedUserAsync();
+        var customer = await SeedCustomerAsync(owner.Id);
+        var opportunity = await SeedOpportunityAsync(customer, owner);
+        _db.Contracts.AddRange(
+            new Contract
+            {
+                ContractNumber = "HD-VISIBLE",
+                CustomerId = customer.Id,
+                OpportunityId = opportunity.Id,
+                OwnerUserId = owner.Id,
+                Status = ContractStatus.Signed,
+                SignedDate = DateTime.UtcNow,
+            },
+            new Contract
+            {
+                ContractNumber = "HD-HIDDEN",
+                CustomerId = customer.Id,
+                OpportunityId = opportunity.Id,
+                OwnerUserId = otherOwner.Id,
+                Status = ContractStatus.Draft,
+            });
+        await _db.SaveChangesAsync();
+
+        var found = await _sut.GetAsync(
+            opportunity.Id,
+            owner.Id,
+            canSeeAll: false,
+            canViewContracts: true,
+            canViewAllContracts: false);
+
+        var contract = Assert.Single(found!.Contracts);
+        Assert.Equal("HD-VISIBLE", contract.ContractNumber);
+    }
+
+    [Fact]
     public async Task UpdateAsync_SalesWithoutSeeAll_CannotReassignToAnotherUser()
     {
         var salesA = await SeedUserAsync();

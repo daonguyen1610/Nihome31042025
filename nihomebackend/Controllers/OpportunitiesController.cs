@@ -82,7 +82,10 @@ public class OpportunitiesController(
         if (userId is null) return Unauthorized();
 
         var canSeeAll = await permissions.HasAsync(userId.Value, "crm.opportunities.view.all", ct);
-        var found = await svc.GetAsync(id, userId.Value, canSeeAll, ct);
+        var canViewContracts = await permissions.HasAsync(userId.Value, "crm.contracts.view", ct);
+        var canViewAllContracts = await permissions.HasAsync(userId.Value, "crm.contracts.view.all", ct);
+        var found = await svc.GetAsync(
+            id, userId.Value, canSeeAll, canViewContracts, canViewAllContracts, ct);
         if (found is null) return NotFound();
         CrmConcurrency.SetResponseEntityTag(Response, found.RowVersion);
         return Ok(found);
