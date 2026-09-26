@@ -102,9 +102,9 @@ function extractError(err: unknown): string {
 
 // --- Thunks ---
 
-export const loginThunk = createAsyncThunk("auth/login", async (payload: { phone: string; password: string }, { rejectWithValue }) => {
+export const loginThunk = createAsyncThunk("auth/login", async (payload: { identifier: string; password: string }, { rejectWithValue }) => {
   try {
-    const { data } = await authApi.login(payload.phone, payload.password);
+    const { data } = await authApi.login(payload.identifier, payload.password);
     persistTokens(data.accessToken, data.refreshToken);
     return data;
   } catch (err) {
@@ -169,10 +169,14 @@ export const resendRegisterOtpThunk = createAsyncThunk("auth/resendRegisterOtp",
   }
 });
 
-export const forgotStartThunk = createAsyncThunk("auth/forgotStart", async (phone: string, { rejectWithValue }) => {
+export const forgotStartThunk = createAsyncThunk("auth/forgotStart", async (identifier: string, { rejectWithValue }) => {
   try {
-    const { data } = await authApi.forgotStart(phone);
-    return { data, phone, email: data.email as string | undefined };
+    const { data } = await authApi.forgotStart(identifier);
+    return {
+      data,
+      accountPhone: data.phone ?? identifier,
+      email: data.email as string | undefined,
+    };
   } catch (err) {
     return rejectWithValue(extractError(err));
   }
@@ -180,9 +184,9 @@ export const forgotStartThunk = createAsyncThunk("auth/forgotStart", async (phon
 
 export const forgotVerifyOtpThunk = createAsyncThunk(
   "auth/forgotVerifyOtp",
-  async (payload: { phone: string; otpCode: string }, { rejectWithValue }) => {
+  async (payload: { accountPhone: string; otpCode: string }, { rejectWithValue }) => {
     try {
-      const { data } = await authApi.forgotVerifyOtp(payload.phone, payload.otpCode);
+      const { data } = await authApi.forgotVerifyOtp(payload.accountPhone, payload.otpCode);
       return data;
     } catch (err) {
       return rejectWithValue(extractError(err));
@@ -192,9 +196,9 @@ export const forgotVerifyOtpThunk = createAsyncThunk(
 
 export const forgotCompleteThunk = createAsyncThunk(
   "auth/forgotComplete",
-  async (payload: { phone: string; newPassword: string }, { rejectWithValue }) => {
+  async (payload: { identifier: string; newPassword: string }, { rejectWithValue }) => {
     try {
-      const { data } = await authApi.forgotComplete(payload.phone, payload.newPassword);
+      const { data } = await authApi.forgotComplete(payload.identifier, payload.newPassword);
       return data;
     } catch (err) {
       return rejectWithValue(extractError(err));
@@ -204,9 +208,9 @@ export const forgotCompleteThunk = createAsyncThunk(
 
 export const forgotResetDirectThunk = createAsyncThunk(
   "auth/forgotResetDirect",
-  async (payload: { phone: string; newPassword: string }, { rejectWithValue }) => {
+  async (payload: { identifier: string; newPassword: string }, { rejectWithValue }) => {
     try {
-      const { data } = await authApi.forgotResetDirect(payload.phone, payload.newPassword);
+      const { data } = await authApi.forgotResetDirect(payload.identifier, payload.newPassword);
       return data;
     } catch (err) {
       return rejectWithValue(extractError(err));
@@ -214,9 +218,9 @@ export const forgotResetDirectThunk = createAsyncThunk(
   },
 );
 
-export const resendForgotOtpThunk = createAsyncThunk("auth/resendForgotOtp", async (phone: string, { rejectWithValue }) => {
+export const resendForgotOtpThunk = createAsyncThunk("auth/resendForgotOtp", async (accountPhone: string, { rejectWithValue }) => {
   try {
-    const { data } = await authApi.forgotResendOtp(phone);
+    const { data } = await authApi.forgotResendOtp(accountPhone);
     return data;
   } catch (err) {
     return rejectWithValue(extractError(err));
@@ -383,8 +387,8 @@ const authSlice = createSlice({
       state.loading = false;
       if (payload.data.otpRequired) {
         state.otpRequired = true;
-        state.otpEmail = payload.email ?? payload.phone;
-        state.otpPhone = payload.phone;
+        state.otpEmail = payload.email ?? payload.accountPhone;
+        state.otpPhone = payload.accountPhone;
         state.otpFlow = "forgot";
       }
     });

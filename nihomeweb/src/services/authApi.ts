@@ -40,8 +40,8 @@ export interface ForgotStartResponse {
 // --- API calls ---
 
 export const authApi = {
-  login: (phoneNumber: string, password: string) =>
-    api.post<AuthResponse>("/auth/login", { phoneNumber, password }),
+  login: (identifier: string, password: string) =>
+    api.post<AuthResponse>("/auth/login", { phoneNumber: identifier, password }),
 
   registerStart: (
     phoneNumber: string,
@@ -69,20 +69,20 @@ export const authApi = {
   registerResendOtp: (phoneNumber: string) =>
     api.post<OtpMessageResponse>("/auth/register/resend-otp", { phoneNumber }),
 
-  forgotStart: (phoneNumber: string) =>
-    api.post<ForgotStartResponse>("/auth/forgot/start", { phoneNumber }),
+  forgotStart: (identifier: string) =>
+    api.post<ForgotStartResponse>("/auth/forgot/start", { phoneNumber: identifier }),
 
-  forgotVerifyOtp: (phoneNumber: string, otpCode: string) =>
-    api.post<OtpMessageResponse>("/auth/forgot/verify-otp", { phoneNumber, otpCode }),
+  forgotVerifyOtp: (accountPhone: string, otpCode: string) =>
+    api.post<OtpMessageResponse>("/auth/forgot/verify-otp", { phoneNumber: accountPhone, otpCode }),
 
-  forgotComplete: (phoneNumber: string, newPassword: string) =>
-    api.post<OtpMessageResponse>("/auth/forgot/complete", { phoneNumber, newPassword }),
+  forgotComplete: (identifier: string, newPassword: string) =>
+    api.post<OtpMessageResponse>("/auth/forgot/complete", { phoneNumber: identifier, newPassword }),
 
-  forgotResetDirect: (phoneNumber: string, newPassword: string) =>
-    api.post<OtpMessageResponse>("/auth/forgot/reset-direct", { phoneNumber, newPassword }),
+  forgotResetDirect: (identifier: string, newPassword: string) =>
+    api.post<OtpMessageResponse>("/auth/forgot/reset-direct", { phoneNumber: identifier, newPassword }),
 
-  forgotResendOtp: (phoneNumber: string) =>
-    api.post<OtpMessageResponse>("/auth/forgot/resend-otp", { phoneNumber }),
+  forgotResendOtp: (accountPhone: string) =>
+    api.post<OtpMessageResponse>("/auth/forgot/resend-otp", { phoneNumber: accountPhone }),
 
   refresh: (refreshToken: string) =>
     api.post<AuthResponse>("/auth/refresh", { refreshToken }),

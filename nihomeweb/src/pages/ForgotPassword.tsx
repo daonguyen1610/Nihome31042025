@@ -16,7 +16,7 @@ import {
   clearOtpFlow,
 } from "@/store/authSlice";
 
-type Step = "phone" | "otp" | "newPassword" | "done";
+type Step = "identifier" | "otp" | "newPassword" | "done";
 
 const ForgotPassword = () => {
   const navigate = useNavigate();
@@ -25,10 +25,10 @@ const ForgotPassword = () => {
   const { t } = useI18n();
   const { loading, error, otpRequired, otpEmail, otpPhone, otpFlow } = useAppSelector((s) => s.auth);
 
-  const [phone, setPhone] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [otpCode, setOtpCode] = useState("");
   const [newPassword, setNewPassword] = useState("");
-  const [step, setStep] = useState<Step>("phone");
+  const [step, setStep] = useState<Step>("identifier");
 
   useEffect(() => {
     if (error) {
@@ -38,7 +38,7 @@ const ForgotPassword = () => {
   }, [error, toast, t, dispatch]);
 
   useEffect(() => {
-    if (otpRequired && otpFlow === "forgot" && step === "phone") {
+    if (otpRequired && otpFlow === "forgot" && step === "identifier") {
       setStep("otp");
     }
   }, [otpRequired, otpFlow, step]);
@@ -49,11 +49,11 @@ const ForgotPassword = () => {
     };
   }, [dispatch]);
 
-  const submitPhone = (e: React.FormEvent) => {
+  const submitIdentifier = (e: React.FormEvent) => {
     e.preventDefault();
-    dispatch(forgotStartThunk(phone)).then((res) => {
+    dispatch(forgotStartThunk(identifier)).then((res) => {
       if (res.meta.requestStatus === "fulfilled") {
-        const payload = res.payload as { data: { otpRequired: boolean }; phone: string };
+        const payload = res.payload as { data: { otpRequired: boolean }; accountPhone: string };
         if (!payload.data.otpRequired) {
           // OTP disabled → go straight to new password (direct reset)
           setStep("newPassword");
@@ -64,8 +64,8 @@ const ForgotPassword = () => {
 
   const submitOtp = (e: React.FormEvent) => {
     e.preventDefault();
-    const p = otpPhone ?? phone;
-    dispatch(forgotVerifyOtpThunk({ phone: p, otpCode })).then((res) => {
+    const accountPhone = otpPhone ?? identifier;
+    dispatch(forgotVerifyOtpThunk({ accountPhone, otpCode })).then((res) => {
       if (res.meta.requestStatus === "fulfilled") {
         setStep("newPassword");
       }
@@ -74,8 +74,10 @@ const ForgotPassword = () => {
 
   const submitNewPassword = (e: React.FormEvent) => {
     e.preventDefault();
-    const p = otpPhone ?? phone;
-    const thunk = otpRequired ? forgotCompleteThunk({ phone: p, newPassword }) : forgotResetDirectThunk({ phone: p, newPassword });
+    const accountIdentifier = otpPhone ?? identifier;
+    const thunk = otpRequired
+      ? forgotCompleteThunk({ identifier: accountIdentifier, newPassword })
+      : forgotResetDirectThunk({ identifier: accountIdentifier, newPassword });
     dispatch(thunk).then((res) => {
       if (res.meta.requestStatus === "fulfilled") {
         setStep("done");
@@ -85,8 +87,8 @@ const ForgotPassword = () => {
   };
 
   const handleResend = async () => {
-    const p = otpPhone ?? phone;
-    const res = await dispatch(resendForgotOtpThunk(p));
+    const accountPhone = otpPhone ?? identifier;
+    const res = await dispatch(resendForgotOtpThunk(accountPhone));
     if (res.meta.requestStatus === "fulfilled") {
       toast({ title: t("auth.otp.resent") });
       return true;
@@ -147,7 +149,7 @@ const ForgotPassword = () => {
               <p className="eyebrow text-primary mb-5 justify-center">{t("auth.otp.eyebrow")}</p>
               <h1 className="font-display text-3xl font-extrabold text-center mb-3 tracking-tight">{t("auth.otp.title")}</h1>
               <p className="text-center text-muted-foreground text-sm mb-8">
-                {t("auth.otp.desc")} <span className="font-bold">{otpEmail ?? phone}</span>
+                {t("auth.otp.desc")} <span className="font-bold">{otpEmail ?? identifier}</span>
               </p>
               <form onSubmit={submitOtp} className="space-y-4">
                 <div className="relative">
@@ -182,15 +184,15 @@ const ForgotPassword = () => {
                 {t("auth.forgot.title")}
               </h1>
               <p className="text-center text-muted-foreground text-sm mb-8">{t("auth.forgot.desc")}</p>
-              <form onSubmit={submitPhone} className="space-y-4">
+              <form onSubmit={submitIdentifier} className="space-y-4">
                 <div className="relative">
                   <Phone className="w-4 h-4 absolute left-5 top-1/2 -translate-y-1/2 text-muted-foreground" />
                   <input
                     required
                     type="text"
                     autoComplete="username"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
+                    value={identifier}
+                    onChange={(e) => setIdentifier(e.target.value)}
                     placeholder={t("auth.phoneWithEmail")}
                     className={inputClass}
                   />

@@ -195,7 +195,7 @@ public class AuthControllerTests : IDisposable
 
         var result = await _sut.Login(new LoginRequest
         {
-            PhoneNumber = "0123456789",
+            Identifier = "0123456789",
             Password = "SecurePass1!"
         });
 
@@ -212,7 +212,7 @@ public class AuthControllerTests : IDisposable
 
         var result = await _sut.Login(new LoginRequest
         {
-            PhoneNumber = "0123456789",
+            Identifier = "0123456789",
             Password = "WrongPass!"
         });
 
@@ -224,7 +224,7 @@ public class AuthControllerTests : IDisposable
     {
         var result = await _sut.Login(new LoginRequest
         {
-            PhoneNumber = "0987654999",
+            Identifier = "0987654999",
             Password = "Pass1!"
         });
 
@@ -238,7 +238,7 @@ public class AuthControllerTests : IDisposable
 
         var result = await _sut.Login(new LoginRequest
         {
-            PhoneNumber = "0123456789",
+            Identifier = "0123456789",
             Password = "SecurePass1!"
         });
 
@@ -252,7 +252,7 @@ public class AuthControllerTests : IDisposable
 
         var result = await _sut.Login(new LoginRequest
         {
-            PhoneNumber = "USER@test.com",
+            Identifier = "USER@test.com",
             Password = "SecurePass1!"
         });
 
@@ -267,7 +267,7 @@ public class AuthControllerTests : IDisposable
     {
         var result = await _sut.Login(new LoginRequest
         {
-            PhoneNumber = "not-a-phone-or-email",
+            Identifier = "not-a-phone-or-email",
             Password = "SecurePass1!"
         });
 
@@ -340,7 +340,7 @@ public class AuthControllerTests : IDisposable
     {
         var result = await _sut.ForgotPasswordStart(new ForgotPasswordStartRequest
         {
-            PhoneNumber = "0987654999"
+            Identifier = "0987654999"
         });
 
         Assert.IsType<BadRequestObjectResult>(result);
@@ -354,7 +354,7 @@ public class AuthControllerTests : IDisposable
 
         var result = await _sut.ForgotPasswordStart(new ForgotPasswordStartRequest
         {
-            PhoneNumber = "0123456789"
+            Identifier = "0123456789"
         });
 
         var ok = Assert.IsType<OkObjectResult>(result);
@@ -371,7 +371,7 @@ public class AuthControllerTests : IDisposable
 
         var result = await _sut.ForgotPasswordStart(new ForgotPasswordStartRequest
         {
-            PhoneNumber = "RESET@test.com"
+            Identifier = "RESET@test.com"
         });
 
         var ok = Assert.IsType<OkObjectResult>(result);
@@ -390,7 +390,7 @@ public class AuthControllerTests : IDisposable
 
         var result = await _sut.ForgotPasswordStart(new ForgotPasswordStartRequest
         {
-            PhoneNumber = "0123456789"
+            Identifier = "0123456789"
         });
 
         var ok = Assert.IsType<OkObjectResult>(result);
@@ -406,7 +406,7 @@ public class AuthControllerTests : IDisposable
 
         var result = await _sut.ForgotPasswordResetDirect(new ForgotPasswordCompleteRequest
         {
-            PhoneNumber = "0123456789",
+            Identifier = "0123456789",
             NewPassword = "NewPass1!"
         });
 
@@ -421,7 +421,7 @@ public class AuthControllerTests : IDisposable
 
         var result = await _sut.ForgotPasswordResetDirect(new ForgotPasswordCompleteRequest
         {
-            PhoneNumber = "0123456789",
+            Identifier = "0123456789",
             NewPassword = "NewPass1!"
         });
 
@@ -438,7 +438,7 @@ public class AuthControllerTests : IDisposable
 
         var result = await _sut.ForgotPasswordResetDirect(new ForgotPasswordCompleteRequest
         {
-            PhoneNumber = "reset@test.com",
+            Identifier = "reset@test.com",
             NewPassword = "NewPass1!"
         });
 
@@ -452,7 +452,7 @@ public class AuthControllerTests : IDisposable
     {
         var result = await _sut.ForgotPasswordComplete(new ForgotPasswordCompleteRequest
         {
-            PhoneNumber = "0987654999",
+            Identifier = "0987654999",
             NewPassword = "NewPass1!"
         });
 

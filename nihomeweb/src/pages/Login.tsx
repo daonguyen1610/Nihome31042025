@@ -14,7 +14,7 @@ const Login = () => {
   const { toast } = useToast();
   const { t } = useI18n();
   const { user, loading, error } = useAppSelector((s) => s.auth);
-  const [phone, setPhone] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
 
   useEffect(() => {
@@ -33,7 +33,7 @@ const Login = () => {
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    dispatch(loginThunk({ phone, password }));
+    dispatch(loginThunk({ identifier, password }));
   };
 
   return (
@@ -57,8 +57,8 @@ const Login = () => {
                   required
                   type="text"
                   autoComplete="username"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
                   placeholder={t("auth.phoneWithEmail")}
                   className="w-full bg-secondary rounded-full pl-12 pr-5 py-3.5 text-sm border border-transparent focus:border-primary focus:bg-background outline-none transition"
                 />

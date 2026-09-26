@@ -210,13 +210,13 @@ public class AuthController : ControllerBase
     [HttpPost("login")]
     public async Task<IActionResult> Login(LoginRequest request, CancellationToken ct = default)
     {
-        var identifierError = ContactValidation.ValidateLoginIdentifier(request.PhoneNumber);
+        var identifierError = ContactValidation.ValidateLoginIdentifier(request.Identifier);
         if (identifierError != null)
         {
             return BadRequest(new { message = identifierError });
         }
 
-        var user = await AuthIdentifier.FindUserAsync(_db, request.PhoneNumber, ct);
+        var user = await AuthIdentifier.FindUserAsync(_db, request.Identifier, ct);
         if (user == null || !_passwordService.Verify(user, request.Password))
         {
             _audit.Log(new AuditEvent
@@ -224,10 +224,10 @@ public class AuthController : ControllerBase
                 Action = "auth.login",
                 ResourceType = "User",
                 ResourceId = user?.Id.ToString(),
-                Message = $"Failed login for {request.PhoneNumber}",
+                Message = $"Failed login for {request.Identifier}",
                 Status = AuditStatus.Failure,
                 FailureReason = "invalid_credentials",
-                Metadata = new { phoneNumber = request.PhoneNumber },
+                Metadata = new { identifier = request.Identifier },
             });
             return Unauthorized(new { message = "Invalid credentials." });
         }
@@ -246,7 +246,7 @@ public class AuthController : ControllerBase
             return Unauthorized(new { message = "Account is inactive." });
         }
 
-        _logger.LogInformation("Login successful for {PhoneNumber}", request.PhoneNumber);
+        _logger.LogInformation("Login successful for {Identifier}", request.Identifier);
         _audit.Log(new AuditEvent
         {
             Action = "auth.login",
@@ -300,13 +300,13 @@ public class AuthController : ControllerBase
     [HttpPost("forgot/start")]
     public async Task<IActionResult> ForgotPasswordStart(ForgotPasswordStartRequest request, CancellationToken ct = default)
     {
-        var identifierError = ContactValidation.ValidateLoginIdentifier(request.PhoneNumber);
+        var identifierError = ContactValidation.ValidateLoginIdentifier(request.Identifier);
         if (identifierError != null)
         {
             return BadRequest(new { message = identifierError });
         }
 
-        var user = await AuthIdentifier.FindUserAsync(_db, request.PhoneNumber, ct);
+        var user = await AuthIdentifier.FindUserAsync(_db, request.Identifier, ct);
         if (user == null)
         {
             return BadRequest(new { message = "Account not found." });
@@ -342,13 +342,13 @@ public class AuthController : ControllerBase
             return BadRequest(new { message = "OTP verification is required. Please use the standard forgot password flow." });
         }
 
-        var identifierError = ContactValidation.ValidateLoginIdentifier(request.PhoneNumber);
+        var identifierError = ContactValidation.ValidateLoginIdentifier(request.Identifier);
         if (identifierError != null)
         {
             return BadRequest(new { message = identifierError });
         }
 
-        var user = await AuthIdentifier.FindUserAsync(_db, request.PhoneNumber, ct);
+        var user = await AuthIdentifier.FindUserAsync(_db, request.Identifier, ct);
         if (user == null)
         {
             return BadRequest(new { message = "Account not found." });
@@ -362,8 +362,8 @@ public class AuthController : ControllerBase
     [HttpPost("forgot/verify-otp")]
     public async Task<IActionResult> ForgotPasswordVerifyOtp(VerifyOtpRequest request, CancellationToken ct = default)
     {
-        var phone = await ResolveExistingUserPhoneAsync(request.PhoneNumber, ct);
-        var otpEntry = await _otpService.VerifyOtp(phone, request.OtpCode);
+        var accountPhone = await ResolveExistingUserPhoneAsync(request.PhoneNumber, ct);
+        var otpEntry = await _otpService.VerifyOtp(accountPhone, request.OtpCode);
         if (otpEntry == null)
         {
             return BadRequest(new { message = "Invalid OTP." });
@@ -375,13 +375,13 @@ public class AuthController : ControllerBase
     [HttpPost("forgot/complete")]
     public async Task<IActionResult> ForgotPasswordComplete(ForgotPasswordCompleteRequest request, CancellationToken ct = default)
     {
-        var identifierError = ContactValidation.ValidateLoginIdentifier(request.PhoneNumber);
+        var identifierError = ContactValidation.ValidateLoginIdentifier(request.Identifier);
         if (identifierError != null)
         {
             return BadRequest(new { message = identifierError });
         }
 
-        var user = await AuthIdentifier.FindUserAsync(_db, request.PhoneNumber, ct);
+        var user = await AuthIdentifier.FindUserAsync(_db, request.Identifier, ct);
         if (user == null)
         {
             return BadRequest(new { message = "Account not found." });
