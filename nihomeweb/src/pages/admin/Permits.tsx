@@ -760,7 +760,7 @@ const AdminPermits = () => {
                     onClick={() => setPage((p) => Math.max(1, p - 1))}
                     disabled={page <= 1}
                   >
-                    {t("common.previous")}
+                    {t("common.prev")}
                   </Button>
                   <Button
                     variant="outline"

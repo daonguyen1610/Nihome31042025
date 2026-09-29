@@ -324,7 +324,7 @@ const OperationalProjects = () => {
               <AccordionTrigger className="py-4 hover:no-underline">
                 <div className="flex items-center gap-3">
                   <Users className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-semibold">{t("designProjects.tabs.team")}</span>
+                  <span className="font-semibold">{t("designProjects.detail.tab.team")}</span>
                 </div>
               </AccordionTrigger>
               <AccordionContent className="pb-4">
