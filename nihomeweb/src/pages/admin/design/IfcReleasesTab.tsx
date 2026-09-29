@@ -475,7 +475,7 @@ export const IfcReleasesTab = ({ project }: Props) => {
                           <div className="min-w-0">
                             <p className="font-mono text-xs text-slate-500">{item.drawingCode}</p>
                             <p className="text-sm text-slate-900">{item.title}</p>
-                            <p className="text-[10px] text-muted-foreground">{item.disciplineLabel ?? item.disciplineCode} · {item.status}</p>
+                            <p className="text-[10px] text-muted-foreground">{item.disciplineLabel ?? item.disciplineCode} · {t(`shopDrawing.status.${item.status}`)}</p>
                           </div>
                           {canManage ? (
                             <Button
@@ -515,7 +515,7 @@ export const IfcReleasesTab = ({ project }: Props) => {
                             <span className="font-mono text-[10px] text-slate-500">{d.drawingCode}</span>
                             <span className="min-w-0 flex-1 truncate">{d.title}</span>
                             <Badge variant="outline" className="border-slate-200 bg-white text-[10px] text-slate-500">
-                              {d.status}
+                              {t(`shopDrawing.status.${d.status}`)}
                             </Badge>
                           </label>
                         ))}

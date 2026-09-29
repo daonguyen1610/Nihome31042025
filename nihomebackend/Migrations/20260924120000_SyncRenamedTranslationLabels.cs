@@ -207,8 +207,35 @@ namespace nihomebackend.Migrations
             new("nav.operationalProjects", "ja", ["運用プロジェクト"], "プロジェクト"),
         ];
 
+        /// <summary>
+        /// Two team-role keys were seeded in camelCase before the roster moved
+        /// to the PascalCase <c>ProjectTeamRoleCode</c> names. SQL Server's
+        /// case-insensitive collation makes the seeder's existence check match
+        /// the stale row, so the corrected key is never inserted, while the
+        /// React lookup is case-sensitive and falls back to printing the raw
+        /// key. The other eight roles were seeded after the switch.
+        /// </summary>
+        private static readonly (string From, string To)[] KeyRenames =
+        [
+            ("designProjects.team.role.projectManager", "designProjects.team.role.ProjectManager"),
+            ("designProjects.team.role.designLead", "designProjects.team.role.DesignLead"),
+        ];
+
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            foreach (var (from, to) in KeyRenames)
+            {
+                migrationBuilder.Sql($"""
+                    UPDATE translations
+                    SET [Key] = {Literal(to)}, UpdatedAt = SYSUTCDATETIME()
+                    WHERE [Key] COLLATE Latin1_General_BIN = {Literal(from)}
+                      AND NOT EXISTS (
+                          SELECT 1 FROM translations existing
+                          WHERE existing.[Key] COLLATE Latin1_General_BIN = {Literal(to)}
+                            AND existing.LanguageCode = translations.LanguageCode);
+                    """);
+            }
+
             foreach (var rename in Renames)
             {
                 var previous = string.Join(", ", rename.PreviousValues.Select(Literal));
@@ -222,16 +249,40 @@ namespace nihomebackend.Migrations
             }
         }
 
+        /// <summary>
+        /// Restores only the renames whose Up collapsed a single previous value,
+        /// so the rollback is exact. Nine rows list two historical variants
+        /// (rows seeded before and after the NIH-459 partial rename); once Up
+        /// has collapsed them the original variant of a given row is no longer
+        /// recoverable, so guessing the first one would silently rewrite data.
+        /// Those rows keep the current value instead — reverting them is a
+        /// content decision, not a schema one.
+        /// </summary>
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             foreach (var rename in Renames)
             {
+                if (rename.PreviousValues.Length != 1) continue;
+
                 migrationBuilder.Sql($"""
                     UPDATE translations
                     SET Value = {Literal(rename.PreviousValues[0])}, UpdatedAt = SYSUTCDATETIME()
                     WHERE [Key] = {Literal(rename.Key)}
                       AND LanguageCode = {Literal(rename.Language)}
                       AND Value = {Literal(rename.Value)};
+                    """);
+            }
+
+            foreach (var (from, to) in KeyRenames)
+            {
+                migrationBuilder.Sql($"""
+                    UPDATE translations
+                    SET [Key] = {Literal(from)}, UpdatedAt = SYSUTCDATETIME()
+                    WHERE [Key] COLLATE Latin1_General_BIN = {Literal(to)}
+                      AND NOT EXISTS (
+                          SELECT 1 FROM translations existing
+                          WHERE existing.[Key] COLLATE Latin1_General_BIN = {Literal(from)}
+                            AND existing.LanguageCode = translations.LanguageCode);
                     """);
             }
         }
