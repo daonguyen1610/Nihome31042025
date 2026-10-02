@@ -58,6 +58,9 @@
 
   { "key": "opportunities.tab.general", "category": "opportunities", "vi": "Thông tin chung", "en": "Overview", "zh": "概览", "ja": "概要" },
   { "key": "opportunities.tab.timeline", "category": "opportunities", "vi": "Lịch sử chăm sóc", "en": "Care timeline", "zh": "跟进记录", "ja": "対応履歴" },
+  { "key": "opportunities.tab.quotes", "category": "opportunities", "vi": "Báo giá", "en": "Quotes", "zh": "报价", "ja": "見積" },
+  { "key": "opportunities.quotes.empty", "category": "opportunities", "vi": "Cơ hội này chưa có báo giá. Lập báo giá để xác định giá trị trước khi ký hợp đồng.", "en": "This opportunity has no quote yet. Create one to settle the value before the contract is signed.", "zh": "此商机尚无报价。请先创建报价，以便在签订合同前确定金额。", "ja": "この商談にはまだ見積がありません。契約締結前に金額を確定するため、見積を作成してください。" },
+  { "key": "opportunities.quotes.won", "category": "opportunities", "vi": "Báo giá thắng", "en": "Winning quote", "zh": "中标报价", "ja": "採用見積" },
   { "key": "opportunities.tab.audit", "category": "opportunities", "vi": "Audit log", "en": "Audit log", "zh": "审计日志", "ja": "監査ログ" },
   { "key": "opportunities.activity.new", "category": "opportunities", "vi": "Thêm ghi nhận", "en": "Add entry", "zh": "新增记录", "ja": "履歴を追加" },
   { "key": "opportunities.activity.type.Call", "category": "opportunities", "vi": "Cuộc gọi", "en": "Call", "zh": "电话", "ja": "電話" },

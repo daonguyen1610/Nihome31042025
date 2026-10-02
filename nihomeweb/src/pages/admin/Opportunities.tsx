@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { AlertTriangle, LayoutGrid, List, Pencil, Plus, RefreshCw, Search, ThumbsDown, Trash2, Trophy } from "lucide-react";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { AlertTriangle, FileText, LayoutGrid, List, Pencil, Plus, RefreshCw, Search, ThumbsDown, Trash2, Trophy } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -47,6 +47,7 @@ import {
   type OpportunityPipelineColumn,
   type OpportunityResponse,
   type OpportunityStage,
+  type QuoteListItemResponse,
   type UpdateOpportunityRequest,
   type UserListItemResponse,
 } from "@/services/adminApi";
@@ -85,6 +86,10 @@ const NEXT_PIPELINE_STAGE: Partial<Record<OpportunityStage, OpportunityStage>> =
 };
 
 const isTerminalStage = (stage: OpportunityStage) => stage === "Won" || stage === "Lost";
+// Mirrors QuoteService.CreateAsync: no quotes on a lost deal, and a won deal
+// takes one only while it has no winning quote yet.
+const canRaiseQuote = (opportunity: OpportunityResponse) =>
+  opportunity.stage !== "Lost" && !(opportunity.stage === "Won" && opportunity.wonQuoteId != null);
 
 const emptyCreate = (): CreateOpportunityRequest => ({
   name: "",
@@ -106,6 +111,8 @@ const AdminOpportunities = () => {
   const canManage = has(ADMIN_PERMS.opportunitiesManage);
   const canSeeAll = has(ADMIN_PERMS.opportunitiesViewAll);
   const canViewContracts = has(ADMIN_PERMS.contracts);
+  const canViewQuotes = has(ADMIN_PERMS.quotes);
+  const canCreateQuote = has(ADMIN_PERMS.quotesManage);
 
   // ---------- data ----------
   const [rows, setRows] = useState<OpportunityResponse[]>([]);
@@ -283,6 +290,24 @@ const AdminOpportunities = () => {
   const [auditItems, setAuditItems] = useState<AuditLogItem[]>([]);
   const [auditLoading, setAuditLoading] = useState(false);
 
+  // Quotes tab — the price is what moves an opportunity towards a contract,
+  // so the detail shows every quote raised against it.
+  const [opportunityQuotes, setOpportunityQuotes] = useState<QuoteListItemResponse[]>([]);
+  const [quotesLoading, setQuotesLoading] = useState(false);
+
+  const loadQuotesForOpportunity = useCallback(async (id: number) => {
+    if (!canViewQuotes) return;
+    setQuotesLoading(true);
+    try {
+      const { data } = await adminApi.listQuotes({ opportunityId: id, pageSize: 50 });
+      setOpportunityQuotes(data.items);
+    } catch {
+      setOpportunityQuotes([]);
+    } finally {
+      setQuotesLoading(false);
+    }
+  }, [canViewQuotes]);
+
   const loadAuditForOpportunity = useCallback(async (id: number) => {
     setAuditLoading(true);
     try {
@@ -306,6 +331,7 @@ const AdminOpportunities = () => {
     setEditing(false);
     setEditForm(null);
     setAuditItems([]);
+    setOpportunityQuotes([]);
     try {
       const { data } = await adminApi.getOpportunity(id);
       setDetail(data);
@@ -324,12 +350,13 @@ const AdminOpportunities = () => {
       }
       // Fetch audit log eagerly so the tab has data when the user switches.
       void loadAuditForOpportunity(id);
+      void loadQuotesForOpportunity(id);
     } catch (err) {
       toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
     } finally {
       setDetailLoading(false);
     }
-  }, [canManage, loadAuditForOpportunity, t, toast]);
+  }, [canManage, loadAuditForOpportunity, loadQuotesForOpportunity, t, toast]);
 
   // Two ways in: the /admin/opportunities/:id route that notifications link to
   // (OpportunityService.cs:524, :553), and the ?open= query other pages already
@@ -1015,10 +1042,14 @@ const AdminOpportunities = () => {
                     </Button>
                   </div>
                 )}
-                {canManage && detail.stage === "Won" && !detail.wonQuoteId && (
+                {/* A quote is raised while the deal is still open (Báo giá/Đấu thầu
+                    stage) so the contract value is known before signing. */}
+                {canCreateQuote && canRaiseQuote(detail) && (
                   <div className="flex flex-wrap gap-2 pt-2">
                     <Button
                       size="sm"
+                      variant={detail.stage === "Won" ? "default" : "outline"}
+                      data-testid="opportunity-create-quote"
                       onClick={() => navigate(`/admin/quotes?create=1&opportunityId=${detail.id}`)}
                     >
                       <Plus className="mr-1.5 h-4 w-4" />
@@ -1031,6 +1062,11 @@ const AdminOpportunities = () => {
               <Tabs defaultValue="general" className="flex min-h-0 flex-col">
                 <TabsList className="h-auto w-full shrink-0 justify-start overflow-x-auto">
                   <TabsTrigger className="h-12 shrink-0" value="general">{t("opportunities.tab.general")}</TabsTrigger>
+                  {canViewQuotes && (
+                    <TabsTrigger className="h-12 shrink-0" value="quotes" data-testid="opportunity-quotes-tab">
+                      {t("opportunities.tab.quotes")} ({opportunityQuotes.length})
+                    </TabsTrigger>
+                  )}
                   <TabsTrigger className="h-12 shrink-0" value="timeline">
                     {t("opportunities.tab.timeline")} ({detail.activities.length})
                   </TabsTrigger>
@@ -1267,6 +1303,51 @@ const AdminOpportunities = () => {
                     </div>
                   )}
                 </TabsContent>
+
+                {canViewQuotes && (
+                  <TabsContent value="quotes" className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain pr-1 pt-3">
+                    {quotesLoading ? (
+                      <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
+                    ) : opportunityQuotes.length === 0 ? (
+                      <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+                        <p>{t("opportunities.quotes.empty")}</p>
+                        {canCreateQuote && canRaiseQuote(detail) && (
+                          <Button
+                            size="sm"
+                            className="mt-3"
+                            onClick={() => navigate(`/admin/quotes?create=1&opportunityId=${detail.id}`)}
+                          >
+                            <Plus className="mr-1.5 h-4 w-4" />
+                            {t("opportunities.action.createQuote")}
+                          </Button>
+                        )}
+                      </div>
+                    ) : (
+                      <ul className="divide-y rounded-md border">
+                        {opportunityQuotes.map((quote) => (
+                          <li key={quote.id} className="flex flex-wrap items-center justify-between gap-2 p-3 text-sm">
+                            <div className="flex min-w-0 items-center gap-2">
+                              <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                              <Link to={`/admin/quotes/${quote.id}`} className="font-mono font-medium text-primary hover:underline">
+                                {quote.code}
+                              </Link>
+                              <span className="text-xs text-muted-foreground">v{quote.version}</span>
+                              {detail.wonQuoteId === quote.id && (
+                                <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700">
+                                  {t("opportunities.quotes.won")}
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <Badge variant="outline">{t(`quotes.status.${quote.status}`)}</Badge>
+                              <span className="tabular-nums">{formatVnd(quote.grandTotal)}</span>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </TabsContent>
+                )}
 
                 <TabsContent value="timeline" className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain pr-1 pt-3">
                   {canManage && (
