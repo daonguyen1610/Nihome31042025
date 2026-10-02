@@ -874,6 +874,85 @@ public class TenderServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task MarkWonAsync_CreateOpportunity_OpensNegotiationOpportunityWithProject()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        await SetTenderStatusAsync(created.Id, TenderStatus.Submitted);
+        _db.TenderEstimateRevisions.AddRange(
+            new TenderEstimateRevision
+            {
+                TenderId = created.Id,
+                VersionNumber = 1,
+                Status = TenderEstimateRevisionStatus.Approved,
+                GrandBidTotal = 1_000_000_000m,
+                SourceFileName = "r1.csv",
+                SourceSha256 = new string('a', 64),
+                ImportedByUserId = _userId,
+                ImportedAt = DateTime.UtcNow,
+            },
+            new TenderEstimateRevision
+            {
+                TenderId = created.Id,
+                VersionNumber = 2,
+                Status = TenderEstimateRevisionStatus.Approved,
+                GrandBidTotal = 1_161_000_000m,
+                SourceFileName = "r2.csv",
+                SourceSha256 = new string('b', 64),
+                ImportedByUserId = _userId,
+                ImportedAt = DateTime.UtcNow,
+            });
+        await _db.SaveChangesAsync();
+
+        var updated = await _sut.MarkWonAsync(created.Id, new MarkTenderWonRequest
+        {
+            CreateOpportunity = true,
+            Note = "Chủ đầu tư thông báo trúng thầu",
+        }, _userId);
+
+        Assert.Equal("Won", updated!.Status);
+        var opportunity = await _db.Opportunities.Include(o => o.OperationalProject)
+            .SingleAsync(o => o.Id == updated.WonOpportunityId);
+        Assert.Equal(created.Name, opportunity.Name);
+        Assert.Equal(_customerId, opportunity.CustomerId);
+        Assert.Equal(OpportunityStage.Negotiation, opportunity.Stage);
+        Assert.Equal(1_161_000_000m, opportunity.EstimatedValue);
+        Assert.Contains(created.Code, opportunity.Note);
+        Assert.NotNull(opportunity.OperationalProject);
+        Assert.Equal(_customerId, opportunity.OperationalProject!.CustomerId);
+        Assert.Equal(OperationalProjectStatus.Planning, opportunity.OperationalProject.Status);
+        Assert.StartsWith($"PJ-{DateTime.UtcNow.Year}-", opportunity.OperationalProject.Code);
+    }
+
+    [Fact]
+    public async Task MarkWonAsync_RequiresExactlyOneWayToContinue()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        await SetTenderStatusAsync(created.Id, TenderStatus.Submitted);
+        var oppId = SeedOpportunity();
+
+        await Assert.ThrowsAsync<TenderOperationException>(() =>
+            _sut.MarkWonAsync(created.Id, new MarkTenderWonRequest(), _userId));
+        await Assert.ThrowsAsync<TenderOperationException>(() =>
+            _sut.MarkWonAsync(created.Id, new MarkTenderWonRequest { OpportunityId = oppId, CreateOpportunity = true }, _userId));
+
+        Assert.Equal("Submitted", (await _sut.GetAsync(created.Id))!.Status);
+        Assert.Single(_db.Opportunities);
+        Assert.Empty(_db.OperationalProjects);
+    }
+
+    [Fact]
+    public async Task MarkWonAsync_CreateOpportunity_OnPreparingTender_CreatesNothing()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+
+        await Assert.ThrowsAsync<TenderOperationException>(() =>
+            _sut.MarkWonAsync(created.Id, new MarkTenderWonRequest { CreateOpportunity = true }, _userId));
+
+        Assert.Empty(_db.Opportunities);
+        Assert.Empty(_db.OperationalProjects);
+    }
+
+    [Fact]
     public async Task MarkWonAsync_UnknownOpportunity_Throws()
     {
         var created = await _sut.CreateAsync(ValidCreate(), _userId);

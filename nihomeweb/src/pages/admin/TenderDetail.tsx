@@ -683,11 +683,13 @@ const LibraryPicker = ({ open, onClose, tender, targetItemId, onSubmit }: Librar
 
 // ---------------------------- mark won / lost dialogs ----------------------------
 
+type WonContinuation = { opportunityId: number } | { createOpportunity: true };
+
 interface MarkWonDialogProps {
   open: boolean;
   onClose: () => void;
   tender: TenderResponse;
-  onSubmit: (opportunityId: number, note: string | null) => Promise<void>;
+  onSubmit: (continuation: WonContinuation, note: string | null) => Promise<void>;
 }
 
 const MarkWonDialog = ({ open, onClose, tender, onSubmit }: MarkWonDialogProps) => {
@@ -695,6 +697,9 @@ const MarkWonDialog = ({ open, onClose, tender, onSubmit }: MarkWonDialogProps) 
   const [opps, setOpps] = useState<OpportunityResponse[]>([]);
   const [loading, setLoading] = useState(false);
   const [oppId, setOppId] = useState<number | null>(null);
+  // The won bid usually is the deal itself, so opening a new opportunity (with
+  // its project) is the default; linking an existing one stays available.
+  const [mode, setMode] = useState<"new" | "existing">("new");
   const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -705,6 +710,7 @@ const MarkWonDialog = ({ open, onClose, tender, onSubmit }: MarkWonDialogProps) 
     setLoading(true);
     setError(null);
     setOppId(null);
+    setMode("new");
     setNote("");
     (async () => {
       try {
@@ -725,14 +731,17 @@ const MarkWonDialog = ({ open, onClose, tender, onSubmit }: MarkWonDialogProps) 
   }, [open, tender.customerId]);
 
   const confirm = async () => {
-    if (oppId == null) {
+    if (mode === "existing" && oppId == null) {
       setError(t("tenders.detail.result.opportunityRequired"));
       return;
     }
     setSubmitting(true);
     setError(null);
     try {
-      await onSubmit(oppId, note.trim() || null);
+      await onSubmit(
+        mode === "new" ? { createOpportunity: true } : { opportunityId: oppId! },
+        note.trim() || null,
+      );
       onClose();
     } catch (err) {
       setError(extractApiError(err));
@@ -746,10 +755,32 @@ const MarkWonDialog = ({ open, onClose, tender, onSubmit }: MarkWonDialogProps) 
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>{t("tenders.detail.result.markWonTitle")}</DialogTitle>
-          <DialogDescription>{t("tenders.detail.result.pickOpportunity")}</DialogDescription>
+          <DialogDescription>{t("tenders.detail.result.continueHint")}</DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
-          <div>
+          <div className="grid gap-2" role="radiogroup" aria-label={t("tenders.detail.result.continueHint")}>
+            {(["new", "existing"] as const).map((option) => (
+              <button
+                key={option}
+                type="button"
+                role="radio"
+                aria-checked={mode === option}
+                data-testid={`tender-won-mode-${option}`}
+                disabled={submitting || (option === "existing" && !loading && opps.length === 0)}
+                onClick={() => { setMode(option); setError(null); }}
+                className={cn(
+                  "rounded-md border p-3 text-left text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50",
+                  mode === option ? "border-primary bg-primary/5" : "hover:bg-muted/50",
+                )}
+              >
+                <span className="font-medium">{t(`tenders.detail.result.mode.${option}`)}</span>
+                <span className="mt-0.5 block text-xs text-muted-foreground">
+                  {t(`tenders.detail.result.mode.${option}Hint`)}
+                </span>
+              </button>
+            ))}
+          </div>
+          {mode === "existing" && <div>
             <Label className="text-xs">{t("tenders.detail.result.pickOpportunity")}</Label>
             {loading ? (
               <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
@@ -775,7 +806,7 @@ const MarkWonDialog = ({ open, onClose, tender, onSubmit }: MarkWonDialogProps) 
                 </SelectContent>
               </Select>
             )}
-          </div>
+          </div>}
           <div>
             <Label className="text-xs">{t("tenders.detail.result.note")}</Label>
             <Textarea
@@ -793,7 +824,11 @@ const MarkWonDialog = ({ open, onClose, tender, onSubmit }: MarkWonDialogProps) 
           <Button variant="outline" onClick={onClose} disabled={submitting}>
             {t("common.cancel")}
           </Button>
-          <Button onClick={() => void confirm()} disabled={submitting || opps.length === 0}>
+          <Button
+            data-testid="tender-won-confirm"
+            onClick={() => void confirm()}
+            disabled={submitting || (mode === "existing" && opps.length === 0)}
+          >
             {submitting ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Trophy className="mr-1 h-4 w-4" />}
             {t("tenders.detail.result.markWon")}
           </Button>
@@ -958,7 +993,11 @@ const ResultTab = ({
               <div>
                 <dt className="text-xs text-emerald-700">{t("tenders.detail.result.opportunity")}</dt>
                 <dd className="break-words font-medium text-emerald-900">
-                  {tender.wonOpportunityName ?? (tender.wonOpportunityId != null ? `#${tender.wonOpportunityId}` : "—")}
+                  {tender.wonOpportunityId != null ? (
+                    <Link to={`/admin/opportunities/${tender.wonOpportunityId}`} className="underline underline-offset-2">
+                      {tender.wonOpportunityName ?? `#${tender.wonOpportunityId}`}
+                    </Link>
+                  ) : "—"}
                 </dd>
               </div>
               <div>
@@ -1202,11 +1241,8 @@ const AdminTenderDetail = () => {
     void fetchTimeline();
   };
 
-  const handleMarkWon = async (opportunityId: number, note: string | null) => {
-    const { data } = await adminApi.markTenderWon(tenderId, {
-      opportunityId,
-      note,
-    });
+  const handleMarkWon = async (continuation: WonContinuation, note: string | null) => {
+    const { data } = await adminApi.markTenderWon(tenderId, { ...continuation, note });
     setTender(data);
     toast({ title: t("tenders.detail.result.wonBadge") });
     void fetchTimeline();
