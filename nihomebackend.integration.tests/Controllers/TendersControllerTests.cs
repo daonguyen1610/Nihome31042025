@@ -780,6 +780,63 @@ public class TendersControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task MarkWon_CreateOpportunity_ContinuesToAContractInTheNewProject()
+    {
+        // Scenario C: the won bid becomes the deal. The tender opens the
+        // opportunity and its project, so the contract needs no extra setup.
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var tenderId = await CreateTenderAsync("Gói thầu nhà xưởng KCN Tân Uyên");
+        await SetTenderStatusAsync(tenderId, TenderStatus.Submitted);
+        var customerId = await WithDbAsync(async db =>
+        {
+            var tender = await db.Tenders.SingleAsync(item => item.Id == tenderId);
+            db.TenderEstimateRevisions.Add(new TenderEstimateRevision
+            {
+                TenderId = tenderId,
+                VersionNumber = 1,
+                Status = TenderEstimateRevisionStatus.Approved,
+                GrandBidTotal = 1_161_000_000m,
+                SourceFileName = "du-toan-du-thau.xlsx",
+                SourceSha256 = new string('c', 64),
+                ImportedByUserId = tender.CreatedByUserId!.Value,
+                ImportedAt = DateTime.UtcNow,
+            });
+            await db.SaveChangesAsync();
+            return tender.CustomerId;
+        });
+
+        var missingChoice = await Client.PostAsJsonAsync($"/api/tenders/{tenderId}/mark-won", new { note = "Thiếu lựa chọn" });
+        missingChoice.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.Tenders.SingleAsync(item => item.Id == tenderId))).Status.Should().Be(TenderStatus.Submitted);
+
+        var won = await Client.PostAsJsonAsync($"/api/tenders/{tenderId}/mark-won", new
+        {
+            createOpportunity = true,
+            note = "Chủ đầu tư gửi thông báo trúng thầu",
+        });
+        won.StatusCode.Should().Be(HttpStatusCode.OK, await won.Content.ReadAsStringAsync());
+        var opportunityId = (await ReadJsonAsync(won)).GetProperty("wonOpportunityId").GetInt32();
+
+        var opportunity = await ReadJsonAsync(await Client.GetAsync($"/api/opportunities/{opportunityId}"));
+        opportunity.GetProperty("stage").GetString().Should().Be("Negotiation");
+        opportunity.GetProperty("customerId").GetInt32().Should().Be(customerId);
+        opportunity.GetProperty("estimatedValue").GetDecimal().Should().Be(1_161_000_000m);
+        var projectId = opportunity.GetProperty("operationalProjectId").GetInt32();
+
+        var contract = await Client.PostAsJsonAsync("/api/contracts", new
+        {
+            customerId,
+            opportunityId,
+            direction = "Upstream",
+            type = "DesignAndBuild",
+            value = 1_161_000_000m,
+            scopeOfWork = "Thiết kế và thi công nhà xưởng theo hồ sơ dự thầu",
+        });
+        contract.StatusCode.Should().Be(HttpStatusCode.Created, await contract.Content.ReadAsStringAsync());
+        (await ReadJsonAsync(contract)).GetProperty("operationalProjectId").GetInt32().Should().Be(projectId);
+    }
+
+    [Fact]
     public async Task MarkWon_AsSale_IsForbidden()
     {
         // Regular SALE role should not carry crm.tenders.mark-result.

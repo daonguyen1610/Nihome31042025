@@ -473,13 +473,101 @@ public class TenderService(
         return await GetAsync(tenderId, ct);
     }
 
-    public Task<TenderResponse?> MarkWonAsync(int tenderId, MarkTenderWonRequest request,
-        int callerUserId, CancellationToken ct = default) => TransitionAsync(tenderId, new TransitionTenderRequest
+    public async Task<TenderResponse?> MarkWonAsync(int tenderId, MarkTenderWonRequest request,
+        int callerUserId, CancellationToken ct = default)
+    {
+        if (request.CreateOpportunity == request.OpportunityId.HasValue)
+        {
+            throw new TenderOperationException(
+                "Hãy chọn một cơ hội có sẵn của khách hàng, hoặc chọn tạo cơ hội mới từ gói thầu.");
+        }
+        if (!request.CreateOpportunity)
+        {
+            return await TransitionAsync(tenderId, new TransitionTenderRequest
+            {
+                Status = nameof(TenderStatus.Won),
+                OpportunityId = request.OpportunityId,
+                Note = request.Note,
+            }, callerUserId, ct);
+        }
+
+        var tender = await db.Tenders.AsNoTracking().FirstOrDefaultAsync(t => t.Id == tenderId, ct);
+        if (tender is null) return null;
+        GuardNotTerminal(tender, "chuyển trạng thái");
+        if (tender.Status != TenderStatus.Submitted)
+        {
+            throw new TenderOperationException($"Không thể chuyển gói thầu từ {tender.Status} sang {TenderStatus.Won}.");
+        }
+
+        // The opportunity, its project and the Won result land together or not at all.
+        await using var transaction = db.Database.IsRelational()
+            ? await db.Database.BeginTransactionAsync(ct)
+            : null;
+        var opportunity = await OpenOpportunityFromTenderAsync(tender, callerUserId, ct);
+        var result = await TransitionAsync(tenderId, new TransitionTenderRequest
         {
             Status = nameof(TenderStatus.Won),
-            OpportunityId = request.OpportunityId,
+            OpportunityId = opportunity.Id,
             Note = request.Note,
         }, callerUserId, ct);
+        if (transaction is not null) await transaction.CommitAsync(ct);
+        logger.LogInformation(
+            "Tender {TenderId} won; opportunity {OpportunityId} and project {ProjectCode} opened by user {UserId}",
+            tenderId, opportunity.Id, opportunity.OperationalProject?.Code, callerUserId);
+        return result;
+    }
+
+    /// <summary>
+    /// A won tender skips prospecting and quoting: the bid was the proposal, so
+    /// the opportunity opens in Negotiation, valued at the approved bid estimate,
+    /// with a Planning project so the contract can be raised straight away.
+    /// </summary>
+    private async Task<Opportunity> OpenOpportunityFromTenderAsync(
+        Tender tender,
+        int callerUserId,
+        CancellationToken ct)
+    {
+        var now = DateTime.UtcNow;
+        var bidTotal = await db.TenderEstimateRevisions.AsNoTracking()
+            .Where(revision => revision.TenderId == tender.Id &&
+                revision.Status == TenderEstimateRevisionStatus.Approved)
+            .OrderByDescending(revision => revision.Id)
+            .Select(revision => (decimal?)revision.GrandBidTotal)
+            .FirstOrDefaultAsync(ct) ?? 0m;
+
+        await OperationalProjectCodeAllocator.AcquireLockAsync(db, now.Year, ct);
+        var projectName = $"Dự án {tender.Name}";
+        var project = new OperationalProject
+        {
+            Code = await OperationalProjectCodeAllocator.NextCodeAsync(db, now.Year, ct),
+            Name = projectName.Length > 300 ? projectName[..300] : projectName,
+            CustomerId = tender.CustomerId,
+            Status = OperationalProjectStatus.Planning,
+            CreatedAt = now,
+            CreatedByUserId = callerUserId,
+            UpdatedAt = now,
+            UpdatedByUserId = callerUserId,
+        };
+        var opportunity = new Opportunity
+        {
+            Name = tender.Name,
+            CustomerId = tender.CustomerId,
+            OperationalProject = project,
+            OwnerUserId = callerUserId,
+            Stage = OpportunityStage.Negotiation,
+            EstimatedValue = bidTotal,
+            WinProbability = 75,
+            Note = $"Tạo từ gói thầu trúng {tender.Code}.",
+            CreatedAt = now,
+            CreatedByUserId = callerUserId,
+            UpdatedAt = now,
+            UpdatedByUserId = callerUserId,
+        };
+        db.OperationalProjects.Add(project);
+        db.Opportunities.Add(opportunity);
+        await db.SaveChangesAsync(ct);
+        return opportunity;
+    }
 
     public Task<TenderResponse?> MarkLostAsync(int tenderId, MarkTenderLostRequest request,
         int callerUserId, CancellationToken ct = default) => TransitionAsync(tenderId, new TransitionTenderRequest

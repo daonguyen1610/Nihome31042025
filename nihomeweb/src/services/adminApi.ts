@@ -2255,8 +2255,10 @@ export interface AttachTenderChecklistFromLibraryRequest {
   items: AttachTenderChecklistFromLibraryItem[];
 }
 
+/** Exactly one of opportunityId / createOpportunity. */
 export interface MarkTenderWonRequest {
-  opportunityId: number;
+  opportunityId?: number | null;
+  createOpportunity?: boolean;
   note?: string | null;
 }
 
