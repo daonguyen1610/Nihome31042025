@@ -1468,6 +1468,70 @@
     "ja": "契約の運用プロジェクトを選択してください。"
   },
   {
+    "key": "contracts.quickProject.action",
+    "category": "contracts",
+    "vi": "Tạo dự án mới",
+    "en": "Create a new project",
+    "zh": "新建项目",
+    "ja": "新規プロジェクトを作成"
+  },
+  {
+    "key": "contracts.quickProject.nameLabel",
+    "category": "contracts",
+    "vi": "Tên dự án mới",
+    "en": "New project name",
+    "zh": "新项目名称",
+    "ja": "新規プロジェクト名"
+  },
+  {
+    "key": "contracts.quickProject.namePrefix",
+    "category": "contracts",
+    "vi": "Dự án",
+    "en": "Project",
+    "zh": "项目",
+    "ja": "プロジェクト"
+  },
+  {
+    "key": "contracts.quickProject.create",
+    "category": "contracts",
+    "vi": "Tạo dự án",
+    "en": "Create project",
+    "zh": "创建项目",
+    "ja": "プロジェクトを作成"
+  },
+  {
+    "key": "contracts.quickProject.created",
+    "category": "contracts",
+    "vi": "Đã tạo dự án {code} và gắn vào hợp đồng.",
+    "en": "Project {code} was created and linked to this contract.",
+    "zh": "已创建项目 {code} 并关联到此合同。",
+    "ja": "プロジェクト {code} を作成し、この契約に紐付けました。"
+  },
+  {
+    "key": "contracts.quickProject.nameRequired",
+    "category": "contracts",
+    "vi": "Tên dự án mới không được để trống. Ví dụ: Dự án Nhà máy Minh Phúc.",
+    "en": "Enter a name for the new project, for example: Minh Phuc Factory Project.",
+    "zh": "请填写新项目名称，例如：明福工厂项目。",
+    "ja": "新規プロジェクト名を入力してください。例：ミンフック工場プロジェクト。"
+  },
+  {
+    "key": "contracts.quickProject.noProjects",
+    "category": "contracts",
+    "vi": "Khách hàng này chưa có dự án vận hành. Hãy tạo dự án mới ngay bên dưới để tiếp tục lập hợp đồng.",
+    "en": "This customer has no operational project yet. Create one below to continue with the contract.",
+    "zh": "该客户尚无运营项目。请在下方新建项目以继续创建合同。",
+    "ja": "この顧客には運用プロジェクトがまだありません。下で新規作成して契約の作成を続けてください。"
+  },
+  {
+    "key": "contracts.quickProject.linkedProject",
+    "category": "contracts",
+    "vi": "Dự án #{id} (theo báo giá)",
+    "en": "Project #{id} (from the quote)",
+    "zh": "项目 #{id}（来自报价）",
+    "ja": "プロジェクト #{id}（見積から）"
+  },
+  {
     "key": "contracts.overdueBadge", "category": "contracts",
     "vi": "Đã quá hạn", "en": "Overdue", "zh": "已逾期", "ja": "期限超過"
   },

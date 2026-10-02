@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Models;
 
@@ -35,11 +34,14 @@ public sealed class CrmBusinessPipelineTests(NihomeWebApplicationFactory factory
         var opportunityPath = $"/api/opportunities/{opportunityId}";
         var opportunity = await ReadAsync(opportunityPath);
         opportunity.GetProperty("stage").GetString().Should().Be("Prospecting");
-        var project = await WriteAsync(HttpMethod.Post, "/api/operational-projects", new { name = UniqueSlug("Factory delivery"), customerId });
-        var projectId = Id(project);
-        var update = JsonNode.Parse(opportunity.GetRawText())!.AsObject();
-        update["operationalProjectId"] = projectId;
-        opportunity = await WriteAsync(HttpMethod.Put, opportunityPath, update);
+        // Conversion opens the project together with the opportunity, so the
+        // contract later in this flow never stalls on an empty project picker.
+        var projectId = opportunity.GetProperty("operationalProjectId").GetInt32();
+        (await WithDbAsync(db => db.OperationalProjects.CountAsync(x => x.CustomerId == customerId))).Should().Be(1);
+        var project = await ReadAsync($"/api/operational-projects/{projectId}");
+        project.GetProperty("customerId").GetInt32().Should().Be(customerId);
+        project.GetProperty("status").GetString().Should().Be("Planning");
+        project.GetProperty("opportunityCount").GetInt32().Should().Be(1);
 
         await RejectAsync(HttpMethod.Patch, opportunityPath + "/stage", new { targetStage = "Won", rowVersion = Version(opportunity) }, HttpStatusCode.BadRequest);
         (await ReadAsync(opportunityPath)).GetProperty("stage").GetString().Should().Be("Prospecting");
@@ -97,10 +99,11 @@ public sealed class CrmBusinessPipelineTests(NihomeWebApplicationFactory factory
         else
         {
             quote = await MoveQuoteAsync(quote, "customer-approve");
+            // No operationalProjectId: the contract inherits the project the
+            // quote and opportunity already belong to.
             var contract = await WriteAsync(HttpMethod.Post, "/api/contracts", new
             {
                 customerId,
-                operationalProjectId = projectId,
                 opportunityId,
                 quoteId = Id(quote),
                 direction = "Upstream",
@@ -145,6 +148,10 @@ public sealed class CrmBusinessPipelineTests(NihomeWebApplicationFactory factory
         final.GetProperty("stage").GetString().Should().Be(finalStage);
         final.GetProperty("customerId").GetInt32().Should().Be(customerId);
         final.GetProperty("operationalProjectId").GetInt32().Should().Be(projectId);
+        var finalProject = await ReadAsync($"/api/operational-projects/{projectId}");
+        finalProject.GetProperty("opportunityCount").GetInt32().Should().Be(1);
+        finalProject.GetProperty("quoteCount").GetInt32().Should().Be(1);
+        finalProject.GetProperty("contractCount").GetInt32().Should().Be(outcome == "Lost" ? 0 : 1);
         final.GetProperty("closedAt").ValueKind.Should().Be(JsonValueKind.String);
         (await ReadAsync(leadPath)).GetProperty("convertedOpportunityId").GetInt32().Should().Be(opportunityId);
     }

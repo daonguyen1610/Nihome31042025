@@ -725,6 +725,96 @@ public class LeadServiceTests : IDisposable
         // test goes red, unconvert stops deleting and always falls back to unlinking.
         Assert.Equal(saved.ConvertedAt, customer.CreatedAt);
         Assert.Equal(saved.ConvertedAt, opportunity.CreatedAt);
+        var project = await _db.OperationalProjects.SingleAsync(p => p.Id == opportunity.OperationalProjectId);
+        Assert.Equal(saved.ConvertedAt, project.CreatedAt);
+    }
+
+    [Fact]
+    public async Task ConvertAsync_OpensPlanningProjectForNewOpportunity()
+    {
+        var sales = await SeedUserAsync(UserRole.USER);
+        SeedSource("marketing");
+        var lead = await SeedLeadAsync(LeadStatus.Interested, ownerId: sales.Id);
+        lead.CompanyName = "Công ty TNHH Sản xuất Minh Phúc";
+        await _db.SaveChangesAsync();
+
+        var response = await _sut.ConvertAsync(
+            lead.Id,
+            new ConvertLeadRequest
+            {
+                Address = "Lô B2, KCN Tân Uyên, Bình Dương",
+                RepresentativeName = "Nguyễn Minh Phúc",
+            },
+            sales.Id,
+            canConvert: true);
+
+        var opportunity = await _db.Opportunities.SingleAsync(o => o.Id == response!.ConvertedOpportunityId);
+        Assert.NotNull(opportunity.OperationalProjectId);
+        var project = await _db.OperationalProjects.SingleAsync();
+        Assert.Equal(opportunity.OperationalProjectId, project.Id);
+        Assert.Equal(response!.ConvertedCustomerId, project.CustomerId);
+        Assert.Equal(OperationalProjectStatus.Planning, project.Status);
+        Assert.Equal("Dự án Công ty TNHH Sản xuất Minh Phúc", project.Name);
+        Assert.Matches(@"^PJ-\d{4}-0001$", project.Code);
+        // The converting user created the project, so it shows up in their list
+        // even without a PM assignment.
+        Assert.Equal(sales.Id, project.CreatedByUserId);
+        Assert.Null(project.ProjectManagerUserId);
+    }
+
+    [Fact]
+    public async Task ConvertAsync_ProjectCodeFollowsHighestSequence_WhenSequenceHasGap()
+    {
+        var sales = await SeedUserAsync(UserRole.USER);
+        SeedSource("marketing");
+        var customer = new Customer { Type = CustomerType.Individual, Name = "Khách cũ", SourceCode = "marketing" };
+        _db.Customers.Add(customer);
+        var year = DateTime.UtcNow.Year;
+        _db.OperationalProjects.AddRange(
+            new OperationalProject { Code = $"PJ-{year}-0001", Name = "Nhà máy GĐ1", Customer = customer },
+            new OperationalProject { Code = $"PJ-{year}-0003", Name = "Kho lạnh", Customer = customer });
+        await _db.SaveChangesAsync();
+        var lead = await SeedLeadAsync(LeadStatus.Interested, ownerId: sales.Id);
+
+        var response = await _sut.ConvertAsync(
+            lead.Id, new ConvertLeadRequest(), sales.Id, canConvert: true);
+
+        var opportunity = await _db.Opportunities.SingleAsync(o => o.Id == response!.ConvertedOpportunityId);
+        var project = await _db.OperationalProjects.SingleAsync(p => p.Id == opportunity.OperationalProjectId);
+        Assert.Equal($"PJ-{year}-0004", project.Code);
+    }
+
+    [Fact]
+    public async Task ConvertAsync_IntoExistingOpportunity_DoesNotOpenAnotherProject()
+    {
+        var sales = await SeedUserAsync(UserRole.USER);
+        SeedSource("marketing");
+        var customer = new Customer { Type = CustomerType.Individual, Name = "Khách cũ", SourceCode = "marketing" };
+        var opportunity = new Opportunity { Name = "Kho lạnh Bình Dương", Customer = customer };
+        _db.Opportunities.Add(opportunity);
+        await _db.SaveChangesAsync();
+        var lead = await SeedLeadAsync(LeadStatus.Interested, ownerId: sales.Id);
+
+        await _sut.ConvertAsync(
+            lead.Id, new ConvertLeadRequest { OpportunityId = opportunity.Id }, sales.Id, canConvert: true);
+
+        Assert.Empty(_db.OperationalProjects);
+        Assert.Null((await _db.Opportunities.SingleAsync()).OperationalProjectId);
+    }
+
+    [Fact]
+    public async Task ConvertAsync_RejectedConversion_LeavesNoProject()
+    {
+        var sales = await SeedUserAsync(UserRole.USER);
+        SeedSource("marketing");
+        var lead = await SeedLeadAsync(LeadStatus.Interested, ownerId: sales.Id);
+        lead.CompanyName = "Công ty Alpha";
+        await _db.SaveChangesAsync();
+
+        await Assert.ThrowsAsync<LeadOperationException>(() => _sut.ConvertAsync(
+            lead.Id, new ConvertLeadRequest(), sales.Id, canConvert: true));
+
+        Assert.Empty(_db.OperationalProjects);
     }
 
     [Fact]
@@ -923,12 +1013,37 @@ public class LeadServiceTests : IDisposable
         Assert.Single(_db.Customers);
         Assert.NotNull(result.KeptCustomerId);
         Assert.Empty(_db.Opportunities);
+        Assert.Empty(_db.OperationalProjects);
 
         var saved = await _db.Leads.SingleAsync(l => l.Id == lead.Id);
         Assert.Equal(LeadStatus.Interested, saved.Status);
         Assert.Null(saved.ConvertedAt);
         Assert.Null(saved.ConvertedCustomerId);
         Assert.Null(saved.ConvertedOpportunityId);
+    }
+
+    [Fact]
+    public async Task UnconvertAsync_KeepsAutoCreatedProject_WhenAnotherOpportunityUsesIt()
+    {
+        var sales = await SeedUserAsync(UserRole.USER);
+        SeedSource("marketing");
+        var lead = await SeedLeadAsync(LeadStatus.Interested, ownerId: sales.Id);
+        var converted = await _sut.ConvertAsync(lead.Id, new ConvertLeadRequest(), sales.Id, canConvert: true);
+        var projectId = (await _db.Opportunities.SingleAsync()).OperationalProjectId!.Value;
+        _db.Opportunities.Add(new Opportunity
+        {
+            Name = "Mở rộng xưởng giai đoạn 2",
+            CustomerId = converted!.ConvertedCustomerId!.Value,
+            OperationalProjectId = projectId,
+        });
+        await _db.SaveChangesAsync();
+
+        var result = await _sut.UnconvertAsync(lead.Id, sales.Id, canConvert: true);
+
+        Assert.Equal(UnconvertOutcome.DeletedOpportunity, result!.Outcome);
+        Assert.Single(_db.OperationalProjects);
+        var remaining = await _db.Opportunities.SingleAsync();
+        Assert.Equal(projectId, remaining.OperationalProjectId);
     }
 
     [Fact]

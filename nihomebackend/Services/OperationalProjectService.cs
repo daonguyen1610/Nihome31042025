@@ -575,50 +575,22 @@ public class OperationalProjectService(
         }
     }
 
-    private async Task<string> NextCodeAsync(int year, CancellationToken ct)
-    {
-        var prefix = $"PJ-{year}-";
-        var codes = await db.OperationalProjects
-            .Where(project => project.Code.StartsWith(prefix))
-            .Select(project => project.Code)
-            .ToListAsync(ct);
-        var next = codes
-            .Select(code => code.Length > prefix.Length &&
-                int.TryParse(code[prefix.Length..], out var sequence)
-                    ? sequence
-                    : 0)
-            .DefaultIfEmpty()
-            .Max() + 1;
-        return $"{prefix}{next:D4}";
-    }
+    private Task<string> NextCodeAsync(int year, CancellationToken ct) =>
+        OperationalProjectCodeAllocator.NextCodeAsync(db, year, ct);
 
     private async Task<IDbContextTransaction?> BeginCodeAllocationAsync(
         int year,
         CancellationToken ct)
     {
         if (!db.Database.IsRelational()) return null;
-        var isSqlServer = string.Equals(
-            db.Database.ProviderName,
-            "Microsoft.EntityFrameworkCore.SqlServer",
-            StringComparison.Ordinal);
         var transaction = await db.Database.BeginTransactionAsync(
-            isSqlServer ? IsolationLevel.ReadCommitted : IsolationLevel.Serializable,
+            OperationalProjectCodeAllocator.IsSqlServer(db)
+                ? IsolationLevel.ReadCommitted
+                : IsolationLevel.Serializable,
             ct);
-        if (!isSqlServer) return transaction;
-
         try
         {
-            var resource = $"operational-project-code-{year}";
-            await db.Database.ExecuteSqlInterpolatedAsync($"""
-                DECLARE @result int;
-                EXEC @result = sys.sp_getapplock
-                    @Resource = {resource},
-                    @LockMode = 'Exclusive',
-                    @LockOwner = 'Transaction',
-                    @LockTimeout = 15000;
-                IF @result < 0
-                    THROW 51000, 'Unable to acquire the project code allocation lock.', 1;
-                """, ct);
+            await OperationalProjectCodeAllocator.AcquireLockAsync(db, year, ct);
             return transaction;
         }
         catch
