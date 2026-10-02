@@ -220,6 +220,9 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
   };
 
   const fromQuoteId = readPositiveParam("fromQuote");
+  // Opportunity detail opens the form for deals without a quote, e.g. one
+  // that continues from a won tender.
+  const fromOpportunityId = readPositiveParam("fromOpportunity");
   const prefillOpportunityId = readPositiveParam("opportunityId");
   const prefillCustomerId = readPositiveParam("customerId");
   const prefillOperationalProjectId = readPositiveParam("operationalProjectId");
@@ -526,18 +529,19 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
     void loadSuggestedContractNumber();
   };
 
-  // Arriving from an approved quote opens the form already filled in. customerId
-  // may legitimately be null on older quotes; the form's own validation then asks
-  // the user to pick one, which beats writing a contract against customer zero.
+  // Arriving from an approved quote (or an opportunity) opens the form already
+  // filled in. customerId may legitimately be null on older quotes; the form's
+  // own validation then asks the user to pick one, which beats writing a
+  // contract against customer zero.
   useEffect(() => {
-    if (fromQuoteId === null) return;
+    if (fromQuoteId === null && fromOpportunityId === null) return;
     setForm({
       ...emptyForm,
       direction: fixedDirection ?? emptyForm.direction,
       type: fixedDirection === "Downstream" ? "Supply" : emptyForm.type,
       customerId: prefillCustomerId,
       operationalProjectId: prefillOperationalProjectId,
-      opportunityId: prefillOpportunityId,
+      opportunityId: fromQuoteId !== null ? prefillOpportunityId : fromOpportunityId,
       quoteId: fromQuoteId,
       value: prefillValue ?? 0,
     });
@@ -546,7 +550,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
     setDialogOpen(true);
     void loadSuggestedContractNumber();
     // Runs once per navigation carrying the parameters.
-  }, [fixedDirection, fromQuoteId, loadSuggestedContractNumber, prefillCustomerId, prefillOperationalProjectId, prefillOpportunityId, prefillValue]);
+  }, [fixedDirection, fromOpportunityId, fromQuoteId, loadSuggestedContractNumber, prefillCustomerId, prefillOperationalProjectId, prefillOpportunityId, prefillValue]);
   const patchMilestone = (index: number, patch: Partial<MilestoneDraft>) => {
     setForm((prev) => ({
       ...prev,

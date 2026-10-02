@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { AlertTriangle, FileText, LayoutGrid, List, Pencil, Plus, RefreshCw, Search, ThumbsDown, Trash2, Trophy } from "lucide-react";
+import { AlertTriangle, FileSignature, FileText, LayoutGrid, List, Pencil, Plus, RefreshCw, Search, ThumbsDown, Trash2, Trophy } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -10,6 +10,7 @@ import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { extractApiError, isConcurrencyConflict } from "@/lib/apiError";
 import { formatVnd, parseVnd } from "@/lib/numberFormat";
 import { isOpportunityOverdue } from "@/lib/opportunityDates";
+import { isContractReadyQuote } from "@/lib/contractQuotes";
 import { PageLoading, PageError } from "@/components/PageState";
 import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
 import { Button } from "@/components/ui/button";
@@ -91,6 +92,25 @@ const isTerminalStage = (stage: OpportunityStage) => stage === "Won" || stage ==
 const canRaiseQuote = (opportunity: OpportunityResponse) =>
   opportunity.stage !== "Lost" && !(opportunity.stage === "Won" && opportunity.wonQuoteId != null);
 
+// The contract form is prefilled from the winning or latest approved quote
+// when there is one; otherwise (e.g. a deal continued from a won tender)
+// from the opportunity itself.
+const contractFormPath = (opportunity: OpportunityResponse, quotes: QuoteListItemResponse[]) => {
+  const quote = quotes.find((item) => item.id === opportunity.wonQuoteId) ??
+    quotes.find((item) => isContractReadyQuote(item.status));
+  const params = new URLSearchParams({ customerId: String(opportunity.customerId) });
+  if (opportunity.operationalProjectId) params.set("operationalProjectId", String(opportunity.operationalProjectId));
+  if (quote) {
+    params.set("fromQuote", String(quote.id));
+    params.set("opportunityId", String(opportunity.id));
+    if (quote.grandTotal > 0) params.set("value", String(quote.grandTotal));
+  } else {
+    params.set("fromOpportunity", String(opportunity.id));
+    if (opportunity.estimatedValue > 0) params.set("value", String(opportunity.estimatedValue));
+  }
+  return `/admin/contracts?${params.toString()}`;
+};
+
 const emptyCreate = (): CreateOpportunityRequest => ({
   name: "",
   customerId: 0,
@@ -113,6 +133,7 @@ const AdminOpportunities = () => {
   const canViewContracts = has(ADMIN_PERMS.contracts);
   const canViewQuotes = has(ADMIN_PERMS.quotes);
   const canCreateQuote = has(ADMIN_PERMS.quotesManage);
+  const canCreateContract = has(ADMIN_PERMS.contractsManage);
 
   // ---------- data ----------
   const [rows, setRows] = useState<OpportunityResponse[]>([]);
@@ -1044,9 +1065,20 @@ const AdminOpportunities = () => {
                 )}
                 {/* A quote is raised while the deal is still open (Báo giá/Đấu thầu
                     stage) so the contract value is known before signing. */}
-                {canCreateQuote && canRaiseQuote(detail) && (
+                {((canCreateQuote && canRaiseQuote(detail)) ||
+                  (canCreateContract && (detail.stage === "Negotiation" || detail.stage === "Won"))) && (
                   <div className="flex flex-wrap gap-2 pt-2">
-                    <Button
+                    {canCreateContract && (detail.stage === "Negotiation" || detail.stage === "Won") && (
+                      <Button
+                        size="sm"
+                        data-testid="opportunity-create-contract"
+                        onClick={() => navigate(contractFormPath(detail, opportunityQuotes))}
+                      >
+                        <FileSignature className="mr-1.5 h-4 w-4" />
+                        {t("opportunities.action.createContract")}
+                      </Button>
+                    )}
+                    {canCreateQuote && canRaiseQuote(detail) && <Button
                       size="sm"
                       variant={detail.stage === "Won" ? "default" : "outline"}
                       data-testid="opportunity-create-quote"
@@ -1054,7 +1086,7 @@ const AdminOpportunities = () => {
                     >
                       <Plus className="mr-1.5 h-4 w-4" />
                       {t("opportunities.action.createQuote")}
-                    </Button>
+                    </Button>}
                   </div>
                 )}
               </DialogHeader>
