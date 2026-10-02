@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import QuoteCatalogEmptyState from "@/components/admin/QuoteCatalogEmptyState";
 import { extractApiError } from "@/lib/apiError";
 import { useI18n } from "@/lib/i18n";
 import { formatVnd } from "@/lib/numberFormat";
@@ -51,6 +52,7 @@ const QuoteRateFields = ({
 }: QuoteRateFieldsProps) => {
   const { t } = useI18n();
   const [catalogs, setCatalogs] = useState<MaterialRateCatalogResponse[]>([]);
+  const [catalogsLoaded, setCatalogsLoaded] = useState(false);
   const [revision, setRevision] = useState<MaterialRateRevisionResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -66,7 +68,11 @@ const QuoteRateFields = ({
   useEffect(() => {
     let cancelled = false;
     void adminApi.listMaterialRateCatalogs(undefined, false, "InvestmentRate")
-      .then(({ data }) => { if (!cancelled) setCatalogs(data); })
+      .then(({ data }) => {
+        if (cancelled) return;
+        setCatalogs(data);
+        setCatalogsLoaded(true);
+      })
       .catch((err) => { if (!cancelled) setError(extractApiError(err)); });
     return () => { cancelled = true; };
   }, []);
@@ -120,6 +126,7 @@ const QuoteRateFields = ({
           {t("quotes.rate.manageCatalogs")}
         </Link>
       </div>
+      {catalogsLoaded && catalogs.length === 0 && <QuoteCatalogEmptyState catalogType="InvestmentRate" />}
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
           <Label>{t("quotes.field.materialRateCatalog")} *</Label>
@@ -145,9 +152,6 @@ const QuoteRateFields = ({
               ))}
             </SelectContent>
           </Select>
-          {catalogs.length === 0 && !error && (
-            <p className="mt-1 text-xs text-amber-700">{t("quotes.rate.noCatalogs")}</p>
-          )}
         </div>
         <div>
           <Label>{t("quotes.field.pricingEffectiveDate")} *</Label>

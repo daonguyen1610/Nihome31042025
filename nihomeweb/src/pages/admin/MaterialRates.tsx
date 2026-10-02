@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import {
+  ArrowLeft,
   ArrowRight,
   Calculator,
   CheckCircle2,
@@ -19,6 +20,7 @@ import {
   XCircle,
 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
+import { readQuoteReturnTo } from "@/lib/quoteCatalogSetup";
 import { BulkActionBar } from "@/components/admin/BulkActionBar";
 import { PageError, PageLoading } from "@/components/PageState";
 import { Badge } from "@/components/ui/badge";
@@ -249,12 +251,26 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
   const [catalogSaving, setCatalogSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  const openCatalogForm = () => {
+  const openCatalogForm = useCallback(() => {
     setEditingCatalogId(null);
     setCatalogForm(emptyCatalog(catalogType));
     setFormError(null);
     setCatalogOpen(true);
-  };
+  }, [catalogType]);
+
+  // Arriving from a quote form (QuoteCatalogEmptyState): open the create dialog
+  // once and keep a way back to the quote the user was preparing.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const quoteReturnTo = readQuoteReturnTo(searchParams.get("returnTo"));
+  useEffect(() => {
+    if (searchParams.get("create") !== "1") return;
+    if (canManage) openCatalogForm();
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      next.delete("create");
+      return next;
+    }, { replace: true });
+  }, [canManage, openCatalogForm, searchParams, setSearchParams]);
 
   const openCatalogEdit = () => {
     if (!selectedCatalog) return;
@@ -698,6 +714,25 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
             )}
           </div>
         </header>
+
+        {quoteReturnTo && (
+          <div
+            className="flex flex-col gap-3 rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm sm:flex-row sm:items-center sm:justify-between"
+            data-testid="material-rates-quote-return"
+          >
+            <p>
+              {t(selectedRevision?.status === "Approved"
+                ? "materialRates.quoteReturn.ready"
+                : "materialRates.quoteReturn.pending")}
+            </p>
+            <Button size="sm" variant={selectedRevision?.status === "Approved" ? "default" : "outline"} asChild>
+              <Link to={quoteReturnTo}>
+                <ArrowLeft className="mr-1.5 h-4 w-4" />
+                {t("materialRates.quoteReturn.action")}
+              </Link>
+            </Button>
+          </div>
+        )}
 
         <nav className="flex w-fit rounded-lg border bg-muted/30 p-1" aria-label={t("materialRates.catalogType.navigation")}>
           <Button variant={catalogType === "InvestmentRate" ? "secondary" : "ghost"} size="sm" asChild><Link to="/admin/material-rates/investment">{t("materialRates.catalogType.investment")}</Link></Button>
