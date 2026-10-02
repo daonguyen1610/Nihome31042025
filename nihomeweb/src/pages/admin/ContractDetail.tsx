@@ -9,6 +9,7 @@ import {
   Clock,
   FileText,
   History,
+  Link2,
   Loader2,
   Pencil,
   Play,
@@ -23,6 +24,7 @@ import {
 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
+import QuoteContractLinkDialog from "@/components/admin/QuoteContractLinkDialog";
 import { useI18n } from "@/lib/i18n";
 import { formatVnd, formatVndWithSymbol } from "@/lib/numberFormat";
 import { cn } from "@/lib/utils";
@@ -389,9 +391,11 @@ interface InfoTabProps {
   contract: ContractResponse;
   onEnsureDesignProject: () => void;
   ensuringDesignProject: boolean;
+  /** Set when the caller may attach an approved quote to this contract. */
+  onLinkQuote?: () => void;
 }
 
-const InfoTab = ({ contract, onEnsureDesignProject, ensuringDesignProject }: InfoTabProps) => {
+const InfoTab = ({ contract, onEnsureDesignProject, ensuringDesignProject, onLinkQuote }: InfoTabProps) => {
   const { t } = useI18n();
 
   const rows: [string, React.ReactNode][] = [
@@ -426,10 +430,18 @@ const InfoTab = ({ contract, onEnsureDesignProject, ensuringDesignProject }: Inf
         </dl>
       </div>
 
-      {contract.quoteId != null || contract.opportunityId != null ? (
+      {contract.quoteId != null || contract.opportunityId != null || onLinkQuote ? (
         <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="text-xs font-medium uppercase tracking-wide text-slate-500">
-            {t("contracts.source.title")}
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="text-xs font-medium uppercase tracking-wide text-slate-500">
+              {t("contracts.source.title")}
+            </div>
+            {onLinkQuote && contract.quoteId == null && (
+              <Button size="sm" variant="outline" data-testid="contract-link-quote" onClick={onLinkQuote}>
+                <Link2 className="mr-1.5 h-4 w-4" />
+                {t("quoteLink.fromContract.action")}
+              </Button>
+            )}
           </div>
           <dl className="mt-2 grid gap-3 sm:grid-cols-2">
             {contract.quoteId != null ? (
@@ -1616,6 +1628,11 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
 
   const [contract, setContract] = useState<ContractResponse | null>(null);
   const [ensuringDesignProject, setEnsuringDesignProject] = useState(false);
+  const [linkQuoteOpen, setLinkQuoteOpen] = useState(false);
+  // A customer contract drafted apart from its quotation can still be tied to
+  // the approved quote afterwards (one source quote per contract).
+  const canLinkQuote = canManage && contract != null && contract.direction === "Upstream" &&
+    contract.quoteId == null && contract.status !== "Cancelled" && contract.status !== "Completed";
   const [appendices, setAppendices] = useState<ContractAppendixResponse[]>([]);
   const [attachments, setAttachments] = useState<ContractAttachmentResponse[]>([]);
   const [attachmentsError, setAttachmentsError] = useState<string | null>(null);
@@ -2054,6 +2071,7 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
                 contract={contract}
                 onEnsureDesignProject={() => void handleEnsureDesignProject()}
                 ensuringDesignProject={ensuringDesignProject}
+                onLinkQuote={canLinkQuote ? () => setLinkQuoteOpen(true) : undefined}
               />
             )}
           </TabsContent>
@@ -2153,6 +2171,15 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
           </DialogContent>
         </Dialog>
       </div>
+      {contract && canLinkQuote && (
+        <QuoteContractLinkDialog
+          mode="fromContract"
+          contract={contract}
+          open={linkQuoteOpen}
+          onOpenChange={setLinkQuoteOpen}
+          onLinked={(updated) => setContract(updated)}
+        />
+      )}
     </AdminLayout>
   );
 };

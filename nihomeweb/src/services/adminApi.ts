@@ -5697,6 +5697,9 @@ export const adminApi = {
   // Contract state / milestones / VO / attachments / timeline (NIH-104)
   ensureContractDesignProject: (contractId: number) =>
     api.post<DesignProjectResponse>(`/contracts/${contractId}/design-project`, {}),
+  /** Attach an approved quote to an existing customer contract. */
+  linkContractQuote: (id: number, quoteId: number, rowVersion: string) =>
+    postIdempotent<ContractResponse>(`/contracts/${id}/link-quote`, { quoteId, rowVersion }),
   transitionContract: (id: number, newStatus: ContractStatus, rowVersion?: string) =>
     api.post<ContractResponse>(`/contracts/${id}/transition`, { newStatus, rowVersion }),
   updateMilestoneStatus: (

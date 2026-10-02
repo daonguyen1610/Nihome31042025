@@ -52,6 +52,11 @@ public interface IContractService
     /// Rejects illegal transitions and pre-conditions (e.g. missing signed
     /// scan when moving Signed → InProgress, unpaid milestones when
     /// closing to Completed).</summary>
+    /// <summary>Attach an approved quote to an existing customer contract.
+    /// Returns <c>null</c> when the contract is missing or out of scope.</summary>
+    Task<ContractResponse?> LinkQuoteAsync(
+        int id, int quoteId, int callerUserId, bool canSeeAll, string? rowVersion, CancellationToken ct = default);
+
     Task<ContractResponse?> TransitionStatusAsync(
         int id, ContractStatus newStatus, int callerUserId, bool canSeeAll, CancellationToken ct = default, string? rowVersion = null);
 
