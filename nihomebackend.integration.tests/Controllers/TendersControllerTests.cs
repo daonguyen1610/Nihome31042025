@@ -54,6 +54,32 @@ public class TendersControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task Create_AfterDeletingATender_AllocatesAnUnusedCode()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var deletedId = await CreateTenderAsync();
+        await CreateTenderAsync();
+        var impactResponse = await Client.GetAsync($"/api/tenders/{deletedId}/deletion-impact");
+        impactResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await ConfirmDeleteAsync(deletedId, await ReadJsonAsync(impactResponse))).StatusCode.Should().Be(HttpStatusCode.NoContent);
+        var prefix = $"TD-{DateTime.UtcNow.Year}-";
+        var existing = await WithDbAsync(db => db.Tenders.Where(t => t.Code.StartsWith(prefix)).Select(t => t.Code).ToListAsync());
+
+        var res = await Client.PostAsJsonAsync("/api/tenders", new
+        {
+            name = "Gói thầu nhà xưởng Minh Phúc giai đoạn 2",
+            customerId = await CreateCustomerAsync(),
+            submissionDeadline = DateTime.UtcNow.AddDays(10),
+        });
+
+        res.StatusCode.Should().Be(HttpStatusCode.Created, await res.Content.ReadAsStringAsync());
+        var code = (await ReadJsonAsync(res)).GetProperty("code").GetString()!;
+        existing.Should().NotContain(code);
+        var highest = existing.Max(item => int.TryParse(item[prefix.Length..], out var n) ? n : 0);
+        code.Should().Be($"{prefix}{highest + 1:D4}");
+    }
+
+    [Fact]
     public async Task Create_WithPastDeadline_IsBadRequest()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));

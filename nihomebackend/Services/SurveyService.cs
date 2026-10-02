@@ -198,11 +198,8 @@ public class SurveyService(
         await ValidateSurveyorAssignmentAsync(
             request.SurveyorUserId, routing.ProjectId.Value, callerUserId, canManageAll, ct);
 
-        var year = DateTime.UtcNow.Year;
-        var nextSeq = 1 + await db.Surveys
-            .Where(s => s.Code.StartsWith($"SV-{year}-"))
-            .CountAsync(ct);
-        var code = $"SV-{year}-{nextSeq:D4}";
+        var code = await SequentialCodes.NextAsync(
+            db.Surveys.Select(s => s.Code), $"SV-{DateTime.UtcNow.Year}-", 4, ct);
 
         var entity = new Survey
         {
