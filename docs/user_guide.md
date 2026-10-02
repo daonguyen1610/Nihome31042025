@@ -240,6 +240,13 @@ Maintain individual and corporate customer records. Support multiple contact per
 
 Track inbound leads with source classification (marketing, referral, etc.). Assign leads to sales personnel. Maintain consultation history. Convert qualified leads to opportunities.
 
+Converting a lead creates (or reuses) the customer and opens, in one step, a new
+opportunity together with a **Planning** operational project for that customer.
+Surveys, quotations, and contracts raised later already carry this project, and
+the project page lists the opportunity and its quotations. Converting into an
+existing opportunity creates no project. Undoing a recent, untouched conversion
+removes the auto-created project only while nothing else is attached to it.
+
 Each Lead has one segment selected from managed `lead_segment` master data. The
 seeded values are Unclassified, Residential, Commercial, and Hospitality;
 administrators can maintain this taxonomy centrally. Lists and forms support
@@ -272,6 +279,11 @@ deleted unless another qualifying Contract remains.
 The Opportunity detail shows each linked Contract to users who can view that
 Contract. Select a Contract number to open its detail page and upload the
 signed scan or update its status.
+
+Price the deal before signing: the opportunity detail offers **Create quote** at
+every open stage (and on Contract signed while no winning quote is set). The
+**Quotes** tab lists each quotation of the opportunity with its status, version,
+total, and the winning mark; an empty tab offers the same action.
 
 | Page | Functions | Estimate |
 |------|-----------|----------|
@@ -315,6 +327,13 @@ Authorized overrides require a Vietnamese reason and remain visible in versions
 and the PDF. Downloadable preliminary PDFs are localized in Vietnamese, English,
 Chinese, or Japanese.
 
+If no active catalog exists, the quote form shows the three setup steps instead
+of an empty list and links to the matching catalog page. That page opens the
+create dialog and shows **Back to the quote** until the revision is approved;
+the link returns to the same quote form. Users without catalog permission are
+asked to contact a QS or the sales manager. A BOQ quotation can still be
+entered manually without a catalog.
+
 For a BOQ quotation, either select an active BOQ catalog and pricing date or add
 rows manually. Applying an Approved effective BOQ revision replaces the current
 rows after confirmation, copies its items into the quote, and retains catalog,
@@ -355,7 +374,13 @@ calculates cost subtotal, bid subtotal, VAT, and grand bid total. Submit the
 revision for approval; authorized users approve or reject it with a reason.
 The Tender can move from Preparing to Submitted only when every checklist item
 is ready and an approved estimate exists. Won and Lost are available only from
-Submitted; Won requires an Opportunity for the same customer.
+Submitted. When marking a tender Won, choose either **Create an opportunity from
+this tender** (default) or an existing opportunity of the same customer. The
+created opportunity carries the tender name, starts in Negotiation, is valued at
+the latest approved bid estimate, and comes with a Planning operational project,
+so a contract can be raised directly from it. The result panel links to the
+opportunity. Tender codes `TD-YYYY-NNNN` continue from the highest code in use,
+so deleting a tender never blocks creating new ones.
 
 | Page | Functions | Estimate |
 |------|-----------|----------|
@@ -407,6 +432,11 @@ legacy client that omits the field. It rejects an omitted project when the
 customer has no project or multiple possible projects. A project can contain
 any number of upstream and downstream contracts of compatible types.
 
+When the selected customer has no suitable project, for example on an
+opportunity created before automatic project creation, select **Create a new
+project** below the project field. Users with project management permission get
+the project created for that customer and selected in the form immediately.
+
 The Contract List can be filtered by Operational Project, customer, status,
 direction, type, signed-date range, and value range, and can be sorted by
 contract number, signed date, end date, value, or last update. Results are
@@ -438,6 +468,13 @@ exceed 40 characters.
 **Objective**: Control technical documents and prevent discrepancies before construction.
 
 #### 3.2.1 Design Project Overview
+
+A design project starts automatically when a contract moves to In progress, or
+manually before any contract exists (design first, contract later). In **Create
+design project**, choose the Operational Project, or a contract that already
+belongs to one. Only the project's PM or a Design Lead on its team can start the
+flow; otherwise the form explains that the PM must add you to the project team
+with the Design Lead role.
 
 | Page | Functions | Estimate |
 |------|-----------|----------|
