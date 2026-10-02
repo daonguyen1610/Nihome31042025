@@ -961,6 +961,15 @@ collisions. Project codes and lead-conversion projects share the per-year SQL
 Server application lock in `OperationalProjectCodeAllocator`; a concurrent
 tender insert that still hits the unique index retries with the next code.
 
+`POST /api/contracts/{id}/link-quote` (`crm.contracts.manage`, idempotent,
+concurrency-checked) attaches an `Approved`, `SentToCustomer`, or
+`CustomerApproved` quote to an upstream contract that is not cancelled or
+completed. The quote must match the contract's customer, opportunity, and
+project, the contract must have no source quote yet, and no other live
+contract may use the quote; the contract's empty opportunity is filled from
+the quote. Creating a contract with a quote, or changing its quote, applies
+the same approved-status rule.
+
 Contract creation derives `OwnerUserId` from the selected customer's `OwnerUserId`. An authorized explicit owner takes precedence; if the customer is unassigned, the caller is used as the fallback. Sales users cannot create or move a contract into another salesperson's customer scope. Opportunity and quote references must belong to the selected customer, and a supplied quote must belong to the supplied opportunity.
 
 `GET /api/contracts` and its `/api/v1` alias require

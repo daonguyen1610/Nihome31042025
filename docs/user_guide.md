@@ -285,6 +285,11 @@ every open stage (and on Contract signed while no winning quote is set). The
 **Quotes** tab lists each quotation of the opportunity with its status, version,
 total, and the winning mark; an empty tab offers the same action.
 
+In Negotiation and Contract signed, **Create contract** opens the contract form
+prefilled from the winning or latest approved quotation, or, when there is none
+(for example an opportunity continued from a won tender), from the opportunity's
+customer, project, and estimated value.
+
 | Page | Functions | Estimate |
 |------|-----------|----------|
 | Opportunity List | Filter by stage, sales, status | 1.5 days |
@@ -378,7 +383,7 @@ Submitted. When marking a tender Won, choose either **Create an opportunity from
 this tender** (default) or an existing opportunity of the same customer. The
 created opportunity carries the tender name, starts in Negotiation, is valued at
 the latest approved bid estimate, and comes with a Planning operational project,
-so a contract can be raised directly from it. The result panel links to the
+so a contract can be raised directly from it with **Create contract**. The result panel links to the
 opportunity. Tender codes `TD-YYYY-NNNN` continue from the highest code in use,
 so deleting a tender never blocks creating new ones.
 
@@ -436,6 +441,14 @@ When the selected customer has no suitable project, for example on an
 opportunity created before automatic project creation, select **Create a new
 project** below the project field. Users with project management permission get
 the project created for that customer and selected in the form immediately.
+
+A contract drafted before its quotation can be tied to the approved quotation
+later: use **Link to an existing contract** on the quotation, or **Link an
+approved quote** in the Source section of the contract. Only quotations that
+are Approved, Sent to customer, or Customer approved, of the same customer
+(and opportunity, when set) are offered. A contract has one source quotation
+and a quotation feeds one live contract; cancelled or completed contracts
+cannot be linked.
 
 The Contract List can be filtered by Operational Project, customer, status,
 direction, type, signed-date range, and value range, and can be sorted by
