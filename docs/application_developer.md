@@ -835,7 +835,9 @@ that the root has been deleted until its status is `Completed`.
   preserved. Opportunities, Tenders, Contracts, Design Projects, and
   Operational Projects are independent required roots and block Customer
   deletion until handled through their own authorized workflows. Undoing a
-  Lead conversion always preserves its Customer; Customers can only be
+  Lead conversion always preserves its Customer and removes the project that
+  conversion opened only when its deletion-impact plan lists nothing but that
+  opportunity; Customers can only be
   permanently removed through this preview-and-confirm contract.
 - Exactly one success audit is written by the durable operation processor in
   the same save that marks the operation `Completed`, after database
@@ -944,6 +946,20 @@ Each Tender checklist row retains one current file. Users with `crm.tenders.mana
 | `POST` | `/api/tenders/{id}/checklist/{itemId}/upload` | `crm.tenders.manage` | Upload and replace the row's current file |
 | `POST` | `/api/tenders/{id}/checklist/attach-from-library` | `crm.tenders.manage` | Attach an existing capability document to the selected row |
 | `GET` | `/api/tenders/{id}/checklist/{itemId}/content` | `crm.tenders.view` | Preview or download the file referenced by that Tender row |
+
+`POST /api/tenders/{id}/mark-won` (`crm.tenders.mark-result`) takes either
+`opportunityId` (an opportunity of the tender's customer) or
+`createOpportunity: true`, never both; otherwise it returns `400`. Creating
+opens, in the same transaction as the Won result, an opportunity in
+`Negotiation` valued at the latest approved estimate revision's
+`GrandBidTotal` and a `Planning` operational project whose creator is the
+caller.
+
+Sequential codes (`PJ-`, `TD-`, `SV-`) are the highest numeric suffix in use
+plus one (`SequentialCodes`), never a row count, so deleted rows do not cause
+collisions. Project codes and lead-conversion projects share the per-year SQL
+Server application lock in `OperationalProjectCodeAllocator`; a concurrent
+tender insert that still hits the unique index retries with the next code.
 
 Contract creation derives `OwnerUserId` from the selected customer's `OwnerUserId`. An authorized explicit owner takes precedence; if the customer is unassigned, the caller is used as the fallback. Sales users cannot create or move a contract into another salesperson's customer scope. Opportunity and quote references must belong to the selected customer, and a supplied quote must belong to the supplied opportunity.
 
