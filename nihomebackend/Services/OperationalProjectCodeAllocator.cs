@@ -36,24 +36,6 @@ internal static class OperationalProjectCodeAllocator
             """, ct);
     }
 
-    /// <summary>
-    /// Highest used sequence plus one, so a deleted project never makes the
-    /// next code collide with a surviving one.
-    /// </summary>
-    public static async Task<string> NextCodeAsync(AppDbContext db, int year, CancellationToken ct)
-    {
-        var prefix = $"PJ-{year}-";
-        var codes = await db.OperationalProjects
-            .Where(project => project.Code.StartsWith(prefix))
-            .Select(project => project.Code)
-            .ToListAsync(ct);
-        var next = codes
-            .Select(code => code.Length > prefix.Length &&
-                int.TryParse(code[prefix.Length..], out var sequence)
-                    ? sequence
-                    : 0)
-            .DefaultIfEmpty()
-            .Max() + 1;
-        return $"{prefix}{next:D4}";
-    }
+    public static Task<string> NextCodeAsync(AppDbContext db, int year, CancellationToken ct) =>
+        SequentialCodes.NextAsync(db.OperationalProjects.Select(project => project.Code), $"PJ-{year}-", 4, ct);
 }

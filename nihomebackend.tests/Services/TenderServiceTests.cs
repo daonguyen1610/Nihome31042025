@@ -122,6 +122,23 @@ public class TenderServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task CreateAsync_AfterADeletedTender_ContinuesFromHighestCode()
+    {
+        // The demo database held TD-0001..0005 and TD-0007..0010: counting rows
+        // produced TD-0010 again and every new tender was rejected.
+        var created = new List<TenderResponse>();
+        for (var i = 0; i < 10; i++) created.Add(await _sut.CreateAsync(ValidCreate(), _userId));
+        var sixth = await _db.Tenders.SingleAsync(t => t.Id == created[5].Id);
+        _db.Tenders.Remove(sixth);
+        await _db.SaveChangesAsync();
+
+        var next = await _sut.CreateAsync(ValidCreate(), _userId);
+
+        Assert.Equal($"TD-{DateTime.UtcNow.Year}-0011", next.Code);
+        Assert.Equal(10, await _db.Tenders.CountAsync());
+    }
+
+    [Fact]
     public async Task CreateAsync_NotifiesAssignedPreparer()
     {
         await _sut.CreateAsync(ValidCreate(), _userId);

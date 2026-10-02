@@ -157,6 +157,20 @@ public class SurveyServiceTests : IDisposable
         Assert.EndsWith("-0002", b.Code);
     }
 
+    [Fact]
+    public async Task CreateAsync_AfterADeletedSurvey_ContinuesFromHighestCode()
+    {
+        var first = await _sut.CreateAsync(ValidCreate(), _userId);
+        await _sut.CreateAsync(ValidCreate(), _userId);
+        await _sut.CreateAsync(ValidCreate(), _userId);
+        _db.Surveys.Remove(await _db.Surveys.SingleAsync(s => s.Id == first.Id));
+        await _db.SaveChangesAsync();
+
+        var next = await _sut.CreateAsync(ValidCreate(), _userId);
+
+        Assert.Equal($"SV-{DateTime.UtcNow.Year}-0004", next.Code);
+    }
+
     // ---------------- Get / List ----------------
 
     [Fact]

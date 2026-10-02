@@ -33,6 +33,7 @@ public class TenderService(
 {
     private const int MaxPageSize = 100;
     private const int DeadlineImminentDays = 3;
+    private const int MaxCodeAttempts = 3;
     private const string ChecklistTemplateCategory = "tender_checklist_default";
 
     // ------------------------------ List / Get ------------------------------
@@ -175,15 +176,10 @@ public class TenderService(
         // to them — auto-assignment keeps the tender owned by a real person.
         var effectivePreparerId = request.PreparerUserId ?? callerUserId;
 
-        var year = DateTime.UtcNow.Year;
-        var nextSeq = 1 + await db.Tenders
-            .Where(t => t.Code.StartsWith($"TD-{year}-"))
-            .CountAsync(ct);
-        var code = $"TD-{year}-{nextSeq:D4}";
-
+        var codePrefix = $"TD-{DateTime.UtcNow.Year}-";
         var entity = new Tender
         {
-            Code = code,
+            Code = await SequentialCodes.NextAsync(db.Tenders.Select(t => t.Code), codePrefix, 4, ct),
             Name = name,
             CustomerId = customer.Id,
             OpeningDate = request.OpeningDate,
@@ -198,7 +194,27 @@ public class TenderService(
             UpdatedAt = DateTime.UtcNow,
         };
         db.Tenders.Add(entity);
-        await db.SaveChangesAsync(ct);
+        // Two users saving at the same moment can both read the same highest
+        // code; the unique index rejects the second, which then takes the next.
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                await db.SaveChangesAsync(ct);
+                break;
+            }
+            catch (DbUpdateException exception) when (
+                SequentialCodes.IsUniqueViolation(exception) && attempt < MaxCodeAttempts)
+            {
+                entity.Code = await SequentialCodes.NextAsync(
+                    db.Tenders.AsNoTracking().Select(t => t.Code), codePrefix, 4, ct);
+            }
+            catch (DbUpdateException exception) when (SequentialCodes.IsUniqueViolation(exception))
+            {
+                throw new TenderOperationException(
+                    "Hệ thống đang cấp mã gói thầu cho nhiều người cùng lúc. Vui lòng bấm Lưu lại.");
+            }
+        }
 
         await SeedDefaultChecklistAsync(entity.Id, ct);
         await NotifyAssigneeAsync(entity, isReassignment: false, ct);
