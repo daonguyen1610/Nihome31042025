@@ -1628,6 +1628,21 @@ export interface OpportunityResponse {
   contracts: OpportunityContractLinkResponse[];
 }
 
+export interface OpportunityOwnerOption {
+  id: number;
+  fullName: string;
+}
+
+/** One change on an opportunity; scoped like the record, no device details. */
+export interface OpportunityHistoryItem {
+  id: number;
+  createdAt: string;
+  action: string;
+  message: string;
+  actorName?: string | null;
+  status: string;
+}
+
 export interface OpportunityListResponse {
   total: number;
   page: number;
@@ -4559,6 +4574,10 @@ export const adminApi = {
     return api.get<OpportunityPipelineResponse>(`/opportunities/pipeline${qs ? `?${qs}` : ""}`);
   },
   getOpportunity: (id: number) => api.get<OpportunityResponse>(`/opportunities/${id}`),
+  listOpportunityOwnerOptions: () =>
+    api.get<OpportunityOwnerOption[]>("/opportunities/owner-options"),
+  getOpportunityHistory: (id: number) =>
+    api.get<OpportunityHistoryItem[]>(`/opportunities/${id}/history`),
   createOpportunity: (body: CreateOpportunityRequest) =>
     api.post<OpportunityResponse>("/opportunities", body),
   updateOpportunity: (id: number, body: UpdateOpportunityRequest) =>

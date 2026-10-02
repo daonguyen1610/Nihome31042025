@@ -70,3 +70,24 @@ public class OpportunityPipelineColumn
     public decimal TotalValue { get; set; }
     public List<OpportunityResponse> Items { get; set; } = new();
 }
+
+/// <summary>A salesperson who can own an opportunity (id and name only).</summary>
+public class OpportunityOwnerOptionResponse
+{
+    public int Id { get; set; }
+    public string FullName { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// One change recorded against an opportunity. Exposes only what the CRM
+/// screen needs, not the network or device details of the full audit log.
+/// </summary>
+public class OpportunityHistoryItemResponse
+{
+    public long Id { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public string Action { get; set; } = string.Empty;
+    public string Message { get; set; } = string.Empty;
+    public string? ActorName { get; set; }
+    public string Status { get; set; } = string.Empty;
+}
