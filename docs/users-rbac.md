@@ -126,6 +126,16 @@ Converting a lead into a new opportunity opens a `Planning` project in the
 same transaction. The converting user is recorded as its creator, so the
 project is in that user's scope without a PM assignment.
 
+### Opportunity owner picker and history
+
+`SALES_MANAGER` deliberately has neither `users.view` nor `system.audit.view`.
+The opportunity screen therefore uses two narrow reads:
+`GET /api/opportunities/owner-options` (`crm.opportunities.view.all`) returns
+only the id and name of active users whose role holds
+`crm.opportunities.manage`, and `GET /api/opportunities/{id}/history`
+(`crm.opportunities.view`, same owner scope as the record) returns that
+opportunity's audit entries without IP, device, or phone details.
+
 ### Starting a design flow
 
 `POST /api/design-projects` requires `design.projects.manage` and an

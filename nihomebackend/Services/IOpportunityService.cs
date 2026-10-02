@@ -50,6 +50,13 @@ public interface IOpportunityService
         bool canViewAllContracts = false,
         CancellationToken ct = default);
 
+    /// <summary>Active users whose role may manage opportunities, for the owner picker.</summary>
+    Task<IReadOnlyList<OpportunityOwnerOptionResponse>> ListOwnerOptionsAsync(CancellationToken ct = default);
+
+    /// <summary>Change history of one opportunity the caller can see; null when out of scope.</summary>
+    Task<IReadOnlyList<OpportunityHistoryItemResponse>?> ListHistoryAsync(
+        int id, int callerUserId, bool canSeeAll, CancellationToken ct = default);
+
     Task<OpportunityResponse> CreateAsync(
         CreateOpportunityRequest request,
         int callerUserId,

@@ -38,7 +38,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   adminApi,
   OPPORTUNITY_STAGES,
-  type AuditLogItem,
   type CreateOpportunityRequest,
   type CustomerResponse,
   type DeletionImpactResponse,
@@ -47,10 +46,11 @@ import {
   type OpportunityListParams,
   type OpportunityPipelineColumn,
   type OpportunityResponse,
+  type OpportunityHistoryItem,
+  type OpportunityOwnerOption,
   type OpportunityStage,
   type QuoteListItemResponse,
   type UpdateOpportunityRequest,
-  type UserListItemResponse,
 } from "@/services/adminApi";
 
 const ACTIVITY_TYPES: OpportunityActivityType[] = ["Call", "Email", "Meeting", "Note"];
@@ -170,7 +170,7 @@ const AdminOpportunities = () => {
   // masters
   const [customers, setCustomers] = useState<CustomerResponse[]>([]);
   const [lostReasons, setLostReasons] = useState<MasterDataOption[]>([]);
-  const [salesUsers, setSalesUsers] = useState<UserListItemResponse[]>([]);
+  const [salesUsers, setSalesUsers] = useState<OpportunityOwnerOption[]>([]);
 
   const fetchList = useCallback(async () => {
     setLoading(true);
@@ -232,8 +232,8 @@ const AdminOpportunities = () => {
       // (canSeeAll). For plain sales the field is hidden — no need to fetch.
       if (canSeeAll) {
         try {
-          const { data } = await adminApi.getUsers({ take: 100 });
-          if (!cancelled) setSalesUsers(data.items.filter((u) => u.isActive));
+          const { data } = await adminApi.listOpportunityOwnerOptions();
+          if (!cancelled) setSalesUsers(data);
         } catch {
           /* non-fatal */
         }
@@ -308,7 +308,7 @@ const AdminOpportunities = () => {
   const [lostNote, setLostNote] = useState("");
 
   // Audit log tab — populated on demand when the detail dialog opens.
-  const [auditItems, setAuditItems] = useState<AuditLogItem[]>([]);
+  const [auditItems, setAuditItems] = useState<OpportunityHistoryItem[]>([]);
   const [auditLoading, setAuditLoading] = useState(false);
 
   // Quotes tab — the price is what moves an opportunity towards a contract,
@@ -332,12 +332,8 @@ const AdminOpportunities = () => {
   const loadAuditForOpportunity = useCallback(async (id: number) => {
     setAuditLoading(true);
     try {
-      const { data } = await adminApi.listAuditLogs({
-        resourceType: "Opportunity",
-        resourceId: id.toString(),
-        pageSize: 50,
-      });
-      setAuditItems(data.items);
+      const { data } = await adminApi.getOpportunityHistory(id);
+      setAuditItems(data);
     } catch {
       // audit view is a diagnostic; missing perm shouldn't break the dialog
       setAuditItems([]);
@@ -964,7 +960,7 @@ const AdminOpportunities = () => {
                   <SelectContent>
                     {salesUsers.map((u) => (
                       <SelectItem key={u.id} value={String(u.id)}>
-                        {u.fullName ?? u.phoneNumber}
+                        {u.fullName}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -1264,7 +1260,7 @@ const AdminOpportunities = () => {
                               <SelectContent>
                                 {salesUsers.map((u) => (
                                   <SelectItem key={u.id} value={String(u.id)}>
-                                    {u.fullName ?? u.phoneNumber}
+                                    {u.fullName}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
@@ -1445,7 +1441,7 @@ const AdminOpportunities = () => {
                                       : a.action}
                             </Badge>
                             <span>{new Date(a.createdAt).toLocaleString()}</span>
-                            {a.actorPhone && <span>· {a.actorPhone}</span>}
+                            {a.actorName && <span>· {a.actorName}</span>}
                             {a.status !== "success" && (
                               <Badge variant="destructive">{a.status}</Badge>
                             )}

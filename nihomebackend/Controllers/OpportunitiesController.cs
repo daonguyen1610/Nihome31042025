@@ -74,6 +74,27 @@ public class OpportunitiesController(
         return Ok(result);
     }
 
+    /// <summary>Owner picker for callers who reassign opportunities, without
+    /// requiring access to the full user directory (users.view).</summary>
+    [HttpGet("owner-options")]
+    [RequirePermission("crm.opportunities", "view.all")]
+    public async Task<ActionResult<IReadOnlyList<OpportunityOwnerOptionResponse>>> OwnerOptions(CancellationToken ct) =>
+        Ok(await svc.ListOwnerOptionsAsync(ct));
+
+    /// <summary>Change history of one opportunity, scoped like the record
+    /// itself, without requiring system-wide audit access.</summary>
+    [HttpGet("{id:int}/history")]
+    [RequirePermission("crm.opportunities", "view")]
+    public async Task<ActionResult<IReadOnlyList<OpportunityHistoryItemResponse>>> History(int id, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+
+        var canSeeAll = await permissions.HasAsync(userId.Value, "crm.opportunities.view.all", ct);
+        var history = await svc.ListHistoryAsync(id, userId.Value, canSeeAll, ct);
+        return history is null ? NotFound() : Ok(history);
+    }
+
     [HttpGet("{id:int}")]
     [RequirePermission("crm.opportunities", "view")]
     public async Task<ActionResult<OpportunityResponse>> Get(int id, CancellationToken ct)

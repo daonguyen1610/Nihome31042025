@@ -717,6 +717,82 @@ public class OpportunitiesControllerTests : IntegrationTestBase
 
     // ---------- helpers ----------
 
+    [Fact]
+    public async Task OwnerOptions_ListsSalesWithoutDirectoryAccess()
+    {
+        // Sales Manager reassigns owners but deliberately lacks users.view.
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        (await Client.GetAsync("/api/users?take=5")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        var res = await Client.GetAsync("/api/opportunities/owner-options");
+
+        res.StatusCode.Should().Be(HttpStatusCode.OK);
+        var options = (await ReadJsonAsync(res)).EnumerateArray().ToList();
+        var ids = options.Select(option => option.GetProperty("id").GetInt32()).ToList();
+        var saleId = await UserIdAsync("SALE");
+        var designId = await UserIdAsync("DESIGN");
+        ids.Should().Contain(saleId).And.NotContain(designId);
+        options.Should().AllSatisfy(option =>
+        {
+            option.TryGetProperty("phoneNumber", out _).Should().BeFalse();
+            option.TryGetProperty("email", out _).Should().BeFalse();
+        });
+    }
+
+    [Fact]
+    public async Task OwnerOptions_RequiresViewAll()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
+        (await Client.GetAsync("/api/opportunities/owner-options")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task History_ShowsTheOpportunityChangesWithinRecordScope()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        (await Client.GetAsync("/api/audit-logs?resourceType=Opportunity")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        var opportunityId = await CreateOpportunityAsync();
+        var otherId = await CreateOpportunityAsync();
+        (await Client.PatchAsJsonAsync($"/api/opportunities/{opportunityId}/stage", new
+        {
+            targetStage = "Qualification",
+            rowVersion = await GetRowVersionAsync(opportunityId),
+        })).EnsureSuccessStatusCode();
+
+        // Audit entries are written by a background queue; wait for both.
+        var resourceId = opportunityId.ToString();
+        for (var attempt = 0; attempt < 50 && await WithDbAsync(db => db.AuditLogs.CountAsync(entry =>
+                 entry.ResourceType == EntityTypes.Opportunity && entry.ResourceId == resourceId)) < 2; attempt++)
+        {
+            await Task.Delay(100);
+        }
+
+        var res = await Client.GetAsync($"/api/opportunities/{opportunityId}/history");
+
+        res.StatusCode.Should().Be(HttpStatusCode.OK);
+        var entries = (await ReadJsonAsync(res)).EnumerateArray().ToList();
+        entries.Select(entry => entry.GetProperty("action").GetString())
+            .Should().Contain("opportunity.create").And.Contain(action => action!.StartsWith("opportunity.stage"));
+        entries.Should().AllSatisfy(entry =>
+        {
+            entry.GetProperty("actorName").GetString().Should().NotBeNullOrWhiteSpace();
+            entry.TryGetProperty("ipAddress", out _).Should().BeFalse();
+        });
+        entries.Select(entry => entry.GetProperty("message").GetString())
+            .Should().NotContain(message => message!.Contains($"#{otherId} "));
+
+        // A salesperson who does not own the opportunity cannot read its history.
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
+        (await Client.GetAsync($"/api/opportunities/{opportunityId}/history")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "WAREHOUSE"));
+        (await Client.GetAsync($"/api/opportunities/{opportunityId}/history")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    private Task<int> UserIdAsync(string roleCode) => WithDbAsync(db => db.Users
+        .Where(user => user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode[roleCode])
+        .Select(user => user.Id)
+        .SingleAsync());
+
     private async Task<int> CreateCustomerAsync()
     {
         var res = await Client.PostAsJsonAsync("/api/customers", new

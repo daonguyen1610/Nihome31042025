@@ -165,6 +165,54 @@ public class OpportunityService(
         return Map(op, op.Customer.Name, op.Owner?.FullName, op.Activities, contracts);
     }
 
+    public async Task<IReadOnlyList<OpportunityOwnerOptionResponse>> ListOwnerOptionsAsync(
+        CancellationToken ct = default) =>
+        await db.Users.AsNoTracking()
+            .Where(user => user.IsActive &&
+                user.RoleEntity != null && user.RoleEntity.IsActive &&
+                user.RoleEntity.RolePermissions.Any(grant =>
+                    grant.Permission.Module == "crm.opportunities" && grant.Permission.Action == "manage"))
+            .OrderBy(user => user.FullName)
+            .Select(user => new OpportunityOwnerOptionResponse
+            {
+                Id = user.Id,
+                FullName = user.FullName ?? user.Email,
+            })
+            .ToListAsync(ct);
+
+    public async Task<IReadOnlyList<OpportunityHistoryItemResponse>?> ListHistoryAsync(
+        int id, int callerUserId, bool canSeeAll, CancellationToken ct = default)
+    {
+        var ownerUserId = await db.Opportunities.AsNoTracking()
+            .Where(item => item.Id == id)
+            .Select(item => new { item.OwnerUserId })
+            .SingleOrDefaultAsync(ct);
+        if (ownerUserId is null) return null;
+        if (!canSeeAll && ownerUserId.OwnerUserId != callerUserId) return null;
+
+        var resourceId = id.ToString();
+        var entries = await db.AuditLogs.AsNoTracking()
+            .Where(entry => entry.ResourceType == EntityTypes.Opportunity && entry.ResourceId == resourceId)
+            .OrderByDescending(entry => entry.CreatedAt)
+            .ThenByDescending(entry => entry.Id)
+            .Take(100)
+            .Select(entry => new { entry.Id, entry.CreatedAt, entry.Action, entry.Message, entry.ActorUserId, entry.Status })
+            .ToListAsync(ct);
+        var actorIds = entries.Where(entry => entry.ActorUserId.HasValue).Select(entry => entry.ActorUserId!.Value).Distinct().ToList();
+        var actorNames = await db.Users.AsNoTracking()
+            .Where(user => actorIds.Contains(user.Id))
+            .ToDictionaryAsync(user => user.Id, user => user.FullName ?? user.Email, ct);
+        return entries.Select(entry => new OpportunityHistoryItemResponse
+        {
+            Id = entry.Id,
+            CreatedAt = entry.CreatedAt,
+            Action = entry.Action,
+            Message = entry.Message,
+            ActorName = entry.ActorUserId.HasValue && actorNames.TryGetValue(entry.ActorUserId.Value, out var name) ? name : null,
+            Status = entry.Status,
+        }).ToList();
+    }
+
     // -------- Create / Update --------
 
     public async Task<OpportunityResponse> CreateAsync(
