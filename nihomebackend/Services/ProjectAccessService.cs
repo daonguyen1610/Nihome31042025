@@ -45,6 +45,32 @@ public sealed class ProjectAccessService(AppDbContext db, IPermissionService per
                       role.Scope == ProjectRoleScope.Module && role.ScopeValue == "Design")))), ct);
     }
 
+    /// <summary>
+    /// Who may start a project's design flow (callers already hold
+    /// design.projects.manage). Project managers qualify through team
+    /// management; a Design Lead does not hold operations.projects.manage, so
+    /// being named PM or Design Lead on this project's team is enough, which
+    /// lets design start before any contract exists (design first, contract
+    /// later).
+    /// </summary>
+    public async Task<bool> CanOpenDesignFlowAsync(
+        int userId,
+        int projectId,
+        CancellationToken ct = default)
+    {
+        if (await CanManageTeamAsync(userId, projectId, ct)) return true;
+
+        return await db.OperationalProjectMembers.AsNoTracking().AnyAsync(member =>
+            member.OperationalProjectId == projectId &&
+            member.UserId == userId &&
+            member.EndedAt == null &&
+            member.Roles.Any(role => role.EndedAt == null &&
+                (role.RoleCode == ProjectTeamRoleCode.ProjectManager ||
+                 role.RoleCode == ProjectTeamRoleCode.DesignLead) &&
+                (role.Scope == ProjectRoleScope.Project ||
+                 role.Scope == ProjectRoleScope.Module && role.ScopeValue == "Design")), ct);
+    }
+
     public async Task<bool> CanManageDesignScheduleAsync(
         int userId,
         int projectId,

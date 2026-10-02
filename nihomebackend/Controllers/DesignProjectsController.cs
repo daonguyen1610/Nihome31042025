@@ -54,10 +54,25 @@ public class DesignProjectsController(
         if (userId is null) return Unauthorized();
         var operationalProjectId = await projectAccess.ResolveDesignCreateOperationalProjectIdAsync(
             request.OperationalProjectId, request.ContractId, ct);
-        if (!operationalProjectId.HasValue ||
-            !await projectAccess.CanManageTeamAsync(userId.Value, operationalProjectId.Value, ct))
+        // A design flow may start before any contract (design first, contract
+        // later), but it always belongs to an operational project.
+        if (!operationalProjectId.HasValue)
+        {
+            return BadRequest(new
+            {
+                message = "Vui lòng chọn Dự án vận hành cho dự án thiết kế (ví dụ PJ-2026-0001), hoặc chọn Hợp đồng đã gắn dự án.",
+            });
+        }
+        if (!await projectAccess.CanViewOperationalProjectAsync(userId.Value, operationalProjectId.Value, ct))
         {
             return NotFound();
+        }
+        if (!await projectAccess.CanOpenDesignFlowAsync(userId.Value, operationalProjectId.Value, ct))
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new
+            {
+                message = "Chỉ PM hoặc Design Lead trong đội ngũ của dự án này mới mở được luồng thiết kế. Hãy nhờ PM thêm bạn vào đội ngũ dự án với vai trò Design Lead.",
+            });
         }
         try
         {
