@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import QuoteCatalogEmptyState from "@/components/admin/QuoteCatalogEmptyState";
 import {
   Select,
   SelectContent,
@@ -30,6 +31,7 @@ interface BoqCatalogFieldsProps {
 const BoqCatalogFields = ({ catalogId, pricingDate, disabled = false, onApply }: BoqCatalogFieldsProps) => {
   const { t } = useI18n();
   const [catalogs, setCatalogs] = useState<MaterialRateCatalogResponse[]>([]);
+  const [catalogsLoaded, setCatalogsLoaded] = useState(false);
   const [selectedCatalogId, setSelectedCatalogId] = useState<number | null>(catalogId ?? null);
   const [selectedDate, setSelectedDate] = useState(pricingDate?.slice(0, 10) ?? new Date().toISOString().slice(0, 10));
   const [revision, setRevision] = useState<MaterialRateRevisionResponse | null>(null);
@@ -41,7 +43,11 @@ const BoqCatalogFields = ({ catalogId, pricingDate, disabled = false, onApply }:
   useEffect(() => {
     let cancelled = false;
     void adminApi.listMaterialRateCatalogs(undefined, false, "Boq")
-      .then(({ data }) => { if (!cancelled) setCatalogs(data); })
+      .then(({ data }) => {
+        if (cancelled) return;
+        setCatalogs(data);
+        setCatalogsLoaded(true);
+      })
       .catch((err) => { if (!cancelled) setError(extractApiError(err)); });
     return () => { cancelled = true; };
   }, []);
@@ -84,6 +90,7 @@ const BoqCatalogFields = ({ catalogId, pricingDate, disabled = false, onApply }:
           {t("quotes.rate.manageCatalogs")}
         </Link>
       </p>
+      {catalogsLoaded && catalogs.length === 0 && <QuoteCatalogEmptyState catalogType="Boq" />}
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
           <Label>{t("quotes.field.materialRateCatalog")}</Label>
@@ -95,7 +102,6 @@ const BoqCatalogFields = ({ catalogId, pricingDate, disabled = false, onApply }:
             <SelectTrigger data-testid="quote-boq-catalog"><SelectValue placeholder={t("quotes.boqCatalog.selectCatalog")} /></SelectTrigger>
             <SelectContent>{catalogs.map((catalog) => <SelectItem key={catalog.id} value={String(catalog.id)}>{catalog.code} · {catalog.name}</SelectItem>)}</SelectContent>
           </Select>
-          {catalogs.length === 0 && !error && <p className="mt-1 text-xs text-amber-700">{t("quotes.boqCatalog.noCatalogs")}</p>}
         </div>
         <div>
           <Label>{t("quotes.field.pricingEffectiveDate")}</Label>

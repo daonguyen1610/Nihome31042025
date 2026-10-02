@@ -210,10 +210,12 @@ const AdminQuotes = () => {
 
   useEffect(() => {
     if (openedFromQuery.current) return;
+    if (searchParams.get("create") !== "1") return;
+    // ?create=1 alone (e.g. returning from catalog setup) opens an empty form;
+    // with an opportunityId it is preselected.
     const opportunityId = Number(searchParams.get("opportunityId"));
-    if (searchParams.get("create") !== "1" || !Number.isInteger(opportunityId) || opportunityId <= 0) return;
     openedFromQuery.current = true;
-    openCreate(opportunityId);
+    openCreate(Number.isInteger(opportunityId) && opportunityId > 0 ? opportunityId : 0);
   }, [searchParams]);
 
   const updateBoqItem = (index: number, patch: Partial<QuoteItemInput>) => {
