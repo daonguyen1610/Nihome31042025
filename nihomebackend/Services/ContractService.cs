@@ -350,6 +350,7 @@ public class ContractService(
             ? await db.Database.BeginTransactionAsync(ct)
             : null;
         var customerOwnerUserId = await ValidateReferencesAsync(req, ct);
+        if (req.QuoteId.HasValue) await EnsureQuoteReadyForContractAsync(req.QuoteId.Value, ct);
         var operationalProjectId = await ResolveOperationalProjectIdAsync(req, null, ct);
 
         // A supplied number is the caller's to own; generated numbers are
@@ -379,7 +380,7 @@ public class ContractService(
 
         if (!canReassignOwner && customerOwnerUserId.HasValue && customerOwnerUserId.Value != callerUserId)
         {
-            throw new ContractValidationException("Customer is outside the caller's ownership scope.");
+            throw new ContractValidationException("Khách hàng này thuộc phạm vi phụ trách của nhân viên khác; bạn không thể lập hoặc chuyển hợp đồng sang khách hàng đó.");
         }
         var ownerUserId = canReassignOwner && req.OwnerUserId.HasValue
             ? req.OwnerUserId.Value
@@ -479,6 +480,12 @@ public class ContractService(
             entity, req.OpportunityId, req.CustomerId, req.Status, req.SignedDate, deleting: false, ct: ct);
 
         var customerOwnerUserId = await ValidateReferencesAsync(req, ct);
+        // Only a newly attached quote must be approved; one linked earlier may
+        // have expired since, and that must not block editing other terms.
+        if (req.QuoteId.HasValue && req.QuoteId != entity.QuoteId)
+        {
+            await EnsureQuoteReadyForContractAsync(req.QuoteId.Value, ct);
+        }
         var operationalProjectId = await ResolveOperationalProjectIdAsync(
             req,
             entity.OperationalProjectId,
@@ -514,7 +521,7 @@ public class ContractService(
             && customerOwnerUserId.HasValue
             && customerOwnerUserId.Value != callerUserId)
         {
-            throw new ContractValidationException("Customer is outside the caller's ownership scope.");
+            throw new ContractValidationException("Khách hàng này thuộc phạm vi phụ trách của nhân viên khác; bạn không thể lập hoặc chuyển hợp đồng sang khách hàng đó.");
         }
         entity.CustomerId = req.CustomerId;
         entity.Direction = req.Direction;
@@ -653,6 +660,103 @@ public class ContractService(
         catch (UnauthorizedAccessException)
         {
         }
+    }
+
+    /// <summary>
+    /// Attaches an approved quote to an existing customer contract, so the
+    /// price agreed with the customer is traceable even when the contract was
+    /// drafted before or independently of the quote.
+    /// </summary>
+    public async Task<ContractResponse?> LinkQuoteAsync(
+        int id, int quoteId, int callerUserId, bool canSeeAll, string? rowVersion, CancellationToken ct = default)
+    {
+        await using var transaction = db.Database.IsRelational()
+            ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct)
+            : null;
+        var entity = await db.Contracts.FindAsync(new object?[] { id }, ct);
+        if (entity == null) return null;
+        if (!canSeeAll && entity.OwnerUserId != callerUserId) return null;
+        CrmConcurrency.Apply(db, entity, rowVersion);
+
+        if (entity.QuoteId == quoteId) return await GetAsync(id, callerUserId, canSeeAll: true, ct);
+        if (entity.Direction != ContractDirection.Upstream)
+        {
+            throw new ContractValidationException("Chỉ hợp đồng với khách hàng mới gắn được báo giá.");
+        }
+        if (entity.Status is ContractStatus.Cancelled or ContractStatus.Completed)
+        {
+            throw new ContractValidationException("Không thể gắn báo giá vào hợp đồng đã huỷ hoặc đã hoàn thành.");
+        }
+
+        var quote = await EnsureQuoteReadyForContractAsync(quoteId, ct);
+        if (entity.QuoteId.HasValue)
+        {
+            var currentCode = await db.Quotes.AsNoTracking()
+                .Where(item => item.Id == entity.QuoteId.Value)
+                .Select(item => item.Code)
+                .SingleOrDefaultAsync(ct);
+            throw new ContractValidationException(
+                $"Hợp đồng đã gắn báo giá {currentCode ?? $"#{entity.QuoteId}"}. Mỗi hợp đồng chỉ có một báo giá nguồn.");
+        }
+        if (quote.CustomerId != entity.CustomerId)
+        {
+            throw new ContractValidationException($"Báo giá {quote.Code} thuộc khách hàng khác với hợp đồng.");
+        }
+        if (entity.OpportunityId.HasValue && entity.OpportunityId != quote.OpportunityId)
+        {
+            throw new ContractValidationException($"Báo giá {quote.Code} không thuộc cơ hội của hợp đồng.");
+        }
+        if (quote.OperationalProjectId.HasValue && entity.OperationalProjectId.HasValue &&
+            quote.OperationalProjectId != entity.OperationalProjectId)
+        {
+            throw new ContractValidationException($"Báo giá {quote.Code} và hợp đồng đang thuộc hai dự án khác nhau.");
+        }
+        var otherContract = await db.Contracts.AsNoTracking()
+            .Where(item => item.QuoteId == quoteId && item.Id != id && item.Status != ContractStatus.Cancelled)
+            .Select(item => item.ContractNumber)
+            .FirstOrDefaultAsync(ct);
+        if (otherContract is not null)
+        {
+            throw new ContractValidationException($"Báo giá {quote.Code} đã được gắn với hợp đồng {otherContract}.");
+        }
+
+        entity.QuoteId = quoteId;
+        entity.OpportunityId ??= quote.OpportunityId;
+        entity.UpdatedAt = DateTime.UtcNow;
+        entity.UpdatedByUserId = callerUserId;
+        await CrmConcurrency.SaveChangesAsync(db, ct);
+        if (transaction is not null) await transaction.CommitAsync(ct);
+        return await GetAsync(id, callerUserId, canSeeAll: true, ct);
+    }
+
+    private static readonly QuoteStatus[] ContractReadyQuoteStatuses =
+        [QuoteStatus.Approved, QuoteStatus.SentToCustomer, QuoteStatus.CustomerApproved];
+
+    private sealed record ContractQuoteReference(
+        int Id, string Code, int OpportunityId, int CustomerId, int? OperationalProjectId);
+
+    private async Task<ContractQuoteReference> EnsureQuoteReadyForContractAsync(int quoteId, CancellationToken ct)
+    {
+        var quote = await db.Quotes.AsNoTracking()
+            .Where(item => item.Id == quoteId)
+            .Select(item => new
+            {
+                item.Id,
+                item.Code,
+                item.Status,
+                item.OpportunityId,
+                item.Opportunity.CustomerId,
+                item.OperationalProjectId,
+            })
+            .SingleOrDefaultAsync(ct)
+            ?? throw new ContractValidationException($"Báo giá #{quoteId} không tồn tại.");
+        if (!ContractReadyQuoteStatuses.Contains(quote.Status))
+        {
+            throw new ContractValidationException(
+                $"Báo giá {quote.Code} chưa được duyệt. Chỉ gắn báo giá ở trạng thái Đã duyệt, Đã gửi khách hoặc Khách đã đồng ý vào hợp đồng.");
+        }
+        return new ContractQuoteReference(
+            quote.Id, quote.Code, quote.OpportunityId, quote.CustomerId, quote.OperationalProjectId);
     }
 
     public async Task<ContractResponse?> TransitionStatusAsync(
@@ -870,7 +974,7 @@ public class ContractService(
             .SingleOrDefaultAsync(ct);
         if (customer is null)
         {
-            throw new ContractValidationException($"Customer {req.CustomerId} does not exist.");
+            throw new ContractValidationException($"Khách hàng #{req.CustomerId} không tồn tại.");
         }
         if (RequiresSignedCustomer(req.Status) && customer.Type == CustomerType.Company &&
             (string.IsNullOrWhiteSpace(customer.TaxId) || !customer.HasLegalRepresentative))
@@ -887,11 +991,11 @@ public class ContractService(
                 .SingleOrDefaultAsync(ct);
             if (!opportunityCustomerId.HasValue)
             {
-                throw new ContractValidationException($"Opportunity {req.OpportunityId} does not exist.");
+                throw new ContractValidationException($"Cơ hội #{req.OpportunityId} không tồn tại.");
             }
             if (opportunityCustomerId.Value != req.CustomerId)
             {
-                throw new ContractValidationException("Opportunity does not belong to the selected customer.");
+                throw new ContractValidationException("Cơ hội đã chọn không thuộc khách hàng của hợp đồng.");
             }
         }
 
@@ -903,15 +1007,15 @@ public class ContractService(
                 .SingleOrDefaultAsync(ct);
             if (quoteOpportunity is null)
             {
-                throw new ContractValidationException($"Quote {req.QuoteId} does not exist.");
+                throw new ContractValidationException($"Báo giá #{req.QuoteId} không tồn tại.");
             }
             if (quoteOpportunity.CustomerId != req.CustomerId)
             {
-                throw new ContractValidationException("Quote does not belong to the selected customer.");
+                throw new ContractValidationException("Báo giá đã chọn không thuộc khách hàng của hợp đồng.");
             }
             if (req.OpportunityId.HasValue && quoteOpportunity.OpportunityId != req.OpportunityId.Value)
             {
-                throw new ContractValidationException("Quote does not belong to the selected opportunity.");
+                throw new ContractValidationException("Báo giá đã chọn không thuộc cơ hội của hợp đồng.");
             }
         }
 

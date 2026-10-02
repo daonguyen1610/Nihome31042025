@@ -322,6 +322,38 @@ public class ContractsController(
 
     // -------- state transitions --------
 
+    [HttpPost("{id:int}/link-quote")]
+    [RequirePermission("crm.contracts", "manage")]
+    [Idempotency("crm.contracts.link-quote")]
+    public async Task<ActionResult<ContractResponse>> LinkQuote(
+        int id, [FromBody] LinkContractQuoteRequest req, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+
+        var canSeeAll = await permissions.HasAsync(userId.Value, "crm.contracts.view.all", ct);
+        req.RowVersion = CrmConcurrency.ResolveRequestToken(Request, req.RowVersion);
+        try
+        {
+            var updated = await svc.LinkQuoteAsync(id, req.QuoteId, userId.Value, canSeeAll, req.RowVersion, ct);
+            if (updated == null) return NotFound();
+
+            audit.Log(new AuditEvent
+            {
+                Action = "contract.link-quote",
+                ResourceType = EntityTypes.Contract,
+                ResourceId = id.ToString(),
+                Message = $"Contract #{id} linked to quote #{req.QuoteId}.",
+            });
+            CrmConcurrency.SetResponseEntityTag(Response, updated.RowVersion);
+            return Ok(updated);
+        }
+        catch (ContractValidationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
     [HttpPost("{id:int}/transition")]
     [RequirePermission("crm.contracts", "manage")]
     [Idempotency("crm.contracts.transition")]

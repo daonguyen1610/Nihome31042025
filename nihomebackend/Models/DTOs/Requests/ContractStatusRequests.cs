@@ -5,6 +5,15 @@ namespace NihomeBackend.Models.DTOs.Requests;
 
 /// <summary>Ask the server to transition the contract's status. Transitions
 /// enforce business rules (see <c>ContractService.TransitionAsync</c>).</summary>
+/// <summary>Attach an approved quote to an existing customer contract.</summary>
+public class LinkContractQuoteRequest : IConcurrencyRequest
+{
+    public string? RowVersion { get; set; }
+
+    [Range(1, int.MaxValue)]
+    public int QuoteId { get; set; }
+}
+
 public class ContractStatusTransitionRequest : IConcurrencyRequest
 {
     public string? RowVersion { get; set; }

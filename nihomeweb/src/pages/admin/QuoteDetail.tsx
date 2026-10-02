@@ -9,6 +9,7 @@ import {
   Download,
   FileText,
   History,
+  Link2,
   ListChecks,
   Loader2,
   Pencil,
@@ -28,6 +29,8 @@ import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
 import BoqPasteDialog from "@/components/admin/BoqPasteDialog";
 import BoqCatalogFields from "@/components/admin/BoqCatalogFields";
 import QuoteRateFields from "@/components/admin/QuoteRateFields";
+import QuoteContractLinkDialog from "@/components/admin/QuoteContractLinkDialog";
+import { isContractReadyQuote } from "@/lib/contractQuotes";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -152,6 +155,8 @@ const AdminQuoteDetail = () => {
   const canApprove = has(ADMIN_PERMS.quotesApprove);
   const canSend = has(ADMIN_PERMS.quotesSend);
   const canOverrideRate = has(ADMIN_PERMS.quotesRateOverride);
+  const canManageContracts = has(ADMIN_PERMS.contractsManage);
+  const [linkContractOpen, setLinkContractOpen] = useState(false);
 
   const [quote, setQuote] = useState<QuoteResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -514,8 +519,8 @@ const AdminQuoteDetail = () => {
 
   // A quote the customer or an approver has signed off on is the point where a
   // contract can be raised from it.
-  const canRaiseContract =
-    canManage && !editing && (quote.status === "Approved" || quote.status === "CustomerApproved");
+  const canRaiseContract = canManage && !editing && isContractReadyQuote(quote.status);
+  const canLinkContract = canRaiseContract && canManageContracts && quote.customerId != null;
 
   // QuoteResponse.customerId is optional, so older quotes may not carry one.
   // Build with URLSearchParams so empty parameters drop out entirely rather than
@@ -606,6 +611,12 @@ const AdminQuoteDetail = () => {
             <Button variant="outline" onClick={goToContractForm}>
               <FileText className="mr-1.5 h-4 w-4" />
               {t("quotes.createContract.action")}
+            </Button>
+          )}
+          {canLinkContract && (
+            <Button variant="outline" data-testid="quote-link-contract" onClick={() => setLinkContractOpen(true)}>
+              <Link2 className="mr-1.5 h-4 w-4" />
+              {t("quoteLink.fromQuote.action")}
             </Button>
           )}
           {!editing && canDelete && (
@@ -1082,6 +1093,15 @@ const AdminQuoteDetail = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {canLinkContract && (
+        <QuoteContractLinkDialog
+          mode="fromQuote"
+          quote={{ id: quote.id, code: quote.code, customerId: quote.customerId!, opportunityId: quote.opportunityId }}
+          open={linkContractOpen}
+          onOpenChange={setLinkContractOpen}
+          onLinked={(contract) => navigate(`/admin/contracts/${contract.id}`)}
+        />
+      )}
     </AdminLayout>
   );
 };
