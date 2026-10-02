@@ -122,6 +122,22 @@ cannot be deleted, and its customer cannot be changed. Existing installations
 receive the new grants through `AddOperationalProjects`; fresh databases use
 `rbac-defaults.json`.
 
+Converting a lead into a new opportunity opens a `Planning` project in the
+same transaction. The converting user is recorded as its creator, so the
+project is in that user's scope without a PM assignment.
+
+### Starting a design flow
+
+`POST /api/design-projects` requires `design.projects.manage` and an
+operational project, given directly or through the linked contract; a contract
+is optional (design first, contract later). Without a project the API returns
+`400` with an actionable message. A project outside the caller's scope returns
+`404`. Inside it, the caller must manage the project team or be an active PM
+or Design Lead team member (project scope, or module scope `Design`);
+otherwise the API returns `403` telling the user to ask the PM for the Design
+Lead team role. `DESIGN_LEAD` has no `operations.projects.manage`, so the team
+role is how a Design Lead is authorized for a specific project.
+
 ## API Surface
 
 - `GET /api/users` — `users.view`

@@ -97,15 +97,106 @@ public class DesignProjectsControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task Create_UnknownCustomer_IsNotFoundAfterAccessCheck()
+    public async Task Create_WithoutProjectOrContract_IsBadRequestWithActionableMessage()
     {
+        // Used to be a silent 404 that the dialog swallowed (scenario B report).
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var name = $"Thiết kế trước {Guid.NewGuid():N}";
         var res = await Client.PostAsJsonAsync("/api/design-projects", new
         {
-            name = "Bad customer",
-            customerId = 9999999,
+            name,
+            customerId = await FirstCustomerIdAsync(),
         });
-        res.StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+        res.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await ReadJsonAsync(res)).GetProperty("message").GetString().Should().Contain("Dự án vận hành");
+        (await WithDbAsync(db => db.DesignProjects.AnyAsync(project => project.Name == name))).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task DesignFirst_DesignLeadOnProjectTeam_CreatesDesignProjectWithoutContract()
+    {
+        // Scenario B: the customer signs a design contract later. Sales converts
+        // the lead (which opens the project), the project owner puts the Design
+        // Lead on the team, and only then can the design flow start.
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var (customerId, projectId) = await ConvertLeadAsync("Nhà máy Minh Phúc giai đoạn 2");
+        var (_, otherProjectId) = await ConvertLeadAsync("Kho lạnh Hậu Giang");
+        var designLeadId = await WithDbAsync(db => db.Users
+            .Where(user => user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["DESIGN_LEAD"])
+            .Select(user => user.Id)
+            .SingleAsync());
+
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "DESIGN_LEAD"));
+        (await CreateDesignAsync(customerId, projectId)).StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        (await AddTeamMemberAsync(otherProjectId, designLeadId, "Architect")).StatusCode.Should().Be(HttpStatusCode.Created);
+        (await AddTeamMemberAsync(projectId, designLeadId, "DesignLead")).StatusCode.Should().Be(HttpStatusCode.Created);
+
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "DESIGN_LEAD"));
+        using var notLead = await CreateDesignAsync(customerId, otherProjectId);
+        notLead.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await ReadJsonAsync(notLead)).GetProperty("message").GetString().Should().Contain("Design Lead");
+        (await WithDbAsync(db => db.DesignProjects.AnyAsync(project => project.OperationalProjectId == otherProjectId)))
+            .Should().BeFalse();
+
+        using var created = await CreateDesignAsync(customerId, projectId);
+        created.StatusCode.Should().Be(HttpStatusCode.Created, await created.Content.ReadAsStringAsync());
+        var body = await ReadJsonAsync(created);
+        body.GetProperty("operationalProjectId").GetInt32().Should().Be(projectId);
+        body.GetProperty("contractId").ValueKind.Should().Be(System.Text.Json.JsonValueKind.Null);
+        body.GetProperty("currentStage").GetString().Should().Be("Concept");
+    }
+
+    private async Task<(int CustomerId, int ProjectId)> ConvertLeadAsync(string companyName)
+    {
+        var lead = await SendWithKeyAsync(HttpMethod.Post, "/api/leads", new
+        {
+            name = $"Đại diện {companyName}",
+            phone = "09" + Random.Shared.Next(10_000_000, 99_999_999),
+            companyName = $"{companyName} {Guid.NewGuid():N}",
+            sourceCode = "marketing",
+        });
+        lead.StatusCode.Should().Be(HttpStatusCode.Created, await lead.Content.ReadAsStringAsync());
+        var leadId = (await ReadJsonAsync(lead)).GetProperty("id").GetInt32();
+        var converted = await SendWithKeyAsync(HttpMethod.Post, $"/api/leads/{leadId}/convert", new
+        {
+            address = "KCN Tân Uyên, Bình Dương",
+            representativeName = "Nguyễn Minh Phúc",
+        });
+        converted.StatusCode.Should().Be(HttpStatusCode.OK, await converted.Content.ReadAsStringAsync());
+        var body = await ReadJsonAsync(converted);
+        var opportunityId = body.GetProperty("convertedOpportunityId").GetInt32();
+        var projectId = await WithDbAsync(db => db.Opportunities
+            .Where(item => item.Id == opportunityId)
+            .Select(item => item.OperationalProjectId!.Value)
+            .SingleAsync());
+        return (body.GetProperty("convertedCustomerId").GetInt32(), projectId);
+    }
+
+    private Task<HttpResponseMessage> CreateDesignAsync(int customerId, int operationalProjectId) =>
+        Client.PostAsJsonAsync("/api/design-projects", new
+        {
+            name = $"Thiết kế ý tưởng nhà xưởng {Guid.NewGuid():N}",
+            customerId,
+            operationalProjectId,
+        });
+
+    private Task<HttpResponseMessage> AddTeamMemberAsync(int projectId, int userId, string roleCode) =>
+        SendWithKeyAsync(HttpMethod.Post, $"/api/operational-projects/{projectId}/team/members", new
+        {
+            userId,
+            position = roleCode == "DesignLead" ? "Chủ trì thiết kế" : "Kiến trúc sư",
+            startedAt = DateTime.UtcNow.AddDays(-1),
+            roles = new[] { new { roleCode, scope = "Project" } },
+        });
+
+    private async Task<HttpResponseMessage> SendWithKeyAsync(HttpMethod method, string path, object body)
+    {
+        using var request = new HttpRequestMessage(method, path) { Content = JsonContent.Create(body) };
+        request.Headers.Add("Idempotency-Key", Guid.NewGuid().ToString());
+        return await Client.SendAsync(request);
     }
 
     [Fact]

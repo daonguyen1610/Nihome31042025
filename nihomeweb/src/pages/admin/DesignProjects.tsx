@@ -38,6 +38,7 @@ import {
   type CreateDesignProjectRequest,
   type CustomerResponse,
   type DesignProjectListItemResponse,
+  type OperationalProjectListItemResponse,
   type DesignProjectListParams,
   type DesignProjectResponse,
   type DesignProjectStage,
@@ -82,6 +83,7 @@ const toUtcMidnight = (yyyyMmDd: string): string =>
 const emptyForm = (): UpdateDesignProjectRequest => ({
   name: "",
   customerId: 0,
+  operationalProjectId: null,
   contractId: null,
   projectManagerUserId: null,
   designLeadUserId: null,
@@ -129,6 +131,8 @@ const AdminDesignProjects = () => {
   // lookups
   const [customers, setCustomers] = useState<CustomerResponse[]>([]);
   const [contracts, setContracts] = useState<ContractResponse[]>([]);
+  // Projects the caller can see; a design flow always belongs to one.
+  const [projects, setProjects] = useState<OperationalProjectListItemResponse[]>([]);
   const [users, setUsers] = useState<UserOption[]>([]);
 
   useEffect(() => {
@@ -146,6 +150,12 @@ const AdminDesignProjects = () => {
         if (cancelled) return;
         setCustomers(custResp.data.items ?? []);
         setContracts(ctrResp.data.items ?? []);
+        try {
+          const { data } = await adminApi.listOperationalProjects({ pageSize: 100 });
+          if (!cancelled) setProjects(data.items ?? []);
+        } catch {
+          // no project access — the server explains the requirement on save
+        }
         if (canPickUser) {
           try {
             const { data } = await adminApi.getUsers({ take: 200 });
@@ -210,10 +220,20 @@ const AdminDesignProjects = () => {
     stage !== "" ||
     status !== "";
 
-  const customerOptions = useMemo(
-    () => customers.map((c) => ({ value: String(c.id), label: c.name })),
-    [customers],
-  );
+  // Roles without customer access (Design Lead) still see the customer of the
+  // projects they belong to, so picking a project fills a readable customer.
+  const customerOptions = useMemo(() => {
+    const options = customers.map((c) => ({ value: String(c.id), label: c.name }));
+    const known = new Set(options.map((option) => option.value));
+    for (const project of projects) {
+      const value = String(project.customerId);
+      if (!known.has(value)) {
+        known.add(value);
+        options.push({ value, label: project.customerName });
+      }
+    }
+    return options;
+  }, [customers, projects]);
   const userOptions = useMemo(
     () => users.map((u) => ({ value: String(u.id), label: u.fullName })),
     [users],
@@ -253,6 +273,17 @@ const AdminDesignProjects = () => {
   const selectableContracts = useMemo(
     () => contracts.filter((c) => c.designProjectId == null || c.id === form.contractId),
     [contracts, form.contractId],
+  );
+  // With a contract chosen the project comes from that contract; without one
+  // (design first, contract later) the user picks the project directly.
+  const selectedContract = contracts.find((c) => c.id === form.contractId);
+  const projectFromContract = selectedContract?.operationalProjectId ?? null;
+  const projectOptions = useMemo(
+    () =>
+      projects
+        .filter((p) => !form.customerId || p.customerId === form.customerId)
+        .map((p) => ({ value: String(p.id), label: `${p.code} · ${p.name}` })),
+    [projects, form.customerId],
   );
   const contractOptions = useMemo(
     () =>
@@ -309,6 +340,10 @@ const AdminDesignProjects = () => {
       setFormError(t("designProjects.form.customerRequired"));
       return;
     }
+    if (!isEdit && !form.operationalProjectId && !projectFromContract) {
+      setFormError(t("designProjects.form.projectRequired"));
+      return;
+    }
     if (form.startDate && form.deadline && form.deadline < form.startDate) {
       setFormError(t("designProjects.form.deadlineBeforeStart"));
       return;
@@ -333,6 +368,7 @@ const AdminDesignProjects = () => {
         const payload: CreateDesignProjectRequest = {
           name: form.name.trim(),
           customerId: form.customerId,
+          operationalProjectId: form.operationalProjectId ?? projectFromContract,
           contractId: form.contractId ?? null,
           projectManagerUserId: form.projectManagerUserId ?? null,
           designLeadUserId: form.designLeadUserId ?? null,
@@ -751,7 +787,7 @@ const AdminDesignProjects = () => {
 
       {/* Create / edit dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-h-[90vh] w-[95vw] max-w-2xl overflow-y-auto sm:w-full">
           <DialogHeader>
             <DialogTitle>{isEdit ? t("designProjects.edit") : t("designProjects.new")}</DialogTitle>
             <DialogDescription>{t("designProjects.form.createHint")}</DialogDescription>
@@ -780,11 +816,50 @@ const AdminDesignProjects = () => {
               <SearchableSelect
                 className="mt-1"
                 value={form.contractId != null ? String(form.contractId) : ""}
-                onChange={(v) => setForm((f) => ({ ...f, contractId: v ? Number(v) : null }))}
+                onChange={(v) => setForm((f) => ({
+                  ...f,
+                  contractId: v ? Number(v) : null,
+                  operationalProjectId: v ? null : f.operationalProjectId,
+                }))}
                 options={[{ value: "", label: t("designProjects.form.contractNone") }, ...contractOptions]}
                 placeholder={t("designProjects.form.contractNone")}
               />
             </div>
+            {!isEdit && (
+              <div className="md:col-span-2" data-testid="design-project-operational-project">
+                <Label>{t("designProjects.field.operationalProject")} *</Label>
+                {projectFromContract ? (
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {t("designProjects.form.projectFromContract", {
+                      project: projects.find((p) => p.id === projectFromContract)?.code ?? `#${projectFromContract}`,
+                    })}
+                  </p>
+                ) : (
+                  <>
+                    <SearchableSelect
+                      className="mt-1"
+                      value={form.operationalProjectId != null ? String(form.operationalProjectId) : ""}
+                      onChange={(v) => {
+                        const project = projects.find((p) => p.id === Number(v));
+                        setFormError(null);
+                        setForm((f) => ({
+                          ...f,
+                          operationalProjectId: v ? Number(v) : null,
+                          customerId: f.customerId || project?.customerId || 0,
+                        }));
+                      }}
+                      options={projectOptions}
+                      placeholder={t("designProjects.form.projectPlaceholder")}
+                    />
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {projectOptions.length === 0
+                        ? t("designProjects.form.noProjects")
+                        : t("designProjects.form.projectHint")}
+                    </p>
+                  </>
+                )}
+              </div>
+            )}
             {canPickUser ? (
               <>
                 <div>
@@ -863,7 +938,7 @@ const AdminDesignProjects = () => {
             </div>
           </div>
           {formError ? (
-            <p className="text-sm text-rose-600">{formError}</p>
+            <p className="text-sm text-rose-600" role="alert" data-testid="design-project-form-error">{formError}</p>
           ) : null}
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>
