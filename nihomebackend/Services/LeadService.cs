@@ -400,6 +400,7 @@ public class LeadService(
         var linkedCustomerId = request.CustomerId ?? customerIdFromOpportunity;
 
         Customer? createdCustomer = null;
+        OperationalProject? createdProject = null;
         Opportunity? createdOpportunity = null;
 
         if (linkedCustomerId.HasValue)
@@ -420,8 +421,37 @@ public class LeadService(
 
         if (!request.OpportunityId.HasValue)
         {
+            // Customer → Project → Contract: the project is the key every later
+            // step needs (survey, quote, contract, design, Drive folder), so it is
+            // opened here in Planning together with the opportunity rather than
+            // left for the user to discover at contract time.
+            var projectName = string.IsNullOrWhiteSpace(lead.CompanyName)
+                ? $"Dự án {lead.Name.Trim()}"
+                : $"Dự án {lead.CompanyName.Trim()}";
+            await OperationalProjectCodeAllocator.AcquireLockAsync(db, now.Year, ct);
+            createdProject = new OperationalProject
+            {
+                Code = await OperationalProjectCodeAllocator.NextCodeAsync(db, now.Year, ct),
+                Name = projectName.Length > 300 ? projectName[..300] : projectName,
+                Status = OperationalProjectStatus.Planning,
+                CreatedAt = now,
+                CreatedByUserId = callerUserId,
+                UpdatedAt = now,
+                UpdatedByUserId = callerUserId,
+            };
+            if (createdCustomer is not null)
+            {
+                createdProject.Customer = createdCustomer;
+            }
+            else
+            {
+                createdProject.CustomerId = linkedCustomerId!.Value;
+            }
+            db.OperationalProjects.Add(createdProject);
+
             createdOpportunity = new Opportunity
             {
+                OperationalProject = createdProject,
                 Name = string.IsNullOrWhiteSpace(lead.CompanyName)
                     ? $"Cơ hội từ lead {lead.Name}"
                     : $"Cơ hội từ lead {lead.CompanyName}",
@@ -449,7 +479,7 @@ public class LeadService(
             db.Opportunities.Add(createdOpportunity);
         }
 
-        // Save #1 — customer and opportunity. The lead is stamped afterwards, never
+        // Save #1 — customer, project and opportunity. The lead is stamped afterwards, never
         // before, so a failure cannot leave it pointing at rows that never landed.
         if (createdCustomer is not null || createdOpportunity is not null)
         {
@@ -617,6 +647,7 @@ public class LeadService(
 
         if (opportunityAutoCreated && opportunityClean)
         {
+            await RemoveAutoCreatedProjectIfEmptyAsync(opportunity!, convertedAt, ct);
             db.Opportunities.Remove(opportunity!);
             outcome = UnconvertOutcome.DeletedOpportunity;
         }
@@ -653,6 +684,32 @@ public class LeadService(
     }
 
     // ---------- helpers ----------
+
+    /// <summary>
+    /// The project opened by ConvertAsync goes with its opportunity only while
+    /// nothing else has been attached to it. The deletion-impact plan is the
+    /// authoritative inventory of a project's dependents; anything beyond this
+    /// opportunity (survey, team, document, Drive folder...) keeps the project.
+    /// </summary>
+    private async Task RemoveAutoCreatedProjectIfEmptyAsync(
+        Opportunity opportunity,
+        DateTime convertedAt,
+        CancellationToken ct)
+    {
+        if (!opportunity.OperationalProjectId.HasValue) return;
+        var project = await db.OperationalProjects
+            .FirstOrDefaultAsync(item => item.Id == opportunity.OperationalProjectId.Value, ct);
+        if (project is null || project.CreatedAt != convertedAt) return;
+
+        var impact = await DeletionImpactPlanner.ForOperationalProjectAsync(db, project.Id, ct);
+        if (impact is null) return;
+        var onlyThisOpportunity = impact.Items.All(item =>
+            item.Key == "operations.opportunities" && item.Count == 1);
+        if (!onlyThisOpportunity) return;
+
+        opportunity.OperationalProjectId = null;
+        db.OperationalProjects.Remove(project);
+    }
 
     /// <summary>
     /// Builds the customer a convert creates. A lead with a company name yields a

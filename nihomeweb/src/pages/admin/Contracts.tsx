@@ -206,6 +206,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
   const location = useLocation();
   const canManage = has(ADMIN_PERMS.contractsManage);
   const canViewOperationalProjects = has(ADMIN_PERMS.operationalProjects);
+  const canCreateOperationalProjects = has(ADMIN_PERMS.operationalProjectsManage);
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Number(null) is 0 and Number.isFinite(0) is true, so parsing straight from
@@ -486,6 +487,13 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
   const [form, setForm] = useState<FormData>(emptyForm);
   const [suggestedContractNumber, setSuggestedContractNumber] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  // null = the quick-create row is closed; a string is the draft project name.
+  const [quickProjectName, setQuickProjectName] = useState<string | null>(null);
+  const [creatingProject, setCreatingProject] = useState(false);
+  const customerProjects = useMemo(
+    () => projects.filter((project) => project.customerId === form.customerId),
+    [projects, form.customerId],
+  );
   const [formError, setFormError] = useState<string | null>(null);
 
   const loadSuggestedContractNumber = useCallback(async () => {
@@ -513,6 +521,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
       operationalProjectId: selectedProject?.id ?? null,
     });
     setFormError(null);
+    setQuickProjectName(null);
     setDialogOpen(true);
     void loadSuggestedContractNumber();
   };
@@ -533,6 +542,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
       value: prefillValue ?? 0,
     });
     setFormError(null);
+    setQuickProjectName(null);
     setDialogOpen(true);
     void loadSuggestedContractNumber();
     // Runs once per navigation carrying the parameters.
@@ -591,6 +601,31 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
   // server's. Without this, a schedule that sums to exactly 100.01 would be
   // rejected by the client badge but accepted by the server, and vice versa.
   const milestoneSumOk = form.milestones.length === 0 || Math.abs(milestoneSum - 100) <= 0.01;
+
+  // Legacy opportunities and directly created contracts may reach this form
+  // before their customer has a project; open one here instead of sending the
+  // user away to the project screen and back.
+  const createProjectInline = async () => {
+    const name = quickProjectName?.trim() ?? "";
+    if (form.customerId == null) return;
+    if (!name) {
+      setFormError(t("contracts.quickProject.nameRequired"));
+      return;
+    }
+    setCreatingProject(true);
+    setFormError(null);
+    try {
+      const { data } = await adminApi.createOperationalProject({ name, customerId: form.customerId });
+      setProjects((current) => [...current, data]);
+      setForm((current) => ({ ...current, operationalProjectId: data.id }));
+      setQuickProjectName(null);
+      toast({ title: t("contracts.quickProject.created", { code: data.code }) });
+    } catch (err) {
+      setFormError(getErrorMessage(err) ?? t("common.error"));
+    } finally {
+      setCreatingProject(false);
+    }
+  };
 
   const submit = async () => {
     setFormError(null);
@@ -1390,11 +1425,72 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
               >
                 <SelectTrigger id="c-project-form" className="h-9"><SelectValue placeholder={t("contracts.selectOperationalProject")} /></SelectTrigger>
                 <SelectContent className="max-h-72">
-                  {projects.filter((project) => project.customerId === form.customerId).map((project) => (
+                  {customerProjects.map((project) => (
                     <SelectItem key={project.id} value={String(project.id)}>{project.code} · {project.name}</SelectItem>
                   ))}
+                  {/* A project inherited from the quote can sit outside the
+                      caller's project list; keep it selectable rather than blank. */}
+                  {form.operationalProjectId != null &&
+                    !customerProjects.some((project) => project.id === form.operationalProjectId) && (
+                    <SelectItem value={String(form.operationalProjectId)}>
+                      {t("contracts.quickProject.linkedProject", { id: form.operationalProjectId })}
+                    </SelectItem>
+                  )}
                 </SelectContent>
               </Select>
+              {form.customerId != null && customerProjects.length === 0 && form.operationalProjectId == null && (
+                <p className="text-xs text-amber-700">{t("contracts.quickProject.noProjects")}</p>
+              )}
+              {canCreateOperationalProjects && form.customerId != null && (
+                quickProjectName === null ? (
+                  <Button
+                    type="button"
+                    variant="link"
+                    size="sm"
+                    className="h-auto px-0 text-xs"
+                    data-testid="contract-quick-project-open"
+                    onClick={() => {
+                      const customerName = customers.find((customer) => customer.id === form.customerId)?.name ?? "";
+                      setQuickProjectName(customerName ? `${t("contracts.quickProject.namePrefix")} ${customerName}` : "");
+                    }}
+                  >
+                    <Plus className="mr-1 h-3.5 w-3.5" />
+                    {t("contracts.quickProject.action")}
+                  </Button>
+                ) : (
+                  <div className="flex flex-col gap-2 rounded-md border bg-muted/30 p-2 sm:flex-row sm:items-center">
+                    <Input
+                      aria-label={t("contracts.quickProject.nameLabel")}
+                      data-testid="contract-quick-project-name"
+                      value={quickProjectName}
+                      maxLength={300}
+                      onChange={(event) => setQuickProjectName(event.target.value)}
+                      placeholder={t("contracts.quickProject.nameLabel")}
+                      className="h-9"
+                    />
+                    <div className="flex shrink-0 gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        data-testid="contract-quick-project-create"
+                        onClick={() => void createProjectInline()}
+                        disabled={creatingProject}
+                      >
+                        {t("contracts.quickProject.create")}
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setQuickProjectName(null)}
+                        disabled={creatingProject}
+                      >
+                        {t("common.cancel")}
+                      </Button>
+                    </div>
+                  </div>
+                )
+              )}
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
