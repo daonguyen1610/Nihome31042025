@@ -127,9 +127,9 @@ The platform is being developed incrementally. The following components are curr
 | Customer contracts, appendices, attachments, and variation orders | Implemented |
 | Design management (projects, concept, basic design, detail design, revisions, IFC) | Implemented |
 | Permitting checklists | Implemented |
-| Construction management (tasks/Gantt and site diaries) | Implemented |
-| Acceptance and handover | Implemented |
-| Punchlist management | Implemented |
+| Construction management (tasks/Gantt and site diaries) | Core functions implemented; the expanded CM preparation, BCH resource/QA-QC/QS portals, S-Curve threshold control, and Budget Baseline workflow are planned |
+| Acceptance and handover | Core records implemented; upstream/downstream QS payment linkage and the expanded two-level CM review are planned |
+| Punchlist management | Core functions implemented; CM overdue supervision and expanded field evidence are planned |
 | Procurement vendor management | Implemented |
 | Procurement BOQ, material requests, and warehouse | Implemented for connected use — BOQ, Material Request, warehouse list/create/edit/detail, stock, allocation, posting, and reversal are live; offline queue/synchronization remains a cross-cutting platform dependency |
 | Finance module | Partially implemented — contracts and variation orders are live; cash flow and P&L are pending |
@@ -484,6 +484,46 @@ Track submission status at government agencies. Monitor processing progress: sub
 ### 3.4 Module 4: Construction and Acceptance
 
 **Objective**: Manage site operations, control quality and schedule, and ensure safety at each construction phase.
+
+The customer-approved target model separates duties between **Phòng CM** at
+the office and the **Ban Chỉ huy Công trình (BCH)** at the site. The existing
+screens documented below remain the current product baseline. The following
+operating model is the target for subsequent delivery and must not be treated as
+implemented until its API, permissions, tests, and UI are released.
+
+#### 3.4.0 Target Operating Model
+
+**Phase 1 - CM preparation after an Upstream D&B/construction contract is
+signed**
+
+1. Create the WBS, construction Gantt, Baseline S-Curve, milestones, and
+   critical path.
+2. Establish the BCH organization: Site Manager, Field/QA-QC Engineer, Site QS,
+   HSE Officer, and Storekeeper.
+3. Plan materials, equipment/machinery, and direct labour by schedule milestone;
+   coordinate Bid Tabulation and Downstream selection with Procurement.
+4. Build and lock the Budget Baseline for materials, labour, machinery, and BCH
+   overhead. Later changes require authorization, history, and a linked VO when
+   they change contract scope or value.
+
+**Phase 2 - parallel execution and cross-control**
+
+| BCH field responsibility | CM office responsibility |
+|---|---|
+| Raise mobile resource requests and compare them with BOQ limits | Perform level-2 review for over-limit or unplanned requests before Procurement |
+| Maintain daily weather, labour, equipment, progress, incident, and photo logs | Reconcile daily progress with the Baseline S-Curve; issue a red alert and require recovery explanation when delay exceeds 5% |
+| Create QA/QC records, use issued IFC drawings, and drive Punchlist items to closure | Review QA/QC evidence, perform spot checks, and supervise overdue Punchlist items |
+| Record HSE activity and violations | Review PPE/HSE compliance and process field violation records |
+| Measure Upstream quantities for CĐT/TVGS acceptance and Downstream quantities for subcontractor/team payment | Review both QS directions at level 2 and appraise VO dossiers |
+
+Quality records synchronize to the `04_Thi_cong_Nghiem_thu` Drive folder, but
+the application remains authoritative for metadata, workflow state, permission,
+version, and audit history. Approved Upstream QS evidence triggers Module 6
+collection milestones; approved Downstream QS evidence supports payment review.
+
+**Separation-of-duty rule:** the author of an MR, QS record, QA/QC dossier, HSE
+violation, or VO cannot satisfy the independent CM review for the same item.
+Every transition records actor, time, comments, and the version reviewed.
 
 #### 3.4.1 Construction Schedule (Gantt)
 

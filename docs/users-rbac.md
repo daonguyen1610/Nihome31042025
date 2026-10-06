@@ -59,6 +59,29 @@ The handover workspace uses separate read, write, and completion capabilities. T
 
 Scoped access includes records created by or assigned to the caller and projects where the caller is project manager or design lead. Reassigning a responsible user requires project leadership or `manage.all`. Wildcard PM, design-lead, admin, and super-admin patterns inherit the broad permissions defined in `rbac-defaults.json`; technical business roles with explicit `view`/`manage` entries remain project-scoped.
 
+### Module 4 target duty separation
+
+The expanded customer workflow requires separate BCH field duties and CM office
+review duties. These are target capabilities and must not be inferred from the
+current broad `PM`, `QS`, or construction permissions until explicit permission
+codes and migrations are delivered.
+
+| Actor | Target scope | Must not imply |
+|---|---|---|
+| PM Phòng CM | Publish baselines; review QA/QC, schedule, HSE, MR, QS, and VO across assigned projects | Creating field evidence on behalf of BCH or self-approving a record the PM authored |
+| Chỉ huy trưởng | Coordinate one assigned site; submit/approve BCH-internal work | CM level-2 approval or portfolio-wide access |
+| Kỹ sư hiện trường / QA-QC | Daily logs, quality evidence, IFC-based inspection, Punchlist handling | QS approval, budget unlock, or CM review |
+| QS công trường | Prepare Upstream/Downstream quantity and acceptance batches | Final payment approval or independent CM review of the same batch |
+| Cán bộ HSE | Record inspections and violations for the assigned site | Deleting confirmed violations or closing CM corrective actions |
+| Thủ kho | Receive, issue, and allocate approved site inventory | Approving the originating resource request or changing BOQ limits |
+| Procurement / Kế toán | Act on approved handoffs within their own module | Editing Module 4 evidence or bypassing required CM review |
+
+Server authorization must combine the specific action permission, Operational
+Project scope, record assignment, lifecycle state, and separation-of-duty
+check. Frontend route/action gates are convenience only. New role or permission
+codes require seed alignment, four-language labels, migration/backfill review,
+and allow/deny integration coverage before use.
+
 ### Operational project permissions
 
 | Permission | Scope |

@@ -93,6 +93,54 @@ All implementation decisions that affect business behavior must comply with 'doc
 - Prefer the smallest solution that satisfies the confirmed business flow, avoids unnecessary work, and improves delivery efficiency without weakening correctness or validation.
 - After implementation, verify the result against the documented workflow and customer expectation before declaring the task complete.
 
+## Module 4 construction and acceptance rules
+
+Treat the Module 4 contract in `docs/Nicon-QLVH.md`, `docs/Nicon-workflow.md`,
+and `docs/application_developer.md` as mandatory for construction work.
+
+- Preserve the two-stage lifecycle: Phòng CM prepares the project after the
+  Upstream D&B/construction contract is signed; BCH and Phòng CM then operate
+  in parallel during construction.
+- Preserve the organizational boundary. BCH creates field evidence and runs the
+  assigned site; Phòng CM supervises multiple projects and performs independent
+  level-2 review. Do not collapse both into one role, menu permission, or status
+  transition.
+- Model the preparation baseline explicitly: WBS/Gantt, critical path,
+  Baseline S-Curve, BCH organization, resource plan, and locked Budget Baseline.
+  Never overwrite a published baseline; version changes and keep their audit
+  history. Budget/scope changes require the applicable VO authorization.
+- Resource requests must be typed as material, equipment/machinery, or labour.
+  Reuse the existing MR/BOQ workflow for material requests. Over-limit or
+  unplanned requests require CM level-2 approval before Procurement.
+- Keep QA/QC, HSE, Punchlist, daily diary, Upstream QS, and Downstream QS as
+  distinct business records with project/WBS links, lifecycle, responsible
+  actor, evidence, timestamps, and concurrency control.
+- Upstream QS links to the Owner/CĐT contract and receivable milestone;
+  Downstream QS links to the subcontractor/team contract and payable dossier.
+  Do not merge directions or infer direction from amount signs.
+- Compute schedule variance against the published Baseline S-Curve. A delay
+  strictly greater than 5% raises a red alert to the Site Manager and requires
+  an explanation/recovery plan. Persist calculation inputs and baseline version
+  so the result is reproducible.
+- Enforce separation of duties server-side: an author cannot perform the
+  independent CM review of the same MR, QA/QC dossier, QS batch, HSE violation,
+  or VO. UI hiding alone is insufficient.
+- Only released IFC revisions are visible as construction instructions. Keep
+  suppliers, Downstream contracts, payment milestones, VOs, and KPI ownership
+  in Modules 5, 6, and 8; Module 4 references them by stable IDs rather than
+  copying master data.
+- Synchronize quality records to `04_Thi_cong_Nghiem_thu` through the existing
+  durable document workflow. Database metadata, workflow state, permissions,
+  versions, and audit history remain authoritative; a Drive failure must be
+  visible and retryable.
+- Design BCH screens mobile-first for weak connectivity and safe retry/offline
+  behavior. Design CM controls for desktop comparison, exception review, and
+  portfolio monitoring. Test duplicate submission and reconnect conflicts.
+- Before implementing unresolved details such as variance period/formula,
+  baseline unlock authority, approval matrix, mandatory QA/QC checklist, and
+  payment dossier composition, obtain a product/business decision; do not
+  invent them.
+
 ## Hard-delete policy
 
 Hard delete is a business operation, not a direct 'DbSet.Remove' call. Every user-facing root delete must follow the Permanent Aggregate Deletion section in 'docs/application_developer.md'.

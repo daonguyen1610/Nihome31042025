@@ -42,17 +42,94 @@
 > * **Checklist hồ sơ pháp lý tự động:** Hệ thống tự động tạo danh mục hồ sơ cần chuẩn bị tùy theo quy mô công trình (Giấy phép xây dựng, thẩm duyệt PCCC, đấu nối điện nước, giấy phép sử dụng vỉa hè, hồ sơ hoàn công).  
 > * **Theo dõi lộ trình hành chính (Tracking Process):** Cập nhật trạng thái xử lý tại cơ quan chức năng (Đã nộp \-\> Đang thụ lý \-\> Cần bổ sung \-\> Đã có kết quả). Cảnh báo đỏ nếu hồ sơ bị ngâm quá thời gian quy định của pháp luật.
 
-### **4\. MODULE 4: QUẢN LÝ THI LẬP TIẾN ĐỘ, THI CÔNG & NGHIỆM THU (CONSTRUCTION & ACCEPTANCE)**
+### **4\. MODULE 4: QUẢN LÝ THI CÔNG & NGHIỆM THU (CONSTRUCTION & ACCEPTANCE MANAGEMENT)**
 
-**Mục tiêu:** Số hóa toàn bộ nhật ký hiện trường và minh bạch hóa quy trình kiểm soát chất lượng.
+**Mục tiêu:** Quản lý khép kín từ khi Phòng Quản lý Thi công (CM) tiếp nhận
+hợp đồng D&B/Thi công đã ký đến khi Ban Chỉ huy Công trình (BCH) tổ chức thi
+công, nghiệm thu, hoàn công và bàn giao; đồng thời duy trì kiểm soát chéo về
+chất lượng, tiến độ, HSE, chi phí và khối lượng.
 
-> * **Quản lý Tiến độ trực quan (Gantt Chart & S-Curve):** Thiết lập bảng tiến độ tổng thể, phân chia hạng mục công việc (WBS). Hệ thống tự động vẽ biểu đồ S-Curve so sánh giữa Tiến độ kế hoạch và Tiến độ thực tế.  
-> * **Nhật ký công trình điện tử (Mobile-First):** Kỹ sư công trường cập nhật báo cáo hàng ngày bằng điện thoại: Số lượng nhân công (theo từng tổ đội), máy móc sử dụng, tình hình thời tiết, hình ảnh/video thi công thực tế và các sự cố phát sinh.  
-> * **Quy trình Nghiệm thu đa tầng (Acceptance Workflow):**  
-  * **Nghiệm thu từng phần (Nghiệm thu bộ phận/Giai đoạn):** Áp dụng cho từng hạng mục khuất lấp hoặc cấu kiện (Cọc, cốt thép, móng, dầm sàn, xây tô, chống thấm...). Kỹ sư gửi yêu cầu kèm hình ảnh thước đo, checklist tiêu chuẩn kỹ thuật. Tư vấn giám sát/Chủ đầu tư ký duyệt online.  
-  * **Nghiệm thu toàn công trình (Bàn giao):** Quy trình chạy thử thiết bị (Commissioning), lập biên bản nghiệm thu tổng thể để bàn giao đưa công trình vào sử dụng.  
-> * **Quản lý lỗi hiện trường (Punchlist):\*\* Chụp ảnh lỗi thi công, khoanh vùng, gắn thẻ (tag) chỉ định người chịu trách nhiệm sửa chữa, đặt deadline khắc phục và theo dõi trạng thái đóng/mở lỗi.**  
-> * **Tự động gom hồ sơ hoàn công: Hệ thống tự động liên kết toàn bộ biên bản nghiệm thu từng phần và bản vẽ có thay đổi thực tế để xuất nhanh bộ hồ sơ hoàn công vào cuối dự án.**
+#### **4.1. Giai đoạn 1 - Tiếp nhận dự án và chuẩn bị thi công (Phòng CM)**
+
+Ngay sau khi hợp đồng Upstream được ký tại Module 6, dự án được chuyển giao cho
+Phòng CM. Kỹ sư PM Phòng CM chủ trì ba nhóm công việc:
+
+1. **Lập kế hoạch thi công tổng thể**
+   * Lập WBS, Gantt Chart và Baseline S-Curve; xác định các mốc móng, kết cấu,
+     hoàn thiện, MEP và đường găng.
+   * Thiết lập sơ đồ tổ chức BCH, tối thiểu gồm Chỉ huy trưởng, Kỹ sư hiện
+     trường/QA-QC, Kỹ sư QS công trường, Cán bộ HSE và Thủ kho.
+2. **Chuẩn bị nguồn lực thực hiện**
+   * Lập định biên và kế hoạch cung ứng vật tư, thiết bị/máy thi công và nhân
+     công trực tiếp theo từng mốc tiến độ.
+   * Phối hợp Phòng Cung ứng (Module 5) lập Bid Tabulation, đánh giá năng lực,
+     lựa chọn thầu phụ/tổ đội/nhà cung cấp và chốt hợp đồng Downstream.
+3. **Lập dự chi và Budget Baseline**
+   * Bóc tách chi phí vật tư, nhân công, máy thi công và chi phí quản lý BCH.
+   * Khóa trần ngân sách cơ sở làm căn cứ kiểm soát P&L thời gian thực tại
+     Module 6 và chấm KPI tại Module 8. Mọi thay đổi sau khi khóa phải có lịch
+     sử, thẩm quyền phê duyệt và căn cứ VO khi làm thay đổi phạm vi/giá trị.
+
+#### **4.2. Giai đoạn 2 - Quản lý và tổ chức thi công**
+
+Khi công trình khởi công, BCH và Phòng CM vận hành song song, có phân quyền và
+kiểm soát chéo; không dùng chung một quyền phê duyệt cho người lập và người
+thẩm định cùng chứng từ.
+
+**Nhóm 1 - BCH tại hiện trường**
+
+* **Đề xuất nguồn lực và cấp phát (Mobile App):** BCH lập phiếu đề xuất vật tư,
+  thiết bị/máy thi công hoặc nhân công theo tiến độ thực tế. Hệ thống đối chiếu
+  hạn mức BOQ; phần vượt định mức hoặc phát sinh phải đi qua Phòng CM trước khi
+  chuyển Cung ứng.
+* **QA/QC và giám sát kỹ thuật:** Lập, theo dõi và lưu hồ sơ chất lượng như biên
+  bản lấy mẫu, kết quả thí nghiệm và chứng chỉ vật liệu; tự động đồng bộ vào
+  `04_Thi_cong_Nghiem_thu` trên Drive. BCH giám sát theo bản vẽ IFC và quản lý
+  Punchlist bằng ảnh, người xử lý, hạn khắc phục và trạng thái đến khi đóng lỗi.
+* **Nhật ký công trình điện tử:** Báo cáo hằng ngày về thời tiết, nhân công theo
+  tổ đội, thiết bị, công việc thực hiện, sự cố và hình ảnh thực tế.
+* **QS công trường:**
+  * Upstream: đo đạc và lập biên bản nghiệm thu khối lượng theo đợt để trình
+    CĐT/TVGS; khối lượng được duyệt là căn cứ kích hoạt mốc thu tiền Module 6.
+  * Downstream: xác nhận khối lượng thực tế của tổ đội/thầu phụ và lập đề nghị
+    thanh toán gửi Phòng Kế toán và PM Phòng CM.
+
+**Nhóm 2 - Phòng CM tại văn phòng**
+
+* **QA/QC Control:** Thẩm định hồ sơ chất lượng của BCH, kiểm tra đột xuất và
+  theo dõi các Punchlist quá hạn.
+* **Schedule Control:** Đối soát nhật ký/progress thực tế với Baseline S-Curve.
+  Khi độ trễ vượt **5%**, hệ thống phát cảnh báo đỏ đến Chỉ huy trưởng và yêu
+  cầu giải trình cùng kế hoạch điều chỉnh. Cách tính độ lệch và kỳ chốt dữ liệu
+  phải được cấu hình thống nhất, có thể truy vết.
+* **HSE Control:** Theo dõi nhật ký an toàn, việc sử dụng trang bị bảo hộ lao
+  động và xử lý biên bản vi phạm HSE từ công trường.
+* **Cost Control:** Duyệt tầng 2 các MR vượt định mức/phát sinh; rà soát bảng QS
+  Upstream và Downstream; thẩm định VO và lập hồ sơ phụ lục trình CĐT.
+
+#### **4.3. Đầu ra và liên kết bắt buộc**
+
+* Chỉ bản vẽ IFC đã phát hành từ Module 2 mới là căn cứ thi công.
+* Lựa chọn nhà cung cấp/thầu phụ và hợp đồng Downstream liên kết Module 5/6;
+  không sao chép thành danh mục độc lập trong Module 4.
+* Nghiệm thu QS Upstream/Downstream phải giữ quan hệ với hợp đồng, đợt, WBS,
+  BOQ/VO và bộ hồ sơ thanh toán tương ứng.
+* Hồ sơ QA/QC, nhật ký, Punchlist, nghiệm thu và hoàn công được liên kết với
+  Drive nhưng hệ thống vẫn quản lý metadata, quyền, phiên bản và audit trail.
+* Hoàn công và bàn giao chỉ được hoàn tất khi các hồ sơ bắt buộc đạt trạng thái
+  duyệt, không còn lỗi chặn và đủ điều kiện nghiệm thu/commissioning.
+
+#### **4.4. Quyết định còn cần NICON chốt trước khi phát triển**
+
+* Công thức, kỳ chốt và nguồn dữ liệu dùng để tính độ trễ S-Curve `> 5%`.
+* Người có quyền phát hành, mở khóa hoặc thay thế Baseline tiến độ và Budget
+  Baseline; giới hạn thay đổi nào bắt buộc có VO.
+* Ma trận duyệt cụ thể cho từng loại đề xuất nguồn lực, hồ sơ QA/QC, HSE, QS và
+  VO, gồm quy tắc ủy quyền/vắng mặt.
+* Checklist hồ sơ chất lượng bắt buộc theo loại công trình và điều kiện chặn
+  nghiệm thu, hoàn công, bàn giao.
+* Thành phần bộ hồ sơ thanh toán Upstream/Downstream và thời điểm Module 6 được
+  phép tạo/yêu cầu thu hoặc chi.
 
 ### **5\. MODULE 5: QUẢN LÝ CUNG ỨNG & KHO VẬT TƯ (PROCUREMENT & MATERIALS)**
 

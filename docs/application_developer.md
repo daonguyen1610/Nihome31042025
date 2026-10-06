@@ -1955,6 +1955,78 @@ stale writes, duplicate keys, immutable approvals, reversals and unchanged state
 after rejection through integration tests. Pure formulas, zero denominators,
 targets, weights, precision and Vietnam-time boundaries belong in unit tests.
 
+### 7.20 Module 4 Target Integration Contract
+
+This section records the customer-approved target for the expanded Construction
+and Acceptance module. It is a delivery contract, not a claim that every item
+below exists in the current API.
+
+#### Aggregate and ownership boundaries
+
+- An executed Upstream D&B/construction Contract starts CM preparation on the
+  existing Operational Project; it must not create a duplicate project.
+- The CM preparation plan owns the WBS baseline, critical path, Baseline
+  S-Curve, BCH organization, resource plan, and versioned Budget Baseline.
+- Field records belong to the project and identify their WBS item, reporting
+  date, author, BCH role, lifecycle status, and row version.
+- QA/QC documents, Punchlist items, HSE records, resource requests, QS batches,
+  and VO dossiers remain separate aggregates linked by stable IDs. Do not use
+  Drive paths, labels, or free text as relational keys.
+- Module 4 references Procurement suppliers/bids and Module 6 contracts,
+  milestones, payment dossiers, and VOs; it does not duplicate their masters.
+
+#### Workflow and controls
+
+1. CM publishes a construction baseline only after WBS, milestones, BCH roles,
+   resource plan, and Budget Baseline pass server validation.
+2. BCH submits field evidence from mobile. Draft/offline data is not approved
+   evidence and cannot trigger Procurement, payment, or KPI events.
+3. Over-limit or unplanned resource requests require an independent CM level-2
+   decision before Procurement. Rejection leaves BOQ commitments unchanged.
+4. Upstream and Downstream QS records use distinct directions and contract
+   links. Approved quantities are immutable; correction uses a superseding
+   version or reversal with full audit history.
+5. CM compares accepted progress evidence with the published Baseline S-Curve.
+   A delay greater than 5% creates a red alert and a required explanation/
+   recovery plan. Store the calculation inputs, baseline version, period, and
+   result so the decision is reproducible.
+6. The creator of an MR, QA/QC dossier, QS batch, HSE violation, or VO cannot
+   satisfy the independent CM review for that record. Enforce this server-side.
+7. Completion/handover consumes approved acceptance, QA/QC, as-built,
+   commissioning, and blocking-Punchlist state; it never trusts a client-only
+   readiness flag.
+
+#### Cross-module events and files
+
+| Source event | Required downstream effect |
+|---|---|
+| Upstream Contract signed | Make CM preparation eligible once, idempotently |
+| IFC released | Expose only the released revision to construction users |
+| Resource request approved by CM | Hand off the typed request to Procurement without copying the BOQ |
+| Upstream QS approved | Make evidence available to the matching receivable/payment milestone |
+| Downstream QS approved | Make evidence available to the matching payable dossier |
+| VO approved | Version affected budget/BOQ references; never mutate the original baseline silently |
+| QA/QC document accepted | Synchronize the managed file to `04_Thi_cong_Nghiem_thu` and retain application metadata |
+| Progress variance over 5% | Create one deduplicated red alert per project/baseline/period until resolved or superseded |
+
+External file writes use the existing durable document-operation pattern. The
+database transaction records authoritative metadata and an outbox/pending
+operation; a Drive failure must not falsely mark a dossier synchronized.
+
+#### Required validation
+
+- Unit tests: S-Curve variance, threshold boundary (`5%` is not `> 5%`), budget
+  roll-up, BOQ remaining quantity, QS totals, and baseline version selection.
+- Integration tests: project/contract scope, BCH-versus-CM permissions,
+  separation of duties, lifecycle transitions, stale row versions,
+  idempotency, rejection with unchanged downstream state, and Upstream versus
+  Downstream payment linkage.
+- Integration tests for Drive cover pending, retry, conflict, and failure
+  states; mocked metadata alone is not evidence of successful external sync.
+- Browser tests cover the mobile BCH happy/negative paths and the CM desktop
+  review/alert paths, including loading, empty, error, offline/retry, and
+  responsive states.
+
 ---
 
 ## 8. Frontend Development

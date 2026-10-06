@@ -45,9 +45,18 @@
                                               │  
                                               ▼  
 ┌──────────────────────────────────────────────────────────────────────────────────────────────────┐  
-│                                MODULE 4: QUẢN LÝ THI CÔNG & NGHIEM THỤ                           │  
-│  \- Tiến độ Gantt Chart & S-Curve  |  Nhật ký công trình Mobile  |  Quản lý lỗi hiện trường Punchlist │  
-│  \- Nghiệm thu từng phần (Cấu kiện/Giai đoạn) ➔ Nghiệm thu Toàn công trình (Bàn giao)             │  
+│                         MODULE 4: QUẢN LÝ THI CÔNG & NGHIỆM THU                                  │
+│  GĐ1 - PHÒNG CM: tiếp nhận HĐ Upstream → WBS/Gantt/Baseline S-Curve → tổ chức BCH                │
+│       → kế hoạch nguồn lực + chọn thầu/NCC → khóa Budget Baseline                                │
+│                                                                                                  │
+│  GĐ2 - BCH HIỆN TRƯỜNG                         PHÒNG CM KIỂM SOÁT CHÉO                            │
+│       - MR vật tư/máy/nhân công                 - QA/QC: thẩm định hồ sơ, Punchlist quá hạn       │
+│       - Nhật ký, HSE, QA/QC, Punchlist          - Schedule: đối soát S-Curve, cảnh báo trễ > 5%  │
+│       - QS Upstream và Downstream               - HSE: kiểm tra tuân thủ, xử lý vi phạm           │
+│                                                  - Cost: duyệt MR/QS tầng 2, thẩm định VO          │
+│                                                                                                  │
+│  Đầu ra: nghiệm thu → hồ sơ thanh toán M6 | QA/QC → Drive M7 | dữ liệu tiến độ/chi phí → KPI M8 │
+│          → hoàn công → commissioning → bàn giao                                                  │
 └─────────────────────────────────────────────┬────────────────────────────────────────────────────┘  
                                               │  
                                               ▼  
