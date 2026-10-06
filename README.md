@@ -248,8 +248,10 @@ https://endava-team-nawxok20.atlassian.net/jira/software/projects/NIH/boards/3
 
 ## Documentation
 
-- Developer setup, architecture, migrations, testing, and deployment: [`docs/application_developer.md`](docs/application_developer.md)
-- Product workflows and API reference: [`docs/user_guide.md`](docs/user_guide.md)
+- [NICON user guide](docs/user_guide.md) — delivered workflows, operating
+  instructions, implementation boundaries, and API usage.
+- [Application developer guide](docs/application_developer.md) — local setup,
+  architecture, API contracts, migrations, operations, and testing guidance.
 - Roles and permission behavior: [`docs/users-rbac.md`](docs/users-rbac.md)
 - Browser test operation: [`nihomeweb/e2e/README.md`](nihomeweb/e2e/README.md)
 

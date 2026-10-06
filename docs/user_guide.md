@@ -1,8 +1,8 @@
 # NICON Platform -- User Guide
 
-Version 1.0
+Version 1.1
 
-Last Updated: 9 September 2026
+Last Updated: 6 October 2026
 
 ---
 
@@ -40,7 +40,11 @@ The platform serves the following audiences:
 - **Administration**: Manage website content, handle contact inquiries, process job applications, configure email templates, and maintain multi-language translations.
 - **Public Visitors**: Browse the company website for information about services, projects, news, activities, and open positions.
 
-This guide describes the business requirements, module analysis, feature specifications, user workflows, and the complete API specification for the currently implemented components.
+This guide describes the business requirements, module analysis, feature
+specifications and user workflows. The API section is a curated operator-facing
+reference for public/content endpoints, not a complete OpenAPI contract; use the
+running Swagger document and controller/DTO source for the authoritative current
+endpoint shape.
 
 For development setup, database management, build procedures, and deployment instructions, refer to `application_developer.md`.
 
@@ -104,7 +108,7 @@ Additionally, the system includes cross-cutting capabilities:
 
 | Capability | Description |
 |------------|-------------|
-| Multi-Language | Vietnamese and English support across the interface |
+| Multi-Language | Vietnamese, English, Chinese, and Japanese across the current interface; the original BreakTask only requested Vietnamese and English |
 | Responsive Design | Support for desktop and mobile devices |
 | Role-Based Access | User creation, role assignment, and menu-level permission control |
 | Workflow Approval | Configurable approval flows for quotations, documents, material requests, and variation orders |
@@ -113,17 +117,27 @@ Additionally, the system includes cross-cutting capabilities:
 | Global Search | Cross-module search with advanced filtering and saved filter presets |
 | Master Data | Configurable reference data (statuses, lead sources, contract types, material types, checklist templates) |
 
-### 2.3 Project Estimation Summary
+### 2.3 Customer Task Breakdown Baseline
 
-Based on the task breakdown analysis, the full platform scope comprises:
+`Nicon_BreakTask_v1.xlsx` is retained as customer planning evidence, not as an
+automatically current delivery estimate. Its **Tiến độ hiện tại** sheet contains
+107 numbered work items at the time of this review: 48 `Done`, 11 `In Progress`,
+and 48 `Not Implement`. The workbook's main requirement sheet marks 291 entries
+`Chưa thực hiện`, but does not provide a complete numeric manday column.
 
-| Category | Task Count | Estimated Effort (Mandays) |
-|----------|------------|----------------------------|
-| Core Module Tasks | 96 | 204 |
-| Supplementary Frontend Tasks | 27 | 61.5 |
-| **Total** | **123** | **265.5** |
+The previously published total of 123 tasks and 265.5 frontend mandays cannot be
+reconciled to the current workbook and is therefore withdrawn. Do not use a task
+count or effort total for commercial or delivery planning unless the workbook
+version, included rows, formula, backend/QA/deployment scope, assumptions, and
+approval date are recorded. Interactive Gantt, workflow builder, offline mobile,
+multi-sheet BOQ import, and floor-plan annotation require separate discovery or
+prototype estimates.
 
-Note: Estimates cover frontend implementation only and do not include backend API development, QA testing, code review, or deployment. Tasks of high complexity (interactive Gantt chart, workflow builder, floor plan annotation) require prototype spikes before final estimation. All estimates carry a variance of plus or minus 20 percent depending on UI design complexity and component reuse.
+All page-level `Estimate` values retained later in this guide are legacy planning
+notes from the earlier document. They are neither an approved baseline nor a
+measure of delivered scope and must not be summed or quoted commercially. Use
+the implementation labels and source-backed workflow descriptions instead;
+re-estimate remaining work only after the open business decisions are approved.
 
 ### 2.4 Implementation Status
 
@@ -143,20 +157,22 @@ The platform is being developed incrementally. The following components are curr
 | Site settings and email template configuration | Implemented |
 | In-app admin notifications | Implemented |
 | CRM module (customers, leads, opportunities) | Implemented, including configurable Lead segments and the controlled five-step sales pipeline |
-| Central operational projects (customer, sales, contract, and design rollup) | Implemented; remaining modules are connected by subsequent NIH-447 subtasks |
+| Central operational projects (customer, sales, contract, and design rollup) | Implemented as the target cross-module root; several legacy construction and closeout records still use `DesignProjectId` and require controlled migration |
 | Quotations, capability documents, and tenders | Implemented, including governed material-rate pricing, localized preliminary PDF, and versioned Tender estimates |
 | Site survey digitization | Implemented, including project routing, structured conditions, CSV import, media/geolocation, Drive sync, and PDF export |
 | Customer contracts, appendices, attachments, and variation orders | Implemented |
-| Design management (projects, concept, basic design, detail design, revisions, IFC) | Implemented |
-| Permitting checklists | Implemented |
+| Design management | Core lifecycle implemented: projects, Concept metadata, Basic/Shop file upload and preview, revisions, IFC, Operational Project team and design schedule. Concept media/feedback threads, markup, the final Design Lead/Design Manager approval contract, and full MS Project import remain planned/open |
+| Permitting checklists | Core checklist implemented: owner/deadline, lifecycle, submitted/issued documents and risk filters. Project-type templates, work packages and construction-readiness integration remain planned/open |
 | Construction management (tasks/Gantt and site diaries) | Core functions implemented; the expanded CM preparation, BCH resource/QA-QC/QS portals, S-Curve threshold control, and Budget Baseline workflow are planned |
 | Acceptance and handover | Core records implemented; upstream/downstream QS payment linkage and the expanded two-level CM review are planned |
 | Punchlist management | Core functions implemented; CM overdue supervision and expanded field evidence are planned |
+| HSE violations | Operational-Project-scoped lifecycle, evidence paths, correction, confirmation/closure and concurrency are implemented; the final BCH-versus-CM approval/delegation matrix remains open |
 | Procurement vendor management | Implemented |
 | Procurement BOQ, material requests, and warehouse | Implemented for connected use — BOQ, Material Request, warehouse list/create/edit/detail, stock, allocation, posting, and reversal are live; offline queue/synchronization remains a cross-cutting platform dependency |
 | Finance module | Partially implemented — contracts and variation orders are live; cash flow and P&L are pending |
-| Google Drive integration | Implemented for current Operational Project file sources; deployment activation and live credentials are required |
+| Google Drive integration | Implemented for current Operational Project file sources; deployment activation and live credentials are required. Survey and CRM Pre-Design remain separate configurable categories pending an approved topology migration |
 | Dashboard and analytics | Partially implemented — operational dashboard exists; full cross-module reporting is pending |
+| KPI | 19 metrics across six current scorecard groups are implemented; the complete NICON 11-position framework is not yet delivered |
 
 ---
 
@@ -453,7 +469,14 @@ Manage drawings for construction permit applications. Maintain technical descrip
 
 Manage detailed construction drawings separated by discipline (Architecture, Structure, MEP, Interior). Catalog drawings by construction work item. Link drawings to construction tasks. Manage drawing versions. Submit for review and approval.
 
-The current implementation manages drawing metadata, workflow status, revision reasons, and IFC distribution records. Binary design-file upload, in-browser PDF/DWG preview, revision file snapshots, and IFC package export remain deferred; therefore the Documents tab lists design records but does not currently provide an Open or Download action for Concept, Basic Design, or Detail Design files.
+The current implementation manages drawing metadata, workflow status, revision
+reasons, and IFC distribution records. Basic Design and Shop Drawing records
+support managed binary upload plus authorized preview/download, and the
+Documents tab exposes those files. Concept options remain metadata-only: media,
+walkthrough video and per-file feedback are deferred. In-drawing markup,
+immutable revision-file snapshots and a generated IFC package export are also
+deferred. DWG is not rendered natively; preview depends on the supported managed
+file type and the server content endpoint.
 
 | Page | Functions | Estimate |
 |------|-----------|----------|
@@ -528,6 +551,14 @@ signed**
    overhead. Later changes require authorization, history, and a linked VO when
    they change contract scope or value.
 
+The signed contract starts **CM preparation**; it does not by itself authorize
+construction. The target start gate also requires the applicable released IFC,
+issued/non-expired permits, published schedule baseline, approved BCH/resource
+plan and locked Budget Baseline. Site handover, method statement and HSE-plan
+evidence are project-template conditions pending NICON's approved ISO checklist.
+Until this gate is implemented, operators must verify these conditions outside
+the current software before recording site execution.
+
 **Phase 2 - parallel execution and cross-control**
 
 | BCH field responsibility | CM office responsibility |
@@ -574,6 +605,15 @@ Signed Downstream Contract
 Eligibility does not mean automatic payment. Missing, mismatched, reversed, or
 superseded evidence blocks the handoff and must leave financial state unchanged.
 
+**Current implementation boundary:** Construction Tasks, Site Diaries,
+Punchlist, Partial Acceptance, As-Built and Handover currently persist against a
+Design Project. HSE, Procurement and Finance controls persist against an
+Operational Project. The product resolves the former through the Design Project
+where possible, but the model has not been fully migrated. CM Preparation,
+Baseline S-Curve, BCH organization, Budget Baseline, machine/labour requests,
+QA/QC dossiers, direction-explicit QS batches and the three BCH portals are not
+current delivered features.
+
 #### 3.4.1 Construction Schedule (Gantt)
 
 Create construction schedules with phases and work items (WBS). Assign responsible personnel. Set start and end dates. Track actual completion percentage. Update progress from the field. Display Gantt chart with dependency lines. Alert on overdue tasks. Support drag-and-drop task bars, resize duration, and zoom (day/week/month).
@@ -610,7 +650,13 @@ Open **Admin > Construction > Partial Acceptance** to manage phase or work-item 
 
 #### 3.4.4 Full Acceptance (Handover)
 
-Open **Admin > Construction > Project Handover** to manage one full-project handover record per design project. The list supports project, responsible user, planned date, status, readiness, text search, sorting, pagination, and CSV export. Users without the view-all permission only see records they created, are responsible for, or whose project they manage or lead.
+Open **Admin > Construction > Project Handover** to manage one handover record
+per Design Project in the current compatibility model. The list supports
+project, responsible user, planned date, status, readiness, text search, sorting,
+pagination, and CSV export. Users without the view-all permission only see
+records they created, are responsible for, or whose project they manage or lead.
+The NICON target is one handover aggregate under the shared Operational Project;
+do not create a second handover when both IDs refer to the same business project.
 
 Create or edit a Draft/Reopened record with the planned date, responsible user, commissioning result, checklist, supporting HTTP(S) or host-relative document links, and signatories. Host-relative links must begin with a single `/`; protocol-relative links and non-HTTP(S) schemes are rejected and legacy unsafe values are shown as text rather than clickable links. Readiness is calculated from canonical project data: at least one approved partial acceptance record, every required as-built category approved, no unresolved punch items, commissioning complete, and every handover checklist item complete.
 
@@ -639,6 +685,13 @@ Open **Admin > Construction > As-Built Records** to search, filter, sort, and pa
 #### 3.4.6 Defect Management (Punchlist)
 
 Record defects at the construction site with location and description. Upload defect photos and videos. Assign responsible person for remediation. Set remediation deadlines. Track status: unresolved, in-progress, completed. Confirm remediation completion. Support floor plan annotation with pin-drop for defect location.
+
+The current delivered record supports code, description, free-text location,
+severity, root-cause attribution, responsible designer, assignee, deadline,
+resolution, verification and reopen count. Its lifecycle is **Open → In Progress
+→ Fixed → Verified**, plus Cancelled/reopen. Dedicated persisted photo/video
+attachments and floor-plan pin annotation are target features, not current
+delivered behavior.
 
 | Page | Functions | Estimate |
 |------|-----------|----------|
@@ -946,11 +999,15 @@ and Drive files and does not automatically move or delete them.
 #### 3.7.1 Automated Project Folder Structure
 
 Folders are created lazily when the first file in a category synchronizes. The
-server-defined paths are `01_CRM_PreDesign`, the three nested folders under
-`02_Thiet_ke`, `03_Xin_phep_Phap_ly`, `04_Thi_cong_Nghiem_thu`,
-`05_Cung_ung_Vat_tu`, and `06_Tai_chinh_Hop_dong`. Stable internal identity is
-independent of displayed project and folder names. Nicon permissions control
-access; Drive group sharing is not synchronized in the current release.
+current server has nine configurable document categories. For compatibility,
+`01_Khao_sat` and `01_CRM_PreDesign` are separate sibling paths, followed by the
+three nested folders under `02_Thiet_ke`, `03_Xin_phep_Phap_ly`,
+`04_Thi_cong_Nghiem_thu`, `05_Cung_ung_Vat_tu`, and
+`06_Tai_chinh_Hop_dong`. The NICON target places survey beneath CRM Pre-Design,
+but files must not be moved until an approved, reversible topology migration is
+run. Stable internal identity is independent of displayed project and folder
+names. Nicon permissions control access; Drive group sharing is not synchronized
+in the current release.
 
 #### 3.7.2 Document Digitization
 
@@ -1030,6 +1087,21 @@ prevents a metric from becoming Available. A period can lock only
 when every active metric is Available and weights total exactly 100%; locking
 freezes definitions and evidence and prevents recalculation. The four-language
 usage guide explains readiness and the irreversible lock operation.
+
+The current seed contains 19 metrics across six scorecard groups:
+
+| Delivered scorecard | Current role mapping |
+|---|---|
+| Sales | `SALE`, `SALES_MANAGER` |
+| Tendering | `QS` |
+| Design | `DESIGN`, `DESIGN_LEAD`, `ARCHITECT`, `MEP_ENGINEER`, `STRUCT_ENGINEER` |
+| Site | `PM` |
+| Procurement | `PROCUREMENT` |
+| Project Accounting | `ACCOUNTANT` |
+
+This mapping is not the complete NICON 11-position target. Separate scorecards
+for PM CM, BCH Commander, Field/QA-QC, Site QS, Legal and HR/Admin require the
+corresponding source workflows and approved definitions before activation.
 See [KPI Framework and Source Evidence](application_developer.md#719-kpi-framework-and-source-evidence)
 for metric sources, accountability and approved calculation decisions.
 
@@ -1824,7 +1896,7 @@ Application statuses: `new`, `interview`, `hired`, `rejected`.
 }
 ```
 
-### 14.10 Contact Messages
+### 14.11 Contact Messages
 
 | Method | Endpoint                                  | Auth   | Description                          |
 |--------|-------------------------------------------|--------|--------------------------------------|
@@ -1855,7 +1927,7 @@ Application statuses: `new`, `interview`, `hired`, `rejected`.
 }
 ```
 
-### 14.11 Logos (Clients, Partners, Suppliers)
+### 14.12 Logos (Clients, Partners, Suppliers)
 
 | Method | Endpoint            | Auth   | Description                               |
 |--------|---------------------|--------|-------------------------------------------|
@@ -1878,7 +1950,7 @@ Logo kinds: `Client`, `Partner`, `Supplier`.
 }
 ```
 
-### 14.12 Processes
+### 14.13 Processes
 
 | Method | Endpoint               | Auth   | Description                          |
 |--------|------------------------|--------|--------------------------------------|
@@ -1930,7 +2002,7 @@ Logo kinds: `Client`, `Partner`, `Supplier`.
 }
 ```
 
-### 14.13 Site Settings
+### 14.14 Site Settings
 
 | Method | Endpoint                             | Auth   | Description              |
 |--------|--------------------------------------|--------|--------------------------|
@@ -1960,7 +2032,7 @@ Logo kinds: `Client`, `Partner`, `Supplier`.
 }
 ```
 
-### 14.14 Translations
+### 14.15 Translations
 
 | Method | Endpoint                              | Auth   | Description                              |
 |--------|---------------------------------------|--------|------------------------------------------|
@@ -1991,7 +2063,7 @@ Logo kinds: `Client`, `Partner`, `Supplier`.
 }
 ```
 
-### 14.15 About Sections
+### 14.16 About Sections
 
 | Method | Endpoint                           | Auth   | Description                                        |
 |--------|------------------------------------|--------|----------------------------------------------------|
@@ -2018,7 +2090,7 @@ Logo kinds: `Client`, `Partner`, `Supplier`.
 }
 ```
 
-### 14.16 System
+### 14.17 System
 
 | Method | Endpoint                      | Auth   | Description              |
 |--------|-------------------------------|--------|--------------------------|
@@ -2177,7 +2249,7 @@ Same structure as Activity.
 | AppliedAt       | datetime | Submission timestamp               |
 | UpdatedAt       | datetime | Last status change timestamp       |
 
-### 15.9 Contact Message
+### 15.10 Contact Message
 
 | Field        | Type     | Description                         |
 |--------------|----------|-------------------------------------|
@@ -2193,7 +2265,7 @@ Same structure as Activity.
 | CreatedAt    | datetime | Submission timestamp                |
 | UpdatedAt    | datetime | Last update timestamp               |
 
-### 15.10 Client Logo
+### 15.11 Client Logo
 
 | Field     | Type     | Description                          |
 |-----------|----------|--------------------------------------|
@@ -2205,7 +2277,7 @@ Same structure as Activity.
 | SortOrder | int      | Display order                        |
 | CreatedAt | datetime | Creation timestamp                   |
 
-### 15.11 Process Document
+### 15.12 Process Document
 
 | Field      | Type     | Description                                              |
 |------------|----------|----------------------------------------------------------|
@@ -2229,7 +2301,7 @@ Same structure as Activity.
 | fileSizeBytes    | long   | File size in bytes                 |
 | sortOrder        | int    | Display order within the asset list|
 
-### 15.12 Translation
+### 15.13 Translation
 
 | Field        | Type     | Description                         |
 |--------------|----------|-------------------------------------|
@@ -2241,7 +2313,7 @@ Same structure as Activity.
 | CreatedAt    | datetime | Creation timestamp                  |
 | UpdatedAt    | datetime | Last update timestamp               |
 
-### 15.13 Entity Translation
+### 15.14 Entity Translation
 
 | Field        | Type     | Description                         |
 |--------------|----------|-------------------------------------|
@@ -2254,7 +2326,7 @@ Same structure as Activity.
 | CreatedAt    | datetime | Creation timestamp                  |
 | UpdatedAt    | datetime | Last update timestamp               |
 
-### 15.14 Site Settings
+### 15.15 Site Settings
 
 | Field                              | Type     | Description                                |
 |------------------------------------|----------|--------------------------------------------|

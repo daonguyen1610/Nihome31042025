@@ -32,8 +32,12 @@ For every non-trivial task:
 1. Inspect repository state and identify affected code, data, documentation, and test layers.
 2. Clarify acceptance criteria and affected API or data contracts.
 3. Implement the smallest complete change.
-4. Add or update tests at the lowest appropriate test layer.
-5. Run relevant checks and investigate failures to distinguish a bad test from a product defect.
+4. Add or update tests at the lowest appropriate test layer when executable
+   behavior changes.
+5. Run relevant checks and investigate failures to distinguish a bad test from
+   a product defect. For documentation-only or other non-code changes that
+   cannot affect build/runtime behavior, use document-focused checks only; do
+   not run code builds or automated test suites.
 6. Review the final diff for scope, security, compatibility, and accidental changes.
 7. Update documentation and seed data when required.
 8. Commit the completed change using the Git rules below.
@@ -123,6 +127,26 @@ auditable source material used to interpret and validate it.
 - Keep implementation status separate from target scope. A requirement in
   `docs/Nicon/` is not evidence that the API, UI, migration, seed, or test is
   delivered.
+- Use only these delivery labels in canonical documentation: `Implemented`
+  requires matching persistence, API authorization, UI and appropriate tests;
+  `Partial` identifies the exact delivered subset and gap; `Target` has no
+  delivery claim; `Open decision` names the owner/decision needed. Do not infer
+  host/deployment status from the local branch.
+- Treat `OperationalProject` as the business root. Existing Construction Task,
+  Diary, Punch, Acceptance, As-Built, Handover and Permit records still use
+  `DesignProjectId`; HSE, Procurement, Finance and project documents use
+  `OperationalProjectId`. This is a compatibility boundary, not permission to
+  create new cross-module aggregates on `DesignProjectId`. Any migration needs
+  backfill, uniqueness/conflict rules, compatibility behavior, rehearsal and
+  rollback.
+- Distinguish preliminary Quote BOQ, Tender Estimate, Design quantity takeoff,
+  approved Execution BOQ revision and Final BOQ. Only the applicable approved
+  Execution BOQ constrains MR/warehouse; never promote a workbook based only on
+  its module, filename or sheet label.
+- The current Drive registry has separate `Survey` (`01_Khao_sat`) and
+  `CrmPreDesign` (`01_CRM_PreDesign`) categories. The business target nests
+  Survey under CRM Pre-Design. Preserve current bindings until an approved,
+  reversible topology migration moves/rebinds and verifies historical files.
 
 ## Module 4 construction and acceptance rules
 
@@ -132,6 +156,12 @@ and `docs/application_developer.md` as mandatory for construction work.
 - Preserve the two-stage lifecycle: Phòng CM prepares the project after the
   Upstream D&B/construction contract is signed; BCH and Phòng CM then operate
   in parallel during construction.
+- A signed Upstream D&B/construction contract only makes CM preparation
+  eligible. Do not set `ReadyToStart`/`InConstruction` until a server-side gate
+  verifies applicable released IFC, valid required permits, published schedule
+  baseline, approved BCH/resource plan and locked Budget Baseline. Apply site
+  handover, method statement and HSE plan when the approved project/ISO template
+  marks them required; retain an evidence snapshot and actor for the gate.
 - Preserve the organizational boundary. BCH creates field evidence and runs the
   assigned site; Phòng CM supervises multiple projects and performs independent
   level-2 review. Do not collapse both into one role, menu permission, or status
@@ -259,9 +289,23 @@ During every change:
 - Before committing, verify that `docs/` contains only the six canonical files
   and `docs/Nicon/`, that the evidence directory follows the structure above,
   and that documentation links and references still resolve.
+- When a guide states counts, estimates, statuses or supported languages, cite
+  the source version/range or derive them from current code. Do not retain a
+  numeric estimate that cannot be reconciled to `Nicon_BreakTask_v1.xlsx`.
 - Update seed/demo data when needed to demonstrate normal, empty, error, and edge states.
 - Keep manual API examples accurate and environment-appropriate.
-- Run checks relevant to the changed area.
+- For documentation-only or other non-code changes that cannot affect compiled
+  or runtime behavior (for example Markdown guides, customer evidence, or
+  repository agent instructions), do not start/rebuild Docker and do not run
+  backend builds, frontend builds, lint, unit, integration, or E2E tests.
+  Validate only the affected artifacts: review the final diff, run
+  `git diff --check`, verify the canonical `docs/` allowlist/evidence layout,
+  check local links/anchors, and validate the format or integrity of any changed
+  document, spreadsheet, PDF, or other artifact as applicable.
+- Run code checks only when the change can affect source behavior, generated
+  executable assets, dependencies, schema, deployment configuration, or the
+  build/test toolchain. If a task mixes code and documentation, validate the
+  code-affected area normally.
 
 Backend:
 

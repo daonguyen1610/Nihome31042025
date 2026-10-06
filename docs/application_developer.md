@@ -1,8 +1,8 @@
-# Nihome Platform -- Application Developer Guide
+# NICON Platform -- Application Developer Guide
 
-Version 1.0
+Version 1.1
 
-Last Updated: 9 September 2026
+Last Updated: 6 October 2026
 
 ---
 
@@ -349,30 +349,28 @@ The platform uses SQL Server 2022 with Entity Framework Core 8 as the ORM. The d
 
 ### 6.2 Schema
 
-| Table                  | Purpose                                             |
-|------------------------|-----------------------------------------------------|
-| `users`                | User accounts with phone-based authentication       |
-| `refresh_tokens`       | JWT refresh tokens linked to users                  |
-| `registration_otp`     | OTP records for registration verification           |
-| `site_settings`        | Application-wide configuration (single row)         |
-| `activities`           | Activity/event content entries                      |
-| `activity_categories`  | Categories for grouping activities                  |
-| `news_articles`        | News and article content entries                    |
-| `projects`             | Project portfolio entries                           |
-| `operational_projects` | Central internal project shared across the eight operational modules |
-| `service_items`        | Service offering descriptions                       |
-| `slideshow_items`      | Homepage slideshow slides                           |
-| `job_positions`        | Open job positions for recruitment                  |
-| `job_applications`     | Candidate applications (FK to job_positions, cascade delete) |
-| `contact_messages`     | Messages submitted through the contact form         |
-| `client_logos`         | Logos for clients, partners, and suppliers           |
-| `process_documents`    | Internal process documentation entries with optional image/file asset metadata stored as JSON columns |
-| `translations`         | Static UI translation strings (unique key + language) |
-| `entity_translations`  | Dynamic content translations (polymorphic)          |
-| `handover_records`     | One project handover aggregate per design project, including readiness inputs and SQL Server row-version concurrency |
-| `handover_status_history` | Immutable project handover lifecycle history      |
+`AppDbContext` and the model snapshot are authoritative. The grouped inventory
+below prevents this guide from implying that the earlier short table was the
+complete operational schema.
 
-### 6.3 Key Indexes
+| Domain | Main aggregates/tables |
+|---|---|
+| Identity and control | users, refresh/OTP, RBAC roles/permissions, notifications/templates, audit, idempotency, hard-delete operations |
+| Public content | activities/categories, news/categories, public projects/categories, services, slideshow, logos, about, processes, recruitment, contacts, settings, translations |
+| CRM/pre-design | leads/activities, customers/contacts/activities/documents, opportunities/activities, quotes/items/versions/approvals/documents, material-rate catalogs/revisions/lines, tenders/checklists/estimates, surveys/media/conditions/checklists |
+| Shared project | operational projects, project members/roles/assignments/history, project documents/folders, project reports/read models |
+| Contracts | contracts, payment milestones/events, appendices/VOs, attachments and contract lines |
+| Design/legal | design projects, concept options, basic documents, shop drawings, drawing revisions, IFC releases/items/recipients, design schedule phases/tasks/dependencies/history, permit checklist items |
+| Construction | construction tasks/dependencies, site diaries, punch items, HSE violations/events, acceptance records, as-built categories/documents, handover records/history |
+| Procurement | vendors/uploads, BOQ revisions/lines, material requests/lines, RFQs/lines/invitations/bids/bid lines/events/awards, receipts/issues/lines, vendor ratings, material alerts/events |
+| Finance/KPI | payment requests/events/attachments, accounting periods/corrections, KPI definitions/periods/snapshots |
+| Drive integration | Google Drive credential, project document catalog, project-folder bindings and synchronization state |
+
+The coexistence of public `projects`, central `operational_projects`, and
+specialized `design_projects` is intentional. Never join them by name/code or
+use one as a substitute for another; follow explicit foreign keys.
+
+### 6.3 Selected Key Indexes
 
 - `users`: Unique index on `Phone`
 - `refresh_tokens`: Unique index on `Token`
@@ -502,7 +500,7 @@ GO
 
 ### 6.7 Operational Project Historical Migration
 
-#### Scope
+#### Historical migration scope
 
 NIH-465 reconciles historical `DesignProject`, `Contract`, `Opportunity`, and
 `Quote` rows into the internal `OperationalProject` aggregate. Public website
@@ -717,7 +715,7 @@ Duplicate project/type pairs return `409`; invalid projects, permit types, owner
 Allow authorized users to permanently remove aggregate roots, including seeded
 or demo records, without hiding dependent data or causing partial deletion.
 
-#### API Contract
+#### Permanent-delete API contract
 
 Each supported aggregate exposes:
 
@@ -1078,6 +1076,15 @@ Module 4 construction tasks. Its lifecycle, validation, weighted roll-up,
 filter, concurrency, migration, and deletion contracts are documented in
 [Detail Design Schedule](#716-detail-design-schedule).
 
+The aggregate migration is incomplete by design. Construction Task, Site Diary,
+Punch Item, Acceptance, As-Built, Handover and Permit still persist
+`DesignProjectId`; HSE, Procurement, RFQ, Finance and project documents persist
+`OperationalProjectId`. New cross-module aggregates must use
+`OperationalProjectId`. Existing Design-Project-based APIs remain compatibility
+surfaces and must resolve a single owning Operational Project before they emit
+cross-module events. Do not add a nullable second project key without a data
+backfill, uniqueness rule, conflict policy, deployment rehearsal and rollback.
+
 The read-only timeline endpoint derives its entries from existing Contract
 payment milestones and does not copy or synchronize data. Each entry identifies
 its Contract, source, status, planned due date, latest update time, and amount.
@@ -1436,7 +1443,7 @@ calculation is auditable. Filters affect the paged task list only; roll-up uses
 the complete schedule and therefore remains stable while browsing filtered
 results.
 
-#### API Contract
+#### Design-schedule API contract
 
 Both `/api/operational-projects/{projectId}/design-schedule` and its `/api/v1`
 alias expose the same controller.
@@ -1817,12 +1824,15 @@ the API, not hardcoded React values.
 
 ### 7.19 KPI Framework and Source Evidence
 
-#### Scope
+#### KPI scope
 
-The KPI platform implements the approved NICON framework from the NIH-447
-customer attachment and `docs/Nicon_BreakTask_v1.xlsx`. It calculates only
-metrics backed by structured source events. A missing source workflow is
-reported as `MissingData`; it is never converted to a zero score.
+The KPI platform currently implements 19 metric definitions in six scorecard
+groups: Sales, Tendering, Design, Site, Procurement, and Project Accounting.
+This is the delivered, source-backed subset of the target NICON 11-position
+framework; it must not be described as complete coverage of all 11 positions.
+Only metrics backed by structured source events are calculated. A missing
+source workflow is reported as `MissingData`; it is never converted to a zero
+score.
 
 #### Platform contract
 
@@ -1979,20 +1989,26 @@ below exists in the current API.
 
 1. CM publishes a construction baseline only after WBS, milestones, BCH roles,
    resource plan, and Budget Baseline pass server validation.
-2. BCH submits field evidence from mobile. Draft/offline data is not approved
+2. A signed Upstream D&B/construction Contract makes the project eligible for
+   CM preparation but does not authorize site start. The construction-start gate
+   also requires applicable IFC releases, valid required permits, published
+   schedule baseline, approved BCH/resource plan and locked Budget Baseline.
+   Site-handover, method-statement and HSE-plan evidence are template-controlled
+   conditions once NICON approves the ISO checklist.
+3. BCH submits field evidence from mobile. Draft/offline data is not approved
    evidence and cannot trigger Procurement, payment, or KPI events.
-3. Over-limit or unplanned resource requests require an independent CM level-2
+4. Over-limit or unplanned resource requests require an independent CM level-2
    decision before Procurement. Rejection leaves BOQ commitments unchanged.
-4. Upstream and Downstream QS records use distinct directions and contract
+5. Upstream and Downstream QS records use distinct directions and contract
    links. Approved quantities are immutable; correction uses a superseding
    version or reversal with full audit history.
-5. CM compares accepted progress evidence with the published Baseline S-Curve.
+6. CM compares accepted progress evidence with the published Baseline S-Curve.
    A delay greater than 5% creates a red alert and a required explanation/
    recovery plan. Store the calculation inputs, baseline version, period, and
    result so the decision is reproducible.
-6. The creator of an MR, QA/QC dossier, QS batch, HSE violation, or VO cannot
+7. The creator of an MR, QA/QC dossier, QS batch, HSE violation, or VO cannot
    satisfy the independent CM review for that record. Enforce this server-side.
-7. Completion/handover consumes approved acceptance, QA/QC, as-built,
+8. Completion/handover consumes approved acceptance, QA/QC, as-built,
    commissioning, and blocking-Punchlist state; it never trusts a client-only
    readiness flag.
 
@@ -2007,6 +2023,21 @@ silos:
 All three use the same Operational Project, WBS/baseline identity, project team,
 document service, audit contract, and project access service. A route split must
 not duplicate project, supplier, contract, BOQ, or user masters.
+
+Use explicit BOQ provenance. The following are not interchangeable:
+
+| Business artifact | Current/target aggregate | May constrain MR/warehouse? |
+|---|---|---|
+| Preliminary quotation BOQ | `Quote`/`QuoteItem` or approved material-rate source | No |
+| Tender estimate | `TenderEstimateRevision`/lines | No |
+| Design quantity takeoff | Design evidence; dedicated governed aggregate remains target | No, unless promoted through an approved execution revision |
+| Execution BOQ | `ProjectBoqRevision`/`ProjectBoqLine` with `Approved` status | Yes; select the applicable approved revision atomically |
+| Final BOQ | Final approved execution revision after project completion and approved VO revisions | Reporting, closeout and KPI evidence |
+
+Every import or promotion records Operational Project, source artifact/version,
+file hash or equivalent provenance, importer, timestamp, preview result and the
+approver. Never infer a financial/warehouse allowance merely because an Excel
+file came from Module 2 or has `BOQ` in its name.
 
 The PRD target defines BOQ consumption bands at 85% (yellow), 95% (orange), and
 above 100% (red/block). Keep these configurable and server-calculated. The
@@ -2081,6 +2112,29 @@ operation; a Drive failure must not falsely mark a dossier synchronized.
 Source files are read-only evidence. Never rewrite, normalize, translate, or
 re-export them as an implementation side effect. Canonical docs summarize the
 approved contract; code and tests prove delivery status.
+
+The PRD phrase "8 layers" is not a folder-count contract: its illustrated tree
+contains six numbered top-level business folders plus three Design subfolders.
+The current code exposes nine `ProjectDocumentCategory` values because Survey
+and CRM Pre-Design are separate categories. Current defaults are:
+
+| Category | Current configured path |
+|---|---|
+| Survey | `01_Khao_sat` |
+| CRM Pre-Design | `01_CRM_PreDesign` |
+| Design Concept | `02_Thiet_ke/01_So_bo_Concept` |
+| Design Basic | `02_Thiet_ke/02_Co_so` |
+| Design Shop Drawing | `02_Thiet_ke/03_Chi_tiet_ShopDrawing` |
+| Legal | `03_Xin_phep_Phap_ly` |
+| Construction/Acceptance | `04_Thi_cong_Nghiem_thu` |
+| Procurement | `05_Cung_ung_Vat_tu` |
+| Finance/Contracts | `06_Tai_chinh_Hop_dong` |
+
+The business target nests Survey beneath CRM Pre-Design. Treat the current two
+paths as a compatibility contract until an approved topology migration disables
+sync, drains active claims, inventories remote/local bindings, handles name and
+content conflicts, moves or rebinds files, verifies checksums, and provides
+rollback. Changing the configuration alone does not move historical files.
 
 #### Schedule import boundary
 
@@ -2192,6 +2246,13 @@ Both `/api/handover-records` and `/api/v1/handover-records` expose the same cont
 `view.all` controls unrestricted reads; `manage.all` independently controls unrestricted writes. A caller with only the base permission is scoped to records they created or own and projects they manage or lead. Business-rule failures return `400`, hidden/missing records return `404`, and duplicate or concurrent writes return `409` so clients can reload instead of overwriting newer data.
 
 Readiness is derived on the server from approved partial acceptance, required approved as-built categories, unresolved punch items, commissioning, and checklist completion. Clients must display this result and must not duplicate it as an authoritative frontend calculation.
+
+The current unique owner key is `DesignProjectId`; this is an explicit
+compatibility boundary, not the target aggregate. Resolve and authorize the
+owning Operational Project before cross-module access. A future migration to
+`OperationalProjectId` must preserve the one-handover invariant, status history,
+row versions, documents, scope rules and deep links, and must define how to
+handle a construction project with no Design Project before adding the new key.
 
 ### 8.7 Procurement Vendor Frontend
 
@@ -2473,7 +2534,7 @@ OAuth apps left in Testing can issue refresh tokens with a limited lifetime. Bef
 
 Official references: [Drive API v3](https://developers.google.com/workspace/drive/api/reference/rest/v3), [files.get](https://developers.google.com/workspace/drive/api/reference/rest/v3/files/get), [OAuth scopes](https://developers.google.com/workspace/drive/api/guides/api-specific-auth), [Shared Drives](https://developers.google.com/workspace/drive/api/guides/about-shareddrives), and [Drive API errors](https://developers.google.com/workspace/drive/api/guides/handle-errors#storageQuotaExceeded).
 
-### 10.1 Deterministic demonstration data
+### 10.4 Deterministic demonstration data
 
 `DbSeeder` creates a deterministic demonstration dataset covering the CRM funnel, all contract statuses, design stages, permitting, construction, acceptance, as-built, and handover workflows. Seeder-owned rows use stable markers such as `[SAMPLE]`, `[SAMPLE_CONTRACT]`, and `[SAMPLE_DP]`; downstream records are attached only to marker-owned sample projects rather than arbitrary database rows.
 

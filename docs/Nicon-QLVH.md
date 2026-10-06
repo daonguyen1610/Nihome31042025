@@ -1,250 +1,340 @@
-# **ĐỀ CƯƠNG CHI TIẾT: HỆ THỐNG PHẦN MỀM QUẢN LÝ CÔNG VIỆC VÀ ĐIỀU HÀNH \- NICON MANAGEMENT SYSTEM**
+# Yêu cầu quản lý và vận hành NICON
 
-**Loại hình công ty:** Tổng thầu xây dựng Design & Build (Thiết kế, Xin phép, Thi công)  
-**Nền tảng lưu trữ lõi:** Google Drive Integration (Tự động hóa cấu trúc và phân quyền)  
-**Tiêu chuẩn vận hành:** Quản trị dữ liệu khép kín, cập nhật thời gian thực (Real-time), đánh giá nhân sự định lượng tự động.
+## 1. Mục đích và phạm vi
 
-**Bộ căn cứ khách hàng:** Các PRD, sơ đồ, tiến độ mẫu, BOQ mẫu và biên bản họp
-được lưu tại `docs/Nicon/`. Biên bản họp ngày 03/10/2026 và bản cập nhật BA ngày
-06/10/2026 là căn cứ mới hơn khi có khác biệt với PRD/sơ đồ cũ. File BOQ và
-tiến độ là mẫu dữ liệu để phân tích, không mặc nhiên là schema nhập liệu đã chốt.
+NICON Management System là nền tảng quản trị Design & Build theo Dự án, kết nối
+CRM, Thiết kế, Pháp lý, Thi công, Cung ứng, Tài chính, tài liệu và KPI. Mục tiêu
+là mỗi giao dịch nghiệp vụ được ghi nhận một lần, có người chịu trách nhiệm,
+trạng thái, bằng chứng và khả năng truy vết xuyên module.
 
-**Nguyên tắc vận hành đã xác nhận:** Dự án là bản ghi dùng chung do Kinh doanh
-khởi tạo. Các phòng ban không tạo lại dự án; họ nhận gói công việc trên Dự án
-hoặc Hợp đồng. Công việc nội bộ không gắn Dự án/Hợp đồng nằm ở khu vực riêng.
+Tài liệu này là hợp đồng nghiệp vụ mục tiêu. Trạng thái phần mềm thực tế được
+mô tả trong `user_guide.md` và `application_developer.md`; yêu cầu xuất hiện ở
+đây không tự động có nghĩa đã triển khai.
 
-## **MỤC TIÊU HỆ THỐNG**
+### 1.1. Nguyên tắc nguồn
 
-> * Số hóa toàn bộ chuỗi giá trị của NICON từ lúc tiếp cận khách hàng đến khi bàn giao công trình và đánh giá hiệu suất nhân sự.  
-> * Tự động hóa việc đồng bộ, lưu trữ tài sản kỹ thuật và hồ sơ pháp lý lên Google Drive.  
-> * Loại bỏ hoàn toàn việc báo cáo thủ công và đánh giá cảm tính nhờ hệ thống dữ liệu liên kết thời gian thực.
+1. Yêu cầu trực tiếp hiện tại của NICON.
+2. Quyết định họp mới nhất đã được xác nhận.
+3. Tài liệu canonical này và `Nicon-workflow.md`.
+4. PRD/workflow gốc, BreakTask, tiến độ và BOQ mẫu trong `docs/Nicon/`.
+5. Mã nguồn là bằng chứng trạng thái triển khai, không tự thay đổi yêu cầu.
 
-## ---
+Đề xuất hoặc câu nói chưa thống nhất được giữ thành quyết định mở. Dữ liệu mẫu,
+tên sheet, màu sắc, ngày và tên khách hàng trong file không phải quy tắc sản phẩm.
 
-**CHI TIẾT 8 MODULE CHỨC NĂNG (ĐỀ BÀI TRIỂN KHAI)**
+### 1.2. Thuật ngữ bắt buộc
 
-### **1\. MODULE 1: QUẢN LÝ KHÁCH HÀNG & TIỀN DỰ ÁN (CRM & PRE-DESIGN)**
+- **Operational Project / Dự án:** aggregate dùng chung xuyên tám module.
+- **Upstream:** hợp đồng, nghiệm thu, phải thu với Chủ đầu tư/khách hàng.
+- **Downstream:** hợp đồng, nghiệm thu, phải trả với NCC/thầu phụ/tổ đội.
+- **Design Project:** aggregate chuyên môn Thiết kế; phải thuộc một Operational
+  Project, không thay thế Dự án dùng chung.
+- **BCH:** Ban Chỉ huy Công trình tại hiện trường.
+- **Phòng CM:** Phòng Quản lý Thi công tại văn phòng, thực hiện quản lý danh mục
+  dự án và kiểm soát chéo.
+- **IFC:** revision hồ sơ được phát hành chính thức cho thi công.
+- **Baseline:** phiên bản kế hoạch đã công bố; sửa đổi tạo version mới, không ghi
+  đè lịch sử.
 
-**Mục tiêu:** Quản lý linh hoạt nguồn khách hàng, tối ưu hóa tỷ lệ chuyển đổi và số hóa dữ liệu khảo sát ban đầu.
+## 2. Yêu cầu xuyên suốt
 
-> * **Quản lý Khách hàng tiềm năng (Lead Management):** Ghi nhận thông tin liên hệ, nguồn khách (Marketing, mối quan hệ), phân loại phân khúc và lưu lịch sử tương tác.  
-> * **Phễu bán hàng (Sales Pipeline):** Theo dõi trạng thái cơ hội theo quy trình: *Tiếp cận \-\> Khảo sát \-\> Báo giá/Đấu thầu \-\> Thương thảo \-\> Ký hợp đồng.*  
-> * **Linh hoạt 02 phương thức chào giá đầu vào:**  
-  * **Phương thức 1 \- Chào giá trực tiếp:** Dành cho khách lẻ/gói thầu chỉ định. Tự động tính suất đầu tư nhanh theo m2 dựa trên định biên vật liệu để xuất file báo giá sơ bộ.  
-  * **Phương thức 2 \- Đấu thầu:** Quản lý danh mục đầu việc chuẩn bị hồ sơ năng lực, lập dự toán dự thầu, theo dõi thời hạn nộp thầu và cập nhật kết quả đấu thầu.  
-> * **Số hóa khảo sát hiện trạng (Mobile App):** Kỹ sư hiện trường dùng app chụp ảnh, quay video, ghi chú tọa độ, lộ giới, cao độ, hạ tầng xung quanh. Dữ liệu tự động đẩy về Folder 01\_Khao\_sat trên Drive của dự án.
+### 2.1. Dữ liệu và audit
 
-### **2\. MODULE 2: QUẢN LÝ THIẾT KẾ 3 GIAI ĐOẠN (DESIGN MANAGEMENT)**
+- Một khách hàng có thể có nhiều Dự án; một Dự án có thể có nhiều cơ hội, báo
+  giá và hợp đồng theo quan hệ nghiệp vụ hợp lệ.
+- Bản ghi vận hành phải có project, actor/responsible owner, lifecycle status,
+  timestamps, creator/updater và concurrency token khi có rủi ro ghi đè.
+- Sự kiện phê duyệt, từ chối, hủy, reversal, reopen và correction giữ lịch sử;
+  không chỉnh trực tiếp dữ liệu terminal để che thay đổi.
+- Mọi write path gồm UI, API, import, seed và migration phải giữ cùng invariant.
 
-**Mục tiêu:** Quản lý tài sản kỹ thuật chặt chẽ, kiểm soát "độ chín" của hồ sơ, chặn đứng rủi ro thi công sai bản vẽ.
+### 2.2. Quyền và phân tách nhiệm vụ
 
-> * **Giai đoạn 1 \- Thiết kế Sơ bộ (Concept Design):** Quản lý các phương án kiến trúc 2D/3D (Option 1, 2, 3\) để khách hàng so sánh. Tích hợp nút bấm "Phê duyệt phương án" từ phía khách hàng hoặc lãnh đạo để khóa ý tưởng trước khi triển khai chi tiết.  
-> * **Giai đoạn 2 \- Thiết kế Cơ sở (Basic Design):** Triển khai bản vẽ khung theo đúng quy chuẩn quy hoạch, mật độ, lộ giới. Hệ thống tự động liên kết và đẩy hồ sơ sang Module 3 (Pháp lý) ngay khi được duyệt nội bộ.  
-> * **Giai đoạn 3 \- Thiết kế Chi tiết / Bản vẽ Thi công (Detailed Design / Shop Drawing):** Phân tách danh mục quản lý theo bộ môn: Kiến trúc, Kết cấu, MEP, Nội thất.  
-> * **Kiểm soát phiên bản (Revision Control):** Tự động đánh mã phiên bản (Rev 00, Rev 01, Rev 02...). Khi có phiên bản mới, hệ thống phát cảnh báo thu hồi bản cũ trên app của toàn bộ kỹ sư công trường.  
-> * **Trạng thái Phát hành IFC (Issued for Construction):** Chỉ những bản vẽ được đóng dấu điện tử "IFC" trên phần mềm mới được hiển thị trên giao diện của đội ngũ thi công hiện trường.
-> * **Khởi tạo trước hợp đồng:** Công việc Thiết kế có thể bắt đầu từ Cơ hội hoặc
-  từ giao việc trên Dự án; không bắt buộc đã có Hợp đồng.
-> * **Vai trò và duyệt:** PM của phòng Thiết kế dùng tên nghiệp vụ **Chủ nhiệm
-  thiết kế / Design Manager**; vẫn giữ vai trò Design Lead. Mỗi đầu việc có một
-  người duyệt, người cần theo dõi dùng CC. Khi người thực hiện bấm Hoàn thành,
-  hệ thống tự chuyển đúng người duyệt.
-> * **Trình nội bộ:** Chủ nhiệm thiết kế gửi phương án cho người được chỉ định
-  xem và bình luận trước khi trình khách; chỉ Chủ nhiệm thiết kế ghi nhận quyết
-  định của khách và chuyển bước.
-> * **Tiến độ:** Hỗ trợ WBS phân cấp, duration, start/finish, predecessor,
-  milestone, calendar, baseline và quan hệ giữa Thiết kế - Pháp lý - Thi công
-  theo các mẫu tiến độ tại `docs/Nicon/`.
+- Hệ thống dùng permission; role là bộ permission có thể quản trị.
+- Quyền xem toàn bộ không kéo theo quyền sửa toàn bộ.
+- Người lập không được thực hiện bước thẩm định độc lập trên cùng chứng từ khi
+  quy trình yêu cầu kiểm soát chéo.
+- Mỗi đầu việc Thiết kế có một người duyệt; người cần theo dõi dùng CC. Việc ai
+  duyệt đầu việc và ai chốt chuyển giai đoạn còn theo quyết định Q-10.
+- Backend phải kiểm tra quyền, scope Dự án, trạng thái và concurrency; ẩn nút ở
+  frontend không phải biện pháp bảo mật.
 
-### **3\. MODULE 3: QUẢN LÝ PHÁP LÝ & XIN PHÉP (PERMITTING)**
+### 2.3. Trạng thái và tích hợp
 
-**Mục tiêu:** Kiểm soát các thủ tục hành chính, đảm bảo công trình khởi công và vận hành hợp pháp.
+- Chỉ sự kiện nghiệp vụ terminal được duyệt/xác nhận/posted/paid mới kích hoạt
+  downstream hoặc KPI.
+- Retry không tạo bản ghi hoặc side effect trùng. Rejection phải giữ downstream
+  state không đổi, ngoài audit/notification được phép.
+- File được quản lý bằng metadata Nicon và binary storage; đường dẫn file không
+  được dùng làm khóa liên kết nghiệp vụ.
 
-> * **Checklist hồ sơ pháp lý tự động:** Hệ thống tự động tạo danh mục hồ sơ cần chuẩn bị tùy theo quy mô công trình (Giấy phép xây dựng, thẩm duyệt PCCC, đấu nối điện nước, giấy phép sử dụng vỉa hè, hồ sơ hoàn công).  
-> * **Theo dõi lộ trình hành chính (Tracking Process):** Cập nhật trạng thái xử lý tại cơ quan chức năng (Đã nộp \-\> Đang thụ lý \-\> Cần bổ sung \-\> Đã có kết quả). Cảnh báo đỏ nếu hồ sơ bị ngâm quá thời gian quy định của pháp luật.
+## 3. Module 1 — CRM, Sales và tiền dự án
 
-### **4\. MODULE 4: QUẢN LÝ THI CÔNG & NGHIỆM THU (CONSTRUCTION & ACCEPTANCE MANAGEMENT)**
+### 3.1. Mục tiêu CRM và tiền dự án
 
-**Mục tiêu:** Quản lý khép kín từ khi Phòng Quản lý Thi công (CM) tiếp nhận
-hợp đồng D&B/Thi công đã ký đến khi Ban Chỉ huy Công trình (BCH) tổ chức thi
-công, nghiệm thu, hoàn công và bàn giao; đồng thời duy trì kiểm soát chéo về
-chất lượng, tiến độ, HSE, chi phí và khối lượng.
+Quản lý nguồn khách, cơ hội, khảo sát, báo giá/đấu thầu và chuyển đổi thành Dự án
+và hợp đồng mà không nhập lại dữ liệu.
 
-#### **4.1. Giai đoạn 1 - Tiếp nhận dự án và chuẩn bị thi công (Phòng CM)**
+### 3.2. Yêu cầu CRM và tiền dự án
 
-Ngay sau khi hợp đồng Upstream được ký tại Module 6, dự án được chuyển giao cho
-Phòng CM. Kỹ sư PM Phòng CM chủ trì ba nhóm công việc:
+- Lead: nguồn, phân khúc, người phụ trách, lịch sử tương tác và deadline phản hồi.
+- Chuyển Lead tạo/liên kết Customer, Opportunity và Operational Project một cách
+  idempotent; Lead sau chuyển đổi bị khóa.
+- Pipeline chuẩn: Tiếp cận → Khảo sát → Báo giá/Đấu thầu → Thương thảo → Ký HĐ.
+- Báo giá trực tiếp hỗ trợ suất đầu tư và BOQ sơ bộ, tính VAT/chiết khấu/tổng,
+  version và duyệt nội bộ/khách hàng.
+- Đấu thầu có kế hoạch, checklist, deadline, hồ sơ năng lực, dự toán versioned và
+  kết quả trúng/trượt.
+- Khảo sát mobile ghi điều kiện hiện trường, tọa độ, ảnh/video/file và checklist;
+  đồng bộ có trạng thái, retry và xung đột rõ ràng.
+- Hợp đồng phải tham chiếu báo giá được duyệt theo quy tắc thương mại hiện hành.
 
-1. **Lập kế hoạch thi công tổng thể**
-   * Lập WBS, Gantt Chart và Baseline S-Curve; xác định các mốc móng, kết cấu,
-     hoàn thiện, MEP và đường găng.
-   * Thiết lập sơ đồ tổ chức BCH, tối thiểu gồm Chỉ huy trưởng, Kỹ sư hiện
-     trường/QA-QC, Kỹ sư QS công trường, Cán bộ HSE và Thủ kho.
-2. **Chuẩn bị nguồn lực thực hiện**
-   * Lập định biên và kế hoạch cung ứng vật tư, thiết bị/máy thi công và nhân
-     công trực tiếp theo từng mốc tiến độ.
-   * Phối hợp Phòng Cung ứng (Module 5) lập Bid Tabulation, đánh giá năng lực,
-     lựa chọn thầu phụ/tổ đội/nhà cung cấp và chốt hợp đồng Downstream.
-3. **Lập dự chi và Budget Baseline**
-   * Bóc tách chi phí vật tư, nhân công, máy thi công và chi phí quản lý BCH.
-   * Khóa trần ngân sách cơ sở làm căn cứ kiểm soát P&L thời gian thực tại
-     Module 6 và chấm KPI tại Module 8. Mọi thay đổi sau khi khóa phải có lịch
-     sử, thẩm quyền phê duyệt và căn cứ VO khi làm thay đổi phạm vi/giá trị.
+### Điểm mở
 
-#### **4.2. Giai đoạn 2 - Quản lý và tổ chức thi công**
+Quy ước mã Dự án, quyền giao việc liên phòng và các field CRM NICON muốn bỏ cần
+được xác nhận bằng văn bản.
 
-Khi công trình khởi công, BCH và Phòng CM vận hành song song, có phân quyền và
-kiểm soát chéo; không dùng chung một quyền phê duyệt cho người lập và người
-thẩm định cùng chứng từ.
+## 4. Module 2 — Thiết kế ba giai đoạn
 
-**Nhóm 1 - BCH tại hiện trường**
+### 4.1. Mục tiêu Thiết kế
 
-* **Đề xuất nguồn lực và cấp phát (Mobile App):** BCH lập phiếu đề xuất vật tư,
-  thiết bị/máy thi công hoặc nhân công theo tiến độ thực tế. Hệ thống đối chiếu
-  hạn mức BOQ; phần vượt định mức hoặc phát sinh phải đi qua Phòng CM trước khi
-  chuyển Cung ứng.
-* **QA/QC và giám sát kỹ thuật:** Lập, theo dõi và lưu hồ sơ chất lượng như biên
-  bản lấy mẫu, kết quả thí nghiệm và chứng chỉ vật liệu; tự động đồng bộ vào
-  `04_Thi_cong_Nghiem_thu` trên Drive. BCH giám sát theo bản vẽ IFC và quản lý
-  Punchlist bằng ảnh, người xử lý, hạn khắc phục và trạng thái đến khi đóng lỗi.
-* **Nhật ký công trình điện tử:** Báo cáo hằng ngày về thời tiết, nhân công theo
-  tổ đội, thiết bị, công việc thực hiện, sự cố và hình ảnh thực tế.
-* **QS công trường:**
-  * Upstream: đo đạc và lập biên bản nghiệm thu khối lượng theo đợt để trình
-    CĐT/TVGS; khối lượng được duyệt là căn cứ kích hoạt mốc thu tiền Module 6.
-  * Downstream: xác nhận khối lượng thực tế của tổ đội/thầu phụ và lập đề nghị
-    thanh toán gửi Phòng Kế toán và PM Phòng CM.
+Kiểm soát độ chín, version và người chịu trách nhiệm của hồ sơ Thiết kế; chỉ IFC
+được phát hành mới được đưa ra công trường.
 
-**Nhóm 2 - Phòng CM tại văn phòng**
+### Giai đoạn và cổng
 
-* **QA/QC Control:** Thẩm định hồ sơ chất lượng của BCH, kiểm tra đột xuất và
-  theo dõi các Punchlist quá hạn.
-* **Schedule Control:** Đối soát nhật ký/progress thực tế với Baseline S-Curve.
-  Khi độ trễ vượt **5%**, hệ thống phát cảnh báo đỏ đến Chỉ huy trưởng và yêu
-  cầu giải trình cùng kế hoạch điều chỉnh. Cách tính độ lệch và kỳ chốt dữ liệu
-  phải được cấu hình thống nhất, có thể truy vết.
-* **HSE Control:** Theo dõi nhật ký an toàn, việc sử dụng trang bị bảo hộ lao
-  động và xử lý biên bản vi phạm HSE từ công trường.
-* **Cost Control:** Duyệt tầng 2 các MR vượt định mức/phát sinh; rà soát bảng QS
-  Upstream và Downstream; thẩm định VO và lập hồ sơ phụ lục trình CĐT.
+1. **Concept:** quản lý nhiều phương án; trình nội bộ/khách hàng; chỉ một phương
+   án được Finalized để mở giai đoạn sau.
+2. **Basic Design:** quản lý theo bộ môn, hồ sơ xin phép và duyệt nội bộ; điều
+   kiện mở Detailed/Shop Drawing phải kiểm tra trên server.
+3. **Detailed/Shop Drawing:** theo bộ môn và hạng mục; review, revision, trạng
+   thái Approved/Pending IFC/Released.
+4. **IFC:** gói phát hành có drawing/revision cụ thể, người nhận và xác nhận đã
+   nhận; hủy gói không được làm mất lịch sử.
 
-#### **4.3. Đầu ra và liên kết bắt buộc**
+Thiết kế có thể bắt đầu trước hợp đồng nhưng luôn thuộc Dự án. Team và tiến độ
+Thiết kế sử dụng Operational Project; file Basic/Shop hiện có upload/preview,
+trong khi media/feedback theo file của Concept và review markup vẫn là mục tiêu.
 
-* Chỉ bản vẽ IFC đã phát hành từ Module 2 mới là căn cứ thi công.
-* Lựa chọn nhà cung cấp/thầu phụ và hợp đồng Downstream liên kết Module 5/6;
-  không sao chép thành danh mục độc lập trong Module 4.
-* Nghiệm thu QS Upstream/Downstream phải giữ quan hệ với hợp đồng, đợt, WBS,
-  BOQ/VO và bộ hồ sơ thanh toán tương ứng.
-* Hồ sơ QA/QC, nhật ký, Punchlist, nghiệm thu và hoàn công được liên kết với
-  Drive nhưng hệ thống vẫn quản lý metadata, quyền, phiên bản và audit trail.
-* Hoàn công và bàn giao chỉ được hoàn tất khi các hồ sơ bắt buộc đạt trạng thái
-  duyệt, không còn lỗi chặn và đủ điều kiện nghiệm thu/commissioning.
+### Quyết định mở
 
-#### **4.4. Quyết định còn cần NICON chốt trước khi phát triển**
+- Q-06: trình nội bộ chỉ bình luận hay cần đồng thuận bắt buộc.
+- Q-07: CC mặc định cho trưởng/phó phòng.
+- Q-08: quyền xóa hồ sơ không đạt, đặc biệt hồ sơ đã trình khách.
+- Q-10: Design Lead duyệt đầu việc và Design Manager chốt giai đoạn hay mô hình
+  khác.
+- Q-11: team và schedule gộp hay tách tab liên kết.
 
-* Công thức, kỳ chốt và nguồn dữ liệu dùng để tính độ trễ S-Curve `> 5%`.
-* Người có quyền phát hành, mở khóa hoặc thay thế Baseline tiến độ và Budget
-  Baseline; giới hạn thay đổi nào bắt buộc có VO.
-* Ma trận duyệt cụ thể cho từng loại đề xuất nguồn lực, hồ sơ QA/QC, HSE, QS và
-  VO, gồm quy tắc ủy quyền/vắng mặt.
-* Checklist hồ sơ chất lượng bắt buộc theo loại công trình và điều kiện chặn
-  nghiệm thu, hoàn công, bàn giao.
-* Thành phần bộ hồ sơ thanh toán Upstream/Downstream và thời điểm Module 6 được
-  phép tạo/yêu cầu thu hoặc chi.
+## 5. Module 3 — Pháp lý và xin phép
 
-### **5\. MODULE 5: QUẢN LÝ CUNG ỨNG & KHO VẬT TƯ (PROCUREMENT & MATERIALS)**
+### 5.1. Mục tiêu Pháp lý
 
-**Mục tiêu: Tối ưu hóa chi phí mua sắm thông qua chọn lọc nhà thầu phụ/nhà cung cấp và triệt tiêu hao hụt vật tư.**
+Bảo đảm hồ sơ pháp lý đúng loại công trình, đúng hạn và đủ điều kiện sử dụng.
 
-> * **Quy trình Chọn lọc & Đánh giá Nhà cung cấp, Thầu phụ:**  
-  * **Hồ sơ năng lực số (Vendor Directory): Lưu trữ danh mục nhà cung cấp/thầu phụ theo nhóm ngành hàng, xếp hạng uy tín.**  
-  * **Ma trận so sánh giá thầu (Bid Tabulation System):\*\* Khi có nhu cầu mua sắm/giao khoán, hệ thống tự động lập bảng so sánh đơn giá, tiến độ, điều khoản thanh toán giữa các bên cung cấp để hỗ trợ chọn thầu tối ưu.**  
-  * **Đánh giá định kỳ (Vendor Rating): Sau khi kết thúc gói thầu, hệ thống yêu cầu cấu phần quản lý chấm điểm đối tác theo 4 tiêu chí định lượng: *Chất lượng vật liệu/thi công \- Tiến độ giao hàng/thực hiện \- Giá thành cạnh tranh \- An toàn lao động.***  
-> * **Quản lý Vật tư dự án và Chống hao hụt:**  
-  * **Quản lý hạn mức BOQ: Khóa trần khối lượng vật tư tối đa dựa trên bảng dự toán chi tiết được duyệt từ Module 2\.**  
-  * **Yêu cầu cấp phát vật tư (Material Request \- MR): Kỹ sư hiện trường gửi lệnh gọi vật tư. Hệ thống tự động đối chiếu với BOQ. Nếu khối lượng gọi vượt quá hạn mức còn lại, hệ thống sẽ chặn và yêu cầu giải trình lý do vượt định mức.**  
-  * **Quản lý Kho hiện trường (Site Inventory): Theo dõi báo cáo Nhập \- Xuất \- Tồn kho thời gian thực tại từng công trường. Ghi nhận chi tiết vật tư được xuất cho tổ đội nào để làm căn cứ quy trách nhiệm nếu xảy ra lãng phí.**
-> * **Cảnh báo MR ba cấp theo PRD mục tiêu:** Vàng khi mức sử dụng đạt 85%, Cam
-  khi đạt 95%, Đỏ khi vượt 100%. Mức Đỏ chặn đặt hàng và yêu cầu VO phát sinh
-  đã được duyệt. Quy tắc tính mẫu số, làm tròn và xử lý BOQ bằng 0 phải được chốt
-  trước khi triển khai.
-> * **BOQ thực tế:** Hệ thống phải hỗ trợ quy trình import có preview và mapping
-  cho cả workbook một sheet và nhiều sheet. Không hard-code tên sheet từ các mẫu
-  trong `docs/Nicon/BOQ/`; phải phân biệt cover/summary, hạng mục/discipline,
-  dòng dữ liệu, công thức, merged cell và lỗi theo sheet/ô.
+### 5.2. Yêu cầu Pháp lý
 
-### **6\. MODULE 6: QUẢN LÝ TÀI CHÍNH, CHI PHÍ & HỢP ĐỒNG (FINANCE & CONTRACT)**
+- Checklist theo loại/quy mô dự án: GPXD, PCCC, điện/nước, vỉa hè, môi trường,
+  an toàn và hoàn công khi áp dụng.
+- Mỗi permit có cơ quan cấp, owner, target deadline, ngày nộp/cấp/hết hạn, hồ sơ
+  nộp, hồ sơ cấp và trạng thái.
+- Luồng: Not Started → Preparing → Submitted → Under Review → Issued; Need More
+  Docs, Rejected và Expired là các nhánh cần xử lý rõ.
+- Cảnh báo quá hạn, sắp đến hạn và sắp hết hạn.
+- Permit bắt buộc chưa Issued hoặc đã Expired phải chặn cổng khởi công liên quan.
 
-**Mục tiêu: Kiểm soát chặt chẽ dòng tiền, quản lý rủi ro pháp lý các cam kết kinh tế và đo lường biên lợi nhuận.**
+Hiện phần mềm đã có checklist, owner/deadline, tài liệu và risk filters; work
+package/template theo loại dự án và liên kết cổng khởi công còn cần hoàn thiện.
 
-> * **Hệ thống quản lý Hợp đồng đa tầng:**  
-  * **Hợp đồng chính (Main Contract \- Upstream): Quản lý hợp đồng ký với Chủ đầu tư. Theo dõi lịch trình, mốc thu tiền dựa theo tiến độ nghiệm thu giai đoạn thực tế ở Module 4\. Tự động thông báo khi đến hạn thu tiền.**  
-  * **Hợp đồng thầu phụ / Cung ứng (Downstream): Quản lý hệ thống hợp đồng ký với các đối tác được chọn ở Module 5\. Theo dõi tiến độ giải ngân, giữ tiền bảo hành công trình.**  
-  * **Quản lý Phát sinh & Phụ lục (Variation Order \- VO): Ghi nhận toàn bộ thay đổi thiết kế/khối lượng làm tăng hoặc giảm giá trị hợp đồng ban đầu. Mọi khoản chi phát sinh tại hiện trường bắt buộc phải gắn liền với một mã VO được duyệt.**  
-  * **Đối soát ba bên cho thanh toán Downstream:** Kế toán chỉ được chuyển hồ sơ
-    sang điều kiện chi khi đối chiếu được Hợp đồng Downstream (Module 6), Phiếu
-    nhập kho hợp lệ (Module 5) và Biên bản nghiệm thu QS thầu phụ được duyệt
-    (Module 4). Thiếu hoặc sai lệch bất kỳ chứng từ nào phải chặn và giải trình.
-> * **Quản lý Dòng tiền Dự án (Cashflow Control): Ghi nhận dòng tiền Thực thu (tiền về tài khoản công ty từ CĐT) và Thực chi (chi trả vật tư, nhân công, máy móc, chi phí quản lý dự án).**  
-> * **Báo cáo Lãi/Lỗ thời gian thực (Real-time P\&L): Biểu đồ cập nhật tự động biên lợi nhuận gộp của từng công trình dựa trên dữ liệu doanh thu thực tế đối chi với các khoản chi phí kho, chi phí nhân công hiện trường.**
+## 6. Module 4 — Thi công và nghiệm thu
 
-### **7\. MODULE 7: LƯU TRỮ & TÍCH HỢP GOOGLE DRIVE (DIGITAL ASSETS)**
+### 6.1. Mô hình vận hành
 
-**Mục tiêu: Biến Google Drive thành kho lưu trữ bảo mật cao, tổ chức khoa học tự động và không giới hạn dung lượng.**
+Module 4 có hai giai đoạn và hai tuyến trách nhiệm. Hợp đồng Upstream D&B/thi
+công đã ký kích hoạt **CM Preparation**, không tự động cho phép khởi công.
 
-> * **Cấu trúc cây thư mục tự động (Auto-Folder Structure): Khi một dự án mới được khởi tạo trên Web/App (Ví dụ: Dự án NICON-01), hệ thống thông qua API tự động tạo ra một cây thư mục chuẩn trên Google Drive của doanh nghiệp theo cấu trúc:**  
->   **`📁 [Mã_Dự_Án]_[Tên_Dự_Án]`**  
->      **`├── 📁 01_CRM_PreDesign (Hồ sơ khảo sát, hồ sơ thầu, nhu cầu khách)`**  
->      **`├── 📁 02_Thiet_ke`**  
->      **`│     ├── 📁 01_So_bo_Concept (Hình ảnh 3D, mặt bằng phương án)`**  
->      **`│     ├── 📁 02_Co_so (Bản vẽ xin phép, thuyết minh kỹ thuật)`**  
->      **`│     └── 📁 03_Chi_tiet_ShopDrawing (Bản vẽ thi công IFC, Thống kê vật tư)`**  
->      **`├── 📁 03_Xin_phep_Phap_ly (GPXD, Thẩm duyệt PCCC, Hồ sơ hoàn công)`**  
->      **`├── 📁 04_Thi_cong_Nghiem_thu (Nhật ký công trình, Biên bản nghiệm thu, Punchlist)`**  
->      **`├── 📁 05_Cung_ung_Vat_tu (Báo giá nhà thầu, Phiếu Nhập-Xuất kho, Đánh giá NCC)`**  
->      **`└── 📁 06_Tai_chinh_Hop_dong (Hợp đồng gốc, Phụ lục VO, Đề nghị thanh toán)`**  
-> * **Đồng bộ phân quyền hai chiều (Permission Sync): Quyền truy cập các thư mục trên Google Drive được cấu hình tự động dựa trên phân quyền vai trò trên Web/App NICON. *(Ví dụ: Nhân viên thiết kế chỉ có quyền xem/sửa folder 02\_Thiet\_ke; Kỹ sư công trường chỉ xem được bản vẽ IFC và sửa folder 04\_Thi\_cong; Chỉ Ban Giám đốc và Kế toán trưởng mới nhìn thấy folder 06\_Tai\_chinh).***  
-> * **Xem file trực tuyến (In-app Viewer): Tích hợp trình xem của Google API để người dùng có thể mở, đọc các định dạng file (.pdf, .dwg chuyển đổi, .docx, .xlsx, hình ảnh) trực tiếp trên giao diện ứng dụng NICON mà không cần tải file về thiết bị cá nhân.**
+#### Giai đoạn 1 — Phòng CM chuẩn bị
 
-### **8\. MODULE 8: QUẢN TRỊ, DASHBOARD & ĐÁNH GIÁ KPI TỰ ĐỘNG (REAL-TIME PERFORMANCE)**
+1. WBS, Gantt, mốc móng/kết cấu/hoàn thiện/MEP, đường găng và Baseline S-Curve.
+2. Cơ cấu BCH gồm Chỉ huy trưởng, Field/QA-QC, Site QS, HSE và Thủ kho.
+3. Kế hoạch vật tư, máy/thiết bị và nhân công theo tiến độ.
+4. Bid Tabulation, đánh giá NCC/thầu phụ/tổ đội và kế hoạch HĐ Downstream cùng
+   Module 5/6.
+5. Budget Baseline cho vật tư, nhân công, máy và chi phí BCH; sau khi khóa chỉ
+   thay đổi qua quyền/version/audit và VO khi ảnh hưởng phạm vi/giá trị.
 
-**Mục tiêu: Số hóa hoàn toàn công tác quản trị nhân sự, chấm điểm hiệu suất định lượng 100% dựa trên dữ liệu vận hành thực tế.**
+#### Cổng đủ điều kiện khởi công
 
-> * **Cơ chế chấm điểm tự động từ dữ liệu nguồn (Data-driven KPI): Hệ thống loại bỏ việc nhân viên tự viết báo cáo và cấp trên chấm điểm cảm tính vào cuối tháng. Điểm KPI được phần mềm tự động quét và tính toán hàng ngày dựa trên hành vi và kết quả ghi nhận từ Module 1 đến Module 6\.**  
-> * **Màn hình theo dõi thời gian thực (Real-time KPI Dashboard): Mỗi nhân sự và cấp quản lý đều có một màn hình cá nhân hiển thị điểm KPI hiện tại. Điểm số này biến động liên tục theo tiến độ hoàn thành công việc trong tháng.**  
-> * **Xuất báo cáo tức thì (Instant Export): Tính năng cho phép cấp quản lý/phòng HR bấm nút xuất file đánh giá KPI của bất kỳ nhân sự nào hoặc toàn bộ công ty tại bất kỳ thời điểm nào trong tháng. File xuất ra được tự động cấu hình thành định dạng Google Sheets hoặc PDF, tự động lưu trữ vào thư mục quản trị trên Drive.**
+Server phải xác nhận hợp đồng hiệu lực, IFC phù hợp, permit bắt buộc còn hiệu
+lực, baseline đã công bố, BCH/resource plan được duyệt và Budget Baseline đã
+khóa. Bàn giao mặt bằng, biện pháp thi công và kế hoạch HSE là điều kiện theo
+template dự án sau khi NICON chốt bộ hồ sơ ISO.
 
-## ---
+#### Giai đoạn 2 — BCH và Phòng CM chạy song song
 
-**KHUNG KPI ĐỊNH LƯỢNG MỤC TIÊU CHO 11 VỊ TRÍ**
+- **BCH Operations:** đề xuất vật tư/máy/nhân công; nhật ký điều phối hằng ngày.
+- **QA/QC:** hồ sơ chất lượng, kiểm tra theo IFC, Punchlist, nhật ký và HSE.
+- **Site QS:** nghiệm thu khối lượng Upstream và Downstream tách biệt.
+- **Phòng CM:** thẩm định chất lượng, kiểm soát S-Curve, HSE, ngân sách, MR, QS
+  và VO trên nhiều công trình.
 
-Mỗi vị trí có ba chỉ số với tổng trọng số 100%. Đây là khung nghiệp vụ mục tiêu
-từ PRD trong `docs/Nicon/`; chỉ số chỉ được tính khi workflow nguồn đã triển
-khai, dữ liệu có người chịu trách nhiệm, trạng thái chốt và bằng chứng truy vết.
-Dữ liệu thiếu phải hiển thị `MissingData`, không tự quy đổi thành điểm 0.
+Trễ tiến độ **lớn hơn 5%** so với baseline tạo cảnh báo đỏ, giải trình và kế
+hoạch phục hồi. Công thức, kỳ chốt và nguồn progress phải lưu được để tái lập.
 
-| Vị trí | KPI mục tiêu và trọng số | Nguồn chính |
-| :---- | :---- | :---- |
-| **PM Phòng CM** | Hoàn thành đúng Budget Baseline (40%); kiểm soát S-Curve (30%); thời gian đóng Punchlist (30%) | Module 4, 5, 6 |
-| **Chỉ huy trưởng BCH** | Tiến độ WBS/S-Curve (40%); hao hụt vật tư (30%); tuân thủ HSE (30%) | Module 4, 5 |
-| **Kỹ sư hiện trường / QA-QC** | Nghiệm thu đạt lần đầu (40%); thời gian đóng lỗi (30%); hồ sơ chất lượng đầy đủ/đúng hạn (30%) | Module 4, 7 |
-| **Kỹ sư QS hiện trường** | Tiến độ/tỷ lệ nghiệm thu với CĐT (40%); độ chính xác và thời gian duyệt QS Downstream (30%); tỷ lệ VO được duyệt (30%) | Module 4, 6 |
-| **Nhân viên Cung ứng** | Tiết kiệm chi phí mua sắm (40%); thời gian cung ứng từ MR đến nhập kho (30%); Vendor Rating (30%) | Module 5 |
-| **Nhân viên Kinh doanh / CRM** | Chuyển đổi Lead thành Hợp đồng (40%); doanh thu Upstream ký mới (40%); thời gian phản hồi Lead (20%) | Module 1, 6 |
-| **Kỹ sư Đấu thầu / QS văn phòng** | Tỷ lệ trúng thầu (40%); đúng hạn hồ sơ thầu/BOQ (30%); độ chính xác dự toán so với BOQ thực tế (30%) | Module 1, 2, 5 |
-| **Kỹ sư / Kiến trúc sư Thiết kế** | Đúng hạn phát hành bản vẽ (40%); đạt duyệt lần đầu (30%); lỗi thiết kế phản hồi từ công trường (30%) | Module 2, 4 |
-| **Kỹ sư Pháp lý & Xin phép** | Đúng hạn GPXD/PCCC/hoàn công (40%); đạt lần nộp đầu (30%); checklist hồ sơ lưu trữ đầy đủ (30%) | Module 3, 7 |
-| **Kế toán Dự án** | Thu hồi công nợ CĐT đúng hạn (40%); thời gian xử lý thanh toán Downstream (30%); độ chính xác dòng tiền/P&L (30%) | Module 4, 6 |
-| **Hành chính Nhân sự** | Tiến độ và tỷ lệ tuyển dụng đạt yêu cầu (40%); khóa/xuất KPI đúng hạn (30%); thời gian xử lý yêu cầu hành chính/thiết bị (30%) | Module 8 và workflow HR |
+### 6.2. Nguồn lực và BOQ
 
-Chi tiết công thức, mẫu số, target, ngưỡng điểm, thời điểm ghi nhận và cách xử
-lý dữ liệu lịch sử phải được phê duyệt theo từng KPI trước khi kích hoạt. Không
-suy ra công thức chỉ từ tên cột hoặc màu sắc trong file mẫu.
+- Đề xuất nguồn lực bắt buộc có loại, WBS, ngày cần, khối lượng và lý do.
+- MR vật tư kiểm tra Execution BOQ revision được duyệt, không dùng BOQ sơ bộ.
+- Trong hiện trạng, vượt allowance còn lại bị chặn. Mục tiêu 85% vàng, 95% cam,
+  trên 100% đỏ/chặn chỉ triển khai sau khi chốt công thức và VO behavior.
+- Đề xuất ngoài kế hoạch/vượt hạn mức cần CM level-2 review độc lập trước khi
+  chuyển Procurement.
 
-## ---
+### 6.3. Chất lượng, an toàn và nhật ký
 
-**YÊU CẦU KỸ THUẬT GIAO DIỆN (UI/UX) CHO ĐỘI PHÁT TRIỂN APP**
+- QA/QC dossier gồm checklist, biên bản mẫu/thí nghiệm, chứng chỉ vật liệu, IFC
+  revision và bằng chứng ảnh/file.
+- Punchlist có vị trí, severity, root cause, assignee, deadline, xử lý, verify và
+  reopen; lỗi chặn chưa đóng tham gia readiness nghiệm thu/bàn giao.
+- HSE có người vi phạm/chịu trách nhiệm, remediation owner/deadline, evidence,
+  confirmation độc lập, correction và close.
+- Draft/offline chưa đồng bộ không phải bằng chứng duyệt hoặc KPI.
 
-> 1. **Mobile-First cho khối Hiện trường: Giao diện hiển thị trên điện thoại của các Module 1 (Khảo sát), Module 4 (Nhật ký, Nghiệm thu, Punchlist) và Module 5 (Nhập xuất kho) phải thiết kế nút bấm to, thao tác tối giản dưới 3 lần chạm, tối ưu tải ảnh nhanh trong điều kiện sóng 3G/4G công trường yếu. Có tính năng lưu trữ tạm thời (Offline Mode) khi mất mạng và tự đồng bộ khi có kết nối trở lại.**  
-> 2. **Web-Dashboard trực quan cho Khối Văn phòng & Ban Giám đốc: Giao diện Web hiển thị trên máy tính tập trung vào các biểu đồ Gantt Chart, biểu đồ S-Curve tiến độ, bảng ma trận so sánh giá thầu và biểu đồ cột tài chính thực tế dòng tiền P\&L.**  
-> 3. **Tích hợp API kết nối sâu với Google Workspace: Hệ thống sử dụng phương thức xác thực phân quyền tài khoản (OAuth 2.0). Mọi hành động khởi tạo dự án, duyệt file bắt buộc phải kích hoạt lệnh chạy tự động cấu trúc folder và phân quyền thư mục tương ứng trên Google Drive thông qua hệ thống API chính thức.**
+### 6.4. QS, nghiệm thu và thanh toán
+
+- Upstream QS liên kết HĐ Upstream, CĐT/TVGS, WBS, BOQ/VO và milestone phải thu.
+- Downstream QS liên kết HĐ Downstream, NCC/thầu phụ/tổ đội, WBS và dossier phải
+  trả.
+- Khối lượng đã duyệt bất biến; correction dùng version thay thế hoặc reversal.
+- Payment review Downstream dùng HĐ hợp lệ + QS được duyệt + warehouse receipt
+  posted khi gói có vật tư. Ma trận theo loại package vẫn cần NICON chốt.
+
+### 6.5. Hoàn công và bàn giao
+
+- Có ít nhất một acceptance được duyệt, đủ category as-built bắt buộc, không còn
+  Punchlist chặn, commissioning và checklist hoàn tất.
+- Final handover cần signatory và quyền `complete`; reopen giữ status history.
+- Điều kiện kỹ thuật không thay thế điều kiện tài chính/hợp đồng.
+
+### 6.6. Ranh giới hiện trạng
+
+Construction Task, Diary, Punch, Acceptance, As-built và Handover hiện dùng
+`DesignProjectId`; HSE dùng `OperationalProjectId`. Baseline/S-Curve, BCH
+organization, Budget Baseline, QA/QC dossier, resource request cho máy/nhân công
+và QS hai hướng chưa có aggregate hoàn chỉnh. Mọi mở rộng mới dùng Operational
+Project và cần kế hoạch migration tương thích cho dữ liệu cũ.
+
+## 7. Module 5 — Cung ứng và kho
+
+### 7.1. Mục tiêu Cung ứng và kho
+
+Quản lý giá đầu vào, lựa chọn NCC/thầu phụ, hạn mức thực hiện và tồn kho dự án.
+
+### 7.2. Yêu cầu Cung ứng và kho
+
+- Vendor directory, hồ sơ năng lực, trạng thái active và rating có phê duyệt.
+- RFQ: lines, invited vendors, portal token, bid revisions/withdrawal, đánh giá,
+  bid tabulation, award và audit; award liên kết HĐ Downstream.
+- Tách rõ material-rate catalog, Tender Estimate, Quote BOQ và Project Execution
+  BOQ. Chỉ execution revision Approved hiện hành làm allowance MR/kho.
+- MR: Draft → Submitted → Approved/Rejected → Partially Fulfilled/Fulfilled hoặc
+  Cancelled; approval không tự nhập kho.
+- Warehouse receipt/issue: Draft → Posted → Reversed; tồn kho là ledger dẫn xuất,
+  không sửa số tồn trực tiếp.
+- BOQ import workbook một/nhiều sheet có preview, mapping, lỗi theo sheet/ô,
+  provenance và xác nhận; không hard-code mẫu khách hàng.
+
+## 8. Module 6 — Tài chính, chi phí và hợp đồng
+
+### 8.1. Mục tiêu Tài chính và hợp đồng
+
+Kiểm soát hợp đồng hai chiều, phải thu/phải trả, dòng tiền và lợi nhuận Dự án.
+
+### 8.2. Yêu cầu Tài chính và hợp đồng
+
+- Hợp đồng Upstream/Downstream có direction/type rõ, milestone, appendix/VO,
+  attachment, lifecycle và Operational Project.
+- VO được version, submit, approve/reject và không sửa ngầm baseline/BOQ gốc.
+- Payment Request: Draft → Under Validation → Ready for Approval → Approved →
+  Paid, với Rejected/Cancelled; actor và reference bắt buộc theo loại chứng từ.
+- Accounting Period: Open → Closing → Closed; post-close correction có lifecycle
+  và reversal, không sửa trực tiếp số liệu đã khóa.
+- Cashflow/P&L phân biệt committed, accrued/accepted, paid/received và forecast;
+  không gọi báo cáo là real-time nếu nguồn chưa đủ.
+
+## 9. Module 7 — Tài liệu và Google Drive
+
+### Cây nghiệp vụ mục tiêu
+
+```text
+[ProjectCode]_[ProjectName]
+├─ 01_CRM_PreDesign/01_Khao_sat
+├─ 02_Thiet_ke/{01_So_bo_Concept,02_Co_so,03_Chi_tiet_ShopDrawing}
+├─ 03_Xin_phep_Phap_ly
+├─ 04_Thi_cong_Nghiem_thu
+├─ 05_Cung_ung_Vat_tu
+└─ 06_Tai_chinh_Hop_dong
+```
+
+Hiện tại code cấu hình `01_Khao_sat` và `01_CRM_PreDesign` là hai category sibling
+riêng. Phải giữ tương thích cho tới khi có migration topology được duyệt; tài
+liệu không được mô tả hai cách này như cùng một trạng thái đã triển khai.
+
+Nicon quản lý metadata, quyền, nguồn, checksum, version, desired operation,
+sync status, retry và conflict. Drive giữ binary. File từ Drive đưa vào phải
+được phân loại; file xóa qua Nicon đi theo chính sách trash/cleanup đã công bố.
+
+## 10. Module 8 — Dashboard và KPI
+
+### 10.1. Mục tiêu Dashboard và KPI
+
+Tính KPI từ dữ liệu vận hành, có bằng chứng drill-down, kỳ thời gian Việt Nam và
+snapshot khi khóa.
+
+### Khung mục tiêu 11 vị trí
+
+| Vị trí | Nhóm chỉ số mục tiêu |
+|---|---|
+| PM Phòng CM | Budget Baseline, S-Curve, thời gian đóng Punchlist |
+| Chỉ huy trưởng BCH | Tiến độ, hao hụt vật tư, HSE |
+| Field/QA-QC | Nghiệm thu lần đầu, đóng lỗi, hồ sơ chất lượng |
+| Site QS | QS Upstream, QS Downstream, VO |
+| Cung ứng | Tối ưu giá, thời gian cung ứng, Vendor Rating |
+| Sales/CRM | Chuyển đổi, doanh thu ký mới, phản hồi Lead |
+| Tendering/QS văn phòng | Tỷ lệ trúng, đúng hạn, độ chính xác dự toán |
+| Design | Đúng hạn, duyệt lần đầu, lỗi thiết kế từ công trường |
+| Legal | Permit đúng hạn, hồ sơ bổ sung, hết hạn/vi phạm |
+| Project Accounting | Thu đúng hạn, xử lý phải trả, correction |
+| HR/Admin | Tuyển dụng, hồ sơ/quy trình nhân sự theo phạm vi được duyệt |
+
+Mã nguồn hiện mới có 19 metric cho sáu scorecard: Sales, Tendering, Design,
+Site, Procurement và Project Accounting. Không được tuyên bố 11 vị trí đã hoàn
+thành. Metric thiếu nguồn/target trả `MissingData`; tổng trọng số active phải
+bằng 100% trước khi khóa kỳ.
+
+## 11. Ngôn ngữ, thiết bị và phi chức năng
+
+- Giao diện hiện hỗ trợ `vi`, `en`, `zh`, `ja`; mọi display text mới phải có đủ
+  bốn ngôn ngữ. Đây là phạm vi triển khai mở rộng so với BreakTask gốc Việt/Anh.
+- BCH ưu tiên mobile/tablet và kết nối yếu; CM/Finance/Procurement ưu tiên desktop
+  cho đối soát. Offline queue chỉ được công bố khi có persistence, retry,
+  idempotency và conflict handling thực tế.
+- Dữ liệu tài chính, file và hành động nhạy cảm phải có authorization, audit và
+  không lộ secret/token trong response/log.
+- Export phải dùng cùng scope/filter/quyền với màn hình nguồn.
+
+## 12. Các quyết định bắt buộc còn mở
+
+Danh sách Q-01–Q-11 và các phụ thuộc chi tiết nằm trong MoM ngày 03–06/10/2026.
+Ngoài ra, NICON cần chốt:
+
+1. Cổng khởi công và checklist ISO theo loại công trình.
+2. Công thức/kỳ chốt S-Curve và quyền publish/unlock baseline.
+3. Approval/delegation matrix cho MR, QA/QC, HSE, QS và VO.
+4. Hồ sơ thanh toán và three-way matching theo loại Downstream package.
+5. Công thức dải BOQ 85/95/>100 và xử lý zero allowance/reversal/conversion.
+6. Migration `DesignProjectId` → `OperationalProjectId` cho Module 2/3/4.
+7. Migration cây Drive cho `01_Khao_sat`.
+8. KPI definition, target và source cho các vị trí còn thiếu.
+
+Không khóa thiết kế dữ liệu hoặc tuyên bố business-ready cho phần phụ thuộc cho
+tới khi chủ sở hữu nghiệp vụ chấp thuận các quyết định tương ứng.

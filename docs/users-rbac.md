@@ -1,6 +1,6 @@
 # Users Section RBAC
 
-Date: 2026-05-16 (updated 2026-09-09 for primary-contract reconciliation access)
+Date: 2026-05-16 (updated 2026-10-06 for NICON workflow alignment)
 
 ## Overview
 
@@ -17,7 +17,17 @@ Roles are still seeded from the JSON bundle (`nihomebackend/Data/Rbac/rbac-defau
 | `USER` | Force-synced on every boot via the bundle pattern (`profile.me.*`). | No |
 | Business roles (`SALE`, `DESIGN`, …) | Seeded once via `Role.InitialPermissionsSeeded`; subsequent edits in the admin matrix editor are preserved on restart. | Yes |
 
-The current business-role catalog contains `SALE`, `SALES_MANAGER`, `DESIGN`, `DESIGN_LEAD`, `ARCHITECT`, `MEP_ENGINEER`, `STRUCT_ENGINEER`, `PM`, `LEGAL_OFFICER`, `QS`, `ACCOUNTANT`, `WAREHOUSE`, and `BGD`. Authorized administrators may also create or delete non-system roles and edit their permission matrices.
+The current business-role catalog contains `SALE`, `SALES_MANAGER`, `DESIGN`,
+`DESIGN_LEAD`, `ARCHITECT`, `MEP_ENGINEER`, `STRUCT_ENGINEER`, `PM`,
+`LEGAL_OFFICER`, `QS`, `PROCUREMENT`, `ACCOUNTANT`, `WAREHOUSE`, and `BGD`.
+Authorized administrators may also create or delete non-system roles and edit
+their permission matrices.
+
+These 14 role codes are access-control bundles, not the NICON 11-position KPI
+framework. The current KPI service maps several roles into six broad scorecards;
+that does not prove distinct PM CM, BCH, Field/QA-QC or Site QS responsibilities.
+Do not infer role semantics from KPI mapping or merge roles merely to make the
+counts equal.
 
 ## Access Rules
 
@@ -82,6 +92,23 @@ check. Frontend route/action gates are convenience only. New role or permission
 codes require seed alignment, four-language labels, migration/backfill review,
 and allow/deny integration coverage before use.
 
+The current delivered Module 4 permission families are broader than the target
+duty model:
+
+| Current permission family | Current capability | Target gap |
+|---|---|---|
+| `construction.tasks.*` | Task/WBS CRUD and progress | Baseline publish/unlock, S-Curve and CM portfolio controls |
+| `construction.diary.*` | Diary view/manage/confirm | Media/offline evidence and explicit BCH/CM separation |
+| `construction.punch.*` | Punch manage/verify | Dedicated CM overdue supervision and governed attachments |
+| `construction.hse.*` | HSE manage/confirm/close | Approved role/delegation matrix for BCH versus CM |
+| `construction.acceptance.*` | Generic partial-acceptance workflow | Direction-explicit Upstream/Downstream QS permissions |
+| `construction.asbuilt.*` | As-built workflow and category management | ISO dossier rules by project type |
+| `construction.handover.*` | Scoped handover lifecycle and completion | Operational-Project owner migration |
+
+Do not reuse `manage`, `approve`, `confirm`, or `complete` as if they represented
+the same business decision. New CM-preparation, QA/QC and QS aggregates require
+action-specific permission codes and server-side author-versus-reviewer checks.
+
 ### Operational project permissions
 
 | Permission | Scope |
@@ -128,7 +155,11 @@ The same endpoints are also exposed below `/api/v1/handover-records`. Unauthoriz
 
 Development and integration seeders provide deterministic accounts for the system and business roles used by manual smoke, integration, and Playwright tests. Account identifiers and development credentials are defined in `DbSeeder`, `BusinessRoleUserSeeder`, integration `TestDataSeeder`, and `nihomeweb/e2e/fixtures/auth.ts`; keep those sources aligned rather than duplicating secrets here.
 
-The development seed now provides a deterministic login for every declared business role: `SALE`, `SALES_MANAGER`, `DESIGN`, `DESIGN_LEAD`, `ARCHITECT`, `MEP_ENGINEER`, `STRUCT_ENGINEER`, `PM`, `LEGAL_OFFICER`, `QS`, `ACCOUNTANT`, `WAREHOUSE`, and `BGD`. Integration tests additionally provide a deterministic `USER` account.
+The development seed now provides a deterministic login for every declared
+business role: `SALE`, `SALES_MANAGER`, `DESIGN`, `DESIGN_LEAD`, `ARCHITECT`,
+`MEP_ENGINEER`, `STRUCT_ENGINEER`, `PM`, `LEGAL_OFFICER`, `QS`, `PROCUREMENT`,
+`ACCOUNTANT`, `WAREHOUSE`, and `BGD`. Integration tests additionally provide a
+deterministic `USER` account.
 
 System roles are stored using the legacy `UserRole` enum; business-role users carry `Role = USER` and the real role link via `RoleEntityId`. `PermissionService` reads `RoleEntityId` first, so the business-role permission matrix from `rbac-defaults.json` applies as-is.
 
@@ -157,7 +188,7 @@ Then restart the backend; `RbacSeeder.SeedInitialBusinessRolePermissionsIfMissin
 - anonymous caller → `401 Unauthorized`
 - `USER`-role caller (only has `profile.me.*`) → `403 Forbidden`
 
-There is no manual route list to maintain — adding a new `[RequirePermission(...)]` action automatically opts that route into both checks. The scanner currently finds ~79 protected endpoints (`POST/PUT/DELETE` + guarded `GET`s). A sanity `Fact` fails if discovery ever returns fewer than 20 routes (catches reflection breakage in refactors).
+There is no manual route list to maintain — adding a new `[RequirePermission(...)]` action automatically opts that route into both checks. The discovered count changes whenever protected controller actions change, so this guide deliberately does not publish a snapshot count. A sanity `Fact` fails if discovery ever returns fewer than 20 routes (catches reflection breakage in refactors).
 
 For per-controller happy-path coverage (admin/SA returns 2xx with a valid payload), use the existing per-controller test files; the dynamic probe intentionally only asserts the deny path so it stays maintenance-free.
 
