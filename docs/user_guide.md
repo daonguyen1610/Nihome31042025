@@ -78,6 +78,28 @@ projects are separate views and must not be used as substitutes for this key.
 | 7. Digital Assets | Automated project folder structure, Google Drive integration, document digitization | Organize, secure, and provide rapid access to project files |
 | 8. Dashboard and Analytics | Progress reports, acceptance reports, financial dashboards, procurement reports, risk alerts | Provide management oversight and early risk detection |
 
+#### 2.2.1 Customer Reference Pack and Status Labels
+
+The repository retains the NICON source pack under `docs/Nicon/`: the full PRD
+and workflow DOCX files, representative design/permitting/construction schedule
+PDFs, real BOQ workbooks, and dated meeting/BA records. These artifacts explain
+the target operating model and provide realistic import examples.
+
+Use the following labels consistently in this guide:
+
+- **Implemented** means the current API, persistence, permission checks, and UI
+  support the described workflow.
+- **Partially implemented** means a usable subset exists and the missing scope
+  is named explicitly.
+- **Target/planned** means the customer requirement is documented but must not
+  be presented to users as available.
+- A sample schedule or BOQ demonstrates real data shape only. Sheet names,
+  colors, dates, customer names, and layout are not fixed product rules.
+
+When the source pack conflicts internally, the dated meeting decision is used
+for the working target. For example, the newer meeting decision of one approver
+per design task plus CC supersedes the older PRD's generic multi-tier wording.
+
 Additionally, the system includes cross-cutting capabilities:
 
 | Capability | Description |
@@ -525,6 +547,33 @@ collection milestones; approved Downstream QS evidence supports payment review.
 violation, or VO cannot satisfy the independent CM review for the same item.
 Every transition records actor, time, comments, and the version reviewed.
 
+The target mobile experience is divided into three BCH portals:
+
+1. **BCH Operations:** resource requests for materials, machinery/equipment,
+   and direct labour, plus daily field coordination.
+2. **QA/QC:** sampling records, test results, certificates, IFC-based
+   inspection, site photos, Punchlist, daily diary, and HSE evidence.
+3. **Site QS:** separate Upstream quantity acceptance with CĐT/TVGS and
+   Downstream quantity acceptance for teams/subcontractors.
+
+Material requests use the target BOQ warning bands from the customer PRD:
+yellow at 85%, orange at 95%, and red above 100%. The red state blocks ordering
+and requires an approved VO. These bands are planned until the denominator,
+rounding, zero-allowance behavior, and server workflow are approved and
+implemented; the current material-request behavior remains the product truth.
+
+For Downstream payment, the target control is three-way matching:
+
+```text
+Signed Downstream Contract
+  + valid posted Warehouse Receipt
+  + approved Downstream QS acceptance
+  = eligible for Accounting payment review
+```
+
+Eligibility does not mean automatic payment. Missing, mismatched, reversed, or
+superseded evidence blocks the handoff and must leave financial state unchanged.
+
 #### 3.4.1 Construction Schedule (Gantt)
 
 Create construction schedules with phases and work items (WBS). Assign responsible personnel. Set start and end dates. Track actual completion percentage. Update progress from the field. Display Gantt chart with dependency lines. Alert on overdue tasks. Support drag-and-drop task bars, resize duration, and zoom (day/week/month).
@@ -672,6 +721,29 @@ processing continue through their existing workflows.
 #### 3.5.3 Material BOQ Management
 
 Create material BOQ by project and construction work item. Define maximum allowable quantities (norms) per project. Link BOQ to construction schedule. Track BOQ amendments. Support Excel import for bulk data entry.
+
+The NICON reference pack contains both a one-sheet estimate and large
+multi-sheet workbooks with cover, total/summary, preliminaries, building,
+infrastructure, fire-fighting, electrical, plumbing, HVAC, and material-list
+sheets. The target import experience therefore uses an explicit workflow:
+
+1. Upload the workbook without changing the approved BOQ.
+2. Detect sheets and let the operator classify each as ignored metadata,
+   summary, or importable detail.
+3. Map required columns and show the detected unit, quantity, unit price,
+   formula/value, and hierarchy before import.
+4. Validate every detail row and report errors by sheet and cell. Blank,
+   duplicated, merged, formula-only, malformed, negative, and unsupported rows
+   must not be silently coerced.
+5. Preview totals and reconcile them with recognized summary totals.
+6. Confirm once to create a Draft version with source filename, hash, importer,
+   import time, mapping version, and per-sheet results.
+7. Review and approve through the normal BOQ lifecycle. Import never bypasses
+   approval or replaces the current approved revision automatically.
+
+This generalized multi-sheet workflow is target/planned unless the current
+screen explicitly exposes it. The existing approved-BOQ and MR controls remain
+authoritative until the importer is delivered.
 
 | Page | Functions | Estimate |
 |------|-----------|----------|
@@ -1001,10 +1073,32 @@ The seeded role catalog is implemented and can be adjusted through **Admin > Rol
 | `SALE`, `SALES_MANAGER` | CRM, quotations, tenders, surveys, and contracts according to assigned permissions |
 | `DESIGN`, `DESIGN_LEAD`, `ARCHITECT`, `MEP_ENGINEER`, `STRUCT_ENGINEER` | Design projects and discipline workflows |
 | `PM`, `LEGAL_OFFICER` | Project, permitting, and construction workflows |
-| `QS`, `ACCOUNTANT`, `WAREHOUSE` | Commercial, finance-adjacent, and operational access currently present in the catalog |
+| `QS`, `PROCUREMENT`, `ACCOUNTANT`, `WAREHOUSE` | Tendering, procurement, finance-adjacent, and operational access currently present in the catalog |
 | `BGD` | Broad read-oriented management access |
 
 Permissions are grouped by module and action, for example `crm.quotes.approve`, `design.ifc.release`, `construction.punch.verify`, and `construction.handover.complete`. Some operational modules also separate assigned-scope access from global access with actions such as `view.all` or `manage.all`. See the dedicated RBAC guide for the complete behavior.
+
+The customer PRD defines eleven business positions for the target operating
+model. They are business responsibilities, not permission-code aliases:
+
+| Target position | Primary responsibility | Current catalog note |
+|---|---|---|
+| PM Phòng CM | Portfolio schedule, budget, QA/QC, HSE, QS and VO control | Uses project/PM permissions today; dedicated CM boundary is planned |
+| Chỉ huy trưởng BCH | Coordinate one assigned construction site | Dedicated BCH duty separation is planned |
+| Kỹ sư hiện trường / QA-QC | Daily field evidence, QA/QC and Punchlist | Map through explicit construction permissions, not role name alone |
+| Kỹ sư QS hiện trường | Upstream and Downstream quantity acceptance | Existing `QS` must not automatically imply both site and tendering duties |
+| Nhân viên Cung ứng | RFQ, award, procurement and vendor performance | `PROCUREMENT` capability must remain distinct from warehouse custody |
+| Nhân viên Kinh doanh / CRM | Lead, opportunity, quotation and Upstream revenue | `SALE` / `SALES_MANAGER` |
+| Kỹ sư Đấu thầu / QS văn phòng | Tender plan, submission and estimating | Existing `QS` currently represents this KPI position |
+| Kỹ sư / Kiến trúc sư Thiết kế | Design tasks, revisions and discipline output | `DESIGN`, `ARCHITECT`, `MEP_ENGINEER`, `STRUCT_ENGINEER` |
+| Kỹ sư Pháp lý & Xin phép | Permit checklist and authority submissions | `LEGAL_OFFICER` |
+| Kế toán Dự án | Receivables, payables, cash flow and P&L evidence | `ACCOUNTANT` |
+| Hành chính Nhân sự | Recruitment, KPI closing/export and internal requests | No dedicated business-role contract is complete yet |
+
+`Design Manager / Chủ nhiệm thiết kế` is the customer-facing name for the
+department-level design owner; `Design Lead` remains the team-level role. The
+target rule is one approver per task and CC for observers. Do not implement a
+second mandatory approval chain from the older PRD without a new decision.
 
 ---
 

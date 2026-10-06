@@ -85,13 +85,44 @@ Before finishing a form or write endpoint, identify each field's invalid-value r
 
 ## Core business alignment
 
-All implementation decisions that affect business behavior must comply with 'docs/Nicon-QLVH.md', 'docs/Nicon_BreakTask_v1.xlsx' and 'docs/Nicon-workflow.md'. These documents are the authoritative source for customer expectations and business workflows.
+All implementation decisions that affect business behavior must comply with
+`docs/Nicon-QLVH.md`, `docs/Nicon_BreakTask_v1.xlsx`, `docs/Nicon-workflow.md`,
+and the customer evidence retained under `docs/Nicon/`. The canonical Markdown
+documents define the current working contract; `docs/Nicon/` provides the
+auditable source material used to interpret and validate it.
 
 - Before implementing, research the relevant documentation, existing behavior, code paths, data contracts, and tests. Do not start coding from assumptions.
 - Think through the actors, business intent, workflow states, rules, permissions, dependencies, edge cases, and expected outcomes before choosing a solution.
 - State unresolved ambiguity and request clarification when it could change business behavior or data; do not invent missing requirements.
 - Prefer the smallest solution that satisfies the confirmed business flow, avoids unnecessary work, and improves delivery efficiency without weakening correctness or validation.
 - After implementation, verify the result against the documented workflow and customer expectation before declaring the task complete.
+
+### Customer evidence under docs/Nicon
+
+- Read `docs/Nicon/MoMs/` for dated decisions, open questions, delivery
+  priorities, and evidence timestamps before relying on older PRD wording.
+- Read the PRD and workflow DOCX files for the eight-module scope, cross-role
+  interactions, eleven-position KPI framework, Google Drive structure, and
+  mobile/desktop requirements.
+- Inspect the relevant schedule PDFs when implementing design, permitting, or
+  construction planning. Preserve hierarchical WBS, task duration, planned
+  start/finish, predecessors, milestones, calendars, and baseline data; do not
+  reduce the schedule to a flat checklist.
+- Inspect representative workbooks under `docs/Nicon/BOQ/` before designing an
+  import contract. They contain both single-sheet and multi-sheet structures,
+  summary/cover sheets, discipline sheets, bilingual labels, formulas, merged
+  cells, and project-specific naming. Treat them as discovery evidence, not as
+  one automatically approved schema.
+- When sources conflict, the explicit current user request wins, followed by a
+  later confirmed meeting decision, then the canonical requirements/workflow,
+  then older PRD/workflow attachments. Record the conflict and preserve an open
+  decision when later evidence is not confirmed.
+- Do not treat a meeting proposal, effort estimate, sample workbook value, PDF
+  date, color, sheet name, or customer-project name as a product rule unless it
+  is confirmed in the canonical contract.
+- Keep implementation status separate from target scope. A requirement in
+  `docs/Nicon/` is not evidence that the API, UI, migration, seed, or test is
+  delivered.
 
 ## Module 4 construction and acceptance rules
 
@@ -195,7 +226,8 @@ Use this rule: pure logic → unit; HTTP/auth/persistence contract → integrati
 
 ## Documentation and quality checks
 
-Keep `docs/` limited to these six canonical files:
+Keep the root of `docs/` limited to these six canonical files plus the curated
+`docs/Nicon/` customer-evidence directory:
 
 - `application_developer.md` — setup, architecture, API contracts, migrations, operations, and testing guidance.
 - `Nicon_BreakTask_v1.xlsx` — authoritative customer task breakdown.
@@ -204,14 +236,29 @@ Keep `docs/` limited to these six canonical files:
 - `user_guide.md` — delivered user workflows and operating instructions.
 - `users-rbac.md` — roles, permissions, and access behavior.
 
+`docs/Nicon/` may contain only customer-provided or customer-derived source
+evidence organized as follows:
+
+- `MoMs/<YYYY-MM-DD>/` — dated meeting minutes, BA synthesis, decisions, open
+  questions, and delivery priorities.
+- `BOQ/` — representative BOQ/quotation workbooks retained byte-for-byte.
+- Root-level PRD/workflow DOCX and schedule PDF files supplied by NICON.
+
+Do not place implementation notes, generated previews, extracted text, test
+artifacts, temporary conversions, or duplicate canonical guides in
+`docs/Nicon/`.
+
 During every change:
 
 - Update the relevant canonical file in place when behavior, configuration, API contracts, workflows, or operations change.
-- Do not add other files or subdirectories under `docs/` unless the user explicitly changes this allowlist.
+- Do not add other root files or subdirectories under `docs/` unless the user
+  explicitly changes this allowlist.
 - Do not create separate ticket notes, feature documents, review reports, scenario matrices, or dated validation reports in `docs/`. Put reusable guidance in the appropriate canonical guide; report run-specific evidence, defects, and residual risks in the task response, PR description, or test artifacts.
 - Consolidate overlapping guidance and replace obsolete sections instead of appending duplicate histories. Preserve current business and safety contracts when cleaning up documentation.
 - Do not rewrite the three customer source documents merely for housekeeping; update them only for confirmed requirement changes.
-- Before committing, verify that `docs/` contains only the six allowed files and that documentation links and references still resolve.
+- Before committing, verify that `docs/` contains only the six canonical files
+  and `docs/Nicon/`, that the evidence directory follows the structure above,
+  and that documentation links and references still resolve.
 - Update seed/demo data when needed to demonstrate normal, empty, error, and edge states.
 - Keep manual API examples accurate and environment-appropriate.
 - Run checks relevant to the changed area.

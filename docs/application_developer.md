@@ -1996,6 +1996,26 @@ below exists in the current API.
    commissioning, and blocking-Punchlist state; it never trusts a client-only
    readiness flag.
 
+The target frontend separates three BCH work areas without creating three data
+silos:
+
+- **BCH Operations** owns typed resource requests and daily coordination.
+- **QA/QC** owns quality dossiers, IFC inspection evidence, Punchlist, diary,
+  and HSE records.
+- **Site QS** owns direction-explicit Upstream and Downstream quantity batches.
+
+All three use the same Operational Project, WBS/baseline identity, project team,
+document service, audit contract, and project access service. A route split must
+not duplicate project, supplier, contract, BOQ, or user masters.
+
+The PRD target defines BOQ consumption bands at 85% (yellow), 95% (orange), and
+above 100% (red/block). Keep these configurable and server-calculated. The
+calculation must define approved allowance, net committed/issued quantity,
+reversals, unit conversions, decimal precision, and zero allowance. Until that
+contract is approved, preserve the current hard validation that rejects a
+Material Request above the remaining approved allowance; do not weaken it merely
+to display the target bands.
+
 #### Cross-module events and files
 
 | Source event | Required downstream effect |
@@ -2008,6 +2028,20 @@ below exists in the current API.
 | VO approved | Version affected budget/BOQ references; never mutate the original baseline silently |
 | QA/QC document accepted | Synchronize the managed file to `04_Thi_cong_Nghiem_thu` and retain application metadata |
 | Progress variance over 5% | Create one deduplicated red alert per project/baseline/period until resolved or superseded |
+
+Downstream payment eligibility uses three-way matching against the same vendor,
+contract, project, currency/amount basis, and covered quantity/period:
+
+1. a signed Downstream Contract or authorized appendix;
+2. a valid posted Warehouse Receipt, net of reversals, when the payable concerns
+   supplied material; and
+3. an approved Downstream QS acceptance batch for performed/accepted quantity.
+
+The exact applicability matrix for supply-only, labour-only, equipment, and
+mixed subcontract packages remains a product decision. Do not invent a dummy
+receipt or QS record to satisfy matching. A failed match returns actionable
+differences and preserves Payment Request, ledger, notification, and audit state
+apart from the allowed rejection/audit record.
 
 External file writes use the existing durable document-operation pattern. The
 database transaction records authoritative metadata and an outbox/pending
@@ -2026,6 +2060,73 @@ operation; a Drive failure must not falsely mark a dossier synchronized.
 - Browser tests cover the mobile BCH happy/negative paths and the CM desktop
   review/alert paths, including loading, empty, error, offline/retry, and
   responsive states.
+
+### 7.21 NICON Customer Reference Data
+
+#### Source inventory and precedence
+
+`docs/Nicon/` is the version-controlled customer-evidence pack:
+
+- the full PRD defines the eight-module scope, cross-functional handoffs,
+  eleven target positions, KPI weights, Drive tree, and UI expectations;
+- the workflow DOCX is historical context and is superseded where the canonical
+  `docs/Nicon-workflow.md` reflects later meeting decisions;
+- `MoMs/2026-10-06/` records confirmed decisions, open questions, priorities,
+  and the distinction between current code and target scope;
+- schedule PDFs demonstrate real WBS hierarchies, durations, start/finish,
+  predecessors, parallel permit/design activities, milestones, and baselines;
+- `BOQ/` contains heterogeneous one-sheet and multi-sheet workbooks used to
+  discover import variability.
+
+Source files are read-only evidence. Never rewrite, normalize, translate, or
+re-export them as an implementation side effect. Canonical docs summarize the
+approved contract; code and tests prove delivery status.
+
+#### Schedule import boundary
+
+A schedule import must use an explicit parser profile/version and a preview
+before persistence. The normalized draft model retains source file hash,
+source row/task ID, task name, hierarchy/outline level, duration and unit,
+planned start/finish, milestone flag, predecessor links with relationship/lag,
+calendar, constraints when supported, and baseline fields. Validation rejects
+missing parent/predecessor references, cycles, invalid dates/durations, duplicate
+source IDs, and finish-before-start values.
+
+Import creates a Draft schedule version. Publishing is a separate authorized
+transition; it never silently replaces the active design or construction
+baseline. Re-import of the same file/profile is idempotent. A changed file must
+create a new version or an explicit diff, not overwrite actual progress.
+
+#### BOQ workbook import boundary
+
+The samples include cover/summary sheets, building and discipline sheets,
+single-sheet quotations, bilingual labels, formulas, merged cells, repeated or
+project-specific names, and material lists. Consequently:
+
+1. discover all visible and hidden sheets and preserve workbook/sheet order;
+2. classify sheets as ignored metadata, summary, or detail using a user-reviewed
+   mapping rather than a hardcoded name list;
+3. read cached formula results only when their provenance is retained and report
+   missing/stale cached values instead of recalculating with a different engine;
+4. normalize item code, description, unit, quantity, unit price, hierarchy and
+   optional discipline only after preview;
+5. validate precision, sign, required values, duplicate identity, merged-cell
+   ambiguity and totals by exact sheet/cell location;
+6. reconcile recognized detail totals with recognized summary totals and show
+   unexplained differences;
+7. persist source hash, importer, timestamp, parser/mapping version, per-sheet
+   decision and row-level outcome; and
+8. create a Draft revision only after explicit confirmation. Approval remains a
+   separate lifecycle action and the current approved BOQ remains unchanged on
+   any rejected or partial import.
+
+File-size, sheet-count, row-count, formula, macro/external-link, and processing
+time limits require explicit configuration and four-language validation
+messages. Unit tests own mapping/normalization and formula-value decisions;
+integration tests own upload/auth/scope/idempotency/persistence; representative
+fixture workbooks derived without customer-sensitive values cover single-sheet,
+multi-sheet, merged-cell, formula, duplicate, malformed, and partial-failure
+cases.
 
 ---
 
