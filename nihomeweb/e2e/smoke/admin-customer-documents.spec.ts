@@ -218,18 +218,23 @@ test("customer related records, documents, and contract owner inheritance work i
     const opportunityDialog = page.getByTestId("opportunity-detail-dialog");
     await expect(opportunityDialog).toBeVisible();
     const opportunityDialogHeight = await opportunityDialog.evaluate((element) => element.clientHeight);
-    const opportunityTabs = opportunityDialog.getByRole("tab");
-    await expect(opportunityTabs).toHaveCount(3);
-    for (let index = 0; index < 3; index += 1) {
-      await opportunityTabs.nth(index).scrollIntoViewIfNeeded();
-      await opportunityTabs.nth(index).click();
-      await expect(opportunityTabs.nth(index)).toHaveAttribute("aria-selected", "true");
-      expect((await opportunityTabs.nth(index).boundingBox())?.height).toBeGreaterThanOrEqual(44);
+    const opportunityTabs = [
+      { tab: opportunityDialog.getByRole("tab", { name: /Thông tin chung|Overview|概览|概要/i }), scrollable: false },
+      { tab: opportunityDialog.getByTestId("opportunity-quotes-tab"), scrollable: false },
+      { tab: opportunityDialog.getByRole("tab", { name: /Lịch sử chăm sóc|Care timeline|跟进记录|対応履歴/i }), scrollable: true },
+      { tab: opportunityDialog.getByRole("tab", { name: /Audit log|审计日志|監査ログ/i }), scrollable: false },
+    ];
+    for (const { tab, scrollable } of opportunityTabs) {
+      await expect(tab).toBeVisible();
+      await tab.scrollIntoViewIfNeeded();
+      await tab.click();
+      await expect(tab).toHaveAttribute("aria-selected", "true");
+      expect((await tab.boundingBox())?.height).toBeGreaterThanOrEqual(44);
       expect(await opportunityDialog.evaluate((element) => element.clientHeight)).toBe(opportunityDialogHeight);
       const activePanel = opportunityDialog.getByRole("tabpanel");
       await expect(activePanel).toBeVisible();
       expect(await activePanel.evaluate((element) => getComputedStyle(element).overflowY)).toBe("auto");
-      if (index === 1) {
+      if (scrollable) {
         const panelSize = await activePanel.evaluate((element) => ({
           clientHeight: element.clientHeight,
           scrollHeight: element.scrollHeight,
