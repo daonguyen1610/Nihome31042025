@@ -114,6 +114,15 @@ test.describe("CRM workflow navigation", () => {
     await crmMenuButton.click();
 
     // CRM submenu should expand
+    const crmLinks = page.locator("#admin-nav-group-crm a");
+    await expect(crmLinks).toHaveCount(11);
+    await expect.poll(async () => crmLinks.evaluateAll((links) =>
+      links.slice(0, 3).map((link) => new URL((link as HTMLAnchorElement).href).pathname),
+    )).toEqual([
+      "/admin/operational-projects",
+      "/admin/opportunities",
+      "/admin/contracts",
+    ]);
     await expect(page.getByRole("link", { name: /lead|tiềm năng/i })).toBeVisible();
     await expect(page.getByRole("link", { name: /khách hàng|customer/i })).toBeVisible();
     await expect(page.getByRole("link", { name: /cơ hội|opportunit/i })).toBeVisible();
