@@ -4,6 +4,7 @@ interface CreateDesignProjectOptions {
   headers: Record<string, string>;
   name: string;
   customerId: number;
+  projectManagerUserId?: number;
 }
 
 export async function createDesignProject(
@@ -32,6 +33,7 @@ export async function createDesignProject(
         name: options.name,
         customerId: options.customerId,
         operationalProjectId,
+        projectManagerUserId: options.projectManagerUserId,
       },
     });
 
