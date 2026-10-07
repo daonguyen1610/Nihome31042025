@@ -80,7 +80,7 @@ before opening department-specific work.
 | 2. Design Management | Three-phase design control (Concept, Basic Design, Detail Design), revision management, IFC issuance | Control technical documents and prevent discrepancies before construction |
 | 3. Permitting | Legal document checklists, permit application tracking | Ensure legal compliance and administrative clearance |
 | 4. Construction and Acceptance | Gantt scheduling, daily site logs, partial/full acceptance, as-built records, punchlist | Manage site operations, quality control, and schedule adherence |
-| 5. Procurement | Vendor management, bid comparison, BOQ control, material requests, warehouse management, material alerts | Manage suppliers, subcontractors, and project materials |
+| 5. Procurement (Cung ứng) | Vendor management, bid comparison, BOQ control, material requests, warehouse management, material alerts | Manage suppliers, subcontractors, and project materials |
 | 6. Finance and Contract | Primary contracts, subcontracts, variation orders, cash flow tracking, P&L reporting | Maintain financial transparency and contract control |
 | 7. Digital Assets | Automated project folder structure, Google Drive integration, document digitization | Organize, secure, and provide rapid access to project files |
 | 8. Dashboard and Analytics | Progress reports, acceptance reports, financial dashboards, procurement reports, risk alerts | Provide management oversight and early risk detection |
