@@ -938,10 +938,25 @@ Quote document metadata is stored in `quote_documents`; physical files are store
 | `POST` | `/api/quotes/{id}/documents` | `crm.quotes.manage` | Upload PDF, Word, Excel, or image files up to 20 MB |
 | `DELETE` | `/api/quotes/{id}/documents/{documentId}` | `crm.quotes.manage` | Delete document metadata and its managed file |
 
-Each Tender checklist row retains one current file. Users with `crm.tenders.manage` may replace it with a direct upload or attach one existing capability document. Direct uploads are stored under `wwwroot/files/tenders/`; capability-library attachments retain their managed capability path. A capability document or retained version cannot be deleted while a Tender checklist row references its path. All checklist mutations are rejected after the Tender reaches `Won`, `Lost`, or `Cancelled`. If a direct upload cannot be attached because the Tender or row is missing, terminal, persistence fails, or the physical copy is interrupted, the newly written or partial file is removed.
+Each Tender checklist row retains one current file. Users with
+`crm.tenders.manage` may assign an active user whose active role also has that
+permission. A changed assignment emits one `tender.checklist.assigned`
+notification with a direct Tender link; an unchanged assignment is idempotent.
+Internal deadlines are date-based, may not be before the current date, and may
+not be after the Tender submission date. These rules are enforced by the
+service as well as the form. Users may replace a checklist file with a direct
+upload or attach one existing capability document. Direct uploads are stored
+under `wwwroot/files/tenders/`; capability-library attachments retain their
+managed capability path. A capability document or retained version cannot be
+deleted while a Tender checklist row references its path. All checklist
+mutations are rejected after the Tender reaches `Won`, `Lost`, or `Cancelled`.
+If a direct upload cannot be attached because the Tender or row is missing,
+terminal, persistence fails, or the physical copy is interrupted, the newly
+written or partial file is removed.
 
 | Method | Route | Permission | Purpose |
 |--------|-------|------------|---------|
+| `GET` | `/api/tenders/assignee-options` | `crm.tenders.manage` | List active users whose active role can manage Tender checklist work |
 | `PATCH` | `/api/tenders/{id}/checklist/{itemId}` | `crm.tenders.manage` | Update checklist status, owner, or internal deadline while mutable |
 | `POST` | `/api/tenders/{id}/checklist/{itemId}/upload` | `crm.tenders.manage` | Upload and replace the row's current file |
 | `POST` | `/api/tenders/{id}/checklist/attach-from-library` | `crm.tenders.manage` | Attach an existing capability document to the selected row |

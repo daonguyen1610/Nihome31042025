@@ -35,7 +35,7 @@ test("SPA renders /admin/tenders without console errors for SALES_MANAGER", asyn
     expect(jsErrors, `Unexpected JS errors: ${jsErrors.join("\n")}`).toHaveLength(0);
 });
 
-test("every tender checklist item offers library and direct upload actions", async ({
+test("tender plan assigns owners and deadlines and manages checklist files", async ({
     api,
     page,
     loginAs,
@@ -93,6 +93,34 @@ test("every tender checklist item offers library and direct upload actions", asy
             await expect(page.getByTestId(`tender-checklist-upload-${key}-desktop`)).toBeVisible();
         }
 
+        const assigneeOptionsResponse = await api.get("/api/tenders/assignee-options", { headers });
+        expect(assigneeOptionsResponse.status(), await assigneeOptionsResponse.text()).toBe(200);
+        const assignee = (await assigneeOptionsResponse.json() as Array<{ id: number; fullName: string }>)[0];
+        expect(assignee).toBeTruthy();
+        const plannedItem = checklistItems[0];
+        const plannedKey = plannedItem.templateCode ?? plannedItem.id;
+        const ownerResponsePromise = page.waitForResponse((response) =>
+            response.request().method() === "PATCH"
+            && response.url().includes(`/api/tenders/${tenderId}/checklist/${plannedItem.id}`),
+        );
+        await page.getByTestId(`tender-checklist-owner-${plannedKey}-desktop`).click();
+        await page.getByRole("option", { name: assignee.fullName, exact: true }).click();
+        const ownerResponse = await ownerResponsePromise;
+        expect(ownerResponse.status(), await ownerResponse.text()).toBe(200);
+        expect((await ownerResponse.json()).checklistItems.find(
+            (item: { id: number }) => item.id === plannedItem.id,
+        )?.ownerUserId).toBe(assignee.id);
+
+        const deadline = new Date(Date.now() + 7 * 24 * 60 * 60 * 1_000).toISOString().slice(0, 10);
+        const deadlineResponsePromise = page.waitForResponse((response) =>
+            response.request().method() === "PATCH"
+            && response.url().includes(`/api/tenders/${tenderId}/checklist/${plannedItem.id}`),
+        );
+        await page.getByTestId(`tender-checklist-row-${plannedKey}-desktop`)
+            .locator('input[type="date"]')
+            .fill(deadline);
+        expect((await deadlineResponsePromise).status()).toBe(200);
+
         const target = checklistItems.find((item) => item.templateCode === "legal") ?? checklistItems[1];
         const targetKey = target.templateCode ?? target.id;
         await page.getByTestId(`tender-checklist-library-${targetKey}-desktop`).click();
@@ -133,6 +161,17 @@ test("every tender checklist item offers library and direct upload actions", asy
         const previewImage = page.getByTestId(`${previewTestId}-image`);
         await expect(previewImage).toBeVisible();
         await expect(previewImage).toHaveAttribute("src", /^blob:/);
+        await page.keyboard.press("Escape");
+
+        await page.setViewportSize({ width: 390, height: 844 });
+        const mobileOwner = page.getByTestId(`tender-checklist-owner-${plannedKey}-mobile`);
+        await expect(mobileOwner).toBeVisible();
+        await expect(mobileOwner).toContainText(assignee.fullName);
+        const mobileDeadline = page.getByTestId(`tender-checklist-row-${plannedKey}-mobile`)
+            .locator('input[type="date"]');
+        await expect(mobileDeadline).toHaveValue(deadline);
+        await expect(mobileDeadline).toHaveAttribute("max", tender.submissionDeadline.slice(0, 10));
+        expect((await mobileOwner.boundingBox())?.height).toBeGreaterThanOrEqual(36);
     } finally {
         if (uploadedFilePath?.startsWith("/files/tenders/")) {
             await rm(

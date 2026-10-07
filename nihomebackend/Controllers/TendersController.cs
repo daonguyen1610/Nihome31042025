@@ -54,6 +54,11 @@ public class TendersController(
         return found is null ? NotFound() : Ok(found);
     }
 
+    [HttpGet("assignee-options")]
+    [RequirePermission("crm.tenders", "manage")]
+    public async Task<ActionResult<IReadOnlyList<TenderAssigneeOptionResponse>>> AssigneeOptions(
+        CancellationToken ct) => Ok(await svc.ListAssigneeOptionsAsync(ct));
+
     [HttpPost]
     [RequirePermission("crm.tenders", "manage")]
     public async Task<ActionResult<TenderResponse>> Create([FromBody] CreateTenderRequest request, CancellationToken ct)

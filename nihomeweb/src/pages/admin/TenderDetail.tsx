@@ -55,6 +55,7 @@ import {
   type CapabilityDocumentResponse,
   type MasterDataOption,
   type OpportunityResponse,
+  type TenderAssigneeOptionResponse,
   type TenderChecklistItemResponse,
   type TenderChecklistItemStatus,
   type TenderResponse,
@@ -107,6 +108,13 @@ const formatDateTime = (iso?: string | null, lang: string = "vi"): string => {
 };
 
 const toDateInputValue = (iso?: string | null) => (iso ? iso.slice(0, 10) : "");
+
+const todayDateInputValue = () => {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${now.getFullYear()}-${month}-${day}`;
+};
 
 /** Whole days until (or since, negative) the ISO deadline. */
 const daysUntil = (iso: string): number => {
@@ -247,6 +255,7 @@ const InfoTab = ({ tender }: { tender: TenderResponse }) => {
 
 interface ChecklistTabProps {
   tender: TenderResponse;
+  assignees: TenderAssigneeOptionResponse[] | null;
   canManage: boolean;
   onPatch: (itemId: number, body: Parameters<typeof adminApi.updateTenderChecklistItem>[2]) => Promise<void>;
   onUpload: (itemId: number, file: File) => Promise<void>;
@@ -254,8 +263,9 @@ interface ChecklistTabProps {
   isTerminal: boolean;
 }
 
-const ChecklistTab = ({ tender, canManage, onPatch, onUpload, onOpenLibrary, isTerminal }: ChecklistTabProps) => {
+const ChecklistTab = ({ tender, assignees, canManage, onPatch, onUpload, onOpenLibrary, isTerminal }: ChecklistTabProps) => {
   const { t } = useI18n();
+  const { toast } = useToast();
   const disabled = !canManage || isTerminal;
   const [savingId, setSavingId] = useState<number | null>(null);
   const [fileInputTarget, setFileInputTarget] = useState<number | null>(null);
@@ -272,6 +282,23 @@ const ChecklistTab = ({ tender, canManage, onPatch, onUpload, onOpenLibrary, isT
   };
 
   const handleDeadline = async (item: TenderChecklistItemResponse, iso: string) => {
+    const today = todayDateInputValue();
+    if (iso && iso < today) {
+      toast({
+        title: t("common.error"),
+        description: t("tenders.detail.checklist.deadlinePast"),
+        variant: "destructive",
+      });
+      return;
+    }
+    if (iso && iso > toDateInputValue(tender.submissionDeadline)) {
+      toast({
+        title: t("common.error"),
+        description: t("tenders.detail.checklist.deadlineAfterSubmission"),
+        variant: "destructive",
+      });
+      return;
+    }
     setSavingId(item.id);
     try {
       if (!iso) {
@@ -282,6 +309,19 @@ const ChecklistTab = ({ tender, canManage, onPatch, onUpload, onOpenLibrary, isT
         // off-by-one on positive UTC offsets (e.g. Asia/Ho_Chi_Minh).
         await onPatch(item.id, { internalDeadline: `${iso}T00:00:00.000Z` });
       }
+    } finally {
+      setSavingId(null);
+    }
+  };
+
+  const handleOwner = async (item: TenderChecklistItemResponse, value: string) => {
+    const nextOwnerId = value === "unassigned" ? null : Number(value);
+    if (item.ownerUserId === nextOwnerId) return;
+    setSavingId(item.id);
+    try {
+      await onPatch(item.id, nextOwnerId == null
+        ? { clearOwner: true }
+        : { ownerUserId: nextOwnerId });
     } finally {
       setSavingId(null);
     }
@@ -368,12 +408,35 @@ const ChecklistTab = ({ tender, canManage, onPatch, onUpload, onOpenLibrary, isT
                   </Select>
                 </td>
                 <td className="px-3 py-2 text-xs text-slate-700">
-                  {item.ownerName ?? <span className="text-slate-400">—</span>}
+                  {!disabled && assignees ? (
+                    <Select
+                      value={item.ownerUserId == null ? "unassigned" : String(item.ownerUserId)}
+                      disabled={savingId === item.id}
+                      onValueChange={(value) => void handleOwner(item, value)}
+                    >
+                      <SelectTrigger
+                        className="h-8 w-44 text-xs"
+                        aria-label={t("tenders.detail.checklist.assign")}
+                        data-testid={`tender-checklist-owner-${item.templateCode ?? item.id}-desktop`}
+                      >
+                        <SelectValue placeholder={t("tenders.detail.checklist.assign")} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="unassigned">{t("tenders.detail.checklist.clearOwner")}</SelectItem>
+                        {assignees.map((assignee) => (
+                          <SelectItem key={assignee.id} value={String(assignee.id)}>{assignee.fullName}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : item.ownerName ?? <span className="text-slate-400">—</span>}
                 </td>
                 <td className="px-3 py-2">
                   <Input
                     type="date"
                     value={toDateInputValue(item.internalDeadline)}
+                    min={todayDateInputValue()}
+                    max={toDateInputValue(tender.submissionDeadline)}
+                    aria-label={t("tenders.detail.checklist.setDeadline")}
                     className="h-8 w-40 text-xs"
                     disabled={disabled || savingId === item.id}
                     onChange={(e) => void handleDeadline(item, e.target.value)}
@@ -447,7 +510,29 @@ const ChecklistTab = ({ tender, canManage, onPatch, onUpload, onOpenLibrary, isT
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <div className="break-words text-sm font-medium text-slate-800">{item.title}</div>
-                <div className="mt-0.5 text-xs text-slate-500">{item.ownerName ?? "—"}</div>
+                {!disabled && assignees ? (
+                  <Select
+                    value={item.ownerUserId == null ? "unassigned" : String(item.ownerUserId)}
+                    disabled={savingId === item.id}
+                    onValueChange={(value) => void handleOwner(item, value)}
+                  >
+                    <SelectTrigger
+                      className="mt-2 h-9 w-full text-xs"
+                      aria-label={t("tenders.detail.checklist.assign")}
+                      data-testid={`tender-checklist-owner-${item.templateCode ?? item.id}-mobile`}
+                    >
+                      <SelectValue placeholder={t("tenders.detail.checklist.assign")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="unassigned">{t("tenders.detail.checklist.clearOwner")}</SelectItem>
+                      {assignees.map((assignee) => (
+                        <SelectItem key={assignee.id} value={String(assignee.id)}>{assignee.fullName}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <div className="mt-0.5 text-xs text-slate-500">{item.ownerName ?? "—"}</div>
+                )}
               </div>
               <Badge
                 variant="outline"
@@ -476,6 +561,9 @@ const ChecklistTab = ({ tender, canManage, onPatch, onUpload, onOpenLibrary, isT
               <Input
                 type="date"
                 value={toDateInputValue(item.internalDeadline)}
+                min={todayDateInputValue()}
+                max={toDateInputValue(tender.submissionDeadline)}
+                aria-label={t("tenders.detail.checklist.setDeadline")}
                 className="h-8 text-xs"
                 disabled={disabled || savingId === item.id}
                 onChange={(e) => void handleDeadline(item, e.target.value)}
@@ -1145,6 +1233,7 @@ const AdminTenderDetail = () => {
   const [error, setError] = useState<string | null>(null);
   const [timeline, setTimeline] = useState<TenderTimelineEvent[] | null>(null);
   const [timelineLoading, setTimelineLoading] = useState(false);
+  const [assignees, setAssignees] = useState<TenderAssigneeOptionResponse[] | null>(null);
 
   const [libraryTargetItemId, setLibraryTargetItemId] = useState<number | null>(null);
   const [markWonOpen, setMarkWonOpen] = useState(false);
@@ -1181,6 +1270,28 @@ const AdminTenderDetail = () => {
     void fetchTender();
     void fetchTimeline();
   }, [fetchTender, fetchTimeline]);
+
+  useEffect(() => {
+    if (!canManage) return;
+    let cancelled = false;
+    adminApi.listTenderAssigneeOptions()
+      .then(({ data }) => {
+        if (!cancelled) setAssignees(data);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setAssignees(null);
+          toast({
+            title: t("common.error"),
+            description: t("tenders.detail.checklist.assigneeLoadFailed"),
+            variant: "destructive",
+          });
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [canManage, t, toast]);
 
   const isTerminal = useMemo(
     () => tender?.status === "Won" || tender?.status === "Lost" || tender?.status === "Cancelled",
@@ -1318,6 +1429,7 @@ const AdminTenderDetail = () => {
               <TabsContent value="checklist" className="mt-3">
                 <ChecklistTab
                   tender={tender}
+                  assignees={assignees}
                   canManage={canManage}
                   onPatch={handleChecklistPatch}
                   onUpload={handleUpload}

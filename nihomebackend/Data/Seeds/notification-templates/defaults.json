@@ -21,6 +21,12 @@
       "adminDescription": "Owner được thông báo khi Cơ hội chuyển sang Won hoặc Lost."
     },
     {
+      "code": "tender.checklist.assigned",
+      "module": "crm.tenders",
+      "channel": "InApp",
+      "adminDescription": "Người phụ trách được thông báo khi được giao một mục hồ sơ dự thầu."
+    },
+    {
       "code": "quote.submitted-for-approval",
       "module": "crm.quotes",
       "channel": "Both",

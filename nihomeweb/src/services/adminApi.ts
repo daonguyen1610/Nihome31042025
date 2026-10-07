@@ -2154,6 +2154,11 @@ export const TENDER_STATUSES: TenderStatus[] = [
 
 export type TenderChecklistItemStatus = "NotStarted" | "Preparing" | "Done" | "Submitted";
 
+export interface TenderAssigneeOptionResponse {
+  id: number;
+  fullName: string;
+}
+
 export interface TenderChecklistItemResponse {
   id: number;
   templateCode?: string | null;
@@ -4774,6 +4779,8 @@ export const adminApi = {
     return api.get<TenderListResponse>(`/tenders${qs ? `?${qs}` : ""}`);
   },
   getTender: (id: number) => api.get<TenderResponse>(`/tenders/${id}`),
+  listTenderAssigneeOptions: () =>
+    api.get<TenderAssigneeOptionResponse[]>("/tenders/assignee-options"),
   createTender: (body: CreateTenderRequest) => api.post<TenderResponse>("/tenders", body),
   updateTender: (id: number, body: UpdateTenderRequest) => api.put<TenderResponse>(`/tenders/${id}`, body),
   getTenderDeletionImpact: (id: number) =>

@@ -6,6 +6,7 @@ using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Models.DTOs.Responses;
+using NihomeBackend.Models.Rbac;
 using NihomeBackend.Services;
 using NihomeBackend.Services.HardDelete;
 using nihomebackend.tests.Helpers;
@@ -37,6 +38,13 @@ public class TenderServiceTests : IDisposable
 
         // Seed a bare-minimum user + customer + master-data checklist so
         // the create-path can succeed without touching production seeders.
+        var tenderPermission = new Permission { Module = "crm.tenders", Action = "manage" };
+        var tenderRole = new Role { Code = "TENDER_TEST", Name = "Tender Test", IsActive = true };
+        tenderRole.RolePermissions.Add(new RolePermission
+        {
+            Role = tenderRole,
+            Permission = tenderPermission,
+        });
         var user = new ApplicationUser
         {
             PhoneNumber = "0900000000",
@@ -45,6 +53,7 @@ public class TenderServiceTests : IDisposable
             Role = UserRole.USER,
             IsActive = true,
             PasswordHash = "x",
+            RoleEntity = tenderRole,
         };
         _db.Users.Add(user);
         var customer = new Customer { Name = "ACME Corp", Type = CustomerType.Company, SourceCode = "referral" };
@@ -626,6 +635,87 @@ public class TenderServiceTests : IDisposable
             ClearOwner = true,
         }, _userId);
         Assert.Null(afterClear!.ChecklistItems.First(i => i.Id == itemId).OwnerUserId);
+    }
+
+    [Fact]
+    public async Task UpdateChecklistItemAsync_AssignsEligibleOwnerAndNotifiesOnce()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        var itemId = created.ChecklistItems[0].Id;
+
+        var updated = await _sut.UpdateChecklistItemAsync(created.Id, itemId,
+            new UpdateTenderChecklistItemRequest { OwnerUserId = _userId }, _userId);
+        await _sut.UpdateChecklistItemAsync(created.Id, itemId,
+            new UpdateTenderChecklistItemRequest { OwnerUserId = _userId }, _userId);
+
+        Assert.Equal(_userId, updated!.ChecklistItems.Single(item => item.Id == itemId).OwnerUserId);
+        _notifications.Verify(service => service.NotifyFromTemplateAsync(
+            _userId,
+            "tender.checklist.assigned",
+            It.Is<IDictionary<string, string>>(data =>
+                data["tenderCode"] == created.Code && data["itemTitle"] == created.ChecklistItems[0].Title),
+            EntityTypes.Tender,
+            created.Id,
+            $"/admin/tenders/{created.Id}",
+            "vi"), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateChecklistItemAsync_RejectsIneligibleOwnerWithoutChangingItem()
+    {
+        var inactive = new ApplicationUser
+        {
+            PhoneNumber = "0900000001",
+            FullName = "Inactive Tender User",
+            Email = "inactive.tender@example.com",
+            Role = UserRole.USER,
+            IsActive = false,
+            PasswordHash = "x",
+        };
+        _db.Users.Add(inactive);
+        await _db.SaveChangesAsync();
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        var itemId = created.ChecklistItems[0].Id;
+
+        await Assert.ThrowsAsync<TenderOperationException>(() => _sut.UpdateChecklistItemAsync(
+            created.Id, itemId, new UpdateTenderChecklistItemRequest { OwnerUserId = inactive.Id }, _userId));
+
+        Assert.Null((await _db.TenderChecklistItems.AsNoTracking().SingleAsync(item => item.Id == itemId)).OwnerUserId);
+        _notifications.Verify(service => service.NotifyFromTemplateAsync(
+            It.IsAny<int>(), It.IsAny<string>(), It.IsAny<IDictionary<string, string>?>(),
+            It.IsAny<string?>(), It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateChecklistItemAsync_ValidatesInternalDeadlineBoundaries()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(DateTime.UtcNow.AddDays(14)), _userId);
+        var itemId = created.ChecklistItems[0].Id;
+        var sameSubmissionDay = DateTime.Parse(created.SubmissionDeadline.ToString("yyyy-MM-dd"));
+
+        var accepted = await _sut.UpdateChecklistItemAsync(created.Id, itemId,
+            new UpdateTenderChecklistItemRequest { InternalDeadline = sameSubmissionDay }, _userId);
+        Assert.Equal(sameSubmissionDay, accepted!.ChecklistItems.Single(item => item.Id == itemId).InternalDeadline);
+
+        await Assert.ThrowsAsync<TenderOperationException>(() => _sut.UpdateChecklistItemAsync(
+            created.Id, itemId,
+            new UpdateTenderChecklistItemRequest { InternalDeadline = sameSubmissionDay.AddDays(1) }, _userId));
+        await Assert.ThrowsAsync<TenderOperationException>(() => _sut.UpdateChecklistItemAsync(
+            created.Id, itemId,
+            new UpdateTenderChecklistItemRequest { InternalDeadline = DateTime.UtcNow.Date.AddDays(-1) }, _userId));
+
+        Assert.Equal(sameSubmissionDay,
+            (await _db.TenderChecklistItems.AsNoTracking().SingleAsync(item => item.Id == itemId)).InternalDeadline);
+    }
+
+    [Fact]
+    public async Task ListAssigneeOptionsAsync_ReturnsOnlyActiveTenderManagers()
+    {
+        var options = await _sut.ListAssigneeOptionsAsync();
+
+        var option = Assert.Single(options);
+        Assert.Equal(_userId, option.Id);
+        Assert.Equal("Sale Tester", option.FullName);
     }
 
     [Fact]

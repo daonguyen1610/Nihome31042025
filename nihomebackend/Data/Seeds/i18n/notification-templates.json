@@ -48,6 +48,22 @@
     "ja": "商談「{{opportunityName}}」（{{customerName}}）が {{stage}} フェーズへ移行しました。"
   },
   {
+    "key": "notification.tender.checklist.assigned.title",
+    "category": "notification",
+    "vi": "Bạn được giao hồ sơ cho gói thầu {{tenderCode}}",
+    "en": "You were assigned a document for tender {{tenderCode}}",
+    "zh": "您已获分配投标 {{tenderCode}} 的资料任务",
+    "ja": "入札 {{tenderCode}} の書類タスクが割り当てられました"
+  },
+  {
+    "key": "notification.tender.checklist.assigned.body",
+    "category": "notification",
+    "vi": "Hạng mục \"{{itemTitle}}\" của gói thầu \"{{tenderName}}\" có deadline nội bộ {{internalDeadline}}.",
+    "en": "The \"{{itemTitle}}\" item for tender \"{{tenderName}}\" has an internal deadline of {{internalDeadline}}.",
+    "zh": "投标“{{tenderName}}”的“{{itemTitle}}”资料内部截止日期为 {{internalDeadline}}。",
+    "ja": "入札「{{tenderName}}」の「{{itemTitle}}」書類の社内期限は {{internalDeadline}} です。"
+  },
+  {
     "key": "notification.quote.submitted-for-approval.title",
     "category": "notification",
     "vi": "Báo giá {{quoteNumber}} chờ bạn duyệt",
