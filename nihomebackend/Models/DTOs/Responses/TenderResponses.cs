@@ -1,5 +1,11 @@
 namespace NihomeBackend.Models.DTOs.Responses;
 
+public class TenderAssigneeOptionResponse
+{
+    public int Id { get; set; }
+    public string FullName { get; set; } = string.Empty;
+}
+
 public class TenderChecklistItemResponse
 {
     public int Id { get; set; }

@@ -546,6 +546,83 @@ public class TendersControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task AssigneeOptions_ReturnOnlyActiveUsersWhoCanManageTenders()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+
+        var response = await Client.GetAsync("/api/tenders/assignee-options");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var options = (await ReadJsonAsync(response)).EnumerateArray().ToList();
+        options.Should().NotBeEmpty();
+        options.Should().OnlyContain(option => option.GetProperty("id").GetInt32() > 0
+            && !string.IsNullOrWhiteSpace(option.GetProperty("fullName").GetString()));
+
+        using var forbiddenClient = Factory.CreateClient();
+        await AuthTestHelper.AuthenticateAsync(
+            forbiddenClient, c => AuthTestHelper.LoginAsRoleAsync(c, "WAREHOUSE"));
+        (await forbiddenClient.GetAsync("/api/tenders/assignee-options"))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task PatchChecklist_AssignsOwnerAndCreatesOneLinkedNotification()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var tenderId = await CreateTenderAsync();
+        var itemId = await FirstChecklistItemIdAsync(tenderId);
+        var optionResponse = await Client.GetAsync("/api/tenders/assignee-options");
+        optionResponse.EnsureSuccessStatusCode();
+        var assignee = (await ReadJsonAsync(optionResponse)).EnumerateArray().First();
+        var assigneeId = assignee.GetProperty("id").GetInt32();
+        var deadline = DateTime.UtcNow.Date.AddDays(2);
+
+        var response = await Client.PatchAsJsonAsync(
+            $"/api/tenders/{tenderId}/checklist/{itemId}",
+            new { ownerUserId = assigneeId, internalDeadline = deadline });
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
+        var item = (await ReadJsonAsync(response)).GetProperty("checklistItems").EnumerateArray()
+            .Single(value => value.GetProperty("id").GetInt32() == itemId);
+        item.GetProperty("ownerUserId").GetInt32().Should().Be(assigneeId);
+        item.GetProperty("ownerName").GetString().Should().NotBeNullOrWhiteSpace();
+
+        (await Client.PatchAsJsonAsync(
+            $"/api/tenders/{tenderId}/checklist/{itemId}", new { ownerUserId = assigneeId }))
+            .EnsureSuccessStatusCode();
+
+        var notifications = await WithDbAsync(db => db.Notifications.AsNoTracking()
+            .Where(notification => notification.UserId == assigneeId
+                && notification.TemplateCode == "tender.checklist.assigned"
+                && notification.RefEntityType == "Tender"
+                && notification.RefEntityId == tenderId)
+            .ToListAsync());
+        notifications.Should().ContainSingle();
+        notifications[0].LinkUrl.Should().Be($"/admin/tenders/{tenderId}");
+    }
+
+    [Fact]
+    public async Task PatchChecklist_RejectsDeadlineAfterSubmissionAndPreservesItem()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var tenderId = await CreateTenderAsync();
+        var itemId = await FirstChecklistItemIdAsync(tenderId);
+        var submissionDeadline = await WithDbAsync(db => db.Tenders
+            .Where(tender => tender.Id == tenderId)
+            .Select(tender => tender.SubmissionDeadline)
+            .SingleAsync());
+
+        var response = await Client.PatchAsJsonAsync(
+            $"/api/tenders/{tenderId}/checklist/{itemId}",
+            new { internalDeadline = submissionDeadline.Date.AddDays(1) });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var unchanged = await WithDbAsync(db => db.TenderChecklistItems.AsNoTracking()
+            .SingleAsync(item => item.Id == itemId));
+        unchanged.InternalDeadline.Should().BeNull();
+        unchanged.OwnerUserId.Should().BeNull();
+    }
+
+    [Fact]
     public async Task UploadChecklist_ContentIsResourceBoundAndStaticPathIsPrivate()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));

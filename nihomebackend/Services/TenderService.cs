@@ -147,6 +147,22 @@ public class TenderService(
         return MapDetail(entity, wonOpportunityName, lostReasonLabel);
     }
 
+    public async Task<IReadOnlyList<TenderAssigneeOptionResponse>> ListAssigneeOptionsAsync(
+        CancellationToken ct = default) =>
+        await db.Users.AsNoTracking()
+            .Where(user => user.IsActive &&
+                user.RoleEntity != null && user.RoleEntity.IsActive &&
+                user.RoleEntity.RolePermissions.Any(grant =>
+                    grant.Permission.Module == "crm.tenders" && grant.Permission.Action == "manage"))
+            .OrderBy(user => user.FullName)
+            .ThenBy(user => user.Id)
+            .Select(user => new TenderAssigneeOptionResponse
+            {
+                Id = user.Id,
+                FullName = user.FullName ?? user.Email,
+            })
+            .ToListAsync(ct);
+
     // ------------------------------ Create ----------------------------------
 
     public async Task<TenderResponse> CreateAsync(CreateTenderRequest request, int callerUserId, CancellationToken ct = default)
@@ -334,15 +350,22 @@ public class TenderService(
             item.Status = next;
         }
 
+        var previousOwnerUserId = item.OwnerUserId;
         if (request.ClearOwner)
         {
             item.OwnerUserId = null;
         }
         else if (request.OwnerUserId.HasValue)
         {
-            if (!await db.Users.AnyAsync(u => u.Id == request.OwnerUserId.Value, ct))
+            var isEligibleAssignee = await db.Users.AnyAsync(user =>
+                user.Id == request.OwnerUserId.Value && user.IsActive &&
+                user.RoleEntity != null && user.RoleEntity.IsActive &&
+                user.RoleEntity.RolePermissions.Any(grant =>
+                    grant.Permission.Module == "crm.tenders" && grant.Permission.Action == "manage"), ct);
+            if (!isEligibleAssignee)
             {
-                throw new TenderOperationException($"Người phụ trách #{request.OwnerUserId} không tồn tại.");
+                throw new TenderOperationException(
+                    $"Người phụ trách #{request.OwnerUserId} không hoạt động hoặc không có quyền quản lý gói thầu.");
             }
             item.OwnerUserId = request.OwnerUserId.Value;
         }
@@ -353,7 +376,16 @@ public class TenderService(
         }
         else if (request.InternalDeadline.HasValue)
         {
-            item.InternalDeadline = request.InternalDeadline.Value;
+            var deadline = request.InternalDeadline.Value;
+            if (deadline.Date < DateTime.UtcNow.Date)
+            {
+                throw new TenderOperationException("Deadline nội bộ không được trước ngày hiện tại.");
+            }
+            if (deadline.Date > item.Tender.SubmissionDeadline.Date)
+            {
+                throw new TenderOperationException("Deadline nội bộ không được sau deadline nộp thầu.");
+            }
+            item.InternalDeadline = deadline;
         }
 
         var now = DateTime.UtcNow;
@@ -367,9 +399,40 @@ public class TenderService(
 
         await db.SaveChangesAsync(ct);
 
+        if (item.OwnerUserId.HasValue && item.OwnerUserId != previousOwnerUserId)
+        {
+            await NotifyChecklistAssigneeAsync(item, ct);
+        }
+
         logger.LogInformation("Tender {TenderId} checklist item {ItemId} updated by user {UserId}",
             tenderId, itemId, callerUserId);
         return await GetAsync(tenderId, ct);
+    }
+
+    private async Task NotifyChecklistAssigneeAsync(TenderChecklistItem item, CancellationToken _)
+    {
+        try
+        {
+            await notifications.NotifyFromTemplateAsync(
+                item.OwnerUserId!.Value,
+                "tender.checklist.assigned",
+                new Dictionary<string, string>
+                {
+                    ["tenderCode"] = item.Tender.Code,
+                    ["tenderName"] = item.Tender.Name,
+                    ["itemTitle"] = item.Title,
+                    ["internalDeadline"] = item.InternalDeadline?.ToString("dd/MM/yyyy") ?? "—",
+                },
+                EntityTypes.Tender,
+                item.TenderId,
+                $"/admin/tenders/{item.TenderId}");
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex,
+                "Tender {TenderId} checklist item {ItemId} persisted but assignee notification failed.",
+                item.TenderId, item.Id);
+        }
     }
 
     public async Task<TenderResponse?> AttachChecklistFileAsync(int tenderId, int itemId,

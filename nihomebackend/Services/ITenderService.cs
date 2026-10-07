@@ -29,6 +29,9 @@ public interface ITenderService
 
     Task<TenderResponse?> GetAsync(int id, CancellationToken ct = default);
 
+    Task<IReadOnlyList<TenderAssigneeOptionResponse>> ListAssigneeOptionsAsync(
+        CancellationToken ct = default);
+
     Task<TenderResponse> CreateAsync(CreateTenderRequest request, int callerUserId, CancellationToken ct = default);
 
     Task<TenderResponse?> UpdateAsync(int id, UpdateTenderRequest request, int callerUserId, CancellationToken ct = default);

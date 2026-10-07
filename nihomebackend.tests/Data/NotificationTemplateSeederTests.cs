@@ -27,6 +27,7 @@ public class NotificationTemplateSeederTests : IDisposable
         foreach (var code in new[]
         {
             "lead.assigned",
+            "tender.checklist.assigned",
             "quote.submitted-for-approval",
             "quote.approved",
             "quote.rejected",

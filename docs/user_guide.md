@@ -378,7 +378,18 @@ request with its idempotency key does not create a duplicate quotation.
 
 #### 3.1.5 Tender Management
 
-Manage tender packages with deadlines and preparation status. Every document checklist item can use one existing document from the shared capability-document library or accept a new direct upload. The selected file is previewed securely inside the Tender detail page. Checklist status, ownership, deadlines, and files become read-only after the tender is Won, Lost, or Cancelled. Track tender results across preparation, submission, win, loss, and cancellation.
+Manage tender packages with deadlines and preparation status. A user with Tender
+management permission can assign each checklist item to an active user whose
+role can manage Tenders and set an internal deadline from today through the
+Tender submission date. A changed assignment sends the assignee an in-app
+notification linked directly to the Tender; saving the same assignee again does
+not create a duplicate notification. Every document checklist item can use one
+existing document from the shared capability-document library or accept a new
+direct upload. The selected file is previewed securely inside the Tender detail
+page. Checklist status, ownership, deadlines, and files become read-only after
+the tender is Won, Lost, or Cancelled. Track tender results across preparation,
+submission, win, loss, and cancellation. Department-level planning remains
+partial until NICON confirms the permission-to-department grouping.
 
 The **Estimate** tab provides a customer-fillable UTF-8 CSV template containing
 item code, description, unit, quantity, internal unit cost, bid unit price, VAT,
