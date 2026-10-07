@@ -39,10 +39,14 @@ async function openEntityType(page: Page, entityType: string) {
       && response.request().method() === "GET"
       && !response.url().includes(`/entity/${entityType}/`),
   );
-  await page.goto(`/admin/translations?tab=entity&type=${entityType}`);
-  const response = await responsePromise;
+  const [{ response, body }] = await Promise.all([
+    responsePromise.then(async (response) => ({
+      response,
+      body: await response.json() as { items: Array<{ id: number; title: string }> },
+    })),
+    page.goto(`/admin/translations?tab=entity&type=${entityType}`),
+  ]);
   expect(response.ok(), `load ${entityType} translation list`).toBeTruthy();
-  const body = await response.json() as { items: Array<{ id: number; title: string }> };
   return body.items;
 }
 
