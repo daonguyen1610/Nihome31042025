@@ -33,6 +33,13 @@ test.describe("NIH-115 — Basic Design + Detail Design unlock (real-user flow)"
     // ---------- 1. Set up a fresh project via the API ----------
     const token = await loginAs(TEST_USERS.superAdmin);
     const authHeader = { Authorization: `Bearer ${token}` };
+    const jwtPayload = JSON.parse(Buffer.from(token.split(".")[1], "base64url").toString()) as Record<string, string>;
+    const currentUserId = Number(
+      jwtPayload.nameid ??
+      jwtPayload.sub ??
+      Object.entries(jwtPayload).find(([key]) => key.endsWith("/nameidentifier"))?.[1],
+    );
+    expect(currentUserId).toBeGreaterThan(0);
 
     // Pick or create a customer.
     const customerId = await createOwnCustomer(api, authHeader, "BD");
@@ -43,6 +50,7 @@ test.describe("NIH-115 — Basic Design + Detail Design unlock (real-user flow)"
       headers: authHeader,
       name: projectName,
       customerId,
+      projectManagerUserId: currentUserId,
     });
 
     // Push a concept option all the way to Finalized so the project
@@ -135,7 +143,10 @@ test.describe("NIH-115 — Basic Design + Detail Design unlock (real-user flow)"
     await page.locator('button[role="tab"]').filter({
       hasText: /^(Đội ngũ|Team|团队|チーム)$/i,
     }).click({ force: true });
-    await expect(page.getByTestId("design-project-team-tab")).toBeVisible();
+    const teamTab = page.getByTestId("design-project-team-tab");
+    await expect(teamTab).toBeVisible();
+    await expect(teamTab.getByText(/^(Quản lý dự án|Project manager|项目经理|プロジェクトマネージャー)/)).toHaveCount(2);
+    await expect(teamTab.getByText(/^(Chủ nhiệm thiết kế|Design manager|设计经理|デザインマネージャー)/)).toHaveCount(2);
     await page.locator('button[role="tab"]').filter({ hasText: /^Tài liệu$|^Documents$/i }).click({ force: true });
     await expect(page.getByTestId("design-project-documents-tab")).toBeVisible();
     await expect(page.getByText(/NIH-114\.\.118/)).toHaveCount(0);

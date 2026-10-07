@@ -160,13 +160,27 @@ public sealed class TranslationSeederTests : IDisposable
             ["ja"] = "デザインマネージャー",
         };
 
-        foreach (var key in new[] { "designProjects.field.pm", "designProjects.team.role.ProjectManager" })
+        foreach (var key in new[] { "designProjects.field.pm", "designProjects.team.role.DesignManager" })
         {
             foreach (var (languageCode, value) in expected)
             {
                 Assert.Equal(value, _db.Translations.Single(item =>
                     item.Key == key && item.LanguageCode == languageCode).Value);
             }
+        }
+
+        var projectManagerExpected = new Dictionary<string, string>
+        {
+            ["vi"] = "Quản lý dự án",
+            ["en"] = "Project manager",
+            ["zh"] = "项目经理",
+            ["ja"] = "プロジェクトマネージャー",
+        };
+        foreach (var (languageCode, value) in projectManagerExpected)
+        {
+            Assert.Equal(value, _db.Translations.Single(item =>
+                item.Key == "designProjects.team.role.ProjectManager" &&
+                item.LanguageCode == languageCode).Value);
         }
     }
 
