@@ -125,5 +125,27 @@ public sealed class TranslationSeederTests : IDisposable
         }
     }
 
+    [Fact]
+    public void Seed_ProcurementModule_UsesConfirmedVietnameseSupplyTerminology()
+    {
+        TranslationSeeder.Seed(_db);
+
+        var expected = new Dictionary<string, string>
+        {
+            ["nav.procurement"] = "Cung ứng",
+            ["nav.procurementControl"] = "Kiểm soát cung ứng",
+            ["procurement.title"] = "Kiểm soát cung ứng",
+            ["procurement.project.emptySelection"] = "Chọn một dự án để mở không gian kiểm soát cung ứng.",
+            ["rbac.role.PROCUREMENT.label"] = "Cung ứng",
+            ["adminRbac.module.proc"] = "Cung ứng",
+        };
+
+        foreach (var (key, value) in expected)
+        {
+            Assert.Equal(value, _db.Translations.Single(item =>
+                item.Key == key && item.LanguageCode == "vi").Value);
+        }
+    }
+
     public void Dispose() => _db.Dispose();
 }

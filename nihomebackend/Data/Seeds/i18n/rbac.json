@@ -874,7 +874,7 @@
   {
     "key": "rbac.role.PROCUREMENT.label",
     "category": "rbac",
-    "vi": "Mua hàng",
+    "vi": "Cung ứng",
     "en": "Procurement",
     "zh": "采购",
     "ja": "調達"
@@ -2589,7 +2589,7 @@
   {"key":"adminRbac.module.master-data","category":"rbac","vi":"Dữ liệu danh mục","en":"Master data","zh":"主数据","ja":"マスターデータ"},
   {"key":"adminRbac.module.operations","category":"rbac","vi":"Vận hành dự án","en":"Project operations","zh":"项目运营","ja":"プロジェクト運用"},
   {"key":"adminRbac.module.permit","category":"rbac","vi":"Giấy phép","en":"Permits","zh":"许可证","ja":"許認可"},
-  {"key":"adminRbac.module.proc","category":"rbac","vi":"Mua sắm","en":"Procurement","zh":"采购","ja":"調達"},
+  {"key":"adminRbac.module.proc","category":"rbac","vi":"Cung ứng","en":"Procurement","zh":"采购","ja":"調達"},
   {"key":"adminRbac.module.processes","category":"rbac","vi":"Quy trình","en":"Processes","zh":"流程","ja":"プロセス"},
   {"key":"adminRbac.module.profile","category":"rbac","vi":"Hồ sơ cá nhân","en":"Profile","zh":"个人资料","ja":"プロフィール"},
   {"key":"adminRbac.module.rbac","category":"rbac","vi":"Phân quyền","en":"Access control","zh":"权限管理","ja":"アクセス制御"},

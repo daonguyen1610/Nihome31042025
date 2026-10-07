@@ -1,10 +1,10 @@
 [
-  {"key":"procurement.title","category":"procurement","vi":"Kiểm soát mua sắm","en":"Procurement control","zh":"采购管控","ja":"調達管理"},
+  {"key":"procurement.title","category":"procurement","vi":"Kiểm soát cung ứng","en":"Procurement control","zh":"采购管控","ja":"調達管理"},
   {"key":"procurement.subtitle","category":"procurement","vi":"Theo dõi BOQ, yêu cầu vật tư, hợp đồng, kho và đánh giá nhà cung cấp theo dự án.","en":"Track BOQs, material requests, contracts, warehouse movements, and vendor ratings by project.","zh":"按项目跟踪工程量清单、材料申请、合同、仓库流转和供应商评价。","ja":"プロジェクト別にBOQ、資材依頼、契約、倉庫入出庫、仕入先評価を管理します。"},
   {"key":"procurement.refresh","category":"procurement","vi":"Tải lại dữ liệu","en":"Refresh data","zh":"刷新数据","ja":"データを更新"},
   {"key":"procurement.project.label","category":"procurement","vi":"Dự án vận hành","en":"Operational project","zh":"运营项目","ja":"運用プロジェクト"},
   {"key":"procurement.project.placeholder","category":"procurement","vi":"Chọn dự án vận hành","en":"Choose an operational project","zh":"选择运营项目","ja":"運用プロジェクトを選択"},
-  {"key":"procurement.project.emptySelection","category":"procurement","vi":"Chọn một dự án để mở không gian kiểm soát mua sắm.","en":"Choose a project to open its procurement workspace.","zh":"请选择项目以打开采购工作区。","ja":"プロジェクトを選択して調達ワークスペースを開いてください。"},
+  {"key":"procurement.project.emptySelection","category":"procurement","vi":"Chọn một dự án để mở không gian kiểm soát cung ứng.","en":"Choose a project to open its procurement workspace.","zh":"请选择项目以打开采购工作区。","ja":"プロジェクトを選択して調達ワークスペースを開いてください。"},
   {"key":"procurement.project.empty","category":"procurement","vi":"Không có dự án vận hành nào khả dụng.","en":"No operational projects are available.","zh":"没有可用的运营项目。","ja":"利用可能な運用プロジェクトがありません。"},
   {"key":"procurement.tabs.boq","category":"procurement","vi":"Phiên bản BOQ","en":"BOQ revisions","zh":"BOQ 版本","ja":"BOQ改訂"},
   {"key":"procurement.tabs.requests","category":"procurement","vi":"Yêu cầu vật tư","en":"Material requests","zh":"材料申请","ja":"資材依頼"},

@@ -131,4 +131,14 @@ test.describe("CRM workflow navigation", () => {
 
     expect(jsErrors).toHaveLength(0);
   });
+
+  test("uses the confirmed Vietnamese Supply department name", async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem("nicon_lang", "vi"));
+    await page.goto("/admin", { waitUntil: "networkidle" });
+
+    const supplyGroup = page.getByRole("button", { name: "Cung ứng", exact: true });
+    await expect(supplyGroup).toBeVisible();
+    await supplyGroup.click();
+    await expect(page.getByRole("link", { name: "Kiểm soát cung ứng", exact: true })).toBeVisible();
+  });
 });
