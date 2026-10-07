@@ -6,6 +6,7 @@ import { test, expect, TEST_USERS } from "../fixtures/auth";
  */
 test("design project dialog requires an operational project when no contract is linked", async ({ loginInBrowserAs, page }) => {
   await loginInBrowserAs(page, TEST_USERS.superAdmin);
+  await page.addInitScript(() => localStorage.setItem("nicon_lang", "vi"));
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/admin/design-projects");
   await page.getByRole("button", { name: /Tạo dự án thiết kế|New design project/i }).first().click();
@@ -14,6 +15,7 @@ test("design project dialog requires an operational project when no contract is 
   const projectField = page.getByTestId("design-project-operational-project");
   await expect(projectField).toBeVisible();
   await expect(projectField).toContainText(/Dự án vận hành|Operational project/);
+  await expect(dialog.getByText("Chủ nhiệm thiết kế", { exact: true })).toBeVisible();
 
   let posted = false;
   page.on("request", (request) => {
