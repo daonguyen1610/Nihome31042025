@@ -85,6 +85,11 @@ before opening department-specific work.
 | 7. Digital Assets | Automated project folder structure, Google Drive integration, document digitization | Organize, secure, and provide rapid access to project files |
 | 8. Dashboard and Analytics | Progress reports, acceptance reports, financial dashboards, procurement reports, risk alerts | Provide management oversight and early risk detection |
 
+Within a Design project, the design-specific manager is labelled **Design
+Manager** (**Chủ nhiệm thiết kế**). This role is distinct from the Project
+Manager of the shared Operational Project; existing access rules remain
+unchanged.
+
 #### 2.2.1 Customer Reference Pack and Status Labels
 
 The repository retains the NICON source pack under `docs/Nicon/`: the full PRD

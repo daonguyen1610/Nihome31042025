@@ -147,5 +147,28 @@ public sealed class TranslationSeederTests : IDisposable
         }
     }
 
+    [Fact]
+    public void Seed_DesignProject_UsesDesignManagerTerminologyInEveryLanguage()
+    {
+        TranslationSeeder.Seed(_db);
+
+        var expected = new Dictionary<string, string>
+        {
+            ["vi"] = "Chủ nhiệm thiết kế",
+            ["en"] = "Design manager",
+            ["zh"] = "设计经理",
+            ["ja"] = "デザインマネージャー",
+        };
+
+        foreach (var key in new[] { "designProjects.field.pm", "designProjects.team.role.ProjectManager" })
+        {
+            foreach (var (languageCode, value) in expected)
+            {
+                Assert.Equal(value, _db.Translations.Single(item =>
+                    item.Key == key && item.LanguageCode == languageCode).Value);
+            }
+        }
+    }
+
     public void Dispose() => _db.Dispose();
 }
