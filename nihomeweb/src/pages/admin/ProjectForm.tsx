@@ -77,6 +77,8 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
       .map((item) => ({ id: item.id, name: item.name, label: localizedName(item, lang) }))
       .sort((a, b) => a.label.localeCompare(b.label, lang));
   }, [categories, lang]);
+  const hasLegacyCategory = data.categoryId == null && Boolean(data.category) &&
+    !categoryOptions.some((option) => option.name === data.category);
 
   if (mode === "edit" && existing && !initialized) {
     setData({
@@ -248,7 +250,7 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
               <Field label={t("proj.field.category")}>
                 <select
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  value={data.categoryId != null ? String(data.categoryId) : ""}
+                  value={data.categoryId != null ? String(data.categoryId) : hasLegacyCategory ? "-1" : ""}
                   onChange={(e) => {
                     const v = e.target.value;
                     const found = categoryOptions.find((opt) => String(opt.id) === v);
@@ -258,8 +260,8 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
                   <option value="">-- Chọn danh mục --</option>
                   {[
                     ...categoryOptions,
-                    ...(data.categoryId == null && data.category && !categoryOptions.some((opt) => opt.name === data.category)
-                      ? [{ id: -1, name: data.category, label: data.category }]
+                    ...(hasLegacyCategory
+                      ? [{ id: -1, name: data.category, label: `${data.category}${t("form.legacyCategorySuffix")}` }]
                       : []),
                   ].map((opt) => (
                     <option key={opt.id} value={opt.id}>{opt.label}</option>

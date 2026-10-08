@@ -135,25 +135,7 @@ public class ProjectCategoryService(AppDbContext db, ILogger<ProjectCategoryServ
             return (existing.Id, existing.Name);
         }
 
-        var maxSortOrder = await db.ProjectCategories
-            .AsNoTracking()
-            .Select(c => (int?)c.SortOrder)
-            .MaxAsync() ?? 0;
-
-        var created = new ProjectCategory
-        {
-            Name = trimmed,
-            NameVi = trimmed,
-            NameEn = trimmed,
-            NameZh = trimmed,
-            NameJa = trimmed,
-            IsActive = true,
-            SortOrder = maxSortOrder + 1,
-        };
-        db.ProjectCategories.Add(created);
-        await db.SaveChangesAsync();
-        logger.LogInformation("Auto-created project category {CategoryName} from project payload", trimmed);
-        return (created.Id, created.Name);
+        throw new InvalidOperationException($"Danh mục dự án '{trimmed}' chưa tồn tại. Hãy tạo danh mục trước khi lưu dự án.");
     }
 
     private async Task EnsureNameUniqueAsync(string name, int? excludingId = null)

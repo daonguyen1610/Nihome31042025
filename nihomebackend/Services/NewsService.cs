@@ -79,7 +79,10 @@ public class NewsService(
         var previousImageUrl = hostedImageService.NormalizeImageUrl(entity.ImageUrl);
         var nextImageUrl = hostedImageService.NormalizeImageUrl(req.ImageUrl);
         var previousGallery = DeserializeGallery(entity.GalleryJson);
-        var (categoryId, categoryName) = await categorySvc.ResolveAsync(req.NewsCategoryId, req.Category);
+        var (categoryId, categoryName) = req.NewsCategoryId is null && entity.NewsCategoryId is null &&
+            string.Equals(req.Category?.Trim(), entity.Category?.Trim(), StringComparison.OrdinalIgnoreCase)
+            ? (null, entity.Category ?? string.Empty)
+            : await categorySvc.ResolveAsync(req.NewsCategoryId, req.Category);
 
         entity.Slug = req.Slug;
         entity.Date = req.Date;

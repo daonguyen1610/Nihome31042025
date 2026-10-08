@@ -134,25 +134,7 @@ public class NewsCategoryService(AppDbContext db, ILogger<NewsCategoryService> l
             return (existing.Id, existing.Name);
         }
 
-        var maxSortOrder = await db.NewsCategories
-            .AsNoTracking()
-            .Select(c => (int?)c.SortOrder)
-            .MaxAsync() ?? 0;
-
-        var created = new NewsCategory
-        {
-            Name = trimmed,
-            NameVi = trimmed,
-            NameEn = trimmed,
-            NameZh = trimmed,
-            NameJa = trimmed,
-            IsActive = true,
-            SortOrder = maxSortOrder + 1,
-        };
-        db.NewsCategories.Add(created);
-        await db.SaveChangesAsync();
-        logger.LogInformation("Auto-created news category {CategoryName} from news payload", trimmed);
-        return (created.Id, created.Name);
+        throw new InvalidOperationException($"Danh mục tin tức '{trimmed}' chưa tồn tại. Hãy tạo danh mục trước khi lưu tin tức.");
     }
 
     private async Task EnsureNameUniqueAsync(string name, int? excludingId = null)

@@ -1825,6 +1825,11 @@ list is empty, an administrator must create the needed activity, news, project,
 employment-type, or as-built document categories, or recruitment-dropdown
 options through the corresponding management action. Existing legacy content
 is not silently converted into category records when someone views a list.
+Saving an activity, news article, or public project with an unknown category
+also does not create a category: create it in category management first, then
+select it in the content form. Editing an existing legacy record without
+changing its unlinked category keeps that text until an administrator chooses
+a managed category.
 
 | Method | Endpoint                                        | Auth   | Description           |
 |--------|-------------------------------------------------|--------|-----------------------|
