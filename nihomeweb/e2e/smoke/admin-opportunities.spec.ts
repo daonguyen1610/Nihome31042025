@@ -347,10 +347,11 @@ test("Opportunity create and edit forms expose customer-scoped project linking",
     await page.getByRole("option", { name: new RegExp(projectName) }).click();
     await createDialog.getByRole("button", { name: /Huỷ|Hủy|Cancel/i }).click();
 
-    const opportunity = (await (await client.get(`/api/opportunities/${opportunityId}`)).json()) as { name: string };
-    await page.getByRole("row").filter({ hasText: opportunity.name })
-        .getByRole("button", { name: /Sửa|Edit/i }).click();
+    await page.goto(`${baseURL}/admin/opportunities/${opportunityId}`, { waitUntil: "networkidle" });
     const editDialog = page.getByTestId("opportunity-detail-dialog");
+    await expect(editDialog.getByTestId("opportunity-link-project")).toBeVisible();
+    await expect(editDialog.getByTestId("opportunity-create-operational-project")).toBeVisible();
+    await editDialog.getByTestId("opportunity-link-project").click();
     await editDialog.getByRole("combobox", { name: /Dự án vận hành|Operational project/i }).click();
     await page.getByRole("option", { name: new RegExp(projectName) }).click();
     const updateResponse = page.waitForResponse((response) =>
@@ -367,6 +368,53 @@ test("Opportunity create and edit forms expose customer-scoped project linking",
     const headers = { Authorization: `Bearer ${token}` };
     await hardDeleteBusinessRoot(api, headers, `/api/opportunities/${opportunityId}`);
     await hardDeleteBusinessRoot(api, headers, `/api/operational-projects/${projectId}`);
+    await hardDeleteBusinessRoot(api, headers, `/api/customers/${customerId}`);
+});
+
+test("Sales creates an operational project from Opportunity detail and confirms its link", async ({
+    api,
+    page,
+    loginAs,
+    loginInBrowserAs,
+    baseURL,
+}) => {
+    const token = await loginAs(TEST_USERS.salesManager);
+    const customerId = await createCustomer(api, token);
+    const opportunityId = await createOpportunity(api, token, customerId);
+    const projectName = `Project from opportunity ${Math.random().toString(36).slice(2, 8)}`;
+    await loginInBrowserAs(page, TEST_USERS.salesManager);
+    await page.goto(`${baseURL}/admin/opportunities/${opportunityId}`, { waitUntil: "networkidle" });
+    const detail = page.getByTestId("opportunity-detail-dialog");
+    await detail.getByTestId("opportunity-create-operational-project").click();
+    await expect(page).toHaveURL(/\/admin\/operational-projects\?create=1/);
+    const projectDialog = page.getByRole("dialog");
+    await expect(projectDialog).toBeVisible();
+    await projectDialog.getByLabel(/Tên dự án|Project name/i).fill(projectName);
+    await projectDialog.getByRole("button", { name: /Lưu|Save/i }).click();
+    await expect(page).toHaveURL(new RegExp(`/admin/opportunities/${opportunityId}\\?edit=1&projectId=\\d+`));
+    await expect(detail.getByRole("combobox", { name: /Dự án vận hành|Operational project/i }))
+        .toContainText(projectName);
+    await page.setViewportSize({ width: 390, height: 844 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+    const responsePromise = page.waitForResponse((response) =>
+        response.request().method() === "PUT"
+        && new URL(response.url()).pathname === `/api/opportunities/${opportunityId}`);
+    await detail.getByRole("button", { name: /Lưu|Save/i }).click();
+    expect((await responsePromise).status()).toBe(200);
+    await expect(page).toHaveURL(new RegExp(`/admin/opportunities/${opportunityId}$`));
+    await expect(detail).toContainText(projectName);
+    const client = authed(api, token);
+    const linked = (await (await client.get(`/api/opportunities/${opportunityId}`)).json()) as {
+        operationalProjectId: number;
+    };
+    expect(linked.operationalProjectId).toBeGreaterThan(0);
+    const project = (await (await client.get(`/api/operational-projects/${linked.operationalProjectId}`)).json()) as {
+        customerId: number;
+    };
+    expect(project.customerId).toBe(customerId);
+    const headers = { Authorization: `Bearer ${token}` };
+    await hardDeleteBusinessRoot(api, headers, `/api/opportunities/${opportunityId}`);
+    await hardDeleteBusinessRoot(api, headers, `/api/operational-projects/${linked.operationalProjectId}`);
     await hardDeleteBusinessRoot(api, headers, `/api/customers/${customerId}`);
 });
 
@@ -410,8 +458,13 @@ test("Opportunity actions follow the sequential and terminal UI contract", async
     const desktopRow = page.getByRole("row").filter({ hasText: opportunityName });
     await expect(desktopRow).toBeVisible();
     await expect(desktopRow.getByRole("button", { name: /^Sửa$|^Edit$/i })).toHaveCount(0);
+    await page.goto(`${baseURL}/admin/opportunities/${opportunityId}`, { waitUntil: "networkidle" });
+    const closedDetail = page.getByTestId("opportunity-detail-dialog");
+    await expect(closedDetail.getByTestId("opportunity-link-project")).toHaveCount(0);
+    await expect(closedDetail.getByTestId("opportunity-create-operational-project")).toHaveCount(0);
 
     await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`${baseURL}/admin/opportunities`, { waitUntil: "networkidle" });
     await page.reload({ waitUntil: "networkidle" });
     await page.getByLabel(/Tìm kiếm|Search/i).fill(opportunityName);
     const mobileCard = page.getByTestId(`opportunity-card-${opportunityId}`);

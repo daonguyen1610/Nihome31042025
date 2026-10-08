@@ -391,7 +391,7 @@ const AdminOpportunities = () => {
     }
   }, []);
 
-  const openDetail = useCallback(async (id: number, options: { startEditing?: boolean } = {}) => {
+  const openDetail = useCallback(async (id: number, options: { startEditing?: boolean; projectId?: number } = {}) => {
     setDetailLoading(true);
     setDetail(null);
     setEditing(false);
@@ -406,7 +406,7 @@ const AdminOpportunities = () => {
           rowVersion: data.rowVersion,
           name: data.name,
           customerId: data.customerId,
-          operationalProjectId: data.operationalProjectId,
+          operationalProjectId: options.projectId ?? data.operationalProjectId,
           ownerUserId: data.ownerUserId,
           estimatedValue: data.estimatedValue,
           winProbability: data.winProbability,
@@ -434,7 +434,12 @@ const AdminOpportunities = () => {
     const openId = Number.isInteger(fromRoute) && fromRoute > 0 ? fromRoute : fromQuery;
     if (Number.isInteger(openId) && openId > 0 && handledOpenId !== openId) {
       setHandledOpenId(openId);
-      void openDetail(openId);
+      const requestedProjectId = Number(searchParams.get("projectId"));
+      void openDetail(openId, {
+        startEditing: searchParams.get("edit") === "1",
+        projectId: Number.isInteger(requestedProjectId) && requestedProjectId > 0
+          ? requestedProjectId : undefined,
+      });
     }
   }, [handledOpenId, openDetail, searchParams, routeId]);
 
@@ -471,6 +476,9 @@ const AdminOpportunities = () => {
       });
       setDetail(data);
       setEditing(false);
+      if (searchParams.get("edit") === "1") {
+        navigate(`/admin/opportunities/${data.id}`, { replace: true });
+      }
       toast({ title: t("opportunities.updated") });
       await fetchList();
     } catch (err) {
@@ -1203,6 +1211,34 @@ const AdminOpportunities = () => {
                         <div className="text-xs text-muted-foreground">{t("opportunities.field.owner")}</div>
                         <div>{detail.ownerName ?? (detail.ownerUserId ? `#${detail.ownerUserId}` : "—")}</div>
                       </div>
+                      <div className="col-span-2">
+                        <div className="text-xs text-muted-foreground">{t("opportunities.field.operationalProject")}</div>
+                        <div>{projects.find((project) => project.id === detail.operationalProjectId)?.name ??
+                          (detail.operationalProjectId ? `#${detail.operationalProjectId}` : "—")}</div>
+                        {canManage && !isTerminalStage(detail.stage) && (
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              data-testid="opportunity-link-project"
+                              onClick={() => void openDetail(detail.id, { startEditing: true })}
+                            >
+                              {t("opportunities.project.link")}
+                            </Button>
+                            {!detail.operationalProjectId && canStartDesign && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                data-testid="opportunity-create-operational-project"
+                                onClick={() => navigate(`/admin/operational-projects?create=1&customerId=${detail.customerId}&returnOpportunity=${detail.id}&returnMode=link`)}
+                              >
+                                <Plus className="mr-1.5 h-4 w-4" />
+                                {t("opportunities.project.create")}
+                              </Button>
+                            )}
+                          </div>
+                        )}
+                      </div>
                       <div>
                         <div className="text-xs text-muted-foreground">{t("opportunities.field.estimatedValue")}</div>
                         <div className="tabular-nums">{formatVnd(detail.estimatedValue)}</div>
@@ -1222,11 +1258,6 @@ const AdminOpportunities = () => {
                       <div>
                         <div className="text-xs text-muted-foreground">{t("opportunities.field.updatedAt")}</div>
                         <div>{new Date(detail.updatedAt).toLocaleString()}</div>
-                      </div>
-                      <div className="col-span-2">
-                        <div className="text-xs text-muted-foreground">{t("opportunities.field.operationalProject")}</div>
-                        <div>{projects.find((project) => project.id === detail.operationalProjectId)?.name ??
-                          (detail.operationalProjectId ? `#${detail.operationalProjectId}` : "—")}</div>
                       </div>
                       {detail.closedAt && (
                         <div>
@@ -1316,6 +1347,13 @@ const AdminOpportunities = () => {
                           placeholder={t("opportunities.project.select")}
                         />
                         {projectLoadError && <p role="alert" className="text-sm text-destructive">{projectLoadError}</p>}
+                        {!detail.operationalProjectId && canStartDesign && (
+                          <Button variant="link" className="h-auto p-0" asChild>
+                            <Link to={`/admin/operational-projects?create=1&customerId=${editForm.customerId}&returnOpportunity=${detail.id}&returnMode=link`}>
+                              {t("opportunities.project.create")}
+                            </Link>
+                          </Button>
+                        )}
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
