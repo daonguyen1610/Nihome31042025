@@ -23,6 +23,24 @@ public class ActivitiesControllerTests : IDisposable
     public ActivitiesControllerTests()
     {
         _db = DbContextFactory.Create();
+        _db.ActivityCategories.AddRange(new ActivityCategory
+        {
+            Name = "Event",
+            NameVi = "Event",
+            NameEn = "Event",
+            NameZh = "活动",
+            NameJa = "イベント",
+            IsActive = true,
+        }, new ActivityCategory
+        {
+            Name = "New",
+            NameVi = "New",
+            NameEn = "New",
+            NameZh = "新建",
+            NameJa = "新規",
+            IsActive = true,
+        });
+        _db.SaveChanges();
 
         var entityTranslationSvc = new EntityTranslationService(
             _db, Mock.Of<IMemoryCache>());

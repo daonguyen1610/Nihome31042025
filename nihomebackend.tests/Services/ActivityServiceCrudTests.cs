@@ -22,6 +22,16 @@ public class ActivityServiceCrudTests : IDisposable
     public ActivityServiceCrudTests()
     {
         _db = DbContextFactory.Create();
+        _db.ActivityCategories.Add(new ActivityCategory
+        {
+            Name = "Events",
+            NameVi = "Events",
+            NameEn = "Events",
+            NameZh = "活动",
+            NameJa = "イベント",
+            IsActive = true,
+        });
+        _db.SaveChanges();
         _translationSvc = new EntityTranslationService(_db, new MemoryCache(new MemoryCacheOptions()));
         var hosted = new HostedImageService(Mock.Of<IWebHostEnvironment>(e => e.ContentRootPath == "/tmp"));
         var categorySvc = new ActivityCategoryService(_db, NullLogger<ActivityCategoryService>.Instance);

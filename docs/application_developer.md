@@ -425,7 +425,12 @@ The project handover schema is introduced by `AddHandoverRecords` and hardened b
 
 ### 6.5 Data Seeding
 
-Outside the `IntegrationTests` environment, application startup applies pending migrations and then runs the complete seed pipeline. The order is baseline users/settings, content, UI and entity translations, RBAC catalog/roles, master data, workflows, notification templates, deterministic business-role users, and sample CRM/design/construction data.
+Application startup applies pending migrations and then runs the baseline seed
+pipeline: users/settings, content, UI and entity translations, RBAC catalog/roles,
+master data, workflows, notification templates, and deterministic business-role
+users. Development-only sample CRM/design/construction data is enabled by the
+startup host only in the `Development` environment; integration tests create
+their own business fixtures explicitly.
 
 Content behavior is entity-specific. Activities, news, and projects are slug-based backfills that preserve administrator edits. Process documents and logos are also reconciled additively: missing canonical rows are restored without deleting custom rows or overwriting administrator-managed values. Translation, RBAC, master-data, workflow, and notification files are embedded resources.
 
@@ -453,7 +458,9 @@ Translation seed files are embedded resources under `Data/Seeds/i18n/`.
 
 The backend seeders create deterministic `SUPER_ADMIN`, `ADMIN`, and selected business-role accounts for development and automated tests. Current identifiers are defined in `DbSeeder`, `BusinessRoleUserSeeder`, integration `TestDataSeeder`, and Playwright fixtures; do not duplicate credentials in operational documentation.
 
-The current startup path is not environment-gated and can create deterministic accounts outside Development. Production deployment must rotate or disable them and should gate demo/sample seeding before the application is exposed.
+The startup path gates demo/sample business data to Development. Production
+deployment must still rotate or disable deterministic development accounts before
+the application is exposed.
 
 ### 6.6 Verifying the Database
 
@@ -2591,9 +2598,20 @@ Official references: [Drive API v3](https://developers.google.com/workspace/driv
 
 ### 10.4 Deterministic demonstration data
 
-`DbSeeder` creates a deterministic demonstration dataset covering the CRM funnel, all contract statuses, design stages, permitting, construction, acceptance, as-built, and handover workflows. Seeder-owned rows use stable markers such as `[SAMPLE]`, `[SAMPLE_CONTRACT]`, and `[SAMPLE_DP]`; downstream records are attached only to marker-owned sample projects rather than arbitrary database rows.
+Development-only sample seeders create a deterministic demonstration dataset
+covering the CRM funnel, all contract statuses, design stages, permitting,
+construction, acceptance, as-built, and handover workflows. Seeder-owned rows
+use stable markers such as `[SAMPLE]`, `[SAMPLE_CONTRACT]`, and `[SAMPLE_DP]`;
+downstream records are attached only to marker-owned sample projects rather than
+arbitrary database rows.
 
-The dataset is idempotent: rerunning startup seeding preserves row counts and administrator-edited free text, lifecycle values, and relationships. A constrained backfill pass populates only missing sample relationships, including opportunity/quote links, project/customer/contract links, and PM/design-lead assignments. Sales records are owned by the SALE demo user, project and construction records prefer PM, design documents prefer DESIGN_LEAD then DESIGN, and permit work prefers LEGAL_OFFICER with safe fallbacks.
+The dataset is idempotent: rerunning Development sample seeding preserves row
+counts and administrator-edited free text, lifecycle values, and relationships.
+A constrained backfill pass populates only missing sample relationships, including
+opportunity/quote links, project/customer/contract links, and PM/design-lead
+assignments. Sales records are owned by the SALE demo user, project and
+construction records prefer PM, design documents prefer DESIGN_LEAD then DESIGN,
+and permit work prefers LEGAL_OFFICER with safe fallbacks.
 
 When a web root is available, the seeder materializes small placeholder PDFs beneath `wwwroot/files/capability/`, `wwwroot/files/contracts/`, and `wwwroot/files/asbuilt/`; URL metadata is still seeded when no web root is supplied. These files and all named contacts, phone numbers, and email addresses in sample rows are demonstration data, not real personal or customer data, and must not be treated as production records.
 

@@ -14,8 +14,9 @@ public sealed class DesignPermitIfcPipelineTests(NihomeWebApplicationFactory fac
     [InlineData(true)]
     public async Task Concept_ToPermitTracking_AndIfcReceipt_PreservesGatesAndRevisionHistory(bool needsCorrection)
     {
-        // Customer/project/team are foundation data. Contract execution creates
-        // the design workspace; no drawing, approval or release is seeded.
+        // Customer/project/team are foundation data. The design workspace is
+        // created explicitly after signing; contract execution must preserve it
+        // and must not create a duplicate.
         // Permit tracking shares the project; automatic Basic-document transfer
         // is not implemented.
         var fixture = await SeedFoundationAsync();
@@ -30,14 +31,28 @@ public sealed class DesignPermitIfcPipelineTests(NihomeWebApplicationFactory fac
             scopeOfWork = "Factory design, permits and construction delivery",
         });
         await UploadAsync($"/api/contracts/{Id(contract)}/attachments", "Signed factory design and build contract", "SignedScan");
-        foreach (var status in new[] { "Signed", "InProgress" })
-            contract = await PostAsync($"/api/contracts/{Id(contract)}/transition", new
+        contract = await PostAsync($"/api/contracts/{Id(contract)}/transition", new
+        {
+            newStatus = "Signed",
+            rowVersion = contract.GetProperty("rowVersion").GetString(),
+        });
+        await LoginAsync("SUPER_ADMIN");
+        var design = await PostAsync("/api/design-projects", new
+        {
+            operationalProjectId = fixture.OperationalProjectId,
+            customerId = fixture.CustomerId,
+            contractId = Id(contract),
+            name = "Factory design workspace",
+        });
+        var projectId = Id(design);
+        await LoginAsync("SALES_MANAGER");
+        contract = await PostAsync($"/api/contracts/{Id(contract)}/transition", new
             {
-                newStatus = status,
+                newStatus = "InProgress",
                 rowVersion = contract.GetProperty("rowVersion").GetString(),
             });
         var contractId = Id(contract);
-        var projectId = await WithDbAsync(db => db.DesignProjects.Where(p => p.ContractId == contractId).Select(p => p.Id).SingleAsync());
+        (await WithDbAsync(db => db.DesignProjects.CountAsync(p => p.ContractId == contractId))).Should().Be(1);
         await LoginAsync("PM");
         var checklist = await GetAsync($"/api/permits?designProjectId={projectId}&pageSize=100");
         checklist.GetProperty("items").GetArrayLength().Should().BeGreaterThan(0);

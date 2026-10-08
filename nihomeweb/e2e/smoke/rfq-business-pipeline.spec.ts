@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { test, expect, TEST_USERS } from "../fixtures/auth";
+import { createOwnCustomer } from "../fixtures/designProjects";
 
 test.describe.configure({ mode: "serial" });
 
@@ -11,8 +12,19 @@ test(`business roles carry an approved BOQ through RFQ, warehouse and invoice ${
   const suffix = randomUUID().slice(0, 8);
   const adminToken = await loginAs(TEST_USERS.superAdmin);
   const headers = { Authorization: `Bearer ${adminToken}`, "Idempotency-Key": randomUUID() };
-  const projects = await api.get("/api/operational-projects?pageSize=100", { headers });
-  const customerId = (await projects.json()).items.find((x: { code: string }) => x.code === "PJ-SAMPLE-RFQ").customerId;
+  const customerId = await createOwnCustomer(api, headers, "RFQ pipeline");
+  const vendorCode = `E2E-RFQ-${suffix}`;
+  const vendorName = `E2E RFQ supplier ${suffix}`;
+  const vendorResponse = await api.post("/api/vendors", {
+    headers: { ...headers, "Idempotency-Key": randomUUID() },
+    data: {
+      vendorCode,
+      companyName: vendorName,
+      vendorType: "Supplier",
+      phone: `090${Math.floor(1_000_000 + Math.random() * 8_999_999)}`,
+    },
+  });
+  expect(vendorResponse.status(), await vendorResponse.text()).toBe(201);
   const userNames = new Map<string, string>();
   async function userId(role: string) {
     const response = await api.get(`/api/users?role=${role}&skip=0&take=100`, { headers });
@@ -73,7 +85,7 @@ test(`business roles carry an approved BOQ through RFQ, warehouse and invoice ${
     await dialog.getByRole("combobox", { name: "Procurement owner", exact: true }).selectOption(String(procurementId));
     await dialog.getByLabel("Quotation deadline", { exact: true }).fill("2035-01-01T09:00");
     await dialog.getByLabel("Quantity PIPE-CABLE", { exact: true }).fill("20");
-    await dialog.getByRole("checkbox", { name: "[SAMPLE] Alternative electrical supplier", exact: true }).check();
+    await dialog.getByRole("checkbox", { name: vendorName, exact: true }).check();
     await dialog.getByRole("button", { name: "Save draft", exact: true }).click();
     await expect(dialog).not.toBeVisible();
     rfqUrl = page.url();

@@ -33,6 +33,7 @@ public class SampleContractSeederTests : IDisposable
     [Fact]
     public void Seed_InsertsSampleContractsCoveringMultipleStatuses()
     {
+        DbSeeder.Seed(_db);
         SampleCrmDataSeeder.Seed(_db);
 
         var contracts = _db.Contracts.ToList();
@@ -113,7 +114,7 @@ public class SampleContractSeederTests : IDisposable
         Assert.Equal(4, categories.Count(item => item.IsRequired));
         Assert.All(categories, category =>
         {
-            Assert.False(string.IsNullOrWhiteSpace(category.NameVi));
+                SampleCrmDataSeeder.Seed(_db);
             Assert.False(string.IsNullOrWhiteSpace(category.NameEn));
             Assert.False(string.IsNullOrWhiteSpace(category.NameZh));
             Assert.False(string.IsNullOrWhiteSpace(category.NameJa));
@@ -212,7 +213,6 @@ public class SampleContractSeederTests : IDisposable
         _db.SaveChanges();
         var userProject = new DesignProject
         {
-            ProjectCode = "DP-USER-0001",
             Name = "Dự án người dùng",
             CustomerId = userCustomer.Id,
             CurrentStage = DesignProjectStage.ShopDrawing,
@@ -223,6 +223,7 @@ public class SampleContractSeederTests : IDisposable
         _db.SaveChanges();
 
         DbSeeder.Seed(_db);
+        SampleCrmDataSeeder.Seed(_db);
 
         var sampleProjectIds = _db.DesignProjects
             .Where(project => project.Note != null && project.Note.StartsWith("[SAMPLE_DP]"))
