@@ -47,10 +47,10 @@ public sealed class DesignPermitIfcPipelineTests(NihomeWebApplicationFactory fac
         var projectId = Id(design);
         await LoginAsync("SALES_MANAGER");
         contract = await PostAsync($"/api/contracts/{Id(contract)}/transition", new
-            {
-                newStatus = "InProgress",
-                rowVersion = contract.GetProperty("rowVersion").GetString(),
-            });
+        {
+            newStatus = "InProgress",
+            rowVersion = contract.GetProperty("rowVersion").GetString(),
+        });
         var contractId = Id(contract);
         (await WithDbAsync(db => db.DesignProjects.CountAsync(p => p.ContractId == contractId))).Should().Be(1);
         await LoginAsync("PM");

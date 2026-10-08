@@ -53,8 +53,12 @@ public class ActivityServiceTests : IDisposable
     {
         var activity = new Activity
         {
-            Slug = "activity-category-test", Title = "Old", Excerpt = "Old",
-            Date = "2026-10-08", Category = "Legacy", ContentJson = "[]",
+            Slug = "activity-category-test",
+            Title = "Old",
+            Excerpt = "Old",
+            Date = "2026-10-08",
+            Category = "Legacy",
+            ContentJson = "[]",
         };
         _db.Activities.Add(activity);
         await _db.SaveChangesAsync();

@@ -130,8 +130,12 @@ public class NewsServiceTests : IDisposable
     {
         var category = new NewsCategory
         {
-            Name = "company", NameVi = "company", NameEn = "company",
-            NameZh = "company", NameJa = "company", IsActive = true,
+            Name = "company",
+            NameVi = "company",
+            NameEn = "company",
+            NameZh = "company",
+            NameJa = "company",
+            IsActive = true,
         };
         _db.NewsCategories.Add(category);
         await _db.SaveChangesAsync();
@@ -161,8 +165,11 @@ public class NewsServiceTests : IDisposable
     {
         var article = new NewsArticle
         {
-            Slug = "legacy-news", Title = "Old", Excerpt = "Old",
-            Category = "Legacy", ContentJson = "[]",
+            Slug = "legacy-news",
+            Title = "Old",
+            Excerpt = "Old",
+            Category = "Legacy",
+            ContentJson = "[]",
         };
         _db.NewsArticles.Add(article);
         await _db.SaveChangesAsync();
