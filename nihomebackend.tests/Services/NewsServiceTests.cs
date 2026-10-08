@@ -161,27 +161,28 @@ public class NewsServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task Update_PreservesUnlinkedLegacyCategoryWithoutCreatingOne()
+    public async Task Update_RejectsUnlinkedCategoryWithoutChangingNews()
     {
         var article = new NewsArticle
         {
-            Slug = "legacy-news",
+            Slug = "unlinked-category-news",
             Title = "Old",
             Excerpt = "Old",
-            Category = "Legacy",
+            Category = "Unlinked",
             ContentJson = "[]",
         };
         _db.NewsArticles.Add(article);
         await _db.SaveChangesAsync();
-        var request = BasePayload("legacy-news");
-        request.Category = "Legacy";
+        var request = BasePayload("unlinked-category-news");
+        request.Category = "Unlinked";
         request.Title = "Edited";
 
-        var updated = await _sut.UpdateAsync(article.Id, request);
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _sut.UpdateAsync(article.Id, request));
 
-        Assert.Equal("Edited", updated!.Title);
-        Assert.Equal("Legacy", updated.Category);
-        Assert.Null(updated.NewsCategoryId);
+        var unchanged = await _db.NewsArticles.FindAsync(article.Id);
+        Assert.Equal("Old", unchanged!.Title);
+        Assert.Equal("Unlinked", unchanged.Category);
         Assert.Empty(_db.NewsCategories);
     }
 

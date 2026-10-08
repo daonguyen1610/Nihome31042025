@@ -88,10 +88,7 @@ public class ProjectService(
         var nextImageUrl = hostedImageService.NormalizeImageUrl(req.ImageUrl);
         var previousGallery = DeserializeGallery(entity.GalleryJson);
 
-        var (categoryId, categoryName) = req.CategoryId is null && entity.ProjectCategoryId is null &&
-            string.Equals(req.Category?.Trim(), entity.Category?.Trim(), StringComparison.OrdinalIgnoreCase)
-            ? (null, entity.Category ?? string.Empty)
-            : await categorySvc.ResolveAsync(req.CategoryId, req.Category);
+        var (categoryId, categoryName) = await categorySvc.ResolveAsync(req.CategoryId, req.Category);
 
         entity.Slug = req.Slug;
         entity.ImageUrl = nextImageUrl ?? string.Empty;

@@ -19,6 +19,7 @@ public static class ContentSeeder
 
     public static void Seed(AppDbContext db)
     {
+        SeedCategories(db);
         SeedActivities(db);
         SeedNews(db);
         SeedProjects(db);
@@ -31,8 +32,6 @@ public static class ContentSeeder
         SeedRecruitment(db);
         SeedContactMessages(db);
         SeedEntityTranslations(db);
-        SeedCategories(db);
-        LinkCategories(db);
     }
 
     private static void SeedCategories(AppDbContext db)
@@ -163,161 +162,6 @@ public static class ContentSeeder
         db.SaveChanges();
     }
 
-    private static void LinkCategories(AppDbContext db)
-    {
-        foreach (var category in db.ActivityCategories)
-        {
-            (category.NameEn, category.NameZh, category.NameJa) = BackfillCategoryLanguages(
-                category.NameVi, category.Name, category.NameEn, category.NameZh, category.NameJa);
-        }
-        foreach (var category in db.ProjectCategories)
-        {
-            (category.NameEn, category.NameZh, category.NameJa) = BackfillCategoryLanguages(
-                category.NameVi, category.Name, category.NameEn, category.NameZh, category.NameJa);
-        }
-        foreach (var category in db.NewsCategories)
-        {
-            (category.NameEn, category.NameZh, category.NameJa) = BackfillCategoryLanguages(
-                category.NameVi, category.Name, category.NameEn, category.NameZh, category.NameJa);
-        }
-
-        // Ensure ActivityCategory rows exist for every distinct Activity.Category
-        var activityCategoryNames = db.Activities
-            .Select(a => a.Category)
-            .Where(c => !string.IsNullOrEmpty(c))
-            .Distinct()
-            .ToList();
-        var existingActivityNames = db.ActivityCategories
-            .Select(c => c.Name)
-            .ToList()
-            .Select(NormalizeCategoryKey)
-            .ToHashSet();
-        var nextOrder = (db.ActivityCategories.Max(c => (int?)c.SortOrder) ?? 0) + 1;
-        foreach (var name in activityCategoryNames)
-        {
-            var trimmed = name.Trim();
-            if (string.IsNullOrWhiteSpace(trimmed)) continue;
-            if (existingActivityNames.Contains(NormalizeCategoryKey(trimmed))) continue;
-            db.ActivityCategories.Add(new ActivityCategory
-            {
-                Name = trimmed,
-                NameVi = trimmed,
-                NameEn = trimmed,
-                NameZh = trimmed,
-                NameJa = trimmed,
-                IsActive = true,
-                SortOrder = nextOrder++,
-            });
-            existingActivityNames.Add(NormalizeCategoryKey(trimmed));
-        }
-
-        // Ensure ProjectCategory rows exist for every distinct Project.Category
-        var projectCategoryNames = db.Projects
-            .Select(p => p.Category)
-            .Where(c => !string.IsNullOrEmpty(c))
-            .Distinct()
-            .ToList();
-        var existingProjectNames = db.ProjectCategories
-            .Select(c => c.Name)
-            .ToList()
-            .Select(NormalizeCategoryKey)
-            .ToHashSet();
-        var nextProjectOrder = (db.ProjectCategories.Max(c => (int?)c.SortOrder) ?? 0) + 1;
-        foreach (var name in projectCategoryNames)
-        {
-            var trimmed = (name ?? string.Empty).Trim();
-            if (string.IsNullOrWhiteSpace(trimmed)) continue;
-            if (existingProjectNames.Contains(NormalizeCategoryKey(trimmed))) continue;
-            db.ProjectCategories.Add(new ProjectCategory
-            {
-                Name = trimmed,
-                NameVi = trimmed,
-                NameEn = trimmed,
-                NameZh = trimmed,
-                NameJa = trimmed,
-                IsActive = true,
-                SortOrder = nextProjectOrder++,
-            });
-            existingProjectNames.Add(NormalizeCategoryKey(trimmed));
-        }
-
-        // Ensure NewsCategory rows exist for every distinct NewsArticle.Category
-        var newsCategoryNames = db.NewsArticles
-            .Select(n => n.Category)
-            .Where(c => !string.IsNullOrEmpty(c))
-            .Distinct()
-            .ToList();
-        var existingNewsNames = db.NewsCategories
-            .Select(c => c.Name)
-            .ToList()
-            .Select(NormalizeCategoryKey)
-            .ToHashSet();
-        var nextNewsOrder = (db.NewsCategories.Max(c => (int?)c.SortOrder) ?? 0) + 1;
-        foreach (var name in newsCategoryNames)
-        {
-            var trimmed = (name ?? string.Empty).Trim();
-            if (string.IsNullOrWhiteSpace(trimmed)) continue;
-            if (existingNewsNames.Contains(NormalizeCategoryKey(trimmed))) continue;
-            db.NewsCategories.Add(new NewsCategory
-            {
-                Name = trimmed,
-                NameVi = trimmed,
-                NameEn = trimmed,
-                NameZh = trimmed,
-                NameJa = trimmed,
-                IsActive = true,
-                SortOrder = nextNewsOrder++,
-            });
-            existingNewsNames.Add(NormalizeCategoryKey(trimmed));
-        }
-        db.SaveChanges();
-
-        // Backfill FK on Activity rows
-        var activityCategoryMap = db.ActivityCategories.ToDictionary(c => NormalizeCategoryKey(c.Name), c => c.Id);
-        foreach (var activity in db.Activities.Where(a => a.ActivityCategoryId == null && a.Category != ""))
-        {
-            if (activityCategoryMap.TryGetValue(NormalizeCategoryKey(activity.Category), out var id))
-            {
-                activity.ActivityCategoryId = id;
-            }
-        }
-
-        // Backfill FK on Project rows
-        var projectCategoryMap = db.ProjectCategories.ToDictionary(c => NormalizeCategoryKey(c.Name), c => c.Id);
-        foreach (var project in db.Projects.Where(p => p.ProjectCategoryId == null && p.Category != null && p.Category != ""))
-        {
-            if (projectCategoryMap.TryGetValue(NormalizeCategoryKey(project.Category!), out var id))
-            {
-                project.ProjectCategoryId = id;
-            }
-        }
-
-        // Backfill FK on News rows
-        var newsCategoryMap = db.NewsCategories.ToDictionary(c => NormalizeCategoryKey(c.Name), c => c.Id);
-        foreach (var article in db.NewsArticles.Where(n => n.NewsCategoryId == null && n.Category != ""))
-        {
-            if (newsCategoryMap.TryGetValue(NormalizeCategoryKey(article.Category), out var id))
-            {
-                article.NewsCategoryId = id;
-            }
-        }
-        db.SaveChanges();
-    }
-
-    private static (string English, string Chinese, string Japanese) BackfillCategoryLanguages(
-        string? nameVi,
-        string name,
-        string? english,
-        string? chinese,
-        string? japanese)
-    {
-        var source = string.IsNullOrWhiteSpace(nameVi) ? name : nameVi;
-        return (
-            string.IsNullOrWhiteSpace(english) ? source : english,
-            string.IsNullOrWhiteSpace(chinese) ? source : chinese,
-            string.IsNullOrWhiteSpace(japanese) ? source : japanese);
-    }
-
     // ─── Activities (manifest-driven from legacy nicon.vn) ──────────
 
     private static void SeedActivities(AppDbContext db)
@@ -403,6 +247,9 @@ public static class ContentSeeder
         if (manifest.Count == 0) return;
 
         var existingSlugs = db.Projects.Select(p => p.Slug).ToHashSet();
+        var categoryIds = db.ProjectCategories
+            .ToList()
+            .ToDictionary(category => NormalizeCategoryKey(category.Name), category => category.Id);
         var newItems = manifest
             .Where(item => !existingSlugs.Contains(item.Slug))
             .Select(item =>
@@ -421,6 +268,18 @@ public static class ContentSeeder
                     : item.Description;
                 var yearMatch = Regex.Match(vi.Date, @"\d{4}");
                 var year = yearMatch.Success ? yearMatch.Value : null;
+                var categoryName = item.Category?.Trim();
+                int? categoryId = null;
+                if (!string.IsNullOrWhiteSpace(categoryName))
+                {
+                    if (!categoryIds.TryGetValue(NormalizeCategoryKey(categoryName), out var resolvedCategoryId))
+                    {
+                        throw new InvalidOperationException(
+                            $"Project seed '{item.Slug}' references unknown category '{categoryName}'.");
+                    }
+
+                    categoryId = resolvedCategoryId;
+                }
 
                 return new Project
                 {
@@ -434,7 +293,8 @@ public static class ContentSeeder
                     Scope = item.Scope,
                     Status = item.Status ?? WarnMissingStatus(item.Slug),
                     Year = year,
-                    Category = string.IsNullOrWhiteSpace(item.Category) ? null : item.Category,
+                    Category = categoryName,
+                    ProjectCategoryId = categoryId,
                     Description = description,
                     ContentJson = item.Content is { Count: > 0 } ? JsonSerializer.Serialize(item.Content) : "[]",
                     ChallengesJson = item.Challenges is { Count: > 0 } ? JsonSerializer.Serialize(item.Challenges) : null,
