@@ -52,6 +52,7 @@ const MaterialAlertDetailPage = lazy(() => import("./pages/admin/procurement/Mat
 const WarehouseTransactionDetailPage = lazy(() => import("./pages/admin/procurement/WarehouseTransactionDetailPage.tsx"));
 const FinanceControlPage = lazy(() => import("./pages/admin/finance/FinanceControlPage.tsx"));
 const AdminOpportunities = lazy(() => import("./pages/admin/Opportunities.tsx"));
+const OpportunityDesignCreate = lazy(() => import("./pages/admin/OpportunityDesignCreate.tsx"));
 const AdminQuotes = lazy(() => import("./pages/admin/Quotes.tsx"));
 const AdminQuoteDetail = lazy(() => import("./pages/admin/QuoteDetail.tsx"));
 const AdminMaterialRates = lazy(() => import("./pages/admin/MaterialRates.tsx"));
@@ -221,6 +222,11 @@ const App = () => (
               <Route element={<RequirePermission code={ADMIN_PERMS.opportunities} />}>
                 <Route path="/admin/opportunities" element={<AdminOpportunities />} />
                 <Route path="/admin/opportunities/:id" element={<AdminOpportunities />} />
+                <Route element={<RequirePermission code={ADMIN_PERMS.opportunitiesManage} />}>
+                  <Route element={<RequirePermission code={ADMIN_PERMS.operationalProjectsManage} />}>
+                    <Route path="/admin/opportunities/:id/design-project/new" element={<OpportunityDesignCreate />} />
+                  </Route>
+                </Route>
               </Route>
               <Route element={<RequirePermission code={ADMIN_PERMS.quotes} />}>
                 <Route path="/admin/quotes" element={<AdminQuotes />} />

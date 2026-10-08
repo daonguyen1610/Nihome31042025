@@ -37,6 +37,8 @@ public interface IDesignProjectService
     Task<EnsureDesignProjectResult> EnsureForOpportunityAsync(
         int opportunityId,
         int callerUserId,
+        string name,
+        string? note,
         CancellationToken ct = default);
 
     Task<DesignProjectResponse?> UpdateAsync(int id, UpdateDesignProjectRequest request, int callerUserId, CancellationToken ct = default);

@@ -86,6 +86,7 @@ public interface IOpportunityService
         int id,
         int callerUserId,
         bool canSeeAll,
+        StartOpportunityDesignRequest request,
         CancellationToken ct = default);
 
     Task<bool> DeleteAsync(

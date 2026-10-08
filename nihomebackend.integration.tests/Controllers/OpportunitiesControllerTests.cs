@@ -56,7 +56,21 @@ public class OpportunitiesControllerTests : IntegrationTestBase
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
         var (opportunityId, projectId) = await CreateOpportunityWithProjectAsync();
 
-        var first = await Client.PostAsync($"/api/opportunities/{opportunityId}/design-project", null);
+        (await Client.PostAsJsonAsync($"/api/opportunities/{opportunityId}/design-project", new { name = "   " }))
+            .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await Client.PostAsJsonAsync($"/api/opportunities/{opportunityId}/design-project", new
+        {
+            name = "Thiết kế hợp lệ",
+            note = new string('n', 4001),
+        })).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.DesignProjects.AnyAsync(item => item.OperationalProjectId == projectId)))
+            .Should().BeFalse();
+
+        var first = await Client.PostAsJsonAsync($"/api/opportunities/{opportunityId}/design-project", new
+        {
+            name = "Thiết kế Nhà máy Minh Phúc",
+            note = "Khởi động Concept để lập báo giá.",
+        });
         first.StatusCode.Should().Be(HttpStatusCode.OK, await first.Content.ReadAsStringAsync());
         var firstBody = await ReadJsonAsync(first);
         firstBody.GetProperty("created").GetBoolean().Should().BeTrue();
@@ -64,9 +78,13 @@ public class OpportunitiesControllerTests : IntegrationTestBase
         designProject.GetProperty("operationalProjectId").GetInt32().Should().Be(projectId);
         designProject.GetProperty("contractId").ValueKind.Should().Be(JsonValueKind.Null);
         designProject.GetProperty("currentStage").GetString().Should().Be("Concept");
+        designProject.GetProperty("name").GetString().Should().Be("Thiết kế Nhà máy Minh Phúc");
         var designProjectId = designProject.GetProperty("id").GetInt32();
 
-        var second = await Client.PostAsync($"/api/opportunities/{opportunityId}/design-project", null);
+        var second = await Client.PostAsJsonAsync($"/api/opportunities/{opportunityId}/design-project", new
+        {
+            name = "Thiết kế Nhà máy Minh Phúc",
+        });
         second.StatusCode.Should().Be(HttpStatusCode.OK);
         var secondBody = await ReadJsonAsync(second);
         secondBody.GetProperty("created").GetBoolean().Should().BeFalse();
@@ -85,7 +103,7 @@ public class OpportunitiesControllerTests : IntegrationTestBase
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
         var missingProjectId = await CreateOpportunityAsync();
-        (await Client.PostAsync($"/api/opportunities/{missingProjectId}/design-project", null))
+        (await Client.PostAsJsonAsync($"/api/opportunities/{missingProjectId}/design-project", new { name = "Thiết kế" }))
             .StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
         var (lostId, _) = await CreateOpportunityWithProjectAsync();
@@ -98,7 +116,7 @@ public class OpportunitiesControllerTests : IntegrationTestBase
             opportunity.ClosedAt = DateTime.UtcNow;
             await db.SaveChangesAsync();
         });
-        (await Client.PostAsync($"/api/opportunities/{lostId}/design-project", null))
+        (await Client.PostAsJsonAsync($"/api/opportunities/{lostId}/design-project", new { name = "Thiết kế" }))
             .StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
         var foreignId = await CreateOpportunityAsync();
@@ -111,9 +129,9 @@ public class OpportunitiesControllerTests : IntegrationTestBase
             await db.SaveChangesAsync();
         });
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
-        (await Client.PostAsync($"/api/opportunities/{foreignId}/design-project", null))
+        (await Client.PostAsJsonAsync($"/api/opportunities/{foreignId}/design-project", new { name = "Thiết kế" }))
             .StatusCode.Should().Be(HttpStatusCode.NotFound);
-        (await Client.PostAsync($"/api/opportunities/{reassignedId}/design-project", null))
+        (await Client.PostAsJsonAsync($"/api/opportunities/{reassignedId}/design-project", new { name = "Thiết kế" }))
             .StatusCode.Should().Be(HttpStatusCode.NotFound);
         (await WithDbAsync(db => db.DesignProjects.AnyAsync(item =>
             item.OperationalProjectId == foreignProjectId))).Should().BeFalse();
@@ -123,8 +141,101 @@ public class OpportunitiesControllerTests : IntegrationTestBase
     public async Task StartDesign_WithoutOpportunityPermission_IsForbidden()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "DESIGN_LEAD"));
-        (await Client.PostAsync("/api/opportunities/1/design-project", null))
+        (await Client.PostAsJsonAsync("/api/opportunities/1/design-project", new { name = "Thiết kế" }))
             .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task Update_CannotLinkProjectOutsideSalesScope_ButCanLinkOwnProject()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
+        var customerId = await CreateCustomerAsync();
+        var opportunityResponse = await Client.PostAsJsonAsync("/api/opportunities", new
+        {
+            name = "Design-first opportunity",
+            customerId,
+            estimatedValue = 1_000_000m,
+            winProbability = 40,
+        });
+        opportunityResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var opportunityId = (await ReadJsonAsync(opportunityResponse)).GetProperty("id").GetInt32();
+
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var foreignResponse = await Client.PostAsJsonAsync("/api/operational-projects", new
+        {
+            name = "Other team's project",
+            customerId,
+        });
+        foreignResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var foreignProjectId = (await ReadJsonAsync(foreignResponse)).GetProperty("id").GetInt32();
+
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
+        var opportunityCount = await WithDbAsync(db => db.Opportunities.CountAsync());
+        (await Client.PostAsJsonAsync("/api/opportunities", new
+        {
+            name = "Must not link another team's project",
+            customerId,
+            estimatedValue = 1_000_000m,
+            winProbability = 40,
+            operationalProjectId = foreignProjectId,
+        })).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.Opportunities.CountAsync())).Should().Be(opportunityCount);
+
+        var ownResponse = await Client.PostAsJsonAsync("/api/operational-projects", new
+        {
+            name = "Own design-first project",
+            customerId,
+        });
+        ownResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var ownProjectId = (await ReadJsonAsync(ownResponse)).GetProperty("id").GetInt32();
+        var otherCustomerId = await CreateCustomerAsync();
+        var otherCustomerProjectResponse = await Client.PostAsJsonAsync("/api/operational-projects", new
+        {
+            name = "Different customer's project",
+            customerId = otherCustomerId,
+        });
+        otherCustomerProjectResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var otherCustomerProjectId = (await ReadJsonAsync(otherCustomerProjectResponse)).GetProperty("id").GetInt32();
+
+        var update = new
+        {
+            rowVersion = await GetRowVersionAsync(opportunityId),
+            name = "Design-first opportunity",
+            customerId,
+            estimatedValue = 1_000_000m,
+            winProbability = 40,
+            operationalProjectId = foreignProjectId,
+        };
+        (await Client.PutAsJsonAsync($"/api/opportunities/{opportunityId}", update))
+            .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.Opportunities.Where(item => item.Id == opportunityId)
+            .Select(item => item.OperationalProjectId).SingleAsync())).Should().BeNull();
+
+        (await Client.PutAsJsonAsync($"/api/opportunities/{opportunityId}", new
+        {
+            update.rowVersion,
+            update.name,
+            update.customerId,
+            update.estimatedValue,
+            update.winProbability,
+            operationalProjectId = otherCustomerProjectId,
+        })).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.Opportunities.Where(item => item.Id == opportunityId)
+            .Select(item => item.OperationalProjectId).SingleAsync())).Should().BeNull();
+
+        var ownUpdate = new
+        {
+            update.rowVersion,
+            update.name,
+            update.customerId,
+            update.estimatedValue,
+            update.winProbability,
+            operationalProjectId = ownProjectId,
+        };
+        (await Client.PutAsJsonAsync($"/api/opportunities/{opportunityId}", ownUpdate))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+        (await WithDbAsync(db => db.Opportunities.Where(item => item.Id == opportunityId)
+            .Select(item => item.OperationalProjectId).SingleAsync())).Should().Be(ownProjectId);
     }
 
     [Fact]

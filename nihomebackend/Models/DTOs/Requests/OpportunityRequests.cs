@@ -92,3 +92,13 @@ public class AddOpportunityActivityRequest
 
     public DateTime? OccurredAt { get; set; }
 }
+
+public class StartOpportunityDesignRequest
+{
+    [Required]
+    [StringLength(300, MinimumLength = 1)]
+    public string Name { get; set; } = string.Empty;
+
+    [StringLength(4000)]
+    public string? Note { get; set; }
+}

@@ -293,14 +293,17 @@ every open stage (and on Contract signed while no winning quote is set). The
 **Quotes** tab lists each quotation of the opportunity with its status, version,
 total, and the winning mark; an empty tab offers the same action.
 
-Design may start before the Contract. On any non-Lost Opportunity, an authorized
-Sales user selects **Create design project** beside **Create quote**. The server
-uses the Opportunity's shared Operational Project, opens exactly one Design
-Project at **Concept**, and does not require or create a Contract. Repeating the
-action returns the existing Design Project instead of creating a duplicate. An
-Opportunity without an Operational Project must be linked to one first. Design
-roles receive the resulting Concept after project assignment; they cannot create
-the Design Project from the Design list.
+Design may start before the Contract. Sales can link an Operational Project of
+the same customer when creating or editing an Opportunity. On a non-Lost
+Opportunity, **Create design project** beside **Create quote** opens a form to
+confirm the project and design name before saving. If the Opportunity has no
+Operational Project, choose an existing one in that form or create one through
+**CRM → Projects**; the new project is selected on return. Saving links the
+Operational Project to the Opportunity and opens one Design Project at
+**Concept**, without requiring or creating a Contract. Repeating the save
+returns the existing Design Project instead of creating a duplicate. Design
+roles receive the Concept after project assignment; they cannot create the
+Design Project from the Design list.
 
 In Negotiation and Contract signed, **Create contract** opens the contract form
 prefilled from the winning or latest approved quotation, or, when there is none

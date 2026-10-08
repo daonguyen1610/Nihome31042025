@@ -242,6 +242,11 @@ public class OpportunityService(
             .FirstOrDefaultAsync(c => c.Id == request.CustomerId, ct)
             ?? throw new OpportunityOperationException($"Không tìm thấy khách hàng #{request.CustomerId}.");
         EnsureCustomerAccess(customer, callerUserId, canSeeAllCustomers);
+        if (request.OperationalProjectId.HasValue &&
+            !await projectAccess.CanViewOperationalProjectAsync(callerUserId, request.OperationalProjectId.Value, ct))
+        {
+            throw new OpportunityOperationException("Dự án vận hành không tồn tại hoặc nằm ngoài phạm vi của bạn.");
+        }
         await EnsureProjectMatchesCustomerAsync(request.OperationalProjectId, request.CustomerId, ct);
 
         if (!canSeeAll && request.OwnerUserId.HasValue && request.OwnerUserId.Value != callerUserId)
@@ -309,6 +314,11 @@ public class OpportunityService(
             ?? throw new OpportunityOperationException($"Không tìm thấy khách hàng #{request.CustomerId}.");
         EnsureCustomerAccess(customer, callerUserId, canSeeAllCustomers);
         var operationalProjectId = request.OperationalProjectId ?? op.OperationalProjectId;
+        if (operationalProjectId.HasValue && operationalProjectId != op.OperationalProjectId &&
+            !await projectAccess.CanViewOperationalProjectAsync(callerUserId, operationalProjectId.Value, ct))
+        {
+            throw new OpportunityOperationException("Dự án vận hành không tồn tại hoặc nằm ngoài phạm vi của bạn.");
+        }
         await EnsureProjectMatchesCustomerAsync(operationalProjectId, request.CustomerId, ct);
 
         var previousOwnerId = op.OwnerUserId;
@@ -505,6 +515,7 @@ public class OpportunityService(
         int id,
         int callerUserId,
         bool canSeeAll,
+        StartOpportunityDesignRequest request,
         CancellationToken ct = default)
     {
         var opportunity = await db.Opportunities.AsNoTracking()
@@ -528,7 +539,15 @@ public class OpportunityService(
             return null;
         }
 
-        var result = await designProjects.EnsureForOpportunityAsync(id, callerUserId, ct);
+        var name = request.Name?.Trim() ?? string.Empty;
+        if (name.Length is < 1 or > 300)
+        {
+            throw new OpportunityOperationException(
+                "Tên dự án thiết kế phải có 1–300 ký tự, ví dụ: Thiết kế nhà máy Alpha.");
+        }
+
+        var result = await designProjects.EnsureForOpportunityAsync(
+            id, callerUserId, name, request.Note?.Trim(), ct);
         return new OpportunityDesignStartResponse
         {
             Created = result.Created,
