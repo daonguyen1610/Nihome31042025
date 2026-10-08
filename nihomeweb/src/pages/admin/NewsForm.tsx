@@ -109,9 +109,6 @@ const NewsForm = ({ mode }: { mode: "create" | "edit" }) => {
       .map((item) => ({ id: item.id, name: item.name, label: localizedName(item, lang) }))
       .sort((a, b) => a.label.localeCompare(b.label, lang));
   }, [categories, lang]);
-  const hasLegacyCategory = data.newsCategoryId == null && Boolean(data.category) &&
-    !categoryOptions.some((option) => option.name === data.category);
-
   useEffect(() => {
     if (!pendingImageFile) {
       setPendingImagePreview(null);
@@ -208,22 +205,17 @@ const NewsForm = ({ mode }: { mode: "create" | "edit" }) => {
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                   <Field label={t("adminNews.field.category")}>
                     <Select
-                      value={data.newsCategoryId != null ? String(data.newsCategoryId) : hasLegacyCategory ? "-1" : undefined}
+                      value={data.newsCategoryId != null ? String(data.newsCategoryId) : undefined}
                       onValueChange={(v) => {
                         const found = categoryOptions.find((opt) => String(opt.id) === v);
-                        setData((d) => ({ ...d, newsCategoryId: found?.id ?? null, category: found?.name ?? d.category }));
+                        setData((d) => ({ ...d, newsCategoryId: found?.id ?? null, category: found?.name ?? "" }));
                       }}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder={t("form.selectCategory")} />
                       </SelectTrigger>
                       <SelectContent>
-                        {[
-                          ...categoryOptions,
-                          ...(hasLegacyCategory
-                            ? [{ id: -1, name: data.category, label: `${data.category}${t("form.legacyCategorySuffix")}` }]
-                            : []),
-                        ].map((opt) => (
+                        {categoryOptions.map((opt) => (
                           <SelectItem key={opt.id} value={String(opt.id)}>{opt.label}</SelectItem>
                         ))}
                       </SelectContent>

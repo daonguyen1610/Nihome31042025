@@ -112,9 +112,6 @@ const ActivityForm = ({ mode }: { mode: "create" | "edit" }) => {
       .map((item) => ({ id: item.id, name: item.name, label: localizedName(item, lang) }))
       .sort((a, b) => a.label.localeCompare(b.label, lang));
   }, [categories, lang]);
-  const hasLegacyCategory = data.categoryId == null && Boolean(data.category) &&
-    !categoryOptions.some((option) => option.name === data.category);
-
   useEffect(() => {
     if (!pendingImageFile) {
       setPendingImagePreview(null);
@@ -212,22 +209,17 @@ const ActivityForm = ({ mode }: { mode: "create" | "edit" }) => {
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                   <Field label={t("activities.field.category")}>
                     <Select
-                      value={data.categoryId != null ? String(data.categoryId) : hasLegacyCategory ? "-1" : undefined}
+                      value={data.categoryId != null ? String(data.categoryId) : undefined}
                       onValueChange={(v) => {
                         const found = categoryOptions.find((opt) => String(opt.id) === v);
-                        setData((d) => ({ ...d, categoryId: found?.id ?? null, category: found?.name ?? d.category }));
+                        setData((d) => ({ ...d, categoryId: found?.id ?? null, category: found?.name ?? "" }));
                       }}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder={t("form.selectCategory")} />
                       </SelectTrigger>
                       <SelectContent>
-                        {[
-                          ...categoryOptions,
-                          ...(hasLegacyCategory
-                            ? [{ id: -1, name: data.category, label: `${data.category}${t("form.legacyCategorySuffix")}` }]
-                            : []),
-                        ].map((opt) => (
+                        {categoryOptions.map((opt) => (
                           <SelectItem key={opt.id} value={String(opt.id)}>{opt.label}</SelectItem>
                         ))}
                       </SelectContent>

@@ -1623,7 +1623,7 @@ Each translation record specifies:
 
 The list shows translation progress across all three target languages. Reset removes the entity's translations and restores source-content fallback. Structured fields must contain valid JSON with the same keys, value types, array lengths, and ordering as the Vietnamese source; this prevents translated content from changing the public data contract.
 
-Users need `content.translations.view` to open this module and `content.translations.manage` to save or reset translations. Legacy category API payloads containing `nameEn`, `nameZh`, or `nameJa` also require translation-manage permission.
+Users need `content.translations.view` to open this module and `content.translations.manage` to save or reset translations. Category API payloads containing `nameEn`, `nameZh`, or `nameJa` also require translation-manage permission.
 
 ### 11.4 Translation Categories
 
@@ -1823,13 +1823,12 @@ Most newer controllers also expose the same contract below `/api/v1`; use the co
 Opening a category or recruitment-options list does not create records. If a
 list is empty, an administrator must create the needed activity, news, project,
 employment-type, or as-built document categories, or recruitment-dropdown
-options through the corresponding management action. Existing legacy content
-is not silently converted into category records when someone views a list.
+options through the corresponding management action. Existing content is not
+silently converted into category records when someone views a list.
 Saving an activity, news article, or public project with an unknown category
 also does not create a category: create it in category management first, then
-select it in the content form. Editing an existing legacy record without
-changing its unlinked category keeps that text until an administrator chooses
-a managed category.
+select it in the content form. Updates containing a non-empty category without
+a matching managed category are rejected and leave the record unchanged.
 
 | Method | Endpoint                                        | Auth   | Description           |
 |--------|-------------------------------------------------|--------|-----------------------|

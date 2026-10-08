@@ -48,12 +48,25 @@ public class ActivityServiceImageUrlTests : IDisposable
         var filePath = Path.Combine(_contentRootPath, "wwwroot", "images", "upload", "existing-image.png");
         await File.WriteAllTextAsync(filePath, "test-image");
 
+        var category = new ActivityCategory
+        {
+            Name = "Events",
+            NameVi = "Events",
+            NameEn = "Events",
+            NameZh = "Events",
+            NameJa = "Events",
+            IsActive = true,
+        };
+        _db.ActivityCategories.Add(category);
+        await _db.SaveChangesAsync();
+
         var activity = new Activity
         {
             Slug = "existing-post",
             Date = "26.04.2026",
             ImageUrl = managedImageUrl,
             Category = "Events",
+            ActivityCategoryId = category.Id,
             Title = "Existing Post",
             Excerpt = "Excerpt",
             ContentJson = "[]",
@@ -68,6 +81,7 @@ public class ActivityServiceImageUrlTests : IDisposable
             Date = activity.Date,
             ImageUrl = absoluteImageUrl,
             Category = activity.Category,
+            CategoryId = category.Id,
             Title = activity.Title,
             Excerpt = activity.Excerpt,
             Content = [],

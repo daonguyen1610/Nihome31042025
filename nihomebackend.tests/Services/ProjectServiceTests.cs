@@ -145,30 +145,31 @@ public class ProjectServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task Update_PreservesUnlinkedLegacyCategoryWithoutCreatingOne()
+    public async Task Update_RejectsUnlinkedCategoryWithoutChangingProject()
     {
         var project = new Project
         {
-            Slug = "legacy-project",
+            Slug = "unlinked-category-project",
             Name = "Old",
             Client = "Client",
             Location = "HCM",
             Scope = "Build",
             Status = "ongoing",
-            Category = "Legacy",
+            Category = "Unlinked",
             ContentJson = "[]",
         };
         _db.Projects.Add(project);
         await _db.SaveChangesAsync();
-        var request = BasePayload("legacy-project");
-        request.Category = "Legacy";
+        var request = BasePayload("unlinked-category-project");
+        request.Category = "Unlinked";
         request.Name = "Edited";
 
-        var updated = await _sut.UpdateAsync(project.Id, request);
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _sut.UpdateAsync(project.Id, request));
 
-        Assert.Equal("Edited", updated!.Name);
-        Assert.Equal("Legacy", updated.Category);
-        Assert.Null(updated.CategoryId);
+        var unchanged = await _db.Projects.FindAsync(project.Id);
+        Assert.Equal("Old", unchanged!.Name);
+        Assert.Equal("Unlinked", unchanged.Category);
         Assert.Empty(_db.ProjectCategories);
     }
 

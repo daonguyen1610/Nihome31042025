@@ -49,27 +49,28 @@ public class ActivityServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task Update_PreservesUnlinkedLegacyCategoryWithoutCreatingOne()
+    public async Task Update_RejectsUnlinkedCategoryWithoutChangingActivity()
     {
         var activity = new Activity
         {
-            Slug = "activity-category-test",
+            Slug = "unlinked-category-activity",
             Title = "Old",
             Excerpt = "Old",
             Date = "2026-10-08",
-            Category = "Legacy",
+            Category = "Unlinked",
             ContentJson = "[]",
         };
         _db.Activities.Add(activity);
         await _db.SaveChangesAsync();
-        var request = Request("Legacy");
+        var request = Request("Unlinked");
         request.Title = "Edited";
 
-        var updated = await _service.UpdateAsync(activity.Id, request);
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _service.UpdateAsync(activity.Id, request));
 
-        Assert.Equal("Edited", updated!.Title);
-        Assert.Equal("Legacy", updated.Category);
-        Assert.Null(updated.CategoryId);
+        var unchanged = await _db.Activities.FindAsync(activity.Id);
+        Assert.Equal("Old", unchanged!.Title);
+        Assert.Equal("Unlinked", unchanged.Category);
         Assert.Empty(_db.ActivityCategories);
     }
 }
