@@ -77,6 +77,7 @@ const OperationalProjects = () => {
     : undefined;
   const returnOpportunity = /^\d+$/.test(searchParams.get("returnOpportunity") ?? "")
     ? Number(searchParams.get("returnOpportunity")) : null;
+  const returnToOpportunityEdit = searchParams.get("returnMode") === "link";
   const openedFromQuery = useRef(false);
 
   const [rows, setRows] = useState<OperationalProjectListItemResponse[]>([]);
@@ -215,7 +216,9 @@ const OperationalProjects = () => {
       setDialogOpen(false);
       toast({ title: t(detail ? "operationalProjects.updated" : "operationalProjects.created") });
       navigate(!detail && returnOpportunity
-        ? `/admin/opportunities/${returnOpportunity}/design-project/new?projectId=${response.data.id}`
+        ? returnToOpportunityEdit
+          ? `/admin/opportunities/${returnOpportunity}?edit=1&projectId=${response.data.id}`
+          : `/admin/opportunities/${returnOpportunity}/design-project/new?projectId=${response.data.id}`
         : `/admin/operational-projects/${response.data.id}`);
     } catch (reason) {
       setFormError(extractApiError(reason));

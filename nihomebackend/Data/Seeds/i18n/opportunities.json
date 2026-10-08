@@ -29,6 +29,7 @@
   { "key": "opportunities.designProject.lost", "category": "opportunities", "vi": "Cơ hội đã đánh dấu Thua nên không thể tạo dự án thiết kế.", "en": "A lost opportunity cannot start a design project.", "zh": "已标记为失败的商机不能创建设计项目。", "ja": "失注した商談から設計プロジェクトは作成できません。" },
   { "key": "opportunities.field.operationalProject", "category": "opportunities", "vi": "Dự án vận hành", "en": "Operational project", "zh": "运营项目", "ja": "運用プロジェクト" },
   { "key": "opportunities.project.select", "category": "opportunities", "vi": "Chọn Dự án vận hành", "en": "Select an operational project", "zh": "选择运营项目", "ja": "運用プロジェクトを選択" },
+  { "key": "opportunities.project.link", "category": "opportunities", "vi": "Liên kết Dự án vận hành", "en": "Link an operational project", "zh": "关联运营项目", "ja": "運用プロジェクトを関連付け" },
   { "key": "opportunities.project.create", "category": "opportunities", "vi": "Tạo Dự án vận hành mới", "en": "Create an operational project", "zh": "创建运营项目", "ja": "運用プロジェクトを作成" },
 
   { "key": "opportunities.field.name", "category": "opportunities", "vi": "Tên cơ hội", "en": "Opportunity name", "zh": "商机名称", "ja": "商談名" },

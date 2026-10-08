@@ -294,8 +294,12 @@ every open stage (and on Contract signed while no winning quote is set). The
 total, and the winning mark; an empty tab offers the same action.
 
 Design may start before the Contract. Sales can link an Operational Project of
-the same customer when creating or editing an Opportunity. On a non-Lost
-Opportunity, **Create design project** beside **Create quote** opens a form to
+the same customer when creating or editing an Opportunity. In the Opportunity
+detail, **Link an operational project** opens the editable selector, while
+**Create an operational project** opens the CRM Project form with the customer
+selected. After creating the project, return to the Opportunity and save the
+preselected project to confirm the link. On a non-Lost Opportunity,
+**Create design project** beside **Create quote** opens a form to
 confirm the project and design name before saving. If the Opportunity has no
 Operational Project, choose an existing one in that form or create one through
 **CRM → Projects**; the new project is selected on return. Saving links the
