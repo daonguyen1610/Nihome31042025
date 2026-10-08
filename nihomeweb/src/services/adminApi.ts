@@ -4596,8 +4596,8 @@ export const adminApi = {
     api.put<OpportunityResponse>(`/opportunities/${id}`, body),
   changeOpportunityStage: (id: number, body: ChangeOpportunityStageRequest) =>
     api.patch<OpportunityResponse>(`/opportunities/${id}/stage`, body),
-  startOpportunityDesign: (id: number) =>
-    api.post<OpportunityDesignStartResponse>(`/opportunities/${id}/design-project`),
+  startOpportunityDesign: (id: number, body: { name: string; note?: string | null }) =>
+    api.post<OpportunityDesignStartResponse>(`/opportunities/${id}/design-project`, body),
   getOpportunityDeletionImpact: (id: number) =>
     api.get<DeletionImpactResponse>(`/opportunities/${id}/deletion-impact`),
   deleteOpportunity: (id: number, body: ConfirmDeletionRequest) =>

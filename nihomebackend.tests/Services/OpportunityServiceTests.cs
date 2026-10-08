@@ -380,6 +380,9 @@ public class OpportunityServiceTests : IDisposable
         var newProject = new OperationalProject { Code = "OP-NEW", Name = "New", CustomerId = customer.Id };
         _db.OperationalProjects.AddRange(oldProject, newProject);
         await _db.SaveChangesAsync();
+        _projectAccess.Setup(access => access.CanViewOperationalProjectAsync(
+                user.Id, newProject.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
         var opportunity = await SeedOpportunityAsync(customer, user);
         opportunity.OperationalProjectId = oldProject.Id;
         var quote = new Quote

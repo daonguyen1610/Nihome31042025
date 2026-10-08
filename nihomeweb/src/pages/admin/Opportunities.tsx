@@ -13,6 +13,7 @@ import { isOpportunityOverdue } from "@/lib/opportunityDates";
 import { isContractReadyQuote } from "@/lib/contractQuotes";
 import { PageLoading, PageError } from "@/components/PageState";
 import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
@@ -48,6 +49,7 @@ import {
   type OpportunityResponse,
   type OpportunityHistoryItem,
   type OpportunityOwnerOption,
+  type OperationalProjectListItemResponse,
   type OpportunityStage,
   type QuoteListItemResponse,
   type UpdateOpportunityRequest,
@@ -173,6 +175,9 @@ const AdminOpportunities = () => {
   const [customers, setCustomers] = useState<CustomerResponse[]>([]);
   const [lostReasons, setLostReasons] = useState<MasterDataOption[]>([]);
   const [salesUsers, setSalesUsers] = useState<OpportunityOwnerOption[]>([]);
+  const [projects, setProjects] = useState<OperationalProjectListItemResponse[]>([]);
+  const [projectLoading, setProjectLoading] = useState(false);
+  const [projectLoadError, setProjectLoadError] = useState<string | null>(null);
 
   const fetchList = useCallback(async () => {
     setLoading(true);
@@ -299,10 +304,51 @@ const AdminOpportunities = () => {
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState<UpdateOpportunityRequest | null>(null);
   const [savingEdit, setSavingEdit] = useState(false);
-  const [startingDesign, setStartingDesign] = useState(false);
   const [activityType, setActivityType] = useState<OpportunityActivityType>("Note");
   const [activityContent, setActivityContent] = useState("");
   const [addingActivity, setAddingActivity] = useState(false);
+
+  const projectCustomerId = creating ? createForm.customerId : editing
+    ? editForm?.customerId : detail?.customerId;
+  useEffect(() => {
+    if (!projectCustomerId || !canManage) {
+      setProjects([]);
+      setProjectLoadError(null);
+      return;
+    }
+    let cancelled = false;
+    setProjectLoading(true);
+    setProjectLoadError(null);
+    (async () => {
+      try {
+        const items: OperationalProjectListItemResponse[] = [];
+        let pageNumber = 1;
+        let total = 0;
+        do {
+          const { data } = await adminApi.listOperationalProjects({
+            customerId: projectCustomerId, page: pageNumber, pageSize: 100,
+          });
+          items.push(...data.items);
+          total = data.total;
+          pageNumber += 1;
+          if (data.items.length === 0) break;
+        } while (items.length < total);
+        if (!cancelled) setProjects(items);
+      } catch (reason) {
+        if (!cancelled) {
+          setProjects([]);
+          setProjectLoadError(extractApiError(reason));
+        }
+      } finally {
+        if (!cancelled) setProjectLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [projectCustomerId, canManage]);
+
+  const projectOptions = projects.filter((project) => project.customerId === projectCustomerId).map((project) => ({
+    value: String(project.id), label: `${project.code} · ${project.name}`,
+  }));
 
   // stage change UX
   const [stageTarget, setStageTarget] = useState<OpportunityStage | null>(null);
@@ -360,6 +406,7 @@ const AdminOpportunities = () => {
           rowVersion: data.rowVersion,
           name: data.name,
           customerId: data.customerId,
+          operationalProjectId: data.operationalProjectId,
           ownerUserId: data.ownerUserId,
           estimatedValue: data.estimatedValue,
           winProbability: data.winProbability,
@@ -523,33 +570,6 @@ const AdminOpportunities = () => {
       if (isConcurrencyConflict(err)) await openDetail(detail.id);
     } finally {
       setChangingStage(false);
-    }
-  };
-
-  const handleStartDesign = async () => {
-    if (!detail) return;
-    setStartingDesign(true);
-    try {
-      const { data } = await adminApi.startOpportunityDesign(detail.id);
-      setDetail((current) => current?.id === detail.id ? {
-        ...current,
-        designProjectId: data.designProject.id,
-        designProjectCode: data.designProject.projectCode,
-      } : current);
-      toast({
-        title: t(data.created
-          ? "opportunities.designProject.created"
-          : "opportunities.designProject.alreadyExists"),
-      });
-      await fetchList();
-    } catch (err) {
-      toast({
-        title: t("common.error"),
-        description: extractApiError(err),
-        variant: "destructive",
-      });
-    } finally {
-      setStartingDesign(false);
     }
   };
 
@@ -936,7 +956,7 @@ const AdminOpportunities = () => {
               <Label>{t("opportunities.field.customer")}</Label>
               <Select
                 value={createForm.customerId ? String(createForm.customerId) : ""}
-                onValueChange={(v) => setCreateForm({ ...createForm, customerId: Number(v) })}
+                onValueChange={(v) => setCreateForm({ ...createForm, customerId: Number(v), operationalProjectId: null })}
               >
                 <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
                 <SelectContent>
@@ -945,6 +965,18 @@ const AdminOpportunities = () => {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+            <div>
+              <Label>{t("opportunities.field.operationalProject")}</Label>
+              <SearchableSelect
+                value={createForm.operationalProjectId ? String(createForm.operationalProjectId) : null}
+                onChange={(value) => setCreateForm({ ...createForm, operationalProjectId: Number(value) })}
+                options={projectOptions}
+                disabled={!createForm.customerId || projectLoading || !!projectLoadError}
+                ariaLabel={t("opportunities.field.operationalProject")}
+                placeholder={t("opportunities.project.select")}
+              />
+              {projectLoadError && <p role="alert" className="text-sm text-destructive">{projectLoadError}</p>}
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -1133,8 +1165,7 @@ const AdminOpportunities = () => {
                           size="sm"
                           variant="outline"
                           data-testid="opportunity-create-design-project"
-                          disabled={startingDesign}
-                          onClick={() => void handleStartDesign()}
+                          onClick={() => navigate(`/admin/opportunities/${detail.id}/design-project/new`)}
                         >
                           <PenTool className="mr-1.5 h-4 w-4" />
                           {t("opportunities.action.createDesignProject")}
@@ -1191,6 +1222,11 @@ const AdminOpportunities = () => {
                       <div>
                         <div className="text-xs text-muted-foreground">{t("opportunities.field.updatedAt")}</div>
                         <div>{new Date(detail.updatedAt).toLocaleString()}</div>
+                      </div>
+                      <div className="col-span-2">
+                        <div className="text-xs text-muted-foreground">{t("opportunities.field.operationalProject")}</div>
+                        <div>{projects.find((project) => project.id === detail.operationalProjectId)?.name ??
+                          (detail.operationalProjectId ? `#${detail.operationalProjectId}` : "—")}</div>
                       </div>
                       {detail.closedAt && (
                         <div>
@@ -1259,7 +1295,7 @@ const AdminOpportunities = () => {
                         <Label>{t("opportunities.field.customer")}</Label>
                         <Select
                           value={String(editForm.customerId)}
-                          onValueChange={(v) => setEditForm({ ...editForm, customerId: Number(v) })}
+                          onValueChange={(v) => setEditForm({ ...editForm, customerId: Number(v), operationalProjectId: null })}
                         >
                           <SelectTrigger><SelectValue /></SelectTrigger>
                           <SelectContent>
@@ -1268,6 +1304,18 @@ const AdminOpportunities = () => {
                             ))}
                           </SelectContent>
                         </Select>
+                      </div>
+                      <div>
+                        <Label>{t("opportunities.field.operationalProject")}</Label>
+                        <SearchableSelect
+                          value={editForm.operationalProjectId ? String(editForm.operationalProjectId) : null}
+                          onChange={(value) => setEditForm({ ...editForm, operationalProjectId: Number(value) })}
+                          options={projectOptions}
+                          disabled={!editForm.customerId || projectLoading || !!projectLoadError}
+                          ariaLabel={t("opportunities.field.operationalProject")}
+                          placeholder={t("opportunities.project.select")}
+                        />
+                        {projectLoadError && <p role="alert" className="text-sm text-destructive">{projectLoadError}</p>}
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div>

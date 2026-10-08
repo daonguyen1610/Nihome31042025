@@ -1475,7 +1475,7 @@ public class ContractServiceTests : IDisposable
             => Task.FromResult(new NihomeBackend.Models.DTOs.Responses.DesignProjectResponse());
 
         public Task<NihomeBackend.Models.DTOs.Responses.EnsureDesignProjectResult> EnsureForOpportunityAsync(
-            int opportunityId, int callerUserId, CancellationToken ct = default)
+            int opportunityId, int callerUserId, string name, string? note, CancellationToken ct = default)
             => Task.FromResult(new NihomeBackend.Models.DTOs.Responses.EnsureDesignProjectResult(
                 new NihomeBackend.Models.DTOs.Responses.DesignProjectResponse(), true));
 

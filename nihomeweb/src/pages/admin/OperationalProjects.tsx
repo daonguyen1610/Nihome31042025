@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ArrowDownToLine, ArrowLeft, ArrowUpFromLine, BriefcaseBusiness, CalendarClock, CircleDollarSign, ExternalLink, FileText, Pencil, Plus, RefreshCcw, RotateCcw, Search, ShoppingCart, Trash2, Users } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
@@ -75,6 +75,9 @@ const OperationalProjects = () => {
   const customerFilter = /^\d+$/.test(searchParams.get("customerId") ?? "")
     ? Number(searchParams.get("customerId"))
     : undefined;
+  const returnOpportunity = /^\d+$/.test(searchParams.get("returnOpportunity") ?? "")
+    ? Number(searchParams.get("returnOpportunity")) : null;
+  const openedFromQuery = useRef(false);
 
   const [rows, setRows] = useState<OperationalProjectListItemResponse[]>([]);
   const [total, setTotal] = useState(0);
@@ -151,10 +154,18 @@ const OperationalProjects = () => {
   useEffect(() => { void load(); }, [load]);
 
   const openCreate = () => {
-    setForm(emptyForm());
+    setForm({ ...emptyForm(), customerId: customerFilter ?? 0 });
     setFormError(null);
     setDialogOpen(true);
   };
+
+  useEffect(() => {
+    if (openedFromQuery.current || searchParams.get("create") !== "1" || !canManage) return;
+    openedFromQuery.current = true;
+    setForm({ ...emptyForm(), customerId: customerFilter ?? 0 });
+    setFormError(null);
+    setDialogOpen(true);
+  }, [searchParams, canManage, customerFilter]);
 
   const openEdit = (project: OperationalProjectResponse) => {
     setForm({
@@ -203,7 +214,9 @@ const OperationalProjects = () => {
         : await adminApi.createOperationalProject(payload);
       setDialogOpen(false);
       toast({ title: t(detail ? "operationalProjects.updated" : "operationalProjects.created") });
-      navigate(`/admin/operational-projects/${response.data.id}`);
+      navigate(!detail && returnOpportunity
+        ? `/admin/opportunities/${returnOpportunity}/design-project/new?projectId=${response.data.id}`
+        : `/admin/operational-projects/${response.data.id}`);
     } catch (reason) {
       setFormError(extractApiError(reason));
     } finally {

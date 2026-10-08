@@ -248,6 +248,7 @@ public class OpportunitiesController(
     [RequirePermission("crm.opportunities", "manage")]
     public async Task<ActionResult<OpportunityDesignStartResponse>> StartDesign(
         int id,
+        [FromBody] StartOpportunityDesignRequest request,
         CancellationToken ct)
     {
         var userId = GetUserId();
@@ -260,7 +261,7 @@ public class OpportunitiesController(
         var canSeeAll = await permissions.HasAsync(userId.Value, "crm.opportunities.view.all", ct);
         try
         {
-            var response = await svc.StartDesignAsync(id, userId.Value, canSeeAll, ct);
+            var response = await svc.StartDesignAsync(id, userId.Value, canSeeAll, request, ct);
             if (response is null) return NotFound();
             if (response.Created)
             {

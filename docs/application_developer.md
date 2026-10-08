@@ -1095,13 +1095,17 @@ it must not be confused with public portfolio content or the three-phase
 | `DELETE` | `/api/operational-projects/{id}` | `operations.projects.manage` | Delete an empty Planning project only |
 
 The pre-contract Design handoff is
-`POST /api/opportunities/{id}/design-project`. It requires both
+`POST /api/opportunities/{id}/design-project` with a required design project
+`name` (1–300 characters) and optional `note` (up to 4,000 characters). It requires both
 `crm.opportunities.manage` and `operations.projects.manage`, applies the normal
 Opportunity owner/view-all scope, rejects Lost Opportunities and Opportunities
 without an Operational Project, and creates a Concept-stage Design Project with
 no Contract. The unique Operational Project relationship makes retries and
 concurrent clicks idempotent; the response includes `created` and the resulting
-`designProject`. Opportunity responses expose `designProjectId` and
+`designProject`. The Opportunity create/edit forms expose the optional
+`operationalProjectId`; the Design form links a selected project through the
+concurrency-protected Opportunity update before calling the handoff. Opportunity
+responses expose `designProjectId` and
 `designProjectCode` so the UI replaces the create action with the existing-state
 action.
 

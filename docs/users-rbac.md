@@ -144,6 +144,9 @@ Sales starts the pre-contract Design flow from the Opportunity through
 Opportunity unless granted `crm.opportunities.view.all`. The endpoint creates
 one Concept-stage Design Project for the Opportunity's Operational Project and
 is idempotent. It rejects Lost Opportunities and missing Operational Projects.
+The Sales form may link a same-customer Operational Project to an unlinked
+Opportunity before submitting the Design handoff; linking requires project
+visibility, and stale Opportunity updates are rejected by row version.
 
 Design roles do not receive either required Sales/Project-management permission
 by default and cannot create the business root from the Design list. Once the

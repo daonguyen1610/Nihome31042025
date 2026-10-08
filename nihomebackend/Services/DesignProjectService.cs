@@ -162,13 +162,14 @@ public class DesignProjectService(
     public async Task<EnsureDesignProjectResult> EnsureForOpportunityAsync(
         int opportunityId,
         int callerUserId,
+        string name,
+        string? note,
         CancellationToken ct = default)
     {
         var source = await db.Opportunities.AsNoTracking()
             .Where(opportunity => opportunity.Id == opportunityId)
             .Select(opportunity => new
             {
-                opportunity.Name,
                 opportunity.CustomerId,
                 opportunity.OperationalProjectId,
             })
@@ -196,9 +197,9 @@ public class DesignProjectService(
             var created = await CreateAsync(new CreateDesignProjectRequest
             {
                 OperationalProjectId = source.OperationalProjectId.Value,
-                Name = source.Name,
+                Name = name,
                 CustomerId = source.CustomerId,
-                Note = $"Tạo từ Cơ hội #{opportunityId} trước hợp đồng.",
+                Note = note,
             }, callerUserId, ct);
             return new EnsureDesignProjectResult(created, true);
         }
