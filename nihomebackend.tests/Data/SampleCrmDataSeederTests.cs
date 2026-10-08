@@ -12,6 +12,7 @@ public class SampleCrmDataSeederTests : IDisposable
     public SampleCrmDataSeederTests()
     {
         DbSeeder.Seed(_db);
+        SampleCrmDataSeeder.Seed(_db);
     }
 
     public void Dispose() => _db.Dispose();

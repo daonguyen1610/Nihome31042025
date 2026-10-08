@@ -22,6 +22,26 @@ public class NewsControllerTests : IDisposable
     public NewsControllerTests()
     {
         _db = DbContextFactory.Create();
+        _db.NewsCategories.AddRange(
+            new NewsCategory
+            {
+                Name = "News",
+                NameVi = "News",
+                NameEn = "News",
+                NameZh = "新闻",
+                NameJa = "ニュース",
+                IsActive = true,
+            },
+            new NewsCategory
+            {
+                Name = "General",
+                NameVi = "General",
+                NameEn = "General",
+                NameZh = "一般",
+                NameJa = "一般",
+                IsActive = true,
+            });
+        _db.SaveChanges();
 
         var entityTranslationSvc = new EntityTranslationService(_db, Mock.Of<IMemoryCache>());
         var hostedImageService = new HostedImageService(

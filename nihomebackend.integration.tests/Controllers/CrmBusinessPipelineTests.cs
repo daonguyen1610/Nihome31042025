@@ -132,10 +132,8 @@ public sealed class CrmBusinessPipelineTests(NihomeWebApplicationFactory factory
             var execute = new { newStatus = "InProgress", rowVersion = Version(contract) };
             contract = await WriteAsync(HttpMethod.Post, $"/api/contracts/{Id(contract)}/transition", execute, executeKey);
             await WriteAsync(HttpMethod.Post, $"/api/contracts/{Id(contract)}/transition", execute, executeKey);
-            var design = await WithDbAsync(db => db.DesignProjects.SingleAsync(x => x.ContractId == Id(contract)));
-            design.CustomerId.Should().Be(customerId);
-            design.OperationalProjectId.Should().Be(projectId);
-            design.CurrentStage.Should().Be(DesignProjectStage.Concept);
+            (await WithDbAsync(db => db.DesignProjects.CountAsync(x => x.ContractId == Id(contract))))
+                .Should().Be(0);
             opportunity = await ReadAsync(opportunityPath);
             if (opportunity.GetProperty("stage").GetString() != "Won")
                 opportunity = await WriteAsync(HttpMethod.Patch, opportunityPath + "/stage", new { targetStage = "Won", wonQuoteId = Id(quote), rowVersion = Version(opportunity) });

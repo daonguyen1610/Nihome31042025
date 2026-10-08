@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Caching.Memory;
 using Moq;
 using NihomeBackend.Data;
+using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Services;
 using nihomebackend.tests.Helpers;
@@ -18,6 +19,16 @@ public class ActivityServiceCategorySyncTests : IDisposable
     public ActivityServiceCategorySyncTests()
     {
         _db = DbContextFactory.Create();
+        _db.ActivityCategories.Add(new ActivityCategory
+        {
+            Name = "Events",
+            NameVi = "Events",
+            NameEn = "Events",
+            NameZh = "活动",
+            NameJa = "イベント",
+            IsActive = true,
+        });
+        _db.SaveChanges();
         var entityTranslationSvc = new EntityTranslationService(_db, Mock.Of<IMemoryCache>());
         var hostedImageService = new HostedImageService(
             Mock.Of<IWebHostEnvironment>(env => env.ContentRootPath == "/tmp"));
@@ -28,9 +39,9 @@ public class ActivityServiceCategorySyncTests : IDisposable
     public void Dispose() => _db.Dispose();
 
     [Fact]
-    public async Task CreateAsync_AutoCreatesMissingActivityCategory()
+    public async Task CreateAsync_RejectsMissingActivityCategory()
     {
-        await _sut.CreateAsync(new UpsertActivityRequest
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _sut.CreateAsync(new UpsertActivityRequest
         {
             Slug = "post-with-new-category",
             Date = "25.04.2026",
@@ -40,17 +51,15 @@ public class ActivityServiceCategorySyncTests : IDisposable
             Excerpt = "Excerpt",
             Content = ["Paragraph"],
             SortOrder = 1,
-        });
+        }));
 
-        var category = _db.ActivityCategories.SingleOrDefault(c => c.Name == "Groundbreaking");
-        Assert.NotNull(category);
-        Assert.True(category!.IsActive);
+        Assert.DoesNotContain(_db.ActivityCategories, category => category.Name == "Groundbreaking");
     }
 
     [Fact]
-    public async Task CreateAsync_AutoCreatedActivityCategory_HasNameViPopulated()
+    public async Task CreateAsync_RejectsMissingActivityCategoryWithoutCreatingIt()
     {
-        await _sut.CreateAsync(new UpsertActivityRequest
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _sut.CreateAsync(new UpsertActivityRequest
         {
             Slug = "post-with-another-new-category",
             Date = "25.04.2026",
@@ -60,9 +69,8 @@ public class ActivityServiceCategorySyncTests : IDisposable
             Excerpt = "Excerpt",
             Content = ["Paragraph"],
             SortOrder = 1,
-        });
+        }));
 
-        var category = _db.ActivityCategories.Single(c => c.Name == "Ribbon Cutting");
-        Assert.Equal("Ribbon Cutting", category.NameVi);
+        Assert.DoesNotContain(_db.ActivityCategories, category => category.Name == "Ribbon Cutting");
     }
 }
