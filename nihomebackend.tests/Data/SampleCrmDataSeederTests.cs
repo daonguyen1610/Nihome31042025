@@ -18,6 +18,79 @@ public class SampleCrmDataSeederTests : IDisposable
     public void Dispose() => _db.Dispose();
 
     [Fact]
+    public void Seed_UsesCompactLinkedBusinessScenarios()
+    {
+        Assert.Equal(2, _db.Leads.Count());
+        Assert.Equal(5, _db.Customers.Count());
+        Assert.Equal(6, _db.Opportunities.Count());
+        Assert.Equal(6, _db.Quotes.Count());
+        Assert.Equal(5, _db.OperationalProjects.Count());
+        Assert.Equal(3, _db.DesignProjects.Count());
+        Assert.Equal(2, _db.Surveys.Count());
+        Assert.Equal(2, _db.Tenders.Count());
+        Assert.DoesNotContain(_db.Leads, item => item.Name.Contains("[SAMPLE]"));
+        Assert.DoesNotContain(_db.Customers, item => item.Name.Contains("[SAMPLE]"));
+        Assert.DoesNotContain(_db.Opportunities, item => item.Name.Contains("[SAMPLE]"));
+        Assert.DoesNotContain(_db.Vendors, item => item.CompanyName.Contains("[SAMPLE]"));
+        Assert.DoesNotContain(_db.OperationalProjects, item => item.Name.Contains("[SAMPLE]"));
+        Assert.DoesNotContain(_db.DesignProjects, item => item.Name.Contains("[SAMPLE]"));
+
+        var projects = _db.OperationalProjects.ToDictionary(item => item.Id);
+        foreach (var opportunity in _db.Opportunities)
+        {
+            var project = projects[Assert.IsType<int>(opportunity.OperationalProjectId)];
+            Assert.Equal(opportunity.CustomerId, project.CustomerId);
+        }
+        foreach (var design in _db.DesignProjects)
+        {
+            var project = projects[Assert.IsType<int>(design.OperationalProjectId)];
+            Assert.Equal(design.CustomerId, project.CustomerId);
+            if (design.ContractId.HasValue)
+                Assert.Equal(design.CustomerId, _db.Contracts.Single(item => item.Id == design.ContractId).CustomerId);
+        }
+        Assert.Null(_db.DesignProjects.Single(item => item.CurrentStage == DesignProjectStage.Concept).ContractId);
+        foreach (var survey in _db.Surveys)
+        {
+            var opportunity = _db.Opportunities.Single(item => item.Id == survey.LinkedOpportunityId);
+            Assert.Equal(opportunity.OperationalProjectId, survey.OperationalProjectId);
+            Assert.Null(survey.LinkedProjectId);
+        }
+        foreach (var tender in _db.Tenders)
+            Assert.Contains(_db.Customers, item => item.Id == tender.CustomerId);
+        var wonTender = _db.Tenders.Single(item => item.Status == TenderStatus.Won);
+        Assert.Equal(wonTender.CustomerId,
+            _db.Opportunities.Single(item => item.Id == wonTender.WonOpportunityId).CustomerId);
+
+        var anPhuDesign = _db.DesignProjects.Single(item => item.ProjectCode == "DP-SAMPLE-003");
+        Assert.Contains("Nhà máy may An Phú", anPhuDesign.Name);
+        Assert.Equal("Công ty Cổ phần May mặc An Phú",
+            _db.Customers.Single(item => item.Id == anPhuDesign.CustomerId).Name);
+        Assert.Contains("An Phú", projects[anPhuDesign.OperationalProjectId!.Value].Name);
+        var anPhuContract = _db.Contracts.Single(item => item.Id == anPhuDesign.ContractId);
+        Assert.Equal(ContractStatus.InProgress, anPhuContract.Status);
+        var anPhuOpportunity = _db.Opportunities.Single(item => item.Id == anPhuContract.OpportunityId);
+        Assert.Contains("Nhà máy may An Phú", anPhuOpportunity.Name);
+        Assert.Equal(anPhuOpportunity.OperationalProjectId, anPhuDesign.OperationalProjectId);
+        var anPhuSurvey = _db.Surveys.Single(item => item.LinkedOpportunityId == anPhuOpportunity.Id);
+        Assert.True(projects[anPhuDesign.OperationalProjectId!.Value].CreatedAt < anPhuSurvey.SurveyDate);
+        Assert.True(anPhuSurvey.SurveyDate < anPhuContract.SignedDate);
+        Assert.Contains(_db.PermitChecklistItems, item => item.DesignProjectId == anPhuDesign.Id);
+        var ifc = _db.IfcReleases.Single(item => item.DesignProjectId == anPhuDesign.Id);
+        Assert.Contains("xưởng may", ifc.Title);
+        Assert.Equal(IfcReleaseStatus.Released, ifc.Status);
+        Assert.NotNull(ifc.ReleaseDate);
+        var releasedDrawingIds = _db.IfcReleaseItems.Where(item => item.IfcReleaseId == ifc.Id)
+            .Select(item => item.ShopDrawingId).ToHashSet();
+        Assert.NotEmpty(releasedDrawingIds);
+        Assert.All(_db.ShopDrawings.Where(item => releasedDrawingIds.Contains(item.Id)),
+            item => Assert.Equal(ShopDrawingStatus.Released, item.Status));
+        Assert.Contains(_db.ConstructionTasks, item => item.DesignProjectId == anPhuDesign.Id);
+        Assert.True(DateOnly.FromDateTime(ifc.ReleaseDate.Value) < _db.ConstructionTasks
+            .Where(item => item.DesignProjectId == anPhuDesign.Id)
+            .Min(item => item.PlannedStart));
+    }
+
+    [Fact]
     public void Seed_CompleteRerun_PreservesStableIdsAndCounts()
     {
         var before = CaptureFingerprint();
@@ -25,6 +98,59 @@ public class SampleCrmDataSeederTests : IDisposable
         SampleCrmDataSeeder.Seed(_db);
 
         Assert.Equal(before, CaptureFingerprint());
+    }
+
+    [Fact]
+    public void Seed_SameDisplayNames_DoNotClaimUnrelatedRecords()
+    {
+        var customer = new Customer
+        {
+            Name = "Nguyễn Văn An",
+            SourceCode = "referral",
+            Contacts = [new CustomerContact { FullName = "Nguyễn Văn An", Phone = "0912345678", IsPrimary = true }],
+        };
+        _db.Customers.Add(customer);
+        _db.Leads.Add(new Lead { Name = "Nguyễn Văn An", Phone = "0912345678", SourceCode = "referral" });
+        var opportunity = new Opportunity { Name = "Thiết kế concept nhà phố Nguyễn Văn An", Customer = customer };
+        _db.Opportunities.Add(opportunity);
+        _db.SaveChanges();
+
+        SampleCrmDataSeeder.Seed(_db);
+
+        Assert.DoesNotContain(_db.OpportunityActivities, item => item.OpportunityId == opportunity.Id);
+        Assert.DoesNotContain(_db.CustomerActivities, item => item.CustomerId == customer.Id);
+        Assert.Equal(2, _db.Leads.Count(item => item.Name == "Nguyễn Văn An"));
+        Assert.Equal(2, _db.Customers.Count(item => item.Name == "Nguyễn Văn An"));
+        Assert.Equal(2, _db.Opportunities.Count(item => item.Name == opportunity.Name));
+    }
+
+    [Fact]
+    public void Seed_RfqScenario_UsesNamedProjectApprovedBoqAndCompetingBids()
+    {
+        RfqSampleDataSeeder.Seed(_db);
+        RfqSampleDataSeeder.Seed(_db);
+
+        var project = _db.OperationalProjects.Single(item => item.Code == "PJ-SAMPLE-RFQ");
+        Assert.Equal("Nhà máy cơ khí Hòa Bình – KCN Quang Minh", project.Name);
+        Assert.Equal("Công ty TNHH Cơ khí Hòa Bình",
+            _db.Customers.Single(item => item.Id == project.CustomerId).Name);
+        var revision = _db.ProjectBoqRevisions.Single(item => item.Id == project.FinalProjectBoqRevisionId);
+        Assert.Equal(ProjectBoqRevisionStatus.Approved, revision.Status);
+
+        var rfqs = _db.Rfqs.Where(item => item.OperationalProjectId == project.Id).OrderBy(item => item.Code).ToList();
+        Assert.Equal(2, rfqs.Count);
+        Assert.All(rfqs, item => Assert.DoesNotContain("[SAMPLE]", item.Title));
+        Assert.Contains("cáp", rfqs[0].Title, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("tủ phân phối", rfqs[1].Title, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(RfqStatus.Draft, rfqs[0].Status);
+        Assert.Equal(RfqStatus.Issued, rfqs[1].Status);
+        Assert.All(rfqs, item => Assert.Equal(revision.Id, item.SourceBoqRevisionId));
+        Assert.Equal(2, _db.RfqBids.Count(item => item.RfqId == rfqs[1].Id));
+
+        var before = CaptureFingerprint();
+        SampleCrmDataSeeder.Seed(_db);
+        Assert.Equal(before, CaptureFingerprint());
+        Assert.Equal(6, _db.Opportunities.Count());
     }
 
     [Fact]
@@ -47,7 +173,7 @@ public class SampleCrmDataSeederTests : IDisposable
     [Fact]
     public void Seed_HardDeletedSampleCustomer_WithTombstone_DoesNotRecreateRoot()
     {
-        var customer = _db.Customers.First(item => item.Name.StartsWith("[SAMPLE]"));
+        var customer = _db.Customers.First(item => item.Name == "Nguyễn Văn An");
         var deletedName = customer.Name;
         _db.SeededRootDeletions.Add(new SeededRootDeletion
         {
@@ -84,7 +210,7 @@ public class SampleCrmDataSeederTests : IDisposable
     [Fact]
     public void Seed_HardDeletedBusinessRoots_WithTombstones_DoNotRecreateRootsOrCapabilityFile()
     {
-        var opportunity = _db.Opportunities.First(item => item.Name.StartsWith("[SAMPLE]"));
+        var opportunity = _db.Opportunities.First(item => item.Name == "Thiết kế concept nhà phố Nguyễn Văn An");
         var opportunityName = opportunity.Name;
         var contract = _db.Contracts.First(item => item.ContractNumber.StartsWith("HD-SAMPLE-"));
         var contractNumber = contract.ContractNumber;
@@ -163,7 +289,7 @@ public class SampleCrmDataSeederTests : IDisposable
         var removedAsBuilt = _db.AsBuiltDocuments.Single(item =>
             item.DesignProjectId == project.Id && item.DocumentCode == "AB-006");
         var removedVendor = _db.Vendors.Single(item => item.VendorCode == "TP-MEP-01");
-        var removedSurvey = _db.Surveys.Single(item => item.Code == "SV-SAMPLE-005");
+        var removedSurvey = _db.Surveys.Single(item => item.Code == "SV-SAMPLE-002");
         var removedSurveyChecklist = _db.SurveyChecklistResults
             .Where(item => item.SurveyId == removedSurvey.Id)
             .ToList();
@@ -217,7 +343,7 @@ public class SampleCrmDataSeederTests : IDisposable
         Assert.Contains(_db.AcceptanceRecords, item => item.DesignProjectId == project.Id && item.AcceptanceCode == "A-003");
         Assert.Contains(_db.AsBuiltDocuments, item => item.DesignProjectId == project.Id && item.DocumentCode == "AB-006");
         Assert.Contains(_db.Vendors, item => item.VendorCode == "TP-MEP-01");
-        var restoredSurvey = _db.Surveys.Single(item => item.Code == "SV-SAMPLE-005");
+        var restoredSurvey = _db.Surveys.Single(item => item.Code == "SV-SAMPLE-002");
         Assert.NotEmpty(_db.SurveyChecklistResults.Where(item => item.SurveyId == restoredSurvey.Id));
         Assert.Contains(_db.IfcReleaseItems, item => item.IfcReleaseId == release.Id
             && item.ShopDrawingId == removedReleaseItem.ShopDrawingId);
@@ -283,7 +409,7 @@ public class SampleCrmDataSeederTests : IDisposable
         designProject.ProjectManagerUserId = alternateOwners[0].Id;
         designProject.DesignLeadUserId = alternateOwners[1].Id;
 
-        var lead = _db.Leads.Where(item => item.Name.StartsWith("[SAMPLE]"))
+        var lead = _db.Leads.Where(item => item.Name == "Nguyễn Văn An")
             .OrderBy(item => item.Id).First();
         var convertedAt = new DateTime(2026, 2, 3, 4, 5, 6, DateTimeKind.Utc);
         lead.Status = LeadStatus.Junk;

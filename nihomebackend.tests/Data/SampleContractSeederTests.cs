@@ -71,14 +71,24 @@ public class SampleContractSeederTests : IDisposable
             }
         });
 
-        var wonOpportunity = _db.Opportunities.Single(item => item.Stage == OpportunityStage.Won);
+        var completed = Assert.Single(contracts, contract => contract.Status == ContractStatus.Completed);
+        var wonOpportunity = _db.Opportunities.Single(item => item.Id == completed.OpportunityId);
+        Assert.Equal(OpportunityStage.Won, wonOpportunity.Stage);
         Assert.NotNull(wonOpportunity.WonQuoteId);
         var wonQuote = _db.Quotes.Single(item => item.Id == wonOpportunity.WonQuoteId);
         Assert.Equal(wonOpportunity.Id, wonQuote.OpportunityId);
         Assert.Equal(QuoteStatus.CustomerApproved, wonQuote.Status);
-        var completed = Assert.Single(contracts, contract => contract.Status == ContractStatus.Completed);
         Assert.Equal(wonOpportunity.Id, completed.OpportunityId);
         Assert.Equal(wonQuote.Id, completed.QuoteId);
+        Assert.All(contracts.Where(item => item.Status != ContractStatus.Draft), contract =>
+        {
+            Assert.Equal(OpportunityStage.Won,
+                _db.Opportunities.Single(item => item.Id == contract.OpportunityId).Stage);
+            var approvedQuote = _db.Quotes.Single(item => item.Id == contract.QuoteId);
+            Assert.Equal(QuoteStatus.CustomerApproved, approvedQuote.Status);
+            Assert.True(approvedQuote.CreatedAt < approvedQuote.ClosedAt);
+            Assert.True(approvedQuote.ClosedAt <= contract.SignedDate);
+        });
 
         var convertedLead = _db.Leads.Single(lead => lead.Status == LeadStatus.Converted);
         Assert.NotNull(convertedLead.ConvertedAt);
@@ -247,7 +257,7 @@ public class SampleContractSeederTests : IDisposable
                 _db.Users.Single(user => user.Id == project.DesignLeadUserId).RoleEntityId);
         });
 
-        Assert.All(_db.ConceptOptions.Where(item => item.Description != null && item.Description.StartsWith("[SAMPLE]")),
+        Assert.All(_db.ConceptOptions.Where(item => item.InternalNote == "Sample option — theo dõi demo."),
             item => Assert.Contains(item.DesignProjectId, sampleProjectIds));
         Assert.All(_db.BasicDesignDocs.Where(item => item.Note != null && item.Note.StartsWith("[SAMPLE_BD]")),
             item => Assert.Contains(item.DesignProjectId, sampleProjectIds));
