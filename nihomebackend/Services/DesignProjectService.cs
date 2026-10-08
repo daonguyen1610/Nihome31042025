@@ -318,20 +318,23 @@ public class DesignProjectService(
 
     public async Task<DesignProjectResponse> EnsureForContractAsync(Contract contract, int? callerUserId, CancellationToken ct = default)
     {
-        var allocationYear = DateTime.UtcNow.Year;
-        await using var allocationTransaction = await BeginCodeAllocationAsync(allocationYear, ct);
         var existing = await db.DesignProjects
-            .FirstOrDefaultAsync(dp => dp.ContractId == contract.Id, ct);
+            .OrderByDescending(dp => dp.ContractId == contract.Id)
+            .FirstOrDefaultAsync(dp => dp.ContractId == contract.Id ||
+                contract.OperationalProjectId != null && dp.OperationalProjectId == contract.OperationalProjectId, ct);
         if (existing is not null)
         {
             return (await GetAsync(existing.Id, ct))!;
         }
 
+        var allocationYear = DateTime.UtcNow.Year;
+        await using var allocationTransaction = await BeginCodeAllocationAsync(allocationYear, ct);
+
         var entity = new DesignProject
         {
             OperationalProjectId = contract.OperationalProjectId,
             ProjectCode = await NextCodeAsync(allocationYear, ct),
-            // Auto-created rows get a predictable, human-friendly name
+            // Contract-created rows get a predictable, human-friendly name
             // derived from the contract number so the operator can find
             // it in the list without opening the contract. They can
             // rename it later via the edit form.
@@ -344,7 +347,7 @@ public class DesignProjectService(
             Deadline = contract.EndDate,
             CurrentStage = DesignProjectStage.Concept,
             Status = DesignProjectStatus.Active,
-            Note = $"Tạo tự động từ hợp đồng {contract.ContractNumber}.",
+            Note = $"Tạo từ hợp đồng {contract.ContractNumber}.",
             CreatedByUserId = callerUserId,
             UpdatedByUserId = callerUserId,
             CreatedAt = DateTime.UtcNow,
@@ -357,7 +360,7 @@ public class DesignProjectService(
             await allocationTransaction.CommitAsync(ct);
         }
         logger.LogInformation(
-            "DesignProject {Id} ({Code}) auto-created for contract {ContractId} ({ContractNumber})",
+            "DesignProject {Id} ({Code}) created from contract {ContractId} ({ContractNumber})",
             entity.Id, entity.ProjectCode, contract.Id, contract.ContractNumber);
 
         await SeedPermitChecklistAsync(entity.Id, callerUserId, ct);

@@ -389,13 +389,14 @@ const ContractHeader = ({
 
 interface InfoTabProps {
   contract: ContractResponse;
-  onEnsureDesignProject: () => void;
+  onEnsureDesignProject?: () => void;
   ensuringDesignProject: boolean;
+  canViewDesignProject: boolean;
   /** Set when the caller may attach an approved quote to this contract. */
   onLinkQuote?: () => void;
 }
 
-const InfoTab = ({ contract, onEnsureDesignProject, ensuringDesignProject, onLinkQuote }: InfoTabProps) => {
+const InfoTab = ({ contract, onEnsureDesignProject, ensuringDesignProject, canViewDesignProject, onLinkQuote }: InfoTabProps) => {
   const { t } = useI18n();
 
   const rows: [string, React.ReactNode][] = [
@@ -480,12 +481,15 @@ const InfoTab = ({ contract, onEnsureDesignProject, ensuringDesignProject, onLin
         </div>
         {contract.designProjectId != null ? (
           <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
-            <Link
-              className="text-sm font-medium text-slate-900 underline"
-              to={`/admin/design-projects/${contract.designProjectId}`}
-            >
-              {contract.designProjectCode} — {contract.designProjectName}
-            </Link>
+            {canViewDesignProject ? (
+              <Link className="text-sm font-medium text-slate-900 underline" to={`/admin/design-projects/${contract.designProjectId}`}>
+                {contract.designProjectCode} — {contract.designProjectName}
+              </Link>
+            ) : (
+              <span className="text-sm font-medium text-slate-900">
+                {contract.designProjectCode} — {contract.designProjectName}
+              </span>
+            )}
             {contract.designProjectCurrentStage ? (
               <Badge variant="outline">
                 {t(`designProjects.stage.${contract.designProjectCurrentStage}`)}
@@ -494,12 +498,12 @@ const InfoTab = ({ contract, onEnsureDesignProject, ensuringDesignProject, onLin
           </div>
         ) : contract.status === "InProgress" ? (
           <div className="mt-2 space-y-2">
-            {/* Auto-create runs on the InProgress transition but is best-effort
-                and swallows its own errors, so this is the way back. */}
             <p className="text-sm text-slate-600">{t("contracts.designProject.missing")}</p>
-            <Button size="sm" onClick={onEnsureDesignProject} disabled={ensuringDesignProject}>
-              {ensuringDesignProject ? "…" : t("contracts.designProject.create")}
-            </Button>
+            {onEnsureDesignProject ? (
+              <Button size="sm" onClick={onEnsureDesignProject} disabled={ensuringDesignProject}>
+                {ensuringDesignProject ? "…" : t("contracts.designProject.create")}
+              </Button>
+            ) : null}
           </div>
         ) : (
           <p className="mt-2 text-sm text-slate-600">{t("contracts.designProject.pending")}</p>
@@ -1664,7 +1668,17 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
     try {
       const { data } = await adminApi.ensureContractDesignProject(contract.id);
       toast({ title: t("contracts.designProject.created") });
-      navigate(`/admin/design-projects/${data.id}`);
+      if (has(ADMIN_PERMS.designProjects)) {
+        navigate(`/admin/design-projects/${data.id}`);
+      } else {
+        setContract((current) => current ? {
+          ...current,
+          designProjectId: data.id,
+          designProjectCode: data.projectCode,
+          designProjectName: data.name,
+          designProjectCurrentStage: data.currentStage,
+        } : current);
+      }
     } catch (err) {
       toast({
         title: t("common.error"),
@@ -2069,8 +2083,11 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
             ) : (
               <InfoTab
                 contract={contract}
-                onEnsureDesignProject={() => void handleEnsureDesignProject()}
+                onEnsureDesignProject={has(ADMIN_PERMS.opportunitiesManage) &&
+                  has(ADMIN_PERMS.operationalProjectsManage)
+                  ? () => void handleEnsureDesignProject() : undefined}
                 ensuringDesignProject={ensuringDesignProject}
+                canViewDesignProject={has(ADMIN_PERMS.designProjects)}
                 onLinkQuote={canLinkQuote ? () => setLinkQuoteOpen(true) : undefined}
               />
             )}

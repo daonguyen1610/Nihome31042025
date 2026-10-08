@@ -517,12 +517,14 @@ exceed 40 characters.
 
 #### 3.2.1 Design Project Overview
 
-A design project starts automatically when a contract moves to In progress, or
-manually before any contract exists (design first, contract later). In **Create
-design project**, choose the Operational Project, or a contract that already
-belongs to one. Only the project's PM or a Design Lead on its team can start the
-flow; otherwise the form explains that the PM must add you to the project team
-with the Design Lead role.
+A design project is created only through an explicit action, including before
+any contract exists (design first, contract later). Changing a contract to In
+progress does not create one. In **Create design project**, choose the
+Operational Project, or a contract that already belongs to one. A design
+project started from the Opportunity remains the same project when a contract
+for that Operational Project is added; creating from the contract does not
+make a duplicate. Sales must have Opportunity and Operational Project manage
+permissions, plus authority to manage the project team, to initiate this flow.
 
 | Page | Functions | Estimate |
 |------|-----------|----------|

@@ -736,7 +736,7 @@ public class DesignProjectServiceTests : IDisposable
             Confirmation = impact.RequiredConfirmation,
         };
 
-    // ---------------- Auto-create hook ----------------
+    // ---------------- Explicit contract creation ----------------
 
     [Fact]
     public async Task EnsureForContractAsync_CreatesRowFirstTime()
@@ -756,6 +756,38 @@ public class DesignProjectServiceTests : IDisposable
         var second = await _sut.EnsureForContractAsync(contract, _userId);
         Assert.Equal(first.Id, second.Id);
         Assert.Equal(1, await _db.DesignProjects.CountAsync(dp => dp.ContractId == _contractId));
+    }
+
+    [Fact]
+    public async Task EnsureForContractAsync_ReusesProjectStartedBeforeContract()
+    {
+        var operationalProject = new OperationalProject
+        {
+            Code = "OP-DESIGN-BEFORE-CONTRACT",
+            Name = "Design before contract",
+            CustomerId = _customerId,
+        };
+        _db.OperationalProjects.Add(operationalProject);
+        await _db.SaveChangesAsync();
+        var contract = await _db.Contracts.SingleAsync(item => item.Id == _contractId);
+        contract.OperationalProjectId = operationalProject.Id;
+        var designProject = new DesignProject
+        {
+            ProjectCode = "DP-PRECONTRACT",
+            Name = "Concept",
+            CustomerId = _customerId,
+            OperationalProjectId = operationalProject.Id,
+            CurrentStage = DesignProjectStage.Concept,
+            Status = DesignProjectStatus.Active,
+        };
+        _db.DesignProjects.Add(designProject);
+        await _db.SaveChangesAsync();
+
+        var result = await _sut.EnsureForContractAsync(contract, _userId);
+
+        Assert.Equal(designProject.Id, result.Id);
+        Assert.Single(_db.DesignProjects);
+        Assert.Null(designProject.ContractId);
     }
 
     /// <summary>

@@ -122,10 +122,10 @@
   {
     "key": "notification.contract.activated.body",
     "category": "notification",
-    "vi": "Hợp đồng {{contractNumber}} với khách hàng {{customerName}} vừa chuyển sang Đang thực hiện. Dự án thiết kế đã được tự động tạo.",
-    "en": "Contract {{contractNumber}} with {{customerName}} is now In Progress. A design project has been auto-created.",
-    "zh": "与 {{customerName}} 的合同 {{contractNumber}} 已进入执行中，同时自动创建设计项目。",
-    "ja": "顧客 {{customerName}} との契約 {{contractNumber}} が実行中となり、設計プロジェクトが自動作成されました。"
+    "vi": "Hợp đồng {{contractNumber}} với khách hàng {{customerName}} vừa chuyển sang Đang thực hiện.",
+    "en": "Contract {{contractNumber}} with {{customerName}} is now In Progress.",
+    "zh": "与 {{customerName}} 的合同 {{contractNumber}} 已进入执行中。",
+    "ja": "顧客 {{customerName}} との契約 {{contractNumber}} が実行中になりました。"
   },
   {
     "key": "notification.design.revision.created.title",

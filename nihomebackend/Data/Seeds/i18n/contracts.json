@@ -1398,18 +1398,18 @@
   {
     "key": "contracts.designProject.pending",
     "category": "contracts",
-    "vi": "Dự án thiết kế sẽ được tạo tự động khi hợp đồng chuyển sang Đang thực hiện.",
-    "en": "A design project is created automatically once the contract moves to In Progress.",
-    "zh": "合同转为执行中后将自动创建设计项目。",
-    "ja": "契約が進行中になると設計プロジェクトが自動作成されます。"
+    "vi": "Chuyển trạng thái hợp đồng không tự tạo dự án thiết kế. Kinh doanh có thể tạo dự án thiết kế từ Cơ hội khi chưa có hợp đồng.",
+    "en": "Changing contract status does not create a design project. Sales can create one from the opportunity before a contract exists.",
+    "zh": "变更合同状态不会自动创建设计项目。销售人员可在签约前从商机创建设计项目。",
+    "ja": "契約のステータス変更では設計プロジェクトは自動作成されません。営業担当者は契約前に商談から作成できます。"
   },
   {
     "key": "contracts.designProject.missing",
     "category": "contracts",
-    "vi": "Hợp đồng đang thực hiện nhưng chưa có dự án thiết kế. Có thể tạo lại thủ công.",
-    "en": "This contract is in progress but has no design project yet. You can create it manually.",
-    "zh": "该合同已在执行但尚无设计项目，可手动创建。",
-    "ja": "この契約は進行中ですが設計プロジェクトがありません。手動で作成できます。"
+    "vi": "Hợp đồng chưa có dự án thiết kế. Chỉ chọn Tạo dự án thiết kế nếu thực sự cần một dự án mới.",
+    "en": "This contract has no design project. Select Create design project only if a new project is needed.",
+    "zh": "此合同尚无设计项目。仅在确实需要新项目时选择创建设计项目。",
+    "ja": "この契約には設計プロジェクトがありません。新規作成が必要な場合のみ作成を選択してください。"
   },
   {
     "key": "contracts.designProject.create",

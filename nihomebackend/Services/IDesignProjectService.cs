@@ -15,9 +15,7 @@ public class DesignProjectOperationException(string message) : Exception(message
 
 /// <summary>
 /// M2 DesignProject (Dự án thiết kế) service — NIH-113 overview slice.
-/// Owns CRUD + the auto-create hook fired by
-/// <see cref="IContractService"/> when a contract transitions to
-/// <see cref="ContractStatus.InProgress"/>. Per-stage documents (Concept /
+/// Owns CRUD and explicit Opportunity/Contract creation paths. Per-stage documents (Concept /
 /// Basic / Shop Drawing / Revision / IFC) and the team roster ship in
 /// NIH-114..118 and are layered on top of this interface.
 /// </summary>
@@ -52,10 +50,8 @@ public interface IDesignProjectService
         CancellationToken ct = default);
 
     /// <summary>
-    /// Idempotent auto-create hook. Called by <see cref="IContractService"/>
-    /// when a contract moves to <see cref="ContractStatus.InProgress"/>.
-    /// Skips when a design project is already linked to the contract so a
-    /// double-click on the transition button does not clone the row.
+    /// Idempotent explicit creation from a contract. Skips when a design
+    /// project is already linked to the contract.
     /// Returns the linked project (existing or new) so the caller can log.
     /// </summary>
     Task<DesignProjectResponse> EnsureForContractAsync(Contract contract, int? callerUserId, CancellationToken ct = default);

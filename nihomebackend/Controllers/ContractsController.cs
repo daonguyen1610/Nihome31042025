@@ -35,6 +35,7 @@ public class ContractsController(
     IContractAppendixService voSvc,
     IContractAttachmentService attSvc,
     IDesignProjectService designProjects,
+    IProjectAccessService projectAccess,
     IPermissionService permissions,
     IWebHostEnvironment env,
     AppDbContext db,
@@ -389,13 +390,12 @@ public class ContractsController(
     // -------- milestone status --------
 
     /// <summary>
-    /// Creates, or returns, this contract's design project. A contract normally
-    /// spawns one when it moves to InProgress, but that path is best-effort and
-    /// swallows its own failures — this is the manual way back when it did fail.
-    /// Idempotent: repeated calls return the same project.
+    /// Explicitly creates, or returns, this contract's design project.
+    /// Changing contract status does not create one. Repeated calls return
+    /// the same project.
     /// </summary>
     [HttpPost("{id:int}/design-project")]
-    [RequirePermission("design.projects", "manage")]
+    [RequirePermission("crm.opportunities", "manage")]
     public async Task<ActionResult<DesignProjectResponse>> EnsureDesignProject(
         int id,
         CancellationToken ct)
@@ -405,6 +405,18 @@ public class ContractsController(
 
         var contract = await db.Contracts.FirstOrDefaultAsync(c => c.Id == id, ct);
         if (contract is null) return NotFound();
+        if (!await permissions.HasAsync(userId.Value, "operations.projects.manage", ct))
+        {
+            return Forbid();
+        }
+        if (!contract.OperationalProjectId.HasValue)
+        {
+            return BadRequest(new { message = "Hợp đồng chưa gắn Dự án vận hành. Hãy liên kết Dự án trước khi tạo dự án thiết kế." });
+        }
+        if (!await projectAccess.CanManageTeamAsync(userId.Value, contract.OperationalProjectId.Value, ct))
+        {
+            return Forbid();
+        }
 
         var response = await designProjects.EnsureForContractAsync(contract, userId.Value, ct);
 

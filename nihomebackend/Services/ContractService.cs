@@ -17,7 +17,6 @@ namespace NihomeBackend.Services;
 /// </summary>
 public class ContractService(
     AppDbContext db,
-    IDesignProjectService designProjectService,
     ILogger<ContractService> logger,
     IProjectDocumentStagingService projectDocuments,
     IOpportunityClosureInvariantService closureInvariant,
@@ -190,7 +189,9 @@ public class ContractService(
                     m.ContractId == c.Id && m.Status != PaymentMilestoneStatus.Paid &&
                     m.DueDate != null && m.DueDate < today),
                 DesignProject = db.DesignProjects
-                    .Where(dp => dp.ContractId == c.Id)
+                    .Where(dp => dp.ContractId == c.Id ||
+                        c.OperationalProjectId != null && dp.OperationalProjectId == c.OperationalProjectId)
+                    .OrderByDescending(dp => dp.ContractId == c.Id)
                     .Select(dp => new { dp.Id, dp.ProjectCode, dp.Name, dp.CurrentStage })
                     .FirstOrDefault(),
             })
@@ -285,7 +286,9 @@ public class ContractService(
                 // lives on the other side — so this reads as a correlated subquery,
                 // the same shape the list projection already uses.
                 DesignProject = db.DesignProjects
-                    .Where(dp => dp.ContractId == c.Id)
+                    .Where(dp => dp.ContractId == c.Id ||
+                        c.OperationalProjectId != null && dp.OperationalProjectId == c.OperationalProjectId)
+                    .OrderByDescending(dp => dp.ContractId == c.Id)
                     .Select(dp => new { dp.Id, dp.ProjectCode, dp.Name, dp.CurrentStage })
                     .FirstOrDefault(),
             })
@@ -809,24 +812,6 @@ public class ContractService(
         await CrmConcurrency.SaveChangesAsync(db, ct);
         if (transaction is not null) await transaction.CommitAsync(ct);
         logger.LogInformation("Transitioned contract {Id} to {Status}", entity.Id, newStatus);
-
-        // NIH-113 AC #1: opening execution of a contract seeds a design
-        // project. The helper is idempotent so double-clicks or manual
-        // pre-creation don't spawn duplicates.
-        if (newStatus == ContractStatus.InProgress)
-        {
-            try
-            {
-                await designProjectService.EnsureForContractAsync(entity, callerUserId, ct);
-            }
-            catch (Exception ex)
-            {
-                // Auto-create is best-effort — a downstream failure must
-                // not block the contract transition itself.
-                logger.LogWarning(ex,
-                    "Failed to auto-create DesignProject for contract {Id}", entity.Id);
-            }
-        }
 
         return await GetAsync(entity.Id, callerUserId, canSeeAll: true, ct);
     }
