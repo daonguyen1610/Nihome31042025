@@ -32,3 +32,12 @@ test("design project dialog requires an operational project when no contract is 
   expect(box!.y).toBeGreaterThanOrEqual(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 });
+
+test("Design Lead cannot create the project root from the Design list", async ({ loginInBrowserAs, page }) => {
+  await loginInBrowserAs(page, TEST_USERS.designLead);
+  await page.addInitScript(() => localStorage.setItem("nicon_lang", "vi"));
+  await page.goto("/admin/design-projects", { waitUntil: "networkidle" });
+
+  await expect(page.getByRole("heading", { name: /Dự án thiết kế|Design projects/i })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Tạo dự án thiết kế|New design project/i })).toHaveCount(0);
+});

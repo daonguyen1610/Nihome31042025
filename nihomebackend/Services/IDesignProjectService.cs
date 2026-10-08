@@ -29,6 +29,16 @@ public interface IDesignProjectService
 
     Task<DesignProjectResponse> CreateAsync(CreateDesignProjectRequest request, int callerUserId, CancellationToken ct = default);
 
+    /// <summary>
+    /// Starts Concept from an Opportunity's shared operational project. The
+    /// operation is idempotent because one operational project owns at most
+    /// one design project.
+    /// </summary>
+    Task<EnsureDesignProjectResult> EnsureForOpportunityAsync(
+        int opportunityId,
+        int callerUserId,
+        CancellationToken ct = default);
+
     Task<DesignProjectResponse?> UpdateAsync(int id, UpdateDesignProjectRequest request, int callerUserId, CancellationToken ct = default);
 
     Task<DeletionImpactResponse?> GetDeletionImpactAsync(int id, CancellationToken ct = default);

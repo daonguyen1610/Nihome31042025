@@ -159,6 +159,64 @@ public class DesignProjectService(
         return (await GetAsync(entity.Id, ct))!;
     }
 
+    public async Task<EnsureDesignProjectResult> EnsureForOpportunityAsync(
+        int opportunityId,
+        int callerUserId,
+        CancellationToken ct = default)
+    {
+        var source = await db.Opportunities.AsNoTracking()
+            .Where(opportunity => opportunity.Id == opportunityId)
+            .Select(opportunity => new
+            {
+                opportunity.Name,
+                opportunity.CustomerId,
+                opportunity.OperationalProjectId,
+            })
+            .SingleOrDefaultAsync(ct)
+            ?? throw new DesignProjectOperationException(
+                $"Cơ hội #{opportunityId} không tồn tại.");
+
+        if (!source.OperationalProjectId.HasValue)
+        {
+            throw new DesignProjectOperationException(
+                "Cơ hội chưa gắn Dự án vận hành. Hãy liên kết Dự án trước khi tạo dự án thiết kế.");
+        }
+
+        var existing = await db.DesignProjects.AsNoTracking()
+            .Where(project => project.OperationalProjectId == source.OperationalProjectId.Value)
+            .Select(project => project.Id)
+            .SingleOrDefaultAsync(ct);
+        if (existing != 0)
+        {
+            return new EnsureDesignProjectResult((await GetAsync(existing, ct))!, false);
+        }
+
+        try
+        {
+            var created = await CreateAsync(new CreateDesignProjectRequest
+            {
+                OperationalProjectId = source.OperationalProjectId.Value,
+                Name = source.Name,
+                CustomerId = source.CustomerId,
+                Note = $"Tạo từ Cơ hội #{opportunityId} trước hợp đồng.",
+            }, callerUserId, ct);
+            return new EnsureDesignProjectResult(created, true);
+        }
+        catch (DbUpdateException)
+        {
+            // Two users can click the handoff concurrently. The unique
+            // operational-project index chooses the winner; return that row
+            // so the second request is an idempotent success.
+            db.ChangeTracker.Clear();
+            existing = await db.DesignProjects.AsNoTracking()
+                .Where(project => project.OperationalProjectId == source.OperationalProjectId.Value)
+                .Select(project => project.Id)
+                .SingleOrDefaultAsync(ct);
+            if (existing == 0) throw;
+            return new EnsureDesignProjectResult((await GetAsync(existing, ct))!, false);
+        }
+    }
+
     public async Task<DesignProjectResponse?> UpdateAsync(int id, UpdateDesignProjectRequest request,
         int callerUserId, CancellationToken ct = default)
     {

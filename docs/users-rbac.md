@@ -138,15 +138,19 @@ opportunity's audit entries without IP, device, or phone details.
 
 ### Starting a design flow
 
-`POST /api/design-projects` requires `design.projects.manage` and an
-operational project, given directly or through the linked contract; a contract
-is optional (design first, contract later). Without a project the API returns
-`400` with an actionable message. A project outside the caller's scope returns
-`404`. Inside it, the caller must manage the project team or be an active PM
-or Design Lead team member (project scope, or module scope `Design`);
-otherwise the API returns `403` telling the user to ask the PM for the Design
-Lead team role. `DESIGN_LEAD` has no `operations.projects.manage`, so the team
-role is how a Design Lead is authorized for a specific project.
+Sales starts the pre-contract Design flow from the Opportunity through
+`POST /api/opportunities/{id}/design-project`. The caller needs both
+`crm.opportunities.manage` and `operations.projects.manage` and must own the
+Opportunity unless granted `crm.opportunities.view.all`. The endpoint creates
+one Concept-stage Design Project for the Opportunity's Operational Project and
+is idempotent. It rejects Lost Opportunities and missing Operational Projects.
+
+Design roles do not receive either required Sales/Project-management permission
+by default and cannot create the business root from the Design list. Once the
+project team assigns them, their Design permissions and project scope govern
+viewing and work inside the existing Concept. `POST /api/design-projects`
+remains available to administrators for exceptional data maintenance and
+requires both Design management and project-team management authority.
 
 ## API Surface
 

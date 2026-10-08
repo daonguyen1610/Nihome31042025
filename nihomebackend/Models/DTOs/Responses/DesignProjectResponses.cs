@@ -70,3 +70,7 @@ public class DesignProjectListResponse
     public int PageSize { get; set; }
     public List<DesignProjectListItemResponse> Items { get; set; } = new();
 }
+
+public sealed record EnsureDesignProjectResult(
+    DesignProjectResponse DesignProject,
+    bool Created);

@@ -244,6 +244,47 @@ public class OpportunitiesController(
         }
     }
 
+    [HttpPost("{id:int}/design-project")]
+    [RequirePermission("crm.opportunities", "manage")]
+    public async Task<ActionResult<OpportunityDesignStartResponse>> StartDesign(
+        int id,
+        CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        if (!await permissions.HasAsync(userId.Value, "operations.projects.manage", ct))
+        {
+            return Forbid();
+        }
+
+        var canSeeAll = await permissions.HasAsync(userId.Value, "crm.opportunities.view.all", ct);
+        try
+        {
+            var response = await svc.StartDesignAsync(id, userId.Value, canSeeAll, ct);
+            if (response is null) return NotFound();
+            if (response.Created)
+            {
+                audit.Log(new AuditEvent
+                {
+                    Action = "opportunity.design-project.create",
+                    ResourceType = EntityTypes.Opportunity,
+                    ResourceId = id.ToString(),
+                    Message = $"Design project #{response.DesignProject.Id} ({response.DesignProject.ProjectCode}) created from opportunity #{id}.",
+                    NewValue = response.DesignProject,
+                });
+            }
+            return Ok(response);
+        }
+        catch (OpportunityOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (DesignProjectOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
     [HttpDelete("{id:int}")]
     [RequirePermission("crm.opportunities", "manage")]
     public async Task<IActionResult> Delete(

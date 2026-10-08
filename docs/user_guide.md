@@ -293,6 +293,15 @@ every open stage (and on Contract signed while no winning quote is set). The
 **Quotes** tab lists each quotation of the opportunity with its status, version,
 total, and the winning mark; an empty tab offers the same action.
 
+Design may start before the Contract. On any non-Lost Opportunity, an authorized
+Sales user selects **Create design project** beside **Create quote**. The server
+uses the Opportunity's shared Operational Project, opens exactly one Design
+Project at **Concept**, and does not require or create a Contract. Repeating the
+action returns the existing Design Project instead of creating a duplicate. An
+Opportunity without an Operational Project must be linked to one first. Design
+roles receive the resulting Concept after project assignment; they cannot create
+the Design Project from the Design list.
+
 In Negotiation and Contract signed, **Create contract** opens the contract form
 prefilled from the winning or latest approved quotation, or, when there is none
 (for example an opportunity continued from a won tender), from the opportunity's

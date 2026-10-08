@@ -197,6 +197,65 @@ test("SPA renders /admin/opportunities without console errors for SALES_MANAGER"
     expect(jsErrors, `Unexpected JS errors: ${jsErrors.join("\n")}`).toHaveLength(0);
 });
 
+test("Sales starts Concept from Opportunity before a contract", async ({
+    api,
+    page,
+    loginAs,
+    loginInBrowserAs,
+    baseURL,
+}) => {
+    const token = await loginAs(TEST_USERS.salesManager);
+    const customerId = await createCustomer(api, token);
+    const client = authed(api, token);
+    const projectResponse = await client.post("/api/operational-projects", {
+        name: `[E2E-OPP] Design first ${Math.random().toString(36).slice(2, 8)}`,
+        customerId,
+    });
+    expect(projectResponse.status()).toBe(201);
+    const projectId = ((await projectResponse.json()) as { id: number }).id;
+    const opportunityId = await createOpportunity(api, token, customerId, {
+        operationalProjectId: projectId,
+    });
+
+    await loginInBrowserAs(page, TEST_USERS.salesManager);
+    await page.goto(`${baseURL}/admin/opportunities/${opportunityId}`, { waitUntil: "networkidle" });
+    const dialog = page.getByTestId("opportunity-detail-dialog");
+    const createQuote = dialog.getByTestId("opportunity-create-quote");
+    const createDesign = dialog.getByTestId("opportunity-create-design-project");
+    await expect(createQuote).toBeVisible();
+    await expect(createDesign).toBeVisible();
+
+    const startResponse = page.waitForResponse((response) =>
+        response.request().method() === "POST"
+        && new URL(response.url()).pathname === `/api/opportunities/${opportunityId}/design-project`);
+    await createDesign.click();
+    const response = await startResponse;
+    expect(response.status()).toBe(200);
+    const result = (await response.json()) as {
+        created: boolean;
+        designProject: { id: number; currentStage: string; contractId: number | null };
+    };
+    expect(result.created).toBe(true);
+    expect(result.designProject).toMatchObject({ currentStage: "Concept", contractId: null });
+    await expect(dialog.getByTestId("opportunity-create-design-project")).toHaveCount(0);
+    await expect(dialog.getByTestId("opportunity-open-design-project")).toBeVisible();
+    await expect(dialog.getByTestId("opportunity-open-design-project")).toBeDisabled();
+
+    // The state survives a reload and remains usable on a narrow phone-sized viewport.
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.reload({ waitUntil: "networkidle" });
+    await expect(page.getByTestId("opportunity-open-design-project")).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+
+    const superAdminToken = await loginAs(TEST_USERS.superAdmin);
+    const superAdminHeaders = { Authorization: `Bearer ${superAdminToken}` };
+    await hardDeleteBusinessRoot(api, superAdminHeaders, `/api/design-projects/${result.designProject.id}`);
+    const managerHeaders = { Authorization: `Bearer ${token}` };
+    await hardDeleteBusinessRoot(api, managerHeaders, `/api/opportunities/${opportunityId}`);
+    await hardDeleteBusinessRoot(api, managerHeaders, `/api/operational-projects/${projectId}`);
+    await hardDeleteBusinessRoot(api, managerHeaders, `/api/customers/${customerId}`);
+});
+
 test("Opportunity actions follow the sequential and terminal UI contract", async ({
     api,
     page,

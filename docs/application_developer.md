@@ -1094,6 +1094,17 @@ it must not be confused with public portfolio content or the three-phase
 | `PUT` | `/api/operational-projects/{id}` | `operations.projects.manage` | Update metadata or perform an allowed lifecycle transition |
 | `DELETE` | `/api/operational-projects/{id}` | `operations.projects.manage` | Delete an empty Planning project only |
 
+The pre-contract Design handoff is
+`POST /api/opportunities/{id}/design-project`. It requires both
+`crm.opportunities.manage` and `operations.projects.manage`, applies the normal
+Opportunity owner/view-all scope, rejects Lost Opportunities and Opportunities
+without an Operational Project, and creates a Concept-stage Design Project with
+no Contract. The unique Operational Project relationship makes retries and
+concurrent clicks idempotent; the response includes `created` and the resulting
+`designProject`. Opportunity responses expose `designProjectId` and
+`designProjectCode` so the UI replaces the create action with the existing-state
+action.
+
 Operational Projects do not expose aggregate archive or restore operations.
 The approved DEC-08 lifecycle decision retains the preview-and-confirm hard-delete
 convention as the only aggregate removal flow; `Completed` and `Cancelled` retain

@@ -14,7 +14,9 @@ public class OpportunityService(
     IQuoteDocumentService quoteDocumentService,
     ILogger<OpportunityService> logger,
     IProjectDocumentStagingService projectDocuments,
-    IOpportunityClosureInvariantService closureInvariant) : IOpportunityService
+    IOpportunityClosureInvariantService closureInvariant,
+    IDesignProjectService designProjects,
+    IProjectAccessService projectAccess) : IOpportunityService
 {
     private const int MaxPageSize = 100;
     private const string LostReasonMasterDataCategory = "opportunity_lost_reason";
@@ -137,6 +139,8 @@ public class OpportunityService(
             .AsNoTracking()
             .Include(o => o.Customer)
             .Include(o => o.Owner)
+            .Include(o => o.OperationalProject)
+                .ThenInclude(project => project!.DesignProject)
             .Include(o => o.Activities)
                 .ThenInclude(a => a.CreatedBy)
             .FirstOrDefaultAsync(o => o.Id == id, ct);
@@ -497,6 +501,41 @@ public class OpportunityService(
         return await GetAsync(op.Id, callerUserId, canSeeAll: true, ct: ct);
     }
 
+    public async Task<OpportunityDesignStartResponse?> StartDesignAsync(
+        int id,
+        int callerUserId,
+        bool canSeeAll,
+        CancellationToken ct = default)
+    {
+        var opportunity = await db.Opportunities.AsNoTracking()
+            .Where(item => item.Id == id && (canSeeAll || item.OwnerUserId == callerUserId))
+            .Select(item => new { item.Id, item.Stage, item.OperationalProjectId })
+            .SingleOrDefaultAsync(ct);
+        if (opportunity is null) return null;
+        if (opportunity.Stage == OpportunityStage.Lost)
+        {
+            throw new OpportunityOperationException(
+                "Không thể tạo dự án thiết kế từ Cơ hội đã đánh dấu Thua.");
+        }
+        if (!opportunity.OperationalProjectId.HasValue)
+        {
+            throw new OpportunityOperationException(
+                "Cơ hội chưa gắn Dự án vận hành. Hãy liên kết Dự án trước khi tạo dự án thiết kế.");
+        }
+        if (!await projectAccess.CanViewOperationalProjectAsync(
+            callerUserId, opportunity.OperationalProjectId.Value, ct))
+        {
+            return null;
+        }
+
+        var result = await designProjects.EnsureForOpportunityAsync(id, callerUserId, ct);
+        return new OpportunityDesignStartResponse
+        {
+            Created = result.Created,
+            DesignProject = result.DesignProject,
+        };
+    }
+
     private async Task ValidateWinningReferencesAsync(
         Opportunity opportunity,
         ChangeOpportunityStageRequest request,
@@ -610,7 +649,10 @@ public class OpportunityService(
         decimal? maxValue,
         string? search)
     {
-        var query = db.Opportunities.AsNoTracking().AsQueryable();
+        var query = db.Opportunities.AsNoTracking()
+            .Include(o => o.OperationalProject)
+                .ThenInclude(project => project!.DesignProject)
+            .AsQueryable();
 
         if (!canSeeAll)
         {
@@ -741,6 +783,8 @@ public class OpportunityService(
             CustomerId = op.CustomerId,
             CustomerName = customerName,
             OperationalProjectId = op.OperationalProjectId,
+            DesignProjectId = op.OperationalProject?.DesignProject?.Id,
+            DesignProjectCode = op.OperationalProject?.DesignProject?.ProjectCode,
             OwnerUserId = op.OwnerUserId,
             OwnerName = ownerName,
             EstimatedValue = op.EstimatedValue,

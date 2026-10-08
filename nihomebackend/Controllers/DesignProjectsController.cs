@@ -67,11 +67,11 @@ public class DesignProjectsController(
         {
             return NotFound();
         }
-        if (!await projectAccess.CanOpenDesignFlowAsync(userId.Value, operationalProjectId.Value, ct))
+        if (!await projectAccess.CanManageTeamAsync(userId.Value, operationalProjectId.Value, ct))
         {
             return StatusCode(StatusCodes.Status403Forbidden, new
             {
-                message = "Chỉ PM hoặc Design Lead trong đội ngũ của dự án này mới mở được luồng thiết kế. Hãy nhờ PM thêm bạn vào đội ngũ dự án với vai trò Design Lead.",
+                message = "Dự án thiết kế phải được Kinh doanh khởi tạo từ Cơ hội. Phòng Thiết kế chỉ tiếp nhận sau khi được phân công.",
             });
         }
         try
