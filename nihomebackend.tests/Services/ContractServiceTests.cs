@@ -1474,6 +1474,11 @@ public class ContractServiceTests : IDisposable
             NihomeBackend.Models.DTOs.Requests.CreateDesignProjectRequest request, int callerUserId, CancellationToken ct = default)
             => Task.FromResult(new NihomeBackend.Models.DTOs.Responses.DesignProjectResponse());
 
+        public Task<NihomeBackend.Models.DTOs.Responses.EnsureDesignProjectResult> EnsureForOpportunityAsync(
+            int opportunityId, int callerUserId, CancellationToken ct = default)
+            => Task.FromResult(new NihomeBackend.Models.DTOs.Responses.EnsureDesignProjectResult(
+                new NihomeBackend.Models.DTOs.Responses.DesignProjectResponse(), true));
+
         public Task<NihomeBackend.Models.DTOs.Responses.DesignProjectResponse?> UpdateAsync(
             int id, NihomeBackend.Models.DTOs.Requests.UpdateDesignProjectRequest request, int callerUserId, CancellationToken ct = default)
             => Task.FromResult<NihomeBackend.Models.DTOs.Responses.DesignProjectResponse?>(null);

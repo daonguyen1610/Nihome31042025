@@ -51,6 +51,83 @@ public class OpportunitiesControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task StartDesign_AsSale_CreatesConceptWithoutContract_AndIsIdempotent()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
+        var (opportunityId, projectId) = await CreateOpportunityWithProjectAsync();
+
+        var first = await Client.PostAsync($"/api/opportunities/{opportunityId}/design-project", null);
+        first.StatusCode.Should().Be(HttpStatusCode.OK, await first.Content.ReadAsStringAsync());
+        var firstBody = await ReadJsonAsync(first);
+        firstBody.GetProperty("created").GetBoolean().Should().BeTrue();
+        var designProject = firstBody.GetProperty("designProject");
+        designProject.GetProperty("operationalProjectId").GetInt32().Should().Be(projectId);
+        designProject.GetProperty("contractId").ValueKind.Should().Be(JsonValueKind.Null);
+        designProject.GetProperty("currentStage").GetString().Should().Be("Concept");
+        var designProjectId = designProject.GetProperty("id").GetInt32();
+
+        var second = await Client.PostAsync($"/api/opportunities/{opportunityId}/design-project", null);
+        second.StatusCode.Should().Be(HttpStatusCode.OK);
+        var secondBody = await ReadJsonAsync(second);
+        secondBody.GetProperty("created").GetBoolean().Should().BeFalse();
+        secondBody.GetProperty("designProject").GetProperty("id").GetInt32()
+            .Should().Be(designProjectId);
+
+        (await WithDbAsync(db => db.DesignProjects.CountAsync(item =>
+            item.OperationalProjectId == projectId))).Should().Be(1);
+
+        var detail = await ReadJsonAsync(await Client.GetAsync($"/api/opportunities/{opportunityId}"));
+        detail.GetProperty("designProjectId").GetInt32().Should().Be(designProjectId);
+    }
+
+    [Fact]
+    public async Task StartDesign_RejectsMissingProject_LostAndForeignOpportunity()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var missingProjectId = await CreateOpportunityAsync();
+        (await Client.PostAsync($"/api/opportunities/{missingProjectId}/design-project", null))
+            .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        var (lostId, _) = await CreateOpportunityWithProjectAsync();
+        await WithDbAsync(async db =>
+        {
+            var opportunity = await db.Opportunities.SingleAsync(item => item.Id == lostId);
+            opportunity.Stage = OpportunityStage.Lost;
+            opportunity.LostReasonCode = "price";
+            opportunity.LostNote = "Không tiếp tục.";
+            opportunity.ClosedAt = DateTime.UtcNow;
+            await db.SaveChangesAsync();
+        });
+        (await Client.PostAsync($"/api/opportunities/{lostId}/design-project", null))
+            .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        var foreignId = await CreateOpportunityAsync();
+        var (reassignedId, foreignProjectId) = await CreateOpportunityWithProjectAsync();
+        var saleId = await UserIdAsync("SALE");
+        await WithDbAsync(async db =>
+        {
+            var opportunity = await db.Opportunities.SingleAsync(item => item.Id == reassignedId);
+            opportunity.OwnerUserId = saleId;
+            await db.SaveChangesAsync();
+        });
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
+        (await Client.PostAsync($"/api/opportunities/{foreignId}/design-project", null))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await Client.PostAsync($"/api/opportunities/{reassignedId}/design-project", null))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await WithDbAsync(db => db.DesignProjects.AnyAsync(item =>
+            item.OperationalProjectId == foreignProjectId))).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task StartDesign_WithoutOpportunityPermission_IsForbidden()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "DESIGN_LEAD"));
+        (await Client.PostAsync("/api/opportunities/1/design-project", null))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
     public async Task Create_AsSale_CannotAssignAnotherOwner()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
@@ -825,6 +902,30 @@ public class OpportunitiesControllerTests : IntegrationTestBase
         res.EnsureSuccessStatusCode();
         var body = await ReadJsonAsync(res);
         return body.GetProperty("id").GetInt32();
+    }
+
+    private async Task<(int OpportunityId, int ProjectId)> CreateOpportunityWithProjectAsync()
+    {
+        var customerId = await CreateCustomerAsync();
+        var projectResponse = await Client.PostAsJsonAsync("/api/operational-projects", new
+        {
+            name = "Design-first project " + Guid.NewGuid().ToString("N")[..6],
+            customerId,
+        });
+        projectResponse.StatusCode.Should().Be(HttpStatusCode.Created, await projectResponse.Content.ReadAsStringAsync());
+        var projectId = (await ReadJsonAsync(projectResponse)).GetProperty("id").GetInt32();
+
+        var opportunityResponse = await Client.PostAsJsonAsync("/api/opportunities", new
+        {
+            name = "Design-first opportunity " + Guid.NewGuid().ToString("N")[..6],
+            customerId,
+            operationalProjectId = projectId,
+            estimatedValue = 1_000_000m,
+            winProbability = 40,
+        });
+        opportunityResponse.StatusCode.Should().Be(HttpStatusCode.Created, await opportunityResponse.Content.ReadAsStringAsync());
+        var opportunityId = (await ReadJsonAsync(opportunityResponse)).GetProperty("id").GetInt32();
+        return (opportunityId, projectId);
     }
 
     private async Task<JsonElement> GetDeletionImpactAsync(int opportunityId)

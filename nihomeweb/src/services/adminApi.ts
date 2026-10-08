@@ -1609,6 +1609,8 @@ export interface OpportunityResponse {
   customerId: number;
   customerName?: string;
   operationalProjectId?: number | null;
+  designProjectId?: number | null;
+  designProjectCode?: string | null;
   ownerUserId?: number;
   ownerName?: string;
   estimatedValue: number;
@@ -1626,6 +1628,11 @@ export interface OpportunityResponse {
   rowVersion: string;
   activities: OpportunityActivityResponse[];
   contracts: OpportunityContractLinkResponse[];
+}
+
+export interface OpportunityDesignStartResponse {
+  created: boolean;
+  designProject: DesignProjectResponse;
 }
 
 export interface OpportunityOwnerOption {
@@ -4589,6 +4596,8 @@ export const adminApi = {
     api.put<OpportunityResponse>(`/opportunities/${id}`, body),
   changeOpportunityStage: (id: number, body: ChangeOpportunityStageRequest) =>
     api.patch<OpportunityResponse>(`/opportunities/${id}/stage`, body),
+  startOpportunityDesign: (id: number) =>
+    api.post<OpportunityDesignStartResponse>(`/opportunities/${id}/design-project`),
   getOpportunityDeletionImpact: (id: number) =>
     api.get<DeletionImpactResponse>(`/opportunities/${id}/deletion-impact`),
   deleteOpportunity: (id: number, body: ConfirmDeletionRequest) =>

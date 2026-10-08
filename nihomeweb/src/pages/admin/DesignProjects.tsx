@@ -107,6 +107,7 @@ const AdminDesignProjects = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const canManage = has(ADMIN_PERMS.designProjectsManage);
+  const canCreate = canManage && has(ADMIN_PERMS.operationalProjectsManage);
   const canPickUser = has(ADMIN_PERMS.users);
 
   // list state
@@ -464,7 +465,7 @@ const AdminDesignProjects = () => {
             </h1>
             <p className="text-sm text-slate-600">{t("designProjects.subtitle")}</p>
           </div>
-          {canManage ? (
+          {canCreate ? (
             <Button size="sm" onClick={openCreate}>
               <Plus className="mr-1 h-4 w-4" />
               {t("designProjects.new")}

@@ -26,6 +26,8 @@ public class OpportunityResponse
     public int CustomerId { get; set; }
     public string? CustomerName { get; set; }
     public int? OperationalProjectId { get; set; }
+    public int? DesignProjectId { get; set; }
+    public string? DesignProjectCode { get; set; }
     public int? OwnerUserId { get; set; }
     public string? OwnerName { get; set; }
     public decimal EstimatedValue { get; set; }
@@ -43,6 +45,12 @@ public class OpportunityResponse
     public string RowVersion { get; set; } = string.Empty;
     public List<OpportunityActivityResponse> Activities { get; set; } = new();
     public List<OpportunityContractLinkResponse> Contracts { get; set; } = new();
+}
+
+public class OpportunityDesignStartResponse
+{
+    public bool Created { get; set; }
+    public DesignProjectResponse DesignProject { get; set; } = new();
 }
 
 public class OpportunityListResponse

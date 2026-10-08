@@ -16,6 +16,11 @@
   { "key": "opportunities.deleteConfirm", "category": "opportunities", "vi": "Bạn có chắc muốn xoá cơ hội này?", "en": "Delete this opportunity?", "zh": "确认删除该商机？", "ja": "この商談を削除しますか？" },
   { "key": "opportunities.action.createQuote", "category": "opportunities", "vi": "Tạo Báo giá", "en": "Create quote", "zh": "创建报价", "ja": "見積を作成" },
   { "key": "opportunities.action.createContract", "category": "opportunities", "vi": "Tạo hợp đồng", "en": "Create contract", "zh": "创建合同", "ja": "契約を作成" },
+  { "key": "opportunities.action.createDesignProject", "category": "opportunities", "vi": "Tạo dự án thiết kế", "en": "Create design project", "zh": "创建设计项目", "ja": "設計プロジェクトを作成" },
+  { "key": "opportunities.action.openDesignProject", "category": "opportunities", "vi": "Mở dự án thiết kế", "en": "Open design project", "zh": "打开设计项目", "ja": "設計プロジェクトを開く" },
+  { "key": "opportunities.action.designProjectCreated", "category": "opportunities", "vi": "Đã tạo dự án thiết kế", "en": "Design project created", "zh": "设计项目已创建", "ja": "設計プロジェクト作成済み" },
+  { "key": "opportunities.designProject.created", "category": "opportunities", "vi": "Đã tạo dự án thiết kế ở giai đoạn Thiết kế ý tưởng.", "en": "The design project was created at the Concept stage.", "zh": "设计项目已在概念设计阶段创建。", "ja": "設計プロジェクトをコンセプト段階で作成しました。" },
+  { "key": "opportunities.designProject.alreadyExists", "category": "opportunities", "vi": "Dự án thiết kế đã tồn tại; hệ thống không tạo bản ghi trùng.", "en": "The design project already exists; no duplicate was created.", "zh": "设计项目已存在，未创建重复记录。", "ja": "設計プロジェクトは既に存在するため、重複作成されませんでした。" },
 
   { "key": "opportunities.field.name", "category": "opportunities", "vi": "Tên cơ hội", "en": "Opportunity name", "zh": "商机名称", "ja": "商談名" },
   { "key": "opportunities.field.customer", "category": "opportunities", "vi": "Khách hàng", "en": "Customer", "zh": "客户", "ja": "顧客" },

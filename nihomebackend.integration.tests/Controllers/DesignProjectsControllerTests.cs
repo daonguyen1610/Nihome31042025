@@ -114,11 +114,10 @@ public class DesignProjectsControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task DesignFirst_DesignLeadOnProjectTeam_CreatesDesignProjectWithoutContract()
+    public async Task DesignFirst_DesignLeadCannotCreateEvenWhenAssignedToProject()
     {
-        // Scenario B: the customer signs a design contract later. Sales converts
-        // the lead (which opens the project), the project owner puts the Design
-        // Lead on the team, and only then can the design flow start.
+        // Sales owns the handoff from Opportunity. Design receives the Concept
+        // after assignment but cannot create a new business root itself.
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
         var (customerId, projectId) = await ConvertLeadAsync("Nhà máy Minh Phúc giai đoạn 2");
         var (_, otherProjectId) = await ConvertLeadAsync("Kho lạnh Hậu Giang");
@@ -137,16 +136,15 @@ public class DesignProjectsControllerTests : IntegrationTestBase
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "DESIGN_LEAD"));
         using var notLead = await CreateDesignAsync(customerId, otherProjectId);
         notLead.StatusCode.Should().Be(HttpStatusCode.Forbidden);
-        (await ReadJsonAsync(notLead)).GetProperty("message").GetString().Should().Contain("Design Lead");
+        (await ReadJsonAsync(notLead)).GetProperty("message").GetString().Should().Contain("Kinh doanh");
         (await WithDbAsync(db => db.DesignProjects.AnyAsync(project => project.OperationalProjectId == otherProjectId)))
             .Should().BeFalse();
 
-        using var created = await CreateDesignAsync(customerId, projectId);
-        created.StatusCode.Should().Be(HttpStatusCode.Created, await created.Content.ReadAsStringAsync());
-        var body = await ReadJsonAsync(created);
-        body.GetProperty("operationalProjectId").GetInt32().Should().Be(projectId);
-        body.GetProperty("contractId").ValueKind.Should().Be(System.Text.Json.JsonValueKind.Null);
-        body.GetProperty("currentStage").GetString().Should().Be("Concept");
+        using var denied = await CreateDesignAsync(customerId, projectId);
+        denied.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await ReadJsonAsync(denied)).GetProperty("message").GetString().Should().Contain("Kinh doanh");
+        (await WithDbAsync(db => db.DesignProjects.AnyAsync(project => project.OperationalProjectId == projectId)))
+            .Should().BeFalse();
     }
 
     private async Task<(int CustomerId, int ProjectId)> ConvertLeadAsync(string companyName)

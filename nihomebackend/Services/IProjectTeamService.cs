@@ -7,7 +7,6 @@ public interface IProjectAccessService
 {
     Task<bool> CanViewOperationalProjectAsync(int userId, int projectId, CancellationToken ct = default);
     Task<bool> CanManageTeamAsync(int userId, int projectId, CancellationToken ct = default);
-    Task<bool> CanOpenDesignFlowAsync(int userId, int projectId, CancellationToken ct = default);
     Task<bool> CanManageDesignScheduleAsync(int userId, int projectId, CancellationToken ct = default);
     Task<bool> CanViewDesignProjectAsync(int userId, int designProjectId, CancellationToken ct = default);
     Task<bool> CanManageDesignProjectAsync(int userId, int designProjectId, CancellationToken ct = default, string? disciplineCode = null);

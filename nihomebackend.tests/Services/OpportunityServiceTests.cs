@@ -15,6 +15,8 @@ public class OpportunityServiceTests : IDisposable
     private readonly Mock<INotificationService> _notifications;
     private readonly Mock<IQuoteDocumentService> _quoteDocuments;
     private readonly Mock<IProjectDocumentStagingService> _projectDocuments;
+    private readonly Mock<IDesignProjectService> _designProjects;
+    private readonly Mock<IProjectAccessService> _projectAccess;
     private readonly OpportunityService _sut;
 
     public OpportunityServiceTests()
@@ -23,13 +25,17 @@ public class OpportunityServiceTests : IDisposable
         _notifications = new Mock<INotificationService>();
         _quoteDocuments = new Mock<IQuoteDocumentService>();
         _projectDocuments = new Mock<IProjectDocumentStagingService>();
+        _designProjects = new Mock<IDesignProjectService>();
+        _projectAccess = new Mock<IProjectAccessService>();
         _sut = new OpportunityService(
             _db,
             _notifications.Object,
             _quoteDocuments.Object,
             NullLogger<OpportunityService>.Instance,
             _projectDocuments.Object,
-            new OpportunityClosureInvariantService(_db));
+            new OpportunityClosureInvariantService(_db),
+            _designProjects.Object,
+            _projectAccess.Object);
     }
 
     public void Dispose() => _db.Dispose();

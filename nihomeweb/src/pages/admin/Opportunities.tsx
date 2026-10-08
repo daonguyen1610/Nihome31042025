@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { AlertTriangle, FileSignature, FileText, LayoutGrid, List, Pencil, Plus, RefreshCw, Search, ThumbsDown, Trash2, Trophy } from "lucide-react";
+import { AlertTriangle, FileSignature, FileText, LayoutGrid, List, Pencil, PenTool, Plus, RefreshCw, Search, ThumbsDown, Trash2, Trophy } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -134,6 +134,8 @@ const AdminOpportunities = () => {
   const canViewQuotes = has(ADMIN_PERMS.quotes);
   const canCreateQuote = has(ADMIN_PERMS.quotesManage);
   const canCreateContract = has(ADMIN_PERMS.contractsManage);
+  const canStartDesign = canManage && has(ADMIN_PERMS.operationalProjectsManage);
+  const canViewDesign = has(ADMIN_PERMS.designProjects);
 
   // ---------- data ----------
   const [rows, setRows] = useState<OpportunityResponse[]>([]);
@@ -297,6 +299,7 @@ const AdminOpportunities = () => {
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState<UpdateOpportunityRequest | null>(null);
   const [savingEdit, setSavingEdit] = useState(false);
+  const [startingDesign, setStartingDesign] = useState(false);
   const [activityType, setActivityType] = useState<OpportunityActivityType>("Note");
   const [activityContent, setActivityContent] = useState("");
   const [addingActivity, setAddingActivity] = useState(false);
@@ -520,6 +523,33 @@ const AdminOpportunities = () => {
       if (isConcurrencyConflict(err)) await openDetail(detail.id);
     } finally {
       setChangingStage(false);
+    }
+  };
+
+  const handleStartDesign = async () => {
+    if (!detail) return;
+    setStartingDesign(true);
+    try {
+      const { data } = await adminApi.startOpportunityDesign(detail.id);
+      setDetail((current) => current?.id === detail.id ? {
+        ...current,
+        designProjectId: data.designProject.id,
+        designProjectCode: data.designProject.projectCode,
+      } : current);
+      toast({
+        title: t(data.created
+          ? "opportunities.designProject.created"
+          : "opportunities.designProject.alreadyExists"),
+      });
+      await fetchList();
+    } catch (err) {
+      toast({
+        title: t("common.error"),
+        description: extractApiError(err),
+        variant: "destructive",
+      });
+    } finally {
+      setStartingDesign(false);
     }
   };
 
@@ -1061,7 +1091,8 @@ const AdminOpportunities = () => {
                 )}
                 {/* A quote is raised while the deal is still open (Báo giá/Đấu thầu
                     stage) so the contract value is known before signing. */}
-                {((canCreateQuote && canRaiseQuote(detail)) ||
+                {((canStartDesign && detail.stage !== "Lost") ||
+                  (canCreateQuote && canRaiseQuote(detail)) ||
                   (canCreateContract && (detail.stage === "Negotiation" || detail.stage === "Won"))) && (
                   <div className="flex flex-wrap gap-2 pt-2">
                     {canCreateContract && (detail.stage === "Negotiation" || detail.stage === "Won") && (
@@ -1083,6 +1114,33 @@ const AdminOpportunities = () => {
                       <Plus className="mr-1.5 h-4 w-4" />
                       {t("opportunities.action.createQuote")}
                     </Button>}
+                    {canStartDesign && detail.stage !== "Lost" && (
+                      detail.designProjectId ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          data-testid="opportunity-open-design-project"
+                          disabled={!canViewDesign}
+                          onClick={() => navigate(`/admin/design-projects/${detail.designProjectId}`)}
+                        >
+                          <PenTool className="mr-1.5 h-4 w-4" />
+                          {t(canViewDesign
+                            ? "opportunities.action.openDesignProject"
+                            : "opportunities.action.designProjectCreated")}
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          data-testid="opportunity-create-design-project"
+                          disabled={startingDesign}
+                          onClick={() => void handleStartDesign()}
+                        >
+                          <PenTool className="mr-1.5 h-4 w-4" />
+                          {t("opportunities.action.createDesignProject")}
+                        </Button>
+                      )
+                    )}
                   </div>
                 )}
               </DialogHeader>
