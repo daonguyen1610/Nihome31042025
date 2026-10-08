@@ -5,15 +5,52 @@ using NihomeBackend.Models;
 namespace NihomeBackend.Data;
 
 /// <summary>
-/// Populates a small, deterministic set of sample rows for the CRM features
-/// (Leads + Customers + primary contact + one activity each) so a freshly
-/// migrated database has data to demo bulk-select, filters and detail
-/// dialogs without hand-crafting curl calls. Idempotent: every insert is
-/// guarded so re-running is a no-op.
+/// Populates a compact, deterministic business demonstration dataset.
+/// Existing sample keys are retained so upgrades never repurpose a row.
+/// Idempotent: every insert is guarded so re-running is a no-op.
 /// </summary>
 public static class SampleCrmDataSeeder
 {
     private const string SampleTag = "[SAMPLE]";
+
+    private static readonly string[] CoreCustomerNames =
+    [
+        "Nguyễn Văn An",
+        "Trần Thị Bảo",
+        "Công ty Cổ phần May mặc An Phú",
+        "Công ty TNHH Nội thất Thành Đạt",
+        "Công ty Cổ phần Gia dụng Tân Phúc",
+    ];
+
+    private static readonly string[] CoreOpportunityNames =
+    [
+        "Thiết kế concept nhà phố Nguyễn Văn An",
+        "Thiết kế nhà phố Trần Thị Bảo",
+        "Thiết kế và thi công Nhà máy may An Phú – Quế Võ",
+        "Thiết kế và thi công showroom Nội thất Thành Đạt",
+        "Cải tạo trụ sở Gia dụng Tân Phúc",
+        "Hạng mục mở rộng nhà phố Nguyễn Văn An",
+    ];
+
+    private static readonly string[] CoreLeadNames = ["Nguyễn Văn An", "Trần Thị Bích"];
+    private const string SampleOpportunityActivityMarker = "Ghi chú mẫu khởi tạo cho cơ hội demo.";
+
+    private static Customer?[] GetCoreCustomers(AppDbContext db)
+    {
+        var customers = db.Customers.Where(customer => CoreCustomerNames.Contains(customer.Name)).ToList();
+        var personalIds = db.CustomerContacts
+            .Where(contact => contact.Phone == "0900000201" || contact.Phone == "0900000202")
+            .Select(contact => contact.CustomerId).ToHashSet();
+        return CoreCustomerNames.Select((name, index) => customers.FirstOrDefault(customer =>
+            customer.Name == name && (index < 2
+                ? personalIds.Contains(customer.Id)
+                : customer.TaxId == $"010000000{index - 1}"))).ToArray();
+    }
+
+    private static IQueryable<Opportunity> GetCoreOpportunities(AppDbContext db) =>
+        db.Opportunities.Where(opportunity => CoreOpportunityNames.Contains(opportunity.Name)
+            && db.OpportunityActivities.Any(activity => activity.OpportunityId == opportunity.Id
+                && activity.Content == SampleOpportunityActivityMarker));
 
     public static void Seed(AppDbContext db, string? webRootPath = null)
     {
@@ -67,16 +104,16 @@ public static class SampleCrmDataSeeder
         {
             new Lead
             {
-                Name = $"{SampleTag} Nguyễn Minh Anh",
-                Phone = "0900000101",
-                Email = "minh.anh.sample@example.com",
+                Name = CoreLeadNames[0],
+                Phone = "0900000201",
+                Email = "an.sample@example.com",
                 SourceCode = "marketing",
                 Status = LeadStatus.Converted,
                 Note = "Lead mẫu từ chiến dịch Facebook Ads.",
             },
             new Lead
             {
-                Name = $"{SampleTag} Trần Thị Bích",
+                Name = CoreLeadNames[1],
                 CompanyName = "Công ty TNHH Bích Anh",
                 Phone = "0900000102",
                 Email = "bich.anh.sample@example.com",
@@ -84,37 +121,17 @@ public static class SampleCrmDataSeeder
                 Status = LeadStatus.Contacted,
                 Note = "Lead mẫu do khách hàng cũ giới thiệu.",
             },
-            new Lead
-            {
-                Name = $"{SampleTag} Phạm Quốc Cường",
-                Phone = "0900000103",
-                SourceCode = "website",
-                Status = LeadStatus.Interested,
-                Note = "Đã liên hệ qua form website, quan tâm gói cao cấp.",
-            },
-            new Lead
-            {
-                Name = $"{SampleTag} Lê Hồng Duyên",
-                Email = "duyen.sample@example.com",
-                SourceCode = "event",
-                Status = LeadStatus.New,
-                Note = "Ghi nhận tại sự kiện triển lãm nội thất tháng 10.",
-            },
-            new Lead
-            {
-                Name = $"{SampleTag} Đỗ Thanh Ê",
-                Phone = "0900000105",
-                SourceCode = "cold-call",
-                Status = LeadStatus.NotInterested,
-                Note = "Chưa có nhu cầu, hẹn liên hệ lại quý sau.",
-            },
         };
 
-        foreach (var s in samples)
+        for (var index = 0; index < samples.Length; index++)
         {
-            var existing = db.Leads.OrderBy(l => l.Id).FirstOrDefault(l => l.Name == s.Name);
+            var s = samples[index];
+            var formerName = index == 0 ? $"{SampleTag} Nguyễn Minh Anh" : $"{SampleTag} Trần Thị Bích";
+            var existing = db.Leads.OrderBy(l => l.Id).FirstOrDefault(l => l.Phone == s.Phone
+                && (l.Name == s.Name || l.Name == formerName));
             if (existing is not null)
             {
+                if (existing.Name == formerName) existing.Name = s.Name;
                 if (!db.LeadActivities.Any(activity => activity.LeadId == existing.Id
                     && activity.Type == LeadActivityType.Note
                     && activity.Content == "Ghi chú mẫu khởi tạo cho lead demo."))
@@ -135,7 +152,7 @@ public static class SampleCrmDataSeeder
             s.OwnerUserId = owner.Id;
             s.CreatedByUserId = owner.Id;
             s.UpdatedByUserId = owner.Id;
-            s.CreatedAt = now;
+            s.CreatedAt = now.AddDays(-300);
             s.UpdatedAt = now;
 
             db.Leads.Add(s);
@@ -161,7 +178,7 @@ public static class SampleCrmDataSeeder
                 new Customer
                 {
                     Type = CustomerType.Individual,
-                    Name = $"{SampleTag} Nguyễn Văn An",
+                    Name = CoreCustomerNames[0],
                     SourceCode = "marketing",
                     RelationshipStatus = CustomerRelationshipStatus.Prospect,
                     Note = "Khách hàng cá nhân mẫu — kênh Marketing.",
@@ -178,7 +195,7 @@ public static class SampleCrmDataSeeder
                 new Customer
                 {
                     Type = CustomerType.Individual,
-                    Name = $"{SampleTag} Trần Thị Bảo",
+                    Name = CoreCustomerNames[1],
                     SourceCode = "referral",
                     RelationshipStatus = CustomerRelationshipStatus.InProgress,
                     Note = "Khách hàng cá nhân đang trong quá trình tư vấn.",
@@ -194,20 +211,20 @@ public static class SampleCrmDataSeeder
                 new Customer
                 {
                     Type = CustomerType.Company,
-                    Name = $"{SampleTag} Công ty CP Xây dựng Alpha",
+                    Name = CoreCustomerNames[2],
                     TaxId = "0100000001",
-                    Address = "Số 1, Đường Alpha, Q.1, TP.HCM",
-                    RepresentativeName = "Ông Nguyễn Văn Alpha",
+                    Address = "KCN Quế Võ, tỉnh Bắc Ninh",
+                    RepresentativeName = "Bà Nguyễn Thị Mai",
                     SourceCode = "website",
                     RelationshipStatus = CustomerRelationshipStatus.Prospect,
-                    Note = "Khách hàng doanh nghiệp mẫu — mảng B2B.",
+                    Note = "Chủ đầu tư nhà máy may tại KCN Quế Võ, Bắc Ninh.",
                 },
                 new CustomerContact
                 {
                     FullName = "Nguyễn Thị Anh",
                     Position = "Trưởng phòng Mua hàng",
                     Phone = "0900000301",
-                    Email = "purchase.alpha.sample@example.com",
+                    Email = "muahang.anphu@example.com",
                     IsPrimary = true,
                 }
             ),
@@ -215,20 +232,20 @@ public static class SampleCrmDataSeeder
                 new Customer
                 {
                     Type = CustomerType.Company,
-                    Name = $"{SampleTag} Công ty TNHH Beta Interior",
+                    Name = CoreCustomerNames[3],
                     TaxId = "0100000002",
-                    Address = "Số 2, Đường Beta, Q.3, TP.HCM",
-                    RepresentativeName = "Bà Lê Thị Beta",
+                    Address = "Quận 3, TP. Hồ Chí Minh",
+                    RepresentativeName = "Bà Lê Thu Hương",
                     SourceCode = "referral",
                     RelationshipStatus = CustomerRelationshipStatus.Signed,
-                    Note = "Khách hàng đã ký hợp đồng — dùng làm demo cho tab hợp đồng.",
+                    Note = "Chủ đầu tư showroom nội thất tại Quận 3, TP. Hồ Chí Minh.",
                 },
                 new CustomerContact
                 {
                     FullName = "Phạm Quốc Bảo",
                     Position = "Giám đốc dự án",
                     Phone = "0900000302",
-                    Email = "pm.beta.sample@example.com",
+                    Email = "duan.thanhdat@example.com",
                     IsPrimary = true,
                 }
             ),
@@ -236,13 +253,13 @@ public static class SampleCrmDataSeeder
                 new Customer
                 {
                     Type = CustomerType.Company,
-                    Name = $"{SampleTag} Công ty CP Gamma Home",
+                    Name = CoreCustomerNames[4],
                     TaxId = "0100000003",
-                    Address = "Số 3, Đường Gamma, Q.7, TP.HCM",
-                    RepresentativeName = "Ông Trần Văn Gamma",
+                    Address = "Quận Phú Nhuận, TP. Hồ Chí Minh",
+                    RepresentativeName = "Ông Trần Quốc Phúc",
                     SourceCode = "event",
                     RelationshipStatus = CustomerRelationshipStatus.InProgress,
-                    Note = "Khách hàng gặp tại sự kiện triển lãm.",
+                    Note = "Chủ đầu tư dự án cải tạo trụ sở và khu trưng bày.",
                 },
                 new CustomerContact
                 {
@@ -256,14 +273,28 @@ public static class SampleCrmDataSeeder
 
         foreach (var (customer, contact) in samples)
         {
+            var prefixedName = $"{SampleTag} {customer.Name}";
+            var formerName = customer.TaxId switch
+            {
+                "0100000001" => $"{SampleTag} Công ty CP Xây dựng Alpha",
+                "0100000002" => $"{SampleTag} Công ty TNHH Beta Interior",
+                "0100000003" => $"{SampleTag} Công ty CP Gamma Home",
+                _ => prefixedName,
+            };
             if (db.SeededRootDeletions.Any(item =>
-                item.ResourceType == EntityTypes.Customer && item.ResourceKey == customer.Name))
+                item.ResourceType == EntityTypes.Customer
+                && (item.ResourceKey == customer.Name || item.ResourceKey == formerName
+                    || item.ResourceKey == prefixedName)))
             {
                 continue;
             }
-            var existing = db.Customers.OrderBy(c => c.Id).FirstOrDefault(c => c.Name == customer.Name);
+            var existing = db.Customers.OrderBy(c => c.Id).FirstOrDefault(c =>
+                (c.Name == customer.Name || c.Name == prefixedName || c.Name == formerName)
+                && (customer.TaxId != null ? c.TaxId == customer.TaxId
+                    : db.CustomerContacts.Any(item => item.CustomerId == c.Id && item.Phone == contact.Phone)));
             if (existing is not null)
             {
+                if (existing.Name == formerName || existing.Name == prefixedName) existing.Name = customer.Name;
                 if (!db.CustomerContacts.Any(item => item.CustomerId == existing.Id
                     && item.FullName == contact.FullName && item.Phone == contact.Phone))
                 {
@@ -295,7 +326,7 @@ public static class SampleCrmDataSeeder
             customer.OwnerUserId = owner.Id;
             customer.CreatedByUserId = owner.Id;
             customer.UpdatedByUserId = owner.Id;
-            customer.CreatedAt = now;
+            customer.CreatedAt = now.AddDays(-400);
             customer.UpdatedAt = now;
 
             db.Customers.Add(customer);
@@ -368,39 +399,45 @@ public static class SampleCrmDataSeeder
         var deletedOpportunityNames = db.SeededRootDeletions
             .Where(item => item.ResourceType == EntityTypes.Opportunity)
             .Select(item => item.ResourceKey).ToHashSet();
-        var sampleCustomers = db.Customers
-            .Where(c => c.Name.StartsWith(SampleTag))
-            .OrderBy(c => c.Id)
-            .ToList();
-        if (sampleCustomers.Count == 0) return;
+        var sampleCustomers = GetCoreCustomers(db);
+        if (sampleCustomers.All(customer => customer is null)) return;
 
-        var samples = new (string Name, decimal Value, int Probability, OpportunityStage Stage, int CloseDaysFromNow)[]
+        var samples = new (string Name, string LegacyName, decimal Value, int Probability, OpportunityStage Stage, int CloseDaysFromNow)[]
         {
-            ($"{SampleTag} Nhà máy Alpha - Giai đoạn 1", 4_500_000_000m, 60, OpportunityStage.Qualification, 45),
-            ($"{SampleTag} Beta Interior - Showroom Q3", 2_100_000_000m, 35, OpportunityStage.Prospecting, 90),
-            ($"{SampleTag} Gamma Home - Cải tạo văn phòng", 1_250_000_000m, 75, OpportunityStage.Proposal, 30),
-            ($"{SampleTag} Beta Interior - Nhà xưởng phụ", 3_800_000_000m, 55, OpportunityStage.Negotiation, 60),
-            ($"{SampleTag} Alpha - Mở rộng kho", 800_000_000m, 100, OpportunityStage.Won, -10),
-            ($"{SampleTag} Trần Thị Bảo - Nhà phố", 350_000_000m, 0, OpportunityStage.Lost, -20),
+            (CoreOpportunityNames[0], $"{SampleTag} Nhà máy Alpha - Giai đoạn 1", 4_500_000_000m, 60, OpportunityStage.Qualification, 45),
+            (CoreOpportunityNames[1], $"{SampleTag} Beta Interior - Showroom Q3", 2_100_000_000m, 100, OpportunityStage.Won, -20),
+            (CoreOpportunityNames[2], $"{SampleTag} Gamma Home - Cải tạo văn phòng", 1_250_000_000m, 100, OpportunityStage.Won, -90),
+            (CoreOpportunityNames[3], $"{SampleTag} Beta Interior - Nhà xưởng phụ", 3_800_000_000m, 100, OpportunityStage.Won, -30),
+            (CoreOpportunityNames[4], $"{SampleTag} Alpha - Mở rộng kho", 800_000_000m, 100, OpportunityStage.Won, -240),
+            (CoreOpportunityNames[5], $"{SampleTag} Trần Thị Bảo - Nhà phố", 350_000_000m, 0, OpportunityStage.Lost, -20),
         };
 
         for (var i = 0; i < samples.Length; i++)
         {
-            var (name, value, probability, stage, closeDays) = samples[i];
-            if (deletedOpportunityNames.Contains(name)) continue;
-            var existing = db.Opportunities.OrderBy(o => o.Id).FirstOrDefault(o => o.Name == name);
+            var (name, legacyName, value, probability, stage, closeDays) = samples[i];
+            var customer = sampleCustomers[i % sampleCustomers.Length];
+            if (customer is null) continue;
+            var prefixedName = $"{SampleTag} {name}";
+            if (deletedOpportunityNames.Contains(name) || deletedOpportunityNames.Contains(legacyName)
+                || deletedOpportunityNames.Contains(prefixedName)) continue;
+            var existing = db.Opportunities.OrderBy(o => o.Id)
+                .FirstOrDefault(o => o.CustomerId == customer.Id
+                    && (o.Name == name || o.Name == legacyName || o.Name == prefixedName)
+                    && db.OpportunityActivities.Any(activity => activity.OpportunityId == o.Id
+                        && activity.Content == SampleOpportunityActivityMarker));
             if (existing is not null)
             {
+                if (existing.Name != name) existing.Name = name;
                 if (!db.OpportunityActivities.Any(activity => activity.OpportunityId == existing.Id
                     && activity.Type == OpportunityActivityType.Note
-                    && activity.Content == "Ghi chú mẫu khởi tạo cho cơ hội demo."))
+                    && activity.Content == SampleOpportunityActivityMarker))
                 {
                     db.OpportunityActivities.Add(new OpportunityActivity
                     {
                         OpportunityId = existing.Id,
                         Type = OpportunityActivityType.Note,
                         OccurredAt = now,
-                        Content = "Ghi chú mẫu khởi tạo cho cơ hội demo.",
+                        Content = SampleOpportunityActivityMarker,
                         CreatedByUserId = owner.Id,
                         CreatedAt = now,
                     });
@@ -409,7 +446,6 @@ public static class SampleCrmDataSeeder
                 continue;
             }
 
-            var customer = sampleCustomers[i % sampleCustomers.Count];
             var closeDate = now.AddDays(closeDays);
 
             var op = new Opportunity
@@ -425,8 +461,10 @@ public static class SampleCrmDataSeeder
                 LostReasonCode = stage == OpportunityStage.Lost ? "price" : null,
                 LostNote = stage == OpportunityStage.Lost ? "Khách hàng cân nhắc lại vì ngân sách." : null,
                 Note = "Cơ hội mẫu — demo pipeline & stage transition.",
-                CreatedAt = now,
-                UpdatedAt = now,
+                CreatedAt = stage is OpportunityStage.Won or OpportunityStage.Lost
+                    ? closeDate.AddDays(-30)
+                    : now.AddDays(-7),
+                UpdatedAt = stage is OpportunityStage.Won or OpportunityStage.Lost ? closeDate : now,
                 CreatedByUserId = owner.Id,
                 UpdatedByUserId = owner.Id,
             };
@@ -437,10 +475,10 @@ public static class SampleCrmDataSeeder
             {
                 OpportunityId = op.Id,
                 Type = OpportunityActivityType.Note,
-                OccurredAt = now,
-                Content = "Ghi chú mẫu khởi tạo cho cơ hội demo.",
+                OccurredAt = op.CreatedAt.AddDays(1),
+                Content = SampleOpportunityActivityMarker,
                 CreatedByUserId = owner.Id,
-                CreatedAt = now,
+                CreatedAt = op.CreatedAt.AddDays(1),
             });
             db.SaveChanges();
         }
@@ -453,7 +491,7 @@ public static class SampleCrmDataSeeder
             new Vendor
             {
                 VendorCode = "NCC-ELECTRIC-01",
-                CompanyName = $"{SampleTag} Công ty Thiết bị Điện Đông Á",
+                CompanyName = "Công ty Thiết bị Điện Đông Á",
                 VendorType = VendorType.Supplier,
                 TaxCode = "0310001001",
                 Phone = "0900000501",
@@ -467,7 +505,7 @@ public static class SampleCrmDataSeeder
             new Vendor
             {
                 VendorCode = "TP-MEP-01",
-                CompanyName = $"{SampleTag} Công ty Cơ điện Minh Phát",
+                CompanyName = "Công ty Cơ điện Minh Phát",
                 VendorType = VendorType.SubContractor,
                 TaxCode = "0310001002",
                 Phone = "0900000502",
@@ -481,7 +519,7 @@ public static class SampleCrmDataSeeder
             new Vendor
             {
                 VendorCode = "DT-FINISH-01",
-                CompanyName = $"{SampleTag} Nội thất Hoàn Thiện Việt",
+                CompanyName = "Nội thất Hoàn Thiện Việt",
                 VendorType = VendorType.Both,
                 TaxCode = "0310001003",
                 Phone = "0900000503",
@@ -510,8 +548,7 @@ public static class SampleCrmDataSeeder
 
     private static void SeedQuotes(AppDbContext db, ApplicationUser owner, DateTime now)
     {
-        var sampleOpps = db.Opportunities
-            .Where(o => o.Name.StartsWith(SampleTag))
+        var sampleOpps = GetCoreOpportunities(db)
             .OrderBy(o => o.Id)
             .ToList();
         if (sampleOpps.Count == 0) return;
@@ -520,20 +557,16 @@ public static class SampleCrmDataSeeder
             .Select(item => item.ResourceKey)
             .ToHashSet();
 
-        // One curated sample per QuoteStatus so every filter/badge/workflow
-        // branch has real data to render (plus a versioned pair to exercise
-        // the Versions tab and QuoteVersionSnapshot table).
+        // Keep one quote per commercial step, including the customer-approved
+        // version used by the won opportunity and completed contract.
         var seeds = new (int OppIdx, QuoteMethod Method, QuoteStatus Status, int ValidDays, string Label)[]
         {
-            (0, QuoteMethod.UnitCost, QuoteStatus.Draft,             45, "Nháp · Suất đầu tư"),
-            (1, QuoteMethod.Boq,      QuoteStatus.Draft,             45, "Nháp · BOQ"),
-            (2, QuoteMethod.Boq,      QuoteStatus.PendingApproval,   30, "Chờ duyệt nội bộ"),
-            (3, QuoteMethod.UnitCost, QuoteStatus.Approved,          30, "Đã duyệt · sẵn gửi khách"),
-            (4, QuoteMethod.Boq,      QuoteStatus.SentToCustomer,     2, "Đã gửi khách · sắp hết hạn"),
-            (4, QuoteMethod.UnitCost, QuoteStatus.CustomerApproved,  60, "Khách đã duyệt · terminal"),
-            (1, QuoteMethod.Boq,      QuoteStatus.Rejected,          30, "Khách từ chối · terminal"),
-            (2, QuoteMethod.UnitCost, QuoteStatus.Expired,           -5, "Hết hạn · quá hạn 5 ngày"),
-            (3, QuoteMethod.Boq,      QuoteStatus.Cancelled,         30, "Đã huỷ · terminal"),
+            (0, QuoteMethod.UnitCost, QuoteStatus.Draft,             45, "Nhà phố Nguyễn Văn An · dự toán concept"),
+            (1, QuoteMethod.Boq,      QuoteStatus.CustomerApproved,  45, "Nhà phố Trần Thị Bảo · khách đã duyệt"),
+            (2, QuoteMethod.Boq,      QuoteStatus.CustomerApproved,  30, "Nhà máy may An Phú · khách đã duyệt"),
+            (3, QuoteMethod.UnitCost, QuoteStatus.CustomerApproved,  30, "Showroom Thành Đạt · khách đã duyệt"),
+            (5, QuoteMethod.Boq,      QuoteStatus.Rejected,          30, "Mở rộng nhà phố Nguyễn Văn An · khách từ chối"),
+            (4, QuoteMethod.UnitCost, QuoteStatus.CustomerApproved,  60, "Cải tạo trụ sở Tân Phúc · khách đã duyệt"),
         };
 
         var snapshotQuoteId = 0;
@@ -552,7 +585,10 @@ public static class SampleCrmDataSeeder
             {
                 continue;
             }
-            var validUntil = now.AddDays(validDays);
+            var eventAt = status is QuoteStatus.CustomerApproved or QuoteStatus.Rejected
+                ? opp.ClosedAt ?? now
+                : now;
+            var validUntil = eventAt.AddDays(validDays);
 
             var quote = new Quote
             {
@@ -566,8 +602,8 @@ public static class SampleCrmDataSeeder
                 ValidUntil = validUntil,
                 Note = sampleNote,
                 Status = status,
-                CreatedAt = now.AddDays(-3),
-                UpdatedAt = now.AddHours(-1),
+                CreatedAt = eventAt.AddDays(-5),
+                UpdatedAt = eventAt.AddHours(-1),
                 CreatedByUserId = owner.Id,
                 UpdatedByUserId = owner.Id,
             };
@@ -576,9 +612,9 @@ public static class SampleCrmDataSeeder
             {
                 quote.AreaSqm = 100m + i * 20m;
                 quote.UnitPricePerSqm = 6_500_000m + i * 800_000m;
-                quote.PackageDescription = "Gói mẫu bao gồm thi công phần thô + hoàn thiện cơ bản.";
+                quote.PackageDescription = $"Dự toán theo suất đầu tư cho {opp.Name}.";
                 quote.RateSource = QuoteRateSource.Override;
-                quote.RateOverrideReason = "Đơn giá minh họa được xác lập bởi dữ liệu mẫu.";
+                quote.RateOverrideReason = "Đơn giá tham khảo theo khảo sát và phạm vi sơ bộ của công trình.";
                 quote.RateOverrideByUserId = owner.Id;
                 quote.RateOverrideAt = quote.CreatedAt;
             }
@@ -595,16 +631,16 @@ public static class SampleCrmDataSeeder
             }
 
             RecomputeTotals(quote);
-            StampWorkflowTimestamps(quote, owner.Id, now);
+            StampWorkflowTimestamps(quote, owner.Id, eventAt);
 
             db.Quotes.Add(quote);
             db.SaveChanges();
-            if (method == QuoteMethod.UnitCost)
+            if (method == QuoteMethod.UnitCost && status == QuoteStatus.Draft)
             {
                 snapshotQuoteId = quote.Id;
             }
 
-            WriteApprovalLogs(db, quote, owner.Id, now);
+            WriteApprovalLogs(db, quote, owner.Id, eventAt);
             db.SaveChanges();
         }
 
@@ -768,8 +804,8 @@ public static class SampleCrmDataSeeder
             quote.Items[0].Amount = decimal.Round(quote.Items[0].Quantity * quote.Items[0].UnitPrice, 2, MidpointRounding.AwayFromZero);
         }
         RecomputeTotals(quote);
-        AppendLog(db, quote.Id, QuoteWorkflowAction.NewVersion, QuoteStatus.Cancelled, QuoteStatus.Cancelled, userId, now.AddHours(-1),
-            $"Bumped to V{quote.Version} on edit-after-approval (sample).");
+        AppendLog(db, quote.Id, QuoteWorkflowAction.NewVersion, QuoteStatus.Draft, QuoteStatus.Draft, userId, now.AddHours(-1),
+            $"Tạo bản nháp V{quote.Version} để so sánh phương án giá.");
         db.SaveChanges();
     }
 
@@ -832,8 +868,7 @@ public static class SampleCrmDataSeeder
         var deletedContractNumbers = db.SeededRootDeletions
             .Where(item => item.ResourceType == EntityTypes.Contract)
             .Select(item => item.ResourceKey).ToHashSet();
-        var sampleOpportunities = db.Opportunities
-            .Where(o => o.Name.StartsWith(SampleTag))
+        var sampleOpportunities = GetCoreOpportunities(db)
             .OrderBy(o => o.Id)
             .ToList();
         if (sampleOpportunities.Count == 0) return;
@@ -851,12 +886,12 @@ public static class SampleCrmDataSeeder
         // the FE red badge (endDate - now ≤ 30 days) has a live example.
         var seeds = new (int CustIdx, ContractType Type, ContractStatus Status, int SignedOffset, int DurationDays, decimal Value, string Label)[]
         {
-            (0, ContractType.Design, ContractStatus.Draft, 0, 180, 250_000_000m, "Bản nháp — chờ 2 bên chốt"),
-            (1, ContractType.DesignAndBuild, ContractStatus.Signed, -20, 200, 850_000_000m, "Đã ký — chuẩn bị khởi công"),
-            (2, ContractType.Construction, ContractStatus.InProgress, -90, 100, 1_500_000_000m, "Đang thi công — sắp kết thúc"),
-            (3, ContractType.DesignAndBuild, ContractStatus.InProgress, -30, 240, 620_000_000m, "Đang thi công — mới bắt đầu"),
-            (3, ContractType.Construction, ContractStatus.OnHold, -60, 180, 480_000_000m, "Tạm dừng theo yêu cầu KH"),
-            (4, ContractType.DesignAndBuild, ContractStatus.Completed, -240, 180, 980_000_000m, "Hoàn thành, đã bàn giao"),
+            (0, ContractType.Design, ContractStatus.Draft, 0, 180, 250_000_000m, "Nhà phố Nguyễn Văn An · dự thảo hợp đồng thiết kế"),
+            (1, ContractType.DesignAndBuild, ContractStatus.Signed, -20, 200, 850_000_000m, "Nhà phố Trần Thị Bảo · đã ký, chuẩn bị triển khai"),
+            (2, ContractType.DesignAndBuild, ContractStatus.InProgress, -90, 100, 1_500_000_000m, "Nhà máy may An Phú · đang thi công"),
+            (3, ContractType.DesignAndBuild, ContractStatus.InProgress, -30, 240, 620_000_000m, "Showroom Nội thất Thành Đạt · đang thi công"),
+            (3, ContractType.Construction, ContractStatus.OnHold, -30, 180, 480_000_000m, "Showroom Nội thất Thành Đạt · tạm dừng"),
+            (4, ContractType.DesignAndBuild, ContractStatus.Completed, -240, 180, 980_000_000m, "Trụ sở Gia dụng Tân Phúc · đã bàn giao"),
         };
 
         for (var index = 0; index < seeds.Length; index++)
@@ -896,7 +931,12 @@ public static class SampleCrmDataSeeder
                 StartDate = startDate,
                 EndDate = endDate,
                 Value = value,
-                ScopeOfWork = "Phạm vi thi công phần thô và hoàn thiện theo hồ sơ thiết kế kèm theo.",
+                ScopeOfWork = type switch
+                {
+                    ContractType.Design => "Lập phương án concept và hồ sơ thiết kế nhà phố.",
+                    ContractType.Construction => "Thi công phần thô, MEP và hoàn thiện theo hồ sơ thiết kế được duyệt.",
+                    _ => "Thiết kế và thi công trọn gói theo phạm vi được hai bên phê duyệt.",
+                },
                 Note = sampleNote,
                 CreatedAt = now.AddDays(signedOffset).AddDays(-3),
                 UpdatedAt = now.AddHours(-1),
@@ -1195,17 +1235,14 @@ public static class SampleCrmDataSeeder
         var deletedCapabilityPaths = db.SeededRootDeletions
             .Where(item => item.ResourceType == EntityTypes.CapabilityDocument)
             .Select(item => item.ResourceKey).ToHashSet();
-        // Curated to cover every tag + every expiry-state band so the FE
-        // filters have at least one row each to render.
+        // A compact capability library: permanent corporate evidence,
+        // project-specific expertise, an expiring permit, and an expired ISO.
         var seeds = new (string Name, string Tag, int? IssuedDaysAgo, int? ExpiryDaysFromNow, string File)[]
         {
             ("Giấy chứng nhận đăng ký doanh nghiệp", "phap-nhan", -365 * 3, null,                    "phap-nhan-erc.pdf"),
-            ("Portfolio Kiến trúc 2026",              "kien-truc", -120,      null,                    "portfolio-kien-truc-2026.pdf"),
-            ("Hồ sơ Kết cấu — Nhà máy Alpha",         "ket-cau",   -200,      365,                     "ho-so-ket-cau-alpha.pdf"),
-            ("Hồ sơ MEP — Nhà xưởng Beta",            "mep",       -180,      45,                      "ho-so-mep-beta.pdf"),
+            ("Hồ sơ kết cấu Nhà máy may An Phú",     "ket-cau",   -200,      365,                     "ho-so-ket-cau-nha-may-may-an-phu.pdf"),
             ("Chứng nhận ISO 9001:2015",              "iso",       -400,      -30,                     "iso-9001-2015.pdf"),
             ("Giấy phép xây dựng tổng thầu",          "giay-phep", -365 * 2, 25,                      "giay-phep-xay-dung.pdf"),
-            ("Hồ sơ năng lực tổng hợp 2026",          "khac",      -30,       null,                    "ho-so-nang-luc-2026.pdf"),
         };
 
         // Phase 1 — self-heal physical files whenever webRoot is known.
@@ -1355,9 +1392,8 @@ public static class SampleCrmDataSeeder
             .Where(item => item.ResourceType == EntityTypes.Tender)
             .Select(item => item.ResourceKey)
             .ToHashSet();
-        var customers = db.Customers.Where(c => c.Name.StartsWith(SampleTag))
-            .OrderBy(c => c.Id).Take(5).ToList();
-        if (customers.Count == 0) return;
+        var customers = GetCoreCustomers(db);
+        if (customers.All(customer => customer is null)) return;
 
         var templates = db.MasterDataOptions
             .Where(o => o.Category == "tender_checklist_default" && o.IsActive)
@@ -1372,8 +1408,7 @@ public static class SampleCrmDataSeeder
             .OrderBy(d => d.Id)
             .FirstOrDefault();
 
-        var sampleOpportunities = db.Opportunities
-            .Where(o => o.Name.StartsWith(SampleTag))
+        var sampleOpportunities = GetCoreOpportunities(db)
             .OrderBy(o => o.Id)
             .ToList();
 
@@ -1383,18 +1418,15 @@ public static class SampleCrmDataSeeder
         var seeds = new (string Name, int CustomerIdx, int DaysToDeadline, TenderStatus Status,
             bool RichChecklist, string? LostReason, string? LostNote)[]
         {
-            ("Gói thầu xây dựng Nhà máy Alpha",         0, 21,  TenderStatus.Preparing, true,  null,       null),
-            ("Gói thầu MEP Nhà xưởng Beta",             1, 2,   TenderStatus.Preparing, true,  null,       null),
-            ("Gói thầu hoàn thiện nội thất Gamma",      2, -5,  TenderStatus.Submitted, false, null,       null),
-            ("Gói thầu mở rộng kho Alpha",              0, -20, TenderStatus.Won,       false, null,       null),
-            ("Gói thầu nội thất căn hộ mẫu Beta",       1, -30, TenderStatus.Lost,      false, "price",    "Khách chốt với đối thủ vì giá thấp hơn 8%."),
+            ("Gói thầu thiết kế nhà phố Nguyễn Văn An", 0, 21, TenderStatus.Preparing, true, null, null),
+            ("Gói thầu thiết kế và thi công Nhà máy may An Phú", 2, -140, TenderStatus.Won, false, null, null),
         };
 
         var i = 0;
         foreach (var (name, custIdx, daysToDeadline, status, richChecklist, lostReason, lostNote) in seeds)
         {
-            if (custIdx >= customers.Count) continue;
-            var customer = customers[custIdx];
+            if (custIdx >= customers.Length || customers[custIdx] is null) continue;
+            var customer = customers[custIdx]!;
             var code = $"TD-SAMPLE-{i + 1:D3}";
             if (deletedTenderCodes.Contains(code))
             {
@@ -1441,15 +1473,15 @@ public static class SampleCrmDataSeeder
                 PreparerUserId = owner.Id,
                 InfoSource = i % 2 == 0 ? "Referral" : "Website",
                 Status = status,
-                Note = $"{SampleTenderMarker} Sample tender for demo.",
+                Note = $"{SampleTenderMarker} Theo dõi hồ sơ dự thầu, hạn nộp và kết quả cho {name}.",
                 WonOpportunityId = wonOppId,
                 LostReasonCode = lostReason,
                 LostNote = lostNote,
                 ClosedAt = closedAt,
                 CreatedByUserId = owner.Id,
                 UpdatedByUserId = owner.Id,
-                CreatedAt = now.AddDays(-7 + i),
-                UpdatedAt = now.AddDays(-1 + i),
+                CreatedAt = status == TenderStatus.Won ? deadline.AddDays(-20) : now.AddDays(-7),
+                UpdatedAt = closedAt ?? now,
             };
             db.Tenders.Add(tender);
             db.SaveChanges();
@@ -1518,8 +1550,7 @@ public static class SampleCrmDataSeeder
         var deletedSurveyCodes = db.SeededRootDeletions
             .Where(item => item.ResourceType == EntityTypes.Survey)
             .Select(item => item.ResourceKey).ToHashSet();
-        var sampleOpportunities = db.Opportunities
-            .Where(o => o.Name.StartsWith(SampleTag))
+        var sampleOpportunities = GetCoreOpportunities(db)
             .OrderBy(o => o.Id)
             .ToList();
         var operationalProjects = db.OperationalProjects
@@ -1540,11 +1571,8 @@ public static class SampleCrmDataSeeder
         var seeds = new (string Location, string ConstructionCode, int DaysAgo,
             SurveyDriveSyncStatus DriveSync, string? DriveError, bool LinkProject, int? LinkOppIdx)[]
         {
-            ("Lô A5, KCN Bắc Ninh",           "industrial",     2,   SurveyDriveSyncStatus.Synced,    null,                                           true,  0),
-            ("Số 12 Nguyễn Trãi, Q. Thanh Xuân, Hà Nội",   "residential",    5,   SurveyDriveSyncStatus.Syncing,   null,                                           false, 1),
-            ("Toà nhà văn phòng Green Tower, Q.1, TP.HCM", "commercial",     8,   SurveyDriveSyncStatus.Failed,    "Quota Drive vượt hạn mức, cần cấp quyền lại.", false, null),
-            ("Khu đô thị Sunbay, Nha Trang",  "mixed-use",      14,  SurveyDriveSyncStatus.NotSynced, null,                                           false, null),
-            ("Showroom nội thất Đông Anh, Hà Nội",         "interior",       30,  SurveyDriveSyncStatus.Synced,    null,                                           false, null),
+            ("Nhà máy may An Phú, KCN Quế Võ, Bắc Ninh", "industrial", 150, SurveyDriveSyncStatus.Synced, null, false, 2),
+            ("Showroom Nội thất Thành Đạt, Quận 3, TP. Hồ Chí Minh", "interior", 60, SurveyDriveSyncStatus.NotSynced, null, false, 3),
         };
 
         var i = 0;
@@ -1583,7 +1611,7 @@ public static class SampleCrmDataSeeder
                 OperationalProjectId = operationalProjectId.Value,
                 LinkedProjectId = linkProject ? sampleProject?.Id : null,
                 LinkedOpportunityId = linkedOppId,
-                Note = $"{SampleSurveyMarker} Sample survey for demo.",
+                Note = $"{SampleSurveyMarker} Khảo sát hiện trạng tại {location} trước khi hoàn thiện thiết kế và báo giá.",
                 DriveSyncStatus = driveSync,
                 DriveSyncError = driveError,
                 LastSyncedAt = driveSync == SurveyDriveSyncStatus.NotSynced ? null : now.AddDays(-daysAgo + 1),
@@ -1645,11 +1673,8 @@ public static class SampleCrmDataSeeder
     private static void SeedDesignProjects(AppDbContext db, ApplicationUser owner, DateTime now)
     {
         var sampleContracts = GetSampleContracts(db);
-        var sampleCustomers = db.Customers
-            .Where(c => c.Name.StartsWith(SampleTag))
-            .OrderBy(c => c.Id)
-            .ToList();
-        if (sampleContracts.Count == 0 && sampleCustomers.Count == 0) return;
+        var sampleCustomers = GetCoreCustomers(db);
+        if (sampleCustomers.All(customer => customer is null)) return;
 
         var projectManager = ResolveRoleUser(db, "PM", owner);
         var designLead = ResolveRoleUser(db, "DESIGN_LEAD", ResolveRoleUser(db, "DESIGN", owner));
@@ -1663,21 +1688,29 @@ public static class SampleCrmDataSeeder
         var seeds = new (string Name, DesignProjectStage Stage, DesignProjectStatus Status,
             int StartDaysAgo, int DeadlineDaysAhead)[]
         {
-            ("Nhà máy Alpha - Giai đoạn 1",   DesignProjectStage.Concept,     DesignProjectStatus.Active, 3,  90),
-            ("Villa Bãi Dài - Nha Trang",     DesignProjectStage.BasicDesign, DesignProjectStatus.Active, 30, 120),
-            ("Showroom nội thất Đông Anh",    DesignProjectStage.ShopDrawing, DesignProjectStatus.Active, 60, 30),
-            ("Nhà kho lạnh KCN Bắc Ninh",     DesignProjectStage.BasicDesign, DesignProjectStatus.OnHold, 45, -5),
+            ("Nhà phố Nguyễn Văn An",        DesignProjectStage.Concept,     DesignProjectStatus.Active, 3,  90),
+            ("Nhà phố Trần Thị Bảo",         DesignProjectStage.BasicDesign, DesignProjectStatus.Active, 30, 120),
+            ("Nhà máy may An Phú – Quế Võ", DesignProjectStage.ShopDrawing, DesignProjectStatus.Active, 120, 30),
         };
 
         for (var index = 0; index < seeds.Length; index++)
         {
             var (name, stage, status, startDaysAgo, deadlineDaysAhead) = seeds[index];
-            var contract = sampleContracts.Count > index ? sampleContracts[index] : null;
-            if (contract is null && sampleCustomers.Count == 0) continue;
-            var customerId = contract?.CustomerId ?? sampleCustomers[index % sampleCustomers.Count].Id;
+            // Concept starts before a contract; later stages may use the
+            // matching customer contract, never a positional fallback.
+            var customer = sampleCustomers[index];
+            if (customer is null) continue;
+            var contract = index == 0 ? null : sampleContracts
+                .FirstOrDefault(item => item.CustomerId == customer.Id);
+            var customerId = customer.Id;
+            var operationalProjectId = db.OperationalProjects
+                .Where(project => project.Code.StartsWith("PJ-SAMPLE-") && project.CustomerId == customerId)
+                .OrderBy(project => project.Id)
+                .Select(project => (int?)project.Id)
+                .FirstOrDefault();
             var projectCode = $"DP-SAMPLE-{index + 1:D3}";
             if (deletedProjectCodes.Contains(projectCode)) continue;
-            var sampleName = $"{SampleTag} {name}";
+            var sampleName = name;
             if (db.DesignProjects.Any(project => project.ProjectCode == projectCode
                 || (project.Note != null && project.Note.StartsWith(SampleDesignProjectMarker)
                     && project.Name == sampleName))) continue;
@@ -1687,14 +1720,14 @@ public static class SampleCrmDataSeeder
                 Name = sampleName,
                 CustomerId = customerId,
                 ContractId = contract?.Id,
-                OperationalProjectId = contract?.OperationalProjectId,
+                OperationalProjectId = operationalProjectId,
                 ProjectManagerUserId = projectManager.Id,
                 DesignLeadUserId = designLead.Id,
                 StartDate = now.AddDays(-startDaysAgo),
                 Deadline = now.AddDays(deadlineDaysAhead),
                 CurrentStage = stage,
                 Status = status,
-                Note = $"{SampleDesignProjectMarker} Sample design project for demo.",
+                Note = $"{SampleDesignProjectMarker} Hồ sơ thiết kế {name} gắn với dự án vận hành và khách hàng chủ đầu tư.",
                 CreatedByUserId = owner.Id,
                 UpdatedByUserId = owner.Id,
                 CreatedAt = now.AddDays(-startDaysAgo),
@@ -1803,9 +1836,9 @@ public static class SampleCrmDataSeeder
         if (project is null) return;
         var seeds = new (string Name, string Description, ConceptOptionStatus Status, int DaysAgo, bool Presented)[]
         {
-            ("Phương án A - Hiện đại",  $"{SampleTag} Concept option A — tone hiện đại, tối giản.", ConceptOptionStatus.PresentedToClient,     3,  true),
-            ("Phương án B - Truyền thống", $"{SampleTag} Concept option B — mái ngói, sân trong.",    ConceptOptionStatus.Drafting,               1,  false),
-            ("Phương án C - Cổ điển",   $"{SampleTag} Concept option C — bỏ ngang do khách không thích tone màu.", ConceptOptionStatus.Discarded, 5, true),
+            ("Mặt tiền hiện đại, không gian mở", "Nhà phố Nguyễn Văn An — mặt tiền tối giản, lấy sáng tự nhiên.", ConceptOptionStatus.PresentedToClient, 3, true),
+            ("Mái dốc và sân trong", "Nhà phố Nguyễn Văn An — sân trong thông gió và mái dốc.", ConceptOptionStatus.Drafting, 1, false),
+            ("Mặt tiền cổ điển", "Nhà phố Nguyễn Văn An — khách không chọn phương án cổ điển.", ConceptOptionStatus.Discarded, 5, true),
         };
 
         foreach (var (name, description, status, daysAgo, presented) in seeds)
@@ -1890,8 +1923,8 @@ public static class SampleCrmDataSeeder
 
     /// <summary>
     /// NIH-116 Shop Drawing showcase. Attaches to the first sample design
-    /// project already at ShopDrawing stage (currently "Showroom nội thất
-    /// Đông Anh") so the tab lights up with drawings across every
+    /// project already at ShopDrawing stage (the An Phú garment factory)
+    /// so the tab lights up with drawings across every
     /// discipline + every state in the slice-1 state machine. Idempotent —
     /// guarded on the "[SAMPLE_SD]" marker in Note.
     /// </summary>
@@ -1917,12 +1950,12 @@ public static class SampleCrmDataSeeder
 
         var seeds = new (string Discipline, string Prefix, string Item, string Title, ShopDrawingStatus Status, int DaysAgo)[]
         {
-            ("architecture", "KT-SD",  "Mặt bằng bố trí showroom tầng 1", "Bản vẽ bố trí cửa hàng — trục A-D", ShopDrawingStatus.Approved,   3),
-            ("architecture", "KT-SD",  "Mặt bằng bố trí showroom tầng 1", "Chi tiết vách kính lễ tân",         ShopDrawingStatus.InReview,   1),
-            ("structure",    "KC-SD",  "Móng cột chính",                  "Bố trí cốt thép móng M1",           ShopDrawingStatus.Drafting,   0),
-            ("mep",          "MEP-SD", "Cấp thoát nước tầng 1",           "Sơ đồ nguyên lý cấp nước",          ShopDrawingStatus.Approved,   4),
-            ("mep",          "MEP-SD", "Hệ điện chiếu sáng tầng 1",       "Sơ đồ nguyên lý chiếu sáng",        ShopDrawingStatus.PendingIfc, 2),
-            ("interior",     "NT-SD",  "Trần thạch cao khu trưng bày",    "Chi tiết trần dán gỗ óc chó",       ShopDrawingStatus.Rejected,   5),
+            ("architecture", "KT-SD",  "Mặt bằng xưởng may tầng 1", "Mặt bằng dây chuyền may — trục A-D", ShopDrawingStatus.Approved, 73),
+            ("architecture", "KT-SD",  "Khối văn phòng điều hành", "Chi tiết vách kính khu tiếp đón", ShopDrawingStatus.InReview, 71),
+            ("structure",    "KC-SD",  "Móng cột chính", "Bố trí cốt thép móng M1", ShopDrawingStatus.Drafting, 70),
+            ("mep",          "MEP-SD", "Cấp thoát nước tầng 1", "Sơ đồ nguyên lý cấp nước", ShopDrawingStatus.Approved, 74),
+            ("mep",          "MEP-SD", "Hệ điện chiếu sáng tầng 1", "Sơ đồ nguyên lý chiếu sáng", ShopDrawingStatus.PendingIfc, 72),
+            ("interior",     "NT-SD", "Trần khu văn phòng điều hành", "Chi tiết trần thạch cao khu họp", ShopDrawingStatus.Rejected, 75),
         };
 
         var perDisciplineSeq = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
@@ -1972,29 +2005,29 @@ public static class SampleCrmDataSeeder
         if (project is null) return;
 
         if (!db.ConceptOptions.Any(item => item.DesignProjectId == project.Id
-                        && item.Name == "Phương án showroom được phê duyệt"))
+                        && item.Name == "Phương án tổng mặt bằng Nhà máy may An Phú"))
         {
             db.ConceptOptions.Add(new ConceptOption
             {
                 DesignProjectId = project.Id,
-                Name = "Phương án showroom được phê duyệt",
-                Description = $"{SampleTag} Mặt bằng mở, luồng tham quan một chiều và mặt tiền nhận diện thương hiệu.",
+                Name = "Phương án tổng mặt bằng Nhà máy may An Phú",
+                Description = "Phân luồng công nhân, xe hàng và khu văn phòng; bố trí xưởng may theo dây chuyền.",
                 InternalNote = ConceptMarker,
                 OwnerUserId = owner.Id,
-                PresentedAt = now.AddDays(-55),
+                PresentedAt = now.AddDays(-100),
                 Status = ConceptOptionStatus.Finalized,
                 CreatedByUserId = owner.Id,
                 UpdatedByUserId = owner.Id,
-                CreatedAt = now.AddDays(-65),
-                UpdatedAt = now.AddDays(-54),
+                CreatedAt = now.AddDays(-115),
+                UpdatedAt = now.AddDays(-99),
             });
         }
 
         var basicDocuments = new[]
         {
-            new { Discipline = "architecture", Code = "KT-BD-101", Title = "Mặt bằng và mặt đứng showroom", Status = BasicDesignDocStatus.PermitApproved },
-            new { Discipline = "structure", Code = "KC-BD-101", Title = "Gia cường kết cấu sàn khu trưng bày", Status = BasicDesignDocStatus.InternallyApproved },
-            new { Discipline = "mep", Code = "MEP-BD-101", Title = "Nguyên lý điện, chiếu sáng và điều hòa", Status = BasicDesignDocStatus.InternallyApproved },
+            new { Discipline = "architecture", Code = "KT-BD-101", Title = "Tổng mặt bằng và mặt đứng xưởng may", Status = BasicDesignDocStatus.PermitApproved },
+            new { Discipline = "structure", Code = "KC-BD-101", Title = "Kết cấu móng và sàn khu sản xuất", Status = BasicDesignDocStatus.InternallyApproved },
+            new { Discipline = "mep", Code = "MEP-BD-101", Title = "Nguyên lý cấp điện, chiếu sáng và thông gió xưởng", Status = BasicDesignDocStatus.InternallyApproved },
         };
         foreach (var document in basicDocuments)
         {
@@ -2012,8 +2045,8 @@ public static class SampleCrmDataSeeder
                 Note = $"{BasicMarker} Approved lifecycle document.",
                 CreatedByUserId = owner.Id,
                 UpdatedByUserId = owner.Id,
-                CreatedAt = now.AddDays(-50),
-                UpdatedAt = now.AddDays(-40),
+                CreatedAt = now.AddDays(-96),
+                UpdatedAt = now.AddDays(-85),
             });
         }
 
@@ -2170,10 +2203,10 @@ public static class SampleCrmDataSeeder
                     TargetId = firstShop.Id,
                     RevisionNumber = 1,
                     ReasonCode = "client-request",
-                    Note = $"{SampleMarker} Khách yêu cầu đổi vị trí cửa chính sang trục B để mở view.",
+                    Note = $"{SampleMarker} Chủ đầu tư yêu cầu điều chỉnh cổng nhập hàng sang trục B.",
                     IsCurrent = false,
                     CreatedByUserId = owner.Id,
-                    CreatedAt = now.AddDays(-2),
+                    CreatedAt = now.AddDays(-70),
                 });
             }
             if (!db.DrawingRevisions.Any(revision => revision.TargetType == DrawingRevisionTargetType.ShopDrawing
@@ -2185,10 +2218,10 @@ public static class SampleCrmDataSeeder
                     TargetId = firstShop.Id,
                     RevisionNumber = 2,
                     ReasonCode = "mep-sync",
-                    Note = $"{SampleMarker} Đồng bộ hộp kỹ thuật MEP với bản vẽ điều hoà.",
+                    Note = $"{SampleMarker} Đồng bộ tuyến máng cáp với hệ thống thông gió xưởng may.",
                     IsCurrent = true,
                     CreatedByUserId = owner.Id,
-                    CreatedAt = now.AddDays(-1),
+                    CreatedAt = now.AddDays(-68),
                 });
             }
         }
@@ -2222,9 +2255,8 @@ public static class SampleCrmDataSeeder
     }
 
     /// <summary>
-    /// NIH-118 IFC Release showcase. Attaches one Draft phi\u1ebfu to the
-    /// sample ShopDrawing-stage project so the FE has a working row to
-    /// walk through. Idempotent — guarded on the "[SAMPLE_IFC]" marker.
+    /// NIH-118 IFC Release showcase. The sample factory has an issued IFC
+    /// package before site work begins. Idempotent on the sample marker.
     /// </summary>
     private static void SeedIfcReleases(AppDbContext db, ApplicationUser owner, DateTime now)
     {
@@ -2247,13 +2279,12 @@ public static class SampleCrmDataSeeder
         if (project is null) return;
         const string releaseNumber = "IFC-SAMPLE-001";
 
-        // Pick the seeded approved shop drawings on this project so the
-        // Draft phi\u1ebfu can walk through the release action without
-        // manual data setup.
+        // Include already-released drawings when repairing sample children.
         var approvedDrawings = db.ShopDrawings
             .Where(s => s.DesignProjectId == project.Id
                      && (s.Status == ShopDrawingStatus.Approved
-                      || s.Status == ShopDrawingStatus.PendingIfc))
+                      || s.Status == ShopDrawingStatus.PendingIfc
+                      || s.Status == ShopDrawingStatus.Released))
             .OrderBy(s => s.Id)
             .Take(3)
             .ToList();
@@ -2279,9 +2310,9 @@ public static class SampleCrmDataSeeder
                 }
                 var recipients = new[]
                 {
-                    (Name: "Công ty CP xây dựng ABC", Type: "main-contractor"),
-                    (Name: "Tư vấn giám sát XYZ", Type: "supervisor"),
-                    (Name: "Chủ đầu tư [SAMPLE] Nguyễn Văn An", Type: "client"),
+                    (Name: "Công ty Xây dựng Bắc Việt", Type: "main-contractor"),
+                    (Name: "Tư vấn Giám sát Hưng Phát", Type: "supervisor"),
+                    (Name: "Công ty Cổ phần May mặc An Phú", Type: "client"),
                 };
                 foreach (var recipient in recipients)
                 {
@@ -2304,25 +2335,28 @@ public static class SampleCrmDataSeeder
         {
             DesignProjectId = project.Id,
             ReleaseNumber = releaseNumber,
-            Title = "B\u00e0n giao t\u1ea7ng 1 — s\u1ea3n showroom",
-            Status = IfcReleaseStatus.Draft,
-            Note = $"{SampleMarker} Gói IFC mẫu — gồm các bản vẽ thiết kế chi tiết đã duyệt đầu tiên.",
+            Title = "Phát hành bản vẽ IFC xưởng may tầng 1",
+            Status = IfcReleaseStatus.Released,
+            ReleaseDate = now.AddDays(-65),
+            IssuedByUserId = owner.Id,
+            Note = $"{SampleMarker} Bản vẽ thi công nhà máy may đã phát hành cho nhà thầu, giám sát và chủ đầu tư.",
             CreatedByUserId = owner.Id,
             UpdatedByUserId = owner.Id,
-            CreatedAt = now.AddDays(-1),
-            UpdatedAt = now.AddDays(-1),
+            CreatedAt = now.AddDays(-67),
+            UpdatedAt = now.AddDays(-65),
             Items = approvedDrawings.Select(d => new IfcReleaseItem
             {
                 ShopDrawingId = d.Id,
             }).ToList(),
             Recipients = new List<IfcReleaseRecipient>
             {
-                new() { Name = "C\u00f4ng ty CP x\u00e2y d\u1ef1ng ABC", RecipientTypeCode = "main-contractor" },
-                new() { Name = "T\u01b0 v\u1ea5n gi\u00e1m s\u00e1t XYZ", RecipientTypeCode = "supervisor" },
-                new() { Name = "Ch\u1ee7 \u0111\u1ea7u t\u01b0 [SAMPLE] Nguy\u1ec5n V\u0103n An", RecipientTypeCode = "client" },
+                new() { Name = "Công ty Xây dựng Bắc Việt", RecipientTypeCode = "main-contractor" },
+                new() { Name = "Tư vấn Giám sát Hưng Phát", RecipientTypeCode = "supervisor" },
+                new() { Name = "Công ty Cổ phần May mặc An Phú", RecipientTypeCode = "client" },
             },
         };
         db.IfcReleases.Add(release);
+        foreach (var drawing in approvedDrawings) drawing.Status = ShopDrawingStatus.Released;
         db.SaveChanges();
     }
 
@@ -2411,8 +2445,8 @@ public static class SampleCrmDataSeeder
             DesignProjectId = project.Id,
             TaskCode = "T-004",
             Wbs = "2.1",
-            Name = "MEP rough-in t\u1ea7ng 1",
-            Description = $"{SampleMarker} MEP first fix — behind schedule for demo.",
+            Name = "Lắp đặt ống điện và máng cáp xưởng may tầng 1",
+            Description = $"{SampleMarker} Thi công ống điện và máng cáp khu sản xuất chậm so với kế hoạch.",
             PlannedStart = today.AddDays(-10),
             PlannedEnd = today.AddDays(-1),
             ActualStart = today.AddDays(-10),
@@ -3069,10 +3103,10 @@ public static class SampleCrmDataSeeder
         {
             DesignProjectId = project.Id,
             HandoverCode = SampleCode,
-            Title = "Bàn giao tổng thể công trình mẫu",
-            Description = "Hồ sơ mẫu minh hoạ checklist, commissioning, tài liệu và luồng bàn giao.",
+            Title = "Bàn giao Nhà máy may An Phú – KCN Quế Võ",
+            Description = "Kiểm tra vận hành hệ thống, đối chiếu hồ sơ hoàn công và xác nhận hiện trạng trước bàn giao.",
             PlannedHandoverDate = DateOnly.FromDateTime(now.AddDays(14)),
-            Location = "Công trường dự án mẫu",
+            Location = "Nhà máy may An Phú, KCN Quế Võ, Bắc Ninh",
             ResponsibleUserId = project.ProjectManagerUserId ?? project.DesignLeadUserId ?? owner.Id,
             CommissioningCompleted = true,
             CommissioningNotes = "Đã chạy thử các hệ thống chính; tiếp tục theo dõi tải vận hành.",
@@ -3178,70 +3212,47 @@ public static class SampleCrmDataSeeder
             .Select(item => item.ResourceKey)
             .ToHashSet();
 
-        var customers = db.Customers
-            .Where(c => c.Name.StartsWith(SampleTag))
-            .OrderBy(c => c.Id)
-            .Take(5)
-            .ToList();
-        if (customers.Count == 0) return;
+        var customers = GetCoreCustomers(db);
+        if (customers.All(customer => customer is null)) return;
 
+        // One operational root per sample customer. Keep codes stable so
+        // existing demo databases are not duplicated on upgrade.
         var samples = new (string Name, OperationalProjectStatus Status, int DaysAgo, int? DurationDays, string Note)[]
         {
             (
-                "Nhà máy sản xuất ABC - Giai đoạn 1",
-                OperationalProjectStatus.Completed,
-                365,
-                180,
-                $"{SampleOperationalProjectMarker} Dự án nhà máy sản xuất linh kiện điện tử, diện tích 5,000m². Đã hoàn thành bàn giao và nghiệm thu."
-            ),
-            (
-                "Văn phòng công ty XYZ",
-                OperationalProjectStatus.Active,
-                90,
-                120,
-                $"{SampleOperationalProjectMarker} Thiết kế và thi công văn phòng làm việc 3 tầng, diện tích sàn 2,500m². Đang trong giai đoạn hoàn thiện nội thất."
-            ),
-            (
-                "Kho logistics Bình Dương",
-                OperationalProjectStatus.Active,
-                45,
-                150,
-                $"{SampleOperationalProjectMarker} Kho bãi logistics tiêu chuẩn ISO, diện tích 10,000m². Tiến độ đạt 60%, đang thi công phần mái."
-            ),
-            (
-                "Biệt thự nghỉ dưỡng Vũng Tàu",
+                "Nhà phố Nguyễn Văn An",
                 OperationalProjectStatus.Planning,
                 15,
                 null,
-                $"{SampleOperationalProjectMarker} Dự án biệt thự cao cấp ven biển, diện tích đất 800m². Đang hoàn thiện hồ sơ pháp lý và thiết kế chi tiết."
+                $"{SampleOperationalProjectMarker} Thiết kế concept nhà phố trước hợp đồng."
             ),
             (
-                "Nhà xưởng công nghiệp 2024",
-                OperationalProjectStatus.OnHold,
-                120,
-                200,
-                $"{SampleOperationalProjectMarker} Nhà xưởng sản xuất công nghiệp nặng, diện tích 15,000m². Tạm dừng do điều chỉnh quy hoạch địa phương."
-            ),
-            (
-                "Trung tâm thương mại mini",
-                OperationalProjectStatus.Cancelled,
-                200,
-                180,
-                $"{SampleOperationalProjectMarker} Dự án TTTM quy mô nhỏ, 4 tầng. Hủy do thay đổi chiến lược đầu tư của chủ đầu tư."
-            ),
-            (
-                "Showroom ô tô cao cấp",
+                "Nhà phố Trần Thị Bảo",
                 OperationalProjectStatus.Active,
-                30,
-                90,
-                $"{SampleOperationalProjectMarker} Showroom trưng bày xe hơi cao cấp, diện tích 1,200m². Tiến độ đạt 40%, đang thi công phần kết cấu."
+                70,
+                270,
+                $"{SampleOperationalProjectMarker} Tư vấn sơ bộ và báo giá nhà phố."
             ),
             (
-                "Nhà hàng & cafe riverside",
-                OperationalProjectStatus.Planning,
-                7,
-                null,
-                $"{SampleOperationalProjectMarker} Nhà hàng view sông, thiết kế hiện đại kết hợp truyền thống. Đang chờ phê duyệt PCCC."
+                "Nhà máy may An Phú – KCN Quế Võ",
+                OperationalProjectStatus.Active,
+                170,
+                190,
+                $"{SampleOperationalProjectMarker} Thiết kế, pháp lý, thi công và bàn giao nhà máy."
+            ),
+            (
+                "Showroom Nội thất Thành Đạt – Quận 3",
+                OperationalProjectStatus.Active,
+                70,
+                300,
+                $"{SampleOperationalProjectMarker} Thiết kế và thi công showroom nội thất."
+            ),
+            (
+                "Trụ sở Gia dụng Tân Phúc",
+                OperationalProjectStatus.Completed,
+                365,
+                330,
+                $"{SampleOperationalProjectMarker} Cải tạo văn phòng, đã hoàn thành và bàn giao."
             ),
         };
 
@@ -3252,7 +3263,8 @@ public static class SampleCrmDataSeeder
             codeIndex++;
             if (existingCodes.Contains(code) || deletedProjectCodes.Contains(code)) continue;
 
-            var customer = customers[(codeIndex - 1) % customers.Count];
+            var customer = customers[codeIndex - 2];
+            if (customer is null) continue;
 
             var startDate = now.AddDays(-daysAgo);
             var endDate = durationDays.HasValue ? startDate.AddDays(durationDays.Value) : (DateTime?)null;
@@ -3296,8 +3308,7 @@ public static class SampleCrmDataSeeder
             .ToDictionary(g => g.Key, g => g.First());
 
         // Link opportunities to projects matching their customer
-        var opportunities = db.Opportunities
-            .Where(o => o.Name.StartsWith(SampleTag))
+        var opportunities = GetCoreOpportunities(db)
             .ToList();
         foreach (var opp in opportunities)
         {
@@ -3342,8 +3353,7 @@ public static class SampleCrmDataSeeder
 
     private static void RepairSampleRelationships(AppDbContext db, ApplicationUser owner)
     {
-        var opportunities = db.Opportunities
-            .Where(opportunity => opportunity.Name.StartsWith(SampleTag))
+        var opportunities = GetCoreOpportunities(db)
             .OrderBy(opportunity => opportunity.Id)
             .ToList();
         var contracts = db.Contracts
@@ -3392,7 +3402,7 @@ public static class SampleCrmDataSeeder
         }
 
         var convertedLead = db.Leads
-            .Where(lead => lead.Name.StartsWith(SampleTag))
+            .Where(lead => lead.Name == CoreLeadNames[0] && lead.Phone == "0900000201")
             .OrderBy(lead => lead.Id)
             .FirstOrDefault();
         var convertedOpportunity = opportunities.FirstOrDefault();
@@ -3425,7 +3435,7 @@ public static class SampleCrmDataSeeder
 
         foreach (var project in sampleProjects)
         {
-            if (!project.ContractId.HasValue)
+            if (!project.ContractId.HasValue && project.CurrentStage != DesignProjectStage.Concept)
             {
                 var contract = sampleContracts.FirstOrDefault(item =>
                     item.CustomerId == project.CustomerId && !usedContractIds.Contains(item.Id));

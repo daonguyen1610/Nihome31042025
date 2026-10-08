@@ -38,6 +38,10 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 768, height: 1024 
     const response = await api.get("/api/operational-projects?pageSize=100", { headers: { Authorization: `Bearer ${token}` } });
     const project = (await response.json()).items.find((x: { code: string }) => x.code === "PJ-SAMPLE-RFQ");
     expect(project).toBeTruthy();
+    const rfqResponse = await api.get(`/api/operational-projects/${project.id}/procurement/rfqs?search=RFQ-SAMPLE-002`, { headers: { Authorization: `Bearer ${token}` } });
+    expect(rfqResponse.ok()).toBe(true);
+    const rfq = (await rfqResponse.json()).items.find((item: { code: string }) => item.code === "RFQ-SAMPLE-002");
+    expect(rfq).toBeTruthy();
     await page.addInitScript(() => localStorage.setItem("nicon_lang", "en"));
     await loginInBrowserAs(page, TEST_USERS.pm);
     const errors: string[] = [];
@@ -46,7 +50,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 768, height: 1024 
     await expect(page.getByRole("heading", { name: "RFQs & bid comparison", exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "Create RFQ", exact: true })).toHaveCount(0);
     await page.getByLabel("Search code, title or vendor", { exact: true }).fill("RFQ-SAMPLE-002");
-    await page.getByRole("button", { name: "[SAMPLE] Electrical package 2", exact: true }).click();
+    await page.getByRole("button", { name: rfq.title, exact: true }).click();
     await expect(page.getByRole("heading", { name: "Bid comparison matrix", exact: true })).toBeVisible();
     const matrix = page.getByRole("region", { name: "Bid comparison matrix", exact: true });
     await expect(matrix.getByText("Not quoted", { exact: true })).toBeVisible();

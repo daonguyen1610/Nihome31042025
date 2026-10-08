@@ -23,11 +23,11 @@ public static class RfqSampleDataSeeder
             alternative = new Vendor
             {
                 VendorCode = "NCC-RFQ-SAMPLE-02",
-                CompanyName = "[SAMPLE] Alternative electrical supplier",
+                CompanyName = "Công ty TNHH Thiết bị Điện Nam Long",
                 VendorType = VendorType.Supplier,
                 IsActive = true,
                 Phone = "0900000599",
-                Email = "rfq.supplier.demo@example.com",
+                Email = "baogia.namlong@example.com",
                 CreatedByUserId = owner.Id,
                 UpdatedByUserId = owner.Id,
             };
@@ -39,20 +39,27 @@ public static class RfqSampleDataSeeder
         var now = DateTime.UtcNow;
         var customer = new Customer
         {
-            Name = "[SAMPLE] RFQ factory customer",
-            Type = CustomerType.Individual,
+            Name = "Công ty TNHH Cơ khí Hòa Bình",
+            Type = CustomerType.Company,
+            TaxId = "0100000099",
+            Address = "KCN Quang Minh, huyện Mê Linh, Hà Nội",
+            RepresentativeName = "Ông Nguyễn Đức Hòa",
             SourceCode = "referral",
-            Contacts = [new() { FullName = "RFQ demo contact", Phone = "0900000199", Email = "rfq.demo@example.com", IsPrimary = true }],
+            CreatedAt = now.AddDays(-30),
+            UpdatedAt = now.AddDays(-30),
+            Contacts = [new() { FullName = "Trần Văn Hòa", Position = "Trưởng phòng Mua hàng", Phone = "0900000199", Email = "muahang.hoabinh@example.com", IsPrimary = true }],
         };
         var project = new OperationalProject
         {
             Code = code,
-            Name = "[SAMPLE] Factory supply comparison",
+            Name = "Nhà máy cơ khí Hòa Bình – KCN Quang Minh",
             Customer = customer,
             Status = OperationalProjectStatus.Active,
             ProjectManagerUserId = pm.Id,
             CreatedByUserId = pm.Id,
-            Note = "[SAMPLE_RFQ] Dedicated procurement demonstration.",
+            Note = "[SAMPLE_RFQ] Dự án nhà máy cơ khí; BOQ điện cấp nguồn cho các gói hỏi giá cung ứng.",
+            CreatedAt = now.AddDays(-20),
+            UpdatedAt = now.AddDays(-2),
         };
         db.OperationalProjects.Add(project);
         db.SaveChanges();
@@ -61,7 +68,7 @@ public static class RfqSampleDataSeeder
             OperationalProjectId = project.Id,
             UserId = owner.Id,
             Position = "Procurement",
-            StartedAt = now,
+            StartedAt = now.AddDays(-20),
             CreatedByUserId = pm.Id,
             UpdatedByUserId = pm.Id,
         });
@@ -76,26 +83,32 @@ public static class RfqSampleDataSeeder
             SubmittedAt = now.AddDays(-10),
             ApprovedByUserId = pm.Id,
             ApprovedAt = now.AddDays(-9),
+            CreatedAt = now.AddDays(-12),
+            UpdatedAt = now.AddDays(-9),
             CostTotal = 30000000m,
-            Lines = [new() { ItemCode = "CABLE-01", Description = "Power cable", Unit = "m", ApprovedQuantity = 100, BudgetUnitPrice = 200000, Amount = 20000000 },
-                new() { ItemCode = "PANEL-01", Description = "Distribution panel", Unit = "set", ApprovedQuantity = 2, BudgetUnitPrice = 5000000, Amount = 10000000, SortOrder = 1 }],
+            Lines = [new() { ItemCode = "CABLE-01", Description = "Cáp điện lực Cu/XLPE/PVC 0,6/1 kV", Unit = "m", ApprovedQuantity = 100, BudgetUnitPrice = 200000, Amount = 20000000 },
+                new() { ItemCode = "PANEL-01", Description = "Tủ phân phối điện MDB 400 A", Unit = "bộ", ApprovedQuantity = 2, BudgetUnitPrice = 5000000, Amount = 10000000, SortOrder = 1 }],
         };
         db.ProjectBoqRevisions.Add(boq);
         db.SaveChanges();
         project.FinalProjectBoqRevisionId = boq.Id;
-        for (var index = 1; index <= 3; index++)
+        for (var index = 1; index <= 2; index++)
         {
             var rfq = new Rfq
             {
                 Code = $"RFQ-SAMPLE-{index:D3}",
-                Title = $"[SAMPLE] Electrical package {index}",
+                Title = index == 1
+                    ? "Dự thảo gói cáp và tủ điện nhà máy cơ khí Hòa Bình"
+                    : "Tủ phân phối và cáp điện nhà máy cơ khí Hòa Bình",
                 OperationalProjectId = project.Id,
                 SourceBoqRevisionId = boq.Id,
                 OwnerUserId = owner.Id,
-                DueAt = index == 3 ? now.AddDays(-1) : now.AddDays(14),
+                DueAt = now.AddDays(14),
                 IssuedAt = index == 1 ? null : now.AddDays(-7),
                 Status = index == 1 ? RfqStatus.Draft : RfqStatus.Issued,
-                Note = "[SAMPLE_RFQ] One package award; compare commercial terms before deciding.",
+                CreatedAt = now.AddDays(-8),
+                UpdatedAt = index == 1 ? now.AddDays(-8) : now.AddDays(-2),
+                Note = "[SAMPLE_RFQ] So sánh phạm vi, đơn giá, tiến độ giao hàng và điều khoản thanh toán.",
                 Lines = boq.Lines.Select(x => new RfqLine
                 {
                     ProjectBoqLineId = x.Id,
@@ -125,11 +138,11 @@ public static class RfqSampleDataSeeder
                     VendorId = vendors[vendorIndex].Id,
                     Revision = 1,
                     LeadTimeDays = 14,
-                    PaymentTerms = "30% advance, 70% on delivery",
+                    PaymentTerms = "Tạm ứng 30%, thanh toán 70% sau nghiệm thu giao hàng",
                     ValidUntil = now.AddDays(30),
                     SubmittedAt = now.AddDays(-2),
                     SubmittedByUserId = owner.Id,
-                    Note = vendorIndex == 0 ? "Complete scope" : "Panel not quoted",
+                    Note = vendorIndex == 0 ? "Báo giá đủ cáp và tủ điện" : "Chỉ báo giá cáp điện, chưa có tủ phân phối",
                     Lines = lines,
                     Currency = "VND",
                     ExchangeRateToVnd = 1m,

@@ -851,7 +851,7 @@ that the root has been deleted until its status is `Completed`.
   finalization and quarantine purge. Request, validation-failure, and
   pre-completion success audits are not emitted.
 - Hard-deleted seeded roots write a durable tombstone. Opportunity uses its
-  `[SAMPLE]` name, Contract its `HD-SAMPLE-` number, Survey its `SV-SAMPLE-`
+  exact seeded name, Contract its `HD-SAMPLE-` number, Survey its `SV-SAMPLE-`
   code, Tender its exact `TD-SAMPLE-` code, and Capability Document its managed
   path when the description begins `[SAMPLE_CAP]`. Seed reruns filter roots and
   dependents before insertion and skip Capability physical-file self-healing
@@ -2598,15 +2598,27 @@ Official references: [Drive API v3](https://developers.google.com/workspace/driv
 
 ### 10.4 Deterministic demonstration data
 
-Development-only sample seeders create a deterministic demonstration dataset
-covering the CRM funnel, all contract statuses, design stages, permitting,
-construction, acceptance, as-built, and handover workflows. Seeder-owned rows
-use stable markers such as `[SAMPLE]`, `[SAMPLE_CONTRACT]`, and `[SAMPLE_DP]`;
+Development-only sample seeders create a compact deterministic demonstration
+dataset: two leads, five customers/operational projects, six opportunities,
+six quotes, six contracts, three design projects, two surveys and two tenders.
+The linked examples cover pre-contract concept, quotation, contracting,
+permitting, construction, acceptance, as-built and handover. The main chain is
+the fictional Nhà máy may An Phú at KCN Quế Võ; a separate fictional Nhà máy
+cơ khí Hòa Bình customer/project carries two RFQs, an approved electrical BOQ,
+vendors and competing bids. Names are fictional but describe the work and
+project context. Display names omit the `[SAMPLE]` prefix; stable codes and
+internal notes identify demo-owned data.
+KPI seed entries are metric definitions, not fabricated performance results.
+Seeder-owned rows use stable internal markers such as `[SAMPLE_CONTRACT]`
+and `[SAMPLE_DP]`;
 downstream records are attached only to marker-owned sample projects rather than
 arbitrary database rows.
 
-The dataset is idempotent: rerunning Development sample seeding preserves row
-counts and administrator-edited free text, lifecycle values, and relationships.
+The dataset is idempotent on a fresh Development database: rerunning sample
+seeding preserves row counts and administrator-edited free text, lifecycle
+values, and relationships. Reducing the manifest does not delete previously
+seeded rows from an existing database; existing local demo data may therefore
+contain more records than the counts above.
 A constrained backfill pass populates only missing sample relationships, including
 opportunity/quote links, project/customer/contract links, and PM/design-lead
 assignments. Sales records are owned by the SALE demo user, project and
