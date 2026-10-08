@@ -225,64 +225,28 @@ public class DbSeederTests : IDisposable
     }
 
     [Fact]
-    public void Seed_AddsSampleQuotesLinkedToSampleOpportunities()
+    public void Seed_WithoutDevelopmentMode_DoesNotCreateBusinessModuleSamples()
     {
         DbSeeder.Seed(_db);
 
-        var quotes = _db.Quotes.ToList();
-        Assert.Equal(9, quotes.Count);
-        Assert.All(quotes, q =>
-        {
-            Assert.StartsWith("QT-", q.Code);
-            Assert.True(q.GrandTotal > 0m, $"Quote {q.Code} should have positive grand total");
-            Assert.NotNull(q.Note);
-            Assert.StartsWith("[SAMPLE_QUOTE]", q.Note);
-        });
-        Assert.All(quotes.Where(q => q.Method == QuoteMethod.UnitCost), q =>
-        {
-            Assert.Equal(QuoteRateSource.Override, q.RateSource);
-            Assert.False(string.IsNullOrWhiteSpace(q.RateOverrideReason));
-            Assert.NotNull(q.RateOverrideByUserId);
-            Assert.NotNull(q.RateOverrideAt);
-        });
-        // Every declared QuoteStatus (bar Draft, which we intentionally have
-        // two of) must be present at least once for the filter/badge demo.
-        var statuses = quotes.Select(q => q.Status).ToHashSet();
-        Assert.Contains(QuoteStatus.Draft, statuses);
-        Assert.Contains(QuoteStatus.PendingApproval, statuses);
-        Assert.Contains(QuoteStatus.Approved, statuses);
-        Assert.Contains(QuoteStatus.SentToCustomer, statuses);
-        Assert.Contains(QuoteStatus.CustomerApproved, statuses);
-        Assert.Contains(QuoteStatus.Rejected, statuses);
-        Assert.Contains(QuoteStatus.Expired, statuses);
-        Assert.Contains(QuoteStatus.Cancelled, statuses);
-        // A version snapshot exists so the Versions tab has V1 + V2.
-        var snapshots = _db.QuoteVersionSnapshots.ToList();
-        Assert.NotEmpty(snapshots);
-        var unitCostSnapshots = snapshots.Where(s => s.Method == QuoteMethod.UnitCost).ToList();
-        Assert.NotEmpty(unitCostSnapshots);
-        Assert.All(unitCostSnapshots, snapshot =>
-        {
-            Assert.Equal(QuoteRateSource.Override, snapshot.RateSource);
-            Assert.False(string.IsNullOrWhiteSpace(snapshot.RateOverrideReason));
-            Assert.NotNull(snapshot.RateOverrideByUserId);
-            Assert.NotNull(snapshot.RateOverrideAt);
-        });
-    }
-
-    [Fact]
-    public void Seed_IsIdempotentForSampleQuotes()
-    {
-        DbSeeder.Seed(_db);
-        var firstRun = _db.Quotes.Count();
-        var firstSnaps = _db.QuoteVersionSnapshots.Count();
-
-        DbSeeder.Seed(_db);
-        var secondRun = _db.Quotes.Count();
-        var secondSnaps = _db.QuoteVersionSnapshots.Count();
-
-        Assert.Equal(firstRun, secondRun);
-        Assert.Equal(firstSnaps, secondSnaps);
+        Assert.Empty(_db.Leads);
+        Assert.Empty(_db.Customers);
+        Assert.Empty(_db.Opportunities);
+        Assert.Empty(_db.Quotes);
+        Assert.Empty(_db.Contracts);
+        Assert.Empty(_db.Vendors);
+        Assert.Empty(_db.Tenders);
+        Assert.Empty(_db.Surveys);
+        Assert.Empty(_db.DesignProjects);
+        Assert.Empty(_db.PermitChecklistItems);
+        Assert.Empty(_db.KpiDefinitions);
+        Assert.Empty(_db.Rfqs);
+        Assert.Empty(_db.ConstructionTasks);
+        Assert.Empty(_db.SiteDiaries);
+        Assert.Empty(_db.PunchItems);
+        Assert.Empty(_db.AcceptanceRecords);
+        Assert.Empty(_db.AsBuiltDocuments);
+        Assert.Empty(_db.HandoverRecords);
     }
 
     private static SiteSettings CreateSettings(string otpEmailBodyTemplate)

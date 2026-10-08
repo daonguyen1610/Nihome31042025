@@ -11,13 +11,14 @@ public static class DbSeeder
     private const string SiteMapUrl = "https://www.google.com/maps?q=92+%C4%90%C6%B0%E1%BB%9Dng+56%2C+B%C3%ACnh+Tr%C6%B0ng%2C+H%E1%BB%93+Ch%C3%AD+Minh+700000%2C+Vietnam&output=embed";
 
     /// <summary>
-    /// Seed the database with baseline users, RBAC, master-data, content
-    /// translations and sample CRM rows. <paramref name="webRootPath"/>
-    /// is optional — when provided, seeders that need to drop physical
-    /// demo assets (e.g. capability-document PDFs so download links
-    /// resolve on a fresh install) know where to write them.
+    /// Seed the database with baseline users, RBAC, master-data and content
+    /// translations. Development-only business samples are included only when
+    /// <paramref name="includeDevelopmentSamples"/> is enabled.
     /// </summary>
-    public static void Seed(AppDbContext db, string? webRootPath = null)
+    public static void Seed(
+        AppDbContext db,
+        string? webRootPath = null,
+        bool includeDevelopmentSamples = false)
     {
         var now = DateTime.UtcNow;
 
@@ -139,9 +140,13 @@ public static class DbSeeder
         WorkflowConfigSeeder.Seed(db);
         NotificationTemplateSeeder.Seed(db);
         SeedBusinessRoleUsers(db);
-        KpiSeeder.Seed(db);
-        SampleCrmDataSeeder.Seed(db, webRootPath);
-        RfqSampleDataSeeder.Seed(db);
+
+        if (includeDevelopmentSamples)
+        {
+            KpiSeeder.Seed(db);
+            SampleCrmDataSeeder.Seed(db, webRootPath);
+            RfqSampleDataSeeder.Seed(db);
+        }
     }
 
     private static readonly (string Phone, string FullName, string Email, UserRole Role)[] _canonicalAdminUsers =
