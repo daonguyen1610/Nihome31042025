@@ -151,7 +151,7 @@ public static class DbSeeder
 
     private static readonly (string Phone, string FullName, string Email, UserRole Role)[] _canonicalAdminUsers =
     [
-        ("0335240370", "Super Admin", "superadmin@nihome.vn", UserRole.SUPER_ADMIN),
+        ("0335240370", "Super Admin", "kudung053@gmail.com", UserRole.SUPER_ADMIN),
         ("0911111111", "Lê Thảo Vy", "ops.admin@nihome.vn", UserRole.ADMIN),
         ("0922222222", "Nguyễn Quốc Bảo", "leasing.admin@nihome.vn", UserRole.ADMIN),
     ];
