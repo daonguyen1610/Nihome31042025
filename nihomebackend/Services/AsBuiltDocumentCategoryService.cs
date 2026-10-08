@@ -15,8 +15,6 @@ public class AsBuiltDocumentCategoryService(AppDbContext db, ILogger<AsBuiltDocu
 {
     public async Task<List<AsBuiltDocumentCategoryResponse>> GetAllAsync(bool includeInactive = false)
     {
-        await SeedDefaultCategoriesIfEmptyAsync();
-
         var query = db.AsBuiltDocumentCategories.AsNoTracking();
         if (!includeInactive)
         {
@@ -152,7 +150,7 @@ public class AsBuiltDocumentCategoryService(AppDbContext db, ILogger<AsBuiltDocu
     }
 
     /// <summary>
-    /// Resolve category by ID or create from code if needed.
+    /// Resolve an existing category by ID or code without creating records.
     /// Used by AsBuiltDocumentService to handle category references.
     /// </summary>
     public async Task<int> ResolveCategoryIdAsync(
@@ -199,87 +197,6 @@ public class AsBuiltDocumentCategoryService(AppDbContext db, ILogger<AsBuiltDocu
             .Where(c => c.IsRequired && c.IsActive)
             .Select(c => c.Id)
             .ToArrayAsync();
-    }
-
-    /// <summary>
-    /// Seed default categories if none exist.
-    /// Called on first access to ensure data consistency.
-    /// </summary>
-    private async Task SeedDefaultCategoriesIfEmptyAsync()
-    {
-        if (await db.AsBuiltDocumentCategories.AsNoTracking().AnyAsync())
-        {
-            return;
-        }
-
-        var defaults = new List<AsBuiltDocumentCategory>
-        {
-            new()
-            {
-                Code = AsBuiltCategoryCodes.Drawing,
-                Name = "Bản vẽ hoàn công",
-                NameVi = "Bản vẽ hoàn công",
-                NameEn = "As-built drawings",
-                NameZh = "竣工图纸",
-                NameJa = "竣工図面",
-                IsRequired = true,
-                IsActive = true,
-                SortOrder = 1,
-            },
-            new()
-            {
-                Code = AsBuiltCategoryCodes.AcceptanceMinute,
-                Name = "Biên bản nghiệm thu",
-                NameVi = "Biên bản nghiệm thu",
-                NameEn = "Acceptance minutes",
-                NameZh = "验收记录",
-                NameJa = "検収議事録",
-                IsRequired = true,
-                IsActive = true,
-                SortOrder = 2,
-            },
-            new()
-            {
-                Code = AsBuiltCategoryCodes.TestReport,
-                Name = "Báo cáo thí nghiệm",
-                NameVi = "Báo cáo thí nghiệm",
-                NameEn = "Test reports",
-                NameZh = "测试报告",
-                NameJa = "試験報告書",
-                IsRequired = true,
-                IsActive = true,
-                SortOrder = 3,
-            },
-            new()
-            {
-                Code = AsBuiltCategoryCodes.WarrantyCertificate,
-                Name = "Chứng chỉ bảo hành",
-                NameVi = "Chứng chỉ bảo hành",
-                NameEn = "Warranty certificates",
-                NameZh = "保修证书",
-                NameJa = "保証書",
-                IsRequired = true,
-                IsActive = true,
-                SortOrder = 4,
-            },
-            new()
-            {
-                Code = AsBuiltCategoryCodes.Other,
-                Name = "Tài liệu khác",
-                NameVi = "Tài liệu khác",
-                NameEn = "Other supporting documents",
-                NameZh = "其他支持文件",
-                NameJa = "その他の書類",
-                IsRequired = false,
-                IsActive = true,
-                SortOrder = 5,
-            },
-        };
-
-        db.AsBuiltDocumentCategories.AddRange(defaults);
-        await db.SaveChangesAsync();
-
-        logger.LogInformation("Seeded {Count} default as-built document categories", defaults.Count);
     }
 
     private async Task EnsureCodeUniqueAsync(string code, int? excludingId = null)

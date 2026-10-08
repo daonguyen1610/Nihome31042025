@@ -1,4 +1,3 @@
-using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
@@ -14,8 +13,6 @@ public class RecruitmentDropdownOptionService(AppDbContext db, ILogger<Recruitme
 
     public async Task<List<RecruitmentDropdownOptionResponse>> GetByTypeAsync(string type, bool includeInactive = false)
     {
-        await SeedDefaultsIfEmptyAsync(type);
-
         var query = db.RecruitmentDropdownOptions
             .AsNoTracking()
             .Where(x => x.Type == type);
@@ -88,50 +85,6 @@ public class RecruitmentDropdownOptionService(AppDbContext db, ILogger<Recruitme
         return true;
     }
 
-    private async Task SeedDefaultsIfEmptyAsync(string type)
-    {
-        var hasAny = await db.RecruitmentDropdownOptions
-            .AsNoTracking()
-            .AnyAsync(x => x.Type == type);
-
-        if (hasAny)
-            return;
-
-        var defaults = type switch
-        {
-            TypeExperienceLevel => new[]
-            {
-                new RecruitmentDropdownOption { Type = type, Code = "student", Name = "Sinh viên / Thực tập", IsActive = true, SortOrder = 1 },
-                new RecruitmentDropdownOption { Type = type, Code = "junior", Name = "Dưới 1 năm kinh nghiệm", IsActive = true, SortOrder = 2 },
-                new RecruitmentDropdownOption { Type = type, Code = "mid", Name = "1 – 3 năm kinh nghiệm", IsActive = true, SortOrder = 3 },
-                new RecruitmentDropdownOption { Type = type, Code = "senior", Name = "Trên 3 năm kinh nghiệm", IsActive = true, SortOrder = 4 },
-            },
-            TypeBenefit => new[]
-            {
-                new RecruitmentDropdownOption { Type = type, Code = "health-insurance", Name = "Bảo hiểm sức khỏe", IsActive = true, SortOrder = 1 },
-                new RecruitmentDropdownOption { Type = type, Code = "training", Name = "Đào tạo & phát triển", IsActive = true, SortOrder = 2 },
-                new RecruitmentDropdownOption { Type = type, Code = "friendly-culture", Name = "Môi trường thân thiện", IsActive = true, SortOrder = 3 },
-                new RecruitmentDropdownOption { Type = type, Code = "project-bonus", Name = "Thưởng dự án", IsActive = true, SortOrder = 4 },
-            },
-            _ => Array.Empty<RecruitmentDropdownOption>()
-        };
-
-        if (defaults.Length == 0)
-            return;
-
-        db.RecruitmentDropdownOptions.AddRange(defaults);
-        try
-        {
-            await db.SaveChangesAsync();
-            logger.LogInformation("Seeded {Count} defaults for type {Type}", defaults.Length, type);
-        }
-        catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
-        {
-            db.ChangeTracker.Clear();
-            logger.LogInformation("Skipped seeding {Type} options due to concurrent insert race.", type);
-        }
-    }
-
     private async Task EnsureCodeUniqueAsync(string type, string code, int? excludingId = null)
     {
         var exists = await db.RecruitmentDropdownOptions
@@ -166,9 +119,6 @@ public class RecruitmentDropdownOptionService(AppDbContext db, ILogger<Recruitme
             throw new InvalidOperationException("Tên không được để trống.");
         return normalized;
     }
-
-    private static bool IsUniqueConstraintViolation(DbUpdateException ex) =>
-        ex.InnerException is SqlException { Number: 2601 or 2627 };
 
     private static RecruitmentDropdownOptionResponse MapToResponse(RecruitmentDropdownOption item) => new()
     {

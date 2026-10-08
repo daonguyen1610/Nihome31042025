@@ -1,4 +1,3 @@
-using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
@@ -12,8 +11,6 @@ public class EmploymentTypeService(AppDbContext db, ILogger<EmploymentTypeServic
 
     public async Task<List<EmploymentTypeResponse>> GetAllAsync(bool includeInactive = false)
     {
-        await SeedFromJobPositionsIfEmptyAsync();
-
         var query = db.EmploymentTypes.AsNoTracking();
         if (!includeInactive)
         {
@@ -97,65 +94,6 @@ public class EmploymentTypeService(AppDbContext db, ILogger<EmploymentTypeServic
         return true;
     }
 
-    private async Task SeedFromJobPositionsIfEmptyAsync()
-    {
-        if (await db.EmploymentTypes.AsNoTracking().AnyAsync())
-        {
-            return;
-        }
-
-        var typeCodes = await db.JobPositions
-            .AsNoTracking()
-            .Select(x => x.EmploymentType)
-            .Where(x => !string.IsNullOrWhiteSpace(x))
-            .ToListAsync();
-
-        var defaults = new[]
-        {
-            new EmploymentType { Code = "full-time", Name = "Toàn thời gian", IsActive = true, SortOrder = 1 },
-            new EmploymentType { Code = "part-time", Name = "Bán thời gian", IsActive = true, SortOrder = 2 },
-            new EmploymentType { Code = "intern", Name = "Thực tập sinh", IsActive = true, SortOrder = 3 },
-        };
-
-        var normalizedCodes = typeCodes
-            .Select(NormalizeCode)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-        var entities = defaults.ToList();
-        var nextSort = entities.Count + 1;
-
-        foreach (var code in normalizedCodes)
-        {
-            if (entities.Any(x => x.Code.Equals(code, StringComparison.OrdinalIgnoreCase)))
-            {
-                continue;
-            }
-
-            entities.Add(new EmploymentType
-            {
-                Code = code,
-                Name = code,
-                IsActive = true,
-                SortOrder = nextSort++,
-            });
-        }
-
-        db.EmploymentTypes.AddRange(entities);
-        try
-        {
-            await db.SaveChangesAsync();
-            logger.LogInformation("Seeded {Count} employment types", entities.Count);
-        }
-        catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
-        {
-            // Concurrent first-requests may race on the same defaults.
-            // Treat duplicate-key as benign and continue with existing rows.
-            db.ChangeTracker.Clear();
-            logger.LogInformation("Skipped employment type seeding due to concurrent insert race.");
-        }
-    }
-
     private async Task EnsureCodeUniqueAsync(string code, int? excludingId = null)
     {
         var exists = await db.EmploymentTypes
@@ -220,16 +158,6 @@ public class EmploymentTypeService(AppDbContext db, ILogger<EmploymentTypeServic
         }
 
         return normalized;
-    }
-
-    private static bool IsUniqueConstraintViolation(DbUpdateException ex)
-    {
-        if (ex.InnerException is not SqlException sqlException)
-        {
-            return false;
-        }
-
-        return sqlException.Number == 2601 || sqlException.Number == 2627;
     }
 
     private static EmploymentTypeResponse MapToResponse(EmploymentType item) => new()

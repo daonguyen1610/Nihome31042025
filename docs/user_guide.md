@@ -745,7 +745,7 @@ records they created, are responsible for, or whose project they manage or lead.
 The NICON target is one handover aggregate under the shared Operational Project;
 do not create a second handover when both IDs refer to the same business project.
 
-Create or edit a Draft/Reopened record with the planned date, responsible user, commissioning result, checklist, supporting HTTP(S) or host-relative document links, and signatories. Host-relative links must begin with a single `/`; protocol-relative links and non-HTTP(S) schemes are rejected and legacy unsafe values are shown as text rather than clickable links. Readiness is calculated from canonical project data: at least one approved partial acceptance record, every required as-built category approved, no unresolved punch items, commissioning complete, and every handover checklist item complete.
+Create or edit a Draft/Reopened record with the planned date, responsible user, commissioning result, checklist, supporting HTTP(S) or host-relative document links, and signatories. Host-relative links must begin with a single `/`; protocol-relative links and non-HTTP(S) schemes are rejected and legacy unsafe values are shown as text rather than clickable links. Readiness is calculated from canonical project data: at least one approved partial acceptance record, at least one configured required as-built category with every required category approved, no unresolved punch items, commissioning complete, and every handover checklist item complete. An empty required-category configuration blocks readiness; an administrator must configure it explicitly.
 
 The lifecycle is **Draft → Ready for Handover → Handed Over**. Managers may return a ready record to Draft, cancel it, or reopen a completed handover for controlled correction. Final completion requires the dedicated completion permission and at least one signatory; it records the actual handover date, actor, timestamp, and immutable status history. Completed records are locked until reopened. If another user changes the same record first, the API returns a conflict and the operator must reload before retrying so a newer change is not overwritten.
 
@@ -1819,6 +1819,12 @@ Most newer controllers also expose the same contract below `/api/v1`; use the co
 ```
 
 ### 14.3 Activity Categories
+
+Opening a category or recruitment-options list does not create records. If a
+list is empty, an administrator must create the needed activity, news, project,
+employment-type, or as-built document categories, or recruitment-dropdown
+options through the corresponding management action. Existing legacy content
+is not silently converted into category records when someone views a list.
 
 | Method | Endpoint                                        | Auth   | Description           |
 |--------|-------------------------------------------------|--------|-----------------------|

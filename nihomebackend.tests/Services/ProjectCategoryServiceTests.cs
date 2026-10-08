@@ -35,7 +35,7 @@ public class ProjectCategoryServiceTests : IDisposable
     };
 
     [Fact]
-    public async Task GetAllAsync_SeedsCategoriesFromProjects_WhenCategoryTableIsEmpty()
+    public async Task GetAllAsync_DoesNotCreateCategoriesFromProjects()
     {
         _db.Projects.AddRange(
             NewProject("p-1", " Factory "),
@@ -45,13 +45,9 @@ public class ProjectCategoryServiceTests : IDisposable
 
         var result = await _sut.GetAllAsync(includeInactive: true);
 
-        Assert.Equal(2, result.Count);
-        Assert.Contains(result, c => c.Name == "Factory");
-        Assert.Contains(result, c => c.Name == "Hotel");
-        Assert.All(result, c => Assert.Equal(c.Name, c.NameVi));
-        Assert.All(result, c => Assert.Equal(c.NameVi, c.NameEn));
-        Assert.All(result, c => Assert.Equal(c.NameVi, c.NameZh));
-        Assert.All(result, c => Assert.Equal(c.NameVi, c.NameJa));
+        Assert.Empty(result);
+        Assert.Empty(_db.ProjectCategories);
+        Assert.Equal(3, _db.Projects.Count());
     }
 
     [Fact]

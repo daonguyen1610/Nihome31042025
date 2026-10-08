@@ -433,7 +433,8 @@ public class HandoverRecordService(
                 item.Value.CommissioningCompleted = record.CommissioningCompleted;
                 item.Value.ChecklistCompleted = record.ChecklistCompleted;
             }
-            item.Value.IsReady = item.Value.ApprovedRequiredAsBuiltCategories == item.Value.RequiredAsBuiltCategories
+            item.Value.IsReady = item.Value.RequiredAsBuiltCategories > 0
+                && item.Value.ApprovedRequiredAsBuiltCategories == item.Value.RequiredAsBuiltCategories
                 && item.Value.UnresolvedPunchItems == 0
                 && item.Value.ApprovedAcceptanceRecords > 0;
         }
@@ -451,6 +452,8 @@ public class HandoverRecordService(
             throw new HandoverRecordOperationException("Dự án chưa có biên bản nghiệm thu từng phần được duyệt.");
         if (readiness.UnresolvedPunchItems > 0)
             throw new HandoverRecordOperationException("Dự án còn lỗi tồn đọng chưa được xác minh.");
+        if (readiness.RequiredAsBuiltCategories == 0)
+            throw new HandoverRecordOperationException("Chưa cấu hình nhóm hồ sơ hoàn công bắt buộc. Vui lòng tạo danh mục trước khi bàn giao.");
         if (readiness.ApprovedRequiredAsBuiltCategories < readiness.RequiredAsBuiltCategories)
             throw new HandoverRecordOperationException("Hồ sơ hoàn công chưa đủ các nhóm tài liệu bắt buộc đã duyệt.");
     }

@@ -21,13 +21,12 @@ public class EmploymentTypeServiceTests : IDisposable
     public void Dispose() => _db.Dispose();
 
     [Fact]
-    public async Task GetAllAsync_SeedsDefaults_WhenTableIsEmpty()
+    public async Task GetAllAsync_DoesNotSeedDefaults_WhenTableIsEmpty()
     {
         var result = await _sut.GetAllAsync(includeInactive: true);
 
-        Assert.Contains(result, item => item.Code == "full-time" && item.Name == "Toàn thời gian");
-        Assert.Contains(result, item => item.Code == "part-time" && item.Name == "Bán thời gian");
-        Assert.Contains(result, item => item.Code == "intern" && item.Name == "Thực tập sinh");
+        Assert.Empty(result);
+        Assert.Empty(_db.EmploymentTypes);
     }
 
     [Fact]

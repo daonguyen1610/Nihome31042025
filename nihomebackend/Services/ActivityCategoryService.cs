@@ -12,8 +12,6 @@ public class ActivityCategoryService(AppDbContext db, ILogger<ActivityCategorySe
 
     public async Task<List<ActivityCategoryResponse>> GetAllAsync(bool includeInactive = false)
     {
-        await SeedFromActivitiesIfEmptyAsync();
-
         var query = db.ActivityCategories.AsNoTracking();
         if (!includeInactive)
         {
@@ -156,46 +154,6 @@ public class ActivityCategoryService(AppDbContext db, ILogger<ActivityCategorySe
         await db.SaveChangesAsync();
         logger.LogInformation("Auto-created activity category {CategoryName} from activity payload", trimmed);
         return (created.Id, created.Name);
-    }
-
-    private async Task SeedFromActivitiesIfEmptyAsync()
-    {
-        if (await db.ActivityCategories.AsNoTracking().AnyAsync())
-        {
-            return;
-        }
-
-        var categories = await db.Activities
-            .AsNoTracking()
-            .Select(a => a.Category)
-            .Where(c => !string.IsNullOrWhiteSpace(c))
-            .ToListAsync();
-
-        if (categories.Count == 0)
-        {
-            return;
-        }
-
-        var entities = categories
-            .Select(NormalizeName)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
-            .Select((name, index) => new ActivityCategory
-            {
-                Name = name,
-                NameVi = name,
-                NameEn = name,
-                NameZh = name,
-                NameJa = name,
-                IsActive = true,
-                SortOrder = index + 1,
-            })
-            .ToList();
-
-        db.ActivityCategories.AddRange(entities);
-        await db.SaveChangesAsync();
-
-        logger.LogInformation("Seeded {Count} activity categories from activities data", entities.Count);
     }
 
     private async Task EnsureNameUniqueAsync(string name, int? excludingId = null)
