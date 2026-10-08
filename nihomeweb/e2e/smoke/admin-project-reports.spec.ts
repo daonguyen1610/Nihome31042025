@@ -101,10 +101,10 @@ test.describe("NIH-461 — Project operational reports", () => {
 
     await reportsPage.locator("#report-project").click();
     await page.getByRole("option", { name: new RegExp(projectName) }).click();
-    await reportsPage.locator("#report-from").fill("2026-09-01");
-    await reportsPage.locator("#report-to").fill("2026-09-30");
     await expect.poll(() => new URL(page.url()).searchParams.get("project")).toBe(String(project.id));
+    await reportsPage.locator("#report-from").fill("2026-09-01");
     await expect.poll(() => new URL(page.url()).searchParams.get("from")).toBe("2026-09-01");
+    await reportsPage.locator("#report-to").fill("2026-09-30");
     await expect.poll(() => new URL(page.url()).searchParams.get("to")).toBe("2026-09-30");
     await expect(reportsPage.getByTestId(`project-report-trigger-${project.id}`)).toHaveAttribute("aria-expanded", "true");
     await expect(reportsPage.getByTestId(`project-report-content-${project.id}`)).toBeVisible();
