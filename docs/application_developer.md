@@ -1871,11 +1871,11 @@ as VND at rate 1 with their previous total copied to subtotal and original total
 Rollback drops only the extension tables and columns, so back up split-award and
 portal-delivery evidence before downgrade.
 
-`RfqSampleDataSeeder` creates only its dedicated `PJ-SAMPLE-RFQ` project and
-respects project deletion tombstones. It provides a draft, an issued comparison
-with complete/partial quotes, and an overdue RFQ. Re-running does not overwrite
-user edits or resurrect the project. Production reference options come from
-the API, not hardcoded React values.
+RFQ demo data is enabled only for the backend `Development` environment.
+Integration/E2E fixtures may also create their own isolated rows. Production
+startup does not create a `PJ-SAMPLE-RFQ` project or any other business sample
+rows. Production reference options come from the API, not hardcoded React
+values.
 
 ### 7.19 KPI Framework and Source Evidence
 

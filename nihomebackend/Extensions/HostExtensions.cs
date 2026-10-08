@@ -42,7 +42,7 @@ public static class HostExtensions
             // via a custom Kestrel setup. Seeded assets belong under the API's
             // own wwwroot, next to /files/capability/ etc.
             var webRoot = Path.Combine(app.Environment.ContentRootPath, "wwwroot");
-            DbSeeder.Seed(db, webRoot);
+            DbSeeder.Seed(db, webRoot, includeDevelopmentSamples: app.Environment.IsDevelopment());
             logger.LogInformation("Database seeding completed successfully.");
         }
         catch (Exception ex)

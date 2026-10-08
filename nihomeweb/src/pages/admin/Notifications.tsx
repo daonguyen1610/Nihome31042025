@@ -180,7 +180,7 @@ const Notifications = () => {
                     <span className="min-w-0">
                       <span className="flex items-start gap-2">
                         <span className="min-w-0 flex-1 text-sm font-bold leading-snug text-foreground">
-                          {notification.title}
+                          {t(notification.title)}
                         </span>
                         {!notification.isRead ? (
                           <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-sky-500" />
