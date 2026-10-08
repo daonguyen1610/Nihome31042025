@@ -1107,6 +1107,90 @@ public class ContractsControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task Transition_SignedToInProgress_DoesNotCreateDesignProject()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var customerId = await CreateCustomerAsync();
+        var contractId = await CreateContractAsync(customerId, status: "Signed");
+        await WithDbAsync(async db =>
+        {
+            db.ContractAttachments.Add(new ContractAttachment
+            {
+                ContractId = contractId,
+                Kind = ContractAttachmentKind.SignedScan,
+                FilePath = "/files/contracts/signed-test.pdf",
+                OriginalFileName = "signed-test.pdf",
+                ContentType = "application/pdf",
+                FileSize = 1,
+            });
+            await db.SaveChangesAsync();
+        });
+
+        var response = await Client.PostAsJsonAsync(
+            $"/api/contracts/{contractId}/transition", new { newStatus = "InProgress" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
+        (await ReadJsonAsync(response)).GetProperty("designProjectId").ValueKind
+            .Should().Be(JsonValueKind.Null);
+        (await WithDbAsync(db => db.DesignProjects.CountAsync(project => project.ContractId == contractId)))
+            .Should().Be(0);
+    }
+
+    [Fact]
+    public async Task CreateDesignProject_FromContract_DesignLeadCannotInitiate()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var customerId = await CreateCustomerAsync();
+        var contractId = await CreateContractAsync(customerId);
+
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "DESIGN_LEAD"));
+        var response = await Client.PostAsync($"/api/contracts/{contractId}/design-project", null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await WithDbAsync(db => db.DesignProjects.CountAsync(project => project.ContractId == contractId)))
+            .Should().Be(0);
+    }
+
+    [Fact]
+    public async Task CreateDesignProject_FromContract_ReusesPreContractProject()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var customerId = await CreateCustomerAsync();
+        var contractId = await CreateContractAsync(customerId);
+        var operationalProjectId = await WithDbAsync(db => db.Contracts
+            .Where(item => item.Id == contractId)
+            .Select(item => item.OperationalProjectId!.Value)
+            .SingleAsync());
+        var designProjectId = await WithDbAsync(async db =>
+        {
+            var project = new DesignProject
+            {
+                ProjectCode = $"DP-{Guid.NewGuid():N}"[..20],
+                Name = "Concept trước hợp đồng",
+                CustomerId = customerId,
+                OperationalProjectId = operationalProjectId,
+                CurrentStage = DesignProjectStage.Concept,
+                Status = DesignProjectStatus.Active,
+            };
+            db.DesignProjects.Add(project);
+            await db.SaveChangesAsync();
+            return project.Id;
+        });
+
+        var detail = await ReadJsonAsync(await Client.GetAsync($"/api/contracts/{contractId}"));
+        detail.GetProperty("designProjectId").GetInt32().Should().Be(designProjectId);
+        var first = await Client.PostAsync($"/api/contracts/{contractId}/design-project", null);
+        var second = await Client.PostAsync($"/api/contracts/{contractId}/design-project", null);
+
+        first.StatusCode.Should().Be(HttpStatusCode.OK);
+        second.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await ReadJsonAsync(first)).GetProperty("id").GetInt32().Should().Be(designProjectId);
+        (await ReadJsonAsync(second)).GetProperty("id").GetInt32().Should().Be(designProjectId);
+        (await WithDbAsync(db => db.DesignProjects.CountAsync(project =>
+            project.OperationalProjectId == operationalProjectId))).Should().Be(1);
+    }
+
+    [Fact]
     public async Task Transition_IllegalPath_ReturnsBadRequest()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));

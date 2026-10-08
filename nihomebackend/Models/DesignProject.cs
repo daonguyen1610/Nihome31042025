@@ -3,9 +3,8 @@ namespace NihomeBackend.Models;
 /// <summary>
 /// M2 Design Project (Dự án thiết kế) — the umbrella record for a design
 /// engagement covering the three canonical stages Concept → Basic Design →
-/// Shop Drawing. Auto-created from a <see cref="Contract"/> when it moves
-/// to <see cref="ContractStatus.InProgress"/> (NIH-113 AC #1) but can also
-/// be created by hand for internal / non-contract work.
+/// Shop Drawing. Created explicitly from an Operational Project, Opportunity,
+/// or Contract; a Contract status transition does not create one.
 ///
 /// This slice ships the overview record + CRUD; per-stage documents,
 /// team roster, revisions and IFC releases land in NIH-114..118.
@@ -43,7 +42,7 @@ public class DesignProject
     public int? DesignLeadUserId { get; set; }
     public ApplicationUser? DesignLead { get; set; }
 
-    /// <summary>Kick-off date. Nullable so an auto-created row can be tightened later.</summary>
+    /// <summary>Kick-off date. Nullable when the date is not yet planned.</summary>
     public DateTime? StartDate { get; set; }
 
     /// <summary>Overall deadline for the design engagement.</summary>

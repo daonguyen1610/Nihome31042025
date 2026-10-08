@@ -31,7 +31,6 @@ public class ContractServiceTests : IDisposable
         environment.SetupGet(item => item.ContentRootPath).Returns(_contentRoot);
         _sut = new ContractService(
             _db,
-            new NoopDesignProjectService(),
             NullLogger<ContractService>.Instance,
             _projectDocuments.Object,
             new OpportunityClosureInvariantService(_db),
@@ -1072,6 +1071,8 @@ public class ContractServiceTests : IDisposable
 
         var updated = await _sut.TransitionStatusAsync(contract.Id, ContractStatus.InProgress, 1, canSeeAll: true);
         Assert.Equal(ContractStatus.InProgress, updated!.Status);
+        Assert.Null(updated.DesignProjectId);
+        Assert.Empty(_db.DesignProjects);
     }
 
     [Fact]
@@ -1274,12 +1275,6 @@ public class ContractServiceTests : IDisposable
         Assert.True((await _sut.GetAsync(contract.Id, 1, canSeeAll: true))!.HasSignedScan);
     }
 
-    /// <summary>
-    /// Stub for tests that don't care about the NIH-113 auto-create hook.
-    /// The real service is exercised in <c>DesignProjectServiceTests</c>
-    /// + integration; here we just want ContractService to not blow up
-    /// when it transitions a contract to InProgress.
-    /// </summary>
     // ---------------- Design project link ----------------
 
     [Fact]
@@ -1317,6 +1312,29 @@ public class ContractServiceTests : IDisposable
         Assert.Null(response.DesignProjectCode);
         Assert.Null(response.DesignProjectName);
         Assert.Null(response.DesignProjectCurrentStage);
+    }
+
+    [Fact]
+    public async Task GetAsync_ShowsExistingDesignProjectOnSameOperationalProject()
+    {
+        var contract = await _sut.CreateAsync(Req(customerId: _customerA), 1, canReassignOwner: true);
+        var operationalProjectId = _db.Contracts.Single(item => item.Id == contract.Id).OperationalProjectId;
+        Assert.NotNull(operationalProjectId);
+        _db.DesignProjects.Add(new DesignProject
+        {
+            ProjectCode = "DP-2026-EXISTING",
+            Name = "Thiết kế trước hợp đồng",
+            CustomerId = _customerA,
+            OperationalProjectId = operationalProjectId,
+            CurrentStage = DesignProjectStage.Concept,
+            Status = DesignProjectStatus.Active,
+        });
+        await _db.SaveChangesAsync();
+
+        var response = await _sut.GetAsync(contract.Id, 1, canSeeAll: true);
+
+        Assert.NotNull(response!.DesignProjectId);
+        Assert.Equal("DP-2026-EXISTING", response.DesignProjectCode);
     }
 
     [Fact]
@@ -1457,45 +1475,5 @@ public class ContractServiceTests : IDisposable
         _db.Opportunities.Add(opportunity);
         _db.SaveChanges();
         return opportunity;
-    }
-
-    private sealed class NoopDesignProjectService : IDesignProjectService
-    {
-        public Task<NihomeBackend.Models.DTOs.Responses.DesignProjectListResponse> ListAsync(
-            NihomeBackend.Models.DTOs.Requests.DesignProjectListParams parameters,
-            int callerUserId,
-            CancellationToken ct = default)
-            => Task.FromResult(new NihomeBackend.Models.DTOs.Responses.DesignProjectListResponse());
-
-        public Task<NihomeBackend.Models.DTOs.Responses.DesignProjectResponse?> GetAsync(int id, CancellationToken ct = default)
-            => Task.FromResult<NihomeBackend.Models.DTOs.Responses.DesignProjectResponse?>(null);
-
-        public Task<NihomeBackend.Models.DTOs.Responses.DesignProjectResponse> CreateAsync(
-            NihomeBackend.Models.DTOs.Requests.CreateDesignProjectRequest request, int callerUserId, CancellationToken ct = default)
-            => Task.FromResult(new NihomeBackend.Models.DTOs.Responses.DesignProjectResponse());
-
-        public Task<NihomeBackend.Models.DTOs.Responses.EnsureDesignProjectResult> EnsureForOpportunityAsync(
-            int opportunityId, int callerUserId, string name, string? note, CancellationToken ct = default)
-            => Task.FromResult(new NihomeBackend.Models.DTOs.Responses.EnsureDesignProjectResult(
-                new NihomeBackend.Models.DTOs.Responses.DesignProjectResponse(), true));
-
-        public Task<NihomeBackend.Models.DTOs.Responses.DesignProjectResponse?> UpdateAsync(
-            int id, NihomeBackend.Models.DTOs.Requests.UpdateDesignProjectRequest request, int callerUserId, CancellationToken ct = default)
-            => Task.FromResult<NihomeBackend.Models.DTOs.Responses.DesignProjectResponse?>(null);
-
-        public Task<NihomeBackend.Models.DTOs.Responses.DeletionImpactResponse?> GetDeletionImpactAsync(
-            int id, CancellationToken ct = default)
-            => Task.FromResult<NihomeBackend.Models.DTOs.Responses.DeletionImpactResponse?>(null);
-
-        public Task<NihomeBackend.Services.HardDelete.HardDeleteOperationResult?> DeleteAsync(
-            int id,
-            NihomeBackend.Models.DTOs.Requests.ConfirmDeletionRequest request,
-            int callerUserId,
-            CancellationToken ct = default)
-            => Task.FromResult<NihomeBackend.Services.HardDelete.HardDeleteOperationResult?>(null);
-
-        public Task<NihomeBackend.Models.DTOs.Responses.DesignProjectResponse> EnsureForContractAsync(
-            NihomeBackend.Models.Contract contract, int? callerUserId, CancellationToken ct = default)
-            => Task.FromResult(new NihomeBackend.Models.DTOs.Responses.DesignProjectResponse());
     }
 }
