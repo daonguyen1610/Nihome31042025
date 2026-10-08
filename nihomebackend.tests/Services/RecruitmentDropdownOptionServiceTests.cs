@@ -21,25 +21,21 @@ public class RecruitmentDropdownOptionServiceTests : IDisposable
     public void Dispose() => _db.Dispose();
 
     [Fact]
-    public async Task GetByTypeAsync_SeedsExperienceLevelDefaults_WhenTableIsEmpty()
+    public async Task GetByTypeAsync_DoesNotSeedExperienceLevelDefaults_WhenTableIsEmpty()
     {
         var result = await _sut.GetByTypeAsync(RecruitmentDropdownOptionService.TypeExperienceLevel, includeInactive: true);
 
-        Assert.Contains(result, x => x.Code == "student");
-        Assert.Contains(result, x => x.Code == "junior");
-        Assert.Contains(result, x => x.Code == "mid");
-        Assert.Contains(result, x => x.Code == "senior");
+        Assert.Empty(result);
+        Assert.Empty(_db.RecruitmentDropdownOptions);
     }
 
     [Fact]
-    public async Task GetByTypeAsync_SeedsBenefitDefaults_WhenTableIsEmpty()
+    public async Task GetByTypeAsync_DoesNotSeedBenefitDefaults_WhenTableIsEmpty()
     {
         var result = await _sut.GetByTypeAsync(RecruitmentDropdownOptionService.TypeBenefit, includeInactive: true);
 
-        Assert.Contains(result, x => x.Code == "health-insurance");
-        Assert.Contains(result, x => x.Code == "training");
-        Assert.Contains(result, x => x.Code == "friendly-culture");
-        Assert.Contains(result, x => x.Code == "project-bonus");
+        Assert.Empty(result);
+        Assert.Empty(_db.RecruitmentDropdownOptions);
     }
 
     [Fact]

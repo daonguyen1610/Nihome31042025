@@ -1,4 +1,5 @@
 using System.Net;
+using Microsoft.EntityFrameworkCore;
 
 namespace NihomeBackend.IntegrationTests.Controllers;
 
@@ -14,13 +15,18 @@ public class RecruitmentDropdownOptionsControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task GetByType_ExperienceLevel_SeedsDefaults_AndReturnsList()
+    public async Task GetByType_ExperienceLevel_DoesNotCreateDefaults()
     {
+        var before = await WithDbAsync(db => db.RecruitmentDropdownOptions
+            .CountAsync(item => item.Type == "experience-level" && item.IsActive));
         var res = await Client.GetAsync("/api/recruitment-dropdown-options?type=experience-level");
         res.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var json = await ReadJsonAsync(res);
-        json.GetArrayLength().Should().BeGreaterThan(0);
+        json.GetArrayLength().Should().Be(before);
+        (await WithDbAsync(db => db.RecruitmentDropdownOptions
+            .CountAsync(item => item.Type == "experience-level" && item.IsActive)))
+            .Should().Be(before);
     }
 
     [Fact]

@@ -266,6 +266,23 @@ public class HandoverRecordServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Ready_transition_rejects_missing_required_category_configuration()
+    {
+        _db.AsBuiltDocumentCategories.RemoveRange(_db.AsBuiltDocumentCategories);
+        await _db.SaveChangesAsync();
+        SeedApprovedAcceptance();
+        var created = await _sut.CreateAsync(Request(complete: true), _userId, false);
+
+        Assert.False(created.Readiness.IsReady);
+        var error = await Assert.ThrowsAsync<HandoverRecordOperationException>(() =>
+            _sut.TransitionAsync(created.Id,
+                new TransitionHandoverStatusRequest { Status = "ReadyForHandover" }, _userId, false));
+
+        Assert.Contains("danh mục", error.Message);
+        Assert.Equal(HandoverStatus.Draft, _db.HandoverRecords.Single(item => item.Id == created.Id).Status);
+    }
+
+    [Fact]
     public async Task Complete_uses_dedicated_action_and_requires_signatory()
     {
         SeedReadyUpstream();

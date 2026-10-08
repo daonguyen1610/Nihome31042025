@@ -12,8 +12,6 @@ public class ProjectCategoryService(AppDbContext db, ILogger<ProjectCategoryServ
 
     public async Task<List<ProjectCategoryResponse>> GetAllAsync(bool includeInactive = false)
     {
-        await SeedFromProjectsIfEmptyAsync();
-
         var query = db.ProjectCategories.AsNoTracking();
         if (!includeInactive)
         {
@@ -156,47 +154,6 @@ public class ProjectCategoryService(AppDbContext db, ILogger<ProjectCategoryServ
         await db.SaveChangesAsync();
         logger.LogInformation("Auto-created project category {CategoryName} from project payload", trimmed);
         return (created.Id, created.Name);
-    }
-
-    private async Task SeedFromProjectsIfEmptyAsync()
-    {
-        if (await db.ProjectCategories.AsNoTracking().AnyAsync())
-        {
-            return;
-        }
-
-        var categories = await db.Projects
-            .AsNoTracking()
-            .Select(p => p.Category)
-            .Where(c => !string.IsNullOrWhiteSpace(c))
-            .ToListAsync();
-
-        if (categories.Count == 0)
-        {
-            return;
-        }
-
-        var entities = categories
-            .Select(c => (c ?? string.Empty).Trim())
-            .Where(c => !string.IsNullOrWhiteSpace(c))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
-            .Select((name, index) => new ProjectCategory
-            {
-                Name = name,
-                NameVi = name,
-                NameEn = name,
-                NameZh = name,
-                NameJa = name,
-                IsActive = true,
-                SortOrder = index + 1,
-            })
-            .ToList();
-
-        db.ProjectCategories.AddRange(entities);
-        await db.SaveChangesAsync();
-
-        logger.LogInformation("Seeded {Count} project categories from projects data", entities.Count);
     }
 
     private async Task EnsureNameUniqueAsync(string name, int? excludingId = null)

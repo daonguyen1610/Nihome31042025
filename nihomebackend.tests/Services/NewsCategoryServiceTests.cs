@@ -22,7 +22,7 @@ public class NewsCategoryServiceTests : IDisposable
     public void Dispose() => _db.Dispose();
 
     [Fact]
-    public async Task GetAll_SeedsFromExistingNews_WhenEmpty()
+    public async Task GetAll_DoesNotCreateCategoriesFromExistingNews()
     {
         _db.NewsArticles.AddRange(
             new NewsArticle { Slug = "n1", Category = "Company", Title = "T", Excerpt = "E", ContentJson = "[]" },
@@ -32,11 +32,9 @@ public class NewsCategoryServiceTests : IDisposable
 
         var result = await _sut.GetAllAsync();
 
-        Assert.Equal(["Company", "Project"], result.Select(c => c.Name).ToArray());
-        Assert.All(result, c => Assert.Equal(c.Name, c.NameVi));
-        Assert.All(result, c => Assert.Equal(c.NameVi, c.NameEn));
-        Assert.All(result, c => Assert.Equal(c.NameVi, c.NameZh));
-        Assert.All(result, c => Assert.Equal(c.NameVi, c.NameJa));
+        Assert.Empty(result);
+        Assert.Empty(_db.NewsCategories);
+        Assert.Equal(3, _db.NewsArticles.Count());
     }
 
     [Fact]

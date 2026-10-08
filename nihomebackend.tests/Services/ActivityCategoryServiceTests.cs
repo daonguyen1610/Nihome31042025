@@ -25,7 +25,7 @@ public class ActivityCategoryServiceTests : IDisposable
     public void Dispose() => _db.Dispose();
 
     [Fact]
-    public async Task GetAllAsync_SeedsCategoriesFromActivities_WhenCategoryTableIsEmpty()
+    public async Task GetAllAsync_DoesNotCreateCategoriesFromActivities()
     {
         _db.Activities.AddRange(
             new Activity
@@ -62,13 +62,9 @@ public class ActivityCategoryServiceTests : IDisposable
 
         var result = await _sut.GetAllAsync(includeInactive: true);
 
-        Assert.Equal(2, result.Count);
-        Assert.Contains(result, item => item.Name == "Event");
-        Assert.Contains(result, item => item.Name == "News");
-        Assert.All(result, item => Assert.Equal(item.Name, item.NameVi));
-        Assert.All(result, item => Assert.Equal(item.NameVi, item.NameEn));
-        Assert.All(result, item => Assert.Equal(item.NameVi, item.NameZh));
-        Assert.All(result, item => Assert.Equal(item.NameVi, item.NameJa));
+        Assert.Empty(result);
+        Assert.Empty(_db.ActivityCategories);
+        Assert.Equal(3, _db.Activities.Count());
     }
 
     [Fact]

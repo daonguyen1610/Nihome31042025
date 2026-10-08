@@ -12,8 +12,6 @@ public class NewsCategoryService(AppDbContext db, ILogger<NewsCategoryService> l
 
     public async Task<List<NewsCategoryResponse>> GetAllAsync(bool includeInactive = false)
     {
-        await SeedFromNewsIfEmptyAsync();
-
         var query = db.NewsCategories.AsNoTracking();
         if (!includeInactive)
         {
@@ -155,46 +153,6 @@ public class NewsCategoryService(AppDbContext db, ILogger<NewsCategoryService> l
         await db.SaveChangesAsync();
         logger.LogInformation("Auto-created news category {CategoryName} from news payload", trimmed);
         return (created.Id, created.Name);
-    }
-
-    private async Task SeedFromNewsIfEmptyAsync()
-    {
-        if (await db.NewsCategories.AsNoTracking().AnyAsync())
-        {
-            return;
-        }
-
-        var categories = await db.NewsArticles
-            .AsNoTracking()
-            .Select(n => n.Category)
-            .Where(c => !string.IsNullOrWhiteSpace(c))
-            .ToListAsync();
-
-        if (categories.Count == 0)
-        {
-            return;
-        }
-
-        var entities = categories
-            .Select(NormalizeName)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
-            .Select((name, index) => new NewsCategory
-            {
-                Name = name,
-                NameVi = name,
-                NameEn = name,
-                NameZh = name,
-                NameJa = name,
-                IsActive = true,
-                SortOrder = index + 1,
-            })
-            .ToList();
-
-        db.NewsCategories.AddRange(entities);
-        await db.SaveChangesAsync();
-
-        logger.LogInformation("Seeded {Count} news categories from news data", entities.Count);
     }
 
     private async Task EnsureNameUniqueAsync(string name, int? excludingId = null)
