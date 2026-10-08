@@ -290,19 +290,12 @@ public class ActivityCategoryServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task ResolveAsync_AutoCreatesCategory_WhenNameNotFound_AndSetsNameVi()
+    public async Task ResolveAsync_RejectsUnknownName_WithoutCreatingCategory()
     {
-        var (id, name) = await _sut.ResolveAsync(categoryId: null, categoryName: " Brand New ");
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _sut.ResolveAsync(categoryId: null, categoryName: " Brand New "));
 
-        Assert.NotNull(id);
-        Assert.Equal("Brand New", name);
-        var stored = Assert.Single(_db.ActivityCategories);
-        Assert.Equal("Brand New", stored.Name);
-        Assert.Equal("Brand New", stored.NameVi);
-        Assert.Equal("Brand New", stored.NameEn);
-        Assert.Equal("Brand New", stored.NameZh);
-        Assert.Equal("Brand New", stored.NameJa);
-        Assert.True(stored.IsActive);
-        Assert.Equal(1, stored.SortOrder);
+        Assert.Contains("Danh mục bài đăng", error.Message);
+        Assert.Empty(_db.ActivityCategories);
     }
 }

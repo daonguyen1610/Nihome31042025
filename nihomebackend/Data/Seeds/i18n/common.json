@@ -696,6 +696,14 @@
     "ja": "カテゴリを選択"
   },
   {
+    "key": "form.legacyCategorySuffix",
+    "category": "form",
+    "vi": " (chưa có trong danh mục)",
+    "en": " (not in category list)",
+    "zh": "（不在分类列表中）",
+    "ja": "（カテゴリ一覧に未登録）"
+  },
+  {
     "key": "gallery.viewGrid",
     "category": "gallery",
     "vi": "Xem dạng lưới",

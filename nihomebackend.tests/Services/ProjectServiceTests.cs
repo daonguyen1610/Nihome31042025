@@ -41,16 +41,35 @@ public class ProjectServiceTests : IDisposable
     };
 
     [Fact]
-    public async Task Create_AutoCreatesCategoryFromName()
+    public async Task Create_ResolvesExistingCategoryFromName()
     {
+        var category = new ProjectCategory
+        {
+            Name = "Hospitality", NameVi = "Hospitality", NameEn = "Hospitality",
+            NameZh = "Hospitality", NameJa = "Hospitality", IsActive = true,
+        };
+        _db.ProjectCategories.Add(category);
+        await _db.SaveChangesAsync();
         var req = BasePayload();
         req.Category = "Hospitality";
 
         var res = await _sut.CreateAsync(req);
 
         Assert.Equal("Hospitality", res.Category);
-        Assert.NotNull(res.CategoryId);
+        Assert.Equal(category.Id, res.CategoryId);
         Assert.Single(_db.ProjectCategories);
+    }
+
+    [Fact]
+    public async Task Create_RejectsUnknownCategoryWithoutWritingProject()
+    {
+        var req = BasePayload();
+        req.Category = "Not configured";
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _sut.CreateAsync(req));
+
+        Assert.Empty(_db.ProjectCategories);
+        Assert.Empty(_db.Projects);
     }
 
     [Fact]
@@ -102,6 +121,10 @@ public class ProjectServiceTests : IDisposable
     [Fact]
     public async Task Update_ChangesGallery_AndCategoryReassign()
     {
+        _db.ProjectCategories.AddRange(
+            new ProjectCategory { Name = "OldCat", NameVi = "OldCat", NameEn = "OldCat", NameZh = "OldCat", NameJa = "OldCat", IsActive = true },
+            new ProjectCategory { Name = "NewCat", NameVi = "NewCat", NameEn = "NewCat", NameZh = "NewCat", NameJa = "NewCat", IsActive = true });
+        await _db.SaveChangesAsync();
         var initial = BasePayload("u1"); initial.Category = "OldCat";
         var created = await _sut.CreateAsync(initial);
 
@@ -115,6 +138,29 @@ public class ProjectServiceTests : IDisposable
         Assert.Equal("Renamed", updated!.Name);
         Assert.Equal("NewCat", updated.Category);
         Assert.Single(updated.Gallery!);
+    }
+
+    [Fact]
+    public async Task Update_PreservesUnlinkedLegacyCategoryWithoutCreatingOne()
+    {
+        var project = new Project
+        {
+            Slug = "legacy-project", Name = "Old", Client = "Client",
+            Location = "HCM", Scope = "Build", Status = "ongoing",
+            Category = "Legacy", ContentJson = "[]",
+        };
+        _db.Projects.Add(project);
+        await _db.SaveChangesAsync();
+        var request = BasePayload("legacy-project");
+        request.Category = "Legacy";
+        request.Name = "Edited";
+
+        var updated = await _sut.UpdateAsync(project.Id, request);
+
+        Assert.Equal("Edited", updated!.Name);
+        Assert.Equal("Legacy", updated.Category);
+        Assert.Null(updated.CategoryId);
+        Assert.Empty(_db.ProjectCategories);
     }
 
     [Fact]

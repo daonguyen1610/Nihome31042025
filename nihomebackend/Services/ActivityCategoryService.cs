@@ -135,25 +135,7 @@ public class ActivityCategoryService(AppDbContext db, ILogger<ActivityCategorySe
             return (existing.Id, existing.Name);
         }
 
-        var maxSortOrder = await db.ActivityCategories
-            .AsNoTracking()
-            .Select(c => (int?)c.SortOrder)
-            .MaxAsync() ?? 0;
-
-        var created = new ActivityCategory
-        {
-            Name = trimmed,
-            NameVi = trimmed,
-            NameEn = trimmed,
-            NameZh = trimmed,
-            NameJa = trimmed,
-            IsActive = true,
-            SortOrder = maxSortOrder + 1,
-        };
-        db.ActivityCategories.Add(created);
-        await db.SaveChangesAsync();
-        logger.LogInformation("Auto-created activity category {CategoryName} from activity payload", trimmed);
-        return (created.Id, created.Name);
+        throw new InvalidOperationException($"Danh mục bài đăng '{trimmed}' chưa tồn tại. Hãy tạo danh mục trước khi lưu bài đăng.");
     }
 
     private async Task EnsureNameUniqueAsync(string name, int? excludingId = null)

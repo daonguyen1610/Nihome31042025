@@ -35,7 +35,7 @@ public class NewsServiceTests : IDisposable
         Slug = slug,
         Date = "2026-01-01",
         ImageUrl = "/images/news/cover.png",
-        Category = "company",
+        Category = "",
         Title = "Hello",
         Excerpt = "World",
         Content = new[] { "p1", "p2" },
@@ -59,7 +59,7 @@ public class NewsServiceTests : IDisposable
             Slug = "b",
             Date = "2026-01-02",
             ImageUrl = "",
-            Category = "x",
+            Category = "",
             Title = "T",
             Excerpt = "E",
             Content = new[] { "c" },
@@ -126,13 +126,56 @@ public class NewsServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task Create_AutoCreatesMissingNewsCategory()
+    public async Task Create_ResolvesExistingCategoryByName()
     {
-        var created = await _sut.CreateAsync(BasePayload("category-sync"));
+        var category = new NewsCategory
+        {
+            Name = "company", NameVi = "company", NameEn = "company",
+            NameZh = "company", NameJa = "company", IsActive = true,
+        };
+        _db.NewsCategories.Add(category);
+        await _db.SaveChangesAsync();
+        var request = BasePayload("category-sync");
+        request.Category = "company";
+        var created = await _sut.CreateAsync(request);
 
         Assert.Equal("company", created.Category);
-        Assert.NotNull(created.NewsCategoryId);
+        Assert.Equal(category.Id, created.NewsCategoryId);
         Assert.Single(_db.NewsCategories);
+    }
+
+    [Fact]
+    public async Task Create_RejectsUnknownCategoryWithoutWritingNews()
+    {
+        var request = BasePayload("unknown-category");
+        request.Category = "Not configured";
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _sut.CreateAsync(request));
+
+        Assert.Empty(_db.NewsCategories);
+        Assert.Empty(_db.NewsArticles);
+    }
+
+    [Fact]
+    public async Task Update_PreservesUnlinkedLegacyCategoryWithoutCreatingOne()
+    {
+        var article = new NewsArticle
+        {
+            Slug = "legacy-news", Title = "Old", Excerpt = "Old",
+            Category = "Legacy", ContentJson = "[]",
+        };
+        _db.NewsArticles.Add(article);
+        await _db.SaveChangesAsync();
+        var request = BasePayload("legacy-news");
+        request.Category = "Legacy";
+        request.Title = "Edited";
+
+        var updated = await _sut.UpdateAsync(article.Id, request);
+
+        Assert.Equal("Edited", updated!.Title);
+        Assert.Equal("Legacy", updated.Category);
+        Assert.Null(updated.NewsCategoryId);
+        Assert.Empty(_db.NewsCategories);
     }
 
     [Fact]
