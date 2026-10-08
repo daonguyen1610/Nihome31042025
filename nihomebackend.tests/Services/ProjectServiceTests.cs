@@ -45,8 +45,12 @@ public class ProjectServiceTests : IDisposable
     {
         var category = new ProjectCategory
         {
-            Name = "Hospitality", NameVi = "Hospitality", NameEn = "Hospitality",
-            NameZh = "Hospitality", NameJa = "Hospitality", IsActive = true,
+            Name = "Hospitality",
+            NameVi = "Hospitality",
+            NameEn = "Hospitality",
+            NameZh = "Hospitality",
+            NameJa = "Hospitality",
+            IsActive = true,
         };
         _db.ProjectCategories.Add(category);
         await _db.SaveChangesAsync();
@@ -145,9 +149,14 @@ public class ProjectServiceTests : IDisposable
     {
         var project = new Project
         {
-            Slug = "legacy-project", Name = "Old", Client = "Client",
-            Location = "HCM", Scope = "Build", Status = "ongoing",
-            Category = "Legacy", ContentJson = "[]",
+            Slug = "legacy-project",
+            Name = "Old",
+            Client = "Client",
+            Location = "HCM",
+            Scope = "Build",
+            Status = "ongoing",
+            Category = "Legacy",
+            ContentJson = "[]",
         };
         _db.Projects.Add(project);
         await _db.SaveChangesAsync();

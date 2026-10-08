@@ -114,7 +114,7 @@ public class SampleContractSeederTests : IDisposable
         Assert.Equal(4, categories.Count(item => item.IsRequired));
         Assert.All(categories, category =>
         {
-                SampleCrmDataSeeder.Seed(_db);
+            SampleCrmDataSeeder.Seed(_db);
             Assert.False(string.IsNullOrWhiteSpace(category.NameEn));
             Assert.False(string.IsNullOrWhiteSpace(category.NameZh));
             Assert.False(string.IsNullOrWhiteSpace(category.NameJa));
