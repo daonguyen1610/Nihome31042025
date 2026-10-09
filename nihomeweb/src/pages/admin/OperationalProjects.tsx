@@ -69,6 +69,7 @@ const OperationalProjects = () => {
   const { toast } = useToast();
   const { has } = usePermissions();
   const canManage = has(ADMIN_PERMS.operationalProjectsManage);
+  const canCreate = canManage && has(ADMIN_PERMS.opportunitiesManage);
   const canViewContracts = has(ADMIN_PERMS.contracts);
   const canListUsers = has(ADMIN_PERMS.users);
   const projectId = id && /^\d+$/.test(id) ? Number(id) : null;
@@ -161,12 +162,12 @@ const OperationalProjects = () => {
   };
 
   useEffect(() => {
-    if (openedFromQuery.current || searchParams.get("create") !== "1" || !canManage) return;
+    if (openedFromQuery.current || searchParams.get("create") !== "1" || !canCreate) return;
     openedFromQuery.current = true;
     setForm({ ...emptyForm(), customerId: customerFilter ?? 0 });
     setFormError(null);
     setDialogOpen(true);
-  }, [searchParams, canManage, customerFilter]);
+  }, [searchParams, canCreate, customerFilter]);
 
   const openEdit = (project: OperationalProjectResponse) => {
     setForm({
@@ -770,7 +771,7 @@ const OperationalProjects = () => {
         <div className="space-y-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div><h1 className="text-2xl font-semibold">{t("operationalProjects.title")}</h1><p className="mt-1 text-sm text-muted-foreground">{t("operationalProjects.subtitle")}</p></div>
-            {canManage && <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" />{t("operationalProjects.new")}</Button>}
+            {canCreate && <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" />{t("operationalProjects.new")}</Button>}
           </div>
           <div className="flex flex-col gap-3 rounded-lg border bg-card p-4 sm:flex-row sm:items-end">
             <div className="flex-1"><Label htmlFor="project-search">{t("operationalProjects.filter.search")}</Label><div className="relative mt-1"><Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" /><Input id="project-search" className="pl-9" value={search} onChange={event => setSearch(event.target.value)} placeholder={t("operationalProjects.filter.searchPlaceholder")} /></div></div>

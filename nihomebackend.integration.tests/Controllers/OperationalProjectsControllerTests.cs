@@ -28,6 +28,24 @@ public class OperationalProjectsControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task ProjectManager_CannotCreateSalesProject_ButCanStillListProjects()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "PM"));
+        var name = $"Dự án Kinh doanh {Guid.NewGuid():N}";
+        var response = await Client.PostAsJsonAsync("/api/operational-projects", new
+        {
+            name,
+            customerId = await CreateCustomerAsync(),
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await WithDbAsync(db => db.OperationalProjects.AnyAsync(project => project.Name == name)))
+            .Should().BeFalse();
+        (await Client.GetAsync("/api/operational-projects")).StatusCode
+            .Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
     public async Task SuperAdmin_CanCreateReadAndActivateProject()
     {
         await AuthTestHelper.AuthenticateAsync(

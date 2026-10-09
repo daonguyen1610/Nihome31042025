@@ -115,7 +115,7 @@ action-specific permission codes and server-side author-versus-reviewer checks.
 |---|---|
 | `operations.projects.view` | Open operational-project list and detail within the caller's created/managed scope. |
 | `operations.projects.view.all` | Read the full operational-project portfolio. |
-| `operations.projects.manage` | Create, edit, transition, and delete eligible projects within scope. |
+| `operations.projects.manage` | Edit, transition, and delete eligible projects within scope; creation also requires `crm.opportunities.manage`. |
 
 `view.all` and `manage` are independent. A project with linked business data
 cannot be deleted, and its customer cannot be changed. Existing installations
@@ -147,6 +147,10 @@ is idempotent. It rejects Lost Opportunities and missing Operational Projects.
 The Sales form may link a same-customer Operational Project to an unlinked
 Opportunity before submitting the Design handoff; linking requires project
 visibility, and stale Opportunity updates are rejected by row version.
+Only users with both `operations.projects.manage` and
+`crm.opportunities.manage` can create the shared Operational Project through
+`POST /api/operational-projects`. A PM can manage assigned projects without
+creating the Sales root.
 
 Design roles do not receive either required Sales/Project-management permission
 by default and cannot create the business root from the Design list. Direct
