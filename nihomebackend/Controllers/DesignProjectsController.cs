@@ -23,6 +23,7 @@ namespace NihomeBackend.Controllers;
 public class DesignProjectsController(
     IDesignProjectService svc,
     IProjectAccessService projectAccess,
+    IPermissionService permissions,
     IAuditLogger audit) : ControllerBase
 {
     [HttpGet]
@@ -66,6 +67,13 @@ public class DesignProjectsController(
         if (!await projectAccess.CanViewOperationalProjectAsync(userId.Value, operationalProjectId.Value, ct))
         {
             return NotFound();
+        }
+        if (!await permissions.HasAsync(userId.Value, "crm.opportunities.manage", ct))
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new
+            {
+                message = "Dự án thiết kế phải được Kinh doanh khởi tạo từ Cơ hội. Phòng Thiết kế chỉ tiếp nhận sau khi được phân công.",
+            });
         }
         if (!await projectAccess.CanManageTeamAsync(userId.Value, operationalProjectId.Value, ct))
         {

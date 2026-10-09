@@ -70,9 +70,9 @@ or individual) can own many operational projects, and one operational project
 can contain many contracts. The operational project code is the traceability
 key used from sales through handover. Public website projects and design-stage
 projects are separate views and must not be used as substitutes for this key.
-The CRM menu keeps the three shared records—Projects, Opportunities, and
-Contracts—at the top so every department can reach the common project context
-before opening department-specific work.
+The CRM menu orders Projects, Opportunities, Contracts, Leads, Customers,
+Quotes, Material Rates, Tenders, Capability Documents, Surveys, and Project
+Reports. Permissions hide items that the current user cannot access.
 
 | Module | Scope | Objective |
 |--------|-------|-----------|
@@ -306,8 +306,10 @@ Operational Project, choose an existing one in that form or create one through
 Operational Project to the Opportunity and opens one Design Project at
 **Concept**, without requiring or creating a Contract. Repeating the save
 returns the existing Design Project instead of creating a duplicate. Design
-roles receive the Concept after project assignment; they cannot create the
-Design Project from the Design list.
+roles receive the Concept after project assignment. Direct creation from the
+Design list requires Design Project management, CRM Opportunity management,
+and Operational Project team management, so a Design-only role cannot start
+the handoff.
 
 In Negotiation and Contract signed, **Create contract** opens the contract form
 prefilled from the winning or latest approved quotation, or, when there is none

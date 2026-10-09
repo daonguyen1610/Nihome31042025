@@ -149,11 +149,15 @@ Opportunity before submitting the Design handoff; linking requires project
 visibility, and stale Opportunity updates are rejected by row version.
 
 Design roles do not receive either required Sales/Project-management permission
-by default and cannot create the business root from the Design list. Once the
-project team assigns them, their Design permissions and project scope govern
-viewing and work inside the existing Concept. `POST /api/design-projects`
+by default and cannot create the business root from the Design list. Direct
+Design Project creation additionally requires `design.projects.manage`,
+`crm.opportunities.manage`, and permission to manage the selected project team;
+granting team-management rights alone does not authorize the Sales handoff.
+Once the project team assigns them, their Design permissions and project scope
+govern viewing and work inside the existing Concept. `POST /api/design-projects`
 remains available to administrators for exceptional data maintenance and
-requires both Design management and project-team management authority.
+requires Design management, CRM Opportunity management, and project-team
+management authority.
 
 ## API Surface
 

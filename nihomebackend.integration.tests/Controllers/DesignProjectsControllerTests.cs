@@ -5,6 +5,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using NihomeBackend.Constants;
 using NihomeBackend.Models;
+using NihomeBackend.Models.Rbac;
+using NihomeBackend.Services;
 
 namespace NihomeBackend.IntegrationTests.Controllers;
 
@@ -145,6 +147,59 @@ public class DesignProjectsControllerTests : IntegrationTestBase
         (await ReadJsonAsync(denied)).GetProperty("message").GetString().Should().Contain("Kinh doanh");
         (await WithDbAsync(db => db.DesignProjects.AnyAsync(project => project.OperationalProjectId == projectId)))
             .Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task DesignFirst_DesignLeadWithTeamManagementCannotCreateBusinessHandoff()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var customerId = await FirstCustomerIdAsync();
+        var projectId = await CreateOperationalProjectAsync(customerId);
+        var phone = $"08{Random.Shared.Next(10_000_000, 99_999_999)}";
+        var userId = await WithDbAsync(async db =>
+        {
+            var role = new Role
+            {
+                Code = $"DESIGN_CREATE_{Guid.NewGuid():N}"[..30],
+                Name = "Design lead with project team management",
+                InitialPermissionsSeeded = true,
+            };
+            db.Roles.Add(role);
+            await db.SaveChangesAsync();
+            var permissionIds = await db.Permissions
+                .Where(permission =>
+                    (permission.Module == "design.projects" && permission.Action == "manage") ||
+                    (permission.Module == "operations.projects" && permission.Action == "manage"))
+                .Select(permission => permission.Id)
+                .ToListAsync();
+            db.RolePermissions.AddRange(permissionIds.Select(permissionId => new RolePermission
+            {
+                RoleId = role.Id,
+                PermissionId = permissionId,
+            }));
+            var user = new ApplicationUser
+            {
+                PhoneNumber = phone,
+                FullName = "Design lead for permission boundary",
+                Email = $"design-create-{Guid.NewGuid():N}@nihome.test",
+                Role = UserRole.USER,
+                RoleEntityId = role.Id,
+                IsActive = true,
+            };
+            user.PasswordHash = new PasswordService().Hash(user, TestDataSeeder.DefaultPassword);
+            db.Users.Add(user);
+            await db.SaveChangesAsync();
+            return user.Id;
+        });
+        (await AddTeamMemberAsync(projectId, userId, "DesignLead")).StatusCode
+            .Should().Be(HttpStatusCode.Created);
+
+        await AuthTestHelper.AuthenticateAsync(Client,
+            c => AuthTestHelper.LoginAsync(c, phone, TestDataSeeder.DefaultPassword));
+        using var response = await CreateDesignAsync(customerId, projectId);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await WithDbAsync(db => db.DesignProjects.AnyAsync(project =>
+            project.OperationalProjectId == projectId))).Should().BeFalse();
     }
 
     private async Task<(int CustomerId, int ProjectId)> ConvertLeadAsync(string companyName)
