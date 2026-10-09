@@ -107,7 +107,8 @@ const AdminDesignProjects = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const canManage = has(ADMIN_PERMS.designProjectsManage);
-  const canCreate = canManage && has(ADMIN_PERMS.operationalProjectsManage);
+  const canCreate = canManage && has(ADMIN_PERMS.operationalProjectsManage) &&
+    has(ADMIN_PERMS.opportunitiesManage);
   const canPickUser = has(ADMIN_PERMS.users);
 
   // list state
