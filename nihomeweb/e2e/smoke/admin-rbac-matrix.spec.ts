@@ -268,10 +268,10 @@ test.describe("Phase 6 — RBAC matrix per seeded role", () => {
       page,
       loginInBrowserAs,
     }) => {
-      // Each loop iteration does a fresh /api/auth/login + page.goto because
-      // refresh tokens are single-use; for SUPER_ADMIN/ADMIN/BGD that means
-      // 22 round-trips, which exceeds the 30s default under CI load.
-      test.slow();
+      // Each route gets a fresh token pair because navigation can rotate the
+      // single-use refresh token. Full-access roles exercise every admin route,
+      // so allow enough time for those real login and navigation round-trips.
+      test.setTimeout(240_000);
       const denials = denied(c.allowed);
 
       for (const path of c.allowed) {
