@@ -365,7 +365,7 @@ test("SPA renders /admin/contracts without console errors for SUPER_ADMIN", asyn
     const row = page.getByTestId(`contract-row-${editableContract.id}`);
     await expect(row).toBeVisible();
     const contractId = await row.getAttribute("data-testid");
-    await row.locator("td").nth(2).hover();
+    await row.hover();
     await expect(row).toHaveAttribute("data-navigation-active", "true");
     await row.locator("[data-contract-actions]").getByRole("button", { name: /Sửa|Edit|编辑|編集/i }).hover();
     await expect(row).toHaveAttribute("data-navigation-active", "false");

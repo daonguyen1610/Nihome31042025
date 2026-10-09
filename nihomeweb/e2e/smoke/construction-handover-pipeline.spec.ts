@@ -92,7 +92,8 @@ test("PM and Design deliver completed site works and a verified dossier to the c
     await dialog.getByRole("combobox").nth(0).click();
     await page.getByRole("option", { name: projectName, exact: true }).click();
     await dialog.getByRole("combobox").nth(1).click();
-    await page.getByRole("option", { name: pm.fullName, exact: true }).click();
+    await page.getByPlaceholder("Search responsible users...").fill(pm.fullName);
+    await page.getByRole("option", { name: pm.fullName, exact: true }).dispatchEvent("click");
     await page.getByTestId("handover-form-title").fill(`Client fire-water handover ${suffix}`);
     await dialog.locator('input[type="date"]').fill("2035-09-15");
     await dialog.getByRole("checkbox").first().check();
