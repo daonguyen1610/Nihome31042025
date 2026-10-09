@@ -91,6 +91,10 @@ public class OperationalProjectsController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
+        if (!await permissions.HasAsync(userId.Value, "crm.opportunities.manage", ct))
+        {
+            return Forbid();
+        }
         var canSeeAll = await permissions.HasAsync(userId.Value, "operations.projects.view.all", ct);
         try
         {

@@ -295,6 +295,9 @@ total, and the winning mark; an empty tab offers the same action.
 
 Design may start before the Contract. Sales can link an Operational Project of
 the same customer when creating or editing an Opportunity. In the Opportunity
+flow, creating the shared Operational Project requires both CRM Opportunity
+management and Operational Project management permissions. A PM can manage an
+assigned project but cannot create this Sales record. In the Opportunity
 detail, **Link an operational project** opens the editable selector, while
 **Create an operational project** opens the CRM Project form with the customer
 selected. After creating the project, return to the Opportunity and save the
