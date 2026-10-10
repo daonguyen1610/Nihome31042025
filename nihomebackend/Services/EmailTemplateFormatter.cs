@@ -37,8 +37,6 @@ public static partial class EmailTemplateFormatter
 
     public static string DefaultQuoteSubject => "Báo giá {{quoteCode}} – {{opportunityName}}";
 
-    public static string PreviousDefaultQuoteBody => "Kính gửi {{customerName}},\n\nNICON gửi Quý khách báo giá {{quoteCode}} cho {{opportunityName}}.\n{{quoteLines}}\nChiết khấu: {{discountPercent}}%; VAT: {{vatPercent}}%.\nTổng giá trị: {{grandTotal}} VND.\nBáo giá có hiệu lực đến {{validUntil}}.\n\nTrân trọng,\nNICON";
-
     public static string DefaultQuoteBody => """
         <div style="margin:0;padding:24px;background:#f3f6fb;font-family:Arial,sans-serif;color:#1f2937">
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="width:100%;max-width:600px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb">
@@ -70,19 +68,14 @@ public static partial class EmailTemplateFormatter
 
     private static string RenderQuoteBody(string template, Dictionary<string, string> tokens)
     {
-        if (!template.TrimStart().StartsWith('<'))
-            return ToSafeQuoteHtml(ReplaceTokens(template, tokens));
         var encodedTokens = tokens.ToDictionary(pair => pair.Key,
             pair => WebUtility.HtmlEncode(pair.Value), StringComparer.OrdinalIgnoreCase);
         return ReplaceTokens(template, encodedTokens);
     }
 
-    public static string ToSafeQuoteHtml(string body) => body.TrimStart().StartsWith('<') ? body
-        : $"<div style=\"white-space:pre-wrap;font-family:Arial,sans-serif\">{WebUtility.HtmlEncode(body)}</div>";
-
     public static bool IsSafeQuoteHtml(string body)
     {
-        if (!body.TrimStart().StartsWith('<')) return true;
+        if (!body.TrimStart().StartsWith('<')) return false;
         try
         {
             using var reader = XmlReader.Create(new StringReader($"<root>{body}</root>"),

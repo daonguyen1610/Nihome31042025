@@ -15,7 +15,7 @@ public class EmailTemplateFormatterTests
         };
 
         var (subject, body) = EmailTemplateFormatter.BuildQuoteEmail(
-            "NICON {{quoteCode}}", "{{quoteLines}}\n{{grandTotal}}", tokens);
+            "NICON {{quoteCode}}", "<div>{{quoteLines}}<strong>{{grandTotal}}</strong></div>", tokens);
 
         Assert.Equal("NICON QT-2026-001", subject);
         Assert.Contains("810.000.000", body);
@@ -55,19 +55,10 @@ public class EmailTemplateFormatterTests
     [InlineData("<a href=\"https://example.com\">x</a>")]
     [InlineData("<div style=\"background:url(https://example.com)\">x</div>")]
     [InlineData("<!DOCTYPE root><div>x</div>")]
+    [InlineData("Nội dung văn bản thuần")]
     public void IsSafeQuoteHtml_RejectsUnsafeMarkup(string body)
     {
         Assert.False(EmailTemplateFormatter.IsSafeQuoteHtml(body));
-    }
-
-    [Fact]
-    public void BuildQuoteEmail_PreservesCustomPlainTextWithoutInterpretingMarkup()
-    {
-        var (_, body) = EmailTemplateFormatter.BuildQuoteEmail("Quote", "Hello {{customerName}} <team>",
-            new Dictionary<string, string> { ["customerName"] = "A&B" });
-
-        Assert.Contains("Hello A&amp;B &lt;team&gt;", body);
-        Assert.True(EmailTemplateFormatter.IsSafeQuoteHtml(body));
     }
 
     [Fact]

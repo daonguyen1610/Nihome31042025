@@ -3,7 +3,6 @@ import { Save, Eye, Maximize2, Minimize2, RotateCcw, Mail, ShieldCheck, FileText
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
-import { quoteEmailPreviewHtml } from "@/lib/quoteEmailPreview";
 import { useToast } from "@/hooks/use-toast";
 import { extractApiError } from "@/lib/apiError";
 import { adminApi } from "@/services/adminApi";
@@ -96,6 +95,10 @@ const EmailTemplateConfig = () => {
     if (!quoteSubject.trim() || !quoteBody.trim() ||
         !normalizedQuoteBody.includes("{{quotelines}}") || !normalizedQuoteBody.includes("{{grandtotal}}")) {
       toast({ title: t("common.error"), description: t("emailTemplate.quote.required"), variant: "destructive" });
+      return;
+    }
+    if (!quoteBody.trimStart().startsWith("<")) {
+      toast({ title: t("common.error"), description: t("emailTemplate.quote.htmlRequired"), variant: "destructive" });
       return;
     }
     const quoteTemplateText = `${quoteSubject}\n${quoteBody}`;
@@ -309,7 +312,7 @@ const EmailTemplateConfig = () => {
                 key={activeTab}
                 ref={iframeRef}
                 title="Email preview"
-                srcDoc={activeTab === "quote" ? quoteEmailPreviewHtml(activeBody) : undefined}
+                srcDoc={activeTab === "quote" ? activeBody : undefined}
                 className="w-full bg-white"
                 style={{ height: fullscreen ? "calc(100vh - 140px)" : "500px", border: "none" }}
                 sandbox={activeTab === "quote" ? "" : "allow-same-origin"}

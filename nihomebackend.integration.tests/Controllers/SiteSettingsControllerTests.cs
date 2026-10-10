@@ -114,7 +114,7 @@ public class SiteSettingsControllerTests : IntegrationTestBase
                 otpEmailSubjectTemplate = otpSubject,
                 otpEmailBodyTemplate = otpBody,
                 quoteEmailSubjectTemplate = "NICON {{quoteCode}}",
-                quoteEmailBodyTemplate = "Hạng mục {{quoteLines}}\nTổng {{grandTotal}}",
+                quoteEmailBodyTemplate = "<div>Hạng mục {{quoteLines}}<strong>Tổng {{grandTotal}}</strong></div>",
             });
             valid.StatusCode.Should().Be(HttpStatusCode.OK);
             var savedResponse = await Client.GetAsync("/api/site-settings/email-templates");

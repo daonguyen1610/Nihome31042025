@@ -1670,7 +1670,7 @@ The platform sends automated emails or lets authorized staff send them for the f
 
 ### 12.2 Email Templates
 
-OTP, job application notification, and CRM quote emails use configurable templates with `{{tokenName}}` substitution. The default OTP and CRM quote templates use branded HTML. Open `/admin/email-templates` and choose **Báo giá** to edit the subject and HTML body; the right pane previews its layout. Keep `{{quoteLines}}` and `{{grandTotal}}` in the body. Only basic HTML and safe inline styles are accepted; scripts and event attributes are rejected. Existing custom plain-text quote templates remain supported. Saving requires `system.settings.manage`. When sending an approved quote, check the recipient and the rendered preview in the send dialog; only users with `crm.quotes.manage` may edit the subject or body.
+OTP, job application notification, and CRM quote emails use configurable templates with `{{tokenName}}` substitution. The default OTP and CRM quote templates use branded HTML. Open `/admin/email-templates` and choose **Báo giá** to edit the subject and HTML body; the right pane previews its layout. Keep `{{quoteLines}}` and `{{grandTotal}}` in the body. Only basic HTML and safe inline styles are accepted; scripts, event attributes, and plain-text quote bodies are rejected. Saving requires `system.settings.manage`. When sending an approved quote, check the recipient and the rendered preview in the send dialog; only users with `crm.quotes.manage` may edit the subject or body.
 
 **OTP Template Placeholders:**
 

@@ -957,10 +957,9 @@ and `validUntil` tokens. The body must contain `quoteLines` and `grandTotal`;
 template updates are limited to 200 subject and 8000 body characters.
 The default uses a branded card layout. Quote HTML is restricted to basic
 structural tags and safe inline styles; dynamic values are HTML-encoded.
-Existing customized plain-text templates remain usable and are escaped before
-sending. The seed replaces only the previous unmodified default, preserving
-customized templates. The send dialog previews the rendered message in an
-isolated iframe, and the submitted body is validated before SMTP delivery.
+Quote email bodies must use valid safe HTML. The send dialog previews the
+rendered message in an isolated iframe, and the submitted body is validated
+before SMTP delivery.
 `POST /api/quotes/{id}/send` requires `toEmail`, `subject`,
 `body`, and the current `rowVersion`. The server validates the address and
 content, permits subject/body edits only with `crm.quotes.manage`, and sends
