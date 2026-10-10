@@ -1,19 +1,19 @@
 import { test, expect, TEST_USERS } from "../fixtures/auth";
 
 /**
- * Browser-side smoke for the /admin/roles matrix UI built in C7.
+ * Browser-side smoke for the focused role editor and comparison matrix.
  *
  * Scope (per AGENTS.md test-layering rules): only what integration
  * tests structurally cannot prove — namely that the SPA actually mounts,
  * fetches /api/admin/rbac/roles + /permissions + per-role permissions,
- * and renders one column per role and one row per permission without
+ * and renders the role-focused editor plus the optional matrix without
  * client-side errors.
  *
  * CRUD round-trips and authorization rules are covered by
  * nihomebackend.integration.tests/Controllers/RbacControllerTests.cs and
  * e2e/smoke/admin-rbac.spec.ts.
  */
-test("matrix page renders dynamic roles and permissions for SUPER_ADMIN", async ({
+test("role editor renders dynamic roles and the comparison matrix for SUPER_ADMIN", async ({
   page,
   loginInBrowserAs,
 }) => {
@@ -33,26 +33,64 @@ test("matrix page renders dynamic roles and permissions for SUPER_ADMIN", async 
   const res = await page.goto("/admin/roles");
   expect(res?.status(), "page responds 2xx").toBeLessThan(400);
 
-  // Wait until the matrix table has loaded its dynamic columns.
-  await expect(page.getByTestId("rbac-col-SUPER_ADMIN")).toBeVisible({ timeout: 15_000 });
-  await expect(page.getByTestId("rbac-col-ADMIN")).toBeVisible();
-  await expect(page.getByTestId("rbac-col-USER")).toBeVisible();
-  await expect(page.getByTestId("rbac-col-SALE")).toBeVisible();
+  // The primary workspace focuses on one role instead of rendering every role
+  // as a wide table column.
+  await expect(page.getByTestId("rbac-role-editor")).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByTestId("rbac-role-SUPER_ADMIN")).toBeVisible();
+  await expect(page.getByTestId("rbac-role-ADMIN")).toBeVisible();
+  await expect(page.getByTestId("rbac-role-USER")).toBeVisible();
+  await expect(page.getByTestId("rbac-role-SALE")).toBeVisible();
 
-  // Permission rows include the well-known catalog codes.
-  await expect(page.getByText("dashboard.view").first()).toBeVisible();
-  await expect(page.getByText("rbac.roles.manage").first()).toBeVisible();
+  // Search exposes matching permission groups and their well-known codes.
+  await page.getByTestId("rbac-role-SALE").click();
+  await page.locator("#rbac-search").fill("dashboard.view");
+  await expect(page.getByText("dashboard.view", { exact: true })).toBeVisible();
+  await page.getByLabel("SALE dashboard.view").click();
+  await expect(page.getByTestId("rbac-save-SALE")).toBeEnabled();
+  await page.getByTestId("rbac-role-editor").getByRole("button", { name: /Hoàn tác|Reset/i }).click();
+  await expect(page.getByTestId("rbac-save-SALE")).toBeDisabled();
 
   // Create-role button is gated by Can; SUPER_ADMIN must see it.
   await expect(page.getByTestId("rbac-create-role")).toBeVisible();
 
-  // System role columns must not expose a delete button (only business roles do).
+  // System roles are read-only; business roles expose their actions.
+  await page.getByTestId("rbac-role-ADMIN").click();
   await expect(page.getByTestId("rbac-delete-ADMIN")).toHaveCount(0);
+  await page.getByTestId("rbac-role-SUPER_ADMIN").click();
   await expect(page.getByTestId("rbac-delete-SUPER_ADMIN")).toHaveCount(0);
-
-  // At least one business role (e.g. SALE from rbac-defaults.json seed)
-  // should be rendered with its delete button visible.
+  await page.getByTestId("rbac-role-SALE").click();
   await expect(page.getByTestId("rbac-delete-SALE")).toBeVisible();
 
+  // Administrators can still switch to a dense comparison matrix.
+  await page.locator("#rbac-search").fill("");
+  await page.getByTestId("rbac-view-matrix").click();
+  await expect(page.getByTestId("rbac-col-SUPER_ADMIN")).toBeVisible();
+  await expect(page.getByTestId("rbac-col-ADMIN")).toBeVisible();
+  await expect(page.getByTestId("rbac-col-USER")).toBeVisible();
+  await expect(page.getByTestId("rbac-col-SALE")).toBeVisible();
+  await expect(page.getByText("rbac.roles.manage", { exact: true }).first()).toBeVisible();
+
   expect(errors, "no console errors on /admin/roles").toEqual([]);
+});
+
+test("role editor stays focused and overflow-free on mobile and tablet", async ({
+  page,
+  loginInBrowserAs,
+}) => {
+  await loginInBrowserAs(page, TEST_USERS.superAdmin);
+
+  for (const width of [390, 768]) {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/admin/roles");
+    await expect(page.getByTestId("rbac-role-editor")).toBeVisible({ timeout: 15_000 });
+    await page.getByTestId("rbac-role-SALE").click();
+    await page.locator("#rbac-search").fill("crm.opportunities.view");
+    await expect(page.getByText("crm.opportunities.view", { exact: true })).toBeVisible();
+
+    const dimensions = await page.locator("html").evaluate((element) => ({
+      clientWidth: element.clientWidth,
+      scrollWidth: element.scrollWidth,
+    }));
+    expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth);
+  }
 });

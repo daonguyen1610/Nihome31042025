@@ -76,6 +76,7 @@ test("the role matrix keeps its header visible and can be filtered down", async 
 }) => {
   await loginInBrowserAs(page, TEST_USERS.superAdmin);
   await page.goto("/admin/roles");
+  await page.getByTestId("rbac-view-matrix").click();
 
   const header = page.locator("[data-testid^=rbac-col-]").first();
   await expect(header).toBeVisible({ timeout: 15_000 });

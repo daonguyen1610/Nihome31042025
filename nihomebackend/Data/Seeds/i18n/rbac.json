@@ -970,10 +970,106 @@
   {
     "key": "adminRbac.description",
     "category": "rbac",
-    "vi": "Bật/tắt từng quyền cho mỗi vai trò. Các vai trò hệ thống không thể chỉnh sửa.",
-    "en": "Toggle individual permissions per role. System roles are read-only.",
-    "zh": "为每个角色启用或禁用权限。系统角色不可编辑。",
-    "ja": "ロールごとに権限を切り替えます。システムロールは編集できません。"
+    "vi": "Chọn một vai trò để quản lý quyền theo nhóm chức năng. Vai trò hệ thống chỉ được xem.",
+    "en": "Select a role and manage its permissions by function group. System roles are read-only.",
+    "zh": "选择一个角色并按功能组管理权限。系统角色仅供查看。",
+    "ja": "ロールを選択し、機能グループごとに権限を管理します。システムロールは読み取り専用です。"
+  },
+  {
+    "key": "adminRbac.view.editor",
+    "category": "rbac",
+    "vi": "Quản lý theo vai trò",
+    "en": "Manage by role",
+    "zh": "按角色管理",
+    "ja": "ロール別に管理"
+  },
+  {
+    "key": "adminRbac.view.matrix",
+    "category": "rbac",
+    "vi": "Ma trận so sánh",
+    "en": "Comparison matrix",
+    "zh": "比较矩阵",
+    "ja": "比較マトリックス"
+  },
+  {
+    "key": "adminRbac.rolesTitle",
+    "category": "rbac",
+    "vi": "Danh sách vai trò",
+    "en": "Role list",
+    "zh": "角色列表",
+    "ja": "ロール一覧"
+  },
+  {
+    "key": "adminRbac.roleSearch",
+    "category": "rbac",
+    "vi": "Tìm vai trò",
+    "en": "Search roles",
+    "zh": "搜索角色",
+    "ja": "ロールを検索"
+  },
+  {
+    "key": "adminRbac.roleSearchPlaceholder",
+    "category": "rbac",
+    "vi": "Tìm theo tên hoặc mã vai trò…",
+    "en": "Search by role name or code…",
+    "zh": "按角色名称或代码搜索…",
+    "ja": "ロール名またはコードで検索…"
+  },
+  {
+    "key": "adminRbac.permissionsShort",
+    "category": "rbac",
+    "vi": "quyền",
+    "en": "permissions",
+    "zh": "项权限",
+    "ja": "件の権限"
+  },
+  {
+    "key": "adminRbac.permissionsGranted",
+    "category": "rbac",
+    "vi": "quyền đang bật",
+    "en": "permissions enabled",
+    "zh": "项权限已启用",
+    "ja": "件の権限が有効"
+  },
+  {
+    "key": "adminRbac.unsaved",
+    "category": "rbac",
+    "vi": "Chưa lưu",
+    "en": "Unsaved",
+    "zh": "未保存",
+    "ja": "未保存"
+  },
+  {
+    "key": "adminRbac.readOnlyHelp",
+    "category": "rbac",
+    "vi": "Vai trò hệ thống được đồng bộ tự động và không thể chỉnh sửa tại đây.",
+    "en": "This system role is synchronized automatically and cannot be edited here.",
+    "zh": "此系统角色会自动同步，无法在此处编辑。",
+    "ja": "このシステムロールは自動同期されるため、ここでは編集できません。"
+  },
+  {
+    "key": "adminRbac.editorHelp",
+    "category": "rbac",
+    "vi": "Mở từng nhóm chức năng, bật hoặc tắt quyền cần thiết rồi lưu thay đổi cho vai trò này.",
+    "en": "Open each function group, enable or disable the required permissions, then save this role.",
+    "zh": "展开功能组，启用或禁用所需权限，然后保存此角色。",
+    "ja": "機能グループを開き、必要な権限を切り替えてから、このロールを保存します。"
+  },
+  {
+    "key": "adminRbac.noRoles",
+    "category": "rbac",
+    "vi": "Không tìm thấy vai trò phù hợp.",
+    "en": "No matching roles found.",
+    "zh": "未找到匹配的角色。",
+    "ja": "一致するロールがありません。"
+  },
+  {
+    "key": "adminRbac.noPermissions",
+    "category": "rbac",
+    "vi": "Không tìm thấy quyền phù hợp với bộ lọc.",
+    "en": "No permissions match the current filters.",
+    "zh": "没有权限符合当前筛选条件。",
+    "ja": "現在のフィルターに一致する権限がありません。"
   },
   {
     "key": "adminRbac.permissionColumn",
