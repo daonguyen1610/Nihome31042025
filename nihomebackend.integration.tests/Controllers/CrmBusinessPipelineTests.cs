@@ -8,6 +8,44 @@ namespace NihomeBackend.IntegrationTests.Controllers;
 
 public sealed class CrmBusinessPipelineTests(NihomeWebApplicationFactory factory) : IntegrationTestBase(factory)
 {
+    [Fact]
+    public async Task AgreedValue_OpportunityToSignedContractAndWon_NeedsNoQuote()
+    {
+        await LoginAsync("SALES_MANAGER");
+        var lead = await WriteAsync(HttpMethod.Post, "/api/leads", new
+        {
+            name = UniqueSlug("Factory owner agreed value"),
+            phone = "09" + Random.Shared.Next(10_000_000, 99_999_999),
+            sourceCode = "marketing",
+        });
+        lead = await WriteAsync(HttpMethod.Post, $"/api/leads/{Id(lead)}/convert",
+            new { note = "Khách đã thống nhất giá trị cải tạo nhà xưởng" });
+        var customerId = lead.GetProperty("convertedCustomerId").GetInt32();
+        var opportunity = await ReadAsync($"/api/opportunities/{lead.GetProperty("convertedOpportunityId").GetInt32()}");
+        var opportunityPath = $"/api/opportunities/{Id(opportunity)}";
+        foreach (var stage in new[] { "Qualification", "Proposal", "Negotiation" })
+            opportunity = await WriteAsync(HttpMethod.Patch, opportunityPath + "/stage",
+                new { targetStage = stage, rowVersion = Version(opportunity) });
+
+        var contract = await WriteAsync(HttpMethod.Post, "/api/contracts", new
+        {
+            customerId,
+            opportunityId = Id(opportunity),
+            direction = "Upstream",
+            type = "DesignAndBuild",
+            value = 750_000_000m,
+            scopeOfWork = "Cải tạo nhà xưởng theo giá trị đã thống nhất",
+        });
+        contract.GetProperty("quoteId").ValueKind.Should().Be(JsonValueKind.Null);
+        contract = await WriteAsync(HttpMethod.Post, $"/api/contracts/{Id(contract)}/transition",
+            new { newStatus = "Signed", rowVersion = Version(contract) });
+        contract.GetProperty("status").GetString().Should().Be("Signed");
+        opportunity = await WriteAsync(HttpMethod.Patch, opportunityPath + "/stage",
+            new { targetStage = "Won", rowVersion = Version(opportunity) });
+        opportunity.GetProperty("wonQuoteId").ValueKind.Should().Be(JsonValueKind.Null);
+        opportunity.GetProperty("stage").GetString().Should().Be("Won");
+    }
+
     [Theory]
     [InlineData("Won")]
     [InlineData("RevisedWon")]
@@ -157,7 +195,19 @@ public sealed class CrmBusinessPipelineTests(NihomeWebApplicationFactory factory
     private Task LoginAsync(string role) => AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, role));
     private static int Id(JsonElement value) => value.GetProperty("id").GetInt32();
     private static string Version(JsonElement value) => value.GetProperty("rowVersion").GetString()!;
-    private Task<JsonElement> MoveQuoteAsync(JsonElement quote, string action) => WriteAsync(HttpMethod.Post, $"/api/quotes/{Id(quote)}/{action}", new { rowVersion = Version(quote) });
+    private async Task<JsonElement> MoveQuoteAsync(JsonElement quote, string action)
+    {
+        if (action != "send")
+            return await WriteAsync(HttpMethod.Post, $"/api/quotes/{Id(quote)}/{action}", new { rowVersion = Version(quote) });
+        var preview = await ReadAsync($"/api/quotes/{Id(quote)}/email-preview");
+        return await WriteAsync(HttpMethod.Post, $"/api/quotes/{Id(quote)}/send", new
+        {
+            rowVersion = Version(quote),
+            toEmail = "khachhang@example.com",
+            subject = preview.GetProperty("subject").GetString(),
+            body = preview.GetProperty("body").GetString(),
+        });
+    }
     private async Task<JsonElement> ReadAsync(string path)
     {
         using var response = await Client.GetAsync(path);

@@ -45,7 +45,8 @@ public interface IQuoteService
     Task<QuoteResponse?> SubmitAsync(int id, QuoteWorkflowRequest request, int callerUserId, bool canManage, bool canSeeAll, CancellationToken ct = default);
     Task<QuoteResponse?> ApproveAsync(int id, QuoteWorkflowRequest request, int callerUserId, bool canApprove, CancellationToken ct = default);
     Task<QuoteResponse?> RejectInternalAsync(int id, QuoteWorkflowRequest request, int callerUserId, bool canApprove, CancellationToken ct = default);
-    Task<QuoteResponse?> SendToCustomerAsync(int id, QuoteWorkflowRequest request, int callerUserId, bool canSend, bool canSeeAll, CancellationToken ct = default);
+    Task<QuoteEmailPreviewResponse?> GetEmailPreviewAsync(int id, int callerUserId, bool canSeeAll, bool canEdit, CancellationToken ct = default);
+    Task<QuoteResponse?> SendToCustomerAsync(int id, SendQuoteEmailRequest request, int callerUserId, bool canSend, bool canSeeAll, bool canEdit, CancellationToken ct = default);
     Task<QuoteResponse?> MarkCustomerApprovedAsync(int id, QuoteWorkflowRequest request, int callerUserId, bool canManage, bool canSeeAll, CancellationToken ct = default);
     Task<QuoteResponse?> MarkCustomerRejectedAsync(int id, QuoteWorkflowRequest request, int callerUserId, bool canManage, bool canSeeAll, CancellationToken ct = default);
     Task<QuoteResponse?> CancelAsync(int id, QuoteWorkflowRequest request, int callerUserId, bool canManage, bool canSeeAll, CancellationToken ct = default);

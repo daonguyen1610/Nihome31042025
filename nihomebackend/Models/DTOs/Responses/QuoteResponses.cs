@@ -126,6 +126,14 @@ public class QuoteResponse
     public List<QuoteApprovalLogResponse> ApprovalLogs { get; set; } = new();
 }
 
+public class QuoteEmailPreviewResponse
+{
+    public string ToEmail { get; set; } = string.Empty;
+    public string Subject { get; set; } = string.Empty;
+    public string Body { get; set; } = string.Empty;
+    public bool CanEdit { get; set; }
+}
+
 public class QuoteListItemResponse
 {
     public int Id { get; set; }

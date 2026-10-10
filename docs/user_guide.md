@@ -314,10 +314,12 @@ Design list requires Design Project management, CRM Opportunity management,
 and Operational Project team management, so a Design-only role cannot start
 the handoff.
 
-In Negotiation and Contract signed, **Create contract** opens the contract form
-prefilled from the winning or latest approved quotation, or, when there is none
-(for example an opportunity continued from a won tender), from the opportunity's
-customer, project, and estimated value.
+For an Opportunity that is not Lost, **Create contract** opens a draft contract
+with its customer and project. A quotation is not required when the customer
+has agreed on the value. If an approved, available quotation exists, the form
+also prefills that quotation and its price. Approved/Sent quotations must be
+unexpired; Customer-approved quotations remain eligible. A tender estimate is
+not itself a CRM customer quotation.
 
 | Page | Functions | Estimate |
 |------|-----------|----------|
@@ -482,16 +484,17 @@ opportunity created before automatic project creation, select **Create a new
 project** below the project field. Users with project management permission get
 the project created for that customer and selected in the form immediately.
 
-Create an upstream customer contract from a quotation in **Approved**, **Sent
-to customer**, or **Customer approved** status. This applies to a won tender
-too: its tender estimate is not a CRM quotation, so raise and approve the
-customer quotation before creating the contract. Design work may start before
-either quotation or contract. Downstream supplier/subcontractor contracts do
-not use a customer quotation. An upstream contract must keep its source
-quotation when edited or changing status. If a development record is missing
-the link, use **Link an approved quote** in the Source section to repair it;
-the quotation must belong to the same customer, opportunity (when set), and
-project. A quotation feeds one live contract.
+An upstream customer contract may be created without a quotation when the
+customer has already agreed on the value. If using a quotation, choose one in
+**Approved**, **Sent to customer**, or **Customer approved** status. Approved
+or Sent quotations must still be within their validity period; a Customer
+approved quotation is a terminal customer decision. A won tender's estimate
+does not count as a CRM customer quotation. Design work may start before either
+quotation or contract. Downstream supplier/subcontractor contracts cannot link
+a CRM customer quotation. Use **Link an approved quote** in the Source section
+when an existing contract needs that source added; it must belong to the same
+customer, opportunity (when set), and project. A quotation feeds one live
+contract.
 Deleting a quotation is blocked while a contract references it; review the
 deletion-impact dialog to find the linked contract.
 
@@ -1000,6 +1003,16 @@ Manage primary contracts linked to projects and customers. Define contract value
 | Primary Contract List | Finance > Primary contracts; upstream contracts with owner/project/status/end-date filters, current value after approved VO, collection-risk summary, next receivable, pagination, contextual detail return, and complete filtered CSV export | Implemented |
 | Primary Contract Create/Edit | Create Upstream contracts from the Finance list and edit accessible records in the Finance detail workflow, with Project/reference/date/value/payment-schedule validation | Implemented |
 | Primary Contract Detail | Finance-scoped route with value and approved VO reconciliation, payment milestones/receivables, files, appendices, status transitions, and audit timeline | Implemented |
+
+Sales may create a customer contract directly from an Opportunity when the
+value has already been agreed; a quotation is optional. If the customer needs
+a quote, approve it internally, open **Send to customer**, check or enter the
+customer email address, review the subject and message, then send. Users with
+quote-management permission may edit the subject and message; send permission
+is required to dispatch. The email contains the priced lines and total; it
+does not currently attach the PDF. An attached quote must still be approved,
+valid, and consistent with the contract's customer and project. A downstream
+supplier contract does not use a customer quote.
 
 Every new primary contract starts as **Draft**. Use the explicit status actions
 on the detail page to sign, start, pause, complete, or cancel it; editing general

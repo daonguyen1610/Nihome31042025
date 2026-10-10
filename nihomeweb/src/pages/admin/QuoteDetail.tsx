@@ -31,6 +31,7 @@ import BoqCatalogFields from "@/components/admin/BoqCatalogFields";
 import QuoteRateFields from "@/components/admin/QuoteRateFields";
 import QuoteContractLinkDialog from "@/components/admin/QuoteContractLinkDialog";
 import { isContractReadyQuote } from "@/lib/contractQuotes";
+import { isValidEmail } from "@/lib/validation";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -59,6 +60,7 @@ import {
 import {
   adminApi,
   type QuoteDocumentResponse,
+  type QuoteEmailPreviewResponse,
   type QuoteItemInput,
   type QuoteResponse,
   type QuoteStatus,
@@ -185,6 +187,8 @@ const AdminQuoteDetail = () => {
   const [workflow, setWorkflow] = useState<WorkflowKind | null>(null);
   const [workflowNote, setWorkflowNote] = useState("");
   const [workflowBusy, setWorkflowBusy] = useState(false);
+  const [sendPreview, setSendPreview] = useState<QuoteEmailPreviewResponse | null>(null);
+  const [sendDraft, setSendDraft] = useState<QuoteEmailPreviewResponse | null>(null);
   const [deleteImpact, setDeleteImpact] = useState<DeletionImpactResponse | null>(null);
   const [deleteImpactLoading, setDeleteImpactLoading] = useState(false);
   const [deleteBusy, setDeleteBusy] = useState(false);
@@ -384,7 +388,12 @@ const AdminQuoteDetail = () => {
         submit: () => adminApi.submitQuote(quote.id, body),
         approve: () => adminApi.approveQuote(quote.id, body),
         rejectInternal: () => adminApi.rejectQuoteInternal(quote.id, body),
-        send: () => adminApi.sendQuoteToCustomer(quote.id, body),
+        send: () => adminApi.sendQuoteToCustomer(quote.id, {
+          ...body,
+          toEmail: sendDraft?.toEmail ?? "",
+          subject: sendDraft?.subject ?? "",
+          body: sendDraft?.body ?? "",
+        }),
         customerApprove: () => adminApi.markQuoteCustomerApproved(quote.id, body),
         customerReject: () => adminApi.markQuoteCustomerRejected(quote.id, body),
         cancel: () => adminApi.cancelQuote(quote.id, body),
@@ -393,6 +402,8 @@ const AdminQuoteDetail = () => {
       setQuote(data);
       setForm(toFormState(data));
       setWorkflow(null);
+      setSendPreview(null);
+      setSendDraft(null);
       setWorkflowNote("");
       toast({ title: t(`quotes.action.${targetWorkflow}`) });
     } catch (err) {
@@ -408,9 +419,24 @@ const AdminQuoteDetail = () => {
   };
 
   // Actions that can run directly without a dialog (note is optional)
-  const directActions: WorkflowKind[] = ["submit", "approve", "rejectInternal", "send", "customerApprove"];
+  const directActions: WorkflowKind[] = ["submit", "approve", "rejectInternal", "customerApprove"];
 
-  const handleWorkflowClick = (k: WorkflowKind) => {
+  const handleWorkflowClick = async (k: WorkflowKind) => {
+    if (k === "send" && quote) {
+      setWorkflowBusy(true);
+      try {
+        const { data } = await adminApi.getQuoteEmailPreview(quote.id);
+        setWorkflowNote("");
+        setSendPreview(data);
+        setSendDraft(data);
+        setWorkflow(k);
+      } catch (err) {
+        toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
+      } finally {
+        setWorkflowBusy(false);
+      }
+      return;
+    }
     if (directActions.includes(k)) {
       void runWorkflow(k);
     } else {
@@ -519,7 +545,7 @@ const AdminQuoteDetail = () => {
 
   // A quote the customer or an approver has signed off on is the point where a
   // contract can be raised from it.
-  const canRaiseContract = canManageContracts && !editing && isContractReadyQuote(quote.status);
+  const canRaiseContract = canManageContracts && !editing && isContractReadyQuote(quote);
   const canLinkContract = canRaiseContract && quote.customerId != null;
 
   // Build with URLSearchParams so absent optional references do not reach the
@@ -598,7 +624,7 @@ const AdminQuoteDetail = () => {
                 disabled={
                   workflowBusy ||
                   ((k === "approve" || k === "rejectInternal") ? !canApprove
-                  : k === "send" ? !canSend
+                  : k === "send" ? !canSend || quote.isExpired
                   : !canManage)
                 }
               >
@@ -1019,24 +1045,47 @@ const AdminQuoteDetail = () => {
 
       {/* ---------- Workflow note dialog ---------- */}
       <Dialog open={!!workflow} onOpenChange={(o) => !o && setWorkflow(null)}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className={workflow === "send" ? "sm:max-w-2xl max-h-[90vh] overflow-y-auto" : "sm:max-w-md"}>
           <DialogHeader>
             <DialogTitle>{workflow && t(`quotes.action.${workflow}`)}</DialogTitle>
-            <DialogDescription>{t("quotes.action.noteOptional")}</DialogDescription>
+            <DialogDescription>{t(workflow === "send" ? "quotes.email.previewHint" : "quotes.action.noteOptional")}</DialogDescription>
           </DialogHeader>
-          <Textarea
+          {workflow === "send" && sendDraft && (
+            <div className="space-y-3">
+              <div className="space-y-1"><Label htmlFor="quote-email-to">{t("quotes.email.to")}</Label>
+                <Input id="quote-email-to" type="email" maxLength={150} value={sendDraft.toEmail}
+                  onChange={(event) => setSendDraft({ ...sendDraft, toEmail: event.target.value })} />
+                {(!sendDraft.toEmail.trim() || !isValidEmail(sendDraft.toEmail)) &&
+                  <p className="text-xs text-destructive">{t(sendDraft.toEmail.trim()
+                    ? "quotes.email.invalid" : "quotes.email.required")}</p>}
+              </div>
+              <div className="space-y-1"><Label htmlFor="quote-email-subject">{t("quotes.email.subject")}</Label>
+                <Input id="quote-email-subject" maxLength={200} value={sendDraft.subject} disabled={!sendPreview?.canEdit}
+                  onChange={(event) => setSendDraft({ ...sendDraft, subject: event.target.value })} />
+                {!sendDraft.subject.trim() && <p className="text-xs text-destructive">{t("quotes.email.subjectRequired")}</p>}
+              </div>
+              <div className="space-y-1"><Label htmlFor="quote-email-body">{t("quotes.email.body")}</Label>
+                <Textarea id="quote-email-body" rows={10} maxLength={8000} value={sendDraft.body} disabled={!sendPreview?.canEdit}
+                  onChange={(event) => setSendDraft({ ...sendDraft, body: event.target.value })} />
+                {!sendDraft.body.trim() && <p className="text-xs text-destructive">{t("quotes.email.bodyRequired")}</p>}
+              </div>
+            </div>
+          )}
+          {workflow !== "send" && <Textarea
             rows={4}
             value={workflowNote}
             onChange={(e) => setWorkflowNote(e.target.value)}
             placeholder={t("quotes.field.note")}
-          />
+          />}
           <DialogFooter>
             <Button variant="outline" onClick={() => setWorkflow(null)}>
               {t("common.cancel")}
             </Button>
-            <Button onClick={() => void runWorkflow()} disabled={workflowBusy}>
+            <Button onClick={() => void runWorkflow()} disabled={workflowBusy ||
+              (workflow === "send" && (!sendDraft || !isValidEmail(sendDraft.toEmail) ||
+                !sendDraft.toEmail.trim() || !sendDraft.subject.trim() || !sendDraft.body.trim()))}>
               {workflowBusy && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
-              {t("common.save")}
+              {t(workflow === "send" ? "quotes.action.send" : "common.save")}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -268,10 +268,23 @@ public class QuotesController(
     [HttpPost("{id:int}/send")]
     [RequirePermission("crm.quotes", "send")]
     [Idempotency("crm.quotes.send")]
-    public Task<ActionResult<QuoteResponse>> Send(int id, [FromBody] QuoteWorkflowRequest body, CancellationToken ct) =>
+    public Task<ActionResult<QuoteResponse>> Send(int id, [FromBody] SendQuoteEmailRequest body, CancellationToken ct) =>
         Workflow(id, body, ct, "send",
             async (uid, sa) => await svc.SendToCustomerAsync(id, body, uid,
-                await permissions.HasAsync(uid, "crm.quotes.send", ct), sa, ct));
+                await permissions.HasAsync(uid, "crm.quotes.send", ct), sa,
+                await permissions.HasAsync(uid, "crm.quotes.manage", ct), ct));
+
+    [HttpGet("{id:int}/email-preview")]
+    [RequirePermission("crm.quotes", "send")]
+    public async Task<ActionResult<QuoteEmailPreviewResponse>> EmailPreview(int id, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        var preview = await svc.GetEmailPreviewAsync(id, userId.Value,
+            await permissions.HasAsync(userId.Value, "crm.quotes.view.all", ct),
+            await permissions.HasAsync(userId.Value, "crm.quotes.manage", ct), ct);
+        return preview is null ? NotFound() : Ok(preview);
+    }
 
     [HttpPost("{id:int}/customer-approve")]
     [RequirePermission("crm.quotes", "manage")]

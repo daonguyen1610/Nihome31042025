@@ -1,7 +1,7 @@
 import { expect, test, TEST_USERS } from "../fixtures/auth";
 import { hardDeleteBusinessRoot } from "../fixtures/hardDelete";
 
-test("customer contract form directs Sales to an approved quote", async ({ loginInBrowserAs, page }) => {
+test("customer contract form permits an agreed value without a quote", async ({ loginInBrowserAs, page }) => {
   await loginInBrowserAs(page, TEST_USERS.salesManager);
   await page.addInitScript(() => localStorage.setItem("nicon_lang", "vi"));
 
@@ -11,15 +11,15 @@ test("customer contract form directs Sales to an approved quote", async ({ login
     await page.getByRole("button", { name: "Thêm hợp đồng" }).first().click();
 
     const dialog = page.getByRole("dialog");
-    await expect(dialog.getByText(/Báo giá nguồn \*/)).toBeVisible();
-    await expect(dialog.getByText(/Hợp đồng đầu ra cần Báo giá đã duyệt/)).toBeVisible();
+    await expect(dialog.getByText(/Báo giá nguồn/)).toBeVisible();
+    await expect(dialog.getByText(/Không bắt buộc khi khách hàng đã thống nhất giá trị/)).toBeVisible();
     await expect(dialog.getByRole("link", { name: "Mở Báo giá" })).toHaveAttribute("href", "/admin/quotes");
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
     await page.keyboard.press("Escape");
   }
 });
 
-test("Opportunity offers a contract only after its customer quote is approved", async ({ api, loginAs, loginInBrowserAs, page }) => {
+test("Opportunity offers a direct contract and optionally prefills an approved quote", async ({ api, loginAs, loginInBrowserAs, page }) => {
   const headers = { Authorization: `Bearer ${await loginAs(TEST_USERS.salesManager)}` };
   const suffix = Math.random().toString(36).slice(2, 10);
   let customerId = 0;
@@ -52,7 +52,10 @@ test("Opportunity offers a contract only after its customer quote is approved", 
 
     await loginInBrowserAs(page, TEST_USERS.salesManager);
     await page.goto(`/admin/opportunities/${opportunityId}`, { waitUntil: "networkidle" });
-    await expect(page.getByTestId("opportunity-create-contract")).toHaveCount(0);
+    await page.getByTestId("opportunity-create-contract").click();
+    await expect(page).toHaveURL(new RegExp(`opportunityId=${opportunityId}`));
+    await expect(page).not.toHaveURL(/fromQuote=/);
+    await page.goto(`/admin/opportunities/${opportunityId}`, { waitUntil: "networkidle" });
 
     const quoteResponse = await api.post("/api/quotes", {
       headers,
@@ -73,6 +76,38 @@ test("Opportunity offers a contract only after its customer quote is approved", 
     const approved = await api.post(`/api/quotes/${quoteId}/approve`, { headers, data: { rowVersion: quote.rowVersion } });
     expect(approved.status(), await approved.text()).toBe(200);
 
+    await page.goto(`/admin/quotes/${quoteId}`, { waitUntil: "networkidle" });
+    await page.getByRole("button", { name: "Gửi khách" }).click();
+    const emailDialog = page.getByRole("dialog");
+    await expect(emailDialog.getByLabel("Email khách hàng")).toBeVisible();
+    await expect(emailDialog.getByLabel("Tiêu đề email")).toHaveValue(/QT-/);
+    await expect(emailDialog.getByLabel("Nội dung email sắp gửi")).toHaveValue(/Tổng giá trị/);
+    await emailDialog.getByLabel("Email khách hàng").fill("bad@domain");
+    await expect(emailDialog.getByText(/Email khách hàng không hợp lệ/)).toBeVisible();
+    await expect(emailDialog.getByRole("button", { name: "Gửi khách" })).toBeDisabled();
+    await emailDialog.getByLabel("Email khách hàng").fill("minhchau@example.com");
+    await expect(emailDialog.getByRole("button", { name: "Gửi khách" })).toBeEnabled();
+    await page.keyboard.press("Escape");
+    await page.goto(`/admin/opportunities/${opportunityId}`, { waitUntil: "networkidle" });
+
+    const quoteListPattern = /\/api\/quotes\?/;
+    await page.route(quoteListPattern, async (route) => {
+      const response = await route.fetch();
+      const body = await response.json() as { items: Array<{ id: number; validUntil: string }> };
+      await route.fulfill({
+        response,
+        json: {
+          ...body,
+          items: body.items.map((item) => item.id === quoteId
+            ? { ...item, validUntil: "2000-01-01T00:00:00Z" }
+            : item),
+        },
+      });
+    });
+    await page.reload({ waitUntil: "networkidle" });
+    await expect(page.getByTestId("opportunity-create-contract")).toBeVisible();
+
+    await page.unroute(quoteListPattern);
     await page.reload({ waitUntil: "networkidle" });
     await page.getByTestId("opportunity-create-contract").click();
     await expect(page).toHaveURL(new RegExp(`fromQuote=${quoteId}`));

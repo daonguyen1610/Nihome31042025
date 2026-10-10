@@ -427,7 +427,7 @@ public class ContractsControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task Create_UpstreamWithoutQuote_ReturnsBadRequestAndDoesNotPersist()
+    public async Task Create_UpstreamWithAgreedValue_WithoutQuote_Persists()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
         var customerId = await CreateCustomerAsync();
@@ -441,14 +441,15 @@ public class ContractsControllerTests : IntegrationTestBase
             value = 100_000_000,
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        (await response.Content.ReadAsStringAsync()).Should().Contain("Báo giá đã duyệt");
+        response.StatusCode.Should().Be(HttpStatusCode.Created, await response.Content.ReadAsStringAsync());
+        var contract = await ReadJsonAsync(response);
+        contract.GetProperty("quoteId").ValueKind.Should().Be(JsonValueKind.Null);
         (await WithDbAsync(db => db.Contracts.CountAsync(contract => contract.CustomerId == customerId)))
-            .Should().Be(0);
+            .Should().Be(1);
     }
 
     [Fact]
-    public async Task Update_UpstreamCannotRemoveSourceQuote()
+    public async Task Update_UpstreamCanRemoveSourceQuote()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
         var customerId = await CreateCustomerAsync();
@@ -469,11 +470,10 @@ public class ContractsControllerTests : IntegrationTestBase
             rowVersion,
         });
 
-        update.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        update.StatusCode.Should().Be(HttpStatusCode.OK, await update.Content.ReadAsStringAsync());
         var unchanged = await Client.GetAsync($"/api/contracts/{id}");
         var saved = await ReadJsonAsync(unchanged);
-        saved.GetProperty("quoteId").GetInt32().Should().Be(_approvedQuoteIds[customerId]);
-        saved.GetProperty("rowVersion").GetString().Should().Be(rowVersion);
+        saved.GetProperty("quoteId").ValueKind.Should().Be(JsonValueKind.Null);
     }
 
     [Fact]
@@ -910,6 +910,19 @@ public class ContractsControllerTests : IntegrationTestBase
             persisted.IsActive = true;
             await db.SaveChangesAsync();
         });
+
+        var downstreamWithCustomerQuote = await Client.PostAsJsonAsync("/api/contracts", new
+        {
+            customerId,
+            direction = "Downstream",
+            type = "Subcontract",
+            vendorId = vendor.Id,
+            quoteId = _approvedQuoteIds[customerId],
+            status = "Draft",
+            value = 100,
+        });
+        downstreamWithCustomerQuote.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await downstreamWithCustomerQuote.Content.ReadAsStringAsync()).Should().Contain("Báo giá");
 
         var created = await Client.PostAsJsonAsync("/api/contracts", new
         {

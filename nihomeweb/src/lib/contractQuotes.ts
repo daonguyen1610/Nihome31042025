@@ -10,5 +10,6 @@ export const CONTRACT_READY_QUOTE_STATUSES: readonly QuoteStatus[] = [
   "CustomerApproved",
 ];
 
-export const isContractReadyQuote = (status: QuoteStatus): boolean =>
-  CONTRACT_READY_QUOTE_STATUSES.includes(status);
+export const isContractReadyQuote = (quote: { status: QuoteStatus; validUntil: string }): boolean =>
+  CONTRACT_READY_QUOTE_STATUSES.includes(quote.status) &&
+  (quote.status === "CustomerApproved" || new Date(quote.validUntil).getTime() >= Date.now());

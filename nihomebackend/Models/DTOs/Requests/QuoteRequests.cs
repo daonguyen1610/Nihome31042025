@@ -109,6 +109,18 @@ public class QuoteWorkflowRequest : IConcurrencyRequest
     public string? Note { get; set; }
 }
 
+public class SendQuoteEmailRequest : QuoteWorkflowRequest
+{
+    [Required, StringLength(150)]
+    public string ToEmail { get; set; } = string.Empty;
+
+    [Required, StringLength(200)]
+    public string Subject { get; set; } = string.Empty;
+
+    [Required, StringLength(8000)]
+    public string Body { get; set; } = string.Empty;
+}
+
 public class ExtendQuoteValidityRequest : IConcurrencyRequest
 {
     public string? RowVersion { get; set; }

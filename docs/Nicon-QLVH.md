@@ -87,7 +87,11 @@ và hợp đồng mà không nhập lại dữ liệu.
   kết quả trúng/trượt.
 - Khảo sát mobile ghi điều kiện hiện trường, tọa độ, ảnh/video/file và checklist;
   đồng bộ có trạng thái, retry và xung đột rõ ràng.
-- Hợp đồng phải tham chiếu báo giá được duyệt theo quy tắc thương mại hiện hành.
+- Hợp đồng Upstream có thể lập trực tiếp từ Cơ hội khi khách đã thống nhất giá
+  trị, không bắt buộc có báo giá. Nếu cần báo giá, Kinh doanh duyệt nội bộ rồi
+  xem trước email, chọn địa chỉ khách và gửi; báo giá được gắn vào hợp đồng phải
+  đã duyệt, còn hiệu lực khi gắn và đúng khách hàng/Dự án. Hợp đồng Downstream
+  với NCC/thầu phụ không dùng báo giá CRM đầu ra.
 
 ### Điểm mở
 

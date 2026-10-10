@@ -353,7 +353,6 @@ public class ContractService(
             ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct)
             : null;
         var customerOwnerUserId = await ValidateReferencesAsync(req, ct);
-        EnsureUpstreamQuote(req.Direction, req.QuoteId);
         if (req.QuoteId.HasValue)
         {
             var quote = await EnsureQuoteReadyForContractAsync(req.QuoteId.Value, ct);
@@ -488,7 +487,6 @@ public class ContractService(
             entity, req.OpportunityId, req.CustomerId, req.Status, req.SignedDate, deleting: false, ct: ct);
 
         var customerOwnerUserId = await ValidateReferencesAsync(req, ct);
-        EnsureUpstreamQuote(req.Direction, req.QuoteId);
         // Only a newly attached quote must be approved; one linked earlier may
         // have expired since, and that must not block editing other terms.
         if (req.QuoteId.HasValue && req.QuoteId != entity.QuoteId)
@@ -740,15 +738,6 @@ public class ContractService(
     private static readonly QuoteStatus[] ContractReadyQuoteStatuses =
         [QuoteStatus.Approved, QuoteStatus.SentToCustomer, QuoteStatus.CustomerApproved];
 
-    private static void EnsureUpstreamQuote(ContractDirection direction, int? quoteId)
-    {
-        if (direction == ContractDirection.Upstream && !quoteId.HasValue)
-        {
-            throw new ContractValidationException(
-                "Hợp đồng đầu ra phải tham chiếu Báo giá đã duyệt trước khi tạo hoặc cập nhật.");
-        }
-    }
-
     private sealed record ContractQuoteReference(
         int Id, string Code, int OpportunityId, int CustomerId, int? OperationalProjectId);
 
@@ -777,6 +766,7 @@ public class ContractService(
                 item.Id,
                 item.Code,
                 item.Status,
+                item.ValidUntil,
                 item.OpportunityId,
                 item.Opportunity.CustomerId,
                 item.OperationalProjectId,
@@ -787,6 +777,11 @@ public class ContractService(
         {
             throw new ContractValidationException(
                 $"Báo giá {quote.Code} chưa được duyệt. Chỉ gắn báo giá ở trạng thái Đã duyệt, Đã gửi khách hoặc Khách đã đồng ý vào hợp đồng.");
+        }
+        if (quote.Status != QuoteStatus.CustomerApproved && quote.ValidUntil < DateTime.UtcNow)
+        {
+            throw new ContractValidationException(
+                $"Báo giá {quote.Code} đã hết hạn. Hãy gia hạn hoặc duyệt báo giá còn hiệu lực trước khi lập hợp đồng.");
         }
         return new ContractQuoteReference(
             quote.Id, quote.Code, quote.OpportunityId, quote.CustomerId, quote.OperationalProjectId);
@@ -819,7 +814,6 @@ public class ContractService(
         }
 
         EnsureTransitionAllowed(entity.Status, newStatus);
-        EnsureUpstreamQuote(entity.Direction, entity.QuoteId);
         if (RequiresSignedCustomer(newStatus))
         {
             await EnsureCustomerReadyForSignatureAsync(entity.CustomerId, ct);
@@ -1114,6 +1108,11 @@ public class ContractService(
         {
             throw new ContractValidationException(
                 "Hợp đồng đầu vào phải có loại Cung ứng hoặc Thầu phụ.");
+        }
+        if (request.QuoteId.HasValue)
+        {
+            throw new ContractValidationException(
+                "Hợp đồng đầu vào không được gắn Báo giá khách hàng; hãy dùng chứng từ Cung ứng phù hợp.");
         }
         if (!request.VendorId.HasValue)
         {

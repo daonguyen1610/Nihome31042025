@@ -360,8 +360,7 @@ const AdminQuotes = () => {
     runAction(id, () => adminApi.submitQuote(id, { rowVersion: rowVersionFor(id) }), "quotes.updated");
   const handleApprove = (id: number) =>
     runAction(id, () => adminApi.approveQuote(id, { rowVersion: rowVersionFor(id) }), "quotes.updated");
-  const handleSend = (id: number) =>
-    runAction(id, () => adminApi.sendQuoteToCustomer(id, { rowVersion: rowVersionFor(id) }), "quotes.updated");
+  const handleSend = (id: number) => navigate(`/admin/quotes/${id}`);
   const handleCancel = (id: number) =>
     runAction(
       id,
