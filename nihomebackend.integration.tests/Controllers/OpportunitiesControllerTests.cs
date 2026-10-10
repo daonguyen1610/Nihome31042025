@@ -770,6 +770,40 @@ public class OpportunitiesControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task List_QuoteEligibleOnly_ExcludesClosedOpportunities()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var eligibleId = await CreateOpportunityAsync();
+        var lostId = await CreateOpportunityAsync();
+        var wonId = await CreateOpportunityAsync();
+
+        await WithDbAsync(async db =>
+        {
+            (await db.Opportunities.SingleAsync(item => item.Id == lostId)).Stage = OpportunityStage.Lost;
+            var won = await db.Opportunities.SingleAsync(item => item.Id == wonId);
+            won.Stage = OpportunityStage.Won;
+            var quote = new Quote
+            {
+                Code = "QT-PICKER-" + Guid.NewGuid().ToString("N")[..12],
+                OpportunityId = wonId,
+                ValidUntil = DateTime.UtcNow.AddDays(30),
+            };
+            db.Quotes.Add(quote);
+            await db.SaveChangesAsync();
+            won.WonQuoteId = quote.Id;
+            await db.SaveChangesAsync();
+        });
+
+        var response = await Client.GetAsync("/api/opportunities?quoteEligibleOnly=true&pageSize=100");
+        response.EnsureSuccessStatusCode();
+        var items = (await ReadJsonAsync(response)).GetProperty("items").EnumerateArray().ToList();
+
+        items.Any(item => item.GetProperty("id").GetInt32() == eligibleId).Should().BeTrue();
+        items.Any(item => item.GetProperty("id").GetInt32() == lostId).Should().BeFalse();
+        items.Any(item => item.GetProperty("id").GetInt32() == wonId).Should().BeFalse();
+    }
+
+    [Fact]
     public async Task AddActivity_PersistsAndAppearsOnDetail()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));

@@ -1222,6 +1222,40 @@ public class OpportunityServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task ListAsync_QuoteEligibleOnly_ExcludesLostAndWonWithWinningQuote()
+    {
+        var user = await SeedUserAsync();
+        var customer = await SeedCustomerAsync(user.Id);
+        var open = await SeedOpportunityAsync(customer, user, OpportunityStage.Proposal);
+        var wonWithoutQuote = await SeedOpportunityAsync(customer, user, OpportunityStage.Won);
+        await SeedOpportunityAsync(customer, user, OpportunityStage.Lost);
+        var wonWithQuote = await SeedOpportunityAsync(customer, user, OpportunityStage.Won);
+        var winningQuote = new Quote
+        {
+            Code = $"QT-TEST-{Guid.NewGuid():N}",
+            OpportunityId = wonWithQuote.Id,
+            OwnerUserId = user.Id,
+            ValidUntil = DateTime.UtcNow.AddDays(30),
+        };
+        _db.Quotes.Add(winningQuote);
+        await _db.SaveChangesAsync();
+        wonWithQuote.WonQuoteId = winningQuote.Id;
+        await _db.SaveChangesAsync();
+
+        var result = await _sut.ListAsync(user.Id, canSeeAll: true, quoteEligibleOnly: true);
+
+        Assert.Equal(2, result.Total);
+        Assert.Contains(result.Items, item => item.Id == open.Id);
+        Assert.Contains(result.Items, item => item.Id == wonWithoutQuote.Id);
+        Assert.DoesNotContain(result.Items, item => item.Id == wonWithQuote.Id);
+
+        var byId = await _sut.ListAsync(user.Id, canSeeAll: true,
+            search: $"#{open.Id}", quoteEligibleOnly: true);
+        Assert.Single(byId.Items);
+        Assert.Equal(open.Id, byId.Items[0].Id);
+    }
+
+    [Fact]
     public async Task ListAsync_DefaultSort_IsExpectedCloseAscWithNullsLast()
     {
         var user = await SeedUserAsync();

@@ -38,6 +38,7 @@ public class OpportunityService(
         string? search = null,
         int page = 1,
         int pageSize = 20,
+        bool quoteEligibleOnly = false,
         CancellationToken ct = default)
     {
         if (page < 1) page = 1;
@@ -47,6 +48,13 @@ public class OpportunityService(
         var query = BuildFilteredQuery(
             callerUserId, canSeeAll, stage, customerId, ownerUserId,
             expectedCloseFrom, expectedCloseTo, minValue, maxValue, search);
+
+        if (quoteEligibleOnly)
+        {
+            query = query.Where(opportunity =>
+                opportunity.Stage != OpportunityStage.Lost &&
+                (opportunity.Stage != OpportunityStage.Won || opportunity.WonQuoteId == null));
+        }
 
         var total = await query.CountAsync(ct);
 
@@ -709,10 +717,14 @@ public class OpportunityService(
         }
         if (!string.IsNullOrWhiteSpace(search))
         {
-            var like = $"%{search.Trim()}%";
+            var normalized = search.Trim();
+            var like = $"%{normalized}%";
+            var hasId = int.TryParse(normalized.TrimStart('#'), out var opportunityId);
             query = query.Where(o =>
                 EF.Functions.Like(o.Name, like)
-                || EF.Functions.Like(o.Customer.Name, like));
+                || EF.Functions.Like(o.Customer.Name, like)
+                || (o.Owner != null && EF.Functions.Like(o.Owner.FullName, like))
+                || (hasId && o.Id == opportunityId));
         }
 
         return query;

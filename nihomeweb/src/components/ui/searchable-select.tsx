@@ -24,6 +24,8 @@ export interface SearchableSelectOption {
   hint?: string;
   /** Extra text used only for the fuzzy filter — never rendered. */
   keywords?: string;
+  /** Optional classes for a multi-line secondary description. */
+  hintClassName?: string;
 }
 
 export interface SearchableSelectProps {
@@ -36,15 +38,20 @@ export interface SearchableSelectProps {
   ariaLabel?: string;
   disabled?: boolean;
   className?: string;
+  searchValue?: string;
+  onSearchValueChange?: (value: string) => void;
+  shouldFilter?: boolean;
+  loading?: boolean;
+  loadingText?: string;
   /** Fixed pixel width for the popover; defaults to the trigger width. */
   popoverWidthPx?: number;
 }
 
 /**
  * Trigger + Popover + Command wrapper — same look as a shadcn Select but
- * with type-to-filter over an arbitrarily long option list. Filter is
- * client-side (accent-insensitive via <c>cmdk</c>'s default matcher) and
- * covers <c>label</c>, <c>hint</c> and <c>keywords</c>.
+ * with type-to-filter over an arbitrarily long option list. Filtering defaults
+ * to cmdk's client-side matcher over <c>label</c>, <c>hint</c> and
+ * <c>keywords</c>; controlled search props allow server-backed pickers.
  */
 export function SearchableSelect({
   value,
@@ -56,6 +63,11 @@ export function SearchableSelect({
   ariaLabel,
   disabled,
   className,
+  searchValue,
+  onSearchValueChange,
+  shouldFilter = true,
+  loading = false,
+  loadingText = "…",
   popoverWidthPx,
 }: SearchableSelectProps) {
   const [open, setOpen] = React.useState(false);
@@ -91,37 +103,45 @@ export function SearchableSelect({
         style={popoverWidthPx ? { width: popoverWidthPx } : { width: "var(--radix-popover-trigger-width)" }}
         align="start"
       >
-        <Command>
-          <CommandInput placeholder={searchPlaceholder ?? placeholder} />
+        <Command shouldFilter={shouldFilter}>
+          <CommandInput
+            placeholder={searchPlaceholder ?? placeholder}
+            value={searchValue}
+            onValueChange={onSearchValueChange}
+          />
           <CommandList>
-            <CommandEmpty>{emptyText ?? "—"}</CommandEmpty>
-            <CommandGroup>
-              {options.map((o) => (
-                <CommandItem
-                  key={o.value}
-                  value={`${o.label} ${o.hint ?? ""} ${o.keywords ?? ""}`}
-                  onSelect={() => {
-                    onChange(o.value);
-                    setOpen(false);
-                  }}
-                >
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      selected?.value === o.value ? "opacity-100" : "opacity-0",
-                    )}
-                  />
-                  <div className="flex min-w-0 flex-col">
-                    <span className="truncate">{o.label}</span>
-                    {o.hint && (
-                      <span className="truncate text-xs text-muted-foreground">
-                        {o.hint}
-                      </span>
-                    )}
-                  </div>
-                </CommandItem>
-              ))}
-            </CommandGroup>
+            {!loading && <CommandEmpty>{emptyText ?? "—"}</CommandEmpty>}
+            {loading ? (
+              <div className="py-6 text-center text-sm text-muted-foreground">{loadingText}</div>
+            ) : (
+              <CommandGroup>
+                {options.map((o) => (
+                  <CommandItem
+                    key={o.value}
+                    value={`${o.label} ${o.hint ?? ""} ${o.keywords ?? ""}`}
+                    onSelect={() => {
+                      onChange(o.value);
+                      setOpen(false);
+                    }}
+                  >
+                    <Check
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        selected?.value === o.value ? "opacity-100" : "opacity-0",
+                      )}
+                    />
+                    <div className="flex min-w-0 flex-col">
+                      <span className="truncate">{o.label}</span>
+                      {o.hint && (
+                        <span className={cn("truncate text-xs text-muted-foreground", o.hintClassName)}>
+                          {o.hint}
+                        </span>
+                      )}
+                    </div>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            )}
           </CommandList>
         </Command>
       </PopoverContent>

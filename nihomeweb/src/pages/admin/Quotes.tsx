@@ -106,10 +106,13 @@ const emptyCreate = (): CreateQuoteRequest => ({
   note: "",
 });
 
+const canRaiseQuote = (opportunity: OpportunityResponse) =>
+  opportunity.stage !== "Lost" && !(opportunity.stage === "Won" && opportunity.wonQuoteId != null);
+
 // -------- Component --------
 
 const AdminQuotes = () => {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
   const navigate = useNavigate();
@@ -171,23 +174,6 @@ const AdminQuotes = () => {
     void fetchList();
   }, [fetchList]);
 
-  // ---------- opportunities dropdown for create form ----------
-  const [opportunities, setOpportunities] = useState<OpportunityResponse[]>([]);
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const { data } = await adminApi.listOpportunities({ pageSize: 100 });
-        if (!cancelled) setOpportunities(data.items);
-      } catch {
-        /* non-fatal — dropdown will just be empty */
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
   // ---------- create dialog ----------
   const [creating, setCreating] = useState(false);
   const [createForm, setCreateForm] = useState<CreateQuoteRequest>(emptyCreate());
@@ -195,6 +181,51 @@ const AdminQuotes = () => {
   const [createError, setCreateError] = useState<string | null>(null);
   const [effectiveRevision, setEffectiveRevision] = useState<MaterialRateRevisionResponse | null>(null);
   const [boqPasteOpen, setBoqPasteOpen] = useState(false);
+
+  // ---------- server-backed opportunity picker ----------
+  const [opportunities, setOpportunities] = useState<OpportunityResponse[]>([]);
+  const [opportunitySearch, setOpportunitySearch] = useState("");
+  const [opportunitiesLoading, setOpportunitiesLoading] = useState(false);
+  const [opportunitiesLoadFailed, setOpportunitiesLoadFailed] = useState(false);
+  useEffect(() => {
+    if (!creating) return;
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      setOpportunitiesLoading(true);
+      setOpportunitiesLoadFailed(false);
+      try {
+        const [listResponse, selectedResponse] = await Promise.all([
+          adminApi.listOpportunities({
+            pageSize: 50,
+            quoteEligibleOnly: true,
+            search: opportunitySearch.trim() || undefined,
+          }),
+          createForm.opportunityId
+            ? adminApi.getOpportunity(createForm.opportunityId).catch(() => null)
+            : Promise.resolve(null),
+        ]);
+        if (!cancelled) {
+          const eligible = listResponse.data.items.filter(canRaiseQuote);
+          const selected = selectedResponse?.data;
+          setOpportunities(selected && canRaiseQuote(selected) && !eligible.some((item) => item.id === selected.id)
+            ? [selected, ...eligible]
+            : eligible);
+        }
+      } catch {
+        if (!cancelled) {
+          setOpportunities([]);
+          setOpportunitiesLoadFailed(true);
+        }
+      } finally {
+        if (!cancelled) setOpportunitiesLoading(false);
+      }
+    }, 300);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [creating, opportunitySearch, createForm.opportunityId]);
+
   const createTotals = useMemo(
     () => calculateQuoteTotals(createForm.method, createForm),
     [createForm],
@@ -203,6 +234,7 @@ const AdminQuotes = () => {
   const openedFromQuery = useRef(false);
   const openCreate = (opportunityId = 0) => {
     setCreateForm({ ...emptyCreate(), opportunityId });
+    setOpportunitySearch("");
     setCreateError(null);
     setEffectiveRevision(null);
     setCreating(true);
@@ -698,14 +730,33 @@ const AdminQuotes = () => {
                 onChange={(v) => setCreateForm({ ...createForm, opportunityId: Number(v) })}
                 options={opportunities.map((o) => ({
                   value: String(o.id),
-                  label: o.name,
-                  hint: o.customerName,
-                  keywords: `${o.customerName ?? ""} ${o.id}`,
+                  label: `#${o.id} · ${o.name}`,
+                  hint: [
+                    o.customerName,
+                    t(`opportunities.stage.${o.stage}`),
+                    `${formatVnd(o.estimatedValue)} ₫`,
+                    o.expectedCloseDate
+                      ? t("quotes.opportunityPicker.expectedClose", {
+                        date: new Date(o.expectedCloseDate).toLocaleDateString(lang),
+                      })
+                      : null,
+                    o.ownerName,
+                  ].filter(Boolean).join(" · "),
+                  keywords: `${o.customerName ?? ""} ${o.ownerName ?? ""} ${o.stage} ${o.id}`,
+                  hintClassName: "whitespace-normal leading-4",
                 }))}
-                placeholder="—"
-                searchPlaceholder={t("quotes.filter.search")}
-                emptyText={t("quotes.empty")}
+                placeholder={t("quotes.opportunityPicker.placeholder")}
+                searchPlaceholder={t("quotes.opportunityPicker.search")}
+                emptyText={t("quotes.opportunityPicker.empty")}
+                searchValue={opportunitySearch}
+                onSearchValueChange={setOpportunitySearch}
+                shouldFilter={false}
+                loading={opportunitiesLoading}
+                loadingText={t("common.loading")}
               />
+              {opportunitiesLoadFailed &&
+                <p className="mt-1 text-xs text-destructive">{t("quotes.opportunityPicker.loadError")}</p>}
+              <p className="mt-1 text-xs text-muted-foreground">{t("quotes.opportunityPicker.hint")}</p>
             </div>
             <div>
               <Label>{t("quotes.field.method")}</Label>

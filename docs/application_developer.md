@@ -946,6 +946,14 @@ Quote document metadata is stored in `quote_documents`; physical files are store
 | `POST` | `/api/quotes/{id}/documents` | `crm.quotes.manage` | Upload PDF, Word, Excel, or image files up to 20 MB |
 | `DELETE` | `/api/quotes/{id}/documents/{documentId}` | `crm.quotes.manage` | Delete document metadata and its managed file |
 
+The quote creation picker uses
+`GET /api/opportunities?quoteEligibleOnly=true&search=...`. Search and owner
+scope are evaluated by the server before paging. The eligibility filter mirrors
+quote creation rules: it excludes Lost Opportunities and Won Opportunities
+that already reference a winning quote. The picker fetches at most 50 matching
+rows per search and separately resolves a URL-preselected Opportunity so a
+direct Create quote action remains stable beyond the first page.
+
 Quote delivery uses `GET /api/quotes/{id}/email-preview` (`crm.quotes.send`)
 to prefill the customer's primary contact email and a quote-specific subject
 and body. The subject/body come from the editable quote template in

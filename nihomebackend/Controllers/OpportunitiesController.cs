@@ -41,6 +41,7 @@ public class OpportunitiesController(
         [FromQuery] string? search,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
+        [FromQuery] bool quoteEligibleOnly = false,
         CancellationToken ct = default)
     {
         var userId = GetUserId();
@@ -49,7 +50,8 @@ public class OpportunitiesController(
         var canSeeAll = await permissions.HasAsync(userId.Value, "crm.opportunities.view.all", ct);
         var result = await svc.ListAsync(
             userId.Value, canSeeAll, stage, customerId, ownerUserId,
-            expectedCloseFrom, expectedCloseTo, minValue, maxValue, search, page, pageSize, ct);
+            expectedCloseFrom, expectedCloseTo, minValue, maxValue, search, page, pageSize,
+            quoteEligibleOnly, ct);
         return Ok(result);
     }
 

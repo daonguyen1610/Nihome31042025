@@ -1723,6 +1723,7 @@ export interface OpportunityListParams {
   search?: string;
   page?: number;
   pageSize?: number;
+  quoteEligibleOnly?: boolean;
 }
 
 export interface OpportunityPipelineParams {
@@ -4589,6 +4590,7 @@ export const adminApi = {
     if (params.search) q.append("search", params.search);
     if (params.page) q.append("page", String(params.page));
     if (params.pageSize) q.append("pageSize", String(params.pageSize));
+    if (params.quoteEligibleOnly != null) q.append("quoteEligibleOnly", String(params.quoteEligibleOnly));
     const qs = q.toString();
     return api.get<OpportunityListResponse>(`/opportunities${qs ? `?${qs}` : ""}`);
   },
