@@ -566,7 +566,7 @@ public class QuoteServiceTests : IDisposable
         {
             SiteName = "NICON",
             QuoteEmailSubjectTemplate = "NICON {{quoteCode}} cho {{customerName}}",
-            QuoteEmailBodyTemplate = "Kính gửi {{customerName}}\n{{quoteLines}}\nTổng cộng {{grandTotal}} VND",
+            QuoteEmailBodyTemplate = "<div>Kính gửi {{customerName}}<p>{{quoteLines}}</p><strong>Tổng cộng {{grandTotal}} VND</strong></div>",
         });
         await _db.SaveChangesAsync();
 

@@ -521,7 +521,7 @@ public class QuoteService(
             throw new QuoteOperationException("Không có quyền chỉnh sửa nội dung email báo giá.");
         if (!EmailTemplateFormatter.IsSafeQuoteHtml(body))
             throw new QuoteOperationException("Nội dung email báo giá chứa HTML không được hỗ trợ hoặc không an toàn.");
-        await emailService.SendEmailAsync(toEmail, subject, EmailTemplateFormatter.ToSafeQuoteHtml(body));
+        await emailService.SendEmailAsync(toEmail, subject, body);
         return await TransitionAsync(id, caller, canSeeAll,
             allowedFrom: [QuoteStatus.Approved],
             to: QuoteStatus.SentToCustomer,

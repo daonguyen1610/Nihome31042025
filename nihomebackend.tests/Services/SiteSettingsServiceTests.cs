@@ -79,12 +79,12 @@ public class SiteSettingsServiceTests : IDisposable
 
         await _sut.UpdateEmailTemplatesAsync("Application", "<p>Application</p>", "hr@example.com",
             quoteEmailSubject: "Báo giá {{quoteCode}}",
-            quoteEmailBody: "Hạng mục: {{quoteLines}}\nTổng: {{grandTotal}}");
+            quoteEmailBody: "<div>Hạng mục: {{quoteLines}}<strong>Tổng: {{grandTotal}}</strong></div>");
         await _sut.UpdateEmailTemplatesAsync("Updated application", "<p>Updated</p>", "hr@example.com");
 
         var saved = await _sut.GetAsync();
         Assert.Equal("Báo giá {{quoteCode}}", saved!.QuoteEmailSubjectTemplate);
-        Assert.Equal("Hạng mục: {{quoteLines}}\nTổng: {{grandTotal}}", saved.QuoteEmailBodyTemplate);
+        Assert.Equal("<div>Hạng mục: {{quoteLines}}<strong>Tổng: {{grandTotal}}</strong></div>", saved.QuoteEmailBodyTemplate);
     }
 
     [Theory]
@@ -92,6 +92,7 @@ public class SiteSettingsServiceTests : IDisposable
     [InlineData("Báo giá", "Thiếu hạng mục {{grandTotal}}")]
     [InlineData("Báo giá", "Thiếu tổng {{quoteLines}}")]
     [InlineData("Báo giá {{unknown}}", "{{quoteLines}} {{grandTotal}}")]
+    [InlineData("Báo giá", "{{quoteLines}} {{grandTotal}}")]
     [InlineData("Báo giá", "{{quoteLines}} {{grandTotal}} {{broken-token}}")]
     [InlineData("Báo giá", "<div onclick=\"alert(1)\">{{quoteLines}} {{grandTotal}}</div>")]
     public async Task UpdateEmailTemplatesAsync_RejectsInvalidQuoteTemplateWithoutSaving(string subject, string body)
