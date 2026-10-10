@@ -443,7 +443,7 @@ test("Opportunity actions follow the sequential and terminal UI contract", async
     }
     await page.reload({ waitUntil: "networkidle" });
     await expect(contractSignedAction).toBeVisible();
-    await expect(page.getByTestId("opportunity-create-contract")).toHaveCount(0);
+    await expect(page.getByTestId("opportunity-create-contract")).toBeVisible();
 
     const lost = await client.patch(`/api/opportunities/${opportunityId}/stage`, {
         targetStage: "Lost",
