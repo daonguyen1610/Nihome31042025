@@ -31,6 +31,9 @@ public sealed class RoleService(
                 r.DescriptionKey,
                 r.IsSystem,
                 r.IsActive,
+                r.RoleGroupId,
+                RoleGroupCode = r.RoleGroup != null ? r.RoleGroup.Code : null,
+                RoleGroupLabelKey = r.RoleGroup != null ? r.RoleGroup.LabelKey : null,
             })
             .ToListAsync(ct);
 
@@ -61,6 +64,9 @@ public sealed class RoleService(
             IsActive = r.IsActive,
             UserCount = userCounts.GetValueOrDefault(r.Id, 0),
             PermissionCount = permCounts.GetValueOrDefault(r.Id, 0),
+            RoleGroupId = r.RoleGroupId,
+            RoleGroupCode = r.RoleGroupCode,
+            RoleGroupLabelKey = r.RoleGroupLabelKey,
         }).ToList();
     }
 
@@ -79,8 +85,32 @@ public sealed class RoleService(
                 IsActive = r.IsActive,
                 UserCount = db.Users.Count(u => u.RoleEntityId == r.Id),
                 PermissionCount = db.RolePermissions.Count(rp => rp.RoleId == r.Id),
+                RoleGroupId = r.RoleGroupId,
+                RoleGroupCode = r.RoleGroup != null ? r.RoleGroup.Code : null,
+                RoleGroupLabelKey = r.RoleGroup != null ? r.RoleGroup.LabelKey : null,
             })
             .FirstOrDefaultAsync(ct);
+    }
+
+    public async Task<List<RoleGroupResponse>> ListRoleGroupsAsync(CancellationToken ct = default)
+    {
+        return await db.RoleGroups.AsNoTracking()
+            .Where(g => g.IsActive)
+            .OrderBy(g => g.SortOrder).ThenBy(g => g.Code)
+            .Select(g => new RoleGroupResponse
+            {
+                Id = g.Id,
+                Code = g.Code,
+                LabelKey = g.LabelKey,
+                SortOrder = g.SortOrder,
+                RoleCount = g.Roles.Count,
+                BaselinePermissions = g.BaselinePermissions
+                    .Where(gp => gp.Permission.IsActive)
+                    .Select(gp => gp.Permission.Module + RbacConventions.CodeSeparator + gp.Permission.Action)
+                    .OrderBy(code => code)
+                    .ToList(),
+            })
+            .ToListAsync(ct);
     }
 
     public async Task<List<PermissionResponse>> ListPermissionsAsync(CancellationToken ct = default)
@@ -286,6 +316,111 @@ public sealed class RoleService(
         return RoleWriteResult<RolePermissionsResponse>.Ok(response);
     }
 
+    public async Task<RoleWriteResult<RoleGroupResponse>> UpdateRoleGroupBaselineAsync(
+        int id, UpdateRolePermissionsRequest req, int actorUserId, CancellationToken ct = default)
+    {
+        var group = await db.RoleGroups.FirstOrDefaultAsync(g => g.Id == id && g.IsActive, ct);
+        if (group == null) return RoleWriteResult<RoleGroupResponse>.NotFound();
+
+        var requested = (req.Permissions ?? [])
+            .Where(code => !string.IsNullOrWhiteSpace(code))
+            .Select(code => code.Trim())
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var catalog = await db.Permissions.AsNoTracking()
+            .Where(permission => permission.IsActive)
+            .Select(permission => new
+            {
+                permission.Id,
+                Code = permission.Module + RbacConventions.CodeSeparator + permission.Action,
+            })
+            .ToListAsync(ct);
+        var idByCode = catalog.ToDictionary(item => item.Code, item => item.Id, StringComparer.OrdinalIgnoreCase);
+        var unknown = requested.Where(code => !idByCode.ContainsKey(code)).OrderBy(code => code).ToList();
+        if (unknown.Count > 0) return RoleWriteResult<RoleGroupResponse>.UnknownCodes(unknown);
+
+        var existing = await db.RoleGroupPermissions
+            .Where(item => item.RoleGroupId == id)
+            .Include(item => item.Permission)
+            .ToListAsync(ct);
+        var existingByCode = existing.ToDictionary(
+            item => RbacConventions.BuildCode(item.Permission.Module, item.Permission.Action),
+            item => item,
+            StringComparer.OrdinalIgnoreCase);
+        var actorPermissions = await permissions.GetForUserAsync(actorUserId, ct);
+        var escalations = requested
+            .Where(code => !existingByCode.ContainsKey(code) && !actorPermissions.Contains(code))
+            .OrderBy(code => code)
+            .ToList();
+        if (escalations.Count > 0) return RoleWriteResult<RoleGroupResponse>.Escalation(escalations);
+
+        var toRemove = existingByCode.Where(item => !requested.Contains(item.Key)).Select(item => item.Value).ToList();
+        var toAdd = requested.Where(code => !existingByCode.ContainsKey(code))
+            .Select(code => new RoleGroupPermission
+            {
+                RoleGroupId = id,
+                PermissionId = idByCode[code],
+                CreatedAt = DateTime.UtcNow,
+            })
+            .ToList();
+
+        if (toRemove.Count == 0 && toAdd.Count == 0)
+        {
+            var unchanged = (await ListRoleGroupsAsync(ct)).Single(item => item.Id == id);
+            return RoleWriteResult<RoleGroupResponse>.Ok(unchanged);
+        }
+
+        if (toRemove.Count > 0) db.RoleGroupPermissions.RemoveRange(toRemove);
+        if (toAdd.Count > 0) db.RoleGroupPermissions.AddRange(toAdd);
+        group.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync(ct);
+
+        var response = (await ListRoleGroupsAsync(ct)).Single(item => item.Id == id);
+        audit.Log(new AuditEvent
+        {
+            Action = "rbac.role-group.baseline.update",
+            ResourceType = "rbac.role-group",
+            ResourceId = group.Code,
+            Message = $"Updated baseline permissions for role group '{group.Code}'.",
+            Status = "success",
+            OldValue = new { permissions = existingByCode.Keys.OrderBy(code => code).ToList() },
+            NewValue = new { permissions = response.BaselinePermissions },
+        });
+        return RoleWriteResult<RoleGroupResponse>.Ok(response);
+    }
+
+    public async Task<RoleWriteResult<RoleResponse>> SetRoleGroupAsync(
+        int id, SetRoleGroupRequest req, int actorUserId, CancellationToken ct = default)
+    {
+        var role = await db.Roles.FirstOrDefaultAsync(item => item.Id == id, ct);
+        if (role == null) return RoleWriteResult<RoleResponse>.NotFound();
+        if (role.IsSystem) return RoleWriteResult<RoleResponse>.SystemRole();
+        if (req.RoleGroupId.HasValue)
+        {
+            var exists = await db.RoleGroups.AsNoTracking()
+                .AnyAsync(group => group.Id == req.RoleGroupId.Value && group.IsActive, ct);
+            if (!exists) return RoleWriteResult<RoleResponse>.Invalid("Role group does not exist.");
+        }
+        if (role.RoleGroupId == req.RoleGroupId)
+            return RoleWriteResult<RoleResponse>.Ok((await GetRoleAsync(id, ct))!);
+
+        var oldGroupId = role.RoleGroupId;
+        role.RoleGroupId = req.RoleGroupId;
+        role.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync(ct);
+        var response = (await GetRoleAsync(id, ct))!;
+        audit.Log(new AuditEvent
+        {
+            Action = "rbac.role.group.update",
+            ResourceType = ResourceType,
+            ResourceId = role.Code,
+            Message = $"Updated role group for '{role.Code}'.",
+            Status = "success",
+            OldValue = new { roleGroupId = oldGroupId },
+            NewValue = new { roleGroupId = role.RoleGroupId },
+        });
+        return RoleWriteResult<RoleResponse>.Ok(response);
+    }
+
     public async Task<RoleWriteResult<RoleResponse>> CreateRoleAsync(
         CreateRoleRequest req, int actorUserId, CancellationToken ct = default)
     {
@@ -297,9 +432,29 @@ public sealed class RoleService(
         if (codeTaken)
             return RoleWriteResult<RoleResponse>.Conflict($"Role code '{code}' already exists.");
 
+        RoleGroup? selectedGroup = null;
+        if (req.RoleGroupId.HasValue)
+        {
+            selectedGroup = await db.RoleGroups.AsNoTracking()
+                .FirstOrDefaultAsync(group => group.Id == req.RoleGroupId.Value && group.IsActive, ct);
+            if (selectedGroup == null)
+                return RoleWriteResult<RoleResponse>.Invalid("Role group does not exist.");
+        }
+        if (req.ImportGroupBaseline && selectedGroup == null)
+            return RoleWriteResult<RoleResponse>.Invalid("Select a role group before importing its baseline.");
+
+        var initialPermissions = req.Permissions;
+        if (initialPermissions == null && req.ImportGroupBaseline && selectedGroup != null)
+        {
+            initialPermissions = await db.RoleGroupPermissions.AsNoTracking()
+                .Where(item => item.RoleGroupId == selectedGroup.Id && item.Permission.IsActive)
+                .Select(item => item.Permission.Module + RbacConventions.CodeSeparator + item.Permission.Action)
+                .ToListAsync(ct);
+        }
+
         // Resolve initial permissions (optional) + anti-escalation, same rules
         // as UpdateRolePermissionsAsync but with an empty "existing" set.
-        var requested = (req.Permissions ?? [])
+        var requested = (initialPermissions ?? [])
             .Where(c => !string.IsNullOrWhiteSpace(c))
             .Select(c => c.Trim())
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -335,6 +490,7 @@ public sealed class RoleService(
             DescriptionKey = req.DescriptionKey?.Trim(),
             IsSystem = false,
             IsActive = true,
+            RoleGroupId = selectedGroup?.Id,
             InitialPermissionsSeeded = true, // RbacSeeder must not retro-seed defaults.
             CreatedAt = now,
         };
@@ -361,8 +517,12 @@ public sealed class RoleService(
             ResourceId = entity.Code,
             Message = $"Created role '{entity.Code}' with {requested.Count} permission(s).",
             Status = "success",
-            NewValue = new { entity.Code, entity.Name, entity.LabelKey, entity.DescriptionKey },
-            Metadata = new { permissions = requested.OrderBy(c => c).ToList() },
+            NewValue = new { entity.Code, entity.Name, entity.LabelKey, entity.DescriptionKey, entity.RoleGroupId },
+            Metadata = new
+            {
+                permissions = requested.OrderBy(c => c).ToList(),
+                importedGroupBaseline = req.ImportGroupBaseline && req.Permissions == null,
+            },
         });
 
         await notifications.CreateForAdminsAsync(
@@ -424,6 +584,7 @@ public sealed class RoleService(
             IsActive = role.IsActive,
             UserCount = 0,
             PermissionCount = 0,
+            RoleGroupId = role.RoleGroupId,
         });
     }
 }

@@ -984,6 +984,14 @@
     "ja": "ロール別に管理"
   },
   {
+    "key": "adminRbac.view.groups",
+    "category": "rbac",
+    "vi": "Nhóm & quyền mẫu",
+    "en": "Groups & baselines",
+    "zh": "角色组与权限基线",
+    "ja": "グループと権限基準"
+  },
+  {
     "key": "adminRbac.view.matrix",
     "category": "rbac",
     "vi": "Ma trận so sánh",
@@ -2694,5 +2702,23 @@
   {"key":"adminRbac.module.system","category":"rbac","vi":"Hệ thống","en":"System","zh":"系统","ja":"システム"},
   {"key":"adminRbac.module.users","category":"rbac","vi":"Người dùng","en":"Users","zh":"用户","ja":"ユーザー"},
   {"key":"adminRbac.module.workflow","category":"rbac","vi":"Luồng duyệt","en":"Approval workflows","zh":"审批流程","ja":"承認フロー"},
-  {"key":"adminRbac.namePlaceholder","category":"rbac","vi":"Ví dụ: Marketing","en":"e.g. Marketing","zh":"例如：市场部","ja":"例：マーケティング"}
+  {"key":"adminRbac.namePlaceholder","category":"rbac","vi":"Ví dụ: Marketing","en":"e.g. Marketing","zh":"例如：市场部","ja":"例：マーケティング"},
+  {"key":"rbac.group.crm","category":"rbac","vi":"Kinh doanh / CRM","en":"Sales / CRM","zh":"销售 / CRM","ja":"営業 / CRM"},
+  {"key":"rbac.group.hr-admin","category":"rbac","vi":"Hành chính nhân sự","en":"HR & Administration","zh":"人力资源与行政","ja":"人事・総務"},
+  {"key":"rbac.group.design","category":"rbac","vi":"Thiết kế","en":"Design","zh":"设计","ja":"設計"},
+  {"key":"rbac.group.construction","category":"rbac","vi":"Quản lý thi công","en":"Construction Management","zh":"施工管理","ja":"施工管理"},
+  {"key":"rbac.group.finance","category":"rbac","vi":"Tài chính kế toán","en":"Finance & Accounting","zh":"财务与会计","ja":"財務・会計"},
+  {"key":"adminRbac.groups.title","category":"rbac","vi":"Nhóm vai trò","en":"Role groups","zh":"角色组","ja":"ロールグループ"},
+  {"key":"adminRbac.groups.help","category":"rbac","vi":"Mỗi nhóm có một bộ quyền mẫu dùng khi tạo vai trò mới.","en":"Each group has a permission baseline for new roles.","zh":"每个组都有用于新角色的权限基线。","ja":"各グループには新規ロール用の権限基準があります。"},
+  {"key":"adminRbac.groups.roleGroup","category":"rbac","vi":"Nhóm vai trò","en":"Role group","zh":"角色组","ja":"ロールグループ"},
+  {"key":"adminRbac.groups.ungrouped","category":"rbac","vi":"Chưa phân nhóm","en":"Ungrouped","zh":"未分组","ja":"未分類"},
+  {"key":"adminRbac.groups.roles","category":"rbac","vi":"vai trò","en":"roles","zh":"个角色","ja":"件のロール"},
+  {"key":"adminRbac.groups.baselineHelp","category":"rbac","vi":"Bộ quyền mẫu chỉ được sao chép một lần khi tạo vai trò. Thay đổi tại đây không tự động sửa các vai trò hiện có.","en":"The baseline is copied once when a role is created. Changes here do not update existing roles.","zh":"权限基线仅在创建角色时复制一次；此处的更改不会更新现有角色。","ja":"権限基準はロール作成時に一度だけコピーされ、既存ロールは自動更新されません。"},
+  {"key":"adminRbac.groups.saveBaseline","category":"rbac","vi":"Lưu quyền mẫu","en":"Save baseline","zh":"保存权限基线","ja":"権限基準を保存"},
+  {"key":"adminRbac.groups.importBaseline","category":"rbac","vi":"Nhập sẵn quyền mẫu của nhóm","en":"Import the group's baseline","zh":"导入组权限基线","ja":"グループの権限基準を取り込む"},
+  {"key":"adminRbac.groups.importBaselineHelp","category":"rbac","vi":"Vai trò mới sẽ bắt đầu với {count} quyền và vẫn có thể chỉnh sửa độc lập sau đó.","en":"The new role starts with {count} permissions and can be edited independently afterward.","zh":"新角色将以 {count} 项权限开始，之后可独立编辑。","ja":"新規ロールには {count} 件の権限が設定され、その後は個別に編集できます。"},
+  {"key":"adminRbac.toast.groupSaved","category":"rbac","vi":"Đã cập nhật nhóm vai trò","en":"Role group updated","zh":"角色组已更新","ja":"ロールグループを更新しました"},
+  {"key":"adminRbac.toast.groupSaveFailed","category":"rbac","vi":"Không thể cập nhật nhóm vai trò","en":"Could not update role group","zh":"无法更新角色组","ja":"ロールグループを更新できませんでした"},
+  {"key":"adminRbac.toast.baselineSaved","category":"rbac","vi":"Đã lưu quyền mẫu của nhóm","en":"Group baseline saved","zh":"组权限基线已保存","ja":"グループの権限基準を保存しました"},
+  {"key":"adminRbac.toast.baselineSaveFailed","category":"rbac","vi":"Không thể lưu quyền mẫu của nhóm","en":"Could not save group baseline","zh":"无法保存组权限基线","ja":"グループの権限基準を保存できませんでした"}
 ]

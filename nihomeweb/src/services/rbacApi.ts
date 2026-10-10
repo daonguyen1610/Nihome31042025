@@ -21,6 +21,18 @@ export interface RoleResponse {
   isActive: boolean;
   userCount: number;
   permissionCount: number;
+  roleGroupId?: number | null;
+  roleGroupCode?: string | null;
+  roleGroupLabelKey?: string | null;
+}
+
+export interface RoleGroupResponse {
+  id: number;
+  code: string;
+  labelKey: string;
+  sortOrder: number;
+  roleCount: number;
+  baselinePermissions: string[];
 }
 
 export interface RolePermissionsResponse {
@@ -40,6 +52,8 @@ export interface CreateRoleRequest {
   labelKey?: string;
   descriptionKey?: string;
   permissions?: string[];
+  roleGroupId?: number | null;
+  importGroupBaseline?: boolean;
 }
 
 export interface UpdateRoleRequest {
@@ -60,6 +74,9 @@ export const rbacApi = {
   listRoles: () =>
     api.get<RoleResponse[]>("/admin/rbac/roles"),
 
+  listRoleGroups: () =>
+    api.get<RoleGroupResponse[]>("/admin/rbac/role-groups"),
+
   getRole: (id: number) =>
     api.get<RoleResponse>(`/admin/rbac/roles/${id}`),
 
@@ -77,6 +94,12 @@ export const rbacApi = {
 
   updateRolePermissions: (id: number, data: UpdateRolePermissionsRequest) =>
     api.put<RolePermissionsResponse>(`/admin/rbac/roles/${id}/permissions`, data),
+
+  setRoleGroup: (id: number, roleGroupId: number | null) =>
+    api.put<RoleResponse>(`/admin/rbac/roles/${id}/group`, { roleGroupId }),
+
+  updateRoleGroupBaseline: (id: number, data: UpdateRolePermissionsRequest) =>
+    api.put<RoleGroupResponse>(`/admin/rbac/role-groups/${id}/baseline`, data),
 
   deleteRole: (id: number) =>
     api.delete<RoleResponse>(`/admin/rbac/roles/${id}`),

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { useParams } from "react-router-dom";
-import { ChevronDown, GitCompareArrows, ListChecks, Plus, Search, ShieldCheck, Trash2, Users } from "lucide-react";
+import { ChevronDown, FolderTree, GitCompareArrows, ListChecks, Plus, Search, ShieldCheck, Trash2, Users } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { Can } from "@/components/auth/Can";
 import { PageError, PageLoading } from "@/components/PageState";
@@ -35,6 +35,7 @@ import { cn } from "@/lib/utils";
 import {
   rbacApi,
   type PermissionResponse,
+  type RoleGroupResponse,
   type RolePermissionsResponse,
   type RoleResponse,
 } from "@/services/rbacApi";
@@ -65,6 +66,10 @@ export default function RoleList() {
   const permsQuery = useQuery({
     queryKey: ["rbac", "permissions"],
     queryFn: async () => (await rbacApi.listPermissions()).data,
+  });
+  const groupsQuery = useQuery({
+    queryKey: ["rbac", "roleGroups"],
+    queryFn: async () => (await rbacApi.listRoleGroups()).data,
   });
 
   const roleIds = rolesQuery.data?.map((r) => r.id) ?? [];
@@ -150,6 +155,7 @@ export default function RoleList() {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ["rbac", "roles"] }),
       queryClient.invalidateQueries({ queryKey: ["rbac", "rolePermissions"] }),
+      queryClient.invalidateQueries({ queryKey: ["rbac", "roleGroups"] }),
       queryClient.invalidateQueries({ queryKey: ["me", "permissions"] }),
     ]);
   };
@@ -190,38 +196,62 @@ export default function RoleList() {
   const [createOpen, setCreateOpen] = useState(false);
   const [createCode, setCreateCode] = useState("");
   const [createName, setCreateName] = useState("");
+  const [createGroupId, setCreateGroupId] = useState<string>("");
+  const [importGroupBaseline, setImportGroupBaseline] = useState(true);
   const codeValid = ROLE_CODE_RE.test(createCode.trim());
   const nameValid = createName.trim().length >= 2;
   const createMutation = useMutation({
     mutationFn: async () =>
-      (await rbacApi.createRole({ code: createCode.trim(), name: createName.trim() })).data,
-    onSuccess: async () => {
+      (await rbacApi.createRole({
+        code: createCode.trim(),
+        name: createName.trim(),
+        roleGroupId: createGroupId ? Number(createGroupId) : null,
+        importGroupBaseline: Boolean(createGroupId) && importGroupBaseline,
+      })).data,
+    onSuccess: async (created) => {
       setCreateOpen(false);
       setCreateCode("");
       setCreateName("");
+      setCreateGroupId("");
+      setImportGroupBaseline(true);
       await invalidateAll();
+      setSelectedRoleId(created.id);
       toast({ title: t("adminRbac.toast.created") });
     },
     onError: (err) => reportError(err, "adminRbac.toast.createFailed"),
   });
 
+  const setGroupMutation = useMutation({
+    mutationFn: async ({ roleId, roleGroupId }: { roleId: number; roleGroupId: number | null }) =>
+      rbacApi.setRoleGroup(roleId, roleGroupId),
+    onSuccess: async () => {
+      await invalidateAll();
+      toast({ title: t("adminRbac.toast.groupSaved") });
+    },
+    onError: (err) => reportError(err, "adminRbac.toast.groupSaveFailed"),
+  });
+
   const [deleteTarget, setDeleteTarget] = useState<RoleResponse | null>(null);
 
-  const loading = rolesQuery.isLoading || permsQuery.isLoading;
-  const error = rolesQuery.error ?? permsQuery.error;
+  const loading = rolesQuery.isLoading || permsQuery.isLoading || groupsQuery.isLoading;
+  const error = rolesQuery.error ?? permsQuery.error ?? groupsQuery.error;
 
   // The matrix is long enough that people lose track of which column they are
   // ticking, and most of it is irrelevant to any one question.
   const [permSearch, setPermSearch] = useState("");
   const [moduleFilter, setModuleFilter] = useState<string>("");
   const [roleSearch, setRoleSearch] = useState("");
-  const [viewMode, setViewMode] = useState<"editor" | "matrix">("editor");
+  const [viewMode, setViewMode] = useState<"editor" | "groups" | "matrix">("editor");
   const [selectedRoleId, setSelectedRoleId] = useState<number | null>(null);
   const [hiddenRoleIds, setHiddenRoleIds] = useState<Set<number>>(new Set());
 
   // Memoised so the fallback does not hand out a fresh array on every render —
   // anything depending on it would then recompute forever.
   const roles: RoleResponse[] = useMemo(() => rolesQuery.data ?? [], [rolesQuery.data]);
+  const roleGroups: RoleGroupResponse[] = useMemo(
+    () => groupsQuery.data ?? [],
+    [groupsQuery.data],
+  );
 
   // RoleService links notifications to /admin/roles/{id}. Open that role in the
   // focused editor; otherwise start with the first editable business role.
@@ -278,6 +308,19 @@ export default function RoleList() {
       || (role.labelKey ? t(role.labelKey).toLowerCase().includes(term) : false));
   }, [roleSearch, roles, t]);
 
+  const rolesByGroup = useMemo(() => {
+    const sections = roleGroups.map((group) => ({
+      key: String(group.id),
+      label: t(group.labelKey),
+      roles: filteredRoles.filter((role) => role.roleGroupId === group.id),
+    }));
+    const ungrouped = filteredRoles.filter((role) => !role.roleGroupId);
+    if (ungrouped.length > 0) {
+      sections.push({ key: "ungrouped", label: t("adminRbac.groups.ungrouped"), roles: ungrouped });
+    }
+    return sections.filter((section) => section.roles.length > 0);
+  }, [filteredRoles, roleGroups, t]);
+
   const selectedRole = roles.find((role) => role.id === selectedRoleId) ?? null;
   const selectedSet = selectedRole
     ? (draft[selectedRole.id] ?? serverMap[selectedRole.id] ?? new Set<string>())
@@ -292,6 +335,42 @@ export default function RoleList() {
     }
     return Array.from(groups.entries());
   }, [perms]);
+
+  const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
+  const [baselineDraft, setBaselineDraft] = useState<Set<string>>(new Set());
+  const selectedGroup = roleGroups.find((group) => group.id === selectedGroupId)
+    ?? roleGroups[0]
+    ?? null;
+  useEffect(() => {
+    if (selectedGroup && selectedGroup.id !== selectedGroupId) setSelectedGroupId(selectedGroup.id);
+  }, [selectedGroup, selectedGroupId]);
+  useEffect(() => {
+    setBaselineDraft(new Set(selectedGroup?.baselinePermissions ?? []));
+  }, [selectedGroup]);
+  const baselineDirty = selectedGroup
+    ? !setsEqual(baselineDraft, new Set(selectedGroup.baselinePermissions))
+    : false;
+  const toggleBaselinePermission = (code: string) => {
+    setBaselineDraft((current) => {
+      const next = new Set(current);
+      if (next.has(code)) next.delete(code);
+      else next.add(code);
+      return next;
+    });
+  };
+  const saveBaselineMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedGroup) return;
+      await rbacApi.updateRoleGroupBaseline(selectedGroup.id, {
+        permissions: Array.from(baselineDraft),
+      });
+    },
+    onSuccess: async () => {
+      await invalidateAll();
+      toast({ title: t("adminRbac.toast.baselineSaved") });
+    },
+    onError: (err) => reportError(err, "adminRbac.toast.baselineSaveFailed"),
+  });
 
   const toggleRoleVisible = (id: number) =>
     setHiddenRoleIds((prev) => {
@@ -325,11 +404,27 @@ export default function RoleList() {
             onRetry={() => {
               void rolesQuery.refetch();
               void permsQuery.refetch();
+              void groupsQuery.refetch();
             }}
           />
         ) : (
           <>
             <div className="flex w-full flex-col gap-2 rounded-xl border bg-card p-1 sm:w-fit sm:flex-row">
+              <button
+                type="button"
+                className={cn(
+                  "flex min-h-10 items-center justify-center gap-2 rounded-lg px-4 text-sm font-medium transition-colors",
+                  viewMode === "groups"
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:bg-muted",
+                )}
+                aria-pressed={viewMode === "groups"}
+                onClick={() => setViewMode("groups")}
+                data-testid="rbac-view-groups"
+              >
+                <FolderTree className="h-4 w-4" />
+                {t("adminRbac.view.groups")}
+              </button>
               <button
                 type="button"
                 className={cn(
@@ -392,45 +487,53 @@ export default function RoleList() {
                       <p className="p-4 text-center text-sm text-muted-foreground">
                         {t("adminRbac.noRoles")}
                       </p>
-                    ) : filteredRoles.map((role) => {
-                      const roleSet = draft[role.id] ?? serverMap[role.id];
-                      const selected = role.id === selectedRoleId;
-                      return (
-                        <button
-                          key={role.id}
-                          type="button"
-                          className={cn(
-                            "w-full rounded-lg border px-3 py-3 text-left transition-colors",
-                            selected
-                              ? "border-primary/40 bg-primary/10 shadow-sm"
-                              : "border-transparent hover:border-border hover:bg-muted/60",
-                          )}
-                          onClick={() => setSelectedRoleId(role.id)}
-                          aria-current={selected ? "true" : undefined}
-                          data-testid={`rbac-role-${role.code}`}
-                          data-role-id={role.id}
-                        >
-                          <span className="flex items-start justify-between gap-2">
-                            <span className="min-w-0">
-                              <span className="block truncate text-sm font-semibold">
-                                {role.labelKey ? t(role.labelKey) : role.name}
+                    ) : rolesByGroup.map((section) => (
+                      <section key={section.key} className="space-y-1">
+                        <div className="flex items-center justify-between px-2 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                          <span>{section.label}</span>
+                          <span>{section.roles.length}</span>
+                        </div>
+                        {section.roles.map((role) => {
+                          const roleSet = draft[role.id] ?? serverMap[role.id];
+                          const selected = role.id === selectedRoleId;
+                          return (
+                            <button
+                              key={role.id}
+                              type="button"
+                              className={cn(
+                                "w-full rounded-lg border px-3 py-3 text-left transition-colors",
+                                selected
+                                  ? "border-primary/40 bg-primary/10 shadow-sm"
+                                  : "border-transparent hover:border-border hover:bg-muted/60",
+                              )}
+                              onClick={() => setSelectedRoleId(role.id)}
+                              aria-current={selected ? "true" : undefined}
+                              data-testid={`rbac-role-${role.code}`}
+                              data-role-id={role.id}
+                            >
+                              <span className="flex items-start justify-between gap-2">
+                                <span className="min-w-0">
+                                  <span className="block truncate text-sm font-semibold">
+                                    {role.labelKey ? t(role.labelKey) : role.name}
+                                  </span>
+                                  <span className="mt-0.5 block text-xs text-muted-foreground">{role.code}</span>
+                                </span>
+                                {isDirty(role.id) && (
+                                  <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-amber-500" />
+                                )}
                               </span>
-                              <span className="mt-0.5 block text-xs text-muted-foreground">{role.code}</span>
-                            </span>
-                            {isDirty(role.id) && (
-                              <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-amber-500" />
-                            )}
-                          </span>
-                          <span className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
-                            <span className="flex items-center gap-1">
-                              <Users className="h-3.5 w-3.5" />{role.userCount}
-                            </span>
-                            <span>{roleSet?.size ?? 0}/{allPerms.length} {t("adminRbac.permissionsShort")}</span>
-                            {role.isSystem && <span>{t("adminRbac.systemRoleBadge")}</span>}
-                          </span>
-                        </button>
-                      );
-                    })}
+                              <span className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
+                                <span className="flex items-center gap-1">
+                                  <Users className="h-3.5 w-3.5" />{role.userCount}
+                                </span>
+                                <span>{roleSet?.size ?? 0}/{allPerms.length} {t("adminRbac.permissionsShort")}</span>
+                                {role.isSystem && <span>{t("adminRbac.systemRoleBadge")}</span>}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </section>
+                    ))}
                   </div>
                 </aside>
 
@@ -471,6 +574,29 @@ export default function RoleList() {
                               {selectedSet.size}/{allPerms.length} {t("adminRbac.permissionsShort")}
                             </span>
                           </div>
+                          {!selectedRole.isSystem && (
+                            <div className="mt-4 max-w-sm space-y-1.5">
+                              <Label className="text-xs" htmlFor="rbac-role-group">
+                                {t("adminRbac.groups.roleGroup")}
+                              </Label>
+                              <select
+                                id="rbac-role-group"
+                                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                                value={selectedRole.roleGroupId ?? ""}
+                                disabled={!canManage || setGroupMutation.isPending}
+                                onChange={(event) => setGroupMutation.mutate({
+                                  roleId: selectedRole.id,
+                                  roleGroupId: event.target.value ? Number(event.target.value) : null,
+                                })}
+                                data-testid="rbac-role-group"
+                              >
+                                <option value="">{t("adminRbac.groups.ungrouped")}</option>
+                                {roleGroups.map((group) => (
+                                  <option key={group.id} value={group.id}>{t(group.labelKey)}</option>
+                                ))}
+                              </select>
+                            </div>
+                          )}
                         </div>
                         {!selectedRole.isSystem && (
                           <Can permission={PERM_MANAGE}>
@@ -615,6 +741,111 @@ export default function RoleList() {
                                   </label>
                                 );
                               })}
+                            </div>
+                          </details>
+                        );
+                      })}
+                    </div>
+                  </section>
+                )}
+              </div>
+            )}
+
+            {viewMode === "groups" && (
+              <div className="grid min-w-0 gap-4 lg:grid-cols-[300px_minmax(0,1fr)]" data-testid="rbac-groups-editor">
+                <aside className="overflow-hidden rounded-xl border bg-card lg:sticky lg:top-4 lg:self-start">
+                  <div className="border-b p-4">
+                    <h2 className="font-semibold">{t("adminRbac.groups.title")}</h2>
+                    <p className="mt-1 text-xs text-muted-foreground">{t("adminRbac.groups.help")}</p>
+                  </div>
+                  <div className="space-y-1 p-2">
+                    {roleGroups.map((group) => (
+                      <button
+                        key={group.id}
+                        type="button"
+                        className={cn(
+                          "w-full rounded-lg border px-3 py-3 text-left transition-colors",
+                          selectedGroup?.id === group.id
+                            ? "border-primary/40 bg-primary/10 shadow-sm"
+                            : "border-transparent hover:border-border hover:bg-muted/60",
+                        )}
+                        onClick={() => setSelectedGroupId(group.id)}
+                        data-testid={`rbac-group-${group.code}`}
+                      >
+                        <span className="block text-sm font-semibold">{t(group.labelKey)}</span>
+                        <span className="mt-1 block text-xs text-muted-foreground">
+                          {group.roleCount} {t("adminRbac.groups.roles")} · {group.baselinePermissions.length} {t("adminRbac.permissionsShort")}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </aside>
+
+                {selectedGroup && (
+                  <section className="min-w-0 space-y-4">
+                    <div className="rounded-xl border bg-card p-4 shadow-sm sm:p-5">
+                      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                          <div className="flex items-center gap-3">
+                            <span className="rounded-lg bg-primary/10 p-2 text-primary"><FolderTree className="h-5 w-5" /></span>
+                            <div>
+                              <h2 className="text-lg font-semibold">{t(selectedGroup.labelKey)}</h2>
+                              <p className="text-xs text-muted-foreground">{selectedGroup.code}</p>
+                            </div>
+                          </div>
+                          <p className="mt-3 max-w-2xl text-sm text-muted-foreground">{t("adminRbac.groups.baselineHelp")}</p>
+                        </div>
+                        <Can permission={PERM_MANAGE}>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              disabled={!baselineDirty}
+                              onClick={() => setBaselineDraft(new Set(selectedGroup.baselinePermissions))}
+                            >
+                              {t("adminRbac.reset")}
+                            </Button>
+                            <Button
+                              disabled={!baselineDirty || saveBaselineMutation.isPending}
+                              onClick={() => saveBaselineMutation.mutate()}
+                              data-testid="rbac-save-baseline"
+                            >
+                              {t("adminRbac.groups.saveBaseline")}
+                            </Button>
+                          </div>
+                        </Can>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      {modules.map((module) => {
+                        const modulePermissions = allPerms.filter((permission) =>
+                          permission.code.startsWith(`${module}.`));
+                        const granted = modulePermissions.filter((permission) => baselineDraft.has(permission.code)).length;
+                        return (
+                          <details key={module} className="group overflow-hidden rounded-xl border bg-card">
+                            <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 hover:bg-muted/40 [&::-webkit-details-marker]:hidden">
+                              <span>
+                                <span className="block text-sm font-semibold">{t(`adminRbac.module.${module}`)}</span>
+                                <span className="block text-xs text-muted-foreground">{granted}/{modulePermissions.length} {t("adminRbac.permissionsGranted")}</span>
+                              </span>
+                              <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-180" />
+                            </summary>
+                            <div className="grid gap-px border-t bg-border sm:grid-cols-2">
+                              {modulePermissions.map((permission) => (
+                                <label key={permission.id} className="flex cursor-pointer items-start gap-3 bg-background p-4 hover:bg-muted/50">
+                                  <Checkbox
+                                    className="mt-0.5"
+                                    checked={baselineDraft.has(permission.code)}
+                                    disabled={!canManage}
+                                    onCheckedChange={() => toggleBaselinePermission(permission.code)}
+                                    aria-label={`${selectedGroup.code} ${permission.code}`}
+                                  />
+                                  <span className="min-w-0">
+                                    <span className="block text-sm font-medium">{t(`rbac.perm.${permission.code}.label`)}</span>
+                                    <span className="mt-1 block break-all font-mono text-[10px] text-muted-foreground">{permission.code}</span>
+                                  </span>
+                                </label>
+                              ))}
                             </div>
                           </details>
                         );
@@ -933,9 +1164,43 @@ export default function RoleList() {
                 data-testid="rbac-create-name"
               />
             </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="rbac-create-group">{t("adminRbac.groups.roleGroup")}</Label>
+              <select
+                id="rbac-create-group"
+                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                value={createGroupId}
+                onChange={(event) => setCreateGroupId(event.target.value)}
+                data-testid="rbac-create-group"
+              >
+                <option value="">{t("adminRbac.groups.ungrouped")}</option>
+                {roleGroups.map((group) => (
+                  <option key={group.id} value={group.id}>{t(group.labelKey)}</option>
+                ))}
+              </select>
+            </div>
+            {createGroupId && (
+              <label className="flex items-start gap-3 rounded-lg border bg-muted/30 p-3">
+                <Checkbox
+                  className="mt-0.5"
+                  checked={importGroupBaseline}
+                  onCheckedChange={(checked) => setImportGroupBaseline(checked === true)}
+                  data-testid="rbac-import-baseline"
+                />
+                <span>
+                  <span className="block text-sm font-medium">{t("adminRbac.groups.importBaseline")}</span>
+                  <span className="mt-1 block text-xs text-muted-foreground">
+                    {t("adminRbac.groups.importBaselineHelp").replace(
+                      "{count}",
+                      String(roleGroups.find((group) => String(group.id) === createGroupId)?.baselinePermissions.length ?? 0),
+                    )}
+                  </span>
+                </span>
+              </label>
+            )}
           </div>
           <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
-            <Button variant="ghost" onClick={() => setCreateOpen(false)}>
+            <Button variant="ghost" onClick={() => setCreateOpen(false)} data-testid="rbac-create-cancel">
               {t("adminRbac.cancel")}
             </Button>
             <Button

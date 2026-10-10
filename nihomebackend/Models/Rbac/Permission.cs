@@ -22,4 +22,5 @@ public class Permission
     public string Code => RbacConventions.BuildCode(Module, Action);
 
     public ICollection<RolePermission> RolePermissions { get; set; } = new List<RolePermission>();
+    public ICollection<RoleGroupPermission> RoleGroupPermissions { get; set; } = new List<RoleGroupPermission>();
 }

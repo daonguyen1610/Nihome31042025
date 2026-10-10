@@ -38,10 +38,47 @@ public static class RbacSeeder
         var catalog = PermissionCatalog.Resolve(bundle.BaseCatalog, discovered);
 
         SeedPermissions(db, catalog);
+        SeedRoleGroups(db);
         SeedRoles(db, bundle);
         ForceSyncSystemRolePermissions(db, catalog, bundle);
         SeedInitialBusinessRolePermissionsIfMissing(db, catalog, bundle);
         BackfillUserRoleEntityIds(db);
+    }
+
+    private static void SeedRoleGroups(AppDbContext db)
+    {
+        var definitions = new[]
+        {
+            new { Code = "CRM", LabelKey = "rbac.group.crm", SortOrder = 10 },
+            new { Code = "HR_ADMIN", LabelKey = "rbac.group.hr-admin", SortOrder = 20 },
+            new { Code = "DESIGN", LabelKey = "rbac.group.design", SortOrder = 30 },
+            new { Code = "CONSTRUCTION", LabelKey = "rbac.group.construction", SortOrder = 40 },
+            new { Code = "FINANCE", LabelKey = "rbac.group.finance", SortOrder = 50 },
+        };
+        var existing = db.RoleGroups.ToDictionary(g => g.Code, StringComparer.OrdinalIgnoreCase);
+        var now = DateTime.UtcNow;
+
+        foreach (var definition in definitions)
+        {
+            if (existing.TryGetValue(definition.Code, out var group))
+            {
+                group.LabelKey = definition.LabelKey;
+                group.SortOrder = definition.SortOrder;
+                group.IsActive = true;
+                continue;
+            }
+
+            db.RoleGroups.Add(new RoleGroup
+            {
+                Code = definition.Code,
+                LabelKey = definition.LabelKey,
+                SortOrder = definition.SortOrder,
+                IsActive = true,
+                CreatedAt = now,
+            });
+        }
+
+        db.SaveChanges();
     }
 
     private static void SeedPermissions(AppDbContext db, IReadOnlyList<PermissionCatalog.Entry> catalog)

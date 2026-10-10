@@ -20,6 +20,19 @@ public class RoleResponse
     public bool IsActive { get; set; }
     public int UserCount { get; set; }
     public int PermissionCount { get; set; }
+    public int? RoleGroupId { get; set; }
+    public string? RoleGroupCode { get; set; }
+    public string? RoleGroupLabelKey { get; set; }
+}
+
+public class RoleGroupResponse
+{
+    public int Id { get; set; }
+    public string Code { get; set; } = string.Empty;
+    public string LabelKey { get; set; } = string.Empty;
+    public int SortOrder { get; set; }
+    public int RoleCount { get; set; }
+    public List<string> BaselinePermissions { get; set; } = [];
 }
 
 public class RolePermissionsResponse

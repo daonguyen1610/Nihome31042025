@@ -107,6 +107,17 @@ public class RoleServiceTests : IDisposable
         Assert.Equal(_db.Permissions.Count(), rp.Permissions.Count);
     }
 
+    [Fact]
+    public async Task ListRoleGroups_ReturnsFiveNiconDepartments_WithoutInventedDefaults()
+    {
+        var groups = await _svc.ListRoleGroupsAsync();
+
+        Assert.Equal(new[] { "CRM", "HR_ADMIN", "DESIGN", "CONSTRUCTION", "FINANCE" },
+            groups.Select(group => group.Code));
+        Assert.All(groups, group => Assert.Empty(group.BaselinePermissions));
+        Assert.All(groups, group => Assert.Equal(0, group.RoleCount));
+    }
+
     // ---------- UpdateRole ----------
 
     [Fact]
@@ -318,6 +329,94 @@ public class RoleServiceTests : IDisposable
         Assert.Equal(new[] { "dashboard.view" }, result.Value!.Permissions);
     }
 
+    // ---------- Role groups and baselines ----------
+
+    [Fact]
+    public async Task UpdateRoleGroupBaseline_PersistsAllowedPermissions()
+    {
+        var group = _db.RoleGroups.Single(item => item.Code == "DESIGN");
+
+        var result = await _svc.UpdateRoleGroupBaselineAsync(group.Id,
+            new UpdateRolePermissionsRequest { Permissions = ["dashboard.view", "design.projects.view"] },
+            SuperAdminUserId());
+
+        Assert.Equal(RoleWriteStatus.Success, result.Status);
+        Assert.Equal(new[] { "dashboard.view", "design.projects.view" }, result.Value!.BaselinePermissions);
+        _audit.Verify(logger => logger.Log(It.Is<AuditEvent>(entry =>
+            entry.Action == "rbac.role-group.baseline.update" && entry.ResourceId == "DESIGN")), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateRoleGroupBaseline_BlocksPrivilegeEscalation()
+    {
+        var group = _db.RoleGroups.Single(item => item.Code == "DESIGN");
+
+        var result = await _svc.UpdateRoleGroupBaselineAsync(group.Id,
+            new UpdateRolePermissionsRequest { Permissions = ["users.manage"] },
+            AdminUserId());
+
+        Assert.Equal(RoleWriteStatus.ForbiddenEscalation, result.Status);
+        Assert.Empty(_db.RoleGroupPermissions.Where(item => item.RoleGroupId == group.Id));
+    }
+
+    [Fact]
+    public async Task UpdateRoleGroupBaseline_RejectsUnknownPermissionCode()
+    {
+        var group = _db.RoleGroups.Single(item => item.Code == "DESIGN");
+
+        var result = await _svc.UpdateRoleGroupBaselineAsync(group.Id,
+            new UpdateRolePermissionsRequest { Permissions = ["does.not.exist"] },
+            SuperAdminUserId());
+
+        Assert.Equal(RoleWriteStatus.InvalidPermissionCodes, result.Status);
+        Assert.Empty(_db.RoleGroupPermissions.Where(item => item.RoleGroupId == group.Id));
+    }
+
+    [Fact]
+    public async Task UpdateRoleGroupBaseline_AllowsNarrowingWithoutRegrantingExistingPermission()
+    {
+        var group = _db.RoleGroups.Single(item => item.Code == "DESIGN");
+        await _svc.UpdateRoleGroupBaselineAsync(group.Id,
+            new UpdateRolePermissionsRequest { Permissions = ["dashboard.view", "users.manage"] },
+            SuperAdminUserId());
+
+        var result = await _svc.UpdateRoleGroupBaselineAsync(group.Id,
+            new UpdateRolePermissionsRequest { Permissions = ["users.manage"] },
+            AdminUserId());
+
+        Assert.Equal(RoleWriteStatus.Success, result.Status);
+        Assert.Equal(new[] { "users.manage" }, result.Value!.BaselinePermissions);
+    }
+
+    [Fact]
+    public async Task SetRoleGroup_AssignsBusinessRole_AndRejectsSystemRole()
+    {
+        var group = _db.RoleGroups.Single(item => item.Code == "CRM");
+        var businessRole = _db.Roles.First(item => !item.IsSystem);
+        var systemRole = _db.Roles.Single(item => item.Code == SystemRoleCodes.Admin);
+
+        var assigned = await _svc.SetRoleGroupAsync(businessRole.Id,
+            new SetRoleGroupRequest { RoleGroupId = group.Id }, SuperAdminUserId());
+        var rejected = await _svc.SetRoleGroupAsync(systemRole.Id,
+            new SetRoleGroupRequest { RoleGroupId = group.Id }, SuperAdminUserId());
+
+        Assert.Equal(RoleWriteStatus.Success, assigned.Status);
+        Assert.Equal(group.Id, assigned.Value!.RoleGroupId);
+        Assert.Equal(RoleWriteStatus.ForbiddenSystemRole, rejected.Status);
+    }
+
+    [Fact]
+    public async Task SetRoleGroup_RejectsUnknownGroup()
+    {
+        var businessRole = _db.Roles.First(item => !item.IsSystem);
+
+        var result = await _svc.SetRoleGroupAsync(businessRole.Id,
+            new SetRoleGroupRequest { RoleGroupId = 999_999 }, SuperAdminUserId());
+
+        Assert.Equal(RoleWriteStatus.InvalidRequest, result.Status);
+        Assert.Null(_db.Roles.AsNoTracking().Single(item => item.Id == businessRole.Id).RoleGroupId);
+    }
+
     // ---------- CreateRole ----------
 
     [Fact]
@@ -336,6 +435,20 @@ public class RoleServiceTests : IDisposable
         Assert.Equal(0, result.Value.PermissionCount);
         Assert.True(_db.Roles.AsNoTracking().Single(r => r.Code == "MARKETING").InitialPermissionsSeeded);
         _audit.Verify(a => a.Log(It.Is<AuditEvent>(e => e.Action == "rbac.role.create")), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateRole_RejectsBaselineImportWithoutGroup()
+    {
+        var result = await _svc.CreateRoleAsync(new CreateRoleRequest
+        {
+            Code = "NO_GROUP",
+            Name = "No group",
+            ImportGroupBaseline = true,
+        }, SuperAdminUserId());
+
+        Assert.Equal(RoleWriteStatus.InvalidRequest, result.Status);
+        Assert.False(_db.Roles.AsNoTracking().Any(role => role.Code == "NO_GROUP"));
     }
 
     [Fact]
@@ -426,6 +539,51 @@ public class RoleServiceTests : IDisposable
             .Select(rp => rp.Permission.Module + "." + rp.Permission.Action)
             .OrderBy(c => c).ToList();
         Assert.Equal(new[] { "dashboard.view", "profile.me.view" }, codes);
+    }
+
+    [Fact]
+    public async Task CreateRole_ImportsGroupBaseline_AsOneTimeSnapshot()
+    {
+        var group = _db.RoleGroups.Single(item => item.Code == "DESIGN");
+        var actor = SuperAdminUserId();
+        await _svc.UpdateRoleGroupBaselineAsync(group.Id,
+            new UpdateRolePermissionsRequest { Permissions = ["dashboard.view", "design.projects.view"] }, actor);
+
+        var created = await _svc.CreateRoleAsync(new CreateRoleRequest
+        {
+            Code = "DESIGN_REVIEWER",
+            Name = "Design reviewer",
+            RoleGroupId = group.Id,
+            ImportGroupBaseline = true,
+        }, actor);
+        await _svc.UpdateRoleGroupBaselineAsync(group.Id,
+            new UpdateRolePermissionsRequest { Permissions = ["dashboard.view"] }, actor);
+
+        Assert.Equal(RoleWriteStatus.Success, created.Status);
+        Assert.Equal(group.Id, created.Value!.RoleGroupId);
+        var rolePermissions = await _svc.GetRolePermissionsAsync(created.Value.Id);
+        Assert.Equal(new[] { "dashboard.view", "design.projects.view" }, rolePermissions!.Permissions);
+    }
+
+    [Fact]
+    public async Task CreateRole_ExplicitPermissionsOverrideGroupBaseline()
+    {
+        var group = _db.RoleGroups.Single(item => item.Code == "CRM");
+        var actor = SuperAdminUserId();
+        await _svc.UpdateRoleGroupBaselineAsync(group.Id,
+            new UpdateRolePermissionsRequest { Permissions = ["dashboard.view"] }, actor);
+
+        var created = await _svc.CreateRoleAsync(new CreateRoleRequest
+        {
+            Code = "CRM_EMPTY",
+            Name = "CRM empty",
+            RoleGroupId = group.Id,
+            ImportGroupBaseline = true,
+            Permissions = [],
+        }, actor);
+
+        Assert.Equal(RoleWriteStatus.Success, created.Status);
+        Assert.Equal(0, created.Value!.PermissionCount);
     }
 
     // ---------- DeleteRole ----------
