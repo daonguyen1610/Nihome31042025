@@ -717,15 +717,19 @@ const AdminQuotes = () => {
 
       {/* Create dialog — both pricing methods validate before the request leaves. */}
       <Dialog open={creating} onOpenChange={(o) => !o && setCreating(false)}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
-          <DialogHeader>
+        <DialogContent
+          className="left-2 right-2 max-h-[90vh] min-w-0 w-auto max-w-5xl translate-x-0 overflow-x-hidden overflow-y-auto p-4 sm:p-6 xl:left-1/2 xl:right-auto xl:w-full xl:-translate-x-1/2"
+          data-testid="quote-create-dialog"
+        >
+          <DialogHeader className="min-w-0">
             <DialogTitle>{t("quotes.new")}</DialogTitle>
             <DialogDescription>{t("quotes.subtitle")}</DialogDescription>
           </DialogHeader>
-          <div className="space-y-3">
-            <div>
+          <div className="min-w-0 space-y-3">
+            <div className="min-w-0">
               <Label>{t("quotes.field.opportunity")}</Label>
               <SearchableSelect
+                className="min-w-0"
                 value={createForm.opportunityId ? String(createForm.opportunityId) : null}
                 onChange={(v) => setCreateForm({ ...createForm, opportunityId: Number(v) })}
                 options={opportunities.map((o) => ({
@@ -808,21 +812,21 @@ const AdminQuotes = () => {
                 </div>
               </>
             ) : (
-              <div className="space-y-3 rounded-md border p-3">
+              <div className="min-w-0 space-y-3 rounded-md border p-3">
                 <BoqCatalogFields
                   key={`${createForm.materialRateCatalogId ?? "manual"}:${createForm.pricingEffectiveDate ?? "none"}`}
                   catalogId={createForm.materialRateCatalogId}
                   pricingDate={createForm.pricingEffectiveDate}
                   onApply={applyBoqCatalog}
                 />
-                <div className="flex items-center justify-between gap-2">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <Label>{t("quotes.boq.title")}</Label>
-                  <div className="flex gap-1.5">
-                    <Button type="button" size="sm" variant="ghost" data-testid="quote-create-boq-paste" onClick={() => setBoqPasteOpen(true)}>
+                  <div className="grid grid-cols-2 gap-1.5 sm:flex">
+                    <Button className="min-w-0" type="button" size="sm" variant="ghost" data-testid="quote-create-boq-paste" onClick={() => setBoqPasteOpen(true)}>
                       <Clipboard className="mr-1 h-3.5 w-3.5" />
                       {t("quotes.boq.paste")}
                     </Button>
-                    <Button type="button" size="sm" variant="outline" onClick={addBoqItem}>
+                    <Button className="min-w-0" type="button" size="sm" variant="outline" onClick={addBoqItem}>
                       <Plus className="mr-1 h-3.5 w-3.5" />
                       {t("quotes.boq.addRow")}
                     </Button>
@@ -871,7 +875,7 @@ const AdminQuotes = () => {
                               onChange={(event) => updateBoqItem(index, { name: event.target.value })}
                             />
                           </div>
-                          <div className="grid grid-cols-3 gap-3">
+                          <div className="grid gap-3 sm:grid-cols-3">
                             <div>
                               <Label className="text-xs">{t("quotes.boq.unit")}</Label>
                               <Input
@@ -918,7 +922,7 @@ const AdminQuotes = () => {
                 )}
               </div>
             )}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-3 sm:grid-cols-2">
               <div>
                 <Label>{t("quotes.field.discountPercent")}</Label>
                 <Input

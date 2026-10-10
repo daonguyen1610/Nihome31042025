@@ -1,7 +1,43 @@
+import type { Page } from "@playwright/test";
 import { expect, test, TEST_USERS } from "../fixtures/auth";
 import { hardDeleteBusinessRoot } from "../fixtures/hardDelete";
 
 const uid = () => Math.random().toString(36).slice(2, 10).toUpperCase();
+
+const expectCreateDialogResponsive = async (page: Page) => {
+  for (const viewport of [
+    { width: 390, height: 844 },
+    { width: 768, height: 1024 },
+    { width: 1440, height: 900 },
+  ]) {
+    await page.setViewportSize(viewport);
+    const dialog = page.getByTestId("quote-create-dialog");
+    const catalogFields = page.getByTestId("quote-boq-catalog-fields");
+    const revision = page.getByTestId("quote-boq-catalog-revision");
+    await expect(dialog).toBeVisible();
+    await expect(revision).toBeVisible();
+    const dimensions = await dialog.evaluate((element) => ({
+      clientWidth: element.clientWidth,
+      scrollWidth: element.scrollWidth,
+      left: element.getBoundingClientRect().left,
+      right: element.getBoundingClientRect().right,
+      width: getComputedStyle(element).width,
+      minWidth: getComputedStyle(element).minWidth,
+      maxWidth: getComputedStyle(element).maxWidth,
+      viewportWidth: window.innerWidth,
+      className: element.className,
+    }));
+    expect(dimensions.scrollWidth, JSON.stringify(dimensions)).toBeLessThanOrEqual(dimensions.clientWidth);
+    expect(dimensions.left, JSON.stringify(dimensions)).toBeGreaterThanOrEqual(0);
+    expect(dimensions.right).toBeLessThanOrEqual(viewport.width);
+    expect(await catalogFields.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+    expect(await revision.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    if (viewport.width === 1440) {
+      expect((await dialog.boundingBox())?.width).toBeGreaterThanOrEqual(1000);
+    }
+  }
+};
 
 test("pastes Excel BOQ safely and applies an approved material rate to a Unit Cost quote", async ({
   api,
@@ -217,6 +253,7 @@ test("pastes Excel BOQ safely and applies an approved material rate to a Unit Co
     await page.getByTestId("quote-boq-catalog").click();
     await page.getByRole("option", { name: new RegExp(boqCatalogCode) }).click();
     await expect(page.getByTestId("quote-boq-catalog-apply")).toBeEnabled();
+    await expectCreateDialogResponsive(page);
     await page.getByTestId("quote-boq-catalog-apply").click();
     await expect(page.getByTestId("quote-create-boq-name-0")).toHaveValue("Hạng mục từ danh mục");
     await page.getByTestId("quote-create-boq-name-0").fill("Hạng mục danh mục đã chỉnh sửa");
