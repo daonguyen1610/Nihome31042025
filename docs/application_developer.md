@@ -960,6 +960,23 @@ attachment. A durable email outbox is not yet part of this workflow, so an
 external delivery followed by a concurrent status conflict still needs manual
 reconciliation.
 
+The browser-to-SMTP delivery E2E uses an opt-in, non-relaying local mailbox:
+
+```bash
+docker compose -f docker-compose.yaml -f docker-compose.e2e.yaml up -d --build
+cd nihomeweb
+BASE_URL=http://localhost:5043 MAIL_SINK_URL=http://127.0.0.1:8025 \
+  npx playwright test e2e/smoke/direct-contract-from-opportunity.spec.ts \
+  e2e/smoke/quote-email-delivery.spec.ts
+```
+
+The test uses a unique `example.test` recipient and verifies the captured
+message and persisted quote status. Do not use production SMTP settings for
+this test. When finished, restore the normal backend configuration with
+`docker compose up -d --force-recreate nihomeBackend`; then stop and remove the
+test-only mailbox with `docker compose -f docker-compose.yaml -f docker-compose.e2e.yaml stop smtpSink`
+and `docker compose -f docker-compose.yaml -f docker-compose.e2e.yaml rm -f smtpSink`.
+
 Each Tender checklist row retains one current file. Users with
 `crm.tenders.manage` may assign an active user whose active role also has that
 permission. A changed assignment emits one `tender.checklist.assigned`

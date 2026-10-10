@@ -1,0 +1,24 @@
+services:
+  nihomeBackend:
+    depends_on:
+      smtpSink:
+        condition: service_started
+    environment:
+      EmailSettings__Host: smtpSink
+      EmailSettings__Port: "1025"
+      EmailSettings__UseSsl: "false"
+      EmailSettings__UseStartTls: "false"
+      EmailSettings__Username: e2e
+      EmailSettings__Password: e2e-only
+      EmailSettings__FromEmail: quotes@example.test
+
+  smtpSink:
+    image: node:22-bullseye-slim
+    command: node /e2e/smtp-sink.mjs
+    volumes:
+      - ./nihomeweb/e2e/fixtures/smtp-sink.mjs:/e2e/smtp-sink.mjs:ro
+    ports:
+      - "127.0.0.1:8025:8025"
+    networks:
+      - nihome-network
+    restart: unless-stopped

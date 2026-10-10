@@ -526,10 +526,10 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
     void loadSuggestedContractNumber();
   };
 
-  // Arriving from an approved quote opens the form with its customer and
-  // project context. The form validates any missing details before saving.
+  // Arriving from an opportunity opens the form, with or without a quote.
+  // The form validates any missing details before saving.
   useEffect(() => {
-    if (fromQuoteId === null) return;
+    if (prefillOpportunityId === null) return;
     setForm({
       ...emptyForm,
       direction: fixedDirection ?? emptyForm.direction,
@@ -601,7 +601,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
   // rejected by the client badge but accepted by the server, and vice versa.
   const milestoneSumOk = form.milestones.length === 0 || Math.abs(milestoneSum - 100) <= 0.01;
 
-  // Legacy opportunities and directly created contracts may reach this form
+  // Opportunities and directly created contracts may reach this form
   // before their customer has a project; open one here instead of sending the
   // user away to the project screen and back.
   const createProjectInline = async () => {
