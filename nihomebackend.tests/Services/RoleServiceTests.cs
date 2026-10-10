@@ -108,14 +108,14 @@ public class RoleServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task ListRoleGroups_ReturnsFiveNiconDepartments_WithoutInventedDefaults()
+    public async Task ListRoleGroups_ReturnsSeededNiconRoleMemberships_WithoutPermissionDefaults()
     {
         var groups = await _svc.ListRoleGroupsAsync();
 
         Assert.Equal(new[] { "CRM", "HR_ADMIN", "DESIGN", "CONSTRUCTION", "FINANCE" },
             groups.Select(group => group.Code));
         Assert.All(groups, group => Assert.Empty(group.BaselinePermissions));
-        Assert.All(groups, group => Assert.Equal(0, group.RoleCount));
+        Assert.Equal(new[] { 2, 1, 5, 4, 1 }, groups.Select(group => group.RoleCount));
     }
 
     // ---------- UpdateRole ----------
@@ -392,7 +392,7 @@ public class RoleServiceTests : IDisposable
     public async Task SetRoleGroup_AssignsBusinessRole_AndRejectsSystemRole()
     {
         var group = _db.RoleGroups.Single(item => item.Code == "CRM");
-        var businessRole = _db.Roles.First(item => !item.IsSystem);
+        var businessRole = _db.Roles.Single(item => item.Code == "BGD");
         var systemRole = _db.Roles.Single(item => item.Code == SystemRoleCodes.Admin);
 
         var assigned = await _svc.SetRoleGroupAsync(businessRole.Id,
@@ -408,7 +408,7 @@ public class RoleServiceTests : IDisposable
     [Fact]
     public async Task SetRoleGroup_RejectsUnknownGroup()
     {
-        var businessRole = _db.Roles.First(item => !item.IsSystem);
+        var businessRole = _db.Roles.Single(item => item.Code == "BGD");
 
         var result = await _svc.SetRoleGroupAsync(businessRole.Id,
             new SetRoleGroupRequest { RoleGroupId = 999_999 }, SuperAdminUserId());

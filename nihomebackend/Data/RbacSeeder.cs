@@ -40,6 +40,7 @@ public static class RbacSeeder
         SeedPermissions(db, catalog);
         SeedRoleGroups(db);
         SeedRoles(db, bundle);
+        SeedInitialBusinessRoleGroupsIfMissing(db, bundle);
         ForceSyncSystemRolePermissions(db, catalog, bundle);
         SeedInitialBusinessRolePermissionsIfMissing(db, catalog, bundle);
         BackfillUserRoleEntityIds(db);
@@ -108,6 +109,12 @@ public static class RbacSeeder
     private static void SeedRoles(AppDbContext db, RbacSeedData.Bundle bundle)
     {
         var existingCodes = db.Roles.Select(r => r.Code).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var groupIdByCode = db.RoleGroups.ToDictionary(g => g.Code, g => g.Id, StringComparer.OrdinalIgnoreCase);
+        var unknownGroupCode = bundle.BusinessRoles
+            .Select(role => role.GroupCode)
+            .FirstOrDefault(code => code != null && !groupIdByCode.ContainsKey(code));
+        if (unknownGroupCode != null)
+            throw new InvalidOperationException($"RBAC defaults reference unknown group '{unknownGroupCode}'.");
         var now = DateTime.UtcNow;
         var toAdd = new List<Role>();
 
@@ -122,6 +129,7 @@ public static class RbacSeeder
                 DescriptionKey = $"rbac.role.{code}.description",
                 IsSystem = true,
                 IsActive = true,
+                InitialGroupSeeded = true,
                 CreatedAt = now,
             });
         }
@@ -137,6 +145,10 @@ public static class RbacSeeder
                 DescriptionKey = br.DescriptionKey,
                 IsSystem = false,
                 IsActive = true,
+                RoleGroupId = br.GroupCode != null && groupIdByCode.TryGetValue(br.GroupCode, out var groupId)
+                    ? groupId
+                    : null,
+                InitialGroupSeeded = true,
                 CreatedAt = now,
             });
         }
@@ -144,6 +156,36 @@ public static class RbacSeeder
         if (toAdd.Count == 0) return;
         db.Roles.AddRange(toAdd);
         db.SaveChanges();
+    }
+
+    private static void SeedInitialBusinessRoleGroupsIfMissing(AppDbContext db, RbacSeedData.Bundle bundle)
+    {
+        var defaultsByRoleCode = bundle.BusinessRoles.ToDictionary(
+            role => role.Code,
+            role => role.GroupCode,
+            StringComparer.OrdinalIgnoreCase);
+        var groupIdByCode = db.RoleGroups.ToDictionary(
+            group => group.Code,
+            group => group.Id,
+            StringComparer.OrdinalIgnoreCase);
+        var roles = db.Roles
+            .Where(role => !role.IsSystem && !role.InitialGroupSeeded)
+            .ToList();
+
+        foreach (var role in roles)
+        {
+            if (defaultsByRoleCode.TryGetValue(role.Code, out var groupCode) && groupCode != null)
+            {
+                if (!groupIdByCode.TryGetValue(groupCode, out var groupId))
+                    throw new InvalidOperationException(
+                        $"RBAC role '{role.Code}' references unknown group '{groupCode}'.");
+                role.RoleGroupId = groupId;
+            }
+
+            role.InitialGroupSeeded = true;
+        }
+
+        if (roles.Count > 0) db.SaveChanges();
     }
 
     private static void ForceSyncSystemRolePermissions(

@@ -26,6 +26,13 @@ public class Role
     public RoleGroup? RoleGroup { get; set; }
 
     /// <summary>
+    /// Marks whether the role's initial NICON department group has been seeded.
+    /// Once true, subsequent restarts preserve administrator reassignment or an
+    /// intentional ungrouped state.
+    /// </summary>
+    public bool InitialGroupSeeded { get; set; }
+
+    /// <summary>
     /// Marks whether RbacSeeder has already populated the initial permission
     /// set for this role. Once true, subsequent reboots will never re-seed —
     /// admin edits (including emptying the role) are preserved. SUPER_ADMIN
