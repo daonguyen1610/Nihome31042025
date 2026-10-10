@@ -69,6 +69,7 @@ Report ambiguity, missing evidence, defects, blocked checks, and residual risk. 
 - Handle loading, error, empty, success, and responsive states where applicable.
 - Do not hardcode business data such as categories in React; fetch it from the backend API or an approved shared configuration source.
 - Do not hardcode 'localhost' or deployment-specific media/API hosts. Store backend media as host-relative paths such as '/images/example.png', resolved through a shared helper.
+- Every number entering to the form, for example: 100000. The frontend must resolve to readable version. like 100.000. Apply for every scenarios in the system.
 - Follow 'nihomeweb/CLAUDE.md' for web UI conventions when it exists.
 - Centralize content translations in '/admin/translations'. Add i18n keys rather than embedding display text.
 - Keep translation keys and seeded content aligned in all supported languages.
@@ -215,6 +216,7 @@ Hard delete is a business operation, not a direct 'DbSet.Remove' call. Every use
 - Seed dependency labels and messages in Vietnamese, English, Chinese, and Japanese.
 - Integration tests must cover authorization, counts/actions, confirmation, blockers, stale plans, concurrency, cleanup/unlinking, and unchanged state after rejection.
 - Seeded and demo roots follow the same contract as user-created data.
+- Support delete images, files whenever those resources did not link or use in the background job.
 
 ## ASP.NET Core and data access
 
