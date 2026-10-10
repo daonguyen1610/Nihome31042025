@@ -48,6 +48,7 @@ public class SampleContractSeederTests : IDisposable
         Assert.Contains(ContractStatus.OnHold, statuses);
         Assert.Contains(ContractStatus.Completed, statuses);
         Assert.Equal(6, contracts.Count);
+        Assert.Equal(contracts.Count, contracts.Select(contract => contract.QuoteId).Distinct().Count());
 
         Assert.NotEmpty(_db.Surveys);
         Assert.All(_db.Surveys, survey =>
@@ -64,11 +65,10 @@ public class SampleContractSeederTests : IDisposable
             Assert.NotNull(contract.OperationalProjectId);
             var operationalProject = _db.OperationalProjects.Single(item => item.Id == contract.OperationalProjectId);
             Assert.Equal(contract.CustomerId, operationalProject.CustomerId);
-            if (contract.QuoteId.HasValue)
-            {
-                var quote = _db.Quotes.Single(item => item.Id == contract.QuoteId.Value);
-                Assert.Equal(opportunity.Id, quote.OpportunityId);
-            }
+            Assert.NotNull(contract.QuoteId);
+            var quote = _db.Quotes.Single(item => item.Id == contract.QuoteId.Value);
+            Assert.Equal(opportunity.Id, quote.OpportunityId);
+            Assert.Contains(quote.Status, new[] { QuoteStatus.Approved, QuoteStatus.SentToCustomer, QuoteStatus.CustomerApproved });
         });
 
         var completed = Assert.Single(contracts, contract => contract.Status == ContractStatus.Completed);

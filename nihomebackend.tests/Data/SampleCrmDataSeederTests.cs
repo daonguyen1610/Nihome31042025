@@ -23,7 +23,7 @@ public class SampleCrmDataSeederTests : IDisposable
         Assert.Equal(2, _db.Leads.Count());
         Assert.Equal(5, _db.Customers.Count());
         Assert.Equal(6, _db.Opportunities.Count());
-        Assert.Equal(6, _db.Quotes.Count());
+        Assert.Equal(8, _db.Quotes.Count());
         Assert.Equal(5, _db.OperationalProjects.Count());
         Assert.Equal(3, _db.DesignProjects.Count());
         Assert.Equal(2, _db.Surveys.Count());

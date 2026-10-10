@@ -19,6 +19,8 @@ public class ContractsControllerTests : IntegrationTestBase
 {
     public ContractsControllerTests(NihomeWebApplicationFactory factory) : base(factory) { }
 
+    private readonly Dictionary<int, int> _approvedQuoteIds = new();
+
     private async Task<int> CreateCustomerAsync(bool createOperationalProject = true)
     {
         var payload = new
@@ -49,15 +51,38 @@ public class ContractsControllerTests : IntegrationTestBase
                 await db.SaveChangesAsync();
             });
         }
+        await SeedApprovedQuoteAsync(customerId);
         return customerId;
     }
 
-    private static object ContractBody(int customerId, string status = "Draft", decimal value = 100_000_000)
+    private async Task SeedApprovedQuoteAsync(int customerId)
+    {
+        _approvedQuoteIds[customerId] = await WithDbAsync(async db =>
+        {
+            var opportunity = new Opportunity
+            {
+                Name = $"Customer quotation for contract {Guid.NewGuid():N}",
+                CustomerId = customerId,
+            };
+            var quote = new Quote
+            {
+                Code = $"QT-CONTRACT-{Guid.NewGuid():N}",
+                Opportunity = opportunity,
+                Status = QuoteStatus.Approved,
+            };
+            db.Quotes.Add(quote);
+            await db.SaveChangesAsync();
+            return quote.Id;
+        });
+    }
+
+    private object ContractBody(int customerId, string status = "Draft", decimal value = 100_000_000)
         => new
         {
             customerId,
             direction = "Upstream",
             type = "DesignAndBuild",
+            quoteId = _approvedQuoteIds.GetValueOrDefault(customerId),
             status,
             value,
             signedDate = "2026-06-01T00:00:00Z",
@@ -99,6 +124,7 @@ public class ContractsControllerTests : IntegrationTestBase
             customerId,
             operationalProjectId = projectId,
             direction = "Upstream",
+            quoteId = _approvedQuoteIds[customerId],
             type = "DesignAndBuild",
             status = "Draft",
             value = 250_000_000,
@@ -401,6 +427,85 @@ public class ContractsControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task Create_UpstreamWithoutQuote_ReturnsBadRequestAndDoesNotPersist()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var customerId = await CreateCustomerAsync();
+
+        var response = await Client.PostAsJsonAsync("/api/contracts", new
+        {
+            customerId,
+            direction = "Upstream",
+            type = "DesignAndBuild",
+            status = "Draft",
+            value = 100_000_000,
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await response.Content.ReadAsStringAsync()).Should().Contain("Báo giá đã duyệt");
+        (await WithDbAsync(db => db.Contracts.CountAsync(contract => contract.CustomerId == customerId)))
+            .Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Update_UpstreamCannotRemoveSourceQuote()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var customerId = await CreateCustomerAsync();
+        var created = await Client.PostAsJsonAsync("/api/contracts", ContractBody(customerId));
+        created.StatusCode.Should().Be(HttpStatusCode.Created, await created.Content.ReadAsStringAsync());
+        var body = await ReadJsonAsync(created);
+        var id = body.GetProperty("id").GetInt32();
+        var rowVersion = body.GetProperty("rowVersion").GetString();
+
+        var update = await Client.PutAsJsonAsync($"/api/contracts/{id}", new
+        {
+            customerId,
+            direction = "Upstream",
+            type = "DesignAndBuild",
+            status = "Draft",
+            quoteId = (int?)null,
+            value = 100_000_000,
+            rowVersion,
+        });
+
+        update.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var unchanged = await Client.GetAsync($"/api/contracts/{id}");
+        var saved = await ReadJsonAsync(unchanged);
+        saved.GetProperty("quoteId").GetInt32().Should().Be(_approvedQuoteIds[customerId]);
+        saved.GetProperty("rowVersion").GetString().Should().Be(rowVersion);
+    }
+
+    [Fact]
+    public async Task OpportunityDetail_IdentifiesQuoteAlreadyUsedByContract()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var customerId = await CreateCustomerAsync();
+        var quoteId = _approvedQuoteIds[customerId];
+        var opportunityId = await WithDbAsync(db => db.Quotes
+            .Where(quote => quote.Id == quoteId)
+            .Select(quote => quote.OpportunityId)
+            .SingleAsync());
+
+        var created = await Client.PostAsJsonAsync("/api/contracts", new
+        {
+            customerId,
+            opportunityId,
+            quoteId,
+            direction = "Upstream",
+            type = "DesignAndBuild",
+            status = "Draft",
+            value = 100_000_000,
+        });
+        created.StatusCode.Should().Be(HttpStatusCode.Created, await created.Content.ReadAsStringAsync());
+
+        var detail = await Client.GetAsync($"/api/opportunities/{opportunityId}");
+        detail.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await ReadJsonAsync(detail)).GetProperty("contracts").EnumerateArray()
+            .Should().ContainSingle(contract => contract.GetProperty("quoteId").GetInt32() == quoteId);
+    }
+
+    [Fact]
     public async Task List_ByOperationalProject_ReturnsMultipleContractTypesForOnlyThatProject()
     {
         await AuthTestHelper.AuthenticateAsync(
@@ -421,11 +526,13 @@ public class ContractsControllerTests : IntegrationTestBase
 
         async Task<(int Id, string Type)> CreateContractAsync(int operationalProjectId, string type)
         {
+            await SeedApprovedQuoteAsync(customerId);
             var response = await Client.PostAsJsonAsync("/api/contracts", new
             {
                 customerId,
                 operationalProjectId,
                 direction = "Upstream",
+                quoteId = _approvedQuoteIds[customerId],
                 type,
                 status = "Draft",
                 value = 100_000_000,
@@ -513,6 +620,7 @@ public class ContractsControllerTests : IntegrationTestBase
             customerId = contractCustomerId,
             operationalProjectId = projectId,
             direction = "Upstream",
+            quoteId = _approvedQuoteIds[contractCustomerId],
             type = "Design",
             status = "Draft",
             value = 100,
@@ -571,6 +679,7 @@ public class ContractsControllerTests : IntegrationTestBase
         {
             customerId,
             direction = "Upstream",
+            quoteId = _approvedQuoteIds[customerId],
             type = "DesignAndBuild",
             status = "Draft",
             value = 500_000_000,
@@ -676,6 +785,7 @@ public class ContractsControllerTests : IntegrationTestBase
             customerId,
             contractNumber = number,
             direction = "Upstream",
+            quoteId = _approvedQuoteIds[customerId],
             type = "DesignAndBuild",
             status = "Draft",
             value = 100,
@@ -683,11 +793,14 @@ public class ContractsControllerTests : IntegrationTestBase
         first.StatusCode.Should().Be(HttpStatusCode.Created);
         (await ReadJsonAsync(first)).GetProperty("contractNumber").GetString().Should().Be(number);
 
+        await SeedApprovedQuoteAsync(customerId);
+
         var dup = await Client.PostAsJsonAsync("/api/contracts", new
         {
             customerId,
             contractNumber = number,
             direction = "Upstream",
+            quoteId = _approvedQuoteIds[customerId],
             type = "DesignAndBuild",
             status = "Draft",
             value = 100,
@@ -836,6 +949,7 @@ public class ContractsControllerTests : IntegrationTestBase
             customerId,
             ownerUserId = 9_999_999,
             direction = "Upstream",
+            quoteId = _approvedQuoteIds[customerId],
             type = "DesignAndBuild",
             status = "Draft",
             value = 100,
@@ -860,6 +974,7 @@ public class ContractsControllerTests : IntegrationTestBase
         {
             customerId,
             direction = "Upstream",
+            quoteId = _approvedQuoteIds[customerId],
             type = "DesignAndBuild",
             status = "Draft",
             value = 1_000_000_000,
@@ -890,6 +1005,7 @@ public class ContractsControllerTests : IntegrationTestBase
         {
             customerId,
             direction = "Upstream",
+            quoteId = _approvedQuoteIds[customerId],
             type = "DesignAndBuild",
             status = "Draft",
             value = 100_000_000,
@@ -905,6 +1021,7 @@ public class ContractsControllerTests : IntegrationTestBase
 
     private async Task<int> CreateContractAsync(int customerId, string status = "Draft", decimal value = 100_000_000m)
     {
+        await SeedApprovedQuoteAsync(customerId);
         var res = await Client.PostAsJsonAsync("/api/contracts", ContractBody(customerId, "Draft", value));
         res.StatusCode.Should().Be(HttpStatusCode.Created);
         var body = await ReadJsonAsync(res);
@@ -1038,6 +1155,7 @@ public class ContractsControllerTests : IntegrationTestBase
             await db.SaveChangesAsync();
             return customer.Id;
         });
+        await SeedApprovedQuoteAsync(customerId);
         var contractId = await CreateContractAsync(customerId);
 
         var missingTax = await Client.PostAsJsonAsync(
@@ -1246,6 +1364,7 @@ public class ContractsControllerTests : IntegrationTestBase
         {
             customerId,
             direction = "Upstream",
+            quoteId = _approvedQuoteIds[customerId],
             type = "DesignAndBuild",
             status = "Draft",
             value = 100_000_000,
@@ -1304,6 +1423,7 @@ public class ContractsControllerTests : IntegrationTestBase
         {
             customerId,
             direction = "Upstream",
+            quoteId = _approvedQuoteIds[customerId],
             type = "DesignAndBuild",
             status = "Draft",
             value = 100_000_000,

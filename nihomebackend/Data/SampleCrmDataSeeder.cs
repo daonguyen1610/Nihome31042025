@@ -567,6 +567,8 @@ public static class SampleCrmDataSeeder
             (3, QuoteMethod.UnitCost, QuoteStatus.CustomerApproved,  30, "Showroom Thành Đạt · khách đã duyệt"),
             (5, QuoteMethod.Boq,      QuoteStatus.Rejected,          30, "Mở rộng nhà phố Nguyễn Văn An · khách từ chối"),
             (4, QuoteMethod.UnitCost, QuoteStatus.CustomerApproved,  60, "Cải tạo trụ sở Tân Phúc · khách đã duyệt"),
+            (0, QuoteMethod.Boq,      QuoteStatus.Approved,          45, "Nhà phố Nguyễn Văn An · báo giá thiết kế đã duyệt"),
+            (3, QuoteMethod.Boq,      QuoteStatus.CustomerApproved,  30, "Showroom Thành Đạt · báo giá thi công riêng đã duyệt"),
         };
 
         var snapshotQuoteId = 0;
@@ -878,8 +880,10 @@ public static class SampleCrmDataSeeder
             .OrderByDescending(q => q.Status == QuoteStatus.CustomerApproved)
             .ThenBy(q => q.Id)
             .ToList()
+            .Where(q => q.Status is QuoteStatus.Approved or QuoteStatus.SentToCustomer or QuoteStatus.CustomerApproved)
             .GroupBy(q => q.OpportunityId)
-            .ToDictionary(group => group.Key, group => group.First());
+            .ToDictionary(group => group.Key, group => group.ToList());
+        var usedQuoteIds = new HashSet<int>();
 
         // (opportunityIdx, status, signedOffsetDays, durationDays, value, label)
         // The InProgress row uses a short remaining window on purpose so
@@ -898,7 +902,8 @@ public static class SampleCrmDataSeeder
         {
             var (opportunityIdx, type, status, signedOffset, durationDays, value, label) = seeds[index];
             var opportunity = sampleOpportunities[opportunityIdx % sampleOpportunities.Count];
-            sampleQuotes.TryGetValue(opportunity.Id, out var quote);
+            var quote = sampleQuotes.GetValueOrDefault(opportunity.Id)?
+                .FirstOrDefault(item => !usedQuoteIds.Contains(item.Id));
             var signedDate = status == ContractStatus.Draft ? (DateTime?)null : now.AddDays(signedOffset);
             var startDate = signedDate?.AddDays(7);
             var endDate = startDate?.AddDays(durationDays);
@@ -914,8 +919,13 @@ public static class SampleCrmDataSeeder
                     existing.Direction = ContractDirection.Upstream;
                     existing.Type = type;
                 }
+                // Do not overwrite an admin-managed relationship on rerun.
+                if (existing.QuoteId.HasValue) usedQuoteIds.Add(existing.QuoteId.Value);
                 continue;
             }
+
+            if (quote is null) continue;
+            usedQuoteIds.Add(quote.Id);
 
             db.Contracts.Add(new Contract
             {
@@ -924,7 +934,7 @@ public static class SampleCrmDataSeeder
                 Direction = ContractDirection.Upstream,
                 Type = type,
                 OpportunityId = opportunity.Id,
-                QuoteId = quote?.Id,
+                QuoteId = quote.Id,
                 OwnerUserId = owner.Id,
                 Status = status,
                 SignedDate = signedDate,

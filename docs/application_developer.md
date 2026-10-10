@@ -990,7 +990,15 @@ completed. The quote must match the contract's customer, opportunity, and
 project, the contract must have no source quote yet, and no other live
 contract may use the quote; the contract's empty opportunity is filled from
 the quote. Creating a contract with a quote, or changing its quote, applies
-the same approved-status rule.
+the same approved-status rule. Creating an `Upstream` contract requires the
+approved source quote even in `Draft`; editing or transitioning it cannot
+remove the link. A won tender's approved estimate does not replace the CRM
+customer quotation, which must be approved before contract creation.
+`Downstream` supplier/subcontractor contracts do not require a customer quote.
+The quote deletion-impact plan blocks deletion while any contract references
+the quote; deleting it must not detach a contract's required source.
+Opportunity detail includes `quoteId` on each linked contract so the Sales UI
+does not offer a quote already used by a non-cancelled contract.
 
 Contract creation derives `OwnerUserId` from the selected customer's `OwnerUserId`. An authorized explicit owner takes precedence; if the customer is unassigned, the caller is used as the fallback. Sales users cannot create or move a contract into another salesperson's customer scope. Opportunity and quote references must belong to the selected customer, and a supplied quote must belong to the supplied opportunity.
 
@@ -2600,7 +2608,7 @@ Official references: [Drive API v3](https://developers.google.com/workspace/driv
 
 Development-only sample seeders create a compact deterministic demonstration
 dataset: two leads, five customers/operational projects, six opportunities,
-six quotes, six contracts, three design projects, two surveys and two tenders.
+eight quotes, six contracts, three design projects, two surveys and two tenders.
 The linked examples cover pre-contract concept, quotation, contracting,
 permitting, construction, acceptance, as-built and handover. The main chain is
 the fictional Nhà máy may An Phú at KCN Quế Võ; a separate fictional Nhà máy

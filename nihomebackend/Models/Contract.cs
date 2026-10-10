@@ -24,8 +24,8 @@ public class Contract : IConcurrencyTracked
     public ContractDirection Direction { get; set; } = ContractDirection.Upstream;
 
     /// <summary>
-    /// Legacy rows remain Unclassified until an authorized user reviews them.
     /// New writes must use a business type compatible with <see cref="Direction"/>.
+    /// Unclassified records cannot progress until corrected.
     /// </summary>
     public ContractType Type { get; set; } = ContractType.Unclassified;
 
@@ -37,11 +37,11 @@ public class Contract : IConcurrencyTracked
     public int? OperationalProjectId { get; set; }
     public OperationalProject? OperationalProject { get; set; }
 
-    /// <summary>Optional source opportunity (nullable — a contract can be drafted directly).</summary>
+    /// <summary>Optional source opportunity; downstream contracts need no CRM opportunity.</summary>
     public int? OpportunityId { get; set; }
     public Opportunity? Opportunity { get; set; }
 
-    /// <summary>Optional source quote used as the pricing baseline.</summary>
+    /// <summary>Required source quote for upstream contracts; not required downstream.</summary>
     public int? QuoteId { get; set; }
     public Quote? Quote { get; set; }
 

@@ -15,6 +15,7 @@ public class OpportunityContractLinkResponse
 {
     public int Id { get; set; }
     public string ContractNumber { get; set; } = string.Empty;
+    public int? QuoteId { get; set; }
     public ContractStatus Status { get; set; }
     public DateTime? SignedDate { get; set; }
 }

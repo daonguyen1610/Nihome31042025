@@ -92,14 +92,35 @@ public class ContractServiceTests : IDisposable
         DateTime? signed = null,
         DateTime? start = null,
         DateTime? end = null,
-        int? owner = null) =>
-        new()
+        int? owner = null)
+    {
+        var selectedCustomerId = customerId ?? _customerA;
+        int? quoteId = null;
+        if (selectedCustomerId == _customerA || selectedCustomerId == _customerB)
+        {
+            var opportunity = new Opportunity
+            {
+                Name = $"Contract quotation opportunity {Guid.NewGuid():N}",
+                CustomerId = selectedCustomerId,
+            };
+            var quote = new Quote
+            {
+                Code = $"QT-CONTRACT-{Guid.NewGuid():N}",
+                Opportunity = opportunity,
+                Status = QuoteStatus.Approved,
+            };
+            _db.Quotes.Add(quote);
+            _db.SaveChanges();
+            quoteId = quote.Id;
+        }
+        return new()
         {
             ContractNumber = number,
-            CustomerId = customerId ?? _customerA,
-            OperationalProjectId = (customerId ?? _customerA) == _customerB ? _projectB : _projectA,
+            CustomerId = selectedCustomerId,
+            OperationalProjectId = selectedCustomerId == _customerB ? _projectB : _projectA,
             Direction = ContractDirection.Upstream,
             Type = ContractType.DesignAndBuild,
+            QuoteId = quoteId,
             Status = status,
             Value = value,
             SignedDate = signed,
@@ -107,6 +128,7 @@ public class ContractServiceTests : IDisposable
             EndDate = end,
             OwnerUserId = owner,
         };
+    }
 
     // ---------------- Create ----------------
 
@@ -126,6 +148,65 @@ public class ContractServiceTests : IDisposable
         Assert.StartsWith("HD-", result.ContractNumber);
         Assert.EndsWith("-0001", result.ContractNumber);
         Assert.Equal(42, result.OwnerUserId);
+    }
+
+    [Fact]
+    public async Task Create_UpstreamWithoutApprovedQuote_RejectsWithoutPersistingContract()
+    {
+        var request = Req();
+        request.QuoteId = null;
+
+        var error = await Assert.ThrowsAsync<ContractValidationException>(
+            () => _sut.CreateAsync(request, 1, canReassignOwner: true));
+
+        Assert.Contains("Báo giá đã duyệt", error.Message);
+        Assert.Empty(_db.Contracts);
+    }
+
+    [Fact]
+    public async Task Create_QuoteAlreadyUsedByLiveContract_RejectsDuplicate()
+    {
+        var firstRequest = Req();
+        var first = await _sut.CreateAsync(firstRequest, 1, canReassignOwner: true);
+        var secondRequest = Req();
+        secondRequest.QuoteId = firstRequest.QuoteId;
+
+        var error = await Assert.ThrowsAsync<ContractValidationException>(
+            () => _sut.CreateAsync(secondRequest, 1, canReassignOwner: true));
+
+        Assert.Contains(first.ContractNumber, error.Message);
+        Assert.Single(_db.Contracts);
+    }
+
+    [Fact]
+    public async Task Create_UnapprovedQuote_RejectsWithoutPersistingContract()
+    {
+        var request = Req();
+        _db.Quotes.Find(request.QuoteId)!.Status = QuoteStatus.Draft;
+        await _db.SaveChangesAsync();
+
+        var error = await Assert.ThrowsAsync<ContractValidationException>(
+            () => _sut.CreateAsync(request, 1, canReassignOwner: true));
+
+        Assert.Contains("chưa được duyệt", error.Message);
+        Assert.Empty(_db.Contracts);
+    }
+
+    [Fact]
+    public async Task Update_CannotAttachQuoteUsedByAnotherLiveContract()
+    {
+        var firstRequest = Req();
+        var first = await _sut.CreateAsync(firstRequest, 1, canReassignOwner: true);
+        var secondRequest = Req();
+        var second = await _sut.CreateAsync(secondRequest, 1, canReassignOwner: true);
+        secondRequest.QuoteId = firstRequest.QuoteId;
+        secondRequest.ContractNumber = second.ContractNumber;
+
+        await Assert.ThrowsAsync<ContractValidationException>(() =>
+            _sut.UpdateAsync(second.Id, secondRequest, 1, canSeeAll: true, canReassignOwner: true));
+
+        Assert.Equal(second.QuoteId, _db.Contracts.Single(item => item.Id == second.Id).QuoteId);
+        Assert.Equal(first.QuoteId, _db.Contracts.Single(item => item.Id == first.Id).QuoteId);
     }
 
     [Fact]
@@ -1373,6 +1454,7 @@ public class ContractServiceTests : IDisposable
         var opportunity = SeedWonOpportunity();
         var request = Req(signed: DateTime.UtcNow);
         request.OpportunityId = opportunity.Id;
+        AlignQuoteWithOpportunity(request, opportunity);
         var contract = await _sut.CreateAsync(request, 1, canReassignOwner: true);
         _db.Contracts.Find(contract.Id)!.Status = ContractStatus.Signed;
         await _db.SaveChangesAsync();
@@ -1401,6 +1483,7 @@ public class ContractServiceTests : IDisposable
         var opportunity = SeedWonOpportunity();
         var request = Req(signed: DateTime.UtcNow);
         request.OpportunityId = opportunity.Id;
+        AlignQuoteWithOpportunity(request, opportunity);
         var contract = await _sut.CreateAsync(request, 1, canReassignOwner: true);
         _db.Contracts.Find(contract.Id)!.Status = ContractStatus.Signed;
         await _db.SaveChangesAsync();
@@ -1416,6 +1499,7 @@ public class ContractServiceTests : IDisposable
         var opportunity = SeedWonOpportunity();
         var request = Req(signed: DateTime.UtcNow);
         request.OpportunityId = opportunity.Id;
+        AlignQuoteWithOpportunity(request, opportunity);
         var contract = await _sut.CreateAsync(request, 1, canReassignOwner: true);
         _db.Contracts.Find(contract.Id)!.Status = ContractStatus.Signed;
         await _db.SaveChangesAsync();
@@ -1431,8 +1515,10 @@ public class ContractServiceTests : IDisposable
         var opportunity = SeedWonOpportunity();
         var firstRequest = Req(number: "HD-WON-1", signed: DateTime.UtcNow);
         firstRequest.OpportunityId = opportunity.Id;
+        AlignQuoteWithOpportunity(firstRequest, opportunity);
         var secondRequest = Req(number: "HD-WON-2", signed: DateTime.UtcNow);
         secondRequest.OpportunityId = opportunity.Id;
+        AlignQuoteWithOpportunity(secondRequest, opportunity);
         var first = await _sut.CreateAsync(firstRequest, 1, canReassignOwner: true);
         var second = await _sut.CreateAsync(secondRequest, 1, canReassignOwner: true);
         _db.Contracts.Find(first.Id)!.Status = ContractStatus.Signed;
@@ -1448,8 +1534,10 @@ public class ContractServiceTests : IDisposable
         var opportunity = SeedWonOpportunity();
         var firstRequest = Req(number: "HD-WON-UPDATE-1", signed: DateTime.UtcNow);
         firstRequest.OpportunityId = opportunity.Id;
+        AlignQuoteWithOpportunity(firstRequest, opportunity);
         var secondRequest = Req(number: "HD-WON-UPDATE-2", signed: DateTime.UtcNow);
         secondRequest.OpportunityId = opportunity.Id;
+        AlignQuoteWithOpportunity(secondRequest, opportunity);
         var first = await _sut.CreateAsync(firstRequest, 1, canReassignOwner: true);
         var second = await _sut.CreateAsync(secondRequest, 1, canReassignOwner: true);
         _db.Contracts.Find(first.Id)!.Status = ContractStatus.Signed;
@@ -1475,5 +1563,11 @@ public class ContractServiceTests : IDisposable
         _db.Opportunities.Add(opportunity);
         _db.SaveChanges();
         return opportunity;
+    }
+
+    private void AlignQuoteWithOpportunity(UpsertContractRequest request, Opportunity opportunity)
+    {
+        _db.Quotes.Find(request.QuoteId)!.OpportunityId = opportunity.Id;
+        _db.SaveChanges();
     }
 }

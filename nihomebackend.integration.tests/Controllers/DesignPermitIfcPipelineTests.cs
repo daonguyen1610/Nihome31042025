@@ -26,6 +26,7 @@ public sealed class DesignPermitIfcPipelineTests(NihomeWebApplicationFactory fac
             customerId = fixture.CustomerId,
             operationalProjectId = fixture.OperationalProjectId,
             direction = "Upstream",
+            quoteId = fixture.QuoteId,
             type = "DesignAndBuild",
             value = 850000000m,
             scopeOfWork = "Factory design, permits and construction delivery",
@@ -242,7 +243,7 @@ public sealed class DesignPermitIfcPipelineTests(NihomeWebApplicationFactory fac
         response.EnsureSuccessStatusCode();
         (await ReadJsonAsync(response)).GetProperty("status").GetString().Should().Be(status);
     }
-    private async Task<(int CustomerId, int OperationalProjectId, int LeadId)> SeedFoundationAsync() =>
+    private async Task<(int CustomerId, int OperationalProjectId, int LeadId, int QuoteId)> SeedFoundationAsync() =>
         await WithDbAsync(async db =>
         {
             var roleIds = new Dictionary<string, int>();
@@ -253,6 +254,21 @@ public sealed class DesignPermitIfcPipelineTests(NihomeWebApplicationFactory fac
             await db.SaveChangesAsync();
             var operational = new OperationalProject { Code = UniqueSlug("PJ-DESIGN-PIPE"), Name = "Factory permit and construction design", CustomerId = customer.Id, ProjectManagerUserId = roleIds["PM"] };
             db.OperationalProjects.Add(operational);
+            await db.SaveChangesAsync();
+            var opportunity = new Opportunity
+            {
+                Name = "Factory design and construction opportunity",
+                CustomerId = customer.Id,
+                OperationalProjectId = operational.Id,
+            };
+            var quote = new Quote
+            {
+                Code = UniqueSlug("QT-DESIGN-PIPE"),
+                Opportunity = opportunity,
+                OperationalProjectId = operational.Id,
+                Status = QuoteStatus.Approved,
+            };
+            db.Quotes.Add(quote);
             await db.SaveChangesAsync();
             foreach (var member in new[] { ("PM", ProjectTeamRoleCode.ProjectManager), ("DESIGN_LEAD", ProjectTeamRoleCode.DesignLead), ("DESIGN", ProjectTeamRoleCode.Architect) })
                 db.OperationalProjectMembers.Add(new OperationalProjectMember
@@ -266,6 +282,6 @@ public sealed class DesignPermitIfcPipelineTests(NihomeWebApplicationFactory fac
                     Roles = [new() { RoleCode = member.Item2, Scope = ProjectRoleScope.Project, StartedAt = DateTime.UtcNow.AddDays(-1) }],
                 });
             await db.SaveChangesAsync();
-            return (customer.Id, operational.Id, roleIds["DESIGN_LEAD"]);
+            return (customer.Id, operational.Id, roleIds["DESIGN_LEAD"], quote.Id);
         });
 }

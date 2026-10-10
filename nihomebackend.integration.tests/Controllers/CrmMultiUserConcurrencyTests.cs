@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using NihomeBackend.Models;
 
 namespace NihomeBackend.IntegrationTests.Controllers;
 
@@ -245,10 +246,30 @@ public class CrmMultiUserConcurrencyTests : IntegrationTestBase
         });
         projectResponse.EnsureSuccessStatusCode();
         var operationalProjectId = (await ReadJsonAsync(projectResponse)).GetProperty("id").GetInt32();
+        var quoteId = await WithDbAsync(async db =>
+        {
+            var opportunity = new Opportunity
+            {
+                Name = $"Concurrent contract opportunity {Guid.NewGuid():N}",
+                CustomerId = customerId,
+                OperationalProjectId = operationalProjectId,
+            };
+            var quote = new Quote
+            {
+                Code = $"QT-CONCURRENT-{Guid.NewGuid():N}",
+                Opportunity = opportunity,
+                OperationalProjectId = operationalProjectId,
+                Status = QuoteStatus.Approved,
+            };
+            db.Quotes.Add(quote);
+            await db.SaveChangesAsync();
+            return quote.Id;
+        });
         using var created = await manager.PostAsJsonAsync("/api/contracts", new
         {
             customerId,
             operationalProjectId,
+            quoteId,
             direction = "Upstream",
             type = "DesignAndBuild",
             status = "Draft",
@@ -270,6 +291,7 @@ public class CrmMultiUserConcurrencyTests : IntegrationTestBase
                 contractNumber,
                 customerId,
                 operationalProjectId,
+                quoteId,
                 direction = "Upstream",
                 type = "DesignAndBuild",
                 status = "Draft",
@@ -281,6 +303,7 @@ public class CrmMultiUserConcurrencyTests : IntegrationTestBase
                 contractNumber,
                 customerId,
                 operationalProjectId,
+                quoteId,
                 direction = "Upstream",
                 type = "DesignAndBuild",
                 status = "Draft",

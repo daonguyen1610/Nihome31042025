@@ -603,7 +603,7 @@ public class QuoteService(
         }, plan =>
         {
             if (!plan.Impact.CanDelete)
-                throw new QuoteOperationException("Không thể xoá báo giá vì còn tệp cần được xử lý an toàn.");
+                throw new QuoteOperationException("Không thể xoá báo giá vì còn Hợp đồng tham chiếu hoặc tệp cần được xử lý an toàn.");
             if (!string.Equals(request.PlanToken?.Trim(), plan.Impact.PlanToken, StringComparison.Ordinal))
                 throw new DeletionPlanChangedException(
                     "Dữ liệu liên quan đã thay đổi. Vui lòng xem lại danh sách ảnh hưởng trước khi xoá.");

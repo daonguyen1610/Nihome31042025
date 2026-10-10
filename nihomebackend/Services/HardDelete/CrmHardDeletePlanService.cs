@@ -594,7 +594,7 @@ public sealed class CrmHardDeletePlanService(
         AddImpact(impactItems, "quote.projectDocumentSidecarBlockers", sidecarBlockers, DeletionImpactActions.Block, quoteDetail, quoteLinks);
         AddImpact(impactItems, "quote.winningOpportunities", opportunityIdentifiers, DeletionImpactActions.Unlink, null,
             opportunityRecords.Select(item => DetailLink(item.Name, $"/admin/opportunities/{item.Id}")).ToList());
-        AddImpact(impactItems, "quote.contracts", contractIdentifiers, DeletionImpactActions.Unlink, null,
+        AddImpact(impactItems, "quote.contracts", contractIdentifiers, DeletionImpactActions.Block, null,
             contractRecords.Select(item => DetailLink(item.ContractNumber, $"/admin/contracts/{item.Id}")).ToList());
 
         var rowVersion = CrmConcurrency.Encode(quote.RowVersion);
@@ -622,7 +622,7 @@ public sealed class CrmHardDeletePlanService(
             ResourceLabel = quote.Code,
             RequiredConfirmation = quote.Code,
             PlanToken = token,
-            CanDelete = fileBlockers.Count == 0 && sidecarBlockers.Count == 0,
+            CanDelete = fileBlockers.Count == 0 && sidecarBlockers.Count == 0 && contractIdentifiers.Count == 0,
             TotalAffected = 1 + itemIdentifiers.Count + documentIdentifiers.Count +
                 approvalLogIdentifiers.Count + snapshotIdentifiers.Count + translationIdentifiers.Count +
                 localPaths.Count + fileBlockers.Count + driveIdentifiers.Count +
@@ -964,7 +964,7 @@ public sealed class QuoteHardDeleteHandler(
             ?? throw new HardDeleteAuthorizationException("Báo giá cần xoá không còn tồn tại trước khi tác vụ bắt đầu.");
         DesignProjectHardDeleteHandler.EnsurePlan(context.PlanToken, current.Impact.PlanToken);
         if (!current.Impact.CanDelete)
-            throw new QuoteOperationException("Không thể xoá báo giá vì còn tệp cần được xử lý an toàn.");
+            throw new QuoteOperationException("Không thể xoá báo giá vì còn Hợp đồng tham chiếu hoặc tệp cần được xử lý an toàn.");
     }
 
     public async Task FinalizeAsync(HardDeleteResourceContext context, CancellationToken ct = default)
@@ -987,7 +987,7 @@ public sealed class QuoteHardDeleteHandler(
             ?? throw new HardDeleteOperationException("resource_not_found", "Không tìm thấy báo giá.");
         DesignProjectHardDeleteHandler.EnsurePlan(context.PlanToken, current.Impact.PlanToken);
         if (!current.Impact.CanDelete)
-            throw new QuoteOperationException("Không thể xoá báo giá vì còn tệp cần được xử lý an toàn.");
+            throw new QuoteOperationException("Không thể xoá báo giá vì còn Hợp đồng tham chiếu hoặc tệp cần được xử lý an toàn.");
         try
         {
             var documentIds = await db.QuoteDocuments
@@ -1023,10 +1023,6 @@ public sealed class QuoteHardDeleteHandler(
             var opportunities = await db.Opportunities
                 .Where(item => item.WonQuoteId == quoteId).ToListAsync(ct);
             foreach (var opportunity in opportunities) opportunity.WonQuoteId = null;
-            var contracts = await db.Contracts
-                .Where(item => item.QuoteId == quoteId).ToListAsync(ct);
-            foreach (var contract in contracts) contract.QuoteId = null;
-
             await db.QuoteItems.Where(item => item.QuoteId == quoteId).ExecuteDeleteOrRemoveAsync(db, ct);
             await db.QuoteDocuments.Where(item => item.QuoteId == quoteId).ExecuteDeleteOrRemoveAsync(db, ct);
             await db.QuoteApprovalLogs.Where(item => item.QuoteId == quoteId).ExecuteDeleteOrRemoveAsync(db, ct);

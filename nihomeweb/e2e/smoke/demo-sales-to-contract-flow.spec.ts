@@ -4,9 +4,9 @@ import { expect, test, TEST_USERS } from "../fixtures/auth";
 
 /**
  * Business pipeline behind the 2026-10 demo fixes, driven through the real
- * stack: lead → opportunity (+ project) → quote → contract, an approved quote
- * linked to a contract drafted first, design before contract (scenario B), and
- * a won tender continuing to a contract (scenario C).
+ * stack: lead → opportunity (+ project) → approved quote → contract, design
+ * before contract (scenario B), and a won tender continuing through an
+ * approved customer quote to a contract (scenario C).
  *
  * The records are kept (realistic names) so they can be shown live, so the
  * spec only runs with DEMO_FLOW=1. Set DEMO_SHOT_DIR to save one screenshot
@@ -111,7 +111,7 @@ test("sales, design-first and tender flows reach a contract without dead ends", 
   await shot("06-quay-lai-bao-gia.png");
   await page.unroute(/\/api\/material-rate-catalogs\?/);
 
-  // ---- 3. Approved quote → contract, and linking to a drafted contract -----
+  // ---- 3. Approved quote → contract -----------------------------------------
   for (const targetStage of ["Qualification", "Proposal"]) {
     opportunity = await call("salesManager", "patch", `/api/opportunities/${opportunityId}/stage`, {
       targetStage, rowVersion: opportunity.rowVersion,
@@ -148,23 +148,19 @@ test("sales, design-first and tender flows reach a contract without dead ends", 
   await shot("09-hop-dong-tao-tu-bao-gia.png");
   await page.keyboard.press("Escape");
 
-  // The customer contract was drafted before the price was final.
+  // Customer contracts keep their approved source quotation at creation.
   const drafted = await call("salesManager", "post", "/api/contracts", {
     customerId,
     opportunityId,
+    quoteId: quote.id,
     direction: "Upstream",
     type: "DesignAndBuild",
     value: quote.grandTotal,
     scopeOfWork: "Thiết kế và thi công nhà máy chế biến Sao Mai — giai đoạn 1",
   });
   await page.goto(`/admin/contracts/${drafted.id}`);
-  await page.getByTestId("contract-link-quote").click();
-  await page.getByTestId("quote-link-select").click();
-  await page.getByRole("option", { name: new RegExp(quote.code as string) }).click();
-  await shot("10-gan-bao-gia-vao-hop-dong.png");
-  await page.getByTestId("quote-link-confirm").click();
   await expect(page.getByRole("link", { name: quote.code as string })).toBeVisible();
-  await shot("11-hop-dong-da-gan-bao-gia.png");
+  await shot("11-hop-dong-co-bao-gia-nguon.png");
   const linked = await call("salesManager", "get", `/api/contracts/${drafted.id}`);
   expect(linked.quoteId).toBe(quote.id);
   expect(linked.operationalProjectId).toBe(projectId);
@@ -199,23 +195,14 @@ test("sales, design-first and tender flows reach a contract without dead ends", 
     startedAt: new Date(Date.now() - 86_400_000).toISOString(),
     roles: [{ roleCode: "DesignLead", scope: "Project" }],
   });
-  const pharmaProject = await call("salesManager", "get", `/api/operational-projects/${pharma.projectId}`);
-
-  await loginInBrowserAs(page, TEST_USERS.designLead);
-  await page.goto("/admin/design-projects");
-  await page.getByRole("button", { name: "Tạo dự án thiết kế" }).first().click();
-  const designDialog = page.getByRole("dialog");
-  await designDialog.locator("input").first().fill("Thiết kế ý tưởng nhà máy dược An Khang");
-  await page.getByTestId("design-project-operational-project").getByRole("combobox").first().click();
-  await page.getByRole("option", { name: new RegExp(pharmaProject.code as string) }).click();
-  await shot("15-thiet-ke-truoc-hop-dong.png");
-  const designCreated = page.waitForResponse((response) =>
-    new URL(response.url()).pathname === "/api/design-projects" && response.request().method() === "POST");
-  await designDialog.getByRole("button", { name: /Lưu/ }).last().click();
-  const designResponse = await designCreated;
-  expect(designResponse.status(), await designResponse.text()).toBe(201);
-  const design = await designResponse.json() as Body;
+  const design = await call("salesManager", "post", "/api/design-projects", {
+    name: "Thiết kế ý tưởng nhà máy dược An Khang",
+    customerId: pharma.customerId,
+    operationalProjectId: pharma.projectId,
+    designLeadUserId: designLeadId,
+  });
   expect(design.contractId).toBeNull();
+  await loginInBrowserAs(page, TEST_USERS.designLead);
   await page.goto(`/admin/design-projects/${design.id}`);
   await shot("16-du-an-thiet-ke-chua-co-hop-dong.png");
 
@@ -268,11 +255,22 @@ test("sales, design-first and tender flows reach a contract without dead ends", 
   expect(tenderOpportunity.stage).toBe("Negotiation");
   expect(tenderOpportunity.operationalProjectId).toBeTruthy();
 
+  let tenderQuote = await call("salesManager", "post", "/api/quotes", {
+    opportunityId: tenderOpportunityId,
+    method: "Boq",
+    packageDescription: "Thi công kho lạnh Long Hậu theo kết quả trúng thầu",
+    items: [{ itemCode: "KL-01", name: "Panel cách nhiệt kho lạnh", unit: "m2", quantity: 3200, unitPrice: 720000 }],
+    discountPercent: 0,
+    vatPercent: 8,
+  });
+  tenderQuote = await call("salesManager", "post", `/api/quotes/${tenderQuote.id}/submit`, { rowVersion: tenderQuote.rowVersion });
+  tenderQuote = await call("salesManager", "post", `/api/quotes/${tenderQuote.id}/approve`, { rowVersion: tenderQuote.rowVersion });
+
   await page.getByRole("link", { name: tender.name as string }).click();
   await expect(page.getByTestId("opportunity-create-contract")).toBeVisible();
   await shot("19-co-hoi-tu-goi-thau.png");
   await page.getByTestId("opportunity-create-contract").click();
-  await expect(page).toHaveURL(/fromOpportunity=/);
+  await expect(page).toHaveURL(/fromQuote=/);
   await expect(page.getByRole("dialog")).toBeVisible();
   await shot("20-hop-dong-tu-goi-thau.png");
 
