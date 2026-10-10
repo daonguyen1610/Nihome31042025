@@ -91,7 +91,7 @@ const QuoteContractLinkDialog = (props: QuoteContractLinkDialogProps) => {
         } else {
           const { data } = await adminApi.listQuotes({ customerId, pageSize: 100 });
           const eligible = data.items.filter((quote) =>
-            isContractReadyQuote(quote.status) &&
+            isContractReadyQuote(quote) &&
             (opportunityId == null || quote.opportunityId === opportunityId));
           if (cancelled) return;
           setCandidates(eligible.map((quote) => ({

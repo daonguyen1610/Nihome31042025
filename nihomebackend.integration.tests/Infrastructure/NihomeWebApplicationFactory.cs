@@ -8,6 +8,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
+using NihomeBackend.Services;
 
 namespace NihomeBackend.IntegrationTests.Infrastructure;
 
@@ -39,6 +40,8 @@ public class NihomeWebApplicationFactory : WebApplicationFactory<Program>
 
         builder.ConfigureTestServices(services =>
         {
+            services.RemoveAll<IEmailService>();
+            services.AddSingleton<IEmailService, NoOpTestEmailService>();
             services.RemoveAll<DbContextOptions<AppDbContext>>();
             services.RemoveAll<AppDbContext>();
 
@@ -55,6 +58,11 @@ public class NihomeWebApplicationFactory : WebApplicationFactory<Program>
             TestDataSeeder.Seed(db);
         });
     }
+}
+
+internal sealed class NoOpTestEmailService : IEmailService
+{
+    public Task SendEmailAsync(string toEmail, string subject, string htmlBody) => Task.CompletedTask;
 }
 
 internal sealed class TestRowVersionInterceptor : SaveChangesInterceptor

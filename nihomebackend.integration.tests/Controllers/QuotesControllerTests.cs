@@ -378,13 +378,43 @@ public class QuotesControllerTests : IntegrationTestBase
 
         (await Client.PostAsJsonAsync($"/api/quotes/{quoteId}/submit", new { }))
             .StatusCode.Should().Be(HttpStatusCode.OK);
-        (await Client.PostAsJsonAsync($"/api/quotes/{quoteId}/approve", new { }))
-            .StatusCode.Should().Be(HttpStatusCode.OK);
-        var sendRes = await Client.PostAsJsonAsync($"/api/quotes/{quoteId}/send", new { });
+        var approved = await Client.PostAsJsonAsync($"/api/quotes/{quoteId}/approve", new { });
+        approved.StatusCode.Should().Be(HttpStatusCode.OK);
+        var approvedQuote = await ReadJsonAsync(approved);
+        var previewResponse = await Client.GetAsync($"/api/quotes/{quoteId}/email-preview");
+        previewResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var preview = await ReadJsonAsync(previewResponse);
+        var sendRes = await Client.PostAsJsonAsync($"/api/quotes/{quoteId}/send", new
+        {
+            rowVersion = approvedQuote.GetProperty("rowVersion").GetString(),
+            toEmail = "khachhang@example.com",
+            subject = preview.GetProperty("subject").GetString(),
+            body = preview.GetProperty("body").GetString(),
+        });
         sendRes.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var body = await ReadJsonAsync(sendRes);
         body.GetProperty("status").GetString().Should().Be("SentToCustomer");
+    }
+
+    [Fact]
+    public async Task Send_WithoutRecipient_ReturnsBadRequestAndKeepsApprovedStatus()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var quoteId = await CreateQuoteAsync();
+        (await Client.PostAsJsonAsync($"/api/quotes/{quoteId}/submit", new { }))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+        (await Client.PostAsJsonAsync($"/api/quotes/{quoteId}/approve", new { }))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+        var response = await Client.PostAsJsonAsync($"/api/quotes/{quoteId}/send", new
+        {
+            toEmail = "bad@domain",
+            subject = "Quote",
+            body = "Hello",
+        });
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var quote = await ReadJsonAsync(await Client.GetAsync($"/api/quotes/{quoteId}"));
+        quote.GetProperty("status").GetString().Should().Be("Approved");
     }
 
     [Fact]

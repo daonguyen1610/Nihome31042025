@@ -806,8 +806,9 @@ that the root has been deleted until its status is `Completed`.
   non-library checklist file outside `/files/tenders` blocks deletion rather
   than being silently orphaned.
 - Quote documents under `/files/quotes` are aggregate-owned and are quarantined
-  and purged with the Quote. Opportunities and Contracts that reference the
-  Quote are unlinked and preserved. A Quote project-document sidecar is eligible
+  and purged with the Quote. Opportunities that reference the Quote are unlinked
+  and preserved; any Contract reference blocks Quote deletion. A Quote
+  project-document sidecar is eligible
   only when it is an exact CRM `QuoteDocument`/`file` binding to the normalized
   Quote path, has stable Nicon ownership with no conflict or active processing
   lease, and is either fully synced with complete Drive ownership metadata or
@@ -945,6 +946,20 @@ Quote document metadata is stored in `quote_documents`; physical files are store
 | `POST` | `/api/quotes/{id}/documents` | `crm.quotes.manage` | Upload PDF, Word, Excel, or image files up to 20 MB |
 | `DELETE` | `/api/quotes/{id}/documents/{documentId}` | `crm.quotes.manage` | Delete document metadata and its managed file |
 
+Quote delivery uses `GET /api/quotes/{id}/email-preview` (`crm.quotes.send`)
+to prefill the customer's primary contact email and a quote-specific subject
+and body. `POST /api/quotes/{id}/send` now requires `toEmail`, `subject`,
+`body`, and the current `rowVersion`. The server validates the address and
+content, permits subject/body edits only with `crm.quotes.manage`, and sends
+through the configured SMTP service before recording `SentToCustomer`.
+The recipient can be changed to another valid address by an authorized sender;
+the system does not prove mailbox ownership.
+SMTP failure leaves the quote in `Approved`; no email is sent by a status-only
+request. The email body includes the priced quote lines and total, but no PDF
+attachment. A durable email outbox is not yet part of this workflow, so an
+external delivery followed by a concurrent status conflict still needs manual
+reconciliation.
+
 Each Tender checklist row retains one current file. Users with
 `crm.tenders.manage` may assign an active user whose active role also has that
 permission. A changed assignment emits one `tender.checklist.assigned`
@@ -990,13 +1005,15 @@ completed. The quote must match the contract's customer, opportunity, and
 project, the contract must have no source quote yet, and no other live
 contract may use the quote; the contract's empty opportunity is filled from
 the quote. Creating a contract with a quote, or changing its quote, applies
-the same approved-status rule. Creating an `Upstream` contract requires the
-approved source quote even in `Draft`; editing or transitioning it cannot
-remove the link. A won tender's approved estimate does not replace the CRM
-customer quotation, which must be approved before contract creation.
-`Downstream` supplier/subcontractor contracts do not require a customer quote.
+the same approved-status rule. An `Approved` or `SentToCustomer` quote must
+also be within its validity period; `CustomerApproved` is terminal. An
+`Upstream` contract may instead be created from an Opportunity with an
+already-agreed value and no quote. A won tender's approved estimate does not
+replace an optional CRM customer quotation.
+`Downstream` supplier/subcontractor contracts cannot reference a CRM customer
+quote.
 The quote deletion-impact plan blocks deletion while any contract references
-the quote; deleting it must not detach a contract's required source.
+the quote; deleting it must not silently detach a contract's source.
 Opportunity detail includes `quoteId` on each linked contract so the Sales UI
 does not offer a quote already used by a non-cancelled contract.
 

@@ -43,7 +43,7 @@ NICON có nhiều đường vào hợp lệ; không bắt buộc mọi dự án 
 
 | Luồng | Trình tự chính | Điều kiện quan trọng |
 |---|---|---|
-| Design & Build | Lead → Cơ hội + Dự án → khảo sát/thiết kế/giá đầu vào → báo giá → HĐ D&B → thiết kế/pháp lý/thi công | Báo giá được duyệt trước hợp đồng; thi công chỉ dùng IFC đã phát hành |
+| Design & Build | Lead → Cơ hội + Dự án → khảo sát/thiết kế/giá đầu vào → báo giá nếu cần → HĐ D&B → thiết kế/pháp lý/thi công | Khách có thể đã thống nhất giá trị không qua báo giá; báo giá được dùng phải đã duyệt; thi công chỉ dùng IFC đã phát hành |
 | Thiết kế trước hợp đồng | Cơ hội + Dự án → Concept/Basic/Detail → BOQ/báo giá → HĐ thiết kế hoặc D&B/thi công | Thiết kế được bắt đầu khi chưa có hợp đồng nhưng luôn thuộc Dự án |
 | Đấu thầu | Dự án → gói thầu → kế hoạch/checklist/dự toán thầu → nộp → kết quả → thương thảo/HĐ | Kết quả, deadline và phiên bản dự toán phải có lịch sử |
 | Tư vấn/báo giá sơ bộ | Dự án → khảo sát/Concept → suất đầu tư hoặc BOQ sơ bộ → báo giá → chuyển đổi nếu thành công | Không dùng BOQ sơ bộ làm hạn mức cấp phát thi công |
@@ -63,7 +63,10 @@ thực hiện theo quyền và điều kiện an toàn dữ liệu hiện có.
 
 ### G1 — Chuyển sang hợp đồng
 
-- Có báo giá được duyệt và đúng khách hàng/Dự án.
+- Hợp đồng Upstream được lập trực tiếp từ Cơ hội khi khách đã thống nhất giá trị.
+  Nếu gắn báo giá CRM, báo giá phải được duyệt, còn hiệu lực khi gắn, đúng
+  khách hàng/Dự án và đúng Cơ hội khi Hợp đồng gắn Cơ hội. Hợp đồng Downstream
+  không dùng báo giá CRM đầu ra.
 - Hợp đồng xác định rõ hướng `Upstream` hoặc `Downstream` và loại Design,
   Construction, Design & Build, Supply hoặc Subcontract.
 - Một Dự án có thể có nhiều hợp đồng; không gộp chúng thành một bản ghi.

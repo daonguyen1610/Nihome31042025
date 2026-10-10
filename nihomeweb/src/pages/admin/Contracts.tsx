@@ -641,10 +641,6 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
       setFormError(t("contracts.validation.vendorRequired"));
       return;
     }
-    if (effectiveDirection === "Upstream" && form.quoteId == null) {
-      setFormError(t("contracts.validation.quoteRequired"));
-      return;
-    }
     if (form.signedDate && form.startDate && form.startDate < form.signedDate) {
       // Sanity check: start date shouldn't be before signed date.
       setFormError(t("form.invalidDateRange"));
@@ -1558,9 +1554,9 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
 
             {form.direction === "Upstream" && (
               <div className="space-y-1.5 rounded-md border bg-muted/30 px-3 py-2.5 text-sm">
-                <Label>{t("contracts.field.sourceQuote")} *</Label>
+                <Label>{t("contracts.field.sourceQuote")}</Label>
                 <p>{form.quoteId == null
-                  ? t("contracts.validation.quoteRequired")
+                  ? t("contracts.validation.quoteOptional")
                   : `#${form.quoteId}`}</p>
                 {form.quoteId == null && (
                   <Link to="/admin/quotes" className="text-primary underline" onClick={() => setDialogOpen(false)}>

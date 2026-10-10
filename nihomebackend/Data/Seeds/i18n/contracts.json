@@ -448,12 +448,12 @@
     "ja": "下流契約には仕入先または下請業者が必要です。"
   },
   {
-    "key": "contracts.validation.quoteRequired",
+    "key": "contracts.validation.quoteOptional",
     "category": "contracts",
-    "vi": "Hợp đồng đầu ra cần Báo giá đã duyệt. Hãy mở Báo giá và tạo hợp đồng từ đó.",
-    "en": "A customer contract needs an approved quotation. Open Quotations and create the contract from it.",
-    "zh": "客户合同需要已批准的报价。请打开报价并从中创建合同。",
-    "ja": "顧客との契約には承認済みの見積書が必要です。見積書を開き、そこから契約を作成してください。"
+    "vi": "Không bắt buộc khi khách hàng đã thống nhất giá trị. Nếu dùng báo giá, hãy tạo hợp đồng từ báo giá đã duyệt.",
+    "en": "Optional when the customer has agreed on the value. If using a quote, create the contract from an approved quote.",
+    "zh": "客户已确认金额时无需报价。如使用报价，请从已批准的报价创建合同。",
+    "ja": "顧客と金額に合意済みなら見積は任意です。見積を使う場合は承認済み見積から契約を作成してください。"
   },
   {
     "key": "contracts.action.openQuotes",

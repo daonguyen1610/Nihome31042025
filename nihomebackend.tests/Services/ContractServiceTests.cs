@@ -151,16 +151,14 @@ public class ContractServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task Create_UpstreamWithoutApprovedQuote_RejectsWithoutPersistingContract()
+    public async Task Create_UpstreamWithAgreedValue_DoesNotRequireQuote()
     {
         var request = Req();
         request.QuoteId = null;
 
-        var error = await Assert.ThrowsAsync<ContractValidationException>(
-            () => _sut.CreateAsync(request, 1, canReassignOwner: true));
-
-        Assert.Contains("Báo giá đã duyệt", error.Message);
-        Assert.Empty(_db.Contracts);
+        var contract = await _sut.CreateAsync(request, 1, canReassignOwner: true);
+        Assert.Null(contract.QuoteId);
+        Assert.Single(_db.Contracts);
     }
 
     [Fact]
@@ -190,6 +188,85 @@ public class ContractServiceTests : IDisposable
 
         Assert.Contains("chưa được duyệt", error.Message);
         Assert.Empty(_db.Contracts);
+    }
+
+    [Fact]
+    public async Task Create_ApprovedButExpiredQuote_RejectsWithoutPersistingContract()
+    {
+        var request = Req();
+        _db.Quotes.Find(request.QuoteId)!.ValidUntil = DateTime.UtcNow.AddMinutes(-1);
+        await _db.SaveChangesAsync();
+
+        var error = await Assert.ThrowsAsync<ContractValidationException>(
+            () => _sut.CreateAsync(request, 1, canReassignOwner: true));
+
+        Assert.Contains("hết hạn", error.Message);
+        Assert.Empty(_db.Contracts);
+    }
+
+    [Fact]
+    public async Task Create_CustomerApprovedQuote_RemainsValidAfterValidityDate()
+    {
+        var request = Req();
+        var quote = _db.Quotes.Find(request.QuoteId)!;
+        quote.Status = QuoteStatus.CustomerApproved;
+        quote.ValidUntil = DateTime.UtcNow.AddMinutes(-1);
+        await _db.SaveChangesAsync();
+
+        var created = await _sut.CreateAsync(request, 1, canReassignOwner: true);
+
+        Assert.Equal(quote.Id, created.QuoteId);
+    }
+
+    [Fact]
+    public async Task Create_DownstreamWithCustomerQuote_RejectsWithoutPersistingContract()
+    {
+        var vendor = new Vendor
+        {
+            VendorCode = "SUP-QUOTE-UNIT",
+            CompanyName = "Project supplier",
+            VendorType = VendorType.Supplier,
+            IsActive = true,
+        };
+        _db.Vendors.Add(vendor);
+        await _db.SaveChangesAsync();
+        var request = Req();
+        request.Direction = ContractDirection.Downstream;
+        request.Type = ContractType.Supply;
+        request.VendorId = vendor.Id;
+
+        var error = await Assert.ThrowsAsync<ContractValidationException>(
+            () => _sut.CreateAsync(request, 1, canReassignOwner: true));
+
+        Assert.Contains("Báo giá", error.Message);
+        Assert.Empty(_db.Contracts);
+    }
+
+    [Fact]
+    public async Task Update_DownstreamCannotAttachCustomerQuote()
+    {
+        var vendor = new Vendor
+        {
+            VendorCode = "SUP-QUOTE-UPDATE",
+            CompanyName = "Project supplier",
+            VendorType = VendorType.Supplier,
+            IsActive = true,
+        };
+        _db.Vendors.Add(vendor);
+        await _db.SaveChangesAsync();
+        var request = Req();
+        request.Direction = ContractDirection.Downstream;
+        request.Type = ContractType.Supply;
+        request.VendorId = vendor.Id;
+        var quoteId = request.QuoteId;
+        request.QuoteId = null;
+        var created = await _sut.CreateAsync(request, 1, canReassignOwner: true);
+
+        request.QuoteId = quoteId;
+        await Assert.ThrowsAsync<ContractValidationException>(() =>
+            _sut.UpdateAsync(created.Id, request, 1, canSeeAll: true, canReassignOwner: true));
+
+        Assert.Null(_db.Contracts.Single().QuoteId);
     }
 
     [Fact]
@@ -255,6 +332,7 @@ public class ContractServiceTests : IDisposable
         valid.Direction = ContractDirection.Downstream;
         valid.Type = ContractType.Supply;
         valid.VendorId = supplier.Id;
+        valid.QuoteId = null;
         var created = await _sut.CreateAsync(valid, 1, canReassignOwner: true);
 
         Assert.Equal(ContractDirection.Downstream, created.Direction);

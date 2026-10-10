@@ -1941,6 +1941,19 @@ export interface QuoteWorkflowRequest {
   note?: string;
 }
 
+export interface QuoteEmailPreviewResponse {
+  toEmail: string;
+  subject: string;
+  body: string;
+  canEdit: boolean;
+}
+
+export interface SendQuoteEmailRequest extends QuoteWorkflowRequest {
+  toEmail: string;
+  subject: string;
+  body: string;
+}
+
 export interface ExtendQuoteValidityRequest {
   rowVersion?: string;
   newValidUntil: string;
@@ -4635,7 +4648,8 @@ export const adminApi = {
     api.post<QuoteResponse>(`/quotes/${id}/approve`, body),
   rejectQuoteInternal: (id: number, body: QuoteWorkflowRequest = {}) =>
     api.post<QuoteResponse>(`/quotes/${id}/reject-internal`, body),
-  sendQuoteToCustomer: (id: number, body: QuoteWorkflowRequest = {}) =>
+  getQuoteEmailPreview: (id: number) => api.get<QuoteEmailPreviewResponse>(`/quotes/${id}/email-preview`),
+  sendQuoteToCustomer: (id: number, body: SendQuoteEmailRequest) =>
     api.post<QuoteResponse>(`/quotes/${id}/send`, body),
   markQuoteCustomerApproved: (id: number, body: QuoteWorkflowRequest = {}) =>
     api.post<QuoteResponse>(`/quotes/${id}/customer-approve`, body),

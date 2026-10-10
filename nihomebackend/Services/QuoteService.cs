@@ -1,4 +1,5 @@
 using System.Data;
+using System.Net;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -41,6 +42,7 @@ public class QuoteService(
     AppDbContext db,
     INotificationService notifications,
     IQuotePdfService quotePdf,
+    IEmailService emailService,
     ILogger<QuoteService> logger,
     ICrmHardDeletePlanService hardDeletePlans,
     IHardDeleteOperationService hardDeleteOperations) : IQuoteService
@@ -480,8 +482,45 @@ public class QuoteService(
                 q.SubmittedByUserId = null;
             }, ct);
 
-    public Task<QuoteResponse?> SendToCustomerAsync(int id, QuoteWorkflowRequest req, int caller, bool canSend, bool canSeeAll, CancellationToken ct = default) =>
-        TransitionAsync(id, caller, canSeeAll,
+    public async Task<QuoteEmailPreviewResponse?> GetEmailPreviewAsync(
+        int id, int caller, bool canSeeAll, bool canEdit, CancellationToken ct = default)
+    {
+        var quote = await db.Quotes.AsNoTracking()
+            .Include(q => q.Items)
+            .Include(q => q.Opportunity).ThenInclude(o => o.Customer).ThenInclude(c => c.Contacts)
+            .FirstOrDefaultAsync(q => q.Id == id, ct);
+        if (quote is null || (!canSeeAll && quote.OwnerUserId != caller)) return null;
+        return BuildEmailPreview(quote, canEdit);
+    }
+
+    public async Task<QuoteResponse?> SendToCustomerAsync(
+        int id, SendQuoteEmailRequest req, int caller, bool canSend, bool canSeeAll, bool canEdit,
+        CancellationToken ct = default)
+    {
+        if (!canSend) throw new QuoteOperationException("Không có quyền gửi báo giá cho khách hàng.");
+        var quote = await db.Quotes.AsNoTracking()
+            .Include(q => q.Items)
+            .Include(q => q.Opportunity).ThenInclude(o => o.Customer).ThenInclude(c => c.Contacts)
+            .FirstOrDefaultAsync(q => q.Id == id, ct);
+        if (quote is null || (!canSeeAll && quote.OwnerUserId != caller)) return null;
+        if (quote.Status != QuoteStatus.Approved || quote.ValidUntil < DateTime.UtcNow ||
+            quote.Opportunity.Stage is OpportunityStage.Won or OpportunityStage.Lost)
+            throw new QuoteOperationException("Chỉ gửi báo giá đã duyệt, còn hiệu lực của cơ hội đang mở.");
+        if (quote.RowVersion.Length > 0)
+            CrmConcurrency.EnsureMatches(quote.RowVersion, req.RowVersion);
+        var toEmail = req.ToEmail.Trim();
+        if (!ContactValidation.IsValidEmail(toEmail) || string.IsNullOrWhiteSpace(toEmail))
+            throw new QuoteOperationException("Email khách hàng không hợp lệ. Ví dụ: khachhang@example.com.");
+        var preview = BuildEmailPreview(quote, canEdit);
+        var subject = req.Subject.Trim();
+        var body = req.Body.Trim();
+        if (subject.Length is < 1 or > 200 || body.Length is < 1 or > 8000)
+            throw new QuoteOperationException("Tiêu đề email (1–200 ký tự) và nội dung (1–8000 ký tự) là bắt buộc.");
+        if (!canEdit && (subject != preview.Subject || body != preview.Body))
+            throw new QuoteOperationException("Không có quyền chỉnh sửa nội dung email báo giá.");
+        await emailService.SendEmailAsync(toEmail, subject,
+            $"<div style=\"white-space:pre-wrap;font-family:Arial,sans-serif\">{WebUtility.HtmlEncode(body)}</div>");
+        return await TransitionAsync(id, caller, canSeeAll,
             allowedFrom: [QuoteStatus.Approved],
             to: QuoteStatus.SentToCustomer,
             action: QuoteWorkflowAction.Send,
@@ -490,6 +529,28 @@ public class QuoteService(
             rowVersion: req.RowVersion,
             beforeSave: q => { q.SentAt = DateTime.UtcNow; q.SentByUserId = caller; },
             ct, requireOpenOpportunity: true);
+    }
+
+    private static QuoteEmailPreviewResponse BuildEmailPreview(Quote quote, bool canEdit)
+    {
+        var customer = quote.Opportunity.Customer;
+        var recipient = customer.Contacts
+            .OrderByDescending(contact => contact.IsPrimary)
+            .FirstOrDefault(contact => !string.IsNullOrWhiteSpace(contact.Email));
+        var culture = System.Globalization.CultureInfo.GetCultureInfo("vi-VN");
+        var amount = quote.GrandTotal.ToString("N0", culture);
+        var details = quote.Method == QuoteMethod.Boq
+            ? string.Join("\n", quote.Items.OrderBy(item => item.SortOrder).Select(item =>
+                $"- {item.Name}: {item.Quantity:N2} {item.Unit} × {item.UnitPrice.ToString("N0", culture)} VND = {item.Amount.ToString("N0", culture)} VND"))
+            : $"Diện tích: {quote.AreaSqm:N2} m²; đơn giá: {quote.UnitPricePerSqm?.ToString("N0", culture)} VND/m².";
+        return new QuoteEmailPreviewResponse
+        {
+            ToEmail = recipient?.Email?.Trim() ?? string.Empty,
+            Subject = $"Báo giá {quote.Code} – {quote.Opportunity.Name}",
+            Body = $"Kính gửi {customer.Name},\n\nNICON gửi Quý khách báo giá {quote.Code} cho {quote.Opportunity.Name}.\n{details}\nChiết khấu: {quote.DiscountPercent}%; VAT: {quote.VatPercent}%.\nTổng giá trị: {amount} VND.\nBáo giá có hiệu lực đến {quote.ValidUntil:dd/MM/yyyy}.\n\nTrân trọng,\nNICON",
+            CanEdit = canEdit,
+        };
+    }
 
     public Task<QuoteResponse?> MarkCustomerApprovedAsync(int id, QuoteWorkflowRequest req, int caller, bool canManage, bool canSeeAll, CancellationToken ct = default) =>
         TransitionAsync(id, caller, canSeeAll,

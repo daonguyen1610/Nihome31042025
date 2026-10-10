@@ -16,6 +16,7 @@ public class QuoteServiceTests : IDisposable
 {
     private readonly AppDbContext _db;
     private readonly Mock<INotificationService> _notifications;
+    private readonly Mock<IEmailService> _email;
     private readonly QuoteService _sut;
     private readonly ICrmHardDeletePlanService _hardDeletePlans;
     private readonly int _rateCatalogId;
@@ -25,6 +26,7 @@ public class QuoteServiceTests : IDisposable
     {
         _db = DbContextFactory.Create();
         _notifications = new Mock<INotificationService>();
+        _email = new Mock<IEmailService>();
         var hardDelete = HardDeleteTestServices.Create(
             _db, Mock.Of<IProjectDocumentStagingService>());
         _hardDeletePlans = hardDelete.CrmPlans;
@@ -32,6 +34,7 @@ public class QuoteServiceTests : IDisposable
             _db,
             _notifications.Object,
             Mock.Of<IQuotePdfService>(),
+            _email.Object,
             NullLogger<QuoteService>.Instance,
             hardDelete.CrmPlans,
             hardDelete.Operations);
@@ -533,14 +536,61 @@ public class QuoteServiceTests : IDisposable
 
         await _sut.SubmitAsync(quote.Id, new(), user.Id, true, true);
         await _sut.ApproveAsync(quote.Id, new(), user.Id, canApprove: true);
-        await _sut.SendToCustomerAsync(quote.Id, new(), user.Id, canSend: true, canSeeAll: true);
+        var preview = await _sut.GetEmailPreviewAsync(quote.Id, user.Id, canSeeAll: true, canEdit: true);
+        Assert.NotNull(preview);
+        Assert.Contains("Tổng giá trị:", preview!.Body);
+        var rowVersion = (await _sut.GetAsync(quote.Id, user.Id, true))!.RowVersion;
+        await _sut.SendToCustomerAsync(quote.Id, new SendQuoteEmailRequest
+        {
+            RowVersion = rowVersion,
+            ToEmail = "khachhang@example.com",
+            Subject = preview.Subject,
+            Body = preview.Body,
+        }, user.Id, canSend: true, canSeeAll: true, canEdit: true);
         var final = await _sut.MarkCustomerApprovedAsync(quote.Id, new(), user.Id, true, true);
 
         Assert.NotNull(final);
         Assert.Equal("CustomerApproved", final!.Status);
+        _email.Verify(email => email.SendEmailAsync("khachhang@example.com", preview.Subject,
+            It.Is<string>(body => body.Contains("1.080.000.000") && !body.Contains("<script"))), Times.Once);
         Assert.NotNull(final.ClosedAt);
         // Approval log has at least 5 entries: create + submit + approve + send + customer-approve.
         Assert.True(final.ApprovalLogs.Count >= 5);
+    }
+
+    [Fact]
+    public async Task SendToCustomer_RejectsInvalidEmailAndUnauthorizedEdits()
+    {
+        var (user, quote) = await SeedApprovedReadyQuoteAsync();
+        await _sut.SubmitAsync(quote.Id, new(), user.Id, true, true);
+        await _sut.ApproveAsync(quote.Id, new(), user.Id, true);
+        var preview = (await _sut.GetEmailPreviewAsync(quote.Id, user.Id, true, false))!;
+        var rowVersion = (await _sut.GetAsync(quote.Id, user.Id, true))!.RowVersion;
+        Assert.False(preview.CanEdit);
+        await Assert.ThrowsAsync<QuoteOperationException>(() => _sut.SendToCustomerAsync(
+            quote.Id, new SendQuoteEmailRequest { RowVersion = rowVersion, ToEmail = "bad@domain", Subject = preview.Subject, Body = preview.Body },
+            user.Id, true, true, false));
+        await Assert.ThrowsAsync<QuoteOperationException>(() => _sut.SendToCustomerAsync(
+            quote.Id, new SendQuoteEmailRequest { RowVersion = rowVersion, ToEmail = "khach@example.com", Subject = "Changed", Body = preview.Body },
+            user.Id, true, true, false));
+        Assert.Equal(QuoteStatus.Approved, (await _db.Quotes.SingleAsync(q => q.Id == quote.Id)).Status);
+        _email.Verify(email => email.SendEmailAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task SendToCustomer_EmailFailure_DoesNotMarkQuoteAsSent()
+    {
+        var (user, quote) = await SeedApprovedReadyQuoteAsync();
+        await _sut.SubmitAsync(quote.Id, new(), user.Id, true, true);
+        await _sut.ApproveAsync(quote.Id, new(), user.Id, true);
+        var preview = (await _sut.GetEmailPreviewAsync(quote.Id, user.Id, true, true))!;
+        var rowVersion = (await _sut.GetAsync(quote.Id, user.Id, true))!.RowVersion;
+        _email.Setup(email => email.SendEmailAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            .ThrowsAsync(new InvalidOperationException("SMTP unavailable"));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _sut.SendToCustomerAsync(
+            quote.Id, new SendQuoteEmailRequest { RowVersion = rowVersion, ToEmail = "khach@example.com", Subject = preview.Subject, Body = preview.Body },
+            user.Id, true, true, true));
+        Assert.Equal(QuoteStatus.Approved, (await _db.Quotes.SingleAsync(q => q.Id == quote.Id)).Status);
     }
 
     // ---------------- Versioning ----------------
@@ -642,15 +692,6 @@ public class QuoteServiceTests : IDisposable
         var opportunity = (await _db.Opportunities.FindAsync(opportunityId))!;
         opportunity.WonQuoteId = quote.Id;
         quote.RowVersion = BitConverter.GetBytes(100L + (int)status);
-        var contract = new Contract
-        {
-            ContractNumber = $"HD-QUOTE-{status}",
-            CustomerId = opportunity.CustomerId,
-            OpportunityId = opportunity.Id,
-            QuoteId = quote.Id,
-            Value = 1,
-        };
-        _db.Contracts.Add(contract);
         await _db.SaveChangesAsync();
         var customerId = opportunity.CustomerId;
         var materialRevisionId = quote.MaterialRateRevisionId;
@@ -670,8 +711,6 @@ public class QuoteServiceTests : IDisposable
         Assert.Empty(_db.QuoteVersionSnapshots);
         Assert.True(await _db.Opportunities.AnyAsync(o => o.Id == opportunityId));
         Assert.Null((await _db.Opportunities.FindAsync(opportunityId))!.WonQuoteId);
-        Assert.Null((await _db.Contracts.FindAsync(contract.Id))!.QuoteId);
-        Assert.True(await _db.Contracts.AnyAsync(item => item.Id == contract.Id));
         Assert.True(await _db.Customers.AnyAsync(c => c.Id == customerId));
         Assert.True(await _db.Users.AnyAsync(u => u.Id == user.Id));
         if (materialRevisionId.HasValue)
@@ -766,7 +805,7 @@ public class QuoteServiceTests : IDisposable
         Assert.Contains(opportunityItem.ResolutionLinks, link =>
             link.Label == opportunity.Name && link.Url == $"/admin/opportunities/{opportunity.Id}");
         var contractItem = Assert.Single(plan.Impact.Items, item => item.Key == "quote.contracts");
-        Assert.Equal(DeletionImpactActions.Unlink, contractItem.Action);
+        Assert.Equal(DeletionImpactActions.Block, contractItem.Action);
         Assert.Contains(contractItem.ResolutionLinks, link =>
             link.Label == contract.ContractNumber && link.Url == $"/admin/contracts/{contract.Id}");
     }

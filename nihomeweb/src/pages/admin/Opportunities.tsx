@@ -94,20 +94,20 @@ const isTerminalStage = (stage: OpportunityStage) => stage === "Won" || stage ==
 const canRaiseQuote = (opportunity: OpportunityResponse) =>
   opportunity.stage !== "Lost" && !(opportunity.stage === "Won" && opportunity.wonQuoteId != null);
 
-// Only an approved quotation can start a customer contract, including after
-// a tender win. The tender estimate is not itself a CRM quotation.
+// An available approved quotation can prefill a contract, but an agreed deal
+// can proceed directly without one.
 const contractReadyQuote = (opportunity: OpportunityResponse, quotes: QuoteListItemResponse[]) =>
-  quotes.find((item) => item.id === opportunity.wonQuoteId && isContractReadyQuote(item.status) &&
+  quotes.find((item) => item.id === opportunity.wonQuoteId && isContractReadyQuote(item) &&
     !opportunity.contracts.some((contract) => contract.quoteId === item.id && contract.status !== "Cancelled")) ??
-  quotes.find((item) => isContractReadyQuote(item.status) &&
+  quotes.find((item) => isContractReadyQuote(item) &&
     !opportunity.contracts.some((contract) => contract.quoteId === item.id && contract.status !== "Cancelled"));
 
-const contractFormPath = (opportunity: OpportunityResponse, quote: QuoteListItemResponse) => {
+const contractFormPath = (opportunity: OpportunityResponse, quote?: QuoteListItemResponse) => {
   const params = new URLSearchParams({ customerId: String(opportunity.customerId) });
   if (opportunity.operationalProjectId) params.set("operationalProjectId", String(opportunity.operationalProjectId));
-  params.set("fromQuote", String(quote.id));
+  if (quote) params.set("fromQuote", String(quote.id));
   params.set("opportunityId", String(opportunity.id));
-  if (quote.grandTotal > 0) params.set("value", String(quote.grandTotal));
+  if (quote && quote.grandTotal > 0) params.set("value", String(quote.grandTotal));
   return `/admin/contracts?${params.toString()}`;
 };
 
@@ -1127,21 +1127,18 @@ const AdminOpportunities = () => {
                     </Button>
                   </div>
                 )}
-                {/* A quote is raised while the deal is still open (Báo giá/Đấu thầu
-                    stage) so the contract value is known before signing. */}
+                {/* Sales may agree a value directly or send a quotation first. */}
                 {((canStartDesign && detail.stage !== "Lost") ||
                   (canCreateQuote && canRaiseQuote(detail)) ||
-                  (canCreateContract && contractReadyQuote(detail, opportunityQuotes) != null &&
-                    (detail.stage === "Negotiation" || detail.stage === "Won"))) && (
+                  (canCreateContract && detail.stage !== "Lost")) && (
                   <div className="flex flex-wrap gap-2 pt-2">
-                    {canCreateContract && contractReadyQuote(detail, opportunityQuotes) != null &&
-                      (detail.stage === "Negotiation" || detail.stage === "Won") && (
+                    {canCreateContract && detail.stage !== "Lost" && (
                       <Button
                         size="sm"
                         data-testid="opportunity-create-contract"
                         onClick={() => {
                           const quote = contractReadyQuote(detail, opportunityQuotes);
-                          if (quote) navigate(contractFormPath(detail, quote));
+                          navigate(contractFormPath(detail, quote));
                         }}
                       >
                         <FileSignature className="mr-1.5 h-4 w-4" />
