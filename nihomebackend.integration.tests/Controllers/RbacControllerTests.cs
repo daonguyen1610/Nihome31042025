@@ -92,8 +92,11 @@ public class RbacControllerTests : IntegrationTestBase
 
         res.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await ReadJsonAsync(res);
-        body.EnumerateArray().Select(group => group.GetProperty("code").GetString())
+        var groups = body.EnumerateArray().ToList();
+        groups.Select(group => group.GetProperty("code").GetString())
             .Should().Equal("CRM", "HR_ADMIN", "DESIGN", "CONSTRUCTION", "FINANCE");
+        groups.Select(group => group.GetProperty("roleCount").GetInt32())
+            .Should().Equal(2, 1, 5, 4, 1);
     }
 
     [Fact]

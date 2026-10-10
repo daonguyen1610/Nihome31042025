@@ -26,9 +26,12 @@ their permission matrices.
 ### NICON role groups and permission baselines
 
 Business roles can be assigned to one of five seeded organizational groups:
-`CRM`, `HR_ADMIN`, `DESIGN`, `CONSTRUCTION`, and `FINANCE`. Existing roles are
-left ungrouped during migration because the customer mapping has not been
-confirmed; administrators assign them explicitly.
+`CRM`, `HR_ADMIN`, `DESIGN`, `CONSTRUCTION`, and `FINANCE`. The initial mapping
+is seeded once from `rbac-defaults.json`: Sales roles belong to `CRM`,
+`LEGAL_OFFICER` to `HR_ADMIN`, Design roles to `DESIGN`, PM/QS/Procurement/
+Warehouse to `CONSTRUCTION`, and `ACCOUNTANT` to `FINANCE`. `BGD` remains
+ungrouped because it is cross-functional. After the initial seed,
+administrator reassignment or intentional ungrouping is preserved on restart.
 
 Each group stores an editable permission baseline. When creating a role, an
 administrator can copy the selected group's current baseline as the initial

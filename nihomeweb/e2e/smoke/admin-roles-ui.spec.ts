@@ -74,6 +74,9 @@ test("role editor renders dynamic roles and the comparison matrix for SUPER_ADMI
   await expect(page.getByTestId("rbac-group-CONSTRUCTION")).toBeVisible();
   await expect(page.getByTestId("rbac-group-FINANCE")).toBeVisible();
   await page.getByTestId("rbac-group-DESIGN").click();
+  await expect(page.getByTestId("rbac-group-member-DESIGN")).toBeVisible();
+  await expect(page.getByTestId("rbac-group-member-DESIGN_LEAD")).toBeVisible();
+  await expect(page.getByTestId("rbac-group-member-ARCHITECT")).toBeVisible();
   await expect(page.getByTestId("rbac-save-baseline")).toBeDisabled();
 
   // Administrators can still switch to a dense comparison matrix.

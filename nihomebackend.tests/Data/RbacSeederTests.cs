@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.Rbac;
@@ -42,6 +43,52 @@ public class RbacSeederTests : IDisposable
         {
             Assert.Single(_db.Roles.Where(r => r.Code == br.Code && !r.IsSystem));
         }
+    }
+
+    [Fact]
+    public void Seed_AssignsBusinessRolesToConfiguredNiconGroups()
+    {
+        RbacSeeder.Seed(_db);
+        var groupByRole = _db.Roles.Include(role => role.RoleGroup)
+            .Where(role => !role.IsSystem)
+            .ToDictionary(role => role.Code, role => role.RoleGroup == null ? null : role.RoleGroup.Code);
+
+        Assert.Equal("CRM", groupByRole["SALE"]);
+        Assert.Equal("HR_ADMIN", groupByRole["LEGAL_OFFICER"]);
+        Assert.Equal("DESIGN", groupByRole["DESIGN_LEAD"]);
+        Assert.Equal("CONSTRUCTION", groupByRole["WAREHOUSE"]);
+        Assert.Equal("FINANCE", groupByRole["ACCOUNTANT"]);
+        Assert.Null(groupByRole["BGD"]);
+        Assert.All(_db.Roles.Where(role => !role.IsSystem), role => Assert.True(role.InitialGroupSeeded));
+    }
+
+    [Fact]
+    public void Seed_PreservesAdministratorRoleGroupChangesAfterInitialAssignment()
+    {
+        RbacSeeder.Seed(_db);
+        var sale = _db.Roles.Single(role => role.Code == "SALE");
+        sale.RoleGroupId = null;
+        _db.SaveChanges();
+
+        RbacSeeder.Seed(_db);
+
+        Assert.Null(_db.Roles.Single(role => role.Code == "SALE").RoleGroupId);
+        Assert.True(sale.InitialGroupSeeded);
+    }
+
+    [Fact]
+    public void Seed_RepairsMissingInitialRoleGroupExactlyOnce()
+    {
+        RbacSeeder.Seed(_db);
+        var sale = _db.Roles.Single(role => role.Code == "SALE");
+        sale.RoleGroupId = null;
+        sale.InitialGroupSeeded = false;
+        _db.SaveChanges();
+
+        RbacSeeder.Seed(_db);
+
+        Assert.Equal("CRM", _db.RoleGroups.Single(group => group.Id == sale.RoleGroupId).Code);
+        Assert.True(sale.InitialGroupSeeded);
     }
 
     [Fact]

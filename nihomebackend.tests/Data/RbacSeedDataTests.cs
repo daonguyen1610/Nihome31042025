@@ -45,6 +45,21 @@ public class RbacSeedDataTests
         var sale = bundle.BusinessRoles.Single(r => r.Code == "SALE");
         Assert.Equal("rbac.role.SALE.label", sale.LabelKey);
         Assert.Equal("rbac.role.SALE.description", sale.DescriptionKey);
+        Assert.Equal("CRM", sale.GroupCode);
+    }
+
+    [Fact]
+    public void Default_AssignsDepartmentGroupToAllDepartmentRoles()
+    {
+        var roles = RbacSeedData.Default.BusinessRoles.ToDictionary(role => role.Code);
+
+        Assert.Equal("CRM", roles["SALES_MANAGER"].GroupCode);
+        Assert.Equal("HR_ADMIN", roles["LEGAL_OFFICER"].GroupCode);
+        Assert.Equal("DESIGN", roles["ARCHITECT"].GroupCode);
+        Assert.Equal("CONSTRUCTION", roles["PM"].GroupCode);
+        Assert.Equal("CONSTRUCTION", roles["PROCUREMENT"].GroupCode);
+        Assert.Equal("FINANCE", roles["ACCOUNTANT"].GroupCode);
+        Assert.Null(roles["BGD"].GroupCode);
     }
 
     [Fact]

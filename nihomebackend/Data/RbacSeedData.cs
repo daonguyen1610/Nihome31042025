@@ -43,7 +43,8 @@ public static class RbacSeedData
                 r.Code,
                 r.Name,
                 $"rbac.role.{r.Code}.label",
-                $"rbac.role.{r.Code}.description"))
+                $"rbac.role.{r.Code}.description",
+                r.GroupCode))
             .ToList();
 
         var rolePermissions = (raw.RolePermissions ?? new())
@@ -81,6 +82,7 @@ public static class RbacSeedData
     {
         public string Code { get; set; } = "";
         public string Name { get; set; } = "";
+        public string? GroupCode { get; set; }
     }
 
     private sealed class RawRolePerms

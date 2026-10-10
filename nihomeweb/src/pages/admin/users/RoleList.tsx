@@ -341,6 +341,9 @@ export default function RoleList() {
   const selectedGroup = roleGroups.find((group) => group.id === selectedGroupId)
     ?? roleGroups[0]
     ?? null;
+  const selectedGroupRoles = selectedGroup
+    ? roles.filter((role) => role.roleGroupId === selectedGroup.id)
+    : [];
   useEffect(() => {
     if (selectedGroup && selectedGroup.id !== selectedGroupId) setSelectedGroupId(selectedGroup.id);
   }, [selectedGroup, selectedGroupId]);
@@ -814,6 +817,43 @@ export default function RoleList() {
                           </div>
                         </Can>
                       </div>
+                    </div>
+
+                    <div className="rounded-xl border bg-card p-4" data-testid="rbac-group-members">
+                      <div className="mb-3 flex items-center justify-between gap-3">
+                        <div>
+                          <h3 className="text-sm font-semibold">{t("adminRbac.groups.membersTitle")}</h3>
+                          <p className="mt-0.5 text-xs text-muted-foreground">{t("adminRbac.groups.membersHelp")}</p>
+                        </div>
+                        <Badge variant="secondary">{selectedGroupRoles.length}</Badge>
+                      </div>
+                      {selectedGroupRoles.length === 0 ? (
+                        <p className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
+                          {t("adminRbac.groups.noMembers")}
+                        </p>
+                      ) : (
+                        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                          {selectedGroupRoles.map((role) => (
+                            <button
+                              key={role.id}
+                              type="button"
+                              className="rounded-lg border p-3 text-left transition-colors hover:border-primary/40 hover:bg-primary/5"
+                              onClick={() => {
+                                setSelectedRoleId(role.id);
+                                setViewMode("editor");
+                              }}
+                              data-testid={`rbac-group-member-${role.code}`}
+                            >
+                              <span className="block truncate text-sm font-semibold">
+                                {role.labelKey ? t(role.labelKey) : role.name}
+                              </span>
+                              <span className="mt-1 block text-xs text-muted-foreground">
+                                {role.code} · {role.permissionCount} {t("adminRbac.permissionsShort")}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
                     <div className="space-y-3">

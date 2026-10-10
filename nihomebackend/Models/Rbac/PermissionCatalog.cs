@@ -34,7 +34,12 @@ public static class PermissionCatalog
         public string Code => RbacConventions.BuildCode(Module, Action);
     }
 
-    public sealed record BusinessRole(string Code, string Name, string LabelKey, string DescriptionKey);
+    public sealed record BusinessRole(
+        string Code,
+        string Name,
+        string LabelKey,
+        string DescriptionKey,
+        string? GroupCode);
 
     /// <summary>
     /// Merges a base catalog (from JSON seed) with auto-discovered entries.

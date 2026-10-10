@@ -405,6 +405,7 @@ public sealed class RoleService(
 
         var oldGroupId = role.RoleGroupId;
         role.RoleGroupId = req.RoleGroupId;
+        role.InitialGroupSeeded = true;
         role.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(ct);
         var response = (await GetRoleAsync(id, ct))!;
@@ -491,6 +492,7 @@ public sealed class RoleService(
             IsSystem = false,
             IsActive = true,
             RoleGroupId = selectedGroup?.Id,
+            InitialGroupSeeded = true,
             InitialPermissionsSeeded = true, // RbacSeeder must not retro-seed defaults.
             CreatedAt = now,
         };
