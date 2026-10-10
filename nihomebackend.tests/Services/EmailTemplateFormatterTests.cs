@@ -25,6 +25,52 @@ public class EmailTemplateFormatterTests
     }
 
     [Fact]
+    public void BuildQuoteEmail_DefaultRendersBrandedHtmlAndEncodesCustomerData()
+    {
+        var tokens = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["customerName"] = "An <script>alert(1)</script>",
+            ["quoteCode"] = "BG-001",
+            ["opportunityName"] = "Văn phòng & nhà ở",
+            ["quoteLines"] = "Thi công <b>test</b>",
+            ["discountPercent"] = "0",
+            ["vatPercent"] = "8",
+            ["grandTotal"] = "1.080.000.000",
+            ["validUntil"] = "31/12/2026",
+        };
+
+        var (_, body) = EmailTemplateFormatter.BuildQuoteEmail(null, null, tokens);
+
+        Assert.Contains("background:#e5394a", body);
+        Assert.Contains("NICON", body);
+        Assert.Contains("An &lt;script&gt;alert(1)&lt;/script&gt;", body);
+        Assert.Contains("&lt;b&gt;test&lt;/b&gt;", body);
+        Assert.Contains("&amp;", body);
+        Assert.True(EmailTemplateFormatter.IsSafeQuoteHtml(body));
+    }
+
+    [Theory]
+    [InlineData("<div onclick=\"alert(1)\">x</div>")]
+    [InlineData("<script>alert(1)</script>")]
+    [InlineData("<a href=\"https://example.com\">x</a>")]
+    [InlineData("<div style=\"background:url(https://example.com)\">x</div>")]
+    [InlineData("<!DOCTYPE root><div>x</div>")]
+    public void IsSafeQuoteHtml_RejectsUnsafeMarkup(string body)
+    {
+        Assert.False(EmailTemplateFormatter.IsSafeQuoteHtml(body));
+    }
+
+    [Fact]
+    public void BuildQuoteEmail_PreservesCustomPlainTextWithoutInterpretingMarkup()
+    {
+        var (_, body) = EmailTemplateFormatter.BuildQuoteEmail("Quote", "Hello {{customerName}} <team>",
+            new Dictionary<string, string> { ["customerName"] = "A&B" });
+
+        Assert.Contains("Hello A&amp;B &lt;team&gt;", body);
+        Assert.True(EmailTemplateFormatter.IsSafeQuoteHtml(body));
+    }
+
+    [Fact]
     public void ReplaceTokens_ReplacesAllMatchingTokens()
     {
         var template = "Hello {{name}}, welcome to {{site}}!";

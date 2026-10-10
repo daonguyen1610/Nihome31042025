@@ -33,6 +33,7 @@ import QuoteContractLinkDialog from "@/components/admin/QuoteContractLinkDialog"
 import { isContractReadyQuote } from "@/lib/contractQuotes";
 import { isValidEmail } from "@/lib/validation";
 import { useI18n } from "@/lib/i18n";
+import { quoteEmailPreviewHtml } from "@/lib/quoteEmailPreview";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -1068,6 +1069,11 @@ const AdminQuoteDetail = () => {
                 <Textarea id="quote-email-body" rows={10} maxLength={8000} value={sendDraft.body} disabled={!sendPreview?.canEdit}
                   onChange={(event) => setSendDraft({ ...sendDraft, body: event.target.value })} />
                 {!sendDraft.body.trim() && <p className="text-xs text-destructive">{t("quotes.email.bodyRequired")}</p>}
+              </div>
+              <div className="space-y-1">
+                <Label>{t("quotes.email.renderedPreview")}</Label>
+                <iframe title={t("quotes.email.renderedPreview")} srcDoc={quoteEmailPreviewHtml(sendDraft.body)}
+                  sandbox="" className="h-72 w-full rounded-md border bg-white" />
               </div>
             </div>
           )}

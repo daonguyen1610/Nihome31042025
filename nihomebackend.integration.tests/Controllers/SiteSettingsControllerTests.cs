@@ -96,6 +96,16 @@ public class SiteSettingsControllerTests : IntegrationTestBase
             unchanged.GetProperty("quoteEmailSubjectTemplate").GetString().Should().Be(originalSubject);
             unchanged.GetProperty("quoteEmailBodyTemplate").GetString().Should().Be(originalBody);
 
+            var unsafeHtml = await Client.PutAsJsonAsync("/api/site-settings/email-templates", new
+            {
+                quoteEmailSubjectTemplate = "NICON {{quoteCode}}",
+                quoteEmailBodyTemplate = "<div onclick=\"alert(1)\">{{quoteLines}} {{grandTotal}}</div>",
+            });
+            unsafeHtml.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            var afterUnsafeResponse = await Client.GetAsync("/api/site-settings/email-templates");
+            var afterUnsafe = await ReadJsonAsync(afterUnsafeResponse);
+            afterUnsafe.GetProperty("quoteEmailBodyTemplate").GetString().Should().Be(originalBody);
+
             var valid = await Client.PutAsJsonAsync("/api/site-settings/email-templates", new
             {
                 newApplicationEmailSubjectTemplate = applicationSubject,

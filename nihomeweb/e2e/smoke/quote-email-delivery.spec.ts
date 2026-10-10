@@ -67,11 +67,14 @@ test("approved opportunity quote sends the edited preview through SMTP before cu
     await expect(dialog.getByLabel("Email khách hàng")).toHaveValue(recipient);
     await expect(dialog.getByLabel("Tiêu đề email")).toHaveValue(/QT-/);
     await expect(dialog.getByLabel("Nội dung email sắp gửi")).toHaveValue(/Tổng giá trị/);
+    await expect(dialog.frameLocator('iframe[title="Xem trước email hiển thị"]').locator("body")).toContainText("NICON");
+    await expect(dialog.frameLocator('iframe[title="Xem trước email hiển thị"]').locator("body")).toContainText("810.000.000");
     await dialog.getByLabel("Email khách hàng").fill("invalid@domain");
     await expect(dialog.getByRole("button", { name: "Gửi khách" })).toBeDisabled();
     await dialog.getByLabel("Email khách hàng").fill(recipient);
     await dialog.getByLabel("Tiêu đề email").fill(`NICON quote ${marker}`);
     await dialog.getByLabel("Nội dung email sắp gửi").fill(`Dear customer, please review ${marker}. Total: 810000000 VND.`);
+    await expect(dialog.frameLocator('iframe[title="Xem trước email hiển thị"]').locator("body")).toContainText(marker);
     await dialog.getByRole("button", { name: "Gửi khách" }).click();
     await expect(dialog).not.toBeVisible();
 

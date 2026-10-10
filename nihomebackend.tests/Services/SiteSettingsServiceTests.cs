@@ -93,6 +93,7 @@ public class SiteSettingsServiceTests : IDisposable
     [InlineData("Báo giá", "Thiếu tổng {{quoteLines}}")]
     [InlineData("Báo giá {{unknown}}", "{{quoteLines}} {{grandTotal}}")]
     [InlineData("Báo giá", "{{quoteLines}} {{grandTotal}} {{broken-token}}")]
+    [InlineData("Báo giá", "<div onclick=\"alert(1)\">{{quoteLines}} {{grandTotal}}</div>")]
     public async Task UpdateEmailTemplatesAsync_RejectsInvalidQuoteTemplateWithoutSaving(string subject, string body)
     {
         SeedSettings();

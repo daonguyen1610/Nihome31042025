@@ -3,6 +3,7 @@ import { Save, Eye, Maximize2, Minimize2, RotateCcw, Mail, ShieldCheck, FileText
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { quoteEmailPreviewHtml } from "@/lib/quoteEmailPreview";
 import { useToast } from "@/hooks/use-toast";
 import { extractApiError } from "@/lib/apiError";
 import { adminApi } from "@/services/adminApi";
@@ -83,14 +84,11 @@ const EmailTemplateConfig = () => {
     if (!iframe) return;
     const doc = iframe.contentDocument;
     if (!doc) return;
-    doc.open();
-    if (activeTab === "quote") {
-      doc.write("<body style='padding:20px;white-space:pre-wrap;font-family:Arial,sans-serif'></body>");
-      doc.body.textContent = activeBody;
-    } else {
+    if (activeTab !== "quote") {
+      doc.open();
       doc.write(activeBody || "<p style='color:#999;padding:20px;font-family:sans-serif;'>Chưa có nội dung template</p>");
+      doc.close();
     }
-    doc.close();
   }, [activeBody, activeTab]);
 
   const handleSave = async () => {
@@ -262,7 +260,7 @@ const EmailTemplateConfig = () => {
                   activeTab === "application" ? setBody(e.target.value)
                     : activeTab === "otp" ? setOtpBody(e.target.value) : setQuoteBody(e.target.value)
                 }
-                placeholder={activeTab === "quote" ? "Kính gửi {{customerName}}, ..." : "<div>...</div>"}
+                placeholder="<div>...</div>"
                 maxLength={activeTab === "quote" ? 8000 : undefined}
               />
               {activeTab === "quote" && <p className="text-xs text-muted-foreground">{t("emailTemplate.quote.hint")}</p>}
@@ -308,11 +306,13 @@ const EmailTemplateConfig = () => {
                 Subject: {activeSubject || "(trống)"}
               </div>
               <iframe
+                key={activeTab}
                 ref={iframeRef}
                 title="Email preview"
+                srcDoc={activeTab === "quote" ? quoteEmailPreviewHtml(activeBody) : undefined}
                 className="w-full bg-white"
                 style={{ height: fullscreen ? "calc(100vh - 140px)" : "500px", border: "none" }}
-                sandbox="allow-same-origin"
+                sandbox={activeTab === "quote" ? "" : "allow-same-origin"}
               />
             </div>
           </div>

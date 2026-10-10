@@ -1,5 +1,7 @@
 using System.Net;
 using System.Text.RegularExpressions;
+using System.Xml;
+using System.Xml.Linq;
 
 namespace NihomeBackend.Services;
 
@@ -35,12 +37,85 @@ public static partial class EmailTemplateFormatter
 
     public static string DefaultQuoteSubject => "Báo giá {{quoteCode}} – {{opportunityName}}";
 
-    public static string DefaultQuoteBody => "Kính gửi {{customerName}},\n\nNICON gửi Quý khách báo giá {{quoteCode}} cho {{opportunityName}}.\n{{quoteLines}}\nChiết khấu: {{discountPercent}}%; VAT: {{vatPercent}}%.\nTổng giá trị: {{grandTotal}} VND.\nBáo giá có hiệu lực đến {{validUntil}}.\n\nTrân trọng,\nNICON";
+    public static string PreviousDefaultQuoteBody => "Kính gửi {{customerName}},\n\nNICON gửi Quý khách báo giá {{quoteCode}} cho {{opportunityName}}.\n{{quoteLines}}\nChiết khấu: {{discountPercent}}%; VAT: {{vatPercent}}%.\nTổng giá trị: {{grandTotal}} VND.\nBáo giá có hiệu lực đến {{validUntil}}.\n\nTrân trọng,\nNICON";
+
+    public static string DefaultQuoteBody => """
+        <div style="margin:0;padding:24px;background:#f3f6fb;font-family:Arial,sans-serif;color:#1f2937">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="width:100%;max-width:600px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb">
+            <tr><td style="padding:18px 24px;background:#e5394a;color:#ffffff">
+              <div style="font-size:20px;font-weight:700">NICON</div>
+              <div style="font-size:12px;margin:6px 0 0">BÁO GIÁ DỰ ÁN · {{quoteCode}}</div>
+            </td></tr>
+            <tr><td style="padding:24px">
+              <p style="margin:0 0 16px;font-size:15px">Kính gửi <strong>{{customerName}}</strong>,</p>
+              <p style="margin:0 0 18px;font-size:14px;line-height:22px">NICON trân trọng gửi Quý khách báo giá cho <strong>{{opportunityName}}</strong>.</p>
+              <div style="padding:16px;background:#f8fafc;border:1px solid #e5e7eb">
+                <div style="font-size:13px;font-weight:700;color:#334155">HẠNG MỤC VÀ ĐƠN GIÁ</div>
+                <div style="margin:12px 0 0;font-size:14px;line-height:23px;white-space:pre-line">{{quoteLines}}</div>
+              </div>
+              <p style="margin:18px 0 8px;font-size:13px;color:#64748b">Chiết khấu {{discountPercent}}% · VAT {{vatPercent}}%</p>
+              <div style="padding:16px;background:#fff1f2;color:#9f1239;font-size:18px;font-weight:700">Tổng giá trị: {{grandTotal}} VND</div>
+              <p style="margin:18px 0 0;font-size:13px;color:#475569">Báo giá có hiệu lực đến {{validUntil}}.</p>
+              <p style="margin:22px 0 0;font-size:14px">Trân trọng,<br />NICON</p>
+            </td></tr>
+            <tr><td style="padding:12px 24px;background:#f8fafc;color:#64748b;font-size:12px">NICON · Đối tác phát triển của Quý khách</td></tr>
+          </table>
+        </div>
+        """;
 
     public static (string subject, string body) BuildQuoteEmail(
         string? subjectTemplate, string? bodyTemplate, Dictionary<string, string> tokens) =>
         (ReplaceTokens(string.IsNullOrWhiteSpace(subjectTemplate) ? DefaultQuoteSubject : subjectTemplate, tokens),
-         ReplaceTokens(string.IsNullOrWhiteSpace(bodyTemplate) ? DefaultQuoteBody : bodyTemplate, tokens));
+         RenderQuoteBody(string.IsNullOrWhiteSpace(bodyTemplate) ? DefaultQuoteBody : bodyTemplate, tokens));
+
+    private static string RenderQuoteBody(string template, Dictionary<string, string> tokens)
+    {
+        if (!template.TrimStart().StartsWith('<'))
+            return ToSafeQuoteHtml(ReplaceTokens(template, tokens));
+        var encodedTokens = tokens.ToDictionary(pair => pair.Key,
+            pair => WebUtility.HtmlEncode(pair.Value), StringComparer.OrdinalIgnoreCase);
+        return ReplaceTokens(template, encodedTokens);
+    }
+
+    public static string ToSafeQuoteHtml(string body) => body.TrimStart().StartsWith('<') ? body
+        : $"<div style=\"white-space:pre-wrap;font-family:Arial,sans-serif\">{WebUtility.HtmlEncode(body)}</div>";
+
+    public static bool IsSafeQuoteHtml(string body)
+    {
+        if (!body.TrimStart().StartsWith('<')) return true;
+        try
+        {
+            using var reader = XmlReader.Create(new StringReader($"<root>{body}</root>"),
+                new XmlReaderSettings { DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null });
+            var root = XDocument.Load(reader, LoadOptions.None).Root!;
+            foreach (var element in root.Descendants())
+            {
+                if (!new[] { "div", "table", "tbody", "tr", "td", "p", "span", "strong", "b", "br" }
+                    .Contains(element.Name.LocalName, StringComparer.OrdinalIgnoreCase)) return false;
+                foreach (var attribute in element.Attributes())
+                {
+                    if (attribute.Name.LocalName.Equals("style", StringComparison.OrdinalIgnoreCase))
+                    {
+                        foreach (var declaration in attribute.Value.Split(';', StringSplitOptions.RemoveEmptyEntries))
+                        {
+                            var parts = declaration.Split(':', 2);
+                            if (parts.Length != 2 || !new[] { "margin", "padding", "background", "color", "font-family", "font-size", "font-weight", "line-height", "border", "width", "max-width", "white-space" }
+                                .Contains(parts[0].Trim(), StringComparer.OrdinalIgnoreCase) ||
+                                !Regex.IsMatch(parts[1].Trim(), @"\A[\w#.,%\s-]+\z", RegexOptions.CultureInvariant)) return false;
+                        }
+                    }
+                    else if (!new[] { "role", "width", "cellspacing", "cellpadding" }
+                        .Contains(attribute.Name.LocalName, StringComparer.OrdinalIgnoreCase) ||
+                        !Regex.IsMatch(attribute.Value, @"\A[\w%-]+\z", RegexOptions.CultureInvariant)) return false;
+                }
+            }
+            return true;
+        }
+        catch (System.Xml.XmlException)
+        {
+            return false;
+        }
+    }
 
     public static string DefaultNewApplicationBody => """
         <div style='margin:0;padding:0;background:#f3f6fb;font-family:Segoe UI,Arial,sans-serif;color:#1f2937;'>
