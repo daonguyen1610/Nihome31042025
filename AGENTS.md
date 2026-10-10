@@ -73,6 +73,7 @@ Report ambiguity, missing evidence, defects, blocked checks, and residual risk. 
 - Follow 'nihomeweb/CLAUDE.md' for web UI conventions when it exists.
 - Centralize content translations in '/admin/translations'. Add i18n keys rather than embedding display text.
 - Keep translation keys and seeded content aligned in all supported languages.
+- Every application email must have an editable template in `/admin/email-templates` (subject and body), a preview of the actual rendered message before sending, and a documented set of supported variables. Do not hardcode a send-only email body in a service or controller. Render variables server-side with appropriate HTML encoding, validate edited templates/content on the server, enforce template-management and send/edit permissions, and cover the rendered email in tests. Keep existing templates working when adding a new email type.
 - For entities with fields such as 'NameVi', 'Name', 'NameZh', and 'NameJa', populate every required language field on every write path: create, seed, migration, and legacy-data auto-create. Do not rely on read-time fallback.
 
 ## Validation rules

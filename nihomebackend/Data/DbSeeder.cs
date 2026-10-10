@@ -128,7 +128,8 @@ public static class DbSeeder
                 updated = true;
             }
 
-            if (string.IsNullOrWhiteSpace(existingSettings.QuoteEmailBodyTemplate))
+            if (string.IsNullOrWhiteSpace(existingSettings.QuoteEmailBodyTemplate) ||
+                existingSettings.QuoteEmailBodyTemplate == EmailTemplateFormatter.PreviousDefaultQuoteBody)
             {
                 existingSettings.QuoteEmailBodyTemplate = EmailTemplateFormatter.DefaultQuoteBody;
                 updated = true;

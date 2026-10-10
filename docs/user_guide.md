@@ -1670,7 +1670,7 @@ The platform sends automated emails or lets authorized staff send them for the f
 
 ### 12.2 Email Templates
 
-OTP, job application notification, and CRM quote emails use configurable templates with `{{tokenName}}` substitution. The default OTP template uses the red/orange brand palette. Open `/admin/email-templates` and choose **Báo giá** to edit the quote subject and plain-text body; the right pane previews the template. Saving requires `system.settings.manage`.
+OTP, job application notification, and CRM quote emails use configurable templates with `{{tokenName}}` substitution. The default OTP and CRM quote templates use branded HTML. Open `/admin/email-templates` and choose **Báo giá** to edit the subject and HTML body; the right pane previews its layout. Keep `{{quoteLines}}` and `{{grandTotal}}` in the body. Only basic HTML and safe inline styles are accepted; scripts and event attributes are rejected. Existing custom plain-text quote templates remain supported. Saving requires `system.settings.manage`. When sending an approved quote, check the recipient and the rendered preview in the send dialog; only users with `crm.quotes.manage` may edit the subject or body.
 
 **OTP Template Placeholders:**
 
@@ -1687,7 +1687,7 @@ OTP, job application notification, and CRM quote emails use configurable templat
 | `{{candidateName}}` | The applicant's full name        |
 | `{{positionTitle}}`  | The job position title           |
 
-**Quote template placeholders:** `{{customerName}}`, `{{quoteCode}}`, `{{opportunityName}}`, `{{quoteLines}}`, `{{discountPercent}}`, `{{vatPercent}}`, `{{grandTotal}}`, and `{{validUntil}}`. The body must retain `{{quoteLines}}` and `{{grandTotal}}` so the customer sees priced items and the total. The configured template prefills the quote send form; only users with `crm.quotes.manage` may alter its subject/body before sending. HTML entered into the quote template is treated as text, not executable markup.
+**Quote template placeholders:** `{{customerName}}`, `{{quoteCode}}`, `{{opportunityName}}`, `{{quoteLines}}`, `{{discountPercent}}`, `{{vatPercent}}`, `{{grandTotal}}`, and `{{validUntil}}`. The body must retain `{{quoteLines}}` and `{{grandTotal}}` so the customer sees priced items and the total. Variables are HTML-encoded before rendering; use the preview to check the final layout and figures before sending.
 
 Templates are configured through the admin panel at `/admin/email-templates` or via the Site Settings API.
 

@@ -613,6 +613,28 @@ public class QuoteServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task SendToCustomer_RejectsUnsafeEditedHtmlWithoutSendingOrTransitioning()
+    {
+        var (user, quote) = await SeedApprovedReadyQuoteAsync();
+        await _sut.SubmitAsync(quote.Id, new(), user.Id, true, true);
+        await _sut.ApproveAsync(quote.Id, new(), user.Id, true);
+        var preview = (await _sut.GetEmailPreviewAsync(quote.Id, user.Id, true, true))!;
+        var rowVersion = (await _sut.GetAsync(quote.Id, user.Id, true))!.RowVersion;
+
+        await Assert.ThrowsAsync<QuoteOperationException>(() => _sut.SendToCustomerAsync(
+            quote.Id, new SendQuoteEmailRequest
+            {
+                RowVersion = rowVersion,
+                ToEmail = "khach@example.com",
+                Subject = preview.Subject,
+                Body = "<div onclick=\"alert(1)\">Unsafe</div>",
+            }, user.Id, true, true, true));
+
+        Assert.Equal(QuoteStatus.Approved, (await _db.Quotes.SingleAsync(q => q.Id == quote.Id)).Status);
+        _email.Verify(email => email.SendEmailAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
     public async Task SendToCustomer_EmailFailure_DoesNotMarkQuoteAsSent()
     {
         var (user, quote) = await SeedApprovedReadyQuoteAsync();

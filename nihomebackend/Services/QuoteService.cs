@@ -1,5 +1,4 @@
 using System.Data;
-using System.Net;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -520,8 +519,9 @@ public class QuoteService(
             throw new QuoteOperationException("Tiêu đề email (1–200 ký tự) và nội dung (1–8000 ký tự) là bắt buộc.");
         if (!canEdit && (subject != preview.Subject || body != preview.Body))
             throw new QuoteOperationException("Không có quyền chỉnh sửa nội dung email báo giá.");
-        await emailService.SendEmailAsync(toEmail, subject,
-            $"<div style=\"white-space:pre-wrap;font-family:Arial,sans-serif\">{WebUtility.HtmlEncode(body)}</div>");
+        if (!EmailTemplateFormatter.IsSafeQuoteHtml(body))
+            throw new QuoteOperationException("Nội dung email báo giá chứa HTML không được hỗ trợ hoặc không an toàn.");
+        await emailService.SendEmailAsync(toEmail, subject, EmailTemplateFormatter.ToSafeQuoteHtml(body));
         return await TransitionAsync(id, caller, canSeeAll,
             allowedFrom: [QuoteStatus.Approved],
             to: QuoteStatus.SentToCustomer,

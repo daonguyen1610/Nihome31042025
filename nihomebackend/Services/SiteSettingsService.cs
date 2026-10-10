@@ -36,6 +36,8 @@ public class SiteSettingsService(AppDbContext db)
             if (!quoteBody.Contains("{{quoteLines}}", StringComparison.OrdinalIgnoreCase) ||
                 !quoteBody.Contains("{{grandTotal}}", StringComparison.OrdinalIgnoreCase))
                 throw new ArgumentException("Nội dung mẫu email báo giá phải có {{quoteLines}} và {{grandTotal}} để khách thấy hạng mục và tổng giá trị.");
+            if (!EmailTemplateFormatter.IsSafeQuoteHtml(quoteBody))
+                throw new ArgumentException("Nội dung mẫu email báo giá chỉ hỗ trợ HTML cơ bản, CSS nội tuyến an toàn; không cho phép script, liên kết hoặc thuộc tính sự kiện.");
             settings.QuoteEmailBodyTemplate = quoteBody;
         }
         settings.UpdatedAt = DateTime.UtcNow;
