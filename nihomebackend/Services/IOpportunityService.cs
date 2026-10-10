@@ -29,6 +29,7 @@ public interface IOpportunityService
         string? search = null,
         int page = 1,
         int pageSize = 20,
+        bool quoteEligibleOnly = false,
         CancellationToken ct = default);
 
     Task<OpportunityPipelineResponse> GetPipelineAsync(

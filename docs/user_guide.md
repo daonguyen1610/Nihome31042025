@@ -292,6 +292,11 @@ Price the deal before signing: the opportunity detail offers **Create quote** at
 every open stage (and on Contract signed while no winning quote is set). The
 **Quotes** tab lists each quotation of the opportunity with its status, version,
 total, and the winning mark; an empty tab offers the same action.
+On the Quotes page, the new-quote Opportunity picker searches the complete
+server-side Opportunity set by ID, name, customer, or owner. Each result shows
+the Opportunity ID, customer, stage, estimated value, expected close date, and
+owner. Lost Opportunities and Contract-signed Opportunities that already have
+a winning quote are not offered for selection.
 
 Design may start before the Contract. Sales can link an Operational Project of
 the same customer when creating or editing an Opportunity. In the Opportunity
