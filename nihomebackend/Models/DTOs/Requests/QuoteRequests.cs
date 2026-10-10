@@ -119,6 +119,9 @@ public class SendQuoteEmailRequest : QuoteWorkflowRequest
 
     [Required, StringLength(8000)]
     public string Body { get; set; } = string.Empty;
+
+    [RegularExpression("^(vi|en|zh|ja)$")]
+    public string LanguageCode { get; set; } = "vi";
 }
 
 public class ExtendQuoteValidityRequest : IConcurrencyRequest

@@ -1,13 +1,12 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using ClosedXML.Excel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Hosting;
 using NihomeBackend.Models;
 using NihomeBackend.Services;
-using UglyToad.PdfPig;
-using UglyToad.PdfPig.DocumentLayoutAnalysis.TextExtractor;
 
 namespace NihomeBackend.IntegrationTests.Controllers;
 
@@ -384,12 +383,16 @@ public class QuotesControllerTests : IntegrationTestBase
         var previewResponse = await Client.GetAsync($"/api/quotes/{quoteId}/email-preview");
         previewResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         var preview = await ReadJsonAsync(previewResponse);
+        preview.GetProperty("attachmentFileName").GetString().Should().EndWith(".xlsx");
+        preview.GetProperty("attachmentContentType").GetString()
+            .Should().Be(QuoteSpreadsheetService.ContentType);
         var sendRes = await Client.PostAsJsonAsync($"/api/quotes/{quoteId}/send", new
         {
             rowVersion = approvedQuote.GetProperty("rowVersion").GetString(),
             toEmail = "khachhang@example.com",
             subject = preview.GetProperty("subject").GetString(),
             body = preview.GetProperty("body").GetString(),
+            languageCode = "vi",
         });
         sendRes.StatusCode.Should().Be(HttpStatusCode.OK);
 
@@ -815,55 +818,112 @@ public class QuotesControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task ExportPdf_ReturnsPreliminaryPdfAndRequiresAuthentication()
+    public async Task ExportSpreadsheet_ReturnsStructuredWorkbookAndRequiresAuthentication()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
         var quoteId = await CreateQuoteAsync();
         using (var scope = Factory.Services.CreateScope())
         {
             var translations = scope.ServiceProvider.GetRequiredService<TranslationService>();
-            await UpsertEnglishPdfTranslationAsync(translations, "quotes.pdf.title", "PRELIMINARY QUOTATION");
-            await UpsertEnglishPdfTranslationAsync(translations, "quotes.pdf.preliminaryWatermark", "PRELIMINARY");
-            await UpsertEnglishPdfTranslationAsync(translations, "quotes.pdf.customerOpportunity", "CUSTOMER / OPPORTUNITY");
-            await UpsertEnglishPdfTranslationAsync(translations, "quotes.pdf.area", "Area");
-            await UpsertEnglishPdfTranslationAsync(translations, "quotes.pdf.catalogRate", "Catalog rate/m²");
-            await UpsertEnglishPdfTranslationAsync(translations, "quotes.pdf.appliedRate", "Applied rate/m²");
-            await UpsertEnglishPdfTranslationAsync(translations, "quotes.pdf.discount", "Discount");
-            await UpsertEnglishPdfTranslationAsync(translations, "quotes.pdf.grandTotal", "GRAND TOTAL");
+            await UpsertEnglishExcelTranslationAsync(translations, "quotes.excel.title", "QUOTATION");
+            await UpsertEnglishExcelTranslationAsync(translations, "quotes.excel.preliminaryWatermark", "PRELIMINARY");
+            await UpsertEnglishExcelTranslationAsync(translations, "quotes.excel.pricing", "PRICING BASIS");
+            await UpsertEnglishExcelTranslationAsync(translations, "quotes.excel.discount", "Discount");
+            await UpsertEnglishExcelTranslationAsync(translations, "quotes.excel.grandTotal", "GRAND TOTAL");
         }
-        var response = await Client.GetAsync($"/api/quotes/{quoteId}/export.pdf?lang=en");
+        var response = await Client.GetAsync($"/api/quotes/{quoteId}/export.xlsx?lang=en");
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        response.Content.Headers.ContentType!.MediaType.Should().Be("application/pdf");
+        response.Content.Headers.ContentType!.MediaType.Should().Be(QuoteSpreadsheetService.ContentType);
+        response.Content.Headers.ContentDisposition!.FileNameStar.Should().Be($"quote-{quoteId}.xlsx");
         var bytes = await response.Content.ReadAsByteArrayAsync();
-        bytes[..5].Should().Equal("%PDF-"u8.ToArray());
-        using var document = PdfDocument.Open(bytes);
-        var text = string.Join('\n', document.GetPages()
-            .Select(page => ContentOrderTextExtractor.GetText(page)));
-        text.Should().Contain("PRELIMINARY");
-        text.Should().Contain("PRELIMINARY QUOTATION");
-        text.Should().Contain("CUSTOMER / OPPORTUNITY");
-        text.Should().Contain("Area");
-        text.Should().Contain("Catalog rate/m²");
-        text.Should().Contain("Applied rate/m²");
-        text.Should().Contain("Discount");
-        text.Should().Contain("VAT");
-        text.Should().Contain("GRAND TOTAL");
+        bytes[..2].Should().Equal("PK"u8.ToArray());
+        using var workbook = new XLWorkbook(new MemoryStream(bytes));
+        var sheet = workbook.Worksheet(1);
+        sheet.Cell("A1").GetString().Should().Be("QUOTATION");
+        sheet.Cell("A2").GetString().Should().Be("PRELIMINARY");
+        sheet.Cell("B3").GetString().Should().StartWith("QT-");
+        sheet.Cell("A9").GetString().Should().Be("PRICING BASIS");
+        sheet.Cell("B10").DataType.Should().Be(XLDataType.Number);
+        sheet.Cell("E12").DataType.Should().Be(XLDataType.Number);
+        sheet.Cell("D17").DataType.Should().Be(XLDataType.Number);
+        sheet.Cell("E17").DataType.Should().Be(XLDataType.Number);
+        sheet.Cell("F17").DataType.Should().Be(XLDataType.Number);
+        sheet.CellsUsed().Select(cell => cell.GetFormattedString()).Should().Contain("GRAND TOTAL");
 
         Client.DefaultRequestHeaders.Authorization = null;
-        (await Client.GetAsync($"/api/quotes/{quoteId}/export.pdf"))
+        (await Client.GetAsync($"/api/quotes/{quoteId}/export.xlsx"))
             .StatusCode.Should().Be(HttpStatusCode.Unauthorized);
 
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "WAREHOUSE"));
-        (await Client.GetAsync($"/api/quotes/{quoteId}/export.pdf"))
+        (await Client.GetAsync($"/api/quotes/{quoteId}/export.xlsx"))
             .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        Client.DefaultRequestHeaders.Authorization = null;
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
+        (await Client.GetAsync($"/api/quotes/{quoteId}/export.xlsx"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task ExportSpreadsheet_BoqQuote_PreservesPricedLinesAndTotals()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var opportunityId = await CreateOpportunityAsync();
+        var created = await Client.PostAsJsonAsync("/api/quotes", new
+        {
+            opportunityId,
+            method = "Boq",
+            items = new[]
+            {
+                new
+                {
+                    itemCode = "BOQ-01",
+                    name = "Bê tông móng M300",
+                    unit = "m3",
+                    quantity = 25.5m,
+                    unitPrice = 1_450_000.25m,
+                    sortOrder = 1,
+                },
+                new
+                {
+                    itemCode = "BOQ-02",
+                    name = "Sơn nội thất",
+                    unit = "m2",
+                    quantity = 1234.56m,
+                    unitPrice = 85_000.5m,
+                    sortOrder = 2,
+                },
+            },
+            discountPercent = 5m,
+            vatPercent = 10m,
+        });
+        created.StatusCode.Should().Be(HttpStatusCode.Created);
+        var quote = await ReadJsonAsync(created);
+        var quoteId = quote.GetProperty("id").GetInt32();
+
+        var response = await Client.GetAsync($"/api/quotes/{quoteId}/export.xlsx?lang=vi");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var workbook = new XLWorkbook(new MemoryStream(await response.Content.ReadAsByteArrayAsync()));
+        var sheet = workbook.Worksheet(1);
+        sheet.Cell("A17").GetString().Should().Be("BOQ-01");
+        sheet.Cell("B17").GetString().Should().Be("Bê tông móng M300");
+        sheet.Cell("C17").GetString().Should().Be("m3");
+        sheet.Cell("D17").GetValue<decimal>().Should().Be(25.5m);
+        sheet.Cell("E17").GetValue<decimal>().Should().Be(1_450_000.25m);
+        sheet.Cell("F17").GetValue<decimal>().Should().Be(36_975_006.38m);
+        sheet.Cell("A18").GetString().Should().Be("BOQ-02");
+        sheet.CellsUsed().Select(cell => cell.GetFormattedString()).Should().Contain("TỔNG CỘNG");
+        sheet.CellsUsed().Where(cell => cell.DataType == XLDataType.Number)
+            .Select(cell => cell.GetValue<decimal>()).Should().Contain(quote.GetProperty("grandTotal").GetDecimal());
     }
 
     [Theory]
-    [InlineData("vi", "BÁO GIÁ SƠ BỘ", "SƠ BỘ")]
-    [InlineData("en", "PRELIMINARY QUOTATION", "PRELIMINARY")]
-    [InlineData("zh", "初步报价单", "初步")]
-    [InlineData("ja", "概算見積書", "概算")]
-    public async Task ExportPdf_SupportsLocalizedUnicodeText(string language, string title, string watermark)
+    [InlineData("vi", "BÁO GIÁ", "SƠ BỘ")]
+    [InlineData("en", "QUOTATION", "PRELIMINARY")]
+    [InlineData("zh", "报价单", "初步")]
+    [InlineData("ja", "見積書", "概算")]
+    public async Task ExportSpreadsheet_SupportsLocalizedUnicodeText(string language, string title, string watermark)
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
         var quoteId = await CreateQuoteAsync();
@@ -871,14 +931,14 @@ public class QuotesControllerTests : IntegrationTestBase
         {
             var translations = scope.ServiceProvider.GetRequiredService<TranslationService>();
             await translations.UpsertPairAsync(
-                "quotes.pdf.title",
-                language == "vi" ? title : "BÁO GIÁ SƠ BỘ",
+                "quotes.excel.title",
+                language == "vi" ? title : "BÁO GIÁ",
                 language == "vi"
                     ? new Dictionary<string, string>()
                     : new Dictionary<string, string> { [language] = title },
                 "quotes");
             await translations.UpsertPairAsync(
-                "quotes.pdf.preliminaryWatermark",
+                "quotes.excel.preliminaryWatermark",
                 language == "vi" ? watermark : "SƠ BỘ",
                 language == "vi"
                     ? new Dictionary<string, string>()
@@ -886,28 +946,29 @@ public class QuotesControllerTests : IntegrationTestBase
                 "quotes");
         }
 
-        var response = await Client.GetAsync($"/api/quotes/{quoteId}/export.pdf?lang={language}");
+        var response = await Client.GetAsync($"/api/quotes/{quoteId}/export.xlsx?lang={language}");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        using var document = PdfDocument.Open(await response.Content.ReadAsByteArrayAsync());
-        var text = string.Join('\n', document.GetPages().Select(page => ContentOrderTextExtractor.GetText(page)));
-        text.Should().Contain(title).And.Contain(watermark);
+        using var workbook = new XLWorkbook(new MemoryStream(await response.Content.ReadAsByteArrayAsync()));
+        var sheet = workbook.Worksheet(1);
+        sheet.Cell("A1").GetString().Should().Be(title);
+        sheet.Cell("A2").GetString().Should().Be(watermark);
     }
 
     [Fact]
-    public async Task ExportPdf_RejectsUnsupportedLanguage()
+    public async Task ExportSpreadsheet_RejectsUnsupportedLanguage()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
         var quoteId = await CreateQuoteAsync();
 
-        var response = await Client.GetAsync($"/api/quotes/{quoteId}/export.pdf?lang=fr");
+        var response = await Client.GetAsync($"/api/quotes/{quoteId}/export.xlsx?lang=fr");
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         (await ReadJsonAsync(response)).GetProperty("message").GetString()
             .Should().Contain("vi, en, zh hoặc ja");
     }
 
-    private static Task UpsertEnglishPdfTranslationAsync(
+    private static Task UpsertEnglishExcelTranslationAsync(
         TranslationService translations,
         string key,
         string value) => translations.UpsertPairAsync(

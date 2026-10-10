@@ -59,5 +59,5 @@ public interface IQuoteService
         bool canManage, bool canSeeAll, CancellationToken ct = default);
 
     Task<QuoteVersionsResponse?> GetVersionsAsync(int id, int callerUserId, bool canSeeAll, CancellationToken ct = default);
-    Task<byte[]?> ExportPdfAsync(int id, int callerUserId, bool canSeeAll, string languageCode, CancellationToken ct = default);
+    Task<byte[]?> ExportSpreadsheetAsync(int id, int callerUserId, bool canSeeAll, string languageCode, CancellationToken ct = default);
 }

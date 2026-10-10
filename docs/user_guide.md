@@ -166,7 +166,7 @@ The platform is being developed incrementally. The following components are curr
 | In-app admin notifications | Implemented |
 | CRM module (customers, leads, opportunities) | Implemented, including configurable Lead segments and the controlled five-step sales pipeline |
 | Central operational projects (customer, sales, contract, and design rollup) | Implemented as the target cross-module root; several legacy construction and closeout records still use `DesignProjectId` and require controlled migration |
-| Quotations, capability documents, and tenders | Implemented, including governed material-rate pricing, localized preliminary PDF, and versioned Tender estimates |
+| Quotations, capability documents, and tenders | Implemented, including governed material-rate pricing, localized Excel quotation workbooks, and versioned Tender estimates |
 | Site survey digitization | Implemented, including project routing, structured conditions, CSV import, media/geolocation, Drive sync, and PDF export |
 | Customer contracts, appendices, attachments, and variation orders | Implemented |
 | Design management | Core lifecycle implemented: projects, Concept metadata, Basic/Shop file upload and preview, revisions, IFC, Operational Project team and design schedule. Concept media/feedback threads, markup, the final Design Lead/Design Manager approval contract, and full MS Project import remain planned/open |
@@ -365,8 +365,10 @@ enter the area, select an active catalog, and choose a date covered by an
 Approved revision. The system resolves the total catalog rate per square metre
 automatically. Only Investment-rate catalogs are available for this method.
 Authorized overrides require a Vietnamese reason and remain visible in versions
-and the PDF. Downloadable preliminary PDFs are localized in Vietnamese, English,
-Chinese, or Japanese.
+and the Excel quotation. Downloadable quotation workbooks are localized in
+Vietnamese, English, Chinese, or Japanese. They preserve customer and
+Opportunity context, BOQ or unit-cost pricing, discount, VAT, and the final
+total as typed spreadsheet values.
 
 If no active catalog exists, the quote form shows the three setup steps instead
 of an empty list and links to the matching catalog page. That page opens the
@@ -400,8 +402,8 @@ request with its idempotency key does not create a duplicate quotation.
 |------|-----------|----------|
 | Quotation List | Filter by customer, opportunity, status | 1.5 days |
 | Quotation Create/Edit | BOQ-based or rate-based pricing, discount, VAT | 3.5 days |
-| Quotation Detail | Version control, internal approval, PDF export | 2.5 days |
-| PDF Preview/Export | Print-ready layout, PDF template | 2.5 days |
+| Quotation Detail | Version control, internal approval, Excel export | 2.5 days |
+| Excel Export | Customer-ready workbook with priced lines and totals | 2.5 days |
 | Version Comparison | Diff view between quotation versions | 2 days |
 
 #### 3.1.5 Tender Management
@@ -1014,8 +1016,9 @@ value has already been agreed; a quotation is optional. If the customer needs
 a quote, approve it internally, open **Send to customer**, check or enter the
 customer email address, review the subject and message, then send. Users with
 quote-management permission may edit the subject and message; send permission
-is required to dispatch. The email contains the priced lines and total; it
-does not currently attach the PDF. An attached quote must still be approved,
+is required to dispatch. The dialog identifies the generated `.xlsx`
+attachment before sending. The email contains the priced lines and total and
+attaches the localized Excel quotation. A sent quote must still be approved,
 valid, and consistent with the contract's customer and project. A downstream
 supplier contract does not use a customer quote.
 

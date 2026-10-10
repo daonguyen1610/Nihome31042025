@@ -17,6 +17,7 @@ public class QuoteServiceTests : IDisposable
     private readonly AppDbContext _db;
     private readonly Mock<INotificationService> _notifications;
     private readonly Mock<IEmailService> _email;
+    private readonly Mock<IQuoteSpreadsheetService> _quoteSpreadsheet;
     private readonly QuoteService _sut;
     private readonly ICrmHardDeletePlanService _hardDeletePlans;
     private readonly int _rateCatalogId;
@@ -27,13 +28,20 @@ public class QuoteServiceTests : IDisposable
         _db = DbContextFactory.Create();
         _notifications = new Mock<INotificationService>();
         _email = new Mock<IEmailService>();
+        _quoteSpreadsheet = new Mock<IQuoteSpreadsheetService>();
+        _quoteSpreadsheet
+            .Setup(service => service.CreateAsync(
+                It.IsAny<QuoteResponse>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync("xlsx-content"u8.ToArray());
         var hardDelete = HardDeleteTestServices.Create(
             _db, Mock.Of<IProjectDocumentStagingService>());
         _hardDeletePlans = hardDelete.CrmPlans;
         _sut = new QuoteService(
             _db,
             _notifications.Object,
-            Mock.Of<IQuotePdfService>(),
+            _quoteSpreadsheet.Object,
             _email.Object,
             NullLogger<QuoteService>.Instance,
             hardDelete.CrmPlans,
@@ -539,6 +547,8 @@ public class QuoteServiceTests : IDisposable
         var preview = await _sut.GetEmailPreviewAsync(quote.Id, user.Id, canSeeAll: true, canEdit: true);
         Assert.NotNull(preview);
         Assert.Contains("Tổng giá trị:", preview!.Body);
+        Assert.Equal($"{quote.Code}.xlsx", preview.AttachmentFileName);
+        Assert.Equal(QuoteSpreadsheetService.ContentType, preview.AttachmentContentType);
         var rowVersion = (await _sut.GetAsync(quote.Id, user.Id, true))!.RowVersion;
         await _sut.SendToCustomerAsync(quote.Id, new SendQuoteEmailRequest
         {
@@ -551,8 +561,14 @@ public class QuoteServiceTests : IDisposable
 
         Assert.NotNull(final);
         Assert.Equal("CustomerApproved", final!.Status);
-        _email.Verify(email => email.SendEmailAsync("khachhang@example.com", preview.Subject,
-            It.Is<string>(body => body.Contains("1.080.000.000") && !body.Contains("<script"))), Times.Once);
+        _email.Verify(email => email.SendEmailWithAttachmentAsync(
+            "khachhang@example.com",
+            preview.Subject,
+            It.Is<string>(body => body.Contains("1.080.000.000") && !body.Contains("<script")),
+            It.Is<EmailAttachment>(attachment => attachment.FileName == $"{quote.Code}.xlsx" &&
+                attachment.ContentType == QuoteSpreadsheetService.ContentType &&
+                System.Text.Encoding.UTF8.GetString(attachment.Content) == "xlsx-content"),
+            It.IsAny<CancellationToken>()), Times.Once);
         Assert.NotNull(final.ClosedAt);
         // Approval log has at least 5 entries: create + submit + approve + send + customer-approve.
         Assert.True(final.ApprovalLogs.Count >= 5);
@@ -589,8 +605,12 @@ public class QuoteServiceTests : IDisposable
             Subject = preview.Subject,
             Body = preview.Body,
         }, user.Id, true, true, false);
-        _email.Verify(email => email.SendEmailAsync("khachhang@example.com", preview.Subject,
-            It.Is<string>(body => body.Contains("Tổng cộng") && body.Contains("1.080.000.000"))), Times.Once);
+        _email.Verify(email => email.SendEmailWithAttachmentAsync(
+            "khachhang@example.com",
+            preview.Subject,
+            It.Is<string>(body => body.Contains("Tổng cộng") && body.Contains("1.080.000.000")),
+            It.Is<EmailAttachment>(attachment => attachment.FileName == $"{quote.Code}.xlsx"),
+            It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -609,7 +629,9 @@ public class QuoteServiceTests : IDisposable
             quote.Id, new SendQuoteEmailRequest { RowVersion = rowVersion, ToEmail = "khach@example.com", Subject = "Changed", Body = preview.Body },
             user.Id, true, true, false));
         Assert.Equal(QuoteStatus.Approved, (await _db.Quotes.SingleAsync(q => q.Id == quote.Id)).Status);
-        _email.Verify(email => email.SendEmailAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        _email.Verify(email => email.SendEmailWithAttachmentAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+            It.IsAny<EmailAttachment>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -631,7 +653,9 @@ public class QuoteServiceTests : IDisposable
             }, user.Id, true, true, true));
 
         Assert.Equal(QuoteStatus.Approved, (await _db.Quotes.SingleAsync(q => q.Id == quote.Id)).Status);
-        _email.Verify(email => email.SendEmailAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        _email.Verify(email => email.SendEmailWithAttachmentAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+            It.IsAny<EmailAttachment>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -642,7 +666,9 @@ public class QuoteServiceTests : IDisposable
         await _sut.ApproveAsync(quote.Id, new(), user.Id, true);
         var preview = (await _sut.GetEmailPreviewAsync(quote.Id, user.Id, true, true))!;
         var rowVersion = (await _sut.GetAsync(quote.Id, user.Id, true))!.RowVersion;
-        _email.Setup(email => email.SendEmailAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+        _email.Setup(email => email.SendEmailWithAttachmentAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<EmailAttachment>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("SMTP unavailable"));
         await Assert.ThrowsAsync<InvalidOperationException>(() => _sut.SendToCustomerAsync(
             quote.Id, new SendQuoteEmailRequest { RowVersion = rowVersion, ToEmail = "khach@example.com", Subject = preview.Subject, Body = preview.Body },

@@ -63,6 +63,13 @@ public class NihomeWebApplicationFactory : WebApplicationFactory<Program>
 internal sealed class NoOpTestEmailService : IEmailService
 {
     public Task SendEmailAsync(string toEmail, string subject, string htmlBody) => Task.CompletedTask;
+
+    public Task SendEmailWithAttachmentAsync(
+        string toEmail,
+        string subject,
+        string htmlBody,
+        EmailAttachment attachment,
+        CancellationToken ct = default) => Task.CompletedTask;
 }
 
 internal sealed class TestRowVersionInterceptor : SaveChangesInterceptor

@@ -968,15 +968,20 @@ structural tags and safe inline styles; dynamic values are HTML-encoded.
 Quote email bodies must use valid safe HTML. The send dialog previews the
 rendered message in an isolated iframe, and the submitted body is validated
 before SMTP delivery.
+`GET /api/quotes/{id}/export.xlsx?lang=vi` (`crm.quotes.view`) returns the
+localized quotation workbook. Supported languages are `vi`, `en`, `zh`, and
+`ja`. The workbook contains typed date and numeric cells for the quote header,
+BOQ or unit-cost rows, discount, VAT, and total; draft or pending quotations
+are marked preliminary.
 `POST /api/quotes/{id}/send` requires `toEmail`, `subject`,
-`body`, and the current `rowVersion`. The server validates the address and
+`body`, `languageCode`, and the current `rowVersion`. The server validates the address and
 content, permits subject/body edits only with `crm.quotes.manage`, and sends
-through the configured SMTP service before recording `SentToCustomer`.
+through the configured SMTP service with the generated `.xlsx` quotation
+attached before recording `SentToCustomer`.
 The recipient can be changed to another valid address by an authorized sender;
 the system does not prove mailbox ownership.
 SMTP failure leaves the quote in `Approved`; no email is sent by a status-only
-request. The email body includes the priced quote lines and total, but no PDF
-attachment. A durable email outbox is not yet part of this workflow, so an
+request. A durable email outbox is not yet part of this workflow, so an
 external delivery followed by a concurrent status conflict still needs manual
 reconciliation.
 

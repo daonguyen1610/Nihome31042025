@@ -82,7 +82,8 @@ và hợp đồng mà không nhập lại dữ liệu.
   idempotent; Lead sau chuyển đổi bị khóa.
 - Pipeline chuẩn: Tiếp cận → Khảo sát → Báo giá/Đấu thầu → Thương thảo → Ký HĐ.
 - Báo giá trực tiếp hỗ trợ suất đầu tư và BOQ sơ bộ, tính VAT/chiết khấu/tổng,
-  version và duyệt nội bộ/khách hàng.
+  version và duyệt nội bộ/khách hàng. Báo giá xuất và gửi khách dưới dạng file
+  Excel có đầy đủ dòng giá, VAT, chiết khấu và tổng cộng.
 - Đấu thầu có kế hoạch, checklist, deadline, hồ sơ năng lực, dự toán versioned và
   kết quả trúng/trượt.
 - Khảo sát mobile ghi điều kiện hiện trường, tọa độ, ảnh/video/file và checklist;
