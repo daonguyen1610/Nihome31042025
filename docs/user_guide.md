@@ -472,8 +472,8 @@ Create contracts or generate from approved quotations. Manage contract value, sc
 Every new or edited contract must belong to one Operational Project. The
 selected project must belong to the same customer as the contract; contracts
 created from an opportunity or quotation inherit that source project's identity.
-When a customer has exactly one project, the API may resolve that project for a
-legacy client that omits the field. It rejects an omitted project when the
+When a customer has exactly one project, the API may resolve that project when
+the request omits the field. It rejects an omitted project when the
 customer has no project or multiple possible projects. A project can contain
 any number of upstream and downstream contracts of compatible types.
 
@@ -482,13 +482,18 @@ opportunity created before automatic project creation, select **Create a new
 project** below the project field. Users with project management permission get
 the project created for that customer and selected in the form immediately.
 
-A contract drafted before its quotation can be tied to the approved quotation
-later: use **Link to an existing contract** on the quotation, or **Link an
-approved quote** in the Source section of the contract. Only quotations that
-are Approved, Sent to customer, or Customer approved, of the same customer
-(and opportunity, when set) are offered. A contract has one source quotation
-and a quotation feeds one live contract; cancelled or completed contracts
-cannot be linked.
+Create an upstream customer contract from a quotation in **Approved**, **Sent
+to customer**, or **Customer approved** status. This applies to a won tender
+too: its tender estimate is not a CRM quotation, so raise and approve the
+customer quotation before creating the contract. Design work may start before
+either quotation or contract. Downstream supplier/subcontractor contracts do
+not use a customer quotation. An upstream contract must keep its source
+quotation when edited or changing status. If a development record is missing
+the link, use **Link an approved quote** in the Source section to repair it;
+the quotation must belong to the same customer, opportunity (when set), and
+project. A quotation feeds one live contract.
+Deleting a quotation is blocked while a contract references it; review the
+deletion-impact dialog to find the linked contract.
 
 The Contract List can be filtered by Operational Project, customer, status,
 direction, type, signed-date range, and value range, and can be sorted by

@@ -160,6 +160,7 @@ public class OpportunityService(
                 {
                     Id = contract.Id,
                     ContractNumber = contract.ContractNumber,
+                    QuoteId = contract.QuoteId,
                     Status = contract.Status,
                     SignedDate = contract.SignedDate,
                 })

@@ -13,6 +13,29 @@ public class OperationalProjectsControllerTests : IntegrationTestBase
 {
     public OperationalProjectsControllerTests(NihomeWebApplicationFactory factory) : base(factory) { }
 
+    private async Task<int> SeedApprovedQuoteAsync(int customerId, int projectId, int? opportunityId = null) =>
+        await WithDbAsync(async db =>
+        {
+            var opportunity = opportunityId.HasValue
+                ? await db.Opportunities.SingleAsync(item => item.Id == opportunityId.Value)
+                : new Opportunity
+                {
+                    Name = $"Project contract opportunity {Guid.NewGuid():N}",
+                    CustomerId = customerId,
+                    OperationalProjectId = projectId,
+                };
+            var quote = new Quote
+            {
+                Code = $"QT-PROJECT-{Guid.NewGuid():N}",
+                Opportunity = opportunity,
+                OperationalProjectId = projectId,
+                Status = QuoteStatus.Approved,
+            };
+            db.Quotes.Add(quote);
+            await db.SaveChangesAsync();
+            return quote.Id;
+        });
+
     [Fact]
     public async Task List_WithoutAuthentication_IsUnauthorized()
     {
@@ -281,11 +304,13 @@ public class OperationalProjectsControllerTests : IntegrationTestBase
         });
         opportunityResponse.EnsureSuccessStatusCode();
         var opportunityId = (await ReadJsonAsync(opportunityResponse)).GetProperty("id").GetInt32();
+        var quoteId = await SeedApprovedQuoteAsync(customerId, projectId, opportunityId);
 
         var contractResponse = await Client.PostAsJsonAsync("/api/contracts", new
         {
             customerId,
             opportunityId,
+            quoteId,
             direction = "Upstream",
             type = "DesignAndBuild",
             status = "Draft",
@@ -367,10 +392,12 @@ public class OperationalProjectsControllerTests : IntegrationTestBase
         });
         projectResponse.EnsureSuccessStatusCode();
         var projectId = (await ReadJsonAsync(projectResponse)).GetProperty("id").GetInt32();
+        var quoteId = await SeedApprovedQuoteAsync(customerId, projectId);
         var contractResponse = await Client.PostAsJsonAsync("/api/contracts", new
         {
             customerId,
             operationalProjectId = projectId,
+            quoteId,
             direction = "Upstream",
             type = "DesignAndBuild",
             status = "Draft",

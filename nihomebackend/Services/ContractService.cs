@@ -350,10 +350,15 @@ public class ContractService(
         }
 
         await using var transaction = db.Database.IsRelational()
-            ? await db.Database.BeginTransactionAsync(ct)
+            ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct)
             : null;
         var customerOwnerUserId = await ValidateReferencesAsync(req, ct);
-        if (req.QuoteId.HasValue) await EnsureQuoteReadyForContractAsync(req.QuoteId.Value, ct);
+        EnsureUpstreamQuote(req.Direction, req.QuoteId);
+        if (req.QuoteId.HasValue)
+        {
+            var quote = await EnsureQuoteReadyForContractAsync(req.QuoteId.Value, ct);
+            await EnsureQuoteAvailableForContractAsync(quote, null, ct);
+        }
         var operationalProjectId = await ResolveOperationalProjectIdAsync(req, null, ct);
 
         // A supplied number is the caller's to own; generated numbers are
@@ -483,11 +488,13 @@ public class ContractService(
             entity, req.OpportunityId, req.CustomerId, req.Status, req.SignedDate, deleting: false, ct: ct);
 
         var customerOwnerUserId = await ValidateReferencesAsync(req, ct);
+        EnsureUpstreamQuote(req.Direction, req.QuoteId);
         // Only a newly attached quote must be approved; one linked earlier may
         // have expired since, and that must not block editing other terms.
         if (req.QuoteId.HasValue && req.QuoteId != entity.QuoteId)
         {
-            await EnsureQuoteReadyForContractAsync(req.QuoteId.Value, ct);
+            var quote = await EnsureQuoteReadyForContractAsync(req.QuoteId.Value, ct);
+            await EnsureQuoteAvailableForContractAsync(quote, id, ct);
         }
         var operationalProjectId = await ResolveOperationalProjectIdAsync(
             req,
@@ -666,9 +673,7 @@ public class ContractService(
     }
 
     /// <summary>
-    /// Attaches an approved quote to an existing customer contract, so the
-    /// price agreed with the customer is traceable even when the contract was
-    /// drafted before or independently of the quote.
+    /// Attaches an approved quote to a customer contract missing its source.
     /// </summary>
     public async Task<ContractResponse?> LinkQuoteAsync(
         int id, int quoteId, int callerUserId, bool canSeeAll, string? rowVersion, CancellationToken ct = default)
@@ -735,8 +740,33 @@ public class ContractService(
     private static readonly QuoteStatus[] ContractReadyQuoteStatuses =
         [QuoteStatus.Approved, QuoteStatus.SentToCustomer, QuoteStatus.CustomerApproved];
 
+    private static void EnsureUpstreamQuote(ContractDirection direction, int? quoteId)
+    {
+        if (direction == ContractDirection.Upstream && !quoteId.HasValue)
+        {
+            throw new ContractValidationException(
+                "Hợp đồng đầu ra phải tham chiếu Báo giá đã duyệt trước khi tạo hoặc cập nhật.");
+        }
+    }
+
     private sealed record ContractQuoteReference(
         int Id, string Code, int OpportunityId, int CustomerId, int? OperationalProjectId);
+
+    private async Task EnsureQuoteAvailableForContractAsync(
+        ContractQuoteReference quote, int? excludeContractId, CancellationToken ct)
+    {
+        var otherNumber = await db.Contracts.AsNoTracking()
+            .Where(contract => contract.QuoteId == quote.Id &&
+                (!excludeContractId.HasValue || contract.Id != excludeContractId.Value) &&
+                contract.Status != ContractStatus.Cancelled)
+            .Select(contract => contract.ContractNumber)
+            .FirstOrDefaultAsync(ct);
+        if (otherNumber is not null)
+        {
+            throw new ContractValidationException(
+                $"Báo giá {quote.Code} đã được gắn với hợp đồng {otherNumber}.");
+        }
+    }
 
     private async Task<ContractQuoteReference> EnsureQuoteReadyForContractAsync(int quoteId, CancellationToken ct)
     {
@@ -789,6 +819,7 @@ public class ContractService(
         }
 
         EnsureTransitionAllowed(entity.Status, newStatus);
+        EnsureUpstreamQuote(entity.Direction, entity.QuoteId);
         if (RequiresSignedCustomer(newStatus))
         {
             await EnsureCustomerReadyForSignatureAsync(entity.CustomerId, ct);

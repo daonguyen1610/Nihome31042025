@@ -1599,6 +1599,7 @@ export interface OpportunityActivityResponse {
 export interface OpportunityContractLinkResponse {
   id: number;
   contractNumber: string;
+  quoteId?: number | null;
   status: ContractStatus;
   signedDate?: string | null;
 }

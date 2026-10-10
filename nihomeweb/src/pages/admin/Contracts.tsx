@@ -220,9 +220,6 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
   };
 
   const fromQuoteId = readPositiveParam("fromQuote");
-  // Opportunity detail opens the form for deals without a quote, e.g. one
-  // that continues from a won tender.
-  const fromOpportunityId = readPositiveParam("fromOpportunity");
   const prefillOpportunityId = readPositiveParam("opportunityId");
   const prefillCustomerId = readPositiveParam("customerId");
   const prefillOperationalProjectId = readPositiveParam("operationalProjectId");
@@ -529,19 +526,17 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
     void loadSuggestedContractNumber();
   };
 
-  // Arriving from an approved quote (or an opportunity) opens the form already
-  // filled in. customerId may legitimately be null on older quotes; the form's
-  // own validation then asks the user to pick one, which beats writing a
-  // contract against customer zero.
+  // Arriving from an approved quote opens the form with its customer and
+  // project context. The form validates any missing details before saving.
   useEffect(() => {
-    if (fromQuoteId === null && fromOpportunityId === null) return;
+    if (fromQuoteId === null) return;
     setForm({
       ...emptyForm,
       direction: fixedDirection ?? emptyForm.direction,
       type: fixedDirection === "Downstream" ? "Supply" : emptyForm.type,
       customerId: prefillCustomerId,
       operationalProjectId: prefillOperationalProjectId,
-      opportunityId: fromQuoteId !== null ? prefillOpportunityId : fromOpportunityId,
+      opportunityId: prefillOpportunityId,
       quoteId: fromQuoteId,
       value: prefillValue ?? 0,
     });
@@ -550,7 +545,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
     setDialogOpen(true);
     void loadSuggestedContractNumber();
     // Runs once per navigation carrying the parameters.
-  }, [fixedDirection, fromOpportunityId, fromQuoteId, loadSuggestedContractNumber, prefillCustomerId, prefillOperationalProjectId, prefillOpportunityId, prefillValue]);
+  }, [fixedDirection, fromQuoteId, loadSuggestedContractNumber, prefillCustomerId, prefillOperationalProjectId, prefillOpportunityId, prefillValue]);
   const patchMilestone = (index: number, patch: Partial<MilestoneDraft>) => {
     setForm((prev) => ({
       ...prev,
@@ -644,6 +639,10 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
     }
     if (effectiveDirection === "Downstream" && form.vendorId == null) {
       setFormError(t("contracts.validation.vendorRequired"));
+      return;
+    }
+    if (effectiveDirection === "Upstream" && form.quoteId == null) {
+      setFormError(t("contracts.validation.quoteRequired"));
       return;
     }
     if (form.signedDate && form.startDate && form.startDate < form.signedDate) {
@@ -1556,6 +1555,20 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                 </Select>
               </div>
             ) : null}
+
+            {form.direction === "Upstream" && (
+              <div className="space-y-1.5 rounded-md border bg-muted/30 px-3 py-2.5 text-sm">
+                <Label>{t("contracts.field.sourceQuote")} *</Label>
+                <p>{form.quoteId == null
+                  ? t("contracts.validation.quoteRequired")
+                  : `#${form.quoteId}`}</p>
+                {form.quoteId == null && (
+                  <Link to="/admin/quotes" className="text-primary underline" onClick={() => setDialogOpen(false)}>
+                    {t("contracts.action.openQuotes")}
+                  </Link>
+                )}
+              </div>
+            )}
 
             <div className="space-y-1.5 rounded-md border bg-muted/30 px-3 py-2.5">
               <Label className="text-xs">{t("contracts.field.owner")}</Label>

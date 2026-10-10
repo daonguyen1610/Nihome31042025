@@ -468,13 +468,14 @@ public class QuotesControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task Delete_SubmittedQuote_WithPreviewConfirmationReturns204AndUnlinksIndependentRoots()
+    public async Task Delete_QuoteReferencedByContract_BlocksAndPreservesBothRecords()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
         var quoteId = await CreateQuoteAsync();
         var quote = await ReadJsonAsync(await Client.GetAsync($"/api/quotes/{quoteId}"));
         var opportunityId = quote.GetProperty("opportunityId").GetInt32();
         (await Client.PostAsJsonAsync($"/api/quotes/{quoteId}/submit", new { })).EnsureSuccessStatusCode();
+        (await Client.PostAsJsonAsync($"/api/quotes/{quoteId}/approve", new { })).EnsureSuccessStatusCode();
         quote = await ReadJsonAsync(await Client.GetAsync($"/api/quotes/{quoteId}"));
         var customerId = quote.GetProperty("customerId").GetInt32();
         var contractId = await WithDbAsync(async db =>
@@ -487,6 +488,9 @@ public class QuotesControllerTests : IntegrationTestBase
                 CustomerId = customerId,
                 OpportunityId = opportunityId,
                 QuoteId = quoteId,
+                Direction = ContractDirection.Upstream,
+                Type = ContractType.DesignAndBuild,
+                OperationalProjectId = opportunity.OperationalProjectId,
                 Value = 1,
             };
             db.Contracts.Add(contract);
@@ -494,17 +498,21 @@ public class QuotesControllerTests : IntegrationTestBase
             return contract.Id;
         });
         var impact = await ReadJsonAsync(await Client.GetAsync($"/api/quotes/{quoteId}/deletion-impact"));
+        impact.GetProperty("canDelete").GetBoolean().Should().BeFalse();
+        impact.GetProperty("items").EnumerateArray()
+            .Should().Contain(item => item.GetProperty("key").GetString() == "quote.contracts" &&
+                item.GetProperty("action").GetString() == "Block");
 
         var response = await DeleteQuoteAsync(quoteId, impact.GetProperty("planToken").GetString()!,
             quote.GetProperty("code").GetString()!, quote.GetProperty("rowVersion").GetString());
 
-        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
-        (await Client.GetAsync($"/api/quotes/{quoteId}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await Client.GetAsync($"/api/quotes/{quoteId}")).StatusCode.Should().Be(HttpStatusCode.OK);
         (await Client.GetAsync($"/api/opportunities/{opportunityId}")).StatusCode.Should().Be(HttpStatusCode.OK);
         (await WithDbAsync(async db =>
-            (await db.Opportunities.FindAsync(opportunityId))!.WonQuoteId)).Should().BeNull();
+            (await db.Opportunities.FindAsync(opportunityId))!.WonQuoteId)).Should().Be(quoteId);
         (await WithDbAsync(async db =>
-            (await db.Contracts.FindAsync(contractId))!.QuoteId)).Should().BeNull();
+            (await db.Contracts.FindAsync(contractId))!.QuoteId)).Should().Be(quoteId);
         (await WithDbAsync(db => db.Customers.AnyAsync(item => item.Id == customerId))).Should().BeTrue();
     }
 

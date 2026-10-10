@@ -519,12 +519,11 @@ const AdminQuoteDetail = () => {
 
   // A quote the customer or an approver has signed off on is the point where a
   // contract can be raised from it.
-  const canRaiseContract = canManage && !editing && isContractReadyQuote(quote.status);
-  const canLinkContract = canRaiseContract && canManageContracts && quote.customerId != null;
+  const canRaiseContract = canManageContracts && !editing && isContractReadyQuote(quote.status);
+  const canLinkContract = canRaiseContract && quote.customerId != null;
 
-  // QuoteResponse.customerId is optional, so older quotes may not carry one.
-  // Build with URLSearchParams so empty parameters drop out entirely rather than
-  // reaching the contract form as the string "undefined".
+  // Build with URLSearchParams so absent optional references do not reach the
+  // contract form as the string "undefined".
   const goToContractForm = () => {
     const params = new URLSearchParams({ fromQuote: String(quote.id) });
     if (quote.opportunityId) params.set("opportunityId", String(quote.opportunityId));

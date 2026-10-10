@@ -900,10 +900,36 @@ public class TendersControllerTests : IntegrationTestBase
         opportunity.GetProperty("estimatedValue").GetDecimal().Should().Be(1_161_000_000m);
         var projectId = opportunity.GetProperty("operationalProjectId").GetInt32();
 
+        var quoteResponse = await Client.PostAsJsonAsync("/api/quotes", new
+        {
+            opportunityId,
+            method = "Boq",
+            packageDescription = "Giá chào thi công nhà xưởng sau trúng thầu",
+            items = new[]
+            {
+                new { itemCode = "XM-01", name = "Thi công kết cấu nhà xưởng", unit = "m2", quantity = 1000m, unitPrice = 1_075_000m },
+            },
+            vatPercent = 8m,
+        });
+        quoteResponse.StatusCode.Should().Be(HttpStatusCode.Created, await quoteResponse.Content.ReadAsStringAsync());
+        var quote = await ReadJsonAsync(quoteResponse);
+        var quoteId = quote.GetProperty("id").GetInt32();
+        var submitted = await Client.PostAsJsonAsync($"/api/quotes/{quoteId}/submit", new
+        {
+            rowVersion = quote.GetProperty("rowVersion").GetString(),
+        });
+        submitted.StatusCode.Should().Be(HttpStatusCode.OK, await submitted.Content.ReadAsStringAsync());
+        var approved = await Client.PostAsJsonAsync($"/api/quotes/{quoteId}/approve", new
+        {
+            rowVersion = (await ReadJsonAsync(submitted)).GetProperty("rowVersion").GetString(),
+        });
+        approved.StatusCode.Should().Be(HttpStatusCode.OK, await approved.Content.ReadAsStringAsync());
+
         var contract = await Client.PostAsJsonAsync("/api/contracts", new
         {
             customerId,
             opportunityId,
+            quoteId,
             direction = "Upstream",
             type = "DesignAndBuild",
             value = 1_161_000_000m,
