@@ -60,6 +60,8 @@ public class SiteSettingsController(SiteSettingsService svc) : ControllerBase
             settings.NotificationEmail,
             settings.OtpEmailSubjectTemplate,
             settings.OtpEmailBodyTemplate,
+            QuoteEmailSubjectTemplate = settings.QuoteEmailSubjectTemplate ?? EmailTemplateFormatter.DefaultQuoteSubject,
+            QuoteEmailBodyTemplate = settings.QuoteEmailBodyTemplate ?? EmailTemplateFormatter.DefaultQuoteBody,
         });
     }
 
@@ -69,12 +71,22 @@ public class SiteSettingsController(SiteSettingsService svc) : ControllerBase
     [RequirePermission("system.settings", "manage")]
     public async Task<IActionResult> UpdateEmailTemplates([FromBody] UpdateEmailTemplatesRequest req)
     {
-        var settings = await svc.UpdateEmailTemplatesAsync(
-            req.NewApplicationEmailSubjectTemplate,
-            req.NewApplicationEmailBodyTemplate,
-            req.NotificationEmail,
-            req.OtpEmailSubjectTemplate,
-            req.OtpEmailBodyTemplate);
+        SiteSettings settings;
+        try
+        {
+            settings = await svc.UpdateEmailTemplatesAsync(
+                req.NewApplicationEmailSubjectTemplate,
+                req.NewApplicationEmailBodyTemplate,
+                req.NotificationEmail,
+                req.OtpEmailSubjectTemplate,
+                req.OtpEmailBodyTemplate,
+                req.QuoteEmailSubjectTemplate,
+                req.QuoteEmailBodyTemplate);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
 
         return Ok(new
         {
@@ -83,6 +95,8 @@ public class SiteSettingsController(SiteSettingsService svc) : ControllerBase
             settings.NotificationEmail,
             settings.OtpEmailSubjectTemplate,
             settings.OtpEmailBodyTemplate,
+            settings.QuoteEmailSubjectTemplate,
+            settings.QuoteEmailBodyTemplate,
         });
     }
 

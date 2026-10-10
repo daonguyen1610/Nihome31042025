@@ -73,6 +73,40 @@ public class SiteSettingsServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task UpdateEmailTemplatesAsync_PersistsQuoteTemplateAndPreservesItForOlderRequests()
+    {
+        SeedSettings();
+
+        await _sut.UpdateEmailTemplatesAsync("Application", "<p>Application</p>", "hr@example.com",
+            quoteEmailSubject: "Báo giá {{quoteCode}}",
+            quoteEmailBody: "Hạng mục: {{quoteLines}}\nTổng: {{grandTotal}}");
+        await _sut.UpdateEmailTemplatesAsync("Updated application", "<p>Updated</p>", "hr@example.com");
+
+        var saved = await _sut.GetAsync();
+        Assert.Equal("Báo giá {{quoteCode}}", saved!.QuoteEmailSubjectTemplate);
+        Assert.Equal("Hạng mục: {{quoteLines}}\nTổng: {{grandTotal}}", saved.QuoteEmailBodyTemplate);
+    }
+
+    [Theory]
+    [InlineData("", "{{quoteLines}} {{grandTotal}}")]
+    [InlineData("Báo giá", "Thiếu hạng mục {{grandTotal}}")]
+    [InlineData("Báo giá", "Thiếu tổng {{quoteLines}}")]
+    [InlineData("Báo giá {{unknown}}", "{{quoteLines}} {{grandTotal}}")]
+    [InlineData("Báo giá", "{{quoteLines}} {{grandTotal}} {{broken-token}}")]
+    public async Task UpdateEmailTemplatesAsync_RejectsInvalidQuoteTemplateWithoutSaving(string subject, string body)
+    {
+        SeedSettings();
+
+        await Assert.ThrowsAsync<ArgumentException>(() => _sut.UpdateEmailTemplatesAsync(
+            "Changed", "<p>Changed</p>", "hr@example.com",
+            quoteEmailSubject: subject, quoteEmailBody: body));
+
+        var saved = await _sut.GetAsync();
+        Assert.Equal("Old subject", saved!.NewApplicationEmailSubjectTemplate);
+        Assert.Null(saved.QuoteEmailSubjectTemplate);
+    }
+
+    [Fact]
     public async Task UpdateEmailTemplatesAsync_TrimsWhitespace()
     {
         SeedSettings();

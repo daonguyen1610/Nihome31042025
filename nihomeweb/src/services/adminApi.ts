@@ -319,6 +319,8 @@ export interface EmailTemplatesResponse {
   notificationEmail: string | null;
   otpEmailSubjectTemplate: string | null;
   otpEmailBodyTemplate: string | null;
+  quoteEmailSubjectTemplate: string | null;
+  quoteEmailBodyTemplate: string | null;
 }
 
 export interface UpdateEmailTemplatesRequest {
@@ -327,6 +329,8 @@ export interface UpdateEmailTemplatesRequest {
   notificationEmail?: string | null;
   otpEmailSubjectTemplate?: string | null;
   otpEmailBodyTemplate?: string | null;
+  quoteEmailSubjectTemplate?: string | null;
+  quoteEmailBodyTemplate?: string | null;
 }
 
 export interface OtpSettingsResponse {

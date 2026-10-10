@@ -559,6 +559,41 @@ public class QuoteServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task EmailPreview_UsesSavedQuoteTemplateAndActualQuoteValues()
+    {
+        var (user, quote) = await SeedApprovedReadyQuoteAsync();
+        _db.SiteSettings.Add(new SiteSettings
+        {
+            SiteName = "NICON",
+            QuoteEmailSubjectTemplate = "NICON {{quoteCode}} cho {{customerName}}",
+            QuoteEmailBodyTemplate = "Kính gửi {{customerName}}\n{{quoteLines}}\nTổng cộng {{grandTotal}} VND",
+        });
+        await _db.SaveChangesAsync();
+
+        await _sut.SubmitAsync(quote.Id, new(), user.Id, true, true);
+        await _sut.ApproveAsync(quote.Id, new(), user.Id, true);
+
+        var preview = await _sut.GetEmailPreviewAsync(quote.Id, user.Id, true, false);
+
+        Assert.NotNull(preview);
+        Assert.Contains(quote.Code, preview!.Subject);
+        Assert.DoesNotContain("{{", preview.Subject);
+        Assert.Contains("1.080.000.000", preview.Body);
+        Assert.Contains("Tổng cộng", preview.Body);
+        Assert.DoesNotContain("{{", preview.Body);
+        var rowVersion = (await _sut.GetAsync(quote.Id, user.Id, true))!.RowVersion;
+        await _sut.SendToCustomerAsync(quote.Id, new SendQuoteEmailRequest
+        {
+            RowVersion = rowVersion,
+            ToEmail = "khachhang@example.com",
+            Subject = preview.Subject,
+            Body = preview.Body,
+        }, user.Id, true, true, false);
+        _email.Verify(email => email.SendEmailAsync("khachhang@example.com", preview.Subject,
+            It.Is<string>(body => body.Contains("Tổng cộng") && body.Contains("1.080.000.000"))), Times.Once);
+    }
+
+    [Fact]
     public async Task SendToCustomer_RejectsInvalidEmailAndUnauthorizedEdits()
     {
         var (user, quote) = await SeedApprovedReadyQuoteAsync();

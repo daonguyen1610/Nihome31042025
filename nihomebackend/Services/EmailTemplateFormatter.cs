@@ -8,6 +8,16 @@ public static partial class EmailTemplateFormatter
     [GeneratedRegex(@"\{\{(\w+)\}\}", RegexOptions.IgnoreCase)]
     private static partial Regex TokenRegex();
 
+    private static readonly HashSet<string> QuoteTokenNames = new(
+        ["customerName", "quoteCode", "opportunityName", "quoteLines",
+         "discountPercent", "vatPercent", "grandTotal", "validUntil"],
+        StringComparer.OrdinalIgnoreCase);
+
+    public static bool HasInvalidQuoteTokens(string template) =>
+        TokenRegex().Matches(template).Any(match => !QuoteTokenNames.Contains(match.Groups[1].Value)) ||
+        TokenRegex().Replace(template, "").Contains("{{", StringComparison.Ordinal) ||
+        TokenRegex().Replace(template, "").Contains("}}", StringComparison.Ordinal);
+
     public static string ReplaceTokens(string template, Dictionary<string, string> tokens)
     {
         if (string.IsNullOrWhiteSpace(template))
@@ -22,6 +32,15 @@ public static partial class EmailTemplateFormatter
 
     public static string DefaultNewApplicationSubject =>
         "[{{siteName}}] Ứng viên mới: {{candidateName}} – {{positionTitle}}";
+
+    public static string DefaultQuoteSubject => "Báo giá {{quoteCode}} – {{opportunityName}}";
+
+    public static string DefaultQuoteBody => "Kính gửi {{customerName}},\n\nNICON gửi Quý khách báo giá {{quoteCode}} cho {{opportunityName}}.\n{{quoteLines}}\nChiết khấu: {{discountPercent}}%; VAT: {{vatPercent}}%.\nTổng giá trị: {{grandTotal}} VND.\nBáo giá có hiệu lực đến {{validUntil}}.\n\nTrân trọng,\nNICON";
+
+    public static (string subject, string body) BuildQuoteEmail(
+        string? subjectTemplate, string? bodyTemplate, Dictionary<string, string> tokens) =>
+        (ReplaceTokens(string.IsNullOrWhiteSpace(subjectTemplate) ? DefaultQuoteSubject : subjectTemplate, tokens),
+         ReplaceTokens(string.IsNullOrWhiteSpace(bodyTemplate) ? DefaultQuoteBody : bodyTemplate, tokens));
 
     public static string DefaultNewApplicationBody => """
         <div style='margin:0;padding:0;background:#f3f6fb;font-family:Segoe UI,Arial,sans-serif;color:#1f2937;'>

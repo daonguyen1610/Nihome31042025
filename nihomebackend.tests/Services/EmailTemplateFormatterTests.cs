@@ -5,6 +5,26 @@ namespace nihomebackend.tests.Services;
 public class EmailTemplateFormatterTests
 {
     [Fact]
+    public void BuildQuoteEmail_UsesConfiguredTokensAndRejectsUnrecognizedSyntax()
+    {
+        var tokens = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["quoteCode"] = "QT-2026-001",
+            ["quoteLines"] = "- Thi công hoàn thiện: 500 m2",
+            ["grandTotal"] = "810.000.000",
+        };
+
+        var (subject, body) = EmailTemplateFormatter.BuildQuoteEmail(
+            "NICON {{quoteCode}}", "{{quoteLines}}\n{{grandTotal}}", tokens);
+
+        Assert.Equal("NICON QT-2026-001", subject);
+        Assert.Contains("810.000.000", body);
+        Assert.False(EmailTemplateFormatter.HasInvalidQuoteTokens("{{quoteCode}} {{grandTotal}}"));
+        Assert.True(EmailTemplateFormatter.HasInvalidQuoteTokens("{{unlisted}}"));
+        Assert.True(EmailTemplateFormatter.HasInvalidQuoteTokens("{{bad-token}}"));
+    }
+
+    [Fact]
     public void ReplaceTokens_ReplacesAllMatchingTokens()
     {
         var template = "Hello {{name}}, welcome to {{site}}!";
