@@ -1,6 +1,6 @@
 # Users Section RBAC
 
-Date: 2026-05-16 (updated 2026-10-06 for NICON workflow alignment)
+Date: 2026-05-16 (updated 2026-10-10 for NICON role groups)
 
 ## Overview
 
@@ -22,6 +22,22 @@ The current business-role catalog contains `SALE`, `SALES_MANAGER`, `DESIGN`,
 `LEGAL_OFFICER`, `QS`, `PROCUREMENT`, `ACCOUNTANT`, `WAREHOUSE`, and `BGD`.
 Authorized administrators may also create or delete non-system roles and edit
 their permission matrices.
+
+### NICON role groups and permission baselines
+
+Business roles can be assigned to one of five seeded organizational groups:
+`CRM`, `HR_ADMIN`, `DESIGN`, `CONSTRUCTION`, and `FINANCE`. Existing roles are
+left ungrouped during migration because the customer mapping has not been
+confirmed; administrators assign them explicitly.
+
+Each group stores an editable permission baseline. When creating a role, an
+administrator can copy the selected group's current baseline as the initial
+permission set. This is a one-time snapshot: later baseline changes do not
+mutate existing roles. Explicit create-request permissions take precedence over
+baseline import, including an intentionally empty permission set. Baseline and
+role writes use the same anti-escalation rule: the actor cannot grant a
+permission they do not currently hold. System roles cannot be assigned to a
+business group.
 
 These 14 role codes are access-control bundles, not the NICON 11-position KPI
 framework. The current KPI service maps several roles into six broad scorecards;
@@ -173,6 +189,11 @@ management authority.
 - `DELETE /api/users/{id}` — `users.manage` (soft delete; sets `IsActive = false`)
 - `DELETE /api/users/{id}/hard` — `users.manage` (hard delete; permanently removes user and related data)
 - `GET /api/users/roles` — `users.view`
+- `GET /api/admin/rbac/role-groups` — `rbac.roles.view`
+- `PUT /api/admin/rbac/role-groups/{id}/baseline` — `rbac.roles.manage`
+- `PUT /api/admin/rbac/roles/{id}/group` — `rbac.roles.manage`
+- `POST /api/admin/rbac/roles` accepts optional `roleGroupId` and
+  `importGroupBaseline`; import requires a selected group.
 
 ### Project handover API
 
@@ -191,11 +212,13 @@ The same endpoints are also exposed below `/api/v1/handover-records`. Unauthoriz
 - `/admin/users` lists users with search, role filter, pagination, create/edit modal, status toggle, and soft delete. The route requires `users.view`; mutation controls additionally require `users.manage`.
 - `/admin/roles` displays the backend role catalog and supports creating/deleting
   non-system roles plus editing their permissions. The default workspace focuses
-  on one role at a time, groups permissions by functional module, and provides
-  role and permission search; administrators can switch to the comparison
-  matrix when they need to inspect several roles together. System roles remain
-  read-only in both views. The route requires `rbac.roles.view`; each operation
-  is gated by its corresponding RBAC permission.
+  on one role at a time, organizes the list by NICON department group, groups
+  permissions by functional module, and provides role and permission search.
+  The group workspace edits permission baselines and the creation dialog can
+  import one as an editable starting point. Administrators can switch to the
+  comparison matrix when they need to inspect several roles together. System
+  roles remain read-only in all views. The route requires `rbac.roles.view`;
+  each operation is gated by its corresponding RBAC permission.
 - Admin route protection lives in `nihomeweb/src/components/auth/ProtectedRoute.tsx`. Frontend permission gates improve navigation and action UX; the API remains authoritative using the permission set returned by `/api/users/me/permissions`.
 
 ## Seeded test users (dev + integration tests)

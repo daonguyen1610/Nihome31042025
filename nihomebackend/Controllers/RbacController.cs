@@ -32,6 +32,13 @@ public class RbacController(
         return Ok(await roles.ListRolesAsync(ct));
     }
 
+    [HttpGet("role-groups")]
+    public async Task<ActionResult<List<RoleGroupResponse>>> ListRoleGroups(CancellationToken ct)
+    {
+        if (!await RequirePermissionAsync(PermView, ct)) return Forbid();
+        return Ok(await roles.ListRoleGroupsAsync(ct));
+    }
+
     [HttpGet("roles/{id:int}")]
     public async Task<ActionResult<RoleResponse>> GetRole(int id, CancellationToken ct)
     {
@@ -82,6 +89,28 @@ public class RbacController(
 
         var result = await roles.UpdateRolePermissionsAsync(id, req, actorId, ct);
         return MapWrite(result);
+    }
+
+    [HttpPut("roles/{id:int}/group")]
+    public async Task<ActionResult<RoleResponse>> SetRoleGroup(
+        int id, [FromBody] SetRoleGroupRequest req, CancellationToken ct)
+    {
+        if (!await RequirePermissionAsync(PermManage, ct)) return Forbid();
+        var actorId = GetCurrentUserId();
+        if (actorId <= 0) return Unauthorized();
+
+        return MapWrite(await roles.SetRoleGroupAsync(id, req, actorId, ct));
+    }
+
+    [HttpPut("role-groups/{id:int}/baseline")]
+    public async Task<ActionResult<RoleGroupResponse>> UpdateRoleGroupBaseline(
+        int id, [FromBody] UpdateRolePermissionsRequest req, CancellationToken ct)
+    {
+        if (!await RequirePermissionAsync(PermManage, ct)) return Forbid();
+        var actorId = GetCurrentUserId();
+        if (actorId <= 0) return Unauthorized();
+
+        return MapWrite(await roles.UpdateRoleGroupBaselineAsync(id, req, actorId, ct));
     }
 
     [HttpDelete("roles/{id:int}")]

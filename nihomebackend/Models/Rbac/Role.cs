@@ -22,6 +22,9 @@ public class Role
 
     public bool IsActive { get; set; } = true;
 
+    public int? RoleGroupId { get; set; }
+    public RoleGroup? RoleGroup { get; set; }
+
     /// <summary>
     /// Marks whether RbacSeeder has already populated the initial permission
     /// set for this role. Once true, subsequent reboots will never re-seed —

@@ -32,6 +32,13 @@ public class CreateRoleRequest
     /// <summary>Optional initial permission set; if provided, anti-escalation
     /// applies (caller must hold every requested permission).</summary>
     public List<string>? Permissions { get; set; }
+
+    /// <summary>Optional NICON department group for organization and defaults.</summary>
+    public int? RoleGroupId { get; set; }
+
+    /// <summary>When true and Permissions is omitted, copy the selected group's
+    /// current baseline. This is a one-time snapshot, not a live inheritance.</summary>
+    public bool ImportGroupBaseline { get; set; }
 }
 
 public class UpdateRoleRequest
@@ -52,4 +59,9 @@ public class UpdateRolePermissionsRequest
 {
     [Required]
     public List<string> Permissions { get; set; } = [];
+}
+
+public class SetRoleGroupRequest
+{
+    public int? RoleGroupId { get; set; }
 }

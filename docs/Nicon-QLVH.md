@@ -51,6 +51,11 @@ tên sheet, màu sắc, ngày và tên khách hàng trong file không phải quy
 ### 2.2. Quyền và phân tách nhiệm vụ
 
 - Hệ thống dùng permission; role là bộ permission có thể quản trị.
+- Vai trò nghiệp vụ được NICON phân vào năm nhóm `Kinh doanh/CRM`, `Hành chính
+  nhân sự`, `Thiết kế`, `Quản lý thi công` và `Tài chính kế toán`. Mỗi nhóm có
+  bộ quyền mẫu do quản trị viên cấu hình; khi tạo vai trò, quản trị viên có thể
+  sao chép bộ quyền mẫu rồi chỉnh độc lập. Thay đổi quyền mẫu không hồi tố vào
+  vai trò đã tạo và không được vượt quá quyền hiện có của người thao tác.
 - Quyền xem toàn bộ không kéo theo quyền sửa toàn bộ.
 - Người lập không được thực hiện bước thẩm định độc lập trên cùng chứng từ khi
   quy trình yêu cầu kiểm soát chéo.

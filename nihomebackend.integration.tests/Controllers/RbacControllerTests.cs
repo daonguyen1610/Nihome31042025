@@ -33,6 +33,14 @@ public class RbacControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task AsCustomer_ListRoleGroups_ReturnsForbidden()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsCustomerAsync);
+        var res = await Client.GetAsync("/api/admin/rbac/role-groups");
+        res.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
     public async Task AsCustomer_UpdateRolePermissions_ReturnsForbidden()
     {
         await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsCustomerAsync);
@@ -73,6 +81,19 @@ public class RbacControllerTests : IntegrationTestBase
         codes.Should().Contain("SUPER_ADMIN");
         codes.Should().Contain("ADMIN");
         codes.Should().Contain("USER");
+    }
+
+    [Fact]
+    public async Task AsAdmin_ListRoleGroups_ReturnsNiconDepartments()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
+
+        var res = await Client.GetAsync("/api/admin/rbac/role-groups");
+
+        res.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await ReadJsonAsync(res);
+        body.EnumerateArray().Select(group => group.GetProperty("code").GetString())
+            .Should().Equal("CRM", "HR_ADMIN", "DESIGN", "CONSTRUCTION", "FINANCE");
     }
 
     [Fact]
@@ -271,6 +292,59 @@ public class RbacControllerTests : IntegrationTestBase
         var newId = body.GetProperty("id").GetInt32();
         var get = await Client.GetAsync($"/api/admin/rbac/roles/{newId}");
         get.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task RoleGroupBaseline_CreateImport_UsesSnapshotAndPersistsGroup()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsSuperAdminAsync);
+        var groups = await ReadJsonAsync(await Client.GetAsync("/api/admin/rbac/role-groups"));
+        var designGroup = groups.EnumerateArray().Single(group => group.GetProperty("code").GetString() == "DESIGN");
+        var groupId = designGroup.GetProperty("id").GetInt32();
+        var originalBaseline = designGroup.GetProperty("baselinePermissions")
+            .EnumerateArray().Select(value => value.GetString()!).ToArray();
+        var code = $"DESIGN_{Guid.NewGuid():N}"[..18].ToUpperInvariant();
+        int? roleId = null;
+
+        try
+        {
+            var baseline = await Client.PutAsJsonAsync($"/api/admin/rbac/role-groups/{groupId}/baseline", new
+            {
+                permissions = new[] { "dashboard.view", "design.projects.view" },
+            });
+            baseline.StatusCode.Should().Be(HttpStatusCode.OK);
+
+            var created = await Client.PostAsJsonAsync("/api/admin/rbac/roles", new
+            {
+                code,
+                name = "Design reviewer",
+                roleGroupId = groupId,
+                importGroupBaseline = true,
+            });
+            created.StatusCode.Should().Be(HttpStatusCode.Created);
+            var createdBody = await ReadJsonAsync(created);
+            roleId = createdBody.GetProperty("id").GetInt32();
+            createdBody.GetProperty("roleGroupId").GetInt32().Should().Be(groupId);
+
+            var changed = await Client.PutAsJsonAsync($"/api/admin/rbac/role-groups/{groupId}/baseline", new
+            {
+                permissions = new[] { "dashboard.view" },
+            });
+            changed.StatusCode.Should().Be(HttpStatusCode.OK);
+
+            var rolePermissions = await ReadJsonAsync(
+                await Client.GetAsync($"/api/admin/rbac/roles/{roleId}/permissions"));
+            rolePermissions.GetProperty("permissions").EnumerateArray().Select(value => value.GetString())
+                .Should().BeEquivalentTo(new[] { "dashboard.view", "design.projects.view" });
+        }
+        finally
+        {
+            if (roleId.HasValue) await Client.DeleteAsync($"/api/admin/rbac/roles/{roleId.Value}");
+            await Client.PutAsJsonAsync($"/api/admin/rbac/role-groups/{groupId}/baseline", new
+            {
+                permissions = originalBaseline,
+            });
+        }
     }
 
     [Theory]

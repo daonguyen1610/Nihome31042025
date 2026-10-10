@@ -21,8 +21,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
     // RBAC
     public DbSet<Role> Roles => Set<Role>();
+    public DbSet<RoleGroup> RoleGroups => Set<RoleGroup>();
     public DbSet<Permission> Permissions => Set<Permission>();
     public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
+    public DbSet<RoleGroupPermission> RoleGroupPermissions => Set<RoleGroupPermission>();
 
     // Content
     public DbSet<Activity> Activities => Set<Activity>();
@@ -201,6 +203,17 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<Role>().Property(r => r.Name).HasMaxLength(100).IsRequired();
         modelBuilder.Entity<Role>().Property(r => r.LabelKey).HasMaxLength(150);
         modelBuilder.Entity<Role>().Property(r => r.DescriptionKey).HasMaxLength(150);
+        modelBuilder.Entity<Role>()
+            .HasOne(r => r.RoleGroup)
+            .WithMany(g => g.Roles)
+            .HasForeignKey(r => r.RoleGroupId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<RoleGroup>().ToTable("role_groups");
+        modelBuilder.Entity<RoleGroup>().HasKey(g => g.Id);
+        modelBuilder.Entity<RoleGroup>().HasIndex(g => g.Code).IsUnique();
+        modelBuilder.Entity<RoleGroup>().Property(g => g.Code).HasMaxLength(50).IsRequired();
+        modelBuilder.Entity<RoleGroup>().Property(g => g.LabelKey).HasMaxLength(150).IsRequired();
 
         modelBuilder.Entity<Permission>().ToTable("permissions");
         modelBuilder.Entity<Permission>().HasKey(p => p.Id);
@@ -222,6 +235,22 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .HasOne(rp => rp.Permission)
             .WithMany(p => p.RolePermissions)
             .HasForeignKey(rp => rp.PermissionId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<RoleGroupPermission>().ToTable("role_group_permissions");
+        modelBuilder.Entity<RoleGroupPermission>().HasKey(gp => gp.Id);
+        modelBuilder.Entity<RoleGroupPermission>()
+            .HasIndex(gp => new { gp.RoleGroupId, gp.PermissionId })
+            .IsUnique();
+        modelBuilder.Entity<RoleGroupPermission>()
+            .HasOne(gp => gp.RoleGroup)
+            .WithMany(g => g.BaselinePermissions)
+            .HasForeignKey(gp => gp.RoleGroupId)
+            .OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<RoleGroupPermission>()
+            .HasOne(gp => gp.Permission)
+            .WithMany(p => p.RoleGroupPermissions)
+            .HasForeignKey(gp => gp.PermissionId)
             .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<RefreshToken>().ToTable("refresh_tokens");

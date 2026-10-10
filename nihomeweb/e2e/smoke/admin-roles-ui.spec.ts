@@ -52,6 +52,10 @@ test("role editor renders dynamic roles and the comparison matrix for SUPER_ADMI
 
   // Create-role button is gated by Can; SUPER_ADMIN must see it.
   await expect(page.getByTestId("rbac-create-role")).toBeVisible();
+  await page.getByTestId("rbac-create-role").click();
+  await page.getByTestId("rbac-create-group").selectOption({ label: "Thiết kế" });
+  await expect(page.getByTestId("rbac-import-baseline")).toBeVisible();
+  await page.getByTestId("rbac-create-cancel").click();
 
   // System roles are read-only; business roles expose their actions.
   await page.getByTestId("rbac-role-ADMIN").click();
@@ -61,7 +65,19 @@ test("role editor renders dynamic roles and the comparison matrix for SUPER_ADMI
   await page.getByTestId("rbac-role-SALE").click();
   await expect(page.getByTestId("rbac-delete-SALE")).toBeVisible();
 
+  // Department groups expose their independent one-time permission baseline.
+  await page.getByTestId("rbac-view-groups").click();
+  await expect(page.getByTestId("rbac-groups-editor")).toBeVisible();
+  await expect(page.getByTestId("rbac-group-CRM")).toBeVisible();
+  await expect(page.getByTestId("rbac-group-HR_ADMIN")).toBeVisible();
+  await expect(page.getByTestId("rbac-group-DESIGN")).toBeVisible();
+  await expect(page.getByTestId("rbac-group-CONSTRUCTION")).toBeVisible();
+  await expect(page.getByTestId("rbac-group-FINANCE")).toBeVisible();
+  await page.getByTestId("rbac-group-DESIGN").click();
+  await expect(page.getByTestId("rbac-save-baseline")).toBeDisabled();
+
   // Administrators can still switch to a dense comparison matrix.
+  await page.getByTestId("rbac-view-editor").click();
   await page.locator("#rbac-search").fill("");
   await page.getByTestId("rbac-view-matrix").click();
   await expect(page.getByTestId("rbac-col-SUPER_ADMIN")).toBeVisible();
@@ -92,5 +108,13 @@ test("role editor stays focused and overflow-free on mobile and tablet", async (
       scrollWidth: element.scrollWidth,
     }));
     expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth);
+
+    await page.getByTestId("rbac-view-groups").click();
+    await expect(page.getByTestId("rbac-groups-editor")).toBeVisible();
+    const groupDimensions = await page.locator("html").evaluate((element) => ({
+      clientWidth: element.clientWidth,
+      scrollWidth: element.scrollWidth,
+    }));
+    expect(groupDimensions.scrollWidth).toBeLessThanOrEqual(groupDimensions.clientWidth);
   }
 });
