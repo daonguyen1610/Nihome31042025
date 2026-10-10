@@ -290,8 +290,20 @@ test("Sales can create the missing operational project and return to the design 
     await expect(page).toHaveURL(/\/admin\/operational-projects\?create=1/);
     const projectDialog = page.getByRole("dialog");
     await expect(projectDialog).toBeVisible();
+    const codeInput = projectDialog.getByTestId("operational-project-code");
+    await expect(codeInput).toHaveValue(/^PJ-\d{4}-\d{4}$/);
+    await expect(projectDialog).toContainText(/Sau khi tạo dự án, mã này không thể thay đổi|cannot be changed after/i);
+    const customProjectCode = `DB-E2E-${Date.now().toString().slice(-8)}`;
+    await codeInput.fill(customProjectCode.toLowerCase());
     await projectDialog.getByLabel(/Tên dự án|Project name/i).fill("Project from design handoff");
+    const projectCreateResponsePromise = page.waitForResponse((response) =>
+        response.request().method() === "POST"
+        && new URL(response.url()).pathname === "/api/operational-projects");
     await projectDialog.getByRole("button", { name: /Lưu|Save/i }).click();
+    const projectCreateResponse = await projectCreateResponsePromise;
+    expect(projectCreateResponse.status()).toBe(201);
+    const createdProject = await projectCreateResponse.json() as { id: number; code: string };
+    expect(createdProject.code).toBe(customProjectCode);
     await expect(page).toHaveURL(new RegExp(`/admin/opportunities/${opportunityId}/design-project/new\\?projectId=\\d+`));
     await expect(form.getByRole("combobox", { name: /Dự án vận hành|Operational project/i }))
         .toContainText("Project from design handoff");
@@ -309,6 +321,10 @@ test("Sales can create the missing operational project and return to the design 
         designProject: { id: number; operationalProjectId: number; contractId: number | null };
     };
     expect(design.designProject.contractId).toBeNull();
+    await page.goto(`${baseURL}/admin/operational-projects/${createdProject.id}`, { waitUntil: "networkidle" });
+    await expect(page.getByRole("heading", { name: new RegExp(customProjectCode) })).toBeVisible();
+    await page.getByRole("button", { name: /^(Sửa|Edit)$/i }).click();
+    await expect(page.getByRole("dialog").getByTestId("operational-project-code")).toHaveCount(0);
     const managerHeaders = { Authorization: `Bearer ${token}` };
     const superAdminToken = await loginAs(TEST_USERS.superAdmin);
     await hardDeleteBusinessRoot(api, { Authorization: `Bearer ${superAdminToken}` },

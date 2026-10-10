@@ -62,6 +62,84 @@ public class OperationalProjectServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task SuggestCodeAsync_ReturnsNextAutomaticCodeWithoutCreatingProject()
+    {
+        var suggestion = await _service.SuggestCodeAsync();
+
+        Assert.Matches($"^PJ-{DateTime.UtcNow.Year}-\\d{{4}}$", suggestion);
+        Assert.Empty(await _db.OperationalProjects.ToListAsync());
+    }
+
+    [Fact]
+    public async Task CreateAsync_CustomCode_IsNormalizedAndPersisted()
+    {
+        var request = ValidCreate();
+        request.Code = " db-2026-009 ";
+
+        var result = await _service.CreateAsync(request, _managerId, false);
+
+        Assert.Equal("DB-2026-009", result.Code);
+        Assert.Equal("DB-2026-009", (await _db.OperationalProjects.SingleAsync()).Code);
+    }
+
+    [Fact]
+    public async Task CreateAsync_CustomCodeAtMaximumLength_IsAccepted()
+    {
+        var request = ValidCreate();
+        request.Code = new string('A', 40);
+
+        var result = await _service.CreateAsync(request, _managerId, false);
+
+        Assert.Equal(request.Code, result.Code);
+    }
+
+    [Fact]
+    public async Task CreateAsync_CustomCodeAboveMaximumLength_IsRejected()
+    {
+        var request = ValidCreate();
+        request.Code = new string('A', 41);
+
+        await Assert.ThrowsAsync<OperationalProjectOperationException>(() =>
+            _service.CreateAsync(request, _managerId, false));
+
+        Assert.Empty(await _db.OperationalProjects.ToListAsync());
+    }
+
+    [Fact]
+    public async Task CreateAsync_DuplicateCustomCode_IsRejectedWithoutCreatingAnotherProject()
+    {
+        var first = ValidCreate("First project");
+        first.Code = "DB-2026-010";
+        await _service.CreateAsync(first, _managerId, false);
+        var duplicate = ValidCreate("Duplicate project");
+        duplicate.Code = "db-2026-010";
+
+        var error = await Assert.ThrowsAsync<OperationalProjectOperationException>(() =>
+            _service.CreateAsync(duplicate, _managerId, false));
+
+        Assert.Contains("đã tồn tại", error.Message);
+        Assert.Single(await _db.OperationalProjects.ToListAsync());
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(" ")]
+    [InlineData("MÃ-2026-001")]
+    [InlineData("DB/2026/001")]
+    [InlineData("-DB-2026-001")]
+    [InlineData("A")]
+    public async Task CreateAsync_InvalidCustomCode_IsRejected(string code)
+    {
+        var request = ValidCreate();
+        request.Code = code;
+
+        await Assert.ThrowsAsync<OperationalProjectOperationException>(() =>
+            _service.CreateAsync(request, _managerId, false));
+
+        Assert.Empty(await _db.OperationalProjects.ToListAsync());
+    }
+
+    [Fact]
     public async Task CreateAsync_EndBeforeStart_IsRejected()
     {
         var request = ValidCreate();

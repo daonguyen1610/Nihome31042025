@@ -44,6 +44,14 @@ public class OperationalProjectsControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task CodeSuggestion_WithoutAuthentication_IsUnauthorized()
+    {
+        var response = await Client.GetAsync("/api/operational-projects/code-suggestion");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
     public async Task DeletionImpact_WithoutAuthentication_IsUnauthorized()
     {
         var response = await Client.GetAsync("/api/operational-projects/1/deletion-impact");
@@ -62,6 +70,8 @@ public class OperationalProjectsControllerTests : IntegrationTestBase
         });
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await Client.GetAsync("/api/operational-projects/code-suggestion")).StatusCode
+            .Should().Be(HttpStatusCode.Forbidden);
         (await WithDbAsync(db => db.OperationalProjects.AnyAsync(project => project.Name == name)))
             .Should().BeFalse();
         (await Client.GetAsync("/api/operational-projects")).StatusCode
@@ -103,6 +113,67 @@ public class OperationalProjectsControllerTests : IntegrationTestBase
 
         update.StatusCode.Should().Be(HttpStatusCode.OK);
         (await ReadJsonAsync(update)).GetProperty("status").GetString().Should().Be("Active");
+    }
+
+    [Fact]
+    public async Task SuperAdmin_CanChooseCodeOnlyDuringCreation_AndDuplicateIsRejected()
+    {
+        await AuthTestHelper.AuthenticateAsync(
+            Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "SUPER_ADMIN"));
+        var suggestionResponse = await Client.GetAsync("/api/operational-projects/code-suggestion");
+        suggestionResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await ReadJsonAsync(suggestionResponse)).GetProperty("code").GetString()
+            .Should().MatchRegex($"^PJ-{DateTime.UtcNow.Year}-\\d{{4}}$");
+
+        var customerId = await CreateCustomerAsync("Custom project code");
+        var suffix = Guid.NewGuid().ToString("N")[..8];
+        var requestedCode = $"db-2026-{suffix}";
+        var create = await Client.PostAsJsonAsync("/api/operational-projects", new
+        {
+            code = $" {requestedCode} ",
+            name = "Project with NICON code",
+            customerId,
+        });
+        create.StatusCode.Should().Be(HttpStatusCode.Created);
+        var created = await ReadJsonAsync(create);
+        var projectId = created.GetProperty("id").GetInt32();
+        var immutableCode = requestedCode.ToUpperInvariant();
+        created.GetProperty("code").GetString().Should().Be(immutableCode);
+
+        var duplicate = await Client.PostAsJsonAsync("/api/operational-projects", new
+        {
+            code = immutableCode.ToLowerInvariant(),
+            name = "Duplicate project code",
+            customerId,
+        });
+        duplicate.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.OperationalProjects.CountAsync(project =>
+            project.Code == immutableCode))).Should().Be(1);
+
+        var tooLong = await Client.PostAsJsonAsync("/api/operational-projects", new
+        {
+            code = new string('A', 41),
+            name = "Invalid project code",
+            customerId,
+        });
+        tooLong.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.OperationalProjects.CountAsync(project =>
+            project.CustomerId == customerId))).Should().Be(1);
+
+        var update = await Client.PutAsJsonAsync($"/api/operational-projects/{projectId}", new
+        {
+            code = $"CHANGED-{suffix}",
+            name = "Updated project name",
+            customerId,
+            projectManagerUserId = created.GetProperty("projectManagerUserId").GetInt32(),
+            status = "Planning",
+            rowVersion = created.GetProperty("rowVersion").GetString(),
+        });
+        update.StatusCode.Should().Be(HttpStatusCode.OK);
+        var updated = await ReadJsonAsync(update);
+        updated.GetProperty("code").GetString().Should().Be(immutableCode);
+        updated.GetProperty("name").GetString().Should().Be("Updated project name");
     }
 
     [Fact]

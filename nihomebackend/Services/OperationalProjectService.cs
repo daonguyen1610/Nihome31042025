@@ -1,4 +1,5 @@
 using System.Data;
+using System.Text.RegularExpressions;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -18,6 +19,13 @@ public class OperationalProjectService(
     IProjectHardDeletePlanService hardDeletePlans,
     IHardDeleteOperationService hardDeleteOperations) : IOperationalProjectService
 {
+    private static readonly Regex ProjectCodePattern = new(
+        "^[A-Z0-9][A-Z0-9_-]{1,39}$",
+        RegexOptions.CultureInvariant);
+
+    public Task<string> SuggestCodeAsync(CancellationToken ct = default) =>
+        NextCodeAsync(DateTime.UtcNow.Year, ct);
+
     private const int MaxPageSize = 100;
 
     public async Task<OperationalProjectListResponse> ListAsync(
@@ -240,10 +248,11 @@ public class OperationalProjectService(
         var now = DateTime.UtcNow;
         var year = now.Year;
         await using var allocationTransaction = await BeginCodeAllocationAsync(year, ct);
+        var code = await ResolveCreateCodeAsync(request.Code, year, ct);
 
         var project = new OperationalProject
         {
-            Code = await NextCodeAsync(year, ct),
+            Code = code,
             Name = request.Name.Trim(),
             CustomerId = request.CustomerId,
             ProjectManagerUserId = request.ProjectManagerUserId ?? callerUserId,
@@ -257,7 +266,15 @@ public class OperationalProjectService(
             UpdatedByUserId = callerUserId,
         };
         db.OperationalProjects.Add(project);
-        await db.SaveChangesAsync(ct);
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException exception) when (SequentialCodes.IsUniqueViolation(exception))
+        {
+            throw new OperationalProjectOperationException(
+                $"Mã dự án '{code}' đã tồn tại. Vui lòng chọn mã khác.");
+        }
         await projectTeamSync.SyncOperationalProjectManagerAsync(
             project.Id, project.ProjectManagerUserId, callerUserId, ct);
         await db.SaveChangesAsync(ct);
@@ -519,7 +536,7 @@ public class OperationalProjectService(
     }
 
     private async Task ValidateAsync(
-        CreateOperationalProjectRequest request,
+        OperationalProjectFieldsRequest request,
         int callerUserId,
         bool canSeeAll,
         CancellationToken ct)
@@ -551,6 +568,33 @@ public class OperationalProjectService(
             throw new OperationalProjectOperationException(
                 "Bạn không có quyền phân công Dự án cho người khác.");
         }
+    }
+
+    private async Task<string> ResolveCreateCodeAsync(
+        string? requestedCode,
+        int year,
+        CancellationToken ct)
+    {
+        if (requestedCode is null) return await NextCodeAsync(year, ct);
+        if (string.IsNullOrWhiteSpace(requestedCode))
+        {
+            throw new OperationalProjectOperationException(
+                "Mã dự án là bắt buộc. Ví dụ: DB-2026-009.");
+        }
+
+        var code = requestedCode.Trim().ToUpperInvariant();
+        if (!ProjectCodePattern.IsMatch(code))
+        {
+            throw new OperationalProjectOperationException(
+                "Mã dự án phải có 2-40 ký tự, bắt đầu bằng chữ hoặc số và chỉ gồm A-Z, 0-9, dấu gạch ngang hoặc gạch dưới. Ví dụ: DB-2026-009.");
+        }
+        if (await db.OperationalProjects.AsNoTracking().AnyAsync(project => project.Code == code, ct))
+        {
+            throw new OperationalProjectOperationException(
+                $"Mã dự án '{code}' đã tồn tại. Vui lòng chọn mã khác.");
+        }
+
+        return code;
     }
 
     private static void ValidateTransition(

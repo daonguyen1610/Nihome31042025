@@ -8,6 +8,8 @@ public sealed class OperationalProjectOperationException(string message) : Excep
 
 public interface IOperationalProjectService
 {
+    Task<string> SuggestCodeAsync(CancellationToken ct = default);
+
     Task<OperationalProjectListResponse> ListAsync(
         OperationalProjectListParams parameters,
         int callerUserId,

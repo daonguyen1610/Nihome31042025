@@ -25,6 +25,24 @@ public class OperationalProjectsController(
     IAuditLogger audit,
     IGoogleDriveSettingsStore driveSettings) : ControllerBase
 {
+    [HttpGet("code-suggestion")]
+    [RequirePermission("operations.projects", "manage")]
+    public async Task<ActionResult<OperationalProjectCodeSuggestionResponse>> SuggestCode(
+        CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        if (!await permissions.HasAsync(userId.Value, "crm.opportunities.manage", ct))
+        {
+            return Forbid();
+        }
+
+        return Ok(new OperationalProjectCodeSuggestionResponse
+        {
+            Code = await service.SuggestCodeAsync(ct),
+        });
+    }
+
     [HttpGet("document-categories")]
     [RequirePermission("operations.projects", "view")]
     public async Task<ActionResult<IReadOnlyList<ProjectDocumentCategoryResponse>>> GetDocumentCategories(

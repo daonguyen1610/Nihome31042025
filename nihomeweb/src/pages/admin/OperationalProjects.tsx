@@ -30,6 +30,7 @@ import {
   type OperationalProjectStatus,
   type OperationalProjectTimelineItem,
   type PaymentMilestoneStatus,
+  type CreateOperationalProjectRequest,
   type UpdateOperationalProjectRequest,
   type UserListItemResponse,
 } from "@/services/adminApi";
@@ -48,7 +49,10 @@ const milestoneStatusClass: Record<PaymentMilestoneStatus, string> = {
   Paid: "border-emerald-200 bg-emerald-50 text-emerald-700",
 };
 
-const emptyForm = (): UpdateOperationalProjectRequest => ({
+type OperationalProjectForm = UpdateOperationalProjectRequest & { code: string };
+
+const emptyForm = (): OperationalProjectForm => ({
+  code: "",
   name: "",
   customerId: 0,
   projectManagerUserId: null,
@@ -92,7 +96,7 @@ const OperationalProjects = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [form, setForm] = useState<UpdateOperationalProjectRequest>(emptyForm());
+  const [form, setForm] = useState<OperationalProjectForm>(emptyForm());
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -155,22 +159,27 @@ const OperationalProjects = () => {
 
   useEffect(() => { void load(); }, [load]);
 
-  const openCreate = () => {
+  const openCreate = useCallback(async () => {
     setForm({ ...emptyForm(), customerId: customerFilter ?? 0 });
     setFormError(null);
     setDialogOpen(true);
-  };
+    try {
+      const response = await adminApi.suggestOperationalProjectCode();
+      setForm(current => current.code ? current : { ...current, code: response.data.code });
+    } catch (reason) {
+      setFormError(extractApiError(reason));
+    }
+  }, [customerFilter]);
 
   useEffect(() => {
     if (openedFromQuery.current || searchParams.get("create") !== "1" || !canCreate) return;
     openedFromQuery.current = true;
-    setForm({ ...emptyForm(), customerId: customerFilter ?? 0 });
-    setFormError(null);
-    setDialogOpen(true);
-  }, [searchParams, canCreate, customerFilter]);
+    void openCreate();
+  }, [searchParams, canCreate, openCreate]);
 
   const openEdit = (project: OperationalProjectResponse) => {
     setForm({
+      code: project.code,
       name: project.name,
       customerId: project.customerId,
       projectManagerUserId: project.projectManagerUserId ?? null,
@@ -185,6 +194,9 @@ const OperationalProjects = () => {
   };
 
   const validate = () => {
+    if (!detail && !/^[A-Za-z0-9][A-Za-z0-9_-]{1,39}$/.test(form.code.trim())) {
+      return t("operationalProjects.validation.code");
+    }
     const name = form.name.trim();
     if (!name || name.length > 300) return t("operationalProjects.validation.name");
     if (form.customerId < 1) return t("operationalProjects.validation.customer");
@@ -204,16 +216,24 @@ const OperationalProjects = () => {
     setSaving(true);
     setFormError(null);
     try {
-      const payload = {
-        ...form,
+      const commonPayload = {
         name: form.name.trim(),
+        customerId: form.customerId,
+        projectManagerUserId: form.projectManagerUserId,
         note: form.note?.trim() || null,
         startDate: apiDate(dateInput(form.startDate)),
         endDate: apiDate(dateInput(form.endDate)),
       };
       const response = detail
-        ? await adminApi.updateOperationalProject(detail.id, payload)
-        : await adminApi.createOperationalProject(payload);
+        ? await adminApi.updateOperationalProject(detail.id, {
+          ...commonPayload,
+          status: form.status,
+          rowVersion: form.rowVersion,
+        })
+        : await adminApi.createOperationalProject({
+          ...commonPayload,
+          code: form.code.trim().toUpperCase(),
+        } satisfies CreateOperationalProjectRequest);
       setDialogOpen(false);
       toast({ title: t(detail ? "operationalProjects.updated" : "operationalProjects.created") });
       navigate(!detail && returnOpportunity
@@ -771,7 +791,7 @@ const OperationalProjects = () => {
         <div className="space-y-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div><h1 className="text-2xl font-semibold">{t("operationalProjects.title")}</h1><p className="mt-1 text-sm text-muted-foreground">{t("operationalProjects.subtitle")}</p></div>
-            {canCreate && <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" />{t("operationalProjects.new")}</Button>}
+            {canCreate && <Button onClick={() => void openCreate()}><Plus className="mr-2 h-4 w-4" />{t("operationalProjects.new")}</Button>}
           </div>
           <div className="flex flex-col gap-3 rounded-lg border bg-card p-4 sm:flex-row sm:items-end">
             <div className="flex-1"><Label htmlFor="project-search">{t("operationalProjects.filter.search")}</Label><div className="relative mt-1"><Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" /><Input id="project-search" className="pl-9" value={search} onChange={event => setSearch(event.target.value)} placeholder={t("operationalProjects.filter.searchPlaceholder")} /></div></div>
@@ -816,6 +836,20 @@ const OperationalProjects = () => {
         <DialogContent className="max-w-2xl">
           <DialogHeader><DialogTitle>{t(detail ? "operationalProjects.edit" : "operationalProjects.new")}</DialogTitle><DialogDescription>{t("operationalProjects.formHint")}</DialogDescription></DialogHeader>
           <div className="grid gap-4 sm:grid-cols-2">
+            {!detail && (
+              <div className="sm:col-span-2">
+                <Label htmlFor="project-code">{t("operationalProjects.field.code")}</Label>
+                <Input
+                  id="project-code"
+                  data-testid="operational-project-code"
+                  maxLength={40}
+                  value={form.code}
+                  onChange={event => setForm(current => ({ ...current, code: event.target.value }))}
+                  autoComplete="off"
+                />
+                <p className="mt-1 text-xs text-muted-foreground">{t("operationalProjects.codeImmutableHint")}</p>
+              </div>
+            )}
             <div className="sm:col-span-2"><Label htmlFor="project-name">{t("operationalProjects.field.name")}</Label><Input id="project-name" maxLength={300} value={form.name} onChange={event => setForm(current => ({ ...current, name: event.target.value }))} /></div>
             <div><Label>{t("operationalProjects.field.customer")}</Label><Select value={form.customerId ? String(form.customerId) : ""} onValueChange={value => setForm(current => ({ ...current, customerId: Number(value) }))}><SelectTrigger><SelectValue placeholder={t("operationalProjects.selectCustomer")} /></SelectTrigger><SelectContent>{customers.map(customer => <SelectItem key={customer.id} value={String(customer.id)}>{customer.name}</SelectItem>)}</SelectContent></Select></div>
             <div><Label>{t("operationalProjects.field.manager")}</Label><Select value={form.projectManagerUserId ? String(form.projectManagerUserId) : "self"} onValueChange={value => setForm(current => ({ ...current, projectManagerUserId: value === "self" ? null : Number(value) }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="self">{t("operationalProjects.managerSelf")}</SelectItem>{users.map(user => <SelectItem key={user.id} value={String(user.id)}>{user.fullName || user.email || user.phoneNumber}</SelectItem>)}</SelectContent></Select></div>

@@ -1261,6 +1261,7 @@ export interface CorrectHseViolationRequest extends UpdateHseViolationRequest {
 }
 
 export interface CreateOperationalProjectRequest {
+  code?: string | null;
   name: string;
   customerId: number;
   projectManagerUserId?: number | null;
@@ -1269,9 +1270,19 @@ export interface CreateOperationalProjectRequest {
   note?: string | null;
 }
 
-export interface UpdateOperationalProjectRequest extends CreateOperationalProjectRequest {
+export interface UpdateOperationalProjectRequest {
+  name: string;
+  customerId: number;
+  projectManagerUserId?: number | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  note?: string | null;
   status: OperationalProjectStatus;
   rowVersion?: string;
+}
+
+export interface OperationalProjectCodeSuggestionResponse {
+  code: string;
 }
 
 export interface ReopenOperationalProjectRequest {
@@ -5562,6 +5573,8 @@ export const adminApi = {
   // Central operational projects (NIH-460)
   listOperationalProjects: (params: OperationalProjectListParams = {}) =>
     api.get<OperationalProjectListResponse>("/operational-projects", { params }),
+  suggestOperationalProjectCode: () =>
+    api.get<OperationalProjectCodeSuggestionResponse>("/operational-projects/code-suggestion"),
   getProjectReports: (params: ProjectReportFilters = {}) =>
     api.get<ProjectReportResponse>("/reports/projects", { params }),
   exportProjectReports: (params: ProjectReportExportParams) =>

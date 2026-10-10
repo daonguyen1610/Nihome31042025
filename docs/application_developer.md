@@ -1039,6 +1039,13 @@ plus one (`SequentialCodes`), never a row count, so deleted rows do not cause
 collisions. Project codes and lead-conversion projects share the per-year SQL
 Server application lock in `OperationalProjectCodeAllocator`; a concurrent
 tender insert that still hits the unique index retries with the next code.
+`GET /api/operational-projects/code-suggestion` returns the current proposed
+operational-project code for authorized creators. `POST /api/operational-projects`
+accepts an optional creation-time `code`; a supplied value is normalized to
+uppercase, validated against the safe 2–40 character code format and rejected
+when already used. Omitting it preserves automatic allocation for integrations
+and conversion flows. `PUT /api/operational-projects/{id}` deliberately has no
+code field: an operational-project code is immutable after creation.
 
 `POST /api/contracts/{id}/link-quote` (`crm.contracts.manage`, idempotent,
 concurrency-checked) attaches an `Approved`, `SentToCustomer`, or

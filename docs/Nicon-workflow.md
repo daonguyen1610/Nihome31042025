@@ -58,8 +58,10 @@ thực hiện theo quyền và điều kiện an toàn dữ liệu hiện có.
 
 - Có khách hàng, mã/tên dự án và người phụ trách hợp lệ.
 - Cơ hội, báo giá, hợp đồng và các module sau phải liên kết lại Dự án này.
-- Mã dự án sửa được theo quy ước NICON sau khi quy ước mã được chốt; không được
-  đổi mã làm mất liên kết file hoặc lịch sử.
+- Khi tạo Dự án, hệ thống đề xuất mã tự động và người tạo được chỉnh mã trước
+  khi lưu. Sau khi Dự án được tạo, mã không được thay đổi để giữ ổn định việc
+  đối soát, tên thư mục và tài liệu lịch sử. Mã phải duy nhất toàn hệ thống;
+  quy ước chi tiết vẫn theo quyết định Q-05 của NICON.
 
 ### G1 — Chuyển sang hợp đồng
 

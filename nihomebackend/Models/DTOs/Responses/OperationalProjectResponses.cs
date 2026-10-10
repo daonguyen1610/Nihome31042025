@@ -1,5 +1,10 @@
 namespace NihomeBackend.Models.DTOs.Responses;
 
+public sealed class OperationalProjectCodeSuggestionResponse
+{
+    public string Code { get; set; } = string.Empty;
+}
+
 public class OperationalProjectListItemResponse
 {
     public int Id { get; set; }

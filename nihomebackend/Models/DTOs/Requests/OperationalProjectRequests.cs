@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace NihomeBackend.Models.DTOs.Requests;
 
-public class CreateOperationalProjectRequest
+public abstract class OperationalProjectFieldsRequest
 {
     [Required]
     [StringLength(300, MinimumLength = 1)]
@@ -19,7 +19,17 @@ public class CreateOperationalProjectRequest
     public string? Note { get; set; }
 }
 
-public class UpdateOperationalProjectRequest : CreateOperationalProjectRequest, IConcurrencyRequest
+public class CreateOperationalProjectRequest : OperationalProjectFieldsRequest
+{
+    /// <summary>
+    /// Optional project code chosen during creation. When omitted, the server
+    /// allocates the next PJ-{year}-{sequence} code.
+    /// </summary>
+    [StringLength(40, MinimumLength = 2)]
+    public string? Code { get; set; }
+}
+
+public class UpdateOperationalProjectRequest : OperationalProjectFieldsRequest, IConcurrencyRequest
 {
     [Required]
     public OperationalProjectStatus Status { get; set; }

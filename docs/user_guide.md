@@ -70,6 +70,10 @@ or individual) can own many operational projects, and one operational project
 can contain many contracts. The operational project code is the traceability
 key used from sales through handover. Public website projects and design-stage
 projects are separate views and must not be used as substitutes for this key.
+When creating an operational project, the system proposes the next project
+code. An authorized creator may adjust that code before saving, subject to the
+displayed format and global uniqueness checks. The code becomes immutable once
+the project has been created.
 The CRM menu orders Projects, Opportunities, Contracts, Leads, Customers,
 Quotes, Material Rates, Tenders, Capability Documents, Surveys, and Project
 Reports. Permissions hide items that the current user cannot access.
