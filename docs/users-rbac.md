@@ -189,7 +189,13 @@ The same endpoints are also exposed below `/api/v1/handover-records`. Unauthoriz
 ## Frontend Surface
 
 - `/admin/users` lists users with search, role filter, pagination, create/edit modal, status toggle, and soft delete. The route requires `users.view`; mutation controls additionally require `users.manage`.
-- `/admin/roles` displays the backend role catalog and supports creating/deleting non-system roles plus editing their permission matrices. The route requires `rbac.roles.view`; each operation is gated by its corresponding RBAC permission.
+- `/admin/roles` displays the backend role catalog and supports creating/deleting
+  non-system roles plus editing their permissions. The default workspace focuses
+  on one role at a time, groups permissions by functional module, and provides
+  role and permission search; administrators can switch to the comparison
+  matrix when they need to inspect several roles together. System roles remain
+  read-only in both views. The route requires `rbac.roles.view`; each operation
+  is gated by its corresponding RBAC permission.
 - Admin route protection lives in `nihomeweb/src/components/auth/ProtectedRoute.tsx`. Frontend permission gates improve navigation and action UX; the API remains authoritative using the permission set returned by `/api/users/me/permissions`.
 
 ## Seeded test users (dev + integration tests)
