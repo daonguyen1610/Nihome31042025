@@ -490,7 +490,8 @@ public class QuoteService(
             .Include(q => q.Opportunity).ThenInclude(o => o.Customer).ThenInclude(c => c.Contacts)
             .FirstOrDefaultAsync(q => q.Id == id, ct);
         if (quote is null || (!canSeeAll && quote.OwnerUserId != caller)) return null;
-        return BuildEmailPreview(quote, canEdit);
+        var settings = await db.SiteSettings.AsNoTracking().FirstOrDefaultAsync(ct);
+        return BuildEmailPreview(quote, canEdit, settings);
     }
 
     public async Task<QuoteResponse?> SendToCustomerAsync(
@@ -511,7 +512,8 @@ public class QuoteService(
         var toEmail = req.ToEmail.Trim();
         if (!ContactValidation.IsValidEmail(toEmail) || string.IsNullOrWhiteSpace(toEmail))
             throw new QuoteOperationException("Email khách hàng không hợp lệ. Ví dụ: khachhang@example.com.");
-        var preview = BuildEmailPreview(quote, canEdit);
+        var settings = await db.SiteSettings.AsNoTracking().FirstOrDefaultAsync(ct);
+        var preview = BuildEmailPreview(quote, canEdit, settings);
         var subject = req.Subject.Trim();
         var body = req.Body.Trim();
         if (subject.Length is < 1 or > 200 || body.Length is < 1 or > 8000)
@@ -531,7 +533,7 @@ public class QuoteService(
             ct, requireOpenOpportunity: true);
     }
 
-    private static QuoteEmailPreviewResponse BuildEmailPreview(Quote quote, bool canEdit)
+    private static QuoteEmailPreviewResponse BuildEmailPreview(Quote quote, bool canEdit, SiteSettings? settings)
     {
         var customer = quote.Opportunity.Customer;
         var recipient = customer.Contacts
@@ -543,11 +545,24 @@ public class QuoteService(
             ? string.Join("\n", quote.Items.OrderBy(item => item.SortOrder).Select(item =>
                 $"- {item.Name}: {item.Quantity:N2} {item.Unit} × {item.UnitPrice.ToString("N0", culture)} VND = {item.Amount.ToString("N0", culture)} VND"))
             : $"Diện tích: {quote.AreaSqm:N2} m²; đơn giá: {quote.UnitPricePerSqm?.ToString("N0", culture)} VND/m².";
+        var tokens = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["customerName"] = customer.Name,
+            ["quoteCode"] = quote.Code,
+            ["opportunityName"] = quote.Opportunity.Name,
+            ["quoteLines"] = details,
+            ["discountPercent"] = quote.DiscountPercent.ToString(culture),
+            ["vatPercent"] = quote.VatPercent.ToString(culture),
+            ["grandTotal"] = amount,
+            ["validUntil"] = quote.ValidUntil.ToString("dd/MM/yyyy", culture),
+        };
+        var (subject, body) = EmailTemplateFormatter.BuildQuoteEmail(
+            settings?.QuoteEmailSubjectTemplate, settings?.QuoteEmailBodyTemplate, tokens);
         return new QuoteEmailPreviewResponse
         {
             ToEmail = recipient?.Email?.Trim() ?? string.Empty,
-            Subject = $"Báo giá {quote.Code} – {quote.Opportunity.Name}",
-            Body = $"Kính gửi {customer.Name},\n\nNICON gửi Quý khách báo giá {quote.Code} cho {quote.Opportunity.Name}.\n{details}\nChiết khấu: {quote.DiscountPercent}%; VAT: {quote.VatPercent}%.\nTổng giá trị: {amount} VND.\nBáo giá có hiệu lực đến {quote.ValidUntil:dd/MM/yyyy}.\n\nTrân trọng,\nNICON",
+            Subject = subject,
+            Body = body,
             CanEdit = canEdit,
         };
     }

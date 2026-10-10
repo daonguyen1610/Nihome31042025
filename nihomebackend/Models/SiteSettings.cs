@@ -32,6 +32,10 @@ public class SiteSettings
 
     public string? NewApplicationEmailBodyTemplate { get; set; }
 
+    public string? QuoteEmailSubjectTemplate { get; set; }
+
+    public string? QuoteEmailBodyTemplate { get; set; }
+
     public string? NotificationEmail { get; set; }
 
     public int AuditLogRetentionMinutes { get; set; } = 43200;

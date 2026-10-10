@@ -1,16 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Save, Eye, Maximize2, Minimize2, RotateCcw, Mail, ShieldCheck } from "lucide-react";
+import { Save, Eye, Maximize2, Minimize2, RotateCcw, Mail, ShieldCheck, FileText } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { extractApiError } from "@/lib/apiError";
 import { adminApi } from "@/services/adminApi";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
-type TabType = "application" | "otp";
+type TabType = "application" | "otp" | "quote";
 
 const APPLICATION_TOKENS = [
   { token: "{{siteName}}", desc: "Tên website" },
@@ -30,6 +31,11 @@ const OTP_TOKENS = [
   { token: "{{otpExpireMinutes}}", desc: "Thời gian hết hạn (phút)" },
 ];
 
+const QUOTE_TOKENS = [
+  "customerName", "quoteCode", "opportunityName", "quoteLines",
+  "discountPercent", "vatPercent", "grandTotal", "validUntil",
+];
+
 const EmailTemplateConfig = () => {
   const { t } = useI18n();
   const { toast } = useToast();
@@ -41,6 +47,8 @@ const EmailTemplateConfig = () => {
   const [notificationEmail, setNotificationEmail] = useState("");
   const [otpSubject, setOtpSubject] = useState("");
   const [otpBody, setOtpBody] = useState("");
+  const [quoteSubject, setQuoteSubject] = useState("");
+  const [quoteBody, setQuoteBody] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
@@ -54,6 +62,8 @@ const EmailTemplateConfig = () => {
       setNotificationEmail(res.data.notificationEmail ?? "");
       setOtpSubject(res.data.otpEmailSubjectTemplate ?? "");
       setOtpBody(res.data.otpEmailBodyTemplate ?? "");
+      setQuoteSubject(res.data.quoteEmailSubjectTemplate ?? "");
+      setQuoteBody(res.data.quoteEmailBodyTemplate ?? "");
     } catch {
       toast({ title: t("common.error"), description: "Không thể tải cấu hình email", variant: "destructive" });
     } finally {
@@ -66,19 +76,39 @@ const EmailTemplateConfig = () => {
   }, [loadTemplates]);
 
   // Update iframe preview whenever body or tab changes
-  const activeBody = activeTab === "application" ? body : otpBody;
-  const activeSubject = activeTab === "application" ? subject : otpSubject;
+  const activeBody = activeTab === "application" ? body : activeTab === "otp" ? otpBody : quoteBody;
+  const activeSubject = activeTab === "application" ? subject : activeTab === "otp" ? otpSubject : quoteSubject;
   useEffect(() => {
     const iframe = iframeRef.current;
     if (!iframe) return;
     const doc = iframe.contentDocument;
     if (!doc) return;
     doc.open();
-    doc.write(activeBody || "<p style='color:#999;padding:20px;font-family:sans-serif;'>Chưa có nội dung template</p>");
+    if (activeTab === "quote") {
+      doc.write("<body style='padding:20px;white-space:pre-wrap;font-family:Arial,sans-serif'></body>");
+      doc.body.textContent = activeBody;
+    } else {
+      doc.write(activeBody || "<p style='color:#999;padding:20px;font-family:sans-serif;'>Chưa có nội dung template</p>");
+    }
     doc.close();
-  }, [activeBody]);
+  }, [activeBody, activeTab]);
 
   const handleSave = async () => {
+    const normalizedQuoteBody = quoteBody.toLowerCase();
+    if (!quoteSubject.trim() || !quoteBody.trim() ||
+        !normalizedQuoteBody.includes("{{quotelines}}") || !normalizedQuoteBody.includes("{{grandtotal}}")) {
+      toast({ title: t("common.error"), description: t("emailTemplate.quote.required"), variant: "destructive" });
+      return;
+    }
+    const quoteTemplateText = `${quoteSubject}\n${quoteBody}`;
+    const matchedTokens = [...quoteTemplateText.matchAll(/\{\{(\w+)\}\}/g)];
+    const unknownToken = matchedTokens.some((match) =>
+      !QUOTE_TOKENS.some((name) => name.toLowerCase() === match[1].toLowerCase()));
+    const unmatchedBraces = quoteTemplateText.replace(/\{\{\w+\}\}/g, "");
+    if (unknownToken || unmatchedBraces.includes("{{") || unmatchedBraces.includes("}}")) {
+      toast({ title: t("common.error"), description: t("emailTemplate.quote.invalidToken"), variant: "destructive" });
+      return;
+    }
     setSaving(true);
     try {
       await adminApi.updateEmailTemplates({
@@ -87,10 +117,12 @@ const EmailTemplateConfig = () => {
         notificationEmail: notificationEmail || null,
         otpEmailSubjectTemplate: otpSubject || null,
         otpEmailBodyTemplate: otpBody || null,
+        quoteEmailSubjectTemplate: quoteSubject,
+        quoteEmailBodyTemplate: quoteBody,
       });
       toast({ title: "Đã lưu", description: "Cấu hình email template đã được cập nhật." });
-    } catch {
-      toast({ title: t("common.error"), description: "Không thể lưu cấu hình", variant: "destructive" });
+    } catch (error) {
+      toast({ title: t("common.error"), description: extractApiError(error), variant: "destructive" });
     } finally {
       setSaving(false);
     }
@@ -104,12 +136,15 @@ const EmailTemplateConfig = () => {
   const insertToken = (token: string) => {
     if (activeTab === "application") {
       setBody((prev) => prev + token);
-    } else {
+    } else if (activeTab === "otp") {
       setOtpBody((prev) => prev + token);
+    } else {
+      setQuoteBody((prev) => prev + token);
     }
   };
 
-  const currentTokens = activeTab === "application" ? APPLICATION_TOKENS : OTP_TOKENS;
+  const currentTokens = activeTab === "application" ? APPLICATION_TOKENS : activeTab === "otp"
+    ? OTP_TOKENS : QUOTE_TOKENS.map((name) => ({ token: `{{${name}}}`, desc: t(`emailTemplate.quote.token.${name}`) }));
 
   if (loading) {
     return (
@@ -141,7 +176,7 @@ const EmailTemplateConfig = () => {
           {/* Left: form */}
           <div className="space-y-4">
             {/* Tabs */}
-            <div className="flex gap-1 border-b">
+            <div className="flex flex-wrap gap-1 border-b">
               <button
                 type="button"
                 onClick={() => setActiveTab("application")}
@@ -166,6 +201,18 @@ const EmailTemplateConfig = () => {
               >
                 <ShieldCheck className="h-4 w-4" /> OTP xác thực
               </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("quote")}
+                className={cn(
+                  "-mb-px inline-flex items-center gap-2 border-b-2 px-4 py-2 text-sm font-medium transition",
+                  activeTab === "quote"
+                    ? "border-primary text-primary"
+                    : "border-transparent text-muted-foreground hover:text-foreground",
+                )}
+              >
+                <FileText className="h-4 w-4" /> {t("emailTemplate.quote.tab")}
+              </button>
             </div>
 
             {/* Notification email — shown only on application tab */}
@@ -188,32 +235,37 @@ const EmailTemplateConfig = () => {
               <Label className="text-xs" htmlFor="email-subject">Tiêu đề email</Label>
               <Input
                 id="email-subject"
-                value={activeTab === "application" ? subject : otpSubject}
+                value={activeSubject}
                 onChange={(e) =>
-                  activeTab === "application" ? setSubject(e.target.value) : setOtpSubject(e.target.value)
+                  activeTab === "application" ? setSubject(e.target.value)
+                    : activeTab === "otp" ? setOtpSubject(e.target.value) : setQuoteSubject(e.target.value)
                 }
                 placeholder={
                   activeTab === "application"
                     ? "[{{siteName}}] Ứng viên mới: {{candidateName}} – {{positionTitle}}"
-                    : "[{{siteName}}] Mã xác thực của bạn"
+                    : activeTab === "otp" ? "[{{siteName}}] Mã xác thực của bạn"
+                      : "Báo giá {{quoteCode}} – {{opportunityName}}"
                 }
-                maxLength={255}
+                maxLength={activeTab === "quote" ? 200 : 255}
               />
             </div>
 
             {/* Body */}
             <div className="space-y-1.5">
-              <Label className="text-xs" htmlFor="email-body">Nội dung HTML</Label>
+              <Label className="text-xs" htmlFor="email-body">{activeTab === "quote" ? t("emailTemplate.quote.bodyLabel") : "Nội dung HTML"}</Label>
               <Textarea
                 id="email-body"
                 className="font-mono text-xs"
                 rows={18}
-                value={activeTab === "application" ? body : otpBody}
+                value={activeBody}
                 onChange={(e) =>
-                  activeTab === "application" ? setBody(e.target.value) : setOtpBody(e.target.value)
+                  activeTab === "application" ? setBody(e.target.value)
+                    : activeTab === "otp" ? setOtpBody(e.target.value) : setQuoteBody(e.target.value)
                 }
-                placeholder="<div>...</div>"
+                placeholder={activeTab === "quote" ? "Kính gửi {{customerName}}, ..." : "<div>...</div>"}
+                maxLength={activeTab === "quote" ? 8000 : undefined}
               />
+              {activeTab === "quote" && <p className="text-xs text-muted-foreground">{t("emailTemplate.quote.hint")}</p>}
             </div>
 
             {/* Available tokens */}

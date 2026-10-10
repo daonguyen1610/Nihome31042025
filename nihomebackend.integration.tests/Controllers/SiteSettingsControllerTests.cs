@@ -61,6 +61,73 @@ public class SiteSettingsControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task QuoteEmailTemplate_OnlyAdminCanUpdateAndInvalidBodyDoesNotPersist()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "SALE"));
+        (await Client.PutAsJsonAsync("/api/site-settings/email-templates", new
+        {
+            quoteEmailSubjectTemplate = "Báo giá {{quoteCode}}",
+            quoteEmailBodyTemplate = "{{quoteLines}} {{grandTotal}}",
+        })).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
+        var beforeResponse = await Client.GetAsync("/api/site-settings/email-templates");
+        beforeResponse.EnsureSuccessStatusCode();
+        var before = await ReadJsonAsync(beforeResponse);
+        var originalSubject = before.GetProperty("quoteEmailSubjectTemplate").GetString();
+        var originalBody = before.GetProperty("quoteEmailBodyTemplate").GetString();
+        var applicationSubject = before.GetProperty("newApplicationEmailSubjectTemplate").GetString();
+        var applicationBody = before.GetProperty("newApplicationEmailBodyTemplate").GetString();
+        var notificationEmail = before.GetProperty("notificationEmail").GetString();
+        var otpSubject = before.GetProperty("otpEmailSubjectTemplate").GetString();
+        var otpBody = before.GetProperty("otpEmailBodyTemplate").GetString();
+
+        try
+        {
+            var invalid = await Client.PutAsJsonAsync("/api/site-settings/email-templates", new
+            {
+                quoteEmailSubjectTemplate = "NICON {{quoteCode}}",
+                quoteEmailBodyTemplate = "Thiếu tổng {{quoteLines}}",
+            });
+            invalid.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            var unchangedResponse = await Client.GetAsync("/api/site-settings/email-templates");
+            var unchanged = await ReadJsonAsync(unchangedResponse);
+            unchanged.GetProperty("quoteEmailSubjectTemplate").GetString().Should().Be(originalSubject);
+            unchanged.GetProperty("quoteEmailBodyTemplate").GetString().Should().Be(originalBody);
+
+            var valid = await Client.PutAsJsonAsync("/api/site-settings/email-templates", new
+            {
+                newApplicationEmailSubjectTemplate = applicationSubject,
+                newApplicationEmailBodyTemplate = applicationBody,
+                notificationEmail,
+                otpEmailSubjectTemplate = otpSubject,
+                otpEmailBodyTemplate = otpBody,
+                quoteEmailSubjectTemplate = "NICON {{quoteCode}}",
+                quoteEmailBodyTemplate = "Hạng mục {{quoteLines}}\nTổng {{grandTotal}}",
+            });
+            valid.StatusCode.Should().Be(HttpStatusCode.OK);
+            var savedResponse = await Client.GetAsync("/api/site-settings/email-templates");
+            var saved = await ReadJsonAsync(savedResponse);
+            saved.GetProperty("quoteEmailSubjectTemplate").GetString().Should().Be("NICON {{quoteCode}}");
+            saved.GetProperty("quoteEmailBodyTemplate").GetString().Should().Contain("{{grandTotal}}");
+        }
+        finally
+        {
+            await Client.PutAsJsonAsync("/api/site-settings/email-templates", new
+            {
+                newApplicationEmailSubjectTemplate = applicationSubject,
+                newApplicationEmailBodyTemplate = applicationBody,
+                notificationEmail,
+                otpEmailSubjectTemplate = otpSubject,
+                otpEmailBodyTemplate = otpBody,
+                quoteEmailSubjectTemplate = originalSubject,
+                quoteEmailBodyTemplate = originalBody,
+            });
+        }
+    }
+
+    [Fact]
     public async Task GetGoogleDriveStatus_WithoutAuth_ReturnsUnauthorized()
     {
         (await Client.GetAsync("/api/site-settings/google-drive/status"))

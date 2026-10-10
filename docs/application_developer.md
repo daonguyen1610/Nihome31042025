@@ -948,7 +948,14 @@ Quote document metadata is stored in `quote_documents`; physical files are store
 
 Quote delivery uses `GET /api/quotes/{id}/email-preview` (`crm.quotes.send`)
 to prefill the customer's primary contact email and a quote-specific subject
-and body. `POST /api/quotes/{id}/send` now requires `toEmail`, `subject`,
+and body. The subject/body come from the editable quote template in
+`site_settings` (`GET/PUT /api/site-settings/email-templates`, guarded by
+`system.settings.view/manage`), with seeded defaults for existing instances.
+The plain-text template supports `customerName`, `quoteCode`,
+`opportunityName`, `quoteLines`, `discountPercent`, `vatPercent`, `grandTotal`,
+and `validUntil` tokens. The body must contain `quoteLines` and `grandTotal`;
+template updates are limited to 200 subject and 8000 body characters.
+`POST /api/quotes/{id}/send` requires `toEmail`, `subject`,
 `body`, and the current `rowVersion`. The server validates the address and
 content, permits subject/body edits only with `crm.quotes.manage`, and sends
 through the configured SMTP service before recording `SentToCustomer`.

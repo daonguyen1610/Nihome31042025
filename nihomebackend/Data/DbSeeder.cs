@@ -42,6 +42,8 @@ public static class DbSeeder
                 OtpEmailBodyTemplate = EmailTemplateFormatter.DefaultOtpBody,
                 NewApplicationEmailSubjectTemplate = NihomeBackend.Services.EmailTemplateFormatter.DefaultNewApplicationSubject,
                 NewApplicationEmailBodyTemplate = NihomeBackend.Services.EmailTemplateFormatter.DefaultNewApplicationBody,
+                QuoteEmailSubjectTemplate = EmailTemplateFormatter.DefaultQuoteSubject,
+                QuoteEmailBodyTemplate = EmailTemplateFormatter.DefaultQuoteBody,
                 NotificationEmail = "nihome@nihome.vn",
                 CreatedAt = now,
                 UpdatedAt = now
@@ -117,6 +119,18 @@ public static class DbSeeder
             if (string.IsNullOrWhiteSpace(existingSettings.NewApplicationEmailBodyTemplate))
             {
                 existingSettings.NewApplicationEmailBodyTemplate = NihomeBackend.Services.EmailTemplateFormatter.DefaultNewApplicationBody;
+                updated = true;
+            }
+
+            if (string.IsNullOrWhiteSpace(existingSettings.QuoteEmailSubjectTemplate))
+            {
+                existingSettings.QuoteEmailSubjectTemplate = EmailTemplateFormatter.DefaultQuoteSubject;
+                updated = true;
+            }
+
+            if (string.IsNullOrWhiteSpace(existingSettings.QuoteEmailBodyTemplate))
+            {
+                existingSettings.QuoteEmailBodyTemplate = EmailTemplateFormatter.DefaultQuoteBody;
                 updated = true;
             }
 

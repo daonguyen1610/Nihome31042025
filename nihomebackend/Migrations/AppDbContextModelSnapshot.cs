@@ -7406,6 +7406,12 @@ namespace nihomebackend.Migrations
                     b.Property<string>("PrimaryPhone")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("QuoteEmailBodyTemplate")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("QuoteEmailSubjectTemplate")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("SecondaryEmail")
                         .HasColumnType("nvarchar(max)");
 

@@ -1658,7 +1658,7 @@ Translations are organized into categories for management convenience. Administr
 
 ### 12.1 Email Types
 
-The platform sends automated emails for the following events:
+The platform sends automated emails or lets authorized staff send them for the following events:
 
 | Event                    | Recipient              | Trigger                                    |
 |--------------------------|------------------------|--------------------------------------------|
@@ -1666,25 +1666,28 @@ The platform sends automated emails for the following events:
 | Password Reset OTP       | Account holder         | User initiates password reset (OTP enabled)|
 | New Application Notice   | Notification address   | Candidate submits a job application         |
 | Contact Reply            | Contact message sender | Administrator replies to a contact message  |
+| Approved CRM Quote       | Selected customer email | Sales sends an approved, valid quote          |
 
 ### 12.2 Email Templates
 
-OTP and job application notification emails use configurable templates with placeholder substitution. The default OTP template uses the red/orange brand palette.
+OTP, job application notification, and CRM quote emails use configurable templates with `{{tokenName}}` substitution. The default OTP template uses the red/orange brand palette. Open `/admin/email-templates` and choose **Báo giá** to edit the quote subject and plain-text body; the right pane previews the template. Saving requires `system.settings.manage`.
 
 **OTP Template Placeholders:**
 
 | Placeholder   | Substituted Value                |
 |---------------|----------------------------------|
-| `{SiteName}`  | The site name from settings      |
-| `{OtpCode}`   | The generated one-time password  |
+| `{{siteName}}`  | The site name from settings      |
+| `{{otpCode}}`   | The generated one-time password  |
 
 **Job Application Template Placeholders:**
 
 | Placeholder       | Substituted Value                |
 |-------------------|----------------------------------|
-| `{SiteName}`      | The site name from settings      |
-| `{CandidateName}` | The applicant's full name        |
-| `{PositionTitle}`  | The job position title           |
+| `{{siteName}}`      | The site name from settings      |
+| `{{candidateName}}` | The applicant's full name        |
+| `{{positionTitle}}`  | The job position title           |
+
+**Quote template placeholders:** `{{customerName}}`, `{{quoteCode}}`, `{{opportunityName}}`, `{{quoteLines}}`, `{{discountPercent}}`, `{{vatPercent}}`, `{{grandTotal}}`, and `{{validUntil}}`. The body must retain `{{quoteLines}}` and `{{grandTotal}}` so the customer sees priced items and the total. The configured template prefills the quote send form; only users with `crm.quotes.manage` may alter its subject/body before sending. HTML entered into the quote template is treated as text, not executable markup.
 
 Templates are configured through the admin panel at `/admin/email-templates` or via the Site Settings API.
 
@@ -1701,6 +1704,8 @@ The following settings control email behavior:
 | New Application Email Subject        | Subject template for application notification emails  |
 | New Application Email Body           | Body template for application notification emails     |
 | Notification Email                   | Email address that receives application notifications |
+| Quote Email Subject Template        | Subject prefilled when sending a CRM quote            |
+| Quote Email Body Template           | Plain-text body prefilled when sending a CRM quote    |
 
 Administrators can toggle registration and forgot-password OTP verification from `/admin/settings` in the Security tab.
 
@@ -2135,11 +2140,13 @@ Logo kinds: `Client`, `Partner`, `Supplier`.
 
 ```json
 {
-  "newApplicationEmailSubjectTemplate": "[{SiteName}] New Application for {PositionTitle}",
-  "newApplicationEmailBodyTemplate": "A new application has been submitted by {CandidateName} for {PositionTitle}.",
+  "newApplicationEmailSubjectTemplate": "[{{siteName}}] New Application for {{positionTitle}}",
+  "newApplicationEmailBodyTemplate": "A new application has been submitted by {{candidateName}} for {{positionTitle}}.",
   "notificationEmail": "hr@nihome.vn",
-  "otpEmailSubjectTemplate": "[{SiteName}] Your verification code",
-  "otpEmailBodyTemplate": "Your OTP code is: {OtpCode}"
+  "otpEmailSubjectTemplate": "[{{siteName}}] Your verification code",
+  "otpEmailBodyTemplate": "Your OTP code is: {{otpCode}}",
+  "quoteEmailSubjectTemplate": "Báo giá {{quoteCode}} – {{opportunityName}}",
+  "quoteEmailBodyTemplate": "Kính gửi {{customerName}},\n{{quoteLines}}\nTổng giá trị: {{grandTotal}} VND"
 }
 ```
 
