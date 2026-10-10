@@ -132,6 +132,8 @@ public class QuoteEmailPreviewResponse
     public string Subject { get; set; } = string.Empty;
     public string Body { get; set; } = string.Empty;
     public bool CanEdit { get; set; }
+    public string AttachmentFileName { get; set; } = string.Empty;
+    public string AttachmentContentType { get; set; } = string.Empty;
 }
 
 public class QuoteListItemResponse

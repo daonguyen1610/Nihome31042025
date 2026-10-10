@@ -313,6 +313,17 @@ test("pastes Excel BOQ safely and applies an approved material rate to a Unit Co
     await page.goto(`${baseURL}/admin/quotes/${catalogBoqQuoteId}`, { waitUntil: "networkidle" });
     await expect(page.getByText(boqCatalogCode)).toBeVisible();
     await expect(page.getByRole("cell", { name: "Hạng mục danh mục sau thay thế", exact: true })).toBeVisible();
+    const exportResponsePromise = page.waitForResponse((response) =>
+      new URL(response.url()).pathname === `/api/quotes/${catalogBoqQuoteId}/export.xlsx`,
+    );
+    const downloadPromise = page.waitForEvent("download");
+    await page.getByTestId("quote-download-excel").click();
+    const [exportResponse, download] = await Promise.all([exportResponsePromise, downloadPromise]);
+    expect(exportResponse.status()).toBe(200);
+    expect(exportResponse.headers()["content-type"]).toContain(
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
+    expect(download.suggestedFilename()).toBe(`${catalogBoqQuote.code}.xlsx`);
     await page.getByTestId("quote-edit").click();
     const exactQuoteRow = page.locator("tbody tr").filter({ has: page.locator('input[value="Kiểm tra đơn giá biên"]') });
     await expect(exactQuoteRow.locator('input[type="number"]')).toHaveValue("99999999999999.99");

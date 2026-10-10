@@ -51,7 +51,7 @@ test("approved opportunity quote sends the edited preview through SMTP before cu
       },
     });
     expect(quoteResponse.status(), await quoteResponse.text()).toBe(201);
-    let quote = await quoteResponse.json() as { id: number; rowVersion: string; status: string };
+    let quote = await quoteResponse.json() as { id: number; code: string; rowVersion: string; status: string };
     quoteId = quote.id;
     const submitted = await api.post(`/api/quotes/${quoteId}/submit`, { headers, data: { rowVersion: quote.rowVersion } });
     expect(submitted.status(), await submitted.text()).toBe(200);
@@ -67,6 +67,7 @@ test("approved opportunity quote sends the edited preview through SMTP before cu
     await expect(dialog.getByLabel("Email khách hàng")).toHaveValue(recipient);
     await expect(dialog.getByLabel("Tiêu đề email")).toHaveValue(/QT-/);
     await expect(dialog.getByLabel("Nội dung email sắp gửi")).toHaveValue(/Tổng giá trị/);
+    await expect(dialog.getByTestId("quote-email-attachment")).toContainText(`${quote.code}.xlsx`);
     await expect(dialog.frameLocator('iframe[title="Xem trước email hiển thị"]').locator("body")).toContainText("NICON");
     await expect(dialog.frameLocator('iframe[title="Xem trước email hiển thị"]').locator("body")).toContainText("810.000.000");
     await dialog.getByLabel("Email khách hàng").fill("invalid@domain");
@@ -88,9 +89,9 @@ test("approved opportunity quote sends the edited preview through SMTP before cu
     const messages = await mailbox.json() as Array<{ recipient: string; raw: string }>;
     const raw = messages.find((message) => message.recipient === recipient)!.raw;
     expect(raw).toContain(`Subject: NICON quote ${marker}`);
-    const base64Body = raw.match(/Content-Transfer-Encoding: base64\r\n(?:[^\r]*\r\n)*?\r\n([A-Za-z0-9+/=\r\n]+)/i)?.[1];
-    const decodedBody = base64Body ? Buffer.from(base64Body, "base64").toString("utf8") : raw;
-    expect(decodedBody).toContain(marker);
+    expect(raw).toContain("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    expect(raw).toContain(`${quote.code}.xlsx`);
+    expect(raw).toContain(`<strong>${marker}</strong>`);
 
     const sentResponse = await api.get(`/api/quotes/${quoteId}`, { headers });
     expect(sentResponse.status()).toBe(200);

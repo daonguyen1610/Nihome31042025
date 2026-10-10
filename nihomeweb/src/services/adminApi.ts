@@ -1951,12 +1951,15 @@ export interface QuoteEmailPreviewResponse {
   subject: string;
   body: string;
   canEdit: boolean;
+  attachmentFileName: string;
+  attachmentContentType: string;
 }
 
 export interface SendQuoteEmailRequest extends QuoteWorkflowRequest {
   toEmail: string;
   subject: string;
   body: string;
+  languageCode: string;
 }
 
 export interface ExtendQuoteValidityRequest {
@@ -4644,8 +4647,8 @@ export const adminApi = {
   },
   getQuote: (id: number) => api.get<QuoteResponse>(`/quotes/${id}`),
   getQuoteVersions: (id: number) => api.get<QuoteVersionsResponse>(`/quotes/${id}/versions`),
-  exportQuotePdf: (id: number, lang: string) =>
-    api.get<Blob>(`/quotes/${id}/export.pdf`, { params: { lang }, responseType: "blob" }),
+  exportQuoteSpreadsheet: (id: number, lang: string) =>
+    api.get<Blob>(`/quotes/${id}/export.xlsx`, { params: { lang }, responseType: "blob" }),
   createQuote: (body: CreateQuoteRequest) => api.post<QuoteResponse>("/quotes", body),
   updateQuote: (id: number, body: UpdateQuoteRequest) => api.put<QuoteResponse>(`/quotes/${id}`, body),
   submitQuote: (id: number, body: QuoteWorkflowRequest = {}) =>

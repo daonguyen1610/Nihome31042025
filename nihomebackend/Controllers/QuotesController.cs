@@ -78,9 +78,9 @@ public class QuotesController(
         return found is null ? NotFound() : Ok(found);
     }
 
-    [HttpGet("{id:int}/export.pdf")]
+    [HttpGet("{id:int}/export.xlsx")]
     [RequirePermission("crm.quotes", "view")]
-    public async Task<IActionResult> ExportPdf(
+    public async Task<IActionResult> ExportSpreadsheet(
         int id, [FromQuery] string lang = "vi", CancellationToken ct = default)
     {
         var userId = GetUserId();
@@ -88,12 +88,14 @@ public class QuotesController(
         var canSeeAll = await permissions.HasAsync(userId.Value, "crm.quotes.view.all", ct);
         try
         {
-            var pdf = await svc.ExportPdfAsync(id, userId.Value, canSeeAll, lang, ct);
-            return pdf is null ? NotFound() : File(pdf, "application/pdf", $"quote-{id}.pdf");
+            var workbook = await svc.ExportSpreadsheetAsync(id, userId.Value, canSeeAll, lang, ct);
+            return workbook is null
+                ? NotFound()
+                : File(workbook, QuoteSpreadsheetService.ContentType, $"quote-{id}.xlsx");
         }
         catch (QuoteOperationException ex)
         {
-            return LogAndBadRequest("quote.export-pdf", ex, id).Result!;
+            return LogAndBadRequest("quote.export-xlsx", ex, id).Result!;
         }
     }
 

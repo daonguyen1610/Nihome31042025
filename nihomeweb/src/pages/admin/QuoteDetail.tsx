@@ -168,7 +168,7 @@ const AdminQuoteDetail = () => {
   const [form, setForm] = useState<UpdateQuoteRequest | null>(null);
   const [saving, setSaving] = useState(false);
   const [effectiveRevision, setEffectiveRevision] = useState<MaterialRateRevisionResponse | null>(null);
-  const [exportingPdf, setExportingPdf] = useState(false);
+  const [exportingSpreadsheet, setExportingSpreadsheet] = useState(false);
   const [boqPasteOpen, setBoqPasteOpen] = useState(false);
 
   const [versions, setVersions] = useState<QuoteVersionsResponse | null>(null);
@@ -360,21 +360,21 @@ const AdminQuoteDetail = () => {
     }
   };
 
-  const downloadPdf = async () => {
+  const downloadSpreadsheet = async () => {
     if (!quote) return;
-    setExportingPdf(true);
+    setExportingSpreadsheet(true);
     try {
-      const { data } = await adminApi.exportQuotePdf(quote.id, lang);
+      const { data } = await adminApi.exportQuoteSpreadsheet(quote.id, lang);
       const url = URL.createObjectURL(data);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `${quote.code}.pdf`;
+      link.download = `${quote.code}.xlsx`;
       link.click();
       URL.revokeObjectURL(url);
     } catch (err) {
       toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
     } finally {
-      setExportingPdf(false);
+      setExportingSpreadsheet(false);
     }
   };
 
@@ -393,6 +393,7 @@ const AdminQuoteDetail = () => {
           toEmail: sendDraft?.toEmail ?? "",
           subject: sendDraft?.subject ?? "",
           body: sendDraft?.body ?? "",
+          languageCode: lang,
         }),
         customerApprove: () => adminApi.markQuoteCustomerApproved(quote.id, body),
         customerReject: () => adminApi.markQuoteCustomerRejected(quote.id, body),
@@ -592,9 +593,14 @@ const AdminQuoteDetail = () => {
 
         <div className="flex flex-wrap gap-1.5">
           {!editing && (
-            <Button variant="outline" onClick={() => void downloadPdf()} disabled={exportingPdf}>
-              {exportingPdf ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Download className="mr-1.5 h-4 w-4" />}
-              {t("quotes.action.downloadPdf")}
+            <Button
+              variant="outline"
+              data-testid="quote-download-excel"
+              onClick={() => void downloadSpreadsheet()}
+              disabled={exportingSpreadsheet}
+            >
+              {exportingSpreadsheet ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Download className="mr-1.5 h-4 w-4" />}
+              {t("quotes.action.downloadExcel")}
             </Button>
           )}
           {showEditToggle && (
@@ -1075,6 +1081,10 @@ const AdminQuoteDetail = () => {
                 <Label>{t("quotes.email.renderedPreview")}</Label>
                 <iframe title={t("quotes.email.renderedPreview")} srcDoc={sendDraft.body}
                   sandbox="" className="h-72 w-full rounded-md border bg-white" />
+              </div>
+              <div className="rounded-md border bg-muted/30 p-3 text-sm" data-testid="quote-email-attachment">
+                <span className="font-medium">{t("quotes.email.attachment")}: </span>
+                <span>{sendDraft.attachmentFileName}</span>
               </div>
             </div>
           )}

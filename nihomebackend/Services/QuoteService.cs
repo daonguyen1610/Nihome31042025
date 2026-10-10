@@ -40,7 +40,7 @@ public class QuoteOperationException : Exception
 public class QuoteService(
     AppDbContext db,
     INotificationService notifications,
-    IQuotePdfService quotePdf,
+    IQuoteSpreadsheetService quoteSpreadsheet,
     IEmailService emailService,
     ILogger<QuoteService> logger,
     ICrmHardDeletePlanService hardDeletePlans,
@@ -521,7 +521,18 @@ public class QuoteService(
             throw new QuoteOperationException("Không có quyền chỉnh sửa nội dung email báo giá.");
         if (!EmailTemplateFormatter.IsSafeQuoteHtml(body))
             throw new QuoteOperationException("Nội dung email báo giá chứa HTML không được hỗ trợ hoặc không an toàn.");
-        await emailService.SendEmailAsync(toEmail, subject, body);
+        var export = await GetAsync(id, caller, canSeeAll, ct)
+            ?? throw new QuoteOperationException("Không tìm thấy báo giá để tạo file Excel đính kèm.");
+        var workbook = await quoteSpreadsheet.CreateAsync(export, req.LanguageCode, ct);
+        await emailService.SendEmailWithAttachmentAsync(
+            toEmail,
+            subject,
+            body,
+            new EmailAttachment(
+                $"{quote.Code}.xlsx",
+                QuoteSpreadsheetService.ContentType,
+                workbook),
+            ct);
         return await TransitionAsync(id, caller, canSeeAll,
             allowedFrom: [QuoteStatus.Approved],
             to: QuoteStatus.SentToCustomer,
@@ -564,6 +575,8 @@ public class QuoteService(
             Subject = subject,
             Body = body,
             CanEdit = canEdit,
+            AttachmentFileName = $"{quote.Code}.xlsx",
+            AttachmentContentType = QuoteSpreadsheetService.ContentType,
         };
     }
 
@@ -788,11 +801,11 @@ public class QuoteService(
         return new QuoteVersionsResponse { QuoteId = quote.Id, Versions = versions };
     }
 
-    public async Task<byte[]?> ExportPdfAsync(
+    public async Task<byte[]?> ExportSpreadsheetAsync(
         int id, int callerUserId, bool canSeeAll, string languageCode, CancellationToken ct = default)
     {
         var quote = await GetAsync(id, callerUserId, canSeeAll, ct);
-        return quote is null ? null : await quotePdf.CreateAsync(quote, languageCode, ct);
+        return quote is null ? null : await quoteSpreadsheet.CreateAsync(quote, languageCode, ct);
     }
 
     // ============================== Internals ==============================

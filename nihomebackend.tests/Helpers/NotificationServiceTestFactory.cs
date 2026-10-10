@@ -39,4 +39,12 @@ public sealed class CapturingEmailService : IEmailService
         _sent.Add((toEmail, subject, htmlBody));
         return Task.CompletedTask;
     }
+
+    public Task SendEmailWithAttachmentAsync(
+        string toEmail,
+        string subject,
+        string htmlBody,
+        EmailAttachment attachment,
+        CancellationToken cancellationToken = default) =>
+        SendEmailAsync(toEmail, subject, htmlBody);
 }
