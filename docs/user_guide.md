@@ -298,7 +298,9 @@ quotation. The reviewer ticks the checklists, records findings, and a different
 user performs the independent approval. Sales can open **Send to customer** only
 after the quotation belongs to a shared Operational Project and its Finance
 commercial review is **Approved**; a quotation with no project is asked to be
-attached to one first.
+attached to one first. The review records which quotation version it covers, so
+changing a price after approval returns the quotation to **Draft** and it must
+be re-approved by Sales and reviewed again by Finance before it can be sent.
 
 **Tài chính – Kế toán — tender review.** Finance reviews the financial dossier
 of a tender submission pack before the package is submitted. The purpose is

@@ -94,6 +94,10 @@ public abstract class IntegrationTestBase : IClassFixture<NihomeWebApplicationFa
             var financeUserId = await db.Users.AsNoTracking()
                 .Where(user => user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["ACCOUNTANT"])
                 .Select(user => user.Id).SingleAsync();
+            var reviewedQuoteVersion = quoteId.HasValue
+                ? await db.Quotes.AsNoTracking().Where(quote => quote.Id == quoteId.Value)
+                    .Select(quote => (int?)quote.Version).SingleAsync()
+                : null;
             var now = DateTime.UtcNow;
             var package = new DepartmentWorkPackage
             {
@@ -116,6 +120,7 @@ public abstract class IntegrationTestBase : IClassFixture<NihomeWebApplicationFa
                     GuaranteesReviewed = true,
                     PaymentTermsReviewed = true,
                     FinancialDossierReviewed = true,
+                    ReviewedQuoteVersion = reviewedQuoteVersion,
                     ReviewedAt = now,
                     ReviewedByUserId = financeUserId,
                     CreatedByUserId = financeUserId,

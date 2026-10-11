@@ -1288,7 +1288,9 @@ Server-side gates that consume these records:
 
 - `QuoteService` send-to-customer requires an `Approved` `FinanceCommercialReview`
   package linked by `SourceQuoteId`, and the quote must carry an
-  `OperationalProjectId` so the review has a project to live under.
+  `OperationalProjectId` so the review has a project to live under. The review
+  pins `ReviewedQuoteVersion` when Finance saves it, so a quote re-versioned
+  after a material post-approval edit needs a fresh review before it can be sent.
 - `QuoteService` resolves `inputPriceOfferId` only when the offer is `Approved`,
   still valid, and belongs to a `ProcurementInputPricing` package of the quote's
   project; the quote stores `InputPriceSnapshotJson` at link time.
@@ -1300,6 +1302,8 @@ Server-side gates that consume these records:
 The migration `AddPrecontractDepartmentControls` adds the offer, line and review
 tables plus the `Purpose` discriminator; every added column is nullable except
 `department_work_packages.Purpose`, which defaults to `General`.
+`AddFinanceReviewQuoteVersion` adds the nullable
+`department_finance_reviews.ReviewedQuoteVersion` used for the version pin.
 
 The Module 2 schedule is exposed beneath
 `/api/operational-projects/{id}/design-schedule` and remains separate from

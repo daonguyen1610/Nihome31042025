@@ -142,6 +142,15 @@ public sealed partial class DepartmentWorkPackageService
         review.PaymentTermsReviewed = request.PaymentTermsReviewed;
         review.FinancialDossierReviewed = request.FinancialDossierReviewed;
         review.Findings = string.IsNullOrWhiteSpace(request.Findings) ? null : request.Findings.Trim();
+        // §5: pin the review to the quotation version it covers. A quotation that
+        // is materially edited after approval is re-versioned, so the approved
+        // review no longer authorises sending the newer content.
+        if (package.SourceQuoteId.HasValue)
+        {
+            review.ReviewedQuoteVersion = await db.Quotes.AsNoTracking()
+                .Where(item => item.Id == package.SourceQuoteId.Value)
+                .Select(item => (int?)item.Version).SingleOrDefaultAsync(ct);
+        }
         review.Status = FinanceReviewStatus.Draft;
         review.DecisionReason = null;
         review.UpdatedAt = now;
@@ -268,8 +277,7 @@ public sealed partial class DepartmentWorkPackageService
         offer.Currency = request.Currency.Trim().ToUpperInvariant();
         offer.ValidUntil = request.ValidUntil.ToUniversalTime();
         offer.Note = string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim();
-        var sort = 0;
-        offer.Lines = request.Lines.Select(line =>
+        offer.Lines = request.Lines.Select((line, index) =>
         {
             var amount = decimal.Round(line.Quantity * line.UnitPrice, 4, MidpointRounding.AwayFromZero);
             return new ProcurementInputPriceLine
@@ -281,7 +289,10 @@ public sealed partial class DepartmentWorkPackageService
                 UnitPrice = line.UnitPrice,
                 VatPercent = line.VatPercent,
                 Amount = amount,
-                SortOrder = line.SortOrder > 0 ? line.SortOrder : ++sort,
+                // An explicit display order wins; otherwise follow the submitted
+                // order. Deriving the fallback from the position keeps the two
+                // rules from producing colliding numbers on the same line set.
+                SortOrder = line.SortOrder > 0 ? line.SortOrder : index + 1,
             };
         }).ToList();
     }

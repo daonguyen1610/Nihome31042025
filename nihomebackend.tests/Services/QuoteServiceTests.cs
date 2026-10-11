@@ -1664,6 +1664,9 @@ public class QuoteServiceTests : IDisposable
                 UpdatedByUserId = userId,
                 ReviewedByUserId = userId,
                 ReviewedAt = DateTime.UtcNow,
+                // The review speaks for the quotation version it covered; the
+                // send gate rejects a review pinned to an older version.
+                ReviewedQuoteVersion = quote.Version,
             },
         });
         await _db.SaveChangesAsync();

@@ -521,13 +521,23 @@ public class QuoteService(
         // belong to a shared project before it can be sent to the customer.
         if (!quote.OperationalProjectId.HasValue)
             throw new QuoteOperationException("Gắn Dự án vận hành cho báo giá để Tài chính – Kế toán rà soát trước khi gửi khách hàng.");
-        var financeApproved = await db.DepartmentWorkPackages.AsNoTracking().AnyAsync(package =>
-            package.SourceQuoteId == quote.Id &&
-            package.Purpose == WorkPackagePurpose.FinanceCommercialReview &&
-            package.FinanceReview != null &&
-            package.FinanceReview.Status == FinanceReviewStatus.Approved, ct);
-        if (!financeApproved)
+        // Only the most recent review of this quote speaks for Finance: an older
+        // one may have been approved for a version that has since changed.
+        var financeReview = await db.DepartmentWorkPackages.AsNoTracking()
+            .Where(package => package.SourceQuoteId == quote.Id &&
+                package.Purpose == WorkPackagePurpose.FinanceCommercialReview &&
+                package.FinanceReview != null)
+            .Select(package => package.FinanceReview!)
+            .OrderByDescending(review => review.ReviewedAt ?? review.UpdatedAt)
+            .FirstOrDefaultAsync(ct);
+        if (financeReview is null || financeReview.Status != FinanceReviewStatus.Approved)
             throw new QuoteOperationException("Báo giá phải được Tài chính – Kế toán rà soát và phê duyệt trước khi gửi khách hàng.");
+        // A quote re-versioned after a material edit resets to Draft and is
+        // re-approved, but the earlier review only covers its own version.
+        if (financeReview.ReviewedQuoteVersion != quote.Version)
+            throw new QuoteOperationException(
+                $"Tài chính – Kế toán đã rà soát phiên bản {financeReview.ReviewedQuoteVersion?.ToString() ?? "trước"}; "
+                + $"báo giá nay là phiên bản {quote.Version} nên cần rà soát lại trước khi gửi khách hàng.");
         if (quote.RowVersion.Length > 0)
             CrmConcurrency.EnsureMatches(quote.RowVersion, req.RowVersion);
         var toEmail = req.ToEmail.Trim();

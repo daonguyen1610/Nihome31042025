@@ -111,7 +111,9 @@ Yêu cầu MoM §5. Cả ba điểm giao việc dưới đây đều chạy trê
 - **Tài chính – Kế toán rà soát điều kiện hợp đồng sau báo giá.** Nhóm việc mục
   đích `FinanceCommercialReview` gắn Báo giá nguồn. Checklist gồm điều kiện hợp
   đồng, bảo lãnh và điều kiện thanh toán; hồ sơ phải được duyệt độc lập trước
-  khi báo giá được gửi khách hàng.
+  khi báo giá được gửi khách hàng. Hồ sơ gắn với **phiên bản báo giá** đã rà
+  soát (`ReviewedQuoteVersion`): báo giá đổi giá trị sau khi duyệt sẽ tăng
+  phiên bản và phải được Tài chính rà soát lại trước khi gửi.
 - **Tài chính – Kế toán rà soát hồ sơ tài chính dự thầu trước khi nộp.** Nhóm
   việc mục đích `FinanceTenderReview` gắn Gói thầu nguồn. Checklist gồm hồ sơ tài
   chính và bảo lãnh; hồ sơ phải được duyệt độc lập trước khi Gói thầu chuyển

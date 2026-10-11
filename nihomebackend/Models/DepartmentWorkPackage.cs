@@ -100,6 +100,13 @@ public class DepartmentFinanceReview : IConcurrencyTracked
     public DateTime? ReviewedAt { get; set; }
     public int? ReviewedByUserId { get; set; }
     public ApplicationUser? ReviewedByUser { get; set; }
+
+    /// <summary>
+    /// Version of the source quotation the commercial review covers. A quotation
+    /// that is edited after approval is re-versioned, so a review approved for an
+    /// older version no longer authorises sending the current one.
+    /// </summary>
+    public int? ReviewedQuoteVersion { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public int CreatedByUserId { get; set; }
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;

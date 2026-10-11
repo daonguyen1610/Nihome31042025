@@ -20,7 +20,8 @@ public sealed class ProjectBoqRevisionListQuery
 
 public sealed class ProjectBoqRevisionRequest : IConcurrencyRequest
 {
-    [Range(1, int.MaxValue)]
+    [Range(1, int.MaxValue,
+        ErrorMessage = "Chọn hợp đồng đầu ra (Upstream) đã ký và còn hiệu lực của dự án để lập BOQ thực hiện.")]
     public int UpstreamContractId { get; set; }
 
     [Required, RegularExpression("^[A-Z]{3}$")]
