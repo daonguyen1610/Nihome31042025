@@ -30,7 +30,6 @@ import BoqPasteDialog from "@/components/admin/BoqPasteDialog";
 import BoqCatalogFields from "@/components/admin/BoqCatalogFields";
 import QuoteRateFields from "@/components/admin/QuoteRateFields";
 import QuoteContractLinkDialog from "@/components/admin/QuoteContractLinkDialog";
-import QuoteBoqImportDialog from "@/components/admin/QuoteBoqImportDialog";
 import { isContractReadyQuote } from "@/lib/contractQuotes";
 import { isValidEmail } from "@/lib/validation";
 import { useI18n } from "@/lib/i18n";
@@ -177,7 +176,6 @@ const AdminQuoteDetail = () => {
   const [effectiveRevision, setEffectiveRevision] = useState<MaterialRateRevisionResponse | null>(null);
   const [exportingSpreadsheet, setExportingSpreadsheet] = useState(false);
   const [boqPasteOpen, setBoqPasteOpen] = useState(false);
-  const [boqImportOpen, setBoqImportOpen] = useState(false);
 
   const [versions, setVersions] = useState<QuoteVersionsResponse | null>(null);
   const [versionsLoading, setVersionsLoading] = useState(false);
@@ -632,11 +630,6 @@ const AdminQuoteDetail = () => {
               {t("quotes.action.downloadExcel")}
             </Button>
           )}
-          {!editing && canManage && quote.method === "Boq" && !["Rejected", "CustomerApproved", "Cancelled"].includes(quote.status) && (
-            <Button variant="outline" data-testid="quote-import-boq" onClick={() => setBoqImportOpen(true)}>
-              <Upload className="mr-1.5 h-4 w-4" />{t("quotes.boqImport.action")}
-            </Button>
-          )}
           {showEditToggle && (
             <Button variant="outline" data-testid="quote-edit" onClick={() => setEditing(true)}>
               <Pencil className="mr-1.5 h-4 w-4" />
@@ -694,7 +687,6 @@ const AdminQuoteDetail = () => {
       </div>
 
       {/* ---------- Meta strip ---------- */}
-      <QuoteBoqImportDialog open={boqImportOpen} onOpenChange={setBoqImportOpen} quoteId={quote.id} rowVersion={quote.rowVersion} onImported={load} />
       {/* At-a-glance summary so the key numbers stay visible without scrolling
           to the side panel on narrow screens. */}
       <dl className="mb-4 grid grid-cols-2 gap-2 rounded-lg border bg-card p-3 text-sm sm:grid-cols-4">

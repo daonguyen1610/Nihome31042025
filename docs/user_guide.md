@@ -481,20 +481,6 @@ or editing a BOQ preserves its item set; submitting and approving follow the
 same quotation workflow and project/owner permissions. Retrying the same create
 request with its idempotency key does not create a duplicate quotation.
 
-To import a multi-sheet quotation BOQ, open a BOQ quotation and choose **Import
-BOQ Excel**. Download the standard template when preparing a new workbook, or
-select an existing `.xlsx` file (maximum 20 MB) and choose **Preview file**.
-Review sheets in workbook order, including hidden sheets; classify each sheet
-as **Ignore**, **Summary**, or **Detail**. For every Detail sheet, verify the
-header row and the numbered columns for description, unit, quantity, unit price,
-and optional code before confirming. Any invalid mapped row rejects the entire
-confirmation and leaves the quotation unchanged. A successful confirmation
-replaces the current Draft lines; when importing into an approved, sent, or
-expired quotation it preserves the old snapshot and opens the next version as
-Draft for normal review and approval. The system records the source hash,
-mapping, row results, user and time. This preliminary quotation BOQ is not the
-approved Execution BOQ used for material requests or warehouse limits.
-
 | Page | Functions | Estimate |
 |------|-----------|----------|
 | Quotation List | Filter by customer, opportunity, status | 1.5 days |

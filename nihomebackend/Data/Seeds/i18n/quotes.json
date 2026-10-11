@@ -244,24 +244,4 @@
   ,{"key":"quotes.field.inputPriceOffer","category":"quotes","vi":"Nguồn giá đầu vào đã duyệt","en":"Approved input price source","zh":"已批准的输入价格来源","ja":"承認済み原価ソース"}
   ,{"key":"quotes.inputPrice.none","category":"quotes","vi":"Chưa gắn báo giá đầu vào","en":"No input offer linked","zh":"未关联输入报价","ja":"原価見積未連携"}
   ,{"key":"quotes.inputPrice.hint","category":"quotes","vi":"Khi lưu, hệ thống chụp lại nhà cung cấp, số báo giá, hiệu lực và toàn bộ dòng giá để phục vụ kiểm tra sau này.","en":"On save, the vendor, reference, validity, and all price lines are snapshotted for later audit.","zh":"保存时会快照供应商、报价编号、有效期及全部价格明细，以供后续审计。","ja":"保存時に仕入先、見積番号、有効期限、全明細を監査用にスナップショットします。"}
-  ,{"key":"quotes.boqImport.action","category":"quotes","vi":"Import BOQ Excel","en":"Import BOQ Excel","zh":"导入 BOQ Excel","ja":"BOQ Excelをインポート"}
-  ,{"key":"quotes.boqImport.title","category":"quotes","vi":"Import BOQ báo giá nhiều sheet","en":"Import a multi-sheet quote BOQ","zh":"导入多工作表报价 BOQ","ja":"複数シートの見積BOQをインポート"}
-  ,{"key":"quotes.boqImport.description","category":"quotes","vi":"Preview toàn bộ sheet, kiểm tra mapping rồi xác nhận. Chỉ các sheet Detail được nhập; báo giá hiện tại không đổi nếu có lỗi.","en":"Preview every sheet, review the mapping, then confirm. Only Detail sheets are imported; errors leave the current quote unchanged.","zh":"预览所有工作表并确认映射。仅导入明细工作表；发生错误时当前报价保持不变。","ja":"全シートをプレビューしてマッピングを確認します。明細シートのみ取り込み、エラー時は現在の見積を変更しません。"}
-  ,{"key":"quotes.boqImport.downloadTemplate","category":"quotes","vi":"Tải template chuẩn","en":"Download standard template","zh":"下载标准模板","ja":"標準テンプレートをダウンロード"}
-  ,{"key":"quotes.boqImport.preview","category":"quotes","vi":"Preview file","en":"Preview file","zh":"预览文件","ja":"ファイルをプレビュー"}
-  ,{"key":"quotes.boqImport.confirm","category":"quotes","vi":"Xác nhận import","en":"Confirm import","zh":"确认导入","ja":"インポートを確定"}
-  ,{"key":"quotes.boqImport.sheet","category":"quotes","vi":"Sheet","en":"Sheet","zh":"工作表","ja":"シート"}
-  ,{"key":"quotes.boqImport.classification","category":"quotes","vi":"Phân loại","en":"Classification","zh":"分类","ja":"分類"}
-  ,{"key":"quotes.boqImport.headerRow","category":"quotes","vi":"Dòng tiêu đề","en":"Header row","zh":"标题行","ja":"見出し行"}
-  ,{"key":"quotes.boqImport.columns","category":"quotes","vi":"Cột (số thứ tự)","en":"Columns (number)","zh":"列（编号）","ja":"列（番号）"}
-  ,{"key":"quotes.boqImport.rows","category":"quotes","vi":"Dòng gợi ý","en":"Suggested rows","zh":"建议行数","ja":"候補行数"}
-  ,{"key":"quotes.boqImport.hidden","category":"quotes","vi":"Sheet ẩn","en":"Hidden sheet","zh":"隐藏工作表","ja":"非表示シート"}
-  ,{"key":"quotes.boqImport.ignored","category":"quotes","vi":"Bỏ qua","en":"Ignore","zh":"忽略","ja":"無視"}
-  ,{"key":"quotes.boqImport.summary","category":"quotes","vi":"Tổng hợp","en":"Summary","zh":"汇总","ja":"集計"}
-  ,{"key":"quotes.boqImport.detail","category":"quotes","vi":"Chi tiết","en":"Detail","zh":"明细","ja":"明細"}
-  ,{"key":"quotes.boqImport.descriptionColumn","category":"quotes","vi":"Mô tả","en":"Description","zh":"描述","ja":"説明"}
-  ,{"key":"quotes.boqImport.unitColumn","category":"quotes","vi":"Đơn vị","en":"Unit","zh":"单位","ja":"単位"}
-  ,{"key":"quotes.boqImport.quantityColumn","category":"quotes","vi":"Khối lượng","en":"Quantity","zh":"数量","ja":"数量"}
-  ,{"key":"quotes.boqImport.unitPriceColumn","category":"quotes","vi":"Đơn giá","en":"Unit price","zh":"单价","ja":"単価"}
-  ,{"key":"quotes.boqImport.itemCodeColumn","category":"quotes","vi":"Mã","en":"Code","zh":"编码","ja":"コード"}
 ]

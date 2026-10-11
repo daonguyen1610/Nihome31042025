@@ -49,7 +49,6 @@
   {"key":"deletionImpact.item.quote.documents","category":"deletionImpact","vi":"Hồ sơ đính kèm báo giá","en":"Quote documents","zh":"报价附件","ja":"見積添付書類"},
   {"key":"deletionImpact.item.quote.approvalLogs","category":"deletionImpact","vi":"Lịch sử phê duyệt báo giá","en":"Quote approval history","zh":"报价审批历史","ja":"見積承認履歴"},
   {"key":"deletionImpact.item.quote.versionSnapshots","category":"deletionImpact","vi":"Phiên bản lưu trữ của báo giá","en":"Quote version snapshots","zh":"报价版本快照","ja":"見積バージョンスナップショット"},
-  {"key":"deletionImpact.item.quote.boqImports","category":"deletionImpact","vi":"Lịch sử import BOQ báo giá","en":"Quote BOQ import history","zh":"报价 BOQ 导入历史","ja":"見積BOQインポート履歴"},
   {"key":"deletionImpact.item.quote.translations","category":"deletionImpact","vi":"Bản dịch nội dung báo giá","en":"Quote content translations","zh":"报价内容翻译","ja":"見積コンテンツ翻訳"},
   {"key":"deletionImpact.item.quote.localFiles","category":"deletionImpact","vi":"Tệp do báo giá quản lý","en":"Quote-managed files","zh":"报价管理的文件","ja":"見積管理ファイル"},
   {"key":"deletionImpact.item.quote.fileBlockers","category":"deletionImpact","vi":"Tệp báo giá có đường dẫn không an toàn hoặc trùng lặp","en":"Quote files with unsafe or duplicate paths","zh":"路径不安全或重复的报价文件","ja":"安全でない、または重複したパスの見積ファイル"},

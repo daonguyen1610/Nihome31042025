@@ -1,5 +1,4 @@
 using System.Security.Claims;
-using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NihomeBackend.Authorization;
@@ -25,7 +24,6 @@ namespace NihomeBackend.Controllers;
 [Authorize]
 public class QuotesController(
     IQuoteService svc,
-    IQuoteBoqImportService boqImport,
     IQuoteDocumentService documentSvc,
     IPermissionService permissions,
     IAuditLogger audit) : ControllerBase
@@ -99,78 +97,6 @@ public class QuotesController(
         {
             return LogAndBadRequest("quote.export-xlsx", ex, id).Result!;
         }
-    }
-
-    [HttpGet("boq-template.xlsx")]
-    [RequirePermission("crm.quotes", "view")]
-    public async Task<IActionResult> DownloadBoqTemplate(CancellationToken ct)
-    {
-        var workbook = await boqImport.CreateTemplateAsync(ct);
-        return File(workbook, QuoteSpreadsheetService.ContentType, "NICON-quote-BOQ-template.xlsx");
-    }
-
-    [HttpPost("{id:int}/boq-import/preview")]
-    [Consumes("multipart/form-data")]
-    [RequirePermission("crm.quotes", "manage")]
-    public async Task<ActionResult<QuoteBoqImportPreviewResponse>> PreviewBoqImport(
-        int id, [FromForm] IFormFile? file, CancellationToken ct)
-    {
-        var userId = GetUserId();
-        if (userId is null) return Unauthorized();
-        var canSeeAll = await permissions.HasAsync(userId.Value, "crm.quotes.view.all", ct);
-        var quote = await svc.GetAsync(id, userId.Value, canSeeAll, ct);
-        if (quote is null) return NotFound();
-        if (!string.Equals(quote.Method, QuoteMethod.Boq.ToString(), StringComparison.Ordinal))
-            return BadRequest(new { message = "Chỉ báo giá theo BOQ mới được preview workbook import." });
-        try { return Ok(await boqImport.PreviewAsync(id, userId.Value, file, ct)); }
-        catch (QuoteOperationException ex) { return BadRequest(new { message = ex.Message }); }
-    }
-
-    [HttpPost("{id:int}/boq-import/confirm")]
-    [Consumes("multipart/form-data")]
-    [RequirePermission("crm.quotes", "manage")]
-    [Idempotency("crm.quotes.boq-import")]
-    public async Task<ActionResult<QuoteBoqImportResponse>> ConfirmBoqImport(
-        int id,
-        [FromForm] IFormFile? file,
-        [FromForm] string? sourceHash,
-        [FromForm] string? previewToken,
-        [FromForm] string? rowVersion,
-        [FromForm] string? mappings,
-        CancellationToken ct)
-    {
-        var userId = GetUserId();
-        if (userId is null) return Unauthorized();
-        try
-        {
-            var parsedMappings = JsonSerializer.Deserialize<List<QuoteBoqSheetMappingInput>>(
-                mappings ?? "[]", new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? [];
-            var request = new ConfirmQuoteBoqImportRequest
-            {
-                SourceHash = sourceHash?.Trim() ?? string.Empty,
-                PreviewToken = previewToken ?? string.Empty,
-                RowVersion = CrmConcurrency.ResolveRequestToken(Request, rowVersion),
-                Sheets = parsedMappings,
-            };
-            if (!TryValidateModel(request)) return ValidationProblem(ModelState);
-            var result = await boqImport.ConfirmAsync(
-                id, file, request, userId.Value,
-                await permissions.HasAsync(userId.Value, "crm.quotes.manage", ct),
-                await permissions.HasAsync(userId.Value, "crm.quotes.view.all", ct), ct);
-            if (result is null) return NotFound();
-            audit.Log(new AuditEvent
-            {
-                Action = "quote.boq-import",
-                ResourceType = EntityTypes.Quote,
-                ResourceId = id.ToString(),
-                Message = $"Imported {result.ImportedItemCount} BOQ rows into quote #{id} V{result.QuoteVersion}.",
-                NewValue = new { result.ImportId, result.SourceHash, result.QuoteVersion, result.ImportedItemCount },
-            });
-            CrmConcurrency.SetResponseEntityTag(Response, result.Quote.RowVersion);
-            return Ok(result);
-        }
-        catch (JsonException) { return BadRequest(new { message = "Mapping sheet không phải JSON hợp lệ." }); }
-        catch (QuoteOperationException ex) { return LogAndBadRequest("quote.boq-import", ex, id).Result!; }
     }
 
     [HttpGet("{id:int}/documents")]
