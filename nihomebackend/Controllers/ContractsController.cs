@@ -77,6 +77,7 @@ public class ContractsController(
         if (userId is null) return Unauthorized();
 
         var canSeeAll = await CanListAcrossOwnersAsync(userId.Value, direction, ct);
+        canSeeAll = await WidenToRequestedProjectAsync(userId.Value, operationalProjectId, canSeeAll, ct);
         var result = await svc.ListAsync(
             userId.Value, canSeeAll, status, direction, type, vendorId,
             ownerUserId, customerId, operationalProjectId, search,
@@ -110,6 +111,7 @@ public class ContractsController(
         if (userId is null) return Unauthorized();
 
         var canSeeAll = await CanListAcrossOwnersAsync(userId.Value, direction, ct);
+        canSeeAll = await WidenToRequestedProjectAsync(userId.Value, operationalProjectId, canSeeAll, ct);
         return Ok(await svc.ListAsync(
             userId.Value, canSeeAll, status, direction, type, vendorId,
             ownerUserId, customerId, operationalProjectId, search,
@@ -914,19 +916,50 @@ public class ContractsController(
             await permissions.HasAsync(userId, "operations.projects.view.all", ct);
     }
 
+    /// <summary>
+    /// Owners see only their own contracts. A user who does not own the rows
+    /// still needs the contract context of a project they work on: the
+    /// procurement officer attaches the signed upstream contract when creating
+    /// an execution BOQ, and the project team reads the Upstream/Downstream
+    /// contract of that project. When the caller asks for one specific project
+    /// and can view that project, widen the read to that project only — the
+    /// requested <c>operationalProjectId</c> filter keeps rows of other
+    /// projects, and rows without a project, out of the result.
+    /// </summary>
+    private async Task<bool> WidenToRequestedProjectAsync(
+        int userId,
+        int? operationalProjectId,
+        bool canSeeAll,
+        CancellationToken ct)
+    {
+        if (canSeeAll || operationalProjectId is not > 0) return canSeeAll;
+        return await projectAccess.CanViewOperationalProjectAsync(userId, operationalProjectId.Value, ct);
+    }
+
     private async Task<bool> CanReadContractAcrossOwnersAsync(
         int userId,
         int contractId,
         CancellationToken ct)
     {
         if (await permissions.HasAsync(userId, "crm.contracts.view.all", ct)) return true;
-        if (!await permissions.HasAsync(userId, "operations.projects.view.all", ct)) return false;
 
-        var direction = await db.Contracts.AsNoTracking()
+        var scope = await db.Contracts.AsNoTracking()
             .Where(contract => contract.Id == contractId)
-            .Select(contract => (ContractDirection?)contract.Direction)
+            .Select(contract => new { contract.Direction, contract.OperationalProjectId })
             .SingleOrDefaultAsync(ct);
-        var scopedPermission = DirectionPortfolioPermission(direction);
+        if (scope is null) return false;
+
+        // Project members read the contracts of their own project (see
+        // WidenToRequestedProjectAsync); portfolio roles need the permission
+        // that matches the contract direction.
+        if (scope.OperationalProjectId is int projectId &&
+            await projectAccess.CanViewOperationalProjectAsync(userId, projectId, ct))
+        {
+            return true;
+        }
+
+        if (!await permissions.HasAsync(userId, "operations.projects.view.all", ct)) return false;
+        var scopedPermission = DirectionPortfolioPermission(scope.Direction);
         return scopedPermission is not null &&
             await permissions.HasAsync(userId, scopedPermission, ct);
     }

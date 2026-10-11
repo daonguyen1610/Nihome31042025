@@ -7,6 +7,8 @@ const revisions = Array.from({ length: 12 }, (_, index) => {
   return {
     id: 720000 + revisionNumber,
     operationalProjectId: projectId,
+    upstreamContractId: 740001,
+    upstreamContractNumber: "HD-CUSTOMER-001",
     revisionNumber,
     currency: "VND",
     status: revisionNumber % 2 === 0 ? "Approved" : "Draft",
@@ -52,6 +54,24 @@ const project = {
   updatedAt: "2026-09-01T00:00:00Z",
 };
 
+// The execution BOQ hangs off the signed customer contract, so the project
+// context carries one in-force upstream contract next to a downstream draft.
+const upstreamContract = {
+  id: 740001, contractNumber: "HD-CUSTOMER-001", direction: "Upstream", type: "DesignAndBuild",
+  vendorId: null, vendorCode: null, vendorName: null, status: "InProgress", value: 20_000_000,
+  approvedVoTotal: 0, currentValue: 20_000_000, paymentMilestoneCount: 0, paidMilestoneCount: 0,
+  scheduledPaymentAmount: 0, paidPaymentAmount: 0, paymentProgressPercent: 0,
+  signedDate: "2026-08-15T00:00:00Z", startDate: "2026-08-15", endDate: "2027-02-15",
+};
+
+const downstreamContract = {
+  id: 740002, contractNumber: "PO-SUPPLIER-002", direction: "Downstream", type: "Supply",
+  vendorId: 8, vendorCode: "V-008", vendorName: "Supplier Eight", status: "Draft", value: 8_000_000,
+  approvedVoTotal: 0, currentValue: 8_000_000, paymentMilestoneCount: 0, paidMilestoneCount: 0,
+  scheduledPaymentAmount: 0, paidPaymentAmount: 0, paymentProgressPercent: 0,
+  signedDate: null, startDate: null, endDate: null,
+};
+
 const projectDetail = {
   ...project,
   note: null,
@@ -71,10 +91,7 @@ const projectDetail = {
   },
   opportunities: [],
   quotes: [],
-  contracts: [
-    { id: 740001, contractNumber: "HD-CUSTOMER-001", direction: "Upstream", type: "DesignAndBuild", vendorId: null, vendorCode: null, vendorName: null, status: "InProgress", value: 20_000_000, approvedVoTotal: 0, currentValue: 20_000_000, paymentMilestoneCount: 0, paidMilestoneCount: 0, scheduledPaymentAmount: 0, paidPaymentAmount: 0, paymentProgressPercent: 0, signedDate: null, startDate: null, endDate: null },
-    { id: 740002, contractNumber: "PO-SUPPLIER-002", direction: "Downstream", type: "Supply", vendorId: 8, vendorCode: "V-008", vendorName: "Supplier Eight", status: "Draft", value: 8_000_000, approvedVoTotal: 0, currentValue: 8_000_000, paymentMilestoneCount: 0, paidMilestoneCount: 0, scheduledPaymentAmount: 0, paidPaymentAmount: 0, paymentProgressPercent: 0, signedDate: null, startDate: null, endDate: null },
-  ],
+  contracts: [upstreamContract, downstreamContract],
 };
 
 test("BOQ list filters, sorts, paginates, and exports within the selected project", async ({
@@ -99,7 +116,7 @@ test("BOQ list filters, sorts, paginates, and exports within the selected projec
     body: JSON.stringify({ boqRevisions: revisions, materialRequests: [], contractLines: [], receipts: [], issues: [], vendorRatings: [] }),
   }));
   await page.route(/\/api\/(?:v1\/)?kpi\/eligible-users$/, route => route.fulfill({ status: 200, contentType: "application/json", body: "[]" }));
-  await page.route(/\/api\/(?:v1\/)?contracts(?:\?.*)?$/, route => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ total: 0, page: 1, pageSize: 200, items: [] }) }));
+  await page.route(/\/api\/(?:v1\/)?contracts(?:\?.*)?$/, route => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ total: 2, page: 1, pageSize: 200, items: [upstreamContract, downstreamContract] }) }));
   await page.route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/procurement/boq-revisions/export(?:\\?.*)?$`), route => route.fulfill({
     status: 200,
     contentType: "text/csv; charset=utf-8",
@@ -182,6 +199,11 @@ test("BOQ detail keeps project context and safely edits a draft", async ({
     status: 200,
     contentType: "application/json",
     body: JSON.stringify(projectDetail),
+  }));
+  await page.route(/\/api\/(?:v1\/)?contracts(?:\?.*)?$/, route => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({ total: 2, page: 1, pageSize: 200, items: [upstreamContract, downstreamContract] }),
   }));
   await page.route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/procurement/boq-revisions/${currentRevision.id}$`), async route => {
     if (route.request().method() === "PUT") {

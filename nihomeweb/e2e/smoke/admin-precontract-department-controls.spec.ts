@@ -18,8 +18,70 @@ import { expect, test, TEST_USERS } from "../fixtures/auth";
  */
 
 type Body = Record<string, unknown>;
+type Call = (
+  name: keyof typeof TEST_USERS,
+  method: "get" | "post" | "put" | "patch",
+  url: string,
+  data?: unknown,
+) => Promise<Body>;
+type DepartmentMember = { userId: number; name: string; roleGroupId: number; canLead: boolean; account: keyof typeof TEST_USERS };
 const shotDir = process.env.E2E_SHOT_DIR;
 const tomorrow = (days: number) => new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10);
+
+/**
+ * Resolve the people who drive a department flow from the API instead of from
+ * hardcoded seeded names. The work-package lead must be an active member of the
+ * receiving department who may assign work, and the maker must be a different
+ * member of the same department, because the author of a business record can
+ * never decide it. Only members with a known test account can be driven in the
+ * browser.
+ */
+const resolveDepartment = async (call: Call, groupCode: string) => {
+  const directory = (await call("superAdmin", "get", "/api/users?take=200"))
+    .items as { id: number; phoneNumber: string }[];
+  const accountByPhone = new Map(
+    Object.entries(TEST_USERS).map(([key, user]) => [user.phoneNumber, key as keyof typeof TEST_USERS]),
+  );
+  const phoneById = new Map(directory.map(item => [item.id, item.phoneNumber]));
+  const options = await call("salesManager", "get", "/api/work-packages/options");
+  const department = (options.departments as { id: number; code: string }[])
+    .find(group => group.code === groupCode)!;
+  expect(department, `department ${groupCode} is seeded`).toBeTruthy();
+  const members = (options.users as Omit<DepartmentMember, "account">[])
+    .filter(user => user.roleGroupId === department.id && accountByPhone.has(phoneById.get(user.userId) ?? ""))
+    .map(user => ({ ...user, account: accountByPhone.get(phoneById.get(user.userId)!)! }));
+  return { department, options, members };
+};
+
+/** The work-package permissions the caller's own account carries. */
+const permissionsOf = async (call: Call, account: keyof typeof TEST_USERS) => {
+  const response = await call(account, "get", "/api/users/me/permissions");
+  return (response.permissions as string[]) ?? [];
+};
+
+/**
+ * Pick the two people the flow needs. The lead chairs the work package — the
+ * server accepts only a member who may assign work — and decides the record.
+ * The maker records it, so it must be a different member whose own role may
+ * both record work-package records and read the master data the offer dialog
+ * needs (`/work-packages/options` is limited to manage/assign); otherwise the
+ * dialog opens with an empty vendor list. Capabilities are read from each
+ * account instead of assuming seeded names.
+ */
+const pickLeadAndMaker = async (call: Call, groupCode: string, members: DepartmentMember[]) => {
+  const lead = members.find(member => member.canLead);
+  expect(lead, `a member of ${groupCode} may lead work packages`).toBeTruthy();
+  let maker: DepartmentMember | undefined;
+  for (const member of members) {
+    if (member.userId === lead!.userId) continue;
+    const permissions = await permissionsOf(call, member.account);
+    const canRecord = permissions.includes("work.packages.progress");
+    const readsMasterData = permissions.includes("work.packages.manage") || permissions.includes("work.packages.assign");
+    if (canRecord && readsMasterData) { maker = member; break; }
+  }
+  expect(maker, `another member of ${groupCode} may record input prices`).toBeTruthy();
+  return { lead: lead!, maker: maker! };
+};
 
 /**
  * A department user only sees a project work package when they are on the
@@ -27,7 +89,7 @@ const tomorrow = (days: number) => new Date(Date.now() + days * 86_400_000).toIS
  * before they can work in it.
  */
 const addProjectMembers = async (
-  call: (name: keyof typeof TEST_USERS, method: "get" | "post" | "put" | "patch", url: string, data?: unknown) => Promise<Body>,
+  call: Call,
   projectId: number,
   members: { phoneNumber: string; position: string }[],
 ) => {
@@ -89,19 +151,14 @@ test.describe("MoM §5 pre-contract department controls", () => {
     const projectId = opportunity.operationalProjectId as number;
     expect(projectId, "lead conversion opens the operational project").toBeTruthy();
 
-    const options = await call("salesManager", "get", "/api/work-packages/options");
-    const procurementGroup = (options.departments as { id: number; code: string }[])
-      .find(group => group.code === "PROCUREMENT")!;
-    const procurementLeads = (options.users as { userId: number; name: string; roleGroupId: number; canLead: boolean }[])
-      .filter(user => user.roleGroupId === procurementGroup.id && user.canLead);
+    const { options, members } = await resolveDepartment(call, "PROCUREMENT");
     // Maker: the Cung ứng officer who collects supplier prices.
-    const maker = TEST_USERS.procurement;
     // Checker: the work package lead, a different person in the same department.
-    const leadOption = procurementLeads.find(user => user.name !== "Đinh Hải Yến")!;
+    const { lead: departmentLead, maker } = await pickLeadAndMaker(call, "PROCUREMENT", members);
     const vendor = (options.vendors as { id: number; code: string; name: string }[])[0];
     await addProjectMembers(call, projectId, [
-      { phoneNumber: maker.phoneNumber, position: "Cán bộ Cung ứng" },
-      { phoneNumber: TEST_USERS.warehouse.phoneNumber, position: "Chủ trì Cung ứng" },
+      { phoneNumber: TEST_USERS[maker.account].phoneNumber, position: "Cán bộ Cung ứng" },
+      { phoneNumber: TEST_USERS[departmentLead.account].phoneNumber, position: "Chủ trì Cung ứng" },
     ]);
 
     // ---- Kinh doanh assigns the input-price work to Cung ứng from the project.
@@ -123,7 +180,7 @@ test.describe("MoM §5 pre-contract department controls", () => {
       "Cung ứng lấy báo giá nhà cung cấp thép và thầu phụ MEP để Kinh doanh chốt báo giá đầu ra.",
     );
     await createDialog.getByRole("combobox").last().click();
-    await page.getByRole("option", { name: leadOption.name }).click();
+    await page.getByRole("option", { name: departmentLead.name }).click();
     await shot("s5-01-giao-viec-cung-ung.png");
     await createDialog.getByRole("button", { name: "Lưu thay đổi" }).click();
 
@@ -133,7 +190,7 @@ test.describe("MoM §5 pre-contract department controls", () => {
     await expect(page.getByRole("heading", { name: "Báo giá đầu vào từ nhà cung cấp / thầu phụ" })).toBeVisible();
 
     // ---- Cung ứng records the supplier offer on the same work package.
-    await loginInBrowserAs(page, maker);
+    await loginInBrowserAs(page, TEST_USERS[maker.account]);
     await page.goto(`/admin/work-packages/${packageId}`, { waitUntil: "networkidle" });
     await page.getByRole("button", { name: "Thêm báo giá đầu vào" }).click();
     const priceDialog = page.getByRole("dialog");
@@ -168,7 +225,7 @@ test.describe("MoM §5 pre-contract department controls", () => {
     await expect(page.locator("article").filter({ hasText: `BG-${suffix}` }).getByText("Chờ duyệt")).toBeVisible();
 
     // ---- The work package lead approves; only then is the price usable.
-    await loginInBrowserAs(page, TEST_USERS.warehouse);
+    await loginInBrowserAs(page, TEST_USERS[departmentLead.account]);
     await page.goto(`/admin/work-packages/${packageId}`, { waitUntil: "networkidle" });
     const leadCard = page.locator("article").filter({ hasText: `BG-${suffix}` });
     await leadCard.getByRole("button", { name: "Phê duyệt" }).click();
@@ -247,19 +304,15 @@ test.describe("MoM §5 pre-contract department controls", () => {
     const quoteId = quote.id as number;
 
     // Cung ứng supplies an approved input price on the shared project.
-    const options = await call("salesManager", "get", "/api/work-packages/options");
-    const procurementGroup = (options.departments as { id: number; code: string }[])
-      .find(group => group.code === "PROCUREMENT")!;
-    const financeGroup = (options.departments as { id: number; code: string }[])
-      .find(group => group.code === "FINANCE")!;
-    const procurementLead = (options.users as { userId: number; name: string; roleGroupId: number; canLead: boolean }[])
-      .find(user => user.roleGroupId === procurementGroup.id && user.name === "Trịnh Văn Sơn")!;
-    const accountant = (options.users as { userId: number; name: string; roleGroupId: number; canLead: boolean }[])
-      .find(user => user.roleGroupId === financeGroup.id && user.canLead)!;
-    const vendor = (options.vendors as { id: number; code: string; name: string }[])[0];
+    const procurement = await resolveDepartment(call, "PROCUREMENT");
+    const finance = await resolveDepartment(call, "FINANCE");
+    const { lead: procurementLead, maker: priceMaker } = await pickLeadAndMaker(call, "PROCUREMENT", procurement.members);
+    const accountant = finance.members.find(member => member.canLead)!;
+    expect(accountant, "a member of FINANCE may lead the commercial review").toBeTruthy();
+    const vendor = (procurement.options.vendors as { id: number; code: string; name: string }[])[0];
     await addProjectMembers(call, projectId, [
-      { phoneNumber: TEST_USERS.procurement.phoneNumber, position: "Cán bộ Cung ứng" },
-      { phoneNumber: TEST_USERS.accountant.phoneNumber, position: "Kế toán dự án" },
+      { phoneNumber: TEST_USERS[priceMaker.account].phoneNumber, position: "Cán bộ Cung ứng" },
+      { phoneNumber: TEST_USERS[accountant.account].phoneNumber, position: "Kế toán dự án" },
     ]);
 
     const pricePackage = await call("salesManager", "post", "/api/work-packages", {
@@ -268,21 +321,21 @@ test.describe("MoM §5 pre-contract department controls", () => {
       name: `Giá đầu vào kết cấu thép Vina ${suffix}`,
       operationalProjectId: projectId,
       sourceOpportunityId: opportunityId,
-      departmentRoleGroupId: procurementGroup.id,
+      departmentRoleGroupId: procurement.department.id,
       leadUserId: procurementLead.userId,
     });
     const pricePackageId = pricePackage.id as number;
-    let offer = await call("procurement", "post", `/api/work-packages/${pricePackageId}/input-price-offers`, {
+    let offer = await call(priceMaker.account, "post", `/api/work-packages/${pricePackageId}/input-price-offers`, {
       vendorId: vendor.id,
       supplierReference: `BG-VINA-${suffix}`,
       currency: "VND",
       validUntil: `${tomorrow(30)}T23:59:59.000Z`,
       lines: [{ itemCode: "KC-THEP-01", description: "Kết cấu thép mạ kẽm nhúng nóng", unit: "kg", quantity: 12_500, unitPrice: 21_500, vatPercent: 8 }],
     });
-    offer = await call("procurement", "post", `/api/work-packages/${pricePackageId}/input-price-offers/${offer.id}/submit`, {
+    offer = await call(priceMaker.account, "post", `/api/work-packages/${pricePackageId}/input-price-offers/${offer.id}/submit`, {
       rowVersion: offer.rowVersion,
     });
-    const approvedOffer = await call("warehouse", "post", `/api/work-packages/${pricePackageId}/input-price-offers/${offer.id}/decision`, {
+    const approvedOffer = await call(procurementLead.account, "post", `/api/work-packages/${pricePackageId}/input-price-offers/${offer.id}/decision`, {
       approved: true,
       rowVersion: offer.rowVersion,
     });
@@ -341,7 +394,7 @@ test.describe("MoM §5 pre-contract department controls", () => {
     await expect(page).toHaveURL(/\/admin\/work-packages\/\d+$/);
     const reviewPackageId = Number(page.url().split("/").pop());
 
-    await loginInBrowserAs(page, TEST_USERS.accountant);
+    await loginInBrowserAs(page, TEST_USERS[accountant.account]);
     await page.goto(`/admin/work-packages/${reviewPackageId}`, { waitUntil: "networkidle" });
     await expect(page.getByRole("heading", { name: "Rà soát điều kiện hợp đồng và thanh toán" })).toBeVisible();
     for (const label of ["Đã rà soát điều kiện hợp đồng", "Đã rà soát điều kiện thanh toán", "Đã rà soát bảo lãnh"]) {

@@ -79,7 +79,9 @@ test.describe("NIH-145 — As-built dossier (real-user flow)", () => {
           r.request().method() === "POST" &&
           r.status() === 201,
       ),
-      page.getByTestId("asbuilt-form-save").click({ force: true }),
+      // Not forced: the dialog animates in, so a forced click can fire at the
+      // pre-animation coordinates, miss the button and time the POST out.
+      page.getByTestId("asbuilt-form-save").click(),
     ]);
     await page.waitForResponse(
       (r) => r.url().includes("/api/as-built-documents?") && r.request().method() === "GET",

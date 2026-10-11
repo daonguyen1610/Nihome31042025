@@ -202,7 +202,15 @@ test("customer related records, documents, and contract owner inheritance work i
     expect(contract.ownerUserId).toBe(ownerUserId);
     expect(contract.ownerName).toBe(ownerName);
     await expect(contractDialog).toBeHidden();
-    await expect(page.locator("table tbody tr").filter({ hasText: customerName })).toBeVisible();
+    const contractSearchResponse = page.waitForResponse((candidate) => {
+      const url = new URL(candidate.url());
+      return url.pathname === "/api/contracts"
+        && url.searchParams.get("search") === contract.contractNumber
+        && candidate.request().method() === "GET";
+    });
+    await page.getByPlaceholder(/Tìm theo Số HĐ|Search by contract|按合同编号|契約番号/i).fill(contract.contractNumber as string);
+    expect((await contractSearchResponse).ok()).toBeTruthy();
+    await expect(page.locator("table tbody tr").filter({ hasText: contract.contractNumber as string })).toBeVisible();
 
     await page.goto("/admin/customers", { waitUntil: "networkidle" });
     await page.locator("#customer-search").fill(customerName);

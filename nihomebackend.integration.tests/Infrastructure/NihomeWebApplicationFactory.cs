@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.IO;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -24,6 +25,16 @@ public class NihomeWebApplicationFactory : WebApplicationFactory<Program>
 {
     // Unique DB name per factory instance so parallel test classes don't share state.
     private readonly string _databaseName = $"NihomeIntegrationTests-{Guid.NewGuid():N}";
+
+    static NihomeWebApplicationFactory()
+    {
+        // Data annotations such as [Range(typeof(decimal), "0", "999999999999.9999")]
+        // parse their limits with the ambient culture, so the same test would pass
+        // on CI and fail on a machine whose locale uses "." as a group separator.
+        // Pin the test host to invariant so results match CI and the Linux container.
+        CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
+        CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
+    }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {

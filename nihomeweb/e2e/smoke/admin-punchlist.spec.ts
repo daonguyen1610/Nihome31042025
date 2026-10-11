@@ -64,7 +64,8 @@ test.describe("NIH-146 — Punch list (real-user flow)", () => {
       })(),
     ]);
 
-    // Create a punch via the dialog
+    // Create a punch via the dialog. A forced click is dispatched while the
+    // dialog is still animating in, so it can miss the moving button.
     await page.getByTestId("punch-new").click();
     await page.waitForSelector('[data-testid="punch-new-title"]');
     const titleText = `E2E punch ${uid()}`;
@@ -76,7 +77,7 @@ test.describe("NIH-146 — Punch list (real-user flow)", () => {
           r.request().method() === "POST" &&
           r.status() === 201,
       ),
-      page.getByTestId("punch-new-save").click({ force: true }),
+      page.getByTestId("punch-new-save").click(),
     ]);
     const row = page.locator('[data-testid^="punch-row-"]').filter({ hasText: titleText });
     await expect(row).toBeVisible();
@@ -118,11 +119,18 @@ test.describe("NIH-146 — Punch list (real-user flow)", () => {
     await expect(page.getByTestId("punch-verify")).toBeVisible();
 
     await page.getByTestId("punch-verify").click();
+    // The confirm action lives in the alert dialog that opens on top of the
+    // detail sheet; click it through normal actionability (a forced click can
+    // land while the dialog is still animating and drop the submit).
+    const verifyDialog = page
+      .getByRole("alertdialog")
+      .filter({ has: page.getByTestId("punch-action-confirm") });
+    await expect(verifyDialog).toBeVisible();
     await Promise.all([
       page.waitForResponse(
         (r) => /\/api\/punch-items\/\d+\/verify$/.test(r.url()) && r.status() === 200,
       ),
-      page.getByTestId("punch-action-confirm").click({ force: true }),
+      verifyDialog.getByTestId("punch-action-confirm").click(),
     ]);
 
     // API sanity — Verified with reopenCount=0.

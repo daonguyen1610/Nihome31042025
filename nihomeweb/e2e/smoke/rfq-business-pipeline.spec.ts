@@ -1,11 +1,12 @@
 import { randomUUID } from "node:crypto";
-import { test, expect, TEST_USERS } from "../fixtures/auth";
+import { test, expect, TEST_USERS, type TestUser } from "../fixtures/auth";
 import { createOwnCustomer } from "../fixtures/designProjects";
 
 test.describe.configure({ mode: "serial" });
 
-// Real stack and seeded business roles. APIs establish only the project/team
-// foundation; every procurement, contract and payment state below comes from UI.
+// Real stack and seeded business roles. APIs establish only the project, team
+// and signed upstream-contract foundation an execution BOQ must attach to;
+// every procurement, RFQ, award, warehouse and payment state below comes from UI.
 for (const outcome of ["Paid", "Rejected", "Cancelled"] as const) {
 test(`business roles carry an approved BOQ through RFQ, warehouse and invoice ${outcome}`, async ({ page, api, loginAs, loginInBrowserAs }, testInfo) => {
   test.setTimeout(180_000);
@@ -26,17 +27,23 @@ test(`business roles carry an approved BOQ through RFQ, warehouse and invoice ${
   });
   expect(vendorResponse.status(), await vendorResponse.text()).toBe(201);
   const userNames = new Map<string, string>();
-  async function userId(role: string) {
-    const response = await api.get(`/api/users?role=${role}&skip=0&take=100`, { headers });
+  // Resolve the exact seeded account the browser session later logs in as.
+  // Picking the first active holder of the role would break as soon as the
+  // seeder carries two accounts of the same role: the API would put one person
+  // on the project team while the browser used the other, and every
+  // project-scoped read would 404 for a non-member.
+  async function userId(user: TestUser) {
+    const response = await api.get(`/api/users?role=${user.role}&search=${user.phoneNumber}&take=10`, { headers });
     expect(response.ok()).toBe(true);
-    const user = (await response.json()).items.find((x: { isActive: boolean }) => x.isActive);
-    userNames.set(role, user.fullName);
-    return user.id as number;
+    const match = (await response.json()).items.find((x: { phoneNumber: string }) => x.phoneNumber === user.phoneNumber);
+    expect(match, `seeded ${user.role} account ${user.phoneNumber}`).toBeTruthy();
+    userNames.set(user.role, match.fullName);
+    return match.id as number;
   }
-  const pmId = await userId("PM");
-  const procurementId = await userId("PROCUREMENT");
-  await userId("ACCOUNTANT");
-  const warehouseId = await userId("WAREHOUSE");
+  const pmId = await userId(TEST_USERS.pm);
+  const procurementId = await userId(TEST_USERS.procurement);
+  await userId(TEST_USERS.accountant);
+  const warehouseId = await userId(TEST_USERS.warehouse);
   const created = await api.post("/api/operational-projects", { headers, data: { name: `RFQ pipeline ${suffix}`, customerId, projectManagerUserId: pmId } });
   expect(created.status(), await created.text()).toBe(201);
   const project = await created.json();
@@ -54,11 +61,37 @@ test(`business roles carry an approved BOQ through RFQ, warehouse and invoice ${
   let rfqUrl = "";
   let contractNumber = "";
 
+  // An execution BOQ can only hang off an in-force signed upstream contract on
+  // the same project, so the foundation includes the signed customer contract.
+  const contractResponse = await api.post("/api/contracts", {
+    headers,
+    data: {
+      customerId,
+      operationalProjectId: project.id,
+      direction: "Upstream",
+      type: "DesignAndBuild",
+      startDate: new Date(Date.now() + 86_400_000).toISOString().slice(0, 10),
+      endDate: new Date(Date.now() + 181 * 86_400_000).toISOString().slice(0, 10),
+      value: 20_000_000,
+      scopeOfWork: "Factory electrical package",
+    },
+  });
+  expect(contractResponse.status(), await contractResponse.text()).toBe(201);
+  const upstreamContract = (await contractResponse.json()) as { id: number; contractNumber: string; rowVersion: string };
+  const signedResponse = await api.post(`/api/contracts/${upstreamContract.id}/transition`, {
+    headers,
+    data: { newStatus: "Signed", rowVersion: upstreamContract.rowVersion },
+  });
+  expect(signedResponse.status(), await signedResponse.text()).toBe(200);
+  expect((await signedResponse.json()).signedDate).toBeTruthy();
+
   await test.step("Procurement prepares the BOQ and BGD approves its budget", async () => {
     await loginInBrowserAs(page, TEST_USERS.procurement);
     await page.goto(`${workspace}&tab=boq`);
     await page.getByRole("button", { name: "Create BOQ revision", exact: true }).click();
     const dialog = page.getByRole("dialog");
+    await dialog.getByRole("combobox").first().click();
+    await page.getByRole("option", { name: upstreamContract.contractNumber }).click();
     await dialog.getByLabel("Item code", { exact: true }).fill("PIPE-CABLE");
     await dialog.getByLabel("Description", { exact: true }).fill("Factory power cable");
     await dialog.getByLabel("Unit", { exact: true }).fill("m");

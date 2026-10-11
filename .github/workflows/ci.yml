@@ -162,17 +162,22 @@ jobs:
       - run: npm run build
 
   e2e:
-    name: E2E (browser + deployment smoke)
+    name: E2E shard ${{ matrix.shard }}/2
     # Pure-API behavior is covered by nihomebackend.integration.tests; this job
     # only runs the real-browser specs and deployment-only contracts (CORS etc.)
-    # against the docker-compose stack.
+    # against isolated docker-compose stacks. Shards run concurrently, while
+    # each shard stays serial because its specs share one SQL database.
     runs-on: ubuntu-latest
     timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
     env:
-      # docker-compose-dev.yaml includes docker-compose.yaml and adds the
-      # non-relaying local mailbox, so the email delivery specs send for real
-      # without reaching a customer. Every compose command in this job uses it.
-      COMPOSE_FILE: docker-compose-dev.yaml
+      # Compose the base stack with the dev overlay that adds the non-relaying
+      # local mailbox. Keeping the overlay separate avoids Docker Compose's
+      # imported-resource conflict on GitHub's runner version.
+      COMPOSE_FILE: docker-compose.yaml:docker-compose-dev.yaml
 
     steps:
       - uses: actions/checkout@v4
@@ -235,13 +240,13 @@ jobs:
         env:
           BASE_URL: http://localhost:5043
           MAIL_SINK_URL: http://127.0.0.1:8025
-        run: npx playwright test
+        run: npx playwright test --shard=${{ matrix.shard }}/2
 
       - name: Publish Playwright results to PR check
         if: always()
         uses: dorny/test-reporter@v1
         with:
-          name: E2E (Playwright)
+          name: E2E shard ${{ matrix.shard }}/2 (Playwright)
           path: nihomeweb/playwright-report/junit.xml
           reporter: java-junit
           fail-on-error: false
@@ -250,7 +255,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report
+          name: playwright-report-shard-${{ matrix.shard }}
           path: |
             nihomeweb/playwright-report
             nihomeweb/test-results
@@ -264,6 +269,17 @@ jobs:
       - name: Tear down stack
         if: always()
         run: docker compose down -v
+
+  e2e-complete:
+    name: E2E (browser + deployment smoke)
+    runs-on: ubuntu-latest
+    needs: e2e
+    if: always()
+    steps:
+      - name: Verify every E2E shard passed
+        env:
+          E2E_RESULT: ${{ needs.e2e.result }}
+        run: test "$E2E_RESULT" = "success"
 
   trivy:
     name: Trivy vulnerability scan

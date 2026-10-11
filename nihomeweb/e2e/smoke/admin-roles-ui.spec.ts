@@ -45,7 +45,14 @@ test("role editor renders dynamic roles and the comparison matrix for SUPER_ADMI
   await page.getByTestId("rbac-role-SALE").click();
   await page.locator("#rbac-search").fill("dashboard.view");
   await expect(page.getByText("dashboard.view", { exact: true })).toBeVisible();
-  await page.getByLabel("SALE dashboard.view").click();
+  // The permission rows render before this role's baseline permissions finish
+  // loading, and the editor discards a toggle made in that window: once the
+  // baseline lands, saving the partial draft would silently revoke every other
+  // grant. Wait for the loaded baseline — SALE is seeded with dashboard.view —
+  // then toggle it and assert the dirty/reset cycle.
+  const dashboardView = page.getByLabel("SALE dashboard.view");
+  await expect(dashboardView).toBeChecked();
+  await dashboardView.click();
   await expect(page.getByTestId("rbac-save-SALE")).toBeEnabled();
   await page.getByTestId("rbac-role-editor").getByRole("button", { name: /Hoàn tác|Reset/i }).click();
   await expect(page.getByTestId("rbac-save-SALE")).toBeDisabled();
