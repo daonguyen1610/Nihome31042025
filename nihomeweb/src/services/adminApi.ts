@@ -2107,43 +2107,6 @@ export interface QuoteVersionsResponse {
   versions: QuoteVersionResponse[];
 }
 
-export type QuoteBoqSheetClassification = "Ignored" | "Summary" | "Detail";
-
-export interface QuoteBoqSheetMapping {
-  order: number;
-  name: string;
-  isHidden: boolean;
-  suggestedClassification: QuoteBoqSheetClassification;
-  headerRow?: number | null;
-  itemCodeColumn?: number | null;
-  descriptionColumn?: number | null;
-  unitColumn?: number | null;
-  quantityColumn?: number | null;
-  unitPriceColumn?: number | null;
-  suggestedItemCount: number;
-  warnings: string[];
-}
-
-export interface QuoteBoqImportPreviewResponse {
-  sourceFileName: string;
-  sourceHash: string;
-  parserVersion: string;
-  previewToken: string;
-  sheets: QuoteBoqSheetMapping[];
-  suggestedItemCount: number;
-  workbookWarnings: string[];
-}
-
-export interface QuoteBoqImportResponse {
-  importId: number;
-  quoteId: number;
-  quoteVersion: number;
-  importedItemCount: number;
-  sourceHash: string;
-  importedAt: string;
-  quote: QuoteResponse;
-}
-
 export interface CreateQuoteRequest {
   opportunityId: number;
   ownerUserId?: number | null;
@@ -4892,38 +4855,6 @@ export const adminApi = {
   getQuoteVersions: (id: number) => api.get<QuoteVersionsResponse>(`/quotes/${id}/versions`),
   exportQuoteSpreadsheet: (id: number, lang: string) =>
     api.get<Blob>(`/quotes/${id}/export.xlsx`, { params: { lang }, responseType: "blob" }),
-  downloadQuoteBoqTemplate: () =>
-    api.get<Blob>("/quotes/boq-template.xlsx", { responseType: "blob" }),
-  previewQuoteBoqImport: (id: number, file: File) => {
-    const body = new FormData();
-    body.append("file", file);
-    return api.post<QuoteBoqImportPreviewResponse>(`/quotes/${id}/boq-import/preview`, body);
-  },
-  confirmQuoteBoqImport: (
-    id: number,
-    file: File,
-    sourceHash: string,
-    previewToken: string,
-    rowVersion: string,
-    sheets: QuoteBoqSheetMapping[],
-  ) => {
-    const body = new FormData();
-    body.append("file", file);
-    body.append("sourceHash", sourceHash);
-    body.append("previewToken", previewToken);
-    body.append("rowVersion", rowVersion);
-    body.append("mappings", JSON.stringify(sheets.map((sheet) => ({
-      sheetName: sheet.name,
-      classification: sheet.suggestedClassification,
-      headerRow: sheet.headerRow,
-      itemCodeColumn: sheet.itemCodeColumn,
-      descriptionColumn: sheet.descriptionColumn,
-      unitColumn: sheet.unitColumn,
-      quantityColumn: sheet.quantityColumn,
-      unitPriceColumn: sheet.unitPriceColumn,
-    }))));
-    return api.post<QuoteBoqImportResponse>(`/quotes/${id}/boq-import/confirm`, body);
-  },
   createQuote: (body: CreateQuoteRequest) => api.post<QuoteResponse>("/quotes", body),
   updateQuote: (id: number, body: UpdateQuoteRequest) => api.put<QuoteResponse>(`/quotes/${id}`, body),
   submitQuote: (id: number, body: QuoteWorkflowRequest = {}) =>

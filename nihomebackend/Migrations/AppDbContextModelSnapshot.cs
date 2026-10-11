@@ -6664,64 +6664,6 @@ namespace nihomebackend.Migrations
                     b.ToTable("quote_approval_logs", (string)null);
                 });
 
-            modelBuilder.Entity("NihomeBackend.Models.QuoteBoqImport", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("ImportedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("ImportedByUserId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("ImportedItemCount")
-                        .HasColumnType("int");
-
-                    b.Property<string>("MappingJson")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("OutcomeJson")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ParserVersion")
-                        .IsRequired()
-                        .HasMaxLength(40)
-                        .HasColumnType("nvarchar(40)");
-
-                    b.Property<int>("QuoteId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("QuoteVersion")
-                        .HasColumnType("int");
-
-                    b.Property<string>("SourceFileName")
-                        .IsRequired()
-                        .HasMaxLength(300)
-                        .HasColumnType("nvarchar(300)");
-
-                    b.Property<string>("SourceHash")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ImportedByUserId");
-
-                    b.HasIndex("QuoteId", "QuoteVersion");
-
-                    b.HasIndex("QuoteId", "SourceHash", "ParserVersion")
-                        .IsUnique();
-
-                    b.ToTable("quote_boq_imports", (string)null);
-                });
-
             modelBuilder.Entity("NihomeBackend.Models.QuoteDocument", b =>
                 {
                     b.Property<int>("Id")
@@ -11223,25 +11165,6 @@ namespace nihomebackend.Migrations
                     b.Navigation("Quote");
                 });
 
-            modelBuilder.Entity("NihomeBackend.Models.QuoteBoqImport", b =>
-                {
-                    b.HasOne("NihomeBackend.Models.ApplicationUser", "ImportedBy")
-                        .WithMany()
-                        .HasForeignKey("ImportedByUserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("NihomeBackend.Models.Quote", "Quote")
-                        .WithMany("BoqImports")
-                        .HasForeignKey("QuoteId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("ImportedBy");
-
-                    b.Navigation("Quote");
-                });
-
             modelBuilder.Entity("NihomeBackend.Models.QuoteDocument", b =>
                 {
                     b.HasOne("NihomeBackend.Models.Quote", "Quote")
@@ -12232,8 +12155,6 @@ namespace nihomebackend.Migrations
             modelBuilder.Entity("NihomeBackend.Models.Quote", b =>
                 {
                     b.Navigation("ApprovalLogs");
-
-                    b.Navigation("BoqImports");
 
                     b.Navigation("Documents");
 

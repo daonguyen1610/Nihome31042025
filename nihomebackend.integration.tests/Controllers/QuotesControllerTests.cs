@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using System.Text.Json;
 using ClosedXML.Excel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -872,72 +871,6 @@ public class QuotesControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task BoqImport_PreviewsThenConfirmsAtomicallyWithProvenance()
-    {
-        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
-        var opportunityId = await CreateOpportunityAsync();
-        var createdResponse = await Client.PostAsJsonAsync("/api/quotes", new
-        {
-            opportunityId,
-            method = "Boq",
-            items = new[] { new { name = "Old item", unit = "item", quantity = 1m, unitPrice = 1m } },
-            discountPercent = 0m,
-            vatPercent = 10m,
-        });
-        var created = await ReadJsonAsync(createdResponse);
-        var quoteId = created.GetProperty("id").GetInt32();
-        var file = CreateMultiSheetBoqWorkbook();
-
-        using var previewContent = new MultipartFormDataContent();
-        previewContent.Add(new ByteArrayContent(file), "file", "factory-boq.xlsx");
-        var previewResponse = await Client.PostAsync($"/api/quotes/{quoteId}/boq-import/preview", previewContent);
-        previewResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        var preview = await ReadJsonAsync(previewResponse);
-        preview.GetProperty("sheets").GetArrayLength().Should().Be(2);
-        preview.GetProperty("suggestedItemCount").GetInt32().Should().Be(2);
-
-        using var confirmContent = new MultipartFormDataContent();
-        confirmContent.Add(new ByteArrayContent(file), "file", "factory-boq.xlsx");
-        confirmContent.Add(new StringContent(preview.GetProperty("sourceHash").GetString()!), "sourceHash");
-        confirmContent.Add(new StringContent(preview.GetProperty("previewToken").GetString()!), "previewToken");
-        confirmContent.Add(new StringContent(created.GetProperty("rowVersion").GetString()!), "rowVersion");
-        var sheets = preview.GetProperty("sheets").EnumerateArray().Select(sheet => new
-        {
-            sheetName = sheet.GetProperty("name").GetString(),
-            classification = sheet.GetProperty("suggestedClassification").GetString(),
-            headerRow = sheet.GetProperty("headerRow").ValueKind == JsonValueKind.Null ? null : sheet.GetProperty("headerRow").GetInt32() as int?,
-            itemCodeColumn = sheet.GetProperty("itemCodeColumn").ValueKind == JsonValueKind.Null ? null : sheet.GetProperty("itemCodeColumn").GetInt32() as int?,
-            descriptionColumn = sheet.GetProperty("descriptionColumn").ValueKind == JsonValueKind.Null ? null : sheet.GetProperty("descriptionColumn").GetInt32() as int?,
-            unitColumn = sheet.GetProperty("unitColumn").ValueKind == JsonValueKind.Null ? null : sheet.GetProperty("unitColumn").GetInt32() as int?,
-            quantityColumn = sheet.GetProperty("quantityColumn").ValueKind == JsonValueKind.Null ? null : sheet.GetProperty("quantityColumn").GetInt32() as int?,
-            unitPriceColumn = sheet.GetProperty("unitPriceColumn").ValueKind == JsonValueKind.Null ? null : sheet.GetProperty("unitPriceColumn").GetInt32() as int?,
-        });
-        confirmContent.Add(new StringContent(JsonSerializer.Serialize(sheets)), "mappings");
-        using var request = new HttpRequestMessage(HttpMethod.Post, $"/api/quotes/{quoteId}/boq-import/confirm") { Content = confirmContent };
-        request.Headers.TryAddWithoutValidation("Idempotency-Key", Guid.NewGuid().ToString("N"));
-        var confirmResponse = await Client.SendAsync(request);
-
-        confirmResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        var result = await ReadJsonAsync(confirmResponse);
-        result.GetProperty("importedItemCount").GetInt32().Should().Be(2);
-        result.GetProperty("quote").GetProperty("items").GetArrayLength().Should().Be(2);
-        using var scope = Factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<NihomeBackend.Data.AppDbContext>();
-        (await db.QuoteBoqImports.CountAsync(item => item.QuoteId == quoteId)).Should().Be(1);
-    }
-
-    [Fact]
-    public async Task BoqTemplate_RequiresPermissionAndReturnsXlsx()
-    {
-        (await Client.GetAsync("/api/quotes/boq-template.xlsx")).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
-        var response = await Client.GetAsync("/api/quotes/boq-template.xlsx");
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-        using var workbook = new XLWorkbook(new MemoryStream(await response.Content.ReadAsByteArrayAsync()));
-        workbook.Worksheets.Select(sheet => sheet.Name).Should().Contain(new[] { "Huong dan", "Mau hang muc" });
-    }
-
-    [Fact]
     public async Task ExportSpreadsheet_BoqQuote_PreservesPricedLinesAndTotals()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
@@ -1049,23 +982,6 @@ public class QuotesControllerTests : IntegrationTestBase
             value,
             new Dictionary<string, string> { ["en"] = value },
             "quotes");
-
-    private static byte[] CreateMultiSheetBoqWorkbook()
-    {
-        using var workbook = new XLWorkbook();
-        workbook.Worksheets.Add("Tổng hợp").Cell("A1").Value = "Tổng giá trị";
-        var detail = workbook.Worksheets.Add("Nhà xưởng");
-        detail.Cell("A2").Value = "Mã hạng mục";
-        detail.Cell("B2").Value = "Mô tả";
-        detail.Cell("C2").Value = "Đơn vị";
-        detail.Cell("D2").Value = "Khối lượng";
-        detail.Cell("E2").Value = "Đơn giá";
-        detail.Cell("A3").Value = "NX-01"; detail.Cell("B3").Value = "Bê tông móng"; detail.Cell("C3").Value = "m3"; detail.Cell("D3").Value = 10; detail.Cell("E3").Value = 1500000;
-        detail.Cell("A4").Value = "NX-02"; detail.Cell("B4").Value = "Cốt thép"; detail.Cell("C4").Value = "kg"; detail.Cell("D4").Value = 500; detail.Cell("E4").Value = 20000;
-        using var stream = new MemoryStream();
-        workbook.SaveAs(stream);
-        return stream.ToArray();
-    }
 
     // ---------- helpers ----------
 
