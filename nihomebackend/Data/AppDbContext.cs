@@ -69,6 +69,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<QuoteApprovalLog> QuoteApprovalLogs => Set<QuoteApprovalLog>();
     public DbSet<QuoteVersionSnapshot> QuoteVersionSnapshots => Set<QuoteVersionSnapshot>();
     public DbSet<QuoteDocument> QuoteDocuments => Set<QuoteDocument>();
+    public DbSet<QuoteBoqImport> QuoteBoqImports => Set<QuoteBoqImport>();
     public DbSet<MaterialRateCatalog> MaterialRateCatalogs => Set<MaterialRateCatalog>();
     public DbSet<MaterialRateRevision> MaterialRateRevisions => Set<MaterialRateRevision>();
     public DbSet<MaterialRateLine> MaterialRateLines => Set<MaterialRateLine>();
@@ -896,6 +897,27 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .OnDelete(DeleteBehavior.Cascade);
             b.HasIndex(s => s.QuoteId);
             b.HasIndex(s => new { s.QuoteId, s.VersionNumber }).IsUnique();
+        });
+
+        modelBuilder.Entity<QuoteBoqImport>(b =>
+        {
+            b.ToTable("quote_boq_imports");
+            b.HasKey(import => import.Id);
+            b.Property(import => import.SourceFileName).HasMaxLength(300).IsRequired();
+            b.Property(import => import.SourceHash).HasMaxLength(64).IsRequired();
+            b.Property(import => import.ParserVersion).HasMaxLength(40).IsRequired();
+            b.Property(import => import.MappingJson).HasColumnType("nvarchar(max)").IsRequired();
+            b.Property(import => import.OutcomeJson).HasColumnType("nvarchar(max)").IsRequired();
+            b.HasOne(import => import.Quote)
+                .WithMany(quote => quote.BoqImports)
+                .HasForeignKey(import => import.QuoteId)
+                .OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(import => import.ImportedBy)
+                .WithMany()
+                .HasForeignKey(import => import.ImportedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            b.HasIndex(import => new { import.QuoteId, import.SourceHash, import.ParserVersion }).IsUnique();
+            b.HasIndex(import => new { import.QuoteId, import.QuoteVersion });
         });
 
         modelBuilder.Entity<Contract>(b =>

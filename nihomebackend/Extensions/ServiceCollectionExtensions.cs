@@ -114,6 +114,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IOpportunityClosureInvariantService, OpportunityClosureInvariantService>();
         services.AddScoped<IQuoteDocumentService, QuoteDocumentService>();
         services.AddScoped<IQuoteSpreadsheetService, QuoteSpreadsheetService>();
+        services.AddScoped<IQuoteBoqImportService, QuoteBoqImportService>();
         services.AddScoped<IQuoteService, QuoteService>();
         services.AddSingleton<IUtf8CsvParser, Utf8CsvParser>();
         services.AddSingleton<IMaterialRateSpreadsheetService, MaterialRateSpreadsheetService>();

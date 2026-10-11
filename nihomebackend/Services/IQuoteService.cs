@@ -60,4 +60,9 @@ public interface IQuoteService
 
     Task<QuoteVersionsResponse?> GetVersionsAsync(int id, int callerUserId, bool canSeeAll, CancellationToken ct = default);
     Task<byte[]?> ExportSpreadsheetAsync(int id, int callerUserId, bool canSeeAll, string languageCode, CancellationToken ct = default);
+    Task<QuoteResponse?> ImportBoqAsync(
+        int id, ConfirmQuoteBoqImportRequest request, List<QuoteItemInput> items,
+        string sourceFileName, string sourceHash, string parserVersion,
+        string mappingJson, string outcomeJson, int callerUserId,
+        bool canManage, bool canSeeAll, CancellationToken ct = default);
 }
