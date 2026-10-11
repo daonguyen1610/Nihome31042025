@@ -95,6 +95,20 @@ public sealed class BoqWorkbookSheetPreviewResponse
     public int? UnitPriceColumn { get; init; }
     public int CandidateCount { get; init; }
     public List<string> Warnings { get; init; } = [];
+    public List<BoqWorkbookColumnPreviewResponse> Columns { get; init; } = [];
+    public List<BoqWorkbookRowPreviewResponse> PreviewRows { get; init; } = [];
+}
+
+public sealed class BoqWorkbookColumnPreviewResponse
+{
+    public int Number { get; init; }
+    public string Label { get; init; } = string.Empty;
+}
+
+public sealed class BoqWorkbookRowPreviewResponse
+{
+    public int RowNumber { get; init; }
+    public Dictionary<int, string> Cells { get; init; } = [];
 }
 
 public sealed class BoqWorkbookPreviewResponse

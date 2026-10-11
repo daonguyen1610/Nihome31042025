@@ -804,6 +804,8 @@ public class MaterialRateCatalogsControllerTests : IntegrationTestBase
         preview.GetProperty("sheets").GetArrayLength().Should().Be(2);
         preview.GetProperty("sheets")[1].GetProperty("descriptionColumn").GetInt32().Should().Be(2);
         preview.GetProperty("sheets")[1].GetProperty("candidateCount").GetInt32().Should().Be(2);
+        preview.GetProperty("sheets")[1].GetProperty("columns")[1].GetProperty("label").GetString().Should().Contain("Description");
+        preview.GetProperty("sheets")[1].GetProperty("previewRows")[0].GetProperty("cells").GetProperty("2").GetString().Should().Be("PHẦN MÓNG");
 
         var mappings = new[]
         {

@@ -168,6 +168,29 @@ public sealed class BoqCatalogWorkbookService(AppDbContext db, IMaterialRateServ
             }
         }
         if (invalidDetails > 0) warnings.Add($"Có {invalidDetails} dòng chi tiết thiếu hoặc sai đơn vị, khối lượng, đơn giá.");
+        var columns = header.HasValue
+            ? Enumerable.Range(1, lastColumn).Select(column => new BoqWorkbookColumnPreviewResponse
+            {
+                Number = column,
+                Label = string.IsNullOrWhiteSpace(sheet.Cell(header.Value, column).GetFormattedString())
+                    ? $"Cột {XLHelper.GetColumnLetterFromNumber(column)}"
+                    : $"{XLHelper.GetColumnLetterFromNumber(column)} — {sheet.Cell(header.Value, column).GetFormattedString().Trim()}"
+            }).ToList()
+            : [];
+        var previewRows = header.HasValue
+            ? Enumerable.Range(header.Value + 1, Math.Max(0, Math.Min(sheet.LastRowUsed()?.RowNumber() ?? header.Value, header.Value + 30) - header.Value))
+                .Select(row => new BoqWorkbookRowPreviewResponse
+                {
+                    RowNumber = row,
+                    Cells = Enumerable.Range(1, lastColumn)
+                        .Select(column => (column, value: sheet.Cell(row, column).GetFormattedString().Trim()))
+                        .Where(cell => !string.IsNullOrWhiteSpace(cell.value))
+                        .ToDictionary(cell => cell.column, cell => cell.value)
+                })
+                .Where(row => row.Cells.Count > 0)
+                .Take(8)
+                .ToList()
+            : [];
         return new BoqWorkbookSheetPreviewResponse
         {
             Name = sheet.Name,
@@ -180,7 +203,9 @@ public sealed class BoqCatalogWorkbookService(AppDbContext db, IMaterialRateServ
             QuantityColumn = quantity,
             UnitPriceColumn = price,
             CandidateCount = candidates,
-            Warnings = warnings
+            Warnings = warnings,
+            Columns = columns,
+            PreviewRows = previewRows
         };
     }
 
