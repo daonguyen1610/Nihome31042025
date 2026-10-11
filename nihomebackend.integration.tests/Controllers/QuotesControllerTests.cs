@@ -380,6 +380,9 @@ public class QuotesControllerTests : IntegrationTestBase
         var approved = await Client.PostAsJsonAsync($"/api/quotes/{quoteId}/approve", new { });
         approved.StatusCode.Should().Be(HttpStatusCode.OK);
         var approvedQuote = await ReadJsonAsync(approved);
+        await CreateApprovedFinanceReviewAsync(
+            await AttachSharedProjectAsync(quoteId), "FinanceCommercialReview", quoteId: quoteId);
+        approvedQuote = await ReadJsonAsync(await Client.GetAsync($"/api/quotes/{quoteId}"));
         var previewResponse = await Client.GetAsync($"/api/quotes/{quoteId}/email-preview");
         previewResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         var preview = await ReadJsonAsync(previewResponse);
@@ -409,6 +412,9 @@ public class QuotesControllerTests : IntegrationTestBase
             .StatusCode.Should().Be(HttpStatusCode.OK);
         (await Client.PostAsJsonAsync($"/api/quotes/{quoteId}/approve", new { }))
             .StatusCode.Should().Be(HttpStatusCode.OK);
+        var approvedQuote = await ReadJsonAsync(await Client.GetAsync($"/api/quotes/{quoteId}"));
+        await CreateApprovedFinanceReviewAsync(
+            await AttachSharedProjectAsync(quoteId), "FinanceCommercialReview", quoteId: quoteId);
         var response = await Client.PostAsJsonAsync($"/api/quotes/{quoteId}/send", new
         {
             toEmail = "bad@domain",
@@ -1049,6 +1055,30 @@ public class QuotesControllerTests : IntegrationTestBase
         res.EnsureSuccessStatusCode();
         return (await ReadJsonAsync(res)).GetProperty("id").GetInt32();
     }
+
+    /// <summary>
+    /// The quoted deal must share an <c>OperationalProject</c> with Finance so
+    /// the pre-contract commercial review can be recorded (§5). Opportunities
+    /// created straight through the API start without a project, so the test
+    /// opens one and links both the opportunity and the quote.
+    /// </summary>
+    private Task<int> AttachSharedProjectAsync(int quoteId) => WithDbAsync(async db =>
+    {
+        var quote = await db.Quotes.Include(item => item.Opportunity)
+            .SingleAsync(item => item.Id == quoteId);
+        var project = new OperationalProject
+        {
+            Code = UniqueSlug("PJ-QUOTE").ToUpperInvariant(),
+            Name = "Quote shared project",
+            CustomerId = quote.Opportunity.CustomerId,
+        };
+        db.OperationalProjects.Add(project);
+        await db.SaveChangesAsync();
+        quote.OperationalProjectId = project.Id;
+        quote.Opportunity.OperationalProjectId = project.Id;
+        await db.SaveChangesAsync();
+        return project.Id;
+    });
 
     private Task<int> CreateRateCatalogAsync(decimal amountPerSqm) => WithDbAsync(async db =>
     {

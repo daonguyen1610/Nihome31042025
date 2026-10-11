@@ -269,6 +269,48 @@ Deleting an Operational Project includes its owned work packages in the impact
 preview. Deleting an optional Contract or source Opportunity only unlinks that
 reference; the work package remains under its shared Project.
 
+#### 3.0.2 Pre-contract department work
+
+Before a quotation or a tender goes out, the contributing departments record
+their part of the package on a project work package instead of a separate
+screen. Set the package's **Business purpose** to the one that matches the
+department's job; the purpose ties the package to the source quotation or
+tender and controls which actions the page offers.
+
+**Cung ứng (Procurement) — input prices.** Procurement runs first and supplies
+the supplier and subcontractor prices that Sales needs to build the customer
+quotation. The purpose is **Cung ứng báo giá đầu vào** (Procurement input
+pricing). The department records each offer with supplier/subcontractor,
+reference, currency, valid-until date, and priced lines (item, code,
+description, unit, quantity, unit price), and the total is shown in the
+localized number format. A draft offer can be edited or removed; submit it when
+ready. The offer follows **Draft → Submitted → Approved/Rejected**, and only
+**Draft** or **Rejected** offers can be edited or resubmitted. The approver must
+be a different user than the author. Only an **Approved**, unexpired offer from
+the quotation's own Operational Project can be chosen as the quotation's input
+price; once chosen, the accepted total is snapshotted onto the quotation, so
+editing the offer afterwards does not change what was quoted.
+
+**Tài chính – Kế toán — commercial review.** After Sales approves the quotation,
+Finance reviews contract conditions, guarantees, and payment terms. The purpose
+is **Tài chính rà soát thương mại** (Finance commercial review), linked to that
+quotation. The reviewer ticks the checklists, records findings, and a different
+user performs the independent approval. Sales can open **Send to customer** only
+after the quotation belongs to a shared Operational Project and its Finance
+commercial review is **Approved**; a quotation with no project is asked to be
+attached to one first.
+
+**Tài chính – Kế toán — tender review.** Finance reviews the financial dossier
+of a tender submission pack before the package is submitted. The purpose is
+**Tài chính rà soát hồ sơ thầu** (Finance tender review), linked to the tender.
+A tender can move from Preparing to Submitted only when, in addition to a ready
+checklist and an approved estimate, it carries a shared Operational Project and
+an **Approved** Finance tender review.
+
+The signed-BOQ control that Procurement performs is a separate, post-contract
+step and does not replace input pricing. The department label shown for
+Procurement in the platform is **Cung ứng**.
+
 ### 3.1 Module 1: CRM / Sale / Contract
 
 **Objective**: Manage customer acquisition and business development flexibly.
@@ -466,7 +508,9 @@ and note. Each valid import atomically creates a hashed Draft revision and
 calculates cost subtotal, bid subtotal, VAT, and grand bid total. Submit the
 revision for approval; authorized users approve or reject it with a reason.
 The Tender can move from Preparing to Submitted only when every checklist item
-is ready and an approved estimate exists. Won and Lost are available only from
+is ready, an approved estimate exists, and the Tender carries a shared
+Operational Project with an approved Finance tender review of its financial
+dossier (see 3.0.2). Won and Lost are available only from
 Submitted. When marking a tender Won, choose either **Create an opportunity from
 this tender** (default) or an existing opportunity of the same customer. The
 created opportunity carries the tender name, starts in Negotiation, is valued at
@@ -1052,8 +1096,10 @@ Manage primary contracts linked to projects and customers. Define contract value
 
 Sales may create a customer contract directly from an Opportunity when the
 value has already been agreed; a quotation is optional. If the customer needs
-a quote, approve it internally, open **Send to customer**, check or enter the
-customer email address, review the subject and message, then send. Users with
+a quote, approve it internally, have Finance record and approve the commercial
+review of contract conditions, guarantees, and payment terms on the quotation's
+Operational Project work package, then open **Send to customer**, check or enter
+the customer email address, review the subject and message, then send. Users with
 quote-management permission may edit the subject and message; send permission
 is required to dispatch. The dialog identifies the generated `.xlsx`
 attachment before sending. The email contains the priced lines and total and

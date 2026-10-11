@@ -79,6 +79,25 @@ public class TenderEstimatesControllerTests : IntegrationTestBase
         await AuthenticateAsAsync("SALES_MANAGER");
         var (tenderId, _) = await CreateTenderAsync();
 
+        // §5 pre-contract control: submission also needs a shared project and an
+        // approved Finance – Accounting review of the tender financial dossier.
+        var tenderProjectId = await WithDbAsync(async db =>
+        {
+            var tender = await db.Tenders.SingleAsync(item => item.Id == tenderId);
+            var project = new OperationalProject
+            {
+                Code = UniqueSlug("PJ-TENDER").ToUpperInvariant(),
+                Name = "Tender shared project",
+                CustomerId = tender.CustomerId,
+            };
+            db.OperationalProjects.Add(project);
+            await db.SaveChangesAsync();
+            tender.OperationalProjectId = project.Id;
+            await db.SaveChangesAsync();
+            return project.Id;
+        });
+        await CreateApprovedFinanceReviewAsync(tenderProjectId, "FinanceTenderReview", tenderId: tenderId);
+
         var rejected = await Client.PostAsJsonAsync($"/api/tenders/{tenderId}/transition", new { status = "Submitted" });
         rejected.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         (await WithDbAsync(db => db.Tenders.AsNoTracking().SingleAsync(item => item.Id == tenderId)))

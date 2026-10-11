@@ -47,6 +47,7 @@ public class TenderService(
             .AsNoTracking()
             .Include(t => t.Customer)
             .Include(t => t.Preparer)
+            .Include(t => t.OperationalProject)
             .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(p.Status))
@@ -123,6 +124,7 @@ public class TenderService(
             .AsNoTracking()
             .Include(t => t.Customer)
             .Include(t => t.Preparer)
+            .Include(t => t.OperationalProject)
             .Include(t => t.ChecklistItems).ThenInclude(i => i.Owner)
             .FirstOrDefaultAsync(t => t.Id == id, ct);
         if (entity is null) return null;
@@ -180,6 +182,7 @@ public class TenderService(
 
         var customer = await db.Customers.FirstOrDefaultAsync(c => c.Id == request.CustomerId, ct)
             ?? throw new TenderOperationException($"Khách hàng #{request.CustomerId} không tồn tại.");
+        await ValidateTenderProjectAsync(request.OperationalProjectId, customer.Id, ct);
 
         if (request.PreparerUserId.HasValue &&
             !await db.Users.AnyAsync(u => u.Id == request.PreparerUserId.Value, ct))
@@ -198,6 +201,7 @@ public class TenderService(
             Code = await SequentialCodes.NextAsync(db.Tenders.Select(t => t.Code), codePrefix, 4, ct),
             Name = name,
             CustomerId = customer.Id,
+            OperationalProjectId = request.OperationalProjectId,
             OpeningDate = request.OpeningDate,
             SubmissionDeadline = request.SubmissionDeadline,
             PreparerUserId = effectivePreparerId,
@@ -260,6 +264,8 @@ public class TenderService(
         {
             throw new TenderOperationException($"Người phụ trách #{request.PreparerUserId} không tồn tại.");
         }
+        var customerId = entity.CustomerId;
+        await ValidateTenderProjectAsync(request.OperationalProjectId, customerId, ct);
 
         // Per NIH-96 AC: only Deadline / Preparer / Note (+ derived Note) may
         // change while Status = Preparing; other statuses accept Note only.
@@ -274,6 +280,7 @@ public class TenderService(
             entity.SubmissionDeadline = request.SubmissionDeadline;
             entity.PreparerUserId = request.PreparerUserId;
             entity.InfoSource = TrimOrNull(request.InfoSource);
+            entity.OperationalProjectId = request.OperationalProjectId;
         }
         entity.Note = TrimOrNull(request.Note);
         entity.UpdatedByUserId = callerUserId;
@@ -677,6 +684,16 @@ public class TenderService(
             {
                 throw new TenderOperationException("Phải có ít nhất một dự toán đã được phê duyệt trước khi nộp gói thầu.");
             }
+            if (!tender.OperationalProjectId.HasValue)
+                throw new TenderOperationException("Gói thầu phải được liên kết với Dự án vận hành trước khi nộp.");
+            var financeApproved = await db.DepartmentWorkPackages.AsNoTracking().AnyAsync(package =>
+                package.SourceTenderId == tenderId &&
+                package.OperationalProjectId == tender.OperationalProjectId &&
+                package.Purpose == WorkPackagePurpose.FinanceTenderReview &&
+                package.FinanceReview != null &&
+                package.FinanceReview.Status == FinanceReviewStatus.Approved, ct);
+            if (!financeApproved)
+                throw new TenderOperationException("Hồ sơ tài chính và bảo lãnh phải được Tài chính – Kế toán phê duyệt trước khi nộp thầu.");
         }
         else if (nextStatus == TenderStatus.Won)
         {
@@ -871,6 +888,9 @@ public class TenderService(
             Name = t.Name,
             CustomerId = t.CustomerId,
             CustomerName = t.Customer?.Name ?? string.Empty,
+            OperationalProjectId = t.OperationalProjectId,
+            OperationalProjectCode = t.OperationalProject?.Code,
+            OperationalProjectName = t.OperationalProject?.Name,
             OpeningDate = t.OpeningDate,
             SubmissionDeadline = t.SubmissionDeadline,
             PreparerUserId = t.PreparerUserId,
@@ -904,5 +924,13 @@ public class TenderService(
             ChecklistCompletionPercent = percent,
             IsDeadlineImminent = IsDeadlineImminent(t.Status, t.SubmissionDeadline, now) && percent < 100,
         };
+    }
+
+    private async Task ValidateTenderProjectAsync(int? projectId, int customerId, CancellationToken ct)
+    {
+        if (!projectId.HasValue) return;
+        if (!await db.OperationalProjects.AsNoTracking().AnyAsync(project =>
+                project.Id == projectId.Value && project.CustomerId == customerId, ct))
+            throw new TenderOperationException("Dự án vận hành không tồn tại hoặc không thuộc khách hàng của gói thầu.");
     }
 }

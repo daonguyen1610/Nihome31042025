@@ -88,6 +88,39 @@ tên sheet, màu sắc, ngày và tên khách hàng trong file không phải quy
 - Xóa Dự án xóa các nhóm việc thuộc Dự án theo deletion-impact. Xóa Hợp đồng
   hoặc Cơ hội chỉ gỡ liên kết tùy chọn và giữ nguyên nhóm việc dưới Dự án.
 
+### 2.2.2. Liên phòng ban ở giai đoạn trước hợp đồng — Implemented
+
+Yêu cầu MoM §5. Cả ba điểm giao việc dưới đây đều chạy trên "nhóm công việc dự
+án" hiện có, không thêm tab hay màn hình riêng.
+
+- **Cung ứng cung cấp giá đầu vào.** Kinh doanh giao nhóm việc mục đích
+  `ProcurementInputPricing` cho phòng Cung ứng, gắn Cơ hội và Dự án dùng chung.
+  Cung ứng nhập chào giá nhà cung cấp/thầu phụ (dòng hạng mục, số lượng, đơn
+  giá, VAT, hiệu lực). Trước hợp đồng Cung ứng chỉ cần thông tin Dự án; hợp đồng
+  chưa bắt buộc.
+- **Vòng đời giá đầu vào.** `Draft → Submitted → Approved | Rejected`. Chỉ sửa
+  được ở `Draft`/`Rejected`; người lập không được tự duyệt hoặc từ chối. Giá đã
+  được báo giá tham chiếu không sửa nữa.
+- **Kinh doanh làm báo giá đầu ra từ giá đầu vào.** Báo giá có thể chọn một giá
+  đầu vào `Approved`, còn hiệu lực, thuộc đúng Dự án và đúng nhóm việc Cung ứng.
+  Báo giá lưu bản chụp (`InputPriceSnapshotJson`) tại thời điểm gắn để truy vết;
+  đổi giá đầu vào không làm đổi báo giá đã phát hành.
+- **Kiểm soát BOQ đã ký là việc sau hợp đồng.** Đây là bước tách biệt với giá đầu
+  vào: chỉ BOQ thực hiện gắn hợp đồng đầu ra đã ký, còn hiệu lực và đúng Dự án
+  mới được tạo/cập nhật; BOQ nháp, đã hủy hoặc khác Dự án bị chặn.
+- **Tài chính – Kế toán rà soát điều kiện hợp đồng sau báo giá.** Nhóm việc mục
+  đích `FinanceCommercialReview` gắn Báo giá nguồn. Checklist gồm điều kiện hợp
+  đồng, bảo lãnh và điều kiện thanh toán; hồ sơ phải được duyệt độc lập trước
+  khi báo giá được gửi khách hàng.
+- **Tài chính – Kế toán rà soát hồ sơ tài chính dự thầu trước khi nộp.** Nhóm
+  việc mục đích `FinanceTenderReview` gắn Gói thầu nguồn. Checklist gồm hồ sơ tài
+  chính và bảo lãnh; hồ sơ phải được duyệt độc lập trước khi Gói thầu chuyển
+  `Submitted`.
+- **Điều kiện bắt buộc của cổng.** Báo giá phải gắn Dự án vận hành để Tài chính
+  có chỗ ghi rà soát; Gói thầu phải gắn Dự án vận hành trước khi nộp.
+- **Đổi nhãn.** Tên phòng ban hiển thị là "Cung ứng" (trước đây "Mua sắm"); module
+  nghiệp vụ vẫn là Module 5 — Cung ứng và kho.
+
 ### 2.3. Trạng thái và tích hợp
 
 - Chỉ sự kiện nghiệp vụ terminal được duyệt/xác nhận/posted/paid mới kích hoạt
@@ -117,6 +150,10 @@ và hợp đồng mà không nhập lại dữ liệu.
   kết quả trúng/trượt.
 - Khảo sát mobile ghi điều kiện hiện trường, tọa độ, ảnh/video/file và checklist;
   đồng bộ có trạng thái, retry và xung đột rõ ràng.
+- Quy tắc "báo giá trước hợp đồng" có điều kiện và do Kinh doanh quyết định theo
+  từng lô: nếu lô dùng báo giá thì báo giá phải được duyệt trước khi lập hợp
+  đồng; nếu khách đã thống nhất giá trị trực tiếp thì chỉ cần hợp đồng. NICON
+  xác nhận ngày 2026-10-11.
 - Hợp đồng Upstream có thể lập trực tiếp từ Cơ hội khi khách đã thống nhất giá
   trị, không bắt buộc có báo giá. Nếu cần báo giá, Kinh doanh duyệt nội bộ rồi
   xem trước email, chọn địa chỉ khách và gửi; báo giá được gắn vào hợp đồng phải

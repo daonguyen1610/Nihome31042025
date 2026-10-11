@@ -18,4 +18,11 @@ public interface IDepartmentWorkPackageService
     Task<DepartmentWorkTaskResponse?> UpdateTaskAsync(int packageId, int taskId, UpsertDepartmentWorkTaskRequest request, int callerUserId, CancellationToken ct = default);
     Task<DepartmentWorkTaskResponse?> UpdateProgressAsync(int packageId, int taskId, UpdateDepartmentWorkTaskProgressRequest request, int callerUserId, CancellationToken ct = default);
     Task<DepartmentWorkTaskResponse?> VerifyTaskAsync(int packageId, int taskId, VerifyDepartmentWorkTaskRequest request, int callerUserId, CancellationToken ct = default);
+    Task<InputPriceOfferResponse> AddInputPriceOfferAsync(int packageId, UpsertInputPriceOfferRequest request, int callerUserId, CancellationToken ct = default);
+    Task<InputPriceOfferResponse?> UpdateInputPriceOfferAsync(int packageId, int offerId, UpsertInputPriceOfferRequest request, int callerUserId, CancellationToken ct = default);
+    Task<InputPriceOfferResponse?> SubmitInputPriceOfferAsync(int packageId, int offerId, SubmitBusinessRecordRequest request, int callerUserId, CancellationToken ct = default);
+    Task<InputPriceOfferResponse?> DecideInputPriceOfferAsync(int packageId, int offerId, DecideBusinessRecordRequest request, int callerUserId, CancellationToken ct = default);
+    Task<FinanceReviewResponse> SaveFinanceReviewAsync(int packageId, UpsertFinanceReviewRequest request, int callerUserId, CancellationToken ct = default);
+    Task<FinanceReviewResponse?> SubmitFinanceReviewAsync(int packageId, SubmitBusinessRecordRequest request, int callerUserId, CancellationToken ct = default);
+    Task<FinanceReviewResponse?> DecideFinanceReviewAsync(int packageId, DecideBusinessRecordRequest request, int callerUserId, CancellationToken ct = default);
 }

@@ -52,6 +52,10 @@ public class QuoteVersionResponse
     public decimal? UnitPricePerSqm { get; set; }
     public string? PackageDescription { get; set; }
     public int? MaterialRateRevisionId { get; set; }
+    public int? InputPriceOfferId { get; set; }
+    public string? InputPriceVendorName { get; set; }
+    public string? InputPriceSupplierReference { get; set; }
+    public string? InputPriceSnapshotJson { get; set; }
     public int? MaterialRateCatalogId { get; set; }
     public string? MaterialRateCatalogCode { get; set; }
     public string? MaterialRateCatalogName { get; set; }
@@ -90,6 +94,10 @@ public class QuoteResponse
     public decimal? UnitPricePerSqm { get; set; }
     public string? PackageDescription { get; set; }
     public int? MaterialRateRevisionId { get; set; }
+    public int? InputPriceOfferId { get; set; }
+    public string? InputPriceVendorName { get; set; }
+    public string? InputPriceSupplierReference { get; set; }
+    public string? InputPriceSnapshotJson { get; set; }
     public int? MaterialRateCatalogId { get; set; }
     public string? MaterialRateCatalogCode { get; set; }
     public string? MaterialRateCatalogName { get; set; }

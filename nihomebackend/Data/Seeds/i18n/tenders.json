@@ -168,4 +168,8 @@
   { "key": "tenders.estimate.line.unitCost", "category": "tenders", "vi": "Đơn giá vốn", "en": "Unit cost", "zh": "单位成本", "ja": "単位原価" },
   { "key": "tenders.estimate.line.bidUnitPrice", "category": "tenders", "vi": "Đơn giá thầu", "en": "Bid unit price", "zh": "投标单价", "ja": "入札単価" },
   { "key": "tenders.estimate.line.bidAmount", "category": "tenders", "vi": "Thành tiền", "en": "Bid amount", "zh": "投标金额", "ja": "入札金額" }
+  ,{"key":"tenders.field.operationalProject","category":"tenders","vi":"Dự án dùng chung","en":"Shared project","zh":"共享项目","ja":"共有プロジェクト"}
+  ,{"key":"tenders.form.projectPlaceholder","category":"tenders","vi":"Chọn dự án của khách hàng","en":"Choose the customer's project","zh":"选择客户项目","ja":"顧客のプロジェクトを選択"}
+  ,{"key":"tenders.form.noProject","category":"tenders","vi":"Khách hàng chưa có dự án dùng chung. Hãy tạo dự án trước khi gửi hồ sơ thầu.","en":"This customer has no shared project. Create one before tender submission.","zh":"该客户尚无共享项目，请在投标前先创建项目。","ja":"この顧客には共有プロジェクトがありません。入札前に作成してください。"}
+  ,{"key":"tenders.action.requestFinanceReview","category":"tenders","vi":"Yêu cầu Tài chính rà soát","en":"Request finance review","zh":"请求财务审查","ja":"財務レビューを依頼"}
 ]

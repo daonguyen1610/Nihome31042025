@@ -1915,6 +1915,79 @@ namespace nihomebackend.Migrations
                     b.ToTable("customer_documents", (string)null);
                 });
 
+            modelBuilder.Entity("NihomeBackend.Models.DepartmentFinanceReview", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("ContractConditionsReviewed")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("DecisionReason")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<bool>("FinancialDossierReviewed")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Findings")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<bool>("GuaranteesReviewed")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("PaymentTermsReviewed")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ReviewedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime?>("SubmittedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("UpdatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("WorkPackageId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReviewedByUserId");
+
+                    b.HasIndex("WorkPackageId")
+                        .IsUnique();
+
+                    b.ToTable("department_finance_reviews", (string)null);
+                });
+
             modelBuilder.Entity("NihomeBackend.Models.DepartmentWorkPackage", b =>
                 {
                     b.Property<int>("Id")
@@ -1969,6 +2042,11 @@ namespace nihomebackend.Migrations
                     b.Property<DateTime?>("PlannedStart")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("Purpose")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .IsRequired()
@@ -1976,6 +2054,12 @@ namespace nihomebackend.Migrations
                         .HasColumnType("rowversion");
 
                     b.Property<int?>("SourceOpportunityId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("SourceQuoteId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("SourceTenderId")
                         .HasColumnType("int");
 
                     b.Property<string>("Status")
@@ -2002,7 +2086,13 @@ namespace nihomebackend.Migrations
 
                     b.HasIndex("SourceOpportunityId");
 
+                    b.HasIndex("SourceQuoteId");
+
+                    b.HasIndex("SourceTenderId");
+
                     b.HasIndex("ContractId", "Status");
+
+                    b.HasIndex("Purpose", "Status");
 
                     b.HasIndex("Kind", "DepartmentRoleGroupId", "Status");
 
@@ -2012,7 +2102,7 @@ namespace nihomebackend.Migrations
                         {
                             t.HasCheckConstraint("CK_department_work_packages_dates", "[PlannedStart] IS NULL OR [PlannedEnd] IS NULL OR [PlannedEnd] >= [PlannedStart]");
 
-                            t.HasCheckConstraint("CK_department_work_packages_scope", "([Kind] = 'Project' AND [OperationalProjectId] IS NOT NULL) OR ([Kind] = 'Internal' AND [OperationalProjectId] IS NULL AND [ContractId] IS NULL AND [SourceOpportunityId] IS NULL)");
+                            t.HasCheckConstraint("CK_department_work_packages_scope", "([Kind] = 'Project' AND [OperationalProjectId] IS NOT NULL) OR ([Kind] = 'Internal' AND [OperationalProjectId] IS NULL AND [ContractId] IS NULL AND [SourceOpportunityId] IS NULL AND [SourceQuoteId] IS NULL AND [SourceTenderId] IS NULL)");
                         });
                 });
 
@@ -2071,7 +2161,7 @@ namespace nihomebackend.Migrations
 
                     b.HasIndex("RoleGroupId");
 
-                    b.ToTable("department_work_package_participant_groups");
+                    b.ToTable("department_work_package_participant_groups", (string)null);
                 });
 
             modelBuilder.Entity("NihomeBackend.Models.DepartmentWorkTask", b =>
@@ -2100,12 +2190,12 @@ namespace nihomebackend.Migrations
                     b.Property<int>("CreatedByUserId")
                         .HasColumnType("int");
 
+                    b.Property<int>("DepartmentRoleGroupId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Description")
                         .HasMaxLength(4000)
                         .HasColumnType("nvarchar(4000)");
-
-                    b.Property<int>("DepartmentRoleGroupId")
-                        .HasColumnType("int");
 
                     b.Property<int?>("KpiDefinitionId")
                         .HasColumnType("int");
@@ -2172,9 +2262,9 @@ namespace nihomebackend.Migrations
                     b.HasIndex("WorkPackageId", "WbsCode")
                         .IsUnique();
 
-                    b.HasIndex("WorkPackageId", "DepartmentRoleGroupId", "Status");
-
                     b.HasIndex("AssigneeUserId", "Status", "PlannedEnd");
+
+                    b.HasIndex("WorkPackageId", "DepartmentRoleGroupId", "Status");
 
                     b.ToTable("department_work_tasks", null, t =>
                         {
@@ -5561,6 +5651,148 @@ namespace nihomebackend.Migrations
                     b.ToTable("process_documents", (string)null);
                 });
 
+            modelBuilder.Entity("NihomeBackend.Models.ProcurementInputPriceLine", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("ItemCode")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<int>("OfferId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Quantity")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("decimal(18,6)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Unit")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<decimal>("VatPercent")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("decimal(5,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OfferId", "ItemCode")
+                        .IsUnique();
+
+                    b.ToTable("procurement_input_price_lines", (string)null);
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.ProcurementInputPriceOffer", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("ApprovedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ApprovedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("nvarchar(3)");
+
+                    b.Property<string>("DecisionReason")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTime?>("RejectedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("RejectedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime?>("SubmittedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("SupplierReference")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("UpdatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("ValidUntil")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("VendorId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("WorkPackageId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApprovedByUserId");
+
+                    b.HasIndex("RejectedByUserId");
+
+                    b.HasIndex("VendorId");
+
+                    b.HasIndex("Status", "ValidUntil");
+
+                    b.HasIndex("WorkPackageId", "SupplierReference", "VendorId")
+                        .IsUnique();
+
+                    b.ToTable("procurement_input_price_offers", (string)null);
+                });
+
             modelBuilder.Entity("NihomeBackend.Models.Project", b =>
                 {
                     b.Property<int>("Id")
@@ -5776,6 +6008,9 @@ namespace nihomebackend.Migrations
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<int?>("UpstreamContractId")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ApprovedByUserId");
@@ -5789,6 +6024,8 @@ namespace nihomebackend.Migrations
                     b.HasIndex("SourceTenderEstimateRevisionId");
 
                     b.HasIndex("SubmittedByUserId");
+
+                    b.HasIndex("UpstreamContractId");
 
                     b.HasIndex("OperationalProjectId", "RevisionNumber")
                         .IsUnique();
@@ -6259,6 +6496,12 @@ namespace nihomebackend.Migrations
                     b.Property<decimal>("GrandTotal")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<int?>("InputPriceOfferId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("InputPriceSnapshotJson")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<int?>("MaterialRateRevisionId")
                         .HasColumnType("int");
 
@@ -6354,6 +6597,8 @@ namespace nihomebackend.Migrations
                         .IsUnique();
 
                     b.HasIndex("CreatedAt");
+
+                    b.HasIndex("InputPriceOfferId");
 
                     b.HasIndex("MaterialRateRevisionId");
 
@@ -6534,6 +6779,12 @@ namespace nihomebackend.Migrations
                     b.Property<decimal>("GrandTotal")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<int?>("InputPriceOfferId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("InputPriceSnapshotJson")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("ItemsJson")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -6704,10 +6955,10 @@ namespace nihomebackend.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<bool>("IsActive")
+                    b.Property<bool>("InitialPermissionsSeeded")
                         .HasColumnType("bit");
 
-                    b.Property<bool>("InitialPermissionsSeeded")
+                    b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
                     b.Property<string>("LabelKey")
@@ -8243,6 +8494,9 @@ namespace nihomebackend.Migrations
                     b.Property<DateTime?>("OpeningDate")
                         .HasColumnType("datetime2");
 
+                    b.Property<int?>("OperationalProjectId")
+                        .HasColumnType("int");
+
                     b.Property<int?>("PreparerUserId")
                         .HasColumnType("int");
 
@@ -8271,6 +8525,8 @@ namespace nihomebackend.Migrations
                     b.HasIndex("CreatedAt");
 
                     b.HasIndex("CustomerId");
+
+                    b.HasIndex("OperationalProjectId");
 
                     b.HasIndex("PreparerUserId");
 
@@ -9589,6 +9845,24 @@ namespace nihomebackend.Migrations
                     b.Navigation("UploadedBy");
                 });
 
+            modelBuilder.Entity("NihomeBackend.Models.DepartmentFinanceReview", b =>
+                {
+                    b.HasOne("NihomeBackend.Models.ApplicationUser", "ReviewedByUser")
+                        .WithMany()
+                        .HasForeignKey("ReviewedByUserId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("NihomeBackend.Models.DepartmentWorkPackage", "WorkPackage")
+                        .WithOne("FinanceReview")
+                        .HasForeignKey("NihomeBackend.Models.DepartmentFinanceReview", "WorkPackageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ReviewedByUser");
+
+                    b.Navigation("WorkPackage");
+                });
+
             modelBuilder.Entity("NihomeBackend.Models.DepartmentWorkPackage", b =>
                 {
                     b.HasOne("NihomeBackend.Models.Contract", "Contract")
@@ -9624,6 +9898,16 @@ namespace nihomebackend.Migrations
                         .HasForeignKey("SourceOpportunityId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("NihomeBackend.Models.Quote", "SourceQuote")
+                        .WithMany()
+                        .HasForeignKey("SourceQuoteId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("NihomeBackend.Models.Tender", "SourceTender")
+                        .WithMany()
+                        .HasForeignKey("SourceTenderId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.Navigation("Contract");
 
                     b.Navigation("CreatedByUser");
@@ -9635,6 +9919,10 @@ namespace nihomebackend.Migrations
                     b.Navigation("OperationalProject");
 
                     b.Navigation("SourceOpportunity");
+
+                    b.Navigation("SourceQuote");
+
+                    b.Navigation("SourceTender");
                 });
 
             modelBuilder.Entity("NihomeBackend.Models.DepartmentWorkPackageHistory", b =>
@@ -9688,16 +9976,16 @@ namespace nihomebackend.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("NihomeBackend.Models.KpiDefinition", "KpiDefinition")
-                        .WithMany()
-                        .HasForeignKey("KpiDefinitionId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.HasOne("NihomeBackend.Models.Rbac.RoleGroup", "DepartmentRoleGroup")
                         .WithMany()
                         .HasForeignKey("DepartmentRoleGroupId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("NihomeBackend.Models.KpiDefinition", "KpiDefinition")
+                        .WithMany()
+                        .HasForeignKey("KpiDefinitionId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NihomeBackend.Models.ApplicationUser", "VerifiedByUser")
                         .WithMany()
@@ -10623,6 +10911,50 @@ namespace nihomebackend.Migrations
                     b.Navigation("Owner");
                 });
 
+            modelBuilder.Entity("NihomeBackend.Models.ProcurementInputPriceLine", b =>
+                {
+                    b.HasOne("NihomeBackend.Models.ProcurementInputPriceOffer", "Offer")
+                        .WithMany("Lines")
+                        .HasForeignKey("OfferId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Offer");
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.ProcurementInputPriceOffer", b =>
+                {
+                    b.HasOne("NihomeBackend.Models.ApplicationUser", "ApprovedByUser")
+                        .WithMany()
+                        .HasForeignKey("ApprovedByUserId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("NihomeBackend.Models.ApplicationUser", "RejectedByUser")
+                        .WithMany()
+                        .HasForeignKey("RejectedByUserId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("NihomeBackend.Models.Vendor", "Vendor")
+                        .WithMany()
+                        .HasForeignKey("VendorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NihomeBackend.Models.DepartmentWorkPackage", "WorkPackage")
+                        .WithMany("InputPriceOffers")
+                        .HasForeignKey("WorkPackageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ApprovedByUser");
+
+                    b.Navigation("RejectedByUser");
+
+                    b.Navigation("Vendor");
+
+                    b.Navigation("WorkPackage");
+                });
+
             modelBuilder.Entity("NihomeBackend.Models.Project", b =>
                 {
                     b.HasOne("NihomeBackend.Models.ProjectCategory", "CategoryRef")
@@ -10683,6 +11015,11 @@ namespace nihomebackend.Migrations
                         .HasForeignKey("SubmittedByUserId")
                         .OnDelete(DeleteBehavior.NoAction);
 
+                    b.HasOne("NihomeBackend.Models.Contract", "UpstreamContract")
+                        .WithMany()
+                        .HasForeignKey("UpstreamContractId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("ApprovedBy");
 
                     b.Navigation("OperationalProject");
@@ -10696,6 +11033,8 @@ namespace nihomebackend.Migrations
                     b.Navigation("SourceTenderEstimateRevision");
 
                     b.Navigation("SubmittedBy");
+
+                    b.Navigation("UpstreamContract");
                 });
 
             modelBuilder.Entity("NihomeBackend.Models.ProjectDocument", b =>
@@ -10768,6 +11107,11 @@ namespace nihomebackend.Migrations
 
             modelBuilder.Entity("NihomeBackend.Models.Quote", b =>
                 {
+                    b.HasOne("NihomeBackend.Models.ProcurementInputPriceOffer", "InputPriceOffer")
+                        .WithMany()
+                        .HasForeignKey("InputPriceOfferId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("NihomeBackend.Models.MaterialRateRevision", "MaterialRateRevision")
                         .WithMany()
                         .HasForeignKey("MaterialRateRevisionId")
@@ -10788,6 +11132,8 @@ namespace nihomebackend.Migrations
                         .WithMany()
                         .HasForeignKey("OwnerUserId")
                         .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("InputPriceOffer");
 
                     b.Navigation("MaterialRateRevision");
 
@@ -11304,12 +11650,19 @@ namespace nihomebackend.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("NihomeBackend.Models.OperationalProject", "OperationalProject")
+                        .WithMany()
+                        .HasForeignKey("OperationalProjectId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("NihomeBackend.Models.ApplicationUser", "Preparer")
                         .WithMany()
                         .HasForeignKey("PreparerUserId")
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Customer");
+
+                    b.Navigation("OperationalProject");
 
                     b.Navigation("Preparer");
                 });
@@ -11631,7 +11984,11 @@ namespace nihomebackend.Migrations
 
             modelBuilder.Entity("NihomeBackend.Models.DepartmentWorkPackage", b =>
                 {
+                    b.Navigation("FinanceReview");
+
                     b.Navigation("History");
+
+                    b.Navigation("InputPriceOffers");
 
                     b.Navigation("ParticipantGroups");
 
@@ -11780,6 +12137,11 @@ namespace nihomebackend.Migrations
                     b.Navigation("Attachments");
 
                     b.Navigation("Events");
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.ProcurementInputPriceOffer", b =>
+                {
+                    b.Navigation("Lines");
                 });
 
             modelBuilder.Entity("NihomeBackend.Models.ProjectBoqRevision", b =>

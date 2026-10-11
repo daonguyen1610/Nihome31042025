@@ -74,4 +74,43 @@
   {"key":"workPackages.toast.verified","category":"work-packages","vi":"Đã xác nhận đầu việc đủ điều kiện KPI","en":"Task verified for KPI scoring","zh":"任务已确认可计入KPI","ja":"KPI評価対象として確認しました"},
   {"key":"workPackages.error.load","category":"work-packages","vi":"Không thể tải nhóm công việc.","en":"Could not load work packages.","zh":"无法加载工作包。","ja":"作業パッケージを読み込めませんでした。"},
   {"key":"workPackages.error.save","category":"work-packages","vi":"Không thể lưu thay đổi.","en":"Could not save changes.","zh":"无法保存更改。","ja":"変更を保存できませんでした。"}
+  ,{"key":"workPackages.field.purpose","category":"work-packages","vi":"Mục đích nghiệp vụ","en":"Business purpose","zh":"业务用途","ja":"業務目的"}
+  ,{"key":"workPackages.purpose.General","category":"work-packages","vi":"Công việc chung","en":"General work","zh":"一般工作","ja":"一般業務"}
+  ,{"key":"workPackages.purpose.ProcurementInputPricing","category":"work-packages","vi":"Cung ứng báo giá đầu vào","en":"Procurement input pricing","zh":"采购输入报价","ja":"調達原価見積"}
+  ,{"key":"workPackages.purpose.FinanceCommercialReview","category":"work-packages","vi":"Tài chính rà soát thương mại","en":"Finance commercial review","zh":"财务商务审查","ja":"財務商務レビュー"}
+  ,{"key":"workPackages.purpose.FinanceTenderReview","category":"work-packages","vi":"Tài chính rà soát hồ sơ thầu","en":"Finance tender review","zh":"财务投标审查","ja":"財務入札レビュー"}
+  ,{"key":"workPackages.inputPrice.title","category":"work-packages","vi":"Báo giá đầu vào từ nhà cung cấp / thầu phụ","en":"Supplier / subcontractor input offers","zh":"供应商 / 分包商输入报价","ja":"仕入先 / 下請業者の原価見積"}
+  ,{"key":"workPackages.inputPrice.help","category":"work-packages","vi":"Cung ứng lập và duyệt giá đầu vào trước khi Kinh doanh chốt báo giá đầu ra.","en":"Procurement prepares and approves input prices before Sales finalizes the customer quote.","zh":"采购在销售最终确定客户报价前编制并审批输入价格。","ja":"営業が顧客見積を確定する前に、調達が原価を作成・承認します。"}
+  ,{"key":"workPackages.inputPrice.empty","category":"work-packages","vi":"Chưa có báo giá đầu vào.","en":"No input offer yet.","zh":"暂无输入报价。","ja":"原価見積はまだありません。"}
+  ,{"key":"workPackages.inputPrice.add","category":"work-packages","vi":"Thêm báo giá đầu vào","en":"Add input offer","zh":"添加输入报价","ja":"原価見積を追加"}
+  ,{"key":"workPackages.inputPrice.vendor","category":"work-packages","vi":"Nhà cung cấp / thầu phụ","en":"Supplier / subcontractor","zh":"供应商 / 分包商","ja":"仕入先 / 下請業者"}
+  ,{"key":"workPackages.inputPrice.reference","category":"work-packages","vi":"Số báo giá nhà cung cấp","en":"Supplier offer reference","zh":"供应商报价编号","ja":"仕入先見積番号"}
+  ,{"key":"workPackages.inputPrice.currency","category":"work-packages","vi":"Tiền tệ","en":"Currency","zh":"币种","ja":"通貨"}
+  ,{"key":"workPackages.inputPrice.validUntil","category":"work-packages","vi":"Hiệu lực đến","en":"Valid until","zh":"有效期至","ja":"有効期限"}
+  ,{"key":"workPackages.inputPrice.lines","category":"work-packages","vi":"Chi tiết giá đầu vào","en":"Input price lines","zh":"输入价格明细","ja":"原価明細"}
+  ,{"key":"workPackages.inputPrice.addLine","category":"work-packages","vi":"Thêm dòng","en":"Add line","zh":"添加行","ja":"行を追加"}
+  ,{"key":"workPackages.inputPrice.item","category":"work-packages","vi":"Hạng mục","en":"Item","zh":"项目","ja":"項目"}
+  ,{"key":"workPackages.inputPrice.itemCode","category":"work-packages","vi":"Mã hạng mục","en":"Item code","zh":"项目代码","ja":"項目コード"}
+  ,{"key":"workPackages.inputPrice.description","category":"work-packages","vi":"Mô tả","en":"Description","zh":"说明","ja":"説明"}
+  ,{"key":"workPackages.inputPrice.unit","category":"work-packages","vi":"Đơn vị","en":"Unit","zh":"单位","ja":"単位"}
+  ,{"key":"workPackages.inputPrice.quantity","category":"work-packages","vi":"Khối lượng","en":"Quantity","zh":"数量","ja":"数量"}
+  ,{"key":"workPackages.inputPrice.unitPrice","category":"work-packages","vi":"Đơn giá","en":"Unit price","zh":"单价","ja":"単価"}
+  ,{"key":"workPackages.inputPrice.amount","category":"work-packages","vi":"Thành tiền","en":"Amount","zh":"金额","ja":"金額"}
+  ,{"key":"workPackages.inputPrice.formHelp","category":"work-packages","vi":"Chỉ báo giá đã duyệt và còn hiệu lực mới được dùng cho báo giá khách hàng.","en":"Only an approved, unexpired offer can be used in a customer quote.","zh":"只有已批准且未过期的报价才能用于客户报价。","ja":"承認済みかつ有効な見積のみ顧客見積に利用できます。"}
+  ,{"key":"workPackages.inputPrice.validation","category":"work-packages","vi":"Chọn nhà cung cấp, nhập số báo giá, hiệu lực tương lai và ít nhất một dòng giá hợp lệ.","en":"Choose a vendor and enter a reference, future validity date, and at least one valid price line.","zh":"请选择供应商，并填写报价编号、未来有效期及至少一条有效价格明细。","ja":"仕入先、見積番号、将来の有効期限、有効な明細を1件以上入力してください。"}
+  ,{"key":"workPackages.action.submit","category":"work-packages","vi":"Gửi duyệt","en":"Submit","zh":"提交审批","ja":"申請"}
+  ,{"key":"workPackages.decision.reason","category":"work-packages","vi":"Lý do từ chối","en":"Rejection reason","zh":"拒绝原因","ja":"却下理由"}
+  ,{"key":"workPackages.review.help","category":"work-packages","vi":"Tài chính hoàn tất checklist và một người khác thực hiện phê duyệt độc lập.","en":"Finance completes the checklist and a different person performs the independent approval.","zh":"财务完成检查清单，并由另一人独立审批。","ja":"財務がチェックリストを完了し、別担当者が独立承認します。"}
+  ,{"key":"workPackages.review.contractConditions","category":"work-packages","vi":"Đã rà soát điều kiện hợp đồng","en":"Contract conditions reviewed","zh":"已审查合同条件","ja":"契約条件レビュー済み"}
+  ,{"key":"workPackages.review.guarantees","category":"work-packages","vi":"Đã rà soát bảo lãnh","en":"Guarantees reviewed","zh":"已审查保函","ja":"保証条件レビュー済み"}
+  ,{"key":"workPackages.review.paymentTerms","category":"work-packages","vi":"Đã rà soát điều kiện thanh toán","en":"Payment terms reviewed","zh":"已审查付款条件","ja":"支払条件レビュー済み"}
+  ,{"key":"workPackages.review.financialDossier","category":"work-packages","vi":"Đã rà soát hồ sơ tài chính dự thầu","en":"Tender financial dossier reviewed","zh":"已审查投标财务资料","ja":"入札財務書類レビュー済み"}
+  ,{"key":"workPackages.review.findings","category":"work-packages","vi":"Kết quả rà soát / lưu ý","en":"Review findings / notes","zh":"审查结果 / 备注","ja":"レビュー結果 / 注記"}
+  ,{"key":"workPackages.review.title.FinanceCommercialReview","category":"work-packages","vi":"Rà soát điều kiện hợp đồng và thanh toán","en":"Contract conditions and payment review","zh":"合同条件与付款审查","ja":"契約条件・支払条件レビュー"}
+  ,{"key":"workPackages.review.title.FinanceTenderReview","category":"work-packages","vi":"Rà soát hồ sơ tài chính dự thầu","en":"Tender financial dossier review","zh":"投标财务资料审查","ja":"入札財務書類レビュー"}
+  ,{"key":"workPackages.inputPrice.edit","category":"work-packages","vi":"Sửa báo giá đầu vào","en":"Edit input price offer","zh":"编辑输入报价","ja":"原価見積を編集"}
+  ,{"key":"workPackages.businessStatus.Draft","category":"work-packages","vi":"Bản nháp","en":"Draft","zh":"草稿","ja":"下書き"}
+  ,{"key":"workPackages.businessStatus.Submitted","category":"work-packages","vi":"Chờ duyệt","en":"Submitted","zh":"已提交","ja":"申請済み"}
+  ,{"key":"workPackages.businessStatus.Approved","category":"work-packages","vi":"Đã duyệt","en":"Approved","zh":"已批准","ja":"承認済み"}
+  ,{"key":"workPackages.businessStatus.Rejected","category":"work-packages","vi":"Từ chối","en":"Rejected","zh":"已拒绝","ja":"却下"}
 ]

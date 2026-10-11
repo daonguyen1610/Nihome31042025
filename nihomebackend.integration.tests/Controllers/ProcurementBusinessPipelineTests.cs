@@ -18,10 +18,12 @@ public sealed class ProcurementBusinessPipelineTests : IntegrationTestBase
         var context = await CreatePipelineContextAsync();
         await LoginAsRoleAsync("SUPER_ADMIN");
         var boqKey = Guid.NewGuid().ToString();
+        var upstreamContractId = await CreateSignedUpstreamContractAsync(context.ProjectId);
         var boqCreated = await SendAsync(HttpMethod.Post,
             $"/api/operational-projects/{context.ProjectId}/procurement/boq-revisions",
             new
             {
+                upstreamContractId,
                 currency = "VND",
                 lines = new[]
                 {
@@ -44,6 +46,7 @@ public sealed class ProcurementBusinessPipelineTests : IntegrationTestBase
             $"/api/operational-projects/{context.ProjectId}/procurement/boq-revisions",
             new
             {
+                upstreamContractId,
                 currency = "VND",
                 lines = new[]
                 {
@@ -63,6 +66,7 @@ public sealed class ProcurementBusinessPipelineTests : IntegrationTestBase
             $"/api/operational-projects/{context.ProjectId}/procurement/boq-revisions",
             new
             {
+                upstreamContractId,
                 currency = "VND",
                 lines = new[]
                 {
@@ -215,7 +219,11 @@ public sealed class ProcurementBusinessPipelineTests : IntegrationTestBase
 
         var receiptDetail = await ReadJsonAsync(await Client.GetAsync(
             $"/api/operational-projects/{context.ProjectId}/procurement/receipts/{receiptId}"));
-        receiptDetail.GetProperty("contracts").GetArrayLength().Should().Be(1);
+        // The project also carries the upstream contract that unlocks its
+        // Execution BOQ, so count only the downstream supplier contract.
+        receiptDetail.GetProperty("contracts").EnumerateArray()
+            .Count(item => item.GetProperty("direction").GetString() == "Downstream")
+            .Should().Be(1);
         receiptDetail.GetProperty("lines")[0].GetProperty("materialRequestCode").GetString()
             .Should().Be(requestDraft.GetProperty("code").GetString());
         var warehousePayload = receiptDetail.GetRawText();

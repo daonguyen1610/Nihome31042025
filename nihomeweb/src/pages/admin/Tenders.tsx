@@ -38,6 +38,7 @@ import {
   type CreateTenderRequest,
   type CustomerResponse,
   type DeletionImpactResponse,
+  type OperationalProjectListItemResponse,
   type TenderListItemResponse,
   type TenderListParams,
   type TenderResponse,
@@ -58,6 +59,7 @@ const STATUS_BADGE_STYLES: Record<TenderStatus, string> = {
 const emptyCreate = (): CreateTenderRequest => ({
   name: "",
   customerId: 0,
+  operationalProjectId: null,
   openingDate: null,
   submissionDeadline: "",
   preparerUserId: null,
@@ -139,13 +141,20 @@ const AdminTenders = () => {
 
   // -------- customers for filter + form --------
   const [customers, setCustomers] = useState<CustomerResponse[]>([]);
+  const [projects, setProjects] = useState<OperationalProjectListItemResponse[]>([]);
   const [preparers, setPreparers] = useState<UserListItemResponse[]>([]);
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const { data } = await adminApi.listCustomers({ pageSize: 200 });
-        if (!cancelled) setCustomers(data.items);
+        const [customerResponse, projectResponse] = await Promise.all([
+          adminApi.listCustomers({ pageSize: 200 }),
+          adminApi.listOperationalProjects({ pageSize: 200 }),
+        ]);
+        if (!cancelled) {
+          setCustomers(customerResponse.data.items);
+          setProjects(projectResponse.data.items);
+        }
       } catch {
         /* non-fatal — filter/form dropdowns just stay empty */
       }
@@ -173,6 +182,10 @@ const AdminTenders = () => {
   const [form, setForm] = useState<CreateTenderRequest>(emptyCreate());
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const customerProjects = useMemo(
+    () => projects.filter((project) => project.customerId === form.customerId),
+    [form.customerId, projects],
+  );
   const isEdit = !!editingDetail;
   const editLocked = isEdit && editingDetail!.status !== "Preparing";
 
@@ -191,6 +204,7 @@ const AdminTenders = () => {
       setForm({
         name: data.name,
         customerId: data.customerId,
+        operationalProjectId: data.operationalProjectId ?? null,
         openingDate: data.openingDate ?? null,
         submissionDeadline: data.submissionDeadline,
         preparerUserId: data.preparerUserId ?? null,
@@ -226,6 +240,7 @@ const AdminTenders = () => {
       if (isEdit) {
         await adminApi.updateTender(editingDetail!.id, {
           name: form.name.trim(),
+          operationalProjectId: form.operationalProjectId ?? null,
           openingDate: form.openingDate || null,
           submissionDeadline: form.submissionDeadline,
           preparerUserId: form.preparerUserId ?? null,
@@ -237,6 +252,7 @@ const AdminTenders = () => {
         await adminApi.createTender({
           name: form.name.trim(),
           customerId: form.customerId,
+          operationalProjectId: form.operationalProjectId ?? null,
           openingDate: form.openingDate || null,
           submissionDeadline: form.submissionDeadline,
           preparerUserId: form.preparerUserId ?? null,
@@ -604,10 +620,29 @@ const AdminTenders = () => {
               ) : (
                 <SearchableSelect
                   value={form.customerId ? String(form.customerId) : ""}
-                  onChange={(v) => setForm({ ...form, customerId: Number(v) || 0 })}
+                  onChange={(v) => setForm({ ...form, customerId: Number(v) || 0, operationalProjectId: null })}
                   options={customerOptions}
                   placeholder={t("tenders.form.customerPlaceholder")}
                 />
+              )}
+            </div>
+
+            <div className="space-y-1">
+              <Label>{t("tenders.field.operationalProject")}</Label>
+              <Select
+                value={form.operationalProjectId ? String(form.operationalProjectId) : ""}
+                onValueChange={(value) => setForm({ ...form, operationalProjectId: Number(value) })}
+                disabled={editLocked || !form.customerId}
+              >
+                <SelectTrigger><SelectValue placeholder={t("tenders.form.projectPlaceholder")} /></SelectTrigger>
+                <SelectContent className="max-h-64">
+                  {customerProjects.map((project) => (
+                    <SelectItem key={project.id} value={String(project.id)}>{project.code} · {project.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {form.customerId > 0 && customerProjects.length === 0 && (
+                <p className="text-xs text-muted-foreground">{t("tenders.form.noProject")}</p>
               )}
             </div>
 

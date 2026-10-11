@@ -112,6 +112,22 @@
     "ja": "編集"
   },
   {
+    "key": "common.approve",
+    "category": "common",
+    "vi": "Phê duyệt",
+    "en": "Approve",
+    "zh": "批准",
+    "ja": "承認"
+  },
+  {
+    "key": "common.reject",
+    "category": "common",
+    "vi": "Từ chối",
+    "en": "Reject",
+    "zh": "拒绝",
+    "ja": "却下"
+  },
+  {
     "key": "common.delete",
     "category": "common",
     "vi": "Xoá",

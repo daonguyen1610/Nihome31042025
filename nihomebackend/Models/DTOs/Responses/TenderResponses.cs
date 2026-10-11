@@ -28,6 +28,9 @@ public class TenderResponse
 
     public int CustomerId { get; set; }
     public string CustomerName { get; set; } = string.Empty;
+    public int? OperationalProjectId { get; set; }
+    public string? OperationalProjectCode { get; set; }
+    public string? OperationalProjectName { get; set; }
 
     public DateTime? OpeningDate { get; set; }
     public DateTime SubmissionDeadline { get; set; }

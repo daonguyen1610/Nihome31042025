@@ -1139,6 +1139,15 @@ public sealed class ProcurementService(
 
     private async Task ValidateBoqAsync(int projectId, ProjectBoqRevisionRequest request, CancellationToken ct)
     {
+        var validContract = await db.Contracts.AsNoTracking().AnyAsync(contract =>
+            contract.Id == request.UpstreamContractId &&
+            contract.OperationalProjectId == projectId &&
+            contract.Direction == ContractDirection.Upstream &&
+            contract.SignedDate != null &&
+            contract.Status != ContractStatus.Draft &&
+            contract.Status != ContractStatus.Cancelled, ct);
+        if (!validContract)
+            throw new ProcurementOperationException("Execution BOQ phải gắn với hợp đồng đầu ra đã ký, còn hiệu lực và thuộc đúng Dự án.");
         var codes = request.Lines.Select(item => item.ItemCode.Trim().ToUpperInvariant()).ToList();
         if (codes.Count != codes.Distinct(StringComparer.OrdinalIgnoreCase).Count())
             throw new ProcurementOperationException("Mã hạng mục BOQ phải duy nhất trong mỗi phiên bản.");
@@ -1164,6 +1173,7 @@ public sealed class ProcurementService(
 
     private static void ApplyBoq(ProjectBoqRevision entity, ProjectBoqRevisionRequest request)
     {
+        entity.UpstreamContractId = request.UpstreamContractId;
         entity.Currency = request.Currency.Trim().ToUpperInvariant();
         entity.SourceTenderEstimateRevisionId = request.SourceTenderEstimateRevisionId;
         entity.SourceContractAppendixId = request.SourceContractAppendixId;
@@ -1617,7 +1627,8 @@ public sealed class ProcurementService(
         db.Database.IsRelational() ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct) : null;
 
     private IQueryable<ProjectBoqRevision> BoqQuery() => db.ProjectBoqRevisions.AsNoTracking()
-        .Include(item => item.PreparedBy).Include(item => item.Lines.OrderBy(line => line.SortOrder));
+        .Include(item => item.PreparedBy).Include(item => item.UpstreamContract)
+        .Include(item => item.Lines.OrderBy(line => line.SortOrder));
 
     private IQueryable<ProjectBoqRevision> ApplyBoqListFilters(
         int projectId,
@@ -1660,6 +1671,8 @@ public sealed class ProcurementService(
         {
             Id = item.Id,
             OperationalProjectId = item.OperationalProjectId,
+            UpstreamContractId = item.UpstreamContractId,
+            UpstreamContractNumber = item.UpstreamContract == null ? null : item.UpstreamContract.ContractNumber,
             RevisionNumber = item.RevisionNumber,
             Currency = item.Currency,
             Status = item.Status,
@@ -1732,6 +1745,8 @@ public sealed class ProcurementService(
     {
         Id = item.Id,
         OperationalProjectId = item.OperationalProjectId,
+        UpstreamContractId = item.UpstreamContractId,
+        UpstreamContractNumber = item.UpstreamContract == null ? null : item.UpstreamContract.ContractNumber,
         RevisionNumber = item.RevisionNumber,
         Currency = item.Currency,
         Status = item.Status.ToString(),

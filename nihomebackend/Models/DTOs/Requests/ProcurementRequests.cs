@@ -20,6 +20,9 @@ public sealed class ProjectBoqRevisionListQuery
 
 public sealed class ProjectBoqRevisionRequest : IConcurrencyRequest
 {
+    [Range(1, int.MaxValue)]
+    public int UpstreamContractId { get; set; }
+
     [Required, RegularExpression("^[A-Z]{3}$")]
     public string Currency { get; set; } = "VND";
     [Range(1, int.MaxValue)]

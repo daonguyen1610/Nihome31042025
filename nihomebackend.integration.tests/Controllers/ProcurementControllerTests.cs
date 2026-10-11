@@ -16,9 +16,11 @@ public class ProcurementControllerTests : IntegrationTestBase
     {
         await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "SUPER_ADMIN"));
         var projectId = await CreateProjectAsync();
+        var upstreamContractId = await CreateSignedUpstreamContractAsync(projectId);
 
         var created = await SendAsync(HttpMethod.Post, $"/api/operational-projects/{projectId}/procurement/boq-revisions", new
         {
+            upstreamContractId,
             currency = "VND",
             lines = new[] { new { itemCode = "MAT-001", description = "Concrete", unit = "m3", approvedQuantity = 10m, budgetUnitPrice = 1_000m } },
         });
@@ -75,6 +77,7 @@ public class ProcurementControllerTests : IntegrationTestBase
 
         var updateApproved = await SendAsync(HttpMethod.Put, $"/api/operational-projects/{projectId}/procurement/boq-revisions/{id}", new
         {
+            upstreamContractId,
             currency = "VND",
             rowVersion = approvedJson.GetProperty("rowVersion").GetString(),
             lines = new[] { new { itemCode = "MAT-001", description = "Changed", unit = "m3", approvedQuantity = 20m, budgetUnitPrice = 1_000m } },
@@ -97,6 +100,7 @@ public class ProcurementControllerTests : IntegrationTestBase
                 $"/api/operational-projects/{targetProjectId}/procurement/boq-revisions",
                 new
                 {
+                    upstreamContractId = await CreateSignedUpstreamContractAsync(targetProjectId),
                     currency = "VND",
                     lines = new[] { new { itemCode = code, description = $"Description {code}", unit = "m2", approvedQuantity = quantity, budgetUnitPrice = unitPrice } },
                 });
@@ -156,6 +160,7 @@ public class ProcurementControllerTests : IntegrationTestBase
             $"/api/operational-projects/{projectId}/procurement/boq-revisions",
             new
             {
+                upstreamContractId = await CreateSignedUpstreamContractAsync(projectId),
                 currency = "VND",
                 lines = new[]
                 {
@@ -188,10 +193,12 @@ public class ProcurementControllerTests : IntegrationTestBase
     {
         await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "SUPER_ADMIN"));
         var projectId = await CreateProjectAsync();
+        var upstreamContractId = await CreateSignedUpstreamContractAsync(projectId);
         var created = await SendAsync(HttpMethod.Post,
             $"/api/operational-projects/{projectId}/procurement/boq-revisions",
             new
             {
+                upstreamContractId,
                 currency = "VND",
                 lines = new[]
                 {
@@ -207,6 +214,7 @@ public class ProcurementControllerTests : IntegrationTestBase
             $"/api/operational-projects/{projectId}/procurement/boq-revisions/{id}",
             new
             {
+                upstreamContractId,
                 currency = "VND",
                 rowVersion,
                 lines = new[]
@@ -226,6 +234,7 @@ public class ProcurementControllerTests : IntegrationTestBase
             $"/api/operational-projects/{projectId}/procurement/boq-revisions/{id}",
             new
             {
+                upstreamContractId,
                 currency = "USD",
                 rowVersion,
                 lines = new[]

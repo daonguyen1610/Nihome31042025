@@ -10,6 +10,7 @@ public class CreateTenderRequest
 
     [Required]
     public int CustomerId { get; set; }
+    public int? OperationalProjectId { get; set; }
 
     public DateTime? OpeningDate { get; set; }
 
@@ -36,6 +37,7 @@ public class UpdateTenderRequest
     [Required]
     [StringLength(300, MinimumLength = 1)]
     public string Name { get; set; } = string.Empty;
+    public int? OperationalProjectId { get; set; }
 
     public DateTime? OpeningDate { get; set; }
 

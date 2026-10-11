@@ -9,7 +9,7 @@ using NihomeBackend.Models.Rbac;
 
 namespace NihomeBackend.Services;
 
-public sealed class DepartmentWorkPackageService(
+public sealed partial class DepartmentWorkPackageService(
     AppDbContext db,
     IProjectAccessService projectAccess,
     INotificationService notifications,
@@ -43,6 +43,10 @@ public sealed class DepartmentWorkPackageService(
         if (query.ContractId.HasValue) packages = packages.Where(item => item.ContractId == query.ContractId);
         if (query.SourceOpportunityId.HasValue)
             packages = packages.Where(item => item.SourceOpportunityId == query.SourceOpportunityId);
+        if (query.SourceQuoteId.HasValue) packages = packages.Where(item => item.SourceQuoteId == query.SourceQuoteId);
+        if (query.SourceTenderId.HasValue) packages = packages.Where(item => item.SourceTenderId == query.SourceTenderId);
+        if (!string.IsNullOrWhiteSpace(query.Purpose) && Enum.TryParse<WorkPackagePurpose>(query.Purpose, true, out var purpose))
+            packages = packages.Where(item => item.Purpose == purpose);
         if (query.DepartmentRoleGroupId.HasValue)
             packages = packages.Where(item => item.DepartmentRoleGroupId == query.DepartmentRoleGroupId);
         if (!string.IsNullOrWhiteSpace(query.Status) && Enum.TryParse<WorkPackageStatus>(query.Status, true, out var status))
@@ -115,6 +119,15 @@ public sealed class DepartmentWorkPackageService(
             Departments = departments,
             Users = users,
             KpiDefinitions = definitions,
+            Vendors = await db.Vendors.AsNoTracking().Where(item => item.IsActive)
+                .OrderBy(item => item.CompanyName)
+                .Select(item => new VendorOptionResponse
+                {
+                    Id = item.Id,
+                    Code = item.VendorCode,
+                    Name = item.CompanyName,
+                    Type = item.VendorType.ToString(),
+                }).ToListAsync(ct),
         };
     }
 
@@ -149,14 +162,19 @@ public sealed class DepartmentWorkPackageService(
     {
         if (!Enum.TryParse<WorkPackageKind>(request.Kind, true, out var kind))
             throw Error("Loại nhóm công việc không hợp lệ. Giá trị hợp lệ: Project hoặc Internal.");
+        if (!Enum.TryParse<WorkPackagePurpose>(request.Purpose, true, out var purpose))
+            throw Error("Mục đích nhóm công việc không hợp lệ.");
         ValidateDates(request.PlannedStart, request.PlannedEnd);
         var admin = await IsAdministratorAsync(callerUserId, ct);
         await ValidateDepartmentLeadAsync(request.LeadUserId, request.DepartmentRoleGroupId, ct);
 
         if (kind == WorkPackageKind.Internal)
         {
-            if (request.OperationalProjectId.HasValue || request.ContractId.HasValue || request.SourceOpportunityId.HasValue)
-                throw Error("Công việc nội bộ không được gắn Dự án, Hợp đồng hoặc Cơ hội.");
+            if (purpose != WorkPackagePurpose.General)
+                throw Error("Công việc nội bộ chỉ sử dụng mục đích General.");
+            if (request.OperationalProjectId.HasValue || request.ContractId.HasValue || request.SourceOpportunityId.HasValue ||
+                request.SourceQuoteId.HasValue || request.SourceTenderId.HasValue)
+                throw Error("Công việc nội bộ không được gắn Dự án, Hợp đồng, Cơ hội, Báo giá hoặc Gói thầu.");
             var callerGroup = await UserRoleGroupIdAsync(callerUserId, ct);
             if (!admin && (callerGroup != request.DepartmentRoleGroupId || request.LeadUserId != callerUserId))
                 throw Error("Công việc nội bộ phải do người chủ trì của chính phòng ban tạo.");
@@ -168,6 +186,7 @@ public sealed class DepartmentWorkPackageService(
             if (!request.OperationalProjectId.HasValue)
                 throw Error("Nhóm công việc dự án phải chọn Dự án vận hành.");
             await ValidateProjectScopeAsync(request, callerUserId, admin, ct);
+            await ValidatePurposeAsync(request, purpose, ct);
         }
 
         var now = DateTime.UtcNow;
@@ -175,11 +194,14 @@ public sealed class DepartmentWorkPackageService(
         {
             Code = $"WP-{now:yyyy}-{Guid.NewGuid():N}"[..20].ToUpperInvariant(),
             Kind = kind,
+            Purpose = purpose,
             Name = request.Name.Trim(),
             Description = TrimOrNull(request.Description),
             OperationalProjectId = request.OperationalProjectId,
             ContractId = request.ContractId,
             SourceOpportunityId = request.SourceOpportunityId,
+            SourceQuoteId = request.SourceQuoteId,
+            SourceTenderId = request.SourceTenderId,
             DepartmentRoleGroupId = request.DepartmentRoleGroupId,
             LeadUserId = request.LeadUserId,
             PlannedStart = request.PlannedStart?.ToUniversalTime(),
@@ -441,6 +463,8 @@ public sealed class DepartmentWorkPackageService(
         .Include(item => item.OperationalProject)
         .Include(item => item.Contract)
         .Include(item => item.SourceOpportunity)
+        .Include(item => item.SourceQuote)
+        .Include(item => item.SourceTender)
         .Include(item => item.DepartmentRoleGroup)
         .Include(item => item.ParticipantGroups).ThenInclude(participant => participant.RoleGroup)
         .Include(item => item.LeadUser)
@@ -449,7 +473,55 @@ public sealed class DepartmentWorkPackageService(
         .Include(item => item.Tasks).ThenInclude(task => task.KpiDefinition)
         .Include(item => item.Tasks).ThenInclude(task => task.DepartmentRoleGroup)
         .Include(item => item.Tasks).ThenInclude(task => task.CcUsers)
-        .Include(item => item.Tasks).ThenInclude(task => task.Predecessors);
+        .Include(item => item.Tasks).ThenInclude(task => task.Predecessors)
+        .Include(item => item.InputPriceOffers).ThenInclude(offer => offer.Vendor)
+        .Include(item => item.InputPriceOffers).ThenInclude(offer => offer.Lines)
+        .Include(item => item.FinanceReview).ThenInclude(review => review!.ReviewedByUser);
+
+    private async Task ValidatePurposeAsync(
+        CreateDepartmentWorkPackageRequest request,
+        WorkPackagePurpose purpose,
+        CancellationToken ct)
+    {
+        var groupCode = await db.RoleGroups.AsNoTracking()
+            .Where(group => group.Id == request.DepartmentRoleGroupId)
+            .Select(group => group.Code)
+            .SingleAsync(ct);
+        var expectedGroup = purpose switch
+        {
+            WorkPackagePurpose.ProcurementInputPricing => "PROCUREMENT",
+            WorkPackagePurpose.FinanceCommercialReview or WorkPackagePurpose.FinanceTenderReview => "FINANCE",
+            _ => null,
+        };
+        if (expectedGroup is not null && !string.Equals(groupCode, expectedGroup, StringComparison.OrdinalIgnoreCase))
+            throw Error("Mục đích nghiệp vụ không phù hợp với phòng ban nhận việc.");
+        if ((purpose is WorkPackagePurpose.ProcurementInputPricing or WorkPackagePurpose.FinanceCommercialReview or WorkPackagePurpose.FinanceTenderReview) &&
+            request.ContractId.HasValue)
+            throw Error("Nhóm công việc tiền hợp đồng không được gắn hợp đồng thực hiện.");
+
+        if (request.SourceQuoteId.HasValue)
+        {
+            var quote = await db.Quotes.AsNoTracking().Where(item => item.Id == request.SourceQuoteId)
+                .Select(item => new { item.OperationalProjectId, item.OpportunityId }).SingleOrDefaultAsync(ct)
+                ?? throw Error("Báo giá nguồn không tồn tại.");
+            if (quote.OperationalProjectId != request.OperationalProjectId ||
+                request.SourceOpportunityId.HasValue && quote.OpportunityId != request.SourceOpportunityId)
+                throw Error("Báo giá nguồn phải thuộc đúng Dự án và Cơ hội của nhóm công việc.");
+        }
+        if (request.SourceTenderId.HasValue)
+        {
+            var tenderProjectId = await db.Tenders.AsNoTracking().Where(item => item.Id == request.SourceTenderId)
+                .Select(item => item.OperationalProjectId).SingleOrDefaultAsync(ct);
+            if (!tenderProjectId.HasValue || tenderProjectId != request.OperationalProjectId)
+                throw Error("Gói thầu nguồn phải thuộc đúng Dự án của nhóm công việc.");
+        }
+        if (purpose == WorkPackagePurpose.FinanceCommercialReview && !request.SourceQuoteId.HasValue)
+            throw Error("Rà soát thương mại phải gắn với một Báo giá.");
+        if (purpose == WorkPackagePurpose.FinanceTenderReview && !request.SourceTenderId.HasValue)
+            throw Error("Rà soát hồ sơ tài chính dự thầu phải gắn với một Gói thầu.");
+        if (purpose == WorkPackagePurpose.ProcurementInputPricing && !request.SourceOpportunityId.HasValue)
+            throw Error("Yêu cầu giá đầu vào phải gắn với Cơ hội của Dự án.");
+    }
 
     private async Task ValidateProjectScopeAsync(
         CreateDepartmentWorkPackageRequest request,
@@ -744,6 +816,7 @@ public sealed class DepartmentWorkPackageService(
             Id = item.Id,
             Code = item.Code,
             Kind = item.Kind.ToString(),
+            Purpose = item.Purpose.ToString(),
             Name = item.Name,
             Description = item.Description,
             OperationalProjectId = item.OperationalProjectId,
@@ -753,6 +826,10 @@ public sealed class DepartmentWorkPackageService(
             ContractNumber = item.Contract?.ContractNumber,
             SourceOpportunityId = item.SourceOpportunityId,
             SourceOpportunityName = item.SourceOpportunity?.Name,
+            SourceQuoteId = item.SourceQuoteId,
+            SourceQuoteCode = item.SourceQuote?.Code,
+            SourceTenderId = item.SourceTenderId,
+            SourceTenderCode = item.SourceTender?.Code,
             DepartmentRoleGroupId = item.DepartmentRoleGroupId,
             DepartmentCode = item.DepartmentRoleGroup.Code,
             DepartmentLabelKey = item.DepartmentRoleGroup.LabelKey,
@@ -781,6 +858,9 @@ public sealed class DepartmentWorkPackageService(
             RowVersion = CrmConcurrency.Encode(item.RowVersion),
             Tasks = item.Tasks.OrderBy(task => task.WbsCode).ThenBy(task => task.Id)
                 .Select(task => MapTask(task, callerUserId, admin, item.LeadUserId)).ToList(),
+            InputPriceOffers = item.InputPriceOffers.OrderByDescending(offer => offer.UpdatedAt)
+                .Select(MapInputPriceOffer).ToList(),
+            FinanceReview = item.FinanceReview is null ? null : MapFinanceReview(item.FinanceReview),
         };
     }
 
