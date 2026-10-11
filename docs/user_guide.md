@@ -458,7 +458,8 @@ of an empty list and links to the matching catalog page. That page opens the
 create dialog and shows **Back to the quote** until the revision is approved;
 the link returns to the same quote form. Users without catalog permission are
 asked to contact a QS or the sales manager. A BOQ quotation can still be
-entered manually without a catalog.
+entered manually without a catalog only for a quote-specific exception;
+reusable BOQ data belongs in the BOQ catalog.
 
 For a BOQ quotation, either select an active BOQ catalog and pricing date or add
 rows manually. Applying an Approved effective BOQ revision replaces the current
@@ -466,11 +467,13 @@ rows after confirmation, copies its items into the quote, and retains catalog,
 revision, and date provenance. The copied name, unit, quantity, and unit price
 remain editable without changing the approved catalog revision; the quote marks
 this source as an editable catalog reference rather than an exact catalog price.
-BOQ quantities support up to four decimal places and unit prices up to two. To paste
-multiple Excel rows, copy columns in the order
-`[optional code] / item name / unit / quantity / unit price`, open **Paste from
-Excel**, paste with `Cmd+V` or `Ctrl+V`, review any invalid row numbers, and
-confirm. This does not require browser clipboard permission and accepts common
+BOQ quantities support up to four decimal places and unit prices up to two. To
+add a small number of quote-specific exception rows from the clipboard, copy
+columns in the order `[optional code] / item name / unit / quantity / unit
+price`, open **Quick add from clipboard**, paste with `Cmd+V` or `Ctrl+V`,
+review any invalid row numbers, and confirm. This action does not import a
+workbook or update the catalog. It does not require browser clipboard permission
+and accepts common
 Vietnamese and English number formats. An ambiguous quantity with one separator
 and exactly three following digits, such as `1.234`, is rejected; use `1234` for
 a whole number or `1.2340` for a decimal. The form previews each calculation basis and the
