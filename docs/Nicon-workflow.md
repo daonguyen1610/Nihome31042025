@@ -98,7 +98,9 @@ Kinh doanh chuẩn bị hồ sơ dự thầu (gói thầu đã gắn Dự án v�
 ```
 
 Hai hồ sơ dùng chung checklist và chung nguyên tắc "người lập không tự duyệt".
-Hồ sơ đã gửi duyệt hoặc đã duyệt thì không sửa được nữa.
+Hồ sơ đã gửi duyệt hoặc đã duyệt thì không sửa được nữa. Hồ sơ thương mại gắn
+với phiên bản báo giá đã rà soát: báo giá thay đổi giá trị làm tăng phiên bản và
+quay lại `Draft`, nên Tài chính phải rà soát lại trước khi gửi khách hàng.
 
 ## 3. Các đường vào dự án
 

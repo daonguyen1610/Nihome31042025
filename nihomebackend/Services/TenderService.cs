@@ -280,7 +280,11 @@ public class TenderService(
             entity.SubmissionDeadline = request.SubmissionDeadline;
             entity.PreparerUserId = request.PreparerUserId;
             entity.InfoSource = TrimOrNull(request.InfoSource);
-            entity.OperationalProjectId = request.OperationalProjectId;
+            // An omitted field must not unlink the shared project: submission and
+            // the Finance – Accounting dossier review both depend on the link, and
+            // older clients do not send it on every save.
+            if (request.OperationalProjectId is > 0)
+                entity.OperationalProjectId = request.OperationalProjectId;
         }
         entity.Note = TrimOrNull(request.Note);
         entity.UpdatedByUserId = callerUserId;

@@ -60,6 +60,29 @@ public sealed class PrecontractCrossDepartmentControlsTests(NihomeWebApplication
         offer.GetProperty("status").GetString().Should().Be("Draft");
         offer.GetProperty("grandTotal").GetDecimal().Should().Be(195_523_200m);
 
+        // Editing a Draft offer in place must survive the unique (offer, item
+        // code) index on the line table when the item codes stay the same: the
+        // service replaces the whole line set on every update.
+        offer = await WriteAsync(HttpMethod.Put, $"{offerPath}/{offerId}", new
+        {
+            vendorId = scope.VendorId,
+            supplierReference = "BG-DIEN-2026-01",
+            currency = "VND",
+            validUntil = DateTime.UtcNow.AddDays(30),
+            note = "Bổ sung khối lượng dự phòng.",
+            rowVersion = Version(offer),
+            lines = new[]
+            {
+                new { itemCode = "MEP-CABLE-01", description = "Cáp điện Cu/XLPE 4x25mm2", unit = "m",
+                    quantity = 320m, unitPrice = 415_000m, vatPercent = 8m, sortOrder = 0 },
+                new { itemCode = "MEP-TRAY-01", description = "Máng cáp thép mạ kẽm 300x100", unit = "m",
+                    quantity = 180m, unitPrice = 268_000m, vatPercent = 8m, sortOrder = 0 },
+            },
+        });
+        offer.GetProperty("status").GetString().Should().Be("Draft");
+        offer.GetProperty("lines").GetArrayLength().Should().Be(2);
+        offer.GetProperty("grandTotal").GetDecimal().Should().Be(195_523_200m);
+
         offer = await MoveAsync($"{offerPath}/{offerId}", offer, "submit");
         offer.GetProperty("status").GetString().Should().Be("Submitted");
 
@@ -180,6 +203,95 @@ public sealed class PrecontractCrossDepartmentControlsTests(NihomeWebApplication
         sent.GetProperty("status").GetString().Should().Be("SentToCustomer");
         (await WithDbAsync(db => db.Quotes.AsNoTracking().SingleAsync(item => item.Id == quoteId)))
             .SentAt.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task TenderUpdate_KeepsSharedProjectWhenFieldOmitted()
+    {
+        var scope = await SeedScopeAsync();
+        await LoginAsync("SALES_MANAGER");
+        var tender = await PostAsync("/api/tenders", new
+        {
+            name = "Gói thầu cơ điện nhà máy cơ khí",
+            customerId = scope.CustomerId,
+            operationalProjectId = scope.ProjectId,
+            submissionDeadline = DateTime.UtcNow.AddDays(14),
+        });
+        var tenderId = Id(tender);
+
+        // A later save that omits the project must not silently unlink it: both
+        // the submission gate and the Finance dossier review depend on the link.
+        var updated = await WriteAsync(HttpMethod.Put, $"/api/tenders/{tenderId}", new
+        {
+            name = tender.GetProperty("name").GetString(),
+            submissionDeadline = DateTime.UtcNow.AddDays(21),
+            note = "Dời hạn nộp theo thông báo của chủ đầu tư.",
+        });
+        updated.GetProperty("operationalProjectId").GetInt32().Should().Be(scope.ProjectId);
+        (await WithDbAsync(db => db.Tenders.AsNoTracking().SingleAsync(item => item.Id == tenderId)))
+            .OperationalProjectId.Should().Be(scope.ProjectId);
+    }
+
+    [Fact]
+    public async Task QuoteSend_RequiresFreshFinanceReviewAfterMaterialChange()
+    {
+        var scope = await SeedScopeAsync();
+        await LoginAsync("SALES_MANAGER");
+        var quoteId = await CreateQuoteAsync(scope);
+        await MoveQuoteAsync(quoteId, "submit");
+        await MoveQuoteAsync(quoteId, "approve");
+
+        // Finance – Accounting releases the review for the quote as it stands now.
+        var package = await PostAsync("/api/work-packages", new
+        {
+            kind = "Project",
+            purpose = "FinanceCommercialReview",
+            name = "Rà soát thương mại báo giá cơ điện nhà máy",
+            operationalProjectId = scope.ProjectId,
+            sourceOpportunityId = scope.OpportunityId,
+            sourceQuoteId = quoteId,
+            departmentRoleGroupId = scope.FinanceGroupId,
+            leadUserId = scope.AccountantUserId,
+        });
+        var reviewPath = $"/api/work-packages/{Id(package)}/finance-review";
+        await LoginAsync("ACCOUNTANT");
+        var review = await WriteAsync(HttpMethod.Put, reviewPath, new
+        {
+            contractConditionsReviewed = true,
+            guaranteesReviewed = true,
+            paymentTermsReviewed = true,
+            financialDossierReviewed = false,
+            findings = "Điều kiện thanh toán và bảo lãnh đã đối chiếu.",
+        });
+        review = await MoveAsync(reviewPath, review, "submit");
+        await LoginAsync("SUPER_ADMIN");
+        await PostAsync($"{reviewPath}/decision", new { approved = true, rowVersion = Version(review) });
+
+        // Sales then changes the price, which re-versions the quote and sends it
+        // back to Draft for a fresh internal approval.
+        await LoginAsync("SALES_MANAGER");
+        var versioned = await WriteAsync(HttpMethod.Put, $"/api/quotes/{quoteId}", new
+        {
+            rowVersion = await VersionAsync($"/api/quotes/{quoteId}"),
+            discountPercent = 5m,
+            vatPercent = 8m,
+            items = new[]
+            {
+                new { itemCode = "MEP-CABLE-01", name = "Cáp điện Cu/XLPE 4x25mm2", unit = "m",
+                    quantity = 320m, unitPrice = 480_000m },
+            },
+        });
+        versioned.GetProperty("version").GetInt32().Should().Be(2);
+        versioned.GetProperty("status").GetString().Should().Be("Draft");
+        await MoveQuoteAsync(quoteId, "submit");
+        await MoveQuoteAsync(quoteId, "approve");
+
+        // The review approved version 1 only, so version 2 cannot reach the
+        // customer until Finance – Accounting reviews the changed terms too.
+        var blocked = await SendQuoteAsync(quoteId);
+        blocked.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await blocked.Content.ReadAsStringAsync()).Should().Contain("rà soát lại");
+        (await ReadAsync($"/api/quotes/{quoteId}")).GetProperty("status").GetString().Should().Be("Approved");
     }
 
     [Fact]

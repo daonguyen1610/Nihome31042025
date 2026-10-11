@@ -1955,6 +1955,9 @@ namespace nihomebackend.Migrations
                     b.Property<int?>("ReviewedByUserId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("ReviewedQuoteVersion")
+                        .HasColumnType("int");
+
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .IsRequired()
