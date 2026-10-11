@@ -41,6 +41,7 @@ For every non-trivial task:
 6. Review the final diff for scope, security, compatibility, and accidental changes.
 7. Update documentation and seed data when required. The Seed data must quality, the data is crucial to reflect the business flow, as well as get the real context when look at the system. The name must be meaningful, and reflect to the business of Nicon.
 8. Commit the completed change using the Git rules below.
+9. Avoid run the full test suite, which takes a lot of time to complete. Only focus on the relevant test to confirm.
 
 Do not declare work complete when required validation is skipped. If a check cannot run, state why and identify the risk.
 
