@@ -18,6 +18,7 @@ const exportPdfLabel = /Xuất PDF|Export PDF|导出 PDF|PDF.*出力/i;
 async function createSurvey(
   api: APIRequestContext,
   authHeader: { Authorization: string },
+  operationalProjectIdOverride?: number,
 ) {
   const suffix = uid();
   const projectsResponse = await api.get("/api/operational-projects?page=1&pageSize=100", {
@@ -26,7 +27,8 @@ async function createSurvey(
   expect(projectsResponse.status(), await projectsResponse.text()).toBe(200);
   const projects = (await projectsResponse.json()) as { items: Array<{ id: number }> };
   expect(projects.items.length, "Survey Media E2E requires a seeded Operational Project").toBeGreaterThan(0);
-  const operationalProjectId = [...projects.items].sort((left, right) => left.id - right.id)[0].id;
+  const operationalProjectId = operationalProjectIdOverride
+    ?? [...projects.items].sort((left, right) => left.id - right.id)[0].id;
 
   const location = `E2E Survey Media ${suffix}`;
   const response = await api.post("/api/surveys", {
@@ -293,7 +295,13 @@ test.describe.serial("NIH-101 — Survey Media browser flow", () => {
   }) => {
     const adminToken = await loginAs(TEST_USERS.superAdmin);
     const authHeader = { Authorization: `Bearer ${adminToken}` };
-    const survey = await createSurvey(api, authHeader);
+    const pmToken = await loginAs(TEST_USERS.pm);
+    const pmHeaders = { Authorization: `Bearer ${pmToken}` };
+    const pmProjectsResponse = await api.get("/api/operational-projects?page=1&pageSize=100", { headers: pmHeaders });
+    expect(pmProjectsResponse.status(), await pmProjectsResponse.text()).toBe(200);
+    const pmProjects = await pmProjectsResponse.json() as { items: Array<{ id: number }> };
+    expect(pmProjects.items.length, "PM needs an accessible project for the view-only survey test").toBeGreaterThan(0);
+    const survey = await createSurvey(api, authHeader, pmProjects.items[0].id);
     const fileName = `view-only-${uid()}.png`;
     const upload = await api.post(`/api/surveys/${survey.id}/media`, {
       headers: authHeader,

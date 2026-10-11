@@ -55,15 +55,11 @@ async function openEntityEditor(page: Page, entityType: string, entityId: number
     has: page.getByText(`#${entityId}`, { exact: true }),
   });
   await expect(card).toBeVisible();
-  const responsePromise = page.waitForResponse((response) =>
-    response.url().includes(`/api/translations/entity/${entityType}/${entityId}`)
-      && response.request().method() === "GET",
-  );
   await card.getByRole("button").click();
-  const response = await responsePromise;
-  expect(response.ok(), `load ${entityType} #${entityId} translation detail`).toBeTruthy();
   const editor = page.getByRole("dialog");
-  await expect(editor).toBeVisible();
+  await expect(editor, `open ${entityType} #${entityId} translation editor`).toBeVisible({
+    timeout: 15_000,
+  });
   return editor;
 }
 

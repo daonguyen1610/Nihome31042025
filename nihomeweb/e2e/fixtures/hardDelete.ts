@@ -1,4 +1,4 @@
-import { expect, type APIRequestContext } from "@playwright/test";
+import { expect, type APIRequestContext, type APIResponse } from "@playwright/test";
 
 interface DeletionImpact {
   planToken: string;
@@ -21,24 +21,37 @@ export async function hardDeleteBusinessRoot(
   headers: { Authorization: string },
   resourcePath: string,
 ) {
-  const detailResponse = await api.get(resourcePath, { headers });
-  if (detailResponse.status() === 404) return;
-  expect(detailResponse.status(), `read ${resourcePath} before cleanup`).toBe(200);
+  let deleteResponse: APIResponse | undefined;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    const detailResponse = await api.get(resourcePath, { headers });
+    if (detailResponse.status() === 404) return;
+    expect(detailResponse.status(), `read ${resourcePath} before cleanup`).toBe(200);
 
-  const impactResponse = await api.get(`${resourcePath}/deletion-impact`, { headers });
-  expect(impactResponse.status(), `preview ${resourcePath} cleanup`).toBe(200);
+    const impactResponse = await api.get(`${resourcePath}/deletion-impact`, { headers });
+    expect(impactResponse.status(), `preview ${resourcePath} cleanup`).toBe(200);
 
-  const detail = await detailResponse.json() as ResourceDetail;
-  const impact = await impactResponse.json() as DeletionImpact;
-  const deleteResponse = await api.delete(resourcePath, {
-    headers,
-    data: {
-      planToken: impact.planToken,
-      confirmation: impact.requiredConfirmation,
-      rowVersion: detail.rowVersion,
-    },
-  });
-  expect([202, 204], await deleteResponse.text()).toContain(deleteResponse.status());
+    const detail = await detailResponse.json() as ResourceDetail;
+    const impact = await impactResponse.json() as DeletionImpact;
+    deleteResponse = await api.delete(resourcePath, {
+      headers,
+      data: {
+        planToken: impact.planToken,
+        confirmation: impact.requiredConfirmation,
+        rowVersion: detail.rowVersion,
+      },
+    });
+    if ([202, 204].includes(deleteResponse.status())) break;
+
+    const errorBody = await deleteResponse.text();
+    const isTransient = errorBody.includes("transient failure");
+    if (!isTransient || attempt === 3) {
+      expect([202, 204], errorBody).toContain(deleteResponse.status());
+    }
+    await new Promise((resolve) => setTimeout(resolve, attempt * 250));
+  }
+
+  expect(deleteResponse, `delete ${resourcePath}`).toBeDefined();
+  if (!deleteResponse) return;
   if (deleteResponse.status() === 204) return;
 
   const acceptedOperation = await deleteResponse.json() as HardDeleteOperation;

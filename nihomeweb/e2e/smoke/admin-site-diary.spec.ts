@@ -76,7 +76,9 @@ test.describe("NIH-142 — Site Diary (real-user flow)", () => {
           r.request().method() === "POST" &&
           r.status() === 201,
       ),
-      page.getByTestId("diary-new-save").click({ force: true }),
+      // Not forced: the dialog animates in, so a forced click can fire at the
+      // pre-animation coordinates, miss the button and time the POST out.
+      page.getByTestId("diary-new-save").click(),
     ]);
     await page.waitForResponse(
       (r) => r.url().includes("/api/site-diaries?") && r.request().method() === "GET",

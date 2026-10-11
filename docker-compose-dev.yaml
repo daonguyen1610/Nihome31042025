@@ -1,12 +1,9 @@
 # Development overlay with a local mailbox. Running
-#   docker compose -f docker-compose-dev.yaml up -d
-# starts every service from docker-compose.yaml plus the non-relaying
-# `smtpSink`, and re-points the backend email settings at it, so a browser run
-# can click a real send without emailing a customer.
+#   docker compose -f docker-compose.yaml -f docker-compose-dev.yaml up -d
+# starts the base services plus the non-relaying `smtpSink`, and re-points the
+# backend email settings at it, so a browser run can click a real send without
+# emailing a customer.
 # Plain `docker compose up -d` keeps the configured mail server.
-include:
-  - docker-compose.yaml
-
 services:
   nihomeBackend:
     depends_on:

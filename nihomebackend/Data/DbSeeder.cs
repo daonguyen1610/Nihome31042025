@@ -219,6 +219,12 @@ public static class DbSeeder
         ("ACCOUNTANT",      "0911000007", "Nguyễn Thùy Linh", "thuy.linh.accounting@nihome.vn", "Accountant Tester",    "accountant.test@nihome.vn"),
         ("WAREHOUSE",       "0911000008", "Trịnh Văn Sơn",    "van.son.warehouse@nihome.vn",   "Warehouse Tester",     "warehouse.test@nihome.vn"),
         ("BGD",             "0911000009", "Phan Anh Dũng",    "anh.dung.bgd@nihome.vn",        "BGD Tester",           "bgd.test@nihome.vn"),
+        // Cung ứng needs two officers: one records supplier offers, a different
+        // one chairs the work package and decides them. With a single
+        // procurement account the four-eyes control cannot be exercised by two
+        // people, so the demo data contradicted the business rule. Appended last
+        // so existing seeded accounts keep their identifiers.
+        ("PROCUREMENT",     "0911000017", "Lý Thanh Tùng",    "thanh.tung.procurement@nihome.vn", null,                null),
     ];
 
     private static void SeedBusinessRoleUsers(AppDbContext db)

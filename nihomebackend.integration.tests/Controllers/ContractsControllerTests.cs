@@ -171,6 +171,97 @@ public class ContractsControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task List_AsProjectMember_ReadsTheRequestedProjectsContractsOnly()
+    {
+        // The procurement officer holds plain crm.contracts.view (own rows
+        // only) but must read the signed upstream contract of the project they
+        // work on when creating its execution BOQ.
+        await AuthTestHelper.AuthenticateAsync(
+            Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "SUPER_ADMIN"));
+        var memberCustomerId = await CreateCustomerAsync();
+        var otherCustomerId = await CreateCustomerAsync();
+        var memberProjectId = await WithDbAsync(db => db.OperationalProjects
+            .Where(project => project.CustomerId == memberCustomerId)
+            .Select(project => project.Id)
+            .SingleAsync());
+        var otherProjectId = await WithDbAsync(db => db.OperationalProjects
+            .Where(project => project.CustomerId == otherCustomerId)
+            .Select(project => project.Id)
+            .SingleAsync());
+
+        var memberContractId = await CreateProjectContractAsync(memberCustomerId, memberProjectId);
+        var otherContractId = await CreateProjectContractAsync(otherCustomerId, otherProjectId);
+
+        var memberPhone = await WithDbAsync(async db =>
+        {
+            var adminId = await db.Users
+                .Where(item => item.RoleEntity != null && item.RoleEntity.Code == "SUPER_ADMIN")
+                .Select(item => item.Id)
+                .FirstAsync();
+            var member = await db.Users
+                .Where(item => item.RoleEntity != null && item.RoleEntity.Code == "PROCUREMENT" && item.IsActive)
+                .Select(item => new { item.Id, item.PhoneNumber })
+                .FirstAsync();
+            db.OperationalProjectMembers.Add(new OperationalProjectMember
+            {
+                OperationalProjectId = memberProjectId,
+                UserId = member.Id,
+                Position = "Procurement",
+                StartedAt = DateTime.UtcNow,
+                CreatedByUserId = adminId,
+                UpdatedByUserId = adminId,
+            });
+            await db.SaveChangesAsync();
+            return member.PhoneNumber;
+        });
+
+        await AuthTestHelper.AuthenticateAsync(
+            Client,
+            client => AuthTestHelper.LoginAsync(client, memberPhone, TestDataSeeder.DefaultPassword));
+
+        var scoped = await Client.GetAsync($"/api/contracts?operationalProjectId={memberProjectId}");
+        scoped.StatusCode.Should().Be(HttpStatusCode.OK);
+        var scopedItems = (await ReadJsonAsync(scoped)).GetProperty("items").EnumerateArray()
+            .Select(item => item.GetProperty("id").GetInt32())
+            .ToList();
+        scopedItems.Should().Contain(memberContractId);
+        scopedItems.Should().NotContain(otherContractId);
+
+        // Membership only widens the read for the project the caller names.
+        var otherScoped = await Client.GetAsync($"/api/contracts?operationalProjectId={otherProjectId}");
+        otherScoped.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await ReadJsonAsync(otherScoped)).GetProperty("items").EnumerateArray()
+            .Should().NotContain(item => item.GetProperty("id").GetInt32() == otherContractId);
+
+        var unscoped = await Client.GetAsync("/api/contracts");
+        unscoped.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await ReadJsonAsync(unscoped)).GetProperty("items").EnumerateArray()
+            .Should().NotContain(item => item.GetProperty("id").GetInt32() == memberContractId);
+
+        (await Client.GetAsync($"/api/contracts/{memberContractId}")).StatusCode
+            .Should().Be(HttpStatusCode.OK);
+        (await Client.GetAsync($"/api/contracts/{otherContractId}")).StatusCode
+            .Should().Be(HttpStatusCode.NotFound);
+    }
+
+    private async Task<int> CreateProjectContractAsync(int customerId, int operationalProjectId)
+    {
+        var create = await Client.PostAsJsonAsync("/api/contracts", new
+        {
+            customerId,
+            operationalProjectId,
+            direction = "Upstream",
+            quoteId = _approvedQuoteIds[customerId],
+            type = "DesignAndBuild",
+            status = "Draft",
+            value = 150_000_000,
+        });
+        create.StatusCode.Should().Be(HttpStatusCode.Created, await create.Content.ReadAsStringAsync());
+        return (await ReadJsonAsync(create)).GetProperty("id").GetInt32();
+    }
+
+    [Fact]
     public async Task DownstreamPortfolio_AsAccountant_IsScopedAndReadOnly()
     {
         await AuthTestHelper.AuthenticateAsync(

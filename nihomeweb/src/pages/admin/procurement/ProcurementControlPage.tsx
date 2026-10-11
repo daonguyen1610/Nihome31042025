@@ -274,7 +274,7 @@ const ProcurementControlPage = () => {
           ? adminApi.listKpiEligibleUsers().catch(() => ({ data: [] as KpiUserOptionResponse[] }))
           : Promise.resolve({ data: [] as KpiUserOptionResponse[] }),
         canReadContracts
-          ? adminApi.listContracts({ page: 1, pageSize: 200 }).catch(() => null)
+          ? adminApi.listContracts({ page: 1, pageSize: 200, operationalProjectId: projectId }).catch(() => null)
           : Promise.resolve(null),
       ]);
       if (projectIdRef.current !== requestedProjectId) return;

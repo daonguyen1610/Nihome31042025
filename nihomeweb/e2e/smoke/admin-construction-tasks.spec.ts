@@ -92,7 +92,12 @@ test.describe("NIH-141 — Construction Gantt (real-user flow)", () => {
         r.request().method() === "GET",
       { timeout: 15_000 },
     );
-    await page.getByTestId("construction-new-save").click({ force: true });
+    // Click without forcing: the create dialog animates in, and a forced click
+    // dispatches at the pre-animation coordinates and can miss the button,
+    // leaving the dialog open and the POST never sent. Playwright's normal
+    // actionability wait retries until the button is stable and receives the
+    // event.
+    await page.getByTestId("construction-new-save").click();
     await postResponse;
     await getResponse;
     // The row itself is clickable now (no dedicated "Xem chi tiết"
@@ -109,8 +114,9 @@ test.describe("NIH-141 — Construction Gantt (real-user flow)", () => {
     await page.locator('input[type="date"]').nth(2).fill(today); // actualStart
     await page.locator('input[type="date"]').nth(3).fill(plusDays(1)); // actualEnd
     await page.getByTestId("construction-progress-slider").fill("100");
-    // The save button lives at the bottom of a tall sheet — scroll it
-    // into view first so Playwright's viewport gate doesn't refuse.
+    // The save button lives at the bottom of a tall sheet. Scroll it into view
+    // and click normally: the sheet animates in, so a forced click can fire at
+    // the pre-animation coordinates and never reach the button.
     await page.getByTestId("construction-detail-save").scrollIntoViewIfNeeded();
     await Promise.all([
       page.waitForResponse(
@@ -119,7 +125,7 @@ test.describe("NIH-141 — Construction Gantt (real-user flow)", () => {
           r.request().method() === "PUT" &&
           r.status() === 200,
       ),
-      page.getByTestId("construction-detail-save").click({ force: true }),
+      page.getByTestId("construction-detail-save").click(),
     ]);
 
     // API sanity — status is Completed on the row we just edited.

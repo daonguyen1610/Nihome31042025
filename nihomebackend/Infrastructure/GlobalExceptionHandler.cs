@@ -23,8 +23,17 @@ public sealed class GlobalExceptionHandler(
         Exception exception,
         CancellationToken cancellationToken)
     {
-        // A client closing the connection is normal traffic, not a bug.
-        if (exception is OperationCanceledException && httpContext.RequestAborted.IsCancellationRequested)
+        // A client closing the connection is normal traffic, not a bug. The
+        // client is already gone, so no response is written. Cancellation does
+        // not always arrive as an OperationCanceledException: when a client
+        // supersedes an in-flight query, EF Core surfaces the aborted SQL batch
+        // as an InvalidOperationException ("transient failure") wrapping
+        // SqlException 3980 "Operation cancelled by user". Matching only the
+        // cancellation exception type let that shape fall through to the
+        // InvalidOperationException mapping below and answer a departed client
+        // with 400 "Invalid operation.", which the SPA then rendered as a page
+        // error over still-valid content.
+        if (httpContext.RequestAborted.IsCancellationRequested && IsClientAbort(exception))
         {
             return true;
         }
@@ -168,6 +177,33 @@ public sealed class GlobalExceptionHandler(
                 "An unexpected error occurred.",
                 "The server encountered an error while handling the request."),
         };
+
+    /// <summary>
+    /// True when the failure is the request's own cancellation rather than a
+    /// domain error. Accepts every shape the stack produces for an aborted
+    /// request: a cancellation exception, or the aborted SQL batch EF Core
+    /// wraps as an invalid operation (SqlException 3980 / "Operation cancelled
+    /// by user"). Message matching mirrors <see cref="IsUniqueConstraintViolation"/>
+    /// because SqlException cannot be constructed outside a live connection.
+    /// </summary>
+    private static bool IsClientAbort(Exception exception)
+    {
+        for (Exception? current = exception; current is not null; current = current.InnerException)
+        {
+            if (current is OperationCanceledException)
+            {
+                return true;
+            }
+
+            if (current.Message.Contains("Operation cancelled by user", StringComparison.OrdinalIgnoreCase) ||
+                current.Message.Contains("Error Number:3980", StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     private static bool IsUniqueConstraintViolation(DbUpdateException ex)
     {

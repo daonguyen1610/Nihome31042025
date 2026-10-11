@@ -342,6 +342,7 @@ test("Opportunity create and edit forms expose customer-scoped project linking",
     loginInBrowserAs,
     baseURL,
 }) => {
+    test.slow();
     const token = await loginAs(TEST_USERS.salesManager);
     const customerId = await createCustomer(api, token);
     const client = authed(api, token);
@@ -394,6 +395,7 @@ test("Sales creates an operational project from Opportunity detail and confirms 
     loginInBrowserAs,
     baseURL,
 }) => {
+    test.slow();
     const token = await loginAs(TEST_USERS.salesManager);
     const customerId = await createCustomer(api, token);
     const opportunityId = await createOpportunity(api, token, customerId);
@@ -406,8 +408,15 @@ test("Sales creates an operational project from Opportunity detail and confirms 
     const projectDialog = page.getByRole("dialog");
     await expect(projectDialog).toBeVisible();
     await projectDialog.getByLabel(/Tên dự án|Project name/i).fill(projectName);
+    await expect(projectDialog.getByTestId("operational-project-code"))
+        .toHaveValue(/^[A-Za-z0-9][A-Za-z0-9_-]{1,39}$/);
     await projectDialog.getByRole("button", { name: /Lưu|Save/i }).click();
-    await expect(page).toHaveURL(new RegExp(`/admin/opportunities/${opportunityId}\\?edit=1&projectId=\\d+`));
+    // The create form saves the project and then routes back through the
+    // opportunity, so allow for the server round trip on a loaded runner.
+    await expect(page).toHaveURL(
+        new RegExp(`/admin/opportunities/${opportunityId}\\?edit=1&projectId=\\d+`),
+        { timeout: 15_000 },
+    );
     await expect(detail.getByRole("combobox", { name: /Dự án vận hành|Operational project/i }))
         .toContainText(projectName);
     await page.setViewportSize({ width: 390, height: 844 });

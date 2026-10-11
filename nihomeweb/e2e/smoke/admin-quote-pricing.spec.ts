@@ -1,8 +1,19 @@
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import { expect, test, TEST_USERS } from "../fixtures/auth";
 import { hardDeleteBusinessRoot } from "../fixtures/hardDelete";
 
 const uid = () => Math.random().toString(36).slice(2, 10).toUpperCase();
+
+// The dialog enters with fade/zoom/slide animations, so its box is still
+// moving when it first becomes visible. Measuring geometry mid-animation reads
+// a transient (already-offset) position; wait for the animations to finish.
+const settleEnterAnimation = async (locator: Locator) => {
+  await locator.evaluate(async (element) => {
+    await Promise.all(
+      element.getAnimations().map((animation) => animation.finished.catch(() => undefined)),
+    );
+  });
+};
 
 const expectCreateDialogResponsive = async (page: Page) => {
   for (const viewport of [
@@ -16,6 +27,7 @@ const expectCreateDialogResponsive = async (page: Page) => {
     const revision = page.getByTestId("quote-boq-catalog-revision");
     await expect(dialog).toBeVisible();
     await expect(revision).toBeVisible();
+    await settleEnterAnimation(dialog);
     const dimensions = await dialog.evaluate((element) => ({
       clientWidth: element.clientWidth,
       scrollWidth: element.scrollWidth,
