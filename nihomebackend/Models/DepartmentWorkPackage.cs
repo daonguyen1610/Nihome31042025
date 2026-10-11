@@ -7,6 +7,7 @@ public class DepartmentWorkPackage : IConcurrencyTracked
     public int Id { get; set; }
     public string Code { get; set; } = string.Empty;
     public WorkPackageKind Kind { get; set; }
+    public WorkPackagePurpose Purpose { get; set; } = WorkPackagePurpose.General;
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }
     public int? OperationalProjectId { get; set; }
@@ -15,6 +16,10 @@ public class DepartmentWorkPackage : IConcurrencyTracked
     public Contract? Contract { get; set; }
     public int? SourceOpportunityId { get; set; }
     public Opportunity? SourceOpportunity { get; set; }
+    public int? SourceQuoteId { get; set; }
+    public Quote? SourceQuote { get; set; }
+    public int? SourceTenderId { get; set; }
+    public Tender? SourceTender { get; set; }
     public int DepartmentRoleGroupId { get; set; }
     public RoleGroup DepartmentRoleGroup { get; set; } = null!;
     public int LeadUserId { get; set; }
@@ -32,6 +37,74 @@ public class DepartmentWorkPackage : IConcurrencyTracked
     public List<DepartmentWorkTask> Tasks { get; set; } = new();
     public List<DepartmentWorkPackageParticipantGroup> ParticipantGroups { get; set; } = new();
     public List<DepartmentWorkPackageHistory> History { get; set; } = new();
+    public List<ProcurementInputPriceOffer> InputPriceOffers { get; set; } = new();
+    public DepartmentFinanceReview? FinanceReview { get; set; }
+}
+
+public class ProcurementInputPriceOffer : IConcurrencyTracked
+{
+    public int Id { get; set; }
+    public int WorkPackageId { get; set; }
+    public DepartmentWorkPackage WorkPackage { get; set; } = null!;
+    public int VendorId { get; set; }
+    public Vendor Vendor { get; set; } = null!;
+    public string SupplierReference { get; set; } = string.Empty;
+    public string Currency { get; set; } = "VND";
+    public DateTime ValidUntil { get; set; }
+    public InputPriceOfferStatus Status { get; set; } = InputPriceOfferStatus.Draft;
+    public string? Note { get; set; }
+    public DateTime? SubmittedAt { get; set; }
+    public DateTime? ApprovedAt { get; set; }
+    public int? ApprovedByUserId { get; set; }
+    public ApplicationUser? ApprovedByUser { get; set; }
+    public DateTime? RejectedAt { get; set; }
+    public int? RejectedByUserId { get; set; }
+    public ApplicationUser? RejectedByUser { get; set; }
+    public string? DecisionReason { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public int CreatedByUserId { get; set; }
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    public int UpdatedByUserId { get; set; }
+    public byte[] RowVersion { get; set; } = [];
+    public List<ProcurementInputPriceLine> Lines { get; set; } = new();
+}
+
+public class ProcurementInputPriceLine
+{
+    public int Id { get; set; }
+    public int OfferId { get; set; }
+    public ProcurementInputPriceOffer Offer { get; set; } = null!;
+    public string ItemCode { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public string Unit { get; set; } = string.Empty;
+    public decimal Quantity { get; set; }
+    public decimal UnitPrice { get; set; }
+    public decimal VatPercent { get; set; }
+    public decimal Amount { get; set; }
+    public int SortOrder { get; set; }
+}
+
+public class DepartmentFinanceReview : IConcurrencyTracked
+{
+    public int Id { get; set; }
+    public int WorkPackageId { get; set; }
+    public DepartmentWorkPackage WorkPackage { get; set; } = null!;
+    public FinanceReviewStatus Status { get; set; } = FinanceReviewStatus.Draft;
+    public bool ContractConditionsReviewed { get; set; }
+    public bool GuaranteesReviewed { get; set; }
+    public bool PaymentTermsReviewed { get; set; }
+    public bool FinancialDossierReviewed { get; set; }
+    public string? Findings { get; set; }
+    public string? DecisionReason { get; set; }
+    public DateTime? SubmittedAt { get; set; }
+    public DateTime? ReviewedAt { get; set; }
+    public int? ReviewedByUserId { get; set; }
+    public ApplicationUser? ReviewedByUser { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public int CreatedByUserId { get; set; }
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    public int UpdatedByUserId { get; set; }
+    public byte[] RowVersion { get; set; } = [];
 }
 
 /// <summary>
@@ -116,6 +189,30 @@ public enum WorkPackageKind
 {
     Project = 0,
     Internal = 1,
+}
+
+public enum WorkPackagePurpose
+{
+    General = 0,
+    ProcurementInputPricing = 1,
+    FinanceCommercialReview = 2,
+    FinanceTenderReview = 3,
+}
+
+public enum InputPriceOfferStatus
+{
+    Draft = 0,
+    Submitted = 1,
+    Approved = 2,
+    Rejected = 3,
+}
+
+public enum FinanceReviewStatus
+{
+    Draft = 0,
+    Submitted = 1,
+    Approved = 2,
+    Rejected = 3,
 }
 
 public enum WorkPackageStatus

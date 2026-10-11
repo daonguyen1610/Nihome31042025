@@ -6,6 +6,7 @@ using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Models.DTOs.Responses;
+using NihomeBackend.Models.Rbac;
 using NihomeBackend.Services;
 using NihomeBackend.Services.HardDelete;
 using nihomebackend.tests.Helpers;
@@ -572,6 +573,26 @@ public class QuoteServiceTests : IDisposable
         Assert.NotNull(final.ClosedAt);
         // Approval log has at least 5 entries: create + submit + approve + send + customer-approve.
         Assert.True(final.ApprovalLogs.Count >= 5);
+    }
+
+    [Fact]
+    public async Task SendToCustomer_RequiresApprovedCommercialFinanceReview()
+    {
+        var (user, quote) = await SeedApprovedReadyQuoteAsync();
+        _db.DepartmentWorkPackages.RemoveRange(_db.DepartmentWorkPackages.Where(item => item.SourceQuoteId == quote.Id));
+        await _db.SaveChangesAsync();
+        await _sut.SubmitAsync(quote.Id, new(), user.Id, true, true);
+        await _sut.ApproveAsync(quote.Id, new(), user.Id, true);
+        var preview = (await _sut.GetEmailPreviewAsync(quote.Id, user.Id, true, true))!;
+        var rowVersion = (await _sut.GetAsync(quote.Id, user.Id, true))!.RowVersion;
+
+        var error = await Assert.ThrowsAsync<QuoteOperationException>(() => _sut.SendToCustomerAsync(
+            quote.Id,
+            new SendQuoteEmailRequest { RowVersion = rowVersion, ToEmail = "khach@example.com", Subject = preview.Subject, Body = preview.Body },
+            user.Id, true, true, true));
+
+        Assert.Contains("Tài chính", error.Message);
+        Assert.Equal(QuoteStatus.Approved, (await _db.Quotes.SingleAsync(item => item.Id == quote.Id)).Status);
     }
 
     [Fact]
@@ -1489,10 +1510,21 @@ public class QuoteServiceTests : IDisposable
         _db.Customers.Add(cust);
         await _db.SaveChangesAsync();
 
+        var project = new OperationalProject
+        {
+            Code = $"DB-2026-{Guid.NewGuid():N}"[..18],
+            Name = "Dự án báo giá NICON",
+            CustomerId = cust.Id,
+            ProjectManagerUserId = user.Id,
+        };
+        _db.OperationalProjects.Add(project);
+        await _db.SaveChangesAsync();
+
         var opp = new Opportunity
         {
             Name = "Opp " + Guid.NewGuid().ToString("N")[..6],
             CustomerId = cust.Id,
+            OperationalProjectId = project.Id,
             OwnerUserId = user.Id,
             EstimatedValue = 1_000_000_000m,
             WinProbability = 30,
@@ -1595,7 +1627,46 @@ public class QuoteServiceTests : IDisposable
         }, user.Id, canManage: true);
 
         var quote = await _db.Quotes.FirstAsync(q => q.Id == created.Id);
+        await SeedApprovedFinanceReviewAsync(quote, user.Id);
         return (user, quote);
+    }
+
+    private async Task SeedApprovedFinanceReviewAsync(Quote quote, int userId)
+    {
+        var group = new RoleGroup
+        {
+            Code = $"FINANCE-{Guid.NewGuid():N}"[..30],
+            LabelKey = "rbac.group.finance",
+        };
+        _db.RoleGroups.Add(group);
+        await _db.SaveChangesAsync();
+        _db.DepartmentWorkPackages.Add(new DepartmentWorkPackage
+        {
+            Code = $"WP-FIN-{Guid.NewGuid():N}"[..30],
+            Kind = WorkPackageKind.Project,
+            Purpose = WorkPackagePurpose.FinanceCommercialReview,
+            Name = "Rà soát thương mại báo giá",
+            OperationalProjectId = quote.OperationalProjectId,
+            SourceOpportunityId = quote.OpportunityId,
+            SourceQuoteId = quote.Id,
+            DepartmentRoleGroupId = group.Id,
+            LeadUserId = userId,
+            Status = WorkPackageStatus.Active,
+            CreatedByUserId = userId,
+            UpdatedByUserId = userId,
+            FinanceReview = new DepartmentFinanceReview
+            {
+                Status = FinanceReviewStatus.Approved,
+                ContractConditionsReviewed = true,
+                GuaranteesReviewed = true,
+                PaymentTermsReviewed = true,
+                CreatedByUserId = userId,
+                UpdatedByUserId = userId,
+                ReviewedByUserId = userId,
+                ReviewedAt = DateTime.UtcNow,
+            },
+        });
+        await _db.SaveChangesAsync();
     }
 
     [Fact]

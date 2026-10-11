@@ -18,21 +18,32 @@ public sealed class DepartmentWorkPackageServiceTests : IDisposable
     private readonly DepartmentWorkPackageService _service;
     private readonly RoleGroup _procurementGroup;
     private readonly RoleGroup _crmGroup;
+    private readonly RoleGroup _financeGroup;
     private readonly ApplicationUser _pm;
+    private readonly ApplicationUser _admin;
     private readonly ApplicationUser _procurementLead;
     private readonly ApplicationUser _warehouseStaff;
     private readonly ApplicationUser _sales;
+    private readonly ApplicationUser _accountantLead;
+    private readonly ApplicationUser _accountantStaff;
     private readonly OperationalProject _project;
+    private readonly Vendor _vendor;
 
     public DepartmentWorkPackageServiceTests()
     {
         _procurementGroup = AddGroup("PROCUREMENT");
         _crmGroup = AddGroup("CRM");
+        _financeGroup = AddGroup("FINANCE");
         var constructionGroup = AddGroup("CONSTRUCTION");
         _pm = AddUser("PM", constructionGroup);
+        _admin = AddUser("SUPER_ADMIN", constructionGroup);
+        _admin.Role = UserRole.ADMIN;
+        _db.SaveChanges();
         _procurementLead = AddUser("PROCUREMENT", _procurementGroup);
         _warehouseStaff = AddUser("WAREHOUSE", _procurementGroup);
         _sales = AddUser("SALE", _crmGroup);
+        _accountantLead = AddUser("ACCOUNTANT", _financeGroup);
+        _accountantStaff = AddUser("ACCOUNTANT_STAFF", _financeGroup);
         var customer = new Customer { Name = "NICON Industrial Client", Type = CustomerType.Company, SourceCode = "referral" };
         _project = new OperationalProject
         {
@@ -42,6 +53,8 @@ public sealed class DepartmentWorkPackageServiceTests : IDisposable
             ProjectManagerUserId = _pm.Id,
         };
         _db.OperationalProjects.Add(_project);
+        _vendor = new Vendor { VendorCode = "NCC-MEP-001", CompanyName = "Công ty Thiết bị MEP An Phát", VendorType = VendorType.Supplier, IsActive = true };
+        _db.Vendors.Add(_vendor);
         _db.SaveChanges();
 
         _access.Setup(item => item.GetAccessibleOperationalProjectIdsAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
@@ -220,6 +233,115 @@ public sealed class DepartmentWorkPackageServiceTests : IDisposable
         }, _warehouseStaff.Id);
 
         Assert.Equal("InProgress", started!.Status);
+    }
+
+    [Fact]
+    public async Task ProcurementInputOffer_RequiresIndependentApproval_AndCanFeedQuote()
+    {
+        var package = AddBusinessPackage(WorkPackagePurpose.ProcurementInputPricing, _procurementGroup, _procurementLead);
+        var offer = await _service.AddInputPriceOfferAsync(package.Id, new UpsertInputPriceOfferRequest
+        {
+            VendorId = _vendor.Id,
+            SupplierReference = "AP-MEP-2026-042",
+            Currency = "VND",
+            ValidUntil = DateTime.UtcNow.AddDays(30),
+            Lines =
+            [
+                new() { ItemCode = "MEP-CABLE-01", Description = "Cáp điện chống cháy", Unit = "m", Quantity = 1200, UnitPrice = 85000, VatPercent = 10, SortOrder = 1 },
+            ],
+        }, _procurementLead.Id);
+        offer = (await _service.SubmitInputPriceOfferAsync(package.Id, offer.Id,
+            new SubmitBusinessRecordRequest { RowVersion = offer.RowVersion }, _procurementLead.Id))!;
+
+        var selfApproval = await Assert.ThrowsAsync<DepartmentWorkPackageOperationException>(() =>
+            _service.DecideInputPriceOfferAsync(package.Id, offer.Id,
+                new DecideBusinessRecordRequest { Approved = true, RowVersion = offer.RowVersion }, _procurementLead.Id));
+        Assert.Contains("không được tự phê duyệt", selfApproval.Message);
+
+        var approved = await _service.DecideInputPriceOfferAsync(package.Id, offer.Id,
+            new DecideBusinessRecordRequest { Approved = true, RowVersion = offer.RowVersion }, _admin.Id);
+
+        Assert.Equal("Approved", approved!.Status);
+        Assert.Equal(112_200_000m, approved.GrandTotal);
+    }
+
+    [Fact]
+    public async Task ProcurementInputOffer_RejectsDuplicateSupplierReference()
+    {
+        var package = AddBusinessPackage(WorkPackagePurpose.ProcurementInputPricing, _procurementGroup, _procurementLead);
+        UpsertInputPriceOfferRequest Request() => new()
+        {
+            VendorId = _vendor.Id,
+            SupplierReference = "AP-MEP-2026-042",
+            Currency = "VND",
+            ValidUntil = DateTime.UtcNow.AddDays(30),
+            Lines =
+            [
+                new() { ItemCode = "MEP-CABLE-01", Description = "Cáp điện chống cháy", Unit = "m", Quantity = 100, UnitPrice = 85000, VatPercent = 10, SortOrder = 1 },
+            ],
+        };
+
+        var first = await _service.AddInputPriceOfferAsync(package.Id, Request(), _procurementLead.Id);
+        Assert.NotNull(first);
+
+        var duplicate = await Assert.ThrowsAsync<DepartmentWorkPackageOperationException>(() =>
+            _service.AddInputPriceOfferAsync(package.Id, Request(), _procurementLead.Id));
+        Assert.Contains("AP-MEP-2026-042", duplicate.Message);
+    }
+
+    [Fact]
+    public async Task FinanceReview_UsesPurposeSpecificChecklist_AndIndependentApproval()
+    {
+        var package = AddBusinessPackage(WorkPackagePurpose.FinanceCommercialReview, _financeGroup, _accountantLead);
+        var review = await _service.SaveFinanceReviewAsync(package.Id, new UpsertFinanceReviewRequest
+        {
+            ContractConditionsReviewed = true,
+            GuaranteesReviewed = true,
+            PaymentTermsReviewed = false,
+            FinancialDossierReviewed = false,
+            Findings = "Điều khoản tạm ứng cần đối chiếu với bảo lãnh.",
+        }, _accountantStaff.Id);
+
+        await Assert.ThrowsAsync<DepartmentWorkPackageOperationException>(() =>
+            _service.SubmitFinanceReviewAsync(package.Id,
+                new SubmitBusinessRecordRequest { RowVersion = review.RowVersion }, _accountantStaff.Id));
+
+        review = await _service.SaveFinanceReviewAsync(package.Id, new UpsertFinanceReviewRequest
+        {
+            ContractConditionsReviewed = true,
+            GuaranteesReviewed = true,
+            PaymentTermsReviewed = true,
+            FinancialDossierReviewed = false,
+            Findings = "Đủ điều kiện trình duyệt.",
+            RowVersion = review.RowVersion,
+        }, _accountantStaff.Id);
+        review = (await _service.SubmitFinanceReviewAsync(package.Id,
+            new SubmitBusinessRecordRequest { RowVersion = review.RowVersion }, _accountantStaff.Id))!;
+        var approved = await _service.DecideFinanceReviewAsync(package.Id,
+            new DecideBusinessRecordRequest { Approved = true, RowVersion = review.RowVersion }, _accountantLead.Id);
+
+        Assert.Equal("Approved", approved!.Status);
+        Assert.Equal(_accountantLead.Id, approved.ReviewedByUserId);
+    }
+
+    private DepartmentWorkPackage AddBusinessPackage(WorkPackagePurpose purpose, RoleGroup group, ApplicationUser lead)
+    {
+        var package = new DepartmentWorkPackage
+        {
+            Code = $"WP-{purpose}-{Guid.NewGuid():N}"[..40],
+            Kind = WorkPackageKind.Project,
+            Purpose = purpose,
+            Name = purpose.ToString(),
+            OperationalProjectId = _project.Id,
+            DepartmentRoleGroupId = group.Id,
+            LeadUserId = lead.Id,
+            Status = WorkPackageStatus.Active,
+            CreatedByUserId = _pm.Id,
+            UpdatedByUserId = _pm.Id,
+        };
+        _db.DepartmentWorkPackages.Add(package);
+        _db.SaveChanges();
+        return package;
     }
 
     private CreateDepartmentWorkPackageRequest ProjectRequest() => new()

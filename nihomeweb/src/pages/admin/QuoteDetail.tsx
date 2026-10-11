@@ -48,6 +48,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -69,6 +70,7 @@ import {
   type UpdateQuoteRequest,
   type MaterialRateRevisionResponse,
   type DeletionImpactResponse,
+  type InputPriceOfferResponse,
 } from "@/services/adminApi";
 
 const STATUS_STYLES: Record<QuoteStatus, string> = {
@@ -114,6 +116,7 @@ function toFormState(q: QuoteResponse): UpdateQuoteRequest {
   return {
     rowVersion: q.rowVersion,
     ownerUserId: q.ownerUserId ?? null,
+    inputPriceOfferId: q.inputPriceOfferId ?? null,
     areaSqm: q.areaSqm ?? null,
     unitPricePerSqm: q.unitPricePerSqm ?? null,
     materialRateCatalogId: q.materialRateCatalogId ?? null,
@@ -154,6 +157,8 @@ const AdminQuoteDetail = () => {
   const { has } = usePermissions();
 
   const canManage = has(ADMIN_PERMS.quotesManage);
+  const canViewWorkPackages = has(ADMIN_PERMS.workPackages);
+  const canManageWorkPackages = has(ADMIN_PERMS.workPackagesManage);
   const canApprove = has(ADMIN_PERMS.quotesApprove);
   const canSend = has(ADMIN_PERMS.quotesSend);
   const canOverrideRate = has(ADMIN_PERMS.quotesRateOverride);
@@ -166,6 +171,7 @@ const AdminQuoteDetail = () => {
 
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<UpdateQuoteRequest | null>(null);
+  const [approvedInputOffers, setApprovedInputOffers] = useState<InputPriceOfferResponse[]>([]);
   const [saving, setSaving] = useState(false);
   const [effectiveRevision, setEffectiveRevision] = useState<MaterialRateRevisionResponse | null>(null);
   const [exportingSpreadsheet, setExportingSpreadsheet] = useState(false);
@@ -205,12 +211,29 @@ const AdminQuoteDetail = () => {
       const { data } = await adminApi.getQuote(quoteId);
       setQuote(data);
       setForm(toFormState(data));
+      // Looks up Procurement's approved input prices from the shared project's
+      // work packages. It is an optional convenience: a failure here must not
+      // hide the quote, so it is handled separately and degrades to no offers.
+      if (data.operationalProjectId && canViewWorkPackages) {
+        try {
+          const packages = await adminApi.listWorkPackages({
+            purpose: "ProcurementInputPricing",
+            operationalProjectId: data.operationalProjectId,
+            pageSize: 100,
+          });
+          setApprovedInputOffers(packages.data.items.flatMap((item) => item.inputPriceOffers).filter((offer) => offer.status === "Approved" && new Date(offer.validUntil) >= new Date()));
+        } catch {
+          setApprovedInputOffers([]);
+        }
+      } else {
+        setApprovedInputOffers([]);
+      }
     } catch (err) {
       setError(extractApiError(err));
     } finally {
       setLoading(false);
     }
-  }, [quoteId]);
+  }, [canViewWorkPackages, quoteId]);
 
   useEffect(() => {
     void load();
@@ -592,6 +615,10 @@ const AdminQuoteDetail = () => {
         </div>
 
         <div className="flex flex-wrap gap-1.5">
+          {!editing && canManageWorkPackages && quote.operationalProjectId && <>
+            <Button variant="outline" asChild><Link to={`/admin/work-packages?create=1&purpose=ProcurementInputPricing&projectId=${quote.operationalProjectId}&opportunityId=${quote.opportunityId}`}><Plus className="mr-1.5 h-4 w-4" />{t("quotes.action.requestInputPrice")}</Link></Button>
+            <Button variant="outline" asChild><Link to={`/admin/work-packages?create=1&purpose=FinanceCommercialReview&projectId=${quote.operationalProjectId}&opportunityId=${quote.opportunityId}&quoteId=${quote.id}`}><CheckCheck className="mr-1.5 h-4 w-4" />{t("quotes.action.requestFinanceReview")}</Link></Button>
+          </>}
           {!editing && (
             <Button
               variant="outline"
@@ -733,6 +760,19 @@ const AdminQuoteDetail = () => {
         <TabsContent value="content" className="mt-4">
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px] xl:gap-6">
             <div className="min-w-0 space-y-4">
+              <div className="rounded-lg border bg-card p-4">
+                <FormField label={t("quotes.field.inputPriceOffer")}>
+                  {editing ? (
+                    <Select value={form.inputPriceOfferId ? String(form.inputPriceOfferId) : "none"} onValueChange={(value) => setForm({ ...form, inputPriceOfferId: value === "none" ? null : Number(value) })}>
+                      <SelectTrigger><SelectValue placeholder={t("quotes.inputPrice.none")} /></SelectTrigger>
+                      <SelectContent><SelectItem value="none">{t("quotes.inputPrice.none")}</SelectItem>{approvedInputOffers.map((offer) => <SelectItem key={offer.id} value={String(offer.id)}>{offer.vendorName} · {offer.supplierReference} · {formatVnd(offer.grandTotal)} {offer.currency}</SelectItem>)}</SelectContent>
+                    </Select>
+                  ) : (
+                    <p className="text-sm font-medium">{quote.inputPriceOfferId ? `${quote.inputPriceVendorName ?? "—"} · ${quote.inputPriceSupplierReference ?? "—"}` : t("quotes.inputPrice.none")}</p>
+                  )}
+                </FormField>
+                <p className="mt-2 text-xs text-muted-foreground">{t("quotes.inputPrice.hint")}</p>
+              </div>
               {quote.method === "UnitCost" ? (
                 <div className="space-y-3 rounded-lg border bg-card p-4">
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

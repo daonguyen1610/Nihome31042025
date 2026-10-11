@@ -12,6 +12,8 @@ public static class DepartmentWorkPackageSampleSeeder
         if (actorId == 0) return;
 
         SeedProjectPackage(db, actorId);
+        SeedPrecontractProcurementPackage(db, actorId);
+        SeedCommercialFinanceReview(db, actorId);
         SeedInternalPackage(db, actorId);
         db.SaveChanges();
     }
@@ -126,6 +128,114 @@ public static class DepartmentWorkPackageSampleSeeder
                     UpdatedByUserId = leadId,
                 },
             ],
+        });
+    }
+
+    private static void SeedPrecontractProcurementPackage(AppDbContext db, int actorId)
+    {
+        const string code = "WP-DEMO-INPUT-PRICE";
+        if (db.DepartmentWorkPackages.Any(item => item.Code == code)) return;
+        var project = db.OperationalProjects.OrderBy(item => item.Id).FirstOrDefault();
+        if (project is null) return;
+        var opportunityId = db.Opportunities.Where(item => item.OperationalProjectId == project.Id)
+            .OrderBy(item => item.Id).Select(item => (int?)item.Id).FirstOrDefault();
+        var groupId = db.RoleGroups.Where(item => item.Code == "PROCUREMENT" && item.IsActive)
+            .Select(item => item.Id).FirstOrDefault();
+        var leadId = ActiveUserForRole(db, "PROCUREMENT");
+        var vendor = db.Vendors.Where(item => item.IsActive).OrderBy(item => item.Id).FirstOrDefault();
+        if (opportunityId is null || groupId == 0 || leadId == 0 || vendor is null) return;
+
+        var now = DateTime.UtcNow;
+        db.DepartmentWorkPackages.Add(new DepartmentWorkPackage
+        {
+            Code = code,
+            Kind = WorkPackageKind.Project,
+            Purpose = WorkPackagePurpose.ProcurementInputPricing,
+            Name = "Cung ứng giá đầu vào – dự án văn phòng NICON",
+            Description = "Thu thập và duyệt giá nhà cung cấp/thầu phụ trước khi Kinh doanh lập báo giá đầu ra.",
+            OperationalProjectId = project.Id,
+            SourceOpportunityId = opportunityId,
+            DepartmentRoleGroupId = groupId,
+            LeadUserId = leadId,
+            Status = WorkPackageStatus.Active,
+            CreatedAt = now.AddDays(-5),
+            CreatedByUserId = actorId,
+            UpdatedAt = now,
+            UpdatedByUserId = leadId,
+            ParticipantGroups = [new DepartmentWorkPackageParticipantGroup { RoleGroupId = groupId }],
+            InputPriceOffers =
+            [
+                new ProcurementInputPriceOffer
+                {
+                    VendorId = vendor.Id,
+                    SupplierReference = "NCC-NICON-2026-042",
+                    Currency = "VND",
+                    ValidUntil = now.AddDays(25),
+                    Status = InputPriceOfferStatus.Approved,
+                    Note = "Giá giao đến công trình, chưa bao gồm chi phí lưu kho.",
+                    SubmittedAt = now.AddDays(-3),
+                    ApprovedAt = now.AddDays(-2),
+                    ApprovedByUserId = leadId,
+                    CreatedAt = now.AddDays(-4),
+                    CreatedByUserId = actorId,
+                    UpdatedAt = now.AddDays(-2),
+                    UpdatedByUserId = leadId,
+                    Lines =
+                    [
+                        new ProcurementInputPriceLine { ItemCode = "MEP-CABLE-01", Description = "Cáp điện chống cháy", Unit = "m", Quantity = 1200, UnitPrice = 85000, VatPercent = 10, Amount = 102000000, SortOrder = 1 },
+                        new ProcurementInputPriceLine { ItemCode = "MEP-TRAY-01", Description = "Máng cáp mạ kẽm", Unit = "m", Quantity = 350, UnitPrice = 240000, VatPercent = 10, Amount = 84000000, SortOrder = 2 },
+                    ],
+                },
+            ],
+        });
+    }
+
+    private static void SeedCommercialFinanceReview(AppDbContext db, int actorId)
+    {
+        const string code = "WP-DEMO-FIN-COMMERCIAL";
+        if (db.DepartmentWorkPackages.Any(item => item.Code == code)) return;
+        var quote = db.Quotes.Where(item => item.OperationalProjectId != null)
+            .OrderBy(item => item.Id).FirstOrDefault();
+        var groupId = db.RoleGroups.Where(item => item.Code == "FINANCE" && item.IsActive)
+            .Select(item => item.Id).FirstOrDefault();
+        var leadId = ActiveUserForRole(db, "ACCOUNTANT");
+        if (quote?.OperationalProjectId is null || groupId == 0 || leadId == 0) return;
+
+        var now = DateTime.UtcNow;
+        db.DepartmentWorkPackages.Add(new DepartmentWorkPackage
+        {
+            Code = code,
+            Kind = WorkPackageKind.Project,
+            Purpose = WorkPackagePurpose.FinanceCommercialReview,
+            Name = "Rà soát điều kiện thương mại trước khi gửi báo giá",
+            Description = "Tài chính – Kế toán kiểm tra điều kiện hợp đồng, bảo lãnh và thanh toán độc lập với người lập.",
+            OperationalProjectId = quote.OperationalProjectId,
+            SourceOpportunityId = quote.OpportunityId,
+            SourceQuoteId = quote.Id,
+            DepartmentRoleGroupId = groupId,
+            LeadUserId = leadId,
+            Status = WorkPackageStatus.Active,
+            CreatedAt = now.AddDays(-3),
+            CreatedByUserId = actorId,
+            UpdatedAt = now,
+            UpdatedByUserId = leadId,
+            ParticipantGroups = [new DepartmentWorkPackageParticipantGroup { RoleGroupId = groupId }],
+            FinanceReview = new DepartmentFinanceReview
+            {
+                Status = FinanceReviewStatus.Approved,
+                ContractConditionsReviewed = true,
+                GuaranteesReviewed = true,
+                PaymentTermsReviewed = true,
+                FinancialDossierReviewed = false,
+                Findings = "Điều kiện tạm ứng và bảo lãnh đã phù hợp hồ sơ thương mại.",
+                SubmittedAt = now.AddDays(-2),
+                ReviewedAt = now.AddDays(-1),
+                ReviewedByUserId = leadId,
+                CreatedAt = now.AddDays(-3),
+                CreatedByUserId = actorId,
+                UpdatedAt = now.AddDays(-1),
+                UpdatedByUserId = leadId,
+            },
         });
     }
 

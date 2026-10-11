@@ -357,4 +357,7 @@
   {"key":"procurement.alerts.acknowledge.validation","category":"procurement","vi":"Ghi chú xử lý phải từ 3 đến 2.000 ký tự.","en":"The response note must contain 3 to 2,000 characters.","zh":"处理备注须为 3 至 2,000 个字符。","ja":"対応メモは3文字以上2,000文字以下で入力してください。"},
   {"key":"procurement.alerts.acknowledge.confirm","category":"procurement","vi":"Xác nhận tiếp nhận","en":"Confirm acknowledgement","zh":"确认接收","ja":"確認を記録"},
   {"key":"procurement.alerts.acknowledge.success","category":"procurement","vi":"Đã ghi nhận tiếp nhận cảnh báo.","en":"Alert acknowledgement recorded.","zh":"已记录预警确认。","ja":"アラートの確認を記録しました。"}
+  ,{"key":"procurement.field.upstreamContract","category":"procurement","vi":"Hợp đồng đầu ra đã ký","en":"Signed upstream contract","zh":"已签署的上游合同","ja":"締結済み上流契約"}
+  ,{"key":"procurement.boq.selectSignedContract","category":"procurement","vi":"Chọn hợp đồng đầu ra đã ký","en":"Choose a signed upstream contract","zh":"选择已签署的上游合同","ja":"締結済み上流契約を選択"}
+  ,{"key":"procurement.boq.noSignedContract","category":"procurement","vi":"Dự án chưa có hợp đồng đầu ra đã ký; chưa thể lập BOQ thi công.","en":"The project has no signed upstream contract; an execution BOQ cannot be created yet.","zh":"项目尚无已签署的上游合同，暂不能创建施工 BOQ。","ja":"締結済み上流契約がないため、施工BOQはまだ作成できません。"}
 ]

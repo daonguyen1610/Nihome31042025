@@ -60,6 +60,46 @@ customer hoặc contract. Khi không chọn KPI, hoàn thành không cần bư�
 Khi chọn KPI, người xác nhận phải khác người thực hiện và sự kiện `Verified` mới
 là bằng chứng chấm KPI.
 
+### 2.2. Liên phòng ban trước hợp đồng — Hiện có
+
+Ba luồng dưới đây dùng lại nhóm công việc dự án, không có tab riêng. Nhóm việc
+tiền hợp đồng không được gắn `ContractId`.
+
+#### 2.2.1. Cung ứng → Kinh doanh: báo giá đầu vào
+
+```text
+Kinh doanh (người phụ trách Cơ hội) hoặc PM Dự án
+  → giao nhóm việc "Giá đầu vào" cho phòng Cung ứng, gắn Dự án + Cơ hội
+  → Cung ứng nhập chào giá NCC/thầu phụ (Draft)
+  → Cung ứng gửi duyệt (Submitted)
+  → người duyệt khác người lập: Approved hoặc Rejected kèm lý do
+  → Kinh doanh chọn giá Approved còn hiệu lực khi lập báo giá Boq đầu ra
+```
+
+Chỉ sửa được chào giá ở `Draft`/`Rejected`; chào giá đã bị báo giá tham chiếu thì
+khoá lại. Báo giá lưu bản chụp giá đầu vào tại thời điểm gắn. Giá hết hiệu lực,
+chưa duyệt, khác Dự án hoặc khác nhóm việc Cung ứng đều bị từ chối.
+
+Kiểm soát **BOQ đã ký** của Cung ứng là bước **sau** hợp đồng và tách biệt: chỉ
+BOQ thực hiện gắn hợp đồng đầu ra đã ký, còn hiệu lực, đúng Dự án mới được lập.
+
+#### 2.2.2. Tài chính – Kế toán: rà soát sau báo giá và trước khi nộp thầu
+
+```text
+Kinh doanh gửi báo giá (đã duyệt nội bộ)
+  → Tài chính lập hồ sơ rà soát điều kiện hợp đồng / bảo lãnh / điều khoản thanh toán
+  → Tài chính gửi duyệt, người duyệt độc lập phê duyệt
+  → Kinh doanh gửi báo giá cho khách hàng
+
+Kinh doanh chuẩn bị hồ sơ dự thầu (gói thầu đã gắn Dự án vận hành)
+  → Tài chính lập hồ sơ rà soát tài chính dự thầu / bảo lãnh
+  → Tài chính gửi duyệt, người duyệt độc lập phê duyệt
+  → Kinh doanh nộp thầu (Submitted)
+```
+
+Hai hồ sơ dùng chung checklist và chung nguyên tắc "người lập không tự duyệt".
+Hồ sơ đã gửi duyệt hoặc đã duyệt thì không sửa được nữa.
+
 ## 3. Các đường vào dự án
 
 NICON có nhiều đường vào hợp lệ; không bắt buộc mọi dự án đi qua cùng một chuỗi:
@@ -88,6 +128,13 @@ thực hiện theo quyền và điều kiện an toàn dữ liệu hiện có.
 
 ### G1 — Chuyển sang hợp đồng
 
+- Báo giá đi trước hợp đồng chỉ khi lô thương mại đó dùng báo giá; nếu khách đã
+  thống nhất giá trị trực tiếp thì chỉ cần hợp đồng. Kinh doanh quyết định theo
+  từng lô (NICON xác nhận ngày 2026-10-11).
+- Trước khi gửi báo giá cho khách, Tài chính – Kế toán phải duyệt hồ sơ rà soát
+  điều kiện hợp đồng, bảo lãnh và điều kiện thanh toán. Báo giá chưa có hồ sơ
+  duyệt thì không gửi được; báo giá cũng phải gắn Dự án vận hành để có chỗ ghi
+  rà soát (xem 2.2).
 - Hợp đồng Upstream được lập trực tiếp từ Cơ hội khi khách đã thống nhất giá trị.
   Nếu gắn báo giá CRM, báo giá phải được duyệt, còn hiệu lực khi gắn, đúng
   khách hàng/Dự án và đúng Cơ hội khi Hợp đồng gắn Cơ hội. Hợp đồng Downstream

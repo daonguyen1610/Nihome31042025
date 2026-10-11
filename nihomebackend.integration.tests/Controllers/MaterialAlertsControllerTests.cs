@@ -17,6 +17,7 @@ public sealed class MaterialAlertsControllerTests : IntegrationTestBase
             $"/api/operational-projects/{fixture.ProjectId}/procurement/boq-revisions",
             new
             {
+                upstreamContractId = await CreateSignedUpstreamContractAsync(fixture.ProjectId),
                 currency = "VND",
                 lines = new[]
                 {

@@ -239,4 +239,9 @@
   {"key":"quotes.validation.overrideReason","category":"quotes","vi":"Lý do ghi đè đơn giá phải bằng tiếng Việt và dài từ 10 đến 500 ký tự.","en":"The override reason must be in Vietnamese and between 10 and 500 characters.","zh":"单价调整原因必须使用越南语，长度为 10 至 500 个字符。","ja":"単価上書き理由はベトナム語で10～500文字入力してください。"},
   {"key":"quotes.email.attachment","category":"quotes","vi":"File Excel đính kèm","en":"Excel attachment","zh":"Excel 附件","ja":"Excel 添付ファイル"},
   {"key":"quotes.action.downloadExcel","category":"quotes","vi":"Tải Excel báo giá","en":"Download quote Excel","zh":"下载报价 Excel","ja":"見積Excelをダウンロード"}
+  ,{"key":"quotes.action.requestInputPrice","category":"quotes","vi":"Yêu cầu giá đầu vào","en":"Request input pricing","zh":"请求输入报价","ja":"原価見積を依頼"}
+  ,{"key":"quotes.action.requestFinanceReview","category":"quotes","vi":"Yêu cầu Tài chính rà soát","en":"Request finance review","zh":"请求财务审查","ja":"財務レビューを依頼"}
+  ,{"key":"quotes.field.inputPriceOffer","category":"quotes","vi":"Nguồn giá đầu vào đã duyệt","en":"Approved input price source","zh":"已批准的输入价格来源","ja":"承認済み原価ソース"}
+  ,{"key":"quotes.inputPrice.none","category":"quotes","vi":"Chưa gắn báo giá đầu vào","en":"No input offer linked","zh":"未关联输入报价","ja":"原価見積未連携"}
+  ,{"key":"quotes.inputPrice.hint","category":"quotes","vi":"Khi lưu, hệ thống chụp lại nhà cung cấp, số báo giá, hiệu lực và toàn bộ dòng giá để phục vụ kiểm tra sau này.","en":"On save, the vendor, reference, validity, and all price lines are snapshotted for later audit.","zh":"保存时会快照供应商、报价编号、有效期及全部价格明细，以供后续审计。","ja":"保存時に仕入先、見積番号、有効期限、全明細を監査用にスナップショットします。"}
 ]

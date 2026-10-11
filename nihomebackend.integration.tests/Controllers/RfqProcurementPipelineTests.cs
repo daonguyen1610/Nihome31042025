@@ -38,6 +38,7 @@ public sealed class RfqProcurementPipelineTests(NihomeWebApplicationFactory fact
         await LoginAsync("PROCUREMENT");
         var boq = await PostAsync(procurement + "/boq-revisions", new
         {
+            upstreamContractId = await CreateSignedUpstreamContractAsync(fixture.ProjectId),
             currency = "VND",
             sourceTenderEstimateRevisionId = estimateId,
             lines = new[]
@@ -156,14 +157,14 @@ public sealed class RfqProcurementPipelineTests(NihomeWebApplicationFactory fact
         };
         var award = AwardRequest(contractType);
         await RejectAsync(rfqPath + "/award-batch", award, HttpStatusCode.Forbidden);
-        (await WithDbAsync(db => db.Contracts.CountAsync(x => x.OperationalProjectId == fixture.ProjectId))).Should().Be(0);
+        (await WithDbAsync(db => db.Contracts.CountAsync(x => x.OperationalProjectId == fixture.ProjectId && x.Direction == ContractDirection.Downstream))).Should().Be(0);
         await LoginAsync("BGD");
         if (vendorType != VendorType.Both)
         {
             await RejectAsync(rfqPath + "/award-batch",
                 AwardRequest(contractType == ContractType.Supply ? ContractType.Subcontract : ContractType.Supply),
                 HttpStatusCode.BadRequest);
-            (await WithDbAsync(db => db.Contracts.CountAsync(x => x.OperationalProjectId == fixture.ProjectId))).Should().Be(0);
+            (await WithDbAsync(db => db.Contracts.CountAsync(x => x.OperationalProjectId == fixture.ProjectId && x.Direction == ContractDirection.Downstream))).Should().Be(0);
         }
         rfq = await PostAsync(rfqPath + "/award-batch", award);
         var contractId = rfq.GetProperty("contractId").GetInt32();
@@ -456,7 +457,7 @@ public sealed class RfqProcurementPipelineTests(NihomeWebApplicationFactory fact
         final.GetProperty("header").GetProperty("status").GetString().Should().Be("Cancelled");
         final.GetProperty("events").GetArrayLength().Should().Be(originalEvents + 1);
         final.GetProperty("contractId").ValueKind.Should().Be(JsonValueKind.Null);
-        (await WithDbAsync(db => db.Contracts.CountAsync(x => x.OperationalProjectId == fixture.ProjectId))).Should().Be(0);
+        (await WithDbAsync(db => db.Contracts.CountAsync(x => x.OperationalProjectId == fixture.ProjectId && x.Direction == ContractDirection.Downstream))).Should().Be(0);
         (await WithDbAsync(db => db.MaterialRequests.CountAsync(x => x.OperationalProjectId == fixture.ProjectId))).Should().Be(0);
     }
 
@@ -464,7 +465,7 @@ public sealed class RfqProcurementPipelineTests(NihomeWebApplicationFactory fact
     {
         await LoginAsync("SALES_MANAGER");
         var opportunity = await PostAsync("/api/opportunities", new { name = "Factory tender opportunity", customerId = fixture.CustomerId, operationalProjectId = fixture.ProjectId });
-        var tender = await PostAsync("/api/tenders", new { name = "Factory electrical installation tender", customerId = fixture.CustomerId, submissionDeadline = DateTime.UtcNow.AddDays(14) });
+        var tender = await PostAsync("/api/tenders", new { name = "Factory electrical installation tender", customerId = fixture.CustomerId, operationalProjectId = fixture.ProjectId, submissionDeadline = DateTime.UtcNow.AddDays(14) });
         var tenderPath = $"/api/tenders/{Id(tender)}";
         await RejectAsync(tenderPath + "/transition", new { status = "Submitted" }, HttpStatusCode.BadRequest);
         (await WithDbAsync(db => db.Tenders.SingleAsync(x => x.Id == Id(tender)))).Status.Should().Be(TenderStatus.Preparing);
@@ -488,11 +489,13 @@ public sealed class RfqProcurementPipelineTests(NihomeWebApplicationFactory fact
             using var completed = await Client.PatchAsJsonAsync(tenderPath + $"/checklist/{Id(item)}", new { status = "Done" });
             completed.IsSuccessStatusCode.Should().BeTrue(await completed.Content.ReadAsStringAsync());
         }
+        await CreateApprovedFinanceReviewAsync(fixture.ProjectId, "FinanceTenderReview", tenderId: Id(tender));
         await PostAsync(tenderPath + "/transition", new { status = "Submitted" });
         await LoginAsync("PROCUREMENT");
         // Approved estimating alone is not a won project procurement source.
         await RejectAsync($"/api/operational-projects/{fixture.ProjectId}/procurement/boq-revisions", new
         {
+            upstreamContractId = await CreateSignedUpstreamContractAsync(fixture.ProjectId),
             currency = "VND",
             sourceTenderEstimateRevisionId = estimateId,
             lines = new[] { new { itemCode = "CABLE-PIPELINE", description = "Factory power cable", unit = "m", approvedQuantity = 10m, budgetUnitPrice = 120m } },

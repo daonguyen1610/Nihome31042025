@@ -26,15 +26,21 @@ import {
   type DepartmentWorkPackageOptionsResponse,
   type DepartmentWorkPackageResponse,
   type DepartmentWorkTaskResponse,
+  type InputPriceOfferResponse,
+  type UpsertFinanceReviewRequest,
+  type UpsertInputPriceOfferRequest,
   type OperationalProjectListItemResponse,
   type UpsertDepartmentWorkTaskRequest,
   type WorkPackageKind,
+  type WorkPackagePurpose,
   type WorkPackageStatus,
 } from "@/services/adminApi";
 
 const dateValue = (value?: string | null) => value?.slice(0, 10) ?? "";
 const apiDate = (value: string) => `${value}T00:00:00.000Z`;
-const emptyOptions: DepartmentWorkPackageOptionsResponse = { departments: [], users: [], kpiDefinitions: [] };
+const emptyOptions: DepartmentWorkPackageOptionsResponse = { departments: [], users: [], kpiDefinitions: [], vendors: [] };
+const money = (value: number, currency: string) => `${new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 2 }).format(value)} ${currency}`;
+const newPriceLine = () => ({ itemCode: "", description: "", unit: "", quantity: 1, unitPrice: 0, vatPercent: 0, sortOrder: 0 });
 
 const statusTone: Record<WorkPackageStatus, string> = {
   Planned: "border-sky-200 bg-sky-50 text-sky-700",
@@ -54,6 +60,8 @@ const DepartmentWorkPackages = () => {
   const kind: WorkPackageKind = params.get("kind") === "Internal" ? "Internal" : "Project";
   const canManage = has(ADMIN_PERMS.workPackagesManage);
   const canAssign = has(ADMIN_PERMS.workPackagesAssign);
+  const canProgress = has(ADMIN_PERMS.workPackagesProgress);
+  const canVerifyBusiness = has(ADMIN_PERMS.workPackagesVerify);
   const canCreate = canManage && (kind === "Project" || canAssign);
 
   const [rows, setRows] = useState<DepartmentWorkPackageResponse[]>([]);
@@ -71,13 +79,20 @@ const DepartmentWorkPackages = () => {
   const [taskEditing, setTaskEditing] = useState<DepartmentWorkTaskResponse | null>(null);
   const [progressTaskEditing, setProgressTaskEditing] = useState<DepartmentWorkTaskResponse | null>(null);
   const [progressPercent, setProgressPercent] = useState(0);
+  const [priceOpen, setPriceOpen] = useState(false);
+  const [priceEditing, setPriceEditing] = useState<{ id: number; rowVersion: string } | null>(null);
+  const [priceForm, setPriceForm] = useState<UpsertInputPriceOfferRequest>({ vendorId: 0, supplierReference: "", currency: "VND", validUntil: "", note: "", lines: [newPriceLine()] });
+  const [reviewForm, setReviewForm] = useState<UpsertFinanceReviewRequest>({ contractConditionsReviewed: false, guaranteesReviewed: false, paymentTermsReviewed: false, financialDossierReviewed: false, findings: "" });
   const [packageForm, setPackageForm] = useState<CreateDepartmentWorkPackageRequest>({
     kind,
+    purpose: "General",
     name: "",
     description: "",
     operationalProjectId: null,
     contractId: null,
     sourceOpportunityId: null,
+    sourceQuoteId: null,
+    sourceTenderId: null,
     departmentRoleGroupId: 0,
     participantDepartmentRoleGroupIds: [],
     leadUserId: 0,
@@ -148,15 +163,37 @@ const DepartmentWorkPackages = () => {
     if (!packageId && params.get("create") === "1" && canManage) {
       const project = Number(params.get("projectId"));
       const opportunity = Number(params.get("opportunityId"));
+      const quote = Number(params.get("quoteId"));
+      const tender = Number(params.get("tenderId"));
+      const requestedPurpose = params.get("purpose") as WorkPackagePurpose | null;
+      const purpose: WorkPackagePurpose = ["ProcurementInputPricing", "FinanceCommercialReview", "FinanceTenderReview"].includes(requestedPurpose ?? "") ? requestedPurpose! : "General";
+      const expectedCode = purpose === "ProcurementInputPricing" ? "PROCUREMENT" : purpose.startsWith("Finance") ? "FINANCE" : "";
+      const expectedDepartment = options.departments.find(group => group.code === expectedCode);
       setPackageForm(current => ({
         ...current,
         kind: "Project",
+        purpose,
         operationalProjectId: Number.isFinite(project) && project > 0 ? project : null,
         sourceOpportunityId: Number.isFinite(opportunity) && opportunity > 0 ? opportunity : null,
+        sourceQuoteId: Number.isFinite(quote) && quote > 0 ? quote : null,
+        sourceTenderId: Number.isFinite(tender) && tender > 0 ? tender : null,
+        departmentRoleGroupId: expectedDepartment?.id ?? current.departmentRoleGroupId,
+        leadUserId: 0,
       }));
       setPackageOpen(true);
     }
-  }, [canManage, packageId, params]);
+  }, [canManage, options.departments, packageId, params]);
+  useEffect(() => {
+    if (!detail?.financeReview) return;
+    setReviewForm({
+      contractConditionsReviewed: detail.financeReview.contractConditionsReviewed,
+      guaranteesReviewed: detail.financeReview.guaranteesReviewed,
+      paymentTermsReviewed: detail.financeReview.paymentTermsReviewed,
+      financialDossierReviewed: detail.financeReview.financialDossierReviewed,
+      findings: detail.financeReview.findings ?? "",
+      rowVersion: detail.financeReview.rowVersion,
+    });
+  }, [detail?.financeReview]);
 
   const departmentUsers = useMemo(() => options.users.filter(user =>
     user.roleGroupId === packageForm.departmentRoleGroupId && user.canLead), [options.users, packageForm.departmentRoleGroupId]);
@@ -170,11 +207,14 @@ const DepartmentWorkPackages = () => {
   const openCreatePackage = () => {
     setPackageForm({
       kind,
+      purpose: "General",
       name: "",
       description: "",
       operationalProjectId: null,
       contractId: null,
       sourceOpportunityId: null,
+      sourceQuoteId: null,
+      sourceTenderId: null,
       departmentRoleGroupId: 0,
       participantDepartmentRoleGroupIds: [],
       leadUserId: 0,
@@ -301,6 +341,72 @@ const DepartmentWorkPackages = () => {
     } catch (cause) { toast({ variant: "destructive", title: extractApiError(cause, t("workPackages.error.save")) }); }
   };
 
+  const resetPriceForm = () => {
+    setPriceEditing(null);
+    setPriceForm({ vendorId: 0, supplierReference: "", currency: "VND", validUntil: "", note: "", lines: [newPriceLine()] });
+  };
+  const openPriceOffer = (offer?: InputPriceOfferResponse) => {
+    if (!offer) { resetPriceForm(); setPriceOpen(true); return; }
+    setPriceEditing({ id: offer.id, rowVersion: offer.rowVersion });
+    setPriceForm({
+      vendorId: offer.vendorId,
+      supplierReference: offer.supplierReference,
+      currency: offer.currency,
+      validUntil: dateValue(offer.validUntil),
+      note: offer.note ?? "",
+      lines: offer.lines.map(line => ({
+        itemCode: line.itemCode, description: line.description, unit: line.unit,
+        quantity: line.quantity, unitPrice: line.unitPrice, vatPercent: line.vatPercent, sortOrder: line.sortOrder,
+      })),
+    });
+    setPriceOpen(true);
+  };
+  const savePriceOffer = async () => {
+    if (!detail || !priceForm.vendorId || !priceForm.supplierReference.trim() || !priceForm.validUntil || priceForm.lines.some(line => !line.itemCode.trim() || !line.description.trim() || !line.unit.trim() || line.quantity <= 0 || line.unitPrice < 0)) {
+      toast({ variant: "destructive", title: t("workPackages.inputPrice.validation") }); return;
+    }
+    setSaving(true);
+    const body: UpsertInputPriceOfferRequest = { ...priceForm, validUntil: `${priceForm.validUntil}T23:59:59.000Z` };
+    try {
+      if (priceEditing) await adminApi.updateInputPriceOffer(detail.id, priceEditing.id, { ...body, rowVersion: priceEditing.rowVersion }, newIdempotencyKey());
+      else await adminApi.addInputPriceOffer(detail.id, body, newIdempotencyKey());
+      setPriceOpen(false);
+      resetPriceForm();
+      await load();
+    } catch (cause) { toast({ variant: "destructive", title: extractApiError(cause, t("workPackages.error.save")) }); }
+    finally { setSaving(false); }
+  };
+
+  const submitPriceOffer = async (offerId: number, rowVersion: string) => {
+    if (!detail) return;
+    try { await adminApi.submitInputPriceOffer(detail.id, offerId, rowVersion, newIdempotencyKey()); await load(); }
+    catch (cause) { toast({ variant: "destructive", title: extractApiError(cause, t("workPackages.error.save")) }); }
+  };
+  const decidePriceOffer = async (offerId: number, approved: boolean, rowVersion: string) => {
+    if (!detail) return;
+    const reason = approved ? null : window.prompt(t("workPackages.decision.reason"));
+    if (!approved && !reason?.trim()) return;
+    try { await adminApi.decideInputPriceOffer(detail.id, offerId, approved, reason, rowVersion, newIdempotencyKey()); await load(); }
+    catch (cause) { toast({ variant: "destructive", title: extractApiError(cause, t("workPackages.error.save")) }); }
+  };
+  const saveFinanceReview = async () => {
+    if (!detail) return;
+    try { await adminApi.saveFinanceReview(detail.id, reviewForm, newIdempotencyKey()); await load(); }
+    catch (cause) { toast({ variant: "destructive", title: extractApiError(cause, t("workPackages.error.save")) }); }
+  };
+  const submitFinanceReview = async () => {
+    if (!detail?.financeReview) return;
+    try { await adminApi.submitFinanceReview(detail.id, detail.financeReview.rowVersion, newIdempotencyKey()); await load(); }
+    catch (cause) { toast({ variant: "destructive", title: extractApiError(cause, t("workPackages.error.save")) }); }
+  };
+  const decideFinanceReview = async (approved: boolean) => {
+    if (!detail?.financeReview) return;
+    const reason = approved ? null : window.prompt(t("workPackages.decision.reason"));
+    if (!approved && !reason?.trim()) return;
+    try { await adminApi.decideFinanceReview(detail.id, approved, reason, detail.financeReview.rowVersion, newIdempotencyKey()); await load(); }
+    catch (cause) { toast({ variant: "destructive", title: extractApiError(cause, t("workPackages.error.save")) }); }
+  };
+
   if (loading) return <AdminLayout><PageLoading /></AdminLayout>;
   if (error) return <AdminLayout><PageError message={error} onRetry={() => void load()} /></AdminLayout>;
 
@@ -310,7 +416,7 @@ const DepartmentWorkPackages = () => {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-2">
             <Button variant="ghost" asChild className="-ml-3"><Link to="/admin/work-packages"><ArrowLeft className="mr-2 h-4 w-4" />{t("workPackages.back")}</Link></Button>
-            <div className="flex flex-wrap items-center gap-2"><h1 className="text-2xl font-bold">{detail.code} · {detail.name}</h1><Badge className={statusTone[detail.status]} variant="outline">{t(`workPackages.status.${detail.status}`)}</Badge></div>
+            <div className="flex flex-wrap items-center gap-2"><h1 className="text-2xl font-bold">{detail.code} · {detail.name}</h1><Badge className={statusTone[detail.status]} variant="outline">{t(`workPackages.status.${detail.status}`)}</Badge><Badge variant="secondary">{t(`workPackages.purpose.${detail.purpose}`)}</Badge></div>
             <p className="text-sm text-muted-foreground">{detail.description || t("workPackages.noDescription")}</p>
           </div>
           <div className="flex gap-2">
@@ -326,6 +432,26 @@ const DepartmentWorkPackages = () => {
           <Summary icon={<Users />} label={t("workPackages.field.lead")} value={detail.leadUserName} />
           <Summary icon={<ClipboardList />} label={t("workPackages.field.contract")} value={detail.contractNumber || "—"} href={detail.contractId ? `/admin/contracts/${detail.contractId}` : undefined} />
         </div>
+
+        {detail.purpose === "ProcurementInputPricing" && <section className="rounded-xl border bg-card">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b p-4"><div><h2 className="font-semibold">{t("workPackages.inputPrice.title")}</h2><p className="text-sm text-muted-foreground">{t("workPackages.inputPrice.help")}</p></div>{canProgress && !["Completed", "Cancelled"].includes(detail.status) && <Button onClick={() => openPriceOffer()}><Plus className="mr-2 h-4 w-4" />{t("workPackages.inputPrice.add")}</Button>}</div>
+          <div className="divide-y">{detail.inputPriceOffers.map(offer => <article key={offer.id} className="space-y-3 p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3"><div><div className="flex flex-wrap items-center gap-2"><strong>{offer.vendorCode} · {offer.vendorName}</strong><Badge variant="outline">{t(`workPackages.businessStatus.${offer.status}`)}</Badge></div><p className="text-sm text-muted-foreground">{offer.supplierReference} · {t("workPackages.inputPrice.validUntil")} {dateValue(offer.validUntil)}</p></div><strong>{money(offer.grandTotal, offer.currency)}</strong></div>
+            <div className="overflow-x-auto"><table className="w-full min-w-[640px] text-sm"><thead><tr className="text-left text-muted-foreground"><th className="py-2">{t("workPackages.inputPrice.item")}</th><th>{t("workPackages.inputPrice.unit")}</th><th className="text-right">{t("workPackages.inputPrice.quantity")}</th><th className="text-right">{t("workPackages.inputPrice.unitPrice")}</th><th className="text-right">{t("workPackages.inputPrice.amount")}</th></tr></thead><tbody>{offer.lines.map(line => <tr key={line.id} className="border-t"><td className="py-2">{line.itemCode} · {line.description}</td><td>{line.unit}</td><td className="text-right">{new Intl.NumberFormat("vi-VN").format(line.quantity)}</td><td className="text-right">{money(line.unitPrice, offer.currency)}</td><td className="text-right">{money(line.amount, offer.currency)}</td></tr>)}</tbody></table></div>
+            <div className="flex flex-wrap justify-end gap-2">{canProgress && ["Draft", "Rejected"].includes(offer.status) && <Button size="sm" variant="outline" onClick={() => openPriceOffer(offer)}>{t("common.edit")}</Button>}{canProgress && ["Draft", "Rejected"].includes(offer.status) && <Button size="sm" onClick={() => void submitPriceOffer(offer.id, offer.rowVersion)}>{t("workPackages.action.submit")}</Button>}{canVerifyBusiness && offer.status === "Submitted" && <><Button size="sm" variant="outline" onClick={() => void decidePriceOffer(offer.id, false, offer.rowVersion)}>{t("common.reject")}</Button><Button size="sm" onClick={() => void decidePriceOffer(offer.id, true, offer.rowVersion)}>{t("common.approve")}</Button></>}</div>
+          </article>)}{detail.inputPriceOffers.length === 0 && <p className="p-8 text-center text-sm text-muted-foreground">{t("workPackages.inputPrice.empty")}</p>}</div>
+        </section>}
+
+        {(detail.purpose === "FinanceCommercialReview" || detail.purpose === "FinanceTenderReview") && <section className="rounded-xl border bg-card p-4">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2"><div><h2 className="font-semibold">{t(`workPackages.review.title.${detail.purpose}`)}</h2><p className="text-sm text-muted-foreground">{t("workPackages.review.help")}</p></div><Badge variant="outline">{t(`workPackages.businessStatus.${detail.financeReview?.status ?? "Draft"}`)}</Badge></div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {detail.purpose === "FinanceCommercialReview" && <><ReviewCheck label={t("workPackages.review.contractConditions")} checked={reviewForm.contractConditionsReviewed} disabled={!canProgress || detail.financeReview?.status === "Submitted" || detail.financeReview?.status === "Approved"} onChange={contractConditionsReviewed => setReviewForm(current => ({ ...current, contractConditionsReviewed }))} /><ReviewCheck label={t("workPackages.review.paymentTerms")} checked={reviewForm.paymentTermsReviewed} disabled={!canProgress || detail.financeReview?.status === "Submitted" || detail.financeReview?.status === "Approved"} onChange={paymentTermsReviewed => setReviewForm(current => ({ ...current, paymentTermsReviewed }))} /></>}
+            <ReviewCheck label={t("workPackages.review.guarantees")} checked={reviewForm.guaranteesReviewed} disabled={!canProgress || detail.financeReview?.status === "Submitted" || detail.financeReview?.status === "Approved"} onChange={guaranteesReviewed => setReviewForm(current => ({ ...current, guaranteesReviewed }))} />
+            {detail.purpose === "FinanceTenderReview" && <ReviewCheck label={t("workPackages.review.financialDossier")} checked={reviewForm.financialDossierReviewed} disabled={!canProgress || detail.financeReview?.status === "Submitted" || detail.financeReview?.status === "Approved"} onChange={financialDossierReviewed => setReviewForm(current => ({ ...current, financialDossierReviewed }))} />}
+            <Field label={t("workPackages.review.findings")} className="sm:col-span-2"><Textarea maxLength={4000} disabled={!canProgress || detail.financeReview?.status === "Submitted" || detail.financeReview?.status === "Approved"} value={reviewForm.findings ?? ""} onChange={event => setReviewForm(current => ({ ...current, findings: event.target.value }))} /></Field>
+          </div>
+          <div className="mt-4 flex flex-wrap justify-end gap-2">{canProgress && (!detail.financeReview || ["Draft", "Rejected"].includes(detail.financeReview.status)) && <Button variant="outline" onClick={() => void saveFinanceReview()}>{t("common.save")}</Button>}{canProgress && detail.financeReview?.status === "Draft" && <Button onClick={() => void submitFinanceReview()}>{t("workPackages.action.submit")}</Button>}{canVerifyBusiness && detail.financeReview?.status === "Submitted" && <><Button variant="outline" onClick={() => void decideFinanceReview(false)}>{t("common.reject")}</Button><Button onClick={() => void decideFinanceReview(true)}>{t("common.approve")}</Button></>}</div>
+        </section>}
 
         <section className="rounded-xl border bg-card">
           <div className="flex items-center justify-between border-b p-4"><div><h2 className="font-semibold">{t("workPackages.tasks.title")}</h2><p className="text-sm text-muted-foreground">{t("workPackages.tasks.help")}</p></div><span className="text-sm font-medium">{detail.progressPercent}%</span></div>
@@ -367,17 +493,20 @@ const DepartmentWorkPackages = () => {
     </div>
 
     <Dialog open={packageOpen} onOpenChange={setPackageOpen}><DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl"><DialogHeader><DialogTitle>{t("workPackages.create.title")}</DialogTitle><DialogDescription>{t("workPackages.create.help")}</DialogDescription></DialogHeader><div className="grid gap-4 sm:grid-cols-2">
-      <Field label={t("workPackages.field.type")}><Select value={packageForm.kind} onValueChange={(value: WorkPackageKind) => setPackageForm(current => ({ ...current, kind: value, operationalProjectId: null, contractId: null, sourceOpportunityId: null, departmentRoleGroupId: 0, participantDepartmentRoleGroupIds: [], leadUserId: 0 }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Project">{t("workPackages.kind.Project")}</SelectItem>{canAssign && <SelectItem value="Internal">{t("workPackages.kind.Internal")}</SelectItem>}</SelectContent></Select></Field>
+      <Field label={t("workPackages.field.type")}><Select value={packageForm.kind} onValueChange={(value: WorkPackageKind) => setPackageForm(current => ({ ...current, kind: value, purpose: "General", operationalProjectId: null, contractId: null, sourceOpportunityId: null, sourceQuoteId: null, sourceTenderId: null, departmentRoleGroupId: 0, participantDepartmentRoleGroupIds: [], leadUserId: 0 }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Project">{t("workPackages.kind.Project")}</SelectItem>{canAssign && <SelectItem value="Internal">{t("workPackages.kind.Internal")}</SelectItem>}</SelectContent></Select></Field>
+      {packageForm.kind === "Project" && <Field label={t("workPackages.field.purpose")}><Select value={packageForm.purpose} onValueChange={(purpose: WorkPackagePurpose) => { const code = purpose === "ProcurementInputPricing" ? "PROCUREMENT" : purpose.startsWith("Finance") ? "FINANCE" : ""; const department = options.departments.find(group => group.code === code); setPackageForm(current => ({ ...current, purpose, contractId: purpose === "General" ? current.contractId : null, departmentRoleGroupId: department?.id ?? 0, leadUserId: 0 })); }}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="General">{t("workPackages.purpose.General")}</SelectItem><SelectItem value="ProcurementInputPricing">{t("workPackages.purpose.ProcurementInputPricing")}</SelectItem><SelectItem value="FinanceCommercialReview">{t("workPackages.purpose.FinanceCommercialReview")}</SelectItem><SelectItem value="FinanceTenderReview">{t("workPackages.purpose.FinanceTenderReview")}</SelectItem></SelectContent></Select></Field>}
       {packageForm.kind === "Project" && <Field label={t("workPackages.field.project")}><Select value={packageForm.operationalProjectId?.toString() ?? ""} onValueChange={value => setPackageForm(current => ({ ...current, operationalProjectId: Number(value), contractId: null }))}><SelectTrigger><SelectValue placeholder={t("workPackages.placeholder.project")} /></SelectTrigger><SelectContent>{projects.map(project => <SelectItem key={project.id} value={String(project.id)}>{project.code} · {project.name}</SelectItem>)}</SelectContent></Select></Field>}
-      {packageForm.kind === "Project" && <Field label={t("workPackages.field.contract")}><Select value={packageForm.contractId?.toString() ?? "none"} onValueChange={value => setPackageForm(current => ({ ...current, contractId: value === "none" ? null : Number(value) }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">{t("workPackages.contract.none")}</SelectItem>{contracts.map(contract => <SelectItem key={contract.id} value={String(contract.id)}>{contract.contractNumber}</SelectItem>)}</SelectContent></Select></Field>}
+      {packageForm.kind === "Project" && packageForm.purpose === "General" && <Field label={t("workPackages.field.contract")}><Select value={packageForm.contractId?.toString() ?? "none"} onValueChange={value => setPackageForm(current => ({ ...current, contractId: value === "none" ? null : Number(value) }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">{t("workPackages.contract.none")}</SelectItem>{contracts.map(contract => <SelectItem key={contract.id} value={String(contract.id)}>{contract.contractNumber}</SelectItem>)}</SelectContent></Select></Field>}
       <Field label={t("workPackages.field.name")} className="sm:col-span-2"><Input maxLength={300} value={packageForm.name} onChange={event => setPackageForm(current => ({ ...current, name: event.target.value }))} /></Field>
-      <Field label={t("workPackages.field.department")}><Select value={packageForm.departmentRoleGroupId ? String(packageForm.departmentRoleGroupId) : ""} onValueChange={value => setPackageForm(current => ({ ...current, departmentRoleGroupId: Number(value), participantDepartmentRoleGroupIds: current.participantDepartmentRoleGroupIds.filter(id => id !== Number(value)), leadUserId: 0 }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{availableDepartments.map(group => <SelectItem key={group.id} value={String(group.id)}>{t(group.labelKey)}</SelectItem>)}</SelectContent></Select></Field>
+      <Field label={t("workPackages.field.department")}><Select disabled={packageForm.purpose !== "General"} value={packageForm.departmentRoleGroupId ? String(packageForm.departmentRoleGroupId) : ""} onValueChange={value => setPackageForm(current => ({ ...current, departmentRoleGroupId: Number(value), participantDepartmentRoleGroupIds: current.participantDepartmentRoleGroupIds.filter(id => id !== Number(value)), leadUserId: 0 }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{availableDepartments.map(group => <SelectItem key={group.id} value={String(group.id)}>{t(group.labelKey)}</SelectItem>)}</SelectContent></Select></Field>
       <Field label={t("workPackages.field.lead")}><Select value={packageForm.leadUserId ? String(packageForm.leadUserId) : ""} onValueChange={value => setPackageForm(current => ({ ...current, leadUserId: Number(value) }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{departmentUsers.map(user => <SelectItem key={user.userId} value={String(user.userId)}>{user.name}</SelectItem>)}</SelectContent></Select></Field>
       {packageForm.kind === "Internal" && <Field label={t("workPackages.field.participants")} className="sm:col-span-2"><ChoiceGrid emptyLabel={t("workPackages.participants.none")} items={options.departments.filter(group => group.id !== packageForm.departmentRoleGroupId).map(group => ({ id: group.id, label: t(group.labelKey) }))} selected={packageForm.participantDepartmentRoleGroupIds} onChange={participantDepartmentRoleGroupIds => setPackageForm(current => ({ ...current, participantDepartmentRoleGroupIds }))} /></Field>}
       <Field label={t("workPackages.field.start")}><Input type="date" value={dateValue(packageForm.plannedStart)} onChange={event => setPackageForm(current => ({ ...current, plannedStart: event.target.value ? apiDate(event.target.value) : null }))} /></Field>
       <Field label={t("workPackages.field.end")}><Input type="date" value={dateValue(packageForm.plannedEnd)} onChange={event => setPackageForm(current => ({ ...current, plannedEnd: event.target.value ? apiDate(event.target.value) : null }))} /></Field>
       <Field label={t("workPackages.field.description")} className="sm:col-span-2"><Textarea maxLength={4000} value={packageForm.description ?? ""} onChange={event => setPackageForm(current => ({ ...current, description: event.target.value }))} /></Field>
     </div><DialogFooter><Button variant="outline" onClick={() => setPackageOpen(false)}>{t("common.cancel")}</Button><Button disabled={saving} onClick={() => void savePackage()}>{t("common.save")}</Button></DialogFooter></DialogContent></Dialog>
+
+    <PriceOfferDialog open={priceOpen} onOpenChange={value => { setPriceOpen(value); if (!value) resetPriceForm(); }} editing={priceEditing !== null} form={priceForm} setForm={setPriceForm} vendors={options.vendors} saving={saving} onSave={() => void savePriceOffer()} t={t} />
 
     <Dialog open={taskOpen} onOpenChange={setTaskOpen}><DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl"><DialogHeader><DialogTitle>{t(taskEditing ? "workPackages.task.edit" : "workPackages.task.create")}</DialogTitle><DialogDescription>{t("workPackages.task.help")}</DialogDescription></DialogHeader><div className="grid gap-4 sm:grid-cols-2">
       <Field label={t("workPackages.field.wbs")}><Input maxLength={120} value={taskForm.wbsCode} onChange={event => setTaskForm(current => ({ ...current, wbsCode: event.target.value }))} /></Field>
@@ -400,6 +529,28 @@ const DepartmentWorkPackages = () => {
 
 const Field = ({ label, children, className = "" }: { label: string; children: React.ReactNode; className?: string }) => <div className={`space-y-2 ${className}`}><Label>{label}</Label>{children}</div>;
 const ChoiceGrid = ({ items, selected, onChange, emptyLabel }: { items: { id: number; label: string }[]; selected: number[]; onChange: (ids: number[]) => void; emptyLabel: string }) => items.length === 0 ? <p className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">{emptyLabel}</p> : <div className="grid max-h-36 gap-2 overflow-y-auto rounded-md border p-3 sm:grid-cols-2">{items.map(item => <label key={item.id} className="flex cursor-pointer items-start gap-2 text-sm"><Checkbox checked={selected.includes(item.id)} onCheckedChange={checked => onChange(checked ? [...selected, item.id] : selected.filter(id => id !== item.id))} /><span>{item.label}</span></label>)}</div>;
+const ReviewCheck = ({ label, checked, disabled, onChange }: { label: string; checked: boolean; disabled: boolean; onChange: (checked: boolean) => void }) => <label className="flex items-start gap-3 rounded-lg border p-3 text-sm"><Checkbox checked={checked} disabled={disabled} onCheckedChange={value => onChange(value === true)} /><span>{label}</span></label>;
+
+const PriceOfferDialog = ({ open, onOpenChange, editing, form, setForm, vendors, saving, onSave, t }: {
+  open: boolean; onOpenChange: (open: boolean) => void; editing: boolean; form: UpsertInputPriceOfferRequest;
+  setForm: React.Dispatch<React.SetStateAction<UpsertInputPriceOfferRequest>>;
+  vendors: DepartmentWorkPackageOptionsResponse["vendors"]; saving: boolean; onSave: () => void; t: (key: string) => string;
+}) => <Dialog open={open} onOpenChange={onOpenChange}><DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-4xl"><DialogHeader><DialogTitle>{t(editing ? "workPackages.inputPrice.edit" : "workPackages.inputPrice.add")}</DialogTitle><DialogDescription>{t("workPackages.inputPrice.formHelp")}</DialogDescription></DialogHeader><div className="grid gap-4 sm:grid-cols-2">
+  <Field label={t("workPackages.inputPrice.vendor")}><Select value={form.vendorId ? String(form.vendorId) : ""} onValueChange={value => setForm(current => ({ ...current, vendorId: Number(value) }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{vendors.map(vendor => <SelectItem key={vendor.id} value={String(vendor.id)}>{vendor.code} · {vendor.name}</SelectItem>)}</SelectContent></Select></Field>
+  <Field label={t("workPackages.inputPrice.reference")}><Input maxLength={120} value={form.supplierReference} onChange={event => setForm(current => ({ ...current, supplierReference: event.target.value }))} /></Field>
+  <Field label={t("workPackages.inputPrice.currency")}><Input maxLength={3} value={form.currency} onChange={event => setForm(current => ({ ...current, currency: event.target.value.toUpperCase() }))} /></Field>
+  <Field label={t("workPackages.inputPrice.validUntil")}><Input type="date" value={form.validUntil} onChange={event => setForm(current => ({ ...current, validUntil: event.target.value }))} /></Field>
+  <div className="space-y-3 sm:col-span-2"><div className="flex items-center justify-between"><Label>{t("workPackages.inputPrice.lines")}</Label><Button type="button" size="sm" variant="outline" onClick={() => setForm(current => ({ ...current, lines: [...current.lines, newPriceLine()] }))}><Plus className="mr-1 h-4 w-4" />{t("workPackages.inputPrice.addLine")}</Button></div>{form.lines.map((line, index) => <div key={index} className="grid gap-2 rounded-lg border p-3 sm:grid-cols-12">
+    <Input className="sm:col-span-2" placeholder={t("workPackages.inputPrice.itemCode")} value={line.itemCode} onChange={event => setForm(current => ({ ...current, lines: current.lines.map((item, i) => i === index ? { ...item, itemCode: event.target.value } : item) }))} />
+    <Input className="sm:col-span-3" placeholder={t("workPackages.inputPrice.description")} value={line.description} onChange={event => setForm(current => ({ ...current, lines: current.lines.map((item, i) => i === index ? { ...item, description: event.target.value } : item) }))} />
+    <Input className="sm:col-span-1" placeholder={t("workPackages.inputPrice.unit")} value={line.unit} onChange={event => setForm(current => ({ ...current, lines: current.lines.map((item, i) => i === index ? { ...item, unit: event.target.value } : item) }))} />
+    <Input className="sm:col-span-2" type="number" min="0.0001" step="0.0001" aria-label={t("workPackages.inputPrice.quantity")} value={line.quantity} onChange={event => setForm(current => ({ ...current, lines: current.lines.map((item, i) => i === index ? { ...item, quantity: Number(event.target.value) } : item) }))} />
+    <Input className="sm:col-span-2" type="number" min="0" step="1000" aria-label={t("workPackages.inputPrice.unitPrice")} value={line.unitPrice} onChange={event => setForm(current => ({ ...current, lines: current.lines.map((item, i) => i === index ? { ...item, unitPrice: Number(event.target.value) } : item) }))} />
+    <Input className="sm:col-span-1" type="number" min="0" max="100" aria-label="VAT" value={line.vatPercent} onChange={event => setForm(current => ({ ...current, lines: current.lines.map((item, i) => i === index ? { ...item, vatPercent: Number(event.target.value) } : item) }))} />
+    <Button className="sm:col-span-1" type="button" size="icon" variant="ghost" disabled={form.lines.length === 1} onClick={() => setForm(current => ({ ...current, lines: current.lines.filter((_, i) => i !== index) }))}>×</Button>
+  </div>)}</div>
+  <Field label={t("workPackages.field.description")} className="sm:col-span-2"><Textarea maxLength={2000} value={form.note ?? ""} onChange={event => setForm(current => ({ ...current, note: event.target.value }))} /></Field>
+</div><DialogFooter><Button variant="outline" onClick={() => onOpenChange(false)}>{t("common.cancel")}</Button><Button disabled={saving} onClick={onSave}>{t("common.save")}</Button></DialogFooter></DialogContent></Dialog>;
 const Summary = ({ icon, label, value, href }: { icon: React.ReactNode; label: string; value: string; href?: string }) => <div className="rounded-xl border bg-card p-4"><div className="mb-2 flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground"><span className="[&>svg]:h-4 [&>svg]:w-4">{icon}</span>{label}</div>{href ? <Link className="font-medium text-primary hover:underline" to={href}>{value}</Link> : <p className="font-medium">{value}</p>}</div>;
 
 export default DepartmentWorkPackages;

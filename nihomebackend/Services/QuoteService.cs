@@ -131,6 +131,7 @@ public class QuoteService(
             .Include(q => q.Opportunity).ThenInclude(o => o.Customer)
             .Include(q => q.Owner)
             .Include(q => q.MaterialRateRevision).ThenInclude(revision => revision!.Catalog)
+            .Include(q => q.InputPriceOffer).ThenInclude(offer => offer!.Vendor)
             .Include(q => q.Items)
             .Include(q => q.ApprovalLogs).ThenInclude(l => l.By)
             .FirstOrDefaultAsync(q => q.Id == id, ct);
@@ -189,6 +190,7 @@ public class QuoteService(
         var boqRevision = request.Method == QuoteMethod.Boq
             ? await ResolveBoqRevisionAsync(request.MaterialRateCatalogId, request.PricingEffectiveDate, required: false, ct)
             : null;
+        var inputPriceOffer = await ResolveInputPriceOfferAsync(request.InputPriceOfferId, opportunity.OperationalProjectId, ct);
         var appliedUnitPrice = rate?.AppliedUnitPrice ?? request.UnitPricePerSqm;
         ValidateMethodPayload(request.Method, request.AreaSqm, appliedUnitPrice, request.Items,
             request.DiscountPercent, request.VatPercent);
@@ -226,6 +228,8 @@ public class QuoteService(
                 ? request.PackageDescription?.Trim()
                 : null,
             MaterialRateRevisionId = rate?.Revision.Id ?? boqRevision?.Revision.Id,
+            InputPriceOfferId = inputPriceOffer?.Id,
+            InputPriceSnapshotJson = inputPriceOffer is null ? null : SerializeInputPriceOffer(inputPriceOffer),
             PricingEffectiveDate = rate?.EffectiveDate ?? boqRevision?.EffectiveDate,
             CatalogUnitPricePerSqm = rate?.CatalogUnitPrice,
             RateSource = rate?.Source ?? (boqRevision is not null ? QuoteRateSource.CatalogReference : QuoteRateSource.Override),
@@ -315,6 +319,7 @@ public class QuoteService(
         var boqRevision = quote.Method == QuoteMethod.Boq
             ? await ResolveUpdatedBoqRevisionAsync(quote, request, ct)
             : null;
+        var inputPriceOffer = await ResolveInputPriceOfferAsync(request.InputPriceOfferId, quote.OperationalProjectId, ct);
         var appliedUnitPrice = rate?.AppliedUnitPrice ?? request.UnitPricePerSqm;
         ValidateMethodPayload(quote.Method, request.AreaSqm, appliedUnitPrice, request.Items,
             request.DiscountPercent, request.VatPercent);
@@ -334,6 +339,8 @@ public class QuoteService(
         {
             changes = new QuoteChangeSet(Any: true, Material: true);
         }
+        if (quote.InputPriceOfferId != inputPriceOffer?.Id)
+            changes = new QuoteChangeSet(Any: true, Material: true);
 
         // Return before touching the entity at all. Not merely to avoid a stray log:
         // the write path below calls QuoteItems.RemoveRange and rebuilds every BOQ
@@ -381,6 +388,8 @@ public class QuoteService(
         quote.PackageDescription = quote.Method == QuoteMethod.UnitCost
             ? request.PackageDescription?.Trim()
             : null;
+        quote.InputPriceOfferId = inputPriceOffer?.Id;
+        quote.InputPriceSnapshotJson = inputPriceOffer is null ? null : SerializeInputPriceOffer(inputPriceOffer);
         if (rate is not null)
         {
             quote.MaterialRateRevisionId = rate.Revision.Id;
@@ -506,6 +515,19 @@ public class QuoteService(
         if (quote.Status != QuoteStatus.Approved || quote.ValidUntil < DateTime.UtcNow ||
             quote.Opportunity.Stage is OpportunityStage.Won or OpportunityStage.Lost)
             throw new QuoteOperationException("Chỉ gửi báo giá đã duyệt, còn hiệu lực của cơ hội đang mở.");
+        // §5 pre-contract control: Finance – Accounting reviews contract
+        // conditions, guarantees and payment terms after the quote is approved.
+        // The review is recorded on a project work package, so the quote must
+        // belong to a shared project before it can be sent to the customer.
+        if (!quote.OperationalProjectId.HasValue)
+            throw new QuoteOperationException("Gắn Dự án vận hành cho báo giá để Tài chính – Kế toán rà soát trước khi gửi khách hàng.");
+        var financeApproved = await db.DepartmentWorkPackages.AsNoTracking().AnyAsync(package =>
+            package.SourceQuoteId == quote.Id &&
+            package.Purpose == WorkPackagePurpose.FinanceCommercialReview &&
+            package.FinanceReview != null &&
+            package.FinanceReview.Status == FinanceReviewStatus.Approved, ct);
+        if (!financeApproved)
+            throw new QuoteOperationException("Báo giá phải được Tài chính – Kế toán rà soát và phê duyệt trước khi gửi khách hàng.");
         if (quote.RowVersion.Length > 0)
             CrmConcurrency.EnsureMatches(quote.RowVersion, req.RowVersion);
         var toEmail = req.ToEmail.Trim();
@@ -722,6 +744,7 @@ public class QuoteService(
             .Include(q => q.Items)
             .Include(q => q.VersionSnapshots)
             .Include(q => q.MaterialRateRevision).ThenInclude(revision => revision!.Catalog)
+            .Include(q => q.InputPriceOffer).ThenInclude(offer => offer!.Vendor)
             .FirstOrDefaultAsync(q => q.Id == id, ct);
         if (quote is null) return null;
         if (!canSeeAll && quote.OwnerUserId != callerUserId) return null;
@@ -751,6 +774,8 @@ public class QuoteService(
                     UnitPricePerSqm = s.UnitPricePerSqm,
                     PackageDescription = s.PackageDescription,
                     MaterialRateRevisionId = s.MaterialRateRevisionId,
+                    InputPriceOfferId = s.InputPriceOfferId,
+                    InputPriceSnapshotJson = s.InputPriceSnapshotJson,
                     MaterialRateCatalogId = revision?.CatalogId,
                     MaterialRateCatalogCode = revision?.Catalog.Code,
                     MaterialRateCatalogName = revision?.Catalog.Name,
@@ -779,6 +804,10 @@ public class QuoteService(
             UnitPricePerSqm = quote.UnitPricePerSqm,
             PackageDescription = quote.PackageDescription,
             MaterialRateRevisionId = quote.MaterialRateRevisionId,
+            InputPriceOfferId = quote.InputPriceOfferId,
+            InputPriceVendorName = quote.InputPriceOffer?.Vendor.CompanyName,
+            InputPriceSupplierReference = quote.InputPriceOffer?.SupplierReference,
+            InputPriceSnapshotJson = quote.InputPriceSnapshotJson,
             MaterialRateCatalogId = quote.MaterialRateRevision?.CatalogId,
             MaterialRateCatalogCode = quote.MaterialRateRevision?.Catalog?.Code,
             MaterialRateCatalogName = quote.MaterialRateRevision?.Catalog?.Name,
@@ -1177,6 +1206,51 @@ public class QuoteService(
     /// </summary>
     private readonly record struct QuoteChangeSet(bool Any, bool Material);
 
+    private async Task<ProcurementInputPriceOffer?> ResolveInputPriceOfferAsync(
+        int? offerId, int? projectId, CancellationToken ct)
+    {
+        if (!offerId.HasValue) return null;
+        if (!projectId.HasValue)
+            throw new QuoteOperationException("Báo giá phải gắn Dự án trước khi sử dụng giá đầu vào Cung ứng.");
+        var offer = await db.ProcurementInputPriceOffers.AsNoTracking()
+            .Include(item => item.Vendor).Include(item => item.Lines)
+            .Include(item => item.WorkPackage)
+            .SingleOrDefaultAsync(item => item.Id == offerId.Value, ct)
+            ?? throw new QuoteOperationException("Giá đầu vào Cung ứng không tồn tại.");
+        if (offer.WorkPackage.OperationalProjectId != projectId ||
+            offer.WorkPackage.Purpose != WorkPackagePurpose.ProcurementInputPricing)
+            throw new QuoteOperationException("Giá đầu vào phải thuộc đúng Dự án và nhóm việc Cung ứng tiền hợp đồng.");
+        if (offer.Status != InputPriceOfferStatus.Approved)
+            throw new QuoteOperationException("Chỉ giá đầu vào đã duyệt mới được dùng cho báo giá đầu ra.");
+        if (offer.ValidUntil <= DateTime.UtcNow)
+            throw new QuoteOperationException("Giá đầu vào đã hết hiệu lực và không thể dùng cho báo giá.");
+        return offer;
+    }
+
+    private static string SerializeInputPriceOffer(ProcurementInputPriceOffer offer) => JsonSerializer.Serialize(new
+    {
+        offer.Id,
+        offer.WorkPackageId,
+        offer.VendorId,
+        VendorCode = offer.Vendor.VendorCode,
+        VendorName = offer.Vendor.CompanyName,
+        VendorType = offer.Vendor.VendorType.ToString(),
+        offer.SupplierReference,
+        offer.Currency,
+        offer.ValidUntil,
+        Lines = offer.Lines.OrderBy(line => line.SortOrder).Select(line => new
+        {
+            line.ItemCode,
+            line.Description,
+            line.Unit,
+            line.Quantity,
+            line.UnitPrice,
+            line.VatPercent,
+            line.Amount,
+            line.SortOrder,
+        }),
+    });
+
     private static QuoteChangeSet DetectChanges(Quote quote, UpdateQuoteRequest request)
     {
         // Normalise null to zero before comparing: the frontend sends 0 for a blank
@@ -1198,6 +1272,7 @@ public class QuoteService(
         }
 
         material |= quote.DiscountPercent != request.DiscountPercent;
+        material |= quote.InputPriceOfferId != request.InputPriceOfferId;
         material |= quote.VatPercent != request.VatPercent;
 
         if (request.ValidUntil.HasValue)
@@ -1370,6 +1445,8 @@ public class QuoteService(
         UnitPricePerSqm = q.UnitPricePerSqm,
         PackageDescription = q.PackageDescription,
         MaterialRateRevisionId = q.MaterialRateRevisionId,
+        InputPriceOfferId = q.InputPriceOfferId,
+        InputPriceSnapshotJson = q.InputPriceSnapshotJson,
         PricingEffectiveDate = q.PricingEffectiveDate,
         CatalogUnitPricePerSqm = q.CatalogUnitPricePerSqm,
         RateSource = q.RateSource,
@@ -1426,6 +1503,10 @@ public class QuoteService(
         UnitPricePerSqm = q.UnitPricePerSqm,
         PackageDescription = q.PackageDescription,
         MaterialRateRevisionId = q.MaterialRateRevisionId,
+        InputPriceOfferId = q.InputPriceOfferId,
+        InputPriceVendorName = q.InputPriceOffer?.Vendor.CompanyName,
+        InputPriceSupplierReference = q.InputPriceOffer?.SupplierReference,
+        InputPriceSnapshotJson = q.InputPriceSnapshotJson,
         MaterialRateCatalogId = q.MaterialRateRevision?.CatalogId,
         MaterialRateCatalogCode = q.MaterialRateRevision?.Catalog?.Code,
         MaterialRateCatalogName = q.MaterialRateRevision?.Catalog?.Name,

@@ -5,6 +5,8 @@ public sealed class ProjectBoqRevision : IConcurrencyTracked
     public int Id { get; set; }
     public int OperationalProjectId { get; set; }
     public OperationalProject OperationalProject { get; set; } = null!;
+    public int? UpstreamContractId { get; set; }
+    public Contract? UpstreamContract { get; set; }
     public int RevisionNumber { get; set; }
     public string Currency { get; set; } = "VND";
     public ProjectBoqRevisionStatus Status { get; set; } = ProjectBoqRevisionStatus.Draft;

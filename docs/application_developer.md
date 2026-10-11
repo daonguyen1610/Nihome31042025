@@ -1228,6 +1228,13 @@ and `/api/v1/work-packages`:
 | `PUT` | `/api/work-packages/{id}/tasks/{taskId}` | `work.packages.assign` | Edit a non-terminal assignment |
 | `PUT` | `/api/work-packages/{id}/tasks/{taskId}/progress` | `work.packages.progress` | Record monotonic assignee progress |
 | `POST` | `/api/work-packages/{id}/tasks/{taskId}/verify` | `work.packages.verify` | Independently verify a completed KPI task |
+| `POST` | `/api/work-packages/{id}/input-price-offers` | `work.packages.progress` | Add a supplier/subcontractor input price offer to a Procurement pricing package |
+| `PUT` | `/api/work-packages/{id}/input-price-offers/{offerId}` | `work.packages.progress` | Edit a Draft/Rejected input price offer |
+| `POST` | `/api/work-packages/{id}/input-price-offers/{offerId}/submit` | `work.packages.progress` | Submit an input price offer for independent approval |
+| `POST` | `/api/work-packages/{id}/input-price-offers/{offerId}/decision` | `work.packages.verify` | Approve or reject a submitted input price offer |
+| `PUT` | `/api/work-packages/{id}/finance-review` | `work.packages.progress` | Save the Finance – Accounting checklist (commercial or tender review) |
+| `POST` | `/api/work-packages/{id}/finance-review/submit` | `work.packages.progress` | Submit the finance review for independent approval |
+| `POST` | `/api/work-packages/{id}/finance-review/decision` | `work.packages.verify` | Approve or reject a submitted finance review |
 
 All writes require an idempotency key. Updates, progress, and verification also
 require `rowversion` through `If-Match` or the request body. Contextual actor
@@ -1252,6 +1259,47 @@ as `Unlink`. KPI metric `VerifiedWorkTaskCount` reads only independently
 verified tasks assigned to the evaluated user in the requested period. Seeded
 definitions are inactive by default so installations must configure targets and
 rebalance weights before activation.
+
+#### Pre-contract department controls (MoM §5)
+
+The `DepartmentWorkPackage.Purpose` discriminator selects the pre-contract
+business flow. Each purpose is bound to
+one receiving department and one source record so the cross-department handoff is
+auditable:
+
+- `ProcurementInputPricing` requires the `PROCUREMENT` role group and a
+  `SourceOpportunityId`. It carries `ProcurementInputPriceOffer` records with
+  lines, vendor, supplier reference, currency and validity.
+- `FinanceCommercialReview` requires the `FINANCE` role group and a
+  `SourceQuoteId`; `FinanceTenderReview` requires the `FINANCE` role group and a
+  `SourceTenderId`.
+- All three purposes reject `ContractId`: pre-contract work must not hang off an
+  executed contract.
+
+`ProcurementInputPriceOffer` and `DepartmentFinanceReview` share one lifecycle:
+`Draft → Submitted → Approved | Rejected`. Editing is limited to `Draft` and
+`Rejected`; the author cannot decide their own record
+(`CreatedByUserId == callerUserId` is rejected server-side), an input price offer
+already referenced by a quote is immutable, and a rejected record requires a
+reason. Offers and reviews are returned with `rowVersion`, and all writes require
+an idempotency key plus `If-Match`/body `rowVersion`.
+
+Server-side gates that consume these records:
+
+- `QuoteService` send-to-customer requires an `Approved` `FinanceCommercialReview`
+  package linked by `SourceQuoteId`, and the quote must carry an
+  `OperationalProjectId` so the review has a project to live under.
+- `QuoteService` resolves `inputPriceOfferId` only when the offer is `Approved`,
+  still valid, and belongs to a `ProcurementInputPricing` package of the quote's
+  project; the quote stores `InputPriceSnapshotJson` at link time.
+- `TenderService` submission requires an `OperationalProjectId` and an
+  `Approved` `FinanceTenderReview` package linked by `SourceTenderId`.
+- `ProcurementService` execution BOQ creation/update requires a same-project
+  `Upstream` contract that is signed and not draft/cancelled.
+
+The migration `AddPrecontractDepartmentControls` adds the offer, line and review
+tables plus the `Purpose` discriminator; every added column is nullable except
+`department_work_packages.Purpose`, which defaults to `General`.
 
 The Module 2 schedule is exposed beneath
 `/api/operational-projects/{id}/design-schedule` and remains separate from

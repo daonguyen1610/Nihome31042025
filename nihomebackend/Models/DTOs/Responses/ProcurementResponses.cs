@@ -14,6 +14,8 @@ public sealed class ProjectBoqRevisionListItemResponse
 {
     public int Id { get; set; }
     public int OperationalProjectId { get; set; }
+    public int? UpstreamContractId { get; set; }
+    public string? UpstreamContractNumber { get; set; }
     public int RevisionNumber { get; set; }
     public string Currency { get; set; } = string.Empty;
     public ProjectBoqRevisionStatus Status { get; set; }
@@ -35,6 +37,8 @@ public sealed class ProjectBoqRevisionResponse
 {
     public int Id { get; set; }
     public int OperationalProjectId { get; set; }
+    public int? UpstreamContractId { get; set; }
+    public string? UpstreamContractNumber { get; set; }
     public int RevisionNumber { get; set; }
     public string Currency { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;

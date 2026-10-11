@@ -122,6 +122,7 @@ public sealed class CrmBusinessPipelineTests(NihomeWebApplicationFactory factory
             quote = await MoveQuoteAsync(quote, "submit");
             quote = await MoveQuoteAsync(quote, "approve");
         }
+        await CreateApprovedFinanceReviewAsync(projectId, "FinanceCommercialReview", quoteId: originalQuoteId);
         quote = await MoveQuoteAsync(quote, "send");
         quote.GetProperty("status").GetString().Should().Be("SentToCustomer");
         opportunity = await ReadAsync(opportunityPath);

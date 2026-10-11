@@ -127,9 +127,10 @@ const daysUntil = (iso: string): number => {
 
 interface HeaderProps {
   tender: TenderResponse;
+  canRequestFinance: boolean;
 }
 
-const HeaderCard = ({ tender }: HeaderProps) => {
+const HeaderCard = ({ tender, canRequestFinance }: HeaderProps) => {
   const { t } = useI18n();
   const days = daysUntil(tender.submissionDeadline);
   const isTerminal = tender.status === "Won" || tender.status === "Lost" || tender.status === "Cancelled";
@@ -159,6 +160,7 @@ const HeaderCard = ({ tender }: HeaderProps) => {
             ) : null}
           </p>
         </div>
+        {canRequestFinance && tender.operationalProjectId && tender.status === "Preparing" ? <Button asChild variant="outline"><Link to={`/admin/work-packages?create=1&purpose=FinanceTenderReview&projectId=${tender.operationalProjectId}&tenderId=${tender.id}`}><CheckCircle2 className="mr-1 h-4 w-4" />{t("tenders.action.requestFinanceReview")}</Link></Button> : null}
       </div>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-3">
@@ -1389,7 +1391,7 @@ const AdminTenderDetail = () => {
           <PageError message={t("tenders.detail.notFound")} onRetry={() => void fetchTender()} />
         ) : (
           <>
-            <HeaderCard tender={tender} />
+            <HeaderCard tender={tender} canRequestFinance={canManage} />
 
             {showDeadlineAlert ? (
               <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">

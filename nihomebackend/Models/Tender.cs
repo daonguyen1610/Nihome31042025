@@ -21,6 +21,8 @@ public class Tender
     /// <summary>Owning customer (chủ đầu tư) — hard FK, tender cannot exist without one.</summary>
     public int CustomerId { get; set; }
     public Customer Customer { get; set; } = null!;
+    public int? OperationalProjectId { get; set; }
+    public OperationalProject? OperationalProject { get; set; }
 
     /// <summary>Bid opening date (ngày mở thầu). Nullable — not always known at create.</summary>
     public DateTime? OpeningDate { get; set; }

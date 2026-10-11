@@ -41,7 +41,11 @@ public class Contract : IConcurrencyTracked
     public int? OpportunityId { get; set; }
     public Opportunity? Opportunity { get; set; }
 
-    /// <summary>Required source quote for upstream contracts; not required downstream.</summary>
+    /// <summary>
+    /// Optional source quotation. When set it must be an approved, still-valid
+    /// customer quote for the same customer, opportunity and project. Downstream
+    /// supplier/subcontract contracts never reference a CRM customer quote.
+    /// </summary>
     public int? QuoteId { get; set; }
     public Quote? Quote { get; set; }
 

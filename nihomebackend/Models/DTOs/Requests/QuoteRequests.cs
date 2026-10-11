@@ -45,6 +45,7 @@ public class CreateQuoteRequest
     public decimal? UnitPricePerSqm { get; set; }
 
     public int? MaterialRateCatalogId { get; set; }
+    public int? InputPriceOfferId { get; set; }
     public DateOnly? PricingEffectiveDate { get; set; }
 
     [StringLength(500, MinimumLength = 10)]
@@ -79,6 +80,7 @@ public class UpdateQuoteRequest : IConcurrencyRequest
     public decimal? AreaSqm { get; set; }
     public decimal? UnitPricePerSqm { get; set; }
     public int? MaterialRateCatalogId { get; set; }
+    public int? InputPriceOfferId { get; set; }
     public DateOnly? PricingEffectiveDate { get; set; }
 
     [StringLength(500, MinimumLength = 10)]

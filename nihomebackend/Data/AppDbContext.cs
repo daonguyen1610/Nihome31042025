@@ -101,6 +101,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<DepartmentWorkTaskCc> DepartmentWorkTaskCcUsers => Set<DepartmentWorkTaskCc>();
     public DbSet<DepartmentWorkTaskDependency> DepartmentWorkTaskDependencies => Set<DepartmentWorkTaskDependency>();
     public DbSet<DepartmentWorkPackageHistory> DepartmentWorkPackageHistory => Set<DepartmentWorkPackageHistory>();
+    public DbSet<ProcurementInputPriceOffer> ProcurementInputPriceOffers => Set<ProcurementInputPriceOffer>();
+    public DbSet<ProcurementInputPriceLine> ProcurementInputPriceLines => Set<ProcurementInputPriceLine>();
+    public DbSet<DepartmentFinanceReview> DepartmentFinanceReviews => Set<DepartmentFinanceReview>();
     public DbSet<KpiDefinition> KpiDefinitions => Set<KpiDefinition>();
     public DbSet<KpiPeriod> KpiPeriods => Set<KpiPeriod>();
     public DbSet<KpiScoreSnapshot> KpiScoreSnapshots => Set<KpiScoreSnapshot>();
@@ -794,6 +797,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .WithMany()
                 .HasForeignKey(q => q.MaterialRateRevisionId)
                 .OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(q => q.InputPriceOffer)
+                .WithMany()
+                .HasForeignKey(q => q.InputPriceOfferId)
+                .OnDelete(DeleteBehavior.Restrict);
+            b.Property(q => q.InputPriceSnapshotJson).HasColumnType("nvarchar(max)");
             b.HasIndex(q => q.OpportunityId);
             b.HasIndex(q => q.OperationalProjectId);
             b.HasIndex(q => q.OwnerUserId);
@@ -801,6 +809,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasIndex(q => q.ValidUntil);
             b.HasIndex(q => q.CreatedAt);
             b.HasIndex(q => q.MaterialRateRevisionId);
+            b.HasIndex(q => q.InputPriceOfferId);
             b.Property(q => q.RowVersion).IsRowVersion();
         });
 
@@ -867,6 +876,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.Property(s => s.Method).HasConversion<string>().HasMaxLength(20);
             b.Property(s => s.PackageDescription).HasMaxLength(2000);
             b.Property(s => s.ItemsJson).HasColumnType("nvarchar(max)");
+            b.Property(s => s.InputPriceSnapshotJson).HasColumnType("nvarchar(max)");
             b.Property(s => s.AreaSqm).HasColumnType("decimal(18,2)");
             b.Property(s => s.UnitPricePerSqm).HasColumnType("decimal(18,2)");
             b.Property(s => s.CatalogUnitPricePerSqm).HasColumnType("decimal(18,2)");
@@ -1086,11 +1096,16 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .WithMany()
                 .HasForeignKey(t => t.CustomerId)
                 .OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(t => t.OperationalProject)
+                .WithMany()
+                .HasForeignKey(t => t.OperationalProjectId)
+                .OnDelete(DeleteBehavior.SetNull);
             b.HasOne(t => t.Preparer)
                 .WithMany()
                 .HasForeignKey(t => t.PreparerUserId)
                 .OnDelete(DeleteBehavior.SetNull);
             b.HasIndex(t => t.CustomerId);
+            b.HasIndex(t => t.OperationalProjectId);
             b.HasIndex(t => t.PreparerUserId);
             b.HasIndex(t => t.Status);
             b.HasIndex(t => t.SubmissionDeadline);
@@ -1306,6 +1321,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.Property(item => item.RowVersion).IsRowVersion();
             b.HasOne(item => item.OperationalProject).WithMany(project => project.BoqRevisions)
                 .HasForeignKey(item => item.OperationalProjectId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(item => item.UpstreamContract).WithMany()
+                .HasForeignKey(item => item.UpstreamContractId).OnDelete(DeleteBehavior.Restrict);
             b.HasOne(item => item.SourceTenderEstimateRevision).WithMany()
                 .HasForeignKey(item => item.SourceTenderEstimateRevisionId).OnDelete(DeleteBehavior.Restrict);
             b.HasOne(item => item.SourceContractAppendix).WithMany()
@@ -1319,6 +1336,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasOne(item => item.RejectedBy).WithMany()
                 .HasForeignKey(item => item.RejectedByUserId).OnDelete(DeleteBehavior.NoAction);
             b.HasIndex(item => new { item.OperationalProjectId, item.RevisionNumber }).IsUnique();
+            b.HasIndex(item => item.UpstreamContractId);
             b.HasIndex(item => new { item.OperationalProjectId, item.Status, item.ApprovedAt });
         });
 
@@ -1848,6 +1866,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasKey(item => item.Id);
             b.Property(item => item.Code).HasMaxLength(40).IsRequired();
             b.Property(item => item.Kind).HasConversion<string>().HasMaxLength(20).IsRequired();
+            b.Property(item => item.Purpose).HasConversion<string>().HasMaxLength(40).IsRequired();
             b.Property(item => item.Name).HasMaxLength(300).IsRequired();
             b.Property(item => item.Description).HasMaxLength(4000);
             b.Property(item => item.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
@@ -1858,6 +1877,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .HasForeignKey(item => item.ContractId).OnDelete(DeleteBehavior.Restrict);
             b.HasOne(item => item.SourceOpportunity).WithMany()
                 .HasForeignKey(item => item.SourceOpportunityId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(item => item.SourceQuote).WithMany()
+                .HasForeignKey(item => item.SourceQuoteId).OnDelete(DeleteBehavior.SetNull);
+            b.HasOne(item => item.SourceTender).WithMany()
+                .HasForeignKey(item => item.SourceTenderId).OnDelete(DeleteBehavior.SetNull);
             b.HasOne(item => item.DepartmentRoleGroup).WithMany()
                 .HasForeignKey(item => item.DepartmentRoleGroupId).OnDelete(DeleteBehavior.Restrict);
             b.HasOne(item => item.LeadUser).WithMany()
@@ -1868,15 +1891,63 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasIndex(item => new { item.OperationalProjectId, item.DepartmentRoleGroupId, item.Status });
             b.HasIndex(item => new { item.ContractId, item.Status });
             b.HasIndex(item => new { item.Kind, item.DepartmentRoleGroupId, item.Status });
+            b.HasIndex(item => new { item.Purpose, item.Status });
+            b.HasIndex(item => item.SourceQuoteId);
+            b.HasIndex(item => item.SourceTenderId);
             b.HasIndex(item => item.LeadUserId);
             b.ToTable(table =>
             {
                 table.HasCheckConstraint("CK_department_work_packages_scope",
                     "([Kind] = 'Project' AND [OperationalProjectId] IS NOT NULL) OR " +
-                    "([Kind] = 'Internal' AND [OperationalProjectId] IS NULL AND [ContractId] IS NULL AND [SourceOpportunityId] IS NULL)");
+                    "([Kind] = 'Internal' AND [OperationalProjectId] IS NULL AND [ContractId] IS NULL AND [SourceOpportunityId] IS NULL AND [SourceQuoteId] IS NULL AND [SourceTenderId] IS NULL)");
                 table.HasCheckConstraint("CK_department_work_packages_dates",
                     "[PlannedStart] IS NULL OR [PlannedEnd] IS NULL OR [PlannedEnd] >= [PlannedStart]");
             });
+        });
+
+        modelBuilder.Entity<ProcurementInputPriceOffer>(b =>
+        {
+            b.ToTable("procurement_input_price_offers");
+            b.Property(item => item.SupplierReference).HasMaxLength(120).IsRequired();
+            b.Property(item => item.Currency).HasMaxLength(3).IsRequired();
+            b.Property(item => item.Note).HasMaxLength(2000);
+            b.Property(item => item.DecisionReason).HasMaxLength(2000);
+            b.Property(item => item.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
+            b.Property(item => item.RowVersion).IsRowVersion();
+            b.HasOne(item => item.WorkPackage).WithMany(item => item.InputPriceOffers)
+                .HasForeignKey(item => item.WorkPackageId).OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(item => item.Vendor).WithMany().HasForeignKey(item => item.VendorId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(item => item.ApprovedByUser).WithMany().HasForeignKey(item => item.ApprovedByUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(item => item.RejectedByUser).WithMany().HasForeignKey(item => item.RejectedByUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasIndex(item => new { item.WorkPackageId, item.SupplierReference, item.VendorId }).IsUnique();
+            b.HasIndex(item => new { item.Status, item.ValidUntil });
+        });
+
+        modelBuilder.Entity<ProcurementInputPriceLine>(b =>
+        {
+            b.ToTable("procurement_input_price_lines");
+            b.Property(item => item.ItemCode).HasMaxLength(120).IsRequired();
+            b.Property(item => item.Description).HasMaxLength(500).IsRequired();
+            b.Property(item => item.Unit).HasMaxLength(30).IsRequired();
+            b.Property(item => item.Quantity).HasPrecision(18, 6);
+            b.Property(item => item.UnitPrice).HasPrecision(18, 4);
+            b.Property(item => item.VatPercent).HasPrecision(5, 2);
+            b.Property(item => item.Amount).HasPrecision(18, 4);
+            b.HasOne(item => item.Offer).WithMany(item => item.Lines).HasForeignKey(item => item.OfferId).OnDelete(DeleteBehavior.Cascade);
+            b.HasIndex(item => new { item.OfferId, item.ItemCode }).IsUnique();
+        });
+
+        modelBuilder.Entity<DepartmentFinanceReview>(b =>
+        {
+            b.ToTable("department_finance_reviews");
+            b.Property(item => item.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
+            b.Property(item => item.Findings).HasMaxLength(4000);
+            b.Property(item => item.DecisionReason).HasMaxLength(2000);
+            b.Property(item => item.RowVersion).IsRowVersion();
+            b.HasOne(item => item.WorkPackage).WithOne(item => item.FinanceReview)
+                .HasForeignKey<DepartmentFinanceReview>(item => item.WorkPackageId).OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(item => item.ReviewedByUser).WithMany().HasForeignKey(item => item.ReviewedByUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasIndex(item => item.WorkPackageId).IsUnique();
         });
 
         modelBuilder.Entity<DepartmentWorkTask>(b =>

@@ -898,6 +898,7 @@ export const OPERATIONAL_PROJECT_STATUSES: OperationalProjectStatus[] = [
 ];
 
 export type WorkPackageKind = "Project" | "Internal";
+export type WorkPackagePurpose = "General" | "ProcurementInputPricing" | "FinanceCommercialReview" | "FinanceTenderReview";
 export type WorkPackageStatus = "Planned" | "Active" | "Completed" | "Cancelled";
 export type WorkTaskStatus = "Planned" | "InProgress" | "Completed" | "Verified" | "Cancelled";
 
@@ -936,6 +937,7 @@ export interface DepartmentWorkPackageResponse {
   id: number;
   code: string;
   kind: WorkPackageKind;
+  purpose: WorkPackagePurpose;
   name: string;
   description?: string | null;
   operationalProjectId?: number | null;
@@ -945,6 +947,10 @@ export interface DepartmentWorkPackageResponse {
   contractNumber?: string | null;
   sourceOpportunityId?: number | null;
   sourceOpportunityName?: string | null;
+  sourceQuoteId?: number | null;
+  sourceQuoteCode?: string | null;
+  sourceTenderId?: number | null;
+  sourceTenderCode?: string | null;
   departmentRoleGroupId: number;
   departmentCode: string;
   departmentLabelKey: string;
@@ -960,6 +966,31 @@ export interface DepartmentWorkPackageResponse {
   canAssignTasks: boolean;
   rowVersion: string;
   tasks: DepartmentWorkTaskResponse[];
+  inputPriceOffers: InputPriceOfferResponse[];
+  financeReview?: FinanceReviewResponse | null;
+}
+
+export type BusinessReviewStatus = "Draft" | "Submitted" | "Approved" | "Rejected";
+
+export interface InputPriceLineResponse {
+  id: number; itemCode: string; description: string; unit: string; quantity: number;
+  unitPrice: number; vatPercent: number; amount: number; sortOrder: number;
+}
+
+export interface InputPriceOfferResponse {
+  id: number; workPackageId: number; vendorId: number; vendorCode: string; vendorName: string;
+  vendorType: string; supplierReference: string; currency: string; validUntil: string;
+  status: BusinessReviewStatus; note?: string | null; decisionReason?: string | null;
+  subtotal: number; vatAmount: number; grandTotal: number; createdByUserId: number;
+  rowVersion: string; lines: InputPriceLineResponse[];
+}
+
+export interface FinanceReviewResponse {
+  id: number; workPackageId: number; status: BusinessReviewStatus;
+  contractConditionsReviewed: boolean; guaranteesReviewed: boolean;
+  paymentTermsReviewed: boolean; financialDossierReviewed: boolean;
+  findings?: string | null; decisionReason?: string | null; createdByUserId: number;
+  reviewedByUserId?: number | null; reviewedByName?: string | null; rowVersion: string;
 }
 
 export interface DepartmentWorkPackageListResponse {
@@ -973,6 +1004,7 @@ export interface DepartmentWorkPackageOptionsResponse {
   departments: { id: number; code: string; labelKey: string; canReceiveProjectPackage: boolean }[];
   users: { userId: number; name: string; email: string; roleGroupId: number; canLead: boolean }[];
   kpiDefinitions: { id: number; code: string; nameKey: string }[];
+  vendors: { id: number; code: string; name: string; type: string }[];
 }
 
 export interface DepartmentWorkPackageQuery {
@@ -980,6 +1012,9 @@ export interface DepartmentWorkPackageQuery {
   operationalProjectId?: number;
   contractId?: number;
   sourceOpportunityId?: number;
+  sourceQuoteId?: number;
+  sourceTenderId?: number;
+  purpose?: WorkPackagePurpose;
   departmentRoleGroupId?: number;
   status?: WorkPackageStatus;
   search?: string;
@@ -989,16 +1024,31 @@ export interface DepartmentWorkPackageQuery {
 
 export interface CreateDepartmentWorkPackageRequest {
   kind: WorkPackageKind;
+  purpose: WorkPackagePurpose;
   name: string;
   description?: string | null;
   operationalProjectId?: number | null;
   contractId?: number | null;
   sourceOpportunityId?: number | null;
+  sourceQuoteId?: number | null;
+  sourceTenderId?: number | null;
   departmentRoleGroupId: number;
   participantDepartmentRoleGroupIds: number[];
   leadUserId: number;
   plannedStart?: string | null;
   plannedEnd?: string | null;
+}
+
+export interface UpsertInputPriceOfferRequest {
+  vendorId: number; supplierReference: string; currency: string; validUntil: string;
+  note?: string | null; rowVersion?: string | null;
+  lines: Array<{ itemCode: string; description: string; unit: string; quantity: number; unitPrice: number; vatPercent: number; sortOrder: number }>;
+}
+
+export interface UpsertFinanceReviewRequest {
+  contractConditionsReviewed: boolean; guaranteesReviewed: boolean;
+  paymentTermsReviewed: boolean; financialDossierReviewed: boolean;
+  findings?: string | null; rowVersion?: string | null;
 }
 
 export interface UpdateDepartmentWorkPackageRequest {
@@ -1951,6 +2001,10 @@ export interface QuoteVersionResponse {
   rateOverrideReason?: string | null;
   rateOverrideByUserId?: number | null;
   rateOverrideAt?: string | null;
+  inputPriceOfferId?: number | null;
+  inputPriceVendorName?: string | null;
+  inputPriceSupplierReference?: string | null;
+  inputPriceSnapshotJson?: string | null;
   subtotal: number;
   discountPercent: number;
   vatPercent: number;
@@ -1986,6 +2040,10 @@ export interface QuoteResponse {
   rateOverrideReason?: string | null;
   rateOverrideByUserId?: number | null;
   rateOverrideAt?: string | null;
+  inputPriceOfferId?: number | null;
+  inputPriceVendorName?: string | null;
+  inputPriceSupplierReference?: string | null;
+  inputPriceSnapshotJson?: string | null;
   subtotal: number;
   discountPercent: number;
   vatPercent: number;
@@ -2052,6 +2110,7 @@ export interface QuoteVersionsResponse {
 export interface CreateQuoteRequest {
   opportunityId: number;
   ownerUserId?: number | null;
+  inputPriceOfferId?: number | null;
   method: QuoteMethod;
   areaSqm?: number | null;
   unitPricePerSqm?: number | null;
@@ -2069,6 +2128,7 @@ export interface CreateQuoteRequest {
 export interface UpdateQuoteRequest {
   rowVersion?: string;
   ownerUserId?: number | null;
+  inputPriceOfferId?: number | null;
   areaSqm?: number | null;
   unitPricePerSqm?: number | null;
   materialRateCatalogId?: number | null;
@@ -2348,6 +2408,9 @@ export interface TenderResponse {
   name: string;
   customerId: number;
   customerName: string;
+  operationalProjectId?: number | null;
+  operationalProjectCode?: string | null;
+  operationalProjectName?: string | null;
   openingDate?: string | null;
   submissionDeadline: string;
   preparerUserId?: number | null;
@@ -2394,6 +2457,7 @@ export interface TenderListResponse {
 export interface CreateTenderRequest {
   name: string;
   customerId: number;
+  operationalProjectId?: number | null;
   openingDate?: string | null;
   submissionDeadline: string;
   preparerUserId?: number | null;
@@ -2403,6 +2467,7 @@ export interface CreateTenderRequest {
 
 export interface UpdateTenderRequest {
   name: string;
+  operationalProjectId?: number | null;
   openingDate?: string | null;
   submissionDeadline: string;
   preparerUserId?: number | null;
@@ -3883,8 +3948,8 @@ export interface PunchItemBulkDeleteResponse {
 // --- Procurement control chain ---------------------------------------
 
 export interface ProjectBoqLineResponse { id: number; itemCode: string; description: string; unit: string; approvedQuantity: number; budgetUnitPrice: number; amount: number }
-export interface ProjectBoqRevisionResponse { id: number; operationalProjectId: number; revisionNumber: number; currency: string; status: string; sourceTenderEstimateRevisionId?: number | null; sourceContractAppendixId?: number | null; costTotal: number; preparedByUserId: number; preparedByName?: string | null; submittedAt?: string | null; approvedAt?: string | null; rejectedAt?: string | null; decisionReason?: string | null; isFinal: boolean; createdAt: string; updatedAt: string; rowVersion: string; lines: ProjectBoqLineResponse[] }
-export interface ProjectBoqRevisionListItemResponse { id: number; operationalProjectId: number; revisionNumber: number; currency: string; status: string; costTotal: number; lineCount: number; itemCodes: string[]; preparedByUserId: number; preparedByName?: string | null; submittedAt?: string | null; approvedAt?: string | null; rejectedAt?: string | null; isFinal: boolean; createdAt: string; updatedAt: string; rowVersion: string }
+export interface ProjectBoqRevisionResponse { id: number; operationalProjectId: number; upstreamContractId?: number | null; upstreamContractNumber?: string | null; revisionNumber: number; currency: string; status: string; sourceTenderEstimateRevisionId?: number | null; sourceContractAppendixId?: number | null; costTotal: number; preparedByUserId: number; preparedByName?: string | null; submittedAt?: string | null; approvedAt?: string | null; rejectedAt?: string | null; decisionReason?: string | null; isFinal: boolean; createdAt: string; updatedAt: string; rowVersion: string; lines: ProjectBoqLineResponse[] }
+export interface ProjectBoqRevisionListItemResponse { id: number; operationalProjectId: number; upstreamContractId?: number | null; upstreamContractNumber?: string | null; revisionNumber: number; currency: string; status: string; costTotal: number; lineCount: number; itemCodes: string[]; preparedByUserId: number; preparedByName?: string | null; submittedAt?: string | null; approvedAt?: string | null; rejectedAt?: string | null; isFinal: boolean; createdAt: string; updatedAt: string; rowVersion: string }
 export interface ProjectBoqRevisionListResponse { total: number; page: number; pageSize: number; items: ProjectBoqRevisionListItemResponse[] }
 export interface ProjectBoqRevisionListParams { search?: string; status?: string; sortBy?: "revision" | "status" | "total" | "preparedBy" | "createdAt" | "updatedAt"; sortDirection?: "asc" | "desc"; page?: number; pageSize?: number }
 export interface MaterialRequestLineResponse { id: number; projectBoqLineId: number; itemCode: string; description: string; unit: string; requestedQuantity: number; receivedQuantity: number; boqApprovedQuantity: number; boqRemainingQuantity: number }
@@ -3917,7 +3982,7 @@ export interface WarehouseReceiptUpsertRequest { inspectedAt: string; receivedBy
 export interface WarehouseIssueUpsertRequest { issuedAt: string; responsibleSiteUserId: number; issuedByUserId: number; workItemCode?: string | null; lines: Array<{ projectBoqLineId: number; issuedQuantity: number }>; rowVersion?: string }
 export interface VendorRatingResponse { id: number; operationalProjectId: number; contractId: number; contractNumber: string; vendorId: number; vendorName: string; versionNumber: number; status: string; procurementOwnerUserId: number; procurementOwnerName?: string | null; qualityScore: number; scheduleScore: number; costScore: number; hseScore: number; overallScore: number; comments?: string | null; preparedByUserId: number; submittedAt?: string | null; approvedAt?: string | null; decisionReason?: string | null; supersedesVendorRatingId?: number | null; rowVersion: string }
 export interface ProcurementWorkspaceResponse { boqRevisions: ProjectBoqRevisionResponse[]; materialRequests: MaterialRequestResponse[]; contractLines: ProcurementContractLineResponse[]; receipts: WarehouseReceiptResponse[]; issues: WarehouseIssueResponse[]; vendorRatings: VendorRatingResponse[] }
-export interface ProjectBoqRevisionRequest { currency: string; sourceTenderEstimateRevisionId?: number | null; sourceContractAppendixId?: number | null; lines: Array<{ itemCode: string; description: string; unit: string; approvedQuantity: number; budgetUnitPrice: number }>; rowVersion?: string }
+export interface ProjectBoqRevisionRequest { upstreamContractId: number; currency: string; sourceTenderEstimateRevisionId?: number | null; sourceContractAppendixId?: number | null; lines: Array<{ itemCode: string; description: string; unit: string; approvedQuantity: number; budgetUnitPrice: number }>; rowVersion?: string }
 export interface MaterialRequestUpsertRequest { responsibleSiteUserId: number; assignedProcurementUserId: number; requiredAt: string; note?: string | null; lines: Array<{ projectBoqLineId: number; requestedQuantity: number }>; rowVersion?: string }
 export interface ProcurementContractLineRequest { contractId: number; projectBoqLineId: number; procurementOwnerUserId: number; quantity: number; negotiatedUnitPrice: number; rowVersion?: string }
 export interface VendorRatingUpsertRequest { contractId: number; qualityScore: number; scheduleScore: number; costScore: number; hseScore: number; comments?: string | null; rowVersion?: string }
@@ -5731,6 +5796,20 @@ export const adminApi = {
       ...withIdempotencyKey(idempotencyKey).headers,
       ...withIfMatch(rowVersion).headers,
     } }),
+  addInputPriceOffer: (packageId: number, body: UpsertInputPriceOfferRequest, idempotencyKey: string) =>
+    api.post<InputPriceOfferResponse>(`/work-packages/${packageId}/input-price-offers`, body, withIdempotencyKey(idempotencyKey)),
+  updateInputPriceOffer: (packageId: number, offerId: number, body: UpsertInputPriceOfferRequest, idempotencyKey: string) =>
+    api.put<InputPriceOfferResponse>(`/work-packages/${packageId}/input-price-offers/${offerId}`, body, { headers: { ...withIdempotencyKey(idempotencyKey).headers, ...withIfMatch(body.rowVersion ?? "").headers } }),
+  submitInputPriceOffer: (packageId: number, offerId: number, rowVersion: string, idempotencyKey: string) =>
+    api.post<InputPriceOfferResponse>(`/work-packages/${packageId}/input-price-offers/${offerId}/submit`, { rowVersion }, { headers: { ...withIdempotencyKey(idempotencyKey).headers, ...withIfMatch(rowVersion).headers } }),
+  decideInputPriceOffer: (packageId: number, offerId: number, approved: boolean, reason: string | null, rowVersion: string, idempotencyKey: string) =>
+    api.post<InputPriceOfferResponse>(`/work-packages/${packageId}/input-price-offers/${offerId}/decision`, { approved, reason, rowVersion }, { headers: { ...withIdempotencyKey(idempotencyKey).headers, ...withIfMatch(rowVersion).headers } }),
+  saveFinanceReview: (packageId: number, body: UpsertFinanceReviewRequest, idempotencyKey: string) =>
+    api.put<FinanceReviewResponse>(`/work-packages/${packageId}/finance-review`, body, { headers: { ...withIdempotencyKey(idempotencyKey).headers, ...(body.rowVersion ? withIfMatch(body.rowVersion).headers : {}) } }),
+  submitFinanceReview: (packageId: number, rowVersion: string, idempotencyKey: string) =>
+    api.post<FinanceReviewResponse>(`/work-packages/${packageId}/finance-review/submit`, { rowVersion }, { headers: { ...withIdempotencyKey(idempotencyKey).headers, ...withIfMatch(rowVersion).headers } }),
+  decideFinanceReview: (packageId: number, approved: boolean, reason: string | null, rowVersion: string, idempotencyKey: string) =>
+    api.post<FinanceReviewResponse>(`/work-packages/${packageId}/finance-review/decision`, { approved, reason, rowVersion }, { headers: { ...withIdempotencyKey(idempotencyKey).headers, ...withIfMatch(rowVersion).headers } }),
   listOperationalProjects: (params: OperationalProjectListParams = {}) =>
     api.get<OperationalProjectListResponse>("/operational-projects", { params }),
   suggestOperationalProjectCode: () =>

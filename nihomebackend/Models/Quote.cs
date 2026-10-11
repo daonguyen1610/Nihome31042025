@@ -40,6 +40,9 @@ public class Quote : IConcurrencyTracked
     public DateOnly? PricingEffectiveDate { get; set; }
     public decimal? CatalogUnitPricePerSqm { get; set; }
     public QuoteRateSource RateSource { get; set; } = QuoteRateSource.Override;
+    public int? InputPriceOfferId { get; set; }
+    public ProcurementInputPriceOffer? InputPriceOffer { get; set; }
+    public string? InputPriceSnapshotJson { get; set; }
     public string? RateOverrideReason { get; set; }
     public int? RateOverrideByUserId { get; set; }
     public DateTime? RateOverrideAt { get; set; }
@@ -134,6 +137,8 @@ public class QuoteVersionSnapshot
     public DateOnly? PricingEffectiveDate { get; set; }
     public decimal? CatalogUnitPricePerSqm { get; set; }
     public QuoteRateSource RateSource { get; set; } = QuoteRateSource.Override;
+    public int? InputPriceOfferId { get; set; }
+    public string? InputPriceSnapshotJson { get; set; }
     public string? RateOverrideReason { get; set; }
     public int? RateOverrideByUserId { get; set; }
     public DateTime? RateOverrideAt { get; set; }

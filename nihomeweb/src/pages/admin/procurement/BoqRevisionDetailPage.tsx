@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useToast } from "@/hooks/use-toast";
@@ -16,6 +17,7 @@ import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { useI18n } from "@/lib/i18n";
 import {
   adminApi,
+  type ContractResponse,
   type OperationalProjectResponse,
   type ProjectBoqRevisionRequest,
   type ProjectBoqRevisionResponse,
@@ -58,6 +60,8 @@ const BoqRevisionDetailPage = () => {
   const [decision, setDecision] = useState<boolean | null>(null);
   const [decisionReason, setDecisionReason] = useState("");
   const [currency, setCurrency] = useState("VND");
+  const [upstreamContractId, setUpstreamContractId] = useState(0);
+  const [upstreamContracts, setUpstreamContracts] = useState<ContractResponse[]>([]);
   const [lines, setLines] = useState<BoqLineDraft[]>([emptyLine()]);
 
   const load = async () => {
@@ -69,12 +73,14 @@ const BoqRevisionDetailPage = () => {
     setLoading(true);
     setError(null);
     try {
-      const [projectResponse, boqResponse] = await Promise.all([
+      const [projectResponse, boqResponse, contractsResponse] = await Promise.all([
         adminApi.getOperationalProject(projectId),
         adminApi.getProjectBoqRevision(projectId, boqId),
+        adminApi.listContracts({ operationalProjectId: projectId, pageSize: 200 }),
       ]);
       setProject(projectResponse.data);
       setBoq(boqResponse.data);
+      setUpstreamContracts(contractsResponse.data.items.filter((contract) => contract.direction === "Upstream" && contract.signedDate && !["Draft", "Cancelled"].includes(contract.status)));
     } catch (reason) {
       setError(extractApiError(reason));
     } finally {
@@ -91,6 +97,7 @@ const BoqRevisionDetailPage = () => {
   const openEdit = () => {
     if (!boq) return;
     setCurrency(boq.currency);
+    setUpstreamContractId(boq.upstreamContractId ?? 0);
     setLines(boq.lines.map((line) => ({
       draftId: String(line.id),
       itemCode: line.itemCode,
@@ -106,7 +113,8 @@ const BoqRevisionDetailPage = () => {
   const validateForm = () => {
     const normalizedCodes = lines.map((line) => line.itemCode.trim().toUpperCase());
     if (normalizedCodes.length !== new Set(normalizedCodes).size) return t("procurement.validation.duplicateItemCode");
-    const valid = /^[A-Z]{3}$/.test(currency)
+    const valid = upstreamContractId > 0
+      && /^[A-Z]{3}$/.test(currency)
       && lines.length > 0
       && lines.every((line) => /^[A-Za-z0-9][A-Za-z0-9._/-]*$/.test(line.itemCode.trim())
         && line.description.trim().length > 0
@@ -129,6 +137,7 @@ const BoqRevisionDetailPage = () => {
     setFormError(null);
     try {
       const response = await adminApi.updateProjectBoqRevision(projectId, boq.id, {
+        upstreamContractId,
         currency,
         sourceTenderEstimateRevisionId: boq.sourceTenderEstimateRevisionId,
         sourceContractAppendixId: boq.sourceContractAppendixId,
@@ -249,6 +258,7 @@ const BoqRevisionDetailPage = () => {
         <section aria-labelledby="boq-overview-heading" className="grid gap-5 border-b pb-6 sm:grid-cols-2 lg:grid-cols-4">
           <h2 id="boq-overview-heading" className="sr-only">{t("procurement.boq.detail.overview")}</h2>
           <Datum label={t("procurement.field.preparedBy")} value={boq.preparedByName ?? `#${boq.preparedByUserId}`} />
+          <Datum label={t("procurement.field.upstreamContract")} value={boq.upstreamContractNumber ?? "—"} />
           <Datum label={t("procurement.field.total")} value={money(boq.costTotal, boq.currency)} />
           <Datum label={t("procurement.field.lines")} value={String(boq.lines.length)} />
           <Datum label={t("procurement.boq.detail.lastUpdated")} value={dateTime(boq.updatedAt)} />
@@ -301,7 +311,7 @@ const BoqRevisionDetailPage = () => {
       <Dialog open={editOpen} onOpenChange={(open) => { if (!busy) setEditOpen(open); }}>
         <DialogContent className="max-h-[92vh] w-[95vw] max-w-5xl overflow-y-auto">
           <DialogHeader><DialogTitle>{t("procurement.boq.edit.title", { revision: boq.revisionNumber })}</DialogTitle><DialogDescription>{t("procurement.boq.edit.description")}</DialogDescription></DialogHeader>
-          <BoqForm currency={currency} setCurrency={setCurrency} lines={lines} setLines={setLines} t={t} />
+          <BoqForm upstreamContractId={upstreamContractId} setUpstreamContractId={setUpstreamContractId} upstreamContracts={upstreamContracts} currency={currency} setCurrency={setCurrency} lines={lines} setLines={setLines} t={t} />
           {formError && <p className="text-sm text-destructive" role="alert">{formError}</p>}
           <DialogFooter><Button variant="outline" onClick={() => setEditOpen(false)} disabled={busy}>{t("common.cancel")}</Button><Button onClick={() => void save()} disabled={busy}>{busy ? t("common.saving") : t("common.save")}</Button></DialogFooter>
         </DialogContent>
@@ -323,9 +333,9 @@ const Datum = ({ label, value }: { label: string; value: string }) => <div class
 
 type Translate = (key: string, params?: Record<string, string | number>) => string;
 
-const BoqForm = ({ currency, setCurrency, lines, setLines, t }: { currency: string; setCurrency: (value: string) => void; lines: BoqLineDraft[]; setLines: React.Dispatch<React.SetStateAction<BoqLineDraft[]>>; t: Translate }) => (
+const BoqForm = ({ upstreamContractId, setUpstreamContractId, upstreamContracts, currency, setCurrency, lines, setLines, t }: { upstreamContractId: number; setUpstreamContractId: (value: number) => void; upstreamContracts: ContractResponse[]; currency: string; setCurrency: (value: string) => void; lines: BoqLineDraft[]; setLines: React.Dispatch<React.SetStateAction<BoqLineDraft[]>>; t: Translate }) => (
   <div className="space-y-4">
-    <div className="max-w-xs space-y-2"><Label htmlFor="boq-edit-currency">{t("procurement.field.currency")}</Label><Input id="boq-edit-currency" maxLength={3} value={currency} onChange={(event) => setCurrency(event.target.value.toUpperCase())} /></div>
+    <div className="grid gap-3 sm:grid-cols-2"><div className="space-y-2"><Label>{t("procurement.field.upstreamContract")}</Label><Select value={upstreamContractId ? String(upstreamContractId) : ""} onValueChange={(value) => setUpstreamContractId(Number(value))}><SelectTrigger><SelectValue placeholder={t("procurement.boq.selectSignedContract")} /></SelectTrigger><SelectContent>{upstreamContracts.map((contract) => <SelectItem key={contract.id} value={String(contract.id)}>{contract.contractNumber}</SelectItem>)}</SelectContent></Select></div><div className="space-y-2"><Label htmlFor="boq-edit-currency">{t("procurement.field.currency")}</Label><Input id="boq-edit-currency" maxLength={3} value={currency} onChange={(event) => setCurrency(event.target.value.toUpperCase())} /></div></div>
     <div className="space-y-3">
       <div className="flex items-center justify-between"><Label>{t("procurement.field.lines")}</Label><Button type="button" variant="outline" size="sm" onClick={() => setLines((current) => [...current, emptyLine()])}><Plus className="mr-2 h-4 w-4" />{t("procurement.action.addLine")}</Button></div>
       {lines.map((line, index) => <div className="grid gap-3 border-t pt-3 sm:grid-cols-2 lg:grid-cols-[1fr_2fr_0.8fr_1fr_1fr_auto]" key={line.draftId}>
