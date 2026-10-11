@@ -847,6 +847,81 @@ public class QuoteService(
         return quote is null ? null : await quoteSpreadsheet.CreateAsync(quote, languageCode, ct);
     }
 
+    public async Task<QuoteResponse?> ImportBoqAsync(
+        int id, ConfirmQuoteBoqImportRequest request, List<QuoteItemInput> items,
+        string sourceFileName, string sourceHash, string parserVersion,
+        string mappingJson, string outcomeJson, int callerUserId,
+        bool canManage, bool canSeeAll, CancellationToken ct = default)
+    {
+        if (!canManage) throw new QuoteOperationException("Không có quyền import BOQ báo giá.");
+        var quote = await db.Quotes.Include(item => item.Items).FirstOrDefaultAsync(item => item.Id == id, ct);
+        if (quote is null || (!canSeeAll && quote.OwnerUserId != callerUserId)) return null;
+        if (quote.Method != QuoteMethod.Boq)
+            throw new QuoteOperationException("Chỉ báo giá theo BOQ mới được import workbook.");
+        if (quote.Status is QuoteStatus.Cancelled or QuoteStatus.Rejected or QuoteStatus.CustomerApproved)
+            throw new QuoteOperationException($"Báo giá ở trạng thái {quote.Status} không thể import BOQ.");
+        CrmConcurrency.Apply(db, quote, request.RowVersion);
+        ValidateMethodPayload(QuoteMethod.Boq, null, null, items, quote.DiscountPercent, quote.VatPercent);
+
+        var now = DateTime.UtcNow;
+        var previousStatus = quote.Status;
+        if (quote.Status is QuoteStatus.Approved or QuoteStatus.SentToCustomer or QuoteStatus.Expired)
+        {
+            db.QuoteVersionSnapshots.Add(SnapshotOf(quote, now, callerUserId));
+            quote.Version += 1;
+            quote.Status = QuoteStatus.Draft;
+            quote.SubmittedAt = null;
+            quote.SubmittedByUserId = null;
+            quote.ApprovedAt = null;
+            quote.ApprovedByUserId = null;
+            quote.SentAt = null;
+            quote.SentByUserId = null;
+            quote.ClosedAt = null;
+            db.QuoteApprovalLogs.Add(new QuoteApprovalLog
+            {
+                QuoteId = quote.Id,
+                Action = QuoteWorkflowAction.NewVersion,
+                FromStatus = previousStatus,
+                ToStatus = QuoteStatus.Draft,
+                ByUserId = callerUserId,
+                Note = $"BOQ import created V{quote.Version} from {sourceFileName}.",
+                CreatedAt = now,
+            });
+        }
+
+        db.QuoteItems.RemoveRange(quote.Items);
+        quote.Items = [];
+        ApplyItems(quote, QuoteMethod.Boq, items);
+        RecomputeTotals(quote);
+        quote.UpdatedAt = now;
+        quote.UpdatedByUserId = callerUserId;
+        db.QuoteBoqImports.Add(new QuoteBoqImport
+        {
+            QuoteId = quote.Id,
+            QuoteVersion = quote.Version,
+            SourceFileName = sourceFileName,
+            SourceHash = sourceHash,
+            ParserVersion = parserVersion,
+            MappingJson = mappingJson,
+            OutcomeJson = outcomeJson,
+            ImportedItemCount = items.Count,
+            ImportedAt = now,
+            ImportedByUserId = callerUserId,
+        });
+        db.QuoteApprovalLogs.Add(new QuoteApprovalLog
+        {
+            QuoteId = quote.Id,
+            Action = QuoteWorkflowAction.Update,
+            FromStatus = quote.Status,
+            ToStatus = quote.Status,
+            ByUserId = callerUserId,
+            Note = $"Imported {items.Count} BOQ rows from {sourceFileName} ({sourceHash[..12]}).",
+            CreatedAt = now,
+        });
+        await CrmConcurrency.SaveChangesAsync(db, ct);
+        return await GetAsync(id, callerUserId, true, ct);
+    }
+
     // ============================== Internals ==============================
 
     private async Task<QuoteResponse?> TransitionAsync(

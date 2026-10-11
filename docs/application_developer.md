@@ -2403,6 +2403,30 @@ create a new version or an explicit diff, not overwrite actual progress.
 
 #### BOQ workbook import boundary
 
+**Implemented for preliminary quotation BOQ (`Quote`/`QuoteItem`):** authorized
+quote managers can download `GET /api/quotes/boq-template.xlsx`, preview an
+`.xlsx` through `POST /api/quotes/{id}/boq-import/preview`, review every visible
+and hidden sheet and its suggested mapping, then confirm by re-uploading the
+same file to `POST /api/quotes/{id}/boq-import/confirm`. Confirmation requires
+the preview SHA-256 and quote concurrency token. It atomically replaces the
+current Draft BOQ lines, or snapshots an approved/sent/expired version and
+creates the next Draft version. `quote_boq_imports` retains filename, source
+hash, parser version, confirmed per-sheet mapping, row outcomes, importer,
+timestamp and resulting quote version. Re-import of the same hash/parser into
+the same quote is rejected. This is preliminary quotation data and never
+becomes an Execution BOQ or an MR/warehouse allowance.
+
+The current parser accepts `.xlsx` up to 20 MB compressed/200 MB uncompressed,
+100 sheets and 20,000 used rows, rejects macros, external data links, legacy
+formats, invalid required values and ambiguous merged
+detail cells, and reports exact sheet/row locations. The operator can classify
+sheets as `Ignored`, `Summary` or `Detail` and adjust the header and required
+column numbers. Summary sheets are retained in the mapping, but automatic
+summary/detail total reconciliation and explicit cached-formula freshness
+diagnostics remain **Partial**; calculated detail values are accepted only as
+the workbook value exposed by ClosedXML. Hierarchy and discipline are not yet
+persisted by `QuoteItem` and remain **Target**.
+
 The samples include cover/summary sheets, building and discipline sheets,
 single-sheet quotations, bilingual labels, formulas, merged cells, repeated or
 project-specific names, and material lists. Consequently:

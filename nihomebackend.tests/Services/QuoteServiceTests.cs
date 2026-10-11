@@ -274,6 +274,29 @@ public class QuoteServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task ImportBoqAsync_OnApprovedQuote_CreatesDraftVersionAndProvenance()
+    {
+        var (user, created) = await SeedApprovedBoqQuoteAsync();
+
+        var imported = await _sut.ImportBoqAsync(
+            created.Id,
+            new ConfirmQuoteBoqImportRequest { SourceHash = new string('a', 64), RowVersion = created.RowVersion },
+            [new QuoteItemInput { ItemCode = "NX-01", Name = "Móng nhà xưởng", Unit = "m3", Quantity = 25m, UnitPrice = 2_000_000m }],
+            "factory-boq.xlsx", new string('a', 64), QuoteBoqImportService.ParserVersion,
+            "[]", "[]", user.Id, canManage: true, canSeeAll: true);
+
+        Assert.NotNull(imported);
+        Assert.Equal(2, imported.Version);
+        Assert.Equal("Draft", imported.Status);
+        Assert.Single(imported.Items);
+        Assert.Equal(50_000_000m, imported.Subtotal);
+        var provenance = await _db.QuoteBoqImports.SingleAsync();
+        Assert.Equal(2, provenance.QuoteVersion);
+        Assert.Equal("factory-boq.xlsx", provenance.SourceFileName);
+        Assert.Single(_db.QuoteVersionSnapshots);
+    }
+
+    [Fact]
     public async Task CreateAsync_UnitCost_RejectsBoqCatalog()
     {
         var (user, opportunity) = await SeedOpportunityAsync();

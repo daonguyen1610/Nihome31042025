@@ -446,6 +446,11 @@ public sealed class CrmHardDeletePlanService(
             .OrderBy(item => item.Id)
             .Select(item => item.Id)
             .ToListAsync(ct);
+        var boqImportIds = await db.QuoteBoqImports.AsNoTracking()
+            .Where(item => item.QuoteId == quoteId)
+            .OrderBy(item => item.Id)
+            .Select(item => item.Id)
+            .ToListAsync(ct);
         var translationIds = await db.EntityTranslations.AsNoTracking()
             .Where(item => item.EntityType == EntityTypes.Quote && item.EntityId == quoteId)
             .OrderBy(item => item.Id)
@@ -574,6 +579,7 @@ public sealed class CrmHardDeletePlanService(
         var documentIdentifiers = documents.Select(item => Identifier(item.Id)).ToList();
         var approvalLogIdentifiers = approvalLogIds.Select(Identifier).ToList();
         var snapshotIdentifiers = snapshotIds.Select(Identifier).ToList();
+        var boqImportIdentifiers = boqImportIds.Select(Identifier).ToList();
         var translationIdentifiers = translationIds.Select(Identifier).ToList();
         var opportunityIdentifiers = opportunityRecords.Select(item => Identifier(item.Id)).ToList();
         var contractIdentifiers = contractRecords.Select(item => Identifier(item.Id)).ToList();
@@ -586,6 +592,7 @@ public sealed class CrmHardDeletePlanService(
         AddImpact(impactItems, "quote.documents", documentIdentifiers, resolutionUrl: quoteDetail, resolutionLinks: quoteLinks);
         AddImpact(impactItems, "quote.approvalLogs", approvalLogIdentifiers, resolutionUrl: quoteDetail, resolutionLinks: quoteLinks);
         AddImpact(impactItems, "quote.versionSnapshots", snapshotIdentifiers, resolutionUrl: quoteDetail, resolutionLinks: quoteLinks);
+        AddImpact(impactItems, "quote.boqImports", boqImportIdentifiers, resolutionUrl: quoteDetail, resolutionLinks: quoteLinks);
         AddImpact(impactItems, "quote.translations", translationIdentifiers);
         AddImpact(impactItems, "quote.localFiles", localPaths, resolutionUrl: quoteDetail, resolutionLinks: quoteLinks);
         AddImpact(impactItems, "quote.fileBlockers", fileBlockers, DeletionImpactActions.Block, quoteDetail, quoteLinks);
@@ -604,6 +611,7 @@ public sealed class CrmHardDeletePlanService(
             $"quote.documents:{string.Join(',', documentIdentifiers)}",
             $"quote.approvalLogs:{string.Join(',', approvalLogIdentifiers)}",
             $"quote.versionSnapshots:{string.Join(',', snapshotIdentifiers)}",
+            $"quote.boqImports:{string.Join(',', boqImportIdentifiers)}",
             $"quote.translations:{string.Join(',', translationIdentifiers)}",
             $"quote.localFiles:{string.Join(',', localPaths)}",
             $"quote.fileBlockers:{string.Join(',', fileBlockers)}",
@@ -624,7 +632,7 @@ public sealed class CrmHardDeletePlanService(
             PlanToken = token,
             CanDelete = fileBlockers.Count == 0 && sidecarBlockers.Count == 0 && contractIdentifiers.Count == 0,
             TotalAffected = 1 + itemIdentifiers.Count + documentIdentifiers.Count +
-                approvalLogIdentifiers.Count + snapshotIdentifiers.Count + translationIdentifiers.Count +
+                approvalLogIdentifiers.Count + snapshotIdentifiers.Count + boqImportIdentifiers.Count + translationIdentifiers.Count +
                 localPaths.Count + fileBlockers.Count + driveIdentifiers.Count +
                 sidecarIdentifiers.Count + sidecarBlockers.Count +
                 opportunityIdentifiers.Count + contractIdentifiers.Count,
@@ -1027,6 +1035,7 @@ public sealed class QuoteHardDeleteHandler(
             await db.QuoteDocuments.Where(item => item.QuoteId == quoteId).ExecuteDeleteOrRemoveAsync(db, ct);
             await db.QuoteApprovalLogs.Where(item => item.QuoteId == quoteId).ExecuteDeleteOrRemoveAsync(db, ct);
             await db.QuoteVersionSnapshots.Where(item => item.QuoteId == quoteId).ExecuteDeleteOrRemoveAsync(db, ct);
+            await db.QuoteBoqImports.Where(item => item.QuoteId == quoteId).ExecuteDeleteOrRemoveAsync(db, ct);
             await db.EntityTranslations
                 .Where(item => item.EntityType == EntityTypes.Quote && item.EntityId == quoteId)
                 .ExecuteDeleteOrRemoveAsync(db, ct);
