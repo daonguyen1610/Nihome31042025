@@ -2059,6 +2059,21 @@ namespace nihomebackend.Migrations
                     b.ToTable("department_work_package_history", (string)null);
                 });
 
+            modelBuilder.Entity("NihomeBackend.Models.DepartmentWorkPackageParticipantGroup", b =>
+                {
+                    b.Property<int>("WorkPackageId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("RoleGroupId")
+                        .HasColumnType("int");
+
+                    b.HasKey("WorkPackageId", "RoleGroupId");
+
+                    b.HasIndex("RoleGroupId");
+
+                    b.ToTable("department_work_package_participant_groups");
+                });
+
             modelBuilder.Entity("NihomeBackend.Models.DepartmentWorkTask", b =>
                 {
                     b.Property<int>("Id")
@@ -2088,6 +2103,9 @@ namespace nihomebackend.Migrations
                     b.Property<string>("Description")
                         .HasMaxLength(4000)
                         .HasColumnType("nvarchar(4000)");
+
+                    b.Property<int>("DepartmentRoleGroupId")
+                        .HasColumnType("int");
 
                     b.Property<int?>("KpiDefinitionId")
                         .HasColumnType("int");
@@ -2145,12 +2163,16 @@ namespace nihomebackend.Migrations
 
                     b.HasIndex("ApproverUserId");
 
+                    b.HasIndex("DepartmentRoleGroupId");
+
                     b.HasIndex("VerifiedByUserId");
 
                     b.HasIndex("KpiDefinitionId", "VerifiedAt");
 
                     b.HasIndex("WorkPackageId", "WbsCode")
                         .IsUnique();
+
+                    b.HasIndex("WorkPackageId", "DepartmentRoleGroupId", "Status");
 
                     b.HasIndex("AssigneeUserId", "Status", "PlannedEnd");
 
@@ -6685,6 +6707,9 @@ namespace nihomebackend.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("InitialPermissionsSeeded")
+                        .HasColumnType("bit");
+
                     b.Property<string>("LabelKey")
                         .IsRequired()
                         .HasMaxLength(150)
@@ -9631,6 +9656,25 @@ namespace nihomebackend.Migrations
                     b.Navigation("WorkPackage");
                 });
 
+            modelBuilder.Entity("NihomeBackend.Models.DepartmentWorkPackageParticipantGroup", b =>
+                {
+                    b.HasOne("NihomeBackend.Models.Rbac.RoleGroup", "RoleGroup")
+                        .WithMany()
+                        .HasForeignKey("RoleGroupId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NihomeBackend.Models.DepartmentWorkPackage", "WorkPackage")
+                        .WithMany("ParticipantGroups")
+                        .HasForeignKey("WorkPackageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("RoleGroup");
+
+                    b.Navigation("WorkPackage");
+                });
+
             modelBuilder.Entity("NihomeBackend.Models.DepartmentWorkTask", b =>
                 {
                     b.HasOne("NihomeBackend.Models.ApplicationUser", "ApproverUser")
@@ -9649,6 +9693,12 @@ namespace nihomebackend.Migrations
                         .HasForeignKey("KpiDefinitionId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("NihomeBackend.Models.Rbac.RoleGroup", "DepartmentRoleGroup")
+                        .WithMany()
+                        .HasForeignKey("DepartmentRoleGroupId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("NihomeBackend.Models.ApplicationUser", "VerifiedByUser")
                         .WithMany()
                         .HasForeignKey("VerifiedByUserId")
@@ -9663,6 +9713,8 @@ namespace nihomebackend.Migrations
                     b.Navigation("ApproverUser");
 
                     b.Navigation("AssigneeUser");
+
+                    b.Navigation("DepartmentRoleGroup");
 
                     b.Navigation("KpiDefinition");
 
@@ -11580,6 +11632,8 @@ namespace nihomebackend.Migrations
             modelBuilder.Entity("NihomeBackend.Models.DepartmentWorkPackage", b =>
                 {
                     b.Navigation("History");
+
+                    b.Navigation("ParticipantGroups");
 
                     b.Navigation("Tasks");
                 });

@@ -16,22 +16,22 @@ public sealed class DepartmentWorkPackageServiceTests : IDisposable
     private readonly Mock<IProjectAccessService> _access = new();
     private readonly Mock<INotificationService> _notifications = new();
     private readonly DepartmentWorkPackageService _service;
-    private readonly RoleGroup _designGroup;
+    private readonly RoleGroup _procurementGroup;
     private readonly RoleGroup _crmGroup;
     private readonly ApplicationUser _pm;
-    private readonly ApplicationUser _designLead;
-    private readonly ApplicationUser _architect;
+    private readonly ApplicationUser _procurementLead;
+    private readonly ApplicationUser _warehouseStaff;
     private readonly ApplicationUser _sales;
     private readonly OperationalProject _project;
 
     public DepartmentWorkPackageServiceTests()
     {
-        _designGroup = AddGroup("DESIGN");
+        _procurementGroup = AddGroup("PROCUREMENT");
         _crmGroup = AddGroup("CRM");
         var constructionGroup = AddGroup("CONSTRUCTION");
         _pm = AddUser("PM", constructionGroup);
-        _designLead = AddUser("DESIGN_LEAD", _designGroup);
-        _architect = AddUser("ARCHITECT", _designGroup);
+        _procurementLead = AddUser("PROCUREMENT", _procurementGroup);
+        _warehouseStaff = AddUser("WAREHOUSE", _procurementGroup);
         _sales = AddUser("SALE", _crmGroup);
         var customer = new Customer { Name = "NICON Industrial Client", Type = CustomerType.Company, SourceCode = "referral" };
         _project = new OperationalProject
@@ -63,8 +63,8 @@ public sealed class DepartmentWorkPackageServiceTests : IDisposable
 
         Assert.Equal("Project", result.Kind);
         Assert.Equal(_project.Id, result.OperationalProjectId);
-        Assert.Equal(_designGroup.Id, result.DepartmentRoleGroupId);
-        Assert.Equal(_designLead.Id, result.LeadUserId);
+        Assert.Equal(_procurementGroup.Id, result.DepartmentRoleGroupId);
+        Assert.Equal(_procurementLead.Id, result.LeadUserId);
         Assert.Equal("Planned", result.Status);
     }
 
@@ -72,7 +72,7 @@ public sealed class DepartmentWorkPackageServiceTests : IDisposable
     public async Task UnrelatedUser_CannotCreateProjectPackage()
     {
         await Assert.ThrowsAsync<DepartmentWorkPackageOperationException>(() =>
-            _service.CreateAsync(ProjectRequest(), _architect.Id));
+            _service.CreateAsync(ProjectRequest(), _warehouseStaff.Id));
 
         Assert.Empty(await _db.DepartmentWorkPackages.ToListAsync());
     }
@@ -81,7 +81,7 @@ public sealed class DepartmentWorkPackageServiceTests : IDisposable
     public async Task ProjectPackage_RejectsLeadWithoutAssignmentPermission()
     {
         var request = ProjectRequest();
-        request.LeadUserId = _architect.Id;
+        request.LeadUserId = _warehouseStaff.Id;
 
         var error = await Assert.ThrowsAsync<DepartmentWorkPackageOperationException>(() =>
             _service.CreateAsync(request, _pm.Id));
@@ -97,29 +97,50 @@ public sealed class DepartmentWorkPackageServiceTests : IDisposable
         request.Kind = "Internal";
 
         await Assert.ThrowsAsync<DepartmentWorkPackageOperationException>(() =>
-            _service.CreateAsync(request, _designLead.Id));
+            _service.CreateAsync(request, _procurementLead.Id));
 
         request.OperationalProjectId = null;
-        request.LeadUserId = _architect.Id;
+        request.LeadUserId = _warehouseStaff.Id;
         await Assert.ThrowsAsync<DepartmentWorkPackageOperationException>(() =>
-            _service.CreateAsync(request, _designLead.Id));
+            _service.CreateAsync(request, _procurementLead.Id));
+    }
+
+    [Fact]
+    public async Task InternalPackage_AssignsTasksAcrossParticipatingDepartments()
+    {
+        var package = await _service.CreateAsync(new CreateDepartmentWorkPackageRequest
+        {
+            Kind = "Internal",
+            Name = "Đào tạo phối hợp liên phòng",
+            DepartmentRoleGroupId = _procurementGroup.Id,
+            ParticipantDepartmentRoleGroupIds = [_crmGroup.Id],
+            LeadUserId = _procurementLead.Id,
+        }, _procurementLead.Id);
+
+        var request = TaskRequest(_sales.Id, _procurementLead.Id, "INT-CRM-01");
+        request.DepartmentRoleGroupId = _crmGroup.Id;
+        request.ApproverUserId = null;
+        var task = await _service.AddTaskAsync(package.Id, request, _procurementLead.Id);
+
+        Assert.Equal(_crmGroup.Id, task.DepartmentRoleGroupId);
+        Assert.Equal(2, package.ParticipantDepartments.Count);
     }
 
     [Fact]
     public async Task OnlyLead_AssignsTaskToActiveMemberOfSameDepartment()
     {
         var package = await _service.CreateAsync(ProjectRequest(), _pm.Id);
-        var valid = TaskRequest(_architect.Id, _designLead.Id);
+        var valid = TaskRequest(_warehouseStaff.Id, _procurementLead.Id);
 
         await Assert.ThrowsAsync<DepartmentWorkPackageScopeException>(() =>
             _service.AddTaskAsync(package.Id, valid, _pm.Id));
 
-        var task = await _service.AddTaskAsync(package.Id, valid, _designLead.Id);
-        Assert.Equal(_architect.Id, task.AssigneeUserId);
+        var task = await _service.AddTaskAsync(package.Id, valid, _procurementLead.Id);
+        Assert.Equal(_warehouseStaff.Id, task.AssigneeUserId);
 
-        var wrongDepartment = TaskRequest(_sales.Id, _designLead.Id, "DES-02");
+        var wrongDepartment = TaskRequest(_sales.Id, _procurementLead.Id, "SUP-02");
         await Assert.ThrowsAsync<DepartmentWorkPackageOperationException>(() =>
-            _service.AddTaskAsync(package.Id, wrongDepartment, _designLead.Id));
+            _service.AddTaskAsync(package.Id, wrongDepartment, _procurementLead.Id));
     }
 
     [Fact]
@@ -127,9 +148,9 @@ public sealed class DepartmentWorkPackageServiceTests : IDisposable
     {
         var definition = new KpiDefinition
         {
-            Code = "DESIGN_VERIFIED_WORK",
-            RoleCode = "DESIGN",
-            NameKey = "kpi.definition.DESIGN_VERIFIED_WORK",
+            Code = "WAREHOUSE_VERIFIED_WORK",
+            RoleCode = "WAREHOUSE",
+            NameKey = "kpi.definition.WAREHOUSE_VERIFIED_WORK",
             SourceModule = "WORK",
             MetricCode = "VerifiedWorkTaskCount",
             Weight = .1m,
@@ -141,10 +162,10 @@ public sealed class DepartmentWorkPackageServiceTests : IDisposable
         _db.KpiDefinitions.Add(definition);
         await _db.SaveChangesAsync();
         var package = await _service.CreateAsync(ProjectRequest(), _pm.Id);
-        var request = TaskRequest(_architect.Id, _designLead.Id);
+        var request = TaskRequest(_warehouseStaff.Id, _procurementLead.Id);
         request.KpiDefinitionId = definition.Id;
 
-        var task = await _service.AddTaskAsync(package.Id, request, _designLead.Id);
+        var task = await _service.AddTaskAsync(package.Id, request, _procurementLead.Id);
 
         Assert.Equal(definition.Id, task.KpiDefinitionId);
         Assert.False(task.CanVerify);
@@ -155,10 +176,10 @@ public sealed class DepartmentWorkPackageServiceTests : IDisposable
     {
         var package = await _service.CreateAsync(ProjectRequest(), _pm.Id);
         var predecessor = await _service.AddTaskAsync(
-            package.Id, TaskRequest(_architect.Id, _designLead.Id, "DES-01"), _designLead.Id);
-        var dependentRequest = TaskRequest(_architect.Id, _designLead.Id, "DES-02");
+            package.Id, TaskRequest(_warehouseStaff.Id, _procurementLead.Id, "SUP-01"), _procurementLead.Id);
+        var dependentRequest = TaskRequest(_warehouseStaff.Id, _procurementLead.Id, "SUP-02");
         dependentRequest.PredecessorTaskIds = [predecessor.Id];
-        var dependent = await _service.AddTaskAsync(package.Id, dependentRequest, _designLead.Id);
+        var dependent = await _service.AddTaskAsync(package.Id, dependentRequest, _procurementLead.Id);
         var predecessorEntity = await _db.DepartmentWorkTasks.FindAsync(predecessor.Id);
         var dependentEntity = await _db.DepartmentWorkTasks.FindAsync(dependent.Id);
         var predecessorVersion = BitConverter.GetBytes(1L);
@@ -173,7 +194,7 @@ public sealed class DepartmentWorkPackageServiceTests : IDisposable
                 Status = "InProgress",
                 ProgressPercent = 10,
                 RowVersion = Convert.ToBase64String(predecessorVersion),
-            }, _architect.Id));
+            }, _warehouseStaff.Id));
 
         (await _db.DepartmentWorkPackages.FindAsync(package.Id))!.Status = WorkPackageStatus.Active;
         await _db.SaveChangesAsync();
@@ -183,20 +204,20 @@ public sealed class DepartmentWorkPackageServiceTests : IDisposable
                 Status = "InProgress",
                 ProgressPercent = 10,
                 RowVersion = Convert.ToBase64String(dependentVersion),
-            }, _architect.Id));
+            }, _warehouseStaff.Id));
 
         await _service.UpdateProgressAsync(package.Id, predecessor.Id, new UpdateDepartmentWorkTaskProgressRequest
         {
             Status = "Completed",
             ProgressPercent = 100,
             RowVersion = Convert.ToBase64String(predecessorVersion),
-        }, _architect.Id);
+        }, _warehouseStaff.Id);
         var started = await _service.UpdateProgressAsync(package.Id, dependent.Id, new UpdateDepartmentWorkTaskProgressRequest
         {
             Status = "InProgress",
             ProgressPercent = 10,
             RowVersion = Convert.ToBase64String(dependentVersion),
-        }, _architect.Id);
+        }, _warehouseStaff.Id);
 
         Assert.Equal("InProgress", started!.Status);
     }
@@ -204,18 +225,18 @@ public sealed class DepartmentWorkPackageServiceTests : IDisposable
     private CreateDepartmentWorkPackageRequest ProjectRequest() => new()
     {
         Kind = "Project",
-        Name = "Triển khai hồ sơ thiết kế kỹ thuật",
+        Name = "Chuẩn bị vật tư thi công",
         OperationalProjectId = _project.Id,
-        DepartmentRoleGroupId = _designGroup.Id,
-        LeadUserId = _designLead.Id,
+        DepartmentRoleGroupId = _procurementGroup.Id,
+        LeadUserId = _procurementLead.Id,
         PlannedStart = DateTime.UtcNow.Date,
         PlannedEnd = DateTime.UtcNow.Date.AddDays(14),
     };
 
-    private static UpsertDepartmentWorkTaskRequest TaskRequest(int assigneeId, int approverId, string wbs = "DES-01") => new()
+    private static UpsertDepartmentWorkTaskRequest TaskRequest(int assigneeId, int approverId, string wbs = "SUP-01") => new()
     {
         WbsCode = wbs,
-        Title = "Hoàn thiện mặt bằng kiến trúc",
+        Title = "Lập kế hoạch cung ứng vật tư",
         AssigneeUserId = assigneeId,
         ApproverUserId = approverId,
         PlannedStart = DateTime.UtcNow.Date,
@@ -233,7 +254,7 @@ public sealed class DepartmentWorkPackageServiceTests : IDisposable
     private ApplicationUser AddUser(string roleCode, RoleGroup group)
     {
         var role = new Role { Code = roleCode, Name = roleCode, RoleGroupId = group.Id, IsActive = true };
-        if (roleCode == "DESIGN_LEAD")
+        if (roleCode == "PROCUREMENT")
         {
             var permission = _db.Permissions.SingleOrDefault(item =>
                 item.Module == "work.packages" && item.Action == "assign") ??

@@ -54,10 +54,10 @@ public class RbacSeedDataTests
         var roles = RbacSeedData.Default.BusinessRoles.ToDictionary(role => role.Code);
 
         Assert.Equal("CRM", roles["SALES_MANAGER"].GroupCode);
-        Assert.Equal("HR_ADMIN", roles["LEGAL_OFFICER"].GroupCode);
+        Assert.Equal("CONSTRUCTION", roles["LEGAL_OFFICER"].GroupCode);
         Assert.Equal("DESIGN", roles["ARCHITECT"].GroupCode);
         Assert.Equal("CONSTRUCTION", roles["PM"].GroupCode);
-        Assert.Equal("CONSTRUCTION", roles["PROCUREMENT"].GroupCode);
+        Assert.Equal("PROCUREMENT", roles["PROCUREMENT"].GroupCode);
         Assert.Equal("FINANCE", roles["ACCOUNTANT"].GroupCode);
         Assert.Null(roles["BGD"].GroupCode);
     }

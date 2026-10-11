@@ -1209,7 +1209,9 @@ in [Operational Project Historical Migration](#67-operational-project-historical
 ### 7.10.1 Department work-package API
 
 `DepartmentWorkPackage` is the cross-department assignment aggregate. Project
-packages require an `OperationalProjectId`; their `ContractId` and
+packages require an `OperationalProjectId` and are available for the generic
+Procurement/Finance handoff; Design and Construction keep their specialist
+aggregates instead of creating duplicate project wrappers. Their `ContractId` and
 `SourceOpportunityId` are optional references. Internal packages reject all
 three business-root references. Endpoints are available at `/api/work-packages`
 and `/api/v1/work-packages`:
@@ -1236,6 +1238,12 @@ Internal package creation requires both `work.packages.manage` and
 `work.packages.assign`, and the caller must be the selected lead in the same
 role group. This prevents a view/progress-only staff role from promoting itself
 to department lead.
+
+Internal packages persist all participating role groups. Every task persists
+one responsible role group and validates its assignee and optional approver
+against that group. Package/task mutation and its history snapshot commit in
+one database transaction; notification delivery occurs after commit and
+remains retry-safe through the notification service.
 
 The migration `AddDepartmentWorkPackages` adds package, task, dependency, CC,
 and history tables. Operational Project deletion classifies owned packages as
@@ -2105,7 +2113,7 @@ current controllers/DTOs and the module contracts in this guide.
 
 | Decision | Approved contract |
 | --- | --- |
-| D-01 | `PROCUREMENT` is a distinct business role and KPI position; `QS` remains Tendering and `WAREHOUSE` remains a control role. Scheduled KPI eligibility must include Procurement. |
+| D-01 | The organization chart supplied 11/10/2026 defines five active groups: Business Development/CRM, Procurement, Construction Management, Design, and Accounting–Finance–HR. `PROCUREMENT` is a distinct business role and KPI position; `QS` remains Tendering, `WAREHOUSE` remains a Procurement control role, and Legal sits under Construction Management. Scheduled KPI eligibility must include Procurement. |
 | D-02 | The latest approved execution BOQ is selected atomically as final when the Operational Project completes. VOs affect it only through an explicitly approved BOQ revision. |
 | D-03 | Verified Punch Items with confirmed Design root cause count equally against the responsible designer; severity is evidence, not a KPI weight. The fixer is not automatically the responsible designer. |
 | D-04 | Confirmed HSE violations count equally against the responsible site user. Draft, Reported, Rejected and Cancelled records and diary text do not count. |

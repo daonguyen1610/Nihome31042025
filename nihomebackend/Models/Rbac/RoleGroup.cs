@@ -18,6 +18,11 @@ public class RoleGroup
 
     public int SortOrder { get; set; }
     public bool IsActive { get; set; } = true;
+    /// <summary>
+    /// Guards the one-time seed of the NICON department permission baseline.
+    /// Administrators may intentionally empty or replace the baseline later.
+    /// </summary>
+    public bool InitialPermissionsSeeded { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
 

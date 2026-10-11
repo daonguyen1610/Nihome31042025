@@ -241,9 +241,15 @@ to the shared Operational Project, or **Internal work** for activities such as
 company training that have no customer, project, or contract.
 
 For project work, the Opportunity owner or Project PM selects the shared
-project, optional contract, receiving department, department lead, and planned
-dates. The Project and Opportunity screens also provide **Assign department
-work** shortcuts. Adding a contract later does not create or move the Project.
+project, optional contract, receiving Procurement/Finance department,
+department lead, and planned dates. Design and Construction work stays in its
+specialist screen rather than creating another project wrapper. The Project
+and Opportunity screens also provide **Assign department work** shortcuts.
+Adding a contract later does not create or move the Project.
+
+For internal work, select the lead department and every additional
+participating department. Each task then selects its responsible department;
+the assignee list is limited to active members of that department.
 
 The receiving department lead opens the package and creates tasks. Enter a WBS
 code, assignee from the same department, dates, inputs/resources, optional

@@ -1,4 +1,5 @@
 using System.Reflection;
+using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Models.Rbac;
 
 namespace NihomeBackend.Data;
@@ -38,7 +39,8 @@ public static class RbacSeeder
         var catalog = PermissionCatalog.Resolve(bundle.BaseCatalog, discovered);
 
         SeedPermissions(db, catalog);
-        SeedRoleGroups(db);
+        SeedRoleGroups(db, bundle);
+        SeedInitialRoleGroupPermissionsIfMissing(db, catalog, bundle);
         SeedRoles(db, bundle);
         SeedInitialBusinessRoleGroupsIfMissing(db, bundle);
         ForceSyncSystemRolePermissions(db, catalog, bundle);
@@ -46,20 +48,12 @@ public static class RbacSeeder
         BackfillUserRoleEntityIds(db);
     }
 
-    private static void SeedRoleGroups(AppDbContext db)
+    private static void SeedRoleGroups(AppDbContext db, RbacSeedData.Bundle bundle)
     {
-        var definitions = new[]
-        {
-            new { Code = "CRM", LabelKey = "rbac.group.crm", SortOrder = 10 },
-            new { Code = "HR_ADMIN", LabelKey = "rbac.group.hr-admin", SortOrder = 20 },
-            new { Code = "DESIGN", LabelKey = "rbac.group.design", SortOrder = 30 },
-            new { Code = "CONSTRUCTION", LabelKey = "rbac.group.construction", SortOrder = 40 },
-            new { Code = "FINANCE", LabelKey = "rbac.group.finance", SortOrder = 50 },
-        };
         var existing = db.RoleGroups.ToDictionary(g => g.Code, StringComparer.OrdinalIgnoreCase);
         var now = DateTime.UtcNow;
 
-        foreach (var definition in definitions)
+        foreach (var definition in bundle.RoleGroups)
         {
             if (existing.TryGetValue(definition.Code, out var group))
             {
@@ -80,6 +74,51 @@ public static class RbacSeeder
         }
 
         db.SaveChanges();
+    }
+
+    private static void SeedInitialRoleGroupPermissionsIfMissing(
+        AppDbContext db,
+        IReadOnlyList<PermissionCatalog.Entry> catalog,
+        RbacSeedData.Bundle bundle)
+    {
+        var permissionIdByCode = db.Permissions.ToDictionary(
+            permission => RbacConventions.BuildCode(permission.Module, permission.Action),
+            permission => permission.Id,
+            StringComparer.OrdinalIgnoreCase);
+        var allCodes = catalog.Select(entry => entry.Code).ToList();
+        var defaultsByCode = bundle.RoleGroups.ToDictionary(
+            group => group.Code,
+            StringComparer.OrdinalIgnoreCase);
+        var groups = db.RoleGroups
+            .Where(group => group.IsActive && !group.InitialPermissionsSeeded)
+            .Include(group => group.BaselinePermissions)
+            .ToList();
+        var now = DateTime.UtcNow;
+
+        foreach (var group in groups)
+        {
+            // A populated legacy/runtime baseline is an administrator choice.
+            // Mark it initialized without adding newly shipped defaults.
+            if (group.BaselinePermissions.Count == 0 &&
+                defaultsByCode.TryGetValue(group.Code, out var defaults))
+            {
+                var codes = PermissionCatalog.ExpandPatterns(defaults.Patterns, allCodes);
+                group.BaselinePermissions = codes
+                    .Where(permissionIdByCode.ContainsKey)
+                    .Select(code => new RoleGroupPermission
+                    {
+                        RoleGroupId = group.Id,
+                        PermissionId = permissionIdByCode[code],
+                        CreatedAt = now,
+                    })
+                    .ToList();
+            }
+
+            group.InitialPermissionsSeeded = true;
+            group.UpdatedAt = now;
+        }
+
+        if (groups.Count > 0) db.SaveChanges();
     }
 
     private static void SeedPermissions(AppDbContext db, IReadOnlyList<PermissionCatalog.Entry> catalog)

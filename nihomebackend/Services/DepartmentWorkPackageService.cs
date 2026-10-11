@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
@@ -15,6 +16,7 @@ public sealed class DepartmentWorkPackageService(
     ILogger<DepartmentWorkPackageService> logger) : IDepartmentWorkPackageService
 {
     private const int MaxPageSize = 100;
+    private static readonly string[] GenericProjectDepartmentCodes = ["PROCUREMENT", "FINANCE"];
 
     public async Task<DepartmentWorkPackageListResponse> ListAsync(
         DepartmentWorkPackageQuery query,
@@ -81,7 +83,13 @@ public sealed class DepartmentWorkPackageService(
     {
         var departments = await db.RoleGroups.AsNoTracking().Where(item => item.IsActive)
             .OrderBy(item => item.SortOrder).ThenBy(item => item.Code)
-            .Select(item => new DepartmentOptionResponse { Id = item.Id, Code = item.Code, LabelKey = item.LabelKey })
+            .Select(item => new DepartmentOptionResponse
+            {
+                Id = item.Id,
+                Code = item.Code,
+                LabelKey = item.LabelKey,
+                CanReceiveProjectPackage = GenericProjectDepartmentCodes.Contains(item.Code),
+            })
             .ToListAsync(ct);
         var users = await db.Users.AsNoTracking()
             .Where(item => item.IsActive && item.RoleEntity != null && item.RoleEntity.IsActive && item.RoleEntity.RoleGroupId != null)
@@ -155,6 +163,8 @@ public sealed class DepartmentWorkPackageService(
         }
         else
         {
+            if (request.ParticipantDepartmentRoleGroupIds.Count > 0)
+                throw Error("Nhóm công việc dự án chỉ có một phòng ban nhận việc.");
             if (!request.OperationalProjectId.HasValue)
                 throw Error("Nhóm công việc dự án phải chọn Dự án vận hành.");
             await ValidateProjectScopeAsync(request, callerUserId, admin, ct);
@@ -179,14 +189,40 @@ public sealed class DepartmentWorkPackageService(
             UpdatedAt = now,
             UpdatedByUserId = callerUserId,
         };
+        entity.ParticipantGroups = await BuildParticipantGroupsAsync(request, kind, ct);
+        await using var transaction = await BeginTransactionAsync(ct);
         db.DepartmentWorkPackages.Add(entity);
         await db.SaveChangesAsync(ct);
         var response = await LoadAndMapAsync(entity.Id, callerUserId, admin, ct);
         await AddHistoryAsync(entity.Id, "Package", entity.Id, "Created", response, callerUserId, ct);
+        await CommitAsync(transaction, ct);
         await NotifySafelyAsync(entity.LeadUserId, "work-package.assigned",
             new Dictionary<string, string> { ["packageName"] = entity.Name, ["packageCode"] = entity.Code },
             "DepartmentWorkPackage", entity.Id, $"/admin/work-packages/{entity.Id}", ct);
         return response;
+    }
+
+    private async Task<List<DepartmentWorkPackageParticipantGroup>> BuildParticipantGroupsAsync(
+        CreateDepartmentWorkPackageRequest request,
+        WorkPackageKind kind,
+        CancellationToken ct)
+    {
+        var ids = kind == WorkPackageKind.Project
+            ? new[] { request.DepartmentRoleGroupId }.ToHashSet()
+            : request.ParticipantDepartmentRoleGroupIds
+                .Append(request.DepartmentRoleGroupId)
+                .Where(id => id > 0)
+                .ToHashSet();
+        var validIds = await db.RoleGroups.AsNoTracking()
+            .Where(group => group.IsActive && ids.Contains(group.Id))
+            .Select(group => group.Id)
+            .ToListAsync(ct);
+        if (validIds.Count != ids.Count)
+            throw Error("Danh sách phòng ban tham gia có phòng ban không tồn tại hoặc đã ngừng hoạt động.");
+        return validIds.Select(roleGroupId => new DepartmentWorkPackageParticipantGroup
+        {
+            RoleGroupId = roleGroupId,
+        }).ToList();
     }
 
     public async Task<DepartmentWorkPackageResponse?> UpdateAsync(
@@ -208,6 +244,7 @@ public sealed class DepartmentWorkPackageService(
             throw Error("Công việc nội bộ không được gắn Hợp đồng.");
         if (request.ContractId.HasValue)
             await ValidateContractAsync(request.ContractId.Value, entity.OperationalProjectId!.Value, ct);
+        await using var transaction = await BeginTransactionAsync(ct);
         CrmConcurrency.Apply(db, entity, request.RowVersion);
         entity.Name = request.Name.Trim();
         entity.Description = TrimOrNull(request.Description);
@@ -221,6 +258,7 @@ public sealed class DepartmentWorkPackageService(
         await CrmConcurrency.SaveChangesAsync(db, ct);
         var response = await LoadAndMapAsync(id, callerUserId, admin, ct);
         await AddHistoryAsync(id, "Package", id, "Updated", response, callerUserId, ct);
+        await CommitAsync(transaction, ct);
         return response;
     }
 
@@ -236,6 +274,7 @@ public sealed class DepartmentWorkPackageService(
         if (package.Status is WorkPackageStatus.Completed or WorkPackageStatus.Cancelled)
             throw Error("Nhóm công việc đã kết thúc và không thể thêm đầu việc.");
         await ValidateTaskAsync(package, null, request, ct);
+        await using var transaction = await BeginTransactionAsync(ct);
         var now = DateTime.UtcNow;
         var task = new DepartmentWorkTask
         {
@@ -244,6 +283,7 @@ public sealed class DepartmentWorkPackageService(
             Title = request.Title.Trim(),
             Description = TrimOrNull(request.Description),
             Resources = TrimOrNull(request.Resources),
+            DepartmentRoleGroupId = ResolveTaskDepartmentRoleGroupId(package, request),
             AssigneeUserId = request.AssigneeUserId,
             ApproverUserId = request.ApproverUserId,
             KpiDefinitionId = request.KpiDefinitionId,
@@ -255,10 +295,12 @@ public sealed class DepartmentWorkPackageService(
             UpdatedByUserId = callerUserId,
         };
         SetTaskLinks(task, request);
+        TouchPackage(package, callerUserId, now);
         db.DepartmentWorkTasks.Add(task);
-        await db.SaveChangesAsync(ct);
+        await CrmConcurrency.SaveChangesAsync(db, ct);
         var response = await LoadTaskAsync(task.Id, callerUserId, await IsAdministratorAsync(callerUserId, ct), ct);
         await AddHistoryAsync(packageId, "Task", task.Id, "Created", response, callerUserId, ct);
+        await CommitAsync(transaction, ct);
         await NotifyTaskAssignedAsync(package, task, ct);
         return response;
     }
@@ -281,12 +323,14 @@ public sealed class DepartmentWorkPackageService(
         if (task.Status is WorkTaskStatus.Completed or WorkTaskStatus.Verified or WorkTaskStatus.Cancelled)
             throw Error("Đầu việc đã kết thúc và không thể chỉnh sửa nội dung phân công.");
         await ValidateTaskAsync(package, taskId, request, ct);
+        await using var transaction = await BeginTransactionAsync(ct);
         CrmConcurrency.Apply(db, task, request.RowVersion);
         var assigneeChanged = task.AssigneeUserId != request.AssigneeUserId;
         task.WbsCode = request.WbsCode.Trim();
         task.Title = request.Title.Trim();
         task.Description = TrimOrNull(request.Description);
         task.Resources = TrimOrNull(request.Resources);
+        task.DepartmentRoleGroupId = ResolveTaskDepartmentRoleGroupId(package, request);
         task.AssigneeUserId = request.AssigneeUserId;
         task.ApproverUserId = request.ApproverUserId;
         task.KpiDefinitionId = request.KpiDefinitionId;
@@ -295,9 +339,11 @@ public sealed class DepartmentWorkPackageService(
         task.UpdatedAt = DateTime.UtcNow;
         task.UpdatedByUserId = callerUserId;
         SyncTaskLinks(task, request);
+        TouchPackage(package, callerUserId, DateTime.UtcNow);
         await CrmConcurrency.SaveChangesAsync(db, ct);
         var response = await LoadTaskAsync(task.Id, callerUserId, await IsAdministratorAsync(callerUserId, ct), ct);
         await AddHistoryAsync(packageId, "Task", task.Id, "Updated", response, callerUserId, ct);
+        await CommitAsync(transaction, ct);
         if (assigneeChanged) await NotifyTaskAssignedAsync(package, task, ct);
         return response;
     }
@@ -328,6 +374,7 @@ public sealed class DepartmentWorkPackageService(
                 link.PredecessorTask.Status != WorkTaskStatus.Completed &&
                 link.PredecessorTask.Status != WorkTaskStatus.Verified, ct))
             throw Error("Chỉ được bắt đầu đầu việc sau khi mọi công tác tiên quyết đã hoàn thành.");
+        await using var transaction = await BeginTransactionAsync(ct);
         CrmConcurrency.Apply(db, task, request.RowVersion);
         var now = DateTime.UtcNow;
         task.Status = status;
@@ -336,9 +383,11 @@ public sealed class DepartmentWorkPackageService(
         task.CompletedAt = status == WorkTaskStatus.Completed ? now : null;
         task.UpdatedAt = now;
         task.UpdatedByUserId = callerUserId;
+        TouchPackage(task.WorkPackage, callerUserId, now);
         await CrmConcurrency.SaveChangesAsync(db, ct);
         var response = await LoadTaskAsync(task.Id, callerUserId, admin, ct);
         await AddHistoryAsync(packageId, "Task", task.Id, "Progressed", response, callerUserId, ct);
+        await CommitAsync(transaction, ct);
         if (status == WorkTaskStatus.Completed && task.KpiDefinitionId.HasValue)
         {
             var verifierId = task.ApproverUserId ?? task.WorkPackage.LeadUserId;
@@ -369,6 +418,7 @@ public sealed class DepartmentWorkPackageService(
             throw Error("Chỉ được xác nhận KPI khi nhóm công việc đang thực hiện.");
         if (!request.Confirm || !task.KpiDefinitionId.HasValue || task.Status != WorkTaskStatus.Completed)
             throw Error("Chỉ đầu việc KPI đã hoàn thành mới được xác nhận.");
+        await using var transaction = await BeginTransactionAsync(ct);
         CrmConcurrency.Apply(db, task, request.RowVersion);
         task.Status = WorkTaskStatus.Verified;
         task.ProgressPercent = 100;
@@ -376,9 +426,11 @@ public sealed class DepartmentWorkPackageService(
         task.VerifiedByUserId = callerUserId;
         task.UpdatedAt = DateTime.UtcNow;
         task.UpdatedByUserId = callerUserId;
+        TouchPackage(task.WorkPackage, callerUserId, DateTime.UtcNow);
         await CrmConcurrency.SaveChangesAsync(db, ct);
         var response = await LoadTaskAsync(task.Id, callerUserId, admin, ct);
         await AddHistoryAsync(packageId, "Task", task.Id, "Verified", response, callerUserId, ct);
+        await CommitAsync(transaction, ct);
         await NotifySafelyAsync(task.AssigneeUserId, "work-task.verified",
             new Dictionary<string, string> { ["taskTitle"] = task.Title, ["packageName"] = task.WorkPackage.Name },
             "DepartmentWorkTask", task.Id, $"/admin/work-packages/{packageId}?taskId={task.Id}", ct);
@@ -390,10 +442,12 @@ public sealed class DepartmentWorkPackageService(
         .Include(item => item.Contract)
         .Include(item => item.SourceOpportunity)
         .Include(item => item.DepartmentRoleGroup)
+        .Include(item => item.ParticipantGroups).ThenInclude(participant => participant.RoleGroup)
         .Include(item => item.LeadUser)
         .Include(item => item.Tasks).ThenInclude(task => task.AssigneeUser)
         .Include(item => item.Tasks).ThenInclude(task => task.ApproverUser)
         .Include(item => item.Tasks).ThenInclude(task => task.KpiDefinition)
+        .Include(item => item.Tasks).ThenInclude(task => task.DepartmentRoleGroup)
         .Include(item => item.Tasks).ThenInclude(task => task.CcUsers)
         .Include(item => item.Tasks).ThenInclude(task => task.Predecessors);
 
@@ -407,6 +461,14 @@ public sealed class DepartmentWorkPackageService(
             .Where(item => item.Id == request.OperationalProjectId)
             .Select(item => new { item.Id, item.ProjectManagerUserId })
             .SingleOrDefaultAsync(ct) ?? throw Error("Dự án vận hành không tồn tại.");
+        var receivingGroupCode = await db.RoleGroups.AsNoTracking()
+            .Where(group => group.Id == request.DepartmentRoleGroupId && group.IsActive)
+            .Select(group => group.Code)
+            .SingleOrDefaultAsync(ct);
+        if (receivingGroupCode is null)
+            throw Error("Phòng ban nhận việc không tồn tại hoặc đã ngừng hoạt động.");
+        if (!GenericProjectDepartmentCodes.Contains(receivingGroupCode, StringComparer.OrdinalIgnoreCase))
+            throw Error("Phòng ban này đã có không gian công việc chuyên môn. Hãy tạo công việc trong module tương ứng để tránh dữ liệu trùng.");
         var isOpportunityOwner = false;
         if (request.SourceOpportunityId.HasValue)
         {
@@ -438,13 +500,21 @@ public sealed class DepartmentWorkPackageService(
         UpsertDepartmentWorkTaskRequest request,
         CancellationToken ct)
     {
+        var taskGroupId = ResolveTaskDepartmentRoleGroupId(package, request);
+        if (package.Kind == WorkPackageKind.Internal)
+        {
+            var participant = await db.DepartmentWorkPackageParticipantGroups.AsNoTracking().AnyAsync(item =>
+                item.WorkPackageId == package.Id && item.RoleGroupId == taskGroupId, ct);
+            if (!participant)
+                throw Error("Phòng ban của đầu việc phải thuộc danh sách phòng ban tham gia công việc nội bộ.");
+        }
         if (request.PlannedEnd < request.PlannedStart)
             throw Error("Ngày kết thúc đầu việc không được trước ngày bắt đầu.");
         if (request.ApproverUserId == request.AssigneeUserId)
             throw Error("Người duyệt phải khác người phụ trách đầu việc.");
-        await ValidateDepartmentUserAsync(request.AssigneeUserId, package.DepartmentRoleGroupId, "Người phụ trách", ct);
+        await ValidateDepartmentUserAsync(request.AssigneeUserId, taskGroupId, "Người phụ trách", ct);
         if (request.ApproverUserId.HasValue)
-            await ValidateDepartmentUserAsync(request.ApproverUserId.Value, package.DepartmentRoleGroupId, "Người duyệt", ct);
+            await ValidateDepartmentUserAsync(request.ApproverUserId.Value, taskGroupId, "Người duyệt", ct);
         foreach (var ccUserId in request.CcUserIds.Distinct())
             await EnsureActiveUserAsync(ccUserId, "Người CC", ct);
         if (await db.DepartmentWorkTasks.AsNoTracking().AnyAsync(item =>
@@ -472,6 +542,22 @@ public sealed class DepartmentWorkPackageService(
             throw Error("Tất cả công tác trước phải thuộc cùng nhóm công việc.");
         if (taskId.HasValue && await CreatesDependencyCycleAsync(taskId.Value, predecessorIds, ct))
             throw Error("Quan hệ công tác trước tạo thành vòng lặp không hợp lệ.");
+    }
+
+    private static int ResolveTaskDepartmentRoleGroupId(
+        DepartmentWorkPackage package,
+        UpsertDepartmentWorkTaskRequest request)
+    {
+        if (package.Kind == WorkPackageKind.Project) return package.DepartmentRoleGroupId;
+        if (!request.DepartmentRoleGroupId.HasValue || request.DepartmentRoleGroupId.Value <= 0)
+            throw Error("Đầu việc nội bộ phải chọn phòng ban phụ trách.");
+        return request.DepartmentRoleGroupId.Value;
+    }
+
+    private static void TouchPackage(DepartmentWorkPackage package, int callerUserId, DateTime now)
+    {
+        package.UpdatedAt = now;
+        package.UpdatedByUserId = callerUserId;
     }
 
     private async Task<bool> CreatesDependencyCycleAsync(int taskId, IReadOnlyCollection<int> predecessors, CancellationToken ct)
@@ -644,7 +730,8 @@ public sealed class DepartmentWorkPackageService(
     {
         var task = await db.DepartmentWorkTasks.AsNoTracking()
             .Include(item => item.WorkPackage).Include(item => item.AssigneeUser).Include(item => item.ApproverUser)
-            .Include(item => item.KpiDefinition).Include(item => item.CcUsers).Include(item => item.Predecessors)
+            .Include(item => item.DepartmentRoleGroup).Include(item => item.KpiDefinition)
+            .Include(item => item.CcUsers).Include(item => item.Predecessors)
             .SingleAsync(item => item.Id == taskId, ct);
         return MapTask(task, callerUserId, admin, task.WorkPackage.LeadUserId);
     }
@@ -669,6 +756,15 @@ public sealed class DepartmentWorkPackageService(
             DepartmentRoleGroupId = item.DepartmentRoleGroupId,
             DepartmentCode = item.DepartmentRoleGroup.Code,
             DepartmentLabelKey = item.DepartmentRoleGroup.LabelKey,
+            ParticipantDepartments = item.ParticipantGroups
+                .OrderBy(participant => participant.RoleGroup.SortOrder)
+                .Select(participant => new DepartmentOptionResponse
+                {
+                    Id = participant.RoleGroupId,
+                    Code = participant.RoleGroup.Code,
+                    LabelKey = participant.RoleGroup.LabelKey,
+                    CanReceiveProjectPackage = GenericProjectDepartmentCodes.Contains(participant.RoleGroup.Code),
+                }).ToList(),
             LeadUserId = item.LeadUserId,
             LeadUserName = item.LeadUser.FullName ?? item.LeadUser.Email,
             Status = item.Status.ToString(),
@@ -703,6 +799,9 @@ public sealed class DepartmentWorkPackageService(
             Title = task.Title,
             Description = task.Description,
             Resources = task.Resources,
+            DepartmentRoleGroupId = task.DepartmentRoleGroupId,
+            DepartmentCode = task.DepartmentRoleGroup.Code,
+            DepartmentLabelKey = task.DepartmentRoleGroup.LabelKey,
             AssigneeUserId = task.AssigneeUserId,
             AssigneeName = task.AssigneeUser.FullName ?? task.AssigneeUser.Email,
             ApproverUserId = task.ApproverUserId,
@@ -739,6 +838,14 @@ public sealed class DepartmentWorkPackageService(
             ChangedByUserId = callerUserId,
         });
         await db.SaveChangesAsync(ct);
+    }
+
+    private async Task<IDbContextTransaction?> BeginTransactionAsync(CancellationToken ct) =>
+        db.Database.IsRelational() ? await db.Database.BeginTransactionAsync(ct) : null;
+
+    private static async Task CommitAsync(IDbContextTransaction? transaction, CancellationToken ct)
+    {
+        if (transaction is not null) await transaction.CommitAsync(ct);
     }
 
     private async Task NotifyTaskAssignedAsync(DepartmentWorkPackage package, DepartmentWorkTask task, CancellationToken ct)

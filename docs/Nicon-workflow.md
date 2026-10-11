@@ -277,13 +277,17 @@ scorecard: Sales, Tendering, Design, Site, Procurement và Project Accounting.
 Các vị trí mục tiêu PM CM, Chỉ huy trưởng, Field/QA-QC, Site QS, Legal và HR chưa
 đều có scorecard độc lập.
 
-KPI chỉ tính từ sự kiện nghiệp vụ terminal có project, người chịu trách nhiệm,
-timestamp, status và version. Không có mẫu số/bằng chứng thì trả `MissingData`,
-không tự đổi thành 0. Kỳ đã khóa là snapshot bất biến.
+KPI nghiệp vụ theo Dự án chỉ tính từ sự kiện terminal có project, người chịu
+trách nhiệm, timestamp, status và version. Riêng `VerifiedWorkTaskCount` được
+phép lấy đầu việc nội bộ không có project khi đầu việc có người chịu trách
+nhiệm, trạng thái `Verified`, người xác nhận độc lập, timestamp và version.
+Không có mẫu số/bằng chứng thì trả `MissingData`, không tự đổi thành 0. Kỳ đã
+khóa là snapshot bất biến.
 
 ## 9. Quyết định còn cần NICON chốt
 
-1. Q-04–Q-05: cơ cấu Cung ứng/Pháp lý và quy ước mã dự án.
+1. Q-05: quy ước mã dự án chi tiết. Cơ cấu Cung ứng/Pháp lý đã được đối chiếu
+   với sơ đồ tổ chức NICON cập nhật ngày 11/10/2026.
 2. Q-06–Q-10: trình nội bộ, CC mặc định, quyền xóa và phân vai Design
    Lead/Design Manager.
 3. Q-09/Q-11: template giấy phép và cách hiển thị team/tiến độ Thiết kế.

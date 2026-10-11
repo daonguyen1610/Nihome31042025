@@ -51,8 +51,9 @@ tên sheet, màu sắc, ngày và tên khách hàng trong file không phải quy
 ### 2.2. Quyền và phân tách nhiệm vụ
 
 - Hệ thống dùng permission; role là bộ permission có thể quản trị.
-- Vai trò nghiệp vụ được NICON phân vào năm nhóm `Kinh doanh/CRM`, `Hành chính
-  nhân sự`, `Thiết kế`, `Quản lý thi công` và `Tài chính kế toán`. Mỗi nhóm có
+- Vai trò nghiệp vụ được NICON phân vào năm nhóm theo sơ đồ tổ chức cập nhật:
+  `Phát triển kinh doanh/CRM`, `Cung ứng`, `Quản lý dự án – Kỹ thuật thi công`,
+  `Thiết kế` và `Kế toán – Tài chính – Nhân sự`. Mỗi nhóm có
   bộ quyền mẫu do quản trị viên cấu hình; khi tạo vai trò, quản trị viên có thể
   sao chép bộ quyền mẫu rồi chỉnh độc lập. Thay đổi quyền mẫu không hồi tố vào
   vai trò đã tạo và không được vượt quá quyền hiện có của người thao tác.
@@ -70,6 +71,9 @@ tên sheet, màu sắc, ngày và tên khách hàng trong file không phải quy
   việc cho phòng nhận; quản trị viên có quyền ngoại lệ. Nhóm theo Dự án luôn giữ
   `OperationalProjectId`; `ContractId` chỉ là liên kết tùy chọn và không làm đổi
   gốc dữ liệu khi ký hợp đồng.
+- Design và Construction tiếp tục vận hành trên các aggregate chuyên môn hiện
+  có; nhóm việc Dự án dùng chung chỉ nhận việc tổng quát cho Cung ứng hoặc Tài
+  chính để tránh tạo thêm một bản sao Dự án theo phòng.
 - Người chủ trì phòng nhận chỉ giao đầu việc cho nhân sự đang hoạt động thuộc
   cùng nhóm phòng ban. Mỗi đầu việc có WBS, thời gian, nguồn lực, người phụ
   trách, công tác tiên quyết và người theo dõi CC.
@@ -77,6 +81,8 @@ tên sheet, màu sắc, ngày và tên khách hàng trong file không phải quy
   tác chỉ được bắt đầu khi mọi công tác tiên quyết đã hoàn thành. Thông báo mở
   trực tiếp đúng đầu việc.
 - Công việc nội bộ nằm ở tab riêng, không gắn Dự án, khách hàng hay hợp đồng.
+  Một nhóm nội bộ có thể chọn nhiều phòng tham gia; mỗi đầu việc chỉ rõ một
+  phòng phụ trách và người được giao phải thuộc phòng đó.
   Không bắt buộc duyệt mọi đầu việc. Nếu liên kết KPI, người xác nhận phải khác
   người thực hiện; chỉ đầu việc đã hoàn thành và được xác nhận mới được tính.
 - Xóa Dự án xóa các nhóm việc thuộc Dự án theo deletion-impact. Xóa Hợp đồng

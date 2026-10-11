@@ -94,9 +94,9 @@ public class RbacControllerTests : IntegrationTestBase
         var body = await ReadJsonAsync(res);
         var groups = body.EnumerateArray().ToList();
         groups.Select(group => group.GetProperty("code").GetString())
-            .Should().Equal("CRM", "HR_ADMIN", "DESIGN", "CONSTRUCTION", "FINANCE");
+            .Should().Equal("CRM", "PROCUREMENT", "CONSTRUCTION", "DESIGN", "FINANCE");
         groups.Select(group => group.GetProperty("roleCount").GetInt32())
-            .Should().Equal(2, 1, 5, 4, 1);
+            .Should().Equal(2, 2, 3, 5, 1);
     }
 
     [Fact]

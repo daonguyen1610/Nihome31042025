@@ -211,6 +211,75 @@
     { "module": "permit.checklists", "action": "mark-issued" }
   ],
 
+  "roleGroups": [
+    {
+      "code": "CRM",
+      "labelKey": "rbac.group.crm",
+      "sortOrder": 10,
+      "patterns": [
+        "dashboard.view", "master-data.view", "workflow.view", "operations.projects.view",
+        "work.packages.view", "work.packages.progress", "analytics.kpi.view", "profile.me.*",
+        "crm.leads.view", "crm.customers.view", "crm.opportunities.view", "crm.quotes.view",
+        "crm.material-rates.view", "crm.tenders.view", "crm.capability-docs.view",
+        "crm.surveys.view", "crm.contracts.view"
+      ]
+    },
+    {
+      "code": "PROCUREMENT",
+      "labelKey": "rbac.group.procurement",
+      "sortOrder": 20,
+      "patterns": [
+        "dashboard.view", "master-data.view", "workflow.view", "operations.projects.view",
+        "work.packages.view", "work.packages.progress", "analytics.kpi.view", "profile.me.*",
+        "crm.contracts.view", "proc.vendors.view", "proc.boq.view", "proc.rfqs.view",
+        "proc.material-requests.view", "proc.contract-lines.view", "proc.warehouse.view",
+        "proc.material-alerts.view", "proc.vendor-ratings.view"
+      ]
+    },
+    {
+      "code": "CONSTRUCTION",
+      "labelKey": "rbac.group.construction",
+      "sortOrder": 30,
+      "patterns": [
+        "dashboard.view", "master-data.view", "workflow.view", "operations.projects.view",
+        "work.packages.view", "work.packages.progress", "analytics.kpi.view", "profile.me.*",
+        "reports.projects.view", "crm.contracts.view", "crm.surveys.view", "proc.vendors.view",
+        "proc.boq.view", "proc.rfqs.view", "proc.material-requests.view", "proc.contract-lines.view",
+        "design.projects.view", "design.basic.view", "design.shop.view",
+        "design.revisions.view", "design.ifc.view", "construction.tasks.view",
+        "construction.diary.view", "construction.punch.view", "construction.hse.view",
+        "construction.acceptance.view", "construction.asbuilt.view",
+        "construction.asbuilt-categories.view", "construction.handover.view",
+        "permit.checklists.view"
+      ]
+    },
+    {
+      "code": "DESIGN",
+      "labelKey": "rbac.group.design",
+      "sortOrder": 40,
+      "patterns": [
+        "dashboard.view", "master-data.view", "workflow.view", "operations.projects.view",
+        "work.packages.view", "work.packages.progress", "analytics.kpi.view", "profile.me.*",
+        "design.projects.view", "design.concepts.view", "design.basic.view", "design.shop.view",
+        "design.revisions.view", "design.ifc.view", "construction.tasks.view",
+        "construction.diary.view", "construction.punch.view", "construction.acceptance.view",
+        "construction.asbuilt.view", "construction.handover.view"
+      ]
+    },
+    {
+      "code": "FINANCE",
+      "labelKey": "rbac.group.finance",
+      "sortOrder": 50,
+      "patterns": [
+        "dashboard.view", "contacts.view", "master-data.view", "workflow.view",
+        "operations.projects.view", "work.packages.view", "work.packages.progress",
+        "analytics.kpi.view", "reports.projects.view", "crm.customers.view",
+        "crm.contracts.view", "proc.vendors.view", "finance.payments.view",
+        "finance.periods.view", "finance.corrections.view", "profile.me.*"
+      ]
+    }
+  ],
+
   "businessRoles": [
     { "code": "SALE", "name": "Sale", "groupCode": "CRM" },
     { "code": "SALES_MANAGER", "name": "Sales Manager", "groupCode": "CRM" },
@@ -220,11 +289,11 @@
     { "code": "MEP_ENGINEER", "name": "MEP Engineer", "groupCode": "DESIGN" },
     { "code": "STRUCT_ENGINEER", "name": "Structural Engineer", "groupCode": "DESIGN" },
     { "code": "PM", "name": "Project Manager", "groupCode": "CONSTRUCTION" },
-    { "code": "LEGAL_OFFICER", "name": "Legal Officer", "groupCode": "HR_ADMIN" },
+    { "code": "LEGAL_OFFICER", "name": "Legal Officer", "groupCode": "CONSTRUCTION" },
     { "code": "QS", "name": "Quantity Surveyor", "groupCode": "CONSTRUCTION" },
-    { "code": "PROCUREMENT", "name": "Procurement", "groupCode": "CONSTRUCTION" },
+    { "code": "PROCUREMENT", "name": "Procurement", "groupCode": "PROCUREMENT" },
     { "code": "ACCOUNTANT", "name": "Accountant", "groupCode": "FINANCE" },
-    { "code": "WAREHOUSE", "name": "Warehouse", "groupCode": "CONSTRUCTION" },
+    { "code": "WAREHOUSE", "name": "Warehouse", "groupCode": "PROCUREMENT" },
     { "code": "BGD", "name": "Board of Directors" }
   ],
 
@@ -481,7 +550,7 @@
         "master-data.view",
         "workflow.view",
         "operations.projects.view",
-        "work.packages.view",
+        "work.packages.view", "work.packages.manage", "work.packages.assign",
         "work.packages.progress", "work.packages.verify",
         "analytics.kpi.view",
         "crm.contracts.view",
@@ -504,7 +573,7 @@
         "master-data.view",
         "workflow.view",
         "operations.projects.view", "operations.projects.view.all",
-        "work.packages.view",
+        "work.packages.view", "work.packages.manage", "work.packages.assign",
         "work.packages.progress", "work.packages.verify",
         "analytics.kpi.view", "analytics.kpi.view.all", "analytics.kpi.manage", "analytics.kpi.export",
         "reports.projects.view", "reports.projects.export",

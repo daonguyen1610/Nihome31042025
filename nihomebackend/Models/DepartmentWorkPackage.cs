@@ -30,7 +30,20 @@ public class DepartmentWorkPackage : IConcurrencyTracked
     public int UpdatedByUserId { get; set; }
     public byte[] RowVersion { get; set; } = [];
     public List<DepartmentWorkTask> Tasks { get; set; } = new();
+    public List<DepartmentWorkPackageParticipantGroup> ParticipantGroups { get; set; } = new();
     public List<DepartmentWorkPackageHistory> History { get; set; } = new();
+}
+
+/// <summary>
+/// Departments participating in an internal initiative. Project packages keep
+/// exactly the receiving department as their only participant.
+/// </summary>
+public class DepartmentWorkPackageParticipantGroup
+{
+    public int WorkPackageId { get; set; }
+    public DepartmentWorkPackage WorkPackage { get; set; } = null!;
+    public int RoleGroupId { get; set; }
+    public RoleGroup RoleGroup { get; set; } = null!;
 }
 
 public class DepartmentWorkTask : IConcurrencyTracked
@@ -42,6 +55,8 @@ public class DepartmentWorkTask : IConcurrencyTracked
     public string Title { get; set; } = string.Empty;
     public string? Description { get; set; }
     public string? Resources { get; set; }
+    public int DepartmentRoleGroupId { get; set; }
+    public RoleGroup DepartmentRoleGroup { get; set; } = null!;
     public int AssigneeUserId { get; set; }
     public ApplicationUser AssigneeUser { get; set; } = null!;
     public int? ApproverUserId { get; set; }

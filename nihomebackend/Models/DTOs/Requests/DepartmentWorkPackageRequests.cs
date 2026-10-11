@@ -23,6 +23,13 @@ public sealed class CreateDepartmentWorkPackageRequest
     [Range(1, int.MaxValue)]
     public int LeadUserId { get; set; }
 
+    /// <summary>
+    /// Additional participating departments for internal initiatives. The
+    /// primary DepartmentRoleGroupId is always included by the server.
+    /// Forbidden for project packages.
+    /// </summary>
+    public List<int> ParticipantDepartmentRoleGroupIds { get; set; } = new();
+
     public DateTime? PlannedStart { get; set; }
     public DateTime? PlannedEnd { get; set; }
 }
@@ -61,6 +68,9 @@ public sealed class UpsertDepartmentWorkTaskRequest : IConcurrencyRequest
 
     [Range(1, int.MaxValue)]
     public int AssigneeUserId { get; set; }
+
+    /// <summary>Required receiving department for internal cross-department tasks.</summary>
+    public int? DepartmentRoleGroupId { get; set; }
 
     public int? ApproverUserId { get; set; }
     public int? KpiDefinitionId { get; set; }

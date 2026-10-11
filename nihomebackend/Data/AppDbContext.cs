@@ -96,6 +96,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<OperationalProjectAssignment> OperationalProjectAssignments => Set<OperationalProjectAssignment>();
     public DbSet<OperationalProjectTeamHistory> OperationalProjectTeamHistory => Set<OperationalProjectTeamHistory>();
     public DbSet<DepartmentWorkPackage> DepartmentWorkPackages => Set<DepartmentWorkPackage>();
+    public DbSet<DepartmentWorkPackageParticipantGroup> DepartmentWorkPackageParticipantGroups => Set<DepartmentWorkPackageParticipantGroup>();
     public DbSet<DepartmentWorkTask> DepartmentWorkTasks => Set<DepartmentWorkTask>();
     public DbSet<DepartmentWorkTaskCc> DepartmentWorkTaskCcUsers => Set<DepartmentWorkTaskCc>();
     public DbSet<DepartmentWorkTaskDependency> DepartmentWorkTaskDependencies => Set<DepartmentWorkTaskDependency>();
@@ -1890,6 +1891,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.Property(item => item.RowVersion).IsRowVersion();
             b.HasOne(item => item.WorkPackage).WithMany(package => package.Tasks)
                 .HasForeignKey(item => item.WorkPackageId).OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(item => item.DepartmentRoleGroup).WithMany()
+                .HasForeignKey(item => item.DepartmentRoleGroupId).OnDelete(DeleteBehavior.Restrict);
             b.HasOne(item => item.AssigneeUser).WithMany()
                 .HasForeignKey(item => item.AssigneeUserId).OnDelete(DeleteBehavior.Restrict);
             b.HasOne(item => item.ApproverUser).WithMany()
@@ -1899,6 +1902,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasOne(item => item.KpiDefinition).WithMany()
                 .HasForeignKey(item => item.KpiDefinitionId).OnDelete(DeleteBehavior.Restrict);
             b.HasIndex(item => new { item.WorkPackageId, item.WbsCode }).IsUnique();
+            b.HasIndex(item => new { item.WorkPackageId, item.DepartmentRoleGroupId, item.Status });
             b.HasIndex(item => new { item.AssigneeUserId, item.Status, item.PlannedEnd });
             b.HasIndex(item => new { item.KpiDefinitionId, item.VerifiedAt });
             b.ToTable(table =>
@@ -1907,6 +1911,17 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 table.HasCheckConstraint("CK_department_work_tasks_progress", "[ProgressPercent] >= 0 AND [ProgressPercent] <= 100");
                 table.HasCheckConstraint("CK_department_work_tasks_approver", "[ApproverUserId] IS NULL OR [ApproverUserId] <> [AssigneeUserId]");
             });
+        });
+
+        modelBuilder.Entity<DepartmentWorkPackageParticipantGroup>(b =>
+        {
+            b.ToTable("department_work_package_participant_groups");
+            b.HasKey(item => new { item.WorkPackageId, item.RoleGroupId });
+            b.HasOne(item => item.WorkPackage).WithMany(package => package.ParticipantGroups)
+                .HasForeignKey(item => item.WorkPackageId).OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(item => item.RoleGroup).WithMany()
+                .HasForeignKey(item => item.RoleGroupId).OnDelete(DeleteBehavior.Restrict);
+            b.HasIndex(item => item.RoleGroupId);
         });
 
         modelBuilder.Entity<DepartmentWorkTaskCc>(b =>

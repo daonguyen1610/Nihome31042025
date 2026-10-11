@@ -152,10 +152,14 @@ receive the new grants through `AddOperationalProjects`; fresh databases use
 | `work.packages.progress` | Update progress; server requires the task assignee or administrator and an Active package. |
 | `work.packages.verify` | Verify a KPI-linked completed task; server requires the independent configured verifier or administrator. |
 
-Permission grants never replace the contextual checks above. Assignees and KPI
-verifiers must belong to the receiving role group, and the verifier cannot be
-the assignee. `work.packages.view.all` is read-only unless a separate mutation
-permission and its server-side actor rule both pass.
+Permission grants never replace the contextual checks above. Project packages
+use one receiving group and are limited to the generic Procurement/Finance
+handoff; Design and Construction keep their dedicated aggregates. An internal
+package can include several participating groups, while each task has exactly
+one responsible group and its assignee/explicit verifier must belong to that
+group. The verifier cannot be the assignee. `work.packages.view.all` is
+read-only unless a separate mutation permission and its server-side actor rule
+both pass.
 
 Converting a lead into a new opportunity opens a `Planning` project in the
 same transaction. The converting user is recorded as its creator, so the

@@ -108,14 +108,14 @@ public class RoleServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task ListRoleGroups_ReturnsSeededNiconRoleMemberships_WithoutPermissionDefaults()
+    public async Task ListRoleGroups_ReturnsSeededNiconRoleMemberships_WithPermissionDefaults()
     {
         var groups = await _svc.ListRoleGroupsAsync();
 
-        Assert.Equal(new[] { "CRM", "HR_ADMIN", "DESIGN", "CONSTRUCTION", "FINANCE" },
+        Assert.Equal(new[] { "CRM", "PROCUREMENT", "CONSTRUCTION", "DESIGN", "FINANCE" },
             groups.Select(group => group.Code));
-        Assert.All(groups, group => Assert.Empty(group.BaselinePermissions));
-        Assert.Equal(new[] { 2, 1, 5, 4, 1 }, groups.Select(group => group.RoleCount));
+        Assert.All(groups, group => Assert.NotEmpty(group.BaselinePermissions));
+        Assert.Equal(new[] { 2, 2, 3, 5, 1 }, groups.Select(group => group.RoleCount));
     }
 
     // ---------- UpdateRole ----------
@@ -350,26 +350,32 @@ public class RoleServiceTests : IDisposable
     public async Task UpdateRoleGroupBaseline_BlocksPrivilegeEscalation()
     {
         var group = _db.RoleGroups.Single(item => item.Code == "DESIGN");
+        var before = _db.RoleGroupPermissions.Where(item => item.RoleGroupId == group.Id)
+            .Select(item => item.PermissionId).OrderBy(id => id).ToList();
 
         var result = await _svc.UpdateRoleGroupBaselineAsync(group.Id,
             new UpdateRolePermissionsRequest { Permissions = ["users.manage"] },
             AdminUserId());
 
         Assert.Equal(RoleWriteStatus.ForbiddenEscalation, result.Status);
-        Assert.Empty(_db.RoleGroupPermissions.Where(item => item.RoleGroupId == group.Id));
+        Assert.Equal(before, _db.RoleGroupPermissions.Where(item => item.RoleGroupId == group.Id)
+            .Select(item => item.PermissionId).OrderBy(id => id).ToList());
     }
 
     [Fact]
     public async Task UpdateRoleGroupBaseline_RejectsUnknownPermissionCode()
     {
         var group = _db.RoleGroups.Single(item => item.Code == "DESIGN");
+        var before = _db.RoleGroupPermissions.Where(item => item.RoleGroupId == group.Id)
+            .Select(item => item.PermissionId).OrderBy(id => id).ToList();
 
         var result = await _svc.UpdateRoleGroupBaselineAsync(group.Id,
             new UpdateRolePermissionsRequest { Permissions = ["does.not.exist"] },
             SuperAdminUserId());
 
         Assert.Equal(RoleWriteStatus.InvalidPermissionCodes, result.Status);
-        Assert.Empty(_db.RoleGroupPermissions.Where(item => item.RoleGroupId == group.Id));
+        Assert.Equal(before, _db.RoleGroupPermissions.Where(item => item.RoleGroupId == group.Id)
+            .Select(item => item.PermissionId).OrderBy(id => id).ToList());
     }
 
     [Fact]
