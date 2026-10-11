@@ -2246,6 +2246,8 @@ export interface BoqWorkbookSheetPreviewResponse {
   unitPriceColumn?: number | null;
   candidateCount: number;
   warnings: string[];
+  columns: Array<{ number: number; label: string }>;
+  previewRows: Array<{ rowNumber: number; cells: Record<number, string> }>;
   include?: boolean;
 }
 

@@ -486,6 +486,9 @@ workbook, download the standard NICON form. For an existing NICON workbook,
 choose **Import multi-sheet BOQ**, preview every sheet in workbook order, select
 only detail sheets, and verify the header row plus code, description, unit,
 quantity, and unit-price columns. Leave cover and summary sheets unselected.
+The wizard shows sheets in a compact list and displays actual sample rows for
+the active sheet. Confirm columns by their Excel letter and header text; raw
+column numbers and template maintenance are available under **Advanced settings**.
 A detail sheet may contain section headers, repeated headers, and subtotal rows;
 the preview excludes these structural rows from its expected-line count. A row
 that looks like a priced detail item but lacks a valid unit, positive quantity,

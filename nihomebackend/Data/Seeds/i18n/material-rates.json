@@ -287,4 +287,8 @@
 , {"key":"materialRates.boqWorkbook.templateName","category":"materialRates","vi":"Ví dụ: BOQ xây dựng chi tiết","en":"For example: Detailed construction BOQ","zh":"例如：详细施工 BOQ","ja":"例：詳細工事BOQ"}
 , {"key":"materialRates.boqWorkbook.saveTemplateHint","category":"materialRates","vi":"Chọn đúng một sheet để lưu mẫu; mẫu sẽ dùng lại cho các file cùng cấu trúc.","en":"Select exactly one sheet to save a template for files with the same structure.","zh":"请选择一个工作表保存模板，以便用于相同结构的文件。","ja":"同じ構造のファイルで再利用するには、1シートだけ選択してテンプレートを保存します。"}
 , {"key":"materialRates.boqWorkbook.import","category":"materialRates","vi":"Nhập {count} dòng dự kiến","en":"Import about {count} rows","zh":"导入约 {count} 行","ja":"約{count}行を取り込む"}
+, {"key":"materialRates.boqWorkbook.visualMappingHint","category":"materialRates","vi":"Kiểm tra tên cột và dữ liệu mẫu bên dưới. Chỉ đổi lựa chọn khi hệ thống nhận sai.","en":"Check the column names and sample data below. Change a selection only when detection is incorrect.","zh":"请检查下方的列名和示例数据。仅在系统识别错误时更改选择。","ja":"下の列名とサンプルデータを確認してください。自動判定が誤っている場合のみ変更します。"}
+, {"key":"materialRates.boqWorkbook.noCode","category":"materialRates","vi":"Không có cột mã — hệ thống tự tạo","en":"No code column — generate codes","zh":"无代码列 — 自动生成代码","ja":"コード列なし — 自動生成"}
+, {"key":"materialRates.boqWorkbook.advanced","category":"materialRates","vi":"Thiết lập nâng cao","en":"Advanced settings","zh":"高级设置","ja":"詳細設定"}
+, {"key":"materialRates.boqWorkbook.includeSheet","category":"materialRates","vi":"Chọn sheet","en":"Select sheet","zh":"选择工作表","ja":"シートを選択"}
 ]

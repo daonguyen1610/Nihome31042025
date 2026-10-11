@@ -42,18 +42,27 @@ test("imports a multi-sheet workbook into a Draft BOQ rate revision", async ({ a
     await page.getByTestId("boq-workbook-open").click();
     await page.getByTestId("boq-workbook-file").setInputFiles({ name: "factory-boq.xlsx", mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", buffer: await workbook() });
     await page.getByTestId("boq-workbook-preview").click();
-    await expect(page.getByTestId("boq-workbook-sheet-0")).toContainText("Summary");
-    await expect(page.getByTestId("boq-workbook-sheet-1")).toContainText("Factory");
+    for (const viewport of [{ width: 390, height: 844 }, { width: 768, height: 1024 }, { width: 1440, height: 900 }]) {
+      await page.setViewportSize(viewport);
+      await expect(page.getByTestId("boq-workbook-sheet-list")).toBeVisible();
+      await expect(page.getByTestId("boq-workbook-data-preview")).toBeVisible();
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    }
+    await expect(page.getByTestId("boq-workbook-sheet-list").getByRole("button", { name: /Summary/ })).toBeVisible();
+    await expect(page.getByTestId("boq-workbook-sheet-list").getByRole("button", { name: /Factory/ })).toBeVisible();
     await expect(page.getByTestId("boq-workbook-include-0")).not.toBeChecked();
     await expect(page.getByTestId("boq-workbook-include-1")).toBeChecked();
+    await expect(page.getByTestId("boq-workbook-data-preview")).toContainText("Foundation concrete");
+    await page.getByText(/Advanced settings|Thiết lập nâng cao/).click();
     await page.getByTestId("boq-workbook-template-name").fill(templateName);
     await page.getByTestId("boq-workbook-template-save").click();
     await expect.poll(() => savedTemplate).toMatchObject({ name: templateName, headerRow: 1, descriptionColumn: 2, unitColumn: 3, quantityColumn: 4, unitPriceColumn: 5 });
-    await page.getByTestId("boq-workbook-descriptionColumn-1").fill("5");
+    await page.getByTestId("boq-workbook-descriptionColumn-1").click();
+    await page.getByRole("option", { name: /E — Unit price/ }).click();
     await expect(page.getByTestId("boq-workbook-confirm")).toBeDisabled();
     await page.getByTestId("boq-workbook-template-1").click();
     await page.getByRole("option", { name: templateName }).click();
-    await expect(page.getByTestId("boq-workbook-descriptionColumn-1")).toHaveValue("2");
+    await expect(page.getByTestId("boq-workbook-descriptionColumn-1")).toContainText("B — Description");
     await expect(page.getByTestId("boq-workbook-confirm")).toBeEnabled();
     await page.getByTestId("boq-workbook-confirm").click();
     await expect(page.getByTestId("boq-catalog-workbook-dialog")).toBeHidden();
