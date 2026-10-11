@@ -66,18 +66,18 @@ export default function QuoteBoqImportDialog({ open, onOpenChange, quoteId, rowV
   }) ?? false;
 
   return <Dialog open={open} onOpenChange={(value) => { if (!busy) { onOpenChange(value); if (!value) reset(); } }}>
-    <DialogContent data-testid="quote-boq-import-dialog" className="max-h-[90vh] max-w-5xl overflow-y-auto">
+    <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto">
       <DialogHeader>
         <DialogTitle>{t("quotes.boqImport.title")}</DialogTitle>
         <DialogDescription>{t("quotes.boqImport.description")}</DialogDescription>
       </DialogHeader>
       <div className="space-y-4">
         <div className="flex flex-wrap gap-2">
-          <Button data-testid="quote-boq-template-download" type="button" variant="outline" onClick={() => void downloadTemplate()} disabled={busy}>
+          <Button type="button" variant="outline" onClick={() => void downloadTemplate()} disabled={busy}>
             <Download className="mr-1.5 h-4 w-4" />{t("quotes.boqImport.downloadTemplate")}
           </Button>
-          <Input data-testid="quote-boq-import-file" ref={inputRef} className="max-w-md" type="file" accept=".xlsx" onChange={(event) => { setFile(event.target.files?.[0] ?? null); setPreview(null); setError(null); }} />
-          <Button data-testid="quote-boq-import-preview" type="button" onClick={() => void runPreview()} disabled={!file || busy}>
+          <Input ref={inputRef} className="max-w-md" type="file" accept=".xlsx" onChange={(event) => { setFile(event.target.files?.[0] ?? null); setPreview(null); setError(null); }} />
+          <Button type="button" onClick={() => void runPreview()} disabled={!file || busy}>
             {busy ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <FileSpreadsheet className="mr-1.5 h-4 w-4" />}{t("quotes.boqImport.preview")}
           </Button>
         </div>
@@ -90,7 +90,7 @@ export default function QuoteBoqImportDialog({ open, onOpenChange, quoteId, rowV
                 <th className="p-2">{t("quotes.boqImport.sheet")}</th><th className="p-2">{t("quotes.boqImport.classification")}</th>
                 <th className="p-2">{t("quotes.boqImport.headerRow")}</th><th className="p-2">{t("quotes.boqImport.columns")}</th><th className="p-2">{t("quotes.boqImport.rows")}</th>
               </tr></thead>
-              <tbody className="divide-y">{preview.sheets.map((sheet, index) => <tr data-testid={`quote-boq-sheet-${index}`} key={`${sheet.order}-${sheet.name}`}>
+              <tbody className="divide-y">{preview.sheets.map((sheet, index) => <tr key={`${sheet.order}-${sheet.name}`}>
                 <td className="p-2"><div className="font-medium">{sheet.order}. {sheet.name}</div>{sheet.isHidden && <div className="text-xs text-amber-700">{t("quotes.boqImport.hidden")}</div>}</td>
                 <td className="p-2"><Select value={sheet.suggestedClassification} onValueChange={(value) => updateSheet(index, { suggestedClassification: value as QuoteBoqSheetMapping["suggestedClassification"] })}><SelectTrigger className="w-32"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Ignored">{t("quotes.boqImport.ignored")}</SelectItem><SelectItem value="Summary">{t("quotes.boqImport.summary")}</SelectItem><SelectItem value="Detail">{t("quotes.boqImport.detail")}</SelectItem></SelectContent></Select></td>
                 <td className="p-2"><Input className="w-20" type="number" min={1} max={1000} step={1} value={sheet.headerRow ?? ""} onChange={(event) => updateSheet(index, { headerRow: event.target.value ? Number(event.target.value) : null })} /></td>
@@ -104,7 +104,7 @@ export default function QuoteBoqImportDialog({ open, onOpenChange, quoteId, rowV
       </div>
       <DialogFooter>
         <Button variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>{t("common.cancel")}</Button>
-        <Button data-testid="quote-boq-import-confirm" onClick={() => void confirm()} disabled={!preview || selectedCount === 0 || !mappingsValid || busy}>
+        <Button onClick={() => void confirm()} disabled={!preview || selectedCount === 0 || !mappingsValid || busy}>
           {busy ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Upload className="mr-1.5 h-4 w-4" />}{t("quotes.boqImport.confirm")}
         </Button>
       </DialogFooter>
