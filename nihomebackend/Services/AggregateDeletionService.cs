@@ -265,6 +265,11 @@ internal static class AggregateDeletionService
             .ToListAsync(ct);
         db.OperationalProjectTeamHistory.RemoveRange(teamHistory);
 
+        var workPackages = await db.DepartmentWorkPackages
+            .Where(item => item.OperationalProjectId == projectId)
+            .ToListAsync(ct);
+        db.DepartmentWorkPackages.RemoveRange(workPackages);
+
         var hseViolations = await db.HseViolations
             .Where(item => item.OperationalProjectId == projectId)
             .ToListAsync(ct);

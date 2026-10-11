@@ -85,6 +85,7 @@ const WorkflowsPage = lazy(() => import("./pages/admin/Workflows.tsx"));
 const ContractsPage = lazy(() => import("./pages/admin/Contracts.tsx"));
 const ContractDetailPage = lazy(() => import("./pages/admin/ContractDetail.tsx"));
 const OperationalProjects = lazy(() => import("./pages/admin/OperationalProjects.tsx"));
+const DepartmentWorkPackages = lazy(() => import("./pages/admin/DepartmentWorkPackages.tsx"));
 const KpiDashboard = lazy(() => import("./pages/admin/KpiDashboard.tsx"));
 const KpiConfiguration = lazy(() => import("./pages/admin/KpiConfiguration.tsx"));
 const ProjectReports = lazy(() => import("@/pages/admin/ProjectReports"));
@@ -255,6 +256,10 @@ const App = () => (
               <Route element={<RequirePermission code={ADMIN_PERMS.operationalProjects} />}>
                 <Route path="/admin/operational-projects" element={<OperationalProjects />} />
                 <Route path="/admin/operational-projects/:id" element={<OperationalProjects />} />
+              </Route>
+              <Route element={<RequirePermission code={ADMIN_PERMS.workPackages} />}>
+                <Route path="/admin/work-packages" element={<DepartmentWorkPackages />} />
+                <Route path="/admin/work-packages/:id" element={<DepartmentWorkPackages />} />
               </Route>
               <Route element={<RequirePermission code={ADMIN_PERMS.kpi} />}>
                 <Route path="/admin/kpi" element={<KpiDashboard />} />

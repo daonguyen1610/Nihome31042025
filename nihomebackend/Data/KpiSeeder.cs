@@ -11,7 +11,8 @@ public static class KpiSeeder
         string MetricCode,
         decimal Weight,
         KpiTargetDirection Direction = KpiTargetDirection.HigherIsBetter,
-        decimal? TargetValue = null);
+        decimal? TargetValue = null,
+        bool IsActive = true);
 
     private static readonly DefinitionSeed[] Definitions =
     [
@@ -34,6 +35,18 @@ public static class KpiSeeder
         new("ACCOUNTING_COLLECTION", "PROJECT_ACCOUNTING", "M6", "ReceivableOnTimeRate", 0.40m),
         new("ACCOUNTING_PAYMENT_SPEED", "PROJECT_ACCOUNTING", "M6", "PartnerPaymentHours", 0.30m, KpiTargetDirection.LowerIsBetter, 72m),
         new("ACCOUNTING_ACCURACY", "PROJECT_ACCOUNTING", "M6", "AccountingCorrectionCount", 0.30m, KpiTargetDirection.LowerIsBetter, 1m),
+        new("SALES_VERIFIED_WORK", "SALES", "WORK", "VerifiedWorkTaskCount", 0.10m,
+            KpiTargetDirection.HigherIsBetter, 1m, false),
+        new("TENDER_VERIFIED_WORK", "TENDERING", "WORK", "VerifiedWorkTaskCount", 0.10m,
+            KpiTargetDirection.HigherIsBetter, 1m, false),
+        new("DESIGN_VERIFIED_WORK", "DESIGN", "WORK", "VerifiedWorkTaskCount", 0.10m,
+            KpiTargetDirection.HigherIsBetter, 1m, false),
+        new("SITE_VERIFIED_WORK", "SITE", "WORK", "VerifiedWorkTaskCount", 0.10m,
+            KpiTargetDirection.HigherIsBetter, 1m, false),
+        new("PROCUREMENT_VERIFIED_WORK", "PROCUREMENT", "WORK", "VerifiedWorkTaskCount", 0.10m,
+            KpiTargetDirection.HigherIsBetter, 1m, false),
+        new("ACCOUNTING_VERIFIED_WORK", "PROJECT_ACCOUNTING", "WORK", "VerifiedWorkTaskCount", 0.10m,
+            KpiTargetDirection.HigherIsBetter, 1m, false),
     ];
 
     public static void Seed(AppDbContext db)
@@ -63,6 +76,7 @@ public static class KpiSeeder
                 Weight = seed.Weight,
                 TargetDirection = seed.Direction,
                 TargetValue = seed.TargetValue,
+                IsActive = seed.IsActive,
                 EffectiveFrom = now,
                 CreatedAt = now,
                 UpdatedAt = now,

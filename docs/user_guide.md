@@ -234,6 +234,35 @@ Drive imports. Files owned by Quote, Contract, Survey, Design, Permit,
 Acceptance, As-Built, or Handover records must be replaced or deleted in that
 source screen; the generic catalog does not bypass the business record.
 
+#### 3.0.1 Department work packages
+
+Open **CRM → Work packages**. Use **Project / contract work** for work attached
+to the shared Operational Project, or **Internal work** for activities such as
+company training that have no customer, project, or contract.
+
+For project work, the Opportunity owner or Project PM selects the shared
+project, optional contract, receiving department, department lead, and planned
+dates. The Project and Opportunity screens also provide **Assign department
+work** shortcuts. Adding a contract later does not create or move the Project.
+
+The receiving department lead opens the package and creates tasks. Enter a WBS
+code, assignee from the same department, dates, inputs/resources, optional
+predecessors and CC followers. If the task should contribute to KPI, select an
+active compatible KPI definition and a verifier different from the assignee.
+Start the package before assignees update progress. A dependent task cannot
+start until every selected predecessor is complete.
+
+The assignee receives a notification linking directly to the task, records a
+progress percentage from 1–99%, and uses **Complete** at 100%. A task without
+KPI needs no additional approval. A KPI-linked task remains **Awaiting
+verification** until the independent verifier confirms it; only then is it
+eligible for KPI calculation. Close the package after all tasks are complete
+and all KPI-linked tasks are verified.
+
+Deleting an Operational Project includes its owned work packages in the impact
+preview. Deleting an optional Contract or source Opportunity only unlinks that
+reference; the work package remains under its shared Project.
+
 ### 3.1 Module 1: CRM / Sale / Contract
 
 **Objective**: Manage customer acquisition and business development flexibly.

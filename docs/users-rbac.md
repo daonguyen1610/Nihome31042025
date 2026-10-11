@@ -141,6 +141,22 @@ cannot be deleted, and its customer cannot be changed. Existing installations
 receive the new grants through `AddOperationalProjects`; fresh databases use
 `rbac-defaults.json`.
 
+### Department work-package permissions
+
+| Permission | Scope |
+|---|---|
+| `work.packages.view` | Read work packages visible through project scope or direct participation. |
+| `work.packages.view.all` | Read all project and internal work packages. |
+| `work.packages.manage` | Create/update a package; server scope still restricts project packages to the Opportunity owner, Project PM, or administrator. Internal creation also requires `assign`. |
+| `work.packages.assign` | Use task-assignment endpoints; server scope still restricts assignment to the receiving department lead or administrator. |
+| `work.packages.progress` | Update progress; server requires the task assignee or administrator and an Active package. |
+| `work.packages.verify` | Verify a KPI-linked completed task; server requires the independent configured verifier or administrator. |
+
+Permission grants never replace the contextual checks above. Assignees and KPI
+verifiers must belong to the receiving role group, and the verifier cannot be
+the assignee. `work.packages.view.all` is read-only unless a separate mutation
+permission and its server-side actor rule both pass.
+
 Converting a lead into a new opportunity opens a `Planning` project in the
 same transaction. The converting user is recorded as its creator, so the
 project is in that user's scope without a PM assignment.

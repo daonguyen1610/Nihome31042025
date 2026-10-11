@@ -1915,6 +1915,288 @@ namespace nihomebackend.Migrations
                     b.ToTable("customer_documents", (string)null);
                 });
 
+            modelBuilder.Entity("NihomeBackend.Models.DepartmentWorkPackage", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ContractId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("DepartmentRoleGroupId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int>("LeadUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<int?>("OperationalProjectId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("PlannedEnd")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("PlannedStart")
+                        .HasColumnType("datetime2");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<int?>("SourceOpportunityId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("UpdatedByUserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("DepartmentRoleGroupId");
+
+                    b.HasIndex("LeadUserId");
+
+                    b.HasIndex("SourceOpportunityId");
+
+                    b.HasIndex("ContractId", "Status");
+
+                    b.HasIndex("Kind", "DepartmentRoleGroupId", "Status");
+
+                    b.HasIndex("OperationalProjectId", "DepartmentRoleGroupId", "Status");
+
+                    b.ToTable("department_work_packages", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_department_work_packages_dates", "[PlannedStart] IS NULL OR [PlannedEnd] IS NULL OR [PlannedEnd] >= [PlannedStart]");
+
+                            t.HasCheckConstraint("CK_department_work_packages_scope", "([Kind] = 'Project' AND [OperationalProjectId] IS NOT NULL) OR ([Kind] = 'Internal' AND [OperationalProjectId] IS NULL AND [ContractId] IS NULL AND [SourceOpportunityId] IS NULL)");
+                        });
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.DepartmentWorkPackageHistory", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<DateTime>("ChangedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("ChangedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("EntityId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("EntityType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("SnapshotJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("WorkPackageId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ChangedByUserId");
+
+                    b.HasIndex("WorkPackageId", "ChangedAt");
+
+                    b.ToTable("department_work_package_history", (string)null);
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.DepartmentWorkTask", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("ActualStart")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ApproverUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("AssigneeUserId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<int?>("KpiDefinitionId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("PlannedEnd")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("PlannedStart")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("ProgressPercent")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Resources")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("UpdatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("VerifiedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("VerifiedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("WbsCode")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<int>("WorkPackageId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApproverUserId");
+
+                    b.HasIndex("VerifiedByUserId");
+
+                    b.HasIndex("KpiDefinitionId", "VerifiedAt");
+
+                    b.HasIndex("WorkPackageId", "WbsCode")
+                        .IsUnique();
+
+                    b.HasIndex("AssigneeUserId", "Status", "PlannedEnd");
+
+                    b.ToTable("department_work_tasks", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_department_work_tasks_approver", "[ApproverUserId] IS NULL OR [ApproverUserId] <> [AssigneeUserId]");
+
+                            t.HasCheckConstraint("CK_department_work_tasks_dates", "[PlannedEnd] >= [PlannedStart]");
+
+                            t.HasCheckConstraint("CK_department_work_tasks_progress", "[ProgressPercent] >= 0 AND [ProgressPercent] <= 100");
+                        });
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.DepartmentWorkTaskCc", b =>
+                {
+                    b.Property<int>("WorkTaskId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("WorkTaskId", "UserId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("department_work_task_cc_users", (string)null);
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.DepartmentWorkTaskDependency", b =>
+                {
+                    b.Property<int>("WorkTaskId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PredecessorTaskId")
+                        .HasColumnType("int");
+
+                    b.HasKey("WorkTaskId", "PredecessorTaskId");
+
+                    b.HasIndex("PredecessorTaskId");
+
+                    b.ToTable("department_work_task_dependencies", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_department_work_task_dependencies_not_self", "[WorkTaskId] <> [PredecessorTaskId]");
+                        });
+                });
+
             modelBuilder.Entity("NihomeBackend.Models.DesignProject", b =>
                 {
                     b.Property<int>("Id")
@@ -9282,6 +9564,151 @@ namespace nihomebackend.Migrations
                     b.Navigation("UploadedBy");
                 });
 
+            modelBuilder.Entity("NihomeBackend.Models.DepartmentWorkPackage", b =>
+                {
+                    b.HasOne("NihomeBackend.Models.Contract", "Contract")
+                        .WithMany()
+                        .HasForeignKey("ContractId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NihomeBackend.Models.ApplicationUser", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("NihomeBackend.Models.Rbac.RoleGroup", "DepartmentRoleGroup")
+                        .WithMany()
+                        .HasForeignKey("DepartmentRoleGroupId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NihomeBackend.Models.ApplicationUser", "LeadUser")
+                        .WithMany()
+                        .HasForeignKey("LeadUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NihomeBackend.Models.OperationalProject", "OperationalProject")
+                        .WithMany()
+                        .HasForeignKey("OperationalProjectId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NihomeBackend.Models.Opportunity", "SourceOpportunity")
+                        .WithMany()
+                        .HasForeignKey("SourceOpportunityId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Contract");
+
+                    b.Navigation("CreatedByUser");
+
+                    b.Navigation("DepartmentRoleGroup");
+
+                    b.Navigation("LeadUser");
+
+                    b.Navigation("OperationalProject");
+
+                    b.Navigation("SourceOpportunity");
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.DepartmentWorkPackageHistory", b =>
+                {
+                    b.HasOne("NihomeBackend.Models.ApplicationUser", "ChangedByUser")
+                        .WithMany()
+                        .HasForeignKey("ChangedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NihomeBackend.Models.DepartmentWorkPackage", "WorkPackage")
+                        .WithMany("History")
+                        .HasForeignKey("WorkPackageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ChangedByUser");
+
+                    b.Navigation("WorkPackage");
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.DepartmentWorkTask", b =>
+                {
+                    b.HasOne("NihomeBackend.Models.ApplicationUser", "ApproverUser")
+                        .WithMany()
+                        .HasForeignKey("ApproverUserId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("NihomeBackend.Models.ApplicationUser", "AssigneeUser")
+                        .WithMany()
+                        .HasForeignKey("AssigneeUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NihomeBackend.Models.KpiDefinition", "KpiDefinition")
+                        .WithMany()
+                        .HasForeignKey("KpiDefinitionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NihomeBackend.Models.ApplicationUser", "VerifiedByUser")
+                        .WithMany()
+                        .HasForeignKey("VerifiedByUserId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("NihomeBackend.Models.DepartmentWorkPackage", "WorkPackage")
+                        .WithMany("Tasks")
+                        .HasForeignKey("WorkPackageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ApproverUser");
+
+                    b.Navigation("AssigneeUser");
+
+                    b.Navigation("KpiDefinition");
+
+                    b.Navigation("VerifiedByUser");
+
+                    b.Navigation("WorkPackage");
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.DepartmentWorkTaskCc", b =>
+                {
+                    b.HasOne("NihomeBackend.Models.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NihomeBackend.Models.DepartmentWorkTask", "WorkTask")
+                        .WithMany("CcUsers")
+                        .HasForeignKey("WorkTaskId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+
+                    b.Navigation("WorkTask");
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.DepartmentWorkTaskDependency", b =>
+                {
+                    b.HasOne("NihomeBackend.Models.DepartmentWorkTask", "PredecessorTask")
+                        .WithMany("Successors")
+                        .HasForeignKey("PredecessorTaskId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("NihomeBackend.Models.DepartmentWorkTask", "WorkTask")
+                        .WithMany("Predecessors")
+                        .HasForeignKey("WorkTaskId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("PredecessorTask");
+
+                    b.Navigation("WorkTask");
+                });
+
             modelBuilder.Entity("NihomeBackend.Models.DesignProject", b =>
                 {
                     b.HasOne("NihomeBackend.Models.Contract", "Contract")
@@ -11148,6 +11575,22 @@ namespace nihomebackend.Migrations
                     b.Navigation("Documents");
 
                     b.Navigation("OperationalProjects");
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.DepartmentWorkPackage", b =>
+                {
+                    b.Navigation("History");
+
+                    b.Navigation("Tasks");
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.DepartmentWorkTask", b =>
+                {
+                    b.Navigation("CcUsers");
+
+                    b.Navigation("Predecessors");
+
+                    b.Navigation("Successors");
                 });
 
             modelBuilder.Entity("NihomeBackend.Models.DesignProject", b =>

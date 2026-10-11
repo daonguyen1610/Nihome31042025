@@ -64,6 +64,24 @@ tên sheet, màu sắc, ngày và tên khách hàng trong file không phải quy
 - Backend phải kiểm tra quyền, scope Dự án, trạng thái và concurrency; ẩn nút ở
   frontend không phải biện pháp bảo mật.
 
+### 2.2.1. Nhóm công việc liên phòng ban — Implemented
+
+- Kinh doanh phụ trách Cơ hội hoặc PM của Operational Project tạo một nhóm công
+  việc cho phòng nhận; quản trị viên có quyền ngoại lệ. Nhóm theo Dự án luôn giữ
+  `OperationalProjectId`; `ContractId` chỉ là liên kết tùy chọn và không làm đổi
+  gốc dữ liệu khi ký hợp đồng.
+- Người chủ trì phòng nhận chỉ giao đầu việc cho nhân sự đang hoạt động thuộc
+  cùng nhóm phòng ban. Mỗi đầu việc có WBS, thời gian, nguồn lực, người phụ
+  trách, công tác tiên quyết và người theo dõi CC.
+- Người phụ trách tự cập nhật tiến độ sau khi nhóm chuyển sang `Active`. Công
+  tác chỉ được bắt đầu khi mọi công tác tiên quyết đã hoàn thành. Thông báo mở
+  trực tiếp đúng đầu việc.
+- Công việc nội bộ nằm ở tab riêng, không gắn Dự án, khách hàng hay hợp đồng.
+  Không bắt buộc duyệt mọi đầu việc. Nếu liên kết KPI, người xác nhận phải khác
+  người thực hiện; chỉ đầu việc đã hoàn thành và được xác nhận mới được tính.
+- Xóa Dự án xóa các nhóm việc thuộc Dự án theo deletion-impact. Xóa Hợp đồng
+  hoặc Cơ hội chỉ gỡ liên kết tùy chọn và giữ nguyên nhóm việc dưới Dự án.
+
 ### 2.3. Trạng thái và tích hợp
 
 - Chỉ sự kiện nghiệp vụ terminal được duyệt/xác nhận/posted/paid mới kích hoạt
@@ -101,8 +119,7 @@ và hợp đồng mà không nhập lại dữ liệu.
 
 ### Điểm mở
 
-Quy ước mã Dự án, quyền giao việc liên phòng và các field CRM NICON muốn bỏ cần
-được xác nhận bằng văn bản.
+Quy ước mã Dự án và các field CRM NICON muốn bỏ cần được xác nhận bằng văn bản.
 
 ## 4. Module 2 — Thiết kế ba giai đoạn
 
@@ -334,7 +351,8 @@ bằng 100% trước khi khóa kỳ.
 
 ## 12. Các quyết định bắt buộc còn mở
 
-Danh sách Q-01–Q-11 và các phụ thuộc chi tiết nằm trong MoM ngày 03–06/10/2026.
+Q-01–Q-03 về nhóm công việc đã được NICON xác nhận và triển khai theo mục 2.2.1.
+Các quyết định Q-04–Q-11 và phụ thuộc chi tiết nằm trong MoM ngày 03–06/10/2026.
 Ngoài ra, NICON cần chốt:
 
 1. Cổng khởi công và checklist ISO theo loại công trình.

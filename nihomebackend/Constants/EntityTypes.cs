@@ -45,6 +45,8 @@ public static class EntityTypes
     public const string SurveyMedia = "SurveyMedia";
     public const string OperationalProject = "OperationalProject";
     public const string OperationalProjectTeam = "OperationalProjectTeam";
+    public const string DepartmentWorkPackage = "DepartmentWorkPackage";
+    public const string DepartmentWorkTask = "DepartmentWorkTask";
     public const string ProjectDocument = "ProjectDocument";
     public const string DesignProject = "DesignProject";
     public const string PermitChecklistItem = "PermitChecklistItem";

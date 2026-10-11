@@ -507,14 +507,40 @@ public class OpportunitiesControllerTests : IntegrationTestBase
                 SurveyDate = DateTime.UtcNow,
                 LinkedOpportunityId = opportunityId,
             };
-            db.AddRange(contract, survey);
+            var groupId = await db.RoleGroups.Where(item => item.Code == "DESIGN").Select(item => item.Id).SingleAsync();
+            var leadId = await db.Users.Where(item => item.RoleEntity != null && item.RoleEntity.Code == "DESIGN_LEAD")
+                .Select(item => item.Id).SingleAsync();
+            var project = new OperationalProject
+            {
+                Code = UniqueSlug("PJ-OP-DELETE"),
+                Name = "Dự án giữ lại khi xóa cơ hội",
+                CustomerId = opportunity.CustomerId,
+                ProjectManagerUserId = leadId,
+            };
+            var workPackage = new DepartmentWorkPackage
+            {
+                Code = UniqueSlug("WP-OP-DELETE"),
+                Kind = WorkPackageKind.Project,
+                Name = "Nhóm công việc giữ lại",
+                OperationalProject = project,
+                SourceOpportunityId = opportunityId,
+                DepartmentRoleGroupId = groupId,
+                LeadUserId = leadId,
+                CreatedByUserId = leadId,
+                UpdatedByUserId = leadId,
+            };
+            db.AddRange(contract, survey, project, workPackage);
             await db.SaveChangesAsync();
             return (
                 ContractId: contract.Id,
                 SurveyId: survey.Id,
-                CustomerId: opportunity.CustomerId);
+                CustomerId: opportunity.CustomerId,
+                WorkPackageId: workPackage.Id);
         });
         var impact = await GetDeletionImpactAsync(opportunityId);
+        impact.GetProperty("items").EnumerateArray().Should().Contain(item =>
+            item.GetProperty("key").GetString() == "opportunity.workPackages" &&
+            item.GetProperty("action").GetString() == "Unlink");
 
         (await ConfirmDeleteAsync(opportunityId, impact))
             .StatusCode.Should().Be(HttpStatusCode.NoContent);
@@ -524,6 +550,7 @@ public class OpportunitiesControllerTests : IntegrationTestBase
             (await db.Opportunities.AnyAsync(row => row.Id == opportunityId)).Should().BeFalse();
             (await db.Contracts.FindAsync(ids.ContractId))!.OpportunityId.Should().BeNull();
             (await db.Surveys.FindAsync(ids.SurveyId))!.LinkedOpportunityId.Should().BeNull();
+            (await db.DepartmentWorkPackages.FindAsync(ids.WorkPackageId))!.SourceOpportunityId.Should().BeNull();
             (await db.Customers.AnyAsync(row => row.Id == ids.CustomerId)).Should().BeTrue();
         });
     }

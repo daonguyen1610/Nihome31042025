@@ -37,6 +37,29 @@ Khách hàng
 Các module dùng chung ID Dự án, không tạo lại dự án theo từng phòng ban. Team,
 giao việc, hợp đồng, BOQ, tài liệu và bằng chứng KPI phải truy vết về cùng Dự án.
 
+### 2.1. Nhóm công việc của phòng ban — Hiện có
+
+```text
+Kinh doanh phụ trách Cơ hội / PM Dự án
+  → chọn Dự án dùng chung và phòng nhận
+  → chọn người chủ trì phòng
+  → người chủ trì chia đầu việc cho nhân sự cùng phòng
+  → người phụ trách cập nhật tiến độ
+  → người xác nhận độc lập xác nhận đầu việc có liên kết KPI
+```
+
+Nhóm theo Dự án không được tạo một Dự án khác cho phòng nhận. Hợp đồng là liên
+kết tùy chọn của nhóm và có thể bổ sung sau; nhóm vẫn thuộc Operational Project.
+Các trạng thái nhóm là `Planned → Active → Completed`, hoặc `Cancelled` theo
+chuyển trạng thái hợp lệ. Nhóm chỉ hoàn thành khi mọi đầu việc đã kết thúc và
+mọi đầu việc KPI đã được xác nhận. Quan hệ tiên quyết không được tạo vòng lặp;
+đầu việc sau không được bắt đầu trước khi đầu việc trước hoàn tất.
+
+Công việc không theo hợp đồng dùng tab **Công việc nội bộ**, không mang project,
+customer hoặc contract. Khi không chọn KPI, hoàn thành không cần bước xác nhận.
+Khi chọn KPI, người xác nhận phải khác người thực hiện và sự kiện `Verified` mới
+là bằng chứng chấm KPI.
+
 ## 3. Các đường vào dự án
 
 NICON có nhiều đường vào hợp lệ; không bắt buộc mọi dự án đi qua cùng một chuỗi:
@@ -260,21 +283,19 @@ không tự đổi thành 0. Kỳ đã khóa là snapshot bất biến.
 
 ## 9. Quyết định còn cần NICON chốt
 
-1. Q-01–Q-03: công việc trước/sau hợp đồng, duyệt công việc nội bộ và quyền giao
-   việc liên phòng ban.
-2. Q-04–Q-05: cơ cấu Cung ứng/Pháp lý và quy ước mã dự án.
-3. Q-06–Q-10: trình nội bộ, CC mặc định, quyền xóa và phân vai Design
+1. Q-04–Q-05: cơ cấu Cung ứng/Pháp lý và quy ước mã dự án.
+2. Q-06–Q-10: trình nội bộ, CC mặc định, quyền xóa và phân vai Design
    Lead/Design Manager.
-4. Q-09/Q-11: template giấy phép và cách hiển thị team/tiến độ Thiết kế.
-5. Công thức/kỳ chốt S-Curve; quyền publish/unlock baseline; điều kiện VO.
-6. Checklist QA/QC, hồ sơ ISO và cổng khởi công theo từng loại công trình.
-7. Thành phần hồ sơ thanh toán Upstream/Downstream và ma trận three-way matching
+3. Q-09/Q-11: template giấy phép và cách hiển thị team/tiến độ Thiết kế.
+4. Công thức/kỳ chốt S-Curve; quyền publish/unlock baseline; điều kiện VO.
+5. Checklist QA/QC, hồ sơ ISO và cổng khởi công theo từng loại công trình.
+6. Thành phần hồ sơ thanh toán Upstream/Downstream và ma trận three-way matching
    cho supply, labour, equipment và mixed package.
-8. Quy tắc dải BOQ 85/95/>100: mẫu số, commitment, issue, reversal, conversion,
+7. Quy tắc dải BOQ 85/95/>100: mẫu số, commitment, issue, reversal, conversion,
    precision và zero allowance.
-9. Kế hoạch migration các record Module 2/3/4 từ `DesignProjectId` sang
+8. Kế hoạch migration các record Module 2/3/4 từ `DesignProjectId` sang
    `OperationalProjectId`, gồm compatibility API và rollback.
-10. Cây Drive đích và migration `01_Khao_sat` vào `01_CRM_PreDesign`.
+9. Cây Drive đích và migration `01_Khao_sat` vào `01_CRM_PreDesign`.
 
 Các điểm trên là blocker cho phần kiến trúc/dữ liệu tương ứng. Chỉ Product Owner
 hoặc đại diện nghiệp vụ NICON được chấp nhận rủi ro yêu cầu.

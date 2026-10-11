@@ -726,6 +726,59 @@ public class ContractsControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task Delete_WithWorkPackage_UnlinksPackageAndPreservesProjectWork()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var customerId = await CreateCustomerAsync();
+        var contractId = await CreateContractAsync(customerId);
+        var seeded = await WithDbAsync(async db =>
+        {
+            var groupId = await db.RoleGroups.Where(item => item.Code == "DESIGN").Select(item => item.Id).SingleAsync();
+            var leadId = await db.Users.Where(item => item.RoleEntity != null && item.RoleEntity.Code == "DESIGN_LEAD")
+                .Select(item => item.Id).SingleAsync();
+            var project = new OperationalProject
+            {
+                Code = UniqueSlug("PJ-CONTRACT-DELETE"),
+                Name = "Dự án giữ lại khi xóa hợp đồng",
+                CustomerId = customerId,
+                ProjectManagerUserId = leadId,
+            };
+            db.OperationalProjects.Add(project);
+            await db.SaveChangesAsync();
+            var contract = await db.Contracts.SingleAsync(item => item.Id == contractId);
+            contract.OperationalProjectId = project.Id;
+            var workPackage = new DepartmentWorkPackage
+            {
+                Code = UniqueSlug("WP-CONTRACT-DELETE"),
+                Kind = WorkPackageKind.Project,
+                Name = "Nhóm công việc giữ lại",
+                OperationalProjectId = project.Id,
+                ContractId = contractId,
+                DepartmentRoleGroupId = groupId,
+                LeadUserId = leadId,
+                CreatedByUserId = leadId,
+                UpdatedByUserId = leadId,
+            };
+            db.DepartmentWorkPackages.Add(workPackage);
+            await db.SaveChangesAsync();
+            return (ProjectId: project.Id, WorkPackageId: workPackage.Id);
+        });
+        var impact = await GetDeletionImpactAsync(contractId);
+        impact.GetProperty("items").EnumerateArray().Should().Contain(item =>
+            item.GetProperty("key").GetString() == "contract.workPackages" &&
+            item.GetProperty("action").GetString() == "Unlink");
+
+        (await ConfirmDeleteAsync(contractId, impact)).StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        await WithDbAsync(async db =>
+        {
+            (await db.Contracts.AnyAsync(item => item.Id == contractId)).Should().BeFalse();
+            (await db.OperationalProjects.AnyAsync(item => item.Id == seeded.ProjectId)).Should().BeTrue();
+            (await db.DepartmentWorkPackages.FindAsync(seeded.WorkPackageId))!.ContractId.Should().BeNull();
+        });
+    }
+
+    [Fact]
     public async Task Delete_RejectsMissingOrInvalidConfirmationAndStalePlanWithoutMutation()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
