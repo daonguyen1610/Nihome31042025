@@ -25,6 +25,7 @@ const settleEnterAnimation = async (locator: Locator) => {
 
 const expectCreateDialogResponsive = async (page: Page) => {
   for (const viewport of [
+    { width: 320, height: 568 },
     { width: 390, height: 844 },
     { width: 768, height: 1024 },
     { width: 1440, height: 900 },
@@ -61,6 +62,7 @@ const expectCreateDialogResponsive = async (page: Page) => {
 
 const expectBulkEntryDialogResponsive = async (page: Page) => {
   for (const viewport of [
+    { width: 320, height: 568 },
     { width: 390, height: 844 },
     { width: 768, height: 1024 },
     { width: 1440, height: 900 },
@@ -68,12 +70,16 @@ const expectBulkEntryDialogResponsive = async (page: Page) => {
     await page.setViewportSize(viewport);
     const dialog = page.getByTestId("boq-bulk-entry-dialog");
     const tableScroll = page.getByTestId("boq-bulk-table-scroll");
+    const confirm = page.getByTestId("boq-bulk-confirm");
     await expect(dialog).toBeVisible();
     await settleEnterAnimation(dialog);
     const box = await dialog.boundingBox();
     expect(box?.x ?? -1).toBeGreaterThanOrEqual(0);
     expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(viewport.width);
+    expect(box?.y ?? -1).toBeGreaterThanOrEqual(0);
+    expect((box?.y ?? 0) + (box?.height ?? 0)).toBeLessThanOrEqual(viewport.height);
     expect(await tableScroll.evaluate((element) => element.scrollWidth >= element.clientWidth)).toBe(true);
+    await expect(confirm).toBeInViewport();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   }
 };

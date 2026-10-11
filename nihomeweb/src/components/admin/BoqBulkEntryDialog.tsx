@@ -31,12 +31,12 @@ export default function BoqBulkEntryDialog({ open, onOpenChange, onConfirm }: Pr
     setRows(current => current.length === 1 ? current : current.filter((_, rowIndex) => rowIndex !== index));
 
   return <Dialog open={open} onOpenChange={next => { if (!next) close(); }}>
-    <DialogContent className="max-h-[92vh] max-w-6xl overflow-y-auto" data-testid="boq-bulk-entry-dialog">
-      <DialogHeader>
-        <DialogTitle className="flex items-center gap-2"><ListPlus className="h-5 w-5" />{t("quotes.bulk.title")}</DialogTitle>
+    <DialogContent className="max-h-[calc(100dvh-1rem)] min-w-0 max-w-6xl grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden" data-testid="boq-bulk-entry-dialog">
+      <DialogHeader className="min-w-0 pr-6">
+        <DialogTitle className="flex min-w-0 items-start gap-2 leading-snug"><ListPlus className="mt-0.5 h-5 w-5 shrink-0" /><span className="break-words">{t("quotes.bulk.title")}</span></DialogTitle>
         <DialogDescription>{t("quotes.bulk.description")}</DialogDescription>
       </DialogHeader>
-      <div className="overflow-x-auto rounded-md border" data-testid="boq-bulk-table-scroll">
+      <div className="min-h-0 overflow-auto rounded-md border" data-testid="boq-bulk-table-scroll">
         <table className="w-full min-w-[850px] text-sm">
           <thead className="bg-muted/40 text-left text-xs uppercase text-muted-foreground">
             <tr>
@@ -62,14 +62,16 @@ export default function BoqBulkEntryDialog({ open, onOpenChange, onConfirm }: Pr
           </tbody>
         </table>
       </div>
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <Button data-testid="boq-bulk-add-row" type="button" variant="outline" onClick={() => setRows(current => [...current, emptyRow()])}><Plus className="mr-2 h-4 w-4" />{t("quotes.bulk.addRow")}</Button>
-        {issue && <p role="alert" data-testid="boq-bulk-error" className="text-sm text-destructive">{t(`quotes.validation.${issue}`)}</p>}
+      <div className="space-y-3">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <Button className="w-full sm:w-auto" data-testid="boq-bulk-add-row" type="button" variant="outline" onClick={() => setRows(current => [...current, emptyRow()])}><Plus className="mr-2 h-4 w-4" />{t("quotes.bulk.addRow")}</Button>
+          {issue && <p role="alert" data-testid="boq-bulk-error" className="break-words text-sm text-destructive">{t(`quotes.validation.${issue}`)}</p>}
+        </div>
+        <DialogFooter className="gap-2 sm:space-x-0">
+          <Button className="w-full sm:w-auto" type="button" variant="outline" onClick={close}>{t("common.cancel")}</Button>
+          <Button className="w-full sm:w-auto" data-testid="boq-bulk-confirm" type="button" disabled={Boolean(issue)} onClick={() => { onConfirm(rows); close(); }}>{t("quotes.bulk.confirm", { count: rows.length })}</Button>
+        </DialogFooter>
       </div>
-      <DialogFooter>
-        <Button type="button" variant="outline" onClick={close}>{t("common.cancel")}</Button>
-        <Button data-testid="boq-bulk-confirm" type="button" disabled={Boolean(issue)} onClick={() => { onConfirm(rows); close(); }}>{t("quotes.bulk.confirm", { count: rows.length })}</Button>
-      </DialogFooter>
     </DialogContent>
   </Dialog>;
 }
