@@ -128,6 +128,7 @@ Buổi họp kéo dài khoảng 3 giờ. Nam (đội dev) demo luồng D&B từ 
 - Phân nhóm quyền theo phòng ban.
 - Nhiều mẫu BOQ Excel theo loại công trình.
 - File tiến độ thiết kế mẫu từ MS Project (chị Yến gửi).
+  (Đã có ở docs/Nicon/MoMs/2026-10-06/ms_project)
 - Danh sách giấy phép của một dự án.
 - Danh sách nhóm công việc Phòng CM.
 - Quy ước mã dự án.
