@@ -15,7 +15,7 @@ public class TenderEstimatesControllerTests : IntegrationTestBase
     public async Task EstimateFlow_ImportsSubmitsEnforcesApprovalPermissionAndApproves()
     {
         await AuthenticateAsAsync("SALES_MANAGER");
-        var (tenderId, _) = await CreateTenderAsync();
+        var (tenderId, _, _) = await CreateTenderAsync();
 
         var template = await Client.GetAsync($"/api/tenders/{tenderId}/estimates/template");
         template.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -61,7 +61,7 @@ public class TenderEstimatesControllerTests : IntegrationTestBase
     public async Task InvalidImport_IsAtomicAndDoesNotConsumeVersion()
     {
         await AuthenticateAsAsync("SALES_MANAGER");
-        var (tenderId, _) = await CreateTenderAsync();
+        var (tenderId, _, _) = await CreateTenderAsync();
         const string invalidCsv = "ItemCode,Description,Unit,Quantity,UnitCost,BidUnitPrice,VatPercent,Note\nA,Hạng mục,m2,1,10,20,10,\nA,Hạng mục,m2,0,10,20,8,";
 
         var invalid = await ImportAsync(tenderId, invalidCsv);
@@ -77,25 +77,10 @@ public class TenderEstimatesControllerTests : IntegrationTestBase
     public async Task TenderSubmission_RequiresCompletedChecklistAndApprovedEstimate()
     {
         await AuthenticateAsAsync("SALES_MANAGER");
-        var (tenderId, _) = await CreateTenderAsync();
+        var (tenderId, _, tenderProjectId) = await CreateTenderAsync();
 
         // §5 pre-contract control: submission also needs a shared project and an
         // approved Finance – Accounting review of the tender financial dossier.
-        var tenderProjectId = await WithDbAsync(async db =>
-        {
-            var tender = await db.Tenders.SingleAsync(item => item.Id == tenderId);
-            var project = new OperationalProject
-            {
-                Code = UniqueSlug("PJ-TENDER").ToUpperInvariant(),
-                Name = "Tender shared project",
-                CustomerId = tender.CustomerId,
-            };
-            db.OperationalProjects.Add(project);
-            await db.SaveChangesAsync();
-            tender.OperationalProjectId = project.Id;
-            await db.SaveChangesAsync();
-            return project.Id;
-        });
         await CreateApprovedFinanceReviewAsync(tenderProjectId, "FinanceTenderReview", tenderId: tenderId);
 
         var rejected = await Client.PostAsJsonAsync($"/api/tenders/{tenderId}/transition", new { status = "Submitted" });
@@ -111,6 +96,60 @@ public class TenderEstimatesControllerTests : IntegrationTestBase
         {
             var items = await db.TenderChecklistItems.Where(item => item.TenderId == tenderId).ToListAsync();
             items.ForEach(item => item.Status = TenderChecklistItemStatus.Done);
+            await db.SaveChangesAsync();
+        });
+
+        var missingPlan = await Client.PostAsJsonAsync($"/api/tenders/{tenderId}/transition", new { status = "Submitted" });
+        missingPlan.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await missingPlan.Content.ReadAsStringAsync()).Should().Contain("Kế hoạch đấu thầu");
+        (await WithDbAsync(db => db.Tenders.AsNoTracking().SingleAsync(item => item.Id == tenderId)))
+            .Status.Should().Be(TenderStatus.Preparing);
+
+        await WithDbAsync(async db =>
+        {
+            var group = await db.RoleGroups.OrderBy(item => item.Id).FirstAsync();
+            var user = await db.Users.OrderBy(item => item.Id).FirstAsync();
+            db.DepartmentWorkPackages.Add(new DepartmentWorkPackage
+            {
+                Code = UniqueSlug("WP-TENDER").ToUpperInvariant(),
+                Kind = WorkPackageKind.Project,
+                Purpose = WorkPackagePurpose.General,
+                Name = "Kế hoạch hồ sơ dự thầu",
+                OperationalProjectId = tenderProjectId,
+                SourceTenderId = tenderId,
+                DepartmentRoleGroupId = group.Id,
+                LeadUserId = user.Id,
+                Status = WorkPackageStatus.Completed,
+                CreatedByUserId = user.Id,
+                UpdatedByUserId = user.Id,
+            });
+            await db.SaveChangesAsync();
+        });
+
+        var missingSharedCapability = await Client.PostAsJsonAsync(
+            $"/api/tenders/{tenderId}/transition", new { status = "Submitted" });
+        missingSharedCapability.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await missingSharedCapability.Content.ReadAsStringAsync()).Should().Contain("thư viện dùng chung");
+
+        await WithDbAsync(async db =>
+        {
+            var capability = new CapabilityDocument
+            {
+                Name = "Hồ sơ năng lực NICON dùng chung",
+                TagCode = "capability",
+                FilePath = $"/files/capability/{UniqueSlug("shared")}.pdf",
+                OriginalFileName = "ho-so-nang-luc-nicon.pdf",
+                FileSize = 1024,
+                ContentType = "application/pdf",
+                CurrentVersion = 1,
+            };
+            db.CapabilityDocuments.Add(capability);
+            await db.SaveChangesAsync();
+            var item = await db.TenderChecklistItems.SingleAsync(row =>
+                row.TenderId == tenderId && row.TemplateCode == "capability");
+            item.CapabilityDocumentId = capability.Id;
+            item.FilePath = capability.FilePath;
+            item.OriginalFileName = capability.OriginalFileName;
             await db.SaveChangesAsync();
         });
 
@@ -131,7 +170,7 @@ public class TenderEstimatesControllerTests : IntegrationTestBase
     public async Task WonTransition_RequiresSubmittedTenderAndSameCustomerOpportunity()
     {
         await AuthenticateAsAsync("SALES_MANAGER");
-        var (tenderId, _) = await CreateTenderAsync();
+        var (tenderId, _, _) = await CreateTenderAsync();
         var otherCustomerId = await CreateCustomerAsync();
         var opportunity = await Client.PostAsJsonAsync("/api/opportunities", new
         {
@@ -164,17 +203,31 @@ public class TenderEstimatesControllerTests : IntegrationTestBase
     private Task AuthenticateAsAsync(string role) =>
         AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, role));
 
-    private async Task<(int TenderId, int CustomerId)> CreateTenderAsync()
+    private async Task<(int TenderId, int CustomerId, int ProjectId)> CreateTenderAsync()
     {
         var customerId = await CreateCustomerAsync();
+        var projectId = await WithDbAsync(async db =>
+        {
+            var project = new OperationalProject
+            {
+                Code = UniqueSlug("PJ-TENDER").ToUpperInvariant(),
+                Name = "Tender shared project",
+                CustomerId = customerId,
+                Status = OperationalProjectStatus.Planning,
+            };
+            db.OperationalProjects.Add(project);
+            await db.SaveChangesAsync();
+            return project.Id;
+        });
         var response = await Client.PostAsJsonAsync("/api/tenders", new
         {
             name = "Tender estimate " + Guid.NewGuid().ToString("N")[..6],
             customerId,
+            operationalProjectId = projectId,
             submissionDeadline = DateTime.UtcNow.AddDays(14),
         });
         response.EnsureSuccessStatusCode();
-        return ((await ReadJsonAsync(response)).GetProperty("id").GetInt32(), customerId);
+        return ((await ReadJsonAsync(response)).GetProperty("id").GetInt32(), customerId, projectId);
     }
 
     private async Task<int> CreateCustomerAsync()

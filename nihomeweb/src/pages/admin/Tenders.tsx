@@ -226,6 +226,10 @@ const AdminTenders = () => {
       setFormError(t("tenders.form.customerRequired"));
       return;
     }
+    if (!form.operationalProjectId) {
+      setFormError(t("tenders.form.projectRequired"));
+      return;
+    }
     if (!form.submissionDeadline) {
       setFormError(t("tenders.form.deadlineRequired"));
       return;

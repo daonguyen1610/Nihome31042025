@@ -20,6 +20,7 @@ public class TenderServiceTests : IDisposable
     private readonly TenderService _sut;
     private readonly ICrmHardDeletePlanService _hardDeletePlans;
     private readonly int _customerId;
+    private readonly int _projectId;
     private readonly int _userId;
 
     public TenderServiceTests()
@@ -66,6 +67,16 @@ public class TenderServiceTests : IDisposable
         );
         _db.SaveChanges();
         _customerId = customer.Id;
+        var project = new OperationalProject
+        {
+            Code = "PJ-TENDER-TEST",
+            Name = "Dự án kiểm thử đấu thầu",
+            CustomerId = customer.Id,
+            Status = OperationalProjectStatus.Planning,
+        };
+        _db.OperationalProjects.Add(project);
+        _db.SaveChanges();
+        _projectId = project.Id;
         _userId = user.Id;
     }
 
@@ -75,6 +86,7 @@ public class TenderServiceTests : IDisposable
     {
         Name = "Gói thầu số 1",
         CustomerId = _customerId,
+        OperationalProjectId = _projectId,
         OpeningDate = DateTime.UtcNow.AddDays(7),
         SubmissionDeadline = deadline ?? DateTime.UtcNow.AddDays(14),
         PreparerUserId = _userId,
@@ -111,6 +123,41 @@ public class TenderServiceTests : IDisposable
         var req = ValidCreate();
         req.CustomerId = 9999;
         await Assert.ThrowsAsync<TenderOperationException>(() => _sut.CreateAsync(req, _userId));
+    }
+
+    [Fact]
+    public async Task CreateAsync_WithoutProject_ThrowsAndCreatesNothing()
+    {
+        var req = ValidCreate();
+        req.OperationalProjectId = null;
+
+        var error = await Assert.ThrowsAsync<TenderOperationException>(() =>
+            _sut.CreateAsync(req, _userId));
+
+        Assert.Contains("Dự án", error.Message);
+        Assert.Empty(await _db.Tenders.ToListAsync());
+    }
+
+    [Fact]
+    public async Task CreateAsync_ProjectForDifferentCustomer_ThrowsAndCreatesNothing()
+    {
+        var otherProject = new OperationalProject
+        {
+            Code = "PJ-OTHER-001",
+            Name = "Dự án khách hàng khác",
+            Customer = new Customer { Name = "Khách hàng khác", Type = CustomerType.Company },
+            Status = OperationalProjectStatus.Planning,
+        };
+        _db.OperationalProjects.Add(otherProject);
+        await _db.SaveChangesAsync();
+        var req = ValidCreate();
+        req.OperationalProjectId = otherProject.Id;
+
+        var error = await Assert.ThrowsAsync<TenderOperationException>(() =>
+            _sut.CreateAsync(req, _userId));
+
+        Assert.Contains("không thuộc khách hàng", error.Message);
+        Assert.Empty(await _db.Tenders.ToListAsync());
     }
 
     [Fact]
@@ -308,6 +355,7 @@ public class TenderServiceTests : IDisposable
         {
             Name = "Tender outbound target",
             CustomerId = _customerId,
+            OperationalProjectId = _projectId,
             OwnerUserId = _userId,
         };
         var unlinkedOpportunity = new Opportunity
@@ -585,6 +633,7 @@ public class TenderServiceTests : IDisposable
         {
             Name = "Nhà máy Alpha",
             CustomerId = _customerId,
+            OperationalProjectId = _projectId,
             SubmissionDeadline = deadline,
         }, _userId);
 
@@ -741,7 +790,7 @@ public class TenderServiceTests : IDisposable
     public async Task AttachChecklistFileAsync_AutoCompletesUnfinishedRow()
     {
         var created = await _sut.CreateAsync(ValidCreate(), _userId);
-        var itemId = created.ChecklistItems[0].Id;
+        var itemId = created.ChecklistItems.Single(item => item.TemplateCode == "boq").Id;
         var storedItem = await _db.TenderChecklistItems.SingleAsync(item => item.Id == itemId);
         storedItem.CapabilityDocumentId = 123;
 
@@ -755,6 +804,22 @@ public class TenderServiceTests : IDisposable
         Assert.Equal("Done", it.Status);
         Assert.Null((await _db.TenderChecklistItems.AsNoTracking()
             .SingleAsync(item => item.Id == itemId)).CapabilityDocumentId);
+    }
+
+    [Fact]
+    public async Task AttachChecklistFileAsync_CapabilityItemRequiresSharedLibrary()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        var itemId = created.ChecklistItems.Single(item => item.TemplateCode == "capability").Id;
+
+        var error = await Assert.ThrowsAsync<TenderOperationException>(() =>
+            _sut.AttachChecklistFileAsync(created.Id, itemId,
+                "/files/tenders/private-capability.pdf", "private-capability.pdf", _userId));
+
+        Assert.Contains("thư viện dùng chung", error.Message);
+        var item = await _db.TenderChecklistItems.AsNoTracking().SingleAsync(row => row.Id == itemId);
+        Assert.Null(item.FilePath);
+        Assert.Null(item.CapabilityDocumentId);
     }
 
     [Fact]
@@ -909,7 +974,7 @@ public class TenderServiceTests : IDisposable
     {
         var first = await _sut.CreateAsync(ValidCreate(), _userId);
         var second = await _sut.CreateAsync(ValidCreate(), _userId);
-        var itemId = first.ChecklistItems[0].Id;
+        var itemId = first.ChecklistItems.Single(item => item.TemplateCode == "boq").Id;
         await _sut.AttachChecklistFileAsync(first.Id, itemId,
             "/files/tenders/cl-owned.pdf", "owned.pdf", _userId);
 
@@ -964,7 +1029,7 @@ public class TenderServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task MarkWonAsync_CreateOpportunity_OpensNegotiationOpportunityWithProject()
+    public async Task MarkWonAsync_CreateOpportunity_UsesTenderProjectForNegotiation()
     {
         var created = await _sut.CreateAsync(ValidCreate(), _userId);
         await SetTenderStatusAsync(created.Id, TenderStatus.Submitted);
@@ -1008,9 +1073,10 @@ public class TenderServiceTests : IDisposable
         Assert.Equal(1_161_000_000m, opportunity.EstimatedValue);
         Assert.Contains(created.Code, opportunity.Note);
         Assert.NotNull(opportunity.OperationalProject);
+        Assert.Equal(_projectId, opportunity.OperationalProjectId);
         Assert.Equal(_customerId, opportunity.OperationalProject!.CustomerId);
         Assert.Equal(OperationalProjectStatus.Planning, opportunity.OperationalProject.Status);
-        Assert.StartsWith($"PJ-{DateTime.UtcNow.Year}-", opportunity.OperationalProject.Code);
+        Assert.Equal(1, await _db.OperationalProjects.CountAsync());
     }
 
     [Fact]
@@ -1027,7 +1093,7 @@ public class TenderServiceTests : IDisposable
 
         Assert.Equal("Submitted", (await _sut.GetAsync(created.Id))!.Status);
         Assert.Single(_db.Opportunities);
-        Assert.Empty(_db.OperationalProjects);
+        Assert.Equal(1, _db.OperationalProjects.Count());
     }
 
     [Fact]
@@ -1039,7 +1105,7 @@ public class TenderServiceTests : IDisposable
             _sut.MarkWonAsync(created.Id, new MarkTenderWonRequest { CreateOpportunity = true }, _userId));
 
         Assert.Empty(_db.Opportunities);
-        Assert.Empty(_db.OperationalProjects);
+        Assert.Equal(1, _db.OperationalProjects.Count());
     }
 
     [Fact]

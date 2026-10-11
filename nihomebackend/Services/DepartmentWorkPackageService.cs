@@ -542,6 +542,7 @@ public sealed partial class DepartmentWorkPackageService(
         if (!GenericProjectDepartmentCodes.Contains(receivingGroupCode, StringComparer.OrdinalIgnoreCase))
             throw Error("Phòng ban này đã có không gian công việc chuyên môn. Hãy tạo công việc trong module tương ứng để tránh dữ liệu trùng.");
         var isOpportunityOwner = false;
+        var isTenderOwner = false;
         if (request.SourceOpportunityId.HasValue)
         {
             var opportunity = await db.Opportunities.AsNoTracking()
@@ -555,8 +556,14 @@ public sealed partial class DepartmentWorkPackageService(
             if (!isOpportunityOwner && !admin)
                 throw Error("Cơ hội không thuộc phạm vi của người dùng hoặc không gắn đúng Dự án.");
         }
-        if (!admin && project.ProjectManagerUserId != callerUserId && !isOpportunityOwner)
-            throw Error("Chỉ PM Dự án hoặc Kinh doanh phụ trách Cơ hội được giao việc cho phòng ban.");
+        if (request.SourceTenderId.HasValue)
+        {
+            isTenderOwner = await db.Tenders.AsNoTracking().AnyAsync(tender =>
+                tender.Id == request.SourceTenderId && tender.OperationalProjectId == project.Id &&
+                (tender.PreparerUserId == callerUserId || tender.CreatedByUserId == callerUserId), ct);
+        }
+        if (!admin && project.ProjectManagerUserId != callerUserId && !isOpportunityOwner && !isTenderOwner)
+            throw Error("Chỉ PM Dự án, Kinh doanh phụ trách Cơ hội hoặc người lập Gói thầu được giao việc cho phòng ban.");
         if (request.ContractId.HasValue) await ValidateContractAsync(request.ContractId.Value, project.Id, ct);
     }
 
@@ -712,6 +719,9 @@ public sealed partial class DepartmentWorkPackageService(
             if (package.Tasks.Any(task => task.Status is WorkTaskStatus.Planned or WorkTaskStatus.InProgress ||
                 task.KpiDefinitionId.HasValue && task.Status != WorkTaskStatus.Verified))
                 throw Error("Mọi đầu việc phải hoàn tất; đầu việc KPI phải được xác nhận trước khi đóng nhóm.");
+            if (package.SourceTenderId.HasValue && package.Purpose == WorkPackagePurpose.General &&
+                package.Tasks.Any(task => task.Status != WorkTaskStatus.Verified))
+                throw Error("Mọi đầu việc trong Kế hoạch đấu thầu phải được người duyệt độc lập xác nhận trước khi đóng nhóm.");
         }
         if (status == WorkPackageStatus.Cancelled && package.Tasks.Any(task => task.Status == WorkTaskStatus.Verified))
             throw Error("Không thể hủy nhóm công việc đã có bằng chứng KPI được xác nhận.");
@@ -733,6 +743,9 @@ public sealed partial class DepartmentWorkPackageService(
         if (item.Kind == WorkPackageKind.Internal) return item.CreatedByUserId == callerUserId && item.LeadUserId == callerUserId;
         if (item.OperationalProjectId.HasValue && await db.OperationalProjects.AsNoTracking().AnyAsync(project =>
             project.Id == item.OperationalProjectId && project.ProjectManagerUserId == callerUserId, ct)) return true;
+        if (item.SourceTenderId.HasValue && await db.Tenders.AsNoTracking().AnyAsync(tender =>
+            tender.Id == item.SourceTenderId &&
+            (tender.PreparerUserId == callerUserId || tender.CreatedByUserId == callerUserId), ct)) return true;
         return item.SourceOpportunityId.HasValue && await db.Opportunities.AsNoTracking().AnyAsync(opportunity =>
             opportunity.Id == item.SourceOpportunityId && opportunity.OwnerUserId == callerUserId, ct);
     }

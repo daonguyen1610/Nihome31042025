@@ -182,6 +182,8 @@ public class TenderService(
 
         var customer = await db.Customers.FirstOrDefaultAsync(c => c.Id == request.CustomerId, ct)
             ?? throw new TenderOperationException($"Khách hàng #{request.CustomerId} không tồn tại.");
+        if (!request.OperationalProjectId.HasValue)
+            throw new TenderOperationException("Gói thầu phải gắn với Dự án vận hành đã có.");
         await ValidateTenderProjectAsync(request.OperationalProjectId, customer.Id, ct);
 
         if (request.PreparerUserId.HasValue &&
@@ -457,6 +459,9 @@ public class TenderService(
         var item = tender?.ChecklistItems.FirstOrDefault(i => i.Id == itemId);
         if (tender is null || item is null) return null;
         GuardChecklistMutable(tender);
+        if (string.Equals(item.TemplateCode, "capability", StringComparison.OrdinalIgnoreCase))
+            throw new TenderOperationException(
+                "Hồ sơ năng lực phải chọn từ thư viện dùng chung, không tải file riêng cho từng gói thầu.");
 
         item.FilePath = filePath;
         item.OriginalFileName = originalFileName;
@@ -573,7 +578,9 @@ public class TenderService(
             throw new TenderOperationException($"Không thể chuyển gói thầu từ {tender.Status} sang {TenderStatus.Won}.");
         }
 
-        // The opportunity, its project and the Won result land together or not at all.
+        // The opportunity and Won result land together or not at all. The
+        // Tender already belongs to the customer project, so winning must not
+        // create a duplicate project root.
         await using var transaction = db.Database.IsRelational()
             ? await db.Database.BeginTransactionAsync(ct)
             : null;
@@ -586,15 +593,16 @@ public class TenderService(
         }, callerUserId, ct);
         if (transaction is not null) await transaction.CommitAsync(ct);
         logger.LogInformation(
-            "Tender {TenderId} won; opportunity {OpportunityId} and project {ProjectCode} opened by user {UserId}",
-            tenderId, opportunity.Id, opportunity.OperationalProject?.Code, callerUserId);
+            "Tender {TenderId} won; opportunity {OpportunityId} continued in project {ProjectId} by user {UserId}",
+            tenderId, opportunity.Id, opportunity.OperationalProjectId, callerUserId);
         return result;
     }
 
     /// <summary>
     /// A won tender skips prospecting and quoting: the bid was the proposal, so
     /// the opportunity opens in Negotiation, valued at the approved bid estimate,
-    /// with a Planning project so the contract can be raised straight away.
+    /// in the Tender's existing project so the contract can be raised without
+    /// duplicating the NICON business root.
     /// </summary>
     private async Task<Opportunity> OpenOpportunityFromTenderAsync(
         Tender tender,
@@ -609,24 +617,13 @@ public class TenderService(
             .Select(revision => (decimal?)revision.GrandBidTotal)
             .FirstOrDefaultAsync(ct) ?? 0m;
 
-        await OperationalProjectCodeAllocator.AcquireLockAsync(db, now.Year, ct);
-        var projectName = $"Dự án {tender.Name}";
-        var project = new OperationalProject
-        {
-            Code = await OperationalProjectCodeAllocator.NextCodeAsync(db, now.Year, ct),
-            Name = projectName.Length > 300 ? projectName[..300] : projectName,
-            CustomerId = tender.CustomerId,
-            Status = OperationalProjectStatus.Planning,
-            CreatedAt = now,
-            CreatedByUserId = callerUserId,
-            UpdatedAt = now,
-            UpdatedByUserId = callerUserId,
-        };
+        if (!tender.OperationalProjectId.HasValue)
+            throw new TenderOperationException("Gói thầu phải gắn với Dự án vận hành trước khi ghi nhận trúng thầu.");
         var opportunity = new Opportunity
         {
             Name = tender.Name,
             CustomerId = tender.CustomerId,
-            OperationalProject = project,
+            OperationalProjectId = tender.OperationalProjectId,
             OwnerUserId = callerUserId,
             Stage = OpportunityStage.Negotiation,
             EstimatedValue = bidTotal,
@@ -637,7 +634,6 @@ public class TenderService(
             UpdatedAt = now,
             UpdatedByUserId = callerUserId,
         };
-        db.OperationalProjects.Add(project);
         db.Opportunities.Add(opportunity);
         await db.SaveChangesAsync(ct);
         return opportunity;
@@ -674,6 +670,16 @@ public class TenderService(
 
         if (nextStatus == TenderStatus.Submitted)
         {
+            var planStatuses = await db.DepartmentWorkPackages.AsNoTracking()
+                .Where(package => package.SourceTenderId == tenderId &&
+                    package.Purpose == WorkPackagePurpose.General &&
+                    package.Status != WorkPackageStatus.Cancelled)
+                .Select(package => package.Status)
+                .ToListAsync(ct);
+            if (planStatuses.Count == 0)
+                throw new TenderOperationException("Phải lập Kế hoạch đấu thầu theo phòng ban trước khi nộp thầu.");
+            if (planStatuses.Any(status => status != WorkPackageStatus.Completed))
+                throw new TenderOperationException("Tất cả nhóm việc trong Kế hoạch đấu thầu phải hoàn thành và được xác nhận trước khi nộp thầu.");
             var allChecklistComplete = await db.TenderChecklistItems
                 .Where(item => item.TenderId == tenderId)
                 .AllAsync(item => item.Status == TenderChecklistItemStatus.Done ||
@@ -682,6 +688,12 @@ public class TenderService(
             if (!hasChecklist || !allChecklistComplete)
             {
                 throw new TenderOperationException("Phải hoàn tất tất cả mục checklist trước khi nộp gói thầu.");
+            }
+            if (await db.TenderChecklistItems.AnyAsync(item => item.TenderId == tenderId &&
+                    item.TemplateCode == "capability" && !item.CapabilityDocumentId.HasValue, ct))
+            {
+                throw new TenderOperationException(
+                    "Hồ sơ năng lực phải được chọn từ thư viện dùng chung trước khi nộp gói thầu.");
             }
             if (!await db.TenderEstimateRevisions.AnyAsync(revision =>
                     revision.TenderId == tenderId && revision.Status == TenderEstimateRevisionStatus.Approved, ct))
@@ -923,6 +935,7 @@ public class TenderService(
                     InternalDeadline = i.InternalDeadline,
                     FilePath = i.FilePath,
                     OriginalFileName = i.OriginalFileName,
+                    CapabilityDocumentId = i.CapabilityDocumentId,
                     SortOrder = i.SortOrder,
                 }).ToList(),
             ChecklistCompletionPercent = percent,

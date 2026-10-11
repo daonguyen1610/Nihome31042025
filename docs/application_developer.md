@@ -1033,6 +1033,20 @@ If a direct upload cannot be attached because the Tender or row is missing,
 terminal, persistence fails, or the physical copy is interrupted, the newly
 written or partial file is removed.
 
+Every new Tender requires an existing `OperationalProjectId` belonging to the
+same Customer. Tender planning reuses `DepartmentWorkPackage` with
+`SourceTenderId`, `Purpose=General`, and one Project work package per responsible
+department. Its tasks carry department, assignee, independent approver, planned
+dates, predecessors, progress, concurrency and history. A Tender-plan package
+cannot become `Completed` until every task is `Verified`; a Tender cannot become
+`Submitted` until at least one non-cancelled plan package exists and every such
+package is complete. This is the server-side gate for planning, dossier
+preparation and internal review; the Tender checklist remains the authoritative
+file/dossier checklist rather than a second planning model.
+The checklist row with `TemplateCode=capability` must reference a
+`CapabilityDocumentId`; direct upload is rejected and submission rechecks this
+invariant. Other project-specific checklist rows may use direct uploads.
+
 | Method | Route | Permission | Purpose |
 |--------|-------|------------|---------|
 | `GET` | `/api/tenders/assignee-options` | `crm.tenders.manage` | List active users whose active role can manage Tender checklist work |
@@ -1046,8 +1060,9 @@ written or partial file is removed.
 `createOpportunity: true`, never both; otherwise it returns `400`. Creating
 opens, in the same transaction as the Won result, an opportunity in
 `Negotiation` valued at the latest approved estimate revision's
-`GrandBidTotal` and a `Planning` operational project whose creator is the
-caller.
+`GrandBidTotal` on the Tender's existing Operational Project. It never creates a
+second project root. Contract creation remains an explicit action from the Won
+result after negotiation.
 
 Sequential codes (`PJ-`, `TD-`, `SV-`) are the highest numeric suffix in use
 plus one (`SequentialCodes`), never a row count, so deleted rows do not cause
