@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
-import { formatVnd, parseVnd } from "@/lib/numberFormat";
+import { formatVnd, parseVnd, parseVndDecimal } from "@/lib/numberFormat";
 import { cn } from "@/lib/utils";
 
 type MoneyInputProps = {
@@ -9,6 +9,8 @@ type MoneyInputProps = {
   id?: string;
   disabled?: boolean;
   className?: string;
+  decimalScale?: number;
+  "data-testid"?: string;
 };
 
 /**
@@ -26,6 +28,8 @@ export const MoneyInput = ({
   id,
   disabled,
   className,
+  decimalScale = 0,
+  "data-testid": testId,
 }: MoneyInputProps) => {
   // formatVnd renders an em dash for null/NaN, which suits a display but not a
   // field — nobody can backspace a dash away. Empty stays empty here.
@@ -39,19 +43,21 @@ export const MoneyInput = ({
     setText(display(value));
   }, [value, focused]);
 
-  // parseVnd returns NaN for anything unreadable; a numeric field has to settle
-  // on 0, exactly as numberFormat.ts tells callers to.
+  // Existing integer-currency fields retain their established 0 fallback.
+  // Decimal-aware fields preserve NaN so the quote validator can reject an
+  // unreadable BOQ price instead of silently changing it to zero.
   const read = (raw: string): number => {
-    const parsed = parseVnd(raw);
-    return Number.isFinite(parsed) ? parsed : 0;
+    const parsed = decimalScale > 0 ? parseVndDecimal(raw, decimalScale) : parseVnd(raw);
+    return Number.isFinite(parsed) ? parsed : decimalScale > 0 ? Number.NaN : 0;
   };
 
   return (
     <Input
       id={id}
       disabled={disabled}
-      inputMode="numeric"
+      inputMode={decimalScale > 0 ? "decimal" : "numeric"}
       className={cn("text-right tabular-nums", className)}
+      data-testid={testId}
       value={text}
       onFocus={() => setFocused(true)}
       onChange={(e) => {

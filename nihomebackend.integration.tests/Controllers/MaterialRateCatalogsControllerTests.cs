@@ -803,6 +803,7 @@ public class MaterialRateCatalogsControllerTests : IntegrationTestBase
         var preview = await ReadJsonAsync(previewResponse);
         preview.GetProperty("sheets").GetArrayLength().Should().Be(2);
         preview.GetProperty("sheets")[1].GetProperty("descriptionColumn").GetInt32().Should().Be(2);
+        preview.GetProperty("sheets")[1].GetProperty("candidateCount").GetInt32().Should().Be(2);
 
         var mappings = new[]
         {
@@ -877,8 +878,10 @@ public class MaterialRateCatalogsControllerTests : IntegrationTestBase
         workbook.Worksheets.Add("Tổng hợp").Cell("A1").Value = "TỔNG GIÁ TRỊ";
         var detail = workbook.Worksheets.Add("Nhà xưởng");
         detail.Cell("A3").Value = "Item code"; detail.Cell("B3").Value = "Description"; detail.Cell("C3").Value = "Unit"; detail.Cell("D3").Value = "Quantity"; detail.Cell("E3").Value = "Unit price";
-        detail.Cell("A4").Value = "NX-01"; detail.Cell("B4").Value = "Bê tông móng"; detail.Cell("C4").Value = "m3"; detail.Cell("D4").Value = 10; detail.Cell("E4").Value = 1500000;
-        detail.Cell("A5").Value = "NX-02"; detail.Cell("B5").Value = "Kết cấu thép"; detail.Cell("C5").Value = "kg"; detail.Cell("D5").Value = 20; detail.Cell("E5").Value = 25000;
+        detail.Cell("A4").Value = "I"; detail.Cell("B4").Value = "PHẦN MÓNG";
+        detail.Cell("A5").Value = "NX-01"; detail.Cell("B5").Value = "Bê tông móng"; detail.Cell("C5").Value = "m3"; detail.Cell("D5").Value = 10; detail.Cell("E5").Value = 1500000;
+        detail.Cell("A6").Value = "NX-02"; detail.Cell("B6").Value = "Kết cấu thép"; detail.Cell("C6").Value = "kg"; detail.Cell("D6").Value = 20; detail.Cell("E6").Value = 25000;
+        detail.Cell("B7").Value = "TỔNG CỘNG"; detail.Cell("E7").FormulaA1 = "SUM(E5:E6)";
         using var stream = new MemoryStream(); workbook.SaveAs(stream); return stream.ToArray();
     }
 }

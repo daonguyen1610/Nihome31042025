@@ -150,8 +150,8 @@ và hợp đồng mà không nhập lại dữ liệu.
   Excel có đầy đủ dòng giá, VAT, chiết khấu và tổng cộng.
 - Workbook BOQ một/nhiều sheet được preview, mapping và chuẩn hoá tại Danh mục
   đơn giá BOQ, không import trực tiếp vào Báo giá. Báo giá BOQ áp dụng một
-  revision danh mục đã duyệt và lưu bản chụp; dòng nhập tay hoặc dán clipboard
-  chỉ là ngoại lệ của riêng báo giá, không cập nhật ngược danh mục.
+  revision danh mục đã duyệt và lưu bản chụp; dòng ngoại lệ được nhập bằng bảng
+  cột/hàng có validation hoặc thêm từng dòng, không cập nhật ngược danh mục.
 - Đấu thầu có kế hoạch, checklist, deadline, hồ sơ năng lực, dự toán versioned và
   kết quả trúng/trượt.
 - Khảo sát mobile ghi điều kiện hiện trường, tọa độ, ảnh/video/file và checklist;

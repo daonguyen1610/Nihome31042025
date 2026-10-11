@@ -4,7 +4,7 @@ import {
   AlertTriangle,
   CheckCheck,
   Ban,
-  Clipboard,
+  ListPlus,
   Loader2,
   Pencil,
   Plus,
@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
-import BoqPasteDialog from "@/components/admin/BoqPasteDialog";
+import BoqBulkEntryDialog from "@/components/admin/BoqBulkEntryDialog";
 import QuoteRateFields from "@/components/admin/QuoteRateFields";
 import BoqCatalogFields from "@/components/admin/BoqCatalogFields";
 import { useI18n } from "@/lib/i18n";
@@ -28,7 +28,7 @@ import { extractApiError } from "@/lib/apiError";
 import { formatVnd, parseVnd } from "@/lib/numberFormat";
 import { calculateQuoteLineAmount, calculateQuoteTotals, MAX_QUOTE_QUANTITY, validateQuoteValues } from "@/lib/quoteTotals";
 import { isValidVietnameseOverrideReason } from "@/lib/quoteRate";
-import { normalizeBoqSortOrder } from "@/lib/boqPaste";
+import { normalizeBoqSortOrder } from "@/lib/boqItems";
 import { PageLoading, PageError } from "@/components/PageState";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -180,7 +180,7 @@ const AdminQuotes = () => {
   const [saving, setSaving] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [effectiveRevision, setEffectiveRevision] = useState<MaterialRateRevisionResponse | null>(null);
-  const [boqPasteOpen, setBoqPasteOpen] = useState(false);
+  const [boqBulkEntryOpen, setBoqBulkEntryOpen] = useState(false);
 
   // ---------- server-backed opportunity picker ----------
   const [opportunities, setOpportunities] = useState<OpportunityResponse[]>([]);
@@ -270,13 +270,13 @@ const AdminQuotes = () => {
     });
   };
 
-  const appendPastedBoqItems = (items: QuoteItemInput[]) => {
+  const appendBulkBoqItems = (items: QuoteItemInput[]) => {
     const existingItems = createForm.items ?? [];
     setCreateForm({
       ...createForm,
       items: normalizeBoqSortOrder([...existingItems, ...items]),
     });
-    toast({ title: t("quotes.paste.ok"), description: `+${items.length}` });
+    toast({ title: t("quotes.bulk.ok"), description: `+${items.length}` });
   };
 
   const changeCreateMethod = (method: QuoteMethod) => {
@@ -822,9 +822,9 @@ const AdminQuotes = () => {
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <Label>{t("quotes.boq.title")}</Label>
                   <div className="grid grid-cols-2 gap-1.5 sm:flex">
-                    <Button className="min-w-0" type="button" size="sm" variant="ghost" data-testid="quote-create-boq-paste" onClick={() => setBoqPasteOpen(true)}>
-                      <Clipboard className="mr-1 h-3.5 w-3.5" />
-                      {t("quotes.boq.paste")}
+                    <Button className="min-w-0" type="button" size="sm" variant="ghost" data-testid="quote-create-boq-bulk-entry" onClick={() => setBoqBulkEntryOpen(true)}>
+                      <ListPlus className="mr-1 h-3.5 w-3.5" />
+                      {t("quotes.boq.bulkEntry")}
                     </Button>
                     <Button className="min-w-0" type="button" size="sm" variant="outline" onClick={addBoqItem}>
                       <Plus className="mr-1 h-3.5 w-3.5" />
@@ -1000,10 +1000,10 @@ const AdminQuotes = () => {
         </DialogContent>
       </Dialog>
 
-      <BoqPasteDialog
-        open={boqPasteOpen}
-        onOpenChange={setBoqPasteOpen}
-        onConfirm={appendPastedBoqItems}
+      <BoqBulkEntryDialog
+        open={boqBulkEntryOpen}
+        onOpenChange={setBoqBulkEntryOpen}
+        onConfirm={appendBulkBoqItems}
       />
 
       <DeletionImpactDialog

@@ -5,7 +5,7 @@ import {
   Ban,
   Calendar,
   CheckCheck,
-  Clipboard,
+  ListPlus,
   Download,
   FileText,
   History,
@@ -26,7 +26,7 @@ import {
 import AdminLayout from "@/components/layout/AdminLayout";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
-import BoqPasteDialog from "@/components/admin/BoqPasteDialog";
+import BoqBulkEntryDialog from "@/components/admin/BoqBulkEntryDialog";
 import BoqCatalogFields from "@/components/admin/BoqCatalogFields";
 import QuoteRateFields from "@/components/admin/QuoteRateFields";
 import QuoteContractLinkDialog from "@/components/admin/QuoteContractLinkDialog";
@@ -41,7 +41,7 @@ import { extractApiError, isConcurrencyConflict } from "@/lib/apiError";
 import { formatFileSize, formatVnd } from "@/lib/numberFormat";
 import { calculateQuoteLineAmount, calculateQuoteTotals, validateQuoteValues } from "@/lib/quoteTotals";
 import { isValidVietnameseOverrideReason } from "@/lib/quoteRate";
-import { normalizeBoqSortOrder } from "@/lib/boqPaste";
+import { normalizeBoqSortOrder } from "@/lib/boqItems";
 import { PageLoading, PageError } from "@/components/PageState";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -175,7 +175,7 @@ const AdminQuoteDetail = () => {
   const [saving, setSaving] = useState(false);
   const [effectiveRevision, setEffectiveRevision] = useState<MaterialRateRevisionResponse | null>(null);
   const [exportingSpreadsheet, setExportingSpreadsheet] = useState(false);
-  const [boqPasteOpen, setBoqPasteOpen] = useState(false);
+  const [boqBulkEntryOpen, setBoqBulkEntryOpen] = useState(false);
 
   const [versions, setVersions] = useState<QuoteVersionsResponse | null>(null);
   const [versionsLoading, setVersionsLoading] = useState(false);
@@ -297,12 +297,12 @@ const AdminQuoteDetail = () => {
     items[idx] = { ...items[idx], ...patch };
     setForm({ ...form, items });
   };
-  const appendPastedBoqItems = (pastedItems: QuoteItemInput[]) => {
+  const appendBulkBoqItems = (newItems: QuoteItemInput[]) => {
     if (!form) return;
     const existingItems = form.items ?? [];
-    const items = normalizeBoqSortOrder([...existingItems, ...pastedItems]);
+    const items = normalizeBoqSortOrder([...existingItems, ...newItems]);
     setForm({ ...form, items });
-    toast({ title: t("quotes.paste.ok"), description: `+${pastedItems.length}` });
+    toast({ title: t("quotes.bulk.ok"), description: `+${newItems.length}` });
   };
 
   const applyBoqCatalog = (revision: MaterialRateRevisionResponse, pricingDate: string) => {
@@ -828,7 +828,7 @@ const AdminQuoteDetail = () => {
                     onAdd={addBoqRow}
                     onRemove={removeBoqRow}
                     onChange={updateBoqRow}
-                    onPaste={() => setBoqPasteOpen(true)}
+                    onBulkEntry={() => setBoqBulkEntryOpen(true)}
                     t={t}
                   />
                 </div>
@@ -1149,10 +1149,10 @@ const AdminQuoteDetail = () => {
         </DialogContent>
       </Dialog>
 
-      <BoqPasteDialog
-        open={boqPasteOpen}
-        onOpenChange={setBoqPasteOpen}
-        onConfirm={appendPastedBoqItems}
+      <BoqBulkEntryDialog
+        open={boqBulkEntryOpen}
+        onOpenChange={setBoqBulkEntryOpen}
+        onConfirm={appendBulkBoqItems}
       />
 
       <DeletionImpactDialog
@@ -1390,7 +1390,7 @@ const BoqTable = ({
   onAdd,
   onRemove,
   onChange,
-  onPaste,
+  onBulkEntry,
   t,
 }: {
   form: UpdateQuoteRequest;
@@ -1398,7 +1398,7 @@ const BoqTable = ({
   onAdd: () => void;
   onRemove: (idx: number) => void;
   onChange: (idx: number, patch: Partial<QuoteItemInput>) => void;
-  onPaste: () => void;
+  onBulkEntry: () => void;
   t: (k: string) => string;
 }) => {
   const items = form.items ?? [];
@@ -1408,9 +1408,9 @@ const BoqTable = ({
         <span>{t("quotes.boq.title")}</span>
         {editing && (
           <div className="flex gap-1.5">
-            <Button size="sm" variant="ghost" className="h-7 px-2" data-testid="boq-paste-open" onClick={onPaste}>
-              <Clipboard className="mr-1 h-3.5 w-3.5" />
-              {t("quotes.boq.paste")}
+            <Button size="sm" variant="ghost" className="h-7 px-2" data-testid="boq-bulk-entry-open" onClick={onBulkEntry}>
+              <ListPlus className="mr-1 h-3.5 w-3.5" />
+              {t("quotes.boq.bulkEntry")}
             </Button>
             <Button size="sm" variant="outline" className="h-7 px-2" onClick={onAdd}>
               <Plus className="mr-1 h-3.5 w-3.5" />

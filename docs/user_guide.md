@@ -468,15 +468,11 @@ revision, and date provenance. The copied name, unit, quantity, and unit price
 remain editable without changing the approved catalog revision; the quote marks
 this source as an editable catalog reference rather than an exact catalog price.
 BOQ quantities support up to four decimal places and unit prices up to two. To
-add a small number of quote-specific exception rows from the clipboard, copy
-columns in the order `[optional code] / item name / unit / quantity / unit
-price`, open **Quick add from clipboard**, paste with `Cmd+V` or `Ctrl+V`,
-review any invalid row numbers, and confirm. This action does not import a
-workbook or update the catalog. It does not require browser clipboard permission
-and accepts common
-Vietnamese and English number formats. An ambiguous quantity with one separator
-and exactly three following digits, such as `1.234`, is rejected; use `1234` for
-a whole number or `1.2340` for a decimal. The form previews each calculation basis and the
+add quote-specific exception rows, open **Enter multiple rows** and enter each
+value under its explicit code, item, unit, quantity, and unit-price column. Add
+or remove rows inside the table and correct every validation error before
+confirming. This action does not import a workbook or update the catalog. The
+form previews each calculation basis and the
 subtotal, discount, VAT, and grand total before saving. Blank rows, quantities
 at or below zero, negative prices, invalid percentages, and values above the
 supported accounting range are rejected in both the browser and API. Reopening
@@ -490,6 +486,11 @@ workbook, download the standard NICON form. For an existing NICON workbook,
 choose **Import multi-sheet BOQ**, preview every sheet in workbook order, select
 only detail sheets, and verify the header row plus code, description, unit,
 quantity, and unit-price columns. Leave cover and summary sheets unselected.
+A detail sheet may contain section headers, repeated headers, and subtotal rows;
+the preview excludes these structural rows from its expected-line count. A row
+that looks like a priced detail item but lacks a valid unit, positive quantity,
+or non-negative unit price remains an error and must be corrected in the source
+workbook or excluded through the selected sheet/mapping.
 A recurring structure can be named and saved as a mapping template; materially
 different workbook structures can use separate templates without changing the
 standard form.
