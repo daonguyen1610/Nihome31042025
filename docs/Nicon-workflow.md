@@ -289,12 +289,15 @@ dần; không được phá API/dữ liệu cũ trong một lần chuyển đổ
 Giá đầu vào, material-rate catalog, Quote BOQ và Execution BOQ là các aggregate
 khác nhau. Việc import phải có preview, mapping, lỗi theo sheet/ô, checksum hoặc
 provenance, người xác nhận và không hard-code tên sheet từ file mẫu.
+Dòng tiêu đề nhóm, tiêu đề cột lặp và tổng phụ không được tính thành dòng đơn
+giá; dòng chi tiết phải có tên, đơn vị, khối lượng dương và đơn giá không âm.
 
 Workbook BOQ khách hàng được nhập tại Draft revision của material-rate catalog.
 Quote BOQ chỉ áp dụng revision Approved phù hợp và lưu snapshot để lập báo giá;
-không có luồng import workbook trực tiếp vào Quote. Nhập tay hoặc dán clipboard
-tại Quote chỉ bổ sung ngoại lệ cục bộ, không thay đổi catalog và không thay thế
-quy trình chuẩn hoá workbook.
+không có luồng import workbook trực tiếp vào Quote. Bảng nhập nhiều dòng hoặc
+thêm từng dòng tại Quote chỉ bổ sung ngoại lệ cục bộ, không thay đổi catalog và
+không thay thế quy trình chuẩn hoá workbook. Không dùng vùng nhập text/clipboard
+tự do cho BOQ của Quote.
 
 ## 7. Google Drive và tài liệu
 

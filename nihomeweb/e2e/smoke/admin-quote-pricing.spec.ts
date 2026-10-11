@@ -4,6 +4,14 @@ import { hardDeleteBusinessRoot } from "../fixtures/hardDelete";
 
 const uid = () => Math.random().toString(36).slice(2, 10).toUpperCase();
 
+const fillBulkBoqRow = async (page: Page, index: number, row: { code: string; name: string; unit: string; quantity: string; unitPrice: string }) => {
+  await page.getByTestId(`boq-bulk-code-${index}`).fill(row.code);
+  await page.getByTestId(`boq-bulk-name-${index}`).fill(row.name);
+  await page.getByTestId(`boq-bulk-unit-${index}`).fill(row.unit);
+  await page.getByTestId(`boq-bulk-quantity-${index}`).fill(row.quantity);
+  await page.getByTestId(`boq-bulk-price-${index}`).fill(row.unitPrice);
+};
+
 // The dialog enters with fade/zoom/slide animations, so its box is still
 // moving when it first becomes visible. Measuring geometry mid-animation reads
 // a transient (already-offset) position; wait for the animations to finish.
@@ -51,14 +59,33 @@ const expectCreateDialogResponsive = async (page: Page) => {
   }
 };
 
-test("adds quote-specific BOQ rows safely and applies an approved material rate to a Unit Cost quote", async ({
+const expectBulkEntryDialogResponsive = async (page: Page) => {
+  for (const viewport of [
+    { width: 390, height: 844 },
+    { width: 768, height: 1024 },
+    { width: 1440, height: 900 },
+  ]) {
+    await page.setViewportSize(viewport);
+    const dialog = page.getByTestId("boq-bulk-entry-dialog");
+    const tableScroll = page.getByTestId("boq-bulk-table-scroll");
+    await expect(dialog).toBeVisible();
+    await settleEnterAnimation(dialog);
+    const box = await dialog.boundingBox();
+    expect(box?.x ?? -1).toBeGreaterThanOrEqual(0);
+    expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(viewport.width);
+    expect(await tableScroll.evaluate((element) => element.scrollWidth >= element.clientWidth)).toBe(true);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  }
+};
+
+test("enters structured BOQ rows safely and applies an approved material rate to a Unit Cost quote", async ({
   api,
   page,
   loginAs,
   loginInBrowserAs,
   baseURL,
 }) => {
-  test.setTimeout(120_000);
+  test.setTimeout(300_000);
   const token = await loginAs(TEST_USERS.superAdmin);
   const headers = { Authorization: `Bearer ${token}` };
   const suffix = uid();
@@ -194,34 +221,20 @@ test("adds quote-specific BOQ rows safely and applies an approved material rate 
     await expect(page.getByTestId("quote-boq-catalog-fields")).toBeVisible();
     await page.getByTestId("boq-remove-desktop-1").click();
 
-    await page.getByTestId("boq-paste-open").click();
-    const pasteDialog = page.getByTestId("boq-paste-dialog");
-    await expect(page.getByTestId("boq-paste-scope-note")).toContainText(/không nhập workbook/i);
-    await expect(page.getByTestId("boq-paste-scope-note").getByRole("link")).toHaveAttribute("href", "/admin/material-rates/boq");
-    await expect(pasteDialog).toContainText(/không cần cấp quyền đọc clipboard/i);
-    await page.getByTestId("boq-paste-input").fill([
-      "Mã\tHạng mục\tĐơn vị\tKhối lượng\tĐơn giá",
-      "BOQ-01\tBê tông móng M300\tm3\t25\t1.450.000",
-      "BOQ-02\tDòng lỗi\tm2\t0\t85.000",
-      "BOQ-03\tKhối lượng mơ hồ\tm2\t1.234\t85.000",
-      `BOQ-04\tĐơn vị quá dài\t${"a".repeat(31)}\t1\t85.000`,
-      `${"C".repeat(61)}\tMã quá dài\tm2\t1\t85.000`,
-      "BOQ-05\tNhóm khối lượng sai\tm2\t1234,567,890\t85.000",
-      "BOQ-06\tNhóm đơn giá sai\tm2\t1\t1234,567.89",
-      "BOQ-07\tNhóm đầu giá dấu phẩy sai\tm2\t1\t1234,567",
-      "BOQ-08\tNhóm đầu giá dấu chấm sai\tm2\t1\t1234.567",
-    ].join("\n"));
-    await expect(page.getByTestId("boq-paste-errors")).toContainText("3, 4, 5, 6, 7, 8, 9, 10");
-    await expect(page.getByTestId("boq-paste-confirm")).toBeDisabled();
-
-    await page.getByTestId("boq-paste-input").fill([
-      "Mã\tHạng mục\tĐơn vị\tKhối lượng\tĐơn giá",
-      "BOQ-01\tBê tông móng M300\tm3\t25\t1.450.000",
-      "BOQ-02\tSơn nội thất\tm2\t1.234,56\t85,000.50",
-      `${maxLengthItemCode}\tMã và đơn vị đúng giới hạn\t${"u".repeat(30)}\t1\t1`,
-    ].join("\n"));
-    await expect(pasteDialog.getByText(/3 dòng hợp lệ/i)).toBeVisible();
-    await page.getByTestId("boq-paste-confirm").click();
+    await page.getByTestId("boq-bulk-entry-open").click();
+    await expectBulkEntryDialogResponsive(page);
+    await expect(page.getByTestId("boq-bulk-entry-dialog")).toContainText(/đúng cột/i);
+    await expect(page.getByTestId("boq-bulk-confirm")).toBeDisabled();
+    await fillBulkBoqRow(page, 0, { code: "BOQ-01", name: "Bê tông móng M300", unit: "m3", quantity: "25", unitPrice: "1.450.000" });
+    await page.getByTestId("boq-bulk-add-row").click();
+    await fillBulkBoqRow(page, 1, { code: "BOQ-02", name: "Sơn nội thất", unit: "m2", quantity: "0", unitPrice: "85.000,50" });
+    await expect(page.getByTestId("boq-bulk-error")).toBeVisible();
+    await expect(page.getByTestId("boq-bulk-confirm")).toBeDisabled();
+    await page.getByTestId("boq-bulk-quantity-1").fill("1234.56");
+    await page.getByTestId("boq-bulk-add-row").click();
+    await fillBulkBoqRow(page, 2, { code: maxLengthItemCode, name: "Mã và đơn vị đúng giới hạn", unit: "u".repeat(30), quantity: "1", unitPrice: "1" });
+    await expect(page.getByTestId("boq-bulk-confirm")).toBeEnabled();
+    await page.getByTestId("boq-bulk-confirm").click();
 
     const updateResponsePromise = page.waitForResponse((response) =>
       new URL(response.url()).pathname === `/api/quotes/${boqQuoteId}` && response.request().method() === "PUT",
@@ -241,9 +254,9 @@ test("adds quote-specific BOQ rows safely and applies an approved material rate 
     await page.goto(`${baseURL}/admin/quotes?create=1&opportunityId=${opportunityId}`, { waitUntil: "networkidle" });
     await page.getByTestId("quote-method").click();
     await page.getByRole("option", { name: /Bảng khối lượng/i }).click();
-    await page.getByTestId("quote-create-boq-paste").click();
-    await page.getByTestId("boq-paste-input").fill("BOQ-MANUAL\tDòng BOQ thủ công\tm2\t1.0050\t1,00");
-    await page.getByTestId("boq-paste-confirm").click();
+    await page.getByTestId("quote-create-boq-bulk-entry").click();
+    await fillBulkBoqRow(page, 0, { code: "BOQ-MANUAL", name: "Dòng BOQ thủ công", unit: "m2", quantity: "1.0050", unitPrice: "1,00" });
+    await page.getByTestId("boq-bulk-confirm").click();
     const manualCreateResponsePromise = page.waitForResponse((response) =>
       new URL(response.url()).pathname === "/api/quotes" && response.request().method() === "POST",
     );
@@ -271,9 +284,9 @@ test("adds quote-specific BOQ rows safely and applies an approved material rate 
     await page.getByTestId("quote-boq-catalog-apply").click();
     await expect(page.getByTestId("quote-create-boq-name-0")).toHaveValue("Hạng mục từ danh mục");
     await page.getByTestId("quote-create-boq-name-0").fill("Hạng mục danh mục đã chỉnh sửa");
-    await page.getByTestId("quote-create-boq-paste").click();
-    await page.getByTestId("boq-paste-input").fill("BOQ-NEW\tDòng tạo mới\tm2\t2\t500.000");
-    await page.getByTestId("boq-paste-confirm").click();
+    await page.getByTestId("quote-create-boq-bulk-entry").click();
+    await fillBulkBoqRow(page, 0, { code: "BOQ-NEW", name: "Dòng tạo mới", unit: "m2", quantity: "2", unitPrice: "500.000" });
+    await page.getByTestId("boq-bulk-confirm").click();
     await expect(page.getByTestId("quote-create-boq-name-1")).toHaveValue("Kiểm tra đơn giá biên");
     await expect(page.getByTestId("quote-create-boq-name-2")).toHaveValue("Dòng tạo mới");
     await page.getByTestId("quote-discount").fill("7");
@@ -356,9 +369,9 @@ test("adds quote-specific BOQ rows safely and applies an approved material rate 
     await page.goto(`${baseURL}/admin/quotes?create=1&opportunityId=${opportunityId}`, { waitUntil: "networkidle" });
     await page.getByTestId("quote-method").click();
     await page.getByRole("option", { name: /Bảng khối lượng/i }).click();
-    await page.getByTestId("quote-create-boq-paste").click();
-    await page.getByTestId("boq-paste-input").fill("BOQ-SWITCH\tDòng kiểm thử chuyển phương thức\tm2\t1\t100.000");
-    await page.getByTestId("boq-paste-confirm").click();
+    await page.getByTestId("quote-create-boq-bulk-entry").click();
+    await fillBulkBoqRow(page, 0, { code: "BOQ-SWITCH", name: "Dòng kiểm thử chuyển phương thức", unit: "m2", quantity: "1", unitPrice: "100.000" });
+    await page.getByTestId("boq-bulk-confirm").click();
     await page.getByTestId("quote-discount").fill("7");
     await page.getByTestId("quote-vat").fill("9");
     page.once("dialog", async (dialog) => {

@@ -62,3 +62,42 @@ export function parseVnd(input: string): number {
     const parsed = Number(digitsOnly);
     return Number.isFinite(parsed) ? parsed : Number.NaN;
 }
+
+/**
+ * Parse a localized monetary amount while preserving a limited decimal part.
+ * Both Vietnamese ("85.000,50") and English ("85,000.50") separators are
+ * accepted. A single three-digit suffix remains a thousands group, so the
+ * established "85.000" currency entry continues to mean 85,000.
+ */
+export function parseVndDecimal(input: string, decimalScale = 2): number {
+    const compact = input.trim().replace(/[\s₫đ]/gi, "");
+    if (!compact) return 0;
+    if (!/^\d+(?:[.,]\d+)*$/.test(compact)) return Number.NaN;
+
+    const dot = compact.lastIndexOf(".");
+    const comma = compact.lastIndexOf(",");
+    const lastSeparator = Math.max(dot, comma);
+    if (lastSeparator < 0) return Number(compact);
+
+    const separator = compact[lastSeparator];
+    const occurrences = [...compact].filter(char => char === separator).length;
+    const fractionLength = compact.length - lastSeparator - 1;
+    const hasOtherSeparator = dot >= 0 && comma >= 0;
+    const isDecimal = hasOtherSeparator
+        || (occurrences === 1 && fractionLength > 0 && fractionLength <= decimalScale && fractionLength !== 3);
+
+    if (isDecimal && fractionLength > decimalScale) return Number.NaN;
+
+    const integerPart = isDecimal ? compact.slice(0, lastSeparator) : compact;
+    const fractionPart = isDecimal ? compact.slice(lastSeparator + 1) : "";
+    const groupingSeparator = integerPart.includes(".") ? "." : integerPart.includes(",") ? "," : "";
+    if (groupingSeparator) {
+        const groups = integerPart.split(groupingSeparator);
+        if (!/^\d{1,3}$/.test(groups[0]) || groups.slice(1).some(group => !/^\d{3}$/.test(group))) {
+            return Number.NaN;
+        }
+    }
+    const normalized = `${integerPart.replace(/[.,]/g, "")}${fractionPart ? `.${fractionPart}` : ""}`;
+    const parsed = Number(normalized);
+    return Number.isFinite(parsed) ? parsed : Number.NaN;
+}

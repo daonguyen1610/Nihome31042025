@@ -27,7 +27,7 @@ public sealed class BoqCatalogWorkbookService(AppDbContext db, IMaterialRateServ
     private const long MaxBytes = 20 * 1024 * 1024;
     private static readonly string[] DescriptionAliases = ["description", "item description", "work description", "noi dung", "mo ta", "ten cong viec", "ten hang muc", "hang muc", "dien giai"];
     private static readonly string[] UnitAliases = ["unit", "don vi", "dvt"];
-    private static readonly string[] QuantityAliases = ["quantity", "qty", "q ty", "khoi luong", "kl tong", "kl"];
+    private static readonly string[] QuantityAliases = ["quantity", "qty", "q ty", "khoi luong", "k luong", "kl tong", "kl", "sl"];
     private static readonly string[] PriceAliases = ["unit price", "total price", "don gia tong", "don gia", "rate"];
     private static readonly string[] CodeAliases = ["item code", "code", "ma hieu", "ma hang muc", "stt", "no"];
 
@@ -39,9 +39,14 @@ public sealed class BoqCatalogWorkbookService(AppDbContext db, IMaterialRateServ
         };
         result.AddRange(await db.BoqImportTemplates.AsNoTracking().OrderBy(item => item.Name).Select(item => new BoqImportTemplateResponse
         {
-            Id = item.Id, Name = item.Name, HeaderRow = item.HeaderRow, ItemCodeColumn = item.ItemCodeColumn,
-            DescriptionColumn = item.DescriptionColumn, UnitColumn = item.UnitColumn,
-            QuantityColumn = item.QuantityColumn, UnitPriceColumn = item.UnitPriceColumn,
+            Id = item.Id,
+            Name = item.Name,
+            HeaderRow = item.HeaderRow,
+            ItemCodeColumn = item.ItemCodeColumn,
+            DescriptionColumn = item.DescriptionColumn,
+            UnitColumn = item.UnitColumn,
+            QuantityColumn = item.QuantityColumn,
+            UnitPriceColumn = item.UnitPriceColumn,
         }).ToListAsync(ct));
         return result;
     }
@@ -54,18 +59,27 @@ public sealed class BoqCatalogWorkbookService(AppDbContext db, IMaterialRateServ
             throw new MaterialRateOperationException("Tên mẫu BOQ đã tồn tại.", "materialRates.boqTemplate.duplicate");
         var entity = new BoqImportTemplate
         {
-            Name = name, HeaderRow = request.HeaderRow, ItemCodeColumn = request.ItemCodeColumn,
-            DescriptionColumn = request.DescriptionColumn, UnitColumn = request.UnitColumn,
-            QuantityColumn = request.QuantityColumn, UnitPriceColumn = request.UnitPriceColumn,
+            Name = name,
+            HeaderRow = request.HeaderRow,
+            ItemCodeColumn = request.ItemCodeColumn,
+            DescriptionColumn = request.DescriptionColumn,
+            UnitColumn = request.UnitColumn,
+            QuantityColumn = request.QuantityColumn,
+            UnitPriceColumn = request.UnitPriceColumn,
             CreatedByUserId = userId,
         };
         db.BoqImportTemplates.Add(entity);
         await db.SaveChangesAsync(ct);
         return new BoqImportTemplateResponse
         {
-            Id = entity.Id, Name = entity.Name, HeaderRow = entity.HeaderRow, ItemCodeColumn = entity.ItemCodeColumn,
-            DescriptionColumn = entity.DescriptionColumn, UnitColumn = entity.UnitColumn,
-            QuantityColumn = entity.QuantityColumn, UnitPriceColumn = entity.UnitPriceColumn,
+            Id = entity.Id,
+            Name = entity.Name,
+            HeaderRow = entity.HeaderRow,
+            ItemCodeColumn = entity.ItemCodeColumn,
+            DescriptionColumn = entity.DescriptionColumn,
+            UnitColumn = entity.UnitColumn,
+            QuantityColumn = entity.QuantityColumn,
+            UnitPriceColumn = entity.UnitPriceColumn,
         };
     }
 
@@ -102,16 +116,13 @@ public sealed class BoqCatalogWorkbookService(AppDbContext db, IMaterialRateServ
             var lastRow = sheet.LastRowUsed()?.RowNumber() ?? mapping.HeaderRow;
             for (var row = mapping.HeaderRow + 1; row <= lastRow; row++)
             {
-                var name = sheet.Cell(row, mapping.DescriptionColumn).GetString().Trim();
-                var unit = sheet.Cell(row, mapping.UnitColumn).GetString().Trim();
-                var quantityText = sheet.Cell(row, mapping.QuantityColumn).GetFormattedString().Trim();
-                var priceText = sheet.Cell(row, mapping.UnitPriceColumn).GetFormattedString().Trim();
-                if (string.IsNullOrWhiteSpace(name) && string.IsNullOrWhiteSpace(unit) && string.IsNullOrWhiteSpace(quantityText) && string.IsNullOrWhiteSpace(priceText)) continue;
-                if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(unit) || !TryDecimal(sheet.Cell(row, mapping.QuantityColumn), out var quantity) || !TryDecimal(sheet.Cell(row, mapping.UnitPriceColumn), out var price))
+                var parsed = ParseRow(sheet, row, mapping.DescriptionColumn, mapping.UnitColumn, mapping.QuantityColumn, mapping.UnitPriceColumn);
+                if (parsed.Kind is BoqRowKind.Empty or BoqRowKind.Structural) continue;
+                if (parsed.Kind == BoqRowKind.Invalid)
                     throw Error($"{sheet.Name}!{row}: tên công việc, đơn vị, khối lượng hoặc đơn giá không hợp lệ.", "materialRates.boqWorkbook.invalidRow");
                 var code = mapping.ItemCodeColumn.HasValue ? sheet.Cell(row, mapping.ItemCodeColumn.Value).GetString().Trim() : string.Empty;
                 if (string.IsNullOrWhiteSpace(code)) code = $"BOQ-{++generatedCode:00000}";
-                lines.Add(new UpsertBoqMaterialRateLineRequest { ItemCode = code, ItemName = name, Unit = unit, Quantity = quantity, UnitPrice = price });
+                lines.Add(new UpsertBoqMaterialRateLineRequest { ItemCode = code, ItemName = parsed.Name, Unit = parsed.Unit, Quantity = parsed.Quantity, UnitPrice = parsed.Price });
             }
         }
         return await materialRates.ReplaceBoqLinesAsync(catalogId, revisionId, lines, source.Name, source.Hash,
@@ -145,12 +156,32 @@ public sealed class BoqCatalogWorkbookService(AppDbContext db, IMaterialRateServ
         var warnings = new List<string>();
         if (sheet.Visibility != XLWorksheetVisibility.Visible) warnings.Add("Sheet đang ẩn.");
         if (best < 4) warnings.Add("Chưa nhận diện đủ cột; hãy chọn mẫu hoặc chỉnh mapping.");
-        var candidates = header.HasValue && description.HasValue
-            ? Enumerable.Range(header.Value + 1, Math.Max(0, (sheet.LastRowUsed()?.RowNumber() ?? header.Value) - header.Value)).Count(row => !string.IsNullOrWhiteSpace(sheet.Cell(row, description.Value).GetString()))
-            : 0;
-        return new BoqWorkbookSheetPreviewResponse { Name = sheet.Name, Order = order, IsHidden = sheet.Visibility != XLWorksheetVisibility.Visible,
-            HeaderRow = header, ItemCodeColumn = code, DescriptionColumn = description, UnitColumn = unit, QuantityColumn = quantity, UnitPriceColumn = price,
-            CandidateCount = candidates, Warnings = warnings };
+        var candidates = 0;
+        var invalidDetails = 0;
+        if (header.HasValue && description.HasValue && unit.HasValue && quantity.HasValue && price.HasValue)
+        {
+            foreach (var row in Enumerable.Range(header.Value + 1, Math.Max(0, (sheet.LastRowUsed()?.RowNumber() ?? header.Value) - header.Value)))
+            {
+                var kind = ParseRow(sheet, row, description.Value, unit.Value, quantity.Value, price.Value).Kind;
+                if (kind == BoqRowKind.Valid) candidates++;
+                else if (kind == BoqRowKind.Invalid) invalidDetails++;
+            }
+        }
+        if (invalidDetails > 0) warnings.Add($"Có {invalidDetails} dòng chi tiết thiếu hoặc sai đơn vị, khối lượng, đơn giá.");
+        return new BoqWorkbookSheetPreviewResponse
+        {
+            Name = sheet.Name,
+            Order = order,
+            IsHidden = sheet.Visibility != XLWorksheetVisibility.Visible,
+            HeaderRow = header,
+            ItemCodeColumn = code,
+            DescriptionColumn = description,
+            UnitColumn = unit,
+            QuantityColumn = quantity,
+            UnitPriceColumn = price,
+            CandidateCount = candidates,
+            Warnings = warnings
+        };
     }
 
     private static void ValidateColumns(int? code, params int[] required)
@@ -165,6 +196,36 @@ public sealed class BoqCatalogWorkbookService(AppDbContext db, IMaterialRateServ
         if (cell.TryGetValue(out value)) return true;
         return decimal.TryParse(cell.GetFormattedString().Replace(",", string.Empty), NumberStyles.Number, CultureInfo.InvariantCulture, out value);
     }
+
+    private static ParsedBoqRow ParseRow(IXLWorksheet sheet, int row, int descriptionColumn, int unitColumn, int quantityColumn, int priceColumn)
+    {
+        var name = sheet.Cell(row, descriptionColumn).GetString().Trim();
+        var unit = sheet.Cell(row, unitColumn).GetString().Trim();
+        var quantityText = sheet.Cell(row, quantityColumn).GetFormattedString().Trim();
+        var priceText = sheet.Cell(row, priceColumn).GetFormattedString().Trim();
+        if (string.IsNullOrWhiteSpace(name) && string.IsNullOrWhiteSpace(unit) && string.IsNullOrWhiteSpace(quantityText) && string.IsNullOrWhiteSpace(priceText))
+            return new(BoqRowKind.Empty, name, unit, 0, 0);
+
+        // Customer workbooks contain section labels and subtotal rows between
+        // detail lines. With no unit and quantity, they are structure, not rates.
+        if (string.IsNullOrWhiteSpace(unit) && string.IsNullOrWhiteSpace(quantityText))
+            return new(BoqRowKind.Structural, name, unit, 0, 0);
+
+        // Some sheets repeat their column header between work sections.
+        if (Matches(Normalize(name), DescriptionAliases) && Matches(Normalize(unit), UnitAliases))
+            return new(BoqRowKind.Structural, name, unit, 0, 0);
+
+        if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(unit) ||
+            !TryDecimal(sheet.Cell(row, quantityColumn), out var quantity) ||
+            !TryDecimal(sheet.Cell(row, priceColumn), out var price) || quantity <= 0 || price < 0)
+            return new(BoqRowKind.Invalid, name, unit, 0, 0);
+
+        return new(BoqRowKind.Valid, name, unit, quantity, price);
+    }
+
+    private enum BoqRowKind { Empty, Structural, Invalid, Valid }
+    private readonly record struct ParsedBoqRow(BoqRowKind Kind, string Name, string Unit, decimal Quantity, decimal Price);
+
     private static string Normalize(string value)
     {
         var decomposed = value.Normalize(NormalizationForm.FormD);
