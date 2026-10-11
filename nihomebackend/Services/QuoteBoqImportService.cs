@@ -3,7 +3,6 @@ using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using ClosedXML.Excel;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
@@ -206,23 +205,21 @@ public sealed class QuoteBoqImportService(
             for (var column = 1; column <= lastColumn; column++)
             {
                 var header = Normalize(sheet.Cell(row, column).GetFormattedString());
-                var isCode = Matches(header, CodeAliases);
-                var isUnitPrice = Matches(header, UnitPriceAliases);
-                if (!isCode && Matches(header, DescriptionAliases)) columns.TryAdd("description", column);
-                if (!isUnitPrice && Matches(header, UnitAliases)) columns.TryAdd("unit", column);
+                if (Matches(header, DescriptionAliases)) columns.TryAdd("description", column);
+                if (Matches(header, UnitAliases)) columns.TryAdd("unit", column);
                 if (Matches(header, QuantityAliases)) columns.TryAdd("quantity", column);
-                if (isUnitPrice) columns.TryAdd("unitPrice", column);
-                if (isCode) columns.TryAdd("code", column);
+                if (Matches(header, UnitPriceAliases)) columns.TryAdd("unitPrice", column);
+                if (Matches(header, CodeAliases)) columns.TryAdd("code", column);
             }
             var score = columns.Keys.Count(key => key != "code");
             if (score <= bestScore) continue;
             bestScore = score;
             result.HeaderRow = row;
-            result.DescriptionColumn = columns.TryGetValue("description", out var descriptionColumn) ? descriptionColumn : null;
-            result.UnitColumn = columns.TryGetValue("unit", out var unitColumn) ? unitColumn : null;
-            result.QuantityColumn = columns.TryGetValue("quantity", out var quantityColumn) ? quantityColumn : null;
-            result.UnitPriceColumn = columns.TryGetValue("unitPrice", out var unitPriceColumn) ? unitPriceColumn : null;
-            result.ItemCodeColumn = columns.TryGetValue("code", out var codeColumn) ? codeColumn : null;
+            result.DescriptionColumn = columns.GetValueOrDefault("description");
+            result.UnitColumn = columns.GetValueOrDefault("unit");
+            result.QuantityColumn = columns.GetValueOrDefault("quantity");
+            result.UnitPriceColumn = columns.GetValueOrDefault("unitPrice");
+            result.ItemCodeColumn = columns.GetValueOrDefault("code");
         }
         if (bestScore == 4)
         {
@@ -332,19 +329,6 @@ public sealed class QuoteBoqImportService(
                 (!mapping.HeaderRow.HasValue || !mapping.DescriptionColumn.HasValue || !mapping.UnitColumn.HasValue ||
                  !mapping.QuantityColumn.HasValue || !mapping.UnitPriceColumn.HasValue))
                 throw new QuoteOperationException($"Sheet '{mapping.SheetName}' thiếu header row hoặc mapping cột bắt buộc.");
-            if (mapping.Classification == "Detail")
-            {
-                var mappedColumns = new[]
-                {
-                    mapping.ItemCodeColumn,
-                    mapping.DescriptionColumn,
-                    mapping.UnitColumn,
-                    mapping.QuantityColumn,
-                    mapping.UnitPriceColumn,
-                }.Where(column => column.HasValue).Select(column => column!.Value).ToList();
-                if (mappedColumns.Distinct().Count() != mappedColumns.Count)
-                    throw new QuoteOperationException($"Sheet '{mapping.SheetName}' không được dùng cùng một cột cho nhiều trường BOQ.");
-            }
         }
     }
 
@@ -363,8 +347,7 @@ public sealed class QuoteBoqImportService(
             || decimal.TryParse(text, NumberStyles.Number, CultureInfo.GetCultureInfo("vi-VN"), out value);
     }
 
-    private static bool Matches(string value, IEnumerable<string> aliases) => aliases.Any(alias =>
-        value == alias || Regex.IsMatch(value, $@"(^|[^a-z0-9]){Regex.Escape(alias)}([^a-z0-9]|$)", RegexOptions.CultureInvariant));
+    private static bool Matches(string value, IEnumerable<string> aliases) => aliases.Any(alias => value == alias || value.Contains(alias));
     private static string Normalize(string value)
     {
         var decomposed = value.Trim().ToLowerInvariant().Normalize(NormalizationForm.FormD);

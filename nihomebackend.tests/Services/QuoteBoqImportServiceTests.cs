@@ -44,30 +44,6 @@ public sealed class QuoteBoqImportServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task PreviewAsync_DoesNotTreatDescriptionTextOrUnitPriceAsOtherColumns()
-    {
-        using var workbook = new XLWorkbook();
-        var detail = workbook.Worksheets.Add("Nhà xưởng");
-        detail.Cell("A1").Value = "NỘI DUNG CÔNG VIỆC";
-        detail.Cell("B1").Value = "ĐVT";
-        detail.Cell("C1").Value = "KHỐI LƯỢNG";
-        detail.Cell("D1").Value = "UNIT PRICE";
-        detail.Cell("A2").Value = "Thi công bê tông móng nhà xưởng";
-        detail.Cell("B2").Value = "m3";
-        detail.Cell("C2").Value = 10;
-        detail.Cell("D2").Value = 1_500_000;
-
-        var result = await CreateService().PreviewAsync(10, 20, ToFile(workbook, "headers.xlsx"));
-
-        var mapping = Assert.Single(result.Sheets);
-        Assert.Equal("Detail", mapping.SuggestedClassification);
-        Assert.Equal(1, mapping.DescriptionColumn);
-        Assert.Equal(2, mapping.UnitColumn);
-        Assert.Equal(4, mapping.UnitPriceColumn);
-        Assert.Null(mapping.ItemCodeColumn);
-    }
-
-    [Fact]
     public async Task PreviewAsync_RejectsMacroWorkbookBeforeParsing()
     {
         var file = new FormFile(new MemoryStream([1, 2, 3]), 0, 3, "file", "unsafe.xlsm");
