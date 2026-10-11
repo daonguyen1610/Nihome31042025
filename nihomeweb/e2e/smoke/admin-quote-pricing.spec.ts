@@ -223,6 +223,8 @@ test("enters structured BOQ rows safely and applies an approved material rate to
 
     await page.getByTestId("boq-bulk-entry-open").click();
     await expectBulkEntryDialogResponsive(page);
+    await expect(page.getByTestId("boq-bulk-entry-dialog")).toContainText("Khối lượng");
+    await expect(page.getByTestId("boq-bulk-entry-dialog")).not.toContainText("QUOTES.BOQ.QUANTITY");
     await expect(page.getByTestId("boq-bulk-entry-dialog")).toContainText(/đúng cột/i);
     await expect(page.getByTestId("boq-bulk-confirm")).toBeDisabled();
     await fillBulkBoqRow(page, 0, { code: "BOQ-01", name: "Bê tông móng M300", unit: "m3", quantity: "25", unitPrice: "1.450.000" });
