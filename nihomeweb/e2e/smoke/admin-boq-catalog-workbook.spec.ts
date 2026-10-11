@@ -42,10 +42,20 @@ test("imports a multi-sheet workbook into a Draft BOQ rate revision", async ({ a
     await page.getByTestId("boq-workbook-open").click();
     await page.getByTestId("boq-workbook-file").setInputFiles({ name: "factory-boq.xlsx", mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", buffer: await workbook() });
     await page.getByTestId("boq-workbook-preview").click();
-    for (const viewport of [{ width: 390, height: 844 }, { width: 768, height: 1024 }, { width: 1440, height: 900 }]) {
+    for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 844 }, { width: 768, height: 1024 }, { width: 1440, height: 900 }]) {
       await page.setViewportSize(viewport);
+      const dialog = page.getByTestId("boq-catalog-workbook-dialog");
       await expect(page.getByTestId("boq-workbook-sheet-list")).toBeVisible();
       await expect(page.getByTestId("boq-workbook-data-preview")).toBeVisible();
+      await dialog.evaluate(async element => {
+        await Promise.all(element.getAnimations().map(animation => animation.finished.catch(() => undefined)));
+      });
+      const box = await dialog.boundingBox();
+      expect(box?.x ?? -1).toBeGreaterThanOrEqual(0);
+      expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(viewport.width);
+      expect(box?.y ?? -1).toBeGreaterThanOrEqual(0);
+      expect((box?.y ?? 0) + (box?.height ?? 0)).toBeLessThanOrEqual(viewport.height);
+      await expect(page.getByTestId("boq-workbook-confirm")).toBeInViewport();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     }
     await expect(page.getByTestId("boq-workbook-sheet-list").getByRole("button", { name: /Summary/ })).toBeVisible();
