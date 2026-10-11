@@ -34,6 +34,9 @@ public sealed class MaterialRateRevisionResponse
     public DateTime? DecidedAt { get; init; }
     public DateTime CreatedAt { get; init; }
     public DateTime UpdatedAt { get; init; }
+    public string? ImportSourceFileName { get; init; }
+    public string? ImportSourceHash { get; init; }
+    public DateTime? ImportedAt { get; init; }
     [JsonConverter(typeof(DecimalStringJsonConverter))]
     public decimal TotalRatePerSqm { get; init; }
     [JsonConverter(typeof(DecimalStringJsonConverter))]
@@ -64,4 +67,39 @@ public sealed class MaterialRateImportResponse
 {
     public int ImportedCount { get; init; }
     public List<CsvImportError> Errors { get; init; } = [];
+}
+
+public sealed class BoqImportTemplateResponse
+{
+    public int Id { get; init; }
+    public string Name { get; init; } = string.Empty;
+    public bool IsSystem { get; init; }
+    public int HeaderRow { get; init; }
+    public int? ItemCodeColumn { get; init; }
+    public int DescriptionColumn { get; init; }
+    public int UnitColumn { get; init; }
+    public int QuantityColumn { get; init; }
+    public int UnitPriceColumn { get; init; }
+}
+
+public sealed class BoqWorkbookSheetPreviewResponse
+{
+    public string Name { get; init; } = string.Empty;
+    public int Order { get; init; }
+    public bool IsHidden { get; init; }
+    public int? HeaderRow { get; init; }
+    public int? ItemCodeColumn { get; init; }
+    public int? DescriptionColumn { get; init; }
+    public int? UnitColumn { get; init; }
+    public int? QuantityColumn { get; init; }
+    public int? UnitPriceColumn { get; init; }
+    public int CandidateCount { get; init; }
+    public List<string> Warnings { get; init; } = [];
+}
+
+public sealed class BoqWorkbookPreviewResponse
+{
+    public string SourceFileName { get; init; } = string.Empty;
+    public string SourceHash { get; init; } = string.Empty;
+    public List<BoqWorkbookSheetPreviewResponse> Sheets { get; init; } = [];
 }

@@ -22,6 +22,7 @@ import {
 import AdminLayout from "@/components/layout/AdminLayout";
 import { readQuoteReturnTo } from "@/lib/quoteCatalogSetup";
 import { BulkActionBar } from "@/components/admin/BulkActionBar";
+import BoqCatalogWorkbookDialog from "@/components/admin/BoqCatalogWorkbookDialog";
 import { PageError, PageLoading } from "@/components/PageState";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -368,6 +369,7 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
   const [pendingImportFile, setPendingImportFile] = useState<File | null>(null);
   const [importedCount, setImportedCount] = useState<number | null>(null);
   const [importConfirmOpen, setImportConfirmOpen] = useState(false);
+  const [boqWorkbookOpen, setBoqWorkbookOpen] = useState(false);
   const selectImportFile = (file: File | null) => {
     if (!file || !selectedCatalogId || !selectedRevision) return;
     setImportErrors([]);
@@ -774,7 +776,7 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
             <div className="rounded-lg border bg-card p-3">
               <div className="relative">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input value={search} onChange={(event) => setSearch(event.target.value)} className="pl-9" placeholder={t("materialRates.catalog.search")} />
+                <Input data-testid="material-rates-search" value={search} onChange={(event) => setSearch(event.target.value)} className="pl-9" placeholder={t("materialRates.catalog.search")} />
               </div>
               <label className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
                 <Checkbox data-testid="material-rates-include-inactive" checked={includeInactive} onCheckedChange={(value) => setIncludeInactive(value === true)} />
@@ -889,7 +891,7 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
                           </section>
                         )}
 
-                        {canManage && selectedRevision.status === "Draft" && (
+                        {canManage && selectedRevision.status === "Draft" && catalogType === "InvestmentRate" && (
                           <section className="rounded-lg border bg-muted/20 p-4">
                             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                               <div>
@@ -915,6 +917,15 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
                               </div>
                             )}
                             <div className="mt-3 flex gap-2 rounded-md border border-amber-300/70 bg-amber-50 p-3 text-xs leading-relaxed text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100"><Info className="mt-0.5 h-4 w-4 shrink-0" /><span>{t("materialRates.import.replaceWarning")}</span></div>
+                          </section>
+                        )}
+
+                        {canManage && selectedRevision.status === "Draft" && catalogType === "Boq" && (
+                          <section className="rounded-lg border border-primary/20 bg-primary/[0.04] p-4" data-testid="boq-workbook-entry">
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                              <div><h4 className="flex items-center gap-2 text-sm font-semibold"><FileSpreadsheet className="h-4 w-4 text-primary" />{t("materialRates.boqWorkbook.entryTitle")}</h4><p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted-foreground">{t("materialRates.boqWorkbook.entryHint")}</p></div>
+                              <div className="flex flex-wrap gap-2"><Button size="sm" variant="outline" onClick={() => void downloadTemplatePackage()}><Download className="mr-1.5 h-4 w-4" />{t("materialRates.boqWorkbook.standardTemplate")}</Button><Button size="sm" data-testid="boq-workbook-open" onClick={() => setBoqWorkbookOpen(true)}><UploadCloud className="mr-1.5 h-4 w-4" />{t("materialRates.boqWorkbook.open")}</Button></div>
+                            </div>
                           </section>
                         )}
 
@@ -988,6 +999,8 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
           </section>
         </div>
       </div>
+
+      {selectedCatalogId && selectedRevision && <BoqCatalogWorkbookDialog open={boqWorkbookOpen} onOpenChange={setBoqWorkbookOpen} catalogId={selectedCatalogId} revisionId={selectedRevision.id} onImported={(revision) => { applyRevision(revision); setImportedCount(revision.lines.length); }} />}
 
       <Dialog open={catalogOpen} onOpenChange={setCatalogOpen}><DialogContent><DialogHeader><DialogTitle>{t(editingCatalogId ? "materialRates.catalog.edit" : "materialRates.catalog.new")}</DialogTitle><DialogDescription>{t("materialRates.catalog.formHint")}</DialogDescription></DialogHeader><div className="space-y-3"><div><Label>{t("materialRates.catalog.code")} *</Label><Input data-testid="material-rates-catalog-code" maxLength={50} value={catalogForm.code} onChange={(event) => setCatalogForm({ ...catalogForm, code: event.target.value })} /></div><div><Label>{t("materialRates.catalog.name")} *</Label><Input data-testid="material-rates-catalog-name" maxLength={200} value={catalogForm.name} onChange={(event) => setCatalogForm({ ...catalogForm, name: event.target.value })} /></div><div><Label>{t("materialRates.catalog.currency")} *</Label><Input data-testid="material-rates-catalog-currency" maxLength={3} value={catalogForm.currency} onChange={(event) => setCatalogForm({ ...catalogForm, currency: event.target.value })} /></div><div><Label>{t("materialRates.catalog.description")}</Label><Textarea data-testid="material-rates-catalog-description" maxLength={1000} value={catalogForm.description ?? ""} onChange={(event) => setCatalogForm({ ...catalogForm, description: event.target.value })} /></div><Label className="flex items-center gap-2"><Checkbox data-testid="material-rates-catalog-active" checked={catalogForm.isActive} onCheckedChange={(value) => setCatalogForm({ ...catalogForm, isActive: value === true })} />{t("materialRates.catalog.active")}</Label>{formError && <p className="text-sm text-destructive">{formError}</p>}</div><DialogFooter><Button variant="outline" onClick={() => setCatalogOpen(false)}>{t("common.cancel")}</Button><Button data-testid="material-rates-catalog-save" onClick={() => void saveCatalog()} disabled={catalogSaving}>{catalogSaving && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}{t("common.save")}</Button></DialogFooter></DialogContent></Dialog>
 

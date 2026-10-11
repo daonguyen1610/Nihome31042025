@@ -1,6 +1,7 @@
 using System.IO.Compression;
 using System.Security.Claims;
 using System.Text;
+using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NihomeBackend.Authorization;
@@ -20,6 +21,7 @@ namespace NihomeBackend.Controllers;
 public sealed class MaterialRateCatalogsController(
     IMaterialRateService service,
     IMaterialRateSpreadsheetService spreadsheetService,
+    IBoqCatalogWorkbookService boqWorkbookService,
     TranslationService translations,
     IAuditLogger audit) : ControllerBase
 {
@@ -101,6 +103,60 @@ public sealed class MaterialRateCatalogsController(
         return File(bytes, "text/csv; charset=utf-8", catalogType == MaterialRateCatalogType.Boq
             ? "boq-rate-template.csv"
             : "material-rate-template.csv");
+    }
+
+    [HttpGet("boq-import-templates")]
+    [RequirePermission("crm.material-rates", "view")]
+    public async Task<ActionResult<List<BoqImportTemplateResponse>>> ListBoqImportTemplates(CancellationToken ct) =>
+        Ok(await boqWorkbookService.ListTemplatesAsync(ct));
+
+    [HttpPost("boq-import-templates")]
+    [RequirePermission("crm.material-rates", "manage")]
+    public async Task<ActionResult<BoqImportTemplateResponse>> CreateBoqImportTemplate(
+        [FromBody] CreateBoqImportTemplateRequest request, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        return await ExecuteAsync<BoqImportTemplateResponse>(async () =>
+        {
+            var result = await boqWorkbookService.CreateTemplateAsync(request, userId.Value, ct);
+            Audit("material-rate-boq-template.create", result.Id, result);
+            return CreatedAtAction(nameof(ListBoqImportTemplates), result);
+        });
+    }
+
+    [HttpPost("{catalogId:int}/revisions/{revisionId:int}/boq-workbook/preview")]
+    [Consumes("multipart/form-data")]
+    [RequirePermission("crm.material-rates", "manage")]
+    public async Task<ActionResult<BoqWorkbookPreviewResponse>> PreviewBoqWorkbook(
+        int catalogId, int revisionId, IFormFile? file, CancellationToken ct)
+    {
+        var revision = await service.GetRevisionAsync(catalogId, revisionId, ct);
+        if (revision is null) return NotFound();
+        if (revision.CatalogType != MaterialRateCatalogType.Boq || revision.Status != MaterialRateRevisionStatus.Draft)
+            return BadRequest(new { message = "Chỉ phiên bản Nháp của Danh mục đơn giá BOQ mới được xem trước workbook." });
+        return await ExecuteAsync<BoqWorkbookPreviewResponse>(async () => Ok(await boqWorkbookService.PreviewAsync(file, ct)));
+    }
+
+    [HttpPost("{catalogId:int}/revisions/{revisionId:int}/boq-workbook/import")]
+    [Consumes("multipart/form-data")]
+    [RequirePermission("crm.material-rates", "manage")]
+    public async Task<ActionResult<MaterialRateRevisionResponse>> ImportBoqWorkbook(
+        int catalogId, int revisionId, IFormFile? file, [FromForm] string sourceHash, [FromForm] string mappingsJson, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        List<BoqSheetMappingRequest>? mappings;
+        try { mappings = JsonSerializer.Deserialize<List<BoqSheetMappingRequest>>(mappingsJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }); }
+        catch (JsonException) { return BadRequest(new { message = "Mapping BOQ không hợp lệ." }); }
+        if (mappings is null) return BadRequest(new { message = "Mapping BOQ không hợp lệ." });
+        return await ExecuteAsync<MaterialRateRevisionResponse>(async () =>
+        {
+            var result = await boqWorkbookService.ImportAsync(catalogId, revisionId, file, sourceHash, mappings, userId.Value, ct);
+            if (result is null) return NotFound();
+            Audit("material-rate-boq-workbook.import", revisionId, new { result.ImportSourceFileName, result.ImportSourceHash, LineCount = result.Lines.Count });
+            return Ok(result);
+        });
     }
 
     [HttpGet("excel-template")]

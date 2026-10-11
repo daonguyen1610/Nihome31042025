@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.IO.Compression;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -781,5 +782,103 @@ public class MaterialRateCatalogsControllerTests : IntegrationTestBase
     {
         element.ValueKind.Should().Be(JsonValueKind.String);
         return decimal.Parse(element.GetString()!, CultureInfo.InvariantCulture);
+    }
+
+    [Fact]
+    public async Task BoqWorkbook_PreviewAndImport_ReplacesDraftLinesAndKeepsProvenance()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "SALES_MANAGER"));
+        var code = "BOQ-WB-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
+        var catalog = await Client.PostAsJsonAsync("/api/material-rate-catalogs", new { catalogType = "Boq", code, name = "BOQ nhà xưởng mẫu", currency = "VND", isActive = true });
+        catalog.EnsureSuccessStatusCode();
+        var catalogId = (await ReadJsonAsync(catalog)).GetProperty("id").GetInt32();
+        var revision = await Client.PostAsJsonAsync($"/api/material-rate-catalogs/{catalogId}/revisions", new { effectiveFrom = "2026-10-01" });
+        revision.EnsureSuccessStatusCode();
+        var revisionId = (await ReadJsonAsync(revision)).GetProperty("id").GetInt32();
+
+        var bytes = CreateMultiSheetBoq();
+        using var previewContent = WorkbookContent(bytes, "BOQ-nha-xuong.xlsx");
+        var previewResponse = await Client.PostAsync($"/api/material-rate-catalogs/{catalogId}/revisions/{revisionId}/boq-workbook/preview", previewContent);
+        previewResponse.EnsureSuccessStatusCode();
+        var preview = await ReadJsonAsync(previewResponse);
+        preview.GetProperty("sheets").GetArrayLength().Should().Be(2);
+        preview.GetProperty("sheets")[1].GetProperty("descriptionColumn").GetInt32().Should().Be(2);
+
+        var mappings = new[]
+        {
+            new { sheetName = "Tổng hợp", include = false, headerRow = 1, itemCodeColumn = (int?)null, descriptionColumn = 1, unitColumn = 2, quantityColumn = 3, unitPriceColumn = 4 },
+            new { sheetName = "Nhà xưởng", include = true, headerRow = 3, itemCodeColumn = (int?)1, descriptionColumn = 2, unitColumn = 3, quantityColumn = 4, unitPriceColumn = 5 },
+        };
+        using var importContent = WorkbookContent(bytes, "BOQ-nha-xuong.xlsx");
+        importContent.Add(new StringContent(preview.GetProperty("sourceHash").GetString()!), "sourceHash");
+        importContent.Add(new StringContent(JsonSerializer.Serialize(mappings)), "mappingsJson");
+        var importResponse = await Client.PostAsync($"/api/material-rate-catalogs/{catalogId}/revisions/{revisionId}/boq-workbook/import", importContent);
+        importResponse.EnsureSuccessStatusCode();
+        var imported = await ReadJsonAsync(importResponse);
+        imported.GetProperty("lines").GetArrayLength().Should().Be(2);
+        imported.GetProperty("importSourceFileName").GetString().Should().Be("BOQ-nha-xuong.xlsx");
+        imported.GetProperty("importSourceHash").GetString().Should().Be(preview.GetProperty("sourceHash").GetString());
+    }
+
+    [Fact]
+    public async Task BoqWorkbook_ImportChangedFile_ReturnsBadRequestAndKeepsDraftEmpty()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "SALES_MANAGER"));
+        var code = "BOQ-HASH-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
+        var catalog = await Client.PostAsJsonAsync("/api/material-rate-catalogs", new { catalogType = "Boq", code, name = "BOQ kiểm tra file", currency = "VND", isActive = true });
+        var catalogId = (await ReadJsonAsync(catalog)).GetProperty("id").GetInt32();
+        var revision = await Client.PostAsJsonAsync($"/api/material-rate-catalogs/{catalogId}/revisions", new { effectiveFrom = "2026-10-01" });
+        var revisionId = (await ReadJsonAsync(revision)).GetProperty("id").GetInt32();
+        using var content = WorkbookContent(CreateMultiSheetBoq(), "changed.xlsx");
+        content.Add(new StringContent(new string('0', 64)), "sourceHash");
+        content.Add(new StringContent("[]"), "mappingsJson");
+
+        (await Client.PostAsync($"/api/material-rate-catalogs/{catalogId}/revisions/{revisionId}/boq-workbook/import", content)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var detail = await Client.GetAsync($"/api/material-rate-catalogs/{catalogId}/revisions/{revisionId}");
+        (await ReadJsonAsync(detail)).GetProperty("lines").GetArrayLength().Should().Be(0);
+    }
+
+    [Fact]
+    public async Task BoqWorkbook_PreviewWithExternalLink_ReturnsBadRequest()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "SALES_MANAGER"));
+        var code = "BOQ-SAFE-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
+        var catalog = await Client.PostAsJsonAsync("/api/material-rate-catalogs", new { catalogType = "Boq", code, name = "BOQ kiểm tra an toàn", currency = "VND", isActive = true });
+        var catalogId = (await ReadJsonAsync(catalog)).GetProperty("id").GetInt32();
+        var revision = await Client.PostAsJsonAsync($"/api/material-rate-catalogs/{catalogId}/revisions", new { effectiveFrom = "2026-10-01" });
+        var revisionId = (await ReadJsonAsync(revision)).GetProperty("id").GetInt32();
+        var bytes = CreateMultiSheetBoq();
+        using (var stream = new MemoryStream())
+        {
+            stream.Write(bytes);
+            using (var archive = new ZipArchive(stream, ZipArchiveMode.Update, leaveOpen: true))
+                archive.CreateEntry("xl/externalLinks/externalLink1.xml");
+            bytes = stream.ToArray();
+        }
+        using var content = WorkbookContent(bytes, "external-link.xlsx");
+
+        var response = await Client.PostAsync($"/api/material-rate-catalogs/{catalogId}/revisions/{revisionId}/boq-workbook/preview", content);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    private static MultipartFormDataContent WorkbookContent(byte[] bytes, string name)
+    {
+        var multipart = new MultipartFormDataContent();
+        var file = new ByteArrayContent(bytes);
+        file.Headers.ContentType = new MediaTypeHeaderValue("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        multipart.Add(file, "file", name);
+        return multipart;
+    }
+
+    private static byte[] CreateMultiSheetBoq()
+    {
+        using var workbook = new XLWorkbook();
+        workbook.Worksheets.Add("Tổng hợp").Cell("A1").Value = "TỔNG GIÁ TRỊ";
+        var detail = workbook.Worksheets.Add("Nhà xưởng");
+        detail.Cell("A3").Value = "Item code"; detail.Cell("B3").Value = "Description"; detail.Cell("C3").Value = "Unit"; detail.Cell("D3").Value = "Quantity"; detail.Cell("E3").Value = "Unit price";
+        detail.Cell("A4").Value = "NX-01"; detail.Cell("B4").Value = "Bê tông móng"; detail.Cell("C4").Value = "m3"; detail.Cell("D4").Value = 10; detail.Cell("E4").Value = 1500000;
+        detail.Cell("A5").Value = "NX-02"; detail.Cell("B5").Value = "Kết cấu thép"; detail.Cell("C5").Value = "kg"; detail.Cell("D5").Value = 20; detail.Cell("E5").Value = 25000;
+        using var stream = new MemoryStream(); workbook.SaveAs(stream); return stream.ToArray();
     }
 }

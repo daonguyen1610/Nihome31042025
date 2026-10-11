@@ -118,6 +118,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IUtf8CsvParser, Utf8CsvParser>();
         services.AddSingleton<IMaterialRateSpreadsheetService, MaterialRateSpreadsheetService>();
         services.AddScoped<IMaterialRateService, MaterialRateService>();
+        services.AddScoped<IBoqCatalogWorkbookService, BoqCatalogWorkbookService>();
         services.AddScoped<IContractService, ContractService>();
         services.AddScoped<ContractMilestoneNotificationService>();
         services.AddHostedService<ContractMilestoneDueWorker>();

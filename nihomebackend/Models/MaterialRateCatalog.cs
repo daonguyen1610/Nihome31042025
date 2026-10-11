@@ -33,8 +33,27 @@ public class MaterialRateRevision
     public int CreatedByUserId { get; set; }
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public int UpdatedByUserId { get; set; }
+    public string? ImportSourceFileName { get; set; }
+    public string? ImportSourceHash { get; set; }
+    public string? ImportMappingJson { get; set; }
+    public DateTime? ImportedAt { get; set; }
+    public int? ImportedByUserId { get; set; }
     public List<MaterialRateLine> Lines { get; set; } = [];
     public decimal TotalRatePerSqm => Lines.Sum(line => line.AmountPerSqm);
+}
+
+public class BoqImportTemplate
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public int HeaderRow { get; set; }
+    public int? ItemCodeColumn { get; set; }
+    public int DescriptionColumn { get; set; }
+    public int UnitColumn { get; set; }
+    public int QuantityColumn { get; set; }
+    public int UnitPriceColumn { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public int CreatedByUserId { get; set; }
 }
 
 public class MaterialRateLine
