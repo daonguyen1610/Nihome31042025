@@ -1388,6 +1388,19 @@ the normal download operation. For legacy source-owned sidecars only, external
 deletion queues restoration and concurrent remote edits preserve a separate
 conflict entry until an authorized user confirms **Keep both**.
 
+### 7.10.2 BOQ catalog workbook intake
+
+Multi-sheet customer workbooks are normalized into Draft BOQ material-rate
+revisions through `/api/material-rate-catalogs/{catalogId}/revisions/{revisionId}/boq-workbook`.
+`preview` detects candidate header/column mappings without persistence. `import`
+requires the same SHA-256 source hash and explicit per-sheet mappings, validates
+all selected rows, and atomically replaces the revision lines. Reusable mapping
+templates are listed and created at `/api/material-rate-catalogs/boq-import-templates`.
+Only callers with `crm.material-rates.manage` may preview, save templates, or
+import, and only BOQ revisions in `Draft` are mutable. Source filename, hash,
+mapping JSON, actor, and timestamp are retained on the revision. Quotes continue
+to consume only an approved effective catalog revision.
+
 ### 7.11 BOQ Quotation Integrity
 
 Material-rate catalogs are discriminated as `InvestmentRate` or `Boq`; existing

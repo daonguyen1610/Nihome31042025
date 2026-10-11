@@ -71,3 +71,27 @@ public sealed class UpsertInvestmentRateLineRequest
     [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
     public decimal? WastePercent { get; set; }
 }
+
+public sealed class CreateBoqImportTemplateRequest
+{
+    [Required, StringLength(120, MinimumLength = 2)]
+    public string Name { get; set; } = string.Empty;
+    [Range(1, 1000)] public int HeaderRow { get; set; }
+    [Range(1, 500)] public int? ItemCodeColumn { get; set; }
+    [Range(1, 500)] public int DescriptionColumn { get; set; }
+    [Range(1, 500)] public int UnitColumn { get; set; }
+    [Range(1, 500)] public int QuantityColumn { get; set; }
+    [Range(1, 500)] public int UnitPriceColumn { get; set; }
+}
+
+public sealed class BoqSheetMappingRequest
+{
+    [Required, StringLength(31)] public string SheetName { get; set; } = string.Empty;
+    public bool Include { get; set; }
+    [Range(1, 1000)] public int HeaderRow { get; set; }
+    [Range(1, 500)] public int? ItemCodeColumn { get; set; }
+    [Range(1, 500)] public int DescriptionColumn { get; set; }
+    [Range(1, 500)] public int UnitColumn { get; set; }
+    [Range(1, 500)] public int QuantityColumn { get; set; }
+    [Range(1, 500)] public int UnitPriceColumn { get; set; }
+}

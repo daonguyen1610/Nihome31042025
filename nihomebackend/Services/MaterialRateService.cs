@@ -33,6 +33,15 @@ public interface IMaterialRateService
         int userId,
         string fileName = "upload.csv",
         CancellationToken ct = default);
+    Task<MaterialRateRevisionResponse?> ReplaceBoqLinesAsync(
+        int catalogId,
+        int revisionId,
+        IReadOnlyList<UpsertBoqMaterialRateLineRequest> requests,
+        string sourceFileName,
+        string sourceHash,
+        string mappingJson,
+        int userId,
+        CancellationToken ct = default);
     Task<MaterialRateRevisionResponse?> ApproveAsync(int catalogId, int revisionId, string? note, int userId, CancellationToken ct = default);
     Task<MaterialRateRevisionResponse?> RejectAsync(int catalogId, int revisionId, string? note, int userId, CancellationToken ct = default);
     Task<MaterialRateRevisionResponse?> RetireAsync(int catalogId, int revisionId, string? note, int userId, CancellationToken ct = default);
@@ -564,6 +573,53 @@ public sealed class MaterialRateService(
         return new MaterialRateImportResponse { ImportedCount = lines.Count };
     }
 
+    public async Task<MaterialRateRevisionResponse?> ReplaceBoqLinesAsync(
+        int catalogId,
+        int revisionId,
+        IReadOnlyList<UpsertBoqMaterialRateLineRequest> requests,
+        string sourceFileName,
+        string sourceHash,
+        string mappingJson,
+        int userId,
+        CancellationToken ct = default)
+    {
+        await using var transaction = await BeginRevisionMutationAsync(revisionId, ct);
+        var revision = await GetEditableBoqRevisionAsync(catalogId, revisionId, ct);
+        if (revision is null) return null;
+        if (requests.Count == 0)
+            throw new MaterialRateOperationException("Workbook không có dòng BOQ hợp lệ để nhập.", "materialRates.boqWorkbook.noRows");
+
+        var codes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var lines = new List<MaterialRateLine>(requests.Count);
+        for (var index = 0; index < requests.Count; index++)
+        {
+            var values = ValidateBoqLine(requests[index]);
+            if (!codes.Add(values.Code)) throw DuplicateBoqCode();
+            lines.Add(new MaterialRateLine
+            {
+                MaterialCode = values.Code,
+                MaterialName = values.Name,
+                Unit = values.Unit,
+                Quantity = values.Quantity,
+                UnitRate = values.UnitPrice,
+                AmountPerSqm = values.Amount,
+                SortOrder = index + 1,
+            });
+        }
+
+        db.MaterialRateLines.RemoveRange(revision.Lines);
+        revision.Lines = lines;
+        revision.ImportSourceFileName = sourceFileName;
+        revision.ImportSourceHash = sourceHash;
+        revision.ImportMappingJson = mappingJson;
+        revision.ImportedAt = DateTime.UtcNow;
+        revision.ImportedByUserId = userId;
+        TouchRevision(revision, userId);
+        await db.SaveChangesAsync(ct);
+        if (transaction is not null) await transaction.CommitAsync(ct);
+        return await GetRevisionAsync(catalogId, revisionId, ct);
+    }
+
     public Task<MaterialRateRevisionResponse?> ApproveAsync(
         int catalogId,
         int revisionId,
@@ -988,6 +1044,9 @@ public sealed class MaterialRateService(
         DecidedAt = revision.DecidedAt,
         CreatedAt = revision.CreatedAt,
         UpdatedAt = revision.UpdatedAt,
+        ImportSourceFileName = revision.ImportSourceFileName,
+        ImportSourceHash = revision.ImportSourceHash,
+        ImportedAt = revision.ImportedAt,
         TotalRatePerSqm = revision.TotalRatePerSqm,
         TotalAmount = revision.Lines.Sum(line => line.AmountPerSqm),
         Lines = revision.Lines

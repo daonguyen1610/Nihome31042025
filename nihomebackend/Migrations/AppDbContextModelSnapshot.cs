@@ -908,6 +908,51 @@ namespace nihomebackend.Migrations
                     b.ToTable("basic_design_docs", (string)null);
                 });
 
+            modelBuilder.Entity("NihomeBackend.Models.BoqImportTemplate", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("DescriptionColumn")
+                        .HasColumnType("int");
+
+                    b.Property<int>("HeaderRow")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("ItemCodeColumn")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<int>("QuantityColumn")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UnitColumn")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UnitPriceColumn")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("boq_import_templates", (string)null);
+                });
+
             modelBuilder.Entity("NihomeBackend.Models.CapabilityDocument", b =>
                 {
                     b.Property<int>("Id")
@@ -4483,6 +4528,23 @@ namespace nihomebackend.Migrations
 
                     b.Property<DateOnly?>("EffectiveTo")
                         .HasColumnType("date");
+
+                    b.Property<string>("ImportMappingJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ImportSourceFileName")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("ImportSourceHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime?>("ImportedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ImportedByUserId")
+                        .HasColumnType("int");
 
                     b.Property<string>("Note")
                         .HasMaxLength(1000)

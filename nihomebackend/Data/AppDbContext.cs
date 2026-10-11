@@ -72,6 +72,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<MaterialRateCatalog> MaterialRateCatalogs => Set<MaterialRateCatalog>();
     public DbSet<MaterialRateRevision> MaterialRateRevisions => Set<MaterialRateRevision>();
     public DbSet<MaterialRateLine> MaterialRateLines => Set<MaterialRateLine>();
+    public DbSet<BoqImportTemplate> BoqImportTemplates => Set<BoqImportTemplate>();
     public DbSet<Contract> Contracts => Set<Contract>();
     public DbSet<ContractPaymentMilestone> ContractPaymentMilestones => Set<ContractPaymentMilestone>();
     public DbSet<ContractPaymentMilestoneEvent> ContractPaymentMilestoneEvents => Set<ContractPaymentMilestoneEvent>();
@@ -556,6 +557,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.Property(revision => revision.Status).HasConversion<string>().HasMaxLength(20);
             b.Property(revision => revision.Note).HasMaxLength(1000);
             b.Property(revision => revision.DecisionNote).HasMaxLength(1000);
+            b.Property(revision => revision.ImportSourceFileName).HasMaxLength(255);
+            b.Property(revision => revision.ImportSourceHash).HasMaxLength(64);
+            b.Property(revision => revision.ImportMappingJson).HasColumnType("nvarchar(max)");
             b.HasIndex(revision => new { revision.CatalogId, revision.Version }).IsUnique();
             b.HasIndex(revision => new { revision.CatalogId, revision.Status, revision.EffectiveFrom });
             b.HasOne(revision => revision.Catalog)
@@ -581,6 +585,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .WithMany(revision => revision.Lines)
                 .HasForeignKey(line => line.RevisionId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<BoqImportTemplate>(b =>
+        {
+            b.ToTable("boq_import_templates");
+            b.HasKey(item => item.Id);
+            b.Property(item => item.Name).HasMaxLength(120).IsRequired();
+            b.HasIndex(item => item.Name).IsUnique();
         });
 
         modelBuilder.Entity<Customer>(b =>

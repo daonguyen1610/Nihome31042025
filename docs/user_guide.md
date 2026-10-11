@@ -481,6 +481,23 @@ or editing a BOQ preserves its item set; submitting and approving follow the
 same quotation workflow and project/owner permissions. Retrying the same create
 request with its idempotency key does not create a duplicate quotation.
 
+Prepare reusable BOQ data under **Material norms & rates → BOQ**, not from a
+quotation detail. Create or select a catalog and a Draft revision. For a new
+workbook, download the standard NICON form. For an existing NICON workbook,
+choose **Import multi-sheet BOQ**, preview every sheet in workbook order, select
+only detail sheets, and verify the header row plus code, description, unit,
+quantity, and unit-price columns. Leave cover and summary sheets unselected.
+A recurring structure can be named and saved as a mapping template; materially
+different workbook structures can use separate templates without changing the
+standard form.
+
+Confirmation atomically replaces the selected Draft revision's lines and stores
+the source filename, SHA-256 hash, mapping, actor, and time. A changed file,
+invalid mapping, duplicate code, or invalid row leaves the revision unchanged.
+Approve the revision through the normal catalog lifecycle, then apply that
+approved revision to a BOQ quotation. Workbook import never edits a quotation
+directly.
+
 | Page | Functions | Estimate |
 |------|-----------|----------|
 | Quotation List | Filter by customer, opportunity, status | 1.5 days |

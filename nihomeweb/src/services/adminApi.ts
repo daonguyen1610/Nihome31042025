@@ -2214,9 +2214,45 @@ export interface MaterialRateRevisionResponse {
   decidedAt?: string | null;
   createdAt: string;
   updatedAt: string;
+  importSourceFileName?: string | null;
+  importSourceHash?: string | null;
+  importedAt?: string | null;
   totalRatePerSqm: string;
   totalAmount: string;
   lines: MaterialRateLineResponse[];
+}
+
+export interface BoqImportTemplateResponse {
+  id: number;
+  name: string;
+  isSystem: boolean;
+  headerRow: number;
+  itemCodeColumn?: number | null;
+  descriptionColumn: number;
+  unitColumn: number;
+  quantityColumn: number;
+  unitPriceColumn: number;
+}
+
+export interface BoqWorkbookSheetPreviewResponse {
+  name: string;
+  order: number;
+  isHidden: boolean;
+  headerRow?: number | null;
+  itemCodeColumn?: number | null;
+  descriptionColumn?: number | null;
+  unitColumn?: number | null;
+  quantityColumn?: number | null;
+  unitPriceColumn?: number | null;
+  candidateCount: number;
+  warnings: string[];
+  include?: boolean;
+}
+
+export interface BoqWorkbookPreviewResponse {
+  sourceFileName: string;
+  sourceHash: string;
+  sheets: BoqWorkbookSheetPreviewResponse[];
 }
 
 export interface UpsertMaterialRateCatalogRequest {
@@ -4947,6 +4983,29 @@ export const adminApi = {
       `/material-rate-catalogs/${catalogId}/revisions/${revisionId}/import`,
       formData,
     );
+  },
+  listBoqImportTemplates: () =>
+    api.get<BoqImportTemplateResponse[]>("/material-rate-catalogs/boq-import-templates"),
+  createBoqImportTemplate: (body: Omit<BoqImportTemplateResponse, "id" | "isSystem">) =>
+    api.post<BoqImportTemplateResponse>("/material-rate-catalogs/boq-import-templates", body),
+  previewBoqWorkbook: (catalogId: number, revisionId: number, file: File) => {
+    const data = new FormData(); data.append("file", file);
+    return api.post<BoqWorkbookPreviewResponse>(`/material-rate-catalogs/${catalogId}/revisions/${revisionId}/boq-workbook/preview`, data);
+  },
+  importBoqWorkbook: (catalogId: number, revisionId: number, file: File, sourceHash: string, mappings: BoqWorkbookSheetPreviewResponse[]) => {
+    const data = new FormData();
+    const selectedMappings = mappings.filter(mapping => mapping.include).map(mapping => ({
+      sheetName: mapping.name,
+      include: true,
+      headerRow: mapping.headerRow,
+      itemCodeColumn: mapping.itemCodeColumn,
+      descriptionColumn: mapping.descriptionColumn,
+      unitColumn: mapping.unitColumn,
+      quantityColumn: mapping.quantityColumn,
+      unitPriceColumn: mapping.unitPriceColumn,
+    }));
+    data.append("file", file); data.append("sourceHash", sourceHash); data.append("mappingsJson", JSON.stringify(selectedMappings));
+    return api.post<MaterialRateRevisionResponse>(`/material-rate-catalogs/${catalogId}/revisions/${revisionId}/boq-workbook/import`, data);
   },
   approveMaterialRateRevision: (catalogId: number, revisionId: number, note?: string) =>
     api.post<MaterialRateRevisionResponse>(
