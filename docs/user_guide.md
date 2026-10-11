@@ -494,6 +494,9 @@ expired quotation it preserves the old snapshot and opens the next version as
 Draft for normal review and approval. The system records the source hash,
 mapping, row results, user and time. This preliminary quotation BOQ is not the
 approved Execution BOQ used for material requests or warehouse limits.
+While a quotation is pending internal approval, its commercial content is
+locked: edit and BOQ import are unavailable until the approver either approves
+it or rejects it back to Draft.
 
 | Page | Functions | Estimate |
 |------|-----------|----------|

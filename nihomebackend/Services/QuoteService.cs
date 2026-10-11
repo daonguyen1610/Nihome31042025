@@ -298,7 +298,8 @@ public class QuoteService(
 
         CrmConcurrency.Apply(db, quote, request.RowVersion);
 
-        if (quote.Status is QuoteStatus.Cancelled
+        if (quote.Status is QuoteStatus.PendingApproval
+            or QuoteStatus.Cancelled
             or QuoteStatus.Rejected
             or QuoteStatus.CustomerApproved)
         {
@@ -858,7 +859,7 @@ public class QuoteService(
         if (quote is null || (!canSeeAll && quote.OwnerUserId != callerUserId)) return null;
         if (quote.Method != QuoteMethod.Boq)
             throw new QuoteOperationException("Chỉ báo giá theo BOQ mới được import workbook.");
-        if (quote.Status is QuoteStatus.Cancelled or QuoteStatus.Rejected or QuoteStatus.CustomerApproved)
+        if (quote.Status is QuoteStatus.PendingApproval or QuoteStatus.Cancelled or QuoteStatus.Rejected or QuoteStatus.CustomerApproved)
             throw new QuoteOperationException($"Báo giá ở trạng thái {quote.Status} không thể import BOQ.");
         CrmConcurrency.Apply(db, quote, request.RowVersion);
         ValidateMethodPayload(QuoteMethod.Boq, null, null, items, quote.DiscountPercent, quote.VatPercent);

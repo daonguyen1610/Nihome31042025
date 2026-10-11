@@ -264,4 +264,5 @@
   ,{"key":"quotes.boqImport.quantityColumn","category":"quotes","vi":"Khối lượng","en":"Quantity","zh":"数量","ja":"数量"}
   ,{"key":"quotes.boqImport.unitPriceColumn","category":"quotes","vi":"Đơn giá","en":"Unit price","zh":"单价","ja":"単価"}
   ,{"key":"quotes.boqImport.itemCodeColumn","category":"quotes","vi":"Mã","en":"Code","zh":"编码","ja":"コード"}
+  ,{"key":"quotes.boqImport.invalidMapping","category":"quotes","vi":"Mỗi sheet Chi tiết phải có dòng tiêu đề và các cột Mô tả, Đơn vị, Khối lượng, Đơn giá hợp lệ. Không dùng cùng một cột cho nhiều trường.","en":"Each Detail sheet needs a valid header row and Description, Unit, Quantity, and Unit price columns. A column cannot be used for multiple fields.","zh":"每个明细工作表都必须设置有效的标题行及描述、单位、数量和单价列。同一列不能映射到多个字段。","ja":"各明細シートには有効な見出し行と説明、単位、数量、単価列が必要です。同じ列を複数の項目に割り当てることはできません。"}
 ]

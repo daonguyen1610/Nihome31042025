@@ -297,6 +297,59 @@ public class QuoteServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task ImportBoqAsync_OnPendingApproval_RejectsWithoutChangingSubmittedContent()
+    {
+        var (user, opp) = await SeedOpportunityAsync();
+        var created = await _sut.CreateAsync(new CreateQuoteRequest
+        {
+            OpportunityId = opp.Id,
+            Method = QuoteMethod.Boq,
+            Items = [new QuoteItemInput { Name = "BOQ đã trình", Unit = "m3", Quantity = 10m, UnitPrice = 1_000m }],
+        }, user.Id, canManage: true);
+        var tracked = await _db.Quotes.SingleAsync(quote => quote.Id == created.Id);
+        tracked.Status = QuoteStatus.PendingApproval;
+        await _db.SaveChangesAsync();
+
+        var exception = await Assert.ThrowsAsync<QuoteOperationException>(() => _sut.ImportBoqAsync(
+            created.Id,
+            new ConfirmQuoteBoqImportRequest { SourceHash = new string('b', 64), RowVersion = CrmConcurrency.Encode(tracked.RowVersion) },
+            [new QuoteItemInput { Name = "BOQ thay thế", Unit = "m3", Quantity = 20m, UnitPrice = 2_000m }],
+            "replacement.xlsx", new string('b', 64), QuoteBoqImportService.ParserVersion,
+            "[]", "[]", user.Id, canManage: true, canSeeAll: true));
+
+        Assert.Contains(nameof(QuoteStatus.PendingApproval), exception.Message);
+        Assert.Equal("BOQ đã trình", (await _db.QuoteItems.SingleAsync(item => item.QuoteId == created.Id)).Name);
+        Assert.Empty(_db.QuoteBoqImports);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_OnPendingApproval_RejectsWithoutChangingSubmittedContent()
+    {
+        var (user, opp) = await SeedOpportunityAsync();
+        var created = await _sut.CreateAsync(new CreateQuoteRequest
+        {
+            OpportunityId = opp.Id,
+            Method = QuoteMethod.Boq,
+            Items = [new QuoteItemInput { Name = "BOQ đã trình", Unit = "m3", Quantity = 10m, UnitPrice = 1_000m }],
+        }, user.Id, canManage: true);
+        var tracked = await _db.Quotes.SingleAsync(quote => quote.Id == created.Id);
+        tracked.Status = QuoteStatus.PendingApproval;
+        await _db.SaveChangesAsync();
+
+        var exception = await Assert.ThrowsAsync<QuoteOperationException>(() => _sut.UpdateAsync(
+            created.Id,
+            new UpdateQuoteRequest
+            {
+                RowVersion = CrmConcurrency.Encode(tracked.RowVersion),
+                Items = [new QuoteItemInput { Name = "BOQ thay thế", Unit = "m3", Quantity = 20m, UnitPrice = 2_000m }],
+            },
+            user.Id, canManage: true, canSeeAll: true));
+
+        Assert.Contains(nameof(QuoteStatus.PendingApproval), exception.Message);
+        Assert.Equal("BOQ đã trình", (await _db.QuoteItems.SingleAsync(item => item.QuoteId == created.Id)).Name);
+    }
+
+    [Fact]
     public async Task CreateAsync_UnitCost_RejectsBoqCatalog()
     {
         var (user, opportunity) = await SeedOpportunityAsync();
