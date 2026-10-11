@@ -44,7 +44,7 @@ export default function BoqBulkEntryDialog({ open, onOpenChange, onConfirm }: Pr
               <th className="w-36 px-2 py-2">{t("quotes.boq.code")}</th>
               <th className="min-w-64 px-2 py-2">{t("quotes.boq.name")}</th>
               <th className="w-28 px-2 py-2">{t("quotes.boq.unit")}</th>
-              <th className="w-36 px-2 py-2 text-right">{t("quotes.boq.quantity")}</th>
+              <th className="w-36 px-2 py-2 text-right">{t("quotes.boq.qty")}</th>
               <th className="w-44 px-2 py-2 text-right">{t("quotes.boq.unitPrice")}</th>
               <th className="w-12"><span className="sr-only">{t("common.delete")}</span></th>
             </tr>
