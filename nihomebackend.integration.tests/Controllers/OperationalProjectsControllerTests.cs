@@ -602,6 +602,56 @@ public class OperationalProjectsControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task Delete_ProjectWithDepartmentWorkPackage_ReportsAndDeletesOwnedPackage()
+    {
+        await AuthTestHelper.AuthenticateAsync(
+            Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "SUPER_ADMIN"));
+        var customerId = await CreateCustomerAsync();
+        var projectResponse = await Client.PostAsJsonAsync("/api/operational-projects", new
+        {
+            name = $"Work package project {Guid.NewGuid():N}",
+            customerId,
+        });
+        projectResponse.EnsureSuccessStatusCode();
+        var project = await ReadJsonAsync(projectResponse);
+        var projectId = project.GetProperty("id").GetInt32();
+        var workPackageId = await WithDbAsync(async db =>
+        {
+            var groupId = await db.RoleGroups.Where(item => item.Code == "DESIGN")
+                .Select(item => item.Id).SingleAsync();
+            var leadId = await db.Users.Where(item => item.RoleEntity != null && item.RoleEntity.Code == "DESIGN_LEAD")
+                .Select(item => item.Id).SingleAsync();
+            var package = new DepartmentWorkPackage
+            {
+                Code = $"WP-DELETE-{Guid.NewGuid():N}"[..30],
+                Kind = WorkPackageKind.Project,
+                Name = "Hồ sơ thiết kế thuộc dự án",
+                OperationalProjectId = projectId,
+                DepartmentRoleGroupId = groupId,
+                LeadUserId = leadId,
+                CreatedByUserId = leadId,
+                UpdatedByUserId = leadId,
+            };
+            db.DepartmentWorkPackages.Add(package);
+            await db.SaveChangesAsync();
+            return package.Id;
+        });
+
+        var impact = await ReadJsonAsync(
+            await Client.GetAsync($"/api/operational-projects/{projectId}/deletion-impact"));
+        impact.GetProperty("items").EnumerateArray().Should().Contain(item =>
+            item.GetProperty("key").GetString() == "operations.workPackages" &&
+            item.GetProperty("action").GetString() == "Delete" &&
+            item.GetProperty("count").GetInt32() == 1);
+
+        (await ConfirmDeleteAsync(projectId, project, impact)).StatusCode
+            .Should().Be(HttpStatusCode.NoContent);
+        (await WithDbAsync(db => db.DepartmentWorkPackages.AnyAsync(item => item.Id == workPackageId)))
+            .Should().BeFalse();
+    }
+
+    [Fact]
     public async Task Delete_ProjectWithTeamHistoryOnly_DeletesOwnedHistory()
     {
         await AuthTestHelper.AuthenticateAsync(

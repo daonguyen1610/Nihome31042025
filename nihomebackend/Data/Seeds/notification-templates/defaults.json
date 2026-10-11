@@ -119,6 +119,36 @@
       "module": "procurement.material-alerts",
       "channel": "InApp",
       "adminDescription": "PM và người phụ trách được cảnh báo khi vật tư vượt BOQ hoặc thiếu so với nhu cầu đã duyệt."
+    },
+    {
+      "code": "work-package.assigned",
+      "module": "work.packages",
+      "channel": "InApp",
+      "adminDescription": "Người chủ trì phòng được thông báo khi nhận một nhóm công việc mới."
+    },
+    {
+      "code": "work-task.assigned",
+      "module": "work.packages",
+      "channel": "InApp",
+      "adminDescription": "Nhân sự được thông báo và mở thẳng đầu việc vừa được giao."
+    },
+    {
+      "code": "work-task.cc",
+      "module": "work.packages",
+      "channel": "InApp",
+      "adminDescription": "Người theo dõi được thông báo khi được CC vào đầu việc."
+    },
+    {
+      "code": "work-task.awaiting-verification",
+      "module": "work.packages",
+      "channel": "InApp",
+      "adminDescription": "Người xác nhận nhận thông báo khi đầu việc KPI hoàn thành."
+    },
+    {
+      "code": "work-task.verified",
+      "module": "work.packages",
+      "channel": "InApp",
+      "adminDescription": "Người phụ trách được thông báo khi đầu việc đã được xác nhận KPI."
     }
   ]
 }

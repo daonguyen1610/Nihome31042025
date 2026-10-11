@@ -136,6 +136,7 @@ const AdminOpportunities = () => {
   const canCreateContract = has(ADMIN_PERMS.contractsManage);
   const canStartDesign = canManage && has(ADMIN_PERMS.operationalProjectsManage);
   const canViewDesign = has(ADMIN_PERMS.designProjects);
+  const canManageWorkPackages = has(ADMIN_PERMS.workPackagesManage);
 
   // ---------- data ----------
   const [rows, setRows] = useState<OpportunityResponse[]>([]);
@@ -1234,6 +1235,16 @@ const AdminOpportunities = () => {
                               >
                                 <Plus className="mr-1.5 h-4 w-4" />
                                 {t("opportunities.project.create")}
+                              </Button>
+                            )}
+                            {detail.operationalProjectId && canManageWorkPackages && (
+                              <Button
+                                size="sm"
+                                data-testid="opportunity-assign-department-work"
+                                onClick={() => navigate(`/admin/work-packages?create=1&projectId=${detail.operationalProjectId}&opportunityId=${detail.id}`)}
+                              >
+                                <Plus className="mr-1.5 h-4 w-4" />
+                                {t("workPackages.action.assignDepartment")}
                               </Button>
                             )}
                           </div>

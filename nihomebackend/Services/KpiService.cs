@@ -1,6 +1,7 @@
 using System.Data;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using NihomeBackend.Constants;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
@@ -270,6 +271,7 @@ public sealed class KpiService(AppDbContext db, INotificationService notificatio
             "ReceivableOnTimeRate" => await ReceivableOnTimeRateAsync(userId, period, ct),
             "PartnerPaymentHours" => await PartnerPaymentHoursAsync(definition, userId, period, ct),
             "AccountingCorrectionCount" => await AccountingCorrectionCountAsync(definition, userId, period, ct),
+            "VerifiedWorkTaskCount" => await VerifiedWorkTaskCountAsync(definition, userId, period, ct),
             _ => MissingData(definition, "The required source event is not implemented in the current module."),
         };
     }
@@ -649,6 +651,22 @@ public sealed class KpiService(AppDbContext db, INotificationService notificatio
         return AgainstTarget(definition, ids.Count, ids, "AccountingCorrection");
     }
 
+    private async Task<MetricResult> VerifiedWorkTaskCountAsync(
+        KpiDefinition definition,
+        int userId,
+        KpiPeriod period,
+        CancellationToken ct)
+    {
+        var ids = await db.DepartmentWorkTasks.AsNoTracking()
+            .Where(item => item.AssigneeUserId == userId &&
+                item.KpiDefinitionId == definition.Id &&
+                item.Status == WorkTaskStatus.Verified &&
+                item.VerifiedAt >= period.PeriodStartUtc && item.VerifiedAt < period.PeriodEndUtc)
+            .Select(item => item.Id)
+            .ToListAsync(ct);
+        return AgainstTarget(definition, ids.Count, ids, EntityTypes.DepartmentWorkTask);
+    }
+
     private static (DateOnly Start, DateOnly End) LocalDateRange(KpiPeriod period) =>
         (new DateOnly(period.Year, period.Month, 1), new DateOnly(period.Year, period.Month, 1).AddMonths(1));
 
@@ -765,7 +783,8 @@ public sealed class KpiService(AppDbContext db, INotificationService notificatio
         "HseViolationCount" or
         "ProcurementDeliveryHours" or
         "PartnerPaymentHours" or
-        "AccountingCorrectionCount";
+        "AccountingCorrectionCount" or
+        "VerifiedWorkTaskCount";
 
     private static KpiScoreResponse MapScore(KpiScoreSnapshot item) => new()
     {

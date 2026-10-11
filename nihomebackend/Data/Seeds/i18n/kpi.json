@@ -92,5 +92,11 @@
   {"key":"kpi.definition.PROCUREMENT_VENDOR_RATING","category":"kpi","vi":"Điểm chất lượng đối tác","en":"Vendor quality rating","zh":"供应商质量评分","ja":"取引先品質評価"},
   {"key":"kpi.definition.ACCOUNTING_COLLECTION","category":"kpi","vi":"Thu hồi công nợ đúng hạn","en":"On-time receivable collection","zh":"应收账款按时回收率","ja":"売掛金期限内回収率"},
   {"key":"kpi.definition.ACCOUNTING_PAYMENT_SPEED","category":"kpi","vi":"Tốc độ xử lý thanh toán đối tác","en":"Partner payment processing speed","zh":"合作方付款处理速度","ja":"取引先支払処理速度"},
-  {"key":"kpi.definition.ACCOUNTING_ACCURACY","category":"kpi","vi":"Độ chính xác số liệu tài chính","en":"Financial data accuracy","zh":"财务数据准确性","ja":"財務データ精度"}
+  {"key":"kpi.definition.ACCOUNTING_ACCURACY","category":"kpi","vi":"Độ chính xác số liệu tài chính","en":"Financial data accuracy","zh":"财务数据准确性","ja":"財務データ精度"},
+  {"key":"kpi.definition.SALES_VERIFIED_WORK","category":"kpi","vi":"Đầu việc Kinh doanh được xác nhận","en":"Verified sales work tasks","zh":"已确认的销售任务","ja":"確認済み営業タスク"},
+  {"key":"kpi.definition.TENDER_VERIFIED_WORK","category":"kpi","vi":"Đầu việc Đấu thầu được xác nhận","en":"Verified tendering work tasks","zh":"已确认的投标任务","ja":"確認済み入札タスク"},
+  {"key":"kpi.definition.DESIGN_VERIFIED_WORK","category":"kpi","vi":"Đầu việc Thiết kế được xác nhận","en":"Verified design work tasks","zh":"已确认的设计任务","ja":"確認済み設計タスク"},
+  {"key":"kpi.definition.SITE_VERIFIED_WORK","category":"kpi","vi":"Đầu việc Thi công được xác nhận","en":"Verified site work tasks","zh":"已确认的施工任务","ja":"確認済み現場タスク"},
+  {"key":"kpi.definition.PROCUREMENT_VERIFIED_WORK","category":"kpi","vi":"Đầu việc Cung ứng được xác nhận","en":"Verified procurement work tasks","zh":"已确认的采购任务","ja":"確認済み調達タスク"},
+  {"key":"kpi.definition.ACCOUNTING_VERIFIED_WORK","category":"kpi","vi":"Đầu việc Kế toán được xác nhận","en":"Verified accounting work tasks","zh":"已确认的会计任务","ja":"確認済み会計タスク"}
 ]

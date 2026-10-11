@@ -181,6 +181,9 @@ public sealed class BusinessRootHardDeletePlanService(
             .OrderBy(item => item.Id).Select(item => new { item.Id, item.Name }).ToListAsync(ct);
         var tenders = await db.Tenders.AsNoTracking().Where(item => item.WonOpportunityId == id)
             .OrderBy(item => item.Id).Select(item => new { item.Id, item.Code, item.Name }).ToListAsync(ct);
+        var workPackages = await db.DepartmentWorkPackages.AsNoTracking()
+            .Where(item => item.SourceOpportunityId == id).OrderBy(item => item.Id)
+            .Select(item => new { item.Id, item.Code }).ToListAsync(ct);
 
         var detail = $"/admin/opportunities/{id}";
         var items = new List<DeletionImpactItemResponse>();
@@ -197,6 +200,8 @@ public sealed class BusinessRootHardDeletePlanService(
             null, leads.Select(item => Link(item.Name, $"/admin/leads/{item.Id}")).ToList());
         Add(items, "opportunity.winningTenders", tenders.Select(item => Id(item.Id)).ToList(), DeletionImpactActions.Unlink,
             null, tenders.Select(item => Link($"{item.Code} · {item.Name}", $"/admin/tenders/{item.Id}")).ToList());
+        Add(items, "opportunity.workPackages", workPackages.Select(item => Id(item.Id)).ToList(), DeletionImpactActions.Unlink,
+            null, workPackages.Select(item => Link(item.Code, $"/admin/work-packages/{item.Id}")).ToList());
 
         var identities = new[]
         {
@@ -204,6 +209,7 @@ public sealed class BusinessRootHardDeletePlanService(
             Part("quotes", quotes.Select(item => item.Id)), Part("contracts", contracts.Select(item => item.Id)),
             Part("surveys", surveys.Select(item => item.Id)), Part("leads", leads.Select(item => item.Id)),
             Part("tenders", tenders.Select(item => item.Id)),
+            Part("work-packages", workPackages.Select(item => item.Id)),
         };
         return Plan(EntityTypes.Opportunity, id, root.Name, $"OPPORTUNITY-{id}",
             root.RowVersion, quotes.Count == 0, items, identities, []);
@@ -324,6 +330,8 @@ public sealed class BusinessRootHardDeletePlanService(
         var boqRevisions = await db.ProjectBoqRevisions.AsNoTracking().Where(item =>
                 item.SourceContractAppendixId.HasValue && item.SourceContractAppendix!.ContractId == id)
             .OrderBy(item => item.Id).Select(item => item.Id).ToListAsync(ct);
+        var workPackages = await db.DepartmentWorkPackages.AsNoTracking().Where(item => item.ContractId == id)
+            .OrderBy(item => item.Id).Select(item => new { item.Id, item.Code }).ToListAsync(ct);
 
         var attachmentIds = attachments.Select(item => (long)item.Id).ToList();
         var appendixIds = appendices.Select(item => (long)item.Id).ToList();
@@ -452,6 +460,8 @@ public sealed class BusinessRootHardDeletePlanService(
             detail, [Link(root.ContractNumber, detail)]);
         Add(items, "contract.wonOpportunity", lifecycleBlockers.Select(item => Id(item.Id)).ToList(), DeletionImpactActions.Block,
             null, lifecycleBlockers.Select(item => Link(item.Name, $"/admin/opportunities/{item.Id}")).ToList());
+        Add(items, "contract.workPackages", workPackages.Select(item => Id(item.Id)).ToList(), DeletionImpactActions.Unlink,
+            null, workPackages.Select(item => Link(item.Code, $"/admin/work-packages/{item.Id}")).ToList());
 
         var identities = new[]
         {
@@ -464,6 +474,7 @@ public sealed class BusinessRootHardDeletePlanService(
             Part("procurement-lines", procurementLines.Select(item => item.Id)),
             Part("rfqs", rfqs), Part("vendor-ratings", vendorRatings), Part("finance-open-payments", openPayments.Select(item => item.Id)),
             Part("finance-committed-payments", committedPayments.Select(item => item.Id)), Part("boq-revisions", boqRevisions),
+            Part("work-packages", workPackages.Select(item => item.Id)),
         };
         var definitions = localPaths.Select((path, index) =>
                 new HardDeleteItemDefinition(HardDeleteItemKind.LocalFile, path, index))
@@ -785,6 +796,8 @@ public sealed class OpportunityHardDeleteHandler(
         foreach (var survey in await Db.Surveys.Where(item => item.LinkedOpportunityId == id).ToListAsync(ct)) survey.LinkedOpportunityId = null;
         foreach (var lead in await Db.Leads.Where(item => item.ConvertedOpportunityId == id).ToListAsync(ct)) lead.ConvertedOpportunityId = null;
         foreach (var tender in await Db.Tenders.Where(item => item.WonOpportunityId == id).ToListAsync(ct)) tender.WonOpportunityId = null;
+        foreach (var workPackage in await Db.DepartmentWorkPackages.Where(item => item.SourceOpportunityId == id).ToListAsync(ct))
+            workPackage.SourceOpportunityId = null;
         await Db.EntityTranslations.Where(item => item.EntityType == EntityTypes.Opportunity && item.EntityId == id)
             .ExecuteDeleteOrRemoveAsync(Db, ct);
         await AddSeedTombstoneAsync(EntityTypes.Opportunity, root.Name,
@@ -809,6 +822,8 @@ public sealed class ContractHardDeleteHandler(
     protected override async Task FinalizeRootAsync(int id, int requestedBy, CancellationToken ct)
     {
         var root = await Db.Contracts.SingleAsync(item => item.Id == id, ct);
+        foreach (var workPackage in await Db.DepartmentWorkPackages.Where(item => item.ContractId == id).ToListAsync(ct))
+            workPackage.ContractId = null;
         var removablePayments = await Db.PaymentRequests.Where(item => item.ContractId == id &&
             item.Status != PaymentRequestStatus.Approved && item.Status != PaymentRequestStatus.Paid).ToListAsync(ct);
         Db.PaymentRequests.RemoveRange(removablePayments);

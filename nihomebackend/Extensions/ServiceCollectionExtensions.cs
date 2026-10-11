@@ -161,6 +161,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IProjectAccessService, ProjectAccessService>();
         services.AddScoped<ILegacyProjectTeamSyncService, LegacyProjectTeamSyncService>();
         services.AddScoped<IProjectTeamService, ProjectTeamService>();
+        services.AddScoped<IDepartmentWorkPackageService, DepartmentWorkPackageService>();
         services.AddScoped<IKpiService, KpiService>();
         services.AddHostedService<KpiCalculationBackgroundService>();
         services.AddScoped<IDetailDesignScheduleService, DetailDesignScheduleService>();

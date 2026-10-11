@@ -897,6 +897,130 @@ export const OPERATIONAL_PROJECT_STATUSES: OperationalProjectStatus[] = [
   "Cancelled",
 ];
 
+export type WorkPackageKind = "Project" | "Internal";
+export type WorkPackageStatus = "Planned" | "Active" | "Completed" | "Cancelled";
+export type WorkTaskStatus = "Planned" | "InProgress" | "Completed" | "Verified" | "Cancelled";
+
+export interface DepartmentWorkTaskResponse {
+  id: number;
+  workPackageId: number;
+  wbsCode: string;
+  title: string;
+  description?: string | null;
+  resources?: string | null;
+  assigneeUserId: number;
+  assigneeName: string;
+  approverUserId?: number | null;
+  approverName?: string | null;
+  kpiDefinitionId?: number | null;
+  kpiDefinitionCode?: string | null;
+  status: WorkTaskStatus;
+  progressPercent: number;
+  plannedStart: string;
+  plannedEnd: string;
+  actualStart?: string | null;
+  completedAt?: string | null;
+  verifiedAt?: string | null;
+  verifiedByUserId?: number | null;
+  ccUserIds: number[];
+  predecessorTaskIds: number[];
+  canUpdateProgress: boolean;
+  canVerify: boolean;
+  rowVersion: string;
+}
+
+export interface DepartmentWorkPackageResponse {
+  id: number;
+  code: string;
+  kind: WorkPackageKind;
+  name: string;
+  description?: string | null;
+  operationalProjectId?: number | null;
+  operationalProjectCode?: string | null;
+  operationalProjectName?: string | null;
+  contractId?: number | null;
+  contractNumber?: string | null;
+  sourceOpportunityId?: number | null;
+  sourceOpportunityName?: string | null;
+  departmentRoleGroupId: number;
+  departmentCode: string;
+  departmentLabelKey: string;
+  leadUserId: number;
+  leadUserName: string;
+  status: WorkPackageStatus;
+  plannedStart?: string | null;
+  plannedEnd?: string | null;
+  completedAt?: string | null;
+  progressPercent: number;
+  canManagePackage: boolean;
+  canAssignTasks: boolean;
+  rowVersion: string;
+  tasks: DepartmentWorkTaskResponse[];
+}
+
+export interface DepartmentWorkPackageListResponse {
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  items: DepartmentWorkPackageResponse[];
+}
+
+export interface DepartmentWorkPackageOptionsResponse {
+  departments: { id: number; code: string; labelKey: string }[];
+  users: { userId: number; name: string; email: string; roleGroupId: number; canLead: boolean }[];
+  kpiDefinitions: { id: number; code: string; nameKey: string }[];
+}
+
+export interface DepartmentWorkPackageQuery {
+  kind?: WorkPackageKind;
+  operationalProjectId?: number;
+  contractId?: number;
+  sourceOpportunityId?: number;
+  departmentRoleGroupId?: number;
+  status?: WorkPackageStatus;
+  search?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface CreateDepartmentWorkPackageRequest {
+  kind: WorkPackageKind;
+  name: string;
+  description?: string | null;
+  operationalProjectId?: number | null;
+  contractId?: number | null;
+  sourceOpportunityId?: number | null;
+  departmentRoleGroupId: number;
+  leadUserId: number;
+  plannedStart?: string | null;
+  plannedEnd?: string | null;
+}
+
+export interface UpdateDepartmentWorkPackageRequest {
+  name: string;
+  description?: string | null;
+  contractId?: number | null;
+  status: WorkPackageStatus;
+  plannedStart?: string | null;
+  plannedEnd?: string | null;
+  rowVersion: string;
+}
+
+export interface UpsertDepartmentWorkTaskRequest {
+  wbsCode: string;
+  title: string;
+  description?: string | null;
+  resources?: string | null;
+  assigneeUserId: number;
+  approverUserId?: number | null;
+  kpiDefinitionId?: number | null;
+  plannedStart: string;
+  plannedEnd: string;
+  ccUserIds: number[];
+  predecessorTaskIds: number[];
+  rowVersion?: string;
+}
+
 export type DeletionImpactAction = "Delete" | "Unlink" | "Block";
 
 export interface DeletionImpactLinkResponse {
@@ -5571,6 +5695,36 @@ export const adminApi = {
     api.delete(`/workflows/${id}`),
 
   // Central operational projects (NIH-460)
+  listWorkPackages: (params: DepartmentWorkPackageQuery = {}) =>
+    api.get<DepartmentWorkPackageListResponse>("/work-packages", { params }),
+  getWorkPackage: (id: number) =>
+    api.get<DepartmentWorkPackageResponse>(`/work-packages/${id}`),
+  getWorkPackageOptions: () =>
+    api.get<DepartmentWorkPackageOptionsResponse>("/work-packages/options"),
+  createWorkPackage: (body: CreateDepartmentWorkPackageRequest, idempotencyKey: string) =>
+    api.post<DepartmentWorkPackageResponse>("/work-packages", body, withIdempotencyKey(idempotencyKey)),
+  updateWorkPackage: (id: number, body: UpdateDepartmentWorkPackageRequest, idempotencyKey: string) =>
+    api.put<DepartmentWorkPackageResponse>(`/work-packages/${id}`, body, { headers: {
+      ...withIdempotencyKey(idempotencyKey).headers,
+      ...withIfMatch(body.rowVersion).headers,
+    } }),
+  addWorkTask: (packageId: number, body: UpsertDepartmentWorkTaskRequest, idempotencyKey: string) =>
+    api.post<DepartmentWorkTaskResponse>(`/work-packages/${packageId}/tasks`, body, withIdempotencyKey(idempotencyKey)),
+  updateWorkTask: (packageId: number, taskId: number, body: UpsertDepartmentWorkTaskRequest, idempotencyKey: string) =>
+    api.put<DepartmentWorkTaskResponse>(`/work-packages/${packageId}/tasks/${taskId}`, body, { headers: {
+      ...withIdempotencyKey(idempotencyKey).headers,
+      ...withIfMatch(body.rowVersion ?? "").headers,
+    } }),
+  updateWorkTaskProgress: (packageId: number, taskId: number, body: { progressPercent: number; status: WorkTaskStatus; rowVersion: string }, idempotencyKey: string) =>
+    api.put<DepartmentWorkTaskResponse>(`/work-packages/${packageId}/tasks/${taskId}/progress`, body, { headers: {
+      ...withIdempotencyKey(idempotencyKey).headers,
+      ...withIfMatch(body.rowVersion).headers,
+    } }),
+  verifyWorkTask: (packageId: number, taskId: number, rowVersion: string, idempotencyKey: string) =>
+    api.post<DepartmentWorkTaskResponse>(`/work-packages/${packageId}/tasks/${taskId}/verify`, { confirm: true, rowVersion }, { headers: {
+      ...withIdempotencyKey(idempotencyKey).headers,
+      ...withIfMatch(rowVersion).headers,
+    } }),
   listOperationalProjects: (params: OperationalProjectListParams = {}) =>
     api.get<OperationalProjectListResponse>("/operational-projects", { params }),
   suggestOperationalProjectCode: () =>

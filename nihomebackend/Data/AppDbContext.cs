@@ -95,6 +95,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<OperationalProjectMemberRole> OperationalProjectMemberRoles => Set<OperationalProjectMemberRole>();
     public DbSet<OperationalProjectAssignment> OperationalProjectAssignments => Set<OperationalProjectAssignment>();
     public DbSet<OperationalProjectTeamHistory> OperationalProjectTeamHistory => Set<OperationalProjectTeamHistory>();
+    public DbSet<DepartmentWorkPackage> DepartmentWorkPackages => Set<DepartmentWorkPackage>();
+    public DbSet<DepartmentWorkTask> DepartmentWorkTasks => Set<DepartmentWorkTask>();
+    public DbSet<DepartmentWorkTaskCc> DepartmentWorkTaskCcUsers => Set<DepartmentWorkTaskCc>();
+    public DbSet<DepartmentWorkTaskDependency> DepartmentWorkTaskDependencies => Set<DepartmentWorkTaskDependency>();
+    public DbSet<DepartmentWorkPackageHistory> DepartmentWorkPackageHistory => Set<DepartmentWorkPackageHistory>();
     public DbSet<KpiDefinition> KpiDefinitions => Set<KpiDefinition>();
     public DbSet<KpiPeriod> KpiPeriods => Set<KpiPeriod>();
     public DbSet<KpiScoreSnapshot> KpiScoreSnapshots => Set<KpiScoreSnapshot>();
@@ -1834,6 +1839,110 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasOne(history => history.ChangedByUser).WithMany()
                 .HasForeignKey(history => history.ChangedByUserId).OnDelete(DeleteBehavior.Restrict);
             b.HasIndex(history => new { history.OperationalProjectId, history.ChangedAt });
+        });
+
+        modelBuilder.Entity<DepartmentWorkPackage>(b =>
+        {
+            b.ToTable("department_work_packages");
+            b.HasKey(item => item.Id);
+            b.Property(item => item.Code).HasMaxLength(40).IsRequired();
+            b.Property(item => item.Kind).HasConversion<string>().HasMaxLength(20).IsRequired();
+            b.Property(item => item.Name).HasMaxLength(300).IsRequired();
+            b.Property(item => item.Description).HasMaxLength(4000);
+            b.Property(item => item.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
+            b.Property(item => item.RowVersion).IsRowVersion();
+            b.HasOne(item => item.OperationalProject).WithMany()
+                .HasForeignKey(item => item.OperationalProjectId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(item => item.Contract).WithMany()
+                .HasForeignKey(item => item.ContractId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(item => item.SourceOpportunity).WithMany()
+                .HasForeignKey(item => item.SourceOpportunityId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(item => item.DepartmentRoleGroup).WithMany()
+                .HasForeignKey(item => item.DepartmentRoleGroupId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(item => item.LeadUser).WithMany()
+                .HasForeignKey(item => item.LeadUserId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(item => item.CreatedByUser).WithMany()
+                .HasForeignKey(item => item.CreatedByUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasIndex(item => item.Code).IsUnique();
+            b.HasIndex(item => new { item.OperationalProjectId, item.DepartmentRoleGroupId, item.Status });
+            b.HasIndex(item => new { item.ContractId, item.Status });
+            b.HasIndex(item => new { item.Kind, item.DepartmentRoleGroupId, item.Status });
+            b.HasIndex(item => item.LeadUserId);
+            b.ToTable(table =>
+            {
+                table.HasCheckConstraint("CK_department_work_packages_scope",
+                    "([Kind] = 'Project' AND [OperationalProjectId] IS NOT NULL) OR " +
+                    "([Kind] = 'Internal' AND [OperationalProjectId] IS NULL AND [ContractId] IS NULL AND [SourceOpportunityId] IS NULL)");
+                table.HasCheckConstraint("CK_department_work_packages_dates",
+                    "[PlannedStart] IS NULL OR [PlannedEnd] IS NULL OR [PlannedEnd] >= [PlannedStart]");
+            });
+        });
+
+        modelBuilder.Entity<DepartmentWorkTask>(b =>
+        {
+            b.ToTable("department_work_tasks");
+            b.HasKey(item => item.Id);
+            b.Property(item => item.WbsCode).HasMaxLength(120).IsRequired();
+            b.Property(item => item.Title).HasMaxLength(300).IsRequired();
+            b.Property(item => item.Description).HasMaxLength(4000);
+            b.Property(item => item.Resources).HasMaxLength(2000);
+            b.Property(item => item.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
+            b.Property(item => item.RowVersion).IsRowVersion();
+            b.HasOne(item => item.WorkPackage).WithMany(package => package.Tasks)
+                .HasForeignKey(item => item.WorkPackageId).OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(item => item.AssigneeUser).WithMany()
+                .HasForeignKey(item => item.AssigneeUserId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(item => item.ApproverUser).WithMany()
+                .HasForeignKey(item => item.ApproverUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(item => item.VerifiedByUser).WithMany()
+                .HasForeignKey(item => item.VerifiedByUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(item => item.KpiDefinition).WithMany()
+                .HasForeignKey(item => item.KpiDefinitionId).OnDelete(DeleteBehavior.Restrict);
+            b.HasIndex(item => new { item.WorkPackageId, item.WbsCode }).IsUnique();
+            b.HasIndex(item => new { item.AssigneeUserId, item.Status, item.PlannedEnd });
+            b.HasIndex(item => new { item.KpiDefinitionId, item.VerifiedAt });
+            b.ToTable(table =>
+            {
+                table.HasCheckConstraint("CK_department_work_tasks_dates", "[PlannedEnd] >= [PlannedStart]");
+                table.HasCheckConstraint("CK_department_work_tasks_progress", "[ProgressPercent] >= 0 AND [ProgressPercent] <= 100");
+                table.HasCheckConstraint("CK_department_work_tasks_approver", "[ApproverUserId] IS NULL OR [ApproverUserId] <> [AssigneeUserId]");
+            });
+        });
+
+        modelBuilder.Entity<DepartmentWorkTaskCc>(b =>
+        {
+            b.ToTable("department_work_task_cc_users");
+            b.HasKey(item => new { item.WorkTaskId, item.UserId });
+            b.HasOne(item => item.WorkTask).WithMany(task => task.CcUsers)
+                .HasForeignKey(item => item.WorkTaskId).OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(item => item.User).WithMany()
+                .HasForeignKey(item => item.UserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<DepartmentWorkTaskDependency>(b =>
+        {
+            b.ToTable("department_work_task_dependencies");
+            b.HasKey(item => new { item.WorkTaskId, item.PredecessorTaskId });
+            b.HasOne(item => item.WorkTask).WithMany(task => task.Predecessors)
+                .HasForeignKey(item => item.WorkTaskId).OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(item => item.PredecessorTask).WithMany(task => task.Successors)
+                .HasForeignKey(item => item.PredecessorTaskId).OnDelete(DeleteBehavior.NoAction);
+            b.ToTable(table => table.HasCheckConstraint(
+                "CK_department_work_task_dependencies_not_self", "[WorkTaskId] <> [PredecessorTaskId]"));
+        });
+
+        modelBuilder.Entity<DepartmentWorkPackageHistory>(b =>
+        {
+            b.ToTable("department_work_package_history");
+            b.HasKey(item => item.Id);
+            b.Property(item => item.EntityType).HasMaxLength(30).IsRequired();
+            b.Property(item => item.Action).HasMaxLength(30).IsRequired();
+            b.Property(item => item.SnapshotJson).HasColumnType("nvarchar(max)").IsRequired();
+            b.HasOne(item => item.WorkPackage).WithMany(package => package.History)
+                .HasForeignKey(item => item.WorkPackageId).OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(item => item.ChangedByUser).WithMany()
+                .HasForeignKey(item => item.ChangedByUserId).OnDelete(DeleteBehavior.Restrict);
+            b.HasIndex(item => new { item.WorkPackageId, item.ChangedAt });
         });
 
         modelBuilder.Entity<DesignSchedulePhase>(b =>

@@ -159,6 +159,7 @@ public static class DbSeeder
         {
             KpiSeeder.Seed(db);
             SampleCrmDataSeeder.Seed(db, webRootPath);
+            DepartmentWorkPackageSampleSeeder.Seed(db);
             RfqSampleDataSeeder.Seed(db);
         }
     }

@@ -75,6 +75,7 @@ const OperationalProjects = () => {
   const canManage = has(ADMIN_PERMS.operationalProjectsManage);
   const canCreate = canManage && has(ADMIN_PERMS.opportunitiesManage);
   const canViewContracts = has(ADMIN_PERMS.contracts);
+  const canManageWorkPackages = has(ADMIN_PERMS.workPackagesManage);
   const canListUsers = has(ADMIN_PERMS.users);
   const projectId = id && /^\d+$/.test(id) ? Number(id) : null;
   const customerFilter = /^\d+$/.test(searchParams.get("customerId") ?? "")
@@ -336,7 +337,10 @@ const OperationalProjects = () => {
               </div>
               <p className="mt-1 text-sm text-muted-foreground">{detail.customerName}</p>
             </div>
-            {canManage && <div className="flex gap-2">
+            {(canManage || canManageWorkPackages) && <div className="flex flex-wrap gap-2">
+              {canManageWorkPackages && <Button asChild><Link to={`/admin/work-packages?create=1&projectId=${detail.id}`}><Plus className="mr-2 h-4 w-4" />{t("workPackages.action.assignDepartment")}</Link></Button>}
+              <Button variant="outline" asChild><Link to={`/admin/work-packages?kind=Project&projectId=${detail.id}`}>{t("workPackages.action.viewProjectWork")}</Link></Button>
+              {canManage && <>
               {detail.status === "Completed" && (
                 <Button variant="outline" onClick={() => { setReopenReason(""); setReopenError(null); setReopenOpen(true); }}>
                   <RotateCcw className="mr-2 h-4 w-4" />{t("operationalProjects.reopen.action")}
@@ -344,6 +348,7 @@ const OperationalProjects = () => {
               )}
               <Button variant="outline" onClick={() => openEdit(detail)}><Pencil className="mr-2 h-4 w-4" />{t("common.edit")}</Button>
               <Button variant="destructive" onClick={() => void openDelete()}><Trash2 className="mr-2 h-4 w-4" />{t("common.delete")}</Button>
+              </>}
             </div>}
           </div>
 

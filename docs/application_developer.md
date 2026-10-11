@@ -1206,6 +1206,45 @@ keys. The operational hierarchy and user workflow are documented in
 deployment checks, rollback plan, and API compatibility contract are documented
 in [Operational Project Historical Migration](#67-operational-project-historical-migration).
 
+### 7.10.1 Department work-package API
+
+`DepartmentWorkPackage` is the cross-department assignment aggregate. Project
+packages require an `OperationalProjectId`; their `ContractId` and
+`SourceOpportunityId` are optional references. Internal packages reject all
+three business-root references. Endpoints are available at `/api/work-packages`
+and `/api/v1/work-packages`:
+
+| Method | Path | Permission | Purpose |
+|---|---|---|---|
+| `GET` | `/api/work-packages` | `work.packages.view` | List scoped project/internal packages with server filters |
+| `GET` | `/api/work-packages/options` | `work.packages.view` + `manage` or `assign` | Return active department, user, and work-KPI options |
+| `GET` | `/api/work-packages/{id}` | `work.packages.view` | Read package, tasks, access flags, and ETag |
+| `GET` | `/api/work-packages/{id}/history` | `work.packages.view` | Read immutable package/task change snapshots |
+| `POST` | `/api/work-packages` | `work.packages.manage` | Create a project or internal package |
+| `PUT` | `/api/work-packages/{id}` | `work.packages.manage` | Update metadata, optional contract, or lifecycle |
+| `POST` | `/api/work-packages/{id}/tasks` | `work.packages.assign` | Add a department task with WBS, dependencies, CC, and optional KPI |
+| `PUT` | `/api/work-packages/{id}/tasks/{taskId}` | `work.packages.assign` | Edit a non-terminal assignment |
+| `PUT` | `/api/work-packages/{id}/tasks/{taskId}/progress` | `work.packages.progress` | Record monotonic assignee progress |
+| `POST` | `/api/work-packages/{id}/tasks/{taskId}/verify` | `work.packages.verify` | Independently verify a completed KPI task |
+
+All writes require an idempotency key. Updates, progress, and verification also
+require `rowversion` through `If-Match` or the request body. Contextual actor
+rules are enforced in the service in addition to permission middleware. Task
+dependencies must remain within one package and acyclic; an Active package and
+completed predecessors are required before progress begins.
+Internal package creation requires both `work.packages.manage` and
+`work.packages.assign`, and the caller must be the selected lead in the same
+role group. This prevents a view/progress-only staff role from promoting itself
+to department lead.
+
+The migration `AddDepartmentWorkPackages` adds package, task, dependency, CC,
+and history tables. Operational Project deletion classifies owned packages as
+`Delete`; Contract and Opportunity deletion classify their optional references
+as `Unlink`. KPI metric `VerifiedWorkTaskCount` reads only independently
+verified tasks assigned to the evaluated user in the requested period. Seeded
+definitions are inactive by default so installations must configure targets and
+rebalance weights before activation.
+
 The Module 2 schedule is exposed beneath
 `/api/operational-projects/{id}/design-schedule` and remains separate from
 Module 4 construction tasks. Its lifecycle, validation, weighted roll-up,
