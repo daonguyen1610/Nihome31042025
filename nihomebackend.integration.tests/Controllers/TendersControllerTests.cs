@@ -36,11 +36,13 @@ public class TendersControllerTests : IntegrationTestBase
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
         var customerId = await CreateCustomerAsync();
+        var projectId = await CreateOperationalProjectAsync(customerId);
 
         var res = await Client.PostAsJsonAsync("/api/tenders", new
         {
             name = "Gói thầu Alpha",
             customerId,
+            operationalProjectId = projectId,
             submissionDeadline = DateTime.UtcNow.AddDays(14),
             openingDate = DateTime.UtcNow.AddDays(7),
             infoSource = "Website",
@@ -65,10 +67,13 @@ public class TendersControllerTests : IntegrationTestBase
         var prefix = $"TD-{DateTime.UtcNow.Year}-";
         var existing = await WithDbAsync(db => db.Tenders.Where(t => t.Code.StartsWith(prefix)).Select(t => t.Code).ToListAsync());
 
+        var customerId = await CreateCustomerAsync();
+        var projectId = await CreateOperationalProjectAsync(customerId);
         var res = await Client.PostAsJsonAsync("/api/tenders", new
         {
             name = "Gói thầu nhà xưởng Minh Phúc giai đoạn 2",
-            customerId = await CreateCustomerAsync(),
+            customerId,
+            operationalProjectId = projectId,
             submissionDeadline = DateTime.UtcNow.AddDays(10),
         });
 
@@ -112,10 +117,12 @@ public class TendersControllerTests : IntegrationTestBase
         // SALE has crm.tenders.view + crm.tenders.manage — should succeed.
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
         var customerId = await CreateCustomerAsync();
+        var projectId = await CreateOperationalProjectAsync(customerId);
         var res = await Client.PostAsJsonAsync("/api/tenders", new
         {
             name = "SALE-created tender",
             customerId,
+            operationalProjectId = projectId,
             submissionDeadline = DateTime.UtcNow.AddDays(10),
         });
         res.StatusCode.Should().Be(HttpStatusCode.Created);
@@ -223,8 +230,11 @@ public class TendersControllerTests : IntegrationTestBase
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
         var tenderId = await CreateTenderAsync();
         var detail = await ReadJsonAsync(await Client.GetAsync($"/api/tenders/{tenderId}"));
-        var checklistIds = detail.GetProperty("checklistItems").EnumerateArray()
-            .Select(item => item.GetProperty("id").GetInt32()).Take(2).ToList();
+        var checklistItems = detail.GetProperty("checklistItems").EnumerateArray().ToList();
+        var ownedItemId = checklistItems.Single(item =>
+            item.GetProperty("templateCode").GetString() == "boq").GetProperty("id").GetInt32();
+        var capabilityItemId = checklistItems.Single(item =>
+            item.GetProperty("templateCode").GetString() == "capability").GetProperty("id").GetInt32();
         var capabilityId = await CreateCapabilityDocumentAsync();
         var capabilityPath = await WithDbAsync(db => db.CapabilityDocuments.AsNoTracking()
             .Where(item => item.Id == capabilityId).Select(item => item.FilePath).SingleAsync());
@@ -239,14 +249,14 @@ public class TendersControllerTests : IntegrationTestBase
             using var form = new MultipartFormDataContent();
             form.Add(new ByteArrayContent(Encoding.UTF8.GetBytes("owned tender file")), "file", "owned.pdf");
             var upload = await Client.PostAsync(
-                $"/api/tenders/{tenderId}/checklist/{checklistIds[0]}/upload", form);
+                $"/api/tenders/{tenderId}/checklist/{ownedItemId}/upload", form);
             upload.StatusCode.Should().Be(HttpStatusCode.OK);
             ownedPath = (await ReadJsonAsync(upload)).GetProperty("checklistItems").EnumerateArray()
-                .Single(item => item.GetProperty("id").GetInt32() == checklistIds[0])
+                .Single(item => item.GetProperty("id").GetInt32() == ownedItemId)
                 .GetProperty("filePath").GetString();
             (await Client.PostAsJsonAsync(
                 $"/api/tenders/{tenderId}/checklist/attach-from-library",
-                new { items = new[] { new { checklistItemId = checklistIds[1], capabilityDocumentId = capabilityId } } }))
+                new { items = new[] { new { checklistItemId = capabilityItemId, capabilityDocumentId = capabilityId } } }))
                 .StatusCode.Should().Be(HttpStatusCode.OK);
 
             var ids = await WithDbAsync(async db =>
@@ -472,15 +482,31 @@ public class TendersControllerTests : IntegrationTestBase
     private async Task<int> CreateTenderAsync(string? name = null)
     {
         var customerId = await CreateCustomerAsync();
+        var projectId = await CreateOperationalProjectAsync(customerId);
         var res = await Client.PostAsJsonAsync("/api/tenders", new
         {
             name = name ?? "Test tender " + Guid.NewGuid().ToString("N")[..6],
             customerId,
+            operationalProjectId = projectId,
             submissionDeadline = DateTime.UtcNow.AddDays(14),
         });
         res.EnsureSuccessStatusCode();
         return (await ReadJsonAsync(res)).GetProperty("id").GetInt32();
     }
+
+    private Task<int> CreateOperationalProjectAsync(int customerId) => WithDbAsync(async db =>
+    {
+        var project = new OperationalProject
+        {
+            Code = UniqueSlug("PJ-TENDER").ToUpperInvariant(),
+            Name = "Dự án đấu thầu tích hợp",
+            CustomerId = customerId,
+            Status = OperationalProjectStatus.Planning,
+        };
+        db.OperationalProjects.Add(project);
+        await db.SaveChangesAsync();
+        return project.Id;
+    });
 
     private Task<HttpResponseMessage> ConfirmDeleteAsync(int tenderId, System.Text.Json.JsonElement impact) =>
         DeleteWithBodyAsync(
@@ -570,7 +596,7 @@ public class TendersControllerTests : IntegrationTestBase
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
         var tenderId = await CreateTenderAsync();
-        var itemId = await FirstChecklistItemIdAsync(tenderId);
+        var itemId = await FirstChecklistItemIdAsync(tenderId, "boq");
         var optionResponse = await Client.GetAsync("/api/tenders/assignee-options");
         optionResponse.EnsureSuccessStatusCode();
         var assignee = (await ReadJsonAsync(optionResponse)).EnumerateArray().First();
@@ -627,7 +653,7 @@ public class TendersControllerTests : IntegrationTestBase
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
         var tenderId = await CreateTenderAsync();
-        var itemId = await FirstChecklistItemIdAsync(tenderId);
+        var itemId = await FirstChecklistItemIdAsync(tenderId, "boq");
         string? storedPath = null;
 
         try
@@ -857,14 +883,15 @@ public class TendersControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task MarkWon_CreateOpportunity_ContinuesToAContractInTheNewProject()
+    public async Task MarkWon_CreateOpportunity_ContinuesToAContractInTheTenderProject()
     {
         // Scenario C: the won bid becomes the deal. The tender opens the
-        // opportunity and its project, so the contract needs no extra setup.
+        // negotiation opportunity in the existing project, so the contract
+        // needs no duplicate business root or extra setup.
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
         var tenderId = await CreateTenderAsync("Gói thầu nhà xưởng KCN Tân Uyên");
         await SetTenderStatusAsync(tenderId, TenderStatus.Submitted);
-        var customerId = await WithDbAsync(async db =>
+        var tenderScope = await WithDbAsync(async db =>
         {
             var tender = await db.Tenders.SingleAsync(item => item.Id == tenderId);
             db.TenderEstimateRevisions.Add(new TenderEstimateRevision
@@ -879,8 +906,9 @@ public class TendersControllerTests : IntegrationTestBase
                 ImportedAt = DateTime.UtcNow,
             });
             await db.SaveChangesAsync();
-            return tender.CustomerId;
+            return new { tender.CustomerId, ProjectId = tender.OperationalProjectId!.Value };
         });
+        var customerId = tenderScope.CustomerId;
 
         var missingChoice = await Client.PostAsJsonAsync($"/api/tenders/{tenderId}/mark-won", new { note = "Thiếu lựa chọn" });
         missingChoice.StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -899,6 +927,9 @@ public class TendersControllerTests : IntegrationTestBase
         opportunity.GetProperty("customerId").GetInt32().Should().Be(customerId);
         opportunity.GetProperty("estimatedValue").GetDecimal().Should().Be(1_161_000_000m);
         var projectId = opportunity.GetProperty("operationalProjectId").GetInt32();
+        projectId.Should().Be(tenderScope.ProjectId);
+        (await WithDbAsync(db => db.OperationalProjects.CountAsync(project =>
+            project.CustomerId == customerId))).Should().Be(1);
 
         var quoteResponse = await Client.PostAsJsonAsync("/api/quotes", new
         {
@@ -1044,14 +1075,16 @@ public class TendersControllerTests : IntegrationTestBase
 
     // ---------- helpers ----------
 
-    private async Task<int> FirstChecklistItemIdAsync(int tenderId)
+    private async Task<int> FirstChecklistItemIdAsync(int tenderId, string? templateCode = null)
     {
         var res = await Client.GetAsync($"/api/tenders/{tenderId}");
         res.EnsureSuccessStatusCode();
         var body = await ReadJsonAsync(res);
         var items = body.GetProperty("checklistItems");
         items.GetArrayLength().Should().BeGreaterThan(0);
-        return items[0].GetProperty("id").GetInt32();
+        return items.EnumerateArray()
+            .First(item => templateCode is null || item.GetProperty("templateCode").GetString() == templateCode)
+            .GetProperty("id").GetInt32();
     }
 
     private async Task<int> CreateOpportunityAsync(int? existingCustomerId = null)

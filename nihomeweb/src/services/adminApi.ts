@@ -2437,6 +2437,7 @@ export interface TenderChecklistItemResponse {
   internalDeadline?: string | null;
   filePath?: string | null;
   originalFileName?: string | null;
+  capabilityDocumentId?: number | null;
   sortOrder: number;
 }
 

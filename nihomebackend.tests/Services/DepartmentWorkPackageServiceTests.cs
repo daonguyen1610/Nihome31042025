@@ -91,6 +91,30 @@ public sealed class DepartmentWorkPackageServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task TenderPreparer_CanAssignPlanPackageForTenderProject()
+    {
+        var tender = new Tender
+        {
+            Code = "TD-PLAN-OWNER-001",
+            Name = "Gói thầu trung tâm logistics NICON",
+            CustomerId = _project.CustomerId,
+            OperationalProjectId = _project.Id,
+            PreparerUserId = _sales.Id,
+            CreatedByUserId = _sales.Id,
+            SubmissionDeadline = DateTime.UtcNow.AddDays(30),
+        };
+        _db.Tenders.Add(tender);
+        await _db.SaveChangesAsync();
+        var request = ProjectRequest();
+        request.SourceTenderId = tender.Id;
+
+        var result = await _service.CreateAsync(request, _sales.Id);
+
+        Assert.Equal(tender.Id, result.SourceTenderId);
+        Assert.Equal(_project.Id, result.OperationalProjectId);
+    }
+
+    [Fact]
     public async Task ProjectPackage_RejectsLeadWithoutAssignmentPermission()
     {
         var request = ProjectRequest();
@@ -233,6 +257,46 @@ public sealed class DepartmentWorkPackageServiceTests : IDisposable
         }, _warehouseStaff.Id);
 
         Assert.Equal("InProgress", started!.Status);
+    }
+
+    [Fact]
+    public async Task TenderPlan_CannotCloseUntilEveryTaskIsIndependentlyVerified()
+    {
+        var tender = new Tender
+        {
+            Code = "TD-PLAN-001",
+            Name = "Gói thầu nhà máy NICON",
+            CustomerId = _project.CustomerId,
+            OperationalProjectId = _project.Id,
+            SubmissionDeadline = DateTime.UtcNow.AddDays(30),
+        };
+        _db.Tenders.Add(tender);
+        await _db.SaveChangesAsync();
+        var request = ProjectRequest();
+        request.SourceTenderId = tender.Id;
+        var package = await _service.CreateAsync(request, _pm.Id);
+        var task = await _service.AddTaskAsync(
+            package.Id, TaskRequest(_warehouseStaff.Id, _procurementLead.Id), _procurementLead.Id);
+        var entity = await _db.DepartmentWorkPackages.Include(item => item.Tasks)
+            .SingleAsync(item => item.Id == package.Id);
+        entity.Status = WorkPackageStatus.Active;
+        entity.Tasks.Single().Status = WorkTaskStatus.Completed;
+        entity.Tasks.Single().ProgressPercent = 100;
+        await _db.SaveChangesAsync();
+
+        var error = await Assert.ThrowsAsync<DepartmentWorkPackageOperationException>(() =>
+            _service.UpdateAsync(package.Id, new UpdateDepartmentWorkPackageRequest
+            {
+                Name = package.Name,
+                Status = "Completed",
+                PlannedStart = package.PlannedStart,
+                PlannedEnd = package.PlannedEnd,
+                RowVersion = package.RowVersion,
+            }, _pm.Id));
+
+        Assert.Contains("duyệt độc lập", error.Message);
+        Assert.Equal(WorkPackageStatus.Active, entity.Status);
+        Assert.Equal(WorkTaskStatus.Completed, entity.Tasks.Single().Status);
     }
 
     [Fact]

@@ -2,6 +2,7 @@ import { test, expect, TEST_USERS } from "../fixtures/auth";
 import { rm } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { hardDeleteBusinessRoot } from "../fixtures/hardDelete";
 
 const specDirectory = path.dirname(fileURLToPath(import.meta.url));
 
@@ -45,6 +46,7 @@ test("tender plan assigns owners and deadlines and manages checklist files", asy
     const headers = { Authorization: `Bearer ${token}` };
     const unique = Date.now().toString();
     let customerId = 0;
+    let projectId = 0;
     let tenderId = 0;
     let uploadedFilePath: string | null = null;
 
@@ -65,11 +67,23 @@ test("tender plan assigns owners and deadlines and manages checklist files", asy
         expect(customerResponse.status(), await customerResponse.text()).toBe(201);
         customerId = (await customerResponse.json()).id as number;
 
+        const projectResponse = await api.post("/api/operational-projects", {
+            headers,
+            data: {
+                name: `Tender shared project ${unique}`,
+                customerId,
+                note: "Dự án có trước gói thầu theo quy trình NICON",
+            },
+        });
+        expect(projectResponse.status(), await projectResponse.text()).toBe(201);
+        projectId = (await projectResponse.json()).id as number;
+
         const tenderResponse = await api.post("/api/tenders", {
             headers,
             data: {
                 name: `Tender checklist actions ${unique}`,
                 customerId,
+                operationalProjectId: projectId,
                 submissionDeadline: new Date(Date.now() + 14 * 24 * 60 * 60 * 1_000).toISOString(),
             },
         });
@@ -86,11 +100,29 @@ test("tender plan assigns owners and deadlines and manages checklist files", asy
         await loginInBrowserAs(page, TEST_USERS.salesManager);
         await page.goto(`/admin/tenders/${tenderId}`, { waitUntil: "networkidle" });
 
+        await page.getByTestId("tender-plan-tab-trigger").click();
+        await expect(page.getByTestId("tender-plan-tab")).toContainText(/Kế hoạch đấu thầu|Tender plan/);
+        const processOverview = page.getByTestId("tender-process-overview");
+        await expect(processOverview).toContainText(/Nhận HSMT|Invitation received/);
+        await expect(processOverview).toContainText(/Lập kế hoạch|Plan/);
+        await expect(processOverview).toContainText(/Lập hồ sơ dự thầu|Prepare bid/);
+        await expect(processOverview).toContainText(/Đánh giá|Review/);
+        await expect(processOverview).toContainText(/Nộp thầu|Submit/);
+        await expect(processOverview).toContainText(/Kết quả|Result/);
+        await expect(page.getByRole("link", { name: /Giao hồ sơ cho phòng ban|Assign a department/ })).toBeVisible();
+        await page.getByRole("tab", { name: /Hồ sơ dự thầu|Checklist/ }).click();
+
         for (const item of checklistItems) {
             const key = item.templateCode ?? item.id;
             await expect(page.getByTestId(`tender-checklist-row-${key}-desktop`)).toBeVisible();
             await expect(page.getByTestId(`tender-checklist-library-${key}-desktop`)).toBeVisible();
-            await expect(page.getByTestId(`tender-checklist-upload-${key}-desktop`)).toBeVisible();
+            if (item.templateCode === "capability") {
+                await expect(page.getByTestId(`tender-checklist-row-${key}-desktop`))
+                    .toContainText(/Phải chọn từ thư viện dùng chung|Select from shared library/);
+                await expect(page.getByTestId(`tender-checklist-upload-${key}-desktop`)).toHaveCount(0);
+            } else {
+                await expect(page.getByTestId(`tender-checklist-upload-${key}-desktop`)).toBeVisible();
+            }
         }
 
         const assigneeOptionsResponse = await api.get("/api/tenders/assignee-options", { headers });
@@ -123,6 +155,8 @@ test("tender plan assigns owners and deadlines and manages checklist files", asy
 
         const target = checklistItems.find((item) => item.templateCode === "legal") ?? checklistItems[1];
         const targetKey = target.templateCode ?? target.id;
+        await expect(page.getByTestId(`tender-checklist-row-${targetKey}-desktop`))
+            .toContainText(/Hồ sơ theo gói thầu|Tender-specific document/);
         await page.getByTestId(`tender-checklist-library-${targetKey}-desktop`).click();
         const libraryDialog = page.getByRole("dialog");
         await expect(libraryDialog).toBeVisible();
@@ -172,6 +206,11 @@ test("tender plan assigns owners and deadlines and manages checklist files", asy
         await expect(mobileDeadline).toHaveValue(deadline);
         await expect(mobileDeadline).toHaveAttribute("max", tender.submissionDeadline.slice(0, 10));
         expect((await mobileOwner.boundingBox())?.height).toBeGreaterThanOrEqual(36);
+        const viewport = await page.evaluate(() => ({
+            bodyWidth: document.body.scrollWidth,
+            viewportWidth: window.innerWidth,
+        }));
+        expect(viewport.bodyWidth).toBeLessThanOrEqual(viewport.viewportWidth);
     } finally {
         if (uploadedFilePath?.startsWith("/files/tenders/")) {
             await rm(
@@ -179,7 +218,8 @@ test("tender plan assigns owners and deadlines and manages checklist files", asy
                 { force: true },
             );
         }
-        if (tenderId) await api.delete(`/api/tenders/${tenderId}`, { headers });
-        if (customerId) await api.delete(`/api/customers/${customerId}`, { headers });
+        if (tenderId) await hardDeleteBusinessRoot(api, headers, `/api/tenders/${tenderId}`);
+        if (projectId) await hardDeleteBusinessRoot(api, headers, `/api/operational-projects/${projectId}`);
+        if (customerId) await hardDeleteBusinessRoot(api, headers, `/api/customers/${customerId}`);
     }
 });

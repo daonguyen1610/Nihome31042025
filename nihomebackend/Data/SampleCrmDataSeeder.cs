@@ -75,8 +75,8 @@ public static class SampleCrmDataSeeder
         SeedQuotes(db, owner, now);
         SeedContracts(db, owner, now, webRootPath);
         SeedCapabilityDocuments(db, owner, now, webRootPath);
-        SeedTenders(db, owner, now);
         SeedOperationalProjects(db, owner, projectManager, now);
+        SeedTenders(db, owner, now);
         SeedSurveys(db, owner, now);
         SeedDesignProjects(db, owner, now);
         SeedPermitChecklists(db, legalOwner, now);
@@ -1421,6 +1421,12 @@ public static class SampleCrmDataSeeder
         var sampleOpportunities = GetCoreOpportunities(db)
             .OrderBy(o => o.Id)
             .ToList();
+        var projectByCustomer = db.OperationalProjects
+            .Where(project => project.Note != null && project.Note.StartsWith(SampleOperationalProjectMarker))
+            .OrderBy(project => project.Id)
+            .ToList()
+            .GroupBy(project => project.CustomerId)
+            .ToDictionary(group => group.Key, group => group.First());
 
         // Curated scenarios so every state (Preparing / imminent / Submitted /
         // Won / Lost) has at least one row on the list, and the detail-page
@@ -1437,6 +1443,11 @@ public static class SampleCrmDataSeeder
         {
             if (custIdx >= customers.Length || customers[custIdx] is null) continue;
             var customer = customers[custIdx]!;
+            if (!projectByCustomer.TryGetValue(customer.Id, out var project))
+            {
+                i++;
+                continue;
+            }
             var code = $"TD-SAMPLE-{i + 1:D3}";
             if (deletedTenderCodes.Contains(code))
             {
@@ -1451,6 +1462,19 @@ public static class SampleCrmDataSeeder
             {
                 if (existingTender.Note != null && existingTender.Note.StartsWith(SampleTenderMarker))
                 {
+                    if (!existingTender.OperationalProjectId.HasValue)
+                    {
+                        existingTender.OperationalProjectId = project.Id;
+                        existingTender.UpdatedByUserId = owner.Id;
+                        existingTender.UpdatedAt = now;
+                    }
+                    if (existingTender.Status == TenderStatus.Won)
+                    {
+                        existingTender.WonOpportunityId = sampleOpportunities
+                            .FirstOrDefault(opportunity => opportunity.CustomerId == customer.Id
+                                && opportunity.OperationalProjectId == project.Id)?.Id;
+                    }
+                    db.SaveChanges();
                     SeedTenderChecklistItems(db, existingTender, templates, libraryDoc, owner.Id, now, richChecklist);
                 }
                 i++;
@@ -1460,13 +1484,13 @@ public static class SampleCrmDataSeeder
 
             // Won tenders need a linked opportunity so the detail-page
             // Result tab renders the "Cơ hội đã gán" row. Pick the first
-            // seeded opportunity for the same customer, else fall back to
-            // any sample opportunity so the demo isn't empty.
+            // seeded opportunity for the same customer and project. Never
+            // cross-link a won tender to another customer's business root.
             int? wonOppId = null;
             if (status == TenderStatus.Won)
             {
-                wonOppId = sampleOpportunities.FirstOrDefault(o => o.CustomerId == customer.Id)?.Id
-                    ?? sampleOpportunities.FirstOrDefault()?.Id;
+                wonOppId = sampleOpportunities.FirstOrDefault(o => o.CustomerId == customer.Id
+                    && o.OperationalProjectId == project.Id)?.Id;
             }
 
             var closedAt = status is TenderStatus.Won or TenderStatus.Lost
@@ -1478,6 +1502,7 @@ public static class SampleCrmDataSeeder
                 Code = code,
                 Name = name,
                 CustomerId = customer.Id,
+                OperationalProjectId = project.Id,
                 OpeningDate = now.AddDays(daysToDeadline - 14),
                 SubmissionDeadline = deadline,
                 PreparerUserId = owner.Id,
@@ -1539,6 +1564,7 @@ public static class SampleCrmDataSeeder
                 {
                     item.FilePath = libraryDoc.FilePath;
                     item.OriginalFileName = libraryDoc.OriginalFileName;
+                    item.CapabilityDocumentId = libraryDoc.Id;
                 }
             }
             db.TenderChecklistItems.Add(item);

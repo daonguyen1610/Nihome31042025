@@ -152,8 +152,14 @@ và hợp đồng mà không nhập lại dữ liệu.
   đơn giá BOQ, không import trực tiếp vào Báo giá. Báo giá BOQ áp dụng một
   revision danh mục đã duyệt và lưu bản chụp; dòng ngoại lệ được nhập bằng bảng
   cột/hàng có validation hoặc thêm từng dòng, không cập nhật ngược danh mục.
-- Đấu thầu có kế hoạch, checklist, deadline, hồ sơ năng lực, dự toán versioned và
-  kết quả trúng/trượt.
+- Đấu thầu bắt buộc gắn Dự án đã có. Kế hoạch dùng nhóm công việc theo từng
+  phòng ban với người phụ trách, người duyệt độc lập, ngày bắt đầu/kết thúc,
+  dependency và tiến độ; khoảng một tháng là hướng dẫn lập kế hoạch, không phải
+  giới hạn cứng. Chỉ được nộp khi các nhóm việc đã hoàn thành/xác nhận, checklist
+  hồ sơ hoàn tất, dự toán được duyệt và TC–KT duyệt hồ sơ tài chính/bảo lãnh.
+  Hồ sơ năng lực liên kết thư viện dùng chung; BOQ, biện pháp và bản vẽ được tải
+  riêng theo gói. Trúng thầu mở Cơ hội ở `Negotiation` trên đúng Dự án hiện có,
+  sau đó người dùng chủ động lập hợp đồng.
 - Khảo sát mobile ghi điều kiện hiện trường, tọa độ, ảnh/video/file và checklist;
   đồng bộ có trạng thái, retry và xung đột rõ ràng.
 - Quy tắc "báo giá trước hợp đồng" có điều kiện và do Kinh doanh quyết định theo

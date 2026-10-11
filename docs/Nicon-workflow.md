@@ -92,9 +92,14 @@ Kinh doanh gửi báo giá (đã duyệt nội bộ)
   → Kinh doanh gửi báo giá cho khách hàng
 
 Kinh doanh chuẩn bị hồ sơ dự thầu (gói thầu đã gắn Dự án vận hành)
+  → lập Kế hoạch đấu thầu theo từng phòng: người phụ trách, người duyệt độc lập,
+    ngày bắt đầu/kết thúc, dependency và tiến độ
+  → từng phòng hoàn thành đầu việc; người duyệt xác nhận
   → Tài chính lập hồ sơ rà soát tài chính dự thầu / bảo lãnh
   → Tài chính gửi duyệt, người duyệt độc lập phê duyệt
   → Kinh doanh nộp thầu (Submitted)
+  → ghi nhận trúng/trượt; nếu trúng, mở Cơ hội Negotiation trên đúng Dự án
+  → sau thương thảo, người dùng chủ động tạo Hợp đồng Upstream
 ```
 
 Hai hồ sơ dùng chung checklist và chung nguyên tắc "người lập không tự duyệt".

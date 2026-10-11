@@ -138,7 +138,7 @@
   { "key": "tenders.lifecycle.cancel", "category": "tenders", "vi": "Huỷ gói thầu", "en": "Cancel tender", "zh": "取消投标", "ja": "入札をキャンセル" },
   { "key": "tenders.lifecycle.title", "category": "tenders", "vi": "Vòng đời gói thầu", "en": "Tender lifecycle", "zh": "投标生命周期", "ja": "入札ライフサイクル" },
   { "key": "tenders.lifecycle.updated", "category": "tenders", "vi": "Đã cập nhật trạng thái gói thầu", "en": "Tender status updated", "zh": "投标状态已更新", "ja": "入札ステータスを更新しました" },
-  { "key": "tenders.lifecycle.help.Preparing", "category": "tenders", "vi": "Hoàn tất checklist và phê duyệt ít nhất một bản dự toán trước khi nộp.", "en": "Complete the checklist and approve at least one estimate before submission.", "zh": "提交前请完成清单并至少批准一版估算。", "ja": "提出前にチェックリストを完了し、見積を1版以上承認してください。" },
+  { "key": "tenders.lifecycle.help.Preparing", "category": "tenders", "vi": "Hoàn tất kế hoạch liên phòng, checklist hồ sơ, dự toán được duyệt và rà soát tài chính trước khi nộp.", "en": "Complete the cross-department plan, document checklist, approved estimate, and finance review before submission.", "zh": "提交前须完成跨部门计划、资料清单、已批准估算及财务审查。", "ja": "提出前に部門横断計画、資料チェックリスト、承認済み見積、財務レビューを完了してください。" },
   { "key": "tenders.lifecycle.help.Submitted", "category": "tenders", "vi": "Gói thầu đã nộp; bước tiếp theo là ghi nhận Trúng, Trượt hoặc Huỷ.", "en": "The tender is submitted; next record Won, Lost, or Cancelled.", "zh": "投标已提交；下一步记录中标、落标或取消。", "ja": "入札は提出済みです。次に落札、失注、またはキャンセルを記録します。" },
   { "key": "tenders.lifecycle.help.Won", "category": "tenders", "vi": "Gói thầu đã trúng và vòng đời đã kết thúc.", "en": "The tender was won and its lifecycle is complete.", "zh": "投标已中标，生命周期结束。", "ja": "落札済みで、ライフサイクルは完了しています。" },
   { "key": "tenders.lifecycle.help.Lost", "category": "tenders", "vi": "Gói thầu đã trượt và vòng đời đã kết thúc.", "en": "The tender was lost and its lifecycle is complete.", "zh": "投标已落标，生命周期结束。", "ja": "失注済みで、ライフサイクルは完了しています。" },
@@ -172,4 +172,22 @@
   ,{"key":"tenders.form.projectPlaceholder","category":"tenders","vi":"Chọn dự án của khách hàng","en":"Choose the customer's project","zh":"选择客户项目","ja":"顧客のプロジェクトを選択"}
   ,{"key":"tenders.form.noProject","category":"tenders","vi":"Khách hàng chưa có dự án dùng chung. Hãy tạo dự án trước khi gửi hồ sơ thầu.","en":"This customer has no shared project. Create one before tender submission.","zh":"该客户尚无共享项目，请在投标前先创建项目。","ja":"この顧客には共有プロジェクトがありません。入札前に作成してください。"}
   ,{"key":"tenders.action.requestFinanceReview","category":"tenders","vi":"Yêu cầu Tài chính rà soát","en":"Request finance review","zh":"请求财务审查","ja":"財務レビューを依頼"}
+  ,{"key":"tenders.form.projectRequired","category":"tenders","vi":"Vui lòng chọn Dự án của khách hàng trước khi tạo gói thầu.","en":"Choose the customer's project before creating the tender.","zh":"创建投标前请选择客户项目。","ja":"入札を作成する前に顧客プロジェクトを選択してください。"}
+  ,{"key":"tenders.plan.title","category":"tenders","vi":"Kế hoạch đấu thầu","en":"Tender plan","zh":"投标计划","ja":"入札計画"}
+  ,{"key":"tenders.plan.help","category":"tenders","vi":"Giao từng nhóm hồ sơ cho phòng ban, lập ngày bắt đầu–kết thúc, người phụ trách và người duyệt độc lập.","en":"Assign each dossier group to a department with dates, an assignee, and an independent verifier.","zh":"将各资料组分配给部门，并设置日期、负责人和独立审核人。","ja":"書類グループごとに部門、日程、担当者、独立確認者を設定します。"}
+  ,{"key":"tenders.plan.assignDepartment","category":"tenders","vi":"Giao hồ sơ cho phòng ban","en":"Assign a department","zh":"分配部门","ja":"部門に割り当て"}
+  ,{"key":"tenders.plan.required","category":"tenders","vi":"Chưa có kế hoạch. Phải tạo ít nhất một nhóm việc theo phòng ban trước khi nộp thầu.","en":"No plan yet. Create at least one department work package before submission.","zh":"尚无计划。提交投标前至少创建一个部门工作包。","ja":"計画がありません。提出前に部門作業パッケージを1件以上作成してください。"}
+  ,{"key":"tenders.plan.inProgress","category":"tenders","vi":"Kế hoạch đang thực hiện. Tất cả nhóm việc phải hoàn thành và được xác nhận trước khi nộp.","en":"The plan is in progress. Every package must be completed and verified before submission.","zh":"计划进行中。所有工作包必须在提交前完成并审核。","ja":"計画は進行中です。提出前に全作業パッケージの完了と確認が必要です。"}
+  ,{"key":"tenders.plan.ready","category":"tenders","vi":"Kế hoạch đã hoàn thành và sẵn sàng cho bước nộp thầu.","en":"The plan is complete and ready for tender submission.","zh":"计划已完成，可提交投标。","ja":"計画が完了し、入札提出の準備が整いました。"}
+  ,{"key":"tenders.plan.tasks","category":"tenders","vi":"đầu việc","en":"tasks","zh":"任务","ja":"タスク"}
+  ,{"key":"tenders.detail.result.createContract","category":"tenders","vi":"Tiếp tục thương thảo và tạo hợp đồng","en":"Continue negotiation and create contract","zh":"继续谈判并创建合同","ja":"交渉を継続して契約を作成"}
+  ,{"key":"tenders.detail.checklist.sharedDocument","category":"tenders","vi":"Hồ sơ dùng chung","en":"Shared document","zh":"共享资料","ja":"共通資料"}
+  ,{"key":"tenders.detail.checklist.sharedDocumentRequired","category":"tenders","vi":"Phải chọn từ thư viện dùng chung","en":"Select from shared library","zh":"须从共享资料库选择","ja":"共有ライブラリから選択"}
+  ,{"key":"tenders.detail.checklist.packageDocument","category":"tenders","vi":"Hồ sơ theo gói thầu","en":"Tender-specific document","zh":"本投标资料","ja":"案件別資料"}
+  ,{"key":"tenders.process.received","category":"tenders","vi":"Nhận HSMT","en":"Invitation received","zh":"收到招标文件","ja":"入札書類受領"}
+  ,{"key":"tenders.process.planning","category":"tenders","vi":"Lập kế hoạch","en":"Plan","zh":"制定计划","ja":"計画"}
+  ,{"key":"tenders.process.dossier","category":"tenders","vi":"Lập hồ sơ dự thầu","en":"Prepare bid","zh":"编制投标文件","ja":"入札書類作成"}
+  ,{"key":"tenders.process.review","category":"tenders","vi":"Đánh giá","en":"Review","zh":"评审","ja":"レビュー"}
+  ,{"key":"tenders.process.submitted","category":"tenders","vi":"Nộp thầu","en":"Submit","zh":"提交投标","ja":"提出"}
+  ,{"key":"tenders.process.result","category":"tenders","vi":"Kết quả","en":"Result","zh":"结果","ja":"結果"}
 ]

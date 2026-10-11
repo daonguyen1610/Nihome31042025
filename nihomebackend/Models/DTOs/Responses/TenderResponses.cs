@@ -17,6 +17,7 @@ public class TenderChecklistItemResponse
     public DateTime? InternalDeadline { get; set; }
     public string? FilePath { get; set; }
     public string? OriginalFileName { get; set; }
+    public int? CapabilityDocumentId { get; set; }
     public int SortOrder { get; set; }
 }
 

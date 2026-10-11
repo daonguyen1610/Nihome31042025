@@ -520,29 +520,35 @@ management permission can assign each checklist item to an active user whose
 role can manage Tenders and set an internal deadline from today through the
 Tender submission date. A changed assignment sends the assignee an in-app
 notification linked directly to the Tender; saving the same assignee again does
-not create a duplicate notification. Every document checklist item can use one
-existing document from the shared capability-document library or accept a new
-direct upload. The selected file is previewed securely inside the Tender detail
+not create a duplicate notification. The **Capability profile** checklist item
+must use an existing document from the shared capability-document library;
+project-specific items such as BOQ, method statement, and tender drawings accept
+a direct upload. The selected file is previewed securely inside the Tender detail
 page. Checklist status, ownership, deadlines, and files become read-only after
-the tender is Won, Lost, or Cancelled. Track tender results across preparation,
-submission, win, loss, and cancellation. Department-level planning remains
-partial until NICON confirms the permission-to-department grouping.
+the tender is Won, Lost, or Cancelled. The **Tender plan** tab uses the shared
+cross-department work-package workflow: create one package for each responsible
+department, then define its task owner, independent verifier, planned start/end,
+dependencies and progress. The approximately one-month duration described by
+NICON is planning guidance, not a hard system limit.
 
 The **Estimate** tab provides a customer-fillable UTF-8 CSV template containing
 item code, description, unit, quantity, internal unit cost, bid unit price, VAT,
 and note. Each valid import atomically creates a hashed Draft revision and
 calculates cost subtotal, bid subtotal, VAT, and grand bid total. Submit the
 revision for approval; authorized users approve or reject it with a reason.
-The Tender can move from Preparing to Submitted only when every checklist item
-is ready, an approved estimate exists, and the Tender carries a shared
+The Tender can move from Preparing to Submitted only when at least one active
+Tender-plan package exists, all active plan packages are completed after their
+tasks are independently verified, every checklist item is ready, an approved
+estimate exists, and the Tender carries a shared
 Operational Project with an approved Finance tender review of its financial
 dossier (see 3.0.2). Won and Lost are available only from
 Submitted. When marking a tender Won, choose either **Create an opportunity from
 this tender** (default) or an existing opportunity of the same customer. The
 created opportunity carries the tender name, starts in Negotiation, is valued at
-the latest approved bid estimate, and comes with a Planning operational project,
-so a contract can be raised directly from it with **Create contract**. The result panel links to the
-opportunity. Tender codes `TD-YYYY-NNNN` continue from the highest code in use,
+the latest approved bid estimate, and reuses the Tender's existing Operational
+Project. The result panel links to the opportunity and offers **Continue
+negotiation and create contract**; contract creation remains a deliberate user
+action after commercial negotiation. Tender codes `TD-YYYY-NNNN` continue from the highest code in use,
 so deleting a tender never blocks creating new ones.
 
 | Page | Functions | Estimate |

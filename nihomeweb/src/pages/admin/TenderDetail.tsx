@@ -6,6 +6,7 @@ import {
   Calendar,
   CheckCircle2,
   ChevronDown,
+  ClipboardList,
   Clock,
   FileSpreadsheet,
   History,
@@ -53,6 +54,7 @@ import {
 import {
   adminApi,
   type CapabilityDocumentResponse,
+  type DepartmentWorkPackageResponse,
   type MasterDataOption,
   type OpportunityResponse,
   type TenderAssigneeOptionResponse,
@@ -390,7 +392,16 @@ const ChecklistTab = ({ tender, assignees, canManage, onPatch, onUpload, onOpenL
                 className="border-t align-top"
                 data-testid={`tender-checklist-row-${item.templateCode ?? item.id}-desktop`}
               >
-                <td className="px-3 py-2 font-medium text-slate-800">{item.title}</td>
+                <td className="px-3 py-2 font-medium text-slate-800">
+                  <div>{item.title}</div>
+                  <Badge variant="outline" className="mt-1 text-[10px] font-normal">
+                    {t(item.templateCode === "capability" && !item.capabilityDocumentId
+                      ? "tenders.detail.checklist.sharedDocumentRequired"
+                      : item.capabilityDocumentId
+                        ? "tenders.detail.checklist.sharedDocument"
+                        : "tenders.detail.checklist.packageDocument")}
+                  </Badge>
+                </td>
                 <td className="px-3 py-2">
                   <Select
                     value={item.status}
@@ -474,7 +485,7 @@ const ChecklistTab = ({ tender, assignees, canManage, onPatch, onUpload, onOpenL
                         <Library className="h-3.5 w-3.5" />
                         <span className="ml-1 text-xs">{t("tenders.detail.checklist.pickFromLibrary")}</span>
                       </Button>
-                      <Button
+                      {item.templateCode !== "capability" ? <Button
                         variant="ghost"
                         size="sm"
                         disabled={savingId === item.id}
@@ -491,7 +502,7 @@ const ChecklistTab = ({ tender, assignees, canManage, onPatch, onUpload, onOpenL
                             ? t("tenders.detail.checklist.replace")
                             : t("tenders.detail.checklist.upload")}
                         </span>
-                      </Button>
+                      </Button> : null}
                     </div>
                   ) : null}
                 </td>
@@ -512,6 +523,13 @@ const ChecklistTab = ({ tender, assignees, canManage, onPatch, onUpload, onOpenL
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <div className="break-words text-sm font-medium text-slate-800">{item.title}</div>
+                <Badge variant="outline" className="mt-1 text-[10px] font-normal">
+                  {t(item.templateCode === "capability" && !item.capabilityDocumentId
+                    ? "tenders.detail.checklist.sharedDocumentRequired"
+                    : item.capabilityDocumentId
+                      ? "tenders.detail.checklist.sharedDocument"
+                      : "tenders.detail.checklist.packageDocument")}
+                </Badge>
                 {!disabled && assignees ? (
                   <Select
                     value={item.ownerUserId == null ? "unassigned" : String(item.ownerUserId)}
@@ -588,7 +606,7 @@ const ChecklistTab = ({ tender, assignees, canManage, onPatch, onUpload, onOpenL
                 <span className="text-slate-400">{t("tenders.detail.checklist.noFile")}</span>
               )}
               {!disabled ? (
-                <div className="mt-2 grid grid-cols-2 gap-2">
+                <div className={cn("mt-2 grid gap-2", item.templateCode === "capability" ? "grid-cols-1" : "grid-cols-2")}>
                   <Button
                     variant="outline"
                     size="sm"
@@ -599,7 +617,7 @@ const ChecklistTab = ({ tender, assignees, canManage, onPatch, onUpload, onOpenL
                     <Library className="h-3.5 w-3.5" />
                     <span className="ml-1">{t("tenders.detail.checklist.pickFromLibrary")}</span>
                   </Button>
-                  <Button
+                  {item.templateCode !== "capability" ? <Button
                     variant="outline"
                     size="sm"
                     disabled={savingId === item.id}
@@ -616,7 +634,7 @@ const ChecklistTab = ({ tender, assignees, canManage, onPatch, onUpload, onOpenL
                         ? t("tenders.detail.checklist.replace")
                         : t("tenders.detail.checklist.upload")}
                     </span>
-                  </Button>
+                  </Button> : null}
                 </div>
               ) : null}
             </div>
@@ -625,6 +643,73 @@ const ChecklistTab = ({ tender, assignees, canManage, onPatch, onUpload, onOpenL
       </div>
     </div>
   );
+};
+
+// ---------------------------- tender plan tab ----------------------------
+
+const TenderPlanTab = ({ tender, packages, financePackages, canManage }: {
+  tender: TenderResponse;
+  packages: DepartmentWorkPackageResponse[];
+  financePackages: DepartmentWorkPackageResponse[];
+  canManage: boolean;
+}) => {
+  const { t, lang } = useI18n();
+  const active = packages.filter(item => item.status !== "Cancelled");
+  const hasPassedSubmission = ["Submitted", "Won", "Lost"].includes(tender.status);
+  const complete = hasPassedSubmission || active.length > 0 && active.every(item => item.status === "Completed");
+  const financeApproved = hasPassedSubmission ||
+    financePackages.some(item => item.financeReview?.status === "Approved");
+  const processStages = [
+    { key: "received", done: true, active: false },
+    { key: "planning", done: complete, active: !complete },
+    { key: "dossier", done: tender.checklistCompletionPercent === 100, active: complete && tender.checklistCompletionPercent < 100 },
+    { key: "review", done: financeApproved, active: tender.checklistCompletionPercent === 100 && !financeApproved },
+    { key: "submitted", done: tender.status !== "Preparing", active: financeApproved && tender.status === "Preparing" },
+    { key: "result", done: ["Won", "Lost", "Cancelled"].includes(tender.status), active: tender.status === "Submitted" },
+  ];
+  return <div className="space-y-3" data-testid="tender-plan-tab">
+    <div className="overflow-x-auto pb-1" data-testid="tender-process-overview">
+      <ol className="grid min-w-[720px] grid-cols-6 gap-2">
+        {processStages.map((stage, index) => <li key={stage.key} className={cn(
+          "rounded-lg border px-3 py-2 text-xs",
+          stage.done && "border-emerald-200 bg-emerald-50 text-emerald-800",
+          stage.active && !stage.done && "border-primary/30 bg-primary/5 text-primary",
+          !stage.done && !stage.active && "border-slate-200 bg-slate-50 text-slate-500",
+        )}>
+          <div className="mb-1 font-semibold">{index + 1}</div>
+          <div>{t(`tenders.process.${stage.key}`)}</div>
+        </li>)}
+      </ol>
+    </div>
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <div className="min-w-0">
+        <h2 className="text-base font-semibold text-slate-800">{t("tenders.plan.title")}</h2>
+        <p className="text-sm text-muted-foreground">{t("tenders.plan.help")}</p>
+      </div>
+      {canManage && tender.status === "Preparing" && tender.operationalProjectId ? <Button asChild className="w-full shrink-0 sm:w-auto">
+        <Link to={`/admin/work-packages?create=1&projectId=${tender.operationalProjectId}&tenderId=${tender.id}`}>
+          <ClipboardList className="mr-2 h-4 w-4" />{t("tenders.plan.assignDepartment")}
+        </Link>
+      </Button> : null}
+    </div>
+    <div className={cn("rounded-lg border p-3 text-sm", complete ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-amber-200 bg-amber-50 text-amber-900")}>
+      {active.length === 0 ? t("tenders.plan.required") : complete ? t("tenders.plan.ready") : t("tenders.plan.inProgress")}
+    </div>
+    <div className="grid gap-3 lg:grid-cols-2">
+      {packages.map(item => <Link key={item.id} to={`/admin/work-packages/${item.id}`} className="min-w-0 rounded-lg border bg-white p-4 shadow-sm transition hover:border-primary/40">
+        <div className="flex min-w-0 items-start justify-between gap-2">
+          <div className="min-w-0"><div className="truncate font-medium">{item.code} · {item.name}</div><div className="text-sm text-muted-foreground">{t(item.departmentLabelKey)} · {item.leadUserName}</div></div>
+          <Badge variant="outline" className="shrink-0">{t(`workPackages.status.${item.status}`)}</Badge>
+        </div>
+        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+          <span>{formatDate(item.plannedStart, lang)} → {formatDate(item.plannedEnd, lang)}</span>
+          <span>{item.progressPercent}%</span>
+          <span>{item.tasks.length} {t("tenders.plan.tasks")}</span>
+        </div>
+        <Progress className="mt-2 h-2" value={item.progressPercent} />
+      </Link>)}
+    </div>
+  </div>;
 };
 
 // ---------------------------- library picker ----------------------------
@@ -1101,6 +1186,11 @@ const ResultTab = ({
                 <p className="text-sm text-emerald-900">{tender.note}</p>
               </div>
             ) : null}
+            {tender.wonOpportunityId && tender.operationalProjectId ? <Button asChild className="mt-3 w-full sm:w-auto">
+              <Link to={`/admin/contracts?opportunityId=${tender.wonOpportunityId}&projectId=${tender.operationalProjectId}&customerId=${tender.customerId}`}>
+                {t("tenders.detail.result.createContract")}
+              </Link>
+            </Button> : null}
           </div>
         ) : tender.status === "Lost" ? (
           <div className="mt-3 rounded-md border border-rose-200 bg-rose-50 p-3">
@@ -1236,6 +1326,8 @@ const AdminTenderDetail = () => {
   const [timeline, setTimeline] = useState<TenderTimelineEvent[] | null>(null);
   const [timelineLoading, setTimelineLoading] = useState(false);
   const [assignees, setAssignees] = useState<TenderAssigneeOptionResponse[] | null>(null);
+  const [planPackages, setPlanPackages] = useState<DepartmentWorkPackageResponse[]>([]);
+  const [financePackages, setFinancePackages] = useState<DepartmentWorkPackageResponse[]>([]);
 
   const [libraryTargetItemId, setLibraryTargetItemId] = useState<number | null>(null);
   const [markWonOpen, setMarkWonOpen] = useState(false);
@@ -1268,10 +1360,23 @@ const AdminTenderDetail = () => {
     }
   }, [tenderId]);
 
+  const fetchPlan = useCallback(async () => {
+    if (!Number.isFinite(tenderId)) return;
+    try {
+      const { data } = await adminApi.listWorkPackages({ sourceTenderId: tenderId, pageSize: 100 });
+      setPlanPackages(data.items.filter(item => item.purpose === "General"));
+      setFinancePackages(data.items.filter(item => item.purpose === "FinanceTenderReview"));
+    } catch {
+      setPlanPackages([]);
+      setFinancePackages([]);
+    }
+  }, [tenderId]);
+
   useEffect(() => {
     void fetchTender();
     void fetchTimeline();
-  }, [fetchTender, fetchTimeline]);
+    void fetchPlan();
+  }, [fetchPlan, fetchTender, fetchTimeline]);
 
   useEffect(() => {
     if (!canManage) return;
@@ -1414,6 +1519,10 @@ const AdminTenderDetail = () => {
                   <Library className="mr-1 h-4 w-4" />
                   {t("tenders.detail.tab.checklist")}
                 </TabsTrigger>
+                <TabsTrigger value="plan" data-testid="tender-plan-tab-trigger">
+                  <Calendar className="mr-1 h-4 w-4" />
+                  {t("tenders.plan.title")}
+                </TabsTrigger>
                 <TabsTrigger value="estimate" data-testid="tender-estimate-tab">
                   <FileSpreadsheet className="mr-1 h-4 w-4" />
                   {t("tenders.estimate.title")}
@@ -1437,6 +1546,15 @@ const AdminTenderDetail = () => {
                   onUpload={handleUpload}
                   onOpenLibrary={setLibraryTargetItemId}
                   isTerminal={!!isTerminal}
+                />
+              </TabsContent>
+
+              <TabsContent value="plan" className="mt-3">
+                <TenderPlanTab
+                  tender={tender}
+                  packages={planPackages}
+                  financePackages={financePackages}
+                  canManage={canManage}
                 />
               </TabsContent>
 
