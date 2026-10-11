@@ -92,6 +92,7 @@ This guide covers development setup, configuration, database management, build a
 ```
 Nihome31042025/
   docker-compose.yaml          -- Container orchestration
+  docker-compose-dev.yaml      -- Opt-in overlay: local mail sink for dev/E2E
   nihomebackend/               -- ASP.NET Core 8 Web API
     Controllers/               -- API endpoint controllers (thin)
     Data/                      -- Database context, migrations, seeders
@@ -325,6 +326,11 @@ The following environment variables are set in `docker-compose.yaml`:
 | `ASPNETCORE_URLS`                     | http://0.0.0.0:5043            | Kestrel binding address              |
 | `DOTNET_USE_POLLING_FILE_WATCHER`     | 1                              | Enables file polling for hot-reload  |
 | `ConnectionStrings__DefaultConnection`| SQL Server connection string   | Database connection (container name) |
+
+`docker-compose-dev.yaml` additionally overrides `EmailSettings__*` so the
+backend sends through the local, non-relaying `smtpSink` service instead of the
+configured mail server. Load it deliberately; section 7.8 has the E2E command
+and the restore step.
 
 ### 5.3 Docker Compose Volumes
 
@@ -985,10 +991,12 @@ request. A durable email outbox is not yet part of this workflow, so an
 external delivery followed by a concurrent status conflict still needs manual
 reconciliation.
 
-The browser-to-SMTP delivery E2E uses an opt-in, non-relaying local mailbox:
+The browser-to-SMTP delivery E2E uses an opt-in, non-relaying local mailbox
+declared in `docker-compose-dev.yaml`. That overlay is separate from
+`docker-compose.yaml` and is never loaded automatically; pass both files:
 
 ```bash
-docker compose -f docker-compose.yaml -f docker-compose.e2e.yaml up -d --build
+docker compose -f docker-compose.yaml -f docker-compose-dev.yaml up -d --build
 cd nihomeweb
 BASE_URL=http://localhost:5043 MAIL_SINK_URL=http://127.0.0.1:8025 \
   npx playwright test e2e/smoke/direct-contract-from-opportunity.spec.ts \
@@ -999,8 +1007,12 @@ The test uses a unique `example.test` recipient and verifies the captured
 message and persisted quote status. Do not use production SMTP settings for
 this test. When finished, restore the normal backend configuration with
 `docker compose up -d --force-recreate nihomeBackend`; then stop and remove the
-test-only mailbox with `docker compose -f docker-compose.yaml -f docker-compose.e2e.yaml stop smtpSink`
-and `docker compose -f docker-compose.yaml -f docker-compose.e2e.yaml rm -f smtpSink`.
+test-only mailbox with `docker compose -f docker-compose.yaml -f docker-compose-dev.yaml stop smtpSink`
+and `docker compose -f docker-compose.yaml -f docker-compose-dev.yaml rm -f smtpSink`.
+
+The CI `e2e` job sets `COMPOSE_FILE` to both files and
+`MAIL_SINK_URL=http://127.0.0.1:8025`, so `quote-email-delivery.spec.ts` runs
+there instead of skipping, and no customer address is ever mailed from CI.
 
 Each Tender checklist row retains one current file. Users with
 `crm.tenders.manage` may assign an active user whose active role also has that

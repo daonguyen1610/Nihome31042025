@@ -1,3 +1,8 @@
+# Local development and E2E overlay. It is not part of docker-compose.yaml and
+# is never loaded automatically: pass it explicitly with
+#   docker compose -f docker-compose.yaml -f docker-compose-dev.yaml up -d --build
+# It replaces the backend SMTP settings with a non-relaying local mailbox so the
+# browser-to-SMTP tests can click a real send without emailing a customer.
 services:
   nihomeBackend:
     depends_on:
