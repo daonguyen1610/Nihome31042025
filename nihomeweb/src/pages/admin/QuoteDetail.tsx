@@ -567,7 +567,7 @@ const AdminQuoteDetail = () => {
     quote.status === "CustomerApproved" ||
     quote.status === "Rejected" ||
     quote.status === "Cancelled";
-  const showEditToggle = canManage && !editing && quote.status !== "PendingApproval" && !isTerminal;
+  const showEditToggle = canManage && !editing && !isTerminal;
 
   // A quote the customer or an approver has signed off on is the point where a
   // contract can be raised from it.
@@ -632,7 +632,7 @@ const AdminQuoteDetail = () => {
               {t("quotes.action.downloadExcel")}
             </Button>
           )}
-          {!editing && canManage && quote.method === "Boq" && !["PendingApproval", "Rejected", "CustomerApproved", "Cancelled"].includes(quote.status) && (
+          {!editing && canManage && quote.method === "Boq" && !["Rejected", "CustomerApproved", "Cancelled"].includes(quote.status) && (
             <Button variant="outline" data-testid="quote-import-boq" onClick={() => setBoqImportOpen(true)}>
               <Upload className="mr-1.5 h-4 w-4" />{t("quotes.boqImport.action")}
             </Button>

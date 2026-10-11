@@ -56,14 +56,6 @@ export default function QuoteBoqImportDialog({ open, onOpenChange, quoteId, rowV
     } catch (err) { setError(extractApiError(err)); } finally { setBusy(false); }
   };
   const selectedCount = preview?.sheets.filter((sheet) => sheet.suggestedClassification === "Detail").length ?? 0;
-  const mappingsValid = preview?.sheets.every((sheet) => {
-    if (sheet.suggestedClassification !== "Detail") return true;
-    const required = [sheet.headerRow, sheet.descriptionColumn, sheet.unitColumn, sheet.quantityColumn, sheet.unitPriceColumn];
-    if (required.some((value) => value == null || !Number.isInteger(value) || value < 1)) return false;
-    const columns = [sheet.itemCodeColumn, sheet.descriptionColumn, sheet.unitColumn, sheet.quantityColumn, sheet.unitPriceColumn]
-      .filter((value): value is number => value != null);
-    return sheet.headerRow! <= 1000 && columns.every((value) => value <= 500) && new Set(columns).size === columns.length;
-  }) ?? false;
 
   return <Dialog open={open} onOpenChange={(value) => { if (!busy) { onOpenChange(value); if (!value) reset(); } }}>
     <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto">
@@ -93,18 +85,17 @@ export default function QuoteBoqImportDialog({ open, onOpenChange, quoteId, rowV
               <tbody className="divide-y">{preview.sheets.map((sheet, index) => <tr key={`${sheet.order}-${sheet.name}`}>
                 <td className="p-2"><div className="font-medium">{sheet.order}. {sheet.name}</div>{sheet.isHidden && <div className="text-xs text-amber-700">{t("quotes.boqImport.hidden")}</div>}</td>
                 <td className="p-2"><Select value={sheet.suggestedClassification} onValueChange={(value) => updateSheet(index, { suggestedClassification: value as QuoteBoqSheetMapping["suggestedClassification"] })}><SelectTrigger className="w-32"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Ignored">{t("quotes.boqImport.ignored")}</SelectItem><SelectItem value="Summary">{t("quotes.boqImport.summary")}</SelectItem><SelectItem value="Detail">{t("quotes.boqImport.detail")}</SelectItem></SelectContent></Select></td>
-                <td className="p-2"><Input className="w-20" type="number" min={1} max={1000} step={1} value={sheet.headerRow ?? ""} onChange={(event) => updateSheet(index, { headerRow: event.target.value ? Number(event.target.value) : null })} /></td>
-                <td className="p-2"><div className="grid grid-cols-5 gap-1">{(["descriptionColumn", "unitColumn", "quantityColumn", "unitPriceColumn", "itemCodeColumn"] as const).map((field) => <div key={field}><Label className="text-[10px]">{t(`quotes.boqImport.${field}`)}</Label><Input type="number" min={1} max={500} step={1} value={sheet[field] ?? ""} onChange={(event) => updateSheet(index, { [field]: event.target.value ? Number(event.target.value) : null })} /></div>)}</div></td>
+                <td className="p-2"><Input className="w-20" type="number" min={1} value={sheet.headerRow ?? ""} onChange={(event) => updateSheet(index, { headerRow: event.target.value ? Number(event.target.value) : null })} /></td>
+                <td className="p-2"><div className="grid grid-cols-5 gap-1">{(["descriptionColumn", "unitColumn", "quantityColumn", "unitPriceColumn", "itemCodeColumn"] as const).map((field) => <div key={field}><Label className="text-[10px]">{t(`quotes.boqImport.${field}`)}</Label><Input type="number" min={1} value={sheet[field] ?? ""} onChange={(event) => updateSheet(index, { [field]: event.target.value ? Number(event.target.value) : null })} /></div>)}</div></td>
                 <td className="p-2 text-right">{sheet.suggestedItemCount}</td>
               </tr>)}</tbody>
             </table>
           </div>
-          {!mappingsValid && <p role="alert" className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{t("quotes.boqImport.invalidMapping")}</p>}
         </>}
       </div>
       <DialogFooter>
         <Button variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>{t("common.cancel")}</Button>
-        <Button onClick={() => void confirm()} disabled={!preview || selectedCount === 0 || !mappingsValid || busy}>
+        <Button onClick={() => void confirm()} disabled={!preview || selectedCount === 0 || busy}>
           {busy ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Upload className="mr-1.5 h-4 w-4" />}{t("quotes.boqImport.confirm")}
         </Button>
       </DialogFooter>

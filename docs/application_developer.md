@@ -2416,11 +2416,6 @@ timestamp and resulting quote version. Re-import of the same hash/parser into
 the same quote is rejected. This is preliminary quotation data and never
 becomes an Execution BOQ or an MR/warehouse allowance.
 
-A quote in `PendingApproval` is immutable: neither the regular edit endpoint
-nor BOQ import may change its commercial content. The submitter must wait for
-approval or for the approver to reject it back to `Draft`. This preserves the
-exact version reviewed by the approver.
-
 The current parser accepts `.xlsx` up to 20 MB compressed/200 MB uncompressed,
 100 sheets and 20,000 used rows, rejects macros, external data links, legacy
 formats, invalid required values and ambiguous merged
