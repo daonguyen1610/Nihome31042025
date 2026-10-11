@@ -51,7 +51,7 @@ const expectCreateDialogResponsive = async (page: Page) => {
   }
 };
 
-test("pastes Excel BOQ safely and applies an approved material rate to a Unit Cost quote", async ({
+test("adds quote-specific BOQ rows safely and applies an approved material rate to a Unit Cost quote", async ({
   api,
   page,
   loginAs,
@@ -196,6 +196,8 @@ test("pastes Excel BOQ safely and applies an approved material rate to a Unit Co
 
     await page.getByTestId("boq-paste-open").click();
     const pasteDialog = page.getByTestId("boq-paste-dialog");
+    await expect(page.getByTestId("boq-paste-scope-note")).toContainText(/không nhập workbook/i);
+    await expect(page.getByTestId("boq-paste-scope-note").getByRole("link")).toHaveAttribute("href", "/admin/material-rates/boq");
     await expect(pasteDialog).toContainText(/không cần cấp quyền đọc clipboard/i);
     await page.getByTestId("boq-paste-input").fill([
       "Mã\tHạng mục\tĐơn vị\tKhối lượng\tĐơn giá",

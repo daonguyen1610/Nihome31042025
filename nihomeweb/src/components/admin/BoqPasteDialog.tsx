@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { ClipboardPaste } from "lucide-react";
+import { AlertTriangle, ClipboardPaste } from "lucide-react";
+import { Link } from "react-router-dom";
 import { parseBoqPaste } from "@/lib/boqPaste";
 import { useI18n } from "@/lib/i18n";
 import type { QuoteItemInput } from "@/services/adminApi";
@@ -41,6 +42,15 @@ const BoqPasteDialog = ({ open, onOpenChange, onConfirm }: BoqPasteDialogProps) 
           <DialogDescription>{t("quotes.paste.instructions")}</DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
+          <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs leading-relaxed text-amber-950" data-testid="boq-paste-scope-note">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+            <p>
+              {t("quotes.paste.scopeNote")}{" "}
+              <Link className="font-semibold underline underline-offset-2" to="/admin/material-rates/boq" onClick={close}>
+                {t("quotes.boq.openMaterialRates")}
+              </Link>
+            </p>
+          </div>
           <div className="rounded-md border bg-muted/30 p-3 text-xs leading-relaxed text-muted-foreground">
             <div className="font-medium text-foreground">{t("quotes.paste.columns")}</div>
             <div>{t("quotes.paste.example")}</div>
