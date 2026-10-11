@@ -18,6 +18,17 @@ test("imports a multi-sheet workbook into a Draft BOQ rate revision", async ({ a
   const token = await loginAs(TEST_USERS.salesManager);
   const headers = { Authorization: `Bearer ${token}` };
   const suffix = `${Date.now()}`;
+  const templateName = `Factory mapping ${suffix}`;
+  let savedTemplate: Record<string, unknown> | undefined;
+  await page.route("**/api/material-rate-catalogs/boq-import-templates", async route => {
+    if (route.request().method() !== "POST") return route.continue();
+    savedTemplate = route.request().postDataJSON() as Record<string, unknown>;
+    await route.fulfill({
+      status: 201,
+      contentType: "application/json",
+      body: JSON.stringify({ id: 2_147_480_000, isSystem: false, ...savedTemplate }),
+    });
+  });
   const catalogResponse = await api.post("/api/material-rate-catalogs", { headers, data: { catalogType: "Boq", code: `E2E-BOQ-${suffix}`, name: `Factory BOQ ${suffix}`, currency: "VND", isActive: true } });
   expect(catalogResponse.status(), await catalogResponse.text()).toBe(201);
   const catalogId = (await catalogResponse.json()).id as number;
@@ -33,6 +44,16 @@ test("imports a multi-sheet workbook into a Draft BOQ rate revision", async ({ a
     await page.getByTestId("boq-workbook-preview").click();
     await expect(page.getByTestId("boq-workbook-sheet-0")).toContainText("Summary");
     await expect(page.getByTestId("boq-workbook-sheet-1")).toContainText("Factory");
+    await expect(page.getByTestId("boq-workbook-include-0")).not.toBeChecked();
+    await expect(page.getByTestId("boq-workbook-include-1")).toBeChecked();
+    await page.getByTestId("boq-workbook-template-name").fill(templateName);
+    await page.getByTestId("boq-workbook-template-save").click();
+    await expect.poll(() => savedTemplate).toMatchObject({ name: templateName, headerRow: 1, descriptionColumn: 2, unitColumn: 3, quantityColumn: 4, unitPriceColumn: 5 });
+    await page.getByTestId("boq-workbook-descriptionColumn-1").fill("5");
+    await expect(page.getByTestId("boq-workbook-confirm")).toBeDisabled();
+    await page.getByTestId("boq-workbook-template-1").click();
+    await page.getByRole("option", { name: templateName }).click();
+    await expect(page.getByTestId("boq-workbook-descriptionColumn-1")).toHaveValue("2");
     await expect(page.getByTestId("boq-workbook-confirm")).toBeEnabled();
     await page.getByTestId("boq-workbook-confirm").click();
     await expect(page.getByTestId("boq-catalog-workbook-dialog")).toBeHidden();
