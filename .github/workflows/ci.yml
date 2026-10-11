@@ -169,10 +169,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 40
     env:
-      # docker-compose-dev.yaml adds the non-relaying local mailbox, so the
-      # email delivery specs send for real without reaching a customer. The
-      # overlay is only loaded here; every compose command in this job needs it.
-      COMPOSE_FILE: docker-compose.yaml:docker-compose-dev.yaml
+      # docker-compose-dev.yaml includes docker-compose.yaml and adds the
+      # non-relaying local mailbox, so the email delivery specs send for real
+      # without reaching a customer. Every compose command in this job uses it.
+      COMPOSE_FILE: docker-compose-dev.yaml
 
     steps:
       - uses: actions/checkout@v4
