@@ -69,7 +69,7 @@ test("role editor renders dynamic roles and the comparison matrix for SUPER_ADMI
   await page.getByTestId("rbac-view-groups").click();
   await expect(page.getByTestId("rbac-groups-editor")).toBeVisible();
   await expect(page.getByTestId("rbac-group-CRM")).toBeVisible();
-  await expect(page.getByTestId("rbac-group-HR_ADMIN")).toBeVisible();
+  await expect(page.getByTestId("rbac-group-PROCUREMENT")).toBeVisible();
   await expect(page.getByTestId("rbac-group-DESIGN")).toBeVisible();
   await expect(page.getByTestId("rbac-group-CONSTRUCTION")).toBeVisible();
   await expect(page.getByTestId("rbac-group-FINANCE")).toBeVisible();

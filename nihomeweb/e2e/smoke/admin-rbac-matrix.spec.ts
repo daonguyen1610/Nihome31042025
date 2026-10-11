@@ -47,6 +47,7 @@ const ALL_ADMIN_PATHS = [
   "/admin/finance-control",
   "/admin/design-projects",
   "/admin/operational-projects",
+  "/admin/work-packages",
   "/admin/reports/projects",
   "/admin/kpi",
   "/admin/kpi/configuration",
@@ -112,7 +113,7 @@ const matrix: RoleExpectation[] = [
     // does NOT have crm.leads.view.all or crm.customers.view.all — the
     // services scope their lists to owned records, but the routes render.
     user: TEST_USERS.sale,
-    allowed: ["/admin", "/admin/notifications", "/admin/leads", "/admin/customers", "/admin/opportunities", "/admin/quotes", "/admin/material-rates", "/admin/capability-documents", "/admin/tenders", "/admin/surveys", "/admin/contracts", "/admin/operational-projects", "/admin/kpi", "/admin/contacts", "/admin/recruitment", "/admin/master-data", "/admin/workflows"],
+    allowed: ["/admin", "/admin/notifications", "/admin/leads", "/admin/customers", "/admin/opportunities", "/admin/quotes", "/admin/material-rates", "/admin/capability-documents", "/admin/tenders", "/admin/surveys", "/admin/contracts", "/admin/operational-projects", "/admin/work-packages", "/admin/kpi", "/admin/contacts", "/admin/recruitment", "/admin/master-data", "/admin/workflows"],
   },
   {
     // SALES_MANAGER: crm.** (full — includes quotes.approve on top of manage)
@@ -120,7 +121,7 @@ const matrix: RoleExpectation[] = [
     // as SALE plus view.all across CRM entities; routes rendered are
     // identical (server enforces scope).
     user: TEST_USERS.salesManager,
-    allowed: ["/admin", "/admin/notifications", "/admin/leads", "/admin/customers", "/admin/opportunities", "/admin/quotes", "/admin/material-rates", "/admin/capability-documents", "/admin/tenders", "/admin/surveys", "/admin/contracts", "/admin/finance/contracts", "/admin/finance/input-contracts", "/admin/operational-projects", "/admin/kpi", "/admin/kpi/configuration", "/admin/contacts", "/admin/recruitment", "/admin/master-data", "/admin/workflows"],
+    allowed: ["/admin", "/admin/notifications", "/admin/leads", "/admin/customers", "/admin/opportunities", "/admin/quotes", "/admin/material-rates", "/admin/capability-documents", "/admin/tenders", "/admin/surveys", "/admin/contracts", "/admin/finance/contracts", "/admin/finance/input-contracts", "/admin/operational-projects", "/admin/work-packages", "/admin/kpi", "/admin/kpi/configuration", "/admin/contacts", "/admin/recruitment", "/admin/master-data", "/admin/workflows"],
   },
   {
     // DESIGN: content.** + processes.view + dashboard.view + design.projects.view
@@ -147,6 +148,7 @@ const matrix: RoleExpectation[] = [
       "/admin/processes/general",
       "/admin/design-projects",
       "/admin/operational-projects",
+      "/admin/work-packages",
       "/admin/kpi",
       "/admin/construction/tasks",
       "/admin/construction/diary",
@@ -178,6 +180,7 @@ const matrix: RoleExpectation[] = [
       "/admin/procurement-control/rfqs",
       "/admin/design-projects",
       "/admin/operational-projects",
+      "/admin/work-packages",
       "/admin/reports/projects",
       "/admin/kpi",
       "/admin/permits",
@@ -199,6 +202,7 @@ const matrix: RoleExpectation[] = [
       "/admin/clients", "/admin/partners", "/admin/suppliers", "/admin/awards",
       "/admin/languages", "/admin/translations", "/admin/master-data", "/admin/workflows",
       "/admin/processes/general", "/admin/design-projects", "/admin/operational-projects",
+      "/admin/work-packages",
       "/admin/kpi",
       "/admin/construction/tasks", "/admin/construction/diary", "/admin/construction/punchlist",
       "/admin/construction/hse",
@@ -215,6 +219,7 @@ const matrix: RoleExpectation[] = [
     allowed: [
       "/admin", "/admin/notifications", "/admin/master-data", "/admin/workflows",
       "/admin/design-projects", "/admin/operational-projects", "/admin/construction/tasks",
+      "/admin/work-packages",
       "/admin/kpi",
       "/admin/construction/diary", "/admin/construction/punchlist",
       "/admin/construction/acceptance", "/admin/construction/asbuilt",
@@ -226,6 +231,7 @@ const matrix: RoleExpectation[] = [
     allowed: [
       "/admin", "/admin/notifications", "/admin/contracts", "/admin/design-projects",
       "/admin/operational-projects", "/admin/kpi", "/admin/permits", "/admin/master-data", "/admin/workflows",
+      "/admin/work-packages",
     ],
   },
   {
@@ -233,22 +239,22 @@ const matrix: RoleExpectation[] = [
     // crm.tenders.view (read-only access to approved quotes / tenders
     // for takeoff / cost tracking).
     user: TEST_USERS.qs,
-    allowed: ["/admin", "/admin/notifications", "/admin/projects", "/admin/quotes", "/admin/tenders", "/admin/contracts", "/admin/vendors", "/admin/operational-projects", "/admin/kpi", "/admin/processes/general", "/admin/master-data", "/admin/workflows"],
+    allowed: ["/admin", "/admin/notifications", "/admin/projects", "/admin/quotes", "/admin/tenders", "/admin/contracts", "/admin/vendors", "/admin/operational-projects", "/admin/work-packages", "/admin/kpi", "/admin/processes/general", "/admin/master-data", "/admin/workflows"],
   },
   {
     user: TEST_USERS.procurement,
-    allowed: ["/admin", "/admin/notifications", "/admin/contracts", "/admin/vendors", "/admin/procurement-control", "/admin/procurement-control/rfqs", "/admin/operational-projects", "/admin/kpi", "/admin/master-data", "/admin/workflows"],
+    allowed: ["/admin", "/admin/notifications", "/admin/contracts", "/admin/vendors", "/admin/procurement-control", "/admin/procurement-control/rfqs", "/admin/operational-projects", "/admin/work-packages", "/admin/kpi", "/admin/master-data", "/admin/workflows"],
   },
   {
     // ACCOUNTANT: contacts.view + system.audit.view + crm.customers.view (+ view.all)
     // + scoped cross-owner access to upstream and downstream contracts.
     user: TEST_USERS.accountant,
-    allowed: ["/admin", "/admin/notifications", "/admin/customers", "/admin/contracts", "/admin/finance/contracts", "/admin/finance/input-contracts", "/admin/vendors", "/admin/finance-control", "/admin/operational-projects", "/admin/reports/projects", "/admin/kpi", "/admin/kpi/configuration", "/admin/contacts", "/admin/activity-log", "/admin/master-data", "/admin/workflows"],
+    allowed: ["/admin", "/admin/notifications", "/admin/customers", "/admin/contracts", "/admin/finance/contracts", "/admin/finance/input-contracts", "/admin/vendors", "/admin/finance-control", "/admin/operational-projects", "/admin/work-packages", "/admin/reports/projects", "/admin/kpi", "/admin/kpi/configuration", "/admin/contacts", "/admin/activity-log", "/admin/master-data", "/admin/workflows"],
   },
   {
     // WAREHOUSE: processes.view only (plus dashboard)
     user: TEST_USERS.warehouse,
-    allowed: ["/admin", "/admin/notifications", "/admin/vendors", "/admin/procurement-control", "/admin/operational-projects", "/admin/processes/general", "/admin/master-data", "/admin/workflows"],
+    allowed: ["/admin", "/admin/notifications", "/admin/vendors", "/admin/procurement-control", "/admin/operational-projects", "/admin/work-packages", "/admin/processes/general", "/admin/master-data", "/admin/workflows"],
   },
   {
     // BGD: **.view + dashboard.view + system.audit.view — every view route.

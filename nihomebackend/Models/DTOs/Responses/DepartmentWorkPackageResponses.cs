@@ -25,6 +25,7 @@ public sealed class DepartmentWorkPackageResponse
     public int DepartmentRoleGroupId { get; set; }
     public string DepartmentCode { get; set; } = string.Empty;
     public string DepartmentLabelKey { get; set; } = string.Empty;
+    public List<DepartmentOptionResponse> ParticipantDepartments { get; set; } = new();
     public int LeadUserId { get; set; }
     public string LeadUserName { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
@@ -46,6 +47,9 @@ public sealed class DepartmentWorkTaskResponse
     public string Title { get; set; } = string.Empty;
     public string? Description { get; set; }
     public string? Resources { get; set; }
+    public int DepartmentRoleGroupId { get; set; }
+    public string DepartmentCode { get; set; } = string.Empty;
+    public string DepartmentLabelKey { get; set; } = string.Empty;
     public int AssigneeUserId { get; set; }
     public string AssigneeName { get; set; } = string.Empty;
     public int? ApproverUserId { get; set; }
@@ -79,6 +83,7 @@ public sealed class DepartmentOptionResponse
     public int Id { get; set; }
     public string Code { get; set; } = string.Empty;
     public string LabelKey { get; set; } = string.Empty;
+    public bool CanReceiveProjectPackage { get; set; }
 }
 
 public sealed class DepartmentUserOptionResponse

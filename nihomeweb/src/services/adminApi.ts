@@ -908,6 +908,9 @@ export interface DepartmentWorkTaskResponse {
   title: string;
   description?: string | null;
   resources?: string | null;
+  departmentRoleGroupId: number;
+  departmentCode: string;
+  departmentLabelKey: string;
   assigneeUserId: number;
   assigneeName: string;
   approverUserId?: number | null;
@@ -945,6 +948,7 @@ export interface DepartmentWorkPackageResponse {
   departmentRoleGroupId: number;
   departmentCode: string;
   departmentLabelKey: string;
+  participantDepartments: { id: number; code: string; labelKey: string; canReceiveProjectPackage: boolean }[];
   leadUserId: number;
   leadUserName: string;
   status: WorkPackageStatus;
@@ -966,7 +970,7 @@ export interface DepartmentWorkPackageListResponse {
 }
 
 export interface DepartmentWorkPackageOptionsResponse {
-  departments: { id: number; code: string; labelKey: string }[];
+  departments: { id: number; code: string; labelKey: string; canReceiveProjectPackage: boolean }[];
   users: { userId: number; name: string; email: string; roleGroupId: number; canLead: boolean }[];
   kpiDefinitions: { id: number; code: string; nameKey: string }[];
 }
@@ -991,6 +995,7 @@ export interface CreateDepartmentWorkPackageRequest {
   contractId?: number | null;
   sourceOpportunityId?: number | null;
   departmentRoleGroupId: number;
+  participantDepartmentRoleGroupIds: number[];
   leadUserId: number;
   plannedStart?: string | null;
   plannedEnd?: string | null;
@@ -1011,6 +1016,7 @@ export interface UpsertDepartmentWorkTaskRequest {
   title: string;
   description?: string | null;
   resources?: string | null;
+  departmentRoleGroupId?: number | null;
   assigneeUserId: number;
   approverUserId?: number | null;
   kpiDefinitionId?: number | null;

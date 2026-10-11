@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { useParams } from "react-router-dom";
-import { ChevronDown, FolderTree, GitCompareArrows, ListChecks, Plus, Search, ShieldCheck, Trash2, Users } from "lucide-react";
+import { ChevronDown, FolderTree, GitCompareArrows, ListChecks, Pencil, Plus, Search, ShieldCheck, Trash2, Users } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { Can } from "@/components/auth/Can";
 import { PageError, PageLoading } from "@/components/PageState";
@@ -229,6 +229,30 @@ export default function RoleList() {
       toast({ title: t("adminRbac.toast.groupSaved") });
     },
     onError: (err) => reportError(err, "adminRbac.toast.groupSaveFailed"),
+  });
+
+  const [editTarget, setEditTarget] = useState<RoleResponse | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editActive, setEditActive] = useState(true);
+  const openEditRole = (role: RoleResponse) => {
+    setEditTarget(role);
+    setEditName(role.name);
+    setEditActive(role.isActive);
+  };
+  const updateRoleMutation = useMutation({
+    mutationFn: async () => {
+      if (!editTarget) return;
+      await rbacApi.updateRole(editTarget.id, {
+        name: editName.trim(),
+        isActive: editActive,
+      });
+    },
+    onSuccess: async () => {
+      setEditTarget(null);
+      await invalidateAll();
+      toast({ title: t("adminRbac.toast.roleUpdated") });
+    },
+    onError: (err) => reportError(err, "adminRbac.toast.roleUpdateFailed"),
   });
 
   const [deleteTarget, setDeleteTarget] = useState<RoleResponse | null>(null);
@@ -604,6 +628,14 @@ export default function RoleList() {
                         {!selectedRole.isSystem && (
                           <Can permission={PERM_MANAGE}>
                             <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">
+                              <Button
+                                variant="outline"
+                                onClick={() => openEditRole(selectedRole)}
+                                data-testid={`rbac-edit-${selectedRole.code}`}
+                              >
+                                <Pencil className="mr-1.5 h-4 w-4" />
+                                {t("common.edit")}
+                              </Button>
                               <Button
                                 variant="outline"
                                 disabled={!isDirty(selectedRole.id)}
@@ -1249,6 +1281,48 @@ export default function RoleList() {
               data-testid="rbac-create-submit"
             >
               {createMutation.isPending ? t("adminRbac.creating") : t("adminRbac.create")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={editTarget !== null} onOpenChange={(open) => { if (!open) setEditTarget(null); }}>
+        <DialogContent className="w-[95vw] max-w-md sm:w-full">
+          <DialogHeader>
+            <DialogTitle>{t("adminRbac.editRole")}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="rbac-edit-code">{t("adminRbac.codeLabel")}</Label>
+              <Input id="rbac-edit-code" value={editTarget?.code ?? ""} disabled />
+              <p className="text-xs text-muted-foreground">{t("adminRbac.editCodeHelp")}</p>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="rbac-edit-name">{t("adminRbac.nameLabel")}</Label>
+              <Input
+                id="rbac-edit-name"
+                value={editName}
+                maxLength={100}
+                onChange={(event) => setEditName(event.target.value)}
+                data-testid="rbac-edit-name"
+              />
+            </div>
+            <label className="flex items-center gap-3 rounded-lg border p-3">
+              <Checkbox checked={editActive} onCheckedChange={(checked) => setEditActive(checked === true)} />
+              <span>
+                <span className="block text-sm font-medium">{t("adminRbac.activeRole")}</span>
+                <span className="block text-xs text-muted-foreground">{t("adminRbac.activeRoleHelp")}</span>
+              </span>
+            </label>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setEditTarget(null)}>{t("adminRbac.cancel")}</Button>
+            <Button
+              onClick={() => updateRoleMutation.mutate()}
+              disabled={updateRoleMutation.isPending || editName.trim().length < 2}
+              data-testid="rbac-edit-submit"
+            >
+              {t("adminRbac.save")}
             </Button>
           </DialogFooter>
         </DialogContent>

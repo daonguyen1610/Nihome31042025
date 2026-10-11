@@ -79,6 +79,7 @@ const DepartmentWorkPackages = () => {
     contractId: null,
     sourceOpportunityId: null,
     departmentRoleGroupId: 0,
+    participantDepartmentRoleGroupIds: [],
     leadUserId: 0,
     plannedStart: null,
     plannedEnd: null,
@@ -88,6 +89,7 @@ const DepartmentWorkPackages = () => {
     title: "",
     description: "",
     resources: "",
+    departmentRoleGroupId: null,
     assigneeUserId: 0,
     approverUserId: null,
     kpiDefinitionId: null,
@@ -123,6 +125,11 @@ const DepartmentWorkPackages = () => {
 
   useEffect(() => { void load(); }, [load]);
   useEffect(() => {
+    if (!detail) return;
+    const taskId = params.get("taskId");
+    if (taskId) document.getElementById(`task-${taskId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [detail, params]);
+  useEffect(() => {
     Promise.all([
       adminApi.getWorkPackageOptions(),
       adminApi.listOperationalProjects({ pageSize: 100 }),
@@ -154,7 +161,11 @@ const DepartmentWorkPackages = () => {
   const departmentUsers = useMemo(() => options.users.filter(user =>
     user.roleGroupId === packageForm.departmentRoleGroupId && user.canLead), [options.users, packageForm.departmentRoleGroupId]);
   const taskUsers = useMemo(() => options.users.filter(user =>
-    user.roleGroupId === detail?.departmentRoleGroupId), [detail?.departmentRoleGroupId, options.users]);
+    user.roleGroupId === (taskForm.departmentRoleGroupId || detail?.departmentRoleGroupId)),
+  [detail?.departmentRoleGroupId, options.users, taskForm.departmentRoleGroupId]);
+  const availableDepartments = useMemo(() => packageForm.kind === "Project"
+    ? options.departments.filter(group => group.canReceiveProjectPackage)
+    : options.departments, [options.departments, packageForm.kind]);
 
   const openCreatePackage = () => {
     setPackageForm({
@@ -165,6 +176,7 @@ const DepartmentWorkPackages = () => {
       contractId: null,
       sourceOpportunityId: null,
       departmentRoleGroupId: 0,
+      participantDepartmentRoleGroupIds: [],
       leadUserId: 0,
       plannedStart: null,
       plannedEnd: null,
@@ -198,6 +210,7 @@ const DepartmentWorkPackages = () => {
       title: task.title,
       description: task.description ?? "",
       resources: task.resources ?? "",
+      departmentRoleGroupId: task.departmentRoleGroupId,
       assigneeUserId: task.assigneeUserId,
       approverUserId: task.approverUserId ?? null,
       kpiDefinitionId: task.kpiDefinitionId ?? null,
@@ -211,6 +224,7 @@ const DepartmentWorkPackages = () => {
       title: "",
       description: "",
       resources: "",
+      departmentRoleGroupId: detail?.kind === "Internal" ? null : detail?.departmentRoleGroupId,
       assigneeUserId: 0,
       approverUserId: null,
       kpiDefinitionId: null,
@@ -337,7 +351,7 @@ const DepartmentWorkPackages = () => {
           <div><h1 className="text-3xl font-bold">{t("workPackages.title")}</h1><p className="mt-1 text-muted-foreground">{t("workPackages.subtitle")}</p></div>
           {canCreate && <Button onClick={openCreatePackage}><Plus className="mr-2 h-4 w-4" />{t("workPackages.action.create")}</Button>}
         </div>
-        <Tabs value={kind} onValueChange={value => { const next = new URLSearchParams(params); next.set("kind", value); next.delete("create"); setParams(next); }}>
+        <Tabs value={kind} onValueChange={value => { const next = new URLSearchParams(); next.set("kind", value); setParams(next); }}>
           <TabsList><TabsTrigger value="Project">{t("workPackages.tab.project")}</TabsTrigger><TabsTrigger value="Internal">{t("workPackages.tab.internal")}</TabsTrigger></TabsList>
         </Tabs>
         <div className="relative max-w-xl"><Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" /><Input value={search} onChange={event => setSearch(event.target.value)} placeholder={t("workPackages.search")} className="pl-9" /></div>
@@ -353,12 +367,13 @@ const DepartmentWorkPackages = () => {
     </div>
 
     <Dialog open={packageOpen} onOpenChange={setPackageOpen}><DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl"><DialogHeader><DialogTitle>{t("workPackages.create.title")}</DialogTitle><DialogDescription>{t("workPackages.create.help")}</DialogDescription></DialogHeader><div className="grid gap-4 sm:grid-cols-2">
-      <Field label={t("workPackages.field.type")}><Select value={packageForm.kind} onValueChange={(value: WorkPackageKind) => setPackageForm(current => ({ ...current, kind: value, operationalProjectId: null, contractId: null }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Project">{t("workPackages.kind.Project")}</SelectItem>{canAssign && <SelectItem value="Internal">{t("workPackages.kind.Internal")}</SelectItem>}</SelectContent></Select></Field>
+      <Field label={t("workPackages.field.type")}><Select value={packageForm.kind} onValueChange={(value: WorkPackageKind) => setPackageForm(current => ({ ...current, kind: value, operationalProjectId: null, contractId: null, sourceOpportunityId: null, departmentRoleGroupId: 0, participantDepartmentRoleGroupIds: [], leadUserId: 0 }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Project">{t("workPackages.kind.Project")}</SelectItem>{canAssign && <SelectItem value="Internal">{t("workPackages.kind.Internal")}</SelectItem>}</SelectContent></Select></Field>
       {packageForm.kind === "Project" && <Field label={t("workPackages.field.project")}><Select value={packageForm.operationalProjectId?.toString() ?? ""} onValueChange={value => setPackageForm(current => ({ ...current, operationalProjectId: Number(value), contractId: null }))}><SelectTrigger><SelectValue placeholder={t("workPackages.placeholder.project")} /></SelectTrigger><SelectContent>{projects.map(project => <SelectItem key={project.id} value={String(project.id)}>{project.code} · {project.name}</SelectItem>)}</SelectContent></Select></Field>}
       {packageForm.kind === "Project" && <Field label={t("workPackages.field.contract")}><Select value={packageForm.contractId?.toString() ?? "none"} onValueChange={value => setPackageForm(current => ({ ...current, contractId: value === "none" ? null : Number(value) }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">{t("workPackages.contract.none")}</SelectItem>{contracts.map(contract => <SelectItem key={contract.id} value={String(contract.id)}>{contract.contractNumber}</SelectItem>)}</SelectContent></Select></Field>}
       <Field label={t("workPackages.field.name")} className="sm:col-span-2"><Input maxLength={300} value={packageForm.name} onChange={event => setPackageForm(current => ({ ...current, name: event.target.value }))} /></Field>
-      <Field label={t("workPackages.field.department")}><Select value={packageForm.departmentRoleGroupId ? String(packageForm.departmentRoleGroupId) : ""} onValueChange={value => setPackageForm(current => ({ ...current, departmentRoleGroupId: Number(value), leadUserId: 0 }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{options.departments.map(group => <SelectItem key={group.id} value={String(group.id)}>{t(group.labelKey)}</SelectItem>)}</SelectContent></Select></Field>
+      <Field label={t("workPackages.field.department")}><Select value={packageForm.departmentRoleGroupId ? String(packageForm.departmentRoleGroupId) : ""} onValueChange={value => setPackageForm(current => ({ ...current, departmentRoleGroupId: Number(value), participantDepartmentRoleGroupIds: current.participantDepartmentRoleGroupIds.filter(id => id !== Number(value)), leadUserId: 0 }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{availableDepartments.map(group => <SelectItem key={group.id} value={String(group.id)}>{t(group.labelKey)}</SelectItem>)}</SelectContent></Select></Field>
       <Field label={t("workPackages.field.lead")}><Select value={packageForm.leadUserId ? String(packageForm.leadUserId) : ""} onValueChange={value => setPackageForm(current => ({ ...current, leadUserId: Number(value) }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{departmentUsers.map(user => <SelectItem key={user.userId} value={String(user.userId)}>{user.name}</SelectItem>)}</SelectContent></Select></Field>
+      {packageForm.kind === "Internal" && <Field label={t("workPackages.field.participants")} className="sm:col-span-2"><ChoiceGrid emptyLabel={t("workPackages.participants.none")} items={options.departments.filter(group => group.id !== packageForm.departmentRoleGroupId).map(group => ({ id: group.id, label: t(group.labelKey) }))} selected={packageForm.participantDepartmentRoleGroupIds} onChange={participantDepartmentRoleGroupIds => setPackageForm(current => ({ ...current, participantDepartmentRoleGroupIds }))} /></Field>}
       <Field label={t("workPackages.field.start")}><Input type="date" value={dateValue(packageForm.plannedStart)} onChange={event => setPackageForm(current => ({ ...current, plannedStart: event.target.value ? apiDate(event.target.value) : null }))} /></Field>
       <Field label={t("workPackages.field.end")}><Input type="date" value={dateValue(packageForm.plannedEnd)} onChange={event => setPackageForm(current => ({ ...current, plannedEnd: event.target.value ? apiDate(event.target.value) : null }))} /></Field>
       <Field label={t("workPackages.field.description")} className="sm:col-span-2"><Textarea maxLength={4000} value={packageForm.description ?? ""} onChange={event => setPackageForm(current => ({ ...current, description: event.target.value }))} /></Field>
@@ -367,6 +382,7 @@ const DepartmentWorkPackages = () => {
     <Dialog open={taskOpen} onOpenChange={setTaskOpen}><DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl"><DialogHeader><DialogTitle>{t(taskEditing ? "workPackages.task.edit" : "workPackages.task.create")}</DialogTitle><DialogDescription>{t("workPackages.task.help")}</DialogDescription></DialogHeader><div className="grid gap-4 sm:grid-cols-2">
       <Field label={t("workPackages.field.wbs")}><Input maxLength={120} value={taskForm.wbsCode} onChange={event => setTaskForm(current => ({ ...current, wbsCode: event.target.value }))} /></Field>
       <Field label={t("workPackages.field.taskName")}><Input maxLength={300} value={taskForm.title} onChange={event => setTaskForm(current => ({ ...current, title: event.target.value }))} /></Field>
+      {detail?.kind === "Internal" && <Field label={t("workPackages.field.department")}><Select value={taskForm.departmentRoleGroupId?.toString() ?? ""} onValueChange={value => setTaskForm(current => ({ ...current, departmentRoleGroupId: Number(value), assigneeUserId: 0, approverUserId: null, ccUserIds: [] }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{detail.participantDepartments.map(group => <SelectItem key={group.id} value={String(group.id)}>{t(group.labelKey)}</SelectItem>)}</SelectContent></Select></Field>}
       <Field label={t("workPackages.field.assignee")}><Select value={taskForm.assigneeUserId ? String(taskForm.assigneeUserId) : ""} onValueChange={value => setTaskForm(current => ({ ...current, assigneeUserId: Number(value), ccUserIds: current.ccUserIds.filter(id => id !== Number(value)), approverUserId: current.approverUserId === Number(value) ? null : current.approverUserId }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{taskUsers.map(user => <SelectItem key={user.userId} value={String(user.userId)}>{user.name}</SelectItem>)}</SelectContent></Select></Field>
       <Field label={t("workPackages.field.approver")}><Select value={taskForm.approverUserId?.toString() ?? "lead"} onValueChange={value => setTaskForm(current => ({ ...current, approverUserId: value === "lead" ? null : Number(value) }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="lead">{t("workPackages.approver.lead")}</SelectItem>{taskUsers.filter(user => user.userId !== taskForm.assigneeUserId).map(user => <SelectItem key={user.userId} value={String(user.userId)}>{user.name}</SelectItem>)}</SelectContent></Select></Field>
       <Field label={t("workPackages.field.start")}><Input type="date" value={taskForm.plannedStart} onChange={event => setTaskForm(current => ({ ...current, plannedStart: event.target.value }))} /></Field>

@@ -54,9 +54,10 @@ public class RbacSeederTests : IDisposable
             .ToDictionary(role => role.Code, role => role.RoleGroup == null ? null : role.RoleGroup.Code);
 
         Assert.Equal("CRM", groupByRole["SALE"]);
-        Assert.Equal("HR_ADMIN", groupByRole["LEGAL_OFFICER"]);
+        Assert.Equal("CONSTRUCTION", groupByRole["LEGAL_OFFICER"]);
         Assert.Equal("DESIGN", groupByRole["DESIGN_LEAD"]);
-        Assert.Equal("CONSTRUCTION", groupByRole["WAREHOUSE"]);
+        Assert.Equal("PROCUREMENT", groupByRole["WAREHOUSE"]);
+        Assert.Equal("PROCUREMENT", groupByRole["PROCUREMENT"]);
         Assert.Equal("FINANCE", groupByRole["ACCOUNTANT"]);
         Assert.Null(groupByRole["BGD"]);
         Assert.All(_db.Roles.Where(role => !role.IsSystem), role => Assert.True(role.InitialGroupSeeded));
@@ -235,7 +236,11 @@ public class RbacSeederTests : IDisposable
         var expandedCatalog = extended.BaseCatalog
             .Append(new PermissionCatalog.Entry("synthetic", "manage", "rbac.perm.synthetic.manage"))
             .ToList();
-        var grown = new RbacSeedData.Bundle(expandedCatalog, extended.BusinessRoles, extended.RolePermissions);
+        var grown = new RbacSeedData.Bundle(
+            expandedCatalog,
+            extended.BusinessRoles,
+            extended.RolePermissions,
+            extended.RoleGroups);
 
         RbacSeeder.Seed(_db, assemblies: null, seedData: grown);
 

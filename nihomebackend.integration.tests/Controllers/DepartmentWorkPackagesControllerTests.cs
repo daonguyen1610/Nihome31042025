@@ -40,10 +40,10 @@ public sealed class DepartmentWorkPackagesControllerTests(NihomeWebApplicationFa
         var packageResponse = await SendAsync(HttpMethod.Post, "/api/work-packages", new
         {
             kind = "Project",
-            name = "Triển khai hồ sơ thiết kế kỹ thuật",
+            name = "Chuẩn bị vật tư thi công",
             operationalProjectId = seed.ProjectId,
-            departmentRoleGroupId = seed.DesignGroupId,
-            leadUserId = seed.DesignLeadId,
+            departmentRoleGroupId = seed.DepartmentGroupId,
+            leadUserId = seed.DepartmentLeadId,
             plannedStart = "2026-10-12T00:00:00Z",
             plannedEnd = "2026-10-30T00:00:00Z",
         });
@@ -53,10 +53,10 @@ public sealed class DepartmentWorkPackagesControllerTests(NihomeWebApplicationFa
 
         var taskResponse = await SendAsync(HttpMethod.Post, $"/api/work-packages/{packageId}/tasks", new
         {
-            wbsCode = "DES-01",
-            title = "Hoàn thiện mặt bằng kiến trúc",
-            assigneeUserId = seed.ArchitectId,
-            approverUserId = seed.DesignLeadId,
+            wbsCode = "SUP-01",
+            title = "Lập kế hoạch cung ứng vật tư",
+            assigneeUserId = seed.DepartmentStaffId,
+            approverUserId = seed.DepartmentLeadId,
             kpiDefinitionId = seed.KpiDefinitionId,
             plannedStart = "2026-10-12T00:00:00Z",
             plannedEnd = "2026-10-18T00:00:00Z",
@@ -66,6 +66,7 @@ public sealed class DepartmentWorkPackagesControllerTests(NihomeWebApplicationFa
         taskResponse.StatusCode.Should().Be(HttpStatusCode.Created);
         var task = await ReadJsonAsync(taskResponse);
         var taskId = task.GetProperty("id").GetInt32();
+        package = await ReadJsonAsync(await Client.GetAsync($"/api/work-packages/{packageId}"));
 
         var activated = await SendAsync(HttpMethod.Put, $"/api/work-packages/{packageId}", new
         {
@@ -77,7 +78,7 @@ public sealed class DepartmentWorkPackagesControllerTests(NihomeWebApplicationFa
         }, package.GetProperty("rowVersion").GetString());
         activated.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "ARCHITECT"));
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "WAREHOUSE"));
         var completed = await SendAsync(HttpMethod.Put, $"/api/work-packages/{packageId}/tasks/{taskId}/progress", new
         {
             status = "Completed",
@@ -94,7 +95,7 @@ public sealed class DepartmentWorkPackagesControllerTests(NihomeWebApplicationFa
         }, completedTask.GetProperty("rowVersion").GetString());
         selfVerify.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
-        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "DESIGN_LEAD"));
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "PROCUREMENT"));
         var verified = await SendAsync(HttpMethod.Post, $"/api/work-packages/{packageId}/tasks/{taskId}/verify", new
         {
             confirm = true,
@@ -115,8 +116,8 @@ public sealed class DepartmentWorkPackagesControllerTests(NihomeWebApplicationFa
             kind = "Internal",
             name = "Đào tạo nội bộ",
             operationalProjectId = seed.ProjectId,
-            departmentRoleGroupId = seed.DesignGroupId,
-            leadUserId = seed.DesignLeadId,
+            departmentRoleGroupId = seed.DepartmentGroupId,
+            leadUserId = seed.DepartmentLeadId,
         });
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -165,8 +166,8 @@ public sealed class DepartmentWorkPackagesControllerTests(NihomeWebApplicationFa
             name = "Nhóm việc sai dự án",
             operationalProjectId = seed.ProjectId,
             sourceOpportunityId = opportunityId,
-            departmentRoleGroupId = seed.DesignGroupId,
-            leadUserId = seed.DesignLeadId,
+            departmentRoleGroupId = seed.DepartmentGroupId,
+            leadUserId = seed.DepartmentLeadId,
         });
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -182,13 +183,13 @@ public sealed class DepartmentWorkPackagesControllerTests(NihomeWebApplicationFa
         return await Client.SendAsync(request);
     }
 
-    private Task<(int ProjectId, int DesignGroupId, int DesignLeadId, int ArchitectId, int KpiDefinitionId)> SeedProjectScopeAsync() =>
+    private Task<(int ProjectId, int DepartmentGroupId, int DepartmentLeadId, int DepartmentStaffId, int KpiDefinitionId)> SeedProjectScopeAsync() =>
         WithDbAsync(async db =>
         {
-            var designGroupId = await db.RoleGroups.Where(item => item.Code == "DESIGN").Select(item => item.Id).SingleAsync();
-            var designLeadId = await db.Users.Where(item => item.RoleEntity != null && item.RoleEntity.Code == "DESIGN_LEAD")
+            var departmentGroupId = await db.RoleGroups.Where(item => item.Code == "PROCUREMENT").Select(item => item.Id).SingleAsync();
+            var departmentLeadId = await db.Users.Where(item => item.RoleEntity != null && item.RoleEntity.Code == "PROCUREMENT")
                 .Select(item => item.Id).SingleAsync();
-            var architectId = await db.Users.Where(item => item.RoleEntity != null && item.RoleEntity.Code == "ARCHITECT")
+            var departmentStaffId = await db.Users.Where(item => item.RoleEntity != null && item.RoleEntity.Code == "WAREHOUSE")
                 .Select(item => item.Id).SingleAsync();
             var adminId = await db.Users.Where(item => item.RoleEntity != null && item.RoleEntity.Code == "SUPER_ADMIN")
                 .Select(item => item.Id).SingleAsync();
@@ -207,9 +208,9 @@ public sealed class DepartmentWorkPackagesControllerTests(NihomeWebApplicationFa
             };
             var definition = new KpiDefinition
             {
-                Code = $"DESIGN-WORK-{Guid.NewGuid():N}"[..30],
-                RoleCode = "DESIGN",
-                NameKey = "kpi.definition.DESIGN_VERIFIED_WORK",
+                Code = $"WAREHOUSE-WORK-{Guid.NewGuid():N}"[..30],
+                RoleCode = "WAREHOUSE",
+                NameKey = "kpi.definition.WAREHOUSE_VERIFIED_WORK",
                 SourceModule = "WORK",
                 MetricCode = "VerifiedWorkTaskCount",
                 Weight = .1m,
@@ -220,6 +221,6 @@ public sealed class DepartmentWorkPackagesControllerTests(NihomeWebApplicationFa
             };
             db.AddRange(project, definition);
             await db.SaveChangesAsync();
-            return (project.Id, designGroupId, designLeadId, architectId, definition.Id);
+            return (project.Id, departmentGroupId, departmentLeadId, departmentStaffId, definition.Id);
         });
 }

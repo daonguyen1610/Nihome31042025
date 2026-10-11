@@ -55,21 +55,36 @@ public static class RbacSeedData
                     kv.Value?.Deny ?? []),
                 StringComparer.OrdinalIgnoreCase);
 
-        return new Bundle(baseCatalog, businessRoles, rolePermissions);
+        var roleGroups = (raw.RoleGroups ?? [])
+            .Select(group => new RoleGroupDefaults(
+                group.Code,
+                group.LabelKey,
+                group.SortOrder,
+                group.Patterns ?? []))
+            .ToList();
+
+        return new Bundle(baseCatalog, businessRoles, rolePermissions, roleGroups);
     }
 
     public sealed record Bundle(
         IReadOnlyList<PermissionCatalog.Entry> BaseCatalog,
         IReadOnlyList<PermissionCatalog.BusinessRole> BusinessRoles,
-        IReadOnlyDictionary<string, RolePermissionDefaults> RolePermissions);
+        IReadOnlyDictionary<string, RolePermissionDefaults> RolePermissions,
+        IReadOnlyList<RoleGroupDefaults> RoleGroups);
 
     public sealed record RolePermissionDefaults(IReadOnlyList<string> Patterns, IReadOnlyList<string> Deny);
+    public sealed record RoleGroupDefaults(
+        string Code,
+        string LabelKey,
+        int SortOrder,
+        IReadOnlyList<string> Patterns);
 
     private sealed class Raw
     {
         [JsonPropertyName("baseCatalog")] public List<RawEntry>? BaseCatalog { get; set; }
         [JsonPropertyName("businessRoles")] public List<RawRole>? BusinessRoles { get; set; }
         [JsonPropertyName("rolePermissions")] public Dictionary<string, RawRolePerms>? RolePermissions { get; set; }
+        [JsonPropertyName("roleGroups")] public List<RawRoleGroup>? RoleGroups { get; set; }
     }
 
     private sealed class RawEntry
@@ -89,5 +104,13 @@ public static class RbacSeedData
     {
         public List<string>? Patterns { get; set; }
         public List<string>? Deny { get; set; }
+    }
+
+    private sealed class RawRoleGroup
+    {
+        public string Code { get; set; } = "";
+        public string LabelKey { get; set; } = "";
+        public int SortOrder { get; set; }
+        public List<string>? Patterns { get; set; }
     }
 }
