@@ -56,7 +56,7 @@ Buổi họp kéo dài khoảng 3 giờ. Nam (đội dev) demo luồng D&B từ 
 
 - Hai hình thức báo giá: theo suất đầu tư và theo BOQ. Hệ thống đã có file Excel mẫu để tải xuống, điền và import. Báo giá có version; mỗi báo giá chỉ một version được duyệt.
 - BOQ của NICON là file Excel **nhiều sheet**. Mỗi sheet là một hạng mục (nhà xưởng, nhà kho, văn phòng, ký túc xá, hạ tầng); số lượng và loại hạng mục khác nhau theo công trình.
-- Dev cần một **template chuẩn** để import. NICON gửi nhiều mẫu BOQ theo loại công trình (nhà xưởng quy mô khác nhau, nhà ở, căn hộ dịch vụ, văn phòng) để dev tìm cách xử lý chung.
+- Dev cần một **template chuẩn** để import. NICON gửi nhiều mẫu BOQ theo loại công trình (nhà xưởng quy mô khác nhau, nhà ở, căn hộ dịch vụ, văn phòng) để dev tìm cách xử lý chung. (Đã có ở docs/Nicon/BOQ).
 
 ## 7. Đấu thầu
 
