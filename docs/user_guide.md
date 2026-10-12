@@ -523,8 +523,11 @@ notification linked directly to the Tender; saving the same assignee again does
 not create a duplicate notification. The **Capability profile** checklist item
 must use an existing document from the shared capability-document library;
 project-specific items such as BOQ, method statement, and tender drawings accept
-a direct upload. The selected file is previewed securely inside the Tender detail
-page. Checklist status, ownership, deadlines, and files become read-only after
+a direct upload. A row can be marked **Done** or **Submitted** only after its
+required evidence is attached; submission rechecks every row and rejects a
+shared-library reference on project-specific items. The selected file is
+previewed securely inside the Tender detail page. Checklist status, ownership,
+deadlines, and files become read-only after
 the tender is Won, Lost, or Cancelled. The **Tender plan** tab uses the shared
 cross-department work-package workflow: create one package for each responsible
 department, then define its task owner, independent verifier, planned start/end,
@@ -543,7 +546,8 @@ calculates cost subtotal, bid subtotal, VAT, and grand bid total. Submit the
 revision for approval; authorized users approve or reject it with a reason.
 The Tender can move from Preparing to Submitted only when at least one active
 Tender-plan package exists, all active plan packages are completed after their
-tasks are independently verified, every checklist item is ready, an approved
+tasks are independently verified, every checklist item is ready with the correct
+shared or tender-specific evidence, an approved
 estimate exists, and the Tender carries a shared
 Operational Project with an approved Finance tender review of its financial
 dossier (see 3.0.2). Won and Lost are available only from

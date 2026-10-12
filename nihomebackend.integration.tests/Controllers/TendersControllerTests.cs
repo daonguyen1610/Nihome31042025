@@ -537,7 +537,14 @@ public class TendersControllerTests : IntegrationTestBase
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
         var id = await CreateTenderAsync();
-        var itemId = await FirstChecklistItemIdAsync(id);
+        var itemId = await FirstChecklistItemIdAsync(id, "boq");
+        await WithDbAsync(async db =>
+        {
+            var item = await db.TenderChecklistItems.SingleAsync(row => row.Id == itemId);
+            item.FilePath = $"/files/tenders/test-{itemId}.pdf";
+            item.OriginalFileName = "boq-goi-thau.pdf";
+            await db.SaveChangesAsync();
+        });
 
         var res = await Client.PatchAsJsonAsync($"/api/tenders/{id}/checklist/{itemId}", new
         {
@@ -546,6 +553,23 @@ public class TendersControllerTests : IntegrationTestBase
         res.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await ReadJsonAsync(res);
         body.GetProperty("checklistCompletionPercent").GetInt32().Should().BeGreaterThan(0);
+    }
+
+    [Fact]
+    public async Task PatchChecklist_CompletedWithoutFile_IsBadRequestAndPreservesItem()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var tenderId = await CreateTenderAsync();
+        var itemId = await FirstChecklistItemIdAsync(tenderId, "boq");
+
+        var response = await Client.PatchAsJsonAsync(
+            $"/api/tenders/{tenderId}/checklist/{itemId}", new { status = "Done" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var item = await WithDbAsync(db => db.TenderChecklistItems.AsNoTracking()
+            .SingleAsync(row => row.Id == itemId));
+        item.Status.Should().Be(TenderChecklistItemStatus.NotStarted);
+        item.FilePath.Should().BeNull();
     }
 
     [Fact]
@@ -631,7 +655,7 @@ public class TendersControllerTests : IntegrationTestBase
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
         var tenderId = await CreateTenderAsync();
-        var itemId = await FirstChecklistItemIdAsync(tenderId);
+        var itemId = await FirstChecklistItemIdAsync(tenderId, "capability");
         var submissionDeadline = await WithDbAsync(db => db.Tenders
             .Where(tender => tender.Id == tenderId)
             .Select(tender => tender.SubmissionDeadline)
@@ -712,7 +736,7 @@ public class TendersControllerTests : IntegrationTestBase
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
         var tenderId = await CreateTenderAsync();
-        var itemId = await FirstChecklistItemIdAsync(tenderId);
+        var itemId = await FirstChecklistItemIdAsync(tenderId, "capability");
         var docId = await CreateCapabilityDocumentAsync();
         await WithDbAsync(async db =>
         {
@@ -850,13 +874,33 @@ public class TendersControllerTests : IntegrationTestBase
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
         var tenderId = await CreateTenderAsync();
-        var itemId = await FirstChecklistItemIdAsync(tenderId);
+        var itemId = await FirstChecklistItemIdAsync(tenderId, "capability");
 
         var res = await Client.PostAsJsonAsync($"/api/tenders/{tenderId}/checklist/attach-from-library", new
         {
             items = new[] { new { checklistItemId = itemId, capabilityDocumentId = 9_999_999 } },
         });
         res.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task AttachFromLibrary_ProjectSpecificItem_IsBadRequestAndPreservesItem()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var tenderId = await CreateTenderAsync();
+        var itemId = await FirstChecklistItemIdAsync(tenderId, "boq");
+        var documentId = await CreateCapabilityDocumentAsync();
+
+        var response = await Client.PostAsJsonAsync(
+            $"/api/tenders/{tenderId}/checklist/attach-from-library",
+            new { items = new[] { new { checklistItemId = itemId, capabilityDocumentId = documentId } } });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var item = await WithDbAsync(db => db.TenderChecklistItems.AsNoTracking()
+            .SingleAsync(row => row.Id == itemId));
+        item.Status.Should().Be(TenderChecklistItemStatus.NotStarted);
+        item.CapabilityDocumentId.Should().BeNull();
+        item.FilePath.Should().BeNull();
     }
 
     [Fact]
@@ -883,7 +927,17 @@ public class TendersControllerTests : IntegrationTestBase
             foreach (var item in tender.ChecklistItems)
             {
                 item.Status = TenderChecklistItemStatus.Done;
-                if (item.TemplateCode == "capability") item.CapabilityDocument = capability;
+                if (item.TemplateCode == "capability")
+                {
+                    item.CapabilityDocument = capability;
+                    item.FilePath = capability.FilePath;
+                    item.OriginalFileName = capability.OriginalFileName;
+                }
+                else
+                {
+                    item.FilePath = $"/files/tenders/test-{tender.Id}-{item.Id}.pdf";
+                    item.OriginalFileName = $"{item.TemplateCode ?? $"item-{item.Id}"}.pdf";
+                }
             }
             var groupId = await db.RoleGroups.Where(item => item.IsActive)
                 .OrderBy(item => item.Id).Select(item => item.Id).FirstAsync();

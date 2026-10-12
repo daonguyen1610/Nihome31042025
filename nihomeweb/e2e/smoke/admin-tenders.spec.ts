@@ -36,6 +36,70 @@ test("SPA renders /admin/tenders without console errors for SALES_MANAGER", asyn
     expect(jsErrors, `Unexpected JS errors: ${jsErrors.join("\n")}`).toHaveLength(0);
 });
 
+test("SALE can prepare a tender but cannot submit or cancel it", async ({
+    api,
+    page,
+    loginAs,
+    loginInBrowserAs,
+}) => {
+    const managerToken = await loginAs(TEST_USERS.salesManager);
+    const headers = { Authorization: `Bearer ${managerToken}` };
+    const unique = Date.now().toString();
+    let customerId = 0;
+    let projectId = 0;
+    let tenderId = 0;
+
+    try {
+        const customerResponse = await api.post("/api/customers", {
+            headers,
+            data: {
+                type: "Individual",
+                name: `Tender permission customer ${unique}`,
+                sourceCode: "marketing",
+                primaryContact: {
+                    fullName: `Tender permission contact ${unique}`,
+                    phone: `07${unique.slice(-8)}`,
+                    isPrimary: true,
+                },
+            },
+        });
+        expect(customerResponse.status(), await customerResponse.text()).toBe(201);
+        customerId = (await customerResponse.json()).id as number;
+
+        const projectResponse = await api.post("/api/operational-projects", {
+            headers,
+            data: { name: `Tender permission project ${unique}`, customerId },
+        });
+        expect(projectResponse.status(), await projectResponse.text()).toBe(201);
+        projectId = (await projectResponse.json()).id as number;
+
+        const tenderResponse = await api.post("/api/tenders", {
+            headers,
+            data: {
+                name: `Tender permission boundary ${unique}`,
+                customerId,
+                operationalProjectId: projectId,
+                submissionDeadline: new Date(Date.now() + 14 * 24 * 60 * 60 * 1_000).toISOString(),
+            },
+        });
+        expect(tenderResponse.status(), await tenderResponse.text()).toBe(201);
+        tenderId = (await tenderResponse.json()).id as number;
+
+        await loginInBrowserAs(page, TEST_USERS.sale);
+        await page.goto(`/admin/tenders/${tenderId}`, { waitUntil: "networkidle" });
+        await page.getByTestId("tender-estimate-tab").click();
+
+        await expect(page.getByTestId("tender-lifecycle")).toBeVisible();
+        await expect(page.getByTestId("tender-submit")).toHaveCount(0);
+        await expect(page.getByTestId("tender-cancel")).toHaveCount(0);
+        await expect(page.getByText(/Nhập dự toán|Import estimate/)).toBeVisible();
+    } finally {
+        if (tenderId) await hardDeleteBusinessRoot(api, headers, `/api/tenders/${tenderId}`);
+        if (projectId) await hardDeleteBusinessRoot(api, headers, `/api/operational-projects/${projectId}`);
+        if (customerId) await hardDeleteBusinessRoot(api, headers, `/api/customers/${customerId}`);
+    }
+});
+
 test("tender plan assigns owners and deadlines and manages checklist files", async ({
     api,
     page,
@@ -134,15 +198,31 @@ test("tender plan assigns owners and deadlines and manages checklist files", asy
         for (const item of checklistItems) {
             const key = item.templateCode ?? item.id;
             await expect(page.getByTestId(`tender-checklist-row-${key}-desktop`)).toBeVisible();
-            await expect(page.getByTestId(`tender-checklist-library-${key}-desktop`)).toBeVisible();
             if (item.templateCode === "capability") {
+                await expect(page.getByTestId(`tender-checklist-library-${key}-desktop`)).toBeVisible();
                 await expect(page.getByTestId(`tender-checklist-row-${key}-desktop`))
                     .toContainText(/Phải chọn từ thư viện dùng chung|Select from shared library/);
                 await expect(page.getByTestId(`tender-checklist-upload-${key}-desktop`)).toHaveCount(0);
             } else {
+                await expect(page.getByTestId(`tender-checklist-library-${key}-desktop`)).toHaveCount(0);
                 await expect(page.getByTestId(`tender-checklist-upload-${key}-desktop`)).toBeVisible();
             }
         }
+
+        const capabilityItem = checklistItems.find((item) => item.templateCode === "capability");
+        expect(capabilityItem).toBeTruthy();
+        const capabilityKey = capabilityItem!.templateCode ?? capabilityItem!.id;
+        await page.getByTestId(`tender-checklist-library-${capabilityKey}-desktop`).click();
+        const libraryDialog = page.getByRole("dialog");
+        await expect(libraryDialog).toBeVisible();
+        await expect(
+            libraryDialog.getByRole("heading", {
+                name: /thư viện dùng chung|shared document library|共享文档库|共有文書ライブラリ/i,
+            }),
+        ).toBeVisible();
+        await expect(libraryDialog.getByTestId("tender-library-target")).toHaveText(capabilityItem!.title);
+        await page.keyboard.press("Escape");
+        await expect(libraryDialog).toBeHidden();
 
         const assigneeOptionsResponse = await api.get("/api/tenders/assignee-options", { headers });
         expect(assigneeOptionsResponse.status(), await assigneeOptionsResponse.text()).toBe(200);
@@ -176,17 +256,7 @@ test("tender plan assigns owners and deadlines and manages checklist files", asy
         const targetKey = target.templateCode ?? target.id;
         await expect(page.getByTestId(`tender-checklist-row-${targetKey}-desktop`))
             .toContainText(/Hồ sơ theo gói thầu|Tender-specific document/);
-        await page.getByTestId(`tender-checklist-library-${targetKey}-desktop`).click();
-        const libraryDialog = page.getByRole("dialog");
-        await expect(libraryDialog).toBeVisible();
-        await expect(
-            libraryDialog.getByRole("heading", {
-                name: /thư viện dùng chung|shared document library|共享文档库|共有文書ライブラリ/i,
-            }),
-        ).toBeVisible();
-        await expect(libraryDialog.getByTestId("tender-library-target")).toHaveText(target.title);
-        await page.keyboard.press("Escape");
-        await expect(libraryDialog).toBeHidden();
+        await expect(page.getByTestId(`tender-checklist-library-${targetKey}-desktop`)).toHaveCount(0);
 
         const uploadResponsePromise = page.waitForResponse((response) =>
             response.request().method() === "POST"

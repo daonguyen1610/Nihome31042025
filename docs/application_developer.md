@@ -1023,8 +1023,11 @@ permission. A changed assignment emits one `tender.checklist.assigned`
 notification with a direct Tender link; an unchanged assignment is idempotent.
 Internal deadlines are date-based, may not be before the current date, and may
 not be after the Tender submission date. These rules are enforced by the
-service as well as the form. Users may replace a checklist file with a direct
-upload or attach one existing capability document. Direct uploads are stored
+service as well as the form. Only the `TemplateCode=capability` row may attach
+an existing capability document; every other row uses a direct upload. A row
+cannot move to `Done` or `Submitted` until its required evidence is present,
+and the Tender submission gate revalidates the evidence type and file metadata.
+Direct uploads are stored
 under `wwwroot/files/tenders/`; capability-library attachments retain their
 managed capability path. A capability document or retained version cannot be
 deleted while a Tender checklist row references its path. All checklist
@@ -1035,9 +1038,11 @@ written or partial file is removed.
 
 Every new Tender requires an existing `OperationalProjectId` belonging to the
 same Customer. Tender planning reuses `DepartmentWorkPackage` with
-`SourceTenderId`, `Purpose=General`, and one Project work package per responsible
-department. Its tasks carry department, assignee, independent approver, planned
-dates, predecessors, progress, concurrency and history. A Tender-plan package
+`SourceTenderId`, `Purpose=TenderPlanning`, and one Project work package per
+responsible department. Its tasks carry department, assignee, independent
+approver, planned dates, predecessors, progress, concurrency and history.
+Legacy rows that already have `Purpose=General` and a `SourceTenderId` remain
+read/submission compatible; new Tender plans must use `TenderPlanning`. A Tender-plan package
 cannot become `Completed` until every task is `Verified`; a Tender cannot become
 `Submitted` until at least one non-cancelled plan package exists and every such
 package is complete. This is the server-side gate for planning, dossier
@@ -1045,7 +1050,8 @@ preparation and internal review; the Tender checklist remains the authoritative
 file/dossier checklist rather than a second planning model.
 The checklist row with `TemplateCode=capability` must reference a
 `CapabilityDocumentId`; direct upload is rejected and submission rechecks this
-invariant. Other project-specific checklist rows may use direct uploads.
+invariant. Other project-specific checklist rows require direct uploads and
+reject capability-library references.
 
 | Method | Route | Permission | Purpose |
 |--------|-------|------------|---------|

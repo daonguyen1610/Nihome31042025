@@ -153,7 +153,7 @@ public abstract class IntegrationTestBase : IClassFixture<NihomeWebApplicationFa
             {
                 Code = UniqueSlug("WP-TENDER-PLAN").ToUpperInvariant(),
                 Kind = WorkPackageKind.Project,
-                Purpose = WorkPackagePurpose.General,
+                Purpose = WorkPackagePurpose.TenderPlanning,
                 Name = "Completed tender plan fixture",
                 OperationalProjectId = operationalProjectId,
                 SourceTenderId = tenderId,
@@ -172,10 +172,11 @@ public abstract class IntegrationTestBase : IClassFixture<NihomeWebApplicationFa
         });
 
     /// <summary>
-    /// Selects a document from the shared capability library for the tender's
-    /// fixed capability checklist item.
+    /// Completes the tender checklist with the evidence required by the NICON
+    /// dossier contract: capability comes from the shared library, while every
+    /// other row has a tender-specific uploaded file.
     /// </summary>
-    protected async Task<int> AttachSharedCapabilityDocumentAsync(int tenderId) =>
+    protected async Task<int> CompleteTenderChecklistWithEvidenceAsync(int tenderId) =>
         await WithDbAsync(async db =>
         {
             var document = new CapabilityDocument
@@ -189,13 +190,27 @@ public abstract class IntegrationTestBase : IClassFixture<NihomeWebApplicationFa
                 CurrentVersion = 1,
             };
             db.CapabilityDocuments.Add(document);
-            await db.SaveChangesAsync();
 
-            var checklistItem = await db.TenderChecklistItems.SingleAsync(item =>
-                item.TenderId == tenderId && item.TemplateCode == "capability");
-            checklistItem.CapabilityDocumentId = document.Id;
-            checklistItem.FilePath = document.FilePath;
-            checklistItem.OriginalFileName = document.OriginalFileName;
+            var items = await db.TenderChecklistItems
+                .Where(item => item.TenderId == tenderId)
+                .ToListAsync();
+            foreach (var item in items)
+            {
+                item.Status = TenderChecklistItemStatus.Done;
+                if (item.TemplateCode == "capability")
+                {
+                    item.CapabilityDocument = document;
+                    item.FilePath = document.FilePath;
+                    item.OriginalFileName = document.OriginalFileName;
+                }
+                else
+                {
+                    item.CapabilityDocumentId = null;
+                    item.FilePath = $"/files/tenders/test-{tenderId}-{item.Id}.pdf";
+                    item.OriginalFileName = $"{item.TemplateCode ?? $"item-{item.Id}"}.pdf";
+                }
+            }
+
             await db.SaveChangesAsync();
             return document.Id;
         });

@@ -360,6 +360,10 @@ public class TenderService(
             {
                 throw new TenderOperationException($"Trạng thái checklist '{request.Status}' không hợp lệ.");
             }
+            if (next is TenderChecklistItemStatus.Done or TenderChecklistItemStatus.Submitted)
+            {
+                EnsureChecklistEvidence(item);
+            }
             item.Status = next;
         }
 
@@ -522,6 +526,12 @@ public class TenderService(
         {
             throw new TenderOperationException("Có checklist item không thuộc gói thầu này.");
         }
+        if (items.Any(item => !string.Equals(
+                item.TemplateCode, "capability", StringComparison.OrdinalIgnoreCase)))
+        {
+            throw new TenderOperationException(
+                "Chỉ Hồ sơ năng lực được chọn từ thư viện dùng chung; các hồ sơ khác phải tải file riêng cho gói thầu.");
+        }
 
         var docs = await db.CapabilityDocuments
             .Where(d => docIds.Contains(d.Id))
@@ -681,20 +691,19 @@ public class TenderService(
                 throw new TenderOperationException("Phải lập Kế hoạch đấu thầu theo phòng ban trước khi nộp thầu.");
             if (planStatuses.Any(status => status != WorkPackageStatus.Completed))
                 throw new TenderOperationException("Tất cả nhóm việc trong Kế hoạch đấu thầu phải hoàn thành và được xác nhận trước khi nộp thầu.");
-            var allChecklistComplete = await db.TenderChecklistItems
+            var checklist = await db.TenderChecklistItems.AsNoTracking()
                 .Where(item => item.TenderId == tenderId)
-                .AllAsync(item => item.Status == TenderChecklistItemStatus.Done ||
-                    item.Status == TenderChecklistItemStatus.Submitted, ct);
-            var hasChecklist = await db.TenderChecklistItems.AnyAsync(item => item.TenderId == tenderId, ct);
-            if (!hasChecklist || !allChecklistComplete)
+                .ToListAsync(ct);
+            if (checklist.Count == 0 || checklist.Any(item =>
+                    item.Status != TenderChecklistItemStatus.Done &&
+                    item.Status != TenderChecklistItemStatus.Submitted))
             {
                 throw new TenderOperationException("Phải hoàn tất tất cả mục checklist trước khi nộp gói thầu.");
             }
-            if (await db.TenderChecklistItems.AnyAsync(item => item.TenderId == tenderId &&
-                    item.TemplateCode == "capability" && !item.CapabilityDocumentId.HasValue, ct))
+            var missingEvidence = checklist.FirstOrDefault(item => !HasRequiredChecklistEvidence(item));
+            if (missingEvidence is not null)
             {
-                throw new TenderOperationException(
-                    "Hồ sơ năng lực phải được chọn từ thư viện dùng chung trước khi nộp gói thầu.");
+                throw MissingChecklistEvidence(missingEvidence);
             }
             if (!await db.TenderEstimateRevisions.AnyAsync(revision =>
                     revision.TenderId == tenderId && revision.Status == TenderEstimateRevisionStatus.Approved, ct))
@@ -831,6 +840,29 @@ public class TenderService(
             throw new TenderOperationException(
                 "Gói thầu đã ở trạng thái kết thúc, không thể chỉnh sửa checklist.");
         }
+    }
+
+    private static bool HasRequiredChecklistEvidence(TenderChecklistItem item)
+    {
+        var hasFile = !string.IsNullOrWhiteSpace(item.FilePath) &&
+            !string.IsNullOrWhiteSpace(item.OriginalFileName);
+        return string.Equals(item.TemplateCode, "capability", StringComparison.OrdinalIgnoreCase)
+            ? item.CapabilityDocumentId.HasValue && hasFile
+            : !item.CapabilityDocumentId.HasValue && hasFile;
+    }
+
+    private static void EnsureChecklistEvidence(TenderChecklistItem item)
+    {
+        if (!HasRequiredChecklistEvidence(item)) throw MissingChecklistEvidence(item);
+    }
+
+    private static TenderOperationException MissingChecklistEvidence(TenderChecklistItem item)
+    {
+        return string.Equals(item.TemplateCode, "capability", StringComparison.OrdinalIgnoreCase)
+            ? new TenderOperationException(
+                "Hồ sơ năng lực phải được chọn từ thư viện dùng chung trước khi đánh dấu hoàn tất.")
+            : new TenderOperationException(
+                $"Mục hồ sơ '{item.Title}' phải có file tải riêng cho gói thầu trước khi đánh dấu hoàn tất.");
     }
 
     // ------------------------------ Helpers ---------------------------------

@@ -322,9 +322,20 @@ public sealed class PrecontractCrossDepartmentControlsTests(NihomeWebApplication
         var transitionPath = $"/api/tenders/{tenderId}/transition";
 
         await PrepareApprovedEstimateAsync(tenderId);
-        await CompleteChecklistAsync(tenderId);
-        await AttachSharedCapabilityDocumentAsync(tenderId);
         await CreateCompletedTenderPlanAsync(scope.ProjectId, tenderId);
+        await WithDbAsync(async db =>
+        {
+            var checklist = await db.TenderChecklistItems
+                .Where(item => item.TenderId == tenderId)
+                .ToListAsync();
+            checklist.ForEach(item => item.Status = TenderChecklistItemStatus.Done);
+            await db.SaveChangesAsync();
+        });
+
+        // A completed status alone is not dossier evidence. Every project-
+        // specific row needs its own upload and capability uses the library.
+        await RejectAsync(transitionPath, new { status = "Submitted" }, HttpStatusCode.BadRequest);
+        await CompleteTenderChecklistWithEvidenceAsync(tenderId);
 
         // Planned and fully estimated, but still without the Finance –
         // Accounting review of the tender financial dossier.
@@ -574,13 +585,6 @@ public sealed class PrecontractCrossDepartmentControlsTests(NihomeWebApplication
             new { note = "Đạt yêu cầu kỹ thuật" });
         return revisionId;
     }
-
-    private Task CompleteChecklistAsync(int tenderId) => WithDbAsync(async db =>
-    {
-        var items = await db.TenderChecklistItems.Where(item => item.TenderId == tenderId).ToListAsync();
-        items.ForEach(item => item.Status = TenderChecklistItemStatus.Done);
-        await db.SaveChangesAsync();
-    });
 
     private Task LoginAsync(string role) =>
         AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, role));

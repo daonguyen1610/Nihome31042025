@@ -21,6 +21,7 @@ import {
 import AdminLayout from "@/components/layout/AdminLayout";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import TenderEstimatePanel from "./TenderEstimatePanel";
+import { isTenderChecklistEvidenceReady } from "./tenderChecklist";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -475,7 +476,7 @@ const ChecklistTab = ({ tender, assignees, canManage, onPatch, onUpload, onOpenL
                 <td className="px-3 py-2 text-right">
                   {!disabled ? (
                     <div className="flex justify-end gap-1">
-                      <Button
+                      {item.templateCode === "capability" ? <Button
                         variant="ghost"
                         size="sm"
                         disabled={savingId === item.id}
@@ -484,7 +485,7 @@ const ChecklistTab = ({ tender, assignees, canManage, onPatch, onUpload, onOpenL
                       >
                         <Library className="h-3.5 w-3.5" />
                         <span className="ml-1 text-xs">{t("tenders.detail.checklist.pickFromLibrary")}</span>
-                      </Button>
+                      </Button> : null}
                       {item.templateCode !== "capability" ? <Button
                         variant="ghost"
                         size="sm"
@@ -606,8 +607,8 @@ const ChecklistTab = ({ tender, assignees, canManage, onPatch, onUpload, onOpenL
                 <span className="text-slate-400">{t("tenders.detail.checklist.noFile")}</span>
               )}
               {!disabled ? (
-                <div className={cn("mt-2 grid gap-2", item.templateCode === "capability" ? "grid-cols-1" : "grid-cols-2")}>
-                  <Button
+                <div className="mt-2 grid grid-cols-1 gap-2">
+                  {item.templateCode === "capability" ? <Button
                     variant="outline"
                     size="sm"
                     disabled={savingId === item.id}
@@ -616,7 +617,7 @@ const ChecklistTab = ({ tender, assignees, canManage, onPatch, onUpload, onOpenL
                   >
                     <Library className="h-3.5 w-3.5" />
                     <span className="ml-1">{t("tenders.detail.checklist.pickFromLibrary")}</span>
-                  </Button>
+                  </Button> : null}
                   {item.templateCode !== "capability" ? <Button
                     variant="outline"
                     size="sm"
@@ -661,12 +662,14 @@ const TenderPlanTab = ({ tender, packages, financePackages, canManage, loadError
   const hasPassedSubmission = ["Submitted", "Won", "Lost"].includes(tender.status);
   const complete = hasPassedSubmission || active.length > 0 && active.every(item => item.status === "Completed");
   const financeApproved = hasPassedSubmission ||
-    financePackages.some(item => item.financeReview?.status === "Approved");
+    financePackages.some(item => item.operationalProjectId === tender.operationalProjectId &&
+      item.financeReview?.status === "Approved");
+  const dossierReady = hasPassedSubmission || isTenderChecklistEvidenceReady(tender);
   const processStages = [
     { key: "received", done: true, active: false },
     { key: "planning", done: complete, active: !cancelled && !complete },
-    { key: "dossier", done: tender.checklistCompletionPercent === 100, active: !cancelled && complete && tender.checklistCompletionPercent < 100 },
-    { key: "review", done: financeApproved, active: !cancelled && tender.checklistCompletionPercent === 100 && !financeApproved },
+    { key: "dossier", done: dossierReady, active: !cancelled && complete && !dossierReady },
+    { key: "review", done: financeApproved, active: !cancelled && dossierReady && !financeApproved },
     { key: "submitted", done: hasPassedSubmission, active: !cancelled && financeApproved && tender.status === "Preparing" },
     { key: "result", done: ["Won", "Lost", "Cancelled"].includes(tender.status), active: tender.status === "Submitted" },
   ];
@@ -1415,6 +1418,16 @@ const AdminTenderDetail = () => {
     () => tender?.status === "Won" || tender?.status === "Lost" || tender?.status === "Cancelled",
     [tender?.status],
   );
+  const tenderPlanReady = useMemo(() => {
+    const active = planPackages.filter((item) => item.status !== "Cancelled");
+    return active.length > 0 && active.every((item) => item.status === "Completed");
+  }, [planPackages]);
+  const tenderFinanceReady = useMemo(
+    () => financePackages.some((item) =>
+      item.operationalProjectId === tender?.operationalProjectId &&
+      item.financeReview?.status === "Approved"),
+    [financePackages, tender?.operationalProjectId],
+  );
 
   const showDeadlineAlert = useMemo(() => {
     if (!tender || isTerminal) return false;
@@ -1575,7 +1588,10 @@ const AdminTenderDetail = () => {
                 <TenderEstimatePanel
                   tender={tender}
                   canManage={canManage}
+                  canTransition={canMarkResult}
                   canApprove={canApproveEstimate}
+                  planReady={tenderPlanReady}
+                  financeReady={tenderFinanceReady}
                   onTenderChanged={setTender}
                 />
               </TabsContent>
