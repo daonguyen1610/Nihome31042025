@@ -144,8 +144,8 @@ const HeaderCard = ({ tender, canRequestFinance }: HeaderProps) => {
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm md:p-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
+      <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0 flex-1">
           <div className="text-sm text-slate-500">
             <Link to="/admin/tenders" className="inline-flex items-center gap-1 hover:text-slate-800">
               <ArrowLeft className="h-4 w-4" />
@@ -153,21 +153,21 @@ const HeaderCard = ({ tender, canRequestFinance }: HeaderProps) => {
             </Link>
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-2">
-            <h1 className="truncate text-xl font-bold text-slate-900 md:text-2xl">{tender.name}</h1>
+            <h1 className="min-w-0 break-words text-xl font-bold text-slate-900 md:text-2xl xl:truncate">{tender.name}</h1>
             <Badge className={cn("border", STATUS_BADGE_STYLES[tender.status])} variant="outline">
               {t(`tenders.status.${tender.status}`)}
             </Badge>
           </div>
-          <p className="mt-1 text-sm text-slate-600">
+          <p className="mt-1 flex min-w-0 flex-wrap items-baseline gap-x-1.5 gap-y-0.5 break-words text-sm text-slate-600">
             <span className="font-mono text-slate-500">{tender.code}</span>
-            <span className="mx-1.5">·</span>
+            <span>·</span>
             <span className="font-medium">{tender.customerName}</span>
             {tender.preparerName ? (
-              <span className="ml-2 text-xs text-slate-400">• {tender.preparerName}</span>
+              <span className="text-xs text-slate-400">• {tender.preparerName}</span>
             ) : null}
           </p>
         </div>
-        {canRequestFinance && tender.operationalProjectId && tender.status === "Preparing" ? <Button asChild variant="outline"><Link to={`/admin/work-packages?create=1&purpose=FinanceTenderReview&projectId=${tender.operationalProjectId}&tenderId=${tender.id}`}><CheckCircle2 className="mr-1 h-4 w-4" />{t("tenders.action.requestFinanceReview")}</Link></Button> : null}
+        {canRequestFinance && tender.operationalProjectId && tender.status === "Preparing" ? <Button asChild variant="outline" className="h-auto min-h-10 w-full whitespace-normal text-center sm:w-auto sm:shrink-0"><Link to={`/admin/work-packages?create=1&purpose=FinanceTenderReview&projectId=${tender.operationalProjectId}&tenderId=${tender.id}`}><CheckCircle2 className="mr-1 h-4 w-4 shrink-0" />{t("tenders.action.requestFinanceReview")}</Link></Button> : null}
       </div>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-3">
@@ -485,7 +485,7 @@ const ChecklistTab = ({ tender, planPackages, assignees, canManage, onPatch, onU
       />
 
       {/* Desktop table */}
-      <div className="hidden overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm md:block">
+      <div className="hidden max-w-full overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm xl:block">
         <table className="min-w-full text-sm">
           <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
             <tr>
@@ -656,7 +656,7 @@ const ChecklistTab = ({ tender, planPackages, assignees, canManage, onPatch, onU
       </div>
 
       {/* Mobile cards */}
-      <div className="grid gap-2 md:hidden">
+      <div className="grid min-w-0 gap-2 xl:hidden">
         {tender.checklistItems.map((item) => (
           <div
             key={item.id}
@@ -723,12 +723,12 @@ const ChecklistTab = ({ tender, planPackages, assignees, canManage, onPatch, onU
               </div>
               <Badge
                 variant="outline"
-                className={cn("shrink-0 text-xs", CHECKLIST_STATUS_STYLES[item.status])}
+                className={cn("max-w-[45%] shrink-0 whitespace-normal text-right text-xs leading-tight", CHECKLIST_STATUS_STYLES[item.status])}
               >
                 {t(`tenders.detail.checklist.itemStatus.${item.status}`)}
               </Badge>
             </div>
-            <div className="mt-2 grid grid-cols-2 gap-2">
+            <div className="mt-2 grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2">
               <Select
                 value={item.status}
                 disabled={disabled || savingId === item.id}
@@ -931,8 +931,8 @@ const TenderPlanTab = ({ tender, packages, financePackages, canManage, loadError
     { key: "result", done: ["Won", "Lost", "Cancelled"].includes(tender.status), active: tender.status === "Submitted" },
   ];
   return <div className="space-y-3" data-testid="tender-plan-tab">
-    <div className="overflow-x-auto pb-1" data-testid="tender-process-overview">
-      <ol className="grid min-w-[720px] grid-cols-6 gap-2">
+    <div className="pb-1" data-testid="tender-process-overview">
+      <ol className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
         {processStages.map((stage, index) => <li key={stage.key} className={cn(
           "rounded-lg border px-3 py-2 text-xs",
           stage.done && "border-emerald-200 bg-emerald-50 text-emerald-800",
@@ -1802,7 +1802,7 @@ const AdminTenderDetail = () => {
 
   return (
     <AdminLayout>
-      <div className="space-y-4 p-3 md:p-4">
+      <div className="min-w-0 space-y-4">
         {loading ? (
           <PageLoading />
         ) : error ? (
@@ -1824,26 +1824,26 @@ const AdminTenderDetail = () => {
               </div>
             ) : null}
 
-            <Tabs defaultValue="checklist" className="w-full">
-              <TabsList className="w-full justify-start overflow-x-auto whitespace-nowrap rounded-lg bg-slate-100 p-1">
-                <TabsTrigger value="info">
-                  <CheckCircle2 className="mr-1 h-4 w-4" />
+            <Tabs defaultValue="checklist" className="min-w-0 w-full">
+              <TabsList data-testid="tender-detail-tabs" className="grid h-auto w-full grid-cols-2 gap-1 rounded-lg bg-slate-100 p-1 sm:grid-cols-3 xl:grid-cols-5">
+                <TabsTrigger value="info" className="h-full min-w-0 whitespace-normal px-2 py-2 text-center text-xs sm:text-sm">
+                  <CheckCircle2 className="mr-1 h-4 w-4 shrink-0" />
                   {t("tenders.detail.tab.info")}
                 </TabsTrigger>
-                <TabsTrigger value="checklist">
-                  <Library className="mr-1 h-4 w-4" />
+                <TabsTrigger value="checklist" className="h-full min-w-0 whitespace-normal px-2 py-2 text-center text-xs sm:text-sm">
+                  <Library className="mr-1 h-4 w-4 shrink-0" />
                   {t("tenders.detail.tab.checklist")}
                 </TabsTrigger>
-                <TabsTrigger value="plan" data-testid="tender-plan-tab-trigger">
-                  <Calendar className="mr-1 h-4 w-4" />
+                <TabsTrigger value="plan" data-testid="tender-plan-tab-trigger" className="h-full min-w-0 whitespace-normal px-2 py-2 text-center text-xs sm:text-sm">
+                  <Calendar className="mr-1 h-4 w-4 shrink-0" />
                   {t("tenders.plan.title")}
                 </TabsTrigger>
-                <TabsTrigger value="estimate" data-testid="tender-estimate-tab">
-                  <FileSpreadsheet className="mr-1 h-4 w-4" />
+                <TabsTrigger value="estimate" data-testid="tender-estimate-tab" className="h-full min-w-0 whitespace-normal px-2 py-2 text-center text-xs sm:text-sm">
+                  <FileSpreadsheet className="mr-1 h-4 w-4 shrink-0" />
                   {t("tenders.estimate.title")}
                 </TabsTrigger>
-                <TabsTrigger value="result">
-                  <Trophy className="mr-1 h-4 w-4" />
+                <TabsTrigger value="result" className="col-span-2 h-full min-w-0 whitespace-normal px-2 py-2 text-center text-xs sm:col-span-1 sm:text-sm">
+                  <Trophy className="mr-1 h-4 w-4 shrink-0" />
                   {t("tenders.detail.tab.result")}
                 </TabsTrigger>
               </TabsList>

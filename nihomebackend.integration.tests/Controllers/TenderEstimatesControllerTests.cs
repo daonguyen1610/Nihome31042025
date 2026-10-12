@@ -83,7 +83,7 @@ public class TenderEstimatesControllerTests : IntegrationTestBase
         // approved Finance – Accounting review of the tender financial dossier.
         await CreateApprovedFinanceReviewAsync(tenderProjectId, "FinanceTenderReview", tenderId: tenderId);
 
-        var rejected = await Client.PostAsJsonAsync($"/api/tenders/{tenderId}/transition", new { status = "Submitted" });
+        var rejected = await SubmitTenderAsync(tenderId);
         rejected.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         (await WithDbAsync(db => db.Tenders.AsNoTracking().SingleAsync(item => item.Id == tenderId)))
             .Status.Should().Be(TenderStatus.Preparing);
@@ -94,20 +94,33 @@ public class TenderEstimatesControllerTests : IntegrationTestBase
         await Client.PostAsJsonAsync($"/api/tenders/{tenderId}/estimates/{revisionId}/approve", new { note = "Đạt" });
         await WithDbAsync(async db =>
         {
+            var preparerUserId = await db.Users.AsNoTracking()
+                .Where(user => user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["SALE"])
+                .Select(user => user.Id).SingleAsync();
+            var verifierUserId = await db.Users.AsNoTracking()
+                .Where(user => user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["ACCOUNTANT"])
+                .Select(user => user.Id).SingleAsync();
+            var now = DateTime.UtcNow;
             var items = await db.TenderChecklistItems.Where(item => item.TenderId == tenderId).ToListAsync();
             foreach (var item in items)
             {
-                item.Status = TenderChecklistItemStatus.Done;
+                item.Status = item.TemplateCode == "capability"
+                    ? TenderChecklistItemStatus.Done
+                    : TenderChecklistItemStatus.Submitted;
+                item.CompletedAt = now.AddMinutes(-5);
+                item.CompletedByUserId = preparerUserId;
                 if (item.TemplateCode != "capability")
                 {
                     item.FilePath = $"/files/tenders/{item.TemplateCode}.pdf";
                     item.OriginalFileName = $"{item.TemplateCode}.pdf";
+                    item.VerifiedAt = now;
+                    item.VerifiedByUserId = verifierUserId;
                 }
             }
             await db.SaveChangesAsync();
         });
 
-        var missingPlan = await Client.PostAsJsonAsync($"/api/tenders/{tenderId}/transition", new { status = "Submitted" });
+        var missingPlan = await SubmitTenderAsync(tenderId);
         missingPlan.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         (await missingPlan.Content.ReadAsStringAsync()).Should().Contain("Kế hoạch đấu thầu");
         (await WithDbAsync(db => db.Tenders.AsNoTracking().SingleAsync(item => item.Id == tenderId)))
@@ -134,10 +147,11 @@ public class TenderEstimatesControllerTests : IntegrationTestBase
             await db.SaveChangesAsync();
         });
 
-        var missingSharedCapability = await Client.PostAsJsonAsync(
-            $"/api/tenders/{tenderId}/transition", new { status = "Submitted" });
+        var missingSharedCapability = await SubmitTenderAsync(tenderId);
         missingSharedCapability.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        (await missingSharedCapability.Content.ReadAsStringAsync()).Should().Contain("thư viện dùng chung");
+        var missingSharedCapabilityBody = await missingSharedCapability.Content.ReadAsStringAsync();
+        missingSharedCapabilityBody.Should().Contain("Hồ sơ năng lực");
+        missingSharedCapabilityBody.Should().Contain("chưa có bằng chứng hợp lệ");
 
         await WithDbAsync(async db =>
         {
@@ -158,10 +172,15 @@ public class TenderEstimatesControllerTests : IntegrationTestBase
             item.CapabilityDocumentId = capability.Id;
             item.FilePath = capability.FilePath;
             item.OriginalFileName = capability.OriginalFileName;
+            item.Status = TenderChecklistItemStatus.Submitted;
+            item.VerifiedAt = DateTime.UtcNow;
+            item.VerifiedByUserId = await db.Users.AsNoTracking()
+                .Where(user => user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["ACCOUNTANT"])
+                .Select(user => user.Id).SingleAsync();
             await db.SaveChangesAsync();
         });
 
-        var submitted = await Client.PostAsJsonAsync($"/api/tenders/{tenderId}/transition", new { status = "Submitted" });
+        var submitted = await SubmitTenderAsync(tenderId);
         submitted.StatusCode.Should().Be(HttpStatusCode.OK);
         (await ReadJsonAsync(submitted)).GetProperty("status").GetString().Should().Be("Submitted");
 

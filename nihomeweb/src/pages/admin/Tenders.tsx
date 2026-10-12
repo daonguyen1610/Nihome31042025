@@ -472,7 +472,7 @@ const AdminTenders = () => {
         ) : (
           <>
             {/* Mobile / tablet card view */}
-            <div className="grid gap-3 lg:hidden">
+            <div className="grid gap-3 xl:hidden" data-testid="tender-list-cards">
               {rows.map((r) => {
                 return (
                   <article
@@ -484,7 +484,7 @@ const AdminTenders = () => {
                       <div className="flex min-w-0 items-start gap-2">
                         <div className="min-w-0">
                           <h3 className="break-words text-sm font-semibold leading-tight">{r.name}</h3>
-                          <p className="mt-0.5 text-xs text-muted-foreground">{r.code} · {r.customerName}</p>
+                          <p className="mt-0.5 break-words text-xs text-muted-foreground">{r.code} · {r.customerName}</p>
                         </div>
                       </div>
                       <Badge className={cn("shrink-0 whitespace-nowrap", STATUS_BADGE_STYLES[r.status])} variant="outline">
@@ -512,7 +512,7 @@ const AdminTenders = () => {
                       </div>
                       <div>
                         <dt className="text-muted-foreground">{t("tenders.field.preparer")}</dt>
-                        <dd className="font-medium">{r.preparerName ?? "—"}</dd>
+                        <dd className="break-words font-medium">{r.preparerName ?? "—"}</dd>
                       </div>
                       <div>
                         <dt className="text-muted-foreground">{t("tenders.field.checklist")}</dt>
@@ -538,7 +538,7 @@ const AdminTenders = () => {
             </div>
 
             {/* Desktop table */}
-            <div className="hidden overflow-x-auto rounded-md border lg:block">
+            <div className="hidden max-w-full overflow-x-auto rounded-md border xl:block" data-testid="tender-list-table">
               <table className="w-full min-w-[960px] text-sm">
                 <thead className="bg-slate-50 text-left text-xs uppercase text-muted-foreground">
                   <tr>
@@ -620,7 +620,7 @@ const AdminTenders = () => {
 
       {/* Create / edit dialog */}
       <Dialog open={dialogOpen} onOpenChange={(v) => (setDialogOpen(v), !v && setEditingDetail(null))}>
-        <DialogContent className="max-h-[90vh] w-[95vw] max-w-2xl overflow-y-auto sm:w-full">
+        <DialogContent className="max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-2xl overflow-x-hidden overflow-y-auto sm:w-full">
           <DialogHeader>
             <DialogTitle>
               {isEdit ? editingDetail!.name : t("tenders.new")}

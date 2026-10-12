@@ -1,4 +1,5 @@
 import { test, expect, TEST_USERS } from "../fixtures/auth";
+import type { Page } from "@playwright/test";
 import { rm } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -10,6 +11,18 @@ const ONE_PIXEL_PNG = Buffer.from(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
     "base64",
 );
+
+const expectNoPageOverflow = async (page: Page, context: string) => {
+    const widths = await page.evaluate(() => ({
+        viewport: document.documentElement.clientWidth,
+        document: document.documentElement.scrollWidth,
+        body: document.body.scrollWidth,
+    }));
+    expect(widths.document, `${context}: document width ${JSON.stringify(widths)}`)
+        .toBeLessThanOrEqual(widths.viewport);
+    expect(widths.body, `${context}: body width ${JSON.stringify(widths)}`)
+        .toBeLessThanOrEqual(widths.viewport);
+};
 
 /**
  * SPA smoke for NIH-85 / NIH-95 / NIH-96 — tender admin page. Full API
@@ -107,7 +120,7 @@ test("tender plan assigns owners and deadlines and manages checklist files", asy
     page,
     loginAs,
     loginInBrowserAs,
-}) => {
+}, testInfo) => {
     test.slow();
     const token = await loginAs(TEST_USERS.salesManager);
     const headers = { Authorization: `Bearer ${token}` };
@@ -167,6 +180,21 @@ test("tender plan assigns owners and deadlines and manages checklist files", asy
         expect(checklistItems.length).toBeGreaterThan(1);
 
         await loginInBrowserAs(page, TEST_USERS.salesManager);
+        await page.setViewportSize({ width: 390, height: 844 });
+        await page.goto("/admin/tenders", { waitUntil: "networkidle" });
+        await expect(page.getByTestId("tender-list-cards")).toBeVisible();
+        await expect(page.getByTestId("tender-list-table")).toBeHidden();
+        await expectNoPageOverflow(page, "tender list at 390px");
+        if (process.env.PLAYWRIGHT_VISUAL_EVIDENCE) {
+            await page.screenshot({ path: testInfo.outputPath("tender-list-mobile.png"), fullPage: true });
+        }
+
+        await page.setViewportSize({ width: 768, height: 1024 });
+        await expect(page.getByTestId("tender-list-cards")).toBeVisible();
+        await expect(page.getByTestId("tender-list-table")).toBeHidden();
+        await expectNoPageOverflow(page, "tender list at 768px");
+
+        await page.setViewportSize({ width: 1280, height: 800 });
         await page.goto(`/admin/tenders/${tenderId}`, { waitUntil: "networkidle" });
 
         await page.getByTestId("tender-plan-tab-trigger").click();
@@ -339,6 +367,30 @@ test("tender plan assigns owners and deadlines and manages checklist files", asy
             viewportWidth: window.innerWidth,
         }));
         expect(viewport.bodyWidth).toBeLessThanOrEqual(viewport.viewportWidth);
+        await expectNoPageOverflow(page, "tender checklist at 390px");
+        await expect(page.getByTestId("tender-detail-tabs")).toHaveJSProperty("scrollWidth",
+            await page.getByTestId("tender-detail-tabs").evaluate((element) => element.clientWidth));
+
+        await page.getByTestId("tender-plan-tab-trigger").click();
+        await expect(page.getByTestId("tender-process-overview")).toBeVisible();
+        const mobileProcessWidths = await page.getByTestId("tender-process-overview").evaluate((element) => ({
+            client: element.clientWidth,
+            scroll: element.scrollWidth,
+        }));
+        expect(mobileProcessWidths.scroll).toBeLessThanOrEqual(mobileProcessWidths.client);
+        await expectNoPageOverflow(page, "tender plan at 390px");
+        if (process.env.PLAYWRIGHT_VISUAL_EVIDENCE) {
+            await page.screenshot({ path: testInfo.outputPath("tender-plan-mobile.png"), fullPage: true });
+        }
+
+        await page.setViewportSize({ width: 768, height: 1024 });
+        await page.getByRole("tab", { name: /Hồ sơ dự thầu|Checklist/ }).click();
+        await expect(page.getByTestId(`tender-checklist-row-${plannedKey}-mobile`)).toBeVisible();
+        await expect(page.getByTestId(`tender-checklist-row-${plannedKey}-desktop`)).toBeHidden();
+        await expectNoPageOverflow(page, "tender checklist at 768px");
+        if (process.env.PLAYWRIGHT_VISUAL_EVIDENCE) {
+            await page.screenshot({ path: testInfo.outputPath("tender-checklist-tablet.png"), fullPage: true });
+        }
     } finally {
         if (uploadedFilePath?.startsWith("/files/tenders/")) {
             await rm(
