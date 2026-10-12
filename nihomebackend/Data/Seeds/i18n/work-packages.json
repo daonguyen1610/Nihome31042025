@@ -79,6 +79,8 @@
   ,{"key":"workPackages.purpose.ProcurementInputPricing","category":"work-packages","vi":"Cung ứng báo giá đầu vào","en":"Procurement input pricing","zh":"采购输入报价","ja":"調達原価見積"}
   ,{"key":"workPackages.purpose.FinanceCommercialReview","category":"work-packages","vi":"Tài chính rà soát thương mại","en":"Finance commercial review","zh":"财务商务审查","ja":"財務商務レビュー"}
   ,{"key":"workPackages.purpose.FinanceTenderReview","category":"work-packages","vi":"Tài chính rà soát hồ sơ thầu","en":"Finance tender review","zh":"财务投标审查","ja":"財務入札レビュー"}
+  ,{"key":"workPackages.purpose.TenderPlanning","category":"work-packages","vi":"Kế hoạch đấu thầu","en":"Tender planning","zh":"投标计划","ja":"入札計画"}
+  ,{"key":"workPackages.field.independentApprover","category":"work-packages","vi":"Người duyệt độc lập","en":"Independent verifier","zh":"独立审核人","ja":"独立確認者"}
   ,{"key":"workPackages.inputPrice.title","category":"work-packages","vi":"Báo giá đầu vào từ nhà cung cấp / thầu phụ","en":"Supplier / subcontractor input offers","zh":"供应商 / 分包商输入报价","ja":"仕入先 / 下請業者の原価見積"}
   ,{"key":"workPackages.inputPrice.help","category":"work-packages","vi":"Cung ứng lập và duyệt giá đầu vào trước khi Kinh doanh chốt báo giá đầu ra.","en":"Procurement prepares and approves input prices before Sales finalizes the customer quote.","zh":"采购在销售最终确定客户报价前编制并审批输入价格。","ja":"営業が顧客見積を確定する前に、調達が原価を作成・承認します。"}
   ,{"key":"workPackages.inputPrice.empty","category":"work-packages","vi":"Chưa có báo giá đầu vào.","en":"No input offer yet.","zh":"暂无输入报价。","ja":"原価見積はまだありません。"}

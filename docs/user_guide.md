@@ -529,7 +529,12 @@ the tender is Won, Lost, or Cancelled. The **Tender plan** tab uses the shared
 cross-department work-package workflow: create one package for each responsible
 department, then define its task owner, independent verifier, planned start/end,
 dependencies and progress. The approximately one-month duration described by
-NICON is planning guidance, not a hard system limit.
+NICON is planning guidance, not a hard system limit. Tender-plan packages use
+the dedicated `TenderPlanning` purpose, so Sales can coordinate every active
+department without duplicating that department's specialist design, legal,
+construction, procurement, or finance records. Their package and task dates must
+fit before the Tender submission deadline. A Tender-plan task can be independently
+verified without attaching it to a KPI; KPI linkage remains optional.
 
 The **Estimate** tab provides a customer-fillable UTF-8 CSV template containing
 item code, description, unit, quantity, internal unit cost, bid unit price, VAT,
@@ -543,10 +548,11 @@ estimate exists, and the Tender carries a shared
 Operational Project with an approved Finance tender review of its financial
 dossier (see 3.0.2). Won and Lost are available only from
 Submitted. When marking a tender Won, choose either **Create an opportunity from
-this tender** (default) or an existing opportunity of the same customer. The
-created opportunity carries the tender name, starts in Negotiation, is valued at
-the latest approved bid estimate, and reuses the Tender's existing Operational
-Project. The result panel links to the opportunity and offers **Continue
+this tender** (default) or an active existing opportunity of the same customer
+and Operational Project. Either path continues the opportunity in Negotiation;
+terminal or different-project opportunities are rejected. A created opportunity
+carries the tender name, is valued at the latest approved bid estimate, and
+reuses the Tender's existing Operational Project. The result panel links to the opportunity and offers **Continue
 negotiation and create contract**; contract creation remains a deliberate user
 action after commercial negotiation. Tender codes `TD-YYYY-NNNN` continue from the highest code in use,
 so deleting a tender never blocks creating new ones.

@@ -185,7 +185,7 @@ public sealed partial class DepartmentWorkPackageService(
                 throw Error("Nhóm công việc dự án chỉ có một phòng ban nhận việc.");
             if (!request.OperationalProjectId.HasValue)
                 throw Error("Nhóm công việc dự án phải chọn Dự án vận hành.");
-            await ValidateProjectScopeAsync(request, callerUserId, admin, ct);
+            await ValidateProjectScopeAsync(request, purpose, callerUserId, admin, ct);
             await ValidatePurposeAsync(request, purpose, ct);
         }
 
@@ -410,7 +410,8 @@ public sealed partial class DepartmentWorkPackageService(
         var response = await LoadTaskAsync(task.Id, callerUserId, admin, ct);
         await AddHistoryAsync(packageId, "Task", task.Id, "Progressed", response, callerUserId, ct);
         await CommitAsync(transaction, ct);
-        if (status == WorkTaskStatus.Completed && task.KpiDefinitionId.HasValue)
+        if (status == WorkTaskStatus.Completed &&
+            (task.KpiDefinitionId.HasValue || IsTenderPlanningPackage(task.WorkPackage)))
         {
             var verifierId = task.ApproverUserId ?? task.WorkPackage.LeadUserId;
             await NotifySafelyAsync(verifierId, "work-task.awaiting-verification",
@@ -438,8 +439,9 @@ public sealed partial class DepartmentWorkPackageService(
             throw Error("Người thực hiện không được tự xác nhận bằng chứng KPI của chính mình.");
         if (task.WorkPackage.Status != WorkPackageStatus.Active)
             throw Error("Chỉ được xác nhận KPI khi nhóm công việc đang thực hiện.");
-        if (!request.Confirm || !task.KpiDefinitionId.HasValue || task.Status != WorkTaskStatus.Completed)
-            throw Error("Chỉ đầu việc KPI đã hoàn thành mới được xác nhận.");
+        if (!request.Confirm || task.Status != WorkTaskStatus.Completed ||
+            !task.KpiDefinitionId.HasValue && !IsTenderPlanningPackage(task.WorkPackage))
+            throw Error("Chỉ đầu việc đã hoàn thành và thuộc KPI hoặc Kế hoạch đấu thầu mới được xác nhận.");
         await using var transaction = await BeginTransactionAsync(ct);
         CrmConcurrency.Apply(db, task, request.RowVersion);
         task.Status = WorkTaskStatus.Verified;
@@ -498,6 +500,35 @@ public sealed partial class DepartmentWorkPackageService(
         if ((purpose is WorkPackagePurpose.ProcurementInputPricing or WorkPackagePurpose.FinanceCommercialReview or WorkPackagePurpose.FinanceTenderReview) &&
             request.ContractId.HasValue)
             throw Error("Nhóm công việc tiền hợp đồng không được gắn hợp đồng thực hiện.");
+        if (purpose == WorkPackagePurpose.TenderPlanning)
+        {
+            if (!request.SourceTenderId.HasValue)
+                throw Error("Kế hoạch đấu thầu phải gắn với một Gói thầu nguồn.");
+            if (request.ContractId.HasValue || request.SourceOpportunityId.HasValue || request.SourceQuoteId.HasValue)
+                throw Error("Kế hoạch đấu thầu chỉ được gắn với Gói thầu và Dự án nguồn.");
+            if (!request.PlannedStart.HasValue || !request.PlannedEnd.HasValue)
+                throw Error("Nhóm hồ sơ trong Kế hoạch đấu thầu phải có ngày bắt đầu và ngày kết thúc.");
+
+            var tender = await db.Tenders.AsNoTracking()
+                .Where(item => item.Id == request.SourceTenderId.Value)
+                .Select(item => new { item.Status, item.SubmissionDeadline })
+                .SingleOrDefaultAsync(ct) ?? throw Error("Gói thầu nguồn không tồn tại.");
+            if (tender.Status != TenderStatus.Preparing)
+                throw Error("Chỉ được lập hoặc bổ sung Kế hoạch đấu thầu khi Gói thầu đang chuẩn bị.");
+            if (request.PlannedEnd.Value.ToUniversalTime() > tender.SubmissionDeadline)
+                throw Error("Ngày kết thúc nhóm hồ sơ không được sau hạn nộp thầu.");
+            if (await db.DepartmentWorkPackages.AsNoTracking().AnyAsync(item =>
+                    item.SourceTenderId == request.SourceTenderId &&
+                    (item.Purpose == WorkPackagePurpose.TenderPlanning ||
+                        item.Purpose == WorkPackagePurpose.General) &&
+                    item.DepartmentRoleGroupId == request.DepartmentRoleGroupId &&
+                    item.Status != WorkPackageStatus.Cancelled, ct))
+                throw Error("Phòng ban này đã có một nhóm hồ sơ đang hoạt động trong Kế hoạch đấu thầu.");
+        }
+        else if (purpose == WorkPackagePurpose.General && request.SourceTenderId.HasValue)
+        {
+            throw Error("Nhóm hồ sơ của Gói thầu phải dùng mục đích Kế hoạch đấu thầu.");
+        }
 
         if (request.SourceQuoteId.HasValue)
         {
@@ -525,6 +556,7 @@ public sealed partial class DepartmentWorkPackageService(
 
     private async Task ValidateProjectScopeAsync(
         CreateDepartmentWorkPackageRequest request,
+        WorkPackagePurpose purpose,
         int callerUserId,
         bool admin,
         CancellationToken ct)
@@ -539,7 +571,8 @@ public sealed partial class DepartmentWorkPackageService(
             .SingleOrDefaultAsync(ct);
         if (receivingGroupCode is null)
             throw Error("Phòng ban nhận việc không tồn tại hoặc đã ngừng hoạt động.");
-        if (!GenericProjectDepartmentCodes.Contains(receivingGroupCode, StringComparer.OrdinalIgnoreCase))
+        if (purpose != WorkPackagePurpose.TenderPlanning &&
+            !GenericProjectDepartmentCodes.Contains(receivingGroupCode, StringComparer.OrdinalIgnoreCase))
             throw Error("Phòng ban này đã có không gian công việc chuyên môn. Hãy tạo công việc trong module tương ứng để tránh dữ liệu trùng.");
         var isOpportunityOwner = false;
         var isTenderOwner = false;
@@ -591,6 +624,15 @@ public sealed partial class DepartmentWorkPackageService(
             throw Error("Ngày kết thúc đầu việc không được trước ngày bắt đầu.");
         if (request.ApproverUserId == request.AssigneeUserId)
             throw Error("Người duyệt phải khác người phụ trách đầu việc.");
+        if (IsTenderPlanningPackage(package))
+        {
+            var verifierId = request.ApproverUserId ?? package.LeadUserId;
+            if (verifierId == request.AssigneeUserId)
+                throw Error("Đầu việc Kế hoạch đấu thầu phải có người duyệt độc lập khác người phụ trách.");
+            if (package.PlannedStart.HasValue && request.PlannedStart < package.PlannedStart.Value ||
+                package.PlannedEnd.HasValue && request.PlannedEnd > package.PlannedEnd.Value)
+                throw Error("Thời gian đầu việc phải nằm trong khoảng thời gian của nhóm hồ sơ đấu thầu.");
+        }
         await ValidateDepartmentUserAsync(request.AssigneeUserId, taskGroupId, "Người phụ trách", ct);
         if (request.ApproverUserId.HasValue)
             await ValidateDepartmentUserAsync(request.ApproverUserId.Value, taskGroupId, "Người duyệt", ct);
@@ -719,7 +761,7 @@ public sealed partial class DepartmentWorkPackageService(
             if (package.Tasks.Any(task => task.Status is WorkTaskStatus.Planned or WorkTaskStatus.InProgress ||
                 task.KpiDefinitionId.HasValue && task.Status != WorkTaskStatus.Verified))
                 throw Error("Mọi đầu việc phải hoàn tất; đầu việc KPI phải được xác nhận trước khi đóng nhóm.");
-            if (package.SourceTenderId.HasValue && package.Purpose == WorkPackagePurpose.General &&
+            if (IsTenderPlanningPackage(package) &&
                 package.Tasks.Any(task => task.Status != WorkTaskStatus.Verified))
                 throw Error("Mọi đầu việc trong Kế hoạch đấu thầu phải được người duyệt độc lập xác nhận trước khi đóng nhóm.");
         }
@@ -866,7 +908,9 @@ public sealed partial class DepartmentWorkPackageService(
                 (item.Kind == WorkPackageKind.Internal && item.CreatedByUserId == callerUserId &&
                     item.LeadUserId == callerUserId) ||
                 item.OperationalProject?.ProjectManagerUserId == callerUserId ||
-                item.SourceOpportunity?.OwnerUserId == callerUserId,
+                item.SourceOpportunity?.OwnerUserId == callerUserId ||
+                item.SourceTender != null &&
+                    (item.SourceTender.PreparerUserId == callerUserId || item.SourceTender.CreatedByUserId == callerUserId),
             CanAssignTasks = admin || item.LeadUserId == callerUserId,
             RowVersion = CrmConcurrency.Encode(item.RowVersion),
             Tasks = item.Tasks.OrderBy(task => task.WbsCode).ThenBy(task => task.Id)
@@ -912,11 +956,16 @@ public sealed partial class DepartmentWorkPackageService(
             CcUserIds = task.CcUsers.Select(item => item.UserId).ToList(),
             PredecessorTaskIds = task.Predecessors.Select(item => item.PredecessorTaskId).ToList(),
             CanUpdateProgress = admin || task.AssigneeUserId == callerUserId,
-            CanVerify = task.KpiDefinitionId.HasValue && task.Status == WorkTaskStatus.Completed &&
+            CanVerify = (task.KpiDefinitionId.HasValue || IsTenderPlanningPackage(task.WorkPackage)) &&
+                task.Status == WorkTaskStatus.Completed &&
                 task.AssigneeUserId != callerUserId && (admin || verifier == callerUserId),
             RowVersion = CrmConcurrency.Encode(task.RowVersion),
         };
     }
+
+    private static bool IsTenderPlanningPackage(DepartmentWorkPackage package) =>
+        package.SourceTenderId.HasValue &&
+        package.Purpose is WorkPackagePurpose.TenderPlanning or WorkPackagePurpose.General;
 
     private async Task AddHistoryAsync(int packageId, string entityType, int entityId, string action, object snapshot, int callerUserId, CancellationToken ct)
     {

@@ -106,6 +106,106 @@ public sealed class DepartmentWorkPackagesControllerTests(NihomeWebApplicationFa
     }
 
     [Fact]
+    public async Task TenderPlan_TaskWithoutKpi_FollowsIndependentVerificationAndCompletionPipeline()
+    {
+        var seed = await SeedProjectScopeAsync();
+        var tenderId = await WithDbAsync(async db =>
+        {
+            var project = await db.OperationalProjects.SingleAsync(item => item.Id == seed.ProjectId);
+            var adminId = project.ProjectManagerUserId!.Value;
+            var tender = new Tender
+            {
+                Code = $"TD-WP-{Guid.NewGuid():N}"[..20].ToUpperInvariant(),
+                Name = "Gói thầu nhà máy NICON có kế hoạch liên phòng",
+                CustomerId = project.CustomerId,
+                OperationalProjectId = project.Id,
+                PreparerUserId = adminId,
+                SubmissionDeadline = DateTime.UtcNow.Date.AddDays(30),
+                CreatedByUserId = adminId,
+                UpdatedByUserId = adminId,
+            };
+            db.Tenders.Add(tender);
+            await db.SaveChangesAsync();
+            return tender.Id;
+        });
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+
+        var packageResponse = await SendAsync(HttpMethod.Post, "/api/work-packages", new
+        {
+            kind = "Project",
+            purpose = "TenderPlanning",
+            name = "Chuẩn bị hồ sơ pháp lý dự thầu",
+            operationalProjectId = seed.ProjectId,
+            sourceTenderId = tenderId,
+            departmentRoleGroupId = seed.DepartmentGroupId,
+            leadUserId = seed.DepartmentLeadId,
+            plannedStart = DateTime.UtcNow.Date,
+            plannedEnd = DateTime.UtcNow.Date.AddDays(14),
+        });
+        packageResponse.StatusCode.Should().Be(HttpStatusCode.Created, await packageResponse.Content.ReadAsStringAsync());
+        var package = await ReadJsonAsync(packageResponse);
+        var packageId = package.GetProperty("id").GetInt32();
+
+        var taskResponse = await SendAsync(HttpMethod.Post, $"/api/work-packages/{packageId}/tasks", new
+        {
+            wbsCode = "TD-PL-01",
+            title = "Rà soát hồ sơ pháp lý theo HSMT",
+            assigneeUserId = seed.DepartmentStaffId,
+            approverUserId = seed.DepartmentLeadId,
+            plannedStart = DateTime.UtcNow.Date,
+            plannedEnd = DateTime.UtcNow.Date.AddDays(7),
+            ccUserIds = Array.Empty<int>(),
+            predecessorTaskIds = Array.Empty<int>(),
+        });
+        taskResponse.StatusCode.Should().Be(HttpStatusCode.Created, await taskResponse.Content.ReadAsStringAsync());
+        var task = await ReadJsonAsync(taskResponse);
+        var taskId = task.GetProperty("id").GetInt32();
+        package = await ReadJsonAsync(await Client.GetAsync($"/api/work-packages/{packageId}"));
+
+        var activated = await SendAsync(HttpMethod.Put, $"/api/work-packages/{packageId}", new
+        {
+            name = package.GetProperty("name").GetString(),
+            status = "Active",
+            plannedStart = package.GetProperty("plannedStart").GetString(),
+            plannedEnd = package.GetProperty("plannedEnd").GetString(),
+            rowVersion = package.GetProperty("rowVersion").GetString(),
+        }, package.GetProperty("rowVersion").GetString());
+        activated.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "WAREHOUSE"));
+        var completed = await SendAsync(HttpMethod.Put, $"/api/work-packages/{packageId}/tasks/{taskId}/progress", new
+        {
+            status = "Completed",
+            progressPercent = 100,
+            rowVersion = task.GetProperty("rowVersion").GetString(),
+        }, task.GetProperty("rowVersion").GetString());
+        completed.StatusCode.Should().Be(HttpStatusCode.OK);
+        var completedTask = await ReadJsonAsync(completed);
+
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "PROCUREMENT"));
+        var verified = await SendAsync(HttpMethod.Post, $"/api/work-packages/{packageId}/tasks/{taskId}/verify", new
+        {
+            confirm = true,
+            rowVersion = completedTask.GetProperty("rowVersion").GetString(),
+        }, completedTask.GetProperty("rowVersion").GetString());
+        verified.StatusCode.Should().Be(HttpStatusCode.OK, await verified.Content.ReadAsStringAsync());
+
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        package = await ReadJsonAsync(await Client.GetAsync($"/api/work-packages/{packageId}"));
+        var closed = await SendAsync(HttpMethod.Put, $"/api/work-packages/{packageId}", new
+        {
+            name = package.GetProperty("name").GetString(),
+            status = "Completed",
+            plannedStart = package.GetProperty("plannedStart").GetString(),
+            plannedEnd = package.GetProperty("plannedEnd").GetString(),
+            rowVersion = package.GetProperty("rowVersion").GetString(),
+        }, package.GetProperty("rowVersion").GetString());
+
+        closed.StatusCode.Should().Be(HttpStatusCode.OK, await closed.Content.ReadAsStringAsync());
+        (await ReadJsonAsync(closed)).GetProperty("status").GetString().Should().Be("Completed");
+    }
+
+    [Fact]
     public async Task InternalPackage_RejectsProjectReference()
     {
         var seed = await SeedProjectScopeAsync();

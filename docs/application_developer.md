@@ -1303,7 +1303,14 @@ auditable:
 - `FinanceCommercialReview` requires the `FINANCE` role group and a
   `SourceQuoteId`; `FinanceTenderReview` requires the `FINANCE` role group and a
   `SourceTenderId`.
-- All three purposes reject `ContractId`: pre-contract work must not hang off an
+- `TenderPlanning` requires `SourceTenderId`, the Tender's Operational Project,
+  a responsible active role group, and package dates no later than the submission
+  deadline. Unlike generic project packages it may coordinate any department;
+  it does not replace that department's specialist aggregate. One non-cancelled
+  package per Tender and department is allowed. Every task requires an independent
+  verifier and must be `Verified` before the package can complete; KPI linkage is
+  optional for these planning tasks.
+- All pre-contract purposes reject `ContractId`: pre-contract work must not hang off an
   executed contract.
 
 `ProcurementInputPriceOffer` and `DepartmentFinanceReview` share one lifecycle:
@@ -1324,8 +1331,10 @@ Server-side gates that consume these records:
 - `QuoteService` resolves `inputPriceOfferId` only when the offer is `Approved`,
   still valid, and belongs to a `ProcurementInputPricing` package of the quote's
   project; the quote stores `InputPriceSnapshotJson` at link time.
-- `TenderService` submission requires an `OperationalProjectId` and an
-  `Approved` `FinanceTenderReview` package linked by `SourceTenderId`.
+- `TenderService` submission requires an `OperationalProjectId`, at least one
+  completed `TenderPlanning` package, and an `Approved` `FinanceTenderReview`
+  package linked by `SourceTenderId`. Legacy Tender plans stored as `General`
+  remain readable by the gate, but new writes must use `TenderPlanning`.
 - `ProcurementService` execution BOQ creation/update requires a same-project
   `Upstream` contract that is signed and not draft/cancelled.
 

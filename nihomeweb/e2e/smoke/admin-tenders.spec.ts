@@ -42,6 +42,7 @@ test("tender plan assigns owners and deadlines and manages checklist files", asy
     loginAs,
     loginInBrowserAs,
 }) => {
+    test.slow();
     const token = await loginAs(TEST_USERS.salesManager);
     const headers = { Authorization: `Bearer ${token}` };
     const unique = Date.now().toString();
@@ -109,7 +110,25 @@ test("tender plan assigns owners and deadlines and manages checklist files", asy
         await expect(processOverview).toContainText(/Đánh giá|Review/);
         await expect(processOverview).toContainText(/Nộp thầu|Submit/);
         await expect(processOverview).toContainText(/Kết quả|Result/);
-        await expect(page.getByRole("link", { name: /Giao hồ sơ cho phòng ban|Assign a department/ })).toBeVisible();
+        const assignDepartmentLink = page.getByRole("link", { name: /Giao hồ sơ cho phòng ban|Assign a department/ });
+        await expect(assignDepartmentLink).toBeVisible();
+        await assignDepartmentLink.click();
+        await expect(page).toHaveURL(new RegExp(
+            `/admin/work-packages\\?create=1&purpose=TenderPlanning&projectId=${projectId}&tenderId=${tenderId}`,
+        ));
+        const packageDialog = page.getByRole("dialog");
+        await expect(packageDialog).toBeVisible();
+        await expect(packageDialog.getByTestId("work-package-purpose"))
+            .toContainText(/Kế hoạch đấu thầu|Tender planning/);
+        await expect(packageDialog.getByTestId("work-package-project"))
+            .toContainText(`Tender shared project ${unique}`);
+        const departmentSelect = packageDialog.getByTestId("work-package-department");
+        await expect(departmentSelect).toBeEnabled();
+        await departmentSelect.click();
+        expect(await page.getByRole("option").count()).toBeGreaterThan(2);
+        await page.keyboard.press("Escape");
+        await page.keyboard.press("Escape");
+        await page.goBack({ waitUntil: "networkidle" });
         await page.getByRole("tab", { name: /Hồ sơ dự thầu|Checklist/ }).click();
 
         for (const item of checklistItems) {

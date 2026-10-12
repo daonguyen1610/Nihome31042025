@@ -672,7 +672,8 @@ public class TenderService(
         {
             var planStatuses = await db.DepartmentWorkPackages.AsNoTracking()
                 .Where(package => package.SourceTenderId == tenderId &&
-                    package.Purpose == WorkPackagePurpose.General &&
+                    (package.Purpose == WorkPackagePurpose.TenderPlanning ||
+                        package.Purpose == WorkPackagePurpose.General) &&
                     package.Status != WorkPackageStatus.Cancelled)
                 .Select(package => package.Status)
                 .ToListAsync(ct);
@@ -713,15 +714,24 @@ public class TenderService(
         }
         else if (nextStatus == TenderStatus.Won)
         {
-            if (!request.OpportunityId.HasValue || !await db.Opportunities.AnyAsync(
-                    opportunity => opportunity.Id == request.OpportunityId.Value &&
-                        opportunity.CustomerId == tender.CustomerId,
-                    ct))
+            var opportunity = request.OpportunityId.HasValue
+                ? await db.Opportunities.FirstOrDefaultAsync(item => item.Id == request.OpportunityId.Value, ct)
+                : null;
+            if (opportunity is null || opportunity.CustomerId != tender.CustomerId ||
+                !tender.OperationalProjectId.HasValue ||
+                opportunity.OperationalProjectId != tender.OperationalProjectId ||
+                opportunity.Stage is OpportunityStage.Won or OpportunityStage.Lost)
             {
                 throw new TenderOperationException(
-                    $"Cơ hội #{request.OpportunityId} không tồn tại hoặc không thuộc khách hàng của gói thầu.");
+                    $"Cơ hội #{request.OpportunityId} phải đang hoạt động và thuộc đúng khách hàng, Dự án của gói thầu.");
             }
-            tender.WonOpportunityId = request.OpportunityId;
+            opportunity.Stage = OpportunityStage.Negotiation;
+            opportunity.ClosedAt = null;
+            opportunity.LostReasonCode = null;
+            opportunity.LostNote = null;
+            opportunity.UpdatedAt = DateTime.UtcNow;
+            opportunity.UpdatedByUserId = callerUserId;
+            tender.WonOpportunityId = opportunity.Id;
             tender.LostReasonCode = null;
             tender.LostNote = null;
         }

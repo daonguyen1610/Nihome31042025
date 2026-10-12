@@ -106,6 +106,7 @@ public sealed class DepartmentWorkPackageServiceTests : IDisposable
         _db.Tenders.Add(tender);
         await _db.SaveChangesAsync();
         var request = ProjectRequest();
+        request.Purpose = "TenderPlanning";
         request.SourceTenderId = tender.Id;
 
         var result = await _service.CreateAsync(request, _sales.Id);
@@ -273,6 +274,7 @@ public sealed class DepartmentWorkPackageServiceTests : IDisposable
         _db.Tenders.Add(tender);
         await _db.SaveChangesAsync();
         var request = ProjectRequest();
+        request.Purpose = "TenderPlanning";
         request.SourceTenderId = tender.Id;
         var package = await _service.CreateAsync(request, _pm.Id);
         var task = await _service.AddTaskAsync(
@@ -297,6 +299,101 @@ public sealed class DepartmentWorkPackageServiceTests : IDisposable
         Assert.Contains("duyệt độc lập", error.Message);
         Assert.Equal(WorkPackageStatus.Active, entity.Status);
         Assert.Equal(WorkTaskStatus.Completed, entity.Tasks.Single().Status);
+    }
+
+    [Fact]
+    public async Task TenderPlan_AllowsAnyDepartmentAndVerifiesTaskWithoutKpi()
+    {
+        var designGroup = AddGroup("DESIGN");
+        var designLead = AddUser("DESIGN_LEAD", designGroup, canAssign: true);
+        var designer = AddUser("DESIGN", designGroup);
+        var tender = new Tender
+        {
+            Code = "TD-PLAN-DESIGN-001",
+            Name = "Gói thầu thiết kế nhà máy NICON",
+            CustomerId = _project.CustomerId,
+            OperationalProjectId = _project.Id,
+            PreparerUserId = _sales.Id,
+            CreatedByUserId = _sales.Id,
+            SubmissionDeadline = DateTime.UtcNow.AddDays(30),
+        };
+        _db.Tenders.Add(tender);
+        await _db.SaveChangesAsync();
+        var request = ProjectRequest();
+        request.Purpose = "TenderPlanning";
+        request.SourceTenderId = tender.Id;
+        request.DepartmentRoleGroupId = designGroup.Id;
+        request.LeadUserId = designLead.Id;
+
+        var package = await _service.CreateAsync(request, _sales.Id);
+        var started = await _service.UpdateAsync(package.Id, new UpdateDepartmentWorkPackageRequest
+        {
+            Name = package.Name,
+            Status = "Active",
+            PlannedStart = package.PlannedStart,
+            PlannedEnd = package.PlannedEnd,
+            RowVersion = package.RowVersion,
+        }, _sales.Id);
+        var taskRequest = TaskRequest(designer.Id, designLead.Id, "DES-01");
+        taskRequest.KpiDefinitionId = null;
+        var task = await _service.AddTaskAsync(package.Id, taskRequest, designLead.Id);
+        var completed = await _service.UpdateProgressAsync(package.Id, task.Id,
+            new UpdateDepartmentWorkTaskProgressRequest
+            {
+                Status = "Completed",
+                ProgressPercent = 100,
+                RowVersion = task.RowVersion,
+            }, designer.Id);
+        var verified = await _service.VerifyTaskAsync(package.Id, task.Id,
+            new VerifyDepartmentWorkTaskRequest { Confirm = true, RowVersion = completed!.RowVersion }, designLead.Id);
+        var closed = await _service.UpdateAsync(package.Id, new UpdateDepartmentWorkPackageRequest
+        {
+            Name = started!.Name,
+            Status = "Completed",
+            PlannedStart = started.PlannedStart,
+            PlannedEnd = started.PlannedEnd,
+            RowVersion = (await _service.GetAsync(package.Id, _sales.Id, canViewAll: true))!.RowVersion,
+        }, _sales.Id);
+
+        Assert.Equal("TenderPlanning", closed!.Purpose);
+        Assert.Equal("Verified", verified!.Status);
+        Assert.Equal("Completed", closed.Status);
+    }
+
+    [Fact]
+    public async Task TenderPlan_RejectsSelfVerificationAndDuplicateDepartment()
+    {
+        var tender = new Tender
+        {
+            Code = "TD-PLAN-GUARD-001",
+            Name = "Gói thầu kho vận NICON",
+            CustomerId = _project.CustomerId,
+            OperationalProjectId = _project.Id,
+            PreparerUserId = _sales.Id,
+            CreatedByUserId = _sales.Id,
+            SubmissionDeadline = DateTime.UtcNow.AddDays(30),
+        };
+        _db.Tenders.Add(tender);
+        await _db.SaveChangesAsync();
+        var request = ProjectRequest();
+        request.Purpose = "TenderPlanning";
+        request.SourceTenderId = tender.Id;
+        var validEnd = request.PlannedEnd;
+        request.PlannedEnd = tender.SubmissionDeadline.AddDays(1);
+        await Assert.ThrowsAsync<DepartmentWorkPackageOperationException>(() =>
+            _service.CreateAsync(request, _sales.Id));
+        request.PlannedEnd = validEnd;
+        var package = await _service.CreateAsync(request, _sales.Id);
+        var legacyPackage = await _db.DepartmentWorkPackages.FindAsync(package.Id);
+        legacyPackage!.Purpose = WorkPackagePurpose.General;
+        await _db.SaveChangesAsync();
+
+        await Assert.ThrowsAsync<DepartmentWorkPackageOperationException>(() =>
+            _service.CreateAsync(request, _sales.Id));
+        var selfApproved = TaskRequest(_procurementLead.Id, _procurementLead.Id);
+        selfApproved.ApproverUserId = null;
+        await Assert.ThrowsAsync<DepartmentWorkPackageOperationException>(() =>
+            _service.AddTaskAsync(package.Id, selfApproved, _procurementLead.Id));
     }
 
     [Fact]
@@ -437,10 +534,10 @@ public sealed class DepartmentWorkPackageServiceTests : IDisposable
         return group;
     }
 
-    private ApplicationUser AddUser(string roleCode, RoleGroup group)
+    private ApplicationUser AddUser(string roleCode, RoleGroup group, bool canAssign = false)
     {
         var role = new Role { Code = roleCode, Name = roleCode, RoleGroupId = group.Id, IsActive = true };
-        if (roleCode == "PROCUREMENT")
+        if (roleCode == "PROCUREMENT" || canAssign)
         {
             var permission = _db.Permissions.SingleOrDefault(item =>
                 item.Module == "work.packages" && item.Action == "assign") ??

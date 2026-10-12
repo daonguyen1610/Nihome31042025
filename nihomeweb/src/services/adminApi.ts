@@ -898,7 +898,7 @@ export const OPERATIONAL_PROJECT_STATUSES: OperationalProjectStatus[] = [
 ];
 
 export type WorkPackageKind = "Project" | "Internal";
-export type WorkPackagePurpose = "General" | "ProcurementInputPricing" | "FinanceCommercialReview" | "FinanceTenderReview";
+export type WorkPackagePurpose = "General" | "ProcurementInputPricing" | "FinanceCommercialReview" | "FinanceTenderReview" | "TenderPlanning";
 export type WorkPackageStatus = "Planned" | "Active" | "Completed" | "Cancelled";
 export type WorkTaskStatus = "Planned" | "InProgress" | "Completed" | "Verified" | "Cancelled";
 
