@@ -132,4 +132,71 @@ public abstract class IntegrationTestBase : IClassFixture<NihomeWebApplicationFa
             await db.SaveChangesAsync();
             return package.Id;
         });
+
+    /// <summary>
+    /// Creates the completed departmental plan required before a tender may be
+    /// submitted. Tests focused on downstream handoffs can use this fixture
+    /// without bypassing the production submission gate.
+    /// </summary>
+    protected async Task<int> CreateCompletedTenderPlanAsync(
+        int operationalProjectId, int tenderId) =>
+        await WithDbAsync(async db =>
+        {
+            var groupId = await db.RoleGroups.AsNoTracking()
+                .Where(group => group.Code == "FINANCE" && group.IsActive)
+                .Select(group => group.Id).SingleAsync();
+            var leadUserId = await db.Users.AsNoTracking()
+                .Where(user => user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["ACCOUNTANT"])
+                .Select(user => user.Id).SingleAsync();
+            var now = DateTime.UtcNow;
+            var package = new DepartmentWorkPackage
+            {
+                Code = UniqueSlug("WP-TENDER-PLAN").ToUpperInvariant(),
+                Kind = WorkPackageKind.Project,
+                Purpose = WorkPackagePurpose.General,
+                Name = "Completed tender plan fixture",
+                OperationalProjectId = operationalProjectId,
+                SourceTenderId = tenderId,
+                DepartmentRoleGroupId = groupId,
+                LeadUserId = leadUserId,
+                Status = WorkPackageStatus.Completed,
+                PlannedStart = now.Date.AddDays(-7),
+                PlannedEnd = now.Date,
+                CompletedAt = now,
+                CreatedByUserId = leadUserId,
+                UpdatedByUserId = leadUserId,
+            };
+            db.DepartmentWorkPackages.Add(package);
+            await db.SaveChangesAsync();
+            return package.Id;
+        });
+
+    /// <summary>
+    /// Selects a document from the shared capability library for the tender's
+    /// fixed capability checklist item.
+    /// </summary>
+    protected async Task<int> AttachSharedCapabilityDocumentAsync(int tenderId) =>
+        await WithDbAsync(async db =>
+        {
+            var document = new CapabilityDocument
+            {
+                Name = "Hồ sơ năng lực NICON dùng chung",
+                TagCode = "capability",
+                FilePath = $"/files/capability/{UniqueSlug("shared")}.pdf",
+                OriginalFileName = "ho-so-nang-luc-nicon.pdf",
+                FileSize = 1024,
+                ContentType = "application/pdf",
+                CurrentVersion = 1,
+            };
+            db.CapabilityDocuments.Add(document);
+            await db.SaveChangesAsync();
+
+            var checklistItem = await db.TenderChecklistItems.SingleAsync(item =>
+                item.TenderId == tenderId && item.TemplateCode == "capability");
+            checklistItem.CapabilityDocumentId = document.Id;
+            checklistItem.FilePath = document.FilePath;
+            checklistItem.OriginalFileName = document.OriginalFileName;
+            await db.SaveChangesAsync();
+            return document.Id;
+        });
 }

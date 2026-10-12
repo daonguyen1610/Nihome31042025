@@ -299,19 +299,33 @@ test.describe("Material rate customer import workflow", () => {
     let revisionId: number | null = null;
     let raceCatalogId: number | null = null;
 
-    const importCsv = async (name: string, csv: string) => {
-      await page.getByTestId("material-rates-import-file").setInputFiles({
-        name,
-        mimeType: "text/csv",
-        buffer: Buffer.from(csv, "utf8"),
-      });
-      await page.getByTestId("material-rates-import-review").click();
-      const responsePromise = page.waitForResponse((response) =>
-        new URL(response.url()).pathname === `/api/material-rate-catalogs/${catalogId}/revisions/${revisionId}/import`
-        && response.request().method() === "POST",
+    const replaceRevisionLines = async (lines: Array<{
+      itemCode: string;
+      itemName: string;
+      quantity: string;
+      unit: string;
+      unitPrice: string;
+    }>) => {
+      const currentResponse = await api.get(
+        `/api/material-rate-catalogs/${catalogId}/revisions/${revisionId}`,
+        { headers },
       );
-      await page.getByTestId("material-rates-import-confirm").click();
-      return responsePromise;
+      expect(currentResponse.ok(), await currentResponse.text()).toBeTruthy();
+      const current = await currentResponse.json();
+      for (const line of current.lines as Array<{ id: number }>) {
+        const deleted = await api.delete(
+          `/api/material-rate-catalogs/${catalogId}/revisions/${revisionId}/lines/${line.id}`,
+          { headers },
+        );
+        expect(deleted.ok(), await deleted.text()).toBeTruthy();
+      }
+      for (const line of lines) {
+        const created = await api.post(
+          `/api/material-rate-catalogs/${catalogId}/revisions/${revisionId}/lines`,
+          { headers, data: line },
+        );
+        expect(created.status(), await created.text()).toBe(201);
+      }
     };
 
     try {
@@ -484,33 +498,6 @@ test.describe("Material rate customer import workflow", () => {
       await page.getByTestId("material-rates-download-package").click();
       expect((await downloadPromise).suggestedFilename()).toBe("NICON-BOQ-Rate-Form.xlsx");
 
-      const investmentRateCsv = [
-        "MaterialCode,MaterialName,Unit,NormPerSqm,UnitRate,WastePercent",
-        "VL-WRONG,Wrong catalog type,kg,1,100,0",
-        "",
-      ].join("\r\n");
-      const wrongHeadersResponse = await importCsv("investment-rate-template.csv", investmentRateCsv);
-      expect(wrongHeadersResponse.status()).toBe(400);
-      await expect(page.getByText(/Invalid CSV headers.*ItemCode,ItemName,Unit,Quantity,UnitPrice/i)).toBeVisible();
-      await expect(page.locator("tbody").getByText("Backfill and compact foundation trenches", { exact: true })).toBeVisible();
-
-      const invalidPrecisionCsv = [
-        "ItemCode,ItemName,Unit,Quantity,UnitPrice",
-        "BOQ-BAD-QTY,Invalid quantity,m3,1.00001,100",
-        "BOQ-BAD-PRICE,Invalid unit price,kg,1,100.001",
-        "",
-      ].join("\r\n");
-      const invalidPrecisionResponse = await importCsv("invalid-boq-precision.csv", invalidPrecisionCsv);
-      expect(invalidPrecisionResponse.status()).toBe(400);
-      await expect(page.getByText(/Quantity may have at most 4 decimal places/i)).toBeVisible();
-      await expect(page.getByText(/Unit rate may have at most 2 decimal places/i)).toBeVisible();
-      const afterInvalidImportsResponse = await api.get(`/api/material-rate-catalogs/${catalogId}/revisions/${revisionId}`, { headers });
-      expect(afterInvalidImportsResponse.ok(), await afterInvalidImportsResponse.text()).toBeTruthy();
-      expect(await afterInvalidImportsResponse.json()).toEqual(expect.objectContaining({
-        totalAmount: expect.stringMatching(/^2343750(?:\.0+)?$/),
-        lines: [expect.objectContaining({ materialCode: "CT-TRAC-DAC", sortOrder: 1 })],
-      }));
-
       const concurrentCreates = await Promise.all([
         api.post(`/api/material-rate-catalogs/${catalogId}/revisions/${revisionId}/lines`, {
           headers,
@@ -586,23 +573,20 @@ test.describe("Material rate customer import workflow", () => {
       expect((await api.delete(`/api/material-rate-catalogs/${raceCatalogId}`, { headers })).status()).toBe(204);
       raceCatalogId = null;
 
-      const validBoqCsv = [
-        "ItemCode,ItemName,Unit,Quantity,UnitPrice",
-        "CT-DAT-MONG,Machine excavation for foundation trenches,m3,25.5,85000",
-        "BT-LOT-M100,Lean concrete blinding grade 100,m3,2.75,1100000",
-        "BT-MONG-M300,Foundation concrete grade 300 with 1x2 aggregate,m3,12.3456,1500000.25",
-        "",
-      ].join("\r\n");
-      const validImportResponse = await importCsv("valid-boq-rates.csv", validBoqCsv);
-      expect(validImportResponse.status(), await validImportResponse.text()).toBe(200);
-      await expect(page.getByText(/Successfully imported 3 rows/i)).toBeVisible();
+      // Workbook import behavior has its own browser suite. Use API setup here
+      // so this lifecycle test stays focused on line editing and exact totals.
+      await replaceRevisionLines([
+        { itemCode: "CT-DAT-MONG", itemName: "Machine excavation for foundation trenches", unit: "m3", quantity: "25.5", unitPrice: "85000" },
+        { itemCode: "BT-LOT-M100", itemName: "Lean concrete blinding grade 100", unit: "m3", quantity: "2.75", unitPrice: "1100000" },
+        { itemCode: "BT-MONG-M300", itemName: "Foundation concrete grade 300 with 1x2 aggregate", unit: "m3", quantity: "12.3456", unitPrice: "1500000.25" },
+      ]);
+      await page.reload({ waitUntil: "networkidle" });
       await expect(page.locator("tbody").getByText("Machine excavation for foundation trenches", { exact: true })).toBeVisible();
       await expect(page.locator("tbody").getByText("Foundation concrete grade 300 with 1x2 aggregate", { exact: true })).toBeVisible();
       await expect(page.locator("tbody").getByText("Backfill and compact foundation trenches", { exact: true })).toHaveCount(0);
       await expect(page.getByRole("columnheader", { name: "Quantity" })).toBeVisible();
       await expect(page.getByRole("columnheader", { name: "Amount" })).toBeVisible();
       await expect(page.getByRole("columnheader", { name: /Norm/i })).toHaveCount(0);
-      await expect(page.getByText(/Review the total BOQ value/i)).toBeVisible();
       await expect(page.locator("body")).not.toContainText("UnitCost Quotes");
 
       const persistedRevisionResponse = await api.get(`/api/material-rate-catalogs/${catalogId}/revisions`, { headers });
