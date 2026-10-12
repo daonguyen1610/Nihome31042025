@@ -963,7 +963,7 @@ public class TendersControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task Submit_WithCompletedGates_IsIdempotentAndCreatesOneSnapshot()
+    public async Task Submit_WithCompletedGates_RejectsLegacyTransitionAndIsIdempotent()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
         var tenderId = await CreateTenderAsync("Gói thầu đủ điều kiện nộp NICON");
@@ -1058,6 +1058,23 @@ public class TendersControllerTests : IntegrationTestBase
             await db.SaveChangesAsync();
         });
 
+        var legacyTransition = await Client.PostAsJsonAsync($"/api/tenders/{tenderId}/transition", new
+        {
+            status = "Submitted",
+        });
+        var legacyReplay = await Client.PostAsJsonAsync($"/api/tenders/{tenderId}/transition", new
+        {
+            status = "Submitted",
+        });
+
+        legacyTransition.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        legacyReplay.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await legacyTransition.Content.ReadAsStringAsync()).Should().Contain("/submit");
+        (await WithDbAsync(db => db.TenderSubmissions.CountAsync(item => item.TenderId == tenderId)))
+            .Should().Be(0);
+        (await WithDbAsync(db => db.Tenders.AsNoTracking().SingleAsync(item => item.Id == tenderId)))
+            .Status.Should().Be(TenderStatus.Preparing);
+
         var detail = await Client.GetFromJsonAsync<JsonElement>($"/api/tenders/{tenderId}");
         var rowVersion = detail.GetProperty("rowVersion").GetString();
         var key = Guid.NewGuid().ToString("N");
@@ -1148,7 +1165,7 @@ public class TendersControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task TransitionSubmitted_WithoutPlan_IsRejectedAndPreservesTender()
+    public async Task TransitionSubmitted_AlwaysRequiresDedicatedSubmitEndpoint()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
         var tenderId = await CreateTenderAsync("Gói thầu chưa có kế hoạch");
@@ -1159,8 +1176,11 @@ public class TendersControllerTests : IntegrationTestBase
         });
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await response.Content.ReadAsStringAsync()).Should().Contain("/submit");
         (await WithDbAsync(db => db.Tenders.Where(item => item.Id == tenderId)
             .Select(item => item.Status).SingleAsync())).Should().Be(TenderStatus.Preparing);
+        (await WithDbAsync(db => db.TenderSubmissions.CountAsync(item => item.TenderId == tenderId)))
+            .Should().Be(0);
     }
 
     // ---------- NIH-97 mark-won / mark-lost ----------

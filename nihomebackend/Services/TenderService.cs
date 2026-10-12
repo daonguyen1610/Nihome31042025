@@ -1131,14 +1131,13 @@ public class TenderService(
             throw new TenderOperationException($"Trạng thái gói thầu '{request.Status}' không hợp lệ.");
         }
         if (nextStatus == TenderStatus.Submitted)
-            return await SubmitAsync(tenderId, new SubmitTenderRequest
-            {
-                SubmissionChannel = "Legacy transition",
-                Note = request.Note,
-            }, callerUserId, ct);
+        {
+            throw new TenderOperationException(
+                "Nộp thầu chỉ được thực hiện qua endpoint /submit có Idempotency-Key và RowVersion.");
+        }
         var allowed = tender.Status switch
         {
-            TenderStatus.Preparing => nextStatus is TenderStatus.Submitted or TenderStatus.Cancelled,
+            TenderStatus.Preparing => nextStatus == TenderStatus.Cancelled,
             TenderStatus.Submitted => nextStatus is TenderStatus.Won or TenderStatus.Lost or TenderStatus.Cancelled,
             _ => false,
         };
@@ -1147,90 +1146,7 @@ public class TenderService(
             throw new TenderOperationException($"Không thể chuyển gói thầu từ {tender.Status} sang {nextStatus}.");
         }
 
-        TenderSubmission? newSubmission = null;
-
-        if (nextStatus == TenderStatus.Submitted)
-        {
-            if (!tender.InvitationReceivedAt.HasValue)
-                throw new TenderOperationException("Phải ghi nhận ngày nhận hồ sơ mời thầu trước khi nộp thầu.");
-            var planStatuses = await db.DepartmentWorkPackages.AsNoTracking()
-                .Where(package => package.SourceTenderId == tenderId &&
-                    (package.Purpose == WorkPackagePurpose.TenderPlanning ||
-                        package.Purpose == WorkPackagePurpose.General) &&
-                    package.Status != WorkPackageStatus.Cancelled)
-                .Select(package => package.Status)
-                .ToListAsync(ct);
-            if (planStatuses.Count == 0)
-                throw new TenderOperationException("Phải lập Kế hoạch đấu thầu theo phòng ban trước khi nộp thầu.");
-            if (planStatuses.Any(status => status != WorkPackageStatus.Completed))
-                throw new TenderOperationException("Tất cả nhóm việc trong Kế hoạch đấu thầu phải hoàn thành và được xác nhận trước khi nộp thầu.");
-            var checklist = await db.TenderChecklistItems.AsNoTracking()
-                .Where(item => item.TenderId == tenderId)
-                .ToListAsync(ct);
-            var requiredChecklist = checklist.Where(item => item.IsRequired).ToList();
-            if (requiredChecklist.Count == 0 || requiredChecklist.Any(item =>
-                    item.Status != TenderChecklistItemStatus.Done &&
-                    item.Status != TenderChecklistItemStatus.Submitted))
-            {
-                throw new TenderOperationException("Phải hoàn tất tất cả mục hồ sơ bắt buộc trước khi nộp gói thầu.");
-            }
-            var missingEvidence = requiredChecklist.FirstOrDefault(item => !HasRequiredChecklistEvidence(item));
-            if (missingEvidence is not null)
-            {
-                throw MissingChecklistEvidence(missingEvidence);
-            }
-            var submittedChecklist = checklist.Where(item => item.IsRequired ||
-                ((item.Status == TenderChecklistItemStatus.Done ||
-                    item.Status == TenderChecklistItemStatus.Submitted) &&
-                    HasRequiredChecklistEvidence(item)))
-                .ToList();
-            var approvedEstimateRevisionId = await db.TenderEstimateRevisions.AsNoTracking()
-                .Where(revision => revision.TenderId == tenderId &&
-                    revision.Status == TenderEstimateRevisionStatus.Approved)
-                .OrderByDescending(revision => revision.Id)
-                .Select(revision => (int?)revision.Id)
-                .FirstOrDefaultAsync(ct);
-            if (!approvedEstimateRevisionId.HasValue)
-            {
-                throw new TenderOperationException("Phải có ít nhất một dự toán đã được phê duyệt trước khi nộp gói thầu.");
-            }
-            if (!tender.OperationalProjectId.HasValue)
-                throw new TenderOperationException("Gói thầu phải được liên kết với Dự án vận hành trước khi nộp.");
-            var financeReviewWorkPackageId = await db.DepartmentWorkPackages.AsNoTracking()
-                .Where(package => package.SourceTenderId == tenderId &&
-                    package.OperationalProjectId == tender.OperationalProjectId &&
-                    package.Purpose == WorkPackagePurpose.FinanceTenderReview &&
-                    package.FinanceReview != null &&
-                    package.FinanceReview.Status == FinanceReviewStatus.Approved)
-                .OrderByDescending(package => package.Id)
-                .Select(package => (int?)package.Id)
-                .FirstOrDefaultAsync(ct);
-            if (!financeReviewWorkPackageId.HasValue)
-                throw new TenderOperationException("Hồ sơ tài chính và bảo lãnh phải được Tài chính – Kế toán phê duyệt trước khi nộp thầu.");
-
-            var submittedAt = DateTime.UtcNow;
-            newSubmission = new TenderSubmission
-            {
-                TenderId = tenderId,
-                Sequence = await db.TenderSubmissions.CountAsync(item => item.TenderId == tenderId, ct) + 1,
-                SubmittedAt = submittedAt,
-                SubmittedByUserId = callerUserId,
-                ApprovedEstimateRevisionId = approvedEstimateRevisionId.Value,
-                FinanceReviewWorkPackageId = financeReviewWorkPackageId.Value,
-                Items = submittedChecklist.Select(item => new TenderSubmissionItem
-                {
-                    ChecklistItemId = item.Id,
-                    TemplateCode = item.TemplateCode,
-                    Title = item.Title,
-                    IsRequired = item.IsRequired,
-                    Status = item.Status,
-                    FilePath = item.FilePath,
-                    OriginalFileName = item.OriginalFileName,
-                    CapabilityDocumentId = item.CapabilityDocumentId,
-                }).ToList(),
-            };
-        }
-        else if (nextStatus == TenderStatus.Won)
+        if (nextStatus == TenderStatus.Won)
         {
             var opportunity = request.OpportunityId.HasValue
                 ? await db.Opportunities.FirstOrDefaultAsync(item => item.Id == request.OpportunityId.Value, ct)
@@ -1277,11 +1193,6 @@ public class TenderService(
             tender.Note = request.Note.Trim();
         }
         var now = DateTime.UtcNow;
-        if (newSubmission is not null)
-        {
-            db.TenderSubmissions.Add(newSubmission);
-            tender.SubmittedAt = newSubmission.SubmittedAt;
-        }
         tender.ClosedAt = nextStatus is TenderStatus.Won or TenderStatus.Lost or TenderStatus.Cancelled ? now : null;
         tender.UpdatedAt = now;
         tender.UpdatedByUserId = callerUserId;

@@ -1087,7 +1087,7 @@ reject capability-library references.
 | `POST` | `/api/tenders/{id}/invitation-documents` | `crm.tenders.manage` | Upload a checksummed invitation document |
 | `GET` | `/api/tenders/{id}/readiness` | `crm.tenders.view` | Return actionable planning, dossier, estimate, and Finance blockers and record first-achieved milestones |
 | `POST` | `/api/tenders/{id}/submit` | `crm.tenders.submit` | Require an idempotency key, channel, concurrency token, and all readiness gates; persist the next immutable submission revision |
-| `POST` | `/api/tenders/{id}/transition` (`Submitted`) | `crm.tenders.submit` | Backward-compatible submission entry point; new clients should use `/submit` |
+| `POST` | `/api/tenders/{id}/transition` (`Submitted`) | `crm.tenders.submit` | Rejected with `400`; all submission clients must use `/submit` so idempotency and concurrency are mandatory |
 
 `POST /api/tenders/{id}/mark-won` (`crm.tenders.mark-result`) takes either
 `opportunityId` (an opportunity of the tender's customer) or

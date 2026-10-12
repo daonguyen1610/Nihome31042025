@@ -877,9 +877,12 @@ public class TenderServiceTests : IDisposable
 
         var verifier = new ApplicationUser
         {
-            PhoneNumber = "0900000002", FullName = "Tender Verifier",
-            Email = "tender.verifier@example.com", Role = UserRole.USER,
-            IsActive = true, PasswordHash = "x",
+            PhoneNumber = "0900000002",
+            FullName = "Tender Verifier",
+            Email = "tender.verifier@example.com",
+            Role = UserRole.USER,
+            IsActive = true,
+            PasswordHash = "x",
         };
         _db.Users.Add(verifier);
         await _db.SaveChangesAsync();
@@ -1125,7 +1128,7 @@ public class TenderServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task TransitionSubmitted_WithVerifiedPlanAndRequiredApprovals_Succeeds()
+    public async Task Submit_WithVerifiedPlanAndRequiredApprovals_Succeeds()
     {
         var created = await _sut.CreateAsync(ValidCreate(), _userId);
         await _sut.CreateChecklistItemAsync(created.Id, new CreateTenderChecklistItemRequest
@@ -1135,8 +1138,12 @@ public class TenderServiceTests : IDisposable
         }, _userId);
         var verifier = new ApplicationUser
         {
-            PhoneNumber = "0900000001", FullName = "Independent Verifier",
-            Email = "verifier@example.com", Role = UserRole.USER, IsActive = true, PasswordHash = "x",
+            PhoneNumber = "0900000001",
+            FullName = "Independent Verifier",
+            Email = "verifier@example.com",
+            Role = UserRole.USER,
+            IsActive = true,
+            PasswordHash = "x",
         };
         _db.Users.Add(verifier);
         await _db.SaveChangesAsync();
@@ -1221,8 +1228,11 @@ public class TenderServiceTests : IDisposable
         });
         await _db.SaveChangesAsync();
 
-        var submitted = await _sut.TransitionAsync(created.Id,
-            new TransitionTenderRequest { Status = "Submitted" }, _userId);
+        var submitted = await _sut.SubmitAsync(created.Id, new SubmitTenderRequest
+        {
+            SubmissionChannel = "Cổng đấu thầu quốc gia",
+            RowVersion = created.RowVersion,
+        }, _userId);
 
         Assert.Equal("Submitted", submitted!.Status);
         Assert.NotNull(submitted.SubmittedAt);
@@ -1233,7 +1243,7 @@ public class TenderServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task TransitionSubmitted_ChecklistStatusWithoutFile_RejectsAndPreservesState()
+    public async Task Submit_ChecklistStatusWithoutFile_RejectsAndPreservesState()
     {
         var created = await _sut.CreateAsync(ValidCreate(), _userId);
         var checklist = await _db.TenderChecklistItems.Where(item => item.TenderId == created.Id).ToListAsync();
@@ -1290,23 +1300,44 @@ public class TenderServiceTests : IDisposable
         });
         await _db.SaveChangesAsync();
 
-        var error = await Assert.ThrowsAsync<TenderOperationException>(() => _sut.TransitionAsync(
-            created.Id, new TransitionTenderRequest { Status = "Submitted" }, _userId));
+        var error = await Assert.ThrowsAsync<TenderOperationException>(() => _sut.SubmitAsync(
+            created.Id, new SubmitTenderRequest
+            {
+                SubmissionChannel = "Cổng đấu thầu quốc gia",
+                RowVersion = created.RowVersion,
+            }, _userId));
 
         Assert.Contains("bằng chứng hợp lệ", error.Message);
         Assert.Equal("Preparing", (await _sut.GetAsync(created.Id))!.Status);
     }
 
     [Fact]
-    public async Task TransitionSubmitted_WithoutTenderPlan_RejectsAndPreservesState()
+    public async Task Submit_WithoutTenderPlan_RejectsAndPreservesState()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+
+        var error = await Assert.ThrowsAsync<TenderOperationException>(() => _sut.SubmitAsync(
+            created.Id, new SubmitTenderRequest
+            {
+                SubmissionChannel = "Cổng đấu thầu quốc gia",
+                RowVersion = created.RowVersion,
+            }, _userId));
+
+        Assert.Contains("Kế hoạch đấu thầu", error.Message);
+        Assert.Equal("Preparing", (await _sut.GetAsync(created.Id))!.Status);
+    }
+
+    [Fact]
+    public async Task TransitionSubmitted_RequiresDedicatedSubmitMethod()
     {
         var created = await _sut.CreateAsync(ValidCreate(), _userId);
 
         var error = await Assert.ThrowsAsync<TenderOperationException>(() => _sut.TransitionAsync(
             created.Id, new TransitionTenderRequest { Status = "Submitted" }, _userId));
 
-        Assert.Contains("Kế hoạch đấu thầu", error.Message);
+        Assert.Contains("/submit", error.Message);
         Assert.Equal("Preparing", (await _sut.GetAsync(created.Id))!.Status);
+        Assert.Empty((await _sut.GetAsync(created.Id))!.Submissions);
     }
 
     // ---------------- NIH-97 Mark Won / Lost ----------------
