@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Security.Cryptography;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
@@ -24,7 +25,8 @@ namespace NihomeBackend.Controllers;
 public class TendersController(
     ITenderService svc,
     IWebHostEnvironment env,
-    IAuditLogger audit) : ControllerBase
+    IAuditLogger audit,
+    IPermissionService permissions) : ControllerBase
 {
     // Upload limits mirror ContractsController — 20 MB, same extension
     // whitelist. Physical files land under wwwroot/files/tenders and are
@@ -52,6 +54,16 @@ public class TendersController(
     {
         var found = await svc.GetAsync(id, ct);
         return found is null ? NotFound() : Ok(found);
+    }
+
+    [HttpGet("{id:int}/readiness")]
+    [RequirePermission("crm.tenders", "view")]
+    public async Task<ActionResult<TenderReadinessResponse>> Readiness(int id, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        var readiness = await svc.GetReadinessAsync(id, userId.Value, ct);
+        return readiness is null ? NotFound() : Ok(readiness);
     }
 
     [HttpGet("assignee-options")]
@@ -175,6 +187,114 @@ public class TendersController(
 
     // -------- NIH-97 detail-page workflow --------
 
+    [HttpPost("{id:int}/checklist")]
+    [RequirePermission("crm.tenders", "manage")]
+    public async Task<ActionResult<TenderResponse>> CreateChecklistItem(
+        int id, [FromBody] CreateTenderChecklistItemRequest request, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        try
+        {
+            var updated = await svc.CreateChecklistItemAsync(id, request, userId.Value, ct);
+            if (updated is null) return NotFound();
+            audit.Log(new AuditEvent
+            {
+                Action = "tender.checklist.create",
+                ResourceType = EntityTypes.Tender,
+                ResourceId = id.ToString(),
+                Message = $"Tender #{id} custom checklist item created.",
+            });
+            return Ok(updated);
+        }
+        catch (TenderOperationException ex)
+        {
+            return LogAndBadRequest("tender.checklist.create", ex, id);
+        }
+    }
+
+    [HttpPost("{id:int}/invitation-documents")]
+    [Consumes("multipart/form-data")]
+    [RequirePermission("crm.tenders", "manage")]
+    public async Task<ActionResult<TenderResponse>> UploadInvitationDocument(
+        int id, [FromForm] IFormFile? file, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        var stored = await StoreUploadedFileAsync(file, "inv", ct);
+        if (stored.Result is BadRequestObjectResult bad) return bad;
+        if (stored.Payload is null) return BadRequest(new { message = "Không upload được file HSMT." });
+        try
+        {
+            var updated = await svc.AttachInvitationDocumentAsync(id, stored.Payload.filePath,
+                stored.Payload.originalFileName, stored.Payload.fileSize, stored.Payload.contentType,
+                await ComputeSha256Async(stored.Payload.fullPath, ct), userId.Value, ct);
+            if (updated is null)
+            {
+                DeleteStoredFile(stored.Payload.fullPath);
+                return NotFound();
+            }
+            return Ok(updated);
+        }
+        catch (TenderOperationException ex)
+        {
+            DeleteStoredFile(stored.Payload.fullPath);
+            return LogAndBadRequest("tender.invitation-document.upload", ex, id);
+        }
+        catch
+        {
+            try
+            {
+                var attached = await svc.IsInvitationDocumentAttachedAsync(
+                    id, stored.Payload.filePath, CancellationToken.None);
+                if (!attached) DeleteStoredFile(stored.Payload.fullPath);
+            }
+            catch
+            {
+            }
+            throw;
+        }
+    }
+
+    [HttpGet("{id:int}/invitation-documents/{documentId:int}/content")]
+    [RequirePermission("crm.tenders", "view")]
+    public async Task<IActionResult> GetInvitationDocumentContent(
+        int id, int documentId, CancellationToken ct)
+    {
+        var file = await svc.GetInvitationDocumentAsync(id, documentId, ct);
+        if (file is null) return NotFound();
+        var fullPath = ResolveManagedChecklistFile(file.FilePath);
+        if (fullPath is null || !System.IO.File.Exists(fullPath)) return NotFound();
+        return PhysicalFile(fullPath, GetContentType(Path.GetExtension(fullPath)), file.OriginalFileName,
+            enableRangeProcessing: true);
+    }
+
+    [HttpDelete("{id:int}/checklist/{itemId:int}")]
+    [RequirePermission("crm.tenders", "manage")]
+    public async Task<ActionResult<TenderResponse>> DeleteChecklistItem(
+        int id, int itemId, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        try
+        {
+            var updated = await svc.DeleteChecklistItemAsync(id, itemId, userId.Value, ct);
+            if (updated is null) return NotFound();
+            audit.Log(new AuditEvent
+            {
+                Action = "tender.checklist.delete",
+                ResourceType = EntityTypes.Tender,
+                ResourceId = id.ToString(),
+                Message = $"Tender #{id} custom checklist item #{itemId} deleted.",
+            });
+            return Ok(updated);
+        }
+        catch (TenderOperationException ex)
+        {
+            return LogAndBadRequest("tender.checklist.delete", ex, id);
+        }
+    }
+
     [HttpPatch("{id:int}/checklist/{itemId:int}")]
     [RequirePermission("crm.tenders", "manage")]
     public async Task<ActionResult<TenderResponse>> UpdateChecklistItem(
@@ -235,7 +355,9 @@ public class TendersController(
         try
         {
             var updated = await svc.AttachChecklistFileAsync(id, itemId,
-                stored.Payload.filePath, stored.Payload.originalFileName, userId.Value, ct);
+                stored.Payload.filePath, stored.Payload.originalFileName,
+                stored.Payload.fileSize, stored.Payload.contentType,
+                await ComputeSha256Async(stored.Payload.fullPath, ct), userId.Value, ct);
             if (updated is null)
             {
                 DeleteStoredFile(stored.Payload.fullPath);
@@ -350,12 +472,17 @@ public class TendersController(
     }
 
     [HttpPost("{id:int}/transition")]
-    [RequirePermission("crm.tenders", "mark-result")]
+    [RequirePermission("crm.tenders", "view")]
     public async Task<ActionResult<TenderResponse>> Transition(
         int id, [FromBody] TransitionTenderRequest request, CancellationToken ct)
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
+        var requiredPermission = string.Equals(request.Status, "Submitted", StringComparison.OrdinalIgnoreCase)
+            ? "crm.tenders.submit"
+            : "crm.tenders.mark-result";
+        if (!await permissions.HasAsync(userId.Value, requiredPermission, ct))
+            return Forbid();
         try
         {
             var updated = await svc.TransitionAsync(id, request, userId.Value, ct);
@@ -373,6 +500,35 @@ public class TendersController(
         catch (TenderOperationException ex)
         {
             return LogAndBadRequest("tender.transition", ex, id);
+        }
+    }
+
+    [HttpPost("{id:int}/submit")]
+    [RequirePermission("crm.tenders", "submit")]
+    [Idempotency("crm.tenders.submit", requireKey: true)]
+    public async Task<ActionResult<TenderResponse>> Submit(
+        int id, [FromBody] SubmitTenderRequest request, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        try
+        {
+            request.RowVersion = CrmConcurrency.ResolveRequestToken(Request, request.RowVersion);
+            var updated = await svc.SubmitAsync(id, request, userId.Value, ct);
+            if (updated is null) return NotFound();
+            CrmConcurrency.SetResponseEntityTag(Response, updated.RowVersion);
+            audit.Log(new AuditEvent
+            {
+                Action = "tender.submit",
+                ResourceType = EntityTypes.Tender,
+                ResourceId = id.ToString(),
+                Message = $"Tender #{id} submission revision #{updated.Submissions.Max(item => item.Sequence)} created.",
+            });
+            return Ok(updated);
+        }
+        catch (TenderOperationException ex)
+        {
+            return LogAndBadRequest("tender.submit", ex, id);
         }
     }
 
@@ -491,6 +647,13 @@ public class TendersController(
         ".jpg" or ".jpeg" => "image/jpeg",
         _ => "application/octet-stream",
     };
+
+    private static async Task<string> ComputeSha256Async(string path, CancellationToken ct)
+    {
+        await using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+        var hash = await SHA256.HashDataAsync(stream, ct);
+        return Convert.ToHexString(hash).ToLowerInvariant();
+    }
 
     private int? GetUserId()
     {

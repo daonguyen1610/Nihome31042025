@@ -905,6 +905,7 @@ public class CustomersControllerTests : IntegrationTestBase
         var customerId = (await ReadJsonAsync(created)).GetProperty("id").GetInt32();
         var ids = await WithDbAsync(async db =>
         {
+            var actorId = await db.Users.Where(item => item.IsActive).Select(item => item.Id).FirstAsync();
             var opportunity = new Opportunity { Name = "Owned opportunity", CustomerId = customerId };
             db.Opportunities.Add(opportunity);
             await db.SaveChangesAsync();
@@ -929,6 +930,9 @@ public class CustomersControllerTests : IntegrationTestBase
                 Name = "Owned tender",
                 CustomerId = customerId,
                 SubmissionDeadline = DateTime.UtcNow.AddDays(1),
+                InvitationReceivedAt = DateTime.UtcNow.AddDays(-1),
+                InvitationSource = "Email khách hàng",
+                InvitationReceivedByUserId = actorId,
             };
             var project = new DesignProject
             {

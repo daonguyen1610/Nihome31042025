@@ -286,6 +286,22 @@ public sealed class CrmHardDeletePlanService(
             .OrderBy(item => item.Id)
             .Select(item => new { item.Id, item.FilePath, item.CapabilityDocumentId })
             .ToListAsync(ct);
+        var evidence = await db.TenderChecklistEvidence.AsNoTracking()
+            .Where(item => item.ChecklistItem.TenderId == tenderId)
+            .OrderBy(item => item.Id)
+            .Select(item => new
+            {
+                item.Id,
+                item.FilePath,
+                item.Source,
+                item.CapabilityDocumentId,
+            })
+            .ToListAsync(ct);
+        var invitationDocuments = await db.TenderInvitationDocuments.AsNoTracking()
+            .Where(item => item.TenderId == tenderId)
+            .OrderBy(item => item.Id)
+            .Select(item => new { item.Id, item.FilePath })
+            .ToListAsync(ct);
         var revisionIds = await db.TenderEstimateRevisions.AsNoTracking()
             .Where(item => item.TenderId == tenderId)
             .OrderBy(item => item.Id)
@@ -303,12 +319,16 @@ public sealed class CrmHardDeletePlanService(
             .ToListAsync(ct);
 
         var checklistIds = checklist.Select(item => Identifier(item.Id)).ToList();
+        var evidenceIds = evidence.Select(item => Identifier(item.Id)).ToList();
+        var invitationDocumentIds = invitationDocuments.Select(item => Identifier(item.Id)).ToList();
         var revisionIdentifiers = revisionIds.Select(Identifier).ToList();
         var lineIdentifiers = lineIds.Select(Identifier).ToList();
         var opportunityIdentifiers = opportunityRecords.Select(item => Identifier(item.Id)).ToList();
         var capabilityIds = checklist
             .Where(item => item.CapabilityDocumentId.HasValue)
             .Select(item => item.CapabilityDocumentId!.Value)
+            .Concat(evidence.Where(item => item.CapabilityDocumentId.HasValue)
+                .Select(item => item.CapabilityDocumentId!.Value))
             .Distinct()
             .ToList();
         var capabilityRecords = await db.CapabilityDocuments.AsNoTracking()
@@ -321,22 +341,30 @@ public sealed class CrmHardDeletePlanService(
             : null;
         var localPaths = new List<string>();
         var fileBlockers = new List<string>();
-        foreach (var item in checklist.Where(item =>
-            !item.CapabilityDocumentId.HasValue && !string.IsNullOrWhiteSpace(item.FilePath)))
+        var managedTenderFiles = checklist
+            .Where(item => !item.CapabilityDocumentId.HasValue && !string.IsNullOrWhiteSpace(item.FilePath))
+            .Select(item => new { Key = item.Id.ToString(CultureInfo.InvariantCulture), FilePath = item.FilePath! })
+            .Concat(evidence
+            .Where(item => item.Source != TenderEvidenceSource.CapabilityLibrary)
+            .Select(item => new { Key = $"evidence:{item.Id}", item.FilePath }))
+            .Concat(invitationDocuments.Where(item => !string.IsNullOrWhiteSpace(item.FilePath))
+                .Select(item => new { Key = $"invitation:{item.Id}", FilePath = item.FilePath! }))
+            .ToList();
+        foreach (var item in managedTenderFiles)
         {
             try
             {
-                var path = files.ValidateManagedPath(item.FilePath!);
+                var path = files.ValidateManagedPath(item.FilePath);
                 if (!path.StartsWith("/files/tenders/", StringComparison.Ordinal))
                 {
-                    fileBlockers.Add($"{item.Id}:{path}");
+                    fileBlockers.Add($"{item.Key}:{path}");
                     continue;
                 }
                 localPaths.Add(path);
             }
             catch (HardDeleteFileException)
             {
-                fileBlockers.Add($"{item.Id}:{item.FilePath}");
+                fileBlockers.Add($"{item.Key}:{item.FilePath}");
             }
         }
         localPaths = localPaths.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToList();
@@ -346,6 +374,8 @@ public sealed class CrmHardDeletePlanService(
         var tenderDetail = $"/admin/tenders/{tender.Id}";
         var tenderLink = new[] { DetailLink($"{tender.Code} · {tender.Name}", tenderDetail) };
         AddImpact(impactItems, "tender.checklistItems", checklistIds, resolutionUrl: tenderDetail, resolutionLinks: tenderLink);
+        AddImpact(impactItems, "tender.checklistEvidence", evidenceIds, resolutionUrl: tenderDetail, resolutionLinks: tenderLink);
+        AddImpact(impactItems, "tender.invitationDocuments", invitationDocumentIds, resolutionUrl: tenderDetail, resolutionLinks: tenderLink);
         AddImpact(impactItems, "tender.estimateRevisions", revisionIdentifiers, resolutionUrl: tenderDetail, resolutionLinks: tenderLink);
         AddImpact(impactItems, "tender.estimateLines", lineIdentifiers, resolutionUrl: tenderDetail, resolutionLinks: tenderLink);
         AddImpact(impactItems, "tender.localFiles", localPaths, resolutionUrl: tenderDetail, resolutionLinks: tenderLink);
@@ -380,6 +410,8 @@ public sealed class CrmHardDeletePlanService(
         var confirmation = tender.Code;
         var tokenSource = string.Join('|',
             $"tender.checklistItems:{string.Join(',', checklistIds)}",
+            $"tender.checklistEvidence:{string.Join(',', evidenceIds)}",
+            $"tender.invitationDocuments:{string.Join(',', invitationDocumentIds)}",
             $"tender.estimateRevisions:{string.Join(',', revisionIdentifiers)}",
             $"tender.estimateLines:{string.Join(',', lineIdentifiers)}",
             $"tender.localFiles:{string.Join(',', localPaths)}",
@@ -398,7 +430,7 @@ public sealed class CrmHardDeletePlanService(
             RequiredConfirmation = confirmation,
             PlanToken = token,
             CanDelete = canDelete,
-            TotalAffected = 1 + checklistIds.Count + revisionIdentifiers.Count +
+            TotalAffected = 1 + checklistIds.Count + evidenceIds.Count + invitationDocumentIds.Count + revisionIdentifiers.Count +
                 lineIdentifiers.Count + localPaths.Count + fileBlockers.Count + capabilityIdentifiers.Count +
                 opportunityIdentifiers.Count + wonOpportunityIdentifiers.Length,
             Items = impactItems,

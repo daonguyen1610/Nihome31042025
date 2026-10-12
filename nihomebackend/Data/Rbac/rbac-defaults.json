@@ -104,6 +104,7 @@
     { "module": "crm.material-rates", "action": "approve" },
     { "module": "crm.tenders", "action": "view" },
     { "module": "crm.tenders", "action": "manage" },
+    { "module": "crm.tenders", "action": "submit" },
     { "module": "crm.tenders", "action": "mark-result" },
     { "module": "crm.tenders", "action": "approve-estimate" },
     { "module": "crm.capability-docs", "action": "view" },

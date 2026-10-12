@@ -10,8 +10,8 @@
  *  2. Simple `{ message: "..." }` bodies from our service exceptions.
  *  3. Any other Error / value — falls back to `.message` then `String(err)`.
  */
-export function extractApiError(err: unknown): string {
-    if (typeof err !== "object" || err === null) return String(err);
+export function extractApiError(err: unknown, fallback?: string): string {
+    if (typeof err !== "object" || err === null) return fallback ?? String(err);
 
     const anyErr = err as {
         response?: { status?: number; data?: unknown };
@@ -33,7 +33,7 @@ export function extractApiError(err: unknown): string {
         }
     }
 
-    return anyErr.message ?? String(err);
+    return anyErr.message ?? fallback ?? String(err);
 }
 
 export function isConcurrencyConflict(err: unknown): boolean {

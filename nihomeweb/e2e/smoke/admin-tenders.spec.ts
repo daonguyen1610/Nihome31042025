@@ -79,6 +79,8 @@ test("SALE can prepare a tender but cannot submit or cancel it", async ({
                 name: `Tender permission boundary ${unique}`,
                 customerId,
                 operationalProjectId: projectId,
+                invitationReceivedAt: new Date(Date.now() - 24 * 60 * 60 * 1_000).toISOString(),
+                invitationSource: "Cổng đấu thầu quốc gia",
                 submissionDeadline: new Date(Date.now() + 14 * 24 * 60 * 60 * 1_000).toISOString(),
             },
         });
@@ -149,6 +151,8 @@ test("tender plan assigns owners and deadlines and manages checklist files", asy
                 name: `Tender checklist actions ${unique}`,
                 customerId,
                 operationalProjectId: projectId,
+                invitationReceivedAt: new Date(Date.now() - 24 * 60 * 60 * 1_000).toISOString(),
+                invitationSource: "Email khách hàng",
                 submissionDeadline: new Date(Date.now() + 14 * 24 * 60 * 60 * 1_000).toISOString(),
             },
         });
@@ -208,6 +212,41 @@ test("tender plan assigns owners and deadlines and manages checklist files", asy
                 await expect(page.getByTestId(`tender-checklist-upload-${key}-desktop`)).toBeVisible();
             }
         }
+
+        const createCustomResponse = page.waitForResponse((response) =>
+            response.request().method() === "POST"
+            && response.url().endsWith(`/api/tenders/${tenderId}/checklist`),
+        );
+        await page.getByTestId("tender-checklist-add").click();
+        await page.getByTestId("tender-checklist-custom-title").fill("Bản vẽ phối cảnh theo HSMT");
+        await page.getByTestId("tender-checklist-custom-required").uncheck();
+        await page.getByTestId("tender-checklist-custom-save").click();
+        const createCustom = await createCustomResponse;
+        expect(createCustom.status(), await createCustom.text()).toBe(200);
+        const customItem = (await createCustom.json()).checklistItems.find(
+            (item: { title: string }) => item.title === "Bản vẽ phối cảnh theo HSMT",
+        ) as { id: number };
+        const customRow = page.getByTestId(`tender-checklist-row-${customItem.id}-desktop`);
+        await expect(customRow).toBeVisible();
+
+        const markNotApplicableResponse = page.waitForResponse((response) =>
+            response.request().method() === "PATCH"
+            && response.url().endsWith(`/api/tenders/${tenderId}/checklist/${customItem.id}`),
+        );
+        await customRow.getByRole("combobox").first().click();
+        await page.getByRole("option", { name: /Không áp dụng|Not applicable/ }).click();
+        await page.getByTestId("tender-checklist-na-reason").fill("HSMT không yêu cầu bản vẽ phối cảnh.");
+        await page.getByTestId("tender-checklist-na-save").click();
+        expect((await markNotApplicableResponse).status()).toBe(200);
+        await expect(customRow).toContainText(/Không áp dụng|Not applicable/);
+
+        const deleteCustomResponse = page.waitForResponse((response) =>
+            response.request().method() === "DELETE"
+            && response.url().endsWith(`/api/tenders/${tenderId}/checklist/${customItem.id}`),
+        );
+        await customRow.getByRole("button", { name: /Xóa mục hồ sơ|Delete document item/ }).click();
+        expect((await deleteCustomResponse).status()).toBe(200);
+        await expect(customRow).toHaveCount(0);
 
         const capabilityItem = checklistItems.find((item) => item.templateCode === "capability");
         expect(capabilityItem).toBeTruthy();

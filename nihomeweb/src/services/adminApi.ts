@@ -2420,7 +2420,7 @@ export const TENDER_STATUSES: TenderStatus[] = [
   "Cancelled",
 ];
 
-export type TenderChecklistItemStatus = "NotStarted" | "Preparing" | "Done" | "Submitted";
+export type TenderChecklistItemStatus = "NotStarted" | "Preparing" | "Done" | "Submitted" | "NotApplicable";
 
 export interface TenderAssigneeOptionResponse {
   id: number;
@@ -2432,6 +2432,9 @@ export interface TenderChecklistItemResponse {
   templateCode?: string | null;
   title: string;
   status: TenderChecklistItemStatus;
+  isRequired: boolean;
+  notApplicableReason?: string | null;
+  documentKind: string;
   ownerUserId?: number | null;
   ownerName?: string | null;
   internalDeadline?: string | null;
@@ -2439,6 +2442,57 @@ export interface TenderChecklistItemResponse {
   originalFileName?: string | null;
   capabilityDocumentId?: number | null;
   sortOrder: number;
+  completedAt?: string | null;
+  completedByUserId?: number | null;
+  verifiedAt?: string | null;
+  verifiedByUserId?: number | null;
+  workTaskId?: number | null;
+  currentEvidenceId?: number | null;
+  evidenceRevisions: TenderChecklistEvidenceResponse[];
+}
+
+export interface TenderChecklistEvidenceResponse {
+  id: number;
+  revision: number;
+  source: "DirectUpload" | "CapabilityLibrary" | "Legacy";
+  originalFileName: string;
+  fileSize: number;
+  contentType: string;
+  sha256?: string | null;
+  capabilityDocumentId?: number | null;
+  capabilityDocumentVersion?: number | null;
+  createdByUserId: number;
+  createdAt: string;
+}
+
+export interface TenderSubmissionResponse {
+  id: number;
+  sequence: number;
+  submittedAt: string;
+  submittedByUserId: number;
+  submittedByName?: string | null;
+  approvedEstimateRevisionId?: number | null;
+  financeReviewWorkPackageId?: number | null;
+  submissionChannel: string;
+  receiptReference?: string | null;
+  legacyUnknown: boolean;
+  itemCount: number;
+  items: TenderSubmissionItemResponse[];
+}
+
+export interface TenderSubmissionItemResponse {
+  checklistItemId: number;
+  templateCode?: string | null;
+  title: string;
+  isRequired: boolean;
+  status: TenderChecklistItemStatus;
+  filePath?: string | null;
+  originalFileName?: string | null;
+  capabilityDocumentId?: number | null;
+  evidenceId?: number | null;
+  capabilityDocumentVersion?: number | null;
+  sha256?: string | null;
+  notApplicableReason?: string | null;
 }
 
 export interface TenderResponse {
@@ -2451,6 +2505,12 @@ export interface TenderResponse {
   operationalProjectCode?: string | null;
   operationalProjectName?: string | null;
   openingDate?: string | null;
+  invitationReceivedAt?: string | null;
+  invitationReference?: string | null;
+  invitationSource: string;
+  invitationReceivedByUserId: number;
+  invitationReceivedByName?: string | null;
+  invitationPortalUrl?: string | null;
   submissionDeadline: string;
   preparerUserId?: number | null;
   preparerName?: string | null;
@@ -2463,11 +2523,47 @@ export interface TenderResponse {
   lostReasonLabel?: string | null;
   lostNote?: string | null;
   closedAt?: string | null;
+  submittedAt?: string | null;
   createdAt: string;
   updatedAt: string;
+  rowVersion: string;
   checklistItems: TenderChecklistItemResponse[];
+  submissions: TenderSubmissionResponse[];
+  invitationDocuments: TenderInvitationDocumentResponse[];
   checklistCompletionPercent: number;
   isDeadlineImminent: boolean;
+  milestones: TenderMilestoneResponse[];
+}
+
+export interface TenderInvitationDocumentResponse {
+  id: number;
+  originalFileName?: string | null;
+  fileSize?: number | null;
+  contentType?: string | null;
+  externalUrl?: string | null;
+  createdByUserId: number;
+  createdAt: string;
+}
+
+export interface TenderMilestoneResponse {
+  kind: "PlanningReady" | "DossierReady" | "InternalReviewReady" | "ReadyToSubmit";
+  achievedAt: string;
+  achievedByUserId: number;
+}
+
+export interface TenderReadinessBlockerResponse {
+  code: string;
+  area: string;
+  message: string;
+  actionPath: string;
+}
+
+export interface TenderReadinessResponse {
+  tenderId: number;
+  currentStep: string;
+  canSubmit: boolean;
+  blockers: TenderReadinessBlockerResponse[];
+  milestones: TenderMilestoneResponse[];
 }
 
 export interface TenderListItemResponse {
@@ -2477,6 +2573,11 @@ export interface TenderListItemResponse {
   customerId: number;
   customerName: string;
   openingDate?: string | null;
+  invitationReceivedAt: string;
+  invitationReference?: string | null;
+  invitationSource: string;
+  invitationReceivedByUserId?: number | null;
+  invitationPortalUrl?: string | null;
   submissionDeadline: string;
   preparerUserId?: number | null;
   preparerName?: string | null;
@@ -2498,6 +2599,11 @@ export interface CreateTenderRequest {
   customerId: number;
   operationalProjectId?: number | null;
   openingDate?: string | null;
+  invitationReceivedAt: string;
+  invitationReference?: string | null;
+  invitationSource: string;
+  invitationReceivedByUserId?: number | null;
+  invitationPortalUrl?: string | null;
   submissionDeadline: string;
   preparerUserId?: number | null;
   infoSource?: string | null;
@@ -2508,6 +2614,11 @@ export interface UpdateTenderRequest {
   name: string;
   operationalProjectId?: number | null;
   openingDate?: string | null;
+  invitationReceivedAt?: string | null;
+  invitationReference?: string | null;
+  invitationSource?: string | null;
+  invitationReceivedByUserId?: number | null;
+  invitationPortalUrl?: string | null;
   submissionDeadline: string;
   preparerUserId?: number | null;
   infoSource?: string | null;
@@ -2538,6 +2649,26 @@ export interface UpdateTenderChecklistItemRequest {
   clearOwner?: boolean;
   internalDeadline?: string | null;
   clearInternalDeadline?: boolean;
+  isRequired?: boolean;
+  notApplicableReason?: string | null;
+  workTaskId?: number | null;
+  clearWorkTask?: boolean;
+}
+
+export interface CreateTenderChecklistItemRequest {
+  title: string;
+  isRequired: boolean;
+  documentKind?: string;
+  ownerUserId?: number | null;
+  workTaskId?: number | null;
+  internalDeadline?: string | null;
+}
+
+export interface SubmitTenderRequest {
+  submissionChannel: string;
+  receiptReference?: string | null;
+  note?: string | null;
+  rowVersion: string;
 }
 
 export interface AttachTenderChecklistFromLibraryItem {
@@ -5080,6 +5211,14 @@ export const adminApi = {
     return api.get<TenderListResponse>(`/tenders${qs ? `?${qs}` : ""}`);
   },
   getTender: (id: number) => api.get<TenderResponse>(`/tenders/${id}`),
+  getTenderReadiness: (id: number) => api.get<TenderReadinessResponse>(`/tenders/${id}/readiness`),
+  uploadTenderInvitationDocument: (tenderId: number, file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    return api.post<TenderResponse>(`/tenders/${tenderId}/invitation-documents`, form, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+  },
   listTenderAssigneeOptions: () =>
     api.get<TenderAssigneeOptionResponse[]>("/tenders/assignee-options"),
   createTender: (body: CreateTenderRequest) => api.post<TenderResponse>("/tenders", body),
@@ -5095,6 +5234,10 @@ export const adminApi = {
     itemId: number,
     body: UpdateTenderChecklistItemRequest,
   ) => api.patch<TenderResponse>(`/tenders/${tenderId}/checklist/${itemId}`, body),
+  createTenderChecklistItem: (tenderId: number, body: CreateTenderChecklistItemRequest) =>
+    api.post<TenderResponse>(`/tenders/${tenderId}/checklist`, body),
+  deleteTenderChecklistItem: (tenderId: number, itemId: number) =>
+    api.delete<TenderResponse>(`/tenders/${tenderId}/checklist/${itemId}`),
   uploadTenderChecklistFile: (tenderId: number, itemId: number, file: File) => {
     const form = new FormData();
     form.append("file", file);
@@ -5120,6 +5263,11 @@ export const adminApi = {
     api.get<TenderTimelineEvent[]>(`/tenders/${tenderId}/timeline`, { params: { limit } }),
   transitionTender: (tenderId: number, body: TransitionTenderRequest) =>
     api.post<TenderResponse>(`/tenders/${tenderId}/transition`, body),
+  submitTender: (tenderId: number, body: SubmitTenderRequest, idempotencyKey: string) =>
+    api.post<TenderResponse>(`/tenders/${tenderId}/submit`, body, { headers: {
+      ...withIdempotencyKey(idempotencyKey).headers,
+      ...withIfMatch(body.rowVersion).headers,
+    } }),
   downloadTenderEstimateTemplate: (tenderId: number) =>
     api.get<Blob>(`/tenders/${tenderId}/estimates/template`, { responseType: "blob" }),
   listTenderEstimates: (tenderId: number) =>

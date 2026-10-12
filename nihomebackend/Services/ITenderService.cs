@@ -56,6 +56,12 @@ public interface ITenderService
     Task<TenderResponse?> UpdateChecklistItemAsync(int tenderId, int itemId,
         UpdateTenderChecklistItemRequest request, int callerUserId, CancellationToken ct = default);
 
+    Task<TenderResponse?> CreateChecklistItemAsync(int tenderId,
+        CreateTenderChecklistItemRequest request, int callerUserId, CancellationToken ct = default);
+
+    Task<TenderResponse?> DeleteChecklistItemAsync(int tenderId, int itemId,
+        int callerUserId, CancellationToken ct = default);
+
     /// <summary>
     /// Attach an uploaded file to one checklist row. File writing is handled
     /// by the controller; this method only persists metadata + flips the
@@ -63,6 +69,10 @@ public interface ITenderService
     /// still un-started/preparing. Returns the refreshed tender or null on
     /// missing tender/item.
     /// </summary>
+    Task<TenderResponse?> AttachChecklistFileAsync(int tenderId, int itemId,
+        string filePath, string originalFileName, long fileSize, string contentType,
+        string sha256, int callerUserId, CancellationToken ct = default);
+
     Task<TenderResponse?> AttachChecklistFileAsync(int tenderId, int itemId,
         string filePath, string originalFileName, int callerUserId, CancellationToken ct = default);
 
@@ -75,6 +85,16 @@ public interface ITenderService
 
     Task<bool> IsChecklistFileAttachedAsync(
         int tenderId, int itemId, string filePath, CancellationToken ct = default);
+
+    Task<TenderResponse?> AttachInvitationDocumentAsync(int tenderId, string filePath,
+        string originalFileName, long fileSize, string contentType, string sha256,
+        int callerUserId, CancellationToken ct = default);
+
+    Task<TenderChecklistFileReference?> GetInvitationDocumentAsync(
+        int tenderId, int documentId, CancellationToken ct = default);
+
+    Task<bool> IsInvitationDocumentAttachedAsync(
+        int tenderId, string filePath, CancellationToken ct = default);
 
     /// <summary>
     /// Attach the fixed <c>TemplateCode=capability</c> checklist row to a
@@ -106,6 +126,12 @@ public interface ITenderService
         int callerUserId, CancellationToken ct = default);
 
     Task<TenderResponse?> TransitionAsync(int tenderId, TransitionTenderRequest request,
+        int callerUserId, CancellationToken ct = default);
+
+    Task<TenderReadinessResponse?> GetReadinessAsync(int tenderId, int callerUserId,
+        CancellationToken ct = default);
+
+    Task<TenderResponse?> SubmitAsync(int tenderId, SubmitTenderRequest request,
         int callerUserId, CancellationToken ct = default);
 
     /// <summary>

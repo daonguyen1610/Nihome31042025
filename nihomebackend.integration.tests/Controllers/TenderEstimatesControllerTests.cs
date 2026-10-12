@@ -95,7 +95,15 @@ public class TenderEstimatesControllerTests : IntegrationTestBase
         await WithDbAsync(async db =>
         {
             var items = await db.TenderChecklistItems.Where(item => item.TenderId == tenderId).ToListAsync();
-            items.ForEach(item => item.Status = TenderChecklistItemStatus.Done);
+            foreach (var item in items)
+            {
+                item.Status = TenderChecklistItemStatus.Done;
+                if (item.TemplateCode != "capability")
+                {
+                    item.FilePath = $"/files/tenders/{item.TemplateCode}.pdf";
+                    item.OriginalFileName = $"{item.TemplateCode}.pdf";
+                }
+            }
             await db.SaveChangesAsync();
         });
 
@@ -224,6 +232,8 @@ public class TenderEstimatesControllerTests : IntegrationTestBase
             name = "Tender estimate " + Guid.NewGuid().ToString("N")[..6],
             customerId,
             operationalProjectId = projectId,
+            invitationReceivedAt = DateTime.UtcNow.AddDays(-1),
+            invitationSource = "Cổng đấu thầu quốc gia",
             submissionDeadline = DateTime.UtcNow.AddDays(14),
         });
         response.EnsureSuccessStatusCode();

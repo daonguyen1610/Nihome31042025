@@ -1017,7 +1017,12 @@ The CI `e2e` job sets `COMPOSE_FILE=docker-compose.yaml:docker-compose-dev.yaml`
 `MAIL_SINK_URL=http://127.0.0.1:8025`, so `quote-email-delivery.spec.ts` runs
 there instead of skipping, and no customer address is ever mailed from CI.
 
-Each Tender checklist row retains one current file. Users with
+Each Tender records the invitation receipt time (required and earlier than the
+submission deadline), source, receiving user, optional customer reference, and
+an invitation portal URL or uploaded invitation documents. Every uploaded file
+stores its size, media type, and SHA-256 digest. Each checklist row points to a
+current evidence revision while retaining every earlier direct-upload or
+capability-library revision. Users with
 `crm.tenders.manage` may assign an active user whose active role also has that
 permission. A changed assignment emits one `tender.checklist.assigned`
 notification with a direct Tender link; an unchanged assignment is idempotent.
@@ -1025,13 +1030,30 @@ Internal deadlines are date-based, may not be before the current date, and may
 not be after the Tender submission date. These rules are enforced by the
 service as well as the form. Only the `TemplateCode=capability` row may attach
 an existing capability document; every other row uses a direct upload. A row
-cannot move to `Done` or `Submitted` until its required evidence is present,
-and the Tender submission gate revalidates the evidence type and file metadata.
+cannot move to `Done` or `Submitted` until its required evidence is present.
+`Done` records the preparer; a different user must move each required row to
+`Submitted` as its independent verification. The Tender submission gate
+revalidates that verification, the evidence type, and the file metadata.
 Direct uploads are stored
 under `wwwroot/files/tenders/`; capability-library attachments retain their
 managed capability path. A capability document or retained version cannot be
-deleted while a Tender checklist row references its path. All checklist
-mutations are rejected after the Tender reaches `Won`, `Lost`, or `Cancelled`.
+deleted while either the current checklist row or its evidence history
+references it. Checklist work may continue after the first `Submitted` state
+for an explicit supplementary submission; terminal `Won`, `Lost`, and
+`Cancelled` Tenders remain locked. The seven standard
+rows include tender drawings as optional by default; users may add package-
+specific rows, mark rows required by the invitation, or mark an optional row
+`NotApplicable` with a reason. Standard rows cannot be deleted. Submission
+creates a numbered immutable `TenderSubmission` snapshot containing the exact
+evidence revisions and checksums, approved estimate content, completed planning
+content, approved Finance review content, submission channel, receipt reference,
+actor, and time. Adding replacement evidence resets that row's verification and
+does not alter earlier snapshots. The Tender's first `SubmittedAt` is immutable.
+The legacy backfill creates a `LegacyUnknown` snapshot only when a successful
+`tender.transition` audit proves the historical Submitted transition and uses
+that audit timestamp. It does not infer submission from `UpdatedAt`; rows
+without auditable evidence remain unbackfilled instead of receiving invented
+history.
 If a direct upload cannot be attached because the Tender or row is missing,
 terminal, persistence fails, or the physical copy is interrupted, the newly
 written or partial file is removed.
@@ -1056,10 +1078,16 @@ reject capability-library references.
 | Method | Route | Permission | Purpose |
 |--------|-------|------------|---------|
 | `GET` | `/api/tenders/assignee-options` | `crm.tenders.manage` | List active users whose active role can manage Tender checklist work |
+| `POST` | `/api/tenders/{id}/checklist` | `crm.tenders.manage` | Add a package-specific required or optional dossier row while Preparing |
+| `DELETE` | `/api/tenders/{id}/checklist/{itemId}` | `crm.tenders.manage` | Delete an empty package-specific row; standard rows cannot be deleted |
 | `PATCH` | `/api/tenders/{id}/checklist/{itemId}` | `crm.tenders.manage` | Update checklist status, owner, or internal deadline while mutable |
 | `POST` | `/api/tenders/{id}/checklist/{itemId}/upload` | `crm.tenders.manage` | Upload and replace the row's current file |
 | `POST` | `/api/tenders/{id}/checklist/attach-from-library` | `crm.tenders.manage` | Attach an existing capability document to the selected row |
 | `GET` | `/api/tenders/{id}/checklist/{itemId}/content` | `crm.tenders.view` | Preview or download the file referenced by that Tender row |
+| `POST` | `/api/tenders/{id}/invitation-documents` | `crm.tenders.manage` | Upload a checksummed invitation document |
+| `GET` | `/api/tenders/{id}/readiness` | `crm.tenders.view` | Return actionable planning, dossier, estimate, and Finance blockers and record first-achieved milestones |
+| `POST` | `/api/tenders/{id}/submit` | `crm.tenders.submit` | Require an idempotency key, channel, concurrency token, and all readiness gates; persist the next immutable submission revision |
+| `POST` | `/api/tenders/{id}/transition` (`Submitted`) | `crm.tenders.submit` | Backward-compatible submission entry point; new clients should use `/submit` |
 
 `POST /api/tenders/{id}/mark-won` (`crm.tenders.mark-result`) takes either
 `opportunityId` (an opportunity of the tender's customer) or

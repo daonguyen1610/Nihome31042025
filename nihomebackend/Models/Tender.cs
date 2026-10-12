@@ -8,7 +8,7 @@ namespace NihomeBackend.Models;
 /// and per-item file uploads are the core value proposition — see the
 /// story spec for the workflow.
 /// </summary>
-public class Tender
+public class Tender : IConcurrencyTracked
 {
     public int Id { get; set; }
 
@@ -26,6 +26,22 @@ public class Tender
 
     /// <summary>Bid opening date (ngày mở thầu). Nullable — not always known at create.</summary>
     public DateTime? OpeningDate { get; set; }
+
+    /// <summary>When NICON received the invitation/tender dossier metadata.</summary>
+    public DateTime? InvitationReceivedAt { get; set; }
+
+    /// <summary>Customer/portal reference for the invitation, when supplied.</summary>
+    public string? InvitationReference { get; set; }
+
+    /// <summary>How the invitation was received (portal, email, paper, etc.).</summary>
+    public string InvitationSource { get; set; } = string.Empty;
+
+    /// <summary>User who formally received and registered the invitation.</summary>
+    public int InvitationReceivedByUserId { get; set; }
+    public ApplicationUser InvitationReceivedByUser { get; set; } = null!;
+
+    /// <summary>Optional HTTP(S) tender-portal URL when the dossier is not stored locally.</summary>
+    public string? InvitationPortalUrl { get; set; }
 
     /// <summary>Submission deadline (deadline nộp) — hard requirement, must be &gt; now on create.</summary>
     public DateTime SubmissionDeadline { get; set; }
@@ -54,22 +70,29 @@ public class Tender
 
     public DateTime? ClosedAt { get; set; }
 
+    /// <summary>Immutable business timestamp of the first submitted bid.</summary>
+    public DateTime? SubmittedAt { get; set; }
+
     // --- Audit ---
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public int? CreatedByUserId { get; set; }
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public int? UpdatedByUserId { get; set; }
+    public byte[] RowVersion { get; set; } = [];
 
     public List<TenderChecklistItem> ChecklistItems { get; set; } = new();
     public List<TenderEstimateRevision> EstimateRevisions { get; set; } = new();
+    public List<TenderSubmission> Submissions { get; set; } = new();
+    public List<TenderMilestone> Milestones { get; set; } = new();
+    public List<TenderInvitationDocument> InvitationDocuments { get; set; } = new();
 }
 
 /// <summary>
 /// Preparation checklist entry attached to a <see cref="Tender"/>. Seeded
 /// from the <c>tender_checklist_default</c> master-data category on create
-/// so every new tender starts with the standard 6 items (Hồ sơ năng lực,
-/// Hồ sơ pháp nhân, Bảo lãnh dự thầu, BOQ, Thuyết minh biện pháp thi công,
-/// Tiến độ). Extra items can be added later via the detail-page inline UI
+/// so every new tender starts with 7 standard items: shared capability,
+/// legal, bid security, BOQ, method statement, tender drawings, and schedule.
+/// Extra items can be added later via the detail-page inline UI
 /// (NIH-97).
 /// </summary>
 public class TenderChecklistItem
@@ -86,9 +109,20 @@ public class TenderChecklistItem
 
     public TenderChecklistItemStatus Status { get; set; } = TenderChecklistItemStatus.NotStarted;
 
+    /// <summary>Only required rows block submission. Optional rows may be marked not applicable.</summary>
+    public bool IsRequired { get; set; } = true;
+
+    public string? NotApplicableReason { get; set; }
+
+    public TenderDocumentKind DocumentKind { get; set; } = TenderDocumentKind.Custom;
+
     /// <summary>Owner of this checklist entry. Nullable — falls back to tender preparer for reminders.</summary>
     public int? OwnerUserId { get; set; }
     public ApplicationUser? Owner { get; set; }
+
+    /// <summary>Optional task in the cross-department Tender plan that produces this dossier item.</summary>
+    public int? WorkTaskId { get; set; }
+    public DepartmentWorkTask? WorkTask { get; set; }
 
     /// <summary>Internal deadline for this item (deadline nội bộ), optional.</summary>
     public DateTime? InternalDeadline { get; set; }
@@ -103,10 +137,36 @@ public class TenderChecklistItem
     public int? CapabilityDocumentId { get; set; }
     public CapabilityDocument? CapabilityDocument { get; set; }
 
+    /// <summary>Current evidence revision. Older revisions remain immutable.</summary>
+    public int? CurrentEvidenceId { get; set; }
+    public TenderChecklistEvidence? CurrentEvidence { get; set; }
+    public List<TenderChecklistEvidence> EvidenceRevisions { get; set; } = new();
+
     public int SortOrder { get; set; }
+
+    /// <summary>Stable completion timestamp used for SLA/KPI calculations.</summary>
+    public DateTime? CompletedAt { get; set; }
+    public int? CompletedByUserId { get; set; }
+    public ApplicationUser? CompletedBy { get; set; }
+
+    public DateTime? VerifiedAt { get; set; }
+    public int? VerifiedByUserId { get; set; }
+    public ApplicationUser? VerifiedBy { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+}
+
+public enum TenderDocumentKind
+{
+    Capability = 0,
+    Legal = 1,
+    BidSecurity = 2,
+    Boq = 3,
+    MethodStatement = 4,
+    Drawings = 5,
+    Schedule = 6,
+    Custom = 7,
 }
 
 public enum TenderStatus
@@ -124,4 +184,5 @@ public enum TenderChecklistItemStatus
     Preparing = 1,
     Done = 2,
     Submitted = 3,
+    NotApplicable = 4,
 }

@@ -61,6 +61,10 @@ const emptyCreate = (): CreateTenderRequest => ({
   customerId: 0,
   operationalProjectId: null,
   openingDate: null,
+  invitationReceivedAt: "",
+  invitationReference: "",
+  invitationSource: "",
+  invitationPortalUrl: "",
   submissionDeadline: "",
   preparerUserId: null,
   infoSource: "",
@@ -206,6 +210,11 @@ const AdminTenders = () => {
         customerId: data.customerId,
         operationalProjectId: data.operationalProjectId ?? null,
         openingDate: data.openingDate ?? null,
+        invitationReceivedAt: data.invitationReceivedAt ?? "",
+        invitationReference: data.invitationReference ?? "",
+        invitationSource: data.invitationSource ?? "",
+        invitationReceivedByUserId: data.invitationReceivedByUserId,
+        invitationPortalUrl: data.invitationPortalUrl ?? "",
         submissionDeadline: data.submissionDeadline,
         preparerUserId: data.preparerUserId ?? null,
         infoSource: data.infoSource ?? "",
@@ -234,6 +243,18 @@ const AdminTenders = () => {
       setFormError(t("tenders.form.deadlineRequired"));
       return;
     }
+    if (!form.invitationReceivedAt) {
+      setFormError(t("tenders.form.invitationReceivedRequired"));
+      return;
+    }
+    if (!form.invitationSource.trim()) {
+      setFormError(t("tenders.form.invitationSourceRequired"));
+      return;
+    }
+    if (new Date(form.invitationReceivedAt) >= new Date(form.submissionDeadline)) {
+      setFormError(t("tenders.form.invitationReceivedBeforeDeadline"));
+      return;
+    }
     // For create, deadline must be > now on the client too (server enforces).
     if (!isEdit && new Date(form.submissionDeadline) <= new Date()) {
       setFormError(t("tenders.form.deadlineRequired"));
@@ -246,6 +267,11 @@ const AdminTenders = () => {
           name: form.name.trim(),
           operationalProjectId: form.operationalProjectId ?? null,
           openingDate: form.openingDate || null,
+          invitationReceivedAt: form.invitationReceivedAt,
+          invitationReference: form.invitationReference?.trim() || null,
+          invitationSource: form.invitationSource.trim(),
+          invitationReceivedByUserId: form.invitationReceivedByUserId ?? null,
+          invitationPortalUrl: form.invitationPortalUrl?.trim() || null,
           submissionDeadline: form.submissionDeadline,
           preparerUserId: form.preparerUserId ?? null,
           infoSource: form.infoSource?.trim() || null,
@@ -258,6 +284,10 @@ const AdminTenders = () => {
           customerId: form.customerId,
           operationalProjectId: form.operationalProjectId ?? null,
           openingDate: form.openingDate || null,
+          invitationReceivedAt: form.invitationReceivedAt,
+          invitationReference: form.invitationReference?.trim() || null,
+          invitationSource: form.invitationSource.trim(),
+          invitationPortalUrl: form.invitationPortalUrl?.trim() || null,
           submissionDeadline: form.submissionDeadline,
           preparerUserId: form.preparerUserId ?? null,
           infoSource: form.infoSource?.trim() || null,
@@ -648,6 +678,52 @@ const AdminTenders = () => {
               {form.customerId > 0 && customerProjects.length === 0 && (
                 <p className="text-xs text-muted-foreground">{t("tenders.form.noProject")}</p>
               )}
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="space-y-1">
+                <Label>{t("tenders.field.invitationReceivedAt")}</Label>
+                <Input
+                  type="datetime-local"
+                  value={toDateTimeInputValue(form.invitationReceivedAt)}
+                  onChange={(e) => setForm({ ...form, invitationReceivedAt: e.target.value })}
+                  disabled={editLocked}
+                  max={toDateTimeInputValue(new Date().toISOString())}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>{t("tenders.field.invitationReference")}</Label>
+                <Input
+                  value={form.invitationReference ?? ""}
+                  onChange={(e) => setForm({ ...form, invitationReference: e.target.value })}
+                  disabled={editLocked}
+                  maxLength={120}
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="space-y-1">
+                <Label>{t("tenders.field.invitationSource")}</Label>
+                <Input
+                  value={form.invitationSource}
+                  onChange={(e) => setForm({ ...form, invitationSource: e.target.value })}
+                  disabled={editLocked}
+                  maxLength={200}
+                  placeholder={t("tenders.form.invitationSourcePlaceholder")}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>{t("tenders.field.invitationPortalUrl")}</Label>
+                <Input
+                  type="url"
+                  value={form.invitationPortalUrl ?? ""}
+                  onChange={(e) => setForm({ ...form, invitationPortalUrl: e.target.value })}
+                  disabled={editLocked}
+                  maxLength={1000}
+                  placeholder="https://..."
+                />
+              </div>
             </div>
 
             <div className="grid gap-3 md:grid-cols-2">

@@ -121,6 +121,9 @@ public sealed class DepartmentWorkPackagesControllerTests(NihomeWebApplicationFa
                 OperationalProjectId = project.Id,
                 PreparerUserId = adminId,
                 SubmissionDeadline = DateTime.UtcNow.Date.AddDays(30),
+                InvitationReceivedAt = DateTime.UtcNow.Date.AddDays(-1),
+                InvitationSource = "Email khách hàng",
+                InvitationReceivedByUserId = adminId,
                 CreatedByUserId = adminId,
                 UpdatedByUserId = adminId,
             };

@@ -233,6 +233,7 @@ public class CapabilityDocumentsControllerTests : IntegrationTestBase
         var docId = await UploadAndCreateAsync("referenced.pdf", "iso");
         var checklistId = await WithDbAsync(async db =>
         {
+            var actorId = await db.Users.Where(item => item.IsActive).Select(item => item.Id).FirstAsync();
             var customer = new Customer
             {
                 Name = $"Capability blocker {Guid.NewGuid():N}",
@@ -244,6 +245,9 @@ public class CapabilityDocumentsControllerTests : IntegrationTestBase
                 Name = "Capability reference",
                 Customer = customer,
                 SubmissionDeadline = DateTime.UtcNow.AddDays(7),
+                InvitationReceivedAt = DateTime.UtcNow.AddDays(-1),
+                InvitationSource = "Cổng đấu thầu quốc gia",
+                InvitationReceivedByUserId = actorId,
             };
             var checklist = new TenderChecklistItem
             {

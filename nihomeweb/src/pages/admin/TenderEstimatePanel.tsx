@@ -3,6 +3,9 @@ import { CheckCircle2, Download, FileSpreadsheet, Loader2, Send, Upload, XCircle
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { extractApiError } from "@/lib/apiError";
 import { useI18n } from "@/lib/i18n";
@@ -11,6 +14,7 @@ import {
   type CsvImportError,
   type TenderEstimateRevisionResponse,
   type TenderResponse,
+  type TenderReadinessResponse,
   type TenderStatus,
 } from "@/services/adminApi";
 import { isTenderChecklistEvidenceReady } from "./tenderChecklist";
@@ -18,7 +22,8 @@ import { isTenderChecklistEvidenceReady } from "./tenderChecklist";
 type Props = {
   tender: TenderResponse;
   canManage: boolean;
-  canTransition: boolean;
+  canSubmit: boolean;
+  canMarkResult: boolean;
   canApprove: boolean;
   planReady: boolean;
   financeReady: boolean;
@@ -42,7 +47,8 @@ const importErrorsFrom = (error: unknown): CsvImportError[] => {
 export default function TenderEstimatePanel({
   tender,
   canManage,
-  canTransition,
+  canSubmit,
+  canMarkResult,
   canApprove,
   planReady,
   financeReady,
@@ -57,12 +63,20 @@ export default function TenderEstimatePanel({
   const [busy, setBusy] = useState(false);
   const [decisionNote, setDecisionNote] = useState("");
   const [importErrors, setImportErrors] = useState<CsvImportError[]>([]);
+  const [readiness, setReadiness] = useState<TenderReadinessResponse | null>(null);
+  const [submitOpen, setSubmitOpen] = useState(false);
+  const [submissionChannel, setSubmissionChannel] = useState("");
+  const [receiptReference, setReceiptReference] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const { data } = await adminApi.listTenderEstimates(tender.id);
+      const [{ data }, readinessResponse] = await Promise.all([
+        adminApi.listTenderEstimates(tender.id),
+        adminApi.getTenderReadiness(tender.id),
+      ]);
       setRevisions(data);
+      setReadiness(readinessResponse.data);
       setSelectedId((current) => current && data.some((revision) => revision.id === current)
         ? current
         : data[0]?.id ?? null);
@@ -83,7 +97,7 @@ export default function TenderEstimatePanel({
   );
   const approved = revisions.some((revision) => revision.status === "Approved");
   const checklistReady = isTenderChecklistEvidenceReady(tender);
-  const canSubmitTender = tender.status === "Preparing" && checklistReady && approved && planReady && financeReady;
+  const canSubmitTender = (tender.status === "Preparing" || tender.status === "Submitted") && readiness?.canSubmit === true;
   const terminal = ["Won", "Lost", "Cancelled"].includes(tender.status);
 
   const money = (value: number, currency: string) => new Intl.NumberFormat(lang, {
@@ -154,6 +168,30 @@ export default function TenderEstimatePanel({
     }
   };
 
+  const submitTender = async () => {
+    if (!submissionChannel.trim()) return;
+    setBusy(true);
+    try {
+      const { data } = await adminApi.submitTender(tender.id, {
+        submissionChannel: submissionChannel.trim(),
+        receiptReference: receiptReference.trim() || null,
+        note: decisionNote.trim() || null,
+        rowVersion: tender.rowVersion,
+      }, crypto.randomUUID());
+      onTenderChanged(data);
+      setSubmitOpen(false);
+      setSubmissionChannel("");
+      setReceiptReference("");
+      setDecisionNote("");
+      toast({ title: t("tenders.lifecycle.submitSuccess") });
+      await load();
+    } catch (error) {
+      toast({ title: t("common.error"), description: extractApiError(error), variant: "destructive" });
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <section className="rounded-lg border bg-white p-4 shadow-sm" data-testid="tender-lifecycle">
@@ -164,7 +202,7 @@ export default function TenderEstimatePanel({
           </div>
           <Badge variant="outline">{t(`tenders.status.${tender.status}`)}</Badge>
         </div>
-        {tender.status === "Preparing" && (
+        {(tender.status === "Preparing" || tender.status === "Submitted") && (
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
             <div className={`rounded-md border p-3 text-sm ${checklistReady ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"}`}>
               {checklistReady ? <CheckCircle2 className="mr-2 inline h-4 w-4" /> : <XCircle className="mr-2 inline h-4 w-4" />}
@@ -186,19 +224,54 @@ export default function TenderEstimatePanel({
             </div>
           </div>
         )}
-        {!terminal && canTransition && (
+        {readiness && readiness.blockers.length > 0 ? (
+          <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3" data-testid="tender-readiness-blockers">
+            <div className="text-sm font-medium text-amber-950">{t("tenders.lifecycle.blockersTitle")}</div>
+            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-amber-900">
+              {readiness.blockers.map((blocker) => <li key={`${blocker.code}-${blocker.message}`}>{blocker.message}</li>)}
+            </ul>
+          </div>
+        ) : null}
+        {!terminal && (canSubmit || canMarkResult) && (
           <div className="mt-3 flex flex-wrap gap-2">
-            {tender.status === "Preparing" && (
-              <Button data-testid="tender-submit" disabled={busy || !canSubmitTender} onClick={() => void transition("Submitted")}>
-                <Send className="mr-2 h-4 w-4" />{t("tenders.lifecycle.submit")}
+            {(tender.status === "Preparing" || tender.status === "Submitted") && canSubmit && (
+              <Button data-testid="tender-submit" disabled={busy || !canSubmitTender} onClick={() => setSubmitOpen(true)}>
+                <Send className="mr-2 h-4 w-4" />{t(tender.status === "Submitted" ? "tenders.lifecycle.resubmit" : "tenders.lifecycle.submit")}
               </Button>
             )}
-            <Button data-testid="tender-cancel" variant="outline" disabled={busy} onClick={() => void transition("Cancelled")}>
-              <XCircle className="mr-2 h-4 w-4" />{t("tenders.lifecycle.cancel")}
-            </Button>
+            {canMarkResult && (
+              <Button data-testid="tender-cancel" variant="outline" disabled={busy} onClick={() => void transition("Cancelled")}>
+                <XCircle className="mr-2 h-4 w-4" />{t("tenders.lifecycle.cancel")}
+              </Button>
+            )}
           </div>
         )}
       </section>
+
+      <Dialog open={submitOpen} onOpenChange={setSubmitOpen}>
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{t("tenders.lifecycle.submitDialogTitle")}</DialogTitle>
+            <DialogDescription>{t("tenders.lifecycle.submitDialogHint")}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <Label>{t("tenders.lifecycle.submissionChannel")}</Label>
+              <Input value={submissionChannel} onChange={(event) => setSubmissionChannel(event.target.value)} maxLength={80} />
+            </div>
+            <div className="space-y-1">
+              <Label>{t("tenders.lifecycle.receiptReference")}</Label>
+              <Input value={receiptReference} onChange={(event) => setReceiptReference(event.target.value)} maxLength={200} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSubmitOpen(false)} disabled={busy}>{t("common.cancel")}</Button>
+            <Button data-testid="tender-submit-confirm" onClick={() => void submitTender()} disabled={busy || !submissionChannel.trim()}>
+              {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{t("tenders.lifecycle.submit")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <section className="rounded-lg border bg-white p-4 shadow-sm" data-testid="tender-estimates">
         <div className="flex flex-wrap items-center justify-between gap-2">

@@ -122,7 +122,8 @@
         { "code": "bid-bond",      "name": "Bảo lãnh dự thầu",             "sortOrder": 3 },
         { "code": "boq",           "name": "BOQ",                          "sortOrder": 4 },
         { "code": "method",        "name": "Thuyết minh biện pháp thi công", "sortOrder": 5 },
-        { "code": "schedule",      "name": "Tiến độ",                      "sortOrder": 6 }
+        { "code": "drawings",      "name": "Bản vẽ dự thầu",              "sortOrder": 6 },
+        { "code": "schedule",      "name": "Tiến độ",                      "sortOrder": 7 }
       ]
     },
 

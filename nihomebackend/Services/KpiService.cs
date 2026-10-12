@@ -321,22 +321,26 @@ public sealed class KpiService(AppDbContext db, INotificationService notificatio
 
     private async Task<MetricResult> TenderWinRateAsync(int userId, KpiPeriod period, CancellationToken ct)
     {
-        var tenders = await db.Tenders.AsNoTracking()
-            .Where(item => item.PreparerUserId == userId && item.ClosedAt >= period.PeriodStartUtc && item.ClosedAt < period.PeriodEndUtc &&
-                (item.Status == TenderStatus.Won || item.Status == TenderStatus.Lost))
-            .Select(item => new { item.Id, item.Status })
+        var tenders = await db.TenderSubmissions.AsNoTracking()
+            .Where(item => item.Tender.PreparerUserId == userId &&
+                item.Sequence == 1 &&
+                item.SubmittedAt >= period.PeriodStartUtc && item.SubmittedAt < period.PeriodEndUtc)
+            .Select(item => new { item.TenderId, item.Tender.Status })
             .ToListAsync(ct);
-        return Ratio("Tender", tenders.Select(item => item.Id), tenders.Count(item => item.Status == TenderStatus.Won), tenders.Count);
+        return Ratio("Tender", tenders.Select(item => item.TenderId),
+            tenders.Count(item => item.Status == TenderStatus.Won), tenders.Count);
     }
 
     private async Task<MetricResult> TenderOnTimeAsync(int userId, KpiPeriod period, CancellationToken ct)
     {
         var items = await db.TenderChecklistItems.AsNoTracking()
-            .Where(item => item.Tender.PreparerUserId == userId && item.UpdatedAt >= period.PeriodStartUtc && item.UpdatedAt < period.PeriodEndUtc && item.InternalDeadline != null &&
-                (item.Status == TenderChecklistItemStatus.Done || item.Status == TenderChecklistItemStatus.Submitted))
-            .Select(item => new { item.Id, item.InternalDeadline, item.UpdatedAt })
+            .Where(item => (item.OwnerUserId == userId || item.OwnerUserId == null && item.Tender.PreparerUserId == userId) &&
+                item.IsRequired && item.CompletedAt >= period.PeriodStartUtc && item.CompletedAt < period.PeriodEndUtc &&
+                item.InternalDeadline != null)
+            .Select(item => new { item.Id, item.InternalDeadline, item.CompletedAt })
             .ToListAsync(ct);
-        return Ratio("TenderChecklistItem", items.Select(item => item.Id), items.Count(item => item.UpdatedAt <= item.InternalDeadline), items.Count);
+        return Ratio("TenderChecklistItem", items.Select(item => item.Id),
+            items.Count(item => item.CompletedAt!.Value <= item.InternalDeadline!.Value), items.Count);
     }
 
     private async Task<MetricResult> TenderEstimateAccuracyAsync(int userId, KpiPeriod period, CancellationToken ct)

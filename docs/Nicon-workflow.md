@@ -97,7 +97,10 @@ Kinh doanh chuẩn bị hồ sơ dự thầu (gói thầu đã gắn Dự án v�
   → từng phòng hoàn thành đầu việc; người duyệt xác nhận
   → Tài chính lập hồ sơ rà soát tài chính dự thầu / bảo lãnh
   → Tài chính gửi duyệt, người duyệt độc lập phê duyệt
-  → Kinh doanh nộp thầu (Submitted)
+  → Kinh doanh nộp thầu (Submitted); hệ thống chốt bất biến đúng revision bằng
+    chứng, dự toán, kế hoạch, rà soát Tài chính, kênh/biên nhận, người và thời điểm nộp
+  → nếu bên mời thầu yêu cầu bổ sung, lập revision bằng chứng và lần nộp mới;
+    không ghi đè snapshot hoặc thời điểm nộp đầu tiên
   → ghi nhận trúng/trượt; nếu trúng, mở Cơ hội Negotiation trên đúng Dự án
   → sau thương thảo, người dùng chủ động tạo Hợp đồng Upstream
 ```

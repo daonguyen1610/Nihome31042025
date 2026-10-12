@@ -515,8 +515,15 @@ directly.
 
 #### 3.1.5 Tender Management
 
-Manage tender packages with deadlines and preparation status. A user with Tender
-management permission can assign each checklist item to an active user whose
+Manage tender packages with deadlines and preparation status. First record the
+invitation receipt date (before the submission deadline), invitation source,
+receiving user, and, when available, its customer reference and portal URL.
+Invitation files can be uploaded from the Tender detail page. The checklist starts with seven standard dossier rows;
+tender drawings are optional by default. Users may add package-specific rows,
+choose whether each row is mandatory under the invitation, or mark an optional
+row **Not applicable** with a reason. Only empty package-specific rows can be
+deleted; standard rows remain for audit. A user with Tender management
+permission can assign each checklist item to an active user whose
 role can manage Tenders and set an internal deadline from today through the
 Tender submission date. A changed assignment sends the assignee an in-app
 notification linked directly to the Tender; saving the same assignee again does
@@ -526,9 +533,17 @@ project-specific items such as BOQ, method statement, and tender drawings accept
 a direct upload. A row can be marked **Done** or **Submitted** only after its
 required evidence is attached; submission rechecks every row and rejects a
 shared-library reference on project-specific items. The selected file is
-previewed securely inside the Tender detail page. Checklist status, ownership,
-deadlines, and files become read-only after
-the tender is Won, Lost, or Cancelled. The **Tender plan** tab uses the shared
+previewed securely inside the Tender detail page, and every replacement remains
+in evidence history with its checksum. Moving a row to **Submitted** is an
+independent verification: the verifier cannot be the user who completed it.
+The **Readiness** panel lists each blocking condition and its correction path.
+Submitting records the channel and optional receipt reference and preserves an
+immutable numbered snapshot with the exact evidence revisions, approved estimate,
+completed plan, approved Finance review, submitting user, and timestamp. If the
+buyer requests additional material, users may add a new evidence revision and
+create a supplementary submission; earlier snapshots and the first submission
+time never change. Checklist changes are locked after **Won**, **Lost**, or
+**Cancelled**. The **Tender plan** tab uses the shared
 cross-department work-package workflow: create one package for each responsible
 department, then define its task owner, independent verifier, planned start/end,
 dependencies and progress. The approximately one-month duration described by
@@ -546,11 +561,12 @@ calculates cost subtotal, bid subtotal, VAT, and grand bid total. Submit the
 revision for approval; authorized users approve or reject it with a reason.
 The Tender can move from Preparing to Submitted only when at least one active
 Tender-plan package exists, all active plan packages are completed after their
-tasks are independently verified, every checklist item is ready with the correct
+tasks are independently verified, every required checklist item is ready with the correct
 shared or tender-specific evidence, an approved
 estimate exists, and the Tender carries a shared
 Operational Project with an approved Finance tender review of its financial
-dossier (see 3.0.2). Won and Lost are available only from
+dossier (see 3.0.2). Submitting requires the dedicated Tender submit permission;
+recording Won/Lost remains a separate result permission. Won and Lost are available only from
 Submitted. When marking a tender Won, choose either **Create an opportunity from
 this tender** (default) or an active existing opportunity of the same customer
 and Operational Project. Either path continues the opportunity in Negotiation;

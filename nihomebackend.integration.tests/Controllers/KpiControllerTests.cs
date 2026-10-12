@@ -137,7 +137,11 @@ public class KpiControllerTests : IntegrationTestBase
                     Code = $"TD-KPI-{Guid.NewGuid():N}"[..24],
                     Name = "KPI Tender",
                     CustomerId = customer.Id,
+                    OperationalProjectId = project.Id,
                     SubmissionDeadline = new DateTime(2026, 7, 1),
+                    InvitationReceivedAt = new DateTime(2026, 6, 1),
+                    InvitationSource = "Cổng đấu thầu quốc gia",
+                    InvitationReceivedByUserId = tenderUserId,
                     PreparerUserId = tenderUserId,
                     Status = TenderStatus.Won,
                     ClosedAt = new DateTime(2026, 7, 2, 0, 0, 0, DateTimeKind.Utc),
@@ -161,6 +165,90 @@ public class KpiControllerTests : IntegrationTestBase
                     ApprovedAt = new DateTime(2026, 7, 2, 0, 0, 0, DateTimeKind.Utc),
                 };
                 db.TenderEstimateRevisions.Add(estimate);
+                await db.SaveChangesAsync();
+                var roleGroupId = await db.RoleGroups.Where(item => item.IsActive)
+                    .OrderBy(item => item.Id).Select(item => item.Id).FirstAsync();
+                var financeReview = new DepartmentWorkPackage
+                {
+                    Code = $"WP-KPI-{Guid.NewGuid():N}"[..20].ToUpperInvariant(),
+                    Kind = WorkPackageKind.Project,
+                    Purpose = WorkPackagePurpose.FinanceTenderReview,
+                    Name = "KPI tender finance review",
+                    OperationalProjectId = project.Id,
+                    SourceTenderId = tender.Id,
+                    DepartmentRoleGroupId = roleGroupId,
+                    LeadUserId = pmUserId,
+                    Status = WorkPackageStatus.Completed,
+                    CreatedByUserId = pmUserId,
+                    UpdatedByUserId = pmUserId,
+                    FinanceReview = new DepartmentFinanceReview
+                    {
+                        Status = FinanceReviewStatus.Approved,
+                        CreatedByUserId = pmUserId,
+                        UpdatedByUserId = pmUserId,
+                    },
+                };
+                db.DepartmentWorkPackages.Add(financeReview);
+                await db.SaveChangesAsync();
+                db.TenderSubmissions.Add(new TenderSubmission
+                {
+                    TenderId = tender.Id,
+                    Sequence = 1,
+                    SubmittedAt = new DateTime(2026, 8, 1, 0, 0, 0, DateTimeKind.Utc),
+                    SubmittedByUserId = tenderUserId,
+                    ApprovedEstimateRevisionId = estimate.Id,
+                    FinanceReviewWorkPackageId = financeReview.Id,
+                    SubmissionChannel = "Cổng đấu thầu quốc gia",
+                });
+                await db.SaveChangesAsync();
+                var waitingTender = new Tender
+                {
+                    Code = $"TD-KPI-WAIT-{Guid.NewGuid():N}"[..28],
+                    Name = "KPI Tender Awaiting Result",
+                    CustomerId = customer.Id,
+                    OperationalProjectId = project.Id,
+                    InvitationReceivedAt = new DateTime(2026, 7, 1),
+                    InvitationSource = "Email khách hàng",
+                    InvitationReceivedByUserId = tenderUserId,
+                    SubmissionDeadline = new DateTime(2026, 8, 20),
+                    PreparerUserId = tenderUserId,
+                    Status = TenderStatus.Submitted,
+                };
+                db.Tenders.Add(waitingTender);
+                await db.SaveChangesAsync();
+                var waitingEstimate = new TenderEstimateRevision
+                {
+                    TenderId = waitingTender.Id, VersionNumber = 1,
+                    Status = TenderEstimateRevisionStatus.Approved,
+                    Currency = "VND", SourceFileName = "waiting.xlsx",
+                    SourceSha256 = new string('b', 64), ImportedByUserId = tenderUserId,
+                    ImportedAt = new DateTime(2026, 8, 2, 0, 0, 0, DateTimeKind.Utc),
+                };
+                var waitingFinance = new DepartmentWorkPackage
+                {
+                    Code = $"WP-KPI-W-{Guid.NewGuid():N}"[..20].ToUpperInvariant(),
+                    Kind = WorkPackageKind.Project, Purpose = WorkPackagePurpose.FinanceTenderReview,
+                    Name = "KPI waiting tender finance review", OperationalProjectId = project.Id,
+                    SourceTenderId = waitingTender.Id, DepartmentRoleGroupId = roleGroupId,
+                    LeadUserId = pmUserId, Status = WorkPackageStatus.Completed,
+                    CreatedByUserId = pmUserId, UpdatedByUserId = pmUserId,
+                    FinanceReview = new DepartmentFinanceReview
+                    {
+                        Status = FinanceReviewStatus.Approved,
+                        CreatedByUserId = pmUserId, UpdatedByUserId = pmUserId,
+                    },
+                };
+                db.AddRange(waitingEstimate, waitingFinance);
+                await db.SaveChangesAsync();
+                db.TenderSubmissions.Add(new TenderSubmission
+                {
+                    TenderId = waitingTender.Id, Sequence = 1,
+                    SubmittedAt = new DateTime(2026, 8, 2, 0, 0, 0, DateTimeKind.Utc),
+                    SubmittedByUserId = tenderUserId,
+                    ApprovedEstimateRevisionId = waitingEstimate.Id,
+                    FinanceReviewWorkPackageId = waitingFinance.Id,
+                    SubmissionChannel = "Email",
+                });
                 await db.SaveChangesAsync();
                 var boq = new ProjectBoqRevision
                 {
@@ -265,6 +353,9 @@ public class KpiControllerTests : IntegrationTestBase
             var tenderDashboard = await ReadJsonAsync(tenderResponse);
             var accuracy = tenderDashboard.GetProperty("scores").EnumerateArray().Single(item => item.GetProperty("code").GetString() == "TENDER_ESTIMATE_ACCURACY");
             accuracy.GetProperty("score").GetDecimal().Should().Be(100m);
+            var winRate = tenderDashboard.GetProperty("scores").EnumerateArray()
+                .Single(item => item.GetProperty("code").GetString() == "TENDER_WIN_RATE");
+            winRate.GetProperty("rawValue").GetDecimal().Should().Be(50m);
         }
         await ValidateProcurementAndMaterialMetricsAsync();
         revenueScore.GetProperty("status").GetString().Should().Be("Available");

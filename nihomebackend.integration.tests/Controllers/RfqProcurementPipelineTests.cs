@@ -465,7 +465,7 @@ public sealed class RfqProcurementPipelineTests(NihomeWebApplicationFactory fact
     {
         await LoginAsync("SALES_MANAGER");
         var opportunity = await PostAsync("/api/opportunities", new { name = "Factory tender opportunity", customerId = fixture.CustomerId, operationalProjectId = fixture.ProjectId });
-        var tender = await PostAsync("/api/tenders", new { name = "Factory electrical installation tender", customerId = fixture.CustomerId, operationalProjectId = fixture.ProjectId, submissionDeadline = DateTime.UtcNow.AddDays(14) });
+        var tender = await PostAsync("/api/tenders", new { name = "Factory electrical installation tender", customerId = fixture.CustomerId, operationalProjectId = fixture.ProjectId, invitationReceivedAt = DateTime.UtcNow.AddDays(-1), invitationSource = "Customer portal", submissionDeadline = DateTime.UtcNow.AddDays(14) });
         var tenderPath = $"/api/tenders/{Id(tender)}";
         await RejectAsync(tenderPath + "/transition", new { status = "Submitted" }, HttpStatusCode.BadRequest);
         (await WithDbAsync(db => db.Tenders.SingleAsync(x => x.Id == Id(tender)))).Status.Should().Be(TenderStatus.Preparing);

@@ -20,7 +20,8 @@ public class TendersControllerTests
         var contentRoot = Path.Combine(Path.GetTempPath(), $"tender-upload-{Guid.NewGuid():N}");
         var service = new Mock<ITenderService>();
         service.Setup(item => item.AttachChecklistFileAsync(
-                10, 20, It.IsAny<string>(), "checklist.pdf", 30, It.IsAny<CancellationToken>()))
+                10, 20, It.IsAny<string>(), "checklist.pdf", It.IsAny<long>(),
+                "application/pdf", It.IsAny<string>(), 30, It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("Injected attachment failure"));
         service.Setup(item => item.IsChecklistFileAttachedAsync(
                 10, 20, It.IsAny<string>(), CancellationToken.None))
@@ -30,7 +31,8 @@ public class TendersControllerTests
         var controller = new TendersController(
             service.Object,
             environment.Object,
-            Mock.Of<IAuditLogger>())
+            Mock.Of<IAuditLogger>(),
+            Mock.Of<IPermissionService>())
         {
             ControllerContext = new ControllerContext
             {

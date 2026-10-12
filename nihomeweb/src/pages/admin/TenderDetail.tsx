@@ -12,6 +12,8 @@ import {
   History,
   Library,
   Loader2,
+  Plus,
+  Trash2,
   Trophy,
   Upload,
   UserRound,
@@ -81,6 +83,7 @@ const CHECKLIST_STATUS_STYLES: Record<TenderChecklistItemStatus, string> = {
   Preparing: "border-amber-200 bg-amber-50 text-amber-700",
   Done: "border-emerald-200 bg-emerald-50 text-emerald-700",
   Submitted: "border-sky-200 bg-sky-50 text-sky-700",
+  NotApplicable: "border-zinc-200 bg-zinc-100 text-zinc-600",
 };
 
 const CHECKLIST_STATUSES: TenderChecklistItemStatus[] = [
@@ -88,6 +91,7 @@ const CHECKLIST_STATUSES: TenderChecklistItemStatus[] = [
   "Preparing",
   "Done",
   "Submitted",
+  "NotApplicable",
 ];
 
 const DEADLINE_ALERT_DAYS = 3;
@@ -219,14 +223,25 @@ const HeaderCard = ({ tender, canRequestFinance }: HeaderProps) => {
 
 // ---------------------------- info tab ----------------------------
 
-const InfoTab = ({ tender }: { tender: TenderResponse }) => {
+const InfoTab = ({ tender, canManage, onUploadInvitation }: {
+  tender: TenderResponse;
+  canManage: boolean;
+  onUploadInvitation: (file: File) => Promise<void>;
+}) => {
   const { t, lang } = useI18n();
+  const invitationFileRef = useRef<HTMLInputElement>(null);
   const rows: [string, string][] = [
     [t("tenders.field.code"), tender.code],
     [t("tenders.field.customer"), tender.customerName],
     [t("tenders.field.preparer"), tender.preparerName ?? "—"],
     [t("tenders.field.openingDate"), formatDate(tender.openingDate, lang)],
+    [t("tenders.field.invitationReceivedAt"), formatDateTime(tender.invitationReceivedAt, lang)],
+    [t("tenders.field.invitationReference"), tender.invitationReference ?? "—"],
+    [t("tenders.field.invitationSource"), tender.invitationSource || "—"],
+    [t("tenders.field.invitationReceivedBy"), tender.invitationReceivedByName || `#${tender.invitationReceivedByUserId}`],
+    [t("tenders.field.invitationPortalUrl"), tender.invitationPortalUrl || "—"],
     [t("tenders.field.deadline"), formatDate(tender.submissionDeadline, lang)],
+    [t("tenders.field.submittedAt"), formatDateTime(tender.submittedAt, lang)],
     [t("tenders.field.infoSource"), tender.infoSource ?? "—"],
     [t("tenders.field.status"), t(`tenders.status.${tender.status}`)],
     [t("tenders.field.updatedAt"), formatDateTime(tender.updatedAt, lang)],
@@ -244,6 +259,31 @@ const InfoTab = ({ tender }: { tender: TenderResponse }) => {
           ))}
         </dl>
       </div>
+      <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h3 className="text-sm font-semibold text-slate-800">{t("tenders.invitationDocuments.title")}</h3>
+            <p className="text-xs text-slate-500">{t("tenders.invitationDocuments.hint")}</p>
+          </div>
+          {canManage ? <>
+            <input ref={invitationFileRef} type="file" className="hidden" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                event.target.value = "";
+                if (file) void onUploadInvitation(file);
+              }} />
+            <Button size="sm" variant="outline" onClick={() => invitationFileRef.current?.click()}>
+              <Upload className="mr-1 h-4 w-4" />{t("tenders.invitationDocuments.upload")}
+            </Button>
+          </> : null}
+        </div>
+        {tender.invitationDocuments.length === 0 ? <p className="mt-3 text-sm text-slate-500">{t("tenders.invitationDocuments.empty")}</p> :
+          <ul className="mt-3 space-y-2">{tender.invitationDocuments.map((document) =>
+            <li key={document.id} className="rounded border bg-slate-50 px-3 py-2 text-sm">
+              <span className="break-all font-medium">{document.originalFileName ?? document.externalUrl}</span>
+              <span className="ml-2 text-xs text-slate-500">{formatDateTime(document.createdAt, lang)}</span>
+            </li>)}</ul>}
+      </div>
       {tender.note ? (
         <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
           <div className="text-xs font-medium uppercase tracking-wide text-slate-500">
@@ -260,29 +300,79 @@ const InfoTab = ({ tender }: { tender: TenderResponse }) => {
 
 interface ChecklistTabProps {
   tender: TenderResponse;
+  planPackages: DepartmentWorkPackageResponse[];
   assignees: TenderAssigneeOptionResponse[] | null;
   canManage: boolean;
   onPatch: (itemId: number, body: Parameters<typeof adminApi.updateTenderChecklistItem>[2]) => Promise<void>;
   onUpload: (itemId: number, file: File) => Promise<void>;
+  onCreate: (body: Parameters<typeof adminApi.createTenderChecklistItem>[1]) => Promise<void>;
+  onDelete: (itemId: number) => Promise<void>;
   onOpenLibrary: (itemId: number) => void;
   isTerminal: boolean;
 }
 
-const ChecklistTab = ({ tender, assignees, canManage, onPatch, onUpload, onOpenLibrary, isTerminal }: ChecklistTabProps) => {
-  const { t } = useI18n();
+const ChecklistTab = ({ tender, planPackages, assignees, canManage, onPatch, onUpload, onCreate, onDelete, onOpenLibrary, isTerminal }: ChecklistTabProps) => {
+  const { t, lang } = useI18n();
   const { toast } = useToast();
   const disabled = !canManage || isTerminal;
   const [savingId, setSavingId] = useState<number | null>(null);
   const [fileInputTarget, setFileInputTarget] = useState<number | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [newRequired, setNewRequired] = useState(true);
+  const [newDocumentKind, setNewDocumentKind] = useState("Custom");
+  const [newWorkTaskId, setNewWorkTaskId] = useState<string>("unlinked");
+  const [notApplicableItem, setNotApplicableItem] = useState<TenderChecklistItemResponse | null>(null);
+  const [notApplicableReason, setNotApplicableReason] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleStatus = async (item: TenderChecklistItemResponse, next: TenderChecklistItemStatus) => {
     if (item.status === next) return;
+    if (next === "NotApplicable") {
+      setNotApplicableItem(item);
+      setNotApplicableReason(item.notApplicableReason ?? "");
+      return;
+    }
     setSavingId(item.id);
     try {
       await onPatch(item.id, { status: next });
     } finally {
       setSavingId(null);
+    }
+  };
+
+  const createItem = async () => {
+    const title = newTitle.trim();
+    if (!title) return;
+    try {
+      await onCreate({
+        title,
+        isRequired: newRequired,
+        documentKind: newDocumentKind,
+        workTaskId: newWorkTaskId === "unlinked" ? null : Number(newWorkTaskId),
+      });
+      setNewTitle("");
+      setNewRequired(true);
+      setNewDocumentKind("Custom");
+      setNewWorkTaskId("unlinked");
+      setCreateOpen(false);
+    } catch {
+      // Parent displays the API error; keep the dialog open for correction.
+    }
+  };
+
+  const markNotApplicable = async () => {
+    if (!notApplicableItem || !notApplicableReason.trim()) return;
+    try {
+      await onPatch(notApplicableItem.id, {
+        status: "NotApplicable",
+        isRequired: false,
+        notApplicableReason: notApplicableReason.trim(),
+      });
+      setNotApplicableItem(null);
+      setNotApplicableReason("");
+    } catch {
+      // Parent displays the API error; keep the dialog open for correction.
     }
   };
 
@@ -332,6 +422,22 @@ const ChecklistTab = ({ tender, assignees, canManage, onPatch, onUpload, onOpenL
     }
   };
 
+  const planTasks = planPackages.flatMap((workPackage) => workPackage.tasks.map((task) => ({
+    ...task,
+    packageName: workPackage.name,
+  })));
+
+  const handleWorkTask = async (item: TenderChecklistItemResponse, value: string) => {
+    setSavingId(item.id);
+    try {
+      await onPatch(item.id, value === "unlinked"
+        ? { clearWorkTask: true }
+        : { workTaskId: Number(value) });
+    } finally {
+      setSavingId(null);
+    }
+  };
+
   const triggerUpload = (itemId: number) => {
     setFileInputTarget(itemId);
     setTimeout(() => fileInputRef.current?.click(), 0);
@@ -353,16 +459,21 @@ const ChecklistTab = ({ tender, assignees, canManage, onPatch, onUpload, onOpenL
 
   return (
     <div className="space-y-3">
-      <div>
-        <h2 className="text-base font-semibold text-slate-800">
-          {t("tenders.detail.checklist.title")}
-        </h2>
-        <div className="mt-0.5 text-xs text-slate-500">
-          {t("tenders.detail.checklist.percentDone").replace(
-            "{percent}",
-            String(tender.checklistCompletionPercent),
-          )}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 className="text-base font-semibold text-slate-800">
+            {t("tenders.detail.checklist.title")}
+          </h2>
+          <div className="mt-0.5 text-xs text-slate-500">
+            {t("tenders.detail.checklist.percentDone").replace(
+              "{percent}",
+              String(tender.checklistCompletionPercent),
+            )}
+          </div>
         </div>
+        {!disabled && <Button size="sm" variant="outline" onClick={() => setCreateOpen(true)} data-testid="tender-checklist-add">
+          <Plus className="mr-1 h-4 w-4" />{t("tenders.detail.checklist.add")}
+        </Button>}
       </div>
 
       <input
@@ -395,6 +506,15 @@ const ChecklistTab = ({ tender, assignees, canManage, onPatch, onUpload, onOpenL
               >
                 <td className="px-3 py-2 font-medium text-slate-800">
                   <div>{item.title}</div>
+                  <label className="mt-1 flex items-center gap-1 text-[11px] font-normal text-slate-500">
+                    <input
+                      type="checkbox"
+                      checked={item.isRequired}
+                      disabled={disabled || savingId === item.id}
+                      onChange={(event) => void onPatch(item.id, { isRequired: event.target.checked })}
+                    />
+                    {t("tenders.detail.checklist.required")}
+                  </label>
                   <Badge variant="outline" className="mt-1 text-[10px] font-normal">
                     {t(item.templateCode === "capability" && !item.capabilityDocumentId
                       ? "tenders.detail.checklist.sharedDocumentRequired"
@@ -413,7 +533,7 @@ const ChecklistTab = ({ tender, assignees, canManage, onPatch, onUpload, onOpenL
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {CHECKLIST_STATUSES.map((s) => (
+                      {CHECKLIST_STATUSES.filter((s) => s !== "NotApplicable" || !item.isRequired).map((s) => (
                         <SelectItem key={s} value={s}>
                           {t(`tenders.detail.checklist.itemStatus.${s}`)}
                         </SelectItem>
@@ -443,6 +563,21 @@ const ChecklistTab = ({ tender, assignees, canManage, onPatch, onUpload, onOpenL
                       </SelectContent>
                     </Select>
                   ) : item.ownerName ?? <span className="text-slate-400">—</span>}
+                  <Select
+                    value={item.workTaskId == null ? "unlinked" : String(item.workTaskId)}
+                    disabled={disabled || savingId === item.id}
+                    onValueChange={(value) => void handleWorkTask(item, value)}
+                  >
+                    <SelectTrigger className="mt-1 h-8 w-44 text-xs" aria-label={t("tenders.detail.checklist.workTask")}>
+                      <SelectValue placeholder={t("tenders.detail.checklist.workTask")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="unlinked">{t("tenders.detail.checklist.noWorkTask")}</SelectItem>
+                      {planTasks.map((task) => <SelectItem key={task.id} value={String(task.id)}>
+                        {task.departmentCode} · {task.title}
+                      </SelectItem>)}
+                    </SelectContent>
+                  </Select>
                 </td>
                 <td className="px-3 py-2">
                   <Input
@@ -504,6 +639,13 @@ const ChecklistTab = ({ tender, assignees, canManage, onPatch, onUpload, onOpenL
                             : t("tenders.detail.checklist.upload")}
                         </span>
                       </Button> : null}
+                      {!item.templateCode && !item.filePath ? <Button
+                        variant="ghost"
+                        size="icon"
+                        disabled={savingId === item.id}
+                        aria-label={t("tenders.detail.checklist.delete")}
+                        onClick={() => void onDelete(item.id).catch(() => undefined)}
+                      ><Trash2 className="h-3.5 w-3.5 text-rose-600" /></Button> : null}
                     </div>
                   ) : null}
                 </td>
@@ -524,6 +666,15 @@ const ChecklistTab = ({ tender, assignees, canManage, onPatch, onUpload, onOpenL
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <div className="break-words text-sm font-medium text-slate-800">{item.title}</div>
+                <label className="mt-1 flex items-center gap-1 text-xs text-slate-500">
+                  <input
+                    type="checkbox"
+                    checked={item.isRequired}
+                    disabled={disabled || savingId === item.id}
+                    onChange={(event) => void onPatch(item.id, { isRequired: event.target.checked })}
+                  />
+                  {t("tenders.detail.checklist.required")}
+                </label>
                 <Badge variant="outline" className="mt-1 text-[10px] font-normal">
                   {t(item.templateCode === "capability" && !item.capabilityDocumentId
                     ? "tenders.detail.checklist.sharedDocumentRequired"
@@ -554,6 +705,21 @@ const ChecklistTab = ({ tender, assignees, canManage, onPatch, onUpload, onOpenL
                 ) : (
                   <div className="mt-0.5 text-xs text-slate-500">{item.ownerName ?? "—"}</div>
                 )}
+                <Select
+                  value={item.workTaskId == null ? "unlinked" : String(item.workTaskId)}
+                  disabled={disabled || savingId === item.id}
+                  onValueChange={(value) => void handleWorkTask(item, value)}
+                >
+                  <SelectTrigger className="mt-2 h-9 w-full text-xs" aria-label={t("tenders.detail.checklist.workTask")}>
+                    <SelectValue placeholder={t("tenders.detail.checklist.workTask")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="unlinked">{t("tenders.detail.checklist.noWorkTask")}</SelectItem>
+                    {planTasks.map((task) => <SelectItem key={task.id} value={String(task.id)}>
+                      {task.departmentCode} · {task.title}
+                    </SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
               <Badge
                 variant="outline"
@@ -572,7 +738,7 @@ const ChecklistTab = ({ tender, assignees, canManage, onPatch, onUpload, onOpenL
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {CHECKLIST_STATUSES.map((s) => (
+                  {CHECKLIST_STATUSES.filter((s) => s !== "NotApplicable" || !item.isRequired).map((s) => (
                     <SelectItem key={s} value={s}>
                       {t(`tenders.detail.checklist.itemStatus.${s}`)}
                     </SelectItem>
@@ -636,12 +802,103 @@ const ChecklistTab = ({ tender, assignees, canManage, onPatch, onUpload, onOpenL
                         : t("tenders.detail.checklist.upload")}
                     </span>
                   </Button> : null}
+                  {!item.templateCode && !item.filePath ? <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => void onDelete(item.id).catch(() => undefined)}
+                  ><Trash2 className="mr-1 h-3.5 w-3.5" />{t("tenders.detail.checklist.delete")}</Button> : null}
                 </div>
               ) : null}
             </div>
           </div>
         ))}
       </div>
+
+      {tender.submissions.length > 0 ? (
+        <section className="space-y-2 rounded-lg border border-sky-200 bg-sky-50/50 p-3 sm:p-4" data-testid="tender-submission-snapshots">
+          <div>
+            <h3 className="text-sm font-semibold text-sky-950">{t("tenders.detail.checklist.snapshotTitle")}</h3>
+            <p className="text-xs text-sky-800">{t("tenders.detail.checklist.snapshotHint")}</p>
+          </div>
+          {tender.submissions.map((submission) => (
+            <div key={submission.id} className="rounded-md border border-sky-100 bg-white p-3">
+              <div className="flex flex-col gap-1 text-xs text-slate-600 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-3">
+                <span className="font-semibold text-slate-800">#{submission.sequence}</span>
+                <span>{formatDateTime(submission.submittedAt, lang)}</span>
+                <span className="break-words">{submission.submittedByName ?? `#${submission.submittedByUserId}`}</span>
+                <span>{submission.itemCount} {t("tenders.detail.checklist.snapshotItems")}</span>
+                <span>{submission.submissionChannel}</span>
+                {submission.receiptReference ? <span>{submission.receiptReference}</span> : null}
+              </div>
+              <ul className="mt-2 grid gap-1 sm:grid-cols-2">
+                {submission.items.map((item) => (
+                  <li key={item.checklistItemId} className="min-w-0 rounded bg-slate-50 px-2 py-1.5 text-xs text-slate-700">
+                    <div className="break-words font-medium">{item.title}</div>
+                    <div className="mt-0.5 flex flex-wrap gap-x-2 text-[11px] text-slate-500">
+                      <span>{t(`tenders.detail.checklist.itemStatus.${item.status}`)}</span>
+                      <span>{item.isRequired ? t("tenders.detail.checklist.required") : t("tenders.detail.checklist.optional")}</span>
+                      {item.originalFileName ? <span className="break-all">{item.originalFileName}</span> : null}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </section>
+      ) : null}
+
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-md">
+          <DialogHeader><DialogTitle>{t("tenders.detail.checklist.add")}</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <Label>{t("tenders.detail.checklist.customTitle")}</Label>
+              <Input data-testid="tender-checklist-custom-title" value={newTitle} onChange={(event) => setNewTitle(event.target.value)} maxLength={300} />
+            </div>
+            <div className="space-y-1">
+              <Label>{t("tenders.detail.checklist.documentKind")}</Label>
+              <Select value={newDocumentKind} onValueChange={setNewDocumentKind}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {["Legal", "BidSecurity", "Boq", "MethodStatement", "Drawings", "Schedule", "Custom"].map((kind) =>
+                    <SelectItem key={kind} value={kind}>{t(`tenders.detail.checklist.documentKind.${kind}`)}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label>{t("tenders.detail.checklist.workTask")}</Label>
+              <Select value={newWorkTaskId} onValueChange={setNewWorkTaskId}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unlinked">{t("tenders.detail.checklist.noWorkTask")}</SelectItem>
+                  {planTasks.map((task) => <SelectItem key={task.id} value={String(task.id)}>
+                    {task.departmentCode} · {task.packageName} · {task.title}
+                  </SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <label className="flex items-center gap-2 text-sm">
+              <input data-testid="tender-checklist-custom-required" type="checkbox" checked={newRequired} onChange={(event) => setNewRequired(event.target.checked)} />
+              {t("tenders.detail.checklist.required")}
+            </label>
+          </div>
+          <DialogFooter><Button variant="outline" onClick={() => setCreateOpen(false)}>{t("common.cancel")}</Button><Button data-testid="tender-checklist-custom-save" disabled={!newTitle.trim()} onClick={() => void createItem()}>{t("common.save")}</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={notApplicableItem != null} onOpenChange={(open) => !open && setNotApplicableItem(null)}>
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("tenders.detail.checklist.notApplicableTitle")}</DialogTitle>
+            <DialogDescription>{notApplicableItem?.title}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-1">
+            <Label>{t("tenders.detail.checklist.notApplicableReason")}</Label>
+            <Textarea data-testid="tender-checklist-na-reason" value={notApplicableReason} onChange={(event) => setNotApplicableReason(event.target.value)} maxLength={500} />
+          </div>
+          <DialogFooter><Button variant="outline" onClick={() => setNotApplicableItem(null)}>{t("common.cancel")}</Button><Button data-testid="tender-checklist-na-save" disabled={!notApplicableReason.trim()} onClick={() => void markNotApplicable()}>{t("common.save")}</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
@@ -1328,6 +1585,7 @@ const AdminTenderDetail = () => {
   const { has } = usePermissions();
   const canManage = has(ADMIN_PERMS.tendersManage);
   const canMarkResult = has(ADMIN_PERMS.tendersMarkResult);
+  const canSubmit = has(ADMIN_PERMS.tendersSubmit);
   const canApproveEstimate = has(ADMIN_PERMS.tendersApproveEstimate);
   const navigate = useNavigate();
 
@@ -1472,6 +1730,39 @@ const AdminTenderDetail = () => {
     }
   };
 
+  const handleInvitationUpload = async (file: File) => {
+    try {
+      const { data } = await adminApi.uploadTenderInvitationDocument(tenderId, file);
+      setTender(data);
+      toast({ title: t("tenders.detail.saved") });
+    } catch (err) {
+      toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
+      throw err;
+    }
+  };
+
+  const handleChecklistCreate = async (body: Parameters<typeof adminApi.createTenderChecklistItem>[1]) => {
+    try {
+      const { data } = await adminApi.createTenderChecklistItem(tenderId, body);
+      setTender(data);
+      toast({ title: t("tenders.detail.saved") });
+    } catch (err) {
+      toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
+      throw err;
+    }
+  };
+
+  const handleChecklistDelete = async (itemId: number) => {
+    try {
+      const { data } = await adminApi.deleteTenderChecklistItem(tenderId, itemId);
+      setTender(data);
+      toast({ title: t("tenders.detail.saved") });
+    } catch (err) {
+      toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
+      throw err;
+    }
+  };
+
   const handleAttachFromLibrary = async (
     assignments: { checklistItemId: number; capabilityDocumentId: number }[],
   ) => {
@@ -1558,16 +1849,19 @@ const AdminTenderDetail = () => {
               </TabsList>
 
               <TabsContent value="info" className="mt-3">
-                <InfoTab tender={tender} />
+                <InfoTab tender={tender} canManage={canManage && !isTerminal} onUploadInvitation={handleInvitationUpload} />
               </TabsContent>
 
               <TabsContent value="checklist" className="mt-3">
                 <ChecklistTab
                   tender={tender}
+                  planPackages={planPackages}
                   assignees={assignees}
                   canManage={canManage}
                   onPatch={handleChecklistPatch}
                   onUpload={handleUpload}
+                  onCreate={handleChecklistCreate}
+                  onDelete={handleChecklistDelete}
                   onOpenLibrary={setLibraryTargetItemId}
                   isTerminal={!!isTerminal}
                 />
@@ -1588,7 +1882,8 @@ const AdminTenderDetail = () => {
                 <TenderEstimatePanel
                   tender={tender}
                   canManage={canManage}
-                  canTransition={canMarkResult}
+                  canSubmit={canSubmit}
+                  canMarkResult={canMarkResult}
                   canApprove={canApproveEstimate}
                   planReady={tenderPlanReady}
                   financeReady={tenderFinanceReady}
