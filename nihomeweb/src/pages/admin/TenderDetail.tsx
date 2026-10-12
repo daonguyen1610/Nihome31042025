@@ -647,24 +647,27 @@ const ChecklistTab = ({ tender, assignees, canManage, onPatch, onUpload, onOpenL
 
 // ---------------------------- tender plan tab ----------------------------
 
-const TenderPlanTab = ({ tender, packages, financePackages, canManage }: {
+const TenderPlanTab = ({ tender, packages, financePackages, canManage, loadError, onRetry }: {
   tender: TenderResponse;
   packages: DepartmentWorkPackageResponse[];
   financePackages: DepartmentWorkPackageResponse[];
   canManage: boolean;
+  loadError: string | null;
+  onRetry: () => void;
 }) => {
   const { t, lang } = useI18n();
   const active = packages.filter(item => item.status !== "Cancelled");
+  const cancelled = tender.status === "Cancelled";
   const hasPassedSubmission = ["Submitted", "Won", "Lost"].includes(tender.status);
   const complete = hasPassedSubmission || active.length > 0 && active.every(item => item.status === "Completed");
   const financeApproved = hasPassedSubmission ||
     financePackages.some(item => item.financeReview?.status === "Approved");
   const processStages = [
     { key: "received", done: true, active: false },
-    { key: "planning", done: complete, active: !complete },
-    { key: "dossier", done: tender.checklistCompletionPercent === 100, active: complete && tender.checklistCompletionPercent < 100 },
-    { key: "review", done: financeApproved, active: tender.checklistCompletionPercent === 100 && !financeApproved },
-    { key: "submitted", done: tender.status !== "Preparing", active: financeApproved && tender.status === "Preparing" },
+    { key: "planning", done: complete, active: !cancelled && !complete },
+    { key: "dossier", done: tender.checklistCompletionPercent === 100, active: !cancelled && complete && tender.checklistCompletionPercent < 100 },
+    { key: "review", done: financeApproved, active: !cancelled && tender.checklistCompletionPercent === 100 && !financeApproved },
+    { key: "submitted", done: hasPassedSubmission, active: !cancelled && financeApproved && tender.status === "Preparing" },
     { key: "result", done: ["Won", "Lost", "Cancelled"].includes(tender.status), active: tender.status === "Submitted" },
   ];
   return <div className="space-y-3" data-testid="tender-plan-tab">
@@ -687,14 +690,17 @@ const TenderPlanTab = ({ tender, packages, financePackages, canManage }: {
         <p className="text-sm text-muted-foreground">{t("tenders.plan.help")}</p>
       </div>
       {canManage && tender.status === "Preparing" && tender.operationalProjectId ? <Button asChild className="w-full shrink-0 sm:w-auto">
-        <Link to={`/admin/work-packages?create=1&projectId=${tender.operationalProjectId}&tenderId=${tender.id}`}>
+        <Link to={`/admin/work-packages?create=1&purpose=TenderPlanning&projectId=${tender.operationalProjectId}&tenderId=${tender.id}`}>
           <ClipboardList className="mr-2 h-4 w-4" />{t("tenders.plan.assignDepartment")}
         </Link>
       </Button> : null}
     </div>
-    <div className={cn("rounded-lg border p-3 text-sm", complete ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-amber-200 bg-amber-50 text-amber-900")}>
+    {loadError ? <div className="flex flex-col gap-3 rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800 sm:flex-row sm:items-center sm:justify-between" role="alert">
+      <span>{loadError}</span>
+      <Button variant="outline" size="sm" className="shrink-0" onClick={onRetry}>{t("common.retry")}</Button>
+    </div> : <div className={cn("rounded-lg border p-3 text-sm", complete ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-amber-200 bg-amber-50 text-amber-900")}>
       {active.length === 0 ? t("tenders.plan.required") : complete ? t("tenders.plan.ready") : t("tenders.plan.inProgress")}
-    </div>
+    </div>}
     <div className="grid gap-3 lg:grid-cols-2">
       {packages.map(item => <Link key={item.id} to={`/admin/work-packages/${item.id}`} className="min-w-0 rounded-lg border bg-white p-4 shadow-sm transition hover:border-primary/40">
         <div className="flex min-w-0 items-start justify-between gap-2">
@@ -893,7 +899,9 @@ const MarkWonDialog = ({ open, onClose, tender, onSubmit }: MarkWonDialogProps) 
           customerId: tender.customerId,
           pageSize: 100,
         });
-        if (!cancelled) setOpps(data.items ?? []);
+        if (!cancelled) setOpps((data.items ?? []).filter(item =>
+          item.operationalProjectId === tender.operationalProjectId &&
+          item.stage !== "Won" && item.stage !== "Lost"));
       } catch (err) {
         if (!cancelled) setError(extractApiError(err));
       } finally {
@@ -903,7 +911,7 @@ const MarkWonDialog = ({ open, onClose, tender, onSubmit }: MarkWonDialogProps) 
     return () => {
       cancelled = true;
     };
-  }, [open, tender.customerId]);
+  }, [open, tender.customerId, tender.operationalProjectId]);
 
   const confirm = async () => {
     if (mode === "existing" && oppId == null) {
@@ -1187,7 +1195,7 @@ const ResultTab = ({
               </div>
             ) : null}
             {tender.wonOpportunityId && tender.operationalProjectId ? <Button asChild className="mt-3 w-full sm:w-auto">
-              <Link to={`/admin/contracts?opportunityId=${tender.wonOpportunityId}&projectId=${tender.operationalProjectId}&customerId=${tender.customerId}`}>
+              <Link to={`/admin/contracts?opportunityId=${tender.wonOpportunityId}&operationalProjectId=${tender.operationalProjectId}&customerId=${tender.customerId}`}>
                 {t("tenders.detail.result.createContract")}
               </Link>
             </Button> : null}
@@ -1328,6 +1336,7 @@ const AdminTenderDetail = () => {
   const [assignees, setAssignees] = useState<TenderAssigneeOptionResponse[] | null>(null);
   const [planPackages, setPlanPackages] = useState<DepartmentWorkPackageResponse[]>([]);
   const [financePackages, setFinancePackages] = useState<DepartmentWorkPackageResponse[]>([]);
+  const [planError, setPlanError] = useState<string | null>(null);
 
   const [libraryTargetItemId, setLibraryTargetItemId] = useState<number | null>(null);
   const [markWonOpen, setMarkWonOpen] = useState(false);
@@ -1362,15 +1371,17 @@ const AdminTenderDetail = () => {
 
   const fetchPlan = useCallback(async () => {
     if (!Number.isFinite(tenderId)) return;
+    setPlanError(null);
     try {
       const { data } = await adminApi.listWorkPackages({ sourceTenderId: tenderId, pageSize: 100 });
-      setPlanPackages(data.items.filter(item => item.purpose === "General"));
+      setPlanPackages(data.items.filter(item => item.purpose === "TenderPlanning" || item.purpose === "General"));
       setFinancePackages(data.items.filter(item => item.purpose === "FinanceTenderReview"));
-    } catch {
+    } catch (cause) {
       setPlanPackages([]);
       setFinancePackages([]);
+      setPlanError(extractApiError(cause, t("tenders.plan.loadError")));
     }
-  }, [tenderId]);
+  }, [t, tenderId]);
 
   useEffect(() => {
     void fetchTender();
@@ -1555,6 +1566,8 @@ const AdminTenderDetail = () => {
                   packages={planPackages}
                   financePackages={financePackages}
                   canManage={canManage}
+                  loadError={planError}
+                  onRetry={() => void fetchPlan()}
                 />
               </TabsContent>
 

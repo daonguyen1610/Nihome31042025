@@ -204,6 +204,7 @@ public enum WorkPackagePurpose
     ProcurementInputPricing = 1,
     FinanceCommercialReview = 2,
     FinanceTenderReview = 3,
+    TenderPlanning = 4,
 }
 
 public enum InputPriceOfferStatus

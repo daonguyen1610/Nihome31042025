@@ -92,7 +92,7 @@ Kinh doanh gửi báo giá (đã duyệt nội bộ)
   → Kinh doanh gửi báo giá cho khách hàng
 
 Kinh doanh chuẩn bị hồ sơ dự thầu (gói thầu đã gắn Dự án vận hành)
-  → lập Kế hoạch đấu thầu theo từng phòng: người phụ trách, người duyệt độc lập,
+  → lập Kế hoạch đấu thầu (`TenderPlanning`) theo từng phòng: người phụ trách, người duyệt độc lập,
     ngày bắt đầu/kết thúc, dependency và tiến độ
   → từng phòng hoàn thành đầu việc; người duyệt xác nhận
   → Tài chính lập hồ sơ rà soát tài chính dự thầu / bảo lãnh

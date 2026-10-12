@@ -991,17 +991,98 @@ public class TenderServiceTests : IDisposable
         Assert.Null(await _sut.GetChecklistFileAsync(first.Id, 999_999));
     }
 
+    [Fact]
+    public async Task TransitionSubmitted_WithVerifiedPlanAndRequiredApprovals_Succeeds()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        var checklist = await _db.TenderChecklistItems.Where(item => item.TenderId == created.Id).ToListAsync();
+        foreach (var item in checklist)
+        {
+            item.Status = TenderChecklistItemStatus.Done;
+            if (item.TemplateCode == "capability") item.CapabilityDocumentId = 101;
+        }
+        var group = new RoleGroup { Code = "TENDERING", LabelKey = "rbac.group.tendering", IsActive = true };
+        var plan = new DepartmentWorkPackage
+        {
+            Code = "WP-TENDER-READY",
+            Kind = WorkPackageKind.Project,
+            Purpose = WorkPackagePurpose.TenderPlanning,
+            Name = "Kế hoạch hồ sơ dự thầu",
+            OperationalProjectId = _projectId,
+            SourceTenderId = created.Id,
+            DepartmentRoleGroup = group,
+            LeadUserId = _userId,
+            Status = WorkPackageStatus.Completed,
+            PlannedStart = DateTime.UtcNow.Date,
+            PlannedEnd = DateTime.UtcNow.Date.AddDays(7),
+            CreatedByUserId = _userId,
+            UpdatedByUserId = _userId,
+        };
+        var finance = new DepartmentWorkPackage
+        {
+            Code = "WP-TENDER-FINANCE",
+            Kind = WorkPackageKind.Project,
+            Purpose = WorkPackagePurpose.FinanceTenderReview,
+            Name = "Rà soát tài chính dự thầu",
+            OperationalProjectId = _projectId,
+            SourceTenderId = created.Id,
+            DepartmentRoleGroup = group,
+            LeadUserId = _userId,
+            Status = WorkPackageStatus.Active,
+            CreatedByUserId = _userId,
+            UpdatedByUserId = _userId,
+            FinanceReview = new DepartmentFinanceReview
+            {
+                Status = FinanceReviewStatus.Approved,
+                FinancialDossierReviewed = true,
+                GuaranteesReviewed = true,
+                CreatedByUserId = _userId,
+                UpdatedByUserId = _userId,
+            },
+        };
+        _db.DepartmentWorkPackages.AddRange(plan, finance);
+        _db.TenderEstimateRevisions.Add(new TenderEstimateRevision
+        {
+            TenderId = created.Id,
+            VersionNumber = 1,
+            Status = TenderEstimateRevisionStatus.Approved,
+            SourceFileName = "tender-ready.csv",
+            SourceSha256 = new string('c', 64),
+            ImportedByUserId = _userId,
+            ImportedAt = DateTime.UtcNow,
+        });
+        await _db.SaveChangesAsync();
+
+        var submitted = await _sut.TransitionAsync(created.Id,
+            new TransitionTenderRequest { Status = "Submitted" }, _userId);
+
+        Assert.Equal("Submitted", submitted!.Status);
+    }
+
+    [Fact]
+    public async Task TransitionSubmitted_WithoutTenderPlan_RejectsAndPreservesState()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+
+        var error = await Assert.ThrowsAsync<TenderOperationException>(() => _sut.TransitionAsync(
+            created.Id, new TransitionTenderRequest { Status = "Submitted" }, _userId));
+
+        Assert.Contains("Kế hoạch đấu thầu", error.Message);
+        Assert.Equal("Preparing", (await _sut.GetAsync(created.Id))!.Status);
+    }
+
     // ---------------- NIH-97 Mark Won / Lost ----------------
 
-    private int SeedOpportunity()
+    private int SeedOpportunity(int? projectId = null, OpportunityStage stage = OpportunityStage.Prospecting)
     {
         var opp = new Opportunity
         {
             CustomerId = _customerId,
+            OperationalProjectId = projectId ?? _projectId,
             Name = "Opp",
             EstimatedValue = 0,
             WinProbability = 10,
-            Stage = OpportunityStage.Prospecting,
+            Stage = stage,
         };
         _db.Opportunities.Add(opp);
         _db.SaveChanges();
@@ -1024,6 +1105,7 @@ public class TenderServiceTests : IDisposable
         Assert.NotNull(updated);
         Assert.Equal("Won", updated!.Status);
         Assert.Equal(oppId, updated.WonOpportunityId);
+        Assert.Equal(OpportunityStage.Negotiation, (await _db.Opportunities.FindAsync(oppId))!.Stage);
         Assert.NotNull(updated.ClosedAt);
         Assert.Equal("Trúng chính thức", updated.Note);
     }
@@ -1145,8 +1227,45 @@ public class TenderServiceTests : IDisposable
                 OpportunityId = opportunity.Id,
             }, _userId));
 
-        Assert.Contains("không thuộc khách hàng", exception.Message);
+        Assert.Contains("đúng khách hàng, Dự án", exception.Message);
         Assert.Equal("Submitted", (await _sut.GetAsync(created.Id))!.Status);
+    }
+
+    [Fact]
+    public async Task MarkWonAsync_OpportunityForDifferentProject_ThrowsAndPreservesState()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        await SetTenderStatusAsync(created.Id, TenderStatus.Submitted);
+        var otherProject = new OperationalProject
+        {
+            Code = "PJ-TENDER-OTHER",
+            Name = "Dự án khác của cùng khách hàng",
+            CustomerId = _customerId,
+            Status = OperationalProjectStatus.Planning,
+        };
+        _db.OperationalProjects.Add(otherProject);
+        await _db.SaveChangesAsync();
+        var opportunityId = SeedOpportunity(otherProject.Id);
+
+        await Assert.ThrowsAsync<TenderOperationException>(() => _sut.MarkWonAsync(created.Id,
+            new MarkTenderWonRequest { OpportunityId = opportunityId }, _userId));
+
+        Assert.Equal("Submitted", (await _sut.GetAsync(created.Id))!.Status);
+        Assert.Equal(OpportunityStage.Prospecting, (await _db.Opportunities.FindAsync(opportunityId))!.Stage);
+    }
+
+    [Fact]
+    public async Task MarkWonAsync_TerminalOpportunity_ThrowsAndPreservesState()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        await SetTenderStatusAsync(created.Id, TenderStatus.Submitted);
+        var opportunityId = SeedOpportunity(stage: OpportunityStage.Lost);
+
+        await Assert.ThrowsAsync<TenderOperationException>(() => _sut.MarkWonAsync(created.Id,
+            new MarkTenderWonRequest { OpportunityId = opportunityId }, _userId));
+
+        Assert.Equal("Submitted", (await _sut.GetAsync(created.Id))!.Status);
+        Assert.Equal(OpportunityStage.Lost, (await _db.Opportunities.FindAsync(opportunityId))!.Stage);
     }
 
     [Fact]

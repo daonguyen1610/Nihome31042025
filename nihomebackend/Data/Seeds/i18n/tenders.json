@@ -180,6 +180,7 @@
   ,{"key":"tenders.plan.inProgress","category":"tenders","vi":"Kế hoạch đang thực hiện. Tất cả nhóm việc phải hoàn thành và được xác nhận trước khi nộp.","en":"The plan is in progress. Every package must be completed and verified before submission.","zh":"计划进行中。所有工作包必须在提交前完成并审核。","ja":"計画は進行中です。提出前に全作業パッケージの完了と確認が必要です。"}
   ,{"key":"tenders.plan.ready","category":"tenders","vi":"Kế hoạch đã hoàn thành và sẵn sàng cho bước nộp thầu.","en":"The plan is complete and ready for tender submission.","zh":"计划已完成，可提交投标。","ja":"計画が完了し、入札提出の準備が整いました。"}
   ,{"key":"tenders.plan.tasks","category":"tenders","vi":"đầu việc","en":"tasks","zh":"任务","ja":"タスク"}
+  ,{"key":"tenders.plan.loadError","category":"tenders","vi":"Không thể tải Kế hoạch đấu thầu. Vui lòng thử lại để tránh bỏ sót phân công.","en":"Could not load the tender plan. Retry to avoid missing assignments.","zh":"无法加载投标计划。请重试，以免遗漏分工。","ja":"入札計画を読み込めませんでした。割り当て漏れを防ぐため再試行してください。"}
   ,{"key":"tenders.detail.result.createContract","category":"tenders","vi":"Tiếp tục thương thảo và tạo hợp đồng","en":"Continue negotiation and create contract","zh":"继续谈判并创建合同","ja":"交渉を継続して契約を作成"}
   ,{"key":"tenders.detail.checklist.sharedDocument","category":"tenders","vi":"Hồ sơ dùng chung","en":"Shared document","zh":"共享资料","ja":"共通資料"}
   ,{"key":"tenders.detail.checklist.sharedDocumentRequired","category":"tenders","vi":"Phải chọn từ thư viện dùng chung","en":"Select from shared library","zh":"须从共享资料库选择","ja":"共有ライブラリから選択"}

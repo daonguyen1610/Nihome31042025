@@ -859,6 +859,111 @@ public class TendersControllerTests : IntegrationTestBase
         res.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
+    [Fact]
+    public async Task TransitionSubmitted_WithCompletedPlanChecklistEstimateAndFinanceReview_Succeeds()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var tenderId = await CreateTenderAsync("Gói thầu đủ điều kiện nộp NICON");
+        await WithDbAsync(async db =>
+        {
+            var tender = await db.Tenders.Include(item => item.ChecklistItems)
+                .SingleAsync(item => item.Id == tenderId);
+            var actorId = tender.CreatedByUserId!.Value;
+            var capability = new CapabilityDocument
+            {
+                Name = "Hồ sơ năng lực dùng chung cho kiểm thử nộp thầu",
+                TagCode = "capability",
+                FilePath = $"/files/capability/{Guid.NewGuid():N}.pdf",
+                OriginalFileName = "nicon-capability.pdf",
+                FileSize = 1024,
+                ContentType = "application/pdf",
+                CurrentVersion = 1,
+            };
+            db.CapabilityDocuments.Add(capability);
+            foreach (var item in tender.ChecklistItems)
+            {
+                item.Status = TenderChecklistItemStatus.Done;
+                if (item.TemplateCode == "capability") item.CapabilityDocument = capability;
+            }
+            var groupId = await db.RoleGroups.Where(item => item.IsActive)
+                .OrderBy(item => item.Id).Select(item => item.Id).FirstAsync();
+            db.DepartmentWorkPackages.AddRange(
+                new DepartmentWorkPackage
+                {
+                    Code = $"WP-TP-{Guid.NewGuid():N}"[..20].ToUpperInvariant(),
+                    Kind = WorkPackageKind.Project,
+                    Purpose = WorkPackagePurpose.TenderPlanning,
+                    Name = "Kế hoạch hồ sơ dự thầu đã xác nhận",
+                    OperationalProjectId = tender.OperationalProjectId,
+                    SourceTenderId = tender.Id,
+                    DepartmentRoleGroupId = groupId,
+                    LeadUserId = actorId,
+                    Status = WorkPackageStatus.Completed,
+                    PlannedStart = DateTime.UtcNow.Date,
+                    PlannedEnd = DateTime.UtcNow.Date.AddDays(7),
+                    CreatedByUserId = actorId,
+                    UpdatedByUserId = actorId,
+                },
+                new DepartmentWorkPackage
+                {
+                    Code = $"WP-FI-{Guid.NewGuid():N}"[..20].ToUpperInvariant(),
+                    Kind = WorkPackageKind.Project,
+                    Purpose = WorkPackagePurpose.FinanceTenderReview,
+                    Name = "Rà soát tài chính hồ sơ dự thầu",
+                    OperationalProjectId = tender.OperationalProjectId,
+                    SourceTenderId = tender.Id,
+                    DepartmentRoleGroupId = groupId,
+                    LeadUserId = actorId,
+                    Status = WorkPackageStatus.Active,
+                    CreatedByUserId = actorId,
+                    UpdatedByUserId = actorId,
+                    FinanceReview = new DepartmentFinanceReview
+                    {
+                        Status = FinanceReviewStatus.Approved,
+                        GuaranteesReviewed = true,
+                        FinancialDossierReviewed = true,
+                        CreatedByUserId = actorId,
+                        UpdatedByUserId = actorId,
+                    },
+                });
+            db.TenderEstimateRevisions.Add(new TenderEstimateRevision
+            {
+                TenderId = tender.Id,
+                VersionNumber = 1,
+                Status = TenderEstimateRevisionStatus.Approved,
+                SourceFileName = "du-toan-da-duyet.csv",
+                SourceSha256 = new string('d', 64),
+                ImportedByUserId = actorId,
+                ImportedAt = DateTime.UtcNow,
+            });
+            await db.SaveChangesAsync();
+        });
+
+        var response = await Client.PostAsJsonAsync($"/api/tenders/{tenderId}/transition", new
+        {
+            status = "Submitted",
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
+        (await ReadJsonAsync(response)).GetProperty("status").GetString().Should().Be("Submitted");
+    }
+
+    [Fact]
+    public async Task TransitionSubmitted_WithoutPlan_IsRejectedAndPreservesTender()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var tenderId = await CreateTenderAsync("Gói thầu chưa có kế hoạch");
+
+        var response = await Client.PostAsJsonAsync($"/api/tenders/{tenderId}/transition", new
+        {
+            status = "Submitted",
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.Tenders.Where(item => item.Id == tenderId)
+            .Select(item => item.Status).SingleAsync())).Should().Be(TenderStatus.Preparing);
+    }
+
     // ---------- NIH-97 mark-won / mark-lost ----------
 
     [Fact]
@@ -867,9 +972,9 @@ public class TendersControllerTests : IntegrationTestBase
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
         var tenderId = await CreateTenderAsync();
         await SetTenderStatusAsync(tenderId, TenderStatus.Submitted);
-        var customerId = await WithDbAsync(db => db.Tenders.Where(item => item.Id == tenderId)
-            .Select(item => item.CustomerId).SingleAsync());
-        var oppId = await CreateOpportunityAsync(customerId);
+        var scope = await WithDbAsync(db => db.Tenders.Where(item => item.Id == tenderId)
+            .Select(item => new { item.CustomerId, item.OperationalProjectId }).SingleAsync());
+        var oppId = await CreateOpportunityAsync(scope.CustomerId, scope.OperationalProjectId);
 
         var res = await Client.PostAsJsonAsync($"/api/tenders/{tenderId}/mark-won", new
         {
@@ -880,6 +985,32 @@ public class TendersControllerTests : IntegrationTestBase
         var body = await ReadJsonAsync(res);
         body.GetProperty("status").GetString().Should().Be("Won");
         body.GetProperty("wonOpportunityId").GetInt32().Should().Be(oppId);
+        (await WithDbAsync(db => db.Opportunities.Where(item => item.Id == oppId)
+            .Select(item => item.Stage).SingleAsync())).Should().Be(OpportunityStage.Negotiation);
+    }
+
+    [Fact]
+    public async Task MarkWon_ExistingOpportunityInDifferentProject_IsRejectedWithoutMutation()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var tenderId = await CreateTenderAsync();
+        await SetTenderStatusAsync(tenderId, TenderStatus.Submitted);
+        var scope = await WithDbAsync(db => db.Tenders.Where(item => item.Id == tenderId)
+            .Select(item => new { item.CustomerId, item.OperationalProjectId }).SingleAsync());
+        var otherProjectId = await CreateOperationalProjectAsync(scope.CustomerId);
+        otherProjectId.Should().NotBe(scope.OperationalProjectId);
+        var opportunityId = await CreateOpportunityAsync(scope.CustomerId, otherProjectId);
+
+        var response = await Client.PostAsJsonAsync($"/api/tenders/{tenderId}/mark-won", new
+        {
+            opportunityId,
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.Tenders.Where(item => item.Id == tenderId)
+            .Select(item => item.Status).SingleAsync())).Should().Be(TenderStatus.Submitted);
+        (await WithDbAsync(db => db.Opportunities.Where(item => item.Id == opportunityId)
+            .Select(item => item.Stage).SingleAsync())).Should().Be(OpportunityStage.Prospecting);
     }
 
     [Fact]
@@ -1034,9 +1165,9 @@ public class TendersControllerTests : IntegrationTestBase
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
         var tenderId = await CreateTenderAsync();
         await SetTenderStatusAsync(tenderId, TenderStatus.Submitted);
-        var customerId = await WithDbAsync(db => db.Tenders.Where(item => item.Id == tenderId)
-            .Select(item => item.CustomerId).SingleAsync());
-        var oppId = await CreateOpportunityAsync(customerId);
+        var scope = await WithDbAsync(db => db.Tenders.Where(item => item.Id == tenderId)
+            .Select(item => new { item.CustomerId, item.OperationalProjectId }).SingleAsync());
+        var oppId = await CreateOpportunityAsync(scope.CustomerId, scope.OperationalProjectId);
         (await Client.PostAsJsonAsync($"/api/tenders/{tenderId}/mark-won", new { opportunityId = oppId }))
             .EnsureSuccessStatusCode();
 
@@ -1087,13 +1218,14 @@ public class TendersControllerTests : IntegrationTestBase
             .GetProperty("id").GetInt32();
     }
 
-    private async Task<int> CreateOpportunityAsync(int? existingCustomerId = null)
+    private async Task<int> CreateOpportunityAsync(int? existingCustomerId = null, int? operationalProjectId = null)
     {
         var customerId = existingCustomerId ?? await CreateCustomerAsync();
         var res = await Client.PostAsJsonAsync("/api/opportunities", new
         {
             name = "Opp " + Guid.NewGuid().ToString("N")[..6],
             customerId,
+            operationalProjectId,
             estimatedValue = 1_000_000m,
             winProbability = 40,
         });

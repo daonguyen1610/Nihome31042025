@@ -14,8 +14,90 @@ public static class DepartmentWorkPackageSampleSeeder
         SeedProjectPackage(db, actorId);
         SeedPrecontractProcurementPackage(db, actorId);
         SeedCommercialFinanceReview(db, actorId);
+        SeedTenderPlanningPackage(db, actorId);
         SeedInternalPackage(db, actorId);
         db.SaveChanges();
+    }
+
+    private static void SeedTenderPlanningPackage(AppDbContext db, int actorId)
+    {
+        const string code = "WP-DEMO-TENDER-PLAN";
+        if (db.DepartmentWorkPackages.Any(item => item.Code == code)) return;
+
+        var tender = db.Tenders.OrderBy(item => item.Id)
+            .FirstOrDefault(item => item.Code == "TD-SAMPLE-001" &&
+                item.Status == TenderStatus.Preparing && item.OperationalProjectId != null);
+        if (tender is null || tender.SubmissionDeadline <= DateTime.UtcNow.AddDays(3)) return;
+
+        var leadCandidates = db.Users
+            .Where(user => user.IsActive && user.RoleEntity != null && user.RoleEntity.IsActive &&
+                user.RoleEntity.RoleGroupId != null && user.RoleEntity.RolePermissions.Any(rolePermission =>
+                    rolePermission.Permission.IsActive &&
+                    rolePermission.Permission.Module == "work.packages" &&
+                    rolePermission.Permission.Action == "assign"))
+            .OrderBy(user => user.Id)
+            .Select(user => new { UserId = user.Id, GroupId = user.RoleEntity!.RoleGroupId!.Value })
+            .ToList();
+        var selected = leadCandidates
+            .Select(candidate => new
+            {
+                LeadId = candidate.UserId,
+                candidate.GroupId,
+                AssigneeId = db.Users.Where(user => user.IsActive && user.Id != candidate.UserId &&
+                        user.RoleEntity != null && user.RoleEntity.IsActive &&
+                        user.RoleEntity.RoleGroupId == candidate.GroupId)
+                    .OrderBy(user => user.Id).Select(user => user.Id).FirstOrDefault(),
+            })
+            .FirstOrDefault(candidate => candidate.AssigneeId != 0);
+        if (selected is null) return;
+
+        var start = tender.SubmissionDeadline.Date.AddDays(-21);
+        var end = tender.SubmissionDeadline.Date.AddDays(-3);
+        db.DepartmentWorkPackages.Add(new DepartmentWorkPackage
+        {
+            Code = code,
+            Kind = WorkPackageKind.Project,
+            Purpose = WorkPackagePurpose.TenderPlanning,
+            Name = "Chuẩn bị hồ sơ pháp lý và năng lực dự thầu",
+            Description = "Nhóm hồ sơ mẫu trong kế hoạch đấu thầu NICON, có người phụ trách, hạn nội bộ và bước duyệt độc lập.",
+            OperationalProjectId = tender.OperationalProjectId,
+            SourceTenderId = tender.Id,
+            DepartmentRoleGroupId = selected.GroupId,
+            LeadUserId = selected.LeadId,
+            Status = WorkPackageStatus.Active,
+            PlannedStart = start,
+            PlannedEnd = end,
+            CreatedAt = DateTime.UtcNow,
+            CreatedByUserId = actorId,
+            UpdatedAt = DateTime.UtcNow,
+            UpdatedByUserId = actorId,
+            ParticipantGroups =
+            [
+                new DepartmentWorkPackageParticipantGroup { RoleGroupId = selected.GroupId },
+            ],
+            Tasks =
+            [
+                new DepartmentWorkTask
+                {
+                    WbsCode = "TD-PL-01",
+                    Title = "Rà soát hồ sơ pháp lý và năng lực dùng chung",
+                    Description = "Đối chiếu hồ sơ năng lực dùng chung với yêu cầu của hồ sơ mời thầu và ghi nhận phần cần bổ sung.",
+                    Resources = "Hồ sơ mời thầu, thư viện hồ sơ năng lực dùng chung",
+                    DepartmentRoleGroupId = selected.GroupId,
+                    AssigneeUserId = selected.AssigneeId,
+                    ApproverUserId = selected.LeadId,
+                    Status = WorkTaskStatus.InProgress,
+                    ProgressPercent = 40,
+                    PlannedStart = start,
+                    PlannedEnd = start.AddDays(7),
+                    ActualStart = start,
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedByUserId = selected.LeadId,
+                    UpdatedAt = DateTime.UtcNow,
+                    UpdatedByUserId = selected.AssigneeId,
+                },
+            ],
+        });
     }
 
     private static void SeedProjectPackage(AppDbContext db, int actorId)
