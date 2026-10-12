@@ -77,14 +77,14 @@ public interface ITenderService
         int tenderId, int itemId, string filePath, CancellationToken ct = default);
 
     /// <summary>
-    /// Bulk-attach one or more checklist rows to <c>capability_documents</c>
-    /// library entries. The library file path is copied onto the checklist
-    /// row and the row moves to <see cref="TenderChecklistItemStatus.Done"/>
-    /// so users don't have to re-upload common files (Hồ sơ năng lực).
+    /// Attach the fixed <c>TemplateCode=capability</c> checklist row to a
+    /// <c>capability_documents</c> library entry. Project-specific rows must
+    /// use direct uploads. The library file path is copied onto the checklist
+    /// row and the row moves to <see cref="TenderChecklistItemStatus.Done"/>.
     /// Returns the refreshed tender, or null when the tender is missing.
     /// Throws <see cref="TenderOperationException"/> on validation failures
-    /// (unknown item / document, or an item that doesn't belong to the
-    /// tender).
+    /// (unknown item / document, non-capability item, or an item that doesn't
+    /// belong to the tender).
     /// </summary>
     Task<TenderResponse?> AttachChecklistFromLibraryAsync(int tenderId,
         AttachTenderChecklistFromLibraryRequest request, int callerUserId, CancellationToken ct = default);

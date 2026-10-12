@@ -13,11 +13,15 @@ import {
   type TenderResponse,
   type TenderStatus,
 } from "@/services/adminApi";
+import { isTenderChecklistEvidenceReady } from "./tenderChecklist";
 
 type Props = {
   tender: TenderResponse;
   canManage: boolean;
+  canTransition: boolean;
   canApprove: boolean;
+  planReady: boolean;
+  financeReady: boolean;
   onTenderChanged: (tender: TenderResponse) => void;
 };
 
@@ -35,7 +39,15 @@ const importErrorsFrom = (error: unknown): CsvImportError[] => {
   return Array.isArray(response?.data?.errors) ? response.data.errors : [];
 };
 
-export default function TenderEstimatePanel({ tender, canManage, canApprove, onTenderChanged }: Props) {
+export default function TenderEstimatePanel({
+  tender,
+  canManage,
+  canTransition,
+  canApprove,
+  planReady,
+  financeReady,
+  onTenderChanged,
+}: Props) {
   const { t, lang } = useI18n();
   const { toast } = useToast();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -70,8 +82,8 @@ export default function TenderEstimatePanel({ tender, canManage, canApprove, onT
     [revisions, selectedId],
   );
   const approved = revisions.some((revision) => revision.status === "Approved");
-  const checklistReady = tender.checklistItems.length > 0 && tender.checklistCompletionPercent === 100;
-  const canSubmitTender = tender.status === "Preparing" && checklistReady && approved;
+  const checklistReady = isTenderChecklistEvidenceReady(tender);
+  const canSubmitTender = tender.status === "Preparing" && checklistReady && approved && planReady && financeReady;
   const terminal = ["Won", "Lost", "Cancelled"].includes(tender.status);
 
   const money = (value: number, currency: string) => new Intl.NumberFormat(lang, {
@@ -156,22 +168,32 @@ export default function TenderEstimatePanel({ tender, canManage, canApprove, onT
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
             <div className={`rounded-md border p-3 text-sm ${checklistReady ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"}`}>
               {checklistReady ? <CheckCircle2 className="mr-2 inline h-4 w-4" /> : <XCircle className="mr-2 inline h-4 w-4" />}
-              {t("tenders.lifecycle.checklistGate").replace("{percent}", String(tender.checklistCompletionPercent))}
+              {checklistReady
+                ? t("tenders.lifecycle.checklistEvidenceReady")
+                : t("tenders.lifecycle.checklistEvidenceGate").replace("{percent}", String(tender.checklistCompletionPercent))}
             </div>
             <div className={`rounded-md border p-3 text-sm ${approved ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"}`}>
               {approved ? <CheckCircle2 className="mr-2 inline h-4 w-4" /> : <XCircle className="mr-2 inline h-4 w-4" />}
               {approved ? t("tenders.lifecycle.estimateApproved") : t("tenders.lifecycle.estimateGate")}
             </div>
+            <div className={`rounded-md border p-3 text-sm ${planReady ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"}`}>
+              {planReady ? <CheckCircle2 className="mr-2 inline h-4 w-4" /> : <XCircle className="mr-2 inline h-4 w-4" />}
+              {planReady ? t("tenders.lifecycle.planReady") : t("tenders.lifecycle.planGate")}
+            </div>
+            <div className={`rounded-md border p-3 text-sm ${financeReady ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"}`}>
+              {financeReady ? <CheckCircle2 className="mr-2 inline h-4 w-4" /> : <XCircle className="mr-2 inline h-4 w-4" />}
+              {financeReady ? t("tenders.lifecycle.financeReady") : t("tenders.lifecycle.financeGate")}
+            </div>
           </div>
         )}
-        {!terminal && canManage && (
+        {!terminal && canTransition && (
           <div className="mt-3 flex flex-wrap gap-2">
             {tender.status === "Preparing" && (
-              <Button disabled={busy || !canSubmitTender} onClick={() => void transition("Submitted")}>
+              <Button data-testid="tender-submit" disabled={busy || !canSubmitTender} onClick={() => void transition("Submitted")}>
                 <Send className="mr-2 h-4 w-4" />{t("tenders.lifecycle.submit")}
               </Button>
             )}
-            <Button variant="outline" disabled={busy} onClick={() => void transition("Cancelled")}>
+            <Button data-testid="tender-cancel" variant="outline" disabled={busy} onClick={() => void transition("Cancelled")}>
               <XCircle className="mr-2 h-4 w-4" />{t("tenders.lifecycle.cancel")}
             </Button>
           </div>

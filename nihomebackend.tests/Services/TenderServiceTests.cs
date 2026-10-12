@@ -654,7 +654,11 @@ public class TenderServiceTests : IDisposable
     public async Task UpdateChecklistItemAsync_ChangesStatus()
     {
         var created = await _sut.CreateAsync(ValidCreate(), _userId);
-        var itemId = created.ChecklistItems[0].Id;
+        var itemId = created.ChecklistItems.Single(item => item.TemplateCode == "boq").Id;
+        var stored = await _db.TenderChecklistItems.SingleAsync(item => item.Id == itemId);
+        stored.FilePath = "/files/tenders/project-boq.xlsx";
+        stored.OriginalFileName = "project-boq.xlsx";
+        await _db.SaveChangesAsync();
 
         var updated = await _sut.UpdateChecklistItemAsync(created.Id, itemId, new UpdateTenderChecklistItemRequest
         {
@@ -666,6 +670,21 @@ public class TenderServiceTests : IDisposable
         Assert.Equal("Done", it.Status);
         // 1 of 3 done → 33%
         Assert.Equal(33, updated.ChecklistCompletionPercent);
+    }
+
+    [Fact]
+    public async Task UpdateChecklistItemAsync_CompletedWithoutRequiredEvidence_Throws()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        var itemId = created.ChecklistItems.Single(item => item.TemplateCode == "boq").Id;
+
+        var error = await Assert.ThrowsAsync<TenderOperationException>(() =>
+            _sut.UpdateChecklistItemAsync(created.Id, itemId,
+                new UpdateTenderChecklistItemRequest { Status = "Done" }, _userId));
+
+        Assert.Contains("file tải riêng", error.Message);
+        var stored = await _db.TenderChecklistItems.AsNoTracking().SingleAsync(item => item.Id == itemId);
+        Assert.Equal(TenderChecklistItemStatus.NotStarted, stored.Status);
     }
 
     [Fact]
@@ -846,19 +865,58 @@ public class TenderServiceTests : IDisposable
                 [
                     new AttachTenderChecklistFromLibraryItem
                     {
-                        ChecklistItemId = created.ChecklistItems[0].Id,
+                        ChecklistItemId = created.ChecklistItems.Single(item => item.TemplateCode == "capability").Id,
                         CapabilityDocumentId = doc.Id,
                     }
                 ],
             }, _userId);
 
         Assert.NotNull(updated);
-        var it = updated!.ChecklistItems.First(i => i.Id == created.ChecklistItems[0].Id);
+        var capabilityItemId = created.ChecklistItems.Single(item => item.TemplateCode == "capability").Id;
+        var it = updated!.ChecklistItems.First(i => i.Id == capabilityItemId);
         Assert.Equal("/files/capability/abc.pdf", it.FilePath);
         Assert.Equal("iso-9001.pdf", it.OriginalFileName);
         Assert.Equal("Done", it.Status);
         Assert.Equal(doc.Id, (await _db.TenderChecklistItems.AsNoTracking()
             .SingleAsync(item => item.Id == it.Id)).CapabilityDocumentId);
+    }
+
+    [Fact]
+    public async Task AttachChecklistFromLibraryAsync_ProjectSpecificItem_Throws()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        var boqItemId = created.ChecklistItems.Single(item => item.TemplateCode == "boq").Id;
+        var doc = new CapabilityDocument
+        {
+            Name = "Hồ sơ năng lực dùng chung",
+            TagCode = "capability",
+            FilePath = "/files/capability/shared.pdf",
+            OriginalFileName = "shared.pdf",
+            FileSize = 1000,
+            ContentType = "application/pdf",
+            CurrentVersion = 1,
+        };
+        _db.CapabilityDocuments.Add(doc);
+        await _db.SaveChangesAsync();
+
+        var error = await Assert.ThrowsAsync<TenderOperationException>(() =>
+            _sut.AttachChecklistFromLibraryAsync(created.Id,
+                new AttachTenderChecklistFromLibraryRequest
+                {
+                    Items =
+                    [
+                        new AttachTenderChecklistFromLibraryItem
+                        {
+                            ChecklistItemId = boqItemId,
+                            CapabilityDocumentId = doc.Id,
+                        }
+                    ],
+                }, _userId));
+
+        Assert.Contains("file riêng", error.Message);
+        var item = await _db.TenderChecklistItems.AsNoTracking().SingleAsync(row => row.Id == boqItemId);
+        Assert.Null(item.FilePath);
+        Assert.Null(item.CapabilityDocumentId);
     }
 
     [Fact]
@@ -999,6 +1057,10 @@ public class TenderServiceTests : IDisposable
         foreach (var item in checklist)
         {
             item.Status = TenderChecklistItemStatus.Done;
+            item.FilePath = item.TemplateCode == "capability"
+                ? "/files/capability/shared.pdf"
+                : $"/files/tenders/{item.TemplateCode}.pdf";
+            item.OriginalFileName = $"{item.TemplateCode}.pdf";
             if (item.TemplateCode == "capability") item.CapabilityDocumentId = 101;
         }
         var group = new RoleGroup { Code = "TENDERING", LabelKey = "rbac.group.tendering", IsActive = true };
@@ -1057,6 +1119,71 @@ public class TenderServiceTests : IDisposable
             new TransitionTenderRequest { Status = "Submitted" }, _userId);
 
         Assert.Equal("Submitted", submitted!.Status);
+    }
+
+    [Fact]
+    public async Task TransitionSubmitted_ChecklistStatusWithoutFile_RejectsAndPreservesState()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        var checklist = await _db.TenderChecklistItems.Where(item => item.TenderId == created.Id).ToListAsync();
+        foreach (var item in checklist) item.Status = TenderChecklistItemStatus.Done;
+        var capability = checklist.Single(item => item.TemplateCode == "capability");
+        capability.CapabilityDocumentId = 101;
+        capability.FilePath = "/files/capability/shared.pdf";
+        capability.OriginalFileName = "shared.pdf";
+        var group = new RoleGroup { Code = "TENDER-EVIDENCE", LabelKey = "rbac.group.tendering", IsActive = true };
+        _db.DepartmentWorkPackages.AddRange(
+            new DepartmentWorkPackage
+            {
+                Code = "WP-TENDER-EVIDENCE",
+                Kind = WorkPackageKind.Project,
+                Purpose = WorkPackagePurpose.TenderPlanning,
+                Name = "Kế hoạch hồ sơ dự thầu",
+                OperationalProjectId = _projectId,
+                SourceTenderId = created.Id,
+                DepartmentRoleGroup = group,
+                LeadUserId = _userId,
+                Status = WorkPackageStatus.Completed,
+                CreatedByUserId = _userId,
+                UpdatedByUserId = _userId,
+            },
+            new DepartmentWorkPackage
+            {
+                Code = "WP-TENDER-EVIDENCE-FIN",
+                Kind = WorkPackageKind.Project,
+                Purpose = WorkPackagePurpose.FinanceTenderReview,
+                Name = "Rà soát tài chính",
+                OperationalProjectId = _projectId,
+                SourceTenderId = created.Id,
+                DepartmentRoleGroup = group,
+                LeadUserId = _userId,
+                Status = WorkPackageStatus.Active,
+                CreatedByUserId = _userId,
+                UpdatedByUserId = _userId,
+                FinanceReview = new DepartmentFinanceReview
+                {
+                    Status = FinanceReviewStatus.Approved,
+                    CreatedByUserId = _userId,
+                    UpdatedByUserId = _userId,
+                },
+            });
+        _db.TenderEstimateRevisions.Add(new TenderEstimateRevision
+        {
+            TenderId = created.Id,
+            VersionNumber = 1,
+            Status = TenderEstimateRevisionStatus.Approved,
+            SourceFileName = "approved.csv",
+            SourceSha256 = new string('e', 64),
+            ImportedByUserId = _userId,
+            ImportedAt = DateTime.UtcNow,
+        });
+        await _db.SaveChangesAsync();
+
+        var error = await Assert.ThrowsAsync<TenderOperationException>(() => _sut.TransitionAsync(
+            created.Id, new TransitionTenderRequest { Status = "Submitted" }, _userId));
+
+        Assert.Contains("file tải riêng", error.Message);
+        Assert.Equal("Preparing", (await _sut.GetAsync(created.Id))!.Status);
     }
 
     [Fact]

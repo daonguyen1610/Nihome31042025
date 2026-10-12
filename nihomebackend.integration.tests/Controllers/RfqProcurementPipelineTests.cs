@@ -484,12 +484,7 @@ public sealed class RfqProcurementPipelineTests(NihomeWebApplicationFactory fact
         (await WithDbAsync(db => db.TenderEstimateRevisions.SingleAsync(x => x.Id == estimateId))).Status.Should().Be(TenderEstimateRevisionStatus.Submitted);
         await LoginAsync("SALES_MANAGER");
         await PostAsync(estimatePath + "/approve", new { note = "Approved scope and costing" });
-        foreach (var item in tender.GetProperty("checklistItems").EnumerateArray())
-        {
-            using var completed = await Client.PatchAsJsonAsync(tenderPath + $"/checklist/{Id(item)}", new { status = "Done" });
-            completed.IsSuccessStatusCode.Should().BeTrue(await completed.Content.ReadAsStringAsync());
-        }
-        await AttachSharedCapabilityDocumentAsync(Id(tender));
+        await CompleteTenderChecklistWithEvidenceAsync(Id(tender));
         await CreateCompletedTenderPlanAsync(fixture.ProjectId, Id(tender));
         await CreateApprovedFinanceReviewAsync(fixture.ProjectId, "FinanceTenderReview", tenderId: Id(tender));
         await PostAsync(tenderPath + "/transition", new { status = "Submitted" });
