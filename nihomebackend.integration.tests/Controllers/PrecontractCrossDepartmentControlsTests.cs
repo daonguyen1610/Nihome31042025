@@ -299,10 +299,23 @@ public sealed class PrecontractCrossDepartmentControlsTests(NihomeWebApplication
     {
         var scope = await SeedScopeAsync();
         await LoginAsync("SALES_MANAGER");
+
+        // A tender cannot be created outside the shared OperationalProject
+        // aggregate because its plan and Finance review use that root.
+        using var orphanCreate = await SendAsync(HttpMethod.Post, "/api/tenders", new
+        {
+            name = "Gói thầu chưa gắn dự án vận hành",
+            customerId = scope.CustomerId,
+            submissionDeadline = DateTime.UtcNow.AddDays(14),
+        });
+        orphanCreate.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await orphanCreate.Content.ReadAsStringAsync()).Should().Contain("Dự án vận hành");
+
         var tender = await PostAsync("/api/tenders", new
         {
             name = "Gói thầu cơ điện nhà máy cơ khí NICON",
             customerId = scope.CustomerId,
+            operationalProjectId = scope.ProjectId,
             submissionDeadline = DateTime.UtcNow.AddDays(14),
         });
         var tenderId = Id(tender);
@@ -310,22 +323,11 @@ public sealed class PrecontractCrossDepartmentControlsTests(NihomeWebApplication
 
         await PrepareApprovedEstimateAsync(tenderId);
         await CompleteChecklistAsync(tenderId);
+        await AttachSharedCapabilityDocumentAsync(tenderId);
+        await CreateCompletedTenderPlanAsync(scope.ProjectId, tenderId);
 
-        // A tender with no shared project cannot be submitted: Finance cannot
-        // review a dossier that is not bound to the business project.
-        var orphan = await SendAsync(HttpMethod.Post, transitionPath, new { status = "Submitted" });
-        orphan.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        (await orphan.Content.ReadAsStringAsync()).Should().Contain("Dự án vận hành");
-
-        await WithDbAsync(async db =>
-        {
-            var entity = await db.Tenders.SingleAsync(item => item.Id == tenderId);
-            entity.OperationalProjectId = scope.ProjectId;
-            await db.SaveChangesAsync();
-        });
-
-        // Linked to the project and fully estimated, but still without the
-        // Finance – Accounting review of the tender financial dossier.
+        // Planned and fully estimated, but still without the Finance –
+        // Accounting review of the tender financial dossier.
         await RejectAsync(transitionPath, new { status = "Submitted" }, HttpStatusCode.BadRequest);
 
         // The project manager assigns the tender financial review to Finance.

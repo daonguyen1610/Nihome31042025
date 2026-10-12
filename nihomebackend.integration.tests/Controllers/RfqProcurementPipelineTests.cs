@@ -489,6 +489,8 @@ public sealed class RfqProcurementPipelineTests(NihomeWebApplicationFactory fact
             using var completed = await Client.PatchAsJsonAsync(tenderPath + $"/checklist/{Id(item)}", new { status = "Done" });
             completed.IsSuccessStatusCode.Should().BeTrue(await completed.Content.ReadAsStringAsync());
         }
+        await AttachSharedCapabilityDocumentAsync(Id(tender));
+        await CreateCompletedTenderPlanAsync(fixture.ProjectId, Id(tender));
         await CreateApprovedFinanceReviewAsync(fixture.ProjectId, "FinanceTenderReview", tenderId: Id(tender));
         await PostAsync(tenderPath + "/transition", new { status = "Submitted" });
         await LoginAsync("PROCUREMENT");
