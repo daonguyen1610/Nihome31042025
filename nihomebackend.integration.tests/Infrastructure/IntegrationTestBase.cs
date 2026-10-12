@@ -1,3 +1,4 @@
+using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -46,6 +47,28 @@ public abstract class IntegrationTestBase : IClassFixture<NihomeWebApplicationFa
     {
         var body = await response.Content.ReadAsStringAsync();
         return JsonDocument.Parse(body).RootElement.Clone();
+    }
+
+    /// <summary>
+    /// Exercises the public tender submission contract with a fresh concurrency
+    /// token and idempotency key. Negative-path tests may inspect the response.
+    /// </summary>
+    protected async Task<HttpResponseMessage> SubmitTenderAsync(int tenderId)
+    {
+        using var detailResponse = await Client.GetAsync($"/api/tenders/{tenderId}");
+        detailResponse.EnsureSuccessStatusCode();
+        var rowVersion = (await ReadJsonAsync(detailResponse)).GetProperty("rowVersion").GetString();
+        var request = new HttpRequestMessage(HttpMethod.Post, $"/api/tenders/{tenderId}/submit")
+        {
+            Content = JsonContent.Create(new
+            {
+                submissionChannel = "Cổng đấu thầu quốc gia",
+                receiptReference = $"TEST-{Guid.NewGuid():N}"[..21].ToUpperInvariant(),
+                rowVersion,
+            }),
+        };
+        request.Headers.Add("Idempotency-Key", Guid.NewGuid().ToString("N"));
+        return await Client.SendAsync(request);
     }
 
     /// <summary>Builds a short unique slug suitable for column length limits.</summary>
@@ -174,7 +197,8 @@ public abstract class IntegrationTestBase : IClassFixture<NihomeWebApplicationFa
     /// <summary>
     /// Completes the tender checklist with the evidence required by the NICON
     /// dossier contract: capability comes from the shared library, while every
-    /// other row has a tender-specific uploaded file.
+    /// other row has a tender-specific uploaded file. Completion and independent
+    /// verification are recorded by different seeded business users.
     /// </summary>
     protected async Task<int> CompleteTenderChecklistWithEvidenceAsync(int tenderId) =>
         await WithDbAsync(async db =>
@@ -191,12 +215,20 @@ public abstract class IntegrationTestBase : IClassFixture<NihomeWebApplicationFa
             };
             db.CapabilityDocuments.Add(document);
 
+            var preparerUserId = await db.Users.AsNoTracking()
+                .Where(user => user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["SALE"])
+                .Select(user => user.Id).SingleAsync();
+            var verifierUserId = await db.Users.AsNoTracking()
+                .Where(user => user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["ACCOUNTANT"])
+                .Select(user => user.Id).SingleAsync();
+            var now = DateTime.UtcNow;
+
             var items = await db.TenderChecklistItems
                 .Where(item => item.TenderId == tenderId)
                 .ToListAsync();
             foreach (var item in items)
             {
-                item.Status = TenderChecklistItemStatus.Done;
+                item.Status = TenderChecklistItemStatus.Submitted;
                 if (item.TemplateCode == "capability")
                 {
                     item.CapabilityDocument = document;
@@ -209,6 +241,29 @@ public abstract class IntegrationTestBase : IClassFixture<NihomeWebApplicationFa
                     item.FilePath = $"/files/tenders/test-{tenderId}-{item.Id}.pdf";
                     item.OriginalFileName = $"{item.TemplateCode ?? $"item-{item.Id}"}.pdf";
                 }
+
+                item.CompletedAt = now.AddMinutes(-5);
+                item.CompletedByUserId = preparerUserId;
+                item.VerifiedAt = now;
+                item.VerifiedByUserId = verifierUserId;
+                var evidence = new TenderChecklistEvidence
+                {
+                    ChecklistItem = item,
+                    Revision = 1,
+                    Source = item.TemplateCode == "capability"
+                        ? TenderEvidenceSource.CapabilityLibrary
+                        : TenderEvidenceSource.DirectUpload,
+                    FilePath = item.FilePath,
+                    OriginalFileName = item.OriginalFileName,
+                    FileSize = 1024,
+                    ContentType = "application/pdf",
+                    CapabilityDocument = item.TemplateCode == "capability" ? document : null,
+                    CapabilityDocumentVersion = item.TemplateCode == "capability" ? document.CurrentVersion : null,
+                    CreatedByUserId = preparerUserId,
+                    CreatedAt = now.AddMinutes(-5),
+                };
+                db.TenderChecklistEvidence.Add(evidence);
+                item.CurrentEvidence = evidence;
             }
 
             await db.SaveChangesAsync();

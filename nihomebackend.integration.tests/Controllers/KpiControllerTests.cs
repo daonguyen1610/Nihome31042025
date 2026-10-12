@@ -218,31 +218,41 @@ public class KpiControllerTests : IntegrationTestBase
                 await db.SaveChangesAsync();
                 var waitingEstimate = new TenderEstimateRevision
                 {
-                    TenderId = waitingTender.Id, VersionNumber = 1,
+                    TenderId = waitingTender.Id,
+                    VersionNumber = 1,
                     Status = TenderEstimateRevisionStatus.Approved,
-                    Currency = "VND", SourceFileName = "waiting.xlsx",
-                    SourceSha256 = new string('b', 64), ImportedByUserId = tenderUserId,
+                    Currency = "VND",
+                    SourceFileName = "waiting.xlsx",
+                    SourceSha256 = new string('b', 64),
+                    ImportedByUserId = tenderUserId,
                     ImportedAt = new DateTime(2026, 8, 2, 0, 0, 0, DateTimeKind.Utc),
                 };
                 var waitingFinance = new DepartmentWorkPackage
                 {
                     Code = $"WP-KPI-W-{Guid.NewGuid():N}"[..20].ToUpperInvariant(),
-                    Kind = WorkPackageKind.Project, Purpose = WorkPackagePurpose.FinanceTenderReview,
-                    Name = "KPI waiting tender finance review", OperationalProjectId = project.Id,
-                    SourceTenderId = waitingTender.Id, DepartmentRoleGroupId = roleGroupId,
-                    LeadUserId = pmUserId, Status = WorkPackageStatus.Completed,
-                    CreatedByUserId = pmUserId, UpdatedByUserId = pmUserId,
+                    Kind = WorkPackageKind.Project,
+                    Purpose = WorkPackagePurpose.FinanceTenderReview,
+                    Name = "KPI waiting tender finance review",
+                    OperationalProjectId = project.Id,
+                    SourceTenderId = waitingTender.Id,
+                    DepartmentRoleGroupId = roleGroupId,
+                    LeadUserId = pmUserId,
+                    Status = WorkPackageStatus.Completed,
+                    CreatedByUserId = pmUserId,
+                    UpdatedByUserId = pmUserId,
                     FinanceReview = new DepartmentFinanceReview
                     {
                         Status = FinanceReviewStatus.Approved,
-                        CreatedByUserId = pmUserId, UpdatedByUserId = pmUserId,
+                        CreatedByUserId = pmUserId,
+                        UpdatedByUserId = pmUserId,
                     },
                 };
                 db.AddRange(waitingEstimate, waitingFinance);
                 await db.SaveChangesAsync();
                 db.TenderSubmissions.Add(new TenderSubmission
                 {
-                    TenderId = waitingTender.Id, Sequence = 1,
+                    TenderId = waitingTender.Id,
+                    Sequence = 1,
                     SubmittedAt = new DateTime(2026, 8, 2, 0, 0, 0, DateTimeKind.Utc),
                     SubmittedByUserId = tenderUserId,
                     ApprovedEstimateRevisionId = waitingEstimate.Id,

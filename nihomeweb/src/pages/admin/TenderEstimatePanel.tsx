@@ -273,7 +273,7 @@ export default function TenderEstimatePanel({
         </DialogContent>
       </Dialog>
 
-      <section className="rounded-lg border bg-white p-4 shadow-sm" data-testid="tender-estimates">
+      <section className="min-w-0 rounded-lg border bg-white p-3 shadow-sm sm:p-4" data-testid="tender-estimates">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <h2 className="font-semibold">{t("tenders.estimate.title")}</h2>
@@ -317,9 +317,9 @@ export default function TenderEstimatePanel({
           </div>
         ) : (
           <div className="mt-4 grid gap-4 lg:grid-cols-[15rem_minmax(0,1fr)]">
-            <div className="flex gap-2 overflow-x-auto lg:block lg:space-y-2 lg:overflow-visible">
+            <div className="grid min-w-0 gap-2 sm:grid-cols-2 lg:block lg:space-y-2">
               {revisions.map((revision) => (
-                <button key={revision.id} type="button" onClick={() => setSelectedId(revision.id)} className={`min-w-52 rounded-md border p-3 text-left lg:w-full ${revision.id === selectedId ? "border-primary bg-primary/5" : "hover:bg-muted/40"}`}>
+                <button key={revision.id} type="button" onClick={() => setSelectedId(revision.id)} className={`min-w-0 rounded-md border p-3 text-left lg:w-full ${revision.id === selectedId ? "border-primary bg-primary/5" : "hover:bg-muted/40"}`}>
                   <div className="flex items-center justify-between gap-2"><span className="font-medium">{t("tenders.estimate.revision").replace("{version}", String(revision.versionNumber))}</span><Badge variant="outline">{t(`tenders.estimate.status.${revision.status}`)}</Badge></div>
                   <p className="mt-1 truncate text-xs text-muted-foreground">{revision.sourceFileName}</p>
                 </button>
@@ -332,7 +332,7 @@ export default function TenderEstimatePanel({
                     <div key={field} className="rounded-md bg-muted/40 p-3"><div className="text-xs text-muted-foreground">{t(`tenders.estimate.${field}`)}</div><div className="mt-1 font-semibold tabular-nums">{money(selected[field], selected.currency)}</div></div>
                   ))}
                 </div>
-                <div className="overflow-x-auto rounded-md border">
+                <div className="max-w-full overflow-x-auto overscroll-x-contain rounded-md border" data-testid="tender-estimate-lines-scroll">
                   <table className="min-w-[760px] w-full text-sm"><thead className="bg-muted/50"><tr>{["code", "description", "unit", "quantity", "unitCost", "bidUnitPrice", "bidAmount"].map((key) => <th key={key} className="px-2 py-2 text-left text-xs">{t(`tenders.estimate.line.${key}`)}</th>)}</tr></thead><tbody className="divide-y">{selected.lines.map((line) => <tr key={line.id}><td className="px-2 py-2 font-mono text-xs">{line.itemCode}</td><td className="px-2 py-2">{line.description}</td><td className="px-2 py-2">{line.unit}</td><td className="px-2 py-2 text-right tabular-nums">{line.quantity}</td><td className="px-2 py-2 text-right tabular-nums">{money(line.unitCost, selected.currency)}</td><td className="px-2 py-2 text-right tabular-nums">{money(line.bidUnitPrice, selected.currency)}</td><td className="px-2 py-2 text-right tabular-nums font-medium">{money(line.bidAmount, selected.currency)}</td></tr>)}</tbody></table>
                 </div>
                 {((canManage && selected.status === "Draft") || (canApprove && selected.status === "Submitted")) && (

@@ -1131,11 +1131,14 @@ public class TenderServiceTests : IDisposable
     public async Task Submit_WithVerifiedPlanAndRequiredApprovals_Succeeds()
     {
         var created = await _sut.CreateAsync(ValidCreate(), _userId);
-        await _sut.CreateChecklistItemAsync(created.Id, new CreateTenderChecklistItemRequest
-        {
-            Title = "Bản vẽ dự thầu kiến trúc",
-            IsRequired = false,
-        }, _userId);
+        await _sut.CreateChecklistItemAsync(
+            created.Id,
+            new CreateTenderChecklistItemRequest
+            {
+                Title = "Bản vẽ dự thầu kiến trúc",
+                IsRequired = false,
+            },
+            _userId);
         var verifier = new ApplicationUser
         {
             PhoneNumber = "0900000001",

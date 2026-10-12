@@ -467,7 +467,7 @@ public sealed class RfqProcurementPipelineTests(NihomeWebApplicationFactory fact
         var opportunity = await PostAsync("/api/opportunities", new { name = "Factory tender opportunity", customerId = fixture.CustomerId, operationalProjectId = fixture.ProjectId });
         var tender = await PostAsync("/api/tenders", new { name = "Factory electrical installation tender", customerId = fixture.CustomerId, operationalProjectId = fixture.ProjectId, invitationReceivedAt = DateTime.UtcNow.AddDays(-1), invitationSource = "Customer portal", submissionDeadline = DateTime.UtcNow.AddDays(14) });
         var tenderPath = $"/api/tenders/{Id(tender)}";
-        await RejectAsync(tenderPath + "/transition", new { status = "Submitted" }, HttpStatusCode.BadRequest);
+        (await SubmitTenderAsync(Id(tender))).StatusCode.Should().Be(HttpStatusCode.BadRequest);
         (await WithDbAsync(db => db.Tenders.SingleAsync(x => x.Id == Id(tender)))).Status.Should().Be(TenderStatus.Preparing);
         using var form = new MultipartFormDataContent();
         var file = new ByteArrayContent(System.Text.Encoding.UTF8.GetBytes("ItemCode,Description,Unit,Quantity,UnitCost,BidUnitPrice,VatPercent,Note\r\nCABLE-PIPELINE,Factory power cable,m,10,120,150,0,Factory delivery\r\nSPARE-PIPELINE,Spare cable conduit,m,5,50,60,0,Separate package\r\n"));
@@ -487,7 +487,8 @@ public sealed class RfqProcurementPipelineTests(NihomeWebApplicationFactory fact
         await CompleteTenderChecklistWithEvidenceAsync(Id(tender));
         await CreateCompletedTenderPlanAsync(fixture.ProjectId, Id(tender));
         await CreateApprovedFinanceReviewAsync(fixture.ProjectId, "FinanceTenderReview", tenderId: Id(tender));
-        await PostAsync(tenderPath + "/transition", new { status = "Submitted" });
+        using var submitted = await SubmitTenderAsync(Id(tender));
+        submitted.StatusCode.Should().Be(HttpStatusCode.OK, await submitted.Content.ReadAsStringAsync());
         await LoginAsync("PROCUREMENT");
         // Approved estimating alone is not a won project procurement source.
         await RejectAsync($"/api/operational-projects/{fixture.ProjectId}/procurement/boq-revisions", new
