@@ -15,7 +15,7 @@ namespace NihomeBackend.Services;
 /// - <b>Create</b> validates SubmissionDeadline &gt; now, generates a
 ///   sequential <c>TD-{year}-{seq:D4}</c> code, and seeds the checklist
 ///   from the <c>tender_checklist_default</c> master-data category so
-///   every new tender ships with the 6 standard items.
+///   every new tender ships with the 7 standard items.
 /// - <b>Update</b> enforces per-status edit lanes: only Deadline /
 ///   Preparer / Note may change while Status = Preparing; other statuses
 ///   accept Note only (per NIH-96 AC).
@@ -87,8 +87,9 @@ public class TenderService(
             {
                 Tender = t,
                 DoneCount = db.TenderChecklistItems.Count(i => i.TenderId == t.Id
+                    && i.IsRequired
                     && (i.Status == TenderChecklistItemStatus.Done || i.Status == TenderChecklistItemStatus.Submitted)),
-                TotalCount = db.TenderChecklistItems.Count(i => i.TenderId == t.Id),
+                TotalCount = db.TenderChecklistItems.Count(i => i.TenderId == t.Id && i.IsRequired),
             })
             .ToListAsync(ct);
 
@@ -124,8 +125,14 @@ public class TenderService(
             .AsNoTracking()
             .Include(t => t.Customer)
             .Include(t => t.Preparer)
+            .Include(t => t.InvitationReceivedByUser)
             .Include(t => t.OperationalProject)
             .Include(t => t.ChecklistItems).ThenInclude(i => i.Owner)
+            .Include(t => t.ChecklistItems).ThenInclude(i => i.EvidenceRevisions)
+            .Include(t => t.Submissions).ThenInclude(s => s.SubmittedBy)
+            .Include(t => t.Submissions).ThenInclude(s => s.Items)
+            .Include(t => t.Milestones)
+            .Include(t => t.InvitationDocuments)
             .FirstOrDefaultAsync(t => t.Id == id, ct);
         if (entity is null) return null;
 
@@ -180,6 +187,10 @@ public class TenderService(
             throw new TenderOperationException("Deadline nộp phải lớn hơn hiện tại.");
         }
 
+        ValidateInvitation(request.InvitationReceivedAt, request.SubmissionDeadline);
+        var invitationSource = TrimOrNull(request.InvitationSource)
+            ?? throw new TenderOperationException("Nguồn nhận hồ sơ mời thầu là bắt buộc, ví dụ: Cổng đấu thầu quốc gia.");
+
         var customer = await db.Customers.FirstOrDefaultAsync(c => c.Id == request.CustomerId, ct)
             ?? throw new TenderOperationException($"Khách hàng #{request.CustomerId} không tồn tại.");
         if (!request.OperationalProjectId.HasValue)
@@ -196,6 +207,9 @@ public class TenderService(
         // Sales users don't have users.view so the FE picker isn't visible
         // to them — auto-assignment keeps the tender owned by a real person.
         var effectivePreparerId = request.PreparerUserId ?? callerUserId;
+        var invitationReceivedByUserId = request.InvitationReceivedByUserId ?? callerUserId;
+        if (!await db.Users.AnyAsync(user => user.Id == invitationReceivedByUserId && user.IsActive, ct))
+            throw new TenderOperationException($"Người tiếp nhận HSMT #{invitationReceivedByUserId} không tồn tại hoặc đã ngừng hoạt động.");
 
         var codePrefix = $"TD-{DateTime.UtcNow.Year}-";
         var entity = new Tender
@@ -205,6 +219,11 @@ public class TenderService(
             CustomerId = customer.Id,
             OperationalProjectId = request.OperationalProjectId,
             OpeningDate = request.OpeningDate,
+            InvitationReceivedAt = request.InvitationReceivedAt,
+            InvitationReference = TrimOrNull(request.InvitationReference),
+            InvitationSource = invitationSource,
+            InvitationReceivedByUserId = invitationReceivedByUserId,
+            InvitationPortalUrl = ValidateOptionalHttpUrl(request.InvitationPortalUrl),
             SubmissionDeadline = request.SubmissionDeadline,
             PreparerUserId = effectivePreparerId,
             InfoSource = TrimOrNull(request.InfoSource),
@@ -260,6 +279,8 @@ public class TenderService(
         {
             throw new TenderOperationException("Deadline nộp phải lớn hơn hiện tại.");
         }
+        if (entity.Status == TenderStatus.Preparing)
+            ValidateInvitation(request.InvitationReceivedAt ?? entity.InvitationReceivedAt, request.SubmissionDeadline);
 
         if (request.PreparerUserId.HasValue &&
             !await db.Users.AnyAsync(u => u.Id == request.PreparerUserId.Value, ct))
@@ -279,6 +300,21 @@ public class TenderService(
                 throw new TenderOperationException("Tên gói thầu là bắt buộc, ví dụ: Gói thầu xây dựng nhà máy A.");
             entity.Name = name;
             entity.OpeningDate = request.OpeningDate;
+            if (request.InvitationReceivedAt.HasValue)
+                entity.InvitationReceivedAt = request.InvitationReceivedAt;
+            if (request.InvitationReference is not null)
+                entity.InvitationReference = TrimOrNull(request.InvitationReference);
+            if (request.InvitationSource is not null)
+                entity.InvitationSource = TrimOrNull(request.InvitationSource)
+                    ?? throw new TenderOperationException("Nguồn nhận hồ sơ mời thầu là bắt buộc.");
+            if (request.InvitationReceivedByUserId.HasValue)
+            {
+                if (!await db.Users.AnyAsync(user => user.Id == request.InvitationReceivedByUserId && user.IsActive, ct))
+                    throw new TenderOperationException($"Người tiếp nhận HSMT #{request.InvitationReceivedByUserId} không tồn tại hoặc đã ngừng hoạt động.");
+                entity.InvitationReceivedByUserId = request.InvitationReceivedByUserId.Value;
+            }
+            if (request.InvitationPortalUrl is not null)
+                entity.InvitationPortalUrl = ValidateOptionalHttpUrl(request.InvitationPortalUrl);
             entity.SubmissionDeadline = request.SubmissionDeadline;
             entity.PreparerUserId = request.PreparerUserId;
             entity.InfoSource = TrimOrNull(request.InfoSource);
@@ -354,6 +390,16 @@ public class TenderService(
         if (item is null) return null;
         GuardChecklistMutable(item.Tender);
 
+        if (request.IsRequired.HasValue)
+        {
+            item.IsRequired = request.IsRequired.Value;
+            if (item.IsRequired && item.Status == TenderChecklistItemStatus.NotApplicable)
+            {
+                item.Status = TenderChecklistItemStatus.NotStarted;
+                item.NotApplicableReason = null;
+            }
+        }
+
         if (!string.IsNullOrWhiteSpace(request.Status))
         {
             if (!Enum.TryParse<TenderChecklistItemStatus>(request.Status, ignoreCase: true, out var next))
@@ -364,7 +410,44 @@ public class TenderService(
             {
                 EnsureChecklistEvidence(item);
             }
+            if (next == TenderChecklistItemStatus.Submitted)
+            {
+                if (!item.CompletedAt.HasValue || !item.CompletedByUserId.HasValue)
+                    throw new TenderOperationException("Hồ sơ phải được người phụ trách hoàn thành trước khi xác nhận độc lập.");
+                if (item.CompletedByUserId == callerUserId)
+                    throw new TenderOperationException("Người hoàn thành hồ sơ không được tự xác nhận hồ sơ của chính mình.");
+            }
+            if (next == TenderChecklistItemStatus.NotApplicable)
+            {
+                if (item.IsRequired)
+                    throw new TenderOperationException("Chỉ hồ sơ không bắt buộc mới được đánh dấu Không áp dụng.");
+                var reason = TrimOrNull(request.NotApplicableReason);
+                if (reason is null)
+                    throw new TenderOperationException("Vui lòng nhập lý do khi đánh dấu hồ sơ Không áp dụng.");
+                item.NotApplicableReason = reason;
+            }
             item.Status = next;
+            if (next == TenderChecklistItemStatus.Done)
+            {
+                item.CompletedAt ??= DateTime.UtcNow;
+                item.CompletedByUserId ??= callerUserId;
+                item.VerifiedAt = null;
+                item.VerifiedByUserId = null;
+                item.NotApplicableReason = null;
+            }
+            else if (next == TenderChecklistItemStatus.Submitted)
+            {
+                item.VerifiedAt = DateTime.UtcNow;
+                item.VerifiedByUserId = callerUserId;
+                item.NotApplicableReason = null;
+            }
+            else
+            {
+                item.VerifiedAt = null;
+                item.VerifiedByUserId = null;
+                if (next != TenderChecklistItemStatus.NotApplicable)
+                    item.NotApplicableReason = null;
+            }
         }
 
         var previousOwnerUserId = item.OwnerUserId;
@@ -405,6 +488,22 @@ public class TenderService(
             item.InternalDeadline = deadline;
         }
 
+        if (request.ClearWorkTask)
+        {
+            item.WorkTaskId = null;
+        }
+        else if (request.WorkTaskId.HasValue)
+        {
+            var belongsToTenderPlan = await db.DepartmentWorkTasks.AsNoTracking().AnyAsync(task =>
+                task.Id == request.WorkTaskId.Value &&
+                task.WorkPackage.SourceTenderId == tenderId &&
+                (task.WorkPackage.Purpose == WorkPackagePurpose.TenderPlanning ||
+                    task.WorkPackage.Purpose == WorkPackagePurpose.General), ct);
+            if (!belongsToTenderPlan)
+                throw new TenderOperationException("Task kế hoạch không tồn tại hoặc không thuộc gói thầu này.");
+            item.WorkTaskId = request.WorkTaskId.Value;
+        }
+
         var now = DateTime.UtcNow;
         item.UpdatedAt = now;
 
@@ -423,6 +522,74 @@ public class TenderService(
 
         logger.LogInformation("Tender {TenderId} checklist item {ItemId} updated by user {UserId}",
             tenderId, itemId, callerUserId);
+        return await GetAsync(tenderId, ct);
+    }
+
+    public async Task<TenderResponse?> CreateChecklistItemAsync(int tenderId,
+        CreateTenderChecklistItemRequest request, int callerUserId, CancellationToken ct = default)
+    {
+        var tender = await db.Tenders.FirstOrDefaultAsync(item => item.Id == tenderId, ct);
+        if (tender is null) return null;
+        GuardChecklistMutable(tender);
+
+        var title = (request.Title ?? string.Empty).Trim();
+        if (title.Length == 0)
+            throw new TenderOperationException("Tên hồ sơ là bắt buộc, ví dụ: Bản vẽ dự thầu kiến trúc.");
+        if (await db.TenderChecklistItems.AnyAsync(item => item.TenderId == tenderId && item.Title == title, ct))
+            throw new TenderOperationException($"Gói thầu đã có mục hồ sơ '{title}'.");
+        ValidateChecklistDeadline(request.InternalDeadline, tender.SubmissionDeadline);
+        if (request.OwnerUserId.HasValue)
+            await EnsureEligibleChecklistAssigneeAsync(request.OwnerUserId.Value, ct);
+        if (!Enum.TryParse<TenderDocumentKind>(request.DocumentKind, true, out var documentKind))
+            throw new TenderOperationException($"Loại hồ sơ '{request.DocumentKind}' không hợp lệ.");
+        if (request.WorkTaskId.HasValue && !await db.DepartmentWorkTasks.AsNoTracking().AnyAsync(task =>
+                task.Id == request.WorkTaskId.Value && task.WorkPackage.SourceTenderId == tenderId &&
+                (task.WorkPackage.Purpose == WorkPackagePurpose.TenderPlanning ||
+                    task.WorkPackage.Purpose == WorkPackagePurpose.General), ct))
+            throw new TenderOperationException("Task kế hoạch không tồn tại hoặc không thuộc gói thầu này.");
+
+        var nextSortOrder = await db.TenderChecklistItems
+            .Where(item => item.TenderId == tenderId)
+            .Select(item => (int?)item.SortOrder)
+            .MaxAsync(ct) ?? 0;
+        var now = DateTime.UtcNow;
+        db.TenderChecklistItems.Add(new TenderChecklistItem
+        {
+            TenderId = tenderId,
+            TemplateCode = null,
+            Title = title,
+            IsRequired = request.IsRequired,
+            DocumentKind = documentKind,
+            OwnerUserId = request.OwnerUserId,
+            WorkTaskId = request.WorkTaskId,
+            InternalDeadline = request.InternalDeadline,
+            Status = TenderChecklistItemStatus.NotStarted,
+            SortOrder = nextSortOrder + 1,
+            CreatedAt = now,
+            UpdatedAt = now,
+        });
+        tender.UpdatedAt = now;
+        tender.UpdatedByUserId = callerUserId;
+        await db.SaveChangesAsync(ct);
+        return await GetAsync(tenderId, ct);
+    }
+
+    public async Task<TenderResponse?> DeleteChecklistItemAsync(int tenderId, int itemId,
+        int callerUserId, CancellationToken ct = default)
+    {
+        var item = await db.TenderChecklistItems.Include(row => row.Tender)
+            .FirstOrDefaultAsync(row => row.Id == itemId && row.TenderId == tenderId, ct);
+        if (item is null) return null;
+        GuardChecklistMutable(item.Tender);
+        if (!string.IsNullOrWhiteSpace(item.TemplateCode))
+            throw new TenderOperationException("Hồ sơ thuộc mẫu chuẩn không thể xóa; hãy chuyển thành Không bắt buộc khi HSMT không yêu cầu.");
+        if (!string.IsNullOrWhiteSpace(item.FilePath) || item.CapabilityDocumentId.HasValue)
+            throw new TenderOperationException("Không thể xóa mục hồ sơ đã có file. Hãy xử lý file trước khi xóa.");
+
+        db.TenderChecklistItems.Remove(item);
+        item.Tender.UpdatedAt = DateTime.UtcNow;
+        item.Tender.UpdatedByUserId = callerUserId;
+        await db.SaveChangesAsync(ct);
         return await GetAsync(tenderId, ct);
     }
 
@@ -452,8 +619,14 @@ public class TenderService(
         }
     }
 
+    public Task<TenderResponse?> AttachChecklistFileAsync(int tenderId, int itemId,
+        string filePath, string originalFileName, int callerUserId, CancellationToken ct = default) =>
+        AttachChecklistFileAsync(tenderId, itemId, filePath, originalFileName, 0,
+            "application/octet-stream", string.Empty, callerUserId, ct);
+
     public async Task<TenderResponse?> AttachChecklistFileAsync(int tenderId, int itemId,
-        string filePath, string originalFileName, int callerUserId, CancellationToken ct = default)
+        string filePath, string originalFileName, long fileSize, string contentType,
+        string sha256, int callerUserId, CancellationToken ct = default)
     {
         var tender = await db.Tenders
             .Include(t => t.Customer)
@@ -470,8 +643,29 @@ public class TenderService(
         item.FilePath = filePath;
         item.OriginalFileName = originalFileName;
         item.CapabilityDocumentId = null;
-        AutoAdvanceIfUnfinished(item);
         var now = DateTime.UtcNow;
+        var evidence = new TenderChecklistEvidence
+        {
+            ChecklistItemId = item.Id,
+            Revision = await NextEvidenceRevisionAsync(item.Id, ct),
+            Source = TenderEvidenceSource.DirectUpload,
+            FilePath = filePath,
+            OriginalFileName = originalFileName,
+            FileSize = fileSize,
+            ContentType = contentType,
+            Sha256 = sha256,
+            CreatedByUserId = callerUserId,
+            CreatedAt = now,
+        };
+        db.TenderChecklistEvidence.Add(evidence);
+        item.CurrentEvidence = evidence;
+        if (item.Status == TenderChecklistItemStatus.Submitted)
+        {
+            item.Status = TenderChecklistItemStatus.Done;
+            item.VerifiedAt = null;
+            item.VerifiedByUserId = null;
+        }
+        AutoAdvanceIfUnfinished(item, callerUserId, now);
         item.UpdatedAt = now;
 
         tender.UpdatedAt = now;
@@ -503,6 +697,43 @@ public class TenderService(
                 && item.FilePath == filePath,
             ct);
     }
+
+    public async Task<TenderResponse?> AttachInvitationDocumentAsync(int tenderId, string filePath,
+        string originalFileName, long fileSize, string contentType, string sha256,
+        int callerUserId, CancellationToken ct = default)
+    {
+        var tender = await db.Tenders.FirstOrDefaultAsync(item => item.Id == tenderId, ct);
+        if (tender is null) return null;
+        GuardChecklistMutable(tender);
+        db.TenderInvitationDocuments.Add(new TenderInvitationDocument
+        {
+            TenderId = tenderId,
+            FilePath = filePath,
+            OriginalFileName = originalFileName,
+            FileSize = fileSize,
+            ContentType = contentType,
+            Sha256 = sha256,
+            CreatedByUserId = callerUserId,
+            CreatedAt = DateTime.UtcNow,
+        });
+        tender.UpdatedAt = DateTime.UtcNow;
+        tender.UpdatedByUserId = callerUserId;
+        await db.SaveChangesAsync(ct);
+        return await GetAsync(tenderId, ct);
+    }
+
+    public Task<TenderChecklistFileReference?> GetInvitationDocumentAsync(
+        int tenderId, int documentId, CancellationToken ct = default) =>
+        db.TenderInvitationDocuments.AsNoTracking()
+            .Where(item => item.Id == documentId && item.TenderId == tenderId &&
+                item.FilePath != null && item.OriginalFileName != null)
+            .Select(item => new TenderChecklistFileReference(item.FilePath!, item.OriginalFileName!))
+            .SingleOrDefaultAsync(ct);
+
+    public Task<bool> IsInvitationDocumentAttachedAsync(
+        int tenderId, string filePath, CancellationToken ct = default) =>
+        db.TenderInvitationDocuments.AsNoTracking().AnyAsync(
+            item => item.TenderId == tenderId && item.FilePath == filePath, ct);
 
     public async Task<TenderResponse?> AttachChecklistFromLibraryAsync(int tenderId,
         AttachTenderChecklistFromLibraryRequest request, int callerUserId, CancellationToken ct = default)
@@ -550,7 +781,29 @@ public class TenderService(
             item.FilePath = doc.FilePath;
             item.OriginalFileName = doc.OriginalFileName;
             item.CapabilityDocumentId = doc.Id;
-            AutoAdvanceIfUnfinished(item);
+            var evidence = new TenderChecklistEvidence
+            {
+                ChecklistItemId = item.Id,
+                Revision = await NextEvidenceRevisionAsync(item.Id, ct),
+                Source = TenderEvidenceSource.CapabilityLibrary,
+                FilePath = doc.FilePath,
+                OriginalFileName = doc.OriginalFileName,
+                FileSize = doc.FileSize,
+                ContentType = doc.ContentType,
+                CapabilityDocumentId = doc.Id,
+                CapabilityDocumentVersion = doc.CurrentVersion,
+                CreatedByUserId = callerUserId,
+                CreatedAt = now,
+            };
+            db.TenderChecklistEvidence.Add(evidence);
+            item.CurrentEvidence = evidence;
+            if (item.Status == TenderChecklistItemStatus.Submitted)
+            {
+                item.Status = TenderChecklistItemStatus.Done;
+                item.VerifiedAt = null;
+                item.VerifiedByUserId = null;
+            }
+            AutoAdvanceIfUnfinished(item, callerUserId, now);
             item.UpdatedAt = now;
         }
         tender.UpdatedAt = now;
@@ -657,6 +910,216 @@ public class TenderService(
             Note = request.Note,
         }, callerUserId, ct);
 
+    public async Task<TenderReadinessResponse?> GetReadinessAsync(
+        int tenderId, int callerUserId, CancellationToken ct = default)
+    {
+        var tender = await db.Tenders.AsNoTracking()
+            .Include(item => item.Milestones)
+            .FirstOrDefaultAsync(item => item.Id == tenderId, ct);
+        if (tender is null) return null;
+
+        var blockers = new List<TenderReadinessBlockerResponse>();
+        void Block(string code, string area, string message, string tab) => blockers.Add(new()
+        {
+            Code = code,
+            Area = area,
+            Message = message,
+            ActionPath = $"/admin/tenders/{tenderId}?tab={tab}",
+        });
+
+        if (!tender.InvitationReceivedAt.HasValue || string.IsNullOrWhiteSpace(tender.InvitationSource) ||
+            tender.InvitationReceivedByUserId <= 0)
+            Block("INVITATION_METADATA_REQUIRED", "Invitation", "Chưa ghi đủ ngày, nguồn và người tiếp nhận HSMT.", "info");
+        if (!tender.OperationalProjectId.HasValue)
+            Block("OPERATIONAL_PROJECT_REQUIRED", "Overview", "Gói thầu chưa gắn Dự án vận hành.", "info");
+
+        var plans = await db.DepartmentWorkPackages.AsNoTracking()
+            .Where(package => package.SourceTenderId == tenderId &&
+                (package.Purpose == WorkPackagePurpose.TenderPlanning || package.Purpose == WorkPackagePurpose.General) &&
+                package.Status != WorkPackageStatus.Cancelled)
+            .Select(package => new { package.Id, package.Name, package.Status })
+            .ToListAsync(ct);
+        var planningReady = plans.Count > 0 && plans.All(package => package.Status == WorkPackageStatus.Completed);
+        if (plans.Count == 0)
+            Block("TENDER_PLAN_REQUIRED", "Planning", "Chưa có Kế hoạch đấu thầu theo phòng ban.", "plan");
+        else
+        {
+            var incomplete = plans.Where(package => package.Status != WorkPackageStatus.Completed).ToList();
+            if (incomplete.Count > 0)
+                Block("TENDER_PLAN_INCOMPLETE", "Planning",
+                    $"Còn {incomplete.Count} nhóm việc kế hoạch chưa hoàn thành/xác nhận.", "plan");
+        }
+
+        var checklist = await db.TenderChecklistItems.AsNoTracking()
+            .Where(item => item.TenderId == tenderId)
+            .ToListAsync(ct);
+        var required = checklist.Where(item => item.IsRequired).ToList();
+        if (required.Count == 0)
+            Block("DOSSIER_REQUIRED", "Dossier", "Checklist chưa có mục hồ sơ bắt buộc.", "checklist");
+        foreach (var item in required)
+        {
+            if (!HasRequiredChecklistEvidence(item))
+                Block("DOSSIER_EVIDENCE_MISSING", "Dossier", $"{item.Title} chưa có bằng chứng hợp lệ.", "checklist");
+            else if (item.Status == TenderChecklistItemStatus.Done)
+                Block("DOSSIER_NOT_VERIFIED", "Dossier",
+                    $"{item.Title} đã hoàn thành nhưng chưa được người khác xác nhận độc lập.", "checklist");
+            else if (item.Status != TenderChecklistItemStatus.Submitted || !item.VerifiedAt.HasValue ||
+                     !item.VerifiedByUserId.HasValue)
+                Block("DOSSIER_NOT_COMPLETED", "Dossier", $"{item.Title} chưa hoàn thành/xác nhận.", "checklist");
+        }
+        var dossierReady = required.Count > 0 && !blockers.Any(item => item.Area == "Dossier");
+
+        var approvedEstimate = await db.TenderEstimateRevisions.AsNoTracking()
+            .Where(revision => revision.TenderId == tenderId && revision.Status == TenderEstimateRevisionStatus.Approved)
+            .OrderByDescending(revision => revision.Id).Select(revision => (int?)revision.Id).FirstOrDefaultAsync(ct);
+        if (!approvedEstimate.HasValue)
+            Block("ESTIMATE_NOT_APPROVED", "Estimate", "Chưa có revision dự toán được phê duyệt.", "estimate");
+
+        var financeApproved = tender.OperationalProjectId.HasValue && await db.DepartmentWorkPackages.AsNoTracking()
+            .AnyAsync(package => package.SourceTenderId == tenderId &&
+                package.OperationalProjectId == tender.OperationalProjectId &&
+                package.Purpose == WorkPackagePurpose.FinanceTenderReview &&
+                package.FinanceReview != null && package.FinanceReview.Status == FinanceReviewStatus.Approved, ct);
+        if (!financeApproved)
+            Block("FINANCE_REVIEW_NOT_APPROVED", "Finance", "Rà soát tài chính/bảo lãnh đang chờ TC–KT phê duyệt.", "plan");
+
+        var internalReviewReady = approvedEstimate.HasValue && financeApproved;
+        var achieved = new List<TenderMilestoneKind>();
+        if (planningReady) achieved.Add(TenderMilestoneKind.PlanningReady);
+        if (dossierReady) achieved.Add(TenderMilestoneKind.DossierReady);
+        if (internalReviewReady) achieved.Add(TenderMilestoneKind.InternalReviewReady);
+        if (blockers.Count == 0) achieved.Add(TenderMilestoneKind.ReadyToSubmit);
+        var existingKinds = tender.Milestones.Select(item => item.Kind).ToHashSet();
+        var now = DateTime.UtcNow;
+        foreach (var kind in achieved.Where(kind => !existingKinds.Contains(kind)))
+            db.TenderMilestones.Add(new TenderMilestone
+            {
+                TenderId = tenderId,
+                Kind = kind,
+                AchievedAt = now,
+                AchievedByUserId = callerUserId,
+            });
+        if (db.ChangeTracker.HasChanges())
+        {
+            try
+            {
+                await db.SaveChangesAsync(ct);
+            }
+            catch (DbUpdateException exception) when (SequentialCodes.IsUniqueViolation(exception))
+            {
+                // Another request observed the same first-achieved gate. The
+                // unique (TenderId, Kind) key keeps one canonical milestone.
+                db.ChangeTracker.Clear();
+            }
+        }
+
+        var milestones = await db.TenderMilestones.AsNoTracking().Where(item => item.TenderId == tenderId)
+            .OrderBy(item => item.AchievedAt).Select(item => new TenderMilestoneResponse
+            {
+                Kind = item.Kind.ToString(),
+                AchievedAt = item.AchievedAt,
+                AchievedByUserId = item.AchievedByUserId,
+            }).ToListAsync(ct);
+        var currentStep = blockers.Count == 0 ? "ReadyToSubmit" :
+            !planningReady ? "Planning" : !dossierReady ? "Dossier" : "InternalReview";
+        return new TenderReadinessResponse
+        {
+            TenderId = tenderId,
+            CurrentStep = currentStep,
+            CanSubmit = blockers.Count == 0 && tender.Status is TenderStatus.Preparing or TenderStatus.Submitted,
+            Blockers = blockers,
+            Milestones = milestones,
+        };
+    }
+
+    public async Task<TenderResponse?> SubmitAsync(
+        int tenderId, SubmitTenderRequest request, int callerUserId, CancellationToken ct = default)
+    {
+        var channel = TrimOrNull(request.SubmissionChannel)
+            ?? throw new TenderOperationException("Kênh nộp thầu là bắt buộc, ví dụ: Cổng đấu thầu quốc gia.");
+        var readiness = await GetReadinessAsync(tenderId, callerUserId, ct);
+        if (readiness is null) return null;
+        if (!readiness.CanSubmit)
+            throw new TenderOperationException(string.Join(" ", readiness.Blockers.Select(item => item.Message)));
+
+        await using var transaction = db.Database.IsRelational()
+            ? await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct)
+            : null;
+        var tender = await db.Tenders.FirstOrDefaultAsync(item => item.Id == tenderId, ct);
+        if (tender is null) return null;
+        if (tender.Status is not (TenderStatus.Preparing or TenderStatus.Submitted))
+            throw new TenderOperationException("Chỉ gói thầu đang chuẩn bị hoặc đã nộp mới được tạo lần nộp bổ sung.");
+        CrmConcurrency.Apply(db, tender, request.RowVersion);
+
+        var checklist = await db.TenderChecklistItems.AsNoTracking()
+            .Include(item => item.CurrentEvidence)
+            .Where(item => item.TenderId == tenderId && (item.IsRequired ||
+                item.Status == TenderChecklistItemStatus.Submitted || item.Status == TenderChecklistItemStatus.NotApplicable))
+            .ToListAsync(ct);
+        var estimate = await db.TenderEstimateRevisions.AsNoTracking()
+            .Where(item => item.TenderId == tenderId && item.Status == TenderEstimateRevisionStatus.Approved)
+            .OrderByDescending(item => item.Id).FirstAsync(ct);
+        var planSnapshot = await db.DepartmentWorkPackages.AsNoTracking()
+            .Where(item => item.SourceTenderId == tenderId && item.Status != WorkPackageStatus.Cancelled &&
+                (item.Purpose == WorkPackagePurpose.TenderPlanning || item.Purpose == WorkPackagePurpose.General))
+            .Select(item => new { item.Id, item.Code, item.Name, item.Status, item.CompletedAt })
+            .ToListAsync(ct);
+        var finance = await db.DepartmentWorkPackages.AsNoTracking()
+            .Where(item => item.SourceTenderId == tenderId && item.OperationalProjectId == tender.OperationalProjectId &&
+                item.Purpose == WorkPackagePurpose.FinanceTenderReview && item.FinanceReview != null &&
+                item.FinanceReview.Status == FinanceReviewStatus.Approved)
+            .OrderByDescending(item => item.Id)
+            .Select(item => new { item.Id, item.Code, item.FinanceReview!.Status, item.FinanceReview.ReviewedAt, item.FinanceReview.ReviewedByUserId })
+            .FirstAsync(ct);
+        var submittedAt = DateTime.UtcNow;
+        var submission = new TenderSubmission
+        {
+            TenderId = tenderId,
+            Sequence = (await db.TenderSubmissions.Where(item => item.TenderId == tenderId)
+                .Select(item => (int?)item.Sequence).MaxAsync(ct) ?? 0) + 1,
+            SubmittedAt = submittedAt,
+            SubmittedByUserId = callerUserId,
+            ApprovedEstimateRevisionId = estimate.Id,
+            FinanceReviewWorkPackageId = finance.Id,
+            SubmissionChannel = channel,
+            ReceiptReference = TrimOrNull(request.ReceiptReference),
+            PlanningSnapshotJson = System.Text.Json.JsonSerializer.Serialize(planSnapshot),
+            EstimateSnapshotJson = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                estimate.Id,
+                estimate.VersionNumber,
+                estimate.SourceSha256,
+                estimate.GrandBidTotal,
+                estimate.Currency,
+            }),
+            FinanceReviewSnapshotJson = System.Text.Json.JsonSerializer.Serialize(finance),
+            Items = checklist.Select(item => new TenderSubmissionItem
+            {
+                ChecklistItemId = item.Id,
+                EvidenceId = item.CurrentEvidenceId,
+                TemplateCode = item.TemplateCode,
+                Title = item.Title,
+                IsRequired = item.IsRequired,
+                Status = item.Status,
+                FilePath = item.CurrentEvidence?.FilePath ?? item.FilePath,
+                OriginalFileName = item.CurrentEvidence?.OriginalFileName ?? item.OriginalFileName,
+                CapabilityDocumentId = item.CurrentEvidence?.CapabilityDocumentId ?? item.CapabilityDocumentId,
+                CapabilityDocumentVersion = item.CurrentEvidence?.CapabilityDocumentVersion,
+                Sha256 = item.CurrentEvidence?.Sha256,
+                NotApplicableReason = item.NotApplicableReason,
+            }).ToList(),
+        };
+        db.TenderSubmissions.Add(submission);
+        tender.Status = TenderStatus.Submitted;
+        tender.SubmittedAt ??= submittedAt;
+        tender.Note = TrimOrNull(request.Note) ?? tender.Note;
+        tender.UpdatedAt = submittedAt;
+        tender.UpdatedByUserId = callerUserId;
+        await CrmConcurrency.SaveChangesAsync(db, ct);
+        if (transaction is not null) await transaction.CommitAsync(ct);
+        return await GetAsync(tenderId, ct);
+    }
+
     public async Task<TenderResponse?> TransitionAsync(int tenderId, TransitionTenderRequest request,
         int callerUserId, CancellationToken ct = default)
     {
@@ -667,6 +1130,12 @@ public class TenderService(
         {
             throw new TenderOperationException($"Trạng thái gói thầu '{request.Status}' không hợp lệ.");
         }
+        if (nextStatus == TenderStatus.Submitted)
+            return await SubmitAsync(tenderId, new SubmitTenderRequest
+            {
+                SubmissionChannel = "Legacy transition",
+                Note = request.Note,
+            }, callerUserId, ct);
         var allowed = tender.Status switch
         {
             TenderStatus.Preparing => nextStatus is TenderStatus.Submitted or TenderStatus.Cancelled,
@@ -678,8 +1147,12 @@ public class TenderService(
             throw new TenderOperationException($"Không thể chuyển gói thầu từ {tender.Status} sang {nextStatus}.");
         }
 
+        TenderSubmission? newSubmission = null;
+
         if (nextStatus == TenderStatus.Submitted)
         {
+            if (!tender.InvitationReceivedAt.HasValue)
+                throw new TenderOperationException("Phải ghi nhận ngày nhận hồ sơ mời thầu trước khi nộp thầu.");
             var planStatuses = await db.DepartmentWorkPackages.AsNoTracking()
                 .Where(package => package.SourceTenderId == tenderId &&
                     (package.Purpose == WorkPackagePurpose.TenderPlanning ||
@@ -694,32 +1167,68 @@ public class TenderService(
             var checklist = await db.TenderChecklistItems.AsNoTracking()
                 .Where(item => item.TenderId == tenderId)
                 .ToListAsync(ct);
-            if (checklist.Count == 0 || checklist.Any(item =>
+            var requiredChecklist = checklist.Where(item => item.IsRequired).ToList();
+            if (requiredChecklist.Count == 0 || requiredChecklist.Any(item =>
                     item.Status != TenderChecklistItemStatus.Done &&
                     item.Status != TenderChecklistItemStatus.Submitted))
             {
-                throw new TenderOperationException("Phải hoàn tất tất cả mục checklist trước khi nộp gói thầu.");
+                throw new TenderOperationException("Phải hoàn tất tất cả mục hồ sơ bắt buộc trước khi nộp gói thầu.");
             }
-            var missingEvidence = checklist.FirstOrDefault(item => !HasRequiredChecklistEvidence(item));
+            var missingEvidence = requiredChecklist.FirstOrDefault(item => !HasRequiredChecklistEvidence(item));
             if (missingEvidence is not null)
             {
                 throw MissingChecklistEvidence(missingEvidence);
             }
-            if (!await db.TenderEstimateRevisions.AnyAsync(revision =>
-                    revision.TenderId == tenderId && revision.Status == TenderEstimateRevisionStatus.Approved, ct))
+            var submittedChecklist = checklist.Where(item => item.IsRequired ||
+                ((item.Status == TenderChecklistItemStatus.Done ||
+                    item.Status == TenderChecklistItemStatus.Submitted) &&
+                    HasRequiredChecklistEvidence(item)))
+                .ToList();
+            var approvedEstimateRevisionId = await db.TenderEstimateRevisions.AsNoTracking()
+                .Where(revision => revision.TenderId == tenderId &&
+                    revision.Status == TenderEstimateRevisionStatus.Approved)
+                .OrderByDescending(revision => revision.Id)
+                .Select(revision => (int?)revision.Id)
+                .FirstOrDefaultAsync(ct);
+            if (!approvedEstimateRevisionId.HasValue)
             {
                 throw new TenderOperationException("Phải có ít nhất một dự toán đã được phê duyệt trước khi nộp gói thầu.");
             }
             if (!tender.OperationalProjectId.HasValue)
                 throw new TenderOperationException("Gói thầu phải được liên kết với Dự án vận hành trước khi nộp.");
-            var financeApproved = await db.DepartmentWorkPackages.AsNoTracking().AnyAsync(package =>
-                package.SourceTenderId == tenderId &&
-                package.OperationalProjectId == tender.OperationalProjectId &&
-                package.Purpose == WorkPackagePurpose.FinanceTenderReview &&
-                package.FinanceReview != null &&
-                package.FinanceReview.Status == FinanceReviewStatus.Approved, ct);
-            if (!financeApproved)
+            var financeReviewWorkPackageId = await db.DepartmentWorkPackages.AsNoTracking()
+                .Where(package => package.SourceTenderId == tenderId &&
+                    package.OperationalProjectId == tender.OperationalProjectId &&
+                    package.Purpose == WorkPackagePurpose.FinanceTenderReview &&
+                    package.FinanceReview != null &&
+                    package.FinanceReview.Status == FinanceReviewStatus.Approved)
+                .OrderByDescending(package => package.Id)
+                .Select(package => (int?)package.Id)
+                .FirstOrDefaultAsync(ct);
+            if (!financeReviewWorkPackageId.HasValue)
                 throw new TenderOperationException("Hồ sơ tài chính và bảo lãnh phải được Tài chính – Kế toán phê duyệt trước khi nộp thầu.");
+
+            var submittedAt = DateTime.UtcNow;
+            newSubmission = new TenderSubmission
+            {
+                TenderId = tenderId,
+                Sequence = await db.TenderSubmissions.CountAsync(item => item.TenderId == tenderId, ct) + 1,
+                SubmittedAt = submittedAt,
+                SubmittedByUserId = callerUserId,
+                ApprovedEstimateRevisionId = approvedEstimateRevisionId.Value,
+                FinanceReviewWorkPackageId = financeReviewWorkPackageId.Value,
+                Items = submittedChecklist.Select(item => new TenderSubmissionItem
+                {
+                    ChecklistItemId = item.Id,
+                    TemplateCode = item.TemplateCode,
+                    Title = item.Title,
+                    IsRequired = item.IsRequired,
+                    Status = item.Status,
+                    FilePath = item.FilePath,
+                    OriginalFileName = item.OriginalFileName,
+                    CapabilityDocumentId = item.CapabilityDocumentId,
+                }).ToList(),
+            };
         }
         else if (nextStatus == TenderStatus.Won)
         {
@@ -768,6 +1277,11 @@ public class TenderService(
             tender.Note = request.Note.Trim();
         }
         var now = DateTime.UtcNow;
+        if (newSubmission is not null)
+        {
+            db.TenderSubmissions.Add(newSubmission);
+            tender.SubmittedAt = newSubmission.SubmittedAt;
+        }
         tender.ClosedAt = nextStatus is TenderStatus.Won or TenderStatus.Lost or TenderStatus.Cancelled ? now : null;
         tender.UpdatedAt = now;
         tender.UpdatedByUserId = callerUserId;
@@ -815,13 +1329,16 @@ public class TenderService(
         }).ToList();
     }
 
-    private static void AutoAdvanceIfUnfinished(TenderChecklistItem item)
+    private static void AutoAdvanceIfUnfinished(TenderChecklistItem item, int callerUserId, DateTime now)
     {
         // Attaching a file also completes the row when it's still in an
         // unfinished state — matches the AC "upload file → % checklist tăng".
         if (item.Status is TenderChecklistItemStatus.NotStarted or TenderChecklistItemStatus.Preparing)
         {
             item.Status = TenderChecklistItemStatus.Done;
+            item.CompletedAt = now;
+            item.CompletedByUserId = callerUserId;
+            item.NotApplicableReason = null;
         }
     }
 
@@ -838,7 +1355,7 @@ public class TenderService(
         if (tender.Status is TenderStatus.Won or TenderStatus.Lost or TenderStatus.Cancelled)
         {
             throw new TenderOperationException(
-                "Gói thầu đã ở trạng thái kết thúc, không thể chỉnh sửa checklist.");
+                "Gói thầu đã kết thúc, không thể chuẩn bị hồ sơ bổ sung.");
         }
     }
 
@@ -868,6 +1385,51 @@ public class TenderService(
     // ------------------------------ Helpers ---------------------------------
 
     private static string? TrimOrNull(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
+
+    private async Task<int> NextEvidenceRevisionAsync(int checklistItemId, CancellationToken ct) =>
+        (await db.TenderChecklistEvidence.Where(item => item.ChecklistItemId == checklistItemId)
+            .Select(item => (int?)item.Revision).MaxAsync(ct) ?? 0) + 1;
+
+    private static string? ValidateOptionalHttpUrl(string? value)
+    {
+        var normalized = TrimOrNull(value);
+        if (normalized is null) return null;
+        if (!Uri.TryCreate(normalized, UriKind.Absolute, out var uri) ||
+            (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+            throw new TenderOperationException("URL cổng đấu thầu phải dùng http hoặc https, ví dụ: https://muasamcong.mpi.gov.vn/.");
+        return normalized;
+    }
+
+    private static void ValidateInvitation(DateTime? receivedAt, DateTime submissionDeadline)
+    {
+        if (!receivedAt.HasValue)
+            throw new TenderOperationException("Ngày nhận hồ sơ mời thầu là bắt buộc.");
+        if (receivedAt.Value > DateTime.UtcNow.AddMinutes(5))
+            throw new TenderOperationException("Ngày nhận hồ sơ mời thầu không được ở tương lai.");
+        if (receivedAt.Value >= submissionDeadline)
+            throw new TenderOperationException("Ngày nhận hồ sơ mời thầu phải trước deadline nộp thầu.");
+    }
+
+    private static void ValidateChecklistDeadline(DateTime? deadline, DateTime submissionDeadline)
+    {
+        if (!deadline.HasValue) return;
+        if (deadline.Value.Date < DateTime.UtcNow.Date)
+            throw new TenderOperationException("Deadline nội bộ không được trước ngày hiện tại.");
+        if (deadline.Value.Date > submissionDeadline.Date)
+            throw new TenderOperationException("Deadline nội bộ không được sau deadline nộp thầu.");
+    }
+
+    private async Task EnsureEligibleChecklistAssigneeAsync(int userId, CancellationToken ct)
+    {
+        var eligible = await db.Users.AnyAsync(user =>
+            user.Id == userId && user.IsActive &&
+            user.RoleEntity != null && user.RoleEntity.IsActive &&
+            user.RoleEntity.RolePermissions.Any(grant =>
+                grant.Permission.Module == "crm.tenders" && grant.Permission.Action == "manage"), ct);
+        if (!eligible)
+            throw new TenderOperationException(
+                $"Người phụ trách #{userId} không hoạt động hoặc không có quyền quản lý gói thầu.");
+    }
 
     private static int ComputePercent(int done, int total) =>
         total <= 0 ? 0 : (int)Math.Round(100.0 * done / total);
@@ -901,6 +1463,18 @@ public class TenderService(
             TemplateCode = tpl.Code,
             Title = tpl.Name,
             Status = TenderChecklistItemStatus.NotStarted,
+            IsRequired = !string.Equals(tpl.Code, "drawings", StringComparison.OrdinalIgnoreCase),
+            DocumentKind = tpl.Code.ToLowerInvariant() switch
+            {
+                "capability" => TenderDocumentKind.Capability,
+                "legal" => TenderDocumentKind.Legal,
+                "bid-security" => TenderDocumentKind.BidSecurity,
+                "boq" => TenderDocumentKind.Boq,
+                "method-statement" => TenderDocumentKind.MethodStatement,
+                "drawings" => TenderDocumentKind.Drawings,
+                "schedule" => TenderDocumentKind.Schedule,
+                _ => TenderDocumentKind.Custom,
+            },
             SortOrder = tpl.SortOrder != 0 ? tpl.SortOrder : idx + 1,
             CreatedAt = now,
             UpdatedAt = now,
@@ -934,9 +1508,10 @@ public class TenderService(
         string? lostReasonLabel = null)
     {
         var now = DateTime.UtcNow;
-        var doneCount = t.ChecklistItems.Count(i =>
+        var requiredItems = t.ChecklistItems.Where(i => i.IsRequired).ToList();
+        var doneCount = requiredItems.Count(i =>
             i.Status == TenderChecklistItemStatus.Done || i.Status == TenderChecklistItemStatus.Submitted);
-        var totalCount = t.ChecklistItems.Count;
+        var totalCount = requiredItems.Count;
         var percent = ComputePercent(doneCount, totalCount);
 
         return new TenderResponse
@@ -950,6 +1525,12 @@ public class TenderService(
             OperationalProjectCode = t.OperationalProject?.Code,
             OperationalProjectName = t.OperationalProject?.Name,
             OpeningDate = t.OpeningDate,
+            InvitationReceivedAt = t.InvitationReceivedAt,
+            InvitationReference = t.InvitationReference,
+            InvitationSource = t.InvitationSource,
+            InvitationReceivedByUserId = t.InvitationReceivedByUserId,
+            InvitationReceivedByName = t.InvitationReceivedByUser?.FullName,
+            InvitationPortalUrl = t.InvitationPortalUrl,
             SubmissionDeadline = t.SubmissionDeadline,
             PreparerUserId = t.PreparerUserId,
             PreparerName = t.Preparer?.FullName,
@@ -962,8 +1543,10 @@ public class TenderService(
             LostReasonLabel = lostReasonLabel,
             LostNote = t.LostNote,
             ClosedAt = t.ClosedAt,
+            SubmittedAt = t.SubmittedAt,
             CreatedAt = t.CreatedAt,
             UpdatedAt = t.UpdatedAt,
+            RowVersion = CrmConcurrency.Encode(t.RowVersion),
             ChecklistItems = t.ChecklistItems
                 .OrderBy(i => i.SortOrder)
                 .Select(i => new TenderChecklistItemResponse
@@ -972,6 +1555,9 @@ public class TenderService(
                     TemplateCode = i.TemplateCode,
                     Title = i.Title,
                     Status = i.Status.ToString(),
+                    IsRequired = i.IsRequired,
+                    NotApplicableReason = i.NotApplicableReason,
+                    DocumentKind = i.DocumentKind.ToString(),
                     OwnerUserId = i.OwnerUserId,
                     OwnerName = i.Owner?.FullName,
                     InternalDeadline = i.InternalDeadline,
@@ -979,9 +1565,78 @@ public class TenderService(
                     OriginalFileName = i.OriginalFileName,
                     CapabilityDocumentId = i.CapabilityDocumentId,
                     SortOrder = i.SortOrder,
+                    CompletedAt = i.CompletedAt,
+                    CompletedByUserId = i.CompletedByUserId,
+                    VerifiedAt = i.VerifiedAt,
+                    VerifiedByUserId = i.VerifiedByUserId,
+                    WorkTaskId = i.WorkTaskId,
+                    CurrentEvidenceId = i.CurrentEvidenceId,
+                    EvidenceRevisions = i.EvidenceRevisions.OrderByDescending(evidence => evidence.Revision)
+                        .Select(evidence => new TenderChecklistEvidenceResponse
+                        {
+                            Id = evidence.Id,
+                            Revision = evidence.Revision,
+                            Source = evidence.Source.ToString(),
+                            OriginalFileName = evidence.OriginalFileName,
+                            FileSize = evidence.FileSize,
+                            ContentType = evidence.ContentType,
+                            Sha256 = evidence.Sha256,
+                            CapabilityDocumentId = evidence.CapabilityDocumentId,
+                            CapabilityDocumentVersion = evidence.CapabilityDocumentVersion,
+                            CreatedByUserId = evidence.CreatedByUserId,
+                            CreatedAt = evidence.CreatedAt,
+                        }).ToList(),
+                }).ToList(),
+            Submissions = t.Submissions
+                .OrderByDescending(item => item.Sequence)
+                .Select(item => new TenderSubmissionResponse
+                {
+                    Id = item.Id,
+                    Sequence = item.Sequence,
+                    SubmittedAt = item.SubmittedAt,
+                    SubmittedByUserId = item.SubmittedByUserId,
+                    SubmittedByName = item.SubmittedBy?.FullName,
+                    ApprovedEstimateRevisionId = item.ApprovedEstimateRevisionId,
+                    FinanceReviewWorkPackageId = item.FinanceReviewWorkPackageId,
+                    SubmissionChannel = item.SubmissionChannel,
+                    ReceiptReference = item.ReceiptReference,
+                    LegacyUnknown = item.LegacyUnknown,
+                    ItemCount = item.Items.Count,
+                    Items = item.Items.Select(snapshot => new TenderSubmissionItemResponse
+                    {
+                        ChecklistItemId = snapshot.ChecklistItemId,
+                        TemplateCode = snapshot.TemplateCode,
+                        Title = snapshot.Title,
+                        IsRequired = snapshot.IsRequired,
+                        Status = snapshot.Status.ToString(),
+                        FilePath = snapshot.FilePath,
+                        OriginalFileName = snapshot.OriginalFileName,
+                        CapabilityDocumentId = snapshot.CapabilityDocumentId,
+                        EvidenceId = snapshot.EvidenceId,
+                        CapabilityDocumentVersion = snapshot.CapabilityDocumentVersion,
+                        Sha256 = snapshot.Sha256,
+                        NotApplicableReason = snapshot.NotApplicableReason,
+                    }).ToList(),
+                }).ToList(),
+            InvitationDocuments = t.InvitationDocuments.OrderByDescending(item => item.CreatedAt)
+                .Select(item => new TenderInvitationDocumentResponse
+                {
+                    Id = item.Id,
+                    OriginalFileName = item.OriginalFileName,
+                    FileSize = item.FileSize,
+                    ContentType = item.ContentType,
+                    ExternalUrl = item.ExternalUrl,
+                    CreatedByUserId = item.CreatedByUserId,
+                    CreatedAt = item.CreatedAt,
                 }).ToList(),
             ChecklistCompletionPercent = percent,
             IsDeadlineImminent = IsDeadlineImminent(t.Status, t.SubmissionDeadline, now) && percent < 100,
+            Milestones = t.Milestones.OrderBy(item => item.AchievedAt).Select(item => new TenderMilestoneResponse
+            {
+                Kind = item.Kind.ToString(),
+                AchievedAt = item.AchievedAt,
+                AchievedByUserId = item.AchievedByUserId,
+            }).ToList(),
         };
     }
 

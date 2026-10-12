@@ -158,7 +158,11 @@ và hợp đồng mà không nhập lại dữ liệu.
   giới hạn cứng. Chỉ được nộp khi các nhóm việc đã hoàn thành/xác nhận, checklist
   hồ sơ hoàn tất, dự toán được duyệt và TC–KT duyệt hồ sơ tài chính/bảo lãnh.
   Hồ sơ năng lực liên kết thư viện dùng chung; BOQ, biện pháp và bản vẽ được tải
-  riêng theo gói. Trúng thầu mở Cơ hội ở `Negotiation` trên đúng Dự án hiện có,
+  riêng theo gói. Mục hồ sơ bắt buộc/không bắt buộc bám theo HSMT; mỗi lần nộp
+  phải lưu bản chốt bất biến của đúng phiên bản bằng chứng, dự toán, kế hoạch,
+  duyệt Tài chính, kênh/biên nhận, người và thời điểm nộp. Yêu cầu bổ sung được
+  lập thành lần nộp mới, không ghi đè lịch sử; kết quả cuối khóa chỉnh sửa.
+  Trúng thầu mở Cơ hội ở `Negotiation` trên đúng Dự án hiện có,
   sau đó người dùng chủ động lập hợp đồng.
 - Khảo sát mobile ghi điều kiện hiện trường, tọa độ, ảnh/video/file và checklist;
   đồng bộ có trạng thái, retry và xung đột rõ ràng.

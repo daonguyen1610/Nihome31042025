@@ -872,6 +872,14 @@
     "ja": "施工方法説明"
   },
   {
+    "key": "masterData.tender_checklist_default.drawings.label",
+    "category": "masterData",
+    "vi": "Bản vẽ dự thầu",
+    "en": "Tender drawings",
+    "zh": "投标图纸",
+    "ja": "入札図面"
+  },
+  {
     "key": "masterData.tender_checklist_default.schedule.label",
     "category": "masterData",
     "vi": "Tiến độ",

@@ -215,6 +215,8 @@ public sealed class PrecontractCrossDepartmentControlsTests(NihomeWebApplication
             name = "Gói thầu cơ điện nhà máy cơ khí",
             customerId = scope.CustomerId,
             operationalProjectId = scope.ProjectId,
+            invitationReceivedAt = DateTime.UtcNow.AddDays(-1),
+            invitationSource = "Email khách hàng",
             submissionDeadline = DateTime.UtcNow.AddDays(14),
         });
         var tenderId = Id(tender);
@@ -306,6 +308,8 @@ public sealed class PrecontractCrossDepartmentControlsTests(NihomeWebApplication
         {
             name = "Gói thầu chưa gắn dự án vận hành",
             customerId = scope.CustomerId,
+            invitationReceivedAt = DateTime.UtcNow.AddDays(-1),
+            invitationSource = "Cổng đấu thầu quốc gia",
             submissionDeadline = DateTime.UtcNow.AddDays(14),
         });
         orphanCreate.StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -316,6 +320,8 @@ public sealed class PrecontractCrossDepartmentControlsTests(NihomeWebApplication
             name = "Gói thầu cơ điện nhà máy cơ khí NICON",
             customerId = scope.CustomerId,
             operationalProjectId = scope.ProjectId,
+            invitationReceivedAt = DateTime.UtcNow.AddDays(-1),
+            invitationSource = "Cổng đấu thầu quốc gia",
             submissionDeadline = DateTime.UtcNow.AddDays(14),
         });
         var tenderId = Id(tender);

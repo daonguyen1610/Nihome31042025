@@ -23,6 +23,27 @@ public class UpdateTenderChecklistItemRequest
     public DateTime? InternalDeadline { get; set; }
 
     public bool ClearInternalDeadline { get; set; }
+
+    public bool? IsRequired { get; set; }
+
+    public int? WorkTaskId { get; set; }
+    public bool ClearWorkTask { get; set; }
+
+    [StringLength(500)]
+    public string? NotApplicableReason { get; set; }
+}
+
+public class CreateTenderChecklistItemRequest
+{
+    [Required]
+    [StringLength(300, MinimumLength = 1)]
+    public string Title { get; set; } = string.Empty;
+
+    public bool IsRequired { get; set; } = true;
+    public string DocumentKind { get; set; } = "Custom";
+    public int? OwnerUserId { get; set; }
+    public int? WorkTaskId { get; set; }
+    public DateTime? InternalDeadline { get; set; }
 }
 
 /// <summary>

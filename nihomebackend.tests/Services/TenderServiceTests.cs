@@ -88,6 +88,9 @@ public class TenderServiceTests : IDisposable
         CustomerId = _customerId,
         OperationalProjectId = _projectId,
         OpeningDate = DateTime.UtcNow.AddDays(7),
+        InvitationReceivedAt = DateTime.UtcNow.AddDays(-1),
+        InvitationSource = "Cổng đấu thầu quốc gia",
+        InvitationReceivedByUserId = _userId,
         SubmissionDeadline = deadline ?? DateTime.UtcNow.AddDays(14),
         PreparerUserId = _userId,
         InfoSource = "Website",
@@ -634,6 +637,9 @@ public class TenderServiceTests : IDisposable
             Name = "Nhà máy Alpha",
             CustomerId = _customerId,
             OperationalProjectId = _projectId,
+            InvitationReceivedAt = DateTime.UtcNow.AddDays(-1),
+            InvitationSource = "Email khách hàng",
+            InvitationReceivedByUserId = _userId,
             SubmissionDeadline = deadline,
         }, _userId);
 
@@ -806,6 +812,36 @@ public class TenderServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task CustomOptionalChecklist_CanBeMarkedNotApplicableAndDeleted()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        var withCustom = await _sut.CreateChecklistItemAsync(created.Id,
+            new CreateTenderChecklistItemRequest
+            {
+                Title = "Bản vẽ phối cảnh theo yêu cầu HSMT",
+                IsRequired = false,
+            }, _userId);
+        var custom = withCustom!.ChecklistItems.Single(item => item.TemplateCode is null);
+
+        await Assert.ThrowsAsync<TenderOperationException>(() => _sut.UpdateChecklistItemAsync(
+            created.Id, custom.Id,
+            new UpdateTenderChecklistItemRequest { Status = "NotApplicable" }, _userId));
+
+        var notApplicable = await _sut.UpdateChecklistItemAsync(created.Id, custom.Id,
+            new UpdateTenderChecklistItemRequest
+            {
+                Status = "NotApplicable",
+                NotApplicableReason = "HSMT không yêu cầu bản vẽ phối cảnh.",
+            }, _userId);
+        Assert.Equal("NotApplicable", notApplicable!.ChecklistItems.Single(item => item.Id == custom.Id).Status);
+
+        var afterDelete = await _sut.DeleteChecklistItemAsync(created.Id, custom.Id, _userId);
+        Assert.DoesNotContain(afterDelete!.ChecklistItems, item => item.Id == custom.Id);
+        await Assert.ThrowsAsync<TenderOperationException>(() => _sut.DeleteChecklistItemAsync(
+            created.Id, created.ChecklistItems[0].Id, _userId));
+    }
+
+    [Fact]
     public async Task AttachChecklistFileAsync_AutoCompletesUnfinishedRow()
     {
         var created = await _sut.CreateAsync(ValidCreate(), _userId);
@@ -823,6 +859,45 @@ public class TenderServiceTests : IDisposable
         Assert.Equal("Done", it.Status);
         Assert.Null((await _db.TenderChecklistItems.AsNoTracking()
             .SingleAsync(item => item.Id == itemId)).CapabilityDocumentId);
+    }
+
+    [Fact]
+    public async Task ChecklistEvidence_NewUploadCreatesRevisionAndRequiresIndependentVerification()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        var itemId = created.ChecklistItems.Single(item => item.TemplateCode == "boq").Id;
+        await _sut.AttachChecklistFileAsync(created.Id, itemId,
+            "/files/tenders/rev-1.pdf", "rev-1.pdf", 100, "application/pdf",
+            new string('a', 64), _userId);
+
+        var selfVerify = await Assert.ThrowsAsync<TenderOperationException>(() =>
+            _sut.UpdateChecklistItemAsync(created.Id, itemId,
+                new UpdateTenderChecklistItemRequest { Status = "Submitted" }, _userId));
+        Assert.Contains("không được tự xác nhận", selfVerify.Message);
+
+        var verifier = new ApplicationUser
+        {
+            PhoneNumber = "0900000002", FullName = "Tender Verifier",
+            Email = "tender.verifier@example.com", Role = UserRole.USER,
+            IsActive = true, PasswordHash = "x",
+        };
+        _db.Users.Add(verifier);
+        await _db.SaveChangesAsync();
+        var verified = await _sut.UpdateChecklistItemAsync(created.Id, itemId,
+            new UpdateTenderChecklistItemRequest { Status = "Submitted" }, verifier.Id);
+        Assert.Equal(verifier.Id, verified!.ChecklistItems.Single(item => item.Id == itemId).VerifiedByUserId);
+
+        await _sut.AttachChecklistFileAsync(created.Id, itemId,
+            "/files/tenders/rev-2.pdf", "rev-2.pdf", 120, "application/pdf",
+            new string('b', 64), _userId);
+        var evidence = await _db.TenderChecklistEvidence.AsNoTracking()
+            .Where(item => item.ChecklistItemId == itemId).OrderBy(item => item.Revision).ToListAsync();
+        Assert.Equal([1, 2], evidence.Select(item => item.Revision));
+        Assert.Equal("/files/tenders/rev-1.pdf", evidence[0].FilePath);
+        var current = await _db.TenderChecklistItems.AsNoTracking().SingleAsync(item => item.Id == itemId);
+        Assert.Equal(TenderChecklistItemStatus.Done, current.Status);
+        Assert.Null(current.VerifiedAt);
+        Assert.Equal(evidence[1].Id, current.CurrentEvidenceId);
     }
 
     [Fact]
@@ -1053,15 +1128,46 @@ public class TenderServiceTests : IDisposable
     public async Task TransitionSubmitted_WithVerifiedPlanAndRequiredApprovals_Succeeds()
     {
         var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        await _sut.CreateChecklistItemAsync(created.Id, new CreateTenderChecklistItemRequest
+        {
+            Title = "Bản vẽ dự thầu kiến trúc",
+            IsRequired = false,
+        }, _userId);
+        var verifier = new ApplicationUser
+        {
+            PhoneNumber = "0900000001", FullName = "Independent Verifier",
+            Email = "verifier@example.com", Role = UserRole.USER, IsActive = true, PasswordHash = "x",
+        };
+        _db.Users.Add(verifier);
+        await _db.SaveChangesAsync();
         var checklist = await _db.TenderChecklistItems.Where(item => item.TenderId == created.Id).ToListAsync();
         foreach (var item in checklist)
         {
-            item.Status = TenderChecklistItemStatus.Done;
+            item.Status = TenderChecklistItemStatus.Submitted;
             item.FilePath = item.TemplateCode == "capability"
                 ? "/files/capability/shared.pdf"
                 : $"/files/tenders/{item.TemplateCode}.pdf";
             item.OriginalFileName = $"{item.TemplateCode}.pdf";
             if (item.TemplateCode == "capability") item.CapabilityDocumentId = 101;
+            item.CompletedAt = DateTime.UtcNow.AddMinutes(-5);
+            item.CompletedByUserId = _userId;
+            item.VerifiedAt = DateTime.UtcNow;
+            item.VerifiedByUserId = verifier.Id;
+            var evidence = new TenderChecklistEvidence
+            {
+                ChecklistItem = item,
+                Revision = 1,
+                Source = item.TemplateCode == "capability"
+                    ? TenderEvidenceSource.CapabilityLibrary : TenderEvidenceSource.DirectUpload,
+                FilePath = item.FilePath,
+                OriginalFileName = item.OriginalFileName,
+                ContentType = "application/pdf",
+                CapabilityDocumentId = item.CapabilityDocumentId,
+                CapabilityDocumentVersion = item.CapabilityDocumentId.HasValue ? 1 : null,
+                CreatedByUserId = _userId,
+            };
+            _db.TenderChecklistEvidence.Add(evidence);
+            item.CurrentEvidence = evidence;
         }
         var group = new RoleGroup { Code = "TENDERING", LabelKey = "rbac.group.tendering", IsActive = true };
         var plan = new DepartmentWorkPackage
@@ -1119,6 +1225,11 @@ public class TenderServiceTests : IDisposable
             new TransitionTenderRequest { Status = "Submitted" }, _userId);
 
         Assert.Equal("Submitted", submitted!.Status);
+        Assert.NotNull(submitted.SubmittedAt);
+        var snapshot = Assert.Single(submitted.Submissions);
+        Assert.Equal(_userId, snapshot.SubmittedByUserId);
+        Assert.Equal(4, snapshot.Items.Count);
+        Assert.Contains(snapshot.Items, item => item.Title == "Bản vẽ dự thầu kiến trúc" && !item.IsRequired);
     }
 
     [Fact]
@@ -1182,7 +1293,7 @@ public class TenderServiceTests : IDisposable
         var error = await Assert.ThrowsAsync<TenderOperationException>(() => _sut.TransitionAsync(
             created.Id, new TransitionTenderRequest { Status = "Submitted" }, _userId));
 
-        Assert.Contains("file tải riêng", error.Message);
+        Assert.Contains("bằng chứng hợp lệ", error.Message);
         Assert.Equal("Preparing", (await _sut.GetAsync(created.Id))!.Status);
     }
 

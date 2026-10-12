@@ -236,6 +236,41 @@ public class CapabilityDocumentServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task DeleteAsync_WhenTenderEvidenceHistoryReferencesDocument_ThrowsAndPreservesRow()
+    {
+        var created = await _sut.CreateAsync(NewCreateRequest(), 1);
+        var item = new TenderChecklistItem
+        {
+            Title = "Hồ sơ năng lực đã thay thế",
+            Tender = new Tender
+            {
+                Code = "TD-2026-0002",
+                Name = "Historical capability evidence",
+                Customer = new Customer { Name = "Historical evidence customer" },
+                OpeningDate = DateTime.UtcNow,
+                SubmissionDeadline = DateTime.UtcNow.AddDays(7),
+            },
+        };
+        item.EvidenceRevisions.Add(new TenderChecklistEvidence
+        {
+            Revision = 1,
+            Source = TenderEvidenceSource.CapabilityLibrary,
+            FilePath = created.FilePath,
+            OriginalFileName = created.OriginalFileName,
+            CapabilityDocumentId = created.Id,
+            CreatedByUserId = 1,
+        });
+        _db.TenderChecklistItems.Add(item);
+        await _db.SaveChangesAsync();
+
+        var exception = await Assert.ThrowsAsync<CapabilityDocumentOperationException>(
+            () => _sut.DeleteAsync(created.Id));
+
+        Assert.Contains("lịch sử bằng chứng", exception.Message);
+        Assert.True(await _db.CapabilityDocuments.AnyAsync(document => document.Id == created.Id));
+    }
+
+    [Fact]
     public async Task DeleteAsync_UnknownId_ReturnsFalse()
     {
         Assert.False(await _sut.DeleteAsync(999));

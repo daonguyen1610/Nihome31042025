@@ -2743,5 +2743,7 @@
   {"key":"rbac.perm.work.packages.progress.label","category":"rbac","vi":"Cập nhật tiến độ đầu việc","en":"Update work progress","zh":"更新任务进度","ja":"作業進捗を更新"},
   {"key":"rbac.perm.work.packages.progress.description","category":"rbac","vi":"Cho phép người phụ trách cập nhật tiến độ đầu việc được giao.","en":"Allow assignees to update progress for their assigned tasks.","zh":"允许负责人更新其任务进度。","ja":"担当者が割り当てられたタスクの進捗を更新します。"},
   {"key":"rbac.perm.work.packages.verify.label","category":"rbac","vi":"Xác nhận đầu việc KPI","en":"Verify KPI work tasks","zh":"确认KPI任务","ja":"KPI作業タスクを確認"},
-  {"key":"rbac.perm.work.packages.verify.description","category":"rbac","vi":"Xác nhận độc lập đầu việc hoàn thành trước khi ghi nhận vào KPI.","en":"Independently verify completed tasks before they count toward KPIs.","zh":"在计入KPI前独立确认已完成任务。","ja":"KPIに計上する前に完了タスクを独立して確認します。"}
+  {"key":"rbac.perm.work.packages.verify.description","category":"rbac","vi":"Xác nhận độc lập đầu việc hoàn thành trước khi ghi nhận vào KPI.","en":"Independently verify completed tasks before they count toward KPIs.","zh":"在计入KPI前独立确认已完成任务。","ja":"KPIに計上する前に完了タスクを独立して確認します。"},
+  {"key":"rbac.perm.crm.tenders.submit.label","category":"rbac","vi":"Nộp gói thầu","en":"Submit tenders","zh":"提交投标","ja":"入札を提出"},
+  {"key":"rbac.perm.crm.tenders.submit.description","category":"rbac","vi":"Cho phép kiểm tra readiness và tạo snapshot bất biến cho mỗi lần nộp thầu.","en":"Allows readiness validation and creation of an immutable snapshot for each tender submission.","zh":"允许验证提交就绪状态，并为每次投标提交创建不可变快照。","ja":"提出準備状況を検証し、入札提出ごとに変更不可のスナップショットを作成できます。"}
 ]

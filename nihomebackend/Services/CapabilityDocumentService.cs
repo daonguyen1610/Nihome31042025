@@ -357,6 +357,13 @@ public class CapabilityDocumentService(
                 "Tài liệu đang được sử dụng trong checklist gói thầu, không thể xoá.");
         }
 
+        if (await db.TenderChecklistEvidence.AnyAsync(
+            evidence => evidence.CapabilityDocumentId == id || paths.Contains(evidence.FilePath), ct))
+        {
+            throw new CapabilityDocumentOperationException(
+                "Tài liệu đang được lưu trong lịch sử bằng chứng gói thầu, không thể xoá.");
+        }
+
         db.CapabilityDocuments.Remove(entity);
         await db.SaveChangesAsync(ct);
 

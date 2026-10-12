@@ -14,6 +14,22 @@ public class CreateTenderRequest
 
     public DateTime? OpeningDate { get; set; }
 
+    [Required]
+    public DateTime? InvitationReceivedAt { get; set; }
+
+    [StringLength(120)]
+    public string? InvitationReference { get; set; }
+
+    [Required]
+    [StringLength(200, MinimumLength = 1)]
+    public string InvitationSource { get; set; } = string.Empty;
+
+    public int? InvitationReceivedByUserId { get; set; }
+
+    [Url]
+    [StringLength(1000)]
+    public string? InvitationPortalUrl { get; set; }
+
     /// <summary>Submission deadline — must be strictly &gt; now on create.</summary>
     [Required]
     public DateTime SubmissionDeadline { get; set; }
@@ -41,6 +57,20 @@ public class UpdateTenderRequest
 
     public DateTime? OpeningDate { get; set; }
 
+    public DateTime? InvitationReceivedAt { get; set; }
+
+    [StringLength(120)]
+    public string? InvitationReference { get; set; }
+
+    [StringLength(200)]
+    public string? InvitationSource { get; set; }
+
+    public int? InvitationReceivedByUserId { get; set; }
+
+    [Url]
+    [StringLength(1000)]
+    public string? InvitationPortalUrl { get; set; }
+
     [Required]
     public DateTime SubmissionDeadline { get; set; }
 
@@ -51,6 +81,21 @@ public class UpdateTenderRequest
 
     [StringLength(4000)]
     public string? Note { get; set; }
+}
+
+public class SubmitTenderRequest
+{
+    [Required]
+    [StringLength(80, MinimumLength = 1)]
+    public string SubmissionChannel { get; set; } = string.Empty;
+
+    [StringLength(200)]
+    public string? ReceiptReference { get; set; }
+
+    [StringLength(200)]
+    public string? Note { get; set; }
+
+    public string? RowVersion { get; set; }
 }
 
 public class TenderListParams

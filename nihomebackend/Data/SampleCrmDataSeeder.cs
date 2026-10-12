@@ -1468,6 +1468,15 @@ public static class SampleCrmDataSeeder
                         existingTender.UpdatedByUserId = owner.Id;
                         existingTender.UpdatedAt = now;
                     }
+                    if (!existingTender.InvitationReceivedAt.HasValue)
+                    {
+                        existingTender.InvitationReceivedAt = existingTender.SubmissionDeadline.AddDays(-30);
+                        existingTender.InvitationReference = $"HSMT-{existingTender.Code}";
+                    }
+                    if (string.IsNullOrWhiteSpace(existingTender.InvitationSource))
+                        existingTender.InvitationSource = "Cổng đấu thầu quốc gia";
+                    if (existingTender.InvitationReceivedByUserId <= 0)
+                        existingTender.InvitationReceivedByUserId = owner.Id;
                     if (existingTender.Status == TenderStatus.Won)
                     {
                         existingTender.WonOpportunityId = sampleOpportunities
@@ -1504,6 +1513,10 @@ public static class SampleCrmDataSeeder
                 CustomerId = customer.Id,
                 OperationalProjectId = project.Id,
                 OpeningDate = now.AddDays(daysToDeadline - 14),
+                InvitationReceivedAt = deadline.AddDays(-30),
+                InvitationReference = $"HSMT-{code}",
+                InvitationSource = i % 2 == 0 ? "Cổng đấu thầu quốc gia" : "Email khách hàng",
+                InvitationReceivedByUserId = owner.Id,
                 SubmissionDeadline = deadline,
                 PreparerUserId = owner.Id,
                 InfoSource = i % 2 == 0 ? "Referral" : "Website",
@@ -1552,6 +1565,18 @@ public static class SampleCrmDataSeeder
                 TemplateCode = template.Code,
                 Title = template.Name,
                 Status = status,
+                IsRequired = !string.Equals(template.Code, "drawings", StringComparison.OrdinalIgnoreCase),
+                DocumentKind = template.Code.ToLowerInvariant() switch
+                {
+                    "capability" => TenderDocumentKind.Capability,
+                    "legal" => TenderDocumentKind.Legal,
+                    "bid-security" => TenderDocumentKind.BidSecurity,
+                    "boq" => TenderDocumentKind.Boq,
+                    "method-statement" => TenderDocumentKind.MethodStatement,
+                    "drawings" => TenderDocumentKind.Drawings,
+                    "schedule" => TenderDocumentKind.Schedule,
+                    _ => TenderDocumentKind.Custom,
+                },
                 SortOrder = template.SortOrder != 0 ? template.SortOrder : index + 1,
                 CreatedAt = now.AddDays(-3),
                 UpdatedAt = now.AddDays(-1),
@@ -1567,7 +1592,39 @@ public static class SampleCrmDataSeeder
                     item.CapabilityDocumentId = libraryDoc.Id;
                 }
             }
+            if (status is TenderChecklistItemStatus.Done or TenderChecklistItemStatus.Submitted &&
+                (!string.IsNullOrWhiteSpace(item.FilePath) || item.CapabilityDocumentId.HasValue))
+            {
+                item.CompletedAt = item.UpdatedAt;
+                item.CompletedByUserId = ownerUserId;
+            }
             db.TenderChecklistItems.Add(item);
+        }
+        db.SaveChanges();
+        var evidencedItems = db.TenderChecklistItems
+            .Where(item => item.TenderId == tender.Id && item.CurrentEvidenceId == null &&
+                item.FilePath != null && item.OriginalFileName != null)
+            .ToList();
+        foreach (var item in evidencedItems)
+        {
+            var evidence = new TenderChecklistEvidence
+            {
+                ChecklistItemId = item.Id,
+                Revision = 1,
+                Source = item.CapabilityDocumentId.HasValue
+                    ? TenderEvidenceSource.CapabilityLibrary : TenderEvidenceSource.DirectUpload,
+                FilePath = item.FilePath!,
+                OriginalFileName = item.OriginalFileName!,
+                FileSize = item.CapabilityDocumentId.HasValue ? libraryDoc?.FileSize ?? 0 : 0,
+                ContentType = item.CapabilityDocumentId.HasValue
+                    ? libraryDoc?.ContentType ?? "application/octet-stream" : "application/octet-stream",
+                CapabilityDocumentId = item.CapabilityDocumentId,
+                CapabilityDocumentVersion = item.CapabilityDocumentId.HasValue ? libraryDoc?.CurrentVersion : null,
+                CreatedByUserId = ownerUserId,
+                CreatedAt = item.UpdatedAt,
+            };
+            db.TenderChecklistEvidence.Add(evidence);
+            item.CurrentEvidence = evidence;
         }
         db.SaveChanges();
     }

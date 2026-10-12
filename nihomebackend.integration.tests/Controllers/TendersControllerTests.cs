@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Net.Http.Headers;
 using System.Text;
+using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -43,6 +44,8 @@ public class TendersControllerTests : IntegrationTestBase
             name = "Gói thầu Alpha",
             customerId,
             operationalProjectId = projectId,
+            invitationReceivedAt = DateTime.UtcNow.AddDays(-1),
+            invitationSource = "Cổng đấu thầu quốc gia",
             submissionDeadline = DateTime.UtcNow.AddDays(14),
             openingDate = DateTime.UtcNow.AddDays(7),
             infoSource = "Website",
@@ -74,6 +77,8 @@ public class TendersControllerTests : IntegrationTestBase
             name = "Gói thầu nhà xưởng Minh Phúc giai đoạn 2",
             customerId,
             operationalProjectId = projectId,
+            invitationReceivedAt = DateTime.UtcNow.AddDays(-1),
+            invitationSource = "Email khách hàng",
             submissionDeadline = DateTime.UtcNow.AddDays(10),
         });
 
@@ -93,6 +98,8 @@ public class TendersControllerTests : IntegrationTestBase
         {
             name = "Bad deadline",
             customerId,
+            invitationReceivedAt = DateTime.UtcNow.AddDays(-2),
+            invitationSource = "Bản giấy",
             submissionDeadline = DateTime.UtcNow.AddDays(-1),
         });
         res.StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -106,6 +113,8 @@ public class TendersControllerTests : IntegrationTestBase
         {
             name = "Bad customer",
             customerId = 999_999,
+            invitationReceivedAt = DateTime.UtcNow.AddDays(-1),
+            invitationSource = "Cổng đấu thầu quốc gia",
             submissionDeadline = DateTime.UtcNow.AddDays(10),
         });
         res.StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -123,6 +132,8 @@ public class TendersControllerTests : IntegrationTestBase
             name = "SALE-created tender",
             customerId,
             operationalProjectId = projectId,
+            invitationReceivedAt = DateTime.UtcNow.AddDays(-1),
+            invitationSource = "Cổng đấu thầu quốc gia",
             submissionDeadline = DateTime.UtcNow.AddDays(10),
         });
         res.StatusCode.Should().Be(HttpStatusCode.Created);
@@ -488,6 +499,8 @@ public class TendersControllerTests : IntegrationTestBase
             name = name ?? "Test tender " + Guid.NewGuid().ToString("N")[..6],
             customerId,
             operationalProjectId = projectId,
+            invitationReceivedAt = DateTime.UtcNow.AddDays(-1),
+            invitationSource = "Cổng đấu thầu quốc gia",
             submissionDeadline = DateTime.UtcNow.AddDays(14),
         });
         res.EnsureSuccessStatusCode();
@@ -593,6 +606,52 @@ public class TendersControllerTests : IntegrationTestBase
         var id = await CreateTenderAsync();
         var res = await Client.PatchAsJsonAsync($"/api/tenders/{id}/checklist/9999", new { status = "Done" });
         res.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task CustomOptionalChecklist_RequiresNotApplicableReasonAndCanBeDeleted()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var tenderId = await CreateTenderAsync();
+        var created = await Client.PostAsJsonAsync($"/api/tenders/{tenderId}/checklist", new
+        {
+            title = "Bản vẽ phối cảnh theo HSMT",
+            isRequired = false,
+        });
+        created.StatusCode.Should().Be(HttpStatusCode.OK, await created.Content.ReadAsStringAsync());
+        var item = (await ReadJsonAsync(created)).GetProperty("checklistItems").EnumerateArray()
+            .Single(value => value.GetProperty("title").GetString() == "Bản vẽ phối cảnh theo HSMT");
+        var itemId = item.GetProperty("id").GetInt32();
+        item.GetProperty("isRequired").GetBoolean().Should().BeFalse();
+
+        (await Client.PatchAsJsonAsync($"/api/tenders/{tenderId}/checklist/{itemId}",
+            new { status = "NotApplicable" })).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var excluded = await Client.PatchAsJsonAsync($"/api/tenders/{tenderId}/checklist/{itemId}", new
+        {
+            status = "NotApplicable",
+            notApplicableReason = "HSMT không yêu cầu bản vẽ phối cảnh.",
+        });
+        excluded.StatusCode.Should().Be(HttpStatusCode.OK, await excluded.Content.ReadAsStringAsync());
+
+        var deleted = await Client.DeleteAsync($"/api/tenders/{tenderId}/checklist/{itemId}");
+        deleted.StatusCode.Should().Be(HttpStatusCode.OK, await deleted.Content.ReadAsStringAsync());
+        (await ReadJsonAsync(deleted)).GetProperty("checklistItems").EnumerateArray()
+            .Should().NotContain(value => value.GetProperty("id").GetInt32() == itemId);
+    }
+
+    [Fact]
+    public async Task SubmitTender_RequiresDedicatedSubmitPermission()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var tenderId = await CreateTenderAsync();
+
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
+        var response = await Client.PostAsJsonAsync(
+            $"/api/tenders/{tenderId}/transition", new { status = "Submitted" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await WithDbAsync(db => db.Tenders.AsNoTracking().SingleAsync(item => item.Id == tenderId)))
+            .Status.Should().Be(TenderStatus.Preparing);
     }
 
     [Fact]
@@ -904,7 +963,7 @@ public class TendersControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task TransitionSubmitted_WithCompletedPlanChecklistEstimateAndFinanceReview_Succeeds()
+    public async Task Submit_WithCompletedGates_IsIdempotentAndCreatesOneSnapshot()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
         var tenderId = await CreateTenderAsync("Gói thầu đủ điều kiện nộp NICON");
@@ -924,9 +983,15 @@ public class TendersControllerTests : IntegrationTestBase
                 CurrentVersion = 1,
             };
             db.CapabilityDocuments.Add(capability);
+            var verifierId = await db.Users.Where(item => item.Id != actorId && item.IsActive)
+                .OrderBy(item => item.Id).Select(item => item.Id).FirstAsync();
             foreach (var item in tender.ChecklistItems)
             {
-                item.Status = TenderChecklistItemStatus.Done;
+                item.Status = TenderChecklistItemStatus.Submitted;
+                item.CompletedAt = DateTime.UtcNow.AddMinutes(-5);
+                item.CompletedByUserId = verifierId;
+                item.VerifiedAt = DateTime.UtcNow;
+                item.VerifiedByUserId = actorId;
                 if (item.TemplateCode == "capability")
                 {
                     item.CapabilityDocument = capability;
@@ -993,13 +1058,93 @@ public class TendersControllerTests : IntegrationTestBase
             await db.SaveChangesAsync();
         });
 
-        var response = await Client.PostAsJsonAsync($"/api/tenders/{tenderId}/transition", new
+        var detail = await Client.GetFromJsonAsync<JsonElement>($"/api/tenders/{tenderId}");
+        var rowVersion = detail.GetProperty("rowVersion").GetString();
+        var key = Guid.NewGuid().ToString("N");
+        HttpRequestMessage BuildRequest()
         {
-            status = "Submitted",
-        });
+            var request = new HttpRequestMessage(HttpMethod.Post, $"/api/tenders/{tenderId}/submit")
+            {
+                Content = JsonContent.Create(new
+                {
+                    submissionChannel = "Cổng đấu thầu quốc gia",
+                    receiptReference = "RCT-001",
+                    rowVersion,
+                }),
+            };
+            request.Headers.Add("Idempotency-Key", key);
+            return request;
+        }
+
+        var response = await Client.SendAsync(BuildRequest());
+        var replay = await Client.SendAsync(BuildRequest());
 
         response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
         (await ReadJsonAsync(response)).GetProperty("status").GetString().Should().Be("Submitted");
+        replay.StatusCode.Should().Be(HttpStatusCode.OK);
+        replay.Headers.GetValues("Idempotency-Replayed").Should().ContainSingle("true");
+        (await WithDbAsync(db => db.TenderSubmissions.CountAsync(item => item.TenderId == tenderId)))
+            .Should().Be(1);
+
+        var boqItemId = await FirstChecklistItemIdAsync(tenderId, "boq");
+        using var upload = new MultipartFormDataContent();
+        upload.Add(new ByteArrayContent("supplement"u8.ToArray())
+        {
+            Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/pdf") },
+        }, "file", "boq-supplement.pdf");
+        var uploaded = await Client.PostAsync($"/api/tenders/{tenderId}/checklist/{boqItemId}/upload", upload);
+        uploaded.StatusCode.Should().Be(HttpStatusCode.OK, await uploaded.Content.ReadAsStringAsync());
+        var verified = await Client.PatchAsJsonAsync($"/api/tenders/{tenderId}/checklist/{boqItemId}",
+            new { status = "Submitted" });
+        verified.StatusCode.Should().Be(HttpStatusCode.OK, await verified.Content.ReadAsStringAsync());
+        var verifiedJson = await ReadJsonAsync(verified);
+        var supplementalRequest = new HttpRequestMessage(HttpMethod.Post, $"/api/tenders/{tenderId}/submit")
+        {
+            Content = JsonContent.Create(new
+            {
+                submissionChannel = "Cổng đấu thầu quốc gia - bổ sung",
+                receiptReference = "RCT-002",
+                rowVersion = verifiedJson.GetProperty("rowVersion").GetString(),
+            }),
+        };
+        supplementalRequest.Headers.Add("Idempotency-Key", Guid.NewGuid().ToString("N"));
+        var supplemental = await Client.SendAsync(supplementalRequest);
+        supplemental.StatusCode.Should().Be(HttpStatusCode.OK, await supplemental.Content.ReadAsStringAsync());
+        var snapshots = await WithDbAsync(db => db.TenderSubmissions.AsNoTracking()
+            .Include(item => item.Items).Where(item => item.TenderId == tenderId)
+            .OrderBy(item => item.Sequence).ToListAsync());
+        snapshots.Should().HaveCount(2);
+        snapshots[0].Items.Single(item => item.ChecklistItemId == boqItemId).OriginalFileName
+            .Should().NotBe("boq-supplement.pdf");
+        snapshots[1].Items.Single(item => item.ChecklistItemId == boqItemId).OriginalFileName
+            .Should().Be("boq-supplement.pdf");
+    }
+
+    [Fact]
+    public async Task Submit_AsSaleWithoutSubmitPermission_IsForbiddenAndCreatesNoSnapshot()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "SALES_MANAGER"));
+        var tenderId = await CreateTenderAsync("Gói thầu kiểm tra quyền nộp riêng");
+        var detail = await Client.GetFromJsonAsync<JsonElement>($"/api/tenders/{tenderId}");
+
+        await AuthTestHelper.AuthenticateAsync(Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "SALE"));
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"/api/tenders/{tenderId}/submit")
+        {
+            Content = JsonContent.Create(new
+            {
+                submissionChannel = "Cổng đấu thầu quốc gia",
+                rowVersion = detail.GetProperty("rowVersion").GetString(),
+            }),
+        };
+        request.Headers.Add("Idempotency-Key", Guid.NewGuid().ToString("N"));
+
+        var response = await Client.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await WithDbAsync(db => db.TenderSubmissions.CountAsync(item => item.TenderId == tenderId)))
+            .Should().Be(0);
     }
 
     [Fact]

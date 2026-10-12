@@ -197,4 +197,46 @@
   ,{"key":"tenders.process.review","category":"tenders","vi":"Đánh giá","en":"Review","zh":"评审","ja":"レビュー"}
   ,{"key":"tenders.process.submitted","category":"tenders","vi":"Nộp thầu","en":"Submit","zh":"提交投标","ja":"提出"}
   ,{"key":"tenders.process.result","category":"tenders","vi":"Kết quả","en":"Result","zh":"结果","ja":"結果"}
+  ,{"key":"tenders.field.invitationReceivedAt","category":"tenders","vi":"Ngày nhận HSMT","en":"Invitation received at","zh":"收到招标文件时间","ja":"入札書類受領日時"}
+  ,{"key":"tenders.field.invitationReference","category":"tenders","vi":"Mã/tham chiếu HSMT","en":"Invitation reference","zh":"招标文件参考号","ja":"入札書類参照番号"}
+  ,{"key":"tenders.field.submittedAt","category":"tenders","vi":"Thời điểm nộp thầu","en":"Submitted at","zh":"投标提交时间","ja":"入札提出日時"}
+  ,{"key":"tenders.form.invitationReceivedRequired","category":"tenders","vi":"Vui lòng nhập ngày nhận hồ sơ mời thầu.","en":"Enter when the tender invitation was received.","zh":"请输入收到招标文件的时间。","ja":"入札書類の受領日時を入力してください。"}
+  ,{"key":"tenders.form.invitationReceivedBeforeDeadline","category":"tenders","vi":"Ngày nhận hồ sơ mời thầu phải trước deadline nộp thầu.","en":"Invitation receipt must be before the submission deadline.","zh":"招标文件接收时间必须早于投标截止时间。","ja":"入札書類の受領日時は提出期限より前である必要があります。"}
+  ,{"key":"tenders.detail.checklist.add","category":"tenders","vi":"Thêm hồ sơ theo gói","en":"Add tender document","zh":"添加本投标资料","ja":"案件別資料を追加"}
+  ,{"key":"tenders.detail.checklist.delete","category":"tenders","vi":"Xóa mục hồ sơ","en":"Delete document item","zh":"删除资料项","ja":"資料項目を削除"}
+  ,{"key":"tenders.detail.checklist.customTitle","category":"tenders","vi":"Tên hồ sơ","en":"Document name","zh":"资料名称","ja":"資料名"}
+  ,{"key":"tenders.detail.checklist.required","category":"tenders","vi":"Bắt buộc theo HSMT","en":"Required by invitation","zh":"招标文件要求","ja":"入札書類で必須"}
+  ,{"key":"tenders.detail.checklist.itemStatus.NotApplicable","category":"tenders","vi":"Không áp dụng","en":"Not applicable","zh":"不适用","ja":"対象外"}
+  ,{"key":"tenders.detail.checklist.notApplicableTitle","category":"tenders","vi":"Xác nhận không áp dụng","en":"Confirm not applicable","zh":"确认不适用","ja":"対象外を確認"}
+  ,{"key":"tenders.detail.checklist.notApplicableReason","category":"tenders","vi":"Lý do không áp dụng","en":"Reason not applicable","zh":"不适用原因","ja":"対象外の理由"}
+  ,{"key":"tenders.detail.checklist.optional","category":"tenders","vi":"Không bắt buộc","en":"Optional","zh":"可选","ja":"任意"}
+  ,{"key":"tenders.detail.checklist.snapshotTitle","category":"tenders","vi":"Hồ sơ đã chốt khi nộp thầu","en":"Submission dossier snapshot","zh":"投标提交资料快照","ja":"入札提出資料スナップショット"}
+  ,{"key":"tenders.detail.checklist.snapshotHint","category":"tenders","vi":"Bản chốt này được giữ nguyên để đối chiếu, không thay đổi theo danh mục hiện tại.","en":"This immutable snapshot is retained for audit and does not follow later checklist changes.","zh":"此不可变快照用于审计，不随之后的清单变更。","ja":"この変更不可のスナップショットは監査用に保持され、その後のチェックリスト変更には連動しません。"}
+  ,{"key":"tenders.detail.checklist.snapshotItems","category":"tenders","vi":"mục hồ sơ","en":"dossier items","zh":"项资料","ja":"資料項目"}
+  ,{"key":"tenders.field.invitationSource","category":"tenders","vi":"Nguồn nhận HSMT","en":"Invitation source","zh":"招标文件来源","ja":"入札書類の受領元"}
+  ,{"key":"tenders.field.invitationReceivedBy","category":"tenders","vi":"Người tiếp nhận HSMT","en":"Invitation recipient","zh":"招标文件接收人","ja":"入札書類受領者"}
+  ,{"key":"tenders.field.invitationPortalUrl","category":"tenders","vi":"URL cổng đấu thầu","en":"Tender portal URL","zh":"招标门户网址","ja":"入札ポータルURL"}
+  ,{"key":"tenders.form.invitationSourceRequired","category":"tenders","vi":"Vui lòng nhập nguồn nhận HSMT, ví dụ: Cổng đấu thầu quốc gia.","en":"Enter the invitation source, for example the national tender portal.","zh":"请输入招标文件来源，例如国家招标门户。","ja":"国の入札ポータルなど、入札書類の受領元を入力してください。"}
+  ,{"key":"tenders.form.invitationSourcePlaceholder","category":"tenders","vi":"Ví dụ: Cổng đấu thầu quốc gia, email, bản giấy","en":"For example: tender portal, email, paper copy","zh":"例如：招标门户、电子邮件、纸质文件","ja":"例：入札ポータル、メール、紙媒体"}
+  ,{"key":"tenders.lifecycle.blockersTitle","category":"tenders","vi":"Chưa thể nộp thầu vì còn các điểm chặn","en":"Submission is blocked by the following items","zh":"以下事项阻止投标提交","ja":"次の項目により提出できません"}
+  ,{"key":"tenders.lifecycle.resubmit","category":"tenders","vi":"Nộp hồ sơ bổ sung","en":"Submit supplement","zh":"提交补充文件","ja":"追加提出"}
+  ,{"key":"tenders.lifecycle.submitDialogTitle","category":"tenders","vi":"Chốt và ghi nhận lần nộp thầu","en":"Record tender submission","zh":"记录投标提交","ja":"入札提出を記録"}
+  ,{"key":"tenders.lifecycle.submitDialogHint","category":"tenders","vi":"Hệ thống sẽ tạo snapshot bất biến của đúng revision hồ sơ, dự toán và phê duyệt hiện tại.","en":"The system will create an immutable snapshot of the current dossier, estimate, and approvals.","zh":"系统将创建当前资料、估算和审批的不可变快照。","ja":"現在の書類、見積、承認の変更不可スナップショットを作成します。"}
+  ,{"key":"tenders.lifecycle.submissionChannel","category":"tenders","vi":"Kênh nộp","en":"Submission channel","zh":"提交渠道","ja":"提出経路"}
+  ,{"key":"tenders.lifecycle.receiptReference","category":"tenders","vi":"Mã biên nhận (nếu có)","en":"Receipt reference (if available)","zh":"回执编号（如有）","ja":"受付番号（ある場合）"}
+  ,{"key":"tenders.lifecycle.submitSuccess","category":"tenders","vi":"Đã tạo snapshot và ghi nhận lần nộp thầu","en":"Submission snapshot recorded","zh":"已记录投标提交快照","ja":"提出スナップショットを記録しました"}
+  ,{"key":"tenders.invitationDocuments.title","category":"tenders","vi":"Hồ sơ mời thầu","en":"Invitation documents","zh":"招标文件","ja":"入札案内書類"}
+  ,{"key":"tenders.invitationDocuments.hint","category":"tenders","vi":"File là tùy chọn; vẫn có thể ghi nhận HSMT nhận qua cổng, email hoặc bản giấy bằng metadata.","en":"Files are optional; portal, email, or paper invitations can be registered with metadata only.","zh":"文件为可选；门户、邮件或纸质招标可仅登记元数据。","ja":"ファイルは任意です。ポータル、メール、紙の案内はメタデータのみで登録できます。"}
+  ,{"key":"tenders.invitationDocuments.upload","category":"tenders","vi":"Tải file HSMT","en":"Upload invitation file","zh":"上传招标文件","ja":"入札案内ファイルをアップロード"}
+  ,{"key":"tenders.invitationDocuments.empty","category":"tenders","vi":"Chưa có file HSMT; metadata tiếp nhận vẫn là bằng chứng bắt buộc.","en":"No invitation file; receipt metadata remains mandatory evidence.","zh":"暂无招标文件；接收元数据仍为必填证据。","ja":"案内ファイルはありません。受領メタデータは必須です。"}
+  ,{"key":"tenders.detail.checklist.documentKind","category":"tenders","vi":"Loại hồ sơ","en":"Document type","zh":"资料类型","ja":"資料種別"}
+  ,{"key":"tenders.detail.checklist.workTask","category":"tenders","vi":"Đầu việc kế hoạch liên kết","en":"Linked plan task","zh":"关联计划任务","ja":"関連計画タスク"}
+  ,{"key":"tenders.detail.checklist.noWorkTask","category":"tenders","vi":"Chưa liên kết đầu việc","en":"No linked task","zh":"未关联任务","ja":"タスク未関連"}
+  ,{"key":"tenders.detail.checklist.documentKind.Legal","category":"tenders","vi":"Pháp nhân","en":"Legal","zh":"法人资料","ja":"法人資料"}
+  ,{"key":"tenders.detail.checklist.documentKind.BidSecurity","category":"tenders","vi":"Bảo lãnh dự thầu","en":"Bid security","zh":"投标保函","ja":"入札保証"}
+  ,{"key":"tenders.detail.checklist.documentKind.Boq","category":"tenders","vi":"BOQ","en":"BOQ","zh":"工程量清单","ja":"BOQ"}
+  ,{"key":"tenders.detail.checklist.documentKind.MethodStatement","category":"tenders","vi":"Biện pháp thi công","en":"Method statement","zh":"施工方案","ja":"施工計画"}
+  ,{"key":"tenders.detail.checklist.documentKind.Drawings","category":"tenders","vi":"Bản vẽ dự thầu","en":"Tender drawings","zh":"投标图纸","ja":"入札図面"}
+  ,{"key":"tenders.detail.checklist.documentKind.Schedule","category":"tenders","vi":"Tiến độ","en":"Schedule","zh":"进度计划","ja":"工程表"}
+  ,{"key":"tenders.detail.checklist.documentKind.Custom","category":"tenders","vi":"Khác theo HSMT","en":"Other invitation requirement","zh":"其他招标要求","ja":"その他の入札要件"}
 ]

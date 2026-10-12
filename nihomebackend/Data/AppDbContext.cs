@@ -82,6 +82,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<CapabilityDocumentVersion> CapabilityDocumentVersions => Set<CapabilityDocumentVersion>();
     public DbSet<Tender> Tenders => Set<Tender>();
     public DbSet<TenderChecklistItem> TenderChecklistItems => Set<TenderChecklistItem>();
+    public DbSet<TenderSubmission> TenderSubmissions => Set<TenderSubmission>();
+    public DbSet<TenderSubmissionItem> TenderSubmissionItems => Set<TenderSubmissionItem>();
+    public DbSet<TenderChecklistEvidence> TenderChecklistEvidence => Set<TenderChecklistEvidence>();
+    public DbSet<TenderMilestone> TenderMilestones => Set<TenderMilestone>();
+    public DbSet<TenderInvitationDocument> TenderInvitationDocuments => Set<TenderInvitationDocument>();
     public DbSet<TenderEstimateRevision> TenderEstimateRevisions => Set<TenderEstimateRevision>();
     public DbSet<TenderEstimateLine> TenderEstimateLines => Set<TenderEstimateLine>();
 
@@ -1100,6 +1105,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasIndex(t => t.Code).IsUnique();
             b.Property(t => t.Name).HasMaxLength(300).IsRequired();
             b.Property(t => t.InfoSource).HasMaxLength(200);
+            b.Property(t => t.InvitationReference).HasMaxLength(120);
+            b.Property(t => t.InvitationSource).HasMaxLength(200).IsRequired();
+            b.Property(t => t.InvitationPortalUrl).HasMaxLength(1000);
             b.Property(t => t.Note).HasMaxLength(4000);
             b.Property(t => t.Status).HasConversion<string>().HasMaxLength(20);
             b.Property(t => t.LostReasonCode).HasMaxLength(80);
@@ -1116,6 +1124,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .WithMany()
                 .HasForeignKey(t => t.PreparerUserId)
                 .OnDelete(DeleteBehavior.SetNull);
+            b.HasOne(t => t.InvitationReceivedByUser)
+                .WithMany()
+                .HasForeignKey(t => t.InvitationReceivedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            b.Property(t => t.RowVersion).IsRowVersion();
             b.HasIndex(t => t.CustomerId);
             b.HasIndex(t => t.OperationalProjectId);
             b.HasIndex(t => t.PreparerUserId);
@@ -1133,6 +1146,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.Property(i => i.Status).HasConversion<string>().HasMaxLength(20);
             b.Property(i => i.FilePath).HasMaxLength(500);
             b.Property(i => i.OriginalFileName).HasMaxLength(300);
+            b.Property(i => i.NotApplicableReason).HasMaxLength(500);
+            b.Property(i => i.DocumentKind).HasConversion<string>().HasMaxLength(30);
             b.HasOne(i => i.Tender)
                 .WithMany(t => t.ChecklistItems)
                 .HasForeignKey(i => i.TenderId)
@@ -1145,9 +1160,131 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .WithMany()
                 .HasForeignKey(i => i.CapabilityDocumentId)
                 .OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(i => i.CompletedBy)
+                .WithMany()
+                .HasForeignKey(i => i.CompletedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(i => i.VerifiedBy)
+                .WithMany()
+                .HasForeignKey(i => i.VerifiedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(i => i.WorkTask)
+                .WithMany()
+                .HasForeignKey(i => i.WorkTaskId)
+                .OnDelete(DeleteBehavior.SetNull);
+            b.HasOne(i => i.CurrentEvidence)
+                .WithMany()
+                .HasForeignKey(i => i.CurrentEvidenceId)
+                .OnDelete(DeleteBehavior.NoAction);
             b.HasIndex(i => i.TenderId);
             b.HasIndex(i => i.CapabilityDocumentId);
+            b.HasIndex(i => i.WorkTaskId);
+            b.HasIndex(i => i.CurrentEvidenceId);
             b.HasIndex(i => new { i.TenderId, i.SortOrder });
+        });
+
+        modelBuilder.Entity<TenderChecklistEvidence>(b =>
+        {
+            b.ToTable("tender_checklist_evidence");
+            b.HasKey(item => item.Id);
+            b.Property(item => item.Source).HasConversion<string>().HasMaxLength(30);
+            b.Property(item => item.FilePath).HasMaxLength(500).IsRequired();
+            b.Property(item => item.OriginalFileName).HasMaxLength(300).IsRequired();
+            b.Property(item => item.ContentType).HasMaxLength(150).IsRequired();
+            b.Property(item => item.Sha256).HasMaxLength(64);
+            b.HasOne(item => item.ChecklistItem)
+                .WithMany(item => item.EvidenceRevisions)
+                .HasForeignKey(item => item.ChecklistItemId)
+                .OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(item => item.CapabilityDocument)
+                .WithMany()
+                .HasForeignKey(item => item.CapabilityDocumentId)
+                .OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(item => item.CreatedByUser)
+                .WithMany()
+                .HasForeignKey(item => item.CreatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            b.HasIndex(item => new { item.ChecklistItemId, item.Revision }).IsUnique();
+        });
+
+        modelBuilder.Entity<TenderMilestone>(b =>
+        {
+            b.ToTable("tender_milestones");
+            b.HasKey(item => item.Id);
+            b.Property(item => item.Kind).HasConversion<string>().HasMaxLength(40);
+            b.HasOne(item => item.Tender).WithMany(item => item.Milestones)
+                .HasForeignKey(item => item.TenderId).OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(item => item.AchievedByUser).WithMany()
+                .HasForeignKey(item => item.AchievedByUserId).OnDelete(DeleteBehavior.Restrict);
+            b.HasIndex(item => new { item.TenderId, item.Kind }).IsUnique();
+        });
+
+        modelBuilder.Entity<TenderInvitationDocument>(b =>
+        {
+            b.ToTable("tender_invitation_documents", table =>
+                table.HasCheckConstraint("CK_tender_invitation_documents_source",
+                    "([FilePath] IS NOT NULL AND [ExternalUrl] IS NULL) OR ([FilePath] IS NULL AND [ExternalUrl] IS NOT NULL)"));
+            b.HasKey(item => item.Id);
+            b.Property(item => item.FilePath).HasMaxLength(500);
+            b.Property(item => item.OriginalFileName).HasMaxLength(300);
+            b.Property(item => item.ContentType).HasMaxLength(150);
+            b.Property(item => item.Sha256).HasMaxLength(64);
+            b.Property(item => item.ExternalUrl).HasMaxLength(1000);
+            b.HasOne(item => item.Tender).WithMany(item => item.InvitationDocuments)
+                .HasForeignKey(item => item.TenderId).OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(item => item.CreatedByUser).WithMany()
+                .HasForeignKey(item => item.CreatedByUserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<TenderSubmission>(b =>
+        {
+            b.ToTable("tender_submissions");
+            b.HasKey(item => item.Id);
+            b.Property(item => item.SubmissionChannel).HasMaxLength(80).IsRequired();
+            b.Property(item => item.ReceiptReference).HasMaxLength(200);
+            b.Property(item => item.PlanningSnapshotJson).HasColumnType("nvarchar(max)").IsRequired();
+            b.Property(item => item.EstimateSnapshotJson).HasColumnType("nvarchar(max)").IsRequired();
+            b.Property(item => item.FinanceReviewSnapshotJson).HasColumnType("nvarchar(max)").IsRequired();
+            b.HasOne(item => item.Tender)
+                .WithMany(tender => tender.Submissions)
+                .HasForeignKey(item => item.TenderId)
+                .OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(item => item.SubmittedBy)
+                .WithMany()
+                .HasForeignKey(item => item.SubmittedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(item => item.ApprovedEstimateRevision)
+                .WithMany()
+                .HasForeignKey(item => item.ApprovedEstimateRevisionId)
+                .OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(item => item.FinanceReviewWorkPackage)
+                .WithMany()
+                .HasForeignKey(item => item.FinanceReviewWorkPackageId)
+                .OnDelete(DeleteBehavior.Restrict);
+            b.HasIndex(item => new { item.TenderId, item.Sequence }).IsUnique();
+            b.HasIndex(item => item.SubmittedAt);
+        });
+
+        modelBuilder.Entity<TenderSubmissionItem>(b =>
+        {
+            b.ToTable("tender_submission_items");
+            b.HasKey(item => item.Id);
+            b.Property(item => item.TemplateCode).HasMaxLength(80);
+            b.Property(item => item.Title).HasMaxLength(300).IsRequired();
+            b.Property(item => item.Status).HasConversion<string>().HasMaxLength(20);
+            b.Property(item => item.FilePath).HasMaxLength(500);
+            b.Property(item => item.OriginalFileName).HasMaxLength(300);
+            b.Property(item => item.Sha256).HasMaxLength(64);
+            b.Property(item => item.NotApplicableReason).HasMaxLength(500);
+            b.HasOne(item => item.TenderSubmission)
+                .WithMany(submission => submission.Items)
+                .HasForeignKey(item => item.TenderSubmissionId)
+                .OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(item => item.Evidence)
+                .WithMany()
+                .HasForeignKey(item => item.EvidenceId)
+                .OnDelete(DeleteBehavior.Restrict);
+            b.HasIndex(item => new { item.TenderSubmissionId, item.ChecklistItemId }).IsUnique();
         });
 
         modelBuilder.Entity<TenderEstimateRevision>(b =>

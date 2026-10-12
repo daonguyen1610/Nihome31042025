@@ -8539,6 +8539,25 @@ namespace nihomebackend.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
+                    b.Property<string>("InvitationPortalUrl")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTime?>("InvitationReceivedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("InvitationReceivedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("InvitationReference")
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<string>("InvitationSource")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
                     b.Property<string>("LostNote")
                         .HasMaxLength(2000)
                         .HasColumnType("nvarchar(2000)");
@@ -8565,12 +8584,21 @@ namespace nihomebackend.Migrations
                     b.Property<int?>("PreparerUserId")
                         .HasColumnType("int");
 
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
                     b.Property<DateTime>("SubmissionDeadline")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("SubmittedAt")
                         .HasColumnType("datetime2");
 
                     b.Property<DateTime>("UpdatedAt")
@@ -8591,6 +8619,8 @@ namespace nihomebackend.Migrations
 
                     b.HasIndex("CustomerId");
 
+                    b.HasIndex("InvitationReceivedByUserId");
+
                     b.HasIndex("OperationalProjectId");
 
                     b.HasIndex("PreparerUserId");
@@ -8600,6 +8630,71 @@ namespace nihomebackend.Migrations
                     b.HasIndex("SubmissionDeadline");
 
                     b.ToTable("tenders", (string)null);
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.TenderChecklistEvidence", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("CapabilityDocumentId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("CapabilityDocumentVersion")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ChecklistItemId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("FilePath")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<long>("FileSize")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("OriginalFileName")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<int>("Revision")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Sha256")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CapabilityDocumentId");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("ChecklistItemId", "Revision")
+                        .IsUnique();
+
+                    b.ToTable("tender_checklist_evidence", (string)null);
                 });
 
             modelBuilder.Entity("NihomeBackend.Models.TenderChecklistItem", b =>
@@ -8613,8 +8708,22 @@ namespace nihomebackend.Migrations
                     b.Property<int?>("CapabilityDocumentId")
                         .HasColumnType("int");
 
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("CompletedByUserId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<int?>("CurrentEvidenceId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("DocumentKind")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
 
                     b.Property<string>("FilePath")
                         .HasMaxLength(500)
@@ -8622,6 +8731,13 @@ namespace nihomebackend.Migrations
 
                     b.Property<DateTime?>("InternalDeadline")
                         .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsRequired")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("NotApplicableReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<string>("OriginalFileName")
                         .HasMaxLength(300)
@@ -8653,13 +8769,30 @@ namespace nihomebackend.Migrations
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("VerifiedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("VerifiedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("WorkTaskId")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CapabilityDocumentId");
 
+                    b.HasIndex("CompletedByUserId");
+
+                    b.HasIndex("CurrentEvidenceId");
+
                     b.HasIndex("OwnerUserId");
 
                     b.HasIndex("TenderId");
+
+                    b.HasIndex("VerifiedByUserId");
+
+                    b.HasIndex("WorkTaskId");
 
                     b.HasIndex("TenderId", "SortOrder");
 
@@ -8821,6 +8954,222 @@ namespace nihomebackend.Migrations
                         .IsUnique();
 
                     b.ToTable("tender_estimate_revisions", (string)null);
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.TenderInvitationDocument", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ContentType")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ExternalUrl")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("FilePath")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<long?>("FileSize")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("OriginalFileName")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<string>("Sha256")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<int>("TenderId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("TenderId");
+
+                    b.ToTable("tender_invitation_documents", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_tender_invitation_documents_source", "([FilePath] IS NOT NULL AND [ExternalUrl] IS NULL) OR ([FilePath] IS NULL AND [ExternalUrl] IS NOT NULL)");
+                        });
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.TenderMilestone", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("AchievedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("AchievedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<int>("TenderId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AchievedByUserId");
+
+                    b.HasIndex("TenderId", "Kind")
+                        .IsUnique();
+
+                    b.ToTable("tender_milestones", (string)null);
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.TenderSubmission", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("ApprovedEstimateRevisionId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("EstimateSnapshotJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("FinanceReviewSnapshotJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("FinanceReviewWorkPackageId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("LegacyUnknown")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("PlanningSnapshotJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ReceiptReference")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("Sequence")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SubmissionChannel")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<DateTime>("SubmittedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("SubmittedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TenderId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApprovedEstimateRevisionId");
+
+                    b.HasIndex("FinanceReviewWorkPackageId");
+
+                    b.HasIndex("SubmittedAt");
+
+                    b.HasIndex("SubmittedByUserId");
+
+                    b.HasIndex("TenderId", "Sequence")
+                        .IsUnique();
+
+                    b.ToTable("tender_submissions", (string)null);
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.TenderSubmissionItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("CapabilityDocumentId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("CapabilityDocumentVersion")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ChecklistItemId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("EvidenceId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("FilePath")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("IsRequired")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("NotApplicableReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("OriginalFileName")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<string>("Sha256")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("TemplateCode")
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<int>("TenderSubmissionId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EvidenceId");
+
+                    b.HasIndex("TenderSubmissionId", "ChecklistItemId")
+                        .IsUnique();
+
+                    b.ToTable("tender_submission_items", (string)null);
                 });
 
             modelBuilder.Entity("NihomeBackend.Models.Translation", b =>
@@ -11715,6 +12064,12 @@ namespace nihomebackend.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("NihomeBackend.Models.ApplicationUser", "InvitationReceivedByUser")
+                        .WithMany()
+                        .HasForeignKey("InvitationReceivedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("NihomeBackend.Models.OperationalProject", "OperationalProject")
                         .WithMany()
                         .HasForeignKey("OperationalProjectId")
@@ -11727,9 +12082,37 @@ namespace nihomebackend.Migrations
 
                     b.Navigation("Customer");
 
+                    b.Navigation("InvitationReceivedByUser");
+
                     b.Navigation("OperationalProject");
 
                     b.Navigation("Preparer");
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.TenderChecklistEvidence", b =>
+                {
+                    b.HasOne("NihomeBackend.Models.CapabilityDocument", "CapabilityDocument")
+                        .WithMany()
+                        .HasForeignKey("CapabilityDocumentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NihomeBackend.Models.TenderChecklistItem", "ChecklistItem")
+                        .WithMany("EvidenceRevisions")
+                        .HasForeignKey("ChecklistItemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("NihomeBackend.Models.ApplicationUser", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("CapabilityDocument");
+
+                    b.Navigation("ChecklistItem");
+
+                    b.Navigation("CreatedByUser");
                 });
 
             modelBuilder.Entity("NihomeBackend.Models.TenderChecklistItem", b =>
@@ -11738,6 +12121,16 @@ namespace nihomebackend.Migrations
                         .WithMany()
                         .HasForeignKey("CapabilityDocumentId")
                         .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NihomeBackend.Models.ApplicationUser", "CompletedBy")
+                        .WithMany()
+                        .HasForeignKey("CompletedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NihomeBackend.Models.TenderChecklistEvidence", "CurrentEvidence")
+                        .WithMany()
+                        .HasForeignKey("CurrentEvidenceId")
+                        .OnDelete(DeleteBehavior.NoAction);
 
                     b.HasOne("NihomeBackend.Models.ApplicationUser", "Owner")
                         .WithMany()
@@ -11750,11 +12143,29 @@ namespace nihomebackend.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("NihomeBackend.Models.ApplicationUser", "VerifiedBy")
+                        .WithMany()
+                        .HasForeignKey("VerifiedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NihomeBackend.Models.DepartmentWorkTask", "WorkTask")
+                        .WithMany()
+                        .HasForeignKey("WorkTaskId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.Navigation("CapabilityDocument");
+
+                    b.Navigation("CompletedBy");
+
+                    b.Navigation("CurrentEvidence");
 
                     b.Navigation("Owner");
 
                     b.Navigation("Tender");
+
+                    b.Navigation("VerifiedBy");
+
+                    b.Navigation("WorkTask");
                 });
 
             modelBuilder.Entity("NihomeBackend.Models.TenderEstimateLine", b =>
@@ -11777,6 +12188,95 @@ namespace nihomebackend.Migrations
                         .IsRequired();
 
                     b.Navigation("Tender");
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.TenderInvitationDocument", b =>
+                {
+                    b.HasOne("NihomeBackend.Models.ApplicationUser", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NihomeBackend.Models.Tender", "Tender")
+                        .WithMany("InvitationDocuments")
+                        .HasForeignKey("TenderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CreatedByUser");
+
+                    b.Navigation("Tender");
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.TenderMilestone", b =>
+                {
+                    b.HasOne("NihomeBackend.Models.ApplicationUser", "AchievedByUser")
+                        .WithMany()
+                        .HasForeignKey("AchievedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NihomeBackend.Models.Tender", "Tender")
+                        .WithMany("Milestones")
+                        .HasForeignKey("TenderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AchievedByUser");
+
+                    b.Navigation("Tender");
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.TenderSubmission", b =>
+                {
+                    b.HasOne("NihomeBackend.Models.TenderEstimateRevision", "ApprovedEstimateRevision")
+                        .WithMany()
+                        .HasForeignKey("ApprovedEstimateRevisionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NihomeBackend.Models.DepartmentWorkPackage", "FinanceReviewWorkPackage")
+                        .WithMany()
+                        .HasForeignKey("FinanceReviewWorkPackageId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NihomeBackend.Models.ApplicationUser", "SubmittedBy")
+                        .WithMany()
+                        .HasForeignKey("SubmittedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NihomeBackend.Models.Tender", "Tender")
+                        .WithMany("Submissions")
+                        .HasForeignKey("TenderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ApprovedEstimateRevision");
+
+                    b.Navigation("FinanceReviewWorkPackage");
+
+                    b.Navigation("SubmittedBy");
+
+                    b.Navigation("Tender");
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.TenderSubmissionItem", b =>
+                {
+                    b.HasOne("NihomeBackend.Models.TenderChecklistEvidence", "Evidence")
+                        .WithMany()
+                        .HasForeignKey("EvidenceId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NihomeBackend.Models.TenderSubmission", "TenderSubmission")
+                        .WithMany("Items")
+                        .HasForeignKey("TenderSubmissionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Evidence");
+
+                    b.Navigation("TenderSubmission");
                 });
 
             modelBuilder.Entity("NihomeBackend.Models.UserDocument", b =>
@@ -12288,11 +12788,27 @@ namespace nihomebackend.Migrations
                     b.Navigation("ChecklistItems");
 
                     b.Navigation("EstimateRevisions");
+
+                    b.Navigation("InvitationDocuments");
+
+                    b.Navigation("Milestones");
+
+                    b.Navigation("Submissions");
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.TenderChecklistItem", b =>
+                {
+                    b.Navigation("EvidenceRevisions");
                 });
 
             modelBuilder.Entity("NihomeBackend.Models.TenderEstimateRevision", b =>
                 {
                     b.Navigation("Lines");
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.TenderSubmission", b =>
+                {
+                    b.Navigation("Items");
                 });
 
             modelBuilder.Entity("NihomeBackend.Models.WarehouseIssue", b =>

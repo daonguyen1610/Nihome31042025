@@ -551,10 +551,25 @@ public sealed class BusinessRootHardDeletePlanService(
             .Distinct().OrderBy(path => path).ToListAsync(ct);
         fileBlockers.AddRange(sharedPaths.Select(path => $"shared:{path}"));
         localPaths = localPaths.Except(sharedPaths, StringComparer.Ordinal).ToList();
-        var tenderReferences = await db.TenderChecklistItems.AsNoTracking()
+        var currentTenderReferences = await db.TenderChecklistItems.AsNoTracking()
             .Where(item => item.CapabilityDocumentId == id || item.FilePath != null && rawPaths.Contains(item.FilePath))
             .OrderBy(item => item.Id)
             .Select(item => new { item.Id, item.TenderId, item.Tender.Code, item.Tender.Name }).ToListAsync(ct);
+        var historicalTenderReferences = await db.TenderChecklistEvidence.AsNoTracking()
+            .Where(item => item.CapabilityDocumentId == id || rawPaths.Contains(item.FilePath))
+            .OrderBy(item => item.Id)
+            .Select(item => new
+            {
+                Id = item.ChecklistItemId,
+                item.ChecklistItem.TenderId,
+                item.ChecklistItem.Tender.Code,
+                item.ChecklistItem.Tender.Name,
+            }).ToListAsync(ct);
+        var tenderReferences = currentTenderReferences.Concat(historicalTenderReferences)
+            .GroupBy(item => new { item.Id, item.TenderId, item.Code, item.Name })
+            .Select(group => group.Key)
+            .OrderBy(item => item.Id)
+            .ToList();
         fileBlockers = fileBlockers.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToList();
 
         var detail = $"/admin/capability-documents?documentId={id}";
