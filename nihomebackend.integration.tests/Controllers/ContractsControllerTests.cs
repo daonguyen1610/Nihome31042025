@@ -409,6 +409,55 @@ public class ContractsControllerTests : IntegrationTestBase
             .Should().Be("Requested");
         requestedBody.GetProperty("contractNumber").GetString()
             .Should().Be(detail.GetProperty("contractNumber").GetString());
+
+        var invalidSchedule = await Client.PutAsJsonAsync($"/api/contracts/{supplyId}/milestones", new
+        {
+            rowVersion = requestedBody.GetProperty("rowVersion").GetString(),
+            paymentMilestones = new[]
+            {
+                new
+                {
+                    id = milestoneId,
+                    order = 1,
+                    name = "Must not persist",
+                    percentValue = 90m,
+                    dueDate = "2026-12-01T00:00:00Z",
+                    status = "Requested",
+                    responsibleAccountantUserId = accountantUserId,
+                },
+            },
+        });
+        invalidSchedule.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        var staleSchedule = await Client.PutAsJsonAsync($"/api/contracts/{supplyId}/milestones", new
+        {
+            rowVersion = detail.GetProperty("rowVersion").GetString(),
+            paymentMilestones = new[]
+            {
+                new
+                {
+                    id = milestoneId,
+                    order = 1,
+                    name = "Stale schedule must not persist",
+                    percentValue = 100m,
+                    dueDate = "2026-12-15T00:00:00Z",
+                    status = "Requested",
+                    responsibleAccountantUserId = accountantUserId,
+                    requestedAt = requestedBody.GetProperty("paymentMilestones")[0]
+                        .GetProperty("requestedAt").GetDateTime(),
+                },
+            },
+        });
+        staleSchedule.StatusCode.Should().Be(
+            HttpStatusCode.Conflict,
+            await staleSchedule.Content.ReadAsStringAsync());
+
+        var unchangedMilestone = await WithDbAsync(db => db.ContractPaymentMilestones.AsNoTracking()
+            .SingleAsync(item => item.Id == milestoneId));
+        unchangedMilestone.Name.Should().Be("Supplier advance");
+        unchangedMilestone.PercentValue.Should().Be(100m);
+        unchangedMilestone.Status.Should().Be(PaymentMilestoneStatus.Requested);
+        unchangedMilestone.DueDate.Should().Be(new DateTime(2026, 11, 15));
     }
 
     [Fact]

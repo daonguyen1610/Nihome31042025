@@ -28,6 +28,8 @@ test("Finance primary-contract list is upstream-only and server-paginated", asyn
     await page.getByRole("button", { name: /Bộ lọc nâng cao|Advanced filters|高级筛选|詳細フィルター/i }).click();
     await expect(page.locator("#c-sort-by")).toBeVisible();
     await expect(page.locator("#c-sort-direction")).toBeVisible();
+    await expect.poll(() => page.evaluate(() =>
+        document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
 });
 
 test("Finance receivables is a read-only projection of the contract registry", async ({
@@ -200,6 +202,8 @@ test("Finance input-contract workspace keeps scope and edits only the financial 
     await page.getByRole("tab").nth(1).click();
     await page.getByTestId("contract-finance-schedule-edit").click();
     await expect(page.getByTestId("contract-finance-schedule-form")).toBeVisible();
+    await expect.poll(() => page.evaluate(() =>
+        document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
     await page.locator("#milestone-due-0").fill("2026-12-05");
     const scheduleResponse = page.waitForResponse((response) =>
         response.request().method() === "PUT"
@@ -458,7 +462,7 @@ test("mobile contract card opens the complete contract detail", async ({
     await expect(page.getByRole("link", { name: /Hợp đồng|Contracts|销售合同|販売契約/i })).toBeVisible();
 });
 
-test("paid milestone date is suggested, customizable, and displayed", async ({
+test("collected milestone date is suggested, customizable, and displayed", async ({
     page,
     loginInBrowserAs,
     baseURL,
@@ -553,8 +557,8 @@ test("paid milestone date is suggested, customizable, and displayed", async ({
     });
 
     await page.goto(`${baseURL}/admin/contracts/${contractId}`, { waitUntil: "domcontentloaded" });
-    await page.getByRole("tab", { name: /Lịch thanh toán|Payment schedule|付款计划|支払スケジュール/i }).click();
-    await page.getByRole("button", { name: /Đánh dấu Đã thanh toán|Mark as Paid|标记为已付款|支払済にする/i }).click();
+    await page.getByRole("tab", { name: /Lịch phải thu|Receivable schedule|应收计划|入金予定/i }).click();
+    await page.getByRole("button", { name: /Đánh dấu đã thu|Mark as collected|标记为已收款|入金済みにする/i }).click();
 
     const dateInput = page.locator("#contract-actual-payment-date");
     const localToday = await page.evaluate(() => {
@@ -565,10 +569,10 @@ test("paid milestone date is suggested, customizable, and displayed", async ({
     });
     await expect(dateInput).toHaveValue(localToday);
     await dateInput.fill("2026-08-30");
-    await page.getByRole("button", { name: /Xác nhận đã thanh toán|Confirm paid|确认已付款|支払済を確認/i }).click();
+    await page.getByRole("button", { name: /Xác nhận đã thu|Confirm collected|确认已收款|入金済みを確認/i }).click();
 
     await expect.poll(() => actualPaymentDate).toBe("2026-08-30T00:00:00.000Z");
-    await expect(page.getByText(/Ngày thanh toán thực tế: 30\/08\/2026|Actual payment date: 30\/08\/2026|实际付款日期: 30\/08\/2026|実際の支払日: 30\/08\/2026/i)).toBeVisible();
+    await expect(page.getByText(/Ngày thu thực tế: 30\/08\/2026|Actual collection date: 30\/08\/2026|实际收款日期: 30\/08\/2026|実際入金日: 30\/08\/2026/i)).toBeVisible();
 
     await page.route(new RegExp("/api/(?:v1/)?users/me/permissions$"), route =>
         route.fulfill({
@@ -577,8 +581,8 @@ test("paid milestone date is suggested, customizable, and displayed", async ({
             body: JSON.stringify({ role: "CONTRACT_VIEWER", roleId: null, permissions: ["crm.contracts.view"] }),
         }));
     await page.reload({ waitUntil: "domcontentloaded" });
-    await page.getByRole("tab", { name: /Lịch thanh toán|Payment schedule|付款计划|支払スケジュール/i }).click();
-    await expect(page.getByRole("button", { name: /Sửa ngày thanh toán|Edit payment date|编辑付款日期|支払日を編集/i })).toHaveCount(0);
+    await page.getByRole("tab", { name: /Lịch phải thu|Receivable schedule|应收计划|入金予定/i }).click();
+    await expect(page.getByRole("button", { name: /Sửa ngày thu|Edit collection date|修改收款日期|入金日を編集/i })).toHaveCount(0);
     await expect(page.getByRole("button", { name: /Trả về Chưa yêu cầu|Revert to Pending|退回为待处理|未請求に戻す/i })).toHaveCount(0);
 });
 
