@@ -184,7 +184,7 @@ public class RbacSeedDataTests
     }
 
     [Fact]
-    public void Design_CannotApproveOrReleaseIfc()
+    public void Design_CanReleaseIfcButCannotApproveDesignStages()
     {
         var bundle = RbacSeedData.Default;
         var allCodes = bundle.BaseCatalog.Select(e => e.Code).ToList();
@@ -193,9 +193,9 @@ public class RbacSeedDataTests
 
         Assert.Contains("design.basic.manage", expanded);
         Assert.Contains("design.shop.manage", expanded);
+        Assert.Contains("design.ifc.release", expanded);
         Assert.DoesNotContain("design.basic.approve", expanded);
         Assert.DoesNotContain("design.shop.approve", expanded);
-        Assert.DoesNotContain("design.ifc.release", expanded);
         Assert.DoesNotContain("design.concepts.finalize", expanded);
     }
 

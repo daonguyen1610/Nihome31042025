@@ -15,8 +15,8 @@ namespace nihomebackend.tests.Services;
 /// <summary>
 /// Unit coverage for the NIH-116 Shop Drawing workflow: per-discipline
 /// code allocation, status state-machine enforcement (incl. Released
-/// being reachable only via the NIH-118 IFC flow), and bulk delete of
-/// drafts with partial-success reporting.
+/// being reachable only via the NIH-118 IFC flow), and cleanup of rejected
+/// drawings with partial-success reporting.
 /// </summary>
 public class ShopDrawingServiceTests : IDisposable
 {
@@ -243,9 +243,10 @@ public class ShopDrawingServiceTests : IDisposable
     // ---------------- Delete + guard ----------------
 
     [Fact]
-    public async Task DeleteAsync_Drafting_Succeeds()
+    public async Task DeleteAsync_Rejected_Succeeds()
     {
         var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        await Transition(created.Id, "Rejected");
         Assert.True(await _sut.DeleteAsync(created.Id));
     }
 
@@ -253,6 +254,7 @@ public class ShopDrawingServiceTests : IDisposable
     public async Task DeleteAsync_BeforeShopStage_Throws()
     {
         var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        await Transition(created.Id, "Rejected");
         var project = await _db.DesignProjects.FindAsync(_projectId);
         project!.CurrentStage = DesignProjectStage.BasicDesign;
         await _db.SaveChangesAsync();
@@ -264,6 +266,7 @@ public class ShopDrawingServiceTests : IDisposable
     public async Task DeleteAsync_AfterShopStage_Succeeds()
     {
         var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        await Transition(created.Id, "Rejected");
         var project = await _db.DesignProjects.FindAsync(_projectId);
         project!.CurrentStage = DesignProjectStage.Completed;
         await _db.SaveChangesAsync();
@@ -275,6 +278,7 @@ public class ShopDrawingServiceTests : IDisposable
     public async Task DeleteAsync_MissingSidecar_StagesFileBeforeDeleting()
     {
         var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        await Transition(created.Id, "Rejected");
         var entity = await _db.ShopDrawings.FindAsync(created.Id);
         entity!.FilePath = "/files/design/shop/legacy.pdf";
         entity.OriginalFileName = "legacy.pdf";
@@ -301,6 +305,7 @@ public class ShopDrawingServiceTests : IDisposable
     public async Task DeleteAsync_WhenSidecarCannotBeStaged_PreservesSourceAndFile()
     {
         var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        await Transition(created.Id, "Rejected");
         var entity = await _db.ShopDrawings.FindAsync(created.Id);
         entity!.FilePath = "/files/design/shop/unstaged.pdf";
         entity.OriginalFileName = "unstaged.pdf";
@@ -352,6 +357,7 @@ public class ShopDrawingServiceTests : IDisposable
         Assert.False(File.Exists(firstPath));
         Assert.True(File.Exists(replacementPath));
 
+        await Transition(created.Id, "Rejected");
         var project = await _db.DesignProjects.FindAsync(_projectId);
         project!.CurrentStage = DesignProjectStage.Completed;
         await _db.SaveChangesAsync();
@@ -383,10 +389,11 @@ public class ShopDrawingServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task DeleteAsync_AfterReview_RemovesRevisionsAndIfcReferences()
+    public async Task DeleteAsync_Rejected_RemovesRevisionsAndIfcReferences()
     {
         var created = await _sut.CreateAsync(ValidCreate(), _userId);
         await Transition(created.Id, "InReview");
+        await Transition(created.Id, "Rejected");
         var release = new IfcRelease
         {
             DesignProjectId = _projectId,
@@ -423,7 +430,7 @@ public class ShopDrawingServiceTests : IDisposable
     // ---------------- Bulk delete ----------------
 
     [Fact]
-    public async Task BulkDelete_AllStatuses_RemovesAggregatesAndReportsMissingRows()
+    public async Task BulkDelete_RejectedRows_RemovesAggregatesAndReportsMissingRows()
     {
         var a = await _sut.CreateAsync(ValidCreate(title: "A"), _userId);
         var b = await _sut.CreateAsync(ValidCreate(title: "B"), _userId);
@@ -433,7 +440,9 @@ public class ShopDrawingServiceTests : IDisposable
         firstRow!.FilePath = "/files/design/shop/bulk-a.pdf";
         await _db.SaveChangesAsync();
 
-        await Transition(c.Id, "InReview");
+        await Transition(a.Id, "Rejected");
+        await Transition(b.Id, "Rejected");
+        await Transition(c.Id, "Rejected");
         var release = new IfcRelease
         {
             DesignProjectId = _projectId,
