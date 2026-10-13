@@ -19,7 +19,7 @@ test("Finance primary-contract list is upstream-only and server-paginated", asyn
     await page.goto(`${baseURL}/admin/finance/contracts`, { waitUntil: "domcontentloaded" });
 
     expect((await listResponse).ok()).toBe(true);
-    await expect(page.getByRole("heading", { name: /Hợp đồng chính|Primary contracts|主合同|主要契約/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Theo dõi phải thu|Receivables monitoring|应收跟踪|売掛金管理/i })).toBeVisible();
     await expect(page.locator("#c-owner")).toBeVisible();
     await expect(page.locator("#c-end-from")).toHaveAttribute("aria-label", /Ngày kết thúc từ|End date from|结束日期起|終了日/);
     await expect(page.locator("#c-end-to")).toHaveAttribute("aria-label", /Ngày kết thúc đến|End date to|结束日期止|終了日/);
@@ -30,7 +30,7 @@ test("Finance primary-contract list is upstream-only and server-paginated", asyn
     await expect(page.locator("#c-sort-direction")).toBeVisible();
 });
 
-test("Finance create and detail navigation stay in the primary-contract context", async ({
+test("Finance receivables is a read-only projection of the contract registry", async ({
     page,
     loginInBrowserAs,
     baseURL,
@@ -38,13 +38,10 @@ test("Finance create and detail navigation stay in the primary-contract context"
     await loginInBrowserAs(page, TEST_USERS.superAdmin);
     await page.goto(`${baseURL}/admin/finance/contracts`, { waitUntil: "domcontentloaded" });
 
-    await page.locator("header").getByRole("button", { name: /Thêm hợp đồng|New contract|新增合同|新規契約/i }).click();
-    const createDialog = page.getByRole("dialog");
-    await expect(page.locator("#c-direction-form")).toHaveCount(0);
-    await expect(page.locator("#c-status-form")).toHaveCount(0);
-    await expect(createDialog.getByText(/Nháp|Draft|草稿|下書き/i)).toBeVisible();
-    await expect(page.getByText(/Đầu ra - Khách hàng|Upstream - Customer|上游 - 客户|上流 - 顧客/i).last()).toBeVisible();
-    await page.getByRole("button", { name: /Huỷ|Hủy|Cancel|取消|キャンセル/i }).click();
+    await expect(page.locator("header").getByRole("button", { name: /Thêm hợp đồng|New contract|新增合同|新規契約/i })).toHaveCount(0);
+    await expect(page.getByText(/góc nhìn Tài chính|Finance view|财务视图|財務ビュー/i)).toBeVisible();
+    await expect(page.getByRole("link", { name: /Mở Sổ hợp đồng|Open Contract registry|打开合同台账|契約台帳を開く/i }))
+        .toHaveAttribute("href", "/admin/contracts?direction=Upstream");
 
     const filteredResponse = page.waitForResponse((response) => {
         const url = new URL(response.url());
@@ -72,6 +69,9 @@ test("Finance create and detail navigation stay in the primary-contract context"
     await row.locator("td").nth(1).click();
     expect((await detailResponse).ok()).toBe(true);
     await expect(page).toHaveURL(/\/admin\/finance\/contracts\/\d+\?/);
+    await expect(page.getByRole("button", { name: /Sửa|Edit|编辑|編集/i })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: /Mở hồ sơ gốc|Open master record|打开主记录|マスターを開く/i }))
+        .toHaveAttribute("href", `/admin/contracts/${contractId}`);
     const returnLink = page.locator('main a[href^="/admin/finance/contracts?"]').first();
     await expect(returnLink).toBeVisible();
     await returnLink.click();
@@ -167,7 +167,7 @@ test("Finance input-contract workspace keeps downstream scope and read-only acco
     });
     await page.goto(`${baseURL}/admin/finance/input-contracts`, { waitUntil: "domcontentloaded" });
     expect((await listResponse).ok()).toBe(true);
-    await expect(page.getByRole("heading", { name: /Hợp đồng đầu vào|Input contracts|下游合同/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Theo dõi phải trả|Payables monitoring|应付跟踪|買掛金管理/i })).toBeVisible();
     await expect(page.locator("#c-direction")).toHaveCount(0);
     await page.getByRole("button", { name: /Bộ lọc nâng cao|Advanced filters|高级筛选|詳細フィルター/i }).click();
     await expect(page.locator("#c-vendor")).toBeVisible();
@@ -192,14 +192,13 @@ test("Finance input-contract workspace keeps downstream scope and read-only acco
     expect((await detailResponse).ok()).toBe(true);
     await expect(page).toHaveURL(new RegExp(`/admin/finance/input-contracts/${contract.id}\\?`));
     await expect(page.locator('main a[href^="/admin/finance/input-contracts?"]').first()).toBeVisible();
+    await expect(page.getByRole("button", { name: /Sửa|Edit|编辑|編集/i })).toHaveCount(0);
 
     await loginInBrowserAs(page, TEST_USERS.superAdmin);
     await page.goto(`${baseURL}/admin/finance/input-contracts`, { waitUntil: "domcontentloaded" });
-    await page.locator("header").getByRole("button", { name: /Thêm hợp đồng|New contract|新增合同|新規契約/i }).click();
-    await expect(page.locator("#c-direction-form")).toHaveCount(0);
-    await expect(page.getByText(/Đầu vào - Đối tác|Downstream - Partner|下游 - 合作方|下流 - パートナー/i).last()).toBeVisible();
-    await expect(page.locator("#c-type-form")).toContainText(/Cung ứng|Supply|供应|供給/i);
-    await expect(page.locator("#c-vendor-form")).toBeVisible();
+    await expect(page.locator("header").getByRole("button", { name: /Thêm hợp đồng|New contract|新增合同|新規契約/i })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: /Mở Sổ hợp đồng|Open Contract registry|打开合同台账|契約台帳を開く/i }))
+        .toHaveAttribute("href", "/admin/contracts?direction=Downstream");
 });
 
 test("Contract pagination and CSV export use every filtered API page", async ({

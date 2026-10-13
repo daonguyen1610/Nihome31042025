@@ -7,7 +7,7 @@ test("customer contract form permits an agreed value without a quote", async ({ 
 
   for (const width of [390, 768]) {
     await page.setViewportSize({ width, height: 844 });
-    await page.goto("/admin/finance/contracts", { waitUntil: "networkidle" });
+    await page.goto("/admin/contracts?direction=Upstream", { waitUntil: "networkidle" });
     await page.getByRole("button", { name: "Thêm hợp đồng" }).first().click();
 
     const dialog = page.getByRole("dialog");

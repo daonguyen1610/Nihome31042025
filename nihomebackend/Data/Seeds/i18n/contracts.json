@@ -2,74 +2,74 @@
   {
     "key": "nav.contracts",
     "category": "nav",
-    "vi": "Hợp đồng",
-    "en": "Contracts",
-    "zh": "合同",
-    "ja": "契約"
+    "vi": "Sổ hợp đồng",
+    "en": "Contract registry",
+    "zh": "合同台账",
+    "ja": "契約台帳"
   },
   {
     "key": "nav.primaryContracts",
     "category": "nav",
-    "vi": "Hợp đồng chính",
-    "en": "Primary contracts",
-    "zh": "主合同",
-    "ja": "主要契約"
+    "vi": "Theo dõi phải thu",
+    "en": "Receivables",
+    "zh": "应收跟踪",
+    "ja": "売掛金管理"
   },
   {
     "key": "nav.inputContracts",
     "category": "nav",
-    "vi": "Hợp đồng đầu vào",
-    "en": "Input contracts",
-    "zh": "下游合同",
-    "ja": "下流契約"
+    "vi": "Theo dõi phải trả",
+    "en": "Payables",
+    "zh": "应付跟踪",
+    "ja": "買掛金管理"
   },
   {
     "key": "contracts.title",
     "category": "contracts",
-    "vi": "Hợp đồng",
-    "en": "Contracts",
-    "zh": "销售合同",
-    "ja": "販売契約"
+    "vi": "Sổ hợp đồng",
+    "en": "Contract registry",
+    "zh": "合同台账",
+    "ja": "契約台帳"
   },
   {
     "key": "contracts.subtitle",
     "category": "contracts",
-    "vi": "Danh sách hợp đồng bán ra theo Sales, khách hàng và tiến độ thực hiện.",
-    "en": "Sales contracts filtered by owner, customer and execution timeline.",
-    "zh": "按负责人、客户和执行时间线过滤的销售合同列表。",
-    "ja": "担当者・顧客・進行状況で絞り込む販売契約一覧。"
+    "vi": "Nguồn dữ liệu hợp đồng dùng chung cho CRM, Tài chính và các module vận hành.",
+    "en": "The shared contract source of truth for CRM, Finance and operational modules.",
+    "zh": "CRM、财务和运营模块共用的合同唯一数据源。",
+    "ja": "CRM、財務、運用モジュールで共有する契約の唯一の管理台帳。"
   },
   {
     "key": "contracts.primary.title",
     "category": "contracts",
-    "vi": "Hợp đồng chính",
-    "en": "Primary contracts",
-    "zh": "主合同",
-    "ja": "主要契約"
+    "vi": "Theo dõi phải thu",
+    "en": "Receivables monitoring",
+    "zh": "应收跟踪",
+    "ja": "売掛金管理"
   },
   {
     "key": "contracts.primary.subtitle",
     "category": "contracts",
-    "vi": "Hợp đồng đầu ra với chủ đầu tư, theo dự án vận hành và phạm vi quyền được cấp.",
-    "en": "Upstream client contracts by operational project and authorized scope.",
-    "zh": "按运营项目和授权范围管理与业主签订的上游合同。",
-    "ja": "運用プロジェクトと権限範囲別の顧客向け上流契約。"
+    "vi": "Theo dõi giá trị, mốc thu và công nợ của hợp đồng đầu ra theo dự án và phạm vi được cấp.",
+    "en": "Monitor values, collection milestones and receivables for upstream contracts within the authorized scope.",
+    "zh": "按授权范围跟踪上游合同的金额、收款节点和应收款。",
+    "ja": "権限範囲内の上流契約について、金額・回収マイルストーン・売掛金を追跡します。"
   },
   {
     "key": "contracts.input.title",
     "category": "contracts",
-    "vi": "Hợp đồng đầu vào",
-    "en": "Input contracts",
-    "zh": "下游合同",
-    "ja": "下流契約"
+    "vi": "Theo dõi phải trả",
+    "en": "Payables monitoring",
+    "zh": "应付跟踪",
+    "ja": "買掛金管理"
   },
   {
     "key": "contracts.input.subtitle",
     "category": "contracts",
-    "vi": "Hợp đồng nhà cung cấp và thầu phụ, nghĩa vụ thanh toán theo dự án vận hành và phạm vi quyền được cấp.",
-    "en": "Supplier and subcontractor contracts and payment obligations by operational project and authorized scope.",
-    "zh": "按运营项目和授权范围管理供应商、分包合同及付款义务。",
-    "ja": "運用プロジェクトと権限範囲別の仕入先・下請契約および支払義務。"
+    "vi": "Theo dõi giá trị, mốc chi và công nợ của hợp đồng nhà cung cấp, thầu phụ theo dự án và phạm vi được cấp.",
+    "en": "Monitor values, payment milestones and payables for supplier and subcontractor contracts within the authorized scope.",
+    "zh": "按授权范围跟踪供应商和分包合同的金额、付款节点和应付款。",
+    "ja": "権限範囲内の仕入先・下請契約について、金額・支払マイルストーン・買掛金を追跡します。"
   },
   {
     "key": "contracts.newContract",
@@ -1685,11 +1685,23 @@
   },
   {
     "key": "contracts.primary.directionLockedHint", "category": "contracts",
-    "vi": "Màn hình Finance chỉ tạo hợp đồng chính với chủ đầu tư.", "en": "Finance creates upstream client contracts on this screen only.", "zh": "财务在此页面仅创建上游业主合同。", "ja": "Financeはこの画面で上流顧客契約のみ作成します。"
+    "vi": "Không gian Tài chính chỉ theo dõi hợp đồng đầu ra; dữ liệu gốc được quản trị tại Sổ hợp đồng.", "en": "Finance monitors upstream contracts here; master data is managed in the Contract registry.", "zh": "财务在此跟踪上游合同；主数据在合同台账中管理。", "ja": "財務では上流契約を追跡し、マスターデータは契約台帳で管理します。"
   },
   {
     "key": "contracts.input.directionLockedHint", "category": "contracts",
-    "vi": "Màn hình này chỉ tạo hợp đồng đầu vào với nhà cung cấp hoặc thầu phụ.", "en": "This screen creates downstream supplier or subcontractor contracts only.", "zh": "此页面仅创建下游供应商或分包合同。", "ja": "この画面では仕入先または下請の下流契約のみ作成します。"
+    "vi": "Không gian Tài chính chỉ theo dõi hợp đồng đầu vào; dữ liệu gốc được quản trị tại Sổ hợp đồng.", "en": "Finance monitors downstream contracts here; master data is managed in the Contract registry.", "zh": "财务在此跟踪下游合同；主数据在合同台账中管理。", "ja": "財務では下流契約を追跡し、マスターデータは契約台帳で管理します。"
+  },
+  {
+    "key": "contracts.finance.masterManagedElsewhere", "category": "contracts",
+    "vi": "Đây là góc nhìn Tài chính trên cùng dữ liệu hợp đồng. Tạo, sửa, chuyển trạng thái và xóa hồ sơ gốc tại Sổ hợp đồng.", "en": "This is a Finance view of the same contract data. Create, edit, transition and delete master records in the Contract registry.", "zh": "这是同一合同数据的财务视图。请在合同台账中创建、编辑、变更状态或删除主记录。", "ja": "同じ契約データの財務ビューです。マスターの作成・編集・状態変更・削除は契約台帳で行います。"
+  },
+  {
+    "key": "contracts.finance.openRegistry", "category": "contracts",
+    "vi": "Mở Sổ hợp đồng", "en": "Open Contract registry", "zh": "打开合同台账", "ja": "契約台帳を開く"
+  },
+  {
+    "key": "contracts.finance.openMasterRecord", "category": "contracts",
+    "vi": "Mở hồ sơ gốc", "en": "Open master record", "zh": "打开主记录", "ja": "マスターを開く"
   },
   {
     "key": "contracts.detail.partialLoadError", "category": "contracts",

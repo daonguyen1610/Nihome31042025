@@ -53,6 +53,7 @@ import { createCsvFilename, downloadCsv } from "@/lib/exportCsv";
 const ENDING_SOON_DAYS = 30;
 const PAGE_SIZE = 20;
 const CONTRACT_TYPES: ContractType[] = ["Unclassified", "Design", "Construction", "DesignAndBuild", "Supply", "Subcontract"];
+const CONTRACT_DIRECTIONS: ContractDirection[] = ["Upstream", "Downstream"];
 
 type ContractListMode = "all" | "upstream" | "downstream";
 type ContractSortBy = NonNullable<ContractListParams["sortBy"]>;
@@ -205,6 +206,8 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const canManage = has(ADMIN_PERMS.contractsManage);
+  const isFinanceWorkspace = mode !== "all";
+  const canManageMaster = canManage && !isFinanceWorkspace;
   const canViewOperationalProjects = has(ADMIN_PERMS.operationalProjects);
   const canCreateOperationalProjects = has(ADMIN_PERMS.operationalProjectsManage);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -258,7 +261,9 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
     ? "Upstream"
     : mode === "downstream" ? "Downstream" : null;
   const [directionFilter, setDirectionFilter] = useState<ContractDirection | "all">(
-    fixedDirection ?? "all",
+    fixedDirection ?? (CONTRACT_DIRECTIONS.includes(searchParams.get("direction") as ContractDirection)
+      ? searchParams.get("direction") as ContractDirection
+      : "all"),
   );
   const [typeFilter, setTypeFilter] = useState<ContractType | "all">(
     CONTRACT_TYPES.includes(searchParams.get("type") as ContractType)
@@ -379,7 +384,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
   }, [classification, directionFilter, fixedDirection, t]);
 
   useEffect(() => {
-    if (!canManage || customers.length > 0) return;
+    if (!canManageMaster || customers.length > 0) return;
     const loadCreateReferences = async () => {
       setReferenceError(null);
       try {
@@ -413,7 +418,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
       }
     };
     void loadCreateReferences();
-  }, [canManage, canViewOperationalProjects, customers.length, t]);
+  }, [canManageMaster, canViewOperationalProjects, customers.length, t]);
 
   useEffect(() => {
     if (mode === "all") return;
@@ -529,7 +534,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
   // Arriving from an opportunity opens the form, with or without a quote.
   // The form validates any missing details before saving.
   useEffect(() => {
-    if (prefillOpportunityId === null) return;
+    if (mode !== "all" || prefillOpportunityId === null) return;
     setForm({
       ...emptyForm,
       direction: fixedDirection ?? emptyForm.direction,
@@ -545,7 +550,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
     setDialogOpen(true);
     void loadSuggestedContractNumber();
     // Runs once per navigation carrying the parameters.
-  }, [fixedDirection, fromQuoteId, loadSuggestedContractNumber, prefillCustomerId, prefillOperationalProjectId, prefillOpportunityId, prefillValue]);
+  }, [fixedDirection, fromQuoteId, loadSuggestedContractNumber, mode, prefillCustomerId, prefillOperationalProjectId, prefillOpportunityId, prefillValue]);
   const patchMilestone = (index: number, patch: Partial<MilestoneDraft>) => {
     setForm((prev) => ({
       ...prev,
@@ -831,13 +836,26 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                 ? t("contracts.exportProgress", exportProgress)
                 : t("contracts.exportCsv")}
             </Button>
-            {canManage && (
+            {canManageMaster && (
               <Button onClick={openCreate}>
                 <Plus className="mr-1.5 h-4 w-4" /> {t("contracts.newContract")}
               </Button>
             )}
           </div>
         </header>
+
+        {isFinanceWorkspace && (
+          <div className="flex flex-col gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900 sm:flex-row sm:items-center sm:justify-between">
+            <p>{t("contracts.finance.masterManagedElsewhere")}</p>
+            {has(ADMIN_PERMS.contracts) && (
+              <Button asChild variant="outline" size="sm" className="shrink-0 bg-white">
+                <Link to={`/admin/contracts?direction=${fixedDirection}`}>
+                  {t("contracts.finance.openRegistry")}
+                </Link>
+              </Button>
+            )}
+          </div>
+        )}
 
         {mode !== "all" && (
           <section className="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label={t("contracts.summary.label")}>
@@ -1095,7 +1113,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
             ) : (
               <>
                 <p>{t("contracts.empty")}</p>
-                {canManage && (
+                {canManageMaster && (
                   <Button size="sm" onClick={openCreate}>
                     <Plus className="mr-1.5 h-4 w-4" /> {t("contracts.newContract")}
                   </Button>
@@ -1179,7 +1197,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                         </>
                       )}
                     </dl>
-                    {canManage && (
+                    {canManageMaster && (
                       <div
                         className="pointer-events-auto mt-3 flex flex-wrap items-center justify-end gap-1 border-t pt-2"
                       >
@@ -1217,7 +1235,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                     {mode !== "all" && <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t(mode === "downstream" ? "contracts.input.nextPayment" : "contracts.field.nextCollection")}</th>}
                     <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("contracts.field.status")}</th>
                     <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("contracts.field.owner")}</th>
-                    {canManage && (
+                    {canManageMaster && (
                       <th className="whitespace-nowrap px-3 py-3 text-right font-medium">{t("common.actions")}</th>
                     )}
                   </tr>
@@ -1283,7 +1301,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                           </Badge>
                         </td>
                         <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground">{row.ownerName ?? "—"}</td>
-                        {canManage && (
+                        {canManageMaster && (
                           <td
                             data-contract-actions
                             className="whitespace-nowrap px-3 py-3 text-right"
