@@ -914,6 +914,10 @@ public class ContractService(
         if (contract is null) return null;
         if (!canSeeAll && contract.OwnerUserId != callerUserId) return null;
 
+        // Schedule synchronization writes child rows before the Contract update.
+        // Reject an already-stale token before any child write; Apply/SaveChanges
+        // below still protects against a race after this initial comparison.
+        CrmConcurrency.EnsureMatches(contract.RowVersion, request.RowVersion);
         CrmConcurrency.Apply(db, contract, request.RowVersion);
         ValidatePaymentMilestones(request.PaymentMilestones);
         await ValidateMilestoneAccountantsAsync(request.PaymentMilestones, ct);
