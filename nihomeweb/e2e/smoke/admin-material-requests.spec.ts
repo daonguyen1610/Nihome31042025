@@ -106,6 +106,16 @@ test("material request list filters and exports within the selected project on m
       }),
     });
   });
+  await page.route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/procurement/boq-revisions(?:\\?.*)?$`), route => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({ total: 0, page: 1, pageSize: 10, items: [] }),
+  }));
+  await page.route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/procurement/warehouse-transactions(?:\\?.*)?$`), route => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({ total: 0, page: 1, pageSize: 20, items: [], stock: [] }),
+  }));
   await page.route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/team$`), route => route.fulfill({
     status: 200,
     contentType: "application/json",
