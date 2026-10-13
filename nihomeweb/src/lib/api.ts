@@ -1,6 +1,8 @@
 import axios from "axios";
 import type { RootState } from "@/store";
-import { newCorrelationId } from "@/lib/logger";
+import { createLogger, newCorrelationId } from "@/lib/logger";
+
+const logger = createLogger("nihomeweb/src/lib/api.ts");
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "/api",
@@ -46,6 +48,42 @@ api.interceptors.request.use((config) => {
   }
   return config;
 });
+
+const readHeader = (headers: unknown, name: string): string | undefined => {
+  if (!headers || typeof headers !== "object") return undefined;
+  const getter = (headers as { get?: (headerName: string) => unknown }).get;
+  const value = typeof getter === "function"
+    ? getter.call(headers, name)
+    : (headers as Record<string, unknown>)[name]
+      ?? (headers as Record<string, unknown>)[name.toLowerCase()];
+  return typeof value === "string" && value.trim() ? value : undefined;
+};
+
+export const getApiCorrelationId = (error: unknown): string | undefined => {
+  if (!axios.isAxiosError(error)) return undefined;
+  return readHeader(error.response?.headers, "X-Correlation-Id")
+    ?? readHeader(error.config?.headers, "X-Correlation-Id");
+};
+
+api.interceptors.response.use(
+  (response) => response,
+  (error: unknown) => {
+    if (axios.isAxiosError(error)) {
+      const method = error.config?.method?.toUpperCase() ?? "UNKNOWN";
+      const path = error.config?.url?.split("?", 1)[0] ?? "unknown";
+      logger.error(
+        `API ${method} ${path} failed with status ${error.response?.status ?? "NETWORK"}`,
+        {
+          apiName: `${method} ${path}`,
+          correlationId: getApiCorrelationId(error),
+          messageType: "api_error",
+          error,
+        },
+      );
+    }
+    return Promise.reject(error);
+  },
+);
 
 /**
  * Build axios request config carrying an Idempotency-Key header so the backend

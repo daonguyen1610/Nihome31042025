@@ -16,7 +16,6 @@ public sealed class RequestLoggingMiddleware(
     public async Task InvokeAsync(HttpContext context)
     {
         var correlationId = ResolveCorrelationId(context);
-        context.TraceIdentifier = correlationId;
         context.Items[CorrelationIdItem] = correlationId;
         context.Response.OnStarting(() =>
         {
@@ -67,6 +66,11 @@ public sealed class RequestLoggingMiddleware(
 
     internal static string ResolveCorrelationId(HttpContext context)
     {
+        if (context.Items[CorrelationIdItem] is string stored && IsValidCorrelationId(stored))
+        {
+            return stored;
+        }
+
         var supplied = context.Request.Headers[CorrelationHeader].FirstOrDefault();
         if (IsValidCorrelationId(supplied))
         {

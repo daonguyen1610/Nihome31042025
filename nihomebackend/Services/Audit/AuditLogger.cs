@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Threading.Channels;
 using Microsoft.AspNetCore.Http;
+using NihomeBackend.Infrastructure.Logging;
 
 namespace NihomeBackend.Services.Audit;
 
@@ -106,9 +107,7 @@ public sealed class AuditLogger(
 
     private static string? ResolveCorrelationId(HttpContext ctx)
     {
-        // RequestLoggingMiddleware validates the caller-provided header and
-        // stores the normalized value in TraceIdentifier.
-        return TrimNullable(ctx.TraceIdentifier, 80);
+        return TrimNullable(RequestLoggingMiddleware.ResolveCorrelationId(ctx), 80);
     }
 
     private static string? ResolveIp(HttpContext ctx)

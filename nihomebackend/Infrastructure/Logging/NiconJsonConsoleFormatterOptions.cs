@@ -8,4 +8,6 @@ public sealed class NiconJsonConsoleFormatterOptions : ConsoleFormatterOptions
     public string ApiName { get; set; } = "Nihome API";
     public string MessageType { get; set; } = "application_log";
     public string SourceRoot { get; set; } = "nihomebackend";
+    public Dictionary<string, string> SourcePathOverrides { get; set; } =
+        new(StringComparer.Ordinal);
 }

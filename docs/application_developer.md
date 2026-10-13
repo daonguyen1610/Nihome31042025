@@ -343,8 +343,12 @@ Every application log is emitted as one JSON object with this contract:
 ```
 
 For application `ILogger<T>` categories, `logger` is the logical repository
-source path derived from the .NET category. Framework categories that do not
-have a repository source file retain their category name. Browser code must use
+source path derived from the .NET category. Classes declared in a differently
+named source file must be listed in `Logging:Json:SourcePathOverrides`.
+Framework categories that do not have a repository source file retain their
+category name. Structured message-template values are retained under
+`properties` with snake-case keys in addition to the four required identity
+fields. Browser code must use
 `createLogger(source)` from `nihomeweb/src/lib/logger.ts`; browser process and
 thread values are represented by a generated browser-session id and
 `browser-main` because the browser does not expose OS process/thread ids.
@@ -352,10 +356,15 @@ thread values are represented by a generated browser-session id and
 The frontend adds a unique `X-Correlation-Id` to each API request. The backend
 validates it, creates a safe id when it is absent or invalid, exposes the
 normalized id in the response header, and places it in the logging scope for
-all downstream controller and service logs. Deployment log collectors should
-parse one JSON object per console line. Supervisor output such as `dotnet watch`
-status messages is outside the application logging provider and is not part of
-this contract.
+all downstream controller and service logs. The server-generated
+`HttpContext.TraceIdentifier` remains the unique request id and is not replaced
+by a client correlation id. The frontend API error logger reuses the request or
+response correlation id so browser and backend failures can be queried
+together. Background logs use a process-scoped correlation fallback when no
+request or activity exists. Deployment log collectors should parse one JSON
+object per console line. Supervisor output such as `dotnet watch` status
+messages is outside the application logging provider and is not part of this
+contract.
 
 ### 5.2 Docker Compose Environment Variables
 
