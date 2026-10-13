@@ -60,16 +60,32 @@ public sealed class ProjectAccessService(AppDbContext db, IPermissionService per
 
         return await db.OperationalProjects.AsNoTracking().AnyAsync(project =>
             project.Id == projectId &&
-            (project.ProjectManagerUserId == userId ||
-             project.DesignProject != null &&
+            (project.DesignProject != null &&
                  (project.DesignProject.ProjectManagerUserId == userId ||
                   project.DesignProject.DesignLeadUserId == userId) ||
              project.TeamMembers.Any(member =>
                  member.UserId == userId &&
                  member.EndedAt == null &&
                  member.Roles.Any(role => role.EndedAt == null &&
-                     (role.RoleCode == ProjectTeamRoleCode.ProjectManager ||
-                      role.RoleCode == ProjectTeamRoleCode.DesignLead) &&
+                    role.RoleCode == ProjectTeamRoleCode.DesignLead &&
+                     (role.Scope == ProjectRoleScope.Project ||
+                      role.Scope == ProjectRoleScope.Module && role.ScopeValue == "Design")))), ct);
+    }
+
+    public async Task<bool> CanManageDesignDocumentsAsync(
+        int userId, int operationalProjectId, CancellationToken ct = default)
+    {
+        if (!await permissions.HasAsync(userId, "design.projects.manage", ct)) return false;
+        if (await HasAdministrativeBypassAsync(userId, ct))
+            return await db.OperationalProjects.AsNoTracking()
+                .AnyAsync(project => project.Id == operationalProjectId, ct);
+        return await db.OperationalProjects.AsNoTracking().AnyAsync(project =>
+            project.Id == operationalProjectId && project.DesignProject != null &&
+            (project.DesignProject.ProjectManagerUserId == userId ||
+             project.DesignProject.DesignLeadUserId == userId ||
+             project.TeamMembers.Any(member => member.UserId == userId && member.EndedAt == null &&
+                 member.Roles.Any(role => role.EndedAt == null &&
+                     role.RoleCode == ProjectTeamRoleCode.DesignLead &&
                      (role.Scope == ProjectRoleScope.Project ||
                       role.Scope == ProjectRoleScope.Module && role.ScopeValue == "Design")))), ct);
     }

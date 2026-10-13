@@ -275,6 +275,9 @@ public class BasicDesignDocService(
             .Include(document => document.DesignProject)
             .FirstOrDefaultAsync(d => d.Id == id, ct);
         if (entity is null) return false;
+        if (entity.Status != BasicDesignDocStatus.Rejected)
+            throw new BasicDesignDocOperationException(
+                "Chỉ hồ sơ Basic Design bị từ chối mới được xóa vĩnh viễn.");
         if (entity.DesignProject.CurrentStage == DesignProjectStage.Concept)
         {
             throw new BasicDesignDocOperationException(
@@ -489,6 +492,31 @@ public class BasicDesignDocService(
             throw new BasicDesignDocOperationException(
                 $"Chưa đủ hồ sơ duyệt nội bộ cho các bộ môn: {string.Join(", ", missing)}.");
         }
+
+        var review = await db.DesignReviews.AsNoTracking()
+            .Where(item => item.DesignProjectId == designProjectId &&
+                item.Stage == DesignReviewStage.BasicDesign)
+            .Include(item => item.Documents).ThenInclude(item => item.ProjectDocument)
+            .OrderByDescending(item => item.RevisionNumber)
+            .FirstOrDefaultAsync(ct);
+        var validDocumentIds = review?.Documents.Where(document =>
+                document.SourceEntityTypeSnapshot == nameof(BasicDesignDoc) &&
+                document.ProjectDocument.DeletedAt == null &&
+                document.ProjectDocument.SyncStatus == ProjectDocumentSyncStatus.Synced &&
+                document.ProjectDocument.Sha256 == document.Sha256Snapshot)
+            .Select(document => (int)document.SourceRecordIdSnapshot).Distinct().ToList() ?? [];
+        var clientApprovedDisciplines = await db.BasicDesignDocs.AsNoTracking()
+            .Where(item => validDocumentIds.Contains(item.Id) &&
+                item.DesignProjectId == designProjectId &&
+                (item.Status == BasicDesignDocStatus.InternallyApproved ||
+                 item.Status == BasicDesignDocStatus.SubmittedForPermit ||
+                 item.Status == BasicDesignDocStatus.PermitApproved))
+            .Select(item => item.DisciplineCode).Distinct().ToListAsync(ct);
+        if (review?.Status != DesignReviewStatus.ClientApproved ||
+            readiness.RequiredDisciplineCodes.Any(code =>
+                !clientApprovedDisciplines.Contains(code, StringComparer.OrdinalIgnoreCase)))
+            throw new BasicDesignDocOperationException(
+                "Hồ sơ khách duyệt phải bao phủ đúng tài liệu Basic Design đã duyệt nội bộ của mọi bộ môn bắt buộc.");
 
         project.CurrentStage = DesignProjectStage.ShopDrawing;
         project.UpdatedAt = DateTime.UtcNow;

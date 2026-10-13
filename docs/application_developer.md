@@ -1684,6 +1684,52 @@ planned and actual dates, ownership, department, progress, milestones, and
 Finish-to-Start predecessor relationships, then derives traceable weighted
 progress for each phase and the complete design schedule.
 
+Each task stores one active `ApproverMemberId` distinct from the assignee,
+optional CC members, description, parent task, resource/subcontractor summary,
+and critical-path flag. Generic task updates cannot write `Completed`; the
+assignee calls `POST .../tasks/{id}/complete`, which records completion and
+automatically routes the task to `Pending` approval. Only the assigned approver
+can call `POST .../tasks/{id}/review`; rejection requires a reason and returns
+the task to `InProgress`. Both paths enforce row-version concurrency and retain
+history/notifications.
+
+Before applying `AddDesignApprovalWorkflow` to an environment with existing
+schedule tasks, assign every Design Project an active Design Lead or Design
+Manager who is also an active Operational Project member and differs from each
+task assignee. The migration backfills that member and deliberately aborts
+instead of inventing an approver when no valid assignment exists. Rehearse this
+preflight and the generated migration script against a production-like backup;
+the rollback drops approval/CC data and is therefore schema-reversible but not
+data-preserving for newly entered approval history.
+
+`EnsureDesignReviewEvidenceSnapshot` is a forward-only compatibility repair
+for environments that applied `AddDesignReviewWorkflow` before the immutable
+source snapshot columns were introduced. It adds only missing columns/indexes,
+backfills them from the linked Project Document, and aborts if any review
+evidence cannot be resolved. Generate and inspect the migration script, rehearse
+it against a production-like backup, and verify there are no unresolved review
+evidence rows before deployment. Its `Down` method is intentionally
+non-destructive; the owning `AddDesignReviewWorkflow` migration removes the
+review schema during a complete rollback.
+
+Design dossier circulation is exposed at
+`/api/design-projects/{projectId}/reviews`. A Design Manager creates a revision
+with designated internal recipients and Project Document IDs from the matching
+Design category. Recipients can only list their assigned reviews and comment
+while the review is internal. The Design Manager consolidates feedback, records
+submission to the client, and records the client decision. Concept finalization,
+Basic-to-Shop unlock, and IFC release require the latest matching review to be
+`ClientApproved`.
+
+Permanent deletion of Concept, Basic Design, Shop Drawing and IFC records uses
+`GET /api/<resource>/{id}/deletion-impact` followed by `DELETE` with
+`ConfirmDeletionRequest`. The server recomputes the deterministic plan inside a
+serializable transaction. Only `Discarded` Concept, `Rejected` Basic/Shop and
+`Cancelled` IFC records are eligible. Active Project Documents, shared review
+evidence and IFC references block deletion; exclusive review history is deleted
+with the rejected dossier. Bulk Shop Drawing deletion is intentionally disabled
+because every root requires an individual impact plan and typed confirmation.
+
 #### Actors and Permissions
 
 - A caller with `operations.projects.view` may read only an Operational Project

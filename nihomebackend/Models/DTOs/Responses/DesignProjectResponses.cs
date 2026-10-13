@@ -14,6 +14,8 @@ public class DesignProjectResponse
     public int? ContractId { get; set; }
     public string? ContractNumber { get; set; }
 
+    public int? DesignManagerUserId { get; set; }
+    public string? DesignManagerName { get; set; }
     public int? ProjectManagerUserId { get; set; }
     public string? ProjectManagerName { get; set; }
 
@@ -48,6 +50,8 @@ public class DesignProjectListItemResponse
     public int? ContractId { get; set; }
     public string? ContractNumber { get; set; }
 
+    public int? DesignManagerUserId { get; set; }
+    public string? DesignManagerName { get; set; }
     public int? ProjectManagerUserId { get; set; }
     public string? ProjectManagerName { get; set; }
 

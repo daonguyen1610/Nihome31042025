@@ -155,10 +155,18 @@ thực hiện theo quyền và điều kiện an toàn dữ liệu hiện có.
 
 ### G2 — Phát hành hồ sơ thi công
 
-- Concept được chốt trước khi mở giai đoạn tiếp theo.
-- Basic Design đủ điều kiện nội bộ/pháp lý theo loại công trình.
+- Nhân viên hoàn thành đầu việc Thiết kế → hệ thống tự chuyển cho đúng một
+  Design Lead/người duyệt đã chỉ định; CC chỉ nhận thông tin. Đầu việc bị trả
+  lại quay về `InProgress` kèm lý do.
+- Design Manager chọn hồ sơ Project Documents và người nhận Kinh doanh/CM/lãnh
+  đạo → người được chỉ định chỉ xem, bình luận → Design Manager tổng hợp → ghi
+  nhận đã trình khách → ghi nhận quyết định khách hàng.
+- Concept chỉ được chốt khi revision Concept mới nhất là `ClientApproved`.
+- Basic Design chỉ mở Shop Drawing khi đủ điều kiện nội bộ/pháp lý và revision
+  Basic Design mới nhất là `ClientApproved`.
 - Shop/Detailed Drawing được duyệt, đưa vào gói IFC và phát hành phiên bản cụ
-  thể. Chỉ revision IFC đã phát hành mới được dùng làm chỉ dẫn thi công.
+  thể sau khi revision Shop Drawing mới nhất là `ClientApproved`. Chỉ revision
+  IFC đã phát hành mới được dùng làm chỉ dẫn thi công.
 
 ### G3 — Pháp lý
 
@@ -354,9 +362,9 @@ khóa là snapshot bất biến.
 
 1. Q-05: quy ước mã dự án chi tiết. Cơ cấu Cung ứng/Pháp lý đã được đối chiếu
    với sơ đồ tổ chức NICON cập nhật ngày 11/10/2026.
-2. Q-06–Q-10: trình nội bộ, CC mặc định, quyền xóa và phân vai Design
-   Lead/Design Manager.
-3. Q-09/Q-11: template giấy phép và cách hiển thị team/tiến độ Thiết kế.
+2. Q-09: template giấy phép theo loại/quy mô Dự án.
+3. Q-11: hợp đồng import MS Project đầy đủ gồm calendar, baseline và dữ liệu
+   phân cấp; Team và Tiến độ hiện được tách thành hai tab liên kết.
 4. Công thức/kỳ chốt S-Curve; quyền publish/unlock baseline; điều kiện VO.
 5. Checklist QA/QC, hồ sơ ISO và cổng khởi công theo từng loại công trình.
 6. Thành phần hồ sơ thanh toán Upstream/Downstream và ma trận three-way matching

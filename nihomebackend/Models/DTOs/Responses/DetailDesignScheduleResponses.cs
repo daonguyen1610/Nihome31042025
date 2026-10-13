@@ -37,8 +37,13 @@ public sealed class DesignScheduleTaskResponse
     public string PhaseCode { get; set; } = string.Empty;
     public string Code { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
+    public string? Description { get; set; }
     public string DepartmentCode { get; set; } = string.Empty;
     public int AssigneeMemberId { get; set; }
+    public int ApproverMemberId { get; set; }
+    public int? ParentTaskId { get; set; }
+    public string? ResourceSummary { get; set; }
+    public bool IsCritical { get; set; }
     public bool IsMilestone { get; set; }
     public DateOnly PlannedStart { get; set; }
     public DateOnly PlannedEnd { get; set; }
@@ -49,6 +54,14 @@ public sealed class DesignScheduleTaskResponse
     public int Weight { get; set; }
     public bool Overdue { get; set; }
     public List<int> PredecessorTaskIds { get; set; } = new();
+    public List<int> SuccessorTaskIds { get; set; } = new();
+    public List<int> CcMemberIds { get; set; } = new();
+    public string ApprovalStatus { get; set; } = string.Empty;
+    public DateTime? SubmittedAt { get; set; }
+    public int? SubmittedByUserId { get; set; }
+    public DateTime? ReviewedAt { get; set; }
+    public int? ReviewedByUserId { get; set; }
+    public string? ReviewComment { get; set; }
     public string RowVersion { get; set; } = string.Empty;
 }
 

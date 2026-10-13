@@ -928,6 +928,7 @@ export interface DepartmentWorkTaskResponse {
   verifiedByUserId?: number | null;
   ccUserIds: number[];
   predecessorTaskIds: number[];
+  successorTaskIds: number[];
   canUpdateProgress: boolean;
   canVerify: boolean;
   rowVersion: string;
@@ -2989,6 +2990,8 @@ export interface DesignProjectResponse {
   operationalProjectId?: number | null;
   contractId?: number | null;
   contractNumber?: string | null;
+  designManagerUserId?: number | null;
+  designManagerName?: string | null;
   projectManagerUserId?: number | null;
   projectManagerName?: string | null;
   designLeadUserId?: number | null;
@@ -3011,6 +3014,8 @@ export interface DesignProjectListItemResponse {
   operationalProjectId?: number | null;
   contractId?: number | null;
   contractNumber?: string | null;
+  designManagerUserId?: number | null;
+  designManagerName?: string | null;
   projectManagerUserId?: number | null;
   projectManagerName?: string | null;
   designLeadUserId?: number | null;
@@ -3032,6 +3037,7 @@ export interface DesignProjectListResponse {
 export interface DesignProjectListParams {
   customerId?: number;
   contractId?: number;
+  designManagerUserId?: number;
   projectManagerUserId?: number;
   designLeadUserId?: number;
   /** Comma-separated `DesignProjectStage` values. */
@@ -3050,6 +3056,7 @@ export interface CreateDesignProjectRequest {
   customerId: number;
   operationalProjectId?: number | null;
   contractId?: number | null;
+  designManagerUserId?: number | null;
   projectManagerUserId?: number | null;
   designLeadUserId?: number | null;
   startDate?: string | null;
@@ -3106,10 +3113,16 @@ export interface UpsertDesignSchedulePhaseRequest {
 export interface UpsertDesignScheduleTaskRequest extends UpsertDesignSchedulePhaseRequest {
   code: string;
   name: string;
+  description?: string | null;
   departmentCode: string;
   assigneeMemberId: number;
+  approverMemberId: number;
+  parentTaskId?: number | null;
+  resourceSummary?: string | null;
+  isCritical: boolean;
   isMilestone: boolean;
   predecessorTaskIds: number[];
+  ccMemberIds: number[];
 }
 
 export interface DesignScheduleQuery {
@@ -3146,8 +3159,13 @@ export interface DesignScheduleTaskResponse {
   phaseCode: DesignSchedulePhaseCode;
   code: string;
   name: string;
+  description?: string | null;
   departmentCode: string;
   assigneeMemberId: number;
+  approverMemberId: number;
+  parentTaskId?: number | null;
+  resourceSummary?: string | null;
+  isCritical: boolean;
   isMilestone: boolean;
   plannedStart: string;
   plannedEnd: string;
@@ -3158,6 +3176,39 @@ export interface DesignScheduleTaskResponse {
   weight: number;
   overdue: boolean;
   predecessorTaskIds: number[];
+  successorTaskIds: number[];
+  ccMemberIds: number[];
+  approvalStatus: "NotSubmitted" | "Pending" | "Approved" | "Rejected";
+  submittedAt?: string | null;
+  submittedByUserId?: number | null;
+  reviewedAt?: string | null;
+  reviewedByUserId?: number | null;
+  reviewComment?: string | null;
+  rowVersion: string;
+}
+
+export type DesignReviewStage = "Concept" | "BasicDesign" | "ShopDrawing";
+export type DesignReviewStatus = "Draft" | "InternalReview" | "ReadyForClient" | "SubmittedToClient" | "ClientChangesRequested" | "ClientApproved" | "Rejected";
+export interface DesignReviewResponse {
+  id: number;
+  designProjectId: number;
+  stage: DesignReviewStage;
+  revisionNumber: number;
+  title: string;
+  status: DesignReviewStatus;
+  designManagerUserId: number;
+  designManagerName?: string | null;
+  internalSummary?: string | null;
+  internalSubmittedAt?: string | null;
+  clientSubmittedAt?: string | null;
+  clientDecisionNote?: string | null;
+  clientDecidedAt?: string | null;
+  canManage: boolean;
+  canComment: boolean;
+  recipients: { userId: number; name: string }[];
+  comments: { id: number; authorUserId: number; authorName: string; body: string; createdAt: string }[];
+  projectDocumentIds: number[];
+  documents: { projectDocumentId: number; originalFileName: string; sourceEntityType: string; sourceRecordId: number; sha256: string }[];
   rowVersion: string;
 }
 
@@ -5424,6 +5475,35 @@ export const adminApi = {
       ...withIfMatch(body.rowVersion).headers,
     } },
   ),
+  completeDesignScheduleTask: (projectId: number, taskId: number, rowVersion: string, idempotencyKey: string) =>
+    api.post<DesignScheduleTaskResponse>(
+      `/operational-projects/${projectId}/design-schedule/tasks/${taskId}/complete`,
+      { rowVersion },
+      { headers: { ...withIdempotencyKey(idempotencyKey).headers, ...withIfMatch(rowVersion).headers } },
+    ),
+  reviewDesignScheduleTask: (projectId: number, taskId: number, approved: boolean, comment: string | null, rowVersion: string, idempotencyKey: string) =>
+    api.post<DesignScheduleTaskResponse>(
+      `/operational-projects/${projectId}/design-schedule/tasks/${taskId}/review`,
+      { decision: approved ? "Approve" : "Reject", comment, rowVersion },
+      { headers: { ...withIdempotencyKey(idempotencyKey).headers, ...withIfMatch(rowVersion).headers } },
+    ),
+  listDesignReviews: (projectId: number) => api.get<DesignReviewResponse[]>(`/design-projects/${projectId}/reviews`),
+  listDesignReviewRecipientCandidates: (projectId: number) =>
+    api.get<Array<{ userId: number; name: string }>>(`/design-projects/${projectId}/reviews/recipient-candidates`),
+  downloadDesignReviewDocument: (projectId: number, reviewId: number, documentId: number) =>
+    api.get<Blob>(`/design-projects/${projectId}/reviews/${reviewId}/documents/${documentId}/content`, { responseType: "blob" }),
+  createDesignReview: (projectId: number, body: { stage: DesignReviewStage; title: string; recipientUserIds: number[]; projectDocumentIds: number[] }, key: string) =>
+    api.post<DesignReviewResponse>(`/design-projects/${projectId}/reviews`, body, withIdempotencyKey(key)),
+  submitDesignReviewInternal: (projectId: number, reviewId: number, rowVersion: string, key: string) =>
+    api.post<DesignReviewResponse>(`/design-projects/${projectId}/reviews/${reviewId}/submit-internal`, { rowVersion }, { headers: { ...withIdempotencyKey(key).headers, ...withIfMatch(rowVersion).headers } }),
+  commentDesignReview: (projectId: number, reviewId: number, body: string, key: string) =>
+    api.post<DesignReviewResponse>(`/design-projects/${projectId}/reviews/${reviewId}/comments`, { body }, withIdempotencyKey(key)),
+  consolidateDesignReview: (projectId: number, reviewId: number, internalSummary: string, rowVersion: string, key: string) =>
+    api.post<DesignReviewResponse>(`/design-projects/${projectId}/reviews/${reviewId}/consolidate`, { internalSummary, rowVersion }, { headers: { ...withIdempotencyKey(key).headers, ...withIfMatch(rowVersion).headers } }),
+  submitDesignReviewClient: (projectId: number, reviewId: number, rowVersion: string, key: string) =>
+    api.post<DesignReviewResponse>(`/design-projects/${projectId}/reviews/${reviewId}/submit-client`, { rowVersion }, { headers: { ...withIdempotencyKey(key).headers, ...withIfMatch(rowVersion).headers } }),
+  recordDesignClientDecision: (projectId: number, reviewId: number, decision: "ClientApproved" | "ClientChangesRequested" | "Rejected", note: string | null, rowVersion: string, key: string) =>
+    api.post<DesignReviewResponse>(`/design-projects/${projectId}/reviews/${reviewId}/client-decision`, { decision, note, rowVersion }, { headers: { ...withIdempotencyKey(key).headers, ...withIfMatch(rowVersion).headers } }),
 
   getHardDeleteOperation: (operationId: string) =>
     api.get<HardDeleteOperationResult>(`/hard-delete-operations/${operationId}`),
@@ -5477,8 +5557,10 @@ export const adminApi = {
     api.post<ConceptOptionResponse>("/concept-options", body),
   updateConceptOption: (id: number, body: UpdateConceptOptionRequest) =>
     api.put<ConceptOptionResponse>(`/concept-options/${id}`, body),
-  deleteConceptOption: (id: number) =>
-    api.delete(`/concept-options/${id}`),
+  getConceptOptionDeletionImpact: (id: number) =>
+    api.get<DeletionImpactResponse>(`/concept-options/${id}/deletion-impact`),
+  deleteConceptOption: (id: number, body: ConfirmDeletionRequest) =>
+    api.delete(`/concept-options/${id}`, { data: body }),
   transitionConceptOption: (id: number, body: TransitionConceptOptionStatusRequest) =>
     api.post<ConceptOptionResponse>(`/concept-options/${id}/status`, body),
 
@@ -5502,8 +5584,10 @@ export const adminApi = {
     api.post<BasicDesignDocResponse>("/basic-design-docs", body),
   updateBasicDesignDoc: (id: number, body: UpdateBasicDesignDocRequest) =>
     api.put<BasicDesignDocResponse>(`/basic-design-docs/${id}`, body),
-  deleteBasicDesignDoc: (id: number) =>
-    api.delete(`/basic-design-docs/${id}`),
+  getBasicDesignDocDeletionImpact: (id: number) =>
+    api.get<DeletionImpactResponse>(`/basic-design-docs/${id}/deletion-impact`),
+  deleteBasicDesignDoc: (id: number, body: ConfirmDeletionRequest) =>
+    api.delete(`/basic-design-docs/${id}`, { data: body }),
   transitionBasicDesignDoc: (id: number, body: TransitionBasicDesignDocStatusRequest) =>
     api.post<BasicDesignDocResponse>(`/basic-design-docs/${id}/status`, body),
   uploadBasicDesignDocFile: (id: number, file: File) => {
@@ -5537,8 +5621,10 @@ export const adminApi = {
     api.post<ShopDrawingResponse>("/shop-drawings", body),
   updateShopDrawing: (id: number, body: UpdateShopDrawingRequest) =>
     api.put<ShopDrawingResponse>(`/shop-drawings/${id}`, body),
-  deleteShopDrawing: (id: number) =>
-    api.delete(`/shop-drawings/${id}`),
+  getShopDrawingDeletionImpact: (id: number) =>
+    api.get<DeletionImpactResponse>(`/shop-drawings/${id}/deletion-impact`),
+  deleteShopDrawing: (id: number, body: ConfirmDeletionRequest) =>
+    api.delete(`/shop-drawings/${id}`, { data: body }),
   bulkDeleteShopDrawings: (body: BulkDeleteShopDrawingsRequest) =>
     api.post<ShopDrawingBulkDeleteResponse>("/shop-drawings/bulk-delete", body),
   transitionShopDrawing: (id: number, body: TransitionShopDrawingStatusRequest) =>
@@ -5588,8 +5674,10 @@ export const adminApi = {
     api.post<IfcReleaseResponse>("/ifc-releases", body),
   updateIfcRelease: (id: number, body: UpdateIfcReleaseRequest) =>
     api.put<IfcReleaseResponse>(`/ifc-releases/${id}`, body),
-  deleteIfcRelease: (id: number) =>
-    api.delete(`/ifc-releases/${id}`),
+  getIfcReleaseDeletionImpact: (id: number) =>
+    api.get<DeletionImpactResponse>(`/ifc-releases/${id}/deletion-impact`),
+  deleteIfcRelease: (id: number, body: ConfirmDeletionRequest) =>
+    api.delete(`/ifc-releases/${id}`, { data: body }),
   addIfcReleaseItems: (id: number, body: AddIfcReleaseItemsRequest) =>
     api.post<IfcReleaseResponse>(`/ifc-releases/${id}/items`, body),
   removeIfcReleaseItem: (id: number, itemId: number) =>
@@ -6168,10 +6256,21 @@ export const adminApi = {
     api.get<ProjectDocumentCategoryResponse[]>("/operational-projects/document-categories"),
   listProjectDocuments: (projectId: number) =>
     api.get<ProjectDocumentResponse[]>(`/operational-projects/${projectId}/documents`),
-  uploadProjectDocument: (projectId: number, file: File, category: string, idempotencyKey: string) => {
+  uploadProjectDocument: (
+    projectId: number,
+    file: File,
+    category: string,
+    idempotencyKey: string,
+    source?: { module: string; entityType: string; recordId: number },
+  ) => {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("category", category);
+    if (source) {
+      formData.append("sourceModule", source.module);
+      formData.append("sourceEntityType", source.entityType);
+      formData.append("sourceRecordId", String(source.recordId));
+    }
     return api.post<ProjectDocumentResponse>(
       `/operational-projects/${projectId}/documents`,
       formData,

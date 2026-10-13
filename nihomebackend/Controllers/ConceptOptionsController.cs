@@ -21,6 +21,7 @@ namespace NihomeBackend.Controllers;
 [Authorize]
 public class ConceptOptionsController(
     IConceptOptionService svc,
+    IDesignRecordDeletionService deletion,
     IPermissionService permissions,
     IProjectAccessService projectAccess,
     IAuditLogger audit) : ControllerBase
@@ -109,17 +110,30 @@ public class ConceptOptionsController(
         }
     }
 
-    [HttpDelete("{id:int}")]
-    [RequirePermission("design.concepts", "manage")]
-    public async Task<IActionResult> Delete(int id, CancellationToken ct)
+    [HttpGet("{id:int}/deletion-impact")]
+    [RequirePermission("design.records", "hard-delete")]
+    public async Task<ActionResult<DeletionImpactResponse>> GetDeletionImpact(int id, CancellationToken ct)
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
-        if (!await CanAccessAsync(userId.Value, id, manage: true, ct)) return NotFound();
+        if (!await CanAccessAsync(userId.Value, id, manage: false, ct)) return NotFound();
+        var impact = await deletion.GetImpactAsync(DesignProjectResourceType.ConceptOption, id, ct);
+        return impact is null ? NotFound() : Ok(impact);
+    }
+
+    [HttpDelete("{id:int}")]
+    [RequirePermission("design.records", "hard-delete")]
+    public async Task<IActionResult> Delete(
+        int id, [FromBody] ConfirmDeletionRequest request, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        if (!await CanAccessAsync(userId.Value, id, manage: false, ct)) return NotFound();
 
         try
         {
-            var removed = await svc.DeleteAsync(id, ct);
+            var removed = await deletion.DeleteAsync(
+                DesignProjectResourceType.ConceptOption, id, request, ct);
             if (!removed) return NotFound();
             audit.Log(new AuditEvent
             {
@@ -133,6 +147,14 @@ public class ConceptOptionsController(
         catch (ConceptOptionOperationException ex)
         {
             return BadRequest(new { message = ex.Message });
+        }
+        catch (DesignRecordDeletionException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (DeletionPlanChangedException ex)
+        {
+            return Conflict(new { message = ex.Message });
         }
     }
 

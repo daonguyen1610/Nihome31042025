@@ -158,6 +158,7 @@
     { "module": "design.projects", "action": "view" },
     { "module": "design.projects", "action": "manage" },
     { "module": "design.schedule", "action": "manage" },
+    { "module": "design.records", "action": "hard-delete" },
     { "module": "design.concepts", "action": "view" },
     { "module": "design.concepts", "action": "manage" },
     { "module": "design.concepts", "action": "finalize" },
@@ -355,12 +356,14 @@
         "work.packages.view",
         "work.packages.progress", "work.packages.verify",
         "analytics.kpi.view",
-        "design.projects.view",
+        "design.projects.view", "design.projects.manage", "design.schedule.manage",
         "design.concepts.view", "design.concepts.manage",
         "design.basic.view", "design.basic.manage",
         "design.shop.view", "design.shop.manage",
         "design.revisions.**",
-        "design.ifc.view",
+        "design.ifc.view", "design.ifc.manage", "design.ifc.release",
+        "proc.vendors.view", "proc.vendors.manage", "proc.rfqs.view", "proc.rfqs.manage",
+        "crm.contracts.view", "crm.contracts.view.downstream.all",
         "construction.tasks.view",
         "construction.diary.view",
         "construction.punch.view",
@@ -592,7 +595,7 @@
       "patterns": ["dashboard.view", "processes.view", "master-data.view", "workflow.view", "operations.projects.view", "work.packages.view", "work.packages.progress", "work.packages.verify", "proc.vendors.view", "proc.boq.view", "proc.material-requests.view", "proc.warehouse.*", "proc.material-alerts.view", "profile.me.*"]
     },
     "BGD": {
-      "patterns": ["dashboard.view", "**.view", "**.view.all", "analytics.kpi.manage", "analytics.kpi.export", "reports.projects.export", "proc.rfqs.award", "proc.rfqs.export", "crm.tenders.approve-estimate", "proc.boq.approve", "proc.material-requests.approve", "proc.vendor-ratings.approve", "finance.payments.approve", "finance.periods.close", "finance.corrections.approve", "finance.corrections.reverse", "system.audit.view", "profile.me.*"]
+      "patterns": ["dashboard.view", "**.view", "**.view.all", "analytics.kpi.manage", "analytics.kpi.export", "reports.projects.export", "proc.rfqs.award", "proc.rfqs.export", "crm.tenders.approve-estimate", "proc.boq.approve", "proc.material-requests.approve", "proc.vendor-ratings.approve", "finance.payments.approve", "finance.periods.close", "finance.corrections.approve", "finance.corrections.reverse", "design.records.hard-delete", "system.audit.view", "profile.me.*"]
     }
   }
 }

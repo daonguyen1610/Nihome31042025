@@ -173,7 +173,7 @@ The platform is being developed incrementally. The following components are curr
 | Quotations, capability documents, and tenders | Implemented, including governed material-rate pricing, localized Excel quotation workbooks, and versioned Tender estimates |
 | Site survey digitization | Implemented, including project routing, structured conditions, CSV import, media/geolocation, Drive sync, and PDF export |
 | Customer contracts, appendices, attachments, and variation orders | Implemented |
-| Design management | Core lifecycle implemented: projects, Concept metadata, Basic/Shop file upload and preview, revisions, IFC, Operational Project team and design schedule. Concept media/feedback threads, markup, the final Design Lead/Design Manager approval contract, and full MS Project import remain planned/open |
+| Design management | Implemented: projects, Concept/Basic/Shop/IFC, Project Documents with Drive sync, linked Team/Schedule, one-approver task completion, CC, internal comment-only circulation, Design Manager consolidation and client decision gates. Concept markup and full MS Project import remain planned |
 | Permitting checklists | Core checklist implemented: owner/deadline, lifecycle, submitted/issued documents and risk filters. Project-type templates, work packages and construction-readiness integration remain planned/open |
 | Construction management (tasks/Gantt and site diaries) | Core functions implemented; the expanded CM preparation, BCH resource/QA-QC/QS portals, S-Curve threshold control, and Budget Baseline workflow are planned |
 | Acceptance and handover | Core records implemented; upstream/downstream QS payment linkage and the expanded two-level CM review are planned |
@@ -185,6 +185,13 @@ The platform is being developed incrementally. The following components are curr
 | Google Drive integration | Implemented for current Operational Project file sources; deployment activation and live credentials are required. Survey and CRM Pre-Design remain separate configurable categories pending an approved topology migration |
 | Dashboard and analytics | Partially implemented — operational dashboard exists; full cross-module reporting is pending |
 | KPI | 19 metrics across six current scorecard groups are implemented; the complete NICON 11-position framework is not yet delivered |
+
+BGD or SUPER_ADMIN can permanently delete only a failed/cancelled design
+dossier. Open the deletion impact dialog, resolve every file, IFC or shared
+review blocker, then type the exact dossier code shown by the dialog. The plan
+expires when related data changes, so refresh the impact before retrying. Shop
+Drawing bulk deletion is not available because each dossier must be reviewed
+and confirmed separately.
 
 ---
 

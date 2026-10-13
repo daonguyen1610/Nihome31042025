@@ -26,6 +26,7 @@ import { IfcReleasesTab } from "./design/IfcReleasesTab";
 import { OperationalProjectTeamPanel } from "./design/DesignProjectTeamTab";
 import { DesignProjectDocumentsTab } from "./design/DesignProjectDocumentsTab";
 import { DesignScheduleTab } from "./design/DesignScheduleTab";
+import { DesignReviewsTab } from "./design/DesignReviewsTab";
 
 const STAGE_BADGE: Record<DesignProjectStage, string> = {
   Concept: "border-sky-200 bg-sky-50 text-sky-700",
@@ -67,7 +68,7 @@ const AdminDesignProjectDetail = () => {
   const { id: idParam } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const requestedTab = searchParams.get("tab");
-  const initialTab = ["overview", "concept", "basic", "shop", "ifc", "team", "schedule", "docs"]
+  const initialTab = ["overview", "concept", "basic", "shop", "ifc", "team", "schedule", "reviews", "docs"]
     .includes(requestedTab ?? "") ? requestedTab! : "overview";
   const numericId = Number(idParam);
   const isValidId = Number.isFinite(numericId) && numericId > 0;
@@ -110,7 +111,7 @@ const AdminDesignProjectDetail = () => {
         label: t("designProjects.field.contract"),
         value: project.contractNumber ?? (project.contractId ? `#${project.contractId}` : "—"),
       },
-      { label: t("designProjects.field.pm"), value: project.projectManagerName ?? "—" },
+      { label: t("designProjects.field.pm"), value: project.designManagerName ?? project.projectManagerName ?? "—" },
       { label: t("designProjects.field.designLead"), value: project.designLeadName ?? "—" },
       { label: t("designProjects.field.startDate"), value: formatDate(project.startDate, lang) },
       { label: t("designProjects.field.deadline"), value: formatDate(project.deadline, lang) },
@@ -230,6 +231,7 @@ const AdminDesignProjectDetail = () => {
             <TabsTrigger value="ifc">{t("designProjects.detail.tab.ifc")}</TabsTrigger>
             <TabsTrigger value="team">{t("designProjects.detail.tab.team")}</TabsTrigger>
             <TabsTrigger value="schedule">{t("designProjects.detail.tab.schedule")}</TabsTrigger>
+            <TabsTrigger value="reviews">{t("designProjects.detail.tab.reviews")}</TabsTrigger>
             <TabsTrigger value="docs">{t("designProjects.detail.tab.docs")}</TabsTrigger>
           </TabsList>
 
@@ -254,7 +256,7 @@ const AdminDesignProjectDetail = () => {
             </div>
           </TabsContent>
 
-          {(["concept", "basic", "shop", "ifc", "team", "schedule", "docs"] as const).map((tab) => (
+          {(["concept", "basic", "shop", "ifc", "team", "schedule", "reviews", "docs"] as const).map((tab) => (
             <TabsContent key={tab} value={tab}>
               {tab === "concept" ? (
                 <ConceptOptionsTab project={project} onProjectMayHaveChanged={fetchProject} />
@@ -268,6 +270,8 @@ const AdminDesignProjectDetail = () => {
                 <OperationalProjectTeamPanel operationalProjectId={project.operationalProjectId} />
               ) : tab === "schedule" ? (
                 <DesignScheduleTab project={project} />
+              ) : tab === "reviews" ? (
+                <DesignReviewsTab project={project} />
               ) : (
                 <DesignProjectDocumentsTab project={project} />
               )}

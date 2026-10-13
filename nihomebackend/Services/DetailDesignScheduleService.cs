@@ -115,9 +115,15 @@ public interface IDetailDesignScheduleService
     Task<DesignSchedulePhaseResponse?> UpdatePhaseAsync(int projectId, int phaseId, UpsertDesignSchedulePhaseRequest request, int callerUserId, CancellationToken ct);
     Task<DesignScheduleTaskResponse?> CreateTaskAsync(int projectId, int phaseId, UpsertDesignScheduleTaskRequest request, int callerUserId, CancellationToken ct);
     Task<DesignScheduleTaskResponse?> UpdateTaskAsync(int projectId, int taskId, UpsertDesignScheduleTaskRequest request, int callerUserId, CancellationToken ct);
+    Task<DesignScheduleTaskResponse?> CompleteTaskAsync(int projectId, int taskId, string rowVersion, int callerUserId, CancellationToken ct);
+    Task<DesignScheduleTaskResponse?> ReviewTaskAsync(int projectId, int taskId, ReviewDesignScheduleTaskRequest request, int callerUserId, CancellationToken ct);
 }
 
-public sealed class DetailDesignScheduleService(AppDbContext db, IProjectAccessService access)
+public sealed class DetailDesignScheduleService(
+    AppDbContext db,
+    IProjectAccessService access,
+    INotificationService notifications,
+    ILogger<DetailDesignScheduleService> logger)
     : IDetailDesignScheduleService
 {
     private const string DepartmentCategory = "project-department";
@@ -225,6 +231,9 @@ public sealed class DetailDesignScheduleService(AppDbContext db, IProjectAccessS
             item.Id == phaseId && item.OperationalProjectId == projectId, ct);
         if (phase is null) return null;
         var status = DesignScheduleRules.ParseStatus(request.Status);
+        if (status == DesignScheduleStatus.Completed)
+            throw new DesignScheduleOperationException(
+                "Dùng thao tác Hoàn thành để tự động gửi đầu việc đến đúng người duyệt.");
         DesignScheduleRules.ValidateTransition(phase.Status, status);
         var plannedStart = RequireDate(request.PlannedStart, "Ngày bắt đầu kế hoạch");
         var plannedEnd = RequireDate(request.PlannedEnd, "Ngày kết thúc kế hoạch");
@@ -277,6 +286,7 @@ public sealed class DetailDesignScheduleService(AppDbContext db, IProjectAccessS
         if (phase is null) return null;
         var status = await ValidateTaskAsync(projectId, null, request, ct);
         var predecessorIds = NormalizePredecessors(request.PredecessorTaskIds);
+        var ccMemberIds = NormalizeMemberIds(request.CcMemberIds);
         await ValidatePredecessorScopeAsync(projectId, predecessorIds, ct);
         var plannedStart = RequireDate(request.PlannedStart, "Ngày bắt đầu kế hoạch");
         var plannedEnd = RequireDate(request.PlannedEnd, "Ngày kết thúc kế hoạch");
@@ -288,8 +298,13 @@ public sealed class DetailDesignScheduleService(AppDbContext db, IProjectAccessS
             PhaseId = phase.Id,
             Code = request.Code.Trim(),
             Name = request.Name.Trim(),
+            Description = NormalizeOptional(request.Description),
             DepartmentCode = request.DepartmentCode.Trim().ToLowerInvariant(),
             AssigneeMemberId = request.AssigneeMemberId,
+            ApproverMemberId = request.ApproverMemberId,
+            ParentTaskId = request.ParentTaskId,
+            ResourceSummary = NormalizeOptional(request.ResourceSummary),
+            IsCritical = request.IsCritical,
             IsMilestone = request.IsMilestone,
             PlannedStart = plannedStart,
             PlannedEnd = plannedEnd,
@@ -306,6 +321,7 @@ public sealed class DetailDesignScheduleService(AppDbContext db, IProjectAccessS
         db.DesignScheduleTasks.Add(task);
         await db.SaveChangesAsync(ct);
         await ReplaceDependenciesAsync(task, predecessorIds, ct);
+        ReplaceCcMembers(task, ccMemberIds);
         await db.SaveChangesAsync(ct);
         var response = await MapTaskAsync(task.Id, ct);
         await AddHistoryAsync(task, "Task", task.Id, "Created", callerUserId, ct);
@@ -322,19 +338,26 @@ public sealed class DetailDesignScheduleService(AppDbContext db, IProjectAccessS
     {
         await EnsureCanManageAsync(projectId, callerUserId, ct);
         await using var transaction = await BeginScheduleMutationAsync(projectId, ct);
-        var task = await db.DesignScheduleTasks.Include(item => item.Predecessors).SingleOrDefaultAsync(item =>
+        var task = await db.DesignScheduleTasks.Include(item => item.Predecessors)
+            .Include(item => item.CcMembers).SingleOrDefaultAsync(item =>
             item.Id == taskId && item.OperationalProjectId == projectId, ct);
         if (task is null) return null;
         var status = await ValidateTaskAsync(projectId, taskId, request, ct);
         DesignScheduleRules.ValidateTransition(task.Status, status);
         var predecessorIds = NormalizePredecessors(request.PredecessorTaskIds);
+        var ccMemberIds = NormalizeMemberIds(request.CcMemberIds);
         var plannedStart = RequireDate(request.PlannedStart, "Ngày bắt đầu kế hoạch");
         var plannedEnd = RequireDate(request.PlannedEnd, "Ngày kết thúc kế hoạch");
         CrmConcurrency.Apply(db, task, request.RowVersion);
         task.Code = request.Code.Trim();
         task.Name = request.Name.Trim();
+        task.Description = NormalizeOptional(request.Description);
         task.DepartmentCode = request.DepartmentCode.Trim().ToLowerInvariant();
         task.AssigneeMemberId = request.AssigneeMemberId;
+        task.ApproverMemberId = request.ApproverMemberId;
+        task.ParentTaskId = request.ParentTaskId;
+        task.ResourceSummary = NormalizeOptional(request.ResourceSummary);
+        task.IsCritical = request.IsCritical;
         task.IsMilestone = request.IsMilestone;
         task.PlannedStart = plannedStart;
         task.PlannedEnd = plannedEnd;
@@ -346,11 +369,112 @@ public sealed class DetailDesignScheduleService(AppDbContext db, IProjectAccessS
         task.UpdatedAt = DateTime.UtcNow;
         task.UpdatedByUserId = callerUserId;
         await ReplaceDependenciesAsync(task, predecessorIds, ct);
+        ReplaceCcMembers(task, ccMemberIds);
         await CrmConcurrency.SaveChangesAsync(db, ct);
         var response = await MapTaskAsync(task.Id, ct);
         await AddHistoryAsync(task, "Task", task.Id, "Updated", callerUserId, ct);
         if (transaction is not null) await transaction.CommitAsync(ct);
         return response;
+    }
+
+    public async Task<DesignScheduleTaskResponse?> CompleteTaskAsync(
+        int projectId, int taskId, string rowVersion, int callerUserId, CancellationToken ct)
+    {
+        await using var transaction = await BeginScheduleMutationAsync(projectId, ct);
+        var task = await db.DesignScheduleTasks
+            .Include(item => item.AssigneeMember)
+            .Include(item => item.ApproverMember)
+            .Include(item => item.CcMembers).ThenInclude(item => item.Member)
+            .Include(item => item.Predecessors)
+            .SingleOrDefaultAsync(item => item.Id == taskId && item.OperationalProjectId == projectId, ct);
+        if (task is null) return null;
+        if (task.AssigneeMember.UserId != callerUserId)
+            throw new DesignScheduleOperationException("Chỉ người phụ trách được đánh dấu hoàn thành đầu việc thiết kế.");
+        if (task.ApprovalStatus == DesignTaskApprovalStatus.Pending)
+            throw new DesignScheduleOperationException("Đầu việc đã được gửi duyệt.");
+        if (task.ApprovalStatus == DesignTaskApprovalStatus.Approved)
+            throw new DesignScheduleOperationException("Đầu việc đã được duyệt và không thể gửi lại.");
+
+        var hasIncompletePredecessor = await db.DesignScheduleTaskDependencies.AsNoTracking()
+            .Where(item => item.TaskId == taskId)
+            .AnyAsync(item => item.PredecessorTask.Status != DesignScheduleStatus.Completed ||
+                              item.PredecessorTask.ApprovalStatus != DesignTaskApprovalStatus.Approved, ct);
+        if (hasIncompletePredecessor)
+            throw new DesignScheduleOperationException(
+                "Mọi công việc tiền nhiệm phải hoàn thành và được duyệt trước khi gửi đầu việc này.");
+
+        CrmConcurrency.Apply(db, task, rowVersion);
+        var now = DateTime.UtcNow;
+        task.Status = DesignScheduleStatus.Completed;
+        task.ProgressPercent = 100;
+        task.ActualStart ??= DateOnly.FromDateTime(now);
+        task.ActualEnd = DateOnly.FromDateTime(now);
+        task.ApprovalStatus = DesignTaskApprovalStatus.Pending;
+        task.SubmittedAt = now;
+        task.SubmittedByUserId = callerUserId;
+        task.ReviewedAt = null;
+        task.ReviewedByUserId = null;
+        task.ReviewComment = null;
+        task.UpdatedAt = now;
+        task.UpdatedByUserId = callerUserId;
+        await CrmConcurrency.SaveChangesAsync(db, ct);
+        await AddHistoryAsync(task, "Task", task.Id, "Submitted", callerUserId, ct);
+        if (transaction is not null) await transaction.CommitAsync(ct);
+
+        var recipients = task.CcMembers.Select(item => item.Member.UserId)
+            .Append(task.ApproverMember.UserId).Distinct().ToList();
+        await NotifyTaskAsync(recipients, "design-task.awaiting-approval", task, projectId);
+        return await MapTaskAsync(task.Id, ct);
+    }
+
+    public async Task<DesignScheduleTaskResponse?> ReviewTaskAsync(
+        int projectId, int taskId, ReviewDesignScheduleTaskRequest request, int callerUserId, CancellationToken ct)
+    {
+        await using var transaction = await BeginScheduleMutationAsync(projectId, ct);
+        var task = await db.DesignScheduleTasks
+            .Include(item => item.AssigneeMember)
+            .Include(item => item.ApproverMember)
+            .Include(item => item.CcMembers)
+            .Include(item => item.Predecessors)
+            .SingleOrDefaultAsync(item => item.Id == taskId && item.OperationalProjectId == projectId, ct);
+        if (task is null) return null;
+        if (task.ApproverMember.UserId != callerUserId)
+            throw new DesignScheduleOperationException("Chỉ người duyệt đã được chỉ định được duyệt đầu việc này.");
+        if (task.AssigneeMember.UserId == callerUserId)
+            throw new DesignScheduleOperationException("Người thực hiện không được tự duyệt đầu việc của mình.");
+        if (task.ApprovalStatus != DesignTaskApprovalStatus.Pending)
+            throw new DesignScheduleOperationException("Chỉ đầu việc đang chờ duyệt mới được xử lý.");
+
+        var decision = request.Decision.Trim();
+        var approved = decision.Equals("Approve", StringComparison.OrdinalIgnoreCase);
+        var rejected = decision.Equals("Reject", StringComparison.OrdinalIgnoreCase);
+        if (!approved && !rejected)
+            throw new DesignScheduleOperationException("Quyết định duyệt phải là Approve hoặc Reject.");
+        if (rejected && string.IsNullOrWhiteSpace(request.Comment))
+            throw new DesignScheduleOperationException(
+                "Lý do từ chối là bắt buộc. Ví dụ: Cập nhật lại kích thước trục A-3.");
+
+        CrmConcurrency.Apply(db, task, request.RowVersion);
+        var now = DateTime.UtcNow;
+        task.ApprovalStatus = approved ? DesignTaskApprovalStatus.Approved : DesignTaskApprovalStatus.Rejected;
+        task.ReviewedAt = now;
+        task.ReviewedByUserId = callerUserId;
+        task.ReviewComment = NormalizeOptional(request.Comment);
+        if (rejected)
+        {
+            task.Status = DesignScheduleStatus.InProgress;
+            task.ProgressPercent = Math.Min(task.ProgressPercent, 99);
+            task.ActualEnd = null;
+        }
+        task.UpdatedAt = now;
+        task.UpdatedByUserId = callerUserId;
+        await CrmConcurrency.SaveChangesAsync(db, ct);
+        await AddHistoryAsync(task, "Task", task.Id, approved ? "Approved" : "Rejected", callerUserId, ct);
+        if (transaction is not null) await transaction.CommitAsync(ct);
+
+        await NotifyTaskAsync([task.AssigneeMember.UserId],
+            approved ? "design-task.approved" : "design-task.rejected", task, projectId);
+        return await MapTaskAsync(task.Id, ct);
     }
 
     private async Task<DesignScheduleStatus> ValidateTaskAsync(
@@ -377,6 +501,53 @@ public sealed class DetailDesignScheduleService(AppDbContext db, IProjectAccessS
                 member.EndedAt == null && member.User.IsActive, ct))
             throw new DesignScheduleOperationException(
                 "Người phụ trách phải là thành viên đang hiệu lực của cùng Dự án.");
+        var ccMemberIds = NormalizeMemberIds(request.CcMemberIds);
+        var memberIds = ccMemberIds.Append(request.AssigneeMemberId)
+            .Append(request.ApproverMemberId).Distinct().ToList();
+        var activeMembers = await db.OperationalProjectMembers.AsNoTracking().Where(member =>
+            memberIds.Contains(member.Id) && member.OperationalProjectId == projectId &&
+            member.EndedAt == null && member.User.IsActive)
+            .Select(member => new
+            {
+                member.Id,
+                member.UserId,
+                IsDesignLead = member.Roles.Any(role => role.EndedAt == null &&
+                    role.RoleCode == ProjectTeamRoleCode.DesignLead &&
+                    (role.Scope == ProjectRoleScope.Project ||
+                     role.Scope == ProjectRoleScope.Module && role.ScopeValue == "Design" ||
+                     role.Scope == ProjectRoleScope.Discipline)),
+            })
+            .ToListAsync(ct);
+        if (activeMembers.Count != memberIds.Count)
+            throw new DesignScheduleOperationException(
+                "Người duyệt và người CC phải là thành viên đang hiệu lực của cùng Dự án.");
+        if (request.AssigneeMemberId == request.ApproverMemberId)
+            throw new DesignScheduleOperationException("Người duyệt phải khác người phụ trách đầu việc.");
+        if (activeMembers.Single(member => member.Id == request.AssigneeMemberId).UserId ==
+            activeMembers.Single(member => member.Id == request.ApproverMemberId).UserId)
+            throw new DesignScheduleOperationException(
+                "Người duyệt phải là một người khác người phụ trách đầu việc.");
+        var approver = activeMembers.Single(member => member.Id == request.ApproverMemberId);
+        var assignedDesignLeadUserId = await db.DesignProjects.AsNoTracking()
+            .Where(item => item.OperationalProjectId == projectId)
+            .Select(item => item.DesignLeadUserId)
+            .SingleOrDefaultAsync(ct);
+        if (!approver.IsDesignLead && approver.UserId != assignedDesignLeadUserId)
+            throw new DesignScheduleOperationException(
+                "Người duyệt đầu việc phải là Design Lead được phân công cho Dự án hoặc bộ môn.");
+        if (ccMemberIds.Contains(request.AssigneeMemberId) || ccMemberIds.Contains(request.ApproverMemberId))
+            throw new DesignScheduleOperationException(
+                "Danh sách CC không được trùng người phụ trách hoặc người duyệt.");
+        if (request.ParentTaskId.HasValue)
+        {
+            if (request.ParentTaskId == taskId)
+                throw new DesignScheduleOperationException("Đầu việc không thể là công việc cha của chính nó.");
+            if (!await db.DesignScheduleTasks.AsNoTracking().AnyAsync(item =>
+                    item.Id == request.ParentTaskId && item.OperationalProjectId == projectId, ct))
+                throw new DesignScheduleOperationException("Công việc cha phải thuộc cùng lịch thiết kế.");
+            if (taskId.HasValue && await WouldCreateParentCycleAsync(taskId.Value, request.ParentTaskId.Value, ct))
+                throw new DesignScheduleOperationException("Cấu trúc đầu việc con tạo thành vòng lặp.");
+        }
         if (await db.DesignScheduleTasks.AsNoTracking().AnyAsync(item =>
                 item.OperationalProjectId == projectId && item.Code == request.Code.Trim() &&
                 item.Id != taskId, ct))
@@ -414,6 +585,33 @@ public sealed class DetailDesignScheduleService(AppDbContext db, IProjectAccessS
         }).ToList();
     }
 
+    private void ReplaceCcMembers(DesignScheduleTask task, IReadOnlyCollection<int> memberIds)
+    {
+        if (task.CcMembers.Count > 0) db.DesignScheduleTaskCcMembers.RemoveRange(task.CcMembers);
+        task.CcMembers = memberIds.Select(memberId => new DesignScheduleTaskCcMember
+        {
+            TaskId = task.Id,
+            MemberId = memberId,
+        }).ToList();
+    }
+
+    private async Task<bool> WouldCreateParentCycleAsync(int taskId, int parentTaskId, CancellationToken ct)
+    {
+        var current = parentTaskId;
+        var visited = new HashSet<int>();
+        while (visited.Add(current))
+        {
+            if (current == taskId) return true;
+            var next = await db.DesignScheduleTasks.AsNoTracking()
+                .Where(item => item.Id == current)
+                .Select(item => item.ParentTaskId)
+                .SingleOrDefaultAsync(ct);
+            if (!next.HasValue) return false;
+            current = next.Value;
+        }
+        return true;
+    }
+
     private async Task ValidatePredecessorScopeAsync(
         int projectId,
         IEnumerable<int> requestedIds,
@@ -440,6 +638,49 @@ public sealed class DetailDesignScheduleService(AppDbContext db, IProjectAccessS
         if (predecessorIds.Any(id => id <= 0))
             throw new DesignScheduleOperationException("Mã công việc tiền nhiệm phải là số nguyên dương.");
         return predecessorIds;
+    }
+
+    private static IReadOnlyList<int> NormalizeMemberIds(IEnumerable<int>? requestedIds)
+    {
+        if (requestedIds is null)
+            throw new DesignScheduleOperationException("Danh sách người CC là bắt buộc; dùng danh sách rỗng khi không có CC.");
+        var memberIds = requestedIds.Distinct().ToList();
+        if (memberIds.Count > 100)
+            throw new DesignScheduleOperationException("Danh sách người CC không được vượt quá 100 người.");
+        if (memberIds.Any(id => id <= 0))
+            throw new DesignScheduleOperationException("Mã thành viên CC phải là số nguyên dương.");
+        return memberIds;
+    }
+
+    private static string? NormalizeOptional(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private async Task NotifyTaskAsync(
+        IEnumerable<int> userIds,
+        string templateCode,
+        DesignScheduleTask task,
+        int projectId)
+    {
+        try
+        {
+            await notifications.NotifyManyFromTemplateAsync(
+                userIds.Distinct(),
+                templateCode,
+                new Dictionary<string, string>
+                {
+                    ["taskCode"] = task.Code,
+                    ["taskTitle"] = task.Name,
+                },
+                "DesignScheduleTask",
+                task.Id,
+                $"/admin/design-projects/{task.DesignProjectId}?tab=schedule");
+        }
+        catch (Exception exception)
+        {
+            logger.LogWarning(exception,
+                "Design task notification {TemplateCode} failed for task {TaskId} in project {ProjectId}",
+                templateCode, task.Id, projectId);
+        }
     }
 
     private async Task<IDbContextTransaction?> BeginScheduleMutationAsync(
@@ -492,6 +733,8 @@ public sealed class DetailDesignScheduleService(AppDbContext db, IProjectAccessS
             .ToListAsync(ct);
         var allTasks = await db.DesignScheduleTasks.AsNoTracking()
             .Include(item => item.Predecessors)
+            .Include(item => item.Successors)
+            .Include(item => item.CcMembers)
             .Include(item => item.Phase)
             .Where(item => item.OperationalProjectId == projectId)
             .ToListAsync(ct);
@@ -586,7 +829,9 @@ public sealed class DetailDesignScheduleService(AppDbContext db, IProjectAccessS
 
     private async Task<DesignScheduleTaskResponse> MapTaskAsync(int taskId, CancellationToken ct) =>
         MapTask(await db.DesignScheduleTasks.AsNoTracking().Include(item => item.Phase)
-            .Include(item => item.Predecessors).SingleAsync(item => item.Id == taskId, ct),
+            .Include(item => item.Predecessors).Include(item => item.Successors)
+            .Include(item => item.CcMembers)
+            .SingleAsync(item => item.Id == taskId, ct),
             DateOnly.FromDateTime(DateTime.UtcNow));
 
     private static DesignSchedulePhaseResponse MapPhase(
@@ -616,8 +861,13 @@ public sealed class DetailDesignScheduleService(AppDbContext db, IProjectAccessS
         PhaseCode = task.Phase.Code.ToString(),
         Code = task.Code,
         Name = task.Name,
+        Description = task.Description,
         DepartmentCode = task.DepartmentCode,
         AssigneeMemberId = task.AssigneeMemberId,
+        ApproverMemberId = task.ApproverMemberId,
+        ParentTaskId = task.ParentTaskId,
+        ResourceSummary = task.ResourceSummary,
+        IsCritical = task.IsCritical,
         IsMilestone = task.IsMilestone,
         PlannedStart = task.PlannedStart,
         PlannedEnd = task.PlannedEnd,
@@ -628,6 +878,14 @@ public sealed class DetailDesignScheduleService(AppDbContext db, IProjectAccessS
         Weight = task.Weight,
         Overdue = IsOverdue(task.PlannedEnd, task.Status, today),
         PredecessorTaskIds = task.Predecessors.Select(item => item.PredecessorTaskId).Order().ToList(),
+        SuccessorTaskIds = task.Successors.Select(item => item.TaskId).Order().ToList(),
+        CcMemberIds = task.CcMembers.Select(item => item.MemberId).Order().ToList(),
+        ApprovalStatus = task.ApprovalStatus.ToString(),
+        SubmittedAt = task.SubmittedAt,
+        SubmittedByUserId = task.SubmittedByUserId,
+        ReviewedAt = task.ReviewedAt,
+        ReviewedByUserId = task.ReviewedByUserId,
+        ReviewComment = task.ReviewComment,
         RowVersion = CrmConcurrency.Encode(task.RowVersion),
     };
 
@@ -708,8 +966,13 @@ public sealed class DetailDesignScheduleService(AppDbContext db, IProjectAccessS
                 task.PhaseId,
                 task.Code,
                 task.Name,
+                task.Description,
                 task.DepartmentCode,
                 task.AssigneeMemberId,
+                task.ApproverMemberId,
+                task.ParentTaskId,
+                task.ResourceSummary,
+                task.IsCritical,
                 task.IsMilestone,
                 task.PlannedStart,
                 task.PlannedEnd,
@@ -718,7 +981,14 @@ public sealed class DetailDesignScheduleService(AppDbContext db, IProjectAccessS
                 Status = task.Status.ToString(),
                 task.ProgressPercent,
                 task.Weight,
+                ApprovalStatus = task.ApprovalStatus.ToString(),
+                task.SubmittedAt,
+                task.SubmittedByUserId,
+                task.ReviewedAt,
+                task.ReviewedByUserId,
+                task.ReviewComment,
                 PredecessorTaskIds = task.Predecessors.Select(item => item.PredecessorTaskId).Order().ToList(),
+                CcMemberIds = task.CcMembers.Select(item => item.MemberId).Order().ToList(),
                 task.CreatedAt,
                 task.CreatedByUserId,
                 task.UpdatedAt,

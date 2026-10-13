@@ -11,6 +11,8 @@ public sealed class ProjectDocumentUploadRequest
     public ProjectDocumentCategory Category { get; set; }
 
     public ProjectDocumentSourceModule SourceModule { get; set; } = ProjectDocumentSourceModule.General;
+    [MaxLength(100)]
+    public string? SourceEntityType { get; set; }
     public long? SourceRecordId { get; set; }
     public int? CustomerId { get; set; }
     public int? ContractId { get; set; }

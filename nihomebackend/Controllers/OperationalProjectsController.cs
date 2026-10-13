@@ -21,12 +21,13 @@ namespace NihomeBackend.Controllers;
 public class OperationalProjectsController(
     IOperationalProjectService service,
     IProjectDocumentService documents,
+    IProjectAccessService projectAccess,
     IPermissionService permissions,
     IAuditLogger audit,
     IGoogleDriveSettingsStore driveSettings) : ControllerBase
 {
     [HttpGet("code-suggestion")]
-    [RequirePermission("operations.projects", "manage")]
+    [RequirePermission("operations.projects", "view")]
     public async Task<ActionResult<OperationalProjectCodeSuggestionResponse>> SuggestCode(
         CancellationToken ct)
     {
@@ -271,7 +272,11 @@ public class OperationalProjectsController(
     {
         var scope = await ResolveScopeAsync(ct);
         if (scope is null) return Unauthorized();
-        if (await service.GetAsync(id, scope.Value.UserId, scope.Value.CanSeeAll, ct) is null) return NotFound();
+        var operationsManager = await permissions.HasAsync(scope.Value.UserId, "operations.projects.manage", ct);
+        var designManager = request.SourceModule == ProjectDocumentSourceModule.Design &&
+            await projectAccess.CanManageDesignDocumentsAsync(scope.Value.UserId, id, ct);
+        if (!operationsManager && !designManager) return Forbid();
+        if (await service.GetAsync(id, scope.Value.UserId, scope.Value.CanSeeAll || designManager, ct) is null) return NotFound();
         if (!IdempotencyService.IsValidKey(Request.Headers["Idempotency-Key"].FirstOrDefault()))
         {
             return BadRequest(new
@@ -281,7 +286,8 @@ public class OperationalProjectsController(
         }
         try
         {
-            var result = await documents.UploadAsync(id, request, scope.Value.UserId, scope.Value.CanSeeAll, ct);
+            var result = await documents.UploadAsync(id, request, scope.Value.UserId,
+                scope.Value.CanSeeAll || designManager, ct);
             if (result is null) return NotFound();
             AuditDocument("project-document.upload", id, result.Id, "uploaded", result);
             return CreatedAtAction(nameof(GetDocumentContent), new { id, documentId = result.Id }, result);

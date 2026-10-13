@@ -18,6 +18,10 @@ public class CreateDesignProjectRequest
     public int CustomerId { get; set; }
 
     public int? ContractId { get; set; }
+    /// <summary>Chủ nhiệm thiết kế (Design Manager).</summary>
+    public int? DesignManagerUserId { get; set; }
+
+    /// <summary>Legacy alias; must match DesignManagerUserId when both are supplied.</summary>
     public int? ProjectManagerUserId { get; set; }
     public int? DesignLeadUserId { get; set; }
 
@@ -46,6 +50,7 @@ public class DesignProjectListParams
 {
     public int? CustomerId { get; set; }
     public int? ContractId { get; set; }
+    public int? DesignManagerUserId { get; set; }
     public int? ProjectManagerUserId { get; set; }
     public int? DesignLeadUserId { get; set; }
 

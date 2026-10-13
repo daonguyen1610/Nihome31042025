@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Moq;
+using Microsoft.Extensions.Logging.Abstractions;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
@@ -110,12 +111,14 @@ public sealed class DetailDesignScheduleServiceTests : IDisposable
     private readonly int projectId;
     private readonly int phaseId;
     private readonly int activeMemberId;
+    private readonly int approverMemberId;
     private readonly int otherProjectTaskId;
 
     public DetailDesignScheduleServiceTests()
     {
         var caller = User("0912000001", true);
         var memberUser = User("0912000002", true);
+        var approverUser = User("0912000005", true);
         var inactiveUser = User("0912000003", false);
         var otherUser = User("0912000004", true);
         var customer = new Customer { Name = "Schedule customer", Type = CustomerType.Company, SourceCode = "referral" };
@@ -130,9 +133,10 @@ public sealed class DetailDesignScheduleServiceTests : IDisposable
         db.AddRange(design, otherDesign);
         db.SaveChanges();
         var member = Member(project.Id, memberUser.Id);
+        var approver = Member(project.Id, approverUser.Id);
         var inactiveMember = Member(project.Id, inactiveUser.Id);
         var otherMember = Member(otherProject.Id, otherUser.Id);
-        db.AddRange(member, inactiveMember, otherMember);
+        db.AddRange(member, approver, inactiveMember, otherMember);
         db.MasterDataOptions.Add(new MasterDataOption
         {
             Category = "project-department",
@@ -145,7 +149,7 @@ public sealed class DetailDesignScheduleServiceTests : IDisposable
         var otherPhase = Phase(otherProject.Id, otherDesign.Id);
         db.AddRange(phase, otherPhase);
         db.SaveChanges();
-        var otherTask = Task(otherProject.Id, otherDesign.Id, otherPhase.Id, otherMember.Id, "OTHER-1");
+        var otherTask = Task(otherProject.Id, otherDesign.Id, otherPhase.Id, otherMember.Id, otherMember.Id, "OTHER-1");
         db.Add(otherTask);
         db.SaveChanges();
 
@@ -153,17 +157,20 @@ public sealed class DetailDesignScheduleServiceTests : IDisposable
         projectId = project.Id;
         phaseId = phase.Id;
         activeMemberId = member.Id;
+        approverMemberId = approver.Id;
         otherProjectTaskId = otherTask.Id;
         var access = new Mock<IProjectAccessService>();
         access.Setup(item => item.CanManageDesignScheduleAsync(callerId, projectId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
-        service = new DetailDesignScheduleService(db, access.Object);
+        service = new DetailDesignScheduleService(
+            db, access.Object, new Mock<INotificationService>().Object,
+            NullLogger<DetailDesignScheduleService>.Instance);
     }
 
     [Fact]
     public async Task CreateTaskAsync_RejectsInactiveDepartmentAndMember()
     {
-        var inactiveDepartment = Request(activeMemberId);
+        var inactiveDepartment = Request(activeMemberId, approverMemberId);
         inactiveDepartment.DepartmentCode = "unknown";
         var inactiveMember = await db.OperationalProjectMembers
             .SingleAsync(item => item.OperationalProjectId == projectId && !item.User.IsActive);
@@ -171,14 +178,14 @@ public sealed class DetailDesignScheduleServiceTests : IDisposable
         await Assert.ThrowsAsync<DesignScheduleOperationException>(() =>
             service.CreateTaskAsync(projectId, phaseId, inactiveDepartment, callerId, default));
         await Assert.ThrowsAsync<DesignScheduleOperationException>(() =>
-            service.CreateTaskAsync(projectId, phaseId, Request(inactiveMember.Id), callerId, default));
+            service.CreateTaskAsync(projectId, phaseId, Request(inactiveMember.Id, approverMemberId), callerId, default));
         Assert.Empty(db.DesignScheduleTasks.Where(item => item.OperationalProjectId == projectId));
     }
 
     [Fact]
     public async Task CreateTaskAsync_RejectsCrossProjectPredecessorWithoutChangingState()
     {
-        var request = Request(activeMemberId);
+        var request = Request(activeMemberId, approverMemberId);
         request.PredecessorTaskIds = [otherProjectTaskId];
 
         await Assert.ThrowsAsync<DesignScheduleOperationException>(() =>
@@ -249,6 +256,7 @@ public sealed class DetailDesignScheduleServiceTests : IDisposable
         int designProjectId,
         int phaseId,
         int memberId,
+        int approverId,
         string code) => new()
         {
             OperationalProjectId = projectId,
@@ -258,6 +266,7 @@ public sealed class DetailDesignScheduleServiceTests : IDisposable
             Name = code,
             DepartmentCode = "design",
             AssigneeMemberId = memberId,
+            ApproverMemberId = approverId,
             PlannedStart = new DateOnly(2026, 9, 1),
             PlannedEnd = new DateOnly(2026, 9, 2),
             Status = DesignScheduleStatus.NotStarted,
@@ -266,12 +275,13 @@ public sealed class DetailDesignScheduleServiceTests : IDisposable
             UpdatedByUserId = 1,
         };
 
-    private static UpsertDesignScheduleTaskRequest Request(int memberId) => new()
+    private static UpsertDesignScheduleTaskRequest Request(int memberId, int approverId) => new()
     {
         Code = "DES-001",
         Name = "Design task",
         DepartmentCode = "design",
         AssigneeMemberId = memberId,
+        ApproverMemberId = approverId,
         PlannedStart = new DateOnly(2026, 9, 1),
         PlannedEnd = new DateOnly(2026, 9, 2),
         Status = "NotStarted",

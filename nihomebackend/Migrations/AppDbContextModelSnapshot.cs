@@ -2448,6 +2448,164 @@ namespace nihomebackend.Migrations
                     b.ToTable("design_projects", (string)null);
                 });
 
+            modelBuilder.Entity("NihomeBackend.Models.DesignReview", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("ClientDecidedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ClientDecisionNote")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<int?>("ClientDecisionRecordedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ClientSubmittedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("DesignManagerUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("DesignProjectId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("InternalSubmittedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("InternalSummary")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<int>("RevisionNumber")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("Stage")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("UpdatedByUserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DesignManagerUserId");
+
+                    b.HasIndex("DesignProjectId", "Status");
+
+                    b.HasIndex("DesignProjectId", "Stage", "RevisionNumber")
+                        .IsUnique();
+
+                    b.ToTable("design_reviews", (string)null);
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.DesignReviewComment", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<int>("AuthorUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("DesignReviewId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AuthorUserId");
+
+                    b.HasIndex("DesignReviewId", "CreatedAt");
+
+                    b.ToTable("design_review_comments", (string)null);
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.DesignReviewDocument", b =>
+                {
+                    b.Property<int>("DesignReviewId")
+                        .HasColumnType("int");
+
+                    b.Property<long>("ProjectDocumentId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Sha256Snapshot")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("SourceEntityTypeSnapshot")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<long>("SourceRecordIdSnapshot")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("DesignReviewId", "ProjectDocumentId");
+
+                    b.HasIndex("ProjectDocumentId");
+
+                    b.HasIndex("SourceEntityTypeSnapshot", "SourceRecordIdSnapshot");
+
+                    b.ToTable("design_review_documents", (string)null);
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.DesignReviewRecipient", b =>
+                {
+                    b.Property<int>("DesignReviewId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("DesignReviewId", "UserId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("design_review_recipients", (string)null);
+                });
+
             modelBuilder.Entity("NihomeBackend.Models.DesignScheduleHistory", b =>
                 {
                     b.Property<long>("Id")
@@ -2588,6 +2746,14 @@ namespace nihomebackend.Migrations
                     b.Property<DateOnly?>("ActualStart")
                         .HasColumnType("date");
 
+                    b.Property<string>("ApprovalStatus")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<int>("ApproverMemberId")
+                        .HasColumnType("int");
+
                     b.Property<int>("AssigneeMemberId")
                         .HasColumnType("int");
 
@@ -2607,8 +2773,15 @@ namespace nihomebackend.Migrations
                         .HasMaxLength(60)
                         .HasColumnType("nvarchar(60)");
 
+                    b.Property<string>("Description")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
                     b.Property<int>("DesignProjectId")
                         .HasColumnType("int");
+
+                    b.Property<bool>("IsCritical")
+                        .HasColumnType("bit");
 
                     b.Property<bool>("IsMilestone")
                         .HasColumnType("bit");
@@ -2619,6 +2792,9 @@ namespace nihomebackend.Migrations
                         .HasColumnType("nvarchar(300)");
 
                     b.Property<int>("OperationalProjectId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("ParentTaskId")
                         .HasColumnType("int");
 
                     b.Property<int>("PhaseId")
@@ -2633,6 +2809,20 @@ namespace nihomebackend.Migrations
                     b.Property<int>("ProgressPercent")
                         .HasColumnType("int");
 
+                    b.Property<string>("ResourceSummary")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("ReviewComment")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ReviewedByUserId")
+                        .HasColumnType("int");
+
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .IsRequired()
@@ -2643,6 +2833,12 @@ namespace nihomebackend.Migrations
                         .IsRequired()
                         .HasMaxLength(40)
                         .HasColumnType("nvarchar(40)");
+
+                    b.Property<DateTime?>("SubmittedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("SubmittedByUserId")
+                        .HasColumnType("int");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -2655,9 +2851,13 @@ namespace nihomebackend.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ApproverMemberId");
+
                     b.HasIndex("AssigneeMemberId");
 
                     b.HasIndex("DesignProjectId");
+
+                    b.HasIndex("ParentTaskId");
 
                     b.HasIndex("PhaseId");
 
@@ -2670,11 +2870,15 @@ namespace nihomebackend.Migrations
 
                     b.HasIndex("OperationalProjectId", "Status");
 
+                    b.HasIndex("OperationalProjectId", "ApproverMemberId", "ApprovalStatus");
+
                     b.HasIndex("OperationalProjectId", "PhaseId", "PlannedStart", "PlannedEnd");
 
                     b.ToTable("design_schedule_tasks", null, t =>
                         {
                             t.HasCheckConstraint("CK_design_schedule_tasks_milestone", "[IsMilestone] = 0 OR [PlannedStart] = [PlannedEnd]");
+
+                            t.HasCheckConstraint("CK_design_schedule_tasks_approver", "[ApproverMemberId] <> [AssigneeMemberId]");
 
                             t.HasCheckConstraint("CK_design_schedule_tasks_planned_dates", "[PlannedEnd] >= [PlannedStart]");
 
@@ -2682,6 +2886,21 @@ namespace nihomebackend.Migrations
 
                             t.HasCheckConstraint("CK_design_schedule_tasks_weight", "[Weight] >= 1 AND [Weight] <= 100");
                         });
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.DesignScheduleTaskCcMember", b =>
+                {
+                    b.Property<int>("TaskId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MemberId")
+                        .HasColumnType("int");
+
+                    b.HasKey("TaskId", "MemberId");
+
+                    b.HasIndex("MemberId");
+
+                    b.ToTable("design_schedule_task_cc_members", (string)null);
                 });
 
             modelBuilder.Entity("NihomeBackend.Models.DesignScheduleTaskDependency", b =>
@@ -10502,6 +10721,82 @@ namespace nihomebackend.Migrations
                     b.Navigation("ProjectManager");
                 });
 
+            modelBuilder.Entity("NihomeBackend.Models.DesignReview", b =>
+                {
+                    b.HasOne("NihomeBackend.Models.ApplicationUser", "DesignManager")
+                        .WithMany()
+                        .HasForeignKey("DesignManagerUserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("NihomeBackend.Models.DesignProject", "DesignProject")
+                        .WithMany()
+                        .HasForeignKey("DesignProjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("DesignManager");
+
+                    b.Navigation("DesignProject");
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.DesignReviewComment", b =>
+                {
+                    b.HasOne("NihomeBackend.Models.ApplicationUser", "Author")
+                        .WithMany()
+                        .HasForeignKey("AuthorUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NihomeBackend.Models.DesignReview", "DesignReview")
+                        .WithMany("Comments")
+                        .HasForeignKey("DesignReviewId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Author");
+
+                    b.Navigation("DesignReview");
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.DesignReviewDocument", b =>
+                {
+                    b.HasOne("NihomeBackend.Models.DesignReview", "DesignReview")
+                        .WithMany("Documents")
+                        .HasForeignKey("DesignReviewId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("NihomeBackend.Models.ProjectDocument", "ProjectDocument")
+                        .WithMany()
+                        .HasForeignKey("ProjectDocumentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("DesignReview");
+
+                    b.Navigation("ProjectDocument");
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.DesignReviewRecipient", b =>
+                {
+                    b.HasOne("NihomeBackend.Models.DesignReview", "DesignReview")
+                        .WithMany("Recipients")
+                        .HasForeignKey("DesignReviewId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("NihomeBackend.Models.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("DesignReview");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("NihomeBackend.Models.DesignScheduleHistory", b =>
                 {
                     b.HasOne("NihomeBackend.Models.ApplicationUser", null)
@@ -10538,6 +10833,12 @@ namespace nihomebackend.Migrations
 
             modelBuilder.Entity("NihomeBackend.Models.DesignScheduleTask", b =>
                 {
+                    b.HasOne("NihomeBackend.Models.OperationalProjectMember", "ApproverMember")
+                        .WithMany()
+                        .HasForeignKey("ApproverMemberId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("NihomeBackend.Models.OperationalProjectMember", "AssigneeMember")
                         .WithMany()
                         .HasForeignKey("AssigneeMemberId")
@@ -10556,11 +10857,18 @@ namespace nihomebackend.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("NihomeBackend.Models.DesignScheduleTask", "ParentTask")
+                        .WithMany("Children")
+                        .HasForeignKey("ParentTaskId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
                     b.HasOne("NihomeBackend.Models.DesignSchedulePhase", "Phase")
                         .WithMany("Tasks")
                         .HasForeignKey("PhaseId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("ApproverMember");
 
                     b.Navigation("AssigneeMember");
 
@@ -10568,7 +10876,28 @@ namespace nihomebackend.Migrations
 
                     b.Navigation("OperationalProject");
 
+                    b.Navigation("ParentTask");
+
                     b.Navigation("Phase");
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.DesignScheduleTaskCcMember", b =>
+                {
+                    b.HasOne("NihomeBackend.Models.OperationalProjectMember", "Member")
+                        .WithMany()
+                        .HasForeignKey("MemberId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NihomeBackend.Models.DesignScheduleTask", "Task")
+                        .WithMany("CcMembers")
+                        .HasForeignKey("TaskId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Member");
+
+                    b.Navigation("Task");
                 });
 
             modelBuilder.Entity("NihomeBackend.Models.DesignScheduleTaskDependency", b =>
@@ -12576,6 +12905,15 @@ namespace nihomebackend.Migrations
                     b.Navigation("ScheduleTasks");
                 });
 
+            modelBuilder.Entity("NihomeBackend.Models.DesignReview", b =>
+                {
+                    b.Navigation("Comments");
+
+                    b.Navigation("Documents");
+
+                    b.Navigation("Recipients");
+                });
+
             modelBuilder.Entity("NihomeBackend.Models.DesignSchedulePhase", b =>
                 {
                     b.Navigation("Tasks");
@@ -12583,6 +12921,10 @@ namespace nihomebackend.Migrations
 
             modelBuilder.Entity("NihomeBackend.Models.DesignScheduleTask", b =>
                 {
+                    b.Navigation("CcMembers");
+
+                    b.Navigation("Children");
+
                     b.Navigation("Predecessors");
 
                     b.Navigation("Successors");

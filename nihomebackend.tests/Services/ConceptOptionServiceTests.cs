@@ -40,8 +40,18 @@ public class ConceptOptionServiceTests : IDisposable
         _db.Customers.Add(customer);
         _db.SaveChanges();
 
+        var operationalProject = new OperationalProject
+        {
+            Code = "OP-CONCEPT",
+            Name = "Concept operational project",
+            CustomerId = customer.Id,
+        };
+        _db.OperationalProjects.Add(operationalProject);
+        _db.SaveChanges();
+
         var project = new DesignProject
         {
+            OperationalProjectId = operationalProject.Id,
             ProjectCode = "DP-2026-CONCEPT",
             Name = "Concept test",
             CustomerId = customer.Id,
@@ -180,20 +190,18 @@ public class ConceptOptionServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task DeleteAsync_DraftingRow_Succeeds()
+    public async Task DeleteAsync_DraftingRow_Throws()
     {
         var created = await _sut.CreateAsync(ValidCreate(), _userId);
-        Assert.True(await _sut.DeleteAsync(created.Id));
-        Assert.Null(await _sut.GetAsync(created.Id));
+        await Assert.ThrowsAsync<ConceptOptionOperationException>(() => _sut.DeleteAsync(created.Id));
     }
 
     [Fact]
-    public async Task DeleteAsync_PresentedRow_Succeeds()
+    public async Task DeleteAsync_PresentedRow_Throws()
     {
         var created = await _sut.CreateAsync(ValidCreate(), _userId);
         await MoveToPresentedAsync(created.Id);
-        Assert.True(await _sut.DeleteAsync(created.Id));
-        Assert.Null(await _sut.GetAsync(created.Id));
+        await Assert.ThrowsAsync<ConceptOptionOperationException>(() => _sut.DeleteAsync(created.Id));
     }
 
     // ---------------- helpers ----------------
@@ -204,5 +212,48 @@ public class ConceptOptionServiceTests : IDisposable
             new TransitionConceptOptionStatusRequest { Status = "PendingInternalReview" }, _userId);
         await _sut.TransitionStatusAsync(id,
             new TransitionConceptOptionStatusRequest { Status = "PresentedToClient" }, _userId);
+        if (!await _db.DesignReviews.AnyAsync(review => review.DesignProjectId == _projectId &&
+            review.Stage == DesignReviewStage.Concept))
+        {
+            var operationalProjectId = await _db.DesignProjects.Where(project => project.Id == _projectId)
+                .Select(project => project.OperationalProjectId!.Value).SingleAsync();
+            var document = new ProjectDocument
+            {
+                OperationalProjectId = operationalProjectId,
+                Category = ProjectDocumentCategory.DesignConcept,
+                SourceModule = ProjectDocumentSourceModule.Design,
+                SourceEntityType = nameof(ConceptOption),
+                SourceRecordId = id,
+                LocalPath = $"/files/project-documents/concept-{id}.pdf",
+                OriginalFileName = $"concept-{id}.pdf",
+                ContentType = "application/pdf",
+                Sha256 = new string('c', 64),
+                SyncStatus = ProjectDocumentSyncStatus.Synced,
+            };
+            _db.ProjectDocuments.Add(document);
+            await _db.SaveChangesAsync();
+            _db.DesignReviews.Add(new DesignReview
+            {
+                DesignProjectId = _projectId,
+                Stage = DesignReviewStage.Concept,
+                RevisionNumber = 1,
+                Title = "Concept client approval",
+                Status = DesignReviewStatus.ClientApproved,
+                DesignManagerUserId = _userId,
+                CreatedByUserId = _userId,
+                UpdatedByUserId = _userId,
+                Documents =
+                [
+                    new DesignReviewDocument
+                    {
+                        ProjectDocumentId = document.Id,
+                        SourceEntityTypeSnapshot = nameof(ConceptOption),
+                        SourceRecordIdSnapshot = id,
+                        Sha256Snapshot = document.Sha256,
+                    },
+                ],
+            });
+            await _db.SaveChangesAsync();
+        }
     }
 }

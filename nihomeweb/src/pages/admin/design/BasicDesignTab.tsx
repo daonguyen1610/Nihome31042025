@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { CheckCircle2, ChevronsRight, Circle, FileUp, History, Loader2, Pencil, Plus, Send, ShieldCheck, Sparkles, Trash2, Undo2, XCircle } from "lucide-react";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
+import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,16 +24,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -46,6 +37,7 @@ import {
   type BasicDesignReadiness,
   type CreateBasicDesignDocRequest,
   type DesignProjectResponse,
+  type DeletionImpactResponse,
   type MasterDataOption,
 } from "@/services/adminApi";
 import { RevisionsPanel } from "./RevisionsPanel";
@@ -108,6 +100,7 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged }: Props) => {
   const canUnlock = has(ADMIN_PERMS.designProjectsManage);
   const canViewRevisions = has(ADMIN_PERMS.designRevisions);
   const canPickOwner = has(ADMIN_PERMS.users);
+  const canHardDelete = has(ADMIN_PERMS.designRecordsHardDelete);
   const [searchParams] = useSearchParams();
   const focusedDocumentId = Number(searchParams.get("documentId"));
 
@@ -303,20 +296,40 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged }: Props) => {
   // -------- delete confirmation --------
   const [deleting, setDeleting] = useState<BasicDesignDocResponse | null>(null);
   const [busyDelete, setBusyDelete] = useState(false);
-  const confirmDelete = async () => {
-    if (!deleting) return;
+  const [deleteImpact, setDeleteImpact] = useState<DeletionImpactResponse | null>(null);
+  const [loadingDeleteImpact, setLoadingDeleteImpact] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!deleting) {
+      setDeleteImpact(null);
+      setDeleteError(null);
+      return;
+    }
+    let active = true;
+    setLoadingDeleteImpact(true);
+    setDeleteError(null);
+    void adminApi.getBasicDesignDocDeletionImpact(deleting.id)
+      .then(({ data }) => { if (active) setDeleteImpact(data); })
+      .catch((err) => { if (active) setDeleteError(extractApiError(err)); })
+      .finally(() => { if (active) setLoadingDeleteImpact(false); });
+    return () => { active = false; };
+  }, [deleting]);
+
+  const confirmDelete = async (confirmation: string) => {
+    if (!deleting || !deleteImpact) return null;
     setBusyDelete(true);
+    setDeleteError(null);
     try {
-      await adminApi.deleteBasicDesignDoc(deleting.id);
-      toast({ title: t("basicDesign.deleted") });
-      setDeleting(null);
-      await fetchRows();
-    } catch (err) {
-      toast({
-        title: t("common.error"),
-        description: extractApiError(err),
-        variant: "destructive",
+      await adminApi.deleteBasicDesignDoc(deleting.id, {
+        planToken: deleteImpact.planToken,
+        confirmation,
       });
+      toast({ title: t("basicDesign.deleted") });
+      return null;
+    } catch (err) {
+      setDeleteError(extractApiError(err));
+      throw err;
     } finally {
       setBusyDelete(false);
     }
@@ -549,12 +562,13 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged }: Props) => {
                             row={row}
                             t={t}
                             canApprove={canApprove}
+                            canHardDelete={canHardDelete}
                             busy={transitioning === row.id}
                             onEdit={() => openEdit(row)}
                             onDelete={() => setDeleting(row)}
                             onTransition={(next) => void transition(row, next)}
                           />
-                        ) : (
+                        ) : canHardDelete && row.status === "Rejected" ? (
                           <Button
                             size="sm"
                             variant="ghost"
@@ -565,9 +579,10 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged }: Props) => {
                             <Trash2 className="mr-1 h-3.5 w-3.5" />
                             {t("basicDesign.action.delete")}
                           </Button>
-                        )}
+                        ) : null}
                       </div>
                     ) : null}
+                    {!canDelete && canHardDelete && row.status === "Rejected" ? <Button size="sm" variant="ghost" className="mt-2 h-8 text-xs text-rose-700" onClick={() => setDeleting(row)}><Trash2 className="mr-1 h-3.5 w-3.5" />{t("basicDesign.action.delete")}</Button> : null}
                   </li>
                 ))}
               </ul>
@@ -654,30 +669,16 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged }: Props) => {
         </DialogContent>
       </Dialog>
 
-      {/* delete confirmation */}
-      <AlertDialog open={!!deleting} onOpenChange={(o) => (!o ? setDeleting(null) : undefined)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t("basicDesign.delete.confirmTitle")}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("basicDesign.delete.confirmBody").replace("{code}", deleting?.documentCode ?? "")}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={busyDelete}>{t("common.cancel")}</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-rose-600 hover:bg-rose-700"
-              onClick={(e) => {
-                e.preventDefault();
-                void confirmDelete();
-              }}
-              disabled={busyDelete}
-            >
-              {t("basicDesign.delete.confirm")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeletionImpactDialog
+        open={deleting !== null}
+        impact={deleteImpact}
+        loading={loadingDeleteImpact}
+        deleting={busyDelete}
+        error={deleteError}
+        onOpenChange={(open) => { if (!open && !busyDelete) setDeleting(null); }}
+        onConfirm={confirmDelete}
+        onCompleted={async () => { setDeleting(null); await fetchRows(); }}
+      />
 
       {revisionsFor ? (
         <RevisionsPanel
@@ -738,6 +739,7 @@ const RowActions = ({
   row,
   t,
   canApprove,
+  canHardDelete,
   busy,
   onEdit,
   onDelete,
@@ -746,6 +748,7 @@ const RowActions = ({
   row: BasicDesignDocResponse;
   t: (key: string) => string;
   canApprove: boolean;
+  canHardDelete: boolean;
   busy: boolean;
   onEdit: () => void;
   onDelete: () => void;
@@ -831,11 +834,11 @@ const RowActions = ({
           {t("basicDesign.status.Rejected")}
         </Badge>
       )}
-      <Button size="sm" variant="ghost" className={cn(btn, "text-rose-700 hover:bg-rose-50 hover:text-rose-800")}
+      {canHardDelete && s === "Rejected" ? <Button size="sm" variant="ghost" className={cn(btn, "text-rose-700 hover:bg-rose-50 hover:text-rose-800")}
         onClick={onDelete} data-testid={`basic-design-delete-${row.id}`}>
         <Trash2 className="mr-1 h-3.5 w-3.5" />
         {t("basicDesign.action.delete")}
-      </Button>
+      </Button> : null}
     </>
   );
 };

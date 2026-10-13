@@ -51,7 +51,8 @@ public class DesignProjectService(
 
         if (p.CustomerId.HasValue) q = q.Where(dp => dp.CustomerId == p.CustomerId.Value);
         if (p.ContractId.HasValue) q = q.Where(dp => dp.ContractId == p.ContractId.Value);
-        if (p.ProjectManagerUserId.HasValue) q = q.Where(dp => dp.ProjectManagerUserId == p.ProjectManagerUserId.Value);
+        var designManagerFilter = ResolveDesignManagerId(p.DesignManagerUserId, p.ProjectManagerUserId);
+        if (designManagerFilter.HasValue) q = q.Where(dp => dp.ProjectManagerUserId == designManagerFilter.Value);
         if (p.DesignLeadUserId.HasValue) q = q.Where(dp => dp.DesignLeadUserId == p.DesignLeadUserId.Value);
 
         if (!string.IsNullOrWhiteSpace(p.Stage))
@@ -112,7 +113,8 @@ public class DesignProjectService(
         {
             throw new DesignProjectOperationException("Tên dự án là bắt buộc.");
         }
-        await EnsureRelationsAsync(request, excludeDesignProjectId: null, ct);
+        var designManagerUserId = ResolveDesignManagerId(request.DesignManagerUserId, request.ProjectManagerUserId);
+        await EnsureRelationsAsync(request, designManagerUserId, excludeDesignProjectId: null, ct);
         var allocationYear = DateTime.UtcNow.Year;
         await using var allocationTransaction = await BeginCodeAllocationAsync(allocationYear, ct);
 
@@ -123,7 +125,7 @@ public class DesignProjectService(
             Name = name,
             CustomerId = request.CustomerId,
             ContractId = request.ContractId,
-            ProjectManagerUserId = request.ProjectManagerUserId,
+            ProjectManagerUserId = designManagerUserId,
             DesignLeadUserId = request.DesignLeadUserId,
             StartDate = request.StartDate,
             Deadline = request.Deadline,
@@ -236,13 +238,14 @@ public class DesignProjectService(
             throw new DesignProjectOperationException(
                 "Không thể chuyển dự án thiết kế sang Dự án vận hành khác.");
         }
-        await EnsureRelationsAsync(request, id, ct);
+        var designManagerUserId = ResolveDesignManagerId(request.DesignManagerUserId, request.ProjectManagerUserId);
+        await EnsureRelationsAsync(request, designManagerUserId, id, ct);
 
         entity.Name = name;
         entity.OperationalProjectId = request.OperationalProjectId;
         entity.CustomerId = request.CustomerId;
         entity.ContractId = request.ContractId;
-        entity.ProjectManagerUserId = request.ProjectManagerUserId;
+        entity.ProjectManagerUserId = designManagerUserId;
         entity.DesignLeadUserId = request.DesignLeadUserId;
         entity.StartDate = request.StartDate;
         entity.Deadline = request.Deadline;
@@ -468,6 +471,7 @@ public class DesignProjectService(
 
     private async Task EnsureRelationsAsync(
         CreateDesignProjectRequest request,
+        int? designManagerUserId,
         int? excludeDesignProjectId,
         CancellationToken ct)
     {
@@ -529,9 +533,9 @@ public class DesignProjectService(
                     "Dự án vận hành đã có một luồng thiết kế.");
             }
         }
-        if (request.ProjectManagerUserId.HasValue &&
+        if (designManagerUserId.HasValue &&
             !await db.Users.AnyAsync(u =>
-                u.Id == request.ProjectManagerUserId.Value && u.IsActive, ct))
+                u.Id == designManagerUserId.Value && u.IsActive, ct))
         {
             throw new DesignProjectOperationException(
                 $"PM #{request.ProjectManagerUserId} không tồn tại hoặc đã ngừng hoạt động.");
@@ -612,6 +616,17 @@ public class DesignProjectService(
 
     private static string? TrimOrNull(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
 
+    private static int? ResolveDesignManagerId(int? designManagerUserId, int? legacyProjectManagerUserId)
+    {
+        if (designManagerUserId.HasValue && legacyProjectManagerUserId.HasValue &&
+            designManagerUserId != legacyProjectManagerUserId)
+        {
+            throw new DesignProjectOperationException(
+                "DesignManagerUserId và ProjectManagerUserId phải giống nhau khi cùng được cung cấp.");
+        }
+        return designManagerUserId ?? legacyProjectManagerUserId;
+    }
+
     private static DesignProjectListItemResponse MapListItem(DesignProject dp) => new()
     {
         Id = dp.Id,
@@ -624,6 +639,8 @@ public class DesignProjectService(
         ContractNumber = dp.Contract?.ContractNumber,
         ProjectManagerUserId = dp.ProjectManagerUserId,
         ProjectManagerName = dp.ProjectManager?.FullName,
+        DesignManagerUserId = dp.ProjectManagerUserId,
+        DesignManagerName = dp.ProjectManager?.FullName,
         DesignLeadUserId = dp.DesignLeadUserId,
         DesignLeadName = dp.DesignLead?.FullName,
         StartDate = dp.StartDate,
@@ -645,6 +662,8 @@ public class DesignProjectService(
         ContractNumber = dp.Contract?.ContractNumber,
         ProjectManagerUserId = dp.ProjectManagerUserId,
         ProjectManagerName = dp.ProjectManager?.FullName,
+        DesignManagerUserId = dp.ProjectManagerUserId,
+        DesignManagerName = dp.ProjectManager?.FullName,
         DesignLeadUserId = dp.DesignLeadUserId,
         DesignLeadName = dp.DesignLead?.FullName,
         StartDate = dp.StartDate,

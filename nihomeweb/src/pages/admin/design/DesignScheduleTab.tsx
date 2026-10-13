@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { CalendarClock, CheckCircle2, ChevronLeft, ChevronRight, Diamond, Filter, Loader2, Pencil, Plus, RefreshCw } from "lucide-react";
+import { CalendarClock, Check, CheckCircle2, ChevronLeft, ChevronRight, Diamond, Filter, Loader2, Pencil, Plus, RefreshCw, Send, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { newIdempotencyKey } from "@/lib/api";
 import { extractApiError } from "@/lib/apiError";
 import { useI18n } from "@/lib/i18n";
+import { useAppSelector } from "@/store";
 import {
   adminApi,
   DESIGN_SCHEDULE_PHASE_CODES,
@@ -50,6 +51,7 @@ const statusClass: Record<string, string> = {
 
 export const DesignScheduleTab = ({ project }: Props) => {
   const { t, lang } = useI18n();
+  const currentUserId = useAppSelector((state) => state.auth.user?.userId ?? null);
   const operationalProjectId = project.operationalProjectId;
   const [schedule, setSchedule] = useState<DesignScheduleResponse | null>(null);
   const [dependencyTasks, setDependencyTasks] = useState<DesignScheduleTaskResponse[]>([]);
@@ -63,6 +65,8 @@ export const DesignScheduleTab = ({ project }: Props) => {
   const [editingTask, setEditingTask] = useState<DesignScheduleTaskResponse | null>(null);
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);
   const [initialPhaseId, setInitialPhaseId] = useState<number | undefined>();
+  const [busyTaskId, setBusyTaskId] = useState<number | null>(null);
+  const [reviewReasons, setReviewReasons] = useState<Record<number, string>>({});
   const initializeKey = useRef(newIdempotencyKey());
 
   const load = useCallback(async () => {
@@ -95,6 +99,7 @@ export const DesignScheduleTab = ({ project }: Props) => {
     return option?.labelKey ? t(option.labelKey) : option?.name ?? code;
   };
   const memberLabel = (id: number) => team?.members.find((member) => member.id === id)?.userName ?? t("designProjects.schedule.value.unknown");
+  const memberUserId = (id: number) => team?.members.find((member) => member.id === id)?.userId;
   const totalPages = Math.max(1, Math.ceil((schedule?.tasks.totalCount ?? 0) / PAGE_SIZE));
   const hasFilters = Boolean(query.phase || query.assigneeMemberId || query.departmentCode || query.status || query.plannedFrom || query.plannedTo || query.overdueOnly);
   const activeMembers = useMemo(() => team?.members.filter((member) => member.isActive) ?? [], [team]);
@@ -129,6 +134,17 @@ export const DesignScheduleTab = ({ project }: Props) => {
     const tasks = await loadAllScheduleTasks(operationalProjectId);
     setDependencyTasks(tasks);
     return tasks.find((task) => task.id === editingTask.id);
+  };
+  const mutateTask = async (task: DesignScheduleTaskResponse, action: "complete" | "approve" | "reject") => {
+    setBusyTaskId(task.id);
+    setError(null);
+    try {
+      const key = newIdempotencyKey();
+      if (action === "complete") await adminApi.completeDesignScheduleTask(operationalProjectId, task.id, task.rowVersion, key);
+      else await adminApi.reviewDesignScheduleTask(operationalProjectId, task.id, action === "approve", action === "reject" ? reviewReasons[task.id]?.trim() || null : null, task.rowVersion, key);
+      await load();
+    } catch (reason) { setError(extractApiError(reason)); }
+    finally { setBusyTaskId(null); }
   };
 
   if (!operationalProjectId) return <section className="rounded-lg border border-dashed border-slate-300 bg-white p-8 text-center"><CalendarClock className="mx-auto h-9 w-9 text-slate-400" /><h2 className="mt-3 font-semibold text-slate-900">{t("designProjects.schedule.unlinkedTitle")}</h2><p className="mx-auto mt-1 max-w-xl text-sm text-slate-500">{t("designProjects.schedule.unlinkedDescription")}</p></section>;
@@ -166,7 +182,24 @@ export const DesignScheduleTab = ({ project }: Props) => {
 
       <section className="rounded-lg border border-slate-200 bg-white shadow-sm"><div className="flex flex-wrap items-center justify-between gap-2 border-b p-4"><div><h3 className="font-semibold text-slate-900">{t("designProjects.schedule.tasks.title")}</h3><p className="text-sm text-slate-500">{t("designProjects.schedule.tasks.total", { count: schedule.tasks.totalCount })}</p></div>{loading ? <Loader2 className="h-5 w-5 animate-spin text-slate-400" /> : null}</div>
         {error ? <div className="m-4 rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700" role="alert"><p>{error}</p><Button size="sm" variant="outline" className="mt-2 min-h-10" onClick={() => void load()}><RefreshCw className="mr-1 h-4 w-4" />{t("common.retry")}</Button></div> : null}
-        {!schedule.tasks.items.length ? <div className="p-10 text-center text-sm text-slate-500">{t(hasFilters ? "designProjects.schedule.tasks.emptyFiltered" : "designProjects.schedule.tasks.empty")}</div> : <div className="divide-y">{schedule.tasks.items.map((task) => <article key={task.id} className="p-4"><div className="flex flex-wrap items-start justify-between gap-3"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2">{task.isMilestone ? <Diamond className="h-4 w-4 fill-amber-400 text-amber-600" /> : null}<strong className="text-slate-900">{task.name}</strong><Badge variant="outline" className={statusClass[task.status]}>{t(`designProjects.schedule.status.${task.status}`)}</Badge>{task.overdue ? <Badge variant="outline" className="border-rose-200 bg-rose-50 text-rose-700">{t("designProjects.schedule.overdue")}</Badge> : null}</div><p className="mt-1 font-mono text-xs text-slate-500">{task.code} · {t(`designProjects.stage.${task.phaseCode}`)}</p></div>{schedule.canManage ? <Button variant="ghost" size="icon" className="min-h-11 min-w-11" aria-label={t("designProjects.schedule.action.editTask")} onClick={() => openEditTask(task)}><Pencil className="h-4 w-4" /></Button> : null}</div><dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-5"><div><dt className="text-xs text-slate-500">{t("designProjects.schedule.field.assignee")}</dt><dd>{memberLabel(task.assigneeMemberId)}</dd></div><div><dt className="text-xs text-slate-500">{t("designProjects.schedule.field.department")}</dt><dd>{departmentLabel(task.departmentCode)}</dd></div><div><dt className="text-xs text-slate-500">{t("designProjects.schedule.field.plannedDates")}</dt><dd>{formatDate(task.plannedStart)} – {formatDate(task.plannedEnd)}</dd></div><div><dt className="text-xs text-slate-500">{t("designProjects.schedule.field.actualDates")}</dt><dd>{formatDate(task.actualStart)} – {formatDate(task.actualEnd)}</dd></div><div><dt className="text-xs text-slate-500">{t("designProjects.schedule.field.progressWeight")}</dt><dd>{task.progressPercent}% · {task.weight}%</dd></div></dl>{task.predecessorTaskIds.length ? <p className="mt-2 text-xs text-slate-500">{t("designProjects.schedule.field.predecessors")}: {task.predecessorTaskIds.map((id) => dependencyTasks.find((item) => item.id === id)?.code ?? `#${id}`).join(", ")}</p> : null}<Progress className="mt-3 h-1.5" value={task.progressPercent} /></article>)}</div>}
+        {!schedule.tasks.items.length ? <div className="p-10 text-center text-sm text-slate-500">{t(hasFilters ? "designProjects.schedule.tasks.emptyFiltered" : "designProjects.schedule.tasks.empty")}</div> : (
+          <div className="divide-y">{schedule.tasks.items.map((task) => {
+            const isAssignee = memberUserId(task.assigneeMemberId) === currentUserId;
+            const isApprover = memberUserId(task.approverMemberId) === currentUserId;
+            return <article key={task.id} className="overflow-hidden p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2">{task.isMilestone ? <Diamond className="h-4 w-4 fill-amber-400 text-amber-600" /> : null}<strong className="break-words text-slate-900">{task.name}</strong><Badge variant="outline" className={statusClass[task.status]}>{t(`designProjects.schedule.status.${task.status}`)}</Badge><Badge variant="outline">{t(`designProjects.schedule.approval.${task.approvalStatus}`)}</Badge>{task.isCritical ? <Badge variant="destructive">{t("designProjects.schedule.field.critical")}</Badge> : null}</div><p className="mt-1 break-all font-mono text-xs text-slate-500">{task.code} / {t(`designProjects.stage.${task.phaseCode}`)}</p></div>{schedule.canManage ? <Button variant="ghost" size="icon" className="min-h-11 min-w-11" aria-label={t("designProjects.schedule.action.editTask")} onClick={() => openEditTask(task)}><Pencil className="h-4 w-4" /></Button> : null}</div>
+              {task.description ? <p className="mt-2 break-words text-sm text-slate-600">{task.description}</p> : null}
+              <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"><div><dt className="text-xs text-slate-500">{t("designProjects.schedule.field.assignee")}</dt><dd>{memberLabel(task.assigneeMemberId)}</dd></div><div><dt className="text-xs text-slate-500">{t("designProjects.schedule.field.approver")}</dt><dd>{memberLabel(task.approverMemberId)}</dd></div><div><dt className="text-xs text-slate-500">{t("designProjects.schedule.field.department")}</dt><dd>{departmentLabel(task.departmentCode)}</dd></div><div><dt className="text-xs text-slate-500">{t("designProjects.schedule.field.plannedDates")}</dt><dd>{formatDate(task.plannedStart)} – {formatDate(task.plannedEnd)}</dd></div><div><dt className="text-xs text-slate-500">{t("designProjects.schedule.field.actualDates")}</dt><dd>{formatDate(task.actualStart)} – {formatDate(task.actualEnd)}</dd></div><div><dt className="text-xs text-slate-500">{t("designProjects.schedule.field.progressWeight")}</dt><dd>{task.progressPercent}% / {task.weight}%</dd></div></dl>
+              {task.resourceSummary ? <p className="mt-2 break-words text-xs text-slate-500">{t("designProjects.schedule.field.resources")}: {task.resourceSummary}</p> : null}
+              {task.predecessorTaskIds.length ? <p className="mt-2 break-words text-xs text-slate-500">{t("designProjects.schedule.field.predecessors")}: {task.predecessorTaskIds.map((id) => dependencyTasks.find((item) => item.id === id)?.code ?? `#${id}`).join(", ")}</p> : null}
+              {task.successorTaskIds.length ? <p className="mt-1 break-words text-xs text-slate-500">{t("designProjects.schedule.field.successors")}: {task.successorTaskIds.map((id) => dependencyTasks.find((item) => item.id === id)?.code ?? `#${id}`).join(", ")}</p> : null}
+              <Progress className="mt-3 h-1.5" value={task.progressPercent} />
+              {isAssignee && task.status === "InProgress" && task.approvalStatus !== "Pending" ? <Button className="mt-3 min-h-11" disabled={busyTaskId === task.id} onClick={() => void mutateTask(task, "complete")}><Send className="mr-1.5 h-4 w-4" />{t("designProjects.schedule.action.complete")}</Button> : null}
+              {isApprover && task.approvalStatus === "Pending" ? <div className="mt-3 space-y-2 rounded-md border bg-slate-50 p-3"><Input value={reviewReasons[task.id] ?? ""} maxLength={2000} placeholder={t("designProjects.schedule.placeholder.reviewReason")} onChange={(event) => setReviewReasons((current) => ({ ...current, [task.id]: event.target.value }))} /><div className="flex flex-wrap gap-2"><Button className="min-h-11" disabled={busyTaskId === task.id} onClick={() => void mutateTask(task, "approve")}><Check className="mr-1 h-4 w-4" />{t("designProjects.schedule.action.approve")}</Button><Button variant="destructive" className="min-h-11" disabled={busyTaskId === task.id || !reviewReasons[task.id]?.trim()} onClick={() => void mutateTask(task, "reject")}><X className="mr-1 h-4 w-4" />{t("designProjects.schedule.action.reject")}</Button></div></div> : null}
+              {task.reviewComment ? <p className="mt-2 break-words text-sm text-rose-700">{task.reviewComment}</p> : null}
+            </article>;
+          })}</div>
+        )}
         <div className="flex items-center justify-between border-t p-4"><span className="text-sm text-slate-500">{t("designProjects.schedule.pagination", { page: schedule.tasks.page, totalPages })}</span><div className="flex gap-2"><Button variant="outline" size="icon" className="min-h-11 min-w-11" aria-label={t("designProjects.schedule.action.previous")} disabled={schedule.tasks.page <= 1 || loading} onClick={() => updateQuery({ page: schedule.tasks.page - 1 })}><ChevronLeft className="h-4 w-4" /></Button><Button variant="outline" size="icon" className="min-h-11 min-w-11" aria-label={t("common.next")} disabled={schedule.tasks.page >= totalPages || loading} onClick={() => updateQuery({ page: schedule.tasks.page + 1 })}><ChevronRight className="h-4 w-4" /></Button></div></div>
       </section>
 

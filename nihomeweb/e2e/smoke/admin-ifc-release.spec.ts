@@ -1,5 +1,9 @@
 import { test, expect, TEST_USERS } from "../fixtures/auth";
-import { createDesignProject } from "../fixtures/designProjects";
+import {
+  approveDesignStage,
+  createDesignProject,
+  isGoogleDriveConnected,
+} from "../fixtures/designProjects";
 
 /**
  * NIH-118 M2 IFC Release end-to-end flow. Real-user path through the
@@ -33,6 +37,10 @@ test.describe("NIH-118 — IFC Release (real-user flow)", () => {
     // ---------- 1. Set up a project + approved shop drawing via the API ----------
     const token = await loginAs(TEST_USERS.superAdmin);
     const authHeader = { Authorization: `Bearer ${token}` };
+    test.skip(
+      !(await isGoogleDriveConnected(api, authHeader)),
+      "Requires a connected Google Drive because approved design evidence must be durably synced.",
+    );
 
     // Own customer, never the newest one from the list. Customers are ordered
     // newest first, so borrowing index 0 picks up whatever another spec just
@@ -72,9 +80,14 @@ test.describe("NIH-118 — IFC Release (real-user flow)", () => {
       data: { designProjectId: projectId, name: "E2E finalized" },
     });
     const optId = (await optCreate.json()).id as number;
-    for (const status of ["PendingInternalReview", "PresentedToClient", "Finalized"]) {
-      await api.post(`/api/concept-options/${optId}/status`, { headers: authHeader, data: { status } });
+    for (const status of ["PendingInternalReview", "PresentedToClient"]) {
+      const transition = await api.post(`/api/concept-options/${optId}/status`, { headers: authHeader, data: { status } });
+      expect(transition.ok(), await transition.text()).toBeTruthy();
     }
+    await approveDesignStage(api, { headers: authHeader, projectId, stage: "Concept", category: "DesignConcept", sourceEntityType: "ConceptOption", sourceRecordIds: [optId] });
+    const finalized = await api.post(`/api/concept-options/${optId}/status`, { headers: authHeader, data: { status: "Finalized" } });
+    expect(finalized.ok(), await finalized.text()).toBeTruthy();
+    const basicDocumentIds: number[] = [];
     for (const disciplineCode of ["architecture", "structure", "mep"]) {
       const doc = await api.post("/api/basic-design-docs", {
         headers: authHeader,
@@ -84,12 +97,17 @@ test.describe("NIH-118 — IFC Release (real-user flow)", () => {
           title: `${disciplineCode} — E2E BD ${uid()}`,
         },
       });
+      expect(doc.ok(), await doc.text()).toBeTruthy();
       const docId = (await doc.json()).id as number;
+      basicDocumentIds.push(docId);
       for (const status of ["SubmittedForReview", "InternallyApproved"]) {
-        await api.post(`/api/basic-design-docs/${docId}/status`, { headers: authHeader, data: { status } });
+        const transition = await api.post(`/api/basic-design-docs/${docId}/status`, { headers: authHeader, data: { status } });
+        expect(transition.ok(), await transition.text()).toBeTruthy();
       }
     }
-    await api.post(`/api/basic-design-docs/design-project/${projectId}/unlock-shop-drawing`, { headers: authHeader });
+    await approveDesignStage(api, { headers: authHeader, projectId, stage: "BasicDesign", category: "DesignBasic", sourceEntityType: "BasicDesignDoc", sourceRecordIds: basicDocumentIds });
+    const unlocked = await api.post(`/api/basic-design-docs/design-project/${projectId}/unlock-shop-drawing`, { headers: authHeader });
+    expect(unlocked.ok(), await unlocked.text()).toBeTruthy();
 
     // Approved shop drawing to bundle.
     const shopCreate = await api.post("/api/shop-drawings", {
@@ -104,8 +122,10 @@ test.describe("NIH-118 — IFC Release (real-user flow)", () => {
     expect(shopCreate.ok(), await shopCreate.text()).toBeTruthy();
     const shopId = (await shopCreate.json()).id as number;
     for (const status of ["InReview", "Approved"]) {
-      await api.post(`/api/shop-drawings/${shopId}/status`, { headers: authHeader, data: { status } });
+      const transition = await api.post(`/api/shop-drawings/${shopId}/status`, { headers: authHeader, data: { status } });
+      expect(transition.ok(), await transition.text()).toBeTruthy();
     }
+    await approveDesignStage(api, { headers: authHeader, projectId, stage: "ShopDrawing", category: "DesignShopDrawing", sourceEntityType: "ShopDrawing", sourceRecordIds: [shopId] });
 
     // ---------- 2. Open the IFC tab in the browser ----------
     await loginInBrowserAs(page, TEST_USERS.superAdmin);
