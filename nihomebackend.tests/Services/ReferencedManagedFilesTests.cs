@@ -6,7 +6,7 @@ using Xunit;
 
 namespace nihomebackend.tests.Services;
 
-public class ReferencedUploadedImagesTests : IDisposable
+public sealed class ReferencedManagedFilesTests : IDisposable
 {
     private readonly AppDbContext _db = DbContextFactory.Create();
 
@@ -17,7 +17,7 @@ public class ReferencedUploadedImagesTests : IDisposable
     {
         // ServiceItem was previously never scanned at all, so every image
         // referenced only from IntroBlocksJson looked orphaned and was
-        // deleted by UploadedImageCleanupService after 24h.
+        // deleted by the orphan-file worker after 24h.
         _db.ServiceItems.Add(new ServiceItem
         {
             Slug = "xay-dung",
@@ -26,9 +26,9 @@ public class ReferencedUploadedImagesTests : IDisposable
         });
         await _db.SaveChangesAsync();
 
-        var referenced = await ReferencedUploadedImages.GetAsync(_db);
+        var referenced = await ReferencedManagedFiles.GetAsync(_db);
 
-        Assert.Contains("services/abc123.jpg", referenced);
+        Assert.Contains("/images/upload/services/abc123.jpg", referenced);
     }
 
     [Fact]
@@ -44,10 +44,10 @@ public class ReferencedUploadedImagesTests : IDisposable
         });
         await _db.SaveChangesAsync();
 
-        var referenced = await ReferencedUploadedImages.GetAsync(_db);
+        var referenced = await ReferencedManagedFiles.GetAsync(_db);
 
-        Assert.Contains("about/company.png", referenced);
-        Assert.Contains("about/site.png", referenced);
+        Assert.Contains("/images/upload/about/company.png", referenced);
+        Assert.Contains("/images/upload/about/site.png", referenced);
     }
 
     [Fact]
@@ -69,10 +69,10 @@ public class ReferencedUploadedImagesTests : IDisposable
         });
         await _db.SaveChangesAsync();
 
-        var referenced = await ReferencedUploadedImages.GetAsync(_db);
+        var referenced = await ReferencedManagedFiles.GetAsync(_db);
 
-        Assert.Contains("news/khai-truong/inline.jpg", referenced);
-        Assert.Contains("activities/hop-mat/inline.jpg", referenced);
+        Assert.Contains("/images/upload/news/khai-truong/inline.jpg", referenced);
+        Assert.Contains("/images/upload/activities/hop-mat/inline.jpg", referenced);
     }
 
     [Fact]
@@ -89,25 +89,27 @@ public class ReferencedUploadedImagesTests : IDisposable
         });
         await _db.SaveChangesAsync();
 
-        var referenced = await ReferencedUploadedImages.GetAsync(_db);
+        var referenced = await ReferencedManagedFiles.GetAsync(_db);
 
-        Assert.Contains("projects/nha-may-abc/inline.jpg", referenced);
+        Assert.Contains("/images/upload/projects/nha-may-abc/inline.jpg", referenced);
     }
 
     [Fact]
-    public async Task GetAsync_ProtectsProcessDocumentImages()
+    public async Task GetAsync_ProtectsProcessImagesAndFiles()
     {
         _db.ProcessDocuments.Add(new ProcessDocument
         {
             GroupKey = "quality",
             Title = "Quy trinh",
-            ImagesJson = """["/images/upload/misc/process1.png"]""",
+            ImagesJson = """["/images/processes/quality/process1.png"]""",
+            FilesJson = """[{"url":"/files/processes/quality/iso-checklist.pdf"}]""",
         });
         await _db.SaveChangesAsync();
 
-        var referenced = await ReferencedUploadedImages.GetAsync(_db);
+        var referenced = await ReferencedManagedFiles.GetAsync(_db);
 
-        Assert.Contains("misc/process1.png", referenced);
+        Assert.Contains("/images/processes/quality/process1.png", referenced);
+        Assert.Contains("/files/processes/quality/iso-checklist.pdf", referenced);
     }
 
     [Fact]
@@ -121,8 +123,54 @@ public class ReferencedUploadedImagesTests : IDisposable
         });
         await _db.SaveChangesAsync();
 
-        var referenced = await ReferencedUploadedImages.GetAsync(_db);
+        var referenced = await ReferencedManagedFiles.GetAsync(_db);
 
         Assert.Empty(referenced);
+    }
+
+    [Fact]
+    public async Task GetAsync_ProtectsManagedDocumentsAcrossBackendModules()
+    {
+        _db.UserDocuments.Add(new UserDocument
+        {
+            UserId = 10,
+            OriginalName = "cccd.pdf",
+            FileUrl = "/images/upload/documents/cccd.pdf",
+            ContentType = "application/pdf",
+        });
+        _db.JobApplications.Add(new JobApplication
+        {
+            JobPositionId = 20,
+            CandidateName = "Nguyen Van An",
+            Email = "an@example.com",
+            CvUrl = "/files/cv/nguyen-van-an.pdf",
+        });
+        _db.PaymentRequestAttachments.Add(new PaymentRequestAttachment
+        {
+            PaymentRequestId = 30,
+            FileName = "de-nghi-thanh-toan.pdf",
+            FilePath = "/files/business-documents/finance/de-nghi-thanh-toan.pdf",
+        });
+        _db.HseViolations.Add(new HseViolation
+        {
+            OperationalProjectId = 40,
+            Code = "HSE-001",
+            OfflineClientId = "offline-hse-001",
+            Location = "Nha may Nicon",
+            Category = "Safety",
+            Description = "Bien ban hien truong",
+            EvidenceDocumentsJson = """["/files/business-documents/construction/hse-photo.jpg"]""",
+            ResponsibleSiteUserId = 10,
+            CreatedByUserId = 10,
+            UpdatedByUserId = 10,
+        });
+        await _db.SaveChangesAsync();
+
+        var referenced = await ReferencedManagedFiles.GetAsync(_db);
+
+        Assert.Contains("/images/upload/documents/cccd.pdf", referenced);
+        Assert.Contains("/files/cv/nguyen-van-an.pdf", referenced);
+        Assert.Contains("/files/business-documents/finance/de-nghi-thanh-toan.pdf", referenced);
+        Assert.Contains("/files/business-documents/construction/hse-photo.jpg", referenced);
     }
 }
