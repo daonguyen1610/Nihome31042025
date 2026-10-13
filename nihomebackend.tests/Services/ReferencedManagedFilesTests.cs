@@ -129,6 +129,21 @@ public sealed class ReferencedManagedFilesTests : IDisposable
     }
 
     [Fact]
+    public async Task GetAsync_RejectsMalformedActiveJsonInsteadOfMissingAReference()
+    {
+        _db.ProcessDocuments.Add(new ProcessDocument
+        {
+            GroupKey = "safety",
+            Title = "Quy trinh an toan",
+            FilesJson = "[\"/files/processes/safety/checklist.pdf\"",
+        });
+        await _db.SaveChangesAsync();
+
+        await Assert.ThrowsAnyAsync<System.Text.Json.JsonException>(() =>
+            ReferencedManagedFiles.GetAsync(_db));
+    }
+
+    [Fact]
     public async Task GetAsync_ProtectsManagedDocumentsAcrossBackendModules()
     {
         _db.UserDocuments.Add(new UserDocument
