@@ -3,6 +3,7 @@ import { Loader2, Save } from "lucide-react";
 import AdminDocumentUpload from "@/components/admin/AdminDocumentUpload";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import { useI18n } from "@/lib/i18n";
+import { createLogger } from "@/lib/logger";
 import { extractApiError } from "@/lib/apiError";
 import { isManagedDocumentPath } from "@/lib/url";
 import { validateContact } from "@/lib/validation";
@@ -22,6 +23,7 @@ type VendorFormProps = {
 };
 
 const TYPES: VendorType[] = ["Supplier", "SubContractor", "Both"];
+const logger = createLogger("nihomeweb/src/pages/admin/procurement/VendorForm.tsx");
 
 const initialValue = (vendor?: VendorResponse): VendorFormValue => ({
   vendorCode: vendor?.vendorCode ?? "",
@@ -53,7 +55,10 @@ export default function VendorForm({ vendor, onSubmit, onCancel }: VendorFormPro
   useEffect(() => () => {
     if (pendingUploadRef.current) {
       void adminApi.discardVendorDocument(pendingUploadRef.current.token)
-        .catch((cleanupError) => console.warn("Unable to discard pending Vendor upload", cleanupError));
+        .catch((cleanupError) => logger.warning("Unable to discard pending Vendor upload", {
+          error: cleanupError,
+          messageType: "document_cleanup",
+        }));
     }
   }, []);
 

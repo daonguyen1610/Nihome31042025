@@ -18,7 +18,8 @@ public static class DbSeeder
     public static void Seed(
         AppDbContext db,
         string? webRootPath = null,
-        bool includeDevelopmentSamples = false)
+        bool includeDevelopmentSamples = false,
+        ILoggerFactory? loggerFactory = null)
     {
         var now = DateTime.UtcNow;
 
@@ -147,7 +148,7 @@ public static class DbSeeder
             }
         }
 
-        ContentSeeder.Seed(db);
+        ContentSeeder.Seed(db, loggerFactory?.CreateLogger("NihomeBackend.Data.ContentSeeder"));
         TranslationSeeder.Seed(db);
         RbacSeeder.Seed(db);
         MasterDataSeeder.Seed(db);

@@ -1,13 +1,18 @@
 import { useLocation } from "react-router-dom";
 import { useEffect } from "react";
 import { useI18n } from "@/lib/i18n";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger("nihomeweb/src/pages/NotFound.tsx");
 
 const NotFound = () => {
   const location = useLocation();
   const { t } = useI18n();
 
   useEffect(() => {
-    console.error("404 Error: User attempted to access non-existent route:", location.pathname);
+    logger.warning(`User attempted to access non-existent route: ${location.pathname}`, {
+      messageType: "navigation",
+    });
   }, [location.pathname]);
 
   return (

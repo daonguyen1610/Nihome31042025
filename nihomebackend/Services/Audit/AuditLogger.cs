@@ -106,10 +106,9 @@ public sealed class AuditLogger(
 
     private static string? ResolveCorrelationId(HttpContext ctx)
     {
-        var header = ctx.Request.Headers["X-Correlation-Id"].FirstOrDefault()
-                     ?? ctx.Request.Headers["X-Request-Id"].FirstOrDefault()
-                     ?? ctx.Request.Headers["traceparent"].FirstOrDefault();
-        return TrimNullable(string.IsNullOrWhiteSpace(header) ? ctx.TraceIdentifier : header, 80);
+        // RequestLoggingMiddleware validates the caller-provided header and
+        // stores the normalized value in TraceIdentifier.
+        return TrimNullable(ctx.TraceIdentifier, 80);
     }
 
     private static string? ResolveIp(HttpContext ctx)

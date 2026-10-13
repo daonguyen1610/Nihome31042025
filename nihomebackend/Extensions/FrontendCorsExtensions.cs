@@ -20,13 +20,15 @@ public static class FrontendCorsExtensions
                 {
                     policy.AllowAnyOrigin()
                         .AllowAnyHeader()
-                        .AllowAnyMethod();
+                        .AllowAnyMethod()
+                        .WithExposedHeaders("X-Correlation-Id");
                     return;
                 }
 
                 policy.WithOrigins(allowedOrigins)
                     .AllowAnyHeader()
-                    .AllowAnyMethod();
+                    .AllowAnyMethod()
+                    .WithExposedHeaders("X-Correlation-Id");
             });
         });
 
