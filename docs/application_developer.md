@@ -688,7 +688,7 @@ Controller (thin) --> Service (business logic) --> DbContext (data access)
 | `EmailTemplateFormatter`   | Format email templates with placeholder substitution     |
 | `TimeService`              | Centralized UTC time provider                            |
 | `HostedImageService`       | Background service for image management                  |
-| `UploadedImageCleanupService` | Background cleanup of orphaned uploaded images        |
+| `OrphanedManagedFileCleanupService` | Deletes unreferenced managed images and files after a 24-hour safety window |
 | `ActivityService`          | CRUD for activities with slug lookup and language support |
 | `ActivityCategoryService`  | CRUD for activity categories                             |
 | `NewsService`              | CRUD for news articles with language support              |
@@ -1261,7 +1261,7 @@ The existing field cardinality remains authoritative: vendor and as-built record
 
 Direct static requests under `/files/quotes`, `/files/customers`, `/files/contracts`, `/files/capability`, `/files/tenders`, `/files/business-documents`, and `/files/design` return `404` before static-file middleware. The React client obtains private bytes through authenticated resource routes and Blob responses. Newly staged two-step uploads are therefore unavailable until their metadata is saved; edit forms do not offer a managed preview until the current record references that path.
 
-Replacing or removing persisted Contract, Design, Vendor, Acceptance, As-Built, Handover, and Permit references deletes the previous managed file only after successful database persistence. Basic Design and Detail Design uploads also enforce the parent project's active stage in the backend service. Uploading before saving a two-step form can still leave an inaccessible, unreferenced physical file when the user cancels, because staged-file expiry/reconciliation is not yet implemented. Allowed extensions and the 20 MB limit are enforced, but malware scanning and full file-signature validation remain deployment hardening work.
+Replacing or removing persisted Contract, Design, Vendor, Acceptance, As-Built, Handover, and Permit references deletes the previous managed file only after successful database persistence. Basic Design and Detail Design uploads also enforce the parent project's active stage in the backend service. The orphan-file worker reconciles cancelled or abandoned two-step uploads every six hours and deletes local files older than 24 hours only when no active database record references their host-relative path. It covers `/images/upload`, `/images/processes`, and all subdirectories under `/files`; hard-delete quarantine is excluded because the durable hard-delete worker owns it. Allowed extensions and the 20 MB limit are enforced, but malware scanning and full file-signature validation remain deployment hardening work.
 
 Customer, quote, and contract files keep their dedicated document workflows. Design-project document upload is tracked separately. Site diaries and punch lists are excluded because they do not currently expose a complete persisted document contract. Every Survey requires an Operational Project, and its media is synchronized only through that project's catalog and Drive worker.
 

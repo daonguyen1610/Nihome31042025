@@ -220,7 +220,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<TranslationService>();
         services.AddScoped<EntityTranslationService>();
 
-        services.AddHostedService<UploadedImageCleanupService>();
+        services.AddScoped<IOrphanedManagedFileCleanupService, OrphanedManagedFileCleanupService>();
+        services.AddHostedService<OrphanedManagedFileCleanupWorker>();
         services.AddHostedService<VendorDocumentUploadCleanupWorker>();
         services.AddHostedService<ProjectDriveSyncService>();
         services.AddHostedService<HardDeleteRetryWorker>();
