@@ -5,6 +5,7 @@ import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import { useI18n } from "@/lib/i18n";
 import { createLogger } from "@/lib/logger";
 import { extractApiError } from "@/lib/apiError";
+import { getApiCorrelationId } from "@/lib/api";
 import { isManagedDocumentPath } from "@/lib/url";
 import { validateContact } from "@/lib/validation";
 import { Button } from "@/components/ui/button";
@@ -56,6 +57,7 @@ export default function VendorForm({ vendor, onSubmit, onCancel }: VendorFormPro
     if (pendingUploadRef.current) {
       void adminApi.discardVendorDocument(pendingUploadRef.current.token)
         .catch((cleanupError) => logger.warning("Unable to discard pending Vendor upload", {
+          correlationId: getApiCorrelationId(cleanupError),
           error: cleanupError,
           messageType: "document_cleanup",
         }));

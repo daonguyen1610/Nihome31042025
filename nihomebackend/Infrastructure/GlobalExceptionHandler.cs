@@ -45,7 +45,7 @@ public sealed class GlobalExceptionHandler(
         {
             ["api_name"] = httpContext.Items[RequestLoggingMiddleware.ApiNameItem]?.ToString()
                 ?? $"{httpContext.Request.Method} {httpContext.Request.Path}",
-            ["correlation_id"] = traceId,
+            ["correlation_id"] = RequestLoggingMiddleware.ResolveCorrelationId(httpContext),
             ["message_type"] = "exception",
         });
 

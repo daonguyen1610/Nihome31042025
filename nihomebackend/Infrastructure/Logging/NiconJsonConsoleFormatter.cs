@@ -14,6 +14,7 @@ public sealed class NiconJsonConsoleFormatter : ConsoleFormatter, IDisposable
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+        DictionaryKeyPolicy = JsonNamingPolicy.SnakeCaseLower,
         PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
     };
 
@@ -68,24 +69,27 @@ public sealed class NiconJsonConsoleFormatter : ConsoleFormatter, IDisposable
             ? message
             : $"{message} | {exception}";
 
+        var outputProperties = BuildOutputProperties(properties, options, processId);
         var record = new JsonLogRecord(
-            ResolveLoggerPath(category, options.SourceRoot),
+            ResolveLoggerPath(category, options),
             $"date=\"{timestamp:O}\", process_id=\"{processId}\", {renderedMessage}",
-            new JsonLogProperties(
-                ReadProperty(properties, "api_name") ?? options.ApiName,
-                ReadProperty(properties, "app_name") ?? options.AppName,
-                ReadProperty(properties, "correlation_id")
-                    ?? Activity.Current?.TraceId.ToString()
-                    ?? string.Empty,
-                ReadProperty(properties, "message_type") ?? options.MessageType),
+            outputProperties,
             ResolveSeverity(level),
             threadName);
 
         return JsonSerializer.Serialize(record, SerializerOptions);
     }
 
-    internal static string ResolveLoggerPath(string category, string sourceRoot)
+    internal static string ResolveLoggerPath(
+        string category,
+        NiconJsonConsoleFormatterOptions options)
     {
+        if (options.SourcePathOverrides.TryGetValue(category, out var configuredPath)
+            && !string.IsNullOrWhiteSpace(configuredPath))
+        {
+            return configuredPath.Replace('\\', '/');
+        }
+
         const string applicationPrefix = "NihomeBackend.";
         if (!category.StartsWith(applicationPrefix, StringComparison.Ordinal))
         {
@@ -99,8 +103,48 @@ public sealed class NiconJsonConsoleFormatter : ConsoleFormatter, IDisposable
             relativeCategory = relativeCategory[..genericMarker];
         }
 
-        return $"{sourceRoot.TrimEnd('/', '\\')}/{relativeCategory.Replace('.', '/')}.cs";
+        return $"{options.SourceRoot.TrimEnd('/', '\\')}/{relativeCategory.Replace('.', '/')}.cs";
     }
+
+    private static Dictionary<string, object?> BuildOutputProperties(
+        IReadOnlyDictionary<string, object?> properties,
+        NiconJsonConsoleFormatterOptions options,
+        int processId)
+    {
+        var output = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var property in properties)
+        {
+            if (property.Key.Equals("{OriginalFormat}", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var normalizedKey = JsonNamingPolicy.SnakeCaseLower.ConvertName(property.Key);
+            // Log state is collected before scopes, so later normalized keys
+            // intentionally win and request-scope identity cannot be spoofed
+            // by a message-template property such as {ApiName}.
+            output[normalizedKey] = NormalizePropertyValue(property.Value);
+        }
+
+        output["api_name"] = ReadProperty(output, "api_name") ?? options.ApiName;
+        output["app_name"] = ReadProperty(output, "app_name") ?? options.AppName;
+        output["correlation_id"] = ReadProperty(output, "correlation_id")
+            ?? Activity.Current?.TraceId.ToString()
+            ?? $"process-{processId}";
+        output["message_type"] = ReadProperty(output, "message_type") ?? options.MessageType;
+
+        return output;
+    }
+
+    private static object? NormalizePropertyValue(object? value) => value switch
+    {
+        null => null,
+        string or bool or byte or sbyte or short or ushort or int or uint or long or ulong
+            or float or double or decimal or DateTime or DateTimeOffset or Guid => value,
+        Enum enumValue => enumValue.ToString(),
+        _ => value.ToString(),
+    };
 
     private static Dictionary<string, object?> CollectProperties<TState>(
         TState state,
@@ -146,13 +190,7 @@ public sealed class NiconJsonConsoleFormatter : ConsoleFormatter, IDisposable
     private sealed record JsonLogRecord(
         string Logger,
         string Message,
-        JsonLogProperties Properties,
+        IReadOnlyDictionary<string, object?> Properties,
         string Severity,
         string Thread);
-
-    private sealed record JsonLogProperties(
-        string ApiName,
-        string AppName,
-        string CorrelationId,
-        string MessageType);
 }

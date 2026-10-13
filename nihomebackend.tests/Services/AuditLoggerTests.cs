@@ -108,6 +108,7 @@ public class AuditLoggerTests
     {
         var (sut, queue, accessor) = Build();
         var ctx = new DefaultHttpContext();
+        var serverRequestId = ctx.TraceIdentifier;
         ctx.Request.Headers["X-Correlation-Id"] = "corr-abc-123";
         accessor.HttpContext = ctx;
 
@@ -115,6 +116,7 @@ public class AuditLoggerTests
         var entry = ReadOne(queue);
 
         Assert.Equal("corr-abc-123", entry.CorrelationId);
+        Assert.Equal(serverRequestId, entry.RequestId);
     }
 
     [Fact]
