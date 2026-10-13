@@ -688,7 +688,7 @@ Controller (thin) --> Service (business logic) --> DbContext (data access)
 | `EmailTemplateFormatter`   | Format email templates with placeholder substitution     |
 | `TimeService`              | Centralized UTC time provider                            |
 | `HostedImageService`       | Background service for image management                  |
-| `OrphanedManagedFileCleanupService` | Deletes unreferenced managed images and files after a 24-hour safety window |
+| `OrphanedManagedFileCleanupService` | Quarantines unreferenced managed images/files after 24 hours, restores newly referenced files, and purges only after another 24-hour retention window |
 | `ActivityService`          | CRUD for activities with slug lookup and language support |
 | `ActivityCategoryService`  | CRUD for activity categories                             |
 | `NewsService`              | CRUD for news articles with language support              |
@@ -706,6 +706,17 @@ Controller (thin) --> Service (business logic) --> DbContext (data access)
 | `TranslationService`       | Manage static UI translations                            |
 | `EntityTranslationService` | Manage dynamic content translations (polymorphic)        |
 | `HandoverRecordService`    | Project handover scoping, validation, readiness derivation, lifecycle, and optimistic concurrency |
+
+The orphan cleanup worker runs every six hours. It scans managed local paths
+under `/images/upload`, `/images/processes`, and `/files`, while excluding the
+hard-delete workflow's own quarantine. An unreferenced file must be at least
+24 hours old before it is atomically moved to `.managed-file-quarantine`
+outside `wwwroot`. The worker re-reads active database references immediately
+before the move and again afterward; a newly referenced file is restored to
+its original path. An unreferenced quarantined file is permanently purged only
+after a further 24-hour retention period and another reference check. Invalid
+reference data or symlink/reparse-point paths stop the operation safely rather
+than risking deletion outside the managed roots.
 
 ### 7.3 Adding a New Entity
 
@@ -1261,7 +1272,7 @@ The existing field cardinality remains authoritative: vendor and as-built record
 
 Direct static requests under `/files/quotes`, `/files/customers`, `/files/contracts`, `/files/capability`, `/files/tenders`, `/files/business-documents`, and `/files/design` return `404` before static-file middleware. The React client obtains private bytes through authenticated resource routes and Blob responses. Newly staged two-step uploads are therefore unavailable until their metadata is saved; edit forms do not offer a managed preview until the current record references that path.
 
-Replacing or removing persisted Contract, Design, Vendor, Acceptance, As-Built, Handover, and Permit references deletes the previous managed file only after successful database persistence. Basic Design and Detail Design uploads also enforce the parent project's active stage in the backend service. The orphan-file worker reconciles cancelled or abandoned two-step uploads every six hours and deletes local files older than 24 hours only when no active database record references their host-relative path. It covers `/images/upload`, `/images/processes`, and all subdirectories under `/files`; hard-delete quarantine is excluded because the durable hard-delete worker owns it. Reference discovery finishes before filesystem deletion starts, and malformed active JSON aborts the complete cleanup run instead of risking an unverified deletion. Allowed extensions and the 20 MB limit are enforced, but malware scanning and full file-signature validation remain deployment hardening work.
+Replacing or removing persisted Contract, Design, Vendor, Acceptance, As-Built, Handover, and Permit references deletes the previous managed file only after successful database persistence. Basic Design and Detail Design uploads also enforce the parent project's active stage in the backend service. The orphan-file worker reconciles cancelled or abandoned two-step uploads every six hours. It covers `/images/upload`, `/images/processes`, and all subdirectories under `/files`; hard-delete quarantine is excluded because the durable hard-delete worker owns it. An unreferenced local file older than 24 hours is first moved to the non-public `.managed-file-quarantine` directory. The worker restores it if an active reference appears and permanently purges it only after another 24 hours without a reference. Reference discovery is repeated immediately before mutation and after quarantine moves; malformed active JSON, failed reference validation, or symlink/reparse-point paths stop destructive processing. Allowed extensions and the 20 MB limit are enforced, but malware scanning and full file-signature validation remain deployment hardening work.
 
 Customer, quote, and contract files keep their dedicated document workflows. Design-project document upload is tracked separately. Site diaries and punch lists are excluded because they do not currently expose a complete persisted document contract. Every Survey requires an Operational Project, and its media is synchronized only through that project's catalog and Drive worker.
 

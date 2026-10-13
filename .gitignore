@@ -52,6 +52,9 @@ nihomebackend/wwwroot/files/customers/
 # Private survey media staging; files are retained locally after Drive sync.
 nihomebackend/wwwroot/files/survey-media/
 
+# Recoverable holding area for the orphan-file cleanup worker.
+nihomebackend/.managed-file-quarantine/
+
 .DS_Store
 deployment-config/.DS_Store
 test-results
