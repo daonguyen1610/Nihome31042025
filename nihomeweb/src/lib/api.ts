@@ -1,5 +1,6 @@
 import axios from "axios";
 import type { RootState } from "@/store";
+import { newCorrelationId } from "@/lib/logger";
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "/api",
@@ -13,6 +14,10 @@ export const setStoreRef = (getState: () => RootState) => {
 };
 
 api.interceptors.request.use((config) => {
+  if (!config.headers["X-Correlation-Id"]) {
+    config.headers["X-Correlation-Id"] = newCorrelationId();
+  }
+
   if (typeof FormData !== "undefined" && config.data instanceof FormData && config.headers) {
     // Let the browser set multipart boundaries for FormData payloads.
     if (typeof (config.headers as { set?: unknown }).set === "function") {

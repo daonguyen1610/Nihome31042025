@@ -11,6 +11,7 @@ public static class HostExtensions
 
         var services = scope.ServiceProvider;
         var logger = services.GetRequiredService<ILogger<AppDbContext>>();
+        var loggerFactory = services.GetRequiredService<ILoggerFactory>();
         var db = services.GetRequiredService<AppDbContext>();
 
         try
@@ -42,7 +43,11 @@ public static class HostExtensions
             // via a custom Kestrel setup. Seeded assets belong under the API's
             // own wwwroot, next to /files/capability/ etc.
             var webRoot = Path.Combine(app.Environment.ContentRootPath, "wwwroot");
-            DbSeeder.Seed(db, webRoot, includeDevelopmentSamples: app.Environment.IsDevelopment());
+            DbSeeder.Seed(
+                db,
+                webRoot,
+                includeDevelopmentSamples: app.Environment.IsDevelopment(),
+                loggerFactory: loggerFactory);
             logger.LogInformation("Database seeding completed successfully.");
         }
         catch (Exception ex)

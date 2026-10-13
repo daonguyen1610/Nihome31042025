@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using NihomeBackend.Infrastructure.Logging;
 using NihomeBackend.Services;
 
 namespace NihomeBackend.Infrastructure;
@@ -40,6 +41,13 @@ public sealed class GlobalExceptionHandler(
 
         var (status, title, detail) = MapException(exception);
         var traceId = httpContext.TraceIdentifier;
+        using var logScope = logger.BeginScope(new Dictionary<string, object?>
+        {
+            ["api_name"] = httpContext.Items[RequestLoggingMiddleware.ApiNameItem]?.ToString()
+                ?? $"{httpContext.Request.Method} {httpContext.Request.Path}",
+            ["correlation_id"] = traceId,
+            ["message_type"] = "exception",
+        });
 
         // Log every caught exception with the same shape so the operator can
         // grep by traceId and pivot to the request that produced it.

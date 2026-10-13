@@ -1,5 +1,6 @@
 using NihomeBackend.Extensions;
 using NihomeBackend.Infrastructure;
+using NihomeBackend.Infrastructure.Logging;
 using NihomeBackend.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.FileProviders;
@@ -52,15 +53,12 @@ var appOptions = new WebApplicationOptions
 var builder = WebApplication.CreateBuilder(appOptions);
 
 builder.Logging.ClearProviders();
-builder.Logging.AddSimpleConsole(options =>
-{
-    options.TimestampFormat = "yyyy-MM-dd HH:mm:ss ";
-    options.SingleLine = true;
-});
-if (builder.Environment.IsDevelopment())
-{
-    builder.Logging.AddDebug();
-}
+builder.Logging.AddConfiguration(builder.Configuration.GetSection("Logging"));
+builder.Services.Configure<NiconJsonConsoleFormatterOptions>(
+    builder.Configuration.GetSection("Logging:Json"));
+builder.Logging
+    .AddConsole(options => options.FormatterName = NiconJsonConsoleFormatter.FormatterName)
+    .AddConsoleFormatter<NiconJsonConsoleFormatter, NiconJsonConsoleFormatterOptions>();
 
 builder.Services.AddOpenApiServices();
 builder.Services.AddFrontendCors(builder.Configuration);
@@ -128,33 +126,8 @@ app.UseStaticFiles(new StaticFileOptions
     RequestPath = "/files/cv"
 });
 
-app.Use(async (context, next) =>
-{
-    if (!context.Request.Path.StartsWithSegments("/api", StringComparison.OrdinalIgnoreCase))
-    {
-        await next();
-        return;
-    }
-
-    var logger = context.RequestServices
-        .GetRequiredService<ILoggerFactory>()
-        .CreateLogger("ApiRequestLogger");
-
-    var start = DateTime.UtcNow;
-    logger.LogDebug("HTTP {Method} {Path}{QueryString} started", context.Request.Method, context.Request.Path, context.Request.QueryString);
-
-    await next();
-
-    var elapsedMs = (DateTime.UtcNow - start).TotalMilliseconds;
-    logger.LogDebug(
-        "HTTP {Method} {Path} finished {StatusCode} in {ElapsedMs} ms",
-        context.Request.Method,
-        context.Request.Path,
-        context.Response.StatusCode,
-        Math.Round(elapsedMs, 2));
-});
-
 app.UseRouting();
+app.UseMiddleware<RequestLoggingMiddleware>();
 app.UseCors(FrontendCorsExtensions.PolicyName);
 app.UseAuthentication();
 app.UseAuthorization();

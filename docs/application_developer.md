@@ -2,7 +2,7 @@
 
 Version 1.1
 
-Last Updated: 6 October 2026
+Last Updated: 13 October 2026
 
 ---
 
@@ -236,7 +236,9 @@ The frontend build output is placed in `nihomeweb/dist/` and is served as static
 
 ### 5.1 Application Settings
 
-Configuration is managed through `appsettings.json` and `appsettings.Development.json` in the `nihomebackend/` directory.
+Application configuration, including logging for both runtimes, is managed
+through `appsettings.json` and `appsettings.Development.json` in the
+`nihomebackend/` directory.
 
 #### Database Connection
 
@@ -315,6 +317,45 @@ Access tokens expire after 7 days (10080 minutes). Refresh tokens expire after 3
   }
 }
 ```
+
+#### Structured JSON Logging
+
+The `Logging` sections in `appsettings.json` and
+`appsettings.Development.json` are the source of truth for backend log levels
+and backend/frontend logging identity fields. ASP.NET reads them at runtime;
+Vite reads the `Logging:Frontend` values from the same files at build time.
+
+Every application log is emitted as one JSON object with this contract:
+
+```json
+{
+  "logger": "nihomebackend/Services/ExampleService.cs",
+  "message": "date=\"2026-10-13T08:30:00.0000000+00:00\", process_id=\"314\", Example message",
+  "properties": {
+    "api_name": "Example.Get",
+    "app_name": "NihomeBackend",
+    "correlation_id": "request-123",
+    "message_type": "api_request"
+  },
+  "severity": "INFO",
+  "thread": ".NET TP Worker"
+}
+```
+
+For application `ILogger<T>` categories, `logger` is the logical repository
+source path derived from the .NET category. Framework categories that do not
+have a repository source file retain their category name. Browser code must use
+`createLogger(source)` from `nihomeweb/src/lib/logger.ts`; browser process and
+thread values are represented by a generated browser-session id and
+`browser-main` because the browser does not expose OS process/thread ids.
+
+The frontend adds a unique `X-Correlation-Id` to each API request. The backend
+validates it, creates a safe id when it is absent or invalid, exposes the
+normalized id in the response header, and places it in the logging scope for
+all downstream controller and service logs. Deployment log collectors should
+parse one JSON object per console line. Supervisor output such as `dotnet watch`
+status messages is outside the application logging provider and is not part of
+this contract.
 
 ### 5.2 Docker Compose Environment Variables
 

@@ -17,12 +17,12 @@ public static class ContentSeeder
     private static string NormalizeCategoryKey(string name)
         => name.Trim().Normalize(NormalizationForm.FormC).ToLowerInvariant();
 
-    public static void Seed(AppDbContext db)
+    public static void Seed(AppDbContext db, ILogger? logger = null)
     {
         SeedCategories(db);
         SeedActivities(db);
         SeedNews(db);
-        SeedProjects(db);
+        SeedProjects(db, logger);
         SeedProjectTranslations(db);
         SeedServices(db);
         SeedLogos(db);
@@ -241,7 +241,7 @@ public static class ContentSeeder
 
     // ─── Projects ───────────────────────────────────────────────────
 
-    private static void SeedProjects(AppDbContext db)
+    private static void SeedProjects(AppDbContext db, ILogger? logger)
     {
         var manifest = LoadProjectSeed();
         if (manifest.Count == 0) return;
@@ -291,7 +291,7 @@ public static class ContentSeeder
                     Location = item.Location,
                     Scale = item.Scale,
                     Scope = item.Scope,
-                    Status = item.Status ?? WarnMissingStatus(item.Slug),
+                    Status = item.Status ?? WarnMissingStatus(item.Slug, logger),
                     Year = year,
                     Category = categoryName,
                     ProjectCategoryId = categoryId,
@@ -315,9 +315,11 @@ public static class ContentSeeder
     // (via a C# property initializer, indistinguishable from an explicit value) —
     // a completed project would seed as ongoing with no signal. Status is now
     // nullable so this path only runs, and warns, when the manifest truly omits it.
-    private static string WarnMissingStatus(string slug)
+    private static string WarnMissingStatus(string slug, ILogger? logger)
     {
-        Console.Error.WriteLine($"[ContentSeeder] Project '{slug}' has no \"status\" in the manifest; defaulting to \"ongoing\". Verify this is correct.");
+        logger?.LogWarning(
+            "Project {ProjectSlug} has no status in the manifest; defaulting to ongoing. Verify this is correct.",
+            slug);
         return "ongoing";
     }
 
