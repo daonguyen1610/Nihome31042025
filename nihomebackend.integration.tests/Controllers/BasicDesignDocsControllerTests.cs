@@ -191,7 +191,7 @@ public class BasicDesignDocsControllerTests : IntegrationTestBase
             project!.CurrentStage = DesignProjectStage.Concept;
             await db.SaveChangesAsync();
         });
-        (await Client.DeleteAsync($"/api/basic-design-docs/{documentId}"))
+        (await DeleteWithImpactAsync($"/api/basic-design-docs/{documentId}"))
             .StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
         await WithDbAsync(async db =>
@@ -209,7 +209,13 @@ public class BasicDesignDocsControllerTests : IntegrationTestBase
         {
             status = "SubmittedForReview",
         })).StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        (await Client.DeleteAsync($"/api/basic-design-docs/{documentId}"))
+        await WithDbAsync(async db =>
+        {
+            var document = await db.BasicDesignDocs.FindAsync(documentId);
+            document!.Status = BasicDesignDocStatus.Rejected;
+            await db.SaveChangesAsync();
+        });
+        (await DeleteWithImpactAsync($"/api/basic-design-docs/{documentId}"))
             .StatusCode.Should().Be(HttpStatusCode.NoContent);
     }
 
@@ -241,10 +247,12 @@ public class BasicDesignDocsControllerTests : IntegrationTestBase
             db.ProjectDocuments.RemoveRange(sidecars);
             var project = await db.DesignProjects.FindAsync(projectId);
             project!.CurrentStage = DesignProjectStage.ShopDrawing;
+            var document = await db.BasicDesignDocs.FindAsync(documentId);
+            document!.Status = BasicDesignDocStatus.Rejected;
             await db.SaveChangesAsync();
         });
 
-        (await Client.DeleteAsync($"/api/basic-design-docs/{documentId}"))
+        (await DeleteWithImpactAsync($"/api/basic-design-docs/{documentId}"))
             .StatusCode.Should().Be(HttpStatusCode.NoContent);
 
         File.Exists(fullPath).Should().BeFalse();
@@ -282,14 +290,18 @@ public class BasicDesignDocsControllerTests : IntegrationTestBase
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
         var projectId = await CreateBasicStageProjectAsync();
         // Approve 1 doc per required discipline.
+        var documentIds = new List<int>();
         foreach (var d in new[] { "architecture", "structure", "mep" })
         {
             var id = await CreateDocAsync(projectId, d);
+            documentIds.Add(id);
             (await Client.PostAsJsonAsync($"/api/basic-design-docs/{id}/status", new { status = "SubmittedForReview" }))
                 .EnsureSuccessStatusCode();
             (await Client.PostAsJsonAsync($"/api/basic-design-docs/{id}/status", new { status = "InternallyApproved" }))
                 .EnsureSuccessStatusCode();
         }
+        await CreateClientApprovedDesignReviewAsync(
+            projectId, DesignReviewStage.BasicDesign, documentIds.ToArray());
 
         var res = await Client.PostAsync($"/api/basic-design-docs/design-project/{projectId}/unlock-shop-drawing", null);
         res.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -336,12 +348,14 @@ public class BasicDesignDocsControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task Delete_AfterReview_RemovesRevision()
+    public async Task Delete_RejectedDocument_RemovesRevision()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
         var projectId = await CreateBasicStageProjectAsync();
         var id = await CreateDocAsync(projectId, "architecture");
         (await Client.PostAsJsonAsync($"/api/basic-design-docs/{id}/status", new { status = "SubmittedForReview" }))
+            .EnsureSuccessStatusCode();
+        (await Client.PostAsJsonAsync($"/api/basic-design-docs/{id}/status", new { status = "Rejected" }))
             .EnsureSuccessStatusCode();
         await WithDbAsync(async db =>
         {
@@ -359,7 +373,7 @@ public class BasicDesignDocsControllerTests : IntegrationTestBase
             await db.SaveChangesAsync();
         });
 
-        (await Client.DeleteAsync($"/api/basic-design-docs/{id}"))
+        (await DeleteWithImpactAsync($"/api/basic-design-docs/{id}"))
             .StatusCode.Should().Be(HttpStatusCode.NoContent);
         await WithDbAsync(async db =>
         {

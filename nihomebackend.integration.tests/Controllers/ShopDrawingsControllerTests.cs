@@ -156,7 +156,7 @@ public class ShopDrawingsControllerTests : IntegrationTestBase
             project!.CurrentStage = DesignProjectStage.BasicDesign;
             await db.SaveChangesAsync();
         });
-        (await Client.DeleteAsync($"/api/shop-drawings/{drawingId}"))
+        (await DeleteWithImpactAsync($"/api/shop-drawings/{drawingId}"))
             .StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
         await WithDbAsync(async db =>
@@ -175,7 +175,13 @@ public class ShopDrawingsControllerTests : IntegrationTestBase
         {
             status = "InReview",
         })).StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        (await Client.DeleteAsync($"/api/shop-drawings/{drawingId}"))
+        await WithDbAsync(async db =>
+        {
+            var drawing = await db.ShopDrawings.FindAsync(drawingId);
+            drawing!.Status = ShopDrawingStatus.Rejected;
+            await db.SaveChangesAsync();
+        });
+        (await DeleteWithImpactAsync($"/api/shop-drawings/{drawingId}"))
             .StatusCode.Should().Be(HttpStatusCode.NoContent);
     }
 
@@ -207,10 +213,12 @@ public class ShopDrawingsControllerTests : IntegrationTestBase
             db.ProjectDocuments.RemoveRange(sidecars);
             var project = await db.DesignProjects.FindAsync(projectId);
             project!.CurrentStage = DesignProjectStage.Completed;
+            var drawing = await db.ShopDrawings.FindAsync(drawingId);
+            drawing!.Status = ShopDrawingStatus.Rejected;
             await db.SaveChangesAsync();
         });
 
-        (await Client.DeleteAsync($"/api/shop-drawings/{drawingId}"))
+        (await DeleteWithImpactAsync($"/api/shop-drawings/{drawingId}"))
             .StatusCode.Should().Be(HttpStatusCode.NoContent);
 
         File.Exists(fullPath).Should().BeFalse();
@@ -259,7 +267,7 @@ public class ShopDrawingsControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task BulkDelete_MixedStatuses_DeletesEveryRequestedRow()
+    public async Task BulkDelete_IsDisabledAndPreservesEveryRequestedRow()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
         var projectId = await CreateShopStageProjectAsync();
@@ -273,11 +281,9 @@ public class ShopDrawingsControllerTests : IntegrationTestBase
         {
             ids = new[] { a, b, c },
         });
-        res.StatusCode.Should().Be(HttpStatusCode.OK);
-        var body = await ReadJsonAsync(res);
-        body.GetProperty("requested").GetInt32().Should().Be(3);
-        body.GetProperty("deleted").GetInt32().Should().Be(3);
-        body.GetProperty("failures").GetArrayLength().Should().Be(0);
+        res.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.ShopDrawings.CountAsync(drawing =>
+            drawing.Id == a || drawing.Id == b || drawing.Id == c))).Should().Be(3);
     }
 
     [Fact]
@@ -309,14 +315,14 @@ public class ShopDrawingsControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task Delete_Approved_RemovesRevisionAndIfcItemButPreservesRelease()
+    public async Task Delete_ReferencedRejectedDrawing_IsBlockedAndPreservesDependencies()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
         var projectId = await CreateShopStageProjectAsync();
         var drawingId = await CreateDrawingAsync(projectId, "architecture");
         (await Client.PostAsJsonAsync($"/api/shop-drawings/{drawingId}/status", new { status = "InReview" }))
             .EnsureSuccessStatusCode();
-        (await Client.PostAsJsonAsync($"/api/shop-drawings/{drawingId}/status", new { status = "Approved" }))
+        (await Client.PostAsJsonAsync($"/api/shop-drawings/{drawingId}/status", new { status = "Rejected" }))
             .EnsureSuccessStatusCode();
         var releaseId = await WithDbAsync<int>(async db =>
         {
@@ -348,14 +354,14 @@ public class ShopDrawingsControllerTests : IntegrationTestBase
             return release.Id;
         });
 
-        (await Client.DeleteAsync($"/api/shop-drawings/{drawingId}"))
-            .StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await DeleteWithImpactAsync($"/api/shop-drawings/{drawingId}"))
+            .StatusCode.Should().Be(HttpStatusCode.BadRequest);
         await WithDbAsync(async db =>
         {
-            (await db.ShopDrawings.AnyAsync(drawing => drawing.Id == drawingId)).Should().BeFalse();
-            (await db.IfcReleaseItems.AnyAsync(item => item.ShopDrawingId == drawingId)).Should().BeFalse();
+            (await db.ShopDrawings.AnyAsync(drawing => drawing.Id == drawingId)).Should().BeTrue();
+            (await db.IfcReleaseItems.AnyAsync(item => item.ShopDrawingId == drawingId)).Should().BeTrue();
             (await db.DrawingRevisions.AnyAsync(revision => revision.TargetId == drawingId
-                && revision.TargetType == DrawingRevisionTargetType.ShopDrawing)).Should().BeFalse();
+                && revision.TargetType == DrawingRevisionTargetType.ShopDrawing)).Should().BeTrue();
             (await db.IfcReleases.AnyAsync(release => release.Id == releaseId)).Should().BeTrue();
         });
     }

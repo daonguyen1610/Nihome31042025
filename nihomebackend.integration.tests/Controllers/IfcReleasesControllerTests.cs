@@ -170,7 +170,7 @@ public class IfcReleasesControllerTests : IntegrationTestBase
         // DESIGN role has design.ifc.view + manage but NOT release (only Design Lead + BGD do).
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "DESIGN"));
         var res = await Client.PostAsync($"/api/ifc-releases/{releaseId}/release", null);
-        res.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        res.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
@@ -259,7 +259,7 @@ public class IfcReleasesControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task DeleteItemsRecipientsAndRelease_AfterRelease_Succeeds()
+    public async Task DeleteItemsRecipientsAndRoot_AfterRelease_AreRejected()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
         var (projectId, approvedId, _) = await CreateShopStageProjectWithApprovedDrawingAsync();
@@ -270,13 +270,15 @@ public class IfcReleasesControllerTests : IntegrationTestBase
         (await Client.PostAsync($"/api/ifc-releases/{releaseId}/release", null)).EnsureSuccessStatusCode();
 
         (await Client.DeleteAsync($"/api/ifc-releases/{releaseId}/items/{itemId}"))
-            .StatusCode.Should().Be(HttpStatusCode.OK);
+            .StatusCode.Should().Be(HttpStatusCode.BadRequest);
         (await Client.DeleteAsync($"/api/ifc-releases/{releaseId}/recipients/{recipientId}"))
-            .StatusCode.Should().Be(HttpStatusCode.OK);
-        (await Client.DeleteAsync($"/api/ifc-releases/{releaseId}"))
-            .StatusCode.Should().Be(HttpStatusCode.NoContent);
-        (await Client.GetAsync($"/api/ifc-releases/{releaseId}"))
-            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+            .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await DeleteWithImpactAsync($"/api/ifc-releases/{releaseId}"))
+            .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var preserved = await ReadJsonAsync(await Client.GetAsync($"/api/ifc-releases/{releaseId}"));
+        preserved.GetProperty("status").GetString().Should().Be("Released");
+        preserved.GetProperty("items").GetArrayLength().Should().Be(1);
+        preserved.GetProperty("recipients").GetArrayLength().Should().Be(1);
     }
 
     // -------- helpers --------
@@ -351,6 +353,8 @@ public class IfcReleasesControllerTests : IntegrationTestBase
 
     private async Task<int> CreateFullDraftAsync(int projectId, int approvedShopId)
     {
+        await CreateClientApprovedDesignReviewAsync(
+            projectId, DesignReviewStage.ShopDrawing, approvedShopId);
         var draft = await Client.PostAsJsonAsync("/api/ifc-releases", new
         {
             designProjectId = projectId,

@@ -92,6 +92,7 @@ public class ConceptOptionsControllerTests : IntegrationTestBase
         var id = await CreateOptionAsync(projectId);
         await Transition(id, "PendingInternalReview");
         await Transition(id, "PresentedToClient");
+        await CreateClientApprovedDesignReviewAsync(projectId, DesignReviewStage.Concept, id);
         var final = await Client.PostAsJsonAsync($"/api/concept-options/{id}/status", new { status = "Finalized" });
         final.StatusCode.Should().Be(HttpStatusCode.OK);
 
@@ -131,14 +132,15 @@ public class ConceptOptionsControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task Delete_PresentedRow_Succeeds()
+    public async Task Delete_DiscardedRow_WithCurrentImpactPlan_Succeeds()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
         var projectId = await CreateDesignProjectAsync();
         var id = await CreateOptionAsync(projectId);
         await Transition(id, "PendingInternalReview");
         await Transition(id, "PresentedToClient");
-        (await Client.DeleteAsync($"/api/concept-options/{id}"))
+        await Transition(id, "Discarded");
+        (await DeleteWithImpactAsync($"/api/concept-options/{id}"))
             .StatusCode.Should().Be(HttpStatusCode.NoContent);
         (await Client.GetAsync($"/api/concept-options/{id}"))
             .StatusCode.Should().Be(HttpStatusCode.NotFound);
