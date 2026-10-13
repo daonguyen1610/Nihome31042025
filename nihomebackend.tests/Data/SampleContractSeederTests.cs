@@ -47,8 +47,16 @@ public class SampleContractSeederTests : IDisposable
         Assert.Contains(ContractStatus.InProgress, statuses);
         Assert.Contains(ContractStatus.OnHold, statuses);
         Assert.Contains(ContractStatus.Completed, statuses);
-        Assert.Equal(6, contracts.Count);
-        Assert.Equal(contracts.Count, contracts.Select(contract => contract.QuoteId).Distinct().Count());
+        Assert.Equal(7, contracts.Count);
+        var downstreamContract = Assert.Single(contracts, contract =>
+            contract.Direction == ContractDirection.Downstream);
+        Assert.Equal(ContractType.Supply, downstreamContract.Type);
+        Assert.Equal("NCC-ELECTRIC-01", _db.Vendors.Single(item => item.Id == downstreamContract.VendorId).VendorCode);
+        Assert.Contains("An Phú", _db.OperationalProjects
+            .Single(item => item.Id == downstreamContract.OperationalProjectId).Name);
+
+        var upstreamContracts = contracts.Where(contract => contract.Direction == ContractDirection.Upstream).ToList();
+        Assert.Equal(upstreamContracts.Count, upstreamContracts.Select(contract => contract.QuoteId).Distinct().Count());
 
         Assert.NotEmpty(_db.Surveys);
         Assert.All(_db.Surveys, survey =>
@@ -58,7 +66,7 @@ public class SampleContractSeederTests : IDisposable
                 project => project.Id == survey.OperationalProjectId);
         });
 
-        Assert.All(contracts, contract =>
+        Assert.All(upstreamContracts, contract =>
         {
             var opportunity = _db.Opportunities.Single(item => item.Id == contract.OpportunityId);
             Assert.Equal(opportunity.CustomerId, contract.CustomerId);
@@ -80,7 +88,7 @@ public class SampleContractSeederTests : IDisposable
         Assert.Equal(QuoteStatus.CustomerApproved, wonQuote.Status);
         Assert.Equal(wonOpportunity.Id, completed.OpportunityId);
         Assert.Equal(wonQuote.Id, completed.QuoteId);
-        Assert.All(contracts.Where(item => item.Status != ContractStatus.Draft), contract =>
+        Assert.All(upstreamContracts.Where(item => item.Status != ContractStatus.Draft), contract =>
         {
             Assert.Equal(OpportunityStage.Won,
                 _db.Opportunities.Single(item => item.Id == contract.OpportunityId).Stage);

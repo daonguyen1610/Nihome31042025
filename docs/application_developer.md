@@ -1238,14 +1238,17 @@ responsible accountant, stores `DueNotificationSentAt` atomically, and clears
 that marker when the due date changes. Upstream-only classification metadata
 omits the downstream vendor catalogue.
 
-The shared frontend list is available at `/admin/contracts`. Finance exposes two
-direction-locked workspaces: `/admin/finance/contracts` for Upstream primary
-contracts and `/admin/finance/input-contracts` for Downstream supplier and
-subcontractor contracts. Their `/{id}` routes reuse the complete edit/detail,
-documents, appendices, payment-schedule, lifecycle, and timeline workflows while
-requesting the same fixed API direction. List URLs retain filters, sort, page,
-and the Downstream vendor filter while users inspect a detail. Both Finance views
-show current value, approved VO impact, the next unpaid milestone, and
+The canonical shared Contract registry and all master-data mutations are
+available at `/admin/contracts`. Finance exposes two read-only projections of
+those same Contract IDs: `/admin/finance/contracts` for Upstream receivables and
+`/admin/finance/input-contracts` for Downstream payables. Their `/{id}` routes
+request the fixed API direction and show the shared detail, documents,
+appendices, payment schedule, and timeline without exposing create, edit,
+lifecycle, attachment, VO, or delete actions. Users with Contract-registry
+access can follow the explicit master-record link when a commercial change is
+required. List URLs retain filters, sort, page, and the Downstream vendor filter
+while users inspect a detail. Both Finance views show current value, approved VO
+impact, the next unpaid milestone, and
 overdue/due-soon summaries with receivable/payable wording appropriate to their
 direction. Server pagination and the dedicated server-side export query keep CSV
 scope and filters identical to the screen without truncating at the current page

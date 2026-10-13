@@ -88,6 +88,13 @@ filter options, exports, and matching details; an unscoped contract list remains
 owner-scoped. These permissions do not grant contract create, edit, transition,
 attachment, appendix, or delete capabilities.
 
+The UI keeps this boundary explicit for combined-role users as well: Finance
+**Receivables** and **Payables** routes never expose Contract master mutations,
+even when the user also has `crm.contracts.manage`. Such a user follows the
+master-record link to **CRM → Contract registry**, where the normal manage and
+scope checks still apply. This avoids two apparent sources of Contract truth;
+the backend continues to serve one Contract aggregate and ID.
+
 ### Project handover permissions
 
 The handover workspace uses separate read, write, and completion capabilities. The API remains the authority; frontend route and action gates only improve the user experience.

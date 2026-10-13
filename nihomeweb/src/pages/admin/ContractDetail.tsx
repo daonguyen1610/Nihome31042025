@@ -245,6 +245,7 @@ interface HeaderProps {
   contract: ContractResponse;
   returnTo: string;
   canEdit: boolean;
+  canTransition: boolean;
   editing: boolean;
   saving: boolean;
   onEditInfo: () => void;
@@ -258,6 +259,7 @@ const ContractHeader = ({
   contract,
   returnTo,
   canEdit,
+  canTransition,
   editing,
   saving,
   onEditInfo,
@@ -353,7 +355,7 @@ const ContractHeader = ({
         </div>
       </div>
 
-      {!editing && transitions.length > 0 ? (
+      {!editing && canTransition && transitions.length > 0 ? (
         <div className="mt-4 flex flex-wrap gap-2">
           {transitions.map((target) => (
             <Button
@@ -1628,14 +1630,16 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
     : mode === "downstream" ? "Downstream" : undefined;
   const idNum = Number(params.id);
   const canManage = has(ADMIN_PERMS.contractsManage);
-  const canDecideVo = has(ADMIN_PERMS.contractsViewAll);
+  const isFinanceWorkspace = mode !== "all";
+  const canManageMaster = canManage && !isFinanceWorkspace;
+  const canDecideVo = has(ADMIN_PERMS.contractsViewAll) && !isFinanceWorkspace;
 
   const [contract, setContract] = useState<ContractResponse | null>(null);
   const [ensuringDesignProject, setEnsuringDesignProject] = useState(false);
   const [linkQuoteOpen, setLinkQuoteOpen] = useState(false);
   // A customer contract drafted apart from its quotation can still be tied to
   // the approved quote afterwards (one source quote per contract).
-  const canLinkQuote = canManage && contract != null && contract.direction === "Upstream" &&
+  const canLinkQuote = canManageMaster && contract != null && contract.direction === "Upstream" &&
     contract.quoteId == null && contract.status !== "Cancelled" && contract.status !== "Completed";
   const [appendices, setAppendices] = useState<ContractAppendixResponse[]>([]);
   const [attachments, setAttachments] = useState<ContractAttachmentResponse[]>([]);
@@ -1881,12 +1885,12 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
   }, [contract, customers.length, projects.length, t, toast]);
 
   useEffect(() => {
-    if (searchParams.get("edit") !== "true" || !contract || !canManage || editing) return;
+    if (searchParams.get("edit") !== "true" || !contract || !canManageMaster || editing) return;
     const next = new URLSearchParams(searchParams);
     next.delete("edit");
     setSearchParams(next, { replace: true });
     void beginEdit();
-  }, [beginEdit, canManage, contract, editing, searchParams, setSearchParams]);
+  }, [beginEdit, canManageMaster, contract, editing, searchParams, setSearchParams]);
 
   const cancelEdit = useCallback(() => {
     if (contract) setForm(toEditForm(contract));
@@ -2018,10 +2022,21 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
   return (
     <AdminLayout>
       <div className="space-y-4">
+        {isFinanceWorkspace && (
+          <div className="flex flex-col gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900 sm:flex-row sm:items-center sm:justify-between">
+            <p>{t("contracts.finance.masterManagedElsewhere")}</p>
+            {has(ADMIN_PERMS.contracts) && (
+              <Button asChild variant="outline" size="sm" className="shrink-0 bg-white">
+                <Link to={`/admin/contracts/${contract.id}`}>{t("contracts.finance.openMasterRecord")}</Link>
+              </Button>
+            )}
+          </div>
+        )}
         <ContractHeader
           contract={contract}
           returnTo={returnTo}
-          canEdit={canManage}
+          canEdit={canManageMaster}
+          canTransition={canManageMaster}
           editing={editing}
           saving={saving}
           onEditInfo={() => void beginEdit()}
@@ -2083,7 +2098,7 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
             ) : (
               <InfoTab
                 contract={contract}
-                onEnsureDesignProject={has(ADMIN_PERMS.opportunitiesManage) &&
+                onEnsureDesignProject={!isFinanceWorkspace && has(ADMIN_PERMS.opportunitiesManage) &&
                   has(ADMIN_PERMS.operationalProjectsManage)
                   ? () => void handleEnsureDesignProject() : undefined}
                 ensuringDesignProject={ensuringDesignProject}
@@ -2101,7 +2116,7 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
             ) : (
               <ScheduleTab
                 contract={contract}
-                canManage={canManage}
+                canManage={canManageMaster}
                 onMilestoneStatus={handleMilestoneStatus}
                 onEditActualPaymentDate={openPaidDateDialog}
                 busyMilestoneId={busyMilestoneId}
@@ -2112,7 +2127,7 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
             <VoTab
               contract={contract}
               rows={appendices}
-              canManage={canManage}
+              canManage={canManageMaster}
               canDecide={canDecideVo}
               refresh={refreshContract}
             />
@@ -2121,7 +2136,7 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
             <DocumentsTab
               contract={contract}
               rows={attachments}
-              canManage={canManage}
+              canManage={canManageMaster}
               error={attachmentsError}
               refresh={refreshContract}
             />

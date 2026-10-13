@@ -73,9 +73,9 @@ public static class SampleCrmDataSeeder
         SeedVendors(db, owner, now);
         SeedOpportunities(db, owner, now);
         SeedQuotes(db, owner, now);
+        SeedOperationalProjects(db, owner, projectManager, now);
         SeedContracts(db, owner, now, webRootPath);
         SeedCapabilityDocuments(db, owner, now, webRootPath);
-        SeedOperationalProjects(db, owner, projectManager, now);
         SeedTenders(db, owner, now);
         SeedSurveys(db, owner, now);
         SeedDesignProjects(db, owner, now);
@@ -953,6 +953,44 @@ public static class SampleCrmDataSeeder
                 CreatedByUserId = owner.Id,
                 UpdatedByUserId = owner.Id,
             });
+        }
+
+        const string downstreamNumber = "HD-SAMPLE-NCC-001";
+        var downstreamNote = $"{SampleContractMarker} Cung cấp thiết bị điện cho dự án Nhà máy may An Phú";
+        if (!deletedContractNumbers.Contains(downstreamNumber) &&
+            !db.Contracts.Any(contract => contract.ContractNumber == downstreamNumber || contract.Note == downstreamNote))
+        {
+            var projectCustomer = GetCoreCustomers(db)[2];
+            var project = projectCustomer is null
+                ? null
+                : db.OperationalProjects.FirstOrDefault(item =>
+                    item.CustomerId == projectCustomer.Id &&
+                    item.Note != null && item.Note.StartsWith(SampleOperationalProjectMarker));
+            var vendor = db.Vendors.FirstOrDefault(item => item.VendorCode == "NCC-ELECTRIC-01");
+            if (project is not null && vendor is not null)
+            {
+                db.Contracts.Add(new Contract
+                {
+                    ContractNumber = downstreamNumber,
+                    CustomerId = project.CustomerId,
+                    Direction = ContractDirection.Downstream,
+                    Type = ContractType.Supply,
+                    VendorId = vendor.Id,
+                    OperationalProjectId = project.Id,
+                    OwnerUserId = owner.Id,
+                    Status = ContractStatus.Signed,
+                    SignedDate = now.AddDays(-15),
+                    StartDate = now.AddDays(-8),
+                    EndDate = now.AddDays(75),
+                    Value = 320_000_000m,
+                    ScopeOfWork = "Cung cấp tủ điện, dây cáp và thiết bị đóng cắt theo tiến độ thi công.",
+                    Note = downstreamNote,
+                    CreatedAt = now.AddDays(-18),
+                    UpdatedAt = now.AddHours(-1),
+                    CreatedByUserId = owner.Id,
+                    UpdatedByUserId = owner.Id,
+                });
+            }
         }
 
         db.SaveChanges();

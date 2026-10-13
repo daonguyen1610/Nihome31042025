@@ -666,6 +666,13 @@ milestones. Access to the aggregate remains governed by Operational Project
 manager, creator, team-member, and global-view permissions; opening the full
 Contract detail additionally requires the normal Contract permission.
 
+Use **CRM → Contract registry** as the single place to create, edit, transition,
+attach documents or appendices to, and delete a Contract. Finance screens do
+not create a second contract record: **Receivables** filters the same registry
+to Upstream contracts, while **Payables** filters it to Downstream contracts.
+Their Contract details are read-only financial views and link back to the master
+record for authorized users.
+
 When opening **New contract**, the system suggests the next Contract Number in
 `HD-YYYY-NNNN` format. The number remains editable for an authorized user who
 needs to follow an external numbering convention. An unchanged suggestion is
@@ -1149,15 +1156,15 @@ source discrepancy is corrected and reopens it if the condition returns.
 
 **Objective**: Maintain financial transparency and contract control.
 
-#### 3.6.1 Primary Contract Management (Client/Owner)
+#### 3.6.1 Upstream Receivables Monitoring
 
 Manage primary contracts linked to projects and customers. Define contract value, duration, and work scope. Establish payment milestones tied to acceptance progress. Track advances and stage-based payments. Upload and store contract files and appendices. Track contract status: not started, in-progress, completed, paused. Monitor contract modification history.
 
 | Page | Functions | Estimate |
 |------|-----------|----------|
-| Primary Contract List | Finance > Primary contracts; upstream contracts with owner/project/status/end-date filters, current value after approved VO, collection-risk summary, next receivable, pagination, contextual detail return, and complete filtered CSV export | Implemented |
-| Primary Contract Create/Edit | Create Upstream contracts from the Finance list and edit accessible records in the Finance detail workflow, with Project/reference/date/value/payment-schedule validation | Implemented |
-| Primary Contract Detail | Finance-scoped route with value and approved VO reconciliation, payment milestones/receivables, files, appendices, status transitions, and audit timeline | Implemented |
+| Receivables List | Finance > Receivables; upstream contracts with owner/project/status/end-date filters, current value after approved VO, collection-risk summary, next receivable, pagination, contextual detail return, and complete filtered CSV export | Implemented |
+| Contract master maintenance | Create and edit the shared Upstream Contract only in CRM > Contract registry; Finance does not duplicate this form | Implemented |
+| Receivables Detail | Read-only Finance route with value and approved VO reconciliation, receivable milestones, files, appendices, audit timeline, and a link to the authorized master record | Implemented |
 
 Sales may create a customer contract directly from an Opportunity when the
 value has already been agreed; a quotation is optional. If the customer needs
@@ -1172,8 +1179,9 @@ attaches the localized Excel quotation. A sent quote must still be approved,
 valid, and consistent with the contract's customer and project. A downstream
 supplier contract does not use a customer quote.
 
-Every new primary contract starts as **Draft**. Use the explicit status actions
-on the detail page to sign, start, pause, complete, or cancel it; editing general
+Every new primary contract starts as **Draft**. In **Contract registry**, use the
+explicit status actions on the detail page to sign, start, pause, complete, or
+cancel it; editing general
 information cannot skip lifecycle checks. Signed and active contracts require a
 signed date, and contract dates must follow signing → start → end order.
 Milestone status and accounting responsibility are changed through the milestone
@@ -1184,17 +1192,17 @@ its due date, the active contract owner and assigned accountant receive one
 notification; changing its due date schedules a new reminder for the revised
 date.
 
-#### 3.6.2 Subcontractor and Supplier Contract Management
+#### 3.6.2 Downstream Payables Monitoring
 
 Manage input contracts with subcontractors and material suppliers. Define contract value, terms, and payment schedules. Track contract execution progress. Monitor payment history. Upload contract files.
 
 | Page | Functions | Estimate |
 |------|-----------|----------|
-| Input Contract List | Finance > Input contracts; Downstream supplier/subcontractor contracts with vendor/project/owner/status/date/value filters, payment-obligation summary, pagination, and complete filtered CSV export | Implemented |
-| Input Contract Create/Edit | Create Downstream Supply/Subcontract contracts with an active compatible Vendor and Operational Project; edit accessible records with lifecycle, date, value, and payment-schedule validation | Implemented |
-| Input Contract Detail | Value and VO reconciliation, terms/scope, payable milestones, files, appendices, status actions, responsible owner, and audit timeline | Implemented |
+| Payables List | Finance > Payables; Downstream supplier/subcontractor contracts with vendor/project/owner/status/date/value filters, payment-obligation summary, pagination, and complete filtered CSV export | Implemented |
+| Contract master maintenance | Create and edit the shared Downstream Supply/Subcontract Contract only in CRM > Contract registry | Implemented |
+| Payables Detail | Read-only value and VO reconciliation, terms/scope, payable milestones, files, appendices, responsible owner, audit timeline, and master-record link | Implemented |
 
-The Input contracts workspace is fixed to **Downstream**. More than one supplier
+The Payables workspace is fixed to **Downstream**. More than one supplier
 or subcontractor contract may belong to the same Operational Project. Choose an
 active Vendor compatible with the contract type: Supplier or Both for Supply,
 and Subcontractor or Both for Subcontract. Payment milestones represent payable
@@ -1202,12 +1210,12 @@ obligations; the next unpaid milestone and overdue/due-within-30-days counts are
 calculated from the current filtered result. CSV export uses the same server-side
 direction, filters, sorting, and access scope as the screen.
 
-Accountants can review input contracts across the full Operational Project
+Accountants can review downstream contracts across the full Operational Project
 portfolio but cannot create, edit, transition, attach files, manage appendices,
-or delete them. Users who already hold contract-management permission can use
-those actions. Lifecycle rules, immutable processed payment milestones, API
-error handling, and concurrency protection are the same as for primary
-contracts.
+or delete them. Even a user who also holds contract-management permission must
+open the canonical Contract registry to perform those master-data actions.
+Lifecycle rules, immutable processed payment milestones, API error handling,
+and concurrency protection remain authoritative at the shared Contract API.
 
 #### 3.6.3 Variation Order (VO) Management
 
