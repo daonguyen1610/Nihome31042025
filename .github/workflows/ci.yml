@@ -145,6 +145,47 @@ jobs:
       - run: npm ci
       - run: npm run lint
 
+  translation-keys:
+    name: translations (missing keys)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Test translation key checker
+        run: python -m unittest discover -s tools/translation_keys -p 'test_*.py'
+
+      - name: Generate missing translation key report
+        id: translation_keys
+        shell: bash
+        run: |
+          set +e
+          python tools/translation_keys/check_translation_keys.py \
+            --format markdown \
+            --output translation-key-report.md \
+            --no-warnings
+          exit_code=$?
+          echo "exit_code=$exit_code" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Publish translation key summary
+        if: always()
+        run: cat translation-key-report.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Fail when translation keys are missing
+        env:
+          TRANSLATION_KEY_EXIT_CODE: ${{ steps.translation_keys.outputs.exit_code }}
+        run: |
+          if [[ "$TRANSLATION_KEY_EXIT_CODE" != "0" ]]; then
+            echo "::error::Translation keys are missing. See the job summary for the complete table."
+            exit "${TRANSLATION_KEY_EXIT_CODE:-2}"
+          fi
+
   nihomeweb-build:
     name: nihomeweb (build)
     runs-on: ubuntu-latest
