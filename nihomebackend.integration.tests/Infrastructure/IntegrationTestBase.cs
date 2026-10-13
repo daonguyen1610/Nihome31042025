@@ -50,6 +50,95 @@ public abstract class IntegrationTestBase : IClassFixture<NihomeWebApplicationFa
     }
 
     /// <summary>
+    /// Exercises the permanent-delete contract after obtaining the current
+    /// impact plan and its typed confirmation value.
+    /// </summary>
+    protected async Task<HttpResponseMessage> DeleteWithImpactAsync(string path)
+    {
+        using var impactResponse = await Client.GetAsync($"{path}/deletion-impact");
+        impactResponse.EnsureSuccessStatusCode();
+        var impact = await ReadJsonAsync(impactResponse);
+        return await Client.SendAsync(new HttpRequestMessage(HttpMethod.Delete, path)
+        {
+            Content = JsonContent.Create(new
+            {
+                planToken = impact.GetProperty("planToken").GetString(),
+                confirmation = impact.GetProperty("requiredConfirmation").GetString(),
+            }),
+        });
+    }
+
+    /// <summary>
+    /// Creates synced Project Document evidence and the client-approved review
+    /// required by the design stage gates.
+    /// </summary>
+    protected Task CreateClientApprovedDesignReviewAsync(
+        int projectId, DesignReviewStage stage, params int[] sourceRecordIds) =>
+        WithDbAsync(async db =>
+        {
+            var sourceEntityType = stage switch
+            {
+                DesignReviewStage.Concept => nameof(ConceptOption),
+                DesignReviewStage.BasicDesign => nameof(BasicDesignDoc),
+                _ => nameof(ShopDrawing),
+            };
+            var category = stage switch
+            {
+                DesignReviewStage.Concept => ProjectDocumentCategory.DesignConcept,
+                DesignReviewStage.BasicDesign => ProjectDocumentCategory.DesignBasic,
+                _ => ProjectDocumentCategory.DesignShopDrawing,
+            };
+            var project = await db.DesignProjects.AsNoTracking()
+                .SingleAsync(item => item.Id == projectId);
+            var managerId = await db.Users.AsNoTracking()
+                .Where(user => user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["DESIGN"])
+                .Select(user => user.Id)
+                .SingleAsync();
+            var documents = sourceRecordIds.Select(id => new ProjectDocument
+            {
+                OperationalProjectId = project.OperationalProjectId!.Value,
+                Category = category,
+                SourceModule = ProjectDocumentSourceModule.Design,
+                SourceEntityType = sourceEntityType,
+                SourceRecordId = id,
+                LocalPath = $"/files/project-documents/{sourceEntityType}-{id}.pdf",
+                OriginalFileName = $"{sourceEntityType}-{id}.pdf",
+                ContentType = "application/pdf",
+                Sha256 = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
+                    System.Text.Encoding.UTF8.GetBytes($"{sourceEntityType}:{id}"))).ToLowerInvariant(),
+                SyncStatus = ProjectDocumentSyncStatus.Synced,
+                CreatedByUserId = managerId,
+                UpdatedByUserId = managerId,
+            }).ToList();
+            db.ProjectDocuments.AddRange(documents);
+            await db.SaveChangesAsync();
+
+            var revision = await db.DesignReviews
+                .Where(review => review.DesignProjectId == projectId && review.Stage == stage)
+                .Select(review => (int?)review.RevisionNumber)
+                .MaxAsync() ?? 0;
+            db.DesignReviews.Add(new DesignReview
+            {
+                DesignProjectId = projectId,
+                Stage = stage,
+                RevisionNumber = revision + 1,
+                Title = $"{stage} client approval",
+                Status = DesignReviewStatus.ClientApproved,
+                DesignManagerUserId = managerId,
+                CreatedByUserId = managerId,
+                UpdatedByUserId = managerId,
+                Documents = documents.Select(document => new DesignReviewDocument
+                {
+                    ProjectDocumentId = document.Id,
+                    SourceEntityTypeSnapshot = sourceEntityType,
+                    SourceRecordIdSnapshot = document.SourceRecordId!.Value,
+                    Sha256Snapshot = document.Sha256,
+                }).ToList(),
+            });
+            await db.SaveChangesAsync();
+        });
+
+    /// <summary>
     /// Exercises the public tender submission contract with a fresh concurrency
     /// token and idempotency key. Negative-path tests may inspect the response.
     /// </summary>
