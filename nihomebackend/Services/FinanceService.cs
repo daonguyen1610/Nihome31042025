@@ -7,7 +7,7 @@ using NihomeBackend.Models.DTOs.Responses;
 
 namespace NihomeBackend.Services;
 
-public sealed class FinanceService(AppDbContext db) : IFinanceService
+public sealed class FinanceService(AppDbContext db, IProjectAccessService projectAccess) : IFinanceService
 {
     private const string AccountantRole = "ACCOUNTANT";
     private static readonly HashSet<string> CorrectionSourceTypes =
@@ -15,13 +15,16 @@ public sealed class FinanceService(AppDbContext db) : IFinanceService
 
     // Payment preparation already authorizes these downstream contracts across
     // owners. Share its eligibility filter without exposing the CRM read model.
-    private IQueryable<Contract> PaymentContracts() => db.Contracts.AsNoTracking().Where(item =>
+    private IQueryable<Contract> PaymentContracts(IReadOnlyCollection<int> accessibleProjectIds) =>
+        db.Contracts.AsNoTracking().Where(item =>
         item.Direction == ContractDirection.Downstream && item.VendorId != null &&
-        item.Status != ContractStatus.Draft && item.Status != ContractStatus.Cancelled);
+        item.Status != ContractStatus.Draft && item.Status != ContractStatus.Cancelled &&
+        item.OperationalProjectId.HasValue && accessibleProjectIds.Contains(item.OperationalProjectId.Value));
 
-    public async Task<PaymentReferencesResponse> GetPaymentReferencesAsync(CancellationToken ct = default)
+    public async Task<PaymentReferencesResponse> GetPaymentReferencesAsync(int userId, CancellationToken ct = default)
     {
-        var eligibleContracts = PaymentContracts();
+        var accessibleProjectIds = (await projectAccess.GetAccessibleOperationalProjectIdsAsync(userId, ct)).ToArray();
+        var eligibleContracts = PaymentContracts(accessibleProjectIds);
         var contracts = await eligibleContracts.OrderBy(item => item.ContractNumber).ThenBy(item => item.Id)
             .Select(item => new PaymentContractOption(item.Id, item.ContractNumber, item.VendorId!.Value,
                 item.Vendor!.CompanyName, db.ContractPaymentMilestones.Where(m => m.ContractId == item.Id).OrderBy(m => m.Order).ThenBy(m => m.Id)
@@ -35,8 +38,13 @@ public sealed class FinanceService(AppDbContext db) : IFinanceService
         return new(contracts, vendors, accountants);
     }
 
-    public async Task<IReadOnlyList<PaymentRequestResponse>> ListPaymentRequestsAsync(CancellationToken ct = default) =>
-        (await PaymentQuery().OrderByDescending(item => item.CreatedAt).ToListAsync(ct)).Select(MapPayment).ToList();
+    public async Task<IReadOnlyList<PaymentRequestResponse>> ListPaymentRequestsAsync(int userId, CancellationToken ct = default)
+    {
+        var accessibleProjectIds = (await projectAccess.GetAccessibleOperationalProjectIdsAsync(userId, ct)).ToArray();
+        return (await PaymentQuery().Where(item => item.Contract.OperationalProjectId.HasValue &&
+                accessibleProjectIds.Contains(item.Contract.OperationalProjectId.Value))
+            .OrderByDescending(item => item.CreatedAt).ToListAsync(ct)).Select(MapPayment).ToList();
+    }
 
     public async Task<IReadOnlyList<AccountingPeriodResponse>> ListPeriodsAsync(CancellationToken ct = default) =>
         (await db.AccountingPeriods.AsNoTracking().OrderByDescending(item => item.Year)
@@ -48,7 +56,7 @@ public sealed class FinanceService(AppDbContext db) : IFinanceService
     public async Task<PaymentRequestResponse> CreatePaymentRequestAsync(
         PaymentRequestUpsertRequest request, int userId, CancellationToken ct = default)
     {
-        await ValidatePaymentAsync(request, null, ct);
+        await ValidatePaymentAsync(request, null, userId, ct);
         await using var transaction = await BeginSerializableAsync(ct);
         var entity = new PaymentRequest
         {
@@ -66,13 +74,16 @@ public sealed class FinanceService(AppDbContext db) : IFinanceService
     }
 
     public async Task<PaymentRequestResponse?> UpdatePaymentRequestAsync(
-        int id, PaymentRequestUpsertRequest request, CancellationToken ct = default)
+        int id, PaymentRequestUpsertRequest request, int userId, CancellationToken ct = default)
     {
-        var entity = await db.PaymentRequests.Include(item => item.Attachments).SingleOrDefaultAsync(item => item.Id == id, ct);
+        var accessibleProjectIds = (await projectAccess.GetAccessibleOperationalProjectIdsAsync(userId, ct)).ToArray();
+        var entity = await db.PaymentRequests.Include(item => item.Attachments).SingleOrDefaultAsync(item =>
+            item.Id == id && item.Contract.OperationalProjectId.HasValue &&
+            accessibleProjectIds.Contains(item.Contract.OperationalProjectId.Value), ct);
         if (entity is null) return null;
         if (entity.Status != PaymentRequestStatus.Draft)
             throw new FinanceOperationException("Chỉ được sửa đề nghị thanh toán ở trạng thái Nháp.");
-        await ValidatePaymentAsync(request, id, ct);
+        await ValidatePaymentAsync(request, id, userId, ct);
         CrmConcurrency.Apply(db, entity, request.RowVersion);
         db.PaymentRequestAttachments.RemoveRange(entity.Attachments);
         entity.Attachments.Clear();
@@ -93,7 +104,7 @@ public sealed class FinanceService(AppDbContext db) : IFinanceService
     public async Task<PaymentRequestResponse?> DecidePaymentRequestAsync(
         int id, FinanceDecisionRequest request, int userId, CancellationToken ct = default)
     {
-        var entity = await db.PaymentRequests.SingleOrDefaultAsync(item => item.Id == id, ct);
+        var entity = await ScopedPaymentRequestAsync(id, userId, ct);
         if (entity is null) return null;
         var target = request.Approved ? PaymentRequestStatus.Approved : PaymentRequestStatus.Rejected;
         if (entity.Status == target) return await GetPaymentAsync(id, ct);
@@ -128,7 +139,7 @@ public sealed class FinanceService(AppDbContext db) : IFinanceService
     public async Task<PaymentRequestResponse?> PayPaymentRequestAsync(
         int id, FinanceTransitionRequest request, int userId, CancellationToken ct = default)
     {
-        var entity = await db.PaymentRequests.SingleOrDefaultAsync(item => item.Id == id, ct);
+        var entity = await ScopedPaymentRequestAsync(id, userId, ct);
         if (entity is null) return null;
         if (entity.Status == PaymentRequestStatus.Paid) return await GetPaymentAsync(id, ct);
         if (entity.Status != PaymentRequestStatus.Approved)
@@ -147,7 +158,7 @@ public sealed class FinanceService(AppDbContext db) : IFinanceService
     public async Task<PaymentRequestResponse?> CancelPaymentRequestAsync(
         int id, FinanceTransitionRequest request, int userId, CancellationToken ct = default)
     {
-        var entity = await db.PaymentRequests.SingleOrDefaultAsync(item => item.Id == id, ct);
+        var entity = await ScopedPaymentRequestAsync(id, userId, ct);
         if (entity is null) return null;
         if (entity.Status == PaymentRequestStatus.Cancelled) return await GetPaymentAsync(id, ct);
         if (entity.Status != PaymentRequestStatus.Approved)
@@ -348,7 +359,10 @@ public sealed class FinanceService(AppDbContext db) : IFinanceService
     private async Task<PaymentRequestResponse?> TransitionPaymentAsync(
         int id, FinanceTransitionRequest request, int userId, PaymentRequestStatus target, CancellationToken ct)
     {
-        var entity = await db.PaymentRequests.Include(item => item.Attachments).SingleOrDefaultAsync(item => item.Id == id, ct);
+        var accessibleProjectIds = (await projectAccess.GetAccessibleOperationalProjectIdsAsync(userId, ct)).ToArray();
+        var entity = await db.PaymentRequests.Include(item => item.Attachments).SingleOrDefaultAsync(item =>
+            item.Id == id && item.Contract.OperationalProjectId.HasValue &&
+            accessibleProjectIds.Contains(item.Contract.OperationalProjectId.Value), ct);
         if (entity is null) return null;
         if (entity.Status == target) return await GetPaymentAsync(id, ct);
         if (target == PaymentRequestStatus.UnderValidation && entity.Status != PaymentRequestStatus.Draft)
@@ -382,11 +396,14 @@ public sealed class FinanceService(AppDbContext db) : IFinanceService
         return await GetPaymentAsync(id, ct);
     }
 
-    private async Task ValidatePaymentAsync(PaymentRequestUpsertRequest request, int? excludeId, CancellationToken ct)
+    private async Task ValidatePaymentAsync(
+        PaymentRequestUpsertRequest request, int? excludeId, int userId, CancellationToken ct)
     {
-        var contract = await PaymentContracts().SingleOrDefaultAsync(item => item.Id == request.ContractId, ct);
+        var accessibleProjectIds = (await projectAccess.GetAccessibleOperationalProjectIdsAsync(userId, ct)).ToArray();
+        var contract = await PaymentContracts(accessibleProjectIds)
+            .SingleOrDefaultAsync(item => item.Id == request.ContractId, ct);
         if (contract is null || contract.VendorId != request.VendorId)
-            throw new FinanceOperationException("Đề nghị thanh toán phải liên kết với hợp đồng đầu ra đang hiệu lực và đúng nhà cung cấp.");
+            throw new FinanceOperationException("Đề nghị thanh toán phải liên kết với hợp đồng đầu vào đang hiệu lực và đúng nhà cung cấp.");
         if (request.ContractPaymentMilestoneId.HasValue && !await db.ContractPaymentMilestones.AsNoTracking().AnyAsync(item =>
                 item.Id == request.ContractPaymentMilestoneId && item.ContractId == request.ContractId, ct))
             throw new FinanceOperationException("Mốc thanh toán không thuộc hợp đồng đã chọn.");
@@ -513,6 +530,14 @@ public sealed class FinanceService(AppDbContext db) : IFinanceService
     {
         var entity = await PaymentQuery().SingleOrDefaultAsync(item => item.Id == id, ct);
         return entity is null ? null : MapPayment(entity);
+    }
+
+    private async Task<PaymentRequest?> ScopedPaymentRequestAsync(int id, int userId, CancellationToken ct)
+    {
+        var accessibleProjectIds = (await projectAccess.GetAccessibleOperationalProjectIdsAsync(userId, ct)).ToArray();
+        return await db.PaymentRequests.SingleOrDefaultAsync(item => item.Id == id &&
+            item.Contract.OperationalProjectId.HasValue &&
+            accessibleProjectIds.Contains(item.Contract.OperationalProjectId.Value), ct);
     }
 
     private async Task<AccountingCorrectionResponse?> GetCorrectionAsync(int id, CancellationToken ct)

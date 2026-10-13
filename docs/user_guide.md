@@ -670,8 +670,12 @@ Use **CRM → Contract registry** as the single place to create, edit, transitio
 attach documents or appendices to, and delete a Contract. Finance screens do
 not create a second contract record: **Receivables** filters the same registry
 to Upstream contracts, while **Payables** filters it to Downstream contracts.
-Their Contract details are read-only financial views and link back to the master
-record for authorized users.
+Selecting either Finance row opens that same canonical Contract ID and keeps a
+return link to the filtered Finance list. Accountants can maintain the
+receivable/payable schedule, responsible accountant, request state, and actual
+collection/payment date there. They cannot edit the Contract header, legal
+state, documents, or VO unless another assigned role grants the corresponding
+CRM permission.
 
 When opening **New contract**, the system suggests the next Contract Number in
 `HD-YYYY-NNNN` format. The number remains editable for an authorized user who
@@ -1164,7 +1168,7 @@ Manage primary contracts linked to projects and customers. Define contract value
 |------|-----------|----------|
 | Receivables List | Finance > Receivables; upstream contracts with owner/project/status/end-date filters, current value after approved VO, collection-risk summary, next receivable, pagination, contextual detail return, and complete filtered CSV export | Implemented |
 | Contract master maintenance | Create and edit the shared Upstream Contract only in CRM > Contract registry; Finance does not duplicate this form | Implemented |
-| Receivables Detail | Read-only Finance route with value and approved VO reconciliation, receivable milestones, files, appendices, audit timeline, and a link to the authorized master record | Implemented |
+| Contract detail | A Finance row opens the one canonical Contract record and preserves a return link to the filtered Receivables workspace; no second Finance detail form exists | Implemented |
 
 Sales may create a customer contract directly from an Opportunity when the
 value has already been agreed; a quotation is optional. If the customer needs
@@ -1200,7 +1204,7 @@ Manage input contracts with subcontractors and material suppliers. Define contra
 |------|-----------|----------|
 | Payables List | Finance > Payables; Downstream supplier/subcontractor contracts with vendor/project/owner/status/date/value filters, payment-obligation summary, pagination, and complete filtered CSV export | Implemented |
 | Contract master maintenance | Create and edit the shared Downstream Supply/Subcontract Contract only in CRM > Contract registry | Implemented |
-| Payables Detail | Read-only value and VO reconciliation, terms/scope, payable milestones, files, appendices, responsible owner, audit timeline, and master-record link | Implemented |
+| Contract detail | A Finance row opens the same canonical Contract ID and preserves a return link to the filtered Payables workspace; no second Finance detail form exists | Implemented |
 
 The Payables workspace is fixed to **Downstream**. More than one supplier
 or subcontractor contract may belong to the same Operational Project. Choose an
@@ -1211,11 +1215,17 @@ calculated from the current filtered result. CSV export uses the same server-sid
 direction, filters, sorting, and access scope as the screen.
 
 Accountants can review downstream contracts across the full Operational Project
-portfolio but cannot create, edit, transition, attach files, manage appendices,
-or delete them. Even a user who also holds contract-management permission must
-open the canonical Contract registry to perform those master-data actions.
+portfolio and maintain their financial schedules, responsible accountants, and
+payment states. They cannot create Contracts or edit headers, transition legal
+status, attach files, manage appendices, or delete Contracts. Finance rows link
+to the canonical Contract detail; only a user who also holds
+contract-management permission sees master-data actions there.
 Lifecycle rules, immutable processed payment milestones, API error handling,
 and concurrency protection remain authoritative at the shared Contract API.
+Payment Request contract choices, request lists, and every workflow action are
+limited to the caller's Operational Project scope. Project members see their
+assigned projects; portfolio finance users require the global project-view
+permission in addition to the relevant Finance permission.
 
 #### 3.6.3 Variation Order (VO) Management
 

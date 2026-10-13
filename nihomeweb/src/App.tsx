@@ -1,6 +1,6 @@
 import { lazy, Suspense } from "react";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Navigate, Route, Routes, useParams } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useLocation, useParams } from "react-router-dom";
 import { Provider } from "react-redux";
 import { store } from "@/store";
 import { queryClient } from "@/lib/queryClient";
@@ -105,6 +105,18 @@ const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 const LegacyPostRedirect = ({ edit = false }: { edit?: boolean }) => {
   const { slug } = useParams();
   return <Navigate to={`/admin/activities/${slug ?? ""}${edit ? "/edit" : ""}`} replace />;
+};
+
+const LegacyFinanceContractRedirect = ({ direction }: { direction: "Upstream" | "Downstream" }) => {
+  const { id } = useParams();
+  const location = useLocation();
+  const search = new URLSearchParams(location.search);
+  if (!search.has("returnTo")) {
+    search.set("returnTo", direction === "Upstream"
+      ? "/admin/finance/contracts"
+      : "/admin/finance/input-contracts");
+  }
+  return <Navigate to={`/admin/contracts/${id ?? ""}?${search.toString()}`} replace />;
 };
 
 const App = () => (
@@ -214,11 +226,11 @@ const App = () => (
               </Route>
               <Route element={<RequirePermission code={[ADMIN_PERMS.contractsViewAll, ADMIN_PERMS.contractsViewUpstreamAll]} />}>
                 <Route path="/admin/finance/contracts" element={<ContractsPage mode="upstream" />} />
-                <Route path="/admin/finance/contracts/:id" element={<ContractDetailPage mode="upstream" />} />
+                <Route path="/admin/finance/contracts/:id" element={<LegacyFinanceContractRedirect direction="Upstream" />} />
               </Route>
               <Route element={<RequirePermission code={[ADMIN_PERMS.contractsViewAll, ADMIN_PERMS.contractsViewDownstreamAll]} />}>
                 <Route path="/admin/finance/input-contracts" element={<ContractsPage mode="downstream" />} />
-                <Route path="/admin/finance/input-contracts/:id" element={<ContractDetailPage mode="downstream" />} />
+                <Route path="/admin/finance/input-contracts/:id" element={<LegacyFinanceContractRedirect direction="Downstream" />} />
               </Route>
               <Route element={<RequirePermission code={ADMIN_PERMS.opportunities} />}>
                 <Route path="/admin/opportunities" element={<AdminOpportunities />} />

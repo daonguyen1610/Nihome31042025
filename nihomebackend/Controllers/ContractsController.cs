@@ -435,7 +435,7 @@ public class ContractsController(
     }
 
     [HttpPatch("{id:int}/milestones/{milestoneId:int}/status")]
-    [RequirePermission("crm.contracts", "manage")]
+    [RequirePermission("crm.contracts", "view")]
     [Idempotency("crm.contracts.milestone-status")]
     public async Task<ActionResult<ContractResponse>> UpdateMilestoneStatus(
         int id, int milestoneId, [FromBody] UpdateMilestoneStatusRequest req, CancellationToken ct)
@@ -443,7 +443,12 @@ public class ContractsController(
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
 
-        var canSeeAll = await permissions.HasAsync(userId.Value, "crm.contracts.view.all", ct);
+        var canManageMaster = await permissions.HasAsync(userId.Value, "crm.contracts.manage", ct);
+        var canManageFinance = await permissions.HasAsync(userId.Value, "finance.payments.manage", ct);
+        if (!canManageMaster && !canManageFinance) return Forbid();
+        var hasProjectScope = await CanReadContractAcrossOwnersAsync(userId.Value, id, ct);
+        if (!canManageMaster && !hasProjectScope) return NotFound();
+        var canSeeAll = hasProjectScope;
         req.RowVersion = CrmConcurrency.ResolveRequestToken(Request, req.RowVersion);
         ContractResponse? updated;
         try
@@ -475,6 +480,42 @@ public class ContractsController(
         });
         CrmConcurrency.SetResponseEntityTag(Response, updated.RowVersion);
         return Ok(updated);
+    }
+
+    [HttpPut("{id:int}/milestones")]
+    [RequirePermission("crm.contracts", "view")]
+    [Idempotency("crm.contracts.payment-schedule")]
+    public async Task<ActionResult<ContractResponse>> UpdatePaymentSchedule(
+        int id, [FromBody] UpdateContractPaymentScheduleRequest req, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+
+        var canManageMaster = await permissions.HasAsync(userId.Value, "crm.contracts.manage", ct);
+        var canManageFinance = await permissions.HasAsync(userId.Value, "finance.payments.manage", ct);
+        if (!canManageMaster && !canManageFinance) return Forbid();
+        var hasProjectScope = await CanReadContractAcrossOwnersAsync(userId.Value, id, ct);
+        if (!canManageMaster && !hasProjectScope) return NotFound();
+        var canSeeAll = hasProjectScope;
+        req.RowVersion = CrmConcurrency.ResolveRequiredRequestToken(Request, req.RowVersion);
+        try
+        {
+            var updated = await svc.UpdatePaymentScheduleAsync(id, req, userId.Value, canSeeAll, ct);
+            if (updated is null) return NotFound();
+            audit.Log(new AuditEvent
+            {
+                Action = "contract.milestone.schedule",
+                ResourceType = EntityTypes.Contract,
+                ResourceId = id.ToString(),
+                Message = $"Contract #{id} payment schedule updated.",
+            });
+            CrmConcurrency.SetResponseEntityTag(Response, updated.RowVersion);
+            return Ok(updated);
+        }
+        catch (ContractValidationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
     // -------- appendices (VO) --------

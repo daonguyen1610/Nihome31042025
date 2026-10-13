@@ -498,6 +498,15 @@ public class ContractService(
             req,
             entity.OperationalProjectId,
             ct);
+        var hasPaymentRequests = await db.PaymentRequests.AsNoTracking()
+            .AnyAsync(item => item.ContractId == id, ct);
+        if (hasPaymentRequests &&
+            (req.Direction != entity.Direction || req.VendorId != entity.VendorId ||
+             operationalProjectId != entity.OperationalProjectId))
+        {
+            throw new ContractValidationException(
+                "Không được đổi chiều hợp đồng, đối tác hoặc Dự án khi đã có Đề nghị thanh toán liên kết.");
+        }
         var previousProjectId = entity.OperationalProjectId;
         if (previousProjectId != operationalProjectId)
         {
@@ -891,6 +900,30 @@ public class ContractService(
             "Milestone {Milestone} of contract {Contract} → {Status}",
             milestoneId, contractId, newStatus);
 
+        return await GetAsync(contractId, callerUserId, canSeeAll: true, ct);
+    }
+
+    public async Task<ContractResponse?> UpdatePaymentScheduleAsync(
+        int contractId, UpdateContractPaymentScheduleRequest request,
+        int callerUserId, bool canSeeAll, CancellationToken ct = default)
+    {
+        await using var transaction = db.Database.IsRelational()
+            ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct)
+            : null;
+        var contract = await db.Contracts.FindAsync(new object?[] { contractId }, ct);
+        if (contract is null) return null;
+        if (!canSeeAll && contract.OwnerUserId != callerUserId) return null;
+
+        CrmConcurrency.Apply(db, contract, request.RowVersion);
+        ValidatePaymentMilestones(request.PaymentMilestones);
+        await ValidateMilestoneAccountantsAsync(request.PaymentMilestones, ct);
+        await SynchronizeMilestonesAsync(contractId, request.PaymentMilestones, ct);
+        contract.UpdatedAt = DateTime.UtcNow;
+        contract.UpdatedByUserId = callerUserId;
+        await CrmConcurrency.SaveChangesAsync(db, ct);
+        if (transaction is not null) await transaction.CommitAsync(ct);
+
+        logger.LogInformation("Updated payment schedule of contract {Contract}", contractId);
         return await GetAsync(contractId, callerUserId, canSeeAll: true, ct);
     }
 

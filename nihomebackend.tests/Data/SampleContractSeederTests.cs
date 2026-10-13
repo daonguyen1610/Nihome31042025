@@ -52,11 +52,31 @@ public class SampleContractSeederTests : IDisposable
             contract.Direction == ContractDirection.Downstream);
         Assert.Equal(ContractType.Supply, downstreamContract.Type);
         Assert.Equal("NCC-ELECTRIC-01", _db.Vendors.Single(item => item.Id == downstreamContract.VendorId).VendorCode);
-        Assert.Contains("An Phú", _db.OperationalProjects
-            .Single(item => item.Id == downstreamContract.OperationalProjectId).Name);
+        var financeDemoProject = _db.OperationalProjects
+            .Single(item => item.Id == downstreamContract.OperationalProjectId);
+        Assert.Contains("An Phú", financeDemoProject.Name);
 
         var upstreamContracts = contracts.Where(contract => contract.Direction == ContractDirection.Upstream).ToList();
         Assert.Equal(upstreamContracts.Count, upstreamContracts.Select(contract => contract.QuoteId).Distinct().Count());
+        var upstreamDesignBuild = Assert.Single(upstreamContracts, contract =>
+            contract.OperationalProjectId == financeDemoProject.Id &&
+            contract.Type == ContractType.DesignAndBuild);
+
+        var financeContractIds = new[] { upstreamDesignBuild.Id, downstreamContract.Id };
+        var financeMilestones = _db.ContractPaymentMilestones
+            .Where(item => financeContractIds.Contains(item.ContractId))
+            .ToList();
+        Assert.Contains(financeMilestones, item => item.Status == PaymentMilestoneStatus.Paid);
+        Assert.Contains(financeMilestones, item => item.Status != PaymentMilestoneStatus.Paid &&
+            item.DueDate < DateTime.UtcNow.Date);
+        Assert.Contains(financeMilestones, item => item.Status != PaymentMilestoneStatus.Paid &&
+            item.DueDate >= DateTime.UtcNow.Date && item.DueDate <= DateTime.UtcNow.Date.AddDays(30));
+
+        var financeAppendices = _db.ContractAppendices
+            .Where(item => financeContractIds.Contains(item.ContractId))
+            .ToList();
+        Assert.Contains(financeAppendices, item => item.Status == ContractAppendixStatus.Approved);
+        Assert.Contains(financeAppendices, item => item.Status != ContractAppendixStatus.Approved);
 
         Assert.NotEmpty(_db.Surveys);
         Assert.All(_db.Surveys, survey =>

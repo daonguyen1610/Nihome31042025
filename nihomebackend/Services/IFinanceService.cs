@@ -5,12 +5,12 @@ namespace NihomeBackend.Services;
 
 public interface IFinanceService
 {
-    Task<PaymentReferencesResponse> GetPaymentReferencesAsync(CancellationToken ct = default);
-    Task<IReadOnlyList<PaymentRequestResponse>> ListPaymentRequestsAsync(CancellationToken ct = default);
+    Task<PaymentReferencesResponse> GetPaymentReferencesAsync(int userId, CancellationToken ct = default);
+    Task<IReadOnlyList<PaymentRequestResponse>> ListPaymentRequestsAsync(int userId, CancellationToken ct = default);
     Task<IReadOnlyList<AccountingPeriodResponse>> ListPeriodsAsync(CancellationToken ct = default);
     Task<IReadOnlyList<AccountingCorrectionResponse>> ListCorrectionsAsync(CancellationToken ct = default);
     Task<PaymentRequestResponse> CreatePaymentRequestAsync(PaymentRequestUpsertRequest request, int userId, CancellationToken ct = default);
-    Task<PaymentRequestResponse?> UpdatePaymentRequestAsync(int id, PaymentRequestUpsertRequest request, CancellationToken ct = default);
+    Task<PaymentRequestResponse?> UpdatePaymentRequestAsync(int id, PaymentRequestUpsertRequest request, int userId, CancellationToken ct = default);
     Task<PaymentRequestResponse?> SubmitPaymentRequestAsync(int id, FinanceTransitionRequest request, int userId, CancellationToken ct = default);
     Task<PaymentRequestResponse?> ValidatePaymentRequestAsync(int id, FinanceTransitionRequest request, int userId, CancellationToken ct = default);
     Task<PaymentRequestResponse?> DecidePaymentRequestAsync(int id, FinanceDecisionRequest request, int userId, CancellationToken ct = default);

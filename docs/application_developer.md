@@ -1241,18 +1241,34 @@ omits the downstream vendor catalogue.
 The canonical shared Contract registry and all master-data mutations are
 available at `/admin/contracts`. Finance exposes two read-only projections of
 those same Contract IDs: `/admin/finance/contracts` for Upstream receivables and
-`/admin/finance/input-contracts` for Downstream payables. Their `/{id}` routes
-request the fixed API direction and show the shared detail, documents,
-appendices, payment schedule, and timeline without exposing create, edit,
-lifecycle, attachment, VO, or delete actions. Users with Contract-registry
-access can follow the explicit master-record link when a commercial change is
-required. List URLs retain filters, sort, page, and the Downstream vendor filter
-while users inspect a detail. Both Finance views show current value, approved VO
+`/admin/finance/input-contracts` for Downstream payables. Selecting a Finance
+row opens the canonical `/admin/contracts/{id}` record and carries a validated
+`returnTo` value so users return to the same Finance filters, sort, and page.
+The former Finance `/{id}` URLs redirect to that canonical record for bookmark
+compatibility; they no longer render a second detail UI. Header, legal status,
+attachments, and VO mutations remain governed by `crm.contracts.manage`.
+Financial schedule ownership is separate: `PUT /api/contracts/{id}/milestones`
+updates only milestone schedule fields, while
+`PATCH /api/contracts/{id}/milestones/{milestoneId}/status` controls the
+responsible accountant, request state, and actual collection/payment date.
+Either `crm.contracts.manage` or `finance.payments.manage` may call those two
+endpoints, but direction and Operational Project visibility are rechecked on
+the server. A Finance permission therefore never elevates Contract header
+access. Both Finance
+views show current value, approved VO
 impact, the next unpaid milestone, and
 overdue/due-soon summaries with receivable/payable wording appropriate to their
 direction. Server pagination and the dedicated server-side export query keep CSV
 scope and filters identical to the screen without truncating at the current page
 or the 100-row API limit.
+
+Payment Request discovery and workflow are also Operational Project scoped.
+`GET /api/finance/payment-references` and `GET /api/finance/payment-requests`
+return only projects visible through `IProjectAccessService`; create, update,
+submit, validate, decide, pay, and cancel recheck the selected Contract's actual
+project before mutation. A scoped finance permission therefore requires active
+project membership (or project manager/creator scope), while
+`operations.projects.view.all` enables the authorized finance portfolio.
 
 ### 7.9 Operational Business Documents
 

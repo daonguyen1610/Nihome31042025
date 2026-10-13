@@ -342,6 +342,54 @@ public class ContractServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Update_WithPaymentRequest_CannotChangeDownstreamIdentity()
+    {
+        var supplier = new Vendor
+        {
+            VendorCode = "SUP-PAYMENT-LOCK",
+            CompanyName = "Payment locked supplier",
+            VendorType = VendorType.Supplier,
+            IsActive = true,
+        };
+        _db.Vendors.Add(supplier);
+        await _db.SaveChangesAsync();
+
+        var request = Req();
+        request.Direction = ContractDirection.Downstream;
+        request.Type = ContractType.Supply;
+        request.VendorId = supplier.Id;
+        request.QuoteId = null;
+        var created = await _sut.CreateAsync(request, 1, canReassignOwner: true);
+        _db.PaymentRequests.Add(new PaymentRequest
+        {
+            Code = "PAY-LOCK-001",
+            ContractId = created.Id,
+            VendorId = supplier.Id,
+            SupplierInvoiceNumber = "INV-LOCK-001",
+            InvoiceDate = DateOnly.FromDateTime(DateTime.UtcNow),
+            InvoiceAmount = 100_000m,
+            ReceivedAt = DateTime.UtcNow,
+            AssignedAccountantUserId = _accountantId,
+            CreatedByUserId = _accountantId,
+        });
+        await _db.SaveChangesAsync();
+
+        request.Direction = ContractDirection.Upstream;
+        request.Type = ContractType.DesignAndBuild;
+        request.VendorId = null;
+        request.RowVersion = created.RowVersion;
+        var error = await Assert.ThrowsAsync<ContractValidationException>(() =>
+            _sut.UpdateAsync(created.Id, request, 1, canSeeAll: true, canReassignOwner: true));
+
+        Assert.Contains("Đề nghị thanh toán", error.Message);
+        var persisted = _db.Contracts.Single(item => item.Id == created.Id);
+        Assert.Equal(ContractDirection.Downstream, persisted.Direction);
+        Assert.Equal(supplier.Id, persisted.VendorId);
+        Assert.Equal(_projectA, persisted.OperationalProjectId);
+        Assert.Single(_db.PaymentRequests, item => item.ContractId == created.Id);
+    }
+
+    [Fact]
     public async Task Create_AutoNumberSkipsManuallyEnteredSuffixes()
     {
         // A hand-entered number can carry any suffix, and a non-numeric one sorts

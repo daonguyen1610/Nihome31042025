@@ -18,13 +18,19 @@ public sealed class FinanceController(IFinanceService service, IAuditLogger audi
 {
     [HttpGet("payment-references")]
     [RequirePermission("finance.payments", "manage")]
-    public async Task<ActionResult<PaymentReferencesResponse>> PaymentReferences(CancellationToken ct) =>
-        Ok(await service.GetPaymentReferencesAsync(ct));
+    public async Task<ActionResult<PaymentReferencesResponse>> PaymentReferences(CancellationToken ct)
+    {
+        var userId = GetUserId();
+        return userId is null ? Unauthorized() : Ok(await service.GetPaymentReferencesAsync(userId.Value, ct));
+    }
 
     [HttpGet("payment-requests")]
     [RequirePermission("finance.payments", "view")]
-    public async Task<ActionResult<IReadOnlyList<PaymentRequestResponse>>> ListPayments(CancellationToken ct) =>
-        Ok(await service.ListPaymentRequestsAsync(ct));
+    public async Task<ActionResult<IReadOnlyList<PaymentRequestResponse>>> ListPayments(CancellationToken ct)
+    {
+        var userId = GetUserId();
+        return userId is null ? Unauthorized() : Ok(await service.ListPaymentRequestsAsync(userId.Value, ct));
+    }
 
     [HttpGet("periods")]
     [RequirePermission("finance.periods", "view")]
@@ -51,8 +57,8 @@ public sealed class FinanceController(IFinanceService service, IAuditLogger audi
         int id, [FromBody] PaymentRequestUpsertRequest request, CancellationToken ct)
     {
         request.RowVersion = CrmConcurrency.ResolveRequiredRequestToken(Request, request.RowVersion);
-        return ExecuteNullable(id, EntityTypes.PaymentRequest, "finance.payment.update", _ =>
-            service.UpdatePaymentRequestAsync(id, request, ct));
+        return ExecuteNullable(id, EntityTypes.PaymentRequest, "finance.payment.update", userId =>
+            service.UpdatePaymentRequestAsync(id, request, userId, ct));
     }
 
     [HttpPost("payment-requests/{id:int}/submit")]

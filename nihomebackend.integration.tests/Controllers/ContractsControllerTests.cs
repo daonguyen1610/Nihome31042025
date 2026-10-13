@@ -353,6 +353,62 @@ public class ContractsControllerTests : IntegrationTestBase
             value = 10,
         });
         forbiddenCreate.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        using var forbiddenUpdate = await Client.PutAsJsonAsync($"/api/contracts/{supplyId}", new
+        {
+            customerId,
+            operationalProjectId = projectId,
+            direction = "Downstream",
+            type = "Supply",
+            vendorId = vendor.Id,
+            status = "Draft",
+            value = 130_000_000,
+            rowVersion = items.Single(item => item.GetProperty("id").GetInt32() == supplyId)
+                .GetProperty("rowVersion").GetString(),
+        });
+        forbiddenUpdate.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        var accountantUserId = await WithDbAsync(db => db.Users
+            .Where(user => user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["ACCOUNTANT"])
+            .Select(user => user.Id)
+            .SingleAsync());
+        var detail = await ReadJsonAsync(await Client.GetAsync($"/api/contracts/{supplyId}?direction=Downstream"));
+        var scheduleUpdate = await Client.PutAsJsonAsync($"/api/contracts/{supplyId}/milestones", new
+        {
+            rowVersion = detail.GetProperty("rowVersion").GetString(),
+            paymentMilestones = new[]
+            {
+                new
+                {
+                    order = 1,
+                    name = "Supplier advance",
+                    percentValue = 100m,
+                    dueDate = "2026-11-15T00:00:00Z",
+                    status = "Pending",
+                    responsibleAccountantUserId = accountantUserId,
+                },
+            },
+        });
+        scheduleUpdate.StatusCode.Should().Be(HttpStatusCode.OK, await scheduleUpdate.Content.ReadAsStringAsync());
+        var schedule = await ReadJsonAsync(scheduleUpdate);
+        schedule.GetProperty("value").GetDecimal().Should().Be(125_000_000m);
+        schedule.GetProperty("paymentMilestones").GetArrayLength().Should().Be(1);
+        var milestoneId = schedule.GetProperty("paymentMilestones")[0].GetProperty("id").GetInt32();
+
+        var requested = await Client.PatchAsJsonAsync(
+            $"/api/contracts/{supplyId}/milestones/{milestoneId}/status",
+            new
+            {
+                status = "Requested",
+                responsibleAccountantUserId = accountantUserId,
+                rowVersion = schedule.GetProperty("rowVersion").GetString(),
+            });
+        requested.StatusCode.Should().Be(HttpStatusCode.OK, await requested.Content.ReadAsStringAsync());
+        var requestedBody = await ReadJsonAsync(requested);
+        requestedBody.GetProperty("paymentMilestones")[0].GetProperty("status").GetString()
+            .Should().Be("Requested");
+        requestedBody.GetProperty("contractNumber").GetString()
+            .Should().Be(detail.GetProperty("contractNumber").GetString());
     }
 
     [Fact]
