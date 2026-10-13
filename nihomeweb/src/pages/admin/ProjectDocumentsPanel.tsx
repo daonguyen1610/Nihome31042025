@@ -33,11 +33,12 @@ type Props = {
   projectId: number;
   canManage: boolean;
   onCountChange?: (count: number) => void;
+  sourceOptions?: Array<{ entityType: string; recordId: number; label: string; category: string }>;
 };
 
 const extensionOf = (fileName: string) => fileName.split(".").pop()?.toLowerCase() ?? "";
 
-export default function ProjectDocumentsPanel({ projectId, canManage, onCountChange }: Props) {
+export default function ProjectDocumentsPanel({ projectId, canManage, onCountChange, sourceOptions }: Props) {
   const { t, lang } = useI18n();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -48,6 +49,7 @@ export default function ProjectDocumentsPanel({ projectId, canManage, onCountCha
   const [error, setError] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [category, setCategory] = useState("");
+  const [sourceKey, setSourceKey] = useState("");
   const [uploading, setUploading] = useState(false);
   const [busyId, setBusyId] = useState<number | null>(null);
   const [classifications, setClassifications] = useState<Record<number, string>>({});
@@ -120,9 +122,16 @@ export default function ProjectDocumentsPanel({ projectId, canManage, onCountCha
     try {
       const idempotencyKey = uploadIdempotencyKeyRef.current ?? newIdempotencyKey();
       uploadIdempotencyKeyRef.current = idempotencyKey;
-      await adminApi.uploadProjectDocument(projectId, file, category, idempotencyKey);
+      const source = sourceOptions?.find((item) => `${item.entityType}:${item.recordId}` === sourceKey);
+      if (sourceOptions?.length && !source) {
+        toast({ title: t("common.error"), description: t("designProjects.documents.validation.sourceRequired"), variant: "destructive" });
+        return;
+      }
+      await adminApi.uploadProjectDocument(projectId, file, category, idempotencyKey,
+        source ? { module: "Design", entityType: source.entityType, recordId: source.recordId } : undefined);
       setFile(null);
       setCategory("");
+      setSourceKey("");
       uploadIdempotencyKeyRef.current = null;
       if (fileInputRef.current) fileInputRef.current.value = "";
       toast({ title: t("operationalProjects.documents.uploaded") });
@@ -215,9 +224,10 @@ export default function ProjectDocumentsPanel({ projectId, canManage, onCountCha
   return (
     <div className="space-y-4" data-testid="project-documents-section">
       <p className="text-sm text-muted-foreground">{t("operationalProjects.documents.description")}</p>
-      {canManage && <div className="grid gap-3 rounded-md border bg-muted/30 p-4 md:grid-cols-[minmax(0,1fr)_minmax(13rem,0.65fr)_auto] md:items-end" data-testid="project-documents-upload">
+      {canManage && <div className="grid gap-3 rounded-md border bg-muted/30 p-4 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(13rem,0.65fr)_minmax(13rem,0.65fr)_auto] xl:items-end" data-testid="project-documents-upload">
         <div><Label htmlFor="project-document-file">{t("operationalProjects.documents.file")}</Label><Input ref={fileInputRef} id="project-document-file" type="file" className="mt-1" onChange={event => selectFile(event.target.files?.[0])} /></div>
-        <div><Label htmlFor="project-document-category">{t("operationalProjects.documents.field.category")}</Label><Select value={category} onValueChange={selectCategory}><SelectTrigger id="project-document-category" className="mt-1"><SelectValue placeholder={t("operationalProjects.documents.selectCategory")} /></SelectTrigger><SelectContent>{categories.map(item => <SelectItem key={item.value} value={item.value}>{t(item.translationKey)} · {item.folderPath}</SelectItem>)}</SelectContent></Select></div>
+        {sourceOptions?.length ? <div><Label htmlFor="project-document-source">{t("designProjects.documents.sourceRecord")}</Label><Select value={sourceKey} onValueChange={(value) => { const source = sourceOptions.find((item) => `${item.entityType}:${item.recordId}` === value); setSourceKey(value); if (source) selectCategory(source.category); }}><SelectTrigger id="project-document-source" className="mt-1"><SelectValue placeholder={t("designProjects.documents.selectSourceRecord")} /></SelectTrigger><SelectContent>{sourceOptions.map((item) => <SelectItem key={`${item.entityType}:${item.recordId}`} value={`${item.entityType}:${item.recordId}`}>{item.label}</SelectItem>)}</SelectContent></Select></div> : null}
+        <div><Label htmlFor="project-document-category">{t("operationalProjects.documents.field.category")}</Label><Select value={category} onValueChange={selectCategory} disabled={Boolean(sourceOptions?.length)}><SelectTrigger id="project-document-category" className="mt-1"><SelectValue placeholder={t("operationalProjects.documents.selectCategory")} /></SelectTrigger><SelectContent>{categories.map(item => <SelectItem key={item.value} value={item.value}>{t(item.translationKey)} · {item.folderPath}</SelectItem>)}</SelectContent></Select></div>
         <Button onClick={() => void upload()} disabled={uploading}>{uploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}{t("operationalProjects.documents.upload")}</Button>
       </div>}
 

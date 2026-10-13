@@ -1,5 +1,10 @@
 import { test, expect, TEST_USERS } from "../fixtures/auth";
-import { createDesignProject, createOwnCustomer } from "../fixtures/designProjects";
+import {
+  approveDesignStage,
+  createDesignProject,
+  createOwnCustomer,
+  isGoogleDriveConnected,
+} from "../fixtures/designProjects";
 
 /**
  * NIH-116 M2 Detail Design end-to-end flow. Real-user path through the
@@ -21,7 +26,7 @@ import { createDesignProject, createOwnCustomer } from "../fixtures/designProjec
 const uid = () => Math.random().toString(36).slice(2, 8);
 
 test.describe("NIH-116 — Detail Design (real-user flow)", () => {
-  test("Design Lead can create, transition and bulk-delete shop drawings", async ({
+  test("Design Lead can create, transition and safely delete rejected shop drawings", async ({
     page,
     api,
     loginAs,
@@ -33,6 +38,10 @@ test.describe("NIH-116 — Detail Design (real-user flow)", () => {
     // ---------- 1. Set up a fresh project via the API ----------
     const token = await loginAs(TEST_USERS.superAdmin);
     const authHeader = { Authorization: `Bearer ${token}` };
+    test.skip(
+      !(await isGoogleDriveConnected(api, authHeader)),
+      "Requires a connected Google Drive because approved design evidence must be durably synced.",
+    );
 
     // Reuse an existing customer if any.
     const customerId = await createOwnCustomer(api, authHeader, "SD");
@@ -51,15 +60,19 @@ test.describe("NIH-116 — Detail Design (real-user flow)", () => {
     });
     expect(optCreate.ok(), await optCreate.text()).toBeTruthy();
     const optId = (await optCreate.json()).id as number;
-    for (const status of ["PendingInternalReview", "PresentedToClient", "Finalized"]) {
+    for (const status of ["PendingInternalReview", "PresentedToClient"]) {
       const t = await api.post(`/api/concept-options/${optId}/status`, {
         headers: authHeader,
         data: { status },
       });
       expect(t.ok(), `${status}: ${await t.text()}`).toBeTruthy();
     }
+    await approveDesignStage(api, { headers: authHeader, projectId, stage: "Concept", category: "DesignConcept", sourceEntityType: "ConceptOption", sourceRecordIds: [optId] });
+    const finalized = await api.post(`/api/concept-options/${optId}/status`, { headers: authHeader, data: { status: "Finalized" } });
+    expect(finalized.ok(), await finalized.text()).toBeTruthy();
 
     // BasicDesign → ShopDrawing (approve 1 doc per required discipline)
+    const basicDocumentIds: number[] = [];
     for (const disciplineCode of ["architecture", "structure", "mep"]) {
       const doc = await api.post("/api/basic-design-docs", {
         headers: authHeader,
@@ -71,6 +84,7 @@ test.describe("NIH-116 — Detail Design (real-user flow)", () => {
       });
       expect(doc.ok(), await doc.text()).toBeTruthy();
       const docId = (await doc.json()).id as number;
+      basicDocumentIds.push(docId);
       for (const status of ["SubmittedForReview", "InternallyApproved"]) {
         const t = await api.post(`/api/basic-design-docs/${docId}/status`, {
           headers: authHeader,
@@ -79,6 +93,7 @@ test.describe("NIH-116 — Detail Design (real-user flow)", () => {
         expect(t.ok(), `${disciplineCode} → ${status}: ${await t.text()}`).toBeTruthy();
       }
     }
+    await approveDesignStage(api, { headers: authHeader, projectId, stage: "BasicDesign", category: "DesignBasic", sourceEntityType: "BasicDesignDoc", sourceRecordIds: basicDocumentIds });
     const unlock = await api.post(`/api/basic-design-docs/design-project/${projectId}/unlock-shop-drawing`, {
       headers: authHeader,
     });
@@ -140,10 +155,8 @@ test.describe("NIH-116 — Detail Design (real-user flow)", () => {
     await expect(page.getByTestId(`shop-drawing-status-${drawingId}`))
       .toHaveText(/PendingIfc|Ch\u1edd ph\u00e1t h\u00e0nh IFC|IFC/i);
 
-    // ---------- 5. Bulk delete of drafts ----------
-    // Create 2 fresh drafts via API (fast + independent from the state
-    // machine we just walked).
-    const drafts: number[] = [];
+    // ---------- 5. Impact-planned deletion of rejected dossiers ----------
+    const rejectedDrawings: Array<{ id: number; drawingCode: string }> = [];
     for (let i = 0; i < 2; i++) {
       const res = await api.post("/api/shop-drawings", {
         headers: authHeader,
@@ -155,7 +168,15 @@ test.describe("NIH-116 — Detail Design (real-user flow)", () => {
         },
       });
       expect(res.ok(), await res.text()).toBeTruthy();
-      drafts.push((await res.json()).id as number);
+      const created = await res.json() as { id: number; drawingCode: string };
+      for (const status of ["InReview", "Rejected"]) {
+        const transition = await api.post(`/api/shop-drawings/${created.id}/status`, {
+          headers: authHeader,
+          data: { status },
+        });
+        expect(transition.ok(), await transition.text()).toBeTruthy();
+      }
+      rejectedDrawings.push(created);
     }
 
     await page.reload({ waitUntil: "networkidle" });
@@ -166,14 +187,15 @@ test.describe("NIH-116 — Detail Design (real-user flow)", () => {
     await shopTab.click({ force: true });
     await expect(page.getByTestId("shop-drawing-tab")).toBeVisible();
 
-    // Select both drafts (checkboxes only render on Drafting rows).
-    for (const id of drafts) {
-      await page.getByTestId(`shop-drawing-check-${id}`).click();
+    for (const drawing of rejectedDrawings) {
+      await page.getByTestId(`shop-drawing-delete-${drawing.id}`).first().click();
+      await expect(page.locator("#deletion-confirmation")).toBeVisible();
+      await page.locator("#deletion-confirmation").fill(drawing.drawingCode);
+      await page.getByRole("button", { name: /Xóa vĩnh viễn|Delete permanently/i }).click();
+      await expect(page.locator(`#shop-drawing-${drawing.id}`)).toHaveCount(0);
     }
-    await page.getByTestId("shop-drawing-bulk-delete").click();
-    await page.getByTestId("shop-drawing-bulk-delete-confirm").click();
 
-    // Confirm both drafts vanish from the list via the API (this is
+    // Confirm both rejected records vanish from the list via the API (this is
     // deterministic regardless of any toast-driven remount).
     await expect
       .poll(async () => {
@@ -182,7 +204,7 @@ test.describe("NIH-116 — Detail Design (real-user flow)", () => {
         });
         if (!l.ok()) return "err";
         const rows = (await l.json()).items as Array<{ id: number }>;
-        return drafts.every((id) => !rows.some((r) => r.id === id));
+        return rejectedDrawings.every(({ id }) => !rows.some((r) => r.id === id));
       }, { timeout: 5_000 })
       .toBe(true);
   });
@@ -197,6 +219,10 @@ test.describe("NIH-116 — Detail Design (real-user flow)", () => {
     test.slow();
     const token = await loginAs(TEST_USERS.superAdmin);
     const authHeader = { Authorization: `Bearer ${token}` };
+    test.skip(
+      !(await isGoogleDriveConnected(api, authHeader)),
+      "Requires a connected Google Drive because approved design evidence must be durably synced.",
+    );
     const customerId = await createOwnCustomer(api, authHeader, "SD-LINK");
     const projectId = await createDesignProject(api, {
       headers: authHeader,
@@ -210,13 +236,17 @@ test.describe("NIH-116 — Detail Design (real-user flow)", () => {
     });
     expect(option.ok(), await option.text()).toBeTruthy();
     const optionId = (await option.json()).id as number;
-    for (const status of ["PendingInternalReview", "PresentedToClient", "Finalized"]) {
+    for (const status of ["PendingInternalReview", "PresentedToClient"]) {
       const transition = await api.post(`/api/concept-options/${optionId}/status`, {
         headers: authHeader,
         data: { status },
       });
       expect(transition.ok(), `${status}: ${await transition.text()}`).toBeTruthy();
     }
+    await approveDesignStage(api, { headers: authHeader, projectId, stage: "Concept", category: "DesignConcept", sourceEntityType: "ConceptOption", sourceRecordIds: [optionId] });
+    const finalized = await api.post(`/api/concept-options/${optionId}/status`, { headers: authHeader, data: { status: "Finalized" } });
+    expect(finalized.ok(), await finalized.text()).toBeTruthy();
+    const prerequisiteDocumentIds: number[] = [];
     for (const disciplineCode of ["architecture", "structure", "mep"]) {
       const document = await api.post("/api/basic-design-docs", {
         headers: authHeader,
@@ -228,6 +258,7 @@ test.describe("NIH-116 — Detail Design (real-user flow)", () => {
       });
       expect(document.ok(), await document.text()).toBeTruthy();
       const documentId = (await document.json()).id as number;
+      prerequisiteDocumentIds.push(documentId);
       for (const status of ["SubmittedForReview", "InternallyApproved"]) {
         const transition = await api.post(`/api/basic-design-docs/${documentId}/status`, {
           headers: authHeader,
@@ -236,6 +267,7 @@ test.describe("NIH-116 — Detail Design (real-user flow)", () => {
         expect(transition.ok(), `${disciplineCode} → ${status}: ${await transition.text()}`).toBeTruthy();
       }
     }
+    await approveDesignStage(api, { headers: authHeader, projectId, stage: "BasicDesign", category: "DesignBasic", sourceEntityType: "BasicDesignDoc", sourceRecordIds: prerequisiteDocumentIds });
     const unlock = await api.post(`/api/basic-design-docs/design-project/${projectId}/unlock-shop-drawing`, {
       headers: authHeader,
     });
@@ -251,6 +283,13 @@ test.describe("NIH-116 — Detail Design (real-user flow)", () => {
     });
     expect(drawing.ok(), await drawing.text()).toBeTruthy();
     const drawingId = (await drawing.json()).id as number;
+    for (const status of ["InReview", "Rejected"]) {
+      const transition = await api.post(`/api/shop-drawings/${drawingId}/status`, {
+        headers: authHeader,
+        data: { status },
+      });
+      expect(transition.ok(), await transition.text()).toBeTruthy();
+    }
 
     await loginInBrowserAs(page, TEST_USERS.superAdmin);
     await page.goto(

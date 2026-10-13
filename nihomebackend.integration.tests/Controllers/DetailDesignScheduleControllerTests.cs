@@ -7,6 +7,8 @@ namespace NihomeBackend.IntegrationTests.Controllers;
 
 public sealed class DetailDesignScheduleControllerTests : IntegrationTestBase
 {
+    private static readonly Dictionary<int, int> ApproverByAssignee = new();
+
     public DetailDesignScheduleControllerTests(NihomeWebApplicationFactory factory) : base(factory) { }
 
     [Fact]
@@ -44,14 +46,14 @@ public sealed class DetailDesignScheduleControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task AssignedProjectManager_CanInitializeSchedule()
+    public async Task OperationalProjectManager_CannotInitializeDesignSchedule()
     {
         var fixture = await CreateFixtureAsync("PM");
         await AuthenticateAsync("PM");
 
         using var response = await InitializeAsync(fixture.ProjectId, InitializePayload());
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK,
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound,
             await response.Content.ReadAsStringAsync());
     }
 
@@ -703,7 +705,7 @@ public sealed class DetailDesignScheduleControllerTests : IntegrationTestBase
     }
 
     private async Task<Fixture> CreateFixtureAsync(
-        string managerRoleCode = "PM",
+        string managerRoleCode = "DESIGN",
         DateTime? startDate = default,
         DateTime? deadline = default,
         bool useDefaultDates = true)
@@ -720,6 +722,21 @@ public sealed class DetailDesignScheduleControllerTests : IntegrationTestBase
             };
             db.Customers.Add(customer);
             await db.SaveChangesAsync();
+            var designLeadRoleId = await db.Users.AsNoTracking()
+                .Where(user => user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["DESIGN_LEAD"])
+                .Select(user => user.RoleEntityId).SingleAsync();
+            var localLead = new ApplicationUser
+            {
+                PhoneNumber = $"08{Random.Shared.Next(10_000_000, 99_999_999)}",
+                FullName = "Design Lead fixture",
+                Email = $"design-lead-{Guid.NewGuid():N}@nihome.test",
+                PasswordHash = "integration-fixture",
+                Role = UserRole.USER,
+                RoleEntityId = designLeadRoleId,
+                IsActive = true,
+            };
+            db.Users.Add(localLead);
+            await db.SaveChangesAsync();
             var project = new OperationalProject
             {
                 Code = $"PJ-DS-{Guid.NewGuid():N}"[..30],
@@ -735,6 +752,8 @@ public sealed class DetailDesignScheduleControllerTests : IntegrationTestBase
                 ProjectCode = $"DP-DS-{Guid.NewGuid():N}"[..30],
                 Name = "Detail design schedule",
                 CustomerId = customer.Id,
+                ProjectManagerUserId = managerRoleCode == "DESIGN" ? managerId : null,
+                DesignLeadUserId = managerRoleCode == "DESIGN_LEAD" ? managerId : localLead.Id,
                 StartDate = useDefaultDates
                     ? startDate ?? new DateTime(2026, 9, 1, 0, 0, 0, DateTimeKind.Utc)
                     : startDate,
@@ -752,8 +771,18 @@ public sealed class DetailDesignScheduleControllerTests : IntegrationTestBase
                 CreatedByUserId = managerId,
                 UpdatedByUserId = managerId,
             };
-            db.OperationalProjectMembers.Add(member);
+            var approver = new OperationalProjectMember
+            {
+                OperationalProjectId = project.Id,
+                UserId = managerRoleCode == "DESIGN_LEAD" ? managerId : localLead.Id,
+                Position = "Design Lead",
+                StartedAt = DateTime.UtcNow.AddDays(-1),
+                CreatedByUserId = managerId,
+                UpdatedByUserId = managerId,
+            };
+            db.OperationalProjectMembers.AddRange(member, approver);
             await db.SaveChangesAsync();
+            ApproverByAssignee[member.Id] = approver.Id;
             return new Fixture(project.Id, member.Id);
         });
     }
@@ -911,6 +940,7 @@ public sealed class DetailDesignScheduleControllerTests : IntegrationTestBase
             Name = "Design package",
             DepartmentCode = "design",
             AssigneeMemberId = memberId,
+            ApproverMemberId = ApproverByAssignee.GetValueOrDefault(memberId),
             PlannedStart = new DateOnly(2026, 9, 1),
             PlannedEnd = new DateOnly(2026, 9, 3),
             ActualStart = actualStart,
@@ -930,6 +960,7 @@ public sealed class DetailDesignScheduleControllerTests : IntegrationTestBase
         public string Name { get; init; } = string.Empty;
         public string DepartmentCode { get; init; } = string.Empty;
         public int AssigneeMemberId { get; init; }
+        public int ApproverMemberId { get; init; }
         public bool IsMilestone { get; init; }
         public DateOnly PlannedStart { get; init; }
         public DateOnly PlannedEnd { get; init; }

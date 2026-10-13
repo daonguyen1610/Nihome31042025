@@ -16,6 +16,14 @@ public enum DesignScheduleStatus
     WaitingForDepartment = 4,
 }
 
+public enum DesignTaskApprovalStatus
+{
+    NotSubmitted = 0,
+    Pending = 1,
+    Approved = 2,
+    Rejected = 3,
+}
+
 public class DesignSchedulePhase : IConcurrencyTracked
 {
     public int Id { get; set; }
@@ -50,9 +58,17 @@ public class DesignScheduleTask : IConcurrencyTracked
     public DesignSchedulePhase Phase { get; set; } = null!;
     public string Code { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
+    public string? Description { get; set; }
     public string DepartmentCode { get; set; } = string.Empty;
     public int AssigneeMemberId { get; set; }
     public OperationalProjectMember AssigneeMember { get; set; } = null!;
+    public int ApproverMemberId { get; set; }
+    public OperationalProjectMember ApproverMember { get; set; } = null!;
+    public int? ParentTaskId { get; set; }
+    public DesignScheduleTask? ParentTask { get; set; }
+    public List<DesignScheduleTask> Children { get; set; } = new();
+    public string? ResourceSummary { get; set; }
+    public bool IsCritical { get; set; }
     public bool IsMilestone { get; set; }
     public DateOnly PlannedStart { get; set; }
     public DateOnly PlannedEnd { get; set; }
@@ -61,6 +77,12 @@ public class DesignScheduleTask : IConcurrencyTracked
     public DesignScheduleStatus Status { get; set; }
     public int ProgressPercent { get; set; }
     public int Weight { get; set; }
+    public DesignTaskApprovalStatus ApprovalStatus { get; set; } = DesignTaskApprovalStatus.NotSubmitted;
+    public DateTime? SubmittedAt { get; set; }
+    public int? SubmittedByUserId { get; set; }
+    public DateTime? ReviewedAt { get; set; }
+    public int? ReviewedByUserId { get; set; }
+    public string? ReviewComment { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public int CreatedByUserId { get; set; }
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
@@ -68,6 +90,15 @@ public class DesignScheduleTask : IConcurrencyTracked
     public byte[] RowVersion { get; set; } = [];
     public List<DesignScheduleTaskDependency> Predecessors { get; set; } = new();
     public List<DesignScheduleTaskDependency> Successors { get; set; } = new();
+    public List<DesignScheduleTaskCcMember> CcMembers { get; set; } = new();
+}
+
+public class DesignScheduleTaskCcMember
+{
+    public int TaskId { get; set; }
+    public DesignScheduleTask Task { get; set; } = null!;
+    public int MemberId { get; set; }
+    public OperationalProjectMember Member { get; set; } = null!;
 }
 
 public class DesignScheduleTaskDependency

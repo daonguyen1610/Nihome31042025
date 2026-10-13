@@ -157,6 +157,9 @@ public class ConceptOptionService(
     {
         var entity = await db.ConceptOptions.FirstOrDefaultAsync(c => c.Id == id, ct);
         if (entity is null) return false;
+        if (entity.Status != ConceptOptionStatus.Discarded)
+            throw new ConceptOptionOperationException(
+                "Chỉ phương án Concept đã bị loại mới được xóa vĩnh viễn.");
 
         db.ConceptOptions.Remove(entity);
         await db.SaveChangesAsync(ct);
@@ -181,6 +184,22 @@ public class ConceptOptionService(
 
         if (next == ConceptOptionStatus.Finalized)
         {
+            var clientApproved = await db.DesignReviews.AsNoTracking()
+                .Where(review => review.DesignProjectId == entity.DesignProjectId &&
+                    review.Stage == DesignReviewStage.Concept &&
+                    review.Documents.Any(document =>
+                        document.SourceEntityTypeSnapshot == nameof(ConceptOption) &&
+                        document.SourceRecordIdSnapshot == entity.Id &&
+                        document.ProjectDocument.DeletedAt == null &&
+                        document.ProjectDocument.SyncStatus == ProjectDocumentSyncStatus.Synced &&
+                        document.ProjectDocument.Sha256 == document.Sha256Snapshot))
+                .OrderByDescending(review => review.RevisionNumber)
+                .Select(review => review.Status == DesignReviewStatus.ClientApproved)
+                .FirstOrDefaultAsync(ct);
+            if (!clientApproved)
+                throw new ConceptOptionOperationException(
+                    "Phải ghi nhận khách hàng duyệt hồ sơ Concept mới được chốt phương án.");
+
             // Guard: at most one Finalized per project.
             var alreadyFinal = await db.ConceptOptions.AsNoTracking()
                 .AnyAsync(c => c.DesignProjectId == entity.DesignProjectId

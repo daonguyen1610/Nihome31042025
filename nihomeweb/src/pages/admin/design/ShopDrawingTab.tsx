@@ -2,9 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { CheckCircle2, ChevronDown, ChevronUp, FileUp, History, Loader2, Pencil, Plus, Send, ShieldCheck, Trash2, Undo2, XCircle } from "lucide-react";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
+import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -24,16 +24,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -45,6 +35,7 @@ import {
   adminApi,
   type CreateShopDrawingRequest,
   type DesignProjectResponse,
+  type DeletionImpactResponse,
   type MasterDataOption,
   type ShopDrawingResponse,
   type ShopDrawingStatus,
@@ -120,6 +111,7 @@ export const ShopDrawingTab = ({ project }: Props) => {
   const canApprove = has(ADMIN_PERMS.designShopApprove);
   const canViewRevisions = has(ADMIN_PERMS.designRevisions);
   const canPickOwner = has(ADMIN_PERMS.users);
+  const canHardDelete = has(ADMIN_PERMS.designRecordsHardDelete);
   const [searchParams] = useSearchParams();
   const focusedDocumentId = Number(searchParams.get("documentId"));
 
@@ -232,34 +224,6 @@ export const ShopDrawingTab = ({ project }: Props) => {
     return byDiscipline;
   }, [rows]);
 
-  // -------- selection (per-row bulk delete) --------
-  const draftableIds = useMemo(
-    () => new Set(rows.map((row) => row.id)),
-    [rows],
-  );
-  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
-  const toggleOne = (id: number, checked: boolean) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (checked) next.add(id);
-      else next.delete(id);
-      return next;
-    });
-  };
-  const clearSelection = () => setSelectedIds(new Set());
-  // when rows change, drop any selected ids that no longer exist
-  useEffect(() => {
-    setSelectedIds((prev) => {
-      let mutated = false;
-      const next = new Set<number>();
-      for (const id of prev) {
-        if (draftableIds.has(id)) next.add(id);
-        else mutated = true;
-      }
-      return mutated ? next : prev;
-    });
-  }, [draftableIds]);
-
   // -------- revisions panel --------
   const [revisionsFor, setRevisionsFor] = useState<ShopDrawingResponse | null>(null);
 
@@ -359,52 +323,42 @@ export const ShopDrawingTab = ({ project }: Props) => {
   // -------- delete (single) confirmation --------
   const [deleting, setDeleting] = useState<ShopDrawingResponse | null>(null);
   const [busyDelete, setBusyDelete] = useState(false);
-  const confirmDelete = async () => {
-    if (!deleting) return;
+  const [deleteImpact, setDeleteImpact] = useState<DeletionImpactResponse | null>(null);
+  const [loadingDeleteImpact, setLoadingDeleteImpact] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!deleting) {
+      setDeleteImpact(null);
+      setDeleteError(null);
+      return;
+    }
+    let active = true;
+    setLoadingDeleteImpact(true);
+    setDeleteError(null);
+    void adminApi.getShopDrawingDeletionImpact(deleting.id)
+      .then(({ data }) => { if (active) setDeleteImpact(data); })
+      .catch((err) => { if (active) setDeleteError(extractApiError(err)); })
+      .finally(() => { if (active) setLoadingDeleteImpact(false); });
+    return () => { active = false; };
+  }, [deleting]);
+
+  const confirmDelete = async (confirmation: string) => {
+    if (!deleting || !deleteImpact) return null;
     setBusyDelete(true);
+    setDeleteError(null);
     try {
-      await adminApi.deleteShopDrawing(deleting.id);
-      toast({ title: t("shopDrawing.deleted") });
-      setDeleting(null);
-      await fetchRows();
-    } catch (err) {
-      toast({
-        title: t("common.error"),
-        description: extractApiError(err),
-        variant: "destructive",
+      await adminApi.deleteShopDrawing(deleting.id, {
+        planToken: deleteImpact.planToken,
+        confirmation,
       });
+      toast({ title: t("shopDrawing.deleted") });
+      return null;
+    } catch (err) {
+      setDeleteError(extractApiError(err));
+      throw err;
     } finally {
       setBusyDelete(false);
-    }
-  };
-
-  // -------- bulk delete --------
-  const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
-  const [busyBulkDelete, setBusyBulkDelete] = useState(false);
-  const doBulkDelete = async () => {
-    const ids = Array.from(selectedIds);
-    if (ids.length === 0) return;
-    setBusyBulkDelete(true);
-    try {
-      const { data } = await adminApi.bulkDeleteShopDrawings({ ids });
-      const failed = (data.failures ?? []).length;
-      toast({
-        title: t("shopDrawing.bulk.result")
-          .replace("{success}", String(data.deleted))
-          .replace("{failed}", String(failed)),
-        variant: failed > 0 && data.deleted === 0 ? "destructive" : undefined,
-      });
-      clearSelection();
-      setBulkConfirmOpen(false);
-      await fetchRows();
-    } catch (err) {
-      toast({
-        title: t("common.error"),
-        description: extractApiError(err),
-        variant: "destructive",
-      });
-    } finally {
-      setBusyBulkDelete(false);
     }
   };
 
@@ -510,20 +464,6 @@ export const ShopDrawingTab = ({ project }: Props) => {
           </SelectContent>
         </Select>
         <div className="ml-auto flex flex-wrap items-center gap-2">
-          {canManage && isShopStage && selectedIds.size > 0 ? (
-            <>
-              <span className="text-xs text-slate-500">{selectedIds.size} selected</span>
-              <Button
-                size="sm"
-                variant="destructive"
-                data-testid="shop-drawing-bulk-delete"
-                onClick={() => setBulkConfirmOpen(true)}
-              >
-                <Trash2 className="mr-1 h-4 w-4" />
-                {t("shopDrawing.bulk.delete")}
-              </Button>
-            </>
-          ) : null}
           {canManage && isShopStage ? (
             <Button size="sm" onClick={openCreate} data-testid="shop-drawing-new">
               <Plus className="mr-1 h-4 w-4" />
@@ -551,12 +491,10 @@ export const ShopDrawingTab = ({ project }: Props) => {
               canApprove={canApprove}
               isShopStage={isShopStage}
               canDelete={canDelete}
+              canHardDelete={canHardDelete}
               focusedDocumentId={focusedDocumentId}
-              selectedIds={selectedIds}
-              draftableIds={draftableIds}
               transitioningId={transitioning}
               uploadingId={uploadingId}
-              onToggle={toggleOne}
               onEdit={openEdit}
               onDelete={setDeleting}
               onTransition={(row, next) => void transition(row, next)}
@@ -669,56 +607,16 @@ export const ShopDrawingTab = ({ project }: Props) => {
         </DialogContent>
       </Dialog>
 
-      {/* single-row delete confirmation */}
-      <AlertDialog open={!!deleting} onOpenChange={(o) => (!o ? setDeleting(null) : undefined)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t("shopDrawing.delete.confirmTitle")}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("shopDrawing.delete.confirmBody").replace("{code}", deleting?.drawingCode ?? "")}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={busyDelete}>{t("common.cancel")}</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-rose-600 hover:bg-rose-700"
-              onClick={(e) => {
-                e.preventDefault();
-                void confirmDelete();
-              }}
-              disabled={busyDelete}
-            >
-              {t("shopDrawing.delete.confirm")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* bulk delete confirmation */}
-      <AlertDialog open={bulkConfirmOpen} onOpenChange={setBulkConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {t("shopDrawing.bulk.confirmTitle").replace("{count}", String(selectedIds.size))}
-            </AlertDialogTitle>
-            <AlertDialogDescription>{t("shopDrawing.bulk.deleteHint")}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={busyBulkDelete}>{t("common.cancel")}</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-rose-600 hover:bg-rose-700"
-              onClick={(e) => {
-                e.preventDefault();
-                void doBulkDelete();
-              }}
-              disabled={busyBulkDelete}
-              data-testid="shop-drawing-bulk-delete-confirm"
-            >
-              {t("shopDrawing.delete.confirm")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeletionImpactDialog
+        open={deleting !== null}
+        impact={deleteImpact}
+        loading={loadingDeleteImpact}
+        deleting={busyDelete}
+        error={deleteError}
+        onOpenChange={(open) => { if (!open && !busyDelete) setDeleting(null); }}
+        onConfirm={confirmDelete}
+        onCompleted={async () => { setDeleting(null); await fetchRows(); }}
+      />
     </div>
   );
 };
@@ -766,12 +664,10 @@ const DisciplineSection = ({
   canViewRevisions,
   isShopStage,
   canDelete,
+  canHardDelete,
   focusedDocumentId,
-  selectedIds,
-  draftableIds,
   transitioningId,
   uploadingId,
-  onToggle,
   onEdit,
   onDelete,
   onTransition,
@@ -788,12 +684,10 @@ const DisciplineSection = ({
   canViewRevisions: boolean;
   isShopStage: boolean;
   canDelete: boolean;
+  canHardDelete: boolean;
   focusedDocumentId: number;
-  selectedIds: Set<number>;
-  draftableIds: Set<number>;
   transitioningId: number | null;
   uploadingId: number | null;
-  onToggle: (id: number, checked: boolean) => void;
   onEdit: (row: ShopDrawingResponse) => void;
   onDelete: (row: ShopDrawingResponse) => void;
   onTransition: (row: ShopDrawingResponse, next: ShopDrawingStatus) => void;
@@ -837,16 +731,6 @@ const DisciplineSection = ({
                   >
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <div className="flex min-w-0 items-start gap-2">
-                        {canManage && isShopStage && draftableIds.has(row.id) ? (
-                          <Checkbox
-                            checked={selectedIds.has(row.id)}
-                            onCheckedChange={(v) => onToggle(row.id, v === true)}
-                            aria-label={row.drawingCode}
-                            data-testid={`shop-drawing-check-${row.id}`}
-                          />
-                        ) : (
-                          <span className="inline-block w-4" />
-                        )}
                         <div className="min-w-0">
                           <p className="font-mono text-xs text-slate-500">{row.drawingCode}</p>
                           <p className="mt-0.5 break-words text-sm font-medium text-slate-900">{row.title}</p>
@@ -912,6 +796,7 @@ const DisciplineSection = ({
                             row={row}
                             t={t}
                             canApprove={canApprove}
+                            canHardDelete={canHardDelete}
                             busy={transitioningId === row.id}
                             onEdit={() => onEdit(row)}
                             onDelete={() => onDelete(row)}
@@ -931,6 +816,7 @@ const DisciplineSection = ({
                         )}
                       </div>
                     ) : null}
+                    {!canDelete && canHardDelete && row.status === "Rejected" ? <Button size="sm" variant="ghost" className="mt-2 h-8 text-xs text-rose-700" onClick={() => onDelete(row)}><Trash2 className="mr-1 h-3.5 w-3.5" />{t("shopDrawing.action.delete")}</Button> : null}
                   </li>
                 ))}
               </ul>
@@ -986,6 +872,7 @@ const RowActions = ({
   row,
   t,
   canApprove,
+  canHardDelete,
   busy,
   onEdit,
   onDelete,
@@ -994,6 +881,7 @@ const RowActions = ({
   row: ShopDrawingResponse;
   t: (key: string) => string;
   canApprove: boolean;
+  canHardDelete: boolean;
   busy: boolean;
   onEdit: () => void;
   onDelete: () => void;
@@ -1079,11 +967,11 @@ const RowActions = ({
           {t("shopDrawing.status.Rejected")}
         </Badge>
       )}
-      <Button size="sm" variant="ghost" className={cn(btn, "text-rose-700 hover:bg-rose-50 hover:text-rose-800")}
+      {canHardDelete && s === "Rejected" ? <Button size="sm" variant="ghost" className={cn(btn, "text-rose-700 hover:bg-rose-50 hover:text-rose-800")}
         onClick={onDelete} data-testid={`shop-drawing-delete-${row.id}`}>
         <Trash2 className="mr-1 h-3.5 w-3.5" />
         {t("shopDrawing.action.delete")}
-      </Button>
+      </Button> : null}
     </>
   );
 };

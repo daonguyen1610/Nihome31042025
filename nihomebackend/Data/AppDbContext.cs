@@ -115,8 +115,13 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<KpiScoreSnapshot> KpiScoreSnapshots => Set<KpiScoreSnapshot>();
     public DbSet<DesignSchedulePhase> DesignSchedulePhases => Set<DesignSchedulePhase>();
     public DbSet<DesignScheduleTask> DesignScheduleTasks => Set<DesignScheduleTask>();
+    public DbSet<DesignScheduleTaskCcMember> DesignScheduleTaskCcMembers => Set<DesignScheduleTaskCcMember>();
     public DbSet<DesignScheduleTaskDependency> DesignScheduleTaskDependencies => Set<DesignScheduleTaskDependency>();
     public DbSet<DesignScheduleHistory> DesignScheduleHistory => Set<DesignScheduleHistory>();
+    public DbSet<DesignReview> DesignReviews => Set<DesignReview>();
+    public DbSet<DesignReviewRecipient> DesignReviewRecipients => Set<DesignReviewRecipient>();
+    public DbSet<DesignReviewComment> DesignReviewComments => Set<DesignReviewComment>();
+    public DbSet<DesignReviewDocument> DesignReviewDocuments => Set<DesignReviewDocument>();
     public DbSet<ProjectDocument> ProjectDocuments => Set<ProjectDocument>();
     public DbSet<ProjectDriveFolder> ProjectDriveFolders => Set<ProjectDriveFolder>();
     public DbSet<GoogleDriveCredential> GoogleDriveCredentials => Set<GoogleDriveCredential>();
@@ -2207,8 +2212,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasKey(task => task.Id);
             b.Property(task => task.Code).HasMaxLength(80).IsRequired();
             b.Property(task => task.Name).HasMaxLength(300).IsRequired();
+            b.Property(task => task.Description).HasMaxLength(4000);
             b.Property(task => task.DepartmentCode).HasMaxLength(60).IsRequired();
+            b.Property(task => task.ResourceSummary).HasMaxLength(2000);
             b.Property(task => task.Status).HasConversion<string>().HasMaxLength(40).IsRequired();
+            b.Property(task => task.ApprovalStatus).HasConversion<string>().HasMaxLength(30).IsRequired();
+            b.Property(task => task.ReviewComment).HasMaxLength(2000);
             b.Property(task => task.RowVersion).IsRowVersion();
             b.HasOne(task => task.OperationalProject).WithMany(project => project.DesignScheduleTasks)
                 .HasForeignKey(task => task.OperationalProjectId).OnDelete(DeleteBehavior.Restrict);
@@ -2218,9 +2227,15 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .HasForeignKey(task => task.PhaseId).OnDelete(DeleteBehavior.Cascade);
             b.HasOne(task => task.AssigneeMember).WithMany()
                 .HasForeignKey(task => task.AssigneeMemberId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(task => task.ApproverMember).WithMany()
+                .HasForeignKey(task => task.ApproverMemberId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(task => task.ParentTask).WithMany(parent => parent.Children)
+                .HasForeignKey(task => task.ParentTaskId).OnDelete(DeleteBehavior.NoAction);
             b.HasIndex(task => new { task.OperationalProjectId, task.Code }).IsUnique();
             b.HasIndex(task => new { task.OperationalProjectId, task.PhaseId, task.PlannedStart, task.PlannedEnd });
             b.HasIndex(task => new { task.OperationalProjectId, task.AssigneeMemberId });
+            b.HasIndex(task => new { task.OperationalProjectId, task.ApproverMemberId, task.ApprovalStatus });
+            b.HasIndex(task => task.ParentTaskId);
             b.HasIndex(task => new { task.OperationalProjectId, task.DepartmentCode });
             b.HasIndex(task => new { task.OperationalProjectId, task.Status });
             b.ToTable(table =>
@@ -2229,7 +2244,74 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 table.HasCheckConstraint("CK_design_schedule_tasks_progress", "[ProgressPercent] >= 0 AND [ProgressPercent] <= 100");
                 table.HasCheckConstraint("CK_design_schedule_tasks_weight", "[Weight] >= 1 AND [Weight] <= 100");
                 table.HasCheckConstraint("CK_design_schedule_tasks_milestone", "[IsMilestone] = 0 OR [PlannedStart] = [PlannedEnd]");
+                table.HasCheckConstraint("CK_design_schedule_tasks_approver", "[ApproverMemberId] <> [AssigneeMemberId]");
             });
+        });
+
+        modelBuilder.Entity<DesignScheduleTaskCcMember>(b =>
+        {
+            b.ToTable("design_schedule_task_cc_members");
+            b.HasKey(item => new { item.TaskId, item.MemberId });
+            b.HasOne(item => item.Task).WithMany(task => task.CcMembers)
+                .HasForeignKey(item => item.TaskId).OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(item => item.Member).WithMany()
+                .HasForeignKey(item => item.MemberId).OnDelete(DeleteBehavior.Restrict);
+            b.HasIndex(item => item.MemberId);
+        });
+
+        modelBuilder.Entity<DesignReview>(b =>
+        {
+            b.ToTable("design_reviews");
+            b.HasKey(item => item.Id);
+            b.Property(item => item.Stage).HasConversion<string>().HasMaxLength(30).IsRequired();
+            b.Property(item => item.Status).HasConversion<string>().HasMaxLength(30).IsRequired();
+            b.Property(item => item.Title).HasMaxLength(300).IsRequired();
+            b.Property(item => item.InternalSummary).HasMaxLength(4000);
+            b.Property(item => item.ClientDecisionNote).HasMaxLength(4000);
+            b.Property(item => item.RowVersion).IsRowVersion();
+            b.HasOne(item => item.DesignProject).WithMany()
+                .HasForeignKey(item => item.DesignProjectId).OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(item => item.DesignManager).WithMany()
+                .HasForeignKey(item => item.DesignManagerUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasIndex(item => new { item.DesignProjectId, item.Stage, item.RevisionNumber }).IsUnique();
+            b.HasIndex(item => new { item.DesignProjectId, item.Status });
+        });
+
+        modelBuilder.Entity<DesignReviewRecipient>(b =>
+        {
+            b.ToTable("design_review_recipients");
+            b.HasKey(item => new { item.DesignReviewId, item.UserId });
+            b.HasOne(item => item.DesignReview).WithMany(review => review.Recipients)
+                .HasForeignKey(item => item.DesignReviewId).OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(item => item.User).WithMany()
+                .HasForeignKey(item => item.UserId).OnDelete(DeleteBehavior.Restrict);
+            b.HasIndex(item => item.UserId);
+        });
+
+        modelBuilder.Entity<DesignReviewComment>(b =>
+        {
+            b.ToTable("design_review_comments");
+            b.HasKey(item => item.Id);
+            b.Property(item => item.Body).HasMaxLength(4000).IsRequired();
+            b.HasOne(item => item.DesignReview).WithMany(review => review.Comments)
+                .HasForeignKey(item => item.DesignReviewId).OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(item => item.Author).WithMany()
+                .HasForeignKey(item => item.AuthorUserId).OnDelete(DeleteBehavior.Restrict);
+            b.HasIndex(item => new { item.DesignReviewId, item.CreatedAt });
+        });
+
+        modelBuilder.Entity<DesignReviewDocument>(b =>
+        {
+            b.ToTable("design_review_documents");
+            b.HasKey(item => new { item.DesignReviewId, item.ProjectDocumentId });
+            b.HasOne(item => item.DesignReview).WithMany(review => review.Documents)
+                .HasForeignKey(item => item.DesignReviewId).OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(item => item.ProjectDocument).WithMany()
+                .HasForeignKey(item => item.ProjectDocumentId).OnDelete(DeleteBehavior.Restrict);
+            b.Property(item => item.SourceEntityTypeSnapshot).HasMaxLength(100).IsRequired();
+            b.Property(item => item.Sha256Snapshot).HasMaxLength(64).IsRequired();
+            b.HasIndex(item => item.ProjectDocumentId);
+            b.HasIndex(item => new { item.SourceEntityTypeSnapshot, item.SourceRecordIdSnapshot });
         });
 
         modelBuilder.Entity<DesignScheduleTaskDependency>(b =>

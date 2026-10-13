@@ -127,5 +127,11 @@
   {"key":"deletionImpact.item.operations.driveFolders","category":"deletionImpact","vi":"Thư mục Google Drive","en":"Google Drive folders","zh":"Google Drive 文件夹","ja":"Google Drive フォルダー"},
   {"key":"deletionImpact.item.operations.surveyMedia","category":"deletionImpact","vi":"Tệp phương tiện khảo sát","en":"Survey media files","zh":"勘察媒体文件","ja":"調査メディアファイル"},
   {"key":"deletionImpact.item.operations.surveyDriveFolders","category":"deletionImpact","vi":"Thư mục Drive của khảo sát","en":"Survey Drive folders","zh":"勘察 Drive 文件夹","ja":"調査 Drive フォルダー"},
-  {"key":"deletionImpact.item.operations.translations","category":"deletionImpact","vi":"Bản dịch nội dung dự án","en":"Project content translations","zh":"项目内容翻译","ja":"プロジェクトコンテンツの翻訳"}
+  {"key":"deletionImpact.item.operations.translations","category":"deletionImpact","vi":"Bản dịch nội dung dự án","en":"Project content translations","zh":"项目内容翻译","ja":"プロジェクトコンテンツの翻訳"},
+  {"key":"deletionImpact.item.design.recordState","category":"deletionImpact","vi":"Trạng thái hồ sơ chưa cho phép xóa","en":"Record state does not permit deletion","zh":"记录状态不允许删除","ja":"レコードの状態では削除できません"},
+  {"key":"deletionImpact.item.design.reviewHistory","category":"deletionImpact","vi":"Lịch sử trình duyệt riêng của hồ sơ","en":"Record-specific review history","zh":"该记录的评审历史","ja":"レコード固有のレビュー履歴"},
+  {"key":"deletionImpact.item.design.reviewDocuments","category":"deletionImpact","vi":"Liên kết tài liệu trong đợt trình","en":"Review document links","zh":"评审文档链接","ja":"レビュー文書リンク"},
+  {"key":"deletionImpact.item.design.reviewComments","category":"deletionImpact","vi":"Bình luận trong đợt trình","en":"Review comments","zh":"评审评论","ja":"レビューコメント"},
+  {"key":"deletionImpact.item.design.reviewRecipients","category":"deletionImpact","vi":"Người nhận trong đợt trình","en":"Review recipients","zh":"评审接收人","ja":"レビュー受信者"},
+  {"key":"deletionImpact.item.design.sharedReviewEvidence","category":"deletionImpact","vi":"Đợt trình dùng chung với hồ sơ khác","en":"Review evidence shared with another record","zh":"与其他记录共享的评审证据","ja":"他のレコードと共有されているレビュー証跡"}
 ]

@@ -1,0 +1,34 @@
+[
+  {
+    "key": "notification.design-review.internal.title",
+    "category": "notification",
+    "vi": "Hồ sơ thiết kế chờ góp ý",
+    "en": "Design dossier awaiting comments",
+    "zh": "设计文件等待意见",
+    "ja": "設計書類のコメント待ち"
+  },
+  {
+    "key": "notification.design-review.internal.body",
+    "category": "notification",
+    "vi": "Hồ sơ “{{title}}” giai đoạn {{stage}} đã được gửi đến bạn để xem và bình luận.",
+    "en": "The {{stage}} dossier “{{title}}” was shared with you for viewing and comments.",
+    "zh": "{{stage}} 文件“{{title}}”已共享给您查看和评论。",
+    "ja": "{{stage}} の書類「{{title}}」が閲覧・コメント用に共有されました。"
+  },
+  {
+    "key": "notification.design-review.client-decision.title",
+    "category": "notification",
+    "vi": "Đã ghi nhận quyết định của khách hàng",
+    "en": "Client decision recorded",
+    "zh": "已记录客户决定",
+    "ja": "顧客の決定を記録しました"
+  },
+  {
+    "key": "notification.design-review.client-decision.body",
+    "category": "notification",
+    "vi": "Hồ sơ “{{title}}” có quyết định {{status}}.",
+    "en": "The decision for “{{title}}” is {{status}}.",
+    "zh": "“{{title}}”的决定为 {{status}}。",
+    "ja": "「{{title}}」の決定は {{status}} です。"
+  }
+]

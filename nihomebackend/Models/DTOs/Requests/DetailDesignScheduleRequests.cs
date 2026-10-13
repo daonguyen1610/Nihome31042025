@@ -47,11 +47,25 @@ public sealed class UpsertDesignScheduleTaskRequest
     [Required, MaxLength(300)]
     public string Name { get; set; } = string.Empty;
 
+    [MaxLength(4000)]
+    public string? Description { get; set; }
+
     [Required, MaxLength(60)]
     public string DepartmentCode { get; set; } = string.Empty;
 
     [Range(1, int.MaxValue)]
     public int AssigneeMemberId { get; set; }
+
+    [Range(1, int.MaxValue)]
+    public int ApproverMemberId { get; set; }
+
+    [Range(1, int.MaxValue)]
+    public int? ParentTaskId { get; set; }
+
+    [MaxLength(2000)]
+    public string? ResourceSummary { get; set; }
+
+    public bool IsCritical { get; set; }
 
     public bool IsMilestone { get; set; }
 
@@ -74,6 +88,27 @@ public sealed class UpsertDesignScheduleTaskRequest
 
     [Required, MaxLength(100)]
     public List<int>? PredecessorTaskIds { get; set; } = new();
+
+    [Required, MaxLength(100)]
+    public List<int>? CcMemberIds { get; set; } = new();
+    public string? RowVersion { get; set; }
+}
+
+public sealed class ReviewDesignScheduleTaskRequest
+{
+    [Required, MaxLength(20)]
+    public string Decision { get; set; } = string.Empty;
+
+    [MaxLength(2000)]
+    public string? Comment { get; set; }
+
+    [Required]
+    public string? RowVersion { get; set; }
+}
+
+public sealed class CompleteDesignScheduleTaskRequest
+{
+    [Required]
     public string? RowVersion { get; set; }
 }
 

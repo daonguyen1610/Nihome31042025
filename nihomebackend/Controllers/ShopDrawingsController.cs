@@ -21,6 +21,7 @@ namespace NihomeBackend.Controllers;
 [Authorize]
 public class ShopDrawingsController(
     IShopDrawingService svc,
+    IDesignRecordDeletionService deletion,
     IPermissionService permissions,
     IProjectAccessService projectAccess,
     IAuditLogger audit) : ControllerBase
@@ -131,17 +132,30 @@ public class ShopDrawingsController(
         }
     }
 
-    [HttpDelete("{id:int}")]
-    [RequirePermission("design.shop", "manage")]
-    public async Task<IActionResult> Delete(int id, CancellationToken ct)
+    [HttpGet("{id:int}/deletion-impact")]
+    [RequirePermission("design.records", "hard-delete")]
+    public async Task<ActionResult<DeletionImpactResponse>> GetDeletionImpact(int id, CancellationToken ct)
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
-        if (!await CanAccessAsync(userId.Value, id, manage: true, ct)) return NotFound();
+        if (!await CanAccessAsync(userId.Value, id, manage: false, ct)) return NotFound();
+        var impact = await deletion.GetImpactAsync(DesignProjectResourceType.ShopDrawing, id, ct);
+        return impact is null ? NotFound() : Ok(impact);
+    }
+
+    [HttpDelete("{id:int}")]
+    [RequirePermission("design.records", "hard-delete")]
+    public async Task<IActionResult> Delete(
+        int id, [FromBody] ConfirmDeletionRequest request, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        if (!await CanAccessAsync(userId.Value, id, manage: false, ct)) return NotFound();
 
         try
         {
-            var removed = await svc.DeleteAsync(id, ct);
+            var removed = await deletion.DeleteAsync(
+                DesignProjectResourceType.ShopDrawing, id, request, ct);
             if (!removed) return NotFound();
             audit.Log(new AuditEvent
             {
@@ -156,6 +170,14 @@ public class ShopDrawingsController(
         {
             return BadRequest(new { message = ex.Message });
         }
+        catch (DesignRecordDeletionException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (DeletionPlanChangedException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
     }
 
     /// <summary>
@@ -164,37 +186,14 @@ public class ShopDrawingsController(
     /// operation when one row has left the Drafting state.
     /// </summary>
     [HttpPost("bulk-delete")]
-    [RequirePermission("design.shop", "manage")]
-    public async Task<ActionResult<ShopDrawingBulkDeleteResponse>> BulkDelete(
+    [RequirePermission("design.records", "hard-delete")]
+    public ActionResult<ShopDrawingBulkDeleteResponse> BulkDelete(
         [FromBody] BulkDeleteShopDrawingsRequest request, CancellationToken ct)
     {
-        var userId = GetUserId();
-        if (userId is null) return Unauthorized();
-        var ids = (request.Ids ?? new List<int>()).Distinct().ToList();
-        var projectIds = await projectAccess.ResolveDesignProjectIdsAsync(
-            DesignProjectResourceType.ShopDrawing, ids, ct);
-        var distinctProjectIds = projectIds.Values.Distinct().ToList();
-        if (projectIds.Count != ids.Count || distinctProjectIds.Count != 1 ||
-            !await AllManageableAsync(userId.Value, ids, ct))
-            return NotFound();
-
-        try
+        return BadRequest(new
         {
-            var result = await svc.BulkDeleteAsync(request.Ids ?? new List<int>(), ct);
-            audit.Log(new AuditEvent
-            {
-                Action = "shop-drawing.bulk-delete",
-                ResourceType = EntityTypes.ShopDrawing,
-                ResourceId = string.Join(",", request.Ids ?? new List<int>()),
-                Message = $"Shop-drawing bulk delete: {result.Deleted}/{result.Requested} removed.",
-                NewValue = result,
-            });
-            return Ok(result);
-        }
-        catch (ShopDrawingOperationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+            message = "Xóa hàng loạt không được hỗ trợ. Vui lòng xem ảnh hưởng và xác nhận từng hồ sơ.",
+        });
     }
 
     /// <summary>
@@ -306,11 +305,11 @@ public class ShopDrawingsController(
                 userId, DesignProjectResourceType.ShopDrawing, id, ct);
     }
 
-    private async Task<bool> AllManageableAsync(int userId, IEnumerable<int> ids, CancellationToken ct)
+    private async Task<bool> AllViewableAsync(int userId, IEnumerable<int> ids, CancellationToken ct)
     {
         foreach (var id in ids)
         {
-            if (!await projectAccess.CanManageDesignResourceAsync(
+            if (!await projectAccess.CanViewDesignResourceAsync(
                     userId, DesignProjectResourceType.ShopDrawing, id, ct)) return false;
         }
         return true;

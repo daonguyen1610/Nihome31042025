@@ -34,6 +34,7 @@ public sealed class ProjectDocumentService(
             throw new ProjectDocumentValidationException("Google Drive chưa được bật; không thể tải tệp dự án lên.");
         ValidateCategory(request.Category, allowUnclassified: false);
         await ValidateMetadataAsync(projectId, request.SourceModule, request.SourceRecordId, request.CustomerId, request.ContractId, ct);
+        await ValidateManualDesignSourceAsync(projectId, request, ct);
         var stored = await storage.InspectUploadAsync(request.File, ct);
         var project = await db.OperationalProjects.SingleAsync(item => item.Id == projectId, ct);
         var folder = await folders.EnsureAsync(project, request.Category, callerUserId, ct);
@@ -51,6 +52,10 @@ public sealed class ProjectDocumentService(
             var document = CreateDocument(projectId, request.Category, request.SourceModule,
                 ProjectDocumentSourceType.ManualUpload, request.SourceRecordId, request.CustomerId,
                 request.ContractId, stored, ProjectDocumentOrigin.Nicon, callerUserId);
+            document.SourceEntityType = string.IsNullOrWhiteSpace(request.SourceEntityType)
+                ? null
+                : request.SourceEntityType.Trim();
+            document.SourceSlot = document.SourceEntityType is null ? null : "review-evidence";
             document.DriveFileId = upload.FileId;
             document.DriveFolderId = folder.DriveFolderId;
             document.DriveWebViewLink = upload.Link;
@@ -371,6 +376,50 @@ public sealed class ProjectDocumentService(
                 : !await db.Contracts.AsNoTracking().AnyAsync(contract =>
                     contract.Id == contractId && contract.OperationalProjectId == projectId, ct)))
             throw new ProjectDocumentValidationException("Hợp đồng nguồn không thuộc dự án đã chọn.");
+    }
+
+    private async Task ValidateManualDesignSourceAsync(
+        int projectId, ProjectDocumentUploadRequest request, CancellationToken ct)
+    {
+        if (request.SourceModule != ProjectDocumentSourceModule.Design)
+        {
+            if (!string.IsNullOrWhiteSpace(request.SourceEntityType))
+                throw new ProjectDocumentValidationException(
+                    "Loại bản ghi nguồn chỉ được khai báo cho tài liệu phân hệ Thiết kế.");
+            return;
+        }
+
+        var sourceType = request.SourceEntityType?.Trim();
+        if (string.IsNullOrWhiteSpace(sourceType) || !request.SourceRecordId.HasValue)
+            throw new ProjectDocumentValidationException(
+                "Tài liệu Thiết kế phải gắn với đúng hồ sơ nguồn Concept, Basic Design hoặc Shop Drawing.");
+
+        var designProjectId = await db.DesignProjects.AsNoTracking()
+            .Where(item => item.OperationalProjectId == projectId)
+            .Select(item => (int?)item.Id)
+            .SingleOrDefaultAsync(ct);
+        if (!designProjectId.HasValue)
+            throw new ProjectDocumentValidationException("Dự án vận hành chưa có Dự án Thiết kế liên kết.");
+
+        if (request.SourceRecordId.Value > int.MaxValue)
+            throw new ProjectDocumentValidationException("Mã hồ sơ nguồn Thiết kế không hợp lệ.");
+        var recordId = (int)request.SourceRecordId.Value;
+        var valid = sourceType switch
+        {
+            nameof(ConceptOption) => request.Category == ProjectDocumentCategory.DesignConcept &&
+                await db.ConceptOptions.AsNoTracking().AnyAsync(item =>
+                    item.Id == recordId && item.DesignProjectId == designProjectId.Value, ct),
+            nameof(BasicDesignDoc) => request.Category == ProjectDocumentCategory.DesignBasic &&
+                await db.BasicDesignDocs.AsNoTracking().AnyAsync(item =>
+                    item.Id == recordId && item.DesignProjectId == designProjectId.Value, ct),
+            nameof(ShopDrawing) => request.Category == ProjectDocumentCategory.DesignShopDrawing &&
+                await db.ShopDrawings.AsNoTracking().AnyAsync(item =>
+                    item.Id == recordId && item.DesignProjectId == designProjectId.Value, ct),
+            _ => false,
+        };
+        if (!valid)
+            throw new ProjectDocumentValidationException(
+                "Hồ sơ nguồn không thuộc đúng Dự án hoặc category giai đoạn Thiết kế.");
     }
 
     private Task<ProjectDocument?> FindAsync(int projectId, long documentId, CancellationToken ct) =>

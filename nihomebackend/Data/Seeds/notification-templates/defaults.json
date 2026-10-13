@@ -149,6 +149,36 @@
       "module": "work.packages",
       "channel": "InApp",
       "adminDescription": "Người phụ trách được thông báo khi đầu việc đã được xác nhận KPI."
+    },
+    {
+      "code": "design-task.awaiting-approval",
+      "module": "design.schedule",
+      "channel": "InApp",
+      "adminDescription": "Notify the assigned approver and CC followers when a design task is completed."
+    },
+    {
+      "code": "design-task.approved",
+      "module": "design.schedule",
+      "channel": "InApp",
+      "adminDescription": "Notify the assignee when a design task is approved."
+    },
+    {
+      "code": "design-task.rejected",
+      "module": "design.schedule",
+      "channel": "InApp",
+      "adminDescription": "Notify the assignee when a design task is returned for changes."
+    },
+    {
+      "code": "design-review.internal",
+      "module": "design.reviews",
+      "channel": "InApp",
+      "adminDescription": "Notify designated internal recipients when a design dossier is circulated for comments."
+    },
+    {
+      "code": "design-review.client-decision",
+      "module": "design.reviews",
+      "channel": "InApp",
+      "adminDescription": "Notify internal recipients when the Design Manager records the client decision."
     }
   ]
 }

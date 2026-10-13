@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { SearchableSelect } from "@/components/ui/searchable-select";
+import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
 import {
   Dialog,
   DialogContent,
@@ -36,6 +37,7 @@ import {
   type ConceptOptionStatus,
   type CreateConceptOptionRequest,
   type DesignProjectResponse,
+  type DeletionImpactResponse,
 } from "@/services/adminApi";
 
 const STATUS_BADGE: Record<ConceptOptionStatus, string> = {
@@ -100,6 +102,7 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged }: Props) =
   const { has } = usePermissions();
   const canManage = has(ADMIN_PERMS.designConceptsManage);
   const canFinalize = has(ADMIN_PERMS.designConceptsFinalize);
+  const canHardDelete = has(ADMIN_PERMS.designRecordsHardDelete);
   const canPickOwner = has(ADMIN_PERMS.users);
 
   const [rows, setRows] = useState<ConceptOptionResponse[]>([]);
@@ -228,20 +231,40 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged }: Props) =
   // -------- delete confirmation --------
   const [deleting, setDeleting] = useState<ConceptOptionResponse | null>(null);
   const [busyDelete, setBusyDelete] = useState(false);
-  const confirmDelete = async () => {
-    if (!deleting) return;
+  const [deleteImpact, setDeleteImpact] = useState<DeletionImpactResponse | null>(null);
+  const [loadingDeleteImpact, setLoadingDeleteImpact] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!deleting) {
+      setDeleteImpact(null);
+      setDeleteError(null);
+      return;
+    }
+    let active = true;
+    setLoadingDeleteImpact(true);
+    setDeleteError(null);
+    void adminApi.getConceptOptionDeletionImpact(deleting.id)
+      .then(({ data }) => { if (active) setDeleteImpact(data); })
+      .catch((err) => { if (active) setDeleteError(extractApiError(err)); })
+      .finally(() => { if (active) setLoadingDeleteImpact(false); });
+    return () => { active = false; };
+  }, [deleting]);
+
+  const confirmDelete = async (confirmation: string) => {
+    if (!deleting || !deleteImpact) return null;
     setBusyDelete(true);
+    setDeleteError(null);
     try {
-      await adminApi.deleteConceptOption(deleting.id);
-      toast({ title: t("concepts.deleted") });
-      setDeleting(null);
-      await fetchRows();
-    } catch (err) {
-      toast({
-        title: t("common.error"),
-        description: extractApiError(err),
-        variant: "destructive",
+      await adminApi.deleteConceptOption(deleting.id, {
+        planToken: deleteImpact.planToken,
+        confirmation,
       });
+      toast({ title: t("concepts.deleted") });
+      return null;
+    } catch (err) {
+      setDeleteError(extractApiError(err));
+      throw err;
     } finally {
       setBusyDelete(false);
     }
@@ -370,6 +393,7 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged }: Props) =
                     row={row}
                     t={t}
                     canFinalize={canFinalize}
+                    canHardDelete={canHardDelete}
                     busy={transitioning === row.id}
                     onEdit={() => openEdit(row)}
                     onDelete={() => setDeleting(row)}
@@ -378,6 +402,7 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged }: Props) =
                   />
                 </div>
               ) : null}
+              {canHardDelete && row.status === "Discarded" && (!canManage || isLocked) ? <Button size="sm" variant="ghost" className="mt-3 h-8 text-xs text-rose-700" onClick={() => setDeleting(row)}><Trash2 className="mr-1 h-3.5 w-3.5" />{t("concepts.action.delete")}</Button> : null}
             </article>
           ))}
         </div>
@@ -450,30 +475,16 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged }: Props) =
         </DialogContent>
       </Dialog>
 
-      {/* delete confirmation */}
-      <AlertDialog open={!!deleting} onOpenChange={(o) => (!o ? setDeleting(null) : undefined)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t("concepts.delete.confirmTitle")}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("concepts.delete.confirmBody").replace("{name}", deleting?.name ?? "")}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={busyDelete}>{t("common.cancel")}</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-rose-600 hover:bg-rose-700"
-              onClick={(e) => {
-                e.preventDefault();
-                void confirmDelete();
-              }}
-              disabled={busyDelete}
-            >
-              {t("concepts.delete.confirm")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeletionImpactDialog
+        open={deleting !== null}
+        impact={deleteImpact}
+        loading={loadingDeleteImpact}
+        deleting={busyDelete}
+        error={deleteError}
+        onOpenChange={(open) => { if (!open && !busyDelete) setDeleting(null); }}
+        onConfirm={confirmDelete}
+        onCompleted={async () => { setDeleting(null); await fetchRows(); }}
+      />
 
       {/* finalize confirmation */}
       <AlertDialog open={!!finalizing} onOpenChange={(o) => (!o ? setFinalizing(null) : undefined)}>
@@ -509,6 +520,7 @@ const RowActions = ({
   row,
   t,
   canFinalize,
+  canHardDelete,
   busy,
   onEdit,
   onDelete,
@@ -518,6 +530,7 @@ const RowActions = ({
   row: ConceptOptionResponse;
   t: (key: string) => string;
   canFinalize: boolean;
+  canHardDelete: boolean;
   busy: boolean;
   onEdit: () => void;
   onDelete: () => void;
@@ -630,7 +643,7 @@ const RowActions = ({
           {t("concepts.status.Finalized")}
         </Badge>
       )}
-      <Button
+      {canHardDelete && s === "Discarded" ? <Button
         size="sm"
         variant="ghost"
         className={cn(btn, "text-rose-700 hover:bg-rose-50 hover:text-rose-800")}
@@ -638,7 +651,7 @@ const RowActions = ({
       >
         <Trash2 className="mr-1 h-3.5 w-3.5" />
         {t("concepts.action.delete")}
-      </Button>
+      </Button> : null}
     </>
   );
 };

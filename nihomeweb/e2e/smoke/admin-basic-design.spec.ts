@@ -1,5 +1,10 @@
 import { test, expect, TEST_USERS } from "../fixtures/auth";
-import { createDesignProject, createOwnCustomer } from "../fixtures/designProjects";
+import {
+  approveDesignStage,
+  createDesignProject,
+  createOwnCustomer,
+  isGoogleDriveConnected,
+} from "../fixtures/designProjects";
 
 /**
  * NIH-115 M2 Basic Design end-to-end flow. Real-user path through the
@@ -33,6 +38,10 @@ test.describe("NIH-115 — Basic Design + Detail Design unlock (real-user flow)"
     // ---------- 1. Set up a fresh project via the API ----------
     const token = await loginAs(TEST_USERS.superAdmin);
     const authHeader = { Authorization: `Bearer ${token}` };
+    test.skip(
+      !(await isGoogleDriveConnected(api, authHeader)),
+      "Requires a connected Google Drive because approved design evidence must be durably synced.",
+    );
     const jwtPayload = JSON.parse(Buffer.from(token.split(".")[1], "base64url").toString()) as Record<string, string>;
     const currentUserId = Number(
       jwtPayload.nameid ??
@@ -62,13 +71,26 @@ test.describe("NIH-115 — Basic Design + Detail Design unlock (real-user flow)"
     });
     expect(optCreate.ok(), await optCreate.text()).toBeTruthy();
     const optId = (await optCreate.json()).id as number;
-    for (const status of ["PendingInternalReview", "PresentedToClient", "Finalized"]) {
+    for (const status of ["PendingInternalReview", "PresentedToClient"]) {
       const t = await api.post(`/api/concept-options/${optId}/status`, {
         headers: authHeader,
         data: { status },
       });
       expect(t.ok(), `${status}: ${await t.text()}`).toBeTruthy();
     }
+    await approveDesignStage(api, {
+      headers: authHeader,
+      projectId,
+      stage: "Concept",
+      category: "DesignConcept",
+      sourceEntityType: "ConceptOption",
+      sourceRecordIds: [optId],
+    });
+    const finalized = await api.post(`/api/concept-options/${optId}/status`, {
+      headers: authHeader,
+      data: { status: "Finalized" },
+    });
+    expect(finalized.ok(), `Finalized: ${await finalized.text()}`).toBeTruthy();
 
     // ---------- 2. Open the detail page in the browser ----------
     await loginInBrowserAs(page, TEST_USERS.superAdmin);
@@ -119,6 +141,14 @@ test.describe("NIH-115 — Basic Design + Detail Design unlock (real-user flow)"
         expect(t.ok(), `${disciplineCode} → ${status}: ${await t.text()}`).toBeTruthy();
       }
     }
+    await approveDesignStage(api, {
+      headers: authHeader,
+      projectId,
+      stage: "BasicDesign",
+      category: "DesignBasic",
+      sourceEntityType: "BasicDesignDoc",
+      sourceRecordIds: documentIds,
+    });
 
     // Reload so the tab shows the just-approved docs.
     await page.reload({ waitUntil: "networkidle" });

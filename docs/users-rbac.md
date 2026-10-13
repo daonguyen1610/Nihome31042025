@@ -48,6 +48,20 @@ that does not prove distinct PM CM, BCH, Field/QA-QC or Site QS responsibilities
 Do not infer role semantics from KPI mapping or merge roles merely to make the
 counts equal.
 
+### Design approval and deletion permissions
+
+`DESIGN` is the seeded Design Manager baseline and includes project/schedule,
+IFC, vendor and downstream-contract access needed to coordinate design
+subcontractors. Task approval is not implied by that role: the API compares the
+current user to the task's single assigned approver. Internal review recipients
+receive record-scoped view/comment access only when explicitly listed.
+
+Permanent deletion of failed design records is separated into
+`design.records.hard-delete`. It is seeded only to `BGD` and the full
+`SUPER_ADMIN` catalog; ordinary Design Manager/Design Lead permissions do not
+grant it. The server additionally restricts deletion to failed/terminal
+`Discarded`, `Rejected`, or `Cancelled` records.
+
 ## Access Rules
 
 - `SUPER_ADMIN` can list, create, update, deactivate, and soft-delete users; manage role × permission matrix; manage audit retention.

@@ -1,0 +1,18 @@
+[
+  {
+    "key": "rbac.perm.design.records.hard-delete.label",
+    "category": "rbac",
+    "vi": "Xóa vĩnh viễn hồ sơ thiết kế",
+    "en": "Permanently delete design records",
+    "zh": "永久删除设计记录",
+    "ja": "設計記録を完全に削除"
+  },
+  {
+    "key": "rbac.perm.design.records.hard-delete.description",
+    "category": "rbac",
+    "vi": "Chỉ cấp cho cấp có thẩm quyền cao nhất để xóa vĩnh viễn hồ sơ thiết kế không đạt.",
+    "en": "Reserved for the highest authority to permanently delete failed design records.",
+    "zh": "仅限最高权限永久删除未通过的设计记录。",
+    "ja": "不合格の設計記録を完全に削除できる最高権限専用です。"
+  }
+]

@@ -232,9 +232,10 @@ public class BasicDesignDocServiceTests : IDisposable
     [Fact]
     public async Task UnlockShopDrawing_Succeeds_WhenReady_AndMovesStage()
     {
-        await ApproveDocAsync("architecture");
-        await ApproveDocAsync("structure");
-        await ApproveDocAsync("mep");
+        var architecture = await ApproveDocAsync("architecture");
+        var structure = await ApproveDocAsync("structure");
+        var mep = await ApproveDocAsync("mep");
+        await AddClientApprovedReviewAsync(architecture, structure, mep);
 
         var resp = await _sut.UnlockShopDrawingAsync(_projectId, _userId);
         Assert.Equal("ShopDrawing", resp.CurrentStage);
@@ -256,10 +257,10 @@ public class BasicDesignDocServiceTests : IDisposable
     // ---------------- Delete ----------------
 
     [Fact]
-    public async Task DeleteAsync_InProgress_Succeeds()
+    public async Task DeleteAsync_InProgress_Throws()
     {
         var created = await _sut.CreateAsync(ValidCreate(), _userId);
-        Assert.True(await _sut.DeleteAsync(created.Id));
+        await Assert.ThrowsAsync<BasicDesignDocOperationException>(() => _sut.DeleteAsync(created.Id));
     }
 
     [Fact]
@@ -277,6 +278,7 @@ public class BasicDesignDocServiceTests : IDisposable
     public async Task DeleteAsync_AfterBasicStage_Succeeds()
     {
         var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        await RejectDocAsync(created.Id);
         var project = await _db.DesignProjects.FindAsync(_projectId);
         project!.CurrentStage = DesignProjectStage.ShopDrawing;
         await _db.SaveChangesAsync();
@@ -295,6 +297,7 @@ public class BasicDesignDocServiceTests : IDisposable
         Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
         await File.WriteAllTextAsync(fullPath, "legacy");
         await _db.SaveChangesAsync();
+        await RejectDocAsync(created.Id);
         _projectDocuments.SetupSequence(staging => staging.StageExistingManagedFileDeleteAsync(
                 _operationalProjectId, ProjectDocumentSourceModule.Design, nameof(BasicDesignDoc), "file",
                 created.Id, entity.FilePath, _userId, It.IsAny<CancellationToken>()))
@@ -321,6 +324,7 @@ public class BasicDesignDocServiceTests : IDisposable
         Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
         await File.WriteAllTextAsync(fullPath, "preserve");
         await _db.SaveChangesAsync();
+        await RejectDocAsync(created.Id);
         _projectDocuments.Setup(staging => staging.StageExistingManagedFileDeleteAsync(
                 _operationalProjectId, ProjectDocumentSourceModule.Design, nameof(BasicDesignDoc), "file",
                 created.Id, entity.FilePath, _userId, It.IsAny<CancellationToken>()))
@@ -337,6 +341,7 @@ public class BasicDesignDocServiceTests : IDisposable
     {
         var created = await _sut.CreateAsync(ValidCreate(), _userId);
         var project = await _db.DesignProjects.FindAsync(_projectId);
+        await RejectDocAsync(created.Id);
         project!.CurrentStage = DesignProjectStage.ShopDrawing;
         await _db.SaveChangesAsync();
 
@@ -364,6 +369,7 @@ public class BasicDesignDocServiceTests : IDisposable
         Assert.False(File.Exists(firstPath));
         Assert.True(File.Exists(replacementPath));
 
+        await RejectDocAsync(created.Id);
         var project = await _db.DesignProjects.FindAsync(_projectId);
         project!.CurrentStage = DesignProjectStage.ShopDrawing;
         await _db.SaveChangesAsync();
@@ -400,6 +406,8 @@ public class BasicDesignDocServiceTests : IDisposable
         var created = await _sut.CreateAsync(ValidCreate(), _userId);
         await _sut.TransitionStatusAsync(created.Id,
             new TransitionBasicDesignDocStatusRequest { Status = "SubmittedForReview" }, _userId);
+        await _sut.TransitionStatusAsync(created.Id,
+            new TransitionBasicDesignDocStatusRequest { Status = "Rejected" }, _userId);
         _db.DrawingRevisions.Add(new DrawingRevision
         {
             TargetType = DrawingRevisionTargetType.BasicDesignDoc,
@@ -432,12 +440,54 @@ public class BasicDesignDocServiceTests : IDisposable
         };
     }
 
-    private async Task ApproveDocAsync(string discipline)
+    private async Task<int> ApproveDocAsync(string discipline)
     {
         var doc = await _sut.CreateAsync(ValidCreate(discipline: discipline), _userId);
         await _sut.TransitionStatusAsync(doc.Id,
             new TransitionBasicDesignDocStatusRequest { Status = "SubmittedForReview" }, _userId);
         await _sut.TransitionStatusAsync(doc.Id,
             new TransitionBasicDesignDocStatusRequest { Status = "InternallyApproved" }, _userId);
+        return doc.Id;
+    }
+
+    private Task RejectDocAsync(int id) => _sut.TransitionStatusAsync(id,
+        new TransitionBasicDesignDocStatusRequest { Status = "Rejected" }, _userId);
+
+    private async Task AddClientApprovedReviewAsync(params int[] basicDesignDocIds)
+    {
+        var documents = basicDesignDocIds.Select(id => new ProjectDocument
+        {
+            OperationalProjectId = _operationalProjectId,
+            Category = ProjectDocumentCategory.DesignBasic,
+            SourceModule = ProjectDocumentSourceModule.Design,
+            SourceEntityType = nameof(BasicDesignDoc),
+            SourceRecordId = id,
+            LocalPath = $"/files/project-documents/basic-{id}.pdf",
+            OriginalFileName = $"basic-{id}.pdf",
+            ContentType = "application/pdf",
+            Sha256 = new string((char)('a' + id % 20), 64),
+            SyncStatus = ProjectDocumentSyncStatus.Synced,
+        }).ToList();
+        _db.ProjectDocuments.AddRange(documents);
+        await _db.SaveChangesAsync();
+        _db.DesignReviews.Add(new DesignReview
+        {
+            DesignProjectId = _projectId,
+            Stage = DesignReviewStage.BasicDesign,
+            RevisionNumber = 1,
+            Title = "Basic Design client approval",
+            Status = DesignReviewStatus.ClientApproved,
+            DesignManagerUserId = _userId,
+            CreatedByUserId = _userId,
+            UpdatedByUserId = _userId,
+            Documents = documents.Select(document => new DesignReviewDocument
+            {
+                ProjectDocumentId = document.Id,
+                SourceEntityTypeSnapshot = nameof(BasicDesignDoc),
+                SourceRecordIdSnapshot = document.SourceRecordId!.Value,
+                Sha256Snapshot = document.Sha256,
+            }).ToList(),
+        });
+        await _db.SaveChangesAsync();
     }
 }

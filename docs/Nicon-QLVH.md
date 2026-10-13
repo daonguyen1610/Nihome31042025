@@ -60,8 +60,10 @@ tên sheet, màu sắc, ngày và tên khách hàng trong file không phải quy
 - Quyền xem toàn bộ không kéo theo quyền sửa toàn bộ.
 - Người lập không được thực hiện bước thẩm định độc lập trên cùng chứng từ khi
   quy trình yêu cầu kiểm soát chéo.
-- Mỗi đầu việc Thiết kế có một người duyệt; người cần theo dõi dùng CC. Việc ai
-  duyệt đầu việc và ai chốt chuyển giai đoạn còn theo quyết định Q-10.
+- Mỗi đầu việc Thiết kế có đúng một người duyệt, khác người thực hiện; người cần
+  theo dõi dùng CC. Người thực hiện bấm hoàn thành để hệ thống tự chuyển sang
+  `Pending`; chỉ người duyệt được chỉ định được duyệt hoặc trả lại. Design Lead
+  duyệt đầu việc trực tiếp; Design Manager tổng hợp ý kiến và chốt chuyển giai đoạn.
 - Backend phải kiểm tra quyền, scope Dự án, trạng thái và concurrency; ẩn nút ở
   frontend không phải biện pháp bảo mật.
 
@@ -202,14 +204,37 @@ Thiết kế có thể bắt đầu trước hợp đồng nhưng luôn thuộc 
 Thiết kế sử dụng Operational Project; file Basic/Shop hiện có upload/preview,
 trong khi media/feedback theo file của Concept và review markup vẫn là mục tiêu.
 
-### Quyết định mở
+### 4.2. Luồng duyệt và điều hành — Implemented
 
-- Q-06: trình nội bộ chỉ bình luận hay cần đồng thuận bắt buộc.
-- Q-07: CC mặc định cho trưởng/phó phòng.
-- Q-08: quyền xóa hồ sơ không đạt, đặc biệt hồ sơ đã trình khách.
-- Q-10: Design Lead duyệt đầu việc và Design Manager chốt giai đoạn hay mô hình
-  khác.
-- Q-11: team và schedule gộp hay tách tab liên kết.
+- Tiến độ và Đội ngũ là hai tab liên kết trên cùng Operational Project. Đầu việc
+  có mô tả, ngày kế hoạch/thực tế, người phụ trách, đúng một người duyệt, CC,
+  đầu việc cha, tiền nhiệm, nguồn lực/thầu phụ và cờ công tác găng.
+- Hoàn thành đầu việc tự động gửi Design Lead/người duyệt đã chỉ định. CC chỉ
+  nhận thông tin, không có quyền phê duyệt.
+- Mỗi revision hồ sơ Concept, Basic Design hoặc Shop Drawing có danh sách người
+  nhận nội bộ cụ thể. Người nhận chỉ xem và bình luận. Design Manager tổng hợp,
+  ghi nhận đã trình khách và quyết định `ClientApproved`,
+  `ClientChangesRequested` hoặc `Rejected`; quyết định không đạt bắt buộc lý do.
+- Cổng chuyển giai đoạn yêu cầu revision mới nhất của đúng giai đoạn đã được
+  khách hàng duyệt. Phát hành IFC yêu cầu Shop Drawing đã được khách duyệt;
+  Thi công chỉ sử dụng IFC ở trạng thái Released.
+- Tài liệu trình phải là Project Document đúng Dự án và đúng category giai đoạn;
+  tab Tài liệu hỗ trợ upload, trạng thái đồng bộ và liên kết Google Drive.
+- Chỉ quyền `design.records.hard-delete`, mặc định cấp BGD và SUPER_ADMIN, được
+  xóa vĩnh viễn hồ sơ không đạt (`Discarded`, `Rejected` hoặc `Cancelled`).
+  Người xóa phải xem trước ảnh hưởng, nhập đúng mã hồ sơ và dùng plan token còn
+  hiệu lực. Hệ thống chặn xóa khi tệp chưa dọn an toàn, Shop Drawing còn nằm
+  trong gói IFC hoặc đợt trình dùng chung với hồ sơ khác; đợt trình chỉ thuộc
+  riêng hồ sơ được xóa cùng lịch sử liên quan.
+
+Vai trò `PM` thuộc nhóm `CONSTRUCTION` hiện là đại diện kỹ thuật cho người nhận
+Phòng CM trong luồng trình nội bộ. Việc tách thêm chức danh PM Phòng CM/BCH chi
+tiết vẫn theo quyết định vai trò Module 4, không làm rộng quyền sửa hồ sơ Thiết
+kế của người nhận.
+
+Q-11 về nhập đầy đủ định dạng MS Project (calendar/baseline/import) vẫn là mục
+tiêu; màn hình hiện tại đã giữ các trường nghiệp vụ cần thiết nhưng chưa phải
+trình nhập `.mpp`.
 
 ## 5. Module 3 — Pháp lý và xin phép
 

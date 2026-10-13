@@ -141,6 +141,59 @@ public sealed class DetailDesignScheduleController(
         }
     }
 
+    [HttpPost("tasks/{taskId:int}/complete")]
+    [RequirePermission("operations.projects", "view")]
+    [Idempotency("operations.projects.design-schedule.tasks.complete", requireKey: true)]
+    public async Task<ActionResult<DesignScheduleTaskResponse>> CompleteTask(
+        int projectId,
+        int taskId,
+        [FromBody] CompleteDesignScheduleTaskRequest request,
+        CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        request.RowVersion = CrmConcurrency.ResolveRequiredRequestToken(Request, request.RowVersion);
+        try
+        {
+            var result = await service.CompleteTaskAsync(
+                projectId, taskId, request.RowVersion, userId.Value, ct);
+            if (result is null) return NotFound();
+            Audit("design-schedule.task.submit", projectId, taskId, result);
+            CrmConcurrency.SetResponseEntityTag(Response, result.RowVersion);
+            return Ok(result);
+        }
+        catch (DesignScheduleOperationException exception)
+        {
+            return BadRequest(new { message = exception.Message });
+        }
+    }
+
+    [HttpPost("tasks/{taskId:int}/review")]
+    [RequirePermission("operations.projects", "view")]
+    [Idempotency("operations.projects.design-schedule.tasks.review", requireKey: true)]
+    public async Task<ActionResult<DesignScheduleTaskResponse>> ReviewTask(
+        int projectId,
+        int taskId,
+        [FromBody] ReviewDesignScheduleTaskRequest request,
+        CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        request.RowVersion = CrmConcurrency.ResolveRequiredRequestToken(Request, request.RowVersion);
+        try
+        {
+            var result = await service.ReviewTaskAsync(projectId, taskId, request, userId.Value, ct);
+            if (result is null) return NotFound();
+            Audit("design-schedule.task.review", projectId, taskId, result);
+            CrmConcurrency.SetResponseEntityTag(Response, result.RowVersion);
+            return Ok(result);
+        }
+        catch (DesignScheduleOperationException exception)
+        {
+            return BadRequest(new { message = exception.Message });
+        }
+    }
+
     private void Audit(string action, int projectId, int entityId, object value) => audit.Log(new AuditEvent
     {
         Action = action,

@@ -21,12 +21,16 @@ test.describe("Detail Design Schedule — assigned Design Lead flow", () => {
 
     const adminToken = await loginAs(TEST_USERS.superAdmin);
     const adminHeaders = { Authorization: `Bearer ${adminToken}` };
-    const usersResponse = await api.get(`/api/users?role=DESIGN_LEAD&search=${TEST_USERS.designLead.phoneNumber}&take=10`, {
+    const usersResponse = await api.get("/api/users?take=200", {
       headers: adminHeaders,
     });
-    const users = await expectOk(usersResponse, "load Design Lead") as { items?: Array<{ id: number; phoneNumber: string }> };
+    const users = await expectOk(usersResponse, "load Design Lead") as {
+      items?: Array<{ id: number; phoneNumber: string; fullName: string }>;
+    };
     const designLead = users.items?.find((user) => user.phoneNumber === TEST_USERS.designLead.phoneNumber);
+    const architect = users.items?.find((user) => user.phoneNumber === TEST_USERS.architect.phoneNumber);
     expect(designLead?.id).toBeGreaterThan(0);
+    expect(architect?.id).toBeGreaterThan(0);
 
     const customerId = await createOwnCustomer(api, adminHeaders, "schedule");
     const suffix = uid();
@@ -41,6 +45,15 @@ test.describe("Detail Design Schedule — assigned Design Lead flow", () => {
         endDate: "2026-06-30",
       },
     }), "create operational project") as { id: number };
+    const architectMember = await expectOk(await api.post(`/api/operational-projects/${operationalProject.id}/team/members`, {
+      headers: { ...adminHeaders, "Idempotency-Key": `e2e-schedule-architect-${suffix}` },
+      data: {
+        userId: architect!.id,
+        position: "Kiến trúc sư chủ trì phương án",
+        startedAt: "2026-04-01T00:00:00Z",
+        roles: [{ roleCode: "Architect", scope: "Discipline", scopeValue: "architecture" }],
+      },
+    }), "add architect member") as { id: number };
     const designProject = await expectOk(await api.post("/api/design-projects", {
       headers: adminHeaders,
       data: {
@@ -89,7 +102,9 @@ test.describe("Detail Design Schedule — assigned Design Lead flow", () => {
     await selectTriggers.nth(2).click();
     await page.getByRole("option", { name: /Kiến trúc|Architecture/i }).click();
     await selectTriggers.nth(3).click();
-    await page.getByRole("option").first().click();
+    await page.getByRole("option", { name: /Kiến trúc sư chủ trì phương án|Architecture lead/i }).click();
+    await selectTriggers.nth(4).click();
+    await page.getByRole("option", { name: designLead!.fullName }).click();
     await dialog.locator("#task-planned-start").fill("2026-04-01");
     await dialog.locator("#task-planned-end").fill("2026-04-15");
     await dialog.getByRole("button", { name: /Lưu|Save/i }).click();
@@ -104,12 +119,12 @@ test.describe("Detail Design Schedule — assigned Design Lead flow", () => {
     await expect(dialog).toBeVisible();
     await dialog.locator("#task-actual-start").fill("2026-04-02");
     await dialog.locator("#task-progress").fill("25");
-    await dialog.locator('button[role="combobox"]').nth(4).click();
+    await dialog.locator('button[role="combobox"]').nth(6).click();
     await page.getByRole("option", { name: /Đang thực hiện|In progress/i }).click();
     await dialog.getByRole("button", { name: /Lưu|Save/i }).click();
 
     await expect(dialog).toBeHidden();
-    await expect(taskRow).toContainText("25% · 1%");
+    await expect(taskRow).toContainText(/25%\s*[\/·]\s*1%/);
     await expect(taskRow).toContainText(/Đang thực hiện|In progress/i);
 
     const filters = schedule.locator("section").filter({ hasText: /Bộ lọc|Filters/i });
@@ -132,6 +147,7 @@ test.describe("Detail Design Schedule — assigned Design Lead flow", () => {
         name: string;
         departmentCode: string;
         assigneeMemberId: number;
+        approverMemberId: number;
         isMilestone: boolean;
         plannedStart: string;
         plannedEnd: string;
@@ -155,6 +171,7 @@ test.describe("Detail Design Schedule — assigned Design Lead flow", () => {
           name: competingName,
           departmentCode: currentTask!.departmentCode,
           assigneeMemberId: currentTask!.assigneeMemberId,
+          approverMemberId: currentTask!.approverMemberId,
           isMilestone: currentTask!.isMilestone,
           plannedStart: currentTask!.plannedStart.slice(0, 10),
           plannedEnd: currentTask!.plannedEnd.slice(0, 10),
@@ -164,6 +181,8 @@ test.describe("Detail Design Schedule — assigned Design Lead flow", () => {
           progressPercent: currentTask!.progressPercent,
           weight: currentTask!.weight,
           predecessorTaskIds: currentTask!.predecessorTaskIds,
+          ccMemberIds: [],
+          isCritical: false,
           rowVersion: currentTask!.rowVersion,
         },
         headers: {
@@ -188,6 +207,7 @@ test.describe("Detail Design Schedule — assigned Design Lead flow", () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await expect(schedule).toBeVisible();
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+    expect(architectMember.id).toBeGreaterThan(0);
 
     await page.setViewportSize({ width: 768, height: 1024 });
     await createTaskButton.focus();

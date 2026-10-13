@@ -166,6 +166,9 @@ public class IfcReleaseService(
             .Include(r => r.Recipients)
             .FirstOrDefaultAsync(r => r.Id == id, ct);
         if (entity is null) return false;
+        if (entity.Status != IfcReleaseStatus.Cancelled)
+            throw new IfcReleaseOperationException(
+                "Chỉ phiếu IFC đã hủy trước khi phát hành mới được xóa vĩnh viễn.");
         db.IfcReleases.Remove(entity);
         await db.SaveChangesAsync(ct);
         return true;
@@ -225,6 +228,7 @@ public class IfcReleaseService(
             .Include(r => r.Items)
             .FirstOrDefaultAsync(r => r.Id == id, ct)
             ?? throw new IfcReleaseOperationException($"Phiếu IFC #{id} không tồn tại.");
+        EnsureDraft(entity, "xóa bản vẽ khỏi phiếu");
 
         var item = entity.Items.FirstOrDefault(i => i.Id == itemId)
             ?? throw new IfcReleaseOperationException($"Dòng #{itemId} không tồn tại trong phiếu.");
@@ -274,6 +278,7 @@ public class IfcReleaseService(
             .Include(r => r.Recipients)
             .FirstOrDefaultAsync(r => r.Id == id, ct)
             ?? throw new IfcReleaseOperationException($"Phiếu IFC #{id} không tồn tại.");
+        EnsureDraft(entity, "xóa nơi nhận khỏi phiếu");
 
         var recipient = entity.Recipients.FirstOrDefault(x => x.Id == recipientId)
             ?? throw new IfcReleaseOperationException($"Nơi nhận #{recipientId} không tồn tại.");
@@ -323,6 +328,24 @@ public class IfcReleaseService(
         {
             throw new IfcReleaseOperationException("Phiếu chưa có nơi nhận nào — không thể phát hành.");
         }
+
+        var drawingIds = entity.Items.Select(item => item.ShopDrawingId).Distinct().ToList();
+        var review = await db.DesignReviews.AsNoTracking()
+            .Where(item => item.DesignProjectId == entity.DesignProjectId &&
+                item.Stage == DesignReviewStage.ShopDrawing)
+            .Include(item => item.Documents).ThenInclude(item => item.ProjectDocument)
+            .OrderByDescending(item => item.RevisionNumber)
+            .FirstOrDefaultAsync(ct);
+        var approvedDrawingIds = review?.Documents.Where(document =>
+                document.SourceEntityTypeSnapshot == nameof(ShopDrawing) &&
+                document.ProjectDocument.DeletedAt == null &&
+                document.ProjectDocument.SyncStatus == ProjectDocumentSyncStatus.Synced &&
+                document.ProjectDocument.Sha256 == document.Sha256Snapshot)
+            .Select(document => (int)document.SourceRecordIdSnapshot).Distinct().ToHashSet() ?? [];
+        if (review?.Status != DesignReviewStatus.ClientApproved ||
+            drawingIds.Any(drawingId => !approvedDrawingIds.Contains(drawingId)))
+            throw new IfcReleaseOperationException(
+                "Hồ sơ khách duyệt phải bao phủ đúng mọi Shop Drawing trong gói IFC.");
 
         var invalid = entity.Items
             .Where(i => i.ShopDrawing.Status != ShopDrawingStatus.Approved

@@ -9,6 +9,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -48,6 +49,7 @@ import { extractApiError } from "@/lib/apiError";
 import {
   adminApi,
   type DesignProjectResponse,
+  type DeletionImpactResponse,
   type IfcReleaseResponse,
   type IfcReleaseStatus,
   type MasterDataOption,
@@ -86,6 +88,7 @@ export const IfcReleasesTab = ({ project }: Props) => {
   const { has } = usePermissions();
   const canManage = has(ADMIN_PERMS.designIfcManage);
   const canRelease = has(ADMIN_PERMS.designIfcRelease);
+  const canHardDelete = has(ADMIN_PERMS.designRecordsHardDelete);
 
   const isShopStage = project.currentStage === "ShopDrawing" || project.currentStage === "Completed";
 
@@ -336,20 +339,41 @@ export const IfcReleasesTab = ({ project }: Props) => {
     }
   };
 
-  const doDelete = async () => {
-    if (!selected) return;
+  const [deleting, setDeleting] = useState<IfcReleaseResponse | null>(null);
+  const [deleteImpact, setDeleteImpact] = useState<DeletionImpactResponse | null>(null);
+  const [loadingDeleteImpact, setLoadingDeleteImpact] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!deleting) {
+      setDeleteImpact(null);
+      setDeleteError(null);
+      return;
+    }
+    let active = true;
+    setLoadingDeleteImpact(true);
+    setDeleteError(null);
+    void adminApi.getIfcReleaseDeletionImpact(deleting.id)
+      .then(({ data }) => { if (active) setDeleteImpact(data); })
+      .catch((err) => { if (active) setDeleteError(extractApiError(err)); })
+      .finally(() => { if (active) setLoadingDeleteImpact(false); });
+    return () => { active = false; };
+  }, [deleting]);
+
+  const doDelete = async (confirmation: string) => {
+    if (!deleting || !deleteImpact) return null;
     setBusy(true);
+    setDeleteError(null);
     try {
-      await adminApi.deleteIfcRelease(selected.id);
-      toast({ title: t("ifcRelease.deleted") });
-      setSelected(null);
-      await fetchRows();
-    } catch (err) {
-      toast({
-        title: t("common.error"),
-        description: extractApiError(err),
-        variant: "destructive",
+      await adminApi.deleteIfcRelease(deleting.id, {
+        planToken: deleteImpact.planToken,
+        confirmation,
       });
+      toast({ title: t("ifcRelease.deleted") });
+      return null;
+    } catch (err) {
+      setDeleteError(extractApiError(err));
+      throw err;
     } finally {
       setBusy(false);
     }
@@ -609,8 +633,8 @@ export const IfcReleasesTab = ({ project }: Props) => {
               </div>
 
               <DialogFooter className="flex-wrap gap-2">
-                {canManage ? (
-                  <Button variant="ghost" onClick={() => void doDelete()} disabled={busy} className="text-rose-700 hover:bg-rose-50">
+                {canHardDelete && selected.status === "Cancelled" ? (
+                  <Button variant="ghost" onClick={() => setDeleting(selected)} disabled={busy} className="text-rose-700 hover:bg-rose-50">
                     <Trash2 className="mr-1 h-4 w-4" />
                     {t("ifcRelease.action.deleteRelease")}
                   </Button>
@@ -728,6 +752,21 @@ export const IfcReleasesTab = ({ project }: Props) => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <DeletionImpactDialog
+        open={deleting !== null}
+        impact={deleteImpact}
+        loading={loadingDeleteImpact}
+        deleting={busy}
+        error={deleteError}
+        onOpenChange={(open) => { if (!open && !busy) setDeleting(null); }}
+        onConfirm={doDelete}
+        onCompleted={async () => {
+          setDeleting(null);
+          setSelected(null);
+          await fetchRows();
+        }}
+      />
     </div>
   );
 };

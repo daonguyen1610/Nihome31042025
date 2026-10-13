@@ -52,8 +52,18 @@ public class IfcReleaseServiceTests : IDisposable
         _db.Customers.Add(customer);
         _db.SaveChanges();
 
+        var operationalProject = new OperationalProject
+        {
+            Code = "OP-IFC-TEST",
+            Name = "IFC operational project",
+            CustomerId = customer.Id,
+        };
+        _db.OperationalProjects.Add(operationalProject);
+        _db.SaveChanges();
+
         var project = new DesignProject
         {
+            OperationalProjectId = operationalProject.Id,
             ProjectCode = "DP-2026-IFC-TEST",
             Name = "IFC fixture",
             CustomerId = customer.Id,
@@ -91,6 +101,29 @@ public class IfcReleaseServiceTests : IDisposable
         };
         _db.ShopDrawings.AddRange(approved, pendingIfc, drafting);
         _db.SaveChanges();
+        var approvedDocument = ReviewDocument(operationalProject.Id, approved.Id, "approved");
+        var pendingDocument = ReviewDocument(operationalProject.Id, pendingIfc.Id, "pending-ifc");
+        _db.ProjectDocuments.AddRange(approvedDocument, pendingDocument);
+        _db.SaveChanges();
+        _db.DesignReviews.Add(new DesignReview
+        {
+            DesignProjectId = project.Id,
+            Stage = DesignReviewStage.ShopDrawing,
+            RevisionNumber = 1,
+            Title = "Shop Drawing client approval",
+            Status = DesignReviewStatus.ClientApproved,
+            DesignManagerUserId = user.Id,
+            CreatedByUserId = user.Id,
+            UpdatedByUserId = user.Id,
+            Documents = new[] { approvedDocument, pendingDocument }.Select(document => new DesignReviewDocument
+            {
+                ProjectDocumentId = document.Id,
+                SourceEntityTypeSnapshot = nameof(ShopDrawing),
+                SourceRecordIdSnapshot = document.SourceRecordId!.Value,
+                Sha256Snapshot = document.Sha256,
+            }).ToList(),
+        });
+        _db.SaveChanges();
 
         _userId = user.Id;
         _projectId = project.Id;
@@ -105,6 +138,20 @@ public class IfcReleaseServiceTests : IDisposable
     {
         DesignProjectId = _projectId,
         Title = title,
+    };
+
+    private static ProjectDocument ReviewDocument(int operationalProjectId, int shopDrawingId, string suffix) => new()
+    {
+        OperationalProjectId = operationalProjectId,
+        Category = ProjectDocumentCategory.DesignShopDrawing,
+        SourceModule = ProjectDocumentSourceModule.Design,
+        SourceEntityType = nameof(ShopDrawing),
+        SourceRecordId = shopDrawingId,
+        LocalPath = $"/files/project-documents/shop-{suffix}.pdf",
+        OriginalFileName = $"shop-{suffix}.pdf",
+        ContentType = "application/pdf",
+        Sha256 = new string(suffix[0], 64),
+        SyncStatus = ProjectDocumentSyncStatus.Synced,
     };
 
     // ---------------- Create ----------------
@@ -350,14 +397,14 @@ public class IfcReleaseServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task DeleteAsync_Draft_Succeeds()
+    public async Task DeleteAsync_Draft_Throws()
     {
         var release = await _sut.CreateAsync(ValidCreate(), _userId);
-        Assert.True(await _sut.DeleteAsync(release.Id));
+        await Assert.ThrowsAsync<IfcReleaseOperationException>(() => _sut.DeleteAsync(release.Id));
     }
 
     [Fact]
-    public async Task RemoveItemAndRecipient_AfterRelease_Succeeds()
+    public async Task RemoveItemAndRecipient_AfterRelease_Throws()
     {
         var release = await _sut.CreateAsync(ValidCreate(), _userId);
         await _sut.AddItemsAsync(release.Id, new AddIfcReleaseItemsRequest
@@ -371,18 +418,15 @@ public class IfcReleaseServiceTests : IDisposable
         }, _userId);
         var released = await _sut.ReleaseAsync(release.Id, _userId);
 
-        var withoutItem = await _sut.RemoveItemAsync(
-            release.Id, released.Items.Single().Id, _userId);
-        var withoutRecipient = await _sut.RemoveRecipientAsync(
-            release.Id, released.Recipients.Single().Id, _userId);
-
-        Assert.Empty(withoutItem.Items);
-        Assert.Empty(withoutRecipient.Recipients);
+        await Assert.ThrowsAsync<IfcReleaseOperationException>(() => _sut.RemoveItemAsync(
+            release.Id, released.Items.Single().Id, _userId));
+        await Assert.ThrowsAsync<IfcReleaseOperationException>(() => _sut.RemoveRecipientAsync(
+            release.Id, released.Recipients.Single().Id, _userId));
         Assert.NotNull(await _db.IfcReleases.FindAsync(release.Id));
     }
 
     [Fact]
-    public async Task DeleteAsync_AfterRelease_Succeeds()
+    public async Task DeleteAsync_AfterRelease_Throws()
     {
         var release = await _sut.CreateAsync(ValidCreate(), _userId);
         await _sut.AddItemsAsync(release.Id, new AddIfcReleaseItemsRequest
@@ -396,7 +440,7 @@ public class IfcReleaseServiceTests : IDisposable
         }, _userId);
         await _sut.ReleaseAsync(release.Id, _userId);
 
-        Assert.True(await _sut.DeleteAsync(release.Id));
-        Assert.Null(await _db.IfcReleases.FindAsync(release.Id));
+        await Assert.ThrowsAsync<IfcReleaseOperationException>(() => _sut.DeleteAsync(release.Id));
+        Assert.NotNull(await _db.IfcReleases.FindAsync(release.Id));
     }
 }

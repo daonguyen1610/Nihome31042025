@@ -5,6 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/lib/i18n";
 import { extractApiError } from "@/lib/apiError";
+import { usePermissions } from "@/hooks/usePermissions";
+import ProjectDocumentsPanel from "@/pages/admin/ProjectDocumentsPanel";
 import {
   adminApi,
   type BasicDesignDocResponse,
@@ -46,6 +48,7 @@ const EMPTY_STATE: DocumentsState = {
 
 export const DesignProjectDocumentsTab = ({ project }: Props) => {
   const { t } = useI18n();
+  const { has } = usePermissions();
   const [data, setData] = useState<DocumentsState>(EMPTY_STATE);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -83,6 +86,11 @@ export const DesignProjectDocumentsTab = ({ project }: Props) => {
     () => data.concepts.length + data.basicDocs.length + data.shopDrawings.length + data.revisions.length + data.ifcReleases.length,
     [data],
   );
+  const sourceOptions = useMemo(() => [
+    ...data.concepts.map((item) => ({ entityType: "ConceptOption", recordId: item.id, label: `Concept · ${item.name}`, category: "DesignConcept" })),
+    ...data.basicDocs.map((item) => ({ entityType: "BasicDesignDoc", recordId: item.id, label: `${item.documentCode} · ${item.title}`, category: "DesignBasic" })),
+    ...data.shopDrawings.map((item) => ({ entityType: "ShopDrawing", recordId: item.id, label: `${item.drawingCode} · ${item.title}`, category: "DesignShopDrawing" })),
+  ], [data.basicDocs, data.concepts, data.shopDrawings]);
 
   const groups: Array<{ key: string; title: string; icon: typeof FileText; rows: DocumentRow[] }> = [
     {
@@ -119,6 +127,11 @@ export const DesignProjectDocumentsTab = ({ project }: Props) => {
 
   return (
     <section className="space-y-4" data-testid="design-project-documents-tab">
+      {project.operationalProjectId ? <ProjectDocumentsPanel
+        projectId={project.operationalProjectId}
+        canManage={has("operations.projects.manage") || has("design.projects.manage")}
+        sourceOptions={sourceOptions}
+      /> : null}
       <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>

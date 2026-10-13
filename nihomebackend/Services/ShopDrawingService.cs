@@ -302,6 +302,9 @@ public class ShopDrawingService(
             .Include(drawing => drawing.DesignProject)
             .FirstOrDefaultAsync(d => d.Id == id, ct);
         if (entity is null) return false;
+        if (entity.Status != ShopDrawingStatus.Rejected)
+            throw new ShopDrawingOperationException(
+                "Chỉ bản vẽ bị từ chối mới được xóa vĩnh viễn.");
         if (entity.DesignProject.CurrentStage is DesignProjectStage.Concept or DesignProjectStage.BasicDesign)
         {
             throw new ShopDrawingOperationException(
@@ -347,6 +350,9 @@ public class ShopDrawingService(
             .Include(drawing => drawing.DesignProject)
             .Where(d => distinctIds.Contains(d.Id))
             .ToListAsync(ct);
+        if (rows.Any(row => row.Status != ShopDrawingStatus.Rejected))
+            throw new ShopDrawingOperationException(
+                "Chỉ bản vẽ bị từ chối mới được xóa vĩnh viễn.");
         if (rows.Any(row => row.DesignProject.CurrentStage is DesignProjectStage.Concept or DesignProjectStage.BasicDesign))
         {
             throw new ShopDrawingOperationException(

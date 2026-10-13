@@ -1,5 +1,10 @@
 import { test, expect, TEST_USERS } from "../fixtures/auth";
-import { createDesignProject, createOwnCustomer } from "../fixtures/designProjects";
+import {
+  approveDesignStage,
+  createDesignProject,
+  createOwnCustomer,
+  isGoogleDriveConnected,
+} from "../fixtures/designProjects";
 
 /**
  * NIH-117 M2 Drawing Revision end-to-end flow. Real-user path through
@@ -29,6 +34,10 @@ test.describe("NIH-117 — Drawing Revisions (real-user flow)", () => {
     // ---------- 1. Set up a project + first shop drawing via the API ----------
     const token = await loginAs(TEST_USERS.superAdmin);
     const authHeader = { Authorization: `Bearer ${token}` };
+    test.skip(
+      !(await isGoogleDriveConnected(api, authHeader)),
+      "Requires a connected Google Drive because approved design evidence must be durably synced.",
+    );
 
     const customerId = await createOwnCustomer(api, authHeader, "REV");
 
@@ -45,10 +54,15 @@ test.describe("NIH-117 — Drawing Revisions (real-user flow)", () => {
     });
     expect(optCreate.ok(), await optCreate.text()).toBeTruthy();
     const optId = (await optCreate.json()).id as number;
-    for (const status of ["PendingInternalReview", "PresentedToClient", "Finalized"]) {
-      (await api.post(`/api/concept-options/${optId}/status`, { headers: authHeader, data: { status } })).ok();
+    for (const status of ["PendingInternalReview", "PresentedToClient"]) {
+      const transition = await api.post(`/api/concept-options/${optId}/status`, { headers: authHeader, data: { status } });
+      expect(transition.ok(), `${status}: ${await transition.text()}`).toBeTruthy();
     }
+    await approveDesignStage(api, { headers: authHeader, projectId, stage: "Concept", category: "DesignConcept", sourceEntityType: "ConceptOption", sourceRecordIds: [optId] });
+    const finalized = await api.post(`/api/concept-options/${optId}/status`, { headers: authHeader, data: { status: "Finalized" } });
+    expect(finalized.ok(), await finalized.text()).toBeTruthy();
     // BasicDesign → ShopDrawing
+    const basicDocumentIds: number[] = [];
     for (const disciplineCode of ["architecture", "structure", "mep"]) {
       const doc = await api.post("/api/basic-design-docs", {
         headers: authHeader,
@@ -58,12 +72,17 @@ test.describe("NIH-117 — Drawing Revisions (real-user flow)", () => {
           title: `${disciplineCode} — E2E BD ${uid()}`,
         },
       });
+      expect(doc.ok(), await doc.text()).toBeTruthy();
       const docId = (await doc.json()).id as number;
+      basicDocumentIds.push(docId);
       for (const status of ["SubmittedForReview", "InternallyApproved"]) {
-        await api.post(`/api/basic-design-docs/${docId}/status`, { headers: authHeader, data: { status } });
+        const transition = await api.post(`/api/basic-design-docs/${docId}/status`, { headers: authHeader, data: { status } });
+        expect(transition.ok(), await transition.text()).toBeTruthy();
       }
     }
-    await api.post(`/api/basic-design-docs/design-project/${projectId}/unlock-shop-drawing`, { headers: authHeader });
+    await approveDesignStage(api, { headers: authHeader, projectId, stage: "BasicDesign", category: "DesignBasic", sourceEntityType: "BasicDesignDoc", sourceRecordIds: basicDocumentIds });
+    const unlocked = await api.post(`/api/basic-design-docs/design-project/${projectId}/unlock-shop-drawing`, { headers: authHeader });
+    expect(unlocked.ok(), await unlocked.text()).toBeTruthy();
 
     const shopCreate = await api.post("/api/shop-drawings", {
       headers: authHeader,
