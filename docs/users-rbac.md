@@ -80,20 +80,31 @@ sending continue to require their dedicated `approve` and `send` permissions.
 
 The `ACCOUNTANT` role has `crm.contracts.view` plus the scoped
 `crm.contracts.view.upstream.all` and `crm.contracts.view.downstream.all`
-permissions for read-only reconciliation of primary and input contracts across
+permissions for portfolio reconciliation of primary and input contracts across
 the operational-project portfolio. Portfolio-wide access requires
 `operations.projects.view.all` and the permission matching the explicitly
 requested direction. It is server-enforced for Upstream/Downstream lists,
 filter options, exports, and matching details; an unscoped contract list remains
-owner-scoped. These permissions do not grant contract create, edit, transition,
-attachment, appendix, or delete capabilities.
+owner-scoped. `finance.payments.manage` additionally permits an Accountant to
+maintain the financial milestone schedule, responsible accountant, request
+state, and actual collection/payment date on that same Contract ID. It does not
+grant contract header create/edit, legal transition, attachment, appendix, VO,
+or delete capabilities.
+
+`finance.payments.view`, `manage`, `approve`, and `pay` do not independently
+grant cross-project access. Payment Request references, lists, and mutations
+are filtered through Operational Project access. A scoped finance user needs
+active membership, project-manager, or project-creator scope; portfolio access
+also requires `operations.projects.view.all`.
 
 The UI keeps this boundary explicit for combined-role users as well: Finance
-**Receivables** and **Payables** routes never expose Contract master mutations,
-even when the user also has `crm.contracts.manage`. Such a user follows the
-master-record link to **CRM → Contract registry**, where the normal manage and
-scope checks still apply. This avoids two apparent sources of Contract truth;
-the backend continues to serve one Contract aggregate and ID.
+**Receivables** and **Payables** remain projection lists and never render a
+second Contract detail or mutation form. Selecting a row opens its canonical
+**CRM → Contract registry** record with a return link to the Finance filters;
+the header remains read-only for an Accountant while the financial schedule is
+editable under its separate permission and server-side project scope. This
+avoids two apparent sources of Contract truth; the backend continues to serve
+one Contract aggregate and ID.
 
 ### Project handover permissions
 

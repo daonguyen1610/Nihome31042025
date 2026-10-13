@@ -42,6 +42,10 @@ test("Finance receivables is a read-only projection of the contract registry", a
     await expect(page.getByText(/góc nhìn Tài chính|Finance view|财务视图|財務ビュー/i)).toBeVisible();
     await expect(page.getByRole("link", { name: /Mở Sổ hợp đồng|Open Contract registry|打开合同台账|契約台帳を開く/i }))
         .toHaveAttribute("href", "/admin/contracts?direction=Upstream");
+    await page.getByRole("button", { name: "CRM", exact: true }).click();
+    await expect(page.locator('#admin-nav-group-crm a[href="/admin/contracts"]')).toHaveCount(1);
+    await expect(page.locator('#admin-nav-group-finance a[href="/admin/finance/contracts"]')).toHaveCount(1);
+    await expect(page.locator('#admin-nav-group-finance a[href="/admin/finance/input-contracts"]')).toHaveCount(1);
 
     const filteredResponse = page.waitForResponse((response) => {
         const url = new URL(response.url());
@@ -64,14 +68,13 @@ test("Finance receivables is a read-only projection of the contract registry", a
         const url = new URL(response.url());
         return response.request().method() === "GET"
             && url.pathname.endsWith(`/api/contracts/${contractId}`)
-            && url.searchParams.get("direction") === "Upstream";
+            && !url.searchParams.has("direction");
     });
     await row.locator("td").nth(1).click();
     expect((await detailResponse).ok()).toBe(true);
-    await expect(page).toHaveURL(/\/admin\/finance\/contracts\/\d+\?/);
-    await expect(page.getByRole("button", { name: /Sửa|Edit|编辑|編集/i })).toHaveCount(0);
-    await expect(page.getByRole("link", { name: /Mở hồ sơ gốc|Open master record|打开主记录|マスターを開く/i }))
-        .toHaveAttribute("href", `/admin/contracts/${contractId}`);
+    await expect(page).toHaveURL(new RegExp(`/admin/contracts/${contractId}\\?`));
+    await expect(page.getByRole("tab", { name: /Lịch phải thu|Receivable schedule|应收计划|入金予定/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /Sửa|Edit|编辑|編集/i }).first()).toBeVisible();
     const returnLink = page.locator('main a[href^="/admin/finance/contracts?"]').first();
     await expect(returnLink).toBeVisible();
     await returnLink.click();
@@ -110,7 +113,7 @@ test("Finance scope denies Sales and recovers from list API errors", async ({
     await expect(page.getByText(/Không có hợp đồng nào khớp|No contracts match|没有符合|一致する契約はありません/i)).toBeVisible();
 });
 
-test("Finance input-contract workspace keeps downstream scope and read-only accounting access", async ({
+test("Finance input-contract workspace keeps scope and edits only the financial schedule", async ({
     page,
     loginInBrowserAs,
     baseURL,
@@ -156,7 +159,7 @@ test("Finance input-contract workspace keeps downstream scope and read-only acco
     expect(contractResponse.status(), await contractResponse.text()).toBe(201);
     const contract = await contractResponse.json();
 
-    await page.setViewportSize({ width: 768, height: 1024 });
+    await page.setViewportSize({ width: 390, height: 844 });
     await loginInBrowserAs(page, TEST_USERS.accountant);
     const listResponse = page.waitForResponse((response) => {
         const url = new URL(response.url());
@@ -186,13 +189,27 @@ test("Finance input-contract workspace keeps downstream scope and read-only acco
     const detailResponse = page.waitForResponse((response) => {
         const url = new URL(response.url());
         return url.pathname.endsWith(`/api/contracts/${contract.id}`)
-            && url.searchParams.get("direction") === "Downstream";
+            && !url.searchParams.has("direction");
     });
     await card.locator(":scope > a").click();
     expect((await detailResponse).ok()).toBe(true);
-    await expect(page).toHaveURL(new RegExp(`/admin/finance/input-contracts/${contract.id}\\?`));
+    await expect(page).toHaveURL(new RegExp(`/admin/contracts/${contract.id}\\?`));
     await expect(page.locator('main a[href^="/admin/finance/input-contracts?"]').first()).toBeVisible();
     await expect(page.getByRole("button", { name: /Sửa|Edit|编辑|編集/i })).toHaveCount(0);
+
+    await page.getByRole("tab").nth(1).click();
+    await page.getByTestId("contract-finance-schedule-edit").click();
+    await expect(page.getByTestId("contract-finance-schedule-form")).toBeVisible();
+    await page.locator("#milestone-due-0").fill("2026-12-05");
+    const scheduleResponse = page.waitForResponse((response) =>
+        response.request().method() === "PUT"
+        && new URL(response.url()).pathname.endsWith(`/api/contracts/${contract.id}/milestones`));
+    await page.getByTestId("contract-finance-schedule-save").click();
+    expect((await scheduleResponse).ok()).toBe(true);
+    await expect(page.getByTestId("contract-finance-schedule-form")).toHaveCount(0);
+
+    await page.goto(`${baseURL}/admin/finance/input-contracts/${contract.id}`, { waitUntil: "domcontentloaded" });
+    await expect(page).toHaveURL(new RegExp(`/admin/contracts/${contract.id}\\?returnTo=%2Fadmin%2Ffinance%2Finput-contracts`));
 
     await loginInBrowserAs(page, TEST_USERS.superAdmin);
     await page.goto(`${baseURL}/admin/finance/input-contracts`, { waitUntil: "domcontentloaded" });

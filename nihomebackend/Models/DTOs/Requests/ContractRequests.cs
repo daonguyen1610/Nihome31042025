@@ -86,3 +86,16 @@ public class ContractPaymentMilestoneRequest
     [StringLength(500)]
     public string? Note { get; set; }
 }
+
+/// <summary>
+/// Finance-owned update of a Contract's collection/payment schedule. This
+/// deliberately excludes Contract header fields so financial access cannot be
+/// used to mutate CRM master data.
+/// </summary>
+public class UpdateContractPaymentScheduleRequest : IConcurrencyRequest
+{
+    public string? RowVersion { get; set; }
+
+    [Required]
+    public List<ContractPaymentMilestoneRequest> PaymentMilestones { get; set; } = [];
+}

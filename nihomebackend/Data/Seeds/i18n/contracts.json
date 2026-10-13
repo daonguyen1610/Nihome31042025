@@ -792,6 +792,118 @@
     "ja": "支払を依頼"
   },
   {
+    "key": "contracts.schedule.edit",
+    "category": "contracts",
+    "vi": "Chỉnh sửa lịch thu/chi",
+    "en": "Edit financial schedule",
+    "zh": "编辑收付款计划",
+    "ja": "入出金スケジュールを編集"
+  },
+  {
+    "key": "contracts.detail.tab.receivableSchedule",
+    "category": "contracts",
+    "vi": "Lịch phải thu",
+    "en": "Receivable schedule",
+    "zh": "应收计划",
+    "ja": "入金予定"
+  },
+  {
+    "key": "contracts.detail.tab.payableSchedule",
+    "category": "contracts",
+    "vi": "Lịch phải trả",
+    "en": "Payable schedule",
+    "zh": "应付计划",
+    "ja": "支払予定"
+  },
+  {
+    "key": "contracts.collection.actualDate",
+    "category": "contracts",
+    "vi": "Ngày thu thực tế",
+    "en": "Actual collection date",
+    "zh": "实际收款日期",
+    "ja": "実際入金日"
+  },
+  {
+    "key": "contracts.collection.markRequested",
+    "category": "contracts",
+    "vi": "Gửi yêu cầu thu",
+    "en": "Request collection",
+    "zh": "发起收款请求",
+    "ja": "入金を依頼"
+  },
+  {
+    "key": "contracts.collection.markCollected",
+    "category": "contracts",
+    "vi": "Đánh dấu đã thu",
+    "en": "Mark as collected",
+    "zh": "标记为已收款",
+    "ja": "入金済みにする"
+  },
+  {
+    "key": "contracts.collection.editActualDate",
+    "category": "contracts",
+    "vi": "Sửa ngày thu",
+    "en": "Edit collection date",
+    "zh": "修改收款日期",
+    "ja": "入金日を編集"
+  },
+  {
+    "key": "contracts.collection.requestDialogTitle",
+    "category": "contracts",
+    "vi": "Gửi yêu cầu thu",
+    "en": "Request collection",
+    "zh": "发起收款请求",
+    "ja": "入金を依頼"
+  },
+  {
+    "key": "contracts.collection.dateDialogTitle",
+    "category": "contracts",
+    "vi": "Xác nhận ngày thu thực tế",
+    "en": "Confirm collection date",
+    "zh": "确认实际收款日期",
+    "ja": "実際入金日を確認"
+  },
+  {
+    "key": "contracts.collection.dateDialogDescription",
+    "category": "contracts",
+    "vi": "Chọn kế toán phụ trách và ngày tiền thực tế được thu.",
+    "en": "Select the responsible accountant and the actual collection date.",
+    "zh": "选择负责会计和实际收款日期。",
+    "ja": "担当経理と実際の入金日を選択してください。"
+  },
+  {
+    "key": "contracts.collection.confirm",
+    "category": "contracts",
+    "vi": "Xác nhận đã thu",
+    "en": "Confirm collected",
+    "zh": "确认已收款",
+    "ja": "入金済みを確認"
+  },
+  {
+    "key": "contracts.collectionStatus.Pending",
+    "category": "contracts",
+    "vi": "Chưa yêu cầu thu",
+    "en": "Collection pending",
+    "zh": "待发起收款",
+    "ja": "入金依頼前"
+  },
+  {
+    "key": "contracts.collectionStatus.Requested",
+    "category": "contracts",
+    "vi": "Đã yêu cầu thu",
+    "en": "Collection requested",
+    "zh": "已发起收款",
+    "ja": "入金依頼済み"
+  },
+  {
+    "key": "contracts.collectionStatus.Paid",
+    "category": "contracts",
+    "vi": "Đã thu",
+    "en": "Collected",
+    "zh": "已收款",
+    "ja": "入金済み"
+  },
+  {
     "key": "contracts.milestoneStatus.Pending",
     "category": "contracts",
     "vi": "Chưa yêu cầu",

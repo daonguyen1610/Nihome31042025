@@ -91,11 +91,21 @@ public sealed class FinancePaymentReferencesTests(NihomeWebApplicationFactory fa
         var unrelatedVendor = new Vendor { VendorCode = UniqueSlug("NCC-EXCLUDE"), CompanyName = "Only draft contracts", VendorType = VendorType.Supplier, IsActive = true };
         db.AddRange(customer, vendor, unrelatedVendor, inactive);
         await db.SaveChangesAsync();
+        var project = new OperationalProject
+        {
+            Code = UniqueSlug("PJ-PAY-REF"),
+            Name = "Payment reference project",
+            CustomerId = customer.Id,
+            ProjectManagerUserId = procurement.Id,
+        };
+        db.OperationalProjects.Add(project);
+        await db.SaveChangesAsync();
         var signed = new Contract
         {
             ContractNumber = UniqueSlug("PO-REF"),
             CustomerId = customer.Id,
             VendorId = vendor.Id,
+            OperationalProjectId = project.Id,
             OwnerUserId = procurement.Id,
             Direction = ContractDirection.Downstream,
             Type = ContractType.Supply,
@@ -106,15 +116,16 @@ public sealed class FinancePaymentReferencesTests(NihomeWebApplicationFactory fa
         };
         var excluded = new[]
         {
-            new Contract { ContractNumber = UniqueSlug("PO-DRAFT"), CustomerId = customer.Id, VendorId = unrelatedVendor.Id, Direction = ContractDirection.Downstream, Status = ContractStatus.Draft },
-            new Contract { ContractNumber = UniqueSlug("PO-CANCEL"), CustomerId = customer.Id, VendorId = unrelatedVendor.Id, Direction = ContractDirection.Downstream, Status = ContractStatus.Cancelled },
-            new Contract { ContractNumber = UniqueSlug("PO-UPSTREAM"), CustomerId = customer.Id, VendorId = unrelatedVendor.Id, Direction = ContractDirection.Upstream, Status = ContractStatus.Signed },
-            new Contract { ContractNumber = UniqueSlug("PO-NOVENDOR"), CustomerId = customer.Id, Direction = ContractDirection.Downstream, Status = ContractStatus.Signed },
+            new Contract { ContractNumber = UniqueSlug("PO-DRAFT"), CustomerId = customer.Id, OperationalProjectId = project.Id, VendorId = unrelatedVendor.Id, Direction = ContractDirection.Downstream, Status = ContractStatus.Draft },
+            new Contract { ContractNumber = UniqueSlug("PO-CANCEL"), CustomerId = customer.Id, OperationalProjectId = project.Id, VendorId = unrelatedVendor.Id, Direction = ContractDirection.Downstream, Status = ContractStatus.Cancelled },
+            new Contract { ContractNumber = UniqueSlug("PO-UPSTREAM"), CustomerId = customer.Id, OperationalProjectId = project.Id, VendorId = unrelatedVendor.Id, Direction = ContractDirection.Upstream, Status = ContractStatus.Signed },
+            new Contract { ContractNumber = UniqueSlug("PO-NOVENDOR"), CustomerId = customer.Id, OperationalProjectId = project.Id, Direction = ContractDirection.Downstream, Status = ContractStatus.Signed },
         };
         var otherEligible = new[] { ContractStatus.InProgress, ContractStatus.OnHold, ContractStatus.Completed }.Select(status => new Contract
         {
             ContractNumber = UniqueSlug("PO-ELIGIBLE"),
             CustomerId = customer.Id,
+            OperationalProjectId = project.Id,
             VendorId = vendor.Id,
             OwnerUserId = procurement.Id,
             Direction = ContractDirection.Downstream,

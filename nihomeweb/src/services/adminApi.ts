@@ -1610,6 +1610,11 @@ export interface ContractPaymentMilestoneRequest {
   note?: string | null;
 }
 
+export interface UpdateContractPaymentScheduleRequest {
+  rowVersion: string;
+  paymentMilestones: ContractPaymentMilestoneRequest[];
+}
+
 export interface ContractListResponse {
   total: number;
   page: number;
@@ -6335,6 +6340,8 @@ export const adminApi = {
       `/contracts/${contractId}/milestones/${milestoneId}/status`,
       { status, actualPaymentDate, responsibleAccountantUserId, note, rowVersion },
     ),
+  updateContractPaymentSchedule: (contractId: number, body: UpdateContractPaymentScheduleRequest) =>
+    api.put<ContractResponse>(`/contracts/${contractId}/milestones`, body),
   listContractAppendices: (contractId: number) =>
     api.get<ContractAppendixResponse[]>(`/contracts/${contractId}/appendices`),
   createContractAppendix: (contractId: number, body: UpsertContractAppendixRequest) =>

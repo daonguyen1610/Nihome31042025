@@ -67,6 +67,10 @@ public interface IContractService
         int contractId, int milestoneId, PaymentMilestoneStatus newStatus, DateTime? actualPaymentDate,
         int? responsibleAccountantUserId, string? note, int callerUserId, bool canSeeAll,
         CancellationToken ct = default, string? rowVersion = null);
+
+    Task<ContractResponse?> UpdatePaymentScheduleAsync(
+        int contractId, UpdateContractPaymentScheduleRequest request,
+        int callerUserId, bool canSeeAll, CancellationToken ct = default);
 }
 
 /// <summary>Thrown when the caller submits a contract number that already

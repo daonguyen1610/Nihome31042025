@@ -3,6 +3,8 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Models;
+using NihomeBackend.Models.Rbac;
+using NihomeBackend.Services;
 
 namespace NihomeBackend.IntegrationTests.Controllers;
 
@@ -24,6 +26,173 @@ public sealed class FinanceControllerTests : IntegrationTestBase
         await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "SALE"));
         using var response = await SendAsync(HttpMethod.Post, "/api/finance/payment-requests", ValidPayment(1, 1, 1));
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task PaymentWorkflow_EnforcesOperationalProjectScope()
+    {
+        var fixture = await CreateFixtureAsync();
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "ACCOUNTANT"));
+        var existingPayment = await CreatePaymentAsync(fixture);
+        var suffix = Guid.NewGuid().ToString("N")[..8];
+        var phone = $"07{Random.Shared.Next(10000000, 99999999)}";
+        var scopedUser = await WithDbAsync(async db =>
+        {
+            var role = new Role
+            {
+                Code = $"FIN_SCOPE_{suffix}",
+                Name = $"Scoped finance {suffix}",
+                IsActive = true,
+                InitialPermissionsSeeded = true,
+            };
+            db.Roles.Add(role);
+            await db.SaveChangesAsync();
+            var permissionIds = await db.Permissions
+                .Where(permission =>
+                    (permission.Module == "finance.payments" &&
+                     (permission.Action == "view" || permission.Action == "manage")) ||
+                    (permission.Module == "crm.contracts" && permission.Action == "view"))
+                .Select(permission => permission.Id)
+                .ToListAsync();
+            db.RolePermissions.AddRange(permissionIds.Select(permissionId => new RolePermission
+            {
+                RoleId = role.Id,
+                PermissionId = permissionId,
+            }));
+            var user = new ApplicationUser
+            {
+                PhoneNumber = phone,
+                FullName = "Scoped finance tester",
+                Email = $"finance-scope-{suffix}@nihome.test",
+                Role = UserRole.USER,
+                RoleEntityId = role.Id,
+                IsActive = true,
+            };
+            user.PasswordHash = new PasswordService().Hash(user, TestDataSeeder.DefaultPassword);
+            db.Users.Add(user);
+            await db.SaveChangesAsync();
+            return (RoleId: role.Id, UserId: user.Id);
+        });
+        var milestoneId = await WithDbAsync(async db =>
+        {
+            var contract = await db.Contracts.SingleAsync(item => item.Id == fixture.ContractId);
+            contract.OwnerUserId = scopedUser.UserId;
+            var milestone = new ContractPaymentMilestone
+            {
+                ContractId = fixture.ContractId,
+                Order = 1,
+                Name = "Scoped supplier payment",
+                PercentValue = 100m,
+                Status = PaymentMilestoneStatus.Pending,
+            };
+            db.ContractPaymentMilestones.Add(milestone);
+            await db.SaveChangesAsync();
+            return milestone.Id;
+        });
+
+        try
+        {
+            await AuthTestHelper.AuthenticateAsync(
+                Client,
+                client => AuthTestHelper.LoginAsync(client, phone, TestDataSeeder.DefaultPassword));
+
+            var hiddenReferences = await ReadJsonAsync(await Client.GetAsync("/api/finance/payment-references"));
+            hiddenReferences.GetProperty("contracts").EnumerateArray()
+                .Should().NotContain(item => item.GetProperty("id").GetInt32() == fixture.ContractId);
+            var hiddenList = await ReadJsonAsync(await Client.GetAsync("/api/finance/payment-requests"));
+            hiddenList.EnumerateArray().Should().NotContain(item =>
+                item.GetProperty("id").GetInt32() == existingPayment.GetProperty("id").GetInt32());
+            using var rejectedCreate = await SendAsync(HttpMethod.Post, "/api/finance/payment-requests",
+                ValidPayment(fixture.ContractId, fixture.VendorId, fixture.AccountantId));
+            rejectedCreate.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            using var rejectedTransition = await SendAsync(
+                HttpMethod.Post,
+                $"/api/finance/payment-requests/{existingPayment.GetProperty("id").GetInt32()}/submit",
+                new { rowVersion = existingPayment.GetProperty("rowVersion").GetString() });
+            rejectedTransition.StatusCode.Should().Be(HttpStatusCode.NotFound);
+            var ownedContract = await ReadJsonAsync(await Client.GetAsync($"/api/contracts/{fixture.ContractId}"));
+            using var rejectedSchedule = await Client.PutAsJsonAsync(
+                $"/api/contracts/{fixture.ContractId}/milestones",
+                new
+                {
+                    rowVersion = ownedContract.GetProperty("rowVersion").GetString(),
+                    paymentMilestones = new[]
+                    {
+                        new
+                        {
+                            id = milestoneId,
+                            order = 1,
+                            name = "Unauthorized schedule change",
+                            percentValue = 100m,
+                            status = "Pending",
+                        },
+                    },
+                });
+            rejectedSchedule.StatusCode.Should().Be(HttpStatusCode.NotFound);
+            using var rejectedMilestoneStatus = await Client.PatchAsJsonAsync(
+                $"/api/contracts/{fixture.ContractId}/milestones/{milestoneId}/status",
+                new
+                {
+                    status = "Requested",
+                    responsibleAccountantUserId = fixture.AccountantId,
+                    rowVersion = ownedContract.GetProperty("rowVersion").GetString(),
+                });
+            rejectedMilestoneStatus.StatusCode.Should().Be(HttpStatusCode.NotFound);
+            var unchangedMilestone = await WithDbAsync(db => db.ContractPaymentMilestones.AsNoTracking()
+                .SingleAsync(item => item.Id == milestoneId));
+            unchangedMilestone.Name.Should().Be("Scoped supplier payment");
+            unchangedMilestone.Status.Should().Be(PaymentMilestoneStatus.Pending);
+
+            await WithDbAsync(async db =>
+            {
+                db.OperationalProjectMembers.Add(new OperationalProjectMember
+                {
+                    OperationalProjectId = fixture.ProjectId,
+                    UserId = scopedUser.UserId,
+                    Position = "Project accountant",
+                    StartedAt = DateTime.UtcNow,
+                    CreatedByUserId = scopedUser.UserId,
+                    UpdatedByUserId = scopedUser.UserId,
+                });
+                await db.SaveChangesAsync();
+            });
+
+            var visibleReferences = await ReadJsonAsync(await Client.GetAsync("/api/finance/payment-references"));
+            visibleReferences.GetProperty("contracts").EnumerateArray()
+                .Should().Contain(item => item.GetProperty("id").GetInt32() == fixture.ContractId);
+            var visibleList = await ReadJsonAsync(await Client.GetAsync("/api/finance/payment-requests"));
+            visibleList.EnumerateArray().Should().Contain(item =>
+                item.GetProperty("id").GetInt32() == existingPayment.GetProperty("id").GetInt32());
+            using var allowedUpdate = await SendAsync(
+                HttpMethod.Put,
+                $"/api/finance/payment-requests/{existingPayment.GetProperty("id").GetInt32()}",
+                new
+                {
+                    contractId = fixture.ContractId,
+                    vendorId = fixture.VendorId,
+                    supplierInvoiceNumber = "INV-2026-002",
+                    invoiceDate = "2026-08-01",
+                    invoiceAmount = 1000m,
+                    currency = "VND",
+                    receivedAt = new DateTime(2026, 8, 2, 1, 0, 0, DateTimeKind.Utc),
+                    assignedAccountantUserId = fixture.AccountantId,
+                    attachments = new[] { new { fileName = "invoice.pdf", filePath = "/files/finance/invoice.pdf" } },
+                    rowVersion = existingPayment.GetProperty("rowVersion").GetString(),
+                });
+            allowedUpdate.StatusCode.Should().Be(HttpStatusCode.OK, await allowedUpdate.Content.ReadAsStringAsync());
+        }
+        finally
+        {
+            await WithDbAsync(async db =>
+            {
+                db.OperationalProjectMembers.RemoveRange(db.OperationalProjectMembers
+                    .Where(member => member.UserId == scopedUser.UserId));
+                db.Users.RemoveRange(db.Users.Where(user => user.Id == scopedUser.UserId));
+                db.RolePermissions.RemoveRange(db.RolePermissions.Where(permission => permission.RoleId == scopedUser.RoleId));
+                db.Roles.RemoveRange(db.Roles.Where(role => role.Id == scopedUser.RoleId));
+                await db.SaveChangesAsync();
+            });
+        }
     }
 
     [Fact]
@@ -85,6 +254,72 @@ public sealed class FinanceControllerTests : IntegrationTestBase
         duplicate.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         (await WithDbAsync(db => db.PaymentRequests.CountAsync(item => item.VendorId == fixture.VendorId &&
             item.SupplierInvoiceNumber == "INV-2026-001"))).Should().Be(1);
+    }
+
+    [Fact]
+    public async Task CreatePayment_WithUpstreamContract_IsRejectedWithoutMutation()
+    {
+        var fixture = await CreateFixtureAsync();
+        var upstreamContractId = await WithDbAsync(async db =>
+        {
+            var project = await db.OperationalProjects.SingleAsync(item => item.Id == fixture.ProjectId);
+            var contract = new Contract
+            {
+                ContractNumber = $"HD-UP-{Guid.NewGuid():N}"[..20],
+                CustomerId = project.CustomerId,
+                OperationalProjectId = project.Id,
+                Direction = ContractDirection.Upstream,
+                Type = ContractType.DesignAndBuild,
+                Status = ContractStatus.Signed,
+                SignedDate = DateTime.UtcNow.Date,
+                Value = 500_000m,
+            };
+            db.Contracts.Add(contract);
+            await db.SaveChangesAsync();
+            return contract.Id;
+        });
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "ACCOUNTANT"));
+
+        using var response = await SendAsync(HttpMethod.Post, "/api/finance/payment-requests",
+            ValidPayment(upstreamContractId, fixture.VendorId, fixture.AccountantId));
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.PaymentRequests.CountAsync(item => item.ContractId == upstreamContractId)))
+            .Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Contract_WithPaymentRequest_CannotBeChangedToUpstream()
+    {
+        var fixture = await CreateFixtureAsync();
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "ACCOUNTANT"));
+        await CreatePaymentAsync(fixture);
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "SUPER_ADMIN"));
+        using var detailResponse = await Client.GetAsync($"/api/contracts/{fixture.ContractId}");
+        detailResponse.EnsureSuccessStatusCode();
+        var detail = await ReadJsonAsync(detailResponse);
+
+        using var update = await Client.PutAsJsonAsync($"/api/contracts/{fixture.ContractId}", new
+        {
+            contractNumber = detail.GetProperty("contractNumber").GetString(),
+            customerId = detail.GetProperty("customerId").GetInt32(),
+            operationalProjectId = fixture.ProjectId,
+            direction = "Upstream",
+            type = "DesignAndBuild",
+            status = detail.GetProperty("status").GetString(),
+            signedDate = detail.GetProperty("signedDate").GetDateTime(),
+            value = detail.GetProperty("value").GetDecimal(),
+            rowVersion = detail.GetProperty("rowVersion").GetString(),
+        });
+
+        update.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var persisted = await WithDbAsync(db => db.Contracts.AsNoTracking()
+            .SingleAsync(item => item.Id == fixture.ContractId));
+        persisted.Direction.Should().Be(ContractDirection.Downstream);
+        persisted.VendorId.Should().Be(fixture.VendorId);
+        persisted.OperationalProjectId.Should().Be(fixture.ProjectId);
+        (await WithDbAsync(db => db.PaymentRequests.CountAsync(item => item.ContractId == fixture.ContractId)))
+            .Should().Be(1);
     }
 
     [Fact]

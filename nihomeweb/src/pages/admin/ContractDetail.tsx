@@ -210,6 +210,22 @@ const hasScheduleChanges = (contract: ContractResponse, milestones: MilestoneDra
   });
 };
 
+const toMilestoneRequests = (milestones: MilestoneDraft[]): ContractPaymentMilestoneRequest[] =>
+  milestones.map((milestone, index) => ({
+    id: milestone.id ?? null,
+    order: index + 1,
+    name: milestone.name.trim(),
+    percentValue: milestone.percentValue,
+    dueDate: toIsoTimestamp(milestone.dueDate),
+    actualPaymentDate: milestone.status === "Paid"
+      ? toIsoTimestamp(milestone.actualPaymentDate)
+      : null,
+    status: milestone.status,
+    responsibleAccountantUserId: milestone.responsibleAccountantUserId,
+    requestedAt: milestone.requestedAt,
+    note: milestone.note.trim() || null,
+  }));
+
 // -------- header --------
 
 const AVAILABLE_TRANSITIONS: Record<ContractStatus, ContractStatus[]> = {
@@ -712,6 +728,10 @@ const isOverdue = (
 const ScheduleTab = ({ contract, canManage, onMilestoneStatus, onEditActualPaymentDate, busyMilestoneId }: ScheduleTabProps) => {
   const { t } = useI18n();
   const milestones = contract.paymentMilestones;
+  const upstream = contract.direction === "Upstream";
+  const statusLabel = (status: PaymentMilestoneStatus) => t(upstream
+    ? `contracts.collectionStatus.${status}`
+    : `contracts.milestoneStatus.${status}`);
 
   if (milestones.length === 0) {
     return (
@@ -746,10 +766,10 @@ const ScheduleTab = ({ contract, canManage, onMilestoneStatus, onEditActualPayme
                   </span>
                   <span>• {t("contracts.milestone.dueDate")}: {formatDate(m.dueDate)}</span>
                   {m.status === "Paid" ? (
-                    <span>• {t("contracts.milestone.actualPaymentDate")}: {formatDate(m.actualPaymentDate)}</span>
+                    <span>• {t(upstream ? "contracts.collection.actualDate" : "contracts.milestone.actualPaymentDate")}: {formatDate(m.actualPaymentDate)}</span>
                   ) : null}
                   <Badge className={cn("border", MILESTONE_STATUS_STYLES[m.status])}>
-                    {t(`contracts.milestoneStatus.${m.status}`)}
+                    {statusLabel(m.status)}
                   </Badge>
                   {overdue ? (
                     <Badge className="border border-rose-300 bg-rose-100 text-rose-700">
@@ -762,19 +782,19 @@ const ScheduleTab = ({ contract, canManage, onMilestoneStatus, onEditActualPayme
                 {m.status === "Pending" ? (
                   <Button size="sm" variant="outline" disabled={busy} onClick={() => onMilestoneStatus(m.id, "Requested")}>
                     {busy ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Send className="mr-1 h-3 w-3" />}
-                    {t("contracts.schedule.markRequested")}
+                    {t(upstream ? "contracts.collection.markRequested" : "contracts.schedule.markRequested")}
                   </Button>
                 ) : null}
                 {(m.status === "Pending" || m.status === "Requested") ? (
                   <Button size="sm" disabled={busy} onClick={() => onEditActualPaymentDate(m.id)}>
                     {busy ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <CheckCircle2 className="mr-1 h-3 w-3" />}
-                    {t("contracts.schedule.markPaid")}
+                    {t(upstream ? "contracts.collection.markCollected" : "contracts.schedule.markPaid")}
                   </Button>
                 ) : null}
                 {m.status === "Paid" ? (
                   <Button size="sm" variant="outline" disabled={busy} onClick={() => onEditActualPaymentDate(m.id, m.actualPaymentDate)}>
                     <Pencil className="mr-1 h-3 w-3" />
-                    {t("contracts.schedule.editActualPaymentDate")}
+                    {t(upstream ? "contracts.collection.editActualDate" : "contracts.schedule.editActualPaymentDate")}
                   </Button>
                 ) : null}
                 {m.status !== "Pending" ? (
@@ -793,11 +813,12 @@ const ScheduleTab = ({ contract, canManage, onMilestoneStatus, onEditActualPayme
 
 interface EditScheduleTabProps {
   value: number;
+  direction: ContractDirection;
   milestones: MilestoneDraft[];
   onChange: (milestones: MilestoneDraft[]) => void;
 }
 
-const EditScheduleTab = ({ value, milestones, onChange }: EditScheduleTabProps) => {
+const EditScheduleTab = ({ value, direction, milestones, onChange }: EditScheduleTabProps) => {
   const { t } = useI18n();
   const total = milestones.reduce((sum, milestone) => sum + milestone.percentValue, 0);
   const totalValid = milestones.length === 0 || Math.abs(total - 100) <= 0.01;
@@ -853,12 +874,16 @@ const EditScheduleTab = ({ value, milestones, onChange }: EditScheduleTabProps) 
               <div className="space-y-1.5">
                 <Label>{t("contracts.milestone.status")}</Label>
                 <div className="flex h-10 items-center">
-                  <Badge variant="outline">{t(`contracts.milestoneStatus.${milestone.status}`)}</Badge>
+                  <Badge variant="outline">{t(direction === "Upstream"
+                    ? `contracts.collectionStatus.${milestone.status}`
+                    : `contracts.milestoneStatus.${milestone.status}`)}</Badge>
                 </div>
               </div>
               {milestone.status === "Paid" ? (
                 <div className="space-y-1.5">
-                  <Label htmlFor={`milestone-actual-${index}`}>{t("contracts.milestone.actualPaymentDate")} *</Label>
+                  <Label htmlFor={`milestone-actual-${index}`}>{t(direction === "Upstream"
+                    ? "contracts.collection.actualDate"
+                    : "contracts.milestone.actualPaymentDate")} *</Label>
                   <Input
                     id={`milestone-actual-${index}`}
                     type="date"
@@ -1604,6 +1629,10 @@ const TimelineTab = ({ events }: { events: ContractTimelineEvent[] }) => {
 
 type TabId = "info" | "schedule" | "appendices" | "documents" | "timeline";
 
+const isContractTab = (value: string | null): value is TabId =>
+  value === "info" || value === "schedule" || value === "appendices" ||
+  value === "documents" || value === "timeline";
+
 type ContractDetailProps = {
   mode?: "all" | "upstream" | "downstream";
 };
@@ -1632,6 +1661,7 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
   const canManage = has(ADMIN_PERMS.contractsManage);
   const isFinanceWorkspace = mode !== "all";
   const canManageMaster = canManage && !isFinanceWorkspace;
+  const canManageMilestones = canManageMaster || has(ADMIN_PERMS.financePaymentsManage);
   const canDecideVo = has(ADMIN_PERMS.contractsViewAll) && !isFinanceWorkspace;
 
   const [contract, setContract] = useState<ContractResponse | null>(null);
@@ -1648,7 +1678,8 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
   const [timeline, setTimeline] = useState<ContractTimelineEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [tab, setTab] = useState<TabId>("info");
+  const requestedTab = searchParams.get("tab");
+  const [tab, setTab] = useState<TabId>(isContractTab(requestedTab) ? requestedTab : "info");
   const [transitionBusy, setTransitionBusy] = useState<ContractStatus | null>(null);
   const [busyMilestoneId, setBusyMilestoneId] = useState<number | null>(null);
   const [milestoneActionDraft, setMilestoneActionDraft] = useState<{
@@ -1662,6 +1693,10 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<ContractEditForm | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const [editingSchedule, setEditingSchedule] = useState(false);
+  const [scheduleDraft, setScheduleDraft] = useState<MilestoneDraft[]>([]);
+  const [scheduleError, setScheduleError] = useState<string | null>(null);
+  const [scheduleSaving, setScheduleSaving] = useState(false);
   const [customers, setCustomers] = useState<CustomerResponse[]>([]);
   const [projects, setProjects] = useState<OperationalProjectListItemResponse[]>([]);
   const [classification, setClassification] = useState<ContractClassificationOptions | null>(null);
@@ -1898,6 +1933,56 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
     setEditing(false);
   }, [contract]);
 
+  const beginScheduleEdit = useCallback(() => {
+    if (!contract) return;
+    setScheduleDraft(toEditForm(contract).milestones);
+    setScheduleError(null);
+    setEditingSchedule(true);
+    setTab("schedule");
+  }, [contract]);
+
+  const cancelScheduleEdit = useCallback(() => {
+    if (contract) setScheduleDraft(toEditForm(contract).milestones);
+    setScheduleError(null);
+    setEditingSchedule(false);
+  }, [contract]);
+
+  const saveSchedule = useCallback(async () => {
+    if (!contract) return;
+    setScheduleError(null);
+    const total = scheduleDraft.reduce((sum, milestone) => sum + milestone.percentValue, 0);
+    if (scheduleDraft.length > 0 && Math.abs(total - 100) > 0.01) {
+      setScheduleError(t("contracts.milestoneSumInvalid"));
+      return;
+    }
+    if (scheduleDraft.some((milestone) => !milestone.name.trim())) {
+      setScheduleError(t("contracts.milestoneNameRequired"));
+      return;
+    }
+    if (scheduleDraft.some((milestone) => milestone.status === "Paid" && !milestone.actualPaymentDate)) {
+      setScheduleError(t("contracts.milestoneActualPaymentDateRequired"));
+      return;
+    }
+    setScheduleSaving(true);
+    try {
+      const { data } = await adminApi.updateContractPaymentSchedule(contract.id, {
+        rowVersion: contract.rowVersion,
+        paymentMilestones: toMilestoneRequests(scheduleDraft),
+      });
+      setContract(data);
+      setForm(toEditForm(data));
+      setScheduleDraft(toEditForm(data).milestones);
+      setEditingSchedule(false);
+      toast({ title: t("form.updated") });
+      await refreshContract();
+    } catch (err) {
+      setScheduleError(getErrorMessage(err) ?? t("common.error"));
+      if (isConcurrencyConflict(err)) await refreshContract();
+    } finally {
+      setScheduleSaving(false);
+    }
+  }, [contract, refreshContract, scheduleDraft, t, toast]);
+
   const saveEdit = useCallback(async () => {
     if (!contract || !form) return;
     const effectiveDirection = scopedDirection ?? form.direction;
@@ -1945,20 +2030,7 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
       return;
     }
     const paymentMilestones: ContractPaymentMilestoneRequest[] | null = scheduleChanged
-      ? form.milestones.map((milestone, index) => ({
-          id: milestone.id ?? null,
-          order: index + 1,
-          name: milestone.name.trim(),
-          percentValue: milestone.percentValue,
-          dueDate: toIsoTimestamp(milestone.dueDate),
-          actualPaymentDate: milestone.status === "Paid"
-            ? toIsoTimestamp(milestone.actualPaymentDate)
-            : null,
-          status: milestone.status,
-          responsibleAccountantUserId: milestone.responsibleAccountantUserId,
-          requestedAt: milestone.requestedAt,
-          note: milestone.note.trim() || null,
-        }))
+      ? toMilestoneRequests(form.milestones)
       : null;
     const payload: UpsertContractRequest = {
       rowVersion: contract.rowVersion,
@@ -2061,7 +2133,9 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
             <TabsList className="inline-flex w-max min-w-full justify-start">
               <TabsTrigger value="info">{t("contracts.detail.tab.info")}</TabsTrigger>
               <TabsTrigger value="schedule">
-                {t("contracts.detail.tab.schedule")}
+                {t(contract.direction === "Upstream"
+                  ? "contracts.detail.tab.receivableSchedule"
+                  : "contracts.detail.tab.payableSchedule")}
                 {contract.paymentMilestones.length > 0 ? (
                   <span className="ml-1 text-xs text-slate-400">({contract.paymentMilestones.length})</span>
                 ) : null}
@@ -2110,17 +2184,39 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
           <TabsContent value="schedule" className="mt-4">
             {editing && form ? (
               <div className="space-y-3">
-                <EditScheduleTab value={form.value} milestones={form.milestones} onChange={(milestones) => setForm({ ...form, milestones })} />
+                <EditScheduleTab direction={contract.direction} value={form.value} milestones={form.milestones} onChange={(milestones) => setForm({ ...form, milestones })} />
                 {formError ? <p className="text-sm text-destructive">{formError}</p> : null}
               </div>
+            ) : editingSchedule ? (
+              <div className="space-y-3" data-testid="contract-finance-schedule-form">
+                <EditScheduleTab direction={contract.direction} value={contract.value} milestones={scheduleDraft} onChange={setScheduleDraft} />
+                {scheduleError ? <p className="text-sm text-destructive">{scheduleError}</p> : null}
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" disabled={scheduleSaving} onClick={cancelScheduleEdit}>{t("common.cancel")}</Button>
+                  <Button data-testid="contract-finance-schedule-save" disabled={scheduleSaving} onClick={() => void saveSchedule()}>
+                    {scheduleSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    {t("common.save")}
+                  </Button>
+                </div>
+              </div>
             ) : (
-              <ScheduleTab
-                contract={contract}
-                canManage={canManageMaster}
-                onMilestoneStatus={handleMilestoneStatus}
-                onEditActualPaymentDate={openPaidDateDialog}
-                busyMilestoneId={busyMilestoneId}
-              />
+              <div className="space-y-3">
+                {canManageMilestones ? (
+                  <div className="flex justify-end">
+                    <Button data-testid="contract-finance-schedule-edit" size="sm" variant="outline" onClick={beginScheduleEdit}>
+                      <Pencil className="mr-1 h-4 w-4" />
+                      {t("contracts.schedule.edit")}
+                    </Button>
+                  </div>
+                ) : null}
+                <ScheduleTab
+                  contract={contract}
+                  canManage={canManageMilestones}
+                  onMilestoneStatus={handleMilestoneStatus}
+                  onEditActualPaymentDate={openPaidDateDialog}
+                  busyMilestoneId={busyMilestoneId}
+                />
+              </div>
             )}
           </TabsContent>
           <TabsContent value="appendices" className="mt-4">
@@ -2149,8 +2245,12 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
         <Dialog open={milestoneActionDraft !== null} onOpenChange={(open) => (!open ? setMilestoneActionDraft(null) : null)}>
           <DialogContent className="w-[95vw] max-w-md">
             <DialogHeader>
-              <DialogTitle>{milestoneActionDraft?.status === "Paid" ? t("contracts.schedule.paidDateDialogTitle") : t("contracts.schedule.requestDialogTitle")}</DialogTitle>
-              <DialogDescription>{t("contracts.schedule.paidDateDialogDescription")}</DialogDescription>
+              <DialogTitle>{milestoneActionDraft?.status === "Paid"
+                ? t(contract.direction === "Upstream" ? "contracts.collection.dateDialogTitle" : "contracts.schedule.paidDateDialogTitle")
+                : t(contract.direction === "Upstream" ? "contracts.collection.requestDialogTitle" : "contracts.schedule.requestDialogTitle")}</DialogTitle>
+              <DialogDescription>{t(contract.direction === "Upstream"
+                ? "contracts.collection.dateDialogDescription"
+                : "contracts.schedule.paidDateDialogDescription")}</DialogDescription>
             </DialogHeader>
             <div className="space-y-3 py-2">
               <div className="space-y-1.5">
@@ -2171,7 +2271,7 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
               </div>
               {milestoneActionDraft?.status === "Paid" && <div className="space-y-1.5">
               <Label htmlFor="contract-actual-payment-date">
-                {t("contracts.milestone.actualPaymentDate")} *
+                {t(contract.direction === "Upstream" ? "contracts.collection.actualDate" : "contracts.milestone.actualPaymentDate")} *
               </Label>
               <Input
                 id="contract-actual-payment-date"
@@ -2197,7 +2297,9 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
                 onClick={() => void confirmPaidDate()}
               >
                 {busyMilestoneId !== null ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : null}
-                {t("contracts.schedule.confirmPaid")}
+                {t(contract.direction === "Upstream"
+                  ? "contracts.collection.confirm"
+                  : "contracts.schedule.confirmPaid")}
               </Button>
             </DialogFooter>
           </DialogContent>
