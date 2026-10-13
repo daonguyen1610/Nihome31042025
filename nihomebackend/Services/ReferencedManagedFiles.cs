@@ -153,15 +153,11 @@ public static class ReferencedManagedFiles
     {
         if (string.IsNullOrWhiteSpace(json)) return;
 
-        try
-        {
-            using var document = JsonDocument.Parse(json);
-            WalkElement(document.RootElement, addIfManaged);
-        }
-        catch (JsonException)
-        {
-            // Malformed legacy JSON must not abort cleanup of unrelated files.
-        }
+        // Fail the complete reference scan when active JSON is malformed.
+        // Cleanup resolves every reference before touching the filesystem, so
+        // an unverifiable record can never cause a still-used file to be lost.
+        using var document = JsonDocument.Parse(json);
+        WalkElement(document.RootElement, addIfManaged);
     }
 
     private static void WalkElement(JsonElement element, Action<string?> addIfManaged)
