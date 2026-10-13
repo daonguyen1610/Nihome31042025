@@ -124,9 +124,9 @@ const matrix: RoleExpectation[] = [
     allowed: ["/admin", "/admin/notifications", "/admin/leads", "/admin/customers", "/admin/opportunities", "/admin/quotes", "/admin/material-rates", "/admin/capability-documents", "/admin/tenders", "/admin/surveys", "/admin/contracts", "/admin/finance/contracts", "/admin/finance/input-contracts", "/admin/operational-projects", "/admin/work-packages", "/admin/kpi", "/admin/kpi/configuration", "/admin/contacts", "/admin/recruitment", "/admin/master-data", "/admin/workflows"],
   },
   {
-    // DESIGN: content.** + processes.view + dashboard.view + design.projects.view
-    // (manage-only routes like /admin/email-templates stay denied because
-    // they require *.manage).
+    // DESIGN: Design Manager baseline, including downstream-contract, vendor,
+    // and RFQ access needed to coordinate design subcontractors. Unrelated
+    // CRM sales and procurement execution routes remain denied.
     user: TEST_USERS.design,
     allowed: [
       "/admin",
@@ -146,6 +146,10 @@ const matrix: RoleExpectation[] = [
       "/admin/master-data",
       "/admin/workflows",
       "/admin/processes/general",
+      "/admin/contracts",
+      "/admin/finance/input-contracts",
+      "/admin/vendors",
+      "/admin/procurement-control/rfqs",
       "/admin/design-projects",
       "/admin/operational-projects",
       "/admin/work-packages",

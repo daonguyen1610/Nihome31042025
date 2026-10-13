@@ -84,7 +84,7 @@ test.describe("Business role access verification", () => {
     expect(jsErrors).toHaveLength(0);
   });
 
-  test("DESIGN user can access design-related pages but not CRM", async ({
+  test("DESIGN user can access design and subcontractor pages but not CRM sales", async ({
     page,
     loginInBrowserAs,
   }) => {
@@ -97,12 +97,20 @@ test.describe("Business role access verification", () => {
     await page.goto("/admin");
     await expect(page.locator("text=/^403$/").first()).toHaveCount(0);
 
-    // DESIGN should be DENIED on CRM contracts
+    // DESIGN coordinates design subcontractors and may read contracts.
     await loginInBrowserAs(page, TEST_USERS.design);
     await page.goto("/admin/contracts");
     await expect(
       page.locator("text=/^403$/").first(),
-      "DESIGN should not access contracts",
+      "DESIGN should access contracts",
+    ).toHaveCount(0);
+
+    // Contract access does not grant access to the CRM sales pipeline.
+    await loginInBrowserAs(page, TEST_USERS.design);
+    await page.goto("/admin/leads");
+    await expect(
+      page.locator("text=/^403$/").first(),
+      "DESIGN should not access CRM leads",
     ).toBeVisible();
 
     // DESIGN should be DENIED on user management

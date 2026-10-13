@@ -136,7 +136,7 @@ test("project viewer without Contract permission sees a non-clickable Contract n
   loginInBrowserAs,
   baseURL,
 }) => {
-  await loginInBrowserAs(page, TEST_USERS.design);
+  await loginInBrowserAs(page, TEST_USERS.architect);
   await page.route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}$`), route =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(detail) }));
   await page.route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/timeline$`), route =>
