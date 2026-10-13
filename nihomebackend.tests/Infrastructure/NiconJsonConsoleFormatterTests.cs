@@ -52,6 +52,9 @@ public sealed class NiconJsonConsoleFormatterTests
         Assert.Equal("NihomeBackend", logProperties.GetProperty("app_name").GetString());
         Assert.Equal("request-123", logProperties.GetProperty("correlation_id").GetString());
         Assert.Equal("api_request", logProperties.GetProperty("message_type").GetString());
+        Assert.Contains("date=\\\"2026-10-13T08:30:00.0000000+00:00\\\"", line);
+        Assert.DoesNotContain("\\u0022", line, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("\\u002B", line, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -72,6 +75,26 @@ public sealed class NiconJsonConsoleFormatterTests
         Assert.Equal("Microsoft.Hosting.Lifetime", document.RootElement.GetProperty("logger").GetString());
         Assert.Equal("DEBUG", document.RootElement.GetProperty("severity").GetString());
         Assert.Contains("InvalidOperationException: invalid configuration", document.RootElement.GetProperty("message").GetString());
+    }
+
+    [Fact]
+    public void FormatLogLine_KeepsPrintablePunctuationReadable()
+    {
+        var line = NiconJsonConsoleFormatter.FormatLogLine(
+            "Microsoft.EntityFrameworkCore.Query",
+            LogLevel.Warning,
+            "The query uses the 'First' operator and offset +07:00.",
+            exception: null,
+            new Dictionary<string, object?>(),
+            Options,
+            DateTimeOffset.UnixEpoch,
+            processId: 1,
+            threadName: ".NET TP Worker");
+
+        Assert.Contains("the 'First' operator and offset +07:00", line, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("\\u0027", line, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("\\u002B", line, StringComparison.OrdinalIgnoreCase);
+        JsonDocument.Parse(line).Dispose();
     }
 
     [Fact]
