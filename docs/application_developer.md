@@ -2732,6 +2732,21 @@ cd nihomeweb
 npm run lint
 ```
 
+Translation keys:
+
+```bash
+python tools/translation_keys/check_translation_keys.py
+python -m unittest discover -s tools/translation_keys -p "test_*.py"
+```
+
+The checker scans frontend/backend literal keys, dynamic key families and keys
+derived from notification, master-data and RBAC seeds. It also verifies that
+every seed row has Vietnamese, English, Chinese and Japanese values. Missing
+keys are printed in a summary and detail table and return exit code `1`;
+repository/read errors return `2`. The CI `translations (missing keys)` job
+publishes the Markdown table to the GitHub Job Summary before enforcing the
+exit code, so a failed check retains the complete actionable list.
+
 ### 9.6 Quality Check Summary
 
 | Check              | Command                              |
@@ -2743,6 +2758,7 @@ npm run lint
 | Browser E2E tests  | `cd nihomeweb && BASE_URL=http://localhost:5043 npx playwright test` |
 | Backend lint       | `docker exec nihome31042025-backend dotnet format --verify-no-changes` |
 | Frontend lint      | `cd nihomeweb && npm run lint`       |
+| Translation keys  | `python tools/translation_keys/check_translation_keys.py` |
 | Docker full build  | `docker compose up --build`          |
 
 ---

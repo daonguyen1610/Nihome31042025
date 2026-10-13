@@ -1174,5 +1174,125 @@
     "en": "Interior",
     "zh": "室内",
     "ja": "インテリア"
+  },
+  {
+    "key": "masterData.category.construction_type.title",
+    "category": "masterData",
+    "vi": "Loại công trình",
+    "en": "Construction type",
+    "zh": "工程类型",
+    "ja": "工事種別"
+  },
+  {
+    "key": "masterData.construction_type.residential.label",
+    "category": "masterData",
+    "vi": "Nhà ở dân dụng",
+    "en": "Residential",
+    "zh": "住宅",
+    "ja": "住宅"
+  },
+  {
+    "key": "masterData.construction_type.commercial.label",
+    "category": "masterData",
+    "vi": "Thương mại",
+    "en": "Commercial",
+    "zh": "商业",
+    "ja": "商業"
+  },
+  {
+    "key": "masterData.construction_type.industrial.label",
+    "category": "masterData",
+    "vi": "Công nghiệp",
+    "en": "Industrial",
+    "zh": "工业",
+    "ja": "工業"
+  },
+  {
+    "key": "masterData.construction_type.mixed-use.label",
+    "category": "masterData",
+    "vi": "Hỗn hợp",
+    "en": "Mixed-use",
+    "zh": "综合用途",
+    "ja": "複合用途"
+  },
+  {
+    "key": "masterData.construction_type.renovation.label",
+    "category": "masterData",
+    "vi": "Cải tạo / Nâng cấp",
+    "en": "Renovation / Upgrade",
+    "zh": "改造 / 升级",
+    "ja": "改修 / アップグレード"
+  },
+  {
+    "key": "masterData.construction_type.interior.label",
+    "category": "masterData",
+    "vi": "Nội thất",
+    "en": "Interior",
+    "zh": "室内装修",
+    "ja": "内装"
+  },
+  {
+    "key": "masterData.construction_type.infrastructure.label",
+    "category": "masterData",
+    "vi": "Hạ tầng",
+    "en": "Infrastructure",
+    "zh": "基础设施",
+    "ja": "インフラ"
+  },
+  {
+    "key": "masterData.category.diary_weather.title",
+    "category": "masterData",
+    "vi": "Thời tiết nhật ký",
+    "en": "Diary weather",
+    "zh": "日志天气",
+    "ja": "日誌の天候"
+  },
+  {
+    "key": "masterData.diary_weather.sunny.label",
+    "category": "masterData",
+    "vi": "Nắng",
+    "en": "Sunny",
+    "zh": "晴",
+    "ja": "晴れ"
+  },
+  {
+    "key": "masterData.diary_weather.partly-cloudy.label",
+    "category": "masterData",
+    "vi": "Nắng nhẹ / Có mây",
+    "en": "Partly cloudy",
+    "zh": "局部多云",
+    "ja": "晴れ時々曇り"
+  },
+  {
+    "key": "masterData.diary_weather.cloudy.label",
+    "category": "masterData",
+    "vi": "Nhiều mây",
+    "en": "Cloudy",
+    "zh": "多云",
+    "ja": "曇り"
+  },
+  {
+    "key": "masterData.diary_weather.rain.label",
+    "category": "masterData",
+    "vi": "Mưa",
+    "en": "Rain",
+    "zh": "雨",
+    "ja": "雨"
+  },
+  {
+    "key": "masterData.diary_weather.heavy-rain.label",
+    "category": "masterData",
+    "vi": "Mưa lớn",
+    "en": "Heavy rain",
+    "zh": "大雨",
+    "ja": "大雨"
+  },
+  {
+    "key": "masterData.diary_weather.storm.label",
+    "category": "masterData",
+    "vi": "Giông bão",
+    "en": "Storm",
+    "zh": "雷暴",
+    "ja": "嵐"
   }
 ]

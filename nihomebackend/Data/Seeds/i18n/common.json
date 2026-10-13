@@ -1246,5 +1246,37 @@
     "en": "Next",
     "zh": "下一页",
     "ja": "次へ"
+  },
+  {
+    "key": "common.deleted",
+    "category": "common",
+    "vi": "Đã xóa",
+    "en": "Deleted",
+    "zh": "已删除",
+    "ja": "削除済み"
+  },
+  {
+    "key": "common.tryAgain",
+    "category": "common",
+    "vi": "Thử lại",
+    "en": "Try again",
+    "zh": "重试",
+    "ja": "再試行"
+  },
+  {
+    "key": "form.saving",
+    "category": "common",
+    "vi": "Đang lưu...",
+    "en": "Saving...",
+    "zh": "正在保存...",
+    "ja": "保存中..."
+  },
+  {
+    "key": "media.gallery.label",
+    "category": "common",
+    "vi": "Thư viện ảnh",
+    "en": "Media gallery",
+    "zh": "媒体库",
+    "ja": "メディアギャラリー"
   }
 ]
