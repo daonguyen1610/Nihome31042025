@@ -113,6 +113,30 @@ public sealed class ReferencedManagedFilesTests : IDisposable
     }
 
     [Fact]
+    public async Task GetAsync_ProtectsManagedLogoAndSlideshowLinks()
+    {
+        _db.ClientLogos.Add(new ClientLogo
+        {
+            Name = "Nicon partner portal",
+            ImageUrl = "/images/upload/logos/nicon.png",
+            Href = "/files/partners/nicon-profile.pdf",
+        });
+        _db.SlideshowItems.Add(new SlideshowItem
+        {
+            Slug = "company-profile",
+            ImageUrl = "/images/upload/slideshow/company-profile.jpg",
+            Title = "Company profile",
+            LinkUrl = "/files/company/nicon-profile.pdf",
+        });
+        await _db.SaveChangesAsync();
+
+        var referenced = await ReferencedManagedFiles.GetAsync(_db);
+
+        Assert.Contains("/files/partners/nicon-profile.pdf", referenced);
+        Assert.Contains("/files/company/nicon-profile.pdf", referenced);
+    }
+
+    [Fact]
     public async Task GetAsync_IgnoresUnmanagedStringsAndTextContent()
     {
         _db.ServiceItems.Add(new ServiceItem

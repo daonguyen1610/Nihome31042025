@@ -93,8 +93,23 @@ public static class ReferencedManagedFiles
             WalkJson(item.ContentJson, AddIfManaged);
         }
 
-        await AddValuesAsync(db.ClientLogos.Select(x => x.ImageUrl));
-        await AddValuesAsync(db.SlideshowItems.Select(x => x.ImageUrl));
+        var logos = await db.ClientLogos.AsNoTracking()
+            .Select(x => new { x.ImageUrl, x.Href })
+            .ToListAsync(cancellationToken);
+        foreach (var item in logos)
+        {
+            AddIfManaged(item.ImageUrl);
+            AddIfManaged(item.Href);
+        }
+
+        var slideshowItems = await db.SlideshowItems.AsNoTracking()
+            .Select(x => new { x.ImageUrl, x.LinkUrl })
+            .ToListAsync(cancellationToken);
+        foreach (var item in slideshowItems)
+        {
+            AddIfManaged(item.ImageUrl);
+            AddIfManaged(item.LinkUrl);
+        }
 
         var aboutSections = await db.AboutSectionContents.AsNoTracking()
             .Select(x => new { x.ImageUrl, x.ItemsJson })
@@ -177,4 +192,15 @@ public static class ReferencedManagedFiles
                 break;
         }
     }
+}
+
+public interface IManagedFileReferenceProvider
+{
+    Task<HashSet<string>> GetAsync(CancellationToken cancellationToken = default);
+}
+
+public sealed class ManagedFileReferenceProvider(AppDbContext db) : IManagedFileReferenceProvider
+{
+    public Task<HashSet<string>> GetAsync(CancellationToken cancellationToken = default) =>
+        ReferencedManagedFiles.GetAsync(db, cancellationToken);
 }
