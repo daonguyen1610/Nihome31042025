@@ -151,18 +151,78 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
         label: t("nav.crm"),
         icon: UserPlus,
         items: [
-          { to: "/admin/operational-projects", label: t("nav.operationalProjects"), icon: BriefcaseBusiness, permission: ADMIN_PERMS.operationalProjects },
-          { to: "/admin/opportunities", label: t("nav.opportunities"), icon: Target, permission: ADMIN_PERMS.opportunities },
-          { to: "/admin/contracts", label: t("nav.contracts"), icon: FileText, permission: ADMIN_PERMS.contracts },
-          { to: "/admin/work-packages", label: t("nav.workPackages"), icon: ClipboardList, permission: ADMIN_PERMS.workPackages },
-          { to: "/admin/leads", label: t("nav.leads"), icon: UserPlus, permission: ADMIN_PERMS.leads },
-          { to: "/admin/customers", label: t("nav.customers"), icon: UserRound, permission: ADMIN_PERMS.customers },
-          { to: "/admin/quotes", label: t("nav.quotes"), icon: FileSpreadsheet, permission: ADMIN_PERMS.quotes },
-          { to: "/admin/material-rates", label: t("nav.materialRates"), icon: Database, permission: ADMIN_PERMS.materialRates },
-          { to: "/admin/tenders", label: t("nav.tenders"), icon: Briefcase, permission: ADMIN_PERMS.tenders },
-          { to: "/admin/capability-documents", label: t("nav.capabilityDocs"), icon: FolderTree, permission: ADMIN_PERMS.capabilityDocs },
-          { to: "/admin/surveys", label: t("nav.surveys"), icon: ClipboardList, permission: ADMIN_PERMS.surveys },
-          { to: "/admin/reports/projects", label: t("nav.projectReports"), icon: ChartNoAxesCombined, permission: ADMIN_PERMS.projectReports },
+          {
+            to: "/admin/operational-projects",
+            label: t("nav.operationalProjects"),
+            icon: BriefcaseBusiness,
+            permission: ADMIN_PERMS.operationalProjects,
+          },
+          {
+            to: "/admin/opportunities",
+            label: t("nav.opportunities"),
+            icon: Target,
+            permission: ADMIN_PERMS.opportunities,
+          },
+          {
+            to: "/admin/contracts",
+            label: t("nav.contracts"),
+            icon: FileText,
+            permission: ADMIN_PERMS.contracts,
+          },
+          {
+            to: "/admin/work-packages",
+            label: t("nav.workPackages"),
+            icon: ClipboardList,
+            permission: ADMIN_PERMS.workPackages,
+          },
+          {
+            to: "/admin/leads",
+            label: t("nav.leads"),
+            icon: UserPlus,
+            permission: ADMIN_PERMS.leads,
+          },
+          {
+            to: "/admin/customers",
+            label: t("nav.customers"),
+            icon: UserRound,
+            permission: ADMIN_PERMS.customers,
+          },
+          {
+            to: "/admin/quotes",
+            label: t("nav.quotes"),
+            icon: FileSpreadsheet,
+            permission: ADMIN_PERMS.quotes,
+          },
+          {
+            to: "/admin/material-rates",
+            label: t("nav.materialRates"),
+            icon: Database,
+            permission: ADMIN_PERMS.materialRates,
+          },
+          {
+            to: "/admin/tenders",
+            label: t("nav.tenders"),
+            icon: Briefcase,
+            permission: ADMIN_PERMS.tenders,
+          },
+          {
+            to: "/admin/capability-documents",
+            label: t("nav.capabilityDocs"),
+            icon: FolderTree,
+            permission: ADMIN_PERMS.capabilityDocs,
+          },
+          {
+            to: "/admin/surveys",
+            label: t("nav.surveys"),
+            icon: ClipboardList,
+            permission: ADMIN_PERMS.surveys,
+          },
+          {
+            to: "/admin/reports/projects",
+            label: t("nav.projectReports"),
+            icon: ChartNoAxesCombined,
+            permission: ADMIN_PERMS.projectReports,
+          },
         ],
       },
       {
@@ -170,7 +230,12 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
         label: t("nav.design"),
         icon: PenTool,
         items: [
-          { to: "/admin/design-projects", label: t("nav.designProjects"), icon: PenTool, permission: ADMIN_PERMS.designProjects },
+          {
+            to: "/admin/design-projects",
+            label: t("nav.designProjects"),
+            icon: PenTool,
+            permission: ADMIN_PERMS.designProjects,
+          },
         ],
       },
       {
@@ -178,9 +243,29 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
         label: t("nav.procurement"),
         icon: Truck,
         items: [
-          { to: "/admin/procurement-control/rfqs", label: t("rfq.title"), icon: ShoppingCart, permission: "proc.rfqs.view" },
-          { to: "/admin/procurement-control", label: t("nav.procurementControl"), icon: ShoppingCart, permission: [ADMIN_PERMS.procurement, ADMIN_PERMS.procurementMaterialRequests, ADMIN_PERMS.procurementWarehouse, ADMIN_PERMS.procurementMaterialAlerts] },
-          { to: "/admin/vendors", label: t("nav.vendors"), icon: Truck, permission: ADMIN_PERMS.vendors },
+          {
+            to: "/admin/procurement-control/rfqs",
+            label: t("rfq.title"),
+            icon: ShoppingCart,
+            permission: "proc.rfqs.view",
+          },
+          {
+            to: "/admin/procurement-control",
+            label: t("nav.procurementControl"),
+            icon: ShoppingCart,
+            permission: [
+              ADMIN_PERMS.procurement,
+              ADMIN_PERMS.procurementMaterialRequests,
+              ADMIN_PERMS.procurementWarehouse,
+              ADMIN_PERMS.procurementMaterialAlerts,
+            ],
+          },
+          {
+            to: "/admin/vendors",
+            label: t("nav.vendors"),
+            icon: Truck,
+            permission: ADMIN_PERMS.vendors,
+          },
         ],
       },
       {
@@ -188,9 +273,28 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
         label: t("nav.finance"),
         icon: Landmark,
         items: [
-          { to: "/admin/finance/contracts", label: t("nav.primaryContracts"), icon: FileText, permission: [ADMIN_PERMS.contractsViewAll, ADMIN_PERMS.contractsViewUpstreamAll] },
-          { to: "/admin/finance/input-contracts", label: t("nav.inputContracts"), icon: FileText, permission: [ADMIN_PERMS.contractsViewAll, ADMIN_PERMS.contractsViewDownstreamAll] },
-          { to: "/admin/finance-control", label: t("nav.financeControl"), icon: Landmark, permission: [ADMIN_PERMS.financePayments, ADMIN_PERMS.financePeriods, ADMIN_PERMS.financeCorrections] },
+          {
+            to: "/admin/finance/contracts",
+            label: t("nav.primaryContracts"),
+            icon: FileText,
+            permission: [ADMIN_PERMS.contractsViewAll, ADMIN_PERMS.contractsViewUpstreamAll],
+          },
+          {
+            to: "/admin/finance/input-contracts",
+            label: t("nav.inputContracts"),
+            icon: FileText,
+            permission: [ADMIN_PERMS.contractsViewAll, ADMIN_PERMS.contractsViewDownstreamAll],
+          },
+          {
+            to: "/admin/finance-control",
+            label: t("nav.financeControl"),
+            icon: Landmark,
+            permission: [
+              ADMIN_PERMS.financePayments,
+              ADMIN_PERMS.financePeriods,
+              ADMIN_PERMS.financeCorrections,
+            ],
+          },
         ],
       },
       {
@@ -198,7 +302,12 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
         label: t("nav.permits"),
         icon: Scale,
         items: [
-          { to: "/admin/permits", label: t("nav.permits"), icon: Scale, permission: ADMIN_PERMS.permits },
+          {
+            to: "/admin/permits",
+            label: t("nav.permits"),
+            icon: Scale,
+            permission: ADMIN_PERMS.permits,
+          },
         ],
       },
       {
@@ -206,14 +315,54 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
         label: t("nav.construction"),
         icon: HardHat,
         items: [
-          { to: "/admin/construction/tasks", label: t("nav.constructionTasks"), icon: HardHat, permission: ADMIN_PERMS.constructionTasks },
-          { to: "/admin/construction/diary", label: t("nav.constructionDiary"), icon: ClipboardList, permission: ADMIN_PERMS.constructionDiary },
-          { to: "/admin/construction/punchlist", label: t("nav.constructionPunch"), icon: ShieldAlert, permission: ADMIN_PERMS.constructionPunch },
-          { to: "/admin/construction/hse", label: t("nav.constructionHse"), icon: ShieldCheck, permission: ADMIN_PERMS.constructionHse },
-          { to: "/admin/construction/acceptance", label: t("nav.constructionAcceptance"), icon: ClipboardCheck, permission: ADMIN_PERMS.constructionAcceptance },
-          { to: "/admin/construction/asbuilt", label: t("nav.constructionAsBuilt"), icon: FolderArchive, permission: ADMIN_PERMS.constructionAsBuilt },
-          { to: "/admin/construction/asbuilt-categories", label: t("nav.constructionAsBuiltCategories"), icon: FolderTree, permission: ADMIN_PERMS.constructionAsBuiltCategories },
-          { to: "/admin/construction/handover", label: t("nav.constructionHandover"), icon: PackageCheck, permission: ADMIN_PERMS.constructionHandover },
+          {
+            to: "/admin/construction/tasks",
+            label: t("nav.constructionTasks"),
+            icon: HardHat,
+            permission: ADMIN_PERMS.constructionTasks,
+          },
+          {
+            to: "/admin/construction/diary",
+            label: t("nav.constructionDiary"),
+            icon: ClipboardList,
+            permission: ADMIN_PERMS.constructionDiary,
+          },
+          {
+            to: "/admin/construction/punchlist",
+            label: t("nav.constructionPunch"),
+            icon: ShieldAlert,
+            permission: ADMIN_PERMS.constructionPunch,
+          },
+          {
+            to: "/admin/construction/hse",
+            label: t("nav.constructionHse"),
+            icon: ShieldCheck,
+            permission: ADMIN_PERMS.constructionHse,
+          },
+          {
+            to: "/admin/construction/acceptance",
+            label: t("nav.constructionAcceptance"),
+            icon: ClipboardCheck,
+            permission: ADMIN_PERMS.constructionAcceptance,
+          },
+          {
+            to: "/admin/construction/asbuilt",
+            label: t("nav.constructionAsBuilt"),
+            icon: FolderArchive,
+            permission: ADMIN_PERMS.constructionAsBuilt,
+          },
+          {
+            to: "/admin/construction/asbuilt-categories",
+            label: t("nav.constructionAsBuiltCategories"),
+            icon: FolderTree,
+            permission: ADMIN_PERMS.constructionAsBuiltCategories,
+          },
+          {
+            to: "/admin/construction/handover",
+            label: t("nav.constructionHandover"),
+            icon: PackageCheck,
+            permission: ADMIN_PERMS.constructionHandover,
+          },
         ],
       },
       {
@@ -221,8 +370,19 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
         label: t("nav.analytics"),
         icon: ChartNoAxesCombined,
         items: [
-          { to: "/admin/kpi", label: t("nav.kpi"), icon: ChartNoAxesCombined, permission: ADMIN_PERMS.kpi, end: true },
-          { to: "/admin/kpi/configuration", label: t("nav.kpiConfiguration"), icon: SlidersHorizontal, permission: ADMIN_PERMS.kpiManage },
+          {
+            to: "/admin/kpi",
+            label: t("nav.kpi"),
+            icon: ChartNoAxesCombined,
+            permission: ADMIN_PERMS.kpi,
+            end: true,
+          },
+          {
+            to: "/admin/kpi/configuration",
+            label: t("nav.kpiConfiguration"),
+            icon: SlidersHorizontal,
+            permission: ADMIN_PERMS.kpiManage,
+          },
         ],
       },
       {
@@ -230,13 +390,48 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
         label: t("nav.content"),
         icon: FileText,
         items: [
-          { to: "/admin/activities", label: t("nav.activities"), icon: FileText, permission: ADMIN_PERMS.activities },
-          { to: "/admin/news", label: t("nav.news"), icon: Newspaper, permission: ADMIN_PERMS.news },
-          { to: "/admin/projects", label: t("nav.projects"), icon: Building2, permission: ADMIN_PERMS.projects },
-          { to: "/admin/services", label: t("nav.services"), icon: ConciergeBell, permission: ADMIN_PERMS.services },
-          { to: "/admin/recruitment", label: t("nav.recruitment"), icon: Briefcase, permission: ADMIN_PERMS.recruitment },
-          { to: "/admin/contacts", label: t("nav.contacts"), icon: Inbox, permission: ADMIN_PERMS.contacts },
-          { to: "/admin/categories", label: t("nav.categories"), icon: FolderTree, permission: ADMIN_PERMS.categories },
+          {
+            to: "/admin/activities",
+            label: t("nav.activities"),
+            icon: FileText,
+            permission: ADMIN_PERMS.activities,
+          },
+          {
+            to: "/admin/news",
+            label: t("nav.news"),
+            icon: Newspaper,
+            permission: ADMIN_PERMS.news,
+          },
+          {
+            to: "/admin/projects",
+            label: t("nav.projects"),
+            icon: Building2,
+            permission: ADMIN_PERMS.projects,
+          },
+          {
+            to: "/admin/services",
+            label: t("nav.services"),
+            icon: ConciergeBell,
+            permission: ADMIN_PERMS.services,
+          },
+          {
+            to: "/admin/recruitment",
+            label: t("nav.recruitment"),
+            icon: Briefcase,
+            permission: ADMIN_PERMS.recruitment,
+          },
+          {
+            to: "/admin/contacts",
+            label: t("nav.contacts"),
+            icon: Inbox,
+            permission: ADMIN_PERMS.contacts,
+          },
+          {
+            to: "/admin/categories",
+            label: t("nav.categories"),
+            icon: FolderTree,
+            permission: ADMIN_PERMS.categories,
+          },
         ],
       },
       {
@@ -244,10 +439,30 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
         label: t("nav.branding"),
         icon: ImageIcon,
         items: [
-          { to: "/admin/clients", label: t("nav.clients"), icon: Handshake, permission: ADMIN_PERMS.logos },
-          { to: "/admin/partners", label: t("nav.partners"), icon: Building, permission: ADMIN_PERMS.logos },
-          { to: "/admin/suppliers", label: t("nav.suppliers"), icon: Truck, permission: ADMIN_PERMS.logos },
-          { to: "/admin/awards", label: t("nav.awards"), icon: Award, permission: ADMIN_PERMS.logos },
+          {
+            to: "/admin/clients",
+            label: t("nav.clients"),
+            icon: Handshake,
+            permission: ADMIN_PERMS.logos,
+          },
+          {
+            to: "/admin/partners",
+            label: t("nav.partners"),
+            icon: Building,
+            permission: ADMIN_PERMS.logos,
+          },
+          {
+            to: "/admin/suppliers",
+            label: t("nav.suppliers"),
+            icon: Truck,
+            permission: ADMIN_PERMS.logos,
+          },
+          {
+            to: "/admin/awards",
+            label: t("nav.awards"),
+            icon: Award,
+            permission: ADMIN_PERMS.logos,
+          },
           { to: "/admin/about", label: t("nav.about"), icon: Info, permission: ADMIN_PERMS.about },
         ],
       },
@@ -256,14 +471,54 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
         label: t("nav.processes"),
         icon: Workflow,
         items: [
-          { to: "/admin/processes/general", label: t("proc.general"), icon: FileText, permission: ADMIN_PERMS.processes },
-          { to: "/admin/processes/ptcskh", label: t("proc.ptcskh"), icon: FileText, permission: ADMIN_PERMS.processes },
-          { to: "/admin/processes/dt", label: t("proc.dt"), icon: FileText, permission: ADMIN_PERMS.processes },
-          { to: "/admin/processes/tk", label: t("proc.tk"), icon: FileText, permission: ADMIN_PERMS.processes },
-          { to: "/admin/processes/tc", label: t("proc.tc"), icon: FileText, permission: ADMIN_PERMS.processes },
-          { to: "/admin/processes/ttqtct", label: t("proc.ttqtct"), icon: FileText, permission: ADMIN_PERMS.processes },
-          { to: "/admin/processes/qlns", label: t("proc.qlns"), icon: FileText, permission: ADMIN_PERMS.processes },
-          { to: "/admin/processes/mhdgncu", label: t("proc.mhdgncu"), icon: FileText, permission: ADMIN_PERMS.processes },
+          {
+            to: "/admin/processes/general",
+            label: t("proc.general"),
+            icon: FileText,
+            permission: ADMIN_PERMS.processes,
+          },
+          {
+            to: "/admin/processes/ptcskh",
+            label: t("proc.ptcskh"),
+            icon: FileText,
+            permission: ADMIN_PERMS.processes,
+          },
+          {
+            to: "/admin/processes/dt",
+            label: t("proc.dt"),
+            icon: FileText,
+            permission: ADMIN_PERMS.processes,
+          },
+          {
+            to: "/admin/processes/tk",
+            label: t("proc.tk"),
+            icon: FileText,
+            permission: ADMIN_PERMS.processes,
+          },
+          {
+            to: "/admin/processes/tc",
+            label: t("proc.tc"),
+            icon: FileText,
+            permission: ADMIN_PERMS.processes,
+          },
+          {
+            to: "/admin/processes/ttqtct",
+            label: t("proc.ttqtct"),
+            icon: FileText,
+            permission: ADMIN_PERMS.processes,
+          },
+          {
+            to: "/admin/processes/qlns",
+            label: t("proc.qlns"),
+            icon: FileText,
+            permission: ADMIN_PERMS.processes,
+          },
+          {
+            to: "/admin/processes/mhdgncu",
+            label: t("proc.mhdgncu"),
+            icon: FileText,
+            permission: ADMIN_PERMS.processes,
+          },
         ],
       },
       {
@@ -271,8 +526,18 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
         label: t("nav.users"),
         icon: Users,
         items: [
-          { to: "/admin/users", label: t("nav.userManagement"), icon: UserCog, permission: ADMIN_PERMS.users },
-          { to: "/admin/roles", label: t("nav.roleManagement"), icon: ShieldCheck, permission: ADMIN_PERMS.rbacRoles },
+          {
+            to: "/admin/users",
+            label: t("nav.userManagement"),
+            icon: UserCog,
+            permission: ADMIN_PERMS.users,
+          },
+          {
+            to: "/admin/roles",
+            label: t("nav.roleManagement"),
+            icon: ShieldCheck,
+            permission: ADMIN_PERMS.rbacRoles,
+          },
         ],
       },
       {
@@ -280,13 +545,48 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
         label: t("nav.config"),
         icon: Cog,
         items: [
-          { to: "/admin/settings", label: t("settings.title"), icon: SlidersHorizontal, permission: ADMIN_PERMS.settings },
-          { to: "/admin/languages", label: t("set.languages"), icon: Languages, permission: ADMIN_PERMS.translations },
-          { to: "/admin/translations", label: t("nav.translations"), icon: Languages, permission: ADMIN_PERMS.translations },
-          { to: "/admin/master-data", label: t("nav.masterData"), icon: Database, permission: ADMIN_PERMS.masterData },
-          { to: "/admin/workflows", label: t("nav.workflows"), icon: Workflow, permission: ADMIN_PERMS.workflow },
-          { to: "/admin/email-templates", label: t("set.emailTemplates"), icon: Mail, permission: ADMIN_PERMS.emailTemplates },
-          { to: "/admin/activity-log", label: t("nav.activityLog"), icon: History, permission: ADMIN_PERMS.activityLog },
+          {
+            to: "/admin/settings",
+            label: t("settings.title"),
+            icon: SlidersHorizontal,
+            permission: ADMIN_PERMS.settings,
+          },
+          {
+            to: "/admin/languages",
+            label: t("set.languages"),
+            icon: Languages,
+            permission: ADMIN_PERMS.translations,
+          },
+          {
+            to: "/admin/translations",
+            label: t("nav.translations"),
+            icon: Languages,
+            permission: ADMIN_PERMS.translations,
+          },
+          {
+            to: "/admin/master-data",
+            label: t("nav.masterData"),
+            icon: Database,
+            permission: ADMIN_PERMS.masterData,
+          },
+          {
+            to: "/admin/workflows",
+            label: t("nav.workflows"),
+            icon: Workflow,
+            permission: ADMIN_PERMS.workflow,
+          },
+          {
+            to: "/admin/email-templates",
+            label: t("set.emailTemplates"),
+            icon: Mail,
+            permission: ADMIN_PERMS.emailTemplates,
+          },
+          {
+            to: "/admin/activity-log",
+            label: t("nav.activityLog"),
+            icon: History,
+            permission: ADMIN_PERMS.activityLog,
+          },
         ],
       },
     ],
@@ -299,14 +599,18 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
         .map((g) => ({
           ...g,
           items: g.items.filter((it) => {
-            const scopedFinanceReader = (permissions.has(ADMIN_PERMS.contractsViewUpstreamAll) ||
+            const scopedFinanceReader =
+              (permissions.has(ADMIN_PERMS.contractsViewUpstreamAll) ||
                 permissions.has(ADMIN_PERMS.contractsViewDownstreamAll)) &&
               !permissions.has(ADMIN_PERMS.contractsViewAll) &&
               !permissions.has(ADMIN_PERMS.contractsManage);
             if (it.to === "/admin/contracts" && scopedFinanceReader) return false;
-            return !it.permission || (Array.isArray(it.permission)
-              ? it.permission.some((permission) => permissions.has(permission))
-              : permissions.has(it.permission as string));
+            return (
+              !it.permission ||
+              (Array.isArray(it.permission)
+                ? it.permission.some((permission) => permissions.has(permission))
+                : permissions.has(it.permission as string))
+            );
           }),
         }))
         .filter((g) => g.items.length > 0),
@@ -332,9 +636,11 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
     setOpenGroups((current) => {
       const next = { ...current };
       groups.forEach((group) => {
-        if (group.items.some((item) =>
-          location.pathname === item.to || location.pathname.startsWith(`${item.to}/`),
-        )) {
+        if (
+          group.items.some(
+            (item) => location.pathname === item.to || location.pathname.startsWith(`${item.to}/`),
+          )
+        ) {
           next[group.id] = true;
         }
       });
@@ -342,8 +648,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
     });
   }, [groups, location.pathname]);
 
-  const toggleGroup = (id: string) =>
-    setOpenGroups((s) => ({ ...s, [id]: !s[id] }));
+  const toggleGroup = (id: string) => setOpenGroups((s) => ({ ...s, [id]: !s[id] }));
 
   const handleLogout = () => {
     logout();
@@ -383,8 +688,13 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
     const matches = item.end
       ? location.pathname === item.to
       : location.pathname === item.to || location.pathname.startsWith(`${item.to}/`);
-    const active = matches && !flatItems.some(other => other.to.length > item.to.length &&
-      (location.pathname === other.to || location.pathname.startsWith(`${other.to}/`)));
+    const active =
+      matches &&
+      !flatItems.some(
+        (other) =>
+          other.to.length > item.to.length &&
+          (location.pathname === other.to || location.pathname.startsWith(`${other.to}/`)),
+      );
     return (
       <Link
         key={item.to}
@@ -417,12 +727,20 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
           open ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
         )}
       >
-        <div className={cn("py-7 flex items-center justify-between", effectiveCollapsed ? "px-4" : "px-7")}>
+        <div
+          className={cn(
+            "py-7 flex items-center justify-between",
+            effectiveCollapsed ? "px-4" : "px-7",
+          )}
+        >
           <Link to="/admin" className="flex items-center gap-2 min-w-0">
             <img
               src={logoNicon}
               alt="NICON"
-              className={cn("w-auto object-contain transition-all", effectiveCollapsed ? "h-9" : "h-11")}
+              className={cn(
+                "w-auto object-contain transition-all",
+                effectiveCollapsed ? "h-9" : "h-11",
+              )}
             />
           </Link>
           <button
@@ -442,8 +760,8 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
 
           {/* Groups */}
           {groups.map((g) => {
-            const groupActive = g.items.some((it) =>
-              location.pathname === it.to || location.pathname.startsWith(`${it.to}/`),
+            const groupActive = g.items.some(
+              (it) => location.pathname === it.to || location.pathname.startsWith(`${it.to}/`),
             );
             const isOpen = openGroups[g.id] ?? false;
             if (effectiveCollapsed) {
@@ -536,11 +854,18 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
             aria-label={t("nav.toggleSidebar")}
             title={collapsed ? t("nav.expand") : t("nav.collapse")}
           >
-            {collapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
+            {collapsed ? (
+              <PanelLeftOpen className="w-4 h-4" />
+            ) : (
+              <PanelLeftClose className="w-4 h-4" />
+            )}
           </button>
 
           {/* Breadcrumb */}
-          <nav aria-label="breadcrumb" className="hidden md:flex min-w-0 items-center gap-1.5 text-sm text-muted-foreground">
+          <nav
+            aria-label="breadcrumb"
+            className="hidden md:flex min-w-0 items-center gap-1.5 text-sm text-muted-foreground"
+          >
             {breadcrumb.map((c, i) => {
               const isLast = i === breadcrumb.length - 1;
               return (
@@ -598,7 +923,10 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
+                <DropdownMenuItem
+                  onClick={handleLogout}
+                  className="text-destructive focus:text-destructive"
+                >
                   <LogOut className="mr-2 h-4 w-4" />
                   {t("nav.logout")}
                 </DropdownMenuItem>

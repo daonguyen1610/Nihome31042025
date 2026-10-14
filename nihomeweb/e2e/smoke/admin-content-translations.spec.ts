@@ -5,11 +5,42 @@ import { expect, test, TEST_USERS } from "../fixtures/auth";
 const entityTypes = [
   { type: "Activity", label: "Activities", fields: ["Title", "Excerpt", "Content"] },
   { type: "News", label: "News", fields: ["Title", "Excerpt", "Content"] },
-  { type: "Project", label: "Projects", fields: ["Name", "Description", "Content", "Challenges", "Solutions", "Highlights"] },
-  { type: "Service", label: "Services", fields: ["Title", "Short title", "Tagline", "Introduction", "Highlights", "Content sections", "Introduction blocks"] },
+  {
+    type: "Project",
+    label: "Projects",
+    fields: ["Name", "Description", "Content", "Challenges", "Solutions", "Highlights"],
+  },
+  {
+    type: "Service",
+    label: "Services",
+    fields: [
+      "Title",
+      "Short title",
+      "Tagline",
+      "Introduction",
+      "Highlights",
+      "Content sections",
+      "Introduction blocks",
+    ],
+  },
   { type: "Slideshow", label: "Homepage slideshow", fields: ["Title", "Subtitle", "Link label"] },
-  { type: "JobPosition", label: "Job positions", fields: ["Title", "Department", "Description", "Requirements"] },
-  { type: "About", label: "About sections", fields: ["Eyebrow label", "Title part one", "Title part two", "Description paragraph one", "Description paragraph two", "Structured content items"] },
+  {
+    type: "JobPosition",
+    label: "Job positions",
+    fields: ["Title", "Department", "Description", "Requirements"],
+  },
+  {
+    type: "About",
+    label: "About sections",
+    fields: [
+      "Eyebrow label",
+      "Title part one",
+      "Title part two",
+      "Description paragraph one",
+      "Description paragraph two",
+      "Structured content items",
+    ],
+  },
   { type: "ActivityCategory", label: "Activity categories", fields: ["Name"] },
   { type: "NewsCategory", label: "News categories", fields: ["Name"] },
   { type: "ProjectCategory", label: "Project categories", fields: ["Name"] },
@@ -23,9 +54,10 @@ async function useEnglish(page: Page) {
 }
 
 async function loadEntityRegistry(page: Page) {
-  const responsePromise = page.waitForResponse((response) =>
-    response.url().endsWith("/api/translations/entity/types")
-      && response.request().method() === "GET",
+  const responsePromise = page.waitForResponse(
+    (response) =>
+      response.url().endsWith("/api/translations/entity/types") &&
+      response.request().method() === "GET",
   );
   await page.goto("/admin/translations?tab=entity&type=Activity");
   const response = await responsePromise;
@@ -34,15 +66,16 @@ async function loadEntityRegistry(page: Page) {
 }
 
 async function openEntityType(page: Page, entityType: string) {
-  const responsePromise = page.waitForResponse((response) =>
-    response.url().includes(`/api/translations/entity/${entityType}`)
-      && response.request().method() === "GET"
-      && !response.url().includes(`/entity/${entityType}/`),
+  const responsePromise = page.waitForResponse(
+    (response) =>
+      response.url().includes(`/api/translations/entity/${entityType}`) &&
+      response.request().method() === "GET" &&
+      !response.url().includes(`/entity/${entityType}/`),
   );
   const [{ response, body }] = await Promise.all([
     responsePromise.then(async (response) => ({
       response,
-      body: await response.json() as { items: Array<{ id: number; title: string }> },
+      body: (await response.json()) as { items: Array<{ id: number; title: string }> },
     })),
     page.goto(`/admin/translations?tab=entity&type=${entityType}`),
   ]);
@@ -64,9 +97,7 @@ async function openEntityEditor(page: Page, entityType: string, entityId: number
 }
 
 function translatedField(editor: ReturnType<Page["getByRole"]>, label: string) {
-  return editor.getByText(`🇺🇸 English ${label}`, { exact: true })
-    .locator("..")
-    .locator("textarea");
+  return editor.getByText(`🇺🇸 English ${label}`, { exact: true }).locator("..").locator("textarea");
 }
 
 test.describe("Content translations — browser coverage", () => {
@@ -87,7 +118,9 @@ test.describe("Content translations — browser coverage", () => {
       expect(items.length, `${entityType.label} needs seeded showcase data`).toBeGreaterThan(0);
 
       const editor = await openEntityEditor(page, entityType.type, items[0].id);
-      await expect(editor.getByText(`${entityType.label} #${items[0].id}`, { exact: true })).toBeVisible();
+      await expect(
+        editor.getByText(`${entityType.label} #${items[0].id}`, { exact: true }),
+      ).toBeVisible();
       await expect(editor.locator("textarea")).toHaveCount(entityType.fields.length * 2);
 
       for (const field of entityType.fields) {
@@ -124,7 +157,7 @@ test.describe("Content translations — browser coverage", () => {
       },
     });
     expect(createResponse.status()).toBe(201);
-    const created = await createResponse.json() as { id: number };
+    const created = (await createResponse.json()) as { id: number };
 
     try {
       await useEnglish(page);
@@ -172,7 +205,10 @@ test.describe("Content translations — browser coverage", () => {
 
     let saveRequests = 0;
     page.on("request", (request) => {
-      if (request.method() === "POST" && request.url().includes(`/api/translations/entity/About/${items[0].id}`)) {
+      if (
+        request.method() === "POST" &&
+        request.url().includes(`/api/translations/entity/About/${items[0].id}`)
+      ) {
         saveRequests += 1;
       }
     });
@@ -195,11 +231,13 @@ test.describe("Content translations — browser coverage", () => {
     const editor = await openEntityEditor(page, "Activity", items[0].id);
     const textareas = editor.locator("textarea");
     await expect(textareas).not.toHaveCount(0);
-    for (let index = 0; index < await textareas.count(); index += 1) {
+    for (let index = 0; index < (await textareas.count()); index += 1) {
       await expect(textareas.nth(index)).toHaveAttribute("readonly", "");
     }
     await expect(editor.getByRole("button", { name: "Save changes", exact: true })).toHaveCount(0);
-    await expect(editor.getByRole("button", { name: "Reset translations", exact: true })).toHaveCount(0);
+    await expect(
+      editor.getByRole("button", { name: "Reset translations", exact: true }),
+    ).toHaveCount(0);
   });
 
   test("design lead can access content translation write actions", async ({
@@ -213,6 +251,8 @@ test.describe("Content translations — browser coverage", () => {
 
     const editor = await openEntityEditor(page, "Activity", items[0].id);
     await expect(editor.getByRole("button", { name: "Save changes", exact: true })).toBeVisible();
-    await expect(editor.getByRole("button", { name: "Reset translations", exact: true })).toBeVisible();
+    await expect(
+      editor.getByRole("button", { name: "Reset translations", exact: true }),
+    ).toBeVisible();
   });
 });

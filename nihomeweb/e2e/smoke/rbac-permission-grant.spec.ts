@@ -57,7 +57,10 @@ test.beforeAll(async ({ api }) => {
 
   // Login as SUPER_ADMIN
   const loginRes = await api.post("/api/auth/login", {
-    data: { phoneNumber: TEST_USERS.superAdmin.phoneNumber, password: TEST_USERS.superAdmin.password },
+    data: {
+      phoneNumber: TEST_USERS.superAdmin.phoneNumber,
+      password: TEST_USERS.superAdmin.password,
+    },
   });
   expect(loginRes.status(), "SA login").toBe(200);
   saToken = (await loginRes.json()).accessToken as string;
@@ -154,10 +157,9 @@ test("Step 2: Grant additional permissions to the role via API", async ({ api })
   });
   expect(roleRes.status()).toBe(200);
   const roleBody = await roleRes.json();
-  expect(
-    new Set(roleBody.permissions as string[]),
-    "Role should have updated permissions",
-  ).toEqual(new Set(ADDITIONAL_PERMISSIONS));
+  expect(new Set(roleBody.permissions as string[]), "Role should have updated permissions").toEqual(
+    new Set(ADDITIONAL_PERMISSIONS),
+  );
 });
 
 test("Step 3: After re-login, user can now access projects and contracts pages", async ({
@@ -203,7 +205,9 @@ test("Step 3: After re-login, user can now access projects and contracts pages",
   ).toBeVisible();
 });
 
-test("Step 4: Verify /api/users/me/permissions reflects the updated permissions", async ({ api }) => {
+test("Step 4: Verify /api/users/me/permissions reflects the updated permissions", async ({
+  api,
+}) => {
   // Login as the test user
   const loginRes = await api.post("/api/auth/login", {
     data: { phoneNumber: TEST_PHONE, password: TEST_PASSWORD },

@@ -12,8 +12,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { adminApi, type CreateVendorRequest, type UpdateVendorRequest, type VendorResponse, type VendorType } from "@/services/adminApi";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  adminApi,
+  type CreateVendorRequest,
+  type UpdateVendorRequest,
+  type VendorResponse,
+  type VendorType,
+} from "@/services/adminApi";
 
 type VendorFormValue = CreateVendorRequest & { isActive: boolean };
 
@@ -53,16 +65,20 @@ export default function VendorForm({ vendor, onSubmit, onCancel }: VendorFormPro
   const pendingUploadRef = useRef<{ path: string; token: string } | null>(null);
   const uploadTokensRef = useRef(new Map<string, string>());
 
-  useEffect(() => () => {
-    if (pendingUploadRef.current) {
-      void adminApi.discardVendorDocument(pendingUploadRef.current.token)
-        .catch((cleanupError) => logger.warning("Unable to discard pending Vendor upload", {
-          correlationId: getApiCorrelationId(cleanupError),
-          error: cleanupError,
-          messageType: "document_cleanup",
-        }));
-    }
-  }, []);
+  useEffect(
+    () => () => {
+      if (pendingUploadRef.current) {
+        void adminApi.discardVendorDocument(pendingUploadRef.current.token).catch((cleanupError) =>
+          logger.warning("Unable to discard pending Vendor upload", {
+            correlationId: getApiCorrelationId(cleanupError),
+            error: cleanupError,
+            messageType: "document_cleanup",
+          }),
+        );
+      }
+    },
+    [],
+  );
 
   const update = <K extends keyof VendorFormValue>(key: K, value: VendorFormValue[K]) =>
     setForm((current) => ({ ...current, [key]: value }));
@@ -111,7 +127,8 @@ export default function VendorForm({ vendor, onSubmit, onCancel }: VendorFormPro
   const uploaded = async (path: string) => {
     const token = uploadTokensRef.current.get(path);
     if (!token) throw new Error(t("common.error"));
-    if (pendingUpload && pendingUpload.path !== path) await adminApi.discardVendorDocument(pendingUpload.token);
+    if (pendingUpload && pendingUpload.path !== path)
+      await adminApi.discardVendorDocument(pendingUpload.token);
     pendingUploadRef.current = { path, token };
     setPendingUpload({ path, token });
     update("capabilityFileUrl", path);
@@ -125,7 +142,11 @@ export default function VendorForm({ vendor, onSubmit, onCancel }: VendorFormPro
     onCancel();
   };
 
-  const field = (key: keyof VendorFormValue, labelKey: string, props: React.ComponentProps<typeof Input> = {}) => (
+  const field = (
+    key: keyof VendorFormValue,
+    labelKey: string,
+    props: React.ComponentProps<typeof Input> = {},
+  ) => (
     <div className="space-y-2">
       <Label htmlFor={`vendor-${key}`}>{t(labelKey)}</Label>
       <Input
@@ -140,16 +161,33 @@ export default function VendorForm({ vendor, onSubmit, onCancel }: VendorFormPro
 
   return (
     <form onSubmit={submit} className="space-y-5">
-      {error && <p role="alert" className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">{error}</p>}
+      {error && (
+        <p
+          role="alert"
+          className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive"
+        >
+          {error}
+        </p>
+      )}
       <div className="grid gap-4 sm:grid-cols-2">
         {field("vendorCode", "proc.vendors.field.code", { required: true, maxLength: 50 })}
         {field("companyName", "proc.vendors.field.companyName", { required: true, maxLength: 300 })}
         <div className="space-y-2">
           <Label>{t("proc.vendors.field.type")}</Label>
-          <Select value={form.vendorType} onValueChange={(value: VendorType) => update("vendorType", value)} disabled={saving}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+          <Select
+            value={form.vendorType}
+            onValueChange={(value: VendorType) => update("vendorType", value)}
+            disabled={saving}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
-              {TYPES.map((type) => <SelectItem key={type} value={type}>{t(`proc.vendors.type.${type}`)}</SelectItem>)}
+              {TYPES.map((type) => (
+                <SelectItem key={type} value={type}>
+                  {t(`proc.vendors.type.${type}`)}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -161,7 +199,9 @@ export default function VendorForm({ vendor, onSubmit, onCancel }: VendorFormPro
         {field("tradeCategory", "proc.vendors.field.tradeCategory", { maxLength: 300 })}
         {field("address", "proc.vendors.field.address", { maxLength: 500 })}
         <div className="space-y-2">
-          <Label htmlFor="vendor-capabilityFileUrl">{t("proc.vendors.field.capabilityFileUrl")}</Label>
+          <Label htmlFor="vendor-capabilityFileUrl">
+            {t("proc.vendors.field.capabilityFileUrl")}
+          </Label>
           <AdminDocumentUpload
             uploadFile={async (file) => {
               const data = (await adminApi.uploadVendorDocument(file)).data;
@@ -174,18 +214,31 @@ export default function VendorForm({ vendor, onSubmit, onCancel }: VendorFormPro
             testId="vendor-capability-file-upload"
           />
           <div className="flex items-center gap-2">
-            <Input id="vendor-capabilityFileUrl" value={form.capabilityFileUrl ?? ""} onChange={(event) => update("capabilityFileUrl", event.target.value)} disabled={saving} maxLength={1000} />
-            {form.capabilityFileUrl?.trim() && (
-              !isManagedDocumentPath(form.capabilityFileUrl, "/files/business-documents/vendors")
-              || vendor?.capabilityFileUrl === form.capabilityFileUrl
-            ) && (
-              <AdminFilePreview
-                url={form.capabilityFileUrl}
-                fetchFile={isManagedDocumentPath(form.capabilityFileUrl, "/files/business-documents/vendors")
-                  ? async () => (await adminApi.getVendorDocumentContent(vendor!.id)).data
-                  : undefined}
-              />
-            )}
+            <Input
+              id="vendor-capabilityFileUrl"
+              value={form.capabilityFileUrl ?? ""}
+              onChange={(event) => update("capabilityFileUrl", event.target.value)}
+              disabled={saving}
+              maxLength={1000}
+            />
+            {form.capabilityFileUrl?.trim() &&
+              (!isManagedDocumentPath(
+                form.capabilityFileUrl,
+                "/files/business-documents/vendors",
+              ) ||
+                vendor?.capabilityFileUrl === form.capabilityFileUrl) && (
+                <AdminFilePreview
+                  url={form.capabilityFileUrl}
+                  fetchFile={
+                    isManagedDocumentPath(
+                      form.capabilityFileUrl,
+                      "/files/business-documents/vendors",
+                    )
+                      ? async () => (await adminApi.getVendorDocumentContent(vendor!.id)).data
+                      : undefined
+                  }
+                />
+              )}
           </div>
         </div>
         {field("driveFolder", "proc.vendors.field.driveFolder", { maxLength: 1000 })}
@@ -196,11 +249,18 @@ export default function VendorForm({ vendor, onSubmit, onCancel }: VendorFormPro
             <Label htmlFor="vendor-active">{t("proc.vendors.field.active")}</Label>
             <p className="text-xs text-muted-foreground">{t("proc.vendors.activeHelp")}</p>
           </div>
-          <Switch id="vendor-active" checked={form.isActive} onCheckedChange={(checked) => update("isActive", checked)} disabled={saving} />
+          <Switch
+            id="vendor-active"
+            checked={form.isActive}
+            onCheckedChange={(checked) => update("isActive", checked)}
+            disabled={saving}
+          />
         </div>
       )}
       <div className="flex justify-end gap-2">
-        <Button type="button" variant="outline" onClick={() => void cancel()} disabled={saving}>{t("common.cancel")}</Button>
+        <Button type="button" variant="outline" onClick={() => void cancel()} disabled={saving}>
+          {t("common.cancel")}
+        </Button>
         <Button type="submit" disabled={saving} className="gap-2">
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
           {t("common.save")}

@@ -75,10 +75,7 @@ const getErrorMessage = (error: unknown): string | undefined => {
   return undefined;
 };
 
-const categoryLabel = (
-  t: (key: string) => string,
-  category: string,
-): string => {
+const categoryLabel = (t: (key: string) => string, category: string): string => {
   // Reuse the existing seed convention: masterData.category.<category>.title
   const key = `masterData.category.${category}.title`;
   const translated = t(key);
@@ -114,9 +111,8 @@ const MasterData = () => {
       setCategories(sorted);
       // If no category selected yet, prefer the ?category= param or the first one.
       const wanted = searchParams.get("category");
-      const initial = wanted && sorted.some((c) => c.category === wanted)
-        ? wanted
-        : sorted[0]?.category ?? "";
+      const initial =
+        wanted && sorted.some((c) => c.category === wanted) ? wanted : (sorted[0]?.category ?? "");
       setActiveCategory((current) => current || initial);
     } catch (err) {
       setCategoriesError(getErrorMessage(err) ?? t("common.error"));
@@ -170,9 +166,7 @@ const MasterData = () => {
     const q = query.trim().toLowerCase();
     if (!q) return options;
     return options.filter(
-      (o) =>
-        o.code.toLowerCase().includes(q) ||
-        o.name.toLowerCase().includes(q),
+      (o) => o.code.toLowerCase().includes(q) || o.name.toLowerCase().includes(q),
     );
   }, [options, query]);
 
@@ -413,14 +407,24 @@ const MasterData = () => {
                         </span>
                       )}
                       <div className="min-w-0">
-                        <h3 className="break-words text-sm font-semibold leading-tight">{o.name}</h3>
-                        <p className="mt-0.5 break-all font-mono text-xs text-muted-foreground">{o.code}</p>
+                        <h3 className="break-words text-sm font-semibold leading-tight">
+                          {o.name}
+                        </h3>
+                        <p className="mt-0.5 break-all font-mono text-xs text-muted-foreground">
+                          {o.code}
+                        </p>
                       </div>
                     </div>
                     {o.isActive ? (
-                      <Check className="h-4 w-4 shrink-0 text-emerald-600" aria-label={t("masterData.field.isActive")} />
+                      <Check
+                        className="h-4 w-4 shrink-0 text-emerald-600"
+                        aria-label={t("masterData.field.isActive")}
+                      />
                     ) : (
-                      <X className="h-4 w-4 shrink-0 text-muted-foreground" aria-label={t("masterData.field.isActive")} />
+                      <X
+                        className="h-4 w-4 shrink-0 text-muted-foreground"
+                        aria-label={t("masterData.field.isActive")}
+                      />
                     )}
                   </div>
                   <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
@@ -428,7 +432,9 @@ const MasterData = () => {
                     <dd className="font-medium">{o.sortOrder}</dd>
                     {o.description && (
                       <>
-                        <dt className="text-muted-foreground">{t("masterData.field.description")}</dt>
+                        <dt className="text-muted-foreground">
+                          {t("masterData.field.description")}
+                        </dt>
                         <dd className="break-words">{o.description}</dd>
                       </>
                     )}
@@ -472,13 +478,25 @@ const MasterData = () => {
                         />
                       </th>
                     )}
-                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("masterData.field.code")}</th>
-                    <th className="min-w-[220px] px-3 py-3 text-left font-medium">{t("masterData.field.name")}</th>
-                    <th className="min-w-[240px] px-3 py-3 text-left font-medium">{t("masterData.field.description")}</th>
-                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("masterData.field.sortOrder")}</th>
-                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("masterData.field.isActive")}</th>
+                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                      {t("masterData.field.code")}
+                    </th>
+                    <th className="min-w-[220px] px-3 py-3 text-left font-medium">
+                      {t("masterData.field.name")}
+                    </th>
+                    <th className="min-w-[240px] px-3 py-3 text-left font-medium">
+                      {t("masterData.field.description")}
+                    </th>
+                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                      {t("masterData.field.sortOrder")}
+                    </th>
+                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                      {t("masterData.field.isActive")}
+                    </th>
                     {canManage && (
-                      <th className="whitespace-nowrap px-3 py-3 text-right font-medium">{t("common.actions")}</th>
+                      <th className="whitespace-nowrap px-3 py-3 text-right font-medium">
+                        {t("common.actions")}
+                      </th>
                     )}
                   </tr>
                 </thead>
@@ -502,12 +520,18 @@ const MasterData = () => {
                       <td className="whitespace-nowrap px-3 py-3">{o.sortOrder}</td>
                       <td className="whitespace-nowrap px-3 py-3">
                         {o.isActive ? (
-                          <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700">
+                          <Badge
+                            variant="outline"
+                            className="border-emerald-200 bg-emerald-50 text-emerald-700"
+                          >
                             <Check className="mr-1 h-3 w-3" />
                             {t("common.on")}
                           </Badge>
                         ) : (
-                          <Badge variant="outline" className="border-slate-200 bg-slate-50 text-slate-600">
+                          <Badge
+                            variant="outline"
+                            className="border-slate-200 bg-slate-50 text-slate-600"
+                          >
                             <X className="mr-1 h-3 w-3" />
                             {t("common.off")}
                           </Badge>
@@ -557,9 +581,7 @@ const MasterData = () => {
                 ? t("masterData.editModalTitle")
                 : t("masterData.createModalTitle")}
             </DialogTitle>
-            <DialogDescription>
-              {categoryLabel(t, activeCategory)}
-            </DialogDescription>
+            <DialogDescription>{categoryLabel(t, activeCategory)}</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-3">

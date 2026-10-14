@@ -20,15 +20,17 @@ const readAppSettings = (filename: string): AppSettings => {
     path.resolve("/app", filename),
   ];
   const settingsPath = candidates.find((candidate) => fs.existsSync(candidate));
-  if (!settingsPath) throw new Error(`Cannot find backend ${filename} for frontend logging configuration.`);
+  if (!settingsPath)
+    throw new Error(`Cannot find backend ${filename} for frontend logging configuration.`);
   return JSON.parse(fs.readFileSync(settingsPath, "utf8")) as AppSettings;
 };
 
 const loadFrontendLogging = (mode: string) => {
   const base = readAppSettings("appsettings.json").Logging?.Frontend ?? {};
-  const environment = mode === "development"
-    ? readAppSettings("appsettings.Development.json").Logging?.Frontend ?? {}
-    : {};
+  const environment =
+    mode === "development"
+      ? (readAppSettings("appsettings.Development.json").Logging?.Frontend ?? {})
+      : {};
   return {
     AppName: "NihomeWeb",
     ApiName: "Nihome SPA",
@@ -56,6 +58,13 @@ export default defineConfig(({ mode }) => ({
     alias: {
       "@": path.resolve(import.meta.dirname, "./src"),
     },
-    dedupe: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime", "@tanstack/react-query", "@tanstack/query-core"],
+    dedupe: [
+      "react",
+      "react-dom",
+      "react/jsx-runtime",
+      "react/jsx-dev-runtime",
+      "@tanstack/react-query",
+      "@tanstack/query-core",
+    ],
   },
 }));

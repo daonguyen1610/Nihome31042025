@@ -45,7 +45,10 @@ const Notifications = () => {
     }
   };
 
-  const handleItemKeyDown = (event: KeyboardEvent<HTMLDivElement>, notification: NotificationDto) => {
+  const handleItemKeyDown = (
+    event: KeyboardEvent<HTMLDivElement>,
+    notification: NotificationDto,
+  ) => {
     if (event.key !== "Enter" && event.key !== " ") return;
     event.preventDefault();
     handleItemClick(notification);
@@ -100,7 +103,11 @@ const Notifications = () => {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Button type="button" variant="outline" onClick={handleRefresh} disabled={loading}>
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bell className="h-4 w-4" />}
+              {loading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Bell className="h-4 w-4" />
+              )}
               {t("notify.refresh")}
             </Button>
             <Button
@@ -128,90 +135,88 @@ const Notifications = () => {
               </Button>
             </div>
           ) : items.length === 0 ? (
-            <div className="px-4 py-20 text-center text-sm text-muted-foreground">{t("notify.empty")}</div>
+            <div className="px-4 py-20 text-center text-sm text-muted-foreground">
+              {t("notify.empty")}
+            </div>
           ) : (
             <>
-            <BulkActionBar
-              selectedCount={selectedIds.size}
-              bulkDeleting={bulkDeleting}
-              onClear={clearSelection}
-              onBulkDelete={() => void handleBulkDelete()}
-            />
-            <div className="flex items-center gap-2 px-4 py-2 text-xs text-muted-foreground">
-              <Checkbox
-                checked={
-                  allVisibleSelected
-                    ? true
-                    : someVisibleSelected
-                      ? "indeterminate"
-                      : false
-                }
-                onCheckedChange={(v) => toggleAllVisible(v === true)}
-                aria-label={t("common.selectAll")}
+              <BulkActionBar
+                selectedCount={selectedIds.size}
+                bulkDeleting={bulkDeleting}
+                onClear={clearSelection}
+                onBulkDelete={() => void handleBulkDelete()}
               />
-              <span>{t("common.selectAll")}</span>
-            </div>
-            <div className="divide-y">
-              {items.map((notification) => {
-                const Icon = moduleIcon(notification);
+              <div className="flex items-center gap-2 px-4 py-2 text-xs text-muted-foreground">
+                <Checkbox
+                  checked={
+                    allVisibleSelected ? true : someVisibleSelected ? "indeterminate" : false
+                  }
+                  onCheckedChange={(v) => toggleAllVisible(v === true)}
+                  aria-label={t("common.selectAll")}
+                />
+                <span>{t("common.selectAll")}</span>
+              </div>
+              <div className="divide-y">
+                {items.map((notification) => {
+                  const Icon = moduleIcon(notification);
 
-                return (
-                  <div
-                    key={notification.id}
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => handleItemClick(notification)}
-                    onKeyDown={(event) => handleItemKeyDown(event, notification)}
-                    className={cn(
-                      "group grid cursor-pointer grid-cols-[2rem_2.25rem_minmax(0,1fr)_auto] gap-3 px-4 py-4 text-left outline-none transition hover:bg-muted/60 focus-visible:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring md:px-5",
-                      !notification.isRead && "bg-primary/5",
-                    )}
-                  >
-                    <span onClick={(e) => e.stopPropagation()} className="mt-1">
-                      <Checkbox
-                        checked={selectedIds.has(notification.id)}
-                        onCheckedChange={(v) => toggleOne(notification.id, v === true)}
-                        aria-label={`${t("common.selectAll")} · ${notification.title}`}
-                      />
-                    </span>
-                    <span className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-full bg-muted text-primary">
-                      <Icon className="h-4 w-4" />
-                    </span>
-                    <span className="min-w-0">
-                      <span className="flex items-start gap-2">
-                        <span className="min-w-0 flex-1 text-sm font-bold leading-snug text-foreground">
-                          {t(notification.title)}
-                        </span>
-                        {!notification.isRead ? (
-                          <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-sky-500" />
-                        ) : null}
-                      </span>
-                      {notification.body ? (
-                        <span className="mt-1 block text-sm leading-relaxed text-muted-foreground">
-                          {notification.body}
-                        </span>
-                      ) : null}
-                      <span className="mt-2 block text-xs text-muted-foreground">
-                        {formatRelativeTime(notification.createdAt)}
-                      </span>
-                    </span>
-                    <button
-                      type="button"
-                      aria-label={t("notify.delete")}
-                      onClick={(event) => handleDelete(event, notification.id)}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter" || event.key === " ") {
-                          event.stopPropagation();
-                        }
-                      }}
-                      className="mt-0.5 rounded-md p-2 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100"
+                  return (
+                    <div
+                      key={notification.id}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => handleItemClick(notification)}
+                      onKeyDown={(event) => handleItemKeyDown(event, notification)}
+                      className={cn(
+                        "group grid cursor-pointer grid-cols-[2rem_2.25rem_minmax(0,1fr)_auto] gap-3 px-4 py-4 text-left outline-none transition hover:bg-muted/60 focus-visible:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring md:px-5",
+                        !notification.isRead && "bg-primary/5",
+                      )}
                     >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
+                      <span onClick={(e) => e.stopPropagation()} className="mt-1">
+                        <Checkbox
+                          checked={selectedIds.has(notification.id)}
+                          onCheckedChange={(v) => toggleOne(notification.id, v === true)}
+                          aria-label={`${t("common.selectAll")} · ${notification.title}`}
+                        />
+                      </span>
+                      <span className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-full bg-muted text-primary">
+                        <Icon className="h-4 w-4" />
+                      </span>
+                      <span className="min-w-0">
+                        <span className="flex items-start gap-2">
+                          <span className="min-w-0 flex-1 text-sm font-bold leading-snug text-foreground">
+                            {t(notification.title)}
+                          </span>
+                          {!notification.isRead ? (
+                            <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-sky-500" />
+                          ) : null}
+                        </span>
+                        {notification.body ? (
+                          <span className="mt-1 block text-sm leading-relaxed text-muted-foreground">
+                            {notification.body}
+                          </span>
+                        ) : null}
+                        <span className="mt-2 block text-xs text-muted-foreground">
+                          {formatRelativeTime(notification.createdAt)}
+                        </span>
+                      </span>
+                      <button
+                        type="button"
+                        aria-label={t("notify.delete")}
+                        onClick={(event) => handleDelete(event, notification.id)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.stopPropagation();
+                          }
+                        }}
+                        className="mt-0.5 rounded-md p-2 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
             </>
           )}
         </section>

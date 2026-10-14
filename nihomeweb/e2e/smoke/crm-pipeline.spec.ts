@@ -1,13 +1,10 @@
 import { test, expect, TEST_USERS } from "../fixtures/auth";
 import type { APIRequestContext } from "@playwright/test";
-import {
-  createApprovedInvestmentRate,
-  retireInvestmentRate,
-} from "../fixtures/materialRate";
+import { createApprovedInvestmentRate, retireInvestmentRate } from "../fixtures/materialRate";
 
 /**
  * Full CRM pipeline E2E test: Lead → Customer + Opportunity → Quote → Contract
- * 
+ *
  * This test verifies the complete sales workflow from initial lead capture
  * to signed contract, including all intermediate states and transitions.
  */
@@ -137,7 +134,12 @@ test.describe("CRM Pipeline: Lead → Opportunity → Quote → Contract", () =>
 
       // ====== STEP 6: Create Quote for Opportunity ======
       console.log("Step 6: Creating quote...");
-      investmentRate = await createApprovedInvestmentRate(api, { Authorization: `Bearer ${token}` }, unique, 3_500_000);
+      investmentRate = await createApprovedInvestmentRate(
+        api,
+        { Authorization: `Bearer ${token}` },
+        unique,
+        3_500_000,
+      );
       const quoteRes = await c.post("/api/quotes", {
         opportunityId,
         method: "UnitCost",
@@ -254,7 +256,6 @@ test.describe("CRM Pipeline: Lead → Opportunity → Quote → Contract", () =>
       expect(finalContractData.status).toBe("Signed");
 
       console.log("✓ Full CRM pipeline test completed successfully!");
-
     } finally {
       // Cleanup in reverse order
       if (contractId) await c.del(`/api/contracts/${contractId}`).catch(() => {});
@@ -331,7 +332,9 @@ test.describe("CRM Pipeline: Lead → Opportunity → Quote → Contract", () =>
       const preservedCustomerRes = await c.get(`/api/customers/${autoCreatedCustomerId}`);
       expect(preservedCustomerRes.status()).toBe(200);
       const preservedCustomer = await preservedCustomerRes.json();
-      const deletionImpactRes = await c.get(`/api/customers/${autoCreatedCustomerId}/deletion-impact`);
+      const deletionImpactRes = await c.get(
+        `/api/customers/${autoCreatedCustomerId}/deletion-impact`,
+      );
       expect(deletionImpactRes.status()).toBe(200);
       const deletionImpact = await deletionImpactRes.json();
       const deleteCustomerRes = await c.del(`/api/customers/${autoCreatedCustomerId}`, {
@@ -343,9 +346,9 @@ test.describe("CRM Pipeline: Lead → Opportunity → Quote → Contract", () =>
       autoCreatedCustomerId = 0; // Mark as already deleted
 
       console.log("✓ Auto-create customer from lead test passed!");
-
     } finally {
-      if (autoCreatedCustomerId) await c.del(`/api/customers/${autoCreatedCustomerId}`).catch(() => {});
+      if (autoCreatedCustomerId)
+        await c.del(`/api/customers/${autoCreatedCustomerId}`).catch(() => {});
       if (leadId) await c.del(`/api/leads/${leadId}`).catch(() => {});
     }
   });
@@ -372,7 +375,7 @@ test.describe("CRM Pipeline: Lead → Opportunity → Quote → Contract", () =>
         },
       });
       expect(customerRes.status()).toBe(201);
-      customerId = ((await customerRes.json()).id as number);
+      customerId = (await customerRes.json()).id as number;
 
       // Create opportunity
       const oppRes = await c.post("/api/opportunities", {
@@ -382,7 +385,7 @@ test.describe("CRM Pipeline: Lead → Opportunity → Quote → Contract", () =>
         winProbability: 30,
       });
       expect(oppRes.status()).toBe(201);
-      opportunityId = ((await oppRes.json()).id as number);
+      opportunityId = (await oppRes.json()).id as number;
 
       // Try to mark as Lost without reason - should fail
       const lostNoReason = await c.patch(`/api/opportunities/${opportunityId}/stage`, {
@@ -400,7 +403,6 @@ test.describe("CRM Pipeline: Lead → Opportunity → Quote → Contract", () =>
       const lostOpp = await lostWithReason.json();
       expect(lostOpp.stage).toBe("Lost");
       expect(lostOpp.lostReasonCode).toBe("price");
-
     } finally {
       if (opportunityId) await c.del(`/api/opportunities/${opportunityId}`).catch(() => {});
       if (customerId) await c.del(`/api/customers/${customerId}`).catch(() => {});
@@ -431,7 +433,7 @@ test.describe("CRM Pipeline: Lead → Opportunity → Quote → Contract", () =>
         },
       });
       expect(customerRes.status()).toBe(201);
-      customerId = ((await customerRes.json()).id as number);
+      customerId = (await customerRes.json()).id as number;
 
       const oppRes = await manager.post("/api/opportunities", {
         name: `RBAC Deal ${unique}`,
@@ -440,7 +442,7 @@ test.describe("CRM Pipeline: Lead → Opportunity → Quote → Contract", () =>
         winProbability: 40,
       });
       expect(oppRes.status()).toBe(201);
-      opportunityId = ((await oppRes.json()).id as number);
+      opportunityId = (await oppRes.json()).id as number;
 
       // SALE should NOT see manager's opportunity
       const saleGet = await sale.get(`/api/opportunities/${opportunityId}`);
@@ -450,8 +452,7 @@ test.describe("CRM Pipeline: Lead → Opportunity → Quote → Contract", () =>
       const saleList = await sale.get("/api/opportunities?pageSize=100");
       expect(saleList.status()).toBe(200);
       const items = (await saleList.json()).items as Array<{ id: number }>;
-      expect(items.some(o => o.id === opportunityId)).toBe(false);
-
+      expect(items.some((o) => o.id === opportunityId)).toBe(false);
     } finally {
       if (opportunityId) await manager.del(`/api/opportunities/${opportunityId}`).catch(() => {});
       if (customerId) await manager.del(`/api/customers/${customerId}`).catch(() => {});

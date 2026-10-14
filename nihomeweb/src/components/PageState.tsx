@@ -19,7 +19,10 @@ export function PageLoading({ label }: { label?: string } = {}) {
 export function PageError({ message, onRetry }: { message: string; onRetry?: () => void }) {
   const { t } = useI18n();
   return (
-    <div className="flex min-h-40 flex-col items-center justify-center gap-3 rounded-lg border border-destructive/20 bg-destructive/5 px-4 py-10 text-center" role="alert">
+    <div
+      className="flex min-h-40 flex-col items-center justify-center gap-3 rounded-lg border border-destructive/20 bg-destructive/5 px-4 py-10 text-center"
+      role="alert"
+    >
       <span className="rounded-full bg-destructive/10 p-2.5 text-destructive">
         <AlertCircle className="h-5 w-5" aria-hidden />
       </span>

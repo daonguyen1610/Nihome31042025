@@ -59,7 +59,10 @@ test.beforeAll(async ({ api }) => {
 
   // Login as SUPER_ADMIN
   const loginRes = await api.post("/api/auth/login", {
-    data: { phoneNumber: TEST_USERS.superAdmin.phoneNumber, password: TEST_USERS.superAdmin.password },
+    data: {
+      phoneNumber: TEST_USERS.superAdmin.phoneNumber,
+      password: TEST_USERS.superAdmin.password,
+    },
   });
   expect(loginRes.status(), "SA login").toBe(200);
   saToken = (await loginRes.json()).accessToken as string;

@@ -24,41 +24,48 @@ const vendor = {
   updatedByName: "Procurement Manager",
   updatedAt: "2026-09-06T08:00:00Z",
   rowVersion: "AAAAAAAAB9M=",
-  contracts: [{
-    id: 701,
-    contractNumber: "HD-2026-0701",
-    status: "InProgress",
-    operationalProjectId: 301,
-    operationalProjectCode: "PJ-2026-0301",
-    operationalProjectName: "Alpha Factory",
-  }],
-  ratings: [{
-    id: 801,
-    contractId: 701,
-    contractNumber: "HD-2026-0701",
-    operationalProjectId: 301,
-    operationalProjectCode: "PJ-2026-0301",
-    status: "Approved",
-    overallScore: 8.5,
-    approvedAt: "2026-09-05T08:00:00Z",
-  }],
-  history: [{
-    id: 901,
-    action: "vendor.update",
-    message: "Vendor profile updated.",
-    actorUserId: 1,
-    actorName: "Procurement Manager",
-    createdAt: "2026-09-06T08:00:00Z",
-  }],
+  contracts: [
+    {
+      id: 701,
+      contractNumber: "HD-2026-0701",
+      status: "InProgress",
+      operationalProjectId: 301,
+      operationalProjectCode: "PJ-2026-0301",
+      operationalProjectName: "Alpha Factory",
+    },
+  ],
+  ratings: [
+    {
+      id: 801,
+      contractId: 701,
+      contractNumber: "HD-2026-0701",
+      operationalProjectId: 301,
+      operationalProjectCode: "PJ-2026-0301",
+      status: "Approved",
+      overallScore: 8.5,
+      approvedAt: "2026-09-05T08:00:00Z",
+    },
+  ],
+  history: [
+    {
+      id: 901,
+      action: "vendor.update",
+      message: "Vendor profile updated.",
+      actorUserId: 1,
+      actorName: "Procurement Manager",
+      createdAt: "2026-09-06T08:00:00Z",
+    },
+  ],
 };
 
 const mockVendorList = async (page: Page) => {
-  await page.route(/\/api\/(?:v1\/)?vendors(?:\?.*)?$/, route =>
+  await page.route(/\/api\/(?:v1\/)?vendors(?:\?.*)?$/, (route) =>
     route.fulfill({
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({ total: 1, page: 1, pageSize: 20, items: [vendor] }),
-    }));
+    }),
+  );
 };
 
 test("vendor rows provide clear hover, keyboard and full-row navigation", async ({
@@ -78,13 +85,17 @@ test("vendor rows provide clear hover, keyboard and full-row navigation", async 
   await expect(row).toBeVisible();
   await expect(page.getByTestId("vendor-card")).toBeHidden();
   await expect(row).toHaveCSS("cursor", "pointer");
-  const actionSizes = await row.getByRole("button").evaluateAll(buttons =>
-    buttons.map(button => button.getBoundingClientRect().height));
-  expect(actionSizes.every(height => height >= 44)).toBe(true);
+  const actionSizes = await row
+    .getByRole("button")
+    .evaluateAll((buttons) => buttons.map((button) => button.getBoundingClientRect().height));
+  expect(actionSizes.every((height) => height >= 44)).toBe(true);
 
-  const backgroundBeforeHover = await row.evaluate(element => getComputedStyle(element).backgroundColor);
+  const backgroundBeforeHover = await row.evaluate(
+    (element) => getComputedStyle(element).backgroundColor,
+  );
   await row.hover();
-  await expect.poll(() => row.evaluate(element => getComputedStyle(element).backgroundColor))
+  await expect
+    .poll(() => row.evaluate((element) => getComputedStyle(element).backgroundColor))
     .not.toBe(backgroundBeforeHover);
 
   await row.focus();
@@ -103,18 +114,25 @@ test("vendor cards and controls remain usable without horizontal overflow", asyn
   await page.evaluate(() => localStorage.setItem("nicon_lang", "en"));
   await mockVendorList(page);
 
-  for (const viewport of [{ width: 820, height: 900 }, { width: 360, height: 800 }]) {
+  for (const viewport of [
+    { width: 820, height: 900 },
+    { width: 360, height: 800 },
+  ]) {
     await page.setViewportSize(viewport);
     await page.goto(`${appUrl}/admin/vendors`, { waitUntil: "networkidle" });
 
     const card = page.getByTestId("vendor-card");
     await expect(card).toBeVisible();
     await expect(page.getByTestId("vendor-row")).toBeHidden();
-    const actionSizes = await card.getByRole("button").evaluateAll(buttons =>
-      buttons.slice(1).map(button => button.getBoundingClientRect().height));
-    expect(actionSizes.every(height => height >= 44)).toBe(true);
-    const overflow = await page.evaluate(() =>
-      document.documentElement.scrollWidth > document.documentElement.clientWidth);
+    const actionSizes = await card
+      .getByRole("button")
+      .evaluateAll((buttons) =>
+        buttons.slice(1).map((button) => button.getBoundingClientRect().height),
+      );
+    expect(actionSizes.every((height) => height >= 44)).toBe(true);
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+    );
     expect(overflow).toBe(false);
   }
 });
@@ -130,13 +148,17 @@ test("vendor detail shows traceability and blocks unsafe deletion on mobile", as
   if (page.url() === "about:blank") await page.goto(appUrl, { waitUntil: "domcontentloaded" });
   await page.evaluate(() => localStorage.setItem("nicon_lang", "en"));
 
-  await page.route(new RegExp(`/api/(?:v1/)?vendors/${vendorId}$`), route => {
+  await page.route(new RegExp(`/api/(?:v1/)?vendors/${vendorId}$`), (route) => {
     if (route.request().method() === "GET") {
-      return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(vendor) });
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(vendor),
+      });
     }
     return route.continue();
   });
-  await page.route(new RegExp(`/api/(?:v1/)?vendors/${vendorId}/deletion-impact$`), route =>
+  await page.route(new RegExp(`/api/(?:v1/)?vendors/${vendorId}/deletion-impact$`), (route) =>
     route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -148,16 +170,19 @@ test("vendor detail shows traceability and blocks unsafe deletion on mobile", as
         planToken: "a".repeat(64),
         canDelete: false,
         totalAffected: 2,
-        items: [{
-          key: "vendor.contracts",
-          action: "Block",
-          count: 1,
-          examples: ["701"],
-          resolutionLinks: [{ label: "HD-2026-0701", url: "/admin/contracts/701" }],
-          resolutionUrl: "/admin/contracts",
-        }],
+        items: [
+          {
+            key: "vendor.contracts",
+            action: "Block",
+            count: 1,
+            examples: ["701"],
+            resolutionLinks: [{ label: "HD-2026-0701", url: "/admin/contracts/701" }],
+            resolutionUrl: "/admin/contracts",
+          },
+        ],
       }),
-    }));
+    }),
+  );
 
   await page.goto(`${appUrl}/admin/vendors/${vendorId}`, { waitUntil: "networkidle" });
   await expect(page.getByRole("heading", { name: vendor.companyName })).toBeVisible();
@@ -167,9 +192,16 @@ test("vendor detail shows traceability and blocks unsafe deletion on mobile", as
 
   await page.getByRole("button", { name: "Delete" }).click();
   await expect(page.getByText("Contracts using this vendor", { exact: true })).toBeVisible();
-  await expect(page.getByText("Deletion is not available yet. Resolve every blocking item and reopen this dialog.", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText(
+      "Deletion is not available yet. Resolve every blocking item and reopen this dialog.",
+      { exact: true },
+    ),
+  ).toBeVisible();
   await expect(page.getByRole("button", { name: /Delete permanently/i })).toBeDisabled();
 
-  const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+  );
   expect(overflow).toBe(false);
 });

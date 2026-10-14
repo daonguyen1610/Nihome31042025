@@ -40,7 +40,8 @@ export function buildExcelCsv<T>({ columns, rows }: Omit<CsvExportOptions<T>, "f
   const dataRows = rows.map((row) =>
     columns
       .map((column) => {
-        const raw = typeof column.value === "function" ? column.value(row) : (row[column.value] as CsvValue);
+        const raw =
+          typeof column.value === "function" ? column.value(row) : (row[column.value] as CsvValue);
         return escapeCsvCell(raw);
       })
       .join(","),

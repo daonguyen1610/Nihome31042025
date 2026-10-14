@@ -24,9 +24,16 @@ type Call = (
   url: string,
   data?: unknown,
 ) => Promise<Body>;
-type DepartmentMember = { userId: number; name: string; roleGroupId: number; canLead: boolean; account: keyof typeof TEST_USERS };
+type DepartmentMember = {
+  userId: number;
+  name: string;
+  roleGroupId: number;
+  canLead: boolean;
+  account: keyof typeof TEST_USERS;
+};
 const shotDir = process.env.E2E_SHOT_DIR;
-const tomorrow = (days: number) => new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10);
+const tomorrow = (days: number) =>
+  new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10);
 
 /**
  * Resolve the people who drive a department flow from the API instead of from
@@ -37,19 +44,28 @@ const tomorrow = (days: number) => new Date(Date.now() + days * 86_400_000).toIS
  * browser.
  */
 const resolveDepartment = async (call: Call, groupCode: string) => {
-  const directory = (await call("superAdmin", "get", "/api/users?take=200"))
-    .items as { id: number; phoneNumber: string }[];
+  const directory = (await call("superAdmin", "get", "/api/users?take=200")).items as {
+    id: number;
+    phoneNumber: string;
+  }[];
   const accountByPhone = new Map(
-    Object.entries(TEST_USERS).map(([key, user]) => [user.phoneNumber, key as keyof typeof TEST_USERS]),
+    Object.entries(TEST_USERS).map(([key, user]) => [
+      user.phoneNumber,
+      key as keyof typeof TEST_USERS,
+    ]),
   );
-  const phoneById = new Map(directory.map(item => [item.id, item.phoneNumber]));
+  const phoneById = new Map(directory.map((item) => [item.id, item.phoneNumber]));
   const options = await call("salesManager", "get", "/api/work-packages/options");
-  const department = (options.departments as { id: number; code: string }[])
-    .find(group => group.code === groupCode)!;
+  const department = (options.departments as { id: number; code: string }[]).find(
+    (group) => group.code === groupCode,
+  )!;
   expect(department, `department ${groupCode} is seeded`).toBeTruthy();
   const members = (options.users as Omit<DepartmentMember, "account">[])
-    .filter(user => user.roleGroupId === department.id && accountByPhone.has(phoneById.get(user.userId) ?? ""))
-    .map(user => ({ ...user, account: accountByPhone.get(phoneById.get(user.userId)!)! }));
+    .filter(
+      (user) =>
+        user.roleGroupId === department.id && accountByPhone.has(phoneById.get(user.userId) ?? ""),
+    )
+    .map((user) => ({ ...user, account: accountByPhone.get(phoneById.get(user.userId)!)! }));
   return { department, options, members };
 };
 
@@ -69,15 +85,19 @@ const permissionsOf = async (call: Call, account: keyof typeof TEST_USERS) => {
  * account instead of assuming seeded names.
  */
 const pickLeadAndMaker = async (call: Call, groupCode: string, members: DepartmentMember[]) => {
-  const lead = members.find(member => member.canLead);
+  const lead = members.find((member) => member.canLead);
   expect(lead, `a member of ${groupCode} may lead work packages`).toBeTruthy();
   let maker: DepartmentMember | undefined;
   for (const member of members) {
     if (member.userId === lead!.userId) continue;
     const permissions = await permissionsOf(call, member.account);
     const canRecord = permissions.includes("work.packages.progress");
-    const readsMasterData = permissions.includes("work.packages.manage") || permissions.includes("work.packages.assign");
-    if (canRecord && readsMasterData) { maker = member; break; }
+    const readsMasterData =
+      permissions.includes("work.packages.manage") || permissions.includes("work.packages.assign");
+    if (canRecord && readsMasterData) {
+      maker = member;
+      break;
+    }
   }
   expect(maker, `another member of ${groupCode} may record input prices`).toBeTruthy();
   return { lead: lead!, maker: maker! };
@@ -93,9 +113,12 @@ const addProjectMembers = async (
   projectId: number,
   members: { phoneNumber: string; position: string }[],
 ) => {
-  const users = (await call("superAdmin", "get", "/api/users?take=200")).items as { id: number; phoneNumber: string }[];
+  const users = (await call("superAdmin", "get", "/api/users?take=200")).items as {
+    id: number;
+    phoneNumber: string;
+  }[];
   for (const member of members) {
-    const user = users.find(item => item.phoneNumber === member.phoneNumber)!;
+    const user = users.find((item) => item.phoneNumber === member.phoneNumber)!;
     await call("salesManager", "post", `/api/operational-projects/${projectId}/team/members`, {
       userId: user.id,
       position: member.position,
@@ -123,9 +146,15 @@ test.describe("MoM §5 pre-contract department controls", () => {
       data?: unknown,
     ) => {
       if (!tokens.has(name)) tokens.set(name, await loginAs(TEST_USERS[name]));
-      const headers = { Authorization: `Bearer ${tokens.get(name)!}`, "Idempotency-Key": randomUUID() };
+      const headers = {
+        Authorization: `Bearer ${tokens.get(name)!}`,
+        "Idempotency-Key": randomUUID(),
+      };
       const response = await api[method](url, { headers, data });
-      expect(response.ok(), `${method.toUpperCase()} ${url}: ${await response.text()}`).toBeTruthy();
+      expect(
+        response.ok(),
+        `${method.toUpperCase()} ${url}: ${await response.text()}`,
+      ).toBeTruthy();
       const text = await response.text();
       return (text ? JSON.parse(text) : {}) as Body;
     };
@@ -176,9 +205,11 @@ test.describe("MoM §5 pre-contract department controls", () => {
     await expect(createDialog.getByText("Phòng ban nhận việc")).toBeVisible();
     await expect(createDialog.getByText("Công việc chung")).toBeHidden();
     await createDialog.locator('input[maxlength="300"]').fill(`Giá đầu vào kết cấu thép ${suffix}`);
-    await createDialog.locator('textarea[maxlength="4000"]').fill(
-      "Cung ứng lấy báo giá nhà cung cấp thép và thầu phụ MEP để Kinh doanh chốt báo giá đầu ra.",
-    );
+    await createDialog
+      .locator('textarea[maxlength="4000"]')
+      .fill(
+        "Cung ứng lấy báo giá nhà cung cấp thép và thầu phụ MEP để Kinh doanh chốt báo giá đầu ra.",
+      );
     await createDialog.getByRole("combobox").last().click();
     await page.getByRole("option", { name: departmentLead.name }).click();
     await shot("s5-01-giao-viec-cung-ung.png");
@@ -187,7 +218,9 @@ test.describe("MoM §5 pre-contract department controls", () => {
     await expect(page).toHaveURL(/\/admin\/work-packages\/\d+$/);
     const packageId = Number(page.url().split("/").pop());
     await expect(page.getByText("Cung ứng báo giá đầu vào").first()).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Báo giá đầu vào từ nhà cung cấp / thầu phụ" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Báo giá đầu vào từ nhà cung cấp / thầu phụ" }),
+    ).toBeVisible();
 
     // ---- Cung ứng records the supplier offer on the same work package.
     await loginInBrowserAs(page, TEST_USERS[maker.account]);
@@ -211,8 +244,12 @@ test.describe("MoM §5 pre-contract department controls", () => {
     // Money leaves the API as a plain number and must reach the screen grouped.
     const detail = await call("salesManager", "get", `/api/work-packages/${packageId}`);
     const offer = (detail.inputPriceOffers as Body[])[0];
-    const grouped = new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 2 }).format(offer.grandTotal as number);
-    await expect(offerCard.getByText(new RegExp(`${grouped.replace(/\./g, "\\.")} VND`)).first()).toBeVisible();
+    const grouped = new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 2 }).format(
+      offer.grandTotal as number,
+    );
+    await expect(
+      offerCard.getByText(new RegExp(`${grouped.replace(/\./g, "\\.")} VND`)).first(),
+    ).toBeVisible();
 
     await offerCard.getByRole("button", { name: "Gửi duyệt" }).click();
     await expect(offerCard.getByText("Chờ duyệt")).toBeVisible();
@@ -222,7 +259,12 @@ test.describe("MoM §5 pre-contract department controls", () => {
     await offerCard.getByRole("button", { name: "Phê duyệt" }).click();
     await expect(page.getByText(/404|Không thể|tự phê duyệt/i).first()).toBeVisible();
     await page.reload({ waitUntil: "networkidle" });
-    await expect(page.locator("article").filter({ hasText: `BG-${suffix}` }).getByText("Chờ duyệt")).toBeVisible();
+    await expect(
+      page
+        .locator("article")
+        .filter({ hasText: `BG-${suffix}` })
+        .getByText("Chờ duyệt"),
+    ).toBeVisible();
 
     // ---- The work package lead approves; only then is the price usable.
     await loginInBrowserAs(page, TEST_USERS[departmentLead.account]);
@@ -233,12 +275,12 @@ test.describe("MoM §5 pre-contract department controls", () => {
     await shot("s5-04-gia-dau-vao-da-duyet.png");
 
     const approved = await call("salesManager", "get", `/api/work-packages/${packageId}`);
-    expect(((approved.inputPriceOffers as Body[])[0].status as string)).toBe("Approved");
+    expect((approved.inputPriceOffers as Body[])[0].status as string).toBe("Approved");
 
     // The screen stays usable on the BCH-style narrow viewport.
     await page.setViewportSize({ width: 390, height: 844 });
     await page.reload({ waitUntil: "networkidle" });
-    const dimensions = await page.locator("html").evaluate(element => ({
+    const dimensions = await page.locator("html").evaluate((element) => ({
       clientWidth: element.clientWidth,
       scrollWidth: element.scrollWidth,
     }));
@@ -262,9 +304,15 @@ test.describe("MoM §5 pre-contract department controls", () => {
       data?: unknown,
     ) => {
       if (!tokens.has(name)) tokens.set(name, await loginAs(TEST_USERS[name]));
-      const headers = { Authorization: `Bearer ${tokens.get(name)!}`, "Idempotency-Key": randomUUID() };
+      const headers = {
+        Authorization: `Bearer ${tokens.get(name)!}`,
+        "Idempotency-Key": randomUUID(),
+      };
       const response = await api[method](url, { headers, data });
-      expect(response.ok(), `${method.toUpperCase()} ${url}: ${await response.text()}`).toBeTruthy();
+      expect(
+        response.ok(),
+        `${method.toUpperCase()} ${url}: ${await response.text()}`,
+      ).toBeTruthy();
       const text = await response.text();
       return (text ? JSON.parse(text) : {}) as Body;
     };
@@ -288,17 +336,30 @@ test.describe("MoM §5 pre-contract department controls", () => {
     let opportunity = await call("salesManager", "get", `/api/opportunities/${opportunityId}`);
     const projectId = opportunity.operationalProjectId as number;
     for (const targetStage of ["Qualification", "Proposal", "Negotiation"]) {
-      opportunity = await call("salesManager", "patch", `/api/opportunities/${opportunityId}/stage`, {
-        targetStage,
-        rowVersion: opportunity.rowVersion,
-      });
+      opportunity = await call(
+        "salesManager",
+        "patch",
+        `/api/opportunities/${opportunityId}/stage`,
+        {
+          targetStage,
+          rowVersion: opportunity.rowVersion,
+        },
+      );
     }
 
     const quote = await call("salesManager", "post", "/api/quotes", {
       opportunityId,
       method: "Boq",
       packageDescription: `Kết cấu thép nhà xưởng Vina ${suffix}`,
-      items: [{ itemCode: "KC-THEP-01", name: "Kết cấu thép mạ kẽm nhúng nóng", unit: "kg", quantity: 12_500, unitPrice: 28_900 }],
+      items: [
+        {
+          itemCode: "KC-THEP-01",
+          name: "Kết cấu thép mạ kẽm nhúng nóng",
+          unit: "kg",
+          quantity: 12_500,
+          unitPrice: 28_900,
+        },
+      ],
       vatPercent: 8,
     });
     const quoteId = quote.id as number;
@@ -306,8 +367,12 @@ test.describe("MoM §5 pre-contract department controls", () => {
     // Cung ứng supplies an approved input price on the shared project.
     const procurement = await resolveDepartment(call, "PROCUREMENT");
     const finance = await resolveDepartment(call, "FINANCE");
-    const { lead: procurementLead, maker: priceMaker } = await pickLeadAndMaker(call, "PROCUREMENT", procurement.members);
-    const accountant = finance.members.find(member => member.canLead)!;
+    const { lead: procurementLead, maker: priceMaker } = await pickLeadAndMaker(
+      call,
+      "PROCUREMENT",
+      procurement.members,
+    );
+    const accountant = finance.members.find((member) => member.canLead)!;
     expect(accountant, "a member of FINANCE may lead the commercial review").toBeTruthy();
     const vendor = (procurement.options.vendors as { id: number; code: string; name: string }[])[0];
     await addProjectMembers(call, projectId, [
@@ -325,20 +390,44 @@ test.describe("MoM §5 pre-contract department controls", () => {
       leadUserId: procurementLead.userId,
     });
     const pricePackageId = pricePackage.id as number;
-    let offer = await call(priceMaker.account, "post", `/api/work-packages/${pricePackageId}/input-price-offers`, {
-      vendorId: vendor.id,
-      supplierReference: `BG-VINA-${suffix}`,
-      currency: "VND",
-      validUntil: `${tomorrow(30)}T23:59:59.000Z`,
-      lines: [{ itemCode: "KC-THEP-01", description: "Kết cấu thép mạ kẽm nhúng nóng", unit: "kg", quantity: 12_500, unitPrice: 21_500, vatPercent: 8 }],
-    });
-    offer = await call(priceMaker.account, "post", `/api/work-packages/${pricePackageId}/input-price-offers/${offer.id}/submit`, {
-      rowVersion: offer.rowVersion,
-    });
-    const approvedOffer = await call(procurementLead.account, "post", `/api/work-packages/${pricePackageId}/input-price-offers/${offer.id}/decision`, {
-      approved: true,
-      rowVersion: offer.rowVersion,
-    });
+    let offer = await call(
+      priceMaker.account,
+      "post",
+      `/api/work-packages/${pricePackageId}/input-price-offers`,
+      {
+        vendorId: vendor.id,
+        supplierReference: `BG-VINA-${suffix}`,
+        currency: "VND",
+        validUntil: `${tomorrow(30)}T23:59:59.000Z`,
+        lines: [
+          {
+            itemCode: "KC-THEP-01",
+            description: "Kết cấu thép mạ kẽm nhúng nóng",
+            unit: "kg",
+            quantity: 12_500,
+            unitPrice: 21_500,
+            vatPercent: 8,
+          },
+        ],
+      },
+    );
+    offer = await call(
+      priceMaker.account,
+      "post",
+      `/api/work-packages/${pricePackageId}/input-price-offers/${offer.id}/submit`,
+      {
+        rowVersion: offer.rowVersion,
+      },
+    );
+    const approvedOffer = await call(
+      procurementLead.account,
+      "post",
+      `/api/work-packages/${pricePackageId}/input-price-offers/${offer.id}/decision`,
+      {
+        approved: true,
+        rowVersion: offer.rowVersion,
+      },
+    );
     expect(approvedOffer.status).toBe("Approved");
 
     // ---- The approved input price is offered to Kinh doanh on the quote.
@@ -346,14 +435,19 @@ test.describe("MoM §5 pre-contract department controls", () => {
     await page.addInitScript(() => localStorage.setItem("nicon_lang", "vi"));
     await page.goto(`/admin/quotes/${quoteId}`, { waitUntil: "networkidle" });
     await page.getByTestId("quote-edit").click();
-    await page.getByRole("combobox").filter({ hasText: /Chưa gắn báo giá đầu vào/ }).click();
+    await page
+      .getByRole("combobox")
+      .filter({ hasText: /Chưa gắn báo giá đầu vào/ })
+      .click();
     await page.getByRole("option", { name: new RegExp(`BG-VINA-${suffix}`) }).click();
     await shot("s5-05-bao-gia-chon-gia-dau-vao.png");
     await page.getByRole("button", { name: "Lưu thay đổi" }).first().click();
-    await expect.poll(async () => {
-      const saved = await call("salesManager", "get", `/api/quotes/${quoteId}`);
-      return saved.inputPriceOfferId;
-    }).toBe(offer.id);
+    await expect
+      .poll(async () => {
+        const saved = await call("salesManager", "get", `/api/quotes/${quoteId}`);
+        return saved.inputPriceOfferId;
+      })
+      .toBe(offer.id);
     await expect(page.getByText(`BG-VINA-${suffix}`).first()).toBeVisible();
 
     // ---- The quote still cannot reach the customer: Finance has not reviewed.
@@ -367,8 +461,11 @@ test.describe("MoM §5 pre-contract department controls", () => {
     await page.getByRole("button", { name: "Gửi khách" }).click();
     const sendDialog = page.getByRole("dialog");
     await expect(sendDialog.getByText("Email khách hàng")).toBeVisible({ timeout: 15_000 });
-    const sendResponse = page.waitForResponse(response =>
-      response.request().method() === "POST" && /\/api\/(?:v1\/)?quotes\/\d+\/send$/.test(response.url()));
+    const sendResponse = page.waitForResponse(
+      (response) =>
+        response.request().method() === "POST" &&
+        /\/api\/(?:v1\/)?quotes\/\d+\/send$/.test(response.url()),
+    );
     await sendDialog.getByRole("button", { name: "Gửi khách" }).click();
     const rejected = await sendResponse;
     expect(rejected.status()).toBe(400);
@@ -387,7 +484,9 @@ test.describe("MoM §5 pre-contract department controls", () => {
     await page.getByRole("link", { name: "Yêu cầu Tài chính rà soát" }).click();
     const reviewPackageDialog = page.getByRole("dialog");
     await reviewPackageDialog.getByText("Tài chính rà soát thương mại").first().waitFor();
-    await reviewPackageDialog.locator('input[maxlength="300"]').fill(`Rà soát thương mại Vina ${suffix}`);
+    await reviewPackageDialog
+      .locator('input[maxlength="300"]')
+      .fill(`Rà soát thương mại Vina ${suffix}`);
     await reviewPackageDialog.getByRole("combobox").last().click();
     await page.getByRole("option", { name: accountant.name }).click();
     await reviewPackageDialog.getByRole("button", { name: "Lưu thay đổi" }).click();
@@ -396,11 +495,19 @@ test.describe("MoM §5 pre-contract department controls", () => {
 
     await loginInBrowserAs(page, TEST_USERS[accountant.account]);
     await page.goto(`/admin/work-packages/${reviewPackageId}`, { waitUntil: "networkidle" });
-    await expect(page.getByRole("heading", { name: "Rà soát điều kiện hợp đồng và thanh toán" })).toBeVisible();
-    for (const label of ["Đã rà soát điều kiện hợp đồng", "Đã rà soát điều kiện thanh toán", "Đã rà soát bảo lãnh"]) {
+    await expect(
+      page.getByRole("heading", { name: "Rà soát điều kiện hợp đồng và thanh toán" }),
+    ).toBeVisible();
+    for (const label of [
+      "Đã rà soát điều kiện hợp đồng",
+      "Đã rà soát điều kiện thanh toán",
+      "Đã rà soát bảo lãnh",
+    ]) {
       await page.getByText(label).click();
     }
-    await page.locator('textarea[maxlength="4000"]').fill("Điều kiện thanh toán theo tiến độ, giữ lại 5% bảo hành 12 tháng.");
+    await page
+      .locator('textarea[maxlength="4000"]')
+      .fill("Điều kiện thanh toán theo tiến độ, giữ lại 5% bảo hành 12 tháng.");
     await page.getByRole("button", { name: "Lưu thay đổi" }).click();
     await shot("s5-07-ra-soat-thuong-mai.png");
     await page.getByRole("button", { name: "Gửi duyệt" }).click();

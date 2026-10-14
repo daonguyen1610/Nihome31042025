@@ -1,7 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { AlertTriangle, ExternalLink, Link2Off, Loader2, RotateCcw, Trash2 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
-import { adminApi, type DeletionImpactAction, type DeletionImpactResponse, type HardDeleteOperationResult } from "@/services/adminApi";
+import {
+  adminApi,
+  type DeletionImpactAction,
+  type DeletionImpactResponse,
+  type HardDeleteOperationResult,
+} from "@/services/adminApi";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -69,7 +74,14 @@ export const DeletionImpactDialog = ({
   }, [open]);
 
   useEffect(() => {
-    if (!open || !operation || operation.isComplete || operation.status === "Failed" || operation.requiresManualAction) return;
+    if (
+      !open ||
+      !operation ||
+      operation.isComplete ||
+      operation.status === "Failed" ||
+      operation.requiresManualAction
+    )
+      return;
 
     let active = true;
     const poll = async () => {
@@ -96,8 +108,13 @@ export const DeletionImpactDialog = ({
   }, [onCompleted, operation]);
 
   const confirmed = impact != null && confirmation === impact.requiredConfirmation;
-  const operationActive = operation != null && !operation.isComplete && operation.status !== "Failed" && !operation.requiresManualAction;
-  const canSubmit = impact?.canDelete === true && confirmed && !loading && !deleting && operation == null;
+  const operationActive =
+    operation != null &&
+    !operation.isComplete &&
+    operation.status !== "Failed" &&
+    !operation.requiresManualAction;
+  const canSubmit =
+    impact?.canDelete === true && confirmed && !loading && !deleting && operation == null;
 
   const submit = async () => {
     try {
@@ -133,7 +150,10 @@ export const DeletionImpactDialog = ({
           <AlertDialogTitle>{t("deletionImpact.title")}</AlertDialogTitle>
           <AlertDialogDescription>
             {impact
-              ? t("deletionImpact.description", { name: impact.resourceLabel, count: impact.totalAffected })
+              ? t("deletionImpact.description", {
+                  name: impact.resourceLabel,
+                  count: impact.totalAffected,
+                })
               : t("deletionImpact.loading")}
           </AlertDialogDescription>
         </AlertDialogHeader>
@@ -146,16 +166,26 @@ export const DeletionImpactDialog = ({
         ) : null}
 
         {error ? (
-          <div role="alert" className="flex gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+          <div
+            role="alert"
+            className="flex gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive"
+          >
             <AlertTriangle className="h-4 w-4" />
             <p>{error}</p>
           </div>
         ) : null}
 
         {operation ? (
-          <div className="space-y-3 rounded-md border border-amber-200 bg-amber-50 p-4" role="status">
+          <div
+            className="space-y-3 rounded-md border border-amber-200 bg-amber-50 p-4"
+            role="status"
+          >
             <div className="flex items-start gap-2 text-sm text-amber-900">
-              {operationActive ? <Loader2 className="mt-0.5 h-4 w-4 animate-spin" /> : <AlertTriangle className="mt-0.5 h-4 w-4" />}
+              {operationActive ? (
+                <Loader2 className="mt-0.5 h-4 w-4 animate-spin" />
+              ) : (
+                <AlertTriangle className="mt-0.5 h-4 w-4" />
+              )}
               <div className="space-y-1">
                 <p className="font-medium">
                   {operation.requiresManualAction
@@ -164,13 +194,29 @@ export const DeletionImpactDialog = ({
                       ? t("deletionImpact.operation.failed")
                       : t("deletionImpact.operation.processing")}
                 </p>
-                <p className="text-xs">{t("deletionImpact.operation.reference", { id: operation.operationId })}</p>
+                <p className="text-xs">
+                  {t("deletionImpact.operation.reference", { id: operation.operationId })}
+                </p>
               </div>
             </div>
-            {operationError ? <p role="alert" className="text-sm text-destructive">{t("deletionImpact.operation.statusError")}</p> : null}
-            {(operation.status === "Failed" || operation.requiresManualAction) ? (
-              <Button type="button" variant="outline" size="sm" disabled={retrying} onClick={() => void retry()}>
-                {retrying ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RotateCcw className="mr-2 h-4 w-4" />}
+            {operationError ? (
+              <p role="alert" className="text-sm text-destructive">
+                {t("deletionImpact.operation.statusError")}
+              </p>
+            ) : null}
+            {operation.status === "Failed" || operation.requiresManualAction ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={retrying}
+                onClick={() => void retry()}
+              >
+                {retrying ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <RotateCcw className="mr-2 h-4 w-4" />
+                )}
                 {t("deletionImpact.operation.retry")}
               </Button>
             ) : null}
@@ -187,19 +233,21 @@ export const DeletionImpactDialog = ({
               <div className="space-y-2">
                 {impact.items.map((item) => {
                   const Icon = actionIcon[item.action];
-                  const resolutionLinks = (item.resolutionLinks ?? [])
-                    .filter((link) => link.url.startsWith("/admin/"));
+                  const resolutionLinks = (item.resolutionLinks ?? []).filter((link) =>
+                    link.url.startsWith("/admin/"),
+                  );
                   const resolutionUrl =
-                    item.count > resolutionLinks.length &&
-                    item.resolutionUrl?.startsWith("/admin/")
-                    ? item.resolutionUrl
-                    : null;
+                    item.count > resolutionLinks.length && item.resolutionUrl?.startsWith("/admin/")
+                      ? item.resolutionUrl
+                      : null;
                   return (
                     <section key={item.key} className="rounded-md border p-3">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
                           <Icon className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm font-medium">{t(`deletionImpact.item.${item.key}`)}</span>
+                          <span className="text-sm font-medium">
+                            {t(`deletionImpact.item.${item.key}`)}
+                          </span>
                         </div>
                         <Badge variant="outline" className={actionClass[item.action]}>
                           {t(`deletionImpact.action.${item.action}`)} · {item.count}
@@ -207,7 +255,9 @@ export const DeletionImpactDialog = ({
                       </div>
                       {resolutionLinks.length > 0 ? (
                         <div className="mt-2 space-y-1 text-xs">
-                          <p className="text-muted-foreground">{t("deletionImpact.relatedRecords")}</p>
+                          <p className="text-muted-foreground">
+                            {t("deletionImpact.relatedRecords")}
+                          </p>
                           {resolutionLinks.map((link) => (
                             <a
                               key={link.url}
@@ -244,7 +294,10 @@ export const DeletionImpactDialog = ({
             )}
 
             {!impact.canDelete ? (
-              <div role="alert" className="flex gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+              <div
+                role="alert"
+                className="flex gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive"
+              >
                 <AlertTriangle className="h-4 w-4" />
                 <p>{t("deletionImpact.blocked")}</p>
               </div>
@@ -268,7 +321,9 @@ export const DeletionImpactDialog = ({
         ) : null}
 
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={deleting || operationActive}>{t("common.cancel")}</AlertDialogCancel>
+          <AlertDialogCancel disabled={deleting || operationActive}>
+            {t("common.cancel")}
+          </AlertDialogCancel>
           {!operation ? (
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"

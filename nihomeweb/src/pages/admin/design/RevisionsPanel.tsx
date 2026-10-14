@@ -210,7 +210,9 @@ export const RevisionsPanel = ({
             <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
           </div>
         ) : error ? (
-          <p className="rounded-md border border-rose-200 bg-rose-50/60 p-3 text-sm text-rose-700">{error}</p>
+          <p className="rounded-md border border-rose-200 bg-rose-50/60 p-3 text-sm text-rose-700">
+            {error}
+          </p>
         ) : (
           <div className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -252,12 +254,18 @@ export const RevisionsPanel = ({
                         <p className="flex items-center gap-2 text-sm font-semibold text-slate-900">
                           <span className="font-mono">{row.revisionLabel}</span>
                           {row.isCurrent ? (
-                            <Badge variant="outline" className="border-emerald-300 bg-emerald-100 text-emerald-800">
+                            <Badge
+                              variant="outline"
+                              className="border-emerald-300 bg-emerald-100 text-emerald-800"
+                            >
                               <CheckCircle2 className="mr-1 h-3 w-3" />
                               {t("drawingRevision.badge.current")}
                             </Badge>
                           ) : (
-                            <Badge variant="outline" className="border-slate-200 bg-slate-50 text-slate-500">
+                            <Badge
+                              variant="outline"
+                              className="border-slate-200 bg-slate-50 text-slate-500"
+                            >
                               {t("drawingRevision.badge.superseded")}
                             </Badge>
                           )}
@@ -266,7 +274,9 @@ export const RevisionsPanel = ({
                           <Sparkles className="mr-1 inline h-3 w-3 text-slate-400" />
                           {row.reasonLabel ?? row.reasonCode}
                         </p>
-                        <p className="mt-1 whitespace-pre-wrap text-sm text-slate-800">{row.note}</p>
+                        <p className="mt-1 whitespace-pre-wrap text-sm text-slate-800">
+                          {row.note}
+                        </p>
                       </div>
                       <div className="text-right text-[11px] text-slate-500">
                         <p>{formatDate(row.createdAt, lang)}</p>
@@ -286,24 +296,34 @@ export const RevisionsPanel = ({
                   {t("drawingRevision.diff.title")}
                 </p>
                 <div className="flex flex-wrap items-center gap-2">
-                  <Select value={diffFrom != null ? String(diffFrom) : ""} onValueChange={(v) => setDiffFrom(v ? Number(v) : null)}>
+                  <Select
+                    value={diffFrom != null ? String(diffFrom) : ""}
+                    onValueChange={(v) => setDiffFrom(v ? Number(v) : null)}
+                  >
                     <SelectTrigger className="h-9 w-[140px]" data-testid="revisions-diff-from">
                       <SelectValue placeholder={t("drawingRevision.diff.from")} />
                     </SelectTrigger>
                     <SelectContent>
                       {rows.map((r) => (
-                        <SelectItem key={r.id} value={String(r.id)}>{r.revisionLabel}</SelectItem>
+                        <SelectItem key={r.id} value={String(r.id)}>
+                          {r.revisionLabel}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                   <span className="text-xs text-slate-400">→</span>
-                  <Select value={diffTo != null ? String(diffTo) : ""} onValueChange={(v) => setDiffTo(v ? Number(v) : null)}>
+                  <Select
+                    value={diffTo != null ? String(diffTo) : ""}
+                    onValueChange={(v) => setDiffTo(v ? Number(v) : null)}
+                  >
                     <SelectTrigger className="h-9 w-[140px]" data-testid="revisions-diff-to">
                       <SelectValue placeholder={t("drawingRevision.diff.to")} />
                     </SelectTrigger>
                     <SelectContent>
                       {rows.map((r) => (
-                        <SelectItem key={r.id} value={String(r.id)}>{r.revisionLabel}</SelectItem>
+                        <SelectItem key={r.id} value={String(r.id)}>
+                          {r.revisionLabel}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -311,14 +331,23 @@ export const RevisionsPanel = ({
                     size="sm"
                     variant="outline"
                     onClick={() => void runDiff()}
-                    disabled={diffFrom == null || diffTo == null || diffFrom === diffTo || diffLoading}
+                    disabled={
+                      diffFrom == null || diffTo == null || diffFrom === diffTo || diffLoading
+                    }
                     data-testid="revisions-diff-run"
                   >
-                    {diffLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t("drawingRevision.diff.run")}
+                    {diffLoading ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      t("drawingRevision.diff.run")
+                    )}
                   </Button>
                 </div>
                 {diff ? (
-                  <ul className="mt-2 list-disc space-y-0.5 pl-4 text-xs text-slate-700" data-testid="revisions-diff-output">
+                  <ul
+                    className="mt-2 list-disc space-y-0.5 pl-4 text-xs text-slate-700"
+                    data-testid="revisions-diff-output"
+                  >
                     {diff.changes.map((line, i) => (
                       <li key={i}>{line}</li>
                     ))}
@@ -345,7 +374,9 @@ export const RevisionsPanel = ({
                   </SelectTrigger>
                   <SelectContent>
                     {reasonOptions.map((o) => (
-                      <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                      <SelectItem key={o.value} value={o.value}>
+                        {o.label}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -361,12 +392,20 @@ export const RevisionsPanel = ({
                 />
               </div>
             </div>
-            {formError ? <p className="text-sm text-rose-600" data-testid="revisions-form-error">{formError}</p> : null}
+            {formError ? (
+              <p className="text-sm text-rose-600" data-testid="revisions-form-error">
+                {formError}
+              </p>
+            ) : null}
             <DialogFooter>
               <Button variant="outline" onClick={() => setCreateOpen(false)} disabled={saving}>
                 {t("common.cancel")}
               </Button>
-              <Button onClick={() => void submitCreate()} disabled={saving} data-testid="revisions-form-save">
+              <Button
+                onClick={() => void submitCreate()}
+                disabled={saving}
+                data-testid="revisions-form-save"
+              >
                 {t("common.save")}
               </Button>
             </DialogFooter>

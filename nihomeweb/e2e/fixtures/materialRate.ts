@@ -26,14 +26,14 @@ export async function createApprovedInvestmentRate(
     },
   });
   expect(catalogResponse.status(), await catalogResponse.text()).toBe(201);
-  const catalogId = ((await catalogResponse.json()).id as number);
+  const catalogId = (await catalogResponse.json()).id as number;
 
   const revisionResponse = await api.post(`/api/material-rate-catalogs/${catalogId}/revisions`, {
     headers,
     data: { effectiveFrom: "2020-01-01", effectiveTo: "2099-12-31" },
   });
   expect(revisionResponse.status(), await revisionResponse.text()).toBe(201);
-  const revisionId = ((await revisionResponse.json()).id as number);
+  const revisionId = (await revisionResponse.json()).id as number;
   const csv = [
     "MaterialCode,MaterialName,Unit,NormPerSqm,UnitRate,WastePercent",
     `E2E-PACKAGE,Construction package,m2,1,${unitPricePerSqm},0`,
@@ -44,7 +44,11 @@ export async function createApprovedInvestmentRate(
     {
       headers,
       multipart: {
-        file: { name: `investment-rate-${suffix}.csv`, mimeType: "text/csv", buffer: Buffer.from(csv) },
+        file: {
+          name: `investment-rate-${suffix}.csv`,
+          mimeType: "text/csv",
+          buffer: Buffer.from(csv),
+        },
       },
     },
   );

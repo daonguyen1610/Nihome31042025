@@ -20,12 +20,7 @@ import { cn } from "@/lib/utils";
 import { PageError } from "@/components/PageState";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   adminApi,
   type SurveyDriveSyncStatus,
@@ -181,9 +176,10 @@ const AdminSurveyDetail = () => {
   }, [searchParams]);
 
   const targetMediaId = useMemo(
-    () => requestedMediaId != null && survey?.media.some((media) => media.id === requestedMediaId)
-      ? requestedMediaId
-      : null,
+    () =>
+      requestedMediaId != null && survey?.media.some((media) => media.id === requestedMediaId)
+        ? requestedMediaId
+        : null,
     [requestedMediaId, survey],
   );
 

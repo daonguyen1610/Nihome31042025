@@ -22,9 +22,7 @@ const Projects = () => {
   );
   const [searchParams, setSearchParams] = useSearchParams();
   const initial = (searchParams.get("status") as FilterId) || "all";
-  const [filter, setFilter] = useState<FilterId>(
-    filterIds.includes(initial) ? initial : "all"
-  );
+  const [filter, setFilter] = useState<FilterId>(filterIds.includes(initial) ? initial : "all");
   const [q, setQ] = useState("");
 
   const filters: { id: FilterId; label: string }[] = [
@@ -59,7 +57,7 @@ const Projects = () => {
           p.location.toLowerCase().includes(q.toLowerCase());
         return matchStatus && matchQ;
       }),
-    [projects, filter, q]
+    [projects, filter, q],
   );
 
   return (
@@ -83,7 +81,7 @@ const Projects = () => {
                     "btn-pill px-5 py-2.5 text-xs uppercase tracking-wider border transition-all",
                     filter === f.id
                       ? "btn-gradient text-white border-transparent"
-                      : "bg-secondary border-border text-foreground/70 hover:text-foreground"
+                      : "bg-secondary border-border text-foreground/70 hover:text-foreground",
                   )}
                 >
                   {f.label}
@@ -121,10 +119,23 @@ const Projects = () => {
                   className="group block card-hover bg-card rounded-3xl overflow-hidden border border-border"
                 >
                   <div className="image-zoom relative aspect-[4/3] overflow-hidden bg-muted">
-                    <img src={p.imageUrl} alt={p.name} loading="lazy" className="w-full h-full object-cover" />
+                    <img
+                      src={p.imageUrl}
+                      alt={p.name}
+                      loading="lazy"
+                      className="w-full h-full object-cover"
+                    />
                     <div className="absolute top-5 left-5 flex gap-2">
-                      <span className={cn("chip", p.status === "ongoing" ? "chip-orange" : "chip-success", "bg-white/95 backdrop-blur")}>
-                        {p.status === "ongoing" ? t("projectsPage.filter.ongoing") : t("projectsPage.filter.completed")}
+                      <span
+                        className={cn(
+                          "chip",
+                          p.status === "ongoing" ? "chip-orange" : "chip-success",
+                          "bg-white/95 backdrop-blur",
+                        )}
+                      >
+                        {p.status === "ongoing"
+                          ? t("projectsPage.filter.ongoing")
+                          : t("projectsPage.filter.completed")}
                       </span>
                     </div>
                     {p.year && (
@@ -134,16 +145,24 @@ const Projects = () => {
                     )}
                   </div>
                   <div className="p-6">
-                    <p className="text-[10px] uppercase tracking-[0.18em] font-bold text-muted-foreground mb-2">{resolveCategoryLabel(p.categoryId, p.category, categoriesById, lang)}</p>
+                    <p className="text-[10px] uppercase tracking-[0.18em] font-bold text-muted-foreground mb-2">
+                      {resolveCategoryLabel(p.categoryId, p.category, categoriesById, lang)}
+                    </p>
                     <h3 className="font-display text-xl lg:text-2xl font-extrabold mb-3 group-hover:text-primary transition-colors leading-tight">
                       {p.name}
                     </h3>
                     <div className="space-y-1.5 text-sm text-muted-foreground mb-5">
-                      <p className="flex items-center gap-2"><MapPin className="w-3.5 h-3.5" /> {p.location}</p>
-                      <p className="flex items-center gap-2"><Maximize2 className="w-3.5 h-3.5" /> {p.scale}</p>
+                      <p className="flex items-center gap-2">
+                        <MapPin className="w-3.5 h-3.5" /> {p.location}
+                      </p>
+                      <p className="flex items-center gap-2">
+                        <Maximize2 className="w-3.5 h-3.5" /> {p.scale}
+                      </p>
                     </div>
                     <div className="flex items-center justify-between pt-4 border-t border-border">
-                      <span className="text-xs uppercase tracking-wider font-bold text-foreground/70">{p.scope}</span>
+                      <span className="text-xs uppercase tracking-wider font-bold text-foreground/70">
+                        {p.scope}
+                      </span>
                       <span className="w-9 h-9 rounded-full bg-secondary group-hover:bg-gradient-primary group-hover:text-white flex items-center justify-center transition-all">
                         <ArrowUpRight className="w-4 h-4" />
                       </span>

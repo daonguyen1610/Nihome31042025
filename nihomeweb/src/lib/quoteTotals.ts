@@ -36,7 +36,7 @@ const toScaledInteger = (value: DecimalInput, scale: number): bigint => {
   }
   if (!Number.isFinite(value)) return 0n;
   if (Math.abs(value) >= 1e21) {
-    return BigInt(Math.trunc(value)) * (10n ** BigInt(scale));
+    return BigInt(Math.trunc(value)) * 10n ** BigInt(scale);
   }
   return BigInt(value.toFixed(scale).replace(".", ""));
 };
@@ -48,9 +48,8 @@ const divideRoundHalfAwayFromZero = (numerator: bigint, denominator: bigint): bi
 
 const centsToNumber = (cents: bigint): number => Number(cents) / 100;
 
-export const roundQuoteMoney = (value: number): number => centsToNumber(
-  divideRoundHalfAwayFromZero(toScaledInteger(value, 4), 100n),
-);
+export const roundQuoteMoney = (value: number): number =>
+  centsToNumber(divideRoundHalfAwayFromZero(toScaledInteger(value, 4), 100n));
 
 const calculateQuoteLineAmountCents = (quantity: DecimalInput, unitPrice: DecimalInput): bigint =>
   divideRoundHalfAwayFromZero(
@@ -82,14 +81,15 @@ export const calculateQuoteTotals = (
     vatPercent: number;
   },
 ): QuoteTotals => {
-  const subtotalCents = method === "Boq"
-    ? (values.items ?? []).reduce((sum, item) => {
-        return sum + calculateQuoteLineAmountCents(item.quantity, item.unitPrice);
-      }, 0n)
-    : divideRoundHalfAwayFromZero(
-        toScaledInteger(values.areaSqm ?? 0, 2) * toScaledInteger(values.unitPricePerSqm ?? 0, 2),
-        100n,
-      );
+  const subtotalCents =
+    method === "Boq"
+      ? (values.items ?? []).reduce((sum, item) => {
+          return sum + calculateQuoteLineAmountCents(item.quantity, item.unitPrice);
+        }, 0n)
+      : divideRoundHalfAwayFromZero(
+          toScaledInteger(values.areaSqm ?? 0, 2) * toScaledInteger(values.unitPricePerSqm ?? 0, 2),
+          100n,
+        );
   const discountBasisPoints = toScaledInteger(values.discountPercent, 2);
   const vatBasisPoints = toScaledInteger(values.vatPercent, 2);
   const discountAmountCents = divideRoundHalfAwayFromZero(
@@ -123,8 +123,14 @@ export const validateQuoteValues = (
     vatPercent: number;
   },
 ): QuoteValidationIssue | null => {
-  if (!Number.isFinite(values.discountPercent) || values.discountPercent < 0 || values.discountPercent > 100 ||
-      !Number.isFinite(values.vatPercent) || values.vatPercent < 0 || values.vatPercent > 100) {
+  if (
+    !Number.isFinite(values.discountPercent) ||
+    values.discountPercent < 0 ||
+    values.discountPercent > 100 ||
+    !Number.isFinite(values.vatPercent) ||
+    values.vatPercent < 0 ||
+    values.vatPercent > 100
+  ) {
     return "percentRange";
   }
   if (!hasScale(values.discountPercent, 2) || !hasScale(values.vatPercent, 2)) {
@@ -132,29 +138,50 @@ export const validateQuoteValues = (
   }
 
   if (method === "UnitCost") {
-    if (!Number.isFinite(values.areaSqm) || !Number.isFinite(values.unitPricePerSqm) ||
-        (values.areaSqm ?? 0) <= 0 || (values.unitPricePerSqm ?? 0) <= 0) {
+    if (
+      !Number.isFinite(values.areaSqm) ||
+      !Number.isFinite(values.unitPricePerSqm) ||
+      (values.areaSqm ?? 0) <= 0 ||
+      (values.unitPricePerSqm ?? 0) <= 0
+    ) {
       return "unitCostRequired";
     }
-    if (!hasScale(values.areaSqm, 2) || !hasScale(values.unitPricePerSqm, 2)) return "numericPrecision";
-    if (values.areaSqm > MAX_QUOTE_MONEY || values.unitPricePerSqm > MAX_QUOTE_MONEY ||
-        values.areaSqm * values.unitPricePerSqm > MAX_QUOTE_MONEY) {
+    if (!hasScale(values.areaSqm, 2) || !hasScale(values.unitPricePerSqm, 2))
+      return "numericPrecision";
+    if (
+      values.areaSqm > MAX_QUOTE_MONEY ||
+      values.unitPricePerSqm > MAX_QUOTE_MONEY ||
+      values.areaSqm * values.unitPricePerSqm > MAX_QUOTE_MONEY
+    ) {
       return "amountTooLarge";
     }
   } else {
     const items = values.items ?? [];
     if (items.length === 0) return "boqRequired";
-    if (items.some((item) => !item.name.trim() || !item.unit.trim() ||
-      !isFiniteDecimal(item.quantity) || !isFiniteDecimal(item.unitPrice) ||
-      Number(item.quantity) <= 0 || Number(item.unitPrice) < 0)) {
+    if (
+      items.some(
+        (item) =>
+          !item.name.trim() ||
+          !item.unit.trim() ||
+          !isFiniteDecimal(item.quantity) ||
+          !isFiniteDecimal(item.unitPrice) ||
+          Number(item.quantity) <= 0 ||
+          Number(item.unitPrice) < 0,
+      )
+    ) {
       return "boqInvalidRow";
     }
     if (items.some((item) => !hasScale(item.quantity, 4) || !hasScale(item.unitPrice, 2))) {
       return "boqPrecision";
     }
-    if (items.some((item) => Number(item.quantity) > MAX_QUOTE_QUANTITY ||
-      Number(item.unitPrice) > MAX_QUOTE_MONEY ||
-      Number(item.quantity) * Number(item.unitPrice) > MAX_QUOTE_MONEY)) {
+    if (
+      items.some(
+        (item) =>
+          Number(item.quantity) > MAX_QUOTE_QUANTITY ||
+          Number(item.unitPrice) > MAX_QUOTE_MONEY ||
+          Number(item.quantity) * Number(item.unitPrice) > MAX_QUOTE_MONEY,
+      )
+    ) {
       return "amountTooLarge";
     }
   }

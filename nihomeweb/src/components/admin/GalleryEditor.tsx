@@ -29,7 +29,10 @@ const GalleryEditor = ({ items, onChange, folder }: GalleryEditorProps) => {
         uploaded.push(res.data.imageUrl);
       }
       onChange([...items, ...uploaded]);
-      toast({ title: t("form.updated"), description: t("media.gallery.countToast").replace("{count}", String(uploaded.length)) });
+      toast({
+        title: t("form.updated"),
+        description: t("media.gallery.countToast").replace("{count}", String(uploaded.length)),
+      });
     } catch {
       toast({ title: t("common.error"), variant: "destructive" });
     } finally {
@@ -105,7 +108,10 @@ const GalleryEditor = ({ items, onChange, folder }: GalleryEditorProps) => {
       ) : (
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           {items.map((url, idx) => (
-            <div key={`${url}-${idx}`} className="group relative aspect-square overflow-hidden rounded-lg border bg-muted">
+            <div
+              key={`${url}-${idx}`}
+              className="group relative aspect-square overflow-hidden rounded-lg border bg-muted"
+            >
               <img
                 src={url}
                 alt=""

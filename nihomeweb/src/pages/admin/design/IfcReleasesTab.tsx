@@ -1,13 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  CheckCircle2,
-  Loader2,
-  Plus,
-  Rocket,
-  ShieldCheck,
-  Trash2,
-  XCircle,
-} from "lucide-react";
+import { CheckCircle2, Loader2, Plus, Rocket, ShieldCheck, Trash2, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
 import { Button } from "@/components/ui/button";
@@ -90,7 +82,8 @@ export const IfcReleasesTab = ({ project }: Props) => {
   const canRelease = has(ADMIN_PERMS.designIfcRelease);
   const canHardDelete = has(ADMIN_PERMS.designRecordsHardDelete);
 
-  const isShopStage = project.currentStage === "ShopDrawing" || project.currentStage === "Completed";
+  const isShopStage =
+    project.currentStage === "ShopDrawing" || project.currentStage === "Completed";
 
   const [rows, setRows] = useState<IfcReleaseResponse[]>([]);
   const [statusCounts, setStatusCounts] = useState<Partial<Record<IfcReleaseStatus, number>>>({});
@@ -353,11 +346,20 @@ export const IfcReleasesTab = ({ project }: Props) => {
     let active = true;
     setLoadingDeleteImpact(true);
     setDeleteError(null);
-    void adminApi.getIfcReleaseDeletionImpact(deleting.id)
-      .then(({ data }) => { if (active) setDeleteImpact(data); })
-      .catch((err) => { if (active) setDeleteError(extractApiError(err)); })
-      .finally(() => { if (active) setLoadingDeleteImpact(false); });
-    return () => { active = false; };
+    void adminApi
+      .getIfcReleaseDeletionImpact(deleting.id)
+      .then(({ data }) => {
+        if (active) setDeleteImpact(data);
+      })
+      .catch((err) => {
+        if (active) setDeleteError(extractApiError(err));
+      })
+      .finally(() => {
+        if (active) setLoadingDeleteImpact(false);
+      });
+    return () => {
+      active = false;
+    };
   }, [deleting]);
 
   const doDelete = async (confirmation: string) => {
@@ -387,7 +389,11 @@ export const IfcReleasesTab = ({ project }: Props) => {
     );
   }
   if (error) {
-    return <div className="rounded-lg border border-rose-200 bg-rose-50/60 p-4 text-sm text-rose-700">{error}</div>;
+    return (
+      <div className="rounded-lg border border-rose-200 bg-rose-50/60 p-4 text-sm text-rose-700">
+        {error}
+      </div>
+    );
   }
 
   return (
@@ -403,9 +409,22 @@ export const IfcReleasesTab = ({ project }: Props) => {
 
       {/* Status pills */}
       <section className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <StatPill label={t("ifcRelease.status.Draft")} value={statusCounts.Draft ?? 0} tone="slate" icon={<ShieldCheck className="h-3.5 w-3.5" />} />
-        <StatPill label={t("ifcRelease.status.Released")} value={statusCounts.Released ?? 0} tone="emerald" />
-        <StatPill label={t("ifcRelease.status.Cancelled")} value={statusCounts.Cancelled ?? 0} tone="rose" />
+        <StatPill
+          label={t("ifcRelease.status.Draft")}
+          value={statusCounts.Draft ?? 0}
+          tone="slate"
+          icon={<ShieldCheck className="h-3.5 w-3.5" />}
+        />
+        <StatPill
+          label={t("ifcRelease.status.Released")}
+          value={statusCounts.Released ?? 0}
+          tone="emerald"
+        />
+        <StatPill
+          label={t("ifcRelease.status.Cancelled")}
+          value={statusCounts.Cancelled ?? 0}
+          tone="rose"
+        />
         <StatPill label={t("ifcRelease.stats.total")} value={rows.length} tone="slate" />
       </section>
 
@@ -420,7 +439,10 @@ export const IfcReleasesTab = ({ project }: Props) => {
       </header>
 
       {rows.length === 0 ? (
-        <div className="rounded-md border border-dashed p-10 text-center text-sm text-muted-foreground" data-testid="ifc-empty">
+        <div
+          className="rounded-md border border-dashed p-10 text-center text-sm text-muted-foreground"
+          data-testid="ifc-empty"
+        >
           {t("ifcRelease.empty")}
         </div>
       ) : (
@@ -431,7 +453,9 @@ export const IfcReleasesTab = ({ project }: Props) => {
                 type="button"
                 className={cn(
                   "w-full rounded-md border p-3 text-left transition-colors",
-                  selected?.id === row.id ? "border-slate-400 bg-slate-50/60" : "border-slate-200 bg-white hover:bg-slate-50/50",
+                  selected?.id === row.id
+                    ? "border-slate-400 bg-slate-50/60"
+                    : "border-slate-200 bg-white hover:bg-slate-50/50",
                 )}
                 onClick={() => setSelected(row)}
                 data-testid={`ifc-row-${row.id}`}
@@ -439,17 +463,25 @@ export const IfcReleasesTab = ({ project }: Props) => {
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="font-mono text-xs text-slate-500">{row.releaseNumber}</p>
-                    <p className="mt-0.5 break-words text-sm font-medium text-slate-900">{row.title}</p>
+                    <p className="mt-0.5 break-words text-sm font-medium text-slate-900">
+                      {row.title}
+                    </p>
                     <p className="mt-0.5 text-xs text-slate-500">
-                      {row.items.length} × {t("ifcRelease.field.items")} · {row.recipients.length} × {t("ifcRelease.field.recipients")}
+                      {row.items.length} × {t("ifcRelease.field.items")} · {row.recipients.length} ×{" "}
+                      {t("ifcRelease.field.recipients")}
                     </p>
                   </div>
                   <div className="flex flex-col items-end gap-1">
-                    <Badge variant="outline" className={cn("whitespace-nowrap", STATUS_BADGE[row.status])}>
+                    <Badge
+                      variant="outline"
+                      className={cn("whitespace-nowrap", STATUS_BADGE[row.status])}
+                    >
                       {t(`ifcRelease.status.${row.status}`)}
                     </Badge>
                     <span className="text-[10px] text-muted-foreground">
-                      {row.releaseDate ? formatDate(row.releaseDate, lang) : formatDate(row.createdAt, lang)}
+                      {row.releaseDate
+                        ? formatDate(row.releaseDate, lang)
+                        : formatDate(row.createdAt, lang)}
                     </span>
                   </div>
                 </div>
@@ -482,7 +514,9 @@ export const IfcReleasesTab = ({ project }: Props) => {
                   </p>
                 ) : null}
                 {selected.note ? (
-                  <p className="whitespace-pre-wrap rounded-md border border-slate-200 bg-slate-50/40 p-2 text-xs text-slate-700">{selected.note}</p>
+                  <p className="whitespace-pre-wrap rounded-md border border-slate-200 bg-slate-50/40 p-2 text-xs text-slate-700">
+                    {selected.note}
+                  </p>
                 ) : null}
 
                 {/* Items */}
@@ -491,15 +525,24 @@ export const IfcReleasesTab = ({ project }: Props) => {
                     {t("ifcRelease.field.items")}
                   </p>
                   {selected.items.length === 0 ? (
-                    <p className="rounded-md border border-dashed p-3 text-center text-xs text-muted-foreground">—</p>
+                    <p className="rounded-md border border-dashed p-3 text-center text-xs text-muted-foreground">
+                      —
+                    </p>
                   ) : (
                     <ul className="divide-y divide-slate-100 rounded-md border border-slate-200">
                       {selected.items.map((item) => (
-                        <li key={item.id} className="flex items-center justify-between gap-2 p-2" data-testid={`ifc-item-${item.id}`}>
+                        <li
+                          key={item.id}
+                          className="flex items-center justify-between gap-2 p-2"
+                          data-testid={`ifc-item-${item.id}`}
+                        >
                           <div className="min-w-0">
                             <p className="font-mono text-xs text-slate-500">{item.drawingCode}</p>
                             <p className="text-sm text-slate-900">{item.title}</p>
-                            <p className="text-[10px] text-muted-foreground">{item.disciplineLabel ?? item.disciplineCode} · {t(`shopDrawing.status.${item.status}`)}</p>
+                            <p className="text-[10px] text-muted-foreground">
+                              {item.disciplineLabel ?? item.disciplineCode} ·{" "}
+                              {t(`shopDrawing.status.${item.status}`)}
+                            </p>
                           </div>
                           {canManage ? (
                             <Button
@@ -536,16 +579,26 @@ export const IfcReleasesTab = ({ project }: Props) => {
                               }}
                               data-testid={`ifc-picker-${d.id}`}
                             />
-                            <span className="font-mono text-[10px] text-slate-500">{d.drawingCode}</span>
+                            <span className="font-mono text-[10px] text-slate-500">
+                              {d.drawingCode}
+                            </span>
                             <span className="min-w-0 flex-1 truncate">{d.title}</span>
-                            <Badge variant="outline" className="border-slate-200 bg-white text-[10px] text-slate-500">
+                            <Badge
+                              variant="outline"
+                              className="border-slate-200 bg-white text-[10px] text-slate-500"
+                            >
                               {t(`shopDrawing.status.${d.status}`)}
                             </Badge>
                           </label>
                         ))}
                       </div>
                       <div className="mt-2 flex justify-end">
-                        <Button size="sm" onClick={() => void addItems()} disabled={pickerDrawingIds.size === 0} data-testid="ifc-picker-add">
+                        <Button
+                          size="sm"
+                          onClick={() => void addItems()}
+                          disabled={pickerDrawingIds.size === 0}
+                          data-testid="ifc-picker-add"
+                        >
                           {t("ifcRelease.action.addDrawing")}
                         </Button>
                       </div>
@@ -559,16 +612,24 @@ export const IfcReleasesTab = ({ project }: Props) => {
                     {t("ifcRelease.field.recipients")}
                   </p>
                   {selected.recipients.length === 0 ? (
-                    <p className="rounded-md border border-dashed p-3 text-center text-xs text-muted-foreground">—</p>
+                    <p className="rounded-md border border-dashed p-3 text-center text-xs text-muted-foreground">
+                      —
+                    </p>
                   ) : (
                     <ul className="divide-y divide-slate-100 rounded-md border border-slate-200">
                       {selected.recipients.map((r) => (
-                        <li key={r.id} className="flex items-center justify-between gap-2 p-2" data-testid={`ifc-recipient-${r.id}`}>
+                        <li
+                          key={r.id}
+                          className="flex items-center justify-between gap-2 p-2"
+                          data-testid={`ifc-recipient-${r.id}`}
+                        >
                           <div className="min-w-0">
                             <p className="text-sm text-slate-900">{r.name}</p>
                             <p className="text-[10px] text-muted-foreground">
                               {r.recipientTypeLabel ?? r.recipientTypeCode}
-                              {r.acknowledgedAt ? ` · ${t("ifcRelease.action.acknowledged")} ${formatDate(r.acknowledgedAt, lang)}` : ""}
+                              {r.acknowledgedAt
+                                ? ` · ${t("ifcRelease.action.acknowledged")} ${formatDate(r.acknowledgedAt, lang)}`
+                                : ""}
                             </p>
                           </div>
                           <div className="flex items-center gap-1">
@@ -614,7 +675,9 @@ export const IfcReleasesTab = ({ project }: Props) => {
                         </SelectTrigger>
                         <SelectContent>
                           {recipientTypes.map((o) => (
-                            <SelectItem key={o.code} value={o.code}>{o.name}</SelectItem>
+                            <SelectItem key={o.code} value={o.code}>
+                              {o.name}
+                            </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -634,13 +697,22 @@ export const IfcReleasesTab = ({ project }: Props) => {
 
               <DialogFooter className="flex-wrap gap-2">
                 {canHardDelete && selected.status === "Cancelled" ? (
-                  <Button variant="ghost" onClick={() => setDeleting(selected)} disabled={busy} className="text-rose-700 hover:bg-rose-50">
+                  <Button
+                    variant="ghost"
+                    onClick={() => setDeleting(selected)}
+                    disabled={busy}
+                    className="text-rose-700 hover:bg-rose-50"
+                  >
                     <Trash2 className="mr-1 h-4 w-4" />
                     {t("ifcRelease.action.deleteRelease")}
                   </Button>
                 ) : null}
                 {isDraft && canManage ? (
-                  <Button variant="outline" onClick={() => setCancelConfirmOpen(true)} disabled={busy}>
+                  <Button
+                    variant="outline"
+                    onClick={() => setCancelConfirmOpen(true)}
+                    disabled={busy}
+                  >
                     <XCircle className="mr-1 h-4 w-4" />
                     {t("ifcRelease.action.cancel")}
                   </Button>
@@ -649,7 +721,9 @@ export const IfcReleasesTab = ({ project }: Props) => {
                   <Button
                     className="bg-emerald-600 hover:bg-emerald-700"
                     onClick={() => setReleaseConfirmOpen(true)}
-                    disabled={busy || selected.items.length === 0 || selected.recipients.length === 0}
+                    disabled={
+                      busy || selected.items.length === 0 || selected.recipients.length === 0
+                    }
                     data-testid="ifc-release"
                   >
                     <Rocket className="mr-1 h-4 w-4" />
@@ -684,11 +758,7 @@ export const IfcReleasesTab = ({ project }: Props) => {
             </div>
             <div>
               <Label>{t("ifcRelease.field.note")}</Label>
-              <Textarea
-                rows={3}
-                value={formNote}
-                onChange={(e) => setFormNote(e.target.value)}
-              />
+              <Textarea rows={3} value={formNote} onChange={(e) => setFormNote(e.target.value)} />
             </div>
           </div>
           {formError ? <p className="text-sm text-rose-600">{formError}</p> : null}
@@ -696,7 +766,11 @@ export const IfcReleasesTab = ({ project }: Props) => {
             <Button variant="outline" onClick={() => setCreateOpen(false)} disabled={saving}>
               {t("common.cancel")}
             </Button>
-            <Button onClick={() => void submitCreate()} disabled={saving} data-testid="ifc-form-save">
+            <Button
+              onClick={() => void submitCreate()}
+              disabled={saving}
+              data-testid="ifc-form-save"
+            >
               {t("common.save")}
             </Button>
           </DialogFooter>
@@ -759,7 +833,9 @@ export const IfcReleasesTab = ({ project }: Props) => {
         loading={loadingDeleteImpact}
         deleting={busy}
         error={deleteError}
-        onOpenChange={(open) => { if (!open && !busy) setDeleting(null); }}
+        onOpenChange={(open) => {
+          if (!open && !busy) setDeleting(null);
+        }}
         onConfirm={doDelete}
         onCompleted={async () => {
           setDeleting(null);

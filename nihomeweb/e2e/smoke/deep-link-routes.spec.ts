@@ -8,7 +8,12 @@ import { createOwnCustomer } from "../fixtures/designProjects";
  * those notifications landed on the 404 page. These cover the routes that fix it.
  */
 test.describe("notification deep links", () => {
-  test("a lead url opens that lead, not the 404 page", async ({ page, api, loginAs, loginInBrowserAs }) => {
+  test("a lead url opens that lead, not the 404 page", async ({
+    page,
+    api,
+    loginAs,
+    loginInBrowserAs,
+  }) => {
     const token = await loginAs(TEST_USERS.superAdmin);
     const authHeader = { Authorization: `Bearer ${token}` };
     await loginInBrowserAs(page, TEST_USERS.superAdmin);
@@ -25,7 +30,12 @@ test.describe("notification deep links", () => {
     await expect(page.getByRole("dialog")).toContainText(lead.name, { timeout: 15_000 });
   });
 
-  test("an opportunity url opens that opportunity", async ({ page, api, loginAs, loginInBrowserAs }) => {
+  test("an opportunity url opens that opportunity", async ({
+    page,
+    api,
+    loginAs,
+    loginInBrowserAs,
+  }) => {
     const token = await loginAs(TEST_USERS.superAdmin);
     const authHeader = { Authorization: `Bearer ${token}` };
     await loginInBrowserAs(page, TEST_USERS.superAdmin);
@@ -41,7 +51,12 @@ test.describe("notification deep links", () => {
     await expect(page.getByRole("dialog")).toContainText(opp.name, { timeout: 15_000 });
   });
 
-  test("the ?open= form still works alongside the route", async ({ page, api, loginAs, loginInBrowserAs }) => {
+  test("the ?open= form still works alongside the route", async ({
+    page,
+    api,
+    loginAs,
+    loginInBrowserAs,
+  }) => {
     const token = await loginAs(TEST_USERS.superAdmin);
     const authHeader = { Authorization: `Bearer ${token}` };
     await loginInBrowserAs(page, TEST_USERS.superAdmin);
@@ -56,7 +71,12 @@ test.describe("notification deep links", () => {
     await expect(page.getByRole("dialog")).toContainText(opp.name, { timeout: 15_000 });
   });
 
-  test("a customer ?open= url opens that customer", async ({ page, api, loginAs, loginInBrowserAs }) => {
+  test("a customer ?open= url opens that customer", async ({
+    page,
+    api,
+    loginAs,
+    loginInBrowserAs,
+  }) => {
     const token = await loginAs(TEST_USERS.superAdmin);
     const authHeader = { Authorization: `Bearer ${token}` };
     await loginInBrowserAs(page, TEST_USERS.superAdmin);
@@ -73,7 +93,12 @@ test.describe("notification deep links", () => {
     await expect(page.getByRole("dialog")).toContainText(customer.name, { timeout: 15_000 });
   });
 
-  test("a role url reaches the roles page without a 404", async ({ page, api, loginAs, loginInBrowserAs }) => {
+  test("a role url reaches the roles page without a 404", async ({
+    page,
+    api,
+    loginAs,
+    loginInBrowserAs,
+  }) => {
     const token = await loginAs(TEST_USERS.superAdmin);
     const authHeader = { Authorization: `Bearer ${token}` };
     await loginInBrowserAs(page, TEST_USERS.superAdmin);
@@ -85,6 +110,8 @@ test.describe("notification deep links", () => {
 
     await page.goto(`/admin/roles/${role.id}`);
 
-    await expect(page.locator(`[data-role-id="${role.id}"]`).first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator(`[data-role-id="${role.id}"]`).first()).toBeVisible({
+      timeout: 15_000,
+    });
   });
 });

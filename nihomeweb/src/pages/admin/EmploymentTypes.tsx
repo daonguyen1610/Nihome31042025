@@ -4,7 +4,11 @@ import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { adminApi, type EmploymentTypeResponse, type RecruitmentDropdownOptionResponse } from "@/services/adminApi";
+import {
+  adminApi,
+  type EmploymentTypeResponse,
+  type RecruitmentDropdownOptionResponse,
+} from "@/services/adminApi";
 import AdminExportButton from "@/components/admin/AdminExportButton";
 import { BulkActionBar } from "@/components/admin/BulkActionBar";
 import { Button } from "@/components/ui/button";
@@ -24,11 +28,14 @@ const emptyDrop: DropdownFormData = { code: "", name: "", isActive: true, sortOr
 
 function getErrorMessage(error: unknown) {
   if (
-    typeof error === "object" && error !== null &&
+    typeof error === "object" &&
+    error !== null &&
     "response" in error &&
-    typeof (error as { response?: { data?: { detail?: string; message?: string } } }).response === "object"
+    typeof (error as { response?: { data?: { detail?: string; message?: string } } }).response ===
+      "object"
   ) {
-    const data = (error as { response: { data?: { detail?: string; message?: string } } }).response?.data;
+    const data = (error as { response: { data?: { detail?: string; message?: string } } }).response
+      ?.data;
     return data?.detail ?? data?.message;
   }
   return undefined;
@@ -70,19 +77,24 @@ const EmploymentTypes = () => {
     }
   }, [t, toast]);
 
-  const loadDrop = useCallback(async (type: string) => {
-    setDropLoading(true);
-    try {
-      const res = await adminApi.getRecruitmentDropdownOptions(type, true);
-      setDropItems(res.data);
-    } catch {
-      toast({ title: t("common.error"), variant: "destructive" });
-    } finally {
-      setDropLoading(false);
-    }
-  }, [t, toast]);
+  const loadDrop = useCallback(
+    async (type: string) => {
+      setDropLoading(true);
+      try {
+        const res = await adminApi.getRecruitmentDropdownOptions(type, true);
+        setDropItems(res.data);
+      } catch {
+        toast({ title: t("common.error"), variant: "destructive" });
+      } finally {
+        setDropLoading(false);
+      }
+    },
+    [t, toast],
+  );
 
-  useEffect(() => { loadEmp(); }, [loadEmp]);
+  useEffect(() => {
+    loadEmp();
+  }, [loadEmp]);
 
   useEffect(() => {
     if (activeTab !== "employment") {
@@ -96,35 +108,71 @@ const EmploymentTypes = () => {
   // --- Filtered lists ---
   const filteredEmp = useMemo(() => {
     const q = empQ.trim().toLowerCase();
-    return q ? empItems.filter((i) => i.name.toLowerCase().includes(q) || i.code.toLowerCase().includes(q)) : empItems;
+    return q
+      ? empItems.filter((i) => i.name.toLowerCase().includes(q) || i.code.toLowerCase().includes(q))
+      : empItems;
   }, [empItems, empQ]);
 
   const filteredDrop = useMemo(() => {
     const q = dropQ.trim().toLowerCase();
-    return q ? dropItems.filter((i) => i.name.toLowerCase().includes(q) || i.code.toLowerCase().includes(q)) : dropItems;
+    return q
+      ? dropItems.filter(
+          (i) => i.name.toLowerCase().includes(q) || i.code.toLowerCase().includes(q),
+        )
+      : dropItems;
   }, [dropItems, dropQ]);
 
   // --- Employment type CRUD ---
-  const startEmpCreate = () => { setEmpEditingId(null); setEmpForm({ ...emptyEmp, sortOrder: empItems.length + 1 }); };
+  const startEmpCreate = () => {
+    setEmpEditingId(null);
+    setEmpForm({ ...emptyEmp, sortOrder: empItems.length + 1 });
+  };
   const startEmpEdit = (item: EmploymentTypeResponse) => {
     setEmpEditingId(item.id);
-    setEmpForm({ code: item.code, name: item.name, isActive: item.isActive, sortOrder: item.sortOrder });
+    setEmpForm({
+      code: item.code,
+      name: item.name,
+      isActive: item.isActive,
+      sortOrder: item.sortOrder,
+    });
   };
   const submitEmp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!empForm.code.trim() || !empForm.name.trim()) {
-      toast({ title: t("form.required"), description: t("empTypes.codeNameRequired"), variant: "destructive" });
+      toast({
+        title: t("form.required"),
+        description: t("empTypes.codeNameRequired"),
+        variant: "destructive",
+      });
       return;
     }
     setEmpSubmitting(true);
     try {
-      const payload = { code: empForm.code.trim(), name: empForm.name.trim(), isActive: empForm.isActive, sortOrder: empForm.sortOrder || 0 };
-      if (empEditingId == null) { await adminApi.createEmploymentType(payload); toast({ title: t("form.created") }); }
-      else { await adminApi.updateEmploymentType(empEditingId, payload); toast({ title: t("form.updated") }); }
-      setEmpEditingId(null); setEmpForm(emptyEmp); await loadEmp();
+      const payload = {
+        code: empForm.code.trim(),
+        name: empForm.name.trim(),
+        isActive: empForm.isActive,
+        sortOrder: empForm.sortOrder || 0,
+      };
+      if (empEditingId == null) {
+        await adminApi.createEmploymentType(payload);
+        toast({ title: t("form.created") });
+      } else {
+        await adminApi.updateEmploymentType(empEditingId, payload);
+        toast({ title: t("form.updated") });
+      }
+      setEmpEditingId(null);
+      setEmpForm(emptyEmp);
+      await loadEmp();
     } catch (error) {
-      toast({ title: t("common.error"), description: getErrorMessage(error), variant: "destructive" });
-    } finally { setEmpSubmitting(false); }
+      toast({
+        title: t("common.error"),
+        description: getErrorMessage(error),
+        variant: "destructive",
+      });
+    } finally {
+      setEmpSubmitting(false);
+    }
   };
   const removeEmp = async (item: EmploymentTypeResponse) => {
     if (!window.confirm(t("form.confirmDelete"))) return;
@@ -133,31 +181,66 @@ const EmploymentTypes = () => {
       setEmpItems((prev) => prev.filter((i) => i.id !== item.id));
       toast({ title: t("form.deleted") });
     } catch (error) {
-      toast({ title: t("common.error"), description: getErrorMessage(error), variant: "destructive" });
+      toast({
+        title: t("common.error"),
+        description: getErrorMessage(error),
+        variant: "destructive",
+      });
     }
   };
 
   // --- Dropdown option CRUD ---
-  const startDropCreate = () => { setDropEditingId(null); setDropForm({ ...emptyDrop, sortOrder: dropItems.length + 1 }); };
+  const startDropCreate = () => {
+    setDropEditingId(null);
+    setDropForm({ ...emptyDrop, sortOrder: dropItems.length + 1 });
+  };
   const startDropEdit = (item: RecruitmentDropdownOptionResponse) => {
     setDropEditingId(item.id);
-    setDropForm({ code: item.code, name: item.name, isActive: item.isActive, sortOrder: item.sortOrder });
+    setDropForm({
+      code: item.code,
+      name: item.name,
+      isActive: item.isActive,
+      sortOrder: item.sortOrder,
+    });
   };
   const submitDrop = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!dropForm.code.trim() || !dropForm.name.trim()) {
-      toast({ title: t("form.required"), description: t("empTypes.codeNameRequired"), variant: "destructive" });
+      toast({
+        title: t("form.required"),
+        description: t("empTypes.codeNameRequired"),
+        variant: "destructive",
+      });
       return;
     }
     setDropSubmitting(true);
     try {
-      const payload = { type: dropType, code: dropForm.code.trim(), name: dropForm.name.trim(), isActive: dropForm.isActive, sortOrder: dropForm.sortOrder || 0 };
-      if (dropEditingId == null) { await adminApi.createRecruitmentDropdownOption(payload); toast({ title: t("form.created") }); }
-      else { await adminApi.updateRecruitmentDropdownOption(dropEditingId, payload); toast({ title: t("form.updated") }); }
-      setDropEditingId(null); setDropForm(emptyDrop); await loadDrop(dropType);
+      const payload = {
+        type: dropType,
+        code: dropForm.code.trim(),
+        name: dropForm.name.trim(),
+        isActive: dropForm.isActive,
+        sortOrder: dropForm.sortOrder || 0,
+      };
+      if (dropEditingId == null) {
+        await adminApi.createRecruitmentDropdownOption(payload);
+        toast({ title: t("form.created") });
+      } else {
+        await adminApi.updateRecruitmentDropdownOption(dropEditingId, payload);
+        toast({ title: t("form.updated") });
+      }
+      setDropEditingId(null);
+      setDropForm(emptyDrop);
+      await loadDrop(dropType);
     } catch (error) {
-      toast({ title: t("common.error"), description: getErrorMessage(error), variant: "destructive" });
-    } finally { setDropSubmitting(false); }
+      toast({
+        title: t("common.error"),
+        description: getErrorMessage(error),
+        variant: "destructive",
+      });
+    } finally {
+      setDropSubmitting(false);
+    }
   };
   const removeDrop = async (item: RecruitmentDropdownOptionResponse) => {
     if (!window.confirm(t("form.confirmDelete"))) return;
@@ -166,26 +249,46 @@ const EmploymentTypes = () => {
       setDropItems((prev) => prev.filter((i) => i.id !== item.id));
       toast({ title: t("form.deleted") });
     } catch (error) {
-      toast({ title: t("common.error"), description: getErrorMessage(error), variant: "destructive" });
+      toast({
+        title: t("common.error"),
+        description: getErrorMessage(error),
+        variant: "destructive",
+      });
     }
   };
 
   // --- Export ---
   const handleExport = () => {
     if (activeTab === "employment") {
-      downloadCsv({ filename: createCsvFilename("employment-types"), columns: [
-        { header: "ID", value: "id" }, { header: t("empTypes.code"), value: "code" },
-        { header: t("empTypes.displayName"), value: "name" },
-        { header: t("empTypes.active"), value: (r: EmploymentTypeResponse) => r.isActive ? "Yes" : "No" },
-        { header: t("empTypes.sortOrder"), value: "sortOrder" },
-      ], rows: filteredEmp });
+      downloadCsv({
+        filename: createCsvFilename("employment-types"),
+        columns: [
+          { header: "ID", value: "id" },
+          { header: t("empTypes.code"), value: "code" },
+          { header: t("empTypes.displayName"), value: "name" },
+          {
+            header: t("empTypes.active"),
+            value: (r: EmploymentTypeResponse) => (r.isActive ? "Yes" : "No"),
+          },
+          { header: t("empTypes.sortOrder"), value: "sortOrder" },
+        ],
+        rows: filteredEmp,
+      });
     } else {
-      downloadCsv({ filename: createCsvFilename(`recruitment-${dropType}`), columns: [
-        { header: "ID", value: "id" }, { header: t("empTypes.code"), value: "code" },
-        { header: t("empTypes.displayName"), value: "name" },
-        { header: t("empTypes.active"), value: (r: RecruitmentDropdownOptionResponse) => r.isActive ? "Yes" : "No" },
-        { header: t("empTypes.sortOrder"), value: "sortOrder" },
-      ], rows: filteredDrop });
+      downloadCsv({
+        filename: createCsvFilename(`recruitment-${dropType}`),
+        columns: [
+          { header: "ID", value: "id" },
+          { header: t("empTypes.code"), value: "code" },
+          { header: t("empTypes.displayName"), value: "name" },
+          {
+            header: t("empTypes.active"),
+            value: (r: RecruitmentDropdownOptionResponse) => (r.isActive ? "Yes" : "No"),
+          },
+          { header: t("empTypes.sortOrder"), value: "sortOrder" },
+        ],
+        rows: filteredDrop,
+      });
     }
   };
 
@@ -195,7 +298,12 @@ const EmploymentTypes = () => {
     { key: "benefit", label: t("empTypes.benefits") },
   ];
 
-  const addLabel = activeTab === "employment" ? t("empTypes.addType") : activeTab === "experience" ? t("empTypes.addExpLevel") : t("empTypes.addBenefit");
+  const addLabel =
+    activeTab === "employment"
+      ? t("empTypes.addType")
+      : activeTab === "experience"
+        ? t("empTypes.addExpLevel")
+        : t("empTypes.addBenefit");
   const isEmp = activeTab === "employment";
   const loading = isEmp ? empLoading : dropLoading;
   const filtered = isEmp ? filteredEmp : filteredDrop;
@@ -217,7 +325,9 @@ const EmploymentTypes = () => {
   } = useBulkSelection<number>({
     visibleIds: empVisibleIds,
     deleteOne: (id) => adminApi.deleteEmploymentType(id),
-    onAfter: async () => { await loadEmp(); },
+    onAfter: async () => {
+      await loadEmp();
+    },
   });
   useEffect(() => {
     empClearSelection();
@@ -237,7 +347,9 @@ const EmploymentTypes = () => {
   } = useBulkSelection<number>({
     visibleIds: dropVisibleIds,
     deleteOne: (id) => adminApi.deleteRecruitmentDropdownOption(id),
-    onAfter: async () => { await loadDrop(dropType); },
+    onAfter: async () => {
+      await loadDrop(dropType);
+    },
   });
   useEffect(() => {
     dropClearSelection();
@@ -255,10 +367,7 @@ const EmploymentTypes = () => {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <AdminExportButton onClick={handleExport} disabled={loading || filtered.length === 0} />
-            <Button
-              type="button"
-              onClick={isEmp ? startEmpCreate : startDropCreate}
-            >
+            <Button type="button" onClick={isEmp ? startEmpCreate : startDropCreate}>
               <Plus className="mr-1.5 h-4 w-4" /> {addLabel}
             </Button>
           </div>
@@ -287,9 +396,24 @@ const EmploymentTypes = () => {
         <section className="space-y-3 rounded-lg border bg-card p-3">
           {isEmp ? (
             <form onSubmit={submitEmp} className="grid grid-cols-1 gap-3 lg:grid-cols-5">
-              <Input value={empForm.code} onChange={(e) => setEmpForm((p) => ({ ...p, code: e.target.value }))} placeholder={t("empTypes.codePlaceholder")} required />
-              <Input value={empForm.name} onChange={(e) => setEmpForm((p) => ({ ...p, name: e.target.value }))} placeholder={t("empTypes.namePlaceholder")} required />
-              <Input type="number" value={empForm.sortOrder} onChange={(e) => setEmpForm((p) => ({ ...p, sortOrder: Number(e.target.value) }))} placeholder={t("empTypes.sortOrder")} />
+              <Input
+                value={empForm.code}
+                onChange={(e) => setEmpForm((p) => ({ ...p, code: e.target.value }))}
+                placeholder={t("empTypes.codePlaceholder")}
+                required
+              />
+              <Input
+                value={empForm.name}
+                onChange={(e) => setEmpForm((p) => ({ ...p, name: e.target.value }))}
+                placeholder={t("empTypes.namePlaceholder")}
+                required
+              />
+              <Input
+                type="number"
+                value={empForm.sortOrder}
+                onChange={(e) => setEmpForm((p) => ({ ...p, sortOrder: Number(e.target.value) }))}
+                placeholder={t("empTypes.sortOrder")}
+              />
               <label className="inline-flex items-center gap-2 rounded-md border bg-background px-3">
                 <Checkbox
                   checked={empForm.isActive}
@@ -305,7 +429,10 @@ const EmploymentTypes = () => {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => { setEmpEditingId(null); setEmpForm(emptyEmp); }}
+                    onClick={() => {
+                      setEmpEditingId(null);
+                      setEmpForm(emptyEmp);
+                    }}
                   >
                     {t("common.cancel")}
                   </Button>
@@ -314,9 +441,24 @@ const EmploymentTypes = () => {
             </form>
           ) : (
             <form onSubmit={submitDrop} className="grid grid-cols-1 gap-3 lg:grid-cols-5">
-              <Input value={dropForm.code} onChange={(e) => setDropForm((p) => ({ ...p, code: e.target.value }))} placeholder={t("empTypes.codePlaceholder")} required />
-              <Input value={dropForm.name} onChange={(e) => setDropForm((p) => ({ ...p, name: e.target.value }))} placeholder={t("empTypes.namePlaceholder")} required />
-              <Input type="number" value={dropForm.sortOrder} onChange={(e) => setDropForm((p) => ({ ...p, sortOrder: Number(e.target.value) }))} placeholder={t("empTypes.sortOrder")} />
+              <Input
+                value={dropForm.code}
+                onChange={(e) => setDropForm((p) => ({ ...p, code: e.target.value }))}
+                placeholder={t("empTypes.codePlaceholder")}
+                required
+              />
+              <Input
+                value={dropForm.name}
+                onChange={(e) => setDropForm((p) => ({ ...p, name: e.target.value }))}
+                placeholder={t("empTypes.namePlaceholder")}
+                required
+              />
+              <Input
+                type="number"
+                value={dropForm.sortOrder}
+                onChange={(e) => setDropForm((p) => ({ ...p, sortOrder: Number(e.target.value) }))}
+                placeholder={t("empTypes.sortOrder")}
+              />
               <label className="inline-flex items-center gap-2 rounded-md border bg-background px-3">
                 <Checkbox
                   checked={dropForm.isActive}
@@ -332,7 +474,10 @@ const EmploymentTypes = () => {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => { setDropEditingId(null); setDropForm(emptyDrop); }}
+                    onClick={() => {
+                      setDropEditingId(null);
+                      setDropForm(emptyDrop);
+                    }}
                   >
                     {t("common.cancel")}
                   </Button>
@@ -342,7 +487,9 @@ const EmploymentTypes = () => {
           )}
 
           <div className="w-full sm:max-w-sm">
-            <Label className="text-xs" htmlFor="emp-search">{t("common.search")}</Label>
+            <Label className="text-xs" htmlFor="emp-search">
+              {t("common.search")}
+            </Label>
             <div className="relative">
               <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -388,14 +535,24 @@ const EmploymentTypes = () => {
                         aria-label={`${t("common.selectAll")} · ${item.name}`}
                       />
                       <div className="min-w-0">
-                        <h3 className="break-words text-sm font-semibold leading-tight">{item.name}</h3>
-                        <p className="mt-0.5 font-mono text-xs text-muted-foreground">{item.code}</p>
+                        <h3 className="break-words text-sm font-semibold leading-tight">
+                          {item.name}
+                        </h3>
+                        <p className="mt-0.5 font-mono text-xs text-muted-foreground">
+                          {item.code}
+                        </p>
                       </div>
                     </div>
                     {item.isActive ? (
-                      <Check className="h-4 w-4 shrink-0 text-emerald-600" aria-label={t("empTypes.active")} />
+                      <Check
+                        className="h-4 w-4 shrink-0 text-emerald-600"
+                        aria-label={t("empTypes.active")}
+                      />
                     ) : (
-                      <X className="h-4 w-4 shrink-0 text-muted-foreground" aria-label={t("empTypes.active")} />
+                      <X
+                        className="h-4 w-4 shrink-0 text-muted-foreground"
+                        aria-label={t("empTypes.active")}
+                      />
                     )}
                   </div>
                   <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
@@ -429,14 +586,24 @@ const EmploymentTypes = () => {
                         aria-label={`${t("common.selectAll")} · ${item.name}`}
                       />
                       <div className="min-w-0">
-                        <h3 className="break-words text-sm font-semibold leading-tight">{item.name}</h3>
-                        <p className="mt-0.5 font-mono text-xs text-muted-foreground">{item.code}</p>
+                        <h3 className="break-words text-sm font-semibold leading-tight">
+                          {item.name}
+                        </h3>
+                        <p className="mt-0.5 font-mono text-xs text-muted-foreground">
+                          {item.code}
+                        </p>
                       </div>
                     </div>
                     {item.isActive ? (
-                      <Check className="h-4 w-4 shrink-0 text-emerald-600" aria-label={t("empTypes.active")} />
+                      <Check
+                        className="h-4 w-4 shrink-0 text-emerald-600"
+                        aria-label={t("empTypes.active")}
+                      />
                     ) : (
-                      <X className="h-4 w-4 shrink-0 text-muted-foreground" aria-label={t("empTypes.active")} />
+                      <X
+                        className="h-4 w-4 shrink-0 text-muted-foreground"
+                        aria-label={t("empTypes.active")}
+                      />
                     )}
                   </div>
                   <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
@@ -481,24 +648,42 @@ const EmploymentTypes = () => {
                               ? "indeterminate"
                               : false
                       }
-                      onCheckedChange={(v) => (isEmp ? empToggleAll(v === true) : dropToggleAll(v === true))}
+                      onCheckedChange={(v) =>
+                        isEmp ? empToggleAll(v === true) : dropToggleAll(v === true)
+                      }
                       aria-label={t("common.selectAll")}
                     />
                   </th>
-                  <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("empTypes.code")}</th>
+                  <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                    {t("empTypes.code")}
+                  </th>
                   <th className="px-3 py-3 text-left font-medium">{t("empTypes.displayName")}</th>
-                  <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("empTypes.active")}</th>
-                  <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("empTypes.sortOrder")}</th>
-                  <th className="whitespace-nowrap px-3 py-3 text-right font-medium">{t("common.actions")}</th>
+                  <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                    {t("empTypes.active")}
+                  </th>
+                  <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                    {t("empTypes.sortOrder")}
+                  </th>
+                  <th className="whitespace-nowrap px-3 py-3 text-right font-medium">
+                    {t("common.actions")}
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y">
                 {loading ? (
-                  <tr><td colSpan={6} className="px-5 py-10 text-center text-muted-foreground">{t("common.loading")}</td></tr>
+                  <tr>
+                    <td colSpan={6} className="px-5 py-10 text-center text-muted-foreground">
+                      {t("common.loading")}
+                    </td>
+                  </tr>
                 ) : filtered.length === 0 ? (
-                  <tr><td colSpan={6} className="px-5 py-10 text-center text-muted-foreground">{t("empTypes.noData")}</td></tr>
+                  <tr>
+                    <td colSpan={6} className="px-5 py-10 text-center text-muted-foreground">
+                      {t("empTypes.noData")}
+                    </td>
+                  </tr>
                 ) : isEmp ? (
-                  (filteredEmp).map((item) => (
+                  filteredEmp.map((item) => (
                     <tr key={item.id} className="hover:bg-muted/40 transition">
                       <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
                         <Checkbox
@@ -509,18 +694,33 @@ const EmploymentTypes = () => {
                       </td>
                       <td className="whitespace-nowrap px-3 py-3 font-mono text-xs">{item.code}</td>
                       <td className="px-3 py-3 font-medium">{item.name}</td>
-                      <td className="px-3 py-3">{item.isActive ? <Check className="h-4 w-4 text-emerald-600" /> : <X className="h-4 w-4 text-muted-foreground" />}</td>
+                      <td className="px-3 py-3">
+                        {item.isActive ? (
+                          <Check className="h-4 w-4 text-emerald-600" />
+                        ) : (
+                          <X className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </td>
                       <td className="px-3 py-3">{item.sortOrder}</td>
                       <td className="whitespace-nowrap px-3 py-3 text-right">
                         <div className="inline-flex items-center gap-1">
-                          <Button variant="ghost" size="sm" onClick={() => startEmpEdit(item)}><Pencil className="mr-1 h-3.5 w-3.5" /> {t("common.edit")}</Button>
-                          <Button variant="ghost" size="sm" onClick={() => removeEmp(item)} className="text-destructive hover:text-destructive"><Trash2 className="mr-1 h-3.5 w-3.5" /> {t("common.delete")}</Button>
+                          <Button variant="ghost" size="sm" onClick={() => startEmpEdit(item)}>
+                            <Pencil className="mr-1 h-3.5 w-3.5" /> {t("common.edit")}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeEmp(item)}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="mr-1 h-3.5 w-3.5" /> {t("common.delete")}
+                          </Button>
                         </div>
                       </td>
                     </tr>
                   ))
                 ) : (
-                  (filteredDrop).map((item) => (
+                  filteredDrop.map((item) => (
                     <tr key={item.id} className="hover:bg-muted/40 transition">
                       <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
                         <Checkbox
@@ -531,12 +731,27 @@ const EmploymentTypes = () => {
                       </td>
                       <td className="whitespace-nowrap px-3 py-3 font-mono text-xs">{item.code}</td>
                       <td className="px-3 py-3 font-medium">{item.name}</td>
-                      <td className="px-3 py-3">{item.isActive ? <Check className="h-4 w-4 text-emerald-600" /> : <X className="h-4 w-4 text-muted-foreground" />}</td>
+                      <td className="px-3 py-3">
+                        {item.isActive ? (
+                          <Check className="h-4 w-4 text-emerald-600" />
+                        ) : (
+                          <X className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </td>
                       <td className="px-3 py-3">{item.sortOrder}</td>
                       <td className="whitespace-nowrap px-3 py-3 text-right">
                         <div className="inline-flex items-center gap-1">
-                          <Button variant="ghost" size="sm" onClick={() => startDropEdit(item)}><Pencil className="mr-1 h-3.5 w-3.5" /> {t("common.edit")}</Button>
-                          <Button variant="ghost" size="sm" onClick={() => removeDrop(item)} className="text-destructive hover:text-destructive"><Trash2 className="mr-1 h-3.5 w-3.5" /> {t("common.delete")}</Button>
+                          <Button variant="ghost" size="sm" onClick={() => startDropEdit(item)}>
+                            <Pencil className="mr-1 h-3.5 w-3.5" /> {t("common.edit")}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeDrop(item)}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="mr-1 h-3.5 w-3.5" /> {t("common.delete")}
+                          </Button>
                         </div>
                       </td>
                     </tr>

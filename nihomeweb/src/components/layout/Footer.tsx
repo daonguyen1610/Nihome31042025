@@ -1,5 +1,15 @@
 import { Link } from "react-router-dom";
-import { Facebook, Youtube, Instagram, Linkedin, Mail, Phone, MapPin, ArrowUpRight, Send } from "lucide-react";
+import {
+  Facebook,
+  Youtube,
+  Instagram,
+  Linkedin,
+  Mail,
+  Phone,
+  MapPin,
+  ArrowUpRight,
+  Send,
+} from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import logoNicon from "@/assets/logo-nicon.png";
 
@@ -45,7 +55,11 @@ const Footer = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16">
           <div className="lg:col-span-5">
             <div className="mb-6">
-              <img src={logoNicon} alt="NICON - Partner of Development" className="h-16 w-auto object-contain brightness-0 invert" />
+              <img
+                src={logoNicon}
+                alt="NICON - Partner of Development"
+                className="h-16 w-auto object-contain brightness-0 invert"
+              />
             </div>
             <p className="text-white/70 text-base leading-relaxed max-w-md mb-8">
               {t("footer.brand.desc")}
@@ -76,7 +90,10 @@ const Footer = () => {
             <ul className="space-y-3">
               {links.map((l) => (
                 <li key={l.to}>
-                  <Link to={l.to} className="text-white/80 hover:text-primary transition-colors inline-flex items-center gap-1.5 group">
+                  <Link
+                    to={l.to}
+                    className="text-white/80 hover:text-primary transition-colors inline-flex items-center gap-1.5 group"
+                  >
                     {l.label}
                     <ArrowUpRight className="w-3.5 h-3.5 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
                   </Link>
@@ -100,20 +117,26 @@ const Footer = () => {
                 <span className="w-9 h-9 rounded-full bg-primary/15 text-primary flex items-center justify-center shrink-0">
                   <Phone className="w-4 h-4" />
                 </span>
-                <a href="tel:0909450266" className="hover:text-primary transition-colors">0909 450 266</a>
+                <a href="tel:0909450266" className="hover:text-primary transition-colors">
+                  0909 450 266
+                </a>
               </li>
               <li className="flex items-center gap-3">
                 <span className="w-9 h-9 rounded-full bg-primary/15 text-primary flex items-center justify-center shrink-0">
                   <Mail className="w-4 h-4" />
                 </span>
-                <a href="mailto:sale@nicon.vn" className="hover:text-primary transition-colors">sale@nicon.vn</a>
+                <a href="mailto:sale@nicon.vn" className="hover:text-primary transition-colors">
+                  sale@nicon.vn
+                </a>
               </li>
             </ul>
           </div>
         </div>
 
         <div className="mt-16 pt-8 border-t border-white/10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 text-xs text-white/50">
-          <p>© {new Date().getFullYear()} {t("footer.copyright")}</p>
+          <p>
+            © {new Date().getFullYear()} {t("footer.copyright")}
+          </p>
           <div className="flex items-center gap-6">
             <span>{t("footer.cert")}</span>
             <span>•</span>

@@ -8,7 +8,9 @@ test("the new contract form suggests an editable contract number", async ({
   await loginInBrowserAs(page, TEST_USERS.superAdmin);
   await page.goto("/admin/contracts");
 
-  await page.getByRole("button", { name: /Thêm hợp đồng|New contract|新增合同|契約を追加/i }).click();
+  await page
+    .getByRole("button", { name: /Thêm hợp đồng|New contract|新增合同|契約を追加/i })
+    .click();
 
   const contractNumber = page.locator("#c-number");
   await expect(contractNumber).toHaveValue(/^HD-\d{4}-\d{4,}$/, { timeout: 15_000 });
@@ -16,16 +18,17 @@ test("the new contract form suggests an editable contract number", async ({
   await expect(contractNumber).toHaveValue("HD-CUSTOM-EDITABLE");
 });
 
-test("the new contract form keeps new milestones Pending", async ({
-  page,
-  loginInBrowserAs,
-}) => {
+test("the new contract form keeps new milestones Pending", async ({ page, loginInBrowserAs }) => {
   await loginInBrowserAs(page, TEST_USERS.superAdmin);
   await page.goto("/admin/contracts");
   await page.locator("#c-project").click();
   await page.getByRole("option").filter({ hasText: /PJ-/ }).first().click();
-  await page.getByRole("button", { name: /Thêm hợp đồng|New contract|新增合同|契約を追加/i }).click();
-  await page.getByRole("button", { name: /Thêm đợt|Add milestone|添加里程碑|マイルストーンを追加/i }).click();
+  await page
+    .getByRole("button", { name: /Thêm hợp đồng|New contract|新增合同|契約を追加/i })
+    .click();
+  await page
+    .getByRole("button", { name: /Thêm đợt|Add milestone|添加里程碑|マイルストーンを追加/i })
+    .click();
 
   const milestone = page.getByTestId("c-milestone-0");
   await expect(milestone.getByText(/Chưa yêu cầu|Pending|待处理|未請求/i)).toBeVisible();
@@ -45,7 +48,9 @@ test("the contract value field groups thousands without stealing the caret", asy
   await loginInBrowserAs(page, TEST_USERS.superAdmin);
   await page.goto("/admin/contracts");
 
-  await page.getByRole("button", { name: /Thêm hợp đồng|New contract|新增合同|契約を追加/i }).click();
+  await page
+    .getByRole("button", { name: /Thêm hợp đồng|New contract|新增合同|契約を追加/i })
+    .click();
 
   const value = page.locator("#c-value");
   await expect(value).toBeVisible({ timeout: 15_000 });

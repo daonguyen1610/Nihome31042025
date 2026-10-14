@@ -1,7 +1,10 @@
 import { expect, test, TEST_USERS } from "../fixtures/auth";
 import { hardDeleteBusinessRoot } from "../fixtures/hardDelete";
 
-test("customer contract form permits an agreed value without a quote", async ({ loginInBrowserAs, page }) => {
+test("customer contract form permits an agreed value without a quote", async ({
+  loginInBrowserAs,
+  page,
+}) => {
   await loginInBrowserAs(page, TEST_USERS.salesManager);
   await page.addInitScript(() => localStorage.setItem("nicon_lang", "vi"));
 
@@ -12,14 +15,26 @@ test("customer contract form permits an agreed value without a quote", async ({ 
 
     const dialog = page.getByRole("dialog");
     await expect(dialog.getByText(/Báo giá nguồn/)).toBeVisible();
-    await expect(dialog.getByText(/Không bắt buộc khi khách hàng đã thống nhất giá trị/)).toBeVisible();
-    await expect(dialog.getByRole("link", { name: "Mở Báo giá" })).toHaveAttribute("href", "/admin/quotes");
-    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+    await expect(
+      dialog.getByText(/Không bắt buộc khi khách hàng đã thống nhất giá trị/),
+    ).toBeVisible();
+    await expect(dialog.getByRole("link", { name: "Mở Báo giá" })).toHaveAttribute(
+      "href",
+      "/admin/quotes",
+    );
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+      width,
+    );
     await page.keyboard.press("Escape");
   }
 });
 
-test("Opportunity offers a direct contract and optionally prefills an approved quote", async ({ api, loginAs, loginInBrowserAs, page }) => {
+test("Opportunity offers a direct contract and optionally prefills an approved quote", async ({
+  api,
+  loginAs,
+  loginInBrowserAs,
+  page,
+}) => {
   const headers = { Authorization: `Bearer ${await loginAs(TEST_USERS.salesManager)}` };
   const suffix = Math.random().toString(36).slice(2, 10);
   let customerId = 0;
@@ -33,7 +48,11 @@ test("Opportunity offers a direct contract and optionally prefills an approved q
         type: "Individual",
         name: `Customer quote gate ${suffix}`,
         sourceCode: "marketing",
-        primaryContact: { fullName: "Nguyễn Minh Châu", phone: `0912${Math.floor(100000 + Math.random() * 899999)}`, isPrimary: true },
+        primaryContact: {
+          fullName: "Nguyễn Minh Châu",
+          phone: `0912${Math.floor(100000 + Math.random() * 899999)}`,
+          isPrimary: true,
+        },
       },
     });
     expect(customerResponse.status(), await customerResponse.text()).toBe(201);
@@ -41,12 +60,20 @@ test("Opportunity offers a direct contract and optionally prefills an approved q
 
     const opportunityResponse = await api.post("/api/opportunities", {
       headers,
-      data: { name: `Cải tạo văn phòng Minh Châu ${suffix}`, customerId, estimatedValue: 750_000_000, winProbability: 45 },
+      data: {
+        name: `Cải tạo văn phòng Minh Châu ${suffix}`,
+        customerId,
+        estimatedValue: 750_000_000,
+        winProbability: 45,
+      },
     });
     expect(opportunityResponse.status(), await opportunityResponse.text()).toBe(201);
     opportunityId = (await opportunityResponse.json()).id as number;
     for (const targetStage of ["Qualification", "Proposal", "Negotiation"]) {
-      const response = await api.patch(`/api/opportunities/${opportunityId}/stage`, { headers, data: { targetStage } });
+      const response = await api.patch(`/api/opportunities/${opportunityId}/stage`, {
+        headers,
+        data: { targetStage },
+      });
       expect(response.status(), await response.text()).toBe(200);
     }
 
@@ -63,17 +90,31 @@ test("Opportunity offers a direct contract and optionally prefills an approved q
         opportunityId,
         method: "Boq",
         packageDescription: "Cải tạo văn phòng và hệ thống MEP Minh Châu",
-        items: [{ itemCode: "CT-01", name: "Thi công hoàn thiện văn phòng", unit: "m2", quantity: 500, unitPrice: 1_500_000 }],
+        items: [
+          {
+            itemCode: "CT-01",
+            name: "Thi công hoàn thiện văn phòng",
+            unit: "m2",
+            quantity: 500,
+            unitPrice: 1_500_000,
+          },
+        ],
         vatPercent: 8,
       },
     });
     expect(quoteResponse.status(), await quoteResponse.text()).toBe(201);
-    let quote = await quoteResponse.json() as { id: number; rowVersion: string };
+    let quote = (await quoteResponse.json()) as { id: number; rowVersion: string };
     quoteId = quote.id;
-    const submitted = await api.post(`/api/quotes/${quoteId}/submit`, { headers, data: { rowVersion: quote.rowVersion } });
+    const submitted = await api.post(`/api/quotes/${quoteId}/submit`, {
+      headers,
+      data: { rowVersion: quote.rowVersion },
+    });
     expect(submitted.status(), await submitted.text()).toBe(200);
-    quote = await submitted.json() as { id: number; rowVersion: string };
-    const approved = await api.post(`/api/quotes/${quoteId}/approve`, { headers, data: { rowVersion: quote.rowVersion } });
+    quote = (await submitted.json()) as { id: number; rowVersion: string };
+    const approved = await api.post(`/api/quotes/${quoteId}/approve`, {
+      headers,
+      data: { rowVersion: quote.rowVersion },
+    });
     expect(approved.status(), await approved.text()).toBe(200);
 
     await page.goto(`/admin/quotes/${quoteId}`, { waitUntil: "networkidle" });
@@ -93,14 +134,14 @@ test("Opportunity offers a direct contract and optionally prefills an approved q
     const quoteListPattern = /\/api\/quotes\?/;
     await page.route(quoteListPattern, async (route) => {
       const response = await route.fetch();
-      const body = await response.json() as { items: Array<{ id: number; validUntil: string }> };
+      const body = (await response.json()) as { items: Array<{ id: number; validUntil: string }> };
       await route.fulfill({
         response,
         json: {
           ...body,
-          items: body.items.map((item) => item.id === quoteId
-            ? { ...item, validUntil: "2000-01-01T00:00:00Z" }
-            : item),
+          items: body.items.map((item) =>
+            item.id === quoteId ? { ...item, validUntil: "2000-01-01T00:00:00Z" } : item,
+          ),
         },
       });
     });
@@ -114,7 +155,8 @@ test("Opportunity offers a direct contract and optionally prefills an approved q
     await expect(page.getByRole("dialog").getByText(`#${quoteId}`)).toBeVisible();
   } finally {
     if (quoteId) await hardDeleteBusinessRoot(api, headers, `/api/quotes/${quoteId}`);
-    if (opportunityId) await hardDeleteBusinessRoot(api, headers, `/api/opportunities/${opportunityId}`);
+    if (opportunityId)
+      await hardDeleteBusinessRoot(api, headers, `/api/opportunities/${opportunityId}`);
     if (customerId) await hardDeleteBusinessRoot(api, headers, `/api/customers/${customerId}`);
   }
 });

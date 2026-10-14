@@ -75,7 +75,12 @@ const NewsForm = ({ mode }: { mode: "create" | "edit" }) => {
   const navigate = useNavigate();
   const { t, lang } = useI18n();
   const { toast } = useToast();
-  const { data: existing, loading, error, refetch } = useNewsItem(mode === "edit" ? (slug ?? "") : "");
+  const {
+    data: existing,
+    loading,
+    error,
+    refetch,
+  } = useNewsItem(mode === "edit" ? (slug ?? "") : "");
   const { data: categories } = useNewsCategories(true);
   const [data, setData] = useState<FormData>(empty);
   const [initialized, setInitialized] = useState(false);
@@ -126,7 +131,11 @@ const NewsForm = ({ mode }: { mode: "create" | "edit" }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!data.title.trim()) {
-      toast({ title: t("form.required"), description: t("adminNews.field.title"), variant: "destructive" });
+      toast({
+        title: t("form.required"),
+        description: t("adminNews.field.title"),
+        variant: "destructive",
+      });
       return;
     }
     let imageUrl = data.imageUrl || "/placeholder.svg";
@@ -145,15 +154,15 @@ const NewsForm = ({ mode }: { mode: "create" | "edit" }) => {
       }
 
       const payload: UpsertNewsRequest = {
-      slug: data.slug || slugify(data.title),
-      date: toApiDate(data.date),
-      imageUrl,
-      gallery: data.gallery.length ? data.gallery : undefined,
-      category: data.category,
-      newsCategoryId: data.newsCategoryId,
-      title: data.title,
-      excerpt: data.excerpt,
-      content: data.content,
+        slug: data.slug || slugify(data.title),
+        date: toApiDate(data.date),
+        imageUrl,
+        gallery: data.gallery.length ? data.gallery : undefined,
+        category: data.category,
+        newsCategoryId: data.newsCategoryId,
+        title: data.title,
+        excerpt: data.excerpt,
+        content: data.content,
       };
 
       if (mode === "create") {
@@ -161,7 +170,10 @@ const NewsForm = ({ mode }: { mode: "create" | "edit" }) => {
       } else {
         await adminApi.updateNews(data.id, payload);
       }
-      toast({ title: mode === "create" ? t("form.created") : t("form.updated"), description: data.title });
+      toast({
+        title: mode === "create" ? t("form.created") : t("form.updated"),
+        description: data.title,
+      });
       navigate("/admin/news");
     } catch {
       toast({ title: t("common.error"), variant: "destructive" });
@@ -171,8 +183,18 @@ const NewsForm = ({ mode }: { mode: "create" | "edit" }) => {
     }
   };
 
-  if (mode === "edit" && loading) return <AdminLayout><PageLoading /></AdminLayout>;
-  if (mode === "edit" && error) return <AdminLayout><PageError message={error} onRetry={refetch} /></AdminLayout>;
+  if (mode === "edit" && loading)
+    return (
+      <AdminLayout>
+        <PageLoading />
+      </AdminLayout>
+    );
+  if (mode === "edit" && error)
+    return (
+      <AdminLayout>
+        <PageError message={error} onRetry={refetch} />
+      </AdminLayout>
+    );
 
   return (
     <AdminLayout>
@@ -197,10 +219,18 @@ const NewsForm = ({ mode }: { mode: "create" | "edit" }) => {
               <h2 className="mb-4 text-base font-semibold">{t("form.basicInfo")}</h2>
               <div className="space-y-4">
                 <Field label={t("adminNews.field.title") + " *"}>
-                  <Input value={data.title} onChange={(e) => update("title", e.target.value)} required />
+                  <Input
+                    value={data.title}
+                    onChange={(e) => update("title", e.target.value)}
+                    required
+                  />
                 </Field>
                 <Field label={t("adminNews.field.excerpt")}>
-                  <Textarea className="min-h-20" value={data.excerpt} onChange={(e) => update("excerpt", e.target.value)} />
+                  <Textarea
+                    className="min-h-20"
+                    value={data.excerpt}
+                    onChange={(e) => update("excerpt", e.target.value)}
+                  />
                 </Field>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                   <Field label={t("adminNews.field.category")}>
@@ -208,7 +238,11 @@ const NewsForm = ({ mode }: { mode: "create" | "edit" }) => {
                       value={data.newsCategoryId != null ? String(data.newsCategoryId) : undefined}
                       onValueChange={(v) => {
                         const found = categoryOptions.find((opt) => String(opt.id) === v);
-                        setData((d) => ({ ...d, newsCategoryId: found?.id ?? null, category: found?.name ?? "" }));
+                        setData((d) => ({
+                          ...d,
+                          newsCategoryId: found?.id ?? null,
+                          category: found?.name ?? "",
+                        }));
                       }}
                     >
                       <SelectTrigger>
@@ -216,13 +250,19 @@ const NewsForm = ({ mode }: { mode: "create" | "edit" }) => {
                       </SelectTrigger>
                       <SelectContent>
                         {categoryOptions.map((opt) => (
-                          <SelectItem key={opt.id} value={String(opt.id)}>{opt.label}</SelectItem>
+                          <SelectItem key={opt.id} value={String(opt.id)}>
+                            {opt.label}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </Field>
                   <Field label={t("adminNews.field.date")}>
-                    <Input type="date" value={data.date} onChange={(e) => update("date", e.target.value)} />
+                    <Input
+                      type="date"
+                      value={data.date}
+                      onChange={(e) => update("date", e.target.value)}
+                    />
                   </Field>
                 </div>
               </div>
@@ -231,7 +271,11 @@ const NewsForm = ({ mode }: { mode: "create" | "edit" }) => {
             <div className="rounded-lg border bg-card p-6">
               <h2 className="mb-4 text-base font-semibold">{t("form.content")}</h2>
               <Field label={t("adminNews.field.content")}>
-                <ContentBlockEditor value={data.content} onChange={(items) => update("content", items)} folder={`news/${data.slug || slugify(data.title)}`} />
+                <ContentBlockEditor
+                  value={data.content}
+                  onChange={(items) => update("content", items)}
+                  folder={`news/${data.slug || slugify(data.title)}`}
+                />
               </Field>
             </div>
           </div>
@@ -257,10 +301,12 @@ const NewsForm = ({ mode }: { mode: "create" | "edit" }) => {
 
             <div className="rounded-lg border bg-card p-6">
               <h2 className="mb-1 text-base font-semibold">{t("media.gallery.title")}</h2>
-              <p className="mb-4 text-xs text-muted-foreground">
-                {t("media.gallery.descPost")}
-              </p>
-              <GalleryEditor items={data.gallery} onChange={(items) => update("gallery", items)} folder={`news/${data.slug || slugify(data.title)}`} />
+              <p className="mb-4 text-xs text-muted-foreground">{t("media.gallery.descPost")}</p>
+              <GalleryEditor
+                items={data.gallery}
+                onChange={(items) => update("gallery", items)}
+                folder={`news/${data.slug || slugify(data.title)}`}
+              />
             </div>
 
             <Button type="submit" disabled={submitting || uploadingImage} className="w-full">

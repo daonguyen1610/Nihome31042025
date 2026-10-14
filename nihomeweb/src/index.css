@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800;900&family=Manrope:wght@400;500;600;700;800&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800;900&family=Manrope:wght@400;500;600;700;800&display=swap");
 @import "tailwindcss";
 @config "../tailwind.config.ts";
 
@@ -62,16 +62,17 @@
     --gradient-overlay: linear-gradient(135deg, hsl(354 84% 57% / 0.85), hsl(22 95% 58% / 0.85));
     --gradient-indigo: linear-gradient(135deg, hsl(244 75% 64%), hsl(255 80% 70%));
     --gradient-success: linear-gradient(135deg, hsl(150 65% 45%), hsl(160 65% 50%));
-    --gradient-mesh: radial-gradient(at 20% 20%, hsl(354 84% 57% / 0.12) 0px, transparent 50%),
-                     radial-gradient(at 80% 0%, hsl(22 95% 58% / 0.10) 0px, transparent 50%),
-                     radial-gradient(at 0% 80%, hsl(244 75% 64% / 0.08) 0px, transparent 50%);
+    --gradient-mesh:
+      radial-gradient(at 20% 20%, hsl(354 84% 57% / 0.12) 0px, transparent 50%),
+      radial-gradient(at 80% 0%, hsl(22 95% 58% / 0.1) 0px, transparent 50%),
+      radial-gradient(at 0% 80%, hsl(244 75% 64% / 0.08) 0px, transparent 50%);
 
     /* Shadows */
     --shadow-soft: 0 2px 14px -4px hsl(220 30% 15% / 0.06);
-    --shadow-card: 0 12px 40px -12px hsl(220 30% 15% / 0.10);
+    --shadow-card: 0 12px 40px -12px hsl(220 30% 15% / 0.1);
     --shadow-elegant: 0 24px 60px -16px hsl(220 30% 15% / 0.18);
     --shadow-glow: 0 8px 24px -4px hsl(354 84% 57% / 0.45);
-    --shadow-glow-orange: 0 8px 24px -4px hsl(22 95% 58% / 0.40);
+    --shadow-glow-orange: 0 8px 24px -4px hsl(22 95% 58% / 0.4);
 
     /* Transitions */
     --transition-smooth: cubic-bezier(0.22, 1, 0.36, 1);
@@ -123,23 +124,28 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: 'Be Vietnam Pro', 'Inter', system-ui, sans-serif;
-    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    font-family: "Be Vietnam Pro", "Inter", system-ui, sans-serif;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 
-  h1, h2, h3, h4, h5, h6 {
-    font-family: 'Be Vietnam Pro', 'Inter', system-ui, sans-serif;
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: "Be Vietnam Pro", "Inter", system-ui, sans-serif;
     @apply tracking-tight;
     letter-spacing: -0.02em;
   }
 
   .font-display {
-    font-family: 'Be Vietnam Pro', 'Inter', system-ui, sans-serif;
+    font-family: "Be Vietnam Pro", "Inter", system-ui, sans-serif;
     letter-spacing: -0.025em;
   }
 
   .font-mono-display {
-    font-family: 'Manrope', sans-serif;
+    font-family: "Manrope", sans-serif;
   }
 }
 
@@ -189,7 +195,9 @@
 
   /* Cards */
   .card-hover {
-    transition: transform var(--transition-base), box-shadow var(--transition-base);
+    transition:
+      transform var(--transition-base),
+      box-shadow var(--transition-base);
   }
   .card-hover:hover {
     transform: translateY(-6px);
@@ -197,7 +205,9 @@
   }
 
   .hover-lift {
-    transition: transform var(--transition-base), box-shadow var(--transition-base);
+    transition:
+      transform var(--transition-base),
+      box-shadow var(--transition-base);
   }
   .hover-lift:hover {
     transform: translateY(-4px);
@@ -221,7 +231,7 @@
     display: inline-block;
   }
   .link-underline::after {
-    content: '';
+    content: "";
     position: absolute;
     left: 0;
     bottom: -2px;
@@ -240,18 +250,28 @@
   }
 
   /* Shadows */
-  .shadow-soft { box-shadow: var(--shadow-soft); }
-  .shadow-card { box-shadow: var(--shadow-card); }
-  .shadow-elegant { box-shadow: var(--shadow-elegant); }
-  .shadow-glow { box-shadow: var(--shadow-glow); }
-  .shadow-glow-orange { box-shadow: var(--shadow-glow-orange); }
+  .shadow-soft {
+    box-shadow: var(--shadow-soft);
+  }
+  .shadow-card {
+    box-shadow: var(--shadow-card);
+  }
+  .shadow-elegant {
+    box-shadow: var(--shadow-elegant);
+  }
+  .shadow-glow {
+    box-shadow: var(--shadow-glow);
+  }
+  .shadow-glow-orange {
+    box-shadow: var(--shadow-glow-orange);
+  }
 
   /* Eyebrow label */
   .eyebrow {
     @apply inline-flex items-center gap-2 text-xs uppercase tracking-[0.22em] font-bold;
   }
   .eyebrow::before {
-    content: '';
+    content: "";
     width: 28px;
     height: 2px;
     background: var(--gradient-primary);
@@ -263,7 +283,7 @@
     @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider;
   }
   .chip-primary {
-    background: hsl(var(--primary) / 0.10);
+    background: hsl(var(--primary) / 0.1);
     color: hsl(var(--primary));
   }
   .chip-orange {
@@ -281,29 +301,53 @@
 }
 
 @keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(28px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(28px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-12px); }
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-12px);
+  }
 }
-.animate-float { animation: float 6s ease-in-out infinite; }
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
 
 @keyframes marquee {
-  from { transform: translateX(0); }
-  to { transform: translateX(-50%); }
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
 }
 .animate-marquee {
   animation: marquee 40s linear infinite;
 }
 
 @keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 0 0 hsl(var(--primary) / 0.5); }
-  50% { box-shadow: 0 0 0 16px hsl(var(--primary) / 0); }
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 hsl(var(--primary) / 0.5);
+  }
+  50% {
+    box-shadow: 0 0 0 16px hsl(var(--primary) / 0);
+  }
 }
-.animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
 
 /* ============================================
    Admin — nihome inspired (indigo + soft cards)
@@ -331,16 +375,22 @@
 
   background: hsl(var(--admin-bg));
   color: hsl(var(--admin-text));
-  font-family: 'Be Vietnam Pro', 'Inter', system-ui, sans-serif;
+  font-family: "Be Vietnam Pro", "Inter", system-ui, sans-serif;
 }
-.admin-scope h1, .admin-scope h2, .admin-scope h3, .admin-scope h4, .admin-scope h5 {
-  font-family: 'Be Vietnam Pro', 'Inter', system-ui, sans-serif;
+.admin-scope h1,
+.admin-scope h2,
+.admin-scope h3,
+.admin-scope h4,
+.admin-scope h5 {
+  font-family: "Be Vietnam Pro", "Inter", system-ui, sans-serif;
   letter-spacing: -0.02em;
 }
 .admin-scope .admin-card {
   background: hsl(var(--admin-surface));
   border-radius: 1rem;
-  box-shadow: 0 2px 6px -1px hsl(var(--admin-shadow) / 0.04), 0 1px 2px -1px hsl(var(--admin-shadow) / 0.03);
+  box-shadow:
+    0 2px 6px -1px hsl(var(--admin-shadow) / 0.04),
+    0 1px 2px -1px hsl(var(--admin-shadow) / 0.03);
   border: 1px solid hsl(var(--admin-border) / 0.6);
 }
 .admin-scope .admin-chip {
@@ -357,7 +407,7 @@
 .admin-scope .admin-btn-primary {
   background: linear-gradient(135deg, hsl(var(--admin-primary)), hsl(22 95% 58%));
   color: hsl(var(--admin-primary-foreground));
-  box-shadow: 0 8px 18px -4px hsl(var(--admin-primary) / 0.40);
+  box-shadow: 0 8px 18px -4px hsl(var(--admin-primary) / 0.4);
   border-radius: 9999px;
   font-weight: 600;
   font-size: 0.875rem;
@@ -379,7 +429,9 @@
   font-size: 0.875rem;
   color: hsl(var(--admin-sidebar-text));
   outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
 }
 .admin-scope .admin-input:focus {
   border-color: hsl(var(--admin-primary));
@@ -399,13 +451,13 @@
   box-shadow: 0 10px 30px -10px hsl(var(--admin-shadow) / 0.25);
 }
 .admin-scope .admin-stat-card::after {
-  content: '';
+  content: "";
   position: absolute;
   top: -30%;
   right: -20%;
   width: 200px;
   height: 200px;
-  background: hsl(0 0% 100% / 0.10);
+  background: hsl(0 0% 100% / 0.1);
   border-radius: 50%;
   pointer-events: none;
 }
@@ -461,7 +513,11 @@
   padding: 0.85rem 1rem;
   border-radius: 1rem;
   border: 1px solid hsl(var(--admin-border));
-  background: linear-gradient(135deg, hsl(var(--admin-surface)), hsl(var(--admin-primary-soft) / 0.34));
+  background: linear-gradient(
+    135deg,
+    hsl(var(--admin-surface)),
+    hsl(var(--admin-primary-soft) / 0.34)
+  );
 }
 .about-sort-badge-label {
   font-size: 0.72rem;
@@ -471,7 +527,7 @@
   color: hsl(var(--admin-muted));
 }
 .about-sort-badge-value {
-  font-family: 'Be Vietnam Pro', 'Inter', system-ui, sans-serif;
+  font-family: "Be Vietnam Pro", "Inter", system-ui, sans-serif;
   font-size: 1rem;
   font-weight: 800;
   color: hsl(var(--admin-primary));
@@ -509,7 +565,9 @@
   font-weight: 800;
   color: hsl(var(--admin-sidebar-text));
   outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
 }
 .about-sort-input:focus {
   border-color: hsl(var(--admin-primary));
@@ -529,7 +587,11 @@
   padding: 0.85rem 1rem;
   border-radius: 1rem;
   border: 1px solid hsl(var(--admin-border));
-  background: linear-gradient(135deg, hsl(var(--admin-surface)), hsl(var(--admin-primary-soft) / 0.22));
+  background: linear-gradient(
+    135deg,
+    hsl(var(--admin-surface)),
+    hsl(var(--admin-primary-soft) / 0.22)
+  );
 }
 .about-visibility-badge-label {
   font-size: 0.72rem;
@@ -628,8 +690,7 @@
   overscroll-behavior: contain;
 }
 .admin-about-dialog .about-dialog-main {
-  background:
-    linear-gradient(180deg, hsl(var(--admin-surface)), hsl(var(--admin-bg) / 0.82));
+  background: linear-gradient(180deg, hsl(var(--admin-surface)), hsl(var(--admin-bg) / 0.82));
 }
 .admin-about-dialog .about-dialog-side {
   background: linear-gradient(180deg, hsl(var(--admin-primary-soft) / 0.52), hsl(var(--admin-bg)));
@@ -642,8 +703,11 @@
   box-shadow: 0 14px 32px -28px hsl(var(--admin-shadow) / 0.28);
 }
 .admin-about-dialog .about-form-card-accent {
-  background:
-    linear-gradient(180deg, hsl(var(--admin-surface)), hsl(var(--admin-primary-soft) / 0.34));
+  background: linear-gradient(
+    180deg,
+    hsl(var(--admin-surface)),
+    hsl(var(--admin-primary-soft) / 0.34)
+  );
 }
 .admin-about-dialog .about-dialog-footer {
   flex-shrink: 0;
@@ -718,7 +782,11 @@
   border-radius: 1.35rem;
   padding: 0.9rem 0.75rem;
   min-height: 120px;
-  transition: transform 220ms var(--transition-smooth), box-shadow 220ms var(--transition-smooth), background 220ms var(--transition-smooth), border-color 220ms var(--transition-smooth);
+  transition:
+    transform 220ms var(--transition-smooth),
+    box-shadow 220ms var(--transition-smooth),
+    background 220ms var(--transition-smooth),
+    border-color 220ms var(--transition-smooth);
 }
 .admin-about-dialog .about-icon-option:hover {
   transform: translateY(-2px);
@@ -761,7 +829,11 @@
   border-radius: 1.6rem;
   border: 1px solid hsl(var(--admin-border));
   padding: 1.25rem;
-  background: linear-gradient(180deg, hsl(var(--admin-surface)), hsl(var(--admin-primary-soft) / 0.26));
+  background: linear-gradient(
+    180deg,
+    hsl(var(--admin-surface)),
+    hsl(var(--admin-primary-soft) / 0.26)
+  );
   box-shadow: 0 20px 36px -28px hsl(var(--admin-shadow) / 0.28);
 }
 .admin-about-dialog .about-icon-preview-mark {
@@ -836,7 +908,9 @@
 /* Logos manager visual language (NICON gradients + depth) */
 .admin-scope .admin-logo-manager .logo-grid-card {
   background: hsl(var(--admin-surface));
-  transition: transform 320ms var(--transition-smooth), box-shadow 320ms var(--transition-smooth);
+  transition:
+    transform 320ms var(--transition-smooth),
+    box-shadow 320ms var(--transition-smooth);
 }
 .admin-scope .admin-logo-manager .logo-grid-card:hover {
   transform: translateY(-4px);

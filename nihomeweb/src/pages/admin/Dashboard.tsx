@@ -1,13 +1,6 @@
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
-import {
-  FileText,
-  Building2,
-  Briefcase,
-  ArrowUpRight,
-  Plus,
-  Users,
-} from "lucide-react";
+import { FileText, Building2, Briefcase, ArrowUpRight, Plus, Users } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, XAxis, YAxis } from "recharts";
 import AdminLayout from "@/components/layout/AdminLayout";
 import {
@@ -33,7 +26,10 @@ const Dashboard = () => {
   const ongoingProjects = (projects ?? []).filter((p) => p.status === "ongoing").length;
   const totalProjects = (projects ?? []).length;
   const openPositions = (jobPositions ?? []).filter((j) => j.isActive).length;
-  const totalApplications = (jobPositions ?? []).reduce((sum, j) => sum + (j.applicationCount ?? 0), 0);
+  const totalApplications = (jobPositions ?? []).reduce(
+    (sum, j) => sum + (j.applicationCount ?? 0),
+    0,
+  );
 
   const recentPosts = (activities ?? []).slice(0, 5);
 
@@ -113,10 +109,13 @@ const Dashboard = () => {
       return status;
     };
 
-    return projectStatusData.reduce<Record<string, { label: string; color: string }>>((acc, item) => {
-      acc[item.status] = { label: getLabel(item.status), color: item.fill };
-      return acc;
-    }, {});
+    return projectStatusData.reduce<Record<string, { label: string; color: string }>>(
+      (acc, item) => {
+        acc[item.status] = { label: getLabel(item.status), color: item.fill };
+        return acc;
+      },
+      {},
+    );
   }, [projectStatusData, t]);
 
   const applicationsConfig = useMemo(
@@ -170,7 +169,9 @@ const Dashboard = () => {
           <p className="text-sm font-medium text-primary">
             {t("dash.welcome")}, {user?.name ?? "Admin"} 👋
           </p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">{t("dash.overview")}</h1>
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">
+            {t("dash.overview")}
+          </h1>
         </header>
 
         {/* Stat cards */}
@@ -221,7 +222,13 @@ const Dashboard = () => {
               <ChartContainer config={projectStatusConfig} className="aspect-auto h-64 w-full">
                 <PieChart>
                   <ChartTooltip content={<ChartTooltipContent nameKey="status" />} />
-                  <Pie data={projectStatusData} dataKey="value" nameKey="status" innerRadius={60} strokeWidth={0}>
+                  <Pie
+                    data={projectStatusData}
+                    dataKey="value"
+                    nameKey="status"
+                    innerRadius={60}
+                    strokeWidth={0}
+                  >
                     {projectStatusData.map((entry) => (
                       <Cell key={entry.status} fill={entry.fill} />
                     ))}
@@ -271,10 +278,17 @@ const Dashboard = () => {
             style={{ background: "linear-gradient(135deg, hsl(244 75% 64%), hsl(255 80% 72%))" }}
           >
             <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10" />
-            <p className="text-xs font-medium uppercase tracking-wider opacity-80">{t("dash.quickAction")}</p>
+            <p className="text-xs font-medium uppercase tracking-wider opacity-80">
+              {t("dash.quickAction")}
+            </p>
             <h3 className="relative z-10 mt-2 text-xl font-bold">{t("dash.createPost")}</h3>
             <p className="relative z-10 mb-5 mt-2 text-sm opacity-85">{t("dash.createPostDesc")}</p>
-            <Button asChild size="sm" variant="secondary" className="relative z-10 bg-white text-primary hover:bg-white/90">
+            <Button
+              asChild
+              size="sm"
+              variant="secondary"
+              className="relative z-10 bg-white text-primary hover:bg-white/90"
+            >
               <Link to="/admin/activities/new">
                 <Plus className="mr-1.5 h-4 w-4" /> {t("activities.create")}
               </Link>
@@ -286,7 +300,11 @@ const Dashboard = () => {
           <section className="rounded-lg border bg-card p-6">
             <h2 className="mb-5 text-lg font-semibold">{t("dash.applicationsByPos")}</h2>
             <ChartContainer config={applicationsConfig} className="aspect-auto h-72 w-full">
-              <BarChart data={applicationsPerPosition} layout="vertical" margin={{ left: 40, right: 16 }}>
+              <BarChart
+                data={applicationsPerPosition}
+                layout="vertical"
+                margin={{ left: 40, right: 16 }}
+              >
                 <CartesianGrid horizontal={false} strokeDasharray="3 3" />
                 <XAxis type="number" tickLine={false} axisLine={false} allowDecimals={false} />
                 <YAxis
@@ -298,7 +316,11 @@ const Dashboard = () => {
                   tickFormatter={truncateLabel}
                 />
                 <ChartTooltip content={<ChartTooltipContent />} />
-                <Bar dataKey="applications" fill="var(--color-applications)" radius={[0, 6, 6, 0]} />
+                <Bar
+                  dataKey="applications"
+                  fill="var(--color-applications)"
+                  radius={[0, 6, 6, 0]}
+                />
               </BarChart>
             </ChartContainer>
           </section>

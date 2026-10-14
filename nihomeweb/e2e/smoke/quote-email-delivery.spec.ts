@@ -4,8 +4,16 @@ import { hardDeleteBusinessRoot } from "../fixtures/hardDelete";
 
 const mailSinkUrl = process.env.MAIL_SINK_URL;
 
-test("approved opportunity quote sends the edited preview through SMTP before customer confirmation", async ({ api, loginAs, loginInBrowserAs, page }) => {
-  test.skip(!mailSinkUrl, "Run with docker-compose-dev.yaml and MAIL_SINK_URL=http://127.0.0.1:8025");
+test("approved opportunity quote sends the edited preview through SMTP before customer confirmation", async ({
+  api,
+  loginAs,
+  loginInBrowserAs,
+  page,
+}) => {
+  test.skip(
+    !mailSinkUrl,
+    "Run with docker-compose-dev.yaml and MAIL_SINK_URL=http://127.0.0.1:8025",
+  );
 
   const headers = { Authorization: `Bearer ${await loginAs(TEST_USERS.salesManager)}` };
   const suffix = Math.random().toString(36).slice(2, 10);
@@ -36,10 +44,16 @@ test("approved opportunity quote sends the edited preview through SMTP before cu
 
     const conversionResponse = await api.post(`/api/leads/${leadId}/convert`, {
       headers,
-      data: { address: "12 Nguyễn Huệ, Quận 1, TP. Hồ Chí Minh", representativeName: "Nguyễn Minh Châu" },
+      data: {
+        address: "12 Nguyễn Huệ, Quận 1, TP. Hồ Chí Minh",
+        representativeName: "Nguyễn Minh Châu",
+      },
     });
     expect(conversionResponse.status(), await conversionResponse.text()).toBe(200);
-    const conversion = await conversionResponse.json() as { convertedCustomerId: number; convertedOpportunityId: number };
+    const conversion = (await conversionResponse.json()) as {
+      convertedCustomerId: number;
+      convertedOpportunityId: number;
+    };
     customerId = conversion.convertedCustomerId;
     opportunityId = conversion.convertedOpportunityId;
 
@@ -48,7 +62,10 @@ test("approved opportunity quote sends the edited preview through SMTP before cu
     projectId = (await opportunityResponse.json()).operationalProjectId as number;
     expect(projectId, "converting a lead must create the operational project").toBeGreaterThan(0);
     for (const targetStage of ["Qualification", "Proposal", "Negotiation"]) {
-      const response = await api.patch(`/api/opportunities/${opportunityId}/stage`, { headers, data: { targetStage } });
+      const response = await api.patch(`/api/opportunities/${opportunityId}/stage`, {
+        headers,
+        data: { targetStage },
+      });
       expect(response.status(), await response.text()).toBe(200);
     }
 
@@ -58,17 +75,36 @@ test("approved opportunity quote sends the edited preview through SMTP before cu
         opportunityId,
         method: "Boq",
         packageDescription: "Cải tạo văn phòng và hệ thống MEP Minh Châu",
-        items: [{ itemCode: "CT-01", name: "Thi công hoàn thiện văn phòng", unit: "m2", quantity: 500, unitPrice: 1_500_000 }],
+        items: [
+          {
+            itemCode: "CT-01",
+            name: "Thi công hoàn thiện văn phòng",
+            unit: "m2",
+            quantity: 500,
+            unitPrice: 1_500_000,
+          },
+        ],
         vatPercent: 8,
       },
     });
     expect(quoteResponse.status(), await quoteResponse.text()).toBe(201);
-    let quote = await quoteResponse.json() as { id: number; code: string; rowVersion: string; status: string };
+    let quote = (await quoteResponse.json()) as {
+      id: number;
+      code: string;
+      rowVersion: string;
+      status: string;
+    };
     quoteId = quote.id;
-    const submitted = await api.post(`/api/quotes/${quoteId}/submit`, { headers, data: { rowVersion: quote.rowVersion } });
+    const submitted = await api.post(`/api/quotes/${quoteId}/submit`, {
+      headers,
+      data: { rowVersion: quote.rowVersion },
+    });
     expect(submitted.status(), await submitted.text()).toBe(200);
     quote = await submitted.json();
-    const approved = await api.post(`/api/quotes/${quoteId}/approve`, { headers, data: { rowVersion: quote.rowVersion } });
+    const approved = await api.post(`/api/quotes/${quoteId}/approve`, {
+      headers,
+      data: { rowVersion: quote.rowVersion },
+    });
     expect(approved.status(), await approved.text()).toBe(200);
 
     // Tài chính – Kế toán reviews the commercial terms before the quotation may
@@ -77,12 +113,14 @@ test("approved opportunity quote sends the edited preview through SMTP before cu
     // their own dossier, so an independent approver clears it.
     const optionsResponse = await api.get("/api/work-packages/options", { headers });
     expect(optionsResponse.status(), await optionsResponse.text()).toBe(200);
-    const options = await optionsResponse.json() as {
+    const options = (await optionsResponse.json()) as {
       departments: { id: number; code: string }[];
       users: { userId: number; name: string; roleGroupId: number; canLead: boolean }[];
     };
-    const financeGroup = options.departments.find(group => group.code === "FINANCE")!;
-    const accountant = options.users.find(user => user.roleGroupId === financeGroup.id && user.canLead)!;
+    const financeGroup = options.departments.find((group) => group.code === "FINANCE")!;
+    const accountant = options.users.find(
+      (user) => user.roleGroupId === financeGroup.id && user.canLead,
+    )!;
     const financePackageResponse = await api.post("/api/work-packages", {
       headers: { ...headers, "Idempotency-Key": randomUUID() },
       data: {
@@ -99,7 +137,10 @@ test("approved opportunity quote sends the edited preview through SMTP before cu
     expect(financePackageResponse.status(), await financePackageResponse.text()).toBe(201);
     const financePackageId = (await financePackageResponse.json()).id as number;
 
-    const accountantHeaders = { Authorization: `Bearer ${await loginAs(TEST_USERS.accountant)}`, "Idempotency-Key": randomUUID() };
+    const accountantHeaders = {
+      Authorization: `Bearer ${await loginAs(TEST_USERS.accountant)}`,
+      "Idempotency-Key": randomUUID(),
+    };
     let reviewResponse = await api.put(`/api/work-packages/${financePackageId}/finance-review`, {
       headers: accountantHeaders,
       data: {
@@ -110,19 +151,28 @@ test("approved opportunity quote sends the edited preview through SMTP before cu
       },
     });
     expect(reviewResponse.status(), await reviewResponse.text()).toBe(200);
-    let review = await reviewResponse.json() as { rowVersion: string };
-    reviewResponse = await api.post(`/api/work-packages/${financePackageId}/finance-review/submit`, {
-      headers: { ...accountantHeaders, "Idempotency-Key": randomUUID() },
-      data: { rowVersion: review.rowVersion },
-    });
+    let review = (await reviewResponse.json()) as { rowVersion: string };
+    reviewResponse = await api.post(
+      `/api/work-packages/${financePackageId}/finance-review/submit`,
+      {
+        headers: { ...accountantHeaders, "Idempotency-Key": randomUUID() },
+        data: { rowVersion: review.rowVersion },
+      },
+    );
     expect(reviewResponse.status(), await reviewResponse.text()).toBe(200);
     review = await reviewResponse.json();
-    reviewResponse = await api.post(`/api/work-packages/${financePackageId}/finance-review/decision`, {
-      headers: { Authorization: `Bearer ${await loginAs(TEST_USERS.superAdmin)}`, "Idempotency-Key": randomUUID() },
-      data: { approved: true, rowVersion: review.rowVersion },
-    });
+    reviewResponse = await api.post(
+      `/api/work-packages/${financePackageId}/finance-review/decision`,
+      {
+        headers: {
+          Authorization: `Bearer ${await loginAs(TEST_USERS.superAdmin)}`,
+          "Idempotency-Key": randomUUID(),
+        },
+        data: { approved: true, rowVersion: review.rowVersion },
+      },
+    );
     expect(reviewResponse.status(), await reviewResponse.text()).toBe(200);
-    expect((await reviewResponse.json() as { status: string }).status).toBe("Approved");
+    expect(((await reviewResponse.json()) as { status: string }).status).toBe("Approved");
 
     await loginInBrowserAs(page, TEST_USERS.salesManager);
     await page.addInitScript(() => localStorage.setItem("nicon_lang", "vi"));
@@ -133,25 +183,40 @@ test("approved opportunity quote sends the edited preview through SMTP before cu
     await expect(dialog.getByLabel("Tiêu đề email")).toHaveValue(/QT-/);
     await expect(dialog.getByLabel("Nội dung email sắp gửi")).toHaveValue(/Tổng giá trị/);
     await expect(dialog.getByTestId("quote-email-attachment")).toContainText(`${quote.code}.xlsx`);
-    await expect(dialog.frameLocator('iframe[title="Xem trước email hiển thị"]').locator("body")).toContainText("NICON");
-    await expect(dialog.frameLocator('iframe[title="Xem trước email hiển thị"]').locator("body")).toContainText("810.000.000");
+    await expect(
+      dialog.frameLocator('iframe[title="Xem trước email hiển thị"]').locator("body"),
+    ).toContainText("NICON");
+    await expect(
+      dialog.frameLocator('iframe[title="Xem trước email hiển thị"]').locator("body"),
+    ).toContainText("810.000.000");
     await dialog.getByLabel("Email khách hàng").fill("invalid@domain");
     await expect(dialog.getByRole("button", { name: "Gửi khách" })).toBeDisabled();
     await dialog.getByLabel("Email khách hàng").fill(recipient);
     await dialog.getByLabel("Tiêu đề email").fill(`NICON quote ${marker}`);
-    await dialog.getByLabel("Nội dung email sắp gửi").fill(`<div>Dear customer, please review <strong>${marker}</strong>. Total: 810000000 VND.</div>`);
-    await expect(dialog.frameLocator('iframe[title="Xem trước email hiển thị"]').locator("body")).toContainText(marker);
+    await dialog
+      .getByLabel("Nội dung email sắp gửi")
+      .fill(
+        `<div>Dear customer, please review <strong>${marker}</strong>. Total: 810000000 VND.</div>`,
+      );
+    await expect(
+      dialog.frameLocator('iframe[title="Xem trước email hiển thị"]').locator("body"),
+    ).toContainText(marker);
     await dialog.getByRole("button", { name: "Gửi khách" }).click();
     await expect(dialog).not.toBeVisible();
 
-    await expect.poll(async () => {
-      const response = await api.get(`${mailSinkUrl}/messages`);
-      expect(response.status()).toBe(200);
-      const messages = await response.json() as Array<{ recipient: string; raw: string }>;
-      return messages.filter((message) => message.recipient === recipient);
-    }, { timeout: 10_000 }).toHaveLength(1);
+    await expect
+      .poll(
+        async () => {
+          const response = await api.get(`${mailSinkUrl}/messages`);
+          expect(response.status()).toBe(200);
+          const messages = (await response.json()) as Array<{ recipient: string; raw: string }>;
+          return messages.filter((message) => message.recipient === recipient);
+        },
+        { timeout: 10_000 },
+      )
+      .toHaveLength(1);
     const mailbox = await api.get(`${mailSinkUrl}/messages`);
-    const messages = await mailbox.json() as Array<{ recipient: string; raw: string }>;
+    const messages = (await mailbox.json()) as Array<{ recipient: string; raw: string }>;
     const raw = messages.find((message) => message.recipient === recipient)!.raw;
     expect(raw).toContain(`Subject: NICON quote ${marker}`);
     expect(raw).toContain("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
@@ -163,10 +228,12 @@ test("approved opportunity quote sends the edited preview through SMTP before cu
     quote = await sentResponse.json();
     expect(quote.status).toBe("SentToCustomer");
     await page.getByRole("button", { name: "Khách duyệt" }).click();
-    await expect.poll(async () => {
-      const response = await api.get(`/api/quotes/${quoteId}`, { headers });
-      return (await response.json() as { status: string }).status;
-    }).toBe("CustomerApproved");
+    await expect
+      .poll(async () => {
+        const response = await api.get(`/api/quotes/${quoteId}`, { headers });
+        return ((await response.json()) as { status: string }).status;
+      })
+      .toBe("CustomerApproved");
 
     await page.goto(`/admin/opportunities/${opportunityId}`, { waitUntil: "networkidle" });
     await page.getByTestId("opportunity-create-contract").click();
@@ -178,12 +245,19 @@ test("approved opportunity quote sends the edited preview through SMTP before cu
     // that project instead of creating a second one for the same customer.
     await expect(contractDialog.locator("#c-project-form")).toContainText(`PJ-`);
     await contractDialog.locator("#c-value").fill("810000000");
-    const contractResponsePromise = page.waitForResponse((response) =>
-      /\/api\/contracts(?:\?.*)?$/.test(response.url()) && response.request().method() === "POST");
+    const contractResponsePromise = page.waitForResponse(
+      (response) =>
+        /\/api\/contracts(?:\?.*)?$/.test(response.url()) && response.request().method() === "POST",
+    );
     await contractDialog.getByRole("button", { name: "Lưu" }).click();
     const contractResponse = await contractResponsePromise;
     expect(contractResponse.status(), await contractResponse.text()).toBe(201);
-    const contract = await contractResponse.json() as { id: number; quoteId: number | null; opportunityId: number | null; value: number };
+    const contract = (await contractResponse.json()) as {
+      id: number;
+      quoteId: number | null;
+      opportunityId: number | null;
+      value: number;
+    };
     contractId = contract.id;
     expect(contract.quoteId).toBe(quoteId);
     expect(contract.opportunityId).toBe(opportunityId);
@@ -191,8 +265,10 @@ test("approved opportunity quote sends the edited preview through SMTP before cu
   } finally {
     if (contractId) await hardDeleteBusinessRoot(api, headers, `/api/contracts/${contractId}`);
     if (quoteId) await hardDeleteBusinessRoot(api, headers, `/api/quotes/${quoteId}`);
-    if (opportunityId) await hardDeleteBusinessRoot(api, headers, `/api/opportunities/${opportunityId}`);
-    if (projectId) await hardDeleteBusinessRoot(api, headers, `/api/operational-projects/${projectId}`);
+    if (opportunityId)
+      await hardDeleteBusinessRoot(api, headers, `/api/opportunities/${opportunityId}`);
+    if (projectId)
+      await hardDeleteBusinessRoot(api, headers, `/api/operational-projects/${projectId}`);
     if (customerId) await hardDeleteBusinessRoot(api, headers, `/api/customers/${customerId}`);
   }
 });

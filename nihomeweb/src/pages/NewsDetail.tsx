@@ -22,15 +22,27 @@ const NewsDetail = () => {
   const [galleryMode, setGalleryMode] = useState<"grid" | "list">("grid");
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
-  if (loading) return <Layout><PageLoading /></Layout>;
-  if (error) return <Layout><PageError message={error} onRetry={refetch} /></Layout>;
+  if (loading)
+    return (
+      <Layout>
+        <PageLoading />
+      </Layout>
+    );
+  if (error)
+    return (
+      <Layout>
+        <PageError message={error} onRetry={refetch} />
+      </Layout>
+    );
 
   if (!item) {
     return (
       <Layout>
         <div className="container-custom py-32 text-center">
           <h1 className="font-display text-3xl font-extrabold mb-4">{t("newsPage.notFound")}</h1>
-          <Link to="/news" className="text-primary font-bold">← {t("newsPage.backToList")}</Link>
+          <Link to="/news" className="text-primary font-bold">
+            ← {t("newsPage.backToList")}
+          </Link>
         </div>
       </Layout>
     );
@@ -43,11 +55,16 @@ const NewsDetail = () => {
       {/* Hero */}
       <section className="relative pt-32 lg:pt-40 pb-12 bg-gradient-soft">
         <div className="container-custom">
-          <Link to="/news" className="inline-flex items-center gap-2 text-sm font-bold text-primary mb-6 hover:gap-3 transition-all">
+          <Link
+            to="/news"
+            className="inline-flex items-center gap-2 text-sm font-bold text-primary mb-6 hover:gap-3 transition-all"
+          >
             <ArrowLeft className="w-4 h-4" /> {t("newsPage.backToList")}
           </Link>
           <div className="flex items-center gap-3 mb-5">
-            <span className="chip chip-primary">{resolveCategoryLabel(item.newsCategoryId, item.category, categoriesById, lang)}</span>
+            <span className="chip chip-primary">
+              {resolveCategoryLabel(item.newsCategoryId, item.category, categoriesById, lang)}
+            </span>
             <span className="text-xs uppercase tracking-wider text-muted-foreground font-bold flex items-center gap-1.5">
               <Calendar className="w-3 h-3" /> {item.date}
             </span>
@@ -70,7 +87,10 @@ const NewsDetail = () => {
       {/* Body */}
       <section className="pb-20 bg-background">
         <div className="container-custom max-w-3xl">
-          <ContentBlocks items={item.content} paragraphClassName="text-lg text-foreground/85 leading-relaxed" />
+          <ContentBlocks
+            items={item.content}
+            paragraphClassName="text-lg text-foreground/85 leading-relaxed"
+          />
         </div>
       </section>
 
@@ -80,23 +100,48 @@ const NewsDetail = () => {
             <div className="flex items-center justify-between gap-4 mb-6">
               <p className="eyebrow text-primary">{t("newsDetail.gallery")}</p>
               <div className="inline-flex rounded-full border border-border overflow-hidden bg-card">
-                <button type="button" onClick={() => setGalleryMode("grid")} className="p-2 hover:bg-muted" aria-label={t("gallery.viewGrid")}>
+                <button
+                  type="button"
+                  onClick={() => setGalleryMode("grid")}
+                  className="p-2 hover:bg-muted"
+                  aria-label={t("gallery.viewGrid")}
+                >
                   <Grid3X3 className="w-4 h-4" />
                 </button>
-                <button type="button" onClick={() => setGalleryMode("list")} className="p-2 hover:bg-muted border-l border-border" aria-label={t("gallery.viewList")}>
+                <button
+                  type="button"
+                  onClick={() => setGalleryMode("list")}
+                  className="p-2 hover:bg-muted border-l border-border"
+                  aria-label={t("gallery.viewList")}
+                >
                   <List className="w-4 h-4" />
                 </button>
               </div>
             </div>
-            <div className={galleryMode === "grid" ? "grid grid-cols-1 md:grid-cols-3 gap-5" : "space-y-5 max-w-5xl mx-auto"}>
+            <div
+              className={
+                galleryMode === "grid"
+                  ? "grid grid-cols-1 md:grid-cols-3 gap-5"
+                  : "space-y-5 max-w-5xl mx-auto"
+              }
+            >
               {item.gallery.map((g, i) => (
                 <button
                   key={`${g}-${i}`}
                   type="button"
                   onClick={() => setSelectedImage(g)}
-                  className={galleryMode === "grid" ? "image-zoom rounded-3xl overflow-hidden aspect-[4/3] bg-muted w-full text-left" : "image-zoom rounded-3xl overflow-hidden aspect-video bg-muted w-full text-left"}
+                  className={
+                    galleryMode === "grid"
+                      ? "image-zoom rounded-3xl overflow-hidden aspect-[4/3] bg-muted w-full text-left"
+                      : "image-zoom rounded-3xl overflow-hidden aspect-video bg-muted w-full text-left"
+                  }
                 >
-                  <img src={g} alt={`${item.title} ${i + 1}`} className="w-full h-full object-cover" loading="lazy" />
+                  <img
+                    src={g}
+                    alt={`${item.title} ${i + 1}`}
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                  />
                 </button>
               ))}
             </div>
@@ -104,7 +149,10 @@ const NewsDetail = () => {
         </section>
       )}
 
-      <Dialog open={Boolean(selectedImage)} onOpenChange={(open) => !open && setSelectedImage(null)}>
+      <Dialog
+        open={Boolean(selectedImage)}
+        onOpenChange={(open) => !open && setSelectedImage(null)}
+      >
         <DialogContent className="p-1 sm:max-w-6xl bg-transparent border-0 shadow-none">
           {selectedImage ? (
             <img
@@ -121,18 +169,32 @@ const NewsDetail = () => {
         <section className="py-20 bg-surface border-t border-border">
           <div className="container-custom">
             <p className="eyebrow text-primary mb-6">{t("newsPage.related")}</p>
-            <h2 className="font-display text-3xl md:text-4xl font-extrabold mb-10 tracking-tight">{t("newsDetail.readMore")}</h2>
+            <h2 className="font-display text-3xl md:text-4xl font-extrabold mb-10 tracking-tight">
+              {t("newsDetail.readMore")}
+            </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {related.map((n) => (
-                <Link key={n.id} to={`/news/${n.slug}`} className="group card-hover bg-card rounded-3xl overflow-hidden border border-border">
+                <Link
+                  key={n.id}
+                  to={`/news/${n.slug}`}
+                  className="group card-hover bg-card rounded-3xl overflow-hidden border border-border"
+                >
                   <div className="image-zoom aspect-[4/3] bg-muted">
-                    <img src={n.imageUrl} alt="" loading="lazy" className="w-full h-full object-cover" />
+                    <img
+                      src={n.imageUrl}
+                      alt=""
+                      loading="lazy"
+                      className="w-full h-full object-cover"
+                    />
                   </div>
                   <div className="p-6">
                     <p className="text-xs text-muted-foreground font-bold uppercase tracking-wider mb-2 inline-flex items-center gap-1.5">
-                      <Tag className="w-3 h-3" /> {resolveCategoryLabel(n.newsCategoryId, n.category, categoriesById, lang)}
+                      <Tag className="w-3 h-3" />{" "}
+                      {resolveCategoryLabel(n.newsCategoryId, n.category, categoriesById, lang)}
                     </p>
-                    <h3 className="font-display text-lg font-extrabold leading-tight group-hover:text-primary transition-colors line-clamp-2">{n.title}</h3>
+                    <h3 className="font-display text-lg font-extrabold leading-tight group-hover:text-primary transition-colors line-clamp-2">
+                      {n.title}
+                    </h3>
                   </div>
                 </Link>
               ))}

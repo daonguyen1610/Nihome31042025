@@ -46,7 +46,16 @@ import { cn } from "@/lib/utils";
 /* ─── Helpers ───────────────────────────────────── */
 
 // Fields stored as JSON in the DB that need plain-text conversion for the editor.
-const JSON_FIELDS = ["Content", "Sections", "Challenges", "Solutions", "Highlights", "IntroBlocks", "ItemsJson", "Requirements"];
+const JSON_FIELDS = [
+  "Content",
+  "Sections",
+  "Challenges",
+  "Solutions",
+  "Highlights",
+  "IntroBlocks",
+  "ItemsJson",
+  "Requirements",
+];
 
 /** i18n key for the hint shown below the translation textarea so users know the expected format. */
 function fieldHintKey(field: string): string | null {
@@ -77,24 +86,29 @@ function jsonToPlainText(raw: string, field: string): string {
           try {
             const repaired = JSON.parse(inner);
             if (Array.isArray(repaired)) return jsonToPlainText(inner, field);
-          } catch { /* not JSON, fall through to render as text */ }
+          } catch {
+            /* not JSON, fall through to render as text */
+          }
         }
       }
 
-      return (parsed as Array<unknown>).map((item) => {
-        if (typeof item === "string") return item;
-        const b = item as Record<string, unknown>;
-        if (b.type === "text" && typeof b.value === "string") return b.value;
-        if (b.type === "image" && typeof b.url === "string") {
-          const url = toHostRelativeUrl(b.url);
-          const caption = typeof b.caption === "string" ? ` | ${b.caption}` : "";
-          return `[IMAGE: ${url}${caption}]`;
-        }
-        if (b.type === "youtube" && typeof b.url === "string") {
-          return `[YOUTUBE: ${b.url}]`;
-        }
-        return "";
-      }).filter(Boolean).join("\n\n");
+      return (parsed as Array<unknown>)
+        .map((item) => {
+          if (typeof item === "string") return item;
+          const b = item as Record<string, unknown>;
+          if (b.type === "text" && typeof b.value === "string") return b.value;
+          if (b.type === "image" && typeof b.url === "string") {
+            const url = toHostRelativeUrl(b.url);
+            const caption = typeof b.caption === "string" ? ` | ${b.caption}` : "";
+            return `[IMAGE: ${url}${caption}]`;
+          }
+          if (b.type === "youtube" && typeof b.url === "string") {
+            return `[YOUTUBE: ${b.url}]`;
+          }
+          return "";
+        })
+        .filter(Boolean)
+        .join("\n\n");
     }
 
     // string[] — Highlights (one per line), IntroBlocks (--- separator), Content/etc (blank-line-separated)
@@ -106,15 +120,21 @@ function jsonToPlainText(raw: string, field: string): string {
 
     // object[] — Sections: ## Heading\nBullet1\nBullet2
     if (parsed.every((v: unknown) => typeof v === "object" && v !== null)) {
-      return (parsed as Record<string, unknown>[]).map((s) => {
-        const heading = typeof s.heading === "string" ? s.heading : "";
-        const bodyArr = Array.isArray(s.body)
-          ? (s.body as unknown[]).map(String)
-          : typeof s.body === "string" ? [s.body] : [];
-        return `## ${heading}\n${bodyArr.join("\n")}`;
-      }).join("\n\n");
+      return (parsed as Record<string, unknown>[])
+        .map((s) => {
+          const heading = typeof s.heading === "string" ? s.heading : "";
+          const bodyArr = Array.isArray(s.body)
+            ? (s.body as unknown[]).map(String)
+            : typeof s.body === "string"
+              ? [s.body]
+              : [];
+          return `## ${heading}\n${bodyArr.join("\n")}`;
+        })
+        .join("\n\n");
     }
-  } catch { /* not JSON */ }
+  } catch {
+    /* not JSON */
+  }
   return raw;
 }
 
@@ -125,42 +145,53 @@ function plainTextToJson(text: string, field: string): string {
   if (field === "Content") {
     // Mixed ContentItem[] — paragraphs + [IMAGE: url] / [IMAGE: url | caption] / [YOUTUBE: url]
     const parts = text.split(/\n\n+/).filter(Boolean);
-    const items = parts.map((part) => {
-      const t = part.trim();
-      const imgMatch = t.match(/^\[IMAGE:\s*(.*?)(?:\s*\|\s*(.*?))?\]$/s);
-      if (imgMatch) {
-        const url = imgMatch[1].trim();
-        const caption = imgMatch[2]?.trim();
-        return caption ? { type: "image", url, caption } : { type: "image", url };
-      }
-      const ytMatch = t.match(/^\[YOUTUBE:\s*(.*?)\]$/s);
-      if (ytMatch) return { type: "youtube", url: ytMatch[1].trim() };
-      return t; // plain text paragraph stored as string
-    }).filter(Boolean);
+    const items = parts
+      .map((part) => {
+        const t = part.trim();
+        const imgMatch = t.match(/^\[IMAGE:\s*(.*?)(?:\s*\|\s*(.*?))?\]$/s);
+        if (imgMatch) {
+          const url = imgMatch[1].trim();
+          const caption = imgMatch[2]?.trim();
+          return caption ? { type: "image", url, caption } : { type: "image", url };
+        }
+        const ytMatch = t.match(/^\[YOUTUBE:\s*(.*?)\]$/s);
+        if (ytMatch) return { type: "youtube", url: ytMatch[1].trim() };
+        return t; // plain text paragraph stored as string
+      })
+      .filter(Boolean);
     return JSON.stringify(items);
   }
 
   if (field === "Sections") {
     // ## Heading\nBullet1\nBullet2\n\n## Next section...
-    const sections = text.split(/\n\n+/).filter(Boolean).map((block) => {
-      const lines = block.split("\n");
-      const m = lines[0].match(/^##\s+(.*)/);
-      const heading = m ? m[1].trim() : "";
-      const body = (m ? lines.slice(1) : lines).map((l) => l.trim()).filter(Boolean);
-      return { heading, body };
-    });
+    const sections = text
+      .split(/\n\n+/)
+      .filter(Boolean)
+      .map((block) => {
+        const lines = block.split("\n");
+        const m = lines[0].match(/^##\s+(.*)/);
+        const heading = m ? m[1].trim() : "";
+        const body = (m ? lines.slice(1) : lines).map((l) => l.trim()).filter(Boolean);
+        return { heading, body };
+      });
     return JSON.stringify(sections);
   }
 
   if (field === "Highlights") {
     // One per line → string[]
-    const items = text.split("\n").map((l) => l.trim()).filter(Boolean);
+    const items = text
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean);
     return JSON.stringify(items);
   }
 
   if (field === "IntroBlocks") {
     // Blocks separated by "---" on its own line → string[]; blank lines within blocks are preserved
-    const items = text.split(/\n-{3,}\n/).map((l) => l.trim()).filter(Boolean);
+    const items = text
+      .split(/\n-{3,}\n/)
+      .map((l) => l.trim())
+      .filter(Boolean);
     return JSON.stringify(items);
   }
 
@@ -198,7 +229,12 @@ interface EntityItem {
 /* ─── Constants ──────────────────────────────────── */
 
 const SUPPORTED_LANGS = ["en", "zh", "ja"] as const;
-const LANG_LABELS: Record<string, string> = { vi: "🇻🇳 VI", en: "🇺🇸 English", zh: "🇨🇳 中文", ja: "🇯🇵 日本語" };
+const LANG_LABELS: Record<string, string> = {
+  vi: "🇻🇳 VI",
+  en: "🇺🇸 English",
+  zh: "🇨🇳 中文",
+  ja: "🇯🇵 日本語",
+};
 const ALL_LANGS = ["vi", "en", "zh", "ja"] as const;
 const PAGE_SIZE = 20;
 
@@ -260,7 +296,9 @@ const TranslationsPage = () => {
   const [entityModalItem, setEntityModalItem] = useState<EntityItem | null>(null);
   const [entityModalType, setEntityModalType] = useState<EntityTypeInfo | null>(null);
   const [entityOriginal, setEntityOriginal] = useState<Record<string, string>>({});
-  const [entityTranslations, setEntityTranslations] = useState<Record<string, Record<string, string>>>({});
+  const [entityTranslations, setEntityTranslations] = useState<
+    Record<string, Record<string, string>>
+  >({});
   const [entityModalLang, setEntityModalLang] = useState("en");
   const [entitySaving, setEntitySaving] = useState(false);
 
@@ -274,7 +312,11 @@ const TranslationsPage = () => {
       const { data } = await api.get<TranslationPair[]>("/translations/admin", { params });
       setPairs(data);
     } catch (error) {
-      toast({ title: t("common.error"), description: extractApiError(error), variant: "destructive" });
+      toast({
+        title: t("common.error"),
+        description: extractApiError(error),
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -284,7 +326,9 @@ const TranslationsPage = () => {
     try {
       const { data } = await api.get<string[]>("/translations/categories");
       setCategories(data);
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }, []);
 
   useEffect(() => {
@@ -306,7 +350,9 @@ const TranslationsPage = () => {
     if (!selectedType) return;
     setEntityLoading(true);
     try {
-      const { data } = await api.get<{ items: EntityItem[] }>(`/translations/entity/${selectedType}`);
+      const { data } = await api.get<{ items: EntityItem[] }>(
+        `/translations/entity/${selectedType}`,
+      );
       setEntityItems(data?.items ?? []);
     } catch {
       setEntityItems([]);
@@ -412,8 +458,13 @@ const TranslationsPage = () => {
         try {
           const origItems = JSON.parse(rawOrig["Content"]) as Array<unknown>;
           const mediaText = origItems
-            .filter((it) => typeof it === "object" && it !== null &&
-              ((it as Record<string, string>).type === "image" || (it as Record<string, string>).type === "youtube"))
+            .filter(
+              (it) =>
+                typeof it === "object" &&
+                it !== null &&
+                ((it as Record<string, string>).type === "image" ||
+                  (it as Record<string, string>).type === "youtube"),
+            )
             .map((it) => {
               const b = it as Record<string, string>;
               if (b.type === "image") {
@@ -433,7 +484,9 @@ const TranslationsPage = () => {
               }
             }
           }
-        } catch { /* ignore parse errors */ }
+        } catch {
+          /* ignore parse errors */
+        }
       }
 
       setEntityTranslations(trans);
@@ -537,9 +590,7 @@ const TranslationsPage = () => {
       <div className="space-y-4 p-4 sm:p-6">
         <header>
           <h1 className="text-2xl font-semibold">{t("nav.translations")}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {t("translations.subtitle")}
-          </p>
+          <p className="mt-1 text-sm text-muted-foreground">{t("translations.subtitle")}</p>
         </header>
 
         <Tabs value={tab} onValueChange={(v) => setTab(v as "static" | "entity")} className="w-fit">
@@ -562,14 +613,20 @@ const TranslationsPage = () => {
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   value={searchQ}
-                  onChange={(e) => { setSearchQ(e.target.value); setPage(1); }}
+                  onChange={(e) => {
+                    setSearchQ(e.target.value);
+                    setPage(1);
+                  }}
                   placeholder={t("translations.searchPlaceholder")}
                   className="h-9 pl-9"
                 />
               </div>
               <Select
                 value={filterCat || "__all__"}
-                onValueChange={(v) => { setFilterCat(v === "__all__" ? "" : v); setPage(1); }}
+                onValueChange={(v) => {
+                  setFilterCat(v === "__all__" ? "" : v);
+                  setPage(1);
+                }}
               >
                 <SelectTrigger className="h-9 w-[200px]">
                   <SelectValue placeholder={t("translations.allCategories")} />
@@ -577,11 +634,16 @@ const TranslationsPage = () => {
                 <SelectContent>
                   <SelectItem value="__all__">{t("translations.allCategories")}</SelectItem>
                   {categories.map((c) => (
-                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                    <SelectItem key={c} value={c}>
+                      {c}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              <AdminExportButton onClick={handleExportStaticTranslations} disabled={loading || pairs.length === 0} />
+              <AdminExportButton
+                onClick={handleExportStaticTranslations}
+                disabled={loading || pairs.length === 0}
+              />
               {canManageTranslations && (
                 <Button onClick={openAdd}>
                   <Plus className="mr-1.5 h-4 w-4" /> {t("translations.addKey")}
@@ -607,7 +669,9 @@ const TranslationsPage = () => {
                     {paged.map((p) => (
                       <li key={p.key} className="rounded-lg border bg-card p-3 shadow-sm">
                         <div className="flex items-start justify-between gap-2">
-                          <code className="break-all rounded bg-muted px-2 py-0.5 text-xs">{p.key}</code>
+                          <code className="break-all rounded bg-muted px-2 py-0.5 text-xs">
+                            {p.key}
+                          </code>
                           {p.category && (
                             <Badge
                               variant="outline"
@@ -627,26 +691,28 @@ const TranslationsPage = () => {
                           <dt className="text-muted-foreground">🇯🇵 JA</dt>
                           <dd className="min-w-0 break-words">{p.translations["ja"] ?? "—"}</dd>
                         </dl>
-                        {canManageTranslations && <div className="mt-3 flex items-center justify-end gap-1 border-t pt-2">
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-8 w-8"
-                            onClick={() => openEdit(p)}
-                            aria-label={t("common.edit")}
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-8 w-8 text-destructive hover:text-destructive"
-                            onClick={() => deletePair(p.key)}
-                            aria-label={t("common.delete")}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>}
+                        {canManageTranslations && (
+                          <div className="mt-3 flex items-center justify-end gap-1 border-t pt-2">
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8"
+                              onClick={() => openEdit(p)}
+                              aria-label={t("common.edit")}
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8 text-destructive hover:text-destructive"
+                              onClick={() => deletePair(p.key)}
+                              aria-label={t("common.delete")}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        )}
                       </li>
                     ))}
                   </ul>
@@ -656,12 +722,22 @@ const TranslationsPage = () => {
                     <table className="w-full min-w-[900px] divide-y text-sm">
                       <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
                         <tr>
-                          <th className="px-4 py-3 text-left font-medium">{t("translations.field.key")}</th>
+                          <th className="px-4 py-3 text-left font-medium">
+                            {t("translations.field.key")}
+                          </th>
                           {ALL_LANGS.map((lang) => (
-                            <th key={lang} className="px-4 py-3 text-left font-medium">{LANG_LABELS[lang]}</th>
+                            <th key={lang} className="px-4 py-3 text-left font-medium">
+                              {LANG_LABELS[lang]}
+                            </th>
                           ))}
-                          <th className="px-4 py-3 text-left font-medium">{t("translations.field.category")}</th>
-                          {canManageTranslations && <th className="w-32 px-4 py-3 text-left font-medium">{t("common.actions")}</th>}
+                          <th className="px-4 py-3 text-left font-medium">
+                            {t("translations.field.category")}
+                          </th>
+                          {canManageTranslations && (
+                            <th className="w-32 px-4 py-3 text-left font-medium">
+                              {t("common.actions")}
+                            </th>
+                          )}
                         </tr>
                       </thead>
                       <tbody className="divide-y">
@@ -670,39 +746,52 @@ const TranslationsPage = () => {
                             <td className="px-4 py-3">
                               <code className="rounded bg-muted px-2 py-0.5 text-xs">{p.key}</code>
                             </td>
-                            <td className="max-w-[160px] truncate px-4 py-3 text-xs">{p.vietnameseValue}</td>
-                            <td className="max-w-[160px] truncate px-4 py-3 text-xs">{p.translations["en"] ?? "—"}</td>
-                            <td className="max-w-[160px] truncate px-4 py-3 text-xs">{p.translations["zh"] ?? "—"}</td>
-                            <td className="max-w-[160px] truncate px-4 py-3 text-xs">{p.translations["ja"] ?? "—"}</td>
+                            <td className="max-w-[160px] truncate px-4 py-3 text-xs">
+                              {p.vietnameseValue}
+                            </td>
+                            <td className="max-w-[160px] truncate px-4 py-3 text-xs">
+                              {p.translations["en"] ?? "—"}
+                            </td>
+                            <td className="max-w-[160px] truncate px-4 py-3 text-xs">
+                              {p.translations["zh"] ?? "—"}
+                            </td>
+                            <td className="max-w-[160px] truncate px-4 py-3 text-xs">
+                              {p.translations["ja"] ?? "—"}
+                            </td>
                             <td className="px-4 py-3">
                               {p.category && (
-                                <Badge variant="outline" className="border-indigo-200 bg-indigo-50 font-medium text-indigo-700">
+                                <Badge
+                                  variant="outline"
+                                  className="border-indigo-200 bg-indigo-50 font-medium text-indigo-700"
+                                >
                                   {p.category}
                                 </Badge>
                               )}
                             </td>
-                            {canManageTranslations && <td className="px-4 py-3">
-                              <div className="flex gap-1">
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  className="h-8 w-8"
-                                  onClick={() => openEdit(p)}
-                                  aria-label={t("common.edit")}
-                                >
-                                  <Pencil className="h-3.5 w-3.5" />
-                                </Button>
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  className="h-8 w-8 text-destructive hover:text-destructive"
-                                  onClick={() => deletePair(p.key)}
-                                  aria-label={t("common.delete")}
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </Button>
-                              </div>
-                            </td>}
+                            {canManageTranslations && (
+                              <td className="px-4 py-3">
+                                <div className="flex gap-1">
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-8 w-8"
+                                    onClick={() => openEdit(p)}
+                                    aria-label={t("common.edit")}
+                                  >
+                                    <Pencil className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-8 w-8 text-destructive hover:text-destructive"
+                                    onClick={() => deletePair(p.key)}
+                                    aria-label={t("common.delete")}
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </Button>
+                                </div>
+                              </td>
+                            )}
                           </tr>
                         ))}
                       </tbody>
@@ -753,7 +842,9 @@ const TranslationsPage = () => {
                 </SelectTrigger>
                 <SelectContent>
                   {entityTypes.map((et) => (
-                    <SelectItem key={et.type} value={et.type}>{t(et.displayKey)}</SelectItem>
+                    <SelectItem key={et.type} value={et.type}>
+                      {t(et.displayKey)}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -780,19 +871,32 @@ const TranslationsPage = () => {
                           </p>
                         )}
                       </div>
-                      <span className="shrink-0 font-mono text-xs text-muted-foreground">#{item.id}</span>
+                      <span className="shrink-0 font-mono text-xs text-muted-foreground">
+                        #{item.id}
+                      </span>
                     </div>
                     <div className="flex items-center justify-between">
                       {item.translationCount === item.expectedFields ? (
-                        <Badge variant="outline" className="gap-1 border-emerald-200 bg-emerald-50 font-medium text-emerald-700">
-                          <Check className="h-3 w-3" /> {t("translations.translated")} ({item.translationCount}/{item.expectedFields})
+                        <Badge
+                          variant="outline"
+                          className="gap-1 border-emerald-200 bg-emerald-50 font-medium text-emerald-700"
+                        >
+                          <Check className="h-3 w-3" /> {t("translations.translated")} (
+                          {item.translationCount}/{item.expectedFields})
                         </Badge>
                       ) : item.translationCount > 0 ? (
-                        <Badge variant="outline" className="gap-1 border-sky-200 bg-sky-50 font-medium text-sky-700">
-                          <Check className="h-3 w-3" /> {t("translations.partiallyTranslated")} ({item.translationCount}/{item.expectedFields})
+                        <Badge
+                          variant="outline"
+                          className="gap-1 border-sky-200 bg-sky-50 font-medium text-sky-700"
+                        >
+                          <Check className="h-3 w-3" /> {t("translations.partiallyTranslated")} (
+                          {item.translationCount}/{item.expectedFields})
                         </Badge>
                       ) : (
-                        <Badge variant="outline" className="gap-1 border-amber-200 bg-amber-50 font-medium text-amber-700">
+                        <Badge
+                          variant="outline"
+                          className="gap-1 border-amber-200 bg-amber-50 font-medium text-amber-700"
+                        >
                           <X className="h-3 w-3" /> {t("translations.notTranslated")}
                         </Badge>
                       )}
@@ -814,13 +918,17 @@ const TranslationsPage = () => {
         <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto sm:w-full">
           <DialogHeader>
             <DialogTitle>
-              {modalMode === "add" ? t("translations.addModalTitle") : t("translations.editModalTitle")}
+              {modalMode === "add"
+                ? t("translations.addModalTitle")
+                : t("translations.editModalTitle")}
             </DialogTitle>
           </DialogHeader>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label htmlFor="tk-key" className="text-xs">{t("translations.field.key")} *</Label>
+              <Label htmlFor="tk-key" className="text-xs">
+                {t("translations.field.key")} *
+              </Label>
               <Input
                 id="tk-key"
                 value={draft.key}
@@ -831,7 +939,9 @@ const TranslationsPage = () => {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="tk-cat" className="text-xs">{t("translations.field.category")}</Label>
+              <Label htmlFor="tk-cat" className="text-xs">
+                {t("translations.field.category")}
+              </Label>
               <Input
                 id="tk-cat"
                 value={draft.category}
@@ -856,7 +966,9 @@ const TranslationsPage = () => {
               { lang: "ja", label: "🇯🇵 日本語", key: "ja" as const },
             ].map((l) => (
               <div key={l.lang} className="space-y-1.5">
-                <Label htmlFor={`tk-${l.lang}`} className="text-xs">{l.label}</Label>
+                <Label htmlFor={`tk-${l.lang}`} className="text-xs">
+                  {l.label}
+                </Label>
                 <Textarea
                   id={`tk-${l.lang}`}
                   value={draft[l.key]}
@@ -868,7 +980,9 @@ const TranslationsPage = () => {
           </div>
 
           <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
-            <Button variant="outline" onClick={() => setModalOpen(false)}>{t("common.cancel")}</Button>
+            <Button variant="outline" onClick={() => setModalOpen(false)}>
+              {t("common.cancel")}
+            </Button>
             <Button onClick={savePair}>{t("common.save")}</Button>
           </DialogFooter>
         </DialogContent>
@@ -911,10 +1025,21 @@ const TranslationsPage = () => {
               <div className="space-y-4">
                 {entityModalType.fields.map((field) => {
                   const rows =
-                    entityModalType.fieldFormats[field] === "json" ? 12
-                    : ["Content", "Sections", "Challenges", "Solutions", "Description", "IntroBlocks", "ItemsJson"].includes(field) ? 8
-                    : ["Highlights", "Requirements"].includes(field) ? 5
-                    : 3;
+                    entityModalType.fieldFormats[field] === "json"
+                      ? 12
+                      : [
+                            "Content",
+                            "Sections",
+                            "Challenges",
+                            "Solutions",
+                            "Description",
+                            "IntroBlocks",
+                            "ItemsJson",
+                          ].includes(field)
+                        ? 8
+                        : ["Highlights", "Requirements"].includes(field)
+                          ? 5
+                          : 3;
                   const hintKey = fieldHintKey(field);
                   return (
                     <div key={field} className="grid grid-cols-2 gap-4">
@@ -937,7 +1062,9 @@ const TranslationsPage = () => {
                           value={entityTranslations[entityModalLang]?.[field] ?? ""}
                           onChange={(e) => updateEntityField(field, e.target.value)}
                           readOnly={!canManageTranslations}
-                          maxLength={entityModalType.type === "AsBuiltDocumentCategory" ? 200 : undefined}
+                          maxLength={
+                            entityModalType.type === "AsBuiltDocumentCategory" ? 200 : undefined
+                          }
                           rows={rows}
                           className="resize-y font-mono"
                         />
@@ -957,7 +1084,11 @@ const TranslationsPage = () => {
                   {t("common.cancel")}
                 </Button>
                 {canManageTranslations && entityModalItem.hasTranslation && (
-                  <Button variant="destructive" onClick={resetEntityTranslations} disabled={entitySaving}>
+                  <Button
+                    variant="destructive"
+                    onClick={resetEntityTranslations}
+                    disabled={entitySaving}
+                  >
                     {t("translations.reset")}
                   </Button>
                 )}

@@ -79,14 +79,15 @@ export const authApi = {
     api.post<OtpMessageResponse>("/auth/forgot/complete", { phoneNumber: identifier, newPassword }),
 
   forgotResetDirect: (identifier: string, newPassword: string) =>
-    api.post<OtpMessageResponse>("/auth/forgot/reset-direct", { phoneNumber: identifier, newPassword }),
+    api.post<OtpMessageResponse>("/auth/forgot/reset-direct", {
+      phoneNumber: identifier,
+      newPassword,
+    }),
 
   forgotResendOtp: (accountPhone: string) =>
     api.post<OtpMessageResponse>("/auth/forgot/resend-otp", { phoneNumber: accountPhone }),
 
-  refresh: (refreshToken: string) =>
-    api.post<AuthResponse>("/auth/refresh", { refreshToken }),
+  refresh: (refreshToken: string) => api.post<AuthResponse>("/auth/refresh", { refreshToken }),
 
-  logout: (refreshToken: string) =>
-    api.post<OtpMessageResponse>("/auth/logout", { refreshToken }),
+  logout: (refreshToken: string) => api.post<OtpMessageResponse>("/auth/logout", { refreshToken }),
 };

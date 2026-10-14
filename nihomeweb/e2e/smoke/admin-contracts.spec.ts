@@ -1,310 +1,443 @@
 import { test, expect, TEST_USERS } from "../fixtures/auth";
 
 test("Finance primary-contract list is upstream-only and server-paginated", async ({
-    page,
-    loginInBrowserAs,
-    baseURL,
+  page,
+  loginInBrowserAs,
+  baseURL,
 }) => {
-    await page.setViewportSize({ width: 768, height: 1024 });
-    await loginInBrowserAs(page, TEST_USERS.accountant);
-    const listResponse = page.waitForResponse((response) => {
-        if (response.request().method() !== "GET") return false;
-        const url = new URL(response.url());
-        return url.pathname.endsWith("/api/contracts")
-            && url.searchParams.get("direction") === "Upstream"
-            && url.searchParams.get("page") === "1"
-            && url.searchParams.get("pageSize") === "20";
-    });
+  await page.setViewportSize({ width: 768, height: 1024 });
+  await loginInBrowserAs(page, TEST_USERS.accountant);
+  const listResponse = page.waitForResponse((response) => {
+    if (response.request().method() !== "GET") return false;
+    const url = new URL(response.url());
+    return (
+      url.pathname.endsWith("/api/contracts") &&
+      url.searchParams.get("direction") === "Upstream" &&
+      url.searchParams.get("page") === "1" &&
+      url.searchParams.get("pageSize") === "20"
+    );
+  });
 
-    await page.goto(`${baseURL}/admin/finance/contracts`, { waitUntil: "domcontentloaded" });
+  await page.goto(`${baseURL}/admin/finance/contracts`, { waitUntil: "domcontentloaded" });
 
-    expect((await listResponse).ok()).toBe(true);
-    await expect(page.getByRole("heading", { name: /Theo dõi phải thu|Receivables monitoring|应收跟踪|売掛金管理/i })).toBeVisible();
-    await expect(page.locator("#c-owner")).toBeVisible();
-    await expect(page.locator("#c-end-from")).toHaveAttribute("aria-label", /Ngày kết thúc từ|End date from|结束日期起|終了日/);
-    await expect(page.locator("#c-end-to")).toHaveAttribute("aria-label", /Ngày kết thúc đến|End date to|结束日期止|終了日/);
-    await expect(page.locator("#c-direction")).toHaveCount(0);
-    await expect(page.locator("#c-vendor")).toHaveCount(0);
-    await page.getByRole("button", { name: /Bộ lọc nâng cao|Advanced filters|高级筛选|詳細フィルター/i }).click();
-    await expect(page.locator("#c-sort-by")).toBeVisible();
-    await expect(page.locator("#c-sort-direction")).toBeVisible();
-    await expect.poll(() => page.evaluate(() =>
-        document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+  expect((await listResponse).ok()).toBe(true);
+  await expect(
+    page.getByRole("heading", {
+      name: /Theo dõi phải thu|Receivables monitoring|应收跟踪|売掛金管理/i,
+    }),
+  ).toBeVisible();
+  await expect(page.locator("#c-owner")).toBeVisible();
+  await expect(page.locator("#c-end-from")).toHaveAttribute(
+    "aria-label",
+    /Ngày kết thúc từ|End date from|结束日期起|終了日/,
+  );
+  await expect(page.locator("#c-end-to")).toHaveAttribute(
+    "aria-label",
+    /Ngày kết thúc đến|End date to|结束日期止|終了日/,
+  );
+  await expect(page.locator("#c-direction")).toHaveCount(0);
+  await expect(page.locator("#c-vendor")).toHaveCount(0);
+  await page
+    .getByRole("button", { name: /Bộ lọc nâng cao|Advanced filters|高级筛选|詳細フィルター/i })
+    .click();
+  await expect(page.locator("#c-sort-by")).toBeVisible();
+  await expect(page.locator("#c-sort-direction")).toBeVisible();
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+      ),
+    )
+    .toBe(true);
 });
 
 test("Finance receivables is a read-only projection of the contract registry", async ({
-    page,
-    loginInBrowserAs,
-    baseURL,
+  page,
+  loginInBrowserAs,
+  baseURL,
 }) => {
-    await loginInBrowserAs(page, TEST_USERS.superAdmin);
-    await page.goto(`${baseURL}/admin/finance/contracts`, { waitUntil: "domcontentloaded" });
+  await loginInBrowserAs(page, TEST_USERS.superAdmin);
+  await page.goto(`${baseURL}/admin/finance/contracts`, { waitUntil: "domcontentloaded" });
 
-    await expect(page.locator("header").getByRole("button", { name: /Thêm hợp đồng|New contract|新增合同|新規契約/i })).toHaveCount(0);
-    await expect(page.getByText(/góc nhìn Tài chính|Finance view|财务视图|財務ビュー/i)).toBeVisible();
-    await expect(page.getByRole("link", { name: /Mở Sổ hợp đồng|Open Contract registry|打开合同台账|契約台帳を開く/i }))
-        .toHaveAttribute("href", "/admin/contracts?direction=Upstream");
-    await page.getByRole("button", { name: "CRM", exact: true }).click();
-    await expect(page.locator('#admin-nav-group-crm a[href="/admin/contracts"]')).toHaveCount(1);
-    await expect(page.locator('#admin-nav-group-finance a[href="/admin/finance/contracts"]')).toHaveCount(1);
-    await expect(page.locator('#admin-nav-group-finance a[href="/admin/finance/input-contracts"]')).toHaveCount(1);
+  await expect(
+    page
+      .locator("header")
+      .getByRole("button", { name: /Thêm hợp đồng|New contract|新增合同|新規契約/i }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByText(/góc nhìn Tài chính|Finance view|财务视图|財務ビュー/i),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", {
+      name: /Mở Sổ hợp đồng|Open Contract registry|打开合同台账|契約台帳を開く/i,
+    }),
+  ).toHaveAttribute("href", "/admin/contracts?direction=Upstream");
+  await page.getByRole("button", { name: "CRM", exact: true }).click();
+  await expect(page.locator('#admin-nav-group-crm a[href="/admin/contracts"]')).toHaveCount(1);
+  await expect(
+    page.locator('#admin-nav-group-finance a[href="/admin/finance/contracts"]'),
+  ).toHaveCount(1);
+  await expect(
+    page.locator('#admin-nav-group-finance a[href="/admin/finance/input-contracts"]'),
+  ).toHaveCount(1);
 
-    const filteredResponse = page.waitForResponse((response) => {
-        const url = new URL(response.url());
-        return url.pathname.endsWith("/api/contracts") && url.searchParams.get("search") === "HD";
-    });
-    await page.locator("#c-search").fill("HD");
-    expect((await filteredResponse).ok()).toBe(true);
-    const endDateResponse = page.waitForResponse((response) => {
-        const url = new URL(response.url());
-        return url.pathname.endsWith("/api/contracts") && url.searchParams.get("endFrom")?.startsWith("2026-01-01");
-    });
-    await page.locator("#c-end-from").fill("2026-01-01");
-    expect((await endDateResponse).ok()).toBe(true);
-    await expect(page).toHaveURL(/search=HD/);
+  const filteredResponse = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return url.pathname.endsWith("/api/contracts") && url.searchParams.get("search") === "HD";
+  });
+  await page.locator("#c-search").fill("HD");
+  expect((await filteredResponse).ok()).toBe(true);
+  const endDateResponse = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return (
+      url.pathname.endsWith("/api/contracts") &&
+      url.searchParams.get("endFrom")?.startsWith("2026-01-01")
+    );
+  });
+  await page.locator("#c-end-from").fill("2026-01-01");
+  expect((await endDateResponse).ok()).toBe(true);
+  await expect(page).toHaveURL(/search=HD/);
 
-    const row = page.locator('[data-testid^="contract-row-"]').first();
-    await expect(row).toBeVisible();
-    const contractId = (await row.getAttribute("data-testid"))?.replace("contract-row-", "");
-    const detailResponse = page.waitForResponse((response) => {
-        const url = new URL(response.url());
-        return response.request().method() === "GET"
-            && url.pathname.endsWith(`/api/contracts/${contractId}`)
-            && !url.searchParams.has("direction");
-    });
-    await row.locator("td").nth(1).click();
-    expect((await detailResponse).ok()).toBe(true);
-    await expect(page).toHaveURL(new RegExp(`/admin/contracts/${contractId}\\?`));
-    await expect(page.getByRole("tab", { name: /Lịch phải thu|Receivable schedule|应收计划|入金予定/i })).toBeVisible();
-    await expect(page.getByRole("button", { name: /Sửa|Edit|编辑|編集/i }).first()).toBeVisible();
-    const returnLink = page.locator('main a[href^="/admin/finance/contracts?"]').first();
-    await expect(returnLink).toBeVisible();
-    await returnLink.click();
-    await expect(page).toHaveURL(/\/admin\/finance\/contracts\?search=HD.*endFrom=2026-01-01/);
-    await expect(page.locator("#c-search")).toHaveValue("HD");
+  const row = page.locator('[data-testid^="contract-row-"]').first();
+  await expect(row).toBeVisible();
+  const contractId = (await row.getAttribute("data-testid"))?.replace("contract-row-", "");
+  const detailResponse = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return (
+      response.request().method() === "GET" &&
+      url.pathname.endsWith(`/api/contracts/${contractId}`) &&
+      !url.searchParams.has("direction")
+    );
+  });
+  await row.locator("td").nth(1).click();
+  expect((await detailResponse).ok()).toBe(true);
+  await expect(page).toHaveURL(new RegExp(`/admin/contracts/${contractId}\\?`));
+  await expect(
+    page.getByRole("tab", { name: /Lịch phải thu|Receivable schedule|应收计划|入金予定/i }),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: /Sửa|Edit|编辑|編集/i }).first()).toBeVisible();
+  const returnLink = page.locator('main a[href^="/admin/finance/contracts?"]').first();
+  await expect(returnLink).toBeVisible();
+  await returnLink.click();
+  await expect(page).toHaveURL(/\/admin\/finance\/contracts\?search=HD.*endFrom=2026-01-01/);
+  await expect(page.locator("#c-search")).toHaveValue("HD");
 });
 
 test("Finance scope denies Sales and recovers from list API errors", async ({
-    page,
-    loginInBrowserAs,
-    baseURL,
+  page,
+  loginInBrowserAs,
+  baseURL,
 }) => {
-    await loginInBrowserAs(page, TEST_USERS.sale);
-    await page.goto(`${baseURL}/admin/finance/contracts`, { waitUntil: "domcontentloaded" });
-    await expect(page.getByRole("heading", { name: "403" })).toBeVisible();
+  await loginInBrowserAs(page, TEST_USERS.sale);
+  await page.goto(`${baseURL}/admin/finance/contracts`, { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("heading", { name: "403" })).toBeVisible();
 
-    await loginInBrowserAs(page, TEST_USERS.superAdmin);
-    let attempts = 0;
-    await page.route(/\/api\/(?:v1\/)?contracts\?.*$/, async route => {
-        attempts += 1;
-        if (attempts === 1) {
-            await route.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ detail: "List unavailable" }) });
-            return;
-        }
-        await route.fulfill({
-            status: 200,
-            contentType: "application/json",
-            body: JSON.stringify({ total: 0, page: 1, pageSize: 20, items: [], totalCurrentValue: 0, overdueContractCount: 0, dueSoonContractCount: 0 }),
-        });
+  await loginInBrowserAs(page, TEST_USERS.superAdmin);
+  let attempts = 0;
+  await page.route(/\/api\/(?:v1\/)?contracts\?.*$/, async (route) => {
+    attempts += 1;
+    if (attempts === 1) {
+      await route.fulfill({
+        status: 500,
+        contentType: "application/json",
+        body: JSON.stringify({ detail: "List unavailable" }),
+      });
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        total: 0,
+        page: 1,
+        pageSize: 20,
+        items: [],
+        totalCurrentValue: 0,
+        overdueContractCount: 0,
+        dueSoonContractCount: 0,
+      }),
     });
-    await page.goto(`${baseURL}/admin/finance/contracts`, { waitUntil: "domcontentloaded" });
-    await expect(page.getByText("List unavailable")).toBeVisible();
-    await page.getByRole("button", { name: /Thử lại|Retry|重试|再試行/i }).click();
-    await expect(page.getByText(/Chưa có hợp đồng nào|No contracts yet|暂无合同|契約がありません/i)).toBeVisible();
-    await page.locator("#c-search").fill("NO-MATCH");
-    await expect(page.getByText(/Không có hợp đồng nào khớp|No contracts match|没有符合|一致する契約はありません/i)).toBeVisible();
+  });
+  await page.goto(`${baseURL}/admin/finance/contracts`, { waitUntil: "domcontentloaded" });
+  await expect(page.getByText("List unavailable")).toBeVisible();
+  await page.getByRole("button", { name: /Thử lại|Retry|重试|再試行/i }).click();
+  await expect(
+    page.getByText(/Chưa có hợp đồng nào|No contracts yet|暂无合同|契約がありません/i),
+  ).toBeVisible();
+  await page.locator("#c-search").fill("NO-MATCH");
+  await expect(
+    page.getByText(
+      /Không có hợp đồng nào khớp|No contracts match|没有符合|一致する契約はありません/i,
+    ),
+  ).toBeVisible();
 });
 
 test("Finance input-contract workspace keeps scope and edits only the financial schedule", async ({
-    page,
-    loginInBrowserAs,
-    baseURL,
-    api,
-    loginAs,
+  page,
+  loginInBrowserAs,
+  baseURL,
+  api,
+  loginAs,
 }) => {
-    const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-    const token = await loginAs(TEST_USERS.superAdmin);
-    const headers = { Authorization: `Bearer ${token}` };
-    const customerResponse = await api.post("/api/customers", { headers, data: {
-        name: `Input contract customer ${suffix}`,
-        type: "Individual",
-        sourceCode: "referral",
-        primaryContact: { fullName: "Project owner", phone: `09${Math.floor(10_000_000 + Math.random() * 89_999_999)}`, isPrimary: true },
-    } });
-    expect(customerResponse.status(), await customerResponse.text()).toBe(201);
-    const customerId = (await customerResponse.json()).id;
-    const projectResponse = await api.post("/api/operational-projects", {
-        headers,
-        data: { name: `Input contract project ${suffix}`, customerId },
-    });
-    expect(projectResponse.status(), await projectResponse.text()).toBe(201);
-    const vendorResponse = await api.post("/api/vendors", { headers, data: {
-        vendorCode: `IN-${suffix}`.slice(0, 50),
-        companyName: `Input contract supplier ${suffix}`,
-        vendorType: "Supplier",
-        phone: `08${Math.floor(10_000_000 + Math.random() * 89_999_999)}`,
-    } });
-    expect(vendorResponse.status(), await vendorResponse.text()).toBe(201);
-    const vendor = await vendorResponse.json();
-    const contractResponse = await api.post("/api/contracts", { headers, data: {
-        customerId,
-        operationalProjectId: (await projectResponse.json()).id,
-        direction: "Downstream",
-        type: "Supply",
-        vendorId: vendor.id,
-        value: 75_000_000,
-        paymentMilestones: [
-            { order: 1, name: "30% advance", percentValue: 30, dueDate: "2026-12-01T00:00:00Z", status: "Pending" },
-            { order: 2, name: "70% on delivery", percentValue: 70, dueDate: "2027-01-15T00:00:00Z", status: "Pending" },
-        ],
-    } });
-    expect(contractResponse.status(), await contractResponse.text()).toBe(201);
-    const contract = await contractResponse.json();
+  const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+  const token = await loginAs(TEST_USERS.superAdmin);
+  const headers = { Authorization: `Bearer ${token}` };
+  const customerResponse = await api.post("/api/customers", {
+    headers,
+    data: {
+      name: `Input contract customer ${suffix}`,
+      type: "Individual",
+      sourceCode: "referral",
+      primaryContact: {
+        fullName: "Project owner",
+        phone: `09${Math.floor(10_000_000 + Math.random() * 89_999_999)}`,
+        isPrimary: true,
+      },
+    },
+  });
+  expect(customerResponse.status(), await customerResponse.text()).toBe(201);
+  const customerId = (await customerResponse.json()).id;
+  const projectResponse = await api.post("/api/operational-projects", {
+    headers,
+    data: { name: `Input contract project ${suffix}`, customerId },
+  });
+  expect(projectResponse.status(), await projectResponse.text()).toBe(201);
+  const vendorResponse = await api.post("/api/vendors", {
+    headers,
+    data: {
+      vendorCode: `IN-${suffix}`.slice(0, 50),
+      companyName: `Input contract supplier ${suffix}`,
+      vendorType: "Supplier",
+      phone: `08${Math.floor(10_000_000 + Math.random() * 89_999_999)}`,
+    },
+  });
+  expect(vendorResponse.status(), await vendorResponse.text()).toBe(201);
+  const vendor = await vendorResponse.json();
+  const contractResponse = await api.post("/api/contracts", {
+    headers,
+    data: {
+      customerId,
+      operationalProjectId: (await projectResponse.json()).id,
+      direction: "Downstream",
+      type: "Supply",
+      vendorId: vendor.id,
+      value: 75_000_000,
+      paymentMilestones: [
+        {
+          order: 1,
+          name: "30% advance",
+          percentValue: 30,
+          dueDate: "2026-12-01T00:00:00Z",
+          status: "Pending",
+        },
+        {
+          order: 2,
+          name: "70% on delivery",
+          percentValue: 70,
+          dueDate: "2027-01-15T00:00:00Z",
+          status: "Pending",
+        },
+      ],
+    },
+  });
+  expect(contractResponse.status(), await contractResponse.text()).toBe(201);
+  const contract = await contractResponse.json();
 
-    await page.setViewportSize({ width: 390, height: 844 });
-    await loginInBrowserAs(page, TEST_USERS.accountant);
-    const listResponse = page.waitForResponse((response) => {
-        const url = new URL(response.url());
-        return response.request().method() === "GET"
-            && url.pathname.endsWith("/api/contracts")
-            && url.searchParams.get("direction") === "Downstream"
-            && url.searchParams.get("pageSize") === "20";
-    });
-    await page.goto(`${baseURL}/admin/finance/input-contracts`, { waitUntil: "domcontentloaded" });
-    expect((await listResponse).ok()).toBe(true);
-    await expect(page.getByRole("heading", { name: /Theo dõi phải trả|Payables monitoring|应付跟踪|買掛金管理/i })).toBeVisible();
-    await expect(page.locator("#c-direction")).toHaveCount(0);
-    await page.getByRole("button", { name: /Bộ lọc nâng cao|Advanced filters|高级筛选|詳細フィルター/i }).click();
-    await expect(page.locator("#c-vendor")).toBeVisible();
-    await expect(page.locator("header").getByRole("button", { name: /Thêm hợp đồng|New contract|新增合同|新規契約/i })).toHaveCount(0);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await loginInBrowserAs(page, TEST_USERS.accountant);
+  const listResponse = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return (
+      response.request().method() === "GET" &&
+      url.pathname.endsWith("/api/contracts") &&
+      url.searchParams.get("direction") === "Downstream" &&
+      url.searchParams.get("pageSize") === "20"
+    );
+  });
+  await page.goto(`${baseURL}/admin/finance/input-contracts`, { waitUntil: "domcontentloaded" });
+  expect((await listResponse).ok()).toBe(true);
+  await expect(
+    page.getByRole("heading", {
+      name: /Theo dõi phải trả|Payables monitoring|应付跟踪|買掛金管理/i,
+    }),
+  ).toBeVisible();
+  await expect(page.locator("#c-direction")).toHaveCount(0);
+  await page
+    .getByRole("button", { name: /Bộ lọc nâng cao|Advanced filters|高级筛选|詳細フィルター/i })
+    .click();
+  await expect(page.locator("#c-vendor")).toBeVisible();
+  await expect(
+    page
+      .locator("header")
+      .getByRole("button", { name: /Thêm hợp đồng|New contract|新增合同|新規契約/i }),
+  ).toHaveCount(0);
 
-    const filteredResponse = page.waitForResponse((response) => {
-        const url = new URL(response.url());
-        return url.pathname.endsWith("/api/contracts")
-            && url.searchParams.get("direction") === "Downstream"
-            && url.searchParams.get("search") === contract.contractNumber;
-    });
-    await page.locator("#c-search").fill(contract.contractNumber);
-    expect((await filteredResponse).ok()).toBe(true);
-    const card = page.getByTestId(`contract-card-${contract.id}`);
-    await expect(card).toContainText(vendor.companyName);
-    const detailResponse = page.waitForResponse((response) => {
-        const url = new URL(response.url());
-        return url.pathname.endsWith(`/api/contracts/${contract.id}`)
-            && !url.searchParams.has("direction");
-    });
-    await card.locator(":scope > a").click();
-    expect((await detailResponse).ok()).toBe(true);
-    await expect(page).toHaveURL(new RegExp(`/admin/contracts/${contract.id}\\?`));
-    await expect(page.locator('main a[href^="/admin/finance/input-contracts?"]').first()).toBeVisible();
-    await expect(page.getByRole("button", { name: /Sửa|Edit|编辑|編集/i })).toHaveCount(0);
+  const filteredResponse = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return (
+      url.pathname.endsWith("/api/contracts") &&
+      url.searchParams.get("direction") === "Downstream" &&
+      url.searchParams.get("search") === contract.contractNumber
+    );
+  });
+  await page.locator("#c-search").fill(contract.contractNumber);
+  expect((await filteredResponse).ok()).toBe(true);
+  const card = page.getByTestId(`contract-card-${contract.id}`);
+  await expect(card).toContainText(vendor.companyName);
+  const detailResponse = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return (
+      url.pathname.endsWith(`/api/contracts/${contract.id}`) && !url.searchParams.has("direction")
+    );
+  });
+  await card.locator(":scope > a").click();
+  expect((await detailResponse).ok()).toBe(true);
+  await expect(page).toHaveURL(new RegExp(`/admin/contracts/${contract.id}\\?`));
+  await expect(
+    page.locator('main a[href^="/admin/finance/input-contracts?"]').first(),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: /Sửa|Edit|编辑|編集/i })).toHaveCount(0);
 
-    await page.getByRole("tab").nth(1).click();
-    await page.getByTestId("contract-finance-schedule-edit").click();
-    await expect(page.getByTestId("contract-finance-schedule-form")).toBeVisible();
-    await expect.poll(() => page.evaluate(() =>
-        document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
-    await page.locator("#milestone-due-0").fill("2026-12-05");
-    const scheduleResponse = page.waitForResponse((response) =>
-        response.request().method() === "PUT"
-        && new URL(response.url()).pathname.endsWith(`/api/contracts/${contract.id}/milestones`));
-    await page.getByTestId("contract-finance-schedule-save").click();
-    expect((await scheduleResponse).ok()).toBe(true);
-    await expect(page.getByTestId("contract-finance-schedule-form")).toHaveCount(0);
+  await page.getByRole("tab").nth(1).click();
+  await page.getByTestId("contract-finance-schedule-edit").click();
+  await expect(page.getByTestId("contract-finance-schedule-form")).toBeVisible();
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+      ),
+    )
+    .toBe(true);
+  await page.locator("#milestone-due-0").fill("2026-12-05");
+  const scheduleResponse = page.waitForResponse(
+    (response) =>
+      response.request().method() === "PUT" &&
+      new URL(response.url()).pathname.endsWith(`/api/contracts/${contract.id}/milestones`),
+  );
+  await page.getByTestId("contract-finance-schedule-save").click();
+  expect((await scheduleResponse).ok()).toBe(true);
+  await expect(page.getByTestId("contract-finance-schedule-form")).toHaveCount(0);
 
-    await page.goto(`${baseURL}/admin/finance/input-contracts/${contract.id}`, { waitUntil: "domcontentloaded" });
-    await expect(page).toHaveURL(new RegExp(`/admin/contracts/${contract.id}\\?returnTo=%2Fadmin%2Ffinance%2Finput-contracts`));
+  await page.goto(`${baseURL}/admin/finance/input-contracts/${contract.id}`, {
+    waitUntil: "domcontentloaded",
+  });
+  await expect(page).toHaveURL(
+    new RegExp(`/admin/contracts/${contract.id}\\?returnTo=%2Fadmin%2Ffinance%2Finput-contracts`),
+  );
 
-    await loginInBrowserAs(page, TEST_USERS.superAdmin);
-    await page.goto(`${baseURL}/admin/finance/input-contracts`, { waitUntil: "domcontentloaded" });
-    await expect(page.locator("header").getByRole("button", { name: /Thêm hợp đồng|New contract|新增合同|新規契約/i })).toHaveCount(0);
-    await expect(page.getByRole("link", { name: /Mở Sổ hợp đồng|Open Contract registry|打开合同台账|契約台帳を開く/i }))
-        .toHaveAttribute("href", "/admin/contracts?direction=Downstream");
+  await loginInBrowserAs(page, TEST_USERS.superAdmin);
+  await page.goto(`${baseURL}/admin/finance/input-contracts`, { waitUntil: "domcontentloaded" });
+  await expect(
+    page
+      .locator("header")
+      .getByRole("button", { name: /Thêm hợp đồng|New contract|新增合同|新規契約/i }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("link", {
+      name: /Mở Sổ hợp đồng|Open Contract registry|打开合同台账|契約台帳を開く/i,
+    }),
+  ).toHaveAttribute("href", "/admin/contracts?direction=Downstream");
 });
 
 test("Contract pagination and CSV export use every filtered API page", async ({
-    page,
-    loginInBrowserAs,
-    baseURL,
+  page,
+  loginInBrowserAs,
+  baseURL,
 }) => {
-    await loginInBrowserAs(page, TEST_USERS.superAdmin);
-    const exportRequests: string[] = [];
-    const exportSearches: string[] = [];
-    await page.route(/\/api\/(?:v1\/)?contracts(?:\/export-data)?\?.*$/, async route => {
-        const url = new URL(route.request().url());
-        const requestedPage = Number(url.searchParams.get("page") ?? "1");
-        const pageSize = Number(url.searchParams.get("pageSize") ?? "20");
-        const isExport = url.pathname.endsWith("/export-data");
-        const total = isExport ? 101 : 21;
-        if (isExport) {
-            exportRequests.push(url.pathname);
-            exportSearches.push(url.searchParams.get("search") ?? "");
-        }
-        const from = isExport ? 0 : (requestedPage - 1) * pageSize;
-        const count = isExport ? total : Math.max(0, Math.min(pageSize, total - from));
-        const items = Array.from({ length: count }, (_, index) => {
-            const id = 700_000 + from + index + 1;
-            return {
-                id,
-                contractNumber: `HD-PAGE-${String(id).padStart(6, "0")}`,
-                customerId: 1,
-                customerName: "Pagination customer",
-                direction: "Upstream",
-                type: "DesignAndBuild",
-                operationalProjectId: 1,
-                operationalProjectCode: "PJ-PAGE",
-                operationalProjectName: "Pagination project",
-                ownerUserId: 1,
-                ownerName: "Pagination owner",
-                status: index === 0 ? "InProgress" : "Draft",
-                signedDate: null,
-                startDate: null,
-                endDate: index === 0 ? "2020-01-01T00:00:00Z" : null,
-                value: id,
-                approvedVoTotal: index === 0 ? 45 : 0,
-                currentValue: index === 0 ? id + 45 : id,
-                nextPaymentDueDate: null,
-                nextPaymentAmount: null,
-                outstandingScheduledAmount: 0,
-                overduePaymentMilestoneCount: 0,
-                hasSignedScan: false,
-                attachmentCount: 0,
-                appendixCount: 0,
-                createdAt: "2026-09-09T00:00:00Z",
-                updatedAt: "2026-09-09T00:00:00Z",
-                rowVersion: "AAAAAAAAB9M=",
-                paymentMilestones: [],
-            };
-        });
-        await route.fulfill({
-            status: 200,
-            contentType: "application/json",
-            body: JSON.stringify({ total, page: requestedPage, pageSize: isExport ? total : pageSize, items }),
-        });
+  await loginInBrowserAs(page, TEST_USERS.superAdmin);
+  const exportRequests: string[] = [];
+  const exportSearches: string[] = [];
+  await page.route(/\/api\/(?:v1\/)?contracts(?:\/export-data)?\?.*$/, async (route) => {
+    const url = new URL(route.request().url());
+    const requestedPage = Number(url.searchParams.get("page") ?? "1");
+    const pageSize = Number(url.searchParams.get("pageSize") ?? "20");
+    const isExport = url.pathname.endsWith("/export-data");
+    const total = isExport ? 101 : 21;
+    if (isExport) {
+      exportRequests.push(url.pathname);
+      exportSearches.push(url.searchParams.get("search") ?? "");
+    }
+    const from = isExport ? 0 : (requestedPage - 1) * pageSize;
+    const count = isExport ? total : Math.max(0, Math.min(pageSize, total - from));
+    const items = Array.from({ length: count }, (_, index) => {
+      const id = 700_000 + from + index + 1;
+      return {
+        id,
+        contractNumber: `HD-PAGE-${String(id).padStart(6, "0")}`,
+        customerId: 1,
+        customerName: "Pagination customer",
+        direction: "Upstream",
+        type: "DesignAndBuild",
+        operationalProjectId: 1,
+        operationalProjectCode: "PJ-PAGE",
+        operationalProjectName: "Pagination project",
+        ownerUserId: 1,
+        ownerName: "Pagination owner",
+        status: index === 0 ? "InProgress" : "Draft",
+        signedDate: null,
+        startDate: null,
+        endDate: index === 0 ? "2020-01-01T00:00:00Z" : null,
+        value: id,
+        approvedVoTotal: index === 0 ? 45 : 0,
+        currentValue: index === 0 ? id + 45 : id,
+        nextPaymentDueDate: null,
+        nextPaymentAmount: null,
+        outstandingScheduledAmount: 0,
+        overduePaymentMilestoneCount: 0,
+        hasSignedScan: false,
+        attachmentCount: 0,
+        appendixCount: 0,
+        createdAt: "2026-09-09T00:00:00Z",
+        updatedAt: "2026-09-09T00:00:00Z",
+        rowVersion: "AAAAAAAAB9M=",
+        paymentMilestones: [],
+      };
     });
-
-    await page.goto(`${baseURL}/admin/contracts`, { waitUntil: "domcontentloaded" });
-    await expect(page.getByTestId("contract-row-700001")).toBeVisible();
-    await expect(page.getByTestId("contract-row-700001")).toContainText("700.046");
-    await expect(page.getByTestId("contract-row-700001")).toContainText(/Đã quá hạn|Overdue|已逾期|期限超過/i);
-    await expect(page.getByTestId("contract-row-700001")).not.toContainText(/Sắp hết hạn|Ending soon|即将到期|終了間近/i);
-    const filteredListResponse = page.waitForResponse((response) => {
-        const url = new URL(response.url());
-        return url.pathname.endsWith("/api/contracts")
-            && url.searchParams.get("search") === "HD-PAGE"
-            && url.searchParams.get("pageSize") === "20";
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        total,
+        page: requestedPage,
+        pageSize: isExport ? total : pageSize,
+        items,
+      }),
     });
-    await page.locator("#c-search").fill("HD-PAGE");
-    await filteredListResponse;
-    await page.getByRole("button", { name: /Sau|Next|下一个|次へ/i }).last().click();
-    await expect(page.getByTestId("contract-row-700021")).toBeVisible();
+  });
 
-    const download = page.waitForEvent("download");
-    await page.getByRole("button", { name: /Xuất CSV|Export CSV|导出 CSV|CSV エクスポート/i }).click();
-    expect((await download).suggestedFilename()).toMatch(/^contracts-\d{4}-\d{2}-\d{2}\.csv$/);
-    expect(exportRequests).toHaveLength(1);
-    expect(exportRequests[0]).toMatch(/\/contracts\/export-data$/);
-    expect(exportSearches).toEqual(["HD-PAGE"]);
+  await page.goto(`${baseURL}/admin/contracts`, { waitUntil: "domcontentloaded" });
+  await expect(page.getByTestId("contract-row-700001")).toBeVisible();
+  await expect(page.getByTestId("contract-row-700001")).toContainText("700.046");
+  await expect(page.getByTestId("contract-row-700001")).toContainText(
+    /Đã quá hạn|Overdue|已逾期|期限超過/i,
+  );
+  await expect(page.getByTestId("contract-row-700001")).not.toContainText(
+    /Sắp hết hạn|Ending soon|即将到期|終了間近/i,
+  );
+  const filteredListResponse = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return (
+      url.pathname.endsWith("/api/contracts") &&
+      url.searchParams.get("search") === "HD-PAGE" &&
+      url.searchParams.get("pageSize") === "20"
+    );
+  });
+  await page.locator("#c-search").fill("HD-PAGE");
+  await filteredListResponse;
+  await page
+    .getByRole("button", { name: /Sau|Next|下一个|次へ/i })
+    .last()
+    .click();
+  await expect(page.getByTestId("contract-row-700021")).toBeVisible();
+
+  const download = page.waitForEvent("download");
+  await page
+    .getByRole("button", { name: /Xuất CSV|Export CSV|导出 CSV|CSV エクスポート/i })
+    .click();
+  expect((await download).suggestedFilename()).toMatch(/^contracts-\d{4}-\d{2}-\d{2}\.csv$/);
+  expect(exportRequests).toHaveLength(1);
+  expect(exportRequests[0]).toMatch(/\/contracts\/export-data$/);
+  expect(exportSearches).toEqual(["HD-PAGE"]);
 });
 
 /**
@@ -314,342 +447,451 @@ test("Contract pagination and CSV export use every filtered API page", async ({
  * and the filter row is present.
  */
 test("SPA renders /admin/contracts without console errors for SUPER_ADMIN", async ({
-    page,
-    loginInBrowserAs,
-    baseURL,
-    api,
-    loginAs,
+  page,
+  loginInBrowserAs,
+  baseURL,
+  api,
+  loginAs,
 }) => {
-    const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-    const token = await loginAs(TEST_USERS.superAdmin);
-    const headers = { Authorization: `Bearer ${token}` };
-    const customerResponse = await api.post("/api/customers", { headers, data: {
-        name: `Contract editor customer ${suffix}`, type: "Individual", sourceCode: "marketing",
-        primaryContact: { fullName: "Factory investor", phone: `09${Math.floor(10_000_000 + Math.random() * 89_999_999)}`, isPrimary: true },
-    } });
-    expect(customerResponse.status(), await customerResponse.text()).toBe(201);
-    const customerId = (await customerResponse.json()).id;
-    const projectResponse = await api.post("/api/operational-projects", { headers, data: { name: `Contract editor project ${suffix}`, customerId } });
-    expect(projectResponse.status(), await projectResponse.text()).toBe(201);
-    const contractResponse = await api.post("/api/contracts", { headers, data: {
-        customerId, operationalProjectId: (await projectResponse.json()).id,
-        direction: "Upstream", type: "DesignAndBuild", value: 1_000_000,
-        scopeOfWork: "Editable draft for contract form regression",
-    } });
-    expect(contractResponse.status(), await contractResponse.text()).toBe(201);
-    const editableContract = await contractResponse.json();
-    const jsErrors: string[] = [];
-    page.on("pageerror", (err) => jsErrors.push(err.message));
+  const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+  const token = await loginAs(TEST_USERS.superAdmin);
+  const headers = { Authorization: `Bearer ${token}` };
+  const customerResponse = await api.post("/api/customers", {
+    headers,
+    data: {
+      name: `Contract editor customer ${suffix}`,
+      type: "Individual",
+      sourceCode: "marketing",
+      primaryContact: {
+        fullName: "Factory investor",
+        phone: `09${Math.floor(10_000_000 + Math.random() * 89_999_999)}`,
+        isPrimary: true,
+      },
+    },
+  });
+  expect(customerResponse.status(), await customerResponse.text()).toBe(201);
+  const customerId = (await customerResponse.json()).id;
+  const projectResponse = await api.post("/api/operational-projects", {
+    headers,
+    data: { name: `Contract editor project ${suffix}`, customerId },
+  });
+  expect(projectResponse.status(), await projectResponse.text()).toBe(201);
+  const contractResponse = await api.post("/api/contracts", {
+    headers,
+    data: {
+      customerId,
+      operationalProjectId: (await projectResponse.json()).id,
+      direction: "Upstream",
+      type: "DesignAndBuild",
+      value: 1_000_000,
+      scopeOfWork: "Editable draft for contract form regression",
+    },
+  });
+  expect(contractResponse.status(), await contractResponse.text()).toBe(201);
+  const editableContract = await contractResponse.json();
+  const jsErrors: string[] = [];
+  page.on("pageerror", (err) => jsErrors.push(err.message));
 
-    await loginInBrowserAs(page, TEST_USERS.superAdmin);
-    await page.goto(`${baseURL}/admin/contracts`, { waitUntil: "domcontentloaded" });
+  await loginInBrowserAs(page, TEST_USERS.superAdmin);
+  await page.goto(`${baseURL}/admin/contracts`, { waitUntil: "domcontentloaded" });
 
-    await expect(
-        page.getByRole("heading", { name: /Hợp đồng|Contracts|销售合同|販売契約/i }),
-    ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: /Hợp đồng|Contracts|销售合同|販売契約/i }),
+  ).toBeVisible();
 
-    // Filters row (status select + search input) always renders.
-    await expect(page.locator("#c-search")).toBeVisible();
-    await expect(page.locator("#c-status")).toBeVisible();
-    await expect(page.locator("#c-project")).toBeVisible();
-    await page.getByRole("button", { name: /Bộ lọc nâng cao|Advanced filters|高级筛选|詳細フィルター/i }).click();
-    await expect(page.locator("#c-direction")).toBeVisible();
-    await expect(page.locator("#c-type")).toBeVisible();
-    await expect(page.locator("#c-vendor")).toBeVisible();
+  // Filters row (status select + search input) always renders.
+  await expect(page.locator("#c-search")).toBeVisible();
+  await expect(page.locator("#c-status")).toBeVisible();
+  await expect(page.locator("#c-project")).toBeVisible();
+  await page
+    .getByRole("button", { name: /Bộ lọc nâng cao|Advanced filters|高级筛选|詳細フィルター/i })
+    .click();
+  await expect(page.locator("#c-direction")).toBeVisible();
+  await expect(page.locator("#c-type")).toBeVisible();
+  await expect(page.locator("#c-vendor")).toBeVisible();
 
-    await page.locator("#c-project").click();
-    const projectOption = page.getByRole("option").filter({ hasText: /PJ-/ }).first();
-    const filteredResponse = page.waitForResponse((response) =>
-        response.request().method() === "GET"
-        && response.url().includes("/api/contracts")
-        && /[?&]operationalProjectId=\d+/.test(response.url()),
-    );
-    await projectOption.click();
-    expect((await filteredResponse).ok()).toBe(true);
-    await page.locator("#c-project").click();
-    await page.getByRole("option", { name: /Tất cả dự án vận hành|All operational projects|全部运营项目|すべての運用プロジェクト/i }).click();
+  await page.locator("#c-project").click();
+  const projectOption = page.getByRole("option").filter({ hasText: /PJ-/ }).first();
+  const filteredResponse = page.waitForResponse(
+    (response) =>
+      response.request().method() === "GET" &&
+      response.url().includes("/api/contracts") &&
+      /[?&]operationalProjectId=\d+/.test(response.url()),
+  );
+  await projectOption.click();
+  expect((await filteredResponse).ok()).toBe(true);
+  await page.locator("#c-project").click();
+  await page
+    .getByRole("option", {
+      name: /Tất cả dự án vận hành|All operational projects|全部运营项目|すべての運用プロジェクト/i,
+    })
+    .click();
 
-    await page.locator("header").getByRole("button", { name: /Thêm hợp đồng|New contract|新增合同|新規契約/i }).click();
-    await page.locator("#c-direction-form").click();
-    await page.getByRole("option", { name: /Đầu vào - Đối tác|Downstream - Partner|下游 - 合作方|下流 - パートナー/i }).click();
-    await expect(page.locator("#c-type-form")).toContainText(/Cung ứng|Supply|供应|供給/i);
-    await expect(page.locator("#c-vendor-form")).toBeVisible();
-    await page.locator("#c-direction-form").click();
-    await page.getByRole("option", { name: /Đầu ra - Khách hàng|Upstream - Customer|上游 - 客户|上流 - 顧客/i }).click();
-    await expect(page.locator("#c-vendor-form")).toBeHidden();
-    await page.getByRole("button", { name: /Huỷ|Hủy|Cancel|取消|キャンセル/i }).click();
+  await page
+    .locator("header")
+    .getByRole("button", { name: /Thêm hợp đồng|New contract|新增合同|新規契約/i })
+    .click();
+  await page.locator("#c-direction-form").click();
+  await page
+    .getByRole("option", {
+      name: /Đầu vào - Đối tác|Downstream - Partner|下游 - 合作方|下流 - パートナー/i,
+    })
+    .click();
+  await expect(page.locator("#c-type-form")).toContainText(/Cung ứng|Supply|供应|供給/i);
+  await expect(page.locator("#c-vendor-form")).toBeVisible();
+  await page.locator("#c-direction-form").click();
+  await page
+    .getByRole("option", {
+      name: /Đầu ra - Khách hàng|Upstream - Customer|上游 - 客户|上流 - 顧客/i,
+    })
+    .click();
+  await expect(page.locator("#c-vendor-form")).toBeHidden();
+  await page.getByRole("button", { name: /Huỷ|Hủy|Cancel|取消|キャンセル/i }).click();
 
-    // Own the editable fixture: the newest shared row may be an immutable
-    // RFQ-awarded contract created by another business pipeline.
-    await page.locator("#c-search").fill(editableContract.contractNumber);
-    const row = page.getByTestId(`contract-row-${editableContract.id}`);
-    await expect(row).toBeVisible();
-    const contractId = await row.getAttribute("data-testid");
-    await row.hover();
-    await expect(row).toHaveAttribute("data-navigation-active", "true");
-    await row.locator("[data-contract-actions]").getByRole("button", { name: /Sửa|Edit|编辑|編集/i }).hover();
-    await expect(row).toHaveAttribute("data-navigation-active", "false");
-    const detailResponse = page.waitForResponse((response) =>
-        response.request().method() === "GET" && new RegExp(`/api/(?:v1/)?contracts/${contractId?.replace("contract-row-", "")}$`).test(response.url()),
-    );
-    await row.locator("td").nth(1).click();
-    expect((await detailResponse).ok()).toBe(true);
+  // Own the editable fixture: the newest shared row may be an immutable
+  // RFQ-awarded contract created by another business pipeline.
+  await page.locator("#c-search").fill(editableContract.contractNumber);
+  const row = page.getByTestId(`contract-row-${editableContract.id}`);
+  await expect(row).toBeVisible();
+  const contractId = await row.getAttribute("data-testid");
+  await row.hover();
+  await expect(row).toHaveAttribute("data-navigation-active", "true");
+  await row
+    .locator("[data-contract-actions]")
+    .getByRole("button", { name: /Sửa|Edit|编辑|編集/i })
+    .hover();
+  await expect(row).toHaveAttribute("data-navigation-active", "false");
+  const detailResponse = page.waitForResponse(
+    (response) =>
+      response.request().method() === "GET" &&
+      new RegExp(`/api/(?:v1/)?contracts/${contractId?.replace("contract-row-", "")}$`).test(
+        response.url(),
+      ),
+  );
+  await row.locator("td").nth(1).click();
+  expect((await detailResponse).ok()).toBe(true);
 
-    await expect(page).toHaveURL(new RegExp(`/admin/contracts/${contractId?.replace("contract-row-", "")}\\?`));
+  await expect(page).toHaveURL(
+    new RegExp(`/admin/contracts/${contractId?.replace("contract-row-", "")}\\?`),
+  );
 
-    const editButton = page.getByRole("button", { name: /Sửa|Edit|编辑|編集/i }).first();
-    await expect(editButton).toBeVisible({ timeout: 15_000 });
-    const contractNumber = await page.getByRole("heading", { level: 1 }).textContent();
-    await editButton.click();
-    const editForm = page.getByTestId("contract-inline-edit-form");
-    await expect(editForm).toBeVisible();
-    const numberInput = editForm.locator("#contract-detail-number");
-    await numberInput.fill(`${contractNumber?.trim()}-cancelled`);
-    await page.getByRole("button", { name: /Huỷ|Hủy|Cancel|取消|キャンセル/i }).click();
-    await expect(editForm).toBeHidden();
-    await expect(page.getByRole("heading", { level: 1 })).toContainText(contractNumber?.trim() ?? "");
+  const editButton = page.getByRole("button", { name: /Sửa|Edit|编辑|編集/i }).first();
+  await expect(editButton).toBeVisible({ timeout: 15_000 });
+  const contractNumber = await page.getByRole("heading", { level: 1 }).textContent();
+  await editButton.click();
+  const editForm = page.getByTestId("contract-inline-edit-form");
+  await expect(editForm).toBeVisible();
+  const numberInput = editForm.locator("#contract-detail-number");
+  await numberInput.fill(`${contractNumber?.trim()}-cancelled`);
+  await page.getByRole("button", { name: /Huỷ|Hủy|Cancel|取消|キャンセル/i }).click();
+  await expect(editForm).toBeHidden();
+  await expect(page.getByRole("heading", { level: 1 })).toContainText(contractNumber?.trim() ?? "");
 
-    await editButton.click();
-    await expect(editForm.locator("#contract-detail-project")).not.toHaveText(/Chọn dự án vận hành|Select operational project|选择运营项目|運用プロジェクトを選択/i);
-    const updateResponse = page.waitForResponse((response) =>
-        response.request().method() === "PUT" && /\/api\/contracts\/\d+$/.test(response.url()),
-    );
-    await page.getByRole("button", { name: /Lưu|Save|保存/i }).click();
-    const response = await updateResponse;
-    expect(
-        response.ok(),
-        `Contract update failed with ${response.status()}: ${await response.text()}`,
-    ).toBe(true);
-    await expect(editForm).toBeHidden();
+  await editButton.click();
+  await expect(editForm.locator("#contract-detail-project")).not.toHaveText(
+    /Chọn dự án vận hành|Select operational project|选择运营项目|運用プロジェクトを選択/i,
+  );
+  const updateResponse = page.waitForResponse(
+    (response) =>
+      response.request().method() === "PUT" && /\/api\/contracts\/\d+$/.test(response.url()),
+  );
+  await page.getByRole("button", { name: /Lưu|Save|保存/i }).click();
+  const response = await updateResponse;
+  expect(
+    response.ok(),
+    `Contract update failed with ${response.status()}: ${await response.text()}`,
+  ).toBe(true);
+  await expect(editForm).toBeHidden();
 
-    await page.getByRole("tab", { name: /Phụ lục|Variation orders|变更附录|変更契約/i }).click();
-    await expect(
-        page.getByText(/VO trong hệ thống|VO in the system|系统中的 VO|システム上のVO/i),
-    ).toBeVisible();
-    await expect(
-        page.getByText(/Người có quyền chỉnh sửa có thể xoá VO ở mọi trạng thái|Users with edit permission may delete a VO in any status|拥有编辑权限的用户可以删除任何状态的 VO|編集権限を持つユーザーは、どのステータスのVOでも削除できます/i),
-    ).toBeVisible();
+  await page.getByRole("tab", { name: /Phụ lục|Variation orders|变更附录|変更契約/i }).click();
+  await expect(
+    page.getByText(/VO trong hệ thống|VO in the system|系统中的 VO|システム上のVO/i),
+  ).toBeVisible();
+  await expect(
+    page.getByText(
+      /Người có quyền chỉnh sửa có thể xoá VO ở mọi trạng thái|Users with edit permission may delete a VO in any status|拥有编辑权限的用户可以删除任何状态的 VO|編集権限を持つユーザーは、どのステータスのVOでも削除できます/i,
+    ),
+  ).toBeVisible();
 
-    expect(jsErrors, `Unexpected JS errors: ${jsErrors.join("\n")}`).toHaveLength(0);
+  expect(jsErrors, `Unexpected JS errors: ${jsErrors.join("\n")}`).toHaveLength(0);
 });
 
 test("mobile contract card opens the complete contract detail", async ({
-    page,
-    loginInBrowserAs,
-    baseURL,
+  page,
+  loginInBrowserAs,
+  baseURL,
 }) => {
-    await page.setViewportSize({ width: 390, height: 844 });
-    await loginInBrowserAs(page, TEST_USERS.superAdmin);
-    await page.goto(`${baseURL}/admin/contracts`, { waitUntil: "domcontentloaded" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await loginInBrowserAs(page, TEST_USERS.superAdmin);
+  await page.goto(`${baseURL}/admin/contracts`, { waitUntil: "domcontentloaded" });
 
-    const card = page.locator('[data-testid^="contract-card-"]').first();
-    await expect(card).toBeVisible();
-    const contractId = await card.getAttribute("data-testid");
-    const cardLink = card.locator(":scope > a");
-    const cardBox = await card.boundingBox();
-    const linkBox = await cardLink.boundingBox();
-    expect(Math.abs((linkBox?.width ?? 0) - (cardBox?.width ?? 0))).toBeLessThanOrEqual(2);
-    expect(Math.abs((linkBox?.height ?? 0) - (cardBox?.height ?? 0))).toBeLessThanOrEqual(2);
-    await card.getByRole("button", { name: /Sửa|Edit|编辑|編集/i }).hover();
-    expect(await cardLink.evaluate((element) => element.matches(":hover"))).toBe(false);
-    const detailResponse = page.waitForResponse((response) =>
-        response.request().method() === "GET" && new RegExp(`/api/(?:v1/)?contracts/${contractId?.replace("contract-card-", "")}$`).test(response.url()),
-    );
-    await cardLink.click();
-    expect((await detailResponse).ok()).toBe(true);
+  const card = page.locator('[data-testid^="contract-card-"]').first();
+  await expect(card).toBeVisible();
+  const contractId = await card.getAttribute("data-testid");
+  const cardLink = card.locator(":scope > a");
+  const cardBox = await card.boundingBox();
+  const linkBox = await cardLink.boundingBox();
+  expect(Math.abs((linkBox?.width ?? 0) - (cardBox?.width ?? 0))).toBeLessThanOrEqual(2);
+  expect(Math.abs((linkBox?.height ?? 0) - (cardBox?.height ?? 0))).toBeLessThanOrEqual(2);
+  await card.getByRole("button", { name: /Sửa|Edit|编辑|編集/i }).hover();
+  expect(await cardLink.evaluate((element) => element.matches(":hover"))).toBe(false);
+  const detailResponse = page.waitForResponse(
+    (response) =>
+      response.request().method() === "GET" &&
+      new RegExp(`/api/(?:v1/)?contracts/${contractId?.replace("contract-card-", "")}$`).test(
+        response.url(),
+      ),
+  );
+  await cardLink.click();
+  expect((await detailResponse).ok()).toBe(true);
 
-    await expect(page).toHaveURL(new RegExp(`/admin/contracts/${contractId?.replace("contract-card-", "")}\\?`));
-    await expect(page.getByRole("link", { name: /Hợp đồng|Contracts|销售合同|販売契約/i })).toBeVisible();
+  await expect(page).toHaveURL(
+    new RegExp(`/admin/contracts/${contractId?.replace("contract-card-", "")}\\?`),
+  );
+  await expect(
+    page.getByRole("link", { name: /Hợp đồng|Contracts|销售合同|販売契約/i }),
+  ).toBeVisible();
 });
 
 test("collected milestone date is suggested, customizable, and displayed", async ({
-    page,
-    loginInBrowserAs,
-    baseURL,
+  page,
+  loginInBrowserAs,
+  baseURL,
 }) => {
-    const contractId = 455100;
-    let actualPaymentDate: string | null = null;
-    let status = "Pending";
-    const contract = () => ({
-        id: contractId,
-        contractNumber: "HD-2026-4551",
-        customerId: 1,
-        customerName: "NICON",
-        direction: "Upstream",
-        type: "DesignAndBuild",
-        vendorId: null,
-        vendorCode: null,
-        vendorName: null,
-        operationalProjectId: null,
-        opportunityId: null,
-        opportunityTitle: null,
-        quoteId: null,
-        quoteCode: null,
-        designProjectId: null,
-        designProjectCode: null,
-        designProjectName: null,
-        designProjectCurrentStage: null,
-        ownerUserId: 1,
-        ownerName: "E2E Admin",
-        status: "Signed",
-        signedDate: "2026-08-01T00:00:00Z",
-        startDate: null,
-        endDate: null,
-        value: 100_000_000,
-        approvedVoTotal: 0,
-        currentValue: 100_000_000,
-        hasSignedScan: false,
-        attachmentCount: 0,
-        appendixCount: 0,
-        scopeOfWork: null,
+  const contractId = 455100;
+  let actualPaymentDate: string | null = null;
+  let status = "Pending";
+  const contract = () => ({
+    id: contractId,
+    contractNumber: "HD-2026-4551",
+    customerId: 1,
+    customerName: "NICON",
+    direction: "Upstream",
+    type: "DesignAndBuild",
+    vendorId: null,
+    vendorCode: null,
+    vendorName: null,
+    operationalProjectId: null,
+    opportunityId: null,
+    opportunityTitle: null,
+    quoteId: null,
+    quoteCode: null,
+    designProjectId: null,
+    designProjectCode: null,
+    designProjectName: null,
+    designProjectCurrentStage: null,
+    ownerUserId: 1,
+    ownerName: "E2E Admin",
+    status: "Signed",
+    signedDate: "2026-08-01T00:00:00Z",
+    startDate: null,
+    endDate: null,
+    value: 100_000_000,
+    approvedVoTotal: 0,
+    currentValue: 100_000_000,
+    hasSignedScan: false,
+    attachmentCount: 0,
+    appendixCount: 0,
+    scopeOfWork: null,
+    note: null,
+    createdAt: "2026-08-01T00:00:00Z",
+    updatedAt: "2026-08-30T00:00:00Z",
+    rowVersion: "AAAAAAAAB9M=",
+    paymentMilestones: [
+      {
+        id: 1,
+        order: 1,
+        name: "Final payment",
+        percentValue: 100,
+        amount: 100_000_000,
+        dueDate: "2026-08-20T00:00:00Z",
+        actualPaymentDate,
+        status,
+        responsibleAccountantUserId: 77,
+        responsibleAccountantName: "E2E Accountant",
+        requestedAt: null,
         note: null,
         createdAt: "2026-08-01T00:00:00Z",
         updatedAt: "2026-08-30T00:00:00Z",
-        rowVersion: "AAAAAAAAB9M=",
-        paymentMilestones: [{
-            id: 1,
-            order: 1,
-            name: "Final payment",
-            percentValue: 100,
-            amount: 100_000_000,
-            dueDate: "2026-08-20T00:00:00Z",
-            actualPaymentDate,
-            status,
-            responsibleAccountantUserId: 77,
-            responsibleAccountantName: "E2E Accountant",
-            requestedAt: null,
-            note: null,
-            createdAt: "2026-08-01T00:00:00Z",
-            updatedAt: "2026-08-30T00:00:00Z",
-        }],
-    });
+      },
+    ],
+  });
 
-    await loginInBrowserAs(page, TEST_USERS.superAdmin);
-    await page.route(/\/api\/(?:v1\/)?kpi\/eligible-users$/, route => route.fulfill({
+  await loginInBrowserAs(page, TEST_USERS.superAdmin);
+  await page.route(/\/api\/(?:v1\/)?kpi\/eligible-users$/, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify([
+        { userId: 77, userName: "E2E Accountant", positionCode: "PROJECT_ACCOUNTING" },
+      ]),
+    }),
+  );
+  await page.route(new RegExp(`/api/(?:v1/)?contracts/${contractId}(?:/.*)?$`), async (route) => {
+    const request = route.request();
+    const path = new URL(request.url()).pathname;
+    if (request.method() === "PATCH" && path.endsWith("/milestones/1/status")) {
+      const payload = request.postDataJSON() as {
+        status: string;
+        actualPaymentDate: string | null;
+        responsibleAccountantUserId: number;
+      };
+      status = payload.status;
+      actualPaymentDate = payload.actualPaymentDate;
+      expect(payload.responsibleAccountantUserId).toBe(77);
+      await route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify([{ userId: 77, userName: "E2E Accountant", positionCode: "PROJECT_ACCOUNTING" }]),
-    }));
-    await page.route(new RegExp(`/api/(?:v1/)?contracts/${contractId}(?:/.*)?$`), async route => {
-        const request = route.request();
-        const path = new URL(request.url()).pathname;
-        if (request.method() === "PATCH" && path.endsWith("/milestones/1/status")) {
-            const payload = request.postDataJSON() as { status: string; actualPaymentDate: string | null; responsibleAccountantUserId: number };
-            status = payload.status;
-            actualPaymentDate = payload.actualPaymentDate;
-            expect(payload.responsibleAccountantUserId).toBe(77);
-            await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(contract()) });
-            return;
-        }
-        if (request.method() === "GET" && path.endsWith("/appendices")) {
-            await route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
-            return;
-        }
-        if (request.method() === "GET" && path.endsWith("/attachments")) {
-            await route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
-            return;
-        }
-        if (request.method() === "GET" && path.endsWith("/timeline")) {
-            await route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
-            return;
-        }
-        await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(contract()) });
+        body: JSON.stringify(contract()),
+      });
+      return;
+    }
+    if (request.method() === "GET" && path.endsWith("/appendices")) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
+      return;
+    }
+    if (request.method() === "GET" && path.endsWith("/attachments")) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
+      return;
+    }
+    if (request.method() === "GET" && path.endsWith("/timeline")) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(contract()),
     });
+  });
 
-    await page.goto(`${baseURL}/admin/contracts/${contractId}`, { waitUntil: "domcontentloaded" });
-    await page.getByRole("tab", { name: /Lịch phải thu|Receivable schedule|应收计划|入金予定/i }).click();
-    await page.getByRole("button", { name: /Đánh dấu đã thu|Mark as collected|标记为已收款|入金済みにする/i }).click();
+  await page.goto(`${baseURL}/admin/contracts/${contractId}`, { waitUntil: "domcontentloaded" });
+  await page
+    .getByRole("tab", { name: /Lịch phải thu|Receivable schedule|应收计划|入金予定/i })
+    .click();
+  await page
+    .getByRole("button", { name: /Đánh dấu đã thu|Mark as collected|标记为已收款|入金済みにする/i })
+    .click();
 
-    const dateInput = page.locator("#contract-actual-payment-date");
-    const localToday = await page.evaluate(() => {
-        const now = new Date();
-        const month = String(now.getMonth() + 1).padStart(2, "0");
-        const day = String(now.getDate()).padStart(2, "0");
-        return `${now.getFullYear()}-${month}-${day}`;
-    });
-    await expect(dateInput).toHaveValue(localToday);
-    await dateInput.fill("2026-08-30");
-    await page.getByRole("button", { name: /Xác nhận đã thu|Confirm collected|确认已收款|入金済みを確認/i }).click();
+  const dateInput = page.locator("#contract-actual-payment-date");
+  const localToday = await page.evaluate(() => {
+    const now = new Date();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+    return `${now.getFullYear()}-${month}-${day}`;
+  });
+  await expect(dateInput).toHaveValue(localToday);
+  await dateInput.fill("2026-08-30");
+  await page
+    .getByRole("button", { name: /Xác nhận đã thu|Confirm collected|确认已收款|入金済みを確認/i })
+    .click();
 
-    await expect.poll(() => actualPaymentDate).toBe("2026-08-30T00:00:00.000Z");
-    await expect(page.getByText(/Ngày thu thực tế: 30\/08\/2026|Actual collection date: 30\/08\/2026|实际收款日期: 30\/08\/2026|実際入金日: 30\/08\/2026/i)).toBeVisible();
+  await expect.poll(() => actualPaymentDate).toBe("2026-08-30T00:00:00.000Z");
+  await expect(
+    page.getByText(
+      /Ngày thu thực tế: 30\/08\/2026|Actual collection date: 30\/08\/2026|实际收款日期: 30\/08\/2026|実際入金日: 30\/08\/2026/i,
+    ),
+  ).toBeVisible();
 
-    await page.route(new RegExp("/api/(?:v1/)?users/me/permissions$"), route =>
-        route.fulfill({
-            status: 200,
-            contentType: "application/json",
-            body: JSON.stringify({ role: "CONTRACT_VIEWER", roleId: null, permissions: ["crm.contracts.view"] }),
-        }));
-    await page.reload({ waitUntil: "domcontentloaded" });
-    await page.getByRole("tab", { name: /Lịch phải thu|Receivable schedule|应收计划|入金予定/i }).click();
-    await expect(page.getByRole("button", { name: /Sửa ngày thu|Edit collection date|修改收款日期|入金日を編集/i })).toHaveCount(0);
-    await expect(page.getByRole("button", { name: /Trả về Chưa yêu cầu|Revert to Pending|退回为待处理|未請求に戻す/i })).toHaveCount(0);
+  await page.route(new RegExp("/api/(?:v1/)?users/me/permissions$"), (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        role: "CONTRACT_VIEWER",
+        roleId: null,
+        permissions: ["crm.contracts.view"],
+      }),
+    }),
+  );
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page
+    .getByRole("tab", { name: /Lịch phải thu|Receivable schedule|应收计划|入金予定/i })
+    .click();
+  await expect(
+    page.getByRole("button", {
+      name: /Sửa ngày thu|Edit collection date|修改收款日期|入金日を編集/i,
+    }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("button", {
+      name: /Trả về Chưa yêu cầu|Revert to Pending|退回为待处理|未請求に戻す/i,
+    }),
+  ).toHaveCount(0);
 });
 
 test("contract documents accept and upload multiple local files", async ({
-    page,
-    loginInBrowserAs,
-    baseURL,
+  page,
+  loginInBrowserAs,
+  baseURL,
 }) => {
-    await loginInBrowserAs(page, TEST_USERS.superAdmin);
-    await page.goto(`${baseURL}/admin/contracts`, { waitUntil: "domcontentloaded" });
+  await loginInBrowserAs(page, TEST_USERS.superAdmin);
+  await page.goto(`${baseURL}/admin/contracts`, { waitUntil: "domcontentloaded" });
 
-    const row = page.locator('[data-testid^="contract-row-"]').first();
-    await expect(row).toBeVisible();
-    const rowTestId = await row.getAttribute("data-testid");
-    const contractId = Number(rowTestId?.replace("contract-row-", ""));
-    expect(contractId).toBeGreaterThan(0);
+  const row = page.locator('[data-testid^="contract-row-"]').first();
+  await expect(row).toBeVisible();
+  const rowTestId = await row.getAttribute("data-testid");
+  const contractId = Number(rowTestId?.replace("contract-row-", ""));
+  expect(contractId).toBeGreaterThan(0);
 
-    const uploadedFiles: Array<Record<string, unknown>> = [];
-    await page.route(`**/api/contracts/${contractId}/attachments`, async (route) => {
-        const request = route.request();
-        if (request.method() === "GET") {
-            await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(uploadedFiles) });
-            return;
-        }
-        if (request.method() !== "POST") {
-            await route.continue();
-            return;
-        }
+  const uploadedFiles: Array<Record<string, unknown>> = [];
+  await page.route(`**/api/contracts/${contractId}/attachments`, async (route) => {
+    const request = route.request();
+    if (request.method() === "GET") {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(uploadedFiles),
+      });
+      return;
+    }
+    if (request.method() !== "POST") {
+      await route.continue();
+      return;
+    }
 
-        const multipartBody = request.postDataBuffer()?.toString("utf8") ?? "";
-        const fileName = multipartBody.match(/filename="([^"]+)"/)?.[1] ?? "unknown.pdf";
-        const attachment = {
-            id: uploadedFiles.length + 1,
-            contractId,
-            kind: "Supporting",
-            filePath: `/files/contracts/${fileName}`,
-            originalFileName: fileName,
-            fileSize: 32,
-            contentType: "application/pdf",
-            label: null,
-            createdAt: new Date().toISOString(),
-            uploadedByUserId: 1,
-            uploadedByName: "E2E Admin",
-        };
-        uploadedFiles.push(attachment);
-        await route.fulfill({ status: 201, contentType: "application/json", body: JSON.stringify(attachment) });
+    const multipartBody = request.postDataBuffer()?.toString("utf8") ?? "";
+    const fileName = multipartBody.match(/filename="([^"]+)"/)?.[1] ?? "unknown.pdf";
+    const attachment = {
+      id: uploadedFiles.length + 1,
+      contractId,
+      kind: "Supporting",
+      filePath: `/files/contracts/${fileName}`,
+      originalFileName: fileName,
+      fileSize: 32,
+      contentType: "application/pdf",
+      label: null,
+      createdAt: new Date().toISOString(),
+      uploadedByUserId: 1,
+      uploadedByName: "E2E Admin",
+    };
+    uploadedFiles.push(attachment);
+    await route.fulfill({
+      status: 201,
+      contentType: "application/json",
+      body: JSON.stringify(attachment),
     });
+  });
 
-    await page.goto(`${baseURL}/admin/contracts/${contractId}`, { waitUntil: "domcontentloaded" });
-    await page.getByRole("tab", { name: /Tài liệu|Documents|文档|資料/i }).click();
+  await page.goto(`${baseURL}/admin/contracts/${contractId}`, { waitUntil: "domcontentloaded" });
+  await page.getByRole("tab", { name: /Tài liệu|Documents|文档|資料/i }).click();
 
-    const fileInput = page.locator("#contract-attachment-files");
-    await expect(fileInput).toHaveAttribute("multiple", "");
-    await fileInput.setInputFiles([
-        {
-            name: "contract-batch-one.pdf",
-            mimeType: "application/pdf",
-            buffer: Buffer.from("%PDF-1.4\ncontract one\n%%EOF"),
-        },
-        {
-            name: "contract-batch-two.pdf",
-            mimeType: "application/pdf",
-            buffer: Buffer.from("%PDF-1.4\ncontract two\n%%EOF"),
-        },
-    ]);
+  const fileInput = page.locator("#contract-attachment-files");
+  await expect(fileInput).toHaveAttribute("multiple", "");
+  await fileInput.setInputFiles([
+    {
+      name: "contract-batch-one.pdf",
+      mimeType: "application/pdf",
+      buffer: Buffer.from("%PDF-1.4\ncontract one\n%%EOF"),
+    },
+    {
+      name: "contract-batch-two.pdf",
+      mimeType: "application/pdf",
+      buffer: Buffer.from("%PDF-1.4\ncontract two\n%%EOF"),
+    },
+  ]);
 
-    await expect.poll(() => uploadedFiles.length).toBe(2);
-    await expect(page.getByText("contract-batch-one.pdf", { exact: true })).toBeVisible();
-    await expect(page.getByText("contract-batch-two.pdf", { exact: true })).toBeVisible();
+  await expect.poll(() => uploadedFiles.length).toBe(2);
+  await expect(page.getByText("contract-batch-one.pdf", { exact: true })).toBeVisible();
+  await expect(page.getByText("contract-batch-two.pdf", { exact: true })).toBeVisible();
 });

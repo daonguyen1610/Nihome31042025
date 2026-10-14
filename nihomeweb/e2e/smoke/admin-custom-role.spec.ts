@@ -33,12 +33,7 @@ const ROLE_PERMISSIONS = [
   "system.audit.view",
 ];
 
-const ALLOWED_PATHS = [
-  "/admin",
-  "/admin/notifications",
-  "/admin/news",
-  "/admin/activity-log",
-];
+const ALLOWED_PATHS = ["/admin", "/admin/notifications", "/admin/news", "/admin/activity-log"];
 
 const DENIED_PATHS = [
   "/admin/users",
@@ -65,20 +60,35 @@ test.beforeAll(async ({ api }) => {
   // Best-effort cleanup of any leftover fixture from a previous failed run.
   // Run each statement separately to avoid multi-statement parsing issues.
   try {
-    execSql(`DELETE FROM refresh_tokens WHERE UserId IN (SELECT Id FROM users WHERE PhoneNumber = '${TEST_PHONE}')`);
-  } catch { /* ignore */ }
+    execSql(
+      `DELETE FROM refresh_tokens WHERE UserId IN (SELECT Id FROM users WHERE PhoneNumber = '${TEST_PHONE}')`,
+    );
+  } catch {
+    /* ignore */
+  }
   try {
     execSql(`DELETE FROM users WHERE PhoneNumber = '${TEST_PHONE}'`);
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   try {
-    execSql(`DELETE rp FROM role_permissions rp JOIN roles r ON r.Id = rp.RoleId WHERE r.Code = '${ROLE_CODE}'`);
-  } catch { /* ignore */ }
+    execSql(
+      `DELETE rp FROM role_permissions rp JOIN roles r ON r.Id = rp.RoleId WHERE r.Code = '${ROLE_CODE}'`,
+    );
+  } catch {
+    /* ignore */
+  }
   try {
     execSql(`DELETE FROM roles WHERE Code = '${ROLE_CODE}'`);
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 
   const loginRes = await api.post("/api/auth/login", {
-    data: { phoneNumber: TEST_USERS.superAdmin.phoneNumber, password: TEST_USERS.superAdmin.password },
+    data: {
+      phoneNumber: TEST_USERS.superAdmin.phoneNumber,
+      password: TEST_USERS.superAdmin.password,
+    },
   });
   expect(loginRes.status(), "SA login").toBe(200);
   saToken = (await loginRes.json()).accessToken as string;

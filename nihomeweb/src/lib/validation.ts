@@ -48,10 +48,7 @@ export type ContactIssue = "missing" | "phone" | "email" | null;
  * Returns which rule broke so the caller can point at the right field and use
  * its own translated message.
  */
-export const validateContact = (
-  phone?: string | null,
-  email?: string | null,
-): ContactIssue => {
+export const validateContact = (phone?: string | null, email?: string | null): ContactIssue => {
   const hasPhone = Boolean(phone && phone.trim());
   const hasEmail = Boolean(email && email.trim());
   if (!hasPhone && !hasEmail) return "missing";

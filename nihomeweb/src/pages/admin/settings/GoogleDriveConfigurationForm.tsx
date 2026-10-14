@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
 import { BookOpen, Save } from "lucide-react";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -52,18 +57,30 @@ function validate(
   const instanceId = form.instanceId.trim();
   if (instanceId && !INSTANCE_ID_PATTERN.test(instanceId))
     return "settings.drive.validation.instanceId";
-  if (form.applicationName.trim().length > 100)
-    return "settings.drive.validation.applicationName";
+  if (form.applicationName.trim().length > 100) return "settings.drive.validation.applicationName";
   const paths = FOLDER_FIELDS.map((field) => form.folders[field].trim());
   const hasAnyPath = paths.some(Boolean);
-  if (hasAnyPath && paths.some((path) => !path || path.length > 500 || path.startsWith("/") || path.endsWith("/") || path.includes("\\") ||
-      path.split("/").some((segment) => !segment || segment === "." || segment === ".." || segment.length > 100)))
+  if (
+    hasAnyPath &&
+    paths.some(
+      (path) =>
+        !path ||
+        path.length > 500 ||
+        path.startsWith("/") ||
+        path.endsWith("/") ||
+        path.includes("\\") ||
+        path
+          .split("/")
+          .some(
+            (segment) => !segment || segment === "." || segment === ".." || segment.length > 100,
+          ),
+    )
+  )
     return "settings.drive.validation.folderPath";
   if (hasAnyPath && new Set(paths.map((path) => path.toLowerCase())).size !== paths.length)
     return "settings.drive.validation.folderDuplicate";
   if (!form.enabled) return null;
-  if (!CLIENT_ID_PATTERN.test(form.clientId.trim()))
-    return "settings.drive.validation.clientId";
+  if (!CLIENT_ID_PATTERN.test(form.clientId.trim())) return "settings.drive.validation.clientId";
   if (form.clientId.trim() !== originalClientId && clientSecret.trim().length < 8)
     return "settings.drive.validation.clientSecretChangedClient";
   if (!form.hasClientSecret && clientSecret.trim().length < 8)
@@ -72,24 +89,48 @@ function validate(
     return "settings.drive.validation.clientSecret";
   try {
     const redirect = new URL(form.oAuthRedirectUri.trim());
-    const loopbackHttp = redirect.protocol === "http:" && ["localhost", "127.0.0.1", "::1"].includes(redirect.hostname);
-    if ((redirect.protocol !== "https:" && !loopbackHttp) || redirect.hash || redirect.username || redirect.password ||
-        !redirect.pathname.endsWith("/api/site-settings/google-drive/oauth/callback"))
+    const loopbackHttp =
+      redirect.protocol === "http:" &&
+      ["localhost", "127.0.0.1", "::1"].includes(redirect.hostname);
+    if (
+      (redirect.protocol !== "https:" && !loopbackHttp) ||
+      redirect.hash ||
+      redirect.username ||
+      redirect.password ||
+      !redirect.pathname.endsWith("/api/site-settings/google-drive/oauth/callback")
+    )
       return "settings.drive.validation.redirectUri";
   } catch {
     return "settings.drive.validation.redirectUri";
   }
   const returnUrl = form.frontendReturnUrl.trim();
-  if (!returnUrl.startsWith("/admin/") || returnUrl.startsWith("//") || returnUrl.includes("\\") || returnUrl.includes("#"))
+  if (
+    !returnUrl.startsWith("/admin/") ||
+    returnUrl.startsWith("//") ||
+    returnUrl.includes("\\") ||
+    returnUrl.includes("#")
+  )
     return "settings.drive.validation.returnUrl";
   if (!DRIVE_ID_PATTERN.test(form.rootFolderId.trim()))
     return "settings.drive.validation.rootFolderId";
-  if (!INSTANCE_ID_PATTERN.test(instanceId))
-    return "settings.drive.validation.instanceId";
+  if (!INSTANCE_ID_PATTERN.test(instanceId)) return "settings.drive.validation.instanceId";
   if (!form.applicationName.trim() || form.applicationName.trim().length > 100)
     return "settings.drive.validation.applicationName";
-  if (paths.some((path) => !path || path.length > 500 || path.startsWith("/") || path.endsWith("/") || path.includes("\\") ||
-      path.split("/").some((segment) => !segment || segment === "." || segment === ".." || segment.length > 100)))
+  if (
+    paths.some(
+      (path) =>
+        !path ||
+        path.length > 500 ||
+        path.startsWith("/") ||
+        path.endsWith("/") ||
+        path.includes("\\") ||
+        path
+          .split("/")
+          .some(
+            (segment) => !segment || segment === "." || segment === ".." || segment.length > 100,
+          ),
+    )
+  )
     return "settings.drive.validation.folderPath";
   if (new Set(paths.map((path) => path.toLowerCase())).size !== paths.length)
     return "settings.drive.validation.folderDuplicate";
@@ -114,7 +155,8 @@ export default function GoogleDriveConfigurationForm({ canManage, reloadKey, onS
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    adminApi.getGoogleDriveConfiguration()
+    adminApi
+      .getGoogleDriveConfiguration()
       .then(({ data }) => {
         if (!cancelled) {
           setForm(data);
@@ -135,19 +177,25 @@ export default function GoogleDriveConfigurationForm({ canManage, reloadKey, onS
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [reloadKey, t, toast]);
 
   const update = <Key extends keyof GoogleDriveAdminConfigurationResponse>(
     key: Key,
     value: GoogleDriveAdminConfigurationResponse[Key],
-  ) => setForm((current) => current ? { ...current, [key]: value } : current);
+  ) => setForm((current) => (current ? { ...current, [key]: value } : current));
 
   const updateFolder = (key: keyof GoogleDriveFolderConfiguration, value: string) =>
-    setForm((current) => current ? {
-      ...current,
-      folders: { ...current.folders, [key]: value },
-    } : current);
+    setForm((current) =>
+      current
+        ? {
+            ...current,
+            folders: { ...current.folders, [key]: value },
+          }
+        : current,
+    );
 
   const save = async () => {
     if (!form) return;
@@ -197,7 +245,10 @@ export default function GoogleDriveConfigurationForm({ canManage, reloadKey, onS
   };
 
   if (loading) return <p className="text-sm text-muted-foreground">{t("common.loading")}</p>;
-  if (!form) return <p className="text-sm text-destructive">{t("settings.drive.configuration.loadError")}</p>;
+  if (!form)
+    return (
+      <p className="text-sm text-destructive">{t("settings.drive.configuration.loadError")}</p>
+    );
 
   const disabled = !canManage || saving;
   return (
@@ -205,7 +256,9 @@ export default function GoogleDriveConfigurationForm({ canManage, reloadKey, onS
       <div className="flex flex-col gap-4 border-b pb-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 className="text-lg font-semibold">{t("settings.drive.configuration.title")}</h2>
-          <p className="mt-1 text-sm text-muted-foreground">{t("settings.drive.configuration.description")}</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {t("settings.drive.configuration.description")}
+          </p>
         </div>
         <div className="flex max-w-sm items-start gap-3">
           <Switch
@@ -249,25 +302,91 @@ export default function GoogleDriveConfigurationForm({ canManage, reloadKey, onS
       </Accordion>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <Field id="drive-client-id" label={t("settings.drive.configuration.clientId")} help={t("settings.drive.configuration.help.clientId")} value={form.clientId} disabled={disabled} onChange={(value) => update("clientId", value)} />
+        <Field
+          id="drive-client-id"
+          label={t("settings.drive.configuration.clientId")}
+          help={t("settings.drive.configuration.help.clientId")}
+          value={form.clientId}
+          disabled={disabled}
+          onChange={(value) => update("clientId", value)}
+        />
         <div className="space-y-1.5">
-          <Label htmlFor="drive-client-secret">{t("settings.drive.configuration.clientSecret")}</Label>
-          <Input id="drive-client-secret" type="password" value={clientSecret} placeholder={form.hasClientSecret ? "••••••••••••" : undefined} disabled={disabled} onChange={(event) => setClientSecret(event.target.value)} autoComplete="new-password" aria-describedby="drive-client-secret-help drive-client-secret-status" />
+          <Label htmlFor="drive-client-secret">
+            {t("settings.drive.configuration.clientSecret")}
+          </Label>
+          <Input
+            id="drive-client-secret"
+            type="password"
+            value={clientSecret}
+            placeholder={form.hasClientSecret ? "••••••••••••" : undefined}
+            disabled={disabled}
+            onChange={(event) => setClientSecret(event.target.value)}
+            autoComplete="new-password"
+            aria-describedby="drive-client-secret-help drive-client-secret-status"
+          />
           <p id="drive-client-secret-help" className="text-xs text-muted-foreground">
             {t("settings.drive.configuration.help.clientSecret")}
           </p>
           <p id="drive-client-secret-status" className="text-xs text-muted-foreground">
-            {t(form.hasClientSecret ? "settings.drive.configuration.secretStored" : "settings.drive.configuration.secretMissing")}
+            {t(
+              form.hasClientSecret
+                ? "settings.drive.configuration.secretStored"
+                : "settings.drive.configuration.secretMissing",
+            )}
           </p>
         </div>
-        <Field id="drive-redirect" label={t("settings.drive.configuration.redirectUri")} help={t("settings.drive.configuration.help.redirectUri")} value={form.oAuthRedirectUri} disabled={disabled} onChange={(value) => update("oAuthRedirectUri", value)} />
-        <Field id="drive-return" label={t("settings.drive.configuration.returnUrl")} help={t("settings.drive.configuration.help.returnUrl")} value={form.frontendReturnUrl} disabled={disabled} onChange={(value) => update("frontendReturnUrl", value)} />
-        <Field id="drive-root" label={t("settings.drive.configuration.rootFolderId")} help={t("settings.drive.configuration.help.rootFolderId")} value={form.rootFolderId} disabled={disabled} onChange={(value) => update("rootFolderId", value)} />
-        <Field id="drive-instance" label={t("settings.drive.configuration.instanceId")} help={t("settings.drive.configuration.help.instanceId")} value={form.instanceId} disabled={disabled} onChange={(value) => update("instanceId", value)} />
-        <Field id="drive-app-name" label={t("settings.drive.configuration.applicationName")} help={t("settings.drive.configuration.help.applicationName")} value={form.applicationName} disabled={disabled} onChange={(value) => update("applicationName", value)} />
+        <Field
+          id="drive-redirect"
+          label={t("settings.drive.configuration.redirectUri")}
+          help={t("settings.drive.configuration.help.redirectUri")}
+          value={form.oAuthRedirectUri}
+          disabled={disabled}
+          onChange={(value) => update("oAuthRedirectUri", value)}
+        />
+        <Field
+          id="drive-return"
+          label={t("settings.drive.configuration.returnUrl")}
+          help={t("settings.drive.configuration.help.returnUrl")}
+          value={form.frontendReturnUrl}
+          disabled={disabled}
+          onChange={(value) => update("frontendReturnUrl", value)}
+        />
+        <Field
+          id="drive-root"
+          label={t("settings.drive.configuration.rootFolderId")}
+          help={t("settings.drive.configuration.help.rootFolderId")}
+          value={form.rootFolderId}
+          disabled={disabled}
+          onChange={(value) => update("rootFolderId", value)}
+        />
+        <Field
+          id="drive-instance"
+          label={t("settings.drive.configuration.instanceId")}
+          help={t("settings.drive.configuration.help.instanceId")}
+          value={form.instanceId}
+          disabled={disabled}
+          onChange={(value) => update("instanceId", value)}
+        />
+        <Field
+          id="drive-app-name"
+          label={t("settings.drive.configuration.applicationName")}
+          help={t("settings.drive.configuration.help.applicationName")}
+          value={form.applicationName}
+          disabled={disabled}
+          onChange={(value) => update("applicationName", value)}
+        />
         <div className="space-y-1.5">
           <Label htmlFor="drive-poll">{t("settings.drive.configuration.pollInterval")}</Label>
-          <Input id="drive-poll" type="number" min={5} max={300} value={form.pollIntervalSeconds} disabled={disabled} onChange={(event) => update("pollIntervalSeconds", Number(event.target.value))} aria-describedby="drive-poll-help" />
+          <Input
+            id="drive-poll"
+            type="number"
+            min={5}
+            max={300}
+            value={form.pollIntervalSeconds}
+            disabled={disabled}
+            onChange={(event) => update("pollIntervalSeconds", Number(event.target.value))}
+            aria-describedby="drive-poll-help"
+          />
           <p id="drive-poll-help" className="text-xs text-muted-foreground">
             {t("settings.drive.configuration.help.pollInterval")}
           </p>
@@ -276,19 +395,38 @@ export default function GoogleDriveConfigurationForm({ canManage, reloadKey, onS
 
       <div>
         <h3 className="text-sm font-semibold">{t("settings.drive.configuration.folders")}</h3>
-        <p className="mt-1 text-xs text-muted-foreground">{t("settings.drive.configuration.help.folders")}</p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          {t("settings.drive.configuration.help.folders")}
+        </p>
         <div className="mt-3 grid gap-4 md:grid-cols-2">
           {FOLDER_FIELDS.map((field) => (
-            <Field key={field} id={`drive-folder-${field}`} label={t(`settings.drive.configuration.folder.${field}`)} help={t("settings.drive.configuration.help.folderPath")} value={form.folders[field]} disabled={disabled} onChange={(value) => updateFolder(field, value)} />
+            <Field
+              key={field}
+              id={`drive-folder-${field}`}
+              label={t(`settings.drive.configuration.folder.${field}`)}
+              help={t("settings.drive.configuration.help.folderPath")}
+              value={form.folders[field]}
+              disabled={disabled}
+              onChange={(value) => updateFolder(field, value)}
+            />
           ))}
         </div>
       </div>
 
       <div className="flex flex-col gap-4 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex max-w-xl items-start gap-3">
-          <Switch id="drive-all-drives" className="mt-0.5" checked={form.supportsAllDrives} onCheckedChange={(value) => update("supportsAllDrives", value)} disabled={disabled} aria-describedby="drive-all-drives-help" />
+          <Switch
+            id="drive-all-drives"
+            className="mt-0.5"
+            checked={form.supportsAllDrives}
+            onCheckedChange={(value) => update("supportsAllDrives", value)}
+            disabled={disabled}
+            aria-describedby="drive-all-drives-help"
+          />
           <div>
-            <Label htmlFor="drive-all-drives">{t("settings.drive.configuration.supportsAllDrives")}</Label>
+            <Label htmlFor="drive-all-drives">
+              {t("settings.drive.configuration.supportsAllDrives")}
+            </Label>
             <p id="drive-all-drives-help" className="mt-1 text-xs text-muted-foreground">
               {t("settings.drive.configuration.help.supportsAllDrives")}
             </p>
@@ -305,7 +443,14 @@ export default function GoogleDriveConfigurationForm({ canManage, reloadKey, onS
   );
 }
 
-function Field({ id, label, help, value, disabled, onChange }: {
+function Field({
+  id,
+  label,
+  help,
+  value,
+  disabled,
+  onChange,
+}: {
   id: string;
   label: string;
   help: string;
@@ -316,8 +461,16 @@ function Field({ id, label, help, value, disabled, onChange }: {
   return (
     <div className="space-y-1.5">
       <Label htmlFor={id}>{label}</Label>
-      <Input id={id} value={value} disabled={disabled} onChange={(event) => onChange(event.target.value)} aria-describedby={`${id}-help`} />
-      <p id={`${id}-help`} className="text-xs text-muted-foreground">{help}</p>
+      <Input
+        id={id}
+        value={value}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.value)}
+        aria-describedby={`${id}-help`}
+      />
+      <p id={`${id}-help`} className="text-xs text-muted-foreground">
+        {help}
+      </p>
     </div>
   );
 }

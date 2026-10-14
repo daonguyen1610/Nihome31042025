@@ -2,7 +2,12 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Pencil, Plus, Save, Trash2, Upload } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
-import { adminApi, slugify, type SlideshowAdminResponse, type UpsertSlideshowRequest } from "@/services/adminApi";
+import {
+  adminApi,
+  slugify,
+  type SlideshowAdminResponse,
+  type UpsertSlideshowRequest,
+} from "@/services/adminApi";
 import { PageEmpty, PageError, PageLoading } from "@/components/PageState";
 import { BulkActionBar } from "@/components/admin/BulkActionBar";
 import { Button } from "@/components/ui/button";
@@ -49,7 +54,10 @@ const mapSlideToDraft = (slide: SlideshowAdminResponse): Draft => ({
 
 const getErrorMessage = (error: unknown, fallback: string) => {
   if (typeof error === "object" && error !== null) {
-    const withMessage = error as { message?: unknown; response?: { data?: { detail?: unknown; message?: unknown } } };
+    const withMessage = error as {
+      message?: unknown;
+      response?: { data?: { detail?: unknown; message?: unknown } };
+    };
     if (typeof withMessage.response?.data?.detail === "string") {
       return withMessage.response.data.detail;
     }
@@ -105,10 +113,18 @@ const SlideshowSettings = () => {
     setUploading(true);
     try {
       if (looksLikeVideo) {
-        const res = await adminApi.uploadVideo(file, draft.id ? draft.imageUrl : undefined, "slideshow");
+        const res = await adminApi.uploadVideo(
+          file,
+          draft.id ? draft.imageUrl : undefined,
+          "slideshow",
+        );
         setDraft((prev) => ({ ...prev, imageUrl: res.data.mediaUrl, mediaKind: "video" }));
       } else {
-        const res = await adminApi.uploadImage(file, draft.id ? draft.imageUrl : undefined, "slideshow");
+        const res = await adminApi.uploadImage(
+          file,
+          draft.id ? draft.imageUrl : undefined,
+          "slideshow",
+        );
         setDraft((prev) => ({ ...prev, imageUrl: res.data.imageUrl, mediaKind: "image" }));
       }
       toast({ title: t("form.updated"), description: file.name });
@@ -128,11 +144,19 @@ const SlideshowSettings = () => {
 
   const saveSlide = async () => {
     if (!draft.title.trim()) {
-      toast({ title: t("form.required"), description: t("set.slideshow.fieldTitle"), variant: "destructive" });
+      toast({
+        title: t("form.required"),
+        description: t("set.slideshow.fieldTitle"),
+        variant: "destructive",
+      });
       return;
     }
     if (!draft.imageUrl.trim()) {
-      toast({ title: t("form.required"), description: t("set.slideshow.fieldMediaUrl"), variant: "destructive" });
+      toast({
+        title: t("form.required"),
+        description: t("set.slideshow.fieldMediaUrl"),
+        variant: "destructive",
+      });
       return;
     }
 
@@ -210,9 +234,7 @@ const SlideshowSettings = () => {
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
               <h2 className="text-lg font-semibold">{t("set.slideshow.title")}</h2>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {t("set.slideshow.desc")}
-              </p>
+              <p className="mt-1 text-xs text-muted-foreground">{t("set.slideshow.desc")}</p>
             </div>
             <Button type="button" size="sm" variant="outline" onClick={resetDraft}>
               <Plus className="mr-1.5 h-3.5 w-3.5" />
@@ -233,11 +255,7 @@ const SlideshowSettings = () => {
               <div className="mb-2 flex items-center gap-2 px-1 text-xs text-muted-foreground">
                 <Checkbox
                   checked={
-                    allVisibleSelected
-                      ? true
-                      : someVisibleSelected
-                        ? "indeterminate"
-                        : false
+                    allVisibleSelected ? true : someVisibleSelected ? "indeterminate" : false
                   }
                   onCheckedChange={(v) => toggleAllVisible(v === true)}
                   aria-label={t("common.selectAll")}
@@ -278,7 +296,10 @@ const SlideshowSettings = () => {
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium">{slide.title}</p>
                       <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                        slug: {slide.slug} · sort: {slide.sortOrder} · {slide.isActive ? t("set.slideshow.statusActive") : t("set.slideshow.statusInactive")}
+                        slug: {slide.slug} · sort: {slide.sortOrder} ·{" "}
+                        {slide.isActive
+                          ? t("set.slideshow.statusActive")
+                          : t("set.slideshow.statusInactive")}
                       </p>
                     </div>
                     <div className="flex items-center gap-1">
@@ -311,9 +332,7 @@ const SlideshowSettings = () => {
 
         <section className="rounded-lg border bg-card p-6 xl:col-span-2">
           <h2 className="text-lg font-semibold">{titleHint}</h2>
-          <p className="mb-5 mt-1 text-xs text-muted-foreground">
-            {t("set.slideshow.editorDesc")}
-          </p>
+          <p className="mb-5 mt-1 text-xs text-muted-foreground">{t("set.slideshow.editorDesc")}</p>
 
           <div className="space-y-4">
             <FieldRow label={`${t("set.slideshow.fieldTitle")} *`}>
@@ -337,7 +356,9 @@ const SlideshowSettings = () => {
                 <select
                   className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                   value={draft.mediaKind}
-                  onChange={(e) => setDraft((prev) => ({ ...prev, mediaKind: e.target.value as MediaKind }))}
+                  onChange={(e) =>
+                    setDraft((prev) => ({ ...prev, mediaKind: e.target.value as MediaKind }))
+                  }
                 >
                   <option value="image">{t("set.slideshow.mediaTypeImage")}</option>
                   <option value="video">{t("set.slideshow.mediaTypeVideo")}</option>
@@ -347,7 +368,9 @@ const SlideshowSettings = () => {
                 <Input
                   type="number"
                   value={draft.sortOrder}
-                  onChange={(e) => setDraft((prev) => ({ ...prev, sortOrder: Number(e.target.value) || 0 }))}
+                  onChange={(e) =>
+                    setDraft((prev) => ({ ...prev, sortOrder: Number(e.target.value) || 0 }))
+                  }
                 />
               </FieldRow>
             </div>
@@ -410,7 +433,8 @@ const SlideshowSettings = () => {
                       ...prev,
                       imageUrl: e.target.value,
                       mediaKind: getMediaKind(e.target.value),
-                    }))}
+                    }))
+                  }
                   placeholder={t("set.slideshow.placeholderMediaUrl")}
                 />
               </details>

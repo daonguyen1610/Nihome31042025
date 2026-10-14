@@ -66,9 +66,7 @@ test.describe("NIH-143 — Partial acceptance (real-user flow)", () => {
       ),
       (async () => {
         await projectFilter.click();
-        await page
-          .getByRole("option", { name: new RegExp(`E2E-ACC ${projSuffix}`) })
-          .click();
+        await page.getByRole("option", { name: new RegExp(`E2E-ACC ${projSuffix}`) }).click();
       })(),
     ]);
 
@@ -93,9 +91,13 @@ test.describe("NIH-143 — Partial acceptance (real-user flow)", () => {
     await expect(page.getByTestId("acceptance-form-documents")).toHaveValue(
       /\/files\/business-documents\/acceptance\/[^\n]+\.pdf\n\/files\/business-documents\/acceptance\/[^\n]+\.pdf/,
     );
-    const [documentPath] = (await page.getByTestId("acceptance-form-documents").inputValue()).split("\n");
+    const [documentPath] = (await page.getByTestId("acceptance-form-documents").inputValue()).split(
+      "\n",
+    );
     const documentFileName = documentPath.split("/").pop()!;
-    await expect(page.getByTestId(`acceptance-form-document-preview-${documentFileName}`)).toHaveCount(0);
+    await expect(
+      page.getByTestId(`acceptance-form-document-preview-${documentFileName}`),
+    ).toHaveCount(0);
     await Promise.all([
       page.waitForResponse(
         (r) =>
@@ -117,23 +119,31 @@ test.describe("NIH-143 — Partial acceptance (real-user flow)", () => {
     await row.locator('[data-testid^="acceptance-row-view-"]').click();
     await expect(page.getByText(taskName, { exact: true })).toBeVisible();
     await page.getByTestId("acceptance-document-preview-0").click();
-    const blobUrlPattern = new RegExp(
-      `^${escapeRegExp(`blob:${new URL(page.url()).origin}/`)}`,
+    const blobUrlPattern = new RegExp(`^${escapeRegExp(`blob:${new URL(page.url()).origin}/`)}`);
+    await expect(page.getByTestId("acceptance-document-preview-0-frame")).toHaveAttribute(
+      "src",
+      blobUrlPattern,
     );
-    await expect(page.getByTestId("acceptance-document-preview-0-frame"))
-      .toHaveAttribute("src", blobUrlPattern);
-    await expect(page.getByTestId("acceptance-document-preview-0-dialog").getByRole("link", { name: /tab|thẻ/i }))
-      .toHaveAttribute("href", blobUrlPattern);
+    await expect(
+      page
+        .getByTestId("acceptance-document-preview-0-dialog")
+        .getByRole("link", { name: /tab|thẻ/i }),
+    ).toHaveAttribute("href", blobUrlPattern);
     await page.getByTestId("acceptance-document-preview-0-close").click();
     await expect(page.getByTestId("acceptance-document-preview-0-dialog")).toHaveCount(0);
 
     const updatedTitle = `${titleText} updated`;
     await page.getByTestId("acceptance-edit").click();
-    await expect(page.getByTestId(`acceptance-form-document-preview-${documentFileName}`)).toBeVisible();
+    await expect(
+      page.getByTestId(`acceptance-form-document-preview-${documentFileName}`),
+    ).toBeVisible();
     await page.getByTestId("acceptance-form-title").fill(updatedTitle);
     await Promise.all([
       page.waitForResponse(
-        (r) => /\/api\/acceptance-records\/\d+$/.test(r.url()) && r.request().method() === "PUT" && r.status() === 200,
+        (r) =>
+          /\/api\/acceptance-records\/\d+$/.test(r.url()) &&
+          r.request().method() === "PUT" &&
+          r.status() === 200,
       ),
       page.getByTestId("acceptance-form-save").click(),
     ]);

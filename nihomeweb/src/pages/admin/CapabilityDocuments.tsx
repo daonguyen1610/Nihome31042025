@@ -232,7 +232,11 @@ const CapabilityDocuments = () => {
     async (files: FileList | File[]) => {
       if (!canManage) return;
       if (!uploadTag) {
-        toast({ title: t("common.error"), description: t("capDocs.form.selectTagFirst"), variant: "destructive" });
+        toast({
+          title: t("common.error"),
+          description: t("capDocs.form.selectTagFirst"),
+          variant: "destructive",
+        });
         return;
       }
       const list = Array.from(files);
@@ -282,33 +286,43 @@ const CapabilityDocuments = () => {
   const [editError, setEditError] = useState<string | null>(null);
   const [savingEdit, setSavingEdit] = useState(false);
 
-  const openEdit = useCallback(async (id: number) => {
-    try {
-      const { data } = await adminApi.getCapabilityDocument(id);
-      setEditing(data);
-      setEditForm({
-        name: data.name,
-        tagCode: data.tagCode,
-        issuedDate: data.issuedDate ?? null,
-        expiryDate: data.expiryDate ?? null,
-        description: data.description ?? "",
-      });
-      setEditError(null);
-    } catch (err) {
-      toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
-    }
-  }, [t, toast]);
+  const openEdit = useCallback(
+    async (id: number) => {
+      try {
+        const { data } = await adminApi.getCapabilityDocument(id);
+        setEditing(data);
+        setEditForm({
+          name: data.name,
+          tagCode: data.tagCode,
+          issuedDate: data.issuedDate ?? null,
+          expiryDate: data.expiryDate ?? null,
+          description: data.description ?? "",
+        });
+        setEditError(null);
+      } catch (err) {
+        toast({
+          title: t("common.error"),
+          description: extractApiError(err),
+          variant: "destructive",
+        });
+      }
+    },
+    [t, toast],
+  );
 
   useEffect(() => {
     const rawId = searchParams.get("documentId");
     const documentId = rawId ? Number(rawId) : 0;
     if (!Number.isInteger(documentId) || documentId <= 0) return;
     void openEdit(documentId);
-    setSearchParams((current) => {
-      const next = new URLSearchParams(current);
-      next.delete("documentId");
-      return next;
-    }, { replace: true });
+    setSearchParams(
+      (current) => {
+        const next = new URLSearchParams(current);
+        next.delete("documentId");
+        return next;
+      },
+      { replace: true },
+    );
   }, [openEdit, searchParams, setSearchParams]);
 
   const submitEdit = async () => {
@@ -424,7 +438,11 @@ const CapabilityDocuments = () => {
       link.remove();
       URL.revokeObjectURL(url);
     } catch (err) {
-      toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
+      toast({
+        title: t("common.error"),
+        description: extractApiError(err),
+        variant: "destructive",
+      });
     } finally {
       setBusy(false);
     }
@@ -494,7 +512,9 @@ const CapabilityDocuments = () => {
         {/* Header */}
         <header className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div className="min-w-0">
-            <h1 className="text-xl font-semibold tracking-tight md:text-2xl">{t("capDocs.title")}</h1>
+            <h1 className="text-xl font-semibold tracking-tight md:text-2xl">
+              {t("capDocs.title")}
+            </h1>
             <p className="mt-1 text-sm text-muted-foreground">{t("capDocs.subtitle")}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -614,7 +634,9 @@ const CapabilityDocuments = () => {
             <SelectContent>
               <SelectItem value={ALL_VALUE}>{t("capDocs.filter.allTags")}</SelectItem>
               {tags.map((tag) => (
-                <SelectItem key={tag.code} value={tag.code}>{tag.name}</SelectItem>
+                <SelectItem key={tag.code} value={tag.code}>
+                  {tag.name}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -631,7 +653,9 @@ const CapabilityDocuments = () => {
             <SelectContent>
               <SelectItem value={ALL_VALUE}>{t("capDocs.filter.allExpiry")}</SelectItem>
               {CAPABILITY_DOCUMENT_EXPIRY_STATES.map((state) => (
-                <SelectItem key={state} value={state}>{expiryLabel(state)}</SelectItem>
+                <SelectItem key={state} value={state}>
+                  {expiryLabel(state)}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -672,10 +696,7 @@ const CapabilityDocuments = () => {
                 </label>
               )}
               {rows.map((r) => (
-                <article
-                  key={r.id}
-                  className="rounded-lg border bg-white p-3 shadow-sm"
-                >
+                <article key={r.id} className="rounded-lg border bg-white p-3 shadow-sm">
                   <header className="flex items-start gap-2">
                     <span onClick={(e) => e.stopPropagation()} className="mt-1 shrink-0">
                       <Checkbox
@@ -691,9 +712,13 @@ const CapabilityDocuments = () => {
                       >
                         {r.name}
                       </button>
-                      <p className="mt-0.5 break-all text-xs text-muted-foreground">{r.originalFileName}</p>
+                      <p className="mt-0.5 break-all text-xs text-muted-foreground">
+                        {r.originalFileName}
+                      </p>
                     </div>
-                    <Badge variant="secondary" className="shrink-0 whitespace-nowrap">V{r.currentVersion}</Badge>
+                    <Badge variant="secondary" className="shrink-0 whitespace-nowrap">
+                      V{r.currentVersion}
+                    </Badge>
                   </header>
 
                   <div className="mt-2 flex flex-wrap items-center gap-1.5">
@@ -740,7 +765,10 @@ const CapabilityDocuments = () => {
                 <thead className="bg-slate-50 text-left text-xs uppercase text-muted-foreground">
                   <tr>
                     <th className="w-10 px-3 py-2">
-                      <Checkbox checked={allSelected} onCheckedChange={(v) => toggleAll(Boolean(v))} />
+                      <Checkbox
+                        checked={allSelected}
+                        onCheckedChange={(v) => toggleAll(Boolean(v))}
+                      />
                     </th>
                     <th className="min-w-[240px] px-3 py-2">{t("capDocs.field.name")}</th>
                     <th className="min-w-[140px] px-3 py-2">{t("capDocs.field.tag")}</th>
@@ -754,12 +782,12 @@ const CapabilityDocuments = () => {
                 </thead>
                 <tbody>
                   {rows.map((r) => (
-                    <tr
-                      key={r.id}
-                      className="border-t align-top hover:bg-slate-50/50"
-                    >
+                    <tr key={r.id} className="border-t align-top hover:bg-slate-50/50">
                       <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
-                        <Checkbox checked={selectedIds.has(r.id)} onCheckedChange={(v) => toggleOne(r.id, Boolean(v))} />
+                        <Checkbox
+                          checked={selectedIds.has(r.id)}
+                          onCheckedChange={(v) => toggleOne(r.id, Boolean(v))}
+                        />
                       </td>
                       <td className="min-w-[240px] px-3 py-2">
                         <button
@@ -769,25 +797,36 @@ const CapabilityDocuments = () => {
                         >
                           {r.name}
                         </button>
-                        <div className="break-all text-xs text-muted-foreground">{r.originalFileName}</div>
+                        <div className="break-all text-xs text-muted-foreground">
+                          {r.originalFileName}
+                        </div>
                       </td>
                       <td className="px-3 py-2">
                         <Badge variant="outline" className="whitespace-nowrap">
                           {localTagLabel(r.tagCode, r.tagLabel)}
                         </Badge>
                       </td>
-                      <td className="whitespace-nowrap px-3 py-2">{formatDate(r.issuedDate, lang)}</td>
+                      <td className="whitespace-nowrap px-3 py-2">
+                        {formatDate(r.issuedDate, lang)}
+                      </td>
                       <td className="whitespace-nowrap px-3 py-2">
                         <div>{formatDate(r.expiryDate, lang)}</div>
                         {r.expiryState !== "none" && r.expiryState !== "ok" && (
-                          <Badge className={cn("mt-1", EXPIRY_BADGE_STYLES[r.expiryState])} variant="outline">
+                          <Badge
+                            className={cn("mt-1", EXPIRY_BADGE_STYLES[r.expiryState])}
+                            variant="outline"
+                          >
                             {expiryLabel(r.expiryState)}
                           </Badge>
                         )}
                       </td>
                       <td className="whitespace-nowrap px-3 py-2">V{r.currentVersion}</td>
-                      <td className="whitespace-nowrap px-3 py-2 text-muted-foreground">{formatBytes(r.fileSize)}</td>
-                      <td className="whitespace-nowrap px-3 py-2 text-xs text-muted-foreground">{formatDate(r.updatedAt, lang)}</td>
+                      <td className="whitespace-nowrap px-3 py-2 text-muted-foreground">
+                        {formatBytes(r.fileSize)}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2 text-xs text-muted-foreground">
+                        {formatDate(r.updatedAt, lang)}
+                      </td>
                       <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
                         <div className="flex justify-end gap-1">{renderRowActions(r)}</div>
                       </td>
@@ -806,10 +845,20 @@ const CapabilityDocuments = () => {
               {page} / {totalPages} · {total}
             </span>
             <div className="flex gap-2">
-              <Button size="sm" variant="outline" disabled={page <= 1} onClick={() => setPage(page - 1)}>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={page <= 1}
+                onClick={() => setPage(page - 1)}
+              >
                 ←
               </Button>
-              <Button size="sm" variant="outline" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={page >= totalPages}
+                onClick={() => setPage(page + 1)}
+              >
                 →
               </Button>
             </div>
@@ -831,15 +880,25 @@ const CapabilityDocuments = () => {
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="space-y-1">
                   <Label>{t("capDocs.field.name")}</Label>
-                  <Input value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} />
+                  <Input
+                    value={editForm.name}
+                    onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                  />
                 </div>
                 <div className="space-y-1">
                   <Label>{t("capDocs.field.tag")}</Label>
-                  <Select value={editForm.tagCode} onValueChange={(v) => setEditForm({ ...editForm, tagCode: v })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                  <Select
+                    value={editForm.tagCode}
+                    onValueChange={(v) => setEditForm({ ...editForm, tagCode: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
                       {tags.map((tag) => (
-                        <SelectItem key={tag.code} value={tag.code}>{tag.name}</SelectItem>
+                        <SelectItem key={tag.code} value={tag.code}>
+                          {tag.name}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -849,7 +908,9 @@ const CapabilityDocuments = () => {
                   <Input
                     type="date"
                     value={editForm.issuedDate ? editForm.issuedDate.slice(0, 10) : ""}
-                    onChange={(e) => setEditForm({ ...editForm, issuedDate: e.target.value || null })}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, issuedDate: e.target.value || null })
+                    }
                   />
                 </div>
                 <div className="space-y-1">
@@ -857,7 +918,9 @@ const CapabilityDocuments = () => {
                   <Input
                     type="date"
                     value={editForm.expiryDate ? editForm.expiryDate.slice(0, 10) : ""}
-                    onChange={(e) => setEditForm({ ...editForm, expiryDate: e.target.value || null })}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, expiryDate: e.target.value || null })
+                    }
                   />
                 </div>
               </div>
@@ -895,13 +958,20 @@ const CapabilityDocuments = () => {
                   {t("capDocs.versions.title")}
                 </Label>
                 {editing && editing.versions.length === 0 ? (
-                  <p className="mt-1 text-xs text-muted-foreground">{t("capDocs.versions.empty")}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {t("capDocs.versions.empty")}
+                  </p>
                 ) : (
                   <ul className="mt-1 divide-y rounded-md border">
                     {editing?.versions.map((v) => (
-                      <li key={v.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm">
+                      <li
+                        key={v.id}
+                        className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm"
+                      >
                         <div className="min-w-0 flex-1">
-                          <div className="break-words font-medium">V{v.versionNumber} · {v.originalFileName}</div>
+                          <div className="break-words font-medium">
+                            V{v.versionNumber} · {v.originalFileName}
+                          </div>
                           <div className="text-xs text-muted-foreground">
                             {formatDate(v.createdAt, lang)} · {formatBytes(v.fileSize)}
                           </div>
@@ -911,7 +981,9 @@ const CapabilityDocuments = () => {
                           fileName={v.originalFileName}
                           contentType={v.contentType}
                           variant="ghost"
-                          fetchFile={async () => (await adminApi.getCapabilityDocumentContent(v.filePath)).data}
+                          fetchFile={async () =>
+                            (await adminApi.getCapabilityDocumentContent(v.filePath)).data
+                          }
                         />
                       </li>
                     ))}
@@ -964,10 +1036,7 @@ const CapabilityDocuments = () => {
           The list already contains every field the preview shows, so
           no extra API call is needed. Full editing still happens in
           the Edit dialog above. */}
-      <Dialog
-        open={previewRow !== null}
-        onOpenChange={(o) => !o && setPreviewRow(null)}
-      >
+      <Dialog open={previewRow !== null} onOpenChange={(o) => !o && setPreviewRow(null)}>
         <DialogContent className="max-h-[90vh] w-[95vw] max-w-2xl overflow-y-auto sm:w-full">
           <DialogHeader>
             <DialogTitle className="break-words text-base md:text-lg">
@@ -985,10 +1054,7 @@ const CapabilityDocuments = () => {
                   {localTagLabel(previewRow.tagCode, previewRow.tagLabel)}
                 </Badge>
                 {previewRow.expiryState !== "none" && previewRow.expiryState !== "ok" && (
-                  <Badge
-                    variant="outline"
-                    className={EXPIRY_BADGE_STYLES[previewRow.expiryState]}
-                  >
+                  <Badge variant="outline" className={EXPIRY_BADGE_STYLES[previewRow.expiryState]}>
                     {expiryLabel(previewRow.expiryState)}
                   </Badge>
                 )}
@@ -1020,7 +1086,9 @@ const CapabilityDocuments = () => {
                 </div>
                 {previewRow.uploadedByName && (
                   <div>
-                    <dt className="text-xs text-muted-foreground">{t("capDocs.field.uploadedBy")}</dt>
+                    <dt className="text-xs text-muted-foreground">
+                      {t("capDocs.field.uploadedBy")}
+                    </dt>
                     <dd className="font-medium">{previewRow.uploadedByName}</dd>
                   </div>
                 )}
@@ -1054,9 +1122,9 @@ const CapabilityDocuments = () => {
                 url={previewRow.filePath}
                 fileName={previewRow.originalFileName}
                 contentType={previewRow.contentType}
-                fetchFile={async () => (
-                  await adminApi.getCapabilityDocumentContent(previewRow.filePath)
-                ).data}
+                fetchFile={async () =>
+                  (await adminApi.getCapabilityDocumentContent(previewRow.filePath)).data
+                }
                 showLabel
                 className="w-full sm:w-auto"
               />
@@ -1097,11 +1165,18 @@ const CapabilityDocuments = () => {
               </div>
               <div className="space-y-1">
                 <Label>{t("capDocs.field.tag")} *</Label>
-                <Select value={createForm.tagCode} onValueChange={(v) => setCreateForm({ ...createForm, tagCode: v })}>
-                  <SelectTrigger><SelectValue placeholder={t("capDocs.placeholder.tag")} /></SelectTrigger>
+                <Select
+                  value={createForm.tagCode}
+                  onValueChange={(v) => setCreateForm({ ...createForm, tagCode: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={t("capDocs.placeholder.tag")} />
+                  </SelectTrigger>
                   <SelectContent>
                     {tags.map((tag) => (
-                      <SelectItem key={tag.code} value={tag.code}>{tag.name}</SelectItem>
+                      <SelectItem key={tag.code} value={tag.code}>
+                        {tag.name}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -1164,9 +1239,7 @@ const CapabilityDocuments = () => {
                 )}
               </div>
             </div>
-            {createError && (
-              <p className="text-sm text-rose-600">{createError}</p>
-            )}
+            {createError && <p className="text-sm text-rose-600">{createError}</p>}
           </div>
           <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
             <Button
@@ -1179,7 +1252,9 @@ const CapabilityDocuments = () => {
             </Button>
             <Button
               onClick={() => void submitCreate()}
-              disabled={savingCreate || !createForm.name.trim() || !createForm.tagCode || !createFile}
+              disabled={
+                savingCreate || !createForm.name.trim() || !createForm.tagCode || !createFile
+              }
               className="w-full sm:w-auto"
             >
               {savingCreate && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

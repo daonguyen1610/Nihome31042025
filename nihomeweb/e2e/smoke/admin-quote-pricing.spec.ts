@@ -4,7 +4,11 @@ import { hardDeleteBusinessRoot } from "../fixtures/hardDelete";
 
 const uid = () => Math.random().toString(36).slice(2, 10).toUpperCase();
 
-const fillBulkBoqRow = async (page: Page, index: number, row: { code: string; name: string; unit: string; quantity: string; unitPrice: string }) => {
+const fillBulkBoqRow = async (
+  page: Page,
+  index: number,
+  row: { code: string; name: string; unit: string; quantity: string; unitPrice: string },
+) => {
   await page.getByTestId(`boq-bulk-code-${index}`).fill(row.code);
   await page.getByTestId(`boq-bulk-name-${index}`).fill(row.name);
   await page.getByTestId(`boq-bulk-unit-${index}`).fill(row.unit);
@@ -48,12 +52,20 @@ const expectCreateDialogResponsive = async (page: Page) => {
       viewportWidth: window.innerWidth,
       className: element.className,
     }));
-    expect(dimensions.scrollWidth, JSON.stringify(dimensions)).toBeLessThanOrEqual(dimensions.clientWidth);
+    expect(dimensions.scrollWidth, JSON.stringify(dimensions)).toBeLessThanOrEqual(
+      dimensions.clientWidth,
+    );
     expect(dimensions.left, JSON.stringify(dimensions)).toBeGreaterThanOrEqual(0);
     expect(dimensions.right).toBeLessThanOrEqual(viewport.width);
-    expect(await catalogFields.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
-    expect(await revision.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    expect(
+      await catalogFields.evaluate((element) => element.scrollWidth <= element.clientWidth),
+    ).toBe(true);
+    expect(await revision.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(
+      true,
+    );
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+    ).toBe(true);
     if (viewport.width === 1440) {
       expect((await dialog.boundingBox())?.width).toBeGreaterThanOrEqual(1000);
     }
@@ -78,9 +90,13 @@ const expectBulkEntryDialogResponsive = async (page: Page) => {
     expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(viewport.width);
     expect(box?.y ?? -1).toBeGreaterThanOrEqual(0);
     expect((box?.y ?? 0) + (box?.height ?? 0)).toBeLessThanOrEqual(viewport.height);
-    expect(await tableScroll.evaluate((element) => element.scrollWidth >= element.clientWidth)).toBe(true);
+    expect(
+      await tableScroll.evaluate((element) => element.scrollWidth >= element.clientWidth),
+    ).toBe(true);
     await expect(confirm).toBeInViewport();
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+    ).toBe(true);
   }
 };
 
@@ -139,7 +155,13 @@ test("enters structured BOQ rows safely and applies an approved material rate to
 
     const catalogResponse = await api.post("/api/material-rate-catalogs", {
       headers,
-      data: { catalogType: "InvestmentRate", code: catalogCode, name: `Rate catalog ${suffix}`, currency: "VND", isActive: true },
+      data: {
+        catalogType: "InvestmentRate",
+        code: catalogCode,
+        name: `Rate catalog ${suffix}`,
+        currency: "VND",
+        isActive: true,
+      },
     });
     expect(catalogResponse.status(), await catalogResponse.text()).toBe(201);
     catalogId = (await catalogResponse.json()).id as number;
@@ -165,21 +187,34 @@ test("enters structured BOQ rows safely and applies an approved material rate to
       },
     );
     expect(importResponse.status(), await importResponse.text()).toBe(200);
-    expect((await api.post(`/api/material-rate-catalogs/${catalogId}/revisions/${revisionId}/approve`, {
-      headers,
-      data: { note: "Browser pricing workflow" },
-    })).status()).toBe(200);
+    expect(
+      (
+        await api.post(`/api/material-rate-catalogs/${catalogId}/revisions/${revisionId}/approve`, {
+          headers,
+          data: { note: "Browser pricing workflow" },
+        })
+      ).status(),
+    ).toBe(200);
 
     const boqCatalogResponse = await api.post("/api/material-rate-catalogs", {
       headers,
-      data: { catalogType: "Boq", code: boqCatalogCode, name: `BOQ catalog ${suffix}`, currency: "VND", isActive: true },
+      data: {
+        catalogType: "Boq",
+        code: boqCatalogCode,
+        name: `BOQ catalog ${suffix}`,
+        currency: "VND",
+        isActive: true,
+      },
     });
     expect(boqCatalogResponse.status(), await boqCatalogResponse.text()).toBe(201);
     boqCatalogId = (await boqCatalogResponse.json()).id as number;
-    const boqRevisionResponse = await api.post(`/api/material-rate-catalogs/${boqCatalogId}/revisions`, {
-      headers,
-      data: { effectiveFrom: "2036-01-01", effectiveTo: "2036-12-31" },
-    });
+    const boqRevisionResponse = await api.post(
+      `/api/material-rate-catalogs/${boqCatalogId}/revisions`,
+      {
+        headers,
+        data: { effectiveFrom: "2036-01-01", effectiveTo: "2036-12-31" },
+      },
+    );
     expect(boqRevisionResponse.status(), await boqRevisionResponse.text()).toBe(201);
     const boqRevisionId = (await boqRevisionResponse.json()).id as number;
     const boqCatalogCsv = [
@@ -193,15 +228,26 @@ test("enters structured BOQ rows safely and applies an approved material rate to
       {
         headers,
         multipart: {
-          file: { name: "boq-rate-data.csv", mimeType: "text/csv", buffer: Buffer.from(boqCatalogCsv) },
+          file: {
+            name: "boq-rate-data.csv",
+            mimeType: "text/csv",
+            buffer: Buffer.from(boqCatalogCsv),
+          },
         },
       },
     );
     expect(boqImportResponse.status(), await boqImportResponse.text()).toBe(200);
-    expect((await api.post(`/api/material-rate-catalogs/${boqCatalogId}/revisions/${boqRevisionId}/approve`, {
-      headers,
-      data: { note: "Browser BOQ catalog workflow" },
-    })).status()).toBe(200);
+    expect(
+      (
+        await api.post(
+          `/api/material-rate-catalogs/${boqCatalogId}/revisions/${boqRevisionId}/approve`,
+          {
+            headers,
+            data: { note: "Browser BOQ catalog workflow" },
+          },
+        )
+      ).status(),
+    ).toBe(200);
 
     const boqResponse = await api.post("/api/quotes", {
       headers,
@@ -209,9 +255,30 @@ test("enters structured BOQ rows safely and applies an approved material rate to
         opportunityId,
         method: "Boq",
         items: [
-          { itemCode: "OLD-1", name: "Existing row 1", unit: "m2", quantity: 1, unitPrice: 100, sortOrder: 1 },
-          { itemCode: "OLD-2", name: "Existing row 2", unit: "m2", quantity: 1, unitPrice: 200, sortOrder: 2 },
-          { itemCode: "OLD-3", name: "Existing row 3", unit: "m2", quantity: 1, unitPrice: 300, sortOrder: 3 },
+          {
+            itemCode: "OLD-1",
+            name: "Existing row 1",
+            unit: "m2",
+            quantity: 1,
+            unitPrice: 100,
+            sortOrder: 1,
+          },
+          {
+            itemCode: "OLD-2",
+            name: "Existing row 2",
+            unit: "m2",
+            quantity: 1,
+            unitPrice: 200,
+            sortOrder: 2,
+          },
+          {
+            itemCode: "OLD-3",
+            name: "Existing row 3",
+            unit: "m2",
+            quantity: 1,
+            unitPrice: 300,
+            sortOrder: 3,
+          },
         ],
         discountPercent: 0,
         vatPercent: 10,
@@ -230,58 +297,110 @@ test("enters structured BOQ rows safely and applies an approved material rate to
     await page.getByTestId("boq-bulk-entry-open").click();
     await expectBulkEntryDialogResponsive(page);
     await expect(page.getByTestId("boq-bulk-entry-dialog")).toContainText("Khối lượng");
-    await expect(page.getByTestId("boq-bulk-entry-dialog")).not.toContainText("QUOTES.BOQ.QUANTITY");
+    await expect(page.getByTestId("boq-bulk-entry-dialog")).not.toContainText(
+      "QUOTES.BOQ.QUANTITY",
+    );
     await expect(page.getByTestId("boq-bulk-entry-dialog")).toContainText(/đúng cột/i);
     await expect(page.getByTestId("boq-bulk-confirm")).toBeDisabled();
-    await fillBulkBoqRow(page, 0, { code: "BOQ-01", name: "Bê tông móng M300", unit: "m3", quantity: "25", unitPrice: "1.450.000" });
+    await fillBulkBoqRow(page, 0, {
+      code: "BOQ-01",
+      name: "Bê tông móng M300",
+      unit: "m3",
+      quantity: "25",
+      unitPrice: "1.450.000",
+    });
     await page.getByTestId("boq-bulk-add-row").click();
-    await fillBulkBoqRow(page, 1, { code: "BOQ-02", name: "Sơn nội thất", unit: "m2", quantity: "0", unitPrice: "85.000,50" });
+    await fillBulkBoqRow(page, 1, {
+      code: "BOQ-02",
+      name: "Sơn nội thất",
+      unit: "m2",
+      quantity: "0",
+      unitPrice: "85.000,50",
+    });
     await expect(page.getByTestId("boq-bulk-error")).toBeVisible();
     await expect(page.getByTestId("boq-bulk-confirm")).toBeDisabled();
     await page.getByTestId("boq-bulk-quantity-1").fill("1234.56");
     await page.getByTestId("boq-bulk-add-row").click();
-    await fillBulkBoqRow(page, 2, { code: maxLengthItemCode, name: "Mã và đơn vị đúng giới hạn", unit: "u".repeat(30), quantity: "1", unitPrice: "1" });
+    await fillBulkBoqRow(page, 2, {
+      code: maxLengthItemCode,
+      name: "Mã và đơn vị đúng giới hạn",
+      unit: "u".repeat(30),
+      quantity: "1",
+      unitPrice: "1",
+    });
     await expect(page.getByTestId("boq-bulk-confirm")).toBeEnabled();
     await page.getByTestId("boq-bulk-confirm").click();
 
-    const updateResponsePromise = page.waitForResponse((response) =>
-      new URL(response.url()).pathname === `/api/quotes/${boqQuoteId}` && response.request().method() === "PUT",
+    const updateResponsePromise = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname === `/api/quotes/${boqQuoteId}` &&
+        response.request().method() === "PUT",
     );
     await page.getByTestId("quote-save").click();
     const updateResponse = await updateResponsePromise;
     expect(updateResponse.status(), await updateResponse.text()).toBe(200);
     const updatedQuote = await updateResponse.json();
-    expect(updatedQuote.items).toEqual(expect.arrayContaining([
-      expect.objectContaining({ itemCode: "OLD-1", sortOrder: 1 }),
-      expect.objectContaining({ itemCode: "OLD-3", sortOrder: 2 }),
-      expect.objectContaining({ itemCode: "BOQ-01", quantity: "25", unitPrice: "1450000", sortOrder: 3 }),
-      expect.objectContaining({ itemCode: "BOQ-02", quantity: "1234.56", unitPrice: "85000.5", sortOrder: 4 }),
-      expect.objectContaining({ itemCode: maxLengthItemCode, unit: "u".repeat(30), sortOrder: 5 }),
-    ]));
+    expect(updatedQuote.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ itemCode: "OLD-1", sortOrder: 1 }),
+        expect.objectContaining({ itemCode: "OLD-3", sortOrder: 2 }),
+        expect.objectContaining({
+          itemCode: "BOQ-01",
+          quantity: "25",
+          unitPrice: "1450000",
+          sortOrder: 3,
+        }),
+        expect.objectContaining({
+          itemCode: "BOQ-02",
+          quantity: "1234.56",
+          unitPrice: "85000.5",
+          sortOrder: 4,
+        }),
+        expect.objectContaining({
+          itemCode: maxLengthItemCode,
+          unit: "u".repeat(30),
+          sortOrder: 5,
+        }),
+      ]),
+    );
 
-    await page.goto(`${baseURL}/admin/quotes?create=1&opportunityId=${opportunityId}`, { waitUntil: "networkidle" });
+    await page.goto(`${baseURL}/admin/quotes?create=1&opportunityId=${opportunityId}`, {
+      waitUntil: "networkidle",
+    });
     await page.getByTestId("quote-method").click();
     await page.getByRole("option", { name: /Bảng khối lượng/i }).click();
     await page.getByTestId("quote-create-boq-bulk-entry").click();
-    await fillBulkBoqRow(page, 0, { code: "BOQ-MANUAL", name: "Dòng BOQ thủ công", unit: "m2", quantity: "1.0050", unitPrice: "1,00" });
+    await fillBulkBoqRow(page, 0, {
+      code: "BOQ-MANUAL",
+      name: "Dòng BOQ thủ công",
+      unit: "m2",
+      quantity: "1.0050",
+      unitPrice: "1,00",
+    });
     await page.getByTestId("boq-bulk-confirm").click();
-    const manualCreateResponsePromise = page.waitForResponse((response) =>
-      new URL(response.url()).pathname === "/api/quotes" && response.request().method() === "POST",
+    const manualCreateResponsePromise = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname === "/api/quotes" &&
+        response.request().method() === "POST",
     );
     await page.getByTestId("quote-create-save").click();
     const manualCreateResponse = await manualCreateResponsePromise;
     expect(manualCreateResponse.status(), await manualCreateResponse.text()).toBe(201);
     const manualBoqQuote = await manualCreateResponse.json();
     manualBoqQuoteId = manualBoqQuote.id as number;
-    expect(manualBoqQuote).toEqual(expect.objectContaining({
-      materialRateCatalogId: null,
-      pricingEffectiveDate: null,
-      rateSource: "Override",
-      subtotal: 1.01,
-      grandTotal: 1.09,
-    }));
+    expect(manualBoqQuote).toEqual(
+      expect.objectContaining({
+        materialRateCatalogId: null,
+        pricingEffectiveDate: null,
+        rateSource: "Override",
+        subtotal: 1.01,
+        grandTotal: 1.09,
+      }),
+    );
 
-    await page.goto(`${baseURL}/admin/quotes?create=1&opportunityId=${opportunityId}`, { waitUntil: "networkidle" });
+    await page.goto(`${baseURL}/admin/quotes?create=1&opportunityId=${opportunityId}`, {
+      waitUntil: "networkidle",
+    });
     await page.getByTestId("quote-method").click();
     await page.getByRole("option", { name: /Bảng khối lượng/i }).click();
     await page.getByTestId("quote-boq-catalog-date").fill("2036-06-15");
@@ -293,7 +412,13 @@ test("enters structured BOQ rows safely and applies an approved material rate to
     await expect(page.getByTestId("quote-create-boq-name-0")).toHaveValue("Hạng mục từ danh mục");
     await page.getByTestId("quote-create-boq-name-0").fill("Hạng mục danh mục đã chỉnh sửa");
     await page.getByTestId("quote-create-boq-bulk-entry").click();
-    await fillBulkBoqRow(page, 0, { code: "BOQ-NEW", name: "Dòng tạo mới", unit: "m2", quantity: "2", unitPrice: "500.000" });
+    await fillBulkBoqRow(page, 0, {
+      code: "BOQ-NEW",
+      name: "Dòng tạo mới",
+      unit: "m2",
+      quantity: "2",
+      unitPrice: "500.000",
+    });
     await page.getByTestId("boq-bulk-confirm").click();
     await expect(page.getByTestId("quote-create-boq-name-1")).toHaveValue("Kiểm tra đơn giá biên");
     await expect(page.getByTestId("quote-create-boq-name-2")).toHaveValue("Dòng tạo mới");
@@ -303,7 +428,9 @@ test("enters structured BOQ rows safely and applies an approved material rate to
     await page.getByTestId("quote-method").click();
     await page.getByRole("option", { name: /Suất đầu tư/i }).click();
     await expect(page.getByTestId("quote-method")).toContainText(/Bảng khối lượng/i);
-    await expect(page.getByTestId("quote-create-boq-name-0")).toHaveValue("Hạng mục danh mục đã chỉnh sửa");
+    await expect(page.getByTestId("quote-create-boq-name-0")).toHaveValue(
+      "Hạng mục danh mục đã chỉnh sửa",
+    );
     page.once("dialog", async (dialog) => {
       expect(dialog.message()).toContain("thay thế toàn bộ dòng BOQ");
       await dialog.accept();
@@ -316,40 +443,53 @@ test("enters structured BOQ rows safely and applies an approved material rate to
     await page.getByTestId("quote-create-boq-name-0").fill("Hạng mục danh mục sau thay thế");
     await page.getByTestId("quote-create-boq-price-0").fill("");
     await page.getByTestId("quote-create-boq-price-0").pressSequentially("250000.25");
-    const catalogBoqCreateResponsePromise = page.waitForResponse((response) =>
-      new URL(response.url()).pathname === "/api/quotes" && response.request().method() === "POST",
+    const catalogBoqCreateResponsePromise = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname === "/api/quotes" &&
+        response.request().method() === "POST",
     );
     await page.getByTestId("quote-create-save").click();
     const catalogBoqCreateResponse = await catalogBoqCreateResponsePromise;
     expect(catalogBoqCreateResponse.status(), await catalogBoqCreateResponse.text()).toBe(201);
-    expect(catalogBoqCreateResponse.request().postDataJSON().items[1]).toEqual(expect.objectContaining({
-      quantity: "0.0001",
-      unitPrice: "99999999999999.99",
-    }));
+    expect(catalogBoqCreateResponse.request().postDataJSON().items[1]).toEqual(
+      expect.objectContaining({
+        quantity: "0.0001",
+        unitPrice: "99999999999999.99",
+      }),
+    );
     const catalogBoqQuote = await catalogBoqCreateResponse.json();
     catalogBoqQuoteId = catalogBoqQuote.id as number;
-    expect(catalogBoqQuote).toEqual(expect.objectContaining({
-      materialRateCatalogId: boqCatalogId,
-      materialRateRevisionId: boqRevisionId,
-      pricingEffectiveDate: "2036-06-15",
-      rateSource: "CatalogReference",
-      rateOverrideReason: null,
-      subtotal: 10_000_750_000.75,
-    }));
-    expect(catalogBoqQuote.items[0]).toEqual(expect.objectContaining({
-      unitPrice: "250000.25",
-      amount: "750000.75",
-    }));
-    expect(catalogBoqQuote.items[1]).toEqual(expect.objectContaining({
-      quantity: "0.0001",
-      unitPrice: "99999999999999.99",
-      amount: "10000000000",
-    }));
+    expect(catalogBoqQuote).toEqual(
+      expect.objectContaining({
+        materialRateCatalogId: boqCatalogId,
+        materialRateRevisionId: boqRevisionId,
+        pricingEffectiveDate: "2036-06-15",
+        rateSource: "CatalogReference",
+        rateOverrideReason: null,
+        subtotal: 10_000_750_000.75,
+      }),
+    );
+    expect(catalogBoqQuote.items[0]).toEqual(
+      expect.objectContaining({
+        unitPrice: "250000.25",
+        amount: "750000.75",
+      }),
+    );
+    expect(catalogBoqQuote.items[1]).toEqual(
+      expect.objectContaining({
+        quantity: "0.0001",
+        unitPrice: "99999999999999.99",
+        amount: "10000000000",
+      }),
+    );
     await page.goto(`${baseURL}/admin/quotes/${catalogBoqQuoteId}`, { waitUntil: "networkidle" });
     await expect(page.getByText(boqCatalogCode)).toBeVisible();
-    await expect(page.getByRole("cell", { name: "Hạng mục danh mục sau thay thế", exact: true })).toBeVisible();
-    const exportResponsePromise = page.waitForResponse((response) =>
-      new URL(response.url()).pathname === `/api/quotes/${catalogBoqQuoteId}/export.xlsx`,
+    await expect(
+      page.getByRole("cell", { name: "Hạng mục danh mục sau thay thế", exact: true }),
+    ).toBeVisible();
+    const exportResponsePromise = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname === `/api/quotes/${catalogBoqQuoteId}/export.xlsx`,
     );
     const downloadPromise = page.waitForEvent("download");
     await page.getByTestId("quote-download-excel").click();
@@ -360,25 +500,39 @@ test("enters structured BOQ rows safely and applies an approved material rate to
     );
     expect(download.suggestedFilename()).toBe(`${catalogBoqQuote.code}.xlsx`);
     await page.getByTestId("quote-edit").click();
-    const exactQuoteRow = page.locator("tbody tr").filter({ has: page.locator('input[value="Kiểm tra đơn giá biên"]') });
+    const exactQuoteRow = page
+      .locator("tbody tr")
+      .filter({ has: page.locator('input[value="Kiểm tra đơn giá biên"]') });
     await expect(exactQuoteRow.locator('input[type="number"]')).toHaveValue("99999999999999.99");
     await exactQuoteRow.locator("input").nth(1).fill("Kiểm tra đơn giá biên sau tải lại");
-    const exactQuoteUpdatePromise = page.waitForResponse((response) =>
-      new URL(response.url()).pathname === `/api/quotes/${catalogBoqQuoteId}` && response.request().method() === "PUT",
+    const exactQuoteUpdatePromise = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname === `/api/quotes/${catalogBoqQuoteId}` &&
+        response.request().method() === "PUT",
     );
     await page.getByTestId("quote-save").click();
     const exactQuoteUpdateResponse = await exactQuoteUpdatePromise;
     expect(exactQuoteUpdateResponse.status(), await exactQuoteUpdateResponse.text()).toBe(200);
-    expect(exactQuoteUpdateResponse.request().postDataJSON().items[1]).toEqual(expect.objectContaining({
-      unitPrice: "99999999999999.99",
-    }));
+    expect(exactQuoteUpdateResponse.request().postDataJSON().items[1]).toEqual(
+      expect.objectContaining({
+        unitPrice: "99999999999999.99",
+      }),
+    );
     expect(await exactQuoteUpdateResponse.text()).toContain('"unitPrice":"99999999999999.99"');
 
-    await page.goto(`${baseURL}/admin/quotes?create=1&opportunityId=${opportunityId}`, { waitUntil: "networkidle" });
+    await page.goto(`${baseURL}/admin/quotes?create=1&opportunityId=${opportunityId}`, {
+      waitUntil: "networkidle",
+    });
     await page.getByTestId("quote-method").click();
     await page.getByRole("option", { name: /Bảng khối lượng/i }).click();
     await page.getByTestId("quote-create-boq-bulk-entry").click();
-    await fillBulkBoqRow(page, 0, { code: "BOQ-SWITCH", name: "Dòng kiểm thử chuyển phương thức", unit: "m2", quantity: "1", unitPrice: "100.000" });
+    await fillBulkBoqRow(page, 0, {
+      code: "BOQ-SWITCH",
+      name: "Dòng kiểm thử chuyển phương thức",
+      unit: "m2",
+      quantity: "1",
+      unitPrice: "100.000",
+    });
     await page.getByTestId("boq-bulk-confirm").click();
     await page.getByTestId("quote-discount").fill("7");
     await page.getByTestId("quote-vat").fill("9");
@@ -389,37 +543,46 @@ test("enters structured BOQ rows safely and applies an approved material rate to
     await page.getByTestId("quote-switch-unit-cost").click();
     await expect(page.getByTestId("quote-discount")).toHaveValue("7");
     await expect(page.getByTestId("quote-vat")).toHaveValue("9");
-    await expect(page.getByText(/Chọn danh mục đang hoạt động và ngày có phiên bản Đã duyệt/i)).toBeVisible();
+    await expect(
+      page.getByText(/Chọn danh mục đang hoạt động và ngày có phiên bản Đã duyệt/i),
+    ).toBeVisible();
     await page.getByTestId("quote-rate-date").fill("2036-06-15");
-    const effectiveResponsePromise = page.waitForResponse((response) =>
-      new URL(response.url()).pathname === `/api/material-rate-catalogs/${catalogId}/effective`
-      && new URL(response.url()).searchParams.get("onDate") === "2036-06-15",
+    const effectiveResponsePromise = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname === `/api/material-rate-catalogs/${catalogId}/effective` &&
+        new URL(response.url()).searchParams.get("onDate") === "2036-06-15",
     );
     await page.getByTestId("quote-rate-catalog").click();
     await page.getByRole("option", { name: new RegExp(catalogCode) }).click();
     expect((await effectiveResponsePromise).status()).toBe(200);
     await expect(page.getByTestId("quote-applied-rate")).toHaveValue("200000.01");
-    await page.getByTestId("quote-applied-rate").press(process.platform === "darwin" ? "Meta+A" : "Control+A");
+    await page
+      .getByTestId("quote-applied-rate")
+      .press(process.platform === "darwin" ? "Meta+A" : "Control+A");
     await page.getByTestId("quote-applied-rate").pressSequentially("200000.02");
     await expect(page.getByTestId("quote-applied-rate")).toHaveValue("200000.02");
     await page.getByTestId("quote-applied-rate").fill("200000.01");
     await page.getByTestId("quote-area").fill("100");
 
-    const createResponsePromise = page.waitForResponse((response) =>
-      new URL(response.url()).pathname === "/api/quotes" && response.request().method() === "POST",
+    const createResponsePromise = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname === "/api/quotes" &&
+        response.request().method() === "POST",
     );
     await page.getByTestId("quote-create-save").click();
     const createResponse = await createResponsePromise;
     expect(createResponse.status(), await createResponse.text()).toBe(201);
     const unitCostQuote = await createResponse.json();
     unitCostQuoteId = unitCostQuote.id as number;
-    expect(unitCostQuote).toEqual(expect.objectContaining({
-      materialRateCatalogId: catalogId,
-      catalogUnitPricePerSqm: 200_000.01,
-      unitPricePerSqm: 200_000.01,
-      subtotal: 20_000_001,
-      rateSource: "Catalog",
-    }));
+    expect(unitCostQuote).toEqual(
+      expect.objectContaining({
+        materialRateCatalogId: catalogId,
+        catalogUnitPricePerSqm: 200_000.01,
+        unitPricePerSqm: 200_000.01,
+        subtotal: 20_000_001,
+        rateSource: "Catalog",
+      }),
+    );
   } finally {
     if (unitCostQuoteId) await api.delete(`/api/quotes/${unitCostQuoteId}`, { headers });
     if (catalogBoqQuoteId) await api.delete(`/api/quotes/${catalogBoqQuoteId}`, { headers });
@@ -430,13 +593,25 @@ test("enters structured BOQ rows safely and applies an approved material rate to
     if (catalogId) {
       await api.put(`/api/material-rate-catalogs/${catalogId}`, {
         headers,
-        data: { catalogType: "InvestmentRate", code: catalogCode, name: `Rate catalog ${suffix}`, currency: "VND", isActive: false },
+        data: {
+          catalogType: "InvestmentRate",
+          code: catalogCode,
+          name: `Rate catalog ${suffix}`,
+          currency: "VND",
+          isActive: false,
+        },
       });
     }
     if (boqCatalogId) {
       await api.put(`/api/material-rate-catalogs/${boqCatalogId}`, {
         headers,
-        data: { catalogType: "Boq", code: boqCatalogCode, name: `BOQ catalog ${suffix}`, currency: "VND", isActive: false },
+        data: {
+          catalogType: "Boq",
+          code: boqCatalogCode,
+          name: `BOQ catalog ${suffix}`,
+          currency: "VND",
+          isActive: false,
+        },
       });
     }
   }
@@ -495,24 +670,30 @@ test("creates a BOQ rate catalog and applies it to a persisted Quote", async ({
     await page.addInitScript(() => localStorage.setItem("nicon_lang", "en"));
     await page.goto(`${baseURL}/admin/material-rates/boq`, { waitUntil: "networkidle" });
 
-    await page.locator("header").getByRole("button", { name: /New catalog/i }).click();
+    await page
+      .locator("header")
+      .getByRole("button", { name: /New catalog/i })
+      .click();
     await page.getByTestId("material-rates-catalog-code").fill(catalogCode);
     await page.getByTestId("material-rates-catalog-name").fill(catalogName);
-    const createCatalogPromise = page.waitForResponse((response) =>
-      new URL(response.url()).pathname === "/api/material-rate-catalogs"
-      && response.request().method() === "POST",
+    const createCatalogPromise = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname === "/api/material-rate-catalogs" &&
+        response.request().method() === "POST",
     );
     await page.getByTestId("material-rates-catalog-save").click();
     const createCatalogResponse = await createCatalogPromise;
     expect(createCatalogResponse.status(), await createCatalogResponse.text()).toBe(201);
-    catalogId = ((await createCatalogResponse.json()).id as number);
+    catalogId = (await createCatalogResponse.json()).id as number;
 
     const searchInput = page.getByPlaceholder(/Search catalog code or name/i);
     const searchResponse = page.waitForResponse((response) => {
       const url = new URL(response.url());
-      return url.pathname === "/api/material-rate-catalogs"
-        && url.searchParams.get("catalogType") === "Boq"
-        && url.searchParams.get("search") === catalogName;
+      return (
+        url.pathname === "/api/material-rate-catalogs" &&
+        url.searchParams.get("catalogType") === "Boq" &&
+        url.searchParams.get("search") === catalogName
+      );
     });
     await searchInput.fill(catalogName);
     await searchResponse;
@@ -521,14 +702,15 @@ test("creates a BOQ rate catalog and applies it to a persisted Quote", async ({
     await page.getByTestId("material-rates-new-revision").click();
     await page.getByTestId("material-rates-effective-from").fill("2041-01-01");
     await page.getByTestId("material-rates-effective-to").fill("2041-12-31");
-    const createRevisionPromise = page.waitForResponse((response) =>
-      new URL(response.url()).pathname === `/api/material-rate-catalogs/${catalogId}/revisions`
-      && response.request().method() === "POST",
+    const createRevisionPromise = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname === `/api/material-rate-catalogs/${catalogId}/revisions` &&
+        response.request().method() === "POST",
     );
     await page.getByTestId("material-rates-revision-save").click();
     const createRevisionResponse = await createRevisionPromise;
     expect(createRevisionResponse.status(), await createRevisionResponse.text()).toBe(201);
-    revisionId = ((await createRevisionResponse.json()).id as number);
+    revisionId = (await createRevisionResponse.json()).id as number;
 
     const addBoqLine = async (code: string, name: string, quantity: string, unitPrice: string) => {
       await page.getByTestId("material-rates-line-add").click();
@@ -537,9 +719,11 @@ test("creates a BOQ rate catalog and applies it to a persisted Quote", async ({
       await page.getByTestId("material-rates-line-unit").fill("m2");
       await page.getByTestId("material-rates-line-quantity").fill(quantity);
       await page.getByTestId("material-rates-line-price").fill(unitPrice);
-      const responsePromise = page.waitForResponse((response) =>
-        new URL(response.url()).pathname === `/api/material-rate-catalogs/${catalogId}/revisions/${revisionId}/lines`
-        && response.request().method() === "POST",
+      const responsePromise = page.waitForResponse(
+        (response) =>
+          new URL(response.url()).pathname ===
+            `/api/material-rate-catalogs/${catalogId}/revisions/${revisionId}/lines` &&
+          response.request().method() === "POST",
       );
       await page.getByTestId("material-rates-line-save").click();
       const response = await responsePromise;
@@ -550,15 +734,19 @@ test("creates a BOQ rate catalog and applies it to a persisted Quote", async ({
     await expect(page.getByText("850 VND", { exact: true }).last()).toBeVisible();
 
     await page.getByTestId("material-rates-approve").click();
-    const approvePromise = page.waitForResponse((response) =>
-      new URL(response.url()).pathname === `/api/material-rate-catalogs/${catalogId}/revisions/${revisionId}/approve`
-      && response.request().method() === "POST",
+    const approvePromise = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname ===
+          `/api/material-rate-catalogs/${catalogId}/revisions/${revisionId}/approve` &&
+        response.request().method() === "POST",
     );
     await page.getByTestId("material-rates-decision-confirm").click();
     expect((await approvePromise).status()).toBe(200);
     await expect(page.getByTestId("material-rates-line-add")).toHaveCount(0);
 
-    await page.goto(`${baseURL}/admin/quotes?create=1&opportunityId=${opportunityId}`, { waitUntil: "networkidle" });
+    await page.goto(`${baseURL}/admin/quotes?create=1&opportunityId=${opportunityId}`, {
+      waitUntil: "networkidle",
+    });
     await page.getByTestId("quote-method").click();
     await page.getByRole("option", { name: /BOQ/i }).click();
     await page.getByTestId("quote-boq-catalog-date").fill("2041-06-15");
@@ -572,26 +760,39 @@ test("creates a BOQ rate catalog and applies it to a persisted Quote", async ({
     await page.getByTestId("quote-discount").fill("0");
     await page.getByTestId("quote-vat").fill("10");
 
-    const createQuotePromise = page.waitForResponse((response) =>
-      new URL(response.url()).pathname === "/api/quotes"
-      && response.request().method() === "POST",
+    const createQuotePromise = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname === "/api/quotes" &&
+        response.request().method() === "POST",
     );
     await page.getByTestId("quote-create-save").click();
     const createQuoteResponse = await createQuotePromise;
     expect(createQuoteResponse.status(), await createQuoteResponse.text()).toBe(201);
     const quote = await createQuoteResponse.json();
     quoteId = quote.id as number;
-    expect(quote).toEqual(expect.objectContaining({
-      materialRateCatalogId: catalogId,
-      materialRateRevisionId: revisionId,
-      pricingEffectiveDate: "2041-06-15",
-      rateSource: "CatalogReference",
-      subtotal: 850,
-      grandTotal: 935,
-    }));
+    expect(quote).toEqual(
+      expect.objectContaining({
+        materialRateCatalogId: catalogId,
+        materialRateRevisionId: revisionId,
+        pricingEffectiveDate: "2041-06-15",
+        rateSource: "CatalogReference",
+        subtotal: 850,
+        grandTotal: 935,
+      }),
+    );
     expect(quote.items).toEqual([
-      expect.objectContaining({ itemCode: "BOQ-FOUNDATION", quantity: "2.5", unitPrice: "100", amount: "250" }),
-      expect.objectContaining({ itemCode: "BOQ-FINISH", quantity: "3", unitPrice: "200", amount: "600" }),
+      expect.objectContaining({
+        itemCode: "BOQ-FOUNDATION",
+        quantity: "2.5",
+        unitPrice: "100",
+        amount: "250",
+      }),
+      expect.objectContaining({
+        itemCode: "BOQ-FINISH",
+        quantity: "3",
+        unitPrice: "200",
+        amount: "600",
+      }),
     ]);
 
     await page.goto(`${baseURL}/admin/quotes/${quoteId}`, { waitUntil: "networkidle" });
@@ -601,19 +802,26 @@ test("creates a BOQ rate catalog and applies it to a persisted Quote", async ({
     await expect(page.getByRole("cell", { name: "Finishing work", exact: true })).toBeVisible();
     const persistedResponse = await api.get(`/api/quotes/${quoteId}`, { headers });
     expect(persistedResponse.status(), await persistedResponse.text()).toBe(200);
-    expect(await persistedResponse.json()).toEqual(expect.objectContaining({
-      materialRateCatalogCode: catalogCode,
-      materialRateRevisionVersion: 1,
-      subtotal: 850,
-      grandTotal: 935,
-    }));
+    expect(await persistedResponse.json()).toEqual(
+      expect.objectContaining({
+        materialRateCatalogCode: catalogCode,
+        materialRateRevisionVersion: 1,
+        subtotal: 850,
+        grandTotal: 935,
+      }),
+    );
   } finally {
     if (quoteId) await hardDeleteBusinessRoot(api, headers, `/api/quotes/${quoteId}`);
-    if (opportunityId) await hardDeleteBusinessRoot(api, headers, `/api/opportunities/${opportunityId}`);
+    if (opportunityId)
+      await hardDeleteBusinessRoot(api, headers, `/api/opportunities/${opportunityId}`);
     if (customerId) await hardDeleteBusinessRoot(api, headers, `/api/customers/${customerId}`);
     if (catalogId) {
-      const deleteCatalogResponse = await api.delete(`/api/material-rate-catalogs/${catalogId}`, { headers });
-      expect([204, 404], await deleteCatalogResponse.text()).toContain(deleteCatalogResponse.status());
+      const deleteCatalogResponse = await api.delete(`/api/material-rate-catalogs/${catalogId}`, {
+        headers,
+      });
+      expect([204, 404], await deleteCatalogResponse.text()).toContain(
+        deleteCatalogResponse.status(),
+      );
     }
   }
 });

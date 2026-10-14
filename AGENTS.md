@@ -23,6 +23,10 @@ When repository instructions conflict, use the more specific and recent instruct
 - Preserve existing behavior and public contracts unless the task requires a change.
 - Reuse existing services, validators, components, and patterns. Search first, especially in 'src/lib/', 'Services/', and shared frontend utilities.
 - Do not refactor unrelated code, add dependencies without justification, or invent requirements, APIs, translations, or business rules.
+- Keep frontend files formatted with the repository Prettier configuration.
+  Do not compress JSX, TypeScript, CSS, JSON, or configuration into long
+  single lines. Run `npm run format` after frontend edits and
+  `npm run format:check` before committing.
 - Record meaningful trade-offs, assumptions, blocked checks, and residual risks.
 
 ## Task lifecycle
@@ -325,6 +329,7 @@ Frontend:
 
 ```bash
 cd nihomeweb
+npm run format:check
 npm run lint
 npm run build
 ```

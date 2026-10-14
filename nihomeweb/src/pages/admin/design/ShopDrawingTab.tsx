@@ -1,6 +1,20 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { CheckCircle2, ChevronDown, ChevronUp, FileUp, History, Loader2, Pencil, Plus, Send, ShieldCheck, Trash2, Undo2, XCircle } from "lucide-react";
+import {
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  FileUp,
+  History,
+  Loader2,
+  Pencil,
+  Plus,
+  Send,
+  ShieldCheck,
+  Trash2,
+  Undo2,
+  XCircle,
+} from "lucide-react";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
 import { Badge } from "@/components/ui/badge";
@@ -237,7 +251,11 @@ export const ShopDrawingTab = ({ project }: Props) => {
       toast({ title: t("shopDrawing.fileUploaded") });
       await fetchRows();
     } catch (err) {
-      toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
+      toast({
+        title: t("common.error"),
+        description: extractApiError(err),
+        variant: "destructive",
+      });
     } finally {
       setUploadingId(null);
     }
@@ -336,11 +354,20 @@ export const ShopDrawingTab = ({ project }: Props) => {
     let active = true;
     setLoadingDeleteImpact(true);
     setDeleteError(null);
-    void adminApi.getShopDrawingDeletionImpact(deleting.id)
-      .then(({ data }) => { if (active) setDeleteImpact(data); })
-      .catch((err) => { if (active) setDeleteError(extractApiError(err)); })
-      .finally(() => { if (active) setLoadingDeleteImpact(false); });
-    return () => { active = false; };
+    void adminApi
+      .getShopDrawingDeletionImpact(deleting.id)
+      .then(({ data }) => {
+        if (active) setDeleteImpact(data);
+      })
+      .catch((err) => {
+        if (active) setDeleteError(extractApiError(err));
+      })
+      .finally(() => {
+        if (active) setLoadingDeleteImpact(false);
+      });
+    return () => {
+      active = false;
+    };
   }, [deleting]);
 
   const confirmDelete = async (confirmation: string) => {
@@ -413,18 +440,27 @@ export const ShopDrawingTab = ({ project }: Props) => {
 
       {/* Status stat pills */}
       <section className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
-        <StatPill label={t("shopDrawing.stats.total")} value={rows.length} icon={<ShieldCheck className="h-3.5 w-3.5" />} tone="slate" />
+        <StatPill
+          label={t("shopDrawing.stats.total")}
+          value={rows.length}
+          icon={<ShieldCheck className="h-3.5 w-3.5" />}
+          tone="slate"
+        />
         {SHOP_DRAWING_STATUSES.filter((s) => s !== "Rejected").map((s) => (
           <StatPill
             key={s}
             label={t(STATUS_STAT_KEY[s])}
             value={statusCounts[s] ?? 0}
             tone={
-              s === "Drafting" ? "sky"
-                : s === "InReview" ? "amber"
-                : s === "Approved" ? "emerald"
-                : s === "PendingIfc" ? "indigo"
-                : "emerald"
+              s === "Drafting"
+                ? "sky"
+                : s === "InReview"
+                  ? "amber"
+                  : s === "Approved"
+                    ? "emerald"
+                    : s === "PendingIfc"
+                      ? "indigo"
+                      : "emerald"
             }
           />
         ))}
@@ -441,25 +477,35 @@ export const ShopDrawingTab = ({ project }: Props) => {
             data-testid="shop-drawing-search"
           />
         </div>
-        <Select value={filterDiscipline || "__all__"} onValueChange={(v) => setFilterDiscipline(v === "__all__" ? "" : v)}>
+        <Select
+          value={filterDiscipline || "__all__"}
+          onValueChange={(v) => setFilterDiscipline(v === "__all__" ? "" : v)}
+        >
           <SelectTrigger className="h-9 w-[170px]" data-testid="shop-drawing-filter-discipline">
             <SelectValue placeholder={t("shopDrawing.filter.allDisciplines")} />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="__all__">{t("shopDrawing.filter.allDisciplines")}</SelectItem>
             {disciplineOptions.map((o) => (
-              <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+              <SelectItem key={o.value} value={o.value}>
+                {o.label}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
-        <Select value={filterStatus || "__all__"} onValueChange={(v) => setFilterStatus(v === "__all__" ? "" : v)}>
+        <Select
+          value={filterStatus || "__all__"}
+          onValueChange={(v) => setFilterStatus(v === "__all__" ? "" : v)}
+        >
           <SelectTrigger className="h-9 w-[170px]" data-testid="shop-drawing-filter-status">
             <SelectValue placeholder={t("shopDrawing.filter.allStatuses")} />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="__all__">{t("shopDrawing.filter.allStatuses")}</SelectItem>
             {SHOP_DRAWING_STATUSES.map((s) => (
-              <SelectItem key={s} value={s}>{t(`shopDrawing.status.${s}`)}</SelectItem>
+              <SelectItem key={s} value={s}>
+                {t(`shopDrawing.status.${s}`)}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -474,7 +520,10 @@ export const ShopDrawingTab = ({ project }: Props) => {
       </section>
 
       {rows.length === 0 ? (
-        <div className="rounded-md border border-dashed p-10 text-center text-sm text-muted-foreground" data-testid="shop-drawing-empty">
+        <div
+          className="rounded-md border border-dashed p-10 text-center text-sm text-muted-foreground"
+          data-testid="shop-drawing-empty"
+        >
           {t("shopDrawing.empty")}
         </div>
       ) : (
@@ -578,9 +627,7 @@ export const ShopDrawingTab = ({ project }: Props) => {
                 <SearchableSelect
                   className="mt-1"
                   value={form.ownerUserId != null ? String(form.ownerUserId) : ""}
-                  onChange={(v) =>
-                    setForm((f) => ({ ...f, ownerUserId: v ? Number(v) : null }))
-                  }
+                  onChange={(v) => setForm((f) => ({ ...f, ownerUserId: v ? Number(v) : null }))}
                   options={[{ value: "", label: t("shopDrawing.form.ownerNone") }, ...userOptions]}
                   placeholder={t("shopDrawing.form.ownerNone")}
                 />
@@ -595,12 +642,20 @@ export const ShopDrawingTab = ({ project }: Props) => {
               />
             </div>
           </div>
-          {formError ? <p className="text-sm text-rose-600" data-testid="shop-drawing-form-error">{formError}</p> : null}
+          {formError ? (
+            <p className="text-sm text-rose-600" data-testid="shop-drawing-form-error">
+              {formError}
+            </p>
+          ) : null}
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>
               {t("common.cancel")}
             </Button>
-            <Button onClick={() => void submitForm()} disabled={saving} data-testid="shop-drawing-form-save">
+            <Button
+              onClick={() => void submitForm()}
+              disabled={saving}
+              data-testid="shop-drawing-form-save"
+            >
               {t("common.save")}
             </Button>
           </DialogFooter>
@@ -613,9 +668,14 @@ export const ShopDrawingTab = ({ project }: Props) => {
         loading={loadingDeleteImpact}
         deleting={busyDelete}
         error={deleteError}
-        onOpenChange={(open) => { if (!open && !busyDelete) setDeleting(null); }}
+        onOpenChange={(open) => {
+          if (!open && !busyDelete) setDeleting(null);
+        }}
         onConfirm={confirmDelete}
-        onCompleted={async () => { setDeleting(null); await fetchRows(); }}
+        onCompleted={async () => {
+          setDeleting(null);
+          await fetchRows();
+        }}
       />
     </div>
   );
@@ -697,14 +757,21 @@ const DisciplineSection = ({
   const [collapsed, setCollapsed] = useState(false);
   const total = Array.from(itemMap.values()).reduce((n, arr) => n + arr.length, 0);
   return (
-    <section className="rounded-lg border border-slate-200 bg-white shadow-sm" data-testid={`shop-drawing-discipline-${disciplineCode}`}>
+    <section
+      className="rounded-lg border border-slate-200 bg-white shadow-sm"
+      data-testid={`shop-drawing-discipline-${disciplineCode}`}
+    >
       <header className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
         <button
           type="button"
           className="flex items-center gap-1.5 text-left"
           onClick={() => setCollapsed((v) => !v)}
         >
-          {collapsed ? <ChevronDown className="h-4 w-4 text-slate-400" /> : <ChevronUp className="h-4 w-4 text-slate-400" />}
+          {collapsed ? (
+            <ChevronDown className="h-4 w-4 text-slate-400" />
+          ) : (
+            <ChevronUp className="h-4 w-4 text-slate-400" />
+          )}
           <p className="text-sm font-semibold text-slate-800">{disciplineLabel}</p>
         </button>
         <span className="text-xs text-slate-500">{total}</span>
@@ -733,7 +800,9 @@ const DisciplineSection = ({
                       <div className="flex min-w-0 items-start gap-2">
                         <div className="min-w-0">
                           <p className="font-mono text-xs text-slate-500">{row.drawingCode}</p>
-                          <p className="mt-0.5 break-words text-sm font-medium text-slate-900">{row.title}</p>
+                          <p className="mt-0.5 break-words text-sm font-medium text-slate-900">
+                            {row.title}
+                          </p>
                           {row.ownerName ? (
                             <p className="mt-0.5 text-xs text-muted-foreground">{row.ownerName}</p>
                           ) : null}
@@ -744,7 +813,9 @@ const DisciplineSection = ({
                                 url={row.filePath}
                                 fileName={row.originalFileName}
                                 contentType={row.contentType}
-                                fetchFile={async () => (await adminApi.getShopDrawingContent(row.id)).data}
+                                fetchFile={async () =>
+                                  (await adminApi.getShopDrawingContent(row.id)).data
+                                }
                                 className="max-w-xs"
                               />
                               {canManage && isShopStage ? (
@@ -774,7 +845,9 @@ const DisciplineSection = ({
                         >
                           {t(`shopDrawing.status.${row.status}`)}
                         </Badge>
-                        <span className="text-[10px] text-muted-foreground">{formatDate(row.updatedAt, lang)}</span>
+                        <span className="text-[10px] text-muted-foreground">
+                          {formatDate(row.updatedAt, lang)}
+                        </span>
                         {canViewRevisions ? (
                           <Button
                             variant="ghost"
@@ -816,7 +889,17 @@ const DisciplineSection = ({
                         )}
                       </div>
                     ) : null}
-                    {!canDelete && canHardDelete && row.status === "Rejected" ? <Button size="sm" variant="ghost" className="mt-2 h-8 text-xs text-rose-700" onClick={() => onDelete(row)}><Trash2 className="mr-1 h-3.5 w-3.5" />{t("shopDrawing.action.delete")}</Button> : null}
+                    {!canDelete && canHardDelete && row.status === "Rejected" ? (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="mt-2 h-8 text-xs text-rose-700"
+                        onClick={() => onDelete(row)}
+                      >
+                        <Trash2 className="mr-1 h-3.5 w-3.5" />
+                        {t("shopDrawing.action.delete")}
+                      </Button>
+                    ) : null}
                   </li>
                 ))}
               </ul>
@@ -848,7 +931,11 @@ const FileUploadButton = ({
         disabled={busy}
         onClick={() => inputRef.current?.click()}
       >
-        {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileUp className="h-3.5 w-3.5" />}
+        {busy ? (
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        ) : (
+          <FileUp className="h-3.5 w-3.5" />
+        )}
         {label}
       </Button>
       <input
@@ -893,12 +980,24 @@ const RowActions = ({
     <>
       {s === "Drafting" && (
         <>
-          <Button size="sm" variant="outline" className={btn} onClick={onEdit} data-testid={`shop-drawing-edit-${row.id}`}>
+          <Button
+            size="sm"
+            variant="outline"
+            className={btn}
+            onClick={onEdit}
+            data-testid={`shop-drawing-edit-${row.id}`}
+          >
             <Pencil className="mr-1 h-3.5 w-3.5" />
             {t("common.edit")}
           </Button>
-          <Button size="sm" variant="secondary" className={btn} disabled={busy}
-            onClick={() => onTransition("InReview")} data-testid={`shop-drawing-send-${row.id}`}>
+          <Button
+            size="sm"
+            variant="secondary"
+            className={btn}
+            disabled={busy}
+            onClick={() => onTransition("InReview")}
+            data-testid={`shop-drawing-send-${row.id}`}
+          >
             <Send className="mr-1 h-3.5 w-3.5" />
             {t("shopDrawing.action.sendReview")}
           </Button>
@@ -911,19 +1010,34 @@ const RowActions = ({
             {t("common.edit")}
           </Button>
           {canApprove ? (
-            <Button size="sm" className={cn(btn, "bg-emerald-600 hover:bg-emerald-700")} disabled={busy}
-              onClick={() => onTransition("Approved")} data-testid={`shop-drawing-approve-${row.id}`}>
+            <Button
+              size="sm"
+              className={cn(btn, "bg-emerald-600 hover:bg-emerald-700")}
+              disabled={busy}
+              onClick={() => onTransition("Approved")}
+              data-testid={`shop-drawing-approve-${row.id}`}
+            >
               <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
               {t("shopDrawing.action.approve")}
             </Button>
           ) : null}
-          <Button size="sm" variant="ghost" className={btn} disabled={busy}
-            onClick={() => onTransition("Drafting")}>
+          <Button
+            size="sm"
+            variant="ghost"
+            className={btn}
+            disabled={busy}
+            onClick={() => onTransition("Drafting")}
+          >
             <Undo2 className="mr-1 h-3.5 w-3.5" />
             {t("shopDrawing.action.backToDraft")}
           </Button>
-          <Button size="sm" variant="ghost" className={cn(btn, "text-rose-700 hover:bg-rose-50")} disabled={busy}
-            onClick={() => onTransition("Rejected")}>
+          <Button
+            size="sm"
+            variant="ghost"
+            className={cn(btn, "text-rose-700 hover:bg-rose-50")}
+            disabled={busy}
+            onClick={() => onTransition("Rejected")}
+          >
             <XCircle className="mr-1 h-3.5 w-3.5" />
             {t("shopDrawing.action.reject")}
           </Button>
@@ -935,21 +1049,37 @@ const RowActions = ({
             <Pencil className="mr-1 h-3.5 w-3.5" />
             {t("common.edit")}
           </Button>
-          <Button size="sm" variant="secondary" className={btn} disabled={busy}
-            onClick={() => onTransition("PendingIfc")} data-testid={`shop-drawing-queue-${row.id}`}>
+          <Button
+            size="sm"
+            variant="secondary"
+            className={btn}
+            disabled={busy}
+            onClick={() => onTransition("PendingIfc")}
+            data-testid={`shop-drawing-queue-${row.id}`}
+          >
             {t("shopDrawing.action.queueIfc")}
           </Button>
         </>
       )}
       {s === "PendingIfc" && (
         <>
-          <Button size="sm" variant="ghost" className={btn} disabled={busy}
-            onClick={() => onTransition("Approved")}>
+          <Button
+            size="sm"
+            variant="ghost"
+            className={btn}
+            disabled={busy}
+            onClick={() => onTransition("Approved")}
+          >
             <Undo2 className="mr-1 h-3.5 w-3.5" />
             {t("shopDrawing.action.unqueueIfc")}
           </Button>
-          <Button size="sm" variant="ghost" className={cn(btn, "text-rose-700 hover:bg-rose-50")} disabled={busy}
-            onClick={() => onTransition("Rejected")}>
+          <Button
+            size="sm"
+            variant="ghost"
+            className={cn(btn, "text-rose-700 hover:bg-rose-50")}
+            disabled={busy}
+            onClick={() => onTransition("Rejected")}
+          >
             <XCircle className="mr-1 h-3.5 w-3.5" />
             {t("shopDrawing.action.reject")}
           </Button>
@@ -967,11 +1097,18 @@ const RowActions = ({
           {t("shopDrawing.status.Rejected")}
         </Badge>
       )}
-      {canHardDelete && s === "Rejected" ? <Button size="sm" variant="ghost" className={cn(btn, "text-rose-700 hover:bg-rose-50 hover:text-rose-800")}
-        onClick={onDelete} data-testid={`shop-drawing-delete-${row.id}`}>
-        <Trash2 className="mr-1 h-3.5 w-3.5" />
-        {t("shopDrawing.action.delete")}
-      </Button> : null}
+      {canHardDelete && s === "Rejected" ? (
+        <Button
+          size="sm"
+          variant="ghost"
+          className={cn(btn, "text-rose-700 hover:bg-rose-50 hover:text-rose-800")}
+          onClick={onDelete}
+          data-testid={`shop-drawing-delete-${row.id}`}
+        >
+          <Trash2 className="mr-1 h-3.5 w-3.5" />
+          {t("shopDrawing.action.delete")}
+        </Button>
+      ) : null}
     </>
   );
 };

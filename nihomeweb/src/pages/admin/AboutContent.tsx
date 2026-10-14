@@ -12,7 +12,13 @@ import {
 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useI18n } from "@/lib/i18n";
 import {
@@ -25,7 +31,11 @@ import {
   sortItemsBySortOrder,
   type AboutIconKey,
 } from "@/lib/aboutSectionContent";
-import { adminApi, type AboutSectionAdminResponse, type UpsertAboutSectionRequest } from "@/services/adminApi";
+import {
+  adminApi,
+  type AboutSectionAdminResponse,
+  type UpsertAboutSectionRequest,
+} from "@/services/adminApi";
 
 type AboutForm = {
   id: number;
@@ -262,8 +272,10 @@ const parseItemArray = <T,>(value: string | null | undefined): T[] => {
 };
 
 const serializeItems = (value: unknown) => JSON.stringify(value, null, 2);
-const createLocalId = (prefix: string) => `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-const normalizeSortOrder = (value: number | undefined, fallback: number) => (Number.isFinite(value) ? value ?? fallback : fallback);
+const createLocalId = (prefix: string) =>
+  `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+const normalizeSortOrder = (value: number | undefined, fallback: number) =>
+  Number.isFinite(value) ? (value ?? fallback) : fallback;
 const nextSortOrder = <T extends { sortOrder?: number }>(items: T[]) =>
   items.reduce((max, item) => Math.max(max, normalizeSortOrder(item.sortOrder, 0)), -1) + 1;
 
@@ -271,7 +283,10 @@ const normalizeStatItems = (raw: string | null | undefined): StatItem[] =>
   sortItemsBySortOrder(
     parseItemArray<StatItem>(raw).map((item, index) => ({
       id: item.id ?? createLocalId("stat"),
-      iconKey: resolveAboutIconKey(item.iconKey ?? item.iconClass, DEFAULT_STATS_ICON_KEYS[index] ?? "calendar"),
+      iconKey: resolveAboutIconKey(
+        item.iconKey ?? item.iconClass,
+        DEFAULT_STATS_ICON_KEYS[index] ?? "calendar",
+      ),
       num: item.num ?? "",
       label: item.label ?? "",
       isActive: item.isActive ?? true,
@@ -409,7 +424,10 @@ const RowCard = ({ children }: { children: ReactNode }) => (
 
 const Field = ({ label, children }: { label: string; children: ReactNode }) => (
   <label className="block space-y-1.5">
-    <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "hsl(var(--muted-foreground))" }}>
+    <span
+      className="text-xs font-bold uppercase tracking-wider"
+      style={{ color: "hsl(var(--muted-foreground))" }}
+    >
       {label}
     </span>
     {children}
@@ -435,7 +453,12 @@ const SortOrderField = ({
       </div>
 
       <div className="about-sort-stepper">
-        <button type="button" className="about-sort-stepper-btn" onClick={() => onChange(Math.max(0, safeValue - 1))} aria-label={`${label} -1`}>
+        <button
+          type="button"
+          className="about-sort-stepper-btn"
+          onClick={() => onChange(Math.max(0, safeValue - 1))}
+          aria-label={`${label} -1`}
+        >
           <Minus className="w-4 h-4" />
         </button>
         <input
@@ -445,7 +468,12 @@ const SortOrderField = ({
           value={safeValue}
           onChange={(e) => onChange(Math.max(0, Number(e.target.value) || 0))}
         />
-        <button type="button" className="about-sort-stepper-btn" onClick={() => onChange(safeValue + 1)} aria-label={`${label} +1`}>
+        <button
+          type="button"
+          className="about-sort-stepper-btn"
+          onClick={() => onChange(safeValue + 1)}
+          aria-label={`${label} +1`}
+        >
           <Plus className="w-4 h-4" />
         </button>
       </div>
@@ -514,7 +542,9 @@ const IconPicker = ({
         </div>
         <div className="text-sm min-w-0 flex-1">
           <p className="text-lg font-extrabold">{ABOUT_ICON_META[value].label}</p>
-          <p style={{ color: "hsl(var(--muted-foreground))" }}>{t("aboutAdmin.iconCurrentLabel")}</p>
+          <p style={{ color: "hsl(var(--muted-foreground))" }}>
+            {t("aboutAdmin.iconCurrentLabel")}
+          </p>
         </div>
         <div className="about-icon-current-badge">NICON</div>
       </div>
@@ -569,19 +599,29 @@ const StatListCard = ({
       <div className="flex items-center gap-3">
         <div
           className="w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0"
-          style={{ background: "linear-gradient(135deg, hsl(var(--primary) / 0.1), rgba(255,255,255,0.92))" }}
+          style={{
+            background:
+              "linear-gradient(135deg, hsl(var(--primary) / 0.1), rgba(255,255,255,0.92))",
+          }}
         >
           <Icon className="w-6 h-6" style={{ color: "hsl(var(--primary))" }} strokeWidth={2} />
         </div>
         <div className="min-w-0 flex-1">
-          <div className="text-3xl font-extrabold leading-none truncate" style={{ color: "hsl(var(--foreground))" }}>
+          <div
+            className="text-3xl font-extrabold leading-none truncate"
+            style={{ color: "hsl(var(--foreground))" }}
+          >
             {item.num || t("aboutAdmin.defaultStatValue")}
           </div>
-          <div className="mt-1 text-base truncate" style={{ color: "hsl(var(--muted-foreground))" }}>
+          <div
+            className="mt-1 text-base truncate"
+            style={{ color: "hsl(var(--muted-foreground))" }}
+          >
             {item.label || t("aboutAdmin.defaultStatLabel")}
           </div>
           <div className="mt-2 text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
-            {t("aboutAdmin.fieldSortOrder")} #{normalizeSortOrder(item.sortOrder, 0)} • {ABOUT_ICON_META[iconKey].label}
+            {t("aboutAdmin.fieldSortOrder")} #{normalizeSortOrder(item.sortOrder, 0)} •{" "}
+            {ABOUT_ICON_META[iconKey].label}
           </div>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
@@ -639,17 +679,26 @@ const IconTextListCard = ({
       <div className="flex items-start gap-3">
         <div
           className="w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0"
-          style={{ background: "linear-gradient(135deg, hsl(var(--primary) / 0.1), rgba(255,255,255,0.92))" }}
+          style={{
+            background:
+              "linear-gradient(135deg, hsl(var(--primary) / 0.1), rgba(255,255,255,0.92))",
+          }}
         >
           <Icon className="w-6 h-6" style={{ color: "hsl(var(--primary))" }} strokeWidth={2} />
         </div>
         <div className="min-w-0 flex-1">
-          <div className="font-bold text-base truncate">{item.title || t("aboutAdmin.defaultItemTitle")}</div>
-          <p className="mt-1 text-sm line-clamp-2" style={{ color: "hsl(var(--muted-foreground))" }}>
+          <div className="font-bold text-base truncate">
+            {item.title || t("aboutAdmin.defaultItemTitle")}
+          </div>
+          <p
+            className="mt-1 text-sm line-clamp-2"
+            style={{ color: "hsl(var(--muted-foreground))" }}
+          >
             {item.desc || t("aboutAdmin.defaultItemDesc")}
           </p>
           <div className="mt-2 text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
-            {t("aboutAdmin.fieldSortOrder")} #{normalizeSortOrder(item.sortOrder, 0)} • {ABOUT_ICON_META[iconKey].label}
+            {t("aboutAdmin.fieldSortOrder")} #{normalizeSortOrder(item.sortOrder, 0)} •{" "}
+            {ABOUT_ICON_META[iconKey].label}
           </div>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
@@ -694,7 +743,12 @@ const AboutContent = () => {
   const { t } = useI18n();
   const { toast } = useToast();
   const localizedTabs = useMemo(
-    () => SECTION_TABS.map((tab) => ({ ...tab, label: t(tab.labelKey), description: t(tab.descriptionKey) })),
+    () =>
+      SECTION_TABS.map((tab) => ({
+        ...tab,
+        label: t(tab.labelKey),
+        description: t(tab.descriptionKey),
+      })),
     [t],
   );
   const [loading, setLoading] = useState(true);
@@ -725,7 +779,9 @@ const AboutContent = () => {
 
         const nextForms = localizedTabs.reduce<Record<string, AboutForm>>((acc, tab, index) => {
           const existing = data.find((item) => item.slug === tab.slug);
-          acc[tab.slug] = normalizeFormForTab(existing ? toForm(existing) : emptyForm(tab.slug, index));
+          acc[tab.slug] = normalizeFormForTab(
+            existing ? toForm(existing) : emptyForm(tab.slug, index),
+          );
           return acc;
         }, {});
 
@@ -765,9 +821,18 @@ const AboutContent = () => {
   const form = forms[activeSlug] ?? emptyForm(activeSlug, 0);
   const shouldShowStructuredEditorFirst = activeTab.editor === "organization";
   const statItems = useMemo(() => normalizeStatItems(form.itemsJson), [form.itemsJson]);
-  const valueItems = useMemo(() => normalizeIconTextItems(form.itemsJson, "value", DEFAULT_VALUE_ICON_KEYS), [form.itemsJson]);
-  const strategyItems = useMemo(() => normalizeIconTextItems(form.itemsJson, "strategy", DEFAULT_STRATEGY_ICON_KEYS), [form.itemsJson]);
-  const organizationItems = useMemo(() => normalizeOrganizationItems(form.itemsJson), [form.itemsJson]);
+  const valueItems = useMemo(
+    () => normalizeIconTextItems(form.itemsJson, "value", DEFAULT_VALUE_ICON_KEYS),
+    [form.itemsJson],
+  );
+  const strategyItems = useMemo(
+    () => normalizeIconTextItems(form.itemsJson, "strategy", DEFAULT_STRATEGY_ICON_KEYS),
+    [form.itemsJson],
+  );
+  const organizationItems = useMemo(
+    () => normalizeOrganizationItems(form.itemsJson),
+    [form.itemsJson],
+  );
   const timelineItems = useMemo(() => normalizeTimelineItems(form.itemsJson), [form.itemsJson]);
   const certItems = useMemo(() => normalizeCertItems(form.itemsJson), [form.itemsJson]);
   const downloadItems = useMemo(() => normalizeDownloadItems(form.itemsJson), [form.itemsJson]);
@@ -911,15 +976,18 @@ const AboutContent = () => {
     }
   };
 
-  const updateStatItems = (nextItems: StatItem[]) => updateItemsJson(sortItemsBySortOrder(nextItems));
-  const updateIconTextCollection = (nextItems: IconTextItem[]) => updateItemsJson(sortItemsBySortOrder(nextItems));
+  const updateStatItems = (nextItems: StatItem[]) =>
+    updateItemsJson(sortItemsBySortOrder(nextItems));
+  const updateIconTextCollection = (nextItems: IconTextItem[]) =>
+    updateItemsJson(sortItemsBySortOrder(nextItems));
 
   const openStatDialog = (item?: StatItem) => {
     if (!item && statItems.length >= 4) return;
 
     const fallbackIcon = item
       ? resolveAboutIconKey(item.iconKey ?? item.iconClass, "calendar")
-      : DEFAULT_STATS_ICON_KEYS[Math.min(statItems.length, DEFAULT_STATS_ICON_KEYS.length - 1)] ?? "calendar";
+      : (DEFAULT_STATS_ICON_KEYS[Math.min(statItems.length, DEFAULT_STATS_ICON_KEYS.length - 1)] ??
+        "calendar");
 
     setStatDraft({
       id: item?.id ?? createLocalId("stat"),
@@ -953,19 +1021,27 @@ const AboutContent = () => {
     };
 
     const exists = statItems.some((item) => item.id === statDraft.id);
-    updateStatItems(exists ? statItems.map((item) => (item.id === statDraft.id ? nextItem : item)) : [...statItems, nextItem]);
+    updateStatItems(
+      exists
+        ? statItems.map((item) => (item.id === statDraft.id ? nextItem : item))
+        : [...statItems, nextItem],
+    );
     setStatDialogOpen(false);
     setStatDraft(null);
   };
 
   const openIconDialog = (editor: "values" | "strategy", item?: IconTextItem) => {
     const items = editor === "values" ? valueItems : strategyItems;
-    const fallbackIcons = editor === "values" ? DEFAULT_VALUE_ICON_KEYS : DEFAULT_STRATEGY_ICON_KEYS;
+    const fallbackIcons =
+      editor === "values" ? DEFAULT_VALUE_ICON_KEYS : DEFAULT_STRATEGY_ICON_KEYS;
 
     setIconDialogEditor(editor);
     setIconDraft({
       id: item?.id ?? createLocalId(editor),
-      iconKey: resolveAboutIconKey(item?.iconKey ?? item?.iconClass, fallbackIcons[Math.min(items.length, fallbackIcons.length - 1)] ?? "star"),
+      iconKey: resolveAboutIconKey(
+        item?.iconKey ?? item?.iconClass,
+        fallbackIcons[Math.min(items.length, fallbackIcons.length - 1)] ?? "star",
+      ),
       title: item?.title ?? "",
       desc: item?.desc ?? "",
       isActive: item?.isActive ?? true,
@@ -996,7 +1072,11 @@ const AboutContent = () => {
 
     const items = iconDialogEditor === "values" ? valueItems : strategyItems;
     const exists = items.some((item) => item.id === iconDraft.id);
-    updateIconTextCollection(exists ? items.map((item) => (item.id === iconDraft.id ? nextItem : item)) : [...items, nextItem]);
+    updateIconTextCollection(
+      exists
+        ? items.map((item) => (item.id === iconDraft.id ? nextItem : item))
+        : [...items, nextItem],
+    );
     setIconDialogOpen(false);
     setIconDraft(null);
   };
@@ -1005,10 +1085,17 @@ const AboutContent = () => {
     if (activeTab.editor === "stats") {
       return (
         <div className="space-y-5">
-          <EditorSection title={t("aboutAdmin.statsList")} actionLabel={t("aboutAdmin.addStat")} onAdd={() => openStatDialog()}>
+          <EditorSection
+            title={t("aboutAdmin.statsList")}
+            actionLabel={t("aboutAdmin.addStat")}
+            onAdd={() => openStatDialog()}
+          >
             <div className="space-y-3">
               {statItems.length === 0 && (
-                <p className="text-sm italic py-4" style={{ color: "hsl(var(--muted-foreground))" }}>
+                <p
+                  className="text-sm italic py-4"
+                  style={{ color: "hsl(var(--muted-foreground))" }}
+                >
                   {t("aboutAdmin.noStats")}
                 </p>
               )}
@@ -1018,7 +1105,9 @@ const AboutContent = () => {
                   item={item}
                   t={t}
                   onEdit={() => openStatDialog(item)}
-                  onDelete={() => updateStatItems(statItems.filter((current) => current.id !== item.id))}
+                  onDelete={() =>
+                    updateStatItems(statItems.filter((current) => current.id !== item.id))
+                  }
                 />
               ))}
               {statItems.length >= 4 && (
@@ -1040,7 +1129,10 @@ const AboutContent = () => {
                   {t("aboutAdmin.previewLive")}
                 </span>
               </div>
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 p-4 rounded-xl" style={{ background: "hsl(var(--muted))" }}>
+              <div
+                className="grid grid-cols-2 lg:grid-cols-4 gap-3 p-4 rounded-xl"
+                style={{ background: "hsl(var(--muted))" }}
+              >
                 {statItems
                   .filter((item) => item.isActive !== false)
                   .map((item) => {
@@ -1051,13 +1143,27 @@ const AboutContent = () => {
                       <div
                         key={item.id}
                         className="rounded-2xl p-4 text-center"
-                        style={{ background: "hsl(var(--card))", borderColor: "hsl(var(--border))", borderWidth: "1px" }}
+                        style={{
+                          background: "hsl(var(--card))",
+                          borderColor: "hsl(var(--border))",
+                          borderWidth: "1px",
+                        }}
                       >
-                        <Icon className="w-6 h-6 mx-auto mb-3" style={{ color: "hsl(var(--primary))" }} strokeWidth={1.5} />
-                        <p className="text-2xl font-extrabold mb-1" style={{ color: "hsl(var(--primary))" }}>
+                        <Icon
+                          className="w-6 h-6 mx-auto mb-3"
+                          style={{ color: "hsl(var(--primary))" }}
+                          strokeWidth={1.5}
+                        />
+                        <p
+                          className="text-2xl font-extrabold mb-1"
+                          style={{ color: "hsl(var(--primary))" }}
+                        >
                           {item.num || "—"}
                         </p>
-                        <p className="text-xs font-medium leading-snug h-8 flex items-center justify-center" style={{ color: "hsl(var(--muted-foreground))" }}>
+                        <p
+                          className="text-xs font-medium leading-snug h-8 flex items-center justify-center"
+                          style={{ color: "hsl(var(--muted-foreground))" }}
+                        >
                           {item.label || t("aboutAdmin.emptyValue")}
                         </p>
                       </div>
@@ -1073,18 +1179,30 @@ const AboutContent = () => {
     if (activeTab.editor === "values" || activeTab.editor === "strategy") {
       const iconEditor: "values" | "strategy" = activeTab.editor;
       const items = iconEditor === "values" ? valueItems : strategyItems;
-      const title = iconEditor === "values" ? t("aboutAdmin.valuesList") : t("aboutAdmin.strategyList");
-      const actionLabel = iconEditor === "values" ? t("aboutAdmin.addValue") : t("aboutAdmin.addStrategy");
+      const title =
+        iconEditor === "values" ? t("aboutAdmin.valuesList") : t("aboutAdmin.strategyList");
+      const actionLabel =
+        iconEditor === "values" ? t("aboutAdmin.addValue") : t("aboutAdmin.addStrategy");
 
       return (
         <div className="space-y-4">
-          <div className="p-3 rounded-xl border text-sm" style={{ background: "hsl(var(--muted))", borderColor: "hsl(var(--primary) / 0.1)" }}>
+          <div
+            className="p-3 rounded-xl border text-sm"
+            style={{ background: "hsl(var(--muted))", borderColor: "hsl(var(--primary) / 0.1)" }}
+          >
             {t("aboutAdmin.iconDialogHint")}
           </div>
-          <EditorSection title={title} actionLabel={actionLabel} onAdd={() => openIconDialog(iconEditor)}>
+          <EditorSection
+            title={title}
+            actionLabel={actionLabel}
+            onAdd={() => openIconDialog(iconEditor)}
+          >
             <div className="space-y-3">
               {items.length === 0 && (
-                <p className="text-sm italic py-4" style={{ color: "hsl(var(--muted-foreground))" }}>
+                <p
+                  className="text-sm italic py-4"
+                  style={{ color: "hsl(var(--muted-foreground))" }}
+                >
                   {t("aboutAdmin.noItems")}
                 </p>
               )}
@@ -1094,7 +1212,9 @@ const AboutContent = () => {
                   item={item}
                   t={t}
                   onEdit={() => openIconDialog(iconEditor, item)}
-                  onDelete={() => updateIconTextCollection(items.filter((current) => current.id !== item.id))}
+                  onDelete={() =>
+                    updateIconTextCollection(items.filter((current) => current.id !== item.id))
+                  }
                 />
               ))}
             </div>
@@ -1114,14 +1234,23 @@ const AboutContent = () => {
           onAdd={() =>
             updateGroup(group, [
               ...organizationItems[group],
-              { id: createLocalId(group), role: "", name: "", isActive: true, sortOrder: nextSortOrder(organizationItems[group]) },
+              {
+                id: createLocalId(group),
+                role: "",
+                name: "",
+                isActive: true,
+                sortOrder: nextSortOrder(organizationItems[group]),
+              },
             ])
           }
         >
           <div className="space-y-3">
             {organizationItems[group].length === 0 && (
               <RowCard>
-                <p className="text-sm italic py-2" style={{ color: "hsl(var(--muted-foreground))" }}>
+                <p
+                  className="text-sm italic py-2"
+                  style={{ color: "hsl(var(--muted-foreground))" }}
+                >
                   {t("aboutAdmin.noItems")}
                 </p>
               </RowCard>
@@ -1175,7 +1304,12 @@ const AboutContent = () => {
                 </div>
                 <button
                   type="button"
-                  onClick={() => updateGroup(group, organizationItems[group].filter((_, i) => i !== index))}
+                  onClick={() =>
+                    updateGroup(
+                      group,
+                      organizationItems[group].filter((_, i) => i !== index),
+                    )
+                  }
                   className="px-3 py-2 rounded-xl border border-border text-sm inline-flex items-center gap-2 hover:bg-muted"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -1204,7 +1338,11 @@ const AboutContent = () => {
               />
               <label className="px-3 py-2 rounded-xl border border-border hover:bg-muted inline-flex items-center gap-2 cursor-pointer text-sm shrink-0">
                 <Upload className="w-4 h-4" />
-                {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : t("aboutAdmin.upload")}
+                {isUploading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  t("aboutAdmin.upload")
+                )}
                 <input
                   type="file"
                   accept="image/*"
@@ -1217,7 +1355,11 @@ const AboutContent = () => {
           </Field>
           {organizationItems[field] && (
             <div className="rounded-2xl overflow-hidden border border-border bg-muted/30">
-              <img src={organizationItems[field]} alt={label} className="w-full object-contain max-h-72" />
+              <img
+                src={organizationItems[field]}
+                alt={label}
+                className="w-full object-contain max-h-72"
+              />
             </div>
           )}
         </div>
@@ -1226,8 +1368,18 @@ const AboutContent = () => {
       return (
         <div className="space-y-5">
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-            {renderChartField("companyChartUrl", t("aboutAdmin.org.companyChart"), uploadingCompanyChart, setUploadingCompanyChart)}
-            {renderChartField("siteChartUrl", t("aboutAdmin.org.siteChart"), uploadingSiteChart, setUploadingSiteChart)}
+            {renderChartField(
+              "companyChartUrl",
+              t("aboutAdmin.org.companyChart"),
+              uploadingCompanyChart,
+              setUploadingCompanyChart,
+            )}
+            {renderChartField(
+              "siteChartUrl",
+              t("aboutAdmin.org.siteChart"),
+              uploadingSiteChart,
+              setUploadingSiteChart,
+            )}
           </div>
           {renderGroup("board", t("aboutAdmin.boardList"))}
           {renderGroup("directors", t("aboutAdmin.directorsList"))}
@@ -1243,7 +1395,13 @@ const AboutContent = () => {
           onAdd={() =>
             updateItemsJson([
               ...timelineItems,
-              { id: createLocalId("timeline"), year: "", title: "", desc: "", sortOrder: nextSortOrder(timelineItems) },
+              {
+                id: createLocalId("timeline"),
+                year: "",
+                title: "",
+                desc: "",
+                sortOrder: nextSortOrder(timelineItems),
+              },
             ])
           }
         >
@@ -1318,7 +1476,16 @@ const AboutContent = () => {
           title={t("aboutAdmin.certsList")}
           actionLabel={t("aboutAdmin.addCert")}
           onAdd={() =>
-            updateItemsJson([...certItems, { id: createLocalId("cert"), name: "", desc: "", imageUrl: "", sortOrder: nextSortOrder(certItems) }])
+            updateItemsJson([
+              ...certItems,
+              {
+                id: createLocalId("cert"),
+                name: "",
+                desc: "",
+                imageUrl: "",
+                sortOrder: nextSortOrder(certItems),
+              },
+            ])
           }
         >
           <div className="space-y-3">
@@ -1377,7 +1544,11 @@ const AboutContent = () => {
                       />
                       <label className="px-3 py-2 rounded-xl border border-border hover:bg-muted inline-flex items-center gap-2 cursor-pointer text-sm shrink-0">
                         <Upload className="w-4 h-4" />
-                        {isUploadingCert ? <Loader2 className="w-4 h-4 animate-spin" /> : t("aboutAdmin.upload")}
+                        {isUploadingCert ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          t("aboutAdmin.upload")
+                        )}
                         <input
                           type="file"
                           accept="image/*"
@@ -1393,7 +1564,11 @@ const AboutContent = () => {
                     </div>
                     {item.imageUrl && (
                       <div className="mt-2 rounded-xl overflow-hidden border border-border bg-muted/30 max-h-40">
-                        <img src={item.imageUrl} alt={item.name} className="w-full object-contain max-h-40" />
+                        <img
+                          src={item.imageUrl}
+                          alt={item.name}
+                          className="w-full object-contain max-h-40"
+                        />
                       </div>
                     )}
                   </Field>
@@ -1421,7 +1596,14 @@ const AboutContent = () => {
           onAdd={() =>
             updateItemsJson([
               ...downloadItems,
-              { id: createLocalId("download"), name: "", size: "", type: "", url: "", sortOrder: nextSortOrder(downloadItems) },
+              {
+                id: createLocalId("download"),
+                name: "",
+                size: "",
+                type: "",
+                url: "",
+                sortOrder: nextSortOrder(downloadItems),
+              },
             ])
           }
         >
@@ -1493,7 +1675,11 @@ const AboutContent = () => {
                         />
                         <label className="px-3 py-2 rounded-xl border border-border hover:bg-muted inline-flex items-center gap-2 cursor-pointer text-sm shrink-0">
                           <Upload className="w-4 h-4" />
-                          {isUploadingDoc ? <Loader2 className="w-4 h-4 animate-spin" /> : t("aboutAdmin.uploadDoc")}
+                          {isUploadingDoc ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            t("aboutAdmin.uploadDoc")
+                          )}
                           <input
                             type="file"
                             accept=".pdf,.doc,.docx,.xls,.xlsx,image/*"
@@ -1539,137 +1725,201 @@ const AboutContent = () => {
   return (
     <AdminLayout>
       <div className="admin-about-page space-y-6">
-      <div className="rounded-lg border bg-card about-hero p-6 lg:p-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] mb-2" style={{ color: "hsl(var(--primary))" }}>
-          {t("nav.about")}
-        </p>
-        <h1 className="text-2xl lg:text-3xl font-extrabold tracking-tight">{t("aboutAdmin.title")}</h1>
-        <p className="text-sm mt-2 max-w-3xl" style={{ color: "hsl(var(--muted-foreground))" }}>
-          {t("aboutAdmin.pageDesc")}
-        </p>
-      </div>
-
-      <div className="about-tabs">
-        {localizedTabs.map((tab) => (
-          <button
-            type="button"
-            key={tab.slug}
-            onClick={() => setActiveSlug(tab.slug)}
-            className={`about-tab ${activeSlug === tab.slug ? "is-active" : ""}`}
-            aria-pressed={activeSlug === tab.slug}
+        <div className="rounded-lg border bg-card about-hero p-6 lg:p-8">
+          <p
+            className="text-xs font-semibold uppercase tracking-[0.18em] mb-2"
+            style={{ color: "hsl(var(--primary))" }}
           >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      <div ref={editorRef} className="rounded-lg border bg-card about-editor p-5 lg:p-7 space-y-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <h2 className="text-xl font-extrabold">{activeTab.label}</h2>
-            <p className="text-sm mt-1" style={{ color: "hsl(var(--muted-foreground))" }}>
-              {activeTab.description}
-            </p>
-          </div>
-          <button
-            onClick={() => void saveSection()}
-            disabled={saving || loading}
-            className="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50 px-4 py-2 text-sm inline-flex items-center gap-2 disabled:opacity-50"
-          >
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            {t("common.save")}
-          </button>
+            {t("nav.about")}
+          </p>
+          <h1 className="text-2xl lg:text-3xl font-extrabold tracking-tight">
+            {t("aboutAdmin.title")}
+          </h1>
+          <p className="text-sm mt-2 max-w-3xl" style={{ color: "hsl(var(--muted-foreground))" }}>
+            {t("aboutAdmin.pageDesc")}
+          </p>
         </div>
 
-        {loading ? (
-          <div className="py-10 flex justify-center">
-            <Loader2 className="w-6 h-6 animate-spin" />
+        <div className="about-tabs">
+          {localizedTabs.map((tab) => (
+            <button
+              type="button"
+              key={tab.slug}
+              onClick={() => setActiveSlug(tab.slug)}
+              className={`about-tab ${activeSlug === tab.slug ? "is-active" : ""}`}
+              aria-pressed={activeSlug === tab.slug}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        <div
+          ref={editorRef}
+          className="rounded-lg border bg-card about-editor p-5 lg:p-7 space-y-6"
+        >
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <h2 className="text-xl font-extrabold">{activeTab.label}</h2>
+              <p className="text-sm mt-1" style={{ color: "hsl(var(--muted-foreground))" }}>
+                {activeTab.description}
+              </p>
+            </div>
+            <button
+              onClick={() => void saveSection()}
+              disabled={saving || loading}
+              className="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50 px-4 py-2 text-sm inline-flex items-center gap-2 disabled:opacity-50"
+            >
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              {t("common.save")}
+            </button>
           </div>
-        ) : (
-          <>
-            {shouldShowStructuredEditorFirst && renderStructuredEditor()}
 
-            <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,1fr)_minmax(280px,0.7fr)] gap-4 items-start">
-              <Field label={t("aboutAdmin.fieldSlug")}>
-                <input className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" value={form.slug} onChange={(e) => updateForm("slug", e.target.value)} placeholder={t("aboutAdmin.placeholderSlug")} />
-              </Field>
-              <SortOrderField
-                label={t("aboutAdmin.fieldSortOrder")}
-                value={form.sortOrder}
-                onChange={(value) => updateForm("sortOrder", value)}
-              />
-              <VisibilityField
-                label={t("aboutAdmin.fieldVisible")}
-                checked={form.isActive}
-                onChange={(value) => updateForm("isActive", value)}
-                activeLabel={t("aboutAdmin.statusActive")}
-                hiddenLabel={t("aboutAdmin.statusHidden")}
-                t={t}
-              />
+          {loading ? (
+            <div className="py-10 flex justify-center">
+              <Loader2 className="w-6 h-6 animate-spin" />
             </div>
+          ) : (
+            <>
+              {shouldShowStructuredEditorFirst && renderStructuredEditor()}
 
-            {activeTab.showEyebrow && (
-              <Field label={t("aboutAdmin.fieldEyebrow")}>
-                <input className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" value={form.eyebrow} onChange={(e) => updateForm("eyebrow", e.target.value)} placeholder={t("aboutAdmin.placeholderEyebrow")} />
-              </Field>
-            )}
-
-            {(activeTab.showTitleA || activeTab.showTitleB) && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {activeTab.showTitleA && (
-                  <Field label={t("aboutAdmin.fieldTitleA")}>
-                    <input className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" value={form.titleA} onChange={(e) => updateForm("titleA", e.target.value)} placeholder={t("aboutAdmin.placeholderTitleA")} />
-                  </Field>
-                )}
-                {activeTab.showTitleB && (
-                  <Field label={t("aboutAdmin.fieldTitleB")}>
-                    <input className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" value={form.titleB} onChange={(e) => updateForm("titleB", e.target.value)} placeholder={t("aboutAdmin.placeholderTitleB")} />
-                  </Field>
-                )}
-              </div>
-            )}
-
-            {activeTab.showParagraph1 && (
-              <Field label={t("aboutAdmin.fieldParagraph1")}>
-                <textarea className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 min-h-24" value={form.paragraph1} onChange={(e) => updateForm("paragraph1", e.target.value)} placeholder={t("aboutAdmin.placeholderParagraph1")} />
-              </Field>
-            )}
-
-            {activeTab.showParagraph2 && (
-              <Field label={t("aboutAdmin.fieldParagraph2")}>
-                <textarea className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 min-h-24" value={form.paragraph2} onChange={(e) => updateForm("paragraph2", e.target.value)} placeholder={t("aboutAdmin.placeholderParagraph2")} />
-              </Field>
-            )}
-
-            {activeTab.showImage && (
-              <div className="space-y-2">
-                <Field label={t("aboutAdmin.fieldImage")}>
-                  <div className="flex items-center gap-2">
-                    <input className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" value={form.imageUrl} onChange={(e) => updateForm("imageUrl", e.target.value)} placeholder={t("aboutAdmin.placeholderImagePath")} />
-                    <label className="px-3 py-2 rounded-xl border border-border hover:bg-muted inline-flex items-center gap-2 cursor-pointer text-sm">
-                      <Upload className="w-4 h-4" />
-                      {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : t("aboutAdmin.upload")}
-                      <input type="file" accept="image/*" onChange={onSelectFile} disabled={uploading} className="hidden" />
-                    </label>
-                  </div>
+              <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,1fr)_minmax(280px,0.7fr)] gap-4 items-start">
+                <Field label={t("aboutAdmin.fieldSlug")}>
+                  <input
+                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                    value={form.slug}
+                    onChange={(e) => updateForm("slug", e.target.value)}
+                    placeholder={t("aboutAdmin.placeholderSlug")}
+                  />
                 </Field>
-                {form.imageUrl && (
-                  <div className="rounded-2xl overflow-hidden border border-border bg-muted/30">
-                    <img src={form.imageUrl} alt={activeTab.label} className="w-full h-56 object-cover" />
-                  </div>
-                )}
+                <SortOrderField
+                  label={t("aboutAdmin.fieldSortOrder")}
+                  value={form.sortOrder}
+                  onChange={(value) => updateForm("sortOrder", value)}
+                />
+                <VisibilityField
+                  label={t("aboutAdmin.fieldVisible")}
+                  checked={form.isActive}
+                  onChange={(value) => updateForm("isActive", value)}
+                  activeLabel={t("aboutAdmin.statusActive")}
+                  hiddenLabel={t("aboutAdmin.statusHidden")}
+                  t={t}
+                />
               </div>
-            )}
 
-            {!shouldShowStructuredEditorFirst && renderStructuredEditor()}
+              {activeTab.showEyebrow && (
+                <Field label={t("aboutAdmin.fieldEyebrow")}>
+                  <input
+                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                    value={form.eyebrow}
+                    onChange={(e) => updateForm("eyebrow", e.target.value)}
+                    placeholder={t("aboutAdmin.placeholderEyebrow")}
+                  />
+                </Field>
+              )}
 
-            <div className="text-xs inline-flex items-center gap-1.5" style={{ color: saving ? "hsl(38 92% 40%)" : "hsl(142 71% 35%)" }}>
-              {saving ? <Sparkles className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
-              {saving ? t("aboutAdmin.saving") : t("aboutAdmin.ready")}
-            </div>
-          </>
-        )}
-      </div>
+              {(activeTab.showTitleA || activeTab.showTitleB) && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {activeTab.showTitleA && (
+                    <Field label={t("aboutAdmin.fieldTitleA")}>
+                      <input
+                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                        value={form.titleA}
+                        onChange={(e) => updateForm("titleA", e.target.value)}
+                        placeholder={t("aboutAdmin.placeholderTitleA")}
+                      />
+                    </Field>
+                  )}
+                  {activeTab.showTitleB && (
+                    <Field label={t("aboutAdmin.fieldTitleB")}>
+                      <input
+                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                        value={form.titleB}
+                        onChange={(e) => updateForm("titleB", e.target.value)}
+                        placeholder={t("aboutAdmin.placeholderTitleB")}
+                      />
+                    </Field>
+                  )}
+                </div>
+              )}
+
+              {activeTab.showParagraph1 && (
+                <Field label={t("aboutAdmin.fieldParagraph1")}>
+                  <textarea
+                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 min-h-24"
+                    value={form.paragraph1}
+                    onChange={(e) => updateForm("paragraph1", e.target.value)}
+                    placeholder={t("aboutAdmin.placeholderParagraph1")}
+                  />
+                </Field>
+              )}
+
+              {activeTab.showParagraph2 && (
+                <Field label={t("aboutAdmin.fieldParagraph2")}>
+                  <textarea
+                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 min-h-24"
+                    value={form.paragraph2}
+                    onChange={(e) => updateForm("paragraph2", e.target.value)}
+                    placeholder={t("aboutAdmin.placeholderParagraph2")}
+                  />
+                </Field>
+              )}
+
+              {activeTab.showImage && (
+                <div className="space-y-2">
+                  <Field label={t("aboutAdmin.fieldImage")}>
+                    <div className="flex items-center gap-2">
+                      <input
+                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                        value={form.imageUrl}
+                        onChange={(e) => updateForm("imageUrl", e.target.value)}
+                        placeholder={t("aboutAdmin.placeholderImagePath")}
+                      />
+                      <label className="px-3 py-2 rounded-xl border border-border hover:bg-muted inline-flex items-center gap-2 cursor-pointer text-sm">
+                        <Upload className="w-4 h-4" />
+                        {uploading ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          t("aboutAdmin.upload")
+                        )}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={onSelectFile}
+                          disabled={uploading}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+                  </Field>
+                  {form.imageUrl && (
+                    <div className="rounded-2xl overflow-hidden border border-border bg-muted/30">
+                      <img
+                        src={form.imageUrl}
+                        alt={activeTab.label}
+                        className="w-full h-56 object-cover"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {!shouldShowStructuredEditorFirst && renderStructuredEditor()}
+
+              <div
+                className="text-xs inline-flex items-center gap-1.5"
+                style={{ color: saving ? "hsl(38 92% 40%)" : "hsl(142 71% 35%)" }}
+              >
+                {saving ? (
+                  <Sparkles className="w-3.5 h-3.5" />
+                ) : (
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                )}
+                {saving ? t("aboutAdmin.saving") : t("aboutAdmin.ready")}
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       <Dialog
@@ -1691,13 +1941,19 @@ const AboutContent = () => {
                 "radial-gradient(at 90% 10%, hsl(var(--primary) / 0.18) 0px, transparent 42%), linear-gradient(135deg, hsl(var(--muted)), hsl(var(--primary) / 0.44))",
             }}
           >
-            <p className="text-[11px] font-bold uppercase tracking-[0.18em] mb-3" style={{ color: "hsl(var(--primary))" }}>
+            <p
+              className="text-[11px] font-bold uppercase tracking-[0.18em] mb-3"
+              style={{ color: "hsl(var(--primary))" }}
+            >
               NICON • {t("nav.about")}
             </p>
             <DialogTitle className="text-[2rem] leading-none tracking-tight">
               {statDraft ? t("aboutAdmin.editStatDialog") : t("aboutAdmin.addStatDialog")}
             </DialogTitle>
-            <DialogDescription className="text-base mt-2 max-w-2xl" style={{ color: "hsl(var(--muted-foreground))" }}>
+            <DialogDescription
+              className="text-base mt-2 max-w-2xl"
+              style={{ color: "hsl(var(--muted-foreground))" }}
+            >
               {t("aboutAdmin.editStatDialogDesc")}
             </DialogDescription>
           </DialogHeader>
@@ -1711,7 +1967,9 @@ const AboutContent = () => {
                       <SortOrderField
                         label={t("aboutAdmin.fieldSortOrder")}
                         value={statDraft.sortOrder}
-                        onChange={(value) => setStatDraft((prev) => (prev ? { ...prev, sortOrder: value } : prev))}
+                        onChange={(value) =>
+                          setStatDraft((prev) => (prev ? { ...prev, sortOrder: value } : prev))
+                        }
                       />
                     </div>
                     <div className="about-form-card">
@@ -1719,7 +1977,9 @@ const AboutContent = () => {
                         <input
                           className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 text-xl font-extrabold"
                           value={statDraft.num}
-                          onChange={(e) => setStatDraft((prev) => (prev ? { ...prev, num: e.target.value } : prev))}
+                          onChange={(e) =>
+                            setStatDraft((prev) => (prev ? { ...prev, num: e.target.value } : prev))
+                          }
                           placeholder={t("aboutAdmin.placeholderStatValue")}
                         />
                       </Field>
@@ -1729,7 +1989,11 @@ const AboutContent = () => {
                         <select
                           className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                           value={statDraft.isActive ? "true" : "false"}
-                          onChange={(e) => setStatDraft((prev) => (prev ? { ...prev, isActive: e.target.value === "true" } : prev))}
+                          onChange={(e) =>
+                            setStatDraft((prev) =>
+                              prev ? { ...prev, isActive: e.target.value === "true" } : prev,
+                            )
+                          }
                         >
                           <option value="true">{t("aboutAdmin.statusActive")}</option>
                           <option value="false">{t("aboutAdmin.statusHidden")}</option>
@@ -1743,7 +2007,9 @@ const AboutContent = () => {
                       <input
                         className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                         value={statDraft.label}
-                        onChange={(e) => setStatDraft((prev) => (prev ? { ...prev, label: e.target.value } : prev))}
+                        onChange={(e) =>
+                          setStatDraft((prev) => (prev ? { ...prev, label: e.target.value } : prev))
+                        }
                         placeholder={t("aboutAdmin.placeholderStatLabel")}
                       />
                     </Field>
@@ -1754,7 +2020,9 @@ const AboutContent = () => {
                       <IconPicker
                         value={statDraft.iconKey}
                         t={t}
-                        onChange={(iconKey) => setStatDraft((prev) => (prev ? { ...prev, iconKey } : prev))}
+                        onChange={(iconKey) =>
+                          setStatDraft((prev) => (prev ? { ...prev, iconKey } : prev))
+                        }
                       />
                     </Field>
                   </div>
@@ -1764,7 +2032,8 @@ const AboutContent = () => {
                   className="about-dialog-side border-t xl:border-t-0 xl:border-l px-5 sm:px-7 py-5 sm:py-6 space-y-5"
                   style={{
                     borderColor: "hsl(var(--border))",
-                    background: "linear-gradient(180deg, hsl(var(--primary) / 0.55), hsl(var(--muted)))",
+                    background:
+                      "linear-gradient(180deg, hsl(var(--primary) / 0.55), hsl(var(--muted)))",
                   }}
                 >
                   <div>
@@ -1792,8 +2061,12 @@ const AboutContent = () => {
                       <PreviewIconProxy iconKey={statDraft.iconKey} />
                     </div>
                     <div className="space-y-2">
-                      <p className="text-sm font-semibold text-white/80">{ABOUT_ICON_META[statDraft.iconKey].label}</p>
-                      <p className="text-5xl font-extrabold leading-none">{statDraft.num || t("aboutAdmin.defaultStatValue")}</p>
+                      <p className="text-sm font-semibold text-white/80">
+                        {ABOUT_ICON_META[statDraft.iconKey].label}
+                      </p>
+                      <p className="text-5xl font-extrabold leading-none">
+                        {statDraft.num || t("aboutAdmin.defaultStatValue")}
+                      </p>
                       <p className="text-sm text-white/85 leading-relaxed">
                         {statDraft.label || t("aboutAdmin.defaultStatLabel")}
                       </p>
@@ -1802,23 +2075,35 @@ const AboutContent = () => {
 
                   <div
                     className="rounded-[1.5rem] border p-4 space-y-3"
-                    style={{ borderColor: "hsl(var(--border))", background: "hsl(var(--card) / 0.88)" }}
+                    style={{
+                      borderColor: "hsl(var(--border))",
+                      background: "hsl(var(--card) / 0.88)",
+                    }}
                   >
                     <div className="flex items-center justify-between text-sm">
-                      <span style={{ color: "hsl(var(--muted-foreground))" }}>{t("aboutAdmin.fieldSortOrder")}</span>
+                      <span style={{ color: "hsl(var(--muted-foreground))" }}>
+                        {t("aboutAdmin.fieldSortOrder")}
+                      </span>
                       <span className="font-bold">#{statDraft.sortOrder}</span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
-                      <span style={{ color: "hsl(var(--muted-foreground))" }}>{t("aboutAdmin.fieldStatus")}</span>
+                      <span style={{ color: "hsl(var(--muted-foreground))" }}>
+                        {t("aboutAdmin.fieldStatus")}
+                      </span>
                       <span
                         className="inline-flex items-center rounded-full px-3 py-1 text-xs font-bold uppercase tracking-[0.14em]"
                         style={
                           statDraft.isActive
                             ? { background: "hsl(142 71% 45% / 0.1)", color: "hsl(142 71% 35%)" }
-                            : { background: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))" }
+                            : {
+                                background: "hsl(var(--muted))",
+                                color: "hsl(var(--muted-foreground))",
+                              }
                         }
                       >
-                        {statDraft.isActive ? t("aboutAdmin.statusActive") : t("aboutAdmin.statusHidden")}
+                        {statDraft.isActive
+                          ? t("aboutAdmin.statusActive")
+                          : t("aboutAdmin.statusHidden")}
                       </span>
                     </div>
                   </div>
@@ -1829,10 +2114,18 @@ const AboutContent = () => {
                 className="about-dialog-footer px-5 sm:px-7 py-4 border-t flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2"
                 style={{ borderColor: "hsl(var(--border))", background: "hsl(var(--muted))" }}
               >
-                <button type="button" className="about-secondary-btn" onClick={() => setStatDialogOpen(false)}>
+                <button
+                  type="button"
+                  className="about-secondary-btn"
+                  onClick={() => setStatDialogOpen(false)}
+                >
                   {t("common.cancel")}
                 </button>
-                <button type="button" className="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50 px-5 py-2.5 sm:min-w-[152px]" onClick={saveStatDialog}>
+                <button
+                  type="button"
+                  className="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50 px-5 py-2.5 sm:min-w-[152px]"
+                  onClick={saveStatDialog}
+                >
                   {t("aboutAdmin.saveStat")}
                 </button>
               </div>
@@ -1848,7 +2141,10 @@ const AboutContent = () => {
           if (!open) setIconDraft(null);
         }}
       >
-        <DialogContent className="admin-scope admin-about-dialog sm:max-w-5xl p-0 gap-0 overflow-hidden rounded-[2rem] border shadow-2xl" style={{ borderColor: "hsl(var(--border))" }}>
+        <DialogContent
+          className="admin-scope admin-about-dialog sm:max-w-5xl p-0 gap-0 overflow-hidden rounded-[2rem] border shadow-2xl"
+          style={{ borderColor: "hsl(var(--border))" }}
+        >
           <DialogHeader
             className="admin-about-dialog-header px-5 sm:px-7 pt-5 sm:pt-6 pb-5 border-b"
             style={{
@@ -1857,13 +2153,21 @@ const AboutContent = () => {
                 "radial-gradient(at 90% 10%, hsl(var(--primary) / 0.18) 0px, transparent 42%), linear-gradient(135deg, hsl(var(--muted)), hsl(var(--primary) / 0.44))",
             }}
           >
-            <p className="text-[11px] font-bold uppercase tracking-[0.18em] mb-3" style={{ color: "hsl(var(--primary))" }}>
+            <p
+              className="text-[11px] font-bold uppercase tracking-[0.18em] mb-3"
+              style={{ color: "hsl(var(--primary))" }}
+            >
               NICON • {t("nav.about")}
             </p>
             <DialogTitle className="text-[1.75rem] leading-none tracking-tight">
-              {iconDialogEditor === "values" ? t("aboutAdmin.editValueDialog") : t("aboutAdmin.editStrategyDialog")}
+              {iconDialogEditor === "values"
+                ? t("aboutAdmin.editValueDialog")
+                : t("aboutAdmin.editStrategyDialog")}
             </DialogTitle>
-            <DialogDescription className="text-base mt-2 max-w-2xl" style={{ color: "hsl(var(--muted-foreground))" }}>
+            <DialogDescription
+              className="text-base mt-2 max-w-2xl"
+              style={{ color: "hsl(var(--muted-foreground))" }}
+            >
               {t("aboutAdmin.editItemDialogDesc")}
             </DialogDescription>
           </DialogHeader>
@@ -1877,7 +2181,9 @@ const AboutContent = () => {
                       <SortOrderField
                         label={t("aboutAdmin.fieldSortOrder")}
                         value={iconDraft.sortOrder}
-                        onChange={(value) => setIconDraft((prev) => (prev ? { ...prev, sortOrder: value } : prev))}
+                        onChange={(value) =>
+                          setIconDraft((prev) => (prev ? { ...prev, sortOrder: value } : prev))
+                        }
                       />
                     </div>
                     <div className="about-form-card">
@@ -1885,7 +2191,11 @@ const AboutContent = () => {
                         <select
                           className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                           value={iconDraft.isActive ? "true" : "false"}
-                          onChange={(e) => setIconDraft((prev) => (prev ? { ...prev, isActive: e.target.value === "true" } : prev))}
+                          onChange={(e) =>
+                            setIconDraft((prev) =>
+                              prev ? { ...prev, isActive: e.target.value === "true" } : prev,
+                            )
+                          }
                         >
                           <option value="true">{t("aboutAdmin.statusActive")}</option>
                           <option value="false">{t("aboutAdmin.statusHidden")}</option>
@@ -1897,7 +2207,11 @@ const AboutContent = () => {
                         <input
                           className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                           value={iconDraft.title}
-                          onChange={(e) => setIconDraft((prev) => (prev ? { ...prev, title: e.target.value } : prev))}
+                          onChange={(e) =>
+                            setIconDraft((prev) =>
+                              prev ? { ...prev, title: e.target.value } : prev,
+                            )
+                          }
                         />
                       </Field>
                     </div>
@@ -1908,7 +2222,9 @@ const AboutContent = () => {
                       <textarea
                         className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 min-h-28"
                         value={iconDraft.desc}
-                        onChange={(e) => setIconDraft((prev) => (prev ? { ...prev, desc: e.target.value } : prev))}
+                        onChange={(e) =>
+                          setIconDraft((prev) => (prev ? { ...prev, desc: e.target.value } : prev))
+                        }
                       />
                     </Field>
                   </div>
@@ -1918,7 +2234,9 @@ const AboutContent = () => {
                       <IconPicker
                         value={iconDraft.iconKey}
                         t={t}
-                        onChange={(iconKey) => setIconDraft((prev) => (prev ? { ...prev, iconKey } : prev))}
+                        onChange={(iconKey) =>
+                          setIconDraft((prev) => (prev ? { ...prev, iconKey } : prev))
+                        }
                       />
                     </Field>
                   </div>
@@ -1928,7 +2246,8 @@ const AboutContent = () => {
                   className="about-dialog-side border-t xl:border-t-0 xl:border-l px-5 sm:px-7 py-5 sm:py-6 space-y-5"
                   style={{
                     borderColor: "hsl(var(--border))",
-                    background: "linear-gradient(180deg, hsl(var(--primary) / 0.55), hsl(var(--muted)))",
+                    background:
+                      "linear-gradient(180deg, hsl(var(--primary) / 0.55), hsl(var(--muted)))",
                   }}
                 >
                   <div>
@@ -1957,7 +2276,10 @@ const AboutContent = () => {
                       <p className="text-2xl font-extrabold leading-tight">
                         {iconDraft.title || t("aboutAdmin.defaultItemTitle")}
                       </p>
-                      <p className="text-sm leading-relaxed" style={{ color: "hsl(var(--muted-foreground))" }}>
+                      <p
+                        className="text-sm leading-relaxed"
+                        style={{ color: "hsl(var(--muted-foreground))" }}
+                      >
                         {iconDraft.desc || t("aboutAdmin.defaultItemDesc")}
                       </p>
                     </div>
@@ -1965,23 +2287,35 @@ const AboutContent = () => {
 
                   <div
                     className="rounded-[1.5rem] border p-4 space-y-3"
-                    style={{ borderColor: "hsl(var(--border))", background: "hsl(var(--card) / 0.88)" }}
+                    style={{
+                      borderColor: "hsl(var(--border))",
+                      background: "hsl(var(--card) / 0.88)",
+                    }}
                   >
                     <div className="flex items-center justify-between text-sm">
-                      <span style={{ color: "hsl(var(--muted-foreground))" }}>{t("aboutAdmin.fieldSortOrder")}</span>
+                      <span style={{ color: "hsl(var(--muted-foreground))" }}>
+                        {t("aboutAdmin.fieldSortOrder")}
+                      </span>
                       <span className="font-bold">#{iconDraft.sortOrder}</span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
-                      <span style={{ color: "hsl(var(--muted-foreground))" }}>{t("aboutAdmin.fieldStatus")}</span>
+                      <span style={{ color: "hsl(var(--muted-foreground))" }}>
+                        {t("aboutAdmin.fieldStatus")}
+                      </span>
                       <span
                         className="inline-flex items-center rounded-full px-3 py-1 text-xs font-bold uppercase tracking-[0.14em]"
                         style={
                           iconDraft.isActive
                             ? { background: "hsl(142 71% 45% / 0.1)", color: "hsl(142 71% 35%)" }
-                            : { background: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))" }
+                            : {
+                                background: "hsl(var(--muted))",
+                                color: "hsl(var(--muted-foreground))",
+                              }
                         }
                       >
-                        {iconDraft.isActive ? t("aboutAdmin.statusActive") : t("aboutAdmin.statusHidden")}
+                        {iconDraft.isActive
+                          ? t("aboutAdmin.statusActive")
+                          : t("aboutAdmin.statusHidden")}
                       </span>
                     </div>
                   </div>
@@ -1992,10 +2326,18 @@ const AboutContent = () => {
                 className="about-dialog-footer px-5 sm:px-7 py-4 border-t flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2"
                 style={{ borderColor: "hsl(var(--border))", background: "hsl(var(--muted))" }}
               >
-                <button type="button" className="about-secondary-btn" onClick={() => setIconDialogOpen(false)}>
+                <button
+                  type="button"
+                  className="about-secondary-btn"
+                  onClick={() => setIconDialogOpen(false)}
+                >
                   {t("common.cancel")}
                 </button>
-                <button type="button" className="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50 px-4 py-2.5 sm:min-w-[152px]" onClick={saveIconDialog}>
+                <button
+                  type="button"
+                  className="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50 px-4 py-2.5 sm:min-w-[152px]"
+                  onClick={saveIconDialog}
+                >
                   {t("aboutAdmin.saveItem")}
                 </button>
               </div>

@@ -29,17 +29,13 @@ test.describe("Business role access verification", () => {
     // SALE should access leads
     await page.goto("/admin/leads");
     await expect(page.locator("text=/^403$/").first()).toHaveCount(0);
-    await expect(
-      page.getByRole("heading", { name: /lead|tiềm năng/i }).first(),
-    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: /lead|tiềm năng/i }).first()).toBeVisible();
 
     // SALE should access opportunities
     await loginInBrowserAs(page, TEST_USERS.sale);
     await page.goto("/admin/opportunities");
     await expect(page.locator("text=/^403$/").first()).toHaveCount(0);
-    await expect(
-      page.getByRole("heading", { name: /cơ hội|opportunit/i }).first(),
-    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: /cơ hội|opportunit/i }).first()).toBeVisible();
 
     // SALE should be DENIED on user management
     await loginInBrowserAs(page, TEST_USERS.sale);
@@ -124,10 +120,7 @@ test.describe("Business role access verification", () => {
     expect(jsErrors).toHaveLength(0);
   });
 
-  test("PM user can access project management pages", async ({
-    page,
-    loginInBrowserAs,
-  }) => {
+  test("PM user can access project management pages", async ({ page, loginInBrowserAs }) => {
     const jsErrors: string[] = [];
     page.on("pageerror", (err) => jsErrors.push(err.message));
 
@@ -205,25 +198,18 @@ test.describe("Business role access verification", () => {
     await loginInBrowserAs(page, TEST_USERS.bgd);
     await page.goto("/admin/users");
     await expect(page.locator("text=/^403$/").first()).toHaveCount(0);
-    await expect(
-      page.getByRole("heading", { name: /người dùng|users/i }).first(),
-    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: /người dùng|users/i }).first()).toBeVisible();
 
     // BGD can view role management but cannot mutate roles
     await loginInBrowserAs(page, TEST_USERS.bgd);
     await page.goto("/admin/roles");
     await expect(page.locator("text=/^403$/").first()).toHaveCount(0);
-    await expect(
-      page.getByRole("heading", { name: /vai trò|role/i }).first(),
-    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: /vai trò|role/i }).first()).toBeVisible();
 
     expect(jsErrors).toHaveLength(0);
   });
 
-  test("SALES_MANAGER has broader CRM access than SALE", async ({
-    page,
-    loginInBrowserAs,
-  }) => {
+  test("SALES_MANAGER has broader CRM access than SALE", async ({ page, loginInBrowserAs }) => {
     const jsErrors: string[] = [];
     page.on("pageerror", (err) => jsErrors.push(err.message));
 
@@ -261,10 +247,7 @@ test.describe("Business role access verification", () => {
 });
 
 test.describe("Cross-role permission boundaries", () => {
-  test("Non-admin roles cannot access system settings", async ({
-    page,
-    loginInBrowserAs,
-  }) => {
+  test("Non-admin roles cannot access system settings", async ({ page, loginInBrowserAs }) => {
     const nonAdminRoles = [
       TEST_USERS.sale,
       TEST_USERS.design,
@@ -287,11 +270,7 @@ test.describe("Cross-role permission boundaries", () => {
     page,
     loginInBrowserAs,
   }) => {
-    const nonAdminRoles = [
-      TEST_USERS.sale,
-      TEST_USERS.pm,
-      TEST_USERS.accountant,
-    ];
+    const nonAdminRoles = [TEST_USERS.sale, TEST_USERS.pm, TEST_USERS.accountant];
 
     for (const user of nonAdminRoles) {
       await loginInBrowserAs(page, user);
@@ -311,23 +290,16 @@ test.describe("Cross-role permission boundaries", () => {
     await loginInBrowserAs(page, TEST_USERS.admin);
     await page.goto("/admin/users");
     await expect(page.locator("text=/^403$/").first()).toHaveCount(0);
-    await expect(
-      page.getByRole("heading", { name: /người dùng|users/i }).first(),
-    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: /người dùng|users/i }).first()).toBeVisible();
 
     // SUPER_ADMIN should access users
     await loginInBrowserAs(page, TEST_USERS.superAdmin);
     await page.goto("/admin/users");
     await expect(page.locator("text=/^403$/").first()).toHaveCount(0);
-    await expect(
-      page.getByRole("heading", { name: /người dùng|users/i }).first(),
-    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: /người dùng|users/i }).first()).toBeVisible();
   });
 
-  test("Only SUPER_ADMIN can access role matrix editing", async ({
-    page,
-    loginInBrowserAs,
-  }) => {
+  test("Only SUPER_ADMIN can access role matrix editing", async ({ page, loginInBrowserAs }) => {
     // ADMIN should access roles page (but with limited editing)
     await loginInBrowserAs(page, TEST_USERS.admin);
     await page.goto("/admin/roles");
@@ -337,8 +309,6 @@ test.describe("Cross-role permission boundaries", () => {
     await loginInBrowserAs(page, TEST_USERS.superAdmin);
     await page.goto("/admin/roles");
     await expect(page.locator("text=/^403$/").first()).toHaveCount(0);
-    await expect(
-      page.getByRole("heading", { name: /vai trò|role/i }).first(),
-    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: /vai trò|role/i }).first()).toBeVisible();
   });
 });

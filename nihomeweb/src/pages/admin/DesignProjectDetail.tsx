@@ -7,12 +7,7 @@ import { cn } from "@/lib/utils";
 import { extractApiError } from "@/lib/apiError";
 import { PageLoading, PageError } from "@/components/PageState";
 import { Badge } from "@/components/ui/badge";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   adminApi,
   type DesignProjectResponse,
@@ -68,8 +63,19 @@ const AdminDesignProjectDetail = () => {
   const { id: idParam } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const requestedTab = searchParams.get("tab");
-  const initialTab = ["overview", "concept", "basic", "shop", "ifc", "team", "schedule", "reviews", "docs"]
-    .includes(requestedTab ?? "") ? requestedTab! : "overview";
+  const initialTab = [
+    "overview",
+    "concept",
+    "basic",
+    "shop",
+    "ifc",
+    "team",
+    "schedule",
+    "reviews",
+    "docs",
+  ].includes(requestedTab ?? "")
+    ? requestedTab!
+    : "overview";
   const numericId = Number(idParam);
   const isValidId = Number.isFinite(numericId) && numericId > 0;
 
@@ -106,17 +112,29 @@ const AdminDesignProjectDetail = () => {
   const infoRows = useMemo(() => {
     if (!project) return [] as { label: string; value: string }[];
     return [
-      { label: t("designProjects.field.customer"), value: project.customerName ?? `#${project.customerId}` },
+      {
+        label: t("designProjects.field.customer"),
+        value: project.customerName ?? `#${project.customerId}`,
+      },
       {
         label: t("designProjects.field.contract"),
         value: project.contractNumber ?? (project.contractId ? `#${project.contractId}` : "—"),
       },
-      { label: t("designProjects.field.pm"), value: project.designManagerName ?? project.projectManagerName ?? "—" },
+      {
+        label: t("designProjects.field.pm"),
+        value: project.designManagerName ?? project.projectManagerName ?? "—",
+      },
       { label: t("designProjects.field.designLead"), value: project.designLeadName ?? "—" },
       { label: t("designProjects.field.startDate"), value: formatDate(project.startDate, lang) },
       { label: t("designProjects.field.deadline"), value: formatDate(project.deadline, lang) },
-      { label: t("designProjects.field.createdAt"), value: formatDateTime(project.createdAt, lang) },
-      { label: t("designProjects.field.updatedAt"), value: formatDateTime(project.updatedAt, lang) },
+      {
+        label: t("designProjects.field.createdAt"),
+        value: formatDateTime(project.createdAt, lang),
+      },
+      {
+        label: t("designProjects.field.updatedAt"),
+        value: formatDateTime(project.updatedAt, lang),
+      },
     ];
   }, [project, t, lang]);
 
@@ -187,10 +205,16 @@ const AdminDesignProjectDetail = () => {
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="outline" className={cn("whitespace-nowrap", STAGE_BADGE[project.currentStage])}>
+              <Badge
+                variant="outline"
+                className={cn("whitespace-nowrap", STAGE_BADGE[project.currentStage])}
+              >
                 {t(`designProjects.stage.${project.currentStage}`)}
               </Badge>
-              <Badge variant="outline" className={cn("whitespace-nowrap", STATUS_BADGE[project.status])}>
+              <Badge
+                variant="outline"
+                className={cn("whitespace-nowrap", STATUS_BADGE[project.status])}
+              >
                 {t(`designProjects.status.${project.status}`)}
               </Badge>
             </div>
@@ -256,7 +280,9 @@ const AdminDesignProjectDetail = () => {
             </div>
           </TabsContent>
 
-          {(["concept", "basic", "shop", "ifc", "team", "schedule", "reviews", "docs"] as const).map((tab) => (
+          {(
+            ["concept", "basic", "shop", "ifc", "team", "schedule", "reviews", "docs"] as const
+          ).map((tab) => (
             <TabsContent key={tab} value={tab}>
               {tab === "concept" ? (
                 <ConceptOptionsTab project={project} onProjectMayHaveChanged={fetchProject} />

@@ -32,8 +32,7 @@ export const meApi = {
   changePassword: (data: { currentPassword: string; newPassword: string }) =>
     api.post<{ message: string }>("/users/me/change-password", data),
 
-  listDocuments: () =>
-    api.get<UserDocumentResponse[]>("/users/me/documents"),
+  listDocuments: () => api.get<UserDocumentResponse[]>("/users/me/documents"),
 
   uploadDocument: (file: File, documentType: string) => {
     const formData = new FormData();
@@ -42,6 +41,5 @@ export const meApi = {
     return api.post<UserDocumentResponse>("/users/me/documents", formData);
   },
 
-  deleteDocument: (id: number) =>
-    api.delete<void>(`/users/me/documents/${id}`),
+  deleteDocument: (id: number) => api.delete<void>(`/users/me/documents/${id}`),
 };

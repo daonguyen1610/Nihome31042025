@@ -11,7 +11,13 @@ type AdminExportButtonProps = {
   className?: string;
 };
 
-const AdminExportButton = ({ onClick, disabled, label, title, className }: AdminExportButtonProps) => {
+const AdminExportButton = ({
+  onClick,
+  disabled,
+  label,
+  title,
+  className,
+}: AdminExportButtonProps) => {
   const { t } = useI18n();
   const text = label ?? t("common.exportExcel");
 

@@ -26,7 +26,9 @@ test.describe("CRM workflow navigation", () => {
 
     for (const { path, heading } of crmPages) {
       await page.goto(path, { waitUntil: "networkidle" });
-      await expect(page.getByRole("heading", { name: heading }).first()).toBeVisible({ timeout: 10000 });
+      await expect(page.getByRole("heading", { name: heading }).first()).toBeVisible({
+        timeout: 10000,
+      });
     }
 
     expect(jsErrors, `CRM navigation errors: ${jsErrors.join("\n")}`).toHaveLength(0);
@@ -41,7 +43,9 @@ test.describe("CRM workflow navigation", () => {
     await expect(page.getByRole("heading", { name: /lead|tiềm năng/i }).first()).toBeVisible();
 
     // Search/filter should be present
-    await expect(page.locator("input[placeholder*='tìm' i], input[placeholder*='search' i]").first()).toBeVisible();
+    await expect(
+      page.locator("input[placeholder*='tìm' i], input[placeholder*='search' i]").first(),
+    ).toBeVisible();
 
     // Add button should be present
     await expect(page.getByRole("button", { name: /thêm|add|tạo|create/i })).toBeVisible();
@@ -58,11 +62,26 @@ test.describe("CRM workflow navigation", () => {
     await expect(page.getByRole("heading", { name: /cơ hội|opportunit/i }).first()).toBeVisible();
 
     // Either kanban board columns or table should be visible
-    const hasKanban = await page.locator("[data-kanban], [class*='kanban'], [class*='board']").first().isVisible().catch(() => false);
-    const hasTable = await page.locator("table").first().isVisible().catch(() => false);
-    const hasList = await page.locator("[role='list'], [class*='list']").first().isVisible().catch(() => false);
+    const hasKanban = await page
+      .locator("[data-kanban], [class*='kanban'], [class*='board']")
+      .first()
+      .isVisible()
+      .catch(() => false);
+    const hasTable = await page
+      .locator("table")
+      .first()
+      .isVisible()
+      .catch(() => false);
+    const hasList = await page
+      .locator("[role='list'], [class*='list']")
+      .first()
+      .isVisible()
+      .catch(() => false);
 
-    expect(hasKanban || hasTable || hasList, "Opportunities should show kanban, table, or list view").toBe(true);
+    expect(
+      hasKanban || hasTable || hasList,
+      "Opportunities should show kanban, table, or list view",
+    ).toBe(true);
 
     expect(jsErrors).toHaveLength(0);
   });
@@ -116,13 +135,13 @@ test.describe("CRM workflow navigation", () => {
     // CRM submenu should expand
     const crmLinks = page.locator("#admin-nav-group-crm a");
     await expect(crmLinks).toHaveCount(12);
-    await expect.poll(async () => crmLinks.evaluateAll((links) =>
-      links.slice(0, 3).map((link) => new URL((link as HTMLAnchorElement).href).pathname),
-    )).toEqual([
-      "/admin/operational-projects",
-      "/admin/opportunities",
-      "/admin/contracts",
-    ]);
+    await expect
+      .poll(async () =>
+        crmLinks.evaluateAll((links) =>
+          links.slice(0, 3).map((link) => new URL((link as HTMLAnchorElement).href).pathname),
+        ),
+      )
+      .toEqual(["/admin/operational-projects", "/admin/opportunities", "/admin/contracts"]);
     await expect(page.getByRole("link", { name: /lead|tiềm năng/i })).toBeVisible();
     await expect(page.getByRole("link", { name: /khách hàng|customer/i })).toBeVisible();
     await expect(page.getByRole("link", { name: /cơ hội|opportunit/i })).toBeVisible();

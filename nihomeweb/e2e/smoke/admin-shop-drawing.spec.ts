@@ -67,8 +67,18 @@ test.describe("NIH-116 — Detail Design (real-user flow)", () => {
       });
       expect(t.ok(), `${status}: ${await t.text()}`).toBeTruthy();
     }
-    await approveDesignStage(api, { headers: authHeader, projectId, stage: "Concept", category: "DesignConcept", sourceEntityType: "ConceptOption", sourceRecordIds: [optId] });
-    const finalized = await api.post(`/api/concept-options/${optId}/status`, { headers: authHeader, data: { status: "Finalized" } });
+    await approveDesignStage(api, {
+      headers: authHeader,
+      projectId,
+      stage: "Concept",
+      category: "DesignConcept",
+      sourceEntityType: "ConceptOption",
+      sourceRecordIds: [optId],
+    });
+    const finalized = await api.post(`/api/concept-options/${optId}/status`, {
+      headers: authHeader,
+      data: { status: "Finalized" },
+    });
     expect(finalized.ok(), await finalized.text()).toBeTruthy();
 
     // BasicDesign → ShopDrawing (approve 1 doc per required discipline)
@@ -93,10 +103,20 @@ test.describe("NIH-116 — Detail Design (real-user flow)", () => {
         expect(t.ok(), `${disciplineCode} → ${status}: ${await t.text()}`).toBeTruthy();
       }
     }
-    await approveDesignStage(api, { headers: authHeader, projectId, stage: "BasicDesign", category: "DesignBasic", sourceEntityType: "BasicDesignDoc", sourceRecordIds: basicDocumentIds });
-    const unlock = await api.post(`/api/basic-design-docs/design-project/${projectId}/unlock-shop-drawing`, {
+    await approveDesignStage(api, {
       headers: authHeader,
+      projectId,
+      stage: "BasicDesign",
+      category: "DesignBasic",
+      sourceEntityType: "BasicDesignDoc",
+      sourceRecordIds: basicDocumentIds,
     });
+    const unlock = await api.post(
+      `/api/basic-design-docs/design-project/${projectId}/unlock-shop-drawing`,
+      {
+        headers: authHeader,
+      },
+    );
     expect(unlock.ok(), await unlock.text()).toBeTruthy();
 
     // ---------- 2. Open the detail page + switch to Detail Design tab ----------
@@ -130,8 +150,10 @@ test.describe("NIH-116 — Detail Design (real-user flow)", () => {
     // The new row should appear grouped under architecture with a KT-SD- code.
     await expect(page.getByTestId("shop-drawing-discipline-architecture")).toBeVisible();
     await expect(
-      page.getByTestId("shop-drawing-discipline-architecture")
-        .locator("text=/KT-SD-\\d{3}/").first(),
+      page
+        .getByTestId("shop-drawing-discipline-architecture")
+        .locator("text=/KT-SD-\\d{3}/")
+        .first(),
     ).toBeVisible();
 
     // ---------- 4. Drive the state machine ----------
@@ -141,19 +163,28 @@ test.describe("NIH-116 — Detail Design (real-user flow)", () => {
       headers: authHeader,
     });
     expect(list.ok(), await list.text()).toBeTruthy();
-    const items = (await list.json()).items as Array<{ id: number; status: string; disciplineCode: string }>;
+    const items = (await list.json()).items as Array<{
+      id: number;
+      status: string;
+      disciplineCode: string;
+    }>;
     const firstDrawing = items.find((r) => r.disciplineCode === "architecture");
     expect(firstDrawing, "created drawing not returned by list").toBeTruthy();
     const drawingId = firstDrawing!.id;
 
     // send review → approve → queue IFC
     await page.getByTestId(`shop-drawing-send-${drawingId}`).click();
-    await expect(page.getByTestId(`shop-drawing-status-${drawingId}`)).toHaveText(/InReview|Chờ duyệt|In review|审核中|レビュー中/i);
+    await expect(page.getByTestId(`shop-drawing-status-${drawingId}`)).toHaveText(
+      /InReview|Chờ duyệt|In review|审核中|レビュー中/i,
+    );
     await page.getByTestId(`shop-drawing-approve-${drawingId}`).click();
-    await expect(page.getByTestId(`shop-drawing-status-${drawingId}`)).toHaveText(/Approved|Đã duyệt|已批准|承認済み/i);
+    await expect(page.getByTestId(`shop-drawing-status-${drawingId}`)).toHaveText(
+      /Approved|Đã duyệt|已批准|承認済み/i,
+    );
     await page.getByTestId(`shop-drawing-queue-${drawingId}`).click();
-    await expect(page.getByTestId(`shop-drawing-status-${drawingId}`))
-      .toHaveText(/PendingIfc|Ch\u1edd ph\u00e1t h\u00e0nh IFC|IFC/i);
+    await expect(page.getByTestId(`shop-drawing-status-${drawingId}`)).toHaveText(
+      /PendingIfc|Ch\u1edd ph\u00e1t h\u00e0nh IFC|IFC/i,
+    );
 
     // ---------- 5. Impact-planned deletion of rejected dossiers ----------
     const rejectedDrawings: Array<{ id: number; drawingCode: string }> = [];
@@ -168,7 +199,7 @@ test.describe("NIH-116 — Detail Design (real-user flow)", () => {
         },
       });
       expect(res.ok(), await res.text()).toBeTruthy();
-      const created = await res.json() as { id: number; drawingCode: string };
+      const created = (await res.json()) as { id: number; drawingCode: string };
       for (const status of ["InReview", "Rejected"]) {
         const transition = await api.post(`/api/shop-drawings/${created.id}/status`, {
           headers: authHeader,
@@ -198,14 +229,17 @@ test.describe("NIH-116 — Detail Design (real-user flow)", () => {
     // Confirm both rejected records vanish from the list via the API (this is
     // deterministic regardless of any toast-driven remount).
     await expect
-      .poll(async () => {
-        const l = await api.get(`/api/shop-drawings?designProjectId=${projectId}&pageSize=200`, {
-          headers: authHeader,
-        });
-        if (!l.ok()) return "err";
-        const rows = (await l.json()).items as Array<{ id: number }>;
-        return rejectedDrawings.every(({ id }) => !rows.some((r) => r.id === id));
-      }, { timeout: 5_000 })
+      .poll(
+        async () => {
+          const l = await api.get(`/api/shop-drawings?designProjectId=${projectId}&pageSize=200`, {
+            headers: authHeader,
+          });
+          if (!l.ok()) return "err";
+          const rows = (await l.json()).items as Array<{ id: number }>;
+          return rejectedDrawings.every(({ id }) => !rows.some((r) => r.id === id));
+        },
+        { timeout: 5_000 },
+      )
       .toBe(true);
   });
 
@@ -243,8 +277,18 @@ test.describe("NIH-116 — Detail Design (real-user flow)", () => {
       });
       expect(transition.ok(), `${status}: ${await transition.text()}`).toBeTruthy();
     }
-    await approveDesignStage(api, { headers: authHeader, projectId, stage: "Concept", category: "DesignConcept", sourceEntityType: "ConceptOption", sourceRecordIds: [optionId] });
-    const finalized = await api.post(`/api/concept-options/${optionId}/status`, { headers: authHeader, data: { status: "Finalized" } });
+    await approveDesignStage(api, {
+      headers: authHeader,
+      projectId,
+      stage: "Concept",
+      category: "DesignConcept",
+      sourceEntityType: "ConceptOption",
+      sourceRecordIds: [optionId],
+    });
+    const finalized = await api.post(`/api/concept-options/${optionId}/status`, {
+      headers: authHeader,
+      data: { status: "Finalized" },
+    });
     expect(finalized.ok(), await finalized.text()).toBeTruthy();
     const prerequisiteDocumentIds: number[] = [];
     for (const disciplineCode of ["architecture", "structure", "mep"]) {
@@ -264,13 +308,26 @@ test.describe("NIH-116 — Detail Design (real-user flow)", () => {
           headers: authHeader,
           data: { status },
         });
-        expect(transition.ok(), `${disciplineCode} → ${status}: ${await transition.text()}`).toBeTruthy();
+        expect(
+          transition.ok(),
+          `${disciplineCode} → ${status}: ${await transition.text()}`,
+        ).toBeTruthy();
       }
     }
-    await approveDesignStage(api, { headers: authHeader, projectId, stage: "BasicDesign", category: "DesignBasic", sourceEntityType: "BasicDesignDoc", sourceRecordIds: prerequisiteDocumentIds });
-    const unlock = await api.post(`/api/basic-design-docs/design-project/${projectId}/unlock-shop-drawing`, {
+    await approveDesignStage(api, {
       headers: authHeader,
+      projectId,
+      stage: "BasicDesign",
+      category: "DesignBasic",
+      sourceEntityType: "BasicDesignDoc",
+      sourceRecordIds: prerequisiteDocumentIds,
     });
+    const unlock = await api.post(
+      `/api/basic-design-docs/design-project/${projectId}/unlock-shop-drawing`,
+      {
+        headers: authHeader,
+      },
+    );
     expect(unlock.ok(), await unlock.text()).toBeTruthy();
     const drawing = await api.post("/api/shop-drawings", {
       headers: authHeader,

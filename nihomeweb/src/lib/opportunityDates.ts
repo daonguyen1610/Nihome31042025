@@ -13,17 +13,17 @@
 export type TerminalCheckStage = string; // narrow via caller (OpportunityStage)
 
 export function isOpportunityOverdue(
-    expectedCloseDate: string | null | undefined,
-    stage: TerminalCheckStage,
+  expectedCloseDate: string | null | undefined,
+  stage: TerminalCheckStage,
 ): boolean {
-    if (!expectedCloseDate) return false;
-    if (stage === "Won" || stage === "Lost") return false;
+  if (!expectedCloseDate) return false;
+  if (stage === "Won" || stage === "Lost") return false;
 
-    const due = new Date(expectedCloseDate);
-    if (Number.isNaN(due.getTime())) return false;
+  const due = new Date(expectedCloseDate);
+  if (Number.isNaN(due.getTime())) return false;
 
-    const now = new Date();
-    const dueDay = new Date(due.getFullYear(), due.getMonth(), due.getDate());
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    return dueDay.getTime() < today.getTime();
+  const now = new Date();
+  const dueDay = new Date(due.getFullYear(), due.getMonth(), due.getDate());
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  return dueDay.getTime() < today.getTime();
 }

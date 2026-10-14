@@ -1,5 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Plus, Pencil, Trash2, Check, X, Search as SearchIcon, ArrowUp, ArrowDown } from "lucide-react";
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  Check,
+  X,
+  Search as SearchIcon,
+  ArrowUp,
+  ArrowDown,
+} from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
@@ -104,10 +113,7 @@ const Workflows = () => {
     setLoading(true);
     setError(null);
     try {
-      const [w, r] = await Promise.all([
-        adminApi.listWorkflows(true),
-        rbacApi.listRoles(),
-      ]);
+      const [w, r] = await Promise.all([adminApi.listWorkflows(true), rbacApi.listRoles()]);
       setWorkflows(w.data);
       setRoles(r.data.filter((role) => role.isActive));
     } catch (err) {
@@ -198,9 +204,7 @@ const Workflows = () => {
       if (prev.steps.length <= 1) return prev;
       return {
         ...prev,
-        steps: prev.steps
-          .filter((_, i) => i !== index)
-          .map((s, i) => ({ ...s, order: i + 1 })),
+        steps: prev.steps.filter((_, i) => i !== index).map((s, i) => ({ ...s, order: i + 1 })),
       };
     });
   };
@@ -392,16 +396,24 @@ const Workflows = () => {
                         </span>
                       )}
                       <div className="min-w-0">
-                        <h3 className="break-words text-sm font-semibold leading-tight">{w.name}</h3>
+                        <h3 className="break-words text-sm font-semibold leading-tight">
+                          {w.name}
+                        </h3>
                         <p className="mt-0.5 break-all font-mono text-xs text-muted-foreground">
                           {w.module}.{w.action}
                         </p>
                       </div>
                     </div>
                     {w.isActive ? (
-                      <Check className="h-4 w-4 shrink-0 text-emerald-600" aria-label={t("workflow.field.isActive")} />
+                      <Check
+                        className="h-4 w-4 shrink-0 text-emerald-600"
+                        aria-label={t("workflow.field.isActive")}
+                      />
                     ) : (
-                      <X className="h-4 w-4 shrink-0 text-muted-foreground" aria-label={t("workflow.field.isActive")} />
+                      <X
+                        className="h-4 w-4 shrink-0 text-muted-foreground"
+                        aria-label={t("workflow.field.isActive")}
+                      />
                     )}
                   </div>
                   <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
@@ -453,13 +465,25 @@ const Workflows = () => {
                         />
                       </th>
                     )}
-                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("workflow.field.module")}</th>
-                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("workflow.field.action")}</th>
-                    <th className="min-w-[200px] px-3 py-3 text-left font-medium">{t("workflow.field.name")}</th>
-                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("workflow.field.steps")}</th>
-                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("workflow.field.isActive")}</th>
+                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                      {t("workflow.field.module")}
+                    </th>
+                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                      {t("workflow.field.action")}
+                    </th>
+                    <th className="min-w-[200px] px-3 py-3 text-left font-medium">
+                      {t("workflow.field.name")}
+                    </th>
+                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                      {t("workflow.field.steps")}
+                    </th>
+                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                      {t("workflow.field.isActive")}
+                    </th>
                     {canManage && (
-                      <th className="whitespace-nowrap px-3 py-3 text-right font-medium">{t("common.actions")}</th>
+                      <th className="whitespace-nowrap px-3 py-3 text-right font-medium">
+                        {t("common.actions")}
+                      </th>
                     )}
                   </tr>
                 </thead>
@@ -486,12 +510,18 @@ const Workflows = () => {
                       <td className="whitespace-nowrap px-3 py-3 text-center">{w.steps.length}</td>
                       <td className="whitespace-nowrap px-3 py-3">
                         {w.isActive ? (
-                          <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700">
+                          <Badge
+                            variant="outline"
+                            className="border-emerald-200 bg-emerald-50 text-emerald-700"
+                          >
                             <Check className="mr-1 h-3 w-3" />
                             {t("common.on")}
                           </Badge>
                         ) : (
-                          <Badge variant="outline" className="border-slate-200 bg-slate-50 text-slate-600">
+                          <Badge
+                            variant="outline"
+                            className="border-slate-200 bg-slate-50 text-slate-600"
+                          >
                             <X className="mr-1 h-3 w-3" />
                             {t("common.off")}
                           </Badge>
@@ -536,9 +566,7 @@ const Workflows = () => {
         <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto sm:w-full">
           <DialogHeader>
             <DialogTitle>
-              {editingId != null
-                ? t("workflow.editModalTitle")
-                : t("workflow.createModalTitle")}
+              {editingId != null ? t("workflow.editModalTitle") : t("workflow.createModalTitle")}
             </DialogTitle>
             <DialogDescription>{t("workflow.dialogHelp")}</DialogDescription>
           </DialogHeader>

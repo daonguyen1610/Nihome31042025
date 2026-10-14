@@ -1,6 +1,21 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { BriefcaseBusiness, Building2, ExternalLink, FileSignature, FileText, Plus, ReceiptText, Search, Trash2, RefreshCw, Star, Upload, X, Pencil } from "lucide-react";
+import {
+  BriefcaseBusiness,
+  Building2,
+  ExternalLink,
+  FileSignature,
+  FileText,
+  Plus,
+  ReceiptText,
+  Search,
+  Trash2,
+  RefreshCw,
+  Star,
+  Upload,
+  X,
+  Pencil,
+} from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { ActivityTimeline } from "@/components/admin/ActivityTimeline";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
@@ -161,10 +176,19 @@ const AdminCustomers = () => {
   const [opportunities, setOpportunities] = useState<OpportunityResponse[]>([]);
   const [quotes, setQuotes] = useState<QuoteListItemResponse[]>([]);
   const [contracts, setContracts] = useState<ContractResponse[]>([]);
-  const [operationalProjects, setOperationalProjects] = useState<OperationalProjectListItemResponse[]>([]);
-  const [relatedTotals, setRelatedTotals] = useState({ projects: 0, opportunities: 0, quotes: 0, contracts: 0 });
+  const [operationalProjects, setOperationalProjects] = useState<
+    OperationalProjectListItemResponse[]
+  >([]);
+  const [relatedTotals, setRelatedTotals] = useState({
+    projects: 0,
+    opportunities: 0,
+    quotes: 0,
+    contracts: 0,
+  });
   const [relatedLoading, setRelatedLoading] = useState(false);
-  const [relatedErrors, setRelatedErrors] = useState<Partial<Record<"projects" | "opportunities" | "quotes" | "contracts", string>>>({});
+  const [relatedErrors, setRelatedErrors] = useState<
+    Partial<Record<"projects" | "opportunities" | "quotes" | "contracts", string>>
+  >({});
   const [deletingCustomer, setDeletingCustomer] = useState<CustomerResponse | null>(null);
   const [deleteImpact, setDeleteImpact] = useState<DeletionImpactResponse | null>(null);
   const [deleteImpactLoading, setDeleteImpactLoading] = useState(false);
@@ -198,7 +222,9 @@ const AdminCustomers = () => {
     }
   }, [page, typeFilter, statusFilter, sourceFilter, search]);
 
-  useEffect(() => { void fetchList(); }, [fetchList]);
+  useEffect(() => {
+    void fetchList();
+  }, [fetchList]);
 
   useEffect(() => {
     let cancelled = false;
@@ -210,7 +236,9 @@ const AdminCustomers = () => {
         // best-effort — dropdown may just be empty
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const sourceLabelByCode = useMemo(() => {
@@ -238,36 +266,51 @@ const AdminCustomers = () => {
 
     await Promise.all([
       canViewOperationalProjects
-        ? adminApi.listOperationalProjects({ customerId, pageSize: 100 })
+        ? adminApi
+            .listOperationalProjects({ customerId, pageSize: 100 })
             .then(({ data }) => {
               setOperationalProjects(data.items);
               setRelatedTotals((current) => ({ ...current, projects: data.total }));
             })
-            .catch((error) => setRelatedErrors((current) => ({ ...current, projects: extractApiError(error) })))
+            .catch((error) =>
+              setRelatedErrors((current) => ({ ...current, projects: extractApiError(error) })),
+            )
         : Promise.resolve(),
       canViewOpportunities
-        ? adminApi.listOpportunities({ customerId, pageSize: 100 })
+        ? adminApi
+            .listOpportunities({ customerId, pageSize: 100 })
             .then(({ data }) => {
               setOpportunities(data.items);
               setRelatedTotals((current) => ({ ...current, opportunities: data.total }));
             })
-            .catch((error) => setRelatedErrors((current) => ({ ...current, opportunities: extractApiError(error) })))
+            .catch((error) =>
+              setRelatedErrors((current) => ({
+                ...current,
+                opportunities: extractApiError(error),
+              })),
+            )
         : Promise.resolve(),
       canViewQuotes
-        ? adminApi.listQuotes({ customerId, pageSize: 100 })
+        ? adminApi
+            .listQuotes({ customerId, pageSize: 100 })
             .then(({ data }) => {
               setQuotes(data.items);
               setRelatedTotals((current) => ({ ...current, quotes: data.total }));
             })
-            .catch((error) => setRelatedErrors((current) => ({ ...current, quotes: extractApiError(error) })))
+            .catch((error) =>
+              setRelatedErrors((current) => ({ ...current, quotes: extractApiError(error) })),
+            )
         : Promise.resolve(),
       canViewContracts
-        ? adminApi.listContracts({ customerId, pageSize: 100 })
+        ? adminApi
+            .listContracts({ customerId, pageSize: 100 })
             .then(({ data }) => {
               setContracts(data.items);
               setRelatedTotals((current) => ({ ...current, contracts: data.total }));
             })
-            .catch((error) => setRelatedErrors((current) => ({ ...current, contracts: extractApiError(error) })))
+            .catch((error) =>
+              setRelatedErrors((current) => ({ ...current, contracts: extractApiError(error) })),
+            )
         : Promise.resolve(),
     ]);
 
@@ -316,7 +359,11 @@ const AdminCustomers = () => {
         setEditing(true);
       }
     } catch (err) {
-      toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
+      toast({
+        title: t("common.error"),
+        description: extractApiError(err),
+        variant: "destructive",
+      });
     } finally {
       setDetailLoading(false);
     }
@@ -360,8 +407,12 @@ const AdminCustomers = () => {
       setCreateError(t("customers.validation.missingFields"));
       return;
     }
-    if (type === "Company" &&
-        (!createForm.taxId?.trim() || !createForm.address?.trim() || !createForm.representativeName?.trim())) {
+    if (
+      type === "Company" &&
+      (!createForm.taxId?.trim() ||
+        !createForm.address?.trim() ||
+        !createForm.representativeName?.trim())
+    ) {
       setCreateError(t("customers.validation.companyFieldsMissing"));
       return;
     }
@@ -388,9 +439,8 @@ const AdminCustomers = () => {
           // Required by the backend but no longer asked for: a company's contact
           // is its representative, and an individual is their own contact.
           fullName:
-            (type === "Company"
-              ? createForm.representativeName?.trim()
-              : createForm.name.trim()) || createForm.name.trim(),
+            (type === "Company" ? createForm.representativeName?.trim() : createForm.name.trim()) ||
+            createForm.name.trim(),
           position: primary.position?.trim() || undefined,
           phone: primary.phone?.trim() || undefined,
           email: primary.email?.trim() || undefined,
@@ -406,7 +456,11 @@ const AdminCustomers = () => {
       await fetchList();
     } catch (err) {
       const anyErr = err as { response?: { status?: number; data?: CustomerDuplicateDetail } };
-      if (anyErr.response?.status === 409 && anyErr.response.data && "field" in anyErr.response.data) {
+      if (
+        anyErr.response?.status === 409 &&
+        anyErr.response.data &&
+        "field" in anyErr.response.data
+      ) {
         setDuplicate(anyErr.response.data);
       } else {
         setCreateError(extractApiError(err));
@@ -436,7 +490,11 @@ const AdminCustomers = () => {
       // updated row, so nothing needs re-reading.
       setRows((prev) => prev.map((row) => (row.id === data.id ? data : row)));
     } catch (err) {
-      toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
+      toast({
+        title: t("common.error"),
+        description: extractApiError(err),
+        variant: "destructive",
+      });
       if (isConcurrencyConflict(err)) await openDetail(detail.id, { startEditing: true });
     } finally {
       setSavingEdit(false);
@@ -522,7 +580,11 @@ const AdminCustomers = () => {
       setContactForm(null);
       toast({ title: t("customers.updated") });
     } catch (err) {
-      toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
+      toast({
+        title: t("common.error"),
+        description: extractApiError(err),
+        variant: "destructive",
+      });
     } finally {
       setSavingContact(false);
     }
@@ -535,7 +597,10 @@ const AdminCustomers = () => {
       return;
     }
     if (detail.type === "Company" && contact.isLegalRepresentative) {
-      toast({ title: t("customers.contact.legalRepresentativeCannotDelete"), variant: "destructive" });
+      toast({
+        title: t("customers.contact.legalRepresentativeCannotDelete"),
+        variant: "destructive",
+      });
       return;
     }
     try {
@@ -543,7 +608,11 @@ const AdminCustomers = () => {
       const { data } = await adminApi.getCustomer(detail.id);
       setDetail(data);
     } catch (err) {
-      toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
+      toast({
+        title: t("common.error"),
+        description: extractApiError(err),
+        variant: "destructive",
+      });
     }
   };
 
@@ -559,7 +628,11 @@ const AdminCustomers = () => {
       setDetail(data);
       setActivityContent("");
     } catch (err) {
-      toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
+      toast({
+        title: t("common.error"),
+        description: extractApiError(err),
+        variant: "destructive",
+      });
     } finally {
       setAddingActivity(false);
     }
@@ -576,7 +649,11 @@ const AdminCustomers = () => {
       await fetchDocuments(detail.id);
       toast({ title: t("customers.document.uploaded") });
     } catch (err) {
-      toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
+      toast({
+        title: t("common.error"),
+        description: extractApiError(err),
+        variant: "destructive",
+      });
     } finally {
       setUploadingDocument(false);
     }
@@ -590,7 +667,11 @@ const AdminCustomers = () => {
       setDocuments((current) => current.filter((document) => document.id !== documentId));
       toast({ title: t("customers.document.deleted") });
     } catch (err) {
-      toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
+      toast({
+        title: t("common.error"),
+        description: extractApiError(err),
+        variant: "destructive",
+      });
     } finally {
       setDeletingDocumentId(null);
     }
@@ -627,7 +708,9 @@ const AdminCustomers = () => {
 
         <section className="grid gap-2 rounded-lg border bg-card p-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)]">
           <div className="sm:col-span-2 lg:col-span-1">
-            <Label className="text-xs" htmlFor="customer-search">{t("customers.filter.search")}</Label>
+            <Label className="text-xs" htmlFor="customer-search">
+              {t("customers.filter.search")}
+            </Label>
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -648,11 +731,15 @@ const AdminCustomers = () => {
                 setTypeFilter(v === "__all" ? "" : (v as CustomerType));
               }}
             >
-              <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-9">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__all">{t("customers.filter.all")}</SelectItem>
                 {TYPES.map((tp) => (
-                  <SelectItem key={tp} value={tp}>{t(`customers.type.${tp}`)}</SelectItem>
+                  <SelectItem key={tp} value={tp}>
+                    {t(`customers.type.${tp}`)}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -666,11 +753,15 @@ const AdminCustomers = () => {
                 setStatusFilter(v === "__all" ? "" : (v as CustomerRelationshipStatus));
               }}
             >
-              <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-9">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__all">{t("customers.filter.all")}</SelectItem>
                 {STATUSES.map((s) => (
-                  <SelectItem key={s} value={s}>{t(`customers.status.${s}`)}</SelectItem>
+                  <SelectItem key={s} value={s}>
+                    {t(`customers.status.${s}`)}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -684,11 +775,15 @@ const AdminCustomers = () => {
                 setSourceFilter(v === "__all" ? "" : v);
               }}
             >
-              <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-9">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__all">{t("customers.filter.all")}</SelectItem>
                 {sources.map((s) => (
-                  <SelectItem key={s.code} value={s.code}>{s.name}</SelectItem>
+                  <SelectItem key={s.code} value={s.code}>
+                    {s.name}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -725,14 +820,19 @@ const AdminCustomers = () => {
                   >
                     <header className="flex items-start gap-2">
                       <div className="min-w-0 flex-1">
-                        <h3 className="break-words text-sm font-semibold leading-tight">{c.name}</h3>
+                        <h3 className="break-words text-sm font-semibold leading-tight">
+                          {c.name}
+                        </h3>
                         {c.type === "Company" && c.taxId && (
                           <p className="mt-0.5 text-xs text-muted-foreground">MST: {c.taxId}</p>
                         )}
                       </div>
                       <Badge
                         variant="outline"
-                        className={cn("shrink-0 whitespace-nowrap font-medium", CUSTOMER_TYPE_STYLES[c.type])}
+                        className={cn(
+                          "shrink-0 whitespace-nowrap font-medium",
+                          CUSTOMER_TYPE_STYLES[c.type],
+                        )}
                       >
                         {t(`customers.type.${c.type}`)}
                       </Badge>
@@ -761,7 +861,9 @@ const AdminCustomers = () => {
 
                     <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
                       <div className="min-w-0">
-                        <dt className="text-muted-foreground">{t("customers.field.primaryContact")}</dt>
+                        <dt className="text-muted-foreground">
+                          {t("customers.field.primaryContact")}
+                        </dt>
                         <dd className="mt-0.5 min-w-0">
                           {primary ? (
                             <>
@@ -783,7 +885,9 @@ const AdminCustomers = () => {
                       )}
                       <div className={cn("min-w-0", !canSeeAll && "col-start-2")}>
                         <dt className="text-muted-foreground">{t("customers.field.createdAt")}</dt>
-                        <dd className="mt-0.5 font-medium">{new Date(c.createdAt).toLocaleDateString()}</dd>
+                        <dd className="mt-0.5 font-medium">
+                          {new Date(c.createdAt).toLocaleDateString()}
+                        </dd>
                       </div>
                     </dl>
 
@@ -820,127 +924,169 @@ const AdminCustomers = () => {
 
             {/* Desktop table view (lg+). */}
             <div className="hidden overflow-x-auto rounded-lg border lg:block">
-            <table className="w-full divide-y text-sm">
-              <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
-                <tr>
-                  <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("customers.field.type")}</th>
-                  <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("customers.field.name")}</th>
-                  <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("customers.field.primaryContact")}</th>
-                  <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("customers.field.source")}</th>
-                  <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("customers.field.status")}</th>
-                  {canSeeAll && (
-                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("customers.field.owner")}</th>
-                  )}
-                  <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("customers.field.createdAt")}</th>
-                  {canManage && <th className="px-3 py-3" />}
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {rows.map((c) => {
-                  const primary = primaryContact(c);
-                  return (
-                    <tr
-                      key={c.id}
-                      className="cursor-pointer hover:bg-muted/40"
-                      onClick={() => void openDetail(c.id)}
-                    >
-                      <td className="px-3 py-3">
-                        <Badge
-                          variant="outline"
-                          className={cn("whitespace-nowrap font-medium", CUSTOMER_TYPE_STYLES[c.type])}
-                        >
-                          {t(`customers.type.${c.type}`)}
-                        </Badge>
-                      </td>
-                      <td className="px-3 py-3 font-medium">
-                        {c.name}
-                        {c.type === "Company" && c.taxId && (
-                          <div className="text-xs text-muted-foreground">MST: {c.taxId}</div>
-                        )}
-                      </td>
-                      <td className="px-3 py-3 text-xs">
-                        {primary ? (
-                          <>
-                            {primary.phone && <div>{primary.phone}</div>}
-                            {primary.email && <div className="text-muted-foreground">{primary.email}</div>}
-                            {!primary.phone && !primary.email && "—"}
-                          </>
-                        ) : "—"}
-                      </td>
-                      <td className="px-3 py-3 text-xs">
-                        {sourceLabelByCode.get(c.sourceCode) ?? c.sourceCode}
-                      </td>
-                      <td className="px-3 py-3">
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            "gap-1.5 whitespace-nowrap font-medium",
-                            CUSTOMER_STATUS_STYLES[c.relationshipStatus],
-                          )}
-                        >
-                          <span
+              <table className="w-full divide-y text-sm">
+                <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
+                  <tr>
+                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                      {t("customers.field.type")}
+                    </th>
+                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                      {t("customers.field.name")}
+                    </th>
+                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                      {t("customers.field.primaryContact")}
+                    </th>
+                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                      {t("customers.field.source")}
+                    </th>
+                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                      {t("customers.field.status")}
+                    </th>
+                    {canSeeAll && (
+                      <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                        {t("customers.field.owner")}
+                      </th>
+                    )}
+                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                      {t("customers.field.createdAt")}
+                    </th>
+                    {canManage && <th className="px-3 py-3" />}
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {rows.map((c) => {
+                    const primary = primaryContact(c);
+                    return (
+                      <tr
+                        key={c.id}
+                        className="cursor-pointer hover:bg-muted/40"
+                        onClick={() => void openDetail(c.id)}
+                      >
+                        <td className="px-3 py-3">
+                          <Badge
+                            variant="outline"
                             className={cn(
-                              "h-1.5 w-1.5 rounded-full",
-                              CUSTOMER_STATUS_DOT[c.relationshipStatus],
+                              "whitespace-nowrap font-medium",
+                              CUSTOMER_TYPE_STYLES[c.type],
                             )}
-                          />
-                          {t(`customers.status.${c.relationshipStatus}`)}
-                        </Badge>
-                      </td>
-                      {canSeeAll && (
-                        <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground">{c.ownerName || "—"}</td>
-                      )}
-                      <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground">
-                        <div>{new Date(c.createdAt).toLocaleDateString()}</div>
-                        <div className="text-[11px] opacity-70">
-                          {new Date(c.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                        </div>
-                      </td>
-                      {canManage && (
-                        <td className="px-3 py-3 text-right">
-                          <div className="flex justify-end gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                void openDetail(c.id, { startEditing: true });
-                              }}
-                              title={t("common.edit")}
-                              aria-label={t("common.edit")}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                void handleDelete(c.id);
-                              }}
-                              title={t("common.delete")}
-                              aria-label={t("common.delete")}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                          >
+                            {t(`customers.type.${c.type}`)}
+                          </Badge>
+                        </td>
+                        <td className="px-3 py-3 font-medium">
+                          {c.name}
+                          {c.type === "Company" && c.taxId && (
+                            <div className="text-xs text-muted-foreground">MST: {c.taxId}</div>
+                          )}
+                        </td>
+                        <td className="px-3 py-3 text-xs">
+                          {primary ? (
+                            <>
+                              {primary.phone && <div>{primary.phone}</div>}
+                              {primary.email && (
+                                <div className="text-muted-foreground">{primary.email}</div>
+                              )}
+                              {!primary.phone && !primary.email && "—"}
+                            </>
+                          ) : (
+                            "—"
+                          )}
+                        </td>
+                        <td className="px-3 py-3 text-xs">
+                          {sourceLabelByCode.get(c.sourceCode) ?? c.sourceCode}
+                        </td>
+                        <td className="px-3 py-3">
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "gap-1.5 whitespace-nowrap font-medium",
+                              CUSTOMER_STATUS_STYLES[c.relationshipStatus],
+                            )}
+                          >
+                            <span
+                              className={cn(
+                                "h-1.5 w-1.5 rounded-full",
+                                CUSTOMER_STATUS_DOT[c.relationshipStatus],
+                              )}
+                            />
+                            {t(`customers.status.${c.relationshipStatus}`)}
+                          </Badge>
+                        </td>
+                        {canSeeAll && (
+                          <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground">
+                            {c.ownerName || "—"}
+                          </td>
+                        )}
+                        <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground">
+                          <div>{new Date(c.createdAt).toLocaleDateString()}</div>
+                          <div className="text-[11px] opacity-70">
+                            {new Date(c.createdAt).toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
                           </div>
                         </td>
-                      )}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                        {canManage && (
+                          <td className="px-3 py-3 text-right">
+                            <div className="flex justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  void openDetail(c.id, { startEditing: true });
+                                }}
+                                title={t("common.edit")}
+                                aria-label={t("common.edit")}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  void handleDelete(c.id);
+                                }}
+                                title={t("common.delete")}
+                                aria-label={t("common.delete")}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           </div>
         )}
 
         {total > pageSize && (
           <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <span>{(page - 1) * pageSize + 1}-{Math.min(page * pageSize, total)} / {total}</span>
+            <span>
+              {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, total)} / {total}
+            </span>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>‹</Button>
-              <Button variant="outline" size="sm" onClick={() => setPage((p) => p + 1)} disabled={page * pageSize >= total}>›</Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+              >
+                ‹
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => p + 1)}
+                disabled={page * pageSize >= total}
+              >
+                ›
+              </Button>
             </div>
           </div>
         )}
@@ -970,10 +1116,14 @@ const AdminCustomers = () => {
                   value={createForm.type}
                   onValueChange={(v) => setCreateForm({ ...createForm, type: v as CustomerType })}
                 >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     {TYPES.map((tp) => (
-                      <SelectItem key={tp} value={tp}>{t(`customers.type.${tp}`)}</SelectItem>
+                      <SelectItem key={tp} value={tp}>
+                        {t(`customers.type.${tp}`)}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -984,10 +1134,14 @@ const AdminCustomers = () => {
                   value={createForm.sourceCode || undefined}
                   onValueChange={(v) => setCreateForm({ ...createForm, sourceCode: v })}
                 >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     {sources.map((s) => (
-                      <SelectItem key={s.code} value={s.code}>{s.name}</SelectItem>
+                      <SelectItem key={s.code} value={s.code}>
+                        {s.name}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -1015,7 +1169,9 @@ const AdminCustomers = () => {
                     <Label>{t("customers.field.representativeName")} *</Label>
                     <Input
                       value={createForm.representativeName ?? ""}
-                      onChange={(e) => setCreateForm({ ...createForm, representativeName: e.target.value })}
+                      onChange={(e) =>
+                        setCreateForm({ ...createForm, representativeName: e.target.value })
+                      }
                     />
                   </div>
                 </div>
@@ -1031,18 +1187,18 @@ const AdminCustomers = () => {
             )}
             <div className="rounded border p-3 space-y-3">
               <h4 className="text-sm font-medium">{t("customers.field.primaryContact")} *</h4>
-              <p className="text-xs text-muted-foreground">
-                {t("customers.contact.nameDerived")}
-              </p>
+              <p className="text-xs text-muted-foreground">{t("customers.contact.nameDerived")}</p>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label>{t("customers.contact.phone")}</Label>
                   <Input
                     value={createForm.primaryContact.phone ?? ""}
-                    onChange={(e) => setCreateForm({
-                      ...createForm,
-                      primaryContact: { ...createForm.primaryContact, phone: e.target.value },
-                    })}
+                    onChange={(e) =>
+                      setCreateForm({
+                        ...createForm,
+                        primaryContact: { ...createForm.primaryContact, phone: e.target.value },
+                      })
+                    }
                   />
                 </div>
                 <div>
@@ -1050,10 +1206,12 @@ const AdminCustomers = () => {
                   <Input
                     type="email"
                     value={createForm.primaryContact.email ?? ""}
-                    onChange={(e) => setCreateForm({
-                      ...createForm,
-                      primaryContact: { ...createForm.primaryContact, email: e.target.value },
-                    })}
+                    onChange={(e) =>
+                      setCreateForm({
+                        ...createForm,
+                        primaryContact: { ...createForm.primaryContact, email: e.target.value },
+                      })
+                    }
                   />
                 </div>
               </div>
@@ -1067,7 +1225,9 @@ const AdminCustomers = () => {
               />
             </div>
             {createError && (
-              <p className="rounded bg-destructive/10 px-3 py-2 text-xs text-destructive">{createError}</p>
+              <p className="rounded bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                {createError}
+              </p>
             )}
           </div>
           <DialogFooter>
@@ -1095,11 +1255,12 @@ const AdminCustomers = () => {
           <DialogHeader>
             <DialogTitle>{t("customers.duplicate.title")}</DialogTitle>
             <DialogDescription>
-              {duplicate ? t("customers.duplicate.body")
-                .replace("{name}", duplicate.existingCustomerName)
-                .replace("{id}", String(duplicate.existingCustomerId))
-                .replace("{field}", duplicate.field)
-                .replace("{value}", duplicate.value)
+              {duplicate
+                ? t("customers.duplicate.body")
+                    .replace("{name}", duplicate.existingCustomerName)
+                    .replace("{id}", String(duplicate.existingCustomerId))
+                    .replace("{field}", duplicate.field)
+                    .replace("{value}", duplicate.value)
                 : ""}
             </DialogDescription>
           </DialogHeader>
@@ -1151,7 +1312,10 @@ const AdminCustomers = () => {
                   {detail.name}
                   <Badge
                     variant="outline"
-                    className={cn("whitespace-nowrap font-medium", CUSTOMER_TYPE_STYLES[detail.type])}
+                    className={cn(
+                      "whitespace-nowrap font-medium",
+                      CUSTOMER_TYPE_STYLES[detail.type],
+                    )}
                   >
                     {t(`customers.type.${detail.type}`)}
                   </Badge>
@@ -1172,7 +1336,8 @@ const AdminCustomers = () => {
                   </Badge>
                 </DialogTitle>
                 <DialogDescription>
-                  {sourceLabelByCode.get(detail.sourceCode) ?? detail.sourceCode} · {detail.ownerName ?? `#${detail.ownerUserId ?? "—"}`}
+                  {sourceLabelByCode.get(detail.sourceCode) ?? detail.sourceCode} ·{" "}
+                  {detail.ownerName ?? `#${detail.ownerUserId ?? "—"}`}
                 </DialogDescription>
               </DialogHeader>
 
@@ -1181,77 +1346,113 @@ const AdminCustomers = () => {
                   className="h-auto w-full shrink-0 justify-start overflow-x-auto"
                   data-testid="customer-detail-tabs"
                 >
-                  <TabsTrigger className="h-12 shrink-0" value="general">{t("customers.tab.general")}</TabsTrigger>
+                  <TabsTrigger className="h-12 shrink-0" value="general">
+                    {t("customers.tab.general")}
+                  </TabsTrigger>
                   <TabsTrigger className="h-12 shrink-0" value="contacts">
                     {t("customers.tab.contacts")} ({detail.contacts.length})
                   </TabsTrigger>
-                  <TabsTrigger className="h-12 shrink-0" value="related">{t("customers.tab.related")}</TabsTrigger>
+                  <TabsTrigger className="h-12 shrink-0" value="related">
+                    {t("customers.tab.related")}
+                  </TabsTrigger>
                   <TabsTrigger className="h-12 shrink-0" value="documents">
                     {t("customers.tab.documents")} ({documents.length})
                   </TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="general" className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain pr-1 pt-3">
+                <TabsContent
+                  value="general"
+                  className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain pr-1 pt-3"
+                >
                   {!editing ? (
                     <>
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>
-                          <div className="text-xs text-muted-foreground">{t("customers.field.type")}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {t("customers.field.type")}
+                          </div>
                           <div>{t(`customers.type.${detail.type}`)}</div>
                         </div>
                         <div>
-                          <div className="text-xs text-muted-foreground">{t("customers.field.status")}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {t("customers.field.status")}
+                          </div>
                           <div>{t(`customers.status.${detail.relationshipStatus}`)}</div>
                         </div>
                         <div>
-                          <div className="text-xs text-muted-foreground">{t("customers.field.source")}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {t("customers.field.source")}
+                          </div>
                           <div>{sourceLabelByCode.get(detail.sourceCode) ?? detail.sourceCode}</div>
                         </div>
                         <div>
-                          <div className="text-xs text-muted-foreground">{t("customers.field.owner")}</div>
-                          <div>{detail.ownerName ?? (detail.ownerUserId ? `#${detail.ownerUserId}` : "—")}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {t("customers.field.owner")}
+                          </div>
+                          <div>
+                            {detail.ownerName ??
+                              (detail.ownerUserId ? `#${detail.ownerUserId}` : "—")}
+                          </div>
                         </div>
                         {detail.type === "Company" && (
                           <>
                             <div>
-                              <div className="text-xs text-muted-foreground">{t("customers.field.taxId")}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {t("customers.field.taxId")}
+                              </div>
                               <div>{detail.taxId || "—"}</div>
                             </div>
                             <div>
-                              <div className="text-xs text-muted-foreground">{t("customers.field.representativeName")}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {t("customers.field.representativeName")}
+                              </div>
                               <div>{detail.representativeName || "—"}</div>
                             </div>
                             <div className="col-span-2">
-                              <div className="text-xs text-muted-foreground">{t("customers.field.address")}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {t("customers.field.address")}
+                              </div>
                               <div className="whitespace-pre-wrap">{detail.address || "—"}</div>
                             </div>
                           </>
                         )}
                         <div>
-                          <div className="text-xs text-muted-foreground">{t("customers.field.createdAt")}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {t("customers.field.createdAt")}
+                          </div>
                           <div>{new Date(detail.createdAt).toLocaleString()}</div>
                         </div>
                         <div>
-                          <div className="text-xs text-muted-foreground">{t("customers.field.updatedAt")}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {t("customers.field.updatedAt")}
+                          </div>
                           <div>{new Date(detail.updatedAt).toLocaleString()}</div>
                         </div>
                         {detail.note && (
                           <div className="col-span-2">
-                            <div className="text-xs text-muted-foreground">{t("customers.field.note")}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {t("customers.field.note")}
+                            </div>
                             <div className="whitespace-pre-wrap">{detail.note}</div>
                           </div>
                         )}
                       </div>
                       {(() => {
-                        const primary = detail.contacts.find((c) => c.isPrimary) ?? detail.contacts[0];
+                        const primary =
+                          detail.contacts.find((c) => c.isPrimary) ?? detail.contacts[0];
                         if (!primary) return null;
                         return (
                           <div className="rounded-md border p-3 text-sm space-y-1">
-                            <div className="text-xs text-muted-foreground">{t("customers.field.primaryContact")}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {t("customers.field.primaryContact")}
+                            </div>
                             <div className="font-medium">
                               {primary.fullName}
                               {primary.position && (
-                                <span className="text-muted-foreground font-normal"> · {primary.position}</span>
+                                <span className="text-muted-foreground font-normal">
+                                  {" "}
+                                  · {primary.position}
+                                </span>
                               )}
                             </div>
                             <div className="text-muted-foreground">
@@ -1294,10 +1495,14 @@ const AdminCustomers = () => {
                                 value={activityType}
                                 onValueChange={(v) => setActivityType(v as CustomerActivityType)}
                               >
-                                <SelectTrigger className="w-full sm:w-[140px]"><SelectValue /></SelectTrigger>
+                                <SelectTrigger className="w-full sm:w-[140px]">
+                                  <SelectValue />
+                                </SelectTrigger>
                                 <SelectContent>
                                   {ACTIVITY_TYPES.map((tp) => (
-                                    <SelectItem key={tp} value={tp}>{t(`customers.activity.${tp}`)}</SelectItem>
+                                    <SelectItem key={tp} value={tp}>
+                                      {t(`customers.activity.${tp}`)}
+                                    </SelectItem>
                                   ))}
                                 </SelectContent>
                               </Select>
@@ -1320,131 +1525,169 @@ const AdminCustomers = () => {
                         )}
                       </div>
                     </>
-                  ) : editForm && (
-                    <div className="space-y-3">
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <Label>{t("customers.field.type")}</Label>
-                          <Select
-                            value={editForm.type}
-                            onValueChange={(v) => setEditForm({ ...editForm, type: v as CustomerType })}
-                          >
-                            <SelectTrigger><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              {TYPES.map((tp) => (
-                                <SelectItem key={tp} value={tp}>{t(`customers.type.${tp}`)}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div>
-                          <Label>{t("customers.field.status")}</Label>
-                          <Select
-                            value={editForm.relationshipStatus}
-                            onValueChange={(v) => setEditForm({
-                              ...editForm,
-                              relationshipStatus: v as CustomerRelationshipStatus,
-                            })}
-                          >
-                            <SelectTrigger><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              {STATUSES.map((s) => (
-                                <SelectItem key={s} value={s}>{t(`customers.status.${s}`)}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                      <div>
-                        <Label>{t("customers.field.name")}</Label>
-                        <Input
-                          value={editForm.name}
-                          onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                        />
-                      </div>
-                      {editForm.type === "Company" && (
-                        <>
-                          <div className="grid grid-cols-2 gap-3">
-                            <div>
-                              <Label>{t("customers.field.taxId")}</Label>
-                              <Input
-                                value={editForm.taxId ?? ""}
-                                onChange={(e) => setEditForm({ ...editForm, taxId: e.target.value })}
-                              />
-                            </div>
-                            <div>
-                              <Label>{t("customers.field.representativeName")}</Label>
-                              <Input
-                                value={editForm.representativeName ?? ""}
-                                onChange={(e) => setEditForm({ ...editForm, representativeName: e.target.value })}
-                              />
-                            </div>
+                  ) : (
+                    editForm && (
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <Label>{t("customers.field.type")}</Label>
+                            <Select
+                              value={editForm.type}
+                              onValueChange={(v) =>
+                                setEditForm({ ...editForm, type: v as CustomerType })
+                              }
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {TYPES.map((tp) => (
+                                  <SelectItem key={tp} value={tp}>
+                                    {t(`customers.type.${tp}`)}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </div>
                           <div>
-                            <Label>{t("customers.field.address")}</Label>
-                            <Textarea
-                              rows={2}
-                              value={editForm.address ?? ""}
-                              onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
-                            />
+                            <Label>{t("customers.field.status")}</Label>
+                            <Select
+                              value={editForm.relationshipStatus}
+                              onValueChange={(v) =>
+                                setEditForm({
+                                  ...editForm,
+                                  relationshipStatus: v as CustomerRelationshipStatus,
+                                })
+                              }
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {STATUSES.map((s) => (
+                                  <SelectItem key={s} value={s}>
+                                    {t(`customers.status.${s}`)}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </div>
-                        </>
-                      )}
-                      <div>
-                        <Label>{t("customers.field.source")}</Label>
-                        <Select
-                          value={editForm.sourceCode}
-                          onValueChange={(v) => setEditForm({ ...editForm, sourceCode: v })}
-                        >
-                          <SelectTrigger><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            {sources.map((s) => (
-                              <SelectItem key={s.code} value={s.code}>{s.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        </div>
+                        <div>
+                          <Label>{t("customers.field.name")}</Label>
+                          <Input
+                            value={editForm.name}
+                            onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                          />
+                        </div>
+                        {editForm.type === "Company" && (
+                          <>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <Label>{t("customers.field.taxId")}</Label>
+                                <Input
+                                  value={editForm.taxId ?? ""}
+                                  onChange={(e) =>
+                                    setEditForm({ ...editForm, taxId: e.target.value })
+                                  }
+                                />
+                              </div>
+                              <div>
+                                <Label>{t("customers.field.representativeName")}</Label>
+                                <Input
+                                  value={editForm.representativeName ?? ""}
+                                  onChange={(e) =>
+                                    setEditForm({ ...editForm, representativeName: e.target.value })
+                                  }
+                                />
+                              </div>
+                            </div>
+                            <div>
+                              <Label>{t("customers.field.address")}</Label>
+                              <Textarea
+                                rows={2}
+                                value={editForm.address ?? ""}
+                                onChange={(e) =>
+                                  setEditForm({ ...editForm, address: e.target.value })
+                                }
+                              />
+                            </div>
+                          </>
+                        )}
+                        <div>
+                          <Label>{t("customers.field.source")}</Label>
+                          <Select
+                            value={editForm.sourceCode}
+                            onValueChange={(v) => setEditForm({ ...editForm, sourceCode: v })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {sources.map((s) => (
+                                <SelectItem key={s.code} value={s.code}>
+                                  {s.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label>{t("customers.field.note")}</Label>
+                          <Textarea
+                            rows={2}
+                            value={editForm.note ?? ""}
+                            onChange={(e) => setEditForm({ ...editForm, note: e.target.value })}
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            onClick={() => void handleSaveEdit()}
+                            disabled={savingEdit}
+                          >
+                            {savingEdit ? "…" : t("customers.save")}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setEditing(false);
+                              setEditForm(null);
+                            }}
+                          >
+                            {t("common.cancel")}
+                          </Button>
+                        </div>
                       </div>
-                      <div>
-                        <Label>{t("customers.field.note")}</Label>
-                        <Textarea
-                          rows={2}
-                          value={editForm.note ?? ""}
-                          onChange={(e) => setEditForm({ ...editForm, note: e.target.value })}
-                        />
-                      </div>
-                      <div className="flex gap-2">
-                        <Button size="sm" onClick={() => void handleSaveEdit()} disabled={savingEdit}>
-                          {savingEdit ? "…" : t("customers.save")}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            setEditing(false);
-                            setEditForm(null);
-                          }}
-                        >
-                          {t("common.cancel")}
-                        </Button>
-                      </div>
-                    </div>
+                    )
                   )}
                 </TabsContent>
 
-                <TabsContent value="contacts" className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain pr-1 pt-3">
+                <TabsContent
+                  value="contacts"
+                  className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain pr-1 pt-3"
+                >
                   <ul className="space-y-2">
                     {detail.contacts.map((c) => (
-                      <li key={c.id} className="flex items-start justify-between rounded border p-2 text-sm">
+                      <li
+                        key={c.id}
+                        className="flex items-start justify-between rounded border p-2 text-sm"
+                      >
                         <div>
                           <div className="flex items-center gap-2 font-medium">
                             {c.fullName}
                             {c.isPrimary && (
                               <Badge variant="default" className="text-[10px]">
-                                <Star className="mr-1 h-3 w-3" />{t("customers.contact.primaryBadge")}
+                                <Star className="mr-1 h-3 w-3" />
+                                {t("customers.contact.primaryBadge")}
                               </Badge>
                             )}
                             {c.isLegalRepresentative && (
-                              <Badge variant="outline" className="border-amber-300 bg-amber-50 text-[10px] text-amber-800">
+                              <Badge
+                                variant="outline"
+                                className="border-amber-300 bg-amber-50 text-[10px] text-amber-800"
+                              >
                                 {t("customers.contact.legalRepresentativeBadge")}
                               </Badge>
                             )}
@@ -1470,7 +1713,10 @@ const AdminCustomers = () => {
                             <Button
                               variant="ghost"
                               size="icon"
-                              disabled={detail.contacts.length <= 1 || (detail.type === "Company" && c.isLegalRepresentative)}
+                              disabled={
+                                detail.contacts.length <= 1 ||
+                                (detail.type === "Company" && c.isLegalRepresentative)
+                              }
                               onClick={() => void handleDeleteContact(c)}
                               title={t("common.delete")}
                               aria-label={t("common.delete")}
@@ -1495,7 +1741,9 @@ const AdminCustomers = () => {
                     <div className="rounded border p-3 space-y-2">
                       <div className="flex items-center justify-between">
                         <h4 className="text-sm font-medium">
-                          {contactForm.id ? t("customers.contact.edit") : t("customers.contact.add")}
+                          {contactForm.id
+                            ? t("customers.contact.edit")
+                            : t("customers.contact.add")}
                         </h4>
                         <Button
                           variant="ghost"
@@ -1511,14 +1759,18 @@ const AdminCustomers = () => {
                           <Label className="text-xs">{t("customers.contact.fullName")} *</Label>
                           <Input
                             value={contactForm.fullName}
-                            onChange={(e) => setContactForm({ ...contactForm, fullName: e.target.value })}
+                            onChange={(e) =>
+                              setContactForm({ ...contactForm, fullName: e.target.value })
+                            }
                           />
                         </div>
                         <div>
                           <Label className="text-xs">{t("customers.contact.phone")}</Label>
                           <Input
                             value={contactForm.phone ?? ""}
-                            onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })}
+                            onChange={(e) =>
+                              setContactForm({ ...contactForm, phone: e.target.value })
+                            }
                           />
                         </div>
                         <div>
@@ -1526,14 +1778,18 @@ const AdminCustomers = () => {
                           <Input
                             type="email"
                             value={contactForm.email ?? ""}
-                            onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
+                            onChange={(e) =>
+                              setContactForm({ ...contactForm, email: e.target.value })
+                            }
                           />
                         </div>
                       </div>
                       <label className="flex items-center gap-2 text-xs">
                         <Checkbox
                           checked={!!contactForm.isPrimary}
-                          onCheckedChange={(v) => setContactForm({ ...contactForm, isPrimary: v === true })}
+                          onCheckedChange={(v) =>
+                            setContactForm({ ...contactForm, isPrimary: v === true })
+                          }
                         />
                         {t("customers.contact.isPrimary")}
                       </label>
@@ -1541,28 +1797,40 @@ const AdminCustomers = () => {
                         <label className="flex items-center gap-2 text-xs">
                           <Checkbox
                             checked={!!contactForm.isLegalRepresentative}
-                            onCheckedChange={(value) => setContactForm({
-                              ...contactForm,
-                              isLegalRepresentative: value === true,
-                            })}
+                            onCheckedChange={(value) =>
+                              setContactForm({
+                                ...contactForm,
+                                isLegalRepresentative: value === true,
+                              })
+                            }
                           />
                           {t("customers.contact.isLegalRepresentative")}
                         </label>
                       )}
-                      <Button size="sm" onClick={() => void handleSaveContact()} disabled={savingContact}>
+                      <Button
+                        size="sm"
+                        onClick={() => void handleSaveContact()}
+                        disabled={savingContact}
+                      >
                         {savingContact ? "…" : t("customers.save")}
                       </Button>
                     </div>
                   )}
                 </TabsContent>
 
-                <TabsContent value="related" className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1 pt-3">
+                <TabsContent
+                  value="related"
+                  className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1 pt-3"
+                >
                   {relatedLoading ? (
                     <div className="flex items-center justify-center gap-2 rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
                       <RefreshCw className="h-4 w-4 animate-spin" aria-hidden />
                       {t("customers.tab.related.loading")}
                     </div>
-                  ) : !canViewOperationalProjects && !canViewOpportunities && !canViewQuotes && !canViewContracts ? (
+                  ) : !canViewOperationalProjects &&
+                    !canViewOpportunities &&
+                    !canViewQuotes &&
+                    !canViewContracts ? (
                     <p className="rounded-lg border border-dashed p-5 text-center text-sm text-muted-foreground">
                       {t("customers.tab.related.noAccess")}
                     </p>
@@ -1571,7 +1839,11 @@ const AdminCustomers = () => {
                       {Object.keys(relatedErrors).length > 0 && (
                         <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
                           <span>{t("customers.tab.related.loadError")}</span>
-                          <Button variant="outline" size="sm" onClick={() => void fetchRelatedRecords(detail.id)}>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => void fetchRelatedRecords(detail.id)}
+                          >
                             <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> {t("common.retry")}
                           </Button>
                         </div>
@@ -1592,7 +1864,9 @@ const AdminCustomers = () => {
                               key={project.id}
                               title={`${project.code} · ${project.name}`}
                               subtitle={t(`operationalProjects.status.${project.status}`)}
-                              value={t("operationalProjects.count.contractsWithValue", { count: project.contractCount })}
+                              value={t("operationalProjects.count.contractsWithValue", {
+                                count: project.contractCount,
+                              })}
                               href={`/admin/operational-projects/${project.id}`}
                             />
                           ))}
@@ -1668,11 +1942,16 @@ const AdminCustomers = () => {
                   )}
                 </TabsContent>
 
-                <TabsContent value="documents" className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain pr-1 pt-3">
+                <TabsContent
+                  value="documents"
+                  className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain pr-1 pt-3"
+                >
                   {canManage && (
                     <div className="grid gap-3 rounded-lg border bg-muted/20 p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
                       <div className="space-y-1.5">
-                        <Label htmlFor="customer-document-file">{t("customers.document.file")}</Label>
+                        <Label htmlFor="customer-document-file">
+                          {t("customers.document.file")}
+                        </Label>
                         <Input
                           key={documentInputKey}
                           id="customer-document-file"
@@ -1680,10 +1959,14 @@ const AdminCustomers = () => {
                           accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
                           onChange={(event) => setDocumentFile(event.target.files?.[0] ?? null)}
                         />
-                        <p className="text-xs text-muted-foreground">{t("customers.document.fileHint")}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {t("customers.document.fileHint")}
+                        </p>
                       </div>
                       <div className="space-y-1.5">
-                        <Label htmlFor="customer-document-label">{t("customers.document.label")}</Label>
+                        <Label htmlFor="customer-document-label">
+                          {t("customers.document.label")}
+                        </Label>
                         <Input
                           id="customer-document-label"
                           value={documentLabel}
@@ -1698,7 +1981,9 @@ const AdminCustomers = () => {
                         disabled={!documentFile || uploadingDocument}
                       >
                         <Upload className="mr-1.5 h-4 w-4" />
-                        {uploadingDocument ? t("customers.document.uploading") : t("customers.document.upload")}
+                        {uploadingDocument
+                          ? t("customers.document.uploading")
+                          : t("customers.document.upload")}
                       </Button>
                     </div>
                   )}
@@ -1710,7 +1995,11 @@ const AdminCustomers = () => {
                   ) : documentsError ? (
                     <div className="flex flex-col items-center gap-2 rounded border border-destructive/40 p-4 text-center text-sm text-destructive">
                       <p>{documentsError}</p>
-                      <Button variant="outline" size="sm" onClick={() => void fetchDocuments(detail.id)}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => void fetchDocuments(detail.id)}
+                      >
                         {t("common.retry")}
                       </Button>
                     </div>
@@ -1722,25 +2011,38 @@ const AdminCustomers = () => {
                   ) : (
                     <ul className="grid gap-2 sm:grid-cols-2">
                       {documents.map((document) => (
-                        <li key={document.id} className="flex min-w-0 items-start gap-3 rounded-lg border p-3">
+                        <li
+                          key={document.id}
+                          className="flex min-w-0 items-start gap-3 rounded-lg border p-3"
+                        >
                           <div className="rounded-md bg-muted p-2">
                             <FileText className="h-5 w-5 text-muted-foreground" />
                           </div>
                           <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-medium" title={document.originalFileName}>
+                            <p
+                              className="truncate text-sm font-medium"
+                              title={document.originalFileName}
+                            >
                               {document.label || document.originalFileName}
                             </p>
                             {document.label && (
-                              <p className="truncate text-xs text-muted-foreground" title={document.originalFileName}>
+                              <p
+                                className="truncate text-xs text-muted-foreground"
+                                title={document.originalFileName}
+                              >
                                 {document.originalFileName}
                               </p>
                             )}
                             <p className="text-xs text-muted-foreground">
-                              {formatFileSize(document.fileSize)} · {new Date(document.createdAt).toLocaleString()}
+                              {formatFileSize(document.fileSize)} ·{" "}
+                              {new Date(document.createdAt).toLocaleString()}
                             </p>
                             {document.uploadedByName && (
                               <p className="truncate text-xs text-muted-foreground">
-                                {t("customers.document.uploadedBy").replace("{name}", document.uploadedByName)}
+                                {t("customers.document.uploadedBy").replace(
+                                  "{name}",
+                                  document.uploadedByName,
+                                )}
                               </p>
                             )}
                           </div>
@@ -1749,9 +2051,10 @@ const AdminCustomers = () => {
                               url={document.filePath}
                               fileName={document.originalFileName}
                               contentType={document.contentType}
-                              fetchFile={async () => (
-                                await adminApi.getCustomerDocumentContent(detail.id, document.id)
-                              ).data}
+                              fetchFile={async () =>
+                                (await adminApi.getCustomerDocumentContent(detail.id, document.id))
+                                  .data
+                              }
                             />
                             {canManage && (
                               <Button
@@ -1829,7 +2132,9 @@ const RelatedSection = ({
       <div className="flex min-w-0 items-center gap-2 text-sm font-semibold">
         {icon}
         <span className="truncate">{title}</span>
-        <Badge variant="secondary" className="h-5 min-w-5 justify-center px-1.5 text-[11px]">{count}</Badge>
+        <Badge variant="secondary" className="h-5 min-w-5 justify-center px-1.5 text-[11px]">
+          {count}
+        </Badge>
       </div>
       <Link to={viewAllHref} className="shrink-0 text-xs font-medium text-primary hover:underline">
         {viewAllLabel}

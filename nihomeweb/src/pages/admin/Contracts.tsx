@@ -1,6 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { Plus, Pencil, Trash2, Search as SearchIcon, Download, AlertTriangle, ArrowUp, ArrowDown, ExternalLink, SlidersHorizontal } from "lucide-react";
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  Search as SearchIcon,
+  Download,
+  AlertTriangle,
+  ArrowUp,
+  ArrowDown,
+  ExternalLink,
+  SlidersHorizontal,
+} from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { formatVnd, formatVndWithSymbol } from "@/lib/numberFormat";
@@ -52,7 +63,14 @@ import { createCsvFilename, downloadCsv } from "@/lib/exportCsv";
 // Number of days before end-date that triggers the red "ending soon" badge.
 const ENDING_SOON_DAYS = 30;
 const PAGE_SIZE = 20;
-const CONTRACT_TYPES: ContractType[] = ["Unclassified", "Design", "Construction", "DesignAndBuild", "Supply", "Subcontract"];
+const CONTRACT_TYPES: ContractType[] = [
+  "Unclassified",
+  "Design",
+  "Construction",
+  "DesignAndBuild",
+  "Supply",
+  "Subcontract",
+];
 const CONTRACT_DIRECTIONS: ContractDirection[] = ["Upstream", "Downstream"];
 
 type ContractListMode = "all" | "upstream" | "downstream";
@@ -237,8 +255,16 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [total, setTotal] = useState(0);
-  const [summary, setSummary] = useState({ totalCurrentValue: 0, overdueContractCount: 0, dueSoonContractCount: 0 });
-  const [filterOptions, setFilterOptions] = useState<ContractFilterOptionsResponse>({ owners: [], customers: [], projects: [] });
+  const [summary, setSummary] = useState({
+    totalCurrentValue: 0,
+    overdueContractCount: 0,
+    dueSoonContractCount: 0,
+  });
+  const [filterOptions, setFilterOptions] = useState<ContractFilterOptionsResponse>({
+    owners: [],
+    customers: [],
+    projects: [],
+  });
   const [customers, setCustomers] = useState<CustomerResponse[]>([]);
   const [projects, setProjects] = useState<OperationalProjectListItemResponse[]>([]);
   const [classification, setClassification] = useState<ContractClassificationOptions | null>(null);
@@ -254,32 +280,36 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
 
   const [statusFilter, setStatusFilter] = useState<ContractStatus | "all">(
     CONTRACT_STATUSES.includes(searchParams.get("status") as ContractStatus)
-      ? searchParams.get("status") as ContractStatus
+      ? (searchParams.get("status") as ContractStatus)
       : "all",
   );
-  const fixedDirection: ContractDirection | null = mode === "upstream"
-    ? "Upstream"
-    : mode === "downstream" ? "Downstream" : null;
+  const fixedDirection: ContractDirection | null =
+    mode === "upstream" ? "Upstream" : mode === "downstream" ? "Downstream" : null;
   const [directionFilter, setDirectionFilter] = useState<ContractDirection | "all">(
-    fixedDirection ?? (CONTRACT_DIRECTIONS.includes(searchParams.get("direction") as ContractDirection)
-      ? searchParams.get("direction") as ContractDirection
-      : "all"),
+    fixedDirection ??
+      (CONTRACT_DIRECTIONS.includes(searchParams.get("direction") as ContractDirection)
+        ? (searchParams.get("direction") as ContractDirection)
+        : "all"),
   );
   const [typeFilter, setTypeFilter] = useState<ContractType | "all">(
     CONTRACT_TYPES.includes(searchParams.get("type") as ContractType)
-      ? searchParams.get("type") as ContractType
+      ? (searchParams.get("type") as ContractType)
       : "all",
   );
   const [vendorFilter, setVendorFilter] = useState<number | "all">(
-    fixedDirection === "Upstream" ? "all" : readPositiveParam("vendor") ?? "all",
+    fixedDirection === "Upstream" ? "all" : (readPositiveParam("vendor") ?? "all"),
   );
   const [customerFilter, setCustomerFilter] = useState<number | "all">(
-    Number.isInteger(customerIdParam) && customerIdParam > 0 ? customerIdParam : (readPositiveParam("customer") ?? "all"),
+    Number.isInteger(customerIdParam) && customerIdParam > 0
+      ? customerIdParam
+      : (readPositiveParam("customer") ?? "all"),
   );
   const [projectFilter, setProjectFilter] = useState<number | "all">(
     prefillOperationalProjectId ?? readPositiveParam("project") ?? "all",
   );
-  const [ownerFilter, setOwnerFilter] = useState<number | "all">(readPositiveParam("owner") ?? "all");
+  const [ownerFilter, setOwnerFilter] = useState<number | "all">(
+    readPositiveParam("owner") ?? "all",
+  );
   const [signedFrom, setSignedFrom] = useState(searchParams.get("signedFrom") ?? "");
   const [signedTo, setSignedTo] = useState(searchParams.get("signedTo") ?? "");
   const [endFrom, setEndFrom] = useState(searchParams.get("endFrom") ?? "");
@@ -288,12 +318,18 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
   const [valueMax, setValueMax] = useState(searchParams.get("valueMax") ?? "");
   const [search, setSearch] = useState(searchParams.get("search") ?? "");
   const [page, setPage] = useState(readPositiveParam("page") ?? 1);
-  const [sortBy, setSortBy] = useState<ContractSortBy>((searchParams.get("sortBy") as ContractSortBy) || "signedDate");
-  const [sortDirection, setSortDirection] = useState<SortDirection>(searchParams.get("sortDirection") === "asc" ? "asc" : "desc");
+  const [sortBy, setSortBy] = useState<ContractSortBy>(
+    (searchParams.get("sortBy") as ContractSortBy) || "signedDate",
+  );
+  const [sortDirection, setSortDirection] = useState<SortDirection>(
+    searchParams.get("sortDirection") === "asc" ? "asc" : "desc",
+  );
   const [exporting, setExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState({ current: 0, total: 0 });
   const [advancedOpen, setAdvancedOpen] = useState(() =>
-    ["type", "vendor", "signedFrom", "signedTo", "valueMin", "valueMax", "sortBy"].some((key) => searchParams.has(key)),
+    ["type", "vendor", "signedFrom", "signedTo", "valueMin", "valueMax", "sortBy"].some((key) =>
+      searchParams.has(key),
+    ),
   );
   const latestRequest = useRef(0);
   const searchEffectReady = useRef(false);
@@ -313,32 +349,54 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
     return () => window.clearTimeout(timer);
   }, [search]);
 
-  const buildListParams = useCallback((requestedPage = page, requestedPageSize = PAGE_SIZE) => {
-    const params: ContractListParams = {
-      page: requestedPage,
-      pageSize: requestedPageSize,
+  const buildListParams = useCallback(
+    (requestedPage = page, requestedPageSize = PAGE_SIZE) => {
+      const params: ContractListParams = {
+        page: requestedPage,
+        pageSize: requestedPageSize,
+        sortBy,
+        sortDirection,
+      };
+      if (statusFilter !== "all") params.status = statusFilter;
+      const effectiveDirection = fixedDirection ?? directionFilter;
+      if (effectiveDirection !== "all") params.direction = effectiveDirection;
+      if (typeFilter !== "all") params.type = typeFilter;
+      if (vendorFilter !== "all" && fixedDirection !== "Upstream") params.vendorId = vendorFilter;
+      if (customerFilter !== "all") params.customerId = customerFilter;
+      if (projectFilter !== "all") params.operationalProjectId = projectFilter;
+      if (ownerFilter !== "all") params.ownerUserId = ownerFilter;
+      if (signedFrom) params.signedFrom = toIsoTimestamp(signedFrom) ?? undefined;
+      if (signedTo) params.signedTo = toIsoTimestamp(signedTo) ?? undefined;
+      if (endFrom) params.endFrom = toIsoTimestamp(endFrom) ?? undefined;
+      if (endTo) params.endTo = toIsoTimestamp(endTo) ?? undefined;
+      const minNum = Number(valueMin);
+      if (valueMin && !Number.isNaN(minNum)) params.valueMin = minNum;
+      const maxNum = Number(valueMax);
+      if (valueMax && !Number.isNaN(maxNum)) params.valueMax = maxNum;
+      if (debouncedSearch.trim()) params.search = debouncedSearch.trim();
+      return params;
+    },
+    [
+      page,
       sortBy,
       sortDirection,
-    };
-    if (statusFilter !== "all") params.status = statusFilter;
-    const effectiveDirection = fixedDirection ?? directionFilter;
-    if (effectiveDirection !== "all") params.direction = effectiveDirection;
-    if (typeFilter !== "all") params.type = typeFilter;
-    if (vendorFilter !== "all" && fixedDirection !== "Upstream") params.vendorId = vendorFilter;
-    if (customerFilter !== "all") params.customerId = customerFilter;
-    if (projectFilter !== "all") params.operationalProjectId = projectFilter;
-    if (ownerFilter !== "all") params.ownerUserId = ownerFilter;
-    if (signedFrom) params.signedFrom = toIsoTimestamp(signedFrom) ?? undefined;
-    if (signedTo) params.signedTo = toIsoTimestamp(signedTo) ?? undefined;
-    if (endFrom) params.endFrom = toIsoTimestamp(endFrom) ?? undefined;
-    if (endTo) params.endTo = toIsoTimestamp(endTo) ?? undefined;
-    const minNum = Number(valueMin);
-    if (valueMin && !Number.isNaN(minNum)) params.valueMin = minNum;
-    const maxNum = Number(valueMax);
-    if (valueMax && !Number.isNaN(maxNum)) params.valueMax = maxNum;
-    if (debouncedSearch.trim()) params.search = debouncedSearch.trim();
-    return params;
-  }, [page, sortBy, sortDirection, statusFilter, fixedDirection, directionFilter, typeFilter, vendorFilter, customerFilter, projectFilter, ownerFilter, signedFrom, signedTo, endFrom, endTo, valueMin, valueMax, debouncedSearch]);
+      statusFilter,
+      fixedDirection,
+      directionFilter,
+      typeFilter,
+      vendorFilter,
+      customerFilter,
+      projectFilter,
+      ownerFilter,
+      signedFrom,
+      signedTo,
+      endFrom,
+      endTo,
+      valueMin,
+      valueMax,
+      debouncedSearch,
+    ],
+  );
 
   const load = useCallback(async () => {
     const requestId = latestRequest.current + 1;
@@ -373,11 +431,13 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
   useEffect(() => {
     const direction = fixedDirection ?? (directionFilter === "all" ? undefined : directionFilter);
     setMetadataError(null);
-    void adminApi.getContractFilterOptions(direction)
+    void adminApi
+      .getContractFilterOptions(direction)
       .then((response) => setFilterOptions(response.data))
       .catch(() => setMetadataError(t("contracts.filterOptionsLoadError")));
     if (classification === null) {
-      void adminApi.getContractClassificationOptions(fixedDirection)
+      void adminApi
+        .getContractClassificationOptions(fixedDirection)
         .then((response) => setClassification(response.data))
         .catch(() => setMetadataError(t("contracts.filterOptionsLoadError")));
     }
@@ -403,7 +463,10 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
           nextPage = 1;
           let expectedProjects = 1;
           while (allProjects.length < expectedProjects) {
-            const response = await adminApi.listOperationalProjects({ page: nextPage, pageSize: 100 });
+            const response = await adminApi.listOperationalProjects({
+              page: nextPage,
+              pageSize: 100,
+            });
             allProjects.push(...response.data.items);
             expectedProjects = response.data.total;
             if (response.data.items.length === 0) break;
@@ -440,7 +503,26 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
     if (sortDirection !== "desc") params.set("sortDirection", sortDirection);
     if (page > 1) params.set("page", String(page));
     setSearchParams(params, { replace: true });
-  }, [mode, search, statusFilter, customerFilter, projectFilter, ownerFilter, endFrom, endTo, typeFilter, vendorFilter, signedFrom, signedTo, valueMin, valueMax, sortBy, sortDirection, page, setSearchParams]);
+  }, [
+    mode,
+    search,
+    statusFilter,
+    customerFilter,
+    projectFilter,
+    ownerFilter,
+    endFrom,
+    endTo,
+    typeFilter,
+    vendorFilter,
+    signedFrom,
+    signedTo,
+    valueMin,
+    valueMax,
+    sortBy,
+    sortDirection,
+    page,
+    setSearchParams,
+  ]);
 
   const resetFilters = () => {
     setStatusFilter("all");
@@ -477,12 +559,15 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
     search !== "";
 
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const detailUrl = useCallback((id: number, edit = false) => {
-    const params = new URLSearchParams();
-    if (edit) params.set("edit", "true");
-    params.set("returnTo", `${location.pathname}${location.search}`);
-    return `/admin/contracts/${id}?${params.toString()}`;
-  }, [location.pathname, location.search]);
+  const detailUrl = useCallback(
+    (id: number, edit = false) => {
+      const params = new URLSearchParams();
+      if (edit) params.set("edit", "true");
+      params.set("returnTo", `${location.pathname}${location.search}`);
+      return `/admin/contracts/${id}?${params.toString()}`;
+    },
+    [location.pathname, location.search],
+  );
 
   // -------- dialog / form --------
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -503,18 +588,21 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
     try {
       const { data } = await adminApi.previewNextContractNumber();
       setSuggestedContractNumber(data.contractNumber);
-      setForm((current) => current.contractNumber.trim() === ""
-        ? { ...current, contractNumber: data.contractNumber }
-        : current);
+      setForm((current) =>
+        current.contractNumber.trim() === ""
+          ? { ...current, contractNumber: data.contractNumber }
+          : current,
+      );
     } catch {
       return;
     }
   }, []);
 
   const openCreate = () => {
-    const selectedProject = projectFilter === "all"
-      ? null
-      : projects.find((project) => project.id === projectFilter) ?? null;
+    const selectedProject =
+      projectFilter === "all"
+        ? null
+        : (projects.find((project) => project.id === projectFilter) ?? null);
     setForm({
       ...emptyForm,
       direction: fixedDirection ?? emptyForm.direction,
@@ -547,7 +635,16 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
     setDialogOpen(true);
     void loadSuggestedContractNumber();
     // Runs once per navigation carrying the parameters.
-  }, [fixedDirection, fromQuoteId, loadSuggestedContractNumber, mode, prefillCustomerId, prefillOperationalProjectId, prefillOpportunityId, prefillValue]);
+  }, [
+    fixedDirection,
+    fromQuoteId,
+    loadSuggestedContractNumber,
+    mode,
+    prefillCustomerId,
+    prefillOperationalProjectId,
+    prefillOpportunityId,
+    prefillValue,
+  ]);
   const patchMilestone = (index: number, patch: Partial<MilestoneDraft>) => {
     setForm((prev) => ({
       ...prev,
@@ -594,7 +691,11 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
   };
 
   const milestoneSum = useMemo(
-    () => form.milestones.reduce((acc, m) => acc + (Number.isFinite(m.percentValue) ? m.percentValue : 0), 0),
+    () =>
+      form.milestones.reduce(
+        (acc, m) => acc + (Number.isFinite(m.percentValue) ? m.percentValue : 0),
+        0,
+      ),
     [form.milestones],
   );
   // Server tolerance is `Math.Abs(sum - 100) > 0.01` — mirror it here with
@@ -616,7 +717,10 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
     setCreatingProject(true);
     setFormError(null);
     try {
-      const { data } = await adminApi.createOperationalProject({ name, customerId: form.customerId });
+      const { data } = await adminApi.createOperationalProject({
+        name,
+        customerId: form.customerId,
+      });
       setProjects((current) => [...current, data]);
       setForm((current) => ({ ...current, operationalProjectId: data.id }));
       setQuickProjectName(null);
@@ -669,19 +773,18 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
       }
     }
     const milestonesPayload: ContractPaymentMilestoneRequest[] = form.milestones.map((m, i) => ({
-        order: i + 1,
-        name: m.name.trim(),
-        percentValue: Number.isFinite(m.percentValue) ? m.percentValue : 0,
-        dueDate: toIsoTimestamp(m.dueDate),
-        actualPaymentDate: m.status === "Paid" ? toIsoTimestamp(m.actualPaymentDate) : null,
-        status: m.status,
-        note: m.note.trim() || null,
-      }));
+      order: i + 1,
+      name: m.name.trim(),
+      percentValue: Number.isFinite(m.percentValue) ? m.percentValue : 0,
+      dueDate: toIsoTimestamp(m.dueDate),
+      actualPaymentDate: m.status === "Paid" ? toIsoTimestamp(m.actualPaymentDate) : null,
+      status: m.status,
+      note: m.note.trim() || null,
+    }));
     const enteredContractNumber = form.contractNumber.trim();
     const payload: UpsertContractRequest = {
-      contractNumber: enteredContractNumber === suggestedContractNumber
-        ? null
-        : enteredContractNumber || null,
+      contractNumber:
+        enteredContractNumber === suggestedContractNumber ? null : enteredContractNumber || null,
       customerId: form.customerId,
       direction: effectiveDirection,
       type: form.type,
@@ -768,16 +871,29 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
       setExportProgress({ current: rows.length, total: exportData.total });
 
       downloadCsv({
-        filename: createCsvFilename(mode === "upstream"
-          ? "primary-contracts"
-          : mode === "downstream" ? "input-contracts" : "contracts"),
+        filename: createCsvFilename(
+          mode === "upstream"
+            ? "primary-contracts"
+            : mode === "downstream"
+              ? "input-contracts"
+              : "contracts",
+        ),
         columns: [
           { header: t("contracts.field.number"), value: "contractNumber" },
           { header: t("contracts.field.customer"), value: (r) => r.customerName ?? "" },
-          { header: t("contracts.field.operationalProject"), value: (r) => r.operationalProjectCode ?? "" },
-          { header: t("contracts.field.direction"), value: (r) => t(`contracts.direction.${r.direction}`) },
+          {
+            header: t("contracts.field.operationalProject"),
+            value: (r) => r.operationalProjectCode ?? "",
+          },
+          {
+            header: t("contracts.field.direction"),
+            value: (r) => t(`contracts.direction.${r.direction}`),
+          },
           { header: t("contracts.field.type"), value: (r) => t(`contracts.type.${r.type}`) },
-          { header: t("contracts.field.counterparty"), value: (r) => r.vendorName ?? r.customerName ?? "" },
+          {
+            header: t("contracts.field.counterparty"),
+            value: (r) => r.vendorName ?? r.customerName ?? "",
+          },
           { header: t("contracts.field.status"), value: (r) => t(`contracts.status.${r.status}`) },
           { header: t("contracts.field.signedDate"), value: (r) => r.signedDate ?? "" },
           { header: t("contracts.field.startDate"), value: (r) => r.startDate ?? "" },
@@ -785,9 +901,30 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
           { header: t("contracts.field.originalValue"), value: "value" },
           { header: t("contracts.field.approvedVoTotal"), value: "approvedVoTotal" },
           { header: t("contracts.field.currentValue"), value: "currentValue" },
-          { header: t(mode === "downstream" ? "contracts.input.nextPaymentDueDate" : "contracts.field.nextPaymentDueDate"), value: (r) => r.nextPaymentDueDate ?? "" },
-          { header: t(mode === "downstream" ? "contracts.input.nextPaymentAmount" : "contracts.field.nextPaymentAmount"), value: (r) => r.nextPaymentAmount ?? "" },
-          { header: t(mode === "downstream" ? "contracts.input.outstandingScheduledAmount" : "contracts.field.outstandingScheduledAmount"), value: "outstandingScheduledAmount" },
+          {
+            header: t(
+              mode === "downstream"
+                ? "contracts.input.nextPaymentDueDate"
+                : "contracts.field.nextPaymentDueDate",
+            ),
+            value: (r) => r.nextPaymentDueDate ?? "",
+          },
+          {
+            header: t(
+              mode === "downstream"
+                ? "contracts.input.nextPaymentAmount"
+                : "contracts.field.nextPaymentAmount",
+            ),
+            value: (r) => r.nextPaymentAmount ?? "",
+          },
+          {
+            header: t(
+              mode === "downstream"
+                ? "contracts.input.outstandingScheduledAmount"
+                : "contracts.field.outstandingScheduledAmount",
+            ),
+            value: "outstandingScheduledAmount",
+          },
           { header: t("contracts.field.owner"), value: (r) => r.ownerName ?? "" },
         ],
         rows,
@@ -803,14 +940,18 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
   if (!initialLoaded && loading) {
     return (
       <AdminLayout>
-        <div className="p-4 sm:p-6"><PageLoading /></div>
+        <div className="p-4 sm:p-6">
+          <PageLoading />
+        </div>
       </AdminLayout>
     );
   }
   if (error) {
     return (
       <AdminLayout>
-        <div className="p-4 sm:p-6"><PageError message={error} onRetry={() => void load()} /></div>
+        <div className="p-4 sm:p-6">
+          <PageError message={error} onRetry={() => void load()} />
+        </div>
       </AdminLayout>
     );
   }
@@ -820,18 +961,33 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
       <div className="space-y-4 p-4 sm:p-6">
         <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
-            <h1 className="text-2xl font-semibold">{t(mode === "upstream"
-              ? "contracts.primary.title"
-              : mode === "downstream" ? "contracts.input.title" : "contracts.title")}</h1>
-            <p className="mt-1 text-sm text-muted-foreground">{t(mode === "upstream"
-              ? "contracts.primary.subtitle"
-              : mode === "downstream" ? "contracts.input.subtitle" : "contracts.subtitle")}</p>
+            <h1 className="text-2xl font-semibold">
+              {t(
+                mode === "upstream"
+                  ? "contracts.primary.title"
+                  : mode === "downstream"
+                    ? "contracts.input.title"
+                    : "contracts.title",
+              )}
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {t(
+                mode === "upstream"
+                  ? "contracts.primary.subtitle"
+                  : mode === "downstream"
+                    ? "contracts.input.subtitle"
+                    : "contracts.subtitle",
+              )}
+            </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" onClick={() => void exportCsv()} disabled={total === 0 || loading || exporting}>
-              <Download className="mr-1.5 h-4 w-4" /> {exporting
-                ? t("contracts.exportProgress", exportProgress)
-                : t("contracts.exportCsv")}
+            <Button
+              variant="outline"
+              onClick={() => void exportCsv()}
+              disabled={total === 0 || loading || exporting}
+            >
+              <Download className="mr-1.5 h-4 w-4" />{" "}
+              {exporting ? t("contracts.exportProgress", exportProgress) : t("contracts.exportCsv")}
             </Button>
             {canManageMaster && (
               <Button onClick={openCreate}>
@@ -855,22 +1011,43 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
         )}
 
         {mode !== "all" && (
-          <section className="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label={t("contracts.summary.label")}>
+          <section
+            className="grid grid-cols-2 gap-3 lg:grid-cols-4"
+            aria-label={t("contracts.summary.label")}
+          >
             <div className="rounded-lg border bg-card p-3">
               <p className="text-xs text-muted-foreground">{t("contracts.summary.contracts")}</p>
               <p className="mt-1 text-xl font-semibold tabular-nums">{total}</p>
             </div>
             <div className="rounded-lg border bg-card p-3">
               <p className="text-xs text-muted-foreground">{t("contracts.summary.currentValue")}</p>
-              <p className="mt-1 truncate text-xl font-semibold tabular-nums">{formatVnd(summary.totalCurrentValue)}</p>
+              <p className="mt-1 truncate text-xl font-semibold tabular-nums">
+                {formatVnd(summary.totalCurrentValue)}
+              </p>
             </div>
             <div className="rounded-lg border border-rose-200 bg-rose-50/60 p-3">
-              <p className="text-xs text-rose-700">{t(mode === "downstream" ? "contracts.summary.overduePayment" : "contracts.summary.overdueCollection")}</p>
-              <p className="mt-1 text-xl font-semibold tabular-nums text-rose-800">{summary.overdueContractCount}</p>
+              <p className="text-xs text-rose-700">
+                {t(
+                  mode === "downstream"
+                    ? "contracts.summary.overduePayment"
+                    : "contracts.summary.overdueCollection",
+                )}
+              </p>
+              <p className="mt-1 text-xl font-semibold tabular-nums text-rose-800">
+                {summary.overdueContractCount}
+              </p>
             </div>
             <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-3">
-              <p className="text-xs text-amber-700">{t(mode === "downstream" ? "contracts.summary.dueSoonPayment" : "contracts.summary.dueSoonCollection")}</p>
-              <p className="mt-1 text-xl font-semibold tabular-nums text-amber-800">{summary.dueSoonContractCount}</p>
+              <p className="text-xs text-amber-700">
+                {t(
+                  mode === "downstream"
+                    ? "contracts.summary.dueSoonPayment"
+                    : "contracts.summary.dueSoonCollection",
+                )}
+              </p>
+              <p className="mt-1 text-xl font-semibold tabular-nums text-amber-800">
+                {summary.dueSoonContractCount}
+              </p>
             </div>
           </section>
         )}
@@ -878,7 +1055,9 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
         {/* Filters */}
         <section className="grid gap-3 rounded-lg border bg-card p-3 sm:grid-cols-2 lg:grid-cols-4">
           <div className="min-w-0 space-y-1">
-            <Label className="text-xs" htmlFor="c-search">{t("common.search")}</Label>
+            <Label className="text-xs" htmlFor="c-search">
+              {t("common.search")}
+            </Label>
             <div className="relative">
               <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -891,74 +1070,115 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
             </div>
           </div>
           <div className="min-w-0 space-y-1">
-            <Label className="text-xs" htmlFor="c-status">{t("contracts.filter.status")}</Label>
-            <Select value={statusFilter} onValueChange={(v) => {
-              setStatusFilter(v as ContractStatus | "all");
-              setPage(1);
-            }}>
-              <SelectTrigger id="c-status" className="h-9"><SelectValue /></SelectTrigger>
+            <Label className="text-xs" htmlFor="c-status">
+              {t("contracts.filter.status")}
+            </Label>
+            <Select
+              value={statusFilter}
+              onValueChange={(v) => {
+                setStatusFilter(v as ContractStatus | "all");
+                setPage(1);
+              }}
+            >
+              <SelectTrigger id="c-status" className="h-9">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{t("contracts.filter.allStatuses")}</SelectItem>
                 {CONTRACT_STATUSES.map((s) => (
-                  <SelectItem key={s} value={s}>{t(`contracts.status.${s}`)}</SelectItem>
+                  <SelectItem key={s} value={s}>
+                    {t(`contracts.status.${s}`)}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <div className="min-w-0 space-y-1">
-            <Label className="text-xs" htmlFor="c-customer">{t("contracts.field.customer")}</Label>
+            <Label className="text-xs" htmlFor="c-customer">
+              {t("contracts.field.customer")}
+            </Label>
             <Select
               value={customerFilter === "all" ? "all" : String(customerFilter)}
               onValueChange={(value) => {
                 const customerId = value === "all" ? "all" : Number(value);
                 setCustomerFilter(customerId);
                 setPage(1);
-                if (projectFilter !== "all" &&
-                    (customerId === "all" || filterOptions.projects.find((project) => project.id === projectFilter)?.customerId !== customerId)) {
+                if (
+                  projectFilter !== "all" &&
+                  (customerId === "all" ||
+                    filterOptions.projects.find((project) => project.id === projectFilter)
+                      ?.customerId !== customerId)
+                ) {
                   setProjectFilter("all");
                 }
               }}
             >
-              <SelectTrigger id="c-customer" className="h-9"><SelectValue /></SelectTrigger>
+              <SelectTrigger id="c-customer" className="h-9">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent className="max-h-72">
                 <SelectItem value="all">{t("contracts.filter.allCustomers")}</SelectItem>
                 {filterOptions.customers.map((c) => (
-                  <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
+                  <SelectItem key={c.id} value={String(c.id)}>
+                    {c.name}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-          {canViewOperationalProjects && <div className="min-w-0 space-y-1">
-            <Label className="text-xs" htmlFor="c-project">{t("contracts.field.operationalProject")}</Label>
+          {canViewOperationalProjects && (
+            <div className="min-w-0 space-y-1">
+              <Label className="text-xs" htmlFor="c-project">
+                {t("contracts.field.operationalProject")}
+              </Label>
+              <Select
+                value={projectFilter === "all" ? "all" : String(projectFilter)}
+                onValueChange={(value) => {
+                  setProjectFilter(value === "all" ? "all" : Number(value));
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger id="c-project" className="h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="max-h-72">
+                  <SelectItem value="all">
+                    {t("contracts.filter.allOperationalProjects")}
+                  </SelectItem>
+                  {filterOptions.projects
+                    .filter(
+                      (project) =>
+                        customerFilter === "all" || project.customerId === customerFilter,
+                    )
+                    .map((project) => (
+                      <SelectItem key={project.id} value={String(project.id)}>
+                        {project.code} · {project.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          <div className="min-w-0 space-y-1">
+            <Label className="text-xs" htmlFor="c-owner">
+              {t("contracts.field.owner")}
+            </Label>
             <Select
-              value={projectFilter === "all" ? "all" : String(projectFilter)}
+              value={ownerFilter === "all" ? "all" : String(ownerFilter)}
               onValueChange={(value) => {
-                setProjectFilter(value === "all" ? "all" : Number(value));
+                setOwnerFilter(value === "all" ? "all" : Number(value));
                 setPage(1);
               }}
             >
-              <SelectTrigger id="c-project" className="h-9"><SelectValue /></SelectTrigger>
-              <SelectContent className="max-h-72">
-                <SelectItem value="all">{t("contracts.filter.allOperationalProjects")}</SelectItem>
-                {filterOptions.projects
-                  .filter((project) => customerFilter === "all" || project.customerId === customerFilter)
-                  .map((project) => (
-                  <SelectItem key={project.id} value={String(project.id)}>{project.code} · {project.name}</SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
-          </div>}
-          <div className="min-w-0 space-y-1">
-            <Label className="text-xs" htmlFor="c-owner">{t("contracts.field.owner")}</Label>
-            <Select value={ownerFilter === "all" ? "all" : String(ownerFilter)} onValueChange={(value) => {
-              setOwnerFilter(value === "all" ? "all" : Number(value));
-              setPage(1);
-            }}>
-              <SelectTrigger id="c-owner" className="h-9"><SelectValue /></SelectTrigger>
+              <SelectTrigger id="c-owner" className="h-9">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent className="max-h-72">
                 <SelectItem value="all">{t("contracts.filter.allOwners")}</SelectItem>
                 {filterOptions.owners.map((owner) => (
-                  <SelectItem key={owner.id} value={String(owner.id)}>{owner.name}</SelectItem>
+                  <SelectItem key={owner.id} value={String(owner.id)}>
+                    {owner.name}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -966,117 +1186,240 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
           <div className="min-w-0 space-y-1 sm:col-span-2">
             <Label className="text-xs">{t("contracts.filter.endRange")}</Label>
             <div className="flex gap-1">
-              <Input id="c-end-from" aria-label={t("contracts.filter.endFrom")} type="date" min={DATE_MIN} max={DATE_MAX} value={endFrom} onChange={(e) => { setEndFrom(e.target.value); setPage(1); }} className="h-9 min-w-0 flex-1" />
-              <Input id="c-end-to" aria-label={t("contracts.filter.endTo")} type="date" min={DATE_MIN} max={DATE_MAX} value={endTo} onChange={(e) => { setEndTo(e.target.value); setPage(1); }} className="h-9 min-w-0 flex-1" />
+              <Input
+                id="c-end-from"
+                aria-label={t("contracts.filter.endFrom")}
+                type="date"
+                min={DATE_MIN}
+                max={DATE_MAX}
+                value={endFrom}
+                onChange={(e) => {
+                  setEndFrom(e.target.value);
+                  setPage(1);
+                }}
+                className="h-9 min-w-0 flex-1"
+              />
+              <Input
+                id="c-end-to"
+                aria-label={t("contracts.filter.endTo")}
+                type="date"
+                min={DATE_MIN}
+                max={DATE_MAX}
+                value={endTo}
+                onChange={(e) => {
+                  setEndTo(e.target.value);
+                  setPage(1);
+                }}
+                className="h-9 min-w-0 flex-1"
+              />
             </div>
           </div>
           <div className="flex items-end">
-            <Button type="button" variant="outline" size="sm" onClick={() => setAdvancedOpen((open) => !open)} aria-expanded={advancedOpen}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setAdvancedOpen((open) => !open)}
+              aria-expanded={advancedOpen}
+            >
               <SlidersHorizontal className="mr-1.5 h-4 w-4" />
               {t(advancedOpen ? "contracts.filter.hideAdvanced" : "contracts.filter.showAdvanced")}
             </Button>
           </div>
-          {advancedOpen && <>
-          {fixedDirection === null && <div className="min-w-0 space-y-1">
-            <Label className="text-xs" htmlFor="c-direction">{t("contracts.field.direction")}</Label>
-            <Select value={directionFilter} onValueChange={(value) => {
-              setDirectionFilter(value as ContractDirection | "all");
-              setPage(1);
-            }}>
-              <SelectTrigger id="c-direction" className="h-9"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t("contracts.filter.allDirections")}</SelectItem>
-                {(classification?.directions ?? []).map((direction) => (
-                  <SelectItem key={direction} value={direction}>{t(`contracts.direction.${direction}`)}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>}
-          <div className="min-w-0 space-y-1">
-            <Label className="text-xs" htmlFor="c-type">{t("contracts.field.type")}</Label>
-            <Select value={typeFilter} onValueChange={(value) => {
-              setTypeFilter(value as ContractType | "all");
-              setPage(1);
-            }}>
-              <SelectTrigger id="c-type" className="h-9"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t("contracts.filter.allTypes")}</SelectItem>
-                <SelectItem value="Unclassified">{t("contracts.type.Unclassified")}</SelectItem>
-                {(classification?.types ?? [])
-                  .filter((type) => fixedDirection === null || classification?.allowedTypes[fixedDirection].includes(type))
-                  .map((type) => (
-                  <SelectItem key={type} value={type}>{t(`contracts.type.${type}`)}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          {fixedDirection !== "Upstream" && <div className="min-w-0 space-y-1">
-            <Label className="text-xs" htmlFor="c-vendor">{t("contracts.field.vendor")}</Label>
-            <Select value={vendorFilter === "all" ? "all" : String(vendorFilter)} onValueChange={(value) => {
-              setVendorFilter(value === "all" ? "all" : Number(value));
-              setPage(1);
-            }}>
-              <SelectTrigger id="c-vendor" className="h-9"><SelectValue /></SelectTrigger>
-              <SelectContent className="max-h-72">
-                <SelectItem value="all">{t("contracts.filter.allVendors")}</SelectItem>
-                {(classification?.vendors ?? []).map((vendor) => (
-                  <SelectItem key={vendor.id} value={String(vendor.id)}>{vendor.vendorCode} · {vendor.companyName}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>}
-          <div className="min-w-0 space-y-1">
-            <Label className="text-xs">{t("contracts.filter.signedRange")}</Label>
-            <div className="flex gap-1">
-              <Input aria-label={t("contracts.filter.signedFrom")} type="date" min={DATE_MIN} max={DATE_MAX} value={signedFrom} onChange={(e) => { setSignedFrom(e.target.value); setPage(1); }} className="h-9 min-w-0 flex-1" />
-              <Input aria-label={t("contracts.filter.signedTo")} type="date" min={DATE_MIN} max={DATE_MAX} value={signedTo} onChange={(e) => { setSignedTo(e.target.value); setPage(1); }} className="h-9 min-w-0 flex-1" />
-            </div>
-          </div>
-          <div className="min-w-0 space-y-1 sm:col-span-2 lg:col-span-2">
-            <Label className="text-xs">{t("contracts.filter.valueRange")}</Label>
-            <div className="flex gap-1">
-              <Input
-                type="number" min={0} value={valueMin}
-                onChange={(e) => { setValueMin(e.target.value); setPage(1); }}
-                aria-label={t("contracts.filter.valueMin")} placeholder={t("contracts.filter.min")} className="h-9 min-w-0 flex-1"
-              />
-              <Input
-                type="number" min={0} value={valueMax}
-                onChange={(e) => { setValueMax(e.target.value); setPage(1); }}
-                aria-label={t("contracts.filter.valueMax")} placeholder={t("contracts.filter.max")} className="h-9 min-w-0 flex-1"
-              />
-            </div>
-          </div>
-          <div className="min-w-0 space-y-1">
-            <Label className="text-xs" htmlFor="c-sort-by">{t("contracts.sort.label")}</Label>
-            <Select value={sortBy} onValueChange={(value) => {
-              setSortBy(value as ContractSortBy);
-              setPage(1);
-            }}>
-              <SelectTrigger id="c-sort-by" className="h-9"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {(["signedDate", "endDate", "value", "contractNumber", "updatedAt"] as const).map((field) => (
-                  <SelectItem key={field} value={field}>{t(`contracts.sort.${field}`)}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="min-w-0 space-y-1">
-            <Label className="text-xs" htmlFor="c-sort-direction">{t("contracts.sort.direction")}</Label>
-            <Select value={sortDirection} onValueChange={(value) => {
-              setSortDirection(value as SortDirection);
-              setPage(1);
-            }}>
-              <SelectTrigger id="c-sort-direction" className="h-9"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="desc">{t("contracts.sort.desc")}</SelectItem>
-                <SelectItem value="asc">{t("contracts.sort.asc")}</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          </>}
+          {advancedOpen && (
+            <>
+              {fixedDirection === null && (
+                <div className="min-w-0 space-y-1">
+                  <Label className="text-xs" htmlFor="c-direction">
+                    {t("contracts.field.direction")}
+                  </Label>
+                  <Select
+                    value={directionFilter}
+                    onValueChange={(value) => {
+                      setDirectionFilter(value as ContractDirection | "all");
+                      setPage(1);
+                    }}
+                  >
+                    <SelectTrigger id="c-direction" className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t("contracts.filter.allDirections")}</SelectItem>
+                      {(classification?.directions ?? []).map((direction) => (
+                        <SelectItem key={direction} value={direction}>
+                          {t(`contracts.direction.${direction}`)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              <div className="min-w-0 space-y-1">
+                <Label className="text-xs" htmlFor="c-type">
+                  {t("contracts.field.type")}
+                </Label>
+                <Select
+                  value={typeFilter}
+                  onValueChange={(value) => {
+                    setTypeFilter(value as ContractType | "all");
+                    setPage(1);
+                  }}
+                >
+                  <SelectTrigger id="c-type" className="h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{t("contracts.filter.allTypes")}</SelectItem>
+                    <SelectItem value="Unclassified">{t("contracts.type.Unclassified")}</SelectItem>
+                    {(classification?.types ?? [])
+                      .filter(
+                        (type) =>
+                          fixedDirection === null ||
+                          classification?.allowedTypes[fixedDirection].includes(type),
+                      )
+                      .map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {t(`contracts.type.${type}`)}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {fixedDirection !== "Upstream" && (
+                <div className="min-w-0 space-y-1">
+                  <Label className="text-xs" htmlFor="c-vendor">
+                    {t("contracts.field.vendor")}
+                  </Label>
+                  <Select
+                    value={vendorFilter === "all" ? "all" : String(vendorFilter)}
+                    onValueChange={(value) => {
+                      setVendorFilter(value === "all" ? "all" : Number(value));
+                      setPage(1);
+                    }}
+                  >
+                    <SelectTrigger id="c-vendor" className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-72">
+                      <SelectItem value="all">{t("contracts.filter.allVendors")}</SelectItem>
+                      {(classification?.vendors ?? []).map((vendor) => (
+                        <SelectItem key={vendor.id} value={String(vendor.id)}>
+                          {vendor.vendorCode} · {vendor.companyName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              <div className="min-w-0 space-y-1">
+                <Label className="text-xs">{t("contracts.filter.signedRange")}</Label>
+                <div className="flex gap-1">
+                  <Input
+                    aria-label={t("contracts.filter.signedFrom")}
+                    type="date"
+                    min={DATE_MIN}
+                    max={DATE_MAX}
+                    value={signedFrom}
+                    onChange={(e) => {
+                      setSignedFrom(e.target.value);
+                      setPage(1);
+                    }}
+                    className="h-9 min-w-0 flex-1"
+                  />
+                  <Input
+                    aria-label={t("contracts.filter.signedTo")}
+                    type="date"
+                    min={DATE_MIN}
+                    max={DATE_MAX}
+                    value={signedTo}
+                    onChange={(e) => {
+                      setSignedTo(e.target.value);
+                      setPage(1);
+                    }}
+                    className="h-9 min-w-0 flex-1"
+                  />
+                </div>
+              </div>
+              <div className="min-w-0 space-y-1 sm:col-span-2 lg:col-span-2">
+                <Label className="text-xs">{t("contracts.filter.valueRange")}</Label>
+                <div className="flex gap-1">
+                  <Input
+                    type="number"
+                    min={0}
+                    value={valueMin}
+                    onChange={(e) => {
+                      setValueMin(e.target.value);
+                      setPage(1);
+                    }}
+                    aria-label={t("contracts.filter.valueMin")}
+                    placeholder={t("contracts.filter.min")}
+                    className="h-9 min-w-0 flex-1"
+                  />
+                  <Input
+                    type="number"
+                    min={0}
+                    value={valueMax}
+                    onChange={(e) => {
+                      setValueMax(e.target.value);
+                      setPage(1);
+                    }}
+                    aria-label={t("contracts.filter.valueMax")}
+                    placeholder={t("contracts.filter.max")}
+                    className="h-9 min-w-0 flex-1"
+                  />
+                </div>
+              </div>
+              <div className="min-w-0 space-y-1">
+                <Label className="text-xs" htmlFor="c-sort-by">
+                  {t("contracts.sort.label")}
+                </Label>
+                <Select
+                  value={sortBy}
+                  onValueChange={(value) => {
+                    setSortBy(value as ContractSortBy);
+                    setPage(1);
+                  }}
+                >
+                  <SelectTrigger id="c-sort-by" className="h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(
+                      ["signedDate", "endDate", "value", "contractNumber", "updatedAt"] as const
+                    ).map((field) => (
+                      <SelectItem key={field} value={field}>
+                        {t(`contracts.sort.${field}`)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="min-w-0 space-y-1">
+                <Label className="text-xs" htmlFor="c-sort-direction">
+                  {t("contracts.sort.direction")}
+                </Label>
+                <Select
+                  value={sortDirection}
+                  onValueChange={(value) => {
+                    setSortDirection(value as SortDirection);
+                    setPage(1);
+                  }}
+                >
+                  <SelectTrigger id="c-sort-direction" className="h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="desc">{t("contracts.sort.desc")}</SelectItem>
+                    <SelectItem value="asc">{t("contracts.sort.asc")}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </>
+          )}
           <div className="flex items-end gap-2">
-            <p className="text-xs italic text-muted-foreground">{contracts.length} / {total}</p>
+            <p className="text-xs italic text-muted-foreground">
+              {contracts.length} / {total}
+            </p>
             {filtersActive && (
               <Button variant="ghost" size="sm" onClick={resetFilters}>
                 {t("common.reset")}
@@ -1086,7 +1429,10 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
         </section>
 
         {metadataError && (
-          <div role="status" className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          <div
+            role="status"
+            className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800"
+          >
             {metadataError}
           </div>
         )}
@@ -1105,7 +1451,9 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
             {filtersActive ? (
               <>
                 <p>{t("contracts.noMatch")}</p>
-                <Button variant="outline" size="sm" onClick={resetFilters}>{t("common.reset")}</Button>
+                <Button variant="outline" size="sm" onClick={resetFilters}>
+                  {t("common.reset")}
+                </Button>
               </>
             ) : (
               <>
@@ -1136,80 +1484,133 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                       aria-label={`${t("common.view")} ${row.contractNumber}`}
                     />
                     <div className="pointer-events-none relative z-10">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex min-w-0 items-start gap-2">
-                        <div className="min-w-0">
-                          <h3 className="break-words text-sm font-semibold leading-tight">{row.customerName ?? "—"}</h3>
-                          <Link
-                            to={detailUrl(row.id)}
-                            className="pointer-events-auto mt-0.5 inline-flex items-center gap-1 break-all font-mono text-xs text-primary hover:underline"
-                          >
-                            {row.contractNumber}
-                            <ExternalLink className="h-3 w-3 opacity-70" />
-                          </Link>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex min-w-0 items-start gap-2">
+                          <div className="min-w-0">
+                            <h3 className="break-words text-sm font-semibold leading-tight">
+                              {row.customerName ?? "—"}
+                            </h3>
+                            <Link
+                              to={detailUrl(row.id)}
+                              className="pointer-events-auto mt-0.5 inline-flex items-center gap-1 break-all font-mono text-xs text-primary hover:underline"
+                            >
+                              {row.contractNumber}
+                              <ExternalLink className="h-3 w-3 opacity-70" />
+                            </Link>
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-end gap-1">
+                          <Badge variant="outline" className={STATUS_VARIANT[row.status]}>
+                            {t(`contracts.status.${row.status}`)}
+                          </Badge>
+                          {deadlineState && (
+                            <Badge
+                              variant="outline"
+                              className={
+                                deadlineState === "overdue"
+                                  ? "border-rose-300 bg-rose-50 text-rose-700"
+                                  : "border-amber-300 bg-amber-50 text-amber-800"
+                              }
+                              title={t(
+                                deadlineState === "overdue"
+                                  ? "contracts.overdueBadgeTitle"
+                                  : "contracts.deadlineBadgeTitle",
+                              )}
+                            >
+                              <AlertTriangle className="mr-1 h-3 w-3" />
+                              {t(
+                                deadlineState === "overdue"
+                                  ? "contracts.overdueBadge"
+                                  : "contracts.deadlineBadge",
+                              )}
+                            </Badge>
+                          )}
                         </div>
                       </div>
-                      <div className="flex flex-col items-end gap-1">
-                        <Badge variant="outline" className={STATUS_VARIANT[row.status]}>
-                          {t(`contracts.status.${row.status}`)}
-                        </Badge>
-                        {deadlineState && (
-                          <Badge variant="outline" className={deadlineState === "overdue" ? "border-rose-300 bg-rose-50 text-rose-700" : "border-amber-300 bg-amber-50 text-amber-800"} title={t(deadlineState === "overdue" ? "contracts.overdueBadgeTitle" : "contracts.deadlineBadgeTitle")}>
-                            <AlertTriangle className="mr-1 h-3 w-3" />
-                            {t(deadlineState === "overdue" ? "contracts.overdueBadge" : "contracts.deadlineBadge")}
-                          </Badge>
+                      <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+                        <dt className="text-muted-foreground">{t("contracts.field.type")}</dt>
+                        <dd>{t(`contracts.type.${row.type}`)}</dd>
+                        <dt className="text-muted-foreground">
+                          {t("contracts.field.operationalProject")}
+                        </dt>
+                        <dd>
+                          {row.operationalProjectCode
+                            ? `${row.operationalProjectCode} · ${row.operationalProjectName ?? ""}`
+                            : "—"}
+                        </dd>
+                        {mode !== "upstream" && (
+                          <>
+                            <dt className="text-muted-foreground">
+                              {t("contracts.field.counterparty")}
+                            </dt>
+                            <dd>{row.vendorName ?? row.customerName ?? "—"}</dd>
+                          </>
                         )}
-                      </div>
-                    </div>
-                    <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
-                      <dt className="text-muted-foreground">{t("contracts.field.type")}</dt>
-                      <dd>{t(`contracts.type.${row.type}`)}</dd>
-                      <dt className="text-muted-foreground">{t("contracts.field.operationalProject")}</dt>
-                      <dd>{row.operationalProjectCode ? `${row.operationalProjectCode} · ${row.operationalProjectName ?? ""}` : "—"}</dd>
-                      {mode !== "upstream" && <>
-                        <dt className="text-muted-foreground">{t("contracts.field.counterparty")}</dt>
-                        <dd>{row.vendorName ?? row.customerName ?? "—"}</dd>
-                      </>}
-                      <dt className="text-muted-foreground">{t("contracts.field.currentValue")}</dt>
-                      <dd className="font-semibold">
-                        {formatVnd(row.currentValue)}
-                        {row.approvedVoTotal !== 0 && <span className="ml-1 font-normal text-muted-foreground">({t("contracts.field.voShort")} {formatVnd(row.approvedVoTotal)})</span>}
-                      </dd>
-                      <dt className="text-muted-foreground">{t("contracts.field.signedDate")}</dt>
-                      <dd>{formatDate(row.signedDate, lang)}</dd>
-                      <dt className="text-muted-foreground">{t("contracts.field.endDate")}</dt>
-                      <dd>{formatDate(row.endDate, lang)}</dd>
-                      {mode !== "all" && <>
-                        <dt className="text-muted-foreground">{t(mode === "downstream" ? "contracts.input.nextPayment" : "contracts.field.nextCollection")}</dt>
-                        <dd>{row.nextPaymentDueDate
-                          ? `${formatDate(row.nextPaymentDueDate, lang)} · ${formatVnd(row.nextPaymentAmount ?? 0)}`
-                          : "—"}</dd>
-                        <dt className="text-muted-foreground">{t(mode === "downstream" ? "contracts.input.outstandingScheduledAmount" : "contracts.field.outstandingScheduledAmount")}</dt>
-                        <dd>{formatVnd(row.outstandingScheduledAmount)}</dd>
-                      </>}
-                      {row.ownerName && (
-                        <>
-                          <dt className="text-muted-foreground">{t("contracts.field.owner")}</dt>
-                          <dd>{row.ownerName}</dd>
-                        </>
+                        <dt className="text-muted-foreground">
+                          {t("contracts.field.currentValue")}
+                        </dt>
+                        <dd className="font-semibold">
+                          {formatVnd(row.currentValue)}
+                          {row.approvedVoTotal !== 0 && (
+                            <span className="ml-1 font-normal text-muted-foreground">
+                              ({t("contracts.field.voShort")} {formatVnd(row.approvedVoTotal)})
+                            </span>
+                          )}
+                        </dd>
+                        <dt className="text-muted-foreground">{t("contracts.field.signedDate")}</dt>
+                        <dd>{formatDate(row.signedDate, lang)}</dd>
+                        <dt className="text-muted-foreground">{t("contracts.field.endDate")}</dt>
+                        <dd>{formatDate(row.endDate, lang)}</dd>
+                        {mode !== "all" && (
+                          <>
+                            <dt className="text-muted-foreground">
+                              {t(
+                                mode === "downstream"
+                                  ? "contracts.input.nextPayment"
+                                  : "contracts.field.nextCollection",
+                              )}
+                            </dt>
+                            <dd>
+                              {row.nextPaymentDueDate
+                                ? `${formatDate(row.nextPaymentDueDate, lang)} · ${formatVnd(row.nextPaymentAmount ?? 0)}`
+                                : "—"}
+                            </dd>
+                            <dt className="text-muted-foreground">
+                              {t(
+                                mode === "downstream"
+                                  ? "contracts.input.outstandingScheduledAmount"
+                                  : "contracts.field.outstandingScheduledAmount",
+                              )}
+                            </dt>
+                            <dd>{formatVnd(row.outstandingScheduledAmount)}</dd>
+                          </>
+                        )}
+                        {row.ownerName && (
+                          <>
+                            <dt className="text-muted-foreground">{t("contracts.field.owner")}</dt>
+                            <dd>{row.ownerName}</dd>
+                          </>
+                        )}
+                      </dl>
+                      {canManageMaster && (
+                        <div className="pointer-events-auto mt-3 flex flex-wrap items-center justify-end gap-1 border-t pt-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => navigate(detailUrl(row.id, true))}
+                          >
+                            <Pencil className="mr-1 h-3.5 w-3.5" /> {t("common.edit")}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => remove(row)}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="mr-1 h-3.5 w-3.5" /> {t("common.delete")}
+                          </Button>
+                        </div>
                       )}
-                    </dl>
-                    {canManageMaster && (
-                      <div
-                        className="pointer-events-auto mt-3 flex flex-wrap items-center justify-end gap-1 border-t pt-2"
-                      >
-                        <Button variant="ghost" size="sm" onClick={() => navigate(detailUrl(row.id, true))}>
-                          <Pencil className="mr-1 h-3.5 w-3.5" /> {t("common.edit")}
-                        </Button>
-                        <Button
-                          variant="ghost" size="sm"
-                          onClick={() => remove(row)}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="mr-1 h-3.5 w-3.5" /> {t("common.delete")}
-                        </Button>
-                      </div>
-                    )}
                     </div>
                   </li>
                 );
@@ -1221,19 +1622,51 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
               <table className="w-full min-w-[1000px] divide-y text-sm">
                 <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
                   <tr>
-                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("contracts.field.number")}</th>
-                    <th className="min-w-[220px] px-3 py-3 text-left font-medium">{t("contracts.field.customer")}</th>
-                    <th className="min-w-[180px] px-3 py-3 text-left font-medium">{t("contracts.field.operationalProject")}</th>
-                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("contracts.field.type")}</th>
-                    {mode !== "upstream" && <th className="min-w-[180px] px-3 py-3 text-left font-medium">{t("contracts.field.counterparty")}</th>}
-                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("contracts.field.signedDate")}</th>
-                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("contracts.field.endDate")}</th>
-                    <th className="whitespace-nowrap px-3 py-3 text-right font-medium">{t("contracts.field.currentValue")}</th>
-                    {mode !== "all" && <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t(mode === "downstream" ? "contracts.input.nextPayment" : "contracts.field.nextCollection")}</th>}
-                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("contracts.field.status")}</th>
-                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("contracts.field.owner")}</th>
+                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                      {t("contracts.field.number")}
+                    </th>
+                    <th className="min-w-[220px] px-3 py-3 text-left font-medium">
+                      {t("contracts.field.customer")}
+                    </th>
+                    <th className="min-w-[180px] px-3 py-3 text-left font-medium">
+                      {t("contracts.field.operationalProject")}
+                    </th>
+                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                      {t("contracts.field.type")}
+                    </th>
+                    {mode !== "upstream" && (
+                      <th className="min-w-[180px] px-3 py-3 text-left font-medium">
+                        {t("contracts.field.counterparty")}
+                      </th>
+                    )}
+                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                      {t("contracts.field.signedDate")}
+                    </th>
+                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                      {t("contracts.field.endDate")}
+                    </th>
+                    <th className="whitespace-nowrap px-3 py-3 text-right font-medium">
+                      {t("contracts.field.currentValue")}
+                    </th>
+                    {mode !== "all" && (
+                      <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                        {t(
+                          mode === "downstream"
+                            ? "contracts.input.nextPayment"
+                            : "contracts.field.nextCollection",
+                        )}
+                      </th>
+                    )}
+                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                      {t("contracts.field.status")}
+                    </th>
+                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                      {t("contracts.field.owner")}
+                    </th>
                     {canManageMaster && (
-                      <th className="whitespace-nowrap px-3 py-3 text-right font-medium">{t("common.actions")}</th>
+                      <th className="whitespace-nowrap px-3 py-3 text-right font-medium">
+                        {t("common.actions")}
+                      </th>
                     )}
                   </tr>
                 </thead>
@@ -1250,54 +1683,108 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                         onMouseEnter={() => setHoveredContractId(row.id)}
                         onMouseLeave={() => setHoveredContractId(null)}
                       >
-                        <td className="whitespace-nowrap px-3 py-3 font-mono text-xs" onClick={(event) => event.stopPropagation()}>
-                          <Link to={detailUrl(row.id)} className="inline-flex items-center gap-1 text-primary hover:underline">
+                        <td
+                          className="whitespace-nowrap px-3 py-3 font-mono text-xs"
+                          onClick={(event) => event.stopPropagation()}
+                        >
+                          <Link
+                            to={detailUrl(row.id)}
+                            className="inline-flex items-center gap-1 text-primary hover:underline"
+                          >
                             {row.contractNumber}
                             <ExternalLink className="h-3 w-3 opacity-70" />
                           </Link>
                         </td>
-                        <td className="min-w-[220px] px-3 py-3 font-medium">{row.customerName ?? "—"}</td>
+                        <td className="min-w-[220px] px-3 py-3 font-medium">
+                          {row.customerName ?? "—"}
+                        </td>
                         <td className="min-w-[180px] px-3 py-3">
                           {row.operationalProjectId ? (
-                            <Link to={`/admin/operational-projects/${row.operationalProjectId}`} className="text-primary hover:underline" onClick={(event) => event.stopPropagation()}>
+                            <Link
+                              to={`/admin/operational-projects/${row.operationalProjectId}`}
+                              className="text-primary hover:underline"
+                              onClick={(event) => event.stopPropagation()}
+                            >
                               {row.operationalProjectCode ?? `#${row.operationalProjectId}`}
                             </Link>
-                          ) : "—"}
+                          ) : (
+                            "—"
+                          )}
                         </td>
-                        <td className="whitespace-nowrap px-3 py-3">{t(`contracts.type.${row.type}`)}</td>
-                        {mode !== "upstream" && <td className="min-w-[180px] px-3 py-3">{row.vendorName ?? row.customerName ?? "—"}</td>}
-                        <td className="whitespace-nowrap px-3 py-3">{formatDate(row.signedDate, lang)}</td>
+                        <td className="whitespace-nowrap px-3 py-3">
+                          {t(`contracts.type.${row.type}`)}
+                        </td>
+                        {mode !== "upstream" && (
+                          <td className="min-w-[180px] px-3 py-3">
+                            {row.vendorName ?? row.customerName ?? "—"}
+                          </td>
+                        )}
+                        <td className="whitespace-nowrap px-3 py-3">
+                          {formatDate(row.signedDate, lang)}
+                        </td>
                         <td className="whitespace-nowrap px-3 py-3">
                           <div className="flex items-center gap-2">
                             {formatDate(row.endDate, lang)}
                             {deadlineState && (
                               <Badge
                                 variant="outline"
-                                className={deadlineState === "overdue" ? "border-rose-300 bg-rose-50 text-rose-700" : "border-amber-300 bg-amber-50 text-amber-800"}
-                                title={t(deadlineState === "overdue" ? "contracts.overdueBadgeTitle" : "contracts.deadlineBadgeTitle")}
+                                className={
+                                  deadlineState === "overdue"
+                                    ? "border-rose-300 bg-rose-50 text-rose-700"
+                                    : "border-amber-300 bg-amber-50 text-amber-800"
+                                }
+                                title={t(
+                                  deadlineState === "overdue"
+                                    ? "contracts.overdueBadgeTitle"
+                                    : "contracts.deadlineBadgeTitle",
+                                )}
                               >
                                 <AlertTriangle className="mr-1 h-3 w-3" />
-                                {t(deadlineState === "overdue" ? "contracts.overdueBadge" : "contracts.deadlineBadge")}
+                                {t(
+                                  deadlineState === "overdue"
+                                    ? "contracts.overdueBadge"
+                                    : "contracts.deadlineBadge",
+                                )}
                               </Badge>
                             )}
                           </div>
                         </td>
                         <td className="whitespace-nowrap px-3 py-3 text-right font-semibold">
                           <div>{formatVnd(row.currentValue)}</div>
-                          {row.approvedVoTotal !== 0 && <div className="text-[11px] font-normal text-muted-foreground">{t("contracts.field.voShort")} {formatVnd(row.approvedVoTotal)}</div>}
+                          {row.approvedVoTotal !== 0 && (
+                            <div className="text-[11px] font-normal text-muted-foreground">
+                              {t("contracts.field.voShort")} {formatVnd(row.approvedVoTotal)}
+                            </div>
+                          )}
                         </td>
-                        {mode !== "all" && <td className="whitespace-nowrap px-3 py-3 text-xs">
-                          {row.nextPaymentDueDate ? <>
-                            <div>{formatDate(row.nextPaymentDueDate, lang)}</div>
-                            <div className={row.overduePaymentMilestoneCount > 0 ? "font-semibold text-rose-700" : "text-muted-foreground"}>{formatVnd(row.nextPaymentAmount ?? 0)}</div>
-                          </> : "—"}
-                        </td>}
+                        {mode !== "all" && (
+                          <td className="whitespace-nowrap px-3 py-3 text-xs">
+                            {row.nextPaymentDueDate ? (
+                              <>
+                                <div>{formatDate(row.nextPaymentDueDate, lang)}</div>
+                                <div
+                                  className={
+                                    row.overduePaymentMilestoneCount > 0
+                                      ? "font-semibold text-rose-700"
+                                      : "text-muted-foreground"
+                                  }
+                                >
+                                  {formatVnd(row.nextPaymentAmount ?? 0)}
+                                </div>
+                              </>
+                            ) : (
+                              "—"
+                            )}
+                          </td>
+                        )}
                         <td className="whitespace-nowrap px-3 py-3">
                           <Badge variant="outline" className={STATUS_VARIANT[row.status]}>
                             {t(`contracts.status.${row.status}`)}
                           </Badge>
                         </td>
-                        <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground">{row.ownerName ?? "—"}</td>
+                        <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground">
+                          {row.ownerName ?? "—"}
+                        </td>
                         {canManageMaster && (
                           <td
                             data-contract-actions
@@ -1307,11 +1794,16 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                             onMouseLeave={() => setHoveredContractId(row.id)}
                           >
                             <div className="inline-flex items-center gap-1">
-                              <Button variant="ghost" size="sm" onClick={() => navigate(detailUrl(row.id, true))}>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => navigate(detailUrl(row.id, true))}
+                              >
                                 <Pencil className="mr-1 h-3.5 w-3.5" /> {t("common.edit")}
                               </Button>
                               <Button
-                                variant="ghost" size="sm"
+                                variant="ghost"
+                                size="sm"
                                 onClick={() => remove(row)}
                                 className="text-destructive hover:text-destructive"
                               >
@@ -1343,7 +1835,9 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                 >
                   {t("common.prev")}
                 </Button>
-                <span className="min-w-16 text-center text-sm tabular-nums">{page} / {pages}</span>
+                <span className="min-w-16 text-center text-sm tabular-nums">
+                  {page} / {pages}
+                </span>
                 <Button
                   variant="outline"
                   size="sm"
@@ -1371,21 +1865,24 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
       >
         <DialogContent className="w-[95vw] max-w-xl max-h-[90vh] overflow-y-auto sm:w-full">
           <DialogHeader>
-            <DialogTitle>
-              {t("contracts.createModalTitle")}
-            </DialogTitle>
+            <DialogTitle>{t("contracts.createModalTitle")}</DialogTitle>
             <DialogDescription>{t("contracts.numberHint")}</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-3">
             {referenceError && (
-              <div role="alert" className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              <div
+                role="alert"
+                className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800"
+              >
                 {referenceError}
               </div>
             )}
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label htmlFor="c-number" className="text-xs">{t("contracts.field.number")}</Label>
+                <Label htmlFor="c-number" className="text-xs">
+                  {t("contracts.field.number")}
+                </Label>
                 <Input
                   id="c-number"
                   value={form.contractNumber}
@@ -1404,7 +1901,9 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="c-customer-form" className="text-xs">{t("contracts.field.customer")} *</Label>
+              <Label htmlFor="c-customer-form" className="text-xs">
+                {t("contracts.field.customer")} *
+              </Label>
               <Select
                 value={form.customerId != null ? String(form.customerId) : ""}
                 onValueChange={(v) => {
@@ -1413,7 +1912,11 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                   setForm({
                     ...form,
                     customerId,
-                    operationalProjectId: projects.some((project) => project.id === form.operationalProjectId && project.customerId === customerId)
+                    operationalProjectId: projects.some(
+                      (project) =>
+                        project.id === form.operationalProjectId &&
+                        project.customerId === customerId,
+                    )
                       ? form.operationalProjectId
                       : null,
                     ownerUserId: customer?.ownerUserId ?? null,
@@ -1421,42 +1924,59 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                   });
                 }}
               >
-                <SelectTrigger id="c-customer-form" className="h-9"><SelectValue placeholder="—" /></SelectTrigger>
+                <SelectTrigger id="c-customer-form" className="h-9">
+                  <SelectValue placeholder="—" />
+                </SelectTrigger>
                 <SelectContent className="max-h-72">
                   {customers.map((c) => (
-                    <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
+                    <SelectItem key={c.id} value={String(c.id)}>
+                      {c.name}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="c-project-form" className="text-xs">{t("contracts.field.operationalProject")} *</Label>
+              <Label htmlFor="c-project-form" className="text-xs">
+                {t("contracts.field.operationalProject")} *
+              </Label>
               <Select
                 value={form.operationalProjectId == null ? "" : String(form.operationalProjectId)}
                 onValueChange={(value) => setForm({ ...form, operationalProjectId: Number(value) })}
                 disabled={form.customerId == null}
               >
-                <SelectTrigger id="c-project-form" className="h-9"><SelectValue placeholder={t("contracts.selectOperationalProject")} /></SelectTrigger>
+                <SelectTrigger id="c-project-form" className="h-9">
+                  <SelectValue placeholder={t("contracts.selectOperationalProject")} />
+                </SelectTrigger>
                 <SelectContent className="max-h-72">
                   {customerProjects.map((project) => (
-                    <SelectItem key={project.id} value={String(project.id)}>{project.code} · {project.name}</SelectItem>
+                    <SelectItem key={project.id} value={String(project.id)}>
+                      {project.code} · {project.name}
+                    </SelectItem>
                   ))}
                   {/* A project inherited from the quote can sit outside the
                       caller's project list; keep it selectable rather than blank. */}
                   {form.operationalProjectId != null &&
-                    !customerProjects.some((project) => project.id === form.operationalProjectId) && (
-                    <SelectItem value={String(form.operationalProjectId)}>
-                      {t("contracts.quickProject.linkedProject", { id: form.operationalProjectId })}
-                    </SelectItem>
-                  )}
+                    !customerProjects.some(
+                      (project) => project.id === form.operationalProjectId,
+                    ) && (
+                      <SelectItem value={String(form.operationalProjectId)}>
+                        {t("contracts.quickProject.linkedProject", {
+                          id: form.operationalProjectId,
+                        })}
+                      </SelectItem>
+                    )}
                 </SelectContent>
               </Select>
-              {form.customerId != null && customerProjects.length === 0 && form.operationalProjectId == null && (
-                <p className="text-xs text-amber-700">{t("contracts.quickProject.noProjects")}</p>
-              )}
-              {canCreateOperationalProjects && form.customerId != null && (
-                quickProjectName === null ? (
+              {form.customerId != null &&
+                customerProjects.length === 0 &&
+                form.operationalProjectId == null && (
+                  <p className="text-xs text-amber-700">{t("contracts.quickProject.noProjects")}</p>
+                )}
+              {canCreateOperationalProjects &&
+                form.customerId != null &&
+                (quickProjectName === null ? (
                   <Button
                     type="button"
                     variant="link"
@@ -1464,8 +1984,13 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                     className="h-auto px-0 text-xs"
                     data-testid="contract-quick-project-open"
                     onClick={() => {
-                      const customerName = customers.find((customer) => customer.id === form.customerId)?.name ?? "";
-                      setQuickProjectName(customerName ? `${t("contracts.quickProject.namePrefix")} ${customerName}` : "");
+                      const customerName =
+                        customers.find((customer) => customer.id === form.customerId)?.name ?? "";
+                      setQuickProjectName(
+                        customerName
+                          ? `${t("contracts.quickProject.namePrefix")} ${customerName}`
+                          : "",
+                      );
                     }}
                   >
                     <Plus className="mr-1 h-3.5 w-3.5" />
@@ -1503,41 +2028,67 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                       </Button>
                     </div>
                   </div>
-                )
-              )}
+                ))}
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
-              {fixedDirection === null ? <div className="space-y-1.5">
-                <Label htmlFor="c-direction-form" className="text-xs">{t("contracts.field.direction")} *</Label>
-                <Select
-                  value={form.direction}
-                  onValueChange={(value) => {
-                    const direction = value as ContractDirection;
-                    const nextType = classification?.allowedTypes[direction]?.[0];
-                    if (!nextType) return;
-                    setForm({ ...form, direction, type: nextType, vendorId: null });
-                  }}
-                >
-                  <SelectTrigger id="c-direction-form" className="h-9"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {(classification?.directions ?? []).map((direction) => (
-                      <SelectItem key={direction} value={direction}>{t(`contracts.direction.${direction}`)}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div> : <div className="space-y-1.5 rounded-md border bg-muted/30 px-3 py-2">
-                <Label className="text-xs">{t("contracts.field.direction")}</Label>
-                <p className="text-sm font-medium">{t(`contracts.direction.${fixedDirection}`)}</p>
-                <p className="text-xs text-muted-foreground">{t(mode === "downstream" ? "contracts.input.directionLockedHint" : "contracts.primary.directionLockedHint")}</p>
-              </div>}
+              {fixedDirection === null ? (
+                <div className="space-y-1.5">
+                  <Label htmlFor="c-direction-form" className="text-xs">
+                    {t("contracts.field.direction")} *
+                  </Label>
+                  <Select
+                    value={form.direction}
+                    onValueChange={(value) => {
+                      const direction = value as ContractDirection;
+                      const nextType = classification?.allowedTypes[direction]?.[0];
+                      if (!nextType) return;
+                      setForm({ ...form, direction, type: nextType, vendorId: null });
+                    }}
+                  >
+                    <SelectTrigger id="c-direction-form" className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(classification?.directions ?? []).map((direction) => (
+                        <SelectItem key={direction} value={direction}>
+                          {t(`contracts.direction.${direction}`)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : (
+                <div className="space-y-1.5 rounded-md border bg-muted/30 px-3 py-2">
+                  <Label className="text-xs">{t("contracts.field.direction")}</Label>
+                  <p className="text-sm font-medium">
+                    {t(`contracts.direction.${fixedDirection}`)}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {t(
+                      mode === "downstream"
+                        ? "contracts.input.directionLockedHint"
+                        : "contracts.primary.directionLockedHint",
+                    )}
+                  </p>
+                </div>
+              )}
               <div className="space-y-1.5">
-                <Label htmlFor="c-type-form" className="text-xs">{t("contracts.field.type")} *</Label>
-                <Select value={form.type} onValueChange={(value) => setForm({ ...form, type: value as FormData["type"] })}>
-                  <SelectTrigger id="c-type-form" className="h-9"><SelectValue /></SelectTrigger>
+                <Label htmlFor="c-type-form" className="text-xs">
+                  {t("contracts.field.type")} *
+                </Label>
+                <Select
+                  value={form.type}
+                  onValueChange={(value) => setForm({ ...form, type: value as FormData["type"] })}
+                >
+                  <SelectTrigger id="c-type-form" className="h-9">
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     {(classification?.allowedTypes[form.direction] ?? []).map((type) => (
-                      <SelectItem key={type} value={type}>{t(`contracts.type.${type}`)}</SelectItem>
+                      <SelectItem key={type} value={type}>
+                        {t(`contracts.type.${type}`)}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -1546,17 +2097,23 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
 
             {form.direction === "Downstream" ? (
               <div className="space-y-1.5">
-                <Label htmlFor="c-vendor-form" className="text-xs">{t("contracts.field.vendor")} *</Label>
+                <Label htmlFor="c-vendor-form" className="text-xs">
+                  {t("contracts.field.vendor")} *
+                </Label>
                 <Select
                   value={form.vendorId == null ? "" : String(form.vendorId)}
                   onValueChange={(value) => setForm({ ...form, vendorId: Number(value) })}
                 >
-                  <SelectTrigger id="c-vendor-form" className="h-9"><SelectValue placeholder={t("contracts.selectVendor")} /></SelectTrigger>
+                  <SelectTrigger id="c-vendor-form" className="h-9">
+                    <SelectValue placeholder={t("contracts.selectVendor")} />
+                  </SelectTrigger>
                   <SelectContent className="max-h-72">
                     {(classification?.vendors ?? [])
-                      .filter((vendor) => form.type === "Supply"
-                        ? vendor.vendorType !== "SubContractor"
-                        : vendor.vendorType !== "Supplier")
+                      .filter((vendor) =>
+                        form.type === "Supply"
+                          ? vendor.vendorType !== "SubContractor"
+                          : vendor.vendorType !== "Supplier",
+                      )
                       .map((vendor) => (
                         <SelectItem key={vendor.id} value={String(vendor.id)}>
                           {vendor.vendorCode} · {vendor.companyName}
@@ -1570,11 +2127,17 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
             {form.direction === "Upstream" && (
               <div className="space-y-1.5 rounded-md border bg-muted/30 px-3 py-2.5 text-sm">
                 <Label>{t("contracts.field.sourceQuote")}</Label>
-                <p>{form.quoteId == null
-                  ? t("contracts.validation.quoteOptional")
-                  : `#${form.quoteId}`}</p>
+                <p>
+                  {form.quoteId == null
+                    ? t("contracts.validation.quoteOptional")
+                    : `#${form.quoteId}`}
+                </p>
                 {form.quoteId == null && (
-                  <Link to="/admin/quotes" className="text-primary underline" onClick={() => setDialogOpen(false)}>
+                  <Link
+                    to="/admin/quotes"
+                    className="text-primary underline"
+                    onClick={() => setDialogOpen(false)}
+                  >
                     {t("contracts.action.openQuotes")}
                   </Link>
                 )}
@@ -1584,31 +2147,63 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
             <div className="space-y-1.5 rounded-md border bg-muted/30 px-3 py-2.5">
               <Label className="text-xs">{t("contracts.field.owner")}</Label>
               <p className="text-sm font-medium">
-                {form.ownerName || (form.ownerUserId ? `#${form.ownerUserId}` : t("contracts.ownerCurrentUserFallback"))}
+                {form.ownerName ||
+                  (form.ownerUserId
+                    ? `#${form.ownerUserId}`
+                    : t("contracts.ownerCurrentUserFallback"))}
               </p>
               <p className="text-xs text-muted-foreground">{t("contracts.ownerInheritedHint")}</p>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-3">
               <div className="space-y-1.5">
-                <Label htmlFor="c-signed" className="text-xs">{t("contracts.field.signedDate")}</Label>
-                <Input id="c-signed" type="date" min={DATE_MIN} max={DATE_MAX} value={form.signedDate}
-                  onChange={(e) => setForm({ ...form, signedDate: e.target.value })} className="h-9" />
+                <Label htmlFor="c-signed" className="text-xs">
+                  {t("contracts.field.signedDate")}
+                </Label>
+                <Input
+                  id="c-signed"
+                  type="date"
+                  min={DATE_MIN}
+                  max={DATE_MAX}
+                  value={form.signedDate}
+                  onChange={(e) => setForm({ ...form, signedDate: e.target.value })}
+                  className="h-9"
+                />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="c-start" className="text-xs">{t("contracts.field.startDate")}</Label>
-                <Input id="c-start" type="date" min={DATE_MIN} max={DATE_MAX} value={form.startDate}
-                  onChange={(e) => setForm({ ...form, startDate: e.target.value })} className="h-9" />
+                <Label htmlFor="c-start" className="text-xs">
+                  {t("contracts.field.startDate")}
+                </Label>
+                <Input
+                  id="c-start"
+                  type="date"
+                  min={DATE_MIN}
+                  max={DATE_MAX}
+                  value={form.startDate}
+                  onChange={(e) => setForm({ ...form, startDate: e.target.value })}
+                  className="h-9"
+                />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="c-end" className="text-xs">{t("contracts.field.endDate")}</Label>
-                <Input id="c-end" type="date" min={DATE_MIN} max={DATE_MAX} value={form.endDate}
-                  onChange={(e) => setForm({ ...form, endDate: e.target.value })} className="h-9" />
+                <Label htmlFor="c-end" className="text-xs">
+                  {t("contracts.field.endDate")}
+                </Label>
+                <Input
+                  id="c-end"
+                  type="date"
+                  min={DATE_MIN}
+                  max={DATE_MAX}
+                  value={form.endDate}
+                  onChange={(e) => setForm({ ...form, endDate: e.target.value })}
+                  className="h-9"
+                />
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="c-value" className="text-xs">{t("contracts.field.value")} *</Label>
+              <Label htmlFor="c-value" className="text-xs">
+                {t("contracts.field.value")} *
+              </Label>
               <MoneyInput
                 id="c-value"
                 value={form.value}
@@ -1619,17 +2214,25 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="c-scope" className="text-xs">{t("contracts.field.scope")}</Label>
+              <Label htmlFor="c-scope" className="text-xs">
+                {t("contracts.field.scope")}
+              </Label>
               <Textarea
-                id="c-scope" rows={3} value={form.scopeOfWork}
+                id="c-scope"
+                rows={3}
+                value={form.scopeOfWork}
                 onChange={(e) => setForm({ ...form, scopeOfWork: e.target.value })}
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="c-note" className="text-xs">{t("contracts.field.note")}</Label>
+              <Label htmlFor="c-note" className="text-xs">
+                {t("contracts.field.note")}
+              </Label>
               <Textarea
-                id="c-note" rows={2} value={form.note}
+                id="c-note"
+                rows={2}
+                value={form.note}
                 onChange={(e) => setForm({ ...form, note: e.target.value })}
               />
             </div>
@@ -1639,7 +2242,12 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <h4 className="text-sm font-semibold">{t("contracts.milestonesTitle")}</h4>
                 <div className="flex flex-wrap gap-2">
-                  <Button type="button" size="sm" variant="outline" onClick={applyPreset30_30_30_10}>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={applyPreset30_30_30_10}
+                  >
                     {t("contracts.milestonePreset")}
                   </Button>
                   <Button type="button" size="sm" variant="outline" onClick={addMilestone}>
@@ -1654,7 +2262,8 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
               ) : (
                 <>
                   {form.milestones.map((m, idx) => {
-                    const amount = Math.round(form.value * (m.percentValue || 0) / 100 * 100) / 100;
+                    const amount =
+                      Math.round(((form.value * (m.percentValue || 0)) / 100) * 100) / 100;
                     return (
                       <div
                         key={idx}
@@ -1662,10 +2271,14 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                         data-testid={`c-milestone-${idx}`}
                       >
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-xs font-semibold uppercase text-muted-foreground">#{idx + 1}</span>
+                          <span className="text-xs font-semibold uppercase text-muted-foreground">
+                            #{idx + 1}
+                          </span>
                           <div className="inline-flex items-center gap-1">
                             <Button
-                              type="button" size="icon" variant="ghost"
+                              type="button"
+                              size="icon"
+                              variant="ghost"
                               onClick={() => moveMilestone(idx, -1)}
                               disabled={idx === 0}
                               aria-label={t("workflow.moveUp")}
@@ -1674,7 +2287,9 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                               <ArrowUp className="h-3.5 w-3.5" />
                             </Button>
                             <Button
-                              type="button" size="icon" variant="ghost"
+                              type="button"
+                              size="icon"
+                              variant="ghost"
                               onClick={() => moveMilestone(idx, 1)}
                               disabled={idx === form.milestones.length - 1}
                               aria-label={t("workflow.moveDown")}
@@ -1683,7 +2298,9 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                               <ArrowDown className="h-3.5 w-3.5" />
                             </Button>
                             <Button
-                              type="button" size="icon" variant="ghost"
+                              type="button"
+                              size="icon"
+                              variant="ghost"
                               onClick={() => removeMilestone(idx)}
                               aria-label={t("common.delete")}
                               className="h-11 w-11 text-destructive hover:text-destructive sm:h-7 sm:w-7"
@@ -1694,7 +2311,9 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                         </div>
                         <div className="grid gap-2 sm:grid-cols-2">
                           <div className="min-w-0 space-y-1">
-                            <Label htmlFor={`c-milestone-name-${idx}`} className="text-xs">{t("contracts.milestone.name")} *</Label>
+                            <Label htmlFor={`c-milestone-name-${idx}`} className="text-xs">
+                              {t("contracts.milestone.name")} *
+                            </Label>
                             <Input
                               id={`c-milestone-name-${idx}`}
                               value={m.name}
@@ -1703,13 +2322,20 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                             />
                           </div>
                           <div className="min-w-0 space-y-1">
-                            <Label htmlFor={`c-milestone-percent-${idx}`} className="text-xs">{t("contracts.milestone.percent")} *</Label>
+                            <Label htmlFor={`c-milestone-percent-${idx}`} className="text-xs">
+                              {t("contracts.milestone.percent")} *
+                            </Label>
                             <div className="flex items-center gap-2">
                               <Input
                                 id={`c-milestone-percent-${idx}`}
-                                type="number" min={0} max={100} step="0.01"
+                                type="number"
+                                min={0}
+                                max={100}
+                                step="0.01"
                                 value={m.percentValue}
-                                onChange={(e) => patchMilestone(idx, { percentValue: Number(e.target.value) || 0 })}
+                                onChange={(e) =>
+                                  patchMilestone(idx, { percentValue: Number(e.target.value) || 0 })
+                                }
                                 className="h-8"
                               />
                               <span className="whitespace-nowrap text-xs text-muted-foreground">
@@ -1718,10 +2344,13 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                             </div>
                           </div>
                           <div className="min-w-0 space-y-1">
-                            <Label htmlFor={`c-milestone-due-${idx}`} className="text-xs">{t("contracts.milestone.dueDate")}</Label>
+                            <Label htmlFor={`c-milestone-due-${idx}`} className="text-xs">
+                              {t("contracts.milestone.dueDate")}
+                            </Label>
                             <Input
                               id={`c-milestone-due-${idx}`}
-                              type="date" value={m.dueDate}
+                              type="date"
+                              value={m.dueDate}
                               onChange={(e) => patchMilestone(idx, { dueDate: e.target.value })}
                               className="h-8"
                             />
@@ -1729,7 +2358,9 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                           <div className="min-w-0 space-y-1">
                             <Label className="text-xs">{t("contracts.milestone.status")}</Label>
                             <div className="flex h-8 items-center">
-                              <Badge variant="outline">{t("contracts.milestoneStatus.Pending")}</Badge>
+                              <Badge variant="outline">
+                                {t("contracts.milestoneStatus.Pending")}
+                              </Badge>
                             </div>
                           </div>
                         </div>

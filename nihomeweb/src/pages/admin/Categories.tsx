@@ -104,7 +104,7 @@ const Categories = () => {
           ? await adminApi.getProjectCategories(true)
           : kind === "news"
             ? await adminApi.getNewsCategories(true)
-          : await adminApi.getActivityCategories(true);
+            : await adminApi.getActivityCategories(true);
       setItems(result.data);
     } catch {
       toast({ title: t("common.error"), variant: "destructive" });
@@ -122,10 +122,12 @@ const Categories = () => {
   }, [loadData]);
 
   const filtered = useMemo(
-    () => items.filter((i) =>
-      localizedName(i, lang).toLowerCase().includes(q.trim().toLowerCase()) ||
-      (i.nameVi || i.name || "").toLowerCase().includes(q.trim().toLowerCase())
-    ),
+    () =>
+      items.filter(
+        (i) =>
+          localizedName(i, lang).toLowerCase().includes(q.trim().toLowerCase()) ||
+          (i.nameVi || i.name || "").toLowerCase().includes(q.trim().toLowerCase()),
+      ),
     [items, q, lang],
   );
 
@@ -172,7 +174,8 @@ const Categories = () => {
 
     setSubmitting(true);
     try {
-      const payload: UpsertActivityCategoryRequest | UpsertProjectCategoryRequest | UpsertNewsCategoryRequest = {
+      const payload:
+        UpsertActivityCategoryRequest | UpsertProjectCategoryRequest | UpsertNewsCategoryRequest = {
         name: form.nameVi.trim(),
         nameVi: form.nameVi.trim(),
         isActive: form.isActive,
@@ -336,7 +339,9 @@ const Categories = () => {
 
         <section className="rounded-lg border bg-card p-3">
           <div className="w-full sm:max-w-sm">
-            <Label className="text-xs" htmlFor="category-search">{t("common.search")}</Label>
+            <Label className="text-xs" htmlFor="category-search">
+              {t("common.search")}
+            </Label>
             <div className="relative">
               <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -350,16 +355,19 @@ const Categories = () => {
           </div>
         </section>
 
-        <Dialog open={dialogOpen} onOpenChange={(open) => (open ? setDialogOpen(true) : closeDialog())}>
+        <Dialog
+          open={dialogOpen}
+          onOpenChange={(open) => (open ? setDialogOpen(true) : closeDialog())}
+        >
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>
-                {editingId == null ? t("cat.add") : t("common.edit")}
-              </DialogTitle>
+              <DialogTitle>{editingId == null ? t("cat.add") : t("common.edit")}</DialogTitle>
             </DialogHeader>
             <form onSubmit={submitForm} className="space-y-4">
               <div className="space-y-1.5">
-                <Label className="text-xs" htmlFor="cat-name-vi">{t("cat.nameVi")}</Label>
+                <Label className="text-xs" htmlFor="cat-name-vi">
+                  {t("cat.nameVi")}
+                </Label>
                 <Input
                   id="cat-name-vi"
                   value={form.nameVi}
@@ -373,20 +381,32 @@ const Categories = () => {
               <div className="flex flex-col gap-3 rounded-lg border border-sky-200 bg-sky-50/60 p-4 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-sm text-sky-900">{t("cat.manageTranslationsHint")}</p>
                 {canViewTranslations && (
-                  <Button asChild type="button" variant="outline" size="sm" className="shrink-0 bg-background">
-                    <Link to={`/admin/translations?tab=entity&type=${translationTypeByCategory[kind]}`}>
+                  <Button
+                    asChild
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0 bg-background"
+                  >
+                    <Link
+                      to={`/admin/translations?tab=entity&type=${translationTypeByCategory[kind]}`}
+                    >
                       {t("cat.openTranslations")}
                     </Link>
                   </Button>
                 )}
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs" htmlFor="cat-order">{t("cat.order")}</Label>
+                <Label className="text-xs" htmlFor="cat-order">
+                  {t("cat.order")}
+                </Label>
                 <Input
                   id="cat-order"
                   type="number"
                   value={form.sortOrder}
-                  onChange={(e) => setForm((prev) => ({ ...prev, sortOrder: Number(e.target.value) }))}
+                  onChange={(e) =>
+                    setForm((prev) => ({ ...prev, sortOrder: Number(e.target.value) }))
+                  }
                 />
               </div>
               <div className="flex items-center justify-between gap-3 rounded-md border px-4 py-3">
@@ -398,16 +418,15 @@ const Categories = () => {
                 />
               </div>
               <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={closeDialog}
-                  disabled={submitting}
-                >
+                <Button type="button" variant="outline" onClick={closeDialog} disabled={submitting}>
                   {t("common.cancel")}
                 </Button>
                 <Button type="submit" disabled={submitting}>
-                  {submitting ? t("common.loading") : editingId == null ? t("form.create") : t("form.update")}
+                  {submitting
+                    ? t("common.loading")
+                    : editingId == null
+                      ? t("form.create")
+                      : t("form.update")}
                 </Button>
               </DialogFooter>
             </form>
@@ -435,10 +454,7 @@ const Categories = () => {
               </li>
             ) : (
               filtered.map((item) => (
-                <li
-                  key={item.id}
-                  className="rounded-lg border bg-card p-3 shadow-sm"
-                >
+                <li key={item.id} className="rounded-lg border bg-card p-3 shadow-sm">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex min-w-0 items-start gap-2">
                       <Checkbox
@@ -452,9 +468,15 @@ const Categories = () => {
                       </h3>
                     </div>
                     {item.isActive ? (
-                      <Check className="h-4 w-4 shrink-0 text-emerald-600" aria-label={t("cat.published")} />
+                      <Check
+                        className="h-4 w-4 shrink-0 text-emerald-600"
+                        aria-label={t("cat.published")}
+                      />
                     ) : (
-                      <X className="h-4 w-4 shrink-0 text-muted-foreground" aria-label={t("cat.published")} />
+                      <X
+                        className="h-4 w-4 shrink-0 text-muted-foreground"
+                        aria-label={t("cat.published")}
+                      />
                     )}
                   </div>
                   <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
@@ -487,20 +509,22 @@ const Categories = () => {
                   <th className="w-10 px-3 py-3 text-left">
                     <Checkbox
                       checked={
-                        allVisibleSelected
-                          ? true
-                          : someVisibleSelected
-                            ? "indeterminate"
-                            : false
+                        allVisibleSelected ? true : someVisibleSelected ? "indeterminate" : false
                       }
                       onCheckedChange={(v) => toggleAllVisible(v === true)}
                       aria-label={t("common.selectAll")}
                     />
                   </th>
                   <th className="px-3 py-3 text-left font-medium">{t("cat.name")}</th>
-                  <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("cat.published")}</th>
-                  <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("cat.order")}</th>
-                  <th className="whitespace-nowrap px-3 py-3 text-right font-medium">{t("common.actions")}</th>
+                  <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                    {t("cat.published")}
+                  </th>
+                  <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                    {t("cat.order")}
+                  </th>
+                  <th className="whitespace-nowrap px-3 py-3 text-right font-medium">
+                    {t("common.actions")}
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -537,11 +561,7 @@ const Categories = () => {
                       <td className="whitespace-nowrap px-3 py-3">{item.sortOrder}</td>
                       <td className="whitespace-nowrap px-3 py-3 text-right">
                         <div className="inline-flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => startEdit(item)}
-                          >
+                          <Button variant="ghost" size="sm" onClick={() => startEdit(item)}>
                             <Pencil className="mr-1 h-3.5 w-3.5" /> {t("common.edit")}
                           </Button>
                           <Button

@@ -11,36 +11,36 @@
  *  3. Any other Error / value — falls back to `.message` then `String(err)`.
  */
 export function extractApiError(err: unknown, fallback?: string): string {
-    if (typeof err !== "object" || err === null) return fallback ?? String(err);
+  if (typeof err !== "object" || err === null) return fallback ?? String(err);
 
-    const anyErr = err as {
-        response?: { status?: number; data?: unknown };
-        message?: string;
-    };
-    const data = anyErr.response?.data;
+  const anyErr = err as {
+    response?: { status?: number; data?: unknown };
+    message?: string;
+  };
+  const data = anyErr.response?.data;
 
-    if (data && typeof data === "object") {
-        if ("errors" in data && data.errors && typeof data.errors === "object") {
-            return Object.entries(data.errors as Record<string, string[]>)
-                .map(([field, messages]) => `${field}: ${messages.join("; ")}`)
-                .join(" · ");
-        }
-        if ("message" in data && typeof (data as { message?: unknown }).message === "string") {
-            return (data as { message: string }).message;
-        }
-        if ("detail" in data && typeof (data as { detail?: unknown }).detail === "string") {
-            return (data as { detail: string }).detail;
-        }
+  if (data && typeof data === "object") {
+    if ("errors" in data && data.errors && typeof data.errors === "object") {
+      return Object.entries(data.errors as Record<string, string[]>)
+        .map(([field, messages]) => `${field}: ${messages.join("; ")}`)
+        .join(" · ");
     }
+    if ("message" in data && typeof (data as { message?: unknown }).message === "string") {
+      return (data as { message: string }).message;
+    }
+    if ("detail" in data && typeof (data as { detail?: unknown }).detail === "string") {
+      return (data as { detail: string }).detail;
+    }
+  }
 
-    return anyErr.message ?? fallback ?? String(err);
+  return anyErr.message ?? fallback ?? String(err);
 }
 
 export function isConcurrencyConflict(err: unknown): boolean {
-    if (typeof err !== "object" || err === null) return false;
-    const response = (err as { response?: { status?: number; data?: unknown } }).response;
-    if (response?.status !== 409 || typeof response.data !== "object" || response.data === null) {
-        return false;
-    }
-    return (response.data as { code?: unknown }).code === "crm_concurrency_conflict";
+  if (typeof err !== "object" || err === null) return false;
+  const response = (err as { response?: { status?: number; data?: unknown } }).response;
+  if (response?.status !== 409 || typeof response.data !== "object" || response.data === null) {
+    return false;
+  }
+  return (response.data as { code?: unknown }).code === "crm_concurrency_conflict";
 }

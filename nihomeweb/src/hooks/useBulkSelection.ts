@@ -88,19 +88,16 @@ export function useBulkSelection<TId extends string | number>({
     setBulkDeleting(true);
     try {
       const results = await Promise.allSettled(ids.map((id) => deleteOne(id)));
-      const failures = results.flatMap((result, index) => result.status === "rejected"
-        ? [{ id: ids[index], reason: result.reason }]
-        : []);
+      const failures = results.flatMap((result, index) =>
+        result.status === "rejected" ? [{ id: ids[index], reason: result.reason }] : [],
+      );
       const failed = failures.length;
       const success = results.length - failed;
       setSelectedIds(new Set(failures.map((failure) => failure.id)));
       await onAfter?.({ success, failed, failures });
       if (failed === 0) {
         toast({
-          title: t("common.bulkDeleteSuccess").replace(
-            "{count}",
-            success.toString(),
-          ),
+          title: t("common.bulkDeleteSuccess").replace("{count}", success.toString()),
         });
       } else {
         toast({

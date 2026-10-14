@@ -57,7 +57,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import {
   adminApi,
   type AsBuiltCategory,
@@ -70,7 +76,13 @@ import {
   type UpdateAsBuiltDocumentRequest,
 } from "@/services/adminApi";
 
-const ASBUILT_STATUSES: AsBuiltStatus[] = ["Draft", "Submitted", "Approved", "Archived", "Cancelled"];
+const ASBUILT_STATUSES: AsBuiltStatus[] = [
+  "Draft",
+  "Submitted",
+  "Approved",
+  "Archived",
+  "Cancelled",
+];
 const EDITABLE_STATUSES = new Set<AsBuiltStatus>(["Draft", "Submitted"]);
 
 const STATUS_BADGE: Record<AsBuiltStatus, string> = {
@@ -146,11 +158,14 @@ export default function AsBuiltDocumentsPage() {
   });
 
   // Helper to get localized category name
-  const getCategoryName = useCallback((code: string) => {
-    const cat = categories.find(c => c.code === code);
-    if (!cat) return code;
-    return localizedName(cat, lang);
-  }, [categories, lang]);
+  const getCategoryName = useCallback(
+    (code: string) => {
+      const cat = categories.find((c) => c.code === code);
+      if (!cat) return code;
+      return localizedName(cat, lang);
+    },
+    [categories, lang],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -216,13 +231,13 @@ export default function AsBuiltDocumentsPage() {
   const openCreate = () => {
     setEditingId(null);
     // Pre-select first active category if available
-    const firstActiveCategory = categories.find(c => c.isActive);
-    setForm({ 
-      title: "", 
-      category: firstActiveCategory?.code || "Drawing", 
-      description: "", 
-      fileUrl: "", 
-      note: "" 
+    const firstActiveCategory = categories.find((c) => c.isActive);
+    setForm({
+      title: "",
+      category: firstActiveCategory?.code || "Drawing",
+      description: "",
+      fileUrl: "",
+      note: "",
     });
     // Pre-select current filter project if set, otherwise leave empty for user to choose
     setFormProjectId(projectId);
@@ -396,21 +411,58 @@ export default function AsBuiltDocumentsPage() {
     const out: Array<{ next: AsBuiltStatus; label: string; testId: string }> = [];
     switch (r.status) {
       case "Draft":
-        if (canManage) out.push({ next: "Submitted", label: t("asbuilt.action.submit"), testId: "asbuilt-submit" });
-        if (canManage) out.push({ next: "Cancelled", label: t("asbuilt.action.cancel"), testId: "asbuilt-cancel" });
+        if (canManage)
+          out.push({
+            next: "Submitted",
+            label: t("asbuilt.action.submit"),
+            testId: "asbuilt-submit",
+          });
+        if (canManage)
+          out.push({
+            next: "Cancelled",
+            label: t("asbuilt.action.cancel"),
+            testId: "asbuilt-cancel",
+          });
         break;
       case "Submitted":
-        if (canApprove) out.push({ next: "Approved", label: t("asbuilt.action.approve"), testId: "asbuilt-approve" });
-        if (canManage) out.push({ next: "Draft", label: t("asbuilt.action.revise"), testId: "asbuilt-revise" });
-        if (canManage) out.push({ next: "Cancelled", label: t("asbuilt.action.cancel"), testId: "asbuilt-cancel" });
+        if (canApprove)
+          out.push({
+            next: "Approved",
+            label: t("asbuilt.action.approve"),
+            testId: "asbuilt-approve",
+          });
+        if (canManage)
+          out.push({ next: "Draft", label: t("asbuilt.action.revise"), testId: "asbuilt-revise" });
+        if (canManage)
+          out.push({
+            next: "Cancelled",
+            label: t("asbuilt.action.cancel"),
+            testId: "asbuilt-cancel",
+          });
         break;
       case "Approved":
-        if (canManage) out.push({ next: "Archived", label: t("asbuilt.action.archive"), testId: "asbuilt-archive" });
-        if (canManage) out.push({ next: "Draft", label: t("asbuilt.action.revise"), testId: "asbuilt-revise" });
-        if (canManage) out.push({ next: "Cancelled", label: t("asbuilt.action.cancel"), testId: "asbuilt-cancel" });
+        if (canManage)
+          out.push({
+            next: "Archived",
+            label: t("asbuilt.action.archive"),
+            testId: "asbuilt-archive",
+          });
+        if (canManage)
+          out.push({ next: "Draft", label: t("asbuilt.action.revise"), testId: "asbuilt-revise" });
+        if (canManage)
+          out.push({
+            next: "Cancelled",
+            label: t("asbuilt.action.cancel"),
+            testId: "asbuilt-cancel",
+          });
         break;
       case "Cancelled":
-        if (canManage) out.push({ next: "Draft", label: t("asbuilt.action.restore"), testId: "asbuilt-restore" });
+        if (canManage)
+          out.push({
+            next: "Draft",
+            label: t("asbuilt.action.restore"),
+            testId: "asbuilt-restore",
+          });
         break;
       case "Archived":
         break;
@@ -445,9 +497,10 @@ export default function AsBuiltDocumentsPage() {
         key: "completeness",
         label: t("asbuilt.stats.completeness"),
         value: totalRequired > 0 ? `${completedRequired}/${totalRequired}` : "—",
-        gradient: totalRequired > 0 && completedRequired === totalRequired
-          ? "from-emerald-500 to-teal-500"
-          : "from-amber-500 to-orange-500",
+        gradient:
+          totalRequired > 0 && completedRequired === totalRequired
+            ? "from-emerald-500 to-teal-500"
+            : "from-amber-500 to-orange-500",
         icon: FolderOpen,
       },
     ],
@@ -455,9 +508,8 @@ export default function AsBuiltDocumentsPage() {
   );
 
   const selectableCategories = useMemo(() => {
-    const existingCategoryCode = editingId == null
-      ? undefined
-      : rows.find((row) => row.id === editingId)?.category;
+    const existingCategoryCode =
+      editingId == null ? undefined : rows.find((row) => row.id === editingId)?.category;
     return categories.filter((item) => item.isActive || item.code === existingCategoryCode);
   }, [categories, editingId, rows]);
 
@@ -533,9 +585,7 @@ export default function AsBuiltDocumentsPage() {
                   <Icon className="h-5 w-5 opacity-80" />
                 </div>
                 <div className="mt-2 text-3xl font-bold">{s.value}</div>
-                {subLabel && (
-                  <div className="mt-1 text-[10px] opacity-90">{subLabel}</div>
-                )}
+                {subLabel && <div className="mt-1 text-[10px] opacity-90">{subLabel}</div>}
               </div>
             );
           })}
@@ -572,11 +622,13 @@ export default function AsBuiltDocumentsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__all__">{t("asbuilt.filter.category.all")}</SelectItem>
-                  {categories.filter(c => c.isActive).map((c) => (
-                    <SelectItem key={c.code} value={c.code}>
-                      {localizedName(c, lang)}
-                    </SelectItem>
-                  ))}
+                  {categories
+                    .filter((c) => c.isActive)
+                    .map((c) => (
+                      <SelectItem key={c.code} value={c.code}>
+                        {localizedName(c, lang)}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
@@ -739,7 +791,9 @@ export default function AsBuiltDocumentsPage() {
                           {getCategoryName(r.category)}
                         </Badge>
                       </td>
-                      <td className="px-3 py-2 text-xs text-muted-foreground">{r.designProjectName}</td>
+                      <td className="px-3 py-2 text-xs text-muted-foreground">
+                        {r.designProjectName}
+                      </td>
                       <td className="px-3 py-2">
                         <Badge variant="outline" className={STATUS_BADGE[r.status]}>
                           {t(`asbuilt.status.${r.status.toLowerCase()}`)}
@@ -747,15 +801,37 @@ export default function AsBuiltDocumentsPage() {
                       </td>
                       <td className="px-3 py-2 text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex justify-end gap-1">
-                          <Button variant="ghost" size="icon" title={t("common.view")} aria-label={t("common.view")} onClick={() => setDetail(r)} data-testid={`asbuilt-row-view-${r.id}`}>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title={t("common.view")}
+                            aria-label={t("common.view")}
+                            onClick={() => setDetail(r)}
+                            data-testid={`asbuilt-row-view-${r.id}`}
+                          >
                             <Eye className="h-4 w-4" />
                           </Button>
                           {canManage && (
                             <>
-                              <Button variant="ghost" size="icon" title={t("common.edit")} aria-label={t("common.edit")} disabled={!EDITABLE_STATUSES.has(r.status)} onClick={() => openEdit(r)} data-testid={`asbuilt-row-edit-${r.id}`}>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                title={t("common.edit")}
+                                aria-label={t("common.edit")}
+                                disabled={!EDITABLE_STATUSES.has(r.status)}
+                                onClick={() => openEdit(r)}
+                                data-testid={`asbuilt-row-edit-${r.id}`}
+                              >
                                 <Pencil className="h-4 w-4" />
                               </Button>
-                              <Button variant="ghost" size="icon" title={t("common.delete")} aria-label={t("common.delete")} onClick={() => setPendingDelete(r)} data-testid={`asbuilt-row-delete-${r.id}`}>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                title={t("common.delete")}
+                                aria-label={t("common.delete")}
+                                onClick={() => setPendingDelete(r)}
+                                data-testid={`asbuilt-row-delete-${r.id}`}
+                              >
                                 <Trash2 className="h-4 w-4 text-rose-500" />
                               </Button>
                             </>
@@ -778,9 +854,13 @@ export default function AsBuiltDocumentsPage() {
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <div className="font-mono text-xs text-muted-foreground">{r.documentCode}</div>
+                      <div className="font-mono text-xs text-muted-foreground">
+                        {r.documentCode}
+                      </div>
                       <div className="truncate font-medium">{r.title}</div>
-                      <div className="mt-1 text-xs text-muted-foreground">{r.designProjectName}</div>
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        {r.designProjectName}
+                      </div>
                     </div>
                     <div className="flex flex-col items-end gap-1">
                       <Badge variant="outline" className={STATUS_BADGE[r.status]}>
@@ -792,16 +872,36 @@ export default function AsBuiltDocumentsPage() {
                     </div>
                   </div>
                   <div className="mt-3 flex flex-wrap justify-end gap-1 border-t pt-2">
-                    <Button variant="ghost" size="sm" onClick={() => setDetail(r)} data-testid={`asbuilt-card-view-${r.id}`}>
-                      <Eye className="mr-1 h-4 w-4" />{t("common.view")}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setDetail(r)}
+                      data-testid={`asbuilt-card-view-${r.id}`}
+                    >
+                      <Eye className="mr-1 h-4 w-4" />
+                      {t("common.view")}
                     </Button>
                     {canManage && (
                       <>
-                        <Button variant="ghost" size="sm" disabled={!EDITABLE_STATUSES.has(r.status)} onClick={() => openEdit(r)} data-testid={`asbuilt-card-edit-${r.id}`}>
-                          <Pencil className="mr-1 h-4 w-4" />{t("common.edit")}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled={!EDITABLE_STATUSES.has(r.status)}
+                          onClick={() => openEdit(r)}
+                          data-testid={`asbuilt-card-edit-${r.id}`}
+                        >
+                          <Pencil className="mr-1 h-4 w-4" />
+                          {t("common.edit")}
                         </Button>
-                        <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => setPendingDelete(r)} data-testid={`asbuilt-card-delete-${r.id}`}>
-                          <Trash2 className="mr-1 h-4 w-4" />{t("common.delete")}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => setPendingDelete(r)}
+                          data-testid={`asbuilt-card-delete-${r.id}`}
+                        >
+                          <Trash2 className="mr-1 h-4 w-4" />
+                          {t("common.delete")}
                         </Button>
                       </>
                     )}
@@ -813,7 +913,12 @@ export default function AsBuiltDocumentsPage() {
             <div className="flex flex-col gap-2 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
               <div>{t("common.pagination.total").replace("{total}", String(total))}</div>
               <div className="flex justify-end gap-1">
-                <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page <= 1}
+                  onClick={() => setPage(page - 1)}
+                >
                   {t("common.pagination.prev")}
                 </Button>
                 <Button
@@ -837,7 +942,9 @@ export default function AsBuiltDocumentsPage() {
             <>
               <SheetHeader>
                 <SheetTitle className="text-lg">
-                  <span className="mr-2 font-mono text-xs text-muted-foreground">{detail.documentCode}</span>
+                  <span className="mr-2 font-mono text-xs text-muted-foreground">
+                    {detail.documentCode}
+                  </span>
                   {detail.title}
                 </SheetTitle>
                 <SheetDescription>{detail.designProjectName}</SheetDescription>
@@ -866,9 +973,15 @@ export default function AsBuiltDocumentsPage() {
                         <span className="min-w-0 flex-1 break-all">{detail.fileUrl}</span>
                         <AdminFilePreview
                           url={detail.fileUrl}
-                          fetchFile={isManagedDocumentPath(detail.fileUrl, "/files/business-documents/as-built")
-                            ? async () => (await adminApi.getAsBuiltDocumentContent(detail.id)).data
-                            : undefined}
+                          fetchFile={
+                            isManagedDocumentPath(
+                              detail.fileUrl,
+                              "/files/business-documents/as-built",
+                            )
+                              ? async () =>
+                                  (await adminApi.getAsBuiltDocumentContent(detail.id)).data
+                              : undefined
+                          }
                           testId="asbuilt-detail-file-preview"
                         />
                       </dd>
@@ -913,24 +1026,42 @@ export default function AsBuiltDocumentsPage() {
                   <ol className="space-y-2 text-xs">
                     <li className="flex items-start justify-between gap-3">
                       <span>{t("asbuilt.lifecycle.created")}</span>
-                      <span className="text-muted-foreground">{formatDateTime(detail.createdAt)}</span>
+                      <span className="text-muted-foreground">
+                        {formatDateTime(detail.createdAt)}
+                      </span>
                     </li>
                     {detail.submittedAt && (
                       <li className="flex items-start justify-between gap-3">
-                        <span>{t("asbuilt.lifecycle.submitted").replace("{user}", detail.submittedByName ?? "—")}</span>
-                        <span className="text-muted-foreground">{formatDateTime(detail.submittedAt)}</span>
+                        <span>
+                          {t("asbuilt.lifecycle.submitted").replace(
+                            "{user}",
+                            detail.submittedByName ?? "—",
+                          )}
+                        </span>
+                        <span className="text-muted-foreground">
+                          {formatDateTime(detail.submittedAt)}
+                        </span>
                       </li>
                     )}
                     {detail.approvedAt && (
                       <li className="flex items-start justify-between gap-3">
-                        <span>{t("asbuilt.lifecycle.approved").replace("{user}", detail.approvedByName ?? "—")}</span>
-                        <span className="text-muted-foreground">{formatDateTime(detail.approvedAt)}</span>
+                        <span>
+                          {t("asbuilt.lifecycle.approved").replace(
+                            "{user}",
+                            detail.approvedByName ?? "—",
+                          )}
+                        </span>
+                        <span className="text-muted-foreground">
+                          {formatDateTime(detail.approvedAt)}
+                        </span>
                       </li>
                     )}
                     {detail.archivedAt && (
                       <li className="flex items-start justify-between gap-3">
                         <span>{t("asbuilt.lifecycle.archived")}</span>
-                        <span className="text-muted-foreground">{formatDateTime(detail.archivedAt)}</span>
+                        <span className="text-muted-foreground">
+                          {formatDateTime(detail.archivedAt)}
+                        </span>
                       </li>
                     )}
                   </ol>
@@ -1027,7 +1158,8 @@ export default function AsBuiltDocumentsPage() {
                 <SelectContent>
                   {selectableCategories.map((c) => (
                     <SelectItem key={c.code} value={c.code}>
-                      {localizedName(c, lang)}{c.isActive ? "" : ` (${t("common.inactive")})`}
+                      {localizedName(c, lang)}
+                      {c.isActive ? "" : ` (${t("common.inactive")})`}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -1036,7 +1168,9 @@ export default function AsBuiltDocumentsPage() {
             <div>
               <Label>{t("asbuilt.field.fileUrl")}</Label>
               <AdminDocumentUpload
-                uploadFile={async (file) => (await adminApi.uploadAsBuiltDocumentFile(file)).data.path}
+                uploadFile={async (file) =>
+                  (await adminApi.uploadAsBuiltDocumentFile(file)).data.path
+                }
                 onUploaded={([path]) => setForm((current) => ({ ...current, fileUrl: path }))}
                 disabled={saving}
                 testId="asbuilt-document-upload"
@@ -1048,17 +1182,18 @@ export default function AsBuiltDocumentsPage() {
                   placeholder="/files/asbuilt/…"
                   data-testid="asbuilt-form-file-url"
                 />
-                {form.fileUrl.trim() && (
-                  !isManagedDocumentPath(form.fileUrl, "/files/business-documents/as-built")
-                  || rows.find((row) => row.id === editingId)?.fileUrl === form.fileUrl
-                ) && (
-                  <AdminFilePreview
-                    url={form.fileUrl}
-                    fetchFile={isManagedDocumentPath(form.fileUrl, "/files/business-documents/as-built")
-                      ? async () => (await adminApi.getAsBuiltDocumentContent(editingId!)).data
-                      : undefined}
-                  />
-                )}
+                {form.fileUrl.trim() &&
+                  (!isManagedDocumentPath(form.fileUrl, "/files/business-documents/as-built") ||
+                    rows.find((row) => row.id === editingId)?.fileUrl === form.fileUrl) && (
+                    <AdminFilePreview
+                      url={form.fileUrl}
+                      fetchFile={
+                        isManagedDocumentPath(form.fileUrl, "/files/business-documents/as-built")
+                          ? async () => (await adminApi.getAsBuiltDocumentContent(editingId!)).data
+                          : undefined
+                      }
+                    />
+                  )}
               </div>
             </div>
             <div>
@@ -1090,7 +1225,10 @@ export default function AsBuiltDocumentsPage() {
       </Dialog>
 
       {/* Confirm transition */}
-      <AlertDialog open={!!pendingTransition} onOpenChange={(o) => !o && setPendingTransition(null)}>
+      <AlertDialog
+        open={!!pendingTransition}
+        onOpenChange={(o) => !o && setPendingTransition(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t("asbuilt.confirm.transition.title")}</AlertDialogTitle>
@@ -1099,7 +1237,9 @@ export default function AsBuiltDocumentsPage() {
                 .replace("{title}", pendingTransition?.title ?? "")
                 .replace(
                   "{status}",
-                  pendingTransition ? t(`asbuilt.status.${pendingTransition.next.toLowerCase()}`) : "",
+                  pendingTransition
+                    ? t(`asbuilt.status.${pendingTransition.next.toLowerCase()}`)
+                    : "",
                 )}
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -1114,7 +1254,10 @@ export default function AsBuiltDocumentsPage() {
           </div>
           <AlertDialogFooter>
             <AlertDialogCancel>{t("asbuilt.action.close")}</AlertDialogCancel>
-            <AlertDialogAction onClick={handleTransitionConfirm} data-testid="asbuilt-action-confirm">
+            <AlertDialogAction
+              onClick={handleTransitionConfirm}
+              data-testid="asbuilt-action-confirm"
+            >
               {t("asbuilt.form.save")}
             </AlertDialogAction>
           </AlertDialogFooter>

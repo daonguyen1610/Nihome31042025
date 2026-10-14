@@ -18,11 +18,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useI18n } from "@/lib/i18n";
-import type {
-  CreateUserRequest,
-  UpdateUserRequest,
-  UserDetailResponse,
-} from "@/services/adminApi";
+import type { CreateUserRequest, UpdateUserRequest, UserDetailResponse } from "@/services/adminApi";
 import type { RoleResponse } from "@/services/rbacApi";
 
 type UserFormModalProps = {
@@ -90,19 +86,21 @@ export default function UserFormModal({
     if (!open) return;
 
     setError(null);
-    setForm(user
-      ? {
-          fullName: user.fullName ?? "",
-          phoneNumber: user.phoneNumber,
-          email: user.email ?? "",
-          password: "",
-          role: user.role,
-          isActive: user.isActive,
-        }
-      : {
-          ...emptyForm,
-          role: defaultRole,
-        });
+    setForm(
+      user
+        ? {
+            fullName: user.fullName ?? "",
+            phoneNumber: user.phoneNumber,
+            email: user.email ?? "",
+            password: "",
+            role: user.role,
+            isActive: user.isActive,
+          }
+        : {
+            ...emptyForm,
+            role: defaultRole,
+          },
+    );
   }, [defaultRole, open, user]);
 
   const updateField = <K extends keyof FormState>(key: K, value: FormState[K]) => {
@@ -127,7 +125,9 @@ export default function UserFormModal({
 
     const email = form.email.trim();
     if (!email) {
-      setError(t("adminUsers.validation.email") || t("profile.emailRequired") || "Vui lòng nhập email");
+      setError(
+        t("adminUsers.validation.email") || t("profile.emailRequired") || "Vui lòng nhập email",
+      );
       return;
     }
 
@@ -154,14 +154,14 @@ export default function UserFormModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle>
-            {isEdit ? t("adminUsers.editUser") : t("adminUsers.addUser")}
-          </DialogTitle>
+          <DialogTitle>{isEdit ? t("adminUsers.editUser") : t("adminUsers.addUser")}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={submit} className="space-y-4">
           <div className="space-y-1.5">
-            <Label className="text-xs" htmlFor="user-full-name">{t("adminUsers.fullName")}</Label>
+            <Label className="text-xs" htmlFor="user-full-name">
+              {t("adminUsers.fullName")}
+            </Label>
             <Input
               id="user-full-name"
               value={form.fullName}
@@ -172,7 +172,9 @@ export default function UserFormModal({
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-xs" htmlFor="user-phone">{t("adminUsers.phoneNumber")}</Label>
+            <Label className="text-xs" htmlFor="user-phone">
+              {t("adminUsers.phoneNumber")}
+            </Label>
             <Input
               id="user-phone"
               value={form.phoneNumber}
@@ -184,7 +186,9 @@ export default function UserFormModal({
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-xs" htmlFor="user-email">{t("adminUsers.email")}</Label>
+            <Label className="text-xs" htmlFor="user-email">
+              {t("adminUsers.email")}
+            </Label>
             <Input
               id="user-email"
               type="email"
@@ -197,7 +201,9 @@ export default function UserFormModal({
 
           {!isEdit && (
             <div className="space-y-1.5">
-              <Label className="text-xs" htmlFor="user-password">{t("adminUsers.password")}</Label>
+              <Label className="text-xs" htmlFor="user-password">
+                {t("adminUsers.password")}
+              </Label>
               <Input
                 id="user-password"
                 type="password"
@@ -211,11 +217,10 @@ export default function UserFormModal({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label className="text-xs" htmlFor="user-role">{t("adminUsers.role")}</Label>
-              <Select
-                value={form.role}
-                onValueChange={(v) => updateField("role", v)}
-              >
+              <Label className="text-xs" htmlFor="user-role">
+                {t("adminUsers.role")}
+              </Label>
+              <Select value={form.role} onValueChange={(v) => updateField("role", v)}>
                 <SelectTrigger id="user-role">
                   <SelectValue />
                 </SelectTrigger>

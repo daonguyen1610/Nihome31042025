@@ -56,7 +56,9 @@ const Header = () => {
     <header
       className={cn(
         "fixed top-0 left-0 right-0 z-50 transition-all duration-500",
-        transparent ? "bg-transparent" : "bg-background/85 backdrop-blur-xl border-b border-border/60 shadow-soft"
+        transparent
+          ? "bg-transparent"
+          : "bg-background/85 backdrop-blur-xl border-b border-border/60 shadow-soft",
       )}
     >
       <div className="container-custom">
@@ -68,7 +70,7 @@ const Header = () => {
               alt="NICON - Partner of Development"
               className={cn(
                 "h-10 2xl:h-14 w-auto object-contain transition-all duration-500",
-                transparent && "brightness-0 invert"
+                transparent && "brightness-0 invert",
               )}
             />
           </Link>
@@ -79,7 +81,7 @@ const Header = () => {
               "hidden 2xl:flex items-center gap-0.5 rounded-full transition-all duration-500 px-1.5 min-w-0 flex-shrink",
               transparent
                 ? "bg-white/10 backdrop-blur-md border border-white/15"
-                : "bg-secondary border border-border"
+                : "bg-secondary border border-border",
             )}
           >
             {nav.map((item) => (
@@ -93,8 +95,8 @@ const Header = () => {
                     isActive
                       ? "bg-primary text-primary-foreground shadow-glow"
                       : transparent
-                      ? "text-white/85 hover:text-white hover:bg-white/10"
-                      : "text-foreground/75 hover:text-foreground hover:bg-background"
+                        ? "text-white/85 hover:text-white hover:bg-white/10"
+                        : "text-foreground/75 hover:text-foreground hover:bg-background",
                   )
                 }
               >
@@ -111,7 +113,7 @@ const Header = () => {
                 "hidden 2xl:flex w-9 h-9 rounded-full items-center justify-center transition-colors",
                 transparent
                   ? "text-white/85 hover:text-white hover:bg-white/10"
-                  : "text-foreground/70 hover:text-foreground hover:bg-secondary"
+                  : "text-foreground/70 hover:text-foreground hover:bg-secondary",
               )}
             >
               <Search className="w-4 h-4" />
@@ -124,7 +126,7 @@ const Header = () => {
                     "flex items-center gap-1.5 pl-2.5 pr-3 2xl:pl-3 2xl:pr-4 py-2 rounded-full text-[11px] 2xl:text-xs uppercase tracking-wider font-bold transition-all whitespace-nowrap outline-none focus-visible:ring-2 focus-visible:ring-primary",
                     transparent
                       ? "bg-white text-foreground hover:shadow-glow"
-                      : "bg-foreground text-background hover:bg-primary"
+                      : "bg-foreground text-background hover:bg-primary",
                   )}
                 >
                   <User className="w-3.5 h-3.5" />
@@ -135,7 +137,9 @@ const Header = () => {
                     <div className="flex flex-col gap-0.5">
                       <span className="text-sm font-semibold truncate">{authUser.fullName}</span>
                       {authUser.email && (
-                        <span className="text-xs text-muted-foreground truncate">{authUser.email}</span>
+                        <span className="text-xs text-muted-foreground truncate">
+                          {authUser.email}
+                        </span>
                       )}
                     </div>
                   </DropdownMenuLabel>
@@ -174,7 +178,7 @@ const Header = () => {
                   "px-3 2xl:px-5 py-2 rounded-full text-[11px] 2xl:text-xs uppercase tracking-wider font-bold transition-all whitespace-nowrap",
                   transparent
                     ? "bg-white text-foreground hover:shadow-glow"
-                    : "btn-gradient text-white"
+                    : "btn-gradient text-white",
                 )}
               >
                 {t("site.nav.login")}
@@ -187,7 +191,7 @@ const Header = () => {
             onClick={() => setOpen(!open)}
             className={cn(
               "2xl:hidden w-10 h-10 rounded-full flex items-center justify-center transition-colors",
-              transparent ? "bg-white/10 text-white" : "bg-secondary text-foreground"
+              transparent ? "bg-white/10 text-white" : "bg-secondary text-foreground",
             )}
             aria-label="Menu"
           >
@@ -200,7 +204,7 @@ const Header = () => {
       <div
         className={cn(
           "2xl:hidden overflow-hidden transition-all duration-500 bg-background border-t border-border",
-          open ? "max-h-screen" : "max-h-0"
+          open ? "max-h-screen" : "max-h-0",
         )}
       >
         <nav className="container-custom py-6 flex flex-col gap-1">
@@ -212,7 +216,9 @@ const Header = () => {
               className={({ isActive }) =>
                 cn(
                   "px-4 py-3 rounded-xl text-base font-semibold transition-colors",
-                  isActive ? "bg-primary text-primary-foreground" : "text-foreground/80 hover:bg-secondary"
+                  isActive
+                    ? "bg-primary text-primary-foreground"
+                    : "text-foreground/80 hover:bg-secondary",
                 )
               }
             >

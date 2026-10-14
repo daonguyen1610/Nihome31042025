@@ -79,8 +79,18 @@ const AdminContacts = () => {
     clearSelection();
   }, [statusFilter, q, clearSelection]);
 
-  if (loading) return <AdminLayout><PageLoading /></AdminLayout>;
-  if (error) return <AdminLayout><PageError message={error} onRetry={refetch} /></AdminLayout>;
+  if (loading)
+    return (
+      <AdminLayout>
+        <PageLoading />
+      </AdminLayout>
+    );
+  if (error)
+    return (
+      <AdminLayout>
+        <PageError message={error} onRetry={refetch} />
+      </AdminLayout>
+    );
   if (!list) return null;
 
   const handleExport = () => {
@@ -188,11 +198,11 @@ const AdminContacts = () => {
                 />
               </div>
               <div className="flex gap-1 rounded-md bg-muted p-1">
-                {([
+                {[
                   { id: "all" as const, label: t("common.all") },
                   { id: "new" as const, label: t("contacts.new") },
                   { id: "replied" as const, label: t("contacts.replied") },
-                ]).map((opt) => (
+                ].map((opt) => (
                   <button
                     key={opt.id}
                     type="button"
@@ -212,16 +222,14 @@ const AdminContacts = () => {
                 <div className="flex items-center gap-2">
                   <Checkbox
                     checked={
-                      allVisibleSelected
-                        ? true
-                        : someVisibleSelected
-                          ? "indeterminate"
-                          : false
+                      allVisibleSelected ? true : someVisibleSelected ? "indeterminate" : false
                     }
                     onCheckedChange={(v) => toggleAllVisible(v === true)}
                     aria-label={t("common.selectAll")}
                   />
-                  <span>{t("contacts.inbox")} ({filteredList.length}/{list.length})</span>
+                  <span>
+                    {t("contacts.inbox")} ({filteredList.length}/{list.length})
+                  </span>
                 </div>
               </div>
               <BulkActionBar
@@ -251,7 +259,10 @@ const AdminContacts = () => {
                     </div>
                     <button
                       type="button"
-                      onClick={() => { setActive(c); setReplyText(""); }}
+                      onClick={() => {
+                        setActive(c);
+                        setReplyText("");
+                      }}
                       className={cn(
                         "flex flex-1 gap-3 rounded-md p-3 text-left transition hover:bg-muted/60",
                         active?.id === c.id && "bg-primary/5 hover:bg-primary/10",
@@ -271,7 +282,10 @@ const AdminContacts = () => {
                         <div className="flex items-center justify-between gap-2">
                           <p className="truncate text-sm font-semibold">{c.name}</p>
                           {!c.isReplied && (
-                            <span className="h-2 w-2 shrink-0 rounded-full bg-sky-500" aria-label={t("contacts.new")} />
+                            <span
+                              className="h-2 w-2 shrink-0 rounded-full bg-sky-500"
+                              aria-label={t("contacts.new")}
+                            />
                           )}
                         </div>
                         <p className="mt-0.5 truncate text-xs font-medium">{c.subject}</p>
@@ -305,18 +319,30 @@ const AdminContacts = () => {
                     <div>
                       <h2 className="text-xl font-semibold">{active.name}</h2>
                       <div className="mt-2 flex flex-wrap gap-3 text-xs text-muted-foreground">
-                        <span className="flex items-center gap-1"><Mail className="h-3 w-3" /> {active.email}</span>
-                        {active.phone && <span className="flex items-center gap-1"><Phone className="h-3 w-3" /> {active.phone}</span>}
+                        <span className="flex items-center gap-1">
+                          <Mail className="h-3 w-3" /> {active.email}
+                        </span>
+                        {active.phone && (
+                          <span className="flex items-center gap-1">
+                            <Phone className="h-3 w-3" /> {active.phone}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     {active.isReplied ? (
-                      <Badge variant="outline" className="gap-1.5 whitespace-nowrap border-green-300 bg-green-100 font-medium text-green-800">
+                      <Badge
+                        variant="outline"
+                        className="gap-1.5 whitespace-nowrap border-green-300 bg-green-100 font-medium text-green-800"
+                      >
                         <CheckCircle2 className="h-3 w-3" /> {t("contacts.replied")}
                       </Badge>
                     ) : (
-                      <Badge variant="outline" className="gap-1.5 whitespace-nowrap border-sky-200 bg-sky-50 font-medium text-sky-700">
+                      <Badge
+                        variant="outline"
+                        className="gap-1.5 whitespace-nowrap border-sky-200 bg-sky-50 font-medium text-sky-700"
+                      >
                         <span className="h-1.5 w-1.5 rounded-full bg-sky-500" />
                         {t("contacts.new")}
                       </Badge>
@@ -376,19 +402,28 @@ const AdminContacts = () => {
             )}
           </section>
         </div>
-        <AlertDialog open={pendingDelete !== null} onOpenChange={(open) => { if (!open && !deleting) setPendingDelete(null); }}>
+        <AlertDialog
+          open={pendingDelete !== null}
+          onOpenChange={(open) => {
+            if (!open && !deleting) setPendingDelete(null);
+          }}
+        >
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>{t("common.delete")}</AlertDialogTitle>
               <AlertDialogDescription>
-                {t("form.confirmDelete")}{pendingDelete ? ` · ${pendingDelete.subject}` : ""}
+                {t("form.confirmDelete")}
+                {pendingDelete ? ` · ${pendingDelete.subject}` : ""}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel disabled={deleting}>{t("common.cancel")}</AlertDialogCancel>
               <AlertDialogAction
                 disabled={deleting}
-                onClick={(event) => { event.preventDefault(); void handleDelete(); }}
+                onClick={(event) => {
+                  event.preventDefault();
+                  void handleDelete();
+                }}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
                 {deleting ? t("common.loading") : t("common.delete")}

@@ -33,40 +33,54 @@ test("hard-delete dialog discloses impact and requires exact typed confirmation"
   await loginInBrowserAs(page, TEST_USERS.superAdmin);
   let deleteBody: Record<string, unknown> | null = null;
 
-  await page.route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}$`), async route => {
+  await page.route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}$`), async (route) => {
     if (route.request().method() === "DELETE") {
       deleteBody = route.request().postDataJSON() as Record<string, unknown>;
       await route.fulfill({ status: 204 });
       return;
     }
-    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(project) });
-  });
-  await page.route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/deletion-impact$`), route =>
-    route.fulfill({
+    await route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({
-        resourceType: "OperationalProject",
-        resourceId: projectId,
-        resourceLabel: `${project.code} · ${project.name}`,
-        requiredConfirmation: project.code,
-        planToken: "a".repeat(64),
-        canDelete: true,
-        totalAffected: 2,
-        items: [{
-          key: "operations.opportunities",
-          action: "Unlink",
-          count: 1,
-          examples: ["Opportunity A"],
-        }],
+      body: JSON.stringify(project),
+    });
+  });
+  await page.route(
+    new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/deletion-impact$`),
+    (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          resourceType: "OperationalProject",
+          resourceId: projectId,
+          resourceLabel: `${project.code} · ${project.name}`,
+          requiredConfirmation: project.code,
+          planToken: "a".repeat(64),
+          canDelete: true,
+          totalAffected: 2,
+          items: [
+            {
+              key: "operations.opportunities",
+              action: "Unlink",
+              count: 1,
+              examples: ["Opportunity A"],
+            },
+          ],
+        }),
       }),
-    }));
-  await page.route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/timeline$`), route =>
-    route.fulfill({ status: 200, contentType: "application/json", body: "[]" }));
-  await page.route(new RegExp("/api/(?:v1/)?operational-projects/document-categories$"), route =>
-    route.fulfill({ status: 200, contentType: "application/json", body: "[]" }));
-  await page.route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/documents$`), route =>
-    route.fulfill({ status: 200, contentType: "application/json", body: "[]" }));
+  );
+  await page.route(
+    new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/timeline$`),
+    (route) => route.fulfill({ status: 200, contentType: "application/json", body: "[]" }),
+  );
+  await page.route(new RegExp("/api/(?:v1/)?operational-projects/document-categories$"), (route) =>
+    route.fulfill({ status: 200, contentType: "application/json", body: "[]" }),
+  );
+  await page.route(
+    new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/documents$`),
+    (route) => route.fulfill({ status: 200, contentType: "application/json", body: "[]" }),
+  );
 
   await page.goto(`/admin/operational-projects/${projectId}`);
   await page.getByRole("button", { name: /Delete|Xoá|删除|削除/i }).click();
@@ -75,7 +89,9 @@ test("hard-delete dialog discloses impact and requires exact typed confirmation"
   await expect(dialog).toBeVisible();
   await expect(dialog).toContainText("Opportunity A");
   await expect(dialog).toContainText("1");
-  const confirmButton = dialog.getByRole("button", { name: /Delete permanently|Xoá vĩnh viễn|永久删除|完全に削除/i });
+  const confirmButton = dialog.getByRole("button", {
+    name: /Delete permanently|Xoá vĩnh viễn|永久删除|完全に削除/i,
+  });
   await expect(confirmButton).toBeDisabled();
   await dialog.getByRole("textbox").fill("WRONG");
   await expect(confirmButton).toBeDisabled();
@@ -92,43 +108,68 @@ test("hard-delete dialog discloses impact and requires exact typed confirmation"
   await expect(page).toHaveURL(/\/admin\/operational-projects$/);
 });
 
-test("hard-delete dialog shows blockers and disables deletion", async ({ page, loginInBrowserAs }) => {
+test("hard-delete dialog shows blockers and disables deletion", async ({
+  page,
+  loginInBrowserAs,
+}) => {
   await loginInBrowserAs(page, TEST_USERS.superAdmin);
   let deleteRequested = false;
-  await page.context().route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}$`), async route => {
-    if (route.request().method() === "DELETE") deleteRequested = true;
-    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(project) });
-  });
-  await page.context().route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/deletion-impact$`), route =>
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({
-        resourceType: "OperationalProject",
-        resourceId: projectId,
-        resourceLabel: `${project.code} · ${project.name}`,
-        requiredConfirmation: project.code,
-        planToken: "b".repeat(64),
-        canDelete: false,
-        totalAffected: 2,
-        items: [{
-          key: "operations.pendingDocuments",
-          action: "Block",
-          count: 1,
-          examples: ["pending.pdf"],
-          resolutionLinks: [{
-            label: "pending.pdf",
-            url: `/admin/operational-projects/${projectId}#project-documents`,
-          }],
-        }],
+  await page
+    .context()
+    .route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}$`), async (route) => {
+      if (route.request().method() === "DELETE") deleteRequested = true;
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(project),
+      });
+    });
+  await page
+    .context()
+    .route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/deletion-impact$`), (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          resourceType: "OperationalProject",
+          resourceId: projectId,
+          resourceLabel: `${project.code} · ${project.name}`,
+          requiredConfirmation: project.code,
+          planToken: "b".repeat(64),
+          canDelete: false,
+          totalAffected: 2,
+          items: [
+            {
+              key: "operations.pendingDocuments",
+              action: "Block",
+              count: 1,
+              examples: ["pending.pdf"],
+              resolutionLinks: [
+                {
+                  label: "pending.pdf",
+                  url: `/admin/operational-projects/${projectId}#project-documents`,
+                },
+              ],
+            },
+          ],
+        }),
       }),
-    }));
-  await page.context().route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/timeline$`), route =>
-    route.fulfill({ status: 200, contentType: "application/json", body: "[]" }));
-  await page.context().route(new RegExp("/api/(?:v1/)?operational-projects/document-categories$"), route =>
-    route.fulfill({ status: 200, contentType: "application/json", body: "[]" }));
-  await page.context().route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/documents$`), route =>
-    route.fulfill({ status: 200, contentType: "application/json", body: "[]" }));
+    );
+  await page
+    .context()
+    .route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/timeline$`), (route) =>
+      route.fulfill({ status: 200, contentType: "application/json", body: "[]" }),
+    );
+  await page
+    .context()
+    .route(new RegExp("/api/(?:v1/)?operational-projects/document-categories$"), (route) =>
+      route.fulfill({ status: 200, contentType: "application/json", body: "[]" }),
+    );
+  await page
+    .context()
+    .route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/documents$`), (route) =>
+      route.fulfill({ status: 200, contentType: "application/json", body: "[]" }),
+    );
 
   await page.goto(`/admin/operational-projects/${projectId}`);
   await page.getByRole("button", { name: /Delete|Xoá|删除|削除/i }).click();
@@ -141,10 +182,7 @@ test("hard-delete dialog shows blockers and disables deletion", async ({ page, l
     `/admin/operational-projects/${projectId}#project-documents`,
   );
   await expect(cleanupLink).toHaveAttribute("target", "_blank");
-  const [cleanupPage] = await Promise.all([
-    page.waitForEvent("popup"),
-    cleanupLink.click(),
-  ]);
+  const [cleanupPage] = await Promise.all([page.waitForEvent("popup"), cleanupLink.click()]);
   await cleanupPage.waitForLoadState("domcontentloaded");
   await expect(cleanupPage).toHaveURL(
     new RegExp(`/admin/operational-projects/${projectId}#project-documents$`),
@@ -152,9 +190,11 @@ test("hard-delete dialog shows blockers and disables deletion", async ({ page, l
   await expect(cleanupPage.getByTestId("project-documents-trigger")).toBeVisible();
   await cleanupPage.close();
   await expect(dialog.getByRole("textbox")).toHaveCount(0);
-  await expect(dialog.getByRole("button", {
-    name: /Delete permanently|Xoá vĩnh viễn|永久删除|完全に削除/i,
-  })).toBeDisabled();
+  await expect(
+    dialog.getByRole("button", {
+      name: /Delete permanently|Xoá vĩnh viễn|永久删除|完全に削除/i,
+    }),
+  ).toBeDisabled();
   expect(deleteRequested).toBe(false);
 });
 
@@ -167,7 +207,7 @@ test("hard-delete dialog polls pending work and completes only after retry succe
   let statusRequests = 0;
   let retryRequests = 0;
 
-  await page.route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}$`), async route => {
+  await page.route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}$`), async (route) => {
     if (route.request().method() === "DELETE") {
       await route.fulfill({
         status: 202,
@@ -183,81 +223,106 @@ test("hard-delete dialog polls pending work and completes only after retry succe
       });
       return;
     }
-    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(project) });
-  });
-  await page.route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/deletion-impact$`), route =>
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({
-        resourceType: "OperationalProject",
-        resourceId: projectId,
-        resourceLabel: `${project.code} · ${project.name}`,
-        requiredConfirmation: project.code,
-        planToken: "d".repeat(64),
-        canDelete: true,
-        totalAffected: 1,
-        items: [],
-      }),
-    }));
-  await page.route(new RegExp(`/api/(?:v1/)?hard-delete-operations/${operationId}/retry$`), async route => {
-    retryRequests += 1;
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({
-        operationId,
-        status: "Completed",
-        isComplete: true,
-        requiresManualAction: false,
-        errorCode: null,
-        errorMessage: null,
-      }),
+      body: JSON.stringify(project),
     });
   });
-  await page.route(new RegExp(`/api/(?:v1/)?hard-delete-operations/${operationId}$`), async route => {
-    statusRequests += 1;
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({
-        operationId,
-        status: "Failed",
-        isComplete: false,
-        requiresManualAction: false,
-        errorCode: "hard_delete_processing_failed",
-        errorMessage: "internal detail must not be displayed",
+  await page.route(
+    new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/deletion-impact$`),
+    (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          resourceType: "OperationalProject",
+          resourceId: projectId,
+          resourceLabel: `${project.code} · ${project.name}`,
+          requiredConfirmation: project.code,
+          planToken: "d".repeat(64),
+          canDelete: true,
+          totalAffected: 1,
+          items: [],
+        }),
       }),
-    });
-  });
-  await page.route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/timeline$`), route =>
-    route.fulfill({ status: 200, contentType: "application/json", body: "[]" }));
-  await page.route(new RegExp("/api/(?:v1/)?operational-projects/document-categories$"), route =>
-    route.fulfill({ status: 200, contentType: "application/json", body: "[]" }));
-  await page.route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/documents$`), route =>
-    route.fulfill({ status: 200, contentType: "application/json", body: "[]" }));
+  );
+  await page.route(
+    new RegExp(`/api/(?:v1/)?hard-delete-operations/${operationId}/retry$`),
+    async (route) => {
+      retryRequests += 1;
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          operationId,
+          status: "Completed",
+          isComplete: true,
+          requiresManualAction: false,
+          errorCode: null,
+          errorMessage: null,
+        }),
+      });
+    },
+  );
+  await page.route(
+    new RegExp(`/api/(?:v1/)?hard-delete-operations/${operationId}$`),
+    async (route) => {
+      statusRequests += 1;
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          operationId,
+          status: "Failed",
+          isComplete: false,
+          requiresManualAction: false,
+          errorCode: "hard_delete_processing_failed",
+          errorMessage: "internal detail must not be displayed",
+        }),
+      });
+    },
+  );
+  await page.route(
+    new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/timeline$`),
+    (route) => route.fulfill({ status: 200, contentType: "application/json", body: "[]" }),
+  );
+  await page.route(new RegExp("/api/(?:v1/)?operational-projects/document-categories$"), (route) =>
+    route.fulfill({ status: 200, contentType: "application/json", body: "[]" }),
+  );
+  await page.route(
+    new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/documents$`),
+    (route) => route.fulfill({ status: 200, contentType: "application/json", body: "[]" }),
+  );
 
   await page.goto(`/admin/operational-projects/${projectId}`);
   await page.getByRole("button", { name: /Delete|Xoá|删除|削除/i }).click();
   const dialog = page.getByRole("alertdialog");
   await dialog.getByRole("textbox").fill(project.code);
-  await dialog.getByRole("button", {
-    name: /Delete permanently|Xoá vĩnh viễn|永久删除|完全に削除/i,
-  }).click();
+  await dialog
+    .getByRole("button", {
+      name: /Delete permanently|Xoá vĩnh viễn|永久删除|完全に削除/i,
+    })
+    .click();
 
   await expect(dialog).toContainText(operationId);
   await expect.poll(() => statusRequests).toBeGreaterThan(0);
   await expect(page).toHaveURL(new RegExp(`/admin/operational-projects/${projectId}$`));
   await expect(dialog).not.toContainText("internal detail must not be displayed");
-  await dialog.getByRole("button", {
-    name: /Retry deletion|Thử tiếp tục xoá|重试删除|削除を再試行|deletionImpact\.operation\.retry/i,
-  }).click();
+  await dialog
+    .getByRole("button", {
+      name: /Retry deletion|Thử tiếp tục xoá|重试删除|削除を再試行|deletionImpact\.operation\.retry/i,
+    })
+    .click();
 
   await expect.poll(() => retryRequests).toBe(1);
   await expect(page).toHaveURL(/\/admin\/operational-projects$/);
 });
 
-test("Design Project deletion removes the row after confirmation", async ({ page, loginInBrowserAs }) => {
+test("Design Project deletion removes the row after confirmation", async ({
+  page,
+  loginInBrowserAs,
+}) => {
   await loginInBrowserAs(page, TEST_USERS.superAdmin);
   const designProject = {
     id: 456101,
@@ -279,36 +344,47 @@ test("Design Project deletion removes the row after confirmation", async ({ page
     updatedAt: "2026-09-03T00:00:00Z",
   };
   let deleted = false;
-  await page.route(new RegExp("/api/(?:v1/)?design-projects(?:\\?.*)?$"), route =>
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({ total: deleted ? 0 : 1, page: 1, pageSize: 20,
-        items: deleted ? [] : [designProject] }),
-    }));
-  await page.route(new RegExp(`/api/(?:v1/)?design-projects/${designProject.id}/deletion-impact$`), route =>
+  await page.route(new RegExp("/api/(?:v1/)?design-projects(?:\\?.*)?$"), (route) =>
     route.fulfill({
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({
-        resourceType: "DesignProject",
-        resourceId: designProject.id,
-        resourceLabel: `${designProject.projectCode} · ${designProject.name}`,
-        requiredConfirmation: designProject.projectCode,
-        planToken: "c".repeat(64),
-        canDelete: true,
-        totalAffected: 1,
-        items: [],
+        total: deleted ? 0 : 1,
+        page: 1,
+        pageSize: 20,
+        items: deleted ? [] : [designProject],
       }),
-    }));
-  await page.route(new RegExp(`/api/(?:v1/)?design-projects/${designProject.id}$`), async route => {
-    if (route.request().method() === "DELETE") {
-      deleted = true;
-      await route.fulfill({ status: 204 });
-      return;
-    }
-    await route.continue();
-  });
+    }),
+  );
+  await page.route(
+    new RegExp(`/api/(?:v1/)?design-projects/${designProject.id}/deletion-impact$`),
+    (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          resourceType: "DesignProject",
+          resourceId: designProject.id,
+          resourceLabel: `${designProject.projectCode} · ${designProject.name}`,
+          requiredConfirmation: designProject.projectCode,
+          planToken: "c".repeat(64),
+          canDelete: true,
+          totalAffected: 1,
+          items: [],
+        }),
+      }),
+  );
+  await page.route(
+    new RegExp(`/api/(?:v1/)?design-projects/${designProject.id}$`),
+    async (route) => {
+      if (route.request().method() === "DELETE") {
+        deleted = true;
+        await route.fulfill({ status: 204 });
+        return;
+      }
+      await route.continue();
+    },
+  );
 
   await page.goto("/admin/design-projects");
   const table = page.getByRole("table");
@@ -317,9 +393,11 @@ test("Design Project deletion removes the row after confirmation", async ({ page
   await row.getByRole("button", { name: /Delete|Xoá|删除|削除/i }).click();
   const dialog = page.getByRole("alertdialog");
   await dialog.getByRole("textbox").fill(designProject.projectCode);
-  await dialog.getByRole("button", {
-    name: /Delete permanently|Xoá vĩnh viễn|永久删除|完全に削除/i,
-  }).click();
+  await dialog
+    .getByRole("button", {
+      name: /Delete permanently|Xoá vĩnh viễn|永久删除|完全に削除/i,
+    })
+    .click();
 
   await expect(table.getByText(designProject.name)).toHaveCount(0);
   expect(deleted).toBe(true);
@@ -352,13 +430,19 @@ test("Lead deletion uses preview confirmation and removes the row only after com
   };
   let deleted = false;
   let deleteBody: Record<string, unknown> | null = null;
-  await page.route(new RegExp("/api/(?:v1/)?leads(?:\\?.*)?$"), route =>
+  await page.route(new RegExp("/api/(?:v1/)?leads(?:\\?.*)?$"), (route) =>
     route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({ total: deleted ? 0 : 1, page: 1, pageSize: 20, items: deleted ? [] : [lead] }),
-    }));
-  await page.route(new RegExp(`/api/(?:v1/)?leads/${lead.id}/deletion-impact$`), route =>
+      body: JSON.stringify({
+        total: deleted ? 0 : 1,
+        page: 1,
+        pageSize: 20,
+        items: deleted ? [] : [lead],
+      }),
+    }),
+  );
+  await page.route(new RegExp(`/api/(?:v1/)?leads/${lead.id}/deletion-impact$`), (route) =>
     route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -372,18 +456,25 @@ test("Lead deletion uses preview confirmation and removes the row only after com
         totalAffected: 1,
         items: [],
       }),
-    }));
-  await page.route(new RegExp(`/api/(?:v1/)?leads/${lead.id}$`), async route => {
+    }),
+  );
+  await page.route(new RegExp(`/api/(?:v1/)?leads/${lead.id}$`), async (route) => {
     if (route.request().method() === "DELETE") {
       deleteBody = route.request().postDataJSON() as Record<string, unknown>;
       deleted = true;
       await route.fulfill({ status: 204 });
       return;
     }
-    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(lead) });
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(lead),
+    });
   });
-  await page.route(new RegExp("/api/(?:v1/)?master-data/(customer_source|lead_segment)$"), route =>
-    route.fulfill({ status: 200, contentType: "application/json", body: "[]" }));
+  await page.route(
+    new RegExp("/api/(?:v1/)?master-data/(customer_source|lead_segment)$"),
+    (route) => route.fulfill({ status: 200, contentType: "application/json", body: "[]" }),
+  );
 
   await page.goto("/admin/leads");
   const table = page.getByRole("table");
@@ -392,9 +483,11 @@ test("Lead deletion uses preview confirmation and removes the row only after com
   await row.getByRole("button", { name: /Delete|Xoá|删除|削除/i }).click();
   const dialog = page.getByRole("alertdialog");
   await dialog.getByRole("textbox").fill(`LEAD-${lead.id}`);
-  await dialog.getByRole("button", {
-    name: /Delete permanently|Xoá vĩnh viễn|永久删除|完全に削除/i,
-  }).click();
+  await dialog
+    .getByRole("button", {
+      name: /Delete permanently|Xoá vĩnh viễn|永久删除|完全に削除/i,
+    })
+    .click();
 
   await expect(table.getByText(lead.name)).toHaveCount(0);
   expect(deleteBody).toMatchObject({
@@ -426,13 +519,19 @@ test("Tender deletion uses typed preview confirmation without bulk selection", a
   };
   let deleted = false;
   let deleteBody: Record<string, unknown> | null = null;
-  await page.route(new RegExp("/api/(?:v1/)?tenders(?:\\?.*)?$"), route =>
+  await page.route(new RegExp("/api/(?:v1/)?tenders(?:\\?.*)?$"), (route) =>
     route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({ total: deleted ? 0 : 1, page: 1, pageSize: 20, items: deleted ? [] : [tender] }),
-    }));
-  await page.route(new RegExp(`/api/(?:v1/)?tenders/${tender.id}/deletion-impact$`), route =>
+      body: JSON.stringify({
+        total: deleted ? 0 : 1,
+        page: 1,
+        pageSize: 20,
+        items: deleted ? [] : [tender],
+      }),
+    }),
+  );
+  await page.route(new RegExp(`/api/(?:v1/)?tenders/${tender.id}/deletion-impact$`), (route) =>
     route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -444,15 +543,18 @@ test("Tender deletion uses typed preview confirmation without bulk selection", a
         planToken: "f".repeat(64),
         canDelete: true,
         totalAffected: 2,
-        items: [{
-          key: "tender.checklistItems",
-          action: "Delete",
-          count: 1,
-          examples: ["123"],
-        }],
+        items: [
+          {
+            key: "tender.checklistItems",
+            action: "Delete",
+            count: 1,
+            examples: ["123"],
+          },
+        ],
       }),
-    }));
-  await page.route(new RegExp(`/api/(?:v1/)?tenders/${tender.id}$`), async route => {
+    }),
+  );
+  await page.route(new RegExp(`/api/(?:v1/)?tenders/${tender.id}$`), async (route) => {
     if (route.request().method() === "DELETE") {
       deleteBody = route.request().postDataJSON() as Record<string, unknown>;
       deleted = true;
@@ -461,18 +563,20 @@ test("Tender deletion uses typed preview confirmation without bulk selection", a
     }
     await route.continue();
   });
-  await page.route(new RegExp("/api/(?:v1/)?customers(?:\\?.*)?$"), route =>
+  await page.route(new RegExp("/api/(?:v1/)?customers(?:\\?.*)?$"), (route) =>
     route.fulfill({
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({ total: 0, page: 1, pageSize: 200, items: [] }),
-    }));
-  await page.route(new RegExp("/api/(?:v1/)?users(?:\\?.*)?$"), route =>
+    }),
+  );
+  await page.route(new RegExp("/api/(?:v1/)?users(?:\\?.*)?$"), (route) =>
     route.fulfill({
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({ total: 0, items: [] }),
-    }));
+    }),
+  );
 
   await page.goto("/admin/tenders");
   const table = page.getByRole("table");
@@ -515,13 +619,14 @@ test("Customer deletion discloses downstream blockers without bulk selection", a
     activities: [],
   };
   let deleteRequested = false;
-  await page.route(new RegExp("/api/(?:v1/)?customers(?:\\?.*)?$"), route =>
+  await page.route(new RegExp("/api/(?:v1/)?customers(?:\\?.*)?$"), (route) =>
     route.fulfill({
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({ total: 1, page: 1, pageSize: 20, items: [customer] }),
-    }));
-  await page.route(new RegExp(`/api/(?:v1/)?customers/${customer.id}/deletion-impact$`), route =>
+    }),
+  );
+  await page.route(new RegExp(`/api/(?:v1/)?customers/${customer.id}/deletion-impact$`), (route) =>
     route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -567,8 +672,9 @@ test("Customer deletion discloses downstream blockers without bulk selection", a
           },
         ],
       }),
-    }));
-  await page.route(new RegExp(`/api/(?:v1/)?customers/${customer.id}$`), async route => {
+    }),
+  );
+  await page.route(new RegExp(`/api/(?:v1/)?customers/${customer.id}$`), async (route) => {
     if (route.request().method() === "DELETE") deleteRequested = true;
     await route.fulfill({ status: 204 });
   });
@@ -595,18 +701,25 @@ test("Customer deletion discloses downstream blockers without bulk selection", a
     "href",
     "/admin/contracts/456109",
   );
-  await expect(dialog.locator(`a[href="/admin/contracts?customerId=${customer.id}"]`)).toHaveCount(0);
+  await expect(dialog.locator(`a[href="/admin/contracts?customerId=${customer.id}"]`)).toHaveCount(
+    0,
+  );
   await expect(dialog.getByRole("link", { name: "Unsafe file", exact: true })).toHaveAttribute(
     "href",
     `/admin/customers/${customer.id}`,
   );
-  await expect(dialog.getByRole("link", { name: "Unsafe file", exact: true })).toHaveAttribute("target", "_blank");
+  await expect(dialog.getByRole("link", { name: "Unsafe file", exact: true })).toHaveAttribute(
+    "target",
+    "_blank",
+  );
   await expect(dialog.getByRole("link", { name: "External unsafe file" })).toHaveCount(0);
   await expect(dialog.locator('a[href="/admin/customers"]')).toHaveCount(0);
   await expect(dialog.getByRole("textbox")).toHaveCount(0);
-  await expect(dialog.getByRole("button", {
-    name: /Delete permanently|Xoá vĩnh viễn|永久删除|完全に削除/i,
-  })).toBeDisabled();
+  await expect(
+    dialog.getByRole("button", {
+      name: /Delete permanently|Xoá vĩnh viễn|永久删除|完全に削除/i,
+    }),
+  ).toBeDisabled();
   expect(deleteRequested).toBe(false);
 });
 
@@ -635,13 +748,19 @@ test("Quote deletion uses shared exact confirmation without bulk selection", asy
   };
   let deleted = false;
   let deleteBody: Record<string, unknown> | null = null;
-  await page.route(new RegExp("/api/(?:v1/)?quotes(?:\\?.*)?$"), route =>
+  await page.route(new RegExp("/api/(?:v1/)?quotes(?:\\?.*)?$"), (route) =>
     route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({ total: deleted ? 0 : 1, page: 1, pageSize: 20, items: deleted ? [] : [quote] }),
-    }));
-  await page.route(new RegExp(`/api/(?:v1/)?quotes/${quote.id}/deletion-impact$`), route =>
+      body: JSON.stringify({
+        total: deleted ? 0 : 1,
+        page: 1,
+        pageSize: 20,
+        items: deleted ? [] : [quote],
+      }),
+    }),
+  );
+  await page.route(new RegExp(`/api/(?:v1/)?quotes/${quote.id}/deletion-impact$`), (route) =>
     route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -653,15 +772,18 @@ test("Quote deletion uses shared exact confirmation without bulk selection", asy
         planToken: "9".repeat(64),
         canDelete: true,
         totalAffected: 2,
-        items: [{
-          key: "quote.winningOpportunities",
-          action: "Unlink",
-          count: 1,
-          examples: ["1"],
-        }],
+        items: [
+          {
+            key: "quote.winningOpportunities",
+            action: "Unlink",
+            count: 1,
+            examples: ["1"],
+          },
+        ],
       }),
-    }));
-  await page.route(new RegExp(`/api/(?:v1/)?quotes/${quote.id}$`), async route => {
+    }),
+  );
+  await page.route(new RegExp(`/api/(?:v1/)?quotes/${quote.id}$`), async (route) => {
     if (route.request().method() === "DELETE") {
       deleteBody = route.request().postDataJSON() as Record<string, unknown>;
       deleted = true;
@@ -670,12 +792,13 @@ test("Quote deletion uses shared exact confirmation without bulk selection", asy
     }
     await route.continue();
   });
-  await page.route(new RegExp("/api/(?:v1/)?opportunities(?:\\?.*)?$"), route =>
+  await page.route(new RegExp("/api/(?:v1/)?opportunities(?:\\?.*)?$"), (route) =>
     route.fulfill({
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({ total: 0, page: 1, pageSize: 100, items: [] }),
-    }));
+    }),
+  );
 
   await page.goto("/admin/quotes");
   const table = page.getByRole("table");

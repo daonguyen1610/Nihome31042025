@@ -6,9 +6,16 @@ import type {
   TenderResponse,
 } from "../../src/services/adminApi";
 
-const json = (body: unknown) => ({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
+const json = (body: unknown) => ({
+  status: 200,
+  contentType: "application/json",
+  body: JSON.stringify(body),
+});
 
-test("tender detail renders estimate revisions, totals, and blocked submission gates", async ({ page, loginInBrowserAs }) => {
+test("tender detail renders estimate revisions, totals, and blocked submission gates", async ({
+  page,
+  loginInBrowserAs,
+}) => {
   const pageErrors: string[] = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
   await loginInBrowserAs(page, TEST_USERS.superAdmin);
@@ -28,18 +35,34 @@ test("tender detail renders estimate revisions, totals, and blocked submission g
     importedByUserId: 1,
     importedAt: "2026-09-01T00:00:00Z",
     note: null,
-    lines: [{ id: 1, itemCode: "HM-001", description: "Wall", unit: "m2", quantity: 10, unitCost: 80000, bidUnitPrice: 100000, costAmount: 800000, bidAmount: 1000000, note: null, sortOrder: 0 }],
+    lines: [
+      {
+        id: 1,
+        itemCode: "HM-001",
+        description: "Wall",
+        unit: "m2",
+        quantity: 10,
+        unitCost: 80000,
+        bidUnitPrice: 100000,
+        costAmount: 800000,
+        bidAmount: 1000000,
+        note: null,
+        sortOrder: 0,
+      },
+    ],
   } satisfies TenderEstimateRevisionResponse;
   const readiness = {
     tenderId: 77,
     currentStep: "Dossier",
     canSubmit: false,
-    blockers: [{
-      code: "DOSSIER_NOT_COMPLETED",
-      area: "Dossier",
-      message: "Complete and independently verify the required tender dossier.",
-      actionPath: "checklist",
-    }],
+    blockers: [
+      {
+        code: "DOSSIER_NOT_COMPLETED",
+        area: "Dossier",
+        message: "Complete and independently verify the required tender dossier.",
+        actionPath: "checklist",
+      },
+    ],
     milestones: [],
   } satisfies TenderReadinessResponse;
   const tender = {
@@ -74,16 +97,18 @@ test("tender detail renders estimate revisions, totals, and blocked submission g
     createdAt: "2026-09-01T00:00:00Z",
     updatedAt: "2026-09-01T00:00:00Z",
     rowVersion: "AAAAAAAAB9E=",
-    checklistItems: [{
-      id: 1,
-      templateCode: "legal",
-      title: "Document",
-      status: "Preparing",
-      isRequired: true,
-      documentKind: "Legal",
-      sortOrder: 0,
-      evidenceRevisions: [],
-    }],
+    checklistItems: [
+      {
+        id: 1,
+        templateCode: "legal",
+        title: "Document",
+        status: "Preparing",
+        isRequired: true,
+        documentKind: "Legal",
+        sortOrder: 0,
+        evidenceRevisions: [],
+      },
+    ],
     submissions: [],
     invitationDocuments: [],
     checklistCompletionPercent: 0,
@@ -95,7 +120,9 @@ test("tender detail renders estimate revisions, totals, and blocked submission g
   await page.route("**/api/tenders/77/readiness", (route) => route.fulfill(json(readiness)));
   await page.route("**/api/tenders/77/timeline?*", (route) => route.fulfill(json([])));
   await page.route(
-    (url) => url.pathname.endsWith("/api/work-packages") && url.searchParams.get("sourceTenderId") === "77",
+    (url) =>
+      url.pathname.endsWith("/api/work-packages") &&
+      url.searchParams.get("sourceTenderId") === "77",
     (route) => route.fulfill(json({ total: 0, page: 1, pageSize: 100, items: [] })),
   );
   await page.route("**/api/tenders/77", (route) => route.fulfill(json(tender)));
@@ -105,30 +132,38 @@ test("tender detail renders estimate revisions, totals, and blocked submission g
   await page.getByTestId("tender-estimate-tab").click();
   await expect(page.getByTestId("tender-estimates")).toBeVisible();
   await expect(page.getByTestId("tender-submit")).toBeDisabled();
-  await expect(page.getByTestId("tender-readiness-blockers"))
-    .toContainText("Complete and independently verify the required tender dossier.");
+  await expect(page.getByTestId("tender-readiness-blockers")).toContainText(
+    "Complete and independently verify the required tender dossier.",
+  );
   await expect(page.getByText("HM-001")).toBeVisible();
 });
 
-test("migrated survey renders project-routed mutation controls", async ({ page, loginInBrowserAs }) => {
+test("migrated survey renders project-routed mutation controls", async ({
+  page,
+  loginInBrowserAs,
+}) => {
   await loginInBrowserAs(page, TEST_USERS.superAdmin);
   await page.route("**/api/surveys/81/timeline?*", (route) => route.fulfill(json([])));
-  await page.route("**/api/surveys/81", (route) => route.fulfill(json({
-    id: 81,
-    code: "SV-081",
-    location: "Legacy site",
-    surveyDate: "2026-09-01T00:00:00Z",
-    operationalProjectId: 9,
-    operationalProjectName: "Migrated operational project",
-    linkedOpportunityId: 71,
-    linkedOpportunityName: "Legacy opportunity",
-    driveSyncStatus: "NotSynced",
-    media: [],
-    checklistResults: [],
-    siteConditions: [],
-    createdAt: "2026-09-01T00:00:00Z",
-    updatedAt: "2026-09-01T00:00:00Z",
-  })));
+  await page.route("**/api/surveys/81", (route) =>
+    route.fulfill(
+      json({
+        id: 81,
+        code: "SV-081",
+        location: "Legacy site",
+        surveyDate: "2026-09-01T00:00:00Z",
+        operationalProjectId: 9,
+        operationalProjectName: "Migrated operational project",
+        linkedOpportunityId: 71,
+        linkedOpportunityName: "Legacy opportunity",
+        driveSyncStatus: "NotSynced",
+        media: [],
+        checklistResults: [],
+        siteConditions: [],
+        createdAt: "2026-09-01T00:00:00Z",
+        updatedAt: "2026-09-01T00:00:00Z",
+      }),
+    ),
+  );
 
   await page.goto("/admin/surveys/81");
   await page.getByTestId("survey-conditions-tab").click();

@@ -23,7 +23,9 @@ const ForgotPassword = () => {
   const dispatch = useAppDispatch();
   const { toast } = useToast();
   const { t } = useI18n();
-  const { loading, error, otpRequired, otpEmail, otpPhone, otpFlow } = useAppSelector((s) => s.auth);
+  const { loading, error, otpRequired, otpEmail, otpPhone, otpFlow } = useAppSelector(
+    (s) => s.auth,
+  );
 
   const [identifier, setIdentifier] = useState("");
   const [otpCode, setOtpCode] = useState("");
@@ -32,7 +34,11 @@ const ForgotPassword = () => {
 
   useEffect(() => {
     if (error) {
-      toast({ title: t("auth.error"), description: translateError(t, error), variant: "destructive" });
+      toast({
+        title: t("auth.error"),
+        description: translateError(t, error),
+        variant: "destructive",
+      });
       dispatch(clearError());
     }
   }, [error, toast, t, dispatch]);
@@ -96,7 +102,8 @@ const ForgotPassword = () => {
     return false;
   };
 
-  const cardClass = "max-w-md mx-auto bg-card border border-border rounded-3xl p-8 lg:p-10 shadow-elegant";
+  const cardClass =
+    "max-w-md mx-auto bg-card border border-border rounded-3xl p-8 lg:p-10 shadow-elegant";
   const inputClass =
     "w-full bg-secondary rounded-full pl-12 pr-5 py-3.5 text-sm border border-transparent focus:border-primary focus:bg-background outline-none transition";
 
@@ -109,8 +116,12 @@ const ForgotPassword = () => {
         <div className="container-custom relative">
           {step === "done" ? (
             <div className={cardClass}>
-              <h1 className="font-display text-3xl font-extrabold text-center mb-3 tracking-tight">{t("auth.forgot.doneTitle")}</h1>
-              <p className="text-center text-muted-foreground text-sm mb-8">{t("auth.forgot.doneDesc")}</p>
+              <h1 className="font-display text-3xl font-extrabold text-center mb-3 tracking-tight">
+                {t("auth.forgot.doneTitle")}
+              </h1>
+              <p className="text-center text-muted-foreground text-sm mb-8">
+                {t("auth.forgot.doneDesc")}
+              </p>
               <button
                 onClick={() => navigate("/login")}
                 className="btn-pill btn-gradient text-white w-full py-3.5 text-sm uppercase tracking-wider"
@@ -121,7 +132,9 @@ const ForgotPassword = () => {
           ) : step === "newPassword" ? (
             <div className={cardClass}>
               <p className="eyebrow text-primary mb-5 justify-center">{t("auth.forgot.eyebrow")}</p>
-              <h1 className="font-display text-3xl font-extrabold text-center mb-3 tracking-tight">{t("auth.forgot.newPwdTitle")}</h1>
+              <h1 className="font-display text-3xl font-extrabold text-center mb-3 tracking-tight">
+                {t("auth.forgot.newPwdTitle")}
+              </h1>
               <form onSubmit={submitNewPassword} className="space-y-4">
                 <div className="relative">
                   <Lock className="w-4 h-4 absolute left-5 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -140,14 +153,22 @@ const ForgotPassword = () => {
                   disabled={loading}
                   className="btn-pill btn-gradient text-white w-full py-3.5 text-sm uppercase tracking-wider disabled:opacity-60"
                 >
-                  {loading ? t("auth.processing") : <>{t("auth.forgot.resetBtn")} <ArrowRight className="w-4 h-4" /></>}
+                  {loading ? (
+                    t("auth.processing")
+                  ) : (
+                    <>
+                      {t("auth.forgot.resetBtn")} <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
                 </button>
               </form>
             </div>
           ) : step === "otp" ? (
             <div className={cardClass}>
               <p className="eyebrow text-primary mb-5 justify-center">{t("auth.otp.eyebrow")}</p>
-              <h1 className="font-display text-3xl font-extrabold text-center mb-3 tracking-tight">{t("auth.otp.title")}</h1>
+              <h1 className="font-display text-3xl font-extrabold text-center mb-3 tracking-tight">
+                {t("auth.otp.title")}
+              </h1>
               <p className="text-center text-muted-foreground text-sm mb-8">
                 {t("auth.otp.desc")} <span className="font-bold">{otpEmail ?? identifier}</span>
               </p>
@@ -168,7 +189,13 @@ const ForgotPassword = () => {
                   disabled={loading}
                   className="btn-pill btn-gradient text-white w-full py-3.5 text-sm uppercase tracking-wider disabled:opacity-60"
                 >
-                  {loading ? t("auth.processing") : <>{t("auth.otp.verify")} <ArrowRight className="w-4 h-4" /></>}
+                  {loading ? (
+                    t("auth.processing")
+                  ) : (
+                    <>
+                      {t("auth.otp.verify")} <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
                 </button>
               </form>
               <OtpResendButton
@@ -183,7 +210,9 @@ const ForgotPassword = () => {
               <h1 className="font-display text-3xl md:text-4xl font-extrabold text-center mb-3 tracking-tight">
                 {t("auth.forgot.title")}
               </h1>
-              <p className="text-center text-muted-foreground text-sm mb-8">{t("auth.forgot.desc")}</p>
+              <p className="text-center text-muted-foreground text-sm mb-8">
+                {t("auth.forgot.desc")}
+              </p>
               <form onSubmit={submitIdentifier} className="space-y-4">
                 <div className="relative">
                   <Phone className="w-4 h-4 absolute left-5 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -202,7 +231,13 @@ const ForgotPassword = () => {
                   disabled={loading}
                   className="btn-pill btn-gradient text-white w-full py-3.5 text-sm uppercase tracking-wider disabled:opacity-60"
                 >
-                  {loading ? t("auth.processing") : <>{t("auth.forgot.btn")} <ArrowRight className="w-4 h-4" /></>}
+                  {loading ? (
+                    t("auth.processing")
+                  ) : (
+                    <>
+                      {t("auth.forgot.btn")} <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
                 </button>
               </form>
               <div className="text-center mt-6 pt-6 border-t border-border">

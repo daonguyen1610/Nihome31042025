@@ -1,6 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { AlertTriangle, CheckCircle2, Clock, Eye, FileCheck2, Filter, Pencil, Plus, RefreshCcw, Search, ShieldAlert, Trash2 } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Clock,
+  Eye,
+  FileCheck2,
+  Filter,
+  Pencil,
+  Plus,
+  RefreshCcw,
+  Search,
+  ShieldAlert,
+  Trash2,
+} from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import AdminDocumentUpload from "@/components/admin/AdminDocumentUpload";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
@@ -87,8 +100,7 @@ const toDateInputValue = (iso?: string | null) => (iso ? iso.slice(0, 10) : "");
 
 /** Local YYYY-MM-DD → `${YYYY-MM-DD}T00:00:00.000Z`. Keeps the picked
  * calendar date intact across the UTC+7 boundary. */
-const toUtcMidnight = (yyyyMmDd: string): string =>
-  yyyyMmDd ? `${yyyyMmDd}T00:00:00.000Z` : "";
+const toUtcMidnight = (yyyyMmDd: string): string => (yyyyMmDd ? `${yyyyMmDd}T00:00:00.000Z` : "");
 
 interface UserOption {
   id: number;
@@ -241,7 +253,19 @@ const AdminPermits = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, search, projectId, permitTypeCode, status, ownerUserId, approverUserId, flag, t, toast]);
+  }, [
+    page,
+    pageSize,
+    search,
+    projectId,
+    permitTypeCode,
+    status,
+    ownerUserId,
+    approverUserId,
+    flag,
+    t,
+    toast,
+  ]);
 
   useEffect(() => {
     void fetchList();
@@ -301,15 +325,19 @@ const AdminPermits = () => {
 
   useEffect(() => {
     const permitId = Number(searchParams.get("permitId"));
-    if (!Number.isInteger(permitId) || permitId <= 0 || openedPermitIdRef.current === permitId) return;
+    if (!Number.isInteger(permitId) || permitId <= 0 || openedPermitIdRef.current === permitId)
+      return;
     openedPermitIdRef.current = permitId;
-    void adminApi.getPermit(permitId)
+    void adminApi
+      .getPermit(permitId)
       .then(({ data }) => setViewing(data))
-      .catch((err) => toast({
-        title: t("common.error"),
-        description: extractApiError(err),
-        variant: "destructive",
-      }));
+      .catch((err) =>
+        toast({
+          title: t("common.error"),
+          description: extractApiError(err),
+          variant: "destructive",
+        }),
+      );
   }, [searchParams, t, toast]);
 
   useEffect(() => {
@@ -321,11 +349,15 @@ const AdminPermits = () => {
     }
     let cancelled = false;
     void Promise.all([
-      adminApi.getPermitHistory(viewing.id).then(({ data }) => data).catch(() => []),
+      adminApi
+        .getPermitHistory(viewing.id)
+        .then(({ data }) => data)
+        .catch(() => []),
       viewing.workPackageId && viewing.workTaskId
-        ? adminApi.getWorkPackage(viewing.workPackageId)
-          .then(({ data }) => data.tasks.find((task) => task.id === viewing.workTaskId) ?? null)
-          .catch(() => null)
+        ? adminApi
+            .getWorkPackage(viewing.workPackageId)
+            .then(({ data }) => data.tasks.find((task) => task.id === viewing.workTaskId) ?? null)
+            .catch(() => null)
         : Promise.resolve(null),
     ]).then(([history, task]) => {
       if (cancelled) return;
@@ -333,7 +365,9 @@ const AdminPermits = () => {
       setViewTask(task);
       setTaskProgress(Math.max(1, Math.min(99, task?.progressPercent || 1)));
     });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [viewing]);
 
   const refreshViewedPermit = async () => {
@@ -341,8 +375,9 @@ const AdminPermits = () => {
     const [{ data: permit }, task] = await Promise.all([
       adminApi.getPermit(viewing.id),
       viewing.workPackageId && viewing.workTaskId
-        ? adminApi.getWorkPackage(viewing.workPackageId)
-          .then(({ data }) => data.tasks.find((item) => item.id === viewing.workTaskId) ?? null)
+        ? adminApi
+            .getWorkPackage(viewing.workPackageId)
+            .then(({ data }) => data.tasks.find((item) => item.id === viewing.workTaskId) ?? null)
         : Promise.resolve(null),
     ]);
     setViewing(permit);
@@ -355,14 +390,23 @@ const AdminPermits = () => {
     if (!viewing?.workPackageId || !viewTask) return;
     setTaskSaving(true);
     try {
-      await adminApi.updateWorkTaskProgress(viewing.workPackageId, viewTask.id, {
-        progressPercent: complete ? 100 : taskProgress,
-        status: complete ? "Completed" : "InProgress",
-        rowVersion: viewTask.rowVersion,
-      }, newIdempotencyKey());
+      await adminApi.updateWorkTaskProgress(
+        viewing.workPackageId,
+        viewTask.id,
+        {
+          progressPercent: complete ? 100 : taskProgress,
+          status: complete ? "Completed" : "InProgress",
+          rowVersion: viewTask.rowVersion,
+        },
+        newIdempotencyKey(),
+      );
       await refreshViewedPermit();
     } catch (cause) {
-      toast({ title: t("common.error"), description: extractApiError(cause), variant: "destructive" });
+      toast({
+        title: t("common.error"),
+        description: extractApiError(cause),
+        variant: "destructive",
+      });
     } finally {
       setTaskSaving(false);
     }
@@ -373,17 +417,31 @@ const AdminPermits = () => {
     setTaskSaving(true);
     try {
       if (approve) {
-        await adminApi.verifyWorkTask(viewing.workPackageId, viewTask.id, viewTask.rowVersion, newIdempotencyKey());
+        await adminApi.verifyWorkTask(
+          viewing.workPackageId,
+          viewTask.id,
+          viewTask.rowVersion,
+          newIdempotencyKey(),
+        );
         toast({ title: t("workPackages.toast.verified") });
       } else {
-        await adminApi.rejectWorkTask(viewing.workPackageId, viewTask.id, viewTask.rowVersion,
-          taskRejectReason.trim(), newIdempotencyKey());
+        await adminApi.rejectWorkTask(
+          viewing.workPackageId,
+          viewTask.id,
+          viewTask.rowVersion,
+          taskRejectReason.trim(),
+          newIdempotencyKey(),
+        );
         setTaskRejectReason("");
         toast({ title: t("workPackages.toast.returned") });
       }
       await refreshViewedPermit();
     } catch (cause) {
-      toast({ title: t("common.error"), description: extractApiError(cause), variant: "destructive" });
+      toast({
+        title: t("common.error"),
+        description: extractApiError(cause),
+        variant: "destructive",
+      });
     } finally {
       setTaskSaving(false);
     }
@@ -483,7 +541,11 @@ const AdminPermits = () => {
       if (rows.length === 1 && page > 1) setPage((current) => current - 1);
       else await fetchList();
     } catch (err) {
-      toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
+      toast({
+        title: t("common.error"),
+        description: extractApiError(err),
+        variant: "destructive",
+      });
     } finally {
       setDeleting(false);
     }
@@ -498,8 +560,8 @@ const AdminPermits = () => {
 
   const refreshPermitAfterUpload = async (id: number) => {
     const { data } = await adminApi.getPermit(id);
-    setEditing((current) => current?.id === id ? data : current);
-    setViewing((current) => current?.id === id ? data : current);
+    setEditing((current) => (current?.id === id ? data : current));
+    setViewing((current) => (current?.id === id ? data : current));
     await fetchList();
     toast({ title: t("permits.document.uploaded") });
   };
@@ -534,13 +596,15 @@ const AdminPermits = () => {
       <div className="space-y-4 p-3 md:p-4">
         <header className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex flex-col gap-1">
-            <h1 className="text-xl font-bold text-slate-900 md:text-2xl">
-              {t("permits.title")}
-            </h1>
+            <h1 className="text-xl font-bold text-slate-900 md:text-2xl">{t("permits.title")}</h1>
             <p className="text-sm text-slate-600">{t("permits.subtitle")}</p>
           </div>
           {canManage ? (
-            <Button size="sm" disabled={!projectId} onClick={() => projectId && setSetupProjectId(projectId)}>
+            <Button
+              size="sm"
+              disabled={!projectId}
+              onClick={() => projectId && setSetupProjectId(projectId)}
+            >
               <Plus className="mr-1 h-4 w-4" />
               {t("permits.setupLegal")}
             </Button>
@@ -661,7 +725,10 @@ const AdminPermits = () => {
                     setProjectId(v ? Number(v) : null);
                     setPage(1);
                   }}
-                  options={[{ value: "", label: t("permits.filter.allProjects") }, ...projectOptions]}
+                  options={[
+                    { value: "", label: t("permits.filter.allProjects") },
+                    ...projectOptions,
+                  ]}
                   placeholder={t("permits.filter.allProjects")}
                 />
               </div>
@@ -730,10 +797,7 @@ const AdminPermits = () => {
             {/* Mobile / tablet card view */}
             <div className="grid gap-3 lg:hidden">
               {rows.map((r) => (
-                <article
-                  key={r.id}
-                  className="rounded-lg border bg-white p-3 shadow-sm"
-                >
+                <article key={r.id} className="rounded-lg border bg-white p-3 shadow-sm">
                   <header className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <h3 className="break-words text-sm font-semibold leading-tight">
@@ -745,7 +809,10 @@ const AdminPermits = () => {
                       </p>
                     </div>
                     <div className="flex flex-col items-end gap-1">
-                      <Badge variant="outline" className={cn("whitespace-nowrap", STATUS_BADGE[r.status])}>
+                      <Badge
+                        variant="outline"
+                        className={cn("whitespace-nowrap", STATUS_BADGE[r.status])}
+                      >
                         {t(`permits.status.${r.status}`)}
                       </Badge>
                       <RiskPills row={r} t={t} />
@@ -766,7 +833,9 @@ const AdminPermits = () => {
                     </div>
                     <div>
                       <dt className="text-muted-foreground">{t("permits.field.progress")}</dt>
-                      <dd className="font-medium">{r.progressPercent}% · {r.workTaskStatus ?? "—"}</dd>
+                      <dd className="font-medium">
+                        {r.progressPercent}% · {r.workTaskStatus ?? "—"}
+                      </dd>
                     </div>
                     <div>
                       <dt className="text-muted-foreground">{t("permits.field.targetDeadline")}</dt>
@@ -779,11 +848,15 @@ const AdminPermits = () => {
                   </dl>
                   <div className="mt-3 flex flex-wrap justify-end gap-1 border-t pt-2">
                     <Button variant="ghost" size="sm" onClick={() => setViewing(r)}>
-                      <Eye className="mr-1 h-4 w-4" />{t("common.view")}
+                      <Eye className="mr-1 h-4 w-4" />
+                      {t("common.view")}
                     </Button>
-                    {canManage ? <Button variant="ghost" size="sm" onClick={() => openEdit(r)}>
-                      <Pencil className="mr-1 h-4 w-4" />{t("common.edit")}
-                    </Button> : null}
+                    {canManage ? (
+                      <Button variant="ghost" size="sm" onClick={() => openEdit(r)}>
+                        <Pencil className="mr-1 h-4 w-4" />
+                        {t("common.edit")}
+                      </Button>
+                    ) : null}
                   </div>
                 </article>
               ))}
@@ -810,7 +883,9 @@ const AdminPermits = () => {
                   {rows.map((r) => (
                     <tr key={r.id} className="transition-colors hover:bg-slate-50/70">
                       <td className="px-3 py-2 text-slate-700">
-                        <div className="font-mono text-xs text-slate-500">{r.operationalProjectCode ?? "—"}</div>
+                        <div className="font-mono text-xs text-slate-500">
+                          {r.operationalProjectCode ?? "—"}
+                        </div>
                         <div className="text-slate-800">{r.operationalProjectName ?? "—"}</div>
                       </td>
                       <td className="px-3 py-2 font-medium text-slate-900">
@@ -820,11 +895,25 @@ const AdminPermits = () => {
                       <td className="px-3 py-2 text-slate-700">{r.ownerName ?? "—"}</td>
                       <td className="px-3 py-2 text-slate-700">{r.approverName ?? "—"}</td>
                       <td className="px-3 py-2 text-slate-700">
-                        <div className="min-w-24"><div className="mb-1 flex justify-between text-xs"><span>{r.workTaskStatus ?? "—"}</span><span>{r.progressPercent}%</span></div><div className="h-1.5 overflow-hidden rounded bg-slate-100"><div className="h-full bg-primary" style={{ width: `${r.progressPercent}%` }} /></div></div>
+                        <div className="min-w-24">
+                          <div className="mb-1 flex justify-between text-xs">
+                            <span>{r.workTaskStatus ?? "—"}</span>
+                            <span>{r.progressPercent}%</span>
+                          </div>
+                          <div className="h-1.5 overflow-hidden rounded bg-slate-100">
+                            <div
+                              className="h-full bg-primary"
+                              style={{ width: `${r.progressPercent}%` }}
+                            />
+                          </div>
+                        </div>
                       </td>
                       <td className="px-3 py-2">
                         <div className="flex flex-col items-start gap-1">
-                          <Badge variant="outline" className={cn("whitespace-nowrap", STATUS_BADGE[r.status])}>
+                          <Badge
+                            variant="outline"
+                            className={cn("whitespace-nowrap", STATUS_BADGE[r.status])}
+                          >
                             {t(`permits.status.${r.status}`)}
                           </Badge>
                           <RiskPills row={r} t={t} />
@@ -838,12 +927,26 @@ const AdminPermits = () => {
                       </td>
                       <td className="px-3 py-2">
                         <div className="flex justify-end gap-1">
-                          <Button variant="ghost" size="icon" title={t("common.view")} aria-label={t("common.view")} onClick={() => setViewing(r)}>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title={t("common.view")}
+                            aria-label={t("common.view")}
+                            onClick={() => setViewing(r)}
+                          >
                             <Eye className="h-4 w-4" />
                           </Button>
-                          {canManage ? <Button variant="ghost" size="icon" title={t("common.edit")} aria-label={t("common.edit")} onClick={() => openEdit(r)}>
-                            <Pencil className="h-4 w-4" />
-                          </Button> : null}
+                          {canManage ? (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title={t("common.edit")}
+                              aria-label={t("common.edit")}
+                              onClick={() => openEdit(r)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          ) : null}
                         </div>
                       </td>
                     </tr>
@@ -887,11 +990,15 @@ const AdminPermits = () => {
       <Dialog open={dialogMode !== null} onOpenChange={(open) => (!open ? closeForm() : undefined)}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>{t(dialogMode === "create" ? "permits.form.createTitle" : "permits.form.title")}</DialogTitle>
+            <DialogTitle>
+              {t(dialogMode === "create" ? "permits.form.createTitle" : "permits.form.title")}
+            </DialogTitle>
             <DialogDescription>
               {dialogMode === "edit" && editing ? (
                 <span className="text-xs text-slate-600">
-                  {(editing.designProjectCode ?? "") + " — " + (editing.permitTypeLabel ?? editing.permitTypeCode)}
+                  {(editing.designProjectCode ?? "") +
+                    " — " +
+                    (editing.permitTypeLabel ?? editing.permitTypeCode)}
                 </span>
               ) : null}
               <span className="mt-1 block">{t("permits.form.hint")}</span>
@@ -906,19 +1013,36 @@ const AdminPermits = () => {
                     <SearchableSelect
                       className="mt-1"
                       value={form.projectId != null ? String(form.projectId) : ""}
-                      onChange={(value) => setForm((current) => current ? { ...current, projectId: value ? Number(value) : null } : current)}
+                      onChange={(value) =>
+                        setForm((current) =>
+                          current
+                            ? { ...current, projectId: value ? Number(value) : null }
+                            : current,
+                        )
+                      }
                       options={projectOptions}
                       placeholder={t("permits.form.selectProject")}
                     />
                   </div>
                   <div>
                     <Label>{t("permits.field.permitType")}</Label>
-                    <Select value={form.permitTypeCode} onValueChange={(value) => setForm((current) => current ? { ...current, permitTypeCode: value } : current)}>
+                    <Select
+                      value={form.permitTypeCode}
+                      onValueChange={(value) =>
+                        setForm((current) =>
+                          current ? { ...current, permitTypeCode: value } : current,
+                        )
+                      }
+                    >
                       <SelectTrigger className="mt-1 h-9">
                         <SelectValue placeholder={t("permits.form.selectType")} />
                       </SelectTrigger>
                       <SelectContent>
-                        {permitTypes.map((type) => <SelectItem key={type.code} value={type.code}>{type.name}</SelectItem>)}
+                        {permitTypes.map((type) => (
+                          <SelectItem key={type.code} value={type.code}>
+                            {type.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -928,7 +1052,9 @@ const AdminPermits = () => {
                 <Label>{t("permits.field.status")}</Label>
                 <Select
                   value={form.status}
-                  onValueChange={(v) => setForm((f) => (f ? { ...f, status: v as PermitStatus } : f))}
+                  onValueChange={(v) =>
+                    setForm((f) => (f ? { ...f, status: v as PermitStatus } : f))
+                  }
                 >
                   <SelectTrigger className="mt-1 h-9">
                     <SelectValue />
@@ -946,7 +1072,9 @@ const AdminPermits = () => {
                 <Label>{t("permits.field.agency")}</Label>
                 <Input
                   value={form.issuingAgency}
-                  onChange={(e) => setForm((f) => (f ? { ...f, issuingAgency: e.target.value } : f))}
+                  onChange={(e) =>
+                    setForm((f) => (f ? { ...f, issuingAgency: e.target.value } : f))
+                  }
                 />
               </div>
               {canPickUser ? (
@@ -955,7 +1083,9 @@ const AdminPermits = () => {
                   <SearchableSelect
                     className="mt-1"
                     value={form.ownerUserId != null ? String(form.ownerUserId) : ""}
-                    onChange={(v) => setForm((f) => (f ? { ...f, ownerUserId: v ? Number(v) : null } : f))}
+                    onChange={(v) =>
+                      setForm((f) => (f ? { ...f, ownerUserId: v ? Number(v) : null } : f))
+                    }
                     options={[{ value: "", label: t("permits.form.ownerNone") }, ...userOptions]}
                     placeholder={t("permits.form.ownerNone")}
                     disabled={Boolean(editing?.workTaskId)}
@@ -968,7 +1098,9 @@ const AdminPermits = () => {
                   type="date"
                   value={form.targetDeadline}
                   disabled={Boolean(editing?.workTaskId)}
-                  onChange={(e) => setForm((f) => (f ? { ...f, targetDeadline: e.target.value } : f))}
+                  onChange={(e) =>
+                    setForm((f) => (f ? { ...f, targetDeadline: e.target.value } : f))
+                  }
                 />
               </div>
               <div>
@@ -1033,68 +1165,129 @@ const AdminPermits = () => {
               {t("common.cancel")}
             </Button>
             <Button onClick={() => void submitForm()} disabled={saving || !canManage}>
-              {saving ? t("common.loading") : t(dialogMode === "create" ? "permits.form.create" : "common.save")}
+              {saving
+                ? t("common.loading")
+                : t(dialogMode === "create" ? "permits.form.create" : "common.save")}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={viewing !== null} onOpenChange={(open) => { if (!open) setViewing(null); }}>
+      <Dialog
+        open={viewing !== null}
+        onOpenChange={(open) => {
+          if (!open) setViewing(null);
+        }}
+      >
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>{t("permits.viewTitle")}</DialogTitle>
             <DialogDescription>
-              {viewing ? `${viewing.operationalProjectCode ?? ""} — ${viewing.permitTypeLabel ?? viewing.permitTypeCode}` : ""}
+              {viewing
+                ? `${viewing.operationalProjectCode ?? ""} — ${viewing.permitTypeLabel ?? viewing.permitTypeCode}`
+                : ""}
             </DialogDescription>
           </DialogHeader>
           {viewing ? (
             <dl className="grid gap-4 rounded-lg border bg-muted/10 p-4 sm:grid-cols-2">
-              <DetailValue label={t("permits.field.project")} value={`${viewing.operationalProjectCode ?? ""} — ${viewing.operationalProjectName ?? "—"}`} />
-              <DetailValue label={t("permits.field.permitType")} value={viewing.permitTypeLabel ?? viewing.permitTypeCode} />
-              <DetailValue label={t("permits.field.status")} value={t(`permits.status.${viewing.status}`)} />
+              <DetailValue
+                label={t("permits.field.project")}
+                value={`${viewing.operationalProjectCode ?? ""} — ${viewing.operationalProjectName ?? "—"}`}
+              />
+              <DetailValue
+                label={t("permits.field.permitType")}
+                value={viewing.permitTypeLabel ?? viewing.permitTypeCode}
+              />
+              <DetailValue
+                label={t("permits.field.status")}
+                value={t(`permits.status.${viewing.status}`)}
+              />
               <DetailValue label={t("permits.field.agency")} value={viewing.issuingAgency} />
               <DetailValue label={t("permits.field.owner")} value={viewing.ownerName} />
               <DetailValue label={t("permits.field.approver")} value={viewing.approverName} />
-              <DetailValue label={t("permits.field.progress")} value={`${viewing.progressPercent}% · ${viewing.workTaskStatus ?? "—"}`} />
-              <DetailValue label={t("permits.field.targetDeadline")} value={formatDate(viewing.targetDeadline, lang)} />
-              <DetailValue label={t("permits.field.submittedAt")} value={formatDate(viewing.submittedAt, lang)} />
-              <DetailValue label={t("permits.field.issuedAt")} value={formatDate(viewing.issuedAt, lang)} />
-              <DetailValue label={t("permits.field.expiresAt")} value={formatDate(viewing.expiresAt, lang)} />
-              <DetailValue label={t("permits.field.updatedAt")} value={formatDate(viewing.updatedAt, lang)} />
-              <div className="sm:col-span-2"><DetailValue label={t("permits.field.note")} value={viewing.note} /></div>
+              <DetailValue
+                label={t("permits.field.progress")}
+                value={`${viewing.progressPercent}% · ${viewing.workTaskStatus ?? "—"}`}
+              />
+              <DetailValue
+                label={t("permits.field.targetDeadline")}
+                value={formatDate(viewing.targetDeadline, lang)}
+              />
+              <DetailValue
+                label={t("permits.field.submittedAt")}
+                value={formatDate(viewing.submittedAt, lang)}
+              />
+              <DetailValue
+                label={t("permits.field.issuedAt")}
+                value={formatDate(viewing.issuedAt, lang)}
+              />
+              <DetailValue
+                label={t("permits.field.expiresAt")}
+                value={formatDate(viewing.expiresAt, lang)}
+              />
+              <DetailValue
+                label={t("permits.field.updatedAt")}
+                value={formatDate(viewing.updatedAt, lang)}
+              />
+              <div className="sm:col-span-2">
+                <DetailValue label={t("permits.field.note")} value={viewing.note} />
+              </div>
               {viewTask ? (
-                <section className="space-y-3 rounded-md border bg-background p-3 sm:col-span-2" aria-label={t("workPackages.tasks.title")}>
+                <section
+                  className="space-y-3 rounded-md border bg-background p-3 sm:col-span-2"
+                  aria-label={t("workPackages.tasks.title")}
+                >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
                       <h3 className="text-sm font-semibold">{t("workPackages.tasks.title")}</h3>
-                      <p className="text-xs text-muted-foreground">{viewTask.wbsCode} Â· {viewTask.title}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {viewTask.wbsCode} Â· {viewTask.title}
+                      </p>
                     </div>
-                    <Badge variant="outline">{viewTask.status} Â· {viewTask.progressPercent}%</Badge>
+                    <Badge variant="outline">
+                      {viewTask.status} Â· {viewTask.progressPercent}%
+                    </Badge>
                   </div>
-                  {viewTask.canUpdateProgress && ["Planned", "InProgress"].includes(viewTask.status) ? (
+                  {viewTask.canUpdateProgress &&
+                  ["Planned", "InProgress"].includes(viewTask.status) ? (
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
                       <div className="flex-1 space-y-1">
-                        <Label htmlFor="permit-task-progress">{t("workPackages.action.progress")}</Label>
+                        <Label htmlFor="permit-task-progress">
+                          {t("workPackages.action.progress")}
+                        </Label>
                         <Input
                           id="permit-task-progress"
                           type="number"
                           min={1}
                           max={99}
                           value={taskProgress}
-                          onChange={(event) => setTaskProgress(Math.max(1, Math.min(99, Number(event.target.value) || 1)))}
+                          onChange={(event) =>
+                            setTaskProgress(
+                              Math.max(1, Math.min(99, Number(event.target.value) || 1)),
+                            )
+                          }
                         />
                       </div>
-                      <Button variant="outline" disabled={taskSaving} onClick={() => void updateViewedTaskProgress(false)}>
+                      <Button
+                        variant="outline"
+                        disabled={taskSaving}
+                        onClick={() => void updateViewedTaskProgress(false)}
+                      >
                         {t("workPackages.action.progress")}
                       </Button>
-                      <Button disabled={taskSaving} onClick={() => void updateViewedTaskProgress(true)}>
+                      <Button
+                        disabled={taskSaving}
+                        onClick={() => void updateViewedTaskProgress(true)}
+                      >
                         {t("workPackages.action.completeTask")}
                       </Button>
                     </div>
                   ) : null}
                   {viewTask.canVerify && viewTask.status === "Completed" ? (
                     <div className="space-y-2 border-t pt-3">
-                      <Label htmlFor="permit-task-reject-reason">{t("workPackages.reject.reason")}</Label>
+                      <Label htmlFor="permit-task-reject-reason">
+                        {t("workPackages.reject.reason")}
+                      </Label>
                       <Textarea
                         id="permit-task-reject-reason"
                         maxLength={2000}
@@ -1102,18 +1295,31 @@ const AdminPermits = () => {
                         onChange={(event) => setTaskRejectReason(event.target.value)}
                       />
                       <div className="flex flex-wrap justify-end gap-2">
-                        <Button variant="destructive" disabled={taskSaving || !taskRejectReason.trim()} onClick={() => void decideViewedTask(false)}>
+                        <Button
+                          variant="destructive"
+                          disabled={taskSaving || !taskRejectReason.trim()}
+                          onClick={() => void decideViewedTask(false)}
+                        >
                           {t("common.reject")}
                         </Button>
                         <Button disabled={taskSaving} onClick={() => void decideViewedTask(true)}>
-                          <CheckCircle2 className="mr-2 h-4 w-4" />{t("workPackages.action.verify")}
+                          <CheckCircle2 className="mr-2 h-4 w-4" />
+                          {t("workPackages.action.verify")}
                         </Button>
                       </div>
                     </div>
                   ) : null}
                 </section>
               ) : null}
-              {viewing.workPackageId ? <div className="sm:col-span-2"><Button asChild variant="outline" size="sm"><Link to={`/admin/work-packages/${viewing.workPackageId}`}>{t("permits.openWorkPackage")}</Link></Button></div> : null}
+              {viewing.workPackageId ? (
+                <div className="sm:col-span-2">
+                  <Button asChild variant="outline" size="sm">
+                    <Link to={`/admin/work-packages/${viewing.workPackageId}`}>
+                      {t("permits.openWorkPackage")}
+                    </Link>
+                  </Button>
+                </div>
+              ) : null}
               <div className="space-y-2 sm:col-span-2">
                 <PermitDocumentField
                   permitId={viewing.id}
@@ -1138,46 +1344,94 @@ const AdminPermits = () => {
               </div>
               <div className="space-y-2 sm:col-span-2">
                 <h3 className="text-sm font-semibold">{t("permits.history")}</h3>
-                {permitHistory.length === 0 ? <p className="text-sm text-muted-foreground">{t("permits.historyEmpty")}</p> : permitHistory.map((entry) => (
-                  <div key={entry.id} className="rounded-md border p-2 text-xs">
-                    <div className="flex flex-wrap justify-between gap-2"><span className="font-medium">{entry.action}{entry.fromStatus && entry.fromStatus !== entry.toStatus ? ` · ${entry.fromStatus} → ${entry.toStatus}` : ""}</span><span className="text-muted-foreground">{formatDate(entry.changedAt, lang)}</span></div>
-                    <p className="mt-1 text-muted-foreground">{entry.changedByName}</p>
-                  </div>
-                ))}
+                {permitHistory.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">{t("permits.historyEmpty")}</p>
+                ) : (
+                  permitHistory.map((entry) => (
+                    <div key={entry.id} className="rounded-md border p-2 text-xs">
+                      <div className="flex flex-wrap justify-between gap-2">
+                        <span className="font-medium">
+                          {entry.action}
+                          {entry.fromStatus && entry.fromStatus !== entry.toStatus
+                            ? ` · ${entry.fromStatus} → ${entry.toStatus}`
+                            : ""}
+                        </span>
+                        <span className="text-muted-foreground">
+                          {formatDate(entry.changedAt, lang)}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-muted-foreground">{entry.changedByName}</p>
+                    </div>
+                  ))
+                )}
               </div>
             </dl>
           ) : null}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setViewing(null)}>{t("common.close")}</Button>
-            {canManage && viewing ? <Button onClick={() => { const row = viewing; setViewing(null); openEdit(row); }}><Pencil className="mr-1 h-4 w-4" />{t("common.edit")}</Button> : null}
+            <Button variant="outline" onClick={() => setViewing(null)}>
+              {t("common.close")}
+            </Button>
+            {canManage && viewing ? (
+              <Button
+                onClick={() => {
+                  const row = viewing;
+                  setViewing(null);
+                  openEdit(row);
+                }}
+              >
+                <Pencil className="mr-1 h-4 w-4" />
+                {t("common.edit")}
+              </Button>
+            ) : null}
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={pendingDelete !== null} onOpenChange={(open) => { if (!open && !deleting) setPendingDelete(null); }}>
+      <AlertDialog
+        open={pendingDelete !== null}
+        onOpenChange={(open) => {
+          if (!open && !deleting) setPendingDelete(null);
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t("permits.deleteTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
               {t("permits.deleteDescription")
-                .replace("{type}", pendingDelete?.permitTypeLabel ?? pendingDelete?.permitTypeCode ?? "")
+                .replace(
+                  "{type}",
+                  pendingDelete?.permitTypeLabel ?? pendingDelete?.permitTypeCode ?? "",
+                )
                 .replace("{project}", pendingDelete?.operationalProjectName ?? "")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleting}>{t("common.cancel")}</AlertDialogCancel>
-            <AlertDialogAction disabled={deleting} onClick={(event) => { event.preventDefault(); void deletePermit(); }} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogAction
+              disabled={deleting}
+              onClick={(event) => {
+                event.preventDefault();
+                void deletePermit();
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
               {deleting ? t("permits.deleting") : t("common.delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      {setupProjectId ? <LegalActivationWizard
-        operationalProjectId={setupProjectId}
-        open
-        onOpenChange={(next) => { if (!next) setSetupProjectId(null); }}
-        onActivated={async () => { await fetchList(); }}
-      /> : null}
+      {setupProjectId ? (
+        <LegalActivationWizard
+          operationalProjectId={setupProjectId}
+          open
+          onOpenChange={(next) => {
+            if (!next) setSetupProjectId(null);
+          }}
+          onActivated={async () => {
+            await fetchList();
+          }}
+        />
+      ) : null}
     </AdminLayout>
   );
 };
@@ -1215,9 +1469,11 @@ const PermitDocumentField = ({
         <AdminFilePreview
           url={path}
           fileName={path.split("/").pop()}
-          fetchFile={isManagedDocumentPath(path, "/files/business-documents/permits")
-            ? async () => (await adminApi.getPermitDocumentContent(permitId, path)).data
-            : undefined}
+          fetchFile={
+            isManagedDocumentPath(path, "/files/business-documents/permits")
+              ? async () => (await adminApi.getPermitDocumentContent(permitId, path)).data
+              : undefined
+          }
         />
       ) : null}
     </div>
@@ -1286,17 +1542,26 @@ const RiskPills = ({
   return (
     <div className="flex flex-wrap items-center gap-1">
       {row.isOverdue ? (
-        <Badge variant="outline" className="border-rose-200 bg-rose-50 text-rose-700 whitespace-nowrap">
+        <Badge
+          variant="outline"
+          className="border-rose-200 bg-rose-50 text-rose-700 whitespace-nowrap"
+        >
           {t("permits.risk.overduePill")}
         </Badge>
       ) : null}
       {row.isDueSoon ? (
-        <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700 whitespace-nowrap">
+        <Badge
+          variant="outline"
+          className="border-amber-200 bg-amber-50 text-amber-700 whitespace-nowrap"
+        >
           {t("permits.risk.dueSoonPill")}
         </Badge>
       ) : null}
       {row.isExpiringSoon ? (
-        <Badge variant="outline" className="border-orange-200 bg-orange-50 text-orange-700 whitespace-nowrap">
+        <Badge
+          variant="outline"
+          className="border-orange-200 bg-orange-50 text-orange-700 whitespace-nowrap"
+        >
           {t("permits.risk.expiringSoonPill")}
         </Badge>
       ) : null}

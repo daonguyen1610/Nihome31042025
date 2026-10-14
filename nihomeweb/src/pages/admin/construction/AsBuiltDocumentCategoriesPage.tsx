@@ -258,12 +258,35 @@ export default function AsBuiltDocumentCategoriesPage() {
           </div>
         </header>
 
-        <section className="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label={t("asbuiltCat.summary.label")}>
+        <section
+          className="grid grid-cols-2 gap-3 lg:grid-cols-4"
+          aria-label={t("asbuiltCat.summary.label")}
+        >
           {[
-            { key: "total", value: summary.total, icon: Files, label: t("asbuiltCat.summary.total") },
-            { key: "active", value: summary.active, icon: CheckCircle2, label: t("asbuiltCat.summary.active") },
-            { key: "required", value: summary.required, icon: FileCheck2, label: t("asbuiltCat.summary.required") },
-            { key: "inUse", value: summary.inUse, icon: CircleOff, label: t("asbuiltCat.summary.inUse") },
+            {
+              key: "total",
+              value: summary.total,
+              icon: Files,
+              label: t("asbuiltCat.summary.total"),
+            },
+            {
+              key: "active",
+              value: summary.active,
+              icon: CheckCircle2,
+              label: t("asbuiltCat.summary.active"),
+            },
+            {
+              key: "required",
+              value: summary.required,
+              icon: FileCheck2,
+              label: t("asbuiltCat.summary.required"),
+            },
+            {
+              key: "inUse",
+              value: summary.inUse,
+              icon: CircleOff,
+              label: t("asbuiltCat.summary.inUse"),
+            },
           ].map((stat) => {
             const Icon = stat.icon;
             return (
@@ -285,7 +308,9 @@ export default function AsBuiltDocumentCategoriesPage() {
         <section className="rounded-xl border bg-card p-3 shadow-sm">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
             <div className="w-full lg:max-w-md">
-              <Label className="text-xs" htmlFor="asbuilt-category-search">{t("common.search")}</Label>
+              <Label className="text-xs" htmlFor="asbuilt-category-search">
+                {t("common.search")}
+              </Label>
               <div className="relative mt-1.5">
                 <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
@@ -309,7 +334,11 @@ export default function AsBuiltDocumentCategoriesPage() {
                 )}
               </div>
             </div>
-            <div className="flex w-full rounded-lg bg-muted p-1 sm:w-auto" role="group" aria-label={t("asbuiltCat.filter.status")}>
+            <div
+              className="flex w-full rounded-lg bg-muted p-1 sm:w-auto"
+              role="group"
+              aria-label={t("asbuiltCat.filter.status")}
+            >
               {(["all", "active", "inactive"] as const).map((filter) => (
                 <Button
                   key={filter}
@@ -348,7 +377,9 @@ export default function AsBuiltDocumentCategoriesPage() {
         ) : filtered.length === 0 ? (
           <div className="rounded-xl border border-dashed p-12 text-center">
             <p className="font-medium">{t("asbuiltCat.empty.title")}</p>
-            <p className="mt-1 text-sm text-muted-foreground">{t("asbuiltCat.empty.description")}</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {t("asbuiltCat.empty.description")}
+            </p>
             {(q || statusFilter !== "all") && (
               <Button
                 variant="outline"
@@ -371,11 +402,18 @@ export default function AsBuiltDocumentCategoriesPage() {
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <h2 className="break-words text-sm font-semibold">{localizedName(item, lang)}</h2>
-                        <Badge variant="outline" className="font-mono font-normal">{item.code}</Badge>
+                        <h2 className="break-words text-sm font-semibold">
+                          {localizedName(item, lang)}
+                        </h2>
+                        <Badge variant="outline" className="font-mono font-normal">
+                          {item.code}
+                        </Badge>
                       </div>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        {t("asbuiltCat.documentCount").replace("{count}", String(item.documentCount))}
+                        {t("asbuiltCat.documentCount").replace(
+                          "{count}",
+                          String(item.documentCount),
+                        )}
                       </p>
                     </div>
                     <Badge variant={item.isActive ? "default" : "secondary"} className="shrink-0">
@@ -385,7 +423,9 @@ export default function AsBuiltDocumentCategoriesPage() {
                   <dl className="mt-4 grid grid-cols-2 gap-3 rounded-lg bg-muted/50 p-3 text-xs">
                     <div>
                       <dt className="text-muted-foreground">{t("asbuiltCat.field.isRequired")}</dt>
-                      <dd className="mt-1 font-medium">{item.isRequired ? t("common.yes") : t("common.no")}</dd>
+                      <dd className="mt-1 font-medium">
+                        {item.isRequired ? t("common.yes") : t("common.no")}
+                      </dd>
                     </div>
                     <div>
                       <dt className="text-muted-foreground">{t("asbuiltCat.field.sortOrder")}</dt>
@@ -404,7 +444,11 @@ export default function AsBuiltDocumentCategoriesPage() {
                         className="text-destructive hover:text-destructive aria-disabled:cursor-not-allowed aria-disabled:opacity-50"
                         onClick={() => item.documentCount === 0 && setPendingDelete(item)}
                         aria-disabled={item.documentCount > 0}
-                        title={item.documentCount > 0 ? t("asbuiltCat.delete.inUseHint") : t("common.delete")}
+                        title={
+                          item.documentCount > 0
+                            ? t("asbuiltCat.delete.inUseHint")
+                            : t("common.delete")
+                        }
                       >
                         <Trash2 className="mr-1.5 h-4 w-4" />
                         {t("common.delete")}
@@ -412,77 +456,103 @@ export default function AsBuiltDocumentCategoriesPage() {
                     </div>
                   )}
                   {canManage && item.documentCount > 0 && (
-                    <p className="mt-2 text-right text-xs text-muted-foreground">{t("asbuiltCat.delete.inUseHint")}</p>
+                    <p className="mt-2 text-right text-xs text-muted-foreground">
+                      {t("asbuiltCat.delete.inUseHint")}
+                    </p>
                   )}
                 </li>
               ))}
             </ul>
 
             <div className="hidden overflow-x-auto rounded-xl border bg-card shadow-sm lg:block">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-44">{t("asbuiltCat.field.code")}</TableHead>
-                  <TableHead>{t("asbuiltCat.field.name")}</TableHead>
-                  <TableHead className="w-32 text-center">{t("asbuiltCat.field.documentCount")}</TableHead>
-                  <TableHead className="w-28 text-center">{t("asbuiltCat.field.isRequired")}</TableHead>
-                  <TableHead className="w-28 text-center">{t("asbuiltCat.field.isActive")}</TableHead>
-                  <TableHead className="w-20 text-center">{t("asbuiltCat.field.sortOrder")}</TableHead>
-                  {canManage && <TableHead className="w-28 text-right">{t("common.actions")}</TableHead>}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtered.map((item) => (
-                  <TableRow key={item.id} className={!item.isActive ? "bg-muted/20" : undefined}>
-                    <TableCell><Badge variant="outline" className="font-mono font-normal">{item.code}</Badge></TableCell>
-                    <TableCell className="font-medium">{localizedName(item, lang)}</TableCell>
-                    <TableCell className="text-center tabular-nums">{item.documentCount}</TableCell>
-                    <TableCell className="text-center">
-                      {item.isRequired ? (
-                        <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">{t("common.yes")}</Badge>
-                      ) : (
-                        <span className="text-sm text-muted-foreground">{t("common.no")}</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {item.isActive ? (
-                        <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">{t("common.active")}</Badge>
-                      ) : (
-                        <Badge variant="secondary">{t("common.inactive")}</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-center">{item.sortOrder}</TableCell>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-44">{t("asbuiltCat.field.code")}</TableHead>
+                    <TableHead>{t("asbuiltCat.field.name")}</TableHead>
+                    <TableHead className="w-32 text-center">
+                      {t("asbuiltCat.field.documentCount")}
+                    </TableHead>
+                    <TableHead className="w-28 text-center">
+                      {t("asbuiltCat.field.isRequired")}
+                    </TableHead>
+                    <TableHead className="w-28 text-center">
+                      {t("asbuiltCat.field.isActive")}
+                    </TableHead>
+                    <TableHead className="w-20 text-center">
+                      {t("asbuiltCat.field.sortOrder")}
+                    </TableHead>
                     {canManage && (
-                      <TableCell>
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => openEdit(item)}
-                            aria-label={`${t("common.edit")} ${localizedName(item, lang)}`}
-                            title={t("common.edit")}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="aria-disabled:cursor-not-allowed aria-disabled:opacity-50"
-                            onClick={() => item.documentCount === 0 && setPendingDelete(item)}
-                            aria-disabled={item.documentCount > 0}
-                            aria-label={`${t("common.delete")} ${localizedName(item, lang)}`}
-                            title={item.documentCount > 0 ? t("asbuiltCat.delete.inUseHint") : t("common.delete")}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
-                      </TableCell>
+                      <TableHead className="w-28 text-right">{t("common.actions")}</TableHead>
                     )}
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                </TableHeader>
+                <TableBody>
+                  {filtered.map((item) => (
+                    <TableRow key={item.id} className={!item.isActive ? "bg-muted/20" : undefined}>
+                      <TableCell>
+                        <Badge variant="outline" className="font-mono font-normal">
+                          {item.code}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="font-medium">{localizedName(item, lang)}</TableCell>
+                      <TableCell className="text-center tabular-nums">
+                        {item.documentCount}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {item.isRequired ? (
+                          <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">
+                            {t("common.yes")}
+                          </Badge>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">{t("common.no")}</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {item.isActive ? (
+                          <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
+                            {t("common.active")}
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary">{t("common.inactive")}</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-center">{item.sortOrder}</TableCell>
+                      {canManage && (
+                        <TableCell>
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => openEdit(item)}
+                              aria-label={`${t("common.edit")} ${localizedName(item, lang)}`}
+                              title={t("common.edit")}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="aria-disabled:cursor-not-allowed aria-disabled:opacity-50"
+                              onClick={() => item.documentCount === 0 && setPendingDelete(item)}
+                              aria-disabled={item.documentCount > 0}
+                              aria-label={`${t("common.delete")} ${localizedName(item, lang)}`}
+                              title={
+                                item.documentCount > 0
+                                  ? t("asbuiltCat.delete.inUseHint")
+                                  : t("common.delete")
+                              }
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </>
         )}
       </div>
@@ -497,39 +567,44 @@ export default function AsBuiltDocumentCategoriesPage() {
           </DialogHeader>
           <form onSubmit={submitForm} className="space-y-4">
             {formError && (
-              <div role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+              <div
+                role="alert"
+                className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive"
+              >
                 {formError}
               </div>
             )}
             <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_140px]">
-            <div className="space-y-1.5">
-              <Label htmlFor="code">{t("asbuiltCat.field.code")} *</Label>
-              <Input
-                id="code"
-                value={form.code}
-                onChange={(e) => setForm({ ...form, code: e.target.value })}
-                placeholder={t("asbuiltCat.form.codePlaceholder")}
-                disabled={editingId != null}
-                maxLength={50}
-                autoFocus
-                required
-                aria-invalid={Boolean(formError && !form.code.trim())}
-              />
-              <p className="text-xs text-muted-foreground">
-                {editingId != null ? t("asbuiltCat.hint.codeReadonly") : t("asbuiltCat.hint.codeFormat")}
-              </p>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="sortOrder">{t("asbuiltCat.field.sortOrder")}</Label>
-              <Input
-                id="sortOrder"
-                type="number"
-                min={0}
-                value={form.sortOrder}
-                onChange={(e) => setForm({ ...form, sortOrder: Number(e.target.value) })}
-              />
-              <p className="text-xs text-muted-foreground">{t("asbuiltCat.hint.sortOrder")}</p>
-            </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="code">{t("asbuiltCat.field.code")} *</Label>
+                <Input
+                  id="code"
+                  value={form.code}
+                  onChange={(e) => setForm({ ...form, code: e.target.value })}
+                  placeholder={t("asbuiltCat.form.codePlaceholder")}
+                  disabled={editingId != null}
+                  maxLength={50}
+                  autoFocus
+                  required
+                  aria-invalid={Boolean(formError && !form.code.trim())}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {editingId != null
+                    ? t("asbuiltCat.hint.codeReadonly")
+                    : t("asbuiltCat.hint.codeFormat")}
+                </p>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="sortOrder">{t("asbuiltCat.field.sortOrder")}</Label>
+                <Input
+                  id="sortOrder"
+                  type="number"
+                  min={0}
+                  value={form.sortOrder}
+                  onChange={(e) => setForm({ ...form, sortOrder: Number(e.target.value) })}
+                />
+                <p className="text-xs text-muted-foreground">{t("asbuiltCat.hint.sortOrder")}</p>
+              </div>
             </div>
 
             <div className="space-y-1.5">
@@ -548,7 +623,13 @@ export default function AsBuiltDocumentCategoriesPage() {
             <div className="flex flex-col gap-3 rounded-lg border border-sky-200 bg-sky-50/60 p-4 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm text-sky-900">{t("asbuiltCat.hint.manageTranslations")}</p>
               {canViewTranslations && (
-                <Button asChild type="button" variant="outline" size="sm" className="shrink-0 bg-background">
+                <Button
+                  asChild
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0 bg-background"
+                >
                   <Link to="/admin/translations?tab=entity&type=AsBuiltDocumentCategory">
                     {t("asbuiltCat.action.openTranslations")}
                   </Link>
@@ -560,7 +641,9 @@ export default function AsBuiltDocumentCategoriesPage() {
               <div className="flex items-start justify-between gap-4 rounded-lg border p-4">
                 <div>
                   <Label htmlFor="isRequired">{t("asbuiltCat.field.isRequired")}</Label>
-                  <p className="mt-1 text-xs text-muted-foreground">{t("asbuiltCat.hint.isRequired")}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {t("asbuiltCat.hint.isRequired")}
+                  </p>
                 </div>
                 <Switch
                   id="isRequired"
@@ -571,7 +654,9 @@ export default function AsBuiltDocumentCategoriesPage() {
               <div className="flex items-start justify-between gap-4 rounded-lg border p-4">
                 <div>
                   <Label htmlFor="isActive">{t("asbuiltCat.field.isActive")}</Label>
-                  <p className="mt-1 text-xs text-muted-foreground">{t("asbuiltCat.hint.isActive")}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {t("asbuiltCat.hint.isActive")}
+                  </p>
                 </div>
                 <Switch
                   id="isActive"
@@ -597,12 +682,18 @@ export default function AsBuiltDocumentCategoriesPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>{t("asbuiltCat.delete.title")}</AlertDialogTitle>
             <AlertDialogDescription>
-              {t("asbuiltCat.delete.confirm").replace("{name}", pendingDelete?.nameVi || pendingDelete?.name || "")}
+              {t("asbuiltCat.delete.confirm").replace(
+                "{name}",
+                pendingDelete?.nameVi || pendingDelete?.name || "",
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
               {t("common.delete")}
             </AlertDialogAction>
           </AlertDialogFooter>

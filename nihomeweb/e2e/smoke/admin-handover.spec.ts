@@ -15,7 +15,11 @@ test.describe("NIH-144 — Project handover", () => {
     const authHeader = { Authorization: `Bearer ${token}` };
     const customerId = await createOwnCustomer(api, authHeader, "HO");
     const projectName = `E2E-HO ${uid()}`;
-    const projectId = await createDesignProject(api, { headers: authHeader, name: projectName, customerId });
+    const projectId = await createDesignProject(api, {
+      headers: authHeader,
+      name: projectName,
+      customerId,
+    });
     const users = await api.get("/api/users?take=1", { headers: authHeader });
     expect(users.ok()).toBeTruthy();
     const responsibleUserId = (await users.json()).items?.[0]?.id as number;
@@ -50,16 +54,14 @@ test.describe("NIH-144 — Project handover", () => {
     await expect(page.getByTestId("handover-page")).toBeVisible();
     await expect(page.locator("body")).not.toContainText("handover.title");
     await Promise.all([
-      page.waitForResponse(
-        (response) => {
-          const url = new URL(response.url());
-          return (
-            url.pathname === "/api/handover-records" &&
-            url.searchParams.get("search") === title &&
-            response.request().method() === "GET"
-          );
-        },
-      ),
+      page.waitForResponse((response) => {
+        const url = new URL(response.url());
+        return (
+          url.pathname === "/api/handover-records" &&
+          url.searchParams.get("search") === title &&
+          response.request().method() === "GET"
+        );
+      }),
       page.getByTestId("handover-search").fill(title),
     ]);
     const row = page.getByTestId(`handover-row-${handoverId}`);
@@ -79,11 +81,13 @@ test.describe("NIH-144 — Project handover", () => {
       new RegExp(documentPath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "$"),
     );
     await expect
-      .poll(() => previewImage.evaluate((image: HTMLImageElement) => ({
-        complete: image.complete,
-        width: image.naturalWidth,
-        height: image.naturalHeight,
-      })))
+      .poll(() =>
+        previewImage.evaluate((image: HTMLImageElement) => ({
+          complete: image.complete,
+          width: image.naturalWidth,
+          height: image.naturalHeight,
+        })),
+      )
       .toEqual({ complete: true, width: 1280, height: 960 });
     await page.getByTestId("handover-document-preview-0-close").click();
     await expect(page.getByTestId("handover-document-preview-0-dialog")).toHaveCount(0);
@@ -92,13 +96,15 @@ test.describe("NIH-144 — Project handover", () => {
     await page.getByTestId("handover-form-title").fill(updatedTitle);
     // Set up response waiter before clicking to avoid race conditions in CI
     const updateResponsePromise = page.waitForResponse(
-      (response) => new URL(response.url()).pathname === `/api/handover-records/${handoverId}`
-        && response.request().method() === "PUT",
+      (response) =>
+        new URL(response.url()).pathname === `/api/handover-records/${handoverId}` &&
+        response.request().method() === "PUT",
       { timeout: 15_000 },
     );
     const refreshedDetailPromise = page.waitForResponse(
-      (response) => new URL(response.url()).pathname === `/api/handover-records/${handoverId}`
-        && response.request().method() === "GET",
+      (response) =>
+        new URL(response.url()).pathname === `/api/handover-records/${handoverId}` &&
+        response.request().method() === "GET",
       { timeout: 15_000 },
     );
     await page.getByTestId("handover-form-save").click();
@@ -112,8 +118,9 @@ test.describe("NIH-144 — Project handover", () => {
     await expect(detail.getByText(updatedTitle, { exact: true })).toBeVisible();
     await page.getByTestId("handover-detail-delete").click();
     const deleteResponsePromise = page.waitForResponse(
-      (response) => new URL(response.url()).pathname === `/api/handover-records/${handoverId}`
-        && response.request().method() === "DELETE",
+      (response) =>
+        new URL(response.url()).pathname === `/api/handover-records/${handoverId}` &&
+        response.request().method() === "DELETE",
       { timeout: 15_000 },
     );
     await page.getByTestId("handover-delete-confirm").click();

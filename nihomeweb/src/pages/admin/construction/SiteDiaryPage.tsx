@@ -53,7 +53,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import {
   adminApi,
   type CreateSiteDiaryRequest,
@@ -79,12 +85,20 @@ const todayIso = () => new Date().toISOString().slice(0, 10);
 
 const formatDate = (iso?: string | null, lang: string = "vi"): string => {
   if (!iso) return "—";
-  try { return new Date(iso).toLocaleDateString(lang); } catch { return iso; }
+  try {
+    return new Date(iso).toLocaleDateString(lang);
+  } catch {
+    return iso;
+  }
 };
 
 const formatDateTime = (iso?: string | null, lang: string = "vi"): string => {
   if (!iso) return "—";
-  try { return new Date(iso).toLocaleString(lang); } catch { return iso; }
+  try {
+    return new Date(iso).toLocaleString(lang);
+  } catch {
+    return iso;
+  }
 };
 
 interface DiaryForm {
@@ -174,7 +188,10 @@ const AdminSiteDiary = () => {
   const [detailSaving, setDetailSaving] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
 
-  const [confirmAction, setConfirmAction] = useState<{ kind: ConfirmKind; row: SiteDiaryResponse | null }>({
+  const [confirmAction, setConfirmAction] = useState<{
+    kind: ConfirmKind;
+    row: SiteDiaryResponse | null;
+  }>({
     kind: null,
     row: null,
   });
@@ -201,7 +218,9 @@ const AdminSiteDiary = () => {
         // non-fatal
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const fetchList = useCallback(async () => {
@@ -222,18 +241,26 @@ const AdminSiteDiary = () => {
       const visible = new Set((data.items ?? []).map((r) => r.id));
       setSelected((prev) => {
         const next = new Set<number>();
-        prev.forEach((id) => { if (visible.has(id)) next.add(id); });
+        prev.forEach((id) => {
+          if (visible.has(id)) next.add(id);
+        });
         return next;
       });
     } catch (err) {
       setError(extractApiError(err));
-      toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
+      toast({
+        title: t("common.error"),
+        description: extractApiError(err),
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
   }, [page, pageSize, projectId, status, weatherCode, dateFrom, dateTo, search, t, toast]);
 
-  useEffect(() => { void fetchList(); }, [fetchList]);
+  useEffect(() => {
+    void fetchList();
+  }, [fetchList]);
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const statusPill = (s: SiteDiaryStatus) => statusCounts[s] ?? 0;
@@ -258,7 +285,12 @@ const AdminSiteDiary = () => {
   );
 
   const hasActiveFilter =
-    projectId != null || status !== "" || weatherCode !== "" || dateFrom !== "" || dateTo !== "" || search.trim() !== "";
+    projectId != null ||
+    status !== "" ||
+    weatherCode !== "" ||
+    dateFrom !== "" ||
+    dateTo !== "" ||
+    search.trim() !== "";
 
   const resetFilters = () => {
     setProjectId(null);
@@ -279,9 +311,18 @@ const AdminSiteDiary = () => {
   };
   const submitCreate = async () => {
     setCreateError(null);
-    if (createProjectId == null) { setCreateError(t("siteDiary.form.projectRequired")); return; }
-    if (!createForm.weatherCode) { setCreateError(t("siteDiary.form.weatherRequired")); return; }
-    if (!createForm.workPerformed.trim()) { setCreateError(t("siteDiary.form.workRequired")); return; }
+    if (createProjectId == null) {
+      setCreateError(t("siteDiary.form.projectRequired"));
+      return;
+    }
+    if (!createForm.weatherCode) {
+      setCreateError(t("siteDiary.form.weatherRequired"));
+      return;
+    }
+    if (!createForm.workPerformed.trim()) {
+      setCreateError(t("siteDiary.form.workRequired"));
+      return;
+    }
     setSaving(true);
     try {
       const body: CreateSiteDiaryRequest = {
@@ -333,8 +374,14 @@ const AdminSiteDiary = () => {
   const submitDetail = async () => {
     if (!detail || !detailForm) return;
     setDetailError(null);
-    if (!detailForm.weatherCode) { setDetailError(t("siteDiary.form.weatherRequired")); return; }
-    if (!detailForm.workPerformed.trim()) { setDetailError(t("siteDiary.form.workRequired")); return; }
+    if (!detailForm.weatherCode) {
+      setDetailError(t("siteDiary.form.weatherRequired"));
+      return;
+    }
+    if (!detailForm.workPerformed.trim()) {
+      setDetailError(t("siteDiary.form.workRequired"));
+      return;
+    }
     setDetailSaving(true);
     try {
       const body: UpdateSiteDiaryRequest = {
@@ -390,7 +437,11 @@ const AdminSiteDiary = () => {
       setConfirmAction({ kind: null, row: null });
       await fetchList();
     } catch (err) {
-      toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
+      toast({
+        title: t("common.error"),
+        description: extractApiError(err),
+        variant: "destructive",
+      });
     } finally {
       setActionBusy(false);
     }
@@ -400,7 +451,8 @@ const AdminSiteDiary = () => {
   const toggleSelect = (id: number, checked: boolean) => {
     setSelected((prev) => {
       const next = new Set(prev);
-      if (checked) next.add(id); else next.delete(id);
+      if (checked) next.add(id);
+      else next.delete(id);
       return next;
     });
   };
@@ -420,7 +472,10 @@ const AdminSiteDiary = () => {
       });
       if (data.failures.length > 0) {
         const MAX_SHOWN = 3;
-        const shown = data.failures.slice(0, MAX_SHOWN).map((f) => `#${f.id}: ${f.message}`).join(" · ");
+        const shown = data.failures
+          .slice(0, MAX_SHOWN)
+          .map((f) => `#${f.id}: ${f.message}`)
+          .join(" · ");
         const rest = data.failures.length - MAX_SHOWN;
         toast({
           title: t("common.warning"),
@@ -432,7 +487,11 @@ const AdminSiteDiary = () => {
       setSelected(new Set());
       await fetchList();
     } catch (err) {
-      toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
+      toast({
+        title: t("common.error"),
+        description: extractApiError(err),
+        variant: "destructive",
+      });
     } finally {
       setBulkDeleting(false);
     }
@@ -450,20 +509,30 @@ const AdminSiteDiary = () => {
     if (!kind || !row) return "";
     const date = formatDate(row.diaryDate, lang);
     switch (kind) {
-      case "submit": return t("siteDiary.confirmSubmit").replace("{date}", date);
-      case "confirm": return t("siteDiary.confirmConfirm").replace("{date}", date);
-      case "reopen": return t("siteDiary.confirmReopen").replace("{date}", date);
-      case "delete": return t("siteDiary.confirmDelete").replace("{date}", date);
-      default: return "";
+      case "submit":
+        return t("siteDiary.confirmSubmit").replace("{date}", date);
+      case "confirm":
+        return t("siteDiary.confirmConfirm").replace("{date}", date);
+      case "reopen":
+        return t("siteDiary.confirmReopen").replace("{date}", date);
+      case "delete":
+        return t("siteDiary.confirmDelete").replace("{date}", date);
+      default:
+        return "";
     }
   };
   const confirmTitle = () => {
     switch (confirmAction.kind) {
-      case "submit": return t("siteDiary.action.submit");
-      case "confirm": return t("siteDiary.action.confirm");
-      case "reopen": return t("siteDiary.action.reopen");
-      case "delete": return t("siteDiary.action.delete");
-      default: return "";
+      case "submit":
+        return t("siteDiary.action.submit");
+      case "confirm":
+        return t("siteDiary.action.confirm");
+      case "reopen":
+        return t("siteDiary.action.reopen");
+      case "delete":
+        return t("siteDiary.action.delete");
+      default:
+        return "";
     }
   };
 
@@ -492,10 +561,30 @@ const AdminSiteDiary = () => {
 
         {/* stats */}
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-          <StatTile icon={<ClipboardList className="h-6 w-6" />} label={t("siteDiary.stat.total")} value={total} gradient="from-indigo-500 to-violet-600" />
-          <StatTile icon={<CircleDot className="h-6 w-6" />} label={t("siteDiary.stat.draft")} value={statusPill("Draft")} gradient="from-slate-500 to-slate-700" />
-          <StatTile icon={<Send className="h-6 w-6" />} label={t("siteDiary.stat.submitted")} value={statusPill("Submitted")} gradient="from-sky-500 to-blue-600" />
-          <StatTile icon={<CheckCircle2 className="h-6 w-6" />} label={t("siteDiary.stat.confirmed")} value={statusPill("Confirmed")} gradient="from-emerald-500 to-teal-600" />
+          <StatTile
+            icon={<ClipboardList className="h-6 w-6" />}
+            label={t("siteDiary.stat.total")}
+            value={total}
+            gradient="from-indigo-500 to-violet-600"
+          />
+          <StatTile
+            icon={<CircleDot className="h-6 w-6" />}
+            label={t("siteDiary.stat.draft")}
+            value={statusPill("Draft")}
+            gradient="from-slate-500 to-slate-700"
+          />
+          <StatTile
+            icon={<Send className="h-6 w-6" />}
+            label={t("siteDiary.stat.submitted")}
+            value={statusPill("Submitted")}
+            gradient="from-sky-500 to-blue-600"
+          />
+          <StatTile
+            icon={<CheckCircle2 className="h-6 w-6" />}
+            label={t("siteDiary.stat.confirmed")}
+            value={statusPill("Confirmed")}
+            gradient="from-emerald-500 to-teal-600"
+          />
         </div>
 
         {/* filters */}
@@ -505,30 +594,53 @@ const AdminSiteDiary = () => {
               <Label className="text-xs text-slate-500">{t("siteDiary.field.project")}</Label>
               <SearchableSelect
                 value={projectId == null ? "" : String(projectId)}
-                onChange={(v) => { setProjectId(v ? Number(v) : null); setPage(1); }}
+                onChange={(v) => {
+                  setProjectId(v ? Number(v) : null);
+                  setPage(1);
+                }}
                 options={projectOptions}
                 placeholder={t("siteDiary.filter.allProjects")}
               />
             </div>
             <div>
               <Label className="text-xs text-slate-500">{t("siteDiary.field.status")}</Label>
-              <Select value={status || "__all__"} onValueChange={(v) => { setStatus(v === "__all__" ? "" : (v as SiteDiaryStatus)); setPage(1); }}>
-                <SelectTrigger><SelectValue placeholder={t("siteDiary.filter.allStatuses")} /></SelectTrigger>
+              <Select
+                value={status || "__all__"}
+                onValueChange={(v) => {
+                  setStatus(v === "__all__" ? "" : (v as SiteDiaryStatus));
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={t("siteDiary.filter.allStatuses")} />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__all__">{t("siteDiary.filter.allStatuses")}</SelectItem>
                   {DIARY_STATUSES.map((s) => (
-                    <SelectItem key={s} value={s}>{t(`siteDiary.status.${s}`)}</SelectItem>
+                    <SelectItem key={s} value={s}>
+                      {t(`siteDiary.status.${s}`)}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div>
               <Label className="text-xs text-slate-500">{t("siteDiary.field.weather")}</Label>
-              <Select value={weatherCode || "__all__"} onValueChange={(v) => { setWeatherCode(v === "__all__" ? "" : v); setPage(1); }}>
-                <SelectTrigger><SelectValue placeholder={t("siteDiary.filter.allWeather")} /></SelectTrigger>
+              <Select
+                value={weatherCode || "__all__"}
+                onValueChange={(v) => {
+                  setWeatherCode(v === "__all__" ? "" : v);
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={t("siteDiary.filter.allWeather")} />
+                </SelectTrigger>
                 <SelectContent>
                   {weatherSelectOptions.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                    <SelectItem key={o.value} value={o.value}>
+                      {o.label}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -540,7 +652,10 @@ const AdminSiteDiary = () => {
                 <Input
                   className="pl-8"
                   value={search}
-                  onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                  onChange={(e) => {
+                    setSearch(e.target.value);
+                    setPage(1);
+                  }}
                   placeholder={t("siteDiary.filter.search")}
                   data-testid="diary-search"
                 />
@@ -550,19 +665,41 @@ const AdminSiteDiary = () => {
           <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 [&>div]:min-w-0">
             <div>
               <Label className="text-xs text-slate-500">{t("siteDiary.filter.dateFrom")}</Label>
-              <Input type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setPage(1); }} />
+              <Input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => {
+                  setDateFrom(e.target.value);
+                  setPage(1);
+                }}
+              />
             </div>
             <div>
               <Label className="text-xs text-slate-500">{t("siteDiary.filter.dateTo")}</Label>
-              <Input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setPage(1); }} />
+              <Input
+                type="date"
+                value={dateTo}
+                onChange={(e) => {
+                  setDateTo(e.target.value);
+                  setPage(1);
+                }}
+              />
             </div>
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-3">
             {hasActiveFilter && (
-              <Button variant="ghost" size="sm" onClick={resetFilters}>{t("common.reset")}</Button>
+              <Button variant="ghost" size="sm" onClick={resetFilters}>
+                {t("common.reset")}
+              </Button>
             )}
             {canManage && selected.size > 0 && (
-              <Button variant="destructive" size="sm" onClick={() => setConfirmBulkDelete(true)} className="ml-auto" data-testid="diary-bulk-delete">
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setConfirmBulkDelete(true)}
+                className="ml-auto"
+                data-testid="diary-bulk-delete"
+              >
                 <Trash2 className="mr-2 h-4 w-4" />
                 {t("siteDiary.action.bulkDelete")} ({selected.size})
               </Button>
@@ -617,7 +754,9 @@ const AdminSiteDiary = () => {
                       {row.headcountTotal}
                     </span>
                   </div>
-                  <div className="mt-2 line-clamp-3 text-sm text-slate-700">{row.workPerformed}</div>
+                  <div className="mt-2 line-clamp-3 text-sm text-slate-700">
+                    {row.workPerformed}
+                  </div>
                   {row.incidents && (
                     <div className="mt-1 flex items-start gap-1 text-xs text-amber-700">
                       <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
@@ -625,18 +764,40 @@ const AdminSiteDiary = () => {
                     </div>
                   )}
                   <div className="mt-3 flex flex-wrap justify-end gap-1 border-t pt-2">
-                    <Button variant="ghost" size="sm" onClick={() => openDetail(row, "view")} data-testid={`diary-view-${row.id}`}>
-                      <Eye className="mr-1 h-4 w-4" />{t("common.view")}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => openDetail(row, "view")}
+                      data-testid={`diary-view-${row.id}`}
+                    >
+                      <Eye className="mr-1 h-4 w-4" />
+                      {t("common.view")}
                     </Button>
                     {canManage ? (
                       <>
-                        <span title={row.status !== "Draft" ? t("siteDiary.action.draftOnly") : undefined}>
-                          <Button variant="ghost" size="sm" disabled={row.status !== "Draft"} onClick={() => openDetail(row, "edit")}>
-                            <Pencil className="mr-1 h-4 w-4" />{t("common.edit")}
+                        <span
+                          title={
+                            row.status !== "Draft" ? t("siteDiary.action.draftOnly") : undefined
+                          }
+                        >
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={row.status !== "Draft"}
+                            onClick={() => openDetail(row, "edit")}
+                          >
+                            <Pencil className="mr-1 h-4 w-4" />
+                            {t("common.edit")}
                           </Button>
                         </span>
-                        <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => setConfirmAction({ kind: "delete", row })}>
-                          <Trash2 className="mr-1 h-4 w-4" />{t("common.delete")}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => setConfirmAction({ kind: "delete", row })}
+                        >
+                          <Trash2 className="mr-1 h-4 w-4" />
+                          {t("common.delete")}
                         </Button>
                       </>
                     ) : null}
@@ -644,11 +805,29 @@ const AdminSiteDiary = () => {
                 </article>
               ))}
               <div className="flex items-center justify-between px-1 pt-1 text-xs text-slate-500">
-                <span>{t("common.showing")} {rows.length} / {total}</span>
+                <span>
+                  {t("common.showing")} {rows.length} / {total}
+                </span>
                 <div className="flex gap-1">
-                  <Button size="sm" variant="outline" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>←</Button>
-                  <span className="px-2 py-1">{page} / {totalPages}</span>
-                  <Button size="sm" variant="outline" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>→</Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={page <= 1}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  >
+                    ←
+                  </Button>
+                  <span className="px-2 py-1">
+                    {page} / {totalPages}
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={page >= totalPages}
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  >
+                    →
+                  </Button>
                 </div>
               </div>
             </div>
@@ -699,7 +878,9 @@ const AdminSiteDiary = () => {
                         </td>
                         <td className="px-3 py-2 text-xs text-slate-600">
                           <div className="font-mono">{row.designProjectCode}</div>
-                          <div className="truncate max-w-[220px] text-slate-500">{row.designProjectName}</div>
+                          <div className="truncate max-w-[220px] text-slate-500">
+                            {row.designProjectName}
+                          </div>
                         </td>
                         <td className="px-3 py-2 text-xs text-slate-700">
                           <div className="inline-flex items-center gap-1">
@@ -710,9 +891,13 @@ const AdminSiteDiary = () => {
                             <div className="text-[11px] text-slate-500">{row.weatherNote}</div>
                           )}
                         </td>
-                        <td className="px-3 py-2 text-sm tabular-nums text-slate-800">{row.headcountTotal}</td>
+                        <td className="px-3 py-2 text-sm tabular-nums text-slate-800">
+                          {row.headcountTotal}
+                        </td>
                         <td className="px-3 py-2">
-                          <div className="line-clamp-2 max-w-[420px] text-sm text-slate-700">{row.workPerformed}</div>
+                          <div className="line-clamp-2 max-w-[420px] text-sm text-slate-700">
+                            {row.workPerformed}
+                          </div>
                           {row.incidents && (
                             <div className="mt-0.5 flex items-start gap-1 text-[11px] text-amber-700">
                               <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
@@ -723,17 +908,47 @@ const AdminSiteDiary = () => {
                         <td className="px-3 py-2">{renderStatusBadge(row)}</td>
                         <td className="px-3 py-2">
                           <div className="flex justify-end gap-1">
-                            <Button variant="ghost" size="icon" title={t("common.view")} aria-label={t("common.view")} onClick={() => openDetail(row, "view")} data-testid={`diary-view-${row.id}`}>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title={t("common.view")}
+                              aria-label={t("common.view")}
+                              onClick={() => openDetail(row, "view")}
+                              data-testid={`diary-view-${row.id}`}
+                            >
                               <Eye className="h-4 w-4" />
                             </Button>
                             {canManage ? (
                               <>
-                                <span title={row.status !== "Draft" ? t("siteDiary.action.draftOnly") : undefined}>
-                                  <Button variant="ghost" size="icon" disabled={row.status !== "Draft"} aria-label={row.status === "Draft" ? t("common.edit") : t("siteDiary.action.draftOnly")} onClick={() => openDetail(row, "edit")}>
+                                <span
+                                  title={
+                                    row.status !== "Draft"
+                                      ? t("siteDiary.action.draftOnly")
+                                      : undefined
+                                  }
+                                >
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    disabled={row.status !== "Draft"}
+                                    aria-label={
+                                      row.status === "Draft"
+                                        ? t("common.edit")
+                                        : t("siteDiary.action.draftOnly")
+                                    }
+                                    onClick={() => openDetail(row, "edit")}
+                                  >
                                     <Pencil className="h-4 w-4" />
                                   </Button>
                                 </span>
-                                <Button variant="ghost" size="icon" title={t("common.delete")} aria-label={t("common.delete")} className="text-destructive hover:text-destructive" onClick={() => setConfirmAction({ kind: "delete", row })}>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  title={t("common.delete")}
+                                  aria-label={t("common.delete")}
+                                  className="text-destructive hover:text-destructive"
+                                  onClick={() => setConfirmAction({ kind: "delete", row })}
+                                >
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
                               </>
@@ -746,11 +961,29 @@ const AdminSiteDiary = () => {
                 </table>
               </div>
               <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50 px-3 py-2 text-xs text-slate-500">
-                <span>{t("common.showing")} {rows.length} / {total}</span>
+                <span>
+                  {t("common.showing")} {rows.length} / {total}
+                </span>
                 <div className="flex gap-1">
-                  <Button size="sm" variant="outline" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>←</Button>
-                  <span className="px-2 py-1">{page} / {totalPages}</span>
-                  <Button size="sm" variant="outline" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>→</Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={page <= 1}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  >
+                    ←
+                  </Button>
+                  <span className="px-2 py-1">
+                    {page} / {totalPages}
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={page >= totalPages}
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  >
+                    →
+                  </Button>
                 </div>
               </div>
             </div>
@@ -777,134 +1010,287 @@ const AdminSiteDiary = () => {
                 </div>
                 <div>
                   <Label>{t("siteDiary.field.date")}</Label>
-                  <Input type="date" value={createForm.diaryDate} onChange={(e) => setCreateForm((f) => ({ ...f, diaryDate: e.target.value }))} />
+                  <Input
+                    type="date"
+                    value={createForm.diaryDate}
+                    onChange={(e) => setCreateForm((f) => ({ ...f, diaryDate: e.target.value }))}
+                  />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label>{t("siteDiary.field.weather")}</Label>
-                  <Select value={createForm.weatherCode} onValueChange={(v) => setCreateForm((f) => ({ ...f, weatherCode: v }))}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                  <Select
+                    value={createForm.weatherCode}
+                    onValueChange={(v) => setCreateForm((f) => ({ ...f, weatherCode: v }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
                       {weatherOptions.map((o) => (
-                        <SelectItem key={o.code} value={o.code}>{o.name}</SelectItem>
+                        <SelectItem key={o.code} value={o.code}>
+                          {o.name}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
                   <Label>{t("siteDiary.field.weatherNote")}</Label>
-                  <Input value={createForm.weatherNote} onChange={(e) => setCreateForm((f) => ({ ...f, weatherNote: e.target.value }))} />
+                  <Input
+                    value={createForm.weatherNote}
+                    onChange={(e) => setCreateForm((f) => ({ ...f, weatherNote: e.target.value }))}
+                  />
                 </div>
               </div>
               <div className="grid grid-cols-4 gap-2">
-                <HeadcountField label={t("siteDiary.field.headcountLabor")} value={createForm.headcountLabor} onChange={(n) => setCreateForm((f) => ({ ...f, headcountLabor: n }))} />
-                <HeadcountField label={t("siteDiary.field.headcountEngineers")} value={createForm.headcountEngineers} onChange={(n) => setCreateForm((f) => ({ ...f, headcountEngineers: n }))} />
-                <HeadcountField label={t("siteDiary.field.headcountSupervisors")} value={createForm.headcountSupervisors} onChange={(n) => setCreateForm((f) => ({ ...f, headcountSupervisors: n }))} />
-                <HeadcountField label={t("siteDiary.field.headcountSubcontractors")} value={createForm.headcountSubcontractors} onChange={(n) => setCreateForm((f) => ({ ...f, headcountSubcontractors: n }))} />
+                <HeadcountField
+                  label={t("siteDiary.field.headcountLabor")}
+                  value={createForm.headcountLabor}
+                  onChange={(n) => setCreateForm((f) => ({ ...f, headcountLabor: n }))}
+                />
+                <HeadcountField
+                  label={t("siteDiary.field.headcountEngineers")}
+                  value={createForm.headcountEngineers}
+                  onChange={(n) => setCreateForm((f) => ({ ...f, headcountEngineers: n }))}
+                />
+                <HeadcountField
+                  label={t("siteDiary.field.headcountSupervisors")}
+                  value={createForm.headcountSupervisors}
+                  onChange={(n) => setCreateForm((f) => ({ ...f, headcountSupervisors: n }))}
+                />
+                <HeadcountField
+                  label={t("siteDiary.field.headcountSubcontractors")}
+                  value={createForm.headcountSubcontractors}
+                  onChange={(n) => setCreateForm((f) => ({ ...f, headcountSubcontractors: n }))}
+                />
               </div>
               <div>
                 <Label>{t("siteDiary.field.workPerformed")}</Label>
-                <Textarea rows={3} value={createForm.workPerformed} onChange={(e) => setCreateForm((f) => ({ ...f, workPerformed: e.target.value }))} data-testid="diary-new-work" />
+                <Textarea
+                  rows={3}
+                  value={createForm.workPerformed}
+                  onChange={(e) => setCreateForm((f) => ({ ...f, workPerformed: e.target.value }))}
+                  data-testid="diary-new-work"
+                />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label>{t("siteDiary.field.machines")}</Label>
-                  <Textarea rows={2} value={createForm.machinesSummary} onChange={(e) => setCreateForm((f) => ({ ...f, machinesSummary: e.target.value }))} />
+                  <Textarea
+                    rows={2}
+                    value={createForm.machinesSummary}
+                    onChange={(e) =>
+                      setCreateForm((f) => ({ ...f, machinesSummary: e.target.value }))
+                    }
+                  />
                 </div>
                 <div>
                   <Label>{t("siteDiary.field.materials")}</Label>
-                  <Textarea rows={2} value={createForm.materialsReceived} onChange={(e) => setCreateForm((f) => ({ ...f, materialsReceived: e.target.value }))} />
+                  <Textarea
+                    rows={2}
+                    value={createForm.materialsReceived}
+                    onChange={(e) =>
+                      setCreateForm((f) => ({ ...f, materialsReceived: e.target.value }))
+                    }
+                  />
                 </div>
               </div>
               <div>
                 <Label>{t("siteDiary.field.incidents")}</Label>
-                <Textarea rows={2} value={createForm.incidents} onChange={(e) => setCreateForm((f) => ({ ...f, incidents: e.target.value }))} />
+                <Textarea
+                  rows={2}
+                  value={createForm.incidents}
+                  onChange={(e) => setCreateForm((f) => ({ ...f, incidents: e.target.value }))}
+                />
               </div>
               <div>
                 <Label>{t("siteDiary.field.note")}</Label>
-                <Textarea rows={2} value={createForm.note} onChange={(e) => setCreateForm((f) => ({ ...f, note: e.target.value }))} />
+                <Textarea
+                  rows={2}
+                  value={createForm.note}
+                  onChange={(e) => setCreateForm((f) => ({ ...f, note: e.target.value }))}
+                />
               </div>
               {createError && <div className="text-sm text-rose-600">{createError}</div>}
             </div>
             <DialogFooter>
-              <Button variant="ghost" onClick={() => setCreating(false)} disabled={saving}>{t("common.cancel")}</Button>
-              <Button onClick={submitCreate} disabled={saving} data-testid="diary-new-save">{saving ? t("common.saving") : t("common.save")}</Button>
+              <Button variant="ghost" onClick={() => setCreating(false)} disabled={saving}>
+                {t("common.cancel")}
+              </Button>
+              <Button onClick={submitCreate} disabled={saving} data-testid="diary-new-save">
+                {saving ? t("common.saving") : t("common.save")}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
 
         {/* detail sheet */}
-        <Sheet open={detail !== null} onOpenChange={(open) => { if (!open) closeDetail(); }}>
+        <Sheet
+          open={detail !== null}
+          onOpenChange={(open) => {
+            if (!open) closeDetail();
+          }}
+        >
           <SheetContent side="right" className="w-full max-w-2xl overflow-y-auto sm:max-w-2xl">
             {detail && detailForm && (
               <>
                 <SheetHeader>
-                  <SheetTitle>{t(detailMode === "edit" ? "siteDiary.edit" : "siteDiary.view")} · {formatDate(detail.diaryDate, lang)} — {detail.designProjectCode}</SheetTitle>
-                  <SheetDescription className="text-xs text-slate-500">{detail.designProjectName}</SheetDescription>
+                  <SheetTitle>
+                    {t(detailMode === "edit" ? "siteDiary.edit" : "siteDiary.view")} ·{" "}
+                    {formatDate(detail.diaryDate, lang)} — {detail.designProjectCode}
+                  </SheetTitle>
+                  <SheetDescription className="text-xs text-slate-500">
+                    {detail.designProjectName}
+                  </SheetDescription>
                 </SheetHeader>
                 <div className="mt-4 space-y-4">
-                  <div className="flex flex-wrap items-center gap-2">{renderStatusBadge(detail)}</div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {renderStatusBadge(detail)}
+                  </div>
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <Label>{t("siteDiary.field.date")}</Label>
-                      <Input type="date" value={detailForm.diaryDate} onChange={(e) => setDetailForm((f) => f && { ...f, diaryDate: e.target.value })} disabled={!canEditDetail} />
+                      <Input
+                        type="date"
+                        value={detailForm.diaryDate}
+                        onChange={(e) =>
+                          setDetailForm((f) => f && { ...f, diaryDate: e.target.value })
+                        }
+                        disabled={!canEditDetail}
+                      />
                     </div>
                     <div>
                       <Label>{t("siteDiary.field.weather")}</Label>
-                      <Select value={detailForm.weatherCode} onValueChange={(v) => setDetailForm((f) => f && { ...f, weatherCode: v })} disabled={!canEditDetail}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
+                      <Select
+                        value={detailForm.weatherCode}
+                        onValueChange={(v) => setDetailForm((f) => f && { ...f, weatherCode: v })}
+                        disabled={!canEditDetail}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
                         <SelectContent>
-                          {weatherOptions.map((o) => (<SelectItem key={o.code} value={o.code}>{o.name}</SelectItem>))}
+                          {weatherOptions.map((o) => (
+                            <SelectItem key={o.code} value={o.code}>
+                              {o.name}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
                   </div>
                   <div>
                     <Label>{t("siteDiary.field.weatherNote")}</Label>
-                    <Input value={detailForm.weatherNote} onChange={(e) => setDetailForm((f) => f && { ...f, weatherNote: e.target.value })} disabled={!canEditDetail} />
+                    <Input
+                      value={detailForm.weatherNote}
+                      onChange={(e) =>
+                        setDetailForm((f) => f && { ...f, weatherNote: e.target.value })
+                      }
+                      disabled={!canEditDetail}
+                    />
                   </div>
                   <div className="grid grid-cols-4 gap-2">
-                    <HeadcountField label={t("siteDiary.field.headcountLabor")} value={detailForm.headcountLabor} onChange={(n) => setDetailForm((f) => f && { ...f, headcountLabor: n })} disabled={!canEditDetail} />
-                    <HeadcountField label={t("siteDiary.field.headcountEngineers")} value={detailForm.headcountEngineers} onChange={(n) => setDetailForm((f) => f && { ...f, headcountEngineers: n })} disabled={!canEditDetail} />
-                    <HeadcountField label={t("siteDiary.field.headcountSupervisors")} value={detailForm.headcountSupervisors} onChange={(n) => setDetailForm((f) => f && { ...f, headcountSupervisors: n })} disabled={!canEditDetail} />
-                    <HeadcountField label={t("siteDiary.field.headcountSubcontractors")} value={detailForm.headcountSubcontractors} onChange={(n) => setDetailForm((f) => f && { ...f, headcountSubcontractors: n })} disabled={!canEditDetail} />
+                    <HeadcountField
+                      label={t("siteDiary.field.headcountLabor")}
+                      value={detailForm.headcountLabor}
+                      onChange={(n) => setDetailForm((f) => f && { ...f, headcountLabor: n })}
+                      disabled={!canEditDetail}
+                    />
+                    <HeadcountField
+                      label={t("siteDiary.field.headcountEngineers")}
+                      value={detailForm.headcountEngineers}
+                      onChange={(n) => setDetailForm((f) => f && { ...f, headcountEngineers: n })}
+                      disabled={!canEditDetail}
+                    />
+                    <HeadcountField
+                      label={t("siteDiary.field.headcountSupervisors")}
+                      value={detailForm.headcountSupervisors}
+                      onChange={(n) => setDetailForm((f) => f && { ...f, headcountSupervisors: n })}
+                      disabled={!canEditDetail}
+                    />
+                    <HeadcountField
+                      label={t("siteDiary.field.headcountSubcontractors")}
+                      value={detailForm.headcountSubcontractors}
+                      onChange={(n) =>
+                        setDetailForm((f) => f && { ...f, headcountSubcontractors: n })
+                      }
+                      disabled={!canEditDetail}
+                    />
                   </div>
                   <div>
                     <Label>{t("siteDiary.field.workPerformed")}</Label>
-                    <Textarea rows={4} value={detailForm.workPerformed} onChange={(e) => setDetailForm((f) => f && { ...f, workPerformed: e.target.value })} disabled={!canEditDetail} />
+                    <Textarea
+                      rows={4}
+                      value={detailForm.workPerformed}
+                      onChange={(e) =>
+                        setDetailForm((f) => f && { ...f, workPerformed: e.target.value })
+                      }
+                      disabled={!canEditDetail}
+                    />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <Label>{t("siteDiary.field.machines")}</Label>
-                      <Textarea rows={2} value={detailForm.machinesSummary} onChange={(e) => setDetailForm((f) => f && { ...f, machinesSummary: e.target.value })} disabled={!canEditDetail} />
+                      <Textarea
+                        rows={2}
+                        value={detailForm.machinesSummary}
+                        onChange={(e) =>
+                          setDetailForm((f) => f && { ...f, machinesSummary: e.target.value })
+                        }
+                        disabled={!canEditDetail}
+                      />
                     </div>
                     <div>
                       <Label>{t("siteDiary.field.materials")}</Label>
-                      <Textarea rows={2} value={detailForm.materialsReceived} onChange={(e) => setDetailForm((f) => f && { ...f, materialsReceived: e.target.value })} disabled={!canEditDetail} />
+                      <Textarea
+                        rows={2}
+                        value={detailForm.materialsReceived}
+                        onChange={(e) =>
+                          setDetailForm((f) => f && { ...f, materialsReceived: e.target.value })
+                        }
+                        disabled={!canEditDetail}
+                      />
                     </div>
                   </div>
                   <div>
                     <Label>{t("siteDiary.field.incidents")}</Label>
-                    <Textarea rows={2} value={detailForm.incidents} onChange={(e) => setDetailForm((f) => f && { ...f, incidents: e.target.value })} disabled={!canEditDetail} />
+                    <Textarea
+                      rows={2}
+                      value={detailForm.incidents}
+                      onChange={(e) =>
+                        setDetailForm((f) => f && { ...f, incidents: e.target.value })
+                      }
+                      disabled={!canEditDetail}
+                    />
                   </div>
                   <div>
                     <Label>{t("siteDiary.field.note")}</Label>
-                    <Textarea rows={2} value={detailForm.note} onChange={(e) => setDetailForm((f) => f && { ...f, note: e.target.value })} disabled={!canEditDetail} />
+                    <Textarea
+                      rows={2}
+                      value={detailForm.note}
+                      onChange={(e) => setDetailForm((f) => f && { ...f, note: e.target.value })}
+                      disabled={!canEditDetail}
+                    />
                   </div>
 
                   {detail.status !== "Draft" && (
                     <div className="rounded-md border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
-                      <p className="mb-2 font-medium text-slate-700">{t("siteDiary.action.draftOnly")}</p>
+                      <p className="mb-2 font-medium text-slate-700">
+                        {t("siteDiary.action.draftOnly")}
+                      </p>
                       {detail.submittedByName && (
                         <div>
-                          <span className="font-semibold">{t("siteDiary.field.submittedBy")}:</span> {detail.submittedByName} · {formatDateTime(detail.submittedAt, lang)}
+                          <span className="font-semibold">{t("siteDiary.field.submittedBy")}:</span>{" "}
+                          {detail.submittedByName} · {formatDateTime(detail.submittedAt, lang)}
                         </div>
                       )}
                       {detail.confirmedByName && (
                         <div className="mt-1">
-                          <span className="font-semibold">{t("siteDiary.field.confirmedBy")}:</span> {detail.confirmedByName} · {formatDateTime(detail.confirmedAt, lang)}
+                          <span className="font-semibold">{t("siteDiary.field.confirmedBy")}:</span>{" "}
+                          {detail.confirmedByName} · {formatDateTime(detail.confirmedAt, lang)}
                         </div>
                       )}
                     </div>
@@ -915,40 +1301,75 @@ const AdminSiteDiary = () => {
                   <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
                     <div className="flex flex-wrap gap-2">
                       {canManage ? (
-                        <Button variant="destructive" size="sm" onClick={() => setConfirmAction({ kind: "delete", row: detail })} data-testid="diary-detail-delete">
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => setConfirmAction({ kind: "delete", row: detail })}
+                          data-testid="diary-detail-delete"
+                        >
                           <Trash2 className="mr-2 h-4 w-4" />
                           {t("siteDiary.action.delete")}
                         </Button>
                       ) : null}
                       {canManage && detail.status === "Draft" && (
-                        <Button variant="outline" size="sm" onClick={() => setConfirmAction({ kind: "submit", row: detail })} data-testid="diary-submit">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setConfirmAction({ kind: "submit", row: detail })}
+                          data-testid="diary-submit"
+                        >
                           <Send className="mr-2 h-4 w-4" />
                           {t("siteDiary.action.submit")}
                         </Button>
                       )}
                       {canConfirm && detail.status === "Submitted" && (
-                        <Button variant="outline" size="sm" onClick={() => setConfirmAction({ kind: "confirm", row: detail })} data-testid="diary-confirm">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setConfirmAction({ kind: "confirm", row: detail })}
+                          data-testid="diary-confirm"
+                        >
                           <CheckCircle2 className="mr-2 h-4 w-4" />
                           {t("siteDiary.action.confirm")}
                         </Button>
                       )}
                       {canConfirm && detail.status !== "Draft" && (
-                        <Button variant="outline" size="sm" onClick={() => setConfirmAction({ kind: "reopen", row: detail })} data-testid="diary-reopen">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setConfirmAction({ kind: "reopen", row: detail })}
+                          data-testid="diary-reopen"
+                        >
                           {t("siteDiary.action.reopen")}
                         </Button>
                       )}
                     </div>
                     <div className="flex gap-2">
-                      <Button variant="ghost" onClick={closeDetail} disabled={detailSaving}>{t("common.close")}</Button>
+                      <Button variant="ghost" onClick={closeDetail} disabled={detailSaving}>
+                        {t("common.close")}
+                      </Button>
                       {canManage && detailMode === "view" ? (
-                        <span title={detail.status !== "Draft" ? t("siteDiary.action.draftOnly") : undefined}>
-                          <Button variant="outline" disabled={detail.status !== "Draft"} onClick={() => setDetailMode("edit")}>
-                            <Pencil className="mr-1 h-4 w-4" />{t("common.edit")}
+                        <span
+                          title={
+                            detail.status !== "Draft" ? t("siteDiary.action.draftOnly") : undefined
+                          }
+                        >
+                          <Button
+                            variant="outline"
+                            disabled={detail.status !== "Draft"}
+                            onClick={() => setDetailMode("edit")}
+                          >
+                            <Pencil className="mr-1 h-4 w-4" />
+                            {t("common.edit")}
                           </Button>
                         </span>
                       ) : null}
                       {canEditDetail && (
-                        <Button onClick={submitDetail} disabled={detailSaving} data-testid="diary-detail-save">
+                        <Button
+                          onClick={submitDetail}
+                          disabled={detailSaving}
+                          data-testid="diary-detail-save"
+                        >
                           {detailSaving ? t("common.saving") : t("common.save")}
                         </Button>
                       )}
@@ -961,7 +1382,10 @@ const AdminSiteDiary = () => {
         </Sheet>
 
         {/* single-action confirm */}
-        <AlertDialog open={confirmAction.kind !== null} onOpenChange={(v) => !v && setConfirmAction({ kind: null, row: null })}>
+        <AlertDialog
+          open={confirmAction.kind !== null}
+          onOpenChange={(v) => !v && setConfirmAction({ kind: null, row: null })}
+        >
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>{confirmTitle()}</AlertDialogTitle>
@@ -973,9 +1397,15 @@ const AdminSiteDiary = () => {
                 onClick={runAction}
                 disabled={actionBusy}
                 data-testid="diary-action-confirm"
-                className={confirmAction.kind === "delete" ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : undefined}
+                className={
+                  confirmAction.kind === "delete"
+                    ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    : undefined
+                }
               >
-                {actionBusy ? t("common.saving") : t(confirmAction.kind === "delete" ? "common.delete" : "common.confirm")}
+                {actionBusy
+                  ? t("common.saving")
+                  : t(confirmAction.kind === "delete" ? "common.delete" : "common.confirm")}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -1018,7 +1448,12 @@ interface StatTileProps {
 }
 
 const StatTile = ({ icon, label, value, gradient }: StatTileProps) => (
-  <div className={cn("relative overflow-hidden rounded-xl bg-gradient-to-br p-4 text-white shadow-sm", gradient)}>
+  <div
+    className={cn(
+      "relative overflow-hidden rounded-xl bg-gradient-to-br p-4 text-white shadow-sm",
+      gradient,
+    )}
+  >
     <div className="relative z-10 flex items-start justify-between gap-2">
       <div className="min-w-0">
         <div className="text-sm font-medium text-white/85">{label}</div>
@@ -1028,7 +1463,10 @@ const StatTile = ({ icon, label, value, gradient }: StatTileProps) => (
         {icon}
       </div>
     </div>
-    <div aria-hidden className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10" />
+    <div
+      aria-hidden
+      className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10"
+    />
   </div>
 );
 

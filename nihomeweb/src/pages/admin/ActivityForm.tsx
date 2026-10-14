@@ -77,7 +77,12 @@ const ActivityForm = ({ mode }: { mode: "create" | "edit" }) => {
   const navigate = useNavigate();
   const { t, lang } = useI18n();
   const { toast } = useToast();
-  const { data: existing, loading, error, refetch } = useActivity(mode === "edit" ? (slug ?? "") : "");
+  const {
+    data: existing,
+    loading,
+    error,
+    refetch,
+  } = useActivity(mode === "edit" ? (slug ?? "") : "");
   const { data: categories } = useActivityCategories(true);
   const [data, setData] = useState<FormData>(empty);
   const [initialized, setInitialized] = useState(false);
@@ -129,7 +134,11 @@ const ActivityForm = ({ mode }: { mode: "create" | "edit" }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!data.title.trim()) {
-      toast({ title: t("form.required"), description: t("activities.field.title"), variant: "destructive" });
+      toast({
+        title: t("form.required"),
+        description: t("activities.field.title"),
+        variant: "destructive",
+      });
       return;
     }
     let imageUrl = data.imageUrl || "/placeholder.svg";
@@ -148,16 +157,16 @@ const ActivityForm = ({ mode }: { mode: "create" | "edit" }) => {
       }
 
       const payload: UpsertActivityRequest = {
-      slug: data.slug || slugify(data.title),
-      date: toApiDate(data.date),
-      imageUrl,
-      gallery: data.gallery.length ? data.gallery : undefined,
-      category: data.category,
-      categoryId: data.categoryId,
-      author: data.author || undefined,
-      title: data.title,
-      excerpt: data.excerpt,
-      content: data.content,
+        slug: data.slug || slugify(data.title),
+        date: toApiDate(data.date),
+        imageUrl,
+        gallery: data.gallery.length ? data.gallery : undefined,
+        category: data.category,
+        categoryId: data.categoryId,
+        author: data.author || undefined,
+        title: data.title,
+        excerpt: data.excerpt,
+        content: data.content,
       };
 
       if (mode === "create") {
@@ -165,7 +174,10 @@ const ActivityForm = ({ mode }: { mode: "create" | "edit" }) => {
       } else {
         await adminApi.updateActivity(data.id, payload);
       }
-      toast({ title: mode === "create" ? t("form.created") : t("form.updated"), description: data.title });
+      toast({
+        title: mode === "create" ? t("form.created") : t("form.updated"),
+        description: data.title,
+      });
       navigate("/admin/activities");
     } catch {
       toast({ title: t("common.error"), variant: "destructive" });
@@ -175,8 +187,18 @@ const ActivityForm = ({ mode }: { mode: "create" | "edit" }) => {
     }
   };
 
-  if (mode === "edit" && loading) return <AdminLayout><PageLoading /></AdminLayout>;
-  if (mode === "edit" && error) return <AdminLayout><PageError message={error} onRetry={refetch} /></AdminLayout>;
+  if (mode === "edit" && loading)
+    return (
+      <AdminLayout>
+        <PageLoading />
+      </AdminLayout>
+    );
+  if (mode === "edit" && error)
+    return (
+      <AdminLayout>
+        <PageError message={error} onRetry={refetch} />
+      </AdminLayout>
+    );
 
   return (
     <AdminLayout>
@@ -201,10 +223,18 @@ const ActivityForm = ({ mode }: { mode: "create" | "edit" }) => {
               <h2 className="mb-4 text-base font-semibold">{t("form.basicInfo")}</h2>
               <div className="space-y-4">
                 <Field label={t("activities.field.title") + " *"}>
-                  <Input value={data.title} onChange={(e) => update("title", e.target.value)} required />
+                  <Input
+                    value={data.title}
+                    onChange={(e) => update("title", e.target.value)}
+                    required
+                  />
                 </Field>
                 <Field label={t("activities.field.excerpt")}>
-                  <Textarea className="min-h-20" value={data.excerpt} onChange={(e) => update("excerpt", e.target.value)} />
+                  <Textarea
+                    className="min-h-20"
+                    value={data.excerpt}
+                    onChange={(e) => update("excerpt", e.target.value)}
+                  />
                 </Field>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                   <Field label={t("activities.field.category")}>
@@ -212,7 +242,11 @@ const ActivityForm = ({ mode }: { mode: "create" | "edit" }) => {
                       value={data.categoryId != null ? String(data.categoryId) : undefined}
                       onValueChange={(v) => {
                         const found = categoryOptions.find((opt) => String(opt.id) === v);
-                        setData((d) => ({ ...d, categoryId: found?.id ?? null, category: found?.name ?? "" }));
+                        setData((d) => ({
+                          ...d,
+                          categoryId: found?.id ?? null,
+                          category: found?.name ?? "",
+                        }));
                       }}
                     >
                       <SelectTrigger>
@@ -220,16 +254,25 @@ const ActivityForm = ({ mode }: { mode: "create" | "edit" }) => {
                       </SelectTrigger>
                       <SelectContent>
                         {categoryOptions.map((opt) => (
-                          <SelectItem key={opt.id} value={String(opt.id)}>{opt.label}</SelectItem>
+                          <SelectItem key={opt.id} value={String(opt.id)}>
+                            {opt.label}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </Field>
                   <Field label={t("activities.field.author")}>
-                    <Input value={data.author ?? ""} onChange={(e) => update("author", e.target.value)} />
+                    <Input
+                      value={data.author ?? ""}
+                      onChange={(e) => update("author", e.target.value)}
+                    />
                   </Field>
                   <Field label={t("activities.field.date")}>
-                    <Input type="date" value={data.date} onChange={(e) => update("date", e.target.value)} />
+                    <Input
+                      type="date"
+                      value={data.date}
+                      onChange={(e) => update("date", e.target.value)}
+                    />
                   </Field>
                 </div>
               </div>
@@ -238,7 +281,11 @@ const ActivityForm = ({ mode }: { mode: "create" | "edit" }) => {
             <div className="rounded-lg border bg-card p-6">
               <h2 className="mb-4 text-base font-semibold">{t("form.content")}</h2>
               <Field label={t("activities.field.content")}>
-                <ContentBlockEditor value={data.content} onChange={(items) => update("content", items)} folder={`activities/${data.slug || slugify(data.title)}`} />
+                <ContentBlockEditor
+                  value={data.content}
+                  onChange={(items) => update("content", items)}
+                  folder={`activities/${data.slug || slugify(data.title)}`}
+                />
               </Field>
             </div>
           </div>
@@ -264,10 +311,12 @@ const ActivityForm = ({ mode }: { mode: "create" | "edit" }) => {
 
             <div className="rounded-lg border bg-card p-6">
               <h2 className="mb-1 text-base font-semibold">{t("media.gallery.title")}</h2>
-              <p className="mb-4 text-xs text-muted-foreground">
-                {t("media.gallery.descPost")}
-              </p>
-              <GalleryEditor items={data.gallery} onChange={(items) => update("gallery", items)} folder={`activities/${data.slug || slugify(data.title)}`} />
+              <p className="mb-4 text-xs text-muted-foreground">{t("media.gallery.descPost")}</p>
+              <GalleryEditor
+                items={data.gallery}
+                onChange={(items) => update("gallery", items)}
+                folder={`activities/${data.slug || slugify(data.title)}`}
+              />
             </div>
 
             <Button type="submit" disabled={submitting || uploadingImage} className="w-full">

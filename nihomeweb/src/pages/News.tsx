@@ -25,11 +25,7 @@ const News = () => {
   const sourceCategoryIds = useMemo(
     () =>
       Array.from(
-        new Set(
-          (news ?? [])
-            .map((n) => n.newsCategoryId)
-            .filter((id): id is number => id != null),
-        ),
+        new Set((news ?? []).map((n) => n.newsCategoryId).filter((id): id is number => id != null)),
       ),
     [news],
   );
@@ -63,7 +59,7 @@ const News = () => {
                 "btn-pill px-5 py-2.5 text-xs uppercase tracking-wider border transition-all",
                 isAll
                   ? "btn-gradient text-white border-transparent"
-                  : "bg-secondary border-border text-foreground/70 hover:text-foreground"
+                  : "bg-secondary border-border text-foreground/70 hover:text-foreground",
               )}
             >
               {ALL}
@@ -76,7 +72,7 @@ const News = () => {
                   "btn-pill px-5 py-2.5 text-xs uppercase tracking-wider border transition-all",
                   !isAll && catId === id
                     ? "btn-gradient text-white border-transparent"
-                    : "bg-secondary border-border text-foreground/70 hover:text-foreground"
+                    : "bg-secondary border-border text-foreground/70 hover:text-foreground",
                 )}
               >
                 {resolveCategoryLabel(id, undefined, categoriesById, lang)}
@@ -111,11 +107,23 @@ const News = () => {
                   className="group grid grid-cols-1 lg:grid-cols-2 gap-8 mb-16 card-hover bg-card border border-border rounded-3xl overflow-hidden"
                 >
                   <div className="image-zoom aspect-[4/3] lg:aspect-auto bg-muted">
-                    <img src={featured.imageUrl} alt="" loading="lazy" className="w-full h-full object-cover" />
+                    <img
+                      src={featured.imageUrl}
+                      alt=""
+                      loading="lazy"
+                      className="w-full h-full object-cover"
+                    />
                   </div>
                   <div className="p-8 lg:p-12 flex flex-col justify-center">
                     <div className="flex items-center gap-3 mb-5">
-                      <span className="chip chip-primary">{resolveCategoryLabel(featured.newsCategoryId, featured.category, categoriesById, lang)}</span>
+                      <span className="chip chip-primary">
+                        {resolveCategoryLabel(
+                          featured.newsCategoryId,
+                          featured.category,
+                          categoriesById,
+                          lang,
+                        )}
+                      </span>
                       <span className="text-xs uppercase tracking-wider text-muted-foreground font-bold flex items-center gap-1.5">
                         <Calendar className="w-3 h-3" /> {featured.date}
                       </span>
@@ -123,9 +131,7 @@ const News = () => {
                     <h2 className="font-display text-3xl lg:text-4xl font-extrabold leading-tight tracking-tight mb-5 group-hover:text-primary transition-colors text-balance">
                       {featured.title}
                     </h2>
-                    <p className="text-muted-foreground leading-relaxed mb-6">
-                      {featured.excerpt}
-                    </p>
+                    <p className="text-muted-foreground leading-relaxed mb-6">{featured.excerpt}</p>
                     <span className="inline-flex items-center gap-2 text-sm font-bold text-primary">
                       {t("common.readMore")} <ArrowUpRight className="w-4 h-4" />
                     </span>
@@ -141,19 +147,24 @@ const News = () => {
                     className="group card-hover bg-card rounded-3xl overflow-hidden border border-border"
                   >
                     <div className="image-zoom aspect-[4/3] bg-muted relative">
-                      <img src={n.imageUrl} alt="" loading="lazy" className="w-full h-full object-cover" />
+                      <img
+                        src={n.imageUrl}
+                        alt=""
+                        loading="lazy"
+                        className="w-full h-full object-cover"
+                      />
                       <span className="absolute top-5 left-5 chip chip-primary bg-white/95">
                         {resolveCategoryLabel(n.newsCategoryId, n.category, categoriesById, lang)}
                       </span>
                     </div>
                     <div className="p-6">
-                      <p className="text-xs uppercase tracking-wider text-muted-foreground font-bold mb-2">{n.date}</p>
+                      <p className="text-xs uppercase tracking-wider text-muted-foreground font-bold mb-2">
+                        {n.date}
+                      </p>
                       <h3 className="font-display text-lg font-extrabold leading-tight mb-2 group-hover:text-primary transition-colors line-clamp-2">
                         {n.title}
                       </h3>
-                      <p className="text-sm text-muted-foreground line-clamp-2">
-                        {n.excerpt}
-                      </p>
+                      <p className="text-sm text-muted-foreground line-clamp-2">{n.excerpt}</p>
                     </div>
                   </Link>
                 ))}
