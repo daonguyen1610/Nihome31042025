@@ -107,6 +107,9 @@ public sealed class VerifyDepartmentWorkTaskRequest : IConcurrencyRequest
     [Required]
     public bool Confirm { get; set; }
 
+    [StringLength(2000)]
+    public string? Reason { get; set; }
+
     public string? RowVersion { get; set; }
 }
 

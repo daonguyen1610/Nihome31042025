@@ -22,29 +22,19 @@ public enum PermitDocumentKind
 }
 
 /// <summary>
-/// NIH-137 M3 Permitting service. Owns the checklist that lives against a
-/// <see cref="Models.DesignProject"/>: idempotent auto-generation from the
-/// master template + patch-style updates + a company-wide risk view.
-///
-/// Future slices may add <c>PermitActivity</c> timeline entries, the daily
-/// expiry cron, and the attach-from-basic-design bridge to NIH-115.
+/// Permitting service for authority status, documents and portfolio risk.
+/// OperationalProject owns each permit; the linked DepartmentWorkTask owns
+/// internal assignment, schedule, progress and approval.
 /// </summary>
 public interface IPermitChecklistService
 {
-    /// <summary>
-    /// Idempotent auto-generation: for the given design project make sure
-    /// every permit type from the master-data catalogue has a corresponding
-    /// checklist row. Existing rows are left untouched so operator edits
-    /// (agency, owner, status …) survive a re-run.
-    /// </summary>
-    Task EnsureForProjectAsync(int designProjectId, int? callerUserId, CancellationToken ct = default);
-
     Task<PermitChecklistListResponse> ListAsync(
         PermitChecklistListParams parameters,
         CancellationToken ct = default,
-        IReadOnlySet<int>? accessibleDesignProjectIds = null);
+        IReadOnlySet<int>? accessibleOperationalProjectIds = null);
 
     Task<PermitChecklistItemResponse?> GetAsync(int id, CancellationToken ct = default);
+    Task<IReadOnlyList<PermitChecklistHistoryResponse>> HistoryAsync(int id, CancellationToken ct = default);
 
     Task<PermitChecklistItemResponse> CreateAsync(CreatePermitChecklistItemRequest request, int callerUserId, CancellationToken ct = default);
 

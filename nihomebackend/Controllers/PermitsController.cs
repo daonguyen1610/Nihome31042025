@@ -1,8 +1,11 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Authorization;
 using NihomeBackend.Constants;
+using NihomeBackend.Data;
+using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Models.DTOs.Responses;
 using NihomeBackend.Services;
@@ -11,9 +14,8 @@ using NihomeBackend.Services.Audit;
 namespace NihomeBackend.Controllers;
 
 /// <summary>
-/// M3 Permitting checklist endpoints (NIH-137). Per-project auto-generation
-/// happens implicitly via <see cref="IDesignProjectService"/> while authorized
-/// operators can also manage individual checklist rows.
+/// M3 permitting workspace endpoints. Permit records are created explicitly
+/// together with their Legal work tasks through the project setup workflow.
 /// </summary>
 [ApiController]
 [Route("api/permits")]
@@ -22,6 +24,8 @@ namespace NihomeBackend.Controllers;
 public class PermitsController(
     IPermitChecklistService svc,
     IProjectAccessService projectAccess,
+    AppDbContext db,
+    IPermissionService permissions,
     IBusinessDocumentStorageService documentStorage,
     IAuditLogger audit) : ControllerBase
 {
@@ -32,8 +36,8 @@ public class PermitsController(
     {
         var userId = GetUserId();
         if (!userId.HasValue) return Unauthorized();
-        var accessibleIds = await projectAccess.GetAccessibleDesignProjectIdsAsync(userId.Value, ct);
-        if (parameters.DesignProjectId.HasValue && !accessibleIds.Contains(parameters.DesignProjectId.Value))
+        var accessibleIds = await projectAccess.GetAccessibleOperationalProjectIdsAsync(userId.Value, ct);
+        if (parameters.OperationalProjectId.HasValue && !accessibleIds.Contains(parameters.OperationalProjectId.Value))
             return NotFound();
         var result = await svc.ListAsync(parameters, ct, accessibleIds);
         return Ok(result);
@@ -47,6 +51,15 @@ public class PermitsController(
         if (!userId.HasValue || !await CanAccessResourceAsync(userId.Value, id, ct)) return NotFound();
         var found = await svc.GetAsync(id, ct);
         return found is null ? NotFound() : Ok(found);
+    }
+
+    [HttpGet("{id:int}/history")]
+    [RequirePermission("permit.checklists", "view")]
+    public async Task<ActionResult<IReadOnlyList<PermitChecklistHistoryResponse>>> History(int id, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (!userId.HasValue || !await CanAccessResourceAsync(userId.Value, id, ct)) return NotFound();
+        return Ok(await svc.HistoryAsync(id, ct));
     }
 
     [HttpGet("{id:int}/documents/{fileName}/content")]
@@ -73,38 +86,25 @@ public class PermitsController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
-        if (!await projectAccess.CanViewDesignProjectAsync(userId.Value, request.DesignProjectId, ct)) return NotFound();
-        try
+        if (!await projectAccess.CanViewOperationalProjectAsync(userId.Value, request.OperationalProjectId, ct)) return NotFound();
+        return StatusCode(StatusCodes.Status410Gone, new
         {
-            var response = await svc.CreateAsync(request, userId.Value, ct);
-            audit.Log(new AuditEvent
-            {
-                Action = "permit.create",
-                ResourceType = EntityTypes.PermitChecklistItem,
-                ResourceId = response.Id.ToString(),
-                Message = $"Permit checklist item #{response.Id} created ({response.PermitTypeCode}).",
-                NewValue = response,
-            });
-            return CreatedAtAction(nameof(Get), new { id = response.Id }, response);
-        }
-        catch (PermitChecklistDuplicateException ex)
-        {
-            return Conflict(new { message = ex.Message });
-        }
-        catch (PermitChecklistOperationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+            code = "LEGAL_SETUP_REQUIRED",
+            message = "Giấy phép và đầu việc phải được tạo cùng nhau qua bước Thiết lập Pháp lý.",
+        });
     }
 
     [HttpPatch("{id:int}")]
-    [RequirePermission("permit.checklists", "manage")]
+    [RequirePermission("permit.checklists", "view")]
     public async Task<ActionResult<PermitChecklistItemResponse>> Update(
         int id, [FromBody] UpdatePermitChecklistItemRequest request, CancellationToken ct)
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
-        if (!await CanAccessResourceAsync(userId.Value, id, ct)) return NotFound();
+        if (!await CanOperateResourceAsync(userId.Value, id, ct)) return Forbid();
+        if (string.Equals(request.Status, nameof(PermitStatus.Issued), StringComparison.OrdinalIgnoreCase) &&
+            !await permissions.HasAsync(userId.Value, "permit.checklists.mark-issued", ct))
+            return Forbid();
         try
         {
             var response = await svc.UpdateAsync(id, request, userId.Value, ct);
@@ -135,7 +135,7 @@ public class PermitsController(
     }
 
     [HttpPost("{id:int}/documents/{kind}")]
-    [RequirePermission("permit.checklists", "manage")]
+    [RequirePermission("permit.checklists", "view")]
     public async Task<ActionResult<PermitChecklistItemResponse>> UploadDocument(
         int id,
         PermitDocumentKind kind,
@@ -144,7 +144,10 @@ public class PermitsController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
-        if (!await CanAccessResourceAsync(userId.Value, id, ct)) return NotFound();
+        if (!await CanOperateResourceAsync(userId.Value, id, ct)) return Forbid();
+        if (kind == PermitDocumentKind.IssuedPermit &&
+            !await permissions.HasAsync(userId.Value, "permit.checklists.mark-issued", ct))
+            return Forbid();
         try
         {
             var response = await svc.UploadDocumentAsync(id, kind, file, userId.Value, ct);
@@ -175,9 +178,8 @@ public class PermitsController(
     }
 
     /// <summary>
-    /// Re-run the auto-generator for a given project. Useful after the master
-    /// template gains a new permit type (e.g. a new local requirement) so
-    /// existing projects catch up without a manual DB touch. Idempotent.
+    /// Retained only as a compatibility endpoint for older clients. Automatic
+    /// checklist generation is retired; callers must use Legal setup instead.
     /// </summary>
     [HttpPost("design-project/{projectId:int}/ensure")]
     [RequirePermission("permit.checklists", "manage")]
@@ -186,27 +188,11 @@ public class PermitsController(
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
         if (!await projectAccess.CanViewDesignProjectAsync(userId.Value, projectId, ct)) return NotFound();
-        try
+        return StatusCode(StatusCodes.Status410Gone, new
         {
-            await svc.EnsureForProjectAsync(projectId, userId.Value, ct);
-            audit.Log(new AuditEvent
-            {
-                Action = "permit.ensure",
-                ResourceType = EntityTypes.PermitChecklistItem,
-                ResourceId = projectId.ToString(),
-                Message = $"Permit checklist regenerated for design project #{projectId}.",
-            });
-            var listing = await svc.ListAsync(new PermitChecklistListParams
-            {
-                DesignProjectId = projectId,
-                PageSize = 200,
-            }, ct, new HashSet<int> { projectId });
-            return Ok(listing);
-        }
-        catch (PermitChecklistOperationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+            code = "LEGAL_SETUP_REQUIRED",
+            message = "Tạo tự động checklist đã ngừng hỗ trợ. Hãy dùng bước Thiết lập Pháp lý của Dự án.",
+        });
     }
 
     [HttpDelete("{id:int}")]
@@ -215,18 +201,11 @@ public class PermitsController(
     {
         var userId = GetUserId();
         if (!userId.HasValue || !await CanAccessResourceAsync(userId.Value, id, ct)) return NotFound();
-        var response = await svc.DeleteAsync(id, ct);
-        if (response is null) return NotFound();
-
-        audit.Log(new AuditEvent
+        return StatusCode(StatusCodes.Status409Conflict, new
         {
-            Action = "permit.delete",
-            ResourceType = EntityTypes.PermitChecklistItem,
-            ResourceId = id.ToString(),
-            Message = $"Permit checklist item #{id} deleted ({response.PermitTypeCode}).",
-            OldValue = response,
+            code = "LEGAL_PERMIT_DELETE_BLOCKED",
+            message = "Không thể xóa riêng giấy phép đã thuộc gói Pháp lý. Hãy điều chỉnh cấu hình gói hoặc dùng quy trình xóa tổng hợp có kiểm tra ảnh hưởng.",
         });
-        return NoContent();
     }
 
     private int? GetUserId()
@@ -237,9 +216,24 @@ public class PermitsController(
 
     private async Task<bool> CanAccessResourceAsync(int userId, int resourceId, CancellationToken ct)
     {
-        var projectId = await projectAccess.ResolveDesignProjectIdAsync(
-            DesignProjectResourceType.PermitChecklistItem, resourceId, ct);
+        var projectId = await db.PermitChecklistItems.AsNoTracking()
+            .Where(item => item.Id == resourceId)
+            .Select(item => (int?)item.OperationalProjectId)
+            .SingleOrDefaultAsync(ct);
         return projectId.HasValue &&
-            await projectAccess.CanViewDesignProjectAsync(userId, projectId.Value, ct);
+            await projectAccess.CanViewOperationalProjectAsync(userId, projectId.Value, ct);
+    }
+
+    private async Task<bool> CanOperateResourceAsync(int userId, int resourceId, CancellationToken ct)
+    {
+        if (await db.Users.AsNoTracking().AnyAsync(item => item.Id == userId && item.IsActive &&
+                (item.Role == UserRole.ADMIN || item.Role == UserRole.SUPER_ADMIN ||
+                 item.RoleEntity != null && item.RoleEntity.IsActive && item.RoleEntity.IsSystem &&
+                 (item.RoleEntity.Code == "ADMIN" || item.RoleEntity.Code == "SUPER_ADMIN")), ct))
+            return true;
+        return await db.PermitChecklistItems.AsNoTracking().AnyAsync(item => item.Id == resourceId &&
+            (item.OperationalProject.ProjectManagerUserId == userId ||
+             item.WorkTask != null && (item.WorkTask.AssigneeUserId == userId ||
+                 item.WorkTask.WorkPackage.LeadUserId == userId)), ct);
     }
 }

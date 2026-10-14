@@ -305,8 +305,8 @@ public sealed class ProjectAccessService(AppDbContext db, IPermissionService per
                 .Where(item => ids.Contains(item.Id))
                 .ToDictionaryAsync(item => item.Id, item => item.DesignProjectId, ct),
             DesignProjectResourceType.PermitChecklistItem => await db.PermitChecklistItems.AsNoTracking()
-                .Where(item => ids.Contains(item.Id))
-                .ToDictionaryAsync(item => item.Id, item => item.DesignProjectId, ct),
+                .Where(item => ids.Contains(item.Id) && item.DesignProjectId.HasValue)
+                .ToDictionaryAsync(item => item.Id, item => item.DesignProjectId!.Value, ct),
             _ => throw new ArgumentOutOfRangeException(nameof(resourceType), resourceType, null),
         };
     }

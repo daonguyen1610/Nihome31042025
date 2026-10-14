@@ -80,8 +80,9 @@ internal static class DeletionImpactPlanner
         await AddAsync(items, "design.conceptOptions", DeletionImpactActions.Delete,
             db.ConceptOptions.Where(item => projectIds.Contains(item.DesignProjectId)), item => item.Id,
             item => item.Name, ct);
-        await AddAsync(items, "design.permits", DeletionImpactActions.Delete,
-            db.PermitChecklistItems.Where(item => projectIds.Contains(item.DesignProjectId)), item => item.Id,
+        await AddAsync(items, "design.permits", DeletionImpactActions.Unlink,
+            db.PermitChecklistItems.Where(item => item.DesignProjectId.HasValue &&
+                projectIds.Contains(item.DesignProjectId.Value)), item => item.Id,
             item => item.PermitTypeCode, ct);
         await AddAsync(items, "design.basicDocuments", DeletionImpactActions.Delete,
             db.BasicDesignDocs.Where(item => projectIds.Contains(item.DesignProjectId)), item => item.Id,
@@ -168,8 +169,6 @@ internal static class DeletionImpactPlanner
         await AddTranslationsAsync(items, db, EntityTypes.DesignProject,
             db.DesignProjects.Where(item => projectIds.Contains(item.Id)).Select(item => item.Id), ct);
         await AddTranslationsAsync(items, db, EntityTypes.ConceptOption, conceptOptionIds, ct);
-        await AddTranslationsAsync(items, db, EntityTypes.PermitChecklistItem,
-            db.PermitChecklistItems.Where(item => projectIds.Contains(item.DesignProjectId)).Select(item => item.Id), ct);
         await AddTranslationsAsync(items, db, EntityTypes.BasicDesignDoc, basicDocumentIds, ct);
         await AddTranslationsAsync(items, db, EntityTypes.ShopDrawing, shopDrawingIds, ct);
         await AddTranslationsAsync(items, db, EntityTypes.DrawingRevision,
@@ -212,30 +211,6 @@ internal static class DeletionImpactPlanner
         references.AddRange(shopDrawings.Select(item => new DesignManagedFileReference(
             item.DesignProjectId, ProjectDocumentSourceModule.Design, nameof(ShopDrawing),
             "file", item.Id, item.FilePath!, $"{item.DrawingCode} · {item.Title}")));
-
-        var permits = await db.PermitChecklistItems.AsNoTracking()
-            .Where(item => projectIds.Contains(item.DesignProjectId) &&
-                (item.SubmittedFilePath != null || item.IssuedFilePath != null))
-            .Select(item => new
-            {
-                item.Id,
-                item.DesignProjectId,
-                item.PermitTypeCode,
-                item.SubmittedFilePath,
-                item.IssuedFilePath
-            })
-            .ToListAsync(ct);
-        foreach (var permit in permits)
-        {
-            if (!string.IsNullOrWhiteSpace(permit.SubmittedFilePath))
-                references.Add(new DesignManagedFileReference(permit.DesignProjectId,
-                    ProjectDocumentSourceModule.Design, nameof(PermitChecklistItem), "submittedPackage",
-                    permit.Id, permit.SubmittedFilePath, permit.PermitTypeCode));
-            if (!string.IsNullOrWhiteSpace(permit.IssuedFilePath))
-                references.Add(new DesignManagedFileReference(permit.DesignProjectId,
-                    ProjectDocumentSourceModule.Design, nameof(PermitChecklistItem), "issuedPermit",
-                    permit.Id, permit.IssuedFilePath, permit.PermitTypeCode));
-        }
 
         var acceptances = await db.AcceptanceRecords.AsNoTracking()
             .Where(item => projectIds.Contains(item.DesignProjectId) && item.Documents != null)
@@ -333,6 +308,12 @@ internal static class DeletionImpactPlanner
         await AddAsync(items, "operations.workPackages", DeletionImpactActions.Delete,
             db.DepartmentWorkPackages.Where(item => item.OperationalProjectId == projectId), item => item.Id,
             item => item.Code, ct);
+        await AddAsync(items, "operations.legalPermits", DeletionImpactActions.Delete,
+            db.PermitChecklistItems.Where(item => item.OperationalProjectId == projectId), item => item.Id,
+            item => item.PermitTypeCode, ct);
+        await AddAsync(items, "operations.legalActivations", DeletionImpactActions.Delete,
+            db.ContractLegalActivations.Where(item => item.OperationalProjectId == projectId), item => item.Id,
+            item => item.Contract.ContractNumber, ct);
         await AddAsync(items, "operations.hseViolations", DeletionImpactActions.Delete,
             db.HseViolations.Where(item => item.OperationalProjectId == projectId), item => item.Id,
             item => item.Code, ct);

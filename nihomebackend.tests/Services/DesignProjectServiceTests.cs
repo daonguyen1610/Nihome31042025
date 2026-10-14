@@ -33,7 +33,6 @@ public class DesignProjectServiceTests : IDisposable
         var hardDelete = HardDeleteTestServices.Create(_db, _projectDocuments.Object);
         _sut = new DesignProjectService(
             _db,
-            new NoopPermitChecklistService(),
             NullLogger<DesignProjectService>.Instance,
             _projectAccess.Object,
             new LegacyProjectTeamSyncService(_db),
@@ -791,9 +790,7 @@ public class DesignProjectServiceTests : IDisposable
     }
 
     /// <summary>
-    /// Stub for the NIH-137 permit checklist hook. Real coverage lives in
-    /// <c>PermitChecklistServiceTests</c>; here we only need the create /
-    /// auto-create paths to not blow up.
+    /// Minimal permit service stub used by legacy design-project test setup.
     /// </summary>
     private sealed class NoopPermitChecklistService : IPermitChecklistService
     {
@@ -808,6 +805,10 @@ public class DesignProjectServiceTests : IDisposable
 
         public Task<NihomeBackend.Models.DTOs.Responses.PermitChecklistItemResponse?> GetAsync(int id, CancellationToken ct = default)
             => Task.FromResult<NihomeBackend.Models.DTOs.Responses.PermitChecklistItemResponse?>(null);
+
+        public Task<IReadOnlyList<NihomeBackend.Models.DTOs.Responses.PermitChecklistHistoryResponse>> HistoryAsync(
+            int id, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<NihomeBackend.Models.DTOs.Responses.PermitChecklistHistoryResponse>>([]);
 
         public Task<NihomeBackend.Models.DTOs.Responses.PermitChecklistItemResponse> CreateAsync(
             NihomeBackend.Models.DTOs.Requests.CreatePermitChecklistItemRequest request, int callerUserId, CancellationToken ct = default)

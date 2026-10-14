@@ -79,6 +79,8 @@ const DepartmentWorkPackages = () => {
   const [taskEditing, setTaskEditing] = useState<DepartmentWorkTaskResponse | null>(null);
   const [progressTaskEditing, setProgressTaskEditing] = useState<DepartmentWorkTaskResponse | null>(null);
   const [progressPercent, setProgressPercent] = useState(0);
+  const [rejectTaskEditing, setRejectTaskEditing] = useState<DepartmentWorkTaskResponse | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
   const [priceOpen, setPriceOpen] = useState(false);
   const [priceEditing, setPriceEditing] = useState<{ id: number; rowVersion: string } | null>(null);
   const [priceForm, setPriceForm] = useState<UpsertInputPriceOfferRequest>({ vendorId: 0, supplierReference: "", currency: "VND", validUntil: "", note: "", lines: [newPriceLine()] });
@@ -122,6 +124,7 @@ const DepartmentWorkPackages = () => {
         const response = await adminApi.getWorkPackage(packageId);
         setDetail(response.data);
       } else {
+        setDetail(null);
         const projectFilter = Number(params.get("projectId"));
         const response = await adminApi.listWorkPackages({
           kind,
@@ -166,7 +169,7 @@ const DepartmentWorkPackages = () => {
       const quote = Number(params.get("quoteId"));
       const tender = Number(params.get("tenderId"));
       const requestedPurpose = params.get("purpose") as WorkPackagePurpose | null;
-      const purpose: WorkPackagePurpose = ["ProcurementInputPricing", "FinanceCommercialReview", "FinanceTenderReview", "TenderPlanning"].includes(requestedPurpose ?? "") ? requestedPurpose! : tender > 0 ? "TenderPlanning" : "General";
+      const purpose: WorkPackagePurpose = ["ProcurementInputPricing", "FinanceCommercialReview", "FinanceTenderReview", "TenderPlanning", "LegalPermitting"].includes(requestedPurpose ?? "") ? requestedPurpose! : tender > 0 ? "TenderPlanning" : "General";
       const expectedCode = purpose === "ProcurementInputPricing" ? "PROCUREMENT" : purpose.startsWith("Finance") ? "FINANCE" : "";
       const expectedDepartment = options.departments.find(group => group.code === expectedCode);
       setPackageForm(current => ({
@@ -343,6 +346,18 @@ const DepartmentWorkPackages = () => {
     } catch (cause) { toast({ variant: "destructive", title: extractApiError(cause, t("workPackages.error.save")) }); }
   };
 
+  const rejectTask = async () => {
+    if (!detail || !rejectTaskEditing || !rejectReason.trim()) return;
+    try {
+      await adminApi.rejectWorkTask(detail.id, rejectTaskEditing.id, rejectTaskEditing.rowVersion,
+        rejectReason.trim(), newIdempotencyKey());
+      setRejectTaskEditing(null);
+      setRejectReason("");
+      toast({ title: t("workPackages.toast.returned") });
+      await load();
+    } catch (cause) { toast({ variant: "destructive", title: extractApiError(cause, t("workPackages.error.save")) }); }
+  };
+
   const resetPriceForm = () => {
     setPriceEditing(null);
     setPriceForm({ vendorId: 0, supplierReference: "", currency: "VND", validUntil: "", note: "", lines: [newPriceLine()] });
@@ -417,14 +432,14 @@ const DepartmentWorkPackages = () => {
       {detail ? <>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-2">
-            <Button variant="ghost" asChild className="-ml-3"><Link to="/admin/work-packages"><ArrowLeft className="mr-2 h-4 w-4" />{t("workPackages.back")}</Link></Button>
+            <Button variant="ghost" asChild className="-ml-3"><Link data-testid="work-package-back" to="/admin/work-packages"><ArrowLeft className="mr-2 h-4 w-4" />{t("workPackages.back")}</Link></Button>
             <div className="flex flex-wrap items-center gap-2"><h1 className="text-2xl font-bold">{detail.code} · {detail.name}</h1><Badge className={statusTone[detail.status]} variant="outline">{t(`workPackages.status.${detail.status}`)}</Badge><Badge variant="secondary">{t(`workPackages.purpose.${detail.purpose}`)}</Badge></div>
             <p className="text-sm text-muted-foreground">{detail.description || t("workPackages.noDescription")}</p>
           </div>
           <div className="flex gap-2">
             {detail.canManagePackage && detail.status === "Planned" && <Button onClick={() => void transitionPackage("Active")}>{t("workPackages.action.start")}</Button>}
             {detail.canManagePackage && detail.status === "Active" && <Button onClick={() => void transitionPackage("Completed")}>{t("workPackages.action.completePackage")}</Button>}
-            {canAssign && detail.canAssignTasks && !["Completed", "Cancelled"].includes(detail.status) && <Button onClick={() => openTask()}><Plus className="mr-2 h-4 w-4" />{t("workPackages.action.addTask")}</Button>}
+            {canAssign && detail.canAssignTasks && detail.purpose !== "LegalPermitting" && !["Completed", "Cancelled"].includes(detail.status) && <Button onClick={() => openTask()}><Plus className="mr-2 h-4 w-4" />{t("workPackages.action.addTask")}</Button>}
           </div>
         </div>
 
@@ -467,7 +482,7 @@ const DepartmentWorkPackages = () => {
                   {canAssign && detail.canAssignTasks && ["Planned", "InProgress"].includes(task.status) && <Button variant="outline" size="sm" onClick={() => openTask(task)}>{t("common.edit")}</Button>}
                   {detail.status === "Active" && task.canUpdateProgress && ["Planned", "InProgress"].includes(task.status) && <Button variant="outline" size="sm" onClick={() => openProgress(task)}>{t("workPackages.action.progress")}</Button>}
                   {detail.status === "Active" && task.canUpdateProgress && ["Planned", "InProgress"].includes(task.status) && <Button size="sm" onClick={() => void progressTask(task, true)}>{t("workPackages.action.completeTask")}</Button>}
-                  {detail.status === "Active" && task.canVerify && <Button size="sm" onClick={() => void verifyTask(task)}><CheckCircle2 className="mr-2 h-4 w-4" />{t("workPackages.action.verify")}</Button>}
+                  {detail.status === "Active" && task.canVerify && <>{detail.purpose === "LegalPermitting" && <Button size="sm" variant="outline" onClick={() => { setRejectTaskEditing(task); setRejectReason(""); }}>{t("common.reject")}</Button>}<Button size="sm" onClick={() => void verifyTask(task)}><CheckCircle2 className="mr-2 h-4 w-4" />{t("workPackages.action.verify")}</Button></>}
                 </div>
               </div>
             </article>)}
@@ -484,7 +499,7 @@ const DepartmentWorkPackages = () => {
         </Tabs>
         <div className="relative max-w-xl"><Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" /><Input value={search} onChange={event => setSearch(event.target.value)} placeholder={t("workPackages.search")} className="pl-9" /></div>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {rows.map(item => <button key={item.id} type="button" className="rounded-xl border bg-card p-5 text-left transition hover:border-primary/50 hover:shadow-sm" onClick={() => navigate(`/admin/work-packages/${item.id}`)}>
+          {rows.map(item => <button key={item.id} data-testid="work-package-card" type="button" className="rounded-xl border bg-card p-5 text-left transition hover:border-primary/50 hover:shadow-sm" onClick={() => navigate(`/admin/work-packages/${item.id}`)}>
             <div className="flex items-start justify-between gap-2"><Badge variant="outline">{item.code}</Badge><Badge className={statusTone[item.status]} variant="outline">{t(`workPackages.status.${item.status}`)}</Badge></div>
             <h2 className="mt-4 font-semibold">{item.name}</h2><p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{item.kind === "Project" ? `${item.operationalProjectCode} · ${item.operationalProjectName}` : t("workPackages.kind.Internal")}</p>
             <div className="mt-4 flex items-center justify-between text-sm"><span>{t(item.departmentLabelKey)} · {item.leadUserName}</span><strong>{item.progressPercent}%</strong></div><Progress value={item.progressPercent} className="mt-2" />
@@ -526,6 +541,8 @@ const DepartmentWorkPackages = () => {
     </div><DialogFooter><Button variant="outline" onClick={() => setTaskOpen(false)}>{t("common.cancel")}</Button><Button disabled={saving} onClick={() => void saveTask()}>{t("common.save")}</Button></DialogFooter></DialogContent></Dialog>
 
     <Dialog open={progressOpen} onOpenChange={setProgressOpen}><DialogContent className="sm:max-w-md"><DialogHeader><DialogTitle>{t("workPackages.progress.title")}</DialogTitle><DialogDescription>{progressTaskEditing?.wbsCode} · {progressTaskEditing?.title}</DialogDescription></DialogHeader><Field label={t("workPackages.progress.percent")}><Input type="number" inputMode="numeric" min={1} max={99} value={progressPercent} onChange={event => setProgressPercent(Number(event.target.value))} /><p className="text-xs text-muted-foreground">{t("workPackages.progress.help")}</p></Field><DialogFooter><Button variant="outline" onClick={() => setProgressOpen(false)}>{t("common.cancel")}</Button><Button disabled={!progressTaskEditing || progressPercent < 1 || progressPercent > 99} onClick={() => progressTaskEditing && void progressTask(progressTaskEditing, false, progressPercent)}>{t("common.save")}</Button></DialogFooter></DialogContent></Dialog>
+
+    <Dialog open={rejectTaskEditing !== null} onOpenChange={(open) => { if (!open) { setRejectTaskEditing(null); setRejectReason(""); } }}><DialogContent className="sm:max-w-md"><DialogHeader><DialogTitle>{t("workPackages.reject.title")}</DialogTitle><DialogDescription>{rejectTaskEditing?.wbsCode} · {rejectTaskEditing?.title}</DialogDescription></DialogHeader><Field label={t("workPackages.reject.reason")}><Textarea maxLength={2000} value={rejectReason} onChange={(event) => setRejectReason(event.target.value)} /></Field><DialogFooter><Button variant="outline" onClick={() => setRejectTaskEditing(null)}>{t("common.cancel")}</Button><Button variant="destructive" disabled={!rejectReason.trim()} onClick={() => void rejectTask()}>{t("common.reject")}</Button></DialogFooter></DialogContent></Dialog>
   </AdminLayout>;
 };
 

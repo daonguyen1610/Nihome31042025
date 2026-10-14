@@ -79,7 +79,7 @@ public static class SampleCrmDataSeeder
         SeedTenders(db, owner, now);
         SeedSurveys(db, owner, now);
         SeedDesignProjects(db, owner, now);
-        SeedPermitChecklists(db, legalOwner, now);
+        SeedLegalPermitting(db, owner, projectManager, legalOwner, designOwner, now, webRootPath);
         SeedConceptOptions(db, designOwner, now);
         SeedBasicDesignDocs(db, designOwner, now);
         SeedShopDrawings(db, designOwner, now);
@@ -1892,7 +1892,7 @@ public static class SampleCrmDataSeeder
 
         // Existing (project, permit) pairs so re-runs are a no-op.
         var existing = db.PermitChecklistItems
-            .Select(p => new { p.DesignProjectId, p.PermitTypeCode })
+            .Select(p => new { p.OperationalProjectId, p.PermitTypeCode })
             .ToHashSet();
 
         int seq = 0;
@@ -1900,10 +1900,12 @@ public static class SampleCrmDataSeeder
         {
             foreach (var code in templateCodes)
             {
-                if (existing.Contains(new { DesignProjectId = dp.Id, PermitTypeCode = code })) continue;
+                if (!dp.OperationalProjectId.HasValue || existing.Contains(new
+                { OperationalProjectId = dp.OperationalProjectId.Value, PermitTypeCode = code })) continue;
 
                 var item = new PermitChecklistItem
                 {
+                    OperationalProjectId = dp.OperationalProjectId.Value,
                     DesignProjectId = dp.Id,
                     PermitTypeCode = code,
                     Status = PermitStatus.NotStarted,
@@ -1957,6 +1959,171 @@ public static class SampleCrmDataSeeder
     /// PresentedToClient, one Discarded). Idempotent — guarded on the
     /// (design_project_id, name) uniqueness of the sample rows.
     /// </summary>
+    private static void SeedLegalPermitting(
+        AppDbContext db, ApplicationUser owner, ApplicationUser projectManager,
+        ApplicationUser legalLead, ApplicationUser crossDepartmentAssignee,
+        DateTime now, string? webRootPath)
+    {
+        var project = db.OperationalProjects.SingleOrDefault(item => item.Code == "PJ-SAMPLE-003");
+        if (project is null || db.DepartmentWorkPackages.Any(item => item.OperationalProjectId == project.Id &&
+                item.Purpose == WorkPackagePurpose.LegalPermitting)) return;
+        var constructionGroup = db.RoleGroups.SingleOrDefault(item => item.Code == "CONSTRUCTION");
+        int GroupOf(ApplicationUser user) => db.Roles.Where(role => role.Id == user.RoleEntityId)
+            .Select(role => role.RoleGroupId ?? 0).SingleOrDefault();
+        var legalGroupId = GroupOf(legalLead);
+        var assigneeGroupId = GroupOf(crossDepartmentAssignee);
+        if (constructionGroup is null || legalGroupId == 0 || assigneeGroupId == 0 ||
+            legalLead.Id == crossDepartmentAssignee.Id) return;
+
+        foreach (var user in new[] { projectManager, legalLead, crossDepartmentAssignee }.DistinctBy(item => item.Id))
+        {
+            if (db.OperationalProjectMembers.Any(item => item.OperationalProjectId == project.Id && item.UserId == user.Id)) continue;
+            var member = new OperationalProjectMember
+            {
+                OperationalProjectId = project.Id,
+                UserId = user.Id,
+                Position = user.Id == projectManager.Id ? "PM toàn dự án" : user.Id == legalLead.Id
+                    ? "Chủ trì Pháp lý" : "Chuyên viên phối hợp chéo phòng",
+                StartedAt = now.AddDays(-90),
+                Source = "SampleLegalWorkflow",
+                CreatedAt = now.AddDays(-90),
+                UpdatedAt = now,
+                CreatedByUserId = owner.Id,
+                UpdatedByUserId = owner.Id,
+            };
+            if (user.Id == projectManager.Id)
+                member.Roles.Add(new OperationalProjectMemberRole { RoleCode = ProjectTeamRoleCode.ProjectManager, StartedAt = now.AddDays(-90), Source = "SampleLegalWorkflow" });
+            if (user.Id == legalLead.Id)
+                member.Roles.Add(new OperationalProjectMemberRole { RoleCode = ProjectTeamRoleCode.LegalOfficer, StartedAt = now.AddDays(-90), Source = "SampleLegalWorkflow" });
+            db.OperationalProjectMembers.Add(member);
+        }
+
+        var package = new DepartmentWorkPackage
+        {
+            Code = $"LEGAL-{project.Id}",
+            Kind = WorkPackageKind.Project,
+            Purpose = WorkPackagePurpose.LegalPermitting,
+            Name = $"Pháp lý và xin phép - {project.Name}",
+            Description = "Gói mẫu NICON quản lý trạng thái cơ quan và tiến độ nội bộ theo từng giấy phép.",
+            OperationalProjectId = project.Id,
+            DepartmentRoleGroupId = constructionGroup.Id,
+            LeadUserId = legalLead.Id,
+            Status = WorkPackageStatus.Active,
+            PlannedStart = now.AddDays(-60),
+            PlannedEnd = now.AddDays(60),
+            CreatedAt = now.AddDays(-60),
+            UpdatedAt = now,
+            CreatedByUserId = owner.Id,
+            UpdatedByUserId = owner.Id,
+            ParticipantGroups = new[] { constructionGroup.Id, legalGroupId, assigneeGroupId }
+                .Distinct()
+                .Select(groupId => new DepartmentWorkPackageParticipantGroup { RoleGroupId = groupId })
+                .ToList(),
+        };
+        db.DepartmentWorkPackages.Add(package);
+        db.SaveChanges();
+
+        const string submittedPath = "/files/business-documents/permits/sample-legal-submitted.pdf";
+        const string issuedPath = "/files/business-documents/permits/sample-legal-issued.pdf";
+        if (!string.IsNullOrWhiteSpace(webRootPath))
+        {
+            var directory = Path.Combine(Path.GetFullPath(webRootPath), "files", "business-documents", "permits");
+            Directory.CreateDirectory(directory);
+            var submittedFile = Path.Combine(directory, "sample-legal-submitted.pdf");
+            var issuedFile = Path.Combine(directory, "sample-legal-issued.pdf");
+            if (!File.Exists(submittedFile)) File.WriteAllBytes(submittedFile, BuildPlaceholderPdf("Hồ sơ pháp lý mẫu đã nộp"));
+            if (!File.Exists(issuedFile)) File.WriteAllBytes(issuedFile, BuildPlaceholderPdf("Giấy phép mẫu đã cấp"));
+        }
+
+        var designProjectId = db.DesignProjects.Where(item => item.OperationalProjectId == project.Id)
+            .OrderBy(item => item.Id).Select(item => (int?)item.Id).FirstOrDefault();
+        var samples = new[]
+        {
+            ("gpxd", "Giấy phép xây dựng", "Sở Xây dựng", PermitStatus.UnderReview, WorkTaskStatus.InProgress, 70, -45, 5, -12, (int?)null, (int?)null),
+            ("pccc", "Thẩm duyệt PCCC", "Phòng Cảnh sát PCCC & CNCH", PermitStatus.NeedMoreDocs, WorkTaskStatus.InProgress, 55, -50, -3, -20, (int?)null, (int?)null),
+            ("electricity", "Thỏa thuận cấp điện", "Điện lực địa phương", PermitStatus.Issued, WorkTaskStatus.Completed, 100, -35, 20, -25, (int?)-4, (int?)180),
+            ("environment", "Hồ sơ môi trường", "Cơ quan tài nguyên và môi trường", PermitStatus.Expired, WorkTaskStatus.Verified, 100, -60, -20, -55, (int?)-40, (int?)-1),
+        };
+        var tasks = new List<DepartmentWorkTask>();
+        for (var index = 0; index < samples.Length; index++)
+        {
+            var sample = samples[index];
+            var task = new DepartmentWorkTask
+            {
+                WorkPackageId = package.Id,
+                WbsCode = $"L-{index + 1:00}",
+                Title = sample.Item2,
+                DepartmentRoleGroupId = assigneeGroupId,
+                AssigneeUserId = crossDepartmentAssignee.Id,
+                ApproverUserId = legalLead.Id,
+                Status = sample.Item5,
+                ProgressPercent = sample.Item6,
+                PlannedStart = now.AddDays(sample.Item7),
+                PlannedEnd = now.AddDays(sample.Item8),
+                ActualStart = now.AddDays(sample.Item7 + 1),
+                CompletedAt = sample.Item5 is WorkTaskStatus.Completed or WorkTaskStatus.Verified ? now.AddDays(-2) : null,
+                VerifiedAt = sample.Item5 == WorkTaskStatus.Verified ? now.AddDays(-15) : null,
+                VerifiedByUserId = sample.Item5 == WorkTaskStatus.Verified ? legalLead.Id : null,
+                CreatedAt = now.AddDays(-60),
+                UpdatedAt = now,
+                CreatedByUserId = owner.Id,
+                UpdatedByUserId = owner.Id,
+            };
+            db.DepartmentWorkTasks.Add(task);
+            db.SaveChanges();
+            tasks.Add(task);
+            var permit = new PermitChecklistItem
+            {
+                OperationalProjectId = project.Id,
+                DesignProjectId = designProjectId,
+                WorkTaskId = task.Id,
+                PermitTypeCode = sample.Item1,
+                Status = sample.Item4,
+                IssuingAgency = sample.Item3,
+                OwnerUserId = crossDepartmentAssignee.Id,
+                TargetDeadline = task.PlannedEnd,
+                SubmittedAt = now.AddDays(sample.Item9),
+                IssuedAt = sample.Item10.HasValue ? now.AddDays(sample.Item10.Value) : null,
+                ExpiresAt = sample.Item11.HasValue ? now.AddDays(sample.Item11.Value) : null,
+                SubmittedFilePath = submittedPath,
+                IssuedFilePath = sample.Item10.HasValue ? issuedPath : null,
+                Note = sample.Item4 == PermitStatus.NeedMoreDocs
+                    ? "Cơ quan yêu cầu bổ sung bản vẽ thoát nạn; công việc nội bộ đã được trả lại kèm lý do."
+                    : "Dữ liệu mẫu quy trình Pháp lý NICON.",
+                CreatedAt = now.AddDays(-60),
+                UpdatedAt = now,
+                CreatedByUserId = owner.Id,
+                UpdatedByUserId = owner.Id,
+            };
+            db.PermitChecklistItems.Add(permit);
+            db.SaveChanges();
+            db.PermitChecklistHistory.Add(new PermitChecklistHistory
+            {
+                PermitChecklistItemId = permit.Id,
+                ToStatus = permit.Status,
+                Action = "SeededLegalScenario",
+                SnapshotJson = "{\"source\":\"NICON sample legal workflow\"}",
+                ChangedAt = now,
+                ChangedByUserId = owner.Id,
+            });
+            if (sample.Item4 == PermitStatus.NeedMoreDocs)
+                db.DepartmentWorkPackageHistory.Add(new DepartmentWorkPackageHistory
+                {
+                    WorkPackageId = package.Id,
+                    EntityType = "Task",
+                    EntityId = task.Id,
+                    Action = "Returned",
+                    SnapshotJson = "{\"reason\":\"Bổ sung bản vẽ thoát nạn theo phản hồi cơ quan PCCC\"}",
+                    ChangedAt = now.AddDays(-1),
+                    ChangedByUserId = legalLead.Id,
+                });
+        }
+        db.DepartmentWorkTaskDependencies.AddRange(
+            new DepartmentWorkTaskDependency { WorkTaskId = tasks[2].Id, PredecessorTaskId = tasks[0].Id },
+            new DepartmentWorkTaskDependency { WorkTaskId = tasks[3].Id, PredecessorTaskId = tasks[1].Id });
+        db.SaveChanges();
+    }
+
     private static void SeedConceptOptions(AppDbContext db, ApplicationUser owner, DateTime now)
     {
         var project = db.DesignProjects

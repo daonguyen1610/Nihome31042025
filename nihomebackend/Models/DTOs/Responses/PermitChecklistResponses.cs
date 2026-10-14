@@ -5,7 +5,10 @@ public class PermitChecklistItemResponse
 {
     public int Id { get; set; }
 
-    public int DesignProjectId { get; set; }
+    public int OperationalProjectId { get; set; }
+    public string? OperationalProjectCode { get; set; }
+    public string? OperationalProjectName { get; set; }
+    public int? DesignProjectId { get; set; }
     public string? DesignProjectCode { get; set; }
     public string? DesignProjectName { get; set; }
 
@@ -17,6 +20,14 @@ public class PermitChecklistItemResponse
 
     public int? OwnerUserId { get; set; }
     public string? OwnerName { get; set; }
+
+    public int? WorkTaskId { get; set; }
+    public int? WorkPackageId { get; set; }
+    public int? ApproverUserId { get; set; }
+    public string? ApproverName { get; set; }
+    public int ProgressPercent { get; set; }
+    public string? WorkTaskStatus { get; set; }
+    public string? WorkTaskRowVersion { get; set; }
 
     public DateTime? TargetDeadline { get; set; }
     public DateTime? SubmittedAt { get; set; }
@@ -64,4 +75,16 @@ public class PermitChecklistRiskSummary
     public int DueSoon { get; set; }
     public int ExpiringSoon { get; set; }
     public int TotalOpen { get; set; }
+}
+
+public sealed class PermitChecklistHistoryResponse
+{
+    public long Id { get; set; }
+    public string? FromStatus { get; set; }
+    public string ToStatus { get; set; } = string.Empty;
+    public string Action { get; set; } = string.Empty;
+    public string SnapshotJson { get; set; } = string.Empty;
+    public DateTime ChangedAt { get; set; }
+    public int ChangedByUserId { get; set; }
+    public string ChangedByName { get; set; } = string.Empty;
 }

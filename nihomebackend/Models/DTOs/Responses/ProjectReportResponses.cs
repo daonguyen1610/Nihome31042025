@@ -117,7 +117,8 @@ public sealed class ProjectReportPermitResponse
 public sealed class ProjectReportPermitItemResponse
 {
     public int Id { get; set; }
-    public int DesignProjectId { get; set; }
+    public int OperationalProjectId { get; set; }
+    public int? DesignProjectId { get; set; }
     public string PermitTypeCode { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
     public DateOnly? TargetDeadline { get; set; }

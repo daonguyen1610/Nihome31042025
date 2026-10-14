@@ -40,6 +40,7 @@ public sealed class ProjectDocumentStorageService(IWebHostEnvironment environmen
             [ProjectDocumentSourceModule.Construction] = ["/files/business-documents/construction/"],
             [ProjectDocumentSourceModule.Acceptance] = ["/files/business-documents/acceptance/", "/files/business-documents/as-built/"],
             [ProjectDocumentSourceModule.Handover] = ["/files/business-documents/handover/"],
+            [ProjectDocumentSourceModule.Legal] = ["/files/business-documents/permits/"],
         };
 
     public async Task<StoredProjectDocument> InspectUploadAsync(IFormFile? file, CancellationToken ct = default)

@@ -768,7 +768,29 @@ uploads cannot be discarded or claimed by another Vendor.
 
 ### 7.6 Permit Checklist API
 
-The permit checklist is auto-generated from active `permit_type` master data when a design project is created. Authorized operators can also manage individual rows when project-specific requirements differ from the default template. Each design-project and permit-type pair remains unique.
+Permit creation is an explicit Operational Project workflow. An eligible
+Upstream `Design`, `Construction`, or `DesignAndBuild` Contract cannot transition
+from `Signed` to `InProgress` through the generic transition endpoint; it returns
+`LEGAL_ACTIVATION_REQUIRED`. The PM/Admin must confirm the Legal wizard. Creating
+or ensuring a `DesignProject` never auto-generates permits.
+
+The activation transaction creates or reuses the project's single
+`LegalPermitting` work package, creates one task per selected permit, records
+dependencies and audit history, creates the Contract activation record, and
+then changes the Contract status. Validation or concurrency failure rolls back
+the entire operation. `ContractLegalActivation.ContractId` is unique for retry
+protection; the package is unique by `(OperationalProjectId, LegalPermitting)`;
+permit type is unique per Operational Project; and `WorkTaskId` is an optional
+unique compatibility link. `DesignProjectId` remains nullable for legacy reads.
+
+Activation/setup routes:
+
+| Method | Route | Permission plus service scope | Purpose |
+|--------|-------|-------------------------------|---------|
+| `GET` | `/api/contracts/{id}/legal-activation-preview` | `crm.contracts.view`; project PM/Admin | Read-only eligibility, active permit types, existing package, and active project members |
+| `POST` | `/api/contracts/{id}/activate-with-legal` | `crm.contracts.view`; project PM/Admin; idempotency key and row version | Atomically activate Contract and create/reuse Legal configuration |
+| `GET` | `/api/operational-projects/{id}/legal-setup` | `permit.checklists.manage`; project PM/Admin | Preview setup for legacy/already-active projects |
+| `POST` | `/api/operational-projects/{id}/legal-setup` | `permit.checklists.manage`; project PM/Admin; idempotency key | Create/reuse package and link legacy permits without changing Contract status |
 
 Both `/api/permits` and `/api/v1/permits` expose the same controller:
 
@@ -776,12 +798,24 @@ Both `/api/permits` and `/api/v1/permits` expose the same controller:
 |--------|-------|------------|---------|
 | `GET` | `/api/permits` | `permit.checklists.view` | Filter, paginate, and read the permit risk summary |
 | `GET` | `/api/permits/{id}` | `permit.checklists.view` | Read one checklist item |
-| `POST` | `/api/permits` | `permit.checklists.manage` | Create a project-specific checklist item |
-| `PATCH` | `/api/permits/{id}` | `permit.checklists.manage` | Update status, ownership, dates, agency, or notes |
-| `DELETE` | `/api/permits/{id}` | `permit.checklists.manage` | Permanently delete one checklist item |
-| `POST` | `/api/permits/design-project/{projectId}/ensure` | `permit.checklists.manage` | Add missing active template items without overwriting existing rows |
+| `GET` | `/api/permits/{id}/history` | `permit.checklists.view` | Read authority-state/document audit history |
+| `POST` | `/api/permits` | `permit.checklists.manage` | Retired with `410 LEGAL_SETUP_REQUIRED`; use Legal setup |
+| `PATCH` | `/api/permits/{id}` | `permit.checklists.view` plus project actor scope | Update authority status, agency, dates, or notes; linked assignment/schedule stay task-owned |
+| `POST` | `/api/permits/{id}/documents/{kind}` | `permit.checklists.view` plus project actor scope | Upload submitted or issued evidence under source module `Legal` |
+| `DELETE` | `/api/permits/{id}` | `permit.checklists.manage` | Blocked with `409`; use aggregate-safe configuration/deletion workflow |
+| `POST` | `/api/permits/design-project/{projectId}/ensure` | `permit.checklists.manage` | Retired with `410 LEGAL_SETUP_REQUIRED` |
 
-Duplicate project/type pairs return `409`; invalid projects, permit types, owners, or statuses return `400`; missing rows return `404`. Create, update, and delete operations write `permit.create`, `permit.update`, and `permit.delete` audit events. Delete returns `204` and records the removed item snapshot.
+Authority transitions are server locked: `Submitted`, `UnderReview`, and
+`NeedMoreDocs` require a submission date and submitted-package file; `Issued`
+requires an issue date and issued-permit file plus
+`permit.checklists.mark-issued`. Files are catalogued in `LegalPermits` beneath
+`03_Xin_phep_Phap_ly` with `ProjectDocumentSourceModule.Legal`.
+
+The linked `DepartmentWorkTask` owns assignee, approver, plan, progress, and
+dependencies. The assignee may submit `Completed` only when the permit is
+`Issued` with its required evidence. Verification performs
+`Completed → Verified`; a return requires a reason and performs
+`Completed → InProgress` without changing the authority status.
 
 ### 7.7 Permanent Aggregate Deletion
 

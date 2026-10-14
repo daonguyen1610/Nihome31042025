@@ -1580,6 +1580,47 @@ namespace nihomebackend.Migrations
                     b.ToTable("contract_attachments", (string)null);
                 });
 
+            modelBuilder.Entity("NihomeBackend.Models.ContractLegalActivation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("ActivatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("ActivatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ConfigurationJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("ContractId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("OperationalProjectId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("WorkPackageId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ActivatedByUserId");
+
+                    b.HasIndex("ContractId")
+                        .IsUnique();
+
+                    b.HasIndex("WorkPackageId");
+
+                    b.HasIndex("OperationalProjectId", "ActivatedAt");
+
+                    b.ToTable("contract_legal_activations", (string)null);
+                });
+
             modelBuilder.Entity("NihomeBackend.Models.ContractLine", b =>
                 {
                     b.Property<int>("Id")
@@ -2139,6 +2180,10 @@ namespace nihomebackend.Migrations
                     b.HasIndex("SourceTenderId");
 
                     b.HasIndex("ContractId", "Status");
+
+                    b.HasIndex("OperationalProjectId", "Purpose")
+                        .IsUnique()
+                        .HasFilter("[OperationalProjectId] IS NOT NULL AND [Purpose] = 'LegalPermitting'");
 
                     b.HasIndex("Purpose", "Status");
 
@@ -2876,9 +2921,9 @@ namespace nihomebackend.Migrations
 
                     b.ToTable("design_schedule_tasks", null, t =>
                         {
-                            t.HasCheckConstraint("CK_design_schedule_tasks_milestone", "[IsMilestone] = 0 OR [PlannedStart] = [PlannedEnd]");
-
                             t.HasCheckConstraint("CK_design_schedule_tasks_approver", "[ApproverMemberId] <> [AssigneeMemberId]");
+
+                            t.HasCheckConstraint("CK_design_schedule_tasks_milestone", "[IsMilestone] = 0 OR [PlannedStart] = [PlannedEnd]");
 
                             t.HasCheckConstraint("CK_design_schedule_tasks_planned_dates", "[PlannedEnd] >= [PlannedStart]");
 
@@ -5808,6 +5853,50 @@ namespace nihomebackend.Migrations
                     b.ToTable("payment_request_events", (string)null);
                 });
 
+            modelBuilder.Entity("NihomeBackend.Models.PermitChecklistHistory", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<DateTime>("ChangedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("ChangedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("FromStatus")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int>("PermitChecklistItemId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SnapshotJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ToStatus")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ChangedByUserId");
+
+                    b.HasIndex("PermitChecklistItemId", "ChangedAt");
+
+                    b.ToTable("permit_checklist_history", (string)null);
+                });
+
             modelBuilder.Entity("NihomeBackend.Models.PermitChecklistItem", b =>
                 {
                     b.Property<int>("Id")
@@ -5822,7 +5911,7 @@ namespace nihomebackend.Migrations
                     b.Property<int?>("CreatedByUserId")
                         .HasColumnType("int");
 
-                    b.Property<int>("DesignProjectId")
+                    b.Property<int?>("DesignProjectId")
                         .HasColumnType("int");
 
                     b.Property<DateTime?>("ExpiresAt")
@@ -5842,6 +5931,9 @@ namespace nihomebackend.Migrations
                     b.Property<string>("Note")
                         .HasMaxLength(4000)
                         .HasColumnType("nvarchar(4000)");
+
+                    b.Property<int>("OperationalProjectId")
+                        .HasColumnType("int");
 
                     b.Property<int?>("OwnerUserId")
                         .HasColumnType("int");
@@ -5872,6 +5964,9 @@ namespace nihomebackend.Migrations
                     b.Property<int?>("UpdatedByUserId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("WorkTaskId")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
                     b.HasIndex("DesignProjectId");
@@ -5884,7 +5979,11 @@ namespace nihomebackend.Migrations
 
                     b.HasIndex("TargetDeadline");
 
-                    b.HasIndex("DesignProjectId", "PermitTypeCode")
+                    b.HasIndex("WorkTaskId")
+                        .IsUnique()
+                        .HasFilter("[WorkTaskId] IS NOT NULL");
+
+                    b.HasIndex("OperationalProjectId", "PermitTypeCode")
                         .IsUnique();
 
                     b.ToTable("permit_checklist_items", (string)null);
@@ -10356,6 +10455,41 @@ namespace nihomebackend.Migrations
                     b.Navigation("UploadedBy");
                 });
 
+            modelBuilder.Entity("NihomeBackend.Models.ContractLegalActivation", b =>
+                {
+                    b.HasOne("NihomeBackend.Models.ApplicationUser", "ActivatedByUser")
+                        .WithMany()
+                        .HasForeignKey("ActivatedByUserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("NihomeBackend.Models.Contract", "Contract")
+                        .WithMany()
+                        .HasForeignKey("ContractId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NihomeBackend.Models.OperationalProject", "OperationalProject")
+                        .WithMany()
+                        .HasForeignKey("OperationalProjectId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NihomeBackend.Models.DepartmentWorkPackage", "WorkPackage")
+                        .WithMany()
+                        .HasForeignKey("WorkPackageId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ActivatedByUser");
+
+                    b.Navigation("Contract");
+
+                    b.Navigation("OperationalProject");
+
+                    b.Navigation("WorkPackage");
+                });
+
             modelBuilder.Entity("NihomeBackend.Models.ContractLine", b =>
                 {
                     b.HasOne("NihomeBackend.Models.Contract", "Contract")
@@ -11636,12 +11770,36 @@ namespace nihomebackend.Migrations
                     b.Navigation("PaymentRequest");
                 });
 
+            modelBuilder.Entity("NihomeBackend.Models.PermitChecklistHistory", b =>
+                {
+                    b.HasOne("NihomeBackend.Models.ApplicationUser", "ChangedByUser")
+                        .WithMany()
+                        .HasForeignKey("ChangedByUserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("NihomeBackend.Models.PermitChecklistItem", "PermitChecklistItem")
+                        .WithMany("History")
+                        .HasForeignKey("PermitChecklistItemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ChangedByUser");
+
+                    b.Navigation("PermitChecklistItem");
+                });
+
             modelBuilder.Entity("NihomeBackend.Models.PermitChecklistItem", b =>
                 {
                     b.HasOne("NihomeBackend.Models.DesignProject", "DesignProject")
                         .WithMany()
                         .HasForeignKey("DesignProjectId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("NihomeBackend.Models.OperationalProject", "OperationalProject")
+                        .WithMany()
+                        .HasForeignKey("OperationalProjectId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("NihomeBackend.Models.ApplicationUser", "Owner")
@@ -11649,9 +11807,18 @@ namespace nihomebackend.Migrations
                         .HasForeignKey("OwnerUserId")
                         .OnDelete(DeleteBehavior.NoAction);
 
+                    b.HasOne("NihomeBackend.Models.DepartmentWorkTask", "WorkTask")
+                        .WithMany()
+                        .HasForeignKey("WorkTaskId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.Navigation("DesignProject");
 
+                    b.Navigation("OperationalProject");
+
                     b.Navigation("Owner");
+
+                    b.Navigation("WorkTask");
                 });
 
             modelBuilder.Entity("NihomeBackend.Models.ProcurementInputPriceLine", b =>
@@ -13044,6 +13211,11 @@ namespace nihomebackend.Migrations
                     b.Navigation("Attachments");
 
                     b.Navigation("Events");
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.PermitChecklistItem", b =>
+                {
+                    b.Navigation("History");
                 });
 
             modelBuilder.Entity("NihomeBackend.Models.ProcurementInputPriceOffer", b =>

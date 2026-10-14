@@ -88,9 +88,8 @@ internal static class AggregateDeletionService
             .Where(option => foundIds.Contains(option.DesignProjectId))
             .Select(option => option.Id)
             .ToListAsync(ct);
-        var permitIds = await db.PermitChecklistItems
-            .Where(permit => foundIds.Contains(permit.DesignProjectId))
-            .Select(permit => permit.Id)
+        var linkedPermits = await db.PermitChecklistItems
+            .Where(permit => permit.DesignProjectId.HasValue && foundIds.Contains(permit.DesignProjectId.Value))
             .ToListAsync(ct);
         var basicDesignDocIds = await db.BasicDesignDocs
             .Where(document => foundIds.Contains(document.DesignProjectId))
@@ -179,9 +178,10 @@ internal static class AggregateDeletionService
         db.AcceptanceRecords.RemoveRange(acceptanceRecords);
         db.HandoverStatusHistory.RemoveRange(handoverHistory);
         db.HandoverRecords.RemoveRange(handoverRecords);
+        foreach (var permit in linkedPermits)
+            permit.DesignProjectId = null;
         db.DesignProjects.RemoveRange(projects);
 
-        await RemoveTranslationsAsync(db, EntityTypes.PermitChecklistItem, permitIds, ct);
         await RemoveTranslationsAsync(db, EntityTypes.ConceptOption, conceptIds, ct);
         await RemoveTranslationsAsync(db, EntityTypes.BasicDesignDoc, basicDesignDocIds, ct);
         await RemoveTranslationsAsync(db, EntityTypes.ShopDrawing, shopDrawingIds, ct);
@@ -268,6 +268,13 @@ internal static class AggregateDeletionService
         var workPackages = await db.DepartmentWorkPackages
             .Where(item => item.OperationalProjectId == projectId)
             .ToListAsync(ct);
+        var legalPermitIds = await db.PermitChecklistItems
+            .Where(item => item.OperationalProjectId == projectId)
+            .Select(item => item.Id).ToListAsync(ct);
+        db.ContractLegalActivations.RemoveRange(
+            await db.ContractLegalActivations.Where(item => item.OperationalProjectId == projectId).ToListAsync(ct));
+        db.PermitChecklistItems.RemoveRange(
+            await db.PermitChecklistItems.Where(item => item.OperationalProjectId == projectId).ToListAsync(ct));
         db.DepartmentWorkPackages.RemoveRange(workPackages);
 
         var hseViolations = await db.HseViolations
@@ -327,6 +334,7 @@ internal static class AggregateDeletionService
         db.ProjectDriveFolders.RemoveRange(driveFolderBindings);
 
         await RemoveTranslationsAsync(db, EntityTypes.Survey, surveyIds, ct);
+        await RemoveTranslationsAsync(db, EntityTypes.PermitChecklistItem, legalPermitIds, ct);
         await RemoveTranslationsAsync(db, EntityTypes.OperationalProject, new[] { projectId }, ct);
         db.OperationalProjects.Remove(project);
     }
@@ -415,22 +423,6 @@ internal static class AggregateDeletionService
             await RequireStagedDeleteAsync(projectDocuments,
                 projectByDesign[document.DesignProjectId], ProjectDocumentSourceModule.Design,
                 nameof(ShopDrawing), "file", document.Id, document.FilePath!, userId, ct);
-        var permits = await db.PermitChecklistItems
-            .Where(document => designProjectIds.Contains(document.DesignProjectId) &&
-                (document.SubmittedFilePath != null || document.IssuedFilePath != null))
-            .ToListAsync(ct);
-        foreach (var document in permits)
-        {
-            var projectId = projectByDesign[document.DesignProjectId];
-            if (!string.IsNullOrWhiteSpace(document.SubmittedFilePath))
-                await RequireStagedDeleteAsync(projectDocuments,
-                    projectId, ProjectDocumentSourceModule.Design, nameof(PermitChecklistItem),
-                    "submittedPackage", document.Id, document.SubmittedFilePath, userId, ct);
-            if (!string.IsNullOrWhiteSpace(document.IssuedFilePath))
-                await RequireStagedDeleteAsync(projectDocuments,
-                    projectId, ProjectDocumentSourceModule.Design, nameof(PermitChecklistItem),
-                    "issuedPermit", document.Id, document.IssuedFilePath, userId, ct);
-        }
         var acceptances = await db.AcceptanceRecords
             .Where(record => designProjectIds.Contains(record.DesignProjectId) && record.Documents != null)
             .ToListAsync(ct);

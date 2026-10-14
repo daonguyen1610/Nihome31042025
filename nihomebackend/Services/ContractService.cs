@@ -650,6 +650,8 @@ public class ContractService(
                     callerUserId, ct);
         }
 
+        db.ContractLegalActivations.RemoveRange(
+            await db.ContractLegalActivations.Where(item => item.ContractId == id).ToListAsync(ct));
         db.Contracts.Remove(entity);
         await CrmConcurrency.SaveChangesAsync(db, ct);
         if (transaction is not null) await transaction.CommitAsync(ct);
@@ -820,6 +822,15 @@ public class ContractService(
             // Ownership was already validated above so re-read with the
             // manager-scope to avoid a redundant permission check.
             return await GetAsync(id, callerUserId, canSeeAll: true, ct);
+        }
+
+        if (entity.Status == ContractStatus.Signed && newStatus == ContractStatus.InProgress &&
+            entity.Direction == ContractDirection.Upstream &&
+            entity.Type is ContractType.Design or ContractType.Construction or ContractType.DesignAndBuild)
+        {
+            throw new ContractValidationException(
+                "Hãy dùng bước kích hoạt có xác nhận để thiết lập công việc Pháp lý trước khi chuyển hợp đồng sang Đang thực hiện.",
+                "LEGAL_ACTIVATION_REQUIRED");
         }
 
         EnsureTransitionAllowed(entity.Status, newStatus);

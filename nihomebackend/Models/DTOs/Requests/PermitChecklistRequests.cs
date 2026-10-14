@@ -5,7 +5,9 @@ namespace NihomeBackend.Models.DTOs.Requests;
 public class CreatePermitChecklistItemRequest
 {
     [Range(1, int.MaxValue)]
-    public int DesignProjectId { get; set; }
+    public int OperationalProjectId { get; set; }
+
+    public int? DesignProjectId { get; set; }
 
     [Required, StringLength(50)]
     public string PermitTypeCode { get; set; } = string.Empty;
@@ -66,8 +68,10 @@ public class UpdatePermitChecklistItemRequest
 /// </summary>
 public class PermitChecklistListParams
 {
+    public int? OperationalProjectId { get; set; }
     public int? DesignProjectId { get; set; }
     public int? OwnerUserId { get; set; }
+    public int? ApproverUserId { get; set; }
 
     /// <summary>Comma-separated <c>PermitStatus</c> values.</summary>
     public string? Status { get; set; }

@@ -25,6 +25,7 @@ import {
 import AdminLayout from "@/components/layout/AdminLayout";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import QuoteContractLinkDialog from "@/components/admin/QuoteContractLinkDialog";
+import LegalActivationWizard from "@/components/admin/LegalActivationWizard";
 import { useI18n } from "@/lib/i18n";
 import { formatVnd, formatVndWithSymbol } from "@/lib/numberFormat";
 import { cn } from "@/lib/utils";
@@ -1681,6 +1682,7 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
   const requestedTab = searchParams.get("tab");
   const [tab, setTab] = useState<TabId>(isContractTab(requestedTab) ? requestedTab : "info");
   const [transitionBusy, setTransitionBusy] = useState<ContractStatus | null>(null);
+  const [legalWizardOpen, setLegalWizardOpen] = useState(false);
   const [busyMilestoneId, setBusyMilestoneId] = useState<number | null>(null);
   const [milestoneActionDraft, setMilestoneActionDraft] = useState<{
     milestoneId: number;
@@ -1803,6 +1805,11 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
           title: t("contracts.detail.transition.needScan"),
         });
         setTab("documents");
+        return;
+      }
+      if (next === "InProgress" && contract.status === "Signed" && contract.direction === "Upstream" &&
+          ["Design", "Construction", "DesignAndBuild"].includes(contract.type)) {
+        setLegalWizardOpen(true);
         return;
       }
       if (next === "Completed") {
@@ -2116,6 +2123,12 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
           onSave={() => void saveEdit()}
           onTransition={handleTransition}
           transitionBusy={transitionBusy}
+        />
+        <LegalActivationWizard
+          contract={contract}
+          open={legalWizardOpen}
+          onOpenChange={setLegalWizardOpen}
+          onActivated={refreshContract}
         />
 
         {supplementalError && (

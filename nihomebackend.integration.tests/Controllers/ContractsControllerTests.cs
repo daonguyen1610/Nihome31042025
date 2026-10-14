@@ -1487,7 +1487,7 @@ public class ContractsControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task Transition_SignedToInProgress_DoesNotCreateDesignProject()
+    public async Task Transition_SignedToInProgress_RequiresLegalActivation()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
         var customerId = await CreateCustomerAsync();
@@ -1509,9 +1509,9 @@ public class ContractsControllerTests : IntegrationTestBase
         var response = await Client.PostAsJsonAsync(
             $"/api/contracts/{contractId}/transition", new { newStatus = "InProgress" });
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
-        (await ReadJsonAsync(response)).GetProperty("designProjectId").ValueKind
-            .Should().Be(JsonValueKind.Null);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest, await response.Content.ReadAsStringAsync());
+        (await ReadJsonAsync(response)).GetProperty("code").GetString()
+            .Should().Be("LEGAL_ACTIVATION_REQUIRED");
         (await WithDbAsync(db => db.DesignProjects.CountAsync(project => project.ContractId == contractId)))
             .Should().Be(0);
     }

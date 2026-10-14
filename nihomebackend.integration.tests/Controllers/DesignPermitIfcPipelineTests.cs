@@ -46,12 +46,51 @@ public sealed class DesignPermitIfcPipelineTests(NihomeWebApplicationFactory fac
             name = "Factory design workspace",
         });
         var projectId = Id(design);
-        await LoginAsync("SALES_MANAGER");
-        contract = await PostAsync($"/api/contracts/{Id(contract)}/transition", new
+        var legalUsers = await WithDbAsync(async db => new
         {
-            newStatus = "InProgress",
-            rowVersion = contract.GetProperty("rowVersion").GetString(),
+            LegalLeadId = await db.Users.Where(user => user.PhoneNumber ==
+                    TestDataSeeder.BusinessRolePhonesByCode["LEGAL_OFFICER"])
+                .Select(user => user.Id).SingleAsync(),
+            AssigneeId = await db.Users.Where(user => user.PhoneNumber ==
+                    TestDataSeeder.BusinessRolePhonesByCode["DESIGN"])
+                .Select(user => user.Id).SingleAsync(),
         });
+        await WithDbAsync(async db =>
+        {
+            db.OperationalProjectMembers.Add(new OperationalProjectMember
+            {
+                OperationalProjectId = fixture.OperationalProjectId,
+                UserId = legalUsers.LegalLeadId,
+                Position = "LEGAL_OFFICER",
+                StartedAt = DateTime.UtcNow.AddDays(-1),
+                CreatedByUserId = legalUsers.LegalLeadId,
+                UpdatedByUserId = legalUsers.LegalLeadId,
+                Roles = [new() { RoleCode = ProjectTeamRoleCode.LegalOfficer, StartedAt = DateTime.UtcNow.AddDays(-1) }],
+            });
+            await db.SaveChangesAsync();
+        });
+        await LoginAsync("PM");
+        contract = await PostWithIdempotencyAsync($"/api/contracts/{Id(contract)}/activate-with-legal", new
+        {
+            legalLeadUserId = legalUsers.LegalLeadId,
+            plannedStart = DateTime.UtcNow.Date,
+            plannedEnd = DateTime.UtcNow.Date.AddMonths(6),
+            rowVersion = contract.GetProperty("rowVersion").GetString(),
+            permits = new[]
+            {
+                new
+                {
+                    permitTypeCode = "gpxd",
+                    issuingAgency = "Sở Xây dựng",
+                    assigneeUserId = legalUsers.AssigneeId,
+                    approverUserId = legalUsers.LegalLeadId,
+                    plannedStart = DateTime.UtcNow.Date,
+                    plannedEnd = DateTime.UtcNow.Date.AddMonths(3),
+                    predecessorPermitTypeCodes = Array.Empty<string>(),
+                },
+            },
+        });
+        contract = contract.GetProperty("contract");
         var contractId = Id(contract);
         (await WithDbAsync(db => db.DesignProjects.CountAsync(p => p.ContractId == contractId))).Should().Be(1);
         await LoginAsync("PM");
@@ -59,7 +98,9 @@ public sealed class DesignPermitIfcPipelineTests(NihomeWebApplicationFactory fac
         checklist.GetProperty("items").GetArrayLength().Should().BeGreaterThan(0);
         var permitId = Id(checklist.GetProperty("items")[0]);
         var permitCount = checklist.GetProperty("items").GetArrayLength();
-        (await PostAsync($"/api/permits/design-project/{projectId}/ensure"))
+        var retiredEnsure = await Client.PostAsync($"/api/permits/design-project/{projectId}/ensure", null);
+        retiredEnsure.StatusCode.Should().Be(HttpStatusCode.Gone);
+        (await GetAsync($"/api/permits?designProjectId={projectId}&pageSize=100"))
             .GetProperty("items").GetArrayLength().Should().Be(permitCount);
 
         await LoginAsync("DESIGN");
@@ -121,6 +162,7 @@ public sealed class DesignPermitIfcPipelineTests(NihomeWebApplicationFactory fac
         // Legal/PM upload is explicit: there is currently no automatic transfer
         // of the approved Basic file or a FK from permit to Basic document.
         await LoginAsync("PM");
+        await PatchPermitAsync(permitId, "Preparing");
         await UploadAsync($"/api/permits/{permitId}/documents/SubmittedPackage", "Factory permit submission package");
         await PatchPermitAsync(permitId, "Submitted");
         if (needsCorrection)
@@ -222,6 +264,17 @@ public sealed class DesignPermitIfcPipelineTests(NihomeWebApplicationFactory fac
         response.IsSuccessStatusCode.Should().BeTrue($"POST {path}: {await response.Content.ReadAsStringAsync()}");
         return await ReadJsonAsync(response);
     }
+    private async Task<JsonElement> PostWithIdempotencyAsync(string path, object body)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, path)
+        {
+            Content = JsonContent.Create(body),
+        };
+        request.Headers.Add("Idempotency-Key", Guid.NewGuid().ToString("N"));
+        var response = await Client.SendAsync(request);
+        response.IsSuccessStatusCode.Should().BeTrue($"POST {path}: {await response.Content.ReadAsStringAsync()}");
+        return await ReadJsonAsync(response);
+    }
     private async Task RejectAsync(string path, object? body, HttpStatusCode expected)
     {
         var response = body is null ? await Client.PostAsync(path, null) : await Client.PostAsJsonAsync(path, body);
@@ -303,8 +356,14 @@ public sealed class DesignPermitIfcPipelineTests(NihomeWebApplicationFactory fac
     }
     private async Task PatchPermitAsync(int id, string status)
     {
-        var response = await Client.PatchAsJsonAsync($"/api/permits/{id}", new { status });
-        response.EnsureSuccessStatusCode();
+        var response = await Client.PatchAsJsonAsync($"/api/permits/{id}", new
+        {
+            status,
+            submittedAt = status == "Submitted" ? DateTime.UtcNow : (DateTime?)null,
+            issuedAt = status == "Issued" ? DateTime.UtcNow : (DateTime?)null,
+        });
+        response.IsSuccessStatusCode.Should().BeTrue(
+            $"PATCH /api/permits/{id} to {status}: {await response.Content.ReadAsStringAsync()}");
         (await ReadJsonAsync(response)).GetProperty("status").GetString().Should().Be(status);
     }
     private async Task<(int CustomerId, int OperationalProjectId, int LeadId, int QuoteId)> SeedFoundationAsync() =>
