@@ -1,7 +1,6 @@
 const API_BASE = import.meta.env.VITE_API_URL || "/api";
 
-const getRuntimeOrigin = () =>
-  typeof window !== "undefined" ? window.location.origin : undefined;
+const getRuntimeOrigin = () => (typeof window !== "undefined" ? window.location.origin : undefined);
 
 export function getApiOrigin() {
   if (!API_BASE) return "";
@@ -62,5 +61,8 @@ export function resolveSafeLinkUrl(value: string) {
 export function isManagedDocumentPath(value: string, prefix: string) {
   const normalized = toHostRelativeUrl(value.trim()).split(/[?#]/, 1)[0];
   const normalizedPrefix = prefix.endsWith("/") ? prefix : `${prefix}/`;
-  return normalized.startsWith(normalizedPrefix) && !normalized.slice(normalizedPrefix.length).includes("/");
+  return (
+    normalized.startsWith(normalizedPrefix) &&
+    !normalized.slice(normalizedPrefix.length).includes("/")
+  );
 }

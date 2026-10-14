@@ -41,7 +41,9 @@ interface SortableBlockProps {
 
 const SortableBlock = ({ id, children }: SortableBlockProps) => {
   const { t } = useI18n();
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id,
+  });
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -49,7 +51,12 @@ const SortableBlock = ({ id, children }: SortableBlockProps) => {
   };
   return (
     <div ref={setNodeRef} style={style}>
-      {children({ ...attributes, ...listeners, type: "button", "aria-label": t("contentBlocks.dragToReorder") } as React.HTMLAttributes<HTMLButtonElement>)}
+      {children({
+        ...attributes,
+        ...listeners,
+        type: "button",
+        "aria-label": t("contentBlocks.dragToReorder"),
+      } as React.HTMLAttributes<HTMLButtonElement>)}
     </div>
   );
 };
@@ -101,7 +108,8 @@ const ContentBlockEditor = ({ value, onChange, folder }: ContentBlockEditorProps
     if (!file || uploadTarget == null) return;
     setUploading(true);
     try {
-      const previous = blocks[uploadTarget]?.type === "image" ? blocks[uploadTarget].url : undefined;
+      const previous =
+        blocks[uploadTarget]?.type === "image" ? blocks[uploadTarget].url : undefined;
       const res = await adminApi.uploadImage(file, previous || undefined, folder);
       const existingBlock = blocks[uploadTarget];
       const caption = existingBlock?.type === "image" ? existingBlock.caption : undefined;
@@ -144,11 +152,22 @@ const ContentBlockEditor = ({ value, onChange, folder }: ContentBlockEditorProps
                           <GripVertical className="h-3.5 w-3.5 text-muted-foreground" />
                         </button>
                         <span className="inline-flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                          {block.type === "text"
-                            ? <><Type className="h-3.5 w-3.5" />{t("contentBlocks.text")}</>
-                            : block.type === "youtube"
-                              ? <><Youtube className="h-3.5 w-3.5" />{t("contentBlocks.youtube")}</>
-                              : <><ImagePlus className="h-3.5 w-3.5" />{t("contentBlocks.image")}</>}
+                          {block.type === "text" ? (
+                            <>
+                              <Type className="h-3.5 w-3.5" />
+                              {t("contentBlocks.text")}
+                            </>
+                          ) : block.type === "youtube" ? (
+                            <>
+                              <Youtube className="h-3.5 w-3.5" />
+                              {t("contentBlocks.youtube")}
+                            </>
+                          ) : (
+                            <>
+                              <ImagePlus className="h-3.5 w-3.5" />
+                              {t("contentBlocks.image")}
+                            </>
+                          )}
                         </span>
                       </div>
                       <Button
@@ -167,40 +186,53 @@ const ContentBlockEditor = ({ value, onChange, folder }: ContentBlockEditorProps
                       <Textarea
                         className="min-h-28"
                         value={block.value}
-                        onChange={(event) => updateBlock(index, { type: "text", value: event.target.value })}
+                        onChange={(event) =>
+                          updateBlock(index, { type: "text", value: event.target.value })
+                        }
                       />
                     ) : block.type === "youtube" ? (
                       <div className="space-y-2">
                         <Input
                           className="h-9"
                           value={block.url}
-                          onChange={(event) => updateBlock(index, { type: "youtube", url: event.target.value })}
+                          onChange={(event) =>
+                            updateBlock(index, { type: "youtube", url: event.target.value })
+                          }
                           placeholder={t("contentBlocks.youtubePlaceholder")}
                         />
-                        {block.url && (() => {
-                          const match = block.url.match(/(?:youtu\.be\/|[?&]v=|\/embed\/|\/shorts\/|\/live\/)([A-Za-z0-9_-]{11})/);
-                          return match ? (
-                            <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-muted">
-                              <iframe
-                                src={`https://www.youtube.com/embed/${match[1]}`}
-                                title="Preview"
-                                className="absolute inset-0 h-full w-full"
-                                allowFullScreen
-                              />
-                            </div>
-                          ) : null;
-                        })()}
+                        {block.url &&
+                          (() => {
+                            const match = block.url.match(
+                              /(?:youtu\.be\/|[?&]v=|\/embed\/|\/shorts\/|\/live\/)([A-Za-z0-9_-]{11})/,
+                            );
+                            return match ? (
+                              <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-muted">
+                                <iframe
+                                  src={`https://www.youtube.com/embed/${match[1]}`}
+                                  title="Preview"
+                                  className="absolute inset-0 h-full w-full"
+                                  allowFullScreen
+                                />
+                              </div>
+                            ) : null;
+                          })()}
                       </div>
                     ) : (
                       <div className="space-y-2">
                         {block.url && (
-                          <img src={block.url} alt="" className="aspect-video w-full rounded-lg bg-muted object-cover" />
+                          <img
+                            src={block.url}
+                            alt=""
+                            className="aspect-video w-full rounded-lg bg-muted object-cover"
+                          />
                         )}
                         <div className="flex items-center gap-2">
                           <Input
                             className="h-9 flex-1"
                             value={block.url}
-                            onChange={(event) => updateBlock(index, { type: "image", url: event.target.value })}
+                            onChange={(event) =>
+                              updateBlock(index, { type: "image", url: event.target.value })
+                            }
                             placeholder={t("media.url.placeholder")}
                           />
                           <Button
@@ -218,7 +250,11 @@ const ContentBlockEditor = ({ value, onChange, folder }: ContentBlockEditorProps
                           className="h-9"
                           value={block.caption ?? ""}
                           onChange={(event) =>
-                            updateBlock(index, { type: "image", url: block.url, caption: event.target.value || undefined })
+                            updateBlock(index, {
+                              type: "image",
+                              url: block.url,
+                              caption: event.target.value || undefined,
+                            })
                           }
                           placeholder={t("contentBlocks.captionPlaceholder")}
                         />

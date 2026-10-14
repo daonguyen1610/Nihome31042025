@@ -68,26 +68,20 @@ export interface UpdateRolePermissionsRequest {
 }
 
 export const rbacApi = {
-  getMyPermissions: () =>
-    api.get<MePermissionsResponse>("/users/me/permissions"),
+  getMyPermissions: () => api.get<MePermissionsResponse>("/users/me/permissions"),
 
-  listRoles: () =>
-    api.get<RoleResponse[]>("/admin/rbac/roles"),
+  listRoles: () => api.get<RoleResponse[]>("/admin/rbac/roles"),
 
-  listRoleGroups: () =>
-    api.get<RoleGroupResponse[]>("/admin/rbac/role-groups"),
+  listRoleGroups: () => api.get<RoleGroupResponse[]>("/admin/rbac/role-groups"),
 
-  getRole: (id: number) =>
-    api.get<RoleResponse>(`/admin/rbac/roles/${id}`),
+  getRole: (id: number) => api.get<RoleResponse>(`/admin/rbac/roles/${id}`),
 
   getRolePermissions: (id: number) =>
     api.get<RolePermissionsResponse>(`/admin/rbac/roles/${id}/permissions`),
 
-  listPermissions: () =>
-    api.get<PermissionResponse[]>("/admin/rbac/permissions"),
+  listPermissions: () => api.get<PermissionResponse[]>("/admin/rbac/permissions"),
 
-  createRole: (data: CreateRoleRequest) =>
-    api.post<RoleResponse>("/admin/rbac/roles", data),
+  createRole: (data: CreateRoleRequest) => api.post<RoleResponse>("/admin/rbac/roles", data),
 
   updateRole: (id: number, data: UpdateRoleRequest) =>
     api.put<RoleResponse>(`/admin/rbac/roles/${id}`, data),
@@ -101,6 +95,5 @@ export const rbacApi = {
   updateRoleGroupBaseline: (id: number, data: UpdateRolePermissionsRequest) =>
     api.put<RoleGroupResponse>(`/admin/rbac/role-groups/${id}/baseline`, data),
 
-  deleteRole: (id: number) =>
-    api.delete<RoleResponse>(`/admin/rbac/roles/${id}`),
+  deleteRole: (id: number) => api.delete<RoleResponse>(`/admin/rbac/roles/${id}`),
 };

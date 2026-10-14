@@ -59,8 +59,7 @@ const formatDate = (iso?: string | null, lang: string = "vi"): string => {
 };
 
 const toDateInputValue = (iso?: string | null) => (iso ? iso.slice(0, 10) : "");
-const toUtcMidnight = (yyyyMmDd: string): string =>
-  yyyyMmDd ? `${yyyyMmDd}T00:00:00.000Z` : "";
+const toUtcMidnight = (yyyyMmDd: string): string => (yyyyMmDd ? `${yyyyMmDd}T00:00:00.000Z` : "");
 
 interface UserOption {
   id: number;
@@ -244,11 +243,20 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged }: Props) =
     let active = true;
     setLoadingDeleteImpact(true);
     setDeleteError(null);
-    void adminApi.getConceptOptionDeletionImpact(deleting.id)
-      .then(({ data }) => { if (active) setDeleteImpact(data); })
-      .catch((err) => { if (active) setDeleteError(extractApiError(err)); })
-      .finally(() => { if (active) setLoadingDeleteImpact(false); });
-    return () => { active = false; };
+    void adminApi
+      .getConceptOptionDeletionImpact(deleting.id)
+      .then(({ data }) => {
+        if (active) setDeleteImpact(data);
+      })
+      .catch((err) => {
+        if (active) setDeleteError(extractApiError(err));
+      })
+      .finally(() => {
+        if (active) setLoadingDeleteImpact(false);
+      });
+    return () => {
+      active = false;
+    };
   }, [deleting]);
 
   const confirmDelete = async (confirmation: string) => {
@@ -335,9 +343,7 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged }: Props) =
       ) : null}
 
       <header className="flex items-center justify-between gap-2">
-        <h2 className="text-base font-semibold text-slate-900">
-          {t("concepts.title")}
-        </h2>
+        <h2 className="text-base font-semibold text-slate-900">{t("concepts.title")}</h2>
         {canManage && !isLocked ? (
           <Button size="sm" onClick={openCreate}>
             <Plus className="mr-1 h-4 w-4" />
@@ -368,7 +374,10 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged }: Props) =
                     <p className="mt-0.5 text-xs text-muted-foreground">{row.ownerName}</p>
                   ) : null}
                 </div>
-                <Badge variant="outline" className={cn("whitespace-nowrap", STATUS_BADGE[row.status])}>
+                <Badge
+                  variant="outline"
+                  className={cn("whitespace-nowrap", STATUS_BADGE[row.status])}
+                >
                   {t(`concepts.status.${row.status}`)}
                 </Badge>
               </header>
@@ -402,7 +411,17 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged }: Props) =
                   />
                 </div>
               ) : null}
-              {canHardDelete && row.status === "Discarded" && (!canManage || isLocked) ? <Button size="sm" variant="ghost" className="mt-3 h-8 text-xs text-rose-700" onClick={() => setDeleting(row)}><Trash2 className="mr-1 h-3.5 w-3.5" />{t("concepts.action.delete")}</Button> : null}
+              {canHardDelete && row.status === "Discarded" && (!canManage || isLocked) ? (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="mt-3 h-8 text-xs text-rose-700"
+                  onClick={() => setDeleting(row)}
+                >
+                  <Trash2 className="mr-1 h-3.5 w-3.5" />
+                  {t("concepts.action.delete")}
+                </Button>
+              ) : null}
             </article>
           ))}
         </div>
@@ -446,9 +465,7 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged }: Props) =
                 <SearchableSelect
                   className="mt-1"
                   value={form.ownerUserId != null ? String(form.ownerUserId) : ""}
-                  onChange={(v) =>
-                    setForm((f) => ({ ...f, ownerUserId: v ? Number(v) : null }))
-                  }
+                  onChange={(v) => setForm((f) => ({ ...f, ownerUserId: v ? Number(v) : null }))}
                   options={[{ value: "", label: t("concepts.form.ownerNone") }, ...userOptions]}
                   placeholder={t("concepts.form.ownerNone")}
                 />
@@ -481,9 +498,14 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged }: Props) =
         loading={loadingDeleteImpact}
         deleting={busyDelete}
         error={deleteError}
-        onOpenChange={(open) => { if (!open && !busyDelete) setDeleting(null); }}
+        onOpenChange={(open) => {
+          if (!open && !busyDelete) setDeleting(null);
+        }}
         onConfirm={confirmDelete}
-        onCompleted={async () => { setDeleting(null); await fetchRows(); }}
+        onCompleted={async () => {
+          setDeleting(null);
+          await fetchRows();
+        }}
       />
 
       {/* finalize confirmation */}
@@ -594,7 +616,11 @@ const RowActions = ({
             {t("common.edit")}
           </Button>
           {canFinalize ? (
-            <Button size="sm" className={cn(btn, "bg-emerald-600 hover:bg-emerald-700")} onClick={onFinalize}>
+            <Button
+              size="sm"
+              className={cn(btn, "bg-emerald-600 hover:bg-emerald-700")}
+              onClick={onFinalize}
+            >
               <Sparkles className="mr-1 h-3.5 w-3.5" />
               {t("concepts.action.finalize")}
             </Button>
@@ -643,15 +669,17 @@ const RowActions = ({
           {t("concepts.status.Finalized")}
         </Badge>
       )}
-      {canHardDelete && s === "Discarded" ? <Button
-        size="sm"
-        variant="ghost"
-        className={cn(btn, "text-rose-700 hover:bg-rose-50 hover:text-rose-800")}
-        onClick={onDelete}
-      >
-        <Trash2 className="mr-1 h-3.5 w-3.5" />
-        {t("concepts.action.delete")}
-      </Button> : null}
+      {canHardDelete && s === "Discarded" ? (
+        <Button
+          size="sm"
+          variant="ghost"
+          className={cn(btn, "text-rose-700 hover:bg-rose-50 hover:text-rose-800")}
+          onClick={onDelete}
+        >
+          <Trash2 className="mr-1 h-3.5 w-3.5" />
+          {t("concepts.action.delete")}
+        </Button>
+      ) : null}
     </>
   );
 };

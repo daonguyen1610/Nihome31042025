@@ -55,9 +55,7 @@ test.describe("NIH-145 — As-built dossier (real-user flow)", () => {
       ),
       (async () => {
         await projectFilter.click();
-        await page
-          .getByRole("option", { name: new RegExp(`E2E-AB ${projSuffix}`) })
-          .click();
+        await page.getByRole("option", { name: new RegExp(`E2E-AB ${projSuffix}`) }).click();
       })(),
     ]);
 
@@ -123,11 +121,16 @@ test.describe("NIH-145 — As-built dossier (real-user flow)", () => {
     await page.getByTestId("asbuilt-form-title").fill(updatedTitle);
     await Promise.all([
       page.waitForResponse(
-        (r) => /\/api\/as-built-documents\/\d+$/.test(r.url()) && r.request().method() === "PUT" && r.status() === 200,
+        (r) =>
+          /\/api\/as-built-documents\/\d+$/.test(r.url()) &&
+          r.request().method() === "PUT" &&
+          r.status() === 200,
       ),
       page.getByTestId("asbuilt-form-save").click(),
     ]);
-    const updatedRow = page.locator('[data-testid^="asbuilt-row-"]').filter({ hasText: updatedTitle });
+    const updatedRow = page
+      .locator('[data-testid^="asbuilt-row-"]')
+      .filter({ hasText: updatedTitle });
     await expect(updatedRow).toBeVisible();
     await page.getByRole("dialog").getByRole("button", { name: "Close" }).click();
 
@@ -174,7 +177,9 @@ test.describe("NIH-145 — As-built dossier (real-user flow)", () => {
           );
           if (!list.ok()) return { status: "err", completedRequiredCategories: 0 };
           const body = await list.json();
-          const match = (body.items as Array<{ title: string; status: string }>).find((i) => i.title === updatedTitle);
+          const match = (body.items as Array<{ title: string; status: string }>).find(
+            (i) => i.title === updatedTitle,
+          );
           return {
             status: match?.status ?? "missing",
             completedRequiredCategories: body.completedRequiredCategories,
@@ -187,7 +192,10 @@ test.describe("NIH-145 — As-built dossier (real-user flow)", () => {
     await page.getByTestId("asbuilt-delete").click();
     await Promise.all([
       page.waitForResponse(
-        (r) => /\/api\/as-built-documents\/\d+$/.test(r.url()) && r.request().method() === "DELETE" && r.status() === 204,
+        (r) =>
+          /\/api\/as-built-documents\/\d+$/.test(r.url()) &&
+          r.request().method() === "DELETE" &&
+          r.status() === 204,
       ),
       page.getByTestId("asbuilt-delete-confirm").click(),
     ]);

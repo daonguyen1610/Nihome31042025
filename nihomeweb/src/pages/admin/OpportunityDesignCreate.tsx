@@ -26,7 +26,9 @@ const OpportunityDesignCreate = () => {
   const opportunityId = Number(id);
   const requestedProjectId = Number(searchParams.get("projectId"));
   const invalidOpportunity = !Number.isInteger(opportunityId) || opportunityId < 1;
-  const backPath = invalidOpportunity ? "/admin/opportunities" : `/admin/opportunities/${opportunityId}`;
+  const backPath = invalidOpportunity
+    ? "/admin/opportunities"
+    : `/admin/opportunities/${opportunityId}`;
   const [opportunity, setOpportunity] = useState<OpportunityResponse | null>(null);
   const [projects, setProjects] = useState<OperationalProjectListItemResponse[]>([]);
   const [projectId, setProjectId] = useState<number | null>(null);
@@ -52,7 +54,9 @@ const OpportunityDesignCreate = () => {
         let total = 0;
         do {
           const result = await adminApi.listOperationalProjects({
-            customerId: data.customerId, page, pageSize: 100,
+            customerId: data.customerId,
+            page,
+            pageSize: 100,
           });
           items.push(...result.data.items);
           total = result.data.total;
@@ -63,15 +67,21 @@ const OpportunityDesignCreate = () => {
         setOpportunity(data);
         setProjects(items);
         setName(data.name);
-        setProjectId(data.operationalProjectId ??
-          (items.some((project) => project.id === requestedProjectId) ? requestedProjectId : null));
+        setProjectId(
+          data.operationalProjectId ??
+            (items.some((project) => project.id === requestedProjectId)
+              ? requestedProjectId
+              : null),
+        );
       } catch (reason) {
         if (!cancelled) setError(extractApiError(reason));
       } finally {
         if (!cancelled) setLoading(false);
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [opportunityId, requestedProjectId, invalidOpportunity]);
 
   const createProjectPath = opportunity
@@ -114,9 +124,13 @@ const OpportunityDesignCreate = () => {
         name: trimmedName,
         note: note.trim() || null,
       });
-      toast({ title: t(data.created
-        ? "opportunities.designProject.created"
-        : "opportunities.designProject.alreadyExists") });
+      toast({
+        title: t(
+          data.created
+            ? "opportunities.designProject.created"
+            : "opportunities.designProject.alreadyExists",
+        ),
+      });
       navigate(backPath);
     } catch (reason) {
       setFormError(extractApiError(reason));
@@ -128,52 +142,109 @@ const OpportunityDesignCreate = () => {
   return (
     <AdminLayout>
       <div className="mx-auto max-w-2xl space-y-5 px-2 py-4 sm:px-0">
-        <Button variant="ghost" asChild><Link to={backPath}><ArrowLeft className="mr-2 h-4 w-4" />{t("common.back")}</Link></Button>
-        {invalidOpportunity ? <PageError message={t("opportunities.designProject.invalidOpportunity")} />
-          : loading ? <PageLoading /> : error ? <PageError message={error} /> : opportunity && (
-          <div className="space-y-5 rounded-lg border bg-card p-4 sm:p-6" data-testid="opportunity-design-form">
-            <div>
-              <h1 className="text-2xl font-semibold">{t("opportunities.action.createDesignProject")}</h1>
-              <p className="text-sm text-muted-foreground">{t("opportunities.designProject.formHint")}</p>
-            </div>
-            {opportunity.stage === "Lost" && <p role="alert" className="text-sm text-destructive">{t("opportunities.designProject.lost")}</p>}
-            {opportunity.designProjectId && <p role="status" className="text-sm text-muted-foreground">{t("opportunities.designProject.alreadyExists")}</p>}
-            <div>
-              <Label>{t("opportunities.field.customer")}</Label>
-              <Input value={opportunity.customerName ?? String(opportunity.customerId)} disabled />
-            </div>
-            <div>
-              <Label htmlFor="design-project-name">{t("designProjects.field.name")}</Label>
-              <Input id="design-project-name" value={name} maxLength={300} onChange={(event) => setName(event.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label>{t("opportunities.field.operationalProject")}</Label>
-              <SearchableSelect
-                value={projectId ? String(projectId) : null}
-                onChange={(value) => setProjectId(Number(value))}
-                options={projects.map((project) => ({ value: String(project.id), label: `${project.code} · ${project.name}` }))}
-                disabled={!!opportunity.operationalProjectId}
-                ariaLabel={t("opportunities.field.operationalProject")}
-                placeholder={t("opportunities.project.select")}
-              />
-              {!opportunity.operationalProjectId && (
-                <Button variant="link" className="h-auto p-0" asChild>
-                  <Link to={createProjectPath}><Plus className="mr-1 h-4 w-4" />{t("opportunities.project.create")}</Link>
-                </Button>
+        <Button variant="ghost" asChild>
+          <Link to={backPath}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            {t("common.back")}
+          </Link>
+        </Button>
+        {invalidOpportunity ? (
+          <PageError message={t("opportunities.designProject.invalidOpportunity")} />
+        ) : loading ? (
+          <PageLoading />
+        ) : error ? (
+          <PageError message={error} />
+        ) : (
+          opportunity && (
+            <div
+              className="space-y-5 rounded-lg border bg-card p-4 sm:p-6"
+              data-testid="opportunity-design-form"
+            >
+              <div>
+                <h1 className="text-2xl font-semibold">
+                  {t("opportunities.action.createDesignProject")}
+                </h1>
+                <p className="text-sm text-muted-foreground">
+                  {t("opportunities.designProject.formHint")}
+                </p>
+              </div>
+              {opportunity.stage === "Lost" && (
+                <p role="alert" className="text-sm text-destructive">
+                  {t("opportunities.designProject.lost")}
+                </p>
               )}
+              {opportunity.designProjectId && (
+                <p role="status" className="text-sm text-muted-foreground">
+                  {t("opportunities.designProject.alreadyExists")}
+                </p>
+              )}
+              <div>
+                <Label>{t("opportunities.field.customer")}</Label>
+                <Input
+                  value={opportunity.customerName ?? String(opportunity.customerId)}
+                  disabled
+                />
+              </div>
+              <div>
+                <Label htmlFor="design-project-name">{t("designProjects.field.name")}</Label>
+                <Input
+                  id="design-project-name"
+                  value={name}
+                  maxLength={300}
+                  onChange={(event) => setName(event.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>{t("opportunities.field.operationalProject")}</Label>
+                <SearchableSelect
+                  value={projectId ? String(projectId) : null}
+                  onChange={(value) => setProjectId(Number(value))}
+                  options={projects.map((project) => ({
+                    value: String(project.id),
+                    label: `${project.code} · ${project.name}`,
+                  }))}
+                  disabled={!!opportunity.operationalProjectId}
+                  ariaLabel={t("opportunities.field.operationalProject")}
+                  placeholder={t("opportunities.project.select")}
+                />
+                {!opportunity.operationalProjectId && (
+                  <Button variant="link" className="h-auto p-0" asChild>
+                    <Link to={createProjectPath}>
+                      <Plus className="mr-1 h-4 w-4" />
+                      {t("opportunities.project.create")}
+                    </Link>
+                  </Button>
+                )}
+              </div>
+              <div>
+                <Label htmlFor="design-project-note">{t("designProjects.field.note")}</Label>
+                <Textarea
+                  id="design-project-note"
+                  rows={3}
+                  maxLength={4000}
+                  value={note}
+                  onChange={(event) => setNote(event.target.value)}
+                />
+              </div>
+              {formError && (
+                <p role="alert" className="text-sm text-destructive">
+                  {formError}
+                </p>
+              )}
+              <div className="flex flex-wrap justify-end gap-2">
+                <Button variant="outline" asChild>
+                  <Link to={backPath}>{t("common.cancel")}</Link>
+                </Button>
+                <Button
+                  data-testid="opportunity-design-submit"
+                  disabled={saving || opportunity.stage === "Lost" || !!opportunity.designProjectId}
+                  onClick={() => void submit()}
+                >
+                  {t("common.save")}
+                </Button>
+              </div>
             </div>
-            <div>
-              <Label htmlFor="design-project-note">{t("designProjects.field.note")}</Label>
-              <Textarea id="design-project-note" rows={3} maxLength={4000} value={note} onChange={(event) => setNote(event.target.value)} />
-            </div>
-            {formError && <p role="alert" className="text-sm text-destructive">{formError}</p>}
-            <div className="flex flex-wrap justify-end gap-2">
-              <Button variant="outline" asChild><Link to={backPath}>{t("common.cancel")}</Link></Button>
-              <Button data-testid="opportunity-design-submit" disabled={saving || opportunity.stage === "Lost" || !!opportunity.designProjectId} onClick={() => void submit()}>
-                {t("common.save")}
-              </Button>
-            </div>
-          </div>
+          )
         )}
       </div>
     </AdminLayout>

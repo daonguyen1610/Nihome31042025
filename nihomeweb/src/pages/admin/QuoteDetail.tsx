@@ -39,7 +39,11 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { extractApiError, isConcurrencyConflict } from "@/lib/apiError";
 import { formatFileSize, formatVnd } from "@/lib/numberFormat";
-import { calculateQuoteLineAmount, calculateQuoteTotals, validateQuoteValues } from "@/lib/quoteTotals";
+import {
+  calculateQuoteLineAmount,
+  calculateQuoteTotals,
+  validateQuoteValues,
+} from "@/lib/quoteTotals";
 import { isValidVietnameseOverrideReason } from "@/lib/quoteRate";
 import { normalizeBoqSortOrder } from "@/lib/boqItems";
 import { PageLoading, PageError } from "@/components/PageState";
@@ -48,7 +52,13 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -173,7 +183,9 @@ const AdminQuoteDetail = () => {
   const [form, setForm] = useState<UpdateQuoteRequest | null>(null);
   const [approvedInputOffers, setApprovedInputOffers] = useState<InputPriceOfferResponse[]>([]);
   const [saving, setSaving] = useState(false);
-  const [effectiveRevision, setEffectiveRevision] = useState<MaterialRateRevisionResponse | null>(null);
+  const [effectiveRevision, setEffectiveRevision] = useState<MaterialRateRevisionResponse | null>(
+    null,
+  );
   const [exportingSpreadsheet, setExportingSpreadsheet] = useState(false);
   const [boqBulkEntryOpen, setBoqBulkEntryOpen] = useState(false);
 
@@ -221,7 +233,13 @@ const AdminQuoteDetail = () => {
             operationalProjectId: data.operationalProjectId,
             pageSize: 100,
           });
-          setApprovedInputOffers(packages.data.items.flatMap((item) => item.inputPriceOffers).filter((offer) => offer.status === "Approved" && new Date(offer.validUntil) >= new Date()));
+          setApprovedInputOffers(
+            packages.data.items
+              .flatMap((item) => item.inputPriceOffers)
+              .filter(
+                (offer) => offer.status === "Approved" && new Date(offer.validUntil) >= new Date(),
+              ),
+          );
         } catch {
           setApprovedInputOffers([]);
         }
@@ -307,7 +325,8 @@ const AdminQuoteDetail = () => {
 
   const applyBoqCatalog = (revision: MaterialRateRevisionResponse, pricingDate: string) => {
     if (!form) return;
-    if ((form.items?.length ?? 0) > 0 && !window.confirm(t("quotes.boqCatalog.replaceConfirm"))) return;
+    if ((form.items?.length ?? 0) > 0 && !window.confirm(t("quotes.boqCatalog.replaceConfirm")))
+      return;
     setForm({
       ...form,
       materialRateCatalogId: revision.catalogId,
@@ -340,20 +359,36 @@ const AdminQuoteDetail = () => {
     }
     if (quote.method === "UnitCost") {
       if (!form.materialRateCatalogId || !form.pricingEffectiveDate) {
-        toast({ title: t("common.error"), description: t("quotes.validation.rateSelectionRequired"), variant: "destructive" });
+        toast({
+          title: t("common.error"),
+          description: t("quotes.validation.rateSelectionRequired"),
+          variant: "destructive",
+        });
         return;
       }
       if (!effectiveRevision) {
-        toast({ title: t("common.error"), description: t("quotes.validation.noEffectiveRate"), variant: "destructive" });
+        toast({
+          title: t("common.error"),
+          description: t("quotes.validation.noEffectiveRate"),
+          variant: "destructive",
+        });
         return;
       }
       const isOverride = form.unitPricePerSqm !== Number(effectiveRevision.totalRatePerSqm);
       if (isOverride && !canOverrideRate) {
-        toast({ title: t("common.error"), description: t("quotes.validation.overridePermission"), variant: "destructive" });
+        toast({
+          title: t("common.error"),
+          description: t("quotes.validation.overridePermission"),
+          variant: "destructive",
+        });
         return;
       }
       if (isOverride && !isValidVietnameseOverrideReason(form.rateOverrideReason)) {
-        toast({ title: t("common.error"), description: t("quotes.validation.overrideReason"), variant: "destructive" });
+        toast({
+          title: t("common.error"),
+          description: t("quotes.validation.overrideReason"),
+          variant: "destructive",
+        });
         return;
       }
     }
@@ -395,7 +430,11 @@ const AdminQuoteDetail = () => {
       link.click();
       URL.revokeObjectURL(url);
     } catch (err) {
-      toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
+      toast({
+        title: t("common.error"),
+        description: extractApiError(err),
+        variant: "destructive",
+      });
     } finally {
       setExportingSpreadsheet(false);
     }
@@ -411,13 +450,14 @@ const AdminQuoteDetail = () => {
         submit: () => adminApi.submitQuote(quote.id, body),
         approve: () => adminApi.approveQuote(quote.id, body),
         rejectInternal: () => adminApi.rejectQuoteInternal(quote.id, body),
-        send: () => adminApi.sendQuoteToCustomer(quote.id, {
-          ...body,
-          toEmail: sendDraft?.toEmail ?? "",
-          subject: sendDraft?.subject ?? "",
-          body: sendDraft?.body ?? "",
-          languageCode: lang,
-        }),
+        send: () =>
+          adminApi.sendQuoteToCustomer(quote.id, {
+            ...body,
+            toEmail: sendDraft?.toEmail ?? "",
+            subject: sendDraft?.subject ?? "",
+            body: sendDraft?.body ?? "",
+            languageCode: lang,
+          }),
         customerApprove: () => adminApi.markQuoteCustomerApproved(quote.id, body),
         customerReject: () => adminApi.markQuoteCustomerRejected(quote.id, body),
         cancel: () => adminApi.cancelQuote(quote.id, body),
@@ -455,7 +495,11 @@ const AdminQuoteDetail = () => {
         setSendDraft(data);
         setWorkflow(k);
       } catch (err) {
-        toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
+        toast({
+          title: t("common.error"),
+          description: extractApiError(err),
+          variant: "destructive",
+        });
       } finally {
         setWorkflowBusy(false);
       }
@@ -555,9 +599,24 @@ const AdminQuoteDetail = () => {
 
   // -------- render --------
 
-  if (!Number.isFinite(quoteId)) return <AdminLayout><PageError message="Invalid id" /></AdminLayout>;
-  if (loading) return <AdminLayout><PageLoading /></AdminLayout>;
-  if (error) return <AdminLayout><PageError message={error} onRetry={() => void load()} /></AdminLayout>;
+  if (!Number.isFinite(quoteId))
+    return (
+      <AdminLayout>
+        <PageError message="Invalid id" />
+      </AdminLayout>
+    );
+  if (loading)
+    return (
+      <AdminLayout>
+        <PageLoading />
+      </AdminLayout>
+    );
+  if (error)
+    return (
+      <AdminLayout>
+        <PageError message={error} onRetry={() => void load()} />
+      </AdminLayout>
+    );
   if (!quote || !form) return null;
 
   const workflowKinds = WORKFLOW_BY_STATUS[quote.status];
@@ -578,7 +637,8 @@ const AdminQuoteDetail = () => {
     const params = new URLSearchParams({ fromQuote: String(quote.id) });
     if (quote.opportunityId) params.set("opportunityId", String(quote.opportunityId));
     if (quote.customerId) params.set("customerId", String(quote.customerId));
-    if (quote.operationalProjectId) params.set("operationalProjectId", String(quote.operationalProjectId));
+    if (quote.operationalProjectId)
+      params.set("operationalProjectId", String(quote.operationalProjectId));
     if (quote.grandTotal > 0) params.set("value", String(quote.grandTotal));
     navigate(`/admin/contracts?${params.toString()}`);
   };
@@ -601,7 +661,10 @@ const AdminQuoteDetail = () => {
           </div>
           <h1 className="flex flex-wrap items-center gap-3 text-2xl font-semibold tracking-tight">
             {quote.code}
-            <Badge variant="outline" className={cn("whitespace-nowrap text-xs", STATUS_STYLES[quote.status])}>
+            <Badge
+              variant="outline"
+              className={cn("whitespace-nowrap text-xs", STATUS_STYLES[quote.status])}
+            >
               {t(`quotes.status.${quote.status}`)}
             </Badge>
             <span className="text-sm font-normal text-muted-foreground">V{quote.version}</span>
@@ -615,10 +678,26 @@ const AdminQuoteDetail = () => {
         </div>
 
         <div className="flex flex-wrap gap-1.5">
-          {!editing && canManageWorkPackages && quote.operationalProjectId && <>
-            <Button variant="outline" asChild><Link to={`/admin/work-packages?create=1&purpose=ProcurementInputPricing&projectId=${quote.operationalProjectId}&opportunityId=${quote.opportunityId}`}><Plus className="mr-1.5 h-4 w-4" />{t("quotes.action.requestInputPrice")}</Link></Button>
-            <Button variant="outline" asChild><Link to={`/admin/work-packages?create=1&purpose=FinanceCommercialReview&projectId=${quote.operationalProjectId}&opportunityId=${quote.opportunityId}&quoteId=${quote.id}`}><CheckCheck className="mr-1.5 h-4 w-4" />{t("quotes.action.requestFinanceReview")}</Link></Button>
-          </>}
+          {!editing && canManageWorkPackages && quote.operationalProjectId && (
+            <>
+              <Button variant="outline" asChild>
+                <Link
+                  to={`/admin/work-packages?create=1&purpose=ProcurementInputPricing&projectId=${quote.operationalProjectId}&opportunityId=${quote.opportunityId}`}
+                >
+                  <Plus className="mr-1.5 h-4 w-4" />
+                  {t("quotes.action.requestInputPrice")}
+                </Link>
+              </Button>
+              <Button variant="outline" asChild>
+                <Link
+                  to={`/admin/work-packages?create=1&purpose=FinanceCommercialReview&projectId=${quote.operationalProjectId}&opportunityId=${quote.opportunityId}&quoteId=${quote.id}`}
+                >
+                  <CheckCheck className="mr-1.5 h-4 w-4" />
+                  {t("quotes.action.requestFinanceReview")}
+                </Link>
+              </Button>
+            </>
+          )}
           {!editing && (
             <Button
               variant="outline"
@@ -626,7 +705,11 @@ const AdminQuoteDetail = () => {
               onClick={() => void downloadSpreadsheet()}
               disabled={exportingSpreadsheet}
             >
-              {exportingSpreadsheet ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Download className="mr-1.5 h-4 w-4" />}
+              {exportingSpreadsheet ? (
+                <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="mr-1.5 h-4 w-4" />
+              )}
               {t("quotes.action.downloadExcel")}
             </Button>
           )}
@@ -638,7 +721,13 @@ const AdminQuoteDetail = () => {
           )}
           {editing && (
             <>
-              <Button variant="outline" onClick={() => { setForm(toFormState(quote)); setEditing(false); }}>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setForm(toFormState(quote));
+                  setEditing(false);
+                }}
+              >
                 {t("common.cancel")}
               </Button>
               <Button data-testid="quote-save" onClick={() => void handleSave()} disabled={saving}>
@@ -652,13 +741,19 @@ const AdminQuoteDetail = () => {
             workflowKinds.map((k) => (
               <Button
                 key={k}
-                variant={k === "rejectInternal" || k === "customerReject" || k === "cancel" ? "outline" : "default"}
+                variant={
+                  k === "rejectInternal" || k === "customerReject" || k === "cancel"
+                    ? "outline"
+                    : "default"
+                }
                 onClick={() => handleWorkflowClick(k)}
                 disabled={
                   workflowBusy ||
-                  ((k === "approve" || k === "rejectInternal") ? !canApprove
-                  : k === "send" ? !canSend || quote.isExpired
-                  : !canManage)
+                  (k === "approve" || k === "rejectInternal"
+                    ? !canApprove
+                    : k === "send"
+                      ? !canSend || quote.isExpired
+                      : !canManage)
                 }
               >
                 {workflowIcon(k)}
@@ -672,13 +767,21 @@ const AdminQuoteDetail = () => {
             </Button>
           )}
           {canLinkContract && (
-            <Button variant="outline" data-testid="quote-link-contract" onClick={() => setLinkContractOpen(true)}>
+            <Button
+              variant="outline"
+              data-testid="quote-link-contract"
+              onClick={() => setLinkContractOpen(true)}
+            >
               <Link2 className="mr-1.5 h-4 w-4" />
               {t("quoteLink.fromQuote.action")}
             </Button>
           )}
           {!editing && canDelete && (
-            <Button variant="outline" className="text-destructive hover:text-destructive" onClick={() => void handleDelete()}>
+            <Button
+              variant="outline"
+              className="text-destructive hover:text-destructive"
+              onClick={() => void handleDelete()}
+            >
               <Trash2 className="mr-1.5 h-4 w-4" />
               {t("quotes.action.delete")}
             </Button>
@@ -694,9 +797,7 @@ const AdminQuoteDetail = () => {
           <dt className="text-xs uppercase tracking-wide text-muted-foreground">
             {t("quotes.field.grandTotal")}
           </dt>
-          <dd className="truncate text-base font-semibold">
-            {formatVnd(quote.grandTotal)} ₫
-          </dd>
+          <dd className="truncate text-base font-semibold">{formatVnd(quote.grandTotal)} ₫</dd>
         </div>
         <div className="min-w-0">
           <dt className="text-xs uppercase tracking-wide text-muted-foreground">
@@ -706,7 +807,10 @@ const AdminQuoteDetail = () => {
             <Calendar className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
             <span className="truncate">{new Date(quote.validUntil).toLocaleDateString()}</span>
             {quote.isExpired && (
-              <Badge variant="outline" className="ml-1 border-rose-200 bg-rose-50 text-[10px] text-rose-700">
+              <Badge
+                variant="outline"
+                className="ml-1 border-rose-200 bg-rose-50 text-[10px] text-rose-700"
+              >
                 {t("quotes.status.Expired")}
               </Badge>
             )}
@@ -751,9 +855,7 @@ const AdminQuoteDetail = () => {
             <FileText className="mr-1.5 h-4 w-4" />
             {t("quotes.tab.documents")}
           </TabsTrigger>
-          <TabsTrigger value="workflow">
-            {t("quotes.tab.workflow")}
-          </TabsTrigger>
+          <TabsTrigger value="workflow">{t("quotes.tab.workflow")}</TabsTrigger>
         </TabsList>
 
         {/* ---------- CONTENT ---------- */}
@@ -763,12 +865,34 @@ const AdminQuoteDetail = () => {
               <div className="rounded-lg border bg-card p-4">
                 <FormField label={t("quotes.field.inputPriceOffer")}>
                   {editing ? (
-                    <Select value={form.inputPriceOfferId ? String(form.inputPriceOfferId) : "none"} onValueChange={(value) => setForm({ ...form, inputPriceOfferId: value === "none" ? null : Number(value) })}>
-                      <SelectTrigger><SelectValue placeholder={t("quotes.inputPrice.none")} /></SelectTrigger>
-                      <SelectContent><SelectItem value="none">{t("quotes.inputPrice.none")}</SelectItem>{approvedInputOffers.map((offer) => <SelectItem key={offer.id} value={String(offer.id)}>{offer.vendorName} · {offer.supplierReference} · {formatVnd(offer.grandTotal)} {offer.currency}</SelectItem>)}</SelectContent>
+                    <Select
+                      value={form.inputPriceOfferId ? String(form.inputPriceOfferId) : "none"}
+                      onValueChange={(value) =>
+                        setForm({
+                          ...form,
+                          inputPriceOfferId: value === "none" ? null : Number(value),
+                        })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={t("quotes.inputPrice.none")} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">{t("quotes.inputPrice.none")}</SelectItem>
+                        {approvedInputOffers.map((offer) => (
+                          <SelectItem key={offer.id} value={String(offer.id)}>
+                            {offer.vendorName} · {offer.supplierReference} ·{" "}
+                            {formatVnd(offer.grandTotal)} {offer.currency}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
                     </Select>
                   ) : (
-                    <p className="text-sm font-medium">{quote.inputPriceOfferId ? `${quote.inputPriceVendorName ?? "—"} · ${quote.inputPriceSupplierReference ?? "—"}` : t("quotes.inputPrice.none")}</p>
+                    <p className="text-sm font-medium">
+                      {quote.inputPriceOfferId
+                        ? `${quote.inputPriceVendorName ?? "—"} · ${quote.inputPriceSupplierReference ?? "—"}`
+                        : t("quotes.inputPrice.none")}
+                    </p>
                   )}
                 </FormField>
                 <p className="mt-2 text-xs text-muted-foreground">{t("quotes.inputPrice.hint")}</p>
@@ -776,14 +900,19 @@ const AdminQuoteDetail = () => {
               {quote.method === "UnitCost" ? (
                 <div className="space-y-3 rounded-lg border bg-card p-4">
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <FormField label={t("quotes.field.areaSqm")}>
-                    <Input
-                      inputMode="decimal"
-                      value={form.areaSqm ?? ""}
-                      disabled={!editing}
-                      onChange={(e) => setForm({ ...form, areaSqm: e.target.value ? Number(e.target.value) : null })}
-                    />
-                  </FormField>
+                    <FormField label={t("quotes.field.areaSqm")}>
+                      <Input
+                        inputMode="decimal"
+                        value={form.areaSqm ?? ""}
+                        disabled={!editing}
+                        onChange={(e) =>
+                          setForm({
+                            ...form,
+                            areaSqm: e.target.value ? Number(e.target.value) : null,
+                          })
+                        }
+                      />
+                    </FormField>
                   </div>
                   {editing ? (
                     <QuoteRateFields
@@ -794,7 +923,9 @@ const AdminQuoteDetail = () => {
                       rateSource={quote.rateSource}
                       canOverride={canOverrideRate}
                       onEffectiveRevisionChange={setEffectiveRevision}
-                      onChange={(patch) => setForm((current) => current ? { ...current, ...patch } : current)}
+                      onChange={(patch) =>
+                        setForm((current) => (current ? { ...current, ...patch } : current))
+                      }
                     />
                   ) : (
                     <RateProvenance value={quote} t={t} />
@@ -837,7 +968,9 @@ const AdminQuoteDetail = () => {
               <div className="grid grid-cols-2 gap-3 rounded-lg border bg-card p-4 sm:grid-cols-4">
                 <FormField label={t("quotes.field.discountPercent")}>
                   <Input
-                    type="number" min={0} max={100}
+                    type="number"
+                    min={0}
+                    max={100}
                     value={form.discountPercent}
                     disabled={!editing}
                     onChange={(e) => setForm({ ...form, discountPercent: Number(e.target.value) })}
@@ -845,7 +978,9 @@ const AdminQuoteDetail = () => {
                 </FormField>
                 <FormField label={t("quotes.field.vatPercent")}>
                   <Input
-                    type="number" min={0} max={100}
+                    type="number"
+                    min={0}
+                    max={100}
                     value={form.vatPercent}
                     disabled={!editing}
                     onChange={(e) => setForm({ ...form, vatPercent: Number(e.target.value) })}
@@ -856,7 +991,12 @@ const AdminQuoteDetail = () => {
                     type="date"
                     value={form.validUntil?.slice(0, 10) ?? ""}
                     disabled={!editing}
-                    onChange={(e) => setForm({ ...form, validUntil: e.target.value ? `${e.target.value}T23:59:59Z` : null })}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        validUntil: e.target.value ? `${e.target.value}T23:59:59Z` : null,
+                      })
+                    }
                   />
                 </FormField>
                 <FormField label={t("quotes.field.note")}>
@@ -873,7 +1013,9 @@ const AdminQuoteDetail = () => {
             <aside className="space-y-2 rounded-lg border bg-card p-4 text-sm">
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">{t("quotes.field.subtotal")}</span>
-                <span className="font-medium">{formatVnd(preview?.subtotal ?? quote.subtotal)} ₫</span>
+                <span className="font-medium">
+                  {formatVnd(preview?.subtotal ?? quote.subtotal)} ₫
+                </span>
               </div>
               <div className="flex items-center justify-between text-muted-foreground">
                 <span>{t("quotes.field.discountPercent")}</span>
@@ -886,10 +1028,14 @@ const AdminQuoteDetail = () => {
               <div className="my-2 border-t" />
               <div className="flex items-center justify-between">
                 <span className="font-semibold">{t("quotes.field.grandTotal")}</span>
-                <span className="text-lg font-bold text-primary">{formatVnd(preview?.grandTotal ?? quote.grandTotal)} ₫</span>
+                <span className="text-lg font-bold text-primary">
+                  {formatVnd(preview?.grandTotal ?? quote.grandTotal)} ₫
+                </span>
               </div>
               <p className="break-words text-xs italic text-muted-foreground">
-                <span className="mr-1 font-medium not-italic">{t("quotes.field.grandTotalInWords")}:</span>
+                <span className="mr-1 font-medium not-italic">
+                  {t("quotes.field.grandTotalInWords")}:
+                </span>
                 {quote.grandTotalInWords}
               </p>
               {editing && preview && preview.grandTotal !== quote.grandTotal && (
@@ -951,7 +1097,10 @@ const AdminQuoteDetail = () => {
           ) : documents ? (
             <ul className="grid gap-3 lg:grid-cols-2">
               {documents.map((document) => (
-                <li key={document.id} className="flex min-w-0 items-start gap-3 rounded-lg border bg-card p-3">
+                <li
+                  key={document.id}
+                  className="flex min-w-0 items-start gap-3 rounded-lg border bg-card p-3"
+                >
                   <div className="rounded-md bg-muted p-2">
                     <FileText className="h-5 w-5 text-muted-foreground" />
                   </div>
@@ -960,12 +1109,16 @@ const AdminQuoteDetail = () => {
                       {document.label || document.originalFileName}
                     </p>
                     {document.label && (
-                      <p className="truncate text-xs text-muted-foreground" title={document.originalFileName}>
+                      <p
+                        className="truncate text-xs text-muted-foreground"
+                        title={document.originalFileName}
+                      >
                         {document.originalFileName}
                       </p>
                     )}
                     <p className="text-xs text-muted-foreground">
-                      {formatFileSize(document.fileSize)} · {new Date(document.createdAt).toLocaleString()}
+                      {formatFileSize(document.fileSize)} ·{" "}
+                      {new Date(document.createdAt).toLocaleString()}
                     </p>
                     {document.uploadedByName && (
                       <p className="truncate text-xs text-muted-foreground">
@@ -978,9 +1131,9 @@ const AdminQuoteDetail = () => {
                       url={document.filePath}
                       fileName={document.originalFileName}
                       contentType={document.contentType}
-                      fetchFile={async () => (
-                        await adminApi.getQuoteDocumentContent(quote.id, document.id)
-                      ).data}
+                      fetchFile={async () =>
+                        (await adminApi.getQuoteDocumentContent(quote.id, document.id)).data
+                      }
                     />
                     {canManage && (
                       <Button
@@ -1051,7 +1204,8 @@ const AdminQuoteDetail = () => {
                     </div>
                     <div className="mt-1 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
                       <span>
-                        {t(`quotes.method.${v.method}`)} · {t("quotes.field.subtotal")} {formatVnd(v.subtotal)} · VAT {v.vatPercent}%
+                        {t(`quotes.method.${v.method}`)} · {t("quotes.field.subtotal")}{" "}
+                        {formatVnd(v.subtotal)} · VAT {v.vatPercent}%
                       </span>
                       <span className="font-medium text-primary">{t("quotes.version.view")}</span>
                     </div>
@@ -1091,57 +1245,107 @@ const AdminQuoteDetail = () => {
 
       {/* ---------- Workflow note dialog ---------- */}
       <Dialog open={!!workflow} onOpenChange={(o) => !o && setWorkflow(null)}>
-        <DialogContent className={workflow === "send" ? "sm:max-w-2xl max-h-[90vh] overflow-y-auto" : "sm:max-w-md"}>
+        <DialogContent
+          className={
+            workflow === "send" ? "sm:max-w-2xl max-h-[90vh] overflow-y-auto" : "sm:max-w-md"
+          }
+        >
           <DialogHeader>
             <DialogTitle>{workflow && t(`quotes.action.${workflow}`)}</DialogTitle>
-            <DialogDescription>{t(workflow === "send" ? "quotes.email.previewHint" : "quotes.action.noteOptional")}</DialogDescription>
+            <DialogDescription>
+              {t(workflow === "send" ? "quotes.email.previewHint" : "quotes.action.noteOptional")}
+            </DialogDescription>
           </DialogHeader>
           {workflow === "send" && sendDraft && (
             <div className="space-y-3">
-              <div className="space-y-1"><Label htmlFor="quote-email-to">{t("quotes.email.to")}</Label>
-                <Input id="quote-email-to" type="email" maxLength={150} value={sendDraft.toEmail}
-                  onChange={(event) => setSendDraft({ ...sendDraft, toEmail: event.target.value })} />
-                {(!sendDraft.toEmail.trim() || !isValidEmail(sendDraft.toEmail)) &&
-                  <p className="text-xs text-destructive">{t(sendDraft.toEmail.trim()
-                    ? "quotes.email.invalid" : "quotes.email.required")}</p>}
+              <div className="space-y-1">
+                <Label htmlFor="quote-email-to">{t("quotes.email.to")}</Label>
+                <Input
+                  id="quote-email-to"
+                  type="email"
+                  maxLength={150}
+                  value={sendDraft.toEmail}
+                  onChange={(event) => setSendDraft({ ...sendDraft, toEmail: event.target.value })}
+                />
+                {(!sendDraft.toEmail.trim() || !isValidEmail(sendDraft.toEmail)) && (
+                  <p className="text-xs text-destructive">
+                    {t(sendDraft.toEmail.trim() ? "quotes.email.invalid" : "quotes.email.required")}
+                  </p>
+                )}
               </div>
-              <div className="space-y-1"><Label htmlFor="quote-email-subject">{t("quotes.email.subject")}</Label>
-                <Input id="quote-email-subject" maxLength={200} value={sendDraft.subject} disabled={!sendPreview?.canEdit}
-                  onChange={(event) => setSendDraft({ ...sendDraft, subject: event.target.value })} />
-                {!sendDraft.subject.trim() && <p className="text-xs text-destructive">{t("quotes.email.subjectRequired")}</p>}
+              <div className="space-y-1">
+                <Label htmlFor="quote-email-subject">{t("quotes.email.subject")}</Label>
+                <Input
+                  id="quote-email-subject"
+                  maxLength={200}
+                  value={sendDraft.subject}
+                  disabled={!sendPreview?.canEdit}
+                  onChange={(event) => setSendDraft({ ...sendDraft, subject: event.target.value })}
+                />
+                {!sendDraft.subject.trim() && (
+                  <p className="text-xs text-destructive">{t("quotes.email.subjectRequired")}</p>
+                )}
               </div>
-              <div className="space-y-1"><Label htmlFor="quote-email-body">{t("quotes.email.body")}</Label>
-                <Textarea id="quote-email-body" rows={10} maxLength={8000} value={sendDraft.body} disabled={!sendPreview?.canEdit}
-                  onChange={(event) => setSendDraft({ ...sendDraft, body: event.target.value })} />
-                {!sendDraft.body.trim() && <p className="text-xs text-destructive">{t("quotes.email.bodyRequired")}</p>}
-                {sendDraft.body.trim() && !sendDraft.body.trimStart().startsWith("<") &&
-                  <p className="text-xs text-destructive">{t("quotes.email.htmlRequired")}</p>}
+              <div className="space-y-1">
+                <Label htmlFor="quote-email-body">{t("quotes.email.body")}</Label>
+                <Textarea
+                  id="quote-email-body"
+                  rows={10}
+                  maxLength={8000}
+                  value={sendDraft.body}
+                  disabled={!sendPreview?.canEdit}
+                  onChange={(event) => setSendDraft({ ...sendDraft, body: event.target.value })}
+                />
+                {!sendDraft.body.trim() && (
+                  <p className="text-xs text-destructive">{t("quotes.email.bodyRequired")}</p>
+                )}
+                {sendDraft.body.trim() && !sendDraft.body.trimStart().startsWith("<") && (
+                  <p className="text-xs text-destructive">{t("quotes.email.htmlRequired")}</p>
+                )}
               </div>
               <div className="space-y-1">
                 <Label>{t("quotes.email.renderedPreview")}</Label>
-                <iframe title={t("quotes.email.renderedPreview")} srcDoc={sendDraft.body}
-                  sandbox="" className="h-72 w-full rounded-md border bg-white" />
+                <iframe
+                  title={t("quotes.email.renderedPreview")}
+                  srcDoc={sendDraft.body}
+                  sandbox=""
+                  className="h-72 w-full rounded-md border bg-white"
+                />
               </div>
-              <div className="rounded-md border bg-muted/30 p-3 text-sm" data-testid="quote-email-attachment">
+              <div
+                className="rounded-md border bg-muted/30 p-3 text-sm"
+                data-testid="quote-email-attachment"
+              >
                 <span className="font-medium">{t("quotes.email.attachment")}: </span>
                 <span>{sendDraft.attachmentFileName}</span>
               </div>
             </div>
           )}
-          {workflow !== "send" && <Textarea
-            rows={4}
-            value={workflowNote}
-            onChange={(e) => setWorkflowNote(e.target.value)}
-            placeholder={t("quotes.field.note")}
-          />}
+          {workflow !== "send" && (
+            <Textarea
+              rows={4}
+              value={workflowNote}
+              onChange={(e) => setWorkflowNote(e.target.value)}
+              placeholder={t("quotes.field.note")}
+            />
+          )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setWorkflow(null)}>
               {t("common.cancel")}
             </Button>
-            <Button onClick={() => void runWorkflow()} disabled={workflowBusy ||
-              (workflow === "send" && (!sendDraft || !isValidEmail(sendDraft.toEmail) ||
-                !sendDraft.toEmail.trim() || !sendDraft.subject.trim() || !sendDraft.body.trim() ||
-                !sendDraft.body.trimStart().startsWith("<")))}>
+            <Button
+              onClick={() => void runWorkflow()}
+              disabled={
+                workflowBusy ||
+                (workflow === "send" &&
+                  (!sendDraft ||
+                    !isValidEmail(sendDraft.toEmail) ||
+                    !sendDraft.toEmail.trim() ||
+                    !sendDraft.subject.trim() ||
+                    !sendDraft.body.trim() ||
+                    !sendDraft.body.trimStart().startsWith("<")))
+              }
+            >
               {workflowBusy && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
               {t(workflow === "send" ? "quotes.action.send" : "common.save")}
             </Button>
@@ -1172,7 +1376,10 @@ const AdminQuoteDetail = () => {
         onCompleted={completeDelete}
       />
 
-      <Dialog open={selectedVersion !== null} onOpenChange={(open) => !open && setSelectedVersion(null)}>
+      <Dialog
+        open={selectedVersion !== null}
+        onOpenChange={(open) => !open && setSelectedVersion(null)}
+      >
         <DialogContent className="max-h-[90vh] w-[95vw] max-w-4xl overflow-y-auto sm:w-full">
           <DialogHeader>
             <DialogTitle className="flex flex-wrap items-center gap-2">
@@ -1186,7 +1393,8 @@ const AdminQuoteDetail = () => {
             <DialogDescription>
               {selectedVersion && (
                 <>
-                  {t("quotes.version.capturedAt")}: {new Date(selectedVersion.capturedAt).toLocaleString()}
+                  {t("quotes.version.capturedAt")}:{" "}
+                  {new Date(selectedVersion.capturedAt).toLocaleString()}
                 </>
               )}
             </DialogDescription>
@@ -1202,7 +1410,12 @@ const AdminQuoteDetail = () => {
       {canLinkContract && (
         <QuoteContractLinkDialog
           mode="fromQuote"
-          quote={{ id: quote.id, code: quote.code, customerId: quote.customerId!, opportunityId: quote.opportunityId }}
+          quote={{
+            id: quote.id,
+            code: quote.code,
+            customerId: quote.customerId!,
+            opportunityId: quote.opportunityId,
+          }}
           open={linkContractOpen}
           onOpenChange={setLinkContractOpen}
           onLinked={(contract) => navigate(`/admin/contracts/${contract.id}`)}
@@ -1245,23 +1458,24 @@ function translateStatus(status: string, t: (k: string) => string): string {
 function workflowIcon(k: WorkflowKind) {
   const cls = "mr-1.5 h-4 w-4";
   switch (k) {
-    case "submit": return <ThumbsUp className={cls} />;
-    case "approve": return <CheckCheck className={cls} />;
-    case "rejectInternal": return <ThumbsDown className={cls} />;
-    case "send": return <Send className={cls} />;
-    case "customerApprove": return <CheckCheck className={cls} />;
-    case "customerReject": return <XCircle className={cls} />;
-    case "cancel": return <Ban className={cls} />;
+    case "submit":
+      return <ThumbsUp className={cls} />;
+    case "approve":
+      return <CheckCheck className={cls} />;
+    case "rejectInternal":
+      return <ThumbsDown className={cls} />;
+    case "send":
+      return <Send className={cls} />;
+    case "customerApprove":
+      return <CheckCheck className={cls} />;
+    case "customerReject":
+      return <XCircle className={cls} />;
+    case "cancel":
+      return <Ban className={cls} />;
   }
 }
 
-const FormField = ({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) => (
+const FormField = ({ label, children }: { label: string; children: React.ReactNode }) => (
   <div>
     <Label className="text-xs uppercase tracking-wide text-muted-foreground">{label}</Label>
     {children}
@@ -1278,19 +1492,27 @@ const QuoteVersionDetails = ({
   <div className="space-y-4">
     <dl className="grid grid-cols-2 gap-3 rounded-lg border bg-muted/20 p-4 text-sm sm:grid-cols-4">
       <div>
-        <dt className="text-xs uppercase tracking-wide text-muted-foreground">{t("quotes.field.method")}</dt>
+        <dt className="text-xs uppercase tracking-wide text-muted-foreground">
+          {t("quotes.field.method")}
+        </dt>
         <dd className="font-medium">{t(`quotes.method.${version.method}`)}</dd>
       </div>
       <div>
-        <dt className="text-xs uppercase tracking-wide text-muted-foreground">{t("quotes.field.subtotal")}</dt>
+        <dt className="text-xs uppercase tracking-wide text-muted-foreground">
+          {t("quotes.field.subtotal")}
+        </dt>
         <dd className="font-medium">{formatVnd(version.subtotal)} ₫</dd>
       </div>
       <div>
-        <dt className="text-xs uppercase tracking-wide text-muted-foreground">{t("quotes.field.discountPercent")}</dt>
+        <dt className="text-xs uppercase tracking-wide text-muted-foreground">
+          {t("quotes.field.discountPercent")}
+        </dt>
         <dd className="font-medium">{version.discountPercent}%</dd>
       </div>
       <div>
-        <dt className="text-xs uppercase tracking-wide text-muted-foreground">{t("quotes.field.vatPercent")}</dt>
+        <dt className="text-xs uppercase tracking-wide text-muted-foreground">
+          {t("quotes.field.vatPercent")}
+        </dt>
         <dd className="font-medium">{version.vatPercent}%</dd>
       </div>
     </dl>
@@ -1298,18 +1520,28 @@ const QuoteVersionDetails = ({
     {version.method === "UnitCost" ? (
       <div className="grid gap-3 rounded-lg border bg-card p-4 sm:grid-cols-2">
         <div>
-          <div className="text-xs uppercase tracking-wide text-muted-foreground">{t("quotes.field.areaSqm")}</div>
+          <div className="text-xs uppercase tracking-wide text-muted-foreground">
+            {t("quotes.field.areaSqm")}
+          </div>
           <div className="font-medium">{version.areaSqm ?? "—"}</div>
         </div>
         <div>
-          <div className="text-xs uppercase tracking-wide text-muted-foreground">{t("quotes.field.unitPricePerSqm")}</div>
-          <div className="font-medium">{version.unitPricePerSqm != null ? `${formatVnd(version.unitPricePerSqm)} ₫` : "—"}</div>
+          <div className="text-xs uppercase tracking-wide text-muted-foreground">
+            {t("quotes.field.unitPricePerSqm")}
+          </div>
+          <div className="font-medium">
+            {version.unitPricePerSqm != null ? `${formatVnd(version.unitPricePerSqm)} ₫` : "—"}
+          </div>
         </div>
         <div className="sm:col-span-2">
-          <div className="text-xs uppercase tracking-wide text-muted-foreground">{t("quotes.field.packageDescription")}</div>
+          <div className="text-xs uppercase tracking-wide text-muted-foreground">
+            {t("quotes.field.packageDescription")}
+          </div>
           <div className="mt-1 whitespace-pre-wrap">{version.packageDescription || "—"}</div>
         </div>
-        <div className="sm:col-span-2"><RateProvenance value={version} t={t} /></div>
+        <div className="sm:col-span-2">
+          <RateProvenance value={version} t={t} />
+        </div>
       </div>
     ) : (
       <div className="rounded-lg border bg-card">
@@ -1349,7 +1581,11 @@ const QuoteVersionDetails = ({
                 <span className="font-medium">{item.name}</span>
                 <span className="whitespace-nowrap font-semibold">{formatVnd(item.amount)} ₫</span>
               </div>
-              {item.itemCode && <div className="text-xs text-muted-foreground">{t("quotes.boq.code")}: {item.itemCode}</div>}
+              {item.itemCode && (
+                <div className="text-xs text-muted-foreground">
+                  {t("quotes.boq.code")}: {item.itemCode}
+                </div>
+              )}
               <div className="text-xs text-muted-foreground">
                 {item.quantity} {item.unit} × {formatVnd(item.unitPrice)} ₫
               </div>
@@ -1366,21 +1602,68 @@ const QuoteVersionDetails = ({
   </div>
 );
 
-type RateProvenanceValue = Pick<QuoteResponse | QuoteVersionResponse,
-  "materialRateCatalogCode" | "materialRateCatalogName" | "materialRateRevisionVersion" |
-  "pricingEffectiveDate" | "catalogUnitPricePerSqm" | "unitPricePerSqm" | "rateSource" |
-  "rateOverrideReason"
+type RateProvenanceValue = Pick<
+  QuoteResponse | QuoteVersionResponse,
+  | "materialRateCatalogCode"
+  | "materialRateCatalogName"
+  | "materialRateRevisionVersion"
+  | "pricingEffectiveDate"
+  | "catalogUnitPricePerSqm"
+  | "unitPricePerSqm"
+  | "rateSource"
+  | "rateOverrideReason"
 >;
 
-const RateProvenance = ({ value, t }: { value: RateProvenanceValue; t: (key: string) => string }) => (
+const RateProvenance = ({
+  value,
+  t,
+}: {
+  value: RateProvenanceValue;
+  t: (key: string) => string;
+}) => (
   <dl className="grid gap-2 rounded-md border bg-muted/20 p-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
-    <div><dt className="text-xs text-muted-foreground">{t("quotes.field.materialRateCatalog")}</dt><dd className="font-medium">{value.materialRateCatalogCode ? `${value.materialRateCatalogCode} · ${value.materialRateCatalogName ?? ""}` : "—"}</dd></div>
-    <div><dt className="text-xs text-muted-foreground">{t("quotes.field.materialRateRevision")}</dt><dd className="font-medium">{value.materialRateRevisionVersion != null ? `V${value.materialRateRevisionVersion}` : "—"}</dd></div>
-    <div><dt className="text-xs text-muted-foreground">{t("quotes.field.pricingEffectiveDate")}</dt><dd className="font-medium">{value.pricingEffectiveDate ?? "—"}</dd></div>
-    <div><dt className="text-xs text-muted-foreground">{t("quotes.field.catalogRate")}</dt><dd className="font-medium">{value.catalogUnitPricePerSqm != null ? `${formatVnd(value.catalogUnitPricePerSqm)} ₫/m²` : "—"}</dd></div>
-    <div><dt className="text-xs text-muted-foreground">{t("quotes.field.appliedRate")}</dt><dd className="font-medium">{value.unitPricePerSqm != null ? `${formatVnd(value.unitPricePerSqm)} ₫/m²` : "—"}</dd></div>
-    <div><dt className="text-xs text-muted-foreground">{t("quotes.field.rateSource")}</dt><dd className="font-medium">{t(`quotes.rateSource.${value.rateSource}`)}</dd></div>
-    {value.rateOverrideReason && <div className="sm:col-span-2 lg:col-span-3"><dt className="text-xs text-muted-foreground">{t("quotes.field.rateOverrideReason")}</dt><dd>{value.rateOverrideReason}</dd></div>}
+    <div>
+      <dt className="text-xs text-muted-foreground">{t("quotes.field.materialRateCatalog")}</dt>
+      <dd className="font-medium">
+        {value.materialRateCatalogCode
+          ? `${value.materialRateCatalogCode} · ${value.materialRateCatalogName ?? ""}`
+          : "—"}
+      </dd>
+    </div>
+    <div>
+      <dt className="text-xs text-muted-foreground">{t("quotes.field.materialRateRevision")}</dt>
+      <dd className="font-medium">
+        {value.materialRateRevisionVersion != null ? `V${value.materialRateRevisionVersion}` : "—"}
+      </dd>
+    </div>
+    <div>
+      <dt className="text-xs text-muted-foreground">{t("quotes.field.pricingEffectiveDate")}</dt>
+      <dd className="font-medium">{value.pricingEffectiveDate ?? "—"}</dd>
+    </div>
+    <div>
+      <dt className="text-xs text-muted-foreground">{t("quotes.field.catalogRate")}</dt>
+      <dd className="font-medium">
+        {value.catalogUnitPricePerSqm != null
+          ? `${formatVnd(value.catalogUnitPricePerSqm)} ₫/m²`
+          : "—"}
+      </dd>
+    </div>
+    <div>
+      <dt className="text-xs text-muted-foreground">{t("quotes.field.appliedRate")}</dt>
+      <dd className="font-medium">
+        {value.unitPricePerSqm != null ? `${formatVnd(value.unitPricePerSqm)} ₫/m²` : "—"}
+      </dd>
+    </div>
+    <div>
+      <dt className="text-xs text-muted-foreground">{t("quotes.field.rateSource")}</dt>
+      <dd className="font-medium">{t(`quotes.rateSource.${value.rateSource}`)}</dd>
+    </div>
+    {value.rateOverrideReason && (
+      <div className="sm:col-span-2 lg:col-span-3">
+        <dt className="text-xs text-muted-foreground">{t("quotes.field.rateOverrideReason")}</dt>
+        <dd>{value.rateOverrideReason}</dd>
+      </div>
+    )}
   </dl>
 );
 
@@ -1408,7 +1691,13 @@ const BoqTable = ({
         <span>{t("quotes.boq.title")}</span>
         {editing && (
           <div className="flex gap-1.5">
-            <Button size="sm" variant="ghost" className="h-7 px-2" data-testid="boq-bulk-entry-open" onClick={onBulkEntry}>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 px-2"
+              data-testid="boq-bulk-entry-open"
+              onClick={onBulkEntry}
+            >
               <ListPlus className="mr-1 h-3.5 w-3.5" />
               {t("quotes.boq.bulkEntry")}
             </Button>
@@ -1431,11 +1720,15 @@ const BoqTable = ({
         <table className="w-full min-w-[560px] divide-y text-sm">
           <thead className="bg-muted/20 text-xs uppercase text-muted-foreground">
             <tr>
-              <th className="hidden w-24 px-2 py-1.5 text-left font-medium lg:table-cell">{t("quotes.boq.code")}</th>
+              <th className="hidden w-24 px-2 py-1.5 text-left font-medium lg:table-cell">
+                {t("quotes.boq.code")}
+              </th>
               <th className="px-2 py-1.5 text-left font-medium">{t("quotes.boq.name")}</th>
               <th className="w-16 px-2 py-1.5 text-left font-medium">{t("quotes.boq.unit")}</th>
               <th className="w-24 px-2 py-1.5 text-right font-medium">{t("quotes.boq.qty")}</th>
-              <th className="w-32 px-2 py-1.5 text-right font-medium">{t("quotes.boq.unitPrice")}</th>
+              <th className="w-32 px-2 py-1.5 text-right font-medium">
+                {t("quotes.boq.unitPrice")}
+              </th>
               <th className="w-32 px-2 py-1.5 text-right font-medium">{t("quotes.boq.amount")}</th>
               {editing && <th className="w-10 px-2 py-1.5" />}
             </tr>
@@ -1509,7 +1802,10 @@ const BoqTable = ({
             })}
             {items.length === 0 && (
               <tr>
-                <td colSpan={editing ? 7 : 6} className="px-2 py-6 text-center text-muted-foreground">
+                <td
+                  colSpan={editing ? 7 : 6}
+                  className="px-2 py-6 text-center text-muted-foreground"
+                >
                   {t("quotes.validation.boqRequired")}
                 </td>
               </tr>

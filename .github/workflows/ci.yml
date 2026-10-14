@@ -130,7 +130,7 @@ jobs:
           retention-days: 2
 
   nihomeweb-lint:
-    name: nihomeweb (lint)
+    name: nihomeweb (format, lint)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -143,6 +143,7 @@ jobs:
           cache: npm
           cache-dependency-path: nihomeweb/package-lock.json
       - run: npm ci
+      - run: npm run format:check
       - run: npm run lint
 
   translation-keys:

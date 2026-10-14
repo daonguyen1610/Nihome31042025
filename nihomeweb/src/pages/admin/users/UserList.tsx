@@ -131,7 +131,11 @@ export default function UserList() {
       setEditingUser(data);
       setModalOpen(true);
     } catch (err) {
-      toast({ title: t("common.error"), description: getErrorMessage(err), variant: "destructive" });
+      toast({
+        title: t("common.error"),
+        description: getErrorMessage(err),
+        variant: "destructive",
+      });
     } finally {
       setBusyUserId(null);
     }
@@ -152,7 +156,11 @@ export default function UserList() {
       setEditingUser(null);
       await loadData();
     } catch (err) {
-      toast({ title: t("common.error"), description: getErrorMessage(err), variant: "destructive" });
+      toast({
+        title: t("common.error"),
+        description: getErrorMessage(err),
+        variant: "destructive",
+      });
     } finally {
       setSubmitting(false);
     }
@@ -165,7 +173,11 @@ export default function UserList() {
       toast({ title: t("form.updated") });
       await loadData();
     } catch (err) {
-      toast({ title: t("common.error"), description: getErrorMessage(err), variant: "destructive" });
+      toast({
+        title: t("common.error"),
+        description: getErrorMessage(err),
+        variant: "destructive",
+      });
     } finally {
       setBusyUserId(null);
     }
@@ -180,7 +192,11 @@ export default function UserList() {
       toast({ title: t("form.deleted") });
       await loadData();
     } catch (err) {
-      toast({ title: t("common.error"), description: getErrorMessage(err), variant: "destructive" });
+      toast({
+        title: t("common.error"),
+        description: getErrorMessage(err),
+        variant: "destructive",
+      });
     } finally {
       setBusyUserId(null);
     }
@@ -228,9 +244,14 @@ export default function UserList() {
           </Button>
         </header>
 
-        <form onSubmit={applySearch} className="flex flex-wrap items-end gap-3 rounded-lg border bg-card p-3">
+        <form
+          onSubmit={applySearch}
+          className="flex flex-wrap items-end gap-3 rounded-lg border bg-card p-3"
+        >
           <div className="min-w-[220px] flex-1">
-            <Label className="text-xs" htmlFor="user-search">{t("common.search")}</Label>
+            <Label className="text-xs" htmlFor="user-search">
+              {t("common.search")}
+            </Label>
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -243,7 +264,9 @@ export default function UserList() {
             </div>
           </div>
           <div className="w-full sm:w-[220px]">
-            <Label className="text-xs" htmlFor="user-role">{t("adminUsers.role")}</Label>
+            <Label className="text-xs" htmlFor="user-role">
+              {t("adminUsers.role")}
+            </Label>
             <Select
               value={role || "__all"}
               onValueChange={(v) => {
@@ -306,13 +329,21 @@ export default function UserList() {
                           </div>
                           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
                             {user.avatarUrl ? (
-                              <img src={user.avatarUrl} alt="" className="h-full w-full rounded-full object-cover" />
+                              <img
+                                src={user.avatarUrl}
+                                alt=""
+                                className="h-full w-full rounded-full object-cover"
+                              />
                             ) : (
-                              user.fullName?.[0]?.toUpperCase() ?? <UserRound className="h-4 w-4" />
+                              (user.fullName?.[0]?.toUpperCase() ?? (
+                                <UserRound className="h-4 w-4" />
+                              ))
                             )}
                           </div>
                           <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-semibold">{user.fullName ?? t("adminUsers.unnamed")}</p>
+                            <p className="truncate text-sm font-semibold">
+                              {user.fullName ?? t("adminUsers.unnamed")}
+                            </p>
                             <p className="text-xs text-muted-foreground">ID #{user.id}</p>
                           </div>
                         </header>
@@ -362,7 +393,11 @@ export default function UserList() {
                               title={t("common.edit")}
                               aria-label={t("common.edit")}
                             >
-                              {disabled ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Edit className="h-4 w-4" />}
+                              {disabled ? (
+                                <RefreshCw className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Edit className="h-4 w-4" />
+                              )}
                             </Button>
                             <Button
                               type="button"
@@ -402,11 +437,19 @@ export default function UserList() {
                           />
                         </th>
                         <th className="px-3 py-3 text-left font-medium">{t("adminUsers.user")}</th>
-                        <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("adminUsers.phoneNumber")}</th>
+                        <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                          {t("adminUsers.phoneNumber")}
+                        </th>
                         <th className="px-3 py-3 text-left font-medium">{t("adminUsers.email")}</th>
-                        <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("adminUsers.role")}</th>
-                        <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("common.status")}</th>
-                        <th className="whitespace-nowrap px-3 py-3 text-right font-medium">{t("common.actions")}</th>
+                        <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                          {t("adminUsers.role")}
+                        </th>
+                        <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                          {t("common.status")}
+                        </th>
+                        <th className="whitespace-nowrap px-3 py-3 text-right font-medium">
+                          {t("common.actions")}
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y">
@@ -425,18 +468,28 @@ export default function UserList() {
                               <div className="flex items-center gap-3">
                                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
                                   {user.avatarUrl ? (
-                                    <img src={user.avatarUrl} alt="" className="h-full w-full rounded-full object-cover" />
+                                    <img
+                                      src={user.avatarUrl}
+                                      alt=""
+                                      className="h-full w-full rounded-full object-cover"
+                                    />
                                   ) : (
-                                    user.fullName?.[0]?.toUpperCase() ?? <UserRound className="h-4 w-4" />
+                                    (user.fullName?.[0]?.toUpperCase() ?? (
+                                      <UserRound className="h-4 w-4" />
+                                    ))
                                   )}
                                 </div>
                                 <div className="min-w-0">
-                                  <p className="truncate font-medium">{user.fullName ?? t("adminUsers.unnamed")}</p>
+                                  <p className="truncate font-medium">
+                                    {user.fullName ?? t("adminUsers.unnamed")}
+                                  </p>
                                   <p className="text-xs text-muted-foreground">ID #{user.id}</p>
                                 </div>
                               </div>
                             </td>
-                            <td className="whitespace-nowrap px-3 py-3 font-medium">{user.phoneNumber}</td>
+                            <td className="whitespace-nowrap px-3 py-3 font-medium">
+                              {user.phoneNumber}
+                            </td>
                             <td className="px-3 py-3">{user.email ?? "—"}</td>
                             <td className="whitespace-nowrap px-3 py-3">
                               <Badge
@@ -458,7 +511,9 @@ export default function UserList() {
                                   aria-label={t("adminUsers.active")}
                                 />
                                 <span className="text-xs text-muted-foreground">
-                                  {user.isActive ? t("adminUsers.active") : t("adminUsers.inactive")}
+                                  {user.isActive
+                                    ? t("adminUsers.active")
+                                    : t("adminUsers.inactive")}
                                 </span>
                               </div>
                             </td>
@@ -473,7 +528,11 @@ export default function UserList() {
                                   title={t("common.edit")}
                                   aria-label={t("common.edit")}
                                 >
-                                  {disabled ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Edit className="h-4 w-4" />}
+                                  {disabled ? (
+                                    <RefreshCw className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Edit className="h-4 w-4" />
+                                  )}
                                 </Button>
                                 <Button
                                   type="button"

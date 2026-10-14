@@ -184,7 +184,6 @@ const AdminLeads = () => {
     void fetchList();
   }, [fetchList]);
 
-
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -215,7 +214,11 @@ const AdminLeads = () => {
       setEditForm(toLeadEditForm(data));
       setEditing(false);
     } catch (err) {
-      toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
+      toast({
+        title: t("common.error"),
+        description: extractApiError(err),
+        variant: "destructive",
+      });
     } finally {
       setDetailLoading(false);
     }
@@ -249,7 +252,13 @@ const AdminLeads = () => {
     }
     const contactIssue = validateContact(createForm.phone, createForm.email);
     if (contactIssue) {
-      setCreateError(t(contactIssue === "missing" ? "leads.field.contactRequired" : `validation.${contactIssue}.invalid`));
+      setCreateError(
+        t(
+          contactIssue === "missing"
+            ? "leads.field.contactRequired"
+            : `validation.${contactIssue}.invalid`,
+        ),
+      );
       return;
     }
     setSaving(true);
@@ -283,7 +292,13 @@ const AdminLeads = () => {
     }
     const contactIssue = validateContact(editForm.phone, editForm.email);
     if (contactIssue) {
-      setEditError(t(contactIssue === "missing" ? "leads.field.contactRequired" : `validation.${contactIssue}.invalid`));
+      setEditError(
+        t(
+          contactIssue === "missing"
+            ? "leads.field.contactRequired"
+            : `validation.${contactIssue}.invalid`,
+        ),
+      );
       return;
     }
     setEditSaving(true);
@@ -364,11 +379,18 @@ const AdminLeads = () => {
     if (!detail || !activityContent.trim()) return;
     setAddingActivity(true);
     try {
-      await adminApi.addLeadActivity(detail.id, { type: activityType, content: activityContent.trim() });
+      await adminApi.addLeadActivity(detail.id, {
+        type: activityType,
+        content: activityContent.trim(),
+      });
       setActivityContent("");
       await openDetail(detail.id);
     } catch (err) {
-      toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
+      toast({
+        title: t("common.error"),
+        description: extractApiError(err),
+        variant: "destructive",
+      });
     } finally {
       setAddingActivity(false);
     }
@@ -391,9 +413,11 @@ const AdminLeads = () => {
       await openDetail(detail.id);
       await fetchList();
     } catch (err) {
-      const response = (err as {
-        response?: { status?: number; data?: CustomerDuplicateDetail };
-      }).response;
+      const response = (
+        err as {
+          response?: { status?: number; data?: CustomerDuplicateDetail };
+        }
+      ).response;
       if (response?.status === 409 && response.data) {
         setDuplicate(response.data);
         return;
@@ -434,8 +458,7 @@ const AdminLeads = () => {
   // optional because a prospect may not have supplied one yet (NIH-448).
   const convertNeedsCompanyFields = Boolean(detail?.companyName?.trim());
   const convertCompanyFieldsMissing =
-    convertNeedsCompanyFields &&
-    (!convertAddress.trim() || !convertRepresentative.trim());
+    convertNeedsCompanyFields && (!convertAddress.trim() || !convertRepresentative.trim());
 
   const openConvertDialog = () => {
     if (!detail) return;
@@ -484,7 +507,9 @@ const AdminLeads = () => {
 
         <section className="grid gap-3 rounded-lg border bg-card p-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))]">
           <div>
-            <Label className="text-xs" htmlFor="lead-search">{t("leads.filter.search")}</Label>
+            <Label className="text-xs" htmlFor="lead-search">
+              {t("leads.filter.search")}
+            </Label>
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -545,11 +570,23 @@ const AdminLeads = () => {
 
           <div>
             <Label className="text-xs">{t("leads.filter.segment")}</Label>
-            <Select value={segmentFilter || "__all"} onValueChange={(value) => { setPage(1); setSegmentFilter(value === "__all" ? "" : value); }}>
-              <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+            <Select
+              value={segmentFilter || "__all"}
+              onValueChange={(value) => {
+                setPage(1);
+                setSegmentFilter(value === "__all" ? "" : value);
+              }}
+            >
+              <SelectTrigger className="h-9">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__all">{t("leads.filter.all")}</SelectItem>
-                {segments.map((segment) => <SelectItem key={segment.code} value={segment.code}>{segment.name}</SelectItem>)}
+                {segments.map((segment) => (
+                  <SelectItem key={segment.code} value={segment.code}>
+                    {segment.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -583,9 +620,13 @@ const AdminLeads = () => {
                 >
                   <header className="flex items-start gap-2">
                     <div className="min-w-0 flex-1">
-                      <h3 className="break-words text-sm font-semibold leading-tight">{lead.name}</h3>
+                      <h3 className="break-words text-sm font-semibold leading-tight">
+                        {lead.name}
+                      </h3>
                       {lead.companyName && (
-                        <p className="mt-0.5 text-xs text-muted-foreground break-words">{lead.companyName}</p>
+                        <p className="mt-0.5 text-xs text-muted-foreground break-words">
+                          {lead.companyName}
+                        </p>
                       )}
                     </div>
                     <Badge
@@ -596,10 +637,7 @@ const AdminLeads = () => {
                       )}
                     >
                       <span
-                        className={cn(
-                          "h-1.5 w-1.5 rounded-full",
-                          LEAD_STATUS_DOT[lead.status],
-                        )}
+                        className={cn("h-1.5 w-1.5 rounded-full", LEAD_STATUS_DOT[lead.status])}
                       />
                       {t(`leads.status.${lead.status}`)}
                     </Badge>
@@ -613,21 +651,29 @@ const AdminLeads = () => {
                         </dt>
                         <dd className="mt-0.5">
                           {lead.phone && <div className="font-medium">{lead.phone}</div>}
-                          {lead.email && <div className="text-muted-foreground break-all">{lead.email}</div>}
+                          {lead.email && (
+                            <div className="text-muted-foreground break-all">{lead.email}</div>
+                          )}
                         </dd>
                       </div>
                     )}
                     <div>
                       <dt className="text-muted-foreground">{t("leads.field.source")}</dt>
-                      <dd className="font-medium">{sourceLabelByCode.get(lead.sourceCode) ?? lead.sourceCode}</dd>
+                      <dd className="font-medium">
+                        {sourceLabelByCode.get(lead.sourceCode) ?? lead.sourceCode}
+                      </dd>
                     </div>
                     <div>
                       <dt className="text-muted-foreground">{t("leads.field.segment")}</dt>
-                      <dd className="font-medium">{segmentLabelByCode.get(lead.segmentCode) ?? lead.segmentCode}</dd>
+                      <dd className="font-medium">
+                        {segmentLabelByCode.get(lead.segmentCode) ?? lead.segmentCode}
+                      </dd>
                     </div>
                     <div>
                       <dt className="text-muted-foreground">{t("leads.field.createdAt")}</dt>
-                      <dd className="font-medium">{new Date(lead.createdAt).toLocaleDateString()}</dd>
+                      <dd className="font-medium">
+                        {new Date(lead.createdAt).toLocaleDateString()}
+                      </dd>
                     </div>
                     {canSeeAll && lead.ownerName && (
                       <div className="col-span-2">
@@ -658,83 +704,103 @@ const AdminLeads = () => {
 
             {/* Desktop table (lg+) */}
             <div className="hidden overflow-x-auto rounded-lg border lg:block">
-            <table className="w-full divide-y text-sm">
-              <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
-                <tr>
-                  <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("leads.field.name")}</th>
-                  <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("leads.field.company")}</th>
-                  <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("leads.field.phone")} / {t("leads.field.email")}</th>
-                  <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("leads.field.source")}</th>
-                  <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("leads.field.segment")}</th>
-                  <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("leads.field.status")}</th>
-                  {canSeeAll && (
-                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("leads.field.owner")}</th>
-                  )}
-                  <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("leads.field.createdAt")}</th>
-                  <th className="px-3 py-3" />
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {leads.map((lead) => (
-                  <tr
-                    key={lead.id}
-                    className="cursor-pointer hover:bg-muted/40"
-                    onClick={() => void openDetail(lead.id)}
-                  >
-                    <td className="px-3 py-3 font-medium">{lead.name}</td>
-                    <td className="px-3 py-3 text-muted-foreground">{lead.companyName || "—"}</td>
-                    <td className="px-3 py-3 text-xs">
-                      <div>{lead.phone || "—"}</div>
-                      <div className="text-muted-foreground">{lead.email || ""}</div>
-                    </td>
-                    <td className="px-3 py-3 text-xs">
-                      {sourceLabelByCode.get(lead.sourceCode) ?? lead.sourceCode}
-                    </td>
-                    <td className="px-3 py-3 text-xs">{segmentLabelByCode.get(lead.segmentCode) ?? lead.segmentCode}</td>
-                    <td className="px-3 py-3">
-                      <Badge
-                        variant="outline"
-                        className={cn(
-                          "gap-1.5 whitespace-nowrap font-medium",
-                          LEAD_STATUS_STYLES[lead.status],
-                        )}
-                      >
-                        <span
-                          className={cn(
-                            "h-1.5 w-1.5 rounded-full",
-                            LEAD_STATUS_DOT[lead.status],
-                          )}
-                        />
-                        {t(`leads.status.${lead.status}`)}
-                      </Badge>
-                    </td>
+              <table className="w-full divide-y text-sm">
+                <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
+                  <tr>
+                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                      {t("leads.field.name")}
+                    </th>
+                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                      {t("leads.field.company")}
+                    </th>
+                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                      {t("leads.field.phone")} / {t("leads.field.email")}
+                    </th>
+                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                      {t("leads.field.source")}
+                    </th>
+                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                      {t("leads.field.segment")}
+                    </th>
+                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                      {t("leads.field.status")}
+                    </th>
                     {canSeeAll && (
-                      <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground">{lead.ownerName || "—"}</td>
+                      <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                        {t("leads.field.owner")}
+                      </th>
                     )}
-                    <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground">
-                      <div>{new Date(lead.createdAt).toLocaleDateString()}</div>
-                      <div className="text-[11px] opacity-70">
-                        {new Date(lead.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                      </div>
-                    </td>
-                    <td className="px-3 py-3 text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          void handleDelete(lead.id);
-                        }}
-                        title={t("common.delete")}
-                        aria-label={t("common.delete")}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </td>
+                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                      {t("leads.field.createdAt")}
+                    </th>
+                    <th className="px-3 py-3" />
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y">
+                  {leads.map((lead) => (
+                    <tr
+                      key={lead.id}
+                      className="cursor-pointer hover:bg-muted/40"
+                      onClick={() => void openDetail(lead.id)}
+                    >
+                      <td className="px-3 py-3 font-medium">{lead.name}</td>
+                      <td className="px-3 py-3 text-muted-foreground">{lead.companyName || "—"}</td>
+                      <td className="px-3 py-3 text-xs">
+                        <div>{lead.phone || "—"}</div>
+                        <div className="text-muted-foreground">{lead.email || ""}</div>
+                      </td>
+                      <td className="px-3 py-3 text-xs">
+                        {sourceLabelByCode.get(lead.sourceCode) ?? lead.sourceCode}
+                      </td>
+                      <td className="px-3 py-3 text-xs">
+                        {segmentLabelByCode.get(lead.segmentCode) ?? lead.segmentCode}
+                      </td>
+                      <td className="px-3 py-3">
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "gap-1.5 whitespace-nowrap font-medium",
+                            LEAD_STATUS_STYLES[lead.status],
+                          )}
+                        >
+                          <span
+                            className={cn("h-1.5 w-1.5 rounded-full", LEAD_STATUS_DOT[lead.status])}
+                          />
+                          {t(`leads.status.${lead.status}`)}
+                        </Badge>
+                      </td>
+                      {canSeeAll && (
+                        <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground">
+                          {lead.ownerName || "—"}
+                        </td>
+                      )}
+                      <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground">
+                        <div>{new Date(lead.createdAt).toLocaleDateString()}</div>
+                        <div className="text-[11px] opacity-70">
+                          {new Date(lead.createdAt).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </div>
+                      </td>
+                      <td className="px-3 py-3 text-right">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void handleDelete(lead.id);
+                          }}
+                          title={t("common.delete")}
+                          aria-label={t("common.delete")}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         )}
@@ -826,9 +892,20 @@ const AdminLeads = () => {
             </div>
             <div>
               <Label>{t("leads.field.segment")} *</Label>
-              <Select value={createForm.segmentCode} onValueChange={(value) => setCreateForm({ ...createForm, segmentCode: value })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{segments.map((segment) => <SelectItem key={segment.code} value={segment.code}>{segment.name}</SelectItem>)}</SelectContent>
+              <Select
+                value={createForm.segmentCode}
+                onValueChange={(value) => setCreateForm({ ...createForm, segmentCode: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {segments.map((segment) => (
+                    <SelectItem key={segment.code} value={segment.code}>
+                      {segment.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
               </Select>
             </div>
             <div>
@@ -840,7 +917,9 @@ const AdminLeads = () => {
               />
             </div>
             {createError && (
-              <p className="rounded bg-destructive/10 px-3 py-2 text-xs text-destructive">{createError}</p>
+              <p className="rounded bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                {createError}
+              </p>
             )}
           </div>
           <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
@@ -892,84 +971,179 @@ const AdminLeads = () => {
               {editing && editForm ? (
                 <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
                   <div className="grid gap-3 sm:grid-cols-2">
-                    <div><Label>{t("leads.field.name")} *</Label><Input value={editForm.name} onChange={(event) => setEditForm({ ...editForm, name: event.target.value })} /></div>
-                    <div><Label>{t("leads.field.company")}</Label><Input value={editForm.companyName ?? ""} onChange={(event) => setEditForm({ ...editForm, companyName: event.target.value })} /></div>
-                    <div><Label>{t("leads.field.phone")}</Label><Input value={editForm.phone ?? ""} onChange={(event) => setEditForm({ ...editForm, phone: event.target.value })} /></div>
-                    <div><Label>{t("leads.field.email")}</Label><Input type="email" value={editForm.email ?? ""} onChange={(event) => setEditForm({ ...editForm, email: event.target.value })} /></div>
-                    <div><Label>{t("leads.field.source")} *</Label><Select value={editForm.sourceCode} onValueChange={(value) => setEditForm({ ...editForm, sourceCode: value })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{sources.map((source) => <SelectItem key={source.code} value={source.code}>{source.name}</SelectItem>)}</SelectContent></Select></div>
-                    <div><Label>{t("leads.field.segment")} *</Label><Select value={editForm.segmentCode} onValueChange={(value) => setEditForm({ ...editForm, segmentCode: value })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{segments.map((segment) => <SelectItem key={segment.code} value={segment.code}>{segment.name}</SelectItem>)}</SelectContent></Select></div>
-                    <div><Label>{t("leads.field.status")}</Label><Select value={editForm.status} onValueChange={(value) => setEditForm({ ...editForm, status: value as LeadStatus })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{STATUSES.filter((status) => status !== "Converted").map((status) => <SelectItem key={status} value={status}>{t(`leads.status.${status}`)}</SelectItem>)}</SelectContent></Select></div>
-                    <div className="sm:col-span-2"><Label>{t("leads.field.note")}</Label><Textarea rows={3} value={editForm.note ?? ""} onChange={(event) => setEditForm({ ...editForm, note: event.target.value })} /></div>
+                    <div>
+                      <Label>{t("leads.field.name")} *</Label>
+                      <Input
+                        value={editForm.name}
+                        onChange={(event) => setEditForm({ ...editForm, name: event.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <Label>{t("leads.field.company")}</Label>
+                      <Input
+                        value={editForm.companyName ?? ""}
+                        onChange={(event) =>
+                          setEditForm({ ...editForm, companyName: event.target.value })
+                        }
+                      />
+                    </div>
+                    <div>
+                      <Label>{t("leads.field.phone")}</Label>
+                      <Input
+                        value={editForm.phone ?? ""}
+                        onChange={(event) =>
+                          setEditForm({ ...editForm, phone: event.target.value })
+                        }
+                      />
+                    </div>
+                    <div>
+                      <Label>{t("leads.field.email")}</Label>
+                      <Input
+                        type="email"
+                        value={editForm.email ?? ""}
+                        onChange={(event) =>
+                          setEditForm({ ...editForm, email: event.target.value })
+                        }
+                      />
+                    </div>
+                    <div>
+                      <Label>{t("leads.field.source")} *</Label>
+                      <Select
+                        value={editForm.sourceCode}
+                        onValueChange={(value) => setEditForm({ ...editForm, sourceCode: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {sources.map((source) => (
+                            <SelectItem key={source.code} value={source.code}>
+                              {source.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>{t("leads.field.segment")} *</Label>
+                      <Select
+                        value={editForm.segmentCode}
+                        onValueChange={(value) => setEditForm({ ...editForm, segmentCode: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {segments.map((segment) => (
+                            <SelectItem key={segment.code} value={segment.code}>
+                              {segment.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>{t("leads.field.status")}</Label>
+                      <Select
+                        value={editForm.status}
+                        onValueChange={(value) =>
+                          setEditForm({ ...editForm, status: value as LeadStatus })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {STATUSES.filter((status) => status !== "Converted").map((status) => (
+                            <SelectItem key={status} value={status}>
+                              {t(`leads.status.${status}`)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="sm:col-span-2">
+                      <Label>{t("leads.field.note")}</Label>
+                      <Textarea
+                        rows={3}
+                        value={editForm.note ?? ""}
+                        onChange={(event) => setEditForm({ ...editForm, note: event.target.value })}
+                      />
+                    </div>
                   </div>
                   {editError && <p className="text-sm text-destructive">{editError}</p>}
                 </div>
-              ) : <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <div className="text-xs text-muted-foreground">{t("leads.field.phone")}</div>
-                  <div>{detail.phone || "—"}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-muted-foreground">{t("leads.field.email")}</div>
-                  <div>{detail.email || "—"}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-muted-foreground">{t("leads.field.owner")}</div>
-                  <div>{detail.ownerName || `#${detail.ownerUserId ?? "—"}`}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-muted-foreground">{t("leads.field.segment")}</div>
-                  <div>{segmentLabelByCode.get(detail.segmentCode) ?? detail.segmentCode}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-muted-foreground">{t("leads.field.createdAt")}</div>
-                  <div>{new Date(detail.createdAt).toLocaleString()}</div>
-                </div>
-                {detail.note && (
-                  <div className="col-span-2">
-                    <div className="text-xs text-muted-foreground">{t("leads.field.note")}</div>
-                    <div className="whitespace-pre-wrap">{detail.note}</div>
+              ) : (
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <div className="text-xs text-muted-foreground">{t("leads.field.phone")}</div>
+                    <div>{detail.phone || "—"}</div>
                   </div>
-                )}
-                {detail.status === "Converted" && (
-                  <div className="col-span-2 space-y-2 rounded bg-muted p-2 text-xs text-muted-foreground">
-                    <div>
-                      {t("leads.convert.locked")}
-                      {detail.convertedCustomerId != null && (
-                        <>
-                          {" · "}
-                          <Link
-                            className="underline"
-                            to={`/admin/customers?open=${detail.convertedCustomerId}`}
-                          >
-                            {t("leads.convert.viewCustomer")}
-                          </Link>
-                        </>
-                      )}
-                      {detail.convertedOpportunityId != null && (
-                        <>
-                          {" · "}
-                          <Link
-                            className="underline"
-                            to={`/admin/opportunities/${detail.convertedOpportunityId}`}
-                          >
-                            {t("leads.convert.viewOpportunity")}
-                          </Link>
-                        </>
+                  <div>
+                    <div className="text-xs text-muted-foreground">{t("leads.field.email")}</div>
+                    <div>{detail.email || "—"}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground">{t("leads.field.owner")}</div>
+                    <div>{detail.ownerName || `#${detail.ownerUserId ?? "—"}`}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground">{t("leads.field.segment")}</div>
+                    <div>{segmentLabelByCode.get(detail.segmentCode) ?? detail.segmentCode}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground">
+                      {t("leads.field.createdAt")}
+                    </div>
+                    <div>{new Date(detail.createdAt).toLocaleString()}</div>
+                  </div>
+                  {detail.note && (
+                    <div className="col-span-2">
+                      <div className="text-xs text-muted-foreground">{t("leads.field.note")}</div>
+                      <div className="whitespace-pre-wrap">{detail.note}</div>
+                    </div>
+                  )}
+                  {detail.status === "Converted" && (
+                    <div className="col-span-2 space-y-2 rounded bg-muted p-2 text-xs text-muted-foreground">
+                      <div>
+                        {t("leads.convert.locked")}
+                        {detail.convertedCustomerId != null && (
+                          <>
+                            {" · "}
+                            <Link
+                              className="underline"
+                              to={`/admin/customers?open=${detail.convertedCustomerId}`}
+                            >
+                              {t("leads.convert.viewCustomer")}
+                            </Link>
+                          </>
+                        )}
+                        {detail.convertedOpportunityId != null && (
+                          <>
+                            {" · "}
+                            <Link
+                              className="underline"
+                              to={`/admin/opportunities/${detail.convertedOpportunityId}`}
+                            >
+                              {t("leads.convert.viewOpportunity")}
+                            </Link>
+                          </>
+                        )}
+                      </div>
+                      {canConvert && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => void handleUnconvert()}
+                          disabled={unconverting}
+                        >
+                          {unconverting ? "…" : t("leads.unconvert.action")}
+                        </Button>
                       )}
                     </div>
-                    {canConvert && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => void handleUnconvert()}
-                        disabled={unconverting}
-                      >
-                        {unconverting ? "…" : t("leads.unconvert.action")}
-                      </Button>
-                    )}
-                  </div>
-                )}
-              </div>}
+                  )}
+                </div>
+              )}
 
               {/* Timeline */}
               <div className="mt-4">
@@ -1030,12 +1204,39 @@ const AdminLeads = () => {
               </div>
 
               <DialogFooter className="flex-col-reverse gap-2 sm:flex-row-reverse sm:justify-start">
-                {canManage && detail.status !== "Converted" && (editing ? <><Button onClick={() => void handleUpdate()} disabled={editSaving}><Save className="mr-1.5 h-4 w-4" />{t("common.save")}</Button><Button variant="outline" onClick={() => { setEditForm(toLeadEditForm(detail)); setEditing(false); setEditError(null); }}>{t("common.cancel")}</Button></> : <Button variant="outline" onClick={() => setEditing(true)}><Pencil className="mr-1.5 h-4 w-4" />{t("common.edit")}</Button>)}
-                {canConvert && detail.status !== "Converted" && detail.status !== "Junk" && detail.status !== "NotInterested" && (
-                  <Button onClick={openConvertDialog}>
-                    <ArrowRight className="mr-1.5 h-4 w-4" /> {t("leads.convert.button")}
-                  </Button>
-                )}
+                {canManage &&
+                  detail.status !== "Converted" &&
+                  (editing ? (
+                    <>
+                      <Button onClick={() => void handleUpdate()} disabled={editSaving}>
+                        <Save className="mr-1.5 h-4 w-4" />
+                        {t("common.save")}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setEditForm(toLeadEditForm(detail));
+                          setEditing(false);
+                          setEditError(null);
+                        }}
+                      >
+                        {t("common.cancel")}
+                      </Button>
+                    </>
+                  ) : (
+                    <Button variant="outline" onClick={() => setEditing(true)}>
+                      <Pencil className="mr-1.5 h-4 w-4" />
+                      {t("common.edit")}
+                    </Button>
+                  ))}
+                {canConvert &&
+                  detail.status !== "Converted" &&
+                  detail.status !== "Junk" &&
+                  detail.status !== "NotInterested" && (
+                    <Button onClick={openConvertDialog}>
+                      <ArrowRight className="mr-1.5 h-4 w-4" /> {t("leads.convert.button")}
+                    </Button>
+                  )}
                 <Button variant="outline" onClick={closeDetail}>
                   {t("common.close")}
                 </Button>

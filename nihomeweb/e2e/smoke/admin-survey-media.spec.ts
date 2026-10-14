@@ -9,7 +9,8 @@ const pngBytes = Buffer.from(
   "base64",
 );
 
-const connectionStatus = /Đã kết nối|Connected|已连接|接続済み|Không thể kết nối|Unavailable|无法连接|接続不可/i;
+const connectionStatus =
+  /Đã kết nối|Connected|已连接|接続済み|Không thể kết nối|Unavailable|无法连接|接続不可/i;
 const previewLabel = /Xem tệp|Preview|预览|プレビュー/i;
 const deleteLabel = /Xoá|Delete|删除|削除/i;
 const saveLabel = /Lưu|Save|保存/i;
@@ -26,9 +27,13 @@ async function createSurvey(
   });
   expect(projectsResponse.status(), await projectsResponse.text()).toBe(200);
   const projects = (await projectsResponse.json()) as { items: Array<{ id: number }> };
-  expect(projects.items.length, "Survey Media E2E requires a seeded Operational Project").toBeGreaterThan(0);
-  const operationalProjectId = operationalProjectIdOverride
-    ?? [...projects.items].sort((left, right) => left.id - right.id)[0].id;
+  expect(
+    projects.items.length,
+    "Survey Media E2E requires a seeded Operational Project",
+  ).toBeGreaterThan(0);
+  const operationalProjectId =
+    operationalProjectIdOverride ??
+    [...projects.items].sort((left, right) => left.id - right.id)[0].id;
 
   const location = `E2E Survey Media ${suffix}`;
   const response = await api.post("/api/surveys", {
@@ -89,13 +94,18 @@ async function waitForMediaProcessingToFinish(
   mediaId: number,
   headers: { Authorization: string },
 ) {
-  await expect.poll(async () => {
-    const detail = await getSurveyDetail(api, surveyId, headers);
-    return detail.media.find((media) => media.id === mediaId)?.syncStatus ?? "Missing";
-  }, {
-    message: `wait for active media ${mediaId} sync before deletion`,
-    timeout: 30_000,
-  }).not.toBe("Processing");
+  await expect
+    .poll(
+      async () => {
+        const detail = await getSurveyDetail(api, surveyId, headers);
+        return detail.media.find((media) => media.id === mediaId)?.syncStatus ?? "Missing";
+      },
+      {
+        message: `wait for active media ${mediaId} sync before deletion`,
+        timeout: 30_000,
+      },
+    )
+    .not.toBe("Processing");
 }
 
 test.describe.serial("NIH-101 — Survey Media browser flow", () => {
@@ -111,12 +121,19 @@ test.describe.serial("NIH-101 — Survey Media browser flow", () => {
         const detail = (await detailResponse.json()) as SurveyDetail;
         for (const media of detail.media) {
           await waitForMediaProcessingToFinish(api, surveyId, media.id, headers);
-          const mediaDelete = await api.delete(`/api/surveys/${surveyId}/media/${media.id}`, { headers });
-          expect(mediaDelete.status(), `cleanup: delete media ${media.id} from survey ${surveyId}`).toBe(204);
+          const mediaDelete = await api.delete(`/api/surveys/${surveyId}/media/${media.id}`, {
+            headers,
+          });
+          expect(
+            mediaDelete.status(),
+            `cleanup: delete media ${media.id} from survey ${surveyId}`,
+          ).toBe(204);
         }
-        const impactResponse = await api.get(`/api/surveys/${surveyId}/deletion-impact`, { headers });
+        const impactResponse = await api.get(`/api/surveys/${surveyId}/deletion-impact`, {
+          headers,
+        });
         expect(impactResponse.status(), `cleanup: preview survey ${surveyId}`).toBe(200);
-        const impact = await impactResponse.json() as {
+        const impact = (await impactResponse.json()) as {
           planToken: string;
           requiredConfirmation: string;
         };
@@ -128,7 +145,10 @@ test.describe.serial("NIH-101 — Survey Media browser flow", () => {
           },
         });
         expect(surveyDelete.status(), `cleanup: delete survey ${surveyId}`).toBe(204);
-        expect((await api.get(`/api/surveys/${surveyId}`, { headers })).status(), `cleanup: verify survey ${surveyId}`).toBe(404);
+        expect(
+          (await api.get(`/api/surveys/${surveyId}`, { headers })).status(),
+          `cleanup: verify survey ${surveyId}`,
+        ).toBe(404);
       }
     } finally {
       createdSurveyIds.clear();
@@ -158,7 +178,9 @@ test.describe.serial("NIH-101 — Survey Media browser flow", () => {
 
     const connection = page.getByTestId("survey-drive-connection");
     await expect(connection).toContainText(connectionStatus);
-    await expect(connection).not.toContainText(/ClientSecret|RefreshToken|client_secret|refresh_token/i);
+    await expect(connection).not.toContainText(
+      /ClientSecret|RefreshToken|client_secret|refresh_token/i,
+    );
 
     const fileInput = page.locator('input[type="file"]').first();
     await fileInput.setInputFiles({ name: fileName, mimeType: "image/png", buffer: pngBytes });
@@ -197,11 +219,14 @@ test.describe.serial("NIH-101 — Survey Media browser flow", () => {
     const card = page.getByTestId("survey-media-card").filter({ hasText: fileName });
     await expect(card).toBeVisible();
     await expect(card).toContainText(note);
-    await expect(card.getByRole("link", { name: /Xem trên bản đồ|View on map|在地图中查看|地図で表示/i }))
-      .toHaveAttribute("href", /mlat=10\.7769.*mlon=106\.7009/);
+    await expect(
+      card.getByRole("link", { name: /Xem trên bản đồ|View on map|在地图中查看|地図で表示/i }),
+    ).toHaveAttribute("href", /mlat=10\.7769.*mlon=106\.7009/);
     const thumbnail = card.getByRole("img", { name: fileName });
     await expect
-      .poll(() => thumbnail.evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0))
+      .poll(() =>
+        thumbnail.evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0),
+      )
       .toBe(true);
 
     await card.getByRole("button", { name: previewLabel }).click();
@@ -209,9 +234,16 @@ test.describe.serial("NIH-101 — Survey Media browser flow", () => {
     const previewImage = previewDialog.getByRole("img", { name: fileName });
     await expect(previewImage).toBeVisible();
     await expect
-      .poll(() => previewImage.evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0))
+      .poll(() =>
+        previewImage.evaluate(
+          (image: HTMLImageElement) => image.complete && image.naturalWidth > 0,
+        ),
+      )
       .toBe(true);
-    await previewDialog.getByRole("button", { name: /Đóng|Close|关闭|閉じる/i }).first().click();
+    await previewDialog
+      .getByRole("button", { name: /Đóng|Close|关闭|閉じる/i })
+      .first()
+      .click();
 
     const checklist = page.getByTestId("survey-checklist");
     const firstChecklistRow = checklist.locator(".grid.rounded-lg").first();
@@ -227,7 +259,11 @@ test.describe.serial("NIH-101 — Survey Media browser flow", () => {
     await firstChecklistRow.getByRole("button", { name: saveLabel }).click();
     const checklistResponse = await checklistResponsePromise;
     expect(checklistResponse.status()).toBe(200);
-    const savedChecklist = (await checklistResponse.json()) as { id: number; status: string; note: string };
+    const savedChecklist = (await checklistResponse.json()) as {
+      id: number;
+      status: string;
+      note: string;
+    };
     expect(savedChecklist).toMatchObject({ status: "Ok", note: checklistNote });
 
     await page.reload({ waitUntil: "networkidle" });
@@ -236,7 +272,10 @@ test.describe.serial("NIH-101 — Survey Media browser flow", () => {
     expect(persistedAfterReload.checklistResults).toContainEqual(
       expect.objectContaining({ id: savedChecklist.id, status: "Ok", note: checklistNote }),
     );
-    const reloadedChecklistRow = page.getByTestId("survey-checklist").locator(".grid.rounded-lg").first();
+    const reloadedChecklistRow = page
+      .getByTestId("survey-checklist")
+      .locator(".grid.rounded-lg")
+      .first();
     await expect(reloadedChecklistRow.getByRole("textbox")).toHaveValue(checklistNote);
     await expect(reloadedChecklistRow.getByRole("combobox")).toContainText(/Đạt|OK|合格|適合/i);
 
@@ -252,7 +291,10 @@ test.describe.serial("NIH-101 — Survey Media browser flow", () => {
 
     const downloadResponsePromise = page.waitForResponse((response) => {
       const url = new URL(response.url());
-      return url.pathname === `/api/surveys/${survey.id}/export.pdf` && url.searchParams.get("lang") === "en";
+      return (
+        url.pathname === `/api/surveys/${survey.id}/export.pdf` &&
+        url.searchParams.get("lang") === "en"
+      );
     });
     const downloadPromise = page.waitForEvent("download");
     await page.getByRole("button", { name: exportPdfLabel }).click();
@@ -297,10 +339,15 @@ test.describe.serial("NIH-101 — Survey Media browser flow", () => {
     const authHeader = { Authorization: `Bearer ${adminToken}` };
     const pmToken = await loginAs(TEST_USERS.pm);
     const pmHeaders = { Authorization: `Bearer ${pmToken}` };
-    const pmProjectsResponse = await api.get("/api/operational-projects?page=1&pageSize=100", { headers: pmHeaders });
+    const pmProjectsResponse = await api.get("/api/operational-projects?page=1&pageSize=100", {
+      headers: pmHeaders,
+    });
     expect(pmProjectsResponse.status(), await pmProjectsResponse.text()).toBe(200);
-    const pmProjects = await pmProjectsResponse.json() as { items: Array<{ id: number }> };
-    expect(pmProjects.items.length, "PM needs an accessible project for the view-only survey test").toBeGreaterThan(0);
+    const pmProjects = (await pmProjectsResponse.json()) as { items: Array<{ id: number }> };
+    expect(
+      pmProjects.items.length,
+      "PM needs an accessible project for the view-only survey test",
+    ).toBeGreaterThan(0);
     const survey = await createSurvey(api, authHeader, pmProjects.items[0].id);
     const fileName = `view-only-${uid()}.png`;
     const upload = await api.post(`/api/surveys/${survey.id}/media`, {
@@ -319,9 +366,13 @@ test.describe.serial("NIH-101 — Survey Media browser flow", () => {
     await expect(page.getByTestId("survey-media-choose-file")).toHaveCount(0);
     await expect(page.getByTestId("survey-media-camera")).toHaveCount(0);
     await expect(page.getByTestId("survey-media-upload")).toHaveCount(0);
-    await expect(page.getByTestId("survey-media-card").getByRole("button", { name: deleteLabel })).toHaveCount(0);
+    await expect(
+      page.getByTestId("survey-media-card").getByRole("button", { name: deleteLabel }),
+    ).toHaveCount(0);
     await expect(page.getByTestId("survey-checklist").getByRole("combobox").first()).toBeDisabled();
-    await expect(page.getByTestId("survey-checklist").getByRole("button", { name: saveLabel })).toHaveCount(0);
+    await expect(
+      page.getByTestId("survey-checklist").getByRole("button", { name: saveLabel }),
+    ).toHaveCount(0);
   });
 
   test("media deep links select, scroll to, and highlight only survey-owned media", async ({
@@ -346,19 +397,27 @@ test.describe.serial("NIH-101 — Survey Media browser flow", () => {
     const foreign = await uploadMedia(otherSurvey.id, `foreign-${uid()}.png`);
 
     await loginInBrowserAs(page, TEST_USERS.superAdmin);
-    await page.goto(`/admin/surveys/${survey.id}?mediaId=${target.id}`, { waitUntil: "networkidle" });
+    await page.goto(`/admin/surveys/${survey.id}?mediaId=${target.id}`, {
+      waitUntil: "networkidle",
+    });
 
     const mediaTab = page.getByTestId("survey-media-tab");
     const targetCard = page.locator(`#survey-media-${target.id}`);
     await expect(mediaTab).toHaveAttribute("data-state", "active");
     await expect(targetCard).toHaveAttribute("data-highlighted", "true");
-    await expect.poll(() => targetCard.evaluate((element) => {
-      const bounds = element.getBoundingClientRect();
-      return bounds.bottom > 0 && bounds.top < window.innerHeight;
-    })).toBe(true);
+    await expect
+      .poll(() =>
+        targetCard.evaluate((element) => {
+          const bounds = element.getBoundingClientRect();
+          return bounds.bottom > 0 && bounds.top < window.innerHeight;
+        }),
+      )
+      .toBe(true);
 
     for (const mediaId of ["invalid", "0", "999999999", String(foreign.id)]) {
-      await page.goto(`/admin/surveys/${survey.id}?mediaId=${mediaId}`, { waitUntil: "networkidle" });
+      await page.goto(`/admin/surveys/${survey.id}?mediaId=${mediaId}`, {
+        waitUntil: "networkidle",
+      });
       await expect(page.getByRole("tab").first()).toHaveAttribute("data-state", "active");
       await expect(page.getByTestId("survey-media-panel")).toHaveCount(0);
     }
@@ -383,7 +442,9 @@ test.describe.serial("NIH-101 — Survey Media browser flow", () => {
     await expect(page.getByTestId("survey-drive-connection")).toContainText(connectionStatus);
     await expect(page.getByTestId("survey-checklist")).toBeVisible();
     await expect(page.getByTestId("survey-sync-log")).toBeVisible();
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+    ).toBe(true);
     expect(jsErrors, jsErrors.join("\n")).toHaveLength(0);
   });
 
@@ -431,9 +492,17 @@ test.describe.serial("NIH-101 — Survey Media browser flow", () => {
 
     await loginInBrowserAs(page, TEST_USERS.superAdmin);
     await openMediaTab(page, survey.id);
-    await expect(page.getByTestId("survey-drive-connection")).toContainText(/Đã kết nối|Connected|已连接|接続済み/i);
-    await expect(page.getByTestId("survey-media-card").filter({ hasText: fileName })).toContainText(/Đã đồng bộ|Synced|已同步|同期済み/i);
+    await expect(page.getByTestId("survey-drive-connection")).toContainText(
+      /Đã kết nối|Connected|已连接|接続済み/i,
+    );
+    await expect(page.getByTestId("survey-media-card").filter({ hasText: fileName })).toContainText(
+      /Đã đồng bộ|Synced|已同步|同期済み/i,
+    );
 
-    expect((await api.delete(`/api/surveys/${survey.id}/media/${mediaId}`, { headers: authHeader })).status()).toBe(204);
+    expect(
+      (
+        await api.delete(`/api/surveys/${survey.id}/media/${mediaId}`, { headers: authHeader })
+      ).status(),
+    ).toBe(204);
   });
 });

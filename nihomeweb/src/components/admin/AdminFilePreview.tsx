@@ -69,7 +69,11 @@ const getExtension = (value: string) => {
   return dot >= 0 ? file.slice(dot + 1).toLowerCase() : "";
 };
 
-const getPreviewKind = (url: string, fileName?: string | null, contentType?: string | null): PreviewKind => {
+const getPreviewKind = (
+  url: string,
+  fileName?: string | null,
+  contentType?: string | null,
+): PreviewKind => {
   const normalizedType = contentType?.toLowerCase().split(";", 1)[0].trim();
   if (normalizedType?.startsWith("image/")) return "image";
   if (normalizedType === "application/pdf") return "pdf";
@@ -172,14 +176,18 @@ export default function AdminFilePreview({
   const triggerLabel = label ?? t("common.previewFile");
   const effectiveHref = fetchFile ? blobHref : href;
 
-  useEffect(() => () => {
-    if (blobHrefRef.current) URL.revokeObjectURL(blobHrefRef.current);
-  }, []);
+  useEffect(
+    () => () => {
+      if (blobHrefRef.current) URL.revokeObjectURL(blobHrefRef.current);
+    },
+    [],
+  );
 
   const handleOpenChange = async (nextOpen: boolean) => {
     setOpen(nextOpen);
     const shouldFetchDirectDocx = previewKind === "docx" && href && !fetchFile;
-    if (!nextOpen || (!fetchFile && !shouldFetchDirectDocx) || blobHrefRef.current || fileLoading) return;
+    if (!nextOpen || (!fetchFile && !shouldFetchDirectDocx) || blobHrefRef.current || fileLoading)
+      return;
 
     setFileLoading(true);
     setFileLoadFailed(false);
@@ -187,9 +195,9 @@ export default function AdminFilePreview({
       const blob = fetchFile
         ? await fetchFile()
         : await fetch(href, { credentials: "include" }).then((response) => {
-          if (!response.ok) throw new Error(`HTTP ${response.status}`);
-          return response.blob();
-        });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return response.blob();
+          });
       const objectUrl = URL.createObjectURL(blob);
       blobHrefRef.current = objectUrl;
       setFileBlob(blob);
@@ -216,12 +224,14 @@ export default function AdminFilePreview({
     previewWindow.document.body.style.background = "#e5e7eb";
 
     void import("docx-preview")
-      .then(({ renderAsync }) => renderAsync(
-        fileBlob,
-        previewWindow.document.body,
-        previewWindow.document.head,
-        DOCX_RENDER_OPTIONS,
-      ))
+      .then(({ renderAsync }) =>
+        renderAsync(
+          fileBlob,
+          previewWindow.document.body,
+          previewWindow.document.head,
+          DOCX_RENDER_OPTIONS,
+        ),
+      )
       .then(() => sanitizeDocxLinks(previewWindow.document))
       .catch(() => {
         previewWindow.document.body.replaceChildren();

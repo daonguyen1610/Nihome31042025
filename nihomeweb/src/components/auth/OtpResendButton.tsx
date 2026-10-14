@@ -8,11 +8,7 @@ type OtpResendButtonProps = {
   onResend: () => Promise<boolean>;
 };
 
-const OtpResendButton = ({
-  countdownEnabled,
-  loading,
-  onResend,
-}: OtpResendButtonProps) => {
+const OtpResendButton = ({ countdownEnabled, loading, onResend }: OtpResendButtonProps) => {
   const { t } = useI18n();
   const { canResend, formattedTime, restart } = useOtpResendCountdown(countdownEnabled);
 

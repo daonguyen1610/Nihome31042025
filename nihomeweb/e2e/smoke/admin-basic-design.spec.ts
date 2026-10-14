@@ -42,11 +42,13 @@ test.describe("NIH-115 — Basic Design + Detail Design unlock (real-user flow)"
       !(await isGoogleDriveConnected(api, authHeader)),
       "Requires a connected Google Drive because approved design evidence must be durably synced.",
     );
-    const jwtPayload = JSON.parse(Buffer.from(token.split(".")[1], "base64url").toString()) as Record<string, string>;
+    const jwtPayload = JSON.parse(
+      Buffer.from(token.split(".")[1], "base64url").toString(),
+    ) as Record<string, string>;
     const currentUserId = Number(
       jwtPayload.nameid ??
-      jwtPayload.sub ??
-      Object.entries(jwtPayload).find(([key]) => key.endsWith("/nameidentifier"))?.[1],
+        jwtPayload.sub ??
+        Object.entries(jwtPayload).find(([key]) => key.endsWith("/nameidentifier"))?.[1],
     );
     expect(currentUserId).toBeGreaterThan(0);
 
@@ -100,7 +102,12 @@ test.describe("NIH-115 — Basic Design + Detail Design unlock (real-user flow)"
 
     // Sanity check the header switched to Basic Design.
     await expect(page.getByRole("heading", { name: new RegExp(`DP-\\d+-\\d+`) })).toBeVisible();
-    await expect(page.locator("main").getByText(/Thiết kế cơ sở|Basic design|基本设计|基本設計/i).first()).toBeVisible();
+    await expect(
+      page
+        .locator("main")
+        .getByText(/Thiết kế cơ sở|Basic design|基本设计|基本設計/i)
+        .first(),
+    ).toBeVisible();
 
     // ---------- 3. Switch to the Basic Design tab ----------
     // The notifications overlay can sit above the tab in some viewports;
@@ -114,7 +121,9 @@ test.describe("NIH-115 — Basic Design + Detail Design unlock (real-user flow)"
     });
     await expect(basicTab).toHaveAttribute("aria-selected", "true");
     // The readiness card + "Tạo bản vẽ" button should be visible.
-    await expect(page.getByRole("button", { name: /T\u1ea1o b\u1ea3n v\u1ebd|New document/i })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: /T\u1ea1o b\u1ea3n v\u1ebd|New document/i }),
+    ).toBeVisible();
 
     // ---------- 4. Create + approve 1 doc per required discipline ----------
     // We drive this through the API (faster + less flaky than clicking through
@@ -161,7 +170,8 @@ test.describe("NIH-115 — Basic Design + Detail Design unlock (real-user flow)"
     // All 3 discipline pills should now be Approved (green). ShopDrawing
     // remains the API enum, while Detail Design is the customer-facing term.
     const readiness = page.locator("section").filter({
-      hasText: /Sẵn sàng chuyển Thiết kế chi tiết|Ready for Detail Design|准备转详细设计|詳細設計移行の準備/i,
+      hasText:
+        /Sẵn sàng chuyển Thiết kế chi tiết|Ready for Detail Design|准备转详细设计|詳細設計移行の準備/i,
     });
     for (const label of ["Kiến trúc", "Kết cấu", "MEP"]) {
       await expect(
@@ -170,14 +180,24 @@ test.describe("NIH-115 — Basic Design + Detail Design unlock (real-user flow)"
     }
 
     // Team and Documents are real API-backed rollups, not follow-up placeholders.
-    await page.locator('button[role="tab"]').filter({
-      hasText: /^(Đội ngũ|Team|团队|チーム)$/i,
-    }).click({ force: true });
+    await page
+      .locator('button[role="tab"]')
+      .filter({
+        hasText: /^(Đội ngũ|Team|团队|チーム)$/i,
+      })
+      .click({ force: true });
     const teamTab = page.getByTestId("design-project-team-tab");
     await expect(teamTab).toBeVisible();
-    await expect(teamTab.getByText(/^(Quản lý dự án|Project manager|项目经理|プロジェクトマネージャー)/)).toHaveCount(2);
-    await expect(teamTab.getByText(/^(Chủ nhiệm thiết kế|Design manager|设计经理|デザインマネージャー)/)).toHaveCount(2);
-    await page.locator('button[role="tab"]').filter({ hasText: /^Tài liệu$|^Documents$/i }).click({ force: true });
+    await expect(
+      teamTab.getByText(/^(Quản lý dự án|Project manager|项目经理|プロジェクトマネージャー)/),
+    ).toHaveCount(2);
+    await expect(
+      teamTab.getByText(/^(Chủ nhiệm thiết kế|Design manager|设计经理|デザインマネージャー)/),
+    ).toHaveCount(2);
+    await page
+      .locator('button[role="tab"]')
+      .filter({ hasText: /^Tài liệu$|^Documents$/i })
+      .click({ force: true });
     await expect(page.getByTestId("design-project-documents-tab")).toBeVisible();
     await expect(page.getByText(/NIH-114\.\.118/)).toHaveCount(0);
 
@@ -194,11 +214,14 @@ test.describe("NIH-115 — Basic Design + Detail Design unlock (real-user flow)"
     // parent DesignProjectDetail; hit the API directly so this final
     // assertion is deterministic on any network condition.
     await expect
-      .poll(async () => {
-        const proj = await api.get(`/api/design-projects/${projectId}`, { headers: authHeader });
-        if (!proj.ok()) return "";
-        return (await proj.json()).currentStage as string;
-      }, { timeout: 5_000 })
+      .poll(
+        async () => {
+          const proj = await api.get(`/api/design-projects/${projectId}`, { headers: authHeader });
+          if (!proj.ok()) return "";
+          return (await proj.json()).currentStage as string;
+        },
+        { timeout: 5_000 },
+      )
       .toBe("ShopDrawing");
 
     await page.goto(

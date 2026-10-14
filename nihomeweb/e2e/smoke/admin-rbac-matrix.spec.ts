@@ -113,7 +113,26 @@ const matrix: RoleExpectation[] = [
     // does NOT have crm.leads.view.all or crm.customers.view.all — the
     // services scope their lists to owned records, but the routes render.
     user: TEST_USERS.sale,
-    allowed: ["/admin", "/admin/notifications", "/admin/leads", "/admin/customers", "/admin/opportunities", "/admin/quotes", "/admin/material-rates", "/admin/capability-documents", "/admin/tenders", "/admin/surveys", "/admin/contracts", "/admin/operational-projects", "/admin/work-packages", "/admin/kpi", "/admin/contacts", "/admin/recruitment", "/admin/master-data", "/admin/workflows"],
+    allowed: [
+      "/admin",
+      "/admin/notifications",
+      "/admin/leads",
+      "/admin/customers",
+      "/admin/opportunities",
+      "/admin/quotes",
+      "/admin/material-rates",
+      "/admin/capability-documents",
+      "/admin/tenders",
+      "/admin/surveys",
+      "/admin/contracts",
+      "/admin/operational-projects",
+      "/admin/work-packages",
+      "/admin/kpi",
+      "/admin/contacts",
+      "/admin/recruitment",
+      "/admin/master-data",
+      "/admin/workflows",
+    ],
   },
   {
     // SALES_MANAGER: crm.** (full — includes quotes.approve on top of manage)
@@ -121,7 +140,29 @@ const matrix: RoleExpectation[] = [
     // as SALE plus view.all across CRM entities; routes rendered are
     // identical (server enforces scope).
     user: TEST_USERS.salesManager,
-    allowed: ["/admin", "/admin/notifications", "/admin/leads", "/admin/customers", "/admin/opportunities", "/admin/quotes", "/admin/material-rates", "/admin/capability-documents", "/admin/tenders", "/admin/surveys", "/admin/contracts", "/admin/finance/contracts", "/admin/finance/input-contracts", "/admin/operational-projects", "/admin/work-packages", "/admin/kpi", "/admin/kpi/configuration", "/admin/contacts", "/admin/recruitment", "/admin/master-data", "/admin/workflows"],
+    allowed: [
+      "/admin",
+      "/admin/notifications",
+      "/admin/leads",
+      "/admin/customers",
+      "/admin/opportunities",
+      "/admin/quotes",
+      "/admin/material-rates",
+      "/admin/capability-documents",
+      "/admin/tenders",
+      "/admin/surveys",
+      "/admin/contracts",
+      "/admin/finance/contracts",
+      "/admin/finance/input-contracts",
+      "/admin/operational-projects",
+      "/admin/work-packages",
+      "/admin/kpi",
+      "/admin/kpi/configuration",
+      "/admin/contacts",
+      "/admin/recruitment",
+      "/admin/master-data",
+      "/admin/workflows",
+    ],
   },
   {
     // DESIGN: Design Manager baseline, including downstream-contract, vendor,
@@ -201,40 +242,71 @@ const matrix: RoleExpectation[] = [
   {
     user: TEST_USERS.designLead,
     allowed: [
-      "/admin", "/admin/notifications", "/admin/activities", "/admin/news",
-      "/admin/projects", "/admin/services", "/admin/categories", "/admin/about",
-      "/admin/clients", "/admin/partners", "/admin/suppliers", "/admin/awards",
-      "/admin/languages", "/admin/translations", "/admin/master-data", "/admin/workflows",
-      "/admin/processes/general", "/admin/design-projects", "/admin/operational-projects",
+      "/admin",
+      "/admin/notifications",
+      "/admin/activities",
+      "/admin/news",
+      "/admin/projects",
+      "/admin/services",
+      "/admin/categories",
+      "/admin/about",
+      "/admin/clients",
+      "/admin/partners",
+      "/admin/suppliers",
+      "/admin/awards",
+      "/admin/languages",
+      "/admin/translations",
+      "/admin/master-data",
+      "/admin/workflows",
+      "/admin/processes/general",
+      "/admin/design-projects",
+      "/admin/operational-projects",
       "/admin/work-packages",
       "/admin/kpi",
-      "/admin/construction/tasks", "/admin/construction/diary", "/admin/construction/punchlist",
+      "/admin/construction/tasks",
+      "/admin/construction/diary",
+      "/admin/construction/punchlist",
       "/admin/construction/hse",
-      "/admin/construction/acceptance", "/admin/construction/asbuilt",
-      "/admin/construction/asbuilt-categories", "/admin/construction/handover",
+      "/admin/construction/acceptance",
+      "/admin/construction/asbuilt",
+      "/admin/construction/asbuilt-categories",
+      "/admin/construction/handover",
     ],
   },
-  ...[
-    TEST_USERS.architect,
-    TEST_USERS.mepEngineer,
-    TEST_USERS.structuralEngineer,
-  ].map((user): RoleExpectation => ({
-    user,
-    allowed: [
-      "/admin", "/admin/notifications", "/admin/master-data", "/admin/workflows",
-      "/admin/design-projects", "/admin/operational-projects", "/admin/construction/tasks",
-      "/admin/work-packages",
-      "/admin/kpi",
-      "/admin/construction/diary", "/admin/construction/punchlist",
-      "/admin/construction/acceptance", "/admin/construction/asbuilt",
-      "/admin/construction/asbuilt-categories", "/admin/construction/handover",
-    ],
-  })),
+  ...[TEST_USERS.architect, TEST_USERS.mepEngineer, TEST_USERS.structuralEngineer].map(
+    (user): RoleExpectation => ({
+      user,
+      allowed: [
+        "/admin",
+        "/admin/notifications",
+        "/admin/master-data",
+        "/admin/workflows",
+        "/admin/design-projects",
+        "/admin/operational-projects",
+        "/admin/construction/tasks",
+        "/admin/work-packages",
+        "/admin/kpi",
+        "/admin/construction/diary",
+        "/admin/construction/punchlist",
+        "/admin/construction/acceptance",
+        "/admin/construction/asbuilt",
+        "/admin/construction/asbuilt-categories",
+        "/admin/construction/handover",
+      ],
+    }),
+  ),
   {
     user: TEST_USERS.legalOfficer,
     allowed: [
-      "/admin", "/admin/notifications", "/admin/contracts", "/admin/design-projects",
-      "/admin/operational-projects", "/admin/kpi", "/admin/permits", "/admin/master-data", "/admin/workflows",
+      "/admin",
+      "/admin/notifications",
+      "/admin/contracts",
+      "/admin/design-projects",
+      "/admin/operational-projects",
+      "/admin/kpi",
+      "/admin/permits",
+      "/admin/master-data",
+      "/admin/workflows",
       "/admin/work-packages",
     ],
   },
@@ -243,22 +315,76 @@ const matrix: RoleExpectation[] = [
     // crm.tenders.view (read-only access to approved quotes / tenders
     // for takeoff / cost tracking).
     user: TEST_USERS.qs,
-    allowed: ["/admin", "/admin/notifications", "/admin/projects", "/admin/quotes", "/admin/tenders", "/admin/contracts", "/admin/vendors", "/admin/operational-projects", "/admin/work-packages", "/admin/kpi", "/admin/processes/general", "/admin/master-data", "/admin/workflows"],
+    allowed: [
+      "/admin",
+      "/admin/notifications",
+      "/admin/projects",
+      "/admin/quotes",
+      "/admin/tenders",
+      "/admin/contracts",
+      "/admin/vendors",
+      "/admin/operational-projects",
+      "/admin/work-packages",
+      "/admin/kpi",
+      "/admin/processes/general",
+      "/admin/master-data",
+      "/admin/workflows",
+    ],
   },
   {
     user: TEST_USERS.procurement,
-    allowed: ["/admin", "/admin/notifications", "/admin/contracts", "/admin/vendors", "/admin/procurement-control", "/admin/procurement-control/rfqs", "/admin/operational-projects", "/admin/work-packages", "/admin/kpi", "/admin/master-data", "/admin/workflows"],
+    allowed: [
+      "/admin",
+      "/admin/notifications",
+      "/admin/contracts",
+      "/admin/vendors",
+      "/admin/procurement-control",
+      "/admin/procurement-control/rfqs",
+      "/admin/operational-projects",
+      "/admin/work-packages",
+      "/admin/kpi",
+      "/admin/master-data",
+      "/admin/workflows",
+    ],
   },
   {
     // ACCOUNTANT: contacts.view + system.audit.view + crm.customers.view (+ view.all)
     // + scoped cross-owner access to upstream and downstream contracts.
     user: TEST_USERS.accountant,
-    allowed: ["/admin", "/admin/notifications", "/admin/customers", "/admin/contracts", "/admin/finance/contracts", "/admin/finance/input-contracts", "/admin/vendors", "/admin/finance-control", "/admin/operational-projects", "/admin/work-packages", "/admin/reports/projects", "/admin/kpi", "/admin/kpi/configuration", "/admin/contacts", "/admin/activity-log", "/admin/master-data", "/admin/workflows"],
+    allowed: [
+      "/admin",
+      "/admin/notifications",
+      "/admin/customers",
+      "/admin/contracts",
+      "/admin/finance/contracts",
+      "/admin/finance/input-contracts",
+      "/admin/vendors",
+      "/admin/finance-control",
+      "/admin/operational-projects",
+      "/admin/work-packages",
+      "/admin/reports/projects",
+      "/admin/kpi",
+      "/admin/kpi/configuration",
+      "/admin/contacts",
+      "/admin/activity-log",
+      "/admin/master-data",
+      "/admin/workflows",
+    ],
   },
   {
     // WAREHOUSE: processes.view only (plus dashboard)
     user: TEST_USERS.warehouse,
-    allowed: ["/admin", "/admin/notifications", "/admin/vendors", "/admin/procurement-control", "/admin/operational-projects", "/admin/work-packages", "/admin/processes/general", "/admin/master-data", "/admin/workflows"],
+    allowed: [
+      "/admin",
+      "/admin/notifications",
+      "/admin/vendors",
+      "/admin/procurement-control",
+      "/admin/operational-projects",
+      "/admin/work-packages",
+      "/admin/processes/general",
+      "/admin/master-data",
+      "/admin/workflows",
+    ],
   },
   {
     // BGD: **.view + dashboard.view + system.audit.view — every view route.
@@ -274,10 +400,7 @@ const FORBIDDEN_BODY = /Access denied|Truy cập bị từ chối|访问被拒�
 
 test.describe("Phase 6 — RBAC matrix per seeded role", () => {
   for (const c of matrix) {
-    test(`${c.user.role} matches the live permission set`, async ({
-      page,
-      loginInBrowserAs,
-    }) => {
+    test(`${c.user.role} matches the live permission set`, async ({ page, loginInBrowserAs }) => {
       // Each route gets a fresh token pair because navigation can rotate the
       // single-use refresh token. Full-access roles exercise every admin route,
       // so allow enough time for those real login and navigation round-trips.
@@ -367,10 +490,7 @@ const MATRIX_PATH_EXCLUSIONS = new Set<string>([
 ]);
 
 test("Tier-1 — every /admin route in App.tsx is covered by the matrix", () => {
-  const appSource = readFileSync(
-    resolve(__dirname, "../../src/App.tsx"),
-    "utf-8",
-  );
+  const appSource = readFileSync(resolve(__dirname, "../../src/App.tsx"), "utf-8");
 
   const declared = new Set<string>();
   for (const m of appSource.matchAll(/path="(\/admin[^"]*)"/g)) {

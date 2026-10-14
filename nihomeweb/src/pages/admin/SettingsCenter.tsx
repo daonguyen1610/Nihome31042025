@@ -1,6 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { ExternalLink, HardDrive, LogOut, Map as MapIcon, RefreshCw, Save, ShieldCheck } from "lucide-react";
+import {
+  ExternalLink,
+  HardDrive,
+  LogOut,
+  Map as MapIcon,
+  RefreshCw,
+  Save,
+  ShieldCheck,
+} from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
@@ -80,19 +88,12 @@ const OtpToggleControl = ({
 }) => (
   <div className="flex items-start gap-4 rounded-lg border bg-muted/40 px-4 py-4">
     <div className="pt-0.5">
-      <Switch
-        checked={enabled}
-        onCheckedChange={onToggle}
-        disabled={disabled}
-        aria-label={label}
-      />
+      <Switch checked={enabled} onCheckedChange={onToggle} disabled={disabled} aria-label={label} />
     </div>
     <div className="min-w-0">
       <p className="text-sm font-medium">{label}</p>
       <p className="mt-1 text-xs text-muted-foreground">{description}</p>
-      {saving && (
-        <p className="mt-2 text-xs font-medium text-primary">{savingLabel}</p>
-      )}
+      {saving && <p className="mt-2 text-xs font-medium text-primary">{savingLabel}</p>}
     </div>
   </div>
 );
@@ -348,19 +349,22 @@ const DriveTab = () => {
     void loadStatus();
   }, [loadStatus]);
 
-  const showOAuthResult = useCallback((result: string) => {
-    const successful = result === "success";
-    toast({
-      title: t(successful ? "settings.drive.oauth.success" : "settings.drive.oauth.error"),
-      description: successful
-        ? undefined
-        : t(DRIVE_OAUTH_RESULT_KEYS[result] ?? "settings.drive.oauth.failed"),
-      variant: successful ? "default" : "destructive",
-    });
-    setConnecting(false);
-    if (successful) setConfigurationVersion((value) => value + 1);
-    void loadStatus();
-  }, [loadStatus, t, toast]);
+  const showOAuthResult = useCallback(
+    (result: string) => {
+      const successful = result === "success";
+      toast({
+        title: t(successful ? "settings.drive.oauth.success" : "settings.drive.oauth.error"),
+        description: successful
+          ? undefined
+          : t(DRIVE_OAUTH_RESULT_KEYS[result] ?? "settings.drive.oauth.failed"),
+        variant: successful ? "default" : "destructive",
+      });
+      setConnecting(false);
+      if (successful) setConfigurationVersion((value) => value + 1);
+      void loadStatus();
+    },
+    [loadStatus, t, toast],
+  );
 
   useEffect(() => {
     const result = searchParams.get("driveOAuth");
@@ -380,7 +384,12 @@ const DriveTab = () => {
   useEffect(() => {
     const onOAuthMessage = (event: MessageEvent) => {
       if (event.origin !== window.location.origin || event.source !== oauthPopup.current) return;
-      if (!event.data || event.data.type !== DRIVE_OAUTH_MESSAGE || typeof event.data.result !== "string") return;
+      if (
+        !event.data ||
+        event.data.type !== DRIVE_OAUTH_MESSAGE ||
+        typeof event.data.result !== "string"
+      )
+        return;
       if (popupPoll.current !== null) window.clearInterval(popupPoll.current);
       popupPoll.current = null;
       oauthPopup.current?.close();
@@ -431,7 +440,10 @@ const DriveTab = () => {
       }
       const { data } = await adminApi.startGoogleDriveOAuth();
       const authorizationUrl = new URL(data.authorizationUrl);
-      if (authorizationUrl.protocol !== "https:" || authorizationUrl.hostname !== "accounts.google.com")
+      if (
+        authorizationUrl.protocol !== "https:" ||
+        authorizationUrl.hostname !== "accounts.google.com"
+      )
         throw new Error("Unexpected OAuth authorization URL");
       popup.location.assign(authorizationUrl.toString());
       popup.focus();
@@ -464,9 +476,10 @@ const DriveTab = () => {
       const { data } = await adminApi.disconnectGoogleDriveOAuth();
       toast({
         title: t("settings.drive.disconnectSuccess"),
-        description: data.hadStoredCredential && !data.providerRevoked
-          ? t("settings.drive.disconnectRevokeWarning")
-          : undefined,
+        description:
+          data.hadStoredCredential && !data.providerRevoked
+            ? t("settings.drive.disconnectRevokeWarning")
+            : undefined,
       });
       setConfigurationVersion((value) => value + 1);
       await loadStatus();
@@ -493,88 +506,108 @@ const DriveTab = () => {
         }}
       />
       <section className="rounded-lg border bg-card p-4 sm:p-6">
-      <div className="flex flex-col gap-4 border-b pb-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex items-start gap-3">
-          <HardDrive className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
-          <div>
-            <h2 className="text-lg font-semibold">{t("settings.drive.title")}</h2>
-            <p className="mt-1 text-sm text-muted-foreground">{t("settings.drive.description")}</p>
+        <div className="flex flex-col gap-4 border-b pb-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex items-start gap-3">
+            <HardDrive className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+            <div>
+              <h2 className="text-lg font-semibold">{t("settings.drive.title")}</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {t("settings.drive.description")}
+              </p>
+            </div>
           </div>
+          <Button type="button" variant="outline" size="sm" onClick={loadStatus} disabled={loading}>
+            <RefreshCw className={`mr-1.5 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            {t("settings.drive.check")}
+          </Button>
         </div>
-        <Button type="button" variant="outline" size="sm" onClick={loadStatus} disabled={loading}>
-          <RefreshCw className={`mr-1.5 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-          {t("settings.drive.check")}
-        </Button>
-      </div>
 
-      {loading && !status ? (
-        <p className="pt-5 text-sm text-muted-foreground">{t("common.loading")}</p>
-      ) : !status ? (
-        <p className="pt-5 text-sm text-destructive">{t("settings.drive.loadError")}</p>
-      ) : (
-        <div className="space-y-5 pt-5">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-lg border bg-muted/30 p-4">
-              <p className="text-xs text-muted-foreground">{t("settings.drive.connectionStatus")}</p>
-              <p className="mt-1 font-medium">{t(DRIVE_STATUS_KEYS[status.status])}</p>
-            </div>
-            <div className="rounded-lg border bg-muted/30 p-4">
-              <p className="text-xs text-muted-foreground">{t("settings.drive.account")}</p>
-              <p className="mt-1 break-all font-medium">{status.accountEmail || t("settings.drive.notAvailable")}</p>
-            </div>
-          </div>
-
-          {DRIVE_ERROR_KEYS[status.status] && (
-            <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
-              {t(DRIVE_ERROR_KEYS[status.status] as string)}
-            </div>
-          )}
-
-          {status.rootFolderName && (
-            <div className="flex flex-col gap-2 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground">{t("settings.drive.rootFolder")}</p>
-                <p className="mt-1 font-medium">{status.rootFolderName}</p>
+        {loading && !status ? (
+          <p className="pt-5 text-sm text-muted-foreground">{t("common.loading")}</p>
+        ) : !status ? (
+          <p className="pt-5 text-sm text-destructive">{t("settings.drive.loadError")}</p>
+        ) : (
+          <div className="space-y-5 pt-5">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-lg border bg-muted/30 p-4">
+                <p className="text-xs text-muted-foreground">
+                  {t("settings.drive.connectionStatus")}
+                </p>
+                <p className="mt-1 font-medium">{t(DRIVE_STATUS_KEYS[status.status])}</p>
               </div>
-              {status.rootFolderLink && (
-                <Button asChild variant="ghost" size="sm">
-                  <a href={status.rootFolderLink} target="_blank" rel="noreferrer">
-                    <ExternalLink className="mr-1.5 h-4 w-4" />
-                    {t("settings.drive.openFolder")}
-                  </a>
-                </Button>
-              )}
+              <div className="rounded-lg border bg-muted/30 p-4">
+                <p className="text-xs text-muted-foreground">{t("settings.drive.account")}</p>
+                <p className="mt-1 break-all font-medium">
+                  {status.accountEmail || t("settings.drive.notAvailable")}
+                </p>
+              </div>
             </div>
-          )}
 
-          {canManage ? (
-            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-              <Button type="button" onClick={connect} disabled={connecting || disconnecting || !status.oauthConfigured}>
-                <HardDrive className="mr-1.5 h-4 w-4" />
-                {connecting
-                  ? t("settings.drive.connecting")
-                  : t(status.hasStoredCredential ? "settings.drive.switchAccount" : "settings.drive.connect")}
-              </Button>
-              {status.hasStoredCredential && (
+            {DRIVE_ERROR_KEYS[status.status] && (
+              <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
+                {t(DRIVE_ERROR_KEYS[status.status] as string)}
+              </div>
+            )}
+
+            {status.rootFolderName && (
+              <div className="flex flex-col gap-2 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-xs text-muted-foreground">{t("settings.drive.rootFolder")}</p>
+                  <p className="mt-1 font-medium">{status.rootFolderName}</p>
+                </div>
+                {status.rootFolderLink && (
+                  <Button asChild variant="ghost" size="sm">
+                    <a href={status.rootFolderLink} target="_blank" rel="noreferrer">
+                      <ExternalLink className="mr-1.5 h-4 w-4" />
+                      {t("settings.drive.openFolder")}
+                    </a>
+                  </Button>
+                )}
+              </div>
+            )}
+
+            {canManage ? (
+              <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
                 <Button
                   type="button"
-                  variant="outline"
-                  onClick={disconnect}
-                  disabled={connecting || disconnecting}
+                  onClick={connect}
+                  disabled={connecting || disconnecting || !status.oauthConfigured}
                 >
-                  <LogOut className="mr-1.5 h-4 w-4" />
-                  {disconnecting ? t("settings.drive.disconnecting") : t("settings.drive.disconnect")}
+                  <HardDrive className="mr-1.5 h-4 w-4" />
+                  {connecting
+                    ? t("settings.drive.connecting")
+                    : t(
+                        status.hasStoredCredential
+                          ? "settings.drive.switchAccount"
+                          : "settings.drive.connect",
+                      )}
                 </Button>
-              )}
-              {!status.oauthConfigured && (
-                <p className="text-xs text-destructive">{t("settings.drive.oauthNotConfigured")}</p>
-              )}
-            </div>
-          ) : (
-            <p className="text-xs text-muted-foreground">{t("settings.drive.managePermissionRequired")}</p>
-          )}
-        </div>
-      )}
+                {status.hasStoredCredential && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={disconnect}
+                    disabled={connecting || disconnecting}
+                  >
+                    <LogOut className="mr-1.5 h-4 w-4" />
+                    {disconnecting
+                      ? t("settings.drive.disconnecting")
+                      : t("settings.drive.disconnect")}
+                  </Button>
+                )}
+                {!status.oauthConfigured && (
+                  <p className="text-xs text-destructive">
+                    {t("settings.drive.oauthNotConfigured")}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                {t("settings.drive.managePermissionRequired")}
+              </p>
+            )}
+          </div>
+        )}
       </section>
     </div>
   );
@@ -585,9 +618,7 @@ const SettingsCenter = () => {
   const { t } = useI18n();
   const [searchParams, setSearchParams] = useSearchParams();
   const currentTab = searchParams.get("tab");
-  const initialTab = tabs.some((tab) => tab.key === currentTab)
-    ? (currentTab as Tab)
-    : "security";
+  const initialTab = tabs.some((tab) => tab.key === currentTab) ? (currentTab as Tab) : "security";
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
 
   useEffect(() => {

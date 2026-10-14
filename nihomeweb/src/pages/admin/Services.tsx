@@ -1,5 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Plus, Search, Pencil, Trash2, ExternalLink, Loader2, Save, X, ImagePlus } from "lucide-react";
+import {
+  Plus,
+  Search,
+  Pencil,
+  Trash2,
+  ExternalLink,
+  Loader2,
+  Save,
+  X,
+  ImagePlus,
+} from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
@@ -59,7 +69,14 @@ function getErrorMessage(error: unknown): string | null {
   if (typeof error === "object" && error !== null) {
     const e = error as {
       message?: unknown;
-      response?: { data?: { detail?: unknown; message?: unknown; title?: unknown; errors?: Record<string, unknown> } };
+      response?: {
+        data?: {
+          detail?: unknown;
+          message?: unknown;
+          title?: unknown;
+          errors?: Record<string, unknown>;
+        };
+      };
     };
     const data = e.response?.data;
     if (typeof data?.detail === "string") return data.detail;
@@ -111,9 +128,7 @@ function SectionsEditor({
   const addBullet = (si: number) => {
     setForm((f) => ({
       ...f,
-      sections: f.sections.map((s, i) =>
-        i === si ? { ...s, body: [...s.body, ""] } : s
-      ),
+      sections: f.sections.map((s, i) => (i === si ? { ...s, body: [...s.body, ""] } : s)),
     }));
   };
 
@@ -121,7 +136,7 @@ function SectionsEditor({
     setForm((f) => ({
       ...f,
       sections: f.sections.map((s, i) =>
-        i === si ? { ...s, body: s.body.filter((_, j) => j !== bi) } : s
+        i === si ? { ...s, body: s.body.filter((_, j) => j !== bi) } : s,
       ),
     }));
   };
@@ -130,9 +145,7 @@ function SectionsEditor({
     setForm((f) => ({
       ...f,
       sections: f.sections.map((s, i) =>
-        i === si
-          ? { ...s, body: s.body.map((b, j) => (j === bi ? value : b)) }
-          : s
+        i === si ? { ...s, body: s.body.map((b, j) => (j === bi ? value : b)) } : s,
       ),
     }));
   };
@@ -149,10 +162,7 @@ function SectionsEditor({
 
       <div className="space-y-4">
         {form.sections.map((sec, si) => (
-          <div
-            key={si}
-            className="rounded-xl border border-slate-200 bg-slate-50 p-4"
-          >
+          <div key={si} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
             {/* Section header row */}
             <div className="flex items-center gap-2 mb-3">
               <span className="w-6 h-6 rounded-full bg-rose-100 text-rose-600 text-xs font-bold flex items-center justify-center shrink-0">
@@ -260,7 +270,7 @@ function IntroBlocksEditor({
       setForm((f) => ({
         ...f,
         introBlocks: f.introBlocks.map((b, j) =>
-          j === i ? { ...b, imageUrl: res.data.imageUrl, uploading: false } : b
+          j === i ? { ...b, imageUrl: res.data.imageUrl, uploading: false } : b,
         ),
       }));
     } catch {
@@ -326,7 +336,9 @@ function IntroBlocksEditor({
                     src={block.imageUrl}
                     alt=""
                     className="w-full object-cover max-h-48"
-                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).style.display = "none";
+                    }}
                   />
                   <button
                     type="button"
@@ -368,7 +380,9 @@ function IntroBlocksEditor({
             )}
 
             <input
-              ref={(el) => { fileInputRefs.current[i] = el; }}
+              ref={(el) => {
+                fileInputRefs.current[i] = el;
+              }}
               type="file"
               accept="image/*"
               className="hidden"
@@ -489,7 +503,13 @@ const AdminServices = () => {
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.title.trim() || !form.slug.trim() || !form.shortTitle.trim() || !form.tagline.trim() || !form.intro.trim()) {
+    if (
+      !form.title.trim() ||
+      !form.slug.trim() ||
+      !form.shortTitle.trim() ||
+      !form.tagline.trim() ||
+      !form.intro.trim()
+    ) {
       toast({ title: t("form.required"), variant: "destructive" });
       return;
     }
@@ -555,7 +575,9 @@ const AdminServices = () => {
         {/* Search bar */}
         <section className="rounded-lg border bg-card p-3">
           <div className="w-full sm:max-w-sm">
-            <Label className="text-xs" htmlFor="service-search">{t("common.search")}</Label>
+            <Label className="text-xs" htmlFor="service-search">
+              {t("common.search")}
+            </Label>
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -609,10 +631,7 @@ const AdminServices = () => {
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex min-w-0 items-start gap-2">
-                      <span
-                        onClick={(e) => e.stopPropagation()}
-                        className="pt-0.5"
-                      >
+                      <span onClick={(e) => e.stopPropagation()} className="pt-0.5">
                         <Checkbox
                           checked={selectedIds.has(s.id)}
                           onCheckedChange={(v) => toggleOne(s.id, v === true)}
@@ -620,7 +639,9 @@ const AdminServices = () => {
                         />
                       </span>
                       <div className="min-w-0">
-                        <h3 className="break-words text-sm font-semibold leading-tight">{s.title}</h3>
+                        <h3 className="break-words text-sm font-semibold leading-tight">
+                          {s.title}
+                        </h3>
                         <p className="mt-0.5 break-all font-mono text-xs text-muted-foreground">
                           /{s.slug}
                         </p>
@@ -634,15 +655,19 @@ const AdminServices = () => {
                     </Badge>
                   </div>
                   {s.tagline && (
-                    <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">
-                      {s.tagline}
-                    </p>
+                    <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">{s.tagline}</p>
                   )}
                   <div
                     className="mt-3 flex items-center justify-end gap-1 border-t pt-2"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <Button asChild variant="ghost" size="icon" title={t("common.view")} aria-label={t("common.view")}>
+                    <Button
+                      asChild
+                      variant="ghost"
+                      size="icon"
+                      title={t("common.view")}
+                      aria-label={t("common.view")}
+                    >
                       <a href={`/services/${s.slug}`} target="_blank" rel="noopener noreferrer">
                         <ExternalLink className="h-4 w-4" />
                       </a>
@@ -679,21 +704,25 @@ const AdminServices = () => {
                     <th className="w-10 px-3 py-3 text-left">
                       <Checkbox
                         checked={
-                          allVisibleSelected
-                            ? true
-                            : someVisibleSelected
-                              ? "indeterminate"
-                              : false
+                          allVisibleSelected ? true : someVisibleSelected ? "indeterminate" : false
                         }
                         onCheckedChange={(v) => toggleAllVisible(v === true)}
                         aria-label={t("common.selectAll")}
                       />
                     </th>
                     <th className="whitespace-nowrap px-3 py-3 text-left font-medium">#</th>
-                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("svc.admin.shortTitle")}</th>
-                    <th className="min-w-[220px] px-3 py-3 text-left font-medium">{t("form.title")}</th>
-                    <th className="hidden px-3 py-3 text-left font-medium md:table-cell">{t("svc.admin.tagline")}</th>
-                    <th className="whitespace-nowrap px-3 py-3 text-right font-medium">{t("common.actions")}</th>
+                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                      {t("svc.admin.shortTitle")}
+                    </th>
+                    <th className="min-w-[220px] px-3 py-3 text-left font-medium">
+                      {t("form.title")}
+                    </th>
+                    <th className="hidden px-3 py-3 text-left font-medium md:table-cell">
+                      {t("svc.admin.tagline")}
+                    </th>
+                    <th className="whitespace-nowrap px-3 py-3 text-right font-medium">
+                      {t("common.actions")}
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -714,24 +743,41 @@ const AdminServices = () => {
                         <span className="font-mono text-xs text-muted-foreground">{s.id}</span>
                       </td>
                       <td className="whitespace-nowrap px-3 py-3">
-                        <Badge variant="outline" className="whitespace-nowrap border-indigo-200 bg-indigo-50 font-medium text-indigo-700">
+                        <Badge
+                          variant="outline"
+                          className="whitespace-nowrap border-indigo-200 bg-indigo-50 font-medium text-indigo-700"
+                        >
                           {s.shortTitle}
                         </Badge>
                       </td>
                       <td className="min-w-[220px] px-3 py-3">
                         <div className="font-medium">{s.title}</div>
-                        <div className="mt-0.5 font-mono text-xs text-muted-foreground">/{s.slug}</div>
+                        <div className="mt-0.5 font-mono text-xs text-muted-foreground">
+                          /{s.slug}
+                        </div>
                       </td>
                       <td className="hidden max-w-xs px-3 py-3 md:table-cell">
-                        <span className="block truncate text-xs text-muted-foreground">{s.tagline}</span>
+                        <span className="block truncate text-xs text-muted-foreground">
+                          {s.tagline}
+                        </span>
                       </td>
                       <td
                         className="whitespace-nowrap px-3 py-3 text-right"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <div className="inline-flex items-center gap-1">
-                          <Button asChild variant="ghost" size="icon" title={t("common.view")} aria-label={t("common.view")}>
-                            <a href={`/services/${s.slug}`} target="_blank" rel="noopener noreferrer">
+                          <Button
+                            asChild
+                            variant="ghost"
+                            size="icon"
+                            title={t("common.view")}
+                            aria-label={t("common.view")}
+                          >
+                            <a
+                              href={`/services/${s.slug}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
                               <ExternalLink className="h-4 w-4" />
                             </a>
                           </Button>
@@ -764,321 +810,323 @@ const AdminServices = () => {
           </div>
         )}
 
-      {/* Dialog */}
-      <Dialog open={openModal} onOpenChange={(open) => { setOpenModal(open); if (!open) setForm(emptyForm); }}>
-        <DialogContent className="admin-scope max-w-2xl max-h-[92vh] flex flex-col p-0 gap-0 overflow-hidden rounded-2xl border-0 shadow-2xl">
-          {/* Gradient header */}
-          <DialogHeader className="relative px-6 py-5 text-left space-y-1 bg-gradient-to-br from-rose-500 via-rose-500 to-orange-500 text-white">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-white/15 backdrop-blur flex items-center justify-center shrink-0">
-                {isEditing ? <Pencil className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
+        {/* Dialog */}
+        <Dialog
+          open={openModal}
+          onOpenChange={(open) => {
+            setOpenModal(open);
+            if (!open) setForm(emptyForm);
+          }}
+        >
+          <DialogContent className="admin-scope max-w-2xl max-h-[92vh] flex flex-col p-0 gap-0 overflow-hidden rounded-2xl border-0 shadow-2xl">
+            {/* Gradient header */}
+            <DialogHeader className="relative px-6 py-5 text-left space-y-1 bg-gradient-to-br from-rose-500 via-rose-500 to-orange-500 text-white">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white/15 backdrop-blur flex items-center justify-center shrink-0">
+                  {isEditing ? <Pencil className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
+                </div>
+                <div className="min-w-0">
+                  <DialogTitle className="text-lg sm:text-xl font-extrabold tracking-tight">
+                    {isEditing ? t("svc.admin.editTitle") : t("svc.admin.createTitle")}
+                  </DialogTitle>
+                  <DialogDescription className="text-white/85 text-xs sm:text-sm mt-0.5">
+                    {t("svc.admin.title")}
+                  </DialogDescription>
+                </div>
               </div>
-              <div className="min-w-0">
-                <DialogTitle className="text-lg sm:text-xl font-extrabold tracking-tight">
-                  {isEditing ? t("svc.admin.editTitle") : t("svc.admin.createTitle")}
-                </DialogTitle>
-                <DialogDescription className="text-white/85 text-xs sm:text-sm mt-0.5">
-                  {t("svc.admin.title")}
-                </DialogDescription>
-              </div>
-            </div>
-          </DialogHeader>
+            </DialogHeader>
 
-          <form onSubmit={save} className="flex flex-col flex-1 overflow-hidden bg-slate-50">
-            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
-
-              {/* Basic info */}
-              <section className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-                <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-4 flex items-center gap-2">
-                  <span className="w-1 h-4 rounded-full bg-rose-500" />
-                  {t("svc.admin.basicInfo")}
-                </h3>
-                <div className="space-y-4">
-                  {/* Title */}
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                      {t("form.title")} <span className="text-rose-500">*</span>
-                    </label>
-                    <input
-                      value={form.title}
-                      onChange={(e) => {
-                        const title = e.target.value;
-                        setForm((f) => ({
-                          ...f,
-                          title,
-                          slug: f.id == null ? slugify(title) : f.slug,
-                        }));
-                      }}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-800 placeholder:text-slate-400 outline-none focus:border-rose-500 focus:ring-4 focus:ring-rose-500/15 transition"
-                      required
-                      autoFocus
-                    />
-                  </div>
-
-                  {/* Short title */}
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                      {t("svc.admin.shortTitle")} <span className="text-rose-500">*</span>
-                    </label>
-                    <input
-                      value={form.shortTitle}
-                      onChange={(e) => setForm((f) => ({ ...f, shortTitle: e.target.value }))}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-800 placeholder:text-slate-400 outline-none focus:border-rose-500 focus:ring-4 focus:ring-rose-500/15 transition"
-                      required
-                    />
-                  </div>
-
-                  {/* Slug */}
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                      {t("svc.admin.slug")} <span className="text-rose-500">*</span>
-                    </label>
-                    <input
-                      value={form.slug}
-                      onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value }))}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-800 font-mono placeholder:text-slate-400 outline-none focus:border-rose-500 focus:ring-4 focus:ring-rose-500/15 transition"
-                      required
-                    />
-                  </div>
-
-                  {/* Tagline + Sort Order */}
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="col-span-2">
+            <form onSubmit={save} className="flex flex-col flex-1 overflow-hidden bg-slate-50">
+              <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+                {/* Basic info */}
+                <section className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+                  <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-4 flex items-center gap-2">
+                    <span className="w-1 h-4 rounded-full bg-rose-500" />
+                    {t("svc.admin.basicInfo")}
+                  </h3>
+                  <div className="space-y-4">
+                    {/* Title */}
+                    <div>
                       <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                        {t("svc.admin.tagline")} <span className="text-rose-500">*</span>
+                        {t("form.title")} <span className="text-rose-500">*</span>
                       </label>
                       <input
-                        value={form.tagline}
-                        onChange={(e) => setForm((f) => ({ ...f, tagline: e.target.value }))}
+                        value={form.title}
+                        onChange={(e) => {
+                          const title = e.target.value;
+                          setForm((f) => ({
+                            ...f,
+                            title,
+                            slug: f.id == null ? slugify(title) : f.slug,
+                          }));
+                        }}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-800 placeholder:text-slate-400 outline-none focus:border-rose-500 focus:ring-4 focus:ring-rose-500/15 transition"
+                        required
+                        autoFocus
+                      />
+                    </div>
+
+                    {/* Short title */}
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                        {t("svc.admin.shortTitle")} <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        value={form.shortTitle}
+                        onChange={(e) => setForm((f) => ({ ...f, shortTitle: e.target.value }))}
                         className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-800 placeholder:text-slate-400 outline-none focus:border-rose-500 focus:ring-4 focus:ring-rose-500/15 transition"
                         required
                       />
                     </div>
+
+                    {/* Slug */}
                     <div>
                       <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                        {t("proc.fieldSortOrder")}
+                        {t("svc.admin.slug")} <span className="text-rose-500">*</span>
                       </label>
                       <input
-                        type="number"
-                        value={form.sortOrder}
-                        onChange={(e) => setForm((f) => ({ ...f, sortOrder: Number(e.target.value) }))}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-800 outline-none focus:border-rose-500 focus:ring-4 focus:ring-rose-500/15 transition"
+                        value={form.slug}
+                        onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value }))}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-800 font-mono placeholder:text-slate-400 outline-none focus:border-rose-500 focus:ring-4 focus:ring-rose-500/15 transition"
+                        required
                       />
+                    </div>
+
+                    {/* Tagline + Sort Order */}
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="col-span-2">
+                        <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                          {t("svc.admin.tagline")} <span className="text-rose-500">*</span>
+                        </label>
+                        <input
+                          value={form.tagline}
+                          onChange={(e) => setForm((f) => ({ ...f, tagline: e.target.value }))}
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-800 placeholder:text-slate-400 outline-none focus:border-rose-500 focus:ring-4 focus:ring-rose-500/15 transition"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                          {t("proc.fieldSortOrder")}
+                        </label>
+                        <input
+                          type="number"
+                          value={form.sortOrder}
+                          onChange={(e) =>
+                            setForm((f) => ({ ...f, sortOrder: Number(e.target.value) }))
+                          }
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-800 outline-none focus:border-rose-500 focus:ring-4 focus:ring-rose-500/15 transition"
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
-              </section>
+                </section>
 
-              {/* Intro */}
-              <section className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-                <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-4 flex items-center gap-2">
-                  <span className="w-1 h-4 rounded-full bg-rose-500" />
-                  {t("svc.admin.intro")}
-                </h3>
-                <textarea
-                  value={form.intro}
-                  onChange={(e) => setForm((f) => ({ ...f, intro: e.target.value }))}
-                  rows={4}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-800 placeholder:text-slate-400 outline-none focus:border-rose-500 focus:ring-4 focus:ring-rose-500/15 transition resize-none"
-                  required
-                />
-              </section>
+                {/* Intro */}
+                <section className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+                  <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-4 flex items-center gap-2">
+                    <span className="w-1 h-4 rounded-full bg-rose-500" />
+                    {t("svc.admin.intro")}
+                  </h3>
+                  <textarea
+                    value={form.intro}
+                    onChange={(e) => setForm((f) => ({ ...f, intro: e.target.value }))}
+                    rows={4}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-800 placeholder:text-slate-400 outline-none focus:border-rose-500 focus:ring-4 focus:ring-rose-500/15 transition resize-none"
+                    required
+                  />
+                </section>
 
-              {/* Highlights */}
-              <section className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-                <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-4 flex items-center gap-2">
-                  <span className="w-1 h-4 rounded-full bg-rose-500" />
-                  {t("svc.admin.highlights")}
-                  <span className="ml-auto text-slate-400 font-normal normal-case tracking-normal text-xs">
-                    {form.highlights.length}
-                  </span>
-                </h3>
-                <div className="space-y-2">
-                  {form.highlights.map((hl, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <input
-                        value={hl}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setForm((f) => ({
-                            ...f,
-                            highlights: f.highlights.map((h, j) => (j === i ? val : h)),
-                          }));
-                        }}
-                        placeholder={t("svc.admin.highlightPh")}
-                        className="flex-1 px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-800 placeholder:text-slate-400 outline-none focus:border-rose-500 focus:ring-4 focus:ring-rose-500/15 transition"
-                      />
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setForm((f) => ({
-                            ...f,
-                            highlights: f.highlights.filter((_, j) => j !== i),
-                          }))
-                        }
-                        className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition shrink-0"
-                        aria-label={t("common.delete")}
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={() => setForm((f) => ({ ...f, highlights: [...f.highlights, ""] }))}
-                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 border-dashed border-slate-200 text-sm font-semibold text-slate-500 hover:border-rose-400 hover:text-rose-600 hover:bg-rose-50/40 transition"
-                  >
-                    {t("svc.admin.addHighlight")}
-                  </button>
-                </div>
-              </section>
+                {/* Highlights */}
+                <section className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+                  <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-4 flex items-center gap-2">
+                    <span className="w-1 h-4 rounded-full bg-rose-500" />
+                    {t("svc.admin.highlights")}
+                    <span className="ml-auto text-slate-400 font-normal normal-case tracking-normal text-xs">
+                      {form.highlights.length}
+                    </span>
+                  </h3>
+                  <div className="space-y-2">
+                    {form.highlights.map((hl, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <input
+                          value={hl}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setForm((f) => ({
+                              ...f,
+                              highlights: f.highlights.map((h, j) => (j === i ? val : h)),
+                            }));
+                          }}
+                          placeholder={t("svc.admin.highlightPh")}
+                          className="flex-1 px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-800 placeholder:text-slate-400 outline-none focus:border-rose-500 focus:ring-4 focus:ring-rose-500/15 transition"
+                        />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setForm((f) => ({
+                              ...f,
+                              highlights: f.highlights.filter((_, j) => j !== i),
+                            }))
+                          }
+                          className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition shrink-0"
+                          aria-label={t("common.delete")}
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setForm((f) => ({ ...f, highlights: [...f.highlights, ""] }))}
+                      className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 border-dashed border-slate-200 text-sm font-semibold text-slate-500 hover:border-rose-400 hover:text-rose-600 hover:bg-rose-50/40 transition"
+                    >
+                      {t("svc.admin.addHighlight")}
+                    </button>
+                  </div>
+                </section>
 
-              {/* Sections editor */}
-              <SectionsEditor form={form} setForm={setForm} t={t} />
+                {/* Sections editor */}
+                <SectionsEditor form={form} setForm={setForm} t={t} />
 
-              {/* Intro blocks editor */}
-              <IntroBlocksEditor form={form} setForm={setForm} t={t} />
-            </div>
-
-            {/* Footer */}
-            <div className="px-6 py-4 border-t border-slate-200 bg-white flex items-center justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setOpenModal(false)}
-                disabled={submitting}
-                className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl font-semibold text-sm border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-50 transition"
-              >
-                <X className="w-4 h-4" />
-                {t("common.cancel")}
-              </button>
-              <button
-                type="submit"
-                disabled={submitting}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm text-white bg-gradient-to-br from-rose-500 to-orange-500 shadow-md shadow-rose-500/30 hover:shadow-lg hover:shadow-rose-500/40 hover:brightness-105 disabled:opacity-50 disabled:shadow-none transition"
-              >
-                {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                {submitting ? t("common.loading") : t("common.save")}
-              </button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Quick-view preview dialog. Read-only summary — full editing is
-          via the pencil button which opens the heavy edit dialog above. */}
-      <Dialog
-        open={previewRow !== null}
-        onOpenChange={(o) => !o && setPreviewRow(null)}
-      >
-        <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto sm:w-full">
-          <DialogHeader>
-            <DialogTitle className="break-words text-base md:text-lg">
-              {previewRow?.title}
-            </DialogTitle>
-            <DialogDescription className="break-all text-xs md:text-sm">
-              /{previewRow?.slug}
-            </DialogDescription>
-          </DialogHeader>
-
-          {previewRow && (
-            <div className="space-y-4 text-sm">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge
-                  variant="outline"
-                  className="border-indigo-200 bg-indigo-50 font-medium text-indigo-700"
-                >
-                  {previewRow.shortTitle}
-                </Badge>
+                {/* Intro blocks editor */}
+                <IntroBlocksEditor form={form} setForm={setForm} t={t} />
               </div>
 
-              {previewRow.tagline && (
-                <div>
-                  <div className="text-xs text-muted-foreground">
-                    {t("svc.admin.tagline")}
-                  </div>
-                  <p className="mt-0.5">{previewRow.tagline}</p>
-                </div>
-              )}
-
-              {previewRow.intro && (
-                <div>
-                  <div className="text-xs text-muted-foreground">
-                    {t("svc.admin.intro")}
-                  </div>
-                  <p className="mt-0.5 whitespace-pre-wrap break-words">
-                    {previewRow.intro}
-                  </p>
-                </div>
-              )}
-
-              {previewRow.highlights.length > 0 && (
-                <div>
-                  <div className="text-xs text-muted-foreground">
-                    {t("svc.admin.highlights")}
-                    <span className="ml-1">({previewRow.highlights.length})</span>
-                  </div>
-                  <ul className="mt-1 list-disc space-y-0.5 pl-5">
-                    {previewRow.highlights.map((h, i) => (
-                      <li key={i}>{h}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {previewRow.sections.length > 0 && (
-                <div>
-                  <div className="text-xs text-muted-foreground">
-                    {t("svc.admin.sections")}
-                    <span className="ml-1">({previewRow.sections.length})</span>
-                  </div>
-                  <ul className="mt-1 space-y-1 pl-1">
-                    {previewRow.sections.map((sec, i) => (
-                      <li key={i} className="font-medium">
-                        {sec.heading || `#${i + 1}`}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          )}
-
-          <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
-            <Button
-              variant="outline"
-              onClick={() => setPreviewRow(null)}
-              className="w-full sm:w-auto"
-            >
-              {t("common.close")}
-            </Button>
-            {previewRow && (
-              <Button asChild variant="outline" className="w-full sm:w-auto">
-                <a
-                  href={`/services/${previewRow.slug}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
+              {/* Footer */}
+              <div className="px-6 py-4 border-t border-slate-200 bg-white flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setOpenModal(false)}
+                  disabled={submitting}
+                  className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl font-semibold text-sm border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-50 transition"
                 >
-                  <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
-                  {t("common.view")}
-                </a>
-              </Button>
-            )}
+                  <X className="w-4 h-4" />
+                  {t("common.cancel")}
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm text-white bg-gradient-to-br from-rose-500 to-orange-500 shadow-md shadow-rose-500/30 hover:shadow-lg hover:shadow-rose-500/40 hover:brightness-105 disabled:opacity-50 disabled:shadow-none transition"
+                >
+                  {submitting ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Save className="w-4 h-4" />
+                  )}
+                  {submitting ? t("common.loading") : t("common.save")}
+                </button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Quick-view preview dialog. Read-only summary — full editing is
+          via the pencil button which opens the heavy edit dialog above. */}
+        <Dialog open={previewRow !== null} onOpenChange={(o) => !o && setPreviewRow(null)}>
+          <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto sm:w-full">
+            <DialogHeader>
+              <DialogTitle className="break-words text-base md:text-lg">
+                {previewRow?.title}
+              </DialogTitle>
+              <DialogDescription className="break-all text-xs md:text-sm">
+                /{previewRow?.slug}
+              </DialogDescription>
+            </DialogHeader>
+
             {previewRow && (
+              <div className="space-y-4 text-sm">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge
+                    variant="outline"
+                    className="border-indigo-200 bg-indigo-50 font-medium text-indigo-700"
+                  >
+                    {previewRow.shortTitle}
+                  </Badge>
+                </div>
+
+                {previewRow.tagline && (
+                  <div>
+                    <div className="text-xs text-muted-foreground">{t("svc.admin.tagline")}</div>
+                    <p className="mt-0.5">{previewRow.tagline}</p>
+                  </div>
+                )}
+
+                {previewRow.intro && (
+                  <div>
+                    <div className="text-xs text-muted-foreground">{t("svc.admin.intro")}</div>
+                    <p className="mt-0.5 whitespace-pre-wrap break-words">{previewRow.intro}</p>
+                  </div>
+                )}
+
+                {previewRow.highlights.length > 0 && (
+                  <div>
+                    <div className="text-xs text-muted-foreground">
+                      {t("svc.admin.highlights")}
+                      <span className="ml-1">({previewRow.highlights.length})</span>
+                    </div>
+                    <ul className="mt-1 list-disc space-y-0.5 pl-5">
+                      {previewRow.highlights.map((h, i) => (
+                        <li key={i}>{h}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {previewRow.sections.length > 0 && (
+                  <div>
+                    <div className="text-xs text-muted-foreground">
+                      {t("svc.admin.sections")}
+                      <span className="ml-1">({previewRow.sections.length})</span>
+                    </div>
+                    <ul className="mt-1 space-y-1 pl-1">
+                      {previewRow.sections.map((sec, i) => (
+                        <li key={i} className="font-medium">
+                          {sec.heading || `#${i + 1}`}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
               <Button
-                onClick={() => {
-                  const row = previewRow;
-                  setPreviewRow(null);
-                  startEdit(row);
-                }}
+                variant="outline"
+                onClick={() => setPreviewRow(null)}
                 className="w-full sm:w-auto"
               >
-                <Pencil className="mr-1.5 h-3.5 w-3.5" />
-                {t("svc.admin.editTitle")}
+                {t("common.close")}
               </Button>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+              {previewRow && (
+                <Button asChild variant="outline" className="w-full sm:w-auto">
+                  <a
+                    href={`/services/${previewRow.slug}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
+                    {t("common.view")}
+                  </a>
+                </Button>
+              )}
+              {previewRow && (
+                <Button
+                  onClick={() => {
+                    const row = previewRow;
+                    setPreviewRow(null);
+                    startEdit(row);
+                  }}
+                  className="w-full sm:w-auto"
+                >
+                  <Pencil className="mr-1.5 h-3.5 w-3.5" />
+                  {t("svc.admin.editTitle")}
+                </Button>
+              )}
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AdminLayout>
   );

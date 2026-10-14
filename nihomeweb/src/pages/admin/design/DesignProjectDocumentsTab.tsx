@@ -1,5 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { DraftingCompass, FileText, History, Lightbulb, Loader2, PackageCheck, RefreshCw, Ruler } from "lucide-react";
+import {
+  DraftingCompass,
+  FileText,
+  History,
+  Lightbulb,
+  Loader2,
+  PackageCheck,
+  RefreshCw,
+  Ruler,
+} from "lucide-react";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -83,55 +92,110 @@ export const DesignProjectDocumentsTab = ({ project }: Props) => {
   }, [load]);
 
   const total = useMemo(
-    () => data.concepts.length + data.basicDocs.length + data.shopDrawings.length + data.revisions.length + data.ifcReleases.length,
+    () =>
+      data.concepts.length +
+      data.basicDocs.length +
+      data.shopDrawings.length +
+      data.revisions.length +
+      data.ifcReleases.length,
     [data],
   );
-  const sourceOptions = useMemo(() => [
-    ...data.concepts.map((item) => ({ entityType: "ConceptOption", recordId: item.id, label: `Concept · ${item.name}`, category: "DesignConcept" })),
-    ...data.basicDocs.map((item) => ({ entityType: "BasicDesignDoc", recordId: item.id, label: `${item.documentCode} · ${item.title}`, category: "DesignBasic" })),
-    ...data.shopDrawings.map((item) => ({ entityType: "ShopDrawing", recordId: item.id, label: `${item.drawingCode} · ${item.title}`, category: "DesignShopDrawing" })),
-  ], [data.basicDocs, data.concepts, data.shopDrawings]);
+  const sourceOptions = useMemo(
+    () => [
+      ...data.concepts.map((item) => ({
+        entityType: "ConceptOption",
+        recordId: item.id,
+        label: `Concept · ${item.name}`,
+        category: "DesignConcept",
+      })),
+      ...data.basicDocs.map((item) => ({
+        entityType: "BasicDesignDoc",
+        recordId: item.id,
+        label: `${item.documentCode} · ${item.title}`,
+        category: "DesignBasic",
+      })),
+      ...data.shopDrawings.map((item) => ({
+        entityType: "ShopDrawing",
+        recordId: item.id,
+        label: `${item.drawingCode} · ${item.title}`,
+        category: "DesignShopDrawing",
+      })),
+    ],
+    [data.basicDocs, data.concepts, data.shopDrawings],
+  );
 
-  const groups: Array<{ key: string; title: string; icon: typeof FileText; rows: DocumentRow[] }> = [
-    {
-      key: "concepts",
-      title: t("designProjects.documents.group.concepts"),
-      icon: Lightbulb,
-      rows: data.concepts.map((item) => ({ id: item.id, code: `#${item.id}`, title: item.name, status: t(`concepts.status.${item.status}`) })),
-    },
-    {
-      key: "basic",
-      title: t("designProjects.documents.group.basic"),
-      icon: Ruler,
-      rows: data.basicDocs.map((item) => ({ id: item.id, code: item.documentCode, title: item.title, status: t(`basicDesign.status.${item.status}`), filePath: item.filePath, originalFileName: item.originalFileName })),
-    },
-    {
-      key: "shop",
-      title: t("designProjects.documents.group.shop"),
-      icon: DraftingCompass,
-      rows: data.shopDrawings.map((item) => ({ id: item.id, code: item.drawingCode, title: item.title, status: t(`shopDrawing.status.${item.status}`), filePath: item.filePath, originalFileName: item.originalFileName })),
-    },
-    {
-      key: "revisions",
-      title: t("designProjects.documents.group.revisions"),
-      icon: History,
-      rows: data.revisions.map((item) => ({ id: item.id, code: `${item.targetCode ?? `#${item.targetId}`} · ${item.revisionLabel}`, title: item.targetTitle ?? item.note, status: item.reasonLabel ?? item.reasonCode })),
-    },
-    {
-      key: "ifc",
-      title: t("designProjects.documents.group.ifc"),
-      icon: PackageCheck,
-      rows: data.ifcReleases.map((item) => ({ id: item.id, code: item.releaseNumber, title: item.title, status: t(`ifcRelease.status.${item.status}`) })),
-    },
-  ];
+  const groups: Array<{ key: string; title: string; icon: typeof FileText; rows: DocumentRow[] }> =
+    [
+      {
+        key: "concepts",
+        title: t("designProjects.documents.group.concepts"),
+        icon: Lightbulb,
+        rows: data.concepts.map((item) => ({
+          id: item.id,
+          code: `#${item.id}`,
+          title: item.name,
+          status: t(`concepts.status.${item.status}`),
+        })),
+      },
+      {
+        key: "basic",
+        title: t("designProjects.documents.group.basic"),
+        icon: Ruler,
+        rows: data.basicDocs.map((item) => ({
+          id: item.id,
+          code: item.documentCode,
+          title: item.title,
+          status: t(`basicDesign.status.${item.status}`),
+          filePath: item.filePath,
+          originalFileName: item.originalFileName,
+        })),
+      },
+      {
+        key: "shop",
+        title: t("designProjects.documents.group.shop"),
+        icon: DraftingCompass,
+        rows: data.shopDrawings.map((item) => ({
+          id: item.id,
+          code: item.drawingCode,
+          title: item.title,
+          status: t(`shopDrawing.status.${item.status}`),
+          filePath: item.filePath,
+          originalFileName: item.originalFileName,
+        })),
+      },
+      {
+        key: "revisions",
+        title: t("designProjects.documents.group.revisions"),
+        icon: History,
+        rows: data.revisions.map((item) => ({
+          id: item.id,
+          code: `${item.targetCode ?? `#${item.targetId}`} · ${item.revisionLabel}`,
+          title: item.targetTitle ?? item.note,
+          status: item.reasonLabel ?? item.reasonCode,
+        })),
+      },
+      {
+        key: "ifc",
+        title: t("designProjects.documents.group.ifc"),
+        icon: PackageCheck,
+        rows: data.ifcReleases.map((item) => ({
+          id: item.id,
+          code: item.releaseNumber,
+          title: item.title,
+          status: t(`ifcRelease.status.${item.status}`),
+        })),
+      },
+    ];
 
   return (
     <section className="space-y-4" data-testid="design-project-documents-tab">
-      {project.operationalProjectId ? <ProjectDocumentsPanel
-        projectId={project.operationalProjectId}
-        canManage={has("operations.projects.manage") || has("design.projects.manage")}
-        sourceOptions={sourceOptions}
-      /> : null}
+      {project.operationalProjectId ? (
+        <ProjectDocumentsPanel
+          projectId={project.operationalProjectId}
+          canManage={has("operations.projects.manage") || has("design.projects.manage")}
+          sourceOptions={sourceOptions}
+        />
+      ) : null}
       <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -139,7 +203,9 @@ export const DesignProjectDocumentsTab = ({ project }: Props) => {
               <FileText className="h-4 w-4 text-slate-500" />
               {t("designProjects.documents.title")}
             </h2>
-            <p className="mt-1 text-sm text-slate-500">{t("designProjects.documents.description")}</p>
+            <p className="mt-1 text-sm text-slate-500">
+              {t("designProjects.documents.description")}
+            </p>
           </div>
           {!loading && !error ? (
             <Badge variant="outline" className="border-slate-200 bg-slate-50 text-slate-700">
@@ -149,7 +215,9 @@ export const DesignProjectDocumentsTab = ({ project }: Props) => {
         </div>
 
         {loading ? (
-          <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-slate-400" /></div>
+          <div className="flex justify-center py-12">
+            <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+          </div>
         ) : error ? (
           <div className="mt-4 rounded-md border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
             <p>{error}</p>
@@ -168,7 +236,10 @@ export const DesignProjectDocumentsTab = ({ project }: Props) => {
       {!loading && !error && total > 0 ? (
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
           {groups.map(({ key, title, icon: Icon, rows }) => (
-            <section key={key} className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+            <section
+              key={key}
+              className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm"
+            >
               <div className="flex items-center justify-between gap-2">
                 <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-900">
                   <Icon className="h-4 w-4 text-slate-500" />
@@ -177,21 +248,34 @@ export const DesignProjectDocumentsTab = ({ project }: Props) => {
                 <Badge variant="secondary">{rows.length}</Badge>
               </div>
               {rows.length === 0 ? (
-                <p className="py-6 text-center text-sm text-slate-400">{t("designProjects.documents.groupEmpty")}</p>
+                <p className="py-6 text-center text-sm text-slate-400">
+                  {t("designProjects.documents.groupEmpty")}
+                </p>
               ) : (
                 <ul className="mt-3 divide-y divide-slate-100">
                   {rows.map((row) => (
-                    <li key={row.id} className="flex flex-wrap items-start justify-between gap-2 py-2.5 first:pt-0 last:pb-0">
+                    <li
+                      key={row.id}
+                      className="flex flex-wrap items-start justify-between gap-2 py-2.5 first:pt-0 last:pb-0"
+                    >
                       <div className="min-w-0">
                         <p className="font-mono text-xs text-slate-500">{row.code}</p>
                         <p className="truncate text-sm font-medium text-slate-900">{row.title}</p>
                       </div>
                       <div className="flex items-center gap-1">
-                        <Badge variant="outline" className="max-w-full whitespace-normal text-right text-xs font-normal text-slate-600">
+                        <Badge
+                          variant="outline"
+                          className="max-w-full whitespace-normal text-right text-xs font-normal text-slate-600"
+                        >
                           {row.status}
                         </Badge>
                         {row.filePath ? (
-                          <AdminFilePreview url={row.filePath} fileName={row.originalFileName} variant="ghost" className="h-7 w-7" />
+                          <AdminFilePreview
+                            url={row.filePath}
+                            fileName={row.originalFileName}
+                            variant="ghost"
+                            className="h-7 w-7"
+                          />
                         ) : null}
                       </div>
                     </li>

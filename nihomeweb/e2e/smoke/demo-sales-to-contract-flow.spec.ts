@@ -38,13 +38,19 @@ test("sales, design-first and tender flows reach a contract without dead ends", 
     data?: unknown,
     multipart?: Record<string, { name: string; mimeType: string; buffer: Buffer }>,
   ) => {
-    const headers = { Authorization: `Bearer ${await token(name)}`, "Idempotency-Key": randomUUID() };
+    const headers = {
+      Authorization: `Bearer ${await token(name)}`,
+      "Idempotency-Key": randomUUID(),
+    };
     const response = await api[method](url, multipart ? { headers, multipart } : { headers, data });
     expect(response.ok(), `${method.toUpperCase()} ${url}: ${await response.text()}`).toBeTruthy();
     const text = await response.text();
     return (text ? JSON.parse(text) : {}) as Body;
   };
-  const shot = async (file: string, clip?: { x: number; y: number; width: number; height: number }) => {
+  const shot = async (
+    file: string,
+    clip?: { x: number; y: number; width: number; height: number },
+  ) => {
     await page.waitForLoadState("networkidle");
     await page.waitForTimeout(400);
     if (shotDir) await page.screenshot({ path: path.join(shotDir, file), clip });
@@ -52,12 +58,20 @@ test("sales, design-first and tender flows reach a contract without dead ends", 
   const phone = () => `09${Math.floor(10_000_000 + Math.random() * 89_999_999)}`;
   const convertLead = async (name: string, company: string) => {
     const lead = await call("salesManager", "post", "/api/leads", {
-      name, phone: phone(), companyName: company, sourceCode: "marketing",
+      name,
+      phone: phone(),
+      companyName: company,
+      sourceCode: "marketing",
     });
     const converted = await call("salesManager", "post", `/api/leads/${lead.id}/convert`, {
-      address: "KCN Tân Uyên, Bình Dương", representativeName: name,
+      address: "KCN Tân Uyên, Bình Dương",
+      representativeName: name,
     });
-    const opportunity = await call("salesManager", "get", `/api/opportunities/${converted.convertedOpportunityId}`);
+    const opportunity = await call(
+      "salesManager",
+      "get",
+      `/api/opportunities/${converted.convertedOpportunityId}`,
+    );
     return {
       customerId: converted.convertedCustomerId as number,
       opportunityId: converted.convertedOpportunityId as number,
@@ -81,7 +95,9 @@ test("sales, design-first and tender flows reach a contract without dead ends", 
   await page.locator("#convert-representative").fill("Lê Văn Thành");
   await shot("01-chuyen-doi-lead.png");
   await page.getByRole("dialog").getByRole("button", { name: "Chuyển thành Khách hàng" }).click();
-  await expect.poll(async () => (await call("salesManager", "get", `/api/leads/${lead.id}`)).status).toBe("Converted");
+  await expect
+    .poll(async () => (await call("salesManager", "get", `/api/leads/${lead.id}`)).status)
+    .toBe("Converted");
   const convertedLead = await call("salesManager", "get", `/api/leads/${lead.id}`);
   const customerId = convertedLead.convertedCustomerId as number;
   const opportunityId = convertedLead.convertedOpportunityId as number;
@@ -99,7 +115,8 @@ test("sales, design-first and tender flows reach a contract without dead ends", 
 
   // ---- 2. Quote without a catalog is guided, not blocked ------------------
   await page.route(/\/api\/material-rate-catalogs\?/, (route) =>
-    route.fulfill({ status: 200, contentType: "application/json", body: "[]" }));
+    route.fulfill({ status: 200, contentType: "application/json", body: "[]" }),
+  );
   await page.goto(`/admin/quotes?create=1&opportunityId=${opportunityId}`);
   await expect(page.getByTestId("quote-catalog-empty-InvestmentRate")).toBeVisible();
   await shot("04-bao-gia-huong-dan-tao-danh-muc.png");
@@ -114,7 +131,8 @@ test("sales, design-first and tender flows reach a contract without dead ends", 
   // ---- 3. Approved quote → contract -----------------------------------------
   for (const targetStage of ["Qualification", "Proposal"]) {
     opportunity = await call("salesManager", "patch", `/api/opportunities/${opportunityId}/stage`, {
-      targetStage, rowVersion: opportunity.rowVersion,
+      targetStage,
+      rowVersion: opportunity.rowVersion,
     });
   }
   let quote = await call("salesManager", "post", "/api/quotes", {
@@ -122,15 +140,37 @@ test("sales, design-first and tender flows reach a contract without dead ends", 
     method: "Boq",
     packageDescription: "Thiết kế và thi công nhà máy chế biến Sao Mai — giai đoạn 1",
     items: [
-      { itemCode: "MONG-01", name: "Móng bê tông cốt thép M250", unit: "m3", quantity: 320, unitPrice: 2_850_000 },
-      { itemCode: "KC-02", name: "Kết cấu thép tiền chế nhà xưởng", unit: "kg", quantity: 54_000, unitPrice: 21_500 },
-      { itemCode: "MAI-03", name: "Mái tôn cách nhiệt PU 50mm", unit: "m2", quantity: 4_800, unitPrice: 385_000 },
+      {
+        itemCode: "MONG-01",
+        name: "Móng bê tông cốt thép M250",
+        unit: "m3",
+        quantity: 320,
+        unitPrice: 2_850_000,
+      },
+      {
+        itemCode: "KC-02",
+        name: "Kết cấu thép tiền chế nhà xưởng",
+        unit: "kg",
+        quantity: 54_000,
+        unitPrice: 21_500,
+      },
+      {
+        itemCode: "MAI-03",
+        name: "Mái tôn cách nhiệt PU 50mm",
+        unit: "m2",
+        quantity: 4_800,
+        unitPrice: 385_000,
+      },
     ],
     discountPercent: 2,
     vatPercent: 8,
   });
-  quote = await call("salesManager", "post", `/api/quotes/${quote.id}/submit`, { rowVersion: quote.rowVersion });
-  quote = await call("salesManager", "post", `/api/quotes/${quote.id}/approve`, { rowVersion: quote.rowVersion });
+  quote = await call("salesManager", "post", `/api/quotes/${quote.id}/submit`, {
+    rowVersion: quote.rowVersion,
+  });
+  quote = await call("salesManager", "post", `/api/quotes/${quote.id}/approve`, {
+    rowVersion: quote.rowVersion,
+  });
 
   await page.goto(`/admin/quotes/${quote.id}`);
   await expect(page.getByTestId("quote-link-contract")).toBeVisible();
@@ -180,15 +220,25 @@ test("sales, design-first and tender flows reach a contract without dead ends", 
   await shot("13-lich-su-thay-doi-co-hoi.png");
 
   await page.goto("/admin/opportunities");
-  await page.getByRole("button", { name: /Pipeline|Phễu/ }).first().click();
+  await page
+    .getByRole("button", { name: /Pipeline|Phễu/ })
+    .first()
+    .click();
   await expect(page.getByText("Tiếp cận").first()).toBeVisible();
   // Column headers only: the cards below include other teams' test records.
-  await shot("14-pheu-ban-hang-thuat-ngu-khach-hang.png", { x: 330, y: 95, width: 1070, height: 320 });
+  await shot("14-pheu-ban-hang-thuat-ngu-khach-hang.png", {
+    x: 330,
+    y: 95,
+    width: 1070,
+    height: 320,
+  });
 
   // ---- 4. Design before contract (scenario B) ------------------------------
   const pharma = await convertLead("Bà Nguyễn Thu Hà", "Công ty CP Dược phẩm An Khang");
   const users = await call("superAdmin", "get", "/api/users?take=200");
-  const designLeadId = ((users.items as Body[]).find((user) => user.phoneNumber === TEST_USERS.designLead.phoneNumber)!).id;
+  const designLeadId = (users.items as Body[]).find(
+    (user) => user.phoneNumber === TEST_USERS.designLead.phoneNumber,
+  )!.id;
   await call("salesManager", "post", `/api/operational-projects/${pharma.projectId}/team/members`, {
     userId: designLeadId,
     position: "Chủ trì thiết kế",
@@ -215,7 +265,12 @@ test("sales, design-first and tender flows reach a contract without dead ends", 
     address: "KCN Long Hậu, Cần Giuộc, Long An",
     representativeName: "Phạm Quốc Bảo",
     sourceCode: "referral",
-    primaryContact: { fullName: "Ông Phạm Quốc Bảo", phone: phone(), email: `bao.pham.${Date.now()}@longhau.vn`, isPrimary: true },
+    primaryContact: {
+      fullName: "Ông Phạm Quốc Bảo",
+      phone: phone(),
+      email: `bao.pham.${Date.now()}@longhau.vn`,
+      isPrimary: true,
+    },
   });
   let tender = await call("salesManager", "post", "/api/tenders", {
     name: "Gói thầu thiết kế và thi công kho lạnh Long Hậu",
@@ -225,7 +280,9 @@ test("sales, design-first and tender flows reach a contract without dead ends", 
     infoSource: "Thư mời thầu",
   });
   for (const item of tender.checklistItems as Body[]) {
-    await call("salesManager", "patch", `/api/tenders/${tender.id}/checklist/${item.id}`, { status: "Done" });
+    await call("salesManager", "patch", `/api/tenders/${tender.id}/checklist/${item.id}`, {
+      status: "Done",
+    });
   }
   const csv = [
     "ItemCode,Description,Unit,Quantity,UnitCost,BidUnitPrice,VatPercent,Note",
@@ -233,17 +290,32 @@ test("sales, design-first and tender flows reach a contract without dead ends", 
     "KL-02,Hệ thống máy lạnh trung tâm,bộ,2,1450000000,1680000000,8,",
     "KL-03,Nền bê tông chịu tải chống thấm,m2,2400,520000,610000,8,",
   ].join("\r\n");
-  const imported = await call("salesManager", "post", `/api/tenders/${tender.id}/estimates/import`, undefined, {
-    file: { name: "du-toan-du-thau-long-hau.csv", mimeType: "text/csv", buffer: Buffer.from(csv, "utf8") },
-  });
+  const imported = await call(
+    "salesManager",
+    "post",
+    `/api/tenders/${tender.id}/estimates/import`,
+    undefined,
+    {
+      file: {
+        name: "du-toan-du-thau-long-hau.csv",
+        mimeType: "text/csv",
+        buffer: Buffer.from(csv, "utf8"),
+      },
+    },
+  );
   const revisionId = (imported.revision as Body).id;
   await call("salesManager", "post", `/api/tenders/${tender.id}/estimates/${revisionId}/submit`);
   await call("salesManager", "post", `/api/tenders/${tender.id}/estimates/${revisionId}/approve`);
-  tender = await call("salesManager", "post", `/api/tenders/${tender.id}/transition`, { status: "Submitted" });
+  tender = await call("salesManager", "post", `/api/tenders/${tender.id}/transition`, {
+    status: "Submitted",
+  });
 
   await page.goto(`/admin/tenders/${tender.id}`);
   await page.getByRole("tab", { name: /Kết quả/ }).click();
-  await page.getByRole("button", { name: /Đánh dấu Trúng/ }).first().click();
+  await page
+    .getByRole("button", { name: /Đánh dấu Trúng/ })
+    .first()
+    .click();
   await expect(page.getByTestId("tender-won-mode-new")).toHaveAttribute("aria-checked", "true");
   await shot("17-trung-thau-tao-co-hoi.png");
   await page.getByTestId("tender-won-confirm").click();
@@ -251,7 +323,11 @@ test("sales, design-first and tender flows reach a contract without dead ends", 
   await shot("18-ket-qua-trung-thau.png");
   tender = await call("salesManager", "get", `/api/tenders/${tender.id}`);
   const tenderOpportunityId = tender.wonOpportunityId as number;
-  const tenderOpportunity = await call("salesManager", "get", `/api/opportunities/${tenderOpportunityId}`);
+  const tenderOpportunity = await call(
+    "salesManager",
+    "get",
+    `/api/opportunities/${tenderOpportunityId}`,
+  );
   expect(tenderOpportunity.stage).toBe("Negotiation");
   expect(tenderOpportunity.operationalProjectId).toBeTruthy();
 
@@ -259,12 +335,24 @@ test("sales, design-first and tender flows reach a contract without dead ends", 
     opportunityId: tenderOpportunityId,
     method: "Boq",
     packageDescription: "Thi công kho lạnh Long Hậu theo kết quả trúng thầu",
-    items: [{ itemCode: "KL-01", name: "Panel cách nhiệt kho lạnh", unit: "m2", quantity: 3200, unitPrice: 720000 }],
+    items: [
+      {
+        itemCode: "KL-01",
+        name: "Panel cách nhiệt kho lạnh",
+        unit: "m2",
+        quantity: 3200,
+        unitPrice: 720000,
+      },
+    ],
     discountPercent: 0,
     vatPercent: 8,
   });
-  tenderQuote = await call("salesManager", "post", `/api/quotes/${tenderQuote.id}/submit`, { rowVersion: tenderQuote.rowVersion });
-  tenderQuote = await call("salesManager", "post", `/api/quotes/${tenderQuote.id}/approve`, { rowVersion: tenderQuote.rowVersion });
+  tenderQuote = await call("salesManager", "post", `/api/quotes/${tenderQuote.id}/submit`, {
+    rowVersion: tenderQuote.rowVersion,
+  });
+  tenderQuote = await call("salesManager", "post", `/api/quotes/${tenderQuote.id}/approve`, {
+    rowVersion: tenderQuote.rowVersion,
+  });
 
   await page.getByRole("link", { name: tender.name as string }).click();
   await expect(page.getByTestId("opportunity-create-contract")).toBeVisible();

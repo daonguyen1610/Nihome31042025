@@ -26,7 +26,12 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { extractApiError } from "@/lib/apiError";
 import { formatVnd, parseVnd } from "@/lib/numberFormat";
-import { calculateQuoteLineAmount, calculateQuoteTotals, MAX_QUOTE_QUANTITY, validateQuoteValues } from "@/lib/quoteTotals";
+import {
+  calculateQuoteLineAmount,
+  calculateQuoteTotals,
+  MAX_QUOTE_QUANTITY,
+  validateQuoteValues,
+} from "@/lib/quoteTotals";
 import { isValidVietnameseOverrideReason } from "@/lib/quoteRate";
 import { normalizeBoqSortOrder } from "@/lib/boqItems";
 import { PageLoading, PageError } from "@/components/PageState";
@@ -138,9 +143,8 @@ const AdminQuotes = () => {
   const [minValue, setMinValue] = useState<string>("");
   const [maxValue, setMaxValue] = useState<string>("");
   const customerIdParam = Number(searchParams.get("customerId"));
-  const customerIdFilter = Number.isInteger(customerIdParam) && customerIdParam > 0
-    ? customerIdParam
-    : undefined;
+  const customerIdFilter =
+    Number.isInteger(customerIdParam) && customerIdParam > 0 ? customerIdParam : undefined;
 
   useEffect(() => {
     const h = window.setTimeout(() => {
@@ -179,7 +183,9 @@ const AdminQuotes = () => {
   const [createForm, setCreateForm] = useState<CreateQuoteRequest>(emptyCreate());
   const [saving, setSaving] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
-  const [effectiveRevision, setEffectiveRevision] = useState<MaterialRateRevisionResponse | null>(null);
+  const [effectiveRevision, setEffectiveRevision] = useState<MaterialRateRevisionResponse | null>(
+    null,
+  );
   const [boqBulkEntryOpen, setBoqBulkEntryOpen] = useState(false);
 
   // ---------- server-backed opportunity picker ----------
@@ -207,9 +213,11 @@ const AdminQuotes = () => {
         if (!cancelled) {
           const eligible = listResponse.data.items.filter(canRaiseQuote);
           const selected = selectedResponse?.data;
-          setOpportunities(selected && canRaiseQuote(selected) && !eligible.some((item) => item.id === selected.id)
-            ? [selected, ...eligible]
-            : eligible);
+          setOpportunities(
+            selected && canRaiseQuote(selected) && !eligible.some((item) => item.id === selected.id)
+              ? [selected, ...eligible]
+              : eligible,
+          );
         }
       } catch {
         if (!cancelled) {
@@ -281,8 +289,12 @@ const AdminQuotes = () => {
 
   const changeCreateMethod = (method: QuoteMethod) => {
     if (method === createForm.method) return;
-    if (createForm.method === "Boq" && method === "UnitCost" &&
-        (createForm.items?.length ?? 0) > 0 && !window.confirm(t("quotes.boq.switchConfirm"))) {
+    if (
+      createForm.method === "Boq" &&
+      method === "UnitCost" &&
+      (createForm.items?.length ?? 0) > 0 &&
+      !window.confirm(t("quotes.boq.switchConfirm"))
+    ) {
       return;
     }
     setCreateForm((current) => ({
@@ -297,7 +309,11 @@ const AdminQuotes = () => {
   };
 
   const applyBoqCatalog = (revision: MaterialRateRevisionResponse, pricingDate: string) => {
-    if ((createForm.items?.length ?? 0) > 0 && !window.confirm(t("quotes.boqCatalog.replaceConfirm"))) return;
+    if (
+      (createForm.items?.length ?? 0) > 0 &&
+      !window.confirm(t("quotes.boqCatalog.replaceConfirm"))
+    )
+      return;
     setCreateForm((current) => ({
       ...current,
       materialRateCatalogId: revision.catalogId,
@@ -366,11 +382,7 @@ const AdminQuotes = () => {
   // ---------- inline workflow actions ----------
   const [pendingAction, setPendingAction] = useState<number | null>(null);
 
-  const runAction = async (
-    id: number,
-    fn: () => Promise<unknown>,
-    successKey: string,
-  ) => {
+  const runAction = async (id: number, fn: () => Promise<unknown>, successKey: string) => {
     setPendingAction(id);
     try {
       await fn();
@@ -389,17 +401,26 @@ const AdminQuotes = () => {
 
   const rowVersionFor = (id: number) => rows.find((row) => row.id === id)?.rowVersion;
   const handleSubmit = (id: number) =>
-    runAction(id, () => adminApi.submitQuote(id, { rowVersion: rowVersionFor(id) }), "quotes.updated");
+    runAction(
+      id,
+      () => adminApi.submitQuote(id, { rowVersion: rowVersionFor(id) }),
+      "quotes.updated",
+    );
   const handleApprove = (id: number) =>
-    runAction(id, () => adminApi.approveQuote(id, { rowVersion: rowVersionFor(id) }), "quotes.updated");
+    runAction(
+      id,
+      () => adminApi.approveQuote(id, { rowVersion: rowVersionFor(id) }),
+      "quotes.updated",
+    );
   const handleSend = (id: number) => navigate(`/admin/quotes/${id}`);
   const handleCancel = (id: number) =>
     runAction(
       id,
-      () => adminApi.cancelQuote(id, {
-        note: t("quotes.action.cancel"),
-        rowVersion: rowVersionFor(id),
-      }),
+      () =>
+        adminApi.cancelQuote(id, {
+          note: t("quotes.action.cancel"),
+          rowVersion: rowVersionFor(id),
+        }),
       "quotes.updated",
     );
   const [deletingQuote, setDeletingQuote] = useState<QuoteListItemResponse | null>(null);
@@ -452,10 +473,7 @@ const AdminQuotes = () => {
     await fetchList();
   };
 
-  const totalPages = useMemo(
-    () => (total > 0 ? Math.ceil(total / pageSize) : 1),
-    [total],
-  );
+  const totalPages = useMemo(() => (total > 0 ? Math.ceil(total / pageSize) : 1), [total]);
 
   return (
     <AdminLayout>
@@ -569,10 +587,7 @@ const AdminQuotes = () => {
                       className="cursor-pointer hover:bg-muted/20"
                       onClick={() => navigate(`/admin/quotes/${r.id}`)}
                     >
-                      <Td
-                        className="whitespace-nowrap"
-                        onClick={(e) => e.stopPropagation()}
-                      >
+                      <Td className="whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                         <Link
                           to={`/admin/quotes/${r.id}`}
                           className="font-medium text-primary hover:underline"
@@ -593,10 +608,7 @@ const AdminQuotes = () => {
                       </Td>
                       <Td>{r.ownerName ?? "—"}</Td>
                       <Td className="text-right">V{r.version}</Td>
-                      <Td
-                        className="text-right"
-                        onClick={(e) => e.stopPropagation()}
-                      >
+                      <Td className="text-right" onClick={(e) => e.stopPropagation()}>
                         <RowActions
                           row={r}
                           canManage={canManage}
@@ -642,13 +654,9 @@ const AdminQuotes = () => {
                       V{r.version}
                     </span>
                   </div>
-                  <div className="mb-2 text-sm text-foreground">
-                    {r.opportunityName ?? "—"}
-                  </div>
+                  <div className="mb-2 text-sm text-foreground">{r.opportunityName ?? "—"}</div>
                   {r.customerName && (
-                    <div className="mb-2 text-xs text-muted-foreground">
-                      {r.customerName}
-                    </div>
+                    <div className="mb-2 text-xs text-muted-foreground">{r.customerName}</div>
                   )}
                   <div className="mb-2 flex items-center justify-between gap-2">
                     <StatusCell status={r.status} expiring={r.isExpiringSoon} t={t} />
@@ -658,8 +666,7 @@ const AdminQuotes = () => {
                   </div>
                   <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
                     <span>
-                      {t("quotes.field.validUntil")}:{" "}
-                      {new Date(r.validUntil).toLocaleDateString()}
+                      {t("quotes.field.validUntil")}: {new Date(r.validUntil).toLocaleDateString()}
                     </span>
                     {r.ownerName && <span className="truncate">{r.ownerName}</span>}
                   </div>
@@ -741,11 +748,13 @@ const AdminQuotes = () => {
                     `${formatVnd(o.estimatedValue)} ₫`,
                     o.expectedCloseDate
                       ? t("quotes.opportunityPicker.expectedClose", {
-                        date: new Date(o.expectedCloseDate).toLocaleDateString(lang),
-                      })
+                          date: new Date(o.expectedCloseDate).toLocaleDateString(lang),
+                        })
                       : null,
                     o.ownerName,
-                  ].filter(Boolean).join(" · "),
+                  ]
+                    .filter(Boolean)
+                    .join(" · "),
                   keywords: `${o.customerName ?? ""} ${o.ownerName ?? ""} ${o.stage} ${o.id}`,
                   hintClassName: "whitespace-normal leading-4",
                 }))}
@@ -758,9 +767,14 @@ const AdminQuotes = () => {
                 loading={opportunitiesLoading}
                 loadingText={t("common.loading")}
               />
-              {opportunitiesLoadFailed &&
-                <p className="mt-1 text-xs text-destructive">{t("quotes.opportunityPicker.loadError")}</p>}
-              <p className="mt-1 text-xs text-muted-foreground">{t("quotes.opportunityPicker.hint")}</p>
+              {opportunitiesLoadFailed && (
+                <p className="mt-1 text-xs text-destructive">
+                  {t("quotes.opportunityPicker.loadError")}
+                </p>
+              )}
+              <p className="mt-1 text-xs text-muted-foreground">
+                {t("quotes.opportunityPicker.hint")}
+              </p>
             </div>
             <div>
               <Label>{t("quotes.field.method")}</Label>
@@ -785,7 +799,12 @@ const AdminQuotes = () => {
                     inputMode="decimal"
                     data-testid="quote-area"
                     value={createForm.areaSqm ?? ""}
-                    onChange={(e) => setCreateForm((current) => ({ ...current, areaSqm: e.target.value ? Number(e.target.value) : null }))}
+                    onChange={(e) =>
+                      setCreateForm((current) => ({
+                        ...current,
+                        areaSqm: e.target.value ? Number(e.target.value) : null,
+                      }))
+                    }
                   />
                 </div>
                 <QuoteRateFields
@@ -822,11 +841,24 @@ const AdminQuotes = () => {
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <Label>{t("quotes.boq.title")}</Label>
                   <div className="grid grid-cols-2 gap-1.5 sm:flex">
-                    <Button className="min-w-0" type="button" size="sm" variant="ghost" data-testid="quote-create-boq-bulk-entry" onClick={() => setBoqBulkEntryOpen(true)}>
+                    <Button
+                      className="min-w-0"
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      data-testid="quote-create-boq-bulk-entry"
+                      onClick={() => setBoqBulkEntryOpen(true)}
+                    >
                       <ListPlus className="mr-1 h-3.5 w-3.5" />
                       {t("quotes.boq.bulkEntry")}
                     </Button>
-                    <Button className="min-w-0" type="button" size="sm" variant="outline" onClick={addBoqItem}>
+                    <Button
+                      className="min-w-0"
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={addBoqItem}
+                    >
                       <Plus className="mr-1 h-3.5 w-3.5" />
                       {t("quotes.boq.addRow")}
                     </Button>
@@ -844,7 +876,9 @@ const AdminQuotes = () => {
                   </button>
                 </div>
                 {(createForm.items ?? []).length === 0 ? (
-                  <p className="text-xs text-muted-foreground">{t("quotes.validation.boqRequired")}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {t("quotes.validation.boqRequired")}
+                  </p>
                 ) : (
                   <div className="space-y-3">
                     {(createForm.items ?? []).map((item, index) => (
@@ -872,7 +906,9 @@ const AdminQuotes = () => {
                               data-testid={`quote-create-boq-name-${index}`}
                               placeholder={t("quotes.boq.namePlaceholder")}
                               value={item.name}
-                              onChange={(event) => updateBoqItem(index, { name: event.target.value })}
+                              onChange={(event) =>
+                                updateBoqItem(index, { name: event.target.value })
+                              }
                             />
                           </div>
                           <div className="grid gap-3 sm:grid-cols-3">
@@ -881,7 +917,9 @@ const AdminQuotes = () => {
                               <Input
                                 placeholder="m², m³, kg..."
                                 value={item.unit}
-                                onChange={(event) => updateBoqItem(index, { unit: event.target.value })}
+                                onChange={(event) =>
+                                  updateBoqItem(index, { unit: event.target.value })
+                                }
                               />
                             </div>
                             <div>
@@ -893,7 +931,9 @@ const AdminQuotes = () => {
                                 step="any"
                                 placeholder="0"
                                 value={item.quantity}
-                                onChange={(event) => updateBoqItem(index, { quantity: Number(event.target.value) })}
+                                onChange={(event) =>
+                                  updateBoqItem(index, { quantity: Number(event.target.value) })
+                                }
                               />
                             </div>
                             <div>
@@ -906,13 +946,16 @@ const AdminQuotes = () => {
                                 data-testid={`quote-create-boq-price-${index}`}
                                 placeholder="0 ₫"
                                 value={item.unitPrice || ""}
-                                onChange={(event) => updateBoqItem(index, { unitPrice: Number(event.target.value) })}
+                                onChange={(event) =>
+                                  updateBoqItem(index, { unitPrice: Number(event.target.value) })
+                                }
                               />
                             </div>
                           </div>
                           {Number(item.quantity) > 0 && Number(item.unitPrice) > 0 && (
                             <div className="text-right text-sm font-medium">
-                              {t("quotes.boq.amount")}: {formatVnd(calculateQuoteLineAmount(item.quantity, item.unitPrice))} ₫
+                              {t("quotes.boq.amount")}:{" "}
+                              {formatVnd(calculateQuoteLineAmount(item.quantity, item.unitPrice))} ₫
                             </div>
                           )}
                         </div>
@@ -958,10 +1001,26 @@ const AdminQuotes = () => {
             </div>
             <div className="space-y-2 rounded-md border bg-muted/30 p-3 text-sm">
               <p className="text-xs text-muted-foreground">{t("quotes.preview.unsaved")}</p>
-              <div className="flex justify-between gap-3"><span>{t("quotes.field.subtotal")}</span><strong>{formatVnd(createTotals.subtotal)} ₫</strong></div>
-              <div className="flex justify-between gap-3"><span>{t("quotes.field.discountPercent")} ({createForm.discountPercent}%)</span><span>-{formatVnd(createTotals.discountAmount)} ₫</span></div>
-              <div className="flex justify-between gap-3"><span>{t("quotes.field.vatPercent")} ({createForm.vatPercent}%)</span><span>{formatVnd(createTotals.vatAmount)} ₫</span></div>
-              <div className="flex justify-between gap-3 border-t pt-2 text-base"><span>{t("quotes.field.grandTotal")}</span><strong>{formatVnd(createTotals.grandTotal)} ₫</strong></div>
+              <div className="flex justify-between gap-3">
+                <span>{t("quotes.field.subtotal")}</span>
+                <strong>{formatVnd(createTotals.subtotal)} ₫</strong>
+              </div>
+              <div className="flex justify-between gap-3">
+                <span>
+                  {t("quotes.field.discountPercent")} ({createForm.discountPercent}%)
+                </span>
+                <span>-{formatVnd(createTotals.discountAmount)} ₫</span>
+              </div>
+              <div className="flex justify-between gap-3">
+                <span>
+                  {t("quotes.field.vatPercent")} ({createForm.vatPercent}%)
+                </span>
+                <span>{formatVnd(createTotals.vatAmount)} ₫</span>
+              </div>
+              <div className="flex justify-between gap-3 border-t pt-2 text-base">
+                <span>{t("quotes.field.grandTotal")}</span>
+                <strong>{formatVnd(createTotals.grandTotal)} ₫</strong>
+              </div>
             </div>
             <div>
               <Label>{t("quotes.field.validUntil")}</Label>
@@ -984,15 +1043,17 @@ const AdminQuotes = () => {
                 onChange={(e) => setCreateForm({ ...createForm, note: e.target.value })}
               />
             </div>
-            {createError && (
-              <p className="text-sm text-destructive">{createError}</p>
-            )}
+            {createError && <p className="text-sm text-destructive">{createError}</p>}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreating(false)}>
               {t("common.cancel")}
             </Button>
-            <Button data-testid="quote-create-save" onClick={() => void handleCreate()} disabled={saving}>
+            <Button
+              data-testid="quote-create-save"
+              onClick={() => void handleCreate()}
+              disabled={saving}
+            >
               {saving && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
               {t("common.save")}
             </Button>
@@ -1022,23 +1083,14 @@ const AdminQuotes = () => {
         onConfirm={confirmDelete}
         onCompleted={completeDelete}
       />
-
     </AdminLayout>
   );
 };
 
 // -------- small local presentation helpers --------
 
-const Th = ({
-  children,
-  className,
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) => (
-  <th className={cn("px-3 py-2 text-left font-medium tracking-wide", className)}>
-    {children}
-  </th>
+const Th = ({ children, className }: { children: React.ReactNode; className?: string }) => (
+  <th className={cn("px-3 py-2 text-left font-medium tracking-wide", className)}>{children}</th>
 );
 
 const Td = ({
@@ -1097,10 +1149,7 @@ const RowActions = ({
     <Button
       variant="ghost"
       size="sm"
-      className={cn(
-        "h-8 px-2",
-        opts.danger && "text-destructive hover:text-destructive",
-      )}
+      className={cn("h-8 px-2", opts.danger && "text-destructive hover:text-destructive")}
       title={label}
       onClick={onClick}
       disabled={pending}
@@ -1110,19 +1159,22 @@ const RowActions = ({
     </Button>
   );
   return (
-    <div
-      className={cn(
-        "flex flex-wrap gap-1",
-        compact ? "justify-start" : "justify-end",
-      )}
-    >
-      {canManage && actions.includes("submit") &&
-        btn(t("quotes.action.submit"), <ThumbsUp className="h-3.5 w-3.5" />, () => onSubmit(row.id))}
-      {canApprove && actions.includes("approve") &&
-        btn(t("quotes.action.approve"), <CheckCheck className="h-3.5 w-3.5" />, () => onApprove(row.id))}
-      {canSend && actions.includes("send") &&
+    <div className={cn("flex flex-wrap gap-1", compact ? "justify-start" : "justify-end")}>
+      {canManage &&
+        actions.includes("submit") &&
+        btn(t("quotes.action.submit"), <ThumbsUp className="h-3.5 w-3.5" />, () =>
+          onSubmit(row.id),
+        )}
+      {canApprove &&
+        actions.includes("approve") &&
+        btn(t("quotes.action.approve"), <CheckCheck className="h-3.5 w-3.5" />, () =>
+          onApprove(row.id),
+        )}
+      {canSend &&
+        actions.includes("send") &&
         btn(t("quotes.action.send"), <Send className="h-3.5 w-3.5" />, () => onSend(row.id))}
-      {canManage && actions.includes("cancel") &&
+      {canManage &&
+        actions.includes("cancel") &&
         btn(t("quotes.action.cancel"), <Ban className="h-3.5 w-3.5" />, () => onCancel(row.id))}
       <Button
         asChild
@@ -1138,7 +1190,12 @@ const RowActions = ({
         </Link>
       </Button>
       {canManage &&
-        btn(t("quotes.action.delete"), <Trash2 className="h-3.5 w-3.5" />, () => void onDelete(row.id), { danger: true })}
+        btn(
+          t("quotes.action.delete"),
+          <Trash2 className="h-3.5 w-3.5" />,
+          () => void onDelete(row.id),
+          { danger: true },
+        )}
     </div>
   );
 };
@@ -1153,10 +1210,7 @@ const StatusCell = ({
   t: (k: string) => string;
 }) => (
   <div className="flex flex-wrap items-center gap-1.5">
-    <Badge
-      variant="outline"
-      className={cn("whitespace-nowrap", STATUS_STYLES[status])}
-    >
+    <Badge variant="outline" className={cn("whitespace-nowrap", STATUS_STYLES[status])}>
       {t(`quotes.status.${status}`)}
     </Badge>
     {expiring && (

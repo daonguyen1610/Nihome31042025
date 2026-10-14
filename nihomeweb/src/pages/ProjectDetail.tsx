@@ -1,6 +1,16 @@
 import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, ArrowUpRight, MapPin, Maximize2, Briefcase, Calendar, Tag, Grid3X3, List } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowUpRight,
+  MapPin,
+  Maximize2,
+  Briefcase,
+  Calendar,
+  Tag,
+  Grid3X3,
+  List,
+} from "lucide-react";
 import Layout from "@/components/layout/Layout";
 import { useI18n } from "@/lib/i18n";
 import { useProject, useProjects, useProjectCategories } from "@/hooks/useContentApi";
@@ -22,15 +32,28 @@ const ProjectDetail = () => {
     [categoryList],
   );
 
-  if (loading) return <Layout><PageLoading /></Layout>;
-  if (error) return <Layout><PageError message={error} onRetry={refetch} /></Layout>;
+  if (loading)
+    return (
+      <Layout>
+        <PageLoading />
+      </Layout>
+    );
+  if (error)
+    return (
+      <Layout>
+        <PageError message={error} onRetry={refetch} />
+      </Layout>
+    );
 
   if (!project) {
     return (
       <Layout>
         <section className="pt-40 pb-20 container-custom text-center">
           <h1 className="font-display text-4xl font-extrabold mb-4">{t("projDetail.notFound")}</h1>
-          <Link to="/projects" className="btn-pill btn-gradient text-white px-6 py-3 text-xs uppercase tracking-wider">
+          <Link
+            to="/projects"
+            className="btn-pill btn-gradient text-white px-6 py-3 text-xs uppercase tracking-wider"
+          >
             <ArrowLeft className="w-4 h-4" /> {t("common.back")}
           </Link>
         </section>
@@ -43,7 +66,10 @@ const ProjectDetail = () => {
     project.highlights && project.highlights.length > 0
       ? project.highlights
       : [
-          { label: t("proj.field.category"), value: resolveCategoryLabel(project.categoryId, project.category, categoriesById, lang) },
+          {
+            label: t("proj.field.category"),
+            value: resolveCategoryLabel(project.categoryId, project.category, categoriesById, lang),
+          },
           { label: t("proj.field.scope"), value: project.scope ?? "" },
           { label: t("proj.scale"), value: project.scale ?? "" },
           { label: t("proj.field.year"), value: project.year ?? "" },
@@ -53,15 +79,26 @@ const ProjectDetail = () => {
     <Layout>
       {/* Hero */}
       <section className="relative h-[70vh] min-h-[500px] overflow-hidden">
-        <img src={project.imageUrl} alt={project.name} className="absolute inset-0 w-full h-full object-cover" />
+        <img
+          src={project.imageUrl}
+          alt={project.name}
+          className="absolute inset-0 w-full h-full object-cover"
+        />
         <div className="absolute inset-0 bg-gradient-to-b from-black/40 to-black/85" />
         <div className="relative z-10 h-full container-custom flex flex-col justify-end pb-16 pt-32">
-          <Link to="/projects" className="inline-flex items-center gap-2 text-white/80 hover:text-white text-xs uppercase tracking-[0.22em] font-bold mb-6 w-fit">
+          <Link
+            to="/projects"
+            className="inline-flex items-center gap-2 text-white/80 hover:text-white text-xs uppercase tracking-[0.22em] font-bold mb-6 w-fit"
+          >
             <ArrowLeft className="w-4 h-4" /> {t("projDetail.back")}
           </Link>
           <div className="flex flex-wrap items-center gap-2 mb-6">
-            <span className={`chip ${project.status === "ongoing" ? "chip-orange" : "chip-success"} bg-white/95`}>
-              {project.status === "ongoing" ? t("projDetail.statusOngoing") : t("projDetail.statusDone")}
+            <span
+              className={`chip ${project.status === "ongoing" ? "chip-orange" : "chip-success"} bg-white/95`}
+            >
+              {project.status === "ongoing"
+                ? t("projDetail.statusOngoing")
+                : t("projDetail.statusDone")}
             </span>
             {resolveCategoryLabel(project.categoryId, project.category, categoriesById, lang) && (
               <span className="chip chip-primary bg-white/95">
@@ -90,14 +127,26 @@ const ProjectDetail = () => {
               { icon: Maximize2, label: t("projDetail.scale"), value: project.scale },
               { icon: Briefcase, label: t("projDetail.scope"), value: project.scope },
               { icon: Calendar, label: t("projDetail.year"), value: project.year ?? "—" },
-              { icon: Tag, label: t("proj.field.category"), value: resolveCategoryLabel(project.categoryId, project.category, categoriesById, lang) || "—" },
+              {
+                icon: Tag,
+                label: t("proj.field.category"),
+                value:
+                  resolveCategoryLabel(
+                    project.categoryId,
+                    project.category,
+                    categoriesById,
+                    lang,
+                  ) || "—",
+              },
             ].map((m, i) => (
               <div key={i} className="flex items-start gap-4">
                 <div className="w-11 h-11 rounded-2xl bg-gradient-primary text-white flex items-center justify-center shrink-0">
                   <m.icon className="w-5 h-5" strokeWidth={1.75} />
                 </div>
                 <div>
-                  <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">{m.label}</p>
+                  <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">
+                    {m.label}
+                  </p>
                   <p className="font-display text-base font-extrabold mt-1">{m.value}</p>
                 </div>
               </div>
@@ -118,11 +167,15 @@ const ProjectDetail = () => {
             )}
             {project.challenges && project.challenges.length > 0 && (
               <div>
-                <h2 className="font-display text-3xl font-extrabold mb-5">{t("projDetail.challenges")}</h2>
+                <h2 className="font-display text-3xl font-extrabold mb-5">
+                  {t("projDetail.challenges")}
+                </h2>
                 <ul className="space-y-3">
                   {project.challenges.map((c, i) => (
                     <li key={i} className="flex gap-3 text-foreground/80 leading-relaxed">
-                      <span className="w-6 h-6 rounded-full bg-gradient-primary text-white shrink-0 flex items-center justify-center text-xs font-extrabold">{i + 1}</span>
+                      <span className="w-6 h-6 rounded-full bg-gradient-primary text-white shrink-0 flex items-center justify-center text-xs font-extrabold">
+                        {i + 1}
+                      </span>
                       {c}
                     </li>
                   ))}
@@ -131,11 +184,15 @@ const ProjectDetail = () => {
             )}
             {project.solutions && project.solutions.length > 0 && (
               <div>
-                <h2 className="font-display text-3xl font-extrabold mb-5">{t("projDetail.solutions")}</h2>
+                <h2 className="font-display text-3xl font-extrabold mb-5">
+                  {t("projDetail.solutions")}
+                </h2>
                 <ul className="space-y-3">
                   {project.solutions.map((s, i) => (
                     <li key={i} className="flex gap-3 text-foreground/80 leading-relaxed">
-                      <span className="w-6 h-6 rounded-full bg-gradient-indigo text-white shrink-0 flex items-center justify-center text-xs font-extrabold">✓</span>
+                      <span className="w-6 h-6 rounded-full bg-gradient-indigo text-white shrink-0 flex items-center justify-center text-xs font-extrabold">
+                        ✓
+                      </span>
                       {s}
                     </li>
                   ))}
@@ -150,8 +207,12 @@ const ProjectDetail = () => {
               <div className="grid grid-cols-2 gap-4">
                 {highlightItems.map((h, i) => (
                   <div key={i} className="bg-card rounded-2xl p-4 border border-border">
-                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">{h.label}</p>
-                    <p className="font-display text-lg font-extrabold text-gradient-primary mt-1">{h.value}</p>
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">
+                      {h.label}
+                    </p>
+                    <p className="font-display text-lg font-extrabold text-gradient-primary mt-1">
+                      {h.value}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -203,7 +264,13 @@ const ProjectDetail = () => {
                 </button>
               </div>
             </div>
-            <div className={galleryMode === "grid" ? "grid grid-cols-1 md:grid-cols-3 gap-5" : "space-y-5 max-w-5xl mx-auto"}>
+            <div
+              className={
+                galleryMode === "grid"
+                  ? "grid grid-cols-1 md:grid-cols-3 gap-5"
+                  : "space-y-5 max-w-5xl mx-auto"
+              }
+            >
               {project.gallery.map((g, i) =>
                 galleryMode === "grid" ? (
                   <button
@@ -212,7 +279,12 @@ const ProjectDetail = () => {
                     onClick={() => setSelectedImage(g)}
                     className="image-zoom rounded-3xl overflow-hidden aspect-[4/3] bg-muted w-full text-left"
                   >
-                    <img src={g} alt={`${project.name} ${i + 1}`} className="w-full h-full object-cover" loading="lazy" />
+                    <img
+                      src={g}
+                      alt={`${project.name} ${i + 1}`}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
                   </button>
                 ) : (
                   <button
@@ -221,16 +293,24 @@ const ProjectDetail = () => {
                     onClick={() => setSelectedImage(g)}
                     className="image-zoom rounded-3xl overflow-hidden aspect-video bg-muted w-full text-left"
                   >
-                    <img src={g} alt={`${project.name} ${i + 1}`} className="w-full h-full object-cover" loading="lazy" />
+                    <img
+                      src={g}
+                      alt={`${project.name} ${i + 1}`}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
                   </button>
-                )
+                ),
               )}
             </div>
           </div>
         </section>
       )}
 
-      <Dialog open={Boolean(selectedImage)} onOpenChange={(open) => !open && setSelectedImage(null)}>
+      <Dialog
+        open={Boolean(selectedImage)}
+        onOpenChange={(open) => !open && setSelectedImage(null)}
+      >
         <DialogContent className="p-1 sm:max-w-6xl bg-transparent border-0 shadow-none">
           {selectedImage ? (
             <img
@@ -246,19 +326,35 @@ const ProjectDetail = () => {
       <section className="py-20 bg-background">
         <div className="container-custom">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
-            <h2 className="font-display text-3xl md:text-4xl font-extrabold tracking-tight">{t("projDetail.related")}</h2>
-            <Link to="/projects" className="btn-pill bg-secondary border border-border px-5 py-2.5 text-xs uppercase tracking-wider hover:bg-foreground hover:text-background">
+            <h2 className="font-display text-3xl md:text-4xl font-extrabold tracking-tight">
+              {t("projDetail.related")}
+            </h2>
+            <Link
+              to="/projects"
+              className="btn-pill bg-secondary border border-border px-5 py-2.5 text-xs uppercase tracking-wider hover:bg-foreground hover:text-background"
+            >
               {t("common.viewAll")} <ArrowUpRight className="w-4 h-4" />
             </Link>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {related.map((p) => (
-              <Link key={p.id} to={`/projects/${p.slug}`} className="group card-hover bg-card rounded-3xl overflow-hidden border border-border">
+              <Link
+                key={p.id}
+                to={`/projects/${p.slug}`}
+                className="group card-hover bg-card rounded-3xl overflow-hidden border border-border"
+              >
                 <div className="image-zoom aspect-[4/3] bg-muted">
-                  <img src={p.imageUrl} alt={p.name} loading="lazy" className="w-full h-full object-cover" />
+                  <img
+                    src={p.imageUrl}
+                    alt={p.name}
+                    loading="lazy"
+                    className="w-full h-full object-cover"
+                  />
                 </div>
                 <div className="p-5">
-                  <h3 className="font-display text-lg font-extrabold group-hover:text-primary transition-colors">{p.name}</h3>
+                  <h3 className="font-display text-lg font-extrabold group-hover:text-primary transition-colors">
+                    {p.name}
+                  </h3>
                   <p className="text-sm text-muted-foreground mt-1">{p.location}</p>
                 </div>
               </Link>

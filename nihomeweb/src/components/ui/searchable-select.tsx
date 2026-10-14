@@ -11,11 +11,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 export interface SearchableSelectOption {
   value: string;
@@ -92,15 +88,17 @@ export function SearchableSelect({
             className,
           )}
         >
-          <span className="truncate text-left">
-            {selected ? selected.label : placeholder}
-          </span>
+          <span className="truncate text-left">{selected ? selected.label : placeholder}</span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
       <PopoverContent
         className="p-0"
-        style={popoverWidthPx ? { width: popoverWidthPx } : { width: "var(--radix-popover-trigger-width)" }}
+        style={
+          popoverWidthPx
+            ? { width: popoverWidthPx }
+            : { width: "var(--radix-popover-trigger-width)" }
+        }
         align="start"
       >
         <Command shouldFilter={shouldFilter}>
@@ -133,7 +131,9 @@ export function SearchableSelect({
                     <div className="flex min-w-0 flex-col">
                       <span className="truncate">{o.label}</span>
                       {o.hint && (
-                        <span className={cn("truncate text-xs text-muted-foreground", o.hintClassName)}>
+                        <span
+                          className={cn("truncate text-xs text-muted-foreground", o.hintClassName)}
+                        >
                           {o.hint}
                         </span>
                       )}

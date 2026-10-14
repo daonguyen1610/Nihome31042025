@@ -14,15 +14,11 @@ export const notificationApi = {
   getAll: (skip = 0, take = 20) =>
     api.get<NotificationDto[]>(`/notifications?skip=${skip}&take=${take}`),
 
-  getUnreadCount: () =>
-    api.get<{ count: number }>("/notifications/unread-count"),
+  getUnreadCount: () => api.get<{ count: number }>("/notifications/unread-count"),
 
-  markRead: (id: number) =>
-    api.patch<NotificationDto>(`/notifications/${id}/mark-read`),
+  markRead: (id: number) => api.patch<NotificationDto>(`/notifications/${id}/mark-read`),
 
-  markAllRead: () =>
-    api.post<{ count: number }>("/notifications/mark-all-read"),
+  markAllRead: () => api.post<{ count: number }>("/notifications/mark-all-read"),
 
-  delete: (id: number) =>
-    api.delete(`/notifications/${id}`),
+  delete: (id: number) => api.delete(`/notifications/${id}`),
 };

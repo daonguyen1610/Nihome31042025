@@ -10,7 +10,10 @@ const VITE_NOISE = /ws:\/\/|websocket|hmr|\[vite\]/i;
 async function getFirstCategory(api: APIRequestContext, path: string) {
   const response = await api.get(path);
   const body = await response.text();
-  expect(response.ok(), `load categories from ${path} (${response.status()}): ${body}`).toBeTruthy();
+  expect(
+    response.ok(),
+    `load categories from ${path} (${response.status()}): ${body}`,
+  ).toBeTruthy();
   const categories = JSON.parse(body) as Array<{ id: number; name: string }>;
   expect(categories.length, `seeded categories from ${path}`).toBeGreaterThan(0);
   return categories[0];

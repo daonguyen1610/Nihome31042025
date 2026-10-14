@@ -4,7 +4,11 @@ import { Button } from "@/components/ui/button";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { useI18n } from "@/lib/i18n";
-import { buildCatalogSetupLink, quoteReturnTarget, type QuoteCatalogType } from "@/lib/quoteCatalogSetup";
+import {
+  buildCatalogSetupLink,
+  quoteReturnTarget,
+  type QuoteCatalogType,
+} from "@/lib/quoteCatalogSetup";
 
 interface QuoteCatalogEmptyStateProps {
   catalogType: QuoteCatalogType;
@@ -21,7 +25,8 @@ const QuoteCatalogEmptyState = ({ catalogType }: QuoteCatalogEmptyStateProps) =>
   const { has } = usePermissions();
   const location = useLocation();
   const canManageCatalogs = has(ADMIN_PERMS.materialRatesManage);
-  const prefix = catalogType === "Boq" ? "quotes.catalogSetup.boq" : "quotes.catalogSetup.investment";
+  const prefix =
+    catalogType === "Boq" ? "quotes.catalogSetup.boq" : "quotes.catalogSetup.investment";
 
   return (
     <div
@@ -40,7 +45,12 @@ const QuoteCatalogEmptyState = ({ catalogType }: QuoteCatalogEmptyStateProps) =>
           </ol>
           {canManageCatalogs ? (
             <Button size="sm" asChild data-testid={`quote-catalog-setup-${catalogType}`}>
-              <Link to={buildCatalogSetupLink(catalogType, quoteReturnTarget(location.pathname, location.search))}>
+              <Link
+                to={buildCatalogSetupLink(
+                  catalogType,
+                  quoteReturnTarget(location.pathname, location.search),
+                )}
+              >
                 {t(`${prefix}.action`)}
                 <ArrowRight className="ml-1.5 h-4 w-4" />
               </Link>

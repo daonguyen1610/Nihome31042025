@@ -5,7 +5,12 @@ import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
 import { adminApi } from "@/services/adminApi";
-import type { UpsertJobPositionRequest, JobPositionResponse, EmploymentTypeResponse, RecruitmentDropdownOptionResponse } from "@/services/adminApi";
+import type {
+  UpsertJobPositionRequest,
+  JobPositionResponse,
+  EmploymentTypeResponse,
+  RecruitmentDropdownOptionResponse,
+} from "@/services/adminApi";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -59,16 +64,19 @@ const JobPositionForm = ({ mode }: { mode: "create" | "edit" }) => {
 
   useEffect(() => {
     setEmploymentTypesLoading(true);
-    adminApi.getEmploymentTypes(true)
+    adminApi
+      .getEmploymentTypes(true)
       .then((res) => setEmploymentTypes(res.data))
       .catch(() => setEmploymentTypes([]))
       .finally(() => setEmploymentTypesLoading(false));
 
-    adminApi.getRecruitmentDropdownOptions("experience-level", true)
+    adminApi
+      .getRecruitmentDropdownOptions("experience-level", true)
       .then((res) => setExperienceLevels(res.data))
       .catch(() => setExperienceLevels([]));
 
-    adminApi.getRecruitmentDropdownOptions("benefit", true)
+    adminApi
+      .getRecruitmentDropdownOptions("benefit", true)
       .then((res) => setBenefitOptions(res.data))
       .catch(() => setBenefitOptions([]));
   }, []);
@@ -91,25 +99,28 @@ const JobPositionForm = ({ mode }: { mode: "create" | "edit" }) => {
 
   useEffect(() => {
     if (mode !== "edit" || !idParam) return;
-    adminApi.getJobPositions(true).then((res) => {
-      const pos = (res.data as JobPositionResponse[]).find((p) => p.id === Number(idParam));
-      if (pos) {
-        setData({
-          id: pos.id,
-          title: pos.title,
-          department: pos.department,
-          location: pos.location,
-          employmentType: pos.employmentType,
-          experienceLevel: pos.experienceLevel,
-          description: pos.description ?? "",
-          requirements: pos.requirements ?? [],
-          benefits: pos.benefits ?? [],
-          isActive: pos.isActive,
-          sortOrder: pos.sortOrder,
-        });
-      }
-      setLoading(false);
-    }).catch(() => setLoading(false));
+    adminApi
+      .getJobPositions(true)
+      .then((res) => {
+        const pos = (res.data as JobPositionResponse[]).find((p) => p.id === Number(idParam));
+        if (pos) {
+          setData({
+            id: pos.id,
+            title: pos.title,
+            department: pos.department,
+            location: pos.location,
+            employmentType: pos.employmentType,
+            experienceLevel: pos.experienceLevel,
+            description: pos.description ?? "",
+            requirements: pos.requirements ?? [],
+            benefits: pos.benefits ?? [],
+            isActive: pos.isActive,
+            sortOrder: pos.sortOrder,
+          });
+        }
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
   }, [mode, idParam]);
 
   const update = <K extends keyof FormData>(key: K, value: FormData[K]) =>
@@ -122,7 +133,10 @@ const JobPositionForm = ({ mode }: { mode: "create" | "edit" }) => {
     update("requirements", next);
   };
   const removeRequirement = (i: number) =>
-    update("requirements", data.requirements.filter((_, idx) => idx !== i));
+    update(
+      "requirements",
+      data.requirements.filter((_, idx) => idx !== i),
+    );
 
   const toggleBenefit = (code: string) => {
     const next = data.benefits.includes(code)
@@ -138,15 +152,27 @@ const JobPositionForm = ({ mode }: { mode: "create" | "edit" }) => {
       return;
     }
     if (employmentTypesLoading) {
-      toast({ title: t("recruit.jobForm.loadingTypes"), description: t("recruit.jobForm.loadingTypesDesc"), variant: "destructive" });
+      toast({
+        title: t("recruit.jobForm.loadingTypes"),
+        description: t("recruit.jobForm.loadingTypesDesc"),
+        variant: "destructive",
+      });
       return;
     }
     if (employmentTypes.length === 0) {
-      toast({ title: t("recruit.jobForm.missingTypes"), description: t("recruit.jobForm.missingTypesDesc"), variant: "destructive" });
+      toast({
+        title: t("recruit.jobForm.missingTypes"),
+        description: t("recruit.jobForm.missingTypesDesc"),
+        variant: "destructive",
+      });
       return;
     }
     if (!data.employmentType.trim()) {
-      toast({ title: t("form.required"), description: t("recruit.jobForm.selectType"), variant: "destructive" });
+      toast({
+        title: t("form.required"),
+        description: t("recruit.jobForm.selectType"),
+        variant: "destructive",
+      });
       return;
     }
     const payload: UpsertJobPositionRequest = {
@@ -168,7 +194,10 @@ const JobPositionForm = ({ mode }: { mode: "create" | "edit" }) => {
       } else {
         await adminApi.updateJobPosition(data.id, payload);
       }
-      toast({ title: mode === "create" ? t("form.created") : t("form.updated"), description: data.title });
+      toast({
+        title: mode === "create" ? t("form.created") : t("form.updated"),
+        description: data.title,
+      });
       navigate("/admin/recruitment");
     } catch {
       toast({ title: t("common.error"), variant: "destructive" });
@@ -198,7 +227,9 @@ const JobPositionForm = ({ mode }: { mode: "create" | "edit" }) => {
           </Button>
           <div>
             <h1 className="text-2xl font-semibold">
-              {mode === "create" ? t("recruit.jobForm.titleCreate") : t("recruit.jobForm.titleEdit")}
+              {mode === "create"
+                ? t("recruit.jobForm.titleCreate")
+                : t("recruit.jobForm.titleEdit")}
             </h1>
             {mode === "edit" && data.title && (
               <p className="text-sm text-muted-foreground">{data.title}</p>
@@ -247,7 +278,9 @@ const JobPositionForm = ({ mode }: { mode: "create" | "edit" }) => {
                     required
                     disabled={employmentTypes.length === 0}
                   >
-                    {employmentTypes.length === 0 && <option value="">{t("recruit.jobForm.noOptions")}</option>}
+                    {employmentTypes.length === 0 && (
+                      <option value="">{t("recruit.jobForm.noOptions")}</option>
+                    )}
                     {employmentTypes.map((type) => (
                       <option key={type.id} value={type.code}>
                         {type.name}
@@ -255,7 +288,11 @@ const JobPositionForm = ({ mode }: { mode: "create" | "edit" }) => {
                     ))}
                   </select>
                   <p className="mt-1.5 text-xs text-muted-foreground">
-                    {t("recruit.jobForm.manageAt")} <Link to="/admin/recruitment/employment-types" className="underline">{t("empTypes.employmentTypes")}</Link>.
+                    {t("recruit.jobForm.manageAt")}{" "}
+                    <Link to="/admin/recruitment/employment-types" className="underline">
+                      {t("empTypes.employmentTypes")}
+                    </Link>
+                    .
                   </p>
                 </Field>
                 <Field label={t("recruit.jobForm.experienceLevel")}>
@@ -265,7 +302,9 @@ const JobPositionForm = ({ mode }: { mode: "create" | "edit" }) => {
                     onChange={(e) => update("experienceLevel", e.target.value)}
                     disabled={experienceLevels.length === 0}
                   >
-                    {experienceLevels.length === 0 && <option value="">{t("recruit.jobForm.noOptions")}</option>}
+                    {experienceLevels.length === 0 && (
+                      <option value="">{t("recruit.jobForm.noOptions")}</option>
+                    )}
                     {experienceLevels.map((lvl) => (
                       <option key={lvl.id} value={lvl.code}>
                         {lvl.name}
@@ -366,7 +405,12 @@ const JobPositionForm = ({ mode }: { mode: "create" | "edit" }) => {
 
             <Button
               type="submit"
-              disabled={submitting || employmentTypesLoading || employmentTypes.length === 0 || !data.employmentType.trim()}
+              disabled={
+                submitting ||
+                employmentTypesLoading ||
+                employmentTypes.length === 0 ||
+                !data.employmentType.trim()
+              }
               className="w-full"
             >
               <Save className="mr-1.5 h-4 w-4" />
@@ -379,7 +423,15 @@ const JobPositionForm = ({ mode }: { mode: "create" | "edit" }) => {
   );
 };
 
-const Field = ({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) => (
+const Field = ({
+  label,
+  children,
+  className,
+}: {
+  label: string;
+  children: React.ReactNode;
+  className?: string;
+}) => (
   <div className={cn("space-y-1.5", className)}>
     <Label className="text-xs">{label}</Label>
     {children}

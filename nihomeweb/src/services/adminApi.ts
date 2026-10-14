@@ -9,7 +9,10 @@ import type {
   ProjectReportResponse,
 } from "@/types/projectReports";
 
-const uploadBusinessDocument = (area: "vendors" | "acceptance" | "as-built" | "handover", file: File) => {
+const uploadBusinessDocument = (
+  area: "vendors" | "acceptance" | "as-built" | "handover",
+  file: File,
+) => {
   const formData = new FormData();
   formData.append("file", file);
   return api.post<BusinessDocumentUploadResponse>(`/business-documents/${area}`, formData);
@@ -349,7 +352,8 @@ export interface UpdateMapEmbedRequest {
 }
 
 export interface GoogleDriveAdminStatusResponse {
-  status: "Disabled" | "Connected" | "ReadOnly" | "InvalidRoot" | "ReconnectRequired" | "Unavailable";
+  status:
+    "Disabled" | "Connected" | "ReadOnly" | "InvalidRoot" | "ReconnectRequired" | "Unavailable";
   oauthConfigured: boolean;
   hasStoredCredential: boolean;
   accountEmail: string | null;
@@ -429,12 +433,7 @@ export interface ContactMessageResponse {
 // -------- CRM Lead --------
 
 export type LeadStatus =
-  | "New"
-  | "Contacted"
-  | "Interested"
-  | "NotInterested"
-  | "Converted"
-  | "Junk";
+  "New" | "Contacted" | "Interested" | "NotInterested" | "Converted" | "Junk";
 
 export type LeadActivityType = "Call" | "Email" | "Meeting" | "Note";
 
@@ -845,12 +844,7 @@ export type PermitDocumentKind = "SubmittedPackage" | "IssuedPermit";
 // ─── CRM Opportunity (NIH-83) ────────────────────────────────────────
 
 export type OpportunityStage =
-  | "Prospecting"
-  | "Qualification"
-  | "Proposal"
-  | "Negotiation"
-  | "Won"
-  | "Lost";
+  "Prospecting" | "Qualification" | "Proposal" | "Negotiation" | "Won" | "Lost";
 
 export const OPPORTUNITY_STAGES: OpportunityStage[] = [
   "Prospecting",
@@ -864,12 +858,7 @@ export const OPPORTUNITY_STAGES: OpportunityStage[] = [
 // -------- CRM Contract (NIH-102) --------
 
 export type ContractStatus =
-  | "Draft"
-  | "Signed"
-  | "InProgress"
-  | "OnHold"
-  | "Completed"
-  | "Cancelled";
+  "Draft" | "Signed" | "InProgress" | "OnHold" | "Completed" | "Cancelled";
 
 export const CONTRACT_STATUSES: ContractStatus[] = [
   "Draft",
@@ -882,12 +871,7 @@ export const CONTRACT_STATUSES: ContractStatus[] = [
 
 // -------- Central operational projects (NIH-460) --------
 
-export type OperationalProjectStatus =
-  | "Planning"
-  | "Active"
-  | "OnHold"
-  | "Completed"
-  | "Cancelled";
+export type OperationalProjectStatus = "Planning" | "Active" | "OnHold" | "Completed" | "Cancelled";
 
 export const OPERATIONAL_PROJECT_STATUSES: OperationalProjectStatus[] = [
   "Planning",
@@ -898,7 +882,13 @@ export const OPERATIONAL_PROJECT_STATUSES: OperationalProjectStatus[] = [
 ];
 
 export type WorkPackageKind = "Project" | "Internal";
-export type WorkPackagePurpose = "General" | "ProcurementInputPricing" | "FinanceCommercialReview" | "FinanceTenderReview" | "TenderPlanning" | "LegalPermitting";
+export type WorkPackagePurpose =
+  | "General"
+  | "ProcurementInputPricing"
+  | "FinanceCommercialReview"
+  | "FinanceTenderReview"
+  | "TenderPlanning"
+  | "LegalPermitting";
 export type WorkPackageStatus = "Planned" | "Active" | "Completed" | "Cancelled";
 export type WorkTaskStatus = "Planned" | "InProgress" | "Completed" | "Verified" | "Cancelled";
 
@@ -955,7 +945,12 @@ export interface DepartmentWorkPackageResponse {
   departmentRoleGroupId: number;
   departmentCode: string;
   departmentLabelKey: string;
-  participantDepartments: { id: number; code: string; labelKey: string; canReceiveProjectPackage: boolean }[];
+  participantDepartments: {
+    id: number;
+    code: string;
+    labelKey: string;
+    canReceiveProjectPackage: boolean;
+  }[];
   leadUserId: number;
   leadUserName: string;
   status: WorkPackageStatus;
@@ -974,24 +969,52 @@ export interface DepartmentWorkPackageResponse {
 export type BusinessReviewStatus = "Draft" | "Submitted" | "Approved" | "Rejected";
 
 export interface InputPriceLineResponse {
-  id: number; itemCode: string; description: string; unit: string; quantity: number;
-  unitPrice: number; vatPercent: number; amount: number; sortOrder: number;
+  id: number;
+  itemCode: string;
+  description: string;
+  unit: string;
+  quantity: number;
+  unitPrice: number;
+  vatPercent: number;
+  amount: number;
+  sortOrder: number;
 }
 
 export interface InputPriceOfferResponse {
-  id: number; workPackageId: number; vendorId: number; vendorCode: string; vendorName: string;
-  vendorType: string; supplierReference: string; currency: string; validUntil: string;
-  status: BusinessReviewStatus; note?: string | null; decisionReason?: string | null;
-  subtotal: number; vatAmount: number; grandTotal: number; createdByUserId: number;
-  rowVersion: string; lines: InputPriceLineResponse[];
+  id: number;
+  workPackageId: number;
+  vendorId: number;
+  vendorCode: string;
+  vendorName: string;
+  vendorType: string;
+  supplierReference: string;
+  currency: string;
+  validUntil: string;
+  status: BusinessReviewStatus;
+  note?: string | null;
+  decisionReason?: string | null;
+  subtotal: number;
+  vatAmount: number;
+  grandTotal: number;
+  createdByUserId: number;
+  rowVersion: string;
+  lines: InputPriceLineResponse[];
 }
 
 export interface FinanceReviewResponse {
-  id: number; workPackageId: number; status: BusinessReviewStatus;
-  contractConditionsReviewed: boolean; guaranteesReviewed: boolean;
-  paymentTermsReviewed: boolean; financialDossierReviewed: boolean;
-  findings?: string | null; decisionReason?: string | null; createdByUserId: number;
-  reviewedByUserId?: number | null; reviewedByName?: string | null; rowVersion: string;
+  id: number;
+  workPackageId: number;
+  status: BusinessReviewStatus;
+  contractConditionsReviewed: boolean;
+  guaranteesReviewed: boolean;
+  paymentTermsReviewed: boolean;
+  financialDossierReviewed: boolean;
+  findings?: string | null;
+  decisionReason?: string | null;
+  createdByUserId: number;
+  reviewedByUserId?: number | null;
+  reviewedByName?: string | null;
+  rowVersion: string;
 }
 
 export interface DepartmentWorkPackageListResponse {
@@ -1041,15 +1064,30 @@ export interface CreateDepartmentWorkPackageRequest {
 }
 
 export interface UpsertInputPriceOfferRequest {
-  vendorId: number; supplierReference: string; currency: string; validUntil: string;
-  note?: string | null; rowVersion?: string | null;
-  lines: Array<{ itemCode: string; description: string; unit: string; quantity: number; unitPrice: number; vatPercent: number; sortOrder: number }>;
+  vendorId: number;
+  supplierReference: string;
+  currency: string;
+  validUntil: string;
+  note?: string | null;
+  rowVersion?: string | null;
+  lines: Array<{
+    itemCode: string;
+    description: string;
+    unit: string;
+    quantity: number;
+    unitPrice: number;
+    vatPercent: number;
+    sortOrder: number;
+  }>;
 }
 
 export interface UpsertFinanceReviewRequest {
-  contractConditionsReviewed: boolean; guaranteesReviewed: boolean;
-  paymentTermsReviewed: boolean; financialDossierReviewed: boolean;
-  findings?: string | null; rowVersion?: string | null;
+  contractConditionsReviewed: boolean;
+  guaranteesReviewed: boolean;
+  paymentTermsReviewed: boolean;
+  financialDossierReviewed: boolean;
+  findings?: string | null;
+  rowVersion?: string | null;
 }
 
 export interface UpdateDepartmentWorkPackageRequest {
@@ -1112,12 +1150,7 @@ export interface ConfirmDeletionRequest {
 }
 
 export type HardDeleteOperationStatus =
-  | "Preparing"
-  | "Ready"
-  | "Processing"
-  | "Completed"
-  | "ManualActionRequired"
-  | "Failed";
+  "Preparing" | "Ready" | "Processing" | "Completed" | "ManualActionRequired" | "Failed";
 
 export interface HardDeleteOperationResult {
   operationId: string;
@@ -1332,13 +1365,7 @@ export interface OperationalProjectListParams {
 }
 
 export type HseViolationStatus =
-  | "Draft"
-  | "Reported"
-  | "Confirmed"
-  | "Remediated"
-  | "Closed"
-  | "Rejected"
-  | "Cancelled";
+  "Draft" | "Reported" | "Confirmed" | "Remediated" | "Closed" | "Rejected" | "Cancelled";
 
 export type HseViolationSeverity = "Low" | "Medium" | "High" | "Critical";
 
@@ -1478,17 +1505,10 @@ export interface ProjectDocumentCategoryResponse {
 }
 
 export type ProjectDocumentSyncStatus =
-  | "Pending"
-  | "Processing"
-  | "Synced"
-  | "Failed"
-  | "Deleted"
-  | "Conflict";
+  "Pending" | "Processing" | "Synced" | "Failed" | "Deleted" | "Conflict";
 
 export type ProjectDocumentSourceType =
-  | "ManualUpload"
-  | "ExistingManagedFile"
-  | "GoogleDriveImport";
+  "ManualUpload" | "ExistingManagedFile" | "GoogleDriveImport";
 
 export interface ProjectDocumentResponse {
   id: number;
@@ -1681,12 +1701,7 @@ export interface UpsertContractRequest {
 export type ContractDirection = "Upstream" | "Downstream";
 
 export type ContractType =
-  | "Unclassified"
-  | "Design"
-  | "Construction"
-  | "DesignAndBuild"
-  | "Supply"
-  | "Subcontract";
+  "Unclassified" | "Design" | "Construction" | "DesignAndBuild" | "Supply" | "Subcontract";
 
 export interface ContractClassificationOptions {
   directions: ContractDirection[];
@@ -1697,11 +1712,7 @@ export interface ContractClassificationOptions {
 
 // -------- NIH-104: appendices (VO), attachments, timeline --------
 
-export type ContractAppendixStatus =
-  | "Draft"
-  | "Submitted"
-  | "Approved"
-  | "Rejected";
+export type ContractAppendixStatus = "Draft" | "Submitted" | "Approved" | "Rejected";
 
 export const CONTRACT_APPENDIX_STATUSES: ContractAppendixStatus[] = [
   "Draft",
@@ -1745,10 +1756,7 @@ export interface UpsertContractAppendixRequest {
 
 export type ContractAttachmentKind = "SignedScan" | "Supporting";
 
-export const CONTRACT_ATTACHMENT_KINDS: ContractAttachmentKind[] = [
-  "SignedScan",
-  "Supporting",
-];
+export const CONTRACT_ATTACHMENT_KINDS: ContractAttachmentKind[] = ["SignedScan", "Supporting"];
 
 export interface ContractAttachmentResponse {
   id: number;
@@ -1780,12 +1788,7 @@ export interface AppendixUploadResponse {
   contentType: string;
 }
 
-export type OpportunityActivityType =
-  | "Call"
-  | "Email"
-  | "Meeting"
-  | "Note"
-  | "StageChange";
+export type OpportunityActivityType = "Call" | "Email" | "Meeting" | "Note" | "StageChange";
 
 export interface OpportunityActivityResponse {
   id: number;
@@ -2426,7 +2429,8 @@ export const TENDER_STATUSES: TenderStatus[] = [
   "Cancelled",
 ];
 
-export type TenderChecklistItemStatus = "NotStarted" | "Preparing" | "Done" | "Submitted" | "NotApplicable";
+export type TenderChecklistItemStatus =
+  "NotStarted" | "Preparing" | "Done" | "Submitted" | "NotApplicable";
 
 export interface TenderAssigneeOptionResponse {
   id: number;
@@ -2825,11 +2829,7 @@ export interface SurveySyncLogResponse {
 }
 
 export type SurveyDriveConnectionStatus =
-  | "Connected"
-  | "ReadOnly"
-  | "InvalidRoot"
-  | "ReconnectRequired"
-  | "Unavailable";
+  "Connected" | "ReadOnly" | "InvalidRoot" | "ReconnectRequired" | "Unavailable";
 
 export interface SurveyDriveConnectionStatusResponse {
   status: SurveyDriveConnectionStatus;
@@ -3076,11 +3076,7 @@ export interface UpdateDesignProjectRequest extends CreateDesignProjectRequest {
 
 export type DesignSchedulePhaseCode = "Concept" | "BasicDesign" | "ShopDrawing";
 export type DesignScheduleStatus =
-  | "NotStarted"
-  | "InProgress"
-  | "Completed"
-  | "OnHold"
-  | "WaitingForDepartment";
+  "NotStarted" | "InProgress" | "Completed" | "OnHold" | "WaitingForDepartment";
 
 export const DESIGN_SCHEDULE_PHASE_CODES: DesignSchedulePhaseCode[] = [
   "Concept",
@@ -3194,7 +3190,14 @@ export interface DesignScheduleTaskResponse {
 }
 
 export type DesignReviewStage = "Concept" | "BasicDesign" | "ShopDrawing";
-export type DesignReviewStatus = "Draft" | "InternalReview" | "ReadyForClient" | "SubmittedToClient" | "ClientChangesRequested" | "ClientApproved" | "Rejected";
+export type DesignReviewStatus =
+  | "Draft"
+  | "InternalReview"
+  | "ReadyForClient"
+  | "SubmittedToClient"
+  | "ClientChangesRequested"
+  | "ClientApproved"
+  | "Rejected";
 export interface DesignReviewResponse {
   id: number;
   designProjectId: number;
@@ -3212,9 +3215,21 @@ export interface DesignReviewResponse {
   canManage: boolean;
   canComment: boolean;
   recipients: { userId: number; name: string }[];
-  comments: { id: number; authorUserId: number; authorName: string; body: string; createdAt: string }[];
+  comments: {
+    id: number;
+    authorUserId: number;
+    authorName: string;
+    body: string;
+    createdAt: string;
+  }[];
   projectDocumentIds: number[];
-  documents: { projectDocumentId: number; originalFileName: string; sourceEntityType: string; sourceRecordId: number; sha256: string }[];
+  documents: {
+    projectDocumentId: number;
+    originalFileName: string;
+    sourceEntityType: string;
+    sourceRecordId: number;
+    sha256: string;
+  }[];
   rowVersion: string;
 }
 
@@ -3498,7 +3513,12 @@ export interface LegalActivationPreview {
   existingWorkPackageId?: number | null;
   reasonCode?: string | null;
   message?: string | null;
-  permitTypes: Array<{ code: string; name: string; alreadyExists: boolean; requiresSetup: boolean }>;
+  permitTypes: Array<{
+    code: string;
+    name: string;
+    alreadyExists: boolean;
+    requiresSetup: boolean;
+  }>;
   projectMembers: LegalProjectMemberOption[];
 }
 
@@ -3701,12 +3721,7 @@ export interface TransitionBasicDesignDocStatusRequest {
 // ─── Shop Drawings (NIH-116) ────────────────────────
 
 export type ShopDrawingStatus =
-  | "Drafting"
-  | "InReview"
-  | "Approved"
-  | "PendingIfc"
-  | "Released"
-  | "Rejected";
+  "Drafting" | "InReview" | "Approved" | "PendingIfc" | "Released" | "Rejected";
 
 export const SHOP_DRAWING_STATUSES: ShopDrawingStatus[] = [
   "Drafting",
@@ -3932,12 +3947,7 @@ export interface AcknowledgeIfcReleaseRecipientRequest {
 // --- Construction schedule (NIH-141) -----------------------------------
 
 export type ConstructionTaskStatus =
-  | "Planned"
-  | "InProgress"
-  | "Completed"
-  | "Cancelled"
-  | "OnHold"
-  | "WaitingForDepartment";
+  "Planned" | "InProgress" | "Completed" | "Cancelled" | "OnHold" | "WaitingForDepartment";
 
 export interface ConstructionTaskDependencyResponse {
   id: number;
@@ -4143,7 +4153,8 @@ export interface SiteDiaryBulkDeleteResponse {
 
 export type PunchStatus = "Open" | "InProgress" | "Fixed" | "Verified" | "Cancelled";
 export type PunchSeverity = "Low" | "Medium" | "High" | "Critical";
-export type PunchRootCause = "Unclassified" | "Design" | "Construction" | "Material" | "ClientChange" | "Other";
+export type PunchRootCause =
+  "Unclassified" | "Design" | "Construction" | "Material" | "ClientChange" | "Other";
 
 export interface PunchItemResponse {
   id: number;
@@ -4246,61 +4257,584 @@ export interface PunchItemBulkDeleteResponse {
 
 // --- Procurement control chain ---------------------------------------
 
-export interface ProjectBoqLineResponse { id: number; itemCode: string; description: string; unit: string; approvedQuantity: number; budgetUnitPrice: number; amount: number }
-export interface ProjectBoqRevisionResponse { id: number; operationalProjectId: number; upstreamContractId?: number | null; upstreamContractNumber?: string | null; revisionNumber: number; currency: string; status: string; sourceTenderEstimateRevisionId?: number | null; sourceContractAppendixId?: number | null; costTotal: number; preparedByUserId: number; preparedByName?: string | null; submittedAt?: string | null; approvedAt?: string | null; rejectedAt?: string | null; decisionReason?: string | null; isFinal: boolean; createdAt: string; updatedAt: string; rowVersion: string; lines: ProjectBoqLineResponse[] }
-export interface ProjectBoqRevisionListItemResponse { id: number; operationalProjectId: number; upstreamContractId?: number | null; upstreamContractNumber?: string | null; revisionNumber: number; currency: string; status: string; costTotal: number; lineCount: number; itemCodes: string[]; preparedByUserId: number; preparedByName?: string | null; submittedAt?: string | null; approvedAt?: string | null; rejectedAt?: string | null; isFinal: boolean; createdAt: string; updatedAt: string; rowVersion: string }
-export interface ProjectBoqRevisionListResponse { total: number; page: number; pageSize: number; items: ProjectBoqRevisionListItemResponse[] }
-export interface ProjectBoqRevisionListParams { search?: string; status?: string; sortBy?: "revision" | "status" | "total" | "preparedBy" | "createdAt" | "updatedAt"; sortDirection?: "asc" | "desc"; page?: number; pageSize?: number }
-export interface MaterialRequestLineResponse { id: number; projectBoqLineId: number; itemCode: string; description: string; unit: string; requestedQuantity: number; receivedQuantity: number; boqApprovedQuantity: number; boqRemainingQuantity: number }
-export interface MaterialRequestResponse { id: number; operationalProjectId: number; code: string; status: string; siteRequesterUserId: number; siteRequesterName?: string | null; responsibleSiteUserId: number; responsibleSiteUserName?: string | null; assignedProcurementUserId: number; assignedProcurementUserName?: string | null; requiredAt: string; note?: string | null; submittedAt?: string | null; submittedByUserId?: number | null; submittedByName?: string | null; approvedAt?: string | null; approvedByUserId?: number | null; approvedByName?: string | null; rejectedAt?: string | null; rejectedByUserId?: number | null; rejectedByName?: string | null; fulfilledAt?: string | null; cancelledAt?: string | null; decisionReason?: string | null; createdAt: string; updatedAt: string; rowVersion: string; lines: MaterialRequestLineResponse[] }
-export interface MaterialRequestDetailResponse extends MaterialRequestResponse { operationalProjectCode: string; operationalProjectName: string; customerId: number; customerName: string; contracts: Array<{ id: number; contractNumber: string; direction: ContractDirection; type: ContractType; vendorId?: number | null; vendorName?: string | null; status: ContractStatus }> }
-export interface MaterialRequestBoqLineOptionResponse { id: number; itemCode: string; description: string; unit: string; approvedQuantity: number; remainingQuantity: number }
-export interface MaterialRequestBoqContextResponse { revisionId: number; revisionNumber: number; lines: MaterialRequestBoqLineOptionResponse[] }
-export interface MaterialRequestListResponse { total: number; page: number; pageSize: number; items: MaterialRequestResponse[]; currentApprovedBoq?: MaterialRequestBoqContextResponse | null }
-export interface MaterialRequestListParams { search?: string; status?: string; siteRequesterUserId?: number; responsibleSiteUserId?: number; assignedProcurementUserId?: number; requiredFrom?: string; requiredTo?: string; sortBy?: "code" | "status" | "requiredAt" | "updatedAt"; sortDirection?: "asc" | "desc"; page?: number; pageSize?: number }
-export interface ProcurementContractLineResponse { id: number; contractId: number; contractNumber: string; projectBoqLineId: number; itemCode: string; procurementOwnerUserId: number; procurementOwnerName?: string | null; quantity: number; budgetUnitPrice: number; negotiatedUnitPrice: number; rowVersion: string }
-export interface WarehouseReceiptLineResponse { id: number; materialRequestLineId: number; contractLineId?: number | null; materialRequestCode: string; itemCode: string; description: string; unit: string; requestedQuantity: number; netReceivedQuantity: number; contractNumber?: string | null; vendorName?: string | null; receivedQuantity: number }
-export interface WarehouseReceiptResponse { id: number; operationalProjectId: number; code: string; status: string; reversalOfReceiptId?: number | null; reversalTransactionId?: number | null; receivedByUserId: number; receivedByName?: string | null; inspectedAt: string; postedAt?: string | null; postedByUserId?: number | null; postedByName?: string | null; reversalReason?: string | null; createdAt: string; updatedAt: string; rowVersion: string; lines: WarehouseReceiptLineResponse[] }
-export interface WarehouseIssueLineResponse { id: number; projectBoqLineId: number; itemCode: string; description: string; unit: string; boqApprovedQuantity: number; stockOnHand: number; issuedQuantity: number }
-export interface WarehouseIssueResponse { id: number; operationalProjectId: number; code: string; status: string; reversalOfIssueId?: number | null; reversalTransactionId?: number | null; responsibleSiteUserId: number; responsibleSiteUserName?: string | null; issuedByUserId: number; issuedByName?: string | null; issuedAt: string; postedAt?: string | null; postedByUserId?: number | null; postedByName?: string | null; workItemCode?: string | null; reversalReason?: string | null; createdAt: string; updatedAt: string; rowVersion: string; lines: WarehouseIssueLineResponse[] }
-export interface WarehouseBusinessContext { operationalProjectCode: string; operationalProjectName: string; customerId: number; customerName: string; contracts: MaterialRequestDetailResponse["contracts"] }
-export interface WarehouseReceiptDetailResponse extends WarehouseReceiptResponse, WarehouseBusinessContext {}
-export interface WarehouseIssueDetailResponse extends WarehouseIssueResponse, WarehouseBusinessContext {}
-export interface WarehouseTransactionListItemResponse { id: number; operationalProjectId: number; type: "Receipt" | "Issue"; code: string; status: string; occurredAt: string; postedAt?: string | null; actorUserId: number; actorName?: string | null; responsibleUserId?: number | null; responsibleUserName?: string | null; workItemCode?: string | null; reversalOfId?: number | null; reversalReason?: string | null; lineCount: number; totalQuantity: number; itemCodes: string[]; createdAt: string; updatedAt: string; rowVersion: string }
-export interface WarehouseStockItemResponse { projectBoqLineId: number; itemCode: string; description: string; unit: string; boqApprovedQuantity: number; receivedQuantity: number; issuedQuantity: number; onHandQuantity: number }
-export interface WarehouseTransactionListResponse { total: number; page: number; pageSize: number; items: WarehouseTransactionListItemResponse[]; stock: WarehouseStockItemResponse[] }
-export interface WarehouseTransactionListParams { search?: string; status?: string; type?: "receipt" | "issue"; responsibleUserId?: number; occurredFrom?: string; occurredTo?: string; sortBy?: "occurredAt" | "code" | "status" | "type" | "updatedAt"; sortDirection?: "asc" | "desc"; page?: number; pageSize?: number }
+export interface ProjectBoqLineResponse {
+  id: number;
+  itemCode: string;
+  description: string;
+  unit: string;
+  approvedQuantity: number;
+  budgetUnitPrice: number;
+  amount: number;
+}
+export interface ProjectBoqRevisionResponse {
+  id: number;
+  operationalProjectId: number;
+  upstreamContractId?: number | null;
+  upstreamContractNumber?: string | null;
+  revisionNumber: number;
+  currency: string;
+  status: string;
+  sourceTenderEstimateRevisionId?: number | null;
+  sourceContractAppendixId?: number | null;
+  costTotal: number;
+  preparedByUserId: number;
+  preparedByName?: string | null;
+  submittedAt?: string | null;
+  approvedAt?: string | null;
+  rejectedAt?: string | null;
+  decisionReason?: string | null;
+  isFinal: boolean;
+  createdAt: string;
+  updatedAt: string;
+  rowVersion: string;
+  lines: ProjectBoqLineResponse[];
+}
+export interface ProjectBoqRevisionListItemResponse {
+  id: number;
+  operationalProjectId: number;
+  upstreamContractId?: number | null;
+  upstreamContractNumber?: string | null;
+  revisionNumber: number;
+  currency: string;
+  status: string;
+  costTotal: number;
+  lineCount: number;
+  itemCodes: string[];
+  preparedByUserId: number;
+  preparedByName?: string | null;
+  submittedAt?: string | null;
+  approvedAt?: string | null;
+  rejectedAt?: string | null;
+  isFinal: boolean;
+  createdAt: string;
+  updatedAt: string;
+  rowVersion: string;
+}
+export interface ProjectBoqRevisionListResponse {
+  total: number;
+  page: number;
+  pageSize: number;
+  items: ProjectBoqRevisionListItemResponse[];
+}
+export interface ProjectBoqRevisionListParams {
+  search?: string;
+  status?: string;
+  sortBy?: "revision" | "status" | "total" | "preparedBy" | "createdAt" | "updatedAt";
+  sortDirection?: "asc" | "desc";
+  page?: number;
+  pageSize?: number;
+}
+export interface MaterialRequestLineResponse {
+  id: number;
+  projectBoqLineId: number;
+  itemCode: string;
+  description: string;
+  unit: string;
+  requestedQuantity: number;
+  receivedQuantity: number;
+  boqApprovedQuantity: number;
+  boqRemainingQuantity: number;
+}
+export interface MaterialRequestResponse {
+  id: number;
+  operationalProjectId: number;
+  code: string;
+  status: string;
+  siteRequesterUserId: number;
+  siteRequesterName?: string | null;
+  responsibleSiteUserId: number;
+  responsibleSiteUserName?: string | null;
+  assignedProcurementUserId: number;
+  assignedProcurementUserName?: string | null;
+  requiredAt: string;
+  note?: string | null;
+  submittedAt?: string | null;
+  submittedByUserId?: number | null;
+  submittedByName?: string | null;
+  approvedAt?: string | null;
+  approvedByUserId?: number | null;
+  approvedByName?: string | null;
+  rejectedAt?: string | null;
+  rejectedByUserId?: number | null;
+  rejectedByName?: string | null;
+  fulfilledAt?: string | null;
+  cancelledAt?: string | null;
+  decisionReason?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  rowVersion: string;
+  lines: MaterialRequestLineResponse[];
+}
+export interface MaterialRequestDetailResponse extends MaterialRequestResponse {
+  operationalProjectCode: string;
+  operationalProjectName: string;
+  customerId: number;
+  customerName: string;
+  contracts: Array<{
+    id: number;
+    contractNumber: string;
+    direction: ContractDirection;
+    type: ContractType;
+    vendorId?: number | null;
+    vendorName?: string | null;
+    status: ContractStatus;
+  }>;
+}
+export interface MaterialRequestBoqLineOptionResponse {
+  id: number;
+  itemCode: string;
+  description: string;
+  unit: string;
+  approvedQuantity: number;
+  remainingQuantity: number;
+}
+export interface MaterialRequestBoqContextResponse {
+  revisionId: number;
+  revisionNumber: number;
+  lines: MaterialRequestBoqLineOptionResponse[];
+}
+export interface MaterialRequestListResponse {
+  total: number;
+  page: number;
+  pageSize: number;
+  items: MaterialRequestResponse[];
+  currentApprovedBoq?: MaterialRequestBoqContextResponse | null;
+}
+export interface MaterialRequestListParams {
+  search?: string;
+  status?: string;
+  siteRequesterUserId?: number;
+  responsibleSiteUserId?: number;
+  assignedProcurementUserId?: number;
+  requiredFrom?: string;
+  requiredTo?: string;
+  sortBy?: "code" | "status" | "requiredAt" | "updatedAt";
+  sortDirection?: "asc" | "desc";
+  page?: number;
+  pageSize?: number;
+}
+export interface ProcurementContractLineResponse {
+  id: number;
+  contractId: number;
+  contractNumber: string;
+  projectBoqLineId: number;
+  itemCode: string;
+  procurementOwnerUserId: number;
+  procurementOwnerName?: string | null;
+  quantity: number;
+  budgetUnitPrice: number;
+  negotiatedUnitPrice: number;
+  rowVersion: string;
+}
+export interface WarehouseReceiptLineResponse {
+  id: number;
+  materialRequestLineId: number;
+  contractLineId?: number | null;
+  materialRequestCode: string;
+  itemCode: string;
+  description: string;
+  unit: string;
+  requestedQuantity: number;
+  netReceivedQuantity: number;
+  contractNumber?: string | null;
+  vendorName?: string | null;
+  receivedQuantity: number;
+}
+export interface WarehouseReceiptResponse {
+  id: number;
+  operationalProjectId: number;
+  code: string;
+  status: string;
+  reversalOfReceiptId?: number | null;
+  reversalTransactionId?: number | null;
+  receivedByUserId: number;
+  receivedByName?: string | null;
+  inspectedAt: string;
+  postedAt?: string | null;
+  postedByUserId?: number | null;
+  postedByName?: string | null;
+  reversalReason?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  rowVersion: string;
+  lines: WarehouseReceiptLineResponse[];
+}
+export interface WarehouseIssueLineResponse {
+  id: number;
+  projectBoqLineId: number;
+  itemCode: string;
+  description: string;
+  unit: string;
+  boqApprovedQuantity: number;
+  stockOnHand: number;
+  issuedQuantity: number;
+}
+export interface WarehouseIssueResponse {
+  id: number;
+  operationalProjectId: number;
+  code: string;
+  status: string;
+  reversalOfIssueId?: number | null;
+  reversalTransactionId?: number | null;
+  responsibleSiteUserId: number;
+  responsibleSiteUserName?: string | null;
+  issuedByUserId: number;
+  issuedByName?: string | null;
+  issuedAt: string;
+  postedAt?: string | null;
+  postedByUserId?: number | null;
+  postedByName?: string | null;
+  workItemCode?: string | null;
+  reversalReason?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  rowVersion: string;
+  lines: WarehouseIssueLineResponse[];
+}
+export interface WarehouseBusinessContext {
+  operationalProjectCode: string;
+  operationalProjectName: string;
+  customerId: number;
+  customerName: string;
+  contracts: MaterialRequestDetailResponse["contracts"];
+}
+export interface WarehouseReceiptDetailResponse
+  extends WarehouseReceiptResponse, WarehouseBusinessContext {}
+export interface WarehouseIssueDetailResponse
+  extends WarehouseIssueResponse, WarehouseBusinessContext {}
+export interface WarehouseTransactionListItemResponse {
+  id: number;
+  operationalProjectId: number;
+  type: "Receipt" | "Issue";
+  code: string;
+  status: string;
+  occurredAt: string;
+  postedAt?: string | null;
+  actorUserId: number;
+  actorName?: string | null;
+  responsibleUserId?: number | null;
+  responsibleUserName?: string | null;
+  workItemCode?: string | null;
+  reversalOfId?: number | null;
+  reversalReason?: string | null;
+  lineCount: number;
+  totalQuantity: number;
+  itemCodes: string[];
+  createdAt: string;
+  updatedAt: string;
+  rowVersion: string;
+}
+export interface WarehouseStockItemResponse {
+  projectBoqLineId: number;
+  itemCode: string;
+  description: string;
+  unit: string;
+  boqApprovedQuantity: number;
+  receivedQuantity: number;
+  issuedQuantity: number;
+  onHandQuantity: number;
+}
+export interface WarehouseTransactionListResponse {
+  total: number;
+  page: number;
+  pageSize: number;
+  items: WarehouseTransactionListItemResponse[];
+  stock: WarehouseStockItemResponse[];
+}
+export interface WarehouseTransactionListParams {
+  search?: string;
+  status?: string;
+  type?: "receipt" | "issue";
+  responsibleUserId?: number;
+  occurredFrom?: string;
+  occurredTo?: string;
+  sortBy?: "occurredAt" | "code" | "status" | "type" | "updatedAt";
+  sortDirection?: "asc" | "desc";
+  page?: number;
+  pageSize?: number;
+}
 export type MaterialAlertType = "OverBoq" | "Shortage";
 export type MaterialAlertStatus = "Open" | "Acknowledged" | "Resolved";
 export type MaterialAlertSeverity = "Warning" | "Critical";
-export interface MaterialAlertEventResponse { id: number; type: string; fromStatus?: string | null; toStatus: MaterialAlertStatus; reason?: string | null; changedByUserId: number; changedByName?: string | null; changedAt: string }
-export interface MaterialAlertResponse { id: number; operationalProjectId: number; operationalProjectCode: string; operationalProjectName: string; customerId: number; customerName: string; projectBoqLineId?: number | null; code: string; type: MaterialAlertType; status: MaterialAlertStatus; severity: MaterialAlertSeverity; itemCode: string; description: string; unit: string; boqAllowance: number; requiredQuantity: number; receivedQuantity: number; issuedQuantity: number; onHandQuantity: number; varianceQuantity: number; sourceEntityType: string; sourceEntityId: number; assignedToUserId: number; assignedToUserName?: string | null; detectedAt: string; acknowledgedAt?: string | null; acknowledgedByUserId?: number | null; acknowledgedByName?: string | null; acknowledgementNote?: string | null; resolvedAt?: string | null; lastEvaluatedAt: string; createdAt: string; updatedAt: string; rowVersion: string; contracts: MaterialRequestDetailResponse["contracts"]; events: MaterialAlertEventResponse[] }
-export interface MaterialAlertListResponse { total: number; page: number; pageSize: number; statusCounts: Partial<Record<MaterialAlertStatus, number>>; items: MaterialAlertResponse[] }
-export interface MaterialAlertListParams { search?: string; type?: MaterialAlertType; status?: MaterialAlertStatus; severity?: MaterialAlertSeverity; assignedToUserId?: number; sortBy?: "detectedAt" | "updatedAt" | "severity" | "variance" | "itemCode"; sortDirection?: "asc" | "desc"; page?: number; pageSize?: number }
-export interface WarehouseReceiptUpsertRequest { inspectedAt: string; receivedByUserId: number; lines: Array<{ materialRequestLineId: number; contractLineId?: number | null; receivedQuantity: number }>; rowVersion?: string }
-export interface WarehouseIssueUpsertRequest { issuedAt: string; responsibleSiteUserId: number; issuedByUserId: number; workItemCode?: string | null; lines: Array<{ projectBoqLineId: number; issuedQuantity: number }>; rowVersion?: string }
-export interface VendorRatingResponse { id: number; operationalProjectId: number; contractId: number; contractNumber: string; vendorId: number; vendorName: string; versionNumber: number; status: string; procurementOwnerUserId: number; procurementOwnerName?: string | null; qualityScore: number; scheduleScore: number; costScore: number; hseScore: number; overallScore: number; comments?: string | null; preparedByUserId: number; submittedAt?: string | null; approvedAt?: string | null; decisionReason?: string | null; supersedesVendorRatingId?: number | null; rowVersion: string }
-export interface ProcurementWorkspaceResponse { boqRevisions: ProjectBoqRevisionResponse[]; materialRequests: MaterialRequestResponse[]; contractLines: ProcurementContractLineResponse[]; receipts: WarehouseReceiptResponse[]; issues: WarehouseIssueResponse[]; vendorRatings: VendorRatingResponse[] }
-export interface ProjectBoqRevisionRequest { upstreamContractId: number; currency: string; sourceTenderEstimateRevisionId?: number | null; sourceContractAppendixId?: number | null; lines: Array<{ itemCode: string; description: string; unit: string; approvedQuantity: number; budgetUnitPrice: number }>; rowVersion?: string }
-export interface MaterialRequestUpsertRequest { responsibleSiteUserId: number; assignedProcurementUserId: number; requiredAt: string; note?: string | null; lines: Array<{ projectBoqLineId: number; requestedQuantity: number }>; rowVersion?: string }
-export interface ProcurementContractLineRequest { contractId: number; projectBoqLineId: number; procurementOwnerUserId: number; quantity: number; negotiatedUnitPrice: number; rowVersion?: string }
-export interface VendorRatingUpsertRequest { contractId: number; qualityScore: number; scheduleScore: number; costScore: number; hseScore: number; comments?: string | null; rowVersion?: string }
+export interface MaterialAlertEventResponse {
+  id: number;
+  type: string;
+  fromStatus?: string | null;
+  toStatus: MaterialAlertStatus;
+  reason?: string | null;
+  changedByUserId: number;
+  changedByName?: string | null;
+  changedAt: string;
+}
+export interface MaterialAlertResponse {
+  id: number;
+  operationalProjectId: number;
+  operationalProjectCode: string;
+  operationalProjectName: string;
+  customerId: number;
+  customerName: string;
+  projectBoqLineId?: number | null;
+  code: string;
+  type: MaterialAlertType;
+  status: MaterialAlertStatus;
+  severity: MaterialAlertSeverity;
+  itemCode: string;
+  description: string;
+  unit: string;
+  boqAllowance: number;
+  requiredQuantity: number;
+  receivedQuantity: number;
+  issuedQuantity: number;
+  onHandQuantity: number;
+  varianceQuantity: number;
+  sourceEntityType: string;
+  sourceEntityId: number;
+  assignedToUserId: number;
+  assignedToUserName?: string | null;
+  detectedAt: string;
+  acknowledgedAt?: string | null;
+  acknowledgedByUserId?: number | null;
+  acknowledgedByName?: string | null;
+  acknowledgementNote?: string | null;
+  resolvedAt?: string | null;
+  lastEvaluatedAt: string;
+  createdAt: string;
+  updatedAt: string;
+  rowVersion: string;
+  contracts: MaterialRequestDetailResponse["contracts"];
+  events: MaterialAlertEventResponse[];
+}
+export interface MaterialAlertListResponse {
+  total: number;
+  page: number;
+  pageSize: number;
+  statusCounts: Partial<Record<MaterialAlertStatus, number>>;
+  items: MaterialAlertResponse[];
+}
+export interface MaterialAlertListParams {
+  search?: string;
+  type?: MaterialAlertType;
+  status?: MaterialAlertStatus;
+  severity?: MaterialAlertSeverity;
+  assignedToUserId?: number;
+  sortBy?: "detectedAt" | "updatedAt" | "severity" | "variance" | "itemCode";
+  sortDirection?: "asc" | "desc";
+  page?: number;
+  pageSize?: number;
+}
+export interface WarehouseReceiptUpsertRequest {
+  inspectedAt: string;
+  receivedByUserId: number;
+  lines: Array<{
+    materialRequestLineId: number;
+    contractLineId?: number | null;
+    receivedQuantity: number;
+  }>;
+  rowVersion?: string;
+}
+export interface WarehouseIssueUpsertRequest {
+  issuedAt: string;
+  responsibleSiteUserId: number;
+  issuedByUserId: number;
+  workItemCode?: string | null;
+  lines: Array<{ projectBoqLineId: number; issuedQuantity: number }>;
+  rowVersion?: string;
+}
+export interface VendorRatingResponse {
+  id: number;
+  operationalProjectId: number;
+  contractId: number;
+  contractNumber: string;
+  vendorId: number;
+  vendorName: string;
+  versionNumber: number;
+  status: string;
+  procurementOwnerUserId: number;
+  procurementOwnerName?: string | null;
+  qualityScore: number;
+  scheduleScore: number;
+  costScore: number;
+  hseScore: number;
+  overallScore: number;
+  comments?: string | null;
+  preparedByUserId: number;
+  submittedAt?: string | null;
+  approvedAt?: string | null;
+  decisionReason?: string | null;
+  supersedesVendorRatingId?: number | null;
+  rowVersion: string;
+}
+export interface ProcurementWorkspaceResponse {
+  boqRevisions: ProjectBoqRevisionResponse[];
+  materialRequests: MaterialRequestResponse[];
+  contractLines: ProcurementContractLineResponse[];
+  receipts: WarehouseReceiptResponse[];
+  issues: WarehouseIssueResponse[];
+  vendorRatings: VendorRatingResponse[];
+}
+export interface ProjectBoqRevisionRequest {
+  upstreamContractId: number;
+  currency: string;
+  sourceTenderEstimateRevisionId?: number | null;
+  sourceContractAppendixId?: number | null;
+  lines: Array<{
+    itemCode: string;
+    description: string;
+    unit: string;
+    approvedQuantity: number;
+    budgetUnitPrice: number;
+  }>;
+  rowVersion?: string;
+}
+export interface MaterialRequestUpsertRequest {
+  responsibleSiteUserId: number;
+  assignedProcurementUserId: number;
+  requiredAt: string;
+  note?: string | null;
+  lines: Array<{ projectBoqLineId: number; requestedQuantity: number }>;
+  rowVersion?: string;
+}
+export interface ProcurementContractLineRequest {
+  contractId: number;
+  projectBoqLineId: number;
+  procurementOwnerUserId: number;
+  quantity: number;
+  negotiatedUnitPrice: number;
+  rowVersion?: string;
+}
+export interface VendorRatingUpsertRequest {
+  contractId: number;
+  qualityScore: number;
+  scheduleScore: number;
+  costScore: number;
+  hseScore: number;
+  comments?: string | null;
+  rowVersion?: string;
+}
 
 // --- Finance control workflows ---------------------------------------
 
-export interface PaymentAttachmentRequest { fileName: string; filePath: string }
-export interface PaymentAttachmentResponse extends PaymentAttachmentRequest { id: number }
-export interface PaymentRequestEventResponse { id: number; fromStatus?: string | null; toStatus: string; reason?: string | null; changedByUserId: number; changedByName?: string | null; changedAt: string }
+export interface PaymentAttachmentRequest {
+  fileName: string;
+  filePath: string;
+}
+export interface PaymentAttachmentResponse extends PaymentAttachmentRequest {
+  id: number;
+}
+export interface PaymentRequestEventResponse {
+  id: number;
+  fromStatus?: string | null;
+  toStatus: string;
+  reason?: string | null;
+  changedByUserId: number;
+  changedByName?: string | null;
+  changedAt: string;
+}
 export interface PaymentReferencesResponse {
-  contracts: Array<{ id: number; contractNumber: string; vendorId: number; vendorName: string; paymentMilestones: Array<{ id: number; order: number; name: string }> }>;
+  contracts: Array<{
+    id: number;
+    contractNumber: string;
+    vendorId: number;
+    vendorName: string;
+    paymentMilestones: Array<{ id: number; order: number; name: string }>;
+  }>;
   vendors: Array<{ id: number; vendorCode: string; companyName: string }>;
   accountants: Array<{ id: number; fullName: string | null }>;
 }
-export interface PaymentRequestResponse { id: number; code: string; contractId: number; contractNumber: string; vendorId: number; vendorName: string; contractPaymentMilestoneId?: number | null; supplierInvoiceNumber: string; invoiceDate: string; invoiceAmount: number; currency: string; status: string; receivedAt: string; validatedAt?: string | null; assignedAccountantUserId: number; assignedAccountantName?: string | null; submittedAt?: string | null; submittedByUserId?: number | null; approvedAt?: string | null; approvedByUserId?: number | null; paidAt?: string | null; paidByUserId?: number | null; rejectedAt?: string | null; cancelledAt?: string | null; decisionReason?: string | null; rowVersion: string; attachments: PaymentAttachmentResponse[]; events: PaymentRequestEventResponse[] }
-export interface PaymentRequestUpsertRequest { contractId: number; vendorId: number; contractPaymentMilestoneId?: number | null; supplierInvoiceNumber: string; invoiceDate: string; invoiceAmount: number; currency: string; receivedAt: string; assignedAccountantUserId: number; attachments: PaymentAttachmentRequest[]; rowVersion?: string }
-export interface AccountingPeriodResponse { id: number; year: number; month: number; periodStartUtc: string; periodEndUtc: string; status: string; closingAt?: string | null; closedAt?: string | null; closeReason?: string | null; rowVersion: string }
-export interface AccountingCorrectionResponse { id: number; code: string; operationalProjectId: number; projectName: string; accountingPeriodId: number; periodLabel: string; sourceEntityType: string; sourceEntityId: number; reasonCode: string; originalValue: number; correctedValue: number; currency: string; note?: string | null; responsibleAccountantUserId: number; responsibleAccountantName?: string | null; status: string; recordedByUserId: number; submittedAt?: string | null; approvedAt?: string | null; rejectedAt?: string | null; decisionReason?: string | null; reversalOfCorrectionId?: number | null; reversedAt?: string | null; rowVersion: string }
-export interface AccountingCorrectionUpsertRequest { operationalProjectId: number; accountingPeriodId: number; sourceEntityType: string; sourceEntityId: number; reasonCode: string; originalValue: number; correctedValue: number; currency: string; note?: string | null; responsibleAccountantUserId: number; rowVersion?: string }
+export interface PaymentRequestResponse {
+  id: number;
+  code: string;
+  contractId: number;
+  contractNumber: string;
+  vendorId: number;
+  vendorName: string;
+  contractPaymentMilestoneId?: number | null;
+  supplierInvoiceNumber: string;
+  invoiceDate: string;
+  invoiceAmount: number;
+  currency: string;
+  status: string;
+  receivedAt: string;
+  validatedAt?: string | null;
+  assignedAccountantUserId: number;
+  assignedAccountantName?: string | null;
+  submittedAt?: string | null;
+  submittedByUserId?: number | null;
+  approvedAt?: string | null;
+  approvedByUserId?: number | null;
+  paidAt?: string | null;
+  paidByUserId?: number | null;
+  rejectedAt?: string | null;
+  cancelledAt?: string | null;
+  decisionReason?: string | null;
+  rowVersion: string;
+  attachments: PaymentAttachmentResponse[];
+  events: PaymentRequestEventResponse[];
+}
+export interface PaymentRequestUpsertRequest {
+  contractId: number;
+  vendorId: number;
+  contractPaymentMilestoneId?: number | null;
+  supplierInvoiceNumber: string;
+  invoiceDate: string;
+  invoiceAmount: number;
+  currency: string;
+  receivedAt: string;
+  assignedAccountantUserId: number;
+  attachments: PaymentAttachmentRequest[];
+  rowVersion?: string;
+}
+export interface AccountingPeriodResponse {
+  id: number;
+  year: number;
+  month: number;
+  periodStartUtc: string;
+  periodEndUtc: string;
+  status: string;
+  closingAt?: string | null;
+  closedAt?: string | null;
+  closeReason?: string | null;
+  rowVersion: string;
+}
+export interface AccountingCorrectionResponse {
+  id: number;
+  code: string;
+  operationalProjectId: number;
+  projectName: string;
+  accountingPeriodId: number;
+  periodLabel: string;
+  sourceEntityType: string;
+  sourceEntityId: number;
+  reasonCode: string;
+  originalValue: number;
+  correctedValue: number;
+  currency: string;
+  note?: string | null;
+  responsibleAccountantUserId: number;
+  responsibleAccountantName?: string | null;
+  status: string;
+  recordedByUserId: number;
+  submittedAt?: string | null;
+  approvedAt?: string | null;
+  rejectedAt?: string | null;
+  decisionReason?: string | null;
+  reversalOfCorrectionId?: number | null;
+  reversedAt?: string | null;
+  rowVersion: string;
+}
+export interface AccountingCorrectionUpsertRequest {
+  operationalProjectId: number;
+  accountingPeriodId: number;
+  sourceEntityType: string;
+  sourceEntityId: number;
+  reasonCode: string;
+  originalValue: number;
+  correctedValue: number;
+  currency: string;
+  note?: string | null;
+  responsibleAccountantUserId: number;
+  rowVersion?: string;
+}
 
 // Partial acceptance (Nghiệm thu từng phần / NIH-143)
 export type AcceptanceStatus = "Draft" | "Submitted" | "Approved" | "Rejected" | "Cancelled";
@@ -4403,12 +4937,7 @@ export interface AcceptanceRecordBulkDeleteResponse {
 // --- As-built dossier (NIH-145) ---------------------------------------
 export type AsBuiltStatus = "Draft" | "Submitted" | "Approved" | "Archived" | "Cancelled";
 export type AsBuiltCategory =
-  | "Drawing"
-  | "AcceptanceMinute"
-  | "TestReport"
-  | "WarrantyCertificate"
-  | "Other"
-  | string; // Allow dynamic categories
+  "Drawing" | "AcceptanceMinute" | "TestReport" | "WarrantyCertificate" | "Other" | string; // Allow dynamic categories
 
 // --- As-built document categories (NIH-452) ---------------------------
 export interface AsBuiltDocumentCategoryResponse {
@@ -4770,12 +5299,9 @@ export const adminApi = {
   },
 
   // Activities / Posts
-  createActivity: (data: UpsertActivityRequest) =>
-    api.post("/activities", data),
-  updateActivity: (id: number, data: UpsertActivityRequest) =>
-    api.put(`/activities/${id}`, data),
-  deleteActivity: (id: number) =>
-    api.delete(`/activities/${id}`),
+  createActivity: (data: UpsertActivityRequest) => api.post("/activities", data),
+  updateActivity: (id: number, data: UpsertActivityRequest) => api.put(`/activities/${id}`, data),
+  deleteActivity: (id: number) => api.delete(`/activities/${id}`),
 
   // Activity categories
   getActivityCategories: (includeInactive = false) =>
@@ -4784,8 +5310,7 @@ export const adminApi = {
     api.post<ActivityCategoryResponse>("/activity-categories", data),
   updateActivityCategory: (id: number, data: UpsertActivityCategoryRequest) =>
     api.put<ActivityCategoryResponse>(`/activity-categories/${id}`, data),
-  deleteActivityCategory: (id: number) =>
-    api.delete(`/activity-categories/${id}`),
+  deleteActivityCategory: (id: number) => api.delete(`/activity-categories/${id}`),
 
   // News categories
   getNewsCategories: (includeInactive = false) =>
@@ -4794,8 +5319,7 @@ export const adminApi = {
     api.post<NewsCategoryResponse>("/news-categories", data),
   updateNewsCategory: (id: number, data: UpsertNewsCategoryRequest) =>
     api.put<NewsCategoryResponse>(`/news-categories/${id}`, data),
-  deleteNewsCategory: (id: number) =>
-    api.delete(`/news-categories/${id}`),
+  deleteNewsCategory: (id: number) => api.delete(`/news-categories/${id}`),
 
   // Project categories
   getProjectCategories: (includeInactive = false) =>
@@ -4804,18 +5328,18 @@ export const adminApi = {
     api.post<ProjectCategoryResponse>("/project-categories", data),
   updateProjectCategory: (id: number, data: UpsertProjectCategoryRequest) =>
     api.put<ProjectCategoryResponse>(`/project-categories/${id}`, data),
-  deleteProjectCategory: (id: number) =>
-    api.delete(`/project-categories/${id}`),
+  deleteProjectCategory: (id: number) => api.delete(`/project-categories/${id}`),
 
   // As-built document categories (NIH-452)
   getAsBuiltDocumentCategories: (includeInactive = false) =>
-    api.get<AsBuiltDocumentCategoryResponse[]>(`/asbuilt-categories?includeInactive=${includeInactive}`),
+    api.get<AsBuiltDocumentCategoryResponse[]>(
+      `/asbuilt-categories?includeInactive=${includeInactive}`,
+    ),
   createAsBuiltDocumentCategory: (data: UpsertAsBuiltDocumentCategoryRequest) =>
     api.post<AsBuiltDocumentCategoryResponse>("/asbuilt-categories", data),
   updateAsBuiltDocumentCategory: (id: number, data: UpsertAsBuiltDocumentCategoryRequest) =>
     api.put<AsBuiltDocumentCategoryResponse>(`/asbuilt-categories/${id}`, data),
-  deleteAsBuiltDocumentCategory: (id: number) =>
-    api.delete(`/asbuilt-categories/${id}`),
+  deleteAsBuiltDocumentCategory: (id: number) => api.delete(`/asbuilt-categories/${id}`),
 
   // Employment types
   getEmploymentTypes: (includeInactive = false) =>
@@ -4824,12 +5348,13 @@ export const adminApi = {
     api.post<EmploymentTypeResponse>("/employment-types", data),
   updateEmploymentType: (id: number, data: UpsertEmploymentTypeRequest) =>
     api.put<EmploymentTypeResponse>(`/employment-types/${id}`, data),
-  deleteEmploymentType: (id: number) =>
-    api.delete(`/employment-types/${id}`),
+  deleteEmploymentType: (id: number) => api.delete(`/employment-types/${id}`),
 
   // Recruitment dropdown options (experience-level, benefit)
   getRecruitmentDropdownOptions: (type: string, includeInactive = false) =>
-    api.get<RecruitmentDropdownOptionResponse[]>(`/recruitment-dropdown-options?type=${encodeURIComponent(type)}&includeInactive=${includeInactive}`),
+    api.get<RecruitmentDropdownOptionResponse[]>(
+      `/recruitment-dropdown-options?type=${encodeURIComponent(type)}&includeInactive=${includeInactive}`,
+    ),
   createRecruitmentDropdownOption: (data: UpsertRecruitmentDropdownOptionRequest) =>
     api.post<RecruitmentDropdownOptionResponse>("/recruitment-dropdown-options", data),
   updateRecruitmentDropdownOption: (id: number, data: UpsertRecruitmentDropdownOptionRequest) =>
@@ -4838,36 +5363,24 @@ export const adminApi = {
     api.delete(`/recruitment-dropdown-options/${id}`),
 
   // News
-  createNews: (data: UpsertNewsRequest) =>
-    api.post("/news", data),
-  updateNews: (id: number, data: UpsertNewsRequest) =>
-    api.put(`/news/${id}`, data),
-  deleteNews: (id: number) =>
-    api.delete(`/news/${id}`),
+  createNews: (data: UpsertNewsRequest) => api.post("/news", data),
+  updateNews: (id: number, data: UpsertNewsRequest) => api.put(`/news/${id}`, data),
+  deleteNews: (id: number) => api.delete(`/news/${id}`),
 
   // Projects
-  createProject: (data: UpsertProjectRequest) =>
-    api.post("/projects", data),
-  updateProject: (id: number, data: UpsertProjectRequest) =>
-    api.put(`/projects/${id}`, data),
-  deleteProject: (id: number) =>
-    api.delete(`/projects/${id}`),
+  createProject: (data: UpsertProjectRequest) => api.post("/projects", data),
+  updateProject: (id: number, data: UpsertProjectRequest) => api.put(`/projects/${id}`, data),
+  deleteProject: (id: number) => api.delete(`/projects/${id}`),
 
   // Logos
-  createLogo: (data: UpsertLogoRequest) =>
-    api.post("/logos", data),
-  updateLogo: (id: number, data: UpsertLogoRequest) =>
-    api.put(`/logos/${id}`, data),
-  deleteLogo: (id: number) =>
-    api.delete(`/logos/${id}`),
+  createLogo: (data: UpsertLogoRequest) => api.post("/logos", data),
+  updateLogo: (id: number, data: UpsertLogoRequest) => api.put(`/logos/${id}`, data),
+  deleteLogo: (id: number) => api.delete(`/logos/${id}`),
 
   // Processes
-  createProcess: (data: UpsertProcessRequest) =>
-    api.post("/processes", data),
-  updateProcess: (id: number, data: UpsertProcessRequest) =>
-    api.put(`/processes/${id}`, data),
-  deleteProcess: (id: number) =>
-    api.delete(`/processes/${id}`),
+  createProcess: (data: UpsertProcessRequest) => api.post("/processes", data),
+  updateProcess: (id: number, data: UpsertProcessRequest) => api.put(`/processes/${id}`, data),
+  deleteProcess: (id: number) => api.delete(`/processes/${id}`),
   uploadProcessImage: (file: File, groupKey: string) => {
     const fd = new FormData();
     fd.append("file", file);
@@ -4886,22 +5399,17 @@ export const adminApi = {
   },
 
   // Services
-  createService: (data: UpsertServiceAdminRequest) =>
-    api.post<ServiceResponse>('/services', data),
+  createService: (data: UpsertServiceAdminRequest) => api.post<ServiceResponse>("/services", data),
   updateService: (id: number, data: UpsertServiceAdminRequest) =>
     api.put<ServiceResponse>(`/services/${id}`, data),
-  deleteService: (id: number) =>
-    api.delete(`/services/${id}`),
+  deleteService: (id: number) => api.delete(`/services/${id}`),
 
   // Slideshow
   getSlideshow: (lang = "vi", activeOnly = false) =>
     api.get<SlideshowAdminResponse[]>(`/slideshow?lang=${lang}&activeOnly=${activeOnly}`),
-  createSlideshow: (data: UpsertSlideshowRequest) =>
-    api.post("/slideshow", data),
-  updateSlideshow: (id: number, data: UpsertSlideshowRequest) =>
-    api.put(`/slideshow/${id}`, data),
-  deleteSlideshow: (id: number) =>
-    api.delete(`/slideshow/${id}`),
+  createSlideshow: (data: UpsertSlideshowRequest) => api.post("/slideshow", data),
+  updateSlideshow: (id: number, data: UpsertSlideshowRequest) => api.put(`/slideshow/${id}`, data),
+  deleteSlideshow: (id: number) => api.delete(`/slideshow/${id}`),
 
   // About sections
   getAboutSections: (activeOnly = false) =>
@@ -4910,8 +5418,7 @@ export const adminApi = {
     api.post<AboutSectionAdminResponse>("/about-sections", data),
   updateAboutSection: (id: number, data: UpsertAboutSectionRequest) =>
     api.put<AboutSectionAdminResponse>(`/about-sections/${id}`, data),
-  deleteAboutSection: (id: number) =>
-    api.delete(`/about-sections/${id}`),
+  deleteAboutSection: (id: number) => api.delete(`/about-sections/${id}`),
 
   // Job positions
   getJobPositions: (includeInactive = false) =>
@@ -4920,8 +5427,7 @@ export const adminApi = {
     api.post<JobPositionResponse>("/job-positions", data),
   updateJobPosition: (id: number, data: UpsertJobPositionRequest) =>
     api.put<JobPositionResponse>(`/job-positions/${id}`, data),
-  deleteJobPosition: (id: number) =>
-    api.delete(`/job-positions/${id}`),
+  deleteJobPosition: (id: number) => api.delete(`/job-positions/${id}`),
 
   // Job applications
   getJobApplications: (positionId?: number, status?: string) => {
@@ -4932,28 +5438,24 @@ export const adminApi = {
   },
   updateApplicationStatus: (id: number, status: string) =>
     api.patch<JobApplicationResponse>(`/job-applications/${id}/status`, { status }),
-  deleteApplication: (id: number) =>
-    api.delete(`/job-applications/${id}`),
+  deleteApplication: (id: number) => api.delete(`/job-applications/${id}`),
 
   // Public: submit application (no auth needed but goes through same axios instance)
   submitJobApplication: (data: SubmitJobApplicationRequest) =>
     api.post<JobApplicationResponse>("/job-applications", data),
 
   // Email templates
-  getEmailTemplates: () =>
-    api.get<EmailTemplatesResponse>("/site-settings/email-templates"),
+  getEmailTemplates: () => api.get<EmailTemplatesResponse>("/site-settings/email-templates"),
   updateEmailTemplates: (data: UpdateEmailTemplatesRequest) =>
     api.put<EmailTemplatesResponse>("/site-settings/email-templates", data),
 
   // OTP settings
-  getOtpSettings: () =>
-    api.get<OtpSettingsResponse>("/site-settings/otp-settings"),
+  getOtpSettings: () => api.get<OtpSettingsResponse>("/site-settings/otp-settings"),
   updateOtpSettings: (data: UpdateOtpSettingsRequest) =>
     api.put<OtpSettingsResponse>("/site-settings/otp-settings", data),
 
   // Map embed (Google Maps URL shown on Contact page)
-  getMapEmbed: () =>
-    api.get<MapEmbedResponse>("/site-settings/map-embed"),
+  getMapEmbed: () => api.get<MapEmbedResponse>("/site-settings/map-embed"),
   updateMapEmbed: (data: UpdateMapEmbedRequest) =>
     api.put<MapEmbedResponse>("/site-settings/map-embed", data),
 
@@ -4963,7 +5465,10 @@ export const adminApi = {
   getGoogleDriveConfiguration: () =>
     api.get<GoogleDriveAdminConfigurationResponse>("/site-settings/google-drive/configuration"),
   updateGoogleDriveConfiguration: (data: UpdateGoogleDriveConfigurationRequest) =>
-    api.put<GoogleDriveAdminConfigurationResponse>("/site-settings/google-drive/configuration", data),
+    api.put<GoogleDriveAdminConfigurationResponse>(
+      "/site-settings/google-drive/configuration",
+      data,
+    ),
   startGoogleDriveOAuth: () =>
     api.post<GoogleDriveOAuthStartResponse>("/site-settings/google-drive/oauth/start"),
   disconnectGoogleDriveOAuth: () =>
@@ -4979,8 +5484,7 @@ export const adminApi = {
     api.post<ContactMessageResponse>(`/contacts/${id}/reply`, { replyContent }),
   markContactReplied: (id: number) =>
     api.patch<ContactMessageResponse>(`/contacts/${id}/mark-replied`),
-  deleteContact: (id: number) =>
-    api.delete(`/contacts/${id}`),
+  deleteContact: (id: number) => api.delete(`/contacts/${id}`),
 
   // CRM leads
   listLeads: (params: LeadListParams = {}) => {
@@ -4996,10 +5500,8 @@ export const adminApi = {
     return api.get<LeadListResponse>(`/leads${qs ? `?${qs}` : ""}`);
   },
   getLead: (id: number) => api.get<LeadResponse>(`/leads/${id}`),
-  createLead: (body: CreateLeadRequest) =>
-    api.post<LeadResponse>("/leads", body),
-  updateLead: (id: number, body: UpdateLeadRequest) =>
-    api.put<LeadResponse>(`/leads/${id}`, body),
+  createLead: (body: CreateLeadRequest) => api.post<LeadResponse>("/leads", body),
+  updateLead: (id: number, body: UpdateLeadRequest) => api.put<LeadResponse>(`/leads/${id}`, body),
   getLeadDeletionImpact: (id: number) =>
     api.get<DeletionImpactResponse>(`/leads/${id}/deletion-impact`),
   deleteLead: (id: number, body: ConfirmDeletionRequest) =>
@@ -5031,7 +5533,8 @@ export const adminApi = {
   },
   getCustomer: (id: number) => api.get<CustomerResponse>(`/customers/${id}`),
   createCustomer: (body: CreateCustomerRequest) => api.post<CustomerResponse>("/customers", body),
-  updateCustomer: (id: number, body: UpdateCustomerRequest) => api.put<CustomerResponse>(`/customers/${id}`, body),
+  updateCustomer: (id: number, body: UpdateCustomerRequest) =>
+    api.put<CustomerResponse>(`/customers/${id}`, body),
   getCustomerDeletionImpact: (id: number) =>
     api.get<DeletionImpactResponse>(`/customers/${id}/deletion-impact`),
   deleteCustomer: (id: number, body: ConfirmDeletionRequest) =>
@@ -5075,15 +5578,18 @@ export const adminApi = {
   },
   getVendor: (id: number) => api.get<VendorResponse>(`/vendors/${id}`),
   createVendor: (body: CreateVendorRequest) => api.post<VendorResponse>("/vendors", body),
-  updateVendor: (id: number, body: UpdateVendorRequest) => api.put<VendorResponse>(`/vendors/${id}`, body),
-  getVendorDeletionImpact: (id: number) => api.get<DeletionImpactResponse>(`/vendors/${id}/deletion-impact`),
+  updateVendor: (id: number, body: UpdateVendorRequest) =>
+    api.put<VendorResponse>(`/vendors/${id}`, body),
+  getVendorDeletionImpact: (id: number) =>
+    api.get<DeletionImpactResponse>(`/vendors/${id}/deletion-impact`),
   deleteVendor: (id: number, body: ConfirmDeletionRequest) =>
     api.delete<HardDeleteOperationResult | null>(`/vendors/${id}`, {
       ...withIfMatch(body.rowVersion),
       data: body,
     }),
   uploadVendorDocument: (file: File) => uploadBusinessDocument("vendors", file),
-  discardVendorDocument: (claimToken: string) => api.delete("/business-documents/vendors", { data: { claimToken } }),
+  discardVendorDocument: (claimToken: string) =>
+    api.delete("/business-documents/vendors", { data: { claimToken } }),
 
   // CRM opportunities (NIH-83)
   listOpportunities: (params: OpportunityListParams = {}) => {
@@ -5098,7 +5604,8 @@ export const adminApi = {
     if (params.search) q.append("search", params.search);
     if (params.page) q.append("page", String(params.page));
     if (params.pageSize) q.append("pageSize", String(params.pageSize));
-    if (params.quoteEligibleOnly != null) q.append("quoteEligibleOnly", String(params.quoteEligibleOnly));
+    if (params.quoteEligibleOnly != null)
+      q.append("quoteEligibleOnly", String(params.quoteEligibleOnly));
     const qs = q.toString();
     return api.get<OpportunityListResponse>(`/opportunities${qs ? `?${qs}` : ""}`);
   },
@@ -5155,14 +5662,16 @@ export const adminApi = {
   exportQuoteSpreadsheet: (id: number, lang: string) =>
     api.get<Blob>(`/quotes/${id}/export.xlsx`, { params: { lang }, responseType: "blob" }),
   createQuote: (body: CreateQuoteRequest) => api.post<QuoteResponse>("/quotes", body),
-  updateQuote: (id: number, body: UpdateQuoteRequest) => api.put<QuoteResponse>(`/quotes/${id}`, body),
+  updateQuote: (id: number, body: UpdateQuoteRequest) =>
+    api.put<QuoteResponse>(`/quotes/${id}`, body),
   submitQuote: (id: number, body: QuoteWorkflowRequest = {}) =>
     api.post<QuoteResponse>(`/quotes/${id}/submit`, body),
   approveQuote: (id: number, body: QuoteWorkflowRequest = {}) =>
     api.post<QuoteResponse>(`/quotes/${id}/approve`, body),
   rejectQuoteInternal: (id: number, body: QuoteWorkflowRequest = {}) =>
     api.post<QuoteResponse>(`/quotes/${id}/reject-internal`, body),
-  getQuoteEmailPreview: (id: number) => api.get<QuoteEmailPreviewResponse>(`/quotes/${id}/email-preview`),
+  getQuoteEmailPreview: (id: number) =>
+    api.get<QuoteEmailPreviewResponse>(`/quotes/${id}/email-preview`),
   sendQuoteToCustomer: (id: number, body: SendQuoteEmailRequest) =>
     api.post<QuoteResponse>(`/quotes/${id}/send`, body),
   markQuoteCustomerApproved: (id: number, body: QuoteWorkflowRequest = {}) =>
@@ -5173,8 +5682,7 @@ export const adminApi = {
     api.post<QuoteResponse>(`/quotes/${id}/cancel`, body),
   extendQuoteValidity: (id: number, body: ExtendQuoteValidityRequest) =>
     api.post<QuoteResponse>(`/quotes/${id}/extend-validity`, body),
-  listQuoteDocuments: (id: number) =>
-    api.get<QuoteDocumentResponse[]>(`/quotes/${id}/documents`),
+  listQuoteDocuments: (id: number) => api.get<QuoteDocumentResponse[]>(`/quotes/${id}/documents`),
   getQuoteDocumentContent: (id: number, documentId: number) =>
     api.get<Blob>(`/quotes/${id}/documents/${documentId}/content`, {
       responseType: "blob",
@@ -5193,7 +5701,11 @@ export const adminApi = {
     api.delete<HardDeleteOperationResult>(`/quotes/${id}`, { data: body }),
 
   // Material rate catalogs
-  listMaterialRateCatalogs: (search?: string, includeInactive = false, catalogType?: MaterialRateCatalogType) =>
+  listMaterialRateCatalogs: (
+    search?: string,
+    includeInactive = false,
+    catalogType?: MaterialRateCatalogType,
+  ) =>
     api.get<MaterialRateCatalogResponse[]>("/material-rate-catalogs", {
       params: { search: search?.trim() || undefined, includeInactive, catalogType },
     }),
@@ -5203,16 +5715,24 @@ export const adminApi = {
     api.post<MaterialRateCatalogResponse>("/material-rate-catalogs", body),
   updateMaterialRateCatalog: (id: number, body: UpsertMaterialRateCatalogRequest) =>
     api.put<MaterialRateCatalogResponse>(`/material-rate-catalogs/${id}`, body),
-  deleteMaterialRateCatalog: (id: number) =>
-    api.delete(`/material-rate-catalogs/${id}`),
+  deleteMaterialRateCatalog: (id: number) => api.delete(`/material-rate-catalogs/${id}`),
   downloadMaterialRateTemplate: (catalogType: MaterialRateCatalogType = "InvestmentRate") =>
-    api.get<Blob>("/material-rate-catalogs/csv-template", { params: { catalogType }, responseType: "blob" }),
-  downloadMaterialRateExcelTemplate: (language: "vi" | "en" | "zh" | "ja", catalogType: MaterialRateCatalogType = "InvestmentRate") =>
+    api.get<Blob>("/material-rate-catalogs/csv-template", {
+      params: { catalogType },
+      responseType: "blob",
+    }),
+  downloadMaterialRateExcelTemplate: (
+    language: "vi" | "en" | "zh" | "ja",
+    catalogType: MaterialRateCatalogType = "InvestmentRate",
+  ) =>
     api.get<Blob>("/material-rate-catalogs/excel-template", {
       params: { language, catalogType },
       responseType: "blob",
     }),
-  downloadMaterialRateTemplatePackage: (language: "vi" | "en" | "zh" | "ja", catalogType: MaterialRateCatalogType = "InvestmentRate") =>
+  downloadMaterialRateTemplatePackage: (
+    language: "vi" | "en" | "zh" | "ja",
+    catalogType: MaterialRateCatalogType = "InvestmentRate",
+  ) =>
     api.get<Blob>("/material-rate-catalogs/template-package", {
       params: { language, catalogType },
       responseType: "blob",
@@ -5220,25 +5740,61 @@ export const adminApi = {
   listMaterialRateRevisions: (catalogId: number) =>
     api.get<MaterialRateRevisionResponse[]>(`/material-rate-catalogs/${catalogId}/revisions`),
   getMaterialRateRevision: (catalogId: number, revisionId: number) =>
-    api.get<MaterialRateRevisionResponse>(`/material-rate-catalogs/${catalogId}/revisions/${revisionId}`),
+    api.get<MaterialRateRevisionResponse>(
+      `/material-rate-catalogs/${catalogId}/revisions/${revisionId}`,
+    ),
   getEffectiveMaterialRateRevision: (catalogId: number, onDate: string) =>
     api.get<MaterialRateRevisionResponse>(`/material-rate-catalogs/${catalogId}/effective`, {
       params: { onDate },
     }),
   createMaterialRateRevision: (catalogId: number, body: CreateMaterialRateRevisionRequest) =>
     api.post<MaterialRateRevisionResponse>(`/material-rate-catalogs/${catalogId}/revisions`, body),
-  createInvestmentMaterialRateLine: (catalogId: number, revisionId: number, body: UpsertInvestmentRateLineRequest) =>
-    api.post<MaterialRateRevisionResponse>(`/material-rate-catalogs/${catalogId}/revisions/${revisionId}/investment-lines`, body),
-  updateInvestmentMaterialRateLine: (catalogId: number, revisionId: number, lineId: number, body: UpsertInvestmentRateLineRequest) =>
-    api.put<MaterialRateRevisionResponse>(`/material-rate-catalogs/${catalogId}/revisions/${revisionId}/investment-lines/${lineId}`, body),
+  createInvestmentMaterialRateLine: (
+    catalogId: number,
+    revisionId: number,
+    body: UpsertInvestmentRateLineRequest,
+  ) =>
+    api.post<MaterialRateRevisionResponse>(
+      `/material-rate-catalogs/${catalogId}/revisions/${revisionId}/investment-lines`,
+      body,
+    ),
+  updateInvestmentMaterialRateLine: (
+    catalogId: number,
+    revisionId: number,
+    lineId: number,
+    body: UpsertInvestmentRateLineRequest,
+  ) =>
+    api.put<MaterialRateRevisionResponse>(
+      `/material-rate-catalogs/${catalogId}/revisions/${revisionId}/investment-lines/${lineId}`,
+      body,
+    ),
   deleteInvestmentMaterialRateLine: (catalogId: number, revisionId: number, lineId: number) =>
-    api.delete<MaterialRateRevisionResponse>(`/material-rate-catalogs/${catalogId}/revisions/${revisionId}/investment-lines/${lineId}`),
-  createBoqMaterialRateLine: (catalogId: number, revisionId: number, body: UpsertBoqMaterialRateLineRequest) =>
-    api.post<MaterialRateRevisionResponse>(`/material-rate-catalogs/${catalogId}/revisions/${revisionId}/lines`, body),
-  updateBoqMaterialRateLine: (catalogId: number, revisionId: number, lineId: number, body: UpsertBoqMaterialRateLineRequest) =>
-    api.put<MaterialRateRevisionResponse>(`/material-rate-catalogs/${catalogId}/revisions/${revisionId}/lines/${lineId}`, body),
+    api.delete<MaterialRateRevisionResponse>(
+      `/material-rate-catalogs/${catalogId}/revisions/${revisionId}/investment-lines/${lineId}`,
+    ),
+  createBoqMaterialRateLine: (
+    catalogId: number,
+    revisionId: number,
+    body: UpsertBoqMaterialRateLineRequest,
+  ) =>
+    api.post<MaterialRateRevisionResponse>(
+      `/material-rate-catalogs/${catalogId}/revisions/${revisionId}/lines`,
+      body,
+    ),
+  updateBoqMaterialRateLine: (
+    catalogId: number,
+    revisionId: number,
+    lineId: number,
+    body: UpsertBoqMaterialRateLineRequest,
+  ) =>
+    api.put<MaterialRateRevisionResponse>(
+      `/material-rate-catalogs/${catalogId}/revisions/${revisionId}/lines/${lineId}`,
+      body,
+    ),
   deleteBoqMaterialRateLine: (catalogId: number, revisionId: number, lineId: number) =>
-    api.delete<MaterialRateRevisionResponse>(`/material-rate-catalogs/${catalogId}/revisions/${revisionId}/lines/${lineId}`),
+    api.delete<MaterialRateRevisionResponse>(
+      `/material-rate-catalogs/${catalogId}/revisions/${revisionId}/lines/${lineId}`,
+    ),
   importMaterialRateRevision: (catalogId: number, revisionId: number, file: File) => {
     const formData = new FormData();
     formData.append("file", file);
@@ -5252,23 +5808,40 @@ export const adminApi = {
   createBoqImportTemplate: (body: Omit<BoqImportTemplateResponse, "id" | "isSystem">) =>
     api.post<BoqImportTemplateResponse>("/material-rate-catalogs/boq-import-templates", body),
   previewBoqWorkbook: (catalogId: number, revisionId: number, file: File) => {
-    const data = new FormData(); data.append("file", file);
-    return api.post<BoqWorkbookPreviewResponse>(`/material-rate-catalogs/${catalogId}/revisions/${revisionId}/boq-workbook/preview`, data);
-  },
-  importBoqWorkbook: (catalogId: number, revisionId: number, file: File, sourceHash: string, mappings: BoqWorkbookSheetPreviewResponse[]) => {
     const data = new FormData();
-    const selectedMappings = mappings.filter(mapping => mapping.include).map(mapping => ({
-      sheetName: mapping.name,
-      include: true,
-      headerRow: mapping.headerRow,
-      itemCodeColumn: mapping.itemCodeColumn,
-      descriptionColumn: mapping.descriptionColumn,
-      unitColumn: mapping.unitColumn,
-      quantityColumn: mapping.quantityColumn,
-      unitPriceColumn: mapping.unitPriceColumn,
-    }));
-    data.append("file", file); data.append("sourceHash", sourceHash); data.append("mappingsJson", JSON.stringify(selectedMappings));
-    return api.post<MaterialRateRevisionResponse>(`/material-rate-catalogs/${catalogId}/revisions/${revisionId}/boq-workbook/import`, data);
+    data.append("file", file);
+    return api.post<BoqWorkbookPreviewResponse>(
+      `/material-rate-catalogs/${catalogId}/revisions/${revisionId}/boq-workbook/preview`,
+      data,
+    );
+  },
+  importBoqWorkbook: (
+    catalogId: number,
+    revisionId: number,
+    file: File,
+    sourceHash: string,
+    mappings: BoqWorkbookSheetPreviewResponse[],
+  ) => {
+    const data = new FormData();
+    const selectedMappings = mappings
+      .filter((mapping) => mapping.include)
+      .map((mapping) => ({
+        sheetName: mapping.name,
+        include: true,
+        headerRow: mapping.headerRow,
+        itemCodeColumn: mapping.itemCodeColumn,
+        descriptionColumn: mapping.descriptionColumn,
+        unitColumn: mapping.unitColumn,
+        quantityColumn: mapping.quantityColumn,
+        unitPriceColumn: mapping.unitPriceColumn,
+      }));
+    data.append("file", file);
+    data.append("sourceHash", sourceHash);
+    data.append("mappingsJson", JSON.stringify(selectedMappings));
+    return api.post<MaterialRateRevisionResponse>(
+      `/material-rate-catalogs/${catalogId}/revisions/${revisionId}/boq-workbook/import`,
+      data,
+    );
   },
   approveMaterialRateRevision: (catalogId: number, revisionId: number, note?: string) =>
     api.post<MaterialRateRevisionResponse>(
@@ -5307,10 +5880,7 @@ export const adminApi = {
   uploadCapabilityDocument: (file: File) => {
     const formData = new FormData();
     formData.append("file", file);
-    return api.post<CapabilityDocumentUploadResponse>(
-      "/capability-documents/upload",
-      formData,
-    );
+    return api.post<CapabilityDocumentUploadResponse>("/capability-documents/upload", formData);
   },
   createCapabilityDocument: (body: UpsertCapabilityDocumentRequest) =>
     api.post<CapabilityDocumentResponse>("/capability-documents", body),
@@ -5351,7 +5921,8 @@ export const adminApi = {
   listTenderAssigneeOptions: () =>
     api.get<TenderAssigneeOptionResponse[]>("/tenders/assignee-options"),
   createTender: (body: CreateTenderRequest) => api.post<TenderResponse>("/tenders", body),
-  updateTender: (id: number, body: UpdateTenderRequest) => api.put<TenderResponse>(`/tenders/${id}`, body),
+  updateTender: (id: number, body: UpdateTenderRequest) =>
+    api.put<TenderResponse>(`/tenders/${id}`, body),
   getTenderDeletionImpact: (id: number) =>
     api.get<DeletionImpactResponse>(`/tenders/${id}/deletion-impact`),
   deleteTender: (id: number, body: ConfirmDeletionRequest) =>
@@ -5370,11 +5941,9 @@ export const adminApi = {
   uploadTenderChecklistFile: (tenderId: number, itemId: number, file: File) => {
     const form = new FormData();
     form.append("file", file);
-    return api.post<TenderResponse>(
-      `/tenders/${tenderId}/checklist/${itemId}/upload`,
-      form,
-      { headers: { "Content-Type": "multipart/form-data" } },
-    );
+    return api.post<TenderResponse>(`/tenders/${tenderId}/checklist/${itemId}/upload`, form, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
   },
   getTenderChecklistFileContent: (tenderId: number, itemId: number) =>
     api.get<Blob>(`/tenders/${tenderId}/checklist/${itemId}/content`, {
@@ -5393,10 +5962,12 @@ export const adminApi = {
   transitionTender: (tenderId: number, body: TransitionTenderRequest) =>
     api.post<TenderResponse>(`/tenders/${tenderId}/transition`, body),
   submitTender: (tenderId: number, body: SubmitTenderRequest, idempotencyKey: string) =>
-    api.post<TenderResponse>(`/tenders/${tenderId}/submit`, body, { headers: {
-      ...withIdempotencyKey(idempotencyKey).headers,
-      ...withIfMatch(body.rowVersion).headers,
-    } }),
+    api.post<TenderResponse>(`/tenders/${tenderId}/submit`, body, {
+      headers: {
+        ...withIdempotencyKey(idempotencyKey).headers,
+        ...withIfMatch(body.rowVersion).headers,
+      },
+    }),
   downloadTenderEstimateTemplate: (tenderId: number) =>
     api.get<Blob>(`/tenders/${tenderId}/estimates/template`, { responseType: "blob" }),
   listTenderEstimates: (tenderId: number) =>
@@ -5409,11 +5980,20 @@ export const adminApi = {
     return api.post<TenderEstimateImportResponse>(`/tenders/${tenderId}/estimates/import`, form);
   },
   submitTenderEstimate: (tenderId: number, revisionId: number, note?: string | null) =>
-    api.post<TenderEstimateRevisionResponse>(`/tenders/${tenderId}/estimates/${revisionId}/submit`, { note }),
+    api.post<TenderEstimateRevisionResponse>(
+      `/tenders/${tenderId}/estimates/${revisionId}/submit`,
+      { note },
+    ),
   approveTenderEstimate: (tenderId: number, revisionId: number, note?: string | null) =>
-    api.post<TenderEstimateRevisionResponse>(`/tenders/${tenderId}/estimates/${revisionId}/approve`, { note }),
+    api.post<TenderEstimateRevisionResponse>(
+      `/tenders/${tenderId}/estimates/${revisionId}/approve`,
+      { note },
+    ),
   rejectTenderEstimate: (tenderId: number, revisionId: number, note?: string | null) =>
-    api.post<TenderEstimateRevisionResponse>(`/tenders/${tenderId}/estimates/${revisionId}/reject`, { note }),
+    api.post<TenderEstimateRevisionResponse>(
+      `/tenders/${tenderId}/estimates/${revisionId}/reject`,
+      { note },
+    ),
 
   // Surveys (NIH-99)
   listSurveys: (params: SurveyListParams = {}) => {
@@ -5459,9 +6039,9 @@ export const adminApi = {
     surveyId: number,
     resultId: number,
     request: UpdateSurveyChecklistRequest,
-  ) => api.put<SurveyChecklistResultResponse>(`/surveys/${surveyId}/checklist/${resultId}`, request),
-  getSurveySyncLog: (id: number) =>
-    api.get<SurveySyncLogResponse[]>(`/surveys/${id}/sync-log`),
+  ) =>
+    api.put<SurveyChecklistResultResponse>(`/surveys/${surveyId}/checklist/${resultId}`, request),
+  getSurveySyncLog: (id: number) => api.get<SurveySyncLogResponse[]>(`/surveys/${id}/sync-log`),
   getSurveyDriveConnection: () =>
     api.get<SurveyDriveConnectionStatusResponse>("/surveys/drive-connection"),
   exportSurveyPdf: (id: number, lang: "vi" | "en" | "zh" | "ja") =>
@@ -5495,8 +6075,7 @@ export const adminApi = {
     const qs = q.toString();
     return api.get<DesignProjectListResponse>(`/design-projects${qs ? `?${qs}` : ""}`);
   },
-  getDesignProject: (id: number) =>
-    api.get<DesignProjectResponse>(`/design-projects/${id}`),
+  getDesignProject: (id: number) => api.get<DesignProjectResponse>(`/design-projects/${id}`),
   createDesignProject: (body: CreateDesignProjectRequest) =>
     api.post<DesignProjectResponse>("/design-projects", body),
   updateDesignProject: (id: number, body: UpdateDesignProjectRequest) =>
@@ -5507,81 +6086,175 @@ export const adminApi = {
     api.delete<HardDeleteOperationResult | null>(`/design-projects/${id}`, { data: body }),
 
   getDesignSchedule: (projectId: number, params: DesignScheduleQuery = {}) =>
-    api.get<DesignScheduleResponse>(`/operational-projects/${projectId}/design-schedule`, { params }),
+    api.get<DesignScheduleResponse>(`/operational-projects/${projectId}/design-schedule`, {
+      params,
+    }),
   initializeDesignSchedule: (
     projectId: number,
     body: InitializeDesignScheduleRequest,
     idempotencyKey: string,
-  ) => api.post<DesignScheduleResponse>(
-    `/operational-projects/${projectId}/design-schedule/initialize`,
-    body,
-    withIdempotencyKey(idempotencyKey),
-  ),
+  ) =>
+    api.post<DesignScheduleResponse>(
+      `/operational-projects/${projectId}/design-schedule/initialize`,
+      body,
+      withIdempotencyKey(idempotencyKey),
+    ),
   updateDesignSchedulePhase: (
     projectId: number,
     phaseId: number,
     body: UpsertDesignSchedulePhaseRequest,
     idempotencyKey: string,
-  ) => api.put<DesignSchedulePhaseResponse>(
-    `/operational-projects/${projectId}/design-schedule/phases/${phaseId}`,
-    body,
-    { headers: {
-      ...withIdempotencyKey(idempotencyKey).headers,
-      ...withIfMatch(body.rowVersion).headers,
-    } },
-  ),
+  ) =>
+    api.put<DesignSchedulePhaseResponse>(
+      `/operational-projects/${projectId}/design-schedule/phases/${phaseId}`,
+      body,
+      {
+        headers: {
+          ...withIdempotencyKey(idempotencyKey).headers,
+          ...withIfMatch(body.rowVersion).headers,
+        },
+      },
+    ),
   createDesignScheduleTask: (
     projectId: number,
     phaseId: number,
     body: UpsertDesignScheduleTaskRequest,
     idempotencyKey: string,
-  ) => api.post<DesignScheduleTaskResponse>(
-    `/operational-projects/${projectId}/design-schedule/phases/${phaseId}/tasks`,
-    body,
-    withIdempotencyKey(idempotencyKey),
-  ),
+  ) =>
+    api.post<DesignScheduleTaskResponse>(
+      `/operational-projects/${projectId}/design-schedule/phases/${phaseId}/tasks`,
+      body,
+      withIdempotencyKey(idempotencyKey),
+    ),
   updateDesignScheduleTask: (
     projectId: number,
     taskId: number,
     body: UpsertDesignScheduleTaskRequest,
     idempotencyKey: string,
-  ) => api.put<DesignScheduleTaskResponse>(
-    `/operational-projects/${projectId}/design-schedule/tasks/${taskId}`,
-    body,
-    { headers: {
-      ...withIdempotencyKey(idempotencyKey).headers,
-      ...withIfMatch(body.rowVersion).headers,
-    } },
-  ),
-  completeDesignScheduleTask: (projectId: number, taskId: number, rowVersion: string, idempotencyKey: string) =>
+  ) =>
+    api.put<DesignScheduleTaskResponse>(
+      `/operational-projects/${projectId}/design-schedule/tasks/${taskId}`,
+      body,
+      {
+        headers: {
+          ...withIdempotencyKey(idempotencyKey).headers,
+          ...withIfMatch(body.rowVersion).headers,
+        },
+      },
+    ),
+  completeDesignScheduleTask: (
+    projectId: number,
+    taskId: number,
+    rowVersion: string,
+    idempotencyKey: string,
+  ) =>
     api.post<DesignScheduleTaskResponse>(
       `/operational-projects/${projectId}/design-schedule/tasks/${taskId}/complete`,
       { rowVersion },
-      { headers: { ...withIdempotencyKey(idempotencyKey).headers, ...withIfMatch(rowVersion).headers } },
+      {
+        headers: {
+          ...withIdempotencyKey(idempotencyKey).headers,
+          ...withIfMatch(rowVersion).headers,
+        },
+      },
     ),
-  reviewDesignScheduleTask: (projectId: number, taskId: number, approved: boolean, comment: string | null, rowVersion: string, idempotencyKey: string) =>
+  reviewDesignScheduleTask: (
+    projectId: number,
+    taskId: number,
+    approved: boolean,
+    comment: string | null,
+    rowVersion: string,
+    idempotencyKey: string,
+  ) =>
     api.post<DesignScheduleTaskResponse>(
       `/operational-projects/${projectId}/design-schedule/tasks/${taskId}/review`,
       { decision: approved ? "Approve" : "Reject", comment, rowVersion },
-      { headers: { ...withIdempotencyKey(idempotencyKey).headers, ...withIfMatch(rowVersion).headers } },
+      {
+        headers: {
+          ...withIdempotencyKey(idempotencyKey).headers,
+          ...withIfMatch(rowVersion).headers,
+        },
+      },
     ),
-  listDesignReviews: (projectId: number) => api.get<DesignReviewResponse[]>(`/design-projects/${projectId}/reviews`),
+  listDesignReviews: (projectId: number) =>
+    api.get<DesignReviewResponse[]>(`/design-projects/${projectId}/reviews`),
   listDesignReviewRecipientCandidates: (projectId: number) =>
-    api.get<Array<{ userId: number; name: string }>>(`/design-projects/${projectId}/reviews/recipient-candidates`),
+    api.get<Array<{ userId: number; name: string }>>(
+      `/design-projects/${projectId}/reviews/recipient-candidates`,
+    ),
   downloadDesignReviewDocument: (projectId: number, reviewId: number, documentId: number) =>
-    api.get<Blob>(`/design-projects/${projectId}/reviews/${reviewId}/documents/${documentId}/content`, { responseType: "blob" }),
-  createDesignReview: (projectId: number, body: { stage: DesignReviewStage; title: string; recipientUserIds: number[]; projectDocumentIds: number[] }, key: string) =>
-    api.post<DesignReviewResponse>(`/design-projects/${projectId}/reviews`, body, withIdempotencyKey(key)),
-  submitDesignReviewInternal: (projectId: number, reviewId: number, rowVersion: string, key: string) =>
-    api.post<DesignReviewResponse>(`/design-projects/${projectId}/reviews/${reviewId}/submit-internal`, { rowVersion }, { headers: { ...withIdempotencyKey(key).headers, ...withIfMatch(rowVersion).headers } }),
+    api.get<Blob>(
+      `/design-projects/${projectId}/reviews/${reviewId}/documents/${documentId}/content`,
+      { responseType: "blob" },
+    ),
+  createDesignReview: (
+    projectId: number,
+    body: {
+      stage: DesignReviewStage;
+      title: string;
+      recipientUserIds: number[];
+      projectDocumentIds: number[];
+    },
+    key: string,
+  ) =>
+    api.post<DesignReviewResponse>(
+      `/design-projects/${projectId}/reviews`,
+      body,
+      withIdempotencyKey(key),
+    ),
+  submitDesignReviewInternal: (
+    projectId: number,
+    reviewId: number,
+    rowVersion: string,
+    key: string,
+  ) =>
+    api.post<DesignReviewResponse>(
+      `/design-projects/${projectId}/reviews/${reviewId}/submit-internal`,
+      { rowVersion },
+      { headers: { ...withIdempotencyKey(key).headers, ...withIfMatch(rowVersion).headers } },
+    ),
   commentDesignReview: (projectId: number, reviewId: number, body: string, key: string) =>
-    api.post<DesignReviewResponse>(`/design-projects/${projectId}/reviews/${reviewId}/comments`, { body }, withIdempotencyKey(key)),
-  consolidateDesignReview: (projectId: number, reviewId: number, internalSummary: string, rowVersion: string, key: string) =>
-    api.post<DesignReviewResponse>(`/design-projects/${projectId}/reviews/${reviewId}/consolidate`, { internalSummary, rowVersion }, { headers: { ...withIdempotencyKey(key).headers, ...withIfMatch(rowVersion).headers } }),
-  submitDesignReviewClient: (projectId: number, reviewId: number, rowVersion: string, key: string) =>
-    api.post<DesignReviewResponse>(`/design-projects/${projectId}/reviews/${reviewId}/submit-client`, { rowVersion }, { headers: { ...withIdempotencyKey(key).headers, ...withIfMatch(rowVersion).headers } }),
-  recordDesignClientDecision: (projectId: number, reviewId: number, decision: "ClientApproved" | "ClientChangesRequested" | "Rejected", note: string | null, rowVersion: string, key: string) =>
-    api.post<DesignReviewResponse>(`/design-projects/${projectId}/reviews/${reviewId}/client-decision`, { decision, note, rowVersion }, { headers: { ...withIdempotencyKey(key).headers, ...withIfMatch(rowVersion).headers } }),
+    api.post<DesignReviewResponse>(
+      `/design-projects/${projectId}/reviews/${reviewId}/comments`,
+      { body },
+      withIdempotencyKey(key),
+    ),
+  consolidateDesignReview: (
+    projectId: number,
+    reviewId: number,
+    internalSummary: string,
+    rowVersion: string,
+    key: string,
+  ) =>
+    api.post<DesignReviewResponse>(
+      `/design-projects/${projectId}/reviews/${reviewId}/consolidate`,
+      { internalSummary, rowVersion },
+      { headers: { ...withIdempotencyKey(key).headers, ...withIfMatch(rowVersion).headers } },
+    ),
+  submitDesignReviewClient: (
+    projectId: number,
+    reviewId: number,
+    rowVersion: string,
+    key: string,
+  ) =>
+    api.post<DesignReviewResponse>(
+      `/design-projects/${projectId}/reviews/${reviewId}/submit-client`,
+      { rowVersion },
+      { headers: { ...withIdempotencyKey(key).headers, ...withIfMatch(rowVersion).headers } },
+    ),
+  recordDesignClientDecision: (
+    projectId: number,
+    reviewId: number,
+    decision: "ClientApproved" | "ClientChangesRequested" | "Rejected",
+    note: string | null,
+    rowVersion: string,
+    key: string,
+  ) =>
+    api.post<DesignReviewResponse>(
+      `/design-projects/${projectId}/reviews/${reviewId}/client-decision`,
+      { decision, note, rowVersion },
+      { headers: { ...withIdempotencyKey(key).headers, ...withIfMatch(rowVersion).headers } },
+    ),
 
   getHardDeleteOperation: (operationId: string) =>
     api.get<HardDeleteOperationResult>(`/hard-delete-operations/${operationId}`),
@@ -5591,7 +6264,8 @@ export const adminApi = {
   // Permits (NIH-137)
   listPermits: (params: PermitChecklistListParams = {}) => {
     const q = new URLSearchParams();
-    if (params.operationalProjectId != null) q.append("operationalProjectId", String(params.operationalProjectId));
+    if (params.operationalProjectId != null)
+      q.append("operationalProjectId", String(params.operationalProjectId));
     if (params.designProjectId != null) q.append("designProjectId", String(params.designProjectId));
     if (params.ownerUserId != null) q.append("ownerUserId", String(params.ownerUserId));
     if (params.approverUserId != null) q.append("approverUserId", String(params.approverUserId));
@@ -5606,8 +6280,7 @@ export const adminApi = {
     const qs = q.toString();
     return api.get<PermitChecklistListResponse>(`/permits${qs ? `?${qs}` : ""}`);
   },
-  getPermit: (id: number) =>
-    api.get<PermitChecklistItemResponse>(`/permits/${id}`),
+  getPermit: (id: number) => api.get<PermitChecklistItemResponse>(`/permits/${id}`),
   getPermitHistory: (id: number) =>
     api.get<PermitChecklistHistoryResponse[]>(`/permits/${id}/history`),
   createPermit: (body: CreatePermitChecklistItemRequest) =>
@@ -5631,8 +6304,7 @@ export const adminApi = {
     const qs = q.toString();
     return api.get<ConceptOptionListResponse>(`/concept-options${qs ? `?${qs}` : ""}`);
   },
-  getConceptOption: (id: number) =>
-    api.get<ConceptOptionResponse>(`/concept-options/${id}`),
+  getConceptOption: (id: number) => api.get<ConceptOptionResponse>(`/concept-options/${id}`),
   createConceptOption: (body: CreateConceptOptionRequest) =>
     api.post<ConceptOptionResponse>("/concept-options", body),
   updateConceptOption: (id: number, body: UpdateConceptOptionRequest) =>
@@ -5656,8 +6328,7 @@ export const adminApi = {
     const qs = q.toString();
     return api.get<BasicDesignDocListResponse>(`/basic-design-docs${qs ? `?${qs}` : ""}`);
   },
-  getBasicDesignDoc: (id: number) =>
-    api.get<BasicDesignDocResponse>(`/basic-design-docs/${id}`),
+  getBasicDesignDoc: (id: number) => api.get<BasicDesignDocResponse>(`/basic-design-docs/${id}`),
   getBasicDesignDocContent: (id: number) =>
     api.get<Blob>(`/basic-design-docs/${id}/content`, { responseType: "blob" }),
   createBasicDesignDoc: (body: CreateBasicDesignDocRequest) =>
@@ -5678,7 +6349,9 @@ export const adminApi = {
     });
   },
   unlockShopDrawing: (designProjectId: number) =>
-    api.post<DesignProjectResponse>(`/basic-design-docs/design-project/${designProjectId}/unlock-shop-drawing`),
+    api.post<DesignProjectResponse>(
+      `/basic-design-docs/design-project/${designProjectId}/unlock-shop-drawing`,
+    ),
 
   // Shop Drawings (NIH-116)
   listShopDrawings: (params: ShopDrawingListParams = {}) => {
@@ -5693,8 +6366,7 @@ export const adminApi = {
     const qs = q.toString();
     return api.get<ShopDrawingListResponse>(`/shop-drawings${qs ? `?${qs}` : ""}`);
   },
-  getShopDrawing: (id: number) =>
-    api.get<ShopDrawingResponse>(`/shop-drawings/${id}`),
+  getShopDrawing: (id: number) => api.get<ShopDrawingResponse>(`/shop-drawings/${id}`),
   getShopDrawingContent: (id: number) =>
     api.get<Blob>(`/shop-drawings/${id}/content`, { responseType: "blob" }),
   createShopDrawing: (body: CreateShopDrawingRequest) =>
@@ -5728,8 +6400,7 @@ export const adminApi = {
     const qs = q.toString();
     return api.get<DrawingRevisionListResponse>(`/drawing-revisions${qs ? `?${qs}` : ""}`);
   },
-  getDrawingRevision: (id: number) =>
-    api.get<DrawingRevisionResponse>(`/drawing-revisions/${id}`),
+  getDrawingRevision: (id: number) => api.get<DrawingRevisionResponse>(`/drawing-revisions/${id}`),
   createDrawingRevision: (body: CreateDrawingRevisionRequest) =>
     api.post<DrawingRevisionResponse>("/drawing-revisions", body),
   diffDrawingRevisions: (fromId: number, toId: number) =>
@@ -5748,8 +6419,7 @@ export const adminApi = {
     const qs = q.toString();
     return api.get<IfcReleaseListResponse>(`/ifc-releases${qs ? `?${qs}` : ""}`);
   },
-  getIfcRelease: (id: number) =>
-    api.get<IfcReleaseResponse>(`/ifc-releases/${id}`),
+  getIfcRelease: (id: number) => api.get<IfcReleaseResponse>(`/ifc-releases/${id}`),
   createIfcRelease: (body: CreateIfcReleaseRequest) =>
     api.post<IfcReleaseResponse>("/ifc-releases", body),
   updateIfcRelease: (id: number, body: UpdateIfcReleaseRequest) =>
@@ -5766,12 +6436,14 @@ export const adminApi = {
     api.post<IfcReleaseResponse>(`/ifc-releases/${id}/recipients`, body),
   removeIfcReleaseRecipient: (id: number, recipientId: number) =>
     api.delete<IfcReleaseResponse>(`/ifc-releases/${id}/recipients/${recipientId}`),
-  acknowledgeIfcReleaseRecipient: (id: number, recipientId: number, body: AcknowledgeIfcReleaseRecipientRequest) =>
+  acknowledgeIfcReleaseRecipient: (
+    id: number,
+    recipientId: number,
+    body: AcknowledgeIfcReleaseRecipientRequest,
+  ) =>
     api.post<IfcReleaseResponse>(`/ifc-releases/${id}/recipients/${recipientId}/acknowledge`, body),
-  releaseIfcRelease: (id: number) =>
-    api.post<IfcReleaseResponse>(`/ifc-releases/${id}/release`),
-  cancelIfcRelease: (id: number) =>
-    api.post<IfcReleaseResponse>(`/ifc-releases/${id}/cancel`),
+  releaseIfcRelease: (id: number) => api.post<IfcReleaseResponse>(`/ifc-releases/${id}/release`),
+  cancelIfcRelease: (id: number) => api.post<IfcReleaseResponse>(`/ifc-releases/${id}/cancel`),
 
   // Construction schedule (NIH-141)
   listConstructionTasks: (params: ConstructionTaskListParams = {}) => {
@@ -5796,8 +6468,7 @@ export const adminApi = {
     api.patch<ConstructionTaskResponse>(`/construction-tasks/${id}/progress`, body),
   setConstructionTaskPredecessors: (id: number, body: SetConstructionTaskPredecessorsRequest) =>
     api.put<ConstructionTaskResponse>(`/construction-tasks/${id}/predecessors`, body),
-  deleteConstructionTask: (id: number) =>
-    api.delete(`/construction-tasks/${id}`),
+  deleteConstructionTask: (id: number) => api.delete(`/construction-tasks/${id}`),
   bulkDeleteConstructionTasks: (body: BulkDeleteConstructionTasksRequest) =>
     api.post<ConstructionTaskBulkDeleteResponse>("/construction-tasks/bulk-delete", body),
 
@@ -5815,20 +6486,15 @@ export const adminApi = {
     const qs = q.toString();
     return api.get<SiteDiaryListResponse>(`/site-diaries${qs ? `?${qs}` : ""}`);
   },
-  getSiteDiary: (id: number) =>
-    api.get<SiteDiaryResponse>(`/site-diaries/${id}`),
+  getSiteDiary: (id: number) => api.get<SiteDiaryResponse>(`/site-diaries/${id}`),
   createSiteDiary: (body: CreateSiteDiaryRequest) =>
     api.post<SiteDiaryResponse>("/site-diaries", body),
   updateSiteDiary: (id: number, body: UpdateSiteDiaryRequest) =>
     api.put<SiteDiaryResponse>(`/site-diaries/${id}`, body),
-  submitSiteDiary: (id: number) =>
-    api.post<SiteDiaryResponse>(`/site-diaries/${id}/submit`),
-  confirmSiteDiary: (id: number) =>
-    api.post<SiteDiaryResponse>(`/site-diaries/${id}/confirm`),
-  reopenSiteDiary: (id: number) =>
-    api.post<SiteDiaryResponse>(`/site-diaries/${id}/reopen`),
-  deleteSiteDiary: (id: number) =>
-    api.delete(`/site-diaries/${id}`),
+  submitSiteDiary: (id: number) => api.post<SiteDiaryResponse>(`/site-diaries/${id}/submit`),
+  confirmSiteDiary: (id: number) => api.post<SiteDiaryResponse>(`/site-diaries/${id}/confirm`),
+  reopenSiteDiary: (id: number) => api.post<SiteDiaryResponse>(`/site-diaries/${id}/reopen`),
+  deleteSiteDiary: (id: number) => api.delete(`/site-diaries/${id}`),
   bulkDeleteSiteDiaries: (body: BulkDeleteSiteDiariesRequest) =>
     api.post<SiteDiaryBulkDeleteResponse>("/site-diaries/bulk-delete", body),
 
@@ -5847,8 +6513,7 @@ export const adminApi = {
     const qs = q.toString();
     return api.get<PunchItemListResponse>(`/punch-items${qs ? `?${qs}` : ""}`);
   },
-  getPunchItem: (id: number) =>
-    api.get<PunchItemResponse>(`/punch-items/${id}`),
+  getPunchItem: (id: number) => api.get<PunchItemResponse>(`/punch-items/${id}`),
   createPunchItem: (body: CreatePunchItemRequest) =>
     api.post<PunchItemResponse>("/punch-items", body),
   updatePunchItem: (id: number, body: UpdatePunchItemRequest) =>
@@ -5857,8 +6522,7 @@ export const adminApi = {
     api.post<PunchItemResponse>(`/punch-items/${id}/status`, body),
   verifyPunchItem: (id: number, body?: Partial<TransitionPunchStatusRequest>) =>
     api.post<PunchItemResponse>(`/punch-items/${id}/verify`, body ?? {}),
-  deletePunchItem: (id: number) =>
-    api.delete(`/punch-items/${id}`),
+  deletePunchItem: (id: number) => api.delete(`/punch-items/${id}`),
   bulkDeletePunchItems: (body: BulkDeletePunchItemsRequest) =>
     api.post<PunchItemBulkDeleteResponse>("/punch-items/bulk-delete", body),
 
@@ -5870,132 +6534,284 @@ export const adminApi = {
       if (value !== undefined && value !== null && value !== "") query.append(key, String(value));
     });
     const suffix = query.toString();
-    return api.get<MaterialRequestListResponse>(`/operational-projects/${projectId}/procurement/material-requests${suffix ? `?${suffix}` : ""}`);
+    return api.get<MaterialRequestListResponse>(
+      `/operational-projects/${projectId}/procurement/material-requests${suffix ? `?${suffix}` : ""}`,
+    );
   },
   listProjectBoqRevisions: (projectId: number, params: ProjectBoqRevisionListParams = {}) =>
-    api.get<ProjectBoqRevisionListResponse>(`/operational-projects/${projectId}/procurement/boq-revisions`, { params }),
+    api.get<ProjectBoqRevisionListResponse>(
+      `/operational-projects/${projectId}/procurement/boq-revisions`,
+      { params },
+    ),
   exportProjectBoqRevisions: (projectId: number, params: ProjectBoqRevisionListParams = {}) =>
-    api.get<Blob>(`/operational-projects/${projectId}/procurement/boq-revisions/export`, { params, responseType: "blob" }),
+    api.get<Blob>(`/operational-projects/${projectId}/procurement/boq-revisions/export`, {
+      params,
+      responseType: "blob",
+    }),
   getProjectBoqRevision: (projectId: number, id: number) =>
-    api.get<ProjectBoqRevisionResponse>(`/operational-projects/${projectId}/procurement/boq-revisions/${id}`),
+    api.get<ProjectBoqRevisionResponse>(
+      `/operational-projects/${projectId}/procurement/boq-revisions/${id}`,
+    ),
   createProjectBoqRevision: (projectId: number, body: ProjectBoqRevisionRequest) =>
-    postIdempotent<ProjectBoqRevisionResponse>(`/operational-projects/${projectId}/procurement/boq-revisions`, body),
+    postIdempotent<ProjectBoqRevisionResponse>(
+      `/operational-projects/${projectId}/procurement/boq-revisions`,
+      body,
+    ),
   updateProjectBoqRevision: (projectId: number, id: number, body: ProjectBoqRevisionRequest) =>
     api.put<ProjectBoqRevisionResponse>(
       `/operational-projects/${projectId}/procurement/boq-revisions/${id}`,
       body,
-      { headers: {
-        ...withIdempotencyKey(crypto.randomUUID()).headers,
-        ...withIfMatch(body.rowVersion).headers,
-      } },
+      {
+        headers: {
+          ...withIdempotencyKey(crypto.randomUUID()).headers,
+          ...withIfMatch(body.rowVersion).headers,
+        },
+      },
     ),
   submitProjectBoqRevision: (projectId: number, id: number, rowVersion: string) =>
-    postIdempotent<ProjectBoqRevisionResponse>(`/operational-projects/${projectId}/procurement/boq-revisions/${id}/submit`, { rowVersion }),
-  decideProjectBoqRevision: (projectId: number, id: number, approved: boolean, rowVersion: string, reason?: string) =>
-    postIdempotent<ProjectBoqRevisionResponse>(`/operational-projects/${projectId}/procurement/boq-revisions/${id}/decision`, { approved, rowVersion, reason }),
+    postIdempotent<ProjectBoqRevisionResponse>(
+      `/operational-projects/${projectId}/procurement/boq-revisions/${id}/submit`,
+      { rowVersion },
+    ),
+  decideProjectBoqRevision: (
+    projectId: number,
+    id: number,
+    approved: boolean,
+    rowVersion: string,
+    reason?: string,
+  ) =>
+    postIdempotent<ProjectBoqRevisionResponse>(
+      `/operational-projects/${projectId}/procurement/boq-revisions/${id}/decision`,
+      { approved, rowVersion, reason },
+    ),
   createMaterialRequest: (projectId: number, body: MaterialRequestUpsertRequest) =>
-    postIdempotent<MaterialRequestResponse>(`/operational-projects/${projectId}/procurement/material-requests`, body),
+    postIdempotent<MaterialRequestResponse>(
+      `/operational-projects/${projectId}/procurement/material-requests`,
+      body,
+    ),
   getMaterialRequest: (projectId: number, id: number) =>
-    api.get<MaterialRequestDetailResponse>(`/operational-projects/${projectId}/procurement/material-requests/${id}`),
+    api.get<MaterialRequestDetailResponse>(
+      `/operational-projects/${projectId}/procurement/material-requests/${id}`,
+    ),
   updateMaterialRequest: (projectId: number, id: number, body: MaterialRequestUpsertRequest) =>
     api.put<MaterialRequestResponse>(
       `/operational-projects/${projectId}/procurement/material-requests/${id}`,
       body,
-      { headers: {
-        ...withIdempotencyKey(crypto.randomUUID()).headers,
-        ...withIfMatch(body.rowVersion).headers,
-      } },
+      {
+        headers: {
+          ...withIdempotencyKey(crypto.randomUUID()).headers,
+          ...withIfMatch(body.rowVersion).headers,
+        },
+      },
     ),
   submitMaterialRequest: (projectId: number, id: number, rowVersion: string) =>
-    postIdempotent<MaterialRequestResponse>(`/operational-projects/${projectId}/procurement/material-requests/${id}/submit`, { rowVersion }),
-  decideMaterialRequest: (projectId: number, id: number, approved: boolean, rowVersion: string, reason?: string) =>
-    postIdempotent<MaterialRequestResponse>(`/operational-projects/${projectId}/procurement/material-requests/${id}/decision`, { approved, rowVersion, reason }),
+    postIdempotent<MaterialRequestResponse>(
+      `/operational-projects/${projectId}/procurement/material-requests/${id}/submit`,
+      { rowVersion },
+    ),
+  decideMaterialRequest: (
+    projectId: number,
+    id: number,
+    approved: boolean,
+    rowVersion: string,
+    reason?: string,
+  ) =>
+    postIdempotent<MaterialRequestResponse>(
+      `/operational-projects/${projectId}/procurement/material-requests/${id}/decision`,
+      { approved, rowVersion, reason },
+    ),
   cancelMaterialRequest: (projectId: number, id: number, rowVersion: string, reason: string) =>
-    postIdempotent<MaterialRequestResponse>(`/operational-projects/${projectId}/procurement/material-requests/${id}/cancel`, { rowVersion, reason }),
+    postIdempotent<MaterialRequestResponse>(
+      `/operational-projects/${projectId}/procurement/material-requests/${id}/cancel`,
+      { rowVersion, reason },
+    ),
   listMaterialAlerts: (projectId: number, params: MaterialAlertListParams = {}) =>
-    api.get<MaterialAlertListResponse>(`/operational-projects/${projectId}/procurement/material-alerts`, { params }),
+    api.get<MaterialAlertListResponse>(
+      `/operational-projects/${projectId}/procurement/material-alerts`,
+      { params },
+    ),
   getMaterialAlert: (projectId: number, id: number) =>
-    api.get<MaterialAlertResponse>(`/operational-projects/${projectId}/procurement/material-alerts/${id}`),
+    api.get<MaterialAlertResponse>(
+      `/operational-projects/${projectId}/procurement/material-alerts/${id}`,
+    ),
   evaluateMaterialAlerts: (projectId: number) =>
-    postIdempotent<MaterialAlertResponse[]>(`/operational-projects/${projectId}/procurement/material-alerts/evaluate`, {}),
+    postIdempotent<MaterialAlertResponse[]>(
+      `/operational-projects/${projectId}/procurement/material-alerts/evaluate`,
+      {},
+    ),
   acknowledgeMaterialAlert: (projectId: number, id: number, note: string, rowVersion: string) =>
-    postIdempotent<MaterialAlertResponse>(`/operational-projects/${projectId}/procurement/material-alerts/${id}/acknowledge`, { note, rowVersion }),
+    postIdempotent<MaterialAlertResponse>(
+      `/operational-projects/${projectId}/procurement/material-alerts/${id}/acknowledge`,
+      { note, rowVersion },
+    ),
   createProcurementContractLine: (projectId: number, body: ProcurementContractLineRequest) =>
-    postIdempotent<ProcurementContractLineResponse>(`/operational-projects/${projectId}/procurement/contract-lines`, body),
+    postIdempotent<ProcurementContractLineResponse>(
+      `/operational-projects/${projectId}/procurement/contract-lines`,
+      body,
+    ),
   listWarehouseTransactions: (projectId: number, params: WarehouseTransactionListParams = {}) =>
-    api.get<WarehouseTransactionListResponse>(`/operational-projects/${projectId}/procurement/warehouse-transactions`, { params }),
+    api.get<WarehouseTransactionListResponse>(
+      `/operational-projects/${projectId}/procurement/warehouse-transactions`,
+      { params },
+    ),
   getWarehouseReceipt: (projectId: number, id: number) =>
-    api.get<WarehouseReceiptDetailResponse>(`/operational-projects/${projectId}/procurement/receipts/${id}`),
+    api.get<WarehouseReceiptDetailResponse>(
+      `/operational-projects/${projectId}/procurement/receipts/${id}`,
+    ),
   createWarehouseReceipt: (projectId: number, body: WarehouseReceiptUpsertRequest) =>
-    postIdempotent<WarehouseReceiptResponse>(`/operational-projects/${projectId}/procurement/receipts`, body),
+    postIdempotent<WarehouseReceiptResponse>(
+      `/operational-projects/${projectId}/procurement/receipts`,
+      body,
+    ),
   updateWarehouseReceipt: (projectId: number, id: number, body: WarehouseReceiptUpsertRequest) =>
     api.put<WarehouseReceiptResponse>(
       `/operational-projects/${projectId}/procurement/receipts/${id}`,
       body,
-      { headers: { ...withIdempotencyKey(crypto.randomUUID()).headers, ...withIfMatch(body.rowVersion).headers } },
+      {
+        headers: {
+          ...withIdempotencyKey(crypto.randomUUID()).headers,
+          ...withIfMatch(body.rowVersion).headers,
+        },
+      },
     ),
   postWarehouseReceipt: (projectId: number, id: number, rowVersion: string) =>
-    postIdempotent<WarehouseReceiptResponse>(`/operational-projects/${projectId}/procurement/receipts/${id}/post`, { rowVersion }),
+    postIdempotent<WarehouseReceiptResponse>(
+      `/operational-projects/${projectId}/procurement/receipts/${id}/post`,
+      { rowVersion },
+    ),
   reverseWarehouseReceipt: (projectId: number, id: number, rowVersion: string, reason: string) =>
-    postIdempotent<WarehouseReceiptResponse>(`/operational-projects/${projectId}/procurement/receipts/${id}/reverse`, { rowVersion, reason }),
+    postIdempotent<WarehouseReceiptResponse>(
+      `/operational-projects/${projectId}/procurement/receipts/${id}/reverse`,
+      { rowVersion, reason },
+    ),
   getWarehouseIssue: (projectId: number, id: number) =>
-    api.get<WarehouseIssueDetailResponse>(`/operational-projects/${projectId}/procurement/issues/${id}`),
+    api.get<WarehouseIssueDetailResponse>(
+      `/operational-projects/${projectId}/procurement/issues/${id}`,
+    ),
   createWarehouseIssue: (projectId: number, body: WarehouseIssueUpsertRequest) =>
-    postIdempotent<WarehouseIssueResponse>(`/operational-projects/${projectId}/procurement/issues`, body),
+    postIdempotent<WarehouseIssueResponse>(
+      `/operational-projects/${projectId}/procurement/issues`,
+      body,
+    ),
   updateWarehouseIssue: (projectId: number, id: number, body: WarehouseIssueUpsertRequest) =>
     api.put<WarehouseIssueResponse>(
       `/operational-projects/${projectId}/procurement/issues/${id}`,
       body,
-      { headers: { ...withIdempotencyKey(crypto.randomUUID()).headers, ...withIfMatch(body.rowVersion).headers } },
+      {
+        headers: {
+          ...withIdempotencyKey(crypto.randomUUID()).headers,
+          ...withIfMatch(body.rowVersion).headers,
+        },
+      },
     ),
   postWarehouseIssue: (projectId: number, id: number, rowVersion: string) =>
-    postIdempotent<WarehouseIssueResponse>(`/operational-projects/${projectId}/procurement/issues/${id}/post`, { rowVersion }),
+    postIdempotent<WarehouseIssueResponse>(
+      `/operational-projects/${projectId}/procurement/issues/${id}/post`,
+      { rowVersion },
+    ),
   reverseWarehouseIssue: (projectId: number, id: number, rowVersion: string, reason: string) =>
-    postIdempotent<WarehouseIssueResponse>(`/operational-projects/${projectId}/procurement/issues/${id}/reverse`, { rowVersion, reason }),
+    postIdempotent<WarehouseIssueResponse>(
+      `/operational-projects/${projectId}/procurement/issues/${id}/reverse`,
+      { rowVersion, reason },
+    ),
   createVendorRating: (projectId: number, body: VendorRatingUpsertRequest) =>
-    postIdempotent<VendorRatingResponse>(`/operational-projects/${projectId}/procurement/vendor-ratings`, body),
+    postIdempotent<VendorRatingResponse>(
+      `/operational-projects/${projectId}/procurement/vendor-ratings`,
+      body,
+    ),
   submitVendorRating: (projectId: number, id: number, rowVersion: string) =>
-    postIdempotent<VendorRatingResponse>(`/operational-projects/${projectId}/procurement/vendor-ratings/${id}/submit`, { rowVersion }),
-  decideVendorRating: (projectId: number, id: number, approved: boolean, rowVersion: string, reason?: string) =>
-    postIdempotent<VendorRatingResponse>(`/operational-projects/${projectId}/procurement/vendor-ratings/${id}/decision`, { approved, rowVersion, reason }),
+    postIdempotent<VendorRatingResponse>(
+      `/operational-projects/${projectId}/procurement/vendor-ratings/${id}/submit`,
+      { rowVersion },
+    ),
+  decideVendorRating: (
+    projectId: number,
+    id: number,
+    approved: boolean,
+    rowVersion: string,
+    reason?: string,
+  ) =>
+    postIdempotent<VendorRatingResponse>(
+      `/operational-projects/${projectId}/procurement/vendor-ratings/${id}/decision`,
+      { approved, rowVersion, reason },
+    ),
 
   getPaymentReferences: () => api.get<PaymentReferencesResponse>("/finance/payment-references"),
   listPaymentRequests: () => api.get<PaymentRequestResponse[]>("/finance/payment-requests"),
   createPaymentRequest: (body: PaymentRequestUpsertRequest) =>
     postIdempotent<PaymentRequestResponse>("/finance/payment-requests", body),
   submitPaymentRequest: (id: number, rowVersion: string, reason?: string) =>
-    postIdempotent<PaymentRequestResponse>(`/finance/payment-requests/${id}/submit`, { rowVersion, reason }),
+    postIdempotent<PaymentRequestResponse>(`/finance/payment-requests/${id}/submit`, {
+      rowVersion,
+      reason,
+    }),
   validatePaymentRequest: (id: number, rowVersion: string, reason?: string) =>
-    postIdempotent<PaymentRequestResponse>(`/finance/payment-requests/${id}/validate`, { rowVersion, reason }),
+    postIdempotent<PaymentRequestResponse>(`/finance/payment-requests/${id}/validate`, {
+      rowVersion,
+      reason,
+    }),
   decidePaymentRequest: (id: number, approved: boolean, rowVersion: string, reason?: string) =>
-    postIdempotent<PaymentRequestResponse>(`/finance/payment-requests/${id}/decision`, { approved, rowVersion, reason }),
+    postIdempotent<PaymentRequestResponse>(`/finance/payment-requests/${id}/decision`, {
+      approved,
+      rowVersion,
+      reason,
+    }),
   payPaymentRequest: (id: number, rowVersion: string, reason?: string) =>
-    postIdempotent<PaymentRequestResponse>(`/finance/payment-requests/${id}/pay`, { rowVersion, reason }),
+    postIdempotent<PaymentRequestResponse>(`/finance/payment-requests/${id}/pay`, {
+      rowVersion,
+      reason,
+    }),
   cancelPaymentRequest: (id: number, rowVersion: string, reason?: string) =>
-    postIdempotent<PaymentRequestResponse>(`/finance/payment-requests/${id}/cancel`, { rowVersion, reason }),
+    postIdempotent<PaymentRequestResponse>(`/finance/payment-requests/${id}/cancel`, {
+      rowVersion,
+      reason,
+    }),
   listAccountingPeriods: () => api.get<AccountingPeriodResponse[]>("/finance/periods"),
   createAccountingPeriod: (year: number, month: number) =>
     postIdempotent<AccountingPeriodResponse>("/finance/periods", { year, month }),
   startClosingAccountingPeriod: (id: number, rowVersion: string, reason?: string) =>
-    postIdempotent<AccountingPeriodResponse>(`/finance/periods/${id}/start-closing`, { rowVersion, reason }),
+    postIdempotent<AccountingPeriodResponse>(`/finance/periods/${id}/start-closing`, {
+      rowVersion,
+      reason,
+    }),
   closeAccountingPeriod: (id: number, rowVersion: string, reason?: string) =>
-    postIdempotent<AccountingPeriodResponse>(`/finance/periods/${id}/close`, { rowVersion, reason }),
+    postIdempotent<AccountingPeriodResponse>(`/finance/periods/${id}/close`, {
+      rowVersion,
+      reason,
+    }),
   listAccountingCorrections: () => api.get<AccountingCorrectionResponse[]>("/finance/corrections"),
   createAccountingCorrection: (body: AccountingCorrectionUpsertRequest) =>
     postIdempotent<AccountingCorrectionResponse>("/finance/corrections", body),
   submitAccountingCorrection: (id: number, rowVersion: string, reason?: string) =>
-    postIdempotent<AccountingCorrectionResponse>(`/finance/corrections/${id}/submit`, { rowVersion, reason }),
-  decideAccountingCorrection: (id: number, approved: boolean, rowVersion: string, reason?: string) =>
-    postIdempotent<AccountingCorrectionResponse>(`/finance/corrections/${id}/decision`, { approved, rowVersion, reason }),
+    postIdempotent<AccountingCorrectionResponse>(`/finance/corrections/${id}/submit`, {
+      rowVersion,
+      reason,
+    }),
+  decideAccountingCorrection: (
+    id: number,
+    approved: boolean,
+    rowVersion: string,
+    reason?: string,
+  ) =>
+    postIdempotent<AccountingCorrectionResponse>(`/finance/corrections/${id}/decision`, {
+      approved,
+      rowVersion,
+      reason,
+    }),
   reverseAccountingCorrection: (id: number, rowVersion: string, reason: string) =>
-    postIdempotent<AccountingCorrectionResponse>(`/finance/corrections/${id}/reverse`, { rowVersion, reason }),
+    postIdempotent<AccountingCorrectionResponse>(`/finance/corrections/${id}/reverse`, {
+      rowVersion,
+      reason,
+    }),
 
   // Partial acceptance (NIH-143)
   listAcceptanceRecords: (params: AcceptanceRecordListParams = {}) => {
     const q = new URLSearchParams();
     if (params.designProjectId != null) q.append("designProjectId", String(params.designProjectId));
-    if (params.constructionTaskId != null) q.append("constructionTaskId", String(params.constructionTaskId));
-    if (params.responsibleUserId != null) q.append("responsibleUserId", String(params.responsibleUserId));
+    if (params.constructionTaskId != null)
+      q.append("constructionTaskId", String(params.constructionTaskId));
+    if (params.responsibleUserId != null)
+      q.append("responsibleUserId", String(params.responsibleUserId));
     if (params.acceptanceFrom) q.append("acceptanceFrom", params.acceptanceFrom);
     if (params.acceptanceTo) q.append("acceptanceTo", params.acceptanceTo);
     if (params.status) q.append("status", params.status);
@@ -6019,8 +6835,7 @@ export const adminApi = {
     api.post<AcceptanceRecordResponse>(`/acceptance-records/${id}/status`, body),
   approveAcceptanceRecord: (id: number, body: TransitionAcceptanceStatusRequest) =>
     api.post<AcceptanceRecordResponse>(`/acceptance-records/${id}/approve`, body),
-  deleteAcceptanceRecord: (id: number) =>
-    api.delete(`/acceptance-records/${id}`),
+  deleteAcceptanceRecord: (id: number) => api.delete(`/acceptance-records/${id}`),
   bulkDeleteAcceptanceRecords: (body: BulkDeleteAcceptanceRecordsRequest) =>
     api.post<AcceptanceRecordBulkDeleteResponse>("/acceptance-records/bulk-delete", body),
   uploadAcceptanceDocument: (file: File) => uploadBusinessDocument("acceptance", file),
@@ -6050,10 +6865,11 @@ export const adminApi = {
     if (params.sortBy) q.append("sortBy", params.sortBy);
     if (params.sortDirection) q.append("sortDirection", params.sortDirection);
     const qs = q.toString();
-    return api.get<Blob>(`/as-built-documents/export${qs ? `?${qs}` : ""}`, { responseType: "blob" });
+    return api.get<Blob>(`/as-built-documents/export${qs ? `?${qs}` : ""}`, {
+      responseType: "blob",
+    });
   },
-  getAsBuiltDocument: (id: number) =>
-    api.get<AsBuiltDocumentResponse>(`/as-built-documents/${id}`),
+  getAsBuiltDocument: (id: number) => api.get<AsBuiltDocumentResponse>(`/as-built-documents/${id}`),
   createAsBuiltDocument: (body: CreateAsBuiltDocumentRequest) =>
     api.post<AsBuiltDocumentResponse>("/as-built-documents", body),
   updateAsBuiltDocument: (id: number, body: UpdateAsBuiltDocumentRequest) =>
@@ -6062,8 +6878,7 @@ export const adminApi = {
     api.post<AsBuiltDocumentResponse>(`/as-built-documents/${id}/status`, body),
   approveAsBuiltDocument: (id: number, body: TransitionAsBuiltStatusRequest) =>
     api.post<AsBuiltDocumentResponse>(`/as-built-documents/${id}/approve`, body),
-  deleteAsBuiltDocument: (id: number) =>
-    api.delete(`/as-built-documents/${id}`),
+  deleteAsBuiltDocument: (id: number) => api.delete(`/as-built-documents/${id}`),
   bulkDeleteAsBuiltDocuments: (body: BulkDeleteAsBuiltDocumentsRequest) =>
     api.post<AsBuiltDocumentBulkDeleteResponse>("/as-built-documents/bulk-delete", body),
   uploadAsBuiltDocumentFile: (file: File) => uploadBusinessDocument("as-built", file),
@@ -6072,7 +6887,8 @@ export const adminApi = {
   listHandoverRecords: (params: HandoverRecordListParams = {}) => {
     const q = new URLSearchParams();
     if (params.designProjectId != null) q.append("designProjectId", String(params.designProjectId));
-    if (params.responsibleUserId != null) q.append("responsibleUserId", String(params.responsibleUserId));
+    if (params.responsibleUserId != null)
+      q.append("responsibleUserId", String(params.responsibleUserId));
     if (params.status) q.append("status", params.status);
     if (params.plannedFrom) q.append("plannedFrom", params.plannedFrom);
     if (params.plannedTo) q.append("plannedTo", params.plannedTo);
@@ -6088,7 +6904,8 @@ export const adminApi = {
   exportHandoverRecords: (params: HandoverRecordListParams = {}) => {
     const q = new URLSearchParams();
     if (params.designProjectId != null) q.append("designProjectId", String(params.designProjectId));
-    if (params.responsibleUserId != null) q.append("responsibleUserId", String(params.responsibleUserId));
+    if (params.responsibleUserId != null)
+      q.append("responsibleUserId", String(params.responsibleUserId));
     if (params.status) q.append("status", params.status);
     if (params.plannedFrom) q.append("plannedFrom", params.plannedFrom);
     if (params.plannedTo) q.append("plannedTo", params.plannedTo);
@@ -6099,8 +6916,7 @@ export const adminApi = {
     const qs = q.toString();
     return api.get<Blob>(`/handover-records/export${qs ? `?${qs}` : ""}`, { responseType: "blob" });
   },
-  getHandoverRecord: (id: number) =>
-    api.get<HandoverRecordResponse>(`/handover-records/${id}`),
+  getHandoverRecord: (id: number) => api.get<HandoverRecordResponse>(`/handover-records/${id}`),
   createHandoverRecord: (body: CreateHandoverRecordRequest) =>
     api.post<HandoverRecordResponse>("/handover-records", body),
   uploadHandoverDocument: (file: File) => uploadBusinessDocument("handover", file),
@@ -6110,16 +6926,14 @@ export const adminApi = {
     api.post<HandoverRecordResponse>(`/handover-records/${id}/status`, body),
   completeHandoverRecord: (id: number, body: TransitionHandoverStatusRequest) =>
     api.post<HandoverRecordResponse>(`/handover-records/${id}/complete`, body),
-  deleteHandoverRecord: (id: number) =>
-    api.delete(`/handover-records/${id}`),
+  deleteHandoverRecord: (id: number) => api.delete(`/handover-records/${id}`),
 
   // Master data (read-only helper — full CRUD lives in NIH-379 admin page)
   getMasterDataOptions: (category: string) =>
     api.get<MasterDataOption[]>(`/master-data/${encodeURIComponent(category)}`),
 
   // Master data admin (NIH-230)
-  listMasterDataCategories: () =>
-    api.get<MasterDataCategory[]>("/master-data/categories"),
+  listMasterDataCategories: () => api.get<MasterDataCategory[]>("/master-data/categories"),
   listMasterDataByCategory: (category: string, includeInactive = false) =>
     api.get<MasterDataOption[]>(`/master-data/${encodeURIComponent(category)}`, {
       params: { includeInactive },
@@ -6128,71 +6942,202 @@ export const adminApi = {
     api.post<MasterDataOption>(`/master-data/${encodeURIComponent(category)}`, body),
   updateMasterDataOption: (id: number, body: UpsertMasterDataOptionRequest) =>
     api.put<MasterDataOption>(`/master-data/options/${id}`, body),
-  deleteMasterDataOption: (id: number) =>
-    api.delete(`/master-data/options/${id}`),
+  deleteMasterDataOption: (id: number) => api.delete(`/master-data/options/${id}`),
 
   // Workflow config (NIH-225)
   listWorkflows: (includeInactive = false) =>
     api.get<WorkflowConfig[]>("/workflows", { params: { includeInactive } }),
-  getWorkflow: (id: number) =>
-    api.get<WorkflowConfig>(`/workflows/${id}`),
+  getWorkflow: (id: number) => api.get<WorkflowConfig>(`/workflows/${id}`),
   createWorkflow: (body: UpsertWorkflowConfigRequest) =>
     api.post<WorkflowConfig>("/workflows", body),
   updateWorkflow: (id: number, body: UpsertWorkflowConfigRequest) =>
     api.put<WorkflowConfig>(`/workflows/${id}`, body),
-  deleteWorkflow: (id: number) =>
-    api.delete(`/workflows/${id}`),
+  deleteWorkflow: (id: number) => api.delete(`/workflows/${id}`),
 
   // Central operational projects (NIH-460)
   listWorkPackages: (params: DepartmentWorkPackageQuery = {}) =>
     api.get<DepartmentWorkPackageListResponse>("/work-packages", { params }),
-  getWorkPackage: (id: number) =>
-    api.get<DepartmentWorkPackageResponse>(`/work-packages/${id}`),
+  getWorkPackage: (id: number) => api.get<DepartmentWorkPackageResponse>(`/work-packages/${id}`),
   getWorkPackageOptions: () =>
     api.get<DepartmentWorkPackageOptionsResponse>("/work-packages/options"),
   createWorkPackage: (body: CreateDepartmentWorkPackageRequest, idempotencyKey: string) =>
-    api.post<DepartmentWorkPackageResponse>("/work-packages", body, withIdempotencyKey(idempotencyKey)),
-  updateWorkPackage: (id: number, body: UpdateDepartmentWorkPackageRequest, idempotencyKey: string) =>
-    api.put<DepartmentWorkPackageResponse>(`/work-packages/${id}`, body, { headers: {
-      ...withIdempotencyKey(idempotencyKey).headers,
-      ...withIfMatch(body.rowVersion).headers,
-    } }),
+    api.post<DepartmentWorkPackageResponse>(
+      "/work-packages",
+      body,
+      withIdempotencyKey(idempotencyKey),
+    ),
+  updateWorkPackage: (
+    id: number,
+    body: UpdateDepartmentWorkPackageRequest,
+    idempotencyKey: string,
+  ) =>
+    api.put<DepartmentWorkPackageResponse>(`/work-packages/${id}`, body, {
+      headers: {
+        ...withIdempotencyKey(idempotencyKey).headers,
+        ...withIfMatch(body.rowVersion).headers,
+      },
+    }),
   addWorkTask: (packageId: number, body: UpsertDepartmentWorkTaskRequest, idempotencyKey: string) =>
-    api.post<DepartmentWorkTaskResponse>(`/work-packages/${packageId}/tasks`, body, withIdempotencyKey(idempotencyKey)),
-  updateWorkTask: (packageId: number, taskId: number, body: UpsertDepartmentWorkTaskRequest, idempotencyKey: string) =>
-    api.put<DepartmentWorkTaskResponse>(`/work-packages/${packageId}/tasks/${taskId}`, body, { headers: {
-      ...withIdempotencyKey(idempotencyKey).headers,
-      ...withIfMatch(body.rowVersion ?? "").headers,
-    } }),
-  updateWorkTaskProgress: (packageId: number, taskId: number, body: { progressPercent: number; status: WorkTaskStatus; rowVersion: string }, idempotencyKey: string) =>
-    api.put<DepartmentWorkTaskResponse>(`/work-packages/${packageId}/tasks/${taskId}/progress`, body, { headers: {
-      ...withIdempotencyKey(idempotencyKey).headers,
-      ...withIfMatch(body.rowVersion).headers,
-    } }),
+    api.post<DepartmentWorkTaskResponse>(
+      `/work-packages/${packageId}/tasks`,
+      body,
+      withIdempotencyKey(idempotencyKey),
+    ),
+  updateWorkTask: (
+    packageId: number,
+    taskId: number,
+    body: UpsertDepartmentWorkTaskRequest,
+    idempotencyKey: string,
+  ) =>
+    api.put<DepartmentWorkTaskResponse>(`/work-packages/${packageId}/tasks/${taskId}`, body, {
+      headers: {
+        ...withIdempotencyKey(idempotencyKey).headers,
+        ...withIfMatch(body.rowVersion ?? "").headers,
+      },
+    }),
+  updateWorkTaskProgress: (
+    packageId: number,
+    taskId: number,
+    body: { progressPercent: number; status: WorkTaskStatus; rowVersion: string },
+    idempotencyKey: string,
+  ) =>
+    api.put<DepartmentWorkTaskResponse>(
+      `/work-packages/${packageId}/tasks/${taskId}/progress`,
+      body,
+      {
+        headers: {
+          ...withIdempotencyKey(idempotencyKey).headers,
+          ...withIfMatch(body.rowVersion).headers,
+        },
+      },
+    ),
   verifyWorkTask: (packageId: number, taskId: number, rowVersion: string, idempotencyKey: string) =>
-    api.post<DepartmentWorkTaskResponse>(`/work-packages/${packageId}/tasks/${taskId}/verify`, { confirm: true, rowVersion }, { headers: {
-      ...withIdempotencyKey(idempotencyKey).headers,
-      ...withIfMatch(rowVersion).headers,
-    } }),
-  rejectWorkTask: (packageId: number, taskId: number, rowVersion: string, reason: string, idempotencyKey: string) =>
-    api.post<DepartmentWorkTaskResponse>(`/work-packages/${packageId}/tasks/${taskId}/verify`, { confirm: false, reason, rowVersion }, { headers: {
-      ...withIdempotencyKey(idempotencyKey).headers,
-      ...withIfMatch(rowVersion).headers,
-    } }),
-  addInputPriceOffer: (packageId: number, body: UpsertInputPriceOfferRequest, idempotencyKey: string) =>
-    api.post<InputPriceOfferResponse>(`/work-packages/${packageId}/input-price-offers`, body, withIdempotencyKey(idempotencyKey)),
-  updateInputPriceOffer: (packageId: number, offerId: number, body: UpsertInputPriceOfferRequest, idempotencyKey: string) =>
-    api.put<InputPriceOfferResponse>(`/work-packages/${packageId}/input-price-offers/${offerId}`, body, { headers: { ...withIdempotencyKey(idempotencyKey).headers, ...withIfMatch(body.rowVersion ?? "").headers } }),
-  submitInputPriceOffer: (packageId: number, offerId: number, rowVersion: string, idempotencyKey: string) =>
-    api.post<InputPriceOfferResponse>(`/work-packages/${packageId}/input-price-offers/${offerId}/submit`, { rowVersion }, { headers: { ...withIdempotencyKey(idempotencyKey).headers, ...withIfMatch(rowVersion).headers } }),
-  decideInputPriceOffer: (packageId: number, offerId: number, approved: boolean, reason: string | null, rowVersion: string, idempotencyKey: string) =>
-    api.post<InputPriceOfferResponse>(`/work-packages/${packageId}/input-price-offers/${offerId}/decision`, { approved, reason, rowVersion }, { headers: { ...withIdempotencyKey(idempotencyKey).headers, ...withIfMatch(rowVersion).headers } }),
-  saveFinanceReview: (packageId: number, body: UpsertFinanceReviewRequest, idempotencyKey: string) =>
-    api.put<FinanceReviewResponse>(`/work-packages/${packageId}/finance-review`, body, { headers: { ...withIdempotencyKey(idempotencyKey).headers, ...(body.rowVersion ? withIfMatch(body.rowVersion).headers : {}) } }),
+    api.post<DepartmentWorkTaskResponse>(
+      `/work-packages/${packageId}/tasks/${taskId}/verify`,
+      { confirm: true, rowVersion },
+      {
+        headers: {
+          ...withIdempotencyKey(idempotencyKey).headers,
+          ...withIfMatch(rowVersion).headers,
+        },
+      },
+    ),
+  rejectWorkTask: (
+    packageId: number,
+    taskId: number,
+    rowVersion: string,
+    reason: string,
+    idempotencyKey: string,
+  ) =>
+    api.post<DepartmentWorkTaskResponse>(
+      `/work-packages/${packageId}/tasks/${taskId}/verify`,
+      { confirm: false, reason, rowVersion },
+      {
+        headers: {
+          ...withIdempotencyKey(idempotencyKey).headers,
+          ...withIfMatch(rowVersion).headers,
+        },
+      },
+    ),
+  addInputPriceOffer: (
+    packageId: number,
+    body: UpsertInputPriceOfferRequest,
+    idempotencyKey: string,
+  ) =>
+    api.post<InputPriceOfferResponse>(
+      `/work-packages/${packageId}/input-price-offers`,
+      body,
+      withIdempotencyKey(idempotencyKey),
+    ),
+  updateInputPriceOffer: (
+    packageId: number,
+    offerId: number,
+    body: UpsertInputPriceOfferRequest,
+    idempotencyKey: string,
+  ) =>
+    api.put<InputPriceOfferResponse>(
+      `/work-packages/${packageId}/input-price-offers/${offerId}`,
+      body,
+      {
+        headers: {
+          ...withIdempotencyKey(idempotencyKey).headers,
+          ...withIfMatch(body.rowVersion ?? "").headers,
+        },
+      },
+    ),
+  submitInputPriceOffer: (
+    packageId: number,
+    offerId: number,
+    rowVersion: string,
+    idempotencyKey: string,
+  ) =>
+    api.post<InputPriceOfferResponse>(
+      `/work-packages/${packageId}/input-price-offers/${offerId}/submit`,
+      { rowVersion },
+      {
+        headers: {
+          ...withIdempotencyKey(idempotencyKey).headers,
+          ...withIfMatch(rowVersion).headers,
+        },
+      },
+    ),
+  decideInputPriceOffer: (
+    packageId: number,
+    offerId: number,
+    approved: boolean,
+    reason: string | null,
+    rowVersion: string,
+    idempotencyKey: string,
+  ) =>
+    api.post<InputPriceOfferResponse>(
+      `/work-packages/${packageId}/input-price-offers/${offerId}/decision`,
+      { approved, reason, rowVersion },
+      {
+        headers: {
+          ...withIdempotencyKey(idempotencyKey).headers,
+          ...withIfMatch(rowVersion).headers,
+        },
+      },
+    ),
+  saveFinanceReview: (
+    packageId: number,
+    body: UpsertFinanceReviewRequest,
+    idempotencyKey: string,
+  ) =>
+    api.put<FinanceReviewResponse>(`/work-packages/${packageId}/finance-review`, body, {
+      headers: {
+        ...withIdempotencyKey(idempotencyKey).headers,
+        ...(body.rowVersion ? withIfMatch(body.rowVersion).headers : {}),
+      },
+    }),
   submitFinanceReview: (packageId: number, rowVersion: string, idempotencyKey: string) =>
-    api.post<FinanceReviewResponse>(`/work-packages/${packageId}/finance-review/submit`, { rowVersion }, { headers: { ...withIdempotencyKey(idempotencyKey).headers, ...withIfMatch(rowVersion).headers } }),
-  decideFinanceReview: (packageId: number, approved: boolean, reason: string | null, rowVersion: string, idempotencyKey: string) =>
-    api.post<FinanceReviewResponse>(`/work-packages/${packageId}/finance-review/decision`, { approved, reason, rowVersion }, { headers: { ...withIdempotencyKey(idempotencyKey).headers, ...withIfMatch(rowVersion).headers } }),
+    api.post<FinanceReviewResponse>(
+      `/work-packages/${packageId}/finance-review/submit`,
+      { rowVersion },
+      {
+        headers: {
+          ...withIdempotencyKey(idempotencyKey).headers,
+          ...withIfMatch(rowVersion).headers,
+        },
+      },
+    ),
+  decideFinanceReview: (
+    packageId: number,
+    approved: boolean,
+    reason: string | null,
+    rowVersion: string,
+    idempotencyKey: string,
+  ) =>
+    api.post<FinanceReviewResponse>(
+      `/work-packages/${packageId}/finance-review/decision`,
+      { approved, reason, rowVersion },
+      {
+        headers: {
+          ...withIdempotencyKey(idempotencyKey).headers,
+          ...withIfMatch(rowVersion).headers,
+        },
+      },
+    ),
   listOperationalProjects: (params: OperationalProjectListParams = {}) =>
     api.get<OperationalProjectListResponse>("/operational-projects", { params }),
   suggestOperationalProjectCode: () =>
@@ -6208,100 +7153,133 @@ export const adminApi = {
   getOperationalProjectTeam: (projectId: number) =>
     api.get<OperationalProjectTeamResponse>(`/operational-projects/${projectId}/team`),
   getOperationalProjectTeamHistory: (projectId: number) =>
-    api.get<OperationalProjectTeamHistoryResponse[]>(`/operational-projects/${projectId}/team/history`),
+    api.get<OperationalProjectTeamHistoryResponse[]>(
+      `/operational-projects/${projectId}/team/history`,
+    ),
   getOperationalProjectTeamCandidates: (projectId: number) =>
     api.get<ProjectMemberCandidateResponse[]>(`/operational-projects/${projectId}/team/candidates`),
   listHseViolations: (projectId: number, params: HseViolationListParams = {}) =>
-    api.get<HseViolationListResponse>(`/operational-projects/${projectId}/hse-violations`, { params }),
+    api.get<HseViolationListResponse>(`/operational-projects/${projectId}/hse-violations`, {
+      params,
+    }),
   getHseViolation: (projectId: number, id: number) =>
     api.get<HseViolationResponse>(`/operational-projects/${projectId}/hse-violations/${id}`),
-  createHseViolation: (projectId: number, body: HseViolationFieldsRequest, idempotencyKey: string) =>
+  createHseViolation: (
+    projectId: number,
+    body: HseViolationFieldsRequest,
+    idempotencyKey: string,
+  ) =>
     api.post<HseViolationResponse>(
       `/operational-projects/${projectId}/hse-violations`,
       body,
       withIdempotencyKey(idempotencyKey),
     ),
-  updateHseViolation: (projectId: number, id: number, body: UpdateHseViolationRequest, idempotencyKey: string) =>
-    api.put<HseViolationResponse>(
-      `/operational-projects/${projectId}/hse-violations/${id}`,
-      body,
-      { headers: {
+  updateHseViolation: (
+    projectId: number,
+    id: number,
+    body: UpdateHseViolationRequest,
+    idempotencyKey: string,
+  ) =>
+    api.put<HseViolationResponse>(`/operational-projects/${projectId}/hse-violations/${id}`, body, {
+      headers: {
         ...withIdempotencyKey(idempotencyKey).headers,
         ...withIfMatch(body.rowVersion).headers,
-      } },
-    ),
+      },
+    }),
   transitionHseViolation: (
     projectId: number,
     id: number,
     action: "report" | "confirm" | "reject" | "remediate" | "cancel" | "close",
     body: TransitionHseViolationRequest,
     idempotencyKey: string,
-  ) => api.post<HseViolationResponse>(
-    `/operational-projects/${projectId}/hse-violations/${id}/${action}`,
-    body,
-    { headers: {
-      ...withIdempotencyKey(idempotencyKey).headers,
-      ...withIfMatch(body.rowVersion).headers,
-    } },
-  ),
-  correctHseViolation: (projectId: number, id: number, body: CorrectHseViolationRequest, idempotencyKey: string) =>
+  ) =>
+    api.post<HseViolationResponse>(
+      `/operational-projects/${projectId}/hse-violations/${id}/${action}`,
+      body,
+      {
+        headers: {
+          ...withIdempotencyKey(idempotencyKey).headers,
+          ...withIfMatch(body.rowVersion).headers,
+        },
+      },
+    ),
+  correctHseViolation: (
+    projectId: number,
+    id: number,
+    body: CorrectHseViolationRequest,
+    idempotencyKey: string,
+  ) =>
     api.post<HseViolationResponse>(
       `/operational-projects/${projectId}/hse-violations/${id}/corrections`,
       body,
-      { headers: {
-        ...withIdempotencyKey(idempotencyKey).headers,
-        ...withIfMatch(body.rowVersion).headers,
-      } },
+      {
+        headers: {
+          ...withIdempotencyKey(idempotencyKey).headers,
+          ...withIfMatch(body.rowVersion).headers,
+        },
+      },
     ),
   addOperationalProjectMember: (
     projectId: number,
     body: UpsertOperationalProjectMemberRequest,
     idempotencyKey: string,
-  ) => api.post<OperationalProjectMemberResponse>(
-    `/operational-projects/${projectId}/team/members`,
-    body,
-    withIdempotencyKey(idempotencyKey),
-  ),
+  ) =>
+    api.post<OperationalProjectMemberResponse>(
+      `/operational-projects/${projectId}/team/members`,
+      body,
+      withIdempotencyKey(idempotencyKey),
+    ),
   updateOperationalProjectMember: (
     projectId: number,
     memberId: number,
     body: UpsertOperationalProjectMemberRequest,
     idempotencyKey: string,
-  ) => api.put<OperationalProjectMemberResponse>(
-    `/operational-projects/${projectId}/team/members/${memberId}`,
-    body,
-    { headers: {
-      ...withIdempotencyKey(idempotencyKey).headers,
-      ...withIfMatch(body.rowVersion).headers,
-    } },
-  ),
+  ) =>
+    api.put<OperationalProjectMemberResponse>(
+      `/operational-projects/${projectId}/team/members/${memberId}`,
+      body,
+      {
+        headers: {
+          ...withIdempotencyKey(idempotencyKey).headers,
+          ...withIfMatch(body.rowVersion).headers,
+        },
+      },
+    ),
   addOperationalProjectAssignment: (
     projectId: number,
     body: UpsertOperationalProjectAssignmentRequest,
     idempotencyKey: string,
-  ) => api.post<OperationalProjectAssignmentResponse>(
-    `/operational-projects/${projectId}/team/assignments`,
-    body,
-    withIdempotencyKey(idempotencyKey),
-  ),
+  ) =>
+    api.post<OperationalProjectAssignmentResponse>(
+      `/operational-projects/${projectId}/team/assignments`,
+      body,
+      withIdempotencyKey(idempotencyKey),
+    ),
   updateOperationalProjectAssignment: (
     projectId: number,
     assignmentId: number,
     body: UpsertOperationalProjectAssignmentRequest,
     idempotencyKey: string,
-  ) => api.put<OperationalProjectAssignmentResponse>(
-    `/operational-projects/${projectId}/team/assignments/${assignmentId}`,
-    body,
-    { headers: {
-      ...withIdempotencyKey(idempotencyKey).headers,
-      ...withIfMatch(body.rowVersion).headers,
-    } },
-  ),
+  ) =>
+    api.put<OperationalProjectAssignmentResponse>(
+      `/operational-projects/${projectId}/team/assignments/${assignmentId}`,
+      body,
+      {
+        headers: {
+          ...withIdempotencyKey(idempotencyKey).headers,
+          ...withIfMatch(body.rowVersion).headers,
+        },
+      },
+    ),
   createOperationalProject: (body: CreateOperationalProjectRequest) =>
     api.post<OperationalProjectResponse>("/operational-projects", body),
   updateOperationalProject: (id: number, body: UpdateOperationalProjectRequest) =>
     api.put<OperationalProjectResponse>(`/operational-projects/${id}`, body),
-  reopenOperationalProject: (id: number, body: ReopenOperationalProjectRequest, idempotencyKey: string) =>
+  reopenOperationalProject: (
+    id: number,
+    body: ReopenOperationalProjectRequest,
+    idempotencyKey: string,
+  ) =>
     api.post<OperationalProjectResponse>(`/operational-projects/${id}/reopen`, body, {
       headers: {
         ...withIfMatch(body.rowVersion).headers,
@@ -6317,21 +7295,29 @@ export const adminApi = {
     }),
   listKpiDefinitions: () => api.get<KpiDefinitionResponse[]>("/kpi/definitions"),
   listKpiEligibleUsers: () => api.get<KpiUserOptionResponse[]>("/kpi/eligible-users"),
-  updateKpiDefinition: (id: number, body: {
-    weight: number;
-    targetValue?: number | null;
-    minimumAcceptableScore?: number | null;
-    targetDirection: KpiTargetDirection;
-    isActive: boolean;
-    rowVersion: string;
-  }) => api.put<KpiDefinitionResponse>(`/kpi/definitions/${id}`, body, {
-    headers: withIfMatch(body.rowVersion).headers,
-  }),
+  updateKpiDefinition: (
+    id: number,
+    body: {
+      weight: number;
+      targetValue?: number | null;
+      minimumAcceptableScore?: number | null;
+      targetDirection: KpiTargetDirection;
+      isActive: boolean;
+      rowVersion: string;
+    },
+  ) =>
+    api.put<KpiDefinitionResponse>(`/kpi/definitions/${id}`, body, {
+      headers: withIfMatch(body.rowVersion).headers,
+    }),
   calculateKpi: (body: { year: number; month: number; userId?: number }, idempotencyKey: string) =>
     api.post<KpiDashboardResponse>("/kpi/calculate", body, withIdempotencyKey(idempotencyKey)),
   getKpiDashboard: (params: { year: number; month: number; userId?: number }) =>
     api.get<KpiDashboardResponse>("/kpi/dashboard", { params }),
-  lockKpiPeriod: (year: number, month: number, body: { userId?: number; note: string; rowVersion: string }) =>
+  lockKpiPeriod: (
+    year: number,
+    month: number,
+    body: { userId?: number; note: string; rowVersion: string },
+  ) =>
     api.post<KpiDashboardResponse>(`/kpi/periods/${year}/${month}/lock`, body, {
       headers: withIfMatch(body.rowVersion).headers,
     }),
@@ -6369,13 +7355,21 @@ export const adminApi = {
   deleteProjectDocument: (projectId: number, documentId: number) =>
     api.delete(`/operational-projects/${projectId}/documents/${documentId}`),
   retryProjectDocument: (projectId: number, documentId: number) =>
-    api.post<ProjectDocumentResponse>(`/operational-projects/${projectId}/documents/${documentId}/retry`),
+    api.post<ProjectDocumentResponse>(
+      `/operational-projects/${projectId}/documents/${documentId}/retry`,
+    ),
   classifyProjectDocument: (projectId: number, documentId: number, category: string) =>
-    api.post<ProjectDocumentResponse>(`/operational-projects/${projectId}/documents/${documentId}/classify`, { category }),
+    api.post<ProjectDocumentResponse>(
+      `/operational-projects/${projectId}/documents/${documentId}/classify`,
+      { category },
+    ),
   resolveProjectDocumentKeepBoth: (projectId: number, documentId: number) =>
-    api.post<ProjectDocumentResponse>(`/operational-projects/${projectId}/documents/${documentId}/resolve-conflict`, {
-      confirmKeepBoth: true,
-    }),
+    api.post<ProjectDocumentResponse>(
+      `/operational-projects/${projectId}/documents/${documentId}/resolve-conflict`,
+      {
+        confirmKeepBoth: true,
+      },
+    ),
 
   // Contracts (NIH-102)
   listContracts: (params?: ContractListParams) =>
@@ -6385,13 +7379,13 @@ export const adminApi = {
   getContractFilterOptions: (direction?: ContractDirection) =>
     api.get<ContractFilterOptionsResponse>("/contracts/filter-options", { params: { direction } }),
   getContractClassificationOptions: (direction?: ContractDirection) =>
-    api.get<ContractClassificationOptions>("/contracts/classification-options", { params: { direction } }),
+    api.get<ContractClassificationOptions>("/contracts/classification-options", {
+      params: { direction },
+    }),
   getContract: (id: number, direction?: ContractDirection) =>
     api.get<ContractResponse>(`/contracts/${id}`, { params: { direction } }),
-  previewNextContractNumber: () =>
-    api.get<{ contractNumber: string }>("/contracts/next-number"),
-  createContract: (body: UpsertContractRequest) =>
-    api.post<ContractResponse>("/contracts", body),
+  previewNextContractNumber: () => api.get<{ contractNumber: string }>("/contracts/next-number"),
+  createContract: (body: UpsertContractRequest) => api.post<ContractResponse>("/contracts", body),
   updateContract: (id: number, body: UpsertContractRequest) =>
     api.put<ContractResponse>(`/contracts/${id}`, body),
   getContractDeletionImpact: (id: number) =>
@@ -6424,44 +7418,39 @@ export const adminApi = {
     note?: string | null,
     rowVersion?: string,
   ) =>
-    api.patch<ContractResponse>(
-      `/contracts/${contractId}/milestones/${milestoneId}/status`,
-      { status, actualPaymentDate, responsibleAccountantUserId, note, rowVersion },
-    ),
+    api.patch<ContractResponse>(`/contracts/${contractId}/milestones/${milestoneId}/status`, {
+      status,
+      actualPaymentDate,
+      responsibleAccountantUserId,
+      note,
+      rowVersion,
+    }),
   updateContractPaymentSchedule: (contractId: number, body: UpdateContractPaymentScheduleRequest) =>
     api.put<ContractResponse>(`/contracts/${contractId}/milestones`, body),
   listContractAppendices: (contractId: number) =>
     api.get<ContractAppendixResponse[]>(`/contracts/${contractId}/appendices`),
   createContractAppendix: (contractId: number, body: UpsertContractAppendixRequest) =>
     api.post<ContractAppendixResponse>(`/contracts/${contractId}/appendices`, body),
-  updateContractAppendix: (
-    contractId: number,
-    voId: number,
-    body: UpsertContractAppendixRequest,
-  ) =>
+  updateContractAppendix: (contractId: number, voId: number, body: UpsertContractAppendixRequest) =>
     api.put<ContractAppendixResponse>(`/contracts/${contractId}/appendices/${voId}`, body),
   submitContractAppendix: (contractId: number, voId: number) =>
     api.post<ContractAppendixResponse>(`/contracts/${contractId}/appendices/${voId}/submit`),
   approveContractAppendix: (contractId: number, voId: number, note?: string) =>
-    api.post<ContractAppendixResponse>(
-      `/contracts/${contractId}/appendices/${voId}/approve`,
-      { note },
-    ),
+    api.post<ContractAppendixResponse>(`/contracts/${contractId}/appendices/${voId}/approve`, {
+      note,
+    }),
   rejectContractAppendix: (contractId: number, voId: number, note: string) =>
-    api.post<ContractAppendixResponse>(
-      `/contracts/${contractId}/appendices/${voId}/reject`,
-      { note },
-    ),
+    api.post<ContractAppendixResponse>(`/contracts/${contractId}/appendices/${voId}/reject`, {
+      note,
+    }),
   deleteContractAppendix: (contractId: number, voId: number) =>
     api.delete(`/contracts/${contractId}/appendices/${voId}`),
   uploadContractAppendixFile: (contractId: number, file: File) => {
     const form = new FormData();
     form.append("file", file);
-    return api.post<AppendixUploadResponse>(
-      `/contracts/${contractId}/appendices/files`,
-      form,
-      { headers: { "Content-Type": "multipart/form-data" } },
-    );
+    return api.post<AppendixUploadResponse>(`/contracts/${contractId}/appendices/files`, form, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
   },
   listContractAttachments: (contractId: number) =>
     api.get<ContractAttachmentResponse[]>(`/contracts/${contractId}/attachments`),
@@ -6470,10 +7459,9 @@ export const adminApi = {
       responseType: "blob",
     }),
   getContractAppendixContent: (contractId: number, path: string) =>
-    api.get<Blob>(
-      `/contracts/${contractId}/appendices/files/${managedFileName(path)}/content`,
-      { responseType: "blob" },
-    ),
+    api.get<Blob>(`/contracts/${contractId}/appendices/files/${managedFileName(path)}/content`, {
+      responseType: "blob",
+    }),
   uploadContractAttachment: (
     contractId: number,
     file: File,
@@ -6484,11 +7472,9 @@ export const adminApi = {
     form.append("file", file);
     form.append("kind", kind);
     if (label) form.append("label", label);
-    return api.post<ContractAttachmentResponse>(
-      `/contracts/${contractId}/attachments`,
-      form,
-      { headers: { "Content-Type": "multipart/form-data" } },
-    );
+    return api.post<ContractAttachmentResponse>(`/contracts/${contractId}/attachments`, form, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
   },
   deleteContractAttachment: (contractId: number, attachmentId: number) =>
     api.delete(`/contracts/${contractId}/attachments/${attachmentId}`),
@@ -6517,20 +7503,15 @@ export const adminApi = {
   // Users / RBAC
   getUsers: (params: { skip?: number; take?: number; search?: string; role?: string }) =>
     api.get<UserListResponse>("/users", { params }),
-  getUser: (id: number) =>
-    api.get<UserDetailResponse>(`/users/${id}`),
+  getUser: (id: number) => api.get<UserDetailResponse>(`/users/${id}`),
   createUser: (data: CreateUserRequest, idempotencyKey?: string) =>
     api.post<UserDetailResponse>("/users", data, withIdempotencyKey(idempotencyKey)),
   updateUser: (id: number, data: UpdateUserRequest, idempotencyKey?: string) =>
     api.put<UserDetailResponse>(`/users/${id}`, data, withIdempotencyKey(idempotencyKey)),
-  toggleUserActive: (id: number) =>
-    api.patch<UserDetailResponse>(`/users/${id}/toggle-active`),
-  deleteUser: (id: number) =>
-    api.delete(`/users/${id}`),
-  hardDeleteUser: (id: number) =>
-    api.delete(`/users/${id}/hard`),
-  getUserRoles: () =>
-    api.get<RoleCatalogResponse>("/users/roles"),
+  toggleUserActive: (id: number) => api.patch<UserDetailResponse>(`/users/${id}/toggle-active`),
+  deleteUser: (id: number) => api.delete(`/users/${id}`),
+  hardDeleteUser: (id: number) => api.delete(`/users/${id}/hard`),
+  getUserRoles: () => api.get<RoleCatalogResponse>("/users/roles"),
 
   // Audit log
   listAuditLogs: (params: ListAuditLogParams = {}) => {
@@ -6549,18 +7530,15 @@ export const adminApi = {
     if (params.search) query.append("search", params.search);
     return api.get<AuditLogPage>(`/audit-logs?${query}`);
   },
-  deleteAuditLog: (id: number) =>
-    api.delete(`/audit-logs/${id}`),
+  deleteAuditLog: (id: number) => api.delete(`/audit-logs/${id}`),
   deleteAuditLogRange: (params: DeleteAuditRangeParams) => {
     const query = new URLSearchParams();
     if (params.before) query.append("before", params.before);
     if (params.action) query.append("action", params.action);
     return api.delete<{ deleted: number }>(`/audit-logs?${query}`);
   },
-  getAuditConfig: () =>
-    api.get<AuditConfigDto>("/audit-logs/config"),
-  updateAuditConfig: (data: AuditConfigDto) =>
-    api.put<AuditConfigDto>("/audit-logs/config", data),
+  getAuditConfig: () => api.get<AuditConfigDto>("/audit-logs/config"),
+  updateAuditConfig: (data: AuditConfigDto) => api.put<AuditConfigDto>("/audit-logs/config", data),
 };
 
 // ─── Slug helper ─────────────────────────────────────────────

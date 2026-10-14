@@ -8,7 +8,8 @@ type TranslationMap = Record<string, string>;
 // --- Backend error message -> i18n key mapping ---
 const backendErrorMap: Record<string, string> = {
   "Invalid credentials.": "auth.err.invalidCredentials",
-  "Enter a valid phone number (example: 0987654321) or email (example: user@example.com).": "auth.err.invalidLoginIdentifier",
+  "Enter a valid phone number (example: 0987654321) or email (example: user@example.com).":
+    "auth.err.invalidLoginIdentifier",
   "Account is inactive.": "auth.err.accountInactive",
   "Phone number already registered.": "auth.err.phoneRegistered",
   "Email already registered.": "auth.err.emailRegistered",
@@ -22,8 +23,10 @@ const backendErrorMap: Record<string, string> = {
   "User not found.": "auth.err.userNotFound",
   "OTP verification is disabled for registration.": "auth.err.otpDisabledRegister",
   "OTP verification is disabled for forgot password.": "auth.err.otpDisabledForgot",
-  "OTP verification is required. Please use the standard forgot password flow.": "auth.err.otpRequiredForgot",
-  "OTP verification is disabled. Complete registration from register/start.": "auth.err.otpDisabledComplete",
+  "OTP verification is required. Please use the standard forgot password flow.":
+    "auth.err.otpRequiredForgot",
+  "OTP verification is disabled. Complete registration from register/start.":
+    "auth.err.otpDisabledComplete",
   "Network Error": "auth.err.networkError",
   "An unexpected error occurred": "auth.err.unexpected",
 };
@@ -46,7 +49,8 @@ const LANGS: Lang[] = ["vi", "en", "zh", "ja"];
 
 export const I18nProvider = ({ children }: { children: ReactNode }) => {
   const [lang, setLangState] = useState<Lang>(() => {
-    const saved = typeof window !== "undefined" ? (localStorage.getItem("nicon_lang") as Lang) : null;
+    const saved =
+      typeof window !== "undefined" ? (localStorage.getItem("nicon_lang") as Lang) : null;
     return saved && LANGS.includes(saved) ? saved : "vi";
   });
   const [fallbackViMap, setFallbackViMap] = useState<TranslationMap>({});
@@ -62,15 +66,17 @@ export const I18nProvider = ({ children }: { children: ReactNode }) => {
 
     const loadTranslations = async () => {
       try {
-        const viReq = api.get<{ languageCode: string; translations: TranslationMap }>("/translations/vi");
-        const langReq = lang === "vi"
-          ? null
-          : api.get<{ languageCode: string; translations: TranslationMap }>(`/translations/${lang}`);
+        const viReq = api.get<{ languageCode: string; translations: TranslationMap }>(
+          "/translations/vi",
+        );
+        const langReq =
+          lang === "vi"
+            ? null
+            : api.get<{ languageCode: string; translations: TranslationMap }>(
+                `/translations/${lang}`,
+              );
 
-        const [viRes, langRes] = await Promise.all([
-          viReq,
-          langReq ?? Promise.resolve(null),
-        ]);
+        const [viRes, langRes] = await Promise.all([viReq, langReq ?? Promise.resolve(null)]);
 
         if (canceled) return;
 

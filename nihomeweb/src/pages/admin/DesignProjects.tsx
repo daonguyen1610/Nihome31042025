@@ -77,8 +77,7 @@ const toDateInputValue = (iso?: string | null) => (iso ? iso.slice(0, 10) : "");
 
 /** Turn a YYYY-MM-DD input into `${YYYY-MM-DD}T00:00:00.000Z`. Keeps the
  * chosen local calendar date intact across the UTC+7 boundary. */
-const toUtcMidnight = (yyyyMmDd: string): string =>
-  yyyyMmDd ? `${yyyyMmDd}T00:00:00.000Z` : "";
+const toUtcMidnight = (yyyyMmDd: string): string => (yyyyMmDd ? `${yyyyMmDd}T00:00:00.000Z` : "");
 
 const emptyForm = (): UpdateDesignProjectRequest => ({
   name: "",
@@ -107,8 +106,8 @@ const AdminDesignProjects = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const canManage = has(ADMIN_PERMS.designProjectsManage);
-  const canCreate = canManage && has(ADMIN_PERMS.operationalProjectsManage) &&
-    has(ADMIN_PERMS.opportunitiesManage);
+  const canCreate =
+    canManage && has(ADMIN_PERMS.operationalProjectsManage) && has(ADMIN_PERMS.opportunitiesManage);
   const canPickUser = has(ADMIN_PERMS.users);
 
   // list state
@@ -545,7 +544,10 @@ const AdminDesignProjects = () => {
                     setCustomerId(v ? Number(v) : null);
                     setPage(1);
                   }}
-                  options={[{ value: "", label: t("designProjects.filter.allCustomers") }, ...customerOptions]}
+                  options={[
+                    { value: "", label: t("designProjects.filter.allCustomers") },
+                    ...customerOptions,
+                  ]}
                   placeholder={t("designProjects.filter.allCustomers")}
                 />
               </div>
@@ -561,7 +563,10 @@ const AdminDesignProjects = () => {
                       setPmId(v ? Number(v) : null);
                       setPage(1);
                     }}
-                    options={[{ value: "", label: t("designProjects.filter.allPms") }, ...userOptions]}
+                    options={[
+                      { value: "", label: t("designProjects.filter.allPms") },
+                      ...userOptions,
+                    ]}
                     placeholder={t("designProjects.filter.allPms")}
                   />
                 </div>
@@ -574,7 +579,10 @@ const AdminDesignProjects = () => {
                       setLeadId(v ? Number(v) : null);
                       setPage(1);
                     }}
-                    options={[{ value: "", label: t("designProjects.filter.allLeads") }, ...userOptions]}
+                    options={[
+                      { value: "", label: t("designProjects.filter.allLeads") },
+                      ...userOptions,
+                    ]}
                     placeholder={t("designProjects.filter.allLeads")}
                   />
                 </div>
@@ -623,7 +631,9 @@ const AdminDesignProjects = () => {
                     <header className="flex items-start justify-between gap-2">
                       <div className="flex min-w-0 items-start gap-2">
                         <div className="min-w-0">
-                          <h3 className="break-words text-sm font-semibold leading-tight">{r.name}</h3>
+                          <h3 className="break-words text-sm font-semibold leading-tight">
+                            {r.name}
+                          </h3>
                           <p className="mt-0.5 text-xs text-muted-foreground">
                             {r.projectCode}
                             {r.customerName ? ` · ${r.customerName}` : ""}
@@ -631,10 +641,16 @@ const AdminDesignProjects = () => {
                         </div>
                       </div>
                       <div className="flex flex-col items-end gap-1">
-                        <Badge variant="outline" className={cn("whitespace-nowrap", STAGE_BADGE[r.currentStage])}>
+                        <Badge
+                          variant="outline"
+                          className={cn("whitespace-nowrap", STAGE_BADGE[r.currentStage])}
+                        >
                           {t(`designProjects.stage.${r.currentStage}`)}
                         </Badge>
-                        <Badge variant="outline" className={cn("whitespace-nowrap", STATUS_BADGE[r.status])}>
+                        <Badge
+                          variant="outline"
+                          className={cn("whitespace-nowrap", STATUS_BADGE[r.status])}
+                        >
                           {t(`designProjects.status.${r.status}`)}
                         </Badge>
                       </div>
@@ -645,20 +661,29 @@ const AdminDesignProjects = () => {
                         <dd className="font-medium">{r.projectManagerName ?? "—"}</dd>
                       </div>
                       <div>
-                        <dt className="text-muted-foreground">{t("designProjects.field.designLead")}</dt>
+                        <dt className="text-muted-foreground">
+                          {t("designProjects.field.designLead")}
+                        </dt>
                         <dd className="font-medium">{r.designLeadName ?? "—"}</dd>
                       </div>
                       <div>
-                        <dt className="text-muted-foreground">{t("designProjects.field.startDate")}</dt>
+                        <dt className="text-muted-foreground">
+                          {t("designProjects.field.startDate")}
+                        </dt>
                         <dd className="font-medium">{formatDate(r.startDate, lang)}</dd>
                       </div>
                       <div>
-                        <dt className="text-muted-foreground">{t("designProjects.field.deadline")}</dt>
+                        <dt className="text-muted-foreground">
+                          {t("designProjects.field.deadline")}
+                        </dt>
                         <dd className="font-medium">{formatDate(r.deadline, lang)}</dd>
                       </div>
                     </dl>
                     {canManage ? (
-                      <div className="mt-2 flex justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+                      <div
+                        className="mt-2 flex justify-end gap-1.5"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <Button variant="ghost" size="sm" onClick={() => void openEdit(r.id)}>
                           <Pencil className="mr-1 h-3.5 w-3.5" />
                           {t("common.edit")}
@@ -706,7 +731,9 @@ const AdminDesignProjects = () => {
                         className="cursor-pointer transition-colors hover:bg-slate-50/70"
                         onClick={() => openDetail(r.id)}
                       >
-                        <td className="px-3 py-2 font-mono text-xs text-slate-600">{r.projectCode}</td>
+                        <td className="px-3 py-2 font-mono text-xs text-slate-600">
+                          {r.projectCode}
+                        </td>
                         <td className="px-3 py-2 font-medium text-slate-900">
                           <div className="flex items-center gap-2">
                             <PenTool className="h-3.5 w-3.5 text-slate-400" />
@@ -716,12 +743,18 @@ const AdminDesignProjects = () => {
                         <td className="px-3 py-2 text-slate-700">{r.customerName ?? "—"}</td>
                         <td className="px-3 py-2 text-slate-700">{r.projectManagerName ?? "—"}</td>
                         <td className="px-3 py-2">
-                          <Badge variant="outline" className={cn("whitespace-nowrap", STAGE_BADGE[r.currentStage])}>
+                          <Badge
+                            variant="outline"
+                            className={cn("whitespace-nowrap", STAGE_BADGE[r.currentStage])}
+                          >
                             {t(`designProjects.stage.${r.currentStage}`)}
                           </Badge>
                         </td>
                         <td className="px-3 py-2">
-                          <Badge variant="outline" className={cn("whitespace-nowrap", STATUS_BADGE[r.status])}>
+                          <Badge
+                            variant="outline"
+                            className={cn("whitespace-nowrap", STATUS_BADGE[r.status])}
+                          >
                             {t(`designProjects.status.${r.status}`)}
                           </Badge>
                         </td>
@@ -818,12 +851,17 @@ const AdminDesignProjects = () => {
               <SearchableSelect
                 className="mt-1"
                 value={form.contractId != null ? String(form.contractId) : ""}
-                onChange={(v) => setForm((f) => ({
-                  ...f,
-                  contractId: v ? Number(v) : null,
-                  operationalProjectId: v ? null : f.operationalProjectId,
-                }))}
-                options={[{ value: "", label: t("designProjects.form.contractNone") }, ...contractOptions]}
+                onChange={(v) =>
+                  setForm((f) => ({
+                    ...f,
+                    contractId: v ? Number(v) : null,
+                    operationalProjectId: v ? null : f.operationalProjectId,
+                  }))
+                }
+                options={[
+                  { value: "", label: t("designProjects.form.contractNone") },
+                  ...contractOptions,
+                ]}
                 placeholder={t("designProjects.form.contractNone")}
               />
             </div>
@@ -833,14 +871,18 @@ const AdminDesignProjects = () => {
                 {projectFromContract ? (
                   <p className="mt-1 text-sm text-muted-foreground">
                     {t("designProjects.form.projectFromContract", {
-                      project: projects.find((p) => p.id === projectFromContract)?.code ?? `#${projectFromContract}`,
+                      project:
+                        projects.find((p) => p.id === projectFromContract)?.code ??
+                        `#${projectFromContract}`,
                     })}
                   </p>
                 ) : (
                   <>
                     <SearchableSelect
                       className="mt-1"
-                      value={form.operationalProjectId != null ? String(form.operationalProjectId) : ""}
+                      value={
+                        form.operationalProjectId != null ? String(form.operationalProjectId) : ""
+                      }
                       onChange={(v) => {
                         const project = projects.find((p) => p.id === Number(v));
                         setFormError(null);
@@ -868,11 +910,16 @@ const AdminDesignProjects = () => {
                   <Label>{t("designProjects.field.pm")}</Label>
                   <SearchableSelect
                     className="mt-1"
-                    value={form.projectManagerUserId != null ? String(form.projectManagerUserId) : ""}
+                    value={
+                      form.projectManagerUserId != null ? String(form.projectManagerUserId) : ""
+                    }
                     onChange={(v) =>
                       setForm((f) => ({ ...f, projectManagerUserId: v ? Number(v) : null }))
                     }
-                    options={[{ value: "", label: t("designProjects.form.pmNone") }, ...userOptions]}
+                    options={[
+                      { value: "", label: t("designProjects.form.pmNone") },
+                      ...userOptions,
+                    ]}
                     placeholder={t("designProjects.form.pmNone")}
                   />
                 </div>
@@ -884,7 +931,10 @@ const AdminDesignProjects = () => {
                     onChange={(v) =>
                       setForm((f) => ({ ...f, designLeadUserId: v ? Number(v) : null }))
                     }
-                    options={[{ value: "", label: t("designProjects.form.leadNone") }, ...userOptions]}
+                    options={[
+                      { value: "", label: t("designProjects.form.leadNone") },
+                      ...userOptions,
+                    ]}
                     placeholder={t("designProjects.form.leadNone")}
                   />
                 </div>
@@ -915,7 +965,9 @@ const AdminDesignProjects = () => {
                 <Label>{t("designProjects.field.status")}</Label>
                 <Select
                   value={form.status ?? "Active"}
-                  onValueChange={(v) => setForm((f) => ({ ...f, status: v as DesignProjectStatus }))}
+                  onValueChange={(v) =>
+                    setForm((f) => ({ ...f, status: v as DesignProjectStatus }))
+                  }
                 >
                   <SelectTrigger className="mt-1 h-9">
                     <SelectValue />
@@ -940,7 +992,13 @@ const AdminDesignProjects = () => {
             </div>
           </div>
           {formError ? (
-            <p className="text-sm text-rose-600" role="alert" data-testid="design-project-form-error">{formError}</p>
+            <p
+              className="text-sm text-rose-600"
+              role="alert"
+              data-testid="design-project-form-error"
+            >
+              {formError}
+            </p>
           ) : null}
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>

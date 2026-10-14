@@ -30,18 +30,23 @@ test("SUPER_ADMIN receives the full catalog", async ({ api, loginAs }) => {
   const body = await fetchPermissions(api, token);
 
   expect(body.role).toBe("SUPER_ADMIN");
-  expect(body.permissions).toEqual(expect.arrayContaining([
-    "dashboard.view",
-    "users.view",
-    "users.manage",
-    "rbac.roles.view",
-    "rbac.roles.manage",
-    "profile.me.view",
-    "profile.me.update",
-  ]));
+  expect(body.permissions).toEqual(
+    expect.arrayContaining([
+      "dashboard.view",
+      "users.view",
+      "users.manage",
+      "rbac.roles.view",
+      "rbac.roles.manage",
+      "profile.me.view",
+      "profile.me.update",
+    ]),
+  );
 });
 
-test("ADMIN can manage roles but cannot manage users (no privilege escalation)", async ({ api, loginAs }) => {
+test("ADMIN can manage roles but cannot manage users (no privilege escalation)", async ({
+  api,
+  loginAs,
+}) => {
   const token = await loginAs(TEST_USERS.admin);
   const body = await fetchPermissions(api, token);
 

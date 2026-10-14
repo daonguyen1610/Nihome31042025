@@ -5,9 +5,10 @@ test("shared-project and internal work package tabs render without browser error
   loginInBrowserAs,
 }) => {
   const errors: string[] = [];
-  page.on("pageerror", error => errors.push(error.message));
-  page.on("console", message => {
-    if (message.type() === "error" && !/WebSocket|\[vite\]/i.test(message.text())) errors.push(message.text());
+  page.on("pageerror", (error) => errors.push(error.message));
+  page.on("console", (message) => {
+    if (message.type() === "error" && !/WebSocket|\[vite\]/i.test(message.text()))
+      errors.push(message.text());
   });
 
   await loginInBrowserAs(page, TEST_USERS.superAdmin);
@@ -32,7 +33,7 @@ test("work package workspace remains usable at mobile and tablet widths", async 
     await page.setViewportSize({ width, height: 844 });
     await page.goto("/admin/work-packages");
     await expect(page.getByTestId("work-packages-page")).toBeVisible({ timeout: 15_000 });
-    const dimensions = await page.locator("html").evaluate(element => ({
+    const dimensions = await page.locator("html").evaluate((element) => ({
       clientWidth: element.clientWidth,
       scrollWidth: element.scrollWidth,
     }));
@@ -49,7 +50,10 @@ test("back from a work package detail restores the package list", async ({
   await expect(page.getByTestId("work-packages-page")).toBeVisible({ timeout: 15_000 });
 
   const firstPackage = page.getByTestId("work-package-card").first();
-  test.skip(await firstPackage.count() === 0, "The seeded environment has no work package to open");
+  test.skip(
+    (await firstPackage.count()) === 0,
+    "The seeded environment has no work package to open",
+  );
   await firstPackage.click();
   await expect(page).toHaveURL(/\/admin\/work-packages\/\d+$/);
 

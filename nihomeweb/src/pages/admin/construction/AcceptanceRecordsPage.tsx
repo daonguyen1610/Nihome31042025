@@ -57,7 +57,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import {
   adminApi,
   type AcceptanceRecordListParams,
@@ -69,7 +75,13 @@ import {
   type UpdateAcceptanceRecordRequest,
 } from "@/services/adminApi";
 
-const ACCEPTANCE_STATUSES: AcceptanceStatus[] = ["Draft", "Submitted", "Approved", "Rejected", "Cancelled"];
+const ACCEPTANCE_STATUSES: AcceptanceStatus[] = [
+  "Draft",
+  "Submitted",
+  "Approved",
+  "Rejected",
+  "Cancelled",
+];
 
 const STATUS_BADGE: Record<AcceptanceStatus, string> = {
   Draft: "border-slate-200 bg-slate-50 text-slate-700",
@@ -87,14 +99,19 @@ const parseDocuments = (value: string | null | undefined): string[] => {
   if (!value) return [];
   try {
     const parsed: unknown = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : [];
+    return Array.isArray(parsed)
+      ? parsed.filter((item): item is string => typeof item === "string")
+      : [];
   } catch {
     return [];
   }
 };
 
 const documentPaths = (value?: string | null) =>
-  (value ?? "").split("\n").map((path) => path.trim()).filter(Boolean);
+  (value ?? "")
+    .split("\n")
+    .map((path) => path.trim())
+    .filter(Boolean);
 
 const serializeDocuments = (paths: string[]) => JSON.stringify(paths);
 
@@ -270,7 +287,22 @@ export default function AcceptanceRecordsPage() {
     } finally {
       setLoading(false);
     }
-  }, [projectId, taskId, responsibleUserId, acceptanceFrom, acceptanceTo, status, search, openOnly, overdueOnly, sortBy, sortDirection, page, pageSize, t]);
+  }, [
+    projectId,
+    taskId,
+    responsibleUserId,
+    acceptanceFrom,
+    acceptanceTo,
+    status,
+    search,
+    openOnly,
+    overdueOnly,
+    sortBy,
+    sortDirection,
+    page,
+    pageSize,
+    t,
+  ]);
 
   useEffect(() => {
     load();
@@ -283,21 +315,24 @@ export default function AcceptanceRecordsPage() {
     if (refreshed && refreshed !== detail) setDetail(refreshed);
   }, [rows, detail]);
 
-  const openDetail = useCallback(async (id: number) => {
-    setDetailOpen(true);
-    setDetailId(id);
-    setDetail(null);
-    setDetailError(null);
-    setDetailLoading(true);
-    try {
-      const response = await adminApi.getAcceptanceRecord(id);
-      setDetail(response.data);
-    } catch (error) {
-      setDetailError(extractApiError(error) || t("acceptance.detail.error"));
-    } finally {
-      setDetailLoading(false);
-    }
-  }, [t]);
+  const openDetail = useCallback(
+    async (id: number) => {
+      setDetailOpen(true);
+      setDetailId(id);
+      setDetail(null);
+      setDetailError(null);
+      setDetailLoading(true);
+      try {
+        const response = await adminApi.getAcceptanceRecord(id);
+        setDetail(response.data);
+      } catch (error) {
+        setDetailError(extractApiError(error) || t("acceptance.detail.error"));
+      } finally {
+        setDetailLoading(false);
+      }
+    },
+    [t],
+  );
 
   const openCreate = () => {
     setEditingId(null);
@@ -349,9 +384,9 @@ export default function AcceptanceRecordsPage() {
     const documents = documentPaths(form.documents);
     const serializedDocuments = serializeDocuments(documents);
     if (
-      documents.length > 20
-      || documents.some((path) => path.length > 500 || !resolveSafeLinkUrl(path))
-      || serializedDocuments.length > 4000
+      documents.length > 20 ||
+      documents.some((path) => path.length > 500 || !resolveSafeLinkUrl(path)) ||
+      serializedDocuments.length > 4000
     ) {
       setFormError(t("acceptance.form.documentsInvalid"));
       return;
@@ -359,9 +394,7 @@ export default function AcceptanceRecordsPage() {
 
     setSaving(true);
     try {
-      const constructionTaskId = form.constructionTaskId
-        ? Number(form.constructionTaskId)
-        : null;
+      const constructionTaskId = form.constructionTaskId ? Number(form.constructionTaskId) : null;
       const payload = {
         title,
         description: form.description.trim() || null,
@@ -393,9 +426,15 @@ export default function AcceptanceRecordsPage() {
   const runTransition = async (id: number, next: AcceptanceStatus, note: string) => {
     try {
       if (next === "Approved") {
-        await adminApi.approveAcceptanceRecord(id, { status: "Approved", resolutionNote: note || null });
+        await adminApi.approveAcceptanceRecord(id, {
+          status: "Approved",
+          resolutionNote: note || null,
+        });
       } else {
-        await adminApi.transitionAcceptanceStatus(id, { status: next, resolutionNote: note || null });
+        await adminApi.transitionAcceptanceStatus(id, {
+          status: next,
+          resolutionNote: note || null,
+        });
       }
       toast({ title: t("acceptance.toast.transition.success") });
       await load();
@@ -461,29 +500,84 @@ export default function AcceptanceRecordsPage() {
   };
 
   // Which workflow actions are available for a row given status + perms.
-  const availableTransitions = (r: AcceptanceRecordResponse): Array<{
+  const availableTransitions = (
+    r: AcceptanceRecordResponse,
+  ): Array<{
     next: AcceptanceStatus;
     label: string;
     testId: string;
     requiresPerm: boolean;
   }> => {
-    const out: Array<{ next: AcceptanceStatus; label: string; testId: string; requiresPerm: boolean }> = [];
+    const out: Array<{
+      next: AcceptanceStatus;
+      label: string;
+      testId: string;
+      requiresPerm: boolean;
+    }> = [];
     switch (r.status) {
       case "Draft":
-        if (canManage) out.push({ next: "Submitted", label: t("acceptance.action.submit"), testId: "acceptance-submit", requiresPerm: true });
-        if (canManage) out.push({ next: "Cancelled", label: t("acceptance.action.cancel"), testId: "acceptance-cancel", requiresPerm: true });
+        if (canManage)
+          out.push({
+            next: "Submitted",
+            label: t("acceptance.action.submit"),
+            testId: "acceptance-submit",
+            requiresPerm: true,
+          });
+        if (canManage)
+          out.push({
+            next: "Cancelled",
+            label: t("acceptance.action.cancel"),
+            testId: "acceptance-cancel",
+            requiresPerm: true,
+          });
         break;
       case "Submitted":
-        if (canApprove) out.push({ next: "Approved", label: t("acceptance.action.approve"), testId: "acceptance-approve", requiresPerm: true });
-        if (canManage) out.push({ next: "Rejected", label: t("acceptance.action.reject"), testId: "acceptance-reject", requiresPerm: true });
-        if (canManage) out.push({ next: "Cancelled", label: t("acceptance.action.cancel"), testId: "acceptance-cancel", requiresPerm: true });
+        if (canApprove)
+          out.push({
+            next: "Approved",
+            label: t("acceptance.action.approve"),
+            testId: "acceptance-approve",
+            requiresPerm: true,
+          });
+        if (canManage)
+          out.push({
+            next: "Rejected",
+            label: t("acceptance.action.reject"),
+            testId: "acceptance-reject",
+            requiresPerm: true,
+          });
+        if (canManage)
+          out.push({
+            next: "Cancelled",
+            label: t("acceptance.action.cancel"),
+            testId: "acceptance-cancel",
+            requiresPerm: true,
+          });
         break;
       case "Rejected":
-        if (canManage) out.push({ next: "Draft", label: t("acceptance.action.revise"), testId: "acceptance-revise", requiresPerm: true });
-        if (canManage) out.push({ next: "Cancelled", label: t("acceptance.action.cancel"), testId: "acceptance-cancel", requiresPerm: true });
+        if (canManage)
+          out.push({
+            next: "Draft",
+            label: t("acceptance.action.revise"),
+            testId: "acceptance-revise",
+            requiresPerm: true,
+          });
+        if (canManage)
+          out.push({
+            next: "Cancelled",
+            label: t("acceptance.action.cancel"),
+            testId: "acceptance-cancel",
+            requiresPerm: true,
+          });
         break;
       case "Approved":
-        if (canManage) out.push({ next: "Cancelled", label: t("acceptance.action.cancel"), testId: "acceptance-cancel", requiresPerm: true });
+        if (canManage)
+          out.push({
+            next: "Cancelled",
+            label: t("acceptance.action.cancel"),
+            testId: "acceptance-cancel",
+            requiresPerm: true,
+          });
         break;
       case "Cancelled":
         break;
@@ -502,7 +596,8 @@ export default function AcceptanceRecordsPage() {
     {
       key: "open",
       label: t("acceptance.stats.open"),
-      value: (statusCounts.Draft ?? 0) + (statusCounts.Submitted ?? 0) + (statusCounts.Rejected ?? 0),
+      value:
+        (statusCounts.Draft ?? 0) + (statusCounts.Submitted ?? 0) + (statusCounts.Rejected ?? 0),
       gradient: "from-slate-500 to-slate-700",
       icon: ClipboardCheck,
     },
@@ -523,8 +618,15 @@ export default function AcceptanceRecordsPage() {
   ];
 
   const hasActiveFilters = Boolean(
-    projectId || taskId || responsibleUserId || acceptanceFrom || acceptanceTo
-      || status || search.trim() || openOnly || overdueOnly,
+    projectId ||
+    taskId ||
+    responsibleUserId ||
+    acceptanceFrom ||
+    acceptanceTo ||
+    status ||
+    search.trim() ||
+    openOnly ||
+    overdueOnly,
   );
 
   const rowClickable = useCallback(
@@ -556,7 +658,12 @@ export default function AcceptanceRecordsPage() {
               {t("common.refresh")}
             </Button>
             {canManage && (
-              <Button size="sm" onClick={openCreate} data-testid="acceptance-new" disabled={projectId == null}>
+              <Button
+                size="sm"
+                onClick={openCreate}
+                data-testid="acceptance-new"
+                disabled={projectId == null}
+              >
                 <Plus className="mr-2 h-4 w-4" />
                 {t("acceptance.action.new")}
               </Button>
@@ -724,7 +831,9 @@ export default function AcceptanceRecordsPage() {
             <div>
               <Label>{t("acceptance.filter.sort")}</Label>
               <Select value={sortBy} onValueChange={(value) => setSortBy(value as typeof sortBy)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="date">{t("acceptance.field.date")}</SelectItem>
                   <SelectItem value="code">{t("acceptance.field.code")}</SelectItem>
@@ -737,8 +846,13 @@ export default function AcceptanceRecordsPage() {
             </div>
             <div>
               <Label>{t("acceptance.filter.direction")}</Label>
-              <Select value={sortDirection} onValueChange={(value) => setSortDirection(value as "asc" | "desc")}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+              <Select
+                value={sortDirection}
+                onValueChange={(value) => setSortDirection(value as "asc" | "desc")}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="asc">{t("acceptance.filter.asc")}</SelectItem>
                   <SelectItem value="desc">{t("acceptance.filter.desc")}</SelectItem>
@@ -847,7 +961,14 @@ export default function AcceptanceRecordsPage() {
                       </td>
                       <td className="px-3 py-2 text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex justify-end gap-1">
-                          <Button variant="ghost" size="icon" title={t("common.view")} aria-label={t("common.view")} onClick={() => void openDetail(r.id)} data-testid={`acceptance-row-view-${r.id}`}>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title={t("common.view")}
+                            aria-label={t("common.view")}
+                            onClick={() => void openDetail(r.id)}
+                            data-testid={`acceptance-row-view-${r.id}`}
+                          >
                             <Eye className="h-4 w-4" />
                           </Button>
                           {canManage && (
@@ -893,9 +1014,13 @@ export default function AcceptanceRecordsPage() {
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <div className="font-mono text-xs text-muted-foreground">{r.acceptanceCode}</div>
+                      <div className="font-mono text-xs text-muted-foreground">
+                        {r.acceptanceCode}
+                      </div>
                       <div className="truncate font-medium">{r.title}</div>
-                      <div className="mt-1 text-xs text-muted-foreground">{r.designProjectName}</div>
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        {r.designProjectName}
+                      </div>
                     </div>
                     <div className="flex flex-col items-end gap-1">
                       <Badge variant="outline" className={STATUS_BADGE[r.status]}>
@@ -908,18 +1033,40 @@ export default function AcceptanceRecordsPage() {
                       )}
                     </div>
                   </div>
-                  <div className="mt-2 text-xs text-muted-foreground">{formatDate(r.acceptanceDate)}</div>
+                  <div className="mt-2 text-xs text-muted-foreground">
+                    {formatDate(r.acceptanceDate)}
+                  </div>
                   <div className="mt-3 flex flex-wrap justify-end gap-1 border-t pt-2">
-                    <Button variant="ghost" size="sm" onClick={() => void openDetail(r.id)} data-testid={`acceptance-card-view-${r.id}`}>
-                      <Eye className="mr-1 h-4 w-4" />{t("common.view")}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => void openDetail(r.id)}
+                      data-testid={`acceptance-card-view-${r.id}`}
+                    >
+                      <Eye className="mr-1 h-4 w-4" />
+                      {t("common.view")}
                     </Button>
                     {canManage && (
                       <>
-                        <Button variant="ghost" size="sm" disabled={!OPEN_STATUSES.has(r.status)} onClick={() => openEdit(r)} data-testid={`acceptance-card-edit-${r.id}`}>
-                          <Pencil className="mr-1 h-4 w-4" />{t("common.edit")}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled={!OPEN_STATUSES.has(r.status)}
+                          onClick={() => openEdit(r)}
+                          data-testid={`acceptance-card-edit-${r.id}`}
+                        >
+                          <Pencil className="mr-1 h-4 w-4" />
+                          {t("common.edit")}
                         </Button>
-                        <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => setPendingDelete(r)} data-testid={`acceptance-card-delete-${r.id}`}>
-                          <Trash2 className="mr-1 h-4 w-4" />{t("common.delete")}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => setPendingDelete(r)}
+                          data-testid={`acceptance-card-delete-${r.id}`}
+                        >
+                          <Trash2 className="mr-1 h-4 w-4" />
+                          {t("common.delete")}
                         </Button>
                       </>
                     )}
@@ -929,11 +1076,14 @@ export default function AcceptanceRecordsPage() {
             </div>
 
             <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <div>
-                {t("common.pagination.total").replace("{total}", String(total))}
-              </div>
+              <div>{t("common.pagination.total").replace("{total}", String(total))}</div>
               <div className="flex gap-1">
-                <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page <= 1}
+                  onClick={() => setPage(page - 1)}
+                >
                   {t("common.pagination.prev")}
                 </Button>
                 <Button
@@ -964,13 +1114,18 @@ export default function AcceptanceRecordsPage() {
         <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
           {detailLoading && <PageLoading label={t("acceptance.detail.loading")} />}
           {!detailLoading && detailError && (
-            <PageError message={detailError} onRetry={() => detailId && void openDetail(detailId)} />
+            <PageError
+              message={detailError}
+              onRetry={() => detailId && void openDetail(detailId)}
+            />
           )}
           {detail && (
             <>
               <SheetHeader>
                 <SheetTitle className="text-lg">
-                  <span className="mr-2 font-mono text-xs text-muted-foreground">{detail.acceptanceCode}</span>
+                  <span className="mr-2 font-mono text-xs text-muted-foreground">
+                    {detail.acceptanceCode}
+                  </span>
                   {detail.title}
                 </SheetTitle>
                 <SheetDescription>{detail.designProjectName}</SheetDescription>
@@ -1011,7 +1166,9 @@ export default function AcceptanceRecordsPage() {
                   )}
                   {detail.resolutionNote && (
                     <>
-                      <dt className="text-muted-foreground">{t("acceptance.field.resolutionNote")}</dt>
+                      <dt className="text-muted-foreground">
+                        {t("acceptance.field.resolutionNote")}
+                      </dt>
                       <dd className="whitespace-pre-wrap">{detail.resolutionNote}</dd>
                     </>
                   )}
@@ -1047,21 +1204,30 @@ export default function AcceptanceRecordsPage() {
                     {t("acceptance.field.documents")}
                   </h3>
                   {parseDocuments(detail.documents).length === 0 ? (
-                    <p className="text-xs text-muted-foreground">{t("acceptance.documents.empty")}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {t("acceptance.documents.empty")}
+                    </p>
                   ) : (
                     <ul className="space-y-2">
                       {parseDocuments(detail.documents).map((path, index) => {
                         const label = path.split("/").pop() || path;
                         return (
-                          <li key={path} className="flex items-center gap-2 rounded-md border px-2 py-1.5">
+                          <li
+                            key={path}
+                            className="flex items-center gap-2 rounded-md border px-2 py-1.5"
+                          >
                             <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                             <span className="min-w-0 flex-1 break-all text-sm">{label}</span>
                             <AdminFilePreview
                               url={path}
                               fileName={label}
-                              fetchFile={isManagedDocumentPath(path, "/files/business-documents/acceptance")
-                                ? async () => (await adminApi.getAcceptanceDocumentContent(detail.id, path)).data
-                                : undefined}
+                              fetchFile={
+                                isManagedDocumentPath(path, "/files/business-documents/acceptance")
+                                  ? async () =>
+                                      (await adminApi.getAcceptanceDocumentContent(detail.id, path))
+                                        .data
+                                  : undefined
+                              }
                               testId={`acceptance-document-preview-${index}`}
                             />
                           </li>
@@ -1125,7 +1291,9 @@ export default function AcceptanceRecordsPage() {
             </DialogTitle>
             <DialogDescription>
               {editingId
-                ? projects.find((p) => p.id === rows.find((r) => r.id === editingId)?.designProjectId)?.name
+                ? projects.find(
+                    (p) => p.id === rows.find((r) => r.id === editingId)?.designProjectId,
+                  )?.name
                 : projects.find((p) => p.id === projectId)?.name}
             </DialogDescription>
           </DialogHeader>
@@ -1195,17 +1363,19 @@ export default function AcceptanceRecordsPage() {
               />
             </div>
             <div>
-              <Label htmlFor="acceptance-form-documents">
-                {t("acceptance.field.documents")}
-              </Label>
+              <Label htmlFor="acceptance-form-documents">{t("acceptance.field.documents")}</Label>
               <AdminDocumentUpload
                 multiple
                 maxFiles={Math.max(0, 20 - documentPaths(form.documents).length)}
-                uploadFile={async (file) => (await adminApi.uploadAcceptanceDocument(file)).data.path}
-                onUploaded={(paths) => setForm((current) => ({
-                  ...current,
-                  documents: [...documentPaths(current.documents), ...paths].join("\n"),
-                }))}
+                uploadFile={async (file) =>
+                  (await adminApi.uploadAcceptanceDocument(file)).data.path
+                }
+                onUploaded={(paths) =>
+                  setForm((current) => ({
+                    ...current,
+                    documents: [...documentPaths(current.documents), ...paths].join("\n"),
+                  }))
+                }
                 disabled={saving}
                 testId="acceptance-document-upload"
               />
@@ -1223,26 +1393,38 @@ export default function AcceptanceRecordsPage() {
               </p>
               {documentPaths(form.documents).length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-2">
-                  {documentPaths(form.documents).filter((path) =>
-                    !isManagedDocumentPath(path, "/files/business-documents/acceptance")
-                    || parseDocuments(rows.find((row) => row.id === editingId)?.documents).includes(path),
-                  ).map((path) => (
-                    <AdminFilePreview
-                      key={path}
-                      url={path}
-                      fileName={path.split("/").pop() || path}
-                      showLabel
-                      label={path.split("/").pop() || t("common.previewFile")}
-                      testId={`acceptance-form-document-preview-${path.split("/").pop()}`}
-                      fetchFile={isManagedDocumentPath(path, "/files/business-documents/acceptance")
-                        ? async () => (await adminApi.getAcceptanceDocumentContent(editingId!, path)).data
-                        : undefined}
-                    />
-                  ))}
+                  {documentPaths(form.documents)
+                    .filter(
+                      (path) =>
+                        !isManagedDocumentPath(path, "/files/business-documents/acceptance") ||
+                        parseDocuments(
+                          rows.find((row) => row.id === editingId)?.documents,
+                        ).includes(path),
+                    )
+                    .map((path) => (
+                      <AdminFilePreview
+                        key={path}
+                        url={path}
+                        fileName={path.split("/").pop() || path}
+                        showLabel
+                        label={path.split("/").pop() || t("common.previewFile")}
+                        testId={`acceptance-form-document-preview-${path.split("/").pop()}`}
+                        fetchFile={
+                          isManagedDocumentPath(path, "/files/business-documents/acceptance")
+                            ? async () =>
+                                (await adminApi.getAcceptanceDocumentContent(editingId!, path)).data
+                            : undefined
+                        }
+                      />
+                    ))}
                 </div>
               )}
             </div>
-            {formError && <div role="alert" className="text-sm text-rose-600">{formError}</div>}
+            {formError && (
+              <div role="alert" className="text-sm text-rose-600">
+                {formError}
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setFormOpen(false)}>
@@ -1256,7 +1438,10 @@ export default function AcceptanceRecordsPage() {
       </Dialog>
 
       {/* Confirm transition */}
-      <AlertDialog open={!!pendingTransition} onOpenChange={(o) => !o && setPendingTransition(null)}>
+      <AlertDialog
+        open={!!pendingTransition}
+        onOpenChange={(o) => !o && setPendingTransition(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t("acceptance.confirm.transition.title")}</AlertDialogTitle>
@@ -1265,7 +1450,9 @@ export default function AcceptanceRecordsPage() {
                 .replace("{title}", pendingTransition?.title ?? "")
                 .replace(
                   "{status}",
-                  pendingTransition ? t(`acceptance.status.${pendingTransition.next.toLowerCase()}`) : "",
+                  pendingTransition
+                    ? t(`acceptance.status.${pendingTransition.next.toLowerCase()}`)
+                    : "",
                 )}
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -1280,7 +1467,10 @@ export default function AcceptanceRecordsPage() {
           </div>
           <AlertDialogFooter>
             <AlertDialogCancel>{t("acceptance.action.close")}</AlertDialogCancel>
-            <AlertDialogAction onClick={handleTransitionConfirm} data-testid="acceptance-action-confirm">
+            <AlertDialogAction
+              onClick={handleTransitionConfirm}
+              data-testid="acceptance-action-confirm"
+            >
               {t("acceptance.form.save")}
             </AlertDialogAction>
           </AlertDialogFooter>

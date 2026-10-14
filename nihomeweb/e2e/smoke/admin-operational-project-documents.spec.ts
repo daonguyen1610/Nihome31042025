@@ -133,71 +133,130 @@ test("project manager operates the responsive Drive document catalog", async ({
   const uploadIdempotencyKeys: string[] = [];
   let deleteRequested = false;
 
-  await page.route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}$`), route =>
-    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(detail) }));
-  await page.route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/timeline$`), route =>
-    route.fulfill({ status: 200, contentType: "application/json", body: "[]" }));
-  await page.route(new RegExp("/api/(?:v1/)?operational-projects/document-categories$"), route =>
-    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(categories) }));
-  await page.route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/documents$`), async route => {
-    if (route.request().method() === "POST") {
-      uploadIdempotencyKeys.push(route.request().headers()["idempotency-key"] ?? "");
-      if (uploadIdempotencyKeys.length === 1) {
+  await page.route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}$`), (route) =>
+    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(detail) }),
+  );
+  await page.route(
+    new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/timeline$`),
+    (route) => route.fulfill({ status: 200, contentType: "application/json", body: "[]" }),
+  );
+  await page.route(new RegExp("/api/(?:v1/)?operational-projects/document-categories$"), (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(categories),
+    }),
+  );
+  await page.route(
+    new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/documents$`),
+    async (route) => {
+      if (route.request().method() === "POST") {
+        uploadIdempotencyKeys.push(route.request().headers()["idempotency-key"] ?? "");
+        if (uploadIdempotencyKeys.length === 1) {
+          await route.fulfill({
+            status: 503,
+            contentType: "application/json",
+            body: JSON.stringify({ message: "Temporary upload failure" }),
+          });
+          return;
+        }
+        documents.push(documentResponse({ id: 13, originalFileName: "new-plan.pdf" }));
         await route.fulfill({
-          status: 503,
+          status: 201,
           contentType: "application/json",
-          body: JSON.stringify({ message: "Temporary upload failure" }),
+          body: JSON.stringify(documents.at(-1)),
         });
         return;
       }
-      documents.push(documentResponse({ id: 13, originalFileName: "new-plan.pdf" }));
-      await route.fulfill({ status: 201, contentType: "application/json", body: JSON.stringify(documents.at(-1)) });
-      return;
-    }
-    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(documents) });
-  });
-  await page.route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/documents/11/classify$`), async route => {
-    documents = documents.map(document => document.id === 11
-      ? { ...document, category: "DesignConcept", syncStatus: "Pending", desiredOperation: "Upsert" }
-      : document);
-    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(documents.find(document => document.id === 11)) });
-  });
-  await page.route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/documents/12/resolve-conflict$`), async route => {
-    documents = documents.map(document => document.id === 12
-      ? { ...document, conflictState: "None", syncStatus: "Synced" }
-      : document);
-    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(documents.find(document => document.id === 12)) });
-  });
-  await page.route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/documents/14$`), async route => {
-    deleteRequested = true;
-    await route.fulfill({ status: 204 });
-  });
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(documents),
+      });
+    },
+  );
+  await page.route(
+    new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/documents/11/classify$`),
+    async (route) => {
+      documents = documents.map((document) =>
+        document.id === 11
+          ? {
+              ...document,
+              category: "DesignConcept",
+              syncStatus: "Pending",
+              desiredOperation: "Upsert",
+            }
+          : document,
+      );
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(documents.find((document) => document.id === 11)),
+      });
+    },
+  );
+  await page.route(
+    new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/documents/12/resolve-conflict$`),
+    async (route) => {
+      documents = documents.map((document) =>
+        document.id === 12
+          ? { ...document, conflictState: "None", syncStatus: "Synced" }
+          : document,
+      );
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(documents.find((document) => document.id === 12)),
+      });
+    },
+  );
+  await page.route(
+    new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/documents/14$`),
+    async (route) => {
+      deleteRequested = true;
+      await route.fulfill({ status: 204 });
+    },
+  );
 
-  await page.goto(`${baseURL}/admin/operational-projects/${projectId}`, { waitUntil: "networkidle" });
+  await page.goto(`${baseURL}/admin/operational-projects/${projectId}`, {
+    waitUntil: "networkidle",
+  });
   const section = page.getByTestId("project-documents-section");
   await expect(section).toBeVisible();
   const sourceOwnedCard = section.locator("article").filter({ hasText: "contract-source.pdf" });
   await expect(sourceOwnedCard).toBeVisible();
-  await expect(sourceOwnedCard.getByRole("button", { name: /Xoá|Delete|删除|削除/i })).toHaveCount(0);
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await expect(sourceOwnedCard.getByRole("button", { name: /Xoá|Delete|删除|削除/i })).toHaveCount(
+    0,
+  );
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  );
 
   const unclassifiedCard = section.locator("article").filter({ hasText: "drive-unclassified.pdf" });
   await unclassifiedCard.getByRole("combobox").click();
-  await page.getByRole("option", { name: /Thiết kế sơ bộ|Concept design|概念设计|コンセプト設計/i }).click();
+  await page
+    .getByRole("option", { name: /Thiết kế sơ bộ|Concept design|概念设计|コンセプト設計/i })
+    .click();
   await unclassifiedCard.getByRole("button", { name: /Phân loại|Classify|分类|分類/i }).click();
-  await expect(unclassifiedCard.getByText(/Thiết kế sơ bộ|Concept design|概念设计|コンセプト設計/i)).toBeVisible();
+  await expect(
+    unclassifiedCard.getByText(/Thiết kế sơ bộ|Concept design|概念设计|コンセプト設計/i),
+  ).toBeVisible();
 
-  page.once("dialog", dialog => dialog.accept());
+  page.once("dialog", (dialog) => dialog.accept());
   const conflictCard = section.locator("article").filter({ hasText: "drive-conflict.pdf" });
-  await conflictCard.getByRole("button", { name: /Giữ cả hai|Keep both|两者都保留|両方を保持/i }).click();
-  await expect(conflictCard.getByRole("button", { name: /Giữ cả hai|Keep both|两者都保留|両方を保持/i })).toHaveCount(0);
+  await conflictCard
+    .getByRole("button", { name: /Giữ cả hai|Keep both|两者都保留|両方を保持/i })
+    .click();
+  await expect(
+    conflictCard.getByRole("button", { name: /Giữ cả hai|Keep both|两者都保留|両方を保持/i }),
+  ).toHaveCount(0);
 
-  page.once("dialog", dialog => dialog.accept());
+  page.once("dialog", (dialog) => dialog.accept());
   const deletedCard = section.locator("article").filter({ hasText: "delete-without-refresh.pdf" });
   await deletedCard.getByRole("button", { name: /^(Xoá|Delete|删除).*|.*削除$/i }).click();
   await expect(deletedCard).toHaveCount(0);
   expect(deleteRequested).toBe(true);
-  expect(documents.some(document => document.id === 14)).toBe(true);
+  expect(documents.some((document) => document.id === 14)).toBe(true);
 
   await page.locator("#project-document-file").setInputFiles({
     name: "new-plan.pdf",
@@ -205,8 +264,12 @@ test("project manager operates the responsive Drive document catalog", async ({
     buffer: Buffer.from("%PDF-1.4 NIH-456"),
   });
   await page.locator("#project-document-category").click();
-  await page.getByRole("option", { name: /Thiết kế cơ sở|Basic design|基础设计|基本設計/i }).click();
-  const uploadButton = section.getByRole("button", { name: /^(Tải lên|Upload|上传|アップロード)$/i });
+  await page
+    .getByRole("option", { name: /Thiết kế cơ sở|Basic design|基础设计|基本設計/i })
+    .click();
+  const uploadButton = section.getByRole("button", {
+    name: /^(Tải lên|Upload|上传|アップロード)$/i,
+  });
   await uploadButton.click();
   await expect.poll(() => uploadIdempotencyKeys.length).toBe(1);
   await uploadButton.click();
@@ -214,5 +277,5 @@ test("project manager operates the responsive Drive document catalog", async ({
   expect(uploadIdempotencyKeys).toHaveLength(2);
   expect(uploadIdempotencyKeys[0]).not.toBe("");
   expect(uploadIdempotencyKeys[1]).toBe(uploadIdempotencyKeys[0]);
-  expect(documents.filter(document => document.id === 13)).toHaveLength(1);
+  expect(documents.filter((document) => document.id === 13)).toHaveLength(1);
 });

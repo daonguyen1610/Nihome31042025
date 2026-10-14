@@ -1,5 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Save, Eye, Maximize2, Minimize2, RotateCcw, Mail, ShieldCheck, FileText } from "lucide-react";
+import {
+  Save,
+  Eye,
+  Maximize2,
+  Minimize2,
+  RotateCcw,
+  Mail,
+  ShieldCheck,
+  FileText,
+} from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -32,8 +41,14 @@ const OTP_TOKENS = [
 ];
 
 const QUOTE_TOKENS = [
-  "customerName", "quoteCode", "opportunityName", "quoteLines",
-  "discountPercent", "vatPercent", "grandTotal", "validUntil",
+  "customerName",
+  "quoteCode",
+  "opportunityName",
+  "quoteLines",
+  "discountPercent",
+  "vatPercent",
+  "grandTotal",
+  "validUntil",
 ];
 
 const EmailTemplateConfig = () => {
@@ -65,7 +80,11 @@ const EmailTemplateConfig = () => {
       setQuoteSubject(res.data.quoteEmailSubjectTemplate ?? "");
       setQuoteBody(res.data.quoteEmailBodyTemplate ?? "");
     } catch {
-      toast({ title: t("common.error"), description: "Không thể tải cấu hình email", variant: "destructive" });
+      toast({
+        title: t("common.error"),
+        description: "Không thể tải cấu hình email",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -77,7 +96,8 @@ const EmailTemplateConfig = () => {
 
   // Update iframe preview whenever body or tab changes
   const activeBody = activeTab === "application" ? body : activeTab === "otp" ? otpBody : quoteBody;
-  const activeSubject = activeTab === "application" ? subject : activeTab === "otp" ? otpSubject : quoteSubject;
+  const activeSubject =
+    activeTab === "application" ? subject : activeTab === "otp" ? otpSubject : quoteSubject;
   useEffect(() => {
     const iframe = iframeRef.current;
     if (!iframe) return;
@@ -85,29 +105,49 @@ const EmailTemplateConfig = () => {
     if (!doc) return;
     if (activeTab !== "quote") {
       doc.open();
-      doc.write(activeBody || "<p style='color:#999;padding:20px;font-family:sans-serif;'>Chưa có nội dung template</p>");
+      doc.write(
+        activeBody ||
+          "<p style='color:#999;padding:20px;font-family:sans-serif;'>Chưa có nội dung template</p>",
+      );
       doc.close();
     }
   }, [activeBody, activeTab]);
 
   const handleSave = async () => {
     const normalizedQuoteBody = quoteBody.toLowerCase();
-    if (!quoteSubject.trim() || !quoteBody.trim() ||
-        !normalizedQuoteBody.includes("{{quotelines}}") || !normalizedQuoteBody.includes("{{grandtotal}}")) {
-      toast({ title: t("common.error"), description: t("emailTemplate.quote.required"), variant: "destructive" });
+    if (
+      !quoteSubject.trim() ||
+      !quoteBody.trim() ||
+      !normalizedQuoteBody.includes("{{quotelines}}") ||
+      !normalizedQuoteBody.includes("{{grandtotal}}")
+    ) {
+      toast({
+        title: t("common.error"),
+        description: t("emailTemplate.quote.required"),
+        variant: "destructive",
+      });
       return;
     }
     if (!quoteBody.trimStart().startsWith("<")) {
-      toast({ title: t("common.error"), description: t("emailTemplate.quote.htmlRequired"), variant: "destructive" });
+      toast({
+        title: t("common.error"),
+        description: t("emailTemplate.quote.htmlRequired"),
+        variant: "destructive",
+      });
       return;
     }
     const quoteTemplateText = `${quoteSubject}\n${quoteBody}`;
     const matchedTokens = [...quoteTemplateText.matchAll(/\{\{(\w+)\}\}/g)];
-    const unknownToken = matchedTokens.some((match) =>
-      !QUOTE_TOKENS.some((name) => name.toLowerCase() === match[1].toLowerCase()));
+    const unknownToken = matchedTokens.some(
+      (match) => !QUOTE_TOKENS.some((name) => name.toLowerCase() === match[1].toLowerCase()),
+    );
     const unmatchedBraces = quoteTemplateText.replace(/\{\{\w+\}\}/g, "");
     if (unknownToken || unmatchedBraces.includes("{{") || unmatchedBraces.includes("}}")) {
-      toast({ title: t("common.error"), description: t("emailTemplate.quote.invalidToken"), variant: "destructive" });
+      toast({
+        title: t("common.error"),
+        description: t("emailTemplate.quote.invalidToken"),
+        variant: "destructive",
+      });
       return;
     }
     setSaving(true);
@@ -123,7 +163,11 @@ const EmailTemplateConfig = () => {
       });
       toast({ title: "Đã lưu", description: "Cấu hình email template đã được cập nhật." });
     } catch (error) {
-      toast({ title: t("common.error"), description: extractApiError(error), variant: "destructive" });
+      toast({
+        title: t("common.error"),
+        description: extractApiError(error),
+        variant: "destructive",
+      });
     } finally {
       setSaving(false);
     }
@@ -144,8 +188,15 @@ const EmailTemplateConfig = () => {
     }
   };
 
-  const currentTokens = activeTab === "application" ? APPLICATION_TOKENS : activeTab === "otp"
-    ? OTP_TOKENS : QUOTE_TOKENS.map((name) => ({ token: `{{${name}}}`, desc: t(`emailTemplate.quote.token.${name}`) }));
+  const currentTokens =
+    activeTab === "application"
+      ? APPLICATION_TOKENS
+      : activeTab === "otp"
+        ? OTP_TOKENS
+        : QUOTE_TOKENS.map((name) => ({
+            token: `{{${name}}}`,
+            desc: t(`emailTemplate.quote.token.${name}`),
+          }));
 
   if (loading) {
     return (
@@ -219,7 +270,9 @@ const EmailTemplateConfig = () => {
             {/* Notification email — shown only on application tab */}
             {activeTab === "application" && (
               <div className="space-y-1.5">
-                <Label className="text-xs" htmlFor="notification-email">Email nhận thông báo</Label>
+                <Label className="text-xs" htmlFor="notification-email">
+                  Email nhận thông báo
+                </Label>
                 <Input
                   id="notification-email"
                   type="email"
@@ -227,24 +280,32 @@ const EmailTemplateConfig = () => {
                   onChange={(e) => setNotificationEmail(e.target.value)}
                   placeholder="hr@nihome.vn"
                 />
-                <p className="text-xs text-muted-foreground">Email sẽ nhận thông báo khi có đơn ứng tuyển mới.</p>
+                <p className="text-xs text-muted-foreground">
+                  Email sẽ nhận thông báo khi có đơn ứng tuyển mới.
+                </p>
               </div>
             )}
 
             {/* Subject */}
             <div className="space-y-1.5">
-              <Label className="text-xs" htmlFor="email-subject">Tiêu đề email</Label>
+              <Label className="text-xs" htmlFor="email-subject">
+                Tiêu đề email
+              </Label>
               <Input
                 id="email-subject"
                 value={activeSubject}
                 onChange={(e) =>
-                  activeTab === "application" ? setSubject(e.target.value)
-                    : activeTab === "otp" ? setOtpSubject(e.target.value) : setQuoteSubject(e.target.value)
+                  activeTab === "application"
+                    ? setSubject(e.target.value)
+                    : activeTab === "otp"
+                      ? setOtpSubject(e.target.value)
+                      : setQuoteSubject(e.target.value)
                 }
                 placeholder={
                   activeTab === "application"
                     ? "[{{siteName}}] Ứng viên mới: {{candidateName}} – {{positionTitle}}"
-                    : activeTab === "otp" ? "[{{siteName}}] Mã xác thực của bạn"
+                    : activeTab === "otp"
+                      ? "[{{siteName}}] Mã xác thực của bạn"
                       : "Báo giá {{quoteCode}} – {{opportunityName}}"
                 }
                 maxLength={activeTab === "quote" ? 200 : 255}
@@ -253,25 +314,34 @@ const EmailTemplateConfig = () => {
 
             {/* Body */}
             <div className="space-y-1.5">
-              <Label className="text-xs" htmlFor="email-body">{activeTab === "quote" ? t("emailTemplate.quote.bodyLabel") : "Nội dung HTML"}</Label>
+              <Label className="text-xs" htmlFor="email-body">
+                {activeTab === "quote" ? t("emailTemplate.quote.bodyLabel") : "Nội dung HTML"}
+              </Label>
               <Textarea
                 id="email-body"
                 className="font-mono text-xs"
                 rows={18}
                 value={activeBody}
                 onChange={(e) =>
-                  activeTab === "application" ? setBody(e.target.value)
-                    : activeTab === "otp" ? setOtpBody(e.target.value) : setQuoteBody(e.target.value)
+                  activeTab === "application"
+                    ? setBody(e.target.value)
+                    : activeTab === "otp"
+                      ? setOtpBody(e.target.value)
+                      : setQuoteBody(e.target.value)
                 }
                 placeholder="<div>...</div>"
                 maxLength={activeTab === "quote" ? 8000 : undefined}
               />
-              {activeTab === "quote" && <p className="text-xs text-muted-foreground">{t("emailTemplate.quote.hint")}</p>}
+              {activeTab === "quote" && (
+                <p className="text-xs text-muted-foreground">{t("emailTemplate.quote.hint")}</p>
+              )}
             </div>
 
             {/* Available tokens */}
             <div className="rounded-lg border bg-muted/50 p-4">
-              <p className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">Biến có sẵn (click để chèn)</p>
+              <p className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Biến có sẵn (click để chèn)
+              </p>
               <div className="flex flex-wrap gap-2">
                 {currentTokens.map(({ token, desc }) => (
                   <button
@@ -295,12 +365,12 @@ const EmailTemplateConfig = () => {
               <div className="flex items-center gap-2 text-sm font-medium">
                 <Eye className="h-4 w-4" /> Xem trước
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setFullscreen(!fullscreen)}
-              >
-                {fullscreen ? <Minimize2 className="mr-1.5 h-3.5 w-3.5" /> : <Maximize2 className="mr-1.5 h-3.5 w-3.5" />}
+              <Button variant="outline" size="sm" onClick={() => setFullscreen(!fullscreen)}>
+                {fullscreen ? (
+                  <Minimize2 className="mr-1.5 h-3.5 w-3.5" />
+                ) : (
+                  <Maximize2 className="mr-1.5 h-3.5 w-3.5" />
+                )}
                 {fullscreen ? "Thu nhỏ" : "Toàn màn hình"}
               </Button>
             </div>

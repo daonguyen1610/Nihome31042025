@@ -54,7 +54,10 @@ test("role editor renders dynamic roles and the comparison matrix for SUPER_ADMI
   await expect(dashboardView).toBeChecked();
   await dashboardView.click();
   await expect(page.getByTestId("rbac-save-SALE")).toBeEnabled();
-  await page.getByTestId("rbac-role-editor").getByRole("button", { name: /Hoàn tác|Reset/i }).click();
+  await page
+    .getByTestId("rbac-role-editor")
+    .getByRole("button", { name: /Hoàn tác|Reset/i })
+    .click();
   await expect(page.getByTestId("rbac-save-SALE")).toBeDisabled();
 
   // Create-role button is gated by Can; SUPER_ADMIN must see it.

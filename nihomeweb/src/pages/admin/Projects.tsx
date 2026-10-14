@@ -55,7 +55,9 @@ const AdminProjects = () => {
   const categoryOptions = useMemo(() => {
     const ids = new Set<number>();
     (categoryMaster ?? []).forEach((c) => ids.add(c.id));
-    list.forEach((p) => { if (p.categoryId != null) ids.add(p.categoryId); });
+    list.forEach((p) => {
+      if (p.categoryId != null) ids.add(p.categoryId);
+    });
     return Array.from(ids)
       .map((id) => ({ id, label: resolveCategoryLabel(id, undefined, categoriesById, lang) }))
       .filter((opt) => opt.label)
@@ -124,13 +126,17 @@ const AdminProjects = () => {
           value: (row) => (row.status === "ongoing" ? t("proj.ongoing") : t("proj.completed")),
         },
         { header: "Year", value: (row) => row.year ?? "" },
-        { header: "Category", value: (row) => resolveCategoryLabel(row.categoryId, row.category, categoriesById, lang) },
+        {
+          header: "Category",
+          value: (row) => resolveCategoryLabel(row.categoryId, row.category, categoriesById, lang),
+        },
         { header: "Description", value: (row) => row.description ?? "" },
         { header: "Challenges", value: (row) => row.challenges ?? [] },
         { header: "Solutions", value: (row) => row.solutions ?? [] },
         {
           header: "Highlights",
-          value: (row) => row.highlights?.map((item) => `${item.label}: ${item.value}`).join("; ") ?? "",
+          value: (row) =>
+            row.highlights?.map((item) => `${item.label}: ${item.value}`).join("; ") ?? "",
         },
         { header: "Image URL", value: "imageUrl" },
         { header: "Gallery", value: (row) => row.gallery ?? [] },
@@ -162,7 +168,9 @@ const AdminProjects = () => {
         <section className="space-y-3 rounded-lg border bg-card p-3">
           <div className="flex flex-wrap items-end gap-3">
             <div className="min-w-[220px] flex-1">
-              <Label className="text-xs" htmlFor="projects-search">{t("common.search")}</Label>
+              <Label className="text-xs" htmlFor="projects-search">
+                {t("common.search")}
+              </Label>
               <div className="relative">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
@@ -175,7 +183,9 @@ const AdminProjects = () => {
               </div>
             </div>
             <div className="w-full sm:w-[220px]">
-              <Label className="text-xs" htmlFor="projects-category">{t("activities.col.category")}</Label>
+              <Label className="text-xs" htmlFor="projects-category">
+                {t("activities.col.category")}
+              </Label>
               <Select
                 value={catId === "all" ? "all" : String(catId)}
                 onValueChange={(v) => setCatId(v === "all" ? "all" : Number(v))}
@@ -186,7 +196,9 @@ const AdminProjects = () => {
                 <SelectContent>
                   <SelectItem value="all">{t("common.all")}</SelectItem>
                   {categoryOptions.map((opt) => (
-                    <SelectItem key={opt.id} value={String(opt.id)}>{opt.label}</SelectItem>
+                    <SelectItem key={opt.id} value={String(opt.id)}>
+                      {opt.label}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -229,87 +241,107 @@ const AdminProjects = () => {
             </Button>
           </div>
         ) : (
-        <div className="space-y-3">
-          <BulkActionBar
-            selectedCount={selectedIds.size}
-            bulkDeleting={bulkDeleting}
-            onClear={clearSelection}
-            onBulkDelete={() => void handleBulkDelete()}
-          />
-          <div className="flex items-center gap-2 px-1 text-xs text-muted-foreground">
-            <Checkbox
-              checked={
-                allVisibleSelected
-                  ? true
-                  : someVisibleSelected
-                    ? "indeterminate"
-                    : false
-              }
-              onCheckedChange={(v) => toggleAllVisible(v === true)}
-              aria-label={t("common.selectAll")}
+          <div className="space-y-3">
+            <BulkActionBar
+              selectedCount={selectedIds.size}
+              bulkDeleting={bulkDeleting}
+              onClear={clearSelection}
+              onBulkDelete={() => void handleBulkDelete()}
             />
-            <span>{t("common.selectAll")}</span>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {filtered.map((p) => (
-              <div key={p.id} className="group relative overflow-hidden rounded-lg border bg-card transition hover:shadow-md">
+            <div className="flex items-center gap-2 px-1 text-xs text-muted-foreground">
+              <Checkbox
+                checked={allVisibleSelected ? true : someVisibleSelected ? "indeterminate" : false}
+                onCheckedChange={(v) => toggleAllVisible(v === true)}
+                aria-label={t("common.selectAll")}
+              />
+              <span>{t("common.selectAll")}</span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {filtered.map((p) => (
                 <div
-                  className="absolute top-3 right-3 z-10 rounded bg-white/90 p-1 shadow"
-                  onClick={(e) => e.stopPropagation()}
+                  key={p.id}
+                  className="group relative overflow-hidden rounded-lg border bg-card transition hover:shadow-md"
                 >
-                  <Checkbox
-                    checked={selectedIds.has(p.id)}
-                    onCheckedChange={(v) => toggleOne(p.id, v === true)}
-                    aria-label={`${t("common.selectAll")} · ${p.name}`}
-                  />
-                </div>
-                <Link to={`/admin/projects/${p.slug}`} className="block aspect-[16/10] overflow-hidden bg-muted relative">
-                  <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition duration-700" />
-                  <Badge
-                    variant="outline"
-                    className={cn(
-                      "absolute top-3 left-3 gap-1.5 whitespace-nowrap bg-white/95 font-medium shadow-sm",
-                      PROJECT_STATUS_STYLES[p.status],
-                    )}
+                  <div
+                    className="absolute top-3 right-3 z-10 rounded bg-white/90 p-1 shadow"
+                    onClick={(e) => e.stopPropagation()}
                   >
-                    <span className={cn("h-1.5 w-1.5 rounded-full", PROJECT_STATUS_DOT[p.status])} />
-                    {p.status === "ongoing" ? t("proj.ongoing") : t("proj.completed")}
-                  </Badge>
-                </Link>
-                <div className="p-4">
-                  {(() => {
-                    const label = resolveCategoryLabel(p.categoryId, p.category, categoriesById, lang);
-                    return label ? (
-                      <p className="text-[10px] uppercase tracking-wide font-medium mb-1 text-primary">
-                        {label}
-                      </p>
-                    ) : null;
-                  })()}
-                  <h3 className="text-base font-semibold mb-2 line-clamp-1">{p.name}</h3>
-                  <div className="space-y-1 text-xs mb-3 text-muted-foreground">
-                    <p className="flex items-center gap-1.5"><MapPin className="h-3 w-3" /> {p.location}</p>
-                    <p className="flex items-center gap-1.5"><Maximize2 className="h-3 w-3" /> {t("proj.scale")}: {p.scale}</p>
+                    <Checkbox
+                      checked={selectedIds.has(p.id)}
+                      onCheckedChange={(v) => toggleOne(p.id, v === true)}
+                      aria-label={`${t("common.selectAll")} · ${p.name}`}
+                    />
                   </div>
-                  <div className="flex items-center gap-1 pt-3 border-t">
-                    <Button asChild variant="ghost" size="sm" className="flex-1">
-                      <Link to={`/admin/projects/${p.slug}`}>
-                        <Eye className="mr-1 h-3.5 w-3.5" /> {t("common.view")}
-                      </Link>
-                    </Button>
-                    <Button asChild variant="ghost" size="sm" className="flex-1">
-                      <Link to={`/admin/projects/${p.slug}/edit`}>
-                        <Edit className="mr-1 h-3.5 w-3.5" /> {t("common.edit")}
-                      </Link>
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => handleDelete(p)} className="flex-1 text-destructive hover:text-destructive">
-                      <Trash2 className="mr-1 h-3.5 w-3.5" /> {t("common.delete")}
-                    </Button>
+                  <Link
+                    to={`/admin/projects/${p.slug}`}
+                    className="block aspect-[16/10] overflow-hidden bg-muted relative"
+                  >
+                    <img
+                      src={p.imageUrl}
+                      alt={p.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition duration-700"
+                    />
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "absolute top-3 left-3 gap-1.5 whitespace-nowrap bg-white/95 font-medium shadow-sm",
+                        PROJECT_STATUS_STYLES[p.status],
+                      )}
+                    >
+                      <span
+                        className={cn("h-1.5 w-1.5 rounded-full", PROJECT_STATUS_DOT[p.status])}
+                      />
+                      {p.status === "ongoing" ? t("proj.ongoing") : t("proj.completed")}
+                    </Badge>
+                  </Link>
+                  <div className="p-4">
+                    {(() => {
+                      const label = resolveCategoryLabel(
+                        p.categoryId,
+                        p.category,
+                        categoriesById,
+                        lang,
+                      );
+                      return label ? (
+                        <p className="text-[10px] uppercase tracking-wide font-medium mb-1 text-primary">
+                          {label}
+                        </p>
+                      ) : null;
+                    })()}
+                    <h3 className="text-base font-semibold mb-2 line-clamp-1">{p.name}</h3>
+                    <div className="space-y-1 text-xs mb-3 text-muted-foreground">
+                      <p className="flex items-center gap-1.5">
+                        <MapPin className="h-3 w-3" /> {p.location}
+                      </p>
+                      <p className="flex items-center gap-1.5">
+                        <Maximize2 className="h-3 w-3" /> {t("proj.scale")}: {p.scale}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1 pt-3 border-t">
+                      <Button asChild variant="ghost" size="sm" className="flex-1">
+                        <Link to={`/admin/projects/${p.slug}`}>
+                          <Eye className="mr-1 h-3.5 w-3.5" /> {t("common.view")}
+                        </Link>
+                      </Button>
+                      <Button asChild variant="ghost" size="sm" className="flex-1">
+                        <Link to={`/admin/projects/${p.slug}/edit`}>
+                          <Edit className="mr-1 h-3.5 w-3.5" /> {t("common.edit")}
+                        </Link>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDelete(p)}
+                        className="flex-1 text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="mr-1 h-3.5 w-3.5" /> {t("common.delete")}
+                      </Button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
         )}
       </div>
     </AdminLayout>

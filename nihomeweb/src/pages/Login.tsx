@@ -19,14 +19,21 @@ const Login = () => {
 
   useEffect(() => {
     if (user) {
-      toast({ title: t("auth.login.toast.title"), description: `${t("auth.login.toast.hello")} ${user.fullName}` });
+      toast({
+        title: t("auth.login.toast.title"),
+        description: `${t("auth.login.toast.hello")} ${user.fullName}`,
+      });
       navigate(isAdminRole(user.role) ? "/admin" : "/profile");
     }
   }, [user, navigate, toast, t]);
 
   useEffect(() => {
     if (error) {
-      toast({ title: t("auth.error"), description: translateError(t, error), variant: "destructive" });
+      toast({
+        title: t("auth.error"),
+        description: translateError(t, error),
+        variant: "destructive",
+      });
       dispatch(clearError());
     }
   }, [error, toast, t, dispatch]);
@@ -46,7 +53,8 @@ const Login = () => {
           <div className="max-w-md mx-auto bg-card border border-border rounded-3xl p-8 lg:p-10 shadow-elegant">
             <p className="eyebrow text-primary mb-5 justify-center">{t("auth.login.eyebrow")}</p>
             <h1 className="font-display text-3xl md:text-4xl font-extrabold text-center mb-3 tracking-tight">
-              {t("auth.login.titleA")} <span className="text-gradient-primary">{t("auth.login.titleB")}</span>
+              {t("auth.login.titleA")}{" "}
+              <span className="text-gradient-primary">{t("auth.login.titleB")}</span>
             </h1>
             <p className="text-center text-muted-foreground text-sm mb-8">{t("auth.login.desc")}</p>
 
@@ -79,7 +87,13 @@ const Login = () => {
                 disabled={loading}
                 className="btn-pill btn-gradient text-white w-full py-3.5 text-sm uppercase tracking-wider disabled:opacity-60"
               >
-                {loading ? t("auth.processing") : <>{t("auth.login.btn")} <ArrowRight className="w-4 h-4" /></>}
+                {loading ? (
+                  t("auth.processing")
+                ) : (
+                  <>
+                    {t("auth.login.btn")} <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
               </button>
             </form>
 

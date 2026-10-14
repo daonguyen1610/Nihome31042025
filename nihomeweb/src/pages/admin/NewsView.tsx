@@ -18,8 +18,18 @@ const NewsView = () => {
   const { data: post, loading, error, refetch } = useNewsItem(slug ?? "");
   const [galleryMode, setGalleryMode] = useState<"grid" | "list">("grid");
 
-  if (loading) return <AdminLayout><PageLoading /></AdminLayout>;
-  if (error) return <AdminLayout><PageError message={error} onRetry={refetch} /></AdminLayout>;
+  if (loading)
+    return (
+      <AdminLayout>
+        <PageLoading />
+      </AdminLayout>
+    );
+  if (error)
+    return (
+      <AdminLayout>
+        <PageError message={error} onRetry={refetch} />
+      </AdminLayout>
+    );
 
   if (!post) {
     return (
@@ -61,7 +71,9 @@ const NewsView = () => {
               <p className="text-xs font-medium uppercase tracking-wide text-primary">
                 {t("adminNews.detail")}
               </p>
-              <h1 className="text-xl font-semibold tracking-tight lg:text-2xl line-clamp-2">{post.title}</h1>
+              <h1 className="text-xl font-semibold tracking-tight lg:text-2xl line-clamp-2">
+                {post.title}
+              </h1>
             </div>
           </div>
           <div className="flex flex-wrap gap-2 shrink-0">
@@ -70,7 +82,11 @@ const NewsView = () => {
                 <Edit className="mr-1.5 h-4 w-4" /> {t("common.edit")}
               </Link>
             </Button>
-            <Button variant="outline" onClick={handleDelete} className="text-destructive hover:text-destructive">
+            <Button
+              variant="outline"
+              onClick={handleDelete}
+              className="text-destructive hover:text-destructive"
+            >
               <Trash2 className="mr-1.5 h-4 w-4" /> {t("common.delete")}
             </Button>
           </div>
@@ -92,15 +108,33 @@ const NewsView = () => {
                 <div className="mb-4 flex items-center justify-between gap-3">
                   <h2 className="text-base font-semibold">{t("media.gallery.title")}</h2>
                   <div className="inline-flex overflow-hidden rounded-md border">
-                    <Button type="button" variant="ghost" size="icon" onClick={() => setGalleryMode("grid")} aria-label={t("gallery.viewGrid")} className="rounded-none">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setGalleryMode("grid")}
+                      aria-label={t("gallery.viewGrid")}
+                      className="rounded-none"
+                    >
                       <Grid3X3 className="h-4 w-4" />
                     </Button>
-                    <Button type="button" variant="ghost" size="icon" onClick={() => setGalleryMode("list")} aria-label={t("gallery.viewList")} className="rounded-none border-l">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setGalleryMode("list")}
+                      aria-label={t("gallery.viewList")}
+                      className="rounded-none border-l"
+                    >
                       <List className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
-                <div className={galleryMode === "grid" ? "grid grid-cols-1 gap-3 sm:grid-cols-2" : "space-y-3"}>
+                <div
+                  className={
+                    galleryMode === "grid" ? "grid grid-cols-1 gap-3 sm:grid-cols-2" : "space-y-3"
+                  }
+                >
                   {post.gallery.map((url, index) => (
                     <img
                       key={`${url}-${index}`}
@@ -130,11 +164,21 @@ const NewsView = () => {
   );
 };
 
-const Info = ({ icon: Icon, label, value }: { icon: React.ComponentType<React.SVGProps<SVGSVGElement>>; label: string; value: string }) => (
+const Info = ({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+  label: string;
+  value: string;
+}) => (
   <div className="flex items-start gap-3">
     <Icon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
     <div className="min-w-0">
-      <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+        {label}
+      </p>
       <p className="font-medium break-words">{value}</p>
     </div>
   </div>

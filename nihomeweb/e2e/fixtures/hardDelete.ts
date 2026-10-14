@@ -30,8 +30,8 @@ export async function hardDeleteBusinessRoot(
     const impactResponse = await api.get(`${resourcePath}/deletion-impact`, { headers });
     expect(impactResponse.status(), `preview ${resourcePath} cleanup`).toBe(200);
 
-    const detail = await detailResponse.json() as ResourceDetail;
-    const impact = await impactResponse.json() as DeletionImpact;
+    const detail = (await detailResponse.json()) as ResourceDetail;
+    const impact = (await impactResponse.json()) as DeletionImpact;
     deleteResponse = await api.delete(resourcePath, {
       headers,
       data: {
@@ -54,21 +54,26 @@ export async function hardDeleteBusinessRoot(
   if (!deleteResponse) return;
   if (deleteResponse.status() === 204) return;
 
-  const acceptedOperation = await deleteResponse.json() as HardDeleteOperation;
-  await expect.poll(async () => {
-    const statusResponse = await api.get(
-      `/api/hard-delete-operations/${acceptedOperation.operationId}`,
-      { headers },
-    );
-    expect(statusResponse.status(), `read ${resourcePath} cleanup status`).toBe(200);
-    const operation = await statusResponse.json() as HardDeleteOperation;
-    expect(
-      operation.requiresManualAction,
-      operation.errorMessage ?? `${resourcePath} cleanup requires manual action`,
-    ).toBe(false);
-    return operation.isComplete;
-  }, {
-    message: `wait for ${resourcePath} cleanup`,
-    timeout: 30_000,
-  }).toBe(true);
+  const acceptedOperation = (await deleteResponse.json()) as HardDeleteOperation;
+  await expect
+    .poll(
+      async () => {
+        const statusResponse = await api.get(
+          `/api/hard-delete-operations/${acceptedOperation.operationId}`,
+          { headers },
+        );
+        expect(statusResponse.status(), `read ${resourcePath} cleanup status`).toBe(200);
+        const operation = (await statusResponse.json()) as HardDeleteOperation;
+        expect(
+          operation.requiresManualAction,
+          operation.errorMessage ?? `${resourcePath} cleanup requires manual action`,
+        ).toBe(false);
+        return operation.isComplete;
+      },
+      {
+        message: `wait for ${resourcePath} cleanup`,
+        timeout: 30_000,
+      },
+    )
+    .toBe(true);
 }

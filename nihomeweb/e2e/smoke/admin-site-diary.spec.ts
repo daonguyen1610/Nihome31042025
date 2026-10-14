@@ -53,14 +53,11 @@ test.describe("NIH-142 — Site Diary (real-user flow)", () => {
     await Promise.all([
       page.waitForResponse(
         (r) =>
-          r.url().includes("/api/site-diaries") &&
-          r.url().includes(`designProjectId=${projectId}`),
+          r.url().includes("/api/site-diaries") && r.url().includes(`designProjectId=${projectId}`),
       ),
       (async () => {
         await projectFilter.click();
-        await page
-          .getByRole("option", { name: new RegExp(`E2E-DIARY ${projSuffix}`) })
-          .click();
+        await page.getByRole("option", { name: new RegExp(`E2E-DIARY ${projSuffix}`) }).click();
       })(),
     ]);
 
@@ -115,12 +112,14 @@ test.describe("NIH-142 — Site Diary (real-user flow)", () => {
     await expect
       .poll(
         async () => {
-          const list = await api.get(
-            `/api/site-diaries?designProjectId=${projectId}&pageSize=50`,
-            { headers: authHeader },
-          );
+          const list = await api.get(`/api/site-diaries?designProjectId=${projectId}&pageSize=50`, {
+            headers: authHeader,
+          });
           if (!list.ok()) return "err";
-          const items = (await list.json()).items as Array<{ workPerformed: string; status: string }>;
+          const items = (await list.json()).items as Array<{
+            workPerformed: string;
+            status: string;
+          }>;
           return items.find((i) => i.workPerformed === workText)?.status ?? "missing";
         },
         { timeout: 5_000 },
@@ -141,12 +140,14 @@ test.describe("NIH-142 — Site Diary (real-user flow)", () => {
     await expect
       .poll(
         async () => {
-          const list = await api.get(
-            `/api/site-diaries?designProjectId=${projectId}&pageSize=50`,
-            { headers: authHeader },
-          );
+          const list = await api.get(`/api/site-diaries?designProjectId=${projectId}&pageSize=50`, {
+            headers: authHeader,
+          });
           if (!list.ok()) return "err";
-          const items = (await list.json()).items as Array<{ workPerformed: string; status: string }>;
+          const items = (await list.json()).items as Array<{
+            workPerformed: string;
+            status: string;
+          }>;
           return items.find((i) => i.workPerformed === workText)?.status ?? "missing";
         },
         { timeout: 5_000 },

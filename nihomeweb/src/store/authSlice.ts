@@ -102,20 +102,29 @@ function extractError(err: unknown): string {
 
 // --- Thunks ---
 
-export const loginThunk = createAsyncThunk("auth/login", async (payload: { identifier: string; password: string }, { rejectWithValue }) => {
-  try {
-    const { data } = await authApi.login(payload.identifier, payload.password);
-    persistTokens(data.accessToken, data.refreshToken);
-    return data;
-  } catch (err) {
-    return rejectWithValue(extractError(err));
-  }
-});
+export const loginThunk = createAsyncThunk(
+  "auth/login",
+  async (payload: { identifier: string; password: string }, { rejectWithValue }) => {
+    try {
+      const { data } = await authApi.login(payload.identifier, payload.password);
+      persistTokens(data.accessToken, data.refreshToken);
+      return data;
+    } catch (err) {
+      return rejectWithValue(extractError(err));
+    }
+  },
+);
 
 export const registerStartThunk = createAsyncThunk(
   "auth/registerStart",
   async (
-    payload: { phone: string; fullName: string; email: string; password: string; idempotencyKey?: string },
+    payload: {
+      phone: string;
+      fullName: string;
+      email: string;
+      password: string;
+      idempotencyKey?: string;
+    },
     { rejectWithValue },
   ) => {
     try {
@@ -148,7 +157,10 @@ export const registerVerifyOtpThunk = createAsyncThunk(
 
 export const registerCompleteThunk = createAsyncThunk(
   "auth/registerComplete",
-  async (payload: { phone: string; password: string; idempotencyKey?: string }, { rejectWithValue }) => {
+  async (
+    payload: { phone: string; password: string; idempotencyKey?: string },
+    { rejectWithValue },
+  ) => {
     try {
       const key = payload.idempotencyKey ?? newIdempotencyKey();
       const { data } = await authApi.registerComplete(payload.phone, payload.password, key);
@@ -160,27 +172,33 @@ export const registerCompleteThunk = createAsyncThunk(
   },
 );
 
-export const resendRegisterOtpThunk = createAsyncThunk("auth/resendRegisterOtp", async (phone: string, { rejectWithValue }) => {
-  try {
-    const { data } = await authApi.registerResendOtp(phone);
-    return data;
-  } catch (err) {
-    return rejectWithValue(extractError(err));
-  }
-});
+export const resendRegisterOtpThunk = createAsyncThunk(
+  "auth/resendRegisterOtp",
+  async (phone: string, { rejectWithValue }) => {
+    try {
+      const { data } = await authApi.registerResendOtp(phone);
+      return data;
+    } catch (err) {
+      return rejectWithValue(extractError(err));
+    }
+  },
+);
 
-export const forgotStartThunk = createAsyncThunk("auth/forgotStart", async (identifier: string, { rejectWithValue }) => {
-  try {
-    const { data } = await authApi.forgotStart(identifier);
-    return {
-      data,
-      accountPhone: data.phone ?? identifier,
-      email: data.email as string | undefined,
-    };
-  } catch (err) {
-    return rejectWithValue(extractError(err));
-  }
-});
+export const forgotStartThunk = createAsyncThunk(
+  "auth/forgotStart",
+  async (identifier: string, { rejectWithValue }) => {
+    try {
+      const { data } = await authApi.forgotStart(identifier);
+      return {
+        data,
+        accountPhone: data.phone ?? identifier,
+        email: data.email as string | undefined,
+      };
+    } catch (err) {
+      return rejectWithValue(extractError(err));
+    }
+  },
+);
 
 export const forgotVerifyOtpThunk = createAsyncThunk(
   "auth/forgotVerifyOtp",
@@ -218,28 +236,34 @@ export const forgotResetDirectThunk = createAsyncThunk(
   },
 );
 
-export const resendForgotOtpThunk = createAsyncThunk("auth/resendForgotOtp", async (accountPhone: string, { rejectWithValue }) => {
-  try {
-    const { data } = await authApi.forgotResendOtp(accountPhone);
-    return data;
-  } catch (err) {
-    return rejectWithValue(extractError(err));
-  }
-});
+export const resendForgotOtpThunk = createAsyncThunk(
+  "auth/resendForgotOtp",
+  async (accountPhone: string, { rejectWithValue }) => {
+    try {
+      const { data } = await authApi.forgotResendOtp(accountPhone);
+      return data;
+    } catch (err) {
+      return rejectWithValue(extractError(err));
+    }
+  },
+);
 
-export const refreshThunk = createAsyncThunk("auth/refresh", async (_, { getState, rejectWithValue }) => {
-  const state = getState() as { auth: AuthState };
-  const token = state.auth.refreshToken;
-  if (!token) return rejectWithValue("No refresh token");
-  try {
-    const { data } = await authApi.refresh(token);
-    persistTokens(data.accessToken, data.refreshToken);
-    return data;
-  } catch (err) {
-    clearTokens();
-    return rejectWithValue(extractError(err));
-  }
-});
+export const refreshThunk = createAsyncThunk(
+  "auth/refresh",
+  async (_, { getState, rejectWithValue }) => {
+    const state = getState() as { auth: AuthState };
+    const token = state.auth.refreshToken;
+    if (!token) return rejectWithValue("No refresh token");
+    try {
+      const { data } = await authApi.refresh(token);
+      persistTokens(data.accessToken, data.refreshToken);
+      return data;
+    } catch (err) {
+      clearTokens();
+      return rejectWithValue(extractError(err));
+    }
+  },
+);
 
 export const logoutThunk = createAsyncThunk("auth/logout", async (_, { getState }) => {
   const state = getState() as { auth: AuthState };

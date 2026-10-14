@@ -50,8 +50,7 @@ const extractError = (err: unknown, fallback: string): string => {
 
 const apiBase = (import.meta.env.VITE_API_URL as string | undefined) ?? "";
 const fileBase = apiBase.replace(/\/api\/?$/, "");
-const resolveFileUrl = (path: string) =>
-  path.startsWith("http") ? path : `${fileBase}${path}`;
+const resolveFileUrl = (path: string) => (path.startsWith("http") ? path : `${fileBase}${path}`);
 
 const MyProfile = () => {
   const { t } = useI18n();
@@ -417,10 +416,7 @@ const DocumentsCard = () => {
 
         <div>
           {loading ? (
-            <p
-              className="text-sm text-center py-6"
-              style={{ color: "hsl(var(--admin-muted))" }}
-            >
+            <p className="text-sm text-center py-6" style={{ color: "hsl(var(--admin-muted))" }}>
               {t("common.loading") || "Đang tải..."}
             </p>
           ) : docs.length === 0 ? (
@@ -522,10 +518,7 @@ const ChangePasswordCard = () => {
       setConfirmPassword("");
     } catch (err) {
       toast({
-        title: extractError(
-          err,
-          t("profile.passwordChangeFailed") || "Đổi mật khẩu thất bại",
-        ),
+        title: extractError(err, t("profile.passwordChangeFailed") || "Đổi mật khẩu thất bại"),
         variant: "destructive",
       });
     } finally {

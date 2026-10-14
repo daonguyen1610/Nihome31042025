@@ -82,9 +82,7 @@ function getErrorMessage(error: unknown) {
       for (const value of Object.values(data.errors)) {
         if (typeof value === "string" && value.trim()) return value;
         if (Array.isArray(value)) {
-          const first = value.find(
-            (item) => typeof item === "string" && item.trim(),
-          );
+          const first = value.find((item) => typeof item === "string" && item.trim());
           if (typeof first === "string") return first;
         }
       }
@@ -109,15 +107,10 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
   const items = useMemo(() => {
     const source = logos?.[kind] ?? [];
     const sorted = [...source].sort(
-      (a, b) =>
-        (a.sortOrder ?? Number.MAX_SAFE_INTEGER) -
-        (b.sortOrder ?? Number.MAX_SAFE_INTEGER),
+      (a, b) => (a.sortOrder ?? Number.MAX_SAFE_INTEGER) - (b.sortOrder ?? Number.MAX_SAFE_INTEGER),
     );
     if (!q.trim()) return sorted;
-    return sorted.filter((item) =>
-      matchesSearch(item.name, q) ||
-      matchesSearch(item.href, q),
-    );
+    return sorted.filter((item) => matchesSearch(item.name, q) || matchesSearch(item.href, q));
   }, [logos, kind, q]);
 
   const totalCount = (logos?.[kind] ?? []).length;
@@ -139,15 +132,11 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
     : isEditing
       ? t("logoAdmin.logoEditDesc")
       : t("logoAdmin.logoCreateDesc");
-  const nameLabel = isAwards
-    ? t("logoAdmin.awardFieldName")
-    : t("logoAdmin.fieldName");
+  const nameLabel = isAwards ? t("logoAdmin.awardFieldName") : t("logoAdmin.fieldName");
   const namePlaceholder = isAwards
     ? t("logoAdmin.awardPlaceholderName")
     : t("logoAdmin.placeholderName");
-  const previewBadge = isAwards
-    ? t("logoAdmin.awardBadge")
-    : t("logoAdmin.logoBadge");
+  const previewBadge = isAwards ? t("logoAdmin.awardBadge") : t("logoAdmin.logoBadge");
   const gridClassName = isAwards
     ? "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4"
     : "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 lg:gap-4";
@@ -158,16 +147,11 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
     ? "aspect-[4/3] rounded-md border bg-white flex items-center justify-center overflow-hidden mb-3"
     : "aspect-[16/10] rounded-md border bg-white flex items-center justify-center overflow-hidden mb-2.5";
 
-  const updateForm = <K extends keyof LogoFormData>(
-    key: K,
-    value: LogoFormData[K],
-  ) => setForm((prev) => ({ ...prev, [key]: value }));
+  const updateForm = <K extends keyof LogoFormData>(key: K, value: LogoFormData[K]) =>
+    setForm((prev) => ({ ...prev, [key]: value }));
 
   const startCreate = () => {
-    const maxSortOrder = items.reduce(
-      (max, item) => Math.max(max, item.sortOrder ?? 0),
-      0,
-    );
+    const maxSortOrder = items.reduce((max, item) => Math.max(max, item.sortOrder ?? 0), 0);
     setForm({
       ...emptyForm,
       sortOrder: maxSortOrder + 1,
@@ -204,8 +188,7 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
 
     setUploading(true);
     try {
-      const previousImageUrl =
-        isEditing && form.imageUrl ? form.imageUrl : undefined;
+      const previousImageUrl = isEditing && form.imageUrl ? form.imageUrl : undefined;
       const res = await adminApi.uploadImage(file, previousImageUrl, "logos");
       updateForm("imageUrl", res.data.imageUrl);
       toast({ title: t("logoAdmin.uploadSuccess") });
@@ -265,8 +248,7 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
   };
 
   const remove = async (item: LogoResponse) => {
-    if (!window.confirm(`${t("logoAdmin.confirmDelete")} "${item.name}"?`))
-      return;
+    if (!window.confirm(`${t("logoAdmin.confirmDelete")} "${item.name}"?`)) return;
 
     try {
       await adminApi.deleteLogo(item.id);
@@ -354,7 +336,9 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
 
         <section className="rounded-lg border bg-card p-3">
           <div className="w-full sm:max-w-sm">
-            <Label className="text-xs" htmlFor="logo-search">{t("common.search")}</Label>
+            <Label className="text-xs" htmlFor="logo-search">
+              {t("common.search")}
+            </Label>
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -371,7 +355,11 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
         {items.length === 0 ? (
           <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
             <div className="rounded-full bg-muted p-3">
-              {isAwards ? <Trophy className="h-5 w-5" aria-hidden /> : <ImageIcon className="h-5 w-5" aria-hidden />}
+              {isAwards ? (
+                <Trophy className="h-5 w-5" aria-hidden />
+              ) : (
+                <ImageIcon className="h-5 w-5" aria-hidden />
+              )}
             </div>
             <p>{t("common.noData")}</p>
             <Button type="button" size="sm" onClick={startCreate}>
@@ -388,13 +376,7 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
             />
             <div className="flex items-center gap-2 px-1 text-xs text-muted-foreground">
               <Checkbox
-                checked={
-                  allVisibleSelected
-                    ? true
-                    : someVisibleSelected
-                      ? "indeterminate"
-                      : false
-                }
+                checked={allVisibleSelected ? true : someVisibleSelected ? "indeterminate" : false}
                 onCheckedChange={(v) => toggleAllVisible(v === true)}
                 aria-label={t("common.selectAll")}
               />
@@ -479,9 +461,7 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
                 </span>
                 {modalTitle}
               </DialogTitle>
-              <DialogDescription className="mt-2 text-sm">
-                {modalDescription}
-              </DialogDescription>
+              <DialogDescription className="mt-2 text-sm">{modalDescription}</DialogDescription>
             </DialogHeader>
 
             <form onSubmit={save}>
@@ -556,11 +536,7 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
               </div>
 
               <DialogFooter className="border-t px-5 sm:px-7 py-4 bg-muted/20">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setOpenModal(false)}
-                >
+                <Button type="button" variant="outline" onClick={() => setOpenModal(false)}>
                   <X className="mr-1.5 h-4 w-4" /> {t("common.cancel")}
                 </Button>
                 <Button type="submit" disabled={isBusy} className="min-w-[140px]">
@@ -606,17 +582,11 @@ const LogoPreview = ({
 
   return (
     <>
-      <p className="logo-preview-heading">
-        {t("logoAdmin.previewTitle")}
-      </p>
+      <p className="logo-preview-heading">{t("logoAdmin.previewTitle")}</p>
       <div className="logo-preview-card">
         <div className="logo-preview-topline">
           <span className="logo-preview-badge">
-            {isAward ? (
-              <Trophy className="w-4 h-4" />
-            ) : (
-              <ImageIcon className="w-4 h-4" />
-            )}
+            {isAward ? <Trophy className="w-4 h-4" /> : <ImageIcon className="w-4 h-4" />}
             {badge}
           </span>
         </div>

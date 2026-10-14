@@ -6,7 +6,7 @@
 // removed as unused mock code; keep this file focused on Languages so a
 // future migration to a real API is a single-file change.
 
-const read = <T,>(key: string, fallback: T): T => {
+const read = <T>(key: string, fallback: T): T => {
   try {
     const raw = localStorage.getItem(key);
     return raw ? (JSON.parse(raw) as T) : fallback;
@@ -15,7 +15,7 @@ const read = <T,>(key: string, fallback: T): T => {
   }
 };
 
-const write = <T,>(key: string, value: T) => {
+const write = <T>(key: string, value: T) => {
   try {
     localStorage.setItem(key, JSON.stringify(value));
     window.dispatchEvent(new CustomEvent(`${key}:changed`));

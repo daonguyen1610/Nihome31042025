@@ -44,7 +44,9 @@ const AdminActivities = () => {
   const filterOptions = useMemo(() => {
     const ids = new Set<number>();
     (categoryMaster ?? []).forEach((c) => ids.add(c.id));
-    list.forEach((a) => { if (a.categoryId != null) ids.add(a.categoryId); });
+    list.forEach((a) => {
+      if (a.categoryId != null) ids.add(a.categoryId);
+    });
     return Array.from(ids)
       .map((id) => ({ id, label: resolveCategoryLabel(id, undefined, categoriesById, lang) }))
       .filter((opt) => opt.label)
@@ -56,7 +58,9 @@ const AdminActivities = () => {
         const matchCat = catId === "all" || a.categoryId === catId;
         if (!matchCat) return false;
         if (!q.trim()) return true;
-        return matchesSearch(a.title, q) || matchesSearch(a.category, q) || matchesSearch(a.slug, q);
+        return (
+          matchesSearch(a.title, q) || matchesSearch(a.category, q) || matchesSearch(a.slug, q)
+        );
       }),
     [list, catId, q],
   );
@@ -100,11 +104,20 @@ const AdminActivities = () => {
         { header: "ID", value: "id" },
         { header: "Slug", value: "slug" },
         { header: t("activities.col.post"), value: "title" },
-        { header: t("activities.col.category"), value: (row) => resolveCategoryLabel(row.categoryId, row.category, categoriesById, lang) },
+        {
+          header: t("activities.col.category"),
+          value: (row) => resolveCategoryLabel(row.categoryId, row.category, categoriesById, lang),
+        },
         { header: t("activities.col.author"), value: (row) => row.author ?? "" },
         { header: t("common.date"), value: "date" },
         { header: "Excerpt", value: "excerpt" },
-        { header: "Content", value: (row) => row.content.map((item) => (typeof item === "string" ? item : JSON.stringify(item))).join("\n\n") },
+        {
+          header: "Content",
+          value: (row) =>
+            row.content
+              .map((item) => (typeof item === "string" ? item : JSON.stringify(item)))
+              .join("\n\n"),
+        },
         { header: "Image URL", value: "imageUrl" },
       ],
       rows: filtered,
@@ -136,208 +149,284 @@ const AdminActivities = () => {
         ) : error ? (
           <PageError message={error} onRetry={refetch} />
         ) : (
-        <>
-        <section className="flex flex-wrap items-end gap-3 rounded-lg border bg-card p-3">
-          <div className="min-w-[220px] flex-1">
-            <Label className="text-xs" htmlFor="activities-search">{t("common.search")}</Label>
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                id="activities-search"
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                placeholder={t("activities.searchPlaceholder")}
-                className="h-9 pl-9"
-              />
-            </div>
-          </div>
-          <div className="w-full sm:w-[200px]">
-            <Label className="text-xs" htmlFor="activities-category">{t("activities.col.category")}</Label>
-            <Select
-              value={catId === "all" ? "all" : String(catId)}
-              onValueChange={(v) => setCatId(v === "all" ? "all" : Number(v))}
-            >
-              <SelectTrigger id="activities-category" className="h-9">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t("activities.allCategories")}</SelectItem>
-                {filterOptions.map((opt) => (
-                  <SelectItem key={opt.id} value={String(opt.id)}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </section>
+          <>
+            <section className="flex flex-wrap items-end gap-3 rounded-lg border bg-card p-3">
+              <div className="min-w-[220px] flex-1">
+                <Label className="text-xs" htmlFor="activities-search">
+                  {t("common.search")}
+                </Label>
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    id="activities-search"
+                    value={q}
+                    onChange={(e) => setQ(e.target.value)}
+                    placeholder={t("activities.searchPlaceholder")}
+                    className="h-9 pl-9"
+                  />
+                </div>
+              </div>
+              <div className="w-full sm:w-[200px]">
+                <Label className="text-xs" htmlFor="activities-category">
+                  {t("activities.col.category")}
+                </Label>
+                <Select
+                  value={catId === "all" ? "all" : String(catId)}
+                  onValueChange={(v) => setCatId(v === "all" ? "all" : Number(v))}
+                >
+                  <SelectTrigger id="activities-category" className="h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{t("activities.allCategories")}</SelectItem>
+                    {filterOptions.map((opt) => (
+                      <SelectItem key={opt.id} value={String(opt.id)}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </section>
 
-        {filtered.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
-            <div className="rounded-full bg-muted p-3">
-              <Search className="h-5 w-5" aria-hidden />
-            </div>
-            <p>{t("activities.empty")}</p>
-            <Button asChild size="sm">
-              <Link to="/admin/activities/new">
-                <Plus className="mr-1.5 h-4 w-4" /> {t("activities.create")}
-              </Link>
-            </Button>
-          </div>
-        ) : (
-        <div className="space-y-2">
-          <BulkActionBar
-            selectedCount={selectedIds.size}
-            bulkDeleting={bulkDeleting}
-            onClear={clearSelection}
-            onBulkDelete={() => void handleBulkDelete()}
-          />
+            {filtered.length === 0 ? (
+              <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
+                <div className="rounded-full bg-muted p-3">
+                  <Search className="h-5 w-5" aria-hidden />
+                </div>
+                <p>{t("activities.empty")}</p>
+                <Button asChild size="sm">
+                  <Link to="/admin/activities/new">
+                    <Plus className="mr-1.5 h-4 w-4" /> {t("activities.create")}
+                  </Link>
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <BulkActionBar
+                  selectedCount={selectedIds.size}
+                  bulkDeleting={bulkDeleting}
+                  onClear={clearSelection}
+                  onBulkDelete={() => void handleBulkDelete()}
+                />
 
-          {/* Mobile / tablet card view (<lg) */}
-          <ul className="grid gap-3 lg:hidden">
-            {filtered.map((a) => {
-              const label = resolveCategoryLabel(a.categoryId, a.category, categoriesById, lang);
-              return (
-                <li key={a.id} className="rounded-lg border bg-card p-3 shadow-sm">
-                  <div className="flex items-start gap-2">
-                    <span onClick={(e) => e.stopPropagation()} className="pt-0.5">
-                      <Checkbox
-                        checked={selectedIds.has(a.id)}
-                        onCheckedChange={(v) => toggleOne(a.id, v === true)}
-                        aria-label={`${t("common.selectAll")} · ${a.title}`}
-                      />
-                    </span>
-                    <Link
-                      to={`/admin/activities/${a.slug}`}
-                      className="flex min-w-0 flex-1 items-start gap-2 hover:opacity-80 transition"
-                    >
-                      <img src={a.imageUrl} alt="" className="h-12 w-12 shrink-0 rounded-lg object-cover" />
-                      <div className="min-w-0">
-                        <h3 className="line-clamp-2 break-words text-sm font-semibold leading-tight">{a.title}</h3>
-                        {label && (
-                          <Badge
-                            variant="outline"
-                            className="mt-1 whitespace-normal border-indigo-200 bg-indigo-50 font-medium text-indigo-700"
+                {/* Mobile / tablet card view (<lg) */}
+                <ul className="grid gap-3 lg:hidden">
+                  {filtered.map((a) => {
+                    const label = resolveCategoryLabel(
+                      a.categoryId,
+                      a.category,
+                      categoriesById,
+                      lang,
+                    );
+                    return (
+                      <li key={a.id} className="rounded-lg border bg-card p-3 shadow-sm">
+                        <div className="flex items-start gap-2">
+                          <span onClick={(e) => e.stopPropagation()} className="pt-0.5">
+                            <Checkbox
+                              checked={selectedIds.has(a.id)}
+                              onCheckedChange={(v) => toggleOne(a.id, v === true)}
+                              aria-label={`${t("common.selectAll")} · ${a.title}`}
+                            />
+                          </span>
+                          <Link
+                            to={`/admin/activities/${a.slug}`}
+                            className="flex min-w-0 flex-1 items-start gap-2 hover:opacity-80 transition"
                           >
-                            {label}
-                          </Badge>
-                        )}
-                      </div>
-                    </Link>
-                  </div>
-                  <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
-                    <dt className="text-muted-foreground">{t("activities.col.author")}</dt>
-                    <dd className="font-medium">{a.author ?? "—"}</dd>
-                    <dt className="text-muted-foreground">{t("common.date")}</dt>
-                    <dd className="font-medium">{a.date}</dd>
-                  </dl>
-                  <div className="mt-3 flex items-center justify-end gap-1 border-t pt-2">
-                    <Button asChild variant="ghost" size="icon" title={t("common.view")} aria-label={t("common.view")}>
-                      <Link to={`/admin/activities/${a.slug}`}>
-                        <Eye className="h-4 w-4" />
-                      </Link>
-                    </Button>
-                    <Button asChild variant="ghost" size="icon" title={t("common.edit")} aria-label={t("common.edit")}>
-                      <Link to={`/admin/activities/${a.slug}/edit`}>
-                        <Edit className="h-4 w-4" />
-                      </Link>
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDelete(a)}
-                      title={t("common.delete")}
-                      aria-label={t("common.delete")}
-                      className="text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
+                            <img
+                              src={a.imageUrl}
+                              alt=""
+                              className="h-12 w-12 shrink-0 rounded-lg object-cover"
+                            />
+                            <div className="min-w-0">
+                              <h3 className="line-clamp-2 break-words text-sm font-semibold leading-tight">
+                                {a.title}
+                              </h3>
+                              {label && (
+                                <Badge
+                                  variant="outline"
+                                  className="mt-1 whitespace-normal border-indigo-200 bg-indigo-50 font-medium text-indigo-700"
+                                >
+                                  {label}
+                                </Badge>
+                              )}
+                            </div>
+                          </Link>
+                        </div>
+                        <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+                          <dt className="text-muted-foreground">{t("activities.col.author")}</dt>
+                          <dd className="font-medium">{a.author ?? "—"}</dd>
+                          <dt className="text-muted-foreground">{t("common.date")}</dt>
+                          <dd className="font-medium">{a.date}</dd>
+                        </dl>
+                        <div className="mt-3 flex items-center justify-end gap-1 border-t pt-2">
+                          <Button
+                            asChild
+                            variant="ghost"
+                            size="icon"
+                            title={t("common.view")}
+                            aria-label={t("common.view")}
+                          >
+                            <Link to={`/admin/activities/${a.slug}`}>
+                              <Eye className="h-4 w-4" />
+                            </Link>
+                          </Button>
+                          <Button
+                            asChild
+                            variant="ghost"
+                            size="icon"
+                            title={t("common.edit")}
+                            aria-label={t("common.edit")}
+                          >
+                            <Link to={`/admin/activities/${a.slug}/edit`}>
+                              <Edit className="h-4 w-4" />
+                            </Link>
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDelete(a)}
+                            title={t("common.delete")}
+                            aria-label={t("common.delete")}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
 
-          {/* Desktop table (lg+) */}
-          <div className="hidden overflow-x-auto rounded-lg border lg:block">
-            <table className="min-w-[800px] w-full divide-y text-sm">
-              <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
-                <tr>
-                  <th className="w-10 px-3 py-3 text-left">
-                    <Checkbox
-                      checked={
-                        allVisibleSelected
-                          ? true
-                          : someVisibleSelected
-                            ? "indeterminate"
-                            : false
-                      }
-                      onCheckedChange={(v) => toggleAllVisible(v === true)}
-                      aria-label={t("common.selectAll")}
-                    />
-                  </th>
-                  <th className="px-3 py-3 text-left font-medium">{t("activities.col.post")}</th>
-                  <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("activities.col.category")}</th>
-                  <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("activities.col.author")}</th>
-                  <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("common.date")}</th>
-                  <th className="whitespace-nowrap px-3 py-3 text-right font-medium">{t("common.actions")}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {filtered.map((a) => (
-                  <tr key={a.id} className="hover:bg-muted/40 transition">
-                    <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
-                      <Checkbox
-                        checked={selectedIds.has(a.id)}
-                        onCheckedChange={(v) => toggleOne(a.id, v === true)}
-                        aria-label={`${t("common.selectAll")} · ${a.title}`}
-                      />
-                    </td>
-                    <td className="px-3 py-3">
-                      <Link to={`/admin/activities/${a.slug}`} className="flex items-center gap-3 hover:opacity-80 transition">
-                        <img src={a.imageUrl} alt="" className="h-12 w-12 rounded-lg object-cover" />
-                        <p className="font-medium line-clamp-2 max-w-md">{a.title}</p>
-                      </Link>
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-3">
-                      {(() => {
-                        const label = resolveCategoryLabel(a.categoryId, a.category, categoriesById, lang);
-                        return label ? (
-                          <Badge variant="outline" className={cn("whitespace-nowrap font-medium border-indigo-200 bg-indigo-50 text-indigo-700")}>
-                            {label}
-                          </Badge>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
-                        );
-                      })()}
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground">{a.author ?? "—"}</td>
-                    <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground">{a.date}</td>
-                    <td className="whitespace-nowrap px-3 py-3 text-right">
-                      <div className="inline-flex items-center gap-1">
-                        <Button asChild variant="ghost" size="icon" title={t("common.view")} aria-label={t("common.view")}>
-                          <Link to={`/admin/activities/${a.slug}`}>
-                            <Eye className="h-4 w-4" />
-                          </Link>
-                        </Button>
-                        <Button asChild variant="ghost" size="icon" title={t("common.edit")} aria-label={t("common.edit")}>
-                          <Link to={`/admin/activities/${a.slug}/edit`}>
-                            <Edit className="h-4 w-4" />
-                          </Link>
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(a)} title={t("common.delete")} aria-label={t("common.delete")}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-        )}
-        </>
+                {/* Desktop table (lg+) */}
+                <div className="hidden overflow-x-auto rounded-lg border lg:block">
+                  <table className="min-w-[800px] w-full divide-y text-sm">
+                    <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
+                      <tr>
+                        <th className="w-10 px-3 py-3 text-left">
+                          <Checkbox
+                            checked={
+                              allVisibleSelected
+                                ? true
+                                : someVisibleSelected
+                                  ? "indeterminate"
+                                  : false
+                            }
+                            onCheckedChange={(v) => toggleAllVisible(v === true)}
+                            aria-label={t("common.selectAll")}
+                          />
+                        </th>
+                        <th className="px-3 py-3 text-left font-medium">
+                          {t("activities.col.post")}
+                        </th>
+                        <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                          {t("activities.col.category")}
+                        </th>
+                        <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                          {t("activities.col.author")}
+                        </th>
+                        <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                          {t("common.date")}
+                        </th>
+                        <th className="whitespace-nowrap px-3 py-3 text-right font-medium">
+                          {t("common.actions")}
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {filtered.map((a) => (
+                        <tr key={a.id} className="hover:bg-muted/40 transition">
+                          <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
+                            <Checkbox
+                              checked={selectedIds.has(a.id)}
+                              onCheckedChange={(v) => toggleOne(a.id, v === true)}
+                              aria-label={`${t("common.selectAll")} · ${a.title}`}
+                            />
+                          </td>
+                          <td className="px-3 py-3">
+                            <Link
+                              to={`/admin/activities/${a.slug}`}
+                              className="flex items-center gap-3 hover:opacity-80 transition"
+                            >
+                              <img
+                                src={a.imageUrl}
+                                alt=""
+                                className="h-12 w-12 rounded-lg object-cover"
+                              />
+                              <p className="font-medium line-clamp-2 max-w-md">{a.title}</p>
+                            </Link>
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-3">
+                            {(() => {
+                              const label = resolveCategoryLabel(
+                                a.categoryId,
+                                a.category,
+                                categoriesById,
+                                lang,
+                              );
+                              return label ? (
+                                <Badge
+                                  variant="outline"
+                                  className={cn(
+                                    "whitespace-nowrap font-medium border-indigo-200 bg-indigo-50 text-indigo-700",
+                                  )}
+                                >
+                                  {label}
+                                </Badge>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">—</span>
+                              );
+                            })()}
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground">
+                            {a.author ?? "—"}
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground">
+                            {a.date}
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-3 text-right">
+                            <div className="inline-flex items-center gap-1">
+                              <Button
+                                asChild
+                                variant="ghost"
+                                size="icon"
+                                title={t("common.view")}
+                                aria-label={t("common.view")}
+                              >
+                                <Link to={`/admin/activities/${a.slug}`}>
+                                  <Eye className="h-4 w-4" />
+                                </Link>
+                              </Button>
+                              <Button
+                                asChild
+                                variant="ghost"
+                                size="icon"
+                                title={t("common.edit")}
+                                aria-label={t("common.edit")}
+                              >
+                                <Link to={`/admin/activities/${a.slug}/edit`}>
+                                  <Edit className="h-4 w-4" />
+                                </Link>
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDelete(a)}
+                                title={t("common.delete")}
+                                aria-label={t("common.delete")}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
     </AdminLayout>

@@ -1,6 +1,21 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { CheckCircle2, ChevronsRight, Circle, FileUp, History, Loader2, Pencil, Plus, Send, ShieldCheck, Sparkles, Trash2, Undo2, XCircle } from "lucide-react";
+import {
+  CheckCircle2,
+  ChevronsRight,
+  Circle,
+  FileUp,
+  History,
+  Loader2,
+  Pencil,
+  Plus,
+  Send,
+  ShieldCheck,
+  Sparkles,
+  Trash2,
+  Undo2,
+  XCircle,
+} from "lucide-react";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
 import { Badge } from "@/components/ui/badge";
@@ -217,7 +232,11 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged }: Props) => {
       toast({ title: t("basicDesign.fileUploaded") });
       await fetchRows();
     } catch (err) {
-      toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
+      toast({
+        title: t("common.error"),
+        description: extractApiError(err),
+        variant: "destructive",
+      });
     } finally {
       setUploadingId(null);
     }
@@ -309,11 +328,20 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged }: Props) => {
     let active = true;
     setLoadingDeleteImpact(true);
     setDeleteError(null);
-    void adminApi.getBasicDesignDocDeletionImpact(deleting.id)
-      .then(({ data }) => { if (active) setDeleteImpact(data); })
-      .catch((err) => { if (active) setDeleteError(extractApiError(err)); })
-      .finally(() => { if (active) setLoadingDeleteImpact(false); });
-    return () => { active = false; };
+    void adminApi
+      .getBasicDesignDocDeletionImpact(deleting.id)
+      .then(({ data }) => {
+        if (active) setDeleteImpact(data);
+      })
+      .catch((err) => {
+        if (active) setDeleteError(extractApiError(err));
+      })
+      .finally(() => {
+        if (active) setLoadingDeleteImpact(false);
+      });
+    return () => {
+      active = false;
+    };
   }, [deleting]);
 
   const confirmDelete = async (confirmation: string) => {
@@ -436,7 +464,10 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged }: Props) => {
                       {ok ? <CheckCircle2 className="h-3 w-3" /> : <Circle className="h-3 w-3" />}
                       {disciplineLabelByCode.get(code) ?? code}
                       <span className="text-[10px] opacity-80">
-                        · {ok ? t("basicDesign.readiness.approved") : t("basicDesign.readiness.missing")}
+                        ·{" "}
+                        {ok
+                          ? t("basicDesign.readiness.approved")
+                          : t("basicDesign.readiness.missing")}
                       </span>
                     </Badge>
                   );
@@ -448,9 +479,7 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged }: Props) => {
                 size="sm"
                 className={cn(
                   "gap-1.5",
-                  readiness.readyForShopDrawing
-                    ? "bg-emerald-600 hover:bg-emerald-700"
-                    : "",
+                  readiness.readyForShopDrawing ? "bg-emerald-600 hover:bg-emerald-700" : "",
                 )}
                 disabled={!readiness.readyForShopDrawing || busyUnlock}
                 onClick={() => void doUnlock()}
@@ -494,7 +523,8 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged }: Props) => {
                     key={row.id}
                     className={cn(
                       "p-3",
-                      focusedDocumentId === row.id && "bg-amber-50 ring-2 ring-inset ring-amber-300",
+                      focusedDocumentId === row.id &&
+                        "bg-amber-50 ring-2 ring-inset ring-amber-300",
                     )}
                   >
                     <div className="flex flex-wrap items-start justify-between gap-2">
@@ -513,7 +543,9 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged }: Props) => {
                               url={row.filePath}
                               fileName={row.originalFileName}
                               contentType={row.contentType}
-                              fetchFile={async () => (await adminApi.getBasicDesignDocContent(row.id)).data}
+                              fetchFile={async () =>
+                                (await adminApi.getBasicDesignDocContent(row.id)).data
+                              }
                               className="max-w-xs"
                             />
                             {canManage && isBasicStage ? (
@@ -535,7 +567,10 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged }: Props) => {
                         ) : null}
                       </div>
                       <div className="flex flex-col items-end gap-1">
-                        <Badge variant="outline" className={cn("whitespace-nowrap", STATUS_BADGE[row.status])}>
+                        <Badge
+                          variant="outline"
+                          className={cn("whitespace-nowrap", STATUS_BADGE[row.status])}
+                        >
                           {t(`basicDesign.status.${row.status}`)}
                         </Badge>
                         <span className="text-[10px] text-muted-foreground">
@@ -582,7 +617,17 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged }: Props) => {
                         ) : null}
                       </div>
                     ) : null}
-                    {!canDelete && canHardDelete && row.status === "Rejected" ? <Button size="sm" variant="ghost" className="mt-2 h-8 text-xs text-rose-700" onClick={() => setDeleting(row)}><Trash2 className="mr-1 h-3.5 w-3.5" />{t("basicDesign.action.delete")}</Button> : null}
+                    {!canDelete && canHardDelete && row.status === "Rejected" ? (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="mt-2 h-8 text-xs text-rose-700"
+                        onClick={() => setDeleting(row)}
+                      >
+                        <Trash2 className="mr-1 h-3.5 w-3.5" />
+                        {t("basicDesign.action.delete")}
+                      </Button>
+                    ) : null}
                   </li>
                 ))}
               </ul>
@@ -640,9 +685,7 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged }: Props) => {
                 <SearchableSelect
                   className="mt-1"
                   value={form.ownerUserId != null ? String(form.ownerUserId) : ""}
-                  onChange={(v) =>
-                    setForm((f) => ({ ...f, ownerUserId: v ? Number(v) : null }))
-                  }
+                  onChange={(v) => setForm((f) => ({ ...f, ownerUserId: v ? Number(v) : null }))}
                   options={[{ value: "", label: t("basicDesign.form.ownerNone") }, ...userOptions]}
                   placeholder={t("basicDesign.form.ownerNone")}
                 />
@@ -675,9 +718,14 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged }: Props) => {
         loading={loadingDeleteImpact}
         deleting={busyDelete}
         error={deleteError}
-        onOpenChange={(open) => { if (!open && !busyDelete) setDeleting(null); }}
+        onOpenChange={(open) => {
+          if (!open && !busyDelete) setDeleting(null);
+        }}
         onConfirm={confirmDelete}
-        onCompleted={async () => { setDeleting(null); await fetchRows(); }}
+        onCompleted={async () => {
+          setDeleting(null);
+          await fetchRows();
+        }}
       />
 
       {revisionsFor ? (
@@ -715,7 +763,11 @@ const FileUploadButton = ({
         disabled={busy}
         onClick={() => inputRef.current?.click()}
       >
-        {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileUp className="h-3.5 w-3.5" />}
+        {busy ? (
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        ) : (
+          <FileUp className="h-3.5 w-3.5" />
+        )}
         {label}
       </Button>
       <input
@@ -764,8 +816,13 @@ const RowActions = ({
             <Pencil className="mr-1 h-3.5 w-3.5" />
             {t("common.edit")}
           </Button>
-          <Button size="sm" variant="secondary" className={btn} disabled={busy}
-            onClick={() => onTransition("SubmittedForReview")}>
+          <Button
+            size="sm"
+            variant="secondary"
+            className={btn}
+            disabled={busy}
+            onClick={() => onTransition("SubmittedForReview")}
+          >
             <Send className="mr-1 h-3.5 w-3.5" />
             {t("basicDesign.action.sendReview")}
           </Button>
@@ -778,19 +835,33 @@ const RowActions = ({
             {t("common.edit")}
           </Button>
           {canApprove ? (
-            <Button size="sm" className={cn(btn, "bg-emerald-600 hover:bg-emerald-700")} disabled={busy}
-              onClick={() => onTransition("InternallyApproved")}>
+            <Button
+              size="sm"
+              className={cn(btn, "bg-emerald-600 hover:bg-emerald-700")}
+              disabled={busy}
+              onClick={() => onTransition("InternallyApproved")}
+            >
               <Sparkles className="mr-1 h-3.5 w-3.5" />
               {t("basicDesign.action.approve")}
             </Button>
           ) : null}
-          <Button size="sm" variant="ghost" className={btn} disabled={busy}
-            onClick={() => onTransition("InProgress")}>
+          <Button
+            size="sm"
+            variant="ghost"
+            className={btn}
+            disabled={busy}
+            onClick={() => onTransition("InProgress")}
+          >
             <Undo2 className="mr-1 h-3.5 w-3.5" />
             {t("basicDesign.action.backToDraft")}
           </Button>
-          <Button size="sm" variant="ghost" className={cn(btn, "text-rose-700 hover:bg-rose-50")} disabled={busy}
-            onClick={() => onTransition("Rejected")}>
+          <Button
+            size="sm"
+            variant="ghost"
+            className={cn(btn, "text-rose-700 hover:bg-rose-50")}
+            disabled={busy}
+            onClick={() => onTransition("Rejected")}
+          >
             <XCircle className="mr-1 h-3.5 w-3.5" />
             {t("basicDesign.action.reject")}
           </Button>
@@ -802,21 +873,35 @@ const RowActions = ({
             <Pencil className="mr-1 h-3.5 w-3.5" />
             {t("common.edit")}
           </Button>
-          <Button size="sm" variant="secondary" className={btn} disabled={busy}
-            onClick={() => onTransition("SubmittedForPermit")}>
+          <Button
+            size="sm"
+            variant="secondary"
+            className={btn}
+            disabled={busy}
+            onClick={() => onTransition("SubmittedForPermit")}
+          >
             {t("basicDesign.action.submitPermit")}
           </Button>
         </>
       )}
       {s === "SubmittedForPermit" && (
         <>
-          <Button size="sm" className={cn(btn, "bg-emerald-600 hover:bg-emerald-700")} disabled={busy}
-            onClick={() => onTransition("PermitApproved")}>
+          <Button
+            size="sm"
+            className={cn(btn, "bg-emerald-600 hover:bg-emerald-700")}
+            disabled={busy}
+            onClick={() => onTransition("PermitApproved")}
+          >
             <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
             {t("basicDesign.action.markPermitApproved")}
           </Button>
-          <Button size="sm" variant="ghost" className={cn(btn, "text-rose-700 hover:bg-rose-50")} disabled={busy}
-            onClick={() => onTransition("Rejected")}>
+          <Button
+            size="sm"
+            variant="ghost"
+            className={cn(btn, "text-rose-700 hover:bg-rose-50")}
+            disabled={busy}
+            onClick={() => onTransition("Rejected")}
+          >
             <XCircle className="mr-1 h-3.5 w-3.5" />
             {t("basicDesign.action.reject")}
           </Button>
@@ -834,11 +919,18 @@ const RowActions = ({
           {t("basicDesign.status.Rejected")}
         </Badge>
       )}
-      {canHardDelete && s === "Rejected" ? <Button size="sm" variant="ghost" className={cn(btn, "text-rose-700 hover:bg-rose-50 hover:text-rose-800")}
-        onClick={onDelete} data-testid={`basic-design-delete-${row.id}`}>
-        <Trash2 className="mr-1 h-3.5 w-3.5" />
-        {t("basicDesign.action.delete")}
-      </Button> : null}
+      {canHardDelete && s === "Rejected" ? (
+        <Button
+          size="sm"
+          variant="ghost"
+          className={cn(btn, "text-rose-700 hover:bg-rose-50 hover:text-rose-800")}
+          onClick={onDelete}
+          data-testid={`basic-design-delete-${row.id}`}
+        >
+          <Trash2 className="mr-1 h-3.5 w-3.5" />
+          {t("basicDesign.action.delete")}
+        </Button>
+      ) : null}
     </>
   );
 };

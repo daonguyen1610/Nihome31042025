@@ -48,7 +48,9 @@ export default function AdminDocumentUpload({
         try {
           uploadedPaths.push(await uploadFile(file));
         } catch (uploadError) {
-          failedFiles.push(`${file.name}: ${extractApiError(uploadError) || t("common.documentUpload.error")}`);
+          failedFiles.push(
+            `${file.name}: ${extractApiError(uploadError) || t("common.documentUpload.error")}`,
+          );
         }
       }
       if (uploadedPaths.length > 0) await onUploaded(uploadedPaths);
@@ -62,7 +64,9 @@ export default function AdminDocumentUpload({
   const inputId = `business-document-${testId ?? "upload"}`;
   return (
     <div className="space-y-2">
-      <Label htmlFor={inputId} className="sr-only">{t("common.documentUpload.select")}</Label>
+      <Label htmlFor={inputId} className="sr-only">
+        {t("common.documentUpload.select")}
+      </Label>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <Input
           ref={inputRef}
@@ -82,12 +86,20 @@ export default function AdminDocumentUpload({
           onClick={() => inputRef.current?.click()}
           className="shrink-0"
         >
-          {uploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+          {uploading ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Upload className="mr-2 h-4 w-4" />
+          )}
           {uploading ? t("common.documentUpload.uploading") : t("common.documentUpload.select")}
         </Button>
       </div>
       <p className="text-xs text-muted-foreground">{t("common.documentUpload.help")}</p>
-      {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+      {error && (
+        <p role="alert" className="text-sm text-destructive">
+          {error}
+        </p>
+      )}
     </div>
   );
 }

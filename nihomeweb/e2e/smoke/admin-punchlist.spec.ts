@@ -53,14 +53,11 @@ test.describe("NIH-146 — Punch list (real-user flow)", () => {
     await Promise.all([
       page.waitForResponse(
         (r) =>
-          r.url().includes("/api/punch-items") &&
-          r.url().includes(`designProjectId=${projectId}`),
+          r.url().includes("/api/punch-items") && r.url().includes(`designProjectId=${projectId}`),
       ),
       (async () => {
         await projectFilter.click();
-        await page
-          .getByRole("option", { name: new RegExp(`E2E-PUNCH ${projSuffix}`) })
-          .click();
+        await page.getByRole("option", { name: new RegExp(`E2E-PUNCH ${projSuffix}`) }).click();
       })(),
     ]);
 
@@ -96,7 +93,10 @@ test.describe("NIH-146 — Punch list (real-user flow)", () => {
     await page.getByTestId("punch-detail-title").fill(updatedTitle);
     await Promise.all([
       page.waitForResponse(
-        (r) => /\/api\/punch-items\/\d+$/.test(r.url()) && r.request().method() === "PUT" && r.status() === 200,
+        (r) =>
+          /\/api\/punch-items\/\d+$/.test(r.url()) &&
+          r.request().method() === "PUT" &&
+          r.status() === 200,
       ),
       page.getByTestId("punch-detail-save").click(),
     ]);
@@ -137,12 +137,15 @@ test.describe("NIH-146 — Punch list (real-user flow)", () => {
     await expect
       .poll(
         async () => {
-          const list = await api.get(
-            `/api/punch-items?designProjectId=${projectId}&pageSize=50`,
-            { headers: authHeader },
-          );
+          const list = await api.get(`/api/punch-items?designProjectId=${projectId}&pageSize=50`, {
+            headers: authHeader,
+          });
           if (!list.ok()) return { status: "err" };
-          const items = (await list.json()).items as Array<{ title: string; status: string; reopenCount: number }>;
+          const items = (await list.json()).items as Array<{
+            title: string;
+            status: string;
+            reopenCount: number;
+          }>;
           const match = items.find((i) => i.title === updatedTitle);
           return match ?? { status: "missing" };
         },
@@ -164,12 +167,15 @@ test.describe("NIH-146 — Punch list (real-user flow)", () => {
     await expect
       .poll(
         async () => {
-          const list = await api.get(
-            `/api/punch-items?designProjectId=${projectId}&pageSize=50`,
-            { headers: authHeader },
-          );
+          const list = await api.get(`/api/punch-items?designProjectId=${projectId}&pageSize=50`, {
+            headers: authHeader,
+          });
           if (!list.ok()) return { status: "err" };
-          const items = (await list.json()).items as Array<{ title: string; status: string; reopenCount: number }>;
+          const items = (await list.json()).items as Array<{
+            title: string;
+            status: string;
+            reopenCount: number;
+          }>;
           const match = items.find((i) => i.title === updatedTitle);
           return match ?? { status: "missing" };
         },
@@ -185,17 +191,19 @@ test.describe("NIH-146 — Punch list (real-user flow)", () => {
     await expect(deleteDialog).toBeVisible();
     await Promise.all([
       page.waitForResponse(
-        (r) => /\/api\/punch-items\/\d+$/.test(r.url()) && r.request().method() === "DELETE" && r.status() === 204,
+        (r) =>
+          /\/api\/punch-items\/\d+$/.test(r.url()) &&
+          r.request().method() === "DELETE" &&
+          r.status() === 204,
       ),
       deleteDialog.getByTestId("punch-action-confirm").click(),
     ]);
     await expect
       .poll(
         async () => {
-          const list = await api.get(
-            `/api/punch-items?designProjectId=${projectId}&pageSize=50`,
-            { headers: authHeader },
-          );
+          const list = await api.get(`/api/punch-items?designProjectId=${projectId}&pageSize=50`, {
+            headers: authHeader,
+          });
           if (!list.ok()) return false;
           const items = (await list.json()).items as Array<{ title: string }>;
           return items.some((item) => item.title === updatedTitle);

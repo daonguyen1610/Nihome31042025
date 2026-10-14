@@ -30,7 +30,11 @@ export const isAdminRole = (role: string | null | undefined): boolean => {
  * Read current user from the Redux store.
  * Returns a shape compatible with the old mock (name, email, role) for backward compat.
  */
-export const getCurrentUser = (): { name: string; email: string; role: "admin" | "user" } | null => {
+export const getCurrentUser = (): {
+  name: string;
+  email: string;
+  role: "admin" | "user";
+} | null => {
   const user = store.getState().auth.user;
   if (!user) return null;
   return {

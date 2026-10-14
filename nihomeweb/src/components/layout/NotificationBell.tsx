@@ -1,12 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { KeyboardEvent, MouseEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  Bell,
-  CheckCheck,
-  Loader2,
-  Trash2,
-} from "lucide-react";
+import { Bell, CheckCheck, Loader2, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useI18n } from "@/lib/i18n";
@@ -87,7 +82,10 @@ export function NotificationBell() {
     void dispatch(removeNotification(id));
   };
 
-  const handleItemKeyDown = (event: KeyboardEvent<HTMLDivElement>, notification: NotificationDto) => {
+  const handleItemKeyDown = (
+    event: KeyboardEvent<HTMLDivElement>,
+    notification: NotificationDto,
+  ) => {
     if (event.key !== "Enter" && event.key !== " ") return;
     event.preventDefault();
     handleItemClick(notification);
@@ -114,7 +112,9 @@ export function NotificationBell() {
         <div className="flex items-center justify-between gap-3 border-b px-4 py-3">
           <div>
             <h2 className="text-sm font-bold">{t("notify.title")}</h2>
-            <p className="text-xs text-muted-foreground">{t("notify.unreadCount").replace("{count}", unreadCount.toString())}</p>
+            <p className="text-xs text-muted-foreground">
+              {t("notify.unreadCount").replace("{count}", unreadCount.toString())}
+            </p>
           </div>
           <button
             type="button"
@@ -143,9 +143,13 @@ export function NotificationBell() {
               {t("notify.loading")}
             </div>
           ) : error && items.length === 0 ? (
-            <div className="px-4 py-8 text-center text-sm text-destructive">{t("notify.error")}</div>
+            <div className="px-4 py-8 text-center text-sm text-destructive">
+              {t("notify.error")}
+            </div>
           ) : items.length === 0 ? (
-            <div className="px-4 py-8 text-center text-sm text-muted-foreground">{t("notify.empty")}</div>
+            <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+              {t("notify.empty")}
+            </div>
           ) : (
             items.map((notification) => {
               const Icon = moduleIcon(notification);
@@ -170,7 +174,9 @@ export function NotificationBell() {
                       <span className="min-w-0 flex-1 text-sm font-semibold leading-snug text-foreground">
                         {t(notification.title)}
                       </span>
-                      {!notification.isRead ? <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-sky-500" /> : null}
+                      {!notification.isRead ? (
+                        <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-sky-500" />
+                      ) : null}
                     </span>
                     {notification.body ? (
                       <span className="mt-1 block line-clamp-2 text-xs leading-relaxed text-muted-foreground">

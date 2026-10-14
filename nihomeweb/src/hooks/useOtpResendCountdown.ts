@@ -3,7 +3,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 export const OTP_RESEND_COOLDOWN_SECONDS = 5 * 60;
 
 const formatRemainingTime = (seconds: number) => {
-  const minutes = Math.floor(seconds / 60).toString().padStart(2, "0");
+  const minutes = Math.floor(seconds / 60)
+    .toString()
+    .padStart(2, "0");
   const restSeconds = (seconds % 60).toString().padStart(2, "0");
   return `${minutes}:${restSeconds}`;
 };
@@ -12,9 +14,7 @@ export const useOtpResendCountdown = (
   enabled: boolean,
   initialSeconds = OTP_RESEND_COOLDOWN_SECONDS,
 ) => {
-  const [remainingSeconds, setRemainingSeconds] = useState(() =>
-    enabled ? initialSeconds : 0,
-  );
+  const [remainingSeconds, setRemainingSeconds] = useState(() => (enabled ? initialSeconds : 0));
   const wasEnabledRef = useRef(enabled);
 
   useEffect(() => {
@@ -50,10 +50,7 @@ export const useOtpResendCountdown = (
     setRemainingSeconds(initialSeconds);
   }, [initialSeconds]);
 
-  const formattedTime = useMemo(
-    () => formatRemainingTime(remainingSeconds),
-    [remainingSeconds],
-  );
+  const formattedTime = useMemo(() => formatRemainingTime(remainingSeconds), [remainingSeconds]);
 
   return {
     canResend: remainingSeconds === 0,

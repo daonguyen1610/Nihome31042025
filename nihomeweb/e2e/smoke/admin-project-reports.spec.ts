@@ -9,7 +9,7 @@ const expectOk = async (
 ) => {
   const body = await response.text();
   expect(response.ok(), `${action} (${response.status()}): ${body}`).toBeTruthy();
-  return body ? JSON.parse(body) as Record<string, unknown> : {};
+  return body ? (JSON.parse(body) as Record<string, unknown>) : {};
 };
 
 test.describe("NIH-461 — Project operational reports", () => {
@@ -28,36 +28,44 @@ test.describe("NIH-461 — Project operational reports", () => {
       `/api/users?role=PM&search=${TEST_USERS.pm.phoneNumber}&take=10`,
       { headers: adminHeaders },
     );
-    const users = await expectOk(usersResponse, "load PM") as {
+    const users = (await expectOk(usersResponse, "load PM")) as {
       items?: Array<{ id: number; phoneNumber: string }>;
     };
-    const projectManager = users.items?.find((user) => user.phoneNumber === TEST_USERS.pm.phoneNumber);
+    const projectManager = users.items?.find(
+      (user) => user.phoneNumber === TEST_USERS.pm.phoneNumber,
+    );
     expect(projectManager?.id).toBeGreaterThan(0);
 
     const customerId = await createOwnCustomer(api, adminHeaders, "reports");
     const suffix = uid();
     const projectName = `E2E report ${suffix}`;
     const secondProjectName = `E2E report secondary ${suffix}`;
-    const project = await expectOk(await api.post("/api/operational-projects", {
-      headers: adminHeaders,
-      data: {
-        name: projectName,
-        customerId,
-        projectManagerUserId: projectManager!.id,
-        startDate: "2026-09-01",
-        endDate: "2026-12-31",
-      },
-    }), "create operational project") as { id: number };
-    const secondProject = await expectOk(await api.post("/api/operational-projects", {
-      headers: adminHeaders,
-      data: {
-        name: secondProjectName,
-        customerId,
-        projectManagerUserId: projectManager!.id,
-        startDate: "2026-09-01",
-        endDate: "2026-12-31",
-      },
-    }), "create second operational project") as { id: number };
+    const project = (await expectOk(
+      await api.post("/api/operational-projects", {
+        headers: adminHeaders,
+        data: {
+          name: projectName,
+          customerId,
+          projectManagerUserId: projectManager!.id,
+          startDate: "2026-09-01",
+          endDate: "2026-12-31",
+        },
+      }),
+      "create operational project",
+    )) as { id: number };
+    const secondProject = (await expectOk(
+      await api.post("/api/operational-projects", {
+        headers: adminHeaders,
+        data: {
+          name: secondProjectName,
+          customerId,
+          projectManagerUserId: projectManager!.id,
+          startDate: "2026-09-01",
+          endDate: "2026-12-31",
+        },
+      }),
+      "create second operational project",
+    )) as { id: number };
 
     await loginInBrowserAs(page, TEST_USERS.bgd);
     await page.goto(`${baseURL}/admin/reports/projects`, { waitUntil: "networkidle" });
@@ -70,7 +78,9 @@ test.describe("NIH-461 — Project operational reports", () => {
     await expect(reportsPage.getByText(/Dữ liệu một phần|Partial data/i).first()).toBeVisible();
     const projectTrigger = reportsPage.getByTestId(`project-report-trigger-${project.id}`);
     const projectContent = reportsPage.getByTestId(`project-report-content-${project.id}`);
-    const secondProjectContent = reportsPage.getByTestId(`project-report-content-${secondProject.id}`);
+    const secondProjectContent = reportsPage.getByTestId(
+      `project-report-content-${secondProject.id}`,
+    );
     await expect(projectTrigger).toHaveAttribute("aria-expanded", "false");
     await expect(projectContent).toBeHidden();
     await expect(secondProjectContent).toBeHidden();
@@ -79,13 +89,21 @@ test.describe("NIH-461 — Project operational reports", () => {
     await expect(projectTrigger).toHaveAttribute("aria-expanded", "true");
     await expect(projectContent).toBeVisible();
     await expect(secondProjectContent).toBeHidden();
-    await expect(projectContent.getByText(/Tài chính theo hợp đồng|Contractual finance/i)).toBeVisible();
+    await expect(
+      projectContent.getByText(/Tài chính theo hợp đồng|Contractual finance/i),
+    ).toBeVisible();
     await expect(projectContent.getByText(/không phải dòng tiền|not cash, revenue/i)).toBeVisible();
     await expect(projectContent).not.toContainText("historicalSCurve");
     await expect(projectContent).not.toContainText("ACTUAL_FINANCE_LEDGER_UNAVAILABLE");
     await expect(projectContent.getByText(/Mở hồ sơ dự án|Open project record/i)).toBeVisible();
-    await expect(projectContent.getByText(/Không có dữ liệu theo trạng thái|No status data is available/i).first()).toBeVisible();
-    const unavailableGroups = projectContent.getByTestId(`project-report-unavailable-groups-${project.id}`);
+    await expect(
+      projectContent
+        .getByText(/Không có dữ liệu theo trạng thái|No status data is available/i)
+        .first(),
+    ).toBeVisible();
+    const unavailableGroups = projectContent.getByTestId(
+      `project-report-unavailable-groups-${project.id}`,
+    );
     await expect(unavailableGroups.locator("li")).toHaveCount(7);
     await expect(unavailableGroups.getByText(/Dòng tiền thực tế|Actual cashflow/i)).toBeVisible();
     await page.evaluate(() => window.scrollTo(0, 0));
@@ -101,12 +119,17 @@ test.describe("NIH-461 — Project operational reports", () => {
 
     await reportsPage.locator("#report-project").click();
     await page.getByRole("option", { name: new RegExp(projectName) }).click();
-    await expect.poll(() => new URL(page.url()).searchParams.get("project")).toBe(String(project.id));
+    await expect
+      .poll(() => new URL(page.url()).searchParams.get("project"))
+      .toBe(String(project.id));
     await reportsPage.locator("#report-from").fill("2026-09-01");
     await expect.poll(() => new URL(page.url()).searchParams.get("from")).toBe("2026-09-01");
     await reportsPage.locator("#report-to").fill("2026-09-30");
     await expect.poll(() => new URL(page.url()).searchParams.get("to")).toBe("2026-09-30");
-    await expect(reportsPage.getByTestId(`project-report-trigger-${project.id}`)).toHaveAttribute("aria-expanded", "true");
+    await expect(reportsPage.getByTestId(`project-report-trigger-${project.id}`)).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
     await expect(reportsPage.getByTestId(`project-report-content-${project.id}`)).toBeVisible();
     await expect(reportsPage).not.toContainText("2026-09-01 – 2026-12-31");
 
@@ -119,12 +142,18 @@ test.describe("NIH-461 — Project operational reports", () => {
     await page.setViewportSize({ width: 820, height: 1180 });
     await page.keyboard.press("Escape");
     await page.evaluate(() => window.scrollTo(0, 0));
-    await expect.poll(() => page.locator("aside").evaluate(
-      (sidebar) => sidebar.getBoundingClientRect().right <= 0,
-    )).toBe(true);
-    await expect.poll(() => page.evaluate(
-      () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
-    )).toBe(true);
+    await expect
+      .poll(() =>
+        page.locator("aside").evaluate((sidebar) => sidebar.getBoundingClientRect().right <= 0),
+      )
+      .toBe(true);
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+        ),
+      )
+      .toBe(true);
     await test.info().attach("project-report-tablet", {
       body: await page.screenshot(),
       contentType: "image/png",
@@ -133,9 +162,11 @@ test.describe("NIH-461 — Project operational reports", () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.keyboard.press("Escape");
     await page.evaluate(() => window.scrollTo(0, 0));
-    await expect.poll(() => page.locator("aside").evaluate(
-      (sidebar) => sidebar.getBoundingClientRect().right <= 0,
-    )).toBe(true);
+    await expect
+      .poll(() =>
+        page.locator("aside").evaluate((sidebar) => sidebar.getBoundingClientRect().right <= 0),
+      )
+      .toBe(true);
     await expect(reportsPage).toBeVisible();
     await test.info().attach("project-report-mobile-expanded", {
       body: await page.screenshot(),
@@ -144,9 +175,13 @@ test.describe("NIH-461 — Project operational reports", () => {
     await reportsPage.getByTestId(`project-report-trigger-${project.id}`).click();
     await expect(reportsPage.getByTestId(`project-report-content-${project.id}`)).toBeHidden();
     await expect(reportsPage.getByText(projectName, { exact: true })).toBeVisible();
-    await expect.poll(() => page.evaluate(
-      () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
-    )).toBe(true);
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+        ),
+      )
+      .toBe(true);
 
     await loginInBrowserAs(page, TEST_USERS.pm);
     await page.goto(`${baseURL}/admin/reports/projects`, { waitUntil: "networkidle" });

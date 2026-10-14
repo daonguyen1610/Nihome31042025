@@ -1,6 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { AlertTriangle, Cloud, CloudOff, Loader2, Pencil, Plus, RefreshCcw, Search, Trash2 } from "lucide-react";
+import {
+  AlertTriangle,
+  Cloud,
+  CloudOff,
+  Loader2,
+  Pencil,
+  Plus,
+  RefreshCcw,
+  Search,
+  Trash2,
+} from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
 import { useI18n } from "@/lib/i18n";
@@ -31,12 +41,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   adminApi,
   SURVEY_DRIVE_STATUSES,
@@ -108,7 +113,13 @@ interface ProjectOption {
  * Compact badge for one Drive sync state. Renders the label + a hover
  * tooltip carrying the error reason when status is Failed.
  */
-const DriveStatusBadge = ({ status, error }: { status: SurveyDriveSyncStatus; error?: string | null }) => {
+const DriveStatusBadge = ({
+  status,
+  error,
+}: {
+  status: SurveyDriveSyncStatus;
+  error?: string | null;
+}) => {
   const { t } = useI18n();
   const Icon =
     status === "Synced"
@@ -133,9 +144,7 @@ const DriveStatusBadge = ({ status, error }: { status: SurveyDriveSyncStatus; er
           <TooltipTrigger asChild>
             <span>{badge}</span>
           </TooltipTrigger>
-          <TooltipContent className="max-w-xs break-words text-xs">
-            {error}
-          </TooltipContent>
+          <TooltipContent className="max-w-xs break-words text-xs">{error}</TooltipContent>
         </Tooltip>
       </TooltipProvider>
     );
@@ -174,7 +183,9 @@ const AdminSurveys = () => {
   const [constructionTypes, setConstructionTypes] = useState<MasterDataOption[]>([]);
   const [users, setUsers] = useState<UserOption[]>([]);
   const [projects, setProjects] = useState<ProjectOption[]>([]);
-  const [operationalProjects, setOperationalProjects] = useState<OperationalProjectListItemResponse[]>([]);
+  const [operationalProjects, setOperationalProjects] = useState<
+    OperationalProjectListItemResponse[]
+  >([]);
   const [opportunities, setOpportunities] = useState<OpportunityResponse[]>([]);
 
   useEffect(() => {
@@ -194,7 +205,12 @@ const AdminSurveys = () => {
         if (cancelled) return;
         setConstructionTypes((ctResp.data ?? []).filter((o) => o.isActive));
         const projectRows = Array.isArray(projResp.data) ? projResp.data : [];
-        setProjects(projectRows.map((project) => ({ id: project.id, name: project.name ?? `#${project.id}` })));
+        setProjects(
+          projectRows.map((project) => ({
+            id: project.id,
+            name: project.name ?? `#${project.id}`,
+          })),
+        );
         setOperationalProjects(operationalResp.data.items ?? []);
         setOpportunities(oppResp.data.items ?? []);
 
@@ -288,10 +304,11 @@ const AdminSurveys = () => {
     [projects],
   );
   const operationalProjectOptions = useMemo(
-    () => operationalProjects.map((project) => ({
-      value: String(project.id),
-      label: `${project.code} · ${project.name}`,
-    })),
+    () =>
+      operationalProjects.map((project) => ({
+        value: String(project.id),
+        label: `${project.code} · ${project.name}`,
+      })),
     [operationalProjects],
   );
 
@@ -368,8 +385,10 @@ const AdminSurveys = () => {
       setFormError(t("surveys.form.operationalProjectRequired"));
       return;
     }
-    if (selectedOpportunity?.operationalProjectId != null &&
-        selectedOpportunity.operationalProjectId !== form.operationalProjectId) {
+    if (
+      selectedOpportunity?.operationalProjectId != null &&
+      selectedOpportunity.operationalProjectId !== form.operationalProjectId
+    ) {
       setFormError(t("surveys.form.projectOpportunityMismatch"));
       return;
     }
@@ -453,9 +472,7 @@ const AdminSurveys = () => {
       <div className="space-y-4 p-3 md:p-4">
         <header className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex flex-col gap-1">
-            <h1 className="text-xl font-bold text-slate-900 md:text-2xl">
-              {t("surveys.title")}
-            </h1>
+            <h1 className="text-xl font-bold text-slate-900 md:text-2xl">{t("surveys.title")}</h1>
             <p className="text-sm text-slate-600">{t("surveys.subtitle")}</p>
           </div>
           {canManage ? (
@@ -496,7 +513,9 @@ const AdminSurveys = () => {
                   <SelectValue placeholder={t("surveys.filter.allConstructionTypes")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__all__">{t("surveys.filter.allConstructionTypes")}</SelectItem>
+                  <SelectItem value="__all__">
+                    {t("surveys.filter.allConstructionTypes")}
+                  </SelectItem>
                   {constructionTypes.map((c) => (
                     <SelectItem key={c.code} value={c.code}>
                       {c.name}
@@ -537,7 +556,10 @@ const AdminSurveys = () => {
                     setSurveyorUserId(v ? Number(v) : null);
                     setPage(1);
                   }}
-                  options={[{ value: "", label: t("surveys.filter.allSurveyors") }, ...surveyorOptions]}
+                  options={[
+                    { value: "", label: t("surveys.filter.allSurveyors") },
+                    ...surveyorOptions,
+                  ]}
                   placeholder={t("surveys.filter.allSurveyors")}
                 />
               </div>
@@ -552,7 +574,10 @@ const AdminSurveys = () => {
                     setLinkedProjectId(v ? Number(v) : null);
                     setPage(1);
                   }}
-                  options={[{ value: "", label: t("surveys.filter.allProjects") }, ...projectOptions]}
+                  options={[
+                    { value: "", label: t("surveys.filter.allProjects") },
+                    ...projectOptions,
+                  ]}
                   placeholder={t("surveys.filter.allProjects")}
                 />
               </div>
@@ -624,7 +649,9 @@ const AdminSurveys = () => {
                     <header className="flex items-start justify-between gap-2">
                       <div className="flex min-w-0 items-start gap-2">
                         <div className="min-w-0">
-                          <h3 className="break-words text-sm font-semibold leading-tight">{r.location}</h3>
+                          <h3 className="break-words text-sm font-semibold leading-tight">
+                            {r.location}
+                          </h3>
                           <p className="mt-0.5 text-xs text-muted-foreground">
                             {r.code}
                             {r.constructionTypeLabel ? ` · ${r.constructionTypeLabel}` : ""}
@@ -643,14 +670,19 @@ const AdminSurveys = () => {
                         <dd className="font-medium">{r.surveyorName ?? "—"}</dd>
                       </div>
                       <div className="col-span-2">
-                        <dt className="text-muted-foreground">{t("surveys.field.projectOrOpportunity")}</dt>
+                        <dt className="text-muted-foreground">
+                          {t("surveys.field.projectOrOpportunity")}
+                        </dt>
                         <dd className="break-words font-medium">
                           {r.linkedProjectName ?? r.linkedOpportunityName ?? "—"}
                         </dd>
                       </div>
                     </dl>
                     {canManage ? (
-                      <div className="mt-2 flex justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+                      <div
+                        className="mt-2 flex justify-end gap-1.5"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <Button variant="ghost" size="sm" onClick={() => void openEdit(r.id)}>
                           <Pencil className="mr-1 h-3.5 w-3.5" />
                           {t("common.edit")}
@@ -684,7 +716,9 @@ const AdminSurveys = () => {
                     <th className="px-3 py-2">{t("surveys.field.surveyDate")}</th>
                     <th className="px-3 py-2">{t("surveys.field.surveyor")}</th>
                     <th className="px-3 py-2">{t("surveys.field.projectOrOpportunity")}</th>
-                    <th className="whitespace-nowrap px-3 py-2">{t("surveys.field.driveStatus")}</th>
+                    <th className="whitespace-nowrap px-3 py-2">
+                      {t("surveys.field.driveStatus")}
+                    </th>
                     {canManage ? <th className="px-3 py-2 text-right"></th> : null}
                   </tr>
                 </thead>
@@ -715,7 +749,10 @@ const AdminSurveys = () => {
                           <DriveStatusBadge status={r.driveSyncStatus} error={r.driveSyncError} />
                         </td>
                         {canManage ? (
-                          <td className="whitespace-nowrap px-3 py-2 text-right" onClick={(e) => e.stopPropagation()}>
+                          <td
+                            className="whitespace-nowrap px-3 py-2 text-right"
+                            onClick={(e) => e.stopPropagation()}
+                          >
                             <Button variant="ghost" size="sm" onClick={() => void openEdit(r.id)}>
                               <Pencil className="h-3.5 w-3.5" />
                             </Button>
@@ -741,7 +778,9 @@ const AdminSurveys = () => {
             {totalPages > 1 ? (
               <div className="flex flex-wrap items-center justify-end gap-2 text-sm">
                 <span className="text-xs text-slate-500">
-                  {t("surveys.paginationLabel").replace("{page}", String(page)).replace("{totalPages}", String(totalPages))}
+                  {t("surveys.paginationLabel")
+                    .replace("{page}", String(page))
+                    .replace("{totalPages}", String(totalPages))}
                 </span>
                 <Button
                   size="sm"
@@ -768,14 +807,17 @@ const AdminSurveys = () => {
       {/* Create / edit dialog (NIH-100). The AC calls for a 3-step wizard; a
           single-form dialog is enough for the current CRUD scope. The wizard +
           media + Drive-sync polling ship in a follow-up alongside NIH-101. */}
-      <Dialog open={dialogOpen} onOpenChange={(v) => (setDialogOpen(v), !v && setEditingDetail(null))}>
+      <Dialog
+        open={dialogOpen}
+        onOpenChange={(v) => (setDialogOpen(v), !v && setEditingDetail(null))}
+      >
         <DialogContent className="max-h-[90vh] w-[95vw] max-w-2xl overflow-y-auto sm:w-full">
           <DialogHeader>
-            <DialogTitle>
-              {isEdit ? t("surveys.edit") : t("surveys.new")}
-            </DialogTitle>
+            <DialogTitle>{isEdit ? t("surveys.edit") : t("surveys.new")}</DialogTitle>
             <DialogDescription className="text-xs">
-              {isEdit && editingDetail ? `${editingDetail.code} · ${editingDetail.location}` : t("surveys.form.createHint")}
+              {isEdit && editingDetail
+                ? `${editingDetail.code} · ${editingDetail.location}`
+                : t("surveys.form.createHint")}
             </DialogDescription>
           </DialogHeader>
 
@@ -800,9 +842,7 @@ const AdminSurveys = () => {
                       ...form,
                       // Persist as UTC midnight so the value round-trips
                       // through .slice(0, 10) without a timezone off-by-one.
-                      surveyDate: e.target.value
-                        ? `${e.target.value}T00:00:00.000Z`
-                        : "",
+                      surveyDate: e.target.value ? `${e.target.value}T00:00:00.000Z` : "",
                     })
                   }
                 />
@@ -838,7 +878,10 @@ const AdminSurveys = () => {
                 <SearchableSelect
                   value={form.surveyorUserId != null ? String(form.surveyorUserId) : ""}
                   onChange={(v) => setForm({ ...form, surveyorUserId: v ? Number(v) : null })}
-                  options={[{ value: "", label: t("surveys.form.surveyorNone") }, ...surveyorOptions]}
+                  options={[
+                    { value: "", label: t("surveys.form.surveyorNone") },
+                    ...surveyorOptions,
+                  ]}
                   placeholder={t("surveys.form.surveyorNone")}
                 />
               </div>
@@ -867,7 +910,8 @@ const AdminSurveys = () => {
                     setForm({
                       ...form,
                       linkedOpportunityId: opportunityId,
-                      operationalProjectId: opportunity?.operationalProjectId ?? form.operationalProjectId,
+                      operationalProjectId:
+                        opportunity?.operationalProjectId ?? form.operationalProjectId,
                     });
                     setFormError(null);
                   }}
@@ -893,10 +937,19 @@ const AdminSurveys = () => {
           </div>
 
           <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
-            <Button variant="ghost" onClick={() => setDialogOpen(false)} disabled={saving} className="w-full sm:w-auto">
+            <Button
+              variant="ghost"
+              onClick={() => setDialogOpen(false)}
+              disabled={saving}
+              className="w-full sm:w-auto"
+            >
               {t("common.cancel")}
             </Button>
-            <Button onClick={() => void submitForm()} disabled={saving || !canManage} className="w-full sm:w-auto">
+            <Button
+              onClick={() => void submitForm()}
+              disabled={saving || !canManage}
+              className="w-full sm:w-auto"
+            >
               {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {t("common.save")}
             </Button>

@@ -30,10 +30,15 @@ const LanguageToggle = ({ variant = "light" }: Props) => {
             "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all select-none",
             variant === "dark"
               ? "bg-white/10 border border-white/15 text-white hover:bg-white/15"
-              : "bg-secondary border border-border text-foreground/80 hover:text-foreground"
+              : "bg-secondary border border-border text-foreground/80 hover:text-foreground",
           )}
         >
-          <Globe className={cn("w-3.5 h-3.5", variant === "dark" ? "text-white/70" : "text-muted-foreground")} />
+          <Globe
+            className={cn(
+              "w-3.5 h-3.5",
+              variant === "dark" ? "text-white/70" : "text-muted-foreground",
+            )}
+          />
           <span className="leading-none">{current.label}</span>
         </button>
       </DropdownMenuTrigger>
@@ -44,7 +49,7 @@ const LanguageToggle = ({ variant = "light" }: Props) => {
             onClick={() => setLang(l.code)}
             className={cn(
               "flex items-center justify-between gap-2 rounded-xl px-3 py-2 text-sm font-semibold cursor-pointer",
-              lang === l.code && "bg-secondary"
+              lang === l.code && "bg-secondary",
             )}
           >
             <span>{l.native}</span>

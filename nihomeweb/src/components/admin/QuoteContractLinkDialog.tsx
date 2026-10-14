@@ -36,8 +36,7 @@ type QuoteContractLinkDialogProps = {
   onOpenChange: (open: boolean) => void;
   onLinked: (contract: ContractResponse) => void;
 } & (
-  | { mode: "fromQuote"; quote: QuoteSide }
-  | { mode: "fromContract"; contract: ContractResponse }
+  { mode: "fromQuote"; quote: QuoteSide } | { mode: "fromContract"; contract: ContractResponse }
 );
 
 interface Candidate {
@@ -62,8 +61,10 @@ const QuoteContractLinkDialog = (props: QuoteContractLinkDialogProps) => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const customerId = props.mode === "fromQuote" ? props.quote.customerId : props.contract.customerId;
-  const opportunityId = props.mode === "fromQuote" ? props.quote.opportunityId : props.contract.opportunityId ?? null;
+  const customerId =
+    props.mode === "fromQuote" ? props.quote.customerId : props.contract.customerId;
+  const opportunityId =
+    props.mode === "fromQuote" ? props.quote.opportunityId : (props.contract.opportunityId ?? null);
   const mode = props.mode;
 
   useEffect(() => {
@@ -75,30 +76,42 @@ const QuoteContractLinkDialog = (props: QuoteContractLinkDialogProps) => {
     (async () => {
       try {
         if (mode === "fromQuote") {
-          const { data } = await adminApi.listContracts({ customerId, direction: "Upstream", pageSize: 100 });
-          const eligible = data.items.filter((contract) =>
-            contract.quoteId == null &&
-            contract.status !== "Cancelled" &&
-            contract.status !== "Completed" &&
-            (contract.opportunityId == null || contract.opportunityId === opportunityId));
+          const { data } = await adminApi.listContracts({
+            customerId,
+            direction: "Upstream",
+            pageSize: 100,
+          });
+          const eligible = data.items.filter(
+            (contract) =>
+              contract.quoteId == null &&
+              contract.status !== "Cancelled" &&
+              contract.status !== "Completed" &&
+              (contract.opportunityId == null || contract.opportunityId === opportunityId),
+          );
           if (cancelled) return;
           setContracts(eligible);
-          setCandidates(eligible.map((contract) => ({
-            id: contract.id,
-            label: contract.contractNumber,
-            detail: `${t(`contracts.status.${contract.status}`)} · ${formatVnd(contract.currentValue)} ₫`,
-          })));
+          setCandidates(
+            eligible.map((contract) => ({
+              id: contract.id,
+              label: contract.contractNumber,
+              detail: `${t(`contracts.status.${contract.status}`)} · ${formatVnd(contract.currentValue)} ₫`,
+            })),
+          );
         } else {
           const { data } = await adminApi.listQuotes({ customerId, pageSize: 100 });
-          const eligible = data.items.filter((quote) =>
-            isContractReadyQuote(quote) &&
-            (opportunityId == null || quote.opportunityId === opportunityId));
+          const eligible = data.items.filter(
+            (quote) =>
+              isContractReadyQuote(quote) &&
+              (opportunityId == null || quote.opportunityId === opportunityId),
+          );
           if (cancelled) return;
-          setCandidates(eligible.map((quote) => ({
-            id: quote.id,
-            label: quote.code,
-            detail: `${t(`quotes.status.${quote.status}`)} · ${formatVnd(quote.grandTotal)} ₫`,
-          })));
+          setCandidates(
+            eligible.map((quote) => ({
+              id: quote.id,
+              label: quote.code,
+              detail: `${t(`quotes.status.${quote.status}`)} · ${formatVnd(quote.grandTotal)} ₫`,
+            })),
+          );
         }
       } catch (err) {
         if (!cancelled) setError(extractApiError(err));
@@ -106,7 +119,9 @@ const QuoteContractLinkDialog = (props: QuoteContractLinkDialogProps) => {
         if (!cancelled) setLoading(false);
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [open, mode, customerId, opportunityId, t]);
 
   const confirm = async () => {
@@ -117,14 +132,24 @@ const QuoteContractLinkDialog = (props: QuoteContractLinkDialogProps) => {
     setSaving(true);
     setError(null);
     try {
-      const { data } = props.mode === "fromQuote"
-        ? await adminApi.linkContractQuote(
-          selectedId,
-          props.quote.id,
-          contracts.find((contract) => contract.id === selectedId)!.rowVersion,
-        )
-        : await adminApi.linkContractQuote(props.contract.id, selectedId, props.contract.rowVersion);
-      toast({ title: t("quoteLink.linked", { quote: data.quoteCode ?? "", contract: data.contractNumber }) });
+      const { data } =
+        props.mode === "fromQuote"
+          ? await adminApi.linkContractQuote(
+              selectedId,
+              props.quote.id,
+              contracts.find((contract) => contract.id === selectedId)!.rowVersion,
+            )
+          : await adminApi.linkContractQuote(
+              props.contract.id,
+              selectedId,
+              props.contract.rowVersion,
+            );
+      toast({
+        title: t("quoteLink.linked", {
+          quote: data.quoteCode ?? "",
+          contract: data.contractNumber,
+        }),
+      });
       onLinked(data);
       onOpenChange(false);
     } catch (err) {
@@ -138,9 +163,15 @@ const QuoteContractLinkDialog = (props: QuoteContractLinkDialogProps) => {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] w-[95vw] max-w-md overflow-y-auto sm:w-full">
         <DialogHeader>
-          <DialogTitle>{t(mode === "fromQuote" ? "quoteLink.fromQuote.title" : "quoteLink.fromContract.title")}</DialogTitle>
+          <DialogTitle>
+            {t(mode === "fromQuote" ? "quoteLink.fromQuote.title" : "quoteLink.fromContract.title")}
+          </DialogTitle>
           <DialogDescription>
-            {t(mode === "fromQuote" ? "quoteLink.fromQuote.description" : "quoteLink.fromContract.description")}
+            {t(
+              mode === "fromQuote"
+                ? "quoteLink.fromQuote.description"
+                : "quoteLink.fromContract.description",
+            )}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-2">
@@ -151,13 +182,27 @@ const QuoteContractLinkDialog = (props: QuoteContractLinkDialogProps) => {
               {t("common.loading")}
             </p>
           ) : candidates.length === 0 ? (
-            <p className="rounded-md border border-dashed p-3 text-sm text-muted-foreground" data-testid="quote-link-empty">
-              {t(mode === "fromQuote" ? "quoteLink.fromQuote.empty" : "quoteLink.fromContract.empty")}
+            <p
+              className="rounded-md border border-dashed p-3 text-sm text-muted-foreground"
+              data-testid="quote-link-empty"
+            >
+              {t(
+                mode === "fromQuote" ? "quoteLink.fromQuote.empty" : "quoteLink.fromContract.empty",
+              )}
             </p>
           ) : (
-            <Select value={selectedId != null ? String(selectedId) : undefined} onValueChange={(value) => setSelectedId(Number(value))}>
+            <Select
+              value={selectedId != null ? String(selectedId) : undefined}
+              onValueChange={(value) => setSelectedId(Number(value))}
+            >
               <SelectTrigger data-testid="quote-link-select">
-                <SelectValue placeholder={t(mode === "fromQuote" ? "quoteLink.contractPlaceholder" : "quoteLink.quotePlaceholder")} />
+                <SelectValue
+                  placeholder={t(
+                    mode === "fromQuote"
+                      ? "quoteLink.contractPlaceholder"
+                      : "quoteLink.quotePlaceholder",
+                  )}
+                />
               </SelectTrigger>
               <SelectContent>
                 {candidates.map((candidate) => (
@@ -168,7 +213,11 @@ const QuoteContractLinkDialog = (props: QuoteContractLinkDialogProps) => {
               </SelectContent>
             </Select>
           )}
-          {error && <p className="text-sm text-destructive" role="alert">{error}</p>}
+          {error && (
+            <p className="text-sm text-destructive" role="alert">
+              {error}
+            </p>
+          )}
         </div>
         <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
@@ -179,7 +228,11 @@ const QuoteContractLinkDialog = (props: QuoteContractLinkDialogProps) => {
             onClick={() => void confirm()}
             disabled={saving || loading || candidates.length === 0}
           >
-            {saving ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Link2 className="mr-1.5 h-4 w-4" />}
+            {saving ? (
+              <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+            ) : (
+              <Link2 className="mr-1.5 h-4 w-4" />
+            )}
             {t("quoteLink.confirm")}
           </Button>
         </DialogFooter>

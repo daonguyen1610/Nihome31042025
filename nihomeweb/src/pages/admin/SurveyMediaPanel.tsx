@@ -56,7 +56,17 @@ import {
 } from "@/services/adminApi";
 
 const MAX_FILE_SIZE = 100 * 1024 * 1024;
-const ALLOWED_EXTENSIONS = new Set(["jpg", "jpeg", "png", "heic", "mp4", "mov", "pdf", "dwg", "rvt"]);
+const ALLOWED_EXTENSIONS = new Set([
+  "jpg",
+  "jpeg",
+  "png",
+  "heic",
+  "mp4",
+  "mov",
+  "pdf",
+  "dwg",
+  "rvt",
+]);
 const ACTIVE_SYNC_STATUSES = new Set<SurveyMediaSyncStatus>(["Pending", "Processing"]);
 
 const SYNC_BADGE: Record<SurveyMediaSyncStatus, string> = {
@@ -106,7 +116,13 @@ function MediaIcon({ media }: { media: SurveyMediaResponse }) {
   return <File className="h-6 w-6" />;
 }
 
-function SurveyMediaThumbnail({ surveyId, media }: { surveyId: number; media: SurveyMediaResponse }) {
+function SurveyMediaThumbnail({
+  surveyId,
+  media,
+}: {
+  surveyId: number;
+  media: SurveyMediaResponse;
+}) {
   const [url, setUrl] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
 
@@ -114,7 +130,8 @@ function SurveyMediaThumbnail({ surveyId, media }: { surveyId: number; media: Su
     if (!media.contentType.startsWith("image/")) return;
     let active = true;
     let objectUrl: string | null = null;
-    void adminApi.getSurveyMediaContent(surveyId, media.id)
+    void adminApi
+      .getSurveyMediaContent(surveyId, media.id)
       .then((response) => {
         if (!active) return;
         objectUrl = URL.createObjectURL(response.data);
@@ -142,7 +159,13 @@ function SurveyMediaThumbnail({ surveyId, media }: { surveyId: number; media: Su
   );
 }
 
-export default function SurveyMediaPanel({ survey, canManage, onRefresh, formatDateTime, targetMediaId }: Props) {
+export default function SurveyMediaPanel({
+  survey,
+  canManage,
+  onRefresh,
+  formatDateTime,
+  targetMediaId,
+}: Props) {
   const { t, lang } = useI18n();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -154,10 +177,13 @@ export default function SurveyMediaPanel({ survey, canManage, onRefresh, formatD
   const [busyMediaId, setBusyMediaId] = useState<number | null>(null);
   const [syncLog, setSyncLog] = useState<SurveySyncLogResponse[]>([]);
   const [syncLogLoading, setSyncLogLoading] = useState(false);
-  const [driveConnection, setDriveConnection] = useState<SurveyDriveConnectionStatusResponse | null>(null);
+  const [driveConnection, setDriveConnection] =
+    useState<SurveyDriveConnectionStatusResponse | null>(null);
   const [driveConnectionLoading, setDriveConnectionLoading] = useState(false);
   const [checklistSavingId, setChecklistSavingId] = useState<number | null>(null);
-  const [checklistDrafts, setChecklistDrafts] = useState<Record<number, SurveyChecklistResultResponse>>({});
+  const [checklistDrafts, setChecklistDrafts] = useState<
+    Record<number, SurveyChecklistResultResponse>
+  >({});
   const [exporting, setExporting] = useState(false);
   const [highlightedMediaId, setHighlightedMediaId] = useState<number | null>(null);
 
@@ -213,18 +239,27 @@ export default function SurveyMediaPanel({ survey, canManage, onRefresh, formatD
     [survey.media],
   );
   const formatSize = (bytes: number) => {
-    if (bytes < 1024 * 1024) return `${new Intl.NumberFormat(lang, { maximumFractionDigits: 1 }).format(bytes / 1024)} KB`;
+    if (bytes < 1024 * 1024)
+      return `${new Intl.NumberFormat(lang, { maximumFractionDigits: 1 }).format(bytes / 1024)} KB`;
     return `${new Intl.NumberFormat(lang, { maximumFractionDigits: 1 }).format(bytes / 1024 / 1024)} MB`;
   };
 
   const selectFile = (file?: File) => {
     if (!file) return;
     if (!ALLOWED_EXTENSIONS.has(extensionOf(file.name))) {
-      toast({ title: t("common.error"), description: t("surveys.media.validation.format"), variant: "destructive" });
+      toast({
+        title: t("common.error"),
+        description: t("surveys.media.validation.format"),
+        variant: "destructive",
+      });
       return;
     }
     if (file.size > MAX_FILE_SIZE) {
-      toast({ title: t("common.error"), description: t("surveys.media.validation.size"), variant: "destructive" });
+      toast({
+        title: t("common.error"),
+        description: t("surveys.media.validation.size"),
+        variant: "destructive",
+      });
       return;
     }
     setUpload((current) => ({ ...current, file }));
@@ -232,7 +267,11 @@ export default function SurveyMediaPanel({ survey, canManage, onRefresh, formatD
 
   const requestLocation = () => {
     if (!navigator.geolocation) {
-      toast({ title: t("common.error"), description: t("surveys.media.locationUnavailable"), variant: "destructive" });
+      toast({
+        title: t("common.error"),
+        description: t("surveys.media.locationUnavailable"),
+        variant: "destructive",
+      });
       return;
     }
     setLocating(true);
@@ -247,7 +286,11 @@ export default function SurveyMediaPanel({ survey, canManage, onRefresh, formatD
       },
       () => {
         setLocating(false);
-        toast({ title: t("common.error"), description: t("surveys.media.locationDenied"), variant: "destructive" });
+        toast({
+          title: t("common.error"),
+          description: t("surveys.media.locationDenied"),
+          variant: "destructive",
+        });
       },
       { enableHighAccuracy: true, timeout: 10_000 },
     );
@@ -255,13 +298,25 @@ export default function SurveyMediaPanel({ survey, canManage, onRefresh, formatD
 
   const submitUpload = async () => {
     if (!upload.file) {
-      toast({ title: t("common.error"), description: t("surveys.media.validation.fileRequired"), variant: "destructive" });
+      toast({
+        title: t("common.error"),
+        description: t("surveys.media.validation.fileRequired"),
+        variant: "destructive",
+      });
       return;
     }
     const latitude = upload.latitude.trim() === "" ? undefined : Number(upload.latitude);
     const longitude = upload.longitude.trim() === "" ? undefined : Number(upload.longitude);
-    if ((latitude == null) !== (longitude == null) || (latitude != null && (!Number.isFinite(latitude) || latitude < -90 || latitude > 90)) || (longitude != null && (!Number.isFinite(longitude) || longitude < -180 || longitude > 180))) {
-      toast({ title: t("common.error"), description: t("surveys.media.validation.coordinates"), variant: "destructive" });
+    if (
+      (latitude == null) !== (longitude == null) ||
+      (latitude != null && (!Number.isFinite(latitude) || latitude < -90 || latitude > 90)) ||
+      (longitude != null && (!Number.isFinite(longitude) || longitude < -180 || longitude > 180))
+    ) {
+      toast({
+        title: t("common.error"),
+        description: t("surveys.media.validation.coordinates"),
+        variant: "destructive",
+      });
       return;
     }
 
@@ -280,7 +335,11 @@ export default function SurveyMediaPanel({ survey, canManage, onRefresh, formatD
       toast({ title: t("surveys.media.uploaded") });
       await onRefresh();
     } catch (error) {
-      toast({ title: t("common.error"), description: extractApiError(error), variant: "destructive" });
+      toast({
+        title: t("common.error"),
+        description: extractApiError(error),
+        variant: "destructive",
+      });
     } finally {
       setUploading(false);
     }
@@ -295,7 +354,11 @@ export default function SurveyMediaPanel({ survey, canManage, onRefresh, formatD
       setDeleting(null);
       await onRefresh();
     } catch (error) {
-      toast({ title: t("common.error"), description: extractApiError(error), variant: "destructive" });
+      toast({
+        title: t("common.error"),
+        description: extractApiError(error),
+        variant: "destructive",
+      });
     } finally {
       setBusyMediaId(null);
     }
@@ -308,7 +371,11 @@ export default function SurveyMediaPanel({ survey, canManage, onRefresh, formatD
       toast({ title: t("surveys.media.retryQueued") });
       await onRefresh();
     } catch (error) {
-      toast({ title: t("common.error"), description: extractApiError(error), variant: "destructive" });
+      toast({
+        title: t("common.error"),
+        description: extractApiError(error),
+        variant: "destructive",
+      });
     } finally {
       setBusyMediaId(null);
     }
@@ -319,7 +386,11 @@ export default function SurveyMediaPanel({ survey, canManage, onRefresh, formatD
     try {
       setSyncLog((await adminApi.getSurveySyncLog(survey.id)).data);
     } catch (error) {
-      toast({ title: t("common.error"), description: extractApiError(error), variant: "destructive" });
+      toast({
+        title: t("common.error"),
+        description: extractApiError(error),
+        variant: "destructive",
+      });
     } finally {
       setSyncLogLoading(false);
     }
@@ -332,7 +403,11 @@ export default function SurveyMediaPanel({ survey, canManage, onRefresh, formatD
   const saveChecklist = async (id: number) => {
     const draft = checklistDrafts[id];
     if (!draft?.status) {
-      toast({ title: t("common.error"), description: t("surveys.checklist.validation.status"), variant: "destructive" });
+      toast({
+        title: t("common.error"),
+        description: t("surveys.checklist.validation.status"),
+        variant: "destructive",
+      });
       return;
     }
     setChecklistSavingId(id);
@@ -345,7 +420,11 @@ export default function SurveyMediaPanel({ survey, canManage, onRefresh, formatD
       toast({ title: t("surveys.checklist.saved") });
       await onRefresh();
     } catch (error) {
-      toast({ title: t("common.error"), description: extractApiError(error), variant: "destructive" });
+      toast({
+        title: t("common.error"),
+        description: extractApiError(error),
+        variant: "destructive",
+      });
     } finally {
       setChecklistSavingId(null);
     }
@@ -363,7 +442,11 @@ export default function SurveyMediaPanel({ survey, canManage, onRefresh, formatD
       URL.revokeObjectURL(url);
       toast({ title: t("surveys.media.pdfExported") });
     } catch (error) {
-      toast({ title: t("common.error"), description: extractApiError(error), variant: "destructive" });
+      toast({
+        title: t("common.error"),
+        description: extractApiError(error),
+        variant: "destructive",
+      });
     } finally {
       setExporting(false);
     }
@@ -388,44 +471,92 @@ export default function SurveyMediaPanel({ survey, canManage, onRefresh, formatD
                 </a>
               </Button>
             ) : null}
-            <Button size="sm" variant="outline" onClick={() => void exportPdf()} disabled={exporting}>
-              {exporting ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Download className="mr-1.5 h-4 w-4" />}
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => void exportPdf()}
+              disabled={exporting}
+            >
+              {exporting ? (
+                <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="mr-1.5 h-4 w-4" />
+              )}
               {t("surveys.media.exportPdf")}
             </Button>
           </div>
         </div>
 
-        <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50/70 p-3" data-testid="survey-drive-connection">
+        <div
+          className="mt-4 rounded-lg border border-slate-200 bg-slate-50/70 p-3"
+          data-testid="survey-drive-connection"
+        >
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <p className="text-sm font-medium text-slate-900">{t("surveys.driveConnection.title")}</p>
+                <p className="text-sm font-medium text-slate-900">
+                  {t("surveys.driveConnection.title")}
+                </p>
                 {driveConnection ? (
                   <Badge variant="outline" className={CONNECTION_BADGE[driveConnection.status]}>
-                    {driveConnection.status === "Connected" ? <Cloud className="mr-1 h-3.5 w-3.5" /> : <AlertTriangle className="mr-1 h-3.5 w-3.5" />}
+                    {driveConnection.status === "Connected" ? (
+                      <Cloud className="mr-1 h-3.5 w-3.5" />
+                    ) : (
+                      <AlertTriangle className="mr-1 h-3.5 w-3.5" />
+                    )}
                     {t(`surveys.driveConnection.status.${driveConnection.status}`)}
                   </Badge>
                 ) : null}
                 <Badge variant="outline">{t("surveys.driveConnection.pushOnly")}</Badge>
               </div>
               <p className="mt-1 text-xs text-slate-600">
-                {driveConnection ? t(`surveys.driveConnection.description.${driveConnection.status}`) : t("surveys.driveConnection.checking")}
+                {driveConnection
+                  ? t(`surveys.driveConnection.description.${driveConnection.status}`)
+                  : t("surveys.driveConnection.checking")}
               </p>
-              {driveConnection?.accountEmail ? <p className="mt-1 break-all text-xs text-slate-500">{t("surveys.driveConnection.authenticatedAccount")}: {driveConnection.accountEmail}</p> : null}
-              {driveConnection?.storageType ? <p className="mt-1 text-xs text-slate-500">{t("surveys.driveConnection.storageType")}: {t(`surveys.driveConnection.storage.${driveConnection.storageType}`)}</p> : null}
-              {driveConnection?.rootFolderName ? <p className="mt-1 text-xs text-slate-500">{t("surveys.driveConnection.folder")}: {driveConnection.rootFolderName}</p> : null}
-              {driveConnection?.error ? <p className="mt-2 rounded bg-rose-50 p-2 text-xs text-rose-700">{driveConnection.error}</p> : null}
+              {driveConnection?.accountEmail ? (
+                <p className="mt-1 break-all text-xs text-slate-500">
+                  {t("surveys.driveConnection.authenticatedAccount")}:{" "}
+                  {driveConnection.accountEmail}
+                </p>
+              ) : null}
+              {driveConnection?.storageType ? (
+                <p className="mt-1 text-xs text-slate-500">
+                  {t("surveys.driveConnection.storageType")}:{" "}
+                  {t(`surveys.driveConnection.storage.${driveConnection.storageType}`)}
+                </p>
+              ) : null}
+              {driveConnection?.rootFolderName ? (
+                <p className="mt-1 text-xs text-slate-500">
+                  {t("surveys.driveConnection.folder")}: {driveConnection.rootFolderName}
+                </p>
+              ) : null}
+              {driveConnection?.error ? (
+                <p className="mt-2 rounded bg-rose-50 p-2 text-xs text-rose-700">
+                  {driveConnection.error}
+                </p>
+              ) : null}
             </div>
             <div className="flex flex-wrap gap-2">
               {driveConnection?.rootFolderLink ? (
                 <Button asChild size="sm" variant="outline">
                   <a href={driveConnection.rootFolderLink} target="_blank" rel="noreferrer">
-                    <ExternalLink className="mr-1.5 h-4 w-4" />{t("surveys.driveConnection.openRoot")}
+                    <ExternalLink className="mr-1.5 h-4 w-4" />
+                    {t("surveys.driveConnection.openRoot")}
                   </a>
                 </Button>
               ) : null}
-              <Button size="sm" variant="outline" onClick={() => void checkDriveConnection()} disabled={driveConnectionLoading}>
-                {driveConnectionLoading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-1.5 h-4 w-4" />}
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => void checkDriveConnection()}
+                disabled={driveConnectionLoading}
+              >
+                {driveConnectionLoading ? (
+                  <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="mr-1.5 h-4 w-4" />
+                )}
                 {t("surveys.driveConnection.check")}
               </Button>
             </div>
@@ -435,31 +566,100 @@ export default function SurveyMediaPanel({ survey, canManage, onRefresh, formatD
         {canManage ? (
           <div className="mt-4 rounded-lg border border-dashed border-slate-300 bg-slate-50/60 p-3">
             <div className="flex flex-wrap gap-2">
-              <Button type="button" size="sm" variant="outline" onClick={() => fileInputRef.current?.click()} data-testid="survey-media-choose-file">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+                data-testid="survey-media-choose-file"
+              >
                 <Upload className="mr-1.5 h-4 w-4" />
                 {t("surveys.media.chooseFile")}
               </Button>
-              <Button type="button" size="sm" variant="outline" onClick={() => cameraInputRef.current?.click()} data-testid="survey-media-camera">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => cameraInputRef.current?.click()}
+                data-testid="survey-media-camera"
+              >
                 <Camera className="mr-1.5 h-4 w-4" />
                 {t("surveys.media.takePhoto")}
               </Button>
-              <Button type="button" size="sm" variant="outline" onClick={requestLocation} disabled={locating}>
-                {locating ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <LocateFixed className="mr-1.5 h-4 w-4" />}
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={requestLocation}
+                disabled={locating}
+              >
+                {locating ? (
+                  <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                ) : (
+                  <LocateFixed className="mr-1.5 h-4 w-4" />
+                )}
                 {t("surveys.media.useLocation")}
               </Button>
-              <input ref={fileInputRef} type="file" className="hidden" accept=".jpg,.jpeg,.png,.heic,.mp4,.mov,.pdf,.dwg,.rvt" onChange={(event) => selectFile(event.target.files?.[0])} />
-              <input ref={cameraInputRef} type="file" className="hidden" accept="image/*" capture="environment" onChange={(event) => selectFile(event.target.files?.[0])} />
+              <input
+                ref={fileInputRef}
+                type="file"
+                className="hidden"
+                accept=".jpg,.jpeg,.png,.heic,.mp4,.mov,.pdf,.dwg,.rvt"
+                onChange={(event) => selectFile(event.target.files?.[0])}
+              />
+              <input
+                ref={cameraInputRef}
+                type="file"
+                className="hidden"
+                accept="image/*"
+                capture="environment"
+                onChange={(event) => selectFile(event.target.files?.[0])}
+              />
             </div>
             {upload.file ? (
               <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1fr)_180px_180px_auto] lg:items-end">
                 <div>
-                  <p className="mb-1 truncate text-xs font-medium text-slate-700">{upload.file.name} · {formatSize(upload.file.size)}</p>
-                  <Textarea value={upload.note} maxLength={2000} rows={2} placeholder={t("surveys.media.notePlaceholder")} onChange={(event) => setUpload((current) => ({ ...current, note: event.target.value }))} />
+                  <p className="mb-1 truncate text-xs font-medium text-slate-700">
+                    {upload.file.name} · {formatSize(upload.file.size)}
+                  </p>
+                  <Textarea
+                    value={upload.note}
+                    maxLength={2000}
+                    rows={2}
+                    placeholder={t("surveys.media.notePlaceholder")}
+                    onChange={(event) =>
+                      setUpload((current) => ({ ...current, note: event.target.value }))
+                    }
+                  />
                 </div>
-                <Input inputMode="decimal" value={upload.latitude} placeholder={t("surveys.media.latitude")} aria-label={t("surveys.media.latitude")} onChange={(event) => setUpload((current) => ({ ...current, latitude: event.target.value }))} />
-                <Input inputMode="decimal" value={upload.longitude} placeholder={t("surveys.media.longitude")} aria-label={t("surveys.media.longitude")} onChange={(event) => setUpload((current) => ({ ...current, longitude: event.target.value }))} />
-                <Button onClick={() => void submitUpload()} disabled={uploading} data-testid="survey-media-upload">
-                  {uploading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Upload className="mr-1.5 h-4 w-4" />}
+                <Input
+                  inputMode="decimal"
+                  value={upload.latitude}
+                  placeholder={t("surveys.media.latitude")}
+                  aria-label={t("surveys.media.latitude")}
+                  onChange={(event) =>
+                    setUpload((current) => ({ ...current, latitude: event.target.value }))
+                  }
+                />
+                <Input
+                  inputMode="decimal"
+                  value={upload.longitude}
+                  placeholder={t("surveys.media.longitude")}
+                  aria-label={t("surveys.media.longitude")}
+                  onChange={(event) =>
+                    setUpload((current) => ({ ...current, longitude: event.target.value }))
+                  }
+                />
+                <Button
+                  onClick={() => void submitUpload()}
+                  disabled={uploading}
+                  data-testid="survey-media-upload"
+                >
+                  {uploading ? (
+                    <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Upload className="mr-1.5 h-4 w-4" />
+                  )}
                   {t("surveys.media.upload")}
                 </Button>
               </div>
@@ -493,37 +693,88 @@ export default function SurveyMediaPanel({ survey, canManage, onRefresh, formatD
                 <div className="p-3">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-slate-900" title={media.originalFileName}>{media.originalFileName}</p>
-                      <p className="text-xs text-slate-500">{formatSize(media.size)} · {formatDateTime(media.capturedAt ?? media.createdAt)}</p>
+                      <p
+                        className="truncate text-sm font-medium text-slate-900"
+                        title={media.originalFileName}
+                      >
+                        {media.originalFileName}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {formatSize(media.size)} ·{" "}
+                        {formatDateTime(media.capturedAt ?? media.createdAt)}
+                      </p>
                     </div>
-                    <Badge variant="outline" className={cn("shrink-0", SYNC_BADGE[media.syncStatus])}>
-                      {media.syncStatus === "Processing" ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : null}
+                    <Badge
+                      variant="outline"
+                      className={cn("shrink-0", SYNC_BADGE[media.syncStatus])}
+                    >
+                      {media.syncStatus === "Processing" ? (
+                        <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                      ) : null}
                       {t(`surveys.media.syncStatus.${media.syncStatus}`)}
                     </Badge>
                   </div>
-                  {media.note ? <p className="mt-2 line-clamp-2 text-xs text-slate-600">{media.note}</p> : null}
+                  {media.note ? (
+                    <p className="mt-2 line-clamp-2 text-xs text-slate-600">{media.note}</p>
+                  ) : null}
                   {media.latitude != null && media.longitude != null ? (
-                    <a className="mt-2 inline-flex items-center gap-1 text-xs text-sky-700 hover:underline" href={`https://www.openstreetmap.org/?mlat=${media.latitude}&mlon=${media.longitude}#map=18/${media.latitude}/${media.longitude}`} target="_blank" rel="noreferrer">
+                    <a
+                      className="mt-2 inline-flex items-center gap-1 text-xs text-sky-700 hover:underline"
+                      href={`https://www.openstreetmap.org/?mlat=${media.latitude}&mlon=${media.longitude}#map=18/${media.latitude}/${media.longitude}`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
                       <MapPin className="h-3 w-3" />
                       {t("surveys.media.viewMap")} <ExternalLink className="h-3 w-3" />
                     </a>
                   ) : null}
-                  {media.syncError ? <p className="mt-2 rounded bg-rose-50 p-2 text-xs text-rose-700">{media.syncError}</p> : null}
+                  {media.syncError ? (
+                    <p className="mt-2 rounded bg-rose-50 p-2 text-xs text-rose-700">
+                      {media.syncError}
+                    </p>
+                  ) : null}
                   <div className="mt-3 flex flex-wrap gap-1.5">
-                    <AdminFilePreview url={media.contentUrl} fileName={media.originalFileName} contentType={media.contentType} fetchFile={async () => (await adminApi.getSurveyMediaContent(survey.id, media.id)).data} showLabel size="sm" label={t("surveys.media.preview")} />
-                    {canManage && media.syncAttemptCount < media.maxSyncAttempts &&
-                    ((media.syncStatus === "Pending" && media.syncAttemptCount > 0) || media.syncStatus === "Failed") ? (
-                      <Button size="sm" variant="outline" onClick={() => void retrySync(media)} disabled={busyMediaId === media.id}>
-                        <RotateCcw className="mr-1 h-3.5 w-3.5" />{t("surveys.media.retry")}
+                    <AdminFilePreview
+                      url={media.contentUrl}
+                      fileName={media.originalFileName}
+                      contentType={media.contentType}
+                      fetchFile={async () =>
+                        (await adminApi.getSurveyMediaContent(survey.id, media.id)).data
+                      }
+                      showLabel
+                      size="sm"
+                      label={t("surveys.media.preview")}
+                    />
+                    {canManage &&
+                    media.syncAttemptCount < media.maxSyncAttempts &&
+                    ((media.syncStatus === "Pending" && media.syncAttemptCount > 0) ||
+                      media.syncStatus === "Failed") ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => void retrySync(media)}
+                        disabled={busyMediaId === media.id}
+                      >
+                        <RotateCcw className="mr-1 h-3.5 w-3.5" />
+                        {t("surveys.media.retry")}
                       </Button>
                     ) : null}
                     {canManage ? (
-                      <Button size="sm" variant="outline" className="text-rose-700 hover:text-rose-800" onClick={() => setDeleting(media)} disabled={busyMediaId === media.id}>
-                        <Trash2 className="mr-1 h-3.5 w-3.5" />{t("surveys.media.delete")}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-rose-700 hover:text-rose-800"
+                        onClick={() => setDeleting(media)}
+                        disabled={busyMediaId === media.id}
+                      >
+                        <Trash2 className="mr-1 h-3.5 w-3.5" />
+                        {t("surveys.media.delete")}
                       </Button>
                     ) : null}
                   </div>
-                  <p className="mt-2 text-[11px] text-slate-400">{t("surveys.media.attempts")}: {media.syncAttemptCount}/{media.maxSyncAttempts}</p>
+                  <p className="mt-2 text-[11px] text-slate-400">
+                    {t("surveys.media.attempts")}: {media.syncAttemptCount}/{media.maxSyncAttempts}
+                  </p>
                 </div>
               </article>
             ))}
@@ -531,7 +782,10 @@ export default function SurveyMediaPanel({ survey, canManage, onRefresh, formatD
         )}
       </section>
 
-      <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm" data-testid="survey-checklist">
+      <section
+        className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm"
+        data-testid="survey-checklist"
+      >
         <div className="flex items-center justify-between gap-2">
           <div>
             <h2 className="font-semibold text-slate-900">{t("surveys.checklist.title")}</h2>
@@ -546,22 +800,50 @@ export default function SurveyMediaPanel({ survey, canManage, onRefresh, formatD
             {survey.checklistResults.map((item) => {
               const draft = checklistDrafts[item.id] ?? item;
               return (
-                <div key={item.id} className="grid gap-2 rounded-lg border border-slate-200 p-3 md:grid-cols-[minmax(160px,1fr)_180px_minmax(220px,1fr)_auto] md:items-center">
+                <div
+                  key={item.id}
+                  className="grid gap-2 rounded-lg border border-slate-200 p-3 md:grid-cols-[minmax(160px,1fr)_180px_minmax(220px,1fr)_auto] md:items-center"
+                >
                   <p className="text-sm font-medium text-slate-800">
                     {localizedChecklistTitle(item, t)}
                   </p>
-                  <Select value={draft.status ?? ""} disabled={!canManage} onValueChange={(value) => updateChecklistDraft(item.id, { status: value as SurveyChecklistStatus })}>
-                    <SelectTrigger><SelectValue placeholder={t("surveys.checklist.selectStatus")} /></SelectTrigger>
+                  <Select
+                    value={draft.status ?? ""}
+                    disabled={!canManage}
+                    onValueChange={(value) =>
+                      updateChecklistDraft(item.id, { status: value as SurveyChecklistStatus })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={t("surveys.checklist.selectStatus")} />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Ok">{t("surveys.checklist.status.Ok")}</SelectItem>
-                      <SelectItem value="NeedsAttention">{t("surveys.checklist.status.NeedsAttention")}</SelectItem>
+                      <SelectItem value="NeedsAttention">
+                        {t("surveys.checklist.status.NeedsAttention")}
+                      </SelectItem>
                       <SelectItem value="Failed">{t("surveys.checklist.status.Failed")}</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Input value={draft.note ?? ""} disabled={!canManage} maxLength={2000} placeholder={t("surveys.checklist.notePlaceholder")} onChange={(event) => updateChecklistDraft(item.id, { note: event.target.value })} />
+                  <Input
+                    value={draft.note ?? ""}
+                    disabled={!canManage}
+                    maxLength={2000}
+                    placeholder={t("surveys.checklist.notePlaceholder")}
+                    onChange={(event) =>
+                      updateChecklistDraft(item.id, { note: event.target.value })
+                    }
+                  />
                   {canManage ? (
-                    <Button size="sm" onClick={() => void saveChecklist(item.id)} disabled={checklistSavingId === item.id}>
-                      {checklistSavingId === item.id ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : null}{t("common.save")}
+                    <Button
+                      size="sm"
+                      onClick={() => void saveChecklist(item.id)}
+                      disabled={checklistSavingId === item.id}
+                    >
+                      {checklistSavingId === item.id ? (
+                        <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                      ) : null}
+                      {t("common.save")}
                     </Button>
                   ) : null}
                 </div>
@@ -571,14 +853,26 @@ export default function SurveyMediaPanel({ survey, canManage, onRefresh, formatD
         )}
       </section>
 
-      <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm" data-testid="survey-sync-log">
+      <section
+        className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm"
+        data-testid="survey-sync-log"
+      >
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <h2 className="font-semibold text-slate-900">{t("surveys.syncLog.title")}</h2>
             <p className="mt-1 text-xs text-slate-500">{t("surveys.syncLog.hint")}</p>
           </div>
-          <Button size="sm" variant="outline" onClick={() => void loadSyncLog()} disabled={syncLogLoading}>
-            {syncLogLoading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-1.5 h-4 w-4" />}
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => void loadSyncLog()}
+            disabled={syncLogLoading}
+          >
+            {syncLogLoading ? (
+              <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCw className="mr-1.5 h-4 w-4" />
+            )}
             {t("surveys.syncLog.refresh")}
           </Button>
         </div>
@@ -587,16 +881,42 @@ export default function SurveyMediaPanel({ survey, canManage, onRefresh, formatD
         ) : (
           <div className="mt-3 overflow-x-auto">
             <table className="w-full min-w-[640px] text-left text-sm">
-              <thead className="border-b text-xs uppercase text-slate-500"><tr><th className="py-2 pr-3">{t("surveys.syncLog.file")}</th><th className="py-2 pr-3">{t("surveys.syncLog.status")}</th><th className="py-2 pr-3">{t("surveys.syncLog.attempt")}</th><th className="py-2">{t("surveys.syncLog.lastAttempt")}</th></tr></thead>
+              <thead className="border-b text-xs uppercase text-slate-500">
+                <tr>
+                  <th className="py-2 pr-3">{t("surveys.syncLog.file")}</th>
+                  <th className="py-2 pr-3">{t("surveys.syncLog.status")}</th>
+                  <th className="py-2 pr-3">{t("surveys.syncLog.attempt")}</th>
+                  <th className="py-2">{t("surveys.syncLog.lastAttempt")}</th>
+                </tr>
+              </thead>
               <tbody className="divide-y">
-                {syncLog.map((entry) => <tr key={entry.mediaId}><td className="py-2 pr-3"><p className="max-w-xs truncate">{entry.fileName}</p>{entry.error ? <p className="max-w-md text-xs text-rose-600">{entry.error}</p> : null}</td><td className="py-2 pr-3">{t(`surveys.media.syncStatus.${entry.status}`)}</td><td className="py-2 pr-3">{entry.attemptCount}/{entry.maxAttempts}</td><td className="py-2">{formatDateTime(entry.lastAttemptAt)}</td></tr>)}
+                {syncLog.map((entry) => (
+                  <tr key={entry.mediaId}>
+                    <td className="py-2 pr-3">
+                      <p className="max-w-xs truncate">{entry.fileName}</p>
+                      {entry.error ? (
+                        <p className="max-w-md text-xs text-rose-600">{entry.error}</p>
+                      ) : null}
+                    </td>
+                    <td className="py-2 pr-3">{t(`surveys.media.syncStatus.${entry.status}`)}</td>
+                    <td className="py-2 pr-3">
+                      {entry.attemptCount}/{entry.maxAttempts}
+                    </td>
+                    <td className="py-2">{formatDateTime(entry.lastAttemptAt)}</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
         )}
       </section>
 
-      <AlertDialog open={Boolean(deleting)} onOpenChange={(open) => { if (!open) setDeleting(null); }}>
+      <AlertDialog
+        open={Boolean(deleting)}
+        onOpenChange={(open) => {
+          if (!open) setDeleting(null);
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t("surveys.media.deleteTitle")}</AlertDialogTitle>
@@ -604,7 +924,12 @@ export default function SurveyMediaPanel({ survey, canManage, onRefresh, formatD
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-            <AlertDialogAction className="bg-rose-600 hover:bg-rose-700" onClick={() => void confirmDelete()}>{t("surveys.media.delete")}</AlertDialogAction>
+            <AlertDialogAction
+              className="bg-rose-600 hover:bg-rose-700"
+              onClick={() => void confirmDelete()}
+            >
+              {t("surveys.media.delete")}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -616,19 +941,18 @@ function ClipboardStatus({ checklist }: { checklist: SurveyChecklistResultRespon
   const completed = checklist.filter((item) => item.status).length;
   const failed = checklist.filter((item) => item.status === "Failed").length;
   const needsAttention = checklist.filter((item) => item.status === "NeedsAttention").length;
-  const status: SurveyChecklistStatus = failed > 0 ? "Failed" : needsAttention > 0 ? "NeedsAttention" : "Ok";
+  const status: SurveyChecklistStatus =
+    failed > 0 ? "Failed" : needsAttention > 0 ? "NeedsAttention" : "Ok";
   const Icon = status === "Ok" ? CheckCircle2 : status === "Failed" ? XCircle : RefreshCw;
   return (
     <Badge variant="outline" className={cn("gap-1", CHECKLIST_BADGE[status])}>
-      <Icon className="h-3.5 w-3.5" />{completed}/{checklist.length}
+      <Icon className="h-3.5 w-3.5" />
+      {completed}/{checklist.length}
     </Badge>
   );
 }
 
-function localizedChecklistTitle(
-  item: SurveyChecklistResultResponse,
-  t: (key: string) => string,
-) {
+function localizedChecklistTitle(item: SurveyChecklistResultResponse, t: (key: string) => string) {
   const key = `masterData.survey_checklist_default.${item.templateCode}.label`;
   const translated = t(key);
   return translated === key ? item.templateTitle : translated;

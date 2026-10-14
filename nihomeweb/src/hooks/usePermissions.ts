@@ -39,10 +39,7 @@ export function usePermissions(): UsePermissionsResult {
     staleTime: 60_000,
   });
 
-  const set = useMemo(
-    () => (query.data ? new Set(query.data.permissions) : EMPTY),
-    [query.data],
-  );
+  const set = useMemo(() => (query.data ? new Set(query.data.permissions) : EMPTY), [query.data]);
 
   return {
     permissions: set,

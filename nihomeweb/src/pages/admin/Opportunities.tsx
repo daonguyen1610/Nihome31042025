@@ -1,6 +1,20 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { AlertTriangle, FileSignature, FileText, LayoutGrid, List, Pencil, PenTool, Plus, RefreshCw, Search, ThumbsDown, Trash2, Trophy } from "lucide-react";
+import {
+  AlertTriangle,
+  FileSignature,
+  FileText,
+  LayoutGrid,
+  List,
+  Pencil,
+  PenTool,
+  Plus,
+  RefreshCw,
+  Search,
+  ThumbsDown,
+  Trash2,
+  Trophy,
+} from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -97,14 +111,26 @@ const canRaiseQuote = (opportunity: OpportunityResponse) =>
 // An available approved quotation can prefill a contract, but an agreed deal
 // can proceed directly without one.
 const contractReadyQuote = (opportunity: OpportunityResponse, quotes: QuoteListItemResponse[]) =>
-  quotes.find((item) => item.id === opportunity.wonQuoteId && isContractReadyQuote(item) &&
-    !opportunity.contracts.some((contract) => contract.quoteId === item.id && contract.status !== "Cancelled")) ??
-  quotes.find((item) => isContractReadyQuote(item) &&
-    !opportunity.contracts.some((contract) => contract.quoteId === item.id && contract.status !== "Cancelled"));
+  quotes.find(
+    (item) =>
+      item.id === opportunity.wonQuoteId &&
+      isContractReadyQuote(item) &&
+      !opportunity.contracts.some(
+        (contract) => contract.quoteId === item.id && contract.status !== "Cancelled",
+      ),
+  ) ??
+  quotes.find(
+    (item) =>
+      isContractReadyQuote(item) &&
+      !opportunity.contracts.some(
+        (contract) => contract.quoteId === item.id && contract.status !== "Cancelled",
+      ),
+  );
 
 const contractFormPath = (opportunity: OpportunityResponse, quote?: QuoteListItemResponse) => {
   const params = new URLSearchParams({ customerId: String(opportunity.customerId) });
-  if (opportunity.operationalProjectId) params.set("operationalProjectId", String(opportunity.operationalProjectId));
+  if (opportunity.operationalProjectId)
+    params.set("operationalProjectId", String(opportunity.operationalProjectId));
   if (quote) params.set("fromQuote", String(quote.id));
   params.set("opportunityId", String(opportunity.id));
   if (quote && quote.grandTotal > 0) params.set("value", String(quote.grandTotal));
@@ -208,7 +234,11 @@ const AdminOpportunities = () => {
       });
       setPipelineColumns(data.columns);
     } catch (err) {
-      toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
+      toast({
+        title: t("common.error"),
+        description: extractApiError(err),
+        variant: "destructive",
+      });
     } finally {
       setPipelineLoading(false);
     }
@@ -307,8 +337,11 @@ const AdminOpportunities = () => {
   const [activityContent, setActivityContent] = useState("");
   const [addingActivity, setAddingActivity] = useState(false);
 
-  const projectCustomerId = creating ? createForm.customerId : editing
-    ? editForm?.customerId : detail?.customerId;
+  const projectCustomerId = creating
+    ? createForm.customerId
+    : editing
+      ? editForm?.customerId
+      : detail?.customerId;
   useEffect(() => {
     if (!projectCustomerId || !canManage) {
       setProjects([]);
@@ -325,7 +358,9 @@ const AdminOpportunities = () => {
         let total = 0;
         do {
           const { data } = await adminApi.listOperationalProjects({
-            customerId: projectCustomerId, page: pageNumber, pageSize: 100,
+            customerId: projectCustomerId,
+            page: pageNumber,
+            pageSize: 100,
           });
           items.push(...data.items);
           total = data.total;
@@ -342,12 +377,17 @@ const AdminOpportunities = () => {
         if (!cancelled) setProjectLoading(false);
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [projectCustomerId, canManage]);
 
-  const projectOptions = projects.filter((project) => project.customerId === projectCustomerId).map((project) => ({
-    value: String(project.id), label: `${project.code} · ${project.name}`,
-  }));
+  const projectOptions = projects
+    .filter((project) => project.customerId === projectCustomerId)
+    .map((project) => ({
+      value: String(project.id),
+      label: `${project.code} · ${project.name}`,
+    }));
 
   // stage change UX
   const [stageTarget, setStageTarget] = useState<OpportunityStage | null>(null);
@@ -364,18 +404,21 @@ const AdminOpportunities = () => {
   const [opportunityQuotes, setOpportunityQuotes] = useState<QuoteListItemResponse[]>([]);
   const [quotesLoading, setQuotesLoading] = useState(false);
 
-  const loadQuotesForOpportunity = useCallback(async (id: number) => {
-    if (!canViewQuotes) return;
-    setQuotesLoading(true);
-    try {
-      const { data } = await adminApi.listQuotes({ opportunityId: id, pageSize: 50 });
-      setOpportunityQuotes(data.items);
-    } catch {
-      setOpportunityQuotes([]);
-    } finally {
-      setQuotesLoading(false);
-    }
-  }, [canViewQuotes]);
+  const loadQuotesForOpportunity = useCallback(
+    async (id: number) => {
+      if (!canViewQuotes) return;
+      setQuotesLoading(true);
+      try {
+        const { data } = await adminApi.listQuotes({ opportunityId: id, pageSize: 50 });
+        setOpportunityQuotes(data.items);
+      } catch {
+        setOpportunityQuotes([]);
+      } finally {
+        setQuotesLoading(false);
+      }
+    },
+    [canViewQuotes],
+  );
 
   const loadAuditForOpportunity = useCallback(async (id: number) => {
     setAuditLoading(true);
@@ -390,39 +433,46 @@ const AdminOpportunities = () => {
     }
   }, []);
 
-  const openDetail = useCallback(async (id: number, options: { startEditing?: boolean; projectId?: number } = {}) => {
-    setDetailLoading(true);
-    setDetail(null);
-    setEditing(false);
-    setEditForm(null);
-    setAuditItems([]);
-    setOpportunityQuotes([]);
-    try {
-      const { data } = await adminApi.getOpportunity(id);
-      setDetail(data);
-      if (options.startEditing && canManage && !isTerminalStage(data.stage)) {
-        setEditForm({
-          rowVersion: data.rowVersion,
-          name: data.name,
-          customerId: data.customerId,
-          operationalProjectId: options.projectId ?? data.operationalProjectId,
-          ownerUserId: data.ownerUserId,
-          estimatedValue: data.estimatedValue,
-          winProbability: data.winProbability,
-          expectedCloseDate: data.expectedCloseDate,
-          note: data.note,
+  const openDetail = useCallback(
+    async (id: number, options: { startEditing?: boolean; projectId?: number } = {}) => {
+      setDetailLoading(true);
+      setDetail(null);
+      setEditing(false);
+      setEditForm(null);
+      setAuditItems([]);
+      setOpportunityQuotes([]);
+      try {
+        const { data } = await adminApi.getOpportunity(id);
+        setDetail(data);
+        if (options.startEditing && canManage && !isTerminalStage(data.stage)) {
+          setEditForm({
+            rowVersion: data.rowVersion,
+            name: data.name,
+            customerId: data.customerId,
+            operationalProjectId: options.projectId ?? data.operationalProjectId,
+            ownerUserId: data.ownerUserId,
+            estimatedValue: data.estimatedValue,
+            winProbability: data.winProbability,
+            expectedCloseDate: data.expectedCloseDate,
+            note: data.note,
+          });
+          setEditing(true);
+        }
+        // Fetch audit log eagerly so the tab has data when the user switches.
+        void loadAuditForOpportunity(id);
+        void loadQuotesForOpportunity(id);
+      } catch (err) {
+        toast({
+          title: t("common.error"),
+          description: extractApiError(err),
+          variant: "destructive",
         });
-        setEditing(true);
+      } finally {
+        setDetailLoading(false);
       }
-      // Fetch audit log eagerly so the tab has data when the user switches.
-      void loadAuditForOpportunity(id);
-      void loadQuotesForOpportunity(id);
-    } catch (err) {
-      toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
-    } finally {
-      setDetailLoading(false);
-    }
-  }, [canManage, loadAuditForOpportunity, loadQuotesForOpportunity, t, toast]);
+    },
+    [canManage, loadAuditForOpportunity, loadQuotesForOpportunity, t, toast],
+  );
 
   // Two ways in: the /admin/opportunities/:id route that notifications link to
   // (OpportunityService.cs:524, :553), and the ?open= query other pages already
@@ -436,8 +486,10 @@ const AdminOpportunities = () => {
       const requestedProjectId = Number(searchParams.get("projectId"));
       void openDetail(openId, {
         startEditing: searchParams.get("edit") === "1",
-        projectId: Number.isInteger(requestedProjectId) && requestedProjectId > 0
-          ? requestedProjectId : undefined,
+        projectId:
+          Number.isInteger(requestedProjectId) && requestedProjectId > 0
+            ? requestedProjectId
+            : undefined,
       });
     }
   }, [handledOpenId, openDetail, searchParams, routeId]);
@@ -454,11 +506,14 @@ const AdminOpportunities = () => {
       // If opened via URL path like /admin/opportunities/6, navigate back to list
       navigate("/admin/opportunities", { replace: true });
     } else if (searchParams.has("open")) {
-      setSearchParams((current) => {
-        const next = new URLSearchParams(current);
-        next.delete("open");
-        return next;
-      }, { replace: true });
+      setSearchParams(
+        (current) => {
+          const next = new URLSearchParams(current);
+          next.delete("open");
+          return next;
+        },
+        { replace: true },
+      );
     }
     setHandledOpenId(null);
   };
@@ -481,7 +536,11 @@ const AdminOpportunities = () => {
       toast({ title: t("opportunities.updated") });
       await fetchList();
     } catch (err) {
-      toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
+      toast({
+        title: t("common.error"),
+        description: extractApiError(err),
+        variant: "destructive",
+      });
       if (isConcurrencyConflict(err)) await openDetail(detail.id, { startEditing: true });
     } finally {
       setSavingEdit(false);
@@ -545,7 +604,11 @@ const AdminOpportunities = () => {
       const { data } = await adminApi.getOpportunity(detail.id);
       setDetail(data);
     } catch (err) {
-      toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
+      toast({
+        title: t("common.error"),
+        description: extractApiError(err),
+        variant: "destructive",
+      });
     } finally {
       setAddingActivity(false);
     }
@@ -573,7 +636,11 @@ const AdminOpportunities = () => {
       await fetchList();
       await openDetail(data.id);
     } catch (err) {
-      toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
+      toast({
+        title: t("common.error"),
+        description: extractApiError(err),
+        variant: "destructive",
+      });
       if (isConcurrencyConflict(err)) await openDetail(detail.id);
     } finally {
       setChangingStage(false);
@@ -589,8 +656,10 @@ const AdminOpportunities = () => {
             <h1 className="text-2xl font-semibold">{t("opportunities.title")}</h1>
             <p className="text-muted-foreground text-sm max-w-3xl">{t("opportunities.subtitle")}</p>
             <p className="text-xs text-muted-foreground mt-1">
-              {(canSeeAll ? t("opportunities.totalCount") : t("opportunities.myScopeCount"))
-                .replace("{count}", total.toString())}
+              {(canSeeAll
+                ? t("opportunities.totalCount")
+                : t("opportunities.myScopeCount")
+              ).replace("{count}", total.toString())}
             </p>
           </div>
           <div className="flex flex-wrap gap-2 items-center">
@@ -612,7 +681,11 @@ const AdminOpportunities = () => {
                 <LayoutGrid className="h-4 w-4" /> {t("opportunities.viewToggle.pipeline")}
               </button>
             </div>
-            <Button variant="outline" size="sm" onClick={() => (view === "table" ? void fetchList() : void fetchPipeline())}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => (view === "table" ? void fetchList() : void fetchPipeline())}
+            >
               <RefreshCw className="mr-1.5 h-4 w-4" /> {t("common.refresh")}
             </Button>
             {canManage && (
@@ -625,7 +698,9 @@ const AdminOpportunities = () => {
 
         <section className="grid items-end gap-3 rounded-lg border bg-card p-3 md:grid-cols-7">
           <div className="md:col-span-2">
-            <Label className="text-xs" htmlFor="opportunity-search">{t("opportunities.filter.search")}</Label>
+            <Label className="text-xs" htmlFor="opportunity-search">
+              {t("opportunities.filter.search")}
+            </Label>
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -639,35 +714,73 @@ const AdminOpportunities = () => {
           </div>
           <div>
             <Label className="text-xs">{t("opportunities.filter.stage")}</Label>
-            <Select value={stageFilter || "all"} onValueChange={(v) => { setStageFilter(v === "all" ? "" : (v as OpportunityStage)); setPage(1); }}>
-              <SelectTrigger className="h-9"><SelectValue placeholder={t("opportunities.filter.all")} /></SelectTrigger>
+            <Select
+              value={stageFilter || "all"}
+              onValueChange={(v) => {
+                setStageFilter(v === "all" ? "" : (v as OpportunityStage));
+                setPage(1);
+              }}
+            >
+              <SelectTrigger className="h-9">
+                <SelectValue placeholder={t("opportunities.filter.all")} />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{t("opportunities.filter.all")}</SelectItem>
                 {OPPORTUNITY_STAGES.map((s) => (
-                  <SelectItem key={s} value={s}>{t(`opportunities.stage.${s}`)}</SelectItem>
+                  <SelectItem key={s} value={s}>
+                    {t(`opportunities.stage.${s}`)}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <div>
             <Label className="text-xs">{t("opportunities.filter.customer")}</Label>
-            <Select value={customerFilter ? String(customerFilter) : "all"} onValueChange={(v) => { setCustomerFilter(v === "all" ? "" : Number(v)); setPage(1); }}>
-              <SelectTrigger className="h-9"><SelectValue placeholder={t("opportunities.filter.all")} /></SelectTrigger>
+            <Select
+              value={customerFilter ? String(customerFilter) : "all"}
+              onValueChange={(v) => {
+                setCustomerFilter(v === "all" ? "" : Number(v));
+                setPage(1);
+              }}
+            >
+              <SelectTrigger className="h-9">
+                <SelectValue placeholder={t("opportunities.filter.all")} />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{t("opportunities.filter.all")}</SelectItem>
                 {customers.map((c) => (
-                  <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
+                  <SelectItem key={c.id} value={String(c.id)}>
+                    {c.name}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <div>
             <Label className="text-xs">{t("opportunities.filter.minValue")}</Label>
-            <Input type="number" min={0} value={minValue} onChange={(e) => { setMinValue(e.target.value); setPage(1); }} className="h-9" />
+            <Input
+              type="number"
+              min={0}
+              value={minValue}
+              onChange={(e) => {
+                setMinValue(e.target.value);
+                setPage(1);
+              }}
+              className="h-9"
+            />
           </div>
           <div>
             <Label className="text-xs">{t("opportunities.filter.maxValue")}</Label>
-            <Input type="number" min={0} value={maxValue} onChange={(e) => { setMaxValue(e.target.value); setPage(1); }} className="h-9" />
+            <Input
+              type="number"
+              min={0}
+              value={maxValue}
+              onChange={(e) => {
+                setMaxValue(e.target.value);
+                setPage(1);
+              }}
+              className="h-9"
+            />
           </div>
         </section>
 
@@ -704,9 +817,13 @@ const AdminOpportunities = () => {
                     >
                       <header className="flex items-start gap-2">
                         <div className="min-w-0 flex-1">
-                          <h3 className="break-words text-sm font-semibold leading-tight">{o.name}</h3>
+                          <h3 className="break-words text-sm font-semibold leading-tight">
+                            {o.name}
+                          </h3>
                           <p className="mt-0.5 text-xs text-muted-foreground">
-                            {o.customerName ?? customerLabel.get(o.customerId) ?? `#${o.customerId}`}
+                            {o.customerName ??
+                              customerLabel.get(o.customerId) ??
+                              `#${o.customerId}`}
                           </p>
                         </div>
                         <Badge
@@ -716,30 +833,57 @@ const AdminOpportunities = () => {
                             OPPORTUNITY_STAGE_STYLES[o.stage],
                           )}
                         >
-                          <span className={cn("h-1.5 w-1.5 rounded-full", OPPORTUNITY_STAGE_DOT[o.stage])} />
+                          <span
+                            className={cn(
+                              "h-1.5 w-1.5 rounded-full",
+                              OPPORTUNITY_STAGE_DOT[o.stage],
+                            )}
+                          />
                           {t(`opportunities.stage.${o.stage}`)}
                         </Badge>
                       </header>
 
                       <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
                         <div>
-                          <dt className="text-muted-foreground">{t("opportunities.field.estimatedValue")}</dt>
-                          <dd className="tabular-nums font-medium">{formatVnd(o.estimatedValue)}</dd>
+                          <dt className="text-muted-foreground">
+                            {t("opportunities.field.estimatedValue")}
+                          </dt>
+                          <dd className="tabular-nums font-medium">
+                            {formatVnd(o.estimatedValue)}
+                          </dd>
                         </div>
                         <div>
-                          <dt className="text-muted-foreground">{t("opportunities.field.winProbability")}</dt>
+                          <dt className="text-muted-foreground">
+                            {t("opportunities.field.winProbability")}
+                          </dt>
                           <dd className="font-medium">{o.winProbability}%</dd>
                         </div>
                         <div>
-                          <dt className="text-muted-foreground">{t("opportunities.field.expectedCloseDate")}</dt>
-                          <dd className={cn("font-medium", overdue && "flex items-center gap-1 text-destructive")}>
-                            {overdue && <AlertTriangle className="h-3 w-3" aria-label={t("opportunities.overdue")} />}
-                            {o.expectedCloseDate ? new Date(o.expectedCloseDate).toLocaleDateString() : "—"}
+                          <dt className="text-muted-foreground">
+                            {t("opportunities.field.expectedCloseDate")}
+                          </dt>
+                          <dd
+                            className={cn(
+                              "font-medium",
+                              overdue && "flex items-center gap-1 text-destructive",
+                            )}
+                          >
+                            {overdue && (
+                              <AlertTriangle
+                                className="h-3 w-3"
+                                aria-label={t("opportunities.overdue")}
+                              />
+                            )}
+                            {o.expectedCloseDate
+                              ? new Date(o.expectedCloseDate).toLocaleDateString()
+                              : "—"}
                           </dd>
                         </div>
                         {canSeeAll && (
                           <div>
-                            <dt className="text-muted-foreground">{t("opportunities.field.owner")}</dt>
+                            <dt className="text-muted-foreground">
+                              {t("opportunities.field.owner")}
+                            </dt>
                             <dd className="truncate font-medium">{o.ownerName ?? "—"}</dd>
                           </div>
                         )}
@@ -783,14 +927,28 @@ const AdminOpportunities = () => {
                 <table className="min-w-[960px] w-full divide-y text-sm">
                   <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
                     <tr>
-                      <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("opportunities.field.name")}</th>
-                      <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("opportunities.field.customer")}</th>
-                      <th className="whitespace-nowrap px-3 py-3 text-right font-medium">{t("opportunities.field.estimatedValue")}</th>
-                      <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("opportunities.field.winProbability")}</th>
-                      <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("opportunities.field.expectedCloseDate")}</th>
-                      <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("opportunities.field.stage")}</th>
+                      <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                        {t("opportunities.field.name")}
+                      </th>
+                      <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                        {t("opportunities.field.customer")}
+                      </th>
+                      <th className="whitespace-nowrap px-3 py-3 text-right font-medium">
+                        {t("opportunities.field.estimatedValue")}
+                      </th>
+                      <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                        {t("opportunities.field.winProbability")}
+                      </th>
+                      <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                        {t("opportunities.field.expectedCloseDate")}
+                      </th>
+                      <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                        {t("opportunities.field.stage")}
+                      </th>
                       {canSeeAll && (
-                        <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("opportunities.field.owner")}</th>
+                        <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                          {t("opportunities.field.owner")}
+                        </th>
                       )}
                       {canManage && <th className="px-3 py-3" />}
                     </tr>
@@ -803,8 +961,12 @@ const AdminOpportunities = () => {
                         onClick={() => void openDetail(o.id)}
                       >
                         <td className="px-3 py-3 font-medium">{o.name}</td>
-                        <td className="px-3 py-3">{o.customerName ?? customerLabel.get(o.customerId) ?? `#${o.customerId}`}</td>
-                        <td className="whitespace-nowrap px-3 py-3 text-right tabular-nums">{formatVnd(o.estimatedValue)}</td>
+                        <td className="px-3 py-3">
+                          {o.customerName ?? customerLabel.get(o.customerId) ?? `#${o.customerId}`}
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-3 text-right tabular-nums">
+                          {formatVnd(o.estimatedValue)}
+                        </td>
                         <td className="whitespace-nowrap px-3 py-3 text-xs">{o.winProbability}%</td>
                         <td className="whitespace-nowrap px-3 py-3 text-xs">
                           {o.expectedCloseDate ? (
@@ -816,7 +978,10 @@ const AdminOpportunities = () => {
                               }
                             >
                               {isOpportunityOverdue(o.expectedCloseDate, o.stage) && (
-                                <AlertTriangle className="h-3 w-3" aria-label={t("opportunities.overdue")} />
+                                <AlertTriangle
+                                  className="h-3 w-3"
+                                  aria-label={t("opportunities.overdue")}
+                                />
                               )}
                               {new Date(o.expectedCloseDate).toLocaleDateString()}
                             </span>
@@ -842,7 +1007,9 @@ const AdminOpportunities = () => {
                           </Badge>
                         </td>
                         {canSeeAll && (
-                          <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground">{o.ownerName || "—"}</td>
+                          <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground">
+                            {o.ownerName || "—"}
+                          </td>
                         )}
                         {canManage && (
                           <td className="px-3 py-3 text-right">
@@ -851,7 +1018,10 @@ const AdminOpportunities = () => {
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  onClick={(e) => { e.stopPropagation(); void openDetail(o.id, { startEditing: true }); }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    void openDetail(o.id, { startEditing: true });
+                                  }}
                                   title={t("common.edit")}
                                   aria-label={t("common.edit")}
                                 >
@@ -861,7 +1031,10 @@ const AdminOpportunities = () => {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={(e) => { e.stopPropagation(); void handleDelete(o.id); }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  void handleDelete(o.id);
+                                }}
                                 title={t("common.delete")}
                                 aria-label={t("common.delete")}
                               >
@@ -877,34 +1050,36 @@ const AdminOpportunities = () => {
               </div>
             </div>
           )
+        ) : pipelineLoading ? (
+          <PageLoading />
         ) : (
-          pipelineLoading ? (
-            <PageLoading />
-          ) : (
-            // Mobile: single-row horizontal scroll (spec NIH-91). Desktop grid at lg / xl.
-            <div className="flex gap-3 overflow-x-auto pb-2 lg:grid lg:grid-cols-3 lg:overflow-visible xl:grid-cols-6">
-              {pipelineColumns.map((col) => (
-                <div
-                  key={col.stage}
-                  className="rounded-lg border bg-muted/20 flex flex-col min-w-[260px] lg:min-w-0"
-                >
-                  <div className="flex items-center gap-2 px-3 py-2 border-b bg-muted/40 rounded-t-lg">
-                    <span className={cn("h-2 w-2 rounded-full", OPPORTUNITY_STAGE_DOT[col.stage])} />
-                    <div className="flex-1">
-                      <div className="text-sm font-medium">{t(`opportunities.stage.${col.stage}`)}</div>
-                      <div className="text-xs text-muted-foreground tabular-nums">
-                        {t("opportunities.pipeline.total")
-                          .replace("{count}", col.count.toString())
-                          .replace("{value}", formatVnd(col.totalValue))}
-                      </div>
+          // Mobile: single-row horizontal scroll (spec NIH-91). Desktop grid at lg / xl.
+          <div className="flex gap-3 overflow-x-auto pb-2 lg:grid lg:grid-cols-3 lg:overflow-visible xl:grid-cols-6">
+            {pipelineColumns.map((col) => (
+              <div
+                key={col.stage}
+                className="rounded-lg border bg-muted/20 flex flex-col min-w-[260px] lg:min-w-0"
+              >
+                <div className="flex items-center gap-2 px-3 py-2 border-b bg-muted/40 rounded-t-lg">
+                  <span className={cn("h-2 w-2 rounded-full", OPPORTUNITY_STAGE_DOT[col.stage])} />
+                  <div className="flex-1">
+                    <div className="text-sm font-medium">
+                      {t(`opportunities.stage.${col.stage}`)}
+                    </div>
+                    <div className="text-xs text-muted-foreground tabular-nums">
+                      {t("opportunities.pipeline.total")
+                        .replace("{count}", col.count.toString())
+                        .replace("{value}", formatVnd(col.totalValue))}
                     </div>
                   </div>
-                  <div className="p-2 space-y-2 min-h-[120px]">
-                    {col.items.length === 0 ? (
-                      <div className="text-xs text-muted-foreground py-6 text-center">
-                        {t("opportunities.pipeline.empty")}
-                      </div>
-                    ) : col.items.map((o) => {
+                </div>
+                <div className="p-2 space-y-2 min-h-[120px]">
+                  {col.items.length === 0 ? (
+                    <div className="text-xs text-muted-foreground py-6 text-center">
+                      {t("opportunities.pipeline.empty")}
+                    </div>
+                  ) : (
+                    col.items.map((o) => {
                       const overdue = isOpportunityOverdue(o.expectedCloseDate, o.stage);
                       return (
                         <button
@@ -914,34 +1089,58 @@ const AdminOpportunities = () => {
                           onClick={() => void openDetail(o.id)}
                         >
                           <div className="font-medium text-sm truncate">{o.name}</div>
-                          <div className="text-muted-foreground truncate">{o.customerName ?? `#${o.customerId}`}</div>
+                          <div className="text-muted-foreground truncate">
+                            {o.customerName ?? `#${o.customerId}`}
+                          </div>
                           <div className="mt-1 flex items-center justify-between">
-                            <span className="tabular-nums font-medium">{formatVnd(o.estimatedValue)}</span>
+                            <span className="tabular-nums font-medium">
+                              {formatVnd(o.estimatedValue)}
+                            </span>
                             <span className="text-muted-foreground">{o.winProbability}%</span>
                           </div>
                           {o.expectedCloseDate && (
-                            <div className={`mt-1 text-[11px] flex items-center gap-1 ${overdue ? "text-destructive" : "text-muted-foreground"}`}>
+                            <div
+                              className={`mt-1 text-[11px] flex items-center gap-1 ${overdue ? "text-destructive" : "text-muted-foreground"}`}
+                            >
                               {overdue && <AlertTriangle className="h-3 w-3" />}
                               {new Date(o.expectedCloseDate).toLocaleDateString()}
-                              {overdue && <span className="font-medium">· {t("opportunities.overdue")}</span>}
+                              {overdue && (
+                                <span className="font-medium">· {t("opportunities.overdue")}</span>
+                              )}
                             </div>
                           )}
                         </button>
                       );
-                    })}
-                  </div>
+                    })
+                  )}
                 </div>
-              ))}
-            </div>
-          )
+              </div>
+            ))}
+          </div>
         )}
 
         {view === "table" && total > pageSize && (
           <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <span>{(page - 1) * pageSize + 1}-{Math.min(page * pageSize, total)} / {total}</span>
+            <span>
+              {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, total)} / {total}
+            </span>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>‹</Button>
-              <Button variant="outline" size="sm" onClick={() => setPage((p) => p + 1)} disabled={page * pageSize >= total}>›</Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+              >
+                ‹
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => p + 1)}
+                disabled={page * pageSize >= total}
+              >
+                ›
+              </Button>
             </div>
           </div>
         )}
@@ -957,18 +1156,31 @@ const AdminOpportunities = () => {
           <div className="space-y-3">
             <div>
               <Label>{t("opportunities.field.name")}</Label>
-              <Input value={createForm.name} onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })} />
+              <Input
+                value={createForm.name}
+                onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
+              />
             </div>
             <div>
               <Label>{t("opportunities.field.customer")}</Label>
               <Select
                 value={createForm.customerId ? String(createForm.customerId) : ""}
-                onValueChange={(v) => setCreateForm({ ...createForm, customerId: Number(v), operationalProjectId: null })}
+                onValueChange={(v) =>
+                  setCreateForm({
+                    ...createForm,
+                    customerId: Number(v),
+                    operationalProjectId: null,
+                  })
+                }
               >
-                <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue placeholder="—" />
+                </SelectTrigger>
                 <SelectContent>
                   {customers.map((c) => (
-                    <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
+                    <SelectItem key={c.id} value={String(c.id)}>
+                      {c.name}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -976,14 +1188,22 @@ const AdminOpportunities = () => {
             <div>
               <Label>{t("opportunities.field.operationalProject")}</Label>
               <SearchableSelect
-                value={createForm.operationalProjectId ? String(createForm.operationalProjectId) : null}
-                onChange={(value) => setCreateForm({ ...createForm, operationalProjectId: Number(value) })}
+                value={
+                  createForm.operationalProjectId ? String(createForm.operationalProjectId) : null
+                }
+                onChange={(value) =>
+                  setCreateForm({ ...createForm, operationalProjectId: Number(value) })
+                }
                 options={projectOptions}
                 disabled={!createForm.customerId || projectLoading || !!projectLoadError}
                 ariaLabel={t("opportunities.field.operationalProject")}
                 placeholder={t("opportunities.project.select")}
               />
-              {projectLoadError && <p role="alert" className="text-sm text-destructive">{projectLoadError}</p>}
+              {projectLoadError && (
+                <p role="alert" className="text-sm text-destructive">
+                  {projectLoadError}
+                </p>
+              )}
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -991,7 +1211,9 @@ const AdminOpportunities = () => {
                 <Input
                   inputMode="numeric"
                   value={createForm.estimatedValue ? formatVnd(createForm.estimatedValue) : ""}
-                  onChange={(e) => setCreateForm({ ...createForm, estimatedValue: parseVnd(e.target.value) })}
+                  onChange={(e) =>
+                    setCreateForm({ ...createForm, estimatedValue: parseVnd(e.target.value) })
+                  }
                   placeholder="0"
                 />
               </div>
@@ -1003,7 +1225,9 @@ const AdminOpportunities = () => {
                     max={100}
                     step={5}
                     value={[createForm.winProbability]}
-                    onValueChange={([next]) => setCreateForm({ ...createForm, winProbability: next })}
+                    onValueChange={([next]) =>
+                      setCreateForm({ ...createForm, winProbability: next })
+                    }
                     className="flex-1"
                     aria-label={t("opportunities.field.winProbability")}
                   />
@@ -1012,7 +1236,9 @@ const AdminOpportunities = () => {
                     min={0}
                     max={100}
                     value={createForm.winProbability}
-                    onChange={(e) => setCreateForm({ ...createForm, winProbability: Number(e.target.value) })}
+                    onChange={(e) =>
+                      setCreateForm({ ...createForm, winProbability: Number(e.target.value) })
+                    }
                     className="w-16"
                   />
                 </div>
@@ -1025,7 +1251,9 @@ const AdminOpportunities = () => {
                   value={createForm.ownerUserId ? String(createForm.ownerUserId) : ""}
                   onValueChange={(v) => setCreateForm({ ...createForm, ownerUserId: Number(v) })}
                 >
-                  <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue placeholder="—" />
+                  </SelectTrigger>
                   <SelectContent>
                     {salesUsers.map((u) => (
                       <SelectItem key={u.id} value={String(u.id)}>
@@ -1044,7 +1272,9 @@ const AdminOpportunities = () => {
                   min={DATE_MIN}
                   max={DATE_MAX}
                   value={createForm.expectedCloseDate?.slice(0, 10) ?? ""}
-                  onChange={(e) => setCreateForm({ ...createForm, expectedCloseDate: e.target.value || null })}
+                  onChange={(e) =>
+                    setCreateForm({ ...createForm, expectedCloseDate: e.target.value || null })
+                  }
                 />
               </div>
               <div>
@@ -1054,13 +1284,21 @@ const AdminOpportunities = () => {
             </div>
             <div>
               <Label>{t("opportunities.field.note")}</Label>
-              <Textarea rows={3} value={createForm.note ?? ""} onChange={(e) => setCreateForm({ ...createForm, note: e.target.value })} />
+              <Textarea
+                rows={3}
+                value={createForm.note ?? ""}
+                onChange={(e) => setCreateForm({ ...createForm, note: e.target.value })}
+              />
             </div>
             {createError && <p className="text-destructive text-sm">{createError}</p>}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCreating(false)} disabled={saving}>{t("common.cancel")}</Button>
-            <Button onClick={() => void handleCreate()} disabled={saving}>{t("common.save")}</Button>
+            <Button variant="outline" onClick={() => setCreating(false)} disabled={saving}>
+              {t("common.cancel")}
+            </Button>
+            <Button onClick={() => void handleCreate()} disabled={saving}>
+              {t("common.save")}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1078,554 +1316,752 @@ const AdminOpportunities = () => {
               </DialogHeader>
               <PageLoading />
             </>
-          ) : detail && (
-            <>
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2 flex-wrap">
-                  {detail.name}
-                  <Badge
-                    variant="outline"
-                    className={cn(
-                      "gap-1.5 whitespace-nowrap font-medium",
-                      OPPORTUNITY_STAGE_STYLES[detail.stage],
-                    )}
-                  >
-                    <span
-                      className={cn("h-1.5 w-1.5 rounded-full", OPPORTUNITY_STAGE_DOT[detail.stage])}
-                    />
-                    {t(`opportunities.stage.${detail.stage}`)}
-                  </Badge>
-                  <span className="text-sm font-normal text-muted-foreground">
-                    · {formatVnd(detail.estimatedValue)} · {detail.winProbability}%
-                  </span>
-                </DialogTitle>
-                <DialogDescription>
-                  {detail.customerName ?? customerLabel.get(detail.customerId) ?? `#${detail.customerId}`}
-                  {detail.ownerName && <> · {detail.ownerName}</>}
-                </DialogDescription>
-                {/* Terminal actions remain prominent, but Contract signed is valid
+          ) : (
+            detail && (
+              <>
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2 flex-wrap">
+                    {detail.name}
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "gap-1.5 whitespace-nowrap font-medium",
+                        OPPORTUNITY_STAGE_STYLES[detail.stage],
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "h-1.5 w-1.5 rounded-full",
+                          OPPORTUNITY_STAGE_DOT[detail.stage],
+                        )}
+                      />
+                      {t(`opportunities.stage.${detail.stage}`)}
+                    </Badge>
+                    <span className="text-sm font-normal text-muted-foreground">
+                      · {formatVnd(detail.estimatedValue)} · {detail.winProbability}%
+                    </span>
+                  </DialogTitle>
+                  <DialogDescription>
+                    {detail.customerName ??
+                      customerLabel.get(detail.customerId) ??
+                      `#${detail.customerId}`}
+                    {detail.ownerName && <> · {detail.ownerName}</>}
+                  </DialogDescription>
+                  {/* Terminal actions remain prominent, but Contract signed is valid
                     only after the Opportunity reaches Negotiation. */}
-                {canManage && detail.stage !== "Won" && detail.stage !== "Lost" && (
-                  <div className="flex flex-wrap gap-2 pt-2">
-                    {detail.stage === "Negotiation" && (
+                  {canManage && detail.stage !== "Won" && detail.stage !== "Lost" && (
+                    <div className="flex flex-wrap gap-2 pt-2">
+                      {detail.stage === "Negotiation" && (
+                        <Button
+                          size="sm"
+                          onClick={() => openStageChange("Won")}
+                          disabled={changingStage}
+                        >
+                          <Trophy className="mr-1.5 h-4 w-4" />
+                          {t("opportunities.action.markWon")}
+                        </Button>
+                      )}
                       <Button
                         size="sm"
-                        onClick={() => openStageChange("Won")}
+                        variant="destructive"
+                        onClick={() => openStageChange("Lost")}
                         disabled={changingStage}
                       >
-                        <Trophy className="mr-1.5 h-4 w-4" />
-                        {t("opportunities.action.markWon")}
+                        <ThumbsDown className="mr-1.5 h-4 w-4" />
+                        {t("opportunities.action.markLost")}
                       </Button>
-                    )}
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => openStageChange("Lost")}
-                      disabled={changingStage}
-                    >
-                      <ThumbsDown className="mr-1.5 h-4 w-4" />
-                      {t("opportunities.action.markLost")}
-                    </Button>
-                  </div>
-                )}
-                {/* Sales may agree a value directly or send a quotation first. */}
-                {((canStartDesign && detail.stage !== "Lost") ||
-                  (canCreateQuote && canRaiseQuote(detail)) ||
-                  (canCreateContract && detail.stage !== "Lost")) && (
-                  <div className="flex flex-wrap gap-2 pt-2">
-                    {canCreateContract && detail.stage !== "Lost" && (
-                      <Button
-                        size="sm"
-                        data-testid="opportunity-create-contract"
-                        onClick={() => {
-                          const quote = contractReadyQuote(detail, opportunityQuotes);
-                          navigate(contractFormPath(detail, quote));
-                        }}
-                      >
-                        <FileSignature className="mr-1.5 h-4 w-4" />
-                        {t("opportunities.action.createContract")}
-                      </Button>
-                    )}
-                    {canCreateQuote && canRaiseQuote(detail) && <Button
-                      size="sm"
-                      variant={detail.stage === "Won" ? "default" : "outline"}
-                      data-testid="opportunity-create-quote"
-                      onClick={() => navigate(`/admin/quotes?create=1&opportunityId=${detail.id}`)}
-                    >
-                      <Plus className="mr-1.5 h-4 w-4" />
-                      {t("opportunities.action.createQuote")}
-                    </Button>}
-                    {canStartDesign && detail.stage !== "Lost" && (
-                      detail.designProjectId ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          data-testid="opportunity-open-design-project"
-                          disabled={!canViewDesign}
-                          onClick={() => navigate(`/admin/design-projects/${detail.designProjectId}`)}
-                        >
-                          <PenTool className="mr-1.5 h-4 w-4" />
-                          {t(canViewDesign
-                            ? "opportunities.action.openDesignProject"
-                            : "opportunities.action.designProjectCreated")}
-                        </Button>
-                      ) : (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          data-testid="opportunity-create-design-project"
-                          onClick={() => navigate(`/admin/opportunities/${detail.id}/design-project/new`)}
-                        >
-                          <PenTool className="mr-1.5 h-4 w-4" />
-                          {t("opportunities.action.createDesignProject")}
-                        </Button>
-                      )
-                    )}
-                  </div>
-                )}
-              </DialogHeader>
-
-              <Tabs defaultValue="general" className="flex min-h-0 flex-col">
-                <TabsList className="h-auto w-full shrink-0 justify-start overflow-x-auto">
-                  <TabsTrigger className="h-12 shrink-0" value="general">{t("opportunities.tab.general")}</TabsTrigger>
-                  {canViewQuotes && (
-                    <TabsTrigger className="h-12 shrink-0" value="quotes" data-testid="opportunity-quotes-tab">
-                      {t("opportunities.tab.quotes")} ({opportunityQuotes.length})
-                    </TabsTrigger>
+                    </div>
                   )}
-                  <TabsTrigger className="h-12 shrink-0" value="timeline">
-                    {t("opportunities.tab.timeline")} ({detail.activities.length})
-                  </TabsTrigger>
-                  <TabsTrigger className="h-12 shrink-0" value="audit">
-                    {t("opportunities.tab.audit")} ({auditItems.length})
-                  </TabsTrigger>
-                </TabsList>
+                  {/* Sales may agree a value directly or send a quotation first. */}
+                  {((canStartDesign && detail.stage !== "Lost") ||
+                    (canCreateQuote && canRaiseQuote(detail)) ||
+                    (canCreateContract && detail.stage !== "Lost")) && (
+                    <div className="flex flex-wrap gap-2 pt-2">
+                      {canCreateContract && detail.stage !== "Lost" && (
+                        <Button
+                          size="sm"
+                          data-testid="opportunity-create-contract"
+                          onClick={() => {
+                            const quote = contractReadyQuote(detail, opportunityQuotes);
+                            navigate(contractFormPath(detail, quote));
+                          }}
+                        >
+                          <FileSignature className="mr-1.5 h-4 w-4" />
+                          {t("opportunities.action.createContract")}
+                        </Button>
+                      )}
+                      {canCreateQuote && canRaiseQuote(detail) && (
+                        <Button
+                          size="sm"
+                          variant={detail.stage === "Won" ? "default" : "outline"}
+                          data-testid="opportunity-create-quote"
+                          onClick={() =>
+                            navigate(`/admin/quotes?create=1&opportunityId=${detail.id}`)
+                          }
+                        >
+                          <Plus className="mr-1.5 h-4 w-4" />
+                          {t("opportunities.action.createQuote")}
+                        </Button>
+                      )}
+                      {canStartDesign &&
+                        detail.stage !== "Lost" &&
+                        (detail.designProjectId ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            data-testid="opportunity-open-design-project"
+                            disabled={!canViewDesign}
+                            onClick={() =>
+                              navigate(`/admin/design-projects/${detail.designProjectId}`)
+                            }
+                          >
+                            <PenTool className="mr-1.5 h-4 w-4" />
+                            {t(
+                              canViewDesign
+                                ? "opportunities.action.openDesignProject"
+                                : "opportunities.action.designProjectCreated",
+                            )}
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            data-testid="opportunity-create-design-project"
+                            onClick={() =>
+                              navigate(`/admin/opportunities/${detail.id}/design-project/new`)
+                            }
+                          >
+                            <PenTool className="mr-1.5 h-4 w-4" />
+                            {t("opportunities.action.createDesignProject")}
+                          </Button>
+                        ))}
+                    </div>
+                  )}
+                </DialogHeader>
 
-                <TabsContent value="general" className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain pr-1 pt-3">
-                  {!editing ? (
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <div className="text-xs text-muted-foreground">{t("opportunities.field.customer")}</div>
-                        <div>{detail.customerName ?? `#${detail.customerId}`}</div>
-                      </div>
-                      <div>
-                        <div className="text-xs text-muted-foreground">{t("opportunities.field.owner")}</div>
-                        <div>{detail.ownerName ?? (detail.ownerUserId ? `#${detail.ownerUserId}` : "—")}</div>
-                      </div>
-                      <div className="col-span-2">
-                        <div className="text-xs text-muted-foreground">{t("opportunities.field.operationalProject")}</div>
-                        <div>{projects.find((project) => project.id === detail.operationalProjectId)?.name ??
-                          (detail.operationalProjectId ? `#${detail.operationalProjectId}` : "—")}</div>
-                        {canManage && !isTerminalStage(detail.stage) && (
-                          <div className="mt-2 flex flex-wrap gap-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              data-testid="opportunity-link-project"
-                              onClick={() => void openDetail(detail.id, { startEditing: true })}
-                            >
-                              {t("opportunities.project.link")}
-                            </Button>
-                            {!detail.operationalProjectId && canStartDesign && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                data-testid="opportunity-create-operational-project"
-                                onClick={() => navigate(`/admin/operational-projects?create=1&customerId=${detail.customerId}&returnOpportunity=${detail.id}&returnMode=link`)}
-                              >
-                                <Plus className="mr-1.5 h-4 w-4" />
-                                {t("opportunities.project.create")}
-                              </Button>
-                            )}
-                            {detail.operationalProjectId && canManageWorkPackages && (
-                              <Button
-                                size="sm"
-                                data-testid="opportunity-assign-department-work"
-                                onClick={() => navigate(`/admin/work-packages?create=1&projectId=${detail.operationalProjectId}&opportunityId=${detail.id}`)}
-                              >
-                                <Plus className="mr-1.5 h-4 w-4" />
-                                {t("workPackages.action.assignDepartment")}
-                              </Button>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                      <div>
-                        <div className="text-xs text-muted-foreground">{t("opportunities.field.estimatedValue")}</div>
-                        <div className="tabular-nums">{formatVnd(detail.estimatedValue)}</div>
-                      </div>
-                      <div>
-                        <div className="text-xs text-muted-foreground">{t("opportunities.field.winProbability")}</div>
-                        <div>{detail.winProbability}%</div>
-                      </div>
-                      <div>
-                        <div className="text-xs text-muted-foreground">{t("opportunities.field.expectedCloseDate")}</div>
-                        <div>{detail.expectedCloseDate ? new Date(detail.expectedCloseDate).toLocaleDateString() : "—"}</div>
-                      </div>
-                      <div>
-                        <div className="text-xs text-muted-foreground">{t("opportunities.field.createdAt")}</div>
-                        <div>{new Date(detail.createdAt).toLocaleString()}</div>
-                      </div>
-                      <div>
-                        <div className="text-xs text-muted-foreground">{t("opportunities.field.updatedAt")}</div>
-                        <div>{new Date(detail.updatedAt).toLocaleString()}</div>
-                      </div>
-                      {detail.closedAt && (
+                <Tabs defaultValue="general" className="flex min-h-0 flex-col">
+                  <TabsList className="h-auto w-full shrink-0 justify-start overflow-x-auto">
+                    <TabsTrigger className="h-12 shrink-0" value="general">
+                      {t("opportunities.tab.general")}
+                    </TabsTrigger>
+                    {canViewQuotes && (
+                      <TabsTrigger
+                        className="h-12 shrink-0"
+                        value="quotes"
+                        data-testid="opportunity-quotes-tab"
+                      >
+                        {t("opportunities.tab.quotes")} ({opportunityQuotes.length})
+                      </TabsTrigger>
+                    )}
+                    <TabsTrigger className="h-12 shrink-0" value="timeline">
+                      {t("opportunities.tab.timeline")} ({detail.activities.length})
+                    </TabsTrigger>
+                    <TabsTrigger className="h-12 shrink-0" value="audit">
+                      {t("opportunities.tab.audit")} ({auditItems.length})
+                    </TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent
+                    value="general"
+                    className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain pr-1 pt-3"
+                  >
+                    {!editing ? (
+                      <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>
-                          <div className="text-xs text-muted-foreground">{t("opportunities.field.closedAt")}</div>
-                          <div>{new Date(detail.closedAt).toLocaleString()}</div>
-                        </div>
-                      )}
-                      {detail.stage === "Won" && (detail.wonQuoteId || detail.wonTenderId) && (
-                        <div className="col-span-2">
                           <div className="text-xs text-muted-foreground">
-                            {detail.wonQuoteId ? t("opportunities.field.wonQuote") : t("opportunities.field.wonTender")}
+                            {t("opportunities.field.customer")}
                           </div>
-                          <div>#{detail.wonQuoteId ?? detail.wonTenderId}</div>
+                          <div>{detail.customerName ?? `#${detail.customerId}`}</div>
                         </div>
-                      )}
-                      {canViewContracts && detail.contracts.length > 0 && (
-                        <div className="col-span-2">
+                        <div>
                           <div className="text-xs text-muted-foreground">
-                            {t("opportunities.field.contracts")}
+                            {t("opportunities.field.owner")}
                           </div>
-                          <div className="mt-1 flex flex-wrap gap-2">
-                            {detail.contracts.map((contract) => (
-                              <Button
-                                key={contract.id}
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => navigate(`/admin/contracts/${contract.id}`)}
-                              >
-                                {contract.contractNumber}
-                              </Button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      {detail.stage === "Lost" && detail.lostReasonCode && (
-                        <>
                           <div>
-                            <div className="text-xs text-muted-foreground">{t("opportunities.field.lostReason")}</div>
-                            <div>
-                              {lostReasons.find((r) => r.code === detail.lostReasonCode)?.name ?? detail.lostReasonCode}
-                            </div>
+                            {detail.ownerName ??
+                              (detail.ownerUserId ? `#${detail.ownerUserId}` : "—")}
                           </div>
-                          {detail.lostNote && (
-                            <div className="col-span-2">
-                              <div className="text-xs text-muted-foreground">{t("opportunities.field.lostNote")}</div>
-                              <div className="whitespace-pre-wrap">{detail.lostNote}</div>
+                        </div>
+                        <div className="col-span-2">
+                          <div className="text-xs text-muted-foreground">
+                            {t("opportunities.field.operationalProject")}
+                          </div>
+                          <div>
+                            {projects.find((project) => project.id === detail.operationalProjectId)
+                              ?.name ??
+                              (detail.operationalProjectId
+                                ? `#${detail.operationalProjectId}`
+                                : "—")}
+                          </div>
+                          {canManage && !isTerminalStage(detail.stage) && (
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                data-testid="opportunity-link-project"
+                                onClick={() => void openDetail(detail.id, { startEditing: true })}
+                              >
+                                {t("opportunities.project.link")}
+                              </Button>
+                              {!detail.operationalProjectId && canStartDesign && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  data-testid="opportunity-create-operational-project"
+                                  onClick={() =>
+                                    navigate(
+                                      `/admin/operational-projects?create=1&customerId=${detail.customerId}&returnOpportunity=${detail.id}&returnMode=link`,
+                                    )
+                                  }
+                                >
+                                  <Plus className="mr-1.5 h-4 w-4" />
+                                  {t("opportunities.project.create")}
+                                </Button>
+                              )}
+                              {detail.operationalProjectId && canManageWorkPackages && (
+                                <Button
+                                  size="sm"
+                                  data-testid="opportunity-assign-department-work"
+                                  onClick={() =>
+                                    navigate(
+                                      `/admin/work-packages?create=1&projectId=${detail.operationalProjectId}&opportunityId=${detail.id}`,
+                                    )
+                                  }
+                                >
+                                  <Plus className="mr-1.5 h-4 w-4" />
+                                  {t("workPackages.action.assignDepartment")}
+                                </Button>
+                              )}
                             </div>
                           )}
-                        </>
-                      )}
-                      {detail.note && (
-                        <div className="col-span-2">
-                          <div className="text-xs text-muted-foreground">{t("opportunities.field.note")}</div>
-                          <div className="whitespace-pre-wrap">{detail.note}</div>
-                        </div>
-                      )}
-                    </div>
-                  ) : editForm && (
-                    <div className="space-y-3">
-                      <div>
-                        <Label>{t("opportunities.field.name")}</Label>
-                        <Input value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} />
-                      </div>
-                      <div>
-                        <Label>{t("opportunities.field.customer")}</Label>
-                        <Select
-                          value={String(editForm.customerId)}
-                          onValueChange={(v) => setEditForm({ ...editForm, customerId: Number(v), operationalProjectId: null })}
-                        >
-                          <SelectTrigger><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            {customers.map((c) => (
-                              <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label>{t("opportunities.field.operationalProject")}</Label>
-                        <SearchableSelect
-                          value={editForm.operationalProjectId ? String(editForm.operationalProjectId) : null}
-                          onChange={(value) => setEditForm({ ...editForm, operationalProjectId: Number(value) })}
-                          options={projectOptions}
-                          disabled={!editForm.customerId || projectLoading || !!projectLoadError}
-                          ariaLabel={t("opportunities.field.operationalProject")}
-                          placeholder={t("opportunities.project.select")}
-                        />
-                        {projectLoadError && <p role="alert" className="text-sm text-destructive">{projectLoadError}</p>}
-                        {!detail.operationalProjectId && canStartDesign && (
-                          <Button variant="link" className="h-auto p-0" asChild>
-                            <Link to={`/admin/operational-projects?create=1&customerId=${editForm.customerId}&returnOpportunity=${detail.id}&returnMode=link`}>
-                              {t("opportunities.project.create")}
-                            </Link>
-                          </Button>
-                        )}
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <Label>{t("opportunities.field.estimatedValue")}</Label>
-                          <Input
-                            inputMode="numeric"
-                            value={editForm.estimatedValue ? formatVnd(editForm.estimatedValue) : ""}
-                            onChange={(e) => setEditForm({ ...editForm, estimatedValue: parseVnd(e.target.value) })}
-                            placeholder="0"
-                          />
                         </div>
                         <div>
-                          <Label>{t("opportunities.field.winProbability")}</Label>
-                          <div className="flex items-center gap-2">
-                            <Slider
-                              min={0}
-                              max={100}
-                              step={5}
-                              value={[editForm.winProbability]}
-                              onValueChange={([next]) => setEditForm({ ...editForm, winProbability: next })}
-                              className="flex-1"
-                              aria-label={t("opportunities.field.winProbability")}
-                            />
-                            <Input
-                              type="number"
-                              min={0}
-                              max={100}
-                              value={editForm.winProbability}
-                              onChange={(e) => setEditForm({ ...editForm, winProbability: Number(e.target.value) })}
-                              className="w-16"
-                            />
+                          <div className="text-xs text-muted-foreground">
+                            {t("opportunities.field.estimatedValue")}
+                          </div>
+                          <div className="tabular-nums">{formatVnd(detail.estimatedValue)}</div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-muted-foreground">
+                            {t("opportunities.field.winProbability")}
+                          </div>
+                          <div>{detail.winProbability}%</div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-muted-foreground">
+                            {t("opportunities.field.expectedCloseDate")}
+                          </div>
+                          <div>
+                            {detail.expectedCloseDate
+                              ? new Date(detail.expectedCloseDate).toLocaleDateString()
+                              : "—"}
                           </div>
                         </div>
-                      </div>
-                      {/* Owner and close date share a row, the way the create
-                          form already lays them out. A full-width date field
-                          strands its browser-drawn calendar icon far from the
-                          value. */}
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        {canSeeAll && (
+                        <div>
+                          <div className="text-xs text-muted-foreground">
+                            {t("opportunities.field.createdAt")}
+                          </div>
+                          <div>{new Date(detail.createdAt).toLocaleString()}</div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-muted-foreground">
+                            {t("opportunities.field.updatedAt")}
+                          </div>
+                          <div>{new Date(detail.updatedAt).toLocaleString()}</div>
+                        </div>
+                        {detail.closedAt && (
                           <div>
-                            <Label>{t("opportunities.field.owner")}</Label>
+                            <div className="text-xs text-muted-foreground">
+                              {t("opportunities.field.closedAt")}
+                            </div>
+                            <div>{new Date(detail.closedAt).toLocaleString()}</div>
+                          </div>
+                        )}
+                        {detail.stage === "Won" && (detail.wonQuoteId || detail.wonTenderId) && (
+                          <div className="col-span-2">
+                            <div className="text-xs text-muted-foreground">
+                              {detail.wonQuoteId
+                                ? t("opportunities.field.wonQuote")
+                                : t("opportunities.field.wonTender")}
+                            </div>
+                            <div>#{detail.wonQuoteId ?? detail.wonTenderId}</div>
+                          </div>
+                        )}
+                        {canViewContracts && detail.contracts.length > 0 && (
+                          <div className="col-span-2">
+                            <div className="text-xs text-muted-foreground">
+                              {t("opportunities.field.contracts")}
+                            </div>
+                            <div className="mt-1 flex flex-wrap gap-2">
+                              {detail.contracts.map((contract) => (
+                                <Button
+                                  key={contract.id}
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => navigate(`/admin/contracts/${contract.id}`)}
+                                >
+                                  {contract.contractNumber}
+                                </Button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {detail.stage === "Lost" && detail.lostReasonCode && (
+                          <>
+                            <div>
+                              <div className="text-xs text-muted-foreground">
+                                {t("opportunities.field.lostReason")}
+                              </div>
+                              <div>
+                                {lostReasons.find((r) => r.code === detail.lostReasonCode)?.name ??
+                                  detail.lostReasonCode}
+                              </div>
+                            </div>
+                            {detail.lostNote && (
+                              <div className="col-span-2">
+                                <div className="text-xs text-muted-foreground">
+                                  {t("opportunities.field.lostNote")}
+                                </div>
+                                <div className="whitespace-pre-wrap">{detail.lostNote}</div>
+                              </div>
+                            )}
+                          </>
+                        )}
+                        {detail.note && (
+                          <div className="col-span-2">
+                            <div className="text-xs text-muted-foreground">
+                              {t("opportunities.field.note")}
+                            </div>
+                            <div className="whitespace-pre-wrap">{detail.note}</div>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      editForm && (
+                        <div className="space-y-3">
+                          <div>
+                            <Label>{t("opportunities.field.name")}</Label>
+                            <Input
+                              value={editForm.name}
+                              onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                            />
+                          </div>
+                          <div>
+                            <Label>{t("opportunities.field.customer")}</Label>
                             <Select
-                              value={editForm.ownerUserId ? String(editForm.ownerUserId) : ""}
-                              onValueChange={(v) => setEditForm({ ...editForm, ownerUserId: Number(v) })}
+                              value={String(editForm.customerId)}
+                              onValueChange={(v) =>
+                                setEditForm({
+                                  ...editForm,
+                                  customerId: Number(v),
+                                  operationalProjectId: null,
+                                })
+                              }
                             >
-                              <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
                               <SelectContent>
-                                {salesUsers.map((u) => (
-                                  <SelectItem key={u.id} value={String(u.id)}>
-                                    {u.fullName}
+                                {customers.map((c) => (
+                                  <SelectItem key={c.id} value={String(c.id)}>
+                                    {c.name}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
                             </Select>
                           </div>
-                        )}
-                        <div>
-                          <Label>{t("opportunities.field.expectedCloseDate")}</Label>
-                          <Input
-                            type="date"
-                            min={DATE_MIN}
-                            max={DATE_MAX}
-                            value={editForm.expectedCloseDate?.slice(0, 10) ?? ""}
-                            onChange={(e) => setEditForm({ ...editForm, expectedCloseDate: e.target.value || null })}
-                          />
+                          <div>
+                            <Label>{t("opportunities.field.operationalProject")}</Label>
+                            <SearchableSelect
+                              value={
+                                editForm.operationalProjectId
+                                  ? String(editForm.operationalProjectId)
+                                  : null
+                              }
+                              onChange={(value) =>
+                                setEditForm({ ...editForm, operationalProjectId: Number(value) })
+                              }
+                              options={projectOptions}
+                              disabled={
+                                !editForm.customerId || projectLoading || !!projectLoadError
+                              }
+                              ariaLabel={t("opportunities.field.operationalProject")}
+                              placeholder={t("opportunities.project.select")}
+                            />
+                            {projectLoadError && (
+                              <p role="alert" className="text-sm text-destructive">
+                                {projectLoadError}
+                              </p>
+                            )}
+                            {!detail.operationalProjectId && canStartDesign && (
+                              <Button variant="link" className="h-auto p-0" asChild>
+                                <Link
+                                  to={`/admin/operational-projects?create=1&customerId=${editForm.customerId}&returnOpportunity=${detail.id}&returnMode=link`}
+                                >
+                                  {t("opportunities.project.create")}
+                                </Link>
+                              </Button>
+                            )}
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <Label>{t("opportunities.field.estimatedValue")}</Label>
+                              <Input
+                                inputMode="numeric"
+                                value={
+                                  editForm.estimatedValue ? formatVnd(editForm.estimatedValue) : ""
+                                }
+                                onChange={(e) =>
+                                  setEditForm({
+                                    ...editForm,
+                                    estimatedValue: parseVnd(e.target.value),
+                                  })
+                                }
+                                placeholder="0"
+                              />
+                            </div>
+                            <div>
+                              <Label>{t("opportunities.field.winProbability")}</Label>
+                              <div className="flex items-center gap-2">
+                                <Slider
+                                  min={0}
+                                  max={100}
+                                  step={5}
+                                  value={[editForm.winProbability]}
+                                  onValueChange={([next]) =>
+                                    setEditForm({ ...editForm, winProbability: next })
+                                  }
+                                  className="flex-1"
+                                  aria-label={t("opportunities.field.winProbability")}
+                                />
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  max={100}
+                                  value={editForm.winProbability}
+                                  onChange={(e) =>
+                                    setEditForm({
+                                      ...editForm,
+                                      winProbability: Number(e.target.value),
+                                    })
+                                  }
+                                  className="w-16"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                          {/* Owner and close date share a row, the way the create
+                          form already lays them out. A full-width date field
+                          strands its browser-drawn calendar icon far from the
+                          value. */}
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            {canSeeAll && (
+                              <div>
+                                <Label>{t("opportunities.field.owner")}</Label>
+                                <Select
+                                  value={editForm.ownerUserId ? String(editForm.ownerUserId) : ""}
+                                  onValueChange={(v) =>
+                                    setEditForm({ ...editForm, ownerUserId: Number(v) })
+                                  }
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="—" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {salesUsers.map((u) => (
+                                      <SelectItem key={u.id} value={String(u.id)}>
+                                        {u.fullName}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            )}
+                            <div>
+                              <Label>{t("opportunities.field.expectedCloseDate")}</Label>
+                              <Input
+                                type="date"
+                                min={DATE_MIN}
+                                max={DATE_MAX}
+                                value={editForm.expectedCloseDate?.slice(0, 10) ?? ""}
+                                onChange={(e) =>
+                                  setEditForm({
+                                    ...editForm,
+                                    expectedCloseDate: e.target.value || null,
+                                  })
+                                }
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <Label>{t("opportunities.field.note")}</Label>
+                            <Textarea
+                              rows={3}
+                              value={editForm.note ?? ""}
+                              onChange={(e) => setEditForm({ ...editForm, note: e.target.value })}
+                            />
+                          </div>
+                          <div className="flex gap-2">
+                            <Button onClick={() => void handleSaveEdit()} disabled={savingEdit}>
+                              {t("common.save")}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              onClick={() => setEditing(false)}
+                              disabled={savingEdit}
+                            >
+                              {t("common.cancel")}
+                            </Button>
+                          </div>
+                        </div>
+                      )
+                    )}
+
+                    {/* Stage transition buttons — hidden when in edit mode or already terminal */}
+                    {!editing && canManage && detail.stage !== "Won" && detail.stage !== "Lost" && (
+                      <div className="rounded-md border p-3 space-y-2 bg-muted/30">
+                        <div className="text-sm font-medium">{t("opportunities.stage.change")}</div>
+                        <div className="flex flex-wrap gap-2">
+                          {[NEXT_PIPELINE_STAGE[detail.stage], "Lost"]
+                            .filter((s): s is OpportunityStage => Boolean(s))
+                            .map((s) => (
+                              <Button
+                                key={s}
+                                size="sm"
+                                variant={
+                                  s === "Won" ? "default" : s === "Lost" ? "destructive" : "outline"
+                                }
+                                onClick={() => {
+                                  if (s === "Won" || s === "Lost") openStageChange(s);
+                                  else {
+                                    setStageTarget(s);
+                                    void (async () => {
+                                      setChangingStage(true);
+                                      try {
+                                        const { data } = await adminApi.changeOpportunityStage(
+                                          detail.id,
+                                          {
+                                            rowVersion: detail.rowVersion,
+                                            targetStage: s,
+                                          },
+                                        );
+                                        setDetail(data);
+                                        setStageTarget(null);
+                                        toast({ title: t("opportunities.updated") });
+                                        await fetchList();
+                                      } catch (err) {
+                                        toast({
+                                          title: t("common.error"),
+                                          description: extractApiError(err),
+                                          variant: "destructive",
+                                        });
+                                      } finally {
+                                        setChangingStage(false);
+                                      }
+                                    })();
+                                  }
+                                }}
+                                disabled={changingStage}
+                              >
+                                {t(`opportunities.stage.${s}`)}
+                              </Button>
+                            ))}
                         </div>
                       </div>
-                      <div>
-                        <Label>{t("opportunities.field.note")}</Label>
-                        <Textarea rows={3} value={editForm.note ?? ""} onChange={(e) => setEditForm({ ...editForm, note: e.target.value })} />
-                      </div>
-                      <div className="flex gap-2">
-                        <Button onClick={() => void handleSaveEdit()} disabled={savingEdit}>{t("common.save")}</Button>
-                        <Button variant="outline" onClick={() => setEditing(false)} disabled={savingEdit}>{t("common.cancel")}</Button>
-                      </div>
-                    </div>
+                    )}
+                  </TabsContent>
+
+                  {canViewQuotes && (
+                    <TabsContent
+                      value="quotes"
+                      className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain pr-1 pt-3"
+                    >
+                      {quotesLoading ? (
+                        <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
+                      ) : opportunityQuotes.length === 0 ? (
+                        <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+                          <p>{t("opportunities.quotes.empty")}</p>
+                          {canCreateQuote && canRaiseQuote(detail) && (
+                            <Button
+                              size="sm"
+                              className="mt-3"
+                              onClick={() =>
+                                navigate(`/admin/quotes?create=1&opportunityId=${detail.id}`)
+                              }
+                            >
+                              <Plus className="mr-1.5 h-4 w-4" />
+                              {t("opportunities.action.createQuote")}
+                            </Button>
+                          )}
+                        </div>
+                      ) : (
+                        <ul className="divide-y rounded-md border">
+                          {opportunityQuotes.map((quote) => (
+                            <li
+                              key={quote.id}
+                              className="flex flex-wrap items-center justify-between gap-2 p-3 text-sm"
+                            >
+                              <div className="flex min-w-0 items-center gap-2">
+                                <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                                <Link
+                                  to={`/admin/quotes/${quote.id}`}
+                                  className="font-mono font-medium text-primary hover:underline"
+                                >
+                                  {quote.code}
+                                </Link>
+                                <span className="text-xs text-muted-foreground">
+                                  v{quote.version}
+                                </span>
+                                {detail.wonQuoteId === quote.id && (
+                                  <Badge
+                                    variant="outline"
+                                    className="border-emerald-200 bg-emerald-50 text-emerald-700"
+                                  >
+                                    {t("opportunities.quotes.won")}
+                                  </Badge>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <Badge variant="outline">
+                                  {t(`quotes.status.${quote.status}`)}
+                                </Badge>
+                                <span className="tabular-nums">{formatVnd(quote.grandTotal)}</span>
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </TabsContent>
                   )}
 
-                  {/* Stage transition buttons — hidden when in edit mode or already terminal */}
-                  {!editing && canManage && detail.stage !== "Won" && detail.stage !== "Lost" && (
-                    <div className="rounded-md border p-3 space-y-2 bg-muted/30">
-                      <div className="text-sm font-medium">{t("opportunities.stage.change")}</div>
-                      <div className="flex flex-wrap gap-2">
-                        {[NEXT_PIPELINE_STAGE[detail.stage], "Lost"].filter((s): s is OpportunityStage => Boolean(s)).map((s) => (
-                          <Button
-                            key={s}
-                            size="sm"
-                            variant={s === "Won" ? "default" : s === "Lost" ? "destructive" : "outline"}
-                            onClick={() => {
-                              if (s === "Won" || s === "Lost") openStageChange(s);
-                              else {
-                                setStageTarget(s);
-                                void (async () => {
-                                  setChangingStage(true);
-                                  try {
-                                    const { data } = await adminApi.changeOpportunityStage(detail.id, {
-                                      rowVersion: detail.rowVersion,
-                                      targetStage: s,
-                                    });
-                                    setDetail(data);
-                                    setStageTarget(null);
-                                    toast({ title: t("opportunities.updated") });
-                                    await fetchList();
-                                  } catch (err) {
-                                    toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
-                                  } finally {
-                                    setChangingStage(false);
-                                  }
-                                })();
-                              }
-                            }}
-                            disabled={changingStage}
+                  <TabsContent
+                    value="timeline"
+                    className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain pr-1 pt-3"
+                  >
+                    {canManage && (
+                      <div className="rounded-md border p-3 space-y-2">
+                        <div className="text-sm font-medium">{t("opportunities.activity.new")}</div>
+                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-[160px_1fr]">
+                          <Select
+                            value={activityType}
+                            onValueChange={(v) => setActivityType(v as OpportunityActivityType)}
                           >
-                            {t(`opportunities.stage.${s}`)}
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {ACTIVITY_TYPES.map((tp) => (
+                                <SelectItem key={tp} value={tp}>
+                                  {t(`opportunities.activity.type.${tp}`)}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Textarea
+                            rows={2}
+                            value={activityContent}
+                            onChange={(e) => setActivityContent(e.target.value)}
+                          />
+                        </div>
+                        <div className="flex justify-end">
+                          <Button
+                            size="sm"
+                            onClick={() => void handleAddActivity()}
+                            disabled={addingActivity || !activityContent.trim()}
+                          >
+                            {t("common.save")}
                           </Button>
+                        </div>
+                      </div>
+                    )}
+                    {detail.activities.length === 0 ? (
+                      <div className="text-sm text-muted-foreground text-center py-4">—</div>
+                    ) : (
+                      <div className="space-y-2">
+                        {detail.activities.map((a) => (
+                          <div key={a.id} className="rounded-md border p-2 text-sm">
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <Badge variant="outline">
+                                {t(`opportunities.activity.type.${a.type}`)}
+                              </Badge>
+                              <span>{new Date(a.occurredAt).toLocaleString()}</span>
+                              {a.createdByName && <span>· {a.createdByName}</span>}
+                            </div>
+                            <div className="mt-1 whitespace-pre-wrap">{a.content}</div>
+                          </div>
                         ))}
                       </div>
-                    </div>
-                  )}
-                </TabsContent>
+                    )}
+                  </TabsContent>
 
-                {canViewQuotes && (
-                  <TabsContent value="quotes" className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain pr-1 pt-3">
-                    {quotesLoading ? (
-                      <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
-                    ) : opportunityQuotes.length === 0 ? (
-                      <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-                        <p>{t("opportunities.quotes.empty")}</p>
-                        {canCreateQuote && canRaiseQuote(detail) && (
-                          <Button
-                            size="sm"
-                            className="mt-3"
-                            onClick={() => navigate(`/admin/quotes?create=1&opportunityId=${detail.id}`)}
-                          >
-                            <Plus className="mr-1.5 h-4 w-4" />
-                            {t("opportunities.action.createQuote")}
-                          </Button>
-                        )}
+                  <TabsContent
+                    value="audit"
+                    className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain pr-1 pt-3"
+                  >
+                    {auditLoading ? (
+                      <div className="text-xs text-muted-foreground py-4 text-center">…</div>
+                    ) : auditItems.length === 0 ? (
+                      <div className="text-sm text-muted-foreground text-center py-4">
+                        {t("opportunities.audit.empty")}
                       </div>
                     ) : (
-                      <ul className="divide-y rounded-md border">
-                        {opportunityQuotes.map((quote) => (
-                          <li key={quote.id} className="flex flex-wrap items-center justify-between gap-2 p-3 text-sm">
-                            <div className="flex min-w-0 items-center gap-2">
-                              <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
-                              <Link to={`/admin/quotes/${quote.id}`} className="font-mono font-medium text-primary hover:underline">
-                                {quote.code}
-                              </Link>
-                              <span className="text-xs text-muted-foreground">v{quote.version}</span>
-                              {detail.wonQuoteId === quote.id && (
-                                <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700">
-                                  {t("opportunities.quotes.won")}
-                                </Badge>
+                      <ul className="space-y-1 text-xs">
+                        {auditItems.map((a) => (
+                          <li key={a.id} className="rounded border px-2 py-1.5">
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                              <Badge variant="outline">
+                                {a.action.startsWith("opportunity.stage")
+                                  ? t("opportunities.audit.actionStage")
+                                  : a.action.endsWith(".create")
+                                    ? t("opportunities.audit.actionCreate")
+                                    : a.action.endsWith(".update")
+                                      ? t("opportunities.audit.actionUpdate")
+                                      : a.action.endsWith(".delete")
+                                        ? t("opportunities.audit.actionDelete")
+                                        : a.action}
+                              </Badge>
+                              <span>{new Date(a.createdAt).toLocaleString()}</span>
+                              {a.actorName && <span>· {a.actorName}</span>}
+                              {a.status !== "success" && (
+                                <Badge variant="destructive">{a.status}</Badge>
                               )}
                             </div>
-                            <div className="flex items-center gap-3">
-                              <Badge variant="outline">{t(`quotes.status.${quote.status}`)}</Badge>
-                              <span className="tabular-nums">{formatVnd(quote.grandTotal)}</span>
-                            </div>
+                            <div className="mt-1">{a.message}</div>
                           </li>
                         ))}
                       </ul>
                     )}
                   </TabsContent>
-                )}
+                </Tabs>
 
-                <TabsContent value="timeline" className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain pr-1 pt-3">
-                  {canManage && (
-                    <div className="rounded-md border p-3 space-y-2">
-                      <div className="text-sm font-medium">{t("opportunities.activity.new")}</div>
-                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-[160px_1fr]">
-                        <Select value={activityType} onValueChange={(v) => setActivityType(v as OpportunityActivityType)}>
-                          <SelectTrigger><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            {ACTIVITY_TYPES.map((tp) => (
-                              <SelectItem key={tp} value={tp}>{t(`opportunities.activity.type.${tp}`)}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Textarea rows={2} value={activityContent} onChange={(e) => setActivityContent(e.target.value)} />
-                      </div>
-                      <div className="flex justify-end">
-                        <Button size="sm" onClick={() => void handleAddActivity()} disabled={addingActivity || !activityContent.trim()}>
-                          {t("common.save")}
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                  {detail.activities.length === 0 ? (
-                    <div className="text-sm text-muted-foreground text-center py-4">—</div>
-                  ) : (
-                    <div className="space-y-2">
-                      {detail.activities.map((a) => (
-                        <div key={a.id} className="rounded-md border p-2 text-sm">
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <Badge variant="outline">{t(`opportunities.activity.type.${a.type}`)}</Badge>
-                            <span>{new Date(a.occurredAt).toLocaleString()}</span>
-                            {a.createdByName && <span>· {a.createdByName}</span>}
-                          </div>
-                          <div className="mt-1 whitespace-pre-wrap">{a.content}</div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </TabsContent>
-
-                <TabsContent value="audit" className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain pr-1 pt-3">
-                  {auditLoading ? (
-                    <div className="text-xs text-muted-foreground py-4 text-center">…</div>
-                  ) : auditItems.length === 0 ? (
-                    <div className="text-sm text-muted-foreground text-center py-4">
-                      {t("opportunities.audit.empty")}
-                    </div>
-                  ) : (
-                    <ul className="space-y-1 text-xs">
-                      {auditItems.map((a) => (
-                        <li key={a.id} className="rounded border px-2 py-1.5">
-                          <div className="flex items-center gap-2 text-muted-foreground">
-                            <Badge variant="outline">
-                              {a.action.startsWith("opportunity.stage")
-                                ? t("opportunities.audit.actionStage")
-                                : a.action.endsWith(".create")
-                                  ? t("opportunities.audit.actionCreate")
-                                  : a.action.endsWith(".update")
-                                    ? t("opportunities.audit.actionUpdate")
-                                    : a.action.endsWith(".delete")
-                                      ? t("opportunities.audit.actionDelete")
-                                      : a.action}
-                            </Badge>
-                            <span>{new Date(a.createdAt).toLocaleString()}</span>
-                            {a.actorName && <span>· {a.actorName}</span>}
-                            {a.status !== "success" && (
-                              <Badge variant="destructive">{a.status}</Badge>
-                            )}
-                          </div>
-                          <div className="mt-1">{a.message}</div>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </TabsContent>
-              </Tabs>
-
-              <DialogFooter>
-                <Button variant="outline" onClick={closeDetail}>{t("common.close")}</Button>
-              </DialogFooter>
-            </>
+                <DialogFooter>
+                  <Button variant="outline" onClick={closeDetail}>
+                    {t("common.close")}
+                  </Button>
+                </DialogFooter>
+              </>
+            )
           )}
         </DialogContent>
       </Dialog>
 
       {/* ---------- Won / Lost sub-dialog ---------- */}
-      <Dialog open={stageTarget === "Won" || stageTarget === "Lost"} onOpenChange={(o) => !o && setStageTarget(null)}>
+      <Dialog
+        open={stageTarget === "Won" || stageTarget === "Lost"}
+        onOpenChange={(o) => !o && setStageTarget(null)}
+      >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
-              {stageTarget === "Won" ? t("opportunities.stage.won.title") : t("opportunities.stage.lost.title")}
+              {stageTarget === "Won"
+                ? t("opportunities.stage.won.title")
+                : t("opportunities.stage.lost.title")}
             </DialogTitle>
             <DialogDescription>
-              {stageTarget === "Won" ? t("opportunities.stage.won.description") : t("opportunities.stage.lost.description")}
+              {stageTarget === "Won"
+                ? t("opportunities.stage.won.description")
+                : t("opportunities.stage.lost.description")}
             </DialogDescription>
           </DialogHeader>
           {stageTarget === "Lost" && (
@@ -1634,26 +2070,38 @@ const AdminOpportunities = () => {
                 <div>
                   <Label>{t("opportunities.field.lostReason")}</Label>
                   <Select value={lostReason} onValueChange={setLostReason}>
-                    <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                    <SelectTrigger>
+                      <SelectValue placeholder="—" />
+                    </SelectTrigger>
                     <SelectContent>
                       {lostReasons.map((r) => (
-                        <SelectItem key={r.code} value={r.code}>{r.name}</SelectItem>
+                        <SelectItem key={r.code} value={r.code}>
+                          {r.name}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
                   <Label>{t("opportunities.field.lostNote")}</Label>
-                  <Textarea rows={3} value={lostNote} onChange={(e) => setLostNote(e.target.value)} />
+                  <Textarea
+                    rows={3}
+                    value={lostNote}
+                    onChange={(e) => setLostNote(e.target.value)}
+                  />
                 </div>
               </>
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setStageTarget(null)} disabled={changingStage}>{t("common.cancel")}</Button>
+            <Button variant="outline" onClick={() => setStageTarget(null)} disabled={changingStage}>
+              {t("common.cancel")}
+            </Button>
             <Button
               onClick={() => void handleChangeStage()}
-              disabled={changingStage || (stageTarget === "Lost" && (!lostReason || !lostNote.trim()))}
+              disabled={
+                changingStage || (stageTarget === "Lost" && (!lostReason || !lostNote.trim()))
+              }
             >
               {t("common.save")}
             </Button>

@@ -17,10 +17,20 @@ test.describe("Browser authentication flow", () => {
     });
 
     await page.goto("/login");
-    await expect(page.locator("input[type='text'], input[placeholder*='phone' i], input[placeholder*='điện thoại' i]").first()).toBeVisible();
+    await expect(
+      page
+        .locator(
+          "input[type='text'], input[placeholder*='phone' i], input[placeholder*='điện thoại' i]",
+        )
+        .first(),
+    ).toBeVisible();
 
     // Fill login form
-    const phoneInput = page.locator("input[type='text'], input[placeholder*='phone' i], input[placeholder*='điện thoại' i]").first();
+    const phoneInput = page
+      .locator(
+        "input[type='text'], input[placeholder*='phone' i], input[placeholder*='điện thoại' i]",
+      )
+      .first();
     const passwordInput = page.locator("input[type='password']").first();
     const loginButton = page.getByRole("button", { name: /đăng nhập|login|sign in/i });
 
@@ -30,12 +40,17 @@ test.describe("Browser authentication flow", () => {
 
     // Should redirect to admin dashboard
     await page.waitForURL(/\/admin/, { timeout: 10000 });
-    await expect(page.getByRole("heading", { name: /bảng điều khiển|dashboard|tổng quan/i })).toBeVisible({ timeout: 10000 });
+    await expect(
+      page.getByRole("heading", { name: /bảng điều khiển|dashboard|tổng quan/i }),
+    ).toBeVisible({ timeout: 10000 });
 
     expect(errors, "no JS errors during login flow").toEqual([]);
   });
 
-  test("logged in user can logout and is redirected to login page", async ({ page, loginInBrowserAs }) => {
+  test("logged in user can logout and is redirected to login page", async ({
+    page,
+    loginInBrowserAs,
+  }) => {
     const errors: string[] = [];
     page.on("pageerror", (err) => errors.push(err.message));
     page.on("console", (msg) => {
@@ -48,7 +63,9 @@ test.describe("Browser authentication flow", () => {
     // Login via cookie injection (standard fixture approach)
     await loginInBrowserAs(page, TEST_USERS.superAdmin);
     await page.goto("/admin");
-    await expect(page.getByRole("heading", { name: /bảng điều khiển|dashboard|tổng quan/i })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: /bảng điều khiển|dashboard|tổng quan/i }),
+    ).toBeVisible();
 
     // Click logout button
     const logoutButton = page.getByRole("button", { name: /đăng xuất|logout|sign out/i });
@@ -64,7 +81,11 @@ test.describe("Browser authentication flow", () => {
   test("login page shows validation error for invalid credentials", async ({ page }) => {
     await page.goto("/login");
 
-    const phoneInput = page.locator("input[type='text'], input[placeholder*='phone' i], input[placeholder*='điện thoại' i]").first();
+    const phoneInput = page
+      .locator(
+        "input[type='text'], input[placeholder*='phone' i], input[placeholder*='điện thoại' i]",
+      )
+      .first();
     const passwordInput = page.locator("input[type='password']").first();
     const loginButton = page.getByRole("button", { name: /đăng nhập|login|sign in/i });
 
@@ -72,12 +93,13 @@ test.describe("Browser authentication flow", () => {
     await passwordInput.fill("wrongpassword");
     await loginButton.click();
 
-    await expect(
-      page.getByText(/invalid|sai|không đúng|lỗi|error|failed/i).first()
-    ).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText(/invalid|sai|không đúng|lỗi|error|failed/i).first()).toBeVisible({
+      timeout: 5000,
+    });
     await expect(page).toHaveURL(/\/login(?:\?|$)/);
-    await expect(page.getByRole("heading", { name: /bảng điều khiển|dashboard|tổng quan/i }))
-      .toHaveCount(0);
+    await expect(
+      page.getByRole("heading", { name: /bảng điều khiển|dashboard|tổng quan/i }),
+    ).toHaveCount(0);
     expect(await page.context().cookies()).toEqual([]);
     expect(await page.evaluate(() => localStorage.getItem("token"))).toBeNull();
   });

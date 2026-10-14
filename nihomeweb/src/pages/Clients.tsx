@@ -60,25 +60,38 @@ const Clients = () => {
   const [active, setActive] = useState<"clients" | "partners" | "suppliers">("clients");
   const current = tabs.find((tab) => tab.id === active)!;
 
-  if (loading) return <Layout><PageLoading /></Layout>;
-  if (error) return <Layout><PageError message={error} onRetry={refetch} /></Layout>;
+  if (loading)
+    return (
+      <Layout>
+        <PageLoading />
+      </Layout>
+    );
+  if (error)
+    return (
+      <Layout>
+        <PageError message={error} onRetry={refetch} />
+      </Layout>
+    );
 
   return (
     <Layout>
-      <PageHeader
-        eyebrow={t("cli.eyebrow")}
-        title={t("cli.title")}
-        description={t("cli.desc")}
-      />
+      <PageHeader eyebrow={t("cli.eyebrow")} title={t("cli.title")} description={t("cli.desc")} />
 
       {/* Stats */}
       <section className="py-12 bg-background">
         <div className="container-custom grid grid-cols-1 md:grid-cols-3 gap-5">
           {stats.map((s, i) => (
-            <div key={i} className="bg-gradient-soft border border-border rounded-3xl p-8 text-center hover-lift">
+            <div
+              key={i}
+              className="bg-gradient-soft border border-border rounded-3xl p-8 text-center hover-lift"
+            >
               <s.icon className="w-9 h-9 text-primary mx-auto mb-4" strokeWidth={1.5} />
-              <p className="font-display text-5xl font-extrabold text-gradient-primary mb-1">{s.num}</p>
-              <p className="text-sm text-muted-foreground font-bold uppercase tracking-wider">{s.label}</p>
+              <p className="font-display text-5xl font-extrabold text-gradient-primary mb-1">
+                {s.num}
+              </p>
+              <p className="text-sm text-muted-foreground font-bold uppercase tracking-wider">
+                {s.label}
+              </p>
             </div>
           ))}
         </div>
@@ -90,7 +103,8 @@ const Clients = () => {
           <div className="text-center max-w-2xl mx-auto mb-10">
             <p className="eyebrow text-primary mb-6 justify-center">{t("cli.network.eyebrow")}</p>
             <h2 className="font-display text-4xl md:text-5xl font-extrabold leading-[1.05] tracking-tight">
-              {t("cli.network.titleA")} <span className="text-gradient-primary">{current.label.toLowerCase()}</span>.
+              {t("cli.network.titleA")}{" "}
+              <span className="text-gradient-primary">{current.label.toLowerCase()}</span>.
             </h2>
           </div>
 
@@ -104,7 +118,7 @@ const Clients = () => {
                   "btn-pill px-6 py-3 text-xs uppercase tracking-wider border transition-all",
                   active === tab.id
                     ? "btn-gradient text-white border-transparent"
-                    : "bg-card border-border text-foreground/70 hover:text-foreground"
+                    : "bg-card border-border text-foreground/70 hover:text-foreground",
                 )}
               >
                 {tab.label} <span className="opacity-60 ml-1">({tab.data.length})</span>
@@ -126,14 +140,20 @@ const Clients = () => {
           <div className="text-center max-w-2xl mx-auto mb-14">
             <p className="eyebrow text-primary mb-6 justify-center">{t("cli.testi.eyebrow")}</p>
             <h2 className="font-display text-4xl md:text-5xl font-extrabold leading-[1.05] tracking-tight">
-              {t("cli.testi.titleA")} <span className="text-gradient-primary">{t("cli.testi.titleB")}</span>.
+              {t("cli.testi.titleA")}{" "}
+              <span className="text-gradient-primary">{t("cli.testi.titleB")}</span>.
             </h2>
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {testimonials.map((tm, i) => (
-              <figure key={i} className="bg-card rounded-3xl border border-border p-8 hover-lift relative">
+              <figure
+                key={i}
+                className="bg-card rounded-3xl border border-border p-8 hover-lift relative"
+              >
                 <Quote className="w-10 h-10 text-primary/20 absolute top-6 right-6" />
-                <blockquote className="text-foreground/85 leading-relaxed mb-7">"{tm.quote}"</blockquote>
+                <blockquote className="text-foreground/85 leading-relaxed mb-7">
+                  "{tm.quote}"
+                </blockquote>
                 <figcaption className="border-t border-border pt-5">
                   <p className="font-display font-extrabold">{tm.author}</p>
                   <p className="text-sm text-muted-foreground mt-1">{tm.role}</p>

@@ -320,7 +320,7 @@ function mapService(item: ServiceResponse): ServiceResponse {
   return {
     ...item,
     introBlocks: (item.introBlocks ?? []).map((b) =>
-      b.imageUrl ? { ...b, imageUrl: resolveAssetUrl(b.imageUrl) } : b
+      b.imageUrl ? { ...b, imageUrl: resolveAssetUrl(b.imageUrl) } : b,
     ),
   };
 }
@@ -339,11 +339,13 @@ function mapLogosGrouped(data: LogosGroupedResponse): LogosGroupedResponse {
 export const contentApi = {
   // Activities (pass ?lang= for translation)
   getActivities: (lang = "vi") =>
-    api.get<ActivityResponse[]>(`/activities?lang=${lang}`)
+    api
+      .get<ActivityResponse[]>(`/activities?lang=${lang}`)
       .then((res) => ({ ...res, data: res.data.map(mapActivity) })),
 
   getActivity: (slug: string, lang = "vi") =>
-    api.get<ActivityResponse>(`/activities/${slug}?lang=${lang}`)
+    api
+      .get<ActivityResponse>(`/activities/${slug}?lang=${lang}`)
       .then((res) => ({ ...res, data: mapActivity(res.data) })),
 
   getActivityCategories: (includeInactive = false) =>
@@ -359,37 +361,46 @@ export const contentApi = {
     api.get<EmploymentTypeResponse[]>(`/employment-types?includeInactive=${includeInactive}`),
 
   getRecruitmentDropdownOptions: (type: string) =>
-    api.get<RecruitmentDropdownOptionResponse[]>(`/recruitment-dropdown-options?type=${encodeURIComponent(type)}`),
+    api.get<RecruitmentDropdownOptionResponse[]>(
+      `/recruitment-dropdown-options?type=${encodeURIComponent(type)}`,
+    ),
 
   // News
   getNews: (lang = "vi") =>
-    api.get<NewsResponse[]>(`/news?lang=${lang}`)
+    api
+      .get<NewsResponse[]>(`/news?lang=${lang}`)
       .then((res) => ({ ...res, data: res.data.map(mapNews) })),
 
   getNewsItem: (slug: string, lang = "vi") =>
-    api.get<NewsResponse>(`/news/${slug}?lang=${lang}`)
+    api
+      .get<NewsResponse>(`/news/${slug}?lang=${lang}`)
       .then((res) => ({ ...res, data: mapNews(res.data) })),
 
   // Projects
   getProjects: (lang = "vi") =>
-    api.get<ProjectResponse[]>(`/projects?lang=${lang}`)
+    api
+      .get<ProjectResponse[]>(`/projects?lang=${lang}`)
       .then((res) => ({ ...res, data: res.data.map(mapProject) })),
 
   getProject: (slug: string, lang = "vi") =>
-    api.get<ProjectResponse>(`/projects/${slug}?lang=${lang}`)
+    api
+      .get<ProjectResponse>(`/projects/${slug}?lang=${lang}`)
       .then((res) => ({ ...res, data: mapProject(res.data) })),
 
   // Services
   getServices: (lang = "vi") =>
-    api.get<ServiceResponse[]>(`/services?lang=${lang}`)
+    api
+      .get<ServiceResponse[]>(`/services?lang=${lang}`)
       .then((res) => ({ ...res, data: res.data.map(mapService) })),
   getService: (slug: string, lang = "vi") =>
-    api.get<ServiceResponse>(`/services/${slug}?lang=${lang}`)
+    api
+      .get<ServiceResponse>(`/services/${slug}?lang=${lang}`)
       .then((res) => ({ ...res, data: mapService(res.data) })),
 
   // Logos
   getLogos: () =>
-    api.get<LogosGroupedResponse>("/logos")
+    api
+      .get<LogosGroupedResponse>("/logos")
       .then((res) => ({ ...res, data: mapLogosGrouped(res.data) })),
 
   // Processes
@@ -397,17 +408,21 @@ export const contentApi = {
 
   // Slideshow
   getSlideshow: (lang = "vi") =>
-    api.get<SlideshowResponse[]>(`/slideshow?lang=${lang}`)
+    api
+      .get<SlideshowResponse[]>(`/slideshow?lang=${lang}`)
       .then((res) => ({ ...res, data: res.data.map(mapSlideshow) })),
 
   // About sections
   getAboutSections: (lang = "vi", activeOnly = true) =>
-    api.get<AboutSectionResponse[]>(`/about-sections?lang=${lang}&activeOnly=${activeOnly}`)
-      .then((res) => ({ ...res, data: res.data.map((x) => ({ ...x, imageUrl: resolveAssetUrl(x.imageUrl) })) })),
+    api
+      .get<AboutSectionResponse[]>(`/about-sections?lang=${lang}&activeOnly=${activeOnly}`)
+      .then((res) => ({
+        ...res,
+        data: res.data.map((x) => ({ ...x, imageUrl: resolveAssetUrl(x.imageUrl) })),
+      })),
 
   // Job positions (public)
-  getJobPositions: (lang = "vi") =>
-    api.get<JobPositionResponse[]>(`/job-positions?lang=${lang}`),
+  getJobPositions: (lang = "vi") => api.get<JobPositionResponse[]>(`/job-positions?lang=${lang}`),
 
   uploadCv: (file: File) => {
     const formData = new FormData();
@@ -427,8 +442,7 @@ export const contentApi = {
     api.post<ContactMessageResponse>("/contacts", data),
 
   // Public map embed URL configured in admin Settings
-  getMapEmbed: () =>
-    api.get<{ mapEmbedUrl: string | null }>("/site-settings/map-embed"),
+  getMapEmbed: () => api.get<{ mapEmbedUrl: string | null }>("/site-settings/map-embed"),
 };
 
 // --- Translation API (admin-managed) ---
@@ -436,7 +450,9 @@ export const contentApi = {
 export const translationApi = {
   // Static UI translations
   getTranslationMap: (lang: string) =>
-    api.get<{ languageCode: string; translations: Record<string, string> }>(`/translations/${lang}`),
+    api.get<{ languageCode: string; translations: Record<string, string> }>(
+      `/translations/${lang}`,
+    ),
 
   // Admin: translation pairs
   getPairs: (params?: { category?: string; search?: string }) =>
@@ -451,8 +467,9 @@ export const translationApi = {
     category?: string;
   }) => api.post("/translations/pair", data),
 
-  bulkUpsert: (items: Array<{ key: string; languageCode: string; value: string; category?: string }>) =>
-    api.post("/translations/bulk", items),
+  bulkUpsert: (
+    items: Array<{ key: string; languageCode: string; value: string; category?: string }>,
+  ) => api.post("/translations/bulk", items),
 
   deleteKey: (key: string) => api.delete(`/translations/key/${encodeURIComponent(key)}`),
 
@@ -466,7 +483,7 @@ export const translationApi = {
   saveEntityTranslations: (
     entityType: string,
     entityId: number,
-    data: { languageCode: string; translations: Record<string, string> }
+    data: { languageCode: string; translations: Record<string, string> },
   ) => api.post(`/translations/entity/${entityType}/${entityId}`, data),
 
   deleteEntityTranslations: (entityType: string, entityId: number) =>

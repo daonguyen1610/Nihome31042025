@@ -63,7 +63,12 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
   const navigate = useNavigate();
   const { t, lang } = useI18n();
   const { toast } = useToast();
-  const { data: existing, loading, error, refetch } = useProject(mode === "edit" ? (slug ?? "") : "");
+  const {
+    data: existing,
+    loading,
+    error,
+    refetch,
+  } = useProject(mode === "edit" ? (slug ?? "") : "");
   const { data: categories } = useProjectCategories(true);
   const [data, setData] = useState<FormData>(empty);
   const [initialized, setInitialized] = useState(false);
@@ -117,7 +122,11 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!data.name.trim()) {
-      toast({ title: t("form.required"), description: t("proj.field.name"), variant: "destructive" });
+      toast({
+        title: t("form.required"),
+        description: t("proj.field.name"),
+        variant: "destructive",
+      });
       return;
     }
     let imageUrl = data.imageUrl || "/placeholder.svg";
@@ -161,7 +170,10 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
       } else {
         await adminApi.updateProject(data.id, payload);
       }
-      toast({ title: mode === "create" ? t("form.created") : t("form.updated"), description: data.name });
+      toast({
+        title: mode === "create" ? t("form.created") : t("form.updated"),
+        description: data.name,
+      });
       navigate("/admin/projects");
     } catch {
       toast({ title: t("common.error"), variant: "destructive" });
@@ -171,8 +183,18 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
     }
   };
 
-  if (mode === "edit" && loading) return <AdminLayout><PageLoading /></AdminLayout>;
-  if (mode === "edit" && error) return <AdminLayout><PageError message={error} onRetry={refetch} /></AdminLayout>;
+  if (mode === "edit" && loading)
+    return (
+      <AdminLayout>
+        <PageLoading />
+      </AdminLayout>
+    );
+  if (mode === "edit" && error)
+    return (
+      <AdminLayout>
+        <PageError message={error} onRetry={refetch} />
+      </AdminLayout>
+    );
 
   return (
     <AdminLayout>
@@ -187,195 +209,206 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
             <h1 className="text-2xl font-semibold tracking-tight lg:text-3xl">
               {mode === "create" ? t("proj.addTitle") : t("proj.editTitle")}
             </h1>
-            <p className="text-sm text-muted-foreground">
-              {mode === "edit" && data.slug}
-            </p>
+            <p className="text-sm text-muted-foreground">{mode === "edit" && data.slug}</p>
           </div>
         </header>
 
         <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <div className="lg:col-span-2 space-y-5">
+          <div className="lg:col-span-2 space-y-5">
+            {/* ── Thông tin cơ bản ── */}
+            <div className="rounded-lg border bg-card p-6">
+              <h2 className="font-bold mb-4">{t("form.basicInfo")}</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Field label={t("proj.field.name") + " *"} className="md:col-span-2">
+                  <input
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    value={data.name}
+                    onChange={(e) => update("name", e.target.value)}
+                    placeholder="Dự án nhà máy ABC..."
+                    required
+                  />
+                </Field>
+                <Field label={t("proj.field.client")}>
+                  <input
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    value={data.client}
+                    onChange={(e) => update("client", e.target.value)}
+                    placeholder="Tên chủ đầu tư"
+                  />
+                </Field>
+                <Field label={t("proj.field.location")}>
+                  <input
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    value={data.location}
+                    onChange={(e) => update("location", e.target.value)}
+                    placeholder="Tỉnh / thành phố"
+                  />
+                </Field>
+                <Field label={t("proj.scale")}>
+                  <input
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    value={data.scale}
+                    onChange={(e) => update("scale", e.target.value)}
+                    placeholder="15.000 m²"
+                  />
+                </Field>
+                <Field label={t("proj.field.year")}>
+                  <input
+                    type="number"
+                    min="1990"
+                    max="2100"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    value={data.year ?? ""}
+                    onChange={(e) => update("year", e.target.value)}
+                    placeholder={String(new Date().getFullYear())}
+                  />
+                </Field>
+                <Field label={t("proj.field.category")}>
+                  <select
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    value={data.categoryId != null ? String(data.categoryId) : ""}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      const found = categoryOptions.find((opt) => String(opt.id) === v);
+                      setData((d) => ({
+                        ...d,
+                        categoryId: found?.id ?? null,
+                        category: found?.name ?? "",
+                      }));
+                    }}
+                  >
+                    <option value="">-- Chọn danh mục --</option>
+                    {categoryOptions.map((opt) => (
+                      <option key={opt.id} value={opt.id}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label={t("proj.field.status")}>
+                  <select
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    value={data.status}
+                    onChange={(e) => update("status", e.target.value)}
+                  >
+                    <option value="ongoing">{t("proj.ongoing")}</option>
+                    <option value="completed">{t("proj.completed")}</option>
+                  </select>
+                </Field>
+                <Field label={t("proj.field.scope")} className="md:col-span-2">
+                  <input
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    value={data.scope}
+                    onChange={(e) => update("scope", e.target.value)}
+                    placeholder="Thiết kế, thi công, hoàn thiện..."
+                  />
+                </Field>
+              </div>
+            </div>
 
-          {/* ── Thông tin cơ bản ── */}
-          <div className="rounded-lg border bg-card p-6">
-            <h2 className="font-bold mb-4">{t("form.basicInfo")}</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Field label={t("proj.field.name") + " *"} className="md:col-span-2">
-                <input
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  value={data.name}
-                  onChange={(e) => update("name", e.target.value)}
-                  placeholder="Dự án nhà máy ABC..."
-                  required
+            {/* ── Mô tả ── */}
+            <div className="rounded-lg border bg-card p-6">
+              <h2 className="font-bold mb-4">{t("form.content")}</h2>
+              <Field label={t("proj.field.description")}>
+                <textarea
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 min-h-24"
+                  value={data.description ?? ""}
+                  onChange={(e) => update("description", e.target.value)}
+                  placeholder="Mô tả tổng quan về dự án..."
                 />
               </Field>
-              <Field label={t("proj.field.client")}>
-                <input
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  value={data.client}
-                  onChange={(e) => update("client", e.target.value)}
-                  placeholder="Tên chủ đầu tư"
+            </div>
+
+            {/* ── Rich content blocks ── */}
+            <div className="rounded-lg border bg-card p-6">
+              <h2 className="font-bold mb-4">{t("form.content")}</h2>
+              <ContentBlockEditor
+                value={data.content}
+                onChange={(items) => update("content", items)}
+                folder={`projects/${data.slug || slugify(data.name)}`}
+              />
+            </div>
+
+            {/* ── Thách thức & Giải pháp ── */}
+            <div className="rounded-lg border bg-card p-6">
+              <h2 className="font-bold mb-4">
+                {t("proj.field.challenges")} & {t("proj.field.solutions")}
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <ListEditor
+                  label={t("proj.field.challenges")}
+                  items={data.challenges}
+                  onChange={(items) => update("challenges", items)}
+                  placeholder="Thêm thách thức..."
                 />
-              </Field>
-              <Field label={t("proj.field.location")}>
-                <input
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  value={data.location}
-                  onChange={(e) => update("location", e.target.value)}
-                  placeholder="Tỉnh / thành phố"
+                <ListEditor
+                  label={t("proj.field.solutions")}
+                  items={data.solutions}
+                  onChange={(items) => update("solutions", items)}
+                  placeholder="Thêm giải pháp..."
                 />
-              </Field>
-              <Field label={t("proj.scale")}>
-                <input
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  value={data.scale}
-                  onChange={(e) => update("scale", e.target.value)}
-                  placeholder="15.000 m²"
-                />
-              </Field>
-              <Field label={t("proj.field.year")}>
-                <input
-                  type="number"
-                  min="1990"
-                  max="2100"
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  value={data.year ?? ""}
-                  onChange={(e) => update("year", e.target.value)}
-                  placeholder={String(new Date().getFullYear())}
-                />
-              </Field>
-              <Field label={t("proj.field.category")}>
-                <select
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  value={data.categoryId != null ? String(data.categoryId) : ""}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    const found = categoryOptions.find((opt) => String(opt.id) === v);
-                    setData((d) => ({ ...d, categoryId: found?.id ?? null, category: found?.name ?? "" }));
+              </div>
+            </div>
+
+            <div className="rounded-lg border bg-card p-6">
+              <h2 className="font-bold mb-4">{t("projDetail.highlights")}</h2>
+              <HighlightsEditor
+                items={data.highlights}
+                onChange={(items) => update("highlights", items)}
+              />
+            </div>
+          </div>
+
+          {/* ── Sidebar ── */}
+          <div className="space-y-5">
+            <div className="rounded-lg border bg-card p-6">
+              <h2 className="font-bold mb-4">{t("form.media")}</h2>
+              <Field label={t("proj.field.image") + " *"}>
+                <FeaturedImageUploader
+                  imageUrl={data.imageUrl}
+                  pendingPreview={pendingImagePreview}
+                  pendingFileName={pendingImageFile?.name}
+                  onUrlChange={(url) => update("imageUrl", url)}
+                  onFileSelected={(file) => {
+                    setPendingImageFile(file);
+                    toast({ title: t("form.updated"), description: file.name });
                   }}
-                >
-                  <option value="">-- Chọn danh mục --</option>
-                  {categoryOptions.map((opt) => (
-                    <option key={opt.id} value={opt.id}>{opt.label}</option>
-                  ))}
-                </select>
-              </Field>
-              <Field label={t("proj.field.status")}>
-                <select
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  value={data.status}
-                  onChange={(e) => update("status", e.target.value)}
-                >
-                  <option value="ongoing">{t("proj.ongoing")}</option>
-                  <option value="completed">{t("proj.completed")}</option>
-                </select>
-              </Field>
-              <Field label={t("proj.field.scope")} className="md:col-span-2">
-                <input
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  value={data.scope}
-                  onChange={(e) => update("scope", e.target.value)}
-                  placeholder="Thiết kế, thi công, hoàn thiện..."
+                  onClearPending={() => setPendingImageFile(null)}
+                  disabled={uploadingImage}
                 />
               </Field>
             </div>
-          </div>
 
-          {/* ── Mô tả ── */}
-          <div className="rounded-lg border bg-card p-6">
-            <h2 className="font-bold mb-4">{t("form.content")}</h2>
-            <Field label={t("proj.field.description")}>
-              <textarea
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 min-h-24"
-                value={data.description ?? ""}
-                onChange={(e) => update("description", e.target.value)}
-                placeholder="Mô tả tổng quan về dự án..."
-              />
-            </Field>
-          </div>
-
-          {/* ── Rich content blocks ── */}
-          <div className="rounded-lg border bg-card p-6">
-            <h2 className="font-bold mb-4">{t("form.content")}</h2>
-            <ContentBlockEditor
-              value={data.content}
-              onChange={(items) => update("content", items)}
-              folder={`projects/${data.slug || slugify(data.name)}`}
-            />
-          </div>
-
-          {/* ── Thách thức & Giải pháp ── */}
-          <div className="rounded-lg border bg-card p-6">
-            <h2 className="font-bold mb-4">{t("proj.field.challenges")} & {t("proj.field.solutions")}</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <ListEditor
-                label={t("proj.field.challenges")}
-                items={data.challenges}
-                onChange={(items) => update("challenges", items)}
-                placeholder="Thêm thách thức..."
-              />
-              <ListEditor
-                label={t("proj.field.solutions")}
-                items={data.solutions}
-                onChange={(items) => update("solutions", items)}
-                placeholder="Thêm giải pháp..."
+            <div className="rounded-lg border bg-card p-6">
+              <h2 className="mb-1 text-base font-semibold">{t("media.gallery.title")}</h2>
+              <p className="mb-4 text-xs text-muted-foreground">{t("media.gallery.descProject")}</p>
+              <GalleryEditor
+                items={data.gallery}
+                onChange={(items) => update("gallery", items)}
+                folder={`projects/${data.slug || slugify(data.name)}`}
               />
             </div>
-          </div>
 
-          <div className="rounded-lg border bg-card p-6">
-            <h2 className="font-bold mb-4">{t("projDetail.highlights")}</h2>
-            <HighlightsEditor
-              items={data.highlights}
-              onChange={(items) => update("highlights", items)}
-            />
+            <Button type="submit" disabled={submitting || uploadingImage} className="w-full">
+              <Save className="mr-1.5 h-4 w-4" />
+              {mode === "create" ? t("form.create") : t("form.update")}
+            </Button>
           </div>
-        </div>
-
-        {/* ── Sidebar ── */}
-        <div className="space-y-5">
-          <div className="rounded-lg border bg-card p-6">
-            <h2 className="font-bold mb-4">{t("form.media")}</h2>
-            <Field label={t("proj.field.image") + " *"}>
-              <FeaturedImageUploader
-                imageUrl={data.imageUrl}
-                pendingPreview={pendingImagePreview}
-                pendingFileName={pendingImageFile?.name}
-                onUrlChange={(url) => update("imageUrl", url)}
-                onFileSelected={(file) => {
-                  setPendingImageFile(file);
-                  toast({ title: t("form.updated"), description: file.name });
-                }}
-                onClearPending={() => setPendingImageFile(null)}
-                disabled={uploadingImage}
-              />
-            </Field>
-          </div>
-
-          <div className="rounded-lg border bg-card p-6">
-            <h2 className="mb-1 text-base font-semibold">{t("media.gallery.title")}</h2>
-            <p className="mb-4 text-xs text-muted-foreground">
-              {t("media.gallery.descProject")}
-            </p>
-            <GalleryEditor items={data.gallery} onChange={(items) => update("gallery", items)} folder={`projects/${data.slug || slugify(data.name)}`} />
-          </div>
-
-          <Button
-            type="submit"
-            disabled={submitting || uploadingImage}
-            className="w-full"
-          >
-            <Save className="mr-1.5 h-4 w-4" />
-            {mode === "create" ? t("form.create") : t("form.update")}
-          </Button>
-        </div>
-      </form>
+        </form>
       </div>
     </AdminLayout>
   );
 };
 
-const Field = ({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) => (
+const Field = ({
+  label,
+  children,
+  className,
+}: {
+  label: string;
+  children: React.ReactNode;
+  className?: string;
+}) => (
   <div className={["space-y-1.5", className].filter(Boolean).join(" ")}>
     <Label className="text-xs">{label}</Label>
     {children}
@@ -455,7 +488,10 @@ const HighlightsEditor = ({
   return (
     <div className="space-y-2">
       {items.map((item, index) => (
-        <div key={index} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-2 items-center">
+        <div
+          key={index}
+          className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-2 items-center"
+        >
           <input
             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             value={item.label}
@@ -482,8 +518,7 @@ const HighlightsEditor = ({
         onClick={addItem}
         className="flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed py-2 text-sm text-muted-foreground transition hover:bg-muted"
       >
-        <Plus className="h-3.5 w-3.5" />
-        + Thêm điểm nổi bật
+        <Plus className="h-3.5 w-3.5" />+ Thêm điểm nổi bật
       </button>
     </div>
   );

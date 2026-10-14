@@ -81,11 +81,24 @@ test.describe("NIH-118 — IFC Release (real-user flow)", () => {
     });
     const optId = (await optCreate.json()).id as number;
     for (const status of ["PendingInternalReview", "PresentedToClient"]) {
-      const transition = await api.post(`/api/concept-options/${optId}/status`, { headers: authHeader, data: { status } });
+      const transition = await api.post(`/api/concept-options/${optId}/status`, {
+        headers: authHeader,
+        data: { status },
+      });
       expect(transition.ok(), await transition.text()).toBeTruthy();
     }
-    await approveDesignStage(api, { headers: authHeader, projectId, stage: "Concept", category: "DesignConcept", sourceEntityType: "ConceptOption", sourceRecordIds: [optId] });
-    const finalized = await api.post(`/api/concept-options/${optId}/status`, { headers: authHeader, data: { status: "Finalized" } });
+    await approveDesignStage(api, {
+      headers: authHeader,
+      projectId,
+      stage: "Concept",
+      category: "DesignConcept",
+      sourceEntityType: "ConceptOption",
+      sourceRecordIds: [optId],
+    });
+    const finalized = await api.post(`/api/concept-options/${optId}/status`, {
+      headers: authHeader,
+      data: { status: "Finalized" },
+    });
     expect(finalized.ok(), await finalized.text()).toBeTruthy();
     const basicDocumentIds: number[] = [];
     for (const disciplineCode of ["architecture", "structure", "mep"]) {
@@ -101,12 +114,25 @@ test.describe("NIH-118 — IFC Release (real-user flow)", () => {
       const docId = (await doc.json()).id as number;
       basicDocumentIds.push(docId);
       for (const status of ["SubmittedForReview", "InternallyApproved"]) {
-        const transition = await api.post(`/api/basic-design-docs/${docId}/status`, { headers: authHeader, data: { status } });
+        const transition = await api.post(`/api/basic-design-docs/${docId}/status`, {
+          headers: authHeader,
+          data: { status },
+        });
         expect(transition.ok(), await transition.text()).toBeTruthy();
       }
     }
-    await approveDesignStage(api, { headers: authHeader, projectId, stage: "BasicDesign", category: "DesignBasic", sourceEntityType: "BasicDesignDoc", sourceRecordIds: basicDocumentIds });
-    const unlocked = await api.post(`/api/basic-design-docs/design-project/${projectId}/unlock-shop-drawing`, { headers: authHeader });
+    await approveDesignStage(api, {
+      headers: authHeader,
+      projectId,
+      stage: "BasicDesign",
+      category: "DesignBasic",
+      sourceEntityType: "BasicDesignDoc",
+      sourceRecordIds: basicDocumentIds,
+    });
+    const unlocked = await api.post(
+      `/api/basic-design-docs/design-project/${projectId}/unlock-shop-drawing`,
+      { headers: authHeader },
+    );
     expect(unlocked.ok(), await unlocked.text()).toBeTruthy();
 
     // Approved shop drawing to bundle.
@@ -122,10 +148,20 @@ test.describe("NIH-118 — IFC Release (real-user flow)", () => {
     expect(shopCreate.ok(), await shopCreate.text()).toBeTruthy();
     const shopId = (await shopCreate.json()).id as number;
     for (const status of ["InReview", "Approved"]) {
-      const transition = await api.post(`/api/shop-drawings/${shopId}/status`, { headers: authHeader, data: { status } });
+      const transition = await api.post(`/api/shop-drawings/${shopId}/status`, {
+        headers: authHeader,
+        data: { status },
+      });
       expect(transition.ok(), await transition.text()).toBeTruthy();
     }
-    await approveDesignStage(api, { headers: authHeader, projectId, stage: "ShopDrawing", category: "DesignShopDrawing", sourceEntityType: "ShopDrawing", sourceRecordIds: [shopId] });
+    await approveDesignStage(api, {
+      headers: authHeader,
+      projectId,
+      stage: "ShopDrawing",
+      category: "DesignShopDrawing",
+      sourceEntityType: "ShopDrawing",
+      sourceRecordIds: [shopId],
+    });
 
     // ---------- 2. Open the IFC tab in the browser ----------
     await loginInBrowserAs(page, TEST_USERS.superAdmin);
@@ -147,8 +183,9 @@ test.describe("NIH-118 — IFC Release (real-user flow)", () => {
     await page.getByTestId("ifc-new").click();
     await page.getByTestId("ifc-form-title").fill(releaseTitle);
     const createReleaseResponsePromise = page.waitForResponse(
-      (response) => new URL(response.url()).pathname === "/api/ifc-releases"
-        && response.request().method() === "POST",
+      (response) =>
+        new URL(response.url()).pathname === "/api/ifc-releases" &&
+        response.request().method() === "POST",
     );
     await page.getByTestId("ifc-form-save").click();
     const createReleaseResponse = await createReleaseResponsePromise;
@@ -160,11 +197,15 @@ test.describe("NIH-118 — IFC Release (real-user flow)", () => {
 
     // ---------- 4. Add the approved drawing + a recipient ----------
     // Expand the picker + tick the drawing we created.
-    await page.getByText(/Th\u00eam b\u1ea3n v\u1ebd|Add drawing/i).first().click();
+    await page
+      .getByText(/Th\u00eam b\u1ea3n v\u1ebd|Add drawing/i)
+      .first()
+      .click();
     await page.getByTestId(`ifc-picker-${shopId}`).click();
     const addItemsResponsePromise = page.waitForResponse(
-      (response) => new URL(response.url()).pathname === `/api/ifc-releases/${releaseId}/items`
-        && response.request().method() === "POST",
+      (response) =>
+        new URL(response.url()).pathname === `/api/ifc-releases/${releaseId}/items` &&
+        response.request().method() === "POST",
     );
     await page.getByTestId("ifc-picker-add").click();
     const addItemsResponse = await addItemsResponsePromise;
@@ -172,17 +213,28 @@ test.describe("NIH-118 — IFC Release (real-user flow)", () => {
 
     // Confirm the item landed via the exact release ID, avoiding stale drafts from retries.
     await expect
-      .poll(async () => {
-        const release = await api.get(`/api/ifc-releases/${releaseId}`, { headers: authHeader });
-        if (!release.ok()) return 0;
-        const body = await release.json() as { title: string; items: Array<{ shopDrawingId: number }> };
-        return body.title === releaseTitle && body.items.some((item) => item.shopDrawingId === shopId) ? 1 : 0;
-      }, { timeout: 10_000 })
+      .poll(
+        async () => {
+          const release = await api.get(`/api/ifc-releases/${releaseId}`, { headers: authHeader });
+          if (!release.ok()) return 0;
+          const body = (await release.json()) as {
+            title: string;
+            items: Array<{ shopDrawingId: number }>;
+          };
+          return body.title === releaseTitle &&
+            body.items.some((item) => item.shopDrawingId === shopId)
+            ? 1
+            : 0;
+        },
+        { timeout: 10_000 },
+      )
       .toBe(1);
 
     await page.getByTestId("ifc-recipient-name").fill("E2E ABC Corp");
     await page.getByTestId("ifc-recipient-type").click();
-    await page.getByRole("option", { name: /Nh\u00e0 th\u1ea7u ch\u00ednh|Main contractor/i }).click();
+    await page
+      .getByRole("option", { name: /Nh\u00e0 th\u1ea7u ch\u00ednh|Main contractor/i })
+      .click();
 
     // Wait for the recipient to actually land, the way the drawing step above
     // already does. Releasing needs at least one item and one recipient, so
@@ -203,15 +255,20 @@ test.describe("NIH-118 — IFC Release (real-user flow)", () => {
     await page.getByTestId("ifc-release-confirm").click();
 
     // Header badge flips to Released.
-    await expect(page.getByTestId("ifc-detail")).toContainText(/\u0110\u00e3 ph\u00e1t h\u00e0nh|Released/i);
+    await expect(page.getByTestId("ifc-detail")).toContainText(
+      /\u0110\u00e3 ph\u00e1t h\u00e0nh|Released/i,
+    );
 
     // Sanity — shop drawing is now Released via the API (deterministic).
     await expect
-      .poll(async () => {
-        const drawing = await api.get(`/api/shop-drawings/${shopId}`, { headers: authHeader });
-        if (!drawing.ok()) return "err";
-        return (await drawing.json()).status as string;
-      }, { timeout: 5_000 })
+      .poll(
+        async () => {
+          const drawing = await api.get(`/api/shop-drawings/${shopId}`, { headers: authHeader });
+          if (!drawing.ok()) return "err";
+          return (await drawing.json()).status as string;
+        },
+        { timeout: 5_000 },
+      )
       .toBe("Released");
   });
 

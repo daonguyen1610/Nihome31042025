@@ -55,11 +55,24 @@ test.describe("NIH-117 — Drawing Revisions (real-user flow)", () => {
     expect(optCreate.ok(), await optCreate.text()).toBeTruthy();
     const optId = (await optCreate.json()).id as number;
     for (const status of ["PendingInternalReview", "PresentedToClient"]) {
-      const transition = await api.post(`/api/concept-options/${optId}/status`, { headers: authHeader, data: { status } });
+      const transition = await api.post(`/api/concept-options/${optId}/status`, {
+        headers: authHeader,
+        data: { status },
+      });
       expect(transition.ok(), `${status}: ${await transition.text()}`).toBeTruthy();
     }
-    await approveDesignStage(api, { headers: authHeader, projectId, stage: "Concept", category: "DesignConcept", sourceEntityType: "ConceptOption", sourceRecordIds: [optId] });
-    const finalized = await api.post(`/api/concept-options/${optId}/status`, { headers: authHeader, data: { status: "Finalized" } });
+    await approveDesignStage(api, {
+      headers: authHeader,
+      projectId,
+      stage: "Concept",
+      category: "DesignConcept",
+      sourceEntityType: "ConceptOption",
+      sourceRecordIds: [optId],
+    });
+    const finalized = await api.post(`/api/concept-options/${optId}/status`, {
+      headers: authHeader,
+      data: { status: "Finalized" },
+    });
     expect(finalized.ok(), await finalized.text()).toBeTruthy();
     // BasicDesign → ShopDrawing
     const basicDocumentIds: number[] = [];
@@ -76,12 +89,25 @@ test.describe("NIH-117 — Drawing Revisions (real-user flow)", () => {
       const docId = (await doc.json()).id as number;
       basicDocumentIds.push(docId);
       for (const status of ["SubmittedForReview", "InternallyApproved"]) {
-        const transition = await api.post(`/api/basic-design-docs/${docId}/status`, { headers: authHeader, data: { status } });
+        const transition = await api.post(`/api/basic-design-docs/${docId}/status`, {
+          headers: authHeader,
+          data: { status },
+        });
         expect(transition.ok(), await transition.text()).toBeTruthy();
       }
     }
-    await approveDesignStage(api, { headers: authHeader, projectId, stage: "BasicDesign", category: "DesignBasic", sourceEntityType: "BasicDesignDoc", sourceRecordIds: basicDocumentIds });
-    const unlocked = await api.post(`/api/basic-design-docs/design-project/${projectId}/unlock-shop-drawing`, { headers: authHeader });
+    await approveDesignStage(api, {
+      headers: authHeader,
+      projectId,
+      stage: "BasicDesign",
+      category: "DesignBasic",
+      sourceEntityType: "BasicDesignDoc",
+      sourceRecordIds: basicDocumentIds,
+    });
+    const unlocked = await api.post(
+      `/api/basic-design-docs/design-project/${projectId}/unlock-shop-drawing`,
+      { headers: authHeader },
+    );
     expect(unlocked.ok(), await unlocked.text()).toBeTruthy();
 
     const shopCreate = await api.post("/api/shop-drawings", {
@@ -100,9 +126,11 @@ test.describe("NIH-117 — Drawing Revisions (real-user flow)", () => {
     await loginInBrowserAs(page, TEST_USERS.superAdmin);
     const shopDrawingListPromise = page.waitForResponse((response) => {
       const url = new URL(response.url());
-      return url.pathname === "/api/shop-drawings"
-        && url.searchParams.get("designProjectId") === String(projectId)
-        && response.request().method() === "GET";
+      return (
+        url.pathname === "/api/shop-drawings" &&
+        url.searchParams.get("designProjectId") === String(projectId) &&
+        response.request().method() === "GET"
+      );
     });
     await page.goto(`${baseURL}/admin/design-projects/${projectId}`, {
       waitUntil: "networkidle",
@@ -128,19 +156,24 @@ test.describe("NIH-117 — Drawing Revisions (real-user flow)", () => {
     // ---------- 4. Append R1 via the dialog ----------
     await page.getByTestId("revisions-new").click();
     await page.getByTestId("revisions-form-reason").click();
-    await page.getByRole("option", { name: /Y\u00eau c\u1ea7u kh\u00e1ch|Client request/i }).click();
+    await page
+      .getByRole("option", { name: /Y\u00eau c\u1ea7u kh\u00e1ch|Client request/i })
+      .click();
     await page.getByTestId("revisions-form-note").fill("R1 E2E — client requested door move");
     await page.getByTestId("revisions-form-save").click();
 
     // R1 row appears + is current
     await expect(page.locator('[data-testid^="revision-row-"]').first()).toContainText(/R1/i);
-    await expect(page.locator('[data-testid^="revision-row-"]').first())
-      .toContainText(/\u0110ang s\u1eed d\u1ee5ng|Current/i);
+    await expect(page.locator('[data-testid^="revision-row-"]').first()).toContainText(
+      /\u0110ang s\u1eed d\u1ee5ng|Current/i,
+    );
 
     // ---------- 5. Append R2 — R1 should flip to superseded ----------
     await page.getByTestId("revisions-new").click();
     await page.getByTestId("revisions-form-reason").click();
-    await page.getByRole("option", { name: /\u0110\u1ed3ng b\u1ed9 MEP|MEP coordination/i }).click();
+    await page
+      .getByRole("option", { name: /\u0110\u1ed3ng b\u1ed9 MEP|MEP coordination/i })
+      .click();
     await page.getByTestId("revisions-form-note").fill("R2 E2E — MEP sync tweak");
     await page.getByTestId("revisions-form-save").click();
 
@@ -168,10 +201,12 @@ test.describe("NIH-117 — Drawing Revisions (real-user flow)", () => {
     await page.getByRole("option", { name: "R2" }).click();
     const diffResponsePromise = page.waitForResponse((response) => {
       const url = new URL(response.url());
-      return url.pathname === "/api/drawing-revisions/diff"
-        && url.searchParams.get("fromId") === String(r1.id)
-        && url.searchParams.get("toId") === String(r2.id)
-        && response.request().method() === "GET";
+      return (
+        url.pathname === "/api/drawing-revisions/diff" &&
+        url.searchParams.get("fromId") === String(r1.id) &&
+        url.searchParams.get("toId") === String(r2.id) &&
+        response.request().method() === "GET"
+      );
     });
     await page.getByTestId("revisions-diff-run").click();
     const diffResponse = await diffResponsePromise;

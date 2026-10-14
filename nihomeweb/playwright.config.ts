@@ -32,7 +32,11 @@ export default defineConfig({
   // serial until every mutable fixture has an isolated database namespace.
   workers: process.env.CI ? 1 : undefined,
   reporter: process.env.CI
-    ? [["list"], ["html", { open: "never" }], ["junit", { outputFile: "playwright-report/junit.xml" }]]
+    ? [
+        ["list"],
+        ["html", { open: "never" }],
+        ["junit", { outputFile: "playwright-report/junit.xml" }],
+      ]
     : "list",
   timeout: 30_000,
   expect: { timeout: 5_000 },

@@ -1,11 +1,26 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { CheckCircle2, Download, FileSpreadsheet, Loader2, Send, Upload, XCircle } from "lucide-react";
+import {
+  CheckCircle2,
+  Download,
+  FileSpreadsheet,
+  Loader2,
+  Send,
+  Upload,
+  XCircle,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { extractApiError } from "@/lib/apiError";
 import { useI18n } from "@/lib/i18n";
@@ -77,11 +92,17 @@ export default function TenderEstimatePanel({
       ]);
       setRevisions(data);
       setReadiness(readinessResponse.data);
-      setSelectedId((current) => current && data.some((revision) => revision.id === current)
-        ? current
-        : data[0]?.id ?? null);
+      setSelectedId((current) =>
+        current && data.some((revision) => revision.id === current)
+          ? current
+          : (data[0]?.id ?? null),
+      );
     } catch (error) {
-      toast({ title: t("common.error"), description: extractApiError(error), variant: "destructive" });
+      toast({
+        title: t("common.error"),
+        description: extractApiError(error),
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -97,21 +118,31 @@ export default function TenderEstimatePanel({
   );
   const approved = revisions.some((revision) => revision.status === "Approved");
   const checklistReady = isTenderChecklistEvidenceReady(tender);
-  const canSubmitTender = (tender.status === "Preparing" || tender.status === "Submitted") && readiness?.canSubmit === true;
+  const canSubmitTender =
+    (tender.status === "Preparing" || tender.status === "Submitted") &&
+    readiness?.canSubmit === true;
   const terminal = ["Won", "Lost", "Cancelled"].includes(tender.status);
 
-  const money = (value: number, currency: string) => new Intl.NumberFormat(lang, {
-    style: "currency",
-    currency,
-    maximumFractionDigits: 0,
-  }).format(value);
+  const money = (value: number, currency: string) =>
+    new Intl.NumberFormat(lang, {
+      style: "currency",
+      currency,
+      maximumFractionDigits: 0,
+    }).format(value);
 
   const downloadTemplate = async () => {
     setBusy(true);
     try {
-      saveBlob((await adminApi.downloadTenderEstimateTemplate(tender.id)).data, "tender-estimate-template.csv");
+      saveBlob(
+        (await adminApi.downloadTenderEstimateTemplate(tender.id)).data,
+        "tender-estimate-template.csv",
+      );
     } catch (error) {
-      toast({ title: t("common.error"), description: extractApiError(error), variant: "destructive" });
+      toast({
+        title: t("common.error"),
+        description: extractApiError(error),
+        variant: "destructive",
+      });
     } finally {
       setBusy(false);
     }
@@ -129,7 +160,11 @@ export default function TenderEstimatePanel({
       const errors = importErrorsFrom(error);
       setImportErrors(errors);
       if (errors.length === 0) {
-        toast({ title: t("common.error"), description: extractApiError(error), variant: "destructive" });
+        toast({
+          title: t("common.error"),
+          description: extractApiError(error),
+          variant: "destructive",
+        });
       }
     } finally {
       setBusy(false);
@@ -141,14 +176,21 @@ export default function TenderEstimatePanel({
     if (!selected) return;
     setBusy(true);
     try {
-      if (action === "submit") await adminApi.submitTenderEstimate(tender.id, selected.id, decisionNote.trim() || null);
-      if (action === "approve") await adminApi.approveTenderEstimate(tender.id, selected.id, decisionNote.trim() || null);
-      if (action === "reject") await adminApi.rejectTenderEstimate(tender.id, selected.id, decisionNote.trim() || null);
+      if (action === "submit")
+        await adminApi.submitTenderEstimate(tender.id, selected.id, decisionNote.trim() || null);
+      if (action === "approve")
+        await adminApi.approveTenderEstimate(tender.id, selected.id, decisionNote.trim() || null);
+      if (action === "reject")
+        await adminApi.rejectTenderEstimate(tender.id, selected.id, decisionNote.trim() || null);
       setDecisionNote("");
       toast({ title: t(`tenders.estimate.${action}Success`) });
       await load();
     } catch (error) {
-      toast({ title: t("common.error"), description: extractApiError(error), variant: "destructive" });
+      toast({
+        title: t("common.error"),
+        description: extractApiError(error),
+        variant: "destructive",
+      });
     } finally {
       setBusy(false);
     }
@@ -157,12 +199,19 @@ export default function TenderEstimatePanel({
   const transition = async (status: TenderStatus) => {
     setBusy(true);
     try {
-      const { data } = await adminApi.transitionTender(tender.id, { status, note: decisionNote.trim() || null });
+      const { data } = await adminApi.transitionTender(tender.id, {
+        status,
+        note: decisionNote.trim() || null,
+      });
       onTenderChanged(data);
       setDecisionNote("");
       toast({ title: t("tenders.lifecycle.updated") });
     } catch (error) {
-      toast({ title: t("common.error"), description: extractApiError(error), variant: "destructive" });
+      toast({
+        title: t("common.error"),
+        description: extractApiError(error),
+        variant: "destructive",
+      });
     } finally {
       setBusy(false);
     }
@@ -172,12 +221,16 @@ export default function TenderEstimatePanel({
     if (!submissionChannel.trim()) return;
     setBusy(true);
     try {
-      const { data } = await adminApi.submitTender(tender.id, {
-        submissionChannel: submissionChannel.trim(),
-        receiptReference: receiptReference.trim() || null,
-        note: decisionNote.trim() || null,
-        rowVersion: tender.rowVersion,
-      }, crypto.randomUUID());
+      const { data } = await adminApi.submitTender(
+        tender.id,
+        {
+          submissionChannel: submissionChannel.trim(),
+          receiptReference: receiptReference.trim() || null,
+          note: decisionNote.trim() || null,
+          rowVersion: tender.rowVersion,
+        },
+        crypto.randomUUID(),
+      );
       onTenderChanged(data);
       setSubmitOpen(false);
       setSubmissionChannel("");
@@ -186,7 +239,11 @@ export default function TenderEstimatePanel({
       toast({ title: t("tenders.lifecycle.submitSuccess") });
       await load();
     } catch (error) {
-      toast({ title: t("common.error"), description: extractApiError(error), variant: "destructive" });
+      toast({
+        title: t("common.error"),
+        description: extractApiError(error),
+        variant: "destructive",
+      });
     } finally {
       setBusy(false);
     }
@@ -198,50 +255,105 @@ export default function TenderEstimatePanel({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="font-semibold">{t("tenders.lifecycle.title")}</h2>
-            <p className="mt-1 text-sm text-muted-foreground">{t(`tenders.lifecycle.help.${tender.status}`)}</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {t(`tenders.lifecycle.help.${tender.status}`)}
+            </p>
           </div>
           <Badge variant="outline">{t(`tenders.status.${tender.status}`)}</Badge>
         </div>
         {(tender.status === "Preparing" || tender.status === "Submitted") && (
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
-            <div className={`rounded-md border p-3 text-sm ${checklistReady ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"}`}>
-              {checklistReady ? <CheckCircle2 className="mr-2 inline h-4 w-4" /> : <XCircle className="mr-2 inline h-4 w-4" />}
+            <div
+              className={`rounded-md border p-3 text-sm ${checklistReady ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"}`}
+            >
+              {checklistReady ? (
+                <CheckCircle2 className="mr-2 inline h-4 w-4" />
+              ) : (
+                <XCircle className="mr-2 inline h-4 w-4" />
+              )}
               {checklistReady
                 ? t("tenders.lifecycle.checklistEvidenceReady")
-                : t("tenders.lifecycle.checklistEvidenceGate").replace("{percent}", String(tender.checklistCompletionPercent))}
+                : t("tenders.lifecycle.checklistEvidenceGate").replace(
+                    "{percent}",
+                    String(tender.checklistCompletionPercent),
+                  )}
             </div>
-            <div className={`rounded-md border p-3 text-sm ${approved ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"}`}>
-              {approved ? <CheckCircle2 className="mr-2 inline h-4 w-4" /> : <XCircle className="mr-2 inline h-4 w-4" />}
-              {approved ? t("tenders.lifecycle.estimateApproved") : t("tenders.lifecycle.estimateGate")}
+            <div
+              className={`rounded-md border p-3 text-sm ${approved ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"}`}
+            >
+              {approved ? (
+                <CheckCircle2 className="mr-2 inline h-4 w-4" />
+              ) : (
+                <XCircle className="mr-2 inline h-4 w-4" />
+              )}
+              {approved
+                ? t("tenders.lifecycle.estimateApproved")
+                : t("tenders.lifecycle.estimateGate")}
             </div>
-            <div className={`rounded-md border p-3 text-sm ${planReady ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"}`}>
-              {planReady ? <CheckCircle2 className="mr-2 inline h-4 w-4" /> : <XCircle className="mr-2 inline h-4 w-4" />}
+            <div
+              className={`rounded-md border p-3 text-sm ${planReady ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"}`}
+            >
+              {planReady ? (
+                <CheckCircle2 className="mr-2 inline h-4 w-4" />
+              ) : (
+                <XCircle className="mr-2 inline h-4 w-4" />
+              )}
               {planReady ? t("tenders.lifecycle.planReady") : t("tenders.lifecycle.planGate")}
             </div>
-            <div className={`rounded-md border p-3 text-sm ${financeReady ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"}`}>
-              {financeReady ? <CheckCircle2 className="mr-2 inline h-4 w-4" /> : <XCircle className="mr-2 inline h-4 w-4" />}
-              {financeReady ? t("tenders.lifecycle.financeReady") : t("tenders.lifecycle.financeGate")}
+            <div
+              className={`rounded-md border p-3 text-sm ${financeReady ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"}`}
+            >
+              {financeReady ? (
+                <CheckCircle2 className="mr-2 inline h-4 w-4" />
+              ) : (
+                <XCircle className="mr-2 inline h-4 w-4" />
+              )}
+              {financeReady
+                ? t("tenders.lifecycle.financeReady")
+                : t("tenders.lifecycle.financeGate")}
             </div>
           </div>
         )}
         {readiness && readiness.blockers.length > 0 ? (
-          <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3" data-testid="tender-readiness-blockers">
-            <div className="text-sm font-medium text-amber-950">{t("tenders.lifecycle.blockersTitle")}</div>
+          <div
+            className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3"
+            data-testid="tender-readiness-blockers"
+          >
+            <div className="text-sm font-medium text-amber-950">
+              {t("tenders.lifecycle.blockersTitle")}
+            </div>
             <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-amber-900">
-              {readiness.blockers.map((blocker) => <li key={`${blocker.code}-${blocker.message}`}>{blocker.message}</li>)}
+              {readiness.blockers.map((blocker) => (
+                <li key={`${blocker.code}-${blocker.message}`}>{blocker.message}</li>
+              ))}
             </ul>
           </div>
         ) : null}
         {!terminal && (canSubmit || canMarkResult) && (
           <div className="mt-3 flex flex-wrap gap-2">
             {(tender.status === "Preparing" || tender.status === "Submitted") && canSubmit && (
-              <Button data-testid="tender-submit" disabled={busy || !canSubmitTender} onClick={() => setSubmitOpen(true)}>
-                <Send className="mr-2 h-4 w-4" />{t(tender.status === "Submitted" ? "tenders.lifecycle.resubmit" : "tenders.lifecycle.submit")}
+              <Button
+                data-testid="tender-submit"
+                disabled={busy || !canSubmitTender}
+                onClick={() => setSubmitOpen(true)}
+              >
+                <Send className="mr-2 h-4 w-4" />
+                {t(
+                  tender.status === "Submitted"
+                    ? "tenders.lifecycle.resubmit"
+                    : "tenders.lifecycle.submit",
+                )}
               </Button>
             )}
             {canMarkResult && (
-              <Button data-testid="tender-cancel" variant="outline" disabled={busy} onClick={() => void transition("Cancelled")}>
-                <XCircle className="mr-2 h-4 w-4" />{t("tenders.lifecycle.cancel")}
+              <Button
+                data-testid="tender-cancel"
+                variant="outline"
+                disabled={busy}
+                onClick={() => void transition("Cancelled")}
+              >
+                <XCircle className="mr-2 h-4 w-4" />
+                {t("tenders.lifecycle.cancel")}
               </Button>
             )}
           </div>
@@ -257,37 +369,68 @@ export default function TenderEstimatePanel({
           <div className="space-y-3">
             <div className="space-y-1">
               <Label>{t("tenders.lifecycle.submissionChannel")}</Label>
-              <Input value={submissionChannel} onChange={(event) => setSubmissionChannel(event.target.value)} maxLength={80} />
+              <Input
+                value={submissionChannel}
+                onChange={(event) => setSubmissionChannel(event.target.value)}
+                maxLength={80}
+              />
             </div>
             <div className="space-y-1">
               <Label>{t("tenders.lifecycle.receiptReference")}</Label>
-              <Input value={receiptReference} onChange={(event) => setReceiptReference(event.target.value)} maxLength={200} />
+              <Input
+                value={receiptReference}
+                onChange={(event) => setReceiptReference(event.target.value)}
+                maxLength={200}
+              />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setSubmitOpen(false)} disabled={busy}>{t("common.cancel")}</Button>
-            <Button data-testid="tender-submit-confirm" onClick={() => void submitTender()} disabled={busy || !submissionChannel.trim()}>
-              {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{t("tenders.lifecycle.submit")}
+            <Button variant="outline" onClick={() => setSubmitOpen(false)} disabled={busy}>
+              {t("common.cancel")}
+            </Button>
+            <Button
+              data-testid="tender-submit-confirm"
+              onClick={() => void submitTender()}
+              disabled={busy || !submissionChannel.trim()}
+            >
+              {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {t("tenders.lifecycle.submit")}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <section className="min-w-0 rounded-lg border bg-white p-3 shadow-sm sm:p-4" data-testid="tender-estimates">
+      <section
+        className="min-w-0 rounded-lg border bg-white p-3 shadow-sm sm:p-4"
+        data-testid="tender-estimates"
+      >
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <h2 className="font-semibold">{t("tenders.estimate.title")}</h2>
             <p className="text-sm text-muted-foreground">{t("tenders.estimate.hint")}</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" size="sm" disabled={busy} onClick={() => void downloadTemplate()}>
-              <Download className="mr-2 h-4 w-4" />{t("tenders.estimate.downloadTemplate")}
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={busy}
+              onClick={() => void downloadTemplate()}
+            >
+              <Download className="mr-2 h-4 w-4" />
+              {t("tenders.estimate.downloadTemplate")}
             </Button>
             {canManage && tender.status === "Preparing" && (
               <>
-                <input ref={fileRef} className="hidden" type="file" accept=".csv,text/csv" onChange={(event) => void importFile(event.target.files?.[0])} />
+                <input
+                  ref={fileRef}
+                  className="hidden"
+                  type="file"
+                  accept=".csv,text/csv"
+                  onChange={(event) => void importFile(event.target.files?.[0])}
+                />
                 <Button size="sm" disabled={busy} onClick={() => fileRef.current?.click()}>
-                  <Upload className="mr-2 h-4 w-4" />{t("tenders.estimate.import")}
+                  <Upload className="mr-2 h-4 w-4" />
+                  {t("tenders.estimate.import")}
                 </Button>
               </>
             )}
@@ -302,7 +445,8 @@ export default function TenderEstimatePanel({
                 <li key={`${error.row}-${error.column}-${index}`}>
                   {t("tenders.estimate.errorLocation")
                     .replace("{row}", error.row?.toString() ?? "—")
-                    .replace("{column}", error.column?.toString() ?? "—")}: {error.message}
+                    .replace("{column}", error.column?.toString() ?? "—")}
+                  : {error.message}
                 </li>
               ))}
             </ul>
@@ -310,37 +454,134 @@ export default function TenderEstimatePanel({
         )}
 
         {loading ? (
-          <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />{t("common.loading")}</div>
+          <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            {t("common.loading")}
+          </div>
         ) : revisions.length === 0 ? (
           <div className="mt-4 rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
-            <FileSpreadsheet className="mx-auto mb-2 h-6 w-6" />{t("tenders.estimate.empty")}
+            <FileSpreadsheet className="mx-auto mb-2 h-6 w-6" />
+            {t("tenders.estimate.empty")}
           </div>
         ) : (
           <div className="mt-4 grid gap-4 lg:grid-cols-[15rem_minmax(0,1fr)]">
             <div className="grid min-w-0 gap-2 sm:grid-cols-2 lg:block lg:space-y-2">
               {revisions.map((revision) => (
-                <button key={revision.id} type="button" onClick={() => setSelectedId(revision.id)} className={`min-w-0 rounded-md border p-3 text-left lg:w-full ${revision.id === selectedId ? "border-primary bg-primary/5" : "hover:bg-muted/40"}`}>
-                  <div className="flex items-center justify-between gap-2"><span className="font-medium">{t("tenders.estimate.revision").replace("{version}", String(revision.versionNumber))}</span><Badge variant="outline">{t(`tenders.estimate.status.${revision.status}`)}</Badge></div>
-                  <p className="mt-1 truncate text-xs text-muted-foreground">{revision.sourceFileName}</p>
+                <button
+                  key={revision.id}
+                  type="button"
+                  onClick={() => setSelectedId(revision.id)}
+                  className={`min-w-0 rounded-md border p-3 text-left lg:w-full ${revision.id === selectedId ? "border-primary bg-primary/5" : "hover:bg-muted/40"}`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium">
+                      {t("tenders.estimate.revision").replace(
+                        "{version}",
+                        String(revision.versionNumber),
+                      )}
+                    </span>
+                    <Badge variant="outline">
+                      {t(`tenders.estimate.status.${revision.status}`)}
+                    </Badge>
+                  </div>
+                  <p className="mt-1 truncate text-xs text-muted-foreground">
+                    {revision.sourceFileName}
+                  </p>
                 </button>
               ))}
             </div>
             {selected && (
               <div className="min-w-0 space-y-3">
                 <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-                  {(["costSubtotal", "bidSubtotal", "vatAmount", "grandBidTotal"] as const).map((field) => (
-                    <div key={field} className="rounded-md bg-muted/40 p-3"><div className="text-xs text-muted-foreground">{t(`tenders.estimate.${field}`)}</div><div className="mt-1 font-semibold tabular-nums">{money(selected[field], selected.currency)}</div></div>
-                  ))}
+                  {(["costSubtotal", "bidSubtotal", "vatAmount", "grandBidTotal"] as const).map(
+                    (field) => (
+                      <div key={field} className="rounded-md bg-muted/40 p-3">
+                        <div className="text-xs text-muted-foreground">
+                          {t(`tenders.estimate.${field}`)}
+                        </div>
+                        <div className="mt-1 font-semibold tabular-nums">
+                          {money(selected[field], selected.currency)}
+                        </div>
+                      </div>
+                    ),
+                  )}
                 </div>
-                <div className="max-w-full overflow-x-auto overscroll-x-contain rounded-md border" data-testid="tender-estimate-lines-scroll">
-                  <table className="min-w-[760px] w-full text-sm"><thead className="bg-muted/50"><tr>{["code", "description", "unit", "quantity", "unitCost", "bidUnitPrice", "bidAmount"].map((key) => <th key={key} className="px-2 py-2 text-left text-xs">{t(`tenders.estimate.line.${key}`)}</th>)}</tr></thead><tbody className="divide-y">{selected.lines.map((line) => <tr key={line.id}><td className="px-2 py-2 font-mono text-xs">{line.itemCode}</td><td className="px-2 py-2">{line.description}</td><td className="px-2 py-2">{line.unit}</td><td className="px-2 py-2 text-right tabular-nums">{line.quantity}</td><td className="px-2 py-2 text-right tabular-nums">{money(line.unitCost, selected.currency)}</td><td className="px-2 py-2 text-right tabular-nums">{money(line.bidUnitPrice, selected.currency)}</td><td className="px-2 py-2 text-right tabular-nums font-medium">{money(line.bidAmount, selected.currency)}</td></tr>)}</tbody></table>
+                <div
+                  className="max-w-full overflow-x-auto overscroll-x-contain rounded-md border"
+                  data-testid="tender-estimate-lines-scroll"
+                >
+                  <table className="min-w-[760px] w-full text-sm">
+                    <thead className="bg-muted/50">
+                      <tr>
+                        {[
+                          "code",
+                          "description",
+                          "unit",
+                          "quantity",
+                          "unitCost",
+                          "bidUnitPrice",
+                          "bidAmount",
+                        ].map((key) => (
+                          <th key={key} className="px-2 py-2 text-left text-xs">
+                            {t(`tenders.estimate.line.${key}`)}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {selected.lines.map((line) => (
+                        <tr key={line.id}>
+                          <td className="px-2 py-2 font-mono text-xs">{line.itemCode}</td>
+                          <td className="px-2 py-2">{line.description}</td>
+                          <td className="px-2 py-2">{line.unit}</td>
+                          <td className="px-2 py-2 text-right tabular-nums">{line.quantity}</td>
+                          <td className="px-2 py-2 text-right tabular-nums">
+                            {money(line.unitCost, selected.currency)}
+                          </td>
+                          <td className="px-2 py-2 text-right tabular-nums">
+                            {money(line.bidUnitPrice, selected.currency)}
+                          </td>
+                          <td className="px-2 py-2 text-right tabular-nums font-medium">
+                            {money(line.bidAmount, selected.currency)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-                {((canManage && selected.status === "Draft") || (canApprove && selected.status === "Submitted")) && (
+                {((canManage && selected.status === "Draft") ||
+                  (canApprove && selected.status === "Submitted")) && (
                   <div className="rounded-md border p-3">
-                    <Textarea value={decisionNote} onChange={(event) => setDecisionNote(event.target.value)} maxLength={2000} placeholder={t("tenders.estimate.notePlaceholder")} />
+                    <Textarea
+                      value={decisionNote}
+                      onChange={(event) => setDecisionNote(event.target.value)}
+                      maxLength={2000}
+                      placeholder={t("tenders.estimate.notePlaceholder")}
+                    />
                     <div className="mt-2 flex flex-wrap gap-2">
-                      {canManage && selected.status === "Draft" && <Button size="sm" disabled={busy} onClick={() => void decide("submit")}><Send className="mr-2 h-4 w-4" />{t("tenders.estimate.submit")}</Button>}
-                      {canApprove && selected.status === "Submitted" && <><Button size="sm" disabled={busy} onClick={() => void decide("approve")}><CheckCircle2 className="mr-2 h-4 w-4" />{t("tenders.estimate.approve")}</Button><Button size="sm" variant="destructive" disabled={busy} onClick={() => void decide("reject")}><XCircle className="mr-2 h-4 w-4" />{t("tenders.estimate.reject")}</Button></>}
+                      {canManage && selected.status === "Draft" && (
+                        <Button size="sm" disabled={busy} onClick={() => void decide("submit")}>
+                          <Send className="mr-2 h-4 w-4" />
+                          {t("tenders.estimate.submit")}
+                        </Button>
+                      )}
+                      {canApprove && selected.status === "Submitted" && (
+                        <>
+                          <Button size="sm" disabled={busy} onClick={() => void decide("approve")}>
+                            <CheckCircle2 className="mr-2 h-4 w-4" />
+                            {t("tenders.estimate.approve")}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            disabled={busy}
+                            onClick={() => void decide("reject")}
+                          >
+                            <XCircle className="mr-2 h-4 w-4" />
+                            {t("tenders.estimate.reject")}
+                          </Button>
+                        </>
+                      )}
                     </div>
                   </div>
                 )}

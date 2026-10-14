@@ -67,9 +67,7 @@ test.describe("NIH-141 — Construction Gantt (real-user flow)", () => {
       ),
       (async () => {
         await projectFilter.click();
-        await page
-          .getByRole("option", { name: new RegExp(`E2E-GANTT ${projSuffix}`) })
-          .click();
+        await page.getByRole("option", { name: new RegExp(`E2E-GANTT ${projSuffix}`) }).click();
       })(),
     ]);
     await expect(projectFilter).toContainText(new RegExp(`E2E-GANTT ${projSuffix}`));
@@ -87,9 +85,7 @@ test.describe("NIH-141 — Construction Gantt (real-user flow)", () => {
       { timeout: 15_000 },
     );
     const getResponse = page.waitForResponse(
-      (r) =>
-        r.url().includes("/api/construction-tasks?") &&
-        r.request().method() === "GET",
+      (r) => r.url().includes("/api/construction-tasks?") && r.request().method() === "GET",
       { timeout: 15_000 },
     );
     // Click without forcing: the create dialog animates in, and a forced click

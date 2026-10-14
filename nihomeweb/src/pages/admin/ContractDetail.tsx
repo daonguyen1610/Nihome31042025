@@ -201,13 +201,15 @@ const hasScheduleChanges = (contract: ContractResponse, milestones: MilestoneDra
   if (contract.paymentMilestones.length !== milestones.length) return true;
   return milestones.some((milestone, index) => {
     const persisted = contract.paymentMilestones[index];
-    return milestone.order !== persisted.order
-      || milestone.name.trim() !== persisted.name
-      || milestone.percentValue !== persisted.percentValue
-      || milestone.dueDate !== toIsoDate(persisted.dueDate)
-      || milestone.actualPaymentDate !== toIsoDate(persisted.actualPaymentDate)
-      || milestone.status !== persisted.status
-      || (milestone.note.trim() || null) !== (persisted.note?.trim() || null);
+    return (
+      milestone.order !== persisted.order ||
+      milestone.name.trim() !== persisted.name ||
+      milestone.percentValue !== persisted.percentValue ||
+      milestone.dueDate !== toIsoDate(persisted.dueDate) ||
+      milestone.actualPaymentDate !== toIsoDate(persisted.actualPaymentDate) ||
+      milestone.status !== persisted.status ||
+      (milestone.note.trim() || null) !== (persisted.note?.trim() || null)
+    );
   });
 };
 
@@ -218,9 +220,8 @@ const toMilestoneRequests = (milestones: MilestoneDraft[]): ContractPaymentMiles
     name: milestone.name.trim(),
     percentValue: milestone.percentValue,
     dueDate: toIsoTimestamp(milestone.dueDate),
-    actualPaymentDate: milestone.status === "Paid"
-      ? toIsoTimestamp(milestone.actualPaymentDate)
-      : null,
+    actualPaymentDate:
+      milestone.status === "Paid" ? toIsoTimestamp(milestone.actualPaymentDate) : null,
     status: milestone.status,
     responsibleAccountantUserId: milestone.responsibleAccountantUserId,
     requestedAt: milestone.requestedAt,
@@ -287,9 +288,8 @@ const ContractHeader = ({
 }: HeaderProps) => {
   const { t } = useI18n();
 
-  const transitions = contract.type === "Unclassified"
-    ? []
-    : AVAILABLE_TRANSITIONS[contract.status] ?? [];
+  const transitions =
+    contract.type === "Unclassified" ? [] : (AVAILABLE_TRANSITIONS[contract.status] ?? []);
   const label = (target: ContractStatus): string => {
     // Signed -> InProgress on the Signed row = "Move to In progress",
     // OnHold -> InProgress = "Resume". Same icon, clearer wording.
@@ -337,7 +337,11 @@ const ContractHeader = ({
                 {t("common.cancel")}
               </Button>
               <Button size="sm" onClick={onSave} disabled={saving}>
-                {saving ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Save className="mr-1 h-4 w-4" />}
+                {saving ? (
+                  <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="mr-1 h-4 w-4" />
+                )}
                 {t("common.save")}
               </Button>
             </>
@@ -357,7 +361,11 @@ const ContractHeader = ({
           <div
             className={cn(
               "mt-1 text-lg font-semibold",
-              contract.approvedVoTotal > 0 ? "text-emerald-700" : contract.approvedVoTotal < 0 ? "text-rose-700" : "text-slate-800",
+              contract.approvedVoTotal > 0
+                ? "text-emerald-700"
+                : contract.approvedVoTotal < 0
+                  ? "text-rose-700"
+                  : "text-slate-800",
             )}
           >
             {contract.approvedVoTotal > 0 ? "+" : ""}
@@ -365,7 +373,9 @@ const ContractHeader = ({
           </div>
         </div>
         <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
-          <div className="text-xs text-emerald-700">{t("contracts.detail.header.currentValue")}</div>
+          <div className="text-xs text-emerald-700">
+            {t("contracts.detail.header.currentValue")}
+          </div>
           <div className="mt-1 text-lg font-bold text-emerald-900">
             {formatVndWithSymbol(contract.currentValue)}
           </div>
@@ -415,17 +425,32 @@ interface InfoTabProps {
   onLinkQuote?: () => void;
 }
 
-const InfoTab = ({ contract, onEnsureDesignProject, ensuringDesignProject, canViewDesignProject, onLinkQuote }: InfoTabProps) => {
+const InfoTab = ({
+  contract,
+  onEnsureDesignProject,
+  ensuringDesignProject,
+  canViewDesignProject,
+  onLinkQuote,
+}: InfoTabProps) => {
   const { t } = useI18n();
 
   const rows: [string, React.ReactNode][] = [
     [t("contracts.field.number"), contract.contractNumber],
     [t("contracts.field.customer"), contract.customerName ?? "—"],
-    [t("contracts.field.operationalProject"), contract.operationalProjectId ? (
-      <Link className="text-primary hover:underline" to={`/admin/operational-projects/${contract.operationalProjectId}`}>
-        {contract.operationalProjectCode ?? `#${contract.operationalProjectId}`} · {contract.operationalProjectName ?? ""}
-      </Link>
-    ) : "—"],
+    [
+      t("contracts.field.operationalProject"),
+      contract.operationalProjectId ? (
+        <Link
+          className="text-primary hover:underline"
+          to={`/admin/operational-projects/${contract.operationalProjectId}`}
+        >
+          {contract.operationalProjectCode ?? `#${contract.operationalProjectId}`} ·{" "}
+          {contract.operationalProjectName ?? ""}
+        </Link>
+      ) : (
+        "—"
+      ),
+    ],
     [t("contracts.field.direction"), t(`contracts.direction.${contract.direction}`)],
     [t("contracts.field.type"), t(`contracts.type.${contract.type}`)],
     [t("contracts.field.counterparty"), contract.vendorName ?? contract.customerName ?? "—"],
@@ -443,7 +468,9 @@ const InfoTab = ({ contract, onEnsureDesignProject, ensuringDesignProject, canVi
         <dl className="grid gap-3 sm:grid-cols-2">
           {rows.map(([label, value]) => (
             <div key={label}>
-              <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</dt>
+              <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                {label}
+              </dt>
               <dd className="mt-0.5 text-sm text-slate-800">{value}</dd>
             </div>
           ))}
@@ -457,7 +484,12 @@ const InfoTab = ({ contract, onEnsureDesignProject, ensuringDesignProject, canVi
               {t("contracts.source.title")}
             </div>
             {onLinkQuote && contract.quoteId == null && (
-              <Button size="sm" variant="outline" data-testid="contract-link-quote" onClick={onLinkQuote}>
+              <Button
+                size="sm"
+                variant="outline"
+                data-testid="contract-link-quote"
+                onClick={onLinkQuote}
+              >
                 <Link2 className="mr-1.5 h-4 w-4" />
                 {t("quoteLink.fromContract.action")}
               </Button>
@@ -476,15 +508,10 @@ const InfoTab = ({ contract, onEnsureDesignProject, ensuringDesignProject, canVi
             ) : null}
             {contract.opportunityId != null ? (
               <div>
-                <dt className="text-xs text-slate-500">
-                  {t("contracts.field.sourceOpportunity")}
-                </dt>
+                <dt className="text-xs text-slate-500">{t("contracts.field.sourceOpportunity")}</dt>
                 <dd className="mt-0.5 text-sm">
                   {/* Route added by plan two task three; until then this lands on 404. */}
-                  <Link
-                    className="underline"
-                    to={`/admin/opportunities/${contract.opportunityId}`}
-                  >
+                  <Link className="underline" to={`/admin/opportunities/${contract.opportunityId}`}>
                     {contract.opportunityTitle ?? `#${contract.opportunityId}`}
                   </Link>
                 </dd>
@@ -501,7 +528,10 @@ const InfoTab = ({ contract, onEnsureDesignProject, ensuringDesignProject, canVi
         {contract.designProjectId != null ? (
           <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
             {canViewDesignProject ? (
-              <Link className="text-sm font-medium text-slate-900 underline" to={`/admin/design-projects/${contract.designProjectId}`}>
+              <Link
+                className="text-sm font-medium text-slate-900 underline"
+                to={`/admin/design-projects/${contract.designProjectId}`}
+              >
                 {contract.designProjectCode} — {contract.designProjectName}
               </Link>
             ) : (
@@ -559,7 +589,15 @@ interface EditInfoTabProps {
   onChange: (next: ContractEditForm) => void;
 }
 
-const EditInfoTab = ({ form, customers, projects, classification, lockDirection, error, onChange }: EditInfoTabProps) => {
+const EditInfoTab = ({
+  form,
+  customers,
+  projects,
+  classification,
+  lockDirection,
+  error,
+  onChange,
+}: EditInfoTabProps) => {
   const { t } = useI18n();
 
   return (
@@ -584,17 +622,24 @@ const EditInfoTab = ({ form, customers, projects, classification, lockDirection,
               onChange({
                 ...form,
                 customerId,
-                operationalProjectId: projects.some((project) => project.id === form.operationalProjectId && project.customerId === customerId)
+                operationalProjectId: projects.some(
+                  (project) =>
+                    project.id === form.operationalProjectId && project.customerId === customerId,
+                )
                   ? form.operationalProjectId
                   : null,
                 ownerName: customer?.ownerName ?? "",
               });
             }}
           >
-            <SelectTrigger id="contract-detail-customer"><SelectValue /></SelectTrigger>
+            <SelectTrigger id="contract-detail-customer">
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent className="max-h-72">
               {customers.map((customer) => (
-                <SelectItem key={customer.id} value={String(customer.id)}>{customer.name}</SelectItem>
+                <SelectItem key={customer.id} value={String(customer.id)}>
+                  {customer.name}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -607,11 +652,17 @@ const EditInfoTab = ({ form, customers, projects, classification, lockDirection,
           value={form.operationalProjectId == null ? "" : String(form.operationalProjectId)}
           onValueChange={(value) => onChange({ ...form, operationalProjectId: Number(value) })}
         >
-          <SelectTrigger id="contract-detail-project"><SelectValue placeholder={t("contracts.selectOperationalProject")} /></SelectTrigger>
+          <SelectTrigger id="contract-detail-project">
+            <SelectValue placeholder={t("contracts.selectOperationalProject")} />
+          </SelectTrigger>
           <SelectContent className="max-h-72">
-            {projects.filter((project) => project.customerId === form.customerId).map((project) => (
-              <SelectItem key={project.id} value={String(project.id)}>{project.code} · {project.name}</SelectItem>
-            ))}
+            {projects
+              .filter((project) => project.customerId === form.customerId)
+              .map((project) => (
+                <SelectItem key={project.id} value={String(project.id)}>
+                  {project.code} · {project.name}
+                </SelectItem>
+              ))}
           </SelectContent>
         </Select>
       </div>
@@ -628,21 +679,34 @@ const EditInfoTab = ({ form, customers, projects, classification, lockDirection,
               if (type) onChange({ ...form, direction, type, vendorId: null });
             }}
           >
-            <SelectTrigger id="contract-detail-direction"><SelectValue /></SelectTrigger>
+            <SelectTrigger id="contract-detail-direction">
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               {(classification?.directions ?? []).map((direction) => (
-                <SelectItem key={direction} value={direction}>{t(`contracts.direction.${direction}`)}</SelectItem>
+                <SelectItem key={direction} value={direction}>
+                  {t(`contracts.direction.${direction}`)}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="contract-detail-type">{t("contracts.field.type")} *</Label>
-          <Select value={form.type} onValueChange={(value) => onChange({ ...form, type: value as ContractType, vendorId: null })}>
-            <SelectTrigger id="contract-detail-type"><SelectValue /></SelectTrigger>
+          <Select
+            value={form.type}
+            onValueChange={(value) =>
+              onChange({ ...form, type: value as ContractType, vendorId: null })
+            }
+          >
+            <SelectTrigger id="contract-detail-type">
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               {(classification?.allowedTypes[form.direction] ?? []).map((type) => (
-                <SelectItem key={type} value={type}>{t(`contracts.type.${type}`)}</SelectItem>
+                <SelectItem key={type} value={type}>
+                  {t(`contracts.type.${type}`)}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -652,15 +716,24 @@ const EditInfoTab = ({ form, customers, projects, classification, lockDirection,
       {form.direction === "Downstream" ? (
         <div className="space-y-1.5">
           <Label htmlFor="contract-detail-vendor">{t("contracts.field.vendor")} *</Label>
-          <Select value={form.vendorId == null ? "" : String(form.vendorId)} onValueChange={(value) => onChange({ ...form, vendorId: Number(value) })}>
-            <SelectTrigger id="contract-detail-vendor"><SelectValue placeholder={t("contracts.selectVendor")} /></SelectTrigger>
+          <Select
+            value={form.vendorId == null ? "" : String(form.vendorId)}
+            onValueChange={(value) => onChange({ ...form, vendorId: Number(value) })}
+          >
+            <SelectTrigger id="contract-detail-vendor">
+              <SelectValue placeholder={t("contracts.selectVendor")} />
+            </SelectTrigger>
             <SelectContent className="max-h-72">
               {(classification?.vendors ?? [])
-                .filter((vendor) => form.type === "Supply"
-                  ? vendor.vendorType !== "SubContractor"
-                  : vendor.vendorType !== "Supplier")
+                .filter((vendor) =>
+                  form.type === "Supply"
+                    ? vendor.vendorType !== "SubContractor"
+                    : vendor.vendorType !== "Supplier",
+                )
                 .map((vendor) => (
-                  <SelectItem key={vendor.id} value={String(vendor.id)}>{vendor.vendorCode} · {vendor.companyName}</SelectItem>
+                  <SelectItem key={vendor.id} value={String(vendor.id)}>
+                    {vendor.vendorCode} · {vendor.companyName}
+                  </SelectItem>
                 ))}
             </SelectContent>
           </Select>
@@ -669,37 +742,70 @@ const EditInfoTab = ({ form, customers, projects, classification, lockDirection,
 
       <div className="space-y-1.5 rounded-md border bg-slate-50 px-3 py-2.5">
         <Label>{t("contracts.field.owner")}</Label>
-        <p className="text-sm font-medium">{form.ownerName || t("contracts.ownerCurrentUserFallback")}</p>
+        <p className="text-sm font-medium">
+          {form.ownerName || t("contracts.ownerCurrentUserFallback")}
+        </p>
         <p className="text-xs text-slate-500">{t("contracts.ownerInheritedHint")}</p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="space-y-1.5">
           <Label htmlFor="contract-detail-signed">{t("contracts.field.signedDate")}</Label>
-          <Input id="contract-detail-signed" type="date" value={form.signedDate} onChange={(event) => onChange({ ...form, signedDate: event.target.value })} />
+          <Input
+            id="contract-detail-signed"
+            type="date"
+            value={form.signedDate}
+            onChange={(event) => onChange({ ...form, signedDate: event.target.value })}
+          />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="contract-detail-start">{t("contracts.field.startDate")}</Label>
-          <Input id="contract-detail-start" type="date" value={form.startDate} onChange={(event) => onChange({ ...form, startDate: event.target.value })} />
+          <Input
+            id="contract-detail-start"
+            type="date"
+            value={form.startDate}
+            onChange={(event) => onChange({ ...form, startDate: event.target.value })}
+          />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="contract-detail-end">{t("contracts.field.endDate")}</Label>
-          <Input id="contract-detail-end" type="date" value={form.endDate} onChange={(event) => onChange({ ...form, endDate: event.target.value })} />
+          <Input
+            id="contract-detail-end"
+            type="date"
+            value={form.endDate}
+            onChange={(event) => onChange({ ...form, endDate: event.target.value })}
+          />
         </div>
       </div>
 
       <div className="space-y-1.5">
         <Label htmlFor="contract-detail-value">{t("contracts.field.value")} *</Label>
-        <Input id="contract-detail-value" type="number" min={0} value={form.value} onChange={(event) => onChange({ ...form, value: Number(event.target.value) || 0 })} />
+        <Input
+          id="contract-detail-value"
+          type="number"
+          min={0}
+          value={form.value}
+          onChange={(event) => onChange({ ...form, value: Number(event.target.value) || 0 })}
+        />
         <p className="text-xs text-slate-500">{formatVndWithSymbol(form.value)}</p>
       </div>
       <div className="space-y-1.5">
         <Label htmlFor="contract-detail-scope">{t("contracts.field.scope")}</Label>
-        <Textarea id="contract-detail-scope" rows={4} value={form.scopeOfWork} onChange={(event) => onChange({ ...form, scopeOfWork: event.target.value })} />
+        <Textarea
+          id="contract-detail-scope"
+          rows={4}
+          value={form.scopeOfWork}
+          onChange={(event) => onChange({ ...form, scopeOfWork: event.target.value })}
+        />
       </div>
       <div className="space-y-1.5">
         <Label htmlFor="contract-detail-note">{t("contracts.field.note")}</Label>
-        <Textarea id="contract-detail-note" rows={3} value={form.note} onChange={(event) => onChange({ ...form, note: event.target.value })} />
+        <Textarea
+          id="contract-detail-note"
+          rows={3}
+          value={form.note}
+          onChange={(event) => onChange({ ...form, note: event.target.value })}
+        />
       </div>
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
     </div>
@@ -716,23 +822,25 @@ interface ScheduleTabProps {
   busyMilestoneId: number | null;
 }
 
-const isOverdue = (
-  dueDate: string | null | undefined,
-  status: PaymentMilestoneStatus,
-): boolean => {
+const isOverdue = (dueDate: string | null | undefined, status: PaymentMilestoneStatus): boolean => {
   if (!dueDate || status === "Paid") return false;
   const d = new Date(dueDate).getTime();
   if (Number.isNaN(d)) return false;
   return d < Date.now();
 };
 
-const ScheduleTab = ({ contract, canManage, onMilestoneStatus, onEditActualPaymentDate, busyMilestoneId }: ScheduleTabProps) => {
+const ScheduleTab = ({
+  contract,
+  canManage,
+  onMilestoneStatus,
+  onEditActualPaymentDate,
+  busyMilestoneId,
+}: ScheduleTabProps) => {
   const { t } = useI18n();
   const milestones = contract.paymentMilestones;
   const upstream = contract.direction === "Upstream";
-  const statusLabel = (status: PaymentMilestoneStatus) => t(upstream
-    ? `contracts.collectionStatus.${status}`
-    : `contracts.milestoneStatus.${status}`);
+  const statusLabel = (status: PaymentMilestoneStatus) =>
+    t(upstream ? `contracts.collectionStatus.${status}` : `contracts.milestoneStatus.${status}`);
 
   if (milestones.length === 0) {
     return (
@@ -765,9 +873,19 @@ const ScheduleTab = ({ contract, canManage, onMilestoneStatus, onEditActualPayme
                   <span>
                     {m.percentValue}% • {formatVndWithSymbol(m.amount)}
                   </span>
-                  <span>• {t("contracts.milestone.dueDate")}: {formatDate(m.dueDate)}</span>
+                  <span>
+                    • {t("contracts.milestone.dueDate")}: {formatDate(m.dueDate)}
+                  </span>
                   {m.status === "Paid" ? (
-                    <span>• {t(upstream ? "contracts.collection.actualDate" : "contracts.milestone.actualPaymentDate")}: {formatDate(m.actualPaymentDate)}</span>
+                    <span>
+                      •{" "}
+                      {t(
+                        upstream
+                          ? "contracts.collection.actualDate"
+                          : "contracts.milestone.actualPaymentDate",
+                      )}
+                      : {formatDate(m.actualPaymentDate)}
+                    </span>
                   ) : null}
                   <Badge className={cn("border", MILESTONE_STATUS_STYLES[m.status])}>
                     {statusLabel(m.status)}
@@ -779,31 +897,68 @@ const ScheduleTab = ({ contract, canManage, onMilestoneStatus, onEditActualPayme
                   ) : null}
                 </div>
               </div>
-              {canManage ? <div className="flex flex-wrap gap-2">
-                {m.status === "Pending" ? (
-                  <Button size="sm" variant="outline" disabled={busy} onClick={() => onMilestoneStatus(m.id, "Requested")}>
-                    {busy ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Send className="mr-1 h-3 w-3" />}
-                    {t(upstream ? "contracts.collection.markRequested" : "contracts.schedule.markRequested")}
-                  </Button>
-                ) : null}
-                {(m.status === "Pending" || m.status === "Requested") ? (
-                  <Button size="sm" disabled={busy} onClick={() => onEditActualPaymentDate(m.id)}>
-                    {busy ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <CheckCircle2 className="mr-1 h-3 w-3" />}
-                    {t(upstream ? "contracts.collection.markCollected" : "contracts.schedule.markPaid")}
-                  </Button>
-                ) : null}
-                {m.status === "Paid" ? (
-                  <Button size="sm" variant="outline" disabled={busy} onClick={() => onEditActualPaymentDate(m.id, m.actualPaymentDate)}>
-                    <Pencil className="mr-1 h-3 w-3" />
-                    {t(upstream ? "contracts.collection.editActualDate" : "contracts.schedule.editActualPaymentDate")}
-                  </Button>
-                ) : null}
-                {m.status !== "Pending" ? (
-                  <Button size="sm" variant="ghost" disabled={busy} onClick={() => onMilestoneStatus(m.id, "Pending")}>
-                    {t("contracts.schedule.revertPending")}
-                  </Button>
-                ) : null}
-              </div> : null}
+              {canManage ? (
+                <div className="flex flex-wrap gap-2">
+                  {m.status === "Pending" ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={busy}
+                      onClick={() => onMilestoneStatus(m.id, "Requested")}
+                    >
+                      {busy ? (
+                        <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                      ) : (
+                        <Send className="mr-1 h-3 w-3" />
+                      )}
+                      {t(
+                        upstream
+                          ? "contracts.collection.markRequested"
+                          : "contracts.schedule.markRequested",
+                      )}
+                    </Button>
+                  ) : null}
+                  {m.status === "Pending" || m.status === "Requested" ? (
+                    <Button size="sm" disabled={busy} onClick={() => onEditActualPaymentDate(m.id)}>
+                      {busy ? (
+                        <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                      ) : (
+                        <CheckCircle2 className="mr-1 h-3 w-3" />
+                      )}
+                      {t(
+                        upstream
+                          ? "contracts.collection.markCollected"
+                          : "contracts.schedule.markPaid",
+                      )}
+                    </Button>
+                  ) : null}
+                  {m.status === "Paid" ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={busy}
+                      onClick={() => onEditActualPaymentDate(m.id, m.actualPaymentDate)}
+                    >
+                      <Pencil className="mr-1 h-3 w-3" />
+                      {t(
+                        upstream
+                          ? "contracts.collection.editActualDate"
+                          : "contracts.schedule.editActualPaymentDate",
+                      )}
+                    </Button>
+                  ) : null}
+                  {m.status !== "Pending" ? (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={busy}
+                      onClick={() => onMilestoneStatus(m.id, "Pending")}
+                    >
+                      {t("contracts.schedule.revertPending")}
+                    </Button>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
           </div>
         );
@@ -824,7 +979,11 @@ const EditScheduleTab = ({ value, direction, milestones, onChange }: EditSchedul
   const total = milestones.reduce((sum, milestone) => sum + milestone.percentValue, 0);
   const totalValid = milestones.length === 0 || Math.abs(total - 100) <= 0.01;
   const patch = (index: number, next: Partial<MilestoneDraft>) =>
-    onChange(milestones.map((milestone, current) => current === index ? { ...milestone, ...next } : milestone));
+    onChange(
+      milestones.map((milestone, current) =>
+        current === index ? { ...milestone, ...next } : milestone,
+      ),
+    );
   const move = (index: number, direction: -1 | 1) => {
     const target = index + direction;
     if (target < 0 || target >= milestones.length) return;
@@ -836,70 +995,170 @@ const EditScheduleTab = ({ value, direction, milestones, onChange }: EditSchedul
   return (
     <div className="space-y-3">
       <div className="flex justify-end">
-        <Button type="button" size="sm" variant="outline" onClick={() => onChange([...milestones, { order: milestones.length + 1, name: "", percentValue: 0, dueDate: "", actualPaymentDate: "", status: "Pending", responsibleAccountantUserId: null, requestedAt: null, note: "" }])}>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() =>
+            onChange([
+              ...milestones,
+              {
+                order: milestones.length + 1,
+                name: "",
+                percentValue: 0,
+                dueDate: "",
+                actualPaymentDate: "",
+                status: "Pending",
+                responsibleAccountantUserId: null,
+                requestedAt: null,
+                note: "",
+              },
+            ])
+          }
+        >
           <Plus className="mr-1 h-4 w-4" />
           {t("contracts.addMilestone")}
         </Button>
       </div>
       {milestones.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">{t("contracts.milestonesEmpty")}</div>
-      ) : milestones.map((milestone, index) => {
-        const amount = Math.round(value * milestone.percentValue) / 100;
-        return (
-          <div key={index} className="space-y-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm" data-testid={`contract-detail-milestone-${index}`}>
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-sm font-semibold text-slate-500">#{index + 1}</span>
-              <div className="flex gap-1">
-                <Button type="button" size="icon" variant="ghost" className="h-11 w-11 sm:h-8 sm:w-8" disabled={index === 0} onClick={() => move(index, -1)} aria-label={t("workflow.moveUp")}><ArrowUp className="h-4 w-4" /></Button>
-                <Button type="button" size="icon" variant="ghost" className="h-11 w-11 sm:h-8 sm:w-8" disabled={index === milestones.length - 1} onClick={() => move(index, 1)} aria-label={t("workflow.moveDown")}><ArrowDown className="h-4 w-4" /></Button>
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="ghost"
-                  className="h-11 w-11 text-destructive hover:text-destructive sm:h-8 sm:w-8"
-                  onClick={() => onChange(
-                    milestones
-                      .filter((_, current) => current !== index)
-                      .map((item, current) => ({ ...item, order: current + 1 })),
-                  )}
-                  aria-label={t("common.delete")}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5"><Label htmlFor={`milestone-name-${index}`}>{t("contracts.milestone.name")} *</Label><Input id={`milestone-name-${index}`} value={milestone.name} onChange={(event) => patch(index, { name: event.target.value })} /></div>
-              <div className="space-y-1.5"><Label htmlFor={`milestone-percent-${index}`}>{t("contracts.milestone.percent")} *</Label><Input id={`milestone-percent-${index}`} type="number" min={0} max={100} step="0.01" value={milestone.percentValue} onChange={(event) => patch(index, { percentValue: Number(event.target.value) || 0 })} /><p className="text-xs text-slate-500">≈ {formatVndWithSymbol(amount)}</p></div>
-              <div className="space-y-1.5"><Label htmlFor={`milestone-due-${index}`}>{t("contracts.milestone.dueDate")}</Label><Input id={`milestone-due-${index}`} type="date" value={milestone.dueDate} onChange={(event) => patch(index, { dueDate: event.target.value })} /></div>
-              <div className="space-y-1.5">
-                <Label>{t("contracts.milestone.status")}</Label>
-                <div className="flex h-10 items-center">
-                  <Badge variant="outline">{t(direction === "Upstream"
-                    ? `contracts.collectionStatus.${milestone.status}`
-                    : `contracts.milestoneStatus.${milestone.status}`)}</Badge>
+        <div className="rounded-lg border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
+          {t("contracts.milestonesEmpty")}
+        </div>
+      ) : (
+        milestones.map((milestone, index) => {
+          const amount = Math.round(value * milestone.percentValue) / 100;
+          return (
+            <div
+              key={index}
+              className="space-y-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm"
+              data-testid={`contract-detail-milestone-${index}`}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-sm font-semibold text-slate-500">#{index + 1}</span>
+                <div className="flex gap-1">
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    className="h-11 w-11 sm:h-8 sm:w-8"
+                    disabled={index === 0}
+                    onClick={() => move(index, -1)}
+                    aria-label={t("workflow.moveUp")}
+                  >
+                    <ArrowUp className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    className="h-11 w-11 sm:h-8 sm:w-8"
+                    disabled={index === milestones.length - 1}
+                    onClick={() => move(index, 1)}
+                    aria-label={t("workflow.moveDown")}
+                  >
+                    <ArrowDown className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    className="h-11 w-11 text-destructive hover:text-destructive sm:h-8 sm:w-8"
+                    onClick={() =>
+                      onChange(
+                        milestones
+                          .filter((_, current) => current !== index)
+                          .map((item, current) => ({ ...item, order: current + 1 })),
+                      )
+                    }
+                    aria-label={t("common.delete")}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
-              {milestone.status === "Paid" ? (
+              <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label htmlFor={`milestone-actual-${index}`}>{t(direction === "Upstream"
-                    ? "contracts.collection.actualDate"
-                    : "contracts.milestone.actualPaymentDate")} *</Label>
+                  <Label htmlFor={`milestone-name-${index}`}>
+                    {t("contracts.milestone.name")} *
+                  </Label>
                   <Input
-                    id={`milestone-actual-${index}`}
-                    type="date"
-                    value={milestone.actualPaymentDate}
-                    readOnly
+                    id={`milestone-name-${index}`}
+                    value={milestone.name}
+                    onChange={(event) => patch(index, { name: event.target.value })}
                   />
                 </div>
-              ) : null}
+                <div className="space-y-1.5">
+                  <Label htmlFor={`milestone-percent-${index}`}>
+                    {t("contracts.milestone.percent")} *
+                  </Label>
+                  <Input
+                    id={`milestone-percent-${index}`}
+                    type="number"
+                    min={0}
+                    max={100}
+                    step="0.01"
+                    value={milestone.percentValue}
+                    onChange={(event) =>
+                      patch(index, { percentValue: Number(event.target.value) || 0 })
+                    }
+                  />
+                  <p className="text-xs text-slate-500">≈ {formatVndWithSymbol(amount)}</p>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor={`milestone-due-${index}`}>
+                    {t("contracts.milestone.dueDate")}
+                  </Label>
+                  <Input
+                    id={`milestone-due-${index}`}
+                    type="date"
+                    value={milestone.dueDate}
+                    onChange={(event) => patch(index, { dueDate: event.target.value })}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>{t("contracts.milestone.status")}</Label>
+                  <div className="flex h-10 items-center">
+                    <Badge variant="outline">
+                      {t(
+                        direction === "Upstream"
+                          ? `contracts.collectionStatus.${milestone.status}`
+                          : `contracts.milestoneStatus.${milestone.status}`,
+                      )}
+                    </Badge>
+                  </div>
+                </div>
+                {milestone.status === "Paid" ? (
+                  <div className="space-y-1.5">
+                    <Label htmlFor={`milestone-actual-${index}`}>
+                      {t(
+                        direction === "Upstream"
+                          ? "contracts.collection.actualDate"
+                          : "contracts.milestone.actualPaymentDate",
+                      )}{" "}
+                      *
+                    </Label>
+                    <Input
+                      id={`milestone-actual-${index}`}
+                      type="date"
+                      value={milestone.actualPaymentDate}
+                      readOnly
+                    />
+                  </div>
+                ) : null}
+              </div>
             </div>
-          </div>
-        );
-      })}
+          );
+        })
+      )}
       {milestones.length > 0 ? (
-        <div className={cn("flex items-center justify-between rounded px-3 py-2 text-sm", totalValid ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700")}>
-          <span>{t("contracts.milestonesSum")}</span><span className="font-semibold">{total.toFixed(2)}% / 100%</span>
+        <div
+          className={cn(
+            "flex items-center justify-between rounded px-3 py-2 text-sm",
+            totalValid ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700",
+          )}
+        >
+          <span>{t("contracts.milestonesSum")}</span>
+          <span className="font-semibold">{total.toFixed(2)}% / 100%</span>
         </div>
       ) : null}
     </div>
@@ -945,7 +1204,7 @@ const VoTab = ({ contract, rows, canManage, canDecide, refresh }: VoTabProps) =>
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const deletableIds = useMemo(
-    () => canManage ? rows.map((row) => row.id) : [],
+    () => (canManage ? rows.map((row) => row.id) : []),
     [canManage, rows],
   );
   const bulk = useBulkSelection<number>({
@@ -972,13 +1231,15 @@ const VoTab = ({ contract, rows, canManage, canDecide, refresh }: VoTabProps) =>
     try {
       const { data } = await adminApi.uploadContractAppendixFile(contract.id, file);
       setDraft((prev) =>
-        prev ? {
-          ...prev,
-          filePath: data.filePath,
-          originalFileName: data.originalFileName,
-          fileSize: data.fileSize,
-          contentType: data.contentType,
-        } : prev,
+        prev
+          ? {
+              ...prev,
+              filePath: data.filePath,
+              originalFileName: data.originalFileName,
+              fileSize: data.fileSize,
+              contentType: data.contentType,
+            }
+          : prev,
       );
       toast({ title: t("contracts.appendix.file") + " ✓" });
     } catch (err) {
@@ -1087,7 +1348,9 @@ const VoTab = ({ contract, rows, canManage, canDecide, refresh }: VoTabProps) =>
         {deletableIds.length > 0 ? (
           <label className="inline-flex items-center gap-2 text-xs text-slate-600">
             <Checkbox
-              checked={bulk.allVisibleSelected ? true : bulk.someVisibleSelected ? "indeterminate" : false}
+              checked={
+                bulk.allVisibleSelected ? true : bulk.someVisibleSelected ? "indeterminate" : false
+              }
               onCheckedChange={(v) => bulk.toggleAllVisible(v === true)}
               aria-label={t("common.selectAll")}
             />
@@ -1123,7 +1386,10 @@ const VoTab = ({ contract, rows, canManage, canDecide, refresh }: VoTabProps) =>
             const canReview = canDecide && vo.status === "Submitted";
             const canDelete = canManage;
             return (
-              <div key={vo.id} className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+              <div
+                key={vo.id}
+                className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm"
+              >
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="flex min-w-0 gap-3">
                     {canDelete ? (
@@ -1136,58 +1402,67 @@ const VoTab = ({ contract, rows, canManage, canDecide, refresh }: VoTabProps) =>
                       </div>
                     ) : null}
                     <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-sm font-semibold text-slate-500">
-                        {t("contracts.appendix.number")} #{vo.voNumber}
-                      </span>
-                      <span className="truncate text-base font-semibold text-slate-900">{vo.title}</span>
-                      <Badge className={cn("border", VO_STATUS_STYLES[vo.status])}>
-                        {t(`contracts.appendix.status.${vo.status}`)}
-                      </Badge>
-                    </div>
-                    <p className="mt-1 whitespace-pre-wrap text-sm text-slate-600">{vo.reason}</p>
-                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
-                      <span
-                        className={cn(
-                          "font-semibold",
-                          vo.valueDelta > 0 ? "text-emerald-700" : "text-rose-700",
-                        )}
-                      >
-                        {vo.valueDelta > 0 ? "+" : ""}
-                        {formatVndWithSymbol(vo.valueDelta)}
-                        {" "}
-                        ({t(vo.valueDelta > 0 ? "contracts.appendix.deltaPositive" : "contracts.appendix.deltaNegative")})
-                      </span>
-                      {vo.submittedByName ? (
-                        <span>
-                          {t("contracts.appendix.submittedBy")}: {vo.submittedByName} • {formatDate(vo.submittedAt)}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-sm font-semibold text-slate-500">
+                          {t("contracts.appendix.number")} #{vo.voNumber}
                         </span>
-                      ) : null}
-                      {vo.decidedByName ? (
-                        <span>
-                          {t("contracts.appendix.decidedBy")}: {vo.decidedByName} • {formatDate(vo.decidedAt)}
+                        <span className="truncate text-base font-semibold text-slate-900">
+                          {vo.title}
                         </span>
-                      ) : null}
-                    </div>
-                    {vo.decisionNote ? (
-                      <p className="mt-1 text-xs italic text-slate-500">
-                        {t("contracts.appendix.decisionNote")}: {vo.decisionNote}
-                      </p>
-                    ) : null}
-                    {vo.filePath ? (
-                      <div className="mt-2">
-                        <AdminFilePreview
-                          url={vo.filePath}
-                          fileName={vo.originalFileName}
-                          showLabel
-                          label={vo.originalFileName ?? t("common.previewFile")}
-                          variant="ghost"
-                          fetchFile={async () => (
-                            await adminApi.getContractAppendixContent(contract.id, vo.filePath!)
-                          ).data}
-                        />
+                        <Badge className={cn("border", VO_STATUS_STYLES[vo.status])}>
+                          {t(`contracts.appendix.status.${vo.status}`)}
+                        </Badge>
                       </div>
-                    ) : null}
+                      <p className="mt-1 whitespace-pre-wrap text-sm text-slate-600">{vo.reason}</p>
+                      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
+                        <span
+                          className={cn(
+                            "font-semibold",
+                            vo.valueDelta > 0 ? "text-emerald-700" : "text-rose-700",
+                          )}
+                        >
+                          {vo.valueDelta > 0 ? "+" : ""}
+                          {formatVndWithSymbol(vo.valueDelta)} (
+                          {t(
+                            vo.valueDelta > 0
+                              ? "contracts.appendix.deltaPositive"
+                              : "contracts.appendix.deltaNegative",
+                          )}
+                          )
+                        </span>
+                        {vo.submittedByName ? (
+                          <span>
+                            {t("contracts.appendix.submittedBy")}: {vo.submittedByName} •{" "}
+                            {formatDate(vo.submittedAt)}
+                          </span>
+                        ) : null}
+                        {vo.decidedByName ? (
+                          <span>
+                            {t("contracts.appendix.decidedBy")}: {vo.decidedByName} •{" "}
+                            {formatDate(vo.decidedAt)}
+                          </span>
+                        ) : null}
+                      </div>
+                      {vo.decisionNote ? (
+                        <p className="mt-1 text-xs italic text-slate-500">
+                          {t("contracts.appendix.decisionNote")}: {vo.decisionNote}
+                        </p>
+                      ) : null}
+                      {vo.filePath ? (
+                        <div className="mt-2">
+                          <AdminFilePreview
+                            url={vo.filePath}
+                            fileName={vo.originalFileName}
+                            showLabel
+                            label={vo.originalFileName ?? t("common.previewFile")}
+                            variant="ghost"
+                            fetchFile={async () =>
+                              (await adminApi.getContractAppendixContent(contract.id, vo.filePath!))
+                                .data
+                            }
+                          />
+                        </div>
+                      ) : null}
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -1256,12 +1531,8 @@ const VoTab = ({ contract, rows, canManage, canDecide, refresh }: VoTabProps) =>
       <Dialog open={draft !== null} onOpenChange={(open) => (!open ? setDraft(null) : null)}>
         <DialogContent className="w-[95vw] max-w-lg">
           <DialogHeader>
-            <DialogTitle>
-              {draft?.id ? t("common.edit") : t("contracts.appendix.new")}
-            </DialogTitle>
-            <DialogDescription>
-              {t("contracts.appendix.mustBeNonZero")}
-            </DialogDescription>
+            <DialogTitle>{draft?.id ? t("common.edit") : t("contracts.appendix.new")}</DialogTitle>
+            <DialogDescription>{t("contracts.appendix.mustBeNonZero")}</DialogDescription>
           </DialogHeader>
           {draft ? (
             <div className="space-y-3">
@@ -1309,7 +1580,11 @@ const VoTab = ({ contract, rows, canManage, canDecide, refresh }: VoTabProps) =>
                     disabled={uploadBusy}
                     onClick={() => fileInputRef.current?.click()}
                   >
-                    {uploadBusy ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Upload className="mr-1 h-3 w-3" />}
+                    {uploadBusy ? (
+                      <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                    ) : (
+                      <Upload className="mr-1 h-3 w-3" />
+                    )}
                     {t("contracts.documents.upload")}
                   </Button>
                   {draft.originalFileName ? (
@@ -1326,20 +1601,25 @@ const VoTab = ({ contract, rows, canManage, canDecide, refresh }: VoTabProps) =>
               {t("common.cancel")}
             </Button>
             <Button onClick={submitDraft} disabled={saving}>
-              {saving ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Save className="mr-1 h-4 w-4" />}
+              {saving ? (
+                <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="mr-1 h-4 w-4" />
+              )}
               {t("common.save")}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={rejectingVo !== null} onOpenChange={(open) => (!open ? setRejectingVo(null) : null)}>
+      <Dialog
+        open={rejectingVo !== null}
+        onOpenChange={(open) => (!open ? setRejectingVo(null) : null)}
+      >
         <DialogContent className="w-[95vw] max-w-md">
           <DialogHeader>
             <DialogTitle>{t("contracts.appendix.reject")}</DialogTitle>
-            <DialogDescription>
-              {t("contracts.appendix.rejectReasonRequired")}
-            </DialogDescription>
+            <DialogDescription>{t("contracts.appendix.rejectReasonRequired")}</DialogDescription>
           </DialogHeader>
           <Textarea
             rows={3}
@@ -1398,7 +1678,12 @@ const DocumentsTab = ({ contract, rows, canManage, error, refresh }: DocumentsTa
     let uploadedCount = 0;
     for (const file of files) {
       try {
-        await adminApi.uploadContractAttachment(contract.id, file, uploadKind, label.trim() || undefined);
+        await adminApi.uploadContractAttachment(
+          contract.id,
+          file,
+          uploadKind,
+          label.trim() || undefined,
+        );
         uploadedCount += 1;
       } catch (err) {
         toast({
@@ -1435,48 +1720,61 @@ const DocumentsTab = ({ contract, rows, canManage, error, refresh }: DocumentsTa
 
   return (
     <div className="space-y-4">
-      {canManage ? <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="grid gap-3 md:grid-cols-3">
-          <div>
-            <Label>{t("contracts.documents.typeLabel")}</Label>
-            <Select value={uploadKind} onValueChange={(v) => setUploadKind(v as ContractAttachmentKind)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="SignedScan">{t("contracts.documents.kind.SignedScan")}</SelectItem>
-                <SelectItem value="Supporting">{t("contracts.documents.kind.Supporting")}</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label>{t("contracts.documents.label")}</Label>
-            <Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="..." />
-          </div>
-          <div className="flex items-end">
-            <input
-              ref={fileInputRef}
-              id="contract-attachment-files"
-              type="file"
-              multiple
-              accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
-              className="hidden"
-              onChange={(e) => {
-                const files = Array.from(e.target.files ?? []);
-                if (files.length > 0) void handleFiles(files);
-              }}
-            />
-            <Button
-              className="w-full"
-              disabled={uploading}
-              onClick={() => fileInputRef.current?.click()}
-            >
-              {uploading ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Upload className="mr-1 h-4 w-4" />}
-              {t("contracts.documents.upload")}
-            </Button>
+      {canManage ? (
+        <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="grid gap-3 md:grid-cols-3">
+            <div>
+              <Label>{t("contracts.documents.typeLabel")}</Label>
+              <Select
+                value={uploadKind}
+                onValueChange={(v) => setUploadKind(v as ContractAttachmentKind)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="SignedScan">
+                    {t("contracts.documents.kind.SignedScan")}
+                  </SelectItem>
+                  <SelectItem value="Supporting">
+                    {t("contracts.documents.kind.Supporting")}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>{t("contracts.documents.label")}</Label>
+              <Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="..." />
+            </div>
+            <div className="flex items-end">
+              <input
+                ref={fileInputRef}
+                id="contract-attachment-files"
+                type="file"
+                multiple
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
+                className="hidden"
+                onChange={(e) => {
+                  const files = Array.from(e.target.files ?? []);
+                  if (files.length > 0) void handleFiles(files);
+                }}
+              />
+              <Button
+                className="w-full"
+                disabled={uploading}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                {uploading ? (
+                  <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                ) : (
+                  <Upload className="mr-1 h-4 w-4" />
+                )}
+                {t("contracts.documents.upload")}
+              </Button>
+            </div>
           </div>
         </div>
-      </div> : null}
+      ) : null}
 
       {error ? (
         <div className="flex flex-col items-center gap-3 rounded-lg border border-destructive/40 p-6 text-center text-sm text-destructive">
@@ -1491,78 +1789,105 @@ const DocumentsTab = ({ contract, rows, canManage, error, refresh }: DocumentsTa
         </div>
       ) : (
         <>
-          {canManage ? <div className="flex items-center gap-3">
-            <label className="inline-flex items-center gap-2 text-xs text-slate-600">
-              <Checkbox
-                checked={bulk.allVisibleSelected ? true : bulk.someVisibleSelected ? "indeterminate" : false}
-                onCheckedChange={(v) => bulk.toggleAllVisible(v === true)}
-                aria-label={t("common.selectAll")}
-              />
-              {t("common.selectAll")}
-            </label>
-          </div> : null}
-          {canManage ? <BulkActionBar
-            selectedCount={bulk.selectedIds.size}
-            bulkDeleting={bulk.bulkDeleting}
-            onClear={bulk.clearSelection}
-            onBulkDelete={bulk.handleBulkDelete}
-          /> : null}
+          {canManage ? (
+            <div className="flex items-center gap-3">
+              <label className="inline-flex items-center gap-2 text-xs text-slate-600">
+                <Checkbox
+                  checked={
+                    bulk.allVisibleSelected
+                      ? true
+                      : bulk.someVisibleSelected
+                        ? "indeterminate"
+                        : false
+                  }
+                  onCheckedChange={(v) => bulk.toggleAllVisible(v === true)}
+                  aria-label={t("common.selectAll")}
+                />
+                {t("common.selectAll")}
+              </label>
+            </div>
+          ) : null}
+          {canManage ? (
+            <BulkActionBar
+              selectedCount={bulk.selectedIds.size}
+              bulkDeleting={bulk.bulkDeleting}
+              onClear={bulk.clearSelection}
+              onBulkDelete={bulk.handleBulkDelete}
+            />
+          ) : null}
           <div className="space-y-2">
             {rows.map((att) => (
-              <div key={att.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+              <div
+                key={att.id}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white p-3 shadow-sm"
+              >
                 <div className="flex min-w-0 gap-3">
-                  {canManage ? <div className="pt-1" onClick={(e) => e.stopPropagation()}>
-                    <Checkbox
-                      checked={bulk.selectedIds.has(att.id)}
-                      onCheckedChange={(v) => bulk.toggleOne(att.id, v === true)}
-                      aria-label={`${t("common.selectAll")} · ${att.originalFileName}`}
-                    />
-                  </div> : null}
+                  {canManage ? (
+                    <div className="pt-1" onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        checked={bulk.selectedIds.has(att.id)}
+                        onCheckedChange={(v) => bulk.toggleOne(att.id, v === true)}
+                        aria-label={`${t("common.selectAll")} · ${att.originalFileName}`}
+                      />
+                    </div>
+                  ) : null}
                   <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge
-                    className={cn(
-                      "border",
-                      att.kind === "SignedScan"
-                        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                        : "border-slate-200 bg-slate-50 text-slate-700",
-                    )}
-                  >
-                    {t(`contracts.documents.kind.${att.kind}`)}
-                  </Badge>
-                  <span className="truncate text-sm font-medium text-slate-800">{att.originalFileName}</span>
-                </div>
-                <div className="mt-1 flex flex-wrap gap-x-3 text-xs text-slate-500">
-                  <span>{formatBytes(att.fileSize)}</span>
-                  <span>{formatDate(att.createdAt)}</span>
-                  {att.uploadedByName ? <span>{t("contracts.documents.uploadedBy")}: {att.uploadedByName}</span> : null}
-                  {att.label ? <span>“{att.label}”</span> : null}
-                </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge
+                        className={cn(
+                          "border",
+                          att.kind === "SignedScan"
+                            ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                            : "border-slate-200 bg-slate-50 text-slate-700",
+                        )}
+                      >
+                        {t(`contracts.documents.kind.${att.kind}`)}
+                      </Badge>
+                      <span className="truncate text-sm font-medium text-slate-800">
+                        {att.originalFileName}
+                      </span>
+                    </div>
+                    <div className="mt-1 flex flex-wrap gap-x-3 text-xs text-slate-500">
+                      <span>{formatBytes(att.fileSize)}</span>
+                      <span>{formatDate(att.createdAt)}</span>
+                      {att.uploadedByName ? (
+                        <span>
+                          {t("contracts.documents.uploadedBy")}: {att.uploadedByName}
+                        </span>
+                      ) : null}
+                      {att.label ? <span>“{att.label}”</span> : null}
+                    </div>
                   </div>
                 </div>
-              <div className="flex gap-2">
+                <div className="flex gap-2">
                   <AdminFilePreview
                     url={att.filePath}
                     fileName={att.originalFileName}
                     contentType={att.contentType}
                     showLabel
-                    fetchFile={async () => (
-                      await adminApi.getContractAttachmentContent(contract.id, att.id)
-                    ).data}
+                    fetchFile={async () =>
+                      (await adminApi.getContractAttachmentContent(contract.id, att.id)).data
+                    }
                   />
-                {canManage ? <Button
-                  size="sm"
-                  variant="ghost"
-                  disabled={deletingId === att.id}
-                  onClick={() => handleDelete(att.id)}
-                  className="text-rose-700 hover:bg-rose-50"
-                  aria-label={`${t("common.delete")} · ${att.originalFileName}`}
-                >
-                  {deletingId === att.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
-                </Button> : null}
+                  {canManage ? (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={deletingId === att.id}
+                      onClick={() => handleDelete(att.id)}
+                      className="text-rose-700 hover:bg-rose-50"
+                      aria-label={`${t("common.delete")} · ${att.originalFileName}`}
+                    >
+                      {deletingId === att.id ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-3 w-3" />
+                      )}
+                    </Button>
+                  ) : null}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
           </div>
         </>
       )}
@@ -1600,7 +1925,10 @@ const TimelineTab = ({ events }: { events: ContractTimelineEvent[] }) => {
   return (
     <ol className="space-y-3">
       {events.map((ev) => (
-        <li key={ev.id} className="flex gap-3 rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+        <li
+          key={ev.id}
+          className="flex gap-3 rounded-lg border border-slate-200 bg-white p-3 shadow-sm"
+        >
           <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-600">
             <History className="h-4 w-4" />
           </div>
@@ -1609,7 +1937,9 @@ const TimelineTab = ({ events }: { events: ContractTimelineEvent[] }) => {
               <span className="font-semibold text-slate-800">
                 {actionKeys[ev.action] ? t(actionKeys[ev.action]) : ev.action}
               </span>
-              <span className="text-xs text-slate-500">{new Date(ev.occurredAt).toLocaleString()}</span>
+              <span className="text-xs text-slate-500">
+                {new Date(ev.occurredAt).toLocaleString()}
+              </span>
             </div>
             {!actionKeys[ev.action] && ev.message ? (
               <p className="mt-0.5 text-sm text-slate-700">{ev.message}</p>
@@ -1631,8 +1961,11 @@ const TimelineTab = ({ events }: { events: ContractTimelineEvent[] }) => {
 type TabId = "info" | "schedule" | "appendices" | "documents" | "timeline";
 
 const isContractTab = (value: string | null): value is TabId =>
-  value === "info" || value === "schedule" || value === "appendices" ||
-  value === "documents" || value === "timeline";
+  value === "info" ||
+  value === "schedule" ||
+  value === "appendices" ||
+  value === "documents" ||
+  value === "timeline";
 
 type ContractDetailProps = {
   mode?: "all" | "upstream" | "downstream";
@@ -1647,17 +1980,20 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedReturnTo = searchParams.get("returnTo");
   const requestedReturnPath = requestedReturnTo?.split("?", 1)[0];
-  const defaultReturnTo = mode === "upstream"
-    ? "/admin/finance/contracts"
-    : mode === "downstream" ? "/admin/finance/input-contracts" : "/admin/contracts";
-  const returnTo = requestedReturnPath === "/admin/contracts" ||
-      requestedReturnPath === "/admin/finance/contracts" ||
-      requestedReturnPath === "/admin/finance/input-contracts"
-    ? requestedReturnTo
-    : defaultReturnTo;
-  const scopedDirection: ContractDirection | undefined = mode === "upstream"
-    ? "Upstream"
-    : mode === "downstream" ? "Downstream" : undefined;
+  const defaultReturnTo =
+    mode === "upstream"
+      ? "/admin/finance/contracts"
+      : mode === "downstream"
+        ? "/admin/finance/input-contracts"
+        : "/admin/contracts";
+  const returnTo =
+    requestedReturnPath === "/admin/contracts" ||
+    requestedReturnPath === "/admin/finance/contracts" ||
+    requestedReturnPath === "/admin/finance/input-contracts"
+      ? requestedReturnTo
+      : defaultReturnTo;
+  const scopedDirection: ContractDirection | undefined =
+    mode === "upstream" ? "Upstream" : mode === "downstream" ? "Downstream" : undefined;
   const idNum = Number(params.id);
   const canManage = has(ADMIN_PERMS.contractsManage);
   const isFinanceWorkspace = mode !== "all";
@@ -1670,8 +2006,13 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
   const [linkQuoteOpen, setLinkQuoteOpen] = useState(false);
   // A customer contract drafted apart from its quotation can still be tied to
   // the approved quote afterwards (one source quote per contract).
-  const canLinkQuote = canManageMaster && contract != null && contract.direction === "Upstream" &&
-    contract.quoteId == null && contract.status !== "Cancelled" && contract.status !== "Completed";
+  const canLinkQuote =
+    canManageMaster &&
+    contract != null &&
+    contract.direction === "Upstream" &&
+    contract.quoteId == null &&
+    contract.status !== "Cancelled" &&
+    contract.status !== "Completed";
   const [appendices, setAppendices] = useState<ContractAppendixResponse[]>([]);
   const [attachments, setAttachments] = useState<ContractAttachmentResponse[]>([]);
   const [attachmentsError, setAttachmentsError] = useState<string | null>(null);
@@ -1712,13 +2053,17 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
       if (has(ADMIN_PERMS.designProjects)) {
         navigate(`/admin/design-projects/${data.id}`);
       } else {
-        setContract((current) => current ? {
-          ...current,
-          designProjectId: data.id,
-          designProjectCode: data.projectCode,
-          designProjectName: data.name,
-          designProjectCurrentStage: data.currentStage,
-        } : current);
+        setContract((current) =>
+          current
+            ? {
+                ...current,
+                designProjectId: data.id,
+                designProjectCode: data.projectCode,
+                designProjectName: data.name,
+                designProjectCurrentStage: data.currentStage,
+              }
+            : current,
+        );
       }
     } catch (err) {
       toast({
@@ -1763,7 +2108,9 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
       try {
         const eligible = await adminApi.listKpiEligibleUsers();
         setAccountants(eligible.data.filter((user) => user.positionCode === "PROJECT_ACCOUNTING"));
-      } catch { /* milestone actions remain server-protected */ }
+      } catch {
+        /* milestone actions remain server-protected */
+      }
     } catch (err) {
       setLoadError(getErrorMessage(err) ?? String(err));
     } finally {
@@ -1807,8 +2154,12 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
         setTab("documents");
         return;
       }
-      if (next === "InProgress" && contract.status === "Signed" && contract.direction === "Upstream" &&
-          ["Design", "Construction", "DesignAndBuild"].includes(contract.type)) {
+      if (
+        next === "InProgress" &&
+        contract.status === "Signed" &&
+        contract.direction === "Upstream" &&
+        ["Design", "Construction", "DesignAndBuild"].includes(contract.type)
+      ) {
         setLegalWizardOpen(true);
         return;
       }
@@ -1820,7 +2171,10 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
           return;
         }
       }
-      if (next === "Cancelled" && !window.confirm(t("contracts.detail.transition.markCancelled") + "?")) {
+      if (
+        next === "Cancelled" &&
+        !window.confirm(t("contracts.detail.transition.markCancelled") + "?")
+      ) {
         return;
       }
       setTransitionBusy(next);
@@ -1852,7 +2206,15 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
       }
       setBusyMilestoneId(milestoneId);
       try {
-        await adminApi.updateMilestoneStatus(contract.id, milestoneId, nextStatus, null, null, null, contract.rowVersion);
+        await adminApi.updateMilestoneStatus(
+          contract.id,
+          milestoneId,
+          nextStatus,
+          null,
+          null,
+          null,
+          contract.rowVersion,
+        );
         await refreshContract();
       } catch (err) {
         toast({ variant: "destructive", title: getErrorMessage(err) ?? String(err) });
@@ -1864,15 +2226,18 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
     [contract, refreshContract, toast],
   );
 
-  const openPaidDateDialog = useCallback((milestoneId: number, actualPaymentDate?: string | null) => {
-    const milestone = contract?.paymentMilestones.find((item) => item.id === milestoneId);
-    setMilestoneActionDraft({
-      milestoneId,
-      status: "Paid",
-      value: toIsoDate(actualPaymentDate) || getLocalIsoDate(),
-      accountantUserId: milestone?.responsibleAccountantUserId ?? null,
-    });
-  }, [contract]);
+  const openPaidDateDialog = useCallback(
+    (milestoneId: number, actualPaymentDate?: string | null) => {
+      const milestone = contract?.paymentMilestones.find((item) => item.id === milestoneId);
+      setMilestoneActionDraft({
+        milestoneId,
+        status: "Paid",
+        value: toIsoDate(actualPaymentDate) || getLocalIsoDate(),
+        accountantUserId: milestone?.responsibleAccountantUserId ?? null,
+      });
+    },
+    [contract],
+  );
 
   const confirmPaidDate = useCallback(async () => {
     if (!contract || !milestoneActionDraft) return;
@@ -1966,7 +2331,9 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
       setScheduleError(t("contracts.milestoneNameRequired"));
       return;
     }
-    if (scheduleDraft.some((milestone) => milestone.status === "Paid" && !milestone.actualPaymentDate)) {
+    if (
+      scheduleDraft.some((milestone) => milestone.status === "Paid" && !milestone.actualPaymentDate)
+    ) {
       setScheduleError(t("contracts.milestoneActualPaymentDateRequired"));
       return;
     }
@@ -2020,7 +2387,10 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
       setTab("info");
       return;
     }
-    const milestoneTotal = form.milestones.reduce((sum, milestone) => sum + milestone.percentValue, 0);
+    const milestoneTotal = form.milestones.reduce(
+      (sum, milestone) => sum + milestone.percentValue,
+      0,
+    );
     if (form.milestones.length > 0 && Math.abs(milestoneTotal - 100) > 0.01) {
       setFormError(t("contracts.milestoneSumInvalid"));
       setTab("schedule");
@@ -2031,7 +2401,12 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
       setTab("schedule");
       return;
     }
-    if (scheduleChanged && form.milestones.some((milestone) => milestone.status === "Paid" && !milestone.actualPaymentDate)) {
+    if (
+      scheduleChanged &&
+      form.milestones.some(
+        (milestone) => milestone.status === "Paid" && !milestone.actualPaymentDate,
+      )
+    ) {
       setFormError(t("contracts.milestoneActualPaymentDateRequired"));
       setTab("schedule");
       return;
@@ -2106,7 +2481,9 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
             <p>{t("contracts.finance.masterManagedElsewhere")}</p>
             {has(ADMIN_PERMS.contracts) && (
               <Button asChild variant="outline" size="sm" className="shrink-0 bg-white">
-                <Link to={`/admin/contracts/${contract.id}`}>{t("contracts.finance.openMasterRecord")}</Link>
+                <Link to={`/admin/contracts/${contract.id}`}>
+                  {t("contracts.finance.openMasterRecord")}
+                </Link>
               </Button>
             )}
           </div>
@@ -2132,7 +2509,10 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
         />
 
         {supplementalError && (
-          <div role="alert" className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          <div
+            role="alert"
+            className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800"
+          >
             {supplementalError}
           </div>
         )}
@@ -2146,11 +2526,15 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
             <TabsList className="inline-flex w-max min-w-full justify-start">
               <TabsTrigger value="info">{t("contracts.detail.tab.info")}</TabsTrigger>
               <TabsTrigger value="schedule">
-                {t(contract.direction === "Upstream"
-                  ? "contracts.detail.tab.receivableSchedule"
-                  : "contracts.detail.tab.payableSchedule")}
+                {t(
+                  contract.direction === "Upstream"
+                    ? "contracts.detail.tab.receivableSchedule"
+                    : "contracts.detail.tab.payableSchedule",
+                )}
                 {contract.paymentMilestones.length > 0 ? (
-                  <span className="ml-1 text-xs text-slate-400">({contract.paymentMilestones.length})</span>
+                  <span className="ml-1 text-xs text-slate-400">
+                    ({contract.paymentMilestones.length})
+                  </span>
                 ) : null}
               </TabsTrigger>
               <TabsTrigger value="appendices">
@@ -2185,9 +2569,13 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
             ) : (
               <InfoTab
                 contract={contract}
-                onEnsureDesignProject={!isFinanceWorkspace && has(ADMIN_PERMS.opportunitiesManage) &&
+                onEnsureDesignProject={
+                  !isFinanceWorkspace &&
+                  has(ADMIN_PERMS.opportunitiesManage) &&
                   has(ADMIN_PERMS.operationalProjectsManage)
-                  ? () => void handleEnsureDesignProject() : undefined}
+                    ? () => void handleEnsureDesignProject()
+                    : undefined
+                }
                 ensuringDesignProject={ensuringDesignProject}
                 canViewDesignProject={has(ADMIN_PERMS.designProjects)}
                 onLinkQuote={canLinkQuote ? () => setLinkQuoteOpen(true) : undefined}
@@ -2197,16 +2585,32 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
           <TabsContent value="schedule" className="mt-4">
             {editing && form ? (
               <div className="space-y-3">
-                <EditScheduleTab direction={contract.direction} value={form.value} milestones={form.milestones} onChange={(milestones) => setForm({ ...form, milestones })} />
+                <EditScheduleTab
+                  direction={contract.direction}
+                  value={form.value}
+                  milestones={form.milestones}
+                  onChange={(milestones) => setForm({ ...form, milestones })}
+                />
                 {formError ? <p className="text-sm text-destructive">{formError}</p> : null}
               </div>
             ) : editingSchedule ? (
               <div className="space-y-3" data-testid="contract-finance-schedule-form">
-                <EditScheduleTab direction={contract.direction} value={contract.value} milestones={scheduleDraft} onChange={setScheduleDraft} />
+                <EditScheduleTab
+                  direction={contract.direction}
+                  value={contract.value}
+                  milestones={scheduleDraft}
+                  onChange={setScheduleDraft}
+                />
                 {scheduleError ? <p className="text-sm text-destructive">{scheduleError}</p> : null}
                 <div className="flex justify-end gap-2">
-                  <Button variant="outline" disabled={scheduleSaving} onClick={cancelScheduleEdit}>{t("common.cancel")}</Button>
-                  <Button data-testid="contract-finance-schedule-save" disabled={scheduleSaving} onClick={() => void saveSchedule()}>
+                  <Button variant="outline" disabled={scheduleSaving} onClick={cancelScheduleEdit}>
+                    {t("common.cancel")}
+                  </Button>
+                  <Button
+                    data-testid="contract-finance-schedule-save"
+                    disabled={scheduleSaving}
+                    onClick={() => void saveSchedule()}
+                  >
                     {scheduleSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                     {t("common.save")}
                   </Button>
@@ -2216,7 +2620,12 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
               <div className="space-y-3">
                 {canManageMilestones ? (
                   <div className="flex justify-end">
-                    <Button data-testid="contract-finance-schedule-edit" size="sm" variant="outline" onClick={beginScheduleEdit}>
+                    <Button
+                      data-testid="contract-finance-schedule-edit"
+                      size="sm"
+                      variant="outline"
+                      onClick={beginScheduleEdit}
+                    >
                       <Pencil className="mr-1 h-4 w-4" />
                       {t("contracts.schedule.edit")}
                     </Button>
@@ -2255,46 +2664,82 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
           </TabsContent>
         </Tabs>
 
-        <Dialog open={milestoneActionDraft !== null} onOpenChange={(open) => (!open ? setMilestoneActionDraft(null) : null)}>
+        <Dialog
+          open={milestoneActionDraft !== null}
+          onOpenChange={(open) => (!open ? setMilestoneActionDraft(null) : null)}
+        >
           <DialogContent className="w-[95vw] max-w-md">
             <DialogHeader>
-              <DialogTitle>{milestoneActionDraft?.status === "Paid"
-                ? t(contract.direction === "Upstream" ? "contracts.collection.dateDialogTitle" : "contracts.schedule.paidDateDialogTitle")
-                : t(contract.direction === "Upstream" ? "contracts.collection.requestDialogTitle" : "contracts.schedule.requestDialogTitle")}</DialogTitle>
-              <DialogDescription>{t(contract.direction === "Upstream"
-                ? "contracts.collection.dateDialogDescription"
-                : "contracts.schedule.paidDateDialogDescription")}</DialogDescription>
+              <DialogTitle>
+                {milestoneActionDraft?.status === "Paid"
+                  ? t(
+                      contract.direction === "Upstream"
+                        ? "contracts.collection.dateDialogTitle"
+                        : "contracts.schedule.paidDateDialogTitle",
+                    )
+                  : t(
+                      contract.direction === "Upstream"
+                        ? "contracts.collection.requestDialogTitle"
+                        : "contracts.schedule.requestDialogTitle",
+                    )}
+              </DialogTitle>
+              <DialogDescription>
+                {t(
+                  contract.direction === "Upstream"
+                    ? "contracts.collection.dateDialogDescription"
+                    : "contracts.schedule.paidDateDialogDescription",
+                )}
+              </DialogDescription>
             </DialogHeader>
             <div className="space-y-3 py-2">
               <div className="space-y-1.5">
                 <Label>{t("contracts.milestone.responsibleAccountant")} *</Label>
                 <Select
-                  value={milestoneActionDraft?.accountantUserId ? String(milestoneActionDraft.accountantUserId) : ""}
-                  onValueChange={(value) => setMilestoneActionDraft((current) => current
-                    ? { ...current, accountantUserId: Number(value) }
-                    : current)}
+                  value={
+                    milestoneActionDraft?.accountantUserId
+                      ? String(milestoneActionDraft.accountantUserId)
+                      : ""
+                  }
+                  onValueChange={(value) =>
+                    setMilestoneActionDraft((current) =>
+                      current ? { ...current, accountantUserId: Number(value) } : current,
+                    )
+                  }
                 >
-                  <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue placeholder="—" />
+                  </SelectTrigger>
                   <SelectContent>
                     {accountants.map((accountant) => (
-                      <SelectItem key={accountant.userId} value={String(accountant.userId)}>{accountant.userName}</SelectItem>
+                      <SelectItem key={accountant.userId} value={String(accountant.userId)}>
+                        {accountant.userName}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-              {milestoneActionDraft?.status === "Paid" && <div className="space-y-1.5">
-              <Label htmlFor="contract-actual-payment-date">
-                {t(contract.direction === "Upstream" ? "contracts.collection.actualDate" : "contracts.milestone.actualPaymentDate")} *
-              </Label>
-              <Input
-                id="contract-actual-payment-date"
-                type="date"
-                value={milestoneActionDraft?.value ?? ""}
-                onChange={(event) => setMilestoneActionDraft((current) => current
-                  ? { ...current, value: event.target.value }
-                  : current)}
-              />
-              </div>}
+              {milestoneActionDraft?.status === "Paid" && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="contract-actual-payment-date">
+                    {t(
+                      contract.direction === "Upstream"
+                        ? "contracts.collection.actualDate"
+                        : "contracts.milestone.actualPaymentDate",
+                    )}{" "}
+                    *
+                  </Label>
+                  <Input
+                    id="contract-actual-payment-date"
+                    type="date"
+                    value={milestoneActionDraft?.value ?? ""}
+                    onChange={(event) =>
+                      setMilestoneActionDraft((current) =>
+                        current ? { ...current, value: event.target.value } : current,
+                      )
+                    }
+                  />
+                </div>
+              )}
             </div>
             <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
               <Button type="button" variant="outline" onClick={() => setMilestoneActionDraft(null)}>
@@ -2309,10 +2754,14 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
                 }
                 onClick={() => void confirmPaidDate()}
               >
-                {busyMilestoneId !== null ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : null}
-                {t(contract.direction === "Upstream"
-                  ? "contracts.collection.confirm"
-                  : "contracts.schedule.confirmPaid")}
+                {busyMilestoneId !== null ? (
+                  <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                ) : null}
+                {t(
+                  contract.direction === "Upstream"
+                    ? "contracts.collection.confirm"
+                    : "contracts.schedule.confirmPaid",
+                )}
               </Button>
             </DialogFooter>
           </DialogContent>

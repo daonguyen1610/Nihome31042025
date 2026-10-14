@@ -140,7 +140,9 @@ const DetailDrawer = ({ item, onClose }: { item: AuditLogItem | null; onClose: (
           s.value ? (
             <div className="mt-4" key={s.label}>
               <div className="mb-1 text-xs font-medium text-muted-foreground">{s.label}</div>
-              <pre className="overflow-x-auto rounded-lg border bg-card p-3 font-mono text-[11px]">{s.value}</pre>
+              <pre className="overflow-x-auto rounded-lg border bg-card p-3 font-mono text-[11px]">
+                {s.value}
+              </pre>
             </div>
           ) : null,
         )}
@@ -197,7 +199,20 @@ const ActivityLog = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, from, to, actionFilter, actorPhone, ip, statusFilter, resourceType, correlationId, search, t]);
+  }, [
+    page,
+    pageSize,
+    from,
+    to,
+    actionFilter,
+    actorPhone,
+    ip,
+    statusFilter,
+    resourceType,
+    correlationId,
+    search,
+    t,
+  ]);
 
   const fetchConfig = useCallback(async () => {
     try {
@@ -211,8 +226,12 @@ const ActivityLog = () => {
     }
   }, []);
 
-  useEffect(() => { fetchLogs(); }, [fetchLogs]);
-  useEffect(() => { fetchConfig(); }, [fetchConfig]);
+  useEffect(() => {
+    fetchLogs();
+  }, [fetchLogs]);
+  useEffect(() => {
+    fetchConfig();
+  }, [fetchConfig]);
 
   const items: AuditLogItem[] = data?.items ?? [];
   const total = data?.total ?? 0;
@@ -223,8 +242,16 @@ const ActivityLog = () => {
 
   const onRefresh = () => (page !== 1 ? setPage(1) : fetchLogs());
   const onResetFilters = () => {
-    setFrom(""); setTo(""); setIp(""); setActorPhone(""); setActionFilter("");
-    setStatusFilter(""); setResourceType(""); setCorrelationId(""); setSearch(""); setPage(1);
+    setFrom("");
+    setTo("");
+    setIp("");
+    setActorPhone("");
+    setActionFilter("");
+    setStatusFilter("");
+    setResourceType("");
+    setCorrelationId("");
+    setSearch("");
+    setPage(1);
   };
 
   const onDeleteOne = async (id: number) => {
@@ -258,11 +285,27 @@ const ActivityLog = () => {
   });
   useEffect(() => {
     clearSelection();
-  }, [page, pageSize, from, to, actionFilter, actorPhone, ip, statusFilter, resourceType, correlationId, search, clearSelection]);
+  }, [
+    page,
+    pageSize,
+    from,
+    to,
+    actionFilter,
+    actorPhone,
+    ip,
+    statusFilter,
+    resourceType,
+    correlationId,
+    search,
+    clearSelection,
+  ]);
 
   const onClearBefore = async () => {
     if (!canManageAudit) return;
-    if (!from) { toast.error(t("log.selectBefore")); return; }
+    if (!from) {
+      toast.error(t("log.selectBefore"));
+      return;
+    }
     if (!window.confirm(t("log.confirmClearBefore"))) return;
     try {
       const res = await adminApi.deleteAuditLogRange({ before: from });
@@ -299,15 +342,25 @@ const ActivityLog = () => {
       <div className="space-y-4 p-4 sm:p-6">
         <header className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h1 data-testid="audit-log-title" className="text-2xl font-semibold">{t("log.title")}</h1>
+            <h1 data-testid="audit-log-title" className="text-2xl font-semibold">
+              {t("log.title")}
+            </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              {total === 0 ? `0 ${t("log.entries")}` : `${showingFrom}–${showingTo} / ${total} ${t("log.entries")}`}
-              {" · "}{t("log.currentRetention")}: <span className="font-medium text-foreground">{retentionLabel}</span>
+              {total === 0
+                ? `0 ${t("log.entries")}`
+                : `${showingFrom}–${showingTo} / ${total} ${t("log.entries")}`}
+              {" · "}
+              {t("log.currentRetention")}:{" "}
+              <span className="font-medium text-foreground">{retentionLabel}</span>
             </p>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" onClick={onRefresh} disabled={loading}>
-              {loading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-1.5 h-4 w-4" />}
+              {loading ? (
+                <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="mr-1.5 h-4 w-4" />
+              )}
               {t("common.refresh")}
             </Button>
             {canManageAudit && (
@@ -326,7 +379,13 @@ const ActivityLog = () => {
             </div>
             <div className="grid grid-cols-1 items-end gap-3 md:grid-cols-4">
               <FilterField label={t("log.retentionAmount")}>
-                <Input type="number" min={0} value={retentionValue} onChange={(e) => setRetentionValue(Number(e.target.value))} className="h-9" />
+                <Input
+                  type="number"
+                  min={0}
+                  value={retentionValue}
+                  onChange={(e) => setRetentionValue(Number(e.target.value))}
+                  className="h-9"
+                />
               </FilterField>
               <FilterField label={t("log.retentionUnit")}>
                 <select
@@ -341,10 +400,16 @@ const ActivityLog = () => {
               </FilterField>
               <div className="flex items-center justify-end gap-3 md:col-span-2">
                 <p className="text-xs text-muted-foreground">
-                  {retentionValue <= 0 ? t("log.retentionForever") : `≈ ${toMinutes(retentionValue, retentionUnit)} ${t("log.unit.minutes")}`}
+                  {retentionValue <= 0
+                    ? t("log.retentionForever")
+                    : `≈ ${toMinutes(retentionValue, retentionUnit)} ${t("log.unit.minutes")}`}
                 </p>
                 <Button onClick={onSaveConfig} disabled={savingConfig}>
-                  {savingConfig ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Save className="mr-1.5 h-4 w-4" />}
+                  {savingConfig ? (
+                    <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="mr-1.5 h-4 w-4" />
+                  )}
                   {t("log.saveConfig")}
                 </Button>
               </div>
@@ -356,7 +421,10 @@ const ActivityLog = () => {
           <FilterField label={t("log.search")}>
             <Input
               value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
               className="h-9"
               placeholder={t("log.searchPlaceholder")}
             />
@@ -364,25 +432,51 @@ const ActivityLog = () => {
 
           <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
             <FilterField label={t("log.from")}>
-              <Input type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }} className="h-9" />
+              <Input
+                type="date"
+                value={from}
+                onChange={(e) => {
+                  setFrom(e.target.value);
+                  setPage(1);
+                }}
+                className="h-9"
+              />
             </FilterField>
             <FilterField label={t("log.to")}>
-              <Input type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} className="h-9" />
+              <Input
+                type="date"
+                value={to}
+                onChange={(e) => {
+                  setTo(e.target.value);
+                  setPage(1);
+                }}
+                className="h-9"
+              />
             </FilterField>
             <FilterField label={t("log.action")}>
               <select
                 value={actionFilter}
-                onChange={(e) => { setActionFilter(e.target.value); setPage(1); }}
+                onChange={(e) => {
+                  setActionFilter(e.target.value);
+                  setPage(1);
+                }}
                 className={selectClasses}
               >
                 <option value="">{t("common.all")}</option>
-                {actions.map((a) => (<option key={a} value={a}>{a}</option>))}
+                {actions.map((a) => (
+                  <option key={a} value={a}>
+                    {a}
+                  </option>
+                ))}
               </select>
             </FilterField>
             <FilterField label={t("log.detail.status")}>
               <select
                 value={statusFilter}
-                onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+                onChange={(e) => {
+                  setStatusFilter(e.target.value);
+                  setPage(1);
+                }}
                 className={selectClasses}
               >
                 <option value="">{t("common.all")}</option>
@@ -392,16 +486,45 @@ const ActivityLog = () => {
               </select>
             </FilterField>
             <FilterField label={t("log.actor")}>
-              <Input value={actorPhone} onChange={(e) => { setActorPhone(e.target.value); setPage(1); }} className="h-9" placeholder={t("log.actorPlaceholder")} />
+              <Input
+                value={actorPhone}
+                onChange={(e) => {
+                  setActorPhone(e.target.value);
+                  setPage(1);
+                }}
+                className="h-9"
+                placeholder={t("log.actorPlaceholder")}
+              />
             </FilterField>
             <FilterField label={t("log.ip")}>
-              <Input value={ip} onChange={(e) => { setIp(e.target.value); setPage(1); }} className="h-9" />
+              <Input
+                value={ip}
+                onChange={(e) => {
+                  setIp(e.target.value);
+                  setPage(1);
+                }}
+                className="h-9"
+              />
             </FilterField>
             <FilterField label={t("log.detail.resourceType")}>
-              <Input value={resourceType} onChange={(e) => { setResourceType(e.target.value); setPage(1); }} className="h-9" />
+              <Input
+                value={resourceType}
+                onChange={(e) => {
+                  setResourceType(e.target.value);
+                  setPage(1);
+                }}
+                className="h-9"
+              />
             </FilterField>
             <FilterField label={t("log.detail.correlationId")}>
-              <Input value={correlationId} onChange={(e) => { setCorrelationId(e.target.value); setPage(1); }} className="h-9" />
+              <Input
+                value={correlationId}
+                onChange={(e) => {
+                  setCorrelationId(e.target.value);
+                  setPage(1);
+                }}
+                className="h-9"
+              />
             </FilterField>
           </div>
 
@@ -451,7 +574,9 @@ const ActivityLog = () => {
                     )}
                     <div className="min-w-0">
                       <p className="break-all font-mono text-xs font-semibold">{l.action}</p>
-                      <p className="mt-0.5 text-xs text-muted-foreground">{formatDate(l.createdAt)}</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        {formatDate(l.createdAt)}
+                      </p>
                     </div>
                   </div>
                   <StatusBadge status={l.status} />
@@ -462,7 +587,9 @@ const ActivityLog = () => {
                   <dd className="min-w-0">
                     <span className="font-medium">{l.resourceType}</span>
                     {l.resourceId && (
-                      <span className="ml-1 font-mono text-[10px] text-muted-foreground">#{l.resourceId}</span>
+                      <span className="ml-1 font-mono text-[10px] text-muted-foreground">
+                        #{l.resourceId}
+                      </span>
                     )}
                   </dd>
 
@@ -472,7 +599,9 @@ const ActivityLog = () => {
                       <>
                         <span className="font-medium">{l.actorPhone}</span>
                         {l.actorRole && (
-                          <span className="ml-1 text-[10px] text-muted-foreground">{l.actorRole}</span>
+                          <span className="ml-1 text-[10px] text-muted-foreground">
+                            {l.actorRole}
+                          </span>
                         )}
                       </>
                     ) : (
@@ -485,7 +614,10 @@ const ActivityLog = () => {
                 </dl>
 
                 {l.message && (
-                  <p className="mt-2 line-clamp-2 break-words text-xs text-muted-foreground" title={l.message}>
+                  <p
+                    className="mt-2 line-clamp-2 break-words text-xs text-muted-foreground"
+                    title={l.message}
+                  >
                     {l.message}
                   </p>
                 )}
@@ -519,11 +651,7 @@ const ActivityLog = () => {
                     <th className="w-10 px-3 py-3 text-left">
                       <Checkbox
                         checked={
-                          allVisibleSelected
-                            ? true
-                            : someVisibleSelected
-                              ? "indeterminate"
-                              : false
+                          allVisibleSelected ? true : someVisibleSelected ? "indeterminate" : false
                         }
                         onCheckedChange={(v) => toggleAllVisible(v === true)}
                         aria-label={t("common.selectAll")}
@@ -550,7 +678,10 @@ const ActivityLog = () => {
                 )}
                 {!loading && items.length === 0 && (
                   <tr>
-                    <td colSpan={canManageAudit ? 9 : 8} className="px-5 py-10 text-center text-sm text-muted-foreground">
+                    <td
+                      colSpan={canManageAudit ? 9 : 8}
+                      className="px-5 py-10 text-center text-sm text-muted-foreground"
+                    >
                       {t("common.empty")}
                     </td>
                   </tr>
@@ -566,13 +697,19 @@ const ActivityLog = () => {
                         />
                       </td>
                     )}
-                    <td className="whitespace-nowrap px-4 py-3 text-xs text-muted-foreground">{formatDate(l.createdAt)}</td>
-                    <td className="px-4 py-3"><StatusBadge status={l.status} /></td>
+                    <td className="whitespace-nowrap px-4 py-3 text-xs text-muted-foreground">
+                      {formatDate(l.createdAt)}
+                    </td>
+                    <td className="px-4 py-3">
+                      <StatusBadge status={l.status} />
+                    </td>
                     <td className="px-4 py-3 font-mono text-xs">{l.action}</td>
                     <td className="px-4 py-3 text-xs">
                       <div className="font-medium">{l.resourceType}</div>
                       {l.resourceId && (
-                        <div className="font-mono text-[10px] text-muted-foreground">#{l.resourceId}</div>
+                        <div className="font-mono text-[10px] text-muted-foreground">
+                          #{l.resourceId}
+                        </div>
                       )}
                     </td>
                     <td className="px-4 py-3 text-xs">
@@ -588,7 +725,9 @@ const ActivityLog = () => {
                       )}
                     </td>
                     <td className="px-4 py-3 font-mono text-xs">{l.ipAddress ?? "—"}</td>
-                    <td className="max-w-xs truncate px-4 py-3 text-xs" title={l.message}>{l.message}</td>
+                    <td className="max-w-xs truncate px-4 py-3 text-xs" title={l.message}>
+                      {l.message}
+                    </td>
                     <td className="whitespace-nowrap px-4 py-3 text-right">
                       <Button size="sm" variant="ghost" onClick={() => setSelected(l)}>
                         <Eye className="mr-1 h-3.5 w-3.5" /> {t("common.view")}
@@ -616,10 +755,17 @@ const ActivityLog = () => {
               <span>{t("common.rowsPerPage")}</span>
               <select
                 value={pageSize}
-                onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setPage(1);
+                }}
                 className={cn(selectClasses, "h-8 w-auto")}
               >
-                {[10, 25, 50, 100, 200].map((s) => (<option key={s} value={s}>{s}</option>))}
+                {[10, 25, 50, 100, 200].map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
               </select>
             </div>
             <div className="flex items-center gap-3 text-xs">
@@ -633,7 +779,9 @@ const ActivityLog = () => {
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <span>{page} / {totalPages}</span>
+              <span>
+                {page} / {totalPages}
+              </span>
               <Button
                 size="icon"
                 variant="ghost"

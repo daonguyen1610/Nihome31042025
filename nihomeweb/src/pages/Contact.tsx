@@ -30,7 +30,12 @@ const Contact = () => {
   }, []);
 
   const offices = [
-    { city: t("contact.office.hq"), address: t("contact.office.hqAddr"), phone: "+84 909 450 266", email: "sale@nicon.vn" },
+    {
+      city: t("contact.office.hq"),
+      address: t("contact.office.hqAddr"),
+      phone: "+84 909 450 266",
+      email: "sale@nicon.vn",
+    },
     // { city: t("contact.office.bd"), address: t("contact.office.bdAddr"), phone: "+84 274 365 4321", email: "binhduong@nicon.vn" },
   ];
 
@@ -48,7 +53,11 @@ const Contact = () => {
       toast({ title: t("contact.toast.title"), description: t("contact.toast.desc") });
       setForm({ name: "", email: "", phone: "", subject: "", message: "" });
     } catch {
-      toast({ title: t("common.error"), description: t("common.tryAgain"), variant: "destructive" });
+      toast({
+        title: t("common.error"),
+        description: t("common.tryAgain"),
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -74,7 +83,9 @@ const Contact = () => {
               <form onSubmit={submit} className="space-y-5">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div>
-                    <label className="text-xs uppercase tracking-wider font-bold text-foreground/70 mb-2 block">{t("contact.form.name")}</label>
+                    <label className="text-xs uppercase tracking-wider font-bold text-foreground/70 mb-2 block">
+                      {t("contact.form.name")}
+                    </label>
                     <input
                       required
                       value={form.name}
@@ -84,7 +95,9 @@ const Contact = () => {
                     />
                   </div>
                   <div>
-                    <label className="text-xs uppercase tracking-wider font-bold text-foreground/70 mb-2 block">{t("contact.form.phone")}</label>
+                    <label className="text-xs uppercase tracking-wider font-bold text-foreground/70 mb-2 block">
+                      {t("contact.form.phone")}
+                    </label>
                     <input
                       value={form.phone}
                       onChange={(e) => setForm({ ...form, phone: e.target.value })}
@@ -94,7 +107,9 @@ const Contact = () => {
                   </div>
                 </div>
                 <div>
-                  <label className="text-xs uppercase tracking-wider font-bold text-foreground/70 mb-2 block">{t("contact.form.email")}</label>
+                  <label className="text-xs uppercase tracking-wider font-bold text-foreground/70 mb-2 block">
+                    {t("contact.form.email")}
+                  </label>
                   <input
                     required
                     type="email"
@@ -105,7 +120,9 @@ const Contact = () => {
                   />
                 </div>
                 <div>
-                  <label className="text-xs uppercase tracking-wider font-bold text-foreground/70 mb-2 block">{t("contact.form.subject")}</label>
+                  <label className="text-xs uppercase tracking-wider font-bold text-foreground/70 mb-2 block">
+                    {t("contact.form.subject")}
+                  </label>
                   <select
                     value={form.subject}
                     onChange={(e) => setForm({ ...form, subject: e.target.value })}
@@ -120,7 +137,9 @@ const Contact = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs uppercase tracking-wider font-bold text-foreground/70 mb-2 block">{t("contact.form.message")}</label>
+                  <label className="text-xs uppercase tracking-wider font-bold text-foreground/70 mb-2 block">
+                    {t("contact.form.message")}
+                  </label>
                   <textarea
                     required
                     rows={5}
@@ -135,7 +154,13 @@ const Contact = () => {
                   disabled={loading}
                   className="btn-pill btn-gradient text-white px-8 py-4 text-sm uppercase tracking-wider w-full md:w-auto disabled:opacity-60"
                 >
-                  {loading ? t("contact.form.sending") : <>{t("contact.form.send")} <Send className="w-4 h-4" /></>}
+                  {loading ? (
+                    t("contact.form.sending")
+                  ) : (
+                    <>
+                      {t("contact.form.send")} <Send className="w-4 h-4" />
+                    </>
+                  )}
                 </button>
               </form>
             </div>
@@ -147,9 +172,15 @@ const Contact = () => {
               <div key={i} className="bg-card border border-border rounded-3xl p-7 hover-lift">
                 <h3 className="font-display text-xl font-extrabold mb-5">{o.city}</h3>
                 <div className="space-y-3 text-sm">
-                  <p className="flex gap-3 text-foreground/80"><MapPin className="w-4 h-4 text-primary mt-0.5 shrink-0" /> {o.address}</p>
-                  <p className="flex gap-3 text-foreground/80"><Phone className="w-4 h-4 text-primary mt-0.5 shrink-0" /> {o.phone}</p>
-                  <p className="flex gap-3 text-foreground/80"><Mail className="w-4 h-4 text-primary mt-0.5 shrink-0" /> {o.email}</p>
+                  <p className="flex gap-3 text-foreground/80">
+                    <MapPin className="w-4 h-4 text-primary mt-0.5 shrink-0" /> {o.address}
+                  </p>
+                  <p className="flex gap-3 text-foreground/80">
+                    <Phone className="w-4 h-4 text-primary mt-0.5 shrink-0" /> {o.phone}
+                  </p>
+                  <p className="flex gap-3 text-foreground/80">
+                    <Mail className="w-4 h-4 text-primary mt-0.5 shrink-0" /> {o.email}
+                  </p>
                 </div>
               </div>
             ))}
@@ -157,12 +188,18 @@ const Contact = () => {
             <div className="bg-gradient-primary text-white rounded-3xl p-7 relative overflow-hidden">
               <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full" />
               <Clock className="w-7 h-7 mb-4" strokeWidth={1.5} />
-              <h3 className="font-display text-xl font-extrabold mb-2">{t("contact.hours.title")}</h3>
+              <h3 className="font-display text-xl font-extrabold mb-2">
+                {t("contact.hours.title")}
+              </h3>
               <p className="text-white/90 text-sm">{t("contact.hours.weekday")}</p>
               <p className="text-white/90 text-sm">{t("contact.hours.sat")}</p>
               <div className="flex gap-3 mt-5 relative z-10">
                 {[Facebook, Linkedin, Youtube].map((Icon, i) => (
-                  <a key={i} href="#" className="w-10 h-10 rounded-full bg-white/15 backdrop-blur hover:bg-white hover:text-primary flex items-center justify-center transition">
+                  <a
+                    key={i}
+                    href="#"
+                    className="w-10 h-10 rounded-full bg-white/15 backdrop-blur hover:bg-white hover:text-primary flex items-center justify-center transition"
+                  >
                     <Icon className="w-4 h-4" />
                   </a>
                 ))}

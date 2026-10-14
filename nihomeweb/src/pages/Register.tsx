@@ -21,7 +21,8 @@ const Register = () => {
   const dispatch = useAppDispatch();
   const { toast } = useToast();
   const { t } = useI18n();
-  const { user, loading, error, otpRequired, otpEmail, otpPhone, otpFlow, otpPassword } = useAppSelector((s) => s.auth);
+  const { user, loading, error, otpRequired, otpEmail, otpPhone, otpFlow, otpPassword } =
+    useAppSelector((s) => s.auth);
 
   const [form, setForm] = useState({ fullName: "", phone: "", email: "", password: "" });
   const [otpCode, setOtpCode] = useState("");
@@ -30,14 +31,21 @@ const Register = () => {
   // Navigate on successful registration (user set in store)
   useEffect(() => {
     if (user) {
-      toast({ title: t("auth.reg.toast.title"), description: `${t("auth.login.toast.hello")} ${user.fullName}` });
+      toast({
+        title: t("auth.reg.toast.title"),
+        description: `${t("auth.login.toast.hello")} ${user.fullName}`,
+      });
       navigate(isAdminRole(user.role) ? "/admin" : "/profile");
     }
   }, [user, navigate, toast, t]);
 
   useEffect(() => {
     if (error) {
-      toast({ title: t("auth.error"), description: translateError(t, error), variant: "destructive" });
+      toast({
+        title: t("auth.error"),
+        description: translateError(t, error),
+        variant: "destructive",
+      });
       dispatch(clearError());
     }
   }, [error, toast, t, dispatch]);
@@ -51,7 +59,14 @@ const Register = () => {
 
   const submitRegister = (e: React.FormEvent) => {
     e.preventDefault();
-    dispatch(registerStartThunk({ phone: form.phone, fullName: form.fullName, email: form.email, password: form.password }));
+    dispatch(
+      registerStartThunk({
+        phone: form.phone,
+        fullName: form.fullName,
+        email: form.email,
+        password: form.password,
+      }),
+    );
   };
 
   const submitOtp = (e: React.FormEvent) => {
@@ -61,7 +76,9 @@ const Register = () => {
       if (res.meta.requestStatus === "fulfilled") {
         setOtpVerified(true);
         // Immediately complete registration
-        dispatch(registerCompleteThunk({ phone: otpPhone, password: otpPassword ?? form.password }));
+        dispatch(
+          registerCompleteThunk({ phone: otpPhone, password: otpPassword ?? form.password }),
+        );
       }
     });
   };
@@ -111,7 +128,13 @@ const Register = () => {
                   disabled={loading}
                   className="btn-pill btn-gradient text-white w-full py-3.5 text-sm uppercase tracking-wider disabled:opacity-60"
                 >
-                  {loading ? t("auth.processing") : <>{t("auth.otp.verify")} <ArrowRight className="w-4 h-4" /></>}
+                  {loading ? (
+                    t("auth.processing")
+                  ) : (
+                    <>
+                      {t("auth.otp.verify")} <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
                 </button>
               </form>
 
@@ -137,7 +160,8 @@ const Register = () => {
           <div className="max-w-md mx-auto bg-card border border-border rounded-3xl p-8 lg:p-10 shadow-elegant">
             <p className="eyebrow text-primary mb-5 justify-center">{t("auth.reg.eyebrow")}</p>
             <h1 className="font-display text-3xl md:text-4xl font-extrabold text-center mb-3 tracking-tight">
-              {t("auth.reg.titleA")} <span className="text-gradient-primary">{t("auth.reg.titleB")}</span>
+              {t("auth.reg.titleA")}{" "}
+              <span className="text-gradient-primary">{t("auth.reg.titleB")}</span>
             </h1>
             <p className="text-center text-muted-foreground text-sm mb-8">{t("auth.reg.desc")}</p>
 
@@ -191,7 +215,13 @@ const Register = () => {
                 disabled={loading}
                 className="btn-pill btn-gradient text-white w-full py-3.5 text-sm uppercase tracking-wider disabled:opacity-60"
               >
-                {loading ? t("auth.processing") : <>{t("auth.reg.btn")} <ArrowRight className="w-4 h-4" /></>}
+                {loading ? (
+                  t("auth.processing")
+                ) : (
+                  <>
+                    {t("auth.reg.btn")} <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
               </button>
             </form>
 

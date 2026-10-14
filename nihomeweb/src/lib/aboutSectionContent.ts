@@ -133,9 +133,19 @@ const LEGACY_ABOUT_ICON_CLASS_MAP: Record<string, AboutIconKey> = {
 
 export const DEFAULT_STATS_ICON_KEYS: AboutIconKey[] = ["calendar", "building", "users", "award"];
 export const DEFAULT_VALUE_ICON_KEYS: AboutIconKey[] = ["target", "shield", "compass", "heart"];
-export const DEFAULT_STRATEGY_ICON_KEYS: AboutIconKey[] = ["building", "hammer", "layers", "wrench", "briefcase", "users-group"];
+export const DEFAULT_STRATEGY_ICON_KEYS: AboutIconKey[] = [
+  "building",
+  "hammer",
+  "layers",
+  "wrench",
+  "briefcase",
+  "users-group",
+];
 
-export function resolveAboutIconKey(value: string | null | undefined, fallback: AboutIconKey = "star"): AboutIconKey {
+export function resolveAboutIconKey(
+  value: string | null | undefined,
+  fallback: AboutIconKey = "star",
+): AboutIconKey {
   const normalized = value?.trim().replace(/\s+/g, " ");
   if (!normalized) return fallback;
 
@@ -148,8 +158,12 @@ export function resolveAboutIconKey(value: string | null | undefined, fallback: 
 
 export function sortItemsBySortOrder<T extends { sortOrder?: number }>(items: T[]): T[] {
   return [...items].sort((left, right) => {
-    const leftOrder = Number.isFinite(left.sortOrder) ? left.sortOrder ?? 0 : Number.MAX_SAFE_INTEGER;
-    const rightOrder = Number.isFinite(right.sortOrder) ? right.sortOrder ?? 0 : Number.MAX_SAFE_INTEGER;
+    const leftOrder = Number.isFinite(left.sortOrder)
+      ? (left.sortOrder ?? 0)
+      : Number.MAX_SAFE_INTEGER;
+    const rightOrder = Number.isFinite(right.sortOrder)
+      ? (right.sortOrder ?? 0)
+      : Number.MAX_SAFE_INTEGER;
     return leftOrder - rightOrder;
   });
 }
@@ -173,9 +187,13 @@ type ParsedOrganizationContent = {
 };
 
 const toOrganizationItemArray = (value: unknown): OrganizationLikeItem[] =>
-  Array.isArray(value) ? value.filter((item): item is OrganizationLikeItem => !!item && typeof item === "object") : [];
+  Array.isArray(value)
+    ? value.filter((item): item is OrganizationLikeItem => !!item && typeof item === "object")
+    : [];
 
-const resolveOrganizationGroup = (value: string | null | undefined): "board" | "directors" | null => {
+const resolveOrganizationGroup = (
+  value: string | null | undefined,
+): "board" | "directors" | null => {
   const normalized = value?.trim().toLowerCase();
   if (!normalized) return null;
 
@@ -223,7 +241,9 @@ const splitOrganizationList = (items: OrganizationLikeItem[]): ParsedOrganizatio
   return { board, directors };
 };
 
-export function parseOrganizationContent(raw: string | null | undefined): ParsedOrganizationContent {
+export function parseOrganizationContent(
+  raw: string | null | undefined,
+): ParsedOrganizationContent {
   if (!raw?.trim()) {
     return { board: [], directors: [] };
   }
@@ -240,10 +260,15 @@ export function parseOrganizationContent(raw: string | null | undefined): Parsed
     }
 
     const record = parsed as Record<string, unknown>;
-    const board = toOrganizationItemArray(record.board ?? record.boardMembers ?? record.leadership ?? record.members);
-    const directors = toOrganizationItemArray(record.directors ?? record.executives ?? record.management ?? record.executiveBoard);
+    const board = toOrganizationItemArray(
+      record.board ?? record.boardMembers ?? record.leadership ?? record.members,
+    );
+    const directors = toOrganizationItemArray(
+      record.directors ?? record.executives ?? record.management ?? record.executiveBoard,
+    );
 
-    const companyChartUrl = typeof record.companyChartUrl === "string" ? record.companyChartUrl : undefined;
+    const companyChartUrl =
+      typeof record.companyChartUrl === "string" ? record.companyChartUrl : undefined;
     const siteChartUrl = typeof record.siteChartUrl === "string" ? record.siteChartUrl : undefined;
 
     if (board.length > 0 || directors.length > 0) {

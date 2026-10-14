@@ -52,7 +52,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import {
   adminApi,
   type ConstructionTaskListParams,
@@ -164,10 +170,7 @@ const buildGantt = (tasks: ConstructionTaskResponse[]) => {
   if (tasks.length === 0) return { rows: [] as GanttRow[], totalDays: 0, startIso: "" };
   const starts = tasks.map((t) => new Date(t.plannedStart).getTime());
   const ends = tasks.map((t) =>
-    Math.max(
-      new Date(t.plannedEnd).getTime(),
-      t.actualEnd ? new Date(t.actualEnd).getTime() : 0,
-    ),
+    Math.max(new Date(t.plannedEnd).getTime(), t.actualEnd ? new Date(t.actualEnd).getTime() : 0),
   );
   const min = Math.min(...starts);
   const max = Math.max(...ends);
@@ -200,14 +203,19 @@ const AdminConstructionTasks = () => {
   // list state
   const [rows, setRows] = useState<ConstructionTaskResponse[]>([]);
   const [total, setTotal] = useState(0);
-  const [statusCounts, setStatusCounts] = useState<Partial<Record<ConstructionTaskStatus, number>>>({});
+  const [statusCounts, setStatusCounts] = useState<Partial<Record<ConstructionTaskStatus, number>>>(
+    {},
+  );
   const [overdueCount, setOverdueCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // filters
-  const projectIdParam = Number(searchParams.get("designProjectId") ?? searchParams.get("projectId"));
-  const initialProjectId = Number.isInteger(projectIdParam) && projectIdParam > 0 ? projectIdParam : null;
+  const projectIdParam = Number(
+    searchParams.get("designProjectId") ?? searchParams.get("projectId"),
+  );
+  const initialProjectId =
+    Number.isInteger(projectIdParam) && projectIdParam > 0 ? projectIdParam : null;
   const taskIdParam = Number(searchParams.get("taskId"));
   const requestedTaskId = Number.isInteger(taskIdParam) && taskIdParam > 0 ? taskIdParam : null;
   const openedTaskIdRef = useRef<number | null>(null);
@@ -419,13 +427,16 @@ const AdminConstructionTasks = () => {
   useEffect(() => {
     if (requestedTaskId == null || openedTaskIdRef.current === requestedTaskId) return;
     openedTaskIdRef.current = requestedTaskId;
-    void adminApi.getConstructionTask(requestedTaskId)
+    void adminApi
+      .getConstructionTask(requestedTaskId)
       .then(({ data }) => openDetail(data))
-      .catch((err) => toast({
-        title: t("common.error"),
-        description: extractApiError(err),
-        variant: "destructive",
-      }));
+      .catch((err) =>
+        toast({
+          title: t("common.error"),
+          description: extractApiError(err),
+          variant: "destructive",
+        }),
+      );
   }, [openDetail, requestedTaskId, t, toast]);
   const closeDetail = () => {
     setDetail(null);
@@ -475,8 +486,9 @@ const AdminConstructionTasks = () => {
       // so we don't add a redundant audit entry on plain edits.
       const originalPreds = new Set(detail.predecessors.map((p) => p.predecessorTaskId));
       const nextPreds = new Set(detailPreds);
-      const changed = originalPreds.size !== nextPreds.size
-        || [...nextPreds].some((id) => !originalPreds.has(id));
+      const changed =
+        originalPreds.size !== nextPreds.size ||
+        [...nextPreds].some((id) => !originalPreds.has(id));
       let latest = updated;
       if (changed) {
         const resp = await adminApi.setConstructionTaskPredecessors(detail.id, {
@@ -574,11 +586,11 @@ const AdminConstructionTasks = () => {
   // -------- render helpers --------
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const hasActiveFilter =
-    projectId != null
-    || status !== ""
-    || ownerUserId != null
-    || search.trim().length > 0
-    || overdueOnly;
+    projectId != null ||
+    status !== "" ||
+    ownerUserId != null ||
+    search.trim().length > 0 ||
+    overdueOnly;
 
   const statusPillCount = (s: ConstructionTaskStatus) => statusCounts[s] ?? 0;
 
@@ -630,22 +642,12 @@ const AdminConstructionTasks = () => {
               <ListChecks className="mr-2 h-4 w-4" />
               {view === "list" ? t("constructionTasks.tab.gantt") : t("constructionTasks.tab.list")}
             </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => void fetchList()}
-            >
+            <Button type="button" variant="outline" size="sm" onClick={() => void fetchList()}>
               <RefreshCcw className="mr-2 h-4 w-4" />
               {t("common.refresh")}
             </Button>
             {canManage && (
-              <Button
-                type="button"
-                size="sm"
-                onClick={openCreate}
-                data-testid="construction-new"
-              >
+              <Button type="button" size="sm" onClick={openCreate} data-testid="construction-new">
                 <Plus className="mr-2 h-4 w-4" />
                 {t("constructionTasks.new")}
               </Button>
@@ -728,9 +730,7 @@ const AdminConstructionTasks = () => {
               </Select>
             </div>
             <div>
-              <Label className="text-xs text-slate-500">
-                {t("constructionTasks.field.owner")}
-              </Label>
+              <Label className="text-xs text-slate-500">{t("constructionTasks.field.owner")}</Label>
               {canListUsers ? (
                 <SearchableSelect
                   value={ownerUserId == null ? "" : String(ownerUserId)}
@@ -835,9 +835,7 @@ const AdminConstructionTasks = () => {
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="font-mono text-xs text-slate-500">
-                          {row.taskCode}
-                        </span>
+                        <span className="font-mono text-xs text-slate-500">{row.taskCode}</span>
                         {row.wbs && (
                           <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-500">
                             WBS {row.wbs}
@@ -849,10 +847,7 @@ const AdminConstructionTasks = () => {
                       </div>
                     </div>
                     {canManage && (
-                      <div
-                        onClick={(e) => e.stopPropagation()}
-                        role="presentation"
-                      >
+                      <div onClick={(e) => e.stopPropagation()} role="presentation">
                         <Checkbox
                           checked={selected.has(row.id)}
                           onCheckedChange={(v) => toggleSelect(row.id, !!v)}
@@ -979,10 +974,7 @@ const AdminConstructionTasks = () => {
                         data-testid={`construction-row-${row.id}`}
                       >
                         {canManage && (
-                          <td
-                            className="px-3 py-2"
-                            onClick={(e) => e.stopPropagation()}
-                          >
+                          <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
                             <Checkbox
                               checked={selected.has(row.id)}
                               onCheckedChange={(v) => toggleSelect(row.id, !!v)}
@@ -1024,13 +1016,8 @@ const AdminConstructionTasks = () => {
                         <td className="px-3 py-2 text-xs text-slate-600">
                           {formatDate(row.plannedEnd, lang)}
                         </td>
-                        <td className="px-3 py-2 text-xs text-slate-600">
-                          {row.ownerName ?? "—"}
-                        </td>
-                        <td
-                          className="px-3 py-2 text-right"
-                          onClick={(e) => e.stopPropagation()}
-                        >
+                        <td className="px-3 py-2 text-xs text-slate-600">{row.ownerName ?? "—"}</td>
+                        <td className="px-3 py-2 text-right" onClick={(e) => e.stopPropagation()}>
                           {canManage && (
                             <Button
                               size="sm"
@@ -1133,9 +1120,7 @@ const AdminConstructionTasks = () => {
                 <Textarea
                   rows={2}
                   value={createForm.description}
-                  onChange={(e) =>
-                    setCreateForm((f) => ({ ...f, description: e.target.value }))
-                  }
+                  onChange={(e) => setCreateForm((f) => ({ ...f, description: e.target.value }))}
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -1144,9 +1129,7 @@ const AdminConstructionTasks = () => {
                   <Input
                     type="date"
                     value={createForm.plannedStart}
-                    onChange={(e) =>
-                      setCreateForm((f) => ({ ...f, plannedStart: e.target.value }))
-                    }
+                    onChange={(e) => setCreateForm((f) => ({ ...f, plannedStart: e.target.value }))}
                   />
                 </div>
                 <div>
@@ -1154,9 +1137,7 @@ const AdminConstructionTasks = () => {
                   <Input
                     type="date"
                     value={createForm.plannedEnd}
-                    onChange={(e) =>
-                      setCreateForm((f) => ({ ...f, plannedEnd: e.target.value }))
-                    }
+                    onChange={(e) => setCreateForm((f) => ({ ...f, plannedEnd: e.target.value }))}
                   />
                 </div>
               </div>
@@ -1164,9 +1145,7 @@ const AdminConstructionTasks = () => {
                 <Label>{t("constructionTasks.field.owner")}</Label>
                 {canListUsers ? (
                   <SearchableSelect
-                    value={
-                      createForm.ownerUserId == null ? "" : String(createForm.ownerUserId)
-                    }
+                    value={createForm.ownerUserId == null ? "" : String(createForm.ownerUserId)}
                     onChange={(v) =>
                       setCreateForm((f) => ({ ...f, ownerUserId: v ? Number(v) : null }))
                     }
@@ -1197,10 +1176,7 @@ const AdminConstructionTasks = () => {
             if (!open) closeDetail();
           }}
         >
-          <SheetContent
-            side="right"
-            className="w-full max-w-xl overflow-y-auto sm:max-w-xl"
-          >
+          <SheetContent side="right" className="w-full max-w-xl overflow-y-auto sm:max-w-xl">
             {detail && detailForm && (
               <>
                 <SheetHeader>
@@ -1219,9 +1195,7 @@ const AdminConstructionTasks = () => {
                     <Label>{t("constructionTasks.field.name")}</Label>
                     <Input
                       value={detailForm.name}
-                      onChange={(e) =>
-                        setDetailForm((f) => f && { ...f, name: e.target.value })
-                      }
+                      onChange={(e) => setDetailForm((f) => f && { ...f, name: e.target.value })}
                       disabled={!canManage}
                     />
                   </div>
@@ -1230,9 +1204,7 @@ const AdminConstructionTasks = () => {
                       <Label>{t("constructionTasks.field.wbs")}</Label>
                       <Input
                         value={detailForm.wbs}
-                        onChange={(e) =>
-                          setDetailForm((f) => f && { ...f, wbs: e.target.value })
-                        }
+                        onChange={(e) => setDetailForm((f) => f && { ...f, wbs: e.target.value })}
                         disabled={!canManage}
                       />
                     </div>
@@ -1241,9 +1213,7 @@ const AdminConstructionTasks = () => {
                       <Select
                         value={detailForm.status}
                         onValueChange={(v) =>
-                          setDetailForm(
-                            (f) => f && { ...f, status: v as ConstructionTaskStatus },
-                          )
+                          setDetailForm((f) => f && { ...f, status: v as ConstructionTaskStatus })
                         }
                         disabled={!canManage}
                       >
@@ -1328,9 +1298,7 @@ const AdminConstructionTasks = () => {
                       step={1}
                       value={detailForm.progressPercent}
                       onChange={(e) =>
-                        setDetailForm(
-                          (f) => f && { ...f, progressPercent: Number(e.target.value) },
-                        )
+                        setDetailForm((f) => f && { ...f, progressPercent: Number(e.target.value) })
                       }
                       disabled={!canManage}
                       data-testid="construction-progress-slider"
@@ -1340,15 +1308,9 @@ const AdminConstructionTasks = () => {
                     <Label>{t("constructionTasks.field.owner")}</Label>
                     {canListUsers ? (
                       <SearchableSelect
-                        value={
-                          detailForm.ownerUserId == null
-                            ? ""
-                            : String(detailForm.ownerUserId)
-                        }
+                        value={detailForm.ownerUserId == null ? "" : String(detailForm.ownerUserId)}
                         onChange={(v) =>
-                          setDetailForm(
-                            (f) => f && { ...f, ownerUserId: v ? Number(v) : null },
-                          )
+                          setDetailForm((f) => f && { ...f, ownerUserId: v ? Number(v) : null })
                         }
                         options={userOptions.filter((o) => o.value !== "")}
                         placeholder="—"
@@ -1456,20 +1418,13 @@ const AdminConstructionTasks = () => {
         <AlertDialog open={confirmBulkDelete} onOpenChange={setConfirmBulkDelete}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>
-                {t("constructionTasks.action.bulkDelete")}
-              </AlertDialogTitle>
+              <AlertDialogTitle>{t("constructionTasks.action.bulkDelete")}</AlertDialogTitle>
               <AlertDialogDescription>
-                {t("constructionTasks.confirmBulkDelete").replace(
-                  "{count}",
-                  String(selected.size),
-                )}
+                {t("constructionTasks.confirmBulkDelete").replace("{count}", String(selected.size))}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel disabled={bulkDeleting}>
-                {t("common.cancel")}
-              </AlertDialogCancel>
+              <AlertDialogCancel disabled={bulkDeleting}>{t("common.cancel")}</AlertDialogCancel>
               <AlertDialogAction
                 onClick={submitBulkDelete}
                 disabled={bulkDeleting}
@@ -1511,9 +1466,7 @@ const StatTile = ({ icon, label, value, gradient }: StatTileProps) => (
     <div className="relative z-10 flex items-start justify-between gap-2">
       <div className="min-w-0">
         <div className="text-sm font-medium text-white/85">{label}</div>
-        <div className="mt-1 text-3xl font-bold tabular-nums leading-none">
-          {value}
-        </div>
+        <div className="mt-1 text-3xl font-bold tabular-nums leading-none">{value}</div>
       </div>
       <div className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-white/20 backdrop-blur-sm">
         {icon}

@@ -223,7 +223,11 @@ const AdminTenders = () => {
       setFormError(null);
       setDialogOpen(true);
     } catch (err) {
-      toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
+      toast({
+        title: t("common.error"),
+        description: extractApiError(err),
+        variant: "destructive",
+      });
     } finally {
       setSaving(false);
     }
@@ -390,11 +394,19 @@ const AdminTenders = () => {
         {/* Header */}
         <header className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div className="min-w-0">
-            <h1 className="text-xl font-semibold tracking-tight md:text-2xl">{t("tenders.title")}</h1>
+            <h1 className="text-xl font-semibold tracking-tight md:text-2xl">
+              {t("tenders.title")}
+            </h1>
             <p className="mt-1 text-sm text-muted-foreground">{t("tenders.subtitle")}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => void fetchList()} disabled={loading} className="flex-1 md:flex-none">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void fetchList()}
+              disabled={loading}
+              className="flex-1 md:flex-none"
+            >
               <RefreshCcw className={cn("mr-2 h-4 w-4", loading && "animate-spin")} />
               {t("common.refresh")}
             </Button>
@@ -431,7 +443,9 @@ const AdminTenders = () => {
             <SelectContent>
               <SelectItem value={ALL_VALUE}>{t("tenders.filter.allStatus")}</SelectItem>
               {TENDER_STATUSES.map((s) => (
-                <SelectItem key={s} value={s}>{statusLabel(s)}</SelectItem>
+                <SelectItem key={s} value={s}>
+                  {statusLabel(s)}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -448,7 +462,9 @@ const AdminTenders = () => {
             <SelectContent className="max-h-64">
               <SelectItem value={ALL_VALUE}>{t("tenders.filter.allCustomers")}</SelectItem>
               {customers.map((c) => (
-                <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
+                <SelectItem key={c.id} value={String(c.id)}>
+                  {c.name}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -483,11 +499,18 @@ const AdminTenders = () => {
                     <header className="flex items-start justify-between gap-2">
                       <div className="flex min-w-0 items-start gap-2">
                         <div className="min-w-0">
-                          <h3 className="break-words text-sm font-semibold leading-tight">{r.name}</h3>
-                          <p className="mt-0.5 break-words text-xs text-muted-foreground">{r.code} · {r.customerName}</p>
+                          <h3 className="break-words text-sm font-semibold leading-tight">
+                            {r.name}
+                          </h3>
+                          <p className="mt-0.5 break-words text-xs text-muted-foreground">
+                            {r.code} · {r.customerName}
+                          </p>
                         </div>
                       </div>
-                      <Badge className={cn("shrink-0 whitespace-nowrap", STATUS_BADGE_STYLES[r.status])} variant="outline">
+                      <Badge
+                        className={cn("shrink-0 whitespace-nowrap", STATUS_BADGE_STYLES[r.status])}
+                        variant="outline"
+                      >
                         {statusLabel(r.status)}
                       </Badge>
                     </header>
@@ -519,7 +542,9 @@ const AdminTenders = () => {
                         <dd>
                           <div className="flex items-center gap-2">
                             <Progress value={r.checklistCompletionPercent} className="h-1.5" />
-                            <span className="text-xs tabular-nums text-muted-foreground">{r.checklistCompletionPercent}%</span>
+                            <span className="text-xs tabular-nums text-muted-foreground">
+                              {r.checklistCompletionPercent}%
+                            </span>
                           </div>
                         </dd>
                       </div>
@@ -529,7 +554,9 @@ const AdminTenders = () => {
                       className="mt-3 flex items-center justify-between gap-1 border-t pt-2"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      <span className="text-xs text-muted-foreground">{formatDate(r.updatedAt, lang)}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {formatDate(r.updatedAt, lang)}
+                      </span>
                       <div className="flex gap-1">{renderRowActions(r)}</div>
                     </footer>
                   </article>
@@ -538,7 +565,10 @@ const AdminTenders = () => {
             </div>
 
             {/* Desktop table */}
-            <div className="hidden max-w-full overflow-x-auto rounded-md border xl:block" data-testid="tender-list-table">
+            <div
+              className="hidden max-w-full overflow-x-auto rounded-md border xl:block"
+              data-testid="tender-list-table"
+            >
               <table className="w-full min-w-[960px] text-sm">
                 <thead className="bg-slate-50 text-left text-xs uppercase text-muted-foreground">
                   <tr>
@@ -562,15 +592,22 @@ const AdminTenders = () => {
                       >
                         <td className="min-w-[220px] px-3 py-2">
                           <div className="font-medium">{r.name}</div>
-                          <div className="whitespace-nowrap text-xs text-muted-foreground">{r.code}</div>
+                          <div className="whitespace-nowrap text-xs text-muted-foreground">
+                            {r.code}
+                          </div>
                         </td>
                         <td className="min-w-[160px] px-3 py-2">{r.customerName}</td>
                         <td className="whitespace-nowrap px-3 py-2">
-                          <div className={cn(r.isDeadlineImminent && "font-semibold text-rose-700")}>
+                          <div
+                            className={cn(r.isDeadlineImminent && "font-semibold text-rose-700")}
+                          >
                             {formatDate(r.submissionDeadline, lang)}
                           </div>
                           {r.isDeadlineImminent && (
-                            <Badge variant="outline" className="mt-1 border-rose-200 bg-rose-50 text-rose-700">
+                            <Badge
+                              variant="outline"
+                              className="mt-1 border-rose-200 bg-rose-50 text-rose-700"
+                            >
                               {t("tenders.badge.deadlineImminent")}
                             </Badge>
                           )}
@@ -583,11 +620,17 @@ const AdminTenders = () => {
                         <td className="whitespace-nowrap px-3 py-2">
                           <div className="flex items-center gap-2">
                             <Progress value={r.checklistCompletionPercent} className="h-1.5 w-20" />
-                            <span className="text-xs tabular-nums text-muted-foreground">{r.checklistCompletionPercent}%</span>
+                            <span className="text-xs tabular-nums text-muted-foreground">
+                              {r.checklistCompletionPercent}%
+                            </span>
                           </div>
                         </td>
-                        <td className="whitespace-nowrap px-3 py-2 text-muted-foreground">{r.preparerName ?? "—"}</td>
-                        <td className="whitespace-nowrap px-3 py-2 text-xs text-muted-foreground">{formatDate(r.updatedAt, lang)}</td>
+                        <td className="whitespace-nowrap px-3 py-2 text-muted-foreground">
+                          {r.preparerName ?? "—"}
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-2 text-xs text-muted-foreground">
+                          {formatDate(r.updatedAt, lang)}
+                        </td>
                         <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
                           <div className="flex justify-end gap-1">{renderRowActions(r)}</div>
                         </td>
@@ -607,10 +650,20 @@ const AdminTenders = () => {
               {page} / {totalPages} · {total}
             </span>
             <div className="flex gap-2">
-              <Button size="sm" variant="outline" disabled={page <= 1} onClick={() => setPage(page - 1)}>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={page <= 1}
+                onClick={() => setPage(page - 1)}
+              >
                 ←
               </Button>
-              <Button size="sm" variant="outline" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={page >= totalPages}
+                onClick={() => setPage(page + 1)}
+              >
                 →
               </Button>
             </div>
@@ -619,12 +672,13 @@ const AdminTenders = () => {
       </div>
 
       {/* Create / edit dialog */}
-      <Dialog open={dialogOpen} onOpenChange={(v) => (setDialogOpen(v), !v && setEditingDetail(null))}>
+      <Dialog
+        open={dialogOpen}
+        onOpenChange={(v) => (setDialogOpen(v), !v && setEditingDetail(null))}
+      >
         <DialogContent className="max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-2xl overflow-x-hidden overflow-y-auto sm:w-full">
           <DialogHeader>
-            <DialogTitle>
-              {isEdit ? editingDetail!.name : t("tenders.new")}
-            </DialogTitle>
+            <DialogTitle>{isEdit ? editingDetail!.name : t("tenders.new")}</DialogTitle>
             <DialogDescription className="text-xs">
               {isEdit ? (
                 <>
@@ -654,7 +708,9 @@ const AdminTenders = () => {
               ) : (
                 <SearchableSelect
                   value={form.customerId ? String(form.customerId) : ""}
-                  onChange={(v) => setForm({ ...form, customerId: Number(v) || 0, operationalProjectId: null })}
+                  onChange={(v) =>
+                    setForm({ ...form, customerId: Number(v) || 0, operationalProjectId: null })
+                  }
                   options={customerOptions}
                   placeholder={t("tenders.form.customerPlaceholder")}
                 />
@@ -668,10 +724,14 @@ const AdminTenders = () => {
                 onValueChange={(value) => setForm({ ...form, operationalProjectId: Number(value) })}
                 disabled={editLocked || !form.customerId}
               >
-                <SelectTrigger><SelectValue placeholder={t("tenders.form.projectPlaceholder")} /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue placeholder={t("tenders.form.projectPlaceholder")} />
+                </SelectTrigger>
                 <SelectContent className="max-h-64">
                   {customerProjects.map((project) => (
-                    <SelectItem key={project.id} value={String(project.id)}>{project.code} · {project.name}</SelectItem>
+                    <SelectItem key={project.id} value={String(project.id)}>
+                      {project.code} · {project.name}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -753,7 +813,9 @@ const AdminTenders = () => {
                 {canPickPreparer ? (
                   <Select
                     value={form.preparerUserId ? String(form.preparerUserId) : ""}
-                    onValueChange={(v) => setForm({ ...form, preparerUserId: v ? Number(v) : null })}
+                    onValueChange={(v) =>
+                      setForm({ ...form, preparerUserId: v ? Number(v) : null })
+                    }
                     disabled={editLocked}
                   >
                     <SelectTrigger>
@@ -797,10 +859,19 @@ const AdminTenders = () => {
           </div>
 
           <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
-            <Button variant="ghost" onClick={() => setDialogOpen(false)} disabled={saving} className="w-full sm:w-auto">
+            <Button
+              variant="ghost"
+              onClick={() => setDialogOpen(false)}
+              disabled={saving}
+              className="w-full sm:w-auto"
+            >
               {t("common.cancel")}
             </Button>
-            <Button onClick={() => void submitForm()} disabled={saving || !canManage} className="w-full sm:w-auto">
+            <Button
+              onClick={() => void submitForm()}
+              disabled={saving || !canManage}
+              className="w-full sm:w-auto"
+            >
               {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {t("common.save")}
             </Button>

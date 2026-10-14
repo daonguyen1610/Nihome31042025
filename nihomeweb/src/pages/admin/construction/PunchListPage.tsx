@@ -55,7 +55,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import {
   adminApi,
   type CreatePunchItemRequest,
@@ -70,8 +76,20 @@ import {
 
 const PUNCH_STATUSES: PunchStatus[] = ["Open", "InProgress", "Fixed", "Verified", "Cancelled"];
 const PUNCH_SEVERITIES: PunchSeverity[] = ["Low", "Medium", "High", "Critical"];
-const PUNCH_ROOT_CAUSES: PunchRootCause[] = ["Design", "Construction", "Material", "ClientChange", "Other"];
-const DESIGN_TEAM_ROLES = new Set(["DesignLead", "Architect", "StructuralEngineer", "MepEngineer", "InteriorDesigner"]);
+const PUNCH_ROOT_CAUSES: PunchRootCause[] = [
+  "Design",
+  "Construction",
+  "Material",
+  "ClientChange",
+  "Other",
+];
+const DESIGN_TEAM_ROLES = new Set([
+  "DesignLead",
+  "Architect",
+  "StructuralEngineer",
+  "MepEngineer",
+  "InteriorDesigner",
+]);
 
 const STATUS_BADGE: Record<PunchStatus, string> = {
   Open: "border-slate-200 bg-slate-50 text-slate-700",
@@ -99,7 +117,11 @@ type ConfirmKind = "reopen" | "verify" | "delete" | null;
 
 const formatDate = (iso?: string | null, lang: string = "vi"): string => {
   if (!iso) return "—";
-  try { return new Date(iso).toLocaleDateString(lang); } catch { return iso; }
+  try {
+    return new Date(iso).toLocaleDateString(lang);
+  } catch {
+    return iso;
+  }
 };
 
 interface PunchForm {
@@ -180,8 +202,12 @@ const AdminPunchList = () => {
   const [detailSaving, setDetailSaving] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
 
-  const [confirmAction, setConfirmAction] = useState<{ kind: ConfirmKind; row: PunchItemResponse | null }>({
-    kind: null, row: null,
+  const [confirmAction, setConfirmAction] = useState<{
+    kind: ConfirmKind;
+    row: PunchItemResponse | null;
+  }>({
+    kind: null,
+    row: null,
   });
   const [actionBusy, setActionBusy] = useState(false);
   const [verifyRootCause, setVerifyRootCause] = useState<PunchRootCause>("Construction");
@@ -200,19 +226,28 @@ const AdminPunchList = () => {
         const { data } = await adminApi.listDesignProjects({ pageSize: 200 });
         if (cancelled) return;
         setProjects(data.items ?? []);
-      } catch { /* non-fatal */ }
+      } catch {
+        /* non-fatal */
+      }
       if (canListUsers) {
         try {
           const { data } = await adminApi.getUsers({ take: 200 });
           if (!cancelled) {
-            setUsers((data.items ?? []).map((u) => ({
-              id: u.id, fullName: u.fullName ?? u.email ?? `#${u.id}`,
-            })));
+            setUsers(
+              (data.items ?? []).map((u) => ({
+                id: u.id,
+                fullName: u.fullName ?? u.email ?? `#${u.id}`,
+              })),
+            );
           }
-        } catch { /* ignore */ }
+        } catch {
+          /* ignore */
+        }
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [canListUsers]);
 
   const fetchList = useCallback(async () => {
@@ -235,18 +270,38 @@ const AdminPunchList = () => {
       const visible = new Set((data.items ?? []).map((r) => r.id));
       setSelected((prev) => {
         const next = new Set<number>();
-        prev.forEach((id) => { if (visible.has(id)) next.add(id); });
+        prev.forEach((id) => {
+          if (visible.has(id)) next.add(id);
+        });
         return next;
       });
     } catch (err) {
       setError(extractApiError(err));
-      toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
+      toast({
+        title: t("common.error"),
+        description: extractApiError(err),
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, projectId, status, severity, assigneeUserId, openOnly, overdueOnly, search, t, toast]);
+  }, [
+    page,
+    pageSize,
+    projectId,
+    status,
+    severity,
+    assigneeUserId,
+    openOnly,
+    overdueOnly,
+    search,
+    t,
+    toast,
+  ]);
 
-  useEffect(() => { void fetchList(); }, [fetchList]);
+  useEffect(() => {
+    void fetchList();
+  }, [fetchList]);
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const statusPill = (s: PunchStatus) => statusCounts[s] ?? 0;
@@ -275,8 +330,13 @@ const AdminPunchList = () => {
   );
 
   const hasActiveFilter =
-    projectId != null || status !== "" || severity !== "" ||
-    assigneeUserId != null || openOnly || overdueOnly || search.trim() !== "";
+    projectId != null ||
+    status !== "" ||
+    severity !== "" ||
+    assigneeUserId != null ||
+    openOnly ||
+    overdueOnly ||
+    search.trim() !== "";
 
   const resetFilters = () => {
     setProjectId(null);
@@ -298,8 +358,14 @@ const AdminPunchList = () => {
   };
   const submitCreate = async () => {
     setCreateError(null);
-    if (createProjectId == null) { setCreateError(t("punch.form.projectRequired")); return; }
-    if (!createForm.title.trim()) { setCreateError(t("punch.form.titleRequired")); return; }
+    if (createProjectId == null) {
+      setCreateError(t("punch.form.projectRequired"));
+      return;
+    }
+    if (!createForm.title.trim()) {
+      setCreateError(t("punch.form.titleRequired"));
+      return;
+    }
     setSaving(true);
     try {
       const body: CreatePunchItemRequest = {
@@ -341,16 +407,20 @@ const AdminPunchList = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [detail?.id]);
 
-  const canEditDetail = canManage
-    && detailMode === "edit"
-    && detail
-    && detail.status !== "Verified"
-    && detail.status !== "Cancelled";
+  const canEditDetail =
+    canManage &&
+    detailMode === "edit" &&
+    detail &&
+    detail.status !== "Verified" &&
+    detail.status !== "Cancelled";
 
   const submitDetail = async () => {
     if (!detail || !detailForm) return;
     setDetailError(null);
-    if (!detailForm.title.trim()) { setDetailError(t("punch.form.titleRequired")); return; }
+    if (!detailForm.title.trim()) {
+      setDetailError(t("punch.form.titleRequired"));
+      return;
+    }
     setDetailSaving(true);
     try {
       const body: UpdatePunchItemRequest = {
@@ -382,7 +452,11 @@ const AdminPunchList = () => {
       if (detail?.id === row.id) setDetail(updated);
       await fetchList();
     } catch (err) {
-      toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
+      toast({
+        title: t("common.error"),
+        description: extractApiError(err),
+        variant: "destructive",
+      });
     }
   };
 
@@ -394,16 +468,25 @@ const AdminPunchList = () => {
       let updated: PunchItemResponse | null = null;
       if (kind === "verify") {
         if (verifyRootCause === "Design" && verifyResponsibleUserId == null) {
-          toast({ title: t("common.error"), description: t("punch.form.responsibleDesignerRequired"), variant: "destructive" });
+          toast({
+            title: t("common.error"),
+            description: t("punch.form.responsibleDesignerRequired"),
+            variant: "destructive",
+          });
           return;
         }
         if (verifyRootCause === "Other" && !verifyRootCauseNote.trim()) {
-          toast({ title: t("common.error"), description: t("punch.form.rootCauseNoteRequired"), variant: "destructive" });
+          toast({
+            title: t("common.error"),
+            description: t("punch.form.rootCauseNoteRequired"),
+            variant: "destructive",
+          });
           return;
         }
         const { data } = await adminApi.verifyPunchItem(row.id, {
           rootCause: verifyRootCause,
-          responsibleDesignUserId: verifyRootCause === "Design" ? verifyResponsibleUserId : undefined,
+          responsibleDesignUserId:
+            verifyRootCause === "Design" ? verifyResponsibleUserId : undefined,
           rootCauseNote: verifyRootCauseNote.trim() || undefined,
         });
         updated = data;
@@ -421,7 +504,11 @@ const AdminPunchList = () => {
       setConfirmAction({ kind: null, row: null });
       await fetchList();
     } catch (err) {
-      toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
+      toast({
+        title: t("common.error"),
+        description: extractApiError(err),
+        variant: "destructive",
+      });
     } finally {
       setActionBusy(false);
     }
@@ -436,10 +523,18 @@ const AdminPunchList = () => {
     if (project?.operationalProjectId) {
       try {
         const { data } = await adminApi.getOperationalProjectTeam(project.operationalProjectId);
-        setVerifyCandidates(data.members
-          .filter((member) => member.isActive && member.roles.some((role) => !role.endedAt && DESIGN_TEAM_ROLES.has(role.roleCode)))
-          .map((member) => ({ id: member.userId, fullName: member.userName })));
-      } catch { /* server validation remains authoritative */ }
+        setVerifyCandidates(
+          data.members
+            .filter(
+              (member) =>
+                member.isActive &&
+                member.roles.some((role) => !role.endedAt && DESIGN_TEAM_ROLES.has(role.roleCode)),
+            )
+            .map((member) => ({ id: member.userId, fullName: member.userName })),
+        );
+      } catch {
+        /* server validation remains authoritative */
+      }
     }
     setConfirmAction({ kind: "verify", row });
   };
@@ -448,7 +543,8 @@ const AdminPunchList = () => {
   const toggleSelect = (id: number, checked: boolean) => {
     setSelected((prev) => {
       const next = new Set(prev);
-      if (checked) next.add(id); else next.delete(id);
+      if (checked) next.add(id);
+      else next.delete(id);
       return next;
     });
   };
@@ -468,7 +564,10 @@ const AdminPunchList = () => {
       });
       if (data.failures.length > 0) {
         const MAX_SHOWN = 3;
-        const shown = data.failures.slice(0, MAX_SHOWN).map((f) => `#${f.id}: ${f.message}`).join(" · ");
+        const shown = data.failures
+          .slice(0, MAX_SHOWN)
+          .map((f) => `#${f.id}: ${f.message}`)
+          .join(" · ");
         const rest = data.failures.length - MAX_SHOWN;
         toast({
           title: t("common.warning"),
@@ -480,7 +579,11 @@ const AdminPunchList = () => {
       setSelected(new Set());
       await fetchList();
     } catch (err) {
-      toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
+      toast({
+        title: t("common.error"),
+        description: extractApiError(err),
+        variant: "destructive",
+      });
     } finally {
       setBulkDeleting(false);
     }
@@ -505,10 +608,14 @@ const AdminPunchList = () => {
 
   const confirmTitle = () => {
     switch (confirmAction.kind) {
-      case "verify": return t("punch.action.verify");
-      case "reopen": return t("punch.action.reopen");
-      case "delete": return t("punch.action.delete");
-      default: return "";
+      case "verify":
+        return t("punch.action.verify");
+      case "reopen":
+        return t("punch.action.reopen");
+      case "delete":
+        return t("punch.action.delete");
+      default:
+        return "";
     }
   };
   const confirmMessage = () => {
@@ -516,10 +623,14 @@ const AdminPunchList = () => {
     if (!kind || !row) return "";
     const code = row.punchCode;
     switch (kind) {
-      case "verify": return t("punch.confirmVerify").replace("{code}", code);
-      case "reopen": return t("punch.confirmReopen").replace("{code}", code);
-      case "delete": return t("punch.confirmDelete").replace("{code}", code);
-      default: return "";
+      case "verify":
+        return t("punch.confirmVerify").replace("{code}", code);
+      case "reopen":
+        return t("punch.confirmReopen").replace("{code}", code);
+      case "delete":
+        return t("punch.confirmDelete").replace("{code}", code);
+      default:
+        return "";
     }
   };
 
@@ -548,10 +659,30 @@ const AdminPunchList = () => {
 
         {/* stats */}
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-          <StatTile icon={<ShieldAlert className="h-6 w-6" />} label={t("punch.stat.total")} value={total} gradient="from-indigo-500 to-violet-600" />
-          <StatTile icon={<CircleDot className="h-6 w-6" />} label={t("punch.stat.open")} value={statusPill("Open")} gradient="from-slate-500 to-slate-700" />
-          <StatTile icon={<Wrench className="h-6 w-6" />} label={t("punch.stat.inProgress")} value={statusPill("InProgress")} gradient="from-sky-500 to-blue-600" />
-          <StatTile icon={<AlertTriangle className="h-6 w-6" />} label={t("punch.stat.overdue")} value={overdueCount} gradient="from-amber-500 to-orange-600" />
+          <StatTile
+            icon={<ShieldAlert className="h-6 w-6" />}
+            label={t("punch.stat.total")}
+            value={total}
+            gradient="from-indigo-500 to-violet-600"
+          />
+          <StatTile
+            icon={<CircleDot className="h-6 w-6" />}
+            label={t("punch.stat.open")}
+            value={statusPill("Open")}
+            gradient="from-slate-500 to-slate-700"
+          />
+          <StatTile
+            icon={<Wrench className="h-6 w-6" />}
+            label={t("punch.stat.inProgress")}
+            value={statusPill("InProgress")}
+            gradient="from-sky-500 to-blue-600"
+          />
+          <StatTile
+            icon={<AlertTriangle className="h-6 w-6" />}
+            label={t("punch.stat.overdue")}
+            value={overdueCount}
+            gradient="from-amber-500 to-orange-600"
+          />
         </div>
 
         {/* filters */}
@@ -561,31 +692,54 @@ const AdminPunchList = () => {
               <Label className="text-xs text-slate-500">{t("punch.field.project")}</Label>
               <SearchableSelect
                 value={projectId == null ? "" : String(projectId)}
-                onChange={(v) => { setProjectId(v ? Number(v) : null); setPage(1); }}
+                onChange={(v) => {
+                  setProjectId(v ? Number(v) : null);
+                  setPage(1);
+                }}
                 options={projectOptions}
                 placeholder={t("punch.filter.allProjects")}
               />
             </div>
             <div>
               <Label className="text-xs text-slate-500">{t("punch.field.status")}</Label>
-              <Select value={status || "__all__"} onValueChange={(v) => { setStatus(v === "__all__" ? "" : (v as PunchStatus)); setPage(1); }}>
-                <SelectTrigger><SelectValue placeholder={t("punch.filter.allStatuses")} /></SelectTrigger>
+              <Select
+                value={status || "__all__"}
+                onValueChange={(v) => {
+                  setStatus(v === "__all__" ? "" : (v as PunchStatus));
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={t("punch.filter.allStatuses")} />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__all__">{t("punch.filter.allStatuses")}</SelectItem>
                   {PUNCH_STATUSES.map((s) => (
-                    <SelectItem key={s} value={s}>{t(`punch.status.${s}`)}</SelectItem>
+                    <SelectItem key={s} value={s}>
+                      {t(`punch.status.${s}`)}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div>
               <Label className="text-xs text-slate-500">{t("punch.field.severity")}</Label>
-              <Select value={severity || "__all__"} onValueChange={(v) => { setSeverity(v === "__all__" ? "" : (v as PunchSeverity)); setPage(1); }}>
-                <SelectTrigger><SelectValue placeholder={t("punch.filter.allSeverities")} /></SelectTrigger>
+              <Select
+                value={severity || "__all__"}
+                onValueChange={(v) => {
+                  setSeverity(v === "__all__" ? "" : (v as PunchSeverity));
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={t("punch.filter.allSeverities")} />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__all__">{t("punch.filter.allSeverities")}</SelectItem>
                   {PUNCH_SEVERITIES.map((s) => (
-                    <SelectItem key={s} value={s}>{t(`punch.severity.${s}`)}</SelectItem>
+                    <SelectItem key={s} value={s}>
+                      {t(`punch.severity.${s}`)}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -595,7 +749,10 @@ const AdminPunchList = () => {
               {canListUsers ? (
                 <SearchableSelect
                   value={assigneeUserId == null ? "" : String(assigneeUserId)}
-                  onChange={(v) => { setAssigneeUserId(v ? Number(v) : null); setPage(1); }}
+                  onChange={(v) => {
+                    setAssigneeUserId(v ? Number(v) : null);
+                    setPage(1);
+                  }}
                   options={userFilterOptions}
                   placeholder={t("punch.filter.allAssignees")}
                 />
@@ -612,7 +769,10 @@ const AdminPunchList = () => {
                 <Input
                   className="pl-8"
                   value={search}
-                  onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                  onChange={(e) => {
+                    setSearch(e.target.value);
+                    setPage(1);
+                  }}
                   placeholder={t("punch.filter.search")}
                   data-testid="punch-search"
                 />
@@ -621,18 +781,38 @@ const AdminPunchList = () => {
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-3">
             <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-600">
-              <Checkbox checked={openOnly} onCheckedChange={(v) => { setOpenOnly(!!v); setPage(1); }} />
+              <Checkbox
+                checked={openOnly}
+                onCheckedChange={(v) => {
+                  setOpenOnly(!!v);
+                  setPage(1);
+                }}
+              />
               {t("punch.filter.openOnly")}
             </label>
             <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-600">
-              <Checkbox checked={overdueOnly} onCheckedChange={(v) => { setOverdueOnly(!!v); setPage(1); }} />
+              <Checkbox
+                checked={overdueOnly}
+                onCheckedChange={(v) => {
+                  setOverdueOnly(!!v);
+                  setPage(1);
+                }}
+              />
               {t("punch.filter.overdueOnly")}
             </label>
             {hasActiveFilter && (
-              <Button variant="ghost" size="sm" onClick={resetFilters}>{t("common.reset")}</Button>
+              <Button variant="ghost" size="sm" onClick={resetFilters}>
+                {t("common.reset")}
+              </Button>
             )}
             {canManage && selected.size > 0 && (
-              <Button variant="destructive" size="sm" onClick={() => setConfirmBulkDelete(true)} className="ml-auto" data-testid="punch-bulk-delete">
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setConfirmBulkDelete(true)}
+                className="ml-auto"
+                data-testid="punch-bulk-delete"
+              >
                 <Trash2 className="mr-2 h-4 w-4" />
                 {t("punch.action.bulkDelete")} ({selected.size})
               </Button>
@@ -664,7 +844,9 @@ const AdminPunchList = () => {
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <div className="font-mono text-xs text-slate-500">{row.punchCode}</div>
-                      <div className="mt-1 line-clamp-2 text-base font-semibold text-slate-900">{row.title}</div>
+                      <div className="mt-1 line-clamp-2 text-base font-semibold text-slate-900">
+                        {row.title}
+                      </div>
                     </div>
                     {canManage && (
                       <div onClick={(e) => e.stopPropagation()} role="presentation">
@@ -685,17 +867,27 @@ const AdminPunchList = () => {
                   )}
                   <div className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-xs text-slate-600">
                     <div>
-                      <div className="text-[10px] uppercase tracking-wide text-slate-400">{t("punch.field.assignee")}</div>
+                      <div className="text-[10px] uppercase tracking-wide text-slate-400">
+                        {t("punch.field.assignee")}
+                      </div>
                       <div>{row.assigneeName ?? "—"}</div>
                     </div>
                     <div>
-                      <div className="text-[10px] uppercase tracking-wide text-slate-400">{t("punch.field.deadline")}</div>
+                      <div className="text-[10px] uppercase tracking-wide text-slate-400">
+                        {t("punch.field.deadline")}
+                      </div>
                       <div>{formatDate(row.deadline, lang)}</div>
                     </div>
                   </div>
                   <div className="mt-3 flex flex-wrap justify-end gap-1 border-t pt-2">
-                    <Button variant="ghost" size="sm" onClick={() => openDetail(row)} data-testid={`punch-view-${row.id}`}>
-                      <Eye className="mr-1 h-4 w-4" />{t("common.view")}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => openDetail(row)}
+                      data-testid={`punch-view-${row.id}`}
+                    >
+                      <Eye className="mr-1 h-4 w-4" />
+                      {t("common.view")}
                     </Button>
                     {canManage && (
                       <>
@@ -706,7 +898,8 @@ const AdminPunchList = () => {
                           onClick={() => openDetail(row, "edit")}
                           data-testid={`punch-edit-${row.id}`}
                         >
-                          <Pencil className="mr-1 h-4 w-4" />{t("common.edit")}
+                          <Pencil className="mr-1 h-4 w-4" />
+                          {t("common.edit")}
                         </Button>
                         <Button
                           variant="ghost"
@@ -715,7 +908,8 @@ const AdminPunchList = () => {
                           onClick={() => setConfirmAction({ kind: "delete", row })}
                           data-testid={`punch-delete-${row.id}`}
                         >
-                          <Trash2 className="mr-1 h-4 w-4" />{t("common.delete")}
+                          <Trash2 className="mr-1 h-4 w-4" />
+                          {t("common.delete")}
                         </Button>
                       </>
                     )}
@@ -723,11 +917,29 @@ const AdminPunchList = () => {
                 </article>
               ))}
               <div className="flex items-center justify-between px-1 pt-1 text-xs text-slate-500">
-                <span>{t("common.showing")} {rows.length} / {total}</span>
+                <span>
+                  {t("common.showing")} {rows.length} / {total}
+                </span>
                 <div className="flex gap-1">
-                  <Button size="sm" variant="outline" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>←</Button>
-                  <span className="px-2 py-1">{page} / {totalPages}</span>
-                  <Button size="sm" variant="outline" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>→</Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={page <= 1}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  >
+                    ←
+                  </Button>
+                  <span className="px-2 py-1">
+                    {page} / {totalPages}
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={page >= totalPages}
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  >
+                    →
+                  </Button>
                 </div>
               </div>
             </div>
@@ -761,7 +973,10 @@ const AdminPunchList = () => {
                     {rows.map((row) => (
                       <tr
                         key={row.id}
-                        className={cn("cursor-pointer hover:bg-slate-50", row.isOverdue && "bg-amber-50/40")}
+                        className={cn(
+                          "cursor-pointer hover:bg-slate-50",
+                          row.isOverdue && "bg-amber-50/40",
+                        )}
                         onClick={() => openDetail(row)}
                         data-testid={`punch-row-${row.id}`}
                       >
@@ -774,7 +989,9 @@ const AdminPunchList = () => {
                             />
                           </td>
                         )}
-                        <td className="px-3 py-2 font-mono text-xs text-slate-600">{row.punchCode}</td>
+                        <td className="px-3 py-2 font-mono text-xs text-slate-600">
+                          {row.punchCode}
+                        </td>
                         <td className="px-3 py-2">
                           <div className="font-medium text-slate-900">{row.title}</div>
                           {row.location && (
@@ -800,11 +1017,22 @@ const AdminPunchList = () => {
                             )}
                           </div>
                         </td>
-                        <td className="px-3 py-2 text-xs text-slate-600">{row.assigneeName ?? "—"}</td>
-                        <td className="px-3 py-2 text-xs text-slate-600">{formatDate(row.deadline, lang)}</td>
+                        <td className="px-3 py-2 text-xs text-slate-600">
+                          {row.assigneeName ?? "—"}
+                        </td>
+                        <td className="px-3 py-2 text-xs text-slate-600">
+                          {formatDate(row.deadline, lang)}
+                        </td>
                         <td className="px-3 py-2" onClick={(event) => event.stopPropagation()}>
                           <div className="flex justify-end gap-1">
-                            <Button variant="ghost" size="icon" title={t("common.view")} aria-label={t("common.view")} onClick={() => openDetail(row)} data-testid={`punch-view-${row.id}`}>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title={t("common.view")}
+                              aria-label={t("common.view")}
+                              onClick={() => openDetail(row)}
+                              data-testid={`punch-view-${row.id}`}
+                            >
                               <Eye className="h-4 w-4" />
                             </Button>
                             {canManage && (
@@ -841,11 +1069,29 @@ const AdminPunchList = () => {
                 </table>
               </div>
               <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50 px-3 py-2 text-xs text-slate-500">
-                <span>{t("common.showing")} {rows.length} / {total}</span>
+                <span>
+                  {t("common.showing")} {rows.length} / {total}
+                </span>
                 <div className="flex gap-1">
-                  <Button size="sm" variant="outline" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>←</Button>
-                  <span className="px-2 py-1">{page} / {totalPages}</span>
-                  <Button size="sm" variant="outline" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>→</Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={page <= 1}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  >
+                    ←
+                  </Button>
+                  <span className="px-2 py-1">
+                    {page} / {totalPages}
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={page >= totalPages}
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  >
+                    →
+                  </Button>
                 </div>
               </div>
             </div>
@@ -879,20 +1125,36 @@ const AdminPunchList = () => {
               </div>
               <div>
                 <Label>{t("punch.field.description")}</Label>
-                <Textarea rows={2} value={createForm.description} onChange={(e) => setCreateForm((f) => ({ ...f, description: e.target.value }))} />
+                <Textarea
+                  rows={2}
+                  value={createForm.description}
+                  onChange={(e) => setCreateForm((f) => ({ ...f, description: e.target.value }))}
+                />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label>{t("punch.field.location")}</Label>
-                  <Input value={createForm.location} onChange={(e) => setCreateForm((f) => ({ ...f, location: e.target.value }))} />
+                  <Input
+                    value={createForm.location}
+                    onChange={(e) => setCreateForm((f) => ({ ...f, location: e.target.value }))}
+                  />
                 </div>
                 <div>
                   <Label>{t("punch.field.severity")}</Label>
-                  <Select value={createForm.severity} onValueChange={(v) => setCreateForm((f) => ({ ...f, severity: v as PunchSeverity }))}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                  <Select
+                    value={createForm.severity}
+                    onValueChange={(v) =>
+                      setCreateForm((f) => ({ ...f, severity: v as PunchSeverity }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
                       {PUNCH_SEVERITIES.map((s) => (
-                        <SelectItem key={s} value={s}>{t(`punch.severity.${s}`)}</SelectItem>
+                        <SelectItem key={s} value={s}>
+                          {t(`punch.severity.${s}`)}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -903,8 +1165,12 @@ const AdminPunchList = () => {
                   <Label>{t("punch.field.assignee")}</Label>
                   {canListUsers ? (
                     <SearchableSelect
-                      value={createForm.assigneeUserId == null ? "" : String(createForm.assigneeUserId)}
-                      onChange={(v) => setCreateForm((f) => ({ ...f, assigneeUserId: v ? Number(v) : null }))}
+                      value={
+                        createForm.assigneeUserId == null ? "" : String(createForm.assigneeUserId)
+                      }
+                      onChange={(v) =>
+                        setCreateForm((f) => ({ ...f, assigneeUserId: v ? Number(v) : null }))
+                      }
                       options={userFormOptions}
                       placeholder="—"
                     />
@@ -914,29 +1180,49 @@ const AdminPunchList = () => {
                 </div>
                 <div>
                   <Label>{t("punch.field.deadline")}</Label>
-                  <Input type="date" value={createForm.deadline} onChange={(e) => setCreateForm((f) => ({ ...f, deadline: e.target.value }))} />
+                  <Input
+                    type="date"
+                    value={createForm.deadline}
+                    onChange={(e) => setCreateForm((f) => ({ ...f, deadline: e.target.value }))}
+                  />
                 </div>
               </div>
               <div>
                 <Label>{t("punch.field.note")}</Label>
-                <Textarea rows={2} value={createForm.note} onChange={(e) => setCreateForm((f) => ({ ...f, note: e.target.value }))} />
+                <Textarea
+                  rows={2}
+                  value={createForm.note}
+                  onChange={(e) => setCreateForm((f) => ({ ...f, note: e.target.value }))}
+                />
               </div>
               {createError && <div className="text-sm text-rose-600">{createError}</div>}
             </div>
             <DialogFooter>
-              <Button variant="ghost" onClick={() => setCreating(false)} disabled={saving}>{t("common.cancel")}</Button>
-              <Button onClick={submitCreate} disabled={saving} data-testid="punch-new-save">{saving ? t("common.saving") : t("common.save")}</Button>
+              <Button variant="ghost" onClick={() => setCreating(false)} disabled={saving}>
+                {t("common.cancel")}
+              </Button>
+              <Button onClick={submitCreate} disabled={saving} data-testid="punch-new-save">
+                {saving ? t("common.saving") : t("common.save")}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
 
         {/* detail sheet */}
-        <Sheet open={detail !== null} onOpenChange={(open) => { if (!open) closeDetail(); }}>
+        <Sheet
+          open={detail !== null}
+          onOpenChange={(open) => {
+            if (!open) closeDetail();
+          }}
+        >
           <SheetContent side="right" className="w-full max-w-xl overflow-y-auto sm:max-w-xl">
             {detail && detailForm && (
               <>
                 <SheetHeader>
-                  <SheetTitle>{t(detailMode === "edit" ? "common.edit" : "common.view")} · {detail.punchCode} — {detail.title}</SheetTitle>
+                  <SheetTitle>
+                    {t(detailMode === "edit" ? "common.edit" : "common.view")} · {detail.punchCode}{" "}
+                    — {detail.title}
+                  </SheetTitle>
                   <SheetDescription className="text-xs text-slate-500">
                     {detail.designProjectCode} · {detail.designProjectName}
                   </SheetDescription>
@@ -945,30 +1231,59 @@ const AdminPunchList = () => {
                   <div className="flex flex-wrap items-center gap-2">{renderBadges(detail)}</div>
                   {detail.reopenCount > 0 && (
                     <div className="text-xs text-slate-500">
-                      {t("punch.field.reopenCount")}: <span className="font-semibold">{detail.reopenCount}</span>
+                      {t("punch.field.reopenCount")}:{" "}
+                      <span className="font-semibold">{detail.reopenCount}</span>
                     </div>
                   )}
 
                   <div>
                     <Label>{t("punch.field.title")}</Label>
-                    <Input value={detailForm.title} onChange={(e) => setDetailForm((f) => f && { ...f, title: e.target.value })} disabled={!canEditDetail} data-testid="punch-detail-title" />
+                    <Input
+                      value={detailForm.title}
+                      onChange={(e) => setDetailForm((f) => f && { ...f, title: e.target.value })}
+                      disabled={!canEditDetail}
+                      data-testid="punch-detail-title"
+                    />
                   </div>
                   <div>
                     <Label>{t("punch.field.description")}</Label>
-                    <Textarea rows={3} value={detailForm.description} onChange={(e) => setDetailForm((f) => f && { ...f, description: e.target.value })} disabled={!canEditDetail} />
+                    <Textarea
+                      rows={3}
+                      value={detailForm.description}
+                      onChange={(e) =>
+                        setDetailForm((f) => f && { ...f, description: e.target.value })
+                      }
+                      disabled={!canEditDetail}
+                    />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <Label>{t("punch.field.location")}</Label>
-                      <Input value={detailForm.location} onChange={(e) => setDetailForm((f) => f && { ...f, location: e.target.value })} disabled={!canEditDetail} />
+                      <Input
+                        value={detailForm.location}
+                        onChange={(e) =>
+                          setDetailForm((f) => f && { ...f, location: e.target.value })
+                        }
+                        disabled={!canEditDetail}
+                      />
                     </div>
                     <div>
                       <Label>{t("punch.field.severity")}</Label>
-                      <Select value={detailForm.severity} onValueChange={(v) => setDetailForm((f) => f && { ...f, severity: v as PunchSeverity })} disabled={!canEditDetail}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
+                      <Select
+                        value={detailForm.severity}
+                        onValueChange={(v) =>
+                          setDetailForm((f) => f && { ...f, severity: v as PunchSeverity })
+                        }
+                        disabled={!canEditDetail}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
                         <SelectContent>
                           {PUNCH_SEVERITIES.map((s) => (
-                            <SelectItem key={s} value={s}>{t(`punch.severity.${s}`)}</SelectItem>
+                            <SelectItem key={s} value={s}>
+                              {t(`punch.severity.${s}`)}
+                            </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -977,8 +1292,16 @@ const AdminPunchList = () => {
                       <Label>{t("punch.field.assignee")}</Label>
                       {canListUsers ? (
                         <SearchableSelect
-                          value={detailForm.assigneeUserId == null ? "" : String(detailForm.assigneeUserId)}
-                          onChange={(v) => setDetailForm((f) => f && { ...f, assigneeUserId: v ? Number(v) : null })}
+                          value={
+                            detailForm.assigneeUserId == null
+                              ? ""
+                              : String(detailForm.assigneeUserId)
+                          }
+                          onChange={(v) =>
+                            setDetailForm(
+                              (f) => f && { ...f, assigneeUserId: v ? Number(v) : null },
+                            )
+                          }
                           options={userFormOptions}
                           placeholder="—"
                           disabled={!canEditDetail}
@@ -989,16 +1312,35 @@ const AdminPunchList = () => {
                     </div>
                     <div>
                       <Label>{t("punch.field.deadline")}</Label>
-                      <Input type="date" value={detailForm.deadline} onChange={(e) => setDetailForm((f) => f && { ...f, deadline: e.target.value })} disabled={!canEditDetail} />
+                      <Input
+                        type="date"
+                        value={detailForm.deadline}
+                        onChange={(e) =>
+                          setDetailForm((f) => f && { ...f, deadline: e.target.value })
+                        }
+                        disabled={!canEditDetail}
+                      />
                     </div>
                   </div>
                   <div>
                     <Label>{t("punch.field.resolutionNote")}</Label>
-                    <Textarea rows={2} value={detailForm.resolutionNote} onChange={(e) => setDetailForm((f) => f && { ...f, resolutionNote: e.target.value })} disabled={!canEditDetail} />
+                    <Textarea
+                      rows={2}
+                      value={detailForm.resolutionNote}
+                      onChange={(e) =>
+                        setDetailForm((f) => f && { ...f, resolutionNote: e.target.value })
+                      }
+                      disabled={!canEditDetail}
+                    />
                   </div>
                   <div>
                     <Label>{t("punch.field.note")}</Label>
-                    <Textarea rows={2} value={detailForm.note} onChange={(e) => setDetailForm((f) => f && { ...f, note: e.target.value })} disabled={!canEditDetail} />
+                    <Textarea
+                      rows={2}
+                      value={detailForm.note}
+                      onChange={(e) => setDetailForm((f) => f && { ...f, note: e.target.value })}
+                      disabled={!canEditDetail}
+                    />
                   </div>
 
                   {detail.verifiedByName && (
@@ -1006,13 +1348,22 @@ const AdminPunchList = () => {
                       <div className="flex items-center gap-1 font-semibold">
                         <ShieldCheck className="h-4 w-4" /> {t("punch.field.verifiedBy")}
                       </div>
-                      <div>{detail.verifiedByName} · {detail.verifiedAt && new Date(detail.verifiedAt).toLocaleString(lang)}</div>
+                      <div>
+                        {detail.verifiedByName} ·{" "}
+                        {detail.verifiedAt && new Date(detail.verifiedAt).toLocaleString(lang)}
+                      </div>
                     </div>
                   )}
                   {detail.rootCause !== "Unclassified" && (
                     <div className="rounded-md border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
-                      <div className="font-semibold">{t("punch.field.rootCause")}: {t(`punch.rootCause.${detail.rootCause}`)}</div>
-                      {detail.responsibleDesignUserName && <div>{t("punch.field.responsibleDesigner")}: {detail.responsibleDesignUserName}</div>}
+                      <div className="font-semibold">
+                        {t("punch.field.rootCause")}: {t(`punch.rootCause.${detail.rootCause}`)}
+                      </div>
+                      {detail.responsibleDesignUserName && (
+                        <div>
+                          {t("punch.field.responsibleDesigner")}: {detail.responsibleDesignUserName}
+                        </div>
+                      )}
                       {detail.rootCauseNote && <div>{detail.rootCauseNote}</div>}
                     </div>
                   )}
@@ -1022,43 +1373,81 @@ const AdminPunchList = () => {
                   <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
                     <div className="flex flex-wrap gap-2">
                       {canManage && (
-                        <Button variant="destructive" size="sm" onClick={() => setConfirmAction({ kind: "delete", row: detail })} data-testid="punch-detail-delete">
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => setConfirmAction({ kind: "delete", row: detail })}
+                          data-testid="punch-detail-delete"
+                        >
                           <Trash2 className="mr-2 h-4 w-4" />
                           {t("punch.action.delete")}
                         </Button>
                       )}
                       {canManage && detail.status === "Open" && (
-                        <Button variant="outline" size="sm" onClick={() => void changeStatus(detail, "InProgress")} data-testid="punch-start">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => void changeStatus(detail, "InProgress")}
+                          data-testid="punch-start"
+                        >
                           <Play className="mr-2 h-4 w-4" />
                           {t("punch.action.startProgress")}
                         </Button>
                       )}
                       {canManage && detail.status === "InProgress" && (
-                        <Button variant="outline" size="sm" onClick={() => void changeStatus(detail, "Fixed")} data-testid="punch-fix">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => void changeStatus(detail, "Fixed")}
+                          data-testid="punch-fix"
+                        >
                           <Wrench className="mr-2 h-4 w-4" />
                           {t("punch.action.markFixed")}
                         </Button>
                       )}
                       {canVerify && detail.status === "Fixed" && (
-                        <Button variant="outline" size="sm" onClick={() => void openVerify(detail)} data-testid="punch-verify">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => void openVerify(detail)}
+                          data-testid="punch-verify"
+                        >
                           <ShieldCheck className="mr-2 h-4 w-4" />
                           {t("punch.action.verify")}
                         </Button>
                       )}
-                      {canManage && (detail.status === "Fixed" || detail.status === "Verified" || detail.status === "InProgress") && (
-                        <Button variant="outline" size="sm" onClick={() => setConfirmAction({ kind: "reopen", row: detail })} data-testid="punch-reopen">
-                          <RotateCcw className="mr-2 h-4 w-4" />
-                          {t("punch.action.reopen")}
-                        </Button>
-                      )}
-                      {canManage && (detail.status === "Open" || detail.status === "InProgress" || detail.status === "Fixed") && (
-                        <Button variant="ghost" size="sm" onClick={() => void changeStatus(detail, "Cancelled")} data-testid="punch-cancel">
-                          {t("punch.action.cancel")}
-                        </Button>
-                      )}
+                      {canManage &&
+                        (detail.status === "Fixed" ||
+                          detail.status === "Verified" ||
+                          detail.status === "InProgress") && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setConfirmAction({ kind: "reopen", row: detail })}
+                            data-testid="punch-reopen"
+                          >
+                            <RotateCcw className="mr-2 h-4 w-4" />
+                            {t("punch.action.reopen")}
+                          </Button>
+                        )}
+                      {canManage &&
+                        (detail.status === "Open" ||
+                          detail.status === "InProgress" ||
+                          detail.status === "Fixed") && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => void changeStatus(detail, "Cancelled")}
+                            data-testid="punch-cancel"
+                          >
+                            {t("punch.action.cancel")}
+                          </Button>
+                        )}
                     </div>
                     <div className="flex gap-2">
-                      <Button variant="ghost" onClick={closeDetail} disabled={detailSaving}>{t("common.close")}</Button>
+                      <Button variant="ghost" onClick={closeDetail} disabled={detailSaving}>
+                        {t("common.close")}
+                      </Button>
                       {canManage && detailMode === "view" && (
                         <Button
                           variant="outline"
@@ -1066,11 +1455,16 @@ const AdminPunchList = () => {
                           onClick={() => setDetailMode("edit")}
                           data-testid="punch-detail-edit"
                         >
-                          <Pencil className="mr-1 h-4 w-4" />{t("common.edit")}
+                          <Pencil className="mr-1 h-4 w-4" />
+                          {t("common.edit")}
                         </Button>
                       )}
                       {canEditDetail && (
-                        <Button onClick={submitDetail} disabled={detailSaving} data-testid="punch-detail-save">
+                        <Button
+                          onClick={submitDetail}
+                          disabled={detailSaving}
+                          data-testid="punch-detail-save"
+                        >
                           {detailSaving ? t("common.saving") : t("common.save")}
                         </Button>
                       )}
@@ -1083,7 +1477,10 @@ const AdminPunchList = () => {
         </Sheet>
 
         {/* single-action confirm */}
-        <AlertDialog open={confirmAction.kind !== null} onOpenChange={(v) => !v && setConfirmAction({ kind: null, row: null })}>
+        <AlertDialog
+          open={confirmAction.kind !== null}
+          onOpenChange={(v) => !v && setConfirmAction({ kind: null, row: null })}
+        >
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>{confirmTitle()}</AlertDialogTitle>
@@ -1093,14 +1490,21 @@ const AdminPunchList = () => {
               <div className="space-y-3">
                 <div>
                   <Label>{t("punch.field.rootCause")}</Label>
-                  <Select value={verifyRootCause} onValueChange={(value) => {
-                    setVerifyRootCause(value as PunchRootCause);
-                    if (value !== "Design") setVerifyResponsibleUserId(null);
-                  }}>
-                    <SelectTrigger data-testid="punch-verify-root-cause"><SelectValue /></SelectTrigger>
+                  <Select
+                    value={verifyRootCause}
+                    onValueChange={(value) => {
+                      setVerifyRootCause(value as PunchRootCause);
+                      if (value !== "Design") setVerifyResponsibleUserId(null);
+                    }}
+                  >
+                    <SelectTrigger data-testid="punch-verify-root-cause">
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
                       {PUNCH_ROOT_CAUSES.map((cause) => (
-                        <SelectItem key={cause} value={cause}>{t(`punch.rootCause.${cause}`)}</SelectItem>
+                        <SelectItem key={cause} value={cause}>
+                          {t(`punch.rootCause.${cause}`)}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -1111,7 +1515,10 @@ const AdminPunchList = () => {
                     <SearchableSelect
                       value={verifyResponsibleUserId == null ? "" : String(verifyResponsibleUserId)}
                       onChange={(value) => setVerifyResponsibleUserId(value ? Number(value) : null)}
-                      options={verifyCandidates.map((candidate) => ({ value: String(candidate.id), label: candidate.fullName }))}
+                      options={verifyCandidates.map((candidate) => ({
+                        value: String(candidate.id),
+                        label: candidate.fullName,
+                      }))}
                       placeholder="—"
                     />
                   </div>
@@ -1119,14 +1526,22 @@ const AdminPunchList = () => {
                 {(verifyRootCause === "Design" || verifyRootCause === "Other") && (
                   <div>
                     <Label>{t("punch.field.rootCauseNote")}</Label>
-                    <Textarea value={verifyRootCauseNote} onChange={(event) => setVerifyRootCauseNote(event.target.value)} rows={2} />
+                    <Textarea
+                      value={verifyRootCauseNote}
+                      onChange={(event) => setVerifyRootCauseNote(event.target.value)}
+                      rows={2}
+                    />
                   </div>
                 )}
               </div>
             )}
             <AlertDialogFooter>
               <AlertDialogCancel disabled={actionBusy}>{t("common.cancel")}</AlertDialogCancel>
-              <AlertDialogAction onClick={runConfirmAction} disabled={actionBusy} data-testid="punch-action-confirm">
+              <AlertDialogAction
+                onClick={runConfirmAction}
+                disabled={actionBusy}
+                data-testid="punch-action-confirm"
+              >
                 {actionBusy ? t("common.saving") : t("common.confirm")}
               </AlertDialogAction>
             </AlertDialogFooter>
@@ -1144,7 +1559,11 @@ const AdminPunchList = () => {
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel disabled={bulkDeleting}>{t("common.cancel")}</AlertDialogCancel>
-              <AlertDialogAction onClick={submitBulkDelete} disabled={bulkDeleting} data-testid="punch-bulk-delete-confirm">
+              <AlertDialogAction
+                onClick={submitBulkDelete}
+                disabled={bulkDeleting}
+                data-testid="punch-bulk-delete-confirm"
+              >
                 {bulkDeleting ? t("common.saving") : t("common.delete")}
               </AlertDialogAction>
             </AlertDialogFooter>
@@ -1165,7 +1584,12 @@ interface StatTileProps {
 }
 
 const StatTile = ({ icon, label, value, gradient }: StatTileProps) => (
-  <div className={cn("relative overflow-hidden rounded-xl bg-gradient-to-br p-4 text-white shadow-sm", gradient)}>
+  <div
+    className={cn(
+      "relative overflow-hidden rounded-xl bg-gradient-to-br p-4 text-white shadow-sm",
+      gradient,
+    )}
+  >
     <div className="relative z-10 flex items-start justify-between gap-2">
       <div className="min-w-0">
         <div className="text-sm font-medium text-white/85">{label}</div>
@@ -1175,7 +1599,10 @@ const StatTile = ({ icon, label, value, gradient }: StatTileProps) => (
         {icon}
       </div>
     </div>
-    <div aria-hidden className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10" />
+    <div
+      aria-hidden
+      className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10"
+    />
   </div>
 );
 

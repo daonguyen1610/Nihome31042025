@@ -3,7 +3,12 @@ import tailwindcssAnimate from "tailwindcss-animate";
 
 export default {
   darkMode: ["class"],
-  content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
+  content: [
+    "./pages/**/*.{ts,tsx}",
+    "./components/**/*.{ts,tsx}",
+    "./app/**/*.{ts,tsx}",
+    "./src/**/*.{ts,tsx}",
+  ],
   prefix: "",
   theme: {
     container: {
@@ -81,27 +86,33 @@ export default {
         "3xl": "calc(var(--radius) + 16px)",
       },
       fontFamily: {
-        display: ['"Be Vietnam Pro"', 'Inter', 'system-ui', 'sans-serif'],
-        sans: ['"Be Vietnam Pro"', 'Inter', 'system-ui', 'sans-serif'],
-        mono: ['Manrope', 'sans-serif'],
+        display: ['"Be Vietnam Pro"', "Inter", "system-ui", "sans-serif"],
+        sans: ['"Be Vietnam Pro"', "Inter", "system-ui", "sans-serif"],
+        mono: ["Manrope", "sans-serif"],
       },
       backgroundImage: {
-        'gradient-primary': 'var(--gradient-primary)',
-        'gradient-soft': 'var(--gradient-soft)',
-        'gradient-mesh': 'var(--gradient-mesh)',
-        'gradient-indigo': 'var(--gradient-indigo)',
-        'gradient-success': 'var(--gradient-success)',
+        "gradient-primary": "var(--gradient-primary)",
+        "gradient-soft": "var(--gradient-soft)",
+        "gradient-mesh": "var(--gradient-mesh)",
+        "gradient-indigo": "var(--gradient-indigo)",
+        "gradient-success": "var(--gradient-success)",
       },
       boxShadow: {
-        soft: 'var(--shadow-soft)',
-        card: 'var(--shadow-card)',
-        elegant: 'var(--shadow-elegant)',
-        glow: 'var(--shadow-glow)',
-        'glow-orange': 'var(--shadow-glow-orange)',
+        soft: "var(--shadow-soft)",
+        card: "var(--shadow-card)",
+        elegant: "var(--shadow-elegant)",
+        glow: "var(--shadow-glow)",
+        "glow-orange": "var(--shadow-glow-orange)",
       },
       keyframes: {
-        "accordion-down": { from: { height: "0" }, to: { height: "var(--radix-accordion-content-height)" } },
-        "accordion-up": { from: { height: "var(--radix-accordion-content-height)" }, to: { height: "0" } },
+        "accordion-down": {
+          from: { height: "0" },
+          to: { height: "var(--radix-accordion-content-height)" },
+        },
+        "accordion-up": {
+          from: { height: "var(--radix-accordion-content-height)" },
+          to: { height: "0" },
+        },
         "fade-in-up": {
           "0%": { opacity: "0", transform: "translateY(28px)" },
           "100%": { opacity: "1", transform: "translateY(0)" },

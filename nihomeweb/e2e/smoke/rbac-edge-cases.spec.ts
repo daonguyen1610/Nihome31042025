@@ -21,10 +21,7 @@ const TEST_FULL_NAME = "Edge Case Test User";
 const TEST_EMAIL = "edge-case-tester@e2e.nihome.local";
 
 // Start with some permissions
-const INITIAL_PERMISSIONS = [
-  "dashboard.view",
-  "content.projects.view",
-];
+const INITIAL_PERMISSIONS = ["dashboard.view", "content.projects.view"];
 
 const PROJECT_PAGE = "/admin/projects";
 const FORBIDDEN_BADGE = /^403$/;
@@ -44,7 +41,10 @@ test.beforeAll(async ({ api }) => {
 
   // Login as SUPER_ADMIN
   const loginRes = await api.post("/api/auth/login", {
-    data: { phoneNumber: TEST_USERS.superAdmin.phoneNumber, password: TEST_USERS.superAdmin.password },
+    data: {
+      phoneNumber: TEST_USERS.superAdmin.phoneNumber,
+      password: TEST_USERS.superAdmin.password,
+    },
   });
   expect(loginRes.status(), "SA login").toBe(200);
   saToken = (await loginRes.json()).accessToken as string;
@@ -85,9 +85,11 @@ test.afterAll(async ({ api }) => {
   }
   if (createdRoleId != null && saToken) {
     // Role may already be deleted by tests
-    await api.delete(`/api/admin/rbac/roles/${createdRoleId}`, {
-      headers: { Authorization: `Bearer ${saToken}` },
-    }).catch(() => {});
+    await api
+      .delete(`/api/admin/rbac/roles/${createdRoleId}`, {
+        headers: { Authorization: `Bearer ${saToken}` },
+      })
+      .catch(() => {});
   }
 });
 
@@ -234,7 +236,8 @@ test("Deleting a role prevents users with that role from logging in properly", a
   // User should have minimal or no permissions (except implicit ones)
   const permissions = meBody.permissions as string[];
   expect(
-    !permissions.includes("content.projects.view") && !permissions.includes("content.projects.manage"),
+    !permissions.includes("content.projects.view") &&
+      !permissions.includes("content.projects.manage"),
     "User should not have project permissions after role deletion",
   ).toBe(true);
 
@@ -242,10 +245,7 @@ test("Deleting a role prevents users with that role from logging in properly", a
   createdRoleId = null;
 });
 
-test("User with no role assignment sees 403 on admin pages", async ({
-  page,
-  loginInBrowserAs,
-}) => {
+test("User with no role assignment sees 403 on admin pages", async ({ page, loginInBrowserAs }) => {
   // User's role was just deleted, try to access admin
   const user = {
     phoneNumber: TEST_PHONE,

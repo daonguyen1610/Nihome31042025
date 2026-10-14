@@ -23,7 +23,10 @@ api.interceptors.request.use((config) => {
   if (typeof FormData !== "undefined" && config.data instanceof FormData && config.headers) {
     // Let the browser set multipart boundaries for FormData payloads.
     if (typeof (config.headers as { set?: unknown }).set === "function") {
-      (config.headers as { set: (name: string, value?: string) => void }).set("Content-Type", undefined);
+      (config.headers as { set: (name: string, value?: string) => void }).set(
+        "Content-Type",
+        undefined,
+      );
     } else {
       delete (config.headers as Record<string, unknown>)["Content-Type"];
     }
@@ -35,14 +38,16 @@ api.interceptors.request.use((config) => {
   }
 
   const method = config.method?.toLowerCase();
-  const isMutation = method === "post" || method === "put" || method === "patch" || method === "delete";
+  const isMutation =
+    method === "post" || method === "put" || method === "patch" || method === "delete";
   const isMultipart = typeof FormData !== "undefined" && config.data instanceof FormData;
   if (isMutation && !isMultipart && !config.headers["Idempotency-Key"]) {
     config.headers["Idempotency-Key"] = newIdempotencyKey();
   }
-  const rowVersion = !isMultipart && config.data && typeof config.data === "object"
-    ? (config.data as { rowVersion?: string }).rowVersion
-    : undefined;
+  const rowVersion =
+    !isMultipart && config.data && typeof config.data === "object"
+      ? (config.data as { rowVersion?: string }).rowVersion
+      : undefined;
   if (rowVersion && !config.headers["If-Match"]) {
     config.headers["If-Match"] = `"${rowVersion}"`;
   }
@@ -52,17 +57,20 @@ api.interceptors.request.use((config) => {
 const readHeader = (headers: unknown, name: string): string | undefined => {
   if (!headers || typeof headers !== "object") return undefined;
   const getter = (headers as { get?: (headerName: string) => unknown }).get;
-  const value = typeof getter === "function"
-    ? getter.call(headers, name)
-    : (headers as Record<string, unknown>)[name]
-      ?? (headers as Record<string, unknown>)[name.toLowerCase()];
+  const value =
+    typeof getter === "function"
+      ? getter.call(headers, name)
+      : ((headers as Record<string, unknown>)[name] ??
+        (headers as Record<string, unknown>)[name.toLowerCase()]);
   return typeof value === "string" && value.trim() ? value : undefined;
 };
 
 export const getApiCorrelationId = (error: unknown): string | undefined => {
   if (!axios.isAxiosError(error)) return undefined;
-  return readHeader(error.response?.headers, "X-Correlation-Id")
-    ?? readHeader(error.config?.headers, "X-Correlation-Id");
+  return (
+    readHeader(error.response?.headers, "X-Correlation-Id") ??
+    readHeader(error.config?.headers, "X-Correlation-Id")
+  );
 };
 
 api.interceptors.response.use(

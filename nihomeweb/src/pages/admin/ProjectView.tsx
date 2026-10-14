@@ -20,8 +20,18 @@ const ProjectView = () => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const { data: project, loading, error, refetch } = useProject(slug ?? "");
 
-  if (loading) return <AdminLayout><PageLoading /></AdminLayout>;
-  if (error) return <AdminLayout><PageError message={error} onRetry={refetch} /></AdminLayout>;
+  if (loading)
+    return (
+      <AdminLayout>
+        <PageLoading />
+      </AdminLayout>
+    );
+  if (error)
+    return (
+      <AdminLayout>
+        <PageError message={error} onRetry={refetch} />
+      </AdminLayout>
+    );
 
   if (!project) {
     return (
@@ -72,7 +82,11 @@ const ProjectView = () => {
                 <Edit className="mr-1.5 h-4 w-4" /> {t("common.edit")}
               </Link>
             </Button>
-            <Button variant="outline" onClick={handleDelete} className="text-destructive hover:text-destructive">
+            <Button
+              variant="outline"
+              onClick={handleDelete}
+              className="text-destructive hover:text-destructive"
+            >
               <Trash2 className="mr-1.5 h-4 w-4" /> {t("common.delete")}
             </Button>
           </div>
@@ -82,7 +96,11 @@ const ProjectView = () => {
           <div className="lg:col-span-2 space-y-4">
             <div className="overflow-hidden rounded-lg border bg-card">
               <div className="aspect-[16/9] bg-muted">
-                <img src={project.imageUrl} alt={project.name} className="w-full h-full object-cover" />
+                <img
+                  src={project.imageUrl}
+                  alt={project.name}
+                  className="w-full h-full object-cover"
+                />
               </div>
             </div>
 
@@ -95,21 +113,29 @@ const ProjectView = () => {
               </div>
             )}
 
-            {(project.challenges?.length || project.solutions?.length) ? (
+            {project.challenges?.length || project.solutions?.length ? (
               <div className="grid gap-4 md:grid-cols-2">
                 {project.challenges?.length ? (
                   <div className="rounded-lg border bg-card p-6">
-                    <h2 className="mb-3 text-base font-semibold">{t("proj.field.challenges").split(" (")[0]}</h2>
+                    <h2 className="mb-3 text-base font-semibold">
+                      {t("proj.field.challenges").split(" (")[0]}
+                    </h2>
                     <ul className="list-inside list-disc space-y-2 text-sm text-muted-foreground">
-                      {project.challenges.map((c, i) => <li key={i}>{c}</li>)}
+                      {project.challenges.map((c, i) => (
+                        <li key={i}>{c}</li>
+                      ))}
                     </ul>
                   </div>
                 ) : null}
                 {project.solutions?.length ? (
                   <div className="rounded-lg border bg-card p-6">
-                    <h2 className="mb-3 text-base font-semibold">{t("proj.field.solutions").split(" (")[0]}</h2>
+                    <h2 className="mb-3 text-base font-semibold">
+                      {t("proj.field.solutions").split(" (")[0]}
+                    </h2>
                     <ul className="list-inside list-disc space-y-2 text-sm text-muted-foreground">
-                      {project.solutions.map((c, i) => <li key={i}>{c}</li>)}
+                      {project.solutions.map((c, i) => (
+                        <li key={i}>{c}</li>
+                      ))}
                     </ul>
                   </div>
                 ) : null}
@@ -174,7 +200,10 @@ const ProjectView = () => {
         </div>
       </div>
 
-      <Dialog open={Boolean(selectedImage)} onOpenChange={(open) => !open && setSelectedImage(null)}>
+      <Dialog
+        open={Boolean(selectedImage)}
+        onOpenChange={(open) => !open && setSelectedImage(null)}
+      >
         <DialogContent className="border-0 bg-transparent p-1 shadow-none sm:max-w-5xl">
           {selectedImage ? (
             <img
@@ -189,11 +218,21 @@ const ProjectView = () => {
   );
 };
 
-const Info = ({ icon: Icon, label, value }: { icon: React.ComponentType<React.SVGProps<SVGSVGElement>>; label: string; value: string }) => (
+const Info = ({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+  label: string;
+  value: string;
+}) => (
   <div className="flex items-start gap-3">
     <Icon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
     <div className="min-w-0">
-      <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+        {label}
+      </p>
       <p className="font-medium break-words">{value}</p>
     </div>
   </div>
