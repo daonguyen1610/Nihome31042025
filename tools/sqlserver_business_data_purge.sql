@@ -1,16 +1,21 @@
 -- SQL Server 2022. Run this whole script in a SQL query editor.
--- First run: select the target database in the editor, set @ExpectedDatabase
--- to its name and leave @Execute = 0 to inspect the scope and row counts.
+-- First run: select the target database in the editor, verify its database
+-- and application schema below, and leave @Execute = 0 to inspect the scope.
 -- After reviewing the result, stop application writes, take a verified backup,
 -- then rerun the whole script with @Execute = 1 to delete the listed rows.
 SET NOCOUNT ON;
 SET XACT_ABORT ON;
 
 DECLARE @ExpectedDatabase sysname = N'NiconV2_NEW';
+DECLARE @ExpectedSchema sysname = N'niconNew';
 DECLARE @Execute bit = 0;
 
 IF DB_NAME() <> @ExpectedDatabase
     THROW 51000, 'Wrong database: check @ExpectedDatabase and query connection.', 1;
+
+DECLARE @TargetSchemaId int = SCHEMA_ID(@ExpectedSchema);
+IF @TargetSchemaId IS NULL
+    THROW 51001, 'Application schema not found: check @ExpectedSchema.', 1;
 
 DECLARE @Targets table (TableName sysname NOT NULL PRIMARY KEY);
 INSERT INTO @Targets (TableName) VALUES
@@ -194,18 +199,18 @@ INSERT INTO @Retained (TableName) VALUES
 IF EXISTS (
     SELECT 1 FROM sys.tables AS table_schema
     WHERE table_schema.is_ms_shipped = 0
-      AND (table_schema.schema_id <> SCHEMA_ID(N'dbo')
-           OR (NOT EXISTS (SELECT 1 FROM @Targets AS target WHERE target.TableName = table_schema.name)
-               AND NOT EXISTS (SELECT 1 FROM @Retained AS retained WHERE retained.TableName = table_schema.name)))
+      AND table_schema.schema_id = @TargetSchemaId
+      AND NOT EXISTS (SELECT 1 FROM @Targets AS target WHERE target.TableName = table_schema.name)
+      AND NOT EXISTS (SELECT 1 FROM @Retained AS retained WHERE retained.TableName = table_schema.name)
 )
 BEGIN
     SELECT SCHEMA_NAME(table_schema.schema_id) AS SchemaName,
            table_schema.name AS UnclassifiedTable
     FROM sys.tables AS table_schema
     WHERE table_schema.is_ms_shipped = 0
-      AND (table_schema.schema_id <> SCHEMA_ID(N'dbo')
-           OR (NOT EXISTS (SELECT 1 FROM @Targets AS target WHERE target.TableName = table_schema.name)
-               AND NOT EXISTS (SELECT 1 FROM @Retained AS retained WHERE retained.TableName = table_schema.name)));
+      AND table_schema.schema_id = @TargetSchemaId
+      AND NOT EXISTS (SELECT 1 FROM @Targets AS target WHERE target.TableName = table_schema.name)
+      AND NOT EXISTS (SELECT 1 FROM @Retained AS retained WHERE retained.TableName = table_schema.name);
 
     DECLARE @UnclassifiedTables nvarchar(max);
     DECLARE @UnclassifiedError nvarchar(2048);
@@ -214,9 +219,9 @@ BEGIN
             + N'.' + QUOTENAME(table_schema.name)), N', ')
     FROM sys.tables AS table_schema
     WHERE table_schema.is_ms_shipped = 0
-      AND (table_schema.schema_id <> SCHEMA_ID(N'dbo')
-           OR (NOT EXISTS (SELECT 1 FROM @Targets AS target WHERE target.TableName = table_schema.name)
-               AND NOT EXISTS (SELECT 1 FROM @Retained AS retained WHERE retained.TableName = table_schema.name)));
+      AND table_schema.schema_id = @TargetSchemaId
+      AND NOT EXISTS (SELECT 1 FROM @Targets AS target WHERE target.TableName = table_schema.name)
+      AND NOT EXISTS (SELECT 1 FROM @Retained AS retained WHERE retained.TableName = table_schema.name);
     SET @UnclassifiedError = N'Unclassified tables: '
         + LEFT(@UnclassifiedTables, 1900)
         + N'. See Results for the full list.';
@@ -227,7 +232,8 @@ IF EXISTS (
     SELECT 1 FROM sys.foreign_keys AS fk
     JOIN sys.tables AS child ON child.object_id = fk.parent_object_id
     JOIN @Targets AS target ON target.TableName = child.name
-    WHERE fk.is_disabled = 1 OR fk.is_not_trusted = 1
+    WHERE child.schema_id = @TargetSchemaId
+      AND (fk.is_disabled = 1 OR fk.is_not_trusted = 1)
 )
     THROW 51005, 'Existing target foreign key is disabled or untrusted.', 1;
 
@@ -236,14 +242,16 @@ IF EXISTS (
     JOIN sys.tables AS table_schema
       ON table_schema.object_id = constraint_schema.parent_object_id
     JOIN @Targets AS target ON target.TableName = table_schema.name
-    WHERE constraint_schema.is_disabled = 1 OR constraint_schema.is_not_trusted = 1
+    WHERE table_schema.schema_id = @TargetSchemaId
+      AND (constraint_schema.is_disabled = 1 OR constraint_schema.is_not_trusted = 1)
 )
     THROW 51006, 'Existing target check constraint is disabled or untrusted.', 1;
 
 IF EXISTS (
     SELECT 1 FROM sys.tables AS table_schema
     JOIN @Targets AS target ON target.TableName = table_schema.name
-    WHERE table_schema.temporal_type <> 0 OR table_schema.is_tracked_by_cdc = 1
+    WHERE table_schema.schema_id = @TargetSchemaId
+      AND (table_schema.temporal_type <> 0 OR table_schema.is_tracked_by_cdc = 1)
 )
     THROW 51007, 'Target table uses temporal history or CDC.', 1;
 
@@ -252,6 +260,7 @@ IF EXISTS (
     JOIN sys.tables AS table_schema
       ON table_schema.object_id = trigger_schema.parent_id
     JOIN @Targets AS target ON target.TableName = table_schema.name
+    WHERE table_schema.schema_id = @TargetSchemaId
 )
     THROW 51008, 'Target table has a trigger. Review side effects.', 1;
 
@@ -259,7 +268,7 @@ IF EXISTS (
     SELECT 1 FROM @Targets AS target
     LEFT JOIN sys.tables AS table_schema
         ON table_schema.name = target.TableName
-       AND table_schema.schema_id = SCHEMA_ID(N'dbo')
+       AND table_schema.schema_id = @TargetSchemaId
     WHERE table_schema.object_id IS NULL
       AND NOT EXISTS (SELECT 1 FROM @Optional AS optional WHERE optional.TableName = target.TableName)
 )
@@ -268,7 +277,7 @@ BEGIN
     FROM @Targets AS target
     LEFT JOIN sys.tables AS table_schema
         ON table_schema.name = target.TableName
-       AND table_schema.schema_id = SCHEMA_ID(N'dbo')
+       AND table_schema.schema_id = @TargetSchemaId
     WHERE table_schema.object_id IS NULL
       AND NOT EXISTS (SELECT 1 FROM @Optional AS optional WHERE optional.TableName = target.TableName);
     THROW 51002, 'Target table missing. Review schema before proceeding.', 1;
@@ -281,8 +290,9 @@ IF EXISTS (
     JOIN sys.tables AS child ON child.object_id = fk.parent_object_id
     JOIN sys.tables AS parent ON parent.object_id = fk.referenced_object_id
     JOIN @Targets AS target ON target.TableName = parent.name
-    WHERE parent.schema_id = SCHEMA_ID(N'dbo')
-      AND NOT EXISTS (SELECT 1 FROM @Targets AS included WHERE included.TableName = child.name)
+    WHERE parent.schema_id = @TargetSchemaId
+      AND NOT (child.schema_id = @TargetSchemaId
+               AND EXISTS (SELECT 1 FROM @Targets AS included WHERE included.TableName = child.name))
 )
 BEGIN
     SELECT child.name AS RetainedChild, parent.name AS TargetParent, fk.name AS ForeignKeyName
@@ -290,24 +300,29 @@ BEGIN
     JOIN sys.tables AS child ON child.object_id = fk.parent_object_id
     JOIN sys.tables AS parent ON parent.object_id = fk.referenced_object_id
     JOIN @Targets AS target ON target.TableName = parent.name
-    WHERE parent.schema_id = SCHEMA_ID(N'dbo')
-      AND NOT EXISTS (SELECT 1 FROM @Targets AS included WHERE included.TableName = child.name)
+    WHERE parent.schema_id = @TargetSchemaId
+      AND NOT (child.schema_id = @TargetSchemaId
+               AND EXISTS (SELECT 1 FROM @Targets AS included WHERE included.TableName = child.name))
     ORDER BY child.name, parent.name;
     THROW 51003, 'Retained tables reference target tables. Review scope.', 1;
 END;
 
-SELECT DB_NAME() AS DatabaseName, @Execute AS ExecuteRequested,
+SELECT DB_NAME() AS DatabaseName, @ExpectedSchema AS TargetSchema,
+       @Execute AS ExecuteRequested,
        (SELECT COUNT(*) FROM @Targets) AS ListedTargetTables,
        (SELECT COUNT(*) FROM @Targets AS target
         JOIN sys.tables AS table_schema
           ON table_schema.name = target.TableName
-         AND table_schema.schema_id = SCHEMA_ID(N'dbo')) AS PresentTargetTables;
+         AND table_schema.schema_id = @TargetSchemaId) AS PresentTargetTables,
+       (SELECT COUNT(*) FROM sys.tables AS table_schema
+        WHERE table_schema.is_ms_shipped = 0
+          AND table_schema.schema_id <> @TargetSchemaId) AS OtherSchemaTables;
 
 SELECT target.TableName, SUM(partition_stats.row_count) AS EstimatedRows
 FROM @Targets AS target
 JOIN sys.tables AS table_schema
     ON table_schema.name = target.TableName
-   AND table_schema.schema_id = SCHEMA_ID(N'dbo')
+   AND table_schema.schema_id = @TargetSchemaId
 JOIN sys.dm_db_partition_stats AS partition_stats
     ON partition_stats.object_id = table_schema.object_id
    AND partition_stats.index_id IN (0, 1)
@@ -321,8 +336,8 @@ JOIN sys.tables AS child ON child.object_id = fk.parent_object_id
 JOIN sys.tables AS parent ON parent.object_id = fk.referenced_object_id
 JOIN @Targets AS child_target ON child_target.TableName = child.name
 JOIN @Targets AS parent_target ON parent_target.TableName = parent.name
-WHERE child.schema_id = SCHEMA_ID(N'dbo')
-  AND parent.schema_id = SCHEMA_ID(N'dbo')
+WHERE child.schema_id = @TargetSchemaId
+  AND parent.schema_id = @TargetSchemaId
 ORDER BY child.name, parent.name;
 
 IF @Execute = 0 RETURN;
@@ -338,13 +353,14 @@ BEGIN TRY
         SELECT target.TableName FROM @Targets AS target
         JOIN sys.tables AS table_schema
           ON table_schema.name = target.TableName
-         AND table_schema.schema_id = SCHEMA_ID(N'dbo')
+         AND table_schema.schema_id = @TargetSchemaId
         ORDER BY target.TableName;
     OPEN target_cursor;
     FETCH NEXT FROM target_cursor INTO @TableName;
     WHILE @@FETCH_STATUS = 0
     BEGIN
-        SET @Sql = N'ALTER TABLE dbo.' + QUOTENAME(@TableName) + N' NOCHECK CONSTRAINT ALL;';
+        SET @Sql = N'ALTER TABLE ' + QUOTENAME(@ExpectedSchema) + N'.'
+            + QUOTENAME(@TableName) + N' NOCHECK CONSTRAINT ALL;';
         EXEC sys.sp_executesql @Sql;
         FETCH NEXT FROM target_cursor INTO @TableName;
     END;
@@ -354,7 +370,8 @@ BEGIN TRY
     FETCH NEXT FROM target_cursor INTO @TableName;
     WHILE @@FETCH_STATUS = 0
     BEGIN
-        SET @Sql = N'DELETE FROM dbo.' + QUOTENAME(@TableName) + N';';
+        SET @Sql = N'DELETE FROM ' + QUOTENAME(@ExpectedSchema) + N'.'
+            + QUOTENAME(@TableName) + N';';
         EXEC sys.sp_executesql @Sql;
         FETCH NEXT FROM target_cursor INTO @TableName;
     END;
@@ -364,7 +381,8 @@ BEGIN TRY
     FETCH NEXT FROM target_cursor INTO @TableName;
     WHILE @@FETCH_STATUS = 0
     BEGIN
-        SET @Sql = N'ALTER TABLE dbo.' + QUOTENAME(@TableName)
+        SET @Sql = N'ALTER TABLE ' + QUOTENAME(@ExpectedSchema) + N'.'
+            + QUOTENAME(@TableName)
             + N' WITH CHECK CHECK CONSTRAINT ALL;';
         EXEC sys.sp_executesql @Sql;
         FETCH NEXT FROM target_cursor INTO @TableName;
