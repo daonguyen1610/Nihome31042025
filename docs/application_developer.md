@@ -493,15 +493,17 @@ For a SQL-only reset of the CRM, Design, Procurement, Finance, Legal,
 Construction, and Analytics records, open `tools/sqlserver_business_data_purge.sql`
 in a SQL Server query editor and run the entire script. Set `@ExpectedDatabase`
 to the exact selected database name (`NihomeDB` locally or the configured
-deployment database name). Keep `@Execute = 0` for the first run to inspect the
-table scope, row counts, and foreign-key dependencies. Stop backend writes and
-take a verified SQL backup before rerunning with `@Execute = 1`. The
-script keeps users, permissions, settings, translations, website content, audit
-history, and EF migration history. Managed files and Google Drive objects remain;
-clean those separately through their owning workflows if needed. New or
-unclassified tables stop the script until its scope is reviewed. The Development
-host seeds sample business records at startup, so keep that host stopped after a
-reset unless sample data is intentionally wanted.
+deployment database name), and set `@ExpectedSchema` to the application schema
+(`dbo` locally; the observed deployment schema is `niconNew`). Keep
+`@Execute = 0` for the first run to inspect the table scope, row counts, and
+foreign-key dependencies. Tables in other schemas are counted but left alone.
+Stop backend writes and take a verified SQL backup before rerunning with
+`@Execute = 1`. The script keeps users, permissions, settings, translations,
+website content, audit history, and EF migration history. Managed files and
+Google Drive objects remain; clean those separately through their owning
+workflows if needed. New or unclassified tables stop the script until its scope
+is reviewed. Development hosts seed sample business records at startup, so keep
+them stopped after a reset unless sample data is intentionally wanted.
 
 Content behavior is entity-specific. Activities, news, and projects are slug-based backfills that preserve administrator edits. Process documents and logos are also reconciled additively: missing canonical rows are restored without deleting custom rows or overwriting administrator-managed values. Translation, RBAC, master-data, workflow, and notification files are embedded resources.
 
