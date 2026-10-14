@@ -206,7 +206,21 @@ BEGIN
       AND (table_schema.schema_id <> SCHEMA_ID(N'dbo')
            OR (NOT EXISTS (SELECT 1 FROM @Targets AS target WHERE target.TableName = table_schema.name)
                AND NOT EXISTS (SELECT 1 FROM @Retained AS retained WHERE retained.TableName = table_schema.name)));
-    THROW 51004, 'Unclassified tables found. Review scope before proceeding.', 1;
+
+    DECLARE @UnclassifiedTables nvarchar(max);
+    DECLARE @UnclassifiedError nvarchar(2048);
+    SELECT @UnclassifiedTables = STRING_AGG(
+        CONVERT(nvarchar(max), QUOTENAME(SCHEMA_NAME(table_schema.schema_id))
+            + N'.' + QUOTENAME(table_schema.name)), N', ')
+    FROM sys.tables AS table_schema
+    WHERE table_schema.is_ms_shipped = 0
+      AND (table_schema.schema_id <> SCHEMA_ID(N'dbo')
+           OR (NOT EXISTS (SELECT 1 FROM @Targets AS target WHERE target.TableName = table_schema.name)
+               AND NOT EXISTS (SELECT 1 FROM @Retained AS retained WHERE retained.TableName = table_schema.name)));
+    SET @UnclassifiedError = N'Unclassified tables: '
+        + LEFT(@UnclassifiedTables, 1900)
+        + N'. See Results for the full list.';
+    THROW 51004, @UnclassifiedError, 1;
 END;
 
 IF EXISTS (
