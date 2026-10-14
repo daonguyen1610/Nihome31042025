@@ -1,4 +1,4 @@
-# !/usr/bin/env bash
+#!/usr/bin/env bash
 
 # Step to automate the deployment to hosting
 # See https://vietnamconstruction.info:8443/smb/file-manager/list/domainId/184
