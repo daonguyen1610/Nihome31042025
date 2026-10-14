@@ -489,6 +489,19 @@ users. Development-only sample CRM/design/construction data is enabled by the
 startup host only in the `Development` environment; integration tests create
 their own business fixtures explicitly.
 
+For a SQL-only reset of the CRM, Design, Procurement, Finance, Legal,
+Construction, and Analytics records, run `tools/sqlserver_business_data_purge.sql`
+with SQLCMD variable `Execute=0` to inspect the explicit table scope, row counts,
+and foreign-key dependencies. Pass `ExpectedDatabase` as the exact target name
+(`NihomeDB` locally or the configured deployment database name). Stop backend
+writes and take a verified SQL backup before rerunning with `Execute=1`. The
+script keeps users, permissions, settings, translations, website content, audit
+history, and EF migration history. Managed files and Google Drive objects remain;
+clean those separately through their owning workflows if needed. New or
+unclassified tables stop the script until its scope is reviewed. The Development
+host seeds sample business records at startup, so keep that host stopped after a
+reset unless sample data is intentionally wanted.
+
 Content behavior is entity-specific. Activities, news, and projects are slug-based backfills that preserve administrator edits. Process documents and logos are also reconciled additively: missing canonical rows are restored without deleting custom rows or overwriting administrator-managed values. Translation, RBAC, master-data, workflow, and notification files are embedded resources.
 
 #### Process Document Seeder Identity
