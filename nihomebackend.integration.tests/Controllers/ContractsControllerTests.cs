@@ -31,7 +31,7 @@ public class ContractsControllerTests : IntegrationTestBase
             primaryContact = new
             {
                 fullName = "Contact",
-                phone = "0911" + Random.Shared.Next(100000, 999999),
+                email = $"contract-{Guid.NewGuid():N}@example.test",
                 isPrimary = true,
             },
         };

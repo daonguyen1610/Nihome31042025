@@ -11,6 +11,7 @@ namespace nihomebackend.tests.Helpers;
 /// </summary>
 internal static class TestCulture
 {
+#pragma warning disable CA2255 // Intentional process-wide initialization for deterministic tests.
     [ModuleInitializer]
     internal static void Initialize()
     {
@@ -19,4 +20,5 @@ internal static class TestCulture
         CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
         CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
     }
+#pragma warning restore CA2255
 }
