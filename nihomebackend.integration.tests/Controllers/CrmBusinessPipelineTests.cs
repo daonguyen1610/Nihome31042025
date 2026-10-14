@@ -168,9 +168,33 @@ public sealed class CrmBusinessPipelineTests(NihomeWebApplicationFactory factory
             }
             contract = await ReadAsync($"/api/contracts/{Id(contract)}");
             var executeKey = Guid.NewGuid().ToString();
-            var execute = new { newStatus = "InProgress", rowVersion = Version(contract) };
-            contract = await WriteAsync(HttpMethod.Post, $"/api/contracts/{Id(contract)}/transition", execute, executeKey);
-            await WriteAsync(HttpMethod.Post, $"/api/contracts/{Id(contract)}/transition", execute, executeKey);
+            var legalUsers = await ConfigureLegalActivationTeamAsync(projectId);
+            var execute = new
+            {
+                legalLeadUserId = legalUsers.LegalLeadUserId,
+                plannedStart = DateTime.UtcNow.Date,
+                plannedEnd = DateTime.UtcNow.Date.AddMonths(6),
+                rowVersion = Version(contract),
+                permits = new[]
+                {
+                    new
+                    {
+                        permitTypeCode = "gpxd",
+                        issuingAgency = "Sá»Ÿ XÃ¢y dá»±ng",
+                        assigneeUserId = legalUsers.AssigneeUserId,
+                        approverUserId = legalUsers.LegalLeadUserId,
+                        plannedStart = DateTime.UtcNow.Date,
+                        plannedEnd = DateTime.UtcNow.Date.AddMonths(3),
+                        predecessorPermitTypeCodes = Array.Empty<string>(),
+                    },
+                },
+            };
+            var activation = await WriteAsync(HttpMethod.Post,
+                $"/api/contracts/{Id(contract)}/activate-with-legal", execute, executeKey);
+            var activationRetry = await WriteAsync(HttpMethod.Post,
+                $"/api/contracts/{Id(contract)}/activate-with-legal", execute, executeKey);
+            contract = activation.GetProperty("contract");
+            activationRetry.GetProperty("contract").GetProperty("id").GetInt32().Should().Be(Id(contract));
             (await WithDbAsync(db => db.DesignProjects.CountAsync(x => x.ContractId == Id(contract))))
                 .Should().Be(0);
             opportunity = await ReadAsync(opportunityPath);
@@ -194,6 +218,52 @@ public sealed class CrmBusinessPipelineTests(NihomeWebApplicationFactory factory
     }
 
     private Task LoginAsync(string role) => AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, role));
+
+    private async Task<(int LegalLeadUserId, int AssigneeUserId)> ConfigureLegalActivationTeamAsync(int projectId)
+    {
+        return await WithDbAsync(async db =>
+        {
+            var salesManagerId = await db.Users.Where(user => user.PhoneNumber ==
+                    TestDataSeeder.BusinessRolePhonesByCode["SALES_MANAGER"])
+                .Select(user => user.Id).SingleAsync();
+            var legalLeadUserId = await db.Users.Where(user => user.PhoneNumber ==
+                    TestDataSeeder.BusinessRolePhonesByCode["LEGAL_OFFICER"])
+                .Select(user => user.Id).SingleAsync();
+            var assigneeUserId = await db.Users.Where(user => user.PhoneNumber ==
+                    TestDataSeeder.BusinessRolePhonesByCode["DESIGN"])
+                .Select(user => user.Id).SingleAsync();
+            var project = await db.OperationalProjects.SingleAsync(item => item.Id == projectId);
+            project.ProjectManagerUserId = salesManagerId;
+
+            foreach (var (userId, role) in new[]
+            {
+                (legalLeadUserId, ProjectTeamRoleCode.LegalOfficer),
+                (assigneeUserId, ProjectTeamRoleCode.Architect),
+            })
+            {
+                if (await db.OperationalProjectMembers.AnyAsync(item =>
+                        item.OperationalProjectId == projectId && item.UserId == userId))
+                    continue;
+                db.OperationalProjectMembers.Add(new OperationalProjectMember
+                {
+                    OperationalProjectId = projectId,
+                    UserId = userId,
+                    Position = role.ToString(),
+                    StartedAt = DateTime.UtcNow.AddDays(-1),
+                    CreatedByUserId = salesManagerId,
+                    UpdatedByUserId = salesManagerId,
+                    Roles = [new OperationalProjectMemberRole
+                    {
+                        RoleCode = role,
+                        StartedAt = DateTime.UtcNow.AddDays(-1),
+                    }],
+                });
+            }
+            await db.SaveChangesAsync();
+            return (legalLeadUserId, assigneeUserId);
+        });
+    }
+
     private static int Id(JsonElement value) => value.GetProperty("id").GetInt32();
     private static string Version(JsonElement value) => value.GetProperty("rowVersion").GetString()!;
     private async Task<JsonElement> MoveQuoteAsync(JsonElement quote, string action)
