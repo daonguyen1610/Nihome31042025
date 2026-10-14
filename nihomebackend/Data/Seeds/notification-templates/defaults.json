@@ -151,6 +151,18 @@
       "adminDescription": "Người phụ trách được thông báo khi đầu việc đã được xác nhận KPI."
     },
     {
+      "code": "work-task.legal-verified",
+      "module": "work.packages",
+      "channel": "InApp",
+      "adminDescription": "Người phụ trách được thông báo khi đầu việc Pháp lý được người duyệt xác nhận."
+    },
+    {
+      "code": "work-task.returned",
+      "module": "work.packages",
+      "channel": "InApp",
+      "adminDescription": "Người phụ trách được thông báo khi đầu việc Pháp lý bị trả lại kèm lý do trong lịch sử."
+    },
+    {
       "code": "design-task.awaiting-approval",
       "module": "design.schedule",
       "channel": "InApp",

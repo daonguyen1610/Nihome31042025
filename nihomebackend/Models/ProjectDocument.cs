@@ -90,6 +90,7 @@ public enum ProjectDocumentSourceModule
     Construction = 4,
     Acceptance = 5,
     Handover = 6,
+    Legal = 7,
 }
 
 public enum ProjectDocumentSourceType

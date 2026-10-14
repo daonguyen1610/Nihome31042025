@@ -22,6 +22,7 @@ public class OperationalProjectsController(
     IOperationalProjectService service,
     IProjectDocumentService documents,
     IProjectAccessService projectAccess,
+    ILegalActivationService legalActivation,
     IPermissionService permissions,
     IAuditLogger audit,
     IGoogleDriveSettingsStore driveSettings) : ControllerBase
@@ -404,6 +405,45 @@ public class OperationalProjectsController(
         var userId = GetUserId();
         if (userId is null) return null;
         return (userId.Value, await permissions.HasAsync(userId.Value, "operations.projects.view.all", ct));
+    }
+
+    [HttpGet("{id:int}/legal-setup")]
+    [RequirePermission("permit.checklists", "manage")]
+    public async Task<ActionResult<LegalActivationPreviewResponse>> LegalSetupPreview(
+        int id, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        try
+        {
+            var preview = await legalActivation.PreviewProjectAsync(id, userId.Value, ct);
+            return preview is null ? NotFound() : Ok(preview);
+        }
+        catch (LegalActivationException ex)
+        {
+            if (ex.Code == "LEGAL_ACTIVATION_FORBIDDEN") return Forbid();
+            return BadRequest(new { code = ex.Code, message = ex.Message });
+        }
+    }
+
+    [HttpPost("{id:int}/legal-setup")]
+    [RequirePermission("permit.checklists", "manage")]
+    [Idempotency("operations.projects.legal-setup")]
+    public async Task<ActionResult<LegalActivationResultResponse>> SetupLegal(
+        int id, [FromBody] SetupProjectLegalRequest request, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        try
+        {
+            var result = await legalActivation.SetupProjectAsync(id, request, userId.Value, ct);
+            return result is null ? NotFound() : Ok(result);
+        }
+        catch (LegalActivationException ex)
+        {
+            if (ex.Code == "LEGAL_ACTIVATION_FORBIDDEN") return Forbid();
+            return BadRequest(new { code = ex.Code, message = ex.Message });
+        }
     }
 
     private int? GetUserId()

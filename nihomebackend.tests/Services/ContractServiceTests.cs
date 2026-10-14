@@ -1256,14 +1256,14 @@ public class ContractServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task Transition_SignedToInProgress_RequiresSignedScan()
+    public async Task Transition_SignedToInProgress_EligibleContractRequiresLegalWizard()
     {
         var contract = await _sut.CreateAsync(Req(), 1, canReassignOwner: true);
         contract = (await _sut.TransitionStatusAsync(
             contract.Id, ContractStatus.Signed, 1, canSeeAll: true))!;
         var ex = await Assert.ThrowsAsync<ContractValidationException>(
             () => _sut.TransitionStatusAsync(contract.Id, ContractStatus.InProgress, 1, canSeeAll: true));
-        Assert.Contains("scan", ex.Message);
+        Assert.Equal("LEGAL_ACTIVATION_REQUIRED", ex.Code);
 
         _db.ContractAttachments.Add(new ContractAttachment
         {
@@ -1276,10 +1276,9 @@ public class ContractServiceTests : IDisposable
         });
         _db.SaveChanges();
 
-        var updated = await _sut.TransitionStatusAsync(contract.Id, ContractStatus.InProgress, 1, canSeeAll: true);
-        Assert.Equal(ContractStatus.InProgress, updated!.Status);
-        Assert.Null(updated.DesignProjectId);
-        Assert.Empty(_db.DesignProjects);
+        var retry = await Assert.ThrowsAsync<ContractValidationException>(
+            () => _sut.TransitionStatusAsync(contract.Id, ContractStatus.InProgress, 1, canSeeAll: true));
+        Assert.Equal("LEGAL_ACTIVATION_REQUIRED", retry.Code);
     }
 
     [Fact]
@@ -1303,7 +1302,8 @@ public class ContractServiceTests : IDisposable
             ContentType = "application/pdf",
         });
         await _db.SaveChangesAsync();
-        await _sut.TransitionStatusAsync(contract.Id, ContractStatus.InProgress, 1, canSeeAll: true);
+        _db.Contracts.Find(contract.Id)!.Status = ContractStatus.InProgress;
+        await _db.SaveChangesAsync();
 
         // Not all paid yet
         var ex = await Assert.ThrowsAsync<ContractValidationException>(

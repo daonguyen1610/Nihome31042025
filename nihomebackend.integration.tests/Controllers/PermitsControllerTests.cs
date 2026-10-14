@@ -8,9 +8,9 @@ namespace NihomeBackend.IntegrationTests.Controllers;
 
 /// <summary>
 /// End-to-end coverage for <c>PermitsController</c> (NIH-137): RBAC gating,
-/// full CRUD + the ensure/regenerate endpoint. Auto-
-/// generation on <c>DesignProject</c> create is exercised through the
-/// public POST so we know the two services wire together in the DI pipeline.
+/// lifecycle updates and the retired direct-create/delete endpoints. Legal
+/// setup owns permit creation; creating a design workspace must remain
+/// side-effect free.
 /// </summary>
 public class PermitsControllerTests : IntegrationTestBase
 {
@@ -42,7 +42,7 @@ public class PermitsControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task Create_DesignProject_AutoSeedsPermitChecklist()
+    public async Task Create_DesignProject_DoesNotAutoSeedPermitChecklist()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
         var projectId = await CreateDesignProjectAsync();
@@ -50,7 +50,7 @@ public class PermitsControllerTests : IntegrationTestBase
         var listRes = await Client.GetAsync($"/api/permits?designProjectId={projectId}&pageSize=100");
         listRes.EnsureSuccessStatusCode();
         var listBody = await ReadJsonAsync(listRes);
-        listBody.GetProperty("items").GetArrayLength().Should().BeGreaterThan(0);
+        listBody.GetProperty("items").GetArrayLength().Should().Be(0);
     }
 
     [Fact]
@@ -58,10 +58,12 @@ public class PermitsControllerTests : IntegrationTestBase
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
         var id = await CreatePermitRowAsync();
+        (await UploadDocumentAsync(id, "SubmittedPackage", "submission.pdf")).EnsureSuccessStatusCode();
 
         var res = await Client.PatchAsJsonAsync($"/api/permits/{id}", new
         {
             status = "Submitted",
+            submittedAt = DateTime.UtcNow,
             issuingAgency = "Sở Xây dựng — integration",
         });
         res.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -71,42 +73,33 @@ public class PermitsControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task CrudRoundTrip_CreatesReadsUpdatesAndDeletesItem()
+    public async Task DirectCreateAndDelete_AreRetiredForLegalPackagePermits()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
         var projectId = await CreateDesignProjectAsync();
-        var existing = await Client.GetAsync($"/api/permits?designProjectId={projectId}&pageSize=100");
-        existing.EnsureSuccessStatusCode();
-        var existingItems = (await ReadJsonAsync(existing)).GetProperty("items");
-        var existingId = existingItems[0].GetProperty("id").GetInt32();
-        (await Client.DeleteAsync($"/api/permits/{existingId}")).StatusCode.Should().Be(HttpStatusCode.NoContent);
-
-        var permitTypeCode = existingItems[0].GetProperty("permitTypeCode").GetString();
+        var existingId = await SeedPermitAsync(projectId);
         var created = await Client.PostAsJsonAsync("/api/permits", new
         {
             designProjectId = projectId,
-            permitTypeCode,
+            operationalProjectId = await OperationalProjectIdAsync(projectId),
+            permitTypeCode = "gpxd",
             status = "Preparing",
             issuingAgency = "Integration agency",
         });
-        created.StatusCode.Should().Be(HttpStatusCode.Created);
-        var createdBody = await ReadJsonAsync(created);
-        var id = createdBody.GetProperty("id").GetInt32();
+        created.StatusCode.Should().Be(HttpStatusCode.Gone);
 
-        (await Client.GetAsync($"/api/permits/{id}")).StatusCode.Should().Be(HttpStatusCode.OK);
-        (await Client.PostAsJsonAsync("/api/permits", new
+        (await Client.GetAsync($"/api/permits/{existingId}")).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await UploadDocumentAsync(existingId, "SubmittedPackage", "submission.pdf")).EnsureSuccessStatusCode();
+        var updated = await Client.PatchAsJsonAsync($"/api/permits/{existingId}", new
         {
-            designProjectId = projectId,
-            permitTypeCode,
-        })).StatusCode.Should().Be(HttpStatusCode.Conflict);
-
-        var updated = await Client.PatchAsJsonAsync($"/api/permits/{id}", new { status = "Submitted" });
+            status = "Submitted",
+            submittedAt = DateTime.UtcNow,
+        });
         updated.StatusCode.Should().Be(HttpStatusCode.OK);
         (await ReadJsonAsync(updated)).GetProperty("status").GetString().Should().Be("Submitted");
 
-        (await Client.DeleteAsync($"/api/permits/{id}")).StatusCode.Should().Be(HttpStatusCode.NoContent);
-        (await Client.GetAsync($"/api/permits/{id}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
-        (await Client.DeleteAsync($"/api/permits/{id}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await Client.DeleteAsync($"/api/permits/{existingId}")).StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await Client.GetAsync($"/api/permits/{existingId}")).StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     [Fact]
@@ -141,14 +134,14 @@ public class PermitsControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task Ensure_RegeneratesForKnownProject()
+    public async Task Ensure_IsRetiredForKnownProject()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
         var projectId = await CreateDesignProjectAsync();
         var res = await Client.PostAsync($"/api/permits/design-project/{projectId}/ensure", null);
-        res.StatusCode.Should().Be(HttpStatusCode.OK);
+        res.StatusCode.Should().Be(HttpStatusCode.Gone);
         var body = await ReadJsonAsync(res);
-        body.GetProperty("items").GetArrayLength().Should().BeGreaterThan(0);
+        body.GetProperty("code").GetString().Should().Be("LEGAL_SETUP_REQUIRED");
     }
 
     [Fact]
@@ -181,8 +174,8 @@ public class PermitsControllerTests : IntegrationTestBase
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
         var accessibleProject = await CreateDesignProjectForPmAsync(assignToPm: true);
         var inaccessibleProject = await CreateDesignProjectForPmAsync(assignToPm: false);
-        var accessiblePermit = await FirstPermitIdAsync(accessibleProject);
-        var inaccessiblePermit = await FirstPermitIdAsync(inaccessibleProject);
+        var accessiblePermit = await SeedPermitAsync(accessibleProject);
+        var inaccessiblePermit = await SeedPermitAsync(inaccessibleProject);
 
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "PM"));
 
@@ -196,7 +189,7 @@ public class PermitsControllerTests : IntegrationTestBase
         (await Client.PatchAsJsonAsync($"/api/permits/{inaccessiblePermit}", new
         {
             status = "Submitted",
-        })).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        })).StatusCode.Should().Be(HttpStatusCode.Forbidden);
         (await WithDbAsync(db => db.PermitChecklistItems
             .Where(item => item.Id == inaccessiblePermit)
             .Select(item => item.Status)
@@ -249,13 +242,6 @@ public class PermitsControllerTests : IntegrationTestBase
         return (await ReadJsonAsync(response)).GetProperty("id").GetInt32();
     }
 
-    private async Task<int> FirstPermitIdAsync(int projectId)
-    {
-        var response = await Client.GetAsync($"/api/permits?designProjectId={projectId}&pageSize=100");
-        response.EnsureSuccessStatusCode();
-        return (await ReadJsonAsync(response)).GetProperty("items")[0].GetProperty("id").GetInt32();
-    }
-
     private async Task<int> CreateOperationalProjectAsync(int customerId)
     {
         return await WithDbAsync<int>(async db =>
@@ -284,11 +270,34 @@ public class PermitsControllerTests : IntegrationTestBase
     private async Task<int> CreatePermitRowAsync()
     {
         var projectId = await CreateDesignProjectAsync();
-        var list = await Client.GetAsync($"/api/permits?designProjectId={projectId}&pageSize=100");
-        list.EnsureSuccessStatusCode();
-        var items = (await ReadJsonAsync(list)).GetProperty("items");
-        items.GetArrayLength().Should().BeGreaterThan(0);
-        return items[0].GetProperty("id").GetInt32();
+        return await SeedPermitAsync(projectId);
+    }
+
+    private Task<int> OperationalProjectIdAsync(int designProjectId) => WithDbAsync(db => db.DesignProjects
+        .Where(item => item.Id == designProjectId)
+        .Select(item => item.OperationalProjectId!.Value)
+        .SingleAsync());
+
+    private async Task<int> SeedPermitAsync(int designProjectId)
+    {
+        return await WithDbAsync<int>(async db =>
+        {
+            var operationalProjectId = await db.DesignProjects
+                .Where(item => item.Id == designProjectId)
+                .Select(item => item.OperationalProjectId!.Value)
+                .SingleAsync();
+            var permit = new PermitChecklistItem
+            {
+                OperationalProjectId = operationalProjectId,
+                DesignProjectId = designProjectId,
+                PermitTypeCode = $"gpxd-{Guid.NewGuid():N}"[..24],
+                IssuingAgency = "Integration authority",
+                Status = PermitStatus.Preparing,
+            };
+            db.PermitChecklistItems.Add(permit);
+            await db.SaveChangesAsync();
+            return permit.Id;
+        });
     }
 
     private async Task<int> FirstCustomerIdAsync()

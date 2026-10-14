@@ -898,7 +898,7 @@ export const OPERATIONAL_PROJECT_STATUSES: OperationalProjectStatus[] = [
 ];
 
 export type WorkPackageKind = "Project" | "Internal";
-export type WorkPackagePurpose = "General" | "ProcurementInputPricing" | "FinanceCommercialReview" | "FinanceTenderReview" | "TenderPlanning";
+export type WorkPackagePurpose = "General" | "ProcurementInputPricing" | "FinanceCommercialReview" | "FinanceTenderReview" | "TenderPlanning" | "LegalPermitting";
 export type WorkPackageStatus = "Planned" | "Active" | "Completed" | "Cancelled";
 export type WorkTaskStatus = "Planned" | "InProgress" | "Completed" | "Verified" | "Cancelled";
 
@@ -2453,6 +2453,7 @@ export interface TenderChecklistItemResponse {
   verifiedAt?: string | null;
   verifiedByUserId?: number | null;
   workTaskId?: number | null;
+  workPackageId?: number | null;
   currentEvidenceId?: number | null;
   evidenceRevisions: TenderChecklistEvidenceResponse[];
 }
@@ -3390,7 +3391,10 @@ export const PERMIT_STATUSES: PermitStatus[] = [
 
 export interface PermitChecklistItemResponse {
   id: number;
-  designProjectId: number;
+  operationalProjectId: number;
+  operationalProjectCode?: string | null;
+  operationalProjectName?: string | null;
+  designProjectId?: number | null;
   designProjectCode?: string | null;
   designProjectName?: string | null;
   permitTypeCode: string;
@@ -3398,6 +3402,12 @@ export interface PermitChecklistItemResponse {
   issuingAgency?: string | null;
   ownerUserId?: number | null;
   ownerName?: string | null;
+  workTaskId?: number | null;
+  approverUserId?: number | null;
+  approverName?: string | null;
+  progressPercent: number;
+  workTaskStatus?: string | null;
+  workTaskRowVersion?: string | null;
   targetDeadline?: string | null;
   submittedAt?: string | null;
   issuedAt?: string | null;
@@ -3428,9 +3438,22 @@ export interface PermitChecklistListResponse {
   risk: PermitChecklistRiskSummary;
 }
 
+export interface PermitChecklistHistoryResponse {
+  id: number;
+  fromStatus?: PermitStatus | null;
+  toStatus: PermitStatus;
+  action: string;
+  snapshotJson: string;
+  changedAt: string;
+  changedByUserId: number;
+  changedByName: string;
+}
+
 export interface PermitChecklistListParams {
+  operationalProjectId?: number;
   designProjectId?: number;
   ownerUserId?: number;
+  approverUserId?: number;
   status?: string;
   permitTypeCode?: string;
   dueSoon?: boolean;
@@ -3442,7 +3465,8 @@ export interface PermitChecklistListParams {
 }
 
 export interface CreatePermitChecklistItemRequest {
-  designProjectId: number;
+  operationalProjectId: number;
+  designProjectId?: number | null;
   permitTypeCode: string;
   status?: PermitStatus;
   issuingAgency?: string | null;
@@ -3452,6 +3476,55 @@ export interface CreatePermitChecklistItemRequest {
   issuedAt?: string | null;
   expiresAt?: string | null;
   note?: string | null;
+}
+
+export interface LegalProjectMemberOption {
+  userId: number;
+  name: string;
+  email: string;
+  roleGroupId: number;
+  roleGroupCode: string;
+  canLeadLegal: boolean;
+}
+
+export interface LegalActivationPreview {
+  contractId: number;
+  operationalProjectId: number;
+  projectCode: string;
+  projectName: string;
+  projectManagerUserId: number;
+  eligible: boolean;
+  alreadyActivated: boolean;
+  existingWorkPackageId?: number | null;
+  reasonCode?: string | null;
+  message?: string | null;
+  permitTypes: Array<{ code: string; name: string; alreadyExists: boolean; requiresSetup: boolean }>;
+  projectMembers: LegalProjectMemberOption[];
+}
+
+export interface LegalPermitSetupItemRequest {
+  permitTypeCode: string;
+  issuingAgency?: string | null;
+  assigneeUserId: number;
+  approverUserId: number;
+  plannedStart: string;
+  plannedEnd: string;
+  predecessorPermitTypeCodes: string[];
+}
+
+export interface ActivateContractWithLegalRequest {
+  rowVersion: string;
+  legalLeadUserId: number;
+  plannedStart: string;
+  plannedEnd: string;
+  permits: LegalPermitSetupItemRequest[];
+}
+
+export interface LegalActivationResult {
+  contract: ContractResponse;
+  workPackageId: number;
+  permitIds: number[];
+  reusedExistingPackage: boolean;
 }
 
 export interface UpdatePermitChecklistItemRequest {
@@ -5518,8 +5591,10 @@ export const adminApi = {
   // Permits (NIH-137)
   listPermits: (params: PermitChecklistListParams = {}) => {
     const q = new URLSearchParams();
+    if (params.operationalProjectId != null) q.append("operationalProjectId", String(params.operationalProjectId));
     if (params.designProjectId != null) q.append("designProjectId", String(params.designProjectId));
     if (params.ownerUserId != null) q.append("ownerUserId", String(params.ownerUserId));
+    if (params.approverUserId != null) q.append("approverUserId", String(params.approverUserId));
     if (params.status) q.append("status", params.status);
     if (params.permitTypeCode) q.append("permitTypeCode", params.permitTypeCode);
     if (params.overdue) q.append("overdue", "true");
@@ -5533,6 +5608,8 @@ export const adminApi = {
   },
   getPermit: (id: number) =>
     api.get<PermitChecklistItemResponse>(`/permits/${id}`),
+  getPermitHistory: (id: number) =>
+    api.get<PermitChecklistHistoryResponse[]>(`/permits/${id}/history`),
   createPermit: (body: CreatePermitChecklistItemRequest) =>
     api.post<PermitChecklistItemResponse>("/permits", body),
   updatePermit: (id: number, body: UpdatePermitChecklistItemRequest) =>
@@ -5543,8 +5620,6 @@ export const adminApi = {
     formData.append("file", file);
     return api.post<PermitChecklistItemResponse>(`/permits/${id}/documents/${kind}`, formData);
   },
-  ensurePermitsForProject: (designProjectId: number) =>
-    api.post<PermitChecklistListResponse>(`/permits/design-project/${designProjectId}/ensure`),
 
   // Concept options (NIH-114)
   listConceptOptions: (params: ConceptOptionListParams = {}) => {
@@ -6099,6 +6174,11 @@ export const adminApi = {
       ...withIdempotencyKey(idempotencyKey).headers,
       ...withIfMatch(rowVersion).headers,
     } }),
+  rejectWorkTask: (packageId: number, taskId: number, rowVersion: string, reason: string, idempotencyKey: string) =>
+    api.post<DepartmentWorkTaskResponse>(`/work-packages/${packageId}/tasks/${taskId}/verify`, { confirm: false, reason, rowVersion }, { headers: {
+      ...withIdempotencyKey(idempotencyKey).headers,
+      ...withIfMatch(rowVersion).headers,
+    } }),
   addInputPriceOffer: (packageId: number, body: UpsertInputPriceOfferRequest, idempotencyKey: string) =>
     api.post<InputPriceOfferResponse>(`/work-packages/${packageId}/input-price-offers`, body, withIdempotencyKey(idempotencyKey)),
   updateInputPriceOffer: (packageId: number, offerId: number, body: UpsertInputPriceOfferRequest, idempotencyKey: string) =>
@@ -6327,6 +6407,14 @@ export const adminApi = {
     postIdempotent<ContractResponse>(`/contracts/${id}/link-quote`, { quoteId, rowVersion }),
   transitionContract: (id: number, newStatus: ContractStatus, rowVersion?: string) =>
     api.post<ContractResponse>(`/contracts/${id}/transition`, { newStatus, rowVersion }),
+  getContractLegalActivationPreview: (id: number) =>
+    api.get<LegalActivationPreview>(`/contracts/${id}/legal-activation-preview`),
+  activateContractWithLegal: (id: number, body: ActivateContractWithLegalRequest) =>
+    postIdempotent<LegalActivationResult>(`/contracts/${id}/activate-with-legal`, body),
+  getProjectLegalSetupPreview: (id: number) =>
+    api.get<LegalActivationPreview>(`/operational-projects/${id}/legal-setup`),
+  setupProjectLegal: (id: number, body: Omit<ActivateContractWithLegalRequest, "rowVersion">) =>
+    postIdempotent<LegalActivationResult>(`/operational-projects/${id}/legal-setup`, body),
   updateMilestoneStatus: (
     contractId: number,
     milestoneId: number,

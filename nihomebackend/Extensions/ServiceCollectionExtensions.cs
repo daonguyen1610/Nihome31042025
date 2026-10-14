@@ -176,6 +176,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IDesignProjectService, DesignProjectService>();
         services.AddScoped<IBusinessDocumentStorageService, BusinessDocumentStorageService>();
         services.AddScoped<IPermitChecklistService, PermitChecklistService>();
+        services.AddScoped<ILegalActivationService, LegalActivationService>();
         services.AddScoped<IConceptOptionService, ConceptOptionService>();
         services.AddScoped<IBasicDesignDocService, BasicDesignDocService>();
         services.AddScoped<IShopDrawingService, ShopDrawingService>();

@@ -1,15 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
-import { AlertTriangle, Clock, Eye, FileCheck2, Filter, Pencil, Plus, RefreshCcw, Search, ShieldAlert, Trash2 } from "lucide-react";
+import { Link, useSearchParams } from "react-router-dom";
+import { AlertTriangle, CheckCircle2, Clock, Eye, FileCheck2, Filter, Pencil, Plus, RefreshCcw, Search, ShieldAlert, Trash2 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import AdminDocumentUpload from "@/components/admin/AdminDocumentUpload";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
+import LegalActivationWizard from "@/components/admin/LegalActivationWizard";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { extractApiError } from "@/lib/apiError";
+import { newIdempotencyKey } from "@/lib/api";
 import { isManagedDocumentPath } from "@/lib/url";
 import { PageLoading, PageError } from "@/components/PageState";
 import { Badge } from "@/components/ui/badge";
@@ -47,9 +49,11 @@ import {
   adminApi,
   PERMIT_STATUSES,
   type CreatePermitChecklistItemRequest,
-  type DesignProjectListItemResponse,
+  type DepartmentWorkTaskResponse,
+  type OperationalProjectListItemResponse,
   type MasterDataOption,
   type PermitChecklistItemResponse,
+  type PermitChecklistHistoryResponse,
   type PermitChecklistListParams,
   type PermitChecklistRiskSummary,
   type PermitDocumentKind,
@@ -118,7 +122,7 @@ const emptyForm = (): PermitForm => ({
 });
 
 const formFrom = (row: PermitChecklistItemResponse): PermitForm => ({
-  projectId: row.designProjectId,
+  projectId: row.operationalProjectId,
   permitTypeCode: row.permitTypeCode,
   status: row.status,
   issuingAgency: row.issuingAgency ?? "",
@@ -155,18 +159,19 @@ const AdminPermits = () => {
   // filters
   const [search, setSearch] = useState("");
   const [projectId, setProjectId] = useState<number | null>(() => {
-    const value = Number(searchParams.get("designProjectId"));
+    const value = Number(searchParams.get("operationalProjectId"));
     return Number.isInteger(value) && value > 0 ? value : null;
   });
   const [permitTypeCode, setPermitTypeCode] = useState<string>("");
   const [status, setStatus] = useState<PermitStatus | "">("");
   const [ownerUserId, setOwnerUserId] = useState<number | null>(null);
+  const [approverUserId, setApproverUserId] = useState<number | null>(null);
   const [flag, setFlag] = useState<"" | "overdue" | "dueSoon" | "expiringSoon">("");
   const [page, setPage] = useState(1);
   const pageSize = 20;
 
   // lookups
-  const [projects, setProjects] = useState<DesignProjectListItemResponse[]>([]);
+  const [projects, setProjects] = useState<OperationalProjectListItemResponse[]>([]);
   const [permitTypes, setPermitTypes] = useState<MasterDataOption[]>([]);
   const [users, setUsers] = useState<UserOption[]>([]);
 
@@ -175,7 +180,7 @@ const AdminPermits = () => {
     (async () => {
       try {
         const [projResp, typesResp] = await Promise.all([
-          adminApi.listDesignProjects({ pageSize: 200 }).catch(() => ({
+          adminApi.listOperationalProjects({ pageSize: 200 }).catch(() => ({
             data: { total: 0, page: 1, pageSize: 200, items: [] },
           })),
           adminApi.getMasterDataOptions("permit_type").catch(() => ({ data: [] })),
@@ -214,10 +219,11 @@ const AdminPermits = () => {
     try {
       const params: PermitChecklistListParams = { page, pageSize };
       if (search.trim()) params.search = search.trim();
-      if (projectId != null) params.designProjectId = projectId;
+      if (projectId != null) params.operationalProjectId = projectId;
       if (permitTypeCode) params.permitTypeCode = permitTypeCode;
       if (status) params.status = status;
       if (ownerUserId != null) params.ownerUserId = ownerUserId;
+      if (approverUserId != null) params.approverUserId = approverUserId;
       if (flag === "overdue") params.overdue = true;
       if (flag === "dueSoon") params.dueSoon = true;
       if (flag === "expiringSoon") params.expiringSoon = true;
@@ -235,7 +241,7 @@ const AdminPermits = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, search, projectId, permitTypeCode, status, ownerUserId, flag, t, toast]);
+  }, [page, pageSize, search, projectId, permitTypeCode, status, ownerUserId, approverUserId, flag, t, toast]);
 
   useEffect(() => {
     void fetchList();
@@ -249,13 +255,14 @@ const AdminPermits = () => {
     permitTypeCode !== "" ||
     status !== "" ||
     ownerUserId != null ||
+    approverUserId != null ||
     flag !== "";
 
   const projectOptions = useMemo(
     () =>
       projects.map((p) => ({
         value: String(p.id),
-        label: `${p.projectCode} — ${p.name}`,
+        label: `${p.code} — ${p.name}`,
       })),
     [projects],
   );
@@ -270,6 +277,7 @@ const AdminPermits = () => {
     setPermitTypeCode("");
     setStatus("");
     setOwnerUserId(null);
+    setApproverUserId(null);
     setFlag("");
     setPage(1);
   };
@@ -278,6 +286,12 @@ const AdminPermits = () => {
   const [dialogMode, setDialogMode] = useState<"create" | "edit" | null>(null);
   const [editing, setEditing] = useState<PermitChecklistItemResponse | null>(null);
   const [viewing, setViewing] = useState<PermitChecklistItemResponse | null>(null);
+  const [permitHistory, setPermitHistory] = useState<PermitChecklistHistoryResponse[]>([]);
+  const [viewTask, setViewTask] = useState<DepartmentWorkTaskResponse | null>(null);
+  const [taskProgress, setTaskProgress] = useState(1);
+  const [taskRejectReason, setTaskRejectReason] = useState("");
+  const [taskSaving, setTaskSaving] = useState(false);
+  const [setupProjectId, setSetupProjectId] = useState<number | null>(null);
   const openedPermitIdRef = useRef<number | null>(null);
   const [pendingDelete, setPendingDelete] = useState<PermitChecklistItemResponse | null>(null);
   const [form, setForm] = useState<PermitForm | null>(null);
@@ -297,6 +311,83 @@ const AdminPermits = () => {
         variant: "destructive",
       }));
   }, [searchParams, t, toast]);
+
+  useEffect(() => {
+    if (!viewing) {
+      setPermitHistory([]);
+      setViewTask(null);
+      setTaskRejectReason("");
+      return;
+    }
+    let cancelled = false;
+    void Promise.all([
+      adminApi.getPermitHistory(viewing.id).then(({ data }) => data).catch(() => []),
+      viewing.workPackageId && viewing.workTaskId
+        ? adminApi.getWorkPackage(viewing.workPackageId)
+          .then(({ data }) => data.tasks.find((task) => task.id === viewing.workTaskId) ?? null)
+          .catch(() => null)
+        : Promise.resolve(null),
+    ]).then(([history, task]) => {
+      if (cancelled) return;
+      setPermitHistory(history);
+      setViewTask(task);
+      setTaskProgress(Math.max(1, Math.min(99, task?.progressPercent || 1)));
+    });
+    return () => { cancelled = true; };
+  }, [viewing]);
+
+  const refreshViewedPermit = async () => {
+    if (!viewing) return;
+    const [{ data: permit }, task] = await Promise.all([
+      adminApi.getPermit(viewing.id),
+      viewing.workPackageId && viewing.workTaskId
+        ? adminApi.getWorkPackage(viewing.workPackageId)
+          .then(({ data }) => data.tasks.find((item) => item.id === viewing.workTaskId) ?? null)
+        : Promise.resolve(null),
+    ]);
+    setViewing(permit);
+    setViewTask(task);
+    setTaskProgress(Math.max(1, Math.min(99, task?.progressPercent || 1)));
+    await fetchList();
+  };
+
+  const updateViewedTaskProgress = async (complete: boolean) => {
+    if (!viewing?.workPackageId || !viewTask) return;
+    setTaskSaving(true);
+    try {
+      await adminApi.updateWorkTaskProgress(viewing.workPackageId, viewTask.id, {
+        progressPercent: complete ? 100 : taskProgress,
+        status: complete ? "Completed" : "InProgress",
+        rowVersion: viewTask.rowVersion,
+      }, newIdempotencyKey());
+      await refreshViewedPermit();
+    } catch (cause) {
+      toast({ title: t("common.error"), description: extractApiError(cause), variant: "destructive" });
+    } finally {
+      setTaskSaving(false);
+    }
+  };
+
+  const decideViewedTask = async (approve: boolean) => {
+    if (!viewing?.workPackageId || !viewTask || (!approve && !taskRejectReason.trim())) return;
+    setTaskSaving(true);
+    try {
+      if (approve) {
+        await adminApi.verifyWorkTask(viewing.workPackageId, viewTask.id, viewTask.rowVersion, newIdempotencyKey());
+        toast({ title: t("workPackages.toast.verified") });
+      } else {
+        await adminApi.rejectWorkTask(viewing.workPackageId, viewTask.id, viewTask.rowVersion,
+          taskRejectReason.trim(), newIdempotencyKey());
+        setTaskRejectReason("");
+        toast({ title: t("workPackages.toast.returned") });
+      }
+      await refreshViewedPermit();
+    } catch (cause) {
+      toast({ title: t("common.error"), description: extractApiError(cause), variant: "destructive" });
+    } finally {
+      setTaskSaving(false);
+    }
+  };
 
   const openCreate = () => {
     setEditing(null);
@@ -330,7 +421,7 @@ const AdminPermits = () => {
     try {
       if (dialogMode === "create") {
         const payload: CreatePermitChecklistItemRequest = {
-          designProjectId: form.projectId!,
+          operationalProjectId: form.projectId!,
           permitTypeCode: form.permitTypeCode,
           status: form.status,
           issuingAgency: form.issuingAgency.trim() || null,
@@ -449,9 +540,9 @@ const AdminPermits = () => {
             <p className="text-sm text-slate-600">{t("permits.subtitle")}</p>
           </div>
           {canManage ? (
-            <Button size="sm" onClick={openCreate}>
+            <Button size="sm" disabled={!projectId} onClick={() => projectId && setSetupProjectId(projectId)}>
               <Plus className="mr-1 h-4 w-4" />
-              {t("permits.create")}
+              {t("permits.setupLegal")}
             </Button>
           ) : null}
         </header>
@@ -590,6 +681,21 @@ const AdminPermits = () => {
                 />
               </div>
             ) : null}
+            {canPickUser && userOptions.length > 0 ? (
+              <div>
+                <Label className="text-xs">{t("permits.field.approver")}</Label>
+                <SearchableSelect
+                  className="mt-1"
+                  value={approverUserId != null ? String(approverUserId) : ""}
+                  onChange={(value) => {
+                    setApproverUserId(value ? Number(value) : null);
+                    setPage(1);
+                  }}
+                  options={[{ value: "", label: t("permits.filter.allApprovers") }, ...userOptions]}
+                  placeholder={t("permits.filter.allApprovers")}
+                />
+              </div>
+            ) : null}
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => void fetchList()} disabled={loading}>
@@ -634,8 +740,8 @@ const AdminPermits = () => {
                         {r.permitTypeLabel ?? r.permitTypeCode}
                       </h3>
                       <p className="mt-0.5 break-words text-xs text-muted-foreground">
-                        {r.designProjectCode ? `${r.designProjectCode} — ` : ""}
-                        {r.designProjectName ?? "—"}
+                        {r.operationalProjectCode ? `${r.operationalProjectCode} — ` : ""}
+                        {r.operationalProjectName ?? "—"}
                       </p>
                     </div>
                     <div className="flex flex-col items-end gap-1">
@@ -655,6 +761,14 @@ const AdminPermits = () => {
                       <dd className="font-medium">{r.issuingAgency ?? "—"}</dd>
                     </div>
                     <div>
+                      <dt className="text-muted-foreground">{t("permits.field.approver")}</dt>
+                      <dd className="font-medium">{r.approverName ?? "—"}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground">{t("permits.field.progress")}</dt>
+                      <dd className="font-medium">{r.progressPercent}% · {r.workTaskStatus ?? "—"}</dd>
+                    </div>
+                    <div>
                       <dt className="text-muted-foreground">{t("permits.field.targetDeadline")}</dt>
                       <dd className="font-medium">{formatDate(r.targetDeadline, lang)}</dd>
                     </div>
@@ -667,16 +781,9 @@ const AdminPermits = () => {
                     <Button variant="ghost" size="sm" onClick={() => setViewing(r)}>
                       <Eye className="mr-1 h-4 w-4" />{t("common.view")}
                     </Button>
-                    {canManage ? (
-                      <>
-                        <Button variant="ghost" size="sm" onClick={() => openEdit(r)}>
-                          <Pencil className="mr-1 h-4 w-4" />{t("common.edit")}
-                        </Button>
-                        <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => setPendingDelete(r)}>
-                          <Trash2 className="mr-1 h-4 w-4" />{t("common.delete")}
-                        </Button>
-                      </>
-                    ) : null}
+                    {canManage ? <Button variant="ghost" size="sm" onClick={() => openEdit(r)}>
+                      <Pencil className="mr-1 h-4 w-4" />{t("common.edit")}
+                    </Button> : null}
                   </div>
                 </article>
               ))}
@@ -691,6 +798,8 @@ const AdminPermits = () => {
                     <th className="px-3 py-2">{t("permits.field.permitType")}</th>
                     <th className="px-3 py-2">{t("permits.field.agency")}</th>
                     <th className="px-3 py-2">{t("permits.field.owner")}</th>
+                    <th className="px-3 py-2">{t("permits.field.approver")}</th>
+                    <th className="px-3 py-2">{t("permits.field.progress")}</th>
                     <th className="px-3 py-2">{t("permits.field.status")}</th>
                     <th className="px-3 py-2">{t("permits.field.targetDeadline")}</th>
                     <th className="px-3 py-2">{t("permits.field.expiresAt")}</th>
@@ -701,14 +810,18 @@ const AdminPermits = () => {
                   {rows.map((r) => (
                     <tr key={r.id} className="transition-colors hover:bg-slate-50/70">
                       <td className="px-3 py-2 text-slate-700">
-                        <div className="font-mono text-xs text-slate-500">{r.designProjectCode ?? "—"}</div>
-                        <div className="text-slate-800">{r.designProjectName ?? "—"}</div>
+                        <div className="font-mono text-xs text-slate-500">{r.operationalProjectCode ?? "—"}</div>
+                        <div className="text-slate-800">{r.operationalProjectName ?? "—"}</div>
                       </td>
                       <td className="px-3 py-2 font-medium text-slate-900">
                         {r.permitTypeLabel ?? r.permitTypeCode}
                       </td>
                       <td className="px-3 py-2 text-slate-700">{r.issuingAgency ?? "—"}</td>
                       <td className="px-3 py-2 text-slate-700">{r.ownerName ?? "—"}</td>
+                      <td className="px-3 py-2 text-slate-700">{r.approverName ?? "—"}</td>
+                      <td className="px-3 py-2 text-slate-700">
+                        <div className="min-w-24"><div className="mb-1 flex justify-between text-xs"><span>{r.workTaskStatus ?? "—"}</span><span>{r.progressPercent}%</span></div><div className="h-1.5 overflow-hidden rounded bg-slate-100"><div className="h-full bg-primary" style={{ width: `${r.progressPercent}%` }} /></div></div>
+                      </td>
                       <td className="px-3 py-2">
                         <div className="flex flex-col items-start gap-1">
                           <Badge variant="outline" className={cn("whitespace-nowrap", STATUS_BADGE[r.status])}>
@@ -728,16 +841,9 @@ const AdminPermits = () => {
                           <Button variant="ghost" size="icon" title={t("common.view")} aria-label={t("common.view")} onClick={() => setViewing(r)}>
                             <Eye className="h-4 w-4" />
                           </Button>
-                          {canManage ? (
-                            <>
-                              <Button variant="ghost" size="icon" title={t("common.edit")} aria-label={t("common.edit")} onClick={() => openEdit(r)}>
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                              <Button variant="ghost" size="icon" title={t("common.delete")} aria-label={t("common.delete")} className="text-destructive hover:text-destructive" onClick={() => setPendingDelete(r)}>
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </>
-                          ) : null}
+                          {canManage ? <Button variant="ghost" size="icon" title={t("common.edit")} aria-label={t("common.edit")} onClick={() => openEdit(r)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button> : null}
                         </div>
                       </td>
                     </tr>
@@ -852,6 +958,7 @@ const AdminPermits = () => {
                     onChange={(v) => setForm((f) => (f ? { ...f, ownerUserId: v ? Number(v) : null } : f))}
                     options={[{ value: "", label: t("permits.form.ownerNone") }, ...userOptions]}
                     placeholder={t("permits.form.ownerNone")}
+                    disabled={Boolean(editing?.workTaskId)}
                   />
                 </div>
               ) : null}
@@ -860,6 +967,7 @@ const AdminPermits = () => {
                 <Input
                   type="date"
                   value={form.targetDeadline}
+                  disabled={Boolean(editing?.workTaskId)}
                   onChange={(e) => setForm((f) => (f ? { ...f, targetDeadline: e.target.value } : f))}
                 />
               </div>
@@ -936,22 +1044,76 @@ const AdminPermits = () => {
           <DialogHeader>
             <DialogTitle>{t("permits.viewTitle")}</DialogTitle>
             <DialogDescription>
-              {viewing ? `${viewing.designProjectCode ?? ""} — ${viewing.permitTypeLabel ?? viewing.permitTypeCode}` : ""}
+              {viewing ? `${viewing.operationalProjectCode ?? ""} — ${viewing.permitTypeLabel ?? viewing.permitTypeCode}` : ""}
             </DialogDescription>
           </DialogHeader>
           {viewing ? (
             <dl className="grid gap-4 rounded-lg border bg-muted/10 p-4 sm:grid-cols-2">
-              <DetailValue label={t("permits.field.project")} value={`${viewing.designProjectCode ?? ""} — ${viewing.designProjectName ?? "—"}`} />
+              <DetailValue label={t("permits.field.project")} value={`${viewing.operationalProjectCode ?? ""} — ${viewing.operationalProjectName ?? "—"}`} />
               <DetailValue label={t("permits.field.permitType")} value={viewing.permitTypeLabel ?? viewing.permitTypeCode} />
               <DetailValue label={t("permits.field.status")} value={t(`permits.status.${viewing.status}`)} />
               <DetailValue label={t("permits.field.agency")} value={viewing.issuingAgency} />
               <DetailValue label={t("permits.field.owner")} value={viewing.ownerName} />
+              <DetailValue label={t("permits.field.approver")} value={viewing.approverName} />
+              <DetailValue label={t("permits.field.progress")} value={`${viewing.progressPercent}% · ${viewing.workTaskStatus ?? "—"}`} />
               <DetailValue label={t("permits.field.targetDeadline")} value={formatDate(viewing.targetDeadline, lang)} />
               <DetailValue label={t("permits.field.submittedAt")} value={formatDate(viewing.submittedAt, lang)} />
               <DetailValue label={t("permits.field.issuedAt")} value={formatDate(viewing.issuedAt, lang)} />
               <DetailValue label={t("permits.field.expiresAt")} value={formatDate(viewing.expiresAt, lang)} />
               <DetailValue label={t("permits.field.updatedAt")} value={formatDate(viewing.updatedAt, lang)} />
               <div className="sm:col-span-2"><DetailValue label={t("permits.field.note")} value={viewing.note} /></div>
+              {viewTask ? (
+                <section className="space-y-3 rounded-md border bg-background p-3 sm:col-span-2" aria-label={t("workPackages.tasks.title")}>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <h3 className="text-sm font-semibold">{t("workPackages.tasks.title")}</h3>
+                      <p className="text-xs text-muted-foreground">{viewTask.wbsCode} Â· {viewTask.title}</p>
+                    </div>
+                    <Badge variant="outline">{viewTask.status} Â· {viewTask.progressPercent}%</Badge>
+                  </div>
+                  {viewTask.canUpdateProgress && ["Planned", "InProgress"].includes(viewTask.status) ? (
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                      <div className="flex-1 space-y-1">
+                        <Label htmlFor="permit-task-progress">{t("workPackages.action.progress")}</Label>
+                        <Input
+                          id="permit-task-progress"
+                          type="number"
+                          min={1}
+                          max={99}
+                          value={taskProgress}
+                          onChange={(event) => setTaskProgress(Math.max(1, Math.min(99, Number(event.target.value) || 1)))}
+                        />
+                      </div>
+                      <Button variant="outline" disabled={taskSaving} onClick={() => void updateViewedTaskProgress(false)}>
+                        {t("workPackages.action.progress")}
+                      </Button>
+                      <Button disabled={taskSaving} onClick={() => void updateViewedTaskProgress(true)}>
+                        {t("workPackages.action.completeTask")}
+                      </Button>
+                    </div>
+                  ) : null}
+                  {viewTask.canVerify && viewTask.status === "Completed" ? (
+                    <div className="space-y-2 border-t pt-3">
+                      <Label htmlFor="permit-task-reject-reason">{t("workPackages.reject.reason")}</Label>
+                      <Textarea
+                        id="permit-task-reject-reason"
+                        maxLength={2000}
+                        value={taskRejectReason}
+                        onChange={(event) => setTaskRejectReason(event.target.value)}
+                      />
+                      <div className="flex flex-wrap justify-end gap-2">
+                        <Button variant="destructive" disabled={taskSaving || !taskRejectReason.trim()} onClick={() => void decideViewedTask(false)}>
+                          {t("common.reject")}
+                        </Button>
+                        <Button disabled={taskSaving} onClick={() => void decideViewedTask(true)}>
+                          <CheckCircle2 className="mr-2 h-4 w-4" />{t("workPackages.action.verify")}
+                        </Button>
+                      </div>
+                    </div>
+                  ) : null}
+                </section>
+              ) : null}
+              {viewing.workPackageId ? <div className="sm:col-span-2"><Button asChild variant="outline" size="sm"><Link to={`/admin/work-packages/${viewing.workPackageId}`}>{t("permits.openWorkPackage")}</Link></Button></div> : null}
               <div className="space-y-2 sm:col-span-2">
                 <PermitDocumentField
                   permitId={viewing.id}
@@ -974,6 +1136,15 @@ const AdminPermits = () => {
                   hideUpload={!canManage}
                 />
               </div>
+              <div className="space-y-2 sm:col-span-2">
+                <h3 className="text-sm font-semibold">{t("permits.history")}</h3>
+                {permitHistory.length === 0 ? <p className="text-sm text-muted-foreground">{t("permits.historyEmpty")}</p> : permitHistory.map((entry) => (
+                  <div key={entry.id} className="rounded-md border p-2 text-xs">
+                    <div className="flex flex-wrap justify-between gap-2"><span className="font-medium">{entry.action}{entry.fromStatus && entry.fromStatus !== entry.toStatus ? ` · ${entry.fromStatus} → ${entry.toStatus}` : ""}</span><span className="text-muted-foreground">{formatDate(entry.changedAt, lang)}</span></div>
+                    <p className="mt-1 text-muted-foreground">{entry.changedByName}</p>
+                  </div>
+                ))}
+              </div>
             </dl>
           ) : null}
           <DialogFooter>
@@ -990,7 +1161,7 @@ const AdminPermits = () => {
             <AlertDialogDescription>
               {t("permits.deleteDescription")
                 .replace("{type}", pendingDelete?.permitTypeLabel ?? pendingDelete?.permitTypeCode ?? "")
-                .replace("{project}", pendingDelete?.designProjectName ?? "")}
+                .replace("{project}", pendingDelete?.operationalProjectName ?? "")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1001,6 +1172,12 @@ const AdminPermits = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      {setupProjectId ? <LegalActivationWizard
+        operationalProjectId={setupProjectId}
+        open
+        onOpenChange={(next) => { if (!next) setSetupProjectId(null); }}
+        onActivated={async () => { await fetchList(); }}
+      /> : null}
     </AdminLayout>
   );
 };

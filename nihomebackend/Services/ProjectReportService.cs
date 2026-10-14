@@ -117,7 +117,7 @@ public sealed class ProjectReportService(
             .Where(record => designProjectIds.Contains(record.DesignProjectId))
             .ToListAsync(ct);
         var permits = await db.PermitChecklistItems.AsNoTracking()
-            .Where(permit => designProjectIds.Contains(permit.DesignProjectId))
+            .Where(permit => projectIds.Contains(permit.OperationalProjectId))
             .ToListAsync(ct);
         var quotes = await db.Quotes.AsNoTracking()
             .Where(quote => quote.OperationalProjectId.HasValue &&
@@ -335,6 +335,7 @@ public sealed class ProjectReportService(
             return new ProjectReportPermitItemResponse
             {
                 Id = permit.Id,
+                OperationalProjectId = permit.OperationalProjectId,
                 DesignProjectId = permit.DesignProjectId,
                 PermitTypeCode = permit.PermitTypeCode,
                 Status = permit.Status.ToString(),

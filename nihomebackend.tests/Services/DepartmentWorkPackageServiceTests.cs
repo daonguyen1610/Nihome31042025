@@ -485,6 +485,106 @@ public sealed class DepartmentWorkPackageServiceTests : IDisposable
         Assert.Equal(_accountantLead.Id, approved.ReviewedByUserId);
     }
 
+    [Fact]
+    public async Task LegalTask_CannotBeSubmittedUntilPermitIsIssuedWithEvidence()
+    {
+        var package = AddBusinessPackage(WorkPackagePurpose.LegalPermitting, _procurementGroup, _procurementLead);
+        var task = new DepartmentWorkTask
+        {
+            WorkPackageId = package.Id,
+            WbsCode = "L-01",
+            Title = "Giấy phép xây dựng",
+            DepartmentRoleGroupId = _procurementGroup.Id,
+            AssigneeUserId = _warehouseStaff.Id,
+            ApproverUserId = _procurementLead.Id,
+            Status = WorkTaskStatus.InProgress,
+            ProgressPercent = 80,
+            PlannedStart = DateTime.UtcNow.Date.AddDays(-10),
+            PlannedEnd = DateTime.UtcNow.Date.AddDays(10),
+            CreatedByUserId = _procurementLead.Id,
+            UpdatedByUserId = _warehouseStaff.Id,
+        };
+        var permit = new PermitChecklistItem
+        {
+            OperationalProjectId = _project.Id,
+            WorkTask = task,
+            PermitTypeCode = "gpxd",
+            Status = PermitStatus.UnderReview,
+            SubmittedAt = DateTime.UtcNow.AddDays(-3),
+            SubmittedFilePath = "/files/business-documents/permits/gpxd-submitted.pdf",
+            CreatedByUserId = _procurementLead.Id,
+            UpdatedByUserId = _warehouseStaff.Id,
+        };
+        _db.PermitChecklistItems.Add(permit);
+        await _db.SaveChangesAsync();
+
+        await Assert.ThrowsAsync<DepartmentWorkPackageOperationException>(() =>
+            _service.UpdateProgressAsync(package.Id, task.Id,
+                new UpdateDepartmentWorkTaskProgressRequest { Status = "Completed", ProgressPercent = 100 },
+                _warehouseStaff.Id));
+
+        permit.Status = PermitStatus.Issued;
+        permit.IssuedAt = DateTime.UtcNow.AddDays(-1);
+        permit.IssuedFilePath = "/files/business-documents/permits/gpxd-issued.pdf";
+        await _db.SaveChangesAsync();
+        var completed = await _service.UpdateProgressAsync(package.Id, task.Id,
+            new UpdateDepartmentWorkTaskProgressRequest { Status = "Completed", ProgressPercent = 100 },
+            _warehouseStaff.Id);
+
+        Assert.Equal("Completed", completed!.Status);
+        Assert.Equal(100, completed.ProgressPercent);
+    }
+
+    [Fact]
+    public async Task LegalTask_ReturnRequiresReason_AndApproverCanVerify()
+    {
+        var package = AddBusinessPackage(WorkPackagePurpose.LegalPermitting, _procurementGroup, _procurementLead);
+        var task = new DepartmentWorkTask
+        {
+            WorkPackageId = package.Id,
+            WbsCode = "L-02",
+            Title = "Thẩm duyệt PCCC",
+            DepartmentRoleGroupId = _procurementGroup.Id,
+            AssigneeUserId = _warehouseStaff.Id,
+            ApproverUserId = _procurementLead.Id,
+            Status = WorkTaskStatus.Completed,
+            ProgressPercent = 100,
+            PlannedStart = DateTime.UtcNow.Date.AddDays(-10),
+            PlannedEnd = DateTime.UtcNow.Date.AddDays(10),
+            CompletedAt = DateTime.UtcNow.AddHours(-1),
+            CreatedByUserId = _procurementLead.Id,
+            UpdatedByUserId = _warehouseStaff.Id,
+        };
+        _db.DepartmentWorkTasks.Add(task);
+        await _db.SaveChangesAsync();
+
+        await Assert.ThrowsAsync<DepartmentWorkPackageOperationException>(() =>
+            _service.VerifyTaskAsync(package.Id, task.Id,
+                new VerifyDepartmentWorkTaskRequest { Confirm = false, Reason = "  " }, _procurementLead.Id));
+        Assert.Equal(WorkTaskStatus.Completed, (await _db.DepartmentWorkTasks.FindAsync(task.Id))!.Status);
+
+        var returned = await _service.VerifyTaskAsync(package.Id, task.Id,
+            new VerifyDepartmentWorkTaskRequest { Confirm = false, Reason = "Bổ sung bản đóng dấu." },
+            _procurementLead.Id);
+        Assert.Equal("InProgress", returned!.Status);
+        Assert.Equal(99, returned.ProgressPercent);
+        Assert.Null(returned.CompletedAt);
+
+        task.Status = WorkTaskStatus.Completed;
+        task.ProgressPercent = 100;
+        task.CompletedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+        var verified = await _service.VerifyTaskAsync(package.Id, task.Id,
+            new VerifyDepartmentWorkTaskRequest { Confirm = true }, _procurementLead.Id);
+
+        Assert.Equal("Verified", verified!.Status);
+        Assert.Equal(_procurementLead.Id, verified.VerifiedByUserId);
+        var history = await _db.DepartmentWorkPackageHistory
+            .Where(item => item.EntityId == task.Id).Select(item => item.Action).ToListAsync();
+        Assert.Contains("Returned", history);
+        Assert.Contains("Verified", history);
+    }
+
     private DepartmentWorkPackage AddBusinessPackage(WorkPackagePurpose purpose, RoleGroup group, ApplicationUser lead)
     {
         var package = new DepartmentWorkPackage

@@ -1,19 +1,21 @@
 namespace NihomeBackend.Models;
 
 /// <summary>
-/// M3 Permitting checklist item (NIH-137). One row per <see cref="DesignProject"/>
-/// × permit type (GPXD, PCCC, electricity, water, sidewalk, safety, environment,
-/// completion — see master data category <c>permit_type</c>). The set is auto-
-/// generated from the master-data template on <see cref="DesignProject"/>
-/// creation and can later be edited by Legal Officer / PM.
+/// M3 permitting record. Operational Project is the business owner; the
+/// Design Project relationship is retained only as a compatibility bridge.
 /// </summary>
 public class PermitChecklistItem
 {
     public int Id { get; set; }
 
-    /// <summary>Owning design project — hard FK.</summary>
-    public int DesignProjectId { get; set; }
-    public DesignProject DesignProject { get; set; } = null!;
+    public int OperationalProjectId { get; set; }
+    public OperationalProject OperationalProject { get; set; } = null!;
+
+    public int? DesignProjectId { get; set; }
+    public DesignProject? DesignProject { get; set; }
+
+    public int? WorkTaskId { get; set; }
+    public DepartmentWorkTask? WorkTask { get; set; }
 
     /// <summary>Master-data code from category <c>permit_type</c>.</summary>
     public string PermitTypeCode { get; set; } = string.Empty;
@@ -51,6 +53,41 @@ public class PermitChecklistItem
     public int? CreatedByUserId { get; set; }
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public int? UpdatedByUserId { get; set; }
+    public List<PermitChecklistHistory> History { get; set; } = new();
+}
+
+public class PermitChecklistHistory
+{
+    public long Id { get; set; }
+    public int PermitChecklistItemId { get; set; }
+    public PermitChecklistItem PermitChecklistItem { get; set; } = null!;
+    public PermitStatus? FromStatus { get; set; }
+    public PermitStatus ToStatus { get; set; }
+    public string Action { get; set; } = string.Empty;
+    public string SnapshotJson { get; set; } = string.Empty;
+    public DateTime ChangedAt { get; set; } = DateTime.UtcNow;
+    public int ChangedByUserId { get; set; }
+    public ApplicationUser ChangedByUser { get; set; } = null!;
+}
+
+/// <summary>
+/// Idempotency and audit record for the manual contract activation wizard.
+/// A project can have several activating contracts while sharing one legal
+/// work package.
+/// </summary>
+public class ContractLegalActivation
+{
+    public int Id { get; set; }
+    public int ContractId { get; set; }
+    public Contract Contract { get; set; } = null!;
+    public int OperationalProjectId { get; set; }
+    public OperationalProject OperationalProject { get; set; } = null!;
+    public int WorkPackageId { get; set; }
+    public DepartmentWorkPackage WorkPackage { get; set; } = null!;
+    public string ConfigurationJson { get; set; } = string.Empty;
+    public DateTime ActivatedAt { get; set; } = DateTime.UtcNow;
+    public int ActivatedByUserId { get; set; }
+    public ApplicationUser ActivatedByUser { get; set; } = null!;
 }
 
 /// <summary>

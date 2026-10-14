@@ -332,6 +332,8 @@ public sealed class BusinessRootHardDeletePlanService(
             .OrderBy(item => item.Id).Select(item => item.Id).ToListAsync(ct);
         var workPackages = await db.DepartmentWorkPackages.AsNoTracking().Where(item => item.ContractId == id)
             .OrderBy(item => item.Id).Select(item => new { item.Id, item.Code }).ToListAsync(ct);
+        var legalActivations = await db.ContractLegalActivations.AsNoTracking().Where(item => item.ContractId == id)
+            .OrderBy(item => item.Id).Select(item => item.Id).ToListAsync(ct);
 
         var attachmentIds = attachments.Select(item => (long)item.Id).ToList();
         var appendixIds = appendices.Select(item => (long)item.Id).ToList();
@@ -462,6 +464,8 @@ public sealed class BusinessRootHardDeletePlanService(
             null, lifecycleBlockers.Select(item => Link(item.Name, $"/admin/opportunities/{item.Id}")).ToList());
         Add(items, "contract.workPackages", workPackages.Select(item => Id(item.Id)).ToList(), DeletionImpactActions.Unlink,
             null, workPackages.Select(item => Link(item.Code, $"/admin/work-packages/{item.Id}")).ToList());
+        Add(items, "contract.legalActivations", legalActivations.Select(Id).ToList(), DeletionImpactActions.Delete,
+            detail, [Link(root.ContractNumber, detail)]);
 
         var identities = new[]
         {
@@ -475,6 +479,7 @@ public sealed class BusinessRootHardDeletePlanService(
             Part("rfqs", rfqs), Part("vendor-ratings", vendorRatings), Part("finance-open-payments", openPayments.Select(item => item.Id)),
             Part("finance-committed-payments", committedPayments.Select(item => item.Id)), Part("boq-revisions", boqRevisions),
             Part("work-packages", workPackages.Select(item => item.Id)),
+            Part("legal-activations", legalActivations),
         };
         var definitions = localPaths.Select((path, index) =>
                 new HardDeleteItemDefinition(HardDeleteItemKind.LocalFile, path, index))
@@ -837,6 +842,8 @@ public sealed class ContractHardDeleteHandler(
     protected override async Task FinalizeRootAsync(int id, int requestedBy, CancellationToken ct)
     {
         var root = await Db.Contracts.SingleAsync(item => item.Id == id, ct);
+        Db.ContractLegalActivations.RemoveRange(
+            await Db.ContractLegalActivations.Where(item => item.ContractId == id).ToListAsync(ct));
         foreach (var workPackage in await Db.DepartmentWorkPackages.Where(item => item.ContractId == id).ToListAsync(ct))
             workPackage.ContractId = null;
         var removablePayments = await Db.PaymentRequests.Where(item => item.ContractId == id &&

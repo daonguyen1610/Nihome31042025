@@ -269,7 +269,11 @@ public class SampleContractSeederTests : IDisposable
             .ToHashSet();
         Assert.NotEmpty(sampleProjectIds);
         Assert.DoesNotContain(_db.PermitChecklistItems, item => item.DesignProjectId == userProject.Id);
-        Assert.All(_db.PermitChecklistItems, item => Assert.Contains(item.DesignProjectId, sampleProjectIds));
+        Assert.All(_db.PermitChecklistItems, item =>
+        {
+            Assert.True(item.DesignProjectId.HasValue);
+            Assert.Contains(item.DesignProjectId!.Value, sampleProjectIds);
+        });
 
         var linkedProject = _db.DesignProjects.First(project => sampleProjectIds.Contains(project.Id)
             && project.ContractId.HasValue);

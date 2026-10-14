@@ -81,6 +81,7 @@ public class ContractDuplicateNumberException(string contractNumber)
     public string ContractNumber { get; } = contractNumber;
 }
 
-public class ContractValidationException(string message) : InvalidOperationException(message)
+public class ContractValidationException(string message, string? code = null) : InvalidOperationException(message)
 {
+    public string? Code { get; } = code;
 }

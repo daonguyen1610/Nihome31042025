@@ -253,8 +253,27 @@ Bảo đảm hồ sơ pháp lý đúng loại công trình, đúng hạn và đ�
 - Cảnh báo quá hạn, sắp đến hạn và sắp hết hạn.
 - Permit bắt buộc chưa Issued hoặc đã Expired phải chặn cổng khởi công liên quan.
 
-Hiện phần mềm đã có checklist, owner/deadline, tài liệu và risk filters; work
-package/template theo loại dự án và liên kết cổng khởi công còn cần hoàn thiện.
+**Implemented:** Hợp đồng Upstream loại Design, Construction hoặc
+DesignAndBuild chỉ chuyển từ `Signed` sang `InProgress` qua wizard Pháp lý do PM
+của Operational Project hoặc Admin xác nhận. Wizard đề xuất các `permit_type`
+đang hoạt động để PM chọn thủ công, chọn chủ trì Pháp lý, người thực hiện/người
+duyệt, lịch và predecessor. Không tạo permit ngầm khi tạo `DesignProject`.
+
+Mỗi Operational Project có tối đa một work package `LegalPermitting`; nhiều hợp
+đồng cùng dự án dùng chung package nhưng có activation audit riêng. Mỗi permit
+có một `DepartmentWorkTask` để quản lý WBS, assignee, approver, lịch, tiến độ và
+duyệt nội bộ. Assignee và approver phải là thành viên dự án đang hoạt động và
+không được trùng nhau. Permit chỉ được trình hoàn thành khi trạng thái cơ quan
+là `Issued`, đã có ngày cấp và hồ sơ giấy phép. Duyệt nội bộ chuyển task
+`Completed → Verified`; trả lại có lý do chuyển `Completed → InProgress` mà
+không thay đổi trạng thái cơ quan.
+
+**Partial:** Workspace `/admin/permits`, tài liệu nguồn `Legal`, risk filters,
+history và cổng kiểm tra permit đã có. Việc xác định permit nào là bắt buộc cho
+từng mốc khởi công vẫn phụ thuộc cấu hình dự án.
+
+**Open decision (Q-09):** NICON chưa chốt template giấy phép theo loại/quy mô
+công trình; hệ thống không tự suy đoán quy tắc này.
 
 ## 6. Module 4 — Thi công và nghiệm thu
 

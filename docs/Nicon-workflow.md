@@ -170,10 +170,22 @@ thực hiện theo quyền và điều kiện an toàn dữ liệu hiện có.
 
 ### G3 — Pháp lý
 
-- Checklist giấy phép được tạo theo loại/quy mô dự án, có chủ trì, hạn xử lý,
-  trạng thái, hồ sơ nộp và hồ sơ được cấp.
+- Khi hợp đồng Upstream Design/Construction/DesignAndBuild chuyển
+  `Signed → InProgress`, PM dự án hoặc Admin phải mở wizard Pháp lý, kiểm tra
+  danh sách đề xuất và xác nhận; tạo `DesignProject` không tự sinh permit.
+- Wizard tạo hoặc tái sử dụng một package `LegalPermitting` của Operational
+  Project. Nhiều hợp đồng cùng dự án dùng chung package, không tạo permit/task
+  trùng, nhưng mỗi hợp đồng giữ activation audit riêng.
+- PM chọn chủ trì Pháp lý. Chủ trì phân công từng permit cho thành viên dự án
+  đang hoạt động, kể cả khác phòng ban; mỗi permit có approver độc lập, lịch,
+  WBS, predecessor và history riêng.
+- Trạng thái cơ quan của `PermitChecklistItem` và trạng thái công việc nội bộ
+  của `DepartmentWorkTask` là hai luồng độc lập. Chỉ permit `Issued` có ngày cấp
+  và hồ sơ được cấp mới cho assignee trình task `Completed`; approver duyệt sang
+  `Verified` hoặc trả về `InProgress` kèm lý do.
 - Giấy phép có ngày hết hạn phải còn hiệu lực tại thời điểm sử dụng.
-- Danh mục giấy phép chuẩn theo loại công trình vẫn là điểm NICON cần chốt.
+- Q-09 về template giấy phép theo loại/quy mô công trình vẫn là Open decision;
+  hiện wizard chỉ đề xuất `permit_type` đang hoạt động và PM chọn/bỏ chọn.
 
 ### G4 — Đủ điều kiện khởi công
 

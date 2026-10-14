@@ -82,54 +82,6 @@ public class PermitChecklistServiceTests : IDisposable
 
     public void Dispose() => _db.Dispose();
 
-    // ---------------- EnsureForProjectAsync ----------------
-
-    [Fact]
-    public async Task EnsureForProjectAsync_CreatesRowPerActiveTemplate()
-    {
-        await _sut.EnsureForProjectAsync(_designProjectId, _userId);
-        var codes = await _db.PermitChecklistItems
-            .Where(p => p.DesignProjectId == _designProjectId)
-            .Select(p => p.PermitTypeCode)
-            .ToListAsync();
-        Assert.Equal(3, codes.Count);
-        Assert.DoesNotContain("retired-perm", codes);
-    }
-
-    [Fact]
-    public async Task EnsureForProjectAsync_IsIdempotent()
-    {
-        await _sut.EnsureForProjectAsync(_designProjectId, _userId);
-        await _sut.EnsureForProjectAsync(_designProjectId, _userId);
-        var count = await _db.PermitChecklistItems.CountAsync(p => p.DesignProjectId == _designProjectId);
-        Assert.Equal(3, count);
-    }
-
-    [Fact]
-    public async Task EnsureForProjectAsync_UnknownProject_Throws()
-    {
-        await Assert.ThrowsAsync<PermitChecklistOperationException>(() =>
-            _sut.EnsureForProjectAsync(999999, _userId));
-    }
-
-    [Fact]
-    public async Task EnsureForProjectAsync_TopUpsAfterTemplateChange()
-    {
-        await _sut.EnsureForProjectAsync(_designProjectId, _userId);
-        // Simulate a new permit type showing up later.
-        _db.MasterDataOptions.Add(new MasterDataOption
-        {
-            Category = "permit_type",
-            Code = "new-type",
-            Name = "New",
-            IsActive = true,
-            SortOrder = 10,
-        });
-        await _db.SaveChangesAsync();
-        await _sut.EnsureForProjectAsync(_designProjectId, _userId);
-        Assert.Equal(4, await _db.PermitChecklistItems.CountAsync(p => p.DesignProjectId == _designProjectId));
-    }
-
     // ---------------- Create / Delete ----------------
 
     [Fact]
@@ -137,6 +89,7 @@ public class PermitChecklistServiceTests : IDisposable
     {
         var response = await _sut.CreateAsync(new CreatePermitChecklistItemRequest
         {
+            OperationalProjectId = _operationalProjectId,
             DesignProjectId = _designProjectId,
             PermitTypeCode = "gpxd",
             Status = "Preparing",
@@ -155,6 +108,7 @@ public class PermitChecklistServiceTests : IDisposable
     {
         var request = new CreatePermitChecklistItemRequest
         {
+            OperationalProjectId = _operationalProjectId,
             DesignProjectId = _designProjectId,
             PermitTypeCode = "gpxd",
         };
@@ -169,6 +123,7 @@ public class PermitChecklistServiceTests : IDisposable
     {
         var created = await _sut.CreateAsync(new CreatePermitChecklistItemRequest
         {
+            OperationalProjectId = _operationalProjectId,
             DesignProjectId = _designProjectId,
             PermitTypeCode = "pccc",
         }, _userId);
@@ -188,11 +143,11 @@ public class PermitChecklistServiceTests : IDisposable
         _documentStorage.Verify(storage => storage.Delete(
             "/files/business-documents/permits/issued.pdf", BusinessDocumentArea.Permits), Times.Once);
         _projectDocuments.Verify(staging => staging.StageExistingManagedFileDeleteAsync(
-            _operationalProjectId, ProjectDocumentSourceModule.Design, nameof(PermitChecklistItem),
+            _operationalProjectId, ProjectDocumentSourceModule.Legal, nameof(PermitChecklistItem),
             "submittedPackage", created.Id, "/files/business-documents/permits/submitted.pdf",
             It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
         _projectDocuments.Verify(staging => staging.StageExistingManagedFileDeleteAsync(
-            _operationalProjectId, ProjectDocumentSourceModule.Design, nameof(PermitChecklistItem),
+            _operationalProjectId, ProjectDocumentSourceModule.Legal, nameof(PermitChecklistItem),
             "issuedPermit", created.Id, "/files/business-documents/permits/issued.pdf",
             It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -208,30 +163,25 @@ public class PermitChecklistServiceTests : IDisposable
     [Fact]
     public async Task UpdateAsync_InvalidStatus_Throws()
     {
-        await _sut.EnsureForProjectAsync(_designProjectId, _userId);
+        await SeedPermitsAsync();
         var id = _db.PermitChecklistItems.First().Id;
         await Assert.ThrowsAsync<PermitChecklistOperationException>(() =>
             _sut.UpdateAsync(id, new UpdatePermitChecklistItemRequest { Status = "NotAStatus" }, _userId));
     }
 
     [Fact]
-    public async Task UpdateAsync_MoveToIssued_StampsIssuedAt()
+    public async Task UpdateAsync_MoveToIssued_RequiresDateAndDocument()
     {
-        await _sut.EnsureForProjectAsync(_designProjectId, _userId);
+        await SeedPermitsAsync();
         var id = _db.PermitChecklistItems.First().Id;
-        var resp = await _sut.UpdateAsync(id, new UpdatePermitChecklistItemRequest
-        {
-            Status = "Issued",
-        }, _userId);
-        Assert.NotNull(resp);
-        Assert.Equal("Issued", resp!.Status);
-        Assert.NotNull(resp.IssuedAt);
+        await Assert.ThrowsAsync<PermitChecklistOperationException>(() => _sut.UpdateAsync(id,
+            new UpdatePermitChecklistItemRequest { Status = "Issued" }, _userId));
     }
 
     [Fact]
     public async Task UpdateAsync_UnknownOwner_Throws()
     {
-        await _sut.EnsureForProjectAsync(_designProjectId, _userId);
+        await SeedPermitsAsync();
         var id = _db.PermitChecklistItems.First().Id;
         await Assert.ThrowsAsync<PermitChecklistOperationException>(() =>
             _sut.UpdateAsync(id, new UpdatePermitChecklistItemRequest { OwnerUserId = 999999 }, _userId));
@@ -240,7 +190,7 @@ public class PermitChecklistServiceTests : IDisposable
     [Fact]
     public async Task UpdateAsync_ClearOwner_ClearsPreviouslyAssigned()
     {
-        await _sut.EnsureForProjectAsync(_designProjectId, _userId);
+        await SeedPermitsAsync();
         var id = _db.PermitChecklistItems.First().Id;
         await _sut.UpdateAsync(id, new UpdatePermitChecklistItemRequest { OwnerUserId = _userId }, _userId);
         var resp = await _sut.UpdateAsync(id, new UpdatePermitChecklistItemRequest { ClearOwner = true }, _userId);
@@ -251,7 +201,7 @@ public class PermitChecklistServiceTests : IDisposable
     [Fact]
     public async Task UploadDocumentAsync_StoresAndAssignsRequestedDocumentKind()
     {
-        await _sut.EnsureForProjectAsync(_designProjectId, _userId);
+        await SeedPermitsAsync();
         var id = _db.PermitChecklistItems.First().Id;
         var entity = await _db.PermitChecklistItems.FindAsync(id);
         entity!.SubmittedFilePath = "/files/business-documents/permits/old.pdf";
@@ -274,11 +224,11 @@ public class PermitChecklistServiceTests : IDisposable
         _documentStorage.Verify(storage => storage.Delete(
             "/files/business-documents/permits/old.pdf", BusinessDocumentArea.Permits), Times.Once);
         _projectDocuments.Verify(staging => staging.StageExistingManagedFileDeleteAsync(
-            _operationalProjectId, ProjectDocumentSourceModule.Design, nameof(PermitChecklistItem),
+            _operationalProjectId, ProjectDocumentSourceModule.Legal, nameof(PermitChecklistItem),
             "submittedPackage", id, "/files/business-documents/permits/old.pdf",
             _userId, It.IsAny<CancellationToken>()), Times.Once);
         _projectDocuments.Verify(staging => staging.StageExistingManagedFileAsync(
-            _operationalProjectId, ProjectDocumentCategory.LegalPermits, ProjectDocumentSourceModule.Design,
+            _operationalProjectId, ProjectDocumentCategory.LegalPermits, ProjectDocumentSourceModule.Legal,
             nameof(PermitChecklistItem), "submittedPackage", id,
             "/files/business-documents/permits/permit.pdf", "permit.pdf",
             It.IsAny<int?>(), It.IsAny<int?>(), _userId, It.IsAny<CancellationToken>()), Times.Once);
@@ -289,7 +239,7 @@ public class PermitChecklistServiceTests : IDisposable
     [Fact]
     public async Task ListAsync_ComputesRiskAggregates()
     {
-        await _sut.EnsureForProjectAsync(_designProjectId, _userId);
+        await SeedPermitsAsync();
         var items = await _db.PermitChecklistItems.ToListAsync();
         var now = DateTime.UtcNow;
         items[0].TargetDeadline = now.AddDays(-1);   // overdue
@@ -309,7 +259,7 @@ public class PermitChecklistServiceTests : IDisposable
     [Fact]
     public async Task ListAsync_OverdueFilter_RestrictsToOverdueOpenRows()
     {
-        await _sut.EnsureForProjectAsync(_designProjectId, _userId);
+        await SeedPermitsAsync();
         var items = await _db.PermitChecklistItems.ToListAsync();
         var now = DateTime.UtcNow;
         items[0].TargetDeadline = now.AddDays(-1); // overdue
@@ -321,5 +271,24 @@ public class PermitChecklistServiceTests : IDisposable
         var list = await _sut.ListAsync(new PermitChecklistListParams { Overdue = true, PageSize = 100 });
         Assert.Single(list.Items);
         Assert.Equal(items[0].Id, list.Items[0].Id);
+    }
+
+    private async Task SeedPermitsAsync()
+    {
+        if (await _db.PermitChecklistItems.AnyAsync()) return;
+        var now = DateTime.UtcNow;
+        _db.PermitChecklistItems.AddRange(new[] { "gpxd", "pccc", "electricity" }
+            .Select(code => new PermitChecklistItem
+            {
+                OperationalProjectId = _operationalProjectId,
+                DesignProjectId = _designProjectId,
+                PermitTypeCode = code,
+                Status = PermitStatus.NotStarted,
+                CreatedAt = now,
+                UpdatedAt = now,
+                CreatedByUserId = _userId,
+                UpdatedByUserId = _userId,
+            }));
+        await _db.SaveChangesAsync();
     }
 }

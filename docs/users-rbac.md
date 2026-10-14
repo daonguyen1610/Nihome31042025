@@ -106,6 +106,30 @@ editable under its separate permission and server-side project scope. This
 avoids two apparent sources of Contract truth; the backend continues to serve
 one Contract aggregate and ID.
 
+### Legal activation and permit scope
+
+`permit.checklists.view` permits reading only records within the caller's
+Operational Project scope. Portfolio visibility does not grant mutation outside
+that scope. `permit.checklists.manage` exposes the Legal setup/workspace, while
+`permit.checklists.mark-issued` is additionally required to upload an issued
+permit or move an authority record to `Issued`.
+
+The service enforces the actor boundary independently of UI visibility:
+
+- only the Operational Project PM or an Admin can activate an eligible Contract
+  or run legacy Legal setup;
+- the selected Legal lead must be an active project member with the Legal role
+  and may maintain package/task configuration;
+- assignee and approver must both be active members of the same project, may be
+  from different departments, and must be different users;
+- only the task assignee updates progress and submits completion;
+- only the designated approver (or Admin) verifies/returns the completed task,
+  and the assignee cannot self-approve even when holding another broad role.
+
+Direct `Signed → InProgress` calls for eligible Upstream Design/Construction/D&B
+Contracts are rejected with `LEGAL_ACTIVATION_REQUIRED`, so holding the generic
+Contract manage permission cannot bypass the wizard.
+
 ### Project handover permissions
 
 The handover workspace uses separate read, write, and completion capabilities. The API remains the authority; frontend route and action gates only improve the user experience.

@@ -158,6 +158,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<DesignProject> DesignProjects => Set<DesignProject>();
 
     public DbSet<PermitChecklistItem> PermitChecklistItems => Set<PermitChecklistItem>();
+    public DbSet<PermitChecklistHistory> PermitChecklistHistory => Set<PermitChecklistHistory>();
+    public DbSet<ContractLegalActivation> ContractLegalActivations => Set<ContractLegalActivation>();
 
     public DbSet<ConceptOption> ConceptOptions => Set<ConceptOption>();
 
@@ -2046,6 +2048,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasIndex(item => new { item.ContractId, item.Status });
             b.HasIndex(item => new { item.Kind, item.DepartmentRoleGroupId, item.Status });
             b.HasIndex(item => new { item.Purpose, item.Status });
+            b.HasIndex(item => new { item.OperationalProjectId, item.Purpose })
+                .IsUnique()
+                .HasFilter("[OperationalProjectId] IS NOT NULL AND [Purpose] = 'LegalPermitting'");
             b.HasIndex(item => item.SourceQuoteId);
             b.HasIndex(item => item.SourceTenderId);
             b.HasIndex(item => item.LeadUserId);
@@ -2424,20 +2429,61 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.Property(p => p.Status).HasConversion<string>().HasMaxLength(20);
             b.Property(p => p.Note).HasMaxLength(4000);
 
+            b.HasOne(p => p.OperationalProject)
+                .WithMany()
+                .HasForeignKey(p => p.OperationalProjectId)
+                .OnDelete(DeleteBehavior.Restrict);
             b.HasOne(p => p.DesignProject)
                 .WithMany()
                 .HasForeignKey(p => p.DesignProjectId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.SetNull);
+            b.HasOne(p => p.WorkTask)
+                .WithMany()
+                .HasForeignKey(p => p.WorkTaskId)
+                .OnDelete(DeleteBehavior.SetNull);
             b.HasOne(p => p.Owner)
                 .WithMany()
                 .HasForeignKey(p => p.OwnerUserId)
                 .OnDelete(DeleteBehavior.NoAction);
 
             b.HasIndex(p => p.DesignProjectId);
-            b.HasIndex(p => new { p.DesignProjectId, p.PermitTypeCode }).IsUnique();
+            b.HasIndex(p => p.WorkTaskId).IsUnique().HasFilter("[WorkTaskId] IS NOT NULL");
+            b.HasIndex(p => new { p.OperationalProjectId, p.PermitTypeCode }).IsUnique();
             b.HasIndex(p => p.Status);
             b.HasIndex(p => p.TargetDeadline);
             b.HasIndex(p => p.ExpiresAt);
+        });
+
+        modelBuilder.Entity<ContractLegalActivation>(b =>
+        {
+            b.ToTable("contract_legal_activations");
+            b.HasKey(item => item.Id);
+            b.Property(item => item.ConfigurationJson).HasColumnType("nvarchar(max)").IsRequired();
+            b.HasOne(item => item.Contract).WithMany()
+                .HasForeignKey(item => item.ContractId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(item => item.OperationalProject).WithMany()
+                .HasForeignKey(item => item.OperationalProjectId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(item => item.WorkPackage).WithMany()
+                .HasForeignKey(item => item.WorkPackageId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(item => item.ActivatedByUser).WithMany()
+                .HasForeignKey(item => item.ActivatedByUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasIndex(item => item.ContractId).IsUnique();
+            b.HasIndex(item => new { item.OperationalProjectId, item.ActivatedAt });
+        });
+
+        modelBuilder.Entity<PermitChecklistHistory>(b =>
+        {
+            b.ToTable("permit_checklist_history");
+            b.HasKey(item => item.Id);
+            b.Property(item => item.FromStatus).HasConversion<string>().HasMaxLength(20);
+            b.Property(item => item.ToStatus).HasConversion<string>().HasMaxLength(20).IsRequired();
+            b.Property(item => item.Action).HasMaxLength(40).IsRequired();
+            b.Property(item => item.SnapshotJson).HasColumnType("nvarchar(max)").IsRequired();
+            b.HasOne(item => item.PermitChecklistItem).WithMany(item => item.History)
+                .HasForeignKey(item => item.PermitChecklistItemId).OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(item => item.ChangedByUser).WithMany()
+                .HasForeignKey(item => item.ChangedByUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasIndex(item => new { item.PermitChecklistItemId, item.ChangedAt });
         });
 
         modelBuilder.Entity<ConceptOption>(b =>

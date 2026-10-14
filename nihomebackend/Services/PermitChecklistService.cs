@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
@@ -20,68 +21,33 @@ public class PermitChecklistService(
     private const int DueSoonDays = 7;
     private const int ExpiringSoonDays = 30;
 
-    public async Task EnsureForProjectAsync(int designProjectId, int? callerUserId, CancellationToken ct = default)
-    {
-        var projectExists = await db.DesignProjects.AsNoTracking()
-            .AnyAsync(dp => dp.Id == designProjectId, ct);
-        if (!projectExists)
-        {
-            throw new PermitChecklistOperationException($"Dự án #{designProjectId} không tồn tại.");
-        }
-
-        var templateCodes = await db.MasterDataOptions.AsNoTracking()
-            .Where(m => m.Category == PermitTypeCategory && m.IsActive)
-            .OrderBy(m => m.SortOrder)
-            .Select(m => m.Code)
-            .ToListAsync(ct);
-
-        if (templateCodes.Count == 0) return;
-
-        var existingCodes = await db.PermitChecklistItems
-            .Where(p => p.DesignProjectId == designProjectId)
-            .Select(p => p.PermitTypeCode)
-            .ToListAsync(ct);
-        var missing = templateCodes.Except(existingCodes, StringComparer.OrdinalIgnoreCase).ToList();
-        if (missing.Count == 0) return;
-
-        var now = DateTime.UtcNow;
-        foreach (var code in missing)
-        {
-            db.PermitChecklistItems.Add(new PermitChecklistItem
-            {
-                DesignProjectId = designProjectId,
-                PermitTypeCode = code,
-                Status = PermitStatus.NotStarted,
-                CreatedByUserId = callerUserId,
-                UpdatedByUserId = callerUserId,
-                CreatedAt = now,
-                UpdatedAt = now,
-            });
-        }
-        await db.SaveChangesAsync(ct);
-        logger.LogInformation(
-            "Seeded {Count} permit checklist items for design project {ProjectId}",
-            missing.Count, designProjectId);
-    }
-
     public async Task<PermitChecklistListResponse> ListAsync(
         PermitChecklistListParams p,
         CancellationToken ct = default,
-        IReadOnlySet<int>? accessibleDesignProjectIds = null)
+        IReadOnlySet<int>? accessibleOperationalProjectIds = null)
     {
         var page = p.Page < 1 ? 1 : p.Page;
         var pageSize = Math.Clamp(p.PageSize <= 0 ? 20 : p.PageSize, 1, MaxPageSize);
 
         var q = db.PermitChecklistItems
             .AsNoTracking()
+            .Include(x => x.OperationalProject)
             .Include(x => x.DesignProject)
             .Include(x => x.Owner)
+            .Include(x => x.WorkTask)!.ThenInclude(task => task!.AssigneeUser)
+            .Include(x => x.WorkTask)!.ThenInclude(task => task!.ApproverUser)
             .AsQueryable();
 
-        if (accessibleDesignProjectIds is not null)
-            q = q.Where(x => accessibleDesignProjectIds.Contains(x.DesignProjectId));
+        if (accessibleOperationalProjectIds is not null)
+            q = q.Where(x => accessibleOperationalProjectIds.Contains(x.OperationalProjectId));
+        if (p.OperationalProjectId.HasValue) q = q.Where(x => x.OperationalProjectId == p.OperationalProjectId.Value);
         if (p.DesignProjectId.HasValue) q = q.Where(x => x.DesignProjectId == p.DesignProjectId.Value);
-        if (p.OwnerUserId.HasValue) q = q.Where(x => x.OwnerUserId == p.OwnerUserId.Value);
+        if (p.OwnerUserId.HasValue)
+            q = q.Where(x => x.WorkTask != null
+                ? x.WorkTask.AssigneeUserId == p.OwnerUserId.Value
+                : x.OwnerUserId == p.OwnerUserId.Value);
+        if (p.ApproverUserId.HasValue)
+            q = q.Where(x => x.WorkTask != null && x.WorkTask.ApproverUserId == p.ApproverUserId.Value);
 
         if (!string.IsNullOrWhiteSpace(p.Status))
         {
@@ -103,15 +69,15 @@ public class PermitChecklistService(
 
         if (p.Overdue == true)
         {
-            q = q.Where(x => x.TargetDeadline != null
-                          && x.TargetDeadline < now
+            q = q.Where(x => (x.WorkTask != null ? x.WorkTask.PlannedEnd : x.TargetDeadline) != null
+                          && (x.WorkTask != null ? x.WorkTask.PlannedEnd : x.TargetDeadline) < now
                           && x.Status != PermitStatus.Issued);
         }
         if (p.DueSoon == true)
         {
-            q = q.Where(x => x.TargetDeadline != null
-                          && x.TargetDeadline >= now
-                          && x.TargetDeadline <= dueSoonCutoff
+            q = q.Where(x => (x.WorkTask != null ? x.WorkTask.PlannedEnd : x.TargetDeadline) != null
+                          && (x.WorkTask != null ? x.WorkTask.PlannedEnd : x.TargetDeadline) >= now
+                          && (x.WorkTask != null ? x.WorkTask.PlannedEnd : x.TargetDeadline) <= dueSoonCutoff
                           && x.Status != PermitStatus.Issued);
         }
         if (p.ExpiringSoon == true)
@@ -125,8 +91,8 @@ public class PermitChecklistService(
         {
             var term = p.Search.Trim();
             q = q.Where(x =>
-                EF.Functions.Like(x.DesignProject.Name, $"%{term}%") ||
-                EF.Functions.Like(x.DesignProject.ProjectCode, $"%{term}%") ||
+                EF.Functions.Like(x.OperationalProject.Name, $"%{term}%") ||
+                EF.Functions.Like(x.OperationalProject.Code, $"%{term}%") ||
                 (x.IssuingAgency != null && EF.Functions.Like(x.IssuingAgency, $"%{term}%")));
         }
 
@@ -136,7 +102,7 @@ public class PermitChecklistService(
         // register naturally sorts to the top of every list.
         var rows = await q
             .OrderBy(x => x.Status == PermitStatus.Issued ? 1 : 0)
-            .ThenBy(x => x.TargetDeadline ?? DateTime.MaxValue)
+            .ThenBy(x => x.WorkTask != null ? x.WorkTask.PlannedEnd : x.TargetDeadline ?? DateTime.MaxValue)
             .ThenBy(x => x.Id)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
@@ -156,7 +122,7 @@ public class PermitChecklistService(
             PageSize = pageSize,
             Items = rows.Select(r => Map(r, labelByCode, now, dueSoonCutoff, expiringSoonCutoff)).ToList(),
             Risk = await ComputeRiskAsync(
-                now, dueSoonCutoff, expiringSoonCutoff, ct, accessibleDesignProjectIds),
+                now, dueSoonCutoff, expiringSoonCutoff, ct, accessibleOperationalProjectIds),
         };
         return response;
     }
@@ -164,8 +130,11 @@ public class PermitChecklistService(
     public async Task<PermitChecklistItemResponse?> GetAsync(int id, CancellationToken ct = default)
     {
         var entity = await db.PermitChecklistItems.AsNoTracking()
+            .Include(x => x.OperationalProject)
             .Include(x => x.DesignProject)
             .Include(x => x.Owner)
+            .Include(x => x.WorkTask)!.ThenInclude(task => task!.AssigneeUser)
+            .Include(x => x.WorkTask)!.ThenInclude(task => task!.ApproverUser)
             .FirstOrDefaultAsync(x => x.Id == id, ct);
         if (entity is null) return null;
 
@@ -183,12 +152,37 @@ public class PermitChecklistService(
             now.AddDays(ExpiringSoonDays));
     }
 
+    public async Task<IReadOnlyList<PermitChecklistHistoryResponse>> HistoryAsync(
+        int id, CancellationToken ct = default) => await db.PermitChecklistHistory.AsNoTracking()
+        .Where(item => item.PermitChecklistItemId == id)
+        .OrderByDescending(item => item.ChangedAt)
+        .Select(item => new PermitChecklistHistoryResponse
+        {
+            Id = item.Id,
+            FromStatus = item.FromStatus.HasValue ? item.FromStatus.Value.ToString() : null,
+            ToStatus = item.ToStatus.ToString(),
+            Action = item.Action,
+            SnapshotJson = item.SnapshotJson,
+            ChangedAt = item.ChangedAt,
+            ChangedByUserId = item.ChangedByUserId,
+            ChangedByName = item.ChangedByUser.FullName ?? item.ChangedByUser.Email ?? $"#{item.ChangedByUserId}",
+        }).ToListAsync(ct);
+
     public async Task<PermitChecklistItemResponse> CreateAsync(
         CreatePermitChecklistItemRequest request,
         int callerUserId,
         CancellationToken ct = default)
     {
-        if (!await db.DesignProjects.AsNoTracking().AnyAsync(x => x.Id == request.DesignProjectId, ct))
+        var project = await db.OperationalProjects.AsNoTracking()
+            .Where(x => x.Id == request.OperationalProjectId)
+            .Select(x => new { x.Id, DesignProjectId = x.DesignProject == null ? null : (int?)x.DesignProject.Id })
+            .SingleOrDefaultAsync(ct);
+        if (project is null)
+            throw new PermitChecklistOperationException($"Dự án vận hành #{request.OperationalProjectId} không tồn tại.");
+        request.DesignProjectId ??= project.DesignProjectId;
+        if (request.DesignProjectId.HasValue && request.DesignProjectId != project.DesignProjectId)
+            throw new PermitChecklistOperationException("Dự án thiết kế không thuộc đúng Dự án vận hành.");
+        if (request.DesignProjectId.HasValue && !await db.DesignProjects.AsNoTracking().AnyAsync(x => x.Id == request.DesignProjectId.Value, ct))
         {
             throw new PermitChecklistOperationException($"Dự án #{request.DesignProjectId} không tồn tại.");
         }
@@ -201,7 +195,7 @@ public class PermitChecklistService(
         }
 
         if (await db.PermitChecklistItems.AsNoTracking().AnyAsync(
-                x => x.DesignProjectId == request.DesignProjectId && x.PermitTypeCode == permitTypeCode, ct))
+                x => x.OperationalProjectId == request.OperationalProjectId && x.PermitTypeCode == permitTypeCode, ct))
         {
             throw new PermitChecklistDuplicateException("Dự án đã có hạng mục cho loại giấy phép này.");
         }
@@ -211,6 +205,7 @@ public class PermitChecklistService(
         var now = DateTime.UtcNow;
         var entity = new PermitChecklistItem
         {
+            OperationalProjectId = request.OperationalProjectId,
             DesignProjectId = request.DesignProjectId,
             PermitTypeCode = permitTypeCode,
             Status = status,
@@ -226,7 +221,7 @@ public class PermitChecklistService(
             UpdatedAt = now,
             UpdatedByUserId = callerUserId,
         };
-        if (entity.Status == PermitStatus.Issued && entity.IssuedAt is null) entity.IssuedAt = now;
+        ValidateStatusData(entity);
 
         db.PermitChecklistItems.Add(entity);
         await db.SaveChangesAsync(ct);
@@ -239,10 +234,16 @@ public class PermitChecklistService(
     {
         var entity = await db.PermitChecklistItems.FirstOrDefaultAsync(x => x.Id == id, ct);
         if (entity is null) return null;
+        var previousStatus = entity.Status;
+        if (entity.WorkTaskId.HasValue && (request.OwnerUserId.HasValue || request.ClearOwner ||
+            request.TargetDeadline.HasValue || request.ClearTargetDeadline))
+            throw new PermitChecklistOperationException(
+                "Người thực hiện và lịch kế hoạch của giấy phép phải được cập nhật trên đầu việc Pháp lý liên kết.");
 
         if (!string.IsNullOrWhiteSpace(request.Status))
         {
             entity.Status = ParseStatus(request.Status);
+            ValidateStatusTransition(previousStatus, entity.Status);
         }
 
         if (request.OwnerUserId.HasValue)
@@ -267,15 +268,20 @@ public class PermitChecklistService(
             v => entity.ExpiresAt = v);
         ApplyStringPatch(request.Note, request.ClearNote, v => entity.Note = v);
 
-        // Business rule: moving to Issued requires an IssuedAt date so the
-        // "expiring soon" cron has something to check against.
-        if (entity.Status == PermitStatus.Issued && entity.IssuedAt is null)
-        {
-            entity.IssuedAt = DateTime.UtcNow;
-        }
+        ValidateStatusData(entity);
 
         entity.UpdatedAt = DateTime.UtcNow;
         entity.UpdatedByUserId = callerUserId;
+        db.PermitChecklistHistory.Add(new PermitChecklistHistory
+        {
+            PermitChecklistItemId = entity.Id,
+            FromStatus = previousStatus,
+            ToStatus = entity.Status,
+            Action = previousStatus == entity.Status ? "Updated" : "StatusChanged",
+            SnapshotJson = JsonSerializer.Serialize(request),
+            ChangedAt = entity.UpdatedAt,
+            ChangedByUserId = callerUserId,
+        });
         await db.SaveChangesAsync(ct);
 
         logger.LogInformation("Permit checklist item {Id} updated by user {UserId}", id, callerUserId);
@@ -290,6 +296,7 @@ public class PermitChecklistService(
         CancellationToken ct = default)
     {
         var entity = await db.PermitChecklistItems
+            .Include(item => item.OperationalProject)
             .Include(item => item.DesignProject)
             .FirstOrDefaultAsync(x => x.Id == id, ct);
         if (entity is null) return null;
@@ -308,22 +315,32 @@ public class PermitChecklistService(
         }
         entity.UpdatedAt = DateTime.UtcNow;
         entity.UpdatedByUserId = callerUserId;
+        db.PermitChecklistHistory.Add(new PermitChecklistHistory
+        {
+            PermitChecklistItemId = entity.Id,
+            FromStatus = entity.Status,
+            ToStatus = entity.Status,
+            Action = kind == PermitDocumentKind.SubmittedPackage ? "SubmittedPackageUploaded" : "IssuedPermitUploaded",
+            SnapshotJson = JsonSerializer.Serialize(new { uploaded.Path, uploaded.OriginalFileName }),
+            ChangedAt = entity.UpdatedAt,
+            ChangedByUserId = callerUserId,
+        });
         try
         {
-            if (entity.DesignProject.OperationalProjectId.HasValue)
+            if (entity.OperationalProjectId > 0)
             {
                 var slot = kind == PermitDocumentKind.SubmittedPackage ? "submittedPackage" : "issuedPermit";
                 if (!string.IsNullOrWhiteSpace(previousPath))
                 {
                     await projectDocuments.StageExistingManagedFileDeleteAsync(
-                        entity.DesignProject.OperationalProjectId.Value, ProjectDocumentSourceModule.Design,
+                        entity.OperationalProjectId, ProjectDocumentSourceModule.Legal,
                         nameof(PermitChecklistItem), slot, entity.Id, previousPath, callerUserId, ct);
                 }
                 await projectDocuments.StageExistingManagedFileAsync(
-                    entity.DesignProject.OperationalProjectId.Value, ProjectDocumentCategory.LegalPermits,
-                    ProjectDocumentSourceModule.Design, nameof(PermitChecklistItem), slot, entity.Id,
-                    uploaded.Path, uploaded.OriginalFileName, entity.DesignProject.CustomerId,
-                    entity.DesignProject.ContractId, callerUserId, ct);
+                    entity.OperationalProjectId, ProjectDocumentCategory.LegalPermits,
+                    ProjectDocumentSourceModule.Legal, nameof(PermitChecklistItem), slot, entity.Id,
+                    uploaded.Path, uploaded.OriginalFileName, entity.OperationalProject.CustomerId,
+                    entity.DesignProject?.ContractId, callerUserId, ct);
             }
             await db.SaveChangesAsync(ct);
         }
@@ -348,20 +365,21 @@ public class PermitChecklistService(
         if (response is null) return null;
 
         var entity = await db.PermitChecklistItems
+            .Include(item => item.OperationalProject)
             .Include(item => item.DesignProject)
             .FirstAsync(x => x.Id == id, ct);
         var submittedFilePath = entity.SubmittedFilePath;
         var issuedFilePath = entity.IssuedFilePath;
-        if (entity.DesignProject.OperationalProjectId.HasValue)
+        if (entity.OperationalProjectId > 0)
         {
             if (!string.IsNullOrWhiteSpace(submittedFilePath))
                 await projectDocuments.StageExistingManagedFileDeleteAsync(
-                    entity.DesignProject.OperationalProjectId.Value, ProjectDocumentSourceModule.Design,
+                    entity.OperationalProjectId, ProjectDocumentSourceModule.Legal,
                     nameof(PermitChecklistItem), "submittedPackage", entity.Id, submittedFilePath,
                     entity.UpdatedByUserId, ct);
             if (!string.IsNullOrWhiteSpace(issuedFilePath))
                 await projectDocuments.StageExistingManagedFileDeleteAsync(
-                    entity.DesignProject.OperationalProjectId.Value, ProjectDocumentSourceModule.Design,
+                    entity.OperationalProjectId, ProjectDocumentSourceModule.Legal,
                     nameof(PermitChecklistItem), "issuedPermit", entity.Id, issuedFilePath,
                     entity.UpdatedByUserId, ct);
         }
@@ -390,6 +408,39 @@ public class PermitChecklistService(
         throw new PermitChecklistOperationException($"Trạng thái '{status}' không hợp lệ.");
     }
 
+    private static void ValidateStatusTransition(PermitStatus from, PermitStatus to)
+    {
+        if (from == to) return;
+        var allowed = from switch
+        {
+            PermitStatus.NotStarted => to == PermitStatus.Preparing,
+            PermitStatus.Preparing => to is PermitStatus.Submitted or PermitStatus.Rejected,
+            PermitStatus.Submitted => to is PermitStatus.UnderReview or PermitStatus.NeedMoreDocs or PermitStatus.Issued or PermitStatus.Rejected,
+            PermitStatus.UnderReview => to is PermitStatus.NeedMoreDocs or PermitStatus.Issued or PermitStatus.Rejected,
+            PermitStatus.NeedMoreDocs => to is PermitStatus.Preparing or PermitStatus.Submitted,
+            PermitStatus.Issued => to == PermitStatus.Expired,
+            PermitStatus.Rejected => to == PermitStatus.Preparing,
+            PermitStatus.Expired => to == PermitStatus.Preparing,
+            _ => false,
+        };
+        if (!allowed)
+            throw new PermitChecklistOperationException($"Không thể chuyển giấy phép từ {from} sang {to}.");
+    }
+
+    private static void ValidateStatusData(PermitChecklistItem entity)
+    {
+        if (entity.SubmittedAt.HasValue && entity.IssuedAt.HasValue && entity.IssuedAt < entity.SubmittedAt)
+            throw new PermitChecklistOperationException("Ngày cấp giấy phép không được trước ngày nộp hồ sơ.");
+        if (entity.IssuedAt.HasValue && entity.ExpiresAt.HasValue && entity.ExpiresAt < entity.IssuedAt)
+            throw new PermitChecklistOperationException("Ngày hết hạn không được trước ngày cấp giấy phép.");
+        if ((entity.Status is PermitStatus.Submitted or PermitStatus.UnderReview or PermitStatus.NeedMoreDocs) &&
+            (!entity.SubmittedAt.HasValue || string.IsNullOrWhiteSpace(entity.SubmittedFilePath)))
+            throw new PermitChecklistOperationException("Trạng thái đã nộp/thẩm định yêu cầu ngày nộp và hồ sơ đã nộp.");
+        if (entity.Status == PermitStatus.Issued &&
+            (!entity.IssuedAt.HasValue || string.IsNullOrWhiteSpace(entity.IssuedFilePath)))
+            throw new PermitChecklistOperationException("Trạng thái Đã cấp yêu cầu ngày cấp và tệp giấy phép được cấp.");
+    }
+
     private static string? TrimOrNull(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
@@ -398,24 +449,25 @@ public class PermitChecklistService(
         DateTime dueSoonCutoff,
         DateTime expiringSoonCutoff,
         CancellationToken ct,
-        IReadOnlySet<int>? accessibleDesignProjectIds)
+        IReadOnlySet<int>? accessibleOperationalProjectIds)
     {
         var openBase = db.PermitChecklistItems.AsNoTracking()
             .Where(x => x.Status != PermitStatus.Issued);
-        if (accessibleDesignProjectIds is not null)
-            openBase = openBase.Where(x => accessibleDesignProjectIds.Contains(x.DesignProjectId));
+        if (accessibleOperationalProjectIds is not null)
+            openBase = openBase.Where(x => accessibleOperationalProjectIds.Contains(x.OperationalProjectId));
 
         var overdue = await openBase
-            .CountAsync(x => x.TargetDeadline != null && x.TargetDeadline < now, ct);
+            .CountAsync(x => (x.WorkTask != null ? x.WorkTask.PlannedEnd : x.TargetDeadline) != null &&
+                (x.WorkTask != null ? x.WorkTask.PlannedEnd : x.TargetDeadline) < now, ct);
         var dueSoon = await openBase
-            .CountAsync(x => x.TargetDeadline != null
-                          && x.TargetDeadline >= now
-                          && x.TargetDeadline <= dueSoonCutoff, ct);
+            .CountAsync(x => (x.WorkTask != null ? x.WorkTask.PlannedEnd : x.TargetDeadline) != null
+                          && (x.WorkTask != null ? x.WorkTask.PlannedEnd : x.TargetDeadline) >= now
+                          && (x.WorkTask != null ? x.WorkTask.PlannedEnd : x.TargetDeadline) <= dueSoonCutoff, ct);
         var totalOpen = await openBase.CountAsync(ct);
         var expiringBase = db.PermitChecklistItems.AsNoTracking()
             .Where(x => x.Status == PermitStatus.Issued);
-        if (accessibleDesignProjectIds is not null)
-            expiringBase = expiringBase.Where(x => accessibleDesignProjectIds.Contains(x.DesignProjectId));
+        if (accessibleOperationalProjectIds is not null)
+            expiringBase = expiringBase.Where(x => accessibleOperationalProjectIds.Contains(x.OperationalProjectId));
         var expiringSoon = await expiringBase
             .CountAsync(x => x.ExpiresAt != null
                           && x.ExpiresAt >= now
@@ -456,23 +508,34 @@ public class PermitChecklistService(
         DateTime now, DateTime dueSoonCutoff, DateTime expiringSoonCutoff)
     {
         var isOpen = entity.Status != PermitStatus.Issued;
-        var isOverdue = isOpen && entity.TargetDeadline is DateTime td && td < now;
-        var isDueSoon = isOpen && entity.TargetDeadline is DateTime td2 && td2 >= now && td2 <= dueSoonCutoff;
+        var deadline = entity.WorkTask?.PlannedEnd ?? entity.TargetDeadline;
+        var isOverdue = isOpen && deadline is DateTime td && td < now;
+        var isDueSoon = isOpen && deadline is DateTime td2 && td2 >= now && td2 <= dueSoonCutoff;
         var isExpiringSoon = entity.Status == PermitStatus.Issued
             && entity.ExpiresAt is DateTime ex && ex >= now && ex <= expiringSoonCutoff;
 
         return new PermitChecklistItemResponse
         {
             Id = entity.Id,
+            OperationalProjectId = entity.OperationalProjectId,
+            OperationalProjectCode = entity.OperationalProject?.Code,
+            OperationalProjectName = entity.OperationalProject?.Name,
             DesignProjectId = entity.DesignProjectId,
             DesignProjectCode = entity.DesignProject?.ProjectCode,
             DesignProjectName = entity.DesignProject?.Name,
             PermitTypeCode = entity.PermitTypeCode,
             PermitTypeLabel = labelByCode.TryGetValue(entity.PermitTypeCode, out var label) ? label : null,
             IssuingAgency = entity.IssuingAgency,
-            OwnerUserId = entity.OwnerUserId,
-            OwnerName = entity.Owner?.FullName,
-            TargetDeadline = entity.TargetDeadline,
+            OwnerUserId = entity.WorkTask?.AssigneeUserId ?? entity.OwnerUserId,
+            OwnerName = entity.WorkTask?.AssigneeUser?.FullName ?? entity.Owner?.FullName,
+            WorkTaskId = entity.WorkTaskId,
+            WorkPackageId = entity.WorkTask?.WorkPackageId,
+            ApproverUserId = entity.WorkTask?.ApproverUserId,
+            ApproverName = entity.WorkTask?.ApproverUser?.FullName,
+            ProgressPercent = entity.WorkTask?.ProgressPercent ?? 0,
+            WorkTaskStatus = entity.WorkTask?.Status.ToString(),
+            WorkTaskRowVersion = entity.WorkTask is null ? null : CrmConcurrency.Encode(entity.WorkTask.RowVersion),
+            TargetDeadline = entity.WorkTask?.PlannedEnd ?? entity.TargetDeadline,
             SubmittedAt = entity.SubmittedAt,
             IssuedAt = entity.IssuedAt,
             ExpiresAt = entity.ExpiresAt,

@@ -776,21 +776,49 @@ Submit drawings for approval before issuance. Apply electronic "Issued For Const
 
 #### 3.3.1 Legal Document Checklist
 
-Open **Admin > Design and Permits > Permits** or navigate to `/admin/permits`. The checklist is generated automatically from active permit types when a design project is created. Users with management permission can create, view, edit, and delete project-specific items from desktop tables or mobile cards. Each project can contain only one item for each permit type.
+Open **Admin > Design and Permits > Permits** or navigate to `/admin/permits`.
+Creating a Design Project does not create permits. When an eligible Upstream
+Design, Construction, or Design & Build Contract is moved from **Signed** to
+**In progress**, the Project Manager or Admin must complete the Legal activation
+wizard on the Contract detail page:
+
+1. Check the Contract and Operational Project.
+2. Select from the active permit types proposed by the system. The proposal is
+   editable because NICON has not yet approved a project-type template.
+3. Select the Legal lead, assignee, independent approver, dates, and predecessor
+   for each permit. Assignees and approvers must be active members of that
+   Operational Project and may belong to different departments.
+4. Review and confirm. Nothing is created and the Contract status does not
+   change before confirmation succeeds.
+
+The first confirmation creates one Legal work package for the Operational
+Project. Later eligible Contracts for the same project reuse that package and
+do not duplicate permits. Legacy projects or already-active Contracts use
+**Set up Legal** from the Permit workspace; legacy Design Project links remain
+available for compatibility.
 
 Track construction permits (GPXD), fire safety (PCCC), electrical supply, water supply, sidewalk permits, completion certificates, and other configured types. Record status, issuing agency, responsible person, submission and issue dates, expiry, target deadline, and notes. Risk cards and filters highlight overdue, due-soon, and expiring items.
 
-Delete is permanent and requires confirmation. Use **Regenerate default checklist** afterward when an accidentally removed active template item should be restored; regeneration adds only missing items and does not overwrite operator changes.
+Permit rows that belong to the Legal package cannot be created, regenerated, or
+deleted independently. Adjust assignment and schedule through the linked work
+package; aggregate deletion remains protected by the deletion-impact workflow.
 
 #### 3.3.2 Permit Application Tracking
 
 Track submission status at government agencies. Monitor processing progress: submitted, under review, supplementary documents required, approved, rejected. Record working history with regulatory bodies. Upload response documents and supplementary requests. Alert on delayed applications. Notify when applications are approved.
 
-| Page | Functions | Estimate |
+The authority status and internal task status are separate. Upload the submitted
+package and record the submission date before using **Submitted**, **Under
+review**, or **Need more documents**. Upload the issued permit and record its
+issue date before using **Issued**. Only then can the assignee submit the linked
+task as **Completed**. The selected approver can verify it or return it with a
+mandatory reason; returning a task does not change the authority status.
+
+| Page | Functions | Delivery |
 |------|-----------|----------|
-| Legal Document List | Search, filter, risk summary, pagination, and responsive CRUD actions | Implemented |
-| Legal Document Create/Edit | Create and update status, ownership, agency, dates, and notes | Implemented |
-| Legal Document Detail | Read-only item details and edit handoff | Implemented |
+| Legal workspace | Project/type/status/assignee/approver/deadline filters, risk summary, history, and responsive cards/table | Implemented |
+| Contract activation wizard | Manual permit selection, Legal lead, assignment, dates, dependencies, review, and atomic confirmation | Implemented |
+| Permit and task lifecycle | Authority status/documents plus independent progress, approval/return, and audit history | Implemented |
 
 ### 3.4 Module 4: Construction and Acceptance
 

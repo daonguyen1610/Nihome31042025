@@ -35,6 +35,7 @@ public class ContractsController(
     IContractAppendixService voSvc,
     IContractAttachmentService attSvc,
     IDesignProjectService designProjects,
+    ILegalActivationService legalActivation,
     IProjectAccessService projectAccess,
     IPermissionService permissions,
     IWebHostEnvironment env,
@@ -229,7 +230,7 @@ public class ContractsController(
         }
         catch (ContractValidationException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(new { code = ex.Code, message = ex.Message });
         }
     }
 
@@ -385,7 +386,65 @@ public class ContractsController(
         }
         catch (ContractValidationException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(new { code = ex.Code, message = ex.Message });
+        }
+    }
+
+    [HttpGet("{id:int}/legal-activation-preview")]
+    [RequirePermission("crm.contracts", "view")]
+    public async Task<ActionResult<LegalActivationPreviewResponse>> LegalActivationPreview(
+        int id, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        try
+        {
+            var preview = await legalActivation.PreviewContractAsync(id, userId.Value, ct);
+            return preview is null ? NotFound() : Ok(preview);
+        }
+        catch (LegalActivationException ex)
+        {
+            if (ex.Code == "LEGAL_ACTIVATION_FORBIDDEN") return Forbid();
+            return BadRequest(new { code = ex.Code, message = ex.Message });
+        }
+    }
+
+    [HttpPost("{id:int}/activate-with-legal")]
+    [RequirePermission("crm.contracts", "view")]
+    [Idempotency("crm.contracts.activate-with-legal")]
+    public async Task<ActionResult<LegalActivationResultResponse>> ActivateWithLegal(
+        int id, [FromBody] ActivateContractWithLegalRequest request, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        try
+        {
+            request.RowVersion = CrmConcurrency.ResolveRequiredRequestToken(Request, request.RowVersion);
+            var result = await legalActivation.ActivateContractAsync(id, request, userId.Value, ct);
+            if (result is null) return NotFound();
+            CrmConcurrency.SetResponseEntityTag(Response, result.Contract.RowVersion);
+            audit.Log(new AuditEvent
+            {
+                Action = "contract.activate-with-legal",
+                ResourceType = EntityTypes.Contract,
+                ResourceId = id.ToString(),
+                Message = $"Contract #{id} activated with legal work package #{result.WorkPackageId}.",
+                NewValue = result,
+            });
+            return Ok(result);
+        }
+        catch (LegalActivationException ex)
+        {
+            if (ex.Code == "LEGAL_ACTIVATION_FORBIDDEN") return Forbid();
+            return BadRequest(new { code = ex.Code, message = ex.Message });
+        }
+        catch (CrmConcurrencyTokenException ex)
+        {
+            return BadRequest(new { code = "INVALID_ROW_VERSION", message = ex.Message });
+        }
+        catch (CrmConcurrencyException ex)
+        {
+            return Conflict(new { code = "CONCURRENCY_CONFLICT", message = ex.Message });
         }
     }
 

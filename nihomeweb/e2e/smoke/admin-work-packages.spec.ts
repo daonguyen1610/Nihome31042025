@@ -39,3 +39,23 @@ test("work package workspace remains usable at mobile and tablet widths", async 
     expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth);
   }
 });
+
+test("back from a work package detail restores the package list", async ({
+  page,
+  loginInBrowserAs,
+}) => {
+  await loginInBrowserAs(page, TEST_USERS.superAdmin);
+  await page.goto("/admin/work-packages");
+  await expect(page.getByTestId("work-packages-page")).toBeVisible({ timeout: 15_000 });
+
+  const firstPackage = page.getByTestId("work-package-card").first();
+  test.skip(await firstPackage.count() === 0, "The seeded environment has no work package to open");
+  await firstPackage.click();
+  await expect(page).toHaveURL(/\/admin\/work-packages\/\d+$/);
+
+  await page.getByTestId("work-package-back").click();
+
+  await expect(page).toHaveURL(/\/admin\/work-packages$/);
+  await expect(page.getByRole("heading", { name: /Nhóm công việc|Work packages/i })).toBeVisible();
+  await expect(page.getByTestId("work-package-back")).toHaveCount(0);
+});
