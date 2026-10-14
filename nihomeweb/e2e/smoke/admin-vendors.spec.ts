@@ -1,3 +1,4 @@
+import type { Page } from "@playwright/test";
 import { expect, test, TEST_USERS } from "../fixtures/auth";
 
 const vendorId = 165001;
@@ -50,6 +51,73 @@ const vendor = {
     createdAt: "2026-09-06T08:00:00Z",
   }],
 };
+
+const mockVendorList = async (page: Page) => {
+  await page.route(/\/api\/(?:v1\/)?vendors(?:\?.*)?$/, route =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ total: 1, page: 1, pageSize: 20, items: [vendor] }),
+    }));
+};
+
+test("vendor rows provide clear hover, keyboard and full-row navigation", async ({
+  page,
+  loginInBrowserAs,
+  baseURL,
+}) => {
+  const appUrl = baseURL ?? "http://localhost:5043";
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await loginInBrowserAs(page, TEST_USERS.superAdmin);
+  if (page.url() === "about:blank") await page.goto(appUrl, { waitUntil: "domcontentloaded" });
+  await page.evaluate(() => localStorage.setItem("nicon_lang", "en"));
+  await mockVendorList(page);
+
+  await page.goto(`${appUrl}/admin/vendors`, { waitUntil: "networkidle" });
+  const row = page.getByTestId("vendor-row");
+  await expect(row).toBeVisible();
+  await expect(page.getByTestId("vendor-card")).toBeHidden();
+  await expect(row).toHaveCSS("cursor", "pointer");
+  const actionSizes = await row.getByRole("button").evaluateAll(buttons =>
+    buttons.map(button => button.getBoundingClientRect().height));
+  expect(actionSizes.every(height => height >= 44)).toBe(true);
+
+  const backgroundBeforeHover = await row.evaluate(element => getComputedStyle(element).backgroundColor);
+  await row.hover();
+  await expect.poll(() => row.evaluate(element => getComputedStyle(element).backgroundColor))
+    .not.toBe(backgroundBeforeHover);
+
+  await row.focus();
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(new RegExp(`/admin/vendors/${vendorId}$`));
+});
+
+test("vendor cards and controls remain usable without horizontal overflow", async ({
+  page,
+  loginInBrowserAs,
+  baseURL,
+}) => {
+  const appUrl = baseURL ?? "http://localhost:5043";
+  await loginInBrowserAs(page, TEST_USERS.superAdmin);
+  if (page.url() === "about:blank") await page.goto(appUrl, { waitUntil: "domcontentloaded" });
+  await page.evaluate(() => localStorage.setItem("nicon_lang", "en"));
+  await mockVendorList(page);
+
+  for (const viewport of [{ width: 820, height: 900 }, { width: 360, height: 800 }]) {
+    await page.setViewportSize(viewport);
+    await page.goto(`${appUrl}/admin/vendors`, { waitUntil: "networkidle" });
+
+    const card = page.getByTestId("vendor-card");
+    await expect(card).toBeVisible();
+    await expect(page.getByTestId("vendor-row")).toBeHidden();
+    const actionSizes = await card.getByRole("button").evaluateAll(buttons =>
+      buttons.slice(1).map(button => button.getBoundingClientRect().height));
+    expect(actionSizes.every(height => height >= 44)).toBe(true);
+    const overflow = await page.evaluate(() =>
+      document.documentElement.scrollWidth > document.documentElement.clientWidth);
+    expect(overflow).toBe(false);
+  }
+});
 
 test("vendor detail shows traceability and blocks unsafe deletion on mobile", async ({
   page,
