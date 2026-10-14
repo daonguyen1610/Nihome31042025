@@ -117,7 +117,8 @@ public sealed class ProjectReportService(
             .Where(record => designProjectIds.Contains(record.DesignProjectId))
             .ToListAsync(ct);
         var permits = await db.PermitChecklistItems.AsNoTracking()
-            .Where(permit => projectIds.Contains(permit.OperationalProjectId))
+            .Where(permit => projectIds.Contains(permit.OperationalProjectId) ||
+                permit.DesignProjectId.HasValue && designProjectIds.Contains(permit.DesignProjectId.Value))
             .ToListAsync(ct);
         var quotes = await db.Quotes.AsNoTracking()
             .Where(quote => quote.OperationalProjectId.HasValue &&
@@ -165,8 +166,10 @@ public sealed class ProjectReportService(
                         .Where(item => InRange(item.AcceptanceDate, query)).ToList(),
                     asOfDate),
                 Permits = BuildPermits(
+                    project.Id,
                     designProjectId,
-                    permits.Where(item => item.DesignProjectId == designProjectId)
+                    permits.Where(item => item.OperationalProjectId == project.Id ||
+                            item.DesignProjectId == designProjectId)
                         .Where(item => PermitInRange(item, query)).ToList(),
                     asOfDate,
                     query),
@@ -311,12 +314,13 @@ public sealed class ProjectReportService(
     }
 
     private static ProjectReportPermitResponse BuildPermits(
+        int operationalProjectId,
         int? designProjectId,
         List<PermitChecklistItem> permits,
         DateOnly asOfDate,
         ProjectReportQuery query)
     {
-        if (!designProjectId.HasValue)
+        if (!designProjectId.HasValue && permits.Count == 0)
         {
             return new ProjectReportPermitResponse
             {
@@ -352,7 +356,7 @@ public sealed class ProjectReportService(
                 DrillDown = new ProjectReportDrillDownResponse
                 {
                     Route = "/admin/permits",
-                    Query = $"designProjectId={permit.DesignProjectId}&permitId={permit.Id}",
+                    Query = $"operationalProjectId={operationalProjectId}&permitId={permit.Id}",
                 },
             };
         }).Where(item => item.IsOverdue || item.IsDueSoon || item.IsExpiring)
