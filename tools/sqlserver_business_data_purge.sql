@@ -1,17 +1,16 @@
--- SQL Server 2022. Run in SQLCMD mode with Execute=0 first.
--- Example: sqlcmd -d NihomeDB -i tools/sqlserver_business_data_purge.sql
---          -v ExpectedDatabase=NihomeDB Execute=0
--- Execute=1 deletes ONLY rows in the explicit table list below.
--- Stop application writes and take a verified database backup before Execute=1.
+-- SQL Server 2022. Run this whole script in a SQL query editor.
+-- First run: select the target database in the editor, set @ExpectedDatabase
+-- to its name and leave @Execute = 0 to inspect the scope and row counts.
+-- After reviewing the result, stop application writes, take a verified backup,
+-- then rerun the whole script with @Execute = 1 to delete the listed rows.
 SET NOCOUNT ON;
 SET XACT_ABORT ON;
 
-IF DB_NAME() <> N'$(ExpectedDatabase)'
-    THROW 51000, 'Wrong database: check ExpectedDatabase and -d.', 1;
+DECLARE @ExpectedDatabase sysname = N'NiconV2_NEW';
+DECLARE @Execute bit = 0;
 
-DECLARE @Execute bit = TRY_CONVERT(bit, '$(Execute)');
-IF @Execute IS NULL
-    THROW 51001, 'Execute must be 0 or 1.', 1;
+IF DB_NAME() <> @ExpectedDatabase
+    THROW 51000, 'Wrong database: check @ExpectedDatabase and query connection.', 1;
 
 DECLARE @Targets table (TableName sysname NOT NULL PRIMARY KEY);
 INSERT INTO @Targets (TableName) VALUES

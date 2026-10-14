@@ -490,11 +490,12 @@ startup host only in the `Development` environment; integration tests create
 their own business fixtures explicitly.
 
 For a SQL-only reset of the CRM, Design, Procurement, Finance, Legal,
-Construction, and Analytics records, run `tools/sqlserver_business_data_purge.sql`
-with SQLCMD variable `Execute=0` to inspect the explicit table scope, row counts,
-and foreign-key dependencies. Pass `ExpectedDatabase` as the exact target name
-(`NihomeDB` locally or the configured deployment database name). Stop backend
-writes and take a verified SQL backup before rerunning with `Execute=1`. The
+Construction, and Analytics records, open `tools/sqlserver_business_data_purge.sql`
+in a SQL Server query editor and run the entire script. Set `@ExpectedDatabase`
+to the exact selected database name (`NihomeDB` locally or the configured
+deployment database name). Keep `@Execute = 0` for the first run to inspect the
+table scope, row counts, and foreign-key dependencies. Stop backend writes and
+take a verified SQL backup before rerunning with `@Execute = 1`. The
 script keeps users, permissions, settings, translations, website content, audit
 history, and EF migration history. Managed files and Google Drive objects remain;
 clean those separately through their owning workflows if needed. New or
