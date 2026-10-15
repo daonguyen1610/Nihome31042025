@@ -53,6 +53,10 @@ import {
   ChartNoAxesCombined,
   ShoppingCart,
   Landmark,
+  Boxes,
+  FileCheck2,
+  CircleDollarSign,
+  MonitorCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { logout } from "@/lib/auth";
@@ -311,15 +315,27 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
         ],
       },
       {
-        id: "construction",
-        label: t("nav.construction"),
+        id: "construction-bch",
+        label: t("nav.constructionBch"),
         icon: HardHat,
         items: [
           {
-            to: "/admin/construction/tasks",
-            label: t("nav.constructionTasks"),
-            icon: HardHat,
-            permission: ADMIN_PERMS.constructionTasks,
+            to: "/admin/construction/bch/resource-requests",
+            label: t("nav.constructionResourceRequests"),
+            icon: Boxes,
+            permission: ADMIN_PERMS.constructionResourceRequests,
+          },
+          {
+            to: "/admin/construction/bch/qa-qc",
+            label: t("nav.constructionQaQc"),
+            icon: FileCheck2,
+            permission: ADMIN_PERMS.constructionQaQc,
+          },
+          {
+            to: "/admin/construction/bch/qs",
+            label: t("nav.constructionQs"),
+            icon: CircleDollarSign,
+            permission: ADMIN_PERMS.constructionQs,
           },
           {
             to: "/admin/construction/diary",
@@ -362,6 +378,30 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
             label: t("nav.constructionHandover"),
             icon: PackageCheck,
             permission: ADMIN_PERMS.constructionHandover,
+          },
+        ],
+      },
+      {
+        id: "construction-cm",
+        label: t("nav.constructionCm"),
+        icon: MonitorCheck,
+        items: [
+          {
+            to: "/admin/construction/tasks",
+            label: t("nav.constructionTasks"),
+            icon: HardHat,
+            permission: ADMIN_PERMS.constructionTasks,
+          },
+          {
+            to: "/admin/construction/cm",
+            label: t("nav.constructionCmControl"),
+            icon: MonitorCheck,
+            permission: [
+              ADMIN_PERMS.constructionCmPreparation,
+              ADMIN_PERMS.constructionResourceRequestsReview,
+              ADMIN_PERMS.constructionQaQcReview,
+              ADMIN_PERMS.constructionQsReview,
+            ],
           },
         ],
       },

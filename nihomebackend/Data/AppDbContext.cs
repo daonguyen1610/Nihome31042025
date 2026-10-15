@@ -183,6 +183,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
     public DbSet<HseViolation> HseViolations => Set<HseViolation>();
     public DbSet<HseViolationEvent> HseViolationEvents => Set<HseViolationEvent>();
+    public DbSet<ConstructionPreparation> ConstructionPreparations => Set<ConstructionPreparation>();
+    public DbSet<ConstructionResourceRequest> ConstructionResourceRequests => Set<ConstructionResourceRequest>();
+    public DbSet<QaQcTemplate> QaQcTemplates => Set<QaQcTemplate>();
+    public DbSet<QaQcDossier> QaQcDossiers => Set<QaQcDossier>();
+    public DbSet<QaQcDossierEvidence> QaQcDossierEvidence => Set<QaQcDossierEvidence>();
+    public DbSet<ConstructionQsBatch> ConstructionQsBatches => Set<ConstructionQsBatch>();
+    public DbSet<ConstructionQsBatchLine> ConstructionQsBatchLines => Set<ConstructionQsBatchLine>();
+    public DbSet<ConstructionQsBatchEvidence> ConstructionQsBatchEvidence => Set<ConstructionQsBatchEvidence>();
 
     public DbSet<AsBuiltDocument> AsBuiltDocuments => Set<AsBuiltDocument>();
     public DbSet<AsBuiltDocumentCategory> AsBuiltDocumentCategories => Set<AsBuiltDocumentCategory>();
@@ -1813,6 +1821,86 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasIndex(item => item.ReversalOfCorrectionId).IsUnique().HasFilter("[ReversalOfCorrectionId] IS NOT NULL");
             b.HasIndex(item => new { item.ResponsibleAccountantUserId, item.ApprovedAt, item.Status });
             b.HasIndex(item => new { item.SourceEntityType, item.SourceEntityId });
+        });
+
+        modelBuilder.Entity<ConstructionPreparation>(b =>
+        {
+            b.ToTable("construction_preparations"); b.HasKey(x => x.Id);
+            b.Property(x => x.Status).HasConversion<string>().HasMaxLength(30);
+            b.Property(x => x.WbsBaselineReference).HasMaxLength(500).IsRequired();
+            b.Property(x => x.ScheduleBaselineReference).HasMaxLength(500).IsRequired();
+            b.Property(x => x.SCurveBaselineReference).HasMaxLength(500).IsRequired();
+            b.Property(x => x.BchOrganizationReference).HasMaxLength(500).IsRequired();
+            b.Property(x => x.ResourcePlanReference).HasMaxLength(500).IsRequired();
+            b.Property(x => x.BudgetBaselineReference).HasMaxLength(500).IsRequired();
+            b.Property(x => x.RowVersion).IsRowVersion();
+            b.HasOne(x => x.OperationalProject).WithMany().HasForeignKey(x => x.OperationalProjectId).OnDelete(DeleteBehavior.Restrict);
+            b.HasIndex(x => new { x.OperationalProjectId, x.Version }).IsUnique();
+        });
+
+        modelBuilder.Entity<ConstructionResourceRequest>(b =>
+        {
+            b.ToTable("construction_resource_requests"); b.HasKey(x => x.Id);
+            b.Property(x => x.Code).HasMaxLength(60).IsRequired(); b.Property(x => x.Type).HasConversion<string>().HasMaxLength(20);
+            b.Property(x => x.Status).HasConversion<string>().HasMaxLength(30); b.Property(x => x.HandoffStatus).HasConversion<string>().HasMaxLength(40);
+            b.Property(x => x.WbsCode).HasMaxLength(100).IsRequired(); b.Property(x => x.Quantity).HasPrecision(18, 6);
+            b.Property(x => x.Unit).HasMaxLength(50).IsRequired(); b.Property(x => x.Reason).HasMaxLength(2000).IsRequired();
+            b.Property(x => x.CmDecisionReason).HasMaxLength(2000); b.Property(x => x.HandoffEntityType).HasMaxLength(100);
+            b.Property(x => x.RowVersion).IsRowVersion();
+            b.HasOne(x => x.OperationalProject).WithMany().HasForeignKey(x => x.OperationalProjectId).OnDelete(DeleteBehavior.Restrict);
+            b.HasIndex(x => new { x.OperationalProjectId, x.Code }).IsUnique();
+            b.HasIndex(x => new { x.OperationalProjectId, x.Status });
+        });
+
+        modelBuilder.Entity<QaQcTemplate>(b =>
+        {
+            b.ToTable("qa_qc_templates"); b.HasKey(x => x.Id); b.Property(x => x.Code).HasMaxLength(60).IsRequired();
+            b.Property(x => x.NameVi).HasMaxLength(200).IsRequired(); b.Property(x => x.Name).HasMaxLength(200).IsRequired();
+            b.Property(x => x.NameZh).HasMaxLength(200).IsRequired(); b.Property(x => x.NameJa).HasMaxLength(200).IsRequired();
+            b.Property(x => x.RowVersion).IsRowVersion(); b.HasIndex(x => new { x.Code, x.Version }).IsUnique();
+        });
+        modelBuilder.Entity<QaQcDossier>(b =>
+        {
+            b.ToTable("qa_qc_dossiers"); b.HasKey(x => x.Id); b.Property(x => x.Code).HasMaxLength(60).IsRequired();
+            b.Property(x => x.WbsCode).HasMaxLength(100).IsRequired(); b.Property(x => x.Title).HasMaxLength(300).IsRequired();
+            b.Property(x => x.Status).HasConversion<string>().HasMaxLength(30); b.Property(x => x.CmDecisionReason).HasMaxLength(2000);
+            b.Property(x => x.RowVersion).IsRowVersion(); b.HasOne(x => x.QaQcTemplate).WithMany().HasForeignKey(x => x.QaQcTemplateId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne<OperationalProject>().WithMany().HasForeignKey(x => x.OperationalProjectId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne<IfcRelease>().WithMany().HasForeignKey(x => x.IfcReleaseId).OnDelete(DeleteBehavior.Restrict);
+            b.HasIndex(x => new { x.OperationalProjectId, x.Code }).IsUnique();
+        });
+        modelBuilder.Entity<QaQcDossierEvidence>(b =>
+        {
+            b.ToTable("qa_qc_dossier_evidence"); b.HasKey(x => new { x.QaQcDossierId, x.ProjectDocumentId });
+            b.Property(x => x.EvidenceType).HasConversion<string>().HasMaxLength(30);
+            b.HasOne(x => x.QaQcDossier).WithMany(x => x.Evidence).HasForeignKey(x => x.QaQcDossierId).OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(x => x.ProjectDocument).WithMany().HasForeignKey(x => x.ProjectDocumentId).OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<ConstructionQsBatch>(b =>
+        {
+            b.ToTable("construction_qs_batches"); b.HasKey(x => x.Id); b.Property(x => x.Code).HasMaxLength(60).IsRequired();
+            b.Property(x => x.Direction).HasConversion<string>().HasMaxLength(20); b.Property(x => x.Status).HasConversion<string>().HasMaxLength(30);
+            b.Property(x => x.WbsCode).HasMaxLength(100).IsRequired(); b.Property(x => x.CertifiedAmount).HasPrecision(18, 2);
+            b.Property(x => x.Description).HasMaxLength(2000).IsRequired(); b.Property(x => x.CmDecisionReason).HasMaxLength(2000);
+            b.Property(x => x.RowVersion).IsRowVersion(); b.HasOne<OperationalProject>().WithMany().HasForeignKey(x => x.OperationalProjectId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne<Contract>().WithMany().HasForeignKey(x => x.ContractId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne<ProjectBoqRevision>().WithMany().HasForeignKey(x => x.ProjectBoqRevisionId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne<ContractAppendix>().WithMany().HasForeignKey(x => x.ContractAppendixId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne<ContractPaymentMilestone>().WithMany().HasForeignKey(x => x.ContractPaymentMilestoneId).OnDelete(DeleteBehavior.Restrict);
+            b.HasIndex(x => new { x.OperationalProjectId, x.Code }).IsUnique();
+        });
+        modelBuilder.Entity<ConstructionQsBatchLine>(b =>
+        {
+            b.ToTable("construction_qs_batch_lines"); b.HasKey(x => x.Id); b.Property(x => x.ItemCode).HasMaxLength(80).IsRequired();
+            b.Property(x => x.Description).HasMaxLength(500).IsRequired(); b.Property(x => x.Unit).HasMaxLength(50).IsRequired();
+            b.Property(x => x.Quantity).HasPrecision(18, 6); b.Property(x => x.UnitPrice).HasPrecision(18, 4); b.Property(x => x.Amount).HasPrecision(18, 4);
+            b.HasOne(x => x.ConstructionQsBatch).WithMany(x => x.Lines).HasForeignKey(x => x.ConstructionQsBatchId).OnDelete(DeleteBehavior.Cascade);
+        });
+        modelBuilder.Entity<ConstructionQsBatchEvidence>(b =>
+        {
+            b.ToTable("construction_qs_batch_evidence"); b.HasKey(x => new { x.ConstructionQsBatchId, x.ProjectDocumentId });
+            b.HasOne(x => x.ConstructionQsBatch).WithMany(x => x.Evidence).HasForeignKey(x => x.ConstructionQsBatchId).OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(x => x.ProjectDocument).WithMany().HasForeignKey(x => x.ProjectDocumentId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<ProjectDocument>(b =>

@@ -1624,7 +1624,9 @@ public sealed class ProcurementService(
     }
 
     private async Task<IDbContextTransaction?> BeginSerializableAsync(CancellationToken ct) =>
-        db.Database.IsRelational() ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct) : null;
+        db.Database.IsRelational() && db.Database.CurrentTransaction is null
+            ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct)
+            : null;
 
     private IQueryable<ProjectBoqRevision> BoqQuery() => db.ProjectBoqRevisions.AsNoTracking()
         .Include(item => item.PreparedBy).Include(item => item.UpstreamContract)

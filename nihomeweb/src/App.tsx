@@ -120,6 +120,14 @@ const AdminAsBuiltDocumentCategories = lazy(
 const AdminHandoverRecords = lazy(
   () => import("./pages/admin/construction/HandoverRecordsPage.tsx"),
 );
+const AdminBchResourceRequests = lazy(
+  () => import("./pages/admin/construction/BchResourceRequestsPage.tsx"),
+);
+const AdminQaQcWorkspace = lazy(() => import("./pages/admin/construction/QaQcWorkspacePage.tsx"));
+const AdminQsWorkspace = lazy(() => import("./pages/admin/construction/QsWorkspacePage.tsx"));
+const AdminCmConstruction = lazy(
+  () => import("./pages/admin/construction/CmConstructionWorkspacePage.tsx"),
+);
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 
 const LegacyPostRedirect = ({ edit = false }: { edit?: boolean }) => {
@@ -437,6 +445,34 @@ const App = () => (
                   </Route>
                   <Route element={<RequirePermission code={ADMIN_PERMS.constructionHandover} />}>
                     <Route path="/admin/construction/handover" element={<AdminHandoverRecords />} />
+                  </Route>
+                  <Route
+                    element={<RequirePermission code={ADMIN_PERMS.constructionResourceRequests} />}
+                  >
+                    <Route
+                      path="/admin/construction/bch/resource-requests"
+                      element={<AdminBchResourceRequests />}
+                    />
+                  </Route>
+                  <Route element={<RequirePermission code={ADMIN_PERMS.constructionQaQc} />}>
+                    <Route path="/admin/construction/bch/qa-qc" element={<AdminQaQcWorkspace />} />
+                  </Route>
+                  <Route element={<RequirePermission code={ADMIN_PERMS.constructionQs} />}>
+                    <Route path="/admin/construction/bch/qs" element={<AdminQsWorkspace />} />
+                  </Route>
+                  <Route
+                    element={
+                      <RequirePermission
+                        code={[
+                          ADMIN_PERMS.constructionCmPreparation,
+                          ADMIN_PERMS.constructionResourceRequestsReview,
+                          ADMIN_PERMS.constructionQaQcReview,
+                          ADMIN_PERMS.constructionQsReview,
+                        ]}
+                      />
+                    }
+                  >
+                    <Route path="/admin/construction/cm" element={<AdminCmConstruction />} />
                   </Route>
                   <Route element={<RequirePermission code={ADMIN_PERMS.recruitment} />}>
                     <Route path="/admin/recruitment" element={<AdminRecruitment />} />

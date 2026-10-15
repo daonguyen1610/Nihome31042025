@@ -186,6 +186,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISiteDiaryService, SiteDiaryService>();
         services.AddScoped<IPunchItemService, PunchItemService>();
         services.AddScoped<IHseViolationService, HseViolationService>();
+        services.AddScoped<IConstructionOperationsService, ConstructionOperationsService>();
         services.AddScoped<IProcurementService, ProcurementService>();
         services.AddScoped<RfqService>();
         services.AddScoped<RfqIdempotencyGuard>();

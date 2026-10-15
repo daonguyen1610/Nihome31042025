@@ -2452,6 +2452,39 @@ This section records the customer-approved target for the expanded Construction
 and Acceptance module. It is a delivery contract, not a claim that every item
 below exists in the current API.
 
+#### Delivered CM/BCH workflow slice
+
+The Operational Project route family
+`/api/operational-projects/{projectId}/construction` now exposes versioned CM
+preparation/readiness, typed resource requests, QA/QC templates and dossiers,
+and direction-explicit QS batches. Mutations require idempotency keys and use
+row-version concurrency. Permissions separate BCH create actions from CM
+review/start actions, and services reject author self-review. Material approval
+reuses `IProcurementService` in the same relational transaction to create and
+submit the existing Material Request; equipment/labour records stop at an
+explicit downstream-ready state.
+
+The readiness service verifies the signed Upstream construction contract,
+released IFC, required valid permits, preparation references, locked Budget
+Baseline, and any preparation flags for site handover, method statement and HSE
+plan. It persists the evaluated evidence snapshot and actor. Published
+preparations are superseded by a new draft rather than overwritten.
+
+QA/QC dossiers require a published multilingual template, a same-project
+released IFC packet, valid checklist JSON and active same-project Project
+Documents. QS validates contract direction, dates, quantity-line totals,
+milestone/appendix/approved BOQ references, and governed superseding or reversal
+references. Submitted records are immutable except through the documented
+review/correction lifecycle.
+
+This is a partial delivery of the target below. WBS/Gantt/S-Curve and Budget
+Baseline are reference-backed rather than dedicated editable aggregates; the
+reproducible greater-than-5% variance alert is not implemented; equipment and
+labour do not yet create Procurement/Finance transactions; and actual NICON ISO
+template content is not seeded without an approved source pack. The legacy
+Design Project construction aggregates and offline/reconnect behavior also
+remain outside this migration.
+
 #### Aggregate and ownership boundaries
 
 - An executed Upstream D&B/construction Contract starts CM preparation on the

@@ -1170,6 +1170,398 @@ namespace nihomebackend.Migrations
                     b.ToTable("concept_options", (string)null);
                 });
 
+            modelBuilder.Entity("NihomeBackend.Models.ConstructionPreparation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("BchOrganizationReference")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("BudgetBaselineLocked")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("BudgetBaselineReference")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("HsePlanApproved")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("HsePlanRequired")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("MethodStatementApproved")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("MethodStatementRequired")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("OperationalProjectId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("PublishedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("PublishedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ReadinessSnapshotJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ResourcePlanReference")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("SCurveBaselineReference")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("ScheduleBaselineReference")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("SiteHandoverComplete")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("SiteHandoverRequired")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("StartedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("StartedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<int?>("SupersedesPreparationId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("UpdatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("int");
+
+                    b.Property<string>("WbsBaselineReference")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OperationalProjectId", "Version")
+                        .IsUnique();
+
+                    b.ToTable("construction_preparations", (string)null);
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.ConstructionQsBatch", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("CertifiedAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("CmDecisionReason")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTime?>("CmReviewedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("CmReviewedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)");
+
+                    b.Property<int?>("ContractAppendixId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ContractId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("ContractPaymentMilestoneId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("Direction")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int>("OperationalProjectId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("PeriodFrom")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("PeriodTo")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ProjectBoqRevisionId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("ReversesBatchId")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<DateTime?>("SubmittedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("SupersedesBatchId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("WbsCode")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ContractAppendixId");
+
+                    b.HasIndex("ContractId");
+
+                    b.HasIndex("ContractPaymentMilestoneId");
+
+                    b.HasIndex("ProjectBoqRevisionId");
+
+                    b.HasIndex("OperationalProjectId", "Code")
+                        .IsUnique();
+
+                    b.ToTable("construction_qs_batches", (string)null);
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.ConstructionQsBatchEvidence", b =>
+                {
+                    b.Property<int>("ConstructionQsBatchId")
+                        .HasColumnType("int");
+
+                    b.Property<long>("ProjectDocumentId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("ConstructionQsBatchId", "ProjectDocumentId");
+
+                    b.HasIndex("ProjectDocumentId");
+
+                    b.ToTable("construction_qs_batch_evidence", (string)null);
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.ConstructionQsBatchLine", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<int>("ConstructionQsBatchId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("ItemCode")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<decimal>("Quantity")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("decimal(18,6)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Unit")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConstructionQsBatchId");
+
+                    b.ToTable("construction_qs_batch_lines", (string)null);
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.ConstructionResourceRequest", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("AssignedProcurementUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CmDecisionReason")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTime?>("CmReviewedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("CmReviewedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<long?>("HandoffEntityId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("HandoffEntityType")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("HandoffStatus")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<DateTime>("NeedByDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("OperationalProjectId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("ProjectBoqLineId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Quantity")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("decimal(18,6)");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<int?>("ResponsibleSiteUserId")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<DateTime?>("SubmittedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Unit")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("WbsCode")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OperationalProjectId", "Code")
+                        .IsUnique();
+
+                    b.HasIndex("OperationalProjectId", "Status");
+
+                    b.ToTable("construction_resource_requests", (string)null);
+                });
+
             modelBuilder.Entity("NihomeBackend.Models.ConstructionTask", b =>
                 {
                     b.Property<int>("Id")
@@ -6839,6 +7231,180 @@ namespace nihomebackend.Migrations
                     b.ToTable("punch_items", (string)null);
                 });
 
+            modelBuilder.Entity("NihomeBackend.Models.QaQcDossier", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ChecklistResultsJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("CmDecisionReason")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTime?>("CmReviewedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("CmReviewedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("IfcReleaseId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("OperationalProjectId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("QaQcTemplateId")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<DateTime?>("SubmittedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("TemplateSnapshotJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("TemplateVersion")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("WbsCode")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IfcReleaseId");
+
+                    b.HasIndex("QaQcTemplateId");
+
+                    b.HasIndex("OperationalProjectId", "Code")
+                        .IsUnique();
+
+                    b.ToTable("qa_qc_dossiers", (string)null);
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.QaQcDossierEvidence", b =>
+                {
+                    b.Property<int>("QaQcDossierId")
+                        .HasColumnType("int");
+
+                    b.Property<long>("ProjectDocumentId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("EvidenceType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.HasKey("QaQcDossierId", "ProjectDocumentId");
+
+                    b.HasIndex("ProjectDocumentId");
+
+                    b.ToTable("qa_qc_dossier_evidence", (string)null);
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.QaQcTemplate", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsPublished")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("NameJa")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("NameVi")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("NameZh")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime?>("PublishedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("SchemaJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code", "Version")
+                        .IsUnique();
+
+                    b.ToTable("qa_qc_templates", (string)null);
+                });
+
             modelBuilder.Entity("NihomeBackend.Models.Quote", b =>
                 {
                     b.Property<int>("Id")
@@ -10329,6 +10895,88 @@ namespace nihomebackend.Migrations
                     b.Navigation("Owner");
                 });
 
+            modelBuilder.Entity("NihomeBackend.Models.ConstructionPreparation", b =>
+                {
+                    b.HasOne("NihomeBackend.Models.OperationalProject", "OperationalProject")
+                        .WithMany()
+                        .HasForeignKey("OperationalProjectId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("OperationalProject");
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.ConstructionQsBatch", b =>
+                {
+                    b.HasOne("NihomeBackend.Models.ContractAppendix", null)
+                        .WithMany()
+                        .HasForeignKey("ContractAppendixId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NihomeBackend.Models.Contract", null)
+                        .WithMany()
+                        .HasForeignKey("ContractId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NihomeBackend.Models.ContractPaymentMilestone", null)
+                        .WithMany()
+                        .HasForeignKey("ContractPaymentMilestoneId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NihomeBackend.Models.OperationalProject", null)
+                        .WithMany()
+                        .HasForeignKey("OperationalProjectId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NihomeBackend.Models.ProjectBoqRevision", null)
+                        .WithMany()
+                        .HasForeignKey("ProjectBoqRevisionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.ConstructionQsBatchEvidence", b =>
+                {
+                    b.HasOne("NihomeBackend.Models.ConstructionQsBatch", "ConstructionQsBatch")
+                        .WithMany("Evidence")
+                        .HasForeignKey("ConstructionQsBatchId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("NihomeBackend.Models.ProjectDocument", "ProjectDocument")
+                        .WithMany()
+                        .HasForeignKey("ProjectDocumentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ConstructionQsBatch");
+
+                    b.Navigation("ProjectDocument");
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.ConstructionQsBatchLine", b =>
+                {
+                    b.HasOne("NihomeBackend.Models.ConstructionQsBatch", "ConstructionQsBatch")
+                        .WithMany("Lines")
+                        .HasForeignKey("ConstructionQsBatchId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ConstructionQsBatch");
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.ConstructionResourceRequest", b =>
+                {
+                    b.HasOne("NihomeBackend.Models.OperationalProject", "OperationalProject")
+                        .WithMany()
+                        .HasForeignKey("OperationalProjectId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("OperationalProject");
+                });
+
             modelBuilder.Entity("NihomeBackend.Models.ConstructionTask", b =>
                 {
                     b.HasOne("NihomeBackend.Models.DesignProject", "DesignProject")
@@ -12015,6 +12663,47 @@ namespace nihomebackend.Migrations
                     b.Navigation("VerifiedBy");
                 });
 
+            modelBuilder.Entity("NihomeBackend.Models.QaQcDossier", b =>
+                {
+                    b.HasOne("NihomeBackend.Models.IfcRelease", null)
+                        .WithMany()
+                        .HasForeignKey("IfcReleaseId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NihomeBackend.Models.OperationalProject", null)
+                        .WithMany()
+                        .HasForeignKey("OperationalProjectId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NihomeBackend.Models.QaQcTemplate", "QaQcTemplate")
+                        .WithMany()
+                        .HasForeignKey("QaQcTemplateId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("QaQcTemplate");
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.QaQcDossierEvidence", b =>
+                {
+                    b.HasOne("NihomeBackend.Models.ProjectDocument", "ProjectDocument")
+                        .WithMany()
+                        .HasForeignKey("ProjectDocumentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NihomeBackend.Models.QaQcDossier", "QaQcDossier")
+                        .WithMany("Evidence")
+                        .HasForeignKey("QaQcDossierId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ProjectDocument");
+
+                    b.Navigation("QaQcDossier");
+                });
+
             modelBuilder.Entity("NihomeBackend.Models.Quote", b =>
                 {
                     b.HasOne("NihomeBackend.Models.ProcurementInputPriceOffer", "InputPriceOffer")
@@ -13027,6 +13716,13 @@ namespace nihomebackend.Migrations
                     b.Navigation("Versions");
                 });
 
+            modelBuilder.Entity("NihomeBackend.Models.ConstructionQsBatch", b =>
+                {
+                    b.Navigation("Evidence");
+
+                    b.Navigation("Lines");
+                });
+
             modelBuilder.Entity("NihomeBackend.Models.ConstructionTask", b =>
                 {
                     b.Navigation("Predecessors");
@@ -13226,6 +13922,11 @@ namespace nihomebackend.Migrations
             modelBuilder.Entity("NihomeBackend.Models.ProjectBoqRevision", b =>
                 {
                     b.Navigation("Lines");
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.QaQcDossier", b =>
+                {
+                    b.Navigation("Evidence");
                 });
 
             modelBuilder.Entity("NihomeBackend.Models.Quote", b =>

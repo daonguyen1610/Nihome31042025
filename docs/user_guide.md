@@ -824,11 +824,10 @@ mandatory reason; returning a task does not change the authority status.
 
 **Objective**: Manage site operations, control quality and schedule, and ensure safety at each construction phase.
 
-The customer-approved target model separates duties between **Phòng CM** at
-the office and the **Ban Chỉ huy Công trình (BCH)** at the site. The existing
-screens documented below remain the current product baseline. The following
-operating model is the target for subsequent delivery and must not be treated as
-implemented until its API, permissions, tests, and UI are released.
+The customer-approved model separates duties between **Phòng CM** at the office
+and the **Ban Chỉ huy Công trình (BCH)** at the site. The first Operational
+Project-based workflow slice is available from the split Construction menu;
+the remaining target controls are identified explicitly below.
 
 #### 3.4.0 Target Operating Model
 
@@ -850,8 +849,11 @@ construction. The target start gate also requires the applicable released IFC,
 issued/non-expired permits, published schedule baseline, approved BCH/resource
 plan and locked Budget Baseline. Site handover, method statement and HSE-plan
 evidence are project-template conditions pending NICON's approved ISO checklist.
-Until this gate is implemented, operators must verify these conditions outside
-the current software before recording site execution.
+The application now evaluates this start gate server-side and stores the gate
+snapshot and actor. WBS, schedule, S-Curve, BCH organization, resource plan and
+Budget Baseline are currently governed as required versioned references rather
+than editable planning structures. Site handover, method statement and HSE plan
+are enforced when CM marks them required for that preparation version.
 
 **Phase 2 - parallel execution and cross-control**
 
@@ -899,14 +901,25 @@ Signed Downstream Contract
 Eligibility does not mean automatic payment. Missing, mismatched, reversed, or
 superseded evidence blocks the handoff and must leave financial state unchanged.
 
-**Current implementation boundary:** Construction Tasks, Site Diaries,
-Punchlist, Partial Acceptance, As-Built and Handover currently persist against a
-Design Project. HSE, Procurement and Finance controls persist against an
-Operational Project. The product resolves the former through the Design Project
-where possible, but the model has not been fully migrated. CM Preparation,
-Baseline S-Curve, BCH organization, Budget Baseline, machine/labour requests,
-QA/QC dossiers, direction-explicit QS batches and the three BCH portals are not
-current delivered features.
+**Current implementation boundary:** The split menu now provides BCH Resource,
+QA/QC, Site QS and CM Control workspaces. It delivers versioned CM preparation
+references and a server start gate; typed material/equipment/labour requests;
+published multilingual QA/QC templates and IFC-linked dossiers; explicit
+Upstream/Downstream QS batches; CM review; row-version concurrency;
+idempotency; and server-side author/reviewer separation. Material approval
+creates and submits the existing Material Request aggregate atomically.
+Equipment/labour approval currently exposes a stable handoff state only; it
+does not create a Procurement or Finance contract. QA/QC evidence must already
+be an active Project Document, so durable Drive synchronization and retry state
+remain owned by the existing document workflow.
+
+Construction Tasks, Site Diaries, Punchlist, Partial Acceptance, As-Built and
+Handover still persist against a Design Project and have not been migrated to
+the Operational Project aggregates in this slice. Editable WBS/Gantt/S-Curve
+baseline data, the reproducible greater-than-5% variance alert, offline queues,
+actual NICON ISO checklist content, automatic contract-triggered preparation,
+and payment eligibility/handoff remain target work pending the documented
+business decisions and controlled compatibility migration.
 
 #### 3.4.1 Construction Schedule (Gantt)
 
