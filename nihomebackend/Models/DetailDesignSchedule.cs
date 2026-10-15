@@ -68,6 +68,10 @@ public class DesignScheduleTask : IConcurrencyTracked
     public DesignScheduleTask? ParentTask { get; set; }
     public List<DesignScheduleTask> Children { get; set; } = new();
     public string? ResourceSummary { get; set; }
+    public int? VendorId { get; set; }
+    public Vendor? Vendor { get; set; }
+    public int? DownstreamContractId { get; set; }
+    public Contract? DownstreamContract { get; set; }
     public bool IsCritical { get; set; }
     public bool IsMilestone { get; set; }
     public DateOnly PlannedStart { get; set; }

@@ -3286,6 +3286,9 @@ namespace nihomebackend.Migrations
                     b.Property<int>("DesignProjectId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("DownstreamContractId")
+                        .HasColumnType("int");
+
                     b.Property<bool>("IsCritical")
                         .HasColumnType("bit");
 
@@ -3352,6 +3355,9 @@ namespace nihomebackend.Migrations
                     b.Property<int>("UpdatedByUserId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("VendorId")
+                        .HasColumnType("int");
+
                     b.Property<int>("Weight")
                         .HasColumnType("int");
 
@@ -3363,9 +3369,13 @@ namespace nihomebackend.Migrations
 
                     b.HasIndex("DesignProjectId");
 
+                    b.HasIndex("DownstreamContractId");
+
                     b.HasIndex("ParentTaskId");
 
                     b.HasIndex("PhaseId");
+
+                    b.HasIndex("VendorId");
 
                     b.HasIndex("OperationalProjectId", "AssigneeMemberId");
 
@@ -5812,6 +5822,71 @@ namespace nihomebackend.Migrations
                         .IsUnique();
 
                     b.ToTable("operational_project_assignments", (string)null);
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.OperationalProjectCodeChange", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("ChangedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("ChangedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("DriveRenameAttemptCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("DriveRenameError")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("DriveRenameStatus")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime?>("DriveRenamedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("NewCode")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<DateTime?>("NextDriveRenameAttemptAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("OldCode")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<int>("OperationalProjectId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DriveRenameStatus", "NextDriveRenameAttemptAt");
+
+                    b.HasIndex("OperationalProjectId", "ChangedAt");
+
+                    b.ToTable("operational_project_code_changes", (string)null);
                 });
 
             modelBuilder.Entity("NihomeBackend.Models.OperationalProjectMember", b =>
@@ -11757,6 +11832,11 @@ namespace nihomebackend.Migrations
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
+                    b.HasOne("NihomeBackend.Models.Contract", "DownstreamContract")
+                        .WithMany()
+                        .HasForeignKey("DownstreamContractId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("NihomeBackend.Models.OperationalProject", "OperationalProject")
                         .WithMany("DesignScheduleTasks")
                         .HasForeignKey("OperationalProjectId")
@@ -11774,17 +11854,26 @@ namespace nihomebackend.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("NihomeBackend.Models.Vendor", "Vendor")
+                        .WithMany()
+                        .HasForeignKey("VendorId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("ApproverMember");
 
                     b.Navigation("AssigneeMember");
 
                     b.Navigation("DesignProject");
 
+                    b.Navigation("DownstreamContract");
+
                     b.Navigation("OperationalProject");
 
                     b.Navigation("ParentTask");
 
                     b.Navigation("Phase");
+
+                    b.Navigation("Vendor");
                 });
 
             modelBuilder.Entity("NihomeBackend.Models.DesignScheduleTaskCcMember", b =>
@@ -12324,6 +12413,17 @@ namespace nihomebackend.Migrations
                     b.Navigation("AssigneeMember");
 
                     b.Navigation("ManagerMember");
+
+                    b.Navigation("OperationalProject");
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.OperationalProjectCodeChange", b =>
+                {
+                    b.HasOne("NihomeBackend.Models.OperationalProject", "OperationalProject")
+                        .WithMany("CodeChanges")
+                        .HasForeignKey("OperationalProjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("OperationalProject");
                 });
@@ -13982,6 +14082,8 @@ namespace nihomebackend.Migrations
             modelBuilder.Entity("NihomeBackend.Models.OperationalProject", b =>
                 {
                     b.Navigation("BoqRevisions");
+
+                    b.Navigation("CodeChanges");
 
                     b.Navigation("Contracts");
 

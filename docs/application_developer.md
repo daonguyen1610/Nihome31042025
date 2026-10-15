@@ -1220,7 +1220,15 @@ accepts an optional creation-time `code`; a supplied value is normalized to
 uppercase, validated against the safe 2–40 character code format and rejected
 when already used. Omitting it preserves automatic allocation for integrations
 and conversion flows. `PUT /api/operational-projects/{id}` deliberately has no
-code field: an operational-project code is immutable after creation.
+code field. A later change uses the dedicated
+`PATCH /api/operational-projects/{id}/code` endpoint, requires
+`operations.projects.rename`, a reason, and the current row version, and writes
+immutable old/new-code history in the same transaction. Existing foreign keys
+remain stable because modules link by `OperationalProjectId`. When Drive
+bindings exist, a durable worker renames the existing project root folder
+without replacing its Drive ID; status and failure details are returned in
+`latestCodeChange`, and `POST .../{id}/code/drive-retry` safely requeues the
+latest failed job.
 
 `POST /api/contracts/{id}/link-quote` (`crm.contracts.manage`, idempotent,
 concurrency-checked) attaches an `Approved`, `SentToCustomer`, or
@@ -1367,6 +1375,8 @@ it must not be confused with public portfolio content or the three-phase
 | `DELETE` | `/api/operational-projects/{id}/documents/{documentId}` | `operations.projects.manage` | Queue deletion of a manual upload or Drive import |
 | `POST` | `/api/operational-projects` | `operations.projects.manage` | Create a planning project with a generated `PJ-YYYY-NNNN` code |
 | `PUT` | `/api/operational-projects/{id}` | `operations.projects.manage` | Update metadata or perform an allowed lifecycle transition |
+| `PATCH` | `/api/operational-projects/{id}/code` | `operations.projects.rename` | Change a project code with reason, row-version concurrency, history, and durable Drive rename status |
+| `POST` | `/api/operational-projects/{id}/code/drive-retry` | `operations.projects.rename` | Requeue the latest failed Drive folder rename without creating a new folder |
 | `DELETE` | `/api/operational-projects/{id}` | `operations.projects.manage` | Delete an empty Planning project only |
 
 The pre-contract Design handoff is
@@ -1823,6 +1833,23 @@ can call `POST .../tasks/{id}/review`; rejection requires a reason and returns
 the task to `InProgress`. Both paths enforce row-version concurrency and retain
 history/notifications.
 
+An outsourced design task additionally stores both `VendorId` and
+`DownstreamContractId`; neither may be supplied alone. The server requires the
+contract to belong to the same Operational Project, match the vendor, have
+`Downstream` direction, use `Design` or `Subcontract` type, and not be
+cancelled. The internal assignee and independent Design Lead approver remain
+required, so the downstream party does not replace NICON accountability.
+The task dialog loads eligible pairs from
+`GET /api/operational-projects/{projectId}/design-schedule/outsource-options`;
+this endpoint uses `design.schedule.manage` plus project scope and does not
+require Design users to receive broad Vendor or Contract-list permissions.
+
+`AddProjectCodeAuditAndDesignVendors` adds these nullable task links and the
+versioned `operational_project_code_changes` queue/history table. Rehearse the
+migration script before deployment. Rollback removes the new links and code
+change history, so export that audit data first if an environment has already
+used project-code changes.
+
 Before applying `AddDesignApprovalWorkflow` to an environment with existing
 schedule tasks, assign every Design Project an active Design Lead or Design
 Manager who is also an active Operational Project member and differs from each
@@ -1857,7 +1884,10 @@ Permanent deletion of Concept, Basic Design, Shop Drawing and IFC records uses
 serializable transaction. Only `Discarded` Concept, `Rejected` Basic/Shop and
 `Cancelled` IFC records are eligible. Active Project Documents, shared review
 evidence and IFC references block deletion; exclusive review history is deleted
-with the rejected dossier. Bulk Shop Drawing deletion is intentionally disabled
+with a rejected dossier only while it has never been submitted to the client.
+Any review with `ClientSubmittedAt` blocks hard delete regardless of its later
+decision; corrections use the recorded client decision and a replacement
+revision instead. Bulk Shop Drawing deletion is intentionally disabled
 because every root requires an individual impact plan and typed confirmation.
 
 #### Actors and Permissions

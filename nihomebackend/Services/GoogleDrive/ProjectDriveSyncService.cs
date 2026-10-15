@@ -9,6 +9,7 @@ namespace NihomeBackend.Services.GoogleDrive;
 
 public interface IProjectDriveSyncProcessor
 {
+    Task<bool> ProcessNextProjectRenameAsync(CancellationToken ct = default);
     Task<bool> ProcessNextOutboundAsync(CancellationToken ct = default);
     Task ReconcileProjectAsync(int projectId, CancellationToken ct = default);
     Task ReconcileBoundProjectsAsync(CancellationToken ct = default);
@@ -28,6 +29,100 @@ public sealed class ProjectDriveSyncProcessor(
     private const string NativeMimePrefix = "application/vnd.google-apps.";
     private const string UnsupportedNativeReason = "Tệp Google Workspace gốc chưa hỗ trợ tải xuống; có thể mở bằng liên kết Google Drive.";
     private string currentInstanceId = string.Empty;
+
+    public async Task<bool> ProcessNextProjectRenameAsync(CancellationToken ct = default)
+    {
+        var options = await settingsStore.GetRuntimeAsync(ct);
+        currentInstanceId = options.InstanceId;
+        if (!options.Enabled) return false;
+        var now = DateTime.UtcNow;
+        var candidate = await db.OperationalProjectCodeChanges
+            .Where(item =>
+                (item.DriveRenameStatus == ProjectDriveRenameStatus.Pending ||
+                 item.DriveRenameStatus == ProjectDriveRenameStatus.Failed ||
+                 item.DriveRenameStatus == ProjectDriveRenameStatus.Processing) &&
+                (!item.NextDriveRenameAttemptAt.HasValue || item.NextDriveRenameAttemptAt <= now))
+            .OrderBy(item => item.ChangedAt).ThenBy(item => item.Id)
+            .FirstOrDefaultAsync(ct);
+        if (candidate is null || !await HasWritableConnectionAsync(ct)) return false;
+
+        candidate.DriveRenameStatus = ProjectDriveRenameStatus.Processing;
+        candidate.DriveRenameAttemptCount++;
+        candidate.DriveRenameError = null;
+        candidate.NextDriveRenameAttemptAt = now.AddMinutes(5);
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            db.Entry(candidate).State = EntityState.Detached;
+            return false;
+        }
+
+        var change = await db.OperationalProjectCodeChanges
+            .Include(item => item.OperationalProject)
+            .SingleAsync(item => item.Id == candidate.Id, ct);
+        try
+        {
+            var folderId = await FindProjectRootFolderIdAsync(change.OperationalProjectId, ct);
+            if (folderId is null)
+            {
+                change.DriveRenameStatus = ProjectDriveRenameStatus.NotRequired;
+            }
+            else
+            {
+                var desiredName = ProjectDriveFolderService.SafeFolderName(
+                    $"{change.NewCode}_{change.OperationalProject.Name}");
+                await drive.UpdateFileNameAsync(folderId, desiredName, ct);
+                change.DriveRenameStatus = ProjectDriveRenameStatus.Succeeded;
+                change.DriveRenamedAt = DateTime.UtcNow;
+            }
+            change.NextDriveRenameAttemptAt = null;
+            await db.SaveChangesAsync(ct);
+            audit.Log(new AuditEvent
+            {
+                Action = "project-drive.folder-rename",
+                ResourceType = EntityTypes.OperationalProject,
+                ResourceId = change.OperationalProjectId.ToString(),
+                Message = $"Project Drive folder renamed for code {change.NewCode}.",
+            });
+        }
+        catch (Exception exception)
+        {
+            change.DriveRenameStatus = ProjectDriveRenameStatus.Failed;
+            change.DriveRenameError = exception.Message.Length <= 1000
+                ? exception.Message
+                : exception.Message[..1000];
+            change.NextDriveRenameAttemptAt = DateTime.UtcNow.Add(
+                change.DriveRenameAttemptCount <= 1 ? TimeSpan.FromMinutes(1) : TimeSpan.FromMinutes(5));
+            await db.SaveChangesAsync(ct);
+            logger.LogWarning(exception,
+                "Project Drive rename {CodeChangeId} failed and will be retried", change.Id);
+        }
+        return true;
+    }
+
+    private async Task<string?> FindProjectRootFolderIdAsync(int projectId, CancellationToken ct)
+    {
+        var currentId = await db.ProjectDriveFolders.AsNoTracking()
+            .Where(item => item.OperationalProjectId == projectId)
+            .OrderBy(item => item.Id)
+            .Select(item => item.DriveFolderId)
+            .FirstOrDefaultAsync(ct);
+        for (var depth = 0; currentId is not null && depth < 12; depth++)
+        {
+            var metadata = await drive.GetMetadataAsync(currentId, ct);
+            if (metadata is null || metadata.IsTrashed)
+                throw new InvalidOperationException("Không tìm thấy thư mục Google Drive đã liên kết của Dự án.");
+            if (metadata.AppProperties.TryGetValue("niconFolderKind", out var kind) && kind == "project" &&
+                metadata.AppProperties.TryGetValue("niconProjectId", out var remoteProjectId) &&
+                remoteProjectId == projectId.ToString(System.Globalization.CultureInfo.InvariantCulture))
+                return metadata.Id;
+            currentId = metadata.Parents?.FirstOrDefault();
+        }
+        throw new InvalidOperationException("Không xác định được thư mục gốc Google Drive của Dự án từ binding hiện tại.");
+    }
 
     public async Task<bool> ProcessNextOutboundAsync(CancellationToken ct = default)
     {
@@ -774,9 +869,10 @@ public sealed class ProjectDriveSyncService(
                     continue;
                 }
                 var processor = scope.ServiceProvider.GetRequiredService<IProjectDriveSyncProcessor>();
+                var renamed = await processor.ProcessNextProjectRenameAsync(stoppingToken);
                 var processed = await processor.ProcessNextOutboundAsync(stoppingToken);
                 await processor.ReconcileBoundProjectsAsync(stoppingToken);
-                if (!processed) await Task.Delay(delay, stoppingToken);
+                if (!renamed && !processed) await Task.Delay(delay, stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { break; }
             catch (Exception exception)

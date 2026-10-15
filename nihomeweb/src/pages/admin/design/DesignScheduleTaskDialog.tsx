@@ -31,6 +31,7 @@ import {
   type DesignScheduleTaskResponse,
   type MasterDataOption,
   type OperationalProjectMemberResponse,
+  type DesignScheduleOutsourceOptionResponse,
   type UpsertDesignScheduleTaskRequest,
 } from "@/services/adminApi";
 
@@ -70,6 +71,8 @@ const emptyForm = (phaseId: number): TaskForm => ({
   approverMemberId: 0,
   parentTaskId: null,
   resourceSummary: null,
+  vendorId: null,
+  downstreamContractId: null,
   isCritical: false,
   isMilestone: false,
   plannedStart: "",
@@ -93,6 +96,8 @@ const taskForm = (task: DesignScheduleTaskResponse): TaskForm => ({
   approverMemberId: task.approverMemberId,
   parentTaskId: task.parentTaskId ?? null,
   resourceSummary: task.resourceSummary ?? null,
+  vendorId: task.vendorId ?? null,
+  downstreamContractId: task.downstreamContractId ?? null,
   isCritical: task.isCritical,
   isMilestone: task.isMilestone,
   plannedStart: task.plannedStart.slice(0, 10),
@@ -126,6 +131,9 @@ export const DesignScheduleTaskDialog = ({
   const [error, setError] = useState<string | null>(null);
   const [conflict, setConflict] = useState(false);
   const [baseStatus, setBaseStatus] = useState<DesignScheduleStatus>("NotStarted");
+  const [outsourceOptions, setOutsourceOptions] = useState<DesignScheduleOutsourceOptionResponse[]>(
+    [],
+  );
   const idempotencyKey = useRef("");
   const activeMembers = useMemo(() => members.filter((member) => member.isActive), [members]);
   const availablePredecessors = useMemo(
@@ -141,6 +149,14 @@ export const DesignScheduleTaskDialog = ({
     setBaseStatus(task?.status ?? "NotStarted");
     idempotencyKey.current = newIdempotencyKey();
   }, [open, task, initialPhaseId, phases]);
+
+  useEffect(() => {
+    if (!open) return;
+    void adminApi
+      .getDesignScheduleOutsourceOptions(operationalProjectId)
+      .then((response) => setOutsourceOptions(response.data ?? []))
+      .catch((reason) => setError(extractApiError(reason)));
+  }, [open, operationalProjectId]);
 
   const createsCycle = () => {
     if (!task) return false;
@@ -209,6 +225,8 @@ export const DesignScheduleTaskDialog = ({
     if (task && form.predecessorTaskIds.includes(task.id))
       return t("designProjects.schedule.validation.selfDependency");
     if (createsCycle()) return t("designProjects.schedule.validation.dependencyCycle");
+    if (Boolean(form.vendorId) !== Boolean(form.downstreamContractId))
+      return t("designProjects.schedule.validation.outsourcePair");
     return null;
   };
 
@@ -373,6 +391,62 @@ export const DesignScheduleTaskDialog = ({
               value={form.description ?? ""}
               onChange={(event) => setForm({ ...form, description: event.target.value || null })}
             />
+          </div>
+          <div>
+            <Label>{t("designProjects.schedule.field.vendor")}</Label>
+            <Select
+              value={form.vendorId ? String(form.vendorId) : "none"}
+              onValueChange={(value) =>
+                setForm((current) => ({
+                  ...current,
+                  vendorId: value === "none" ? null : Number(value),
+                  downstreamContractId: null,
+                }))
+              }
+            >
+              <SelectTrigger className="mt-1 min-h-11">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">{t("designProjects.schedule.value.none")}</SelectItem>
+                {Array.from(
+                  new Map(
+                    outsourceOptions.map((option) => [option.vendorId, option] as const),
+                  ).values(),
+                ).map((option) => (
+                  <SelectItem key={option.vendorId} value={String(option.vendorId)}>
+                    {option.vendorCode} · {option.vendorName}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>{t("designProjects.schedule.field.downstreamContract")}</Label>
+            <Select
+              disabled={!form.vendorId}
+              value={form.downstreamContractId ? String(form.downstreamContractId) : "none"}
+              onValueChange={(value) =>
+                setForm({
+                  ...form,
+                  downstreamContractId: value === "none" ? null : Number(value),
+                })
+              }
+            >
+              <SelectTrigger className="mt-1 min-h-11">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">{t("designProjects.schedule.value.none")}</SelectItem>
+                {outsourceOptions
+                  .filter((option) => option.vendorId === form.vendorId)
+                  .map((option) => (
+                    <SelectItem key={option.contractId} value={String(option.contractId)}>
+                      {option.contractNumber}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <Label>{t("designProjects.schedule.field.department")}</Label>

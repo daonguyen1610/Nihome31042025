@@ -169,6 +169,40 @@ public sealed class DesignRecordDeletionServiceTests : IDisposable
         concepts.Verify(item => item.DeleteAsync(concept.Id, It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    [Fact]
+    public async Task Impact_BlocksExclusiveReviewAfterClientSubmission()
+    {
+        var concept = AddConcept("PA-KT-06", ConceptOptionStatus.Discarded);
+        var manager = AddUser();
+        var document = AddDeletedDocument(concept.Id, "PA-KT-06.pdf");
+        var review = new DesignReview
+        {
+            DesignProjectId = projectId,
+            Stage = DesignReviewStage.Concept,
+            RevisionNumber = 2,
+            Title = "Hồ sơ PA-KT-06 đã trình khách hàng",
+            DesignManagerUserId = manager.Id,
+            Status = DesignReviewStatus.Rejected,
+            ClientSubmittedAt = DateTime.UtcNow.AddDays(-1),
+            CreatedByUserId = manager.Id,
+            UpdatedByUserId = manager.Id,
+        };
+        review.Documents.Add(ReviewDocument(review, document, concept.Id));
+        db.Add(review);
+        await db.SaveChangesAsync();
+
+        var impact = await service.GetImpactAsync(
+            DesignProjectResourceType.ConceptOption, concept.Id);
+
+        Assert.NotNull(impact);
+        Assert.False(impact.CanDelete);
+        Assert.Contains(impact.Items, item =>
+            item.Key == "design.clientSubmissionHistory" && item.Action == "Block");
+        Assert.DoesNotContain(impact.Items, item =>
+            item.Key == "design.reviewHistory" && item.Action == "Delete");
+        concepts.Verify(item => item.DeleteAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     public void Dispose() => db.Dispose();
 
     private ConceptOption AddConcept(string name, ConceptOptionStatus status)

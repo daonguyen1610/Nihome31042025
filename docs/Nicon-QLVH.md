@@ -209,6 +209,9 @@ trong khi media/feedback theo file của Concept và review markup vẫn là m�
 - Tiến độ và Đội ngũ là hai tab liên kết trên cùng Operational Project. Đầu việc
   có mô tả, ngày kế hoạch/thực tế, người phụ trách, đúng một người duyệt, CC,
   đầu việc cha, tiền nhiệm, nguồn lực/thầu phụ và cờ công tác găng.
+- Công việc thuê ngoài liên kết bằng `VendorId` và `DownstreamContractId`; hợp
+  đồng phải cùng Dự án, đúng nhà cung cấp, có chiều Downstream và thuộc loại
+  Design/Subcontract. Người phụ trách nội bộ vẫn bắt buộc.
 - Hoàn thành đầu việc tự động gửi Design Lead/người duyệt đã chỉ định. CC chỉ
   nhận thông tin, không có quyền phê duyệt.
 - Mỗi revision hồ sơ Concept, Basic Design hoặc Shop Drawing có danh sách người
@@ -226,6 +229,9 @@ trong khi media/feedback theo file của Concept và review markup vẫn là m�
   hiệu lực. Hệ thống chặn xóa khi tệp chưa dọn an toàn, Shop Drawing còn nằm
   trong gói IFC hoặc đợt trình dùng chung với hồ sơ khác; đợt trình chỉ thuộc
   riêng hồ sơ được xóa cùng lịch sử liên quan.
+- Sau khi một đợt review đã ghi nhận `ClientSubmittedAt`, hồ sơ nguồn không còn
+  được hard delete ở bất kỳ trạng thái nào. Sửa sai phải dùng revision thay thế
+  và quyết định khách hàng có lý do để giữ đầy đủ lịch sử trình khách.
 
 Vai trò `PM` thuộc nhóm `CONSTRUCTION` hiện là đại diện kỹ thuật cho người nhận
 Phòng CM trong luồng trình nội bộ. Việc tách thêm chức danh PM Phòng CM/BCH chi
@@ -493,14 +499,14 @@ tới khi chủ sở hữu nghiệp vụ chấp thuận các quyết định tư
 
 | Mục | Năng lực | Trạng thái | Bằng chứng triển khai hoặc khoảng trống |
 |---:|---|---|---|
-| 1 | Nhóm quyền/phòng ban | Partial | Có role group và permission seed; chưa có role HR độc lập và ma trận phòng ban cuối cùng. |
-| 2 | CRM và mã dự án | Partial | Dự án → Cơ hội → Hợp đồng đã có; mã dự án chưa có luồng đổi mã/audit/Drive rename. |
+| 1 | Nhóm quyền/phòng ban | Partial | Đã có role HR độc lập với quyền tuyển dụng và không có quyền tài chính; ma trận phòng ban cuối cùng vẫn cần NICON xác nhận. |
+| 2 | CRM và mã dự án | Implemented | Dự án → Cơ hội → Hợp đồng và luồng đổi mã có quyền riêng, lý do, concurrency, audit, Drive rename/retry đã có persistence/API/UI/test. |
 | 3 | Dự án dùng chung | Implemented | Operational Project, work package, task, dependency, CC và thông báo đã có persistence/API/UI/test. |
 | 4 | Thiết kế trước hợp đồng | Implemented | Design Project và công việc thiết kế không phụ thuộc hợp đồng đã ký. |
 | 5 | Liên phòng ban trước hợp đồng | Implemented | Procurement input, Finance review và gate báo giá/nộp thầu đã có. |
 | 6 | BOQ | Partial | Có preview/mapping nhiều sheet; persistence chưa giữ hierarchy và provenance từng dòng. |
 | 7 | Đấu thầu | Implemented | Kế hoạch, hồ sơ, năng lực, estimate, review, submission snapshot và kết quả đã có. |
-| 8 | Thiết kế chi tiết | Partial | Có schedule/review/Drive; công việc thuê ngoài chưa liên kết Vendor/HĐ Downstream bằng stable ID. |
+| 8 | Thiết kế chi tiết | Partial | Schedule/review/Drive và liên kết Vendor/HĐ Downstream bằng stable ID đã có; nhập `.mpp` đầy đủ và markup theo file còn là mục tiêu. |
 | 9 | Pháp lý | Partial | Có activation wizard, permit workflow và risk view; template loại/quy mô công trình là Q-09. |
 | 10 | Thi công | Partial | Có CM/BCH, resource request, QA/QC và QS; baseline cấu trúc, handoff và portfolio còn thiếu. |
 | 11 | Tài chính kế toán | Partial | Có Payment Request Downstream; chưa có dossier hai chiều và ba section chứng từ. |

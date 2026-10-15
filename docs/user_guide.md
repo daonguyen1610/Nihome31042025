@@ -231,6 +231,15 @@ Users normally see projects they created or manage. Portfolio roles with the
 `operations.projects.view.all` permission see all projects. Creating or editing
 requires `operations.projects.manage`.
 
+Changing an existing project code is a separate governed action. A user with
+`operations.projects.rename` opens the project detail, selects **Change project
+code**, enters the new 2–40 character code and a reason, then submits the current
+record version. The database code and immutable change history are saved
+together. If the project already has Drive folders, the detail page shows the
+background folder-rename status. A failed rename can be queued again without
+creating another folder or changing its Drive ID. A stale screen is rejected;
+reload before retrying.
+
 The detail view's **Project documents** section provides the project-wide file
 catalog. Users with view permission can inspect synchronization status,
 download private content, and open an available Drive copy. Users with manage
@@ -705,6 +714,13 @@ for that Operational Project is added; creating from the contract does not
 make a duplicate. Sales must have Opportunity and Operational Project manage
 permissions, plus authority to manage the project team, to initiate this flow.
 
+In the project **Design schedule**, every task keeps an internal NICON assignee
+and an independent Design Lead approver. For outsourced work, select both the
+vendor and its Downstream Design/Subcontract contract. The contract must belong
+to the same Operational Project and match the selected vendor; selecting only
+one field is rejected. This reference does not copy vendor or contract master
+data into the Design module.
+
 | Page | Functions | Estimate |
 |------|-----------|----------|
 | Design Project List | All design projects | 1.5 days |
@@ -743,6 +759,11 @@ walkthrough video and per-file feedback are deferred. In-drawing markup,
 immutable revision-file snapshots and a generated IFC package export are also
 deferred. DWG is not rendered natively; preview depends on the supported managed
 file type and the server content endpoint.
+
+Once a design dossier has been submitted to the client, it cannot be
+permanently deleted even if the later decision is Rejected. Correct it with a
+recorded client decision and a replacement revision so the submitted evidence
+and lineage remain auditable.
 
 | Page | Functions | Estimate |
 |------|-----------|----------|
@@ -1473,6 +1494,7 @@ The seeded role catalog is implemented and can be adjusted through **Admin > Rol
 | `DESIGN`, `DESIGN_LEAD`, `ARCHITECT`, `MEP_ENGINEER`, `STRUCT_ENGINEER` | Design projects and discipline workflows |
 | `PM`, `LEGAL_OFFICER` | Project, permitting, and construction workflows |
 | `QS`, `PROCUREMENT`, `ACCOUNTANT`, `WAREHOUSE` | Tendering, procurement, finance-adjacent, and operational access currently present in the catalog |
+| `HR` | Recruitment applications, positions, recruitment options, contacts, and shared master data; no Finance payment or approval permission |
 | `BGD` | Broad read-oriented management access |
 
 Permissions are grouped by module and action, for example `crm.quotes.approve`, `design.ifc.release`, `construction.punch.verify`, and `construction.handover.complete`. Some operational modules also separate assigned-scope access from global access with actions such as `view.all` or `manage.all`. See the dedicated RBAC guide for the complete behavior.
@@ -1492,7 +1514,7 @@ model. They are business responsibilities, not permission-code aliases:
 | Kỹ sư / Kiến trúc sư Thiết kế | Design tasks, revisions and discipline output | `DESIGN`, `ARCHITECT`, `MEP_ENGINEER`, `STRUCT_ENGINEER` |
 | Kỹ sư Pháp lý & Xin phép | Permit checklist and authority submissions | `LEGAL_OFFICER` |
 | Kế toán Dự án | Receivables, payables, cash flow and P&L evidence | `ACCOUNTANT` |
-| Hành chính Nhân sự | Recruitment, KPI closing/export and internal requests | No dedicated business-role contract is complete yet |
+| Hành chính Nhân sự | Recruitment, KPI closing/export and internal requests | Dedicated `HR` access is delivered for recruitment administration; KPI/internal-request scope remains open |
 
 `Design Manager / Chủ nhiệm thiết kế` is the customer-facing name for the
 department-level design owner; `Design Lead` remains the team-level role. The

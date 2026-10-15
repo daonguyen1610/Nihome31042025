@@ -218,6 +218,7 @@ public static class DbSeeder
         ("QS",              "0911000006", "Hoàng Gia Bảo",    "gia.bao.qs@nihome.vn",          "QS Tester",            "qs.test@nihome.vn"),
         ("PROCUREMENT",     "0911000016", "Đinh Hải Yến",      "hai.yen.procurement@nihome.vn", null,                   null),
         ("ACCOUNTANT",      "0911000007", "Nguyễn Thùy Linh", "thuy.linh.accounting@nihome.vn", "Accountant Tester",    "accountant.test@nihome.vn"),
+        ("HR",              "0911000018", "Võ Thanh Hương",   "thanh.huong.hr@nihome.vn",       null,                   null),
         ("WAREHOUSE",       "0911000008", "Trịnh Văn Sơn",    "van.son.warehouse@nihome.vn",   "Warehouse Tester",     "warehouse.test@nihome.vn"),
         ("BGD",             "0911000009", "Phan Anh Dũng",    "anh.dung.bgd@nihome.vn",        "BGD Tester",           "bgd.test@nihome.vn"),
         // Cung ứng needs two officers: one records supplier offers, a different

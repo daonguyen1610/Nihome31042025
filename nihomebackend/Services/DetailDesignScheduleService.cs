@@ -111,6 +111,7 @@ public static class DesignScheduleRules
 public interface IDetailDesignScheduleService
 {
     Task<DesignScheduleResponse?> GetAsync(int projectId, DesignScheduleQuery query, int callerUserId, CancellationToken ct);
+    Task<List<DesignScheduleOutsourceOptionResponse>> GetOutsourceOptionsAsync(int projectId, int callerUserId, CancellationToken ct);
     Task<DesignScheduleResponse> InitializeAsync(int projectId, InitializeDesignScheduleRequest request, int callerUserId, CancellationToken ct);
     Task<DesignSchedulePhaseResponse?> UpdatePhaseAsync(int projectId, int phaseId, UpsertDesignSchedulePhaseRequest request, int callerUserId, CancellationToken ct);
     Task<DesignScheduleTaskResponse?> CreateTaskAsync(int projectId, int phaseId, UpsertDesignScheduleTaskRequest request, int callerUserId, CancellationToken ct);
@@ -138,6 +139,31 @@ public sealed class DetailDesignScheduleService(
         var designProjectId = await GetDesignProjectIdAsync(projectId, ct);
         if (!designProjectId.HasValue) return null;
         return await BuildResponseAsync(projectId, designProjectId.Value, query, callerUserId, ct);
+    }
+
+    public async Task<List<DesignScheduleOutsourceOptionResponse>> GetOutsourceOptionsAsync(
+        int projectId,
+        int callerUserId,
+        CancellationToken ct)
+    {
+        await EnsureCanManageAsync(projectId, callerUserId, ct);
+        return await db.Contracts.AsNoTracking()
+            .Where(contract => contract.OperationalProjectId == projectId &&
+                contract.Direction == ContractDirection.Downstream &&
+                (contract.Type == ContractType.Design || contract.Type == ContractType.Subcontract) &&
+                contract.Status != ContractStatus.Cancelled && contract.VendorId.HasValue)
+            .OrderBy(contract => contract.Vendor!.CompanyName)
+            .ThenBy(contract => contract.ContractNumber)
+            .Select(contract => new DesignScheduleOutsourceOptionResponse
+            {
+                VendorId = contract.VendorId!.Value,
+                VendorCode = contract.Vendor!.VendorCode,
+                VendorName = contract.Vendor.CompanyName,
+                ContractId = contract.Id,
+                ContractNumber = contract.ContractNumber,
+                ContractType = contract.Type.ToString(),
+            })
+            .ToListAsync(ct);
     }
 
     public async Task<DesignScheduleResponse> InitializeAsync(
@@ -304,6 +330,8 @@ public sealed class DetailDesignScheduleService(
             ApproverMemberId = request.ApproverMemberId,
             ParentTaskId = request.ParentTaskId,
             ResourceSummary = NormalizeOptional(request.ResourceSummary),
+            VendorId = request.VendorId,
+            DownstreamContractId = request.DownstreamContractId,
             IsCritical = request.IsCritical,
             IsMilestone = request.IsMilestone,
             PlannedStart = plannedStart,
@@ -357,6 +385,8 @@ public sealed class DetailDesignScheduleService(
         task.ApproverMemberId = request.ApproverMemberId;
         task.ParentTaskId = request.ParentTaskId;
         task.ResourceSummary = NormalizeOptional(request.ResourceSummary);
+        task.VendorId = request.VendorId;
+        task.DownstreamContractId = request.DownstreamContractId;
         task.IsCritical = request.IsCritical;
         task.IsMilestone = request.IsMilestone;
         task.PlannedStart = plannedStart;
@@ -496,6 +526,18 @@ public sealed class DetailDesignScheduleService(
                 option.Category == DepartmentCategory && option.Code == department && option.IsActive, ct))
             throw new DesignScheduleOperationException(
                 "Phòng ban không hợp lệ hoặc đã ngừng hoạt động. Ví dụ hợp lệ: design.");
+        if (request.VendorId.HasValue != request.DownstreamContractId.HasValue)
+            throw new DesignScheduleOperationException(
+                "Công việc thiết kế thuê ngoài phải chọn đồng thời nhà cung cấp và hợp đồng đầu vào.");
+        if (request.DownstreamContractId.HasValue && !await db.Contracts.AsNoTracking().AnyAsync(contract =>
+                contract.Id == request.DownstreamContractId &&
+                contract.OperationalProjectId == projectId &&
+                contract.Direction == ContractDirection.Downstream &&
+                (contract.Type == ContractType.Design || contract.Type == ContractType.Subcontract) &&
+                contract.VendorId == request.VendorId &&
+                contract.Status != ContractStatus.Cancelled, ct))
+            throw new DesignScheduleOperationException(
+                "Hợp đồng thiết kế thuê ngoài phải thuộc cùng Dự án, đúng nhà cung cấp, có chiều đầu vào và loại Thiết kế hoặc Thầu phụ.");
         if (!await db.OperationalProjectMembers.AsNoTracking().AnyAsync(member =>
                 member.Id == request.AssigneeMemberId && member.OperationalProjectId == projectId &&
                 member.EndedAt == null && member.User.IsActive, ct))
@@ -736,6 +778,8 @@ public sealed class DetailDesignScheduleService(
             .Include(item => item.Successors)
             .Include(item => item.CcMembers)
             .Include(item => item.Phase)
+            .Include(item => item.Vendor)
+            .Include(item => item.DownstreamContract)
             .Where(item => item.OperationalProjectId == projectId)
             .ToListAsync(ct);
         var filtered = allTasks.AsEnumerable();
@@ -831,6 +875,7 @@ public sealed class DetailDesignScheduleService(
         MapTask(await db.DesignScheduleTasks.AsNoTracking().Include(item => item.Phase)
             .Include(item => item.Predecessors).Include(item => item.Successors)
             .Include(item => item.CcMembers)
+            .Include(item => item.Vendor).Include(item => item.DownstreamContract)
             .SingleAsync(item => item.Id == taskId, ct),
             DateOnly.FromDateTime(DateTime.UtcNow));
 
@@ -867,6 +912,10 @@ public sealed class DetailDesignScheduleService(
         ApproverMemberId = task.ApproverMemberId,
         ParentTaskId = task.ParentTaskId,
         ResourceSummary = task.ResourceSummary,
+        VendorId = task.VendorId,
+        VendorName = task.Vendor?.CompanyName,
+        DownstreamContractId = task.DownstreamContractId,
+        DownstreamContractNumber = task.DownstreamContract?.ContractNumber,
         IsCritical = task.IsCritical,
         IsMilestone = task.IsMilestone,
         PlannedStart = task.PlannedStart,

@@ -129,6 +129,7 @@ public sealed class DetailDesignScheduleServiceTests : IDisposable
         db.AddRange(project, otherProject);
         db.SaveChanges();
         var design = Design(project, customer.Id, "DP-SCHEDULE-1");
+        design.DesignLeadUserId = approverUser.Id;
         var otherDesign = Design(otherProject, customer.Id, "DP-SCHEDULE-2");
         db.AddRange(design, otherDesign);
         db.SaveChanges();
@@ -187,6 +188,98 @@ public sealed class DetailDesignScheduleServiceTests : IDisposable
     {
         var request = Request(activeMemberId, approverMemberId);
         request.PredecessorTaskIds = [otherProjectTaskId];
+
+        await Assert.ThrowsAsync<DesignScheduleOperationException>(() =>
+            service.CreateTaskAsync(projectId, phaseId, request, callerId, default));
+
+        Assert.Empty(db.DesignScheduleTasks.Where(item => item.OperationalProjectId == projectId));
+    }
+
+    [Fact]
+    public async Task CreateTaskAsync_RequiresMatchingDownstreamDesignContract()
+    {
+        var vendor = new Vendor
+        {
+            VendorCode = "NCC-TK-001",
+            CompanyName = "Công ty Tư vấn Thiết kế NICON",
+            VendorType = VendorType.SubContractor,
+            CreatedByUserId = callerId,
+        };
+        db.Vendors.Add(vendor);
+        await db.SaveChangesAsync();
+        var project = await db.OperationalProjects.SingleAsync(item => item.Id == projectId);
+        var contract = new Contract
+        {
+            ContractNumber = "HD-TK-DAU-VAO-001",
+            CustomerId = project.CustomerId,
+            OperationalProjectId = projectId,
+            Direction = ContractDirection.Downstream,
+            Type = ContractType.Design,
+            VendorId = vendor.Id,
+            Status = ContractStatus.Signed,
+        };
+        db.Contracts.Add(contract);
+        await db.SaveChangesAsync();
+        var request = Request(activeMemberId, approverMemberId);
+        request.VendorId = vendor.Id;
+        request.DownstreamContractId = contract.Id;
+
+        var result = await service.CreateTaskAsync(projectId, phaseId, request, callerId, default);
+
+        Assert.NotNull(result);
+        Assert.Equal(vendor.Id, result.VendorId);
+        Assert.Equal(vendor.CompanyName, result.VendorName);
+        Assert.Equal(contract.Id, result.DownstreamContractId);
+        Assert.Equal(contract.ContractNumber, result.DownstreamContractNumber);
+    }
+
+    [Fact]
+    public async Task CreateTaskAsync_RejectsVendorWithoutContractAndLeavesStateUnchanged()
+    {
+        var request = Request(activeMemberId, approverMemberId);
+        request.VendorId = 999;
+
+        await Assert.ThrowsAsync<DesignScheduleOperationException>(() =>
+            service.CreateTaskAsync(projectId, phaseId, request, callerId, default));
+
+        Assert.Empty(db.DesignScheduleTasks.Where(item => item.OperationalProjectId == projectId));
+    }
+
+    [Fact]
+    public async Task CreateTaskAsync_RejectsContractForAnotherVendorAndLeavesStateUnchanged()
+    {
+        var selectedVendor = new Vendor
+        {
+            VendorCode = "NCC-TK-SELECTED",
+            CompanyName = "Nhà thầu thiết kế được chọn",
+            VendorType = VendorType.SubContractor,
+            CreatedByUserId = callerId,
+        };
+        var contractVendor = new Vendor
+        {
+            VendorCode = "NCC-TK-CONTRACT",
+            CompanyName = "Nhà thầu đứng tên hợp đồng",
+            VendorType = VendorType.SubContractor,
+            CreatedByUserId = callerId,
+        };
+        db.Vendors.AddRange(selectedVendor, contractVendor);
+        await db.SaveChangesAsync();
+        var project = await db.OperationalProjects.SingleAsync(item => item.Id == projectId);
+        var contract = new Contract
+        {
+            ContractNumber = "HD-TK-SAI-NCC-001",
+            CustomerId = project.CustomerId,
+            OperationalProjectId = projectId,
+            Direction = ContractDirection.Downstream,
+            Type = ContractType.Design,
+            VendorId = contractVendor.Id,
+            Status = ContractStatus.Signed,
+        };
+        db.Contracts.Add(contract);
+        await db.SaveChangesAsync();
+        var request = Request(activeMemberId, approverMemberId);
+        request.VendorId = selectedVendor.Id;
+        request.DownstreamContractId = contract.Id;
 
         await Assert.ThrowsAsync<DesignScheduleOperationException>(() =>
             service.CreateTaskAsync(projectId, phaseId, request, callerId, default));

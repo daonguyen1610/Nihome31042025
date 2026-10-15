@@ -1,6 +1,6 @@
 # Users Section RBAC
 
-Date: 2026-05-16 (updated 2026-10-10 for NICON role groups)
+Date: 2026-05-16 (updated 2026-10-15 for NICON role groups)
 
 ## Overview
 
@@ -19,18 +19,20 @@ Roles are still seeded from the JSON bundle (`nihomebackend/Data/Rbac/rbac-defau
 
 The current business-role catalog contains `SALE`, `SALES_MANAGER`, `DESIGN`,
 `DESIGN_LEAD`, `ARCHITECT`, `MEP_ENGINEER`, `STRUCT_ENGINEER`, `PM`,
-`LEGAL_OFFICER`, `QS`, `PROCUREMENT`, `ACCOUNTANT`, `WAREHOUSE`, and `BGD`.
+`SITE_COMMANDER`, `SITE_QAQC`, `LEGAL_OFFICER`, `QS`, `PROCUREMENT`,
+`ACCOUNTANT`, `HR`, `WAREHOUSE`, and `BGD`.
 Authorized administrators may also create or delete non-system roles and edit
 their permission matrices.
 
 ### NICON role groups and permission baselines
 
 Business roles can be assigned to one of five seeded organizational groups:
-`CRM`, `HR_ADMIN`, `DESIGN`, `CONSTRUCTION`, and `FINANCE`. The initial mapping
-is seeded once from `rbac-defaults.json`: Sales roles belong to `CRM`,
-`LEGAL_OFFICER` to `HR_ADMIN`, Design roles to `DESIGN`, PM/QS/Procurement/
-Warehouse to `CONSTRUCTION`, and `ACCOUNTANT` to `FINANCE`. `BGD` remains
-ungrouped because it is cross-functional. After the initial seed,
+`CRM`, `PROCUREMENT`, `CONSTRUCTION`, `DESIGN`, and `FINANCE`. The initial
+mapping is seeded once from `rbac-defaults.json`: Sales roles belong to `CRM`;
+Procurement and Warehouse belong to `PROCUREMENT`; PM, site roles, Legal, and
+QS belong to `CONSTRUCTION`; design roles belong to `DESIGN`; and Accountant
+and HR belong to `FINANCE`. `BGD` remains ungrouped because it is
+cross-functional. After the initial seed,
 administrator reassignment or intentional ungrouping is preserved on restart.
 
 Each group stores an editable permission baseline. When creating a role, an
@@ -42,7 +44,7 @@ role writes use the same anti-escalation rule: the actor cannot grant a
 permission they do not currently hold. System roles cannot be assigned to a
 business group.
 
-These 14 role codes are access-control bundles, not the NICON 11-position KPI
+These 17 role codes are access-control bundles, not the NICON 11-position KPI
 framework. The current KPI service maps several roles into six broad scorecards;
 that does not prove distinct PM CM, BCH, Field/QA-QC or Site QS responsibilities.
 Do not infer role semantics from KPI mapping or merge roles merely to make the
@@ -90,6 +92,13 @@ maintain the financial milestone schedule, responsible accountant, request
 state, and actual collection/payment date on that same Contract ID. It does not
 grant contract header create/edit, legal transition, attachment, appendix, VO,
 or delete capabilities.
+
+The `HR` role is deliberately separate from `ACCOUNTANT`, although both appear
+under the combined Accounting–Finance–HR organizational group. HR receives
+contacts, master data, recruitment applications, recruitment positions,
+recruitment options, and own-profile permissions. It does not inherit payment,
+accounting-period, contract-management, approval, or project-code-change
+permissions.
 
 `finance.payments.view`, `manage`, `approve`, and `pay` do not independently
 grant cross-project access. Payment Request references, lists, and mutations
@@ -322,7 +331,7 @@ Development and integration seeders provide deterministic accounts for the syste
 The development seed now provides a deterministic login for every declared
 business role: `SALE`, `SALES_MANAGER`, `DESIGN`, `DESIGN_LEAD`, `ARCHITECT`,
 `MEP_ENGINEER`, `STRUCT_ENGINEER`, `PM`, `LEGAL_OFFICER`, `QS`, `PROCUREMENT`,
-`ACCOUNTANT`, `WAREHOUSE`, and `BGD`. Integration tests additionally provide a
+`ACCOUNTANT`, `HR`, `WAREHOUSE`, and `BGD`. Integration tests additionally provide a
 deterministic `USER` account.
 
 System roles are stored using the legacy `UserRole` enum; business-role users carry `Role = USER` and the real role link via `RoleEntityId`. `PermissionService` reads `RoleEntityId` first, so the business-role permission matrix from `rbac-defaults.json` applies as-is.

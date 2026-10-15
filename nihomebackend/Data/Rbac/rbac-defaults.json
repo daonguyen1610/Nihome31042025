@@ -68,6 +68,7 @@
     { "module": "operations.projects", "action": "view" },
     { "module": "operations.projects", "action": "view.all" },
     { "module": "operations.projects", "action": "manage" },
+    { "module": "operations.projects", "action": "rename" },
     { "module": "work.packages", "action": "view" },
     { "module": "work.packages", "action": "view.all" },
     { "module": "work.packages", "action": "manage" },
@@ -288,11 +289,7 @@
       "labelKey": "rbac.group.finance",
       "sortOrder": 50,
       "patterns": [
-        "dashboard.view", "contacts.view", "master-data.view", "workflow.view",
-        "operations.projects.view", "work.packages.view", "work.packages.progress",
-        "analytics.kpi.view", "reports.projects.view", "crm.customers.view",
-        "crm.contracts.view", "proc.vendors.view", "finance.payments.view",
-        "finance.periods.view", "finance.corrections.view", "profile.me.*"
+        "dashboard.view", "contacts.view", "master-data.view", "profile.me.*"
       ]
     }
   ],
@@ -312,6 +309,7 @@
     { "code": "QS", "name": "Quantity Surveyor", "groupCode": "CONSTRUCTION" },
     { "code": "PROCUREMENT", "name": "Procurement", "groupCode": "PROCUREMENT" },
     { "code": "ACCOUNTANT", "name": "Accountant", "groupCode": "FINANCE" },
+    { "code": "HR", "name": "Human Resources", "groupCode": "FINANCE" },
     { "code": "WAREHOUSE", "name": "Warehouse", "groupCode": "PROCUREMENT" },
     { "code": "BGD", "name": "Board of Directors" }
   ],
@@ -636,11 +634,22 @@
         "profile.me.*"
       ]
     },
+    "HR": {
+      "patterns": [
+        "dashboard.view",
+        "contacts.view",
+        "master-data.view",
+        "recruitment.applications.*",
+        "recruitment.positions.*",
+        "recruitment.options.*",
+        "profile.me.*"
+      ]
+    },
     "WAREHOUSE": {
       "patterns": ["dashboard.view", "processes.view", "master-data.view", "workflow.view", "operations.projects.view", "work.packages.view", "work.packages.progress", "work.packages.verify", "proc.vendors.view", "proc.boq.view", "proc.material-requests.view", "proc.warehouse.*", "proc.material-alerts.view", "profile.me.*"]
     },
     "BGD": {
-      "patterns": ["dashboard.view", "**.view", "**.view.all", "analytics.kpi.manage", "analytics.kpi.export", "reports.projects.export", "proc.rfqs.award", "proc.rfqs.export", "crm.tenders.approve-estimate", "proc.boq.approve", "proc.material-requests.approve", "proc.vendor-ratings.approve", "finance.payments.approve", "finance.periods.close", "finance.corrections.approve", "finance.corrections.reverse", "design.records.hard-delete", "system.audit.view", "profile.me.*"]
+      "patterns": ["dashboard.view", "**.view", "**.view.all", "operations.projects.rename", "analytics.kpi.manage", "analytics.kpi.export", "reports.projects.export", "proc.rfqs.award", "proc.rfqs.export", "crm.tenders.approve-estimate", "proc.boq.approve", "proc.material-requests.approve", "proc.vendor-ratings.approve", "finance.payments.approve", "finance.periods.close", "finance.corrections.approve", "finance.corrections.reverse", "design.records.hard-delete", "system.audit.view", "profile.me.*"]
     }
   }
 }

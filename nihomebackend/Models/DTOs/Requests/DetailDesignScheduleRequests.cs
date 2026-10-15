@@ -65,6 +65,12 @@ public sealed class UpsertDesignScheduleTaskRequest
     [MaxLength(2000)]
     public string? ResourceSummary { get; set; }
 
+    [Range(1, int.MaxValue)]
+    public int? VendorId { get; set; }
+
+    [Range(1, int.MaxValue)]
+    public int? DownstreamContractId { get; set; }
+
     public bool IsCritical { get; set; }
 
     public bool IsMilestone { get; set; }

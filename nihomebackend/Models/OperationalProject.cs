@@ -43,6 +43,7 @@ public class OperationalProject : IConcurrencyTracked
     public DesignProject? DesignProject { get; set; }
     public List<ProjectDocument> Documents { get; set; } = new();
     public List<ProjectDriveFolder> DriveFolders { get; set; } = new();
+    public List<OperationalProjectCodeChange> CodeChanges { get; set; } = new();
     public List<OperationalProjectMember> TeamMembers { get; set; } = new();
     public List<OperationalProjectAssignment> TeamAssignments { get; set; } = new();
     public List<DesignSchedulePhase> DesignSchedulePhases { get; set; } = new();
@@ -53,6 +54,33 @@ public class OperationalProject : IConcurrencyTracked
     public List<WarehouseIssue> WarehouseIssues { get; set; } = new();
     public List<MaterialAlert> MaterialAlerts { get; set; } = new();
     public List<VendorRating> VendorRatings { get; set; } = new();
+}
+
+public sealed class OperationalProjectCodeChange : IConcurrencyTracked
+{
+    public long Id { get; set; }
+    public int OperationalProjectId { get; set; }
+    public OperationalProject OperationalProject { get; set; } = null!;
+    public string OldCode { get; set; } = string.Empty;
+    public string NewCode { get; set; } = string.Empty;
+    public string Reason { get; set; } = string.Empty;
+    public ProjectDriveRenameStatus DriveRenameStatus { get; set; } = ProjectDriveRenameStatus.Pending;
+    public int DriveRenameAttemptCount { get; set; }
+    public string? DriveRenameError { get; set; }
+    public DateTime? NextDriveRenameAttemptAt { get; set; }
+    public DateTime? DriveRenamedAt { get; set; }
+    public DateTime ChangedAt { get; set; } = DateTime.UtcNow;
+    public int ChangedByUserId { get; set; }
+    public byte[] RowVersion { get; set; } = [];
+}
+
+public enum ProjectDriveRenameStatus
+{
+    Pending = 0,
+    Processing = 1,
+    Succeeded = 2,
+    Failed = 3,
+    NotRequired = 4,
 }
 
 public enum OperationalProjectStatus

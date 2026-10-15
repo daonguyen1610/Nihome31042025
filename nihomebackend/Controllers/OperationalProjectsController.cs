@@ -202,6 +202,70 @@ public class OperationalProjectsController(
         }
     }
 
+    [HttpPatch("{id:int}/code")]
+    [RequirePermission("operations.projects", "rename")]
+    [Idempotency("operations.projects.rename")]
+    public async Task<ActionResult<OperationalProjectResponse>> RenameCode(
+        int id,
+        [FromBody] RenameOperationalProjectRequest request,
+        CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        var canSeeAll = await permissions.HasAsync(userId.Value, "operations.projects.view.all", ct);
+        request.RowVersion = CrmConcurrency.ResolveRequestToken(Request, request.RowVersion);
+        try
+        {
+            var result = await service.RenameCodeAsync(id, request, userId.Value, canSeeAll, ct);
+            if (result is null) return NotFound();
+            audit.Log(new AuditEvent
+            {
+                Action = "operational-project.code-change",
+                ResourceType = EntityTypes.OperationalProject,
+                ResourceId = id.ToString(),
+                Message = $"Operational project #{id} code changed to {result.Code}: {request.Reason.Trim()}",
+                NewValue = result.LatestCodeChange,
+            });
+            CrmConcurrency.SetResponseEntityTag(Response, result.RowVersion);
+            return Ok(result);
+        }
+        catch (OperationalProjectOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpPost("{id:int}/code/drive-retry")]
+    [RequirePermission("operations.projects", "rename")]
+    [Idempotency("operations.projects.rename-drive-retry")]
+    public async Task<ActionResult<OperationalProjectResponse>> RetryDriveRename(
+        int id,
+        CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        var canSeeAll = await permissions.HasAsync(userId.Value, "operations.projects.view.all", ct);
+        try
+        {
+            var result = await service.RetryDriveRenameAsync(id, userId.Value, canSeeAll, ct);
+            if (result is null) return NotFound();
+            audit.Log(new AuditEvent
+            {
+                Action = "operational-project.drive-rename-retry",
+                ResourceType = EntityTypes.OperationalProject,
+                ResourceId = id.ToString(),
+                Message = $"Google Drive folder rename retry requested for operational project #{id}.",
+                NewValue = result.LatestCodeChange,
+            });
+            CrmConcurrency.SetResponseEntityTag(Response, result.RowVersion);
+            return Ok(result);
+        }
+        catch (OperationalProjectOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
     [HttpDelete("{id:int}")]
     [RequirePermission("operations.projects", "manage")]
     public async Task<IActionResult> Delete(

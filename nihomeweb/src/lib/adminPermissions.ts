@@ -57,6 +57,7 @@ export const ADMIN_PERMS = {
   contractsViewDownstreamAll: "crm.contracts.view.downstream.all",
   operationalProjects: "operations.projects.view",
   operationalProjectsManage: "operations.projects.manage",
+  operationalProjectsRename: "operations.projects.rename",
   operationalProjectsViewAll: "operations.projects.view.all",
   workPackages: "work.packages.view",
   workPackagesViewAll: "work.packages.view.all",
