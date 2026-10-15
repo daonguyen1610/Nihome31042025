@@ -15,6 +15,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -29,6 +36,7 @@ import {
   type ConstructionResourceRequestResponse,
   type QaQcDossierResponse,
   type QaQcTemplateResponse,
+  type ProjectDocumentResponse,
 } from "@/services/adminApi";
 
 type ReviewTarget =
@@ -43,6 +51,15 @@ const referenceFields = [
   "bchOrganizationReference",
   "resourcePlanReference",
   "budgetBaselineReference",
+] as const;
+
+const baselineDocumentFields = [
+  ["wbsBaselineDocumentId", "wbsBaselineReference"],
+  ["scheduleBaselineDocumentId", "scheduleBaselineReference"],
+  ["sCurveBaselineDocumentId", "sCurveBaselineReference"],
+  ["bchOrganizationDocumentId", "bchOrganizationReference"],
+  ["resourcePlanDocumentId", "resourcePlanReference"],
+  ["budgetBaselineDocumentId", "budgetBaselineReference"],
 ] as const;
 
 export default function CmConstructionWorkspacePage() {
@@ -60,6 +77,7 @@ export default function CmConstructionWorkspacePage() {
   const [dossiers, setDossiers] = useState<QaQcDossierResponse[]>([]);
   const [batches, setBatches] = useState<ConstructionQsBatchResponse[]>([]);
   const [templates, setTemplates] = useState<QaQcTemplateResponse[]>([]);
+  const [projectDocuments, setProjectDocuments] = useState<ProjectDocumentResponse[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reload, setReload] = useState(0);
@@ -95,8 +113,9 @@ export default function CmConstructionWorkspacePage() {
       canViewQaQc ? adminApi.listQaQcDossiers(projectId) : Promise.resolve(null),
       canViewQs ? adminApi.listConstructionQsBatches(projectId) : Promise.resolve(null),
       canViewQaQc ? adminApi.listQaQcTemplates(projectId) : Promise.resolve(null),
+      canViewPreparation ? adminApi.listProjectDocuments(projectId) : Promise.resolve(null),
     ])
-      .then(([prep, resourceList, dossierList, batchList, templateList]) => {
+      .then(([prep, resourceList, dossierList, batchList, templateList, documentsList]) => {
         if (!active) return;
         setPreparation(
           prep?.data ??
@@ -112,6 +131,12 @@ export default function CmConstructionWorkspacePage() {
                   bchOrganizationReference: "",
                   resourcePlanReference: "",
                   budgetBaselineReference: "",
+                  wbsBaselineDocumentId: null,
+                  scheduleBaselineDocumentId: null,
+                  sCurveBaselineDocumentId: null,
+                  bchOrganizationDocumentId: null,
+                  resourcePlanDocumentId: null,
+                  budgetBaselineDocumentId: null,
                   budgetBaselineLocked: false,
                   siteHandoverRequired: false,
                   siteHandoverComplete: false,
@@ -119,6 +144,9 @@ export default function CmConstructionWorkspacePage() {
                   methodStatementApproved: false,
                   hsePlanRequired: false,
                   hsePlanApproved: false,
+                  siteHandoverDocumentId: null,
+                  methodStatementDocumentId: null,
+                  hsePlanDocumentId: null,
                   missingConditions: [],
                   readinessSnapshotJson: null,
                   rowVersion: "",
@@ -129,6 +157,14 @@ export default function CmConstructionWorkspacePage() {
         setDossiers(dossierList?.data ?? []);
         setBatches(batchList?.data ?? []);
         setTemplates(templateList?.data ?? []);
+        setProjectDocuments(
+          (documentsList?.data ?? []).filter(
+            (document) =>
+              document.category === "ConstructionAcceptance" &&
+              document.desiredOperation !== "Delete" &&
+              document.syncStatus !== "Deleted",
+          ),
+        );
       })
       .catch((cause) => active && setError(extractApiError(cause, t("construction.cm.loadError"))))
       .finally(() => active && setLoading(false));
@@ -150,6 +186,12 @@ export default function CmConstructionWorkspacePage() {
         bchOrganizationReference: preparation.bchOrganizationReference,
         resourcePlanReference: preparation.resourcePlanReference,
         budgetBaselineReference: preparation.budgetBaselineReference,
+        wbsBaselineDocumentId: preparation.wbsBaselineDocumentId,
+        scheduleBaselineDocumentId: preparation.scheduleBaselineDocumentId,
+        sCurveBaselineDocumentId: preparation.sCurveBaselineDocumentId,
+        bchOrganizationDocumentId: preparation.bchOrganizationDocumentId,
+        resourcePlanDocumentId: preparation.resourcePlanDocumentId,
+        budgetBaselineDocumentId: preparation.budgetBaselineDocumentId,
         budgetBaselineLocked: preparation.budgetBaselineLocked,
         siteHandoverRequired: preparation.siteHandoverRequired,
         siteHandoverComplete: preparation.siteHandoverComplete,
@@ -157,6 +199,9 @@ export default function CmConstructionWorkspacePage() {
         methodStatementApproved: preparation.methodStatementApproved,
         hsePlanRequired: preparation.hsePlanRequired,
         hsePlanApproved: preparation.hsePlanApproved,
+        siteHandoverDocumentId: preparation.siteHandoverDocumentId,
+        methodStatementDocumentId: preparation.methodStatementDocumentId,
+        hsePlanDocumentId: preparation.hsePlanDocumentId,
         rowVersion: preparation.rowVersion,
       });
       setPreparation(data);
@@ -382,16 +427,19 @@ export default function CmConstructionWorkspacePage() {
                       />
                     </div>
                   ))}
+                  {baselineDocumentFields.map(([field, labelField]) => (
+                    <DocumentSelect
+                      key={field}
+                      id={field}
+                      label={`${t(`construction.cm.${labelField}`)} · ${t("acceptance.field.documents")}`}
+                      value={preparation[field]}
+                      documents={projectDocuments}
+                      disabled={!has(ADMIN_PERMS.constructionCmPreparationManage)}
+                      onChange={(value) => patchPreparation({ [field]: value })}
+                    />
+                  ))}
                   {(
-                    [
-                      "budgetBaselineLocked",
-                      "siteHandoverRequired",
-                      "siteHandoverComplete",
-                      "methodStatementRequired",
-                      "methodStatementApproved",
-                      "hsePlanRequired",
-                      "hsePlanApproved",
-                    ] as const
+                    ["siteHandoverRequired", "methodStatementRequired", "hsePlanRequired"] as const
                   ).map((field) => (
                     <div
                       key={field}
@@ -406,6 +454,52 @@ export default function CmConstructionWorkspacePage() {
                       />
                     </div>
                   ))}
+                  {(
+                    [
+                      "budgetBaselineLocked",
+                      "siteHandoverComplete",
+                      "methodStatementApproved",
+                      "hsePlanApproved",
+                    ] as const
+                  ).map((field) => (
+                    <div
+                      key={field}
+                      className="flex items-center justify-between gap-3 rounded-lg border bg-muted/30 p-3"
+                    >
+                      <Label htmlFor={field}>{t(`construction.cm.${field}`)}</Label>
+                      <Switch id={field} checked={preparation[field]} disabled />
+                    </div>
+                  ))}
+                  {preparation.siteHandoverRequired && (
+                    <DocumentSelect
+                      id="siteHandoverDocumentId"
+                      label={`${t("construction.cm.siteHandoverComplete")} · ${t("acceptance.field.documents")}`}
+                      value={preparation.siteHandoverDocumentId}
+                      documents={projectDocuments}
+                      disabled={!has(ADMIN_PERMS.constructionCmPreparationManage)}
+                      onChange={(value) => patchPreparation({ siteHandoverDocumentId: value })}
+                    />
+                  )}
+                  {preparation.methodStatementRequired && (
+                    <DocumentSelect
+                      id="methodStatementDocumentId"
+                      label={`${t("construction.cm.methodStatementApproved")} · ${t("acceptance.field.documents")}`}
+                      value={preparation.methodStatementDocumentId}
+                      documents={projectDocuments}
+                      disabled={!has(ADMIN_PERMS.constructionCmPreparationManage)}
+                      onChange={(value) => patchPreparation({ methodStatementDocumentId: value })}
+                    />
+                  )}
+                  {preparation.hsePlanRequired && (
+                    <DocumentSelect
+                      id="hsePlanDocumentId"
+                      label={`${t("construction.cm.hsePlanApproved")} · ${t("acceptance.field.documents")}`}
+                      value={preparation.hsePlanDocumentId}
+                      documents={projectDocuments}
+                      disabled={!has(ADMIN_PERMS.constructionCmPreparationManage)}
+                      onChange={(value) => patchPreparation({ hsePlanDocumentId: value })}
+                    />
+                  )}
                 </div>
                 {preparation.missingConditions.length > 0 && (
                   <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
@@ -605,6 +699,45 @@ function ReviewList({ children, empty }: { children: ReactNode; empty: string })
     <PageEmpty message={empty} />
   ) : (
     <div className="grid gap-3 lg:grid-cols-2">{children}</div>
+  );
+}
+
+function DocumentSelect({
+  id,
+  label,
+  value,
+  documents,
+  disabled,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  value?: number | null;
+  documents: ProjectDocumentResponse[];
+  disabled: boolean;
+  onChange: (value: number | null) => void;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor={id}>{label}</Label>
+      <Select
+        value={value ? String(value) : "none"}
+        onValueChange={(next) => onChange(next === "none" ? null : Number(next))}
+        disabled={disabled}
+      >
+        <SelectTrigger id={id} data-testid={id}>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="none">—</SelectItem>
+          {documents.map((document) => (
+            <SelectItem key={document.id} value={String(document.id)}>
+              {document.originalFileName}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
   );
 }
 

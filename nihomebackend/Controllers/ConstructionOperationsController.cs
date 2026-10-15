@@ -29,6 +29,9 @@ public sealed class ConstructionOperationsController(IConstructionOperationsServ
 
     [HttpGet("resource-requests"), RequirePermission("construction.resource-request", "view")]
     public Task<IActionResult> Resources(int projectId, CancellationToken ct) => Run(projectId, uid => service.ListResourcesAsync(projectId, ct));
+    [HttpGet("resource-references"), RequirePermission("construction.resource-request", "view")]
+    public Task<IActionResult> ResourceReferences(int projectId, CancellationToken ct) =>
+        Run(projectId, uid => service.GetResourceReferencesAsync(projectId, ct));
     [HttpGet("resource-requests/{id:int}"), RequirePermission("construction.resource-request", "view")]
     public Task<IActionResult> Resource(int projectId, int id, CancellationToken ct) => Run(projectId, uid => service.GetResourceAsync(projectId, id, ct));
     [HttpPost("resource-requests"), RequirePermission("construction.resource-request", "create"), Idempotency("construction.resource-request.create", requireKey: true)]
@@ -69,6 +72,9 @@ public sealed class ConstructionOperationsController(IConstructionOperationsServ
 
     [HttpGet("qs-batches"), RequirePermission("construction.qs", "view")]
     public Task<IActionResult> Qs(int projectId, CancellationToken ct) => Run(projectId, uid => service.ListQsAsync(projectId, ct));
+    [HttpGet("qs-references"), RequirePermission("construction.qs", "view")]
+    public Task<IActionResult> QsReferences(int projectId, CancellationToken ct) =>
+        Run(projectId, uid => service.GetQsReferencesAsync(projectId, ct));
     [HttpGet("qs-batches/{id:int}"), RequirePermission("construction.qs", "view")]
     public Task<IActionResult> Qs(int projectId, int id, CancellationToken ct) => Run(projectId, uid => service.GetQsAsync(projectId, id, ct));
     [HttpPost("qs-batches"), RequirePermission("construction.qs", "create"), Idempotency("construction.qs.create", requireKey: true)]

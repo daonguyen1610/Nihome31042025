@@ -31,7 +31,9 @@ import {
   adminApi,
   type ConstructionQsBatchLineRequest,
   type ConstructionQsBatchResponse,
+  type ConstructionQsAdjustmentKind,
   type ConstructionQsDirection,
+  type ConstructionQsReferenceDataResponse,
 } from "@/services/adminApi";
 
 const emptyLine = (): ConstructionQsBatchLineRequest => ({
@@ -54,8 +56,15 @@ export default function QsWorkspacePage() {
   const [reload, setReload] = useState(0);
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [referenceData, setReferenceData] = useState<ConstructionQsReferenceDataResponse>({
+    contracts: [],
+    approvedBoqRevisions: [],
+  });
+  const [lookupsLoading, setLookupsLoading] = useState(false);
   const [form, setForm] = useState({
     direction: "Upstream" as ConstructionQsDirection,
+    adjustmentKind: "Original" as ConstructionQsAdjustmentKind,
+    predecessorBatchId: "",
     contractId: "",
     wbsCode: "",
     periodFrom: "",
@@ -84,6 +93,29 @@ export default function QsWorkspacePage() {
     };
   }, [projectId, reload, t]);
 
+  useEffect(() => {
+    if (projectId == null) return;
+    let active = true;
+    setLookupsLoading(true);
+    void adminApi
+      .getConstructionQsReferenceData(projectId)
+      .then(({ data }) => {
+        if (!active) return;
+        setReferenceData(data);
+      })
+      .catch((cause) => {
+        if (active)
+          toast({
+            variant: "destructive",
+            title: extractApiError(cause, t("construction.qs.loadError")),
+          });
+      })
+      .finally(() => active && setLookupsLoading(false));
+    return () => {
+      active = false;
+    };
+  }, [projectId, t, toast]);
+
   const updateLine = (index: number, patch: Partial<ConstructionQsBatchLineRequest>) =>
     setForm((current) => ({
       ...current,
@@ -94,6 +126,18 @@ export default function QsWorkspacePage() {
   const save = async (event: FormEvent) => {
     event.preventDefault();
     if (projectId == null) return;
+    if (!form.contractId) {
+      toast({ variant: "destructive", title: t("construction.qs.contractRequired") });
+      return;
+    }
+    if (form.direction === "Upstream" && !form.contractPaymentMilestoneId) {
+      toast({ variant: "destructive", title: t("construction.qs.milestoneRequired") });
+      return;
+    }
+    if (form.adjustmentKind !== "Original" && !form.predecessorBatchId) {
+      toast({ variant: "destructive", title: t("construction.qs.predecessorRequired") });
+      return;
+    }
     setSaving(true);
     try {
       await adminApi.createConstructionQsBatch(projectId, {
@@ -115,8 +159,10 @@ export default function QsWorkspacePage() {
           .map((value) => value.trim())
           .filter(Boolean)
           .map(Number),
-        supersedesBatchId: null,
-        reversesBatchId: null,
+        supersedesBatchId:
+          form.adjustmentKind === "SupersedingCorrection" ? Number(form.predecessorBatchId) : null,
+        reversesBatchId:
+          form.adjustmentKind === "Reversal" ? Number(form.predecessorBatchId) : null,
       });
       setOpen(false);
       setReload((value) => value + 1);
@@ -238,7 +284,15 @@ export default function QsWorkspacePage() {
                 <Select
                   value={form.direction}
                   onValueChange={(value) =>
-                    setForm({ ...form, direction: value as ConstructionQsDirection })
+                    setForm({
+                      ...form,
+                      direction: value as ConstructionQsDirection,
+                      adjustmentKind: "Original",
+                      predecessorBatchId: "",
+                      contractId: "",
+                      contractAppendixId: "",
+                      contractPaymentMilestoneId: "",
+                    })
                   }
                 >
                   <SelectTrigger data-testid="qs-direction">
@@ -255,15 +309,85 @@ export default function QsWorkspacePage() {
                 </Select>
               </div>
               <div className="space-y-1.5">
+                <Label htmlFor="qs-adjustment">{t("construction.qs.adjustmentMode")}</Label>
+                <Select
+                  value={form.adjustmentKind}
+                  onValueChange={(value) =>
+                    setForm({
+                      ...form,
+                      adjustmentKind: value as ConstructionQsAdjustmentKind,
+                      predecessorBatchId: "",
+                    })
+                  }
+                >
+                  <SelectTrigger id="qs-adjustment" data-testid="qs-adjustment-mode">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(["Original", "SupersedingCorrection", "Reversal"] as const).map((kind) => (
+                      <SelectItem key={kind} value={kind}>
+                        {t(`construction.qs.adjustment.${kind}`)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {form.adjustmentKind !== "Original" && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="qs-predecessor">{t("construction.qs.predecessor")}</Label>
+                  <Select
+                    required
+                    value={form.predecessorBatchId}
+                    onValueChange={(value) => setForm({ ...form, predecessorBatchId: value })}
+                  >
+                    <SelectTrigger id="qs-predecessor" data-testid="qs-predecessor">
+                      <SelectValue placeholder={t("construction.qs.predecessor")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {rows
+                        .filter(
+                          (row) =>
+                            row.direction === form.direction &&
+                            row.status === "CmApproved" &&
+                            row.recordState === "Active",
+                        )
+                        .map((row) => (
+                          <SelectItem key={row.id} value={String(row.id)}>
+                            {row.code} · {row.certifiedAmount.toLocaleString(lang)}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              <div className="space-y-1.5">
                 <Label htmlFor="qs-contract">{t("construction.qs.contract")}</Label>
-                <Input
-                  id="qs-contract"
-                  type="number"
-                  min="1"
+                <Select
                   required
                   value={form.contractId}
-                  onChange={(e) => setForm({ ...form, contractId: e.target.value })}
-                />
+                  onValueChange={(value) =>
+                    setForm({
+                      ...form,
+                      contractId: value,
+                      contractAppendixId: "",
+                      contractPaymentMilestoneId: "",
+                    })
+                  }
+                  disabled={lookupsLoading}
+                >
+                  <SelectTrigger id="qs-contract" data-testid="qs-contract">
+                    <SelectValue placeholder={t("construction.qs.contract")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {referenceData.contracts
+                      .filter((contract) => contract.direction === form.direction)
+                      .map((contract) => (
+                        <SelectItem key={contract.id} value={String(contract.id)}>
+                          {contract.contractNumber}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="qs-wbs">{t("construction.common.wbs")}</Label>
@@ -275,6 +399,82 @@ export default function QsWorkspacePage() {
                   onChange={(e) => setForm({ ...form, wbsCode: e.target.value })}
                 />
               </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="qs-boq">{t("procurement.boq.title")}</Label>
+                <Select
+                  value={form.projectBoqRevisionId || "none"}
+                  onValueChange={(value) =>
+                    setForm({ ...form, projectBoqRevisionId: value === "none" ? "" : value })
+                  }
+                >
+                  <SelectTrigger id="qs-boq" data-testid="qs-boq-revision">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">—</SelectItem>
+                    {referenceData.approvedBoqRevisions.map((revision) => (
+                      <SelectItem key={revision.id} value={String(revision.id)}>
+                        BOQ v{revision.revisionNumber} · {revision.currency}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="qs-vo">{t("contracts.appendix.title")}</Label>
+                <Select
+                  value={form.contractAppendixId || "none"}
+                  onValueChange={(value) =>
+                    setForm({ ...form, contractAppendixId: value === "none" ? "" : value })
+                  }
+                  disabled={!form.contractId}
+                >
+                  <SelectTrigger id="qs-vo" data-testid="qs-contract-appendix">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">—</SelectItem>
+                    {(
+                      referenceData.contracts.find(
+                        (contract) => contract.id === Number(form.contractId),
+                      )?.approvedAppendices ?? []
+                    ).map((appendix) => (
+                      <SelectItem key={appendix.id} value={String(appendix.id)}>
+                        VO-{appendix.voNumber} · {appendix.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {form.direction === "Upstream" && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="qs-milestone">{t("contracts.milestonesTitle")}</Label>
+                  <Select
+                    required
+                    value={form.contractPaymentMilestoneId}
+                    onValueChange={(value) =>
+                      setForm({ ...form, contractPaymentMilestoneId: value })
+                    }
+                    disabled={!form.contractId}
+                  >
+                    <SelectTrigger id="qs-milestone" data-testid="qs-payment-milestone">
+                      <SelectValue placeholder={t("contracts.milestonesTitle")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(
+                        referenceData.contracts.find(
+                          (contract) => contract.id === Number(form.contractId),
+                        )?.paymentMilestones ?? []
+                      ).map((milestone) => (
+                        <SelectItem key={milestone.id} value={String(milestone.id)}>
+                          {milestone.order}. {milestone.name} ·{" "}
+                          {milestone.amount.toLocaleString(lang)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div className="space-y-1.5">
                 <Label htmlFor="qs-from">{t("construction.qs.periodFrom")}</Label>
                 <Input

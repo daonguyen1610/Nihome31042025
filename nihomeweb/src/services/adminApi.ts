@@ -1269,6 +1269,8 @@ export interface OperationalProjectResponse extends OperationalProjectListItemRe
 export type ConstructionWorkflowStatus = "Draft" | "PendingCmReview" | "CmApproved" | "CmRejected";
 export type ConstructionResourceType = "Material" | "Equipment" | "Labour";
 export type ConstructionQsDirection = "Upstream" | "Downstream";
+export type ConstructionQsAdjustmentKind = "Original" | "SupersedingCorrection" | "Reversal";
+export type ConstructionQsRecordState = "Active" | "Superseded" | "Reversed";
 
 export interface ConstructionResourceRequestResponse {
   id: number;
@@ -1293,6 +1295,19 @@ export interface ConstructionResourceRequestResponse {
 
 export interface ConstructionResourceRequestListResponse {
   items: ConstructionResourceRequestResponse[];
+}
+
+export interface ConstructionResourceReferenceDataResponse {
+  boqLines: Array<{
+    id: number;
+    itemCode: string;
+    description: string;
+    unit: string;
+    approvedQuantity: number;
+    remainingQuantity: number;
+  }>;
+  siteUsers: Array<{ userId: number; userName: string }>;
+  procurementUsers: Array<{ userId: number; userName: string }>;
 }
 
 export interface CreateConstructionResourceRequest {
@@ -1369,6 +1384,8 @@ export interface ConstructionQsBatchResponse {
   description: string;
   supersedesBatchId?: number | null;
   reversesBatchId?: number | null;
+  adjustmentKind: ConstructionQsAdjustmentKind;
+  recordState: ConstructionQsRecordState;
   lines: ConstructionQsBatchLineResponse[];
   evidenceDocumentIds: number[];
   status: ConstructionWorkflowStatus;
@@ -1412,6 +1429,24 @@ export interface ConstructionQsBatchLineResponse extends ConstructionQsBatchLine
   sortOrder: number;
 }
 
+export interface ConstructionQsReferenceDataResponse {
+  contracts: Array<{
+    id: number;
+    contractNumber: string;
+    direction: ConstructionQsDirection;
+    status: string;
+    paymentMilestones: Array<{
+      id: number;
+      order: number;
+      name: string;
+      amount: number;
+      status: string;
+    }>;
+    approvedAppendices: Array<{ id: number; voNumber: number; title: string }>;
+  }>;
+  approvedBoqRevisions: Array<{ id: number; revisionNumber: number; currency: string }>;
+}
+
 export interface ConstructionPreparationResponse {
   id: number;
   operationalProjectId: number;
@@ -1423,6 +1458,12 @@ export interface ConstructionPreparationResponse {
   bchOrganizationReference: string;
   resourcePlanReference: string;
   budgetBaselineReference: string;
+  wbsBaselineDocumentId?: number | null;
+  scheduleBaselineDocumentId?: number | null;
+  sCurveBaselineDocumentId?: number | null;
+  bchOrganizationDocumentId?: number | null;
+  resourcePlanDocumentId?: number | null;
+  budgetBaselineDocumentId?: number | null;
   budgetBaselineLocked: boolean;
   siteHandoverRequired: boolean;
   siteHandoverComplete: boolean;
@@ -1430,6 +1471,9 @@ export interface ConstructionPreparationResponse {
   methodStatementApproved: boolean;
   hsePlanRequired: boolean;
   hsePlanApproved: boolean;
+  siteHandoverDocumentId?: number | null;
+  methodStatementDocumentId?: number | null;
+  hsePlanDocumentId?: number | null;
   missingConditions: string[];
   readinessSnapshotJson?: string | null;
   rowVersion: string;
@@ -1450,6 +1494,12 @@ export interface UpdateConstructionPreparationRequest {
   bchOrganizationReference: string;
   resourcePlanReference: string;
   budgetBaselineReference: string;
+  wbsBaselineDocumentId?: number | null;
+  scheduleBaselineDocumentId?: number | null;
+  sCurveBaselineDocumentId?: number | null;
+  bchOrganizationDocumentId?: number | null;
+  resourcePlanDocumentId?: number | null;
+  budgetBaselineDocumentId?: number | null;
   budgetBaselineLocked: boolean;
   siteHandoverRequired: boolean;
   siteHandoverComplete: boolean;
@@ -1457,6 +1507,9 @@ export interface UpdateConstructionPreparationRequest {
   methodStatementApproved: boolean;
   hsePlanRequired: boolean;
   hsePlanApproved: boolean;
+  siteHandoverDocumentId?: number | null;
+  methodStatementDocumentId?: number | null;
+  hsePlanDocumentId?: number | null;
   rowVersion?: string;
 }
 
@@ -7393,6 +7446,10 @@ export const adminApi = {
     api.get<ConstructionResourceRequestResponse[]>(
       `/operational-projects/${projectId}/construction/resource-requests`,
     ),
+  getConstructionResourceReferenceData: (projectId: number) =>
+    api.get<ConstructionResourceReferenceDataResponse>(
+      `/operational-projects/${projectId}/construction/resource-references`,
+    ),
   createConstructionResourceRequest: (projectId: number, body: CreateConstructionResourceRequest) =>
     postIdempotent<ConstructionResourceRequestResponse>(
       `/operational-projects/${projectId}/construction/resource-requests`,
@@ -7472,6 +7529,10 @@ export const adminApi = {
   listConstructionQsBatches: (projectId: number) =>
     api.get<ConstructionQsBatchResponse[]>(
       `/operational-projects/${projectId}/construction/qs-batches`,
+    ),
+  getConstructionQsReferenceData: (projectId: number) =>
+    api.get<ConstructionQsReferenceDataResponse>(
+      `/operational-projects/${projectId}/construction/qs-references`,
     ),
   createConstructionQsBatch: (projectId: number, body: CreateConstructionQsBatchRequest) =>
     postIdempotent<ConstructionQsBatchResponse>(

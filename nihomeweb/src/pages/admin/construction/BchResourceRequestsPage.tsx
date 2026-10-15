@@ -30,9 +30,12 @@ import {
   adminApi,
   type ConstructionResourceRequestResponse,
   type ConstructionResourceType,
+  type ConstructionResourceReferenceDataResponse,
 } from "@/services/adminApi";
 
 const TYPES: ConstructionResourceType[] = ["Material", "Equipment", "Labour"];
+type UserOption = { userId: number; userName: string };
+type BoqLineOption = ConstructionResourceReferenceDataResponse["boqLines"][number];
 
 export default function BchResourceRequestsPage() {
   const { t, lang } = useI18n();
@@ -46,6 +49,9 @@ export default function BchResourceRequestsPage() {
   const [reload, setReload] = useState(0);
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [siteUsers, setSiteUsers] = useState<UserOption[]>([]);
+  const [procurementUsers, setProcurementUsers] = useState<UserOption[]>([]);
+  const [boqLines, setBoqLines] = useState<BoqLineOption[]>([]);
   const [form, setForm] = useState({
     type: "Material" as ConstructionResourceType,
     wbsCode: "",
@@ -54,6 +60,8 @@ export default function BchResourceRequestsPage() {
     unit: "",
     reason: "",
     projectBoqLineId: "",
+    responsibleSiteUserId: "",
+    assignedProcurementUserId: "",
   });
 
   useEffect(() => {
@@ -61,9 +69,17 @@ export default function BchResourceRequestsPage() {
     let active = true;
     setLoading(true);
     setError(null);
-    void adminApi
-      .listConstructionResourceRequests(projectId)
-      .then(({ data }) => active && setRows(data))
+    void Promise.all([
+      adminApi.listConstructionResourceRequests(projectId),
+      adminApi.getConstructionResourceReferenceData(projectId),
+    ])
+      .then(([requests, references]) => {
+        if (!active) return;
+        setRows(requests.data);
+        setSiteUsers(references.data.siteUsers);
+        setProcurementUsers(references.data.procurementUsers);
+        setBoqLines(references.data.boqLines);
+      })
       .catch(
         (cause) => active && setError(extractApiError(cause, t("construction.resource.loadError"))),
       )
@@ -76,6 +92,16 @@ export default function BchResourceRequestsPage() {
   const save = async (event: FormEvent) => {
     event.preventDefault();
     if (projectId == null) return;
+    if (
+      form.type === "Material" &&
+      (!form.projectBoqLineId || !form.responsibleSiteUserId || !form.assignedProcurementUserId)
+    ) {
+      toast({
+        variant: "destructive",
+        title: t("construction.resource.materialReferencesRequired"),
+      });
+      return;
+    }
     setSaving(true);
     try {
       await adminApi.createConstructionResourceRequest(projectId, {
@@ -86,6 +112,12 @@ export default function BchResourceRequestsPage() {
         unit: form.unit.trim(),
         reason: form.reason.trim(),
         projectBoqLineId: form.projectBoqLineId ? Number(form.projectBoqLineId) : null,
+        responsibleSiteUserId: form.responsibleSiteUserId
+          ? Number(form.responsibleSiteUserId)
+          : null,
+        assignedProcurementUserId: form.assignedProcurementUserId
+          ? Number(form.assignedProcurementUserId)
+          : null,
       });
       setOpen(false);
       setForm({
@@ -96,6 +128,8 @@ export default function BchResourceRequestsPage() {
         unit: "",
         reason: "",
         projectBoqLineId: "",
+        responsibleSiteUserId: "",
+        assignedProcurementUserId: "",
       });
       setReload((value) => value + 1);
       toast({ title: t("construction.resource.created") });
@@ -273,16 +307,41 @@ export default function BchResourceRequestsPage() {
                 />
               </div>
               {form.type === "Material" && (
-                <div className="space-y-1.5">
-                  <Label htmlFor="resource-boq">{t("construction.resource.boqLine")}</Label>
-                  <Input
-                    id="resource-boq"
-                    type="number"
-                    min="1"
-                    value={form.projectBoqLineId}
-                    onChange={(e) => setForm({ ...form, projectBoqLineId: e.target.value })}
+                <>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="resource-boq">{t("construction.resource.boqLine")}</Label>
+                    <Select
+                      required
+                      value={form.projectBoqLineId}
+                      onValueChange={(value) => setForm({ ...form, projectBoqLineId: value })}
+                    >
+                      <SelectTrigger id="resource-boq" data-testid="resource-boq-line">
+                        <SelectValue placeholder={t("construction.resource.boqLine")} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {boqLines.map((line) => (
+                          <SelectItem key={line.id} value={String(line.id)}>
+                            {line.itemCode} · {line.description}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <UserSelect
+                    id="resource-site-user"
+                    label={t("procurement.field.responsibleSite")}
+                    value={form.responsibleSiteUserId}
+                    users={siteUsers}
+                    onChange={(value) => setForm({ ...form, responsibleSiteUserId: value })}
                   />
-                </div>
+                  <UserSelect
+                    id="resource-procurement-user"
+                    label={t("procurement.field.procurementOwner")}
+                    value={form.assignedProcurementUserId}
+                    users={procurementUsers}
+                    onChange={(value) => setForm({ ...form, assignedProcurementUserId: value })}
+                  />
+                </>
               )}
               <div className="space-y-1.5 sm:col-span-2">
                 <Label htmlFor="resource-reason">{t("construction.resource.reason")}</Label>
@@ -307,5 +366,37 @@ export default function BchResourceRequestsPage() {
         </DialogContent>
       </Dialog>
     </ConstructionWorkspaceShell>
+  );
+}
+
+function UserSelect({
+  id,
+  label,
+  value,
+  users,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  users: UserOption[];
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor={id}>{label}</Label>
+      <Select required value={value} onValueChange={onChange}>
+        <SelectTrigger id={id} data-testid={id}>
+          <SelectValue placeholder={label} />
+        </SelectTrigger>
+        <SelectContent>
+          {users.map((user) => (
+            <SelectItem key={user.userId} value={String(user.userId)}>
+              {user.userName}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
   );
 }
