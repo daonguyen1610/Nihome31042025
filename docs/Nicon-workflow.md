@@ -265,8 +265,10 @@ Server kiểm tra Dự án, quyền, baseline và hạn mức
        └─ Duyệt → chuyển Module 5/đơn vị liên quan bằng stable ID
 ```
 
-Hiện tại phần mềm đã có MR vật tư và chặn khi vượt allowance còn lại. Đề xuất
-máy/thiết bị và nhân công, CM level-2 review và ba portal BCH là **mục tiêu**.
+Hiện tại phần mềm đã có đề xuất Material/Equipment/Labour và CM level-2 review.
+Material đã tạo được MR vật tư và chặn khi vượt allowance còn lại. Equipment và
+Labour mới dừng ở handoff `ReadyForProcurementAndFinance`; quy trình mua/thuê,
+liên kết HĐ Downstream và hoàn tất handoff vẫn là **mục tiêu**.
 Các dải 85% vàng, 95% cam và trên 100% đỏ/chặn chưa thay thế validation hiện có
 cho đến khi chốt mẫu số, quy đổi đơn vị, làm tròn, reversal và BOQ bằng 0.
 
@@ -297,8 +299,10 @@ giả để đủ three-way matching.
 | Partial acceptance | Hiện có workflow chung; chưa phân hướng Upstream/Downstream QS | `DesignProjectId` |
 | As-built | Hiện có category, workflow và completeness | `DesignProjectId` |
 | Handover | Hiện có readiness, commissioning, checklist, signatory và row version | `DesignProjectId` |
-| CM preparation/BCH organization/Budget Baseline | Chưa có aggregate hoàn chỉnh | Mục tiêu `OperationalProjectId` |
-| QA/QC dossier và Site QS hai hướng | Chưa có aggregate hoàn chỉnh | Mục tiêu `OperationalProjectId` + WBS/contract/BOQ |
+| CM preparation/BCH organization/Budget Baseline | Có aggregate versioned và readiness snapshot; baseline vẫn là document reference, chưa có dữ liệu cấu trúc/S-Curve engine | `OperationalProjectId` |
+| Resource request | Có Material/Equipment/Labour và CM review; Material tạo MR, hai loại còn lại chưa có procurement handoff hoàn chỉnh | `OperationalProjectId` + WBS/BOQ |
+| QA/QC dossier | Có template snapshot, checklist, IFC và document evidence; API chưa giữ evidence type khi ghi | `OperationalProjectId` + WBS |
+| Site QS hai hướng | Có Upstream/Downstream, contract/BOQ/milestone, evidence và correction lineage; chưa handoff Finance | `OperationalProjectId` + WBS/contract/BOQ |
 
 Không mở rộng các aggregate mới dựa trên `DesignProjectId`. Phần hiện có cần
 resolve an toàn qua Design Project sang Operational Project và được migration
