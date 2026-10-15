@@ -255,6 +255,71 @@ public sealed class DetailDesignScheduleControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task CreateExternalTask_PersistsMatchingVendorAndDownstreamContract()
+    {
+        await AuthenticateAsync("SUPER_ADMIN");
+        var fixture = await CreateFixtureAsync("DESIGN_LEAD");
+        using var initializedResponse = await InitializeAsync(fixture.ProjectId, InitializePayload());
+        initializedResponse.StatusCode.Should().Be(HttpStatusCode.OK,
+            await initializedResponse.Content.ReadAsStringAsync());
+        var phase = await GetPhaseAsync(fixture.ProjectId, "Concept");
+        var external = await WithDbAsync(async db =>
+        {
+            var project = await db.OperationalProjects.AsNoTracking()
+                .SingleAsync(item => item.Id == fixture.ProjectId);
+            var vendor = new Vendor
+            {
+                VendorCode = $"NCC-TK-{Guid.NewGuid():N}"[..30],
+                CompanyName = "Công ty Tư vấn Thiết kế Kết cấu NICON",
+                VendorType = VendorType.SubContractor,
+                CreatedByUserId = project.ProjectManagerUserId!.Value,
+            };
+            db.Vendors.Add(vendor);
+            await db.SaveChangesAsync();
+            var contract = new Contract
+            {
+                ContractNumber = $"HD-TK-{Guid.NewGuid():N}"[..30],
+                CustomerId = project.CustomerId,
+                OperationalProjectId = project.Id,
+                Direction = ContractDirection.Downstream,
+                Type = ContractType.Design,
+                VendorId = vendor.Id,
+                Status = ContractStatus.Signed,
+            };
+            db.Contracts.Add(contract);
+            await db.SaveChangesAsync();
+            return new { VendorId = vendor.Id, ContractId = contract.Id };
+        });
+        await AuthenticateAsync("DESIGN_LEAD");
+        using var optionsResponse = await Client.GetAsync(
+            $"/api/operational-projects/{fixture.ProjectId}/design-schedule/outsource-options");
+        optionsResponse.StatusCode.Should().Be(HttpStatusCode.OK,
+            await optionsResponse.Content.ReadAsStringAsync());
+        var options = await ReadJsonAsync(optionsResponse);
+        var option = options.EnumerateArray().Single(item =>
+            item.GetProperty("contractId").GetInt32() == external.ContractId);
+        option.GetProperty("vendorId").GetInt32().Should().Be(external.VendorId);
+        var payload = TaskPayload("EXT-DES-001", fixture.MemberId, 0) with
+        {
+            VendorId = external.VendorId,
+            DownstreamContractId = external.ContractId,
+        };
+
+        using var response = await CreateTaskAsync(fixture, phase.Id, payload);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created,
+            await response.Content.ReadAsStringAsync());
+        var body = await ReadJsonAsync(response);
+        body.GetProperty("vendorId").GetInt32().Should().Be(external.VendorId);
+        body.GetProperty("downstreamContractId").GetInt32().Should().Be(external.ContractId);
+        var task = await WithDbAsync(db => db.DesignScheduleTasks.AsNoTracking()
+            .SingleAsync(item => item.OperationalProjectId == fixture.ProjectId &&
+                item.Code == "EXT-DES-001"));
+        task.VendorId.Should().Be(external.VendorId);
+        task.DownstreamContractId.Should().Be(external.ContractId);
+    }
+
+    [Fact]
     public async Task UpdatePhase_ValidUpdateSucceedsButInvalidWeightPreservesStateAndHistory()
     {
         await AuthenticateAsync("SUPER_ADMIN");
@@ -969,6 +1034,8 @@ public sealed class DetailDesignScheduleControllerTests : IntegrationTestBase
         public string Status { get; init; } = string.Empty;
         public int ProgressPercent { get; init; }
         public int Weight { get; init; }
+        public int? VendorId { get; init; }
+        public int? DownstreamContractId { get; init; }
         public List<int>? PredecessorTaskIds { get; init; } = new();
         public string? RowVersion { get; init; }
     }

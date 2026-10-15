@@ -96,7 +96,7 @@ public class RbacControllerTests : IntegrationTestBase
         groups.Select(group => group.GetProperty("code").GetString())
             .Should().Equal("CRM", "PROCUREMENT", "CONSTRUCTION", "DESIGN", "FINANCE");
         groups.Select(group => group.GetProperty("roleCount").GetInt32())
-            .Should().Equal(2, 2, 3, 5, 1);
+            .Should().Equal(2, 2, 5, 5, 2);
     }
 
     [Fact]

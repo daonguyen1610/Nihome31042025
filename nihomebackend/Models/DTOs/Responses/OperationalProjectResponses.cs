@@ -40,10 +40,24 @@ public class OperationalProjectResponse : OperationalProjectListItemResponse
     public string? DesignProjectCode { get; set; }
     public string RowVersion { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
+    public ProjectDriveRenameResponse? LatestCodeChange { get; set; }
     public OperationalProjectContractSummaryResponse ContractSummary { get; set; } = new();
     public List<OperationalProjectOpportunityResponse> Opportunities { get; set; } = new();
     public List<OperationalProjectQuoteResponse> Quotes { get; set; } = new();
     public List<OperationalProjectContractResponse> Contracts { get; set; } = new();
+}
+
+public sealed class ProjectDriveRenameResponse
+{
+    public long Id { get; set; }
+    public string OldCode { get; set; } = string.Empty;
+    public string NewCode { get; set; } = string.Empty;
+    public string Reason { get; set; } = string.Empty;
+    public string Status { get; set; } = string.Empty;
+    public int AttemptCount { get; set; }
+    public string? Error { get; set; }
+    public DateTime ChangedAt { get; set; }
+    public DateTime? RenamedAt { get; set; }
 }
 
 public class OperationalProjectContractSummaryResponse

@@ -101,6 +101,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<OperationalProjectMemberRole> OperationalProjectMemberRoles => Set<OperationalProjectMemberRole>();
     public DbSet<OperationalProjectAssignment> OperationalProjectAssignments => Set<OperationalProjectAssignment>();
     public DbSet<OperationalProjectTeamHistory> OperationalProjectTeamHistory => Set<OperationalProjectTeamHistory>();
+    public DbSet<OperationalProjectCodeChange> OperationalProjectCodeChanges => Set<OperationalProjectCodeChange>();
     public DbSet<DepartmentWorkPackage> DepartmentWorkPackages => Set<DepartmentWorkPackage>();
     public DbSet<DepartmentWorkPackageParticipantGroup> DepartmentWorkPackageParticipantGroups => Set<DepartmentWorkPackageParticipantGroup>();
     public DbSet<DepartmentWorkTask> DepartmentWorkTasks => Set<DepartmentWorkTask>();
@@ -1977,6 +1978,22 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasIndex(f => f.ReconciliationClaimExpiresAt);
         });
 
+        modelBuilder.Entity<OperationalProjectCodeChange>(b =>
+        {
+            b.ToTable("operational_project_code_changes");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.OldCode).HasMaxLength(40).IsRequired();
+            b.Property(x => x.NewCode).HasMaxLength(40).IsRequired();
+            b.Property(x => x.Reason).HasMaxLength(1000).IsRequired();
+            b.Property(x => x.DriveRenameStatus).HasConversion<string>().HasMaxLength(20);
+            b.Property(x => x.DriveRenameError).HasMaxLength(1000);
+            b.Property(x => x.RowVersion).IsRowVersion();
+            b.HasOne(x => x.OperationalProject).WithMany(x => x.CodeChanges)
+                .HasForeignKey(x => x.OperationalProjectId).OnDelete(DeleteBehavior.Cascade);
+            b.HasIndex(x => new { x.DriveRenameStatus, x.NextDriveRenameAttemptAt });
+            b.HasIndex(x => new { x.OperationalProjectId, x.ChangedAt });
+        });
+
         modelBuilder.Entity<GoogleDriveCredential>(b =>
         {
             b.ToTable("google_drive_credentials");
@@ -2341,6 +2358,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .HasForeignKey(task => task.AssigneeMemberId).OnDelete(DeleteBehavior.Restrict);
             b.HasOne(task => task.ApproverMember).WithMany()
                 .HasForeignKey(task => task.ApproverMemberId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(task => task.Vendor).WithMany()
+                .HasForeignKey(task => task.VendorId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(task => task.DownstreamContract).WithMany()
+                .HasForeignKey(task => task.DownstreamContractId).OnDelete(DeleteBehavior.Restrict);
             b.HasOne(task => task.ParentTask).WithMany(parent => parent.Children)
                 .HasForeignKey(task => task.ParentTaskId).OnDelete(DeleteBehavior.NoAction);
             b.HasIndex(task => new { task.OperationalProjectId, task.Code }).IsUnique();
@@ -2350,6 +2371,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasIndex(task => task.ParentTaskId);
             b.HasIndex(task => new { task.OperationalProjectId, task.DepartmentCode });
             b.HasIndex(task => new { task.OperationalProjectId, task.Status });
+            b.HasIndex(task => task.VendorId);
+            b.HasIndex(task => task.DownstreamContractId);
             b.ToTable(table =>
             {
                 table.HasCheckConstraint("CK_design_schedule_tasks_planned_dates", "[PlannedEnd] >= [PlannedStart]");

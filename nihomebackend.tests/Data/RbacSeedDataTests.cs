@@ -59,6 +59,7 @@ public class RbacSeedDataTests
         Assert.Equal("CONSTRUCTION", roles["PM"].GroupCode);
         Assert.Equal("PROCUREMENT", roles["PROCUREMENT"].GroupCode);
         Assert.Equal("FINANCE", roles["ACCOUNTANT"].GroupCode);
+        Assert.Equal("FINANCE", roles["HR"].GroupCode);
         Assert.Null(roles["BGD"].GroupCode);
     }
 
@@ -87,8 +88,21 @@ public class RbacSeedDataTests
         "DESIGN", "DESIGN_LEAD",
         "ARCHITECT", "MEP_ENGINEER", "STRUCT_ENGINEER",
         "PM", "LEGAL_OFFICER",
-        "QS", "PROCUREMENT", "ACCOUNTANT", "WAREHOUSE", "BGD",
+        "QS", "PROCUREMENT", "ACCOUNTANT", "HR", "WAREHOUSE", "BGD",
     };
+
+    [Fact]
+    public void Default_FinanceGroupBaselineContainsOnlySharedPermissions()
+    {
+        var group = RbacSeedData.Default.RoleGroups.Single(item => item.Code == "FINANCE");
+
+        Assert.Contains("dashboard.view", group.Patterns);
+        Assert.Contains("contacts.view", group.Patterns);
+        Assert.DoesNotContain(group.Patterns,
+            pattern => pattern.StartsWith("finance.", StringComparison.Ordinal));
+        Assert.DoesNotContain(group.Patterns,
+            pattern => pattern.StartsWith("recruitment.", StringComparison.Ordinal));
+    }
 
     [Theory]
     [MemberData(nameof(NiconBusinessRoles))]

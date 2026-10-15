@@ -38,6 +38,25 @@ public sealed class DetailDesignScheduleController(
         }
     }
 
+    [HttpGet("outsource-options")]
+    [RequirePermission("design.schedule", "manage")]
+    public async Task<ActionResult<List<DesignScheduleOutsourceOptionResponse>>> GetOutsourceOptions(
+        int projectId,
+        CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        if (!await access.CanManageDesignScheduleAsync(userId.Value, projectId, ct)) return NotFound();
+        try
+        {
+            return Ok(await service.GetOutsourceOptionsAsync(projectId, userId.Value, ct));
+        }
+        catch (DesignScheduleOperationException exception)
+        {
+            return BadRequest(new { message = exception.Message });
+        }
+    }
+
     [HttpPost("initialize")]
     [RequirePermission("design.schedule", "manage")]
     [Idempotency("operations.projects.design-schedule.initialize", requireKey: true)]

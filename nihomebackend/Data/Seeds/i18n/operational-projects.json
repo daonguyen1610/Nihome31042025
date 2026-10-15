@@ -129,5 +129,18 @@
   {"key":"operationalProjects.reopen.description","category":"operationalProjects","vi":"Dự án sẽ trở lại trạng thái Đang thực hiện. Lý do được lưu trong lịch sử để kiểm toán.","en":"The project returns to Active. The reason is retained in history for audit.","zh":"项目将恢复为进行中，原因会保留在历史记录中供审计。","ja":"プロジェクトは進行中に戻り、理由は監査用の履歴に保存されます。"},
   {"key":"operationalProjects.reopen.reason","category":"operationalProjects","vi":"Lý do mở lại","en":"Reopen reason","zh":"重新打开原因","ja":"再開理由"},
   {"key":"operationalProjects.reopen.validation","category":"operationalProjects","vi":"Lý do mở lại phải có ít nhất 3 ký tự.","en":"The reopen reason must be at least 3 characters.","zh":"重新打开原因至少需要 3 个字符。","ja":"再開理由は3文字以上必要です。"},
-  {"key":"operationalProjects.reopen.success","category":"operationalProjects","vi":"Dự án đã được mở lại.","en":"Project reopened.","zh":"项目已重新打开。","ja":"プロジェクトを再開しました。"}
+  {"key":"operationalProjects.reopen.success","category":"operationalProjects","vi":"Dự án đã được mở lại.","en":"Project reopened.","zh":"项目已重新打开。","ja":"プロジェクトを再開しました。"},
+  {"key":"operationalProjects.rename.action","category":"operationalProjects","vi":"Đổi mã dự án","en":"Change project code","zh":"更改项目编号","ja":"プロジェクト番号を変更"},
+  {"key":"operationalProjects.rename.title","category":"operationalProjects","vi":"Đổi mã dự án vận hành","en":"Change operational project code","zh":"更改运营项目编号","ja":"運用プロジェクト番号を変更"},
+  {"key":"operationalProjects.rename.description","category":"operationalProjects","vi":"Mã mới được lưu ngay; tên thư mục Google Drive sẽ được đồng bộ an toàn ở chế độ nền.","en":"The new code is saved immediately; the Google Drive folder name is synchronized safely in the background.","zh":"新编号会立即保存；Google Drive 文件夹名称将在后台安全同步。","ja":"新しい番号は直ちに保存され、Google Drive フォルダー名はバックグラウンドで安全に同期されます。"},
+  {"key":"operationalProjects.rename.reason","category":"operationalProjects","vi":"Lý do đổi mã","en":"Reason for change","zh":"更改原因","ja":"変更理由"},
+  {"key":"operationalProjects.rename.validation","category":"operationalProjects","vi":"Mã mới phải khác mã hiện tại và lý do phải có ít nhất 3 ký tự.","en":"The new code must differ from the current code and the reason must contain at least 3 characters.","zh":"新编号必须不同于当前编号，且原因至少包含 3 个字符。","ja":"新しい番号は現在の番号と異なり、理由は3文字以上である必要があります。"},
+  {"key":"operationalProjects.rename.success","category":"operationalProjects","vi":"Đã đổi mã dự án và đưa yêu cầu đồng bộ Drive vào hàng đợi.","en":"Project code changed and Drive synchronization queued.","zh":"项目编号已更改，Drive 同步已加入队列。","ja":"プロジェクト番号を変更し、Drive 同期をキューに追加しました。"},
+  {"key":"operationalProjects.rename.driveStatus","category":"operationalProjects","vi":"Trạng thái đổi tên thư mục Drive","en":"Drive folder rename status","zh":"Drive 文件夹重命名状态","ja":"Drive フォルダー名変更状態"},
+  {"key":"operationalProjects.rename.retryQueued","category":"operationalProjects","vi":"Đã đưa yêu cầu đổi tên Drive vào hàng đợi lại.","en":"Drive folder rename was queued again.","zh":"Drive 文件夹重命名已重新加入队列。","ja":"Drive フォルダー名変更を再度キューに追加しました。"},
+  {"key":"operationalProjects.rename.status.Pending","category":"operationalProjects","vi":"Đang chờ đồng bộ","en":"Pending","zh":"等待同步","ja":"同期待ち"},
+  {"key":"operationalProjects.rename.status.Processing","category":"operationalProjects","vi":"Đang đồng bộ","en":"Processing","zh":"正在同步","ja":"同期中"},
+  {"key":"operationalProjects.rename.status.Succeeded","category":"operationalProjects","vi":"Đã đồng bộ","en":"Succeeded","zh":"同步成功","ja":"同期済み"},
+  {"key":"operationalProjects.rename.status.Failed","category":"operationalProjects","vi":"Đồng bộ thất bại","en":"Failed","zh":"同步失败","ja":"同期失敗"},
+  {"key":"operationalProjects.rename.status.NotRequired","category":"operationalProjects","vi":"Không cần đồng bộ","en":"Not required","zh":"无需同步","ja":"同期不要"}
 ]

@@ -133,6 +133,7 @@ public class OperationalProjectService(
                 .ThenInclude(c => c.Owner)
             .Include(item => item.Contracts)
                 .ThenInclude(c => c.Vendor)
+            .Include(item => item.CodeChanges)
             .Include(item => item.TeamMembers)
             .FirstOrDefaultAsync(item => item.Id == id, ct);
 
@@ -338,6 +339,88 @@ public class OperationalProjectService(
             project.Id, project.ProjectManagerUserId, callerUserId, ct);
         await CrmConcurrency.SaveChangesAsync(db, ct);
         if (transaction is not null) await transaction.CommitAsync(ct);
+        return await GetAsync(id, callerUserId, canSeeAll, ct);
+    }
+
+    public async Task<OperationalProjectResponse?> RenameCodeAsync(
+        int id,
+        RenameOperationalProjectRequest request,
+        int callerUserId,
+        bool canSeeAll,
+        CancellationToken ct = default)
+    {
+        await using var transaction = db.Database.IsRelational()
+            ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct)
+            : null;
+        var project = await db.OperationalProjects.FirstOrDefaultAsync(item => item.Id == id, ct);
+        if (project is null || !CanManage(project, callerUserId, canSeeAll)) return null;
+        if (string.IsNullOrWhiteSpace(request.Reason) || request.Reason.Trim().Length < 3)
+            throw new OperationalProjectOperationException("Lý do đổi mã Dự án phải có ít nhất 3 ký tự.");
+
+        var newCode = await ValidateProjectCodeAsync(request.NewCode, id, ct);
+        if (string.Equals(project.Code, newCode, StringComparison.Ordinal))
+            throw new OperationalProjectOperationException("Mã Dự án mới phải khác mã hiện tại.");
+
+        CrmConcurrency.EnsureMatches(project.RowVersion, request.RowVersion);
+        CrmConcurrency.Apply(db, project, request.RowVersion);
+        var oldCode = project.Code;
+        project.Code = newCode;
+        project.UpdatedAt = DateTime.UtcNow;
+        project.UpdatedByUserId = callerUserId;
+        var hasDriveFolders = await db.ProjectDriveFolders.AsNoTracking()
+            .AnyAsync(item => item.OperationalProjectId == id, ct);
+        db.OperationalProjectCodeChanges.Add(new OperationalProjectCodeChange
+        {
+            OperationalProjectId = id,
+            OldCode = oldCode,
+            NewCode = newCode,
+            Reason = request.Reason.Trim(),
+            DriveRenameStatus = hasDriveFolders
+                ? ProjectDriveRenameStatus.Pending
+                : ProjectDriveRenameStatus.NotRequired,
+            ChangedByUserId = callerUserId,
+            ChangedAt = DateTime.UtcNow,
+        });
+        try
+        {
+            await CrmConcurrency.SaveChangesAsync(db, ct);
+        }
+        catch (DbUpdateException exception) when (SequentialCodes.IsUniqueViolation(exception))
+        {
+            throw new OperationalProjectOperationException(
+                $"Mã dự án '{newCode}' đã tồn tại. Vui lòng chọn mã khác.");
+        }
+        if (transaction is not null) await transaction.CommitAsync(ct);
+        logger.LogInformation(
+            "OperationalProject {ProjectId} code changed from {OldCode} to {NewCode} by user {UserId}",
+            id, oldCode, newCode, callerUserId);
+        return await GetAsync(id, callerUserId, canSeeAll, ct);
+    }
+
+    public async Task<OperationalProjectResponse?> RetryDriveRenameAsync(
+        int id,
+        int callerUserId,
+        bool canSeeAll,
+        CancellationToken ct = default)
+    {
+        var project = await db.OperationalProjects.Include(item => item.TeamMembers)
+            .FirstOrDefaultAsync(item => item.Id == id, ct);
+        if (project is null || !CanManage(project, callerUserId, canSeeAll)) return null;
+        var change = await db.OperationalProjectCodeChanges
+            .Where(item => item.OperationalProjectId == id)
+            .OrderByDescending(item => item.ChangedAt).ThenByDescending(item => item.Id)
+            .FirstOrDefaultAsync(ct);
+        if (change is null || change.DriveRenameStatus == ProjectDriveRenameStatus.NotRequired)
+            throw new OperationalProjectOperationException("Dự án không có yêu cầu đổi tên thư mục Drive.");
+        if (change.DriveRenameStatus == ProjectDriveRenameStatus.Succeeded)
+            return await GetAsync(id, callerUserId, canSeeAll, ct);
+        if (change.DriveRenameStatus == ProjectDriveRenameStatus.Processing)
+            throw new OperationalProjectOperationException(
+                "Yêu cầu đổi tên thư mục Drive đang được xử lý. Vui lòng thử lại sau.");
+        change.DriveRenameStatus = ProjectDriveRenameStatus.Pending;
+        change.DriveRenameError = null;
+        change.NextDriveRenameAttemptAt = null;
+        await db.SaveChangesAsync(ct);
         return await GetAsync(id, callerUserId, canSeeAll, ct);
     }
 
@@ -597,6 +680,22 @@ public class OperationalProjectService(
         return code;
     }
 
+    private async Task<string> ValidateProjectCodeAsync(
+        string requestedCode,
+        int excludedProjectId,
+        CancellationToken ct)
+    {
+        var code = requestedCode.Trim().ToUpperInvariant();
+        if (!ProjectCodePattern.IsMatch(code))
+            throw new OperationalProjectOperationException(
+                "Mã dự án phải có 2-40 ký tự, bắt đầu bằng chữ hoặc số và chỉ gồm A-Z, 0-9, dấu gạch ngang hoặc gạch dưới. Ví dụ: DB-2026-009.");
+        if (await db.OperationalProjects.AsNoTracking()
+            .AnyAsync(project => project.Id != excludedProjectId && project.Code == code, ct))
+            throw new OperationalProjectOperationException(
+                $"Mã dự án '{code}' đã tồn tại. Vui lòng chọn mã khác.");
+        return code;
+    }
+
     private static void ValidateTransition(
         OperationalProjectStatus current,
         OperationalProjectStatus requested)
@@ -693,6 +792,22 @@ public class OperationalProjectService(
             RowVersion = CrmConcurrency.Encode(project.RowVersion),
             CreatedAt = project.CreatedAt,
             UpdatedAt = project.UpdatedAt,
+            LatestCodeChange = project.CodeChanges
+                .OrderByDescending(item => item.ChangedAt)
+                .ThenByDescending(item => item.Id)
+                .Select(item => new ProjectDriveRenameResponse
+                {
+                    Id = item.Id,
+                    OldCode = item.OldCode,
+                    NewCode = item.NewCode,
+                    Reason = item.Reason,
+                    Status = item.DriveRenameStatus.ToString(),
+                    AttemptCount = item.DriveRenameAttemptCount,
+                    Error = item.DriveRenameError,
+                    ChangedAt = item.ChangedAt,
+                    RenamedAt = item.DriveRenamedAt,
+                })
+                .FirstOrDefault(),
             ContractSummary = new OperationalProjectContractSummaryResponse
             {
                 ActiveContractCount = activeContracts.Count,

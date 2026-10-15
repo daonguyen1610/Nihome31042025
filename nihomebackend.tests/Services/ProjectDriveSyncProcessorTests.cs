@@ -55,10 +55,112 @@ public sealed class ProjectDriveSyncProcessorTests : IDisposable
             new TestGoogleDriveSettingsStore(new GoogleDriveOptions()), claimLease.Object,
             Mock.Of<IAuditLogger>(), NullLogger<ProjectDriveSyncProcessor>.Instance);
 
+        Assert.False(await disabled.ProcessNextProjectRenameAsync());
         Assert.False(await disabled.ProcessNextOutboundAsync());
         await disabled.ReconcileProjectAsync(project.Id);
 
         drive.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task ProjectRename_RenamesExistingRootAndKeepsFolderBinding()
+    {
+        project.Name = "Van phong NICON";
+        var change = new OperationalProjectCodeChange
+        {
+            OperationalProjectId = project.Id,
+            OldCode = project.Code,
+            NewCode = "NIC-2026-002",
+            Reason = "Chuẩn hóa mã dự án theo quyết định đã duyệt",
+            ChangedByUserId = 7,
+            DriveRenameStatus = ProjectDriveRenameStatus.Pending,
+        };
+        db.OperationalProjectCodeChanges.Add(change);
+        db.SaveChanges();
+        drive.Setup(item => item.GetMetadataAsync("folder-design", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new DriveItem(
+                "folder-design", "02_Thiet_ke", "application/vnd.google-apps.folder", null, null,
+                null, null, new Dictionary<string, string>(), false, ["project-root"]));
+        drive.Setup(item => item.GetMetadataAsync("project-root", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new DriveItem(
+                "project-root", "OP-002_Van phong NICON", "application/vnd.google-apps.folder", null,
+                null, null, null, new Dictionary<string, string>
+                {
+                    ["niconFolderKind"] = "project",
+                    ["niconProjectId"] = project.Id.ToString(),
+                }, false));
+
+        Assert.True(await processor.ProcessNextProjectRenameAsync());
+
+        var persisted = db.OperationalProjectCodeChanges.Single(item => item.Id == change.Id);
+        Assert.Equal(ProjectDriveRenameStatus.Succeeded, persisted.DriveRenameStatus);
+        Assert.Equal(1, persisted.DriveRenameAttemptCount);
+        Assert.NotNull(persisted.DriveRenamedAt);
+        Assert.Equal("folder-design", db.ProjectDriveFolders.Single().DriveFolderId);
+        drive.Verify(item => item.UpdateFileNameAsync(
+            "project-root", "NIC-2026-002_Van phong NICON", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ProjectRename_ActiveProcessingLease_IsNotClaimedAgain()
+    {
+        db.OperationalProjectCodeChanges.Add(new OperationalProjectCodeChange
+        {
+            OperationalProjectId = project.Id,
+            OldCode = "OP-001",
+            NewCode = project.Code,
+            Reason = "Worker khác đang xử lý",
+            ChangedByUserId = 7,
+            DriveRenameStatus = ProjectDriveRenameStatus.Processing,
+            NextDriveRenameAttemptAt = DateTime.UtcNow.AddMinutes(4),
+        });
+        db.SaveChanges();
+
+        Assert.False(await processor.ProcessNextProjectRenameAsync());
+
+        drive.Verify(item => item.CheckConnectionAsync(It.IsAny<CancellationToken>()), Times.Never);
+        drive.Verify(item => item.UpdateFileNameAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ProjectRename_DriveFailurePersistsRetryableStateWithoutChangingBinding()
+    {
+        var change = new OperationalProjectCodeChange
+        {
+            OperationalProjectId = project.Id,
+            OldCode = "OP-001",
+            NewCode = project.Code,
+            Reason = "Kiểm tra lỗi Drive có thể retry",
+            ChangedByUserId = 7,
+            DriveRenameStatus = ProjectDriveRenameStatus.Pending,
+        };
+        db.OperationalProjectCodeChanges.Add(change);
+        db.SaveChanges();
+        drive.Setup(item => item.GetMetadataAsync("folder-design", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new DriveItem(
+                "folder-design", "02_Thiet_ke", "application/vnd.google-apps.folder", null, null,
+                null, null, new Dictionary<string, string>(), false, ["project-root"]));
+        drive.Setup(item => item.GetMetadataAsync("project-root", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new DriveItem(
+                "project-root", "OP-001_NICON", "application/vnd.google-apps.folder", null, null,
+                null, null, new Dictionary<string, string>
+                {
+                    ["niconFolderKind"] = "project",
+                    ["niconProjectId"] = project.Id.ToString(),
+                }, false));
+        drive.Setup(item => item.UpdateFileNameAsync(
+                "project-root", It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("Drive temporarily unavailable"));
+
+        Assert.True(await processor.ProcessNextProjectRenameAsync());
+
+        var persisted = db.OperationalProjectCodeChanges.Single(item => item.Id == change.Id);
+        Assert.Equal(ProjectDriveRenameStatus.Failed, persisted.DriveRenameStatus);
+        Assert.Equal(1, persisted.DriveRenameAttemptCount);
+        Assert.Contains("temporarily unavailable", persisted.DriveRenameError);
+        Assert.True(persisted.NextDriveRenameAttemptAt > DateTime.UtcNow);
+        Assert.Equal("folder-design", db.ProjectDriveFolders.Single().DriveFolderId);
     }
 
     [Fact]
@@ -194,9 +296,11 @@ public sealed class ProjectDriveSyncProcessorTests : IDisposable
     {
         var document = db.Model.FindEntityType(typeof(ProjectDocument))!;
         var driveFolder = db.Model.FindEntityType(typeof(ProjectDriveFolder))!;
+        var codeChange = db.Model.FindEntityType(typeof(OperationalProjectCodeChange))!;
 
         Assert.True(document.FindProperty(nameof(ProjectDocument.RowVersion))!.IsConcurrencyToken);
         Assert.True(driveFolder.FindProperty(nameof(ProjectDriveFolder.RowVersion))!.IsConcurrencyToken);
+        Assert.True(codeChange.FindProperty(nameof(OperationalProjectCodeChange.RowVersion))!.IsConcurrencyToken);
         Assert.Contains(document.GetIndexes(), index => index.IsUnique && index.Properties.Select(property => property.Name)
             .SequenceEqual(new[]
             {

@@ -132,9 +132,13 @@ thực hiện theo quyền và điều kiện an toàn dữ liệu hiện có.
 - Có khách hàng, mã/tên dự án và người phụ trách hợp lệ.
 - Cơ hội, báo giá, hợp đồng và các module sau phải liên kết lại Dự án này.
 - Khi tạo Dự án, hệ thống đề xuất mã tự động và người tạo được chỉnh mã trước
-  khi lưu. Sau khi Dự án được tạo, mã không được thay đổi để giữ ổn định việc
-  đối soát, tên thư mục và tài liệu lịch sử. Mã phải duy nhất toàn hệ thống;
-  quy ước chi tiết vẫn theo quyết định Q-05 của NICON.
+  khi lưu. Sau khi tạo, chỉ người có quyền chuyên biệt mới được đổi mã; yêu cầu
+  phải có mã mới hợp lệ, lý do và đúng `rowVersion`. Hệ thống giữ mã cũ/mới,
+  người đổi và thời điểm trong lịch sử, không đổi `OperationalProjectId`.
+- Đổi tên thư mục Drive chạy bất đồng bộ trên đúng folder ID hiện có. Lỗi Drive
+  không hoàn tác mã trong cơ sở dữ liệu nhưng phải hiển thị trạng thái và cho
+  phép retry an toàn. Mã vẫn phải duy nhất toàn hệ thống; quy ước chi tiết vẫn
+  theo quyết định Q-05 của NICON.
 
 ### G1 — Chuyển sang hợp đồng
 
@@ -161,6 +165,11 @@ thực hiện theo quyền và điều kiện an toàn dữ liệu hiện có.
 - Design Manager chọn hồ sơ Project Documents và người nhận Kinh doanh/CM/lãnh
   đạo → người được chỉ định chỉ xem, bình luận → Design Manager tổng hợp → ghi
   nhận đã trình khách → ghi nhận quyết định khách hàng.
+- Công việc thiết kế thuê ngoài phải liên kết đồng thời Vendor và Hợp đồng
+  Downstream cùng Dự án, đúng loại Design/Subcontract và đúng nhà cung cấp; NICON
+  vẫn chỉ định một người phụ trách nội bộ.
+- Hồ sơ đã ghi nhận trình khách không được xóa vật lý, kể cả khi bị từ chối;
+  việc sửa sai dùng quyết định khách hàng có lý do và revision thay thế.
 - Concept chỉ được chốt khi revision Concept mới nhất là `ClientApproved`.
 - Basic Design chỉ mở Shop Drawing khi đủ điều kiện nội bộ/pháp lý và revision
   Basic Design mới nhất là `ClientApproved`.

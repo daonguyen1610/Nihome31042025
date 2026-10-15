@@ -108,6 +108,7 @@ const OperationalProjects = () => {
   const { toast } = useToast();
   const { has } = usePermissions();
   const canManage = has(ADMIN_PERMS.operationalProjectsManage);
+  const canRename = has(ADMIN_PERMS.operationalProjectsRename);
   const canCreate = canManage && has(ADMIN_PERMS.opportunitiesManage);
   const canViewContracts = has(ADMIN_PERMS.contracts);
   const canManageWorkPackages = has(ADMIN_PERMS.workPackagesManage);
@@ -145,6 +146,11 @@ const OperationalProjects = () => {
   const [reopenReason, setReopenReason] = useState("");
   const [reopenError, setReopenError] = useState<string | null>(null);
   const [reopening, setReopening] = useState(false);
+  const [renameOpen, setRenameOpen] = useState(false);
+  const [renameCode, setRenameCode] = useState("");
+  const [renameReason, setRenameReason] = useState("");
+  const [renameError, setRenameError] = useState<string | null>(null);
+  const [renaming, setRenaming] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -374,6 +380,49 @@ const OperationalProjects = () => {
   );
   const formatDate = (value?: string | null) => (value ? dateFormat.format(new Date(value)) : "—");
 
+  const renameProject = async () => {
+    if (!detail) return;
+    const normalizedCode = renameCode.trim().toUpperCase();
+    if (!/^[A-Z0-9][A-Z0-9_-]{1,39}$/.test(normalizedCode)) {
+      setRenameError(t("operationalProjects.validation.code"));
+      return;
+    }
+    if (normalizedCode === detail.code || renameReason.trim().length < 3) {
+      setRenameError(t("operationalProjects.rename.validation"));
+      return;
+    }
+    setRenaming(true);
+    setRenameError(null);
+    try {
+      const response = await adminApi.renameOperationalProject(
+        detail.id,
+        { newCode: normalizedCode, reason: renameReason.trim(), rowVersion: detail.rowVersion },
+        newIdempotencyKey(),
+      );
+      setDetail(response.data);
+      setRenameOpen(false);
+      toast({ title: t("operationalProjects.rename.success") });
+    } catch (reason) {
+      setRenameError(extractApiError(reason));
+    } finally {
+      setRenaming(false);
+    }
+  };
+
+  const retryDriveRename = async () => {
+    if (!detail) return;
+    try {
+      const response = await adminApi.retryOperationalProjectDriveRename(
+        detail.id,
+        newIdempotencyKey(),
+      );
+      setDetail(response.data);
+      toast({ title: t("operationalProjects.rename.retryQueued") });
+    } catch (reason) {
+      toast({ title: extractApiError(reason), variant: "destructive" });
+    }
+  };
+
   return (
     <AdminLayout>
       {loading ? (
@@ -400,7 +449,7 @@ const OperationalProjects = () => {
               </div>
               <p className="mt-1 text-sm text-muted-foreground">{detail.customerName}</p>
             </div>
-            {(canManage || canManageWorkPackages) && (
+            {(canManage || canManageWorkPackages || canRename) && (
               <div className="flex flex-wrap gap-2">
                 {canManageWorkPackages && (
                   <Button asChild>
@@ -440,6 +489,19 @@ const OperationalProjects = () => {
                     </Button>
                   </>
                 )}
+                {canRename && (
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setRenameCode(detail.code);
+                      setRenameReason("");
+                      setRenameError(null);
+                      setRenameOpen(true);
+                    }}
+                  >
+                    {t("operationalProjects.rename.action")}
+                  </Button>
+                )}
               </div>
             )}
           </div>
@@ -467,6 +529,26 @@ const OperationalProjects = () => {
               value={formatDate(detail.updatedAt)}
             />
           </section>
+
+          {detail.latestCodeChange && detail.latestCodeChange.status !== "NotRequired" && (
+            <div className="rounded-lg border bg-card p-3 text-sm">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span>
+                  {t("operationalProjects.rename.driveStatus")}:{" "}
+                  {t(`operationalProjects.rename.status.${detail.latestCodeChange.status}`)}
+                </span>
+                {detail.latestCodeChange.status === "Failed" && canRename && (
+                  <Button size="sm" variant="outline" onClick={() => void retryDriveRename()}>
+                    <RefreshCcw className="mr-2 h-4 w-4" />
+                    {t("common.retry")}
+                  </Button>
+                )}
+              </div>
+              {detail.latestCodeChange.error && (
+                <p className="mt-1 text-destructive">{detail.latestCodeChange.error}</p>
+              )}
+            </div>
+          )}
 
           {detail.note && (
             <section className="rounded-lg border bg-card p-4">
@@ -1330,6 +1412,46 @@ const OperationalProjects = () => {
             </Button>
             <Button disabled={saving} onClick={() => void save()}>
               {saving ? t("common.saving") : t("common.save")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("operationalProjects.rename.title")}</DialogTitle>
+            <DialogDescription>{t("operationalProjects.rename.description")}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="rename-project-code">{t("operationalProjects.field.code")}</Label>
+              <Input
+                id="rename-project-code"
+                maxLength={40}
+                value={renameCode}
+                onChange={(event) => setRenameCode(event.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="rename-project-reason">
+                {t("operationalProjects.rename.reason")}
+              </Label>
+              <Textarea
+                id="rename-project-reason"
+                maxLength={1000}
+                value={renameReason}
+                onChange={(event) => setRenameReason(event.target.value)}
+              />
+            </div>
+            {renameError && <p className="text-sm text-destructive">{renameError}</p>}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRenameOpen(false)} disabled={renaming}>
+              {t("common.cancel")}
+            </Button>
+            <Button onClick={() => void renameProject()} disabled={renaming}>
+              {renaming ? t("common.saving") : t("common.save")}
             </Button>
           </DialogFooter>
         </DialogContent>

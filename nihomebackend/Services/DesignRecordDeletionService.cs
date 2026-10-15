@@ -147,6 +147,7 @@ public sealed class DesignRecordDeletionService(
             {
                 review.Id,
                 review.Title,
+                review.ClientSubmittedAt,
                 IsExclusive = review.Documents.All(document =>
                     document.SourceEntityTypeSnapshot == entityType &&
                     document.SourceRecordIdSnapshot == resourceId),
@@ -160,7 +161,13 @@ public sealed class DesignRecordDeletionService(
             .OrderBy(review => review.Id)
             .ToListAsync(ct);
 
-        var exclusive = reviewEvidence.Where(review => review.IsExclusive).ToList();
+        var clientSubmitted = reviewEvidence.Where(review => review.ClientSubmittedAt.HasValue).ToList();
+        Add(items, "design.clientSubmissionHistory", DeletionImpactActions.Block,
+            clientSubmitted.Select(review => review.Id.ToString()),
+            clientSubmitted.Select(review => review.Title));
+
+        var exclusive = reviewEvidence
+            .Where(review => review.IsExclusive && !review.ClientSubmittedAt.HasValue).ToList();
         Add(items, "design.reviewHistory", DeletionImpactActions.Delete,
             exclusive.Select(review => review.Id.ToString()), exclusive.Select(review => review.Title));
         Add(items, "design.reviewDocuments", DeletionImpactActions.Delete,
@@ -240,7 +247,8 @@ public sealed class DesignRecordDeletionService(
                     document.SourceRecordIdSnapshot == resourceId) &&
                 review.Documents.All(document =>
                     document.SourceEntityTypeSnapshot == entityType &&
-                    document.SourceRecordIdSnapshot == resourceId))
+                    document.SourceRecordIdSnapshot == resourceId) &&
+                !review.ClientSubmittedAt.HasValue)
             .Select(review => review.Id)
             .ToListAsync(ct);
     }

@@ -28,6 +28,8 @@ public class BusinessRolePermissionsTests : IntegrationTestBase
                         new[] { "content.projects.manage", "processes.manage", "users.view" } },
         { "ACCOUNTANT", new[] { "dashboard.view", "contacts.view", "system.audit.view", "profile.me.view", "crm.customers.view", "crm.customers.view.all", "crm.contracts.view.upstream.all", "crm.contracts.view.downstream.all" },
                         new[] { "contacts.manage", "system.audit.manage", "users.view", "crm.customers.manage", "crm.contracts.manage", "crm.contracts.view.all" } },
+        { "HR",         new[] { "dashboard.view", "contacts.view", "master-data.view", "recruitment.applications.view", "recruitment.applications.manage", "recruitment.positions.view", "recruitment.positions.manage", "recruitment.options.view", "recruitment.options.manage", "profile.me.view" },
+                        new[] { "finance.payments.view", "finance.payments.manage", "finance.payments.approve", "finance.payments.pay", "finance.periods.close", "crm.contracts.manage", "operations.projects.rename" } },
         { "WAREHOUSE",  new[] { "dashboard.view", "processes.view", "profile.me.view" },
                         new[] { "processes.manage", "users.view", "contacts.view" } },
         { "BGD",        new[] { "dashboard.view", "users.view", "content.projects.view", "processes.view", "system.audit.view", "profile.me.view" },
@@ -63,6 +65,7 @@ public class BusinessRolePermissionsTests : IntegrationTestBase
     [InlineData("PM")]
     [InlineData("QS")]
     [InlineData("ACCOUNTANT")]
+    [InlineData("HR")]
     [InlineData("WAREHOUSE")]
     [InlineData("BGD")]
     public async Task BusinessRole_CanReadDashboard_CannotMutateUsers(string roleCode)

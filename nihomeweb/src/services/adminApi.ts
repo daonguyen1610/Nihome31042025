@@ -1184,6 +1184,17 @@ export interface OperationalProjectResponse extends OperationalProjectListItemRe
   designProjectCode?: string | null;
   rowVersion: string;
   createdAt: string;
+  latestCodeChange?: {
+    id: number;
+    oldCode: string;
+    newCode: string;
+    reason: string;
+    status: "Pending" | "Processing" | "Succeeded" | "Failed" | "NotRequired";
+    attemptCount: number;
+    error?: string | null;
+    changedAt: string;
+    renamedAt?: string | null;
+  } | null;
   contractSummary: {
     activeContractCount: number;
     upstreamContractCount: number;
@@ -1744,6 +1755,12 @@ export interface UpdateOperationalProjectRequest {
   note?: string | null;
   status: OperationalProjectStatus;
   rowVersion?: string;
+}
+
+export interface RenameOperationalProjectRequest {
+  newCode: string;
+  reason: string;
+  rowVersion: string;
 }
 
 export interface OperationalProjectCodeSuggestionResponse {
@@ -3378,6 +3395,8 @@ export interface UpsertDesignScheduleTaskRequest extends UpsertDesignSchedulePha
   approverMemberId: number;
   parentTaskId?: number | null;
   resourceSummary?: string | null;
+  vendorId?: number | null;
+  downstreamContractId?: number | null;
   isCritical: boolean;
   isMilestone: boolean;
   predecessorTaskIds: number[];
@@ -3424,6 +3443,10 @@ export interface DesignScheduleTaskResponse {
   approverMemberId: number;
   parentTaskId?: number | null;
   resourceSummary?: string | null;
+  vendorId?: number | null;
+  vendorName?: string | null;
+  downstreamContractId?: number | null;
+  downstreamContractNumber?: string | null;
   isCritical: boolean;
   isMilestone: boolean;
   plannedStart: string;
@@ -3444,6 +3467,15 @@ export interface DesignScheduleTaskResponse {
   reviewedByUserId?: number | null;
   reviewComment?: string | null;
   rowVersion: string;
+}
+
+export interface DesignScheduleOutsourceOptionResponse {
+  vendorId: number;
+  vendorCode: string;
+  vendorName: string;
+  contractId: number;
+  contractNumber: string;
+  contractType: "Design" | "Subcontract";
 }
 
 export type DesignReviewStage = "Concept" | "BasicDesign" | "ShopDrawing";
@@ -6346,6 +6378,10 @@ export const adminApi = {
     api.get<DesignScheduleResponse>(`/operational-projects/${projectId}/design-schedule`, {
       params,
     }),
+  getDesignScheduleOutsourceOptions: (projectId: number) =>
+    api.get<DesignScheduleOutsourceOptionResponse[]>(
+      `/operational-projects/${projectId}/design-schedule/outsource-options`,
+    ),
   initializeDesignSchedule: (
     projectId: number,
     body: InitializeDesignScheduleRequest,
@@ -7692,6 +7728,23 @@ export const adminApi = {
     api.post<OperationalProjectResponse>("/operational-projects", body),
   updateOperationalProject: (id: number, body: UpdateOperationalProjectRequest) =>
     api.put<OperationalProjectResponse>(`/operational-projects/${id}`, body),
+  renameOperationalProject: (
+    id: number,
+    body: RenameOperationalProjectRequest,
+    idempotencyKey: string,
+  ) =>
+    api.patch<OperationalProjectResponse>(`/operational-projects/${id}/code`, body, {
+      headers: {
+        ...withIfMatch(body.rowVersion).headers,
+        ...withIdempotencyKey(idempotencyKey).headers,
+      },
+    }),
+  retryOperationalProjectDriveRename: (id: number, idempotencyKey: string) =>
+    api.post<OperationalProjectResponse>(
+      `/operational-projects/${id}/code/drive-retry`,
+      {},
+      withIdempotencyKey(idempotencyKey),
+    ),
   reopenOperationalProject: (
     id: number,
     body: ReopenOperationalProjectRequest,

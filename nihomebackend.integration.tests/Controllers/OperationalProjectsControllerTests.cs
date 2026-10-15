@@ -177,6 +177,120 @@ public class OperationalProjectsControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task RenameCode_RequiresSpecialPermissionAndPersistsDriveWorkAndHistory()
+    {
+        await AuthTestHelper.AuthenticateAsync(
+            Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "SUPER_ADMIN"));
+        var customerId = await CreateCustomerAsync("Project code governance");
+        var createResponse = await Client.PostAsJsonAsync("/api/operational-projects", new
+        {
+            code = $"NICON-OLD-{Guid.NewGuid():N}"[..30],
+            name = "Trụ sở điều hành NICON",
+            customerId,
+        });
+        createResponse.EnsureSuccessStatusCode();
+        var created = await ReadJsonAsync(createResponse);
+        var projectId = created.GetProperty("id").GetInt32();
+        var oldCode = created.GetProperty("code").GetString();
+        await WithDbAsync(async db =>
+        {
+            db.ProjectDriveFolders.Add(new ProjectDriveFolder
+            {
+                OperationalProjectId = projectId,
+                Category = ProjectDocumentCategory.DesignBasic,
+                DriveFolderId = $"drive-project-{Guid.NewGuid():N}",
+                DriveWebViewLink = "https://drive.test/project",
+            });
+            await db.SaveChangesAsync();
+        });
+        var newCode = $"nicon-new-{Guid.NewGuid():N}"[..30];
+
+        var renameResponse = await Client.PatchAsJsonAsync(
+            $"/api/operational-projects/{projectId}/code",
+            new
+            {
+                newCode,
+                reason = "Chuẩn hóa theo quy ước mã dự án đã phê duyệt",
+                rowVersion = created.GetProperty("rowVersion").GetString(),
+            });
+
+        renameResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var renamed = await ReadJsonAsync(renameResponse);
+        renamed.GetProperty("code").GetString().Should().Be(newCode.ToUpperInvariant());
+        renamed.GetProperty("latestCodeChange").GetProperty("status").GetString()
+            .Should().Be("Pending");
+        var history = await WithDbAsync(db => db.OperationalProjectCodeChanges.AsNoTracking()
+            .SingleAsync(item => item.OperationalProjectId == projectId));
+        history.OldCode.Should().Be(oldCode);
+        history.NewCode.Should().Be(newCode.ToUpperInvariant());
+        history.Reason.Should().Be("Chuẩn hóa theo quy ước mã dự án đã phê duyệt");
+        history.ChangedByUserId.Should().BeGreaterThan(0);
+
+        var staleResponse = await Client.PatchAsJsonAsync(
+            $"/api/operational-projects/{projectId}/code",
+            new
+            {
+                newCode = $"NICON-STALE-{Guid.NewGuid():N}"[..30],
+                reason = "Yêu cầu dùng phiên bản cũ phải bị từ chối",
+                rowVersion = created.GetProperty("rowVersion").GetString(),
+            });
+        staleResponse.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await WithDbAsync(db => db.OperationalProjectCodeChanges.CountAsync(item =>
+            item.OperationalProjectId == projectId))).Should().Be(1);
+    }
+
+    [Fact]
+    public async Task RenameCode_WithoutSpecialPermission_IsForbiddenWithoutMutation()
+    {
+        var seeded = await WithDbAsync(async db =>
+        {
+            var pmUserId = await db.Users
+                .Where(user => user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["PM"])
+                .Select(user => user.Id)
+                .SingleAsync();
+            var customer = new Customer
+            {
+                Name = "Restricted project code customer",
+                Type = CustomerType.Company,
+                SourceCode = "referral",
+            };
+            db.Customers.Add(customer);
+            await db.SaveChangesAsync();
+            var project = new OperationalProject
+            {
+                Code = $"PJ-LOCKED-{Guid.NewGuid():N}"[..30],
+                Name = "Dự án không được tự đổi mã",
+                CustomerId = customer.Id,
+                ProjectManagerUserId = pmUserId,
+            };
+            db.OperationalProjects.Add(project);
+            await db.SaveChangesAsync();
+            return new { project.Id, project.Code, RowVersion = CrmConcurrency.Encode(project.RowVersion) };
+        });
+        await AuthTestHelper.AuthenticateAsync(
+            Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "PM"));
+
+        var response = await Client.PatchAsJsonAsync(
+            $"/api/operational-projects/{seeded.Id}/code",
+            new
+            {
+                newCode = $"PJ-DENIED-{Guid.NewGuid():N}"[..30],
+                reason = "PM không có quyền chuyên biệt",
+                rowVersion = seeded.RowVersion,
+            });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await WithDbAsync(db => db.OperationalProjects
+            .Where(item => item.Id == seeded.Id)
+            .Select(item => item.Code)
+            .SingleAsync())).Should().Be(seeded.Code);
+        (await WithDbAsync(db => db.OperationalProjectCodeChanges.AnyAsync(item =>
+            item.OperationalProjectId == seeded.Id))).Should().BeFalse();
+    }
+
+    [Fact]
     public async Task Complete_RequiresTerminalModules_AndReopenRequiresReasonWithAudit()
     {
         await AuthTestHelper.AuthenticateAsync(

@@ -46,6 +46,20 @@ public class ReopenOperationalProjectRequest : IConcurrencyRequest
     public string Reason { get; set; } = string.Empty;
 }
 
+public sealed class RenameOperationalProjectRequest : IConcurrencyRequest
+{
+    [Required]
+    [StringLength(40, MinimumLength = 2)]
+    public string NewCode { get; set; } = string.Empty;
+
+    [Required]
+    [StringLength(1000, MinimumLength = 3)]
+    public string Reason { get; set; } = string.Empty;
+
+    [Required]
+    public string? RowVersion { get; set; }
+}
+
 public class OperationalProjectListParams
 {
     public int? CustomerId { get; set; }

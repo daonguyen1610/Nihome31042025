@@ -391,6 +391,83 @@ public class OperationalProjectServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task RenameCodeAsync_NormalizesCodeAndCreatesAuditableDriveWork()
+    {
+        var created = await _service.CreateAsync(ValidCreate(), _managerId, false);
+        _db.ProjectDriveFolders.Add(new ProjectDriveFolder
+        {
+            OperationalProjectId = created.Id,
+            Category = ProjectDocumentCategory.DesignConcept,
+            DriveFolderId = "drive-design-folder",
+        });
+        var persistedProject = await _db.OperationalProjects.SingleAsync(item => item.Id == created.Id);
+        persistedProject.RowVersion = BitConverter.GetBytes(1L);
+        await _db.SaveChangesAsync();
+
+        var result = await _service.RenameCodeAsync(created.Id, new RenameOperationalProjectRequest
+        {
+            NewCode = " db-2026-renamed ",
+            Reason = "Đồng bộ mã theo phê duyệt của NICON",
+            RowVersion = CrmConcurrency.Encode(persistedProject.RowVersion),
+        }, _managerId, false);
+
+        Assert.NotNull(result);
+        Assert.Equal("DB-2026-RENAMED", result!.Code);
+        Assert.Equal("Pending", result.LatestCodeChange!.Status);
+        var history = await _db.OperationalProjectCodeChanges.SingleAsync();
+        Assert.Equal(created.Code, history.OldCode);
+        Assert.Equal("DB-2026-RENAMED", history.NewCode);
+        Assert.Equal(_managerId, history.ChangedByUserId);
+    }
+
+    [Fact]
+    public async Task RenameCodeAsync_DuplicateCodeLeavesProjectUnchanged()
+    {
+        var first = ValidCreate("First project");
+        first.Code = "PJ-RENAME-ONE";
+        var firstProject = await _service.CreateAsync(first, _managerId, false);
+        var second = ValidCreate("Second project");
+        second.Code = "PJ-RENAME-TWO";
+        var secondProject = await _service.CreateAsync(second, _managerId, false);
+
+        await Assert.ThrowsAsync<OperationalProjectOperationException>(() =>
+            _service.RenameCodeAsync(secondProject.Id, new RenameOperationalProjectRequest
+            {
+                NewCode = firstProject.Code,
+                Reason = "Trùng mã để kiểm tra validation",
+                RowVersion = secondProject.RowVersion,
+            }, _managerId, false));
+
+        Assert.Equal("PJ-RENAME-TWO",
+            (await _db.OperationalProjects.SingleAsync(item => item.Id == secondProject.Id)).Code);
+        Assert.Empty(await _db.OperationalProjectCodeChanges.ToListAsync());
+    }
+
+    [Fact]
+    public async Task RetryDriveRenameAsync_RejectsWorkAlreadyBeingProcessed()
+    {
+        var created = await _service.CreateAsync(ValidCreate(), _managerId, false);
+        _db.OperationalProjectCodeChanges.Add(new OperationalProjectCodeChange
+        {
+            OperationalProjectId = created.Id,
+            OldCode = created.Code,
+            NewCode = "DB-2026-PROCESSING",
+            Reason = "Kiểm tra chống xử lý trùng",
+            ChangedByUserId = _managerId,
+            DriveRenameStatus = ProjectDriveRenameStatus.Processing,
+            NextDriveRenameAttemptAt = DateTime.UtcNow.AddMinutes(5),
+        });
+        await _db.SaveChangesAsync();
+
+        var exception = await Assert.ThrowsAsync<OperationalProjectOperationException>(() =>
+            _service.RetryDriveRenameAsync(created.Id, _managerId, false));
+
+        Assert.Contains("đang được xử lý", exception.Message);
+        Assert.Equal(ProjectDriveRenameStatus.Processing,
+            (await _db.OperationalProjectCodeChanges.SingleAsync()).DriveRenameStatus);
+    }
+
+    [Fact]
     public async Task GetAsync_AggregatesLinkedBusinessRecords()
     {
         var created = await _service.CreateAsync(ValidCreate(), _managerId, false);

@@ -46,5 +46,8 @@
   {"key":"designProjects.documents.sourceRecord","category":"design-projects","vi":"Hồ sơ nguồn","en":"Source dossier","zh":"源文件","ja":"元書類"},
   {"key":"designProjects.documents.selectSourceRecord","category":"design-projects","vi":"Chọn Concept/Bản vẽ cần gắn","en":"Select the related concept or drawing","zh":"选择关联方案或图纸","ja":"関連する案または図面を選択"},
   {"key":"designProjects.documents.validation.sourceRequired","category":"design-projects","vi":"Phải chọn hồ sơ nguồn để tài liệu được dùng làm bằng chứng trình duyệt.","en":"Select a source dossier so the document can be used as review evidence.","zh":"请选择源文件，以便该文档可用作评审证据。","ja":"レビュー証跡として使用するため元書類を選択してください。"},
-  {"key":"designProjects.schedule.field.successors","category":"design-projects","vi":"Công tác nối tiếp","en":"Successor tasks","zh":"后续任务","ja":"後続タスク"}
+  {"key":"designProjects.schedule.field.successors","category":"design-projects","vi":"Công tác nối tiếp","en":"Successor tasks","zh":"后续任务","ja":"後続タスク"},
+  {"key":"designProjects.schedule.field.vendor","category":"design-projects","vi":"Đơn vị thiết kế thuê ngoài","en":"External design vendor","zh":"外部设计供应商","ja":"外部設計会社"},
+  {"key":"designProjects.schedule.field.downstreamContract","category":"design-projects","vi":"Hợp đồng đầu vào","en":"Downstream contract","zh":"下游合同","ja":"下流契約"},
+  {"key":"designProjects.schedule.validation.outsourcePair","category":"design-projects","vi":"Công việc thuê ngoài phải chọn đồng thời đơn vị thiết kế và hợp đồng đầu vào phù hợp.","en":"An outsourced task must select both an external design vendor and a matching downstream contract.","zh":"外包任务必须同时选择外部设计供应商和匹配的下游合同。","ja":"外注タスクでは外部設計会社と対応する下流契約の両方を選択してください。"}
 ]

@@ -125,13 +125,13 @@ test.describe("Detail Design Schedule — assigned Design Lead flow", () => {
     await dialog.locator("#schedule-task-name").fill(`Architecture coordination ${suffix}`);
 
     const selectTriggers = dialog.locator('button[role="combobox"]');
-    await selectTriggers.nth(2).click();
+    await selectTriggers.nth(4).click();
     await page.getByRole("option", { name: /Kiến trúc|Architecture/i }).click();
-    await selectTriggers.nth(3).click();
+    await selectTriggers.nth(5).click();
     await page
       .getByRole("option", { name: /Kiến trúc sư chủ trì phương án|Architecture lead/i })
       .click();
-    await selectTriggers.nth(4).click();
+    await selectTriggers.nth(6).click();
     await page.getByRole("option", { name: designLead!.fullName }).click();
     await dialog.locator("#task-planned-start").fill("2026-04-01");
     await dialog.locator("#task-planned-end").fill("2026-04-15");
@@ -150,7 +150,7 @@ test.describe("Detail Design Schedule — assigned Design Lead flow", () => {
     await expect(dialog).toBeVisible();
     await dialog.locator("#task-actual-start").fill("2026-04-02");
     await dialog.locator("#task-progress").fill("25");
-    await dialog.locator('button[role="combobox"]').nth(6).click();
+    await dialog.locator('button[role="combobox"]').nth(8).click();
     await page.getByRole("option", { name: /Đang thực hiện|In progress/i }).click();
     await dialog.getByRole("button", { name: /Lưu|Save/i }).click();
 

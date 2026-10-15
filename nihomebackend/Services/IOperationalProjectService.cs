@@ -48,6 +48,19 @@ public interface IOperationalProjectService
         bool canSeeAll,
         CancellationToken ct = default);
 
+    Task<OperationalProjectResponse?> RenameCodeAsync(
+        int id,
+        RenameOperationalProjectRequest request,
+        int callerUserId,
+        bool canSeeAll,
+        CancellationToken ct = default);
+
+    Task<OperationalProjectResponse?> RetryDriveRenameAsync(
+        int id,
+        int callerUserId,
+        bool canSeeAll,
+        CancellationToken ct = default);
+
     Task<DeletionImpactResponse?> GetDeletionImpactAsync(
         int id,
         int callerUserId,

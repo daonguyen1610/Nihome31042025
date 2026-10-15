@@ -43,6 +43,10 @@ public sealed class DesignScheduleTaskResponse
     public int ApproverMemberId { get; set; }
     public int? ParentTaskId { get; set; }
     public string? ResourceSummary { get; set; }
+    public int? VendorId { get; set; }
+    public string? VendorName { get; set; }
+    public int? DownstreamContractId { get; set; }
+    public string? DownstreamContractNumber { get; set; }
     public bool IsCritical { get; set; }
     public bool IsMilestone { get; set; }
     public DateOnly PlannedStart { get; set; }
@@ -89,4 +93,14 @@ public sealed class PagedDesignScheduleTasksResponse
     public int PageSize { get; set; }
     public int TotalCount { get; set; }
     public List<DesignScheduleTaskResponse> Items { get; set; } = new();
+}
+
+public sealed class DesignScheduleOutsourceOptionResponse
+{
+    public int VendorId { get; set; }
+    public string VendorCode { get; set; } = string.Empty;
+    public string VendorName { get; set; } = string.Empty;
+    public int ContractId { get; set; }
+    public string ContractNumber { get; set; } = string.Empty;
+    public string ContractType { get; set; } = string.Empty;
 }

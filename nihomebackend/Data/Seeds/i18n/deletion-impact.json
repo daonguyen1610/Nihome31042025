@@ -130,6 +130,7 @@
   {"key":"deletionImpact.item.operations.translations","category":"deletionImpact","vi":"Bản dịch nội dung dự án","en":"Project content translations","zh":"项目内容翻译","ja":"プロジェクトコンテンツの翻訳"},
   {"key":"deletionImpact.item.design.recordState","category":"deletionImpact","vi":"Trạng thái hồ sơ chưa cho phép xóa","en":"Record state does not permit deletion","zh":"记录状态不允许删除","ja":"レコードの状態では削除できません"},
   {"key":"deletionImpact.item.design.reviewHistory","category":"deletionImpact","vi":"Lịch sử trình duyệt riêng của hồ sơ","en":"Record-specific review history","zh":"该记录的评审历史","ja":"レコード固有のレビュー履歴"},
+  {"key":"deletionImpact.item.design.clientSubmissionHistory","category":"deletionImpact","vi":"Hồ sơ đã trình khách hàng phải được giữ lại","en":"Client-submitted dossier must be retained","zh":"已提交客户的档案必须保留","ja":"顧客提出済みの書類は保持する必要があります"},
   {"key":"deletionImpact.item.design.reviewDocuments","category":"deletionImpact","vi":"Liên kết tài liệu trong đợt trình","en":"Review document links","zh":"评审文档链接","ja":"レビュー文書リンク"},
   {"key":"deletionImpact.item.design.reviewComments","category":"deletionImpact","vi":"Bình luận trong đợt trình","en":"Review comments","zh":"评审评论","ja":"レビューコメント"},
   {"key":"deletionImpact.item.design.reviewRecipients","category":"deletionImpact","vi":"Người nhận trong đợt trình","en":"Review recipients","zh":"评审接收人","ja":"レビュー受信者"},

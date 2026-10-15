@@ -92,7 +92,7 @@ public sealed class ProjectDriveFolderService(
             ["niconFolderPath"] = path,
         };
 
-    private static string SafeFolderName(string value) => string.Join("-", value.Split(
+    internal static string SafeFolderName(string value) => string.Join("-", value.Split(
         Path.GetInvalidFileNameChars().Concat(['/']).ToArray(),
         StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
 }
