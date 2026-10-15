@@ -1848,7 +1848,10 @@ require Design users to receive broad Vendor or Contract-list permissions.
 versioned `operational_project_code_changes` queue/history table. Rehearse the
 migration script before deployment. Rollback removes the new links and code
 change history, so export that audit data first if an environment has already
-used project-code changes.
+used project-code changes. The same migration removes only the previously
+shipped sensitive defaults from the `FINANCE` group baseline; it leaves any
+other administrator-added baseline permissions unchanged. Rollback restores
+those shipped defaults.
 
 Before applying `AddDesignApprovalWorkflow` to an environment with existing
 schedule tasks, assign every Design Project an active Design Lead or Design
