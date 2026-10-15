@@ -1835,6 +1835,15 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.Property(x => x.BudgetBaselineReference).HasMaxLength(500).IsRequired();
             b.Property(x => x.RowVersion).IsRowVersion();
             b.HasOne(x => x.OperationalProject).WithMany().HasForeignKey(x => x.OperationalProjectId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne<ProjectDocument>().WithMany().HasForeignKey(x => x.WbsBaselineDocumentId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne<ProjectDocument>().WithMany().HasForeignKey(x => x.ScheduleBaselineDocumentId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne<ProjectDocument>().WithMany().HasForeignKey(x => x.SCurveBaselineDocumentId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne<ProjectDocument>().WithMany().HasForeignKey(x => x.BchOrganizationDocumentId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne<ProjectDocument>().WithMany().HasForeignKey(x => x.ResourcePlanDocumentId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne<ProjectDocument>().WithMany().HasForeignKey(x => x.BudgetBaselineDocumentId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne<ProjectDocument>().WithMany().HasForeignKey(x => x.SiteHandoverDocumentId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne<ProjectDocument>().WithMany().HasForeignKey(x => x.MethodStatementDocumentId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne<ProjectDocument>().WithMany().HasForeignKey(x => x.HsePlanDocumentId).OnDelete(DeleteBehavior.Restrict);
             b.HasIndex(x => new { x.OperationalProjectId, x.Version }).IsUnique();
         });
 
@@ -1880,6 +1889,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         {
             b.ToTable("construction_qs_batches"); b.HasKey(x => x.Id); b.Property(x => x.Code).HasMaxLength(60).IsRequired();
             b.Property(x => x.Direction).HasConversion<string>().HasMaxLength(20); b.Property(x => x.Status).HasConversion<string>().HasMaxLength(30);
+            b.Property(x => x.AdjustmentKind).HasConversion<string>().HasMaxLength(30);
+            b.Property(x => x.RecordState).HasConversion<string>().HasMaxLength(20);
             b.Property(x => x.WbsCode).HasMaxLength(100).IsRequired(); b.Property(x => x.CertifiedAmount).HasPrecision(18, 2);
             b.Property(x => x.Description).HasMaxLength(2000).IsRequired(); b.Property(x => x.CmDecisionReason).HasMaxLength(2000);
             b.Property(x => x.RowVersion).IsRowVersion(); b.HasOne<OperationalProject>().WithMany().HasForeignKey(x => x.OperationalProjectId).OnDelete(DeleteBehavior.Restrict);
@@ -1887,7 +1898,15 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasOne<ProjectBoqRevision>().WithMany().HasForeignKey(x => x.ProjectBoqRevisionId).OnDelete(DeleteBehavior.Restrict);
             b.HasOne<ContractAppendix>().WithMany().HasForeignKey(x => x.ContractAppendixId).OnDelete(DeleteBehavior.Restrict);
             b.HasOne<ContractPaymentMilestone>().WithMany().HasForeignKey(x => x.ContractPaymentMilestoneId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne<ConstructionQsBatch>().WithMany().HasForeignKey(x => x.SupersedesBatchId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne<ConstructionQsBatch>().WithMany().HasForeignKey(x => x.ReversesBatchId).OnDelete(DeleteBehavior.Restrict);
             b.HasIndex(x => new { x.OperationalProjectId, x.Code }).IsUnique();
+            b.HasIndex(x => x.SupersedesBatchId).IsUnique().HasFilter("[SupersedesBatchId] IS NOT NULL AND [IsActiveLineage] = CAST(1 AS bit)");
+            b.HasIndex(x => x.ReversesBatchId).IsUnique().HasFilter("[ReversesBatchId] IS NOT NULL AND [IsActiveLineage] = CAST(1 AS bit)");
+            b.ToTable(table => table.HasCheckConstraint("CK_construction_qs_batches_adjustment_link",
+                "([AdjustmentKind] = 'Original' AND [SupersedesBatchId] IS NULL AND [ReversesBatchId] IS NULL) OR " +
+                "([AdjustmentKind] = 'SupersedingCorrection' AND [SupersedesBatchId] IS NOT NULL AND [ReversesBatchId] IS NULL) OR " +
+                "([AdjustmentKind] = 'Reversal' AND [SupersedesBatchId] IS NULL AND [ReversesBatchId] IS NOT NULL)"));
         });
         modelBuilder.Entity<ConstructionQsBatchLine>(b =>
         {

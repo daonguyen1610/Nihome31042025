@@ -14,13 +14,22 @@ public sealed class ConstructionPreparation : IConcurrencyTracked
     public string BchOrganizationReference { get; set; } = string.Empty;
     public string ResourcePlanReference { get; set; } = string.Empty;
     public string BudgetBaselineReference { get; set; } = string.Empty;
+    public long? WbsBaselineDocumentId { get; set; }
+    public long? ScheduleBaselineDocumentId { get; set; }
+    public long? SCurveBaselineDocumentId { get; set; }
+    public long? BchOrganizationDocumentId { get; set; }
+    public long? ResourcePlanDocumentId { get; set; }
+    public long? BudgetBaselineDocumentId { get; set; }
     public bool BudgetBaselineLocked { get; set; }
     public bool SiteHandoverRequired { get; set; }
     public bool SiteHandoverComplete { get; set; }
+    public long? SiteHandoverDocumentId { get; set; }
     public bool MethodStatementRequired { get; set; }
     public bool MethodStatementApproved { get; set; }
+    public long? MethodStatementDocumentId { get; set; }
     public bool HsePlanRequired { get; set; }
     public bool HsePlanApproved { get; set; }
+    public long? HsePlanDocumentId { get; set; }
     public string? ReadinessSnapshotJson { get; set; }
     public DateTime? PublishedAt { get; set; }
     public int? PublishedByUserId { get; set; }
@@ -144,6 +153,9 @@ public sealed class ConstructionQsBatch : IConcurrencyTracked
     public string? CmDecisionReason { get; set; }
     public int? SupersedesBatchId { get; set; }
     public int? ReversesBatchId { get; set; }
+    public ConstructionQsAdjustmentKind AdjustmentKind { get; set; } = ConstructionQsAdjustmentKind.Original;
+    public ConstructionQsRecordState RecordState { get; set; } = ConstructionQsRecordState.Active;
+    public bool IsActiveLineage { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public byte[] RowVersion { get; set; } = [];
@@ -152,6 +164,8 @@ public sealed class ConstructionQsBatch : IConcurrencyTracked
 }
 
 public enum ConstructionQsDirection { Upstream, Downstream }
+public enum ConstructionQsAdjustmentKind { Original, SupersedingCorrection, Reversal }
+public enum ConstructionQsRecordState { Active, Superseded, Reversed }
 
 public sealed class ConstructionQsBatchLine
 {

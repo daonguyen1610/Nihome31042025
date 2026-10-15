@@ -1178,10 +1178,16 @@ namespace nihomebackend.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<long?>("BchOrganizationDocumentId")
+                        .HasColumnType("bigint");
+
                     b.Property<string>("BchOrganizationReference")
                         .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
+
+                    b.Property<long?>("BudgetBaselineDocumentId")
+                        .HasColumnType("bigint");
 
                     b.Property<bool>("BudgetBaselineLocked")
                         .HasColumnType("bit");
@@ -1200,11 +1206,17 @@ namespace nihomebackend.Migrations
                     b.Property<bool>("HsePlanApproved")
                         .HasColumnType("bit");
 
+                    b.Property<long?>("HsePlanDocumentId")
+                        .HasColumnType("bigint");
+
                     b.Property<bool>("HsePlanRequired")
                         .HasColumnType("bit");
 
                     b.Property<bool>("MethodStatementApproved")
                         .HasColumnType("bit");
+
+                    b.Property<long?>("MethodStatementDocumentId")
+                        .HasColumnType("bigint");
 
                     b.Property<bool>("MethodStatementRequired")
                         .HasColumnType("bit");
@@ -1221,6 +1233,9 @@ namespace nihomebackend.Migrations
                     b.Property<string>("ReadinessSnapshotJson")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<long?>("ResourcePlanDocumentId")
+                        .HasColumnType("bigint");
+
                     b.Property<string>("ResourcePlanReference")
                         .IsRequired()
                         .HasMaxLength(500)
@@ -1232,10 +1247,16 @@ namespace nihomebackend.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
 
+                    b.Property<long?>("SCurveBaselineDocumentId")
+                        .HasColumnType("bigint");
+
                     b.Property<string>("SCurveBaselineReference")
                         .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
+
+                    b.Property<long?>("ScheduleBaselineDocumentId")
+                        .HasColumnType("bigint");
 
                     b.Property<string>("ScheduleBaselineReference")
                         .IsRequired()
@@ -1244,6 +1265,9 @@ namespace nihomebackend.Migrations
 
                     b.Property<bool>("SiteHandoverComplete")
                         .HasColumnType("bit");
+
+                    b.Property<long?>("SiteHandoverDocumentId")
+                        .HasColumnType("bigint");
 
                     b.Property<bool>("SiteHandoverRequired")
                         .HasColumnType("bit");
@@ -1271,12 +1295,33 @@ namespace nihomebackend.Migrations
                     b.Property<int>("Version")
                         .HasColumnType("int");
 
+                    b.Property<long?>("WbsBaselineDocumentId")
+                        .HasColumnType("bigint");
+
                     b.Property<string>("WbsBaselineReference")
                         .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("BchOrganizationDocumentId");
+
+                    b.HasIndex("BudgetBaselineDocumentId");
+
+                    b.HasIndex("HsePlanDocumentId");
+
+                    b.HasIndex("MethodStatementDocumentId");
+
+                    b.HasIndex("ResourcePlanDocumentId");
+
+                    b.HasIndex("SCurveBaselineDocumentId");
+
+                    b.HasIndex("ScheduleBaselineDocumentId");
+
+                    b.HasIndex("SiteHandoverDocumentId");
+
+                    b.HasIndex("WbsBaselineDocumentId");
 
                     b.HasIndex("OperationalProjectId", "Version")
                         .IsUnique();
@@ -1291,6 +1336,11 @@ namespace nihomebackend.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AdjustmentKind")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
 
                     b.Property<decimal>("CertifiedAmount")
                         .HasPrecision(18, 2)
@@ -1336,6 +1386,9 @@ namespace nihomebackend.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
+                    b.Property<bool>("IsActiveLineage")
+                        .HasColumnType("bit");
+
                     b.Property<int>("OperationalProjectId")
                         .HasColumnType("int");
 
@@ -1347,6 +1400,11 @@ namespace nihomebackend.Migrations
 
                     b.Property<int?>("ProjectBoqRevisionId")
                         .HasColumnType("int");
+
+                    b.Property<string>("RecordState")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
 
                     b.Property<int?>("ReversesBatchId")
                         .HasColumnType("int");
@@ -1386,10 +1444,21 @@ namespace nihomebackend.Migrations
 
                     b.HasIndex("ProjectBoqRevisionId");
 
+                    b.HasIndex("ReversesBatchId")
+                        .IsUnique()
+                        .HasFilter("[ReversesBatchId] IS NOT NULL AND [IsActiveLineage] = CAST(1 AS bit)");
+
+                    b.HasIndex("SupersedesBatchId")
+                        .IsUnique()
+                        .HasFilter("[SupersedesBatchId] IS NOT NULL AND [IsActiveLineage] = CAST(1 AS bit)");
+
                     b.HasIndex("OperationalProjectId", "Code")
                         .IsUnique();
 
-                    b.ToTable("construction_qs_batches", (string)null);
+                    b.ToTable("construction_qs_batches", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_construction_qs_batches_adjustment_link", "([AdjustmentKind] = 'Original' AND [SupersedesBatchId] IS NULL AND [ReversesBatchId] IS NULL) OR ([AdjustmentKind] = 'SupersedingCorrection' AND [SupersedesBatchId] IS NOT NULL AND [ReversesBatchId] IS NULL) OR ([AdjustmentKind] = 'Reversal' AND [SupersedesBatchId] IS NULL AND [ReversesBatchId] IS NOT NULL)");
+                        });
                 });
 
             modelBuilder.Entity("NihomeBackend.Models.ConstructionQsBatchEvidence", b =>
@@ -10897,11 +10966,56 @@ namespace nihomebackend.Migrations
 
             modelBuilder.Entity("NihomeBackend.Models.ConstructionPreparation", b =>
                 {
+                    b.HasOne("NihomeBackend.Models.ProjectDocument", null)
+                        .WithMany()
+                        .HasForeignKey("BchOrganizationDocumentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NihomeBackend.Models.ProjectDocument", null)
+                        .WithMany()
+                        .HasForeignKey("BudgetBaselineDocumentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NihomeBackend.Models.ProjectDocument", null)
+                        .WithMany()
+                        .HasForeignKey("HsePlanDocumentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NihomeBackend.Models.ProjectDocument", null)
+                        .WithMany()
+                        .HasForeignKey("MethodStatementDocumentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("NihomeBackend.Models.OperationalProject", "OperationalProject")
                         .WithMany()
                         .HasForeignKey("OperationalProjectId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("NihomeBackend.Models.ProjectDocument", null)
+                        .WithMany()
+                        .HasForeignKey("ResourcePlanDocumentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NihomeBackend.Models.ProjectDocument", null)
+                        .WithMany()
+                        .HasForeignKey("SCurveBaselineDocumentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NihomeBackend.Models.ProjectDocument", null)
+                        .WithMany()
+                        .HasForeignKey("ScheduleBaselineDocumentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NihomeBackend.Models.ProjectDocument", null)
+                        .WithMany()
+                        .HasForeignKey("SiteHandoverDocumentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NihomeBackend.Models.ProjectDocument", null)
+                        .WithMany()
+                        .HasForeignKey("WbsBaselineDocumentId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("OperationalProject");
                 });
@@ -10933,6 +11047,16 @@ namespace nihomebackend.Migrations
                     b.HasOne("NihomeBackend.Models.ProjectBoqRevision", null)
                         .WithMany()
                         .HasForeignKey("ProjectBoqRevisionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NihomeBackend.Models.ConstructionQsBatch", null)
+                        .WithMany()
+                        .HasForeignKey("ReversesBatchId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NihomeBackend.Models.ConstructionQsBatch", null)
+                        .WithMany()
+                        .HasForeignKey("SupersedesBatchId")
                         .OnDelete(DeleteBehavior.Restrict);
                 });
 

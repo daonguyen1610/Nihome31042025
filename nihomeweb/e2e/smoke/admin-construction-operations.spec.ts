@@ -58,11 +58,44 @@ test("BCH resource workspace renders the assigned project on mobile", async ({
         ]),
       }),
   );
+  await page.route(
+    new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/construction/resource-references$`),
+    (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          boqLines: [
+            {
+              id: 1101,
+              itemCode: "MAT-STEEL-01",
+              description: "Reinforcement steel",
+              unit: "kg",
+              approvedQuantity: 1000,
+              remainingQuantity: 1000,
+            },
+          ],
+          siteUsers: [{ userId: 501, userName: "Nguyen Van BCH" }],
+          procurementUsers: [{ userId: 502, userName: "Tran Thi Procurement" }],
+        }),
+      }),
+  );
 
-  await page.goto(`${appUrl}/admin/construction/bch/resources`, { waitUntil: "networkidle" });
+  await page.goto(`${appUrl}/admin/construction/bch/resource-requests`, {
+    waitUntil: "networkidle",
+  });
 
   await expect(page.getByTestId("bch-resource-page")).toBeVisible();
   await expect(page.getByTestId("resource-row-190101")).toContainText("WBS-STR-01");
   await expect(page.getByTestId("bch-resource-page-project")).toContainText("NICON-M4-01");
+  await page.getByTestId("resource-new").click();
+  await page.getByTestId("resource-boq-line").click();
+  await expect(page.getByRole("option", { name: /MAT-STEEL-01/ })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await page.getByTestId("resource-site-user").click();
+  await expect(page.getByRole("option", { name: "Nguyen Van BCH" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await page.getByTestId("resource-procurement-user").click();
+  await expect(page.getByRole("option", { name: "Tran Thi Procurement" })).toBeVisible();
   expect(errors).toEqual([]);
 });

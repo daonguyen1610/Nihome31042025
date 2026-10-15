@@ -17,6 +17,22 @@ public sealed class ConstructionOperationsControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task ResourceReferences_ProjectQsCanReadWithoutProcurementPermission()
+    {
+        var fixture = await CreateProjectAsync();
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "QS"));
+
+        using var response = await Client.GetAsync(
+            $"/api/operational-projects/{fixture.ProjectId}/construction/resource-references");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var payload = await ReadJsonAsync(response);
+        payload.TryGetProperty("boqLines", out _).Should().BeTrue();
+        payload.TryGetProperty("siteUsers", out _).Should().BeTrue();
+        payload.TryGetProperty("procurementUsers", out _).Should().BeTrue();
+    }
+
+    [Fact]
     public async Task ResourceRequest_CreateReplaySubmitAndCmApproval_PreservesSingleRecord()
     {
         var fixture = await CreateProjectAsync();

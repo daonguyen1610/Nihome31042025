@@ -11,13 +11,22 @@ public sealed class UpsertConstructionPreparationRequest : IConcurrencyRequest
     [Required, MaxLength(500)] public string BchOrganizationReference { get; set; } = string.Empty;
     [Required, MaxLength(500)] public string ResourcePlanReference { get; set; } = string.Empty;
     [Required, MaxLength(500)] public string BudgetBaselineReference { get; set; } = string.Empty;
+    [Range(1, long.MaxValue)] public long? WbsBaselineDocumentId { get; set; }
+    [Range(1, long.MaxValue)] public long? ScheduleBaselineDocumentId { get; set; }
+    [Range(1, long.MaxValue)] public long? SCurveBaselineDocumentId { get; set; }
+    [Range(1, long.MaxValue)] public long? BchOrganizationDocumentId { get; set; }
+    [Range(1, long.MaxValue)] public long? ResourcePlanDocumentId { get; set; }
+    [Range(1, long.MaxValue)] public long? BudgetBaselineDocumentId { get; set; }
     public bool BudgetBaselineLocked { get; set; }
     public bool SiteHandoverRequired { get; set; }
     public bool SiteHandoverComplete { get; set; }
+    [Range(1, long.MaxValue)] public long? SiteHandoverDocumentId { get; set; }
     public bool MethodStatementRequired { get; set; }
     public bool MethodStatementApproved { get; set; }
+    [Range(1, long.MaxValue)] public long? MethodStatementDocumentId { get; set; }
     public bool HsePlanRequired { get; set; }
     public bool HsePlanApproved { get; set; }
+    [Range(1, long.MaxValue)] public long? HsePlanDocumentId { get; set; }
     public string? RowVersion { get; set; }
 }
 
