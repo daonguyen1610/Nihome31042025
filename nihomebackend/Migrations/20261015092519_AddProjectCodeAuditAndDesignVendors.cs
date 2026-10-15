@@ -88,6 +88,29 @@ namespace nihomebackend.Migrations
                 principalTable: "procurement_vendors",
                 principalColumn: "Id",
                 onDelete: ReferentialAction.Restrict);
+
+            migrationBuilder.Sql(
+                """
+                DELETE rgp
+                FROM role_group_permissions rgp
+                INNER JOIN role_groups rg ON rg.Id = rgp.RoleGroupId
+                INNER JOIN permissions p ON p.Id = rgp.PermissionId
+                INNER JOIN (VALUES
+                    (N'workflow', N'view'),
+                    (N'operations.projects', N'view'),
+                    (N'work.packages', N'view'),
+                    (N'work.packages', N'progress'),
+                    (N'analytics.kpi', N'view'),
+                    (N'reports.projects', N'view'),
+                    (N'crm.customers', N'view'),
+                    (N'crm.contracts', N'view'),
+                    (N'proc.vendors', N'view'),
+                    (N'finance.payments', N'view'),
+                    (N'finance.periods', N'view'),
+                    (N'finance.corrections', N'view')
+                ) shipped(Module, Action) ON shipped.Module = p.Module AND shipped.Action = p.Action
+                WHERE rg.Code = N'FINANCE';
+                """);
         }
 
         /// <inheritdoc />
@@ -119,6 +142,32 @@ namespace nihomebackend.Migrations
             migrationBuilder.DropColumn(
                 name: "VendorId",
                 table: "design_schedule_tasks");
+
+            migrationBuilder.Sql(
+                """
+                INSERT INTO role_group_permissions (RoleGroupId, PermissionId, CreatedAt)
+                SELECT rg.Id, p.Id, SYSUTCDATETIME()
+                FROM role_groups rg
+                CROSS JOIN (VALUES
+                    (N'workflow', N'view'),
+                    (N'operations.projects', N'view'),
+                    (N'work.packages', N'view'),
+                    (N'work.packages', N'progress'),
+                    (N'analytics.kpi', N'view'),
+                    (N'reports.projects', N'view'),
+                    (N'crm.customers', N'view'),
+                    (N'crm.contracts', N'view'),
+                    (N'proc.vendors', N'view'),
+                    (N'finance.payments', N'view'),
+                    (N'finance.periods', N'view'),
+                    (N'finance.corrections', N'view')
+                ) shipped(Module, Action)
+                INNER JOIN permissions p ON p.Module = shipped.Module AND p.Action = shipped.Action
+                WHERE rg.Code = N'FINANCE'
+                  AND NOT EXISTS (
+                      SELECT 1 FROM role_group_permissions existing
+                      WHERE existing.RoleGroupId = rg.Id AND existing.PermissionId = p.Id);
+                """);
         }
     }
 }
