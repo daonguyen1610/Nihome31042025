@@ -348,10 +348,21 @@ hoạch phục hồi. Công thức, kỳ chốt và nguồn progress phải lưu
 ### 6.6. Ranh giới hiện trạng
 
 Construction Task, Diary, Punch, Acceptance, As-built và Handover hiện dùng
-`DesignProjectId`; HSE dùng `OperationalProjectId`. Baseline/S-Curve, BCH
-organization, Budget Baseline, QA/QC dossier, resource request cho máy/nhân công
-và QS hai hướng chưa có aggregate hoàn chỉnh. Mọi mở rộng mới dùng Operational
-Project và cần kế hoạch migration tương thích cho dữ liệu cũ.
+`DesignProjectId`; HSE dùng `OperationalProjectId`. Các aggregate mới
+`ConstructionPreparation`, `ConstructionResourceRequest`, `QaQcDossier` và
+`ConstructionQsBatch` đã dùng `OperationalProjectId` và đã có API/UI cơ bản.
+
+**Partial:** CM Preparation hiện lưu các baseline chính dưới dạng document
+reference và readiness snapshot, chưa có WBS/Gantt/S-Curve/Budget Baseline dạng
+dữ liệu có cấu trúc. Đề xuất vật tư đã tạo được Material Request; đề xuất máy và
+nhân công mới dừng ở trạng thái sẵn sàng chuyển tiếp, chưa có handoff mua/thuê và
+liên kết HĐ Downstream hoàn chỉnh. QA/QC đã có template/dossier nhưng API chưa
+giữ loại cho từng evidence. QS đã tách Upstream/Downstream, có contract/BOQ/
+milestone và correction lineage, nhưng CM approval chưa tạo hồ sơ thanh toán.
+
+Mọi mở rộng tiếp theo tiếp tục dùng Operational Project. Migration các aggregate
+cũ cần giữ API tương thích, có backfill, rehearsal và rollback; không đổi khóa
+gốc trong một lần triển khai.
 
 ## 7. Module 5 — Cung ứng và kho
 
@@ -386,10 +397,18 @@ Kiểm soát hợp đồng hai chiều, phải thu/phải trả, dòng tiền v�
 - VO được version, submit, approve/reject và không sửa ngầm baseline/BOQ gốc.
 - Payment Request: Draft → Under Validation → Ready for Approval → Approved →
   Paid, với Rejected/Cancelled; actor và reference bắt buộc theo loại chứng từ.
+- Hồ sơ thanh toán mục tiêu tách Upstream/Downstream, liên kết QS/milestone và có
+  ba phần Công trường, CM, Kế toán theo template chứng từ đã được NICON duyệt.
 - Accounting Period: Open → Closing → Closed; post-close correction có lifecycle
   và reversal, không sửa trực tiếp số liệu đã khóa.
 - Cashflow/P&L phân biệt committed, accrued/accepted, paid/received và forecast;
   không gọi báo cáo là real-time nếu nguồn chưa đủ.
+
+**Partial:** `PaymentRequest` hiện thực hiện luồng phải trả Downstream, yêu cầu
+vendor, invoice và attachment chung. Hệ thống chưa có Payment Dossier hai chiều,
+chưa lưu ba section Công trường/CM/Kế toán và chưa có ma trận chứng từ theo loại
+Supply, Labour, Equipment hoặc Mixed Subcontract. Bộ ISO NICON và mapping biểu
+mẫu là đầu vào bắt buộc trước khi publish template sản xuất.
 
 ## 9. Module 7 — Tài liệu và Google Drive
 
@@ -469,3 +488,26 @@ Ngoài ra, NICON cần chốt:
 
 Không khóa thiết kế dữ liệu hoặc tuyên bố business-ready cho phần phụ thuộc cho
 tới khi chủ sở hữu nghiệp vụ chấp thuận các quyết định tương ứng.
+
+## 13. Truy vết biên bản ngày 03/10/2026
+
+| Mục | Năng lực | Trạng thái | Bằng chứng triển khai hoặc khoảng trống |
+|---:|---|---|---|
+| 1 | Nhóm quyền/phòng ban | Partial | Có role group và permission seed; chưa có role HR độc lập và ma trận phòng ban cuối cùng. |
+| 2 | CRM và mã dự án | Partial | Dự án → Cơ hội → Hợp đồng đã có; mã dự án chưa có luồng đổi mã/audit/Drive rename. |
+| 3 | Dự án dùng chung | Implemented | Operational Project, work package, task, dependency, CC và thông báo đã có persistence/API/UI/test. |
+| 4 | Thiết kế trước hợp đồng | Implemented | Design Project và công việc thiết kế không phụ thuộc hợp đồng đã ký. |
+| 5 | Liên phòng ban trước hợp đồng | Implemented | Procurement input, Finance review và gate báo giá/nộp thầu đã có. |
+| 6 | BOQ | Partial | Có preview/mapping nhiều sheet; persistence chưa giữ hierarchy và provenance từng dòng. |
+| 7 | Đấu thầu | Implemented | Kế hoạch, hồ sơ, năng lực, estimate, review, submission snapshot và kết quả đã có. |
+| 8 | Thiết kế chi tiết | Partial | Có schedule/review/Drive; công việc thuê ngoài chưa liên kết Vendor/HĐ Downstream bằng stable ID. |
+| 9 | Pháp lý | Partial | Có activation wizard, permit workflow và risk view; template loại/quy mô công trình là Q-09. |
+| 10 | Thi công | Partial | Có CM/BCH, resource request, QA/QC và QS; baseline cấu trúc, handoff và portfolio còn thiếu. |
+| 11 | Tài chính kế toán | Partial | Có Payment Request Downstream; chưa có dossier hai chiều và ba section chứng từ. |
+| 12 | Host và Drive NICON | Target | Chỉ công nhận sau deployment, OAuth NICON, health check và smoke test có bằng chứng. |
+| 13 | Đầu vào NICON | Open decision | Thiếu ISO/mapping, permit matrix, danh sách kiểm soát CM và quy ước mã dự án. |
+| 14 | Điểm chưa chắc chắn | Open decision | Công thức S-Curve, approval matrix và payment matrix chỉ được cấu hình sau xác nhận nghiệp vụ. |
+
+`Implemented` yêu cầu đồng thời có persistence, API authorization, UI và test phù
+hợp. Bảng này mô tả branch hiện tại, không phải bằng chứng trạng thái môi trường
+host hoặc UAT của NICON.
