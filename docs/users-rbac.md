@@ -144,12 +144,11 @@ The handover workspace uses separate read, write, and completion capabilities. T
 
 Scoped access includes records created by or assigned to the caller and projects where the caller is project manager or design lead. Reassigning a responsible user requires project leadership or `manage.all`. Wildcard PM, design-lead, admin, and super-admin patterns inherit the broad permissions defined in `rbac-defaults.json`; technical business roles with explicit `view`/`manage` entries remain project-scoped.
 
-### Module 4 target duty separation
+### Module 4 CM/BCH duty separation
 
-The expanded customer workflow requires separate BCH field duties and CM office
-review duties. These are target capabilities and must not be inferred from the
-current broad `PM`, `QS`, or construction permissions until explicit permission
-codes and migrations are delivered.
+The expanded workflow has separate BCH field duties and CM office review
+duties. The first delivered slice uses action-specific permissions and project
+scope; legacy construction screens retain their existing permission families.
 
 | Actor | Target scope | Must not imply |
 |---|---|---|
@@ -167,8 +166,8 @@ check. Frontend route/action gates are convenience only. New role or permission
 codes require seed alignment, four-language labels, migration/backfill review,
 and allow/deny integration coverage before use.
 
-The current delivered Module 4 permission families are broader than the target
-duty model:
+The legacy Module 4 permission families remain broader than the target duty
+model:
 
 | Current permission family | Current capability | Target gap |
 |---|---|---|
@@ -183,6 +182,22 @@ duty model:
 Do not reuse `manage`, `approve`, `confirm`, or `complete` as if they represented
 the same business decision. New CM-preparation, QA/QC and QS aggregates require
 action-specific permission codes and server-side author-versus-reviewer checks.
+
+The delivered Operational Project workflow adds these permission families:
+
+| Permission | Behavior |
+|---|---|
+| `construction.cm-preparation.view/manage/start` | View or version CM preparation, evaluate readiness, and authorize the server-validated start gate. |
+| `construction.resource-request.view/create/cm-review` | Read, draft/submit typed BCH requests, or perform independent CM review and downstream handoff. |
+| `construction.qa-qc.view/create/cm-review/template-manage` | Read or submit IFC-linked dossiers, perform independent CM review, and version/publish standard templates. |
+| `construction.qs.view/create/cm-review` | Read or submit direction-explicit QS batches and perform independent CM review. |
+
+`PM` receives CM preparation and CM-review actions, not BCH create actions.
+`SITE_COMMANDER` and `SITE_QAQC` provide the new site-facing permission sets;
+the existing `QS` role receives Site-QS/resource authoring only for this slice.
+Every endpoint also checks Operational Project visibility. A creator cannot
+review the same resource, QA/QC or QS record even if another role assignment
+grants the review permission.
 
 ### Operational project permissions
 

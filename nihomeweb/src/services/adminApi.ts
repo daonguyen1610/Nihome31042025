@@ -399,7 +399,7 @@ export interface GoogleDriveAdminConfigurationResponse {
   pollIntervalSeconds: number;
   accountEmail: string | null;
   connectedAt: string | null;
-  rowVersion: string;
+  rowVersion?: string;
 }
 
 export interface UpdateGoogleDriveConfigurationRequest {
@@ -1263,6 +1263,210 @@ export interface OperationalProjectResponse extends OperationalProjectListItemRe
     ownerName?: string | null;
     createdAt: string;
   }>;
+}
+
+// Module 4 construction operations
+export type ConstructionWorkflowStatus = "Draft" | "PendingCmReview" | "CmApproved" | "CmRejected";
+export type ConstructionResourceType = "Material" | "Equipment" | "Labour";
+export type ConstructionQsDirection = "Upstream" | "Downstream";
+
+export interface ConstructionResourceRequestResponse {
+  id: number;
+  code: string;
+  type: ConstructionResourceType;
+  wbsCode: string;
+  needByDate: string;
+  quantity: number;
+  unit: string;
+  reason: string;
+  projectBoqLineId?: number | null;
+  responsibleSiteUserId?: number | null;
+  assignedProcurementUserId?: number | null;
+  status: ConstructionWorkflowStatus;
+  createdByUserId: number;
+  cmDecisionReason?: string | null;
+  handoffEntityType?: string | null;
+  handoffEntityId?: number | null;
+  handoffStatus: "NotReady" | "ReadyForProcurementAndFinance" | "MaterialRequestCreated";
+  rowVersion: string;
+}
+
+export interface ConstructionResourceRequestListResponse {
+  items: ConstructionResourceRequestResponse[];
+}
+
+export interface CreateConstructionResourceRequest {
+  type: ConstructionResourceType;
+  wbsCode: string;
+  needByDate: string;
+  quantity: number;
+  unit: string;
+  reason: string;
+  projectBoqLineId?: number | null;
+  responsibleSiteUserId?: number | null;
+  assignedProcurementUserId?: number | null;
+}
+
+export interface UpdateConstructionResourceRequest extends CreateConstructionResourceRequest {
+  rowVersion: string;
+}
+
+export interface QaQcTemplateResponse {
+  id: number;
+  code: string;
+  nameVi: string;
+  name: string;
+  nameZh: string;
+  nameJa: string;
+  version: number;
+  schemaJson: string;
+  isPublished: boolean;
+  rowVersion: string;
+}
+
+export interface QaQcDossierResponse {
+  id: number;
+  code: string;
+  templateId: number;
+  templateVersion: number;
+  templateSnapshotJson: string;
+  ifcReleaseId?: number | null;
+  checklistResultsJson: string;
+  wbsCode: string;
+  title: string;
+  evidenceDocumentIds: number[];
+  status: ConstructionWorkflowStatus;
+  createdByUserId: number;
+  cmDecisionReason?: string | null;
+  rowVersion: string;
+}
+
+export interface CreateQaQcDossierRequest {
+  templateId: number;
+  wbsCode: string;
+  title: string;
+  ifcReleaseId?: number | null;
+  checklistResultsJson: string;
+  evidenceDocumentIds: number[];
+}
+
+export interface UpdateQaQcDossierRequest extends CreateQaQcDossierRequest {
+  rowVersion: string;
+}
+
+export interface ConstructionQsBatchResponse {
+  id: number;
+  code: string;
+  direction: ConstructionQsDirection;
+  contractId: number;
+  wbsCode: string;
+  periodFrom: string;
+  periodTo: string;
+  projectBoqRevisionId?: number | null;
+  contractAppendixId?: number | null;
+  contractPaymentMilestoneId?: number | null;
+  certifiedAmount: number;
+  description: string;
+  supersedesBatchId?: number | null;
+  reversesBatchId?: number | null;
+  lines: ConstructionQsBatchLineResponse[];
+  evidenceDocumentIds: number[];
+  status: ConstructionWorkflowStatus;
+  createdByUserId: number;
+  cmDecisionReason?: string | null;
+  rowVersion: string;
+}
+
+export interface CreateConstructionQsBatchRequest {
+  direction: ConstructionQsDirection;
+  contractId: number;
+  wbsCode: string;
+  periodFrom: string;
+  periodTo: string;
+  projectBoqRevisionId?: number | null;
+  contractAppendixId?: number | null;
+  contractPaymentMilestoneId?: number | null;
+  certifiedAmount: number;
+  description: string;
+  supersedesBatchId?: number | null;
+  reversesBatchId?: number | null;
+  lines: ConstructionQsBatchLineRequest[];
+  evidenceDocumentIds: number[];
+}
+
+export interface UpdateConstructionQsBatchRequest extends CreateConstructionQsBatchRequest {
+  rowVersion: string;
+}
+
+export interface ConstructionQsBatchLineRequest {
+  itemCode: string;
+  description: string;
+  unit: string;
+  quantity: number;
+  unitPrice: number;
+}
+
+export interface ConstructionQsBatchLineResponse extends ConstructionQsBatchLineRequest {
+  id: number;
+  amount: number;
+  sortOrder: number;
+}
+
+export interface ConstructionPreparationResponse {
+  id: number;
+  operationalProjectId: number;
+  version: number;
+  status: "Draft" | "Published" | "ReadyToStart" | "InConstruction" | "Superseded";
+  wbsBaselineReference: string;
+  scheduleBaselineReference: string;
+  sCurveBaselineReference: string;
+  bchOrganizationReference: string;
+  resourcePlanReference: string;
+  budgetBaselineReference: string;
+  budgetBaselineLocked: boolean;
+  siteHandoverRequired: boolean;
+  siteHandoverComplete: boolean;
+  methodStatementRequired: boolean;
+  methodStatementApproved: boolean;
+  hsePlanRequired: boolean;
+  hsePlanApproved: boolean;
+  missingConditions: string[];
+  readinessSnapshotJson?: string | null;
+  rowVersion: string;
+}
+
+export interface ConstructionReadinessResponse {
+  isReady: boolean;
+  isStarted: boolean;
+  blockers: Array<{ code: string; message: string }>;
+  evaluatedAt: string;
+  rowVersion?: string;
+}
+
+export interface UpdateConstructionPreparationRequest {
+  wbsBaselineReference: string;
+  scheduleBaselineReference: string;
+  sCurveBaselineReference: string;
+  bchOrganizationReference: string;
+  resourcePlanReference: string;
+  budgetBaselineReference: string;
+  budgetBaselineLocked: boolean;
+  siteHandoverRequired: boolean;
+  siteHandoverComplete: boolean;
+  methodStatementRequired: boolean;
+  methodStatementApproved: boolean;
+  hsePlanRequired: boolean;
+  hsePlanApproved: boolean;
+  rowVersion?: string;
+}
+
+export interface CreateQaQcTemplateRequest {
+  code: string;
+  nameVi: string;
+  name: string;
+  nameZh: string;
+  nameJa: string;
+  schemaJson: string;
 }
 
 export interface OperationalProjectTimelineItem {
@@ -7148,6 +7352,158 @@ export const adminApi = {
     api.get<Blob>("/reports/projects/export", { params, responseType: "blob" }),
   getOperationalProject: (id: number) =>
     api.get<OperationalProjectResponse>(`/operational-projects/${id}`),
+  getConstructionPreparation: (projectId: number) =>
+    api.get<ConstructionPreparationResponse>(
+      `/operational-projects/${projectId}/construction/preparation`,
+    ),
+  updateConstructionPreparation: (projectId: number, body: UpdateConstructionPreparationRequest) =>
+    api.put<ConstructionPreparationResponse>(
+      `/operational-projects/${projectId}/construction/preparation`,
+      body,
+      {
+        headers: {
+          ...withIdempotencyKey(crypto.randomUUID()).headers,
+          ...(body.rowVersion ? withIfMatch(body.rowVersion).headers : {}),
+        },
+      },
+    ),
+  evaluateConstructionReadiness: (projectId: number, rowVersion: string) =>
+    api.post<ConstructionPreparationResponse>(
+      `/operational-projects/${projectId}/construction/readiness/evaluate`,
+      { rowVersion },
+      {
+        headers: {
+          ...withIdempotencyKey(crypto.randomUUID()).headers,
+          ...withIfMatch(rowVersion).headers,
+        },
+      },
+    ),
+  startConstruction: (projectId: number, rowVersion: string) =>
+    api.post<ConstructionPreparationResponse>(
+      `/operational-projects/${projectId}/construction/readiness/start`,
+      { rowVersion },
+      {
+        headers: {
+          ...withIdempotencyKey(crypto.randomUUID()).headers,
+          ...withIfMatch(rowVersion).headers,
+        },
+      },
+    ),
+  listConstructionResourceRequests: (projectId: number) =>
+    api.get<ConstructionResourceRequestResponse[]>(
+      `/operational-projects/${projectId}/construction/resource-requests`,
+    ),
+  createConstructionResourceRequest: (projectId: number, body: CreateConstructionResourceRequest) =>
+    postIdempotent<ConstructionResourceRequestResponse>(
+      `/operational-projects/${projectId}/construction/resource-requests`,
+      body,
+    ),
+  updateConstructionResourceRequest: (
+    projectId: number,
+    id: number,
+    body: UpdateConstructionResourceRequest,
+  ) =>
+    api.put<ConstructionResourceRequestResponse>(
+      `/operational-projects/${projectId}/construction/resource-requests/${id}`,
+      body,
+      withIfMatch(body.rowVersion),
+    ),
+  submitConstructionResourceRequest: (projectId: number, id: number, rowVersion: string) =>
+    postIdempotent<ConstructionResourceRequestResponse>(
+      `/operational-projects/${projectId}/construction/resource-requests/${id}/submit`,
+      { rowVersion },
+    ),
+  decideConstructionResourceRequest: (
+    projectId: number,
+    id: number,
+    approved: boolean,
+    reason: string,
+    rowVersion: string,
+  ) =>
+    postIdempotent<ConstructionResourceRequestResponse>(
+      `/operational-projects/${projectId}/construction/resource-requests/${id}/cm-decision`,
+      { approved, reason, rowVersion },
+    ),
+  listQaQcTemplates: (projectId: number) =>
+    api.get<QaQcTemplateResponse[]>(
+      `/operational-projects/${projectId}/construction/qa-qc/templates`,
+    ),
+  createQaQcTemplate: (projectId: number, body: CreateQaQcTemplateRequest) =>
+    postIdempotent<QaQcTemplateResponse>(
+      `/operational-projects/${projectId}/construction/qa-qc/templates`,
+      body,
+    ),
+  publishQaQcTemplate: (projectId: number, id: number, rowVersion: string) =>
+    postIdempotent<QaQcTemplateResponse>(
+      `/operational-projects/${projectId}/construction/qa-qc/templates/${id}/publish`,
+      { rowVersion },
+    ),
+  listQaQcDossiers: (projectId: number) =>
+    api.get<QaQcDossierResponse[]>(
+      `/operational-projects/${projectId}/construction/qa-qc/dossiers`,
+    ),
+  createQaQcDossier: (projectId: number, body: CreateQaQcDossierRequest) =>
+    postIdempotent<QaQcDossierResponse>(
+      `/operational-projects/${projectId}/construction/qa-qc/dossiers`,
+      body,
+    ),
+  updateQaQcDossier: (projectId: number, id: number, body: UpdateQaQcDossierRequest) =>
+    api.put<QaQcDossierResponse>(
+      `/operational-projects/${projectId}/construction/qa-qc/dossiers/${id}`,
+      body,
+      withIfMatch(body.rowVersion),
+    ),
+  submitQaQcDossier: (projectId: number, id: number, rowVersion: string) =>
+    postIdempotent<QaQcDossierResponse>(
+      `/operational-projects/${projectId}/construction/qa-qc/dossiers/${id}/submit`,
+      { rowVersion },
+    ),
+  decideQaQcDossier: (
+    projectId: number,
+    id: number,
+    approved: boolean,
+    reason: string,
+    rowVersion: string,
+  ) =>
+    postIdempotent<QaQcDossierResponse>(
+      `/operational-projects/${projectId}/construction/qa-qc/dossiers/${id}/cm-decision`,
+      { approved, reason, rowVersion },
+    ),
+  listConstructionQsBatches: (projectId: number) =>
+    api.get<ConstructionQsBatchResponse[]>(
+      `/operational-projects/${projectId}/construction/qs-batches`,
+    ),
+  createConstructionQsBatch: (projectId: number, body: CreateConstructionQsBatchRequest) =>
+    postIdempotent<ConstructionQsBatchResponse>(
+      `/operational-projects/${projectId}/construction/qs-batches`,
+      body,
+    ),
+  updateConstructionQsBatch: (
+    projectId: number,
+    id: number,
+    body: UpdateConstructionQsBatchRequest,
+  ) =>
+    api.put<ConstructionQsBatchResponse>(
+      `/operational-projects/${projectId}/construction/qs-batches/${id}`,
+      body,
+      withIfMatch(body.rowVersion),
+    ),
+  submitConstructionQsBatch: (projectId: number, id: number, rowVersion: string) =>
+    postIdempotent<ConstructionQsBatchResponse>(
+      `/operational-projects/${projectId}/construction/qs-batches/${id}/submit`,
+      { rowVersion },
+    ),
+  decideConstructionQsBatch: (
+    projectId: number,
+    id: number,
+    approved: boolean,
+    reason: string,
+    rowVersion: string,
+  ) =>
+    postIdempotent<ConstructionQsBatchResponse>(
+      `/operational-projects/${projectId}/construction/qs-batches/${id}/cm-decision`,
+      { approved, reason, rowVersion },
+    ),
   getOperationalProjectTimeline: (id: number) =>
     api.get<OperationalProjectTimelineItem[]>(`/operational-projects/${id}/timeline`),
   getOperationalProjectTeam: (projectId: number) =>

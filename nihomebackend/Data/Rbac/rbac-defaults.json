@@ -189,6 +189,19 @@
     { "module": "construction.hse", "action": "manage" },
     { "module": "construction.hse", "action": "confirm" },
     { "module": "construction.hse", "action": "close" },
+    { "module": "construction.cm-preparation", "action": "view" },
+    { "module": "construction.cm-preparation", "action": "manage" },
+    { "module": "construction.cm-preparation", "action": "start" },
+    { "module": "construction.resource-request", "action": "view" },
+    { "module": "construction.resource-request", "action": "create" },
+    { "module": "construction.resource-request", "action": "cm-review" },
+    { "module": "construction.qa-qc", "action": "view" },
+    { "module": "construction.qa-qc", "action": "create" },
+    { "module": "construction.qa-qc", "action": "cm-review" },
+    { "module": "construction.qa-qc", "action": "template-manage" },
+    { "module": "construction.qs", "action": "view" },
+    { "module": "construction.qs", "action": "create" },
+    { "module": "construction.qs", "action": "cm-review" },
 
     { "module": "construction.acceptance", "action": "view" },
     { "module": "construction.acceptance", "action": "view.all" },
@@ -250,6 +263,8 @@
         "design.projects.view", "design.basic.view", "design.shop.view",
         "design.revisions.view", "design.ifc.view", "construction.tasks.view",
         "construction.diary.view", "construction.punch.view", "construction.hse.view",
+        "construction.cm-preparation.view", "construction.resource-request.view",
+        "construction.qa-qc.view", "construction.qs.view",
         "construction.acceptance.view", "construction.asbuilt.view",
         "construction.asbuilt-categories.view", "construction.handover.view",
         "permit.checklists.view"
@@ -291,6 +306,8 @@
     { "code": "MEP_ENGINEER", "name": "MEP Engineer", "groupCode": "DESIGN" },
     { "code": "STRUCT_ENGINEER", "name": "Structural Engineer", "groupCode": "DESIGN" },
     { "code": "PM", "name": "Project Manager", "groupCode": "CONSTRUCTION" },
+    { "code": "SITE_COMMANDER", "name": "Site Commander", "groupCode": "CONSTRUCTION" },
+    { "code": "SITE_QAQC", "name": "Site QA/QC Engineer", "groupCode": "CONSTRUCTION" },
     { "code": "LEGAL_OFFICER", "name": "Legal Officer", "groupCode": "CONSTRUCTION" },
     { "code": "QS", "name": "Quantity Surveyor", "groupCode": "CONSTRUCTION" },
     { "code": "PROCUREMENT", "name": "Procurement", "groupCode": "PROCUREMENT" },
@@ -504,11 +521,37 @@
         "construction.diary.**",
         "construction.punch.**",
         "construction.hse.**",
+        "construction.cm-preparation.**",
+        "construction.resource-request.view", "construction.resource-request.cm-review",
+        "construction.qa-qc.view", "construction.qa-qc.cm-review", "construction.qa-qc.template-manage",
+        "construction.qs.view", "construction.qs.cm-review",
         "construction.acceptance.**",
         "construction.asbuilt.**",
         "construction.asbuilt-categories.view",
         "construction.handover.**",
         "permit.checklists.**",
+        "profile.me.*"
+      ]
+    },
+    "SITE_COMMANDER": {
+      "patterns": [
+        "dashboard.view", "operations.projects.view", "reports.projects.view",
+        "construction.tasks.view", "construction.diary.**", "construction.punch.**",
+        "construction.hse.view", "construction.hse.manage",
+        "construction.acceptance.view", "construction.acceptance.manage",
+        "construction.resource-request.view", "construction.resource-request.create",
+        "construction.qa-qc.view", "construction.qa-qc.create",
+        "construction.qs.view", "construction.qs.create",
+        "profile.me.*"
+      ]
+    },
+    "SITE_QAQC": {
+      "patterns": [
+        "dashboard.view", "operations.projects.view",
+        "design.ifc.view", "construction.tasks.view", "construction.diary.view", "construction.diary.manage",
+        "construction.punch.**", "construction.hse.view", "construction.acceptance.view", "construction.acceptance.manage",
+        "construction.resource-request.view", "construction.resource-request.create",
+        "construction.qa-qc.view", "construction.qa-qc.create",
         "profile.me.*"
       ]
     },
@@ -545,6 +588,8 @@
         "proc.vendors.*",
         "design.basic.view",
         "design.shop.view",
+        "construction.resource-request.view", "construction.resource-request.create",
+        "construction.qs.view", "construction.qs.create",
         "profile.me.*"
       ]
     },
