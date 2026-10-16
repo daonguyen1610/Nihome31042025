@@ -221,6 +221,8 @@ public static class DbSeeder
         ("HR",              "0911000018", "Võ Thanh Hương",   "thanh.huong.hr@nihome.vn",       null,                   null),
         ("WAREHOUSE",       "0911000008", "Trịnh Văn Sơn",    "van.son.warehouse@nihome.vn",   "Warehouse Tester",     "warehouse.test@nihome.vn"),
         ("BGD",             "0911000009", "Phan Anh Dũng",    "anh.dung.bgd@nihome.vn",        "BGD Tester",           "bgd.test@nihome.vn"),
+        ("SITE_COMMANDER",  "0911000019", "Trần Quốc Khánh",  "quoc.khanh.site@nihome.vn",     null,                   null),
+        ("SITE_QAQC",       "0911000020", "Nguyễn Hữu Phúc",  "huu.phuc.qaqc@nihome.vn",       null,                   null),
         // Cung ứng needs two officers: one records supplier offers, a different
         // one chairs the work package and decides them. With a single
         // procurement account the four-eyes control cannot be exercised by two

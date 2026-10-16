@@ -34,6 +34,8 @@ public static class TestDataSeeder
             ["MEP_ENGINEER"] = "0911000013",
             ["STRUCT_ENGINEER"] = "0911000014",
             ["PM"] = "0911000005",
+            ["SITE_COMMANDER"] = "0911000019",
+            ["SITE_QAQC"] = "0911000020",
             ["LEGAL_OFFICER"] = "0911000015",
             ["QS"] = "0911000006",
             ["PROCUREMENT"] = "0911000016",
