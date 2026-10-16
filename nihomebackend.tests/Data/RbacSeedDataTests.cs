@@ -59,7 +59,7 @@ public class RbacSeedDataTests
         Assert.Equal("CONSTRUCTION", roles["PM"].GroupCode);
         Assert.Equal("PROCUREMENT", roles["PROCUREMENT"].GroupCode);
         Assert.Equal("FINANCE", roles["ACCOUNTANT"].GroupCode);
-        Assert.Equal("FINANCE", roles["HR"].GroupCode);
+        Assert.Equal("HR", roles["HR"].GroupCode);
         Assert.Null(roles["BGD"].GroupCode);
     }
 
