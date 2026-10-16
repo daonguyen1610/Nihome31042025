@@ -241,9 +241,19 @@
       ]
     },
     {
+      "code": "HR",
+      "labelKey": "rbac.group.hr-admin",
+      "sortOrder": 20,
+      "patterns": [
+        "dashboard.view", "contacts.view", "master-data.view", "profile.me.*",
+        "recruitment.applications.view", "recruitment.positions.view",
+        "recruitment.options.view"
+      ]
+    },
+    {
       "code": "PROCUREMENT",
       "labelKey": "rbac.group.procurement",
-      "sortOrder": 20,
+      "sortOrder": 30,
       "patterns": [
         "dashboard.view", "master-data.view", "workflow.view", "operations.projects.view",
         "work.packages.view", "work.packages.progress", "analytics.kpi.view", "profile.me.*",
@@ -255,7 +265,7 @@
     {
       "code": "CONSTRUCTION",
       "labelKey": "rbac.group.construction",
-      "sortOrder": 30,
+      "sortOrder": 40,
       "patterns": [
         "dashboard.view", "master-data.view", "workflow.view", "operations.projects.view",
         "work.packages.view", "work.packages.progress", "analytics.kpi.view", "profile.me.*",
@@ -274,7 +284,7 @@
     {
       "code": "DESIGN",
       "labelKey": "rbac.group.design",
-      "sortOrder": 40,
+      "sortOrder": 50,
       "patterns": [
         "dashboard.view", "master-data.view", "workflow.view", "operations.projects.view",
         "work.packages.view", "work.packages.progress", "analytics.kpi.view", "profile.me.*",
@@ -287,7 +297,7 @@
     {
       "code": "FINANCE",
       "labelKey": "rbac.group.finance",
-      "sortOrder": 50,
+      "sortOrder": 60,
       "patterns": [
         "dashboard.view", "contacts.view", "master-data.view", "profile.me.*"
       ]
@@ -309,7 +319,7 @@
     { "code": "QS", "name": "Quantity Surveyor", "groupCode": "CONSTRUCTION" },
     { "code": "PROCUREMENT", "name": "Procurement", "groupCode": "PROCUREMENT" },
     { "code": "ACCOUNTANT", "name": "Accountant", "groupCode": "FINANCE" },
-    { "code": "HR", "name": "Human Resources", "groupCode": "FINANCE" },
+    { "code": "HR", "name": "Human Resources", "groupCode": "HR" },
     { "code": "WAREHOUSE", "name": "Warehouse", "groupCode": "PROCUREMENT" },
     { "code": "BGD", "name": "Board of Directors" }
   ],

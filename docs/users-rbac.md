@@ -26,20 +26,24 @@ their permission matrices.
 
 ### NICON role groups and permission baselines
 
-The current implementation assigns business roles to five seeded groups:
-`CRM`, `PROCUREMENT`, `CONSTRUCTION`, `DESIGN`, and `FINANCE`. The initial
+The current implementation assigns business roles to six seeded groups:
+`CRM`, `HR`, `PROCUREMENT`, `CONSTRUCTION`, `DESIGN`, and `FINANCE`. The initial
 mapping is seeded once from `rbac-defaults.json`: Sales roles belong to `CRM`;
 Procurement and Warehouse belong to `PROCUREMENT`; PM, site roles, Legal, and
-QS belong to `CONSTRUCTION`; design roles belong to `DESIGN`; and Accountant
-and HR belong to `FINANCE`. `BGD` remains ungrouped because it is
-cross-functional. After the initial seed,
-administrator reassignment or intentional ungrouping is preserved on restart.
+QS belong to `CONSTRUCTION`; design roles belong to `DESIGN`; Accountant belongs
+to `FINANCE`; and Human Resources belongs to `HR`. `BGD` remains ungrouped
+because it is cross-functional. After the initial seed, administrator
+reassignment or intentional ungrouping is preserved on restart.
 
-This implemented grouping does not match the controlling 03/10 business
-baseline, which names CRM, Administration/HR, Design, Construction Management,
-and Finance/Accounting as the five departments and leaves the placement of
-Procurement and Legal open. Treat the seed as a technical interim model until
-NICON answers Q-04; do not present it as an approved organization chart.
+The six-group model is an implementation proposal for functional RBAC, not a
+NICON-approved organization chart. The 03/10 meeting names five departments
+and leaves Procurement and Legal placement unresolved. HR is kept separate
+from Finance to avoid conflating their permission baselines; NICON's formal
+role-to-department matrix still needs confirmation before production migration.
+The HR migration moves only the original `HR → FINANCE` assignment when no
+administrator reassignment is recorded. It preserves customized assignments
+and permissions; its rollback does not reverse live role changes. Rehearse it
+against a data copy and review the HR role's effective permissions before rollout.
 
 Each group stores an editable permission baseline. When creating a role, an
 administrator can copy the selected group's current baseline as the initial
@@ -99,8 +103,8 @@ state, and actual collection/payment date on that same Contract ID. It does not
 grant contract header create/edit, legal transition, attachment, appendix, VO,
 or delete capabilities.
 
-The `HR` role has a separate permission set from `ACCOUNTANT`, although the
-current seed places both under `FINANCE`. HR receives
+The `HR` role belongs to the independent `HR` group and has a separate
+permission set from `ACCOUNTANT`. HR receives
 contacts, master data, recruitment applications, recruitment positions,
 recruitment options, and own-profile permissions. It does not inherit payment,
 accounting-period, contract-management, approval, or project-code-change

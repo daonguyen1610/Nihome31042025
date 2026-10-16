@@ -395,11 +395,15 @@ Bằng chứng chính:
 | Medium | Quy tắc package/assignment đang đi trước quyết định | Có thể phải migrate liên kết và quyền sau khi NICON trả lời | Đóng Q-01–Q-03 trước khi mở rộng dữ liệu thật |
 | Medium | Chặn xóa sau trình khách là giả định kỹ thuật | Có thể lệch thẩm quyền/lưu trữ hồ sơ NICON | Giữ chặn an toàn cho tới khi Q-08 được trả lời |
 
-## 5. Câu hỏi cần NICON làm rõ
+## 5. Phương án thiết kế để triển khai và đối chiếu UAT
 
-Mỗi câu trả lời nên ghi: người phê duyệt, ngày hiệu lực, phạm vi dự án áp dụng,
-ngoại lệ, ví dụ dữ liệu và tài liệu/form mẫu kèm theo. Không nên trả lời chỉ
-“đồng ý/không đồng ý” nếu câu hỏi có nhiều nhánh.
+Các câu trả lời dưới đây là **đề xuất thiết kế theo yêu cầu hiện tại của người
+dùng**, dựa trên biên bản 03/10, codebase và nguyên tắc kiểm soát nội bộ. Chúng
+giúp triển khai từng lát cắt và chuẩn bị UAT, **không phải xác nhận rằng NICON
+đã phê duyệt**. Những chỗ cần sơ đồ tổ chức, biểu mẫu ISO, mẫu BOQ, hồ sơ pháp
+lý, chính sách lưu trữ hoặc cấu hình môi trường thật vẫn cần đầu vào từ NICON.
+Không coi phương án trong mục này là tính năng `Implemented` khi chưa có đủ
+persistence, API authorization, UI và test tương ứng.
 
 ### P0 — Chặn hợp đồng nghiệp vụ và mô hình quyền
 
@@ -413,6 +417,19 @@ ngoại lệ, ví dụ dữ liệu và tài liệu/form mẫu kèm theo. Không 
    đóng? Lịch sử và file có cần snapshot tại thời điểm chuyển không?
 4. Báo cáo/KPI quy về Dự án hay Hợp đồng khi package đã gắn Hợp đồng?
 
+**Phương án Q-01:**
+
+1. `OperationalProject` luôn là business root. Package trước hợp đồng được giữ
+   nguyên; `ContractId` chỉ là liên kết phân loại bổ sung, không chuyển ownership.
+2. Một package chỉ được gắn tối đa một Hợp đồng. Công việc dùng chung nhiều Hợp
+   đồng giữ ở package cấp Dự án; phần riêng phải tách thành package khác. PM hoặc
+   người chủ trì package thực hiện tách, không phân bổ phần trăm hồi tố.
+3. Hợp đồng bị hủy/thay thế không tự động chuyển package. Package cũ được đóng
+   hoặc hủy có lý do; package kế tiếp liên kết Hợp đồng mới. History, file và
+   snapshot tại thời điểm chuyển được giữ nguyên.
+4. KPI và báo cáo tổng hợp theo `OperationalProjectId`; `ContractId` là chiều
+   drill-down. Không tính trùng một task cho cả Dự án và Hợp đồng.
+
 #### Q-02 — Công việc nội bộ và KPI
 
 1. Công việc nội bộ có cần người duyệt/Verifier bắt buộc cho mọi task không?
@@ -421,6 +438,23 @@ ngoại lệ, ví dụ dữ liệu và tài liệu/form mẫu kèm theo. Không 
 4. Trọng số, kỳ ghi nhận và bằng chứng tối thiểu là gì? Task trễ qua hai kỳ tính
    vào kỳ hoàn thành hay kỳ deadline?
 5. Task không được duyệt hoặc bị trả lại có ảnh hưởng KPI không?
+
+**Phương án Q-02:**
+
+1. Task gắn KPI hoặc task Dự án bắt buộc có verifier độc lập với assignee. Task
+   nội bộ không gắn KPI có thể dùng người chủ trì package làm verifier mặc định,
+   nhưng không được tự duyệt việc của mình.
+2. Lifecycle chuẩn: `Planned → InProgress → Completed → Verified`; `Cancelled`
+   là terminal. `Completed` nghĩa là chờ xác minh. Hủy hoặc mở lại phải do người
+   chủ trì/Admin thực hiện với lý do và audit; sửa task đã `Verified` phải mở lại
+   và xác minh lại, không ghi đè kết quả cũ.
+3. Chỉ task `Verified` có `KpiDefinitionId` mới được tính KPI. Task Dự án và nội
+   bộ dùng chung engine nhưng có dimension `Kind` để báo cáo riêng.
+4. Trọng số nằm ở KPI definition, không nhập tự do trên task. Thành tích ghi vào
+   kỳ của `VerifiedAt`; đúng hạn/trễ được đánh giá riêng theo `PlannedEnd`, nên
+   task trễ qua kỳ không được chuyển deadline để làm đẹp KPI.
+5. Task bị trả lại quay về `InProgress`, không ghi nhận KPI. Task hủy hoặc chưa
+   xác minh không tạo điểm, nhưng vẫn giữ lịch sử phục vụ đo rework/SLA.
 
 #### Q-03 — Quyền khởi tạo và giao việc liên phòng
 
@@ -431,6 +465,21 @@ ngoại lệ, ví dụ dữ liệu và tài liệu/form mẫu kèm theo. Không 
 4. BGD/Admin có quyền ngoại lệ không; có bắt buộc ghi lý do và audit không?
 5. Khi người dùng đổi phòng/nghỉ việc, task đang mở được tự động chuyển hay chặn
    cho tới khi người quản lý reassign?
+
+**Phương án Q-03:**
+
+1. Trước hợp đồng, PM Dự án và owner Cơ hội có quyền quản lý đúng Dự án được tạo
+   package; người gửi chỉ chọn phòng nhận và người chủ trì đủ quyền.
+2. Contract Owner không mặc nhiên có quyền PM. Muốn quản lý package phải là
+   thành viên/PM của Dự án hoặc được cấp permission và scope rõ ràng.
+3. Người chủ trì phòng nhận mới chọn/thay assignee và approver trong phòng. PM
+   gửi việc không chỉ định trực tiếp nhân viên phòng khác, trừ package Pháp lý
+   có rule cross-department riêng đã audit.
+4. `SUPER_ADMIN`/`ADMIN` có emergency override; thao tác thay ownership,
+   assignee hoặc approver phải có lý do và audit. BGD không mặc nhiên mutate.
+5. Khi user đổi phòng/ngừng hoạt động, hệ thống không tự chuyển task. Task mở bị
+   chặn transition cho tới khi người chủ trì/Admin reassign có audit; lịch sử
+   assignee cũ được giữ.
 
 #### Q-04 — Năm phòng, vị trí Cung ứng và Pháp lý
 
@@ -443,6 +492,26 @@ ngoại lệ, ví dụ dữ liệu và tài liệu/form mẫu kèm theo. Không 
 5. Một người có thể thuộc nhiều phòng/group không; khi có nhiều role thì baseline
    quyền cộng dồn hay chọn một vai trò hoạt động?
 6. Đề nghị NICON cung cấp bảng Role × Department × Permission baseline chính thức.
+
+**Phương án Q-04:**
+
+1. Đề xuất sáu **nhóm quyền chức năng** độc lập: `CRM`, `HR`, `DESIGN`,
+   `CONSTRUCTION`, `PROCUREMENT`, `FINANCE`. Đây không phải xác nhận NICON có sáu
+   phòng: biên bản nêu năm phòng và chưa chốt vị trí Cung ứng/Pháp lý. Tách HR
+   khỏi Finance để baseline quyền không trộn hai chức năng.
+2. Cung ứng là group độc lập; Kho thuộc Cung ứng nhưng dùng role/permission riêng
+   để không tự duyệt yêu cầu nguồn lực hoặc thay BOQ.
+3. Tạm xếp role Pháp lý vào group quyền `CONSTRUCTION` để tái sử dụng baseline
+   project-scoped; điều này không xác định Pháp lý thuộc Phòng CM về tổ chức.
+   Task liên phòng cần PM phân công và server kiểm tra scope.
+4. Giữ một role `QS`; vị trí Site/Office và hướng Upstream/Downstream được xác
+   định bằng project membership, task và permission hành động, không nhân đôi
+   role trước khi có nhu cầu phân quyền khác biệt thực tế.
+5. Mỗi tài khoản có một business role hoạt động và một group tại một thời điểm.
+   Không cộng dồn role ngầm; nhu cầu bổ sung dùng custom role có permission được
+   duyệt hoặc đổi active role có audit.
+6. Seed là baseline kỹ thuật theo quyết định này; NICON vẫn có thể chỉnh custom
+   role, nhưng không được làm mất separation of duties server-side.
 
 #### Q-COM-01 — Hai hướng tạo Hợp đồng (đã xác nhận 16/10/2026)
 
@@ -463,6 +532,21 @@ hoặc bằng chứng cho hướng tạo trực tiếp:
 5. Một Báo giá có thể sinh nhiều Hợp đồng Upstream không; một Hợp đồng có thể
    tổng hợp nhiều Báo giá không?
 
+**Phương án chi tiết Q-COM-01 (ngoài hai hướng đã xác nhận):**
+
+1. Hướng trực tiếp phải lưu `CommercialSource = DirectAgreedValue`, giá trị đã
+   thống nhất và ghi chú căn cứ tối thiểu; không giả lập một Báo giá rỗng.
+2. Phụ lục/gia hạn thuộc lifecycle Hợp đồng hiện hữu. Hợp đồng khung/chỉ định
+   thầu có thể dùng hướng trực tiếp nhưng vẫn cần căn cứ và audit; phạm vi thương
+   mại mới dùng Báo giá mới.
+3. Hướng Báo giá chấp nhận `Approved`, `SentToCustomer` hoặc
+   `CustomerApproved`; không bắt buộc đã gửi khách để lập bản nháp Hợp đồng.
+4. `Approved`/`SentToCustomer` hết hạn phải gia hạn hoặc tạo version mới;
+   `CustomerApproved` được coi là quyết định khách hàng cuối cùng và không bị
+   vô hiệu chỉ vì ngày hiệu lực danh nghĩa đã qua.
+5. Một Báo giá chỉ sinh tối đa một Hợp đồng live và một Hợp đồng chỉ có một Báo
+   giá nguồn. Gộp nhiều Báo giá phải lập Báo giá tổng hợp/version mới trước.
+
 ### P1 — Thiết kế, hồ sơ và Pháp lý
 
 #### Q-05 — Quy ước mã Dự án
@@ -474,6 +558,20 @@ hoặc bằng chứng cho hướng tạo trực tiếp:
 5. Khi đổi mã, tên folder Drive, mã trên Báo giá/Hợp đồng/file đã phát hành có
    đổi hồi tố không? Alias mã cũ phải tìm kiếm được trong bao lâu?
 
+**Phương án Q-05:**
+
+1. Mặc định hệ thống cấp `PJ-YYYY-NNNN`; người có quyền được thay bằng quy ước
+   NICON như `DB-2026-009` qua endpoint đổi mã chuyên biệt.
+2. Mã duy nhất toàn công ty, so sánh sau khi chuẩn hóa uppercase.
+3. Cho phép 2–40 ký tự `A-Z`, `0-9`, `-`, `_`; không dấu cách, Unicode hoặc ký
+   tự đặc biệt. UI/API dùng cùng rule.
+4. Được đổi khi Dự án chưa `Completed/Cancelled`, bởi PM Dự án hoặc role có
+   `operations.projects.rename`; bắt buộc lý do, row version và audit. Sau đóng
+   Dự án chỉ Admin được mở lại theo quy trình rồi mới đổi.
+5. Chỉ tên folder Drive hiện tại được rename bất đồng bộ trên cùng folder ID.
+   Báo giá, Hợp đồng, file/snapshot đã phát hành giữ mã tại thời điểm phát hành.
+   Lịch sử mã cũ được giữ vĩnh viễn và phải tìm kiếm được như alias.
+
 #### Q-06 — Trình nội bộ Thiết kế
 
 1. Người nhận nội bộ chỉ comment hay mỗi người phải Accept/Reject?
@@ -481,12 +579,35 @@ hoặc bằng chứng cho hướng tạo trực tiếp:
 3. Comment nào là blocker; ai được resolve; có cho sửa/xóa comment không?
 4. Design Manager được trình khách khi còn comment mở không?
 
+**Phương án Q-06:**
+
+1. Người nhận nội bộ có quyền xem và comment; không tạo nhiều approval song
+   song. Một Design Manager chịu trách nhiệm tổng hợp và chuyển trạng thái.
+2. Không dùng quorum. Ý kiến là input tư vấn; trách nhiệm quyết định thuộc Design
+   Manager, còn duyệt task kỹ thuật thuộc đúng một Design Lead/approver.
+3. Comment có mức `Normal` hoặc `Blocker`. Tác giả hoặc Design Manager được
+   resolve blocker với resolution note; comment không sửa/xóa sau khi gửi, chỉ
+   được bổ sung correction.
+4. Không được `ReadyForClient`/trình khách khi còn blocker mở. Comment thường có
+   thể được tổng hợp vào `InternalSummary` và không chặn.
+
 #### Q-07 — CC mặc định
 
 1. Trưởng/phó phòng Thiết kế có tự động là CC cho mọi Dự án không?
 2. CC áp dụng mọi task, chỉ milestone hay chỉ hồ sơ trình nội bộ?
 3. CC có được tải file/comment không hay chỉ nhận thông báo?
 4. Khi nhân sự đổi chức danh, CC lịch sử giữ nguyên hay cập nhật động?
+
+**Phương án Q-07:**
+
+1. Design Manager và Design Lead của Dự án tự động nhận thông báo milestone;
+   không tự thêm trưởng/phó phòng toàn công ty vào mọi task.
+2. CC task là danh sách explicit theo task. Hồ sơ trình nội bộ có recipient riêng;
+   phase gate/IFC luôn thông báo Design Manager và Design Lead.
+3. CC chỉ xem, tải file nếu có project/document scope và comment khi được chọn
+   làm recipient; không được approve hoặc transition.
+4. Danh sách recipient/CC được snapshot theo từng submission/task revision để
+   bảo toàn lịch sử. Thay đổi chức danh chỉ áp dụng lần giao/trình tiếp theo.
 
 #### Q-08 — Xóa hồ sơ Thiết kế
 
@@ -499,6 +620,22 @@ hoặc bằng chứng cho hướng tạo trực tiếp:
 5. Dữ liệu audit, comment, submission receipt và revision thay thế phải giữ bao
    lâu? Có yêu cầu pháp lý cấm xóa không?
 
+**Phương án Q-08:**
+
+1. Dùng permission riêng `design.records.hard-delete`, mặc định chỉ `BGD` và
+   `SUPER_ADMIN`; không suy từ chức danh hoặc `design.*` wildcard thông thường.
+2. Chỉ cho xóa vĩnh viễn record ở trạng thái loại bỏ rõ ràng: Concept
+   `Discarded`, Basic/Shop `Rejected` sau khi phase đã đi tiếp, IFC `Cancelled`.
+3. Hồ sơ đã trình khách không bao giờ hard-delete. Dùng supersede/archive và
+   giữ receipt, quyết định, comment, checksum; đây là legal/audit hold.
+4. File quản lý bởi ứng dụng phải hoàn thành durable cleanup và đưa binary vào
+   Drive trash; shared/external binding chỉ unlink/archive, không xóa file ngoài
+   ownership. Delete bị block khi cleanup đang pending.
+5. Audit, submission receipt, comment và revision lineage được giữ khi chưa có
+   retention schedule được NICON/pháp chế phê duyệt; không tự đặt thời hạn 10 năm
+   hoặc tự động purge. Legal hold luôn chặn purge. Sau khi có chính sách lưu trữ,
+   tác vụ purge phải là quy trình quản trị riêng, không đi qua hard-delete nghiệp vụ.
+
 #### Q-09 — Template giấy phép
 
 1. Danh sách permit theo loại công trình, quy mô, địa phương và phạm vi D&B là gì?
@@ -510,6 +647,23 @@ hoặc bằng chứng cho hướng tạo trực tiếp:
 5. Một permit dùng chung nhiều Hợp đồng/Dự án được không; renewal/version xử lý
    thế nào?
 
+**Phương án Q-09:**
+
+1. Permit template có version và điều kiện: loại công trình, scale band, tỉnh/
+   thành, phạm vi Design/Construction/D&B và ngày hiệu lực.
+2. Mỗi item có gate `BeforeStart`, `Milestone` hoặc `Advisory`. `BeforeStart`
+   bắt buộc `Issued` và còn hiệu lực tại cổng khởi công; `Milestone` chặn đúng
+   milestone; `Advisory` chỉ cảnh báo.
+3. Legal quản lý draft template, PM/role được ủy quyền publish. Version mới chỉ
+   áp dụng activation mới; Dự án đang chạy giữ snapshot và chỉ migrate bằng
+   change request có preview.
+4. Khi Hợp đồng `Signed → InProgress`, hệ thống tạo một proposal idempotent từ
+   template và PM xác nhận phân công. PM được thêm permit; chỉ được bỏ item không
+   bắt buộc với lý do. Item bắt buộc không được bỏ qua bằng UI/API.
+5. Permit thuộc một `OperationalProject` và có thể phục vụ nhiều Hợp đồng cùng
+   Dự án; không dùng chung giữa hai Dự án. Gia hạn tạo revision nối tiếp, giữ hồ
+   sơ cũ và trạng thái hiệu lực theo ngày.
+
 #### Q-10 — Ranh giới Design Lead và Design Manager
 
 1. Design Lead duyệt mọi task kỹ thuật hay chỉ task thuộc discipline/team mình?
@@ -517,6 +671,19 @@ hoặc bằng chứng cho hướng tạo trực tiếp:
 3. Ai chốt Concept, mở Basic/Shop và phát hành IFC?
 4. Khi Design Lead đồng thời là Design Manager, có vi phạm phân tách nhiệm vụ
    không; có cần người duyệt thay thế?
+
+**Phương án Q-10:**
+
+1. Design Lead duyệt task thuộc discipline/team mình hoặc task được chỉ định;
+   không có quyền duyệt toàn bộ task chỉ vì chức danh.
+2. Design Manager không override một quyết định task. Họ có thể reopen/reassign
+   có lý do và audit, sau đó approver độc lập duyệt lại.
+3. Design Lead duyệt task kỹ thuật; Design Manager chốt Concept, mở phase tiếp
+   theo, tổng hợp trình khách và đề nghị IFC. Quyền `design.ifc.release` độc lập
+   thực hiện phát hành IFC.
+4. Một người có thể giữ hai chức danh trên Dự án nhưng không được vừa là assignee
+   vừa approver của cùng task, hoặc vừa lập vừa phát hành IFC. Phải chỉ định
+   approver/releaser thay thế đang hoạt động.
 
 #### Q-11 — Team, tiến độ và MS Project
 
@@ -528,6 +695,23 @@ hoặc bằng chứng cho hướng tạo trực tiếp:
    ưu tiên; conflict được giải quyết ra sao?
 4. Có cần export ngược `.mpp` hay chỉ import?
 5. Baseline nào được coi là published và ai có quyền thay thế?
+
+**Phương án Q-11:**
+
+1. Dùng hai tab `Đội ngũ` và `Tiến độ` trên cùng Design Project và chung member
+   IDs; không tạo hai aggregate hoặc hai danh sách nhân sự.
+2. Import giữ external UID, WBS hierarchy, duration, planned start/finish,
+   predecessor type/lag, constraints, calendar, resource assignment, milestone,
+   critical flag, baseline và `% complete`. Trường không hỗ trợ phải báo trong
+   preview, không silently drop.
+3. Import vào draft bằng external UID + source file fingerprint. Re-import tạo
+   change set; field sửa ở cả Nicon và file là conflict người dùng phải chọn.
+   Baseline published không bị re-import ghi đè.
+4. Giai đoạn đầu chỉ import MS Project XML/XER-equivalent đã chuẩn hóa; native
+   `.mpp` cần adapter được cấp phép. Không export `.mpp` cho tới khi round-trip
+   fidelity được chứng minh; CSV/XLSX không được gọi là MPP-compatible.
+5. Design Manager publish baseline sau khi Design Lead/PM xác nhận. Thay baseline
+   tạo version mới và change reason; không unlock/overwrite version cũ.
 
 ### P1 — BOQ, Thi công và Tài chính
 
@@ -541,6 +725,25 @@ hoặc bằng chứng cho hướng tạo trực tiếp:
 4. Quy tắc version/approval và người có quyền promote một revision là gì?
 5. Cách xử lý VO, thay thế revision và truy vết cell/sheet nguồn?
 
+**Phương án Q-BOQ-01:**
+
+1. Dùng năm schema/lifecycle tách biệt: Investment Rate, Quote BOQ, Tender
+   Estimate, Execution BOQ và Final BOQ. Core columns của detail line là code,
+   description, unit, quantity và unit price; schema chuyên biệt được version.
+2. Cover/summary chỉ lưu file gốc và metadata, không tạo line hạn mức. Chỉ sheet
+   detail được chọn trong preview. Giá trị formula được tính bằng engine workbook
+   tại import; đồng thời lưu sheet, row, cell mapping, formula text và raw value.
+   Merged/bilingual headers được mapping về canonical fields, file gốc bất biến.
+3. Import atomic theo revision: lỗi mapping, thiếu unit/code hoặc số không hợp lệ
+   chặn toàn workbook và trả lỗi sheet/row/cell. Warning không ảnh hưởng số liệu
+   có thể được người dùng xác nhận trong preview.
+4. Revision Draft được sửa/import lại; submit khóa nội dung; approver độc lập
+   approve/reject. Chỉ approval action được promote; filename/sheet không quyết
+   định loại hoặc hiệu lực.
+5. VO đã duyệt sinh revision Execution BOQ kế tiếp có lineage; không sửa revision
+   Approved. Final BOQ là revision được chốt lúc closeout. Mọi line giữ source
+   workbook checksum, sheet, row/cell và predecessor revision/VO.
+
 #### Q-CM-01 — Danh mục việc và quyền Phòng CM
 
 1. NICON cung cấp danh sách nhóm việc CM chuẩn theo loại công trình, owner,
@@ -549,6 +752,20 @@ hoặc bằng chứng cho hướng tạo trực tiếp:
 3. Approval tầng 2 bắt buộc cho MR/QA-QC/QS/HSE/VO nào; ngưỡng giá trị hoặc mức
    rủi ro là bao nhiêu?
 4. Ai thay thế reviewer khi chính PM CM là tác giả hoặc vắng mặt?
+
+**Phương án Q-CM-01:**
+
+1. Template CM tối thiểu gồm readiness/baseline, BCH & resource plan, HSE,
+   QA/QC, MR, QS, VO, schedule recovery và closeout. Từng template version khai
+   báo owner role, approver role, SLA và evidence bắt buộc theo loại công trình.
+2. PM CM chỉ xem Dự án được phân công; portfolio toàn công ty cần permission
+   `view.all`. BGD có read-only portfolio, không mặc nhiên review.
+3. Tất cả MR vượt BOQ/unplanned, QA/QC dossier, QS batch, HSE violation mức
+   Major/Critical và VO đều cần level-2 CM review. MR trong hạn mức vẫn cần CM
+   decision trước handoff; Finance/BGD approval bổ sung theo giá trị/risk matrix
+   cấu hình, không thay CM review.
+4. Reviewer thay thế phải được delegate rõ Dự án, phạm vi và thời hạn; không là
+   tác giả. Hệ thống lưu delegator, delegate, lý do, hiệu lực và action audit.
 
 #### Q-CM-02 — Baseline, S-Curve và cảnh báo trễ
 
@@ -559,6 +776,20 @@ hoặc bằng chứng cho hướng tạo trực tiếp:
 4. Cảnh báo gửi Chỉ huy trưởng, PM CM và ai khác; SLA giải trình/recovery plan?
 5. Khi dữ liệu thiếu hoặc kỳ chưa chốt, hiển thị MissingData hay cảnh báo?
 
+**Phương án Q-CM-02:**
+
+1. Variance là `planned cumulative physical progress - actual cumulative
+   accepted progress`, theo điểm phần trăm, chốt hàng tuần theo timezone Dự án.
+   Chỉ `> 5.00` điểm phần trăm tạo red alert; đúng `5.00` không đỏ.
+2. So với baseline published đang có hiệu lực tại kỳ. Thay đổi được duyệt tạo
+   version mới có effective date; kỳ lịch sử luôn dùng version lúc đã chốt.
+3. PM CM chuẩn bị/publish; thay baseline cần change request. Nếu đổi budget/scope
+   phải có VO và Finance/BGD approval tương ứng. Không unlock version cũ.
+4. Alert gửi Chỉ huy trưởng, PM CM và Project Manager; Critical/không phản hồi
+   escalates BGD. Giải trình trong 2 ngày làm việc, recovery plan trong 5 ngày.
+5. Thiếu baseline, kỳ hoặc actual accepted data hiển thị `MissingData`, không
+   sinh cảnh báo giả; đồng thời tạo data-quality notification cho owner.
+
 #### Q-CM-03 — ISO, QA/QC, HSE và cổng khởi công
 
 1. Checklist/form bắt buộc theo loại công trình và hạng mục là gì?
@@ -566,6 +797,21 @@ hoặc bằng chứng cho hướng tạo trực tiếp:
 3. Bằng chứng tối thiểu để QA/QC dossier được submit/approve?
 4. Punch/HSE mức nào chặn nghiệm thu hoặc bàn giao?
 5. Quy tắc offline, duplicate submit và conflict khi BCH mất mạng?
+
+**Phương án Q-CM-03:**
+
+1. Checklist/form là template versioned theo loại công trình/hạng mục; không
+   hardcode danh mục ISO trong React. Dự án snapshot version khi bắt đầu.
+2. Site handover, method statement và HSE plan chỉ chặn cổng khởi công khi
+   template dự án/ISO được duyệt đánh dấu bắt buộc. `NotApplicable` cần PM CM
+   duyệt lý do; không tự áp một danh mục giấy tờ cho mọi loại công trình.
+3. QA/QC submit tối thiểu cần WBS, released IFC revision, checklist hoàn tất,
+   người/giờ kiểm tra và ít nhất một evidence document cho mục yêu cầu evidence.
+4. Punch Critical/Major chưa đóng và HSE Critical hoặc stop-work đang mở chặn
+   acceptance/handover; Minor cảnh báo nhưng không tự chặn trừ template quy định.
+5. Mobile tạo client UUID và idempotency key, lưu local draft/outbox. Retry cùng
+   payload trả cùng kết quả; payload khác cùng key bị conflict. Row-version stale
+   trả `409` và yêu cầu người dùng chọn reload/copy-as-new, không silent merge.
 
 #### Q-FIN-01 — Hồ sơ thanh toán ba phần
 
@@ -578,6 +824,28 @@ hoặc bằng chứng cho hướng tạo trực tiếp:
    tổng tiền; ai duyệt vượt ngưỡng?
 6. Hồ sơ bị trả lại tạo version mới hay sửa version hiện tại; SLA/KPI tính ra sao?
 
+**Phương án Q-FIN-01:**
+
+1. Mỗi dossier có ba section versioned: `Site` (QS/acceptance/evidence), `CM`
+   (scope, BOQ/VO, quality/schedule confirmation) và `Accounting` (invoice,
+   tax, banking, payment/receipt references). Template quy định chứng từ theo
+   Upstream, Supply, Labour, Equipment và Mixed package.
+2. Ba section được chuẩn bị song song. Mỗi section có maker và checker độc lập;
+   Finance chỉ submit/approve dossier khi cả ba section `Approved`. BGD/authorized
+   approver quyết định chi/ghi nhận theo matrix, không tự lập section.
+3. Section sau có thể Draft khi phần trước chưa duyệt nhưng không được Approved
+   nếu dependency bắt buộc chưa Approved.
+4. Upstream bắt buộc Contract + receivable milestone + approved Upstream QS;
+   Downstream bắt buộc Contract + payable milestone + vendor invoice + approved
+   Downstream QS/receipt theo loại package + applicable Execution BOQ/VO.
+5. Default tolerance là zero cho contract/vendor/tax/currency và tổng tiền.
+   Quantity/unit-price rounding theo đơn vị tiền nhưng không auto-approve chênh
+   lệch; vượt bất kỳ tolerance cấu hình nào cần Finance Manager/BGD override có
+   lý do và audit. Không dùng amount sign để suy direction.
+6. Draft sửa tại chỗ. Sau submit, trả lại tạo revision mới nối lineage; bản đã
+   submit/approved bất biến. SLA tính riêng từ submit→review và approved→paid;
+   KPI ghi theo actor/timestamp thực, không reset khi tạo revision sửa.
+
 ### P2 — Vận hành, dữ liệu và nghiệm thu
 
 #### Q-OPS-01 — Drive và topology thư mục
@@ -588,6 +856,24 @@ hoặc bằng chứng cho hướng tạo trực tiếp:
 4. Retention, archive, restore và xóa file khi hard-delete là gì?
 5. Cutover cần backfill/rebind folder lịch sử và tiêu chí rollback nào?
 
+**Phương án Q-OPS-01:**
+
+1. Dùng OAuth identity do NICON sở hữu (ưu tiên Shared Drive hoặc tài khoản chức
+   năng, không dùng tài khoản cá nhân); root folder và Data Protection key ring
+   là cấu hình môi trường, không commit vào repository.
+2. Topology đích đặt Survey dưới `01_CRM_PreDesign`. Registry hiện hữu
+   `01_Khao_sat` chỉ đổi sau migration có preview; không đổi string seed rồi làm
+   mất binding lịch sử.
+3. Ứng dụng là nguồn quyền authoritative. Không đồng bộ ACL Drive theo từng user
+   ở giai đoạn này; OAuth identity sở hữu file, người dùng tải qua API có project
+   scope. Chỉ bật Drive sharing sync khi NICON IT duyệt mapping group.
+4. Xóa nghiệp vụ đưa file thuộc ownership ứng dụng vào Drive trash sau durable
+   cleanup; external/shared file chỉ unlink. Restore/archive theo retention của
+   record nguồn; legal hold luôn thắng purge.
+5. Cutover: disable worker → đợi hết lease → inventory/checksum → preview mapping
+   → move/rebind theo folder ID → reconcile → sample download → enable worker.
+   Rollback giữ mapping cũ và folder ID; dừng nếu count/checksum/ownership lệch.
+
 #### Q-OPS-02 — Host/UAT và tiêu chí bàn giao
 
 1. URL UAT, branch/commit, ngày deploy và bộ dữ liệu demo chuẩn là gì?
@@ -595,6 +881,21 @@ hoặc bằng chứng cho hướng tạo trực tiếp:
 3. Browser/device/mobile width và điều kiện mạng yếu cần test?
 4. Tiêu chí pass cho health, Drive, email, upload, retry và audit?
 5. Cơ chế ghi defect, severity, SLA và retest trên phiên bản nào?
+
+**Phương án Q-OPS-02:**
+
+1. Mỗi đợt UAT phải công bố URL, environment, branch, commit SHA, migration ID,
+   seed version và thời điểm deploy; không nghiệm thu theo nhãn “latest”.
+2. UAT dùng tài khoản riêng cho mọi business role và owner/non-owner scope. Chủ
+   module NICON ký scenario của module; Product Owner/BGD ký cross-module và go-live.
+3. Browser tối thiểu Chrome/Edge hai phiên bản gần nhất; desktop 1366×768, tablet
+   768×1024, mobile 390×844. BCH test thêm mạng chậm, offline, reconnect và retry.
+4. Pass khi health/database/migration OK; không có Critical/High defect; Drive,
+   email, upload/download, retry/idempotency, permission denial và audit đều có
+   bằng chứng; không có secret/PII trong log.
+5. Defect lưu ID, build SHA, environment, role/data, steps, expected/actual và
+   evidence. Critical: xử lý ngay/chặn release; High: trước sign-off; Medium/Low
+   cần owner và kế hoạch. Retest đúng commit fix rồi chạy regression liên quan.
 
 #### Q-GOV-01 — Thẩm quyền xác nhận yêu cầu
 
@@ -605,6 +906,20 @@ hoặc bằng chứng cho hướng tạo trực tiếp:
    sign-off? Khi các kênh khác nhau thì thứ tự ưu tiên là gì?
 4. Mỗi quyết định cần mã, ngày hiệu lực và người duyệt để đóng Q-01–Q-11 hay chỉ
    cần cập nhật biên bản tổng hợp?
+
+**Phương án Q-GOV-01:**
+
+1. Không suy đoán tên/chức danh từ transcript tự động. Dùng role nghiệp vụ trong
+   tài liệu cho tới khi NICON xác nhận danh tính bằng văn bản.
+2. Đầu mối BA được tổng hợp nhưng không thay thẩm quyền: trưởng phòng duyệt rule
+   module; BGD/Product Owner duyệt cross-module, cơ cấu quyền, tài chính, retention
+   và go-live.
+3. Thứ tự hiệu lực: change decision được ký/phê duyệt có ID → biên bản họp được
+   xác nhận → email xác nhận từ owner → UAT sign-off. Google Sheet/chat chỉ là
+   working evidence; UAT không tự thay đổi requirement nếu không có change ID.
+4. Mỗi quyết định bắt buộc có ID, owner, approver, ngày hiệu lực, phạm vi, rule,
+   exception, migration/backfill, acceptance criteria và link evidence. Canonical
+   docs cập nhật sau đó; không đóng câu hỏi chỉ bằng sửa biên bản tổng hợp.
 
 ## 6. Đầu vào còn cần NICON cung cấp
 
@@ -625,20 +940,19 @@ hoặc bằng chứng cho hướng tạo trực tiếp:
 |---:|---|---|---|---|
 | 1 | Hai hướng tạo Hợp đồng Upstream | Implemented | Code đã hỗ trợ tạo trực tiếp với `QuoteId = null` và kiểm tra Báo giá đã duyệt khi có `QuoteId`; quyết định được căn chỉnh vào canonical docs tại commit `be7a4fbc` | Duy trì QA-COM-01; chỉ bổ sung cờ/lý do khi NICON trả lời câu hỏi bằng chứng của hướng trực tiếp |
 | 2 | Route RBAC BCH/CM và tài khoản seed cho mọi business role | Implemented | Commit `65bea63d`; Tier-1 route-discovery chạy lại ngày 16/10: `1 passed`; unit test tập trung gồm `DbSeederTests`: `92 passed` | Chạy deployed RBAC matrix khi Docker/UAT khả dụng |
-| 3 | Năm nhóm phòng ban và mapping role | Open decision | Seed hiện tại không khớp nguyên văn baseline; đổi trực tiếp có nguy cơ cấp/thu hồi sai quyền | NICON trả lời Q-04 và cung cấp Role × Department × Permission matrix; sau đó migration/rebind có audit |
+| 3 | Nhóm quyền chức năng và mapping role | Partial | Đề xuất seed sáu group tách HR khỏi Finance; unit/integration RBAC tập trung đã pass. Biên bản vẫn nêu năm phòng, nên đây không phải sơ đồ tổ chức đã duyệt | NICON xác nhận Role × Department × Permission matrix trước rollout dữ liệu thật; rehearsal migration và kiểm tra quyền runtime |
 | 4 | Ownership/liên kết nhóm việc | Open decision | Persistence hiện có nhưng Q-01–Q-03 quyết định cardinality, ownership, KPI và quyền giao việc | Chốt Q-01–Q-03 trước mọi migration dữ liệu thật |
 | 5 | BOQ đa mẫu và provenance từng dòng | Open decision | Có import/mapping nhiều sheet nhưng chưa có schema được duyệt cho hierarchy, formula và provenance | NICON duyệt mapping theo bộ workbook đại diện; sau đó thiết kế import contract và regression fixtures |
 | 6 | Thiết kế chi tiết, MPP, review và hard-delete | Open decision | Phần lõi đã có; Q-06–Q-08, Q-10–Q-11 ảnh hưởng trực tiếp lifecycle và schema | Chốt các câu hỏi rồi triển khai theo từng lát persistence → API → UI → test |
 | 7 | Tự sinh hồ sơ Pháp lý | Open decision | Wizard idempotent đã có nhưng permit áp dụng theo loại/quy mô chưa được duyệt | NICON cung cấp permit matrix Q-09; sau đó tự sinh idempotent và giữ bước PM phân công |
 | 8 | CM/BCH, S-Curve và ISO | Open decision | Lát cắt readiness/resource/QA-QC/QS đã có; công thức, checklist và approval matrix còn mở | Nhận ISO/rules; triển khai versioned baseline, gate và test SoD/duplicate/reconnect |
 | 9 | Hồ sơ thanh toán ba phần | Open decision | Payment Request hiện có nhưng chưa đủ dossier hai chiều và matching | Chốt Q-FIN-01 trước khi thiết kế aggregate, trạng thái và tolerance |
-| 10 | Drive/UAT/host | External dependency | Repository chỉ chứng minh capability, không chứng minh cấu hình hoặc deploy NICON | Nhận OAuth/root folder/UAT URL và tiêu chí bàn giao; chạy deployed smoke trên commit công bố |
+| 10 | Drive/UAT/host | Open decision | Repository chỉ chứng minh capability, không chứng minh cấu hình hoặc deploy NICON | Nhận OAuth/root folder/UAT URL và tiêu chí bàn giao; chạy deployed smoke trên commit công bố |
 
-Nguyên tắc thực thi sau mỗi quyết định: cập nhật canonical docs → cập nhật
+Nguyên tắc thực thi sau mỗi quyết định được phê duyệt: cập nhật canonical docs → cập nhật
 code/migration → unit/integration test đúng layer → E2E hành trình trình duyệt
-cần thiết → UAT trên commit được công bố. Không tự lấp các ô `Open decision`
-bằng giả định kỹ thuật vì các lựa chọn này làm thay đổi quyền, dữ liệu hoặc
-trách nhiệm nghiệp vụ.
+cần thiết → UAT trên commit được công bố. Phương án mục 5 là đầu vào thiết kế,
+không tự đóng các ô `Open decision` hoặc thay thế bằng chứng phê duyệt của NICON.
 
 ## 8. QA handoff sau khi có quyết định
 
@@ -677,3 +991,11 @@ RBAC matrix trên deployed stack. Sau khi có các quyết định còn mở, c�
 tập trung cho Work Package, Design, Legal, Construction và Finance, rồi E2E
 trình duyệt phù hợp. Việc cùng một người thực hiện cả đối chiếu và kiểm định là
 giới hạn độc lập của review này.
+
+Bổ sung kiểm tra trong lượt HR/RBAC hiện tại: backend build trong container
+`0 warning, 0 error`; `RbacSeederTests|RoleServiceTests` `60/60`; integration
+`RbacControllerTests` `30/30`. Các kiểm tra này chứng minh seed, permission
+isolation và API shape, **chưa** chứng minh migration dữ liệu hiện hữu trên bản
+sao NICON hoặc đúng cơ cấu phòng ban khách hàng. EF CLI chưa cài trong backend
+container nên chưa tạo được migration script bằng `dotnet ef`; không áp dụng
+migration trên database đang chạy chỉ để thử.

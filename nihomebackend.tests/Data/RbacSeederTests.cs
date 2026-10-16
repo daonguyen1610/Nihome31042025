@@ -59,8 +59,31 @@ public class RbacSeederTests : IDisposable
         Assert.Equal("PROCUREMENT", groupByRole["WAREHOUSE"]);
         Assert.Equal("PROCUREMENT", groupByRole["PROCUREMENT"]);
         Assert.Equal("FINANCE", groupByRole["ACCOUNTANT"]);
+        Assert.Equal("HR", groupByRole["HR"]);
         Assert.Null(groupByRole["BGD"]);
         Assert.All(_db.Roles.Where(role => !role.IsSystem), role => Assert.True(role.InitialGroupSeeded));
+    }
+
+    [Fact]
+    public void Seed_HrGroupAndRoleDoNotInheritFinancePermissions()
+    {
+        RbacSeeder.Seed(_db);
+
+        var hrGroup = _db.RoleGroups.Single(group => group.Code == "HR");
+        var hrRole = _db.Roles.Single(role => role.Code == "HR");
+        var groupCodes = _db.RoleGroupPermissions
+            .Where(item => item.RoleGroupId == hrGroup.Id)
+            .Select(item => item.Permission.Module + "." + item.Permission.Action)
+            .ToList();
+        var roleCodes = _db.RolePermissions
+            .Where(item => item.RoleId == hrRole.Id)
+            .Select(item => item.Permission.Module + "." + item.Permission.Action)
+            .ToList();
+
+        Assert.Contains("recruitment.applications.view", groupCodes);
+        Assert.Contains("recruitment.applications.manage", roleCodes);
+        Assert.DoesNotContain(groupCodes, code => code.StartsWith("finance."));
+        Assert.DoesNotContain(roleCodes, code => code.StartsWith("finance."));
     }
 
     [Fact]
