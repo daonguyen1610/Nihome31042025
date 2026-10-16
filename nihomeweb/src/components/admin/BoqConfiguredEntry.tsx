@@ -774,7 +774,7 @@ export function BoqConfiguredRows({
             </DialogTitle>
           </DialogHeader>
           <form
-            className="space-y-4"
+            className="space-y-6"
             onSubmit={(event) => {
               event.preventDefault();
               if (allowed)
@@ -787,11 +787,13 @@ export function BoqConfiguredRows({
                 );
             }}
           >
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-x-4 gap-y-5 sm:grid-cols-2">
               {sheet.fields.map((field) => (
-                <Label key={field.key} htmlFor={`boq-entry-${field.key}`} className="space-y-2">
-                  {label(field)}
-                  {field.required ? " *" : ""}
+                <div key={field.key} className="grid min-w-0 gap-2">
+                  <Label htmlFor={`boq-entry-${field.key}`} className="leading-5">
+                    {label(field)}
+                    {field.required ? " *" : ""}
+                  </Label>
                   {field.type === "Number" ? (
                     <BoqNumberEntry
                       id={`boq-entry-${field.key}`}
@@ -812,18 +814,20 @@ export function BoqConfiguredRows({
                       }
                     />
                   )}
-                </Label>
+                </div>
               ))}
             </div>
             {!allowed && (
-              <p className="text-sm text-muted-foreground">{t("boqConfigured.rules")}</p>
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                {t("boqConfigured.rules")}
+              </p>
             )}
             {error && (
               <p role="alert" className="text-sm text-destructive">
                 {error}
               </p>
             )}
-            <DialogFooter>
+            <DialogFooter className="border-t pt-4">
               <Button
                 type="button"
                 variant="outline"

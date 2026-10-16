@@ -135,6 +135,12 @@ test("category forms, download and sheet changes keep BOQ fields separate", asyn
     { width: 1440, height: 900 },
   ]) {
     await page.setViewportSize(viewport);
+    for (const input of await dialog.locator('input[id^="boq-entry-"]').all()) {
+      const id = await input.getAttribute("id");
+      const labelBox = await dialog.locator(`label[for="${id}"]`).boundingBox();
+      const inputBox = await input.boundingBox();
+      expect(inputBox!.y - (labelBox!.y + labelBox!.height)).toBeGreaterThanOrEqual(7);
+    }
     await expect
       .poll(async () => {
         const box = await dialog.boundingBox();
