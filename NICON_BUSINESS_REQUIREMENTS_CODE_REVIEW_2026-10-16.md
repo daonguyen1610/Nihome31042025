@@ -565,17 +565,19 @@ hoặc bằng chứng cho hướng tạo trực tiếp:
 2. Mã duy nhất toàn công ty, so sánh sau khi chuẩn hóa uppercase.
 3. Cho phép 2–40 ký tự `A-Z`, `0-9`, `-`, `_`; không dấu cách, Unicode hoặc ký
    tự đặc biệt. UI/API dùng cùng rule.
-4. Được đổi khi Dự án chưa `Completed/Cancelled`, bởi PM Dự án hoặc role có
-   `operations.projects.rename`; bắt buộc lý do, row version và audit. Sau đóng
-   Dự án chỉ Admin được mở lại theo quy trình rồi mới đổi.
+4. Chỉ role có permission `operations.projects.rename` và scope quản lý Dự án
+   được đổi khi Dự án chưa `Completed/Cancelled`; bắt buộc lý do, row version
+   và audit. Dự án đã đóng phải mở lại qua workflow có quyền riêng trước khi
+   đổi mã; PM không mặc nhiên có quyền đổi mã.
 5. Chỉ tên folder Drive hiện tại được rename bất đồng bộ trên cùng folder ID.
    Báo giá, Hợp đồng, file/snapshot đã phát hành giữ mã tại thời điểm phát hành.
    Lịch sử mã cũ được giữ vĩnh viễn và phải tìm kiếm được như alias.
 
 **Delivery note Q-05:** Danh sách Dự án đã tìm được bằng mã cũ trong lịch sử
-đổi mã và vẫn áp project scope. Chưa có ràng buộc duy nhất xuyên suốt lịch sử
-mã cũ ở cấp database; cần kiểm kê dữ liệu cũ, thiết kế registry/unique constraint
-và rehearsal migration trước khi cam kết không bao giờ tái sử dụng alias.
+đổi mã và vẫn áp project scope; Dự án `Completed/Cancelled` không cho đổi mã.
+Chưa có ràng buộc duy nhất xuyên suốt lịch sử mã cũ ở cấp database; cần kiểm kê
+dữ liệu cũ, thiết kế registry/unique constraint và rehearsal migration trước
+khi cam kết không bao giờ tái sử dụng alias.
 
 #### Q-06 — Trình nội bộ Thiết kế
 

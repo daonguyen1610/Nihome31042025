@@ -475,6 +475,30 @@ public class OperationalProjectServiceTests : IDisposable
         Assert.Empty(await _db.OperationalProjectCodeChanges.ToListAsync());
     }
 
+    [Theory]
+    [InlineData(OperationalProjectStatus.Completed)]
+    [InlineData(OperationalProjectStatus.Cancelled)]
+    public async Task RenameCodeAsync_TerminalProjectRejectsWithoutMutation(
+        OperationalProjectStatus status)
+    {
+        var created = await _service.CreateAsync(ValidCreate(), _managerId, false);
+        var project = await _db.OperationalProjects.SingleAsync(item => item.Id == created.Id);
+        project.Status = status;
+        project.RowVersion = BitConverter.GetBytes(1L);
+        await _db.SaveChangesAsync();
+
+        await Assert.ThrowsAsync<OperationalProjectOperationException>(() =>
+            _service.RenameCodeAsync(created.Id, new RenameOperationalProjectRequest
+            {
+                NewCode = "PJ-CLOSED-RENAMED",
+                Reason = "Không được đổi mã Dự án đã đóng",
+                RowVersion = CrmConcurrency.Encode(project.RowVersion),
+            }, _managerId, false));
+
+        Assert.Equal(created.Code, project.Code);
+        Assert.Empty(await _db.OperationalProjectCodeChanges.ToListAsync());
+    }
+
     [Fact]
     public async Task RetryDriveRenameAsync_RejectsWorkAlreadyBeingProcessed()
     {
