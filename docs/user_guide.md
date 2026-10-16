@@ -922,7 +922,8 @@ dossier. Older integrations that send document IDs without a type remain
 supported. New IDs from those integrations are stored as **Other**, while
 updates retain an existing classification for unchanged IDs. Classification
 is not inferred from a filename. The published ISO template and released IFC
-still apply.
+still apply. Each dossier card shows the document IDs and classifications for
+review.
 
 Material requests use the target BOQ warning bands from the customer PRD:
 yellow at 85%, orange at 95%, and red above 100%. The red state blocks ordering

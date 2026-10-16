@@ -155,13 +155,35 @@ test("BCH QA/QC form sends a type for each evidence document on mobile", async (
         submittedEvidence = route.request().postDataJSON().evidence;
         await route.fulfill({ status: 201, contentType: "application/json", body: "{}" });
       } else {
-        await route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify([
+            {
+              id: 4001,
+              code: "QA-190002-0001",
+              title: "Kiểm tra bê tông móng",
+              status: "Draft",
+              wbsCode: "WBS-FOUNDATION-01",
+              templateId: 1001,
+              templateVersion: 1,
+              ifcReleaseId: 2001,
+              evidenceDocumentIds: [3001],
+              evidence: [{ projectDocumentId: 3001, evidenceType: "LaboratoryResult" }],
+              rowVersion: "AAAAAAAAAAE=",
+            },
+          ]),
+        });
       }
     },
   );
 
   await page.goto(`${appUrl}/admin/construction/bch/qa-qc`, { waitUntil: "networkidle" });
   await expect(page.getByTestId("qa-qc-page")).toBeVisible();
+  await expect(page.getByTestId("qa-qc-evidence-4001")).toContainText("3001");
+  await expect(page.getByTestId("qa-qc-evidence-4001")).toContainText(
+    /Kết quả thí nghiệm|Laboratory result/,
+  );
   await page.getByTestId("qa-qc-new").click();
   await page.getByTestId("qa-qc-template").click();
   await page.getByRole("option", { name: /Hồ sơ chất lượng vật liệu/ }).click();

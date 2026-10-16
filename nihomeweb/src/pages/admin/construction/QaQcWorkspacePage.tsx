@@ -218,6 +218,19 @@ export default function QaQcWorkspacePage() {
                     <dd>{row.evidenceDocumentIds.length.toLocaleString(lang)}</dd>
                   </div>
                 </dl>
+                {row.evidence.length > 0 && (
+                  <div className="space-y-1 text-sm" data-testid={`qa-qc-evidence-${row.id}`}>
+                    <p className="text-muted-foreground">{t("construction.qaQc.evidence")}</p>
+                    <ul className="space-y-1">
+                      {row.evidence.map((item) => (
+                        <li key={item.projectDocumentId} className="break-words">
+                          #{item.projectDocumentId} ·{" "}
+                          {t(`construction.qaQc.evidenceType.${item.evidenceType}`)}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
                 {row.status === "Draft" && (
                   <Button
                     size="sm"

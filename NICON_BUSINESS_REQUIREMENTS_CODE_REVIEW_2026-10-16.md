@@ -1030,8 +1030,9 @@ Kiểm tra lát QA/QC evidence type: `ConstructionOperationsServiceTests`
 `14/14`, `ConstructionOperationsControllerTests` `6/6`; API round-trip giữ
 `LaboratoryResult`, client ID cũ tương thích và không làm mất loại đã lưu khi
 cập nhật cùng tài liệu. Frontend format/lint/build và TypeScript typecheck đạt.
-Playwright mobile scenario `1/1` pass, xác nhận form gửi đúng ID và loại minh
-chứng. Lần chạy đầu bị `ECONNRESET` vì backend `dotnet watch` restart do
+Playwright construction smoke `2/2` pass, xác nhận form gửi đúng ID và loại
+minh chứng, đồng thời thẻ hồ sơ hiển thị loại cho Phòng CM kiểm tra. Lần chạy
+đầu bị `ECONNRESET` vì backend `dotnet watch` restart do
 polling watcher trùng `/nihomeweb/vite.config.ts`; đã chạy lại khi stack ổn
 định và pass. Chưa kiểm chứng Drive thực của NICON hay checklist ISO theo loại
 công trình.
