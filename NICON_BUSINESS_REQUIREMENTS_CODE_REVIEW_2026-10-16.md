@@ -14,10 +14,11 @@ Mã nguồn đã có nền tảng nghiệp vụ đáng kể, đặc biệt ở C
 Thiết kế trước hợp đồng, phối hợp Cung ứng–Tài chính trước hợp đồng và Đấu thầu.
 Tuy nhiên chưa thể tuyên bố toàn bộ yêu cầu 03/10 là business-ready vì:
 
-1. Sai lệch role group vẫn chờ NICON quyết định cơ cấu phòng ban tại Q-04;
-   không được tự đổi seed vì có thể làm sai quyền dữ liệu. Việc Hợp đồng
-   Upstream không có Báo giá không còn là sai lệch: xác nhận ngày 16/10/2026
-   cho phép hướng này khi khách hàng đã biết và thống nhất giá trị Hợp đồng.
+1. Nhóm quyền HR đã được tách khỏi Finance trong seed/migration, nhưng cơ cấu
+   phòng ban chính thức vẫn chờ NICON quyết định tại Q-04. Không được coi sáu
+   group kỹ thuật là sơ đồ tổ chức đã duyệt. Riêng Hợp đồng Upstream không có
+   Báo giá không còn là sai lệch: xác nhận ngày 16/10/2026 cho phép hướng này
+   khi khách hàng đã biết và thống nhất giá trị Hợp đồng.
 2. Một số lựa chọn kỹ thuật đang được vận hành như quy tắc mặc dù NICON chưa
    trả lời: cách gắn nhóm việc khi có hợp đồng, quyền giao việc liên phòng, xóa
    hồ sơ đã trình khách và cách kích hoạt thủ tục Pháp lý.
@@ -46,16 +47,15 @@ API, UI và test phù hợp với yêu cầu được nêu. Nó không xác nh�
   `nihomebackend.tests`, `nihomebackend.integration.tests` và E2E smoke.
 - Mỗi nhóm yêu cầu được truy vết theo chuỗi: route/UI → DTO/controller → service
   rule → persistence/migration/seed → test.
-- Kiểm tra này là static review trên working tree. Theo quy định repository cho
-  thay đổi chỉ liên quan tài liệu, không chạy build, unit, integration hoặc E2E.
-  Tên test chứng minh có coverage trong mã, không phải bằng chứng test vừa chạy.
+- Bản rà soát gốc là static review. Các test chạy sau đó được ghi riêng ở mục
+  9; tên test trong ma trận không mặc nhiên là bằng chứng test vừa chạy.
 - Không kiểm tra host, Google Drive thật, SMTP thật hoặc dữ liệu UAT của NICON.
 
 ## 3. Ma trận yêu cầu → mã nguồn
 
 ### BR-01 — Permission, vai trò và nhóm phòng ban
 
-**Trạng thái: Partial — có framework tốt, sai cơ cấu group baseline.**
+**Trạng thái: Partial — có framework và HR group riêng, cơ cấu tổ chức chưa chốt.**
 
 Đã làm tốt:
 
@@ -71,11 +71,13 @@ API, UI và test phù hợp với yêu cầu được nêu. Nó không xác nh�
 
 Khoảng trống/sai lệch:
 
-- `rbac-defaults.json` seed `CRM`, `PROCUREMENT`, `CONSTRUCTION`, `DESIGN`,
-  `FINANCE`; baseline yêu cầu `Kinh doanh/CRM`, `Hành chính nhân sự`, `Thiết kế`,
-  `Quản lý thi công`, `Tài chính kế toán`.
-- `HR` đang thuộc `FINANCE`; `PROCUREMENT` là group độc lập; `LEGAL_OFFICER`
-  thuộc `CONSTRUCTION`. Đây là giả định triển khai, chưa phải quyết định NICON.
+- `rbac-defaults.json` hiện seed sáu group chức năng: `CRM`, `HR`,
+  `PROCUREMENT`, `CONSTRUCTION`, `DESIGN`, `FINANCE`; `HR` thuộc `HR`, không còn
+  thuộc `FINANCE`. Đây không phải xác nhận NICON có sáu phòng.
+- Biên bản 03/10 liệt kê năm phòng nhưng chưa xác định vị trí Cung ứng/Pháp lý.
+  Ảnh sơ đồ tổ chức lưu trong `docs/Nicon/` là rev 2022, có Cung ứng riêng và
+  gộp Kế toán–Tài chính–Nhân sự; không dùng ảnh cũ để phủ định biên bản mới.
+  Mapping chính thức Role × Department × Permission vẫn cần NICON xác nhận.
 
 Bằng chứng chính:
 
@@ -390,7 +392,7 @@ Bằng chứng chính:
 | Mức | Sai lệch | Ảnh hưởng | Hành động đề xuất |
 |---|---|---|---|
 | Resolved | Hợp đồng Upstream không bắt buộc `QuoteId` | Đây là hướng nghiệp vụ hợp lệ khi khách hàng đã biết và thống nhất giá trị; hướng có Báo giá vẫn bắt buộc Báo giá đã duyệt | Duy trì test hồi quy cho cả hai hướng và không biến `QuoteId` thành bắt buộc toàn cục |
-| High | Role group seed không khớp năm phòng baseline | Sai ownership, bộ quyền mặc định và báo cáo/KPI | NICON trả lời Q-04; lập migration/rebind có audit thay vì đổi seed đơn thuần |
+| High | Sáu group quyền kỹ thuật chưa được xác nhận là năm phòng NICON | Có thể sai ownership, bộ quyền mặc định và báo cáo/KPI nếu coi group là cơ cấu tổ chức | NICON trả lời Q-04; rehearsal migration/rebind và kiểm tra quyền runtime trước rollout |
 | Medium | Wizard Pháp lý cần chọn thủ công | Không đạt yêu cầu tự sinh khi Hợp đồng chạy | Chốt permit matrix; tự tạo idempotent và giữ bước PM phân công |
 | Medium | Quy tắc package/assignment đang đi trước quyết định | Có thể phải migrate liên kết và quyền sau khi NICON trả lời | Đóng Q-01–Q-03 trước khi mở rộng dữ liệu thật |
 | Medium | Chặn xóa sau trình khách là giả định kỹ thuật | Có thể lệch thẩm quyền/lưu trữ hồ sơ NICON | Giữ chặn an toàn cho tới khi Q-08 được trả lời |
