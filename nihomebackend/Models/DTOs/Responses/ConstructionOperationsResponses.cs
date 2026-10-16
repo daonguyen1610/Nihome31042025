@@ -38,7 +38,10 @@ public sealed record QaQcTemplateResponse(int Id, string Code, int Version, stri
 
 public sealed record QaQcDossierResponse(int Id, string Code, int TemplateId, int TemplateVersion,
     string TemplateSnapshotJson, int? IfcReleaseId, string ChecklistResultsJson, string WbsCode, string Title, ConstructionReviewStatus Status,
-    int CreatedByUserId, IReadOnlyList<long> EvidenceDocumentIds, string? CmDecisionReason, string RowVersion);
+    int CreatedByUserId, IReadOnlyList<long> EvidenceDocumentIds, string? CmDecisionReason, string RowVersion,
+    IReadOnlyList<QaQcEvidenceResponse> Evidence);
+
+public sealed record QaQcEvidenceResponse(long ProjectDocumentId, QaQcEvidenceType EvidenceType);
 
 public sealed record ConstructionQsBatchResponse(int Id, string Code, ConstructionQsDirection Direction,
     ConstructionReviewStatus Status, int ContractId, string WbsCode, DateTime PeriodFrom, DateTime PeriodTo, int? ProjectBoqRevisionId,

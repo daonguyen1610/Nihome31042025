@@ -383,8 +383,9 @@ Construction Task, Diary, Punch, Acceptance, As-built và Handover hiện dùng
 reference và readiness snapshot, chưa có WBS/Gantt/S-Curve/Budget Baseline dạng
 dữ liệu có cấu trúc. Đề xuất vật tư đã tạo được Material Request; đề xuất máy và
 nhân công mới dừng ở trạng thái sẵn sàng chuyển tiếp, chưa có handoff mua/thuê và
-liên kết HĐ Downstream hoàn chỉnh. QA/QC đã có template/dossier nhưng API chưa
-giữ loại cho từng evidence. QS đã tách Upstream/Downstream, có contract/BOQ/
+liên kết HĐ Downstream hoàn chỉnh. QA/QC đã lưu loại minh chứng theo từng
+tài liệu; hồ sơ ISO/checklist bắt buộc theo từng loại công trình vẫn chưa chốt.
+QS đã tách Upstream/Downstream, có contract/BOQ/
 milestone và correction lineage, nhưng CM approval chưa tạo hồ sơ thanh toán.
 
 Mọi mở rộng tiếp theo tiếp tục dùng Operational Project. Migration các aggregate

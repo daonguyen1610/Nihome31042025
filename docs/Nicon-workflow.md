@@ -313,7 +313,7 @@ giả để đủ three-way matching.
 | Handover | Hiện có readiness, commissioning, checklist, signatory và row version | `DesignProjectId` |
 | CM preparation/BCH organization/Budget Baseline | Có aggregate versioned và readiness snapshot; baseline vẫn là document reference, chưa có dữ liệu cấu trúc/S-Curve engine | `OperationalProjectId` |
 | Resource request | Có Material/Equipment/Labour và CM review; Material tạo MR, hai loại còn lại chưa có procurement handoff hoàn chỉnh | `OperationalProjectId` + WBS/BOQ |
-| QA/QC dossier | Có template snapshot, checklist, IFC và document evidence; API chưa giữ evidence type khi ghi | `OperationalProjectId` + WBS |
+| QA/QC dossier | Có template snapshot, checklist, IFC và loại minh chứng theo từng tài liệu; checklist ISO bắt buộc theo loại công trình chưa chốt | `OperationalProjectId` + WBS |
 | Site QS hai hướng | Có Upstream/Downstream, contract/BOQ/milestone, evidence và correction lineage; chưa handoff Finance | `OperationalProjectId` + WBS/contract/BOQ |
 
 Không mở rộng các aggregate mới dựa trên `DesignProjectId`. Phần hiện có cần

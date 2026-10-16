@@ -141,6 +141,90 @@ public sealed class ConstructionOperationsControllerTests : IntegrationTestBase
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
+    [Fact]
+    public async Task QaQcDossier_TypedEvidenceRoundTripsAndMixedPayloadIsRejected()
+    {
+        var fixture = await CreateProjectAsync();
+        var references = await WithDbAsync(async db =>
+        {
+            var template = new QaQcTemplate
+            {
+                Code = "ISO-QA-" + Guid.NewGuid().ToString("N")[..8],
+                Version = 1,
+                NameVi = "Hồ sơ chất lượng vật liệu",
+                Name = "Material quality dossier",
+                NameZh = "材料质量档案",
+                NameJa = "材料品質記録",
+                SchemaJson = "{}",
+                IsPublished = true,
+                CreatedByUserId = fixture.PmUserId,
+            };
+            var design = new DesignProject
+            {
+                OperationalProjectId = fixture.ProjectId,
+                ProjectCode = "DP-QA-" + Guid.NewGuid().ToString("N")[..8],
+                Name = "NICON QA/QC integration project",
+            };
+            db.QaQcTemplates.Add(template);
+            db.DesignProjects.Add(design);
+            await db.SaveChangesAsync();
+            var release = new IfcRelease
+            {
+                DesignProjectId = design.Id,
+                ReleaseNumber = "IFC-QA-01",
+                Title = "Foundation inspection drawings",
+                Status = IfcReleaseStatus.Released,
+            };
+            var document = new ProjectDocument
+            {
+                OperationalProjectId = fixture.ProjectId,
+                Category = ProjectDocumentCategory.ConstructionAcceptance,
+                LocalPath = "/files/project-documents/qa-lab-result.pdf",
+                OriginalFileName = "qa-lab-result.pdf",
+                Sha256 = new string('b', 64),
+            };
+            db.IfcReleases.Add(release);
+            db.ProjectDocuments.Add(document);
+            await db.SaveChangesAsync();
+            return (TemplateId: template.Id, ReleaseId: release.Id, DocumentId: document.Id);
+        });
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "SUPER_ADMIN"));
+        var path = $"/api/operational-projects/{fixture.ProjectId}/construction/qa-qc/dossiers";
+        using var createdResponse = await SendAsync(HttpMethod.Post, path, new
+        {
+            templateId = references.TemplateId,
+            wbsCode = "1.2.1",
+            title = "Foundation concrete laboratory test",
+            ifcReleaseId = references.ReleaseId,
+            checklistResultsJson = "[]",
+            evidence = new[] { new { projectDocumentId = references.DocumentId, evidenceType = "LaboratoryResult" } },
+        });
+        createdResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var created = await ReadJsonAsync(createdResponse);
+        created.GetProperty("evidence")[0].GetProperty("evidenceType").GetString()
+            .Should().Be("LaboratoryResult");
+        created.GetProperty("evidenceDocumentIds")[0].GetInt64().Should().Be(references.DocumentId);
+
+        using var readResponse = await Client.GetAsync($"{path}/{created.GetProperty("id").GetInt32()}");
+        readResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await ReadJsonAsync(readResponse)).GetProperty("evidence")[0]
+            .GetProperty("evidenceType").GetString().Should().Be("LaboratoryResult");
+
+        using var invalidResponse = await SendAsync(HttpMethod.Post, path, new
+        {
+            templateId = references.TemplateId,
+            wbsCode = "1.2.2",
+            title = "Invalid mixed evidence",
+            ifcReleaseId = references.ReleaseId,
+            checklistResultsJson = "[]",
+            evidenceDocumentIds = new[] { references.DocumentId },
+            evidence = new[] { new { projectDocumentId = references.DocumentId, evidenceType = "Sample" } },
+        });
+        invalidResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.QaQcDossiers.CountAsync(x => x.OperationalProjectId == fixture.ProjectId)))
+            .Should().Be(1);
+    }
+
     private async Task<(int ProjectId, int PmUserId)> CreateProjectAsync() =>
         await WithDbAsync(async db =>
         {

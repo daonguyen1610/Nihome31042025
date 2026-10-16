@@ -69,7 +69,14 @@ public sealed class CreateQaQcDossierRequest : IConcurrencyRequest
     [Range(1, int.MaxValue)] public int? IfcReleaseId { get; set; }
     [Required, MaxLength(20000)] public string ChecklistResultsJson { get; set; } = "[]";
     [MaxLength(100)] public List<long> EvidenceDocumentIds { get; set; } = [];
+    [MaxLength(100)] public List<QaQcEvidenceRequest> Evidence { get; set; } = [];
     public string? RowVersion { get; set; }
+}
+
+public sealed class QaQcEvidenceRequest
+{
+    [Range(1, long.MaxValue)] public long ProjectDocumentId { get; set; }
+    [Required] public QaQcEvidenceType EvidenceType { get; set; }
 }
 
 public sealed class CreateConstructionQsBatchRequest : IConcurrencyRequest
