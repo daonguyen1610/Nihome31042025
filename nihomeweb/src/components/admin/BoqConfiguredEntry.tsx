@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { Download, FileSpreadsheet, UploadCloud, Plus, Info, FileCheck2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -66,6 +67,45 @@ const download = (blob: Blob, filename: string) => {
   anchor.click();
   setTimeout(() => URL.revokeObjectURL(href), 1000);
 };
+
+function BoqTemplateDownload({ catalog }: { catalog: MaterialRateCatalogResponse }) {
+  const { t, lang } = useI18n();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  return (
+    <div className="w-full sm:w-auto sm:shrink-0">
+      <Button
+        variant="outline"
+        className="w-full sm:w-auto"
+        disabled={busy}
+        data-testid="boq-template-download"
+        onClick={async () => {
+          setBusy(true);
+          setError(null);
+          try {
+            const { data } = await api.get(
+              `/material-rate-catalogs/${catalog.id}/configured-boq-template`,
+              { params: { language: lang }, responseType: "blob" },
+            );
+            download(data, `${catalog.code}.xlsx`);
+          } catch (error) {
+            setError(extractApiError(error));
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        <Download className="mr-2 h-4 w-4 shrink-0" />
+        {t("materialRates.package.download")}
+      </Button>
+      {error && (
+        <p role="alert" className="mt-2 text-sm text-destructive">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
 
 export function BoqCategorySetup({
   catalog,
@@ -139,28 +179,8 @@ export function BoqCategorySetup({
         {t(catalog.boqConfiguration ? "boqConfigured.configuredHint" : "boqConfigured.setupHint")}
       </p>
       <div className="flex flex-wrap gap-2">
-        {catalog.boqConfiguration && (
-          <Button
-            variant="outline"
-            disabled={busy}
-            onClick={async () => {
-              setBusy(true);
-              setError(null);
-              try {
-                const { data } = await api.get(
-                  `/material-rate-catalogs/${catalog.id}/configured-boq-template`,
-                  { params: { language: lang }, responseType: "blob" },
-                );
-                download(data, `${catalog.code}.xlsx`);
-              } catch (error) {
-                setError(extractApiError(error));
-              } finally {
-                setBusy(false);
-              }
-            }}
-          >
-            {t("boqConfigured.download")}
-          </Button>
+        {catalog.boqConfiguration && catalog.revisionCount === 0 && (
+          <BoqTemplateDownload catalog={catalog} />
         )}
         {canManage && catalog.revisionCount === 0 && (
           <Button
@@ -545,10 +565,16 @@ export function BoqConfiguredRows({
     });
   return (
     <section className="space-y-4" data-testid="configured-boq-rows">
-      <p className="text-sm text-muted-foreground">{t("boqConfigured.rowsHint")}</p>
       {editable && (
-        <div className="flex flex-wrap gap-2">
+        <section className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-primary/20 bg-primary/[0.04] p-4">
+          <div className="min-w-0 flex-[1_1_16rem]">
+            <h4 className="text-sm font-semibold">{t("materialRates.line.manageTitle")}</h4>
+            <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted-foreground">
+              {t("materialRates.line.manageHint")}
+            </p>
+          </div>
           <Button
+            className="shrink-0"
             disabled={busy}
             onClick={() => {
               setEditing(null);
@@ -556,38 +582,85 @@ export function BoqConfiguredRows({
               setEditingOpen(true);
             }}
           >
+            <Plus className="mr-2 h-4 w-4" />
             {t("boqConfigured.addRow")}
           </Button>
-          <Input
-            aria-label={t("boqConfigured.file")}
-            type="file"
-            accept=".xlsx"
-            className="max-w-sm"
-            disabled={busy}
-            onChange={(e) => {
-              setFile(e.target.files?.[0] ?? null);
-              setPreview(null);
-            }}
-          />
-          <Button
-            variant="outline"
-            disabled={busy || !file}
-            onClick={() =>
-              void run(async () => {
-                const form = new FormData();
-                form.append("file", file!);
-                const { data } = await api.post(
-                  `/material-rate-catalogs/${catalog.id}/configured-boq-preview`,
-                  form,
-                );
-                setPreview(data);
-              })
-            }
-          >
-            {t("boqConfigured.preview")}
-          </Button>
-        </div>
+        </section>
       )}
+      <section className="rounded-lg border bg-muted/20 p-4" data-testid="boq-excel-entry">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0 flex-[1_1_16rem]">
+            <h4 className="flex items-center gap-2 text-sm font-semibold">
+              <FileSpreadsheet className="h-4 w-4 shrink-0 text-primary" />
+              {t("materialRates.import.title")}
+            </h4>
+            <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted-foreground">
+              {t("boqConfigured.rowsHint")}
+            </p>
+          </div>
+          <BoqTemplateDownload key={catalog.id} catalog={catalog} />
+        </div>
+        {editable && (
+          <>
+            <Label
+              className="mt-4 flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed bg-background px-4 py-6 text-center transition-colors hover:border-primary/60 focus-within:ring-2 focus-within:ring-ring"
+              onDragOver={(event) => event.preventDefault()}
+              onDrop={(event) => {
+                event.preventDefault();
+                if (!busy) {
+                  setFile(event.dataTransfer.files?.[0] ?? null);
+                  setPreview(null);
+                }
+              }}
+            >
+              <UploadCloud className="h-8 w-8 text-primary" />
+              <span className="mt-2 text-sm font-medium">{t("materialRates.import.select")}</span>
+              <span className="mt-1 text-xs text-muted-foreground">Excel .xlsx · 20 MB</span>
+              <Input
+                aria-label={t("boqConfigured.file")}
+                type="file"
+                accept=".xlsx"
+                className="sr-only"
+                disabled={busy}
+                onChange={(event) => {
+                  setFile(event.target.files?.[0] ?? null);
+                  setPreview(null);
+                  event.target.value = "";
+                }}
+              />
+            </Label>
+            {file && (
+              <div className="mt-3 flex flex-col gap-3 rounded-md border bg-background p-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex min-w-0 items-center gap-2">
+                  <FileCheck2 className="h-5 w-5 shrink-0 text-emerald-600" />
+                  <span className="break-all text-sm font-medium">{file.name}</span>
+                </div>
+                <Button
+                  variant="outline"
+                  disabled={busy || !file}
+                  onClick={() =>
+                    void run(async () => {
+                      const form = new FormData();
+                      form.append("file", file!);
+                      const { data } = await api.post(
+                        `/material-rate-catalogs/${catalog.id}/configured-boq-preview`,
+                        form,
+                      );
+                      setPreview(data);
+                    })
+                  }
+                >
+                  {t("boqConfigured.preview")}
+                </Button>
+              </div>
+            )}
+            <div className="mt-3 flex gap-2 rounded-md border border-amber-300/70 bg-amber-50 p-3 text-xs leading-relaxed text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
+              <Info className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>{t("materialRates.import.replaceWarning")}</span>
+            </div>
+          </>
+        )}
+      </section>
       {error && (
         <p role="alert" className="text-sm text-destructive">
           {error}
