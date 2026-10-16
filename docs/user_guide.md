@@ -1513,8 +1513,8 @@ The platform uses permission-based authorization. `SUPER_ADMIN`, `ADMIN`, and `U
 
 The seeded role catalog is implemented and can be adjusted through **Admin > Roles**. Business-role permission edits persist in the database.
 
-| Role | Vietnamese | Module Access |
-|------|------------|---------------|
+| Role | Module Access |
+|------|---------------|
 | `SALE`, `SALES_MANAGER` | CRM, quotations, tenders, surveys, and contracts according to assigned permissions |
 | `DESIGN`, `DESIGN_LEAD`, `ARCHITECT`, `MEP_ENGINEER`, `STRUCT_ENGINEER` | Design projects and discipline workflows |
 | `PM`, `SITE_COMMANDER`, `SITE_QAQC`, `LEGAL_OFFICER` | CM preparation/review, BCH site operations, QA/QC, permitting, and construction workflows according to assigned permissions |
