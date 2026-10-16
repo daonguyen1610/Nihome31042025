@@ -1,11 +1,6 @@
 import { test, expect, TEST_USERS } from "../fixtures/auth";
 import type { Page } from "@playwright/test";
-import { rm } from "node:fs/promises";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { hardDeleteBusinessRoot } from "../fixtures/hardDelete";
-
-const specDirectory = path.dirname(fileURLToPath(import.meta.url));
 
 const ONE_PIXEL_PNG = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
@@ -134,7 +129,6 @@ test("tender plan assigns owners and deadlines and manages checklist files", asy
   let customerId = 0;
   let projectId = 0;
   let tenderId = 0;
-  let uploadedFilePath: string | null = null;
 
   try {
     const customerResponse = await api.post("/api/customers", {
@@ -375,9 +369,10 @@ test("tender plan assigns owners and deadlines and manages checklist files", asy
     const uploadResponse = await uploadResponsePromise;
     expect(uploadResponse.status()).toBe(200);
     const uploadedTender = await uploadResponse.json();
-    uploadedFilePath =
+    const uploadedFilePath =
       uploadedTender.checklistItems.find((item: { id: number }) => item.id === target.id)
         ?.filePath ?? null;
+    expect(uploadedFilePath).toMatch(/^\/files\/tenders\/cl-[a-f0-9]{32}\.png$/);
 
     const previewTestId = `tender-checklist-preview-${targetKey}-desktop`;
     await expect(page.getByTestId(previewTestId)).toBeVisible();
@@ -438,12 +433,6 @@ test("tender plan assigns owners and deadlines and manages checklist files", asy
       });
     }
   } finally {
-    if (uploadedFilePath?.startsWith("/files/tenders/")) {
-      await rm(
-        path.resolve(specDirectory, "../../../nihomebackend/wwwroot", uploadedFilePath.slice(1)),
-        { force: true },
-      );
-    }
     if (tenderId) await hardDeleteBusinessRoot(api, headers, `/api/tenders/${tenderId}`);
     if (projectId)
       await hardDeleteBusinessRoot(api, headers, `/api/operational-projects/${projectId}`);
