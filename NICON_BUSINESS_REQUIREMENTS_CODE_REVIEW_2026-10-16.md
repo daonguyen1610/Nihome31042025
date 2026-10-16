@@ -313,6 +313,9 @@ Bằng chứng chính:
 - Resource request có ba loại material/equipment/labour; vật tư handoff sang MR.
 - QA/QC gắn template version, IFC, WBS và evidence; QS bắt buộc chỉ rõ
   Upstream/Downstream và đúng loại Hợp đồng/milestone.
+- QA/QC nay giữ loại minh chứng theo từng document ID; payload ID cũ được
+  nhận, ID mới mặc định `General` và ID cũ giữ phân loại khi cập nhật. Không
+  tự suy diễn loại từ tên file.
 
 Khoảng trống:
 
@@ -1022,3 +1025,13 @@ format/lint/build đã pass; chưa chạy E2E trình duyệt cho nút trả vi�
 Task Dự án cũ đang ở `Completed` nhưng chưa `Verified` sẽ cần người duyệt
 xác nhận trước khi đóng package sau khi triển khai. Quy tắc này là phương án
 kiểm soát theo yêu cầu hiện tại của người dùng, chưa phải phê duyệt của NICON.
+
+Kiểm tra lát QA/QC evidence type: `ConstructionOperationsServiceTests`
+`14/14`, `ConstructionOperationsControllerTests` `6/6`; API round-trip giữ
+`LaboratoryResult`, client ID cũ tương thích và không làm mất loại đã lưu khi
+cập nhật cùng tài liệu. Frontend format/lint/build và TypeScript typecheck đạt.
+Playwright mobile scenario `1/1` pass, xác nhận form gửi đúng ID và loại minh
+chứng. Lần chạy đầu bị `ECONNRESET` vì backend `dotnet watch` restart do
+polling watcher trùng `/nihomeweb/vite.config.ts`; đã chạy lại khi stack ổn
+định và pass. Chưa kiểm chứng Drive thực của NICON hay checklist ISO theo loại
+công trình.

@@ -1361,10 +1361,24 @@ export interface QaQcDossierResponse {
   wbsCode: string;
   title: string;
   evidenceDocumentIds: number[];
+  evidence: QaQcEvidence[];
   status: ConstructionWorkflowStatus;
   createdByUserId: number;
   cmDecisionReason?: string | null;
   rowVersion: string;
+}
+
+export type QaQcEvidenceType =
+  | "General"
+  | "AcceptanceRecord"
+  | "Sample"
+  | "LaboratoryResult"
+  | "MaterialCertificate"
+  | "SiteDiary";
+
+export interface QaQcEvidence {
+  projectDocumentId: number;
+  evidenceType: QaQcEvidenceType;
 }
 
 export interface CreateQaQcDossierRequest {
@@ -1373,7 +1387,8 @@ export interface CreateQaQcDossierRequest {
   title: string;
   ifcReleaseId?: number | null;
   checklistResultsJson: string;
-  evidenceDocumentIds: number[];
+  evidenceDocumentIds?: number[];
+  evidence?: QaQcEvidence[];
 }
 
 export interface UpdateQaQcDossierRequest extends CreateQaQcDossierRequest {
@@ -3706,6 +3721,7 @@ export interface PermitChecklistItemResponse {
   issuingAgency?: string | null;
   ownerUserId?: number | null;
   ownerName?: string | null;
+  workPackageId?: number | null;
   workTaskId?: number | null;
   approverUserId?: number | null;
   approverName?: string | null;

@@ -408,7 +408,19 @@ public sealed class ConstructionOperationsService(AppDbContext db, IProcurementS
         var template = await db.QaQcTemplates.SingleOrDefaultAsync(x => x.Id == request.TemplateId && x.IsPublished, ct) ?? throw new ConstructionOperationException("A published QA/QC template is required.");
         if (request.IfcReleaseId is null) throw new ConstructionOperationException("A released IFC packet is required for every QA/QC dossier.");
         if (!await db.IfcReleases.AnyAsync(x => x.Id == request.IfcReleaseId && x.Status == IfcReleaseStatus.Released && x.DesignProject.OperationalProjectId == projectId, ct)) throw new ConstructionOperationException("QA/QC dossiers may reference only a released IFC packet for the same project.");
-        if (request.EvidenceDocumentIds.Count != request.EvidenceDocumentIds.Distinct().Count() || await db.ProjectDocuments.CountAsync(x => request.EvidenceDocumentIds.Contains(x.Id) && x.OperationalProjectId == projectId && x.DeletedAt == null, ct) != request.EvidenceDocumentIds.Count) throw new ConstructionOperationException("Every evidence document must be an active staged document in the same project.");
+        if (request.Evidence is null || request.EvidenceDocumentIds is null || request.Evidence.Any(x => x is null))
+            throw new ConstructionOperationException("QA/QC evidence lists and items cannot be null.");
+        if (request.Evidence.Count > 0 && request.EvidenceDocumentIds.Count > 0)
+            throw new ConstructionOperationException("Provide either typed QA/QC evidence or legacy evidence document IDs, not both.");
+        if (request.Evidence.Any(x => x.ProjectDocumentId <= 0 || !Enum.IsDefined(x.EvidenceType)))
+            throw new ConstructionOperationException("Every QA/QC evidence item requires a positive document ID and a valid evidence type.");
+        var evidenceIds = request.Evidence.Count > 0
+            ? request.Evidence.Select(x => x.ProjectDocumentId).ToList()
+            : request.EvidenceDocumentIds;
+        if (evidenceIds.Count != evidenceIds.Distinct().Count() ||
+            await db.ProjectDocuments.CountAsync(x => evidenceIds.Contains(x.Id) &&
+                x.OperationalProjectId == projectId && x.DeletedAt == null, ct) != evidenceIds.Count)
+            throw new ConstructionOperationException("Every evidence document must be an active staged document in the same project and appear only once.");
         return template;
     }
 
@@ -515,13 +527,38 @@ public sealed class ConstructionOperationsService(AppDbContext db, IProcurementS
     private static void ValidateJson(string value, string field, JsonValueKind expectedKind) { try { using var document = JsonDocument.Parse(value); if (document.RootElement.ValueKind != expectedKind) throw new ConstructionOperationException($"{field} must be a JSON {expectedKind.ToString().ToLowerInvariant()}."); } catch (JsonException) { throw new ConstructionOperationException($"{field} must be valid JSON."); } }
     private static void Apply(ConstructionPreparation x, UpsertConstructionPreparationRequest r, int user) { x.WbsBaselineReference = r.WbsBaselineReference.Trim(); x.ScheduleBaselineReference = r.ScheduleBaselineReference.Trim(); x.SCurveBaselineReference = r.SCurveBaselineReference.Trim(); x.BchOrganizationReference = r.BchOrganizationReference.Trim(); x.ResourcePlanReference = r.ResourcePlanReference.Trim(); x.BudgetBaselineReference = r.BudgetBaselineReference.Trim(); x.WbsBaselineDocumentId = r.WbsBaselineDocumentId; x.ScheduleBaselineDocumentId = r.ScheduleBaselineDocumentId; x.SCurveBaselineDocumentId = r.SCurveBaselineDocumentId; x.BchOrganizationDocumentId = r.BchOrganizationDocumentId; x.ResourcePlanDocumentId = r.ResourcePlanDocumentId; x.BudgetBaselineDocumentId = r.BudgetBaselineDocumentId; x.BudgetBaselineLocked = false; x.SiteHandoverRequired = r.SiteHandoverRequired; x.SiteHandoverComplete = false; x.SiteHandoverDocumentId = r.SiteHandoverDocumentId; x.MethodStatementRequired = r.MethodStatementRequired; x.MethodStatementApproved = false; x.MethodStatementDocumentId = r.MethodStatementDocumentId; x.HsePlanRequired = r.HsePlanRequired; x.HsePlanApproved = false; x.HsePlanDocumentId = r.HsePlanDocumentId; x.UpdatedAt = DateTime.UtcNow; x.UpdatedByUserId = user; }
     private static void Apply(ConstructionResourceRequest x, UpsertConstructionResourceRequest r) { x.Type = r.Type; x.WbsCode = r.WbsCode.Trim(); x.NeedByDate = r.NeedByDate!.Value; x.Quantity = r.Quantity; x.Unit = r.Unit.Trim(); x.Reason = r.Reason.Trim(); x.ProjectBoqLineId = r.ProjectBoqLineId; x.ResponsibleSiteUserId = r.ResponsibleSiteUserId; x.AssignedProcurementUserId = r.AssignedProcurementUserId; x.UpdatedAt = DateTime.UtcNow; }
-    private static void Apply(QaQcDossier x, CreateQaQcDossierRequest r, QaQcTemplate t) { x.QaQcTemplateId = t.Id; x.TemplateVersion = t.Version; x.TemplateSnapshotJson = t.SchemaJson; x.IfcReleaseId = r.IfcReleaseId; x.ChecklistResultsJson = r.ChecklistResultsJson; x.WbsCode = r.WbsCode.Trim(); x.Title = r.Title.Trim(); x.Evidence.Clear(); x.Evidence.AddRange(r.EvidenceDocumentIds.Select(id => new QaQcDossierEvidence { ProjectDocumentId = id })); x.UpdatedAt = DateTime.UtcNow; }
+    private static void Apply(QaQcDossier x, CreateQaQcDossierRequest r, QaQcTemplate t)
+    {
+        x.QaQcTemplateId = t.Id;
+        x.TemplateVersion = t.Version;
+        x.TemplateSnapshotJson = t.SchemaJson;
+        x.IfcReleaseId = r.IfcReleaseId;
+        x.ChecklistResultsJson = r.ChecklistResultsJson;
+        x.WbsCode = r.WbsCode.Trim();
+        x.Title = r.Title.Trim();
+        var requestedTypes = r.Evidence.Count > 0
+            ? r.Evidence.ToDictionary(item => item.ProjectDocumentId, item => item.EvidenceType)
+            : r.EvidenceDocumentIds.ToDictionary(id => id, id => x.Evidence
+                .FirstOrDefault(item => item.ProjectDocumentId == id)?.EvidenceType ?? QaQcEvidenceType.General);
+        x.Evidence.RemoveAll(item => !requestedTypes.ContainsKey(item.ProjectDocumentId));
+        foreach (var (documentId, evidenceType) in requestedTypes)
+        {
+            var existing = x.Evidence.FirstOrDefault(item => item.ProjectDocumentId == documentId);
+            if (existing is not null) existing.EvidenceType = evidenceType;
+            else x.Evidence.Add(new QaQcDossierEvidence
+            {
+                ProjectDocumentId = documentId,
+                EvidenceType = evidenceType,
+            });
+        }
+        x.UpdatedAt = DateTime.UtcNow;
+    }
     private static void Apply(ConstructionQsBatch x, CreateConstructionQsBatchRequest r) { x.Direction = r.Direction; x.ContractId = r.ContractId; x.WbsCode = r.WbsCode.Trim(); x.PeriodFrom = r.PeriodFrom!.Value; x.PeriodTo = r.PeriodTo!.Value; x.ProjectBoqRevisionId = r.ProjectBoqRevisionId; x.ContractAppendixId = r.ContractAppendixId; x.ContractPaymentMilestoneId = r.ContractPaymentMilestoneId; x.CertifiedAmount = r.CertifiedAmount; x.Description = r.Description.Trim(); x.SupersedesBatchId = r.SupersedesBatchId; x.ReversesBatchId = r.ReversesBatchId; x.AdjustmentKind = r.SupersedesBatchId is not null ? ConstructionQsAdjustmentKind.SupersedingCorrection : r.ReversesBatchId is not null ? ConstructionQsAdjustmentKind.Reversal : ConstructionQsAdjustmentKind.Original; x.IsActiveLineage = false; x.Lines.Clear(); x.Lines.AddRange(r.Lines.Select((line, i) => new ConstructionQsBatchLine { ItemCode = line.ItemCode.Trim(), Description = line.Description.Trim(), Unit = line.Unit.Trim(), Quantity = line.Quantity, UnitPrice = line.UnitPrice, Amount = line.Quantity * line.UnitPrice, SortOrder = i })); x.Evidence.Clear(); x.Evidence.AddRange(r.EvidenceDocumentIds.Select(id => new ConstructionQsBatchEvidence { ProjectDocumentId = id })); x.UpdatedAt = DateTime.UtcNow; }
     private IQueryable<QaQcDossier> Dossiers() => db.QaQcDossiers.Include(x => x.Evidence);
     private IQueryable<ConstructionQsBatch> Qs() => db.ConstructionQsBatches.Include(x => x.Lines).Include(x => x.Evidence);
     private static ConstructionPreparationResponse? Map(ConstructionPreparation? x, IReadOnlyList<string>? missing = null) => x is null ? null : new(x.Id, x.OperationalProjectId, x.Version, x.Status, x.WbsBaselineReference, x.ScheduleBaselineReference, x.SCurveBaselineReference, x.BchOrganizationReference, x.ResourcePlanReference, x.BudgetBaselineReference, x.WbsBaselineDocumentId, x.ScheduleBaselineDocumentId, x.SCurveBaselineDocumentId, x.BchOrganizationDocumentId, x.ResourcePlanDocumentId, x.BudgetBaselineDocumentId, x.BudgetBaselineLocked, x.SiteHandoverRequired, x.SiteHandoverComplete, x.MethodStatementRequired, x.MethodStatementApproved, x.HsePlanRequired, x.HsePlanApproved, x.SiteHandoverDocumentId, x.MethodStatementDocumentId, x.HsePlanDocumentId, missing ?? [], x.ReadinessSnapshotJson, CrmConcurrency.Encode(x.RowVersion));
     private static ConstructionResourceRequestResponse Map(ConstructionResourceRequest x) => new(x.Id, x.Code, x.Type, x.Status, x.WbsCode, x.NeedByDate, x.Quantity, x.Unit, x.Reason, x.ProjectBoqLineId, x.ResponsibleSiteUserId, x.AssignedProcurementUserId, x.CreatedByUserId, x.CmDecisionReason, x.HandoffEntityType, x.HandoffEntityId, x.HandoffStatus, CrmConcurrency.Encode(x.RowVersion));
     private static QaQcTemplateResponse Map(QaQcTemplate x) => new(x.Id, x.Code, x.Version, x.NameVi, x.Name, x.NameZh, x.NameJa, x.SchemaJson, x.IsPublished, CrmConcurrency.Encode(x.RowVersion));
-    private static QaQcDossierResponse? Map(QaQcDossier? x) => x is null ? null : new(x.Id, x.Code, x.QaQcTemplateId, x.TemplateVersion, x.TemplateSnapshotJson, x.IfcReleaseId, x.ChecklistResultsJson, x.WbsCode, x.Title, x.Status, x.CreatedByUserId, x.Evidence.Select(e => e.ProjectDocumentId).ToList(), x.CmDecisionReason, CrmConcurrency.Encode(x.RowVersion));
+    private static QaQcDossierResponse? Map(QaQcDossier? x) => x is null ? null : new(x.Id, x.Code, x.QaQcTemplateId, x.TemplateVersion, x.TemplateSnapshotJson, x.IfcReleaseId, x.ChecklistResultsJson, x.WbsCode, x.Title, x.Status, x.CreatedByUserId, x.Evidence.Select(e => e.ProjectDocumentId).ToList(), x.CmDecisionReason, CrmConcurrency.Encode(x.RowVersion), x.Evidence.Select(e => new QaQcEvidenceResponse(e.ProjectDocumentId, e.EvidenceType)).ToList());
     private static ConstructionQsBatchResponse? Map(ConstructionQsBatch? x) => x is null ? null : new(x.Id, x.Code, x.Direction, x.Status, x.ContractId, x.WbsCode, x.PeriodFrom, x.PeriodTo, x.ProjectBoqRevisionId, x.ContractAppendixId, x.ContractPaymentMilestoneId, x.CertifiedAmount, x.Description, x.CreatedByUserId, x.CmDecisionReason, x.SupersedesBatchId, x.ReversesBatchId, x.AdjustmentKind, x.RecordState, x.Lines.OrderBy(l => l.SortOrder).Select(l => new ConstructionQsBatchLineResponse(l.Id, l.ItemCode, l.Description, l.Unit, l.Quantity, l.UnitPrice, l.Amount, l.SortOrder)).ToList(), x.Evidence.Select(e => e.ProjectDocumentId).ToList(), CrmConcurrency.Encode(x.RowVersion));
 }

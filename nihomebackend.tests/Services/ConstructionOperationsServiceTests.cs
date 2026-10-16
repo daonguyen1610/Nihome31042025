@@ -136,6 +136,64 @@ public sealed class ConstructionOperationsServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Qa_qc_dossier_preserves_each_evidence_type_and_legacy_ids()
+    {
+        var templateId = await SeedQaQcReferencesAsync();
+        var typed = QaQcRequest(templateId);
+        typed.Evidence =
+        [
+            new QaQcEvidenceRequest { ProjectDocumentId = 901, EvidenceType = QaQcEvidenceType.LaboratoryResult },
+            new QaQcEvidenceRequest { ProjectDocumentId = 902, EvidenceType = QaQcEvidenceType.MaterialCertificate },
+        ];
+
+        var created = await _sut.CreateDossierAsync(ProjectId, typed, BchUserId, default);
+        var loaded = await _sut.GetDossierAsync(ProjectId, created.Id, default);
+
+        Assert.NotNull(loaded);
+        Assert.Contains(loaded.Evidence, item => item.ProjectDocumentId == 901 &&
+            item.EvidenceType == QaQcEvidenceType.LaboratoryResult);
+        Assert.Contains(loaded.Evidence, item => item.ProjectDocumentId == 902 &&
+            item.EvidenceType == QaQcEvidenceType.MaterialCertificate);
+        Assert.Equal(2, loaded.EvidenceDocumentIds.Count);
+
+        var legacyUpdate = QaQcRequest(templateId);
+        legacyUpdate.EvidenceDocumentIds = [901, 902];
+        var updated = await _sut.UpdateDossierAsync(ProjectId, created.Id, legacyUpdate,
+            created.RowVersion, BchUserId, default);
+        Assert.Contains(updated!.Evidence, item => item.ProjectDocumentId == 901 &&
+            item.EvidenceType == QaQcEvidenceType.LaboratoryResult);
+        Assert.Contains(updated.Evidence, item => item.ProjectDocumentId == 902 &&
+            item.EvidenceType == QaQcEvidenceType.MaterialCertificate);
+
+        var legacy = QaQcRequest(templateId);
+        legacy.EvidenceDocumentIds = [903];
+        var legacyCreated = await _sut.CreateDossierAsync(ProjectId, legacy, BchUserId, default);
+        Assert.Equal(QaQcEvidenceType.General, Assert.Single(legacyCreated.Evidence).EvidenceType);
+    }
+
+    [Fact]
+    public async Task Qa_qc_dossier_rejects_mixed_duplicate_and_unknown_evidence()
+    {
+        var templateId = await SeedQaQcReferencesAsync();
+        var request = QaQcRequest(templateId);
+        request.Evidence = [new QaQcEvidenceRequest { ProjectDocumentId = 901, EvidenceType = QaQcEvidenceType.Sample }];
+        request.EvidenceDocumentIds = [902];
+        await Assert.ThrowsAsync<ConstructionOperationException>(() =>
+            _sut.CreateDossierAsync(ProjectId, request, BchUserId, default));
+
+        request.EvidenceDocumentIds = [];
+        request.Evidence.Add(new QaQcEvidenceRequest { ProjectDocumentId = 901, EvidenceType = QaQcEvidenceType.Sample });
+        await Assert.ThrowsAsync<ConstructionOperationException>(() =>
+            _sut.CreateDossierAsync(ProjectId, request, BchUserId, default));
+
+        request.Evidence.RemoveAt(1);
+        request.Evidence[0].EvidenceType = (QaQcEvidenceType)999;
+        await Assert.ThrowsAsync<ConstructionOperationException>(() =>
+            _sut.CreateDossierAsync(ProjectId, request, BchUserId, default));
+        Assert.Empty(_db.QaQcDossiers);
+    }
+
+    [Fact]
     public async Task Preparation_get_recomputes_zero_permit_blocker_from_persisted_evidence()
     {
         var documents = Enumerable.Range(1, 9).Select(index => new ProjectDocument
@@ -423,6 +481,58 @@ public sealed class ConstructionOperationsServiceTests : IDisposable
         Quantity = 2,
         Unit = "machine",
         Reason = "Two excavators are required for the approved earthwork sequence.",
+    };
+
+    private async Task<int> SeedQaQcReferencesAsync()
+    {
+        var template = new QaQcTemplate
+        {
+            Code = "ISO-QA-01",
+            Version = 1,
+            NameVi = "Hồ sơ chất lượng vật liệu",
+            Name = "Material quality dossier",
+            NameZh = "材料质量档案",
+            NameJa = "材料品質記録",
+            SchemaJson = "{}",
+            IsPublished = true,
+            CreatedByUserId = CmUserId,
+        };
+        _db.QaQcTemplates.Add(template);
+        _db.DesignProjects.Add(new DesignProject
+        {
+            Id = 701,
+            OperationalProjectId = ProjectId,
+            ProjectCode = "DP-QA-041",
+            Name = "NICON quality control test project",
+        });
+        _db.IfcReleases.Add(new IfcRelease
+        {
+            Id = 801,
+            DesignProjectId = 701,
+            ReleaseNumber = "IFC-QA-041",
+            Title = "Foundation works",
+            Status = IfcReleaseStatus.Released,
+        });
+        _db.ProjectDocuments.AddRange(Enumerable.Range(901, 3).Select(id => new ProjectDocument
+        {
+            Id = id,
+            OperationalProjectId = ProjectId,
+            Category = ProjectDocumentCategory.ConstructionAcceptance,
+            LocalPath = $"/files/project-documents/quality-{id}.pdf",
+            OriginalFileName = $"quality-{id}.pdf",
+            Sha256 = new string('a', 64),
+        }));
+        await _db.SaveChangesAsync();
+        return template.Id;
+    }
+
+    private static CreateQaQcDossierRequest QaQcRequest(int templateId) => new()
+    {
+        TemplateId = templateId,
+        WbsCode = "1.2.1",
+        Title = "Kiểm tra chất lượng bê tông móng",
+        IfcReleaseId = 801,
+        ChecklistResultsJson = "[]",
     };
 
     private async Task SeedDownstreamContractAsync()

@@ -915,6 +915,15 @@ The target mobile experience is divided into three BCH portals:
 3. **Site QS:** separate Upstream quantity acceptance with CĐT/TVGS and
    Downstream quantity acceptance for teams/subcontractors.
 
+When adding QA/QC evidence, enter each active project document ID and classify
+it as an acceptance record, sample, laboratory result, material certificate,
+site diary, or other evidence. The same document can appear only once in a
+dossier. Older integrations that send document IDs without a type remain
+supported. New IDs from those integrations are stored as **Other**, while
+updates retain an existing classification for unchanged IDs. Classification
+is not inferred from a filename. The published ISO template and released IFC
+still apply.
+
 Material requests use the target BOQ warning bands from the customer PRD:
 yellow at 85%, orange at 95%, and red above 100%. The red state blocks ordering
 and requires an approved VO. These bands are planned until the denominator,

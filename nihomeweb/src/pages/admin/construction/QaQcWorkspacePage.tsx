@@ -26,7 +26,21 @@ import { useToast } from "@/hooks/use-toast";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { extractApiError } from "@/lib/apiError";
 import { useI18n } from "@/lib/i18n";
-import { adminApi, type QaQcDossierResponse, type QaQcTemplateResponse } from "@/services/adminApi";
+import {
+  adminApi,
+  type QaQcDossierResponse,
+  type QaQcEvidenceType,
+  type QaQcTemplateResponse,
+} from "@/services/adminApi";
+
+const evidenceTypes: QaQcEvidenceType[] = [
+  "General",
+  "AcceptanceRecord",
+  "Sample",
+  "LaboratoryResult",
+  "MaterialCertificate",
+  "SiteDiary",
+];
 
 export default function QaQcWorkspacePage() {
   const { t, lang } = useI18n();
@@ -41,13 +55,15 @@ export default function QaQcWorkspacePage() {
   const [reload, setReload] = useState(0);
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [evidence, setEvidence] = useState<
+    Array<{ projectDocumentId: string; evidenceType: QaQcEvidenceType }>
+  >([]);
   const [form, setForm] = useState({
     templateId: "",
     wbsCode: "",
     title: "",
     ifcReleaseId: "",
     checklistResultsJson: "[]",
-    evidenceDocumentIds: "",
   });
 
   useEffect(() => {
@@ -80,6 +96,14 @@ export default function QaQcWorkspacePage() {
       toast({ variant: "destructive", title: t("construction.qaQc.invalidChecklistJson") });
       return;
     }
+    const evidenceIds = evidence.map((item) => Number(item.projectDocumentId));
+    if (
+      evidenceIds.some((id) => !Number.isSafeInteger(id) || id <= 0) ||
+      new Set(evidenceIds).size !== evidenceIds.length
+    ) {
+      toast({ variant: "destructive", title: t("construction.qaQc.invalidEvidence") });
+      return;
+    }
     setSaving(true);
     try {
       await adminApi.createQaQcDossier(projectId, {
@@ -88,11 +112,10 @@ export default function QaQcWorkspacePage() {
         title: form.title.trim(),
         ifcReleaseId: form.ifcReleaseId ? Number(form.ifcReleaseId) : null,
         checklistResultsJson: JSON.stringify(checklist),
-        evidenceDocumentIds: form.evidenceDocumentIds
-          .split(",")
-          .map((value) => value.trim())
-          .filter(Boolean)
-          .map(Number),
+        evidence: evidence.map((item, index) => ({
+          projectDocumentId: evidenceIds[index],
+          evidenceType: item.evidenceType,
+        })),
       });
       setOpen(false);
       setForm({
@@ -101,8 +124,8 @@ export default function QaQcWorkspacePage() {
         title: "",
         ifcReleaseId: "",
         checklistResultsJson: "[]",
-        evidenceDocumentIds: "",
       });
+      setEvidence([]);
       setReload((value) => value + 1);
       toast({ title: t("construction.qaQc.created") });
     } catch (cause) {
@@ -280,13 +303,76 @@ export default function QaQcWorkspacePage() {
                 />
               </div>
               <div className="space-y-1.5 sm:col-span-2">
-                <Label htmlFor="qa-evidence">{t("construction.qaQc.evidenceIds")}</Label>
-                <Input
-                  id="qa-evidence"
-                  value={form.evidenceDocumentIds}
-                  onChange={(e) => setForm({ ...form, evidenceDocumentIds: e.target.value })}
-                  placeholder="101, 102"
-                />
+                <Label>{t("construction.qaQc.evidence")}</Label>
+                {evidence.map((item, index) => (
+                  <div key={index} className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+                    <Input
+                      data-testid={`qa-evidence-document-${index}`}
+                      type="number"
+                      min="1"
+                      step="1"
+                      required
+                      aria-label={t("construction.qaQc.evidenceDocumentId")}
+                      value={item.projectDocumentId}
+                      onChange={(event) =>
+                        setEvidence((current) =>
+                          current.map((entry, entryIndex) =>
+                            entryIndex === index
+                              ? { ...entry, projectDocumentId: event.target.value }
+                              : entry,
+                          ),
+                        )
+                      }
+                    />
+                    <Select
+                      value={item.evidenceType}
+                      onValueChange={(value: QaQcEvidenceType) =>
+                        setEvidence((current) =>
+                          current.map((entry, entryIndex) =>
+                            entryIndex === index ? { ...entry, evidenceType: value } : entry,
+                          ),
+                        )
+                      }
+                    >
+                      <SelectTrigger
+                        data-testid={`qa-evidence-type-${index}`}
+                        aria-label={t("construction.qaQc.evidenceType")}
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {evidenceTypes.map((type) => (
+                          <SelectItem key={type} value={type}>
+                            {t(`construction.qaQc.evidenceType.${type}`)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() =>
+                        setEvidence((current) => current.filter((_, i) => i !== index))
+                      }
+                    >
+                      {t("construction.qaQc.removeEvidence")}
+                    </Button>
+                  </div>
+                ))}
+                <Button
+                  data-testid="qa-add-evidence"
+                  type="button"
+                  variant="outline"
+                  onClick={() =>
+                    setEvidence((current) => [
+                      ...current,
+                      { projectDocumentId: "", evidenceType: "General" },
+                    ])
+                  }
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  {t("construction.qaQc.addEvidence")}
+                </Button>
               </div>
             </div>
             <DialogFooter>
