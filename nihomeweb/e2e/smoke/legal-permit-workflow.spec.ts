@@ -412,6 +412,39 @@ test("legal workspace updates progress and preserves input on concurrency confli
   await page.locator("article button").first().click();
   const dialog = page.getByRole("dialog");
   await expect(dialog).toContainText("PL.GPXD");
+  for (const viewport of [
+    { width: 390, height: 844 },
+    { width: 768, height: 1024 },
+    { width: 1920, height: 900 },
+    { width: 844, height: 390 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await expect
+      .poll(() =>
+        dialog.evaluate((element) => {
+          const bounds = element.getBoundingClientRect();
+          return (
+            bounds.top >= 0 &&
+            bounds.left >= 0 &&
+            bounds.bottom <= window.innerHeight &&
+            bounds.right <= window.innerWidth &&
+            element.scrollWidth <= element.clientWidth
+          );
+        }),
+      )
+      .toBe(true);
+    const details = dialog.locator("dl");
+    await details.evaluate((element) => {
+      element.scrollTop = element.scrollHeight;
+    });
+    await expect(dialog.getByText("StatusChanged", { exact: false })).toBeInViewport();
+    await expect(dialog.locator("button").last()).toBeInViewport();
+    await details.evaluate((element) => {
+      element.scrollTop = 0;
+    });
+    await expect(dialog.getByRole("heading").first()).toBeInViewport();
+  }
+  await page.setViewportSize({ width: 390, height: 844 });
   const taskSection = dialog.locator("section").filter({ hasText: "PL.GPXD" });
   const progress = taskSection.locator("#permit-task-progress");
   await progress.fill("60");
