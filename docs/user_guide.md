@@ -278,16 +278,19 @@ the assignee list is limited to active members of that department.
 The receiving department lead opens the package and creates tasks. Enter a WBS
 code, assignee from the same department, dates, inputs/resources, optional
 predecessors and CC followers. If the task should contribute to KPI, select an
-active compatible KPI definition and a verifier different from the assignee.
+active compatible KPI definition. Every Project task and every KPI-linked task
+needs a verifier different from the assignee; the department lead is the
+default when no approver is selected.
 Start the package before assignees update progress. A dependent task cannot
 start until every selected predecessor is complete.
 
 The assignee receives a notification linking directly to the task, records a
-progress percentage from 1–99%, and uses **Complete** at 100%. A task without
-KPI needs no additional approval. A KPI-linked task remains **Awaiting
-verification** until the independent verifier confirms it; only then is it
-eligible for KPI calculation. Close the package after all tasks are complete
-and all KPI-linked tasks are verified.
+progress percentage from 1–99%, and uses **Complete** at 100%. A Project task
+then remains **Completed** pending independent verification, whether or not it
+has a KPI. The verifier can confirm it or return it to **In progress** with a
+reason. Internal tasks without KPI do not require verification. Only a
+KPI-linked task that reaches **Verified** is eligible for KPI calculation.
+Close a Project package after every task has been verified.
 
 Deleting an Operational Project includes its owned work packages in the impact
 preview. Deleting an optional Contract or source Opportunity only unlinks that

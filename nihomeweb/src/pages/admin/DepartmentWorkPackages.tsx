@@ -1079,18 +1079,16 @@ const DepartmentWorkPackages = () => {
                           )}
                         {detail.status === "Active" && task.canVerify && (
                           <>
-                            {detail.purpose === "LegalPermitting" && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => {
-                                  setRejectTaskEditing(task);
-                                  setRejectReason("");
-                                }}
-                              >
-                                {t("common.reject")}
-                              </Button>
-                            )}
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setRejectTaskEditing(task);
+                                setRejectReason("");
+                              }}
+                            >
+                              {t("common.reject")}
+                            </Button>
                             <Button size="sm" onClick={() => void verifyTask(task)}>
                               <CheckCircle2 className="mr-2 h-4 w-4" />
                               {t("workPackages.action.verify")}
@@ -1706,7 +1704,7 @@ const DepartmentWorkPackages = () => {
       >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{t("workPackages.reject.title")}</DialogTitle>
+            <DialogTitle>{t("workPackages.reject.taskTitle")}</DialogTitle>
             <DialogDescription>
               {rejectTaskEditing?.wbsCode} · {rejectTaskEditing?.title}
             </DialogDescription>

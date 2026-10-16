@@ -89,6 +89,9 @@ tên sheet, màu sắc, ngày và tên khách hàng trong file không phải quy
 - Người phụ trách tự cập nhật tiến độ sau khi nhóm chuyển sang `Active`. Công
   tác chỉ được bắt đầu khi mọi công tác tiên quyết đã hoàn thành. Thông báo mở
   trực tiếp đúng đầu việc.
+- Mọi đầu việc Dự án ở `Completed` cần người xác nhận độc lập chuyển sang
+  `Verified` trước khi đóng nhóm; trả lại phải có lý do và đưa đầu việc về
+  `InProgress`. Đầu việc không gắn KPI không phát sinh điểm KPI.
 - Công việc nội bộ nằm ở tab riêng, không gắn Dự án, khách hàng hay hợp đồng.
   Một nhóm nội bộ có thể chọn nhiều phòng tham gia; mỗi đầu việc chỉ rõ một
   phòng phụ trách và người được giao phải thuộc phòng đó.

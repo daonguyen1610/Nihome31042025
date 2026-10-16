@@ -124,7 +124,7 @@ Bằng chứng chính:
 - Có hai loại `Project` và `Internal`; nhóm Internal bị chặn liên kết project,
   contract hoặc opportunity.
 - Có kiểm tra người giao/người nhận theo group và tách người thực hiện với người
-  xác nhận khi task liên kết KPI.
+  xác nhận cho task Dự án và task liên kết KPI.
 - Có API/UI và unit/integration/E2E cho happy path, quyền, liên kết sai Dự án,
   dependency và verification.
 
@@ -444,10 +444,11 @@ persistence, API authorization, UI và test tương ứng.
 **Phương án Q-02:**
 
 1. Task gắn KPI hoặc task Dự án bắt buộc có verifier độc lập với assignee. Task
-   nội bộ không gắn KPI có thể dùng người chủ trì package làm verifier mặc định,
-   nhưng không được tự duyệt việc của mình.
-2. Lifecycle chuẩn: `Planned → InProgress → Completed → Verified`; `Cancelled`
-   là terminal. `Completed` nghĩa là chờ xác minh. Hủy hoặc mở lại phải do người
+   nội bộ không gắn KPI không bắt buộc verifier và được hoàn tất trực tiếp;
+   nếu gắn KPI thì người duyệt không được tự duyệt việc của mình.
+2. Task cần duyệt theo `Planned → InProgress → Completed → Verified`; task nội
+   bộ không KPI có thể dừng ở `Completed`. `Cancelled` là terminal. Với task
+   cần duyệt, `Completed` nghĩa là chờ xác minh. Hủy hoặc mở lại phải do người
    chủ trì/Admin thực hiện với lý do và audit; sửa task đã `Verified` phải mở lại
    và xác minh lại, không ghi đè kết quả cũ.
 3. Chỉ task `Verified` có `KpiDefinitionId` mới được tính KPI. Task Dự án và nội
@@ -950,7 +951,7 @@ khi cam kết không bao giờ tái sử dụng alias.
 | 1 | Hai hướng tạo Hợp đồng Upstream | Implemented | Code đã hỗ trợ tạo trực tiếp với `QuoteId = null` và kiểm tra Báo giá đã duyệt khi có `QuoteId`; quyết định được căn chỉnh vào canonical docs tại commit `be7a4fbc` | Duy trì QA-COM-01; chỉ bổ sung cờ/lý do khi NICON trả lời câu hỏi bằng chứng của hướng trực tiếp |
 | 2 | Route RBAC BCH/CM và tài khoản seed cho mọi business role | Implemented | Commit `65bea63d`; Tier-1 route-discovery chạy lại ngày 16/10: `1 passed`; unit test tập trung gồm `DbSeederTests`: `92 passed` | Chạy deployed RBAC matrix khi Docker/UAT khả dụng |
 | 3 | Nhóm quyền chức năng và mapping role | Partial | Đề xuất seed sáu group tách HR khỏi Finance; unit/integration RBAC tập trung đã pass. Biên bản vẫn nêu năm phòng, nên đây không phải sơ đồ tổ chức đã duyệt | NICON xác nhận Role × Department × Permission matrix trước rollout dữ liệu thật; rehearsal migration và kiểm tra quyền runtime |
-| 4 | Ownership/liên kết nhóm việc | Open decision | Persistence hiện có nhưng Q-01–Q-03 quyết định cardinality, ownership, KPI và quyền giao việc | Chốt Q-01–Q-03 trước mọi migration dữ liệu thật |
+| 4 | Ownership/liên kết nhóm việc | Partial | Task Dự án nay cần xác nhận độc lập kể cả khi không gắn KPI; task nội bộ không KPI giữ đường hoàn tất trực tiếp. Q-01–Q-03 vẫn chưa được NICON phê duyệt toàn bộ | Chốt ownership, cardinality, KPI kỳ/trọng số và quyền giao việc trước migration dữ liệu thật |
 | 5 | BOQ đa mẫu và provenance từng dòng | Open decision | Có import/mapping nhiều sheet nhưng chưa có schema được duyệt cho hierarchy, formula và provenance | NICON duyệt mapping theo bộ workbook đại diện; sau đó thiết kế import contract và regression fixtures |
 | 6 | Thiết kế chi tiết, MPP, review và hard-delete | Open decision | Phần lõi đã có; Q-06–Q-08, Q-10–Q-11 ảnh hưởng trực tiếp lifecycle và schema | Chốt các câu hỏi rồi triển khai theo từng lát persistence → API → UI → test |
 | 7 | Tự sinh hồ sơ Pháp lý | Open decision | Wizard idempotent đã có nhưng permit áp dụng theo loại/quy mô chưa được duyệt | NICON cung cấp permit matrix Q-09; sau đó tự sinh idempotent và giữ bước PM phân công |
@@ -1013,3 +1014,11 @@ Kiểm tra Q-05 bổ sung: `OperationalProjectServiceTests` `31/31` và integrat
 `OperationalProjectsControllerTests.RenameCode*` `2/2`. Phạm vi đã chứng minh
 tìm bằng mã cũ có scope và chặn đổi mã ở trạng thái đóng; chưa chứng minh
 unique alias xuyên lịch sử hay Drive rename trên môi trường NICON.
+
+Kiểm tra Q-02 bổ sung: `DepartmentWorkPackageServiceTests` `20/20` và
+`DepartmentWorkPackagesControllerTests` `6/6` trong container; test API bao
+gồm task Dự án không KPI bị chặn đóng nhóm trước xác nhận độc lập. Frontend
+format/lint/build đã pass; chưa chạy E2E trình duyệt cho nút trả việc mới.
+Task Dự án cũ đang ở `Completed` nhưng chưa `Verified` sẽ cần người duyệt
+xác nhận trước khi đóng package sau khi triển khai. Quy tắc này là phương án
+kiểm soát theo yêu cầu hiện tại của người dùng, chưa phải phê duyệt của NICON.
