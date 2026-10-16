@@ -245,6 +245,8 @@ background folder-rename status. A failed rename can be queued again without
 creating another folder or changing its Drive ID. A stale screen is rejected;
 reload before retrying. The project list also finds a renamed project when you
 search for its former code; normal project visibility rules still apply.
+Completed or Cancelled projects cannot be renamed until reopened through the
+governed project lifecycle.
 
 The detail view's **Project documents** section provides the project-wide file
 catalog. Users with view permission can inspect synchronization status,

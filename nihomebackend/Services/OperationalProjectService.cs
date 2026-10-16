@@ -355,6 +355,9 @@ public class OperationalProjectService(
             : null;
         var project = await db.OperationalProjects.FirstOrDefaultAsync(item => item.Id == id, ct);
         if (project is null || !CanManage(project, callerUserId, canSeeAll)) return null;
+        if (project.Status is OperationalProjectStatus.Completed or OperationalProjectStatus.Cancelled)
+            throw new OperationalProjectOperationException(
+                "Không thể đổi mã Dự án đã hoàn thành hoặc hủy. Hãy mở lại Dự án theo quy trình trước khi đổi mã.");
         if (string.IsNullOrWhiteSpace(request.Reason) || request.Reason.Trim().Length < 3)
             throw new OperationalProjectOperationException("Lý do đổi mã Dự án phải có ít nhất 3 ký tự.");
 
