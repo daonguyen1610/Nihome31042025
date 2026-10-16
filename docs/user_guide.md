@@ -473,7 +473,11 @@ remain protected. All names require Vietnamese, English, Chinese and Japanese.
 Once a revision exists, changing the field set requires another category.
 
 Create a Draft revision, choose a sheet and use **Add / edit sheet entry**, or
-**Download category template**. Fill data from row 3 of that downloaded workbook;
+use **Download Excel form** in the revision's **Prepare and import rates**
+panel. The download is beside the instructions, above the file drop area;
+manual row entry has its own panel. Drop or choose the completed `.xlsx` file
+(up to 20 MB), check the displayed filename, then select **Validate file**.
+Fill data from row 3 of that downloaded workbook;
 retain sheet names, visible headers and hidden markers. Enter numeric Excel
 cells rather than numeric text or formulas. **Validate file** shows the entries;
 **Confirm Draft replacement** replaces all rows only after confirmation. An

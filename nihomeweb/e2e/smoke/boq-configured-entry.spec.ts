@@ -83,8 +83,32 @@ test("category forms, download and sheet changes keep BOQ fields separate", asyn
   await page.getByRole("button", { name: new RegExp(apartment.code) }).click();
   const entry = page.getByTestId("configured-boq-rows");
   await expect(entry).toBeVisible();
+  for (const width of [320, 390, 768, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    if (width < 1024)
+      await expect
+        .poll(async () => {
+          const box = await page.locator("aside").boundingBox();
+          return box ? box.x + box.width : 0;
+        })
+        .toBeLessThanOrEqual(1);
+    const template = entry.getByTestId("boq-template-download");
+    await template.scrollIntoViewIfNeeded();
+    await expect(template).toBeInViewport();
+    const box = await template.boundingBox();
+    expect(box!.x).toBeGreaterThanOrEqual(0);
+    expect(box!.x + box!.width).toBeLessThanOrEqual(width + 1);
+    await page.screenshot({ path: test.info().outputPath(`boq-import-${width}.png`) });
+  }
+  await entry.getByLabel("Category Excel file").setInputFiles({
+    name: "filled-boq.xlsx",
+    mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    buffer: Buffer.from("ui-selection"),
+  });
+  await expect(entry.getByText("filled-boq.xlsx", { exact: true })).toBeVisible();
+  await expect(entry.getByRole("button", { name: "Validate file", exact: true })).toBeEnabled();
   const downloadPromise = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Download category template" }).click();
+  await entry.getByTestId("boq-template-download").click();
   const download = await downloadPromise;
   const stream = await download.createReadStream();
   const chunks: Buffer[] = [];
