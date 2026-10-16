@@ -412,6 +412,25 @@ Quản lý giá đầu vào, lựa chọn NCC/thầu phụ, hạn mức thực h
 - BOQ import workbook một/nhiều sheet có preview, mapping, lỗi theo sheet/ô,
   provenance và xác nhận; không hard-code mẫu khách hàng.
 
+**Target — BOQ nhiều loại và trường cấu hình (yêu cầu người dùng 17/10/2026):**
+cho phép tạo danh mục/loại BOQ và bộ trường phù hợp từng loại, tái sử dụng cho
+form, import và export. Loại nội dung (ví dụ CSA, MEP hoặc dịch vụ từ workbook
+mẫu) tách khỏi mục đích BOQ sơ bộ, dự thầu, quantity takeoff, thực hiện và chốt
+cuối. Một workbook có thể có nhiều sheet và một sheet có nhiều vùng bảng với
+schema khác nhau. Danh mục, field key, kiểu dữ liệu, validation và nhãn bốn ngôn
+ngữ được quản lý trên server; schema được version và snapshot theo revision,
+không sửa ngầm hồ sơ đã duyệt. Trường mở rộng không thay được business root,
+approval hay quy tắc chỉ Execution BOQ Approved hiện hành làm hạn mức MR/kho.
+
+**Partial hiện tại:** có nhiều catalog và mẫu mapping cột, chưa có bộ trường
+động theo loại, hierarchy/provenance từng dòng hoặc import trực tiếp đúng cả bộ
+workbook nguồn. `BoqImportTemplate` hiện chỉ cấu hình header/vị trí cột cố định.
+Tên loại, field bắt buộc, công thức/đơn vị/làm tròn, phụ lục không có giá,
+re-import/line identity và approval matrix chi tiết còn là **Open decision** của
+owner BOQ/QS và Product Owner; không dùng tên file/sheet hoặc sample value làm
+quy tắc. File gốc được giữ bất biến; external links, lỗi formula và text-number
+phải được công bố/xử lý có kiểm soát, không tự đổi thành 0 hay bỏ kiểm tra an toàn.
+
 ## 8. Module 6 — Tài chính, chi phí và hợp đồng
 
 ### 8.1. Mục tiêu Tài chính và hợp đồng

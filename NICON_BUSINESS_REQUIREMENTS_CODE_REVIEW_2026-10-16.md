@@ -1,6 +1,8 @@
 # NICON — Đối chiếu yêu cầu 03/10 với mã nguồn
 
-Ngày rà soát: 16/10/2026
+Ngày rà soát lại: 17/10/2026. Baseline mã nguồn:
+`cc3f0048f8da388bc20690f09531233576a7f3c7` trên `main`.
+Tên file giữ ngày của báo cáo gốc để không làm đứt tham chiếu.
 
 Phạm vi: backend, frontend, migration/seed, unit test, integration test và E2E
 trong repository hiện tại.
@@ -9,6 +11,14 @@ Nguồn nghiệp vụ điều khiển:
 `docs/Nicon/MoMs/2026-10-06/NICON_Meeting_2026-10-03_Tom-tat-yeu-cau-moi.md`.
 
 ## 1. Kết luận điều hành
+
+**Chưa thực hiện toàn bộ.** Rà soát lại cả BR-01–BR-12 và các phương án tại
+mục 5 không tìm thấy bằng chứng để nâng các mục `Partial` lên `Implemented`.
+Đặc biệt, có nhiều danh mục đơn giá BOQ và nhiều mẫu mapping không đồng nghĩa
+với có nhiều loại BOQ với bộ trường cấu hình riêng. Khả năng sau chưa được
+triển khai; hướng này được ghi `Target` theo yêu cầu người dùng ngày 17/10.
+Mục 3 dưới đây mô tả phần đã giao; mục 5 là phương án triển khai, không phải
+danh sách tính năng đã hoàn thành. Ma trận mục 7 đối chiếu từng phương án.
 
 Mã nguồn đã có nền tảng nghiệp vụ đáng kể, đặc biệt ở CRM/Dự án dùng chung,
 Thiết kế trước hợp đồng, phối hợp Cung ứng–Tài chính trước hợp đồng và Đấu thầu.
@@ -50,6 +60,24 @@ API, UI và test phù hợp với yêu cầu được nêu. Nó không xác nh�
 - Bản rà soát gốc là static review. Các test chạy sau đó được ghi riêng ở mục
   9; tên test trong ma trận không mặc nhiên là bằng chứng test vừa chạy.
 - Không kiểm tra host, Google Drive thật, SMTP thật hoặc dữ liệu UAT của NICON.
+- Lượt 17/10 đối chiếu lại model/DTO, controller authorization, service, route/UI,
+  migration và test liên quan cho cả 12 nhóm BR và các phương án mục 5; đọc
+  baseline 03/10, canonical Markdown, hai PRD/workflow DOCX và workbook
+  `Nicon_BreakTask_v1.xlsx`. Trạng thái `Done` trong workbook không tự chứng minh
+  code đã hoàn tất; không suy tỷ lệ hoàn thành từ số màn hình hoặc estimate.
+- Đọc toàn bộ cấu trúc OOXML của 6 workbook BOQ: sheet, vùng dữ liệu, header,
+  merge, formula text, cached value và external-link parts; xem các header/dòng
+  đại diện để so sánh mô hình. Không mở liên kết ngoài, chạy macro, tính lại
+  formula hay sửa file nguồn. SHA-256 và trích xuất nằm trong artifact kiểm tra,
+  không đặt dưới `docs/Nicon/`.
+- Lượt này là review tĩnh và cập nhật tài liệu, không chạy lại build, unit,
+  integration hoặc E2E. Kết quả test ngày 16/10 ở mục 9 là bằng chứng lịch sử,
+  không phải kết quả chạy mới. Không kết luận mọi payload, thiết bị hoặc trạng
+  thái runtime đều đã pass. Review do cùng agent thực hiện, không độc lập.
+- Kiểm tra tài liệu: `git diff --check`, 73 tham chiếu đường dẫn source đầy đủ
+  đều tồn tại, root `docs/` đúng allowlist và SHA-256 cả 6 workbook không đổi.
+  Hai JPG khách hàng có sẵn ở root `docs/Nicon/` vẫn ngoài cấu trúc định dạng
+  evidence cho phép; giữ nguyên, không tự di chuyển/xóa trong lượt audit.
 
 ## 3. Ma trận yêu cầu → mã nguồn
 
@@ -211,6 +239,76 @@ Khoảng trống còn lại:
 - Workbook import chưa chứng minh giữ đầy đủ hierarchy/merged cells/formula và
   provenance từng dòng cho mọi BOQ mẫu; không được coi các file mẫu là một schema
   đã duyệt.
+- `BoqImportTemplate` chỉ là tên + header row + vị trí 5 cột; không có danh mục
+  loại BOQ, field definition, field value, schema version hoặc form riêng theo
+  loại. `MaterialRateCatalogType` chỉ phân biệt `InvestmentRate` và `Boq`.
+- `MaterialRateLine` và `ProjectBoqLine` vẫn là dòng cố định. Import giữ tên
+  file/hash/mapping tại revision nhưng không lưu sheet/row/cell/formula theo
+  dòng, cây nhóm hay các cột kỹ thuật ngoài 5 cột chuẩn.
+- Đường import workbook hiện đọc bytes để parse/hash nhưng không lưu bản upload
+  bất biến qua document storage; metadata filename/hash không thay thế file
+  nguồn có thể truy xuất. Việc giữ 6 file mẫu trong Git không giải quyết lưu
+  nguồn cho các lần người dùng upload sau này.
+
+#### Kết quả kiểm tra bộ BOQ NICON ngày 17/10
+
+Số sheet và formula dưới đây được đọc trực tiếp từ OOXML của file tại baseline
+review; bao gồm cả cover/summary/hidden sheet, không phải số hạng mục nghiệp vụ.
+Lỗi nêu dưới đây là giá trị lỗi được lưu trong file, chưa phải kết quả tính lại
+bằng Excel và không phải lỗi do hệ thống Nicon tạo ra.
+
+| Workbook trong `docs/Nicon/BOQ/` | Sheet / ô công thức | Cấu trúc đại diện / bằng chứng |
+|---|---:|---|
+| `250417-NIC-Thiết kế xin phép_Estimate Quotation (1).xlsx` | 1 / 16 | `Goldfarm!A10:I10` chứa quy mô đất/sàn/hạ tầng/chiều cao; `A28:I28` và `A36:I36` là bảng phí công việc. Một sheet có nhiều vùng bảng khác nghĩa. |
+| `250725-Xây dựng, cơ điện (ME) & xin phép PCCC-BOQ base 25072025.xlsx` | 18 / 8.949 | `Cọc!A6:L7`: số lượng, dài, khối lượng, đơn giá/thành tiền vật tư và NC&MTC; `Trạm điện!D7:H7`: SL/dài/rộng/cao/hệ số. Có summary, header nhiều hàng, dòng diễn giải tính khối lượng. `Bể XLNT!L9` lưu `#REF!`. |
+| `BG ctrinh căn hộ dịch vụ.xlsx` | 1 / 82 | `ptct!A15:G15`, `A31:G31`, `A84:G84`: ba khu vực công việc trên cùng sheet; có xuất xứ, đơn vị, khối lượng, đơn giá và thành tiền. |
+| `NICON BOQ _ CSA WORK.xlsx` | 17 / 22.542 | `C02.CSA_OFFICE!A5:U6`: standard, dimensions, component/total quantity, material, labour & equipment, total, remark, profit. Có cover/summary/schedule of rates/material list; `C02.CSA_OFFICE!T5` lưu `#REF!`. |
+| `Nicon- GNF - BOQ -  26.04.06 Boq gốc.xlsx` | 23 / 4.812 | `C1. Hệ Thống Plumbing!A4:K5`: specification, quantity, giá vật liệu/nhân công/thiết bị, tổng đơn giá, thành tiền. Có hai cover và bảng tổng hợp; `6.Nhà Để Xe Máy!K48` lưu `#REF!`. |
+| `Trọn gói - Bill of quotation - rev01 08072025.xlsx` | 34 / 8.537 | `Cọc BTCT D300!A6:S7`: specification, brand/origin, kích thước và ba thành phần giá; `CTN !C3:E4`: phân bổ số lượng theo vị trí; `List material!A7:G8`: thông số đề xuất/nhà thầu, supplier và remark, không phải bảng giá. `Design and permit!G34` là text `free`; `Prelim!G25` lưu `#REF!`. |
+
+**Phát hiện ưu tiên:**
+
+1. **High — Data / operational risk:** 4 file nhiều sheet có
+   `xl/externalLinks/*.xml`: bộ 250725, CSA WORK, GNF và Trọn gói. Hàm
+   `BoqCatalogWorkbookService.ReadAsync` chặn file chứa external-link parts
+   trước preview. Vì vậy không thể coi “hỗ trợ import nhiều sheet” là đã hỗ trợ
+   trực tiếp cả 6 file nguồn. Đây là giới hạn an toàn hiện hành, không đề nghị
+   bỏ chặn. Cần giữ nguyên bản gốc và một bản dẫn xuất được kiểm soát nếu muốn
+   loại link ngoài; kiểm tra lỗi công thức và đối soát trước khi duyệt số liệu.
+2. **High — Requirement gap / Target:** chưa có cơ chế loại BOQ → schema trường
+   → form/import/export theo schema. Thêm danh mục có tên khác hoặc lưu thêm mẫu
+   mapping hiện tại không giải quyết khoảng trống này.
+3. **High — Coverage / data risk:** `ImportAsync` bỏ dòng `Structural`, gom detail
+   của mọi sheet thành một list và chỉ truyền code/name/unit/quantity/price.
+   `ReplaceBoqLinesAsync` yêu cầu code duy nhất trên cả revision. Nếu dùng STT
+   bắt đầu lại ở mỗi sheet/nhóm làm code, import có thể bị trùng; chưa có quy tắc
+   định danh theo sheet/nhóm và lineage được duyệt. Không tự sửa mã khách hàng.
+4. **High — Usability / data risk:** detector chọn một hàng header tốt nhất và
+   cột khớp alias đầu tiên. Với header ghép nhiều hàng, giá thành phần/tổng và
+   quantity thành phần/tổng, mapping gợi ý chưa đủ để bảo đảm chọn đúng số.
+   Cần người xác nhận và test theo từng vùng bảng, không auto-approve kết quả.
+5. **Medium — Data / operational risk:** `TryDecimal` có fallback bỏ dấu phẩy
+   rồi parse invariant. Text dạng `1,5` có nguy cơ thành `15`; số typed-numeric
+   của Excel đi qua nhánh khác. Locale/text-number cần được quyết định và test
+   rõ; `free`, giá trống, lỗi formula không được tự quy về 0.
+6. **Medium — Requirement / coverage gap:** catalog hiện duyệt trực tiếp từ
+   Draft, không có bước Submitted; `MaterialRateService.DecideAsync` chưa chặn
+   người lập tự duyệt. Permission approve có ở controller nhưng không thay
+   kiểm tra maker/checker. Đây là thiếu so với **phương án** Q-BOQ-01, chưa được
+   coi là vi phạm một quyết định approval matrix đã được NICON xác nhận.
+
+Bằng chứng cụ thể: `Models/MaterialRateCatalog.cs`, `Models/Procurement.cs`,
+`Models/DTOs/Requests/MaterialRateRequests.cs`,
+`Services/BoqCatalogWorkbookService.cs:102`, `:135`, `:219`, `:262`,
+`Services/MaterialRateService.cs:576`, `:678`, dưới `nihomebackend/`.
+UI: `nihomeweb/src/components/admin/BoqCatalogWorkbookDialog.tsx`.
+Integration `BoqWorkbook_PreviewAndImport_ReplacesDraftLinesAndKeepsProvenance`
+dùng workbook tổng hợp tạo trong test, chứng minh metadata cấp revision;
+không chứng minh provenance từng dòng hay cả bộ file nguồn.
+Test `BoqWorkbook_PreviewWithExternalLink_ReturnsBadRequest` còn xác nhận
+chủ đích chặn external link. E2E `admin-boq-catalog-workbook.spec.ts` kiểm tra
+UI mapping/import bằng workbook tự tạo và mock thao tác lưu template; không
+phải bằng chứng đã import đúng các workbook NICON.
 
 Bằng chứng chính:
 
@@ -399,6 +497,7 @@ Bằng chứng chính:
 | Medium | Wizard Pháp lý cần chọn thủ công | Không đạt yêu cầu tự sinh khi Hợp đồng chạy | Chốt permit matrix; tự tạo idempotent và giữ bước PM phân công |
 | Medium | Quy tắc package/assignment đang đi trước quyết định | Có thể phải migrate liên kết và quyền sau khi NICON trả lời | Đóng Q-01–Q-03 trước khi mở rộng dữ liệu thật |
 | Medium | Chặn xóa sau trình khách là giả định kỹ thuật | Có thể lệch thẩm quyền/lưu trữ hồ sơ NICON | Giữ chặn an toàn cho tới khi Q-08 được trả lời |
+| High | BOQ chưa có schema trường theo loại; importer cố định không tương thích trực tiếp 4 workbook chứa external links | Không giữ đủ cấu trúc/semantics và chưa chứng minh dùng đúng bộ mẫu thực tế | Thực hiện Q-BOQ-01 đa schema; giữ nguyên nguồn, xử lý bản dẫn xuất và đối soát; không bỏ chặn an toàn |
 
 ## 5. Phương án thiết kế để triển khai và đối chiếu UAT
 
@@ -742,22 +841,84 @@ khi cam kết không bao giờ tái sử dụng alias.
 
 **Phương án Q-BOQ-01:**
 
-1. Dùng năm schema/lifecycle tách biệt: Investment Rate, Quote BOQ, Tender
-   Estimate, Execution BOQ và Final BOQ. Core columns của detail line là code,
-   description, unit, quantity và unit price; schema chuyên biệt được version.
-2. Cover/summary chỉ lưu file gốc và metadata, không tạo line hạn mức. Chỉ sheet
-   detail được chọn trong preview. Giá trị formula được tính bằng engine workbook
-   tại import; đồng thời lưu sheet, row, cell mapping, formula text và raw value.
-   Merged/bilingual headers được mapping về canonical fields, file gốc bất biến.
-3. Import atomic theo revision: lỗi mapping, thiếu unit/code hoặc số không hợp lệ
-   chặn toàn workbook và trả lỗi sheet/row/cell. Warning không ảnh hưởng số liệu
-   có thể được người dùng xác nhận trong preview.
-4. Revision Draft được sửa/import lại; submit khóa nội dung; approver độc lập
-   approve/reject. Chỉ approval action được promote; filename/sheet không quyết
-   định loại hoặc hiệu lực.
-5. VO đã duyệt sinh revision Execution BOQ kế tiếp có lineage; không sửa revision
-   Approved. Final BOQ là revision được chốt lúc closeout. Mọi line giữ source
-   workbook checksum, sheet, row/cell và predecessor revision/VO.
+**Target, cập nhật theo yêu cầu người dùng 17/10/2026:** cho phép quản lý nhiều
+danh mục/loại BOQ và bộ trường phù hợp từng loại, có thể sử dụng lại. Chưa có
+persistence/API/UI/test cho khả năng này. Bộ trường dưới đây là thiết kế đề
+xuất từ workbook, chưa phải taxonomy hoặc công thức đã được NICON duyệt.
+
+1. Tách **mục đích/lifecycle** khỏi **danh mục nội dung và schema**. BOQ sơ bộ/
+   Quote, Tender Estimate, Design quantity takeoff, Execution BOQ và Final BOQ
+   không phải năm kiểu bảng Excel cố định. Suất đầu tư là cách lập giá/catalog
+   riêng. Một lifecycle có thể dùng nhiều schema nội dung; cùng schema CSA/MEP
+   có thể được dùng ở dự thầu và thực hiện nhưng không tự chuyển hiệu lực.
+2. Danh mục/loại BOQ có mã ổn định, tên VI/EN/ZH/JA, mô tả, active state và
+   schema version. Một schema khai báo field key ổn định, nhãn đa ngôn ngữ,
+   data type, đơn vị/precision, required/optional, default, thứ tự, nhóm, phạm vi
+   header/line/breakdown, điều kiện hiển thị và validation. Select/reference
+   lấy từ master data được quản lý, không hardcode danh mục trong React.
+3. Lõi business ID, project, lifecycle, revision, source và trạng thái duyệt
+   được bảo vệ; field mở rộng không được ghi đè quantity/currency/approval hoặc
+   biến BOQ báo giá thành allowance. Dòng có giá dùng canonical quantity/rate/
+   amount để tổng hợp; field kỹ thuật là dữ liệu typed theo schema version.
+   Không bắt mọi dòng/sheet vật tư tham khảo phải có đơn giá và khối lượng.
+   Section/summary/note/takeoff component/detail phải phân biệt để không tính
+   tổng hai lần. Tên cột Excel không được dùng làm field ID bền vững.
+4. Snapshot schema version trên revision. Sửa schema không thay bản Draft cũ
+   âm thầm, càng không thay revision Approved; nâng version có preview đổi
+   trường, mất dữ liệu và mapping, được xác nhận/audit. Không xóa field/category
+   đang được dùng; retire hoặc tuân thủ deletion-impact policy.
+5. Import profile độc lập với loại BOQ. Một workbook được chọn nhiều sheet,
+   mỗi sheet có thể có nhiều table region; từng region chọn schema và mapping
+   header nhiều hàng, code/nhóm/parent, canonical fields và field mở rộng.
+   Cho phép bỏ qua cover hoặc giữ summary để đối soát; sheet summary không tự
+   tạo allowance. Một hạng mục có thể ở nhiều sheet và một sheet có nhiều vùng
+   nghiệp vụ; không lấy tên sheet làm danh mục cố định.
+6. Giữ file gốc bất biến/hash và metadata từng dòng/cell: sheet, region, source
+   row, raw/formatted/cached value, formula text, mapping/schema version và actor.
+   STT nguồn được giữ riêng với stable line ID; cần quyết định uniqueness theo
+   document/section và cách re-import giữ link Quote/MR/VO. Không dùng mã tăng
+   theo vị trí làm khóa merge lịch sử. Bản dẫn xuất bỏ external link phải có
+   lineage và đối soát; không ghi đè 6 workbook nguồn hay bỏ kiểm tra an toàn.
+7. Công thức nghiệp vụ dùng tập phép tính được kiểm soát và version, không chạy
+   code tùy ý từ người dùng/Excel. Preview phân biệt formula gốc, cached value
+   và giá trị tính lại; lỗi/unsupported formula/external reference phải được
+   công bố. Locale text-number, đơn vị, phép quy đổi và làm tròn được cấu hình/
+   duyệt; không âm thầm đổi `free`, trống hoặc `#REF!` thành số 0. Chưa chọn
+   engine hay mặc định công thức kích thước trước khi owner xác nhận.
+8. Import atomic theo revision và xác nhận preview; lỗi định kiểu/required/
+   công thức ở field bắt buộc chặn commit, trả sheet/region/row/cell/field. Với
+   dòng không có giá, áp validation đúng schema, không ép vào rate catalog.
+   Server kiểm tra field lạ, presence, format, length, range, precision, enum,
+   normalization và cross-field relationships; frontend phản hồi cùng rule.
+9. Permission riêng cho quản lý danh mục/schema, import, submit và approve;
+   maker/checker áp trên server theo matrix được duyệt. Draft sửa/import lại;
+   submitted/approved bất biến theo lifecycle tương ứng. Chỉ applicable approved
+   Execution BOQ gắn Hợp đồng/Dự án hợp lệ làm allowance. VO tạo revision có
+   lineage; Final BOQ là chốt có thẩm quyền, không suy từ filename/sheet.
+
+**Nhóm trường ứng viên từ mẫu (không phải bộ danh mục bắt buộc):**
+
+| Nhóm nội dung | Trường có bằng chứng nguồn | Trường hợp cần làm rõ |
+|---|---|---|
+| Thiết kế/xin phép/dịch vụ | Nội dung VI/EN, scope, diện tích đất/sàn/hạ tầng, chiều cao, đơn vị, khối lượng, phí, note | Một sheet có vùng quy mô và vùng phí; `free`/included có phải giá 0 hay trạng thái thương mại riêng? |
+| Xây dựng/CSA và takeoff | Nhóm/parent, standard, SL, dài/rộng/cao/hệ số, quantity thành phần/tổng, đơn giá vật tư/nhân công/máy, profit/remark | Công thức và đơn vị theo dòng, trừ lỗ mở/điều chỉnh, không mặc định mọi quantity = SL×D×R×C×HS. |
+| MEP/PCCC/HVAC/Plumbing | Specification, brand/origin, vị trí, unit/quantity, vật tư/nhân công/thiết bị và tổng giá | Có bảng phân bổ số lượng theo nhiều vị trí; cần breakdown theo location, không một cột cứng cho từng tên xưởng. |
+| Danh mục vật tư/đề xuất kỹ thuật | Specification yêu cầu và đề xuất, supplier/origin, remark | Đây có thể là phụ lục tham khảo, không tự coi là BOQ có giá hoặc nguồn hạn mức kho. |
+
+**Acceptance criteria để đánh dấu Implemented:** CRUD danh mục/schema đúng quyền
+và đủ bốn ngôn ngữ; tạo cùng lifecycle với ít nhất hai schema khác nhau; form,
+API, import/export round-trip giữ field values và schema version; xử lý workbook
+nhiều sheet/nhiều vùng, trùng STT khác section, giá thành phần/tổng, formula lỗi,
+locale text-number, stale/concurrent re-import, approval bất biến và từ chối
+promote sai loại; kiểm tra toàn bộ 6 file nguồn hoặc báo rõ giới hạn theo file
+và bản dẫn xuất được duyệt. Migration cần backfill schema mặc định cho dữ liệu
+cũ, rehearsal, rollback và không làm đứt stable IDs của Quote/MR/warehouse.
+
+**Open decision:** owner BOQ/QS và Product Owner chốt taxonomy ban đầu,
+required fields theo schema, scope của phụ lục vật tư, công thức/precision,
+re-import/uniqueness, approval matrix và import source-versus-derived policy.
+Không chặn việc thiết kế capability cấu hình bằng lý do “chưa có một template
+Excel chuẩn duy nhất”; điều cần chốt là semantics của field và các gate nghiệp vụ.
 
 #### Q-CM-01 — Danh mục việc và quyền Phòng CM
 
@@ -954,25 +1115,63 @@ ISO/QA-QC/HSE/thanh toán và ma trận giấy phép sẽ được cung cấp sa
 thể xác nhận các luồng phụ thuộc những đầu vào này đã business-ready hoặc chạy
 deployed smoke trên môi trường NICON trong đợt hiện tại.
 
-## 7. Kế hoạch thực thi và trạng thái ngày 16/10/2026
+## 7. Đối chiếu thực thi ngày 17/10/2026
 
-| Thứ tự | Workstream | Trạng thái | Bằng chứng/kết quả | Bước tiếp theo |
-|---:|---|---|---|---|
-| 1 | Hai hướng tạo Hợp đồng Upstream | Implemented | Code đã hỗ trợ tạo trực tiếp với `QuoteId = null` và kiểm tra Báo giá đã duyệt khi có `QuoteId`; quyết định được căn chỉnh vào canonical docs tại commit `be7a4fbc` | Duy trì QA-COM-01; chỉ bổ sung cờ/lý do khi NICON trả lời câu hỏi bằng chứng của hướng trực tiếp |
-| 2 | Route RBAC BCH/CM và tài khoản seed cho mọi business role | Implemented | Commit `65bea63d`; Tier-1 route-discovery chạy lại ngày 16/10: `1 passed`; unit test tập trung gồm `DbSeederTests`: `92 passed` | Chạy deployed RBAC matrix khi Docker/UAT khả dụng |
-| 3 | Nhóm quyền chức năng và mapping role | Partial | Đề xuất seed sáu group tách HR khỏi Finance; unit/integration RBAC tập trung đã pass. Biên bản vẫn nêu năm phòng, nên đây không phải sơ đồ tổ chức đã duyệt | NICON xác nhận Role × Department × Permission matrix trước rollout dữ liệu thật; rehearsal migration và kiểm tra quyền runtime |
-| 4 | Ownership/liên kết nhóm việc | Partial | Task Dự án nay cần xác nhận độc lập kể cả khi không gắn KPI; task nội bộ không KPI giữ đường hoàn tất trực tiếp. Q-01–Q-03 vẫn chưa được NICON phê duyệt toàn bộ | Chốt ownership, cardinality, KPI kỳ/trọng số và quyền giao việc trước migration dữ liệu thật |
-| 5 | BOQ đa mẫu và provenance từng dòng | Partial | Có import/mapping nhiều sheet; chưa có schema được duyệt cho hierarchy, formula và provenance | Duyệt mapping theo bộ workbook đại diện; sau đó thiết kế import contract và regression fixtures |
-| 6 | Thiết kế chi tiết, MPP, review và hard-delete | Partial | Phần lõi đã có; Q-06–Q-08, Q-10–Q-11 ảnh hưởng trực tiếp lifecycle và schema | Ghi nhận quyết định có thẩm quyền rồi triển khai theo từng lát persistence → API → UI → test |
-| 7 | Tự sinh hồ sơ Pháp lý | Partial | Wizard idempotent đã có; chưa có matrix permit áp dụng theo loại/quy mô | Nhận permit matrix Q-09; sau đó tự sinh idempotent và giữ bước PM phân công |
-| 8 | CM/BCH, S-Curve và ISO | Partial | Lát cắt readiness/resource/QA-QC/QS đã có; công thức, checklist và approval matrix còn mở | Nhận ISO/rules; triển khai baseline cấu trúc, cảnh báo và test SoD/duplicate/reconnect |
-| 9 | Hồ sơ thanh toán ba phần | Partial | Payment Request hiện có nhưng chưa đủ dossier hai chiều và matching | Ghi nhận Q-FIN-01 trước khi thiết kế aggregate, trạng thái và tolerance |
-| 10 | Drive/UAT/host | Target | Repository chỉ chứng minh capability, không chứng minh cấu hình hoặc deploy NICON | Nhận OAuth/root folder/UAT URL và tiêu chí bàn giao; chạy deployed smoke trên commit công bố |
+Các trạng thái dưới đây dựa trên source tại commit ở đầu báo cáo. Có code/test
+không có nghĩa mọi phương án Q đã được triển khai; đặc biệt không lấy một
+lát cắt đã pass làm bằng chứng cho toàn module.
 
-Nguyên tắc thực thi sau mỗi quyết định được phê duyệt: cập nhật canonical docs → cập nhật
-code/migration → unit/integration test đúng layer → E2E hành trình trình duyệt
-cần thiết → UAT trên commit được công bố. Phương án mục 5 là đầu vào thiết kế,
-không tự đóng các ô `Open decision` hoặc thay thế bằng chứng phê duyệt của NICON.
+| Phương án / workstream | Trạng thái | Phần đã có và phần còn thiếu | Bằng chứng chính trong repository |
+|---|---|---|---|
+| Q-COM-01 — Hai hướng Hợp đồng | Implemented cho hai hướng; Target cho bằng chứng ngoại lệ bổ sung | Có tạo không QuoteId và kiểm tra Quote khi chọn; chưa coi cờ/lý do/chứng từ thỏa thuận đề xuất là đã có. | ContractService.CreateAsync; Contracts.tsx; ContractQuoteLinkTests; direct-contract-from-opportunity.spec.ts |
+| Q-01 — Ownership package | Partial | Có OperationalProject root + ContractId tùy chọn. Chưa có quy trình split package có lineage, xử lý thay/hủy hợp đồng và migration được duyệt cho mọi tình huống. | Models/DepartmentWorkPackage.cs; DepartmentWorkPackageService; DepartmentWorkPackagesControllerTests |
+| Q-02 — Internal/project task và KPI | Partial | Có verifier độc lập cho project/KPI, trả về InProgress, VerifiedAt và metric VerifiedWorkTaskCount. Không có trọn workflow reopen Verified/version kết quả như phương án; cần chốt kỳ/KPI và quyền. | DepartmentWorkPackageService.UpdateTaskAsync/VerifyTaskAsync; KpiService; unit/integration work-package tests |
+| Q-03 — Giao việc liên phòng | Partial | Có lead nhận việc, kiểm tra group, project scope và ngoại lệ Legal. Admin bypass chưa có một contract emergency-override bắt buộc lý do/delegation như phương án; chưa chứng minh mọi transition của user đổi phòng/inactive đều bị chặn. | DepartmentWorkPackageService.EnsureCanAssignAsync/CanManagePackageAsync/UpdateProgressAsync |
+| Q-04 — Cơ cấu tổ chức | Open decision | Có sáu group kỹ thuật, HR tách Finance; chưa có matrix phòng chính thức và rehearsal rebind dữ liệu NICON. | Data/Rbac/rbac-defaults.json; RoleService; RbacSeederTests; RbacControllerTests |
+| Q-05 — Quy ước mã Dự án | Partial | Có gợi ý mã, uniqueness hiện tại, đổi mã/audit/tìm mã cũ và Drive retry. Chưa có bằng chứng đủ cho quy tắc alias duy nhất xuyên lịch sử và toàn bộ format/migration trong phương án. | OperationalProjectService; OperationalProjectServiceTests; OperationalProjectsControllerTests.RenameCode* |
+| Q-06 — Trình nội bộ | Partial | Có recipient-scoped review, comment, consolidate, trình khách và quyết định khách. Comment gắn review, chưa có per-file/per-page annotation đầy đủ; chưa được coi là đã giao mọi ý kiến/ack rule đề xuất. | DesignReviewService.AddCommentAsync; Models/DesignReview.cs; DesignReviewsControllerTests |
+| Q-07 — CC mặc định | Partial | Có CcMembers/CcUserIds và notification; chưa có chính sách default CC versioned theo discipline/role như phương án. | Models/DetailDesignSchedule.cs; DetailDesignScheduleService; DepartmentWorkPackageService |
+| Q-08 — Xóa hồ sơ | Partial | Có impact/token/typed confirmation và block lịch sử trình khách; chưa có quyết định retention NICON để đóng câu hỏi. Không bỏ blocker chỉ để giống đề xuất. | DesignRecordDeletionService.Build*; design hard-delete integration/E2E |
+| Q-09 — Pháp lý tự sinh | Partial | Có wizard transaction/idempotency tạo permit/task theo lựa chọn. Chưa có template/matrix theo loại, quy mô, địa phương để tự suy danh sách áp dụng. | LegalActivationService.ActivateContractAsync; LegalActivationWizard; LegalActivationControllerTests |
+| Q-10 — Design Lead/Manager | Partial | Có team role, một approver, assignee khác approver, phase/client/IFC gate. Chưa chứng minh toàn bộ quyền reopen/reassign, delegation và phạm vi discipline của phương án. | DetailDesignScheduleService; DesignReviewService; IfcReleaseService; design tests |
+| Q-11 — Team/tiến độ/MS Project | Partial | Có parent, predecessor, planned/actual dates, critical/milestone flags, resource summary, vendor/downstream link. Chưa có import/re-import MPP với UID, lag, calendar, baseline và conflict policy đầy đủ; critical flag không chứng minh CPM engine. | Models/DetailDesignSchedule.cs; DetailDesignScheduleService; DesignScheduleTimeline.tsx |
+| Q-BOQ-01 — Đa loại và trường | Partial cho importer hiện tại; Target cho schema cấu hình | Có nhiều catalog/mapping nhưng chỉ dòng/cột cố định; 4 file nguồn chứa external-link parts bị chặn; thiếu hierarchy/provenance từng dòng, schema version và dynamic field form. | MaterialRateCatalog.cs; BoqCatalogWorkbookService; MaterialRateService; ma trận workbook tại BR-06 |
+| Q-CM-01 — Portfolio, CM templates, delegation | Partial | Có CM/BCH roles/routes và kiểm tra tác giả khác reviewer. Chưa có catalog CM, delegate có hiệu lực/SLA và portfolio exception đầy đủ. Equipment/Labour chỉ đánh dấu ReadyForProcurementAndFinance, chưa tạo hồ sơ downstream thực tế. | ConstructionOperationsService.CreateResourceHandoff; ConstructionWorkspaceShell.tsx; ConstructionOperationsControllerTests |
+| Q-CM-02 — Baseline/S-Curve | Partial | Có preparation Version/Supersedes và snapshot readiness; WBS/Schedule/S-Curve/Budget là reference/document IDs. Chưa có published time-series baseline/actual engine, phép variance, kỳ chốt và recovery workflow như phương án. | Models/ConstructionOperations.cs; ConstructionOperationsService.BuildReadinessSnapshot; KpiService.SiteProgressVarianceAsync |
+| Q-CM-03 — ISO/offline | Partial | Có readiness server gate, evidence và QA/QC schema version/type, HSE/punch/acceptance records. Chưa có ISO applicability chuẩn và local outbox/reconnect conflict flow đầy đủ; idempotency middleware không đồng nghĩa có offline queue. | ConstructionOperationsService; QaQcWorkspacePage.tsx; SiteDiaryPage.tsx; ConstructionOperations tests |
+| Q-FIN-01 — Dossier ba phần | Partial | Có PaymentRequest, milestone, invoice, SoD, Paid immutability và correction. Chưa có dossier Site/CM/Accounting, section approval/version, QS→Finance handoff và matching matrix hoàn chỉnh. | Models/Finance.cs; Models/ConstructionOperations.cs; FinanceService; FinanceControllerTests |
+| Q-OPS-01 — Drive topology/account | Partial cho capability; Target cho chuyển tài khoản/topology | Có OAuth/configuration/durable sync. Survey và CrmPreDesign vẫn là hai binding; chưa có migration topology reversible và verify file lịch sử trên tài khoản NICON. | GoogleDriveOptions; GoogleDriveSettingsStore; ProjectDriveSyncService |
+| Q-OPS-02 — Host/UAT | Target | Không có URL/commit deployment/sign-off mới trong lượt này. Local Docker hoặc test pass không chứng minh host NICON. | Yêu cầu môi trường tại mục 6; repository không cung cấp chứng nhận vận hành. |
+| Q-GOV-01 — Quyết định và thẩm quyền | Open decision | Có đề xuất decision record ở mục 5; chưa có hồ sơ xác nhận đủ owner/approver/phạm vi cho mọi câu hỏi. Hướng nhiều loại BOQ của người dùng không tự chốt công thức, ISO hay approval matrix khác. | Biên bản 03/10; canonical docs; yêu cầu người dùng 17/10 |
+
+### Phần giao cắt cần tiếp tục kiểm chứng
+
+- KPI vẫn là Partial cho phạm vi đầy đủ các vị trí/nguồn: KpiService chỉ dispatch
+  các MetricCode đã viết và trả MissingData cho mã khác. Export hiện là CSV tại
+  KpiController.Export; không suy ra đã giao Google Sheets/PDF theo sheet
+  “Yêu cầu mới 2005 ” của BreakTask. Mapping vai trò không chứng minh đủ nguồn
+  dữ liệu hay nghiệm thu toàn bộ 11 vị trí PRD.
+- Bản sửa UI/UX nằm trong commit baseline: tìm dự án public, phân trang bản dịch,
+  dialog ngắn màn hình, label Contact và KPI cards. Đây không đóng khoảng trống
+  ISO/BOQ/Finance hoặc chứng minh toàn bộ màn hình trên mọi thiết bị. Có test
+  ui-ux-responsive.spec.ts; lượt review này không chạy lại.
+- Test tập trung có trong source cho từng lát cắt ở trên. Các assertion phải
+  được đối chiếu với acceptance criteria cụ thể; tên file test và lịch sử pass
+  không thay thế regression với cả bộ workbook hoặc hành trình liên module.
+
+### Thứ tự thực hiện còn lại
+
+1. BOQ: thống nhất semantics đa loại/field và stage, profile mapping; lưu nguồn,
+   hierarchy và schema version; migration tương thích; rồi import/re-import,
+   approval, Quote snapshot và Execution allowance regression.
+2. Các quyết định ownership/quyền, design review/CC/delete và MPP được đóng theo
+   từng contract có thể kiểm thử; không gọi cả phương án là đã hoàn tất khi chỉ
+   có một endpoint hoặc role.
+3. Hoàn thiện CM structural baseline/portfolio, resource Equipment/Labour,
+   QS→Finance và dossier ba phần sau khi có ISO/approval/payment inputs.
+4. Drive topology/account và UAT là bước triển khai riêng, có commit/version,
+   owner, rehearsal/rollback và nghiệm thu; không suy từ local source.
+
 
 ## 8. QA handoff sau khi có quyết định
 
@@ -983,6 +1182,8 @@ không tự đóng các ô `Open decision` hoặc thay thế bằng chứng phê
 | QA-WP-01 | High | Q-01–Q-03 được duyệt | Package giữ/chuyển liên kết đúng; quyền giao việc đúng; rejection giữ nguyên dữ liệu | Integration |
 | QA-DES-01 | High | Q-06–Q-11 được duyệt | Một approver, CC đúng scope, phase gate và deletion policy đúng mọi trạng thái | Unit + Integration + E2E hẹp |
 | QA-LEGAL-01 | High | Permit matrix Q-09 có hiệu lực | Kích hoạt Hợp đồng sinh đúng permit một lần; retry không trùng; bỏ permit trái rule bị chặn | Integration |
+| QA-BOQ-01 | High | Schema/field/mapping được duyệt | Hai schema cùng lifecycle, multi-sheet/multi-region, field typed/validation, source hash và provenance round-trip; trùng STT, lỗi formula/external link/text-number không làm sai số hoặc mất draft cũ | Unit cho parser/rule + Integration cho persistence/auth/import |
+| QA-BOQ-02 | Critical | Quy tắc re-import/promotion và bộ dữ liệu đại diện có hiệu lực | Re-import stale/duplicate, schema upgrade, Quote snapshot và Execution allowance giữ stable IDs; từ chối dùng BOQ sơ bộ/material list làm hạn mức, không đổi revision Approved | Integration + E2E hẹp chọn loại/mapping/đối soát |
 | QA-CM-01 | Critical | ISO/gate/approval matrix được duyệt | Readiness gate, SoD CM/BCH, typed resource, QA/QC và QS direction không thể bị bypass qua API | Unit + Integration |
 | QA-FIN-01 | Critical | Payment dossier/matching được duyệt | Ba phần chứng từ, Upstream/Downstream, matching/tolerance, rejection và immutable paid state đúng | Unit + Integration |
 | QA-OPS-01 | High | UAT/Drive account sẵn sàng | OAuth, upload/sync/retry/conflict, folder mapping và audit chạy trên đúng commit | E2E/deployed smoke |
@@ -993,6 +1194,13 @@ phát sinh side effect ngoài audit thất bại được phép. Dữ liệu tes
 concurrency token stale.
 
 ## 9. BA/QA verdict
+
+**Rà soát lại 17/10/2026:** kết luận vẫn chưa hoàn tất toàn bộ. Hướng BOQ nhiều
+loại/trường được ghi `Target`, chưa có feature business-ready để QA nghiệm thu.
+Các High findings của BR-06 và khoảng trống mục 7 phải được xử lý/ra quyết định.
+Không có build/test runtime mới trong lượt review tài liệu này. Các số liệu
+pass và giới hạn môi trường bên dưới thuộc các lượt kiểm tra trước, được giữ
+để truy vết, không tái sử dụng thành kết quả ngày 17/10.
 
 **BA verdict: Blocked cho việc tuyên bố toàn bộ yêu cầu 03/10 là hoàn tất.**
 Hai hướng tạo Hợp đồng đã được xác nhận và không còn là sai lệch. Người dùng
