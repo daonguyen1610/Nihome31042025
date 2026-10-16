@@ -26,7 +26,7 @@ their permission matrices.
 
 ### NICON role groups and permission baselines
 
-Business roles can be assigned to one of five seeded organizational groups:
+The current implementation assigns business roles to five seeded groups:
 `CRM`, `PROCUREMENT`, `CONSTRUCTION`, `DESIGN`, and `FINANCE`. The initial
 mapping is seeded once from `rbac-defaults.json`: Sales roles belong to `CRM`;
 Procurement and Warehouse belong to `PROCUREMENT`; PM, site roles, Legal, and
@@ -34,6 +34,12 @@ QS belong to `CONSTRUCTION`; design roles belong to `DESIGN`; and Accountant
 and HR belong to `FINANCE`. `BGD` remains ungrouped because it is
 cross-functional. After the initial seed,
 administrator reassignment or intentional ungrouping is preserved on restart.
+
+This implemented grouping does not match the controlling 03/10 business
+baseline, which names CRM, Administration/HR, Design, Construction Management,
+and Finance/Accounting as the five departments and leaves the placement of
+Procurement and Legal open. Treat the seed as a technical interim model until
+NICON answers Q-04; do not present it as an approved organization chart.
 
 Each group stores an editable permission baseline. When creating a role, an
 administrator can copy the selected group's current baseline as the initial
@@ -93,8 +99,8 @@ state, and actual collection/payment date on that same Contract ID. It does not
 grant contract header create/edit, legal transition, attachment, appendix, VO,
 or delete capabilities.
 
-The `HR` role is deliberately separate from `ACCOUNTANT`, although both appear
-under the combined Accounting–Finance–HR organizational group. HR receives
+The `HR` role has a separate permission set from `ACCOUNTANT`, although the
+current seed places both under `FINANCE`. HR receives
 contacts, master data, recruitment applications, recruitment positions,
 recruitment options, and own-profile permissions. It does not inherit payment,
 accounting-period, contract-management, approval, or project-code-change

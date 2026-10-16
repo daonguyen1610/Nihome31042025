@@ -1,8 +1,10 @@
 # Quy trình vận hành NICON
 
 Tài liệu này mô tả quy trình nghiệp vụ mục tiêu của NICON và ranh giới với phần
-mềm hiện có. Nó được tổng hợp từ yêu cầu tám module, tài liệu họp ngày
-03–06/10/2026, bộ tiến độ mẫu, BOQ mẫu và mã nguồn tại thời điểm cập nhật.
+mềm hiện có. Baseline điều khiển là
+`docs/Nicon/MoMs/2026-10-06/NICON_Meeting_2026-10-03_Tom-tat-yeu-cau-moi.md`;
+giả định hoặc quyết định về sau chưa có xác nhận bằng văn bản không được ghi đè
+baseline. Tài liệu cũng đối chiếu bộ tiến độ mẫu, BOQ mẫu và mã nguồn hiện tại.
 
 ## 1. Cách đọc trạng thái
 
@@ -116,7 +118,7 @@ NICON có nhiều đường vào hợp lệ; không bắt buộc mọi dự án 
 
 | Luồng | Trình tự chính | Điều kiện quan trọng |
 |---|---|---|
-| Design & Build | Lead → Cơ hội + Dự án → khảo sát/thiết kế/giá đầu vào → báo giá nếu cần → HĐ D&B → thiết kế/pháp lý/thi công | Khách có thể đã thống nhất giá trị không qua báo giá; báo giá được dùng phải đã duyệt; thi công chỉ dùng IFC đã phát hành |
+| Design & Build | Lead → Cơ hội + Dự án → khảo sát/thiết kế/giá đầu vào → báo giá → HĐ D&B → thiết kế/pháp lý/thi công | Báo giá luôn đi trước hợp đồng; thi công chỉ dùng IFC đã phát hành |
 | Thiết kế trước hợp đồng | Cơ hội + Dự án → Concept/Basic/Detail → BOQ/báo giá → HĐ thiết kế hoặc D&B/thi công | Thiết kế được bắt đầu khi chưa có hợp đồng nhưng luôn thuộc Dự án |
 | Đấu thầu | Dự án → gói thầu → kế hoạch/checklist/dự toán thầu → nộp → kết quả → thương thảo/HĐ | Kết quả, deadline và phiên bản dự toán phải có lịch sử |
 | Tư vấn/báo giá sơ bộ | Dự án → khảo sát/Concept → suất đầu tư hoặc BOQ sơ bộ → báo giá → chuyển đổi nếu thành công | Không dùng BOQ sơ bộ làm hạn mức cấp phát thi công |
@@ -142,16 +144,14 @@ thực hiện theo quyền và điều kiện an toàn dữ liệu hiện có.
 
 ### G1 — Chuyển sang hợp đồng
 
-- Báo giá đi trước hợp đồng chỉ khi lô thương mại đó dùng báo giá; nếu khách đã
-  thống nhất giá trị trực tiếp thì chỉ cần hợp đồng. Kinh doanh quyết định theo
-  từng lô (NICON xác nhận ngày 2026-10-11).
+- Báo giá luôn đi trước Hợp đồng Upstream theo baseline 03/10. Không có ngoại lệ
+  "đã thống nhất giá trị trực tiếp" nếu chưa được NICON xác nhận bằng văn bản.
 - Trước khi gửi báo giá cho khách, Tài chính – Kế toán phải duyệt hồ sơ rà soát
   điều kiện hợp đồng, bảo lãnh và điều kiện thanh toán. Báo giá chưa có hồ sơ
   duyệt thì không gửi được; báo giá cũng phải gắn Dự án vận hành để có chỗ ghi
   rà soát (xem 2.2).
-- Hợp đồng Upstream được lập trực tiếp từ Cơ hội khi khách đã thống nhất giá trị.
-  Nếu gắn báo giá CRM, báo giá phải được duyệt, còn hiệu lực khi gắn, đúng
-  khách hàng/Dự án và đúng Cơ hội khi Hợp đồng gắn Cơ hội. Hợp đồng Downstream
+- Hợp đồng Upstream phải tham chiếu báo giá CRM đã được duyệt, còn hiệu lực,
+  đúng khách hàng/Dự án và đúng Cơ hội khi Hợp đồng gắn Cơ hội. Hợp đồng Downstream
   không dùng báo giá CRM đầu ra.
 - Hợp đồng xác định rõ hướng `Upstream` hoặc `Downstream` và loại Design,
   Construction, Design & Build, Supply hoặc Subcontract.
@@ -168,8 +168,9 @@ thực hiện theo quyền và điều kiện an toàn dữ liệu hiện có.
 - Công việc thiết kế thuê ngoài phải liên kết đồng thời Vendor và Hợp đồng
   Downstream cùng Dự án, đúng loại Design/Subcontract và đúng nhà cung cấp; NICON
   vẫn chỉ định một người phụ trách nội bộ.
-- Hồ sơ đã ghi nhận trình khách không được xóa vật lý, kể cả khi bị từ chối;
-  việc sửa sai dùng quyết định khách hàng có lý do và revision thay thế.
+- Mã nguồn hiện chặn xóa vật lý hồ sơ đã ghi nhận trình khách và dùng revision
+  thay thế. Đây là mặc định an toàn trong khi NICON chưa chốt Q-08, không phải
+  kết luận nghiệp vụ cuối cùng.
 - Concept chỉ được chốt khi revision Concept mới nhất là `ClientApproved`.
 - Basic Design chỉ mở Shop Drawing khi đủ điều kiện nội bộ/pháp lý và revision
   Basic Design mới nhất là `ClientApproved`.
@@ -180,8 +181,9 @@ thực hiện theo quyền và điều kiện an toàn dữ liệu hiện có.
 ### G3 — Pháp lý
 
 - Khi hợp đồng Upstream Design/Construction/DesignAndBuild chuyển
-  `Signed → InProgress`, PM dự án hoặc Admin phải mở wizard Pháp lý, kiểm tra
-  danh sách đề xuất và xác nhận; tạo `DesignProject` không tự sinh permit.
+  `Signed → InProgress`, mục tiêu là tự sinh danh sách thủ tục áp dụng để PM
+  phân công ngay. Hiện trạng yêu cầu PM/Admin mở wizard, kiểm tra danh sách đề
+  xuất và xác nhận; tạo `DesignProject` không tự sinh permit.
 - Wizard tạo hoặc tái sử dụng một package `LegalPermitting` của Operational
   Project. Nhiều hợp đồng cùng dự án dùng chung package, không tạo permit/task
   trùng, nhưng mỗi hợp đồng giữ activation audit riêng.
@@ -385,20 +387,25 @@ khóa là snapshot bất biến.
 
 ## 9. Quyết định còn cần NICON chốt
 
-1. Q-05: quy ước mã dự án chi tiết. Cơ cấu Cung ứng/Pháp lý đã được đối chiếu
-   với sơ đồ tổ chức NICON cập nhật ngày 11/10/2026.
-2. Q-09: template giấy phép theo loại/quy mô Dự án.
-3. Q-11: hợp đồng import MS Project đầy đủ gồm calendar, baseline và dữ liệu
+1. Q-01: cách giữ/chuyển nhóm việc khi có một hoặc nhiều hợp đồng.
+2. Q-02: duyệt và KPI cho công việc nội bộ.
+3. Q-03: PM Dự án hay người phụ trách Cơ hội được giao việc liên phòng.
+4. Q-04: vị trí tổ chức của Cung ứng và Pháp lý trong năm phòng baseline.
+5. Q-05: quy ước mã dự án chi tiết.
+6. Q-06 đến Q-08 và Q-10: quyền bình luận/đồng ý, CC mặc định, xóa hồ sơ và ranh
+   giới duyệt của Design Lead/Design Manager.
+7. Q-09: template giấy phép theo loại/quy mô Dự án.
+8. Q-11: hợp đồng import MS Project đầy đủ gồm calendar, baseline và dữ liệu
    phân cấp; Team và Tiến độ hiện được tách thành hai tab liên kết.
-4. Công thức/kỳ chốt S-Curve; quyền publish/unlock baseline; điều kiện VO.
-5. Checklist QA/QC, hồ sơ ISO và cổng khởi công theo từng loại công trình.
-6. Thành phần hồ sơ thanh toán Upstream/Downstream và ma trận three-way matching
+9. Công thức/kỳ chốt S-Curve; quyền publish/unlock baseline; điều kiện VO.
+10. Checklist QA/QC, hồ sơ ISO và cổng khởi công theo từng loại công trình.
+11. Thành phần hồ sơ thanh toán Upstream/Downstream và ma trận three-way matching
    cho supply, labour, equipment và mixed package.
-7. Quy tắc dải BOQ 85/95/>100: mẫu số, commitment, issue, reversal, conversion,
+12. Quy tắc dải BOQ 85/95/>100: mẫu số, commitment, issue, reversal, conversion,
    precision và zero allowance.
-8. Kế hoạch migration các record Module 2/3/4 từ `DesignProjectId` sang
+13. Kế hoạch migration các record Module 2/3/4 từ `DesignProjectId` sang
    `OperationalProjectId`, gồm compatibility API và rollback.
-9. Cây Drive đích và migration `01_Khao_sat` vào `01_CRM_PreDesign`.
+14. Cây Drive đích và migration `01_Khao_sat` vào `01_CRM_PreDesign`.
 
 Các điểm trên là blocker cho phần kiến trúc/dữ liệu tương ứng. Chỉ Product Owner
 hoặc đại diện nghiệp vụ NICON được chấp nhận rủi ro yêu cầu.

@@ -8,6 +8,11 @@ status: "Bản tổng quan làm việc — các quyết định mở cần NICON
 
 # NICON Management System — Tổng quan dự án sau cập nhật quy trình
 
+> **Baseline điều khiển:** Tài liệu phải được đọc cùng
+> `NICON_Meeting_2026-10-03_Tom-tat-yeu-cau-moi.md`; bản tóm tắt đó được ưu tiên
+> khi có khác biệt. Mọi điểm chưa được bản tóm tắt xác nhận vẫn là câu hỏi mở,
+> không phải quy tắc sản phẩm đã duyệt.
+
 ## 1. Mục tiêu của tài liệu
 
 Đây là bức tranh tổng thể của hệ thống sau khi quy trình đã được điều chỉnh
