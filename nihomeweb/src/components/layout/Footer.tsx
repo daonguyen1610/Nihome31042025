@@ -8,7 +8,6 @@ import {
   Phone,
   MapPin,
   ArrowUpRight,
-  Send,
 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import logoNicon from "@/assets/logo-nicon.png";
@@ -34,22 +33,15 @@ const Footer = () => {
         <div className="mb-16 lg:mb-20 grid grid-cols-1 lg:grid-cols-12 gap-6 items-center pb-12 border-b border-white/10">
           <div className="lg:col-span-7">
             <h3 className="font-display text-3xl md:text-4xl lg:text-5xl font-bold leading-[1.1] text-balance">
-              {t("footer.newsletter.title")}
+              {t("contact.form.title")}
             </h3>
           </div>
-          <form className="lg:col-span-5 flex flex-col sm:flex-row gap-2 p-2 bg-white/10 backdrop-blur-md rounded-2xl sm:rounded-full border border-white/15">
-            <input
-              type="email"
-              placeholder={t("footer.newsletter.placeholder")}
-              className="flex-1 min-w-0 bg-transparent px-5 py-2 text-sm placeholder:text-white/50 focus:outline-none"
-            />
-            <button
-              type="submit"
-              className="btn-gradient text-white px-5 py-2.5 rounded-full text-xs uppercase tracking-wider font-bold inline-flex items-center justify-center gap-2 shrink-0"
-            >
-              {t("footer.newsletter.subscribe")} <Send className="w-3.5 h-3.5" />
-            </button>
-          </form>
+          <Link
+            to="/contact"
+            className="lg:col-span-5 btn-gradient text-white px-6 py-3 rounded-full text-sm font-bold inline-flex items-center justify-center gap-2"
+          >
+            {t("site.nav.contact")} <ArrowUpRight className="w-4 h-4" />
+          </Link>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16">

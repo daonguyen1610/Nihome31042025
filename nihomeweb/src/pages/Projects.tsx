@@ -33,7 +33,7 @@ const Projects = () => {
 
   useEffect(() => {
     const param = searchParams.get("status") as FilterId | null;
-    if (param && filterIds.includes(param)) setFilter(param);
+    setFilter(param && filterIds.includes(param) ? param : "all");
   }, [searchParams]);
 
   const updateFilter = (id: FilterId) => {
@@ -55,9 +55,18 @@ const Projects = () => {
           p.name.toLowerCase().includes(q.toLowerCase()) ||
           p.client.toLowerCase().includes(q.toLowerCase()) ||
           p.location.toLowerCase().includes(q.toLowerCase());
-        return matchStatus && matchQ;
+        const category = searchParams.get("category");
+        const scale = searchParams.get("scale");
+        const location = searchParams.get("location");
+        return (
+          matchStatus &&
+          matchQ &&
+          (!category || String(p.categoryId) === category) &&
+          (!scale || p.scale === scale) &&
+          (!location || p.location === location)
+        );
       }),
-    [projects, filter, q],
+    [projects, filter, q, searchParams],
   );
 
   return (
@@ -71,6 +80,27 @@ const Projects = () => {
       {/* Filter bar */}
       <section className="py-10 bg-background border-b border-border">
         <div className="container-custom">
+          <div className="mb-4 flex flex-wrap gap-2">
+            {["category", "scale", "location"]
+              .filter((key) => searchParams.has(key))
+              .map((key) => (
+                <button
+                  key={key}
+                  className="rounded-full border px-3 py-2 text-sm"
+                  onClick={() => {
+                    const next = new URLSearchParams(searchParams);
+                    next.delete(key);
+                    setSearchParams(next);
+                  }}
+                >
+                  {key === "category"
+                    ? resolveCategoryLabel(Number(searchParams.get(key)), "", categoriesById, lang)
+                    : searchParams.get(key)}{" "}
+                  <span className="sr-only">{t("common.clearSearch")}</span>
+                  <span aria-hidden="true">×</span>
+                </button>
+              ))}
+          </div>
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
             <div className="flex flex-wrap gap-2">
               {filters.map((f) => (
@@ -91,6 +121,7 @@ const Projects = () => {
             <div className="flex items-center gap-2 bg-secondary rounded-full px-5 py-2.5 w-full lg:w-80 border border-border">
               <Search className="w-4 h-4 text-muted-foreground shrink-0" />
               <input
+                aria-label={t("projectsPage.searchPh")}
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 placeholder={t("projectsPage.searchPh")}
