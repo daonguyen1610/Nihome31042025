@@ -619,15 +619,26 @@ hoặc bằng chứng cho hướng tạo trực tiếp:
 | Bộ ISO BCH/QA-QC/HSE | Chưa chốt phạm vi rút gọn | Form/checklist và gate áp dụng |
 | Hồ sơ thanh toán | Chưa chốt ba phần | Chứng từ, role, transition và matching |
 
-## 7. Trình tự đề xuất sau khi NICON trả lời
+## 7. Kế hoạch thực thi và trạng thái ngày 16/10/2026
 
-1. Chốt Q-COM-01 và Q-04 trước vì đang có hành vi code mâu thuẫn baseline.
-2. Chốt Q-01–Q-03 trước khi migrate hoặc mở rộng nhóm công việc với dữ liệu thật.
-3. Chốt Q-06–Q-11 trước khi hoàn tất review, hard-delete, Permit và import MPP.
-4. Chốt BOQ/ISO/CM/Finance template trước khi mở rộng Module 4–6.
-5. Sau mỗi nhóm quyết định: cập nhật canonical docs → cập nhật code/migration →
-   unit/integration test đúng layer → E2E hành trình trình duyệt cần thiết → UAT
-   trên commit được công bố.
+| Thứ tự | Workstream | Trạng thái | Bằng chứng/kết quả | Bước tiếp theo |
+|---:|---|---|---|---|
+| 1 | Hai hướng tạo Hợp đồng Upstream | Implemented | Code đã hỗ trợ tạo trực tiếp với `QuoteId = null` và kiểm tra Báo giá đã duyệt khi có `QuoteId`; quyết định được căn chỉnh vào canonical docs tại commit `be7a4fbc` | Duy trì QA-COM-01; chỉ bổ sung cờ/lý do khi NICON trả lời câu hỏi bằng chứng của hướng trực tiếp |
+| 2 | Route RBAC BCH/CM và tài khoản seed cho mọi business role | Implemented | Commit `65bea63d`; Tier-1 route-discovery chạy lại ngày 16/10: `1 passed`; unit test tập trung gồm `DbSeederTests`: `92 passed` | Chạy deployed RBAC matrix khi Docker/UAT khả dụng |
+| 3 | Năm nhóm phòng ban và mapping role | Open decision | Seed hiện tại không khớp nguyên văn baseline; đổi trực tiếp có nguy cơ cấp/thu hồi sai quyền | NICON trả lời Q-04 và cung cấp Role × Department × Permission matrix; sau đó migration/rebind có audit |
+| 4 | Ownership/liên kết nhóm việc | Open decision | Persistence hiện có nhưng Q-01–Q-03 quyết định cardinality, ownership, KPI và quyền giao việc | Chốt Q-01–Q-03 trước mọi migration dữ liệu thật |
+| 5 | BOQ đa mẫu và provenance từng dòng | Open decision | Có import/mapping nhiều sheet nhưng chưa có schema được duyệt cho hierarchy, formula và provenance | NICON duyệt mapping theo bộ workbook đại diện; sau đó thiết kế import contract và regression fixtures |
+| 6 | Thiết kế chi tiết, MPP, review và hard-delete | Open decision | Phần lõi đã có; Q-06–Q-08, Q-10–Q-11 ảnh hưởng trực tiếp lifecycle và schema | Chốt các câu hỏi rồi triển khai theo từng lát persistence → API → UI → test |
+| 7 | Tự sinh hồ sơ Pháp lý | Open decision | Wizard idempotent đã có nhưng permit áp dụng theo loại/quy mô chưa được duyệt | NICON cung cấp permit matrix Q-09; sau đó tự sinh idempotent và giữ bước PM phân công |
+| 8 | CM/BCH, S-Curve và ISO | Open decision | Lát cắt readiness/resource/QA-QC/QS đã có; công thức, checklist và approval matrix còn mở | Nhận ISO/rules; triển khai versioned baseline, gate và test SoD/duplicate/reconnect |
+| 9 | Hồ sơ thanh toán ba phần | Open decision | Payment Request hiện có nhưng chưa đủ dossier hai chiều và matching | Chốt Q-FIN-01 trước khi thiết kế aggregate, trạng thái và tolerance |
+| 10 | Drive/UAT/host | External dependency | Repository chỉ chứng minh capability, không chứng minh cấu hình hoặc deploy NICON | Nhận OAuth/root folder/UAT URL và tiêu chí bàn giao; chạy deployed smoke trên commit công bố |
+
+Nguyên tắc thực thi sau mỗi quyết định: cập nhật canonical docs → cập nhật
+code/migration → unit/integration test đúng layer → E2E hành trình trình duyệt
+cần thiết → UAT trên commit được công bố. Không tự lấp các ô `Open decision`
+bằng giả định kỹ thuật vì các lựa chọn này làm thay đổi quyền, dữ liệu hoặc
+trách nhiệm nghiệp vụ.
 
 ## 8. QA handoff sau khi có quyết định
 
@@ -650,13 +661,19 @@ concurrency token stale.
 ## 9. BA/QA verdict
 
 **BA verdict: Blocked cho việc tuyên bố toàn bộ yêu cầu 03/10 là hoàn tất.**
-Lý do là hai sai lệch High và các quyết định P0 chưa có chủ sở hữu xác nhận.
-Các năng lực ghi `Implemented` có đủ bằng chứng tĩnh để đưa vào phạm vi QA tập
-trung, nhưng chưa phải xác nhận UAT.
+Hai hướng tạo Hợp đồng đã được xác nhận và không còn là sai lệch. Blocker còn
+lại là cơ cấu role group Q-04, các quyết định Q-01–Q-11/biểu mẫu nghiệp vụ và
+đầu vào môi trường chưa có chủ sở hữu xác nhận. Các năng lực ghi `Implemented`
+có đủ bằng chứng tĩnh để đưa vào phạm vi QA tập trung, nhưng chưa phải xác nhận
+UAT.
 
-**QA verdict: Not Run / Blocked cho business-ready.** Đây là lượt căn chỉnh tài
-liệu nên không chạy suite. Sau khi tài liệu được phê duyệt và code được sửa theo
-các quyết định, cần chạy test tập trung cho RBAC, CRM Contract/Quote, Work Package,
-Design, Legal, Construction và Finance; sau đó mới chọn các E2E trình duyệt phù
-hợp. Việc cùng một người thực hiện cả đối chiếu và kiểm định là giới hạn độc lập
-của review này.
+**QA verdict: Partial / Blocked cho business-ready.** Các kiểm tra tập trung chạy
+ngày 16/10/2026 từ source hiện tại đều pass: Tier-1 route-discovery `1/1`; unit
+`DbSeederTests|ContractServiceTests` `92/92`; integration
+`ContractsControllerTests|CrmBusinessPipelineTests|ContractQuoteLinkTests`
+`59/59`. Docker daemon không chạy nên backend được build/test trực tiếp trên
+host với `SkipNihomeWebBuild=true`; chưa chạy E2E hai hướng Hợp đồng hoặc toàn bộ
+RBAC matrix trên deployed stack. Sau khi có các quyết định còn mở, cần chạy test
+tập trung cho Work Package, Design, Legal, Construction và Finance, rồi E2E
+trình duyệt phù hợp. Việc cùng một người thực hiện cả đối chiếu và kiểm định là
+giới hạn độc lập của review này.
