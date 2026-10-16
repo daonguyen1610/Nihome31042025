@@ -118,7 +118,7 @@ NICON có nhiều đường vào hợp lệ; không bắt buộc mọi dự án 
 
 | Luồng | Trình tự chính | Điều kiện quan trọng |
 |---|---|---|
-| Design & Build | Lead → Cơ hội + Dự án → khảo sát/thiết kế/giá đầu vào → báo giá → HĐ D&B → thiết kế/pháp lý/thi công | Báo giá luôn đi trước hợp đồng; thi công chỉ dùng IFC đã phát hành |
+| Design & Build | Lead → Cơ hội + Dự án → khảo sát/thiết kế/giá đầu vào → báo giá hoặc thống nhất trực tiếp giá trị → HĐ D&B → thiết kế/pháp lý/thi công | Hướng có Báo giá chỉ dùng Báo giá đã duyệt; hướng trực tiếp không cần Báo giá; thi công chỉ dùng IFC đã phát hành |
 | Thiết kế trước hợp đồng | Cơ hội + Dự án → Concept/Basic/Detail → BOQ/báo giá → HĐ thiết kế hoặc D&B/thi công | Thiết kế được bắt đầu khi chưa có hợp đồng nhưng luôn thuộc Dự án |
 | Đấu thầu | Dự án → gói thầu → kế hoạch/checklist/dự toán thầu → nộp → kết quả → thương thảo/HĐ | Kết quả, deadline và phiên bản dự toán phải có lịch sử |
 | Tư vấn/báo giá sơ bộ | Dự án → khảo sát/Concept → suất đầu tư hoặc BOQ sơ bộ → báo giá → chuyển đổi nếu thành công | Không dùng BOQ sơ bộ làm hạn mức cấp phát thi công |
@@ -144,15 +144,16 @@ thực hiện theo quyền và điều kiện an toàn dữ liệu hiện có.
 
 ### G1 — Chuyển sang hợp đồng
 
-- Báo giá luôn đi trước Hợp đồng Upstream theo baseline 03/10. Không có ngoại lệ
-  "đã thống nhất giá trị trực tiếp" nếu chưa được NICON xác nhận bằng văn bản.
+- Hợp đồng Upstream có hai hướng đã được xác nhận ngày 16/10/2026: tạo từ Báo
+  giá đã duyệt, hoặc tạo trực tiếp không cần Báo giá khi khách hàng đã biết và
+  thống nhất giá trị Hợp đồng.
 - Trước khi gửi báo giá cho khách, Tài chính – Kế toán phải duyệt hồ sơ rà soát
   điều kiện hợp đồng, bảo lãnh và điều kiện thanh toán. Báo giá chưa có hồ sơ
   duyệt thì không gửi được; báo giá cũng phải gắn Dự án vận hành để có chỗ ghi
   rà soát (xem 2.2).
-- Hợp đồng Upstream phải tham chiếu báo giá CRM đã được duyệt, còn hiệu lực,
-  đúng khách hàng/Dự án và đúng Cơ hội khi Hợp đồng gắn Cơ hội. Hợp đồng Downstream
-  không dùng báo giá CRM đầu ra.
+- Khi chọn hướng có Báo giá, Hợp đồng Upstream phải tham chiếu Báo giá CRM đã
+  được duyệt, còn hiệu lực, đúng khách hàng/Dự án và đúng Cơ hội khi Hợp đồng
+  gắn Cơ hội. Hợp đồng Downstream không dùng Báo giá CRM đầu ra.
 - Hợp đồng xác định rõ hướng `Upstream` hoặc `Downstream` và loại Design,
   Construction, Design & Build, Supply hoặc Subcontract.
 - Một Dự án có thể có nhiều hợp đồng; không gộp chúng thành một bản ghi.

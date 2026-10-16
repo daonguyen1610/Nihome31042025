@@ -179,10 +179,11 @@ và hợp đồng mà không nhập lại dữ liệu.
   sau đó người dùng chủ động lập hợp đồng.
 - Khảo sát mobile ghi điều kiện hiện trường, tọa độ, ảnh/video/file và checklist;
   đồng bộ có trạng thái, retry và xung đột rõ ràng.
-- **Báo giá luôn đi trước Hợp đồng Upstream.** Kinh doanh lập báo giá theo suất
-  đầu tư hoặc BOQ, hoàn tất duyệt nội bộ và rà soát Tài chính trước khi lập hợp
-  đồng. Mã nguồn hiện vẫn cho phép tạo Hợp đồng Upstream với `QuoteId = null`;
-  đây là khoảng trống triển khai, không phải ngoại lệ nghiệp vụ đã được duyệt.
+- Hợp đồng Upstream có hai hướng tạo đã được xác nhận ngày 16/10/2026: (1) tạo
+  từ Báo giá đã duyệt; hoặc (2) tạo trực tiếp không cần Báo giá khi khách hàng
+  đã biết và thống nhất giá trị Hợp đồng. Nếu chọn hướng Báo giá, Kinh doanh lập
+  báo giá theo suất đầu tư hoặc BOQ, hoàn tất duyệt nội bộ và rà soát Tài chính
+  trước khi lập Hợp đồng; không được gắn Báo giá nháp/chưa duyệt để lách luồng.
 - Kinh doanh duyệt nội bộ báo giá rồi
   xem trước email, chọn địa chỉ khách và gửi; báo giá được gắn vào hợp đồng phải
   đã duyệt, còn hiệu lực khi gắn và đúng khách hàng/Dự án. Hợp đồng Downstream
@@ -534,7 +535,7 @@ tới khi chủ sở hữu nghiệp vụ chấp thuận các quyết định tư
 | Mục | Năng lực | Trạng thái | Bằng chứng triển khai hoặc khoảng trống |
 |---:|---|---|---|
 | 1 | Nhóm quyền/phòng ban | Partial | Có role/group/editor, nhưng năm group seed hiện tại không khớp baseline 03/10; HR đang nằm trong FINANCE và thiếu group Hành chính nhân sự độc lập. |
-| 2 | CRM và mã dự án | Partial | Lead/Cơ hội/Dự án và đổi mã đã có; Hợp đồng Upstream vẫn tạo được khi không có báo giá, trái baseline. |
+| 2 | CRM và mã dự án | Implemented | Lead/Cơ hội/Dự án và đổi mã đã có; Hợp đồng Upstream hỗ trợ đúng hai hướng: từ Báo giá đã duyệt hoặc tạo trực tiếp khi khách hàng đã thống nhất giá trị. |
 | 3 | Dự án dùng chung | Partial | Operational Project, work package, task, dependency, CC và thông báo đã có; Q-01 đến Q-03 còn mở. |
 | 4 | Thiết kế trước hợp đồng | Implemented | Design Project và công việc thiết kế không phụ thuộc hợp đồng đã ký. |
 | 5 | Liên phòng ban trước hợp đồng | Implemented | Procurement input, Finance review và gate báo giá/nộp thầu đã có. |

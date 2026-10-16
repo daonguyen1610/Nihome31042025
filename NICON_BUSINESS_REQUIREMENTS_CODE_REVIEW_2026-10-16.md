@@ -14,9 +14,10 @@ Mã nguồn đã có nền tảng nghiệp vụ đáng kể, đặc biệt ở C
 Thiết kế trước hợp đồng, phối hợp Cung ứng–Tài chính trước hợp đồng và Đấu thầu.
 Tuy nhiên chưa thể tuyên bố toàn bộ yêu cầu 03/10 là business-ready vì:
 
-1. Có hai sai lệch trực tiếp so với baseline:
-   - năm role group seed hiện tại không đúng năm phòng được nêu ngày 03/10;
-   - Hợp đồng Upstream vẫn được tạo khi không có Báo giá.
+1. Sai lệch role group vẫn chờ NICON quyết định cơ cấu phòng ban tại Q-04;
+   không được tự đổi seed vì có thể làm sai quyền dữ liệu. Việc Hợp đồng
+   Upstream không có Báo giá không còn là sai lệch: xác nhận ngày 16/10/2026
+   cho phép hướng này khi khách hàng đã biết và thống nhất giá trị Hợp đồng.
 2. Một số lựa chọn kỹ thuật đang được vận hành như quy tắc mặc dù NICON chưa
    trả lời: cách gắn nhóm việc khi có hợp đồng, quyền giao việc liên phòng, xóa
    hồ sơ đã trình khách và cách kích hoạt thủ tục Pháp lý.
@@ -30,8 +31,8 @@ Tuy nhiên chưa thể tuyên bố toàn bộ yêu cầu 03/10 là business-read
 
 | Trạng thái | Năng lực |
 |---|---|
-| Implemented | CRM lõi và mã Dự án; Thiết kế khởi tạo từ Cơ hội trước hợp đồng; kiểm soát Cung ứng/Tài chính trước hợp đồng; Đấu thầu |
-| Partial | RBAC theo phòng; nhóm công việc dùng chung; Báo giá/BOQ/Hợp đồng; Thiết kế chi tiết; Pháp lý; Thi công CM/BCH; Tài chính |
+| Implemented | CRM lõi, mã Dự án và cổng Báo giá → Hợp đồng Upstream; Thiết kế khởi tạo từ Cơ hội trước hợp đồng; kiểm soát Cung ứng/Tài chính trước hợp đồng; Đấu thầu |
+| Partial | RBAC theo phòng; nhóm công việc dùng chung; BOQ; Thiết kế chi tiết; Pháp lý; Thi công CM/BCH; Tài chính |
 | Target | Host/UAT và chuyển kết nối Drive sang tài khoản NICON |
 | Open decision | Cơ cấu tổ chức, Q-01–Q-11, biểu mẫu ISO/CM/thanh toán, công thức S-Curve và ma trận phê duyệt |
 
@@ -190,7 +191,7 @@ Bằng chứng chính:
 
 ### BR-06 — Báo giá, BOQ và cổng tạo Hợp đồng
 
-**Trạng thái: Partial — có chức năng tốt nhưng vi phạm thứ tự bắt buộc.**
+**Trạng thái: Partial — hai hướng tạo Hợp đồng đã đúng; BOQ nâng cao còn thiếu.**
 
 Đã làm tốt:
 
@@ -198,14 +199,13 @@ Bằng chứng chính:
   file Excel chi tiết.
 - BOQ catalog hỗ trợ preview/mapping workbook một hoặc nhiều sheet; revision
   Approved được áp dụng vào Báo giá dưới dạng snapshot.
-- Khi `QuoteId` được cung cấp, service kiểm tra Báo giá đã duyệt, còn hiệu lực,
-  đúng Customer/Opportunity/Dự án và không bị dùng sai.
+- API và UI cho phép tạo Hợp đồng Upstream trực tiếp khi khách hàng đã biết và
+  thống nhất giá trị, không bắt buộc `QuoteId`.
+- Khi người dùng chọn hướng có Báo giá, service bắt buộc Báo giá đã duyệt, còn
+  hiệu lực, đúng Customer/Opportunity/Dự án và chưa được Hợp đồng live khác dùng.
 
-Sai lệch mức High:
+Khoảng trống còn lại:
 
-- `CreateContractRequest.QuoteId` là nullable và `ContractService` chỉ kiểm tra
-  khi có giá trị. Integration test còn khẳng định luồng “đã thống nhất giá trị”
-  không cần Báo giá. Baseline 03/10 nói rõ Báo giá luôn trước Hợp đồng.
 - Workbook import chưa chứng minh giữ đầy đủ hierarchy/merged cells/formula và
   provenance từng dòng cho mọi BOQ mẫu; không được coi các file mẫu là một schema
   đã duyệt.
@@ -389,7 +389,7 @@ Bằng chứng chính:
 
 | Mức | Sai lệch | Ảnh hưởng | Hành động đề xuất |
 |---|---|---|---|
-| High | Hợp đồng Upstream không bắt buộc `QuoteId` | Có thể bỏ qua Báo giá và Finance review, trái chuỗi thương mại NICON | Chốt không có ngoại lệ; sau đó bắt buộc Quote ở DTO/service/UI và sửa integration/E2E |
+| Resolved | Hợp đồng Upstream không bắt buộc `QuoteId` | Đây là hướng nghiệp vụ hợp lệ khi khách hàng đã biết và thống nhất giá trị; hướng có Báo giá vẫn bắt buộc Báo giá đã duyệt | Duy trì test hồi quy cho cả hai hướng và không biến `QuoteId` thành bắt buộc toàn cục |
 | High | Role group seed không khớp năm phòng baseline | Sai ownership, bộ quyền mặc định và báo cáo/KPI | NICON trả lời Q-04; lập migration/rebind có audit thay vì đổi seed đơn thuần |
 | Medium | Wizard Pháp lý cần chọn thủ công | Không đạt yêu cầu tự sinh khi Hợp đồng chạy | Chốt permit matrix; tự tạo idempotent và giữ bước PM phân công |
 | Medium | Quy tắc package/assignment đang đi trước quyết định | Có thể phải migrate liên kết và quyền sau khi NICON trả lời | Đóng Q-01–Q-03 trước khi mở rộng dữ liệu thật |
@@ -444,11 +444,18 @@ ngoại lệ, ví dụ dữ liệu và tài liệu/form mẫu kèm theo. Không 
    quyền cộng dồn hay chọn một vai trò hoạt động?
 6. Đề nghị NICON cung cấp bảng Role × Department × Permission baseline chính thức.
 
-#### Q-COM-01 — Báo giá bắt buộc trước Hợp đồng
+#### Q-COM-01 — Hai hướng tạo Hợp đồng (đã xác nhận 16/10/2026)
 
-1. Xác nhận mọi Hợp đồng Upstream đều phải có đúng một Báo giá nguồn đã duyệt?
-2. Có ngoại lệ nào cho gia hạn, phụ lục, hợp đồng khung, chỉ định thầu hoặc giá
-   đã thỏa thuận không? Nếu có, ai duyệt ngoại lệ và bằng chứng bắt buộc là gì?
+Quyết định: cho phép (1) tạo từ Báo giá đã duyệt và (2) tạo trực tiếp không cần
+Báo giá khi khách hàng đã biết và thống nhất giá trị Hợp đồng.
+
+Các chi tiết dưới đây chỉ còn là câu hỏi mở nếu NICON muốn siết thêm ngoại lệ
+hoặc bằng chứng cho hướng tạo trực tiếp:
+
+1. Với hướng tạo trực tiếp, hệ thống có cần lưu cờ/lý do hoặc bằng chứng khách
+   hàng đã biết và thống nhất giá trị hay chỉ cần giá trị Hợp đồng?
+2. Gia hạn, phụ lục, hợp đồng khung và chỉ định thầu đi theo hướng trực tiếp hay
+   cần quy tắc riêng? Nếu cần, ai duyệt và bằng chứng bắt buộc là gì?
 3. Báo giá phải ở trạng thái nội bộ nào và có bắt buộc đã gửi/được khách chấp
    thuận trước khi tạo Hợp đồng?
 4. Nếu Báo giá hết hiệu lực trong lúc thương thảo nhưng đã được khách chấp thuận,
@@ -626,7 +633,7 @@ ngoại lệ, ví dụ dữ liệu và tài liệu/form mẫu kèm theo. Không 
 
 | Scenario | Priority | Điều kiện để chạy | Kết quả phải chứng minh | Layer |
 |---|---|---|---|---|
-| QA-COM-01 | Critical | Q-COM-01 xác nhận Báo giá bắt buộc | API và UI từ chối Hợp đồng Upstream không có Báo giá; không ghi dữ liệu/audit/notification sai | Integration + E2E hẹp |
+| QA-COM-01 | Critical | Quyết định hai hướng ngày 16/10 | API/UI tạo được Hợp đồng trực tiếp khi đã thống nhất giá trị; hướng có Báo giá từ chối Báo giá chưa duyệt/hết hạn/sai ngữ cảnh | Unit + Integration + E2E hẹp |
 | QA-RBAC-01 | Critical | Q-04 và matrix quyền được duyệt | Đúng group/role baseline; không nâng quyền; HR không nhận Finance; API chặn role sai | Unit + Integration |
 | QA-WP-01 | High | Q-01–Q-03 được duyệt | Package giữ/chuyển liên kết đúng; quyền giao việc đúng; rejection giữ nguyên dữ liệu | Integration |
 | QA-DES-01 | High | Q-06–Q-11 được duyệt | Một approver, CC đúng scope, phase gate và deletion policy đúng mọi trạng thái | Unit + Integration + E2E hẹp |
