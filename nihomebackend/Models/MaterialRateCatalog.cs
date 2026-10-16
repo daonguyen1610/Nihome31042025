@@ -9,6 +9,7 @@ public class MaterialRateCatalog
     public string? Description { get; set; }
     public string Currency { get; set; } = "VND";
     public bool IsActive { get; set; } = true;
+    public string? BoqConfigurationJson { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public int CreatedByUserId { get; set; }
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
@@ -36,6 +37,7 @@ public class MaterialRateRevision
     public string? ImportSourceFileName { get; set; }
     public string? ImportSourceHash { get; set; }
     public string? ImportMappingJson { get; set; }
+    public string? BoqRowsJson { get; set; }
     public DateTime? ImportedAt { get; set; }
     public int? ImportedByUserId { get; set; }
     public List<MaterialRateLine> Lines { get; set; } = [];

@@ -150,6 +150,7 @@ public static class DbSeeder
 
         ContentSeeder.Seed(db, loggerFactory?.CreateLogger("NihomeBackend.Data.ContentSeeder"));
         TranslationSeeder.Seed(db);
+        BoqCategorySeeder.Seed(db);
         RbacSeeder.Seed(db);
         MasterDataSeeder.Seed(db);
         WorkflowConfigSeeder.Seed(db);

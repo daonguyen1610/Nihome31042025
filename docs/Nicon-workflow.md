@@ -341,25 +341,33 @@ thêm từng dòng tại Quote chỉ bổ sung ngoại lệ cục bộ, không t
 không thay thế quy trình chuẩn hoá workbook. Không dùng vùng nhập text/clipboard
 tự do cho BOQ của Quote.
 
-**Target — luồng đa loại BOQ/trường cấu hình, yêu cầu người dùng 17/10/2026:**
-người có quyền tạo danh mục/loại và schema field versioned → tạo Draft revision
-đúng mục đích nghiệp vụ → chọn schema cho từng sheet/vùng bảng → preview/mapping
-canonical field và field kỹ thuật → xác nhận/đối soát → lưu atomic với file hash,
-schema snapshot và provenance từng dòng → duyệt theo lifecycle tương ứng →
-Quote/Execution sử dụng đúng revision được phép. Schema mô tả nội dung không
-tự quyết định một BOQ có được làm hạn mức vật tư hay không.
+**Implemented — luồng chọn danh mục → nhập đúng trường (17/10/2026):**
 
-Một workbook không bắt buộc chỉ dùng một schema; không biến cover/summary,
-dòng diễn giải takeoff hoặc danh mục vật tư tham khảo thành detail có giá để
-tính tổng hai lần. Quy tắc dòng dương/giá không âm phía trên vẫn áp cho importer
-rate hiện tại; schema tham khảo không có giá là Target riêng, chưa được importer
-hiện tại hỗ trợ. Chỉnh schema phải tạo version và có cơ chế chuyển đổi rõ ràng,
-không làm đổi số liệu Approved hoặc mất liên kết Quote/MR/VO. Bộ field bắt buộc,
-quy tắc công thức, re-import và approval cần owner BOQ/QS/Product Owner chốt.
+1. Vào danh mục đơn giá BOQ; chọn một cấu hình mẫu đã có hoặc tạo danh mục mới.
+   Nếu cần bộ trường khác, sao chép cấu trúc rồi sửa sheet/field và nhãn bốn
+   ngôn ngữ **trước khi tạo phiên bản đầu tiên**. Danh mục cũ không có cấu hình
+   giữ mẫu nhập 5 cột hiện tại; không tự chuyển dữ liệu.
+2. Tạo Draft revision; chọn sheet để thêm/sửa/bỏ dòng với đúng trường của sheet.
+   Đổi sheet reset form mới; đổi danh mục/revision reset ngữ cảnh nhập. Không
+   cho mang field của danh mục cũ sang danh mục mới.
+3. Hoặc tải mẫu riêng của danh mục (VI/EN/ZH/JA), giữ nguyên sheet/header/dấu
+   nhận diện, điền từ hàng 3 bằng số/văn bản, không dùng công thức. Kiểm tra file
+   trước; hệ thống hiển thị các dòng hợp lệ và cảnh báo **thay toàn bộ Draft**.
+   Xác nhận mới lưu atomic; sai field/category/hash hoặc revision stale bị từ
+   chối và không ghi đè. File trống không được import để xóa dữ liệu.
+4. Dòng có giá tạo canonical code theo sheet + mã nguồn, quantity, unit price
+   và amount để luồng duyệt/Quote hiện tại sử dụng. Cùng STT ở sheet khác không
+   trùng nhau; trùng code trong cùng sheet bị chặn. Dòng tham khảo chỉ lưu cùng
+   revision, không cộng tổng hay dùng làm allowance. Giá thành phần/kích thước
+   được lưu đúng trường để đối chiếu, không tự suy tổng giá/khối lượng.
+5. Từ revision đầu, cấu hình không đổi; muốn đổi cấu trúc tạo danh mục mới.
+   Danh mục đã cấu hình chỉ được ngừng hoạt động, không hard-delete qua luồng
+   cũ. Chỉ applicable approved Execution BOQ làm hạn mức MR/kho như trước.
 
-**Partial:** hiện mới có catalog và mapping 5 cột; chưa có quản lý field động
-hay trọn luồng nhiều schema này. File mẫu `docs/Nicon/BOQ/` là nguồn khảo sát,
-không tự trở thành template nghiệp vụ được duyệt.
+Đây là mẫu nhập chuẩn hóa dựa trên cấu trúc nguồn, không phải tính năng import
+nguyên trạng mọi workbook khách hàng. Cover/summary không được tạo thành dòng
+chi phí trùng; giữ file nguồn dưới docs bất biến. Các khả năng baseline/hierarchy,
+provenance từng cell, công thức Excel và chuyển schema tự động vẫn là Target.
 
 ## 7. Google Drive và tài liệu
 

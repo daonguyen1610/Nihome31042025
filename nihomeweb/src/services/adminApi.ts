@@ -1,3 +1,4 @@
+import type { BoqConfiguration, BoqEntryRow } from "@/components/admin/BoqConfiguredEntry";
 import api, { withIdempotencyKey, withIfMatch } from "@/lib/api";
 
 const postIdempotent = <T>(url: string, body: unknown) =>
@@ -2471,6 +2472,8 @@ export type MaterialRateRevisionStatus = "Draft" | "Approved" | "Rejected" | "Re
 export type MaterialRateCatalogType = "InvestmentRate" | "Boq";
 
 export interface MaterialRateCatalogResponse {
+  boqConfiguration?: BoqConfiguration | null;
+  boqConfigurationHash?: string | null;
   id: number;
   catalogType: MaterialRateCatalogType;
   code: string;
@@ -2497,6 +2500,7 @@ export interface MaterialRateLineResponse {
 }
 
 export interface MaterialRateRevisionResponse {
+  boqRows?: BoqEntryRow[];
   id: number;
   catalogId: number;
   catalogType: MaterialRateCatalogType;

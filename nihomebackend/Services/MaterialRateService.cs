@@ -12,6 +12,7 @@ namespace NihomeBackend.Services;
 
 public interface IMaterialRateService
 {
+    Task<MaterialRateRevisionResponse?> SaveConfiguredRowsAsync(int catalogId, int revisionId, SaveBoqRowsRequest request, int userId, string? sourceFile = null, string? sourceHash = null, CancellationToken ct = default);
     Task<List<MaterialRateCatalogResponse>> ListCatalogsAsync(string? search, bool includeInactive, MaterialRateCatalogType? catalogType = null, CancellationToken ct = default);
     Task<MaterialRateCatalogResponse?> GetCatalogAsync(int id, CancellationToken ct = default);
     Task<MaterialRateCatalogResponse> CreateCatalogAsync(UpsertMaterialRateCatalogRequest request, int userId, CancellationToken ct = default);
@@ -48,7 +49,7 @@ public interface IMaterialRateService
     Task<MaterialRateRevisionResponse?> GetEffectiveAsync(int catalogId, DateOnly effectiveDate, CancellationToken ct = default);
 }
 
-public sealed class MaterialRateService(
+public sealed partial class MaterialRateService(
     AppDbContext db,
     IUtf8CsvParser csvParser,
     IMaterialRateSpreadsheetService spreadsheetService) : IMaterialRateService
@@ -97,6 +98,8 @@ public sealed class MaterialRateService(
             .Select(catalog => new MaterialRateCatalogResponse
             {
                 Id = catalog.Id,
+                BoqConfiguration = BoqConfigurationRules.Read(catalog.BoqConfigurationJson),
+                BoqConfigurationHash = BoqConfigurationRules.Hash(catalog.BoqConfigurationJson),
                 CatalogType = catalog.CatalogType,
                 Code = catalog.Code,
                 Name = catalog.Name,
@@ -174,6 +177,7 @@ public sealed class MaterialRateService(
             throw new MaterialRateOperationException("Không được đổi loại, mã danh mục hoặc tiền tệ sau khi đã có phiên bản được duyệt.");
         }
 
+        if (catalog.BoqConfigurationJson != null && request.CatalogType != MaterialRateCatalogType.Boq) throw BoqConfigurationRules.Error("categoryLocked");
         catalog.CatalogType = request.CatalogType;
         catalog.Code = code;
         catalog.Name = request.Name.Trim();
@@ -197,6 +201,7 @@ public sealed class MaterialRateService(
             .FirstOrDefaultAsync(item => item.Id == id, ct);
         if (catalog is null) return null;
 
+        if (catalog.BoqConfigurationJson != null) throw DeleteBlocked();
         var revisionIds = catalog.Revisions.Select(revision => revision.Id).ToList();
         if (revisionIds.Count > 0 &&
             (await db.Quotes.AnyAsync(quote =>
@@ -478,6 +483,7 @@ public sealed class MaterialRateService(
             throw new MaterialRateOperationException("Chỉ phiên bản Nháp mới được phép nhập dữ liệu đơn giá.");
         }
 
+        if (revision.Catalog.BoqConfigurationJson != null) throw BoqConfigurationRules.Error("configuredOnly");
         var isExcel = Path.GetExtension(fileName).Equals(".xlsx", StringComparison.OrdinalIgnoreCase);
         var headers = revision.Catalog.CatalogType == MaterialRateCatalogType.Boq ? BoqCsvHeaders : CsvHeaders;
         var parsed = isExcel
@@ -799,6 +805,7 @@ public sealed class MaterialRateService(
                 "Chỉ phiên bản Nháp mới cho phép thêm, sửa hoặc xoá dòng BOQ.",
                 "materialRates.line.draftOnly");
         }
+        if (revision.Catalog.BoqConfigurationJson != null) throw BoqConfigurationRules.Error("configuredOnly");
         return revision;
     }
 
@@ -1016,6 +1023,8 @@ public sealed class MaterialRateService(
     private static MaterialRateCatalogResponse MapCatalog(MaterialRateCatalog catalog) => new()
     {
         Id = catalog.Id,
+        BoqConfiguration = BoqConfigurationRules.Read(catalog.BoqConfigurationJson),
+        BoqConfigurationHash = BoqConfigurationRules.Hash(catalog.BoqConfigurationJson),
         CatalogType = catalog.CatalogType,
         Code = catalog.Code,
         Name = catalog.Name,
@@ -1030,6 +1039,7 @@ public sealed class MaterialRateService(
     private static MaterialRateRevisionResponse MapRevision(MaterialRateRevision revision) => new()
     {
         Id = revision.Id,
+        BoqRows = BoqConfigurationRules.ReadRows(revision.BoqRowsJson),
         CatalogId = revision.CatalogId,
         CatalogCode = revision.Catalog.Code,
         CatalogName = revision.Catalog.Name,

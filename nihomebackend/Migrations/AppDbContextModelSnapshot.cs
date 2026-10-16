@@ -5123,6 +5123,9 @@ namespace nihomebackend.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("BoqConfigurationJson")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("CatalogType")
                         .IsRequired()
                         .HasMaxLength(30)
@@ -5238,6 +5241,9 @@ namespace nihomebackend.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("BoqRowsJson")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("CatalogId")
                         .HasColumnType("int");

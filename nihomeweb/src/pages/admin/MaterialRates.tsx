@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { BoqCategorySetup, BoqConfiguredRows } from "@/components/admin/BoqConfiguredEntry";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -176,6 +177,12 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
   );
   const visibleCatalogIds = useMemo(() => catalogs.map((catalog) => catalog.id), [catalogs]);
 
+  const activeCatalog = useRef(selectedCatalogId);
+  const activeRevision = useRef(selectedRevision?.id);
+  const revisionLoad = useRef(0);
+  activeCatalog.current = selectedCatalogId;
+  activeRevision.current = selectedRevision?.id;
+
   const loadCatalogs = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -199,9 +206,11 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
 
   const loadRevisions = useCallback(
     async (catalogId: number) => {
+      const request = ++revisionLoad.current;
       setRevisionLoading(true);
       try {
         const { data } = await adminApi.listMaterialRateRevisions(catalogId);
+        if (request !== revisionLoad.current || activeCatalog.current !== catalogId) return;
         setRevisions(data);
         setSelectedRevision((current) =>
           current && data.some((revision) => revision.id === current.id)
@@ -215,7 +224,7 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
           variant: "destructive",
         });
       } finally {
-        setRevisionLoading(false);
+        if (request === revisionLoad.current) setRevisionLoading(false);
       }
     },
     [t, toast],
@@ -525,6 +534,8 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
   };
 
   const applyRevision = (revision: MaterialRateRevisionResponse) => {
+    if (revision.catalogId !== activeCatalog.current || revision.id !== activeRevision.current)
+      return;
     setSelectedRevision(revision);
     setRevisions((current) => current.map((item) => (item.id === revision.id ? revision : item)));
   };
@@ -1089,18 +1100,20 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
                         <Pencil className="mr-1 h-4 w-4" />
                         {t("common.edit")}
                       </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        data-testid="material-rates-delete-catalog"
-                        onClick={() => {
-                          setDeleteCatalogError(null);
-                          setDeleteCatalogOpen(true);
-                        }}
-                      >
-                        <Trash2 className="mr-1 h-4 w-4" />
-                        {t("materialRates.catalog.delete")}
-                      </Button>
+                      {!selectedCatalog.boqConfiguration && (
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          data-testid="material-rates-delete-catalog"
+                          onClick={() => {
+                            setDeleteCatalogError(null);
+                            setDeleteCatalogOpen(true);
+                          }}
+                        >
+                          <Trash2 className="mr-1 h-4 w-4" />
+                          {t("materialRates.catalog.delete")}
+                        </Button>
+                      )}
                       <Button
                         size="sm"
                         data-testid="material-rates-new-revision"
@@ -1119,6 +1132,15 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
                   )}
                 </div>
 
+                {catalogType === "Boq" && (
+                  <BoqCategorySetup
+                    key={selectedCatalog.id}
+                    catalog={selectedCatalog}
+                    catalogs={catalogs}
+                    canManage={canManage}
+                    onSaved={() => void loadCatalogs()}
+                  />
+                )}
                 {revisionLoading ? (
                   <PageLoading />
                 ) : revisions.length === 0 ? (
@@ -1184,7 +1206,7 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
                         </button>
                       ))}
                     </div>
-                    {selectedRevision && (
+                    {selectedRevision && selectedRevision.catalogId === selectedCatalog.id && (
                       <div className="min-w-0 space-y-3 rounded-lg border bg-card p-4">
                         <div className="flex flex-wrap items-start justify-between gap-2">
                           <div>
@@ -1233,449 +1255,468 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
                           </div>
                         )}
 
-                        {canEditLines && (
-                          <section
-                            className="flex flex-col gap-3 rounded-lg border border-primary/20 bg-primary/[0.04] p-4 sm:flex-row sm:items-center sm:justify-between"
-                            data-testid="material-rates-manual-entry"
-                          >
-                            <div>
-                              <h4 className="text-sm font-semibold">
-                                {t(
-                                  catalogType === "Boq"
-                                    ? "materialRates.line.manageTitle"
-                                    : "materialRates.investmentLine.manageTitle",
-                                )}
-                              </h4>
-                              <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted-foreground">
-                                {t("materialRates.line.manageHint")}
-                              </p>
-                            </div>
-                            <Button
-                              size="sm"
-                              className="shrink-0"
-                              data-testid="material-rates-line-add"
-                              onClick={openNewLine}
-                            >
-                              <Plus className="mr-1.5 h-4 w-4" />
-                              {t(
-                                catalogType === "Boq"
-                                  ? "materialRates.line.add"
-                                  : "materialRates.investmentLine.add",
-                              )}
-                            </Button>
-                          </section>
-                        )}
-
-                        {canManage &&
-                          selectedRevision.status === "Draft" &&
-                          catalogType === "InvestmentRate" && (
-                            <section className="rounded-lg border bg-muted/20 p-4">
-                              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        {selectedCatalog.boqConfiguration ? (
+                          <BoqConfiguredRows
+                            key={selectedRevision.id}
+                            catalog={selectedCatalog}
+                            revision={selectedRevision}
+                            canManage={canManage}
+                            onSaved={applyRevision}
+                          />
+                        ) : (
+                          <>
+                            {canEditLines && (
+                              <section
+                                className="flex flex-col gap-3 rounded-lg border border-primary/20 bg-primary/[0.04] p-4 sm:flex-row sm:items-center sm:justify-between"
+                                data-testid="material-rates-manual-entry"
+                              >
                                 <div>
-                                  <h4 className="flex items-center gap-2 text-sm font-semibold">
-                                    <FileSpreadsheet className="h-4 w-4 text-primary" />
-                                    {t("materialRates.import.title")}
+                                  <h4 className="text-sm font-semibold">
+                                    {t(
+                                      catalogType === "Boq"
+                                        ? "materialRates.line.manageTitle"
+                                        : "materialRates.investmentLine.manageTitle",
+                                    )}
                                   </h4>
                                   <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted-foreground">
-                                    {t("materialRates.import.packageHint")}
+                                    {t("materialRates.line.manageHint")}
                                   </p>
                                 </div>
                                 <Button
                                   size="sm"
-                                  variant="outline"
-                                  onClick={() => void downloadTemplatePackage()}
+                                  className="shrink-0"
+                                  data-testid="material-rates-line-add"
+                                  onClick={openNewLine}
                                 >
-                                  <Download className="mr-1.5 h-4 w-4" />
-                                  {t("materialRates.package.download")}
+                                  <Plus className="mr-1.5 h-4 w-4" />
+                                  {t(
+                                    catalogType === "Boq"
+                                      ? "materialRates.line.add"
+                                      : "materialRates.investmentLine.add",
+                                  )}
                                 </Button>
-                              </div>
-                              <Label
-                                className="mt-4 flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed bg-background px-4 py-6 text-center transition-colors hover:border-primary/60 hover:bg-primary/[0.02]"
-                                onDragOver={(event) => event.preventDefault()}
-                                onDrop={(event) => {
-                                  event.preventDefault();
-                                  selectImportFile(event.dataTransfer.files?.[0] ?? null);
-                                }}
-                              >
-                                <UploadCloud className="h-8 w-8 text-primary" />
-                                <span className="mt-2 text-sm font-medium">
-                                  {t("materialRates.import.select")}
-                                </span>
-                                <span className="mt-1 text-xs text-muted-foreground">
-                                  {t("materialRates.import.requirements")}
-                                </span>
-                                <Input
-                                  type="file"
-                                  accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"
-                                  className="sr-only"
-                                  data-testid="material-rates-import-file"
-                                  disabled={importing}
-                                  onChange={(event) => {
-                                    selectImportFile(event.target.files?.[0] ?? null);
-                                    event.target.value = "";
-                                  }}
-                                />
-                              </Label>
-                              {pendingImportFile && (
-                                <div
-                                  className="mt-3 flex flex-col gap-3 rounded-md border bg-background p-3 sm:flex-row sm:items-center sm:justify-between"
-                                  data-testid="material-rates-selected-file"
-                                >
-                                  <div className="flex min-w-0 flex-1 items-center gap-2">
-                                    <FileCheck2 className="h-5 w-5 shrink-0 text-emerald-600" />
-                                    <div className="min-w-0 flex-1">
-                                      <p className="break-all text-sm font-medium">
-                                        {pendingImportFile.name}
-                                      </p>
-                                      <p className="text-xs text-muted-foreground">
-                                        {formatFileSize(pendingImportFile.size)}
+                              </section>
+                            )}
+
+                            {canManage &&
+                              selectedRevision.status === "Draft" &&
+                              catalogType === "InvestmentRate" && (
+                                <section className="rounded-lg border bg-muted/20 p-4">
+                                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                    <div>
+                                      <h4 className="flex items-center gap-2 text-sm font-semibold">
+                                        <FileSpreadsheet className="h-4 w-4 text-primary" />
+                                        {t("materialRates.import.title")}
+                                      </h4>
+                                      <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted-foreground">
+                                        {t("materialRates.import.packageHint")}
                                       </p>
                                     </div>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => void downloadTemplatePackage()}
+                                    >
+                                      <Download className="mr-1.5 h-4 w-4" />
+                                      {t("materialRates.package.download")}
+                                    </Button>
                                   </div>
+                                  <Label
+                                    className="mt-4 flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed bg-background px-4 py-6 text-center transition-colors hover:border-primary/60 hover:bg-primary/[0.02]"
+                                    onDragOver={(event) => event.preventDefault()}
+                                    onDrop={(event) => {
+                                      event.preventDefault();
+                                      selectImportFile(event.dataTransfer.files?.[0] ?? null);
+                                    }}
+                                  >
+                                    <UploadCloud className="h-8 w-8 text-primary" />
+                                    <span className="mt-2 text-sm font-medium">
+                                      {t("materialRates.import.select")}
+                                    </span>
+                                    <span className="mt-1 text-xs text-muted-foreground">
+                                      {t("materialRates.import.requirements")}
+                                    </span>
+                                    <Input
+                                      type="file"
+                                      accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"
+                                      className="sr-only"
+                                      data-testid="material-rates-import-file"
+                                      disabled={importing}
+                                      onChange={(event) => {
+                                        selectImportFile(event.target.files?.[0] ?? null);
+                                        event.target.value = "";
+                                      }}
+                                    />
+                                  </Label>
+                                  {pendingImportFile && (
+                                    <div
+                                      className="mt-3 flex flex-col gap-3 rounded-md border bg-background p-3 sm:flex-row sm:items-center sm:justify-between"
+                                      data-testid="material-rates-selected-file"
+                                    >
+                                      <div className="flex min-w-0 flex-1 items-center gap-2">
+                                        <FileCheck2 className="h-5 w-5 shrink-0 text-emerald-600" />
+                                        <div className="min-w-0 flex-1">
+                                          <p className="break-all text-sm font-medium">
+                                            {pendingImportFile.name}
+                                          </p>
+                                          <p className="text-xs text-muted-foreground">
+                                            {formatFileSize(pendingImportFile.size)}
+                                          </p>
+                                        </div>
+                                      </div>
+                                      <Button
+                                        size="sm"
+                                        data-testid="material-rates-import-review"
+                                        onClick={() => setImportConfirmOpen(true)}
+                                        disabled={importing}
+                                      >
+                                        <UploadCloud className="mr-1.5 h-4 w-4" />
+                                        {t("materialRates.import.confirmAction")}
+                                      </Button>
+                                    </div>
+                                  )}
+                                  <div className="mt-3 flex gap-2 rounded-md border border-amber-300/70 bg-amber-50 p-3 text-xs leading-relaxed text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
+                                    <Info className="mt-0.5 h-4 w-4 shrink-0" />
+                                    <span>{t("materialRates.import.replaceWarning")}</span>
+                                  </div>
+                                </section>
+                              )}
+
+                            {canManage &&
+                              selectedRevision.status === "Draft" &&
+                              catalogType === "Boq" && (
+                                <section
+                                  className="rounded-lg border border-primary/20 bg-primary/[0.04] p-4"
+                                  data-testid="boq-workbook-entry"
+                                >
+                                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                    <div>
+                                      <h4 className="flex items-center gap-2 text-sm font-semibold">
+                                        <FileSpreadsheet className="h-4 w-4 text-primary" />
+                                        {t("materialRates.boqWorkbook.entryTitle")}
+                                      </h4>
+                                      <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted-foreground">
+                                        {t("materialRates.boqWorkbook.entryHint")}
+                                      </p>
+                                    </div>
+                                    <div className="flex flex-wrap gap-2">
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => void downloadTemplatePackage()}
+                                      >
+                                        <Download className="mr-1.5 h-4 w-4" />
+                                        {t("materialRates.boqWorkbook.standardTemplate")}
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        data-testid="boq-workbook-open"
+                                        onClick={() => setBoqWorkbookOpen(true)}
+                                      >
+                                        <UploadCloud className="mr-1.5 h-4 w-4" />
+                                        {t("materialRates.boqWorkbook.open")}
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </section>
+                              )}
+
+                            {importedCount !== null && (
+                              <div className="flex flex-col gap-3 rounded-md border border-emerald-300 bg-emerald-50 p-3 text-emerald-950 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-100 sm:flex-row sm:items-center sm:justify-between">
+                                <div className="flex gap-2">
+                                  <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" />
+                                  <div>
+                                    <p className="text-sm font-semibold">
+                                      {t("materialRates.import.result", { count: importedCount })}
+                                    </p>
+                                    <p className="text-xs">
+                                      {t(
+                                        catalogType === "Boq"
+                                          ? "materialRates.boq.import.nextStep"
+                                          : "materialRates.import.nextStep",
+                                      )}
+                                    </p>
+                                  </div>
+                                </div>
+                                <p className="whitespace-nowrap text-sm font-bold">
+                                  {formatVnd(
+                                    catalogType === "Boq"
+                                      ? selectedRevision.totalAmount
+                                      : selectedRevision.totalRatePerSqm,
+                                  )}{" "}
+                                  {selectedRevision.currency}
+                                  {catalogType === "InvestmentRate" ? "/m²" : ""}
+                                </p>
+                              </div>
+                            )}
+
+                            <div className="flex flex-wrap items-center gap-2 border-y py-3">
+                              {canApprove && selectedRevision.status === "Draft" && (
+                                <>
                                   <Button
                                     size="sm"
-                                    data-testid="material-rates-import-review"
-                                    onClick={() => setImportConfirmOpen(true)}
-                                    disabled={importing}
+                                    data-testid="material-rates-approve"
+                                    disabled={selectedRevision.lines.length === 0}
+                                    title={
+                                      selectedRevision.lines.length === 0
+                                        ? t("materialRates.action.approveDisabled")
+                                        : undefined
+                                    }
+                                    onClick={() => {
+                                      setDecision("approve");
+                                      setDecisionNote("");
+                                      setFormError(null);
+                                    }}
                                   >
-                                    <UploadCloud className="mr-1.5 h-4 w-4" />
-                                    {t("materialRates.import.confirmAction")}
+                                    <CheckCircle2 className="mr-1 h-4 w-4" />
+                                    {t("materialRates.action.approve")}
                                   </Button>
-                                </div>
-                              )}
-                              <div className="mt-3 flex gap-2 rounded-md border border-amber-300/70 bg-amber-50 p-3 text-xs leading-relaxed text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
-                                <Info className="mt-0.5 h-4 w-4 shrink-0" />
-                                <span>{t("materialRates.import.replaceWarning")}</span>
-                              </div>
-                            </section>
-                          )}
-
-                        {canManage &&
-                          selectedRevision.status === "Draft" &&
-                          catalogType === "Boq" && (
-                            <section
-                              className="rounded-lg border border-primary/20 bg-primary/[0.04] p-4"
-                              data-testid="boq-workbook-entry"
-                            >
-                              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                                <div>
-                                  <h4 className="flex items-center gap-2 text-sm font-semibold">
-                                    <FileSpreadsheet className="h-4 w-4 text-primary" />
-                                    {t("materialRates.boqWorkbook.entryTitle")}
-                                  </h4>
-                                  <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted-foreground">
-                                    {t("materialRates.boqWorkbook.entryHint")}
-                                  </p>
-                                </div>
-                                <div className="flex flex-wrap gap-2">
                                   <Button
                                     size="sm"
                                     variant="outline"
-                                    onClick={() => void downloadTemplatePackage()}
+                                    onClick={() => {
+                                      setDecision("reject");
+                                      setDecisionNote("");
+                                      setFormError(null);
+                                    }}
                                   >
-                                    <Download className="mr-1.5 h-4 w-4" />
-                                    {t("materialRates.boqWorkbook.standardTemplate")}
+                                    <XCircle className="mr-1 h-4 w-4" />
+                                    {t("materialRates.action.reject")}
                                   </Button>
-                                  <Button
-                                    size="sm"
-                                    data-testid="boq-workbook-open"
-                                    onClick={() => setBoqWorkbookOpen(true)}
-                                  >
-                                    <UploadCloud className="mr-1.5 h-4 w-4" />
-                                    {t("materialRates.boqWorkbook.open")}
-                                  </Button>
-                                </div>
-                              </div>
-                            </section>
-                          )}
-
-                        {importedCount !== null && (
-                          <div className="flex flex-col gap-3 rounded-md border border-emerald-300 bg-emerald-50 p-3 text-emerald-950 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-100 sm:flex-row sm:items-center sm:justify-between">
-                            <div className="flex gap-2">
-                              <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" />
-                              <div>
-                                <p className="text-sm font-semibold">
-                                  {t("materialRates.import.result", { count: importedCount })}
-                                </p>
-                                <p className="text-xs">
-                                  {t(
-                                    catalogType === "Boq"
-                                      ? "materialRates.boq.import.nextStep"
-                                      : "materialRates.import.nextStep",
-                                  )}
-                                </p>
-                              </div>
-                            </div>
-                            <p className="whitespace-nowrap text-sm font-bold">
-                              {formatVnd(
-                                catalogType === "Boq"
-                                  ? selectedRevision.totalAmount
-                                  : selectedRevision.totalRatePerSqm,
-                              )}{" "}
-                              {selectedRevision.currency}
-                              {catalogType === "InvestmentRate" ? "/m²" : ""}
-                            </p>
-                          </div>
-                        )}
-
-                        <div className="flex flex-wrap items-center gap-2 border-y py-3">
-                          {canApprove && selectedRevision.status === "Draft" && (
-                            <>
-                              <Button
-                                size="sm"
-                                data-testid="material-rates-approve"
-                                disabled={selectedRevision.lines.length === 0}
-                                title={
-                                  selectedRevision.lines.length === 0
-                                    ? t("materialRates.action.approveDisabled")
-                                    : undefined
-                                }
-                                onClick={() => {
-                                  setDecision("approve");
-                                  setDecisionNote("");
-                                  setFormError(null);
-                                }}
-                              >
-                                <CheckCircle2 className="mr-1 h-4 w-4" />
-                                {t("materialRates.action.approve")}
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => {
-                                  setDecision("reject");
-                                  setDecisionNote("");
-                                  setFormError(null);
-                                }}
-                              >
-                                <XCircle className="mr-1 h-4 w-4" />
-                                {t("materialRates.action.reject")}
-                              </Button>
-                            </>
-                          )}
-                          {selectedRevision.status === "Approved" &&
-                            selectedCatalog.isActive &&
-                            canViewQuotes && (
-                              <Button size="sm" asChild>
-                                <Link to="/admin/quotes" data-testid="material-rates-open-quotes">
-                                  {t("materialRates.quote.open")}
-                                  <ArrowRight className="ml-1.5 h-4 w-4" />
-                                </Link>
-                              </Button>
-                            )}
-                          {selectedRevision.status === "Approved" && (
-                            <p className="basis-full text-xs text-muted-foreground">
-                              {selectedCatalog.isActive
-                                ? t(
-                                    catalogType === "Boq"
-                                      ? "materialRates.boq.quote.hint"
-                                      : "materialRates.quote.hint",
-                                  )
-                                : t("materialRates.quote.inactiveHint")}
-                            </p>
-                          )}
-                        </div>
-
-                        {importErrors.length > 0 && (
-                          <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3">
-                            <p className="mb-2 text-sm font-medium text-destructive">
-                              {t("materialRates.import.errors")}
-                            </p>
-                            <ul className="space-y-1 text-xs text-destructive">
-                              {importErrors.map((item, index) => (
-                                <li key={`${item.row}-${item.column}-${index}`}>
-                                  {item.row
-                                    ? t("materialRates.import.errorLocation", {
-                                        row: item.row,
-                                        column: item.column ?? "—",
-                                      })
-                                    : ""}{" "}
-                                  {importErrorMessage(item)}
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-
-                        {selectedRevision.lines.length === 0 ? (
-                          <p className="rounded border border-dashed p-6 text-center text-sm text-muted-foreground">
-                            {t(
-                              catalogType === "Boq"
-                                ? "materialRates.lines.emptyBoq"
-                                : "materialRates.lines.empty",
-                            )}
-                          </p>
-                        ) : (
-                          <>
-                            <div className="hidden overflow-x-auto md:block">
-                              <table className="w-full min-w-[720px] divide-y text-sm">
-                                <thead className="bg-muted/40 text-xs text-muted-foreground">
-                                  <tr>
-                                    <th className="px-2 py-2 text-left">
-                                      {t(
-                                        catalogType === "Boq"
-                                          ? "materialRates.field.itemCode"
-                                          : "materialRates.field.materialCode",
-                                      )}
-                                    </th>
-                                    <th className="px-2 py-2 text-left">
-                                      {t(
-                                        catalogType === "Boq"
-                                          ? "materialRates.field.itemName"
-                                          : "materialRates.field.materialName",
-                                      )}
-                                    </th>
-                                    <th className="px-2 py-2 text-left">
-                                      {t("materialRates.field.unit")}
-                                    </th>
-                                    {catalogType === "Boq" ? (
-                                      <>
-                                        <th className="px-2 py-2 text-right">
-                                          {t("materialRates.field.quantity")}
-                                        </th>
-                                        <th className="px-2 py-2 text-right">
-                                          {t("materialRates.field.unitRate")}
-                                        </th>
-                                        <th className="px-2 py-2 text-right">
-                                          {t("materialRates.field.totalAmount")}
-                                        </th>
-                                      </>
-                                    ) : (
-                                      <>
-                                        <th className="px-2 py-2 text-right">
-                                          {t("materialRates.field.normPerSqm")}
-                                        </th>
-                                        <th className="px-2 py-2 text-right">
-                                          {t("materialRates.field.unitRate")}
-                                        </th>
-                                        <th className="px-2 py-2 text-right">
-                                          {t("materialRates.field.wastePercent")}
-                                        </th>
-                                        <th className="px-2 py-2 text-right">
-                                          {t("materialRates.field.amountPerSqm")}
-                                        </th>
-                                      </>
-                                    )}
-                                    {canEditLines && (
-                                      <th className="px-2 py-2 text-right">
-                                        {t("materialRates.line.actions")}
-                                      </th>
-                                    )}
-                                  </tr>
-                                </thead>
-                                <tbody className="divide-y">
-                                  {selectedRevision.lines.map((line) => (
-                                    <tr
-                                      key={line.id}
-                                      data-testid={`material-rates-line-${line.id}`}
+                                </>
+                              )}
+                              {selectedRevision.status === "Approved" &&
+                                selectedCatalog.isActive &&
+                                canViewQuotes && (
+                                  <Button size="sm" asChild>
+                                    <Link
+                                      to="/admin/quotes"
+                                      data-testid="material-rates-open-quotes"
                                     >
-                                      <td className="px-2 py-2">{line.materialCode}</td>
-                                      <td className="px-2 py-2 font-medium">{line.materialName}</td>
-                                      <td className="px-2 py-2">{line.unit}</td>
-                                      {catalogType === "Boq" ? (
-                                        <>
-                                          <td className="px-2 py-2 text-right">{line.quantity}</td>
-                                          <td className="px-2 py-2 text-right">
-                                            {formatVnd(line.unitRate)}
-                                          </td>
-                                          <td className="px-2 py-2 text-right font-medium">
-                                            {formatVnd(line.amountPerSqm)}
-                                          </td>
-                                        </>
-                                      ) : (
-                                        <>
-                                          <td className="px-2 py-2 text-right">
-                                            {line.normPerSqm}
-                                          </td>
-                                          <td className="px-2 py-2 text-right">
-                                            {formatVnd(line.unitRate)}
-                                          </td>
-                                          <td className="px-2 py-2 text-right">
-                                            {line.wastePercent}%
-                                          </td>
-                                          <td className="px-2 py-2 text-right font-medium">
-                                            {formatVnd(line.amountPerSqm)}
-                                          </td>
-                                        </>
-                                      )}
-                                      {canEditLines && (
-                                        <td className="px-2 py-2">
-                                          <div className="flex justify-end gap-1">
-                                            <Button
-                                              size="icon"
-                                              variant="ghost"
-                                              data-testid={`material-rates-line-edit-${line.id}`}
-                                              aria-label={`${t("common.edit")} ${line.materialName}`}
-                                              onClick={() => openEditLine(line)}
-                                            >
-                                              <Pencil className="h-4 w-4" />
-                                            </Button>
-                                            <Button
-                                              size="icon"
-                                              variant="ghost"
-                                              className="text-destructive hover:text-destructive"
-                                              data-testid={`material-rates-line-delete-${line.id}`}
-                                              aria-label={`${t("materialRates.line.delete")} ${line.materialName}`}
-                                              onClick={() => {
-                                                setLineError(null);
-                                                setDeletingLine(line);
-                                              }}
-                                            >
-                                              <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                          </div>
-                                        </td>
-                                      )}
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
+                                      {t("materialRates.quote.open")}
+                                      <ArrowRight className="ml-1.5 h-4 w-4" />
+                                    </Link>
+                                  </Button>
+                                )}
+                              {selectedRevision.status === "Approved" && (
+                                <p className="basis-full text-xs text-muted-foreground">
+                                  {selectedCatalog.isActive
+                                    ? t(
+                                        catalogType === "Boq"
+                                          ? "materialRates.boq.quote.hint"
+                                          : "materialRates.quote.hint",
+                                      )
+                                    : t("materialRates.quote.inactiveHint")}
+                                </p>
+                              )}
                             </div>
-                            <ul className="grid gap-2 md:hidden">
-                              {selectedRevision.lines.map((line) => (
-                                <li
-                                  key={line.id}
-                                  className="rounded border p-3 text-sm"
-                                  data-testid={`material-rates-line-card-${line.id}`}
-                                >
-                                  <div className="flex justify-between gap-2">
-                                    <span className="font-medium">{line.materialName}</span>
-                                    <span className="font-semibold">
-                                      {formatVnd(line.amountPerSqm)}
-                                    </span>
-                                  </div>
-                                  <p className="text-xs text-muted-foreground">
-                                    {catalogType === "Boq"
-                                      ? `${line.materialCode} · ${line.quantity} ${line.unit} · ${formatVnd(line.unitRate)}`
-                                      : `${line.materialCode} · ${line.normPerSqm} ${line.unit}/m² · ${formatVnd(line.unitRate)} · ${line.wastePercent}%`}
-                                  </p>
-                                  {canEditLines && (
-                                    <div className="mt-3 flex justify-end gap-2 border-t pt-2">
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => openEditLine(line)}
-                                      >
-                                        <Pencil className="mr-1 h-4 w-4" />
-                                        {t("common.edit")}
-                                      </Button>
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        className="text-destructive hover:text-destructive"
-                                        onClick={() => {
-                                          setLineError(null);
-                                          setDeletingLine(line);
-                                        }}
-                                      >
-                                        <Trash2 className="mr-1 h-4 w-4" />
-                                        {t("materialRates.line.delete")}
-                                      </Button>
-                                    </div>
-                                  )}
-                                </li>
-                              ))}
-                            </ul>
+
+                            {importErrors.length > 0 && (
+                              <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3">
+                                <p className="mb-2 text-sm font-medium text-destructive">
+                                  {t("materialRates.import.errors")}
+                                </p>
+                                <ul className="space-y-1 text-xs text-destructive">
+                                  {importErrors.map((item, index) => (
+                                    <li key={`${item.row}-${item.column}-${index}`}>
+                                      {item.row
+                                        ? t("materialRates.import.errorLocation", {
+                                            row: item.row,
+                                            column: item.column ?? "—",
+                                          })
+                                        : ""}{" "}
+                                      {importErrorMessage(item)}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+
+                            {selectedRevision.lines.length === 0 ? (
+                              <p className="rounded border border-dashed p-6 text-center text-sm text-muted-foreground">
+                                {t(
+                                  catalogType === "Boq"
+                                    ? "materialRates.lines.emptyBoq"
+                                    : "materialRates.lines.empty",
+                                )}
+                              </p>
+                            ) : (
+                              <>
+                                <div className="hidden overflow-x-auto md:block">
+                                  <table className="w-full min-w-[720px] divide-y text-sm">
+                                    <thead className="bg-muted/40 text-xs text-muted-foreground">
+                                      <tr>
+                                        <th className="px-2 py-2 text-left">
+                                          {t(
+                                            catalogType === "Boq"
+                                              ? "materialRates.field.itemCode"
+                                              : "materialRates.field.materialCode",
+                                          )}
+                                        </th>
+                                        <th className="px-2 py-2 text-left">
+                                          {t(
+                                            catalogType === "Boq"
+                                              ? "materialRates.field.itemName"
+                                              : "materialRates.field.materialName",
+                                          )}
+                                        </th>
+                                        <th className="px-2 py-2 text-left">
+                                          {t("materialRates.field.unit")}
+                                        </th>
+                                        {catalogType === "Boq" ? (
+                                          <>
+                                            <th className="px-2 py-2 text-right">
+                                              {t("materialRates.field.quantity")}
+                                            </th>
+                                            <th className="px-2 py-2 text-right">
+                                              {t("materialRates.field.unitRate")}
+                                            </th>
+                                            <th className="px-2 py-2 text-right">
+                                              {t("materialRates.field.totalAmount")}
+                                            </th>
+                                          </>
+                                        ) : (
+                                          <>
+                                            <th className="px-2 py-2 text-right">
+                                              {t("materialRates.field.normPerSqm")}
+                                            </th>
+                                            <th className="px-2 py-2 text-right">
+                                              {t("materialRates.field.unitRate")}
+                                            </th>
+                                            <th className="px-2 py-2 text-right">
+                                              {t("materialRates.field.wastePercent")}
+                                            </th>
+                                            <th className="px-2 py-2 text-right">
+                                              {t("materialRates.field.amountPerSqm")}
+                                            </th>
+                                          </>
+                                        )}
+                                        {canEditLines && (
+                                          <th className="px-2 py-2 text-right">
+                                            {t("materialRates.line.actions")}
+                                          </th>
+                                        )}
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y">
+                                      {selectedRevision.lines.map((line) => (
+                                        <tr
+                                          key={line.id}
+                                          data-testid={`material-rates-line-${line.id}`}
+                                        >
+                                          <td className="px-2 py-2">{line.materialCode}</td>
+                                          <td className="px-2 py-2 font-medium">
+                                            {line.materialName}
+                                          </td>
+                                          <td className="px-2 py-2">{line.unit}</td>
+                                          {catalogType === "Boq" ? (
+                                            <>
+                                              <td className="px-2 py-2 text-right">
+                                                {line.quantity}
+                                              </td>
+                                              <td className="px-2 py-2 text-right">
+                                                {formatVnd(line.unitRate)}
+                                              </td>
+                                              <td className="px-2 py-2 text-right font-medium">
+                                                {formatVnd(line.amountPerSqm)}
+                                              </td>
+                                            </>
+                                          ) : (
+                                            <>
+                                              <td className="px-2 py-2 text-right">
+                                                {line.normPerSqm}
+                                              </td>
+                                              <td className="px-2 py-2 text-right">
+                                                {formatVnd(line.unitRate)}
+                                              </td>
+                                              <td className="px-2 py-2 text-right">
+                                                {line.wastePercent}%
+                                              </td>
+                                              <td className="px-2 py-2 text-right font-medium">
+                                                {formatVnd(line.amountPerSqm)}
+                                              </td>
+                                            </>
+                                          )}
+                                          {canEditLines && (
+                                            <td className="px-2 py-2">
+                                              <div className="flex justify-end gap-1">
+                                                <Button
+                                                  size="icon"
+                                                  variant="ghost"
+                                                  data-testid={`material-rates-line-edit-${line.id}`}
+                                                  aria-label={`${t("common.edit")} ${line.materialName}`}
+                                                  onClick={() => openEditLine(line)}
+                                                >
+                                                  <Pencil className="h-4 w-4" />
+                                                </Button>
+                                                <Button
+                                                  size="icon"
+                                                  variant="ghost"
+                                                  className="text-destructive hover:text-destructive"
+                                                  data-testid={`material-rates-line-delete-${line.id}`}
+                                                  aria-label={`${t("materialRates.line.delete")} ${line.materialName}`}
+                                                  onClick={() => {
+                                                    setLineError(null);
+                                                    setDeletingLine(line);
+                                                  }}
+                                                >
+                                                  <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                              </div>
+                                            </td>
+                                          )}
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                                <ul className="grid gap-2 md:hidden">
+                                  {selectedRevision.lines.map((line) => (
+                                    <li
+                                      key={line.id}
+                                      className="rounded border p-3 text-sm"
+                                      data-testid={`material-rates-line-card-${line.id}`}
+                                    >
+                                      <div className="flex justify-between gap-2">
+                                        <span className="font-medium">{line.materialName}</span>
+                                        <span className="font-semibold">
+                                          {formatVnd(line.amountPerSqm)}
+                                        </span>
+                                      </div>
+                                      <p className="text-xs text-muted-foreground">
+                                        {catalogType === "Boq"
+                                          ? `${line.materialCode} · ${line.quantity} ${line.unit} · ${formatVnd(line.unitRate)}`
+                                          : `${line.materialCode} · ${line.normPerSqm} ${line.unit}/m² · ${formatVnd(line.unitRate)} · ${line.wastePercent}%`}
+                                      </p>
+                                      {canEditLines && (
+                                        <div className="mt-3 flex justify-end gap-2 border-t pt-2">
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={() => openEditLine(line)}
+                                          >
+                                            <Pencil className="mr-1 h-4 w-4" />
+                                            {t("common.edit")}
+                                          </Button>
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="text-destructive hover:text-destructive"
+                                            onClick={() => {
+                                              setLineError(null);
+                                              setDeletingLine(line);
+                                            }}
+                                          >
+                                            <Trash2 className="mr-1 h-4 w-4" />
+                                            {t("materialRates.line.delete")}
+                                          </Button>
+                                        </div>
+                                      )}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </>
+                            )}
                           </>
                         )}
                       </div>

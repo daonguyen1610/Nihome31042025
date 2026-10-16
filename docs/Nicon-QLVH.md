@@ -412,24 +412,34 @@ Quản lý giá đầu vào, lựa chọn NCC/thầu phụ, hạn mức thực h
 - BOQ import workbook một/nhiều sheet có preview, mapping, lỗi theo sheet/ô,
   provenance và xác nhận; không hard-code mẫu khách hàng.
 
-**Target — BOQ nhiều loại và trường cấu hình (yêu cầu người dùng 17/10/2026):**
-cho phép tạo danh mục/loại BOQ và bộ trường phù hợp từng loại, tái sử dụng cho
-form, import và export. Loại nội dung (ví dụ CSA, MEP hoặc dịch vụ từ workbook
-mẫu) tách khỏi mục đích BOQ sơ bộ, dự thầu, quantity takeoff, thực hiện và chốt
-cuối. Một workbook có thể có nhiều sheet và một sheet có nhiều vùng bảng với
-schema khác nhau. Danh mục, field key, kiểu dữ liệu, validation và nhãn bốn ngôn
-ngữ được quản lý trên server; schema được version và snapshot theo revision,
-không sửa ngầm hồ sơ đã duyệt. Trường mở rộng không thay được business root,
-approval hay quy tắc chỉ Execution BOQ Approved hiện hành làm hạn mức MR/kho.
+**Implemented — nhập BOQ theo danh mục cấu hình (yêu cầu 17/10/2026):**
+Danh mục đơn giá BOQ hiện có giữ bộ sheet/trường riêng; không tạo một module
+“loại BOQ” trùng với danh mục. Có sáu cấu hình ban đầu rút từ sáu workbook nguồn
+có cấu trúc khác nhau (manifest `Data/Seeds/boq-categories.json`); các nhóm
+trường giống nhau được tái sử dụng trong manifest. ADMIN/người có quyền
+`crm.material-rates.manage` có thể tạo danh mục, sao chép/chỉnh cấu hình trước
+phiên bản đầu tiên, chọn sheet thêm/sửa/bỏ dòng hoặc tải mẫu Excel đúng danh
+mục → điền → kiểm tra → xác nhận import vào Draft.
 
-**Partial hiện tại:** có nhiều catalog và mẫu mapping cột, chưa có bộ trường
-động theo loại, hierarchy/provenance từng dòng hoặc import trực tiếp đúng cả bộ
-workbook nguồn. `BoqImportTemplate` hiện chỉ cấu hình header/vị trí cột cố định.
-Tên loại, field bắt buộc, công thức/đơn vị/làm tròn, phụ lục không có giá,
-re-import/line identity và approval matrix chi tiết còn là **Open decision** của
-owner BOQ/QS và Product Owner; không dùng tên file/sheet hoặc sample value làm
-quy tắc. File gốc được giữ bất biến; external links, lỗi formula và text-number
-phải được công bố/xử lý có kiểm soát, không tự đổi thành 0 hay bỏ kiểm tra an toàn.
+Cùng cấu hình kiểm tra cả nhập tay và import trên server: đúng catalog/revision,
+sheet, field keys, required/type/length/precision, mã dòng duy nhất trong sheet.
+File có dấu nhận diện catalog và hash cấu hình; sai danh mục/cột/sheet bị từ
+chối, không ghép tự do. Cấu hình khóa từ phiên bản đầu; đổi bộ trường phải tạo
+catalog mới, không âm thầm chuyển dữ liệu cũ. Schema hiện hỗ trợ Text/Number,
+nhãn VI/EN/ZH/JA và phân biệt sheet có giá với thông tin tham khảo. Dòng tham
+khảo không trở thành đơn giá hoặc allowance; chỉ dòng có giá đi vào Quote
+snapshot theo luồng hiện có. Trạng thái duyệt và hạn mức Execution BOQ vẫn là
+quy tắc độc lập, không suy từ danh mục nội dung.
+
+**Partial cho phạm vi BOQ nâng cao:** mẫu tải xuống là mẫu nhập an toàn chuẩn
+hóa theo danh mục, không phải bản sao giữ toàn bộ layout/formula của file nguồn.
+Không tự tính khối lượng từ kích thước hoặc cộng các giá thành phần thành giá
+tổng; người nhập cung cấp quantity/unit price tổng đã kiểm tra. Import nhận ô
+số typed numeric, không formula, text-number, macro hay external link; file nguồn
+trong docs giữ nguyên. Giữ hierarchy/provenance từng cell, tự chuyển đổi schema,
+re-import hợp nhất theo UID và tính lại Excel đầy đủ vẫn là Target riêng. Quyết
+định ISO/approval matrix hoặc công thức không được coi là đã chốt bởi việc có
+cấu hình nhập liệu này.
 
 ## 8. Module 6 — Tài chính, chi phí và hợp đồng
 
