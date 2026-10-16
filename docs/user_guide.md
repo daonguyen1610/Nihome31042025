@@ -243,7 +243,8 @@ record version. The database code and immutable change history are saved
 together. If the project already has Drive folders, the detail page shows the
 background folder-rename status. A failed rename can be queued again without
 creating another folder or changing its Drive ID. A stale screen is rejected;
-reload before retrying.
+reload before retrying. The project list also finds a renamed project when you
+search for its former code; normal project visibility rules still apply.
 
 The detail view's **Project documents** section provides the project-wide file
 catalog. Users with view permission can inspect synchronization status,

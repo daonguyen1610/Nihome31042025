@@ -572,6 +572,11 @@ hoặc bằng chứng cho hướng tạo trực tiếp:
    Báo giá, Hợp đồng, file/snapshot đã phát hành giữ mã tại thời điểm phát hành.
    Lịch sử mã cũ được giữ vĩnh viễn và phải tìm kiếm được như alias.
 
+**Delivery note Q-05:** Danh sách Dự án đã tìm được bằng mã cũ trong lịch sử
+đổi mã và vẫn áp project scope. Chưa có ràng buộc duy nhất xuyên suốt lịch sử
+mã cũ ở cấp database; cần kiểm kê dữ liệu cũ, thiết kế registry/unique constraint
+và rehearsal migration trước khi cam kết không bao giờ tái sử dụng alias.
+
 #### Q-06 — Trình nội bộ Thiết kế
 
 1. Người nhận nội bộ chỉ comment hay mỗi người phải Accept/Reject?
