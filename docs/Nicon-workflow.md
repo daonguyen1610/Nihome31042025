@@ -341,6 +341,26 @@ thêm từng dòng tại Quote chỉ bổ sung ngoại lệ cục bộ, không t
 không thay thế quy trình chuẩn hoá workbook. Không dùng vùng nhập text/clipboard
 tự do cho BOQ của Quote.
 
+**Target — luồng đa loại BOQ/trường cấu hình, yêu cầu người dùng 17/10/2026:**
+người có quyền tạo danh mục/loại và schema field versioned → tạo Draft revision
+đúng mục đích nghiệp vụ → chọn schema cho từng sheet/vùng bảng → preview/mapping
+canonical field và field kỹ thuật → xác nhận/đối soát → lưu atomic với file hash,
+schema snapshot và provenance từng dòng → duyệt theo lifecycle tương ứng →
+Quote/Execution sử dụng đúng revision được phép. Schema mô tả nội dung không
+tự quyết định một BOQ có được làm hạn mức vật tư hay không.
+
+Một workbook không bắt buộc chỉ dùng một schema; không biến cover/summary,
+dòng diễn giải takeoff hoặc danh mục vật tư tham khảo thành detail có giá để
+tính tổng hai lần. Quy tắc dòng dương/giá không âm phía trên vẫn áp cho importer
+rate hiện tại; schema tham khảo không có giá là Target riêng, chưa được importer
+hiện tại hỗ trợ. Chỉnh schema phải tạo version và có cơ chế chuyển đổi rõ ràng,
+không làm đổi số liệu Approved hoặc mất liên kết Quote/MR/VO. Bộ field bắt buộc,
+quy tắc công thức, re-import và approval cần owner BOQ/QS/Product Owner chốt.
+
+**Partial:** hiện mới có catalog và mapping 5 cột; chưa có quản lý field động
+hay trọn luồng nhiều schema này. File mẫu `docs/Nicon/BOQ/` là nguồn khảo sát,
+không tự trở thành template nghiệp vụ được duyệt.
+
 ## 7. Google Drive và tài liệu
 
 ### 7.1. Cây mục tiêu NICON
