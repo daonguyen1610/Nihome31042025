@@ -1240,8 +1240,9 @@ the quote. Creating a contract with a quote, or changing its quote, applies
 the same approved-status rule. An `Approved` or `SentToCustomer` quote must
 also be within its validity period; `CustomerApproved` is terminal. An
 `Upstream` contract may instead be created from an Opportunity with an
-already-agreed value and no quote. A won tender's approved estimate does not
-replace an optional CRM customer quotation.
+already-agreed value and no quote. This is the second confirmed business path,
+not a legacy-data exception. A won tender's approved estimate does not replace
+an optional CRM customer quotation.
 `Downstream` supplier/subcontractor contracts cannot reference a CRM customer
 quote.
 The quote deletion-impact plan blocks deletion while any contract references

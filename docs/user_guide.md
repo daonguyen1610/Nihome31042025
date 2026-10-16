@@ -1237,20 +1237,22 @@ Manage primary contracts linked to projects and customers. Define contract value
 | Contract master maintenance | Create and edit the shared Upstream Contract only in CRM > Contract registry; Finance does not duplicate this form | Implemented |
 | Contract detail | A Finance row opens the one canonical Contract record and preserves a return link to the filtered Receivables workspace; no second Finance detail form exists | Implemented |
 
-The current screen allows Sales to create an Upstream customer contract directly
-from an Opportunity and treats a quotation as optional. This is an implementation
-gap against the controlling 03/10 baseline, which requires a quotation before
-every Upstream contract. Until the product flow is corrected, users should
-approve the quotation internally, have Finance record and approve the commercial
-review of contract conditions, guarantees, and payment terms on the quotation's
-Operational Project work package, then open **Send to customer**, check or enter
-the customer email address, review the subject and message, then send. Users with
+Sales can create an Upstream customer contract in either of two ways. Use
+**Create contract** directly from the Opportunity when the customer already
+knows and has agreed the contract value; no quotation is required for this
+path. Alternatively, create the contract from an internally approved,
+unexpired and unused quotation. In the quotation path, Finance first records
+and approves the commercial review of contract conditions, guarantees, and
+payment terms on the quotation's Operational Project work package. The source
+quotation must match the contract's customer, project and Opportunity. A
+downstream supplier contract does not use a customer quotation.
+
+To send the quotation, open **Send to customer**, check or enter the customer
+email address, review the subject and message, then send. Users with
 quote-management permission may edit the subject and message; send permission
 is required to dispatch. The dialog identifies the generated `.xlsx`
 attachment before sending. The email contains the priced lines and total and
-attaches the localized Excel quotation. A sent quote must still be approved,
-valid, and consistent with the contract's customer and project. A downstream
-supplier contract does not use a customer quote.
+attaches the localized Excel quotation.
 
 Every new primary contract starts as **Draft**. In **Contract registry**, use the
 explicit status actions on the detail page to sign, start, pause, complete, or
