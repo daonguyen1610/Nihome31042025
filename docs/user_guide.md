@@ -142,19 +142,19 @@ automatically current delivery estimate. Its **Tiến độ hiện tại** sheet
 and 48 `Not Implement`. The workbook's main requirement sheet marks 291 entries
 `Chưa thực hiện`, but does not provide a complete numeric manday column.
 
-The previously published total of 123 tasks and 265.5 frontend mandays cannot be
-reconciled to the current workbook and is therefore withdrawn. Do not use a task
+The previously published task-count and frontend-effort totals cannot be
+reconciled to the current workbook and are therefore withdrawn. Do not use a task
 count or effort total for commercial or delivery planning unless the workbook
 version, included rows, formula, backend/QA/deployment scope, assumptions, and
 approval date are recorded. Interactive Gantt, workflow builder, offline mobile,
 multi-sheet BOQ import, and floor-plan annotation require separate discovery or
 prototype estimates.
 
-All page-level `Estimate` values retained later in this guide are legacy planning
-notes from the earlier document. They are neither an approved baseline nor a
-measure of delivered scope and must not be summed or quoted commercially. Use
-the implementation labels and source-backed workflow descriptions instead;
-re-estimate remaining work only after the open business decisions are approved.
+The earlier guide's page-level day estimates have been removed: the workbook's
+main `Nicon` sheet has an `Estimate(manday)` column but no numeric values to
+reconcile them against. A dash in a page table means that page has not been
+classified separately; use the module status and source-backed workflow above.
+Re-estimate remaining work only after the open business decisions are recorded.
 
 ### 2.4 Implementation Status
 
@@ -348,11 +348,11 @@ Procurement in the platform is **Cung ứng**.
 
 Maintain individual and corporate customer records. Support multiple contact persons per customer. Link customers to leads, opportunities, quotations, contracts, and projects. Track customer status through the lifecycle: potential, in-transaction, signed, inactive. Store legal documents (tax ID, address, legal representative). Maintain a customer care timeline with callback and visit reminders.
 
-| Page | Functions | Estimate |
-|------|-----------|----------|
-| Customer List | Search, filter, navigate to detail | 1.5 days |
-| Customer Create/Edit | Create and update customer information | 2 days |
-| Customer Detail | Overview, contacts, care history, related records | 2.5 days |
+| Page | Functions |
+|------|-----------|
+| Customer List | Search, filter, navigate to detail |
+| Customer Create/Edit | Create and update customer information |
+| Customer Detail | Overview, contacts, care history, related records |
 
 #### 3.1.2 Lead Management
 
@@ -370,11 +370,11 @@ seeded values are Unclassified, Residential, Commercial, and Hospitality;
 administrators can maintain this taxonomy centrally. Lists and forms support
 segment filtering while consultation activities retain the care history.
 
-| Page | Functions | Estimate |
-|------|-----------|----------|
-| Lead List | Filter by source, status, assigned sales | 1.5 days |
-| Lead Create/Edit | Create lead, update info, assign sales | 2 days |
-| Lead Detail | Lead info, consultation history, convert to opportunity | 2.5 days |
+| Page | Functions |
+|------|-----------|
+| Lead List | Filter by source, status, assigned sales |
+| Lead Create/Edit | Create lead, update info, assign sales |
+| Lead Detail | Lead info, consultation history, convert to opportunity |
 
 #### 3.1.3 Opportunity Management
 
@@ -436,12 +436,12 @@ also prefills that quotation and its price. Approved/Sent quotations must be
 unexpired; Customer-approved quotations remain eligible. A tender estimate is
 not itself a CRM customer quotation.
 
-| Page | Functions | Estimate |
-|------|-----------|----------|
-| Opportunity List | Filter by stage, sales, status | 1.5 days |
-| Opportunity Create/Edit | Create/update value, probability, stage | 2 days |
-| Opportunity Detail | Track info, documents, win/loss result | 2 days |
-| Pipeline Kanban | Kanban board by sales stage | 2.5 days |
+| Page | Functions |
+|------|-----------|
+| Opportunity List | Filter by stage, sales, status |
+| Opportunity Create/Edit | Create/update value, probability, stage |
+| Opportunity Detail | Track info, documents, win/loss result |
+| Pipeline Kanban | Kanban board by sales stage |
 
 #### 3.1.4 Direct Quotation
 
@@ -532,13 +532,13 @@ Approve the revision through the normal catalog lifecycle, then apply that
 approved revision to a BOQ quotation. Workbook import never edits a quotation
 directly.
 
-| Page | Functions | Estimate |
-|------|-----------|----------|
-| Quotation List | Filter by customer, opportunity, status | 1.5 days |
-| Quotation Create/Edit | BOQ-based or rate-based pricing, discount, VAT | 3.5 days |
-| Quotation Detail | Version control, internal approval, Excel export | 2.5 days |
-| Excel Export | Customer-ready workbook with priced lines and totals | 2.5 days |
-| Version Comparison | Diff view between quotation versions | 2 days |
+| Page | Functions |
+|------|-----------|
+| Quotation List | Filter by customer, opportunity, status |
+| Quotation Create/Edit | BOQ-based or rate-based pricing, discount, VAT |
+| Quotation Detail | Version control, internal approval, Excel export |
+| Excel Export | Customer-ready workbook with priced lines and totals |
+| Version Comparison | Diff view between quotation versions |
 
 #### 3.1.5 Tender Management
 
@@ -604,12 +604,12 @@ negotiation and create contract**; contract creation remains a deliberate user
 action after commercial negotiation. Tender codes `TD-YYYY-NNNN` continue from the highest code in use,
 so deleting a tender never blocks creating new ones.
 
-| Page | Functions | Estimate |
-|------|-----------|----------|
-| Tender List | Status, deadline tracking | 1.5 days |
-| Tender Create/Edit | Tender package setup, invitation details | 2 days |
-| Tender Detail | Document checklist, preparation progress, results | 2.5 days |
-| Capability Documents | Repository CRUD | 2 days |
+| Page | Functions |
+|------|-----------|
+| Tender List | Status, deadline tracking |
+| Tender Create/Edit | Tender package setup, invitation details |
+| Tender Detail | Document checklist, preparation progress, results |
+| Capability Documents | Repository CRUD |
 
 #### 3.1.6 Site Survey Digitization
 
@@ -636,11 +636,11 @@ To change accounts, select **Disconnect** and then **Connect Google Drive**, or 
 
 Every Survey persists an Operational Project and stores media in that project's configured `01_Khao_sat` category. Opportunity, project, and customer relationships must agree. Reassigning a Survey stages current media into the new project. Deployment backfills historical Surveys from their linked Opportunity and aborts atomically if any row cannot be routed; unrouted Surveys are not supported at runtime. Files added or changed directly in a managed project folder are reflected in the Nicon catalog. Deletion through Nicon moves the Drive replica to trash so it remains recoverable. `Read only` means the OAuth account can see the folder but cannot add files, and `Invalid folder` means the configured ID is not a live folder. The worker uploads only while the connection is `Connected`, makes at most three claims per file, and rejects retry or deletion while a file is actively synchronizing.
 
-| Page | Functions | Estimate |
-|------|-----------|----------|
-| Survey List | By lead, opportunity, or project | 1.5 days |
-| Survey Create/Edit | Create survey record, update info | 2 days |
-| Survey Detail | Notes, checklist, photo/video/file upload, Drive sync | 3 days |
+| Page | Functions |
+|------|-----------|
+| Survey List | By lead, opportunity, or project |
+| Survey Create/Edit | Create survey record, update info |
+| Survey Detail | Notes, checklist, photo/video/file upload, Drive sync |
 
 #### 3.1.7 Customer Contract Management
 
@@ -704,11 +704,11 @@ allocated authoritatively when the form is saved, so it may advance if another
 contract was created in the meantime. Custom numbers must be unique and cannot
 exceed 40 characters.
 
-| Page | Functions | Estimate |
-|------|-----------|----------|
-| Contract List | Filter by project, customer, status | 1.5 days |
-| Contract Create/Edit | Create new or from quotation, update terms | 2.5 days |
-| Contract Detail | Info, appendices, payment schedule, attachments, convert to project | 3 days |
+| Page | Functions |
+|------|-----------|
+| Contract List | Filter by project, customer, status |
+| Contract Create/Edit | Create new or from quotation, update terms |
+| Contract Detail | Info, appendices, payment schedule, attachments, convert to project |
 
 ### 3.2 Module 2: Design Management (3-Phase)
 
@@ -732,31 +732,31 @@ to the same Operational Project and match the selected vendor; selecting only
 one field is rejected. This reference does not copy vendor or contract master
 data into the Design module.
 
-| Page | Functions | Estimate |
-|------|-----------|----------|
-| Design Project List | All design projects | 1.5 days |
-| Design Project Create/Edit | Create and update design project | 2 days |
-| Design Project Detail | Overview and 3-phase progress tracking | 2.5 days |
+| Page | Functions |
+|------|-----------|
+| Design Project List | All design projects |
+| Design Project Create/Edit | Create and update design project |
+| Design Project Detail | Overview and 3-phase progress tracking |
 
 #### 3.2.2 Phase 1: Concept Design
 
 Manage architectural 3D models and functional floor plans. Attach presentation images and files. Record client feedback and revision notes. Manage concept versions. Submit for client approval.
 
-| Page | Functions | Estimate |
-|------|-----------|----------|
-| Concept List | Concept documents by project | 1.5 days |
-| Concept Create/Edit | Create proposal, assign responsible person | 2 days |
-| Concept Detail | File upload, feedback, internal/client approval | 2.5 days |
+| Page | Functions |
+|------|-----------|
+| Concept List | Concept documents by project |
+| Concept Create/Edit | Create proposal, assign responsible person |
+| Concept Detail | File upload, feedback, internal/client approval |
 
 #### 3.2.3 Phase 2: Basic Design
 
 Manage drawings for construction permit applications. Maintain technical descriptions. Classify documents by discipline (Architecture, Structure, MEP). Manage drawing versions. Attach related legal documents. Submit for review and approval.
 
-| Page | Functions | Estimate |
-|------|-----------|----------|
-| Basic Design List | Documents by project | 1.5 days |
-| Basic Design Create/Edit | Create and update documents | 2 days |
-| Basic Design Detail | Drawing catalog, descriptions, file upload, approval status | 2.5 days |
+| Page | Functions |
+|------|-----------|
+| Basic Design List | Documents by project |
+| Basic Design Create/Edit | Create and update documents |
+| Basic Design Detail | Drawing catalog, descriptions, file upload, approval status |
 
 #### 3.2.4 Phase 3: Detail Design
 
@@ -776,31 +776,31 @@ permanently deleted even if the later decision is Rejected. Correct it with a
 recorded client decision and a replacement revision so the submitted evidence
 and lineage remain auditable.
 
-| Page | Functions | Estimate |
-|------|-----------|----------|
-| Detail Design List | Documents by project | 1.5 days |
-| Detail Design Create/Edit | Create and update documents | 2 days |
-| Detail Design by Discipline | Discipline management, drawing list, cross-review | 3 days |
+| Page | Functions |
+|------|-----------|
+| Detail Design List | Documents by project |
+| Detail Design Create/Edit | Create and update documents |
+| Detail Design by Discipline | Discipline management, drawing list, cross-review |
 
 #### 3.2.5 Revision Control
 
 Track drawing revision history. Create new revisions with change justification. Compare revision versions. Mark the active version. Withdraw or lock old drawings. Notify relevant departments of version updates.
 
-| Page | Functions | Estimate |
-|------|-----------|----------|
-| Revision List | Revisions for a document/drawing | 1 day |
-| Revision Create/Edit | New revision with change reason | 1.5 days |
-| Revision Detail/History | Change history, withdrawal, audit log | 2 days |
+| Page | Functions |
+|------|-----------|
+| Revision List | Revisions for a document/drawing |
+| Revision Create/Edit | New revision with change reason |
+| Revision Detail/History | Change history, withdrawal, audit log |
 
 #### 3.2.6 IFC (Issued For Construction) Issuance
 
 Submit drawings for approval before issuance. Apply electronic "Issued For Construction" stamp. Lock issued drawings from further editing. Distribute to construction and supervision teams. Track issuance history.
 
-| Page | Functions | Estimate |
-|------|-----------|----------|
-| IFC List | Issued documents by project | 1 day |
-| IFC Create/Edit | Create/update issuance batch | 1.5 days |
-| IFC Detail | Issuance record, electronic stamp, recipient tracking | 2 days |
+| Page | Functions |
+|------|-----------|
+| IFC List | Issued documents by project |
+| IFC Create/Edit | Create/update issuance batch |
+| IFC Detail | Issuance record, electronic stamp, recipient tracking |
 
 ### 3.3 Module 3: Permitting
 
@@ -967,12 +967,12 @@ business decisions and controlled compatibility migration.
 
 Create construction schedules with phases and work items (WBS). Assign responsible personnel. Set start and end dates. Track actual completion percentage. Update progress from the field. Display Gantt chart with dependency lines. Alert on overdue tasks. Support drag-and-drop task bars, resize duration, and zoom (day/week/month).
 
-| Page | Functions | Estimate |
-|------|-----------|----------|
-| Task List | Tasks/WBS by project and phase | 1.5 days |
-| Task Create/Edit | Create task, update plan/actual/percentage | 2 days |
-| Gantt Chart Detail | Interactive Gantt, dependencies, personnel assignment, alerts | 5 days |
-| Interactive Gantt UI | Drag-drop, resize, zoom, dependency lines | 6 days |
+| Page | Functions |
+|------|-----------|
+| Task List | Tasks/WBS by project and phase |
+| Task Create/Edit | Create task, update plan/actual/percentage |
+| Gantt Chart Detail | Interactive Gantt, dependencies, personnel assignment, alerts |
+| Interactive Gantt UI | Drag-drop, resize, zoom, dependency lines |
 
 #### 3.4.2 Electronic Site Log
 
@@ -980,22 +980,22 @@ Open **Admin > Construction > Site Diary** to record daily weather, workforce, e
 
 The lifecycle is **Draft → Submitted → Confirmed**. Only Draft diaries can be edited; reopen a Submitted or Confirmed diary to Draft when its content needs correction. Users with management permission can permanently delete a diary in any status when it was created or transitioned accidentally. Single and bulk deletion always show a destructive confirmation and cannot be undone; the single-delete audit event retains the removed record snapshot.
 
-| Page | Functions | Estimate |
+| Page | Functions | Delivery status |
 |------|-----------|----------|
 | Site Log List | Filters, status summary, responsive CRUD actions, and bulk delete | Implemented |
 | Site Log Create/Edit | Create Draft logs; edit after reopening when required | Implemented |
 | Site Log Detail | View workflow metadata, submit, confirm, reopen, and force delete | Implemented |
-| Mobile Media Upload | Camera picker, gallery, upload progress, thumbnails | 2 days |
+| Mobile Media Upload | Camera picker, gallery, upload progress, thumbnails | — |
 
 #### 3.4.3 Partial Acceptance (Phase/Section Acceptance)
 
 Open **Admin > Construction > Partial Acceptance** to manage phase or work-item acceptance records. Authorized users can search, filter, sort, and paginate records by project, linked construction task, responsible person, acceptance date, and workflow status. Create or edit records with participants, findings, and related document or photo paths, then move them through Draft, Submitted, Approved, Rejected, or Cancelled states. Rejected records can be revised and resubmitted; approved and cancelled records are locked. Unless granted the view-all permission, users only see records connected to their project assignment, linked task ownership, creation, or workflow participation.
 
-| Page | Functions | Estimate |
-|------|-----------|----------|
-| Acceptance List | Scoped records, operational filters, sorting, pagination, summary counts | 1.5 days |
-| Acceptance Create/Edit | Project/task linkage, participants, findings, documents | 2 days |
-| Acceptance Detail | Workflow history, responsible users, documents, permitted actions | 2.5 days |
+| Page | Functions |
+|------|-----------|
+| Acceptance List | Scoped records, operational filters, sorting, pagination, summary counts |
+| Acceptance Create/Edit | Project/task linkage, participants, findings, documents |
+| Acceptance Detail | Workflow history, responsible users, documents, permitted actions |
 
 #### 3.4.4 Full Acceptance (Handover)
 
@@ -1013,11 +1013,11 @@ The lifecycle is **Draft → Ready for Handover → Handed Over**. Managers may 
 
 Handover access is permission-based. `construction.handover.view` opens the workspace, `view.all` removes project-assignment restrictions for reads and CSV export, `manage` enables scoped create/update/delete and preparation-state transitions, `manage.all` removes project-assignment restrictions for mutations, and `complete` authorizes final completion. Read-all access never implies write-all access. A scoped responsible user cannot reassign the record unless they are also the project manager or design lead.
 
-| Page | Functions | Estimate |
-|------|-----------|----------|
-| Handover List | Handover records by project | 1.5 days |
-| Handover Create/Edit | Create and update handover records | 2 days |
-| Handover Detail | Checklist, commissioning, acceptance record | 2.5 days |
+| Page | Functions |
+|------|-----------|
+| Handover List | Handover records by project |
+| Handover Create/Edit | Create and update handover records |
+| Handover Detail | Checklist, commissioning, acceptance record |
 
 #### 3.4.5 As-Built Records
 
@@ -1025,11 +1025,11 @@ Automatically compile as-built drawings. Consolidate acceptance records for all 
 
 Open **Admin > Construction > As-Built Records** to search, filter, sort, and paginate documents by project, category, and workflow status. Authorized users can create and edit draft/submitted records, move them through Draft, Submitted, Approved, Archived, or Cancelled states, inspect the lifecycle history, and export the complete filtered list to CSV. Approved and archived records are locked; duplicate document titles within the same project are rejected. The summary cards show required-category completeness for the selected project.
 
-| Page | Functions | Estimate |
-|------|-----------|----------|
-| As-Built List | Document packages by project | 1 day |
-| As-Built Create/Edit | Create and update packages | 1.5 days |
-| As-Built Detail | Drawing compilation, acceptance records, completeness check, catalog export | 2 days |
+| Page | Functions |
+|------|-----------|
+| As-Built List | Document packages by project |
+| As-Built Create/Edit | Create and update packages |
+| As-Built Detail | Drawing compilation, acceptance records, completeness check, catalog export |
 
 #### 3.4.6 Defect Management (Punchlist)
 
@@ -1042,12 +1042,12 @@ resolution, verification and reopen count. Its lifecycle is **Open → In Progre
 attachments and floor-plan pin annotation are target features, not current
 delivered behavior.
 
-| Page | Functions | Estimate |
-|------|-----------|----------|
-| Punchlist List | Defects by project | 1 day |
-| Punchlist Create/Edit | Create defect, assign handler, set deadline | 1.5 days |
-| Punchlist Detail | Description, photos/video, status, re-open capability | 2 days |
-| Floor Plan Annotation | Upload drawing, pin defect locations, popup details | 3.5 days |
+| Page | Functions |
+|------|-----------|
+| Punchlist List | Defects by project |
+| Punchlist Create/Edit | Create defect, assign handler, set deadline |
+| Punchlist Detail | Description, photos/video, status, re-open capability |
+| Floor Plan Annotation | Upload drawing, pin defect locations, popup details |
 
 #### 3.4.7 Permanent Delete Behavior
 
@@ -1081,7 +1081,7 @@ At least one valid phone number or email address is required, and vendor codes a
 
 Before permanent deletion, the system shows an impact preview and requires the exact vendor code. Linked Contracts, Vendor Ratings, Payment Requests, shared files, or unsafe file references block deletion. Use the links in the impact dialog to resolve dependencies, or keep the Vendor inactive when its identity is required for historical reporting. Bid comparison, warehouse transactions, and creation of procurement ratings remain in their dedicated Module 5 workspaces.
 
-| Page | Functions | Estimate |
+| Page | Functions | Delivery status |
 |------|-----------|----------|
 | Vendor List | Search, filter, sort, paginate, export, view, edit, and delete vendors and subcontractors | Implemented |
 | Vendor Create/Edit | Create and update profile, contact, document-link, and active-status information | Implemented |
@@ -1113,12 +1113,12 @@ Draft downstream Supply/Subcontract contract per selected vendor. Awarded values
 and lines remain protected while signing, warehouse operations and payable
 processing continue through their existing workflows.
 
-| Page | Functions | Estimate |
-|------|-----------|----------|
-| RFQ List | Requests for quotation | 1.5 days |
-| RFQ Create/Edit | Create and update RFQ | 2 days |
-| Bid Tabulation Detail | Comparison matrix, vendor selection/approval | 3 days |
-| Interactive Comparison Matrix | Multi-vendor matrix with auto-highlight | 3 days |
+| Page | Functions |
+|------|-----------|
+| RFQ List | Requests for quotation |
+| RFQ Create/Edit | Create and update RFQ |
+| Bid Tabulation Detail | Comparison matrix, vendor selection/approval |
+| Interactive Comparison Matrix | Multi-vendor matrix with auto-highlight |
 
 #### 3.5.3 Material BOQ Management
 
@@ -1147,12 +1147,12 @@ This generalized multi-sheet workflow is target/planned unless the current
 screen explicitly exposes it. The existing approved-BOQ and MR controls remain
 authoritative until the importer is delivered.
 
-| Page | Functions | Estimate |
-|------|-----------|----------|
-| BOQ List | By project | 1.5 days |
-| BOQ Create/Edit | Create/update BOQ, Excel import | 3 days |
-| BOQ Detail | Material catalog, norms, quantities | 2 days |
-| Excel Import Wizard | Upload, column mapping preview, validation, confirm | 3 days |
+| Page | Functions |
+|------|-----------|
+| BOQ List | By project |
+| BOQ Create/Edit | Create/update BOQ, Excel import |
+| BOQ Detail | Material catalog, norms, quantities |
+| Excel Import Wizard | Upload, column mapping preview, validation, confirm |
 
 #### 3.5.4 Material Request (MR)
 
@@ -1180,7 +1180,7 @@ requests may be cancelled with a recorded reason. Submitted and decided records
 are locked against editing. The assigned procurement owner and requester receive
 notifications when responsibility changes through the workflow.
 
-| Page | Functions | Estimate |
+| Page | Functions | Delivery status |
 |------|-----------|----------|
 | MR List | Project-scoped search, filters, sorting, pagination, export, quantities, and permission-aware actions | Implemented |
 | MR Create/Edit | Create/update Drafts with project users, future required date, unique current-BOQ items, and remaining-allowance validation | Implemented |
@@ -1190,7 +1190,7 @@ notifications when responsibility changes through the workflow.
 
 Manage warehouse receipts (inbound) and issue slips (outbound). Track inventory at the construction site. Record material distribution to construction crews. Maintain inbound/outbound/stock history. Report material usage by work item.
 
-| Page | Functions | Estimate |
+| Page | Functions | Delivery status |
 |------|-----------|----------|
 | Warehouse List | Project-scoped inbound/outbound/stock, filters, pagination, and CSV export | Implemented |
 | Receipt/Issue Create/Edit | Create and update Draft warehouse transactions with source and stock validation | Implemented |
@@ -1234,7 +1234,7 @@ and immutable event history. The assigned user or Project Manager can select
 responsibility but does not close the alert. The system closes it only after the
 source discrepancy is corrected and reopens it if the condition returns.
 
-| Page | Functions | Estimate |
+| Page | Functions | Delivery status |
 |------|-----------|----------|
 | Material Alerts | Project-scoped exceptions, filters, status summary, source reconciliation, and CSV export | Implemented |
 | Material Alert Detail | Source metrics, Customer/Project/Contract context, acknowledgement, and lifecycle history | Implemented |
@@ -1247,7 +1247,7 @@ source discrepancy is corrected and reopens it if the condition returns.
 
 Manage primary contracts linked to projects and customers. Define contract value, duration, and work scope. Establish payment milestones tied to acceptance progress. Track advances and stage-based payments. Upload and store contract files and appendices. Track contract status: not started, in-progress, completed, paused. Monitor contract modification history.
 
-| Page | Functions | Estimate |
+| Page | Functions | Delivery status |
 |------|-----------|----------|
 | Receivables List | Finance > Receivables; upstream contracts with owner/project/status/end-date filters, current value after approved VO, collection-risk summary, next receivable, pagination, contextual detail return, and complete filtered CSV export | Implemented |
 | Contract master maintenance | Create and edit the shared Upstream Contract only in CRM > Contract registry; Finance does not duplicate this form | Implemented |
@@ -1287,7 +1287,7 @@ date.
 
 Manage input contracts with subcontractors and material suppliers. Define contract value, terms, and payment schedules. Track contract execution progress. Monitor payment history. Upload contract files.
 
-| Page | Functions | Estimate |
+| Page | Functions | Delivery status |
 |------|-----------|----------|
 | Payables List | Finance > Payables; Downstream supplier/subcontractor contracts with vendor/project/owner/status/date/value filters, payment-obligation summary, pagination, and complete filtered CSV export | Implemented |
 | Contract master maintenance | Create and edit the shared Downstream Supply/Subcontract Contract only in CRM > Contract registry | Implemented |
@@ -1329,29 +1329,29 @@ VO removes its adjustment from the Contract's Current value. These states
 describe current system behavior and do not replace NICON's pending approval
 of the remaining official VO policy.
 
-| Page | Functions | Estimate |
-|------|-----------|----------|
-| VO List | Variation orders by project | 1 day |
-| VO Create/Edit | Create cost increase/decrease records | 2 days |
-| VO Detail | VO information, approval workflow | 2 days |
+| Page | Functions |
+|------|-----------|
+| VO List | Variation orders by project |
+| VO Create/Edit | Create cost increase/decrease records |
+| VO Detail | VO information, approval workflow |
 
 #### 3.6.4 Project Cash Flow
 
 Record income from clients/owners. Record expenditures for materials and subcontractors. Track actual income vs. actual expenditure by project. Manage payment schedules and receivables/payables. Update payment status: unpaid, paid, overdue. Provide visual timeline charts (bar and line combination).
 
-| Page | Functions | Estimate |
-|------|-----------|----------|
-| Cash Flow Dashboard | Cash in/out tracking, planned vs. actual | 3.5 days |
-| Cash Flow Chart | Timeline visualization, filter by project/period | 2.5 days |
+| Page | Functions |
+|------|-----------|
+| Cash Flow Dashboard | Cash in/out tracking, planned vs. actual |
+| Cash Flow Chart | Timeline visualization, filter by project/period |
 
 #### 3.6.5 Profit and Loss (P&L) Report
 
 Aggregate revenue by project. Aggregate material and subcontractor costs. Calculate profit or loss per project. Compare actual costs against budget estimates. Analyze economic efficiency by project. Generate P&L reports by month, quarter, or year. Provide stacked bar charts with drill-down by project.
 
-| Page | Functions | Estimate |
-|------|-----------|----------|
-| P&L Report | Revenue/cost/profit analysis, cost breakdown | 3 days |
-| P&L Chart | Stacked bar chart with project drill-down | 2.5 days |
+| Page | Functions |
+|------|-----------|
+| P&L Report | Revenue/cost/profit analysis, cost breakdown |
+| P&L Chart | Stacked bar chart with project drill-down |
 
 ### 3.7 Module 7: Digital Assets (Google Drive Integration)
 
@@ -1397,7 +1397,7 @@ Acceptance, As-Built, or Handover retain their source-module lifecycle during
 the compatibility migration; for those sidecars, remote deletion is restored
 and concurrent edits preserve both versions for confirmation.
 
-| Page | Functions | Estimate |
+| Page | Functions | Delivery status |
 |------|-----------|----------|
 | Folder Structure Configuration | Admin-managed category paths and Drive connection settings | Implemented |
 | Project Document Catalog | Responsive list, upload, status, download, classification, retry, conflict and delete controls | Implemented |
@@ -1410,12 +1410,12 @@ and concurrent edits preserve both versions for confirmation.
 
 Overview of leads, opportunities, contracts, and projects. Construction progress tracking. Financial summary. Procurement status. Lead funnel chart (Lead to Opportunity to Quotation to Contract with conversion rates). Project progress bars with schedule overrun alerts. Tender win-rate visualization.
 
-| Page | Functions | Estimate |
-|------|-----------|----------|
-| Executive Dashboard | Multi-module overview with charts and widgets | 5 days |
-| Lead Funnel Chart | Funnel visualization with conversion rates | 2 days |
-| Project Progress Widget | Progress bars with overrun alerts | 2 days |
-| Tender Win-Rate Chart | Donut/pie chart with period filtering | 1.5 days |
+| Page | Functions |
+|------|-----------|
+| Executive Dashboard | Multi-module overview with charts and widgets |
+| Lead Funnel Chart | Funnel visualization with conversion rates |
+| Project Progress Widget | Progress bars with overrun alerts |
+| Tender Win-Rate Chart | Donut/pie chart with period filtering |
 
 #### 3.8.2 Reports
 
@@ -1439,11 +1439,11 @@ explains them in the selected interface language instead of calculating
 substitutes. Stable reason codes remain available in the API and exports for
 audit and integration use.
 
-| Page | Functions | Estimate |
-|------|-----------|----------|
-| Business Reports | Acceptance, risk, cost, permit, task reports | 3.5 days |
-| Advanced Report Filters | Multi-condition filters, date range, saved presets | 2 days |
-| Report Export | Excel and PDF export with progress indicator | 1.5 days |
+| Page | Functions |
+|------|-----------|
+| Business Reports | Acceptance, risk, cost, permit, task reports |
+| Advanced Report Filters | Multi-condition filters, date range, saved presets |
+| Report Export | Excel and PDF export with progress indicator |
 
 #### 3.8.3 Employee KPI Evaluation
 
@@ -1480,20 +1480,20 @@ for metric sources, accountability and approved calculation decisions.
 
 ### 3.9 Cross-Cutting Capabilities
 
-| Capability | Page/Screen | Functions | Estimate |
+| Capability | Page/Screen | Functions | Delivery status |
 |------------|-------------|-----------|----------|
-| Authentication | Login Page | Login form, validation, error handling, redirect | 1.5 days |
-| Authentication | Forgot Password | Email input, OTP/link, password reset | 1.5 days |
-| Authentication | User Profile | View/edit personal info, change password, avatar upload | 1.5 days |
-| Navigation | Sidebar + Layout | Sidebar navigation, collapse/expand, responsive mobile drawer | 3 days |
-| Navigation | Header Bar | Logo, breadcrumb, notification badge, user dropdown | 1.5 days |
-| Navigation | Error Pages | 404, 403, 500 pages with navigation guidance | 0.5 days |
-| Workflow | Approval Configuration | Drag-drop step builder, role assignment, skip conditions | 4 days |
-| Permissions | Roles and Permissions | Admin, Sales, Design, PM, QS, Accounting, Warehouse, Management | 3.5 days |
+| Authentication | Login Page | Login form, validation, error handling, redirect | — |
+| Authentication | Forgot Password | Email input, OTP/link, password reset | — |
+| Authentication | User Profile | View/edit personal info, change password, avatar upload | — |
+| Navigation | Sidebar + Layout | Sidebar navigation, collapse/expand, responsive mobile drawer | — |
+| Navigation | Header Bar | Logo, breadcrumb, notification badge, user dropdown | — |
+| Navigation | Error Pages | 404, 403, 500 pages with navigation guidance | — |
+| Workflow | Approval Configuration | Drag-drop step builder, role assignment, skip conditions | — |
+| Permissions | Roles and Permissions | Admin, Sales, Design, PM, QS, Accounting, Warehouse, Management | — |
 | Notifications | Notification Center | Pull-down panel, full-page notification list, module categorization, mark as read, delete, link to record | Implemented |
-| Search | Global Search and Filter | Cross-module search, advanced filter, saved filter presets | 2 days |
-| Audit Log | Audit Log Viewer | Filter by user, action, module, date range; view change details | 1.5 days |
-| Master Data | Reference Data Management | CRUD for statuses, lead sources, contract types, material types, checklist templates | 2.5 days |
+| Search | Global Search and Filter | Cross-module search, advanced filter, saved filter presets | — |
+| Audit Log | Audit Log Viewer | Filter by user, action, module, date range; view change details | — |
+| Master Data | Reference Data Management | CRUD for statuses, lead sources, contract types, material types, checklist templates | — |
 
 ---
 
