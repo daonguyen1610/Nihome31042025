@@ -2714,7 +2714,7 @@
   {"key":"rbac.group.procurement","category":"rbac","vi":"Cung ứng","en":"Procurement","zh":"采购","ja":"調達"},
   {"key":"rbac.group.design","category":"rbac","vi":"Thiết kế","en":"Design","zh":"设计","ja":"設計"},
   {"key":"rbac.group.construction","category":"rbac","vi":"Quản lý dự án – Kỹ thuật thi công","en":"Construction Management & Engineering","zh":"项目管理与施工技术","ja":"プロジェクト管理・施工技術"},
-  {"key":"rbac.group.finance","category":"rbac","vi":"Kế toán – Tài chính – Nhân sự","en":"Accounting, Finance & Human Resources","zh":"会计、财务与人力资源","ja":"会計・財務・人事"},
+  {"key":"rbac.group.finance","category":"rbac","vi":"Kế toán – Tài chính","en":"Accounting & Finance","zh":"会计与财务","ja":"会計・財務"},
   {"key":"adminRbac.groups.title","category":"rbac","vi":"Nhóm vai trò","en":"Role groups","zh":"角色组","ja":"ロールグループ"},
   {"key":"adminRbac.groups.help","category":"rbac","vi":"Mỗi nhóm có một bộ quyền mẫu dùng khi tạo vai trò mới.","en":"Each group has a permission baseline for new roles.","zh":"每个组都有用于新角色的权限基线。","ja":"各グループには新規ロール用の権限基準があります。"},
   {"key":"adminRbac.groups.roleGroup","category":"rbac","vi":"Nhóm vai trò","en":"Role group","zh":"角色组","ja":"ロールグループ"},
