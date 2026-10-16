@@ -1179,8 +1179,11 @@ const AdminPermits = () => {
           if (!open) setViewing(null);
         }}
       >
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
+        <DialogContent
+          className="flex max-h-[calc(100dvh-2rem)] max-w-2xl flex-col overflow-hidden"
+          data-testid="permit-detail-dialog"
+        >
+          <DialogHeader className="shrink-0 break-words pr-6">
             <DialogTitle>{t("permits.viewTitle")}</DialogTitle>
             <DialogDescription>
               {viewing
@@ -1189,7 +1192,7 @@ const AdminPermits = () => {
             </DialogDescription>
           </DialogHeader>
           {viewing ? (
-            <dl className="grid gap-4 rounded-lg border bg-muted/10 p-4 sm:grid-cols-2">
+            <dl className="grid min-h-0 min-w-0 gap-4 overflow-y-auto overscroll-contain rounded-lg border bg-muted/10 p-4 sm:grid-cols-2 [&>*]:min-w-0">
               <DetailValue
                 label={t("permits.field.project")}
                 value={`${viewing.operationalProjectCode ?? ""} — ${viewing.operationalProjectName ?? "—"}`}
@@ -1251,7 +1254,7 @@ const AdminPermits = () => {
                   {viewTask.canUpdateProgress &&
                   ["Planned", "InProgress"].includes(viewTask.status) ? (
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-                      <div className="flex-1 space-y-1">
+                      <div className="min-w-0 flex-1 space-y-1">
                         <Label htmlFor="permit-task-progress">
                           {t("workPackages.action.progress")}
                         </Label>
@@ -1367,7 +1370,7 @@ const AdminPermits = () => {
               </div>
             </dl>
           ) : null}
-          <DialogFooter>
+          <DialogFooter className="shrink-0 gap-2">
             <Button variant="outline" onClick={() => setViewing(null)}>
               {t("common.close")}
             </Button>
