@@ -10,8 +10,14 @@ public class ConfiguredBoqControllerTests(NihomeWebApplicationFactory factory) :
 {
     private static BoqEntryField Field(string key, string binding, bool number = false) => new()
     {
-        Key = key, Binding = binding, NameVi = key, Name = key, NameZh = key, NameJa = key,
-        Required = binding != "None", Type = number ? "Number" : "Text",
+        Key = key,
+        Binding = binding,
+        NameVi = key,
+        Name = key,
+        NameZh = key,
+        NameJa = key,
+        Required = binding != "None",
+        Type = number ? "Number" : "Text",
         MaxLength = binding == "Code" ? 38 : binding == "Unit" ? 30 : 300,
         DecimalPlaces = binding == "UnitPrice" ? 2 : 4
     };
