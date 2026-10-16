@@ -459,6 +459,37 @@ test("legal workspace updates progress and preserves input on concurrency confli
   await taskSection.getByRole("button").nth(0).click();
   expect(rejectReason).toContain("biÃªn báº£n");
   await expect(dialog).toContainText("InProgress");
+  await dialog.getByRole("button", { name: /Edit|S\u1eeda|\u7f16\u8f91|\u7de8\u96c6/i }).click();
+  const editDialog = page.getByTestId("permit-form-dialog");
+  await expect(editDialog).toBeVisible();
+  for (const viewport of [
+    { width: 390, height: 844 },
+    { width: 768, height: 1024 },
+    { width: 1920, height: 900 },
+    { width: 844, height: 390 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await expect
+      .poll(() =>
+        editDialog.evaluate((element) => {
+          const bounds = element.getBoundingClientRect();
+          return (
+            bounds.top >= 0 &&
+            bounds.left >= 0 &&
+            bounds.bottom <= window.innerHeight &&
+            bounds.right <= window.innerWidth &&
+            element.scrollWidth <= element.clientWidth
+          );
+        }),
+      )
+      .toBe(true);
+    await editDialog.getByTestId("permit-issued-file-upload").scrollIntoViewIfNeeded();
+    await expect(editDialog.getByTestId("permit-issued-file-upload")).toBeInViewport();
+    await expect(editDialog.getByRole("heading")).toBeInViewport();
+    await expect(editDialog.locator("button").nth(-2)).toBeInViewport();
+  }
+  await editDialog.locator("button").last().click();
+  await expect(editDialog).toHaveCount(0);
   await expect
     .poll(() =>
       page.evaluate(
