@@ -988,8 +988,11 @@ const AdminPermits = () => {
 
       {/* Create / edit dialog */}
       <Dialog open={dialogMode !== null} onOpenChange={(open) => (!open ? closeForm() : undefined)}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
+        <DialogContent
+          className="flex max-h-[calc(100dvh-2rem)] max-w-2xl flex-col overflow-hidden"
+          data-testid="permit-form-dialog"
+        >
+          <DialogHeader className="shrink-0 break-words pr-6">
             <DialogTitle>
               {t(dialogMode === "create" ? "permits.form.createTitle" : "permits.form.title")}
             </DialogTitle>
@@ -1005,7 +1008,7 @@ const AdminPermits = () => {
             </DialogDescription>
           </DialogHeader>
           {form ? (
-            <div className="grid gap-3 md:grid-cols-2">
+            <div className="grid min-h-0 min-w-0 gap-3 overflow-y-auto overscroll-contain md:grid-cols-2 [&>*]:min-w-0">
               {dialogMode === "create" ? (
                 <>
                   <div>
@@ -1160,7 +1163,7 @@ const AdminPermits = () => {
             </div>
           ) : null}
           {formError ? <p className="text-sm text-rose-600">{formError}</p> : null}
-          <DialogFooter>
+          <DialogFooter className="shrink-0 gap-2">
             <Button variant="outline" onClick={closeForm} disabled={saving}>
               {t("common.cancel")}
             </Button>
