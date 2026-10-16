@@ -210,6 +210,137 @@ public sealed class DepartmentWorkPackageServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task ProjectTaskWithoutKpi_RequiresIndependentVerificationBeforePackageClosure()
+    {
+        var package = await _service.CreateAsync(ProjectRequest(), _pm.Id);
+        var task = await _service.AddTaskAsync(package.Id,
+            TaskRequest(_warehouseStaff.Id, _procurementLead.Id), _procurementLead.Id);
+        var active = await _service.UpdateAsync(package.Id, new UpdateDepartmentWorkPackageRequest
+        {
+            Name = package.Name,
+            Status = "Active",
+            PlannedStart = package.PlannedStart,
+            PlannedEnd = package.PlannedEnd,
+            RowVersion = package.RowVersion,
+        }, _pm.Id);
+
+        var completed = await _service.UpdateProgressAsync(package.Id, task.Id,
+            new UpdateDepartmentWorkTaskProgressRequest
+            {
+                Status = "Completed",
+                ProgressPercent = 100,
+                RowVersion = task.RowVersion,
+            }, _warehouseStaff.Id);
+        Assert.True((await _service.GetAsync(package.Id, _procurementLead.Id, false))!
+            .Tasks.Single().CanVerify);
+
+        await Assert.ThrowsAsync<DepartmentWorkPackageOperationException>(() =>
+            _service.UpdateAsync(package.Id, new UpdateDepartmentWorkPackageRequest
+            {
+                Name = active!.Name,
+                Status = "Completed",
+                PlannedStart = active.PlannedStart,
+                PlannedEnd = active.PlannedEnd,
+                RowVersion = active.RowVersion,
+            }, _pm.Id));
+        await Assert.ThrowsAsync<DepartmentWorkPackageOperationException>(() =>
+            _service.VerifyTaskAsync(package.Id, task.Id,
+                new VerifyDepartmentWorkTaskRequest { Confirm = true, RowVersion = completed!.RowVersion },
+                _warehouseStaff.Id));
+        await Assert.ThrowsAsync<DepartmentWorkPackageOperationException>(() =>
+            _service.VerifyTaskAsync(package.Id, task.Id,
+                new VerifyDepartmentWorkTaskRequest { Confirm = false, RowVersion = completed!.RowVersion },
+                _procurementLead.Id));
+        Assert.Equal(WorkTaskStatus.Completed,
+            (await _db.DepartmentWorkTasks.SingleAsync(item => item.Id == task.Id)).Status);
+
+        var returned = await _service.VerifyTaskAsync(package.Id, task.Id,
+            new VerifyDepartmentWorkTaskRequest
+            {
+                Confirm = false,
+                Reason = "Bổ sung biên bản xác nhận vật tư",
+                RowVersion = completed!.RowVersion,
+            }, _procurementLead.Id);
+        Assert.Equal("InProgress", returned!.Status);
+        var resubmitted = await _service.UpdateProgressAsync(package.Id, task.Id,
+            new UpdateDepartmentWorkTaskProgressRequest
+            {
+                Status = "Completed",
+                ProgressPercent = 100,
+                RowVersion = returned.RowVersion,
+            }, _warehouseStaff.Id);
+        var verified = await _service.VerifyTaskAsync(package.Id, task.Id,
+            new VerifyDepartmentWorkTaskRequest { Confirm = true, RowVersion = resubmitted!.RowVersion },
+            _procurementLead.Id);
+        var refreshed = await _service.GetAsync(package.Id, _pm.Id, false);
+        var closed = await _service.UpdateAsync(package.Id, new UpdateDepartmentWorkPackageRequest
+        {
+            Name = refreshed!.Name,
+            Status = "Completed",
+            PlannedStart = refreshed.PlannedStart,
+            PlannedEnd = refreshed.PlannedEnd,
+            RowVersion = refreshed.RowVersion,
+        }, _pm.Id);
+
+        Assert.Equal("Verified", verified!.Status);
+        Assert.Equal("Completed", closed!.Status);
+        _notifications.Verify(item => item.NotifyFromTemplateAsync(
+            _procurementLead.Id, "work-task.project-awaiting-verification",
+            It.IsAny<IDictionary<string, string>>(), It.IsAny<string>(),
+            It.IsAny<int?>(), It.IsAny<string>(), It.IsAny<string>()), Times.AtLeastOnce);
+    }
+
+    [Fact]
+    public async Task ProjectTask_RejectsSelfApprovalWhenLeadIsAssignee()
+    {
+        var package = await _service.CreateAsync(ProjectRequest(), _pm.Id);
+        var request = TaskRequest(_procurementLead.Id, _procurementLead.Id);
+        request.ApproverUserId = null;
+
+        await Assert.ThrowsAsync<DepartmentWorkPackageOperationException>(() =>
+            _service.AddTaskAsync(package.Id, request, _procurementLead.Id));
+        Assert.Empty(await _db.DepartmentWorkTasks.ToListAsync());
+    }
+
+    [Fact]
+    public async Task InternalTaskWithoutKpi_StillClosesWithoutVerification()
+    {
+        var package = await _service.CreateAsync(new CreateDepartmentWorkPackageRequest
+        {
+            Kind = "Internal",
+            Name = "Đào tạo quy trình quản lý vật tư",
+            DepartmentRoleGroupId = _procurementGroup.Id,
+            LeadUserId = _procurementLead.Id,
+        }, _procurementLead.Id);
+        var taskRequest = TaskRequest(_warehouseStaff.Id, _procurementLead.Id);
+        taskRequest.ApproverUserId = null;
+        taskRequest.DepartmentRoleGroupId = _procurementGroup.Id;
+        var task = await _service.AddTaskAsync(package.Id, taskRequest, _procurementLead.Id);
+        var active = await _service.UpdateAsync(package.Id, new UpdateDepartmentWorkPackageRequest
+        {
+            Name = package.Name,
+            Status = "Active",
+            RowVersion = package.RowVersion,
+        }, _procurementLead.Id);
+        var completed = await _service.UpdateProgressAsync(package.Id, task.Id,
+            new UpdateDepartmentWorkTaskProgressRequest
+            {
+                Status = "Completed",
+                ProgressPercent = 100,
+                RowVersion = task.RowVersion,
+            }, _warehouseStaff.Id);
+        var closed = await _service.UpdateAsync(package.Id, new UpdateDepartmentWorkPackageRequest
+        {
+            Name = active!.Name,
+            Status = "Completed",
+            RowVersion = (await _service.GetAsync(package.Id, _procurementLead.Id, false))!.RowVersion,
+        }, _procurementLead.Id);
+
+        Assert.False(completed!.CanVerify);
+        Assert.Equal("Completed", closed!.Status);
+    }
+
+    [Fact]
     public async Task Task_CannotStartUntilPackageAndPredecessorAreReady()
     {
         var package = await _service.CreateAsync(ProjectRequest(), _pm.Id);

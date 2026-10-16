@@ -103,6 +103,65 @@ public sealed class DepartmentWorkPackagesControllerTests(NihomeWebApplicationFa
         }, completedTask.GetProperty("rowVersion").GetString());
         verified.StatusCode.Should().Be(HttpStatusCode.OK);
         (await ReadJsonAsync(verified)).GetProperty("status").GetString().Should().Be("Verified");
+
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var noKpiResponse = await SendAsync(HttpMethod.Post, $"/api/work-packages/{packageId}/tasks", new
+        {
+            wbsCode = "SUP-02",
+            title = "Kiểm tra biên bản giao vật tư",
+            assigneeUserId = seed.DepartmentStaffId,
+            approverUserId = seed.DepartmentLeadId,
+            plannedStart = "2026-10-19T00:00:00Z",
+            plannedEnd = "2026-10-20T00:00:00Z",
+            ccUserIds = Array.Empty<int>(),
+            predecessorTaskIds = Array.Empty<int>(),
+        });
+        noKpiResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var noKpiTask = await ReadJsonAsync(noKpiResponse);
+        var noKpiTaskId = noKpiTask.GetProperty("id").GetInt32();
+
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "WAREHOUSE"));
+        var noKpiCompleted = await SendAsync(HttpMethod.Put, $"/api/work-packages/{packageId}/tasks/{noKpiTaskId}/progress", new
+        {
+            status = "Completed",
+            progressPercent = 100,
+            rowVersion = noKpiTask.GetProperty("rowVersion").GetString(),
+        }, noKpiTask.GetProperty("rowVersion").GetString());
+        noKpiCompleted.StatusCode.Should().Be(HttpStatusCode.OK);
+        var completedNoKpiTask = await ReadJsonAsync(noKpiCompleted);
+
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        package = await ReadJsonAsync(await Client.GetAsync($"/api/work-packages/{packageId}"));
+        var prematureClosure = await SendAsync(HttpMethod.Put, $"/api/work-packages/{packageId}", new
+        {
+            name = package.GetProperty("name").GetString(),
+            status = "Completed",
+            plannedStart = package.GetProperty("plannedStart").GetString(),
+            plannedEnd = package.GetProperty("plannedEnd").GetString(),
+            rowVersion = package.GetProperty("rowVersion").GetString(),
+        }, package.GetProperty("rowVersion").GetString());
+        prematureClosure.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "PROCUREMENT"));
+        var noKpiVerified = await SendAsync(HttpMethod.Post, $"/api/work-packages/{packageId}/tasks/{noKpiTaskId}/verify", new
+        {
+            confirm = true,
+            rowVersion = completedNoKpiTask.GetProperty("rowVersion").GetString(),
+        }, completedNoKpiTask.GetProperty("rowVersion").GetString());
+        noKpiVerified.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await ReadJsonAsync(noKpiVerified)).GetProperty("status").GetString().Should().Be("Verified");
+
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        package = await ReadJsonAsync(await Client.GetAsync($"/api/work-packages/{packageId}"));
+        var closed = await SendAsync(HttpMethod.Put, $"/api/work-packages/{packageId}", new
+        {
+            name = package.GetProperty("name").GetString(),
+            status = "Completed",
+            plannedStart = package.GetProperty("plannedStart").GetString(),
+            plannedEnd = package.GetProperty("plannedEnd").GetString(),
+            rowVersion = package.GetProperty("rowVersion").GetString(),
+        }, package.GetProperty("rowVersion").GetString());
+        closed.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     [Fact]

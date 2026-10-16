@@ -117,6 +117,7 @@
   ,{"key":"workPackages.businessStatus.Rejected","category":"work-packages","vi":"Từ chối","en":"Rejected","zh":"已拒绝","ja":"却下"}
   ,{"key":"workPackages.purpose.LegalPermitting","category":"work-packages","vi":"Pháp lý và xin phép","en":"Legal permitting","zh":"法务与许可","ja":"法務・許認可"}
   ,{"key":"workPackages.reject.title","category":"work-packages","vi":"Trả lại công việc Pháp lý","en":"Return legal task","zh":"退回法务任务","ja":"法務タスクを差し戻す"}
+  ,{"key":"workPackages.reject.taskTitle","category":"work-packages","vi":"Trả lại đầu việc","en":"Return task","zh":"退回任务","ja":"タスクを差し戻す"}
   ,{"key":"workPackages.reject.reason","category":"work-packages","vi":"Lý do trả lại","en":"Return reason","zh":"退回原因","ja":"差し戻し理由"}
   ,{"key":"workPackages.toast.returned","category":"work-packages","vi":"Đã trả công việc về Đang thực hiện","en":"Task returned to In progress","zh":"任务已退回进行中","ja":"タスクを進行中に差し戻しました"}
 ]

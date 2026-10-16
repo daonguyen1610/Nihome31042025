@@ -47,14 +47,14 @@ Kinh doanh phụ trách Cơ hội / PM Dự án
   → chọn người chủ trì phòng
   → người chủ trì chia đầu việc cho nhân sự cùng phòng
   → người phụ trách cập nhật tiến độ
-  → người xác nhận độc lập xác nhận đầu việc có liên kết KPI
+  → người xác nhận độc lập xác nhận mọi đầu việc Dự án và đầu việc có KPI
 ```
 
 Nhóm theo Dự án không được tạo một Dự án khác cho phòng nhận. Hợp đồng là liên
 kết tùy chọn của nhóm và có thể bổ sung sau; nhóm vẫn thuộc Operational Project.
 Các trạng thái nhóm là `Planned → Active → Completed`, hoặc `Cancelled` theo
 chuyển trạng thái hợp lệ. Nhóm chỉ hoàn thành khi mọi đầu việc đã kết thúc và
-mọi đầu việc KPI đã được xác nhận. Quan hệ tiên quyết không được tạo vòng lặp;
+mọi đầu việc Dự án đã được xác nhận. Quan hệ tiên quyết không được tạo vòng lặp;
 đầu việc sau không được bắt đầu trước khi đầu việc trước hoàn tất.
 
 Công việc không theo hợp đồng dùng tab **Công việc nội bộ**, không mang project,
