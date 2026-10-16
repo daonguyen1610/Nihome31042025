@@ -8,14 +8,12 @@ baseline. Tài liệu cũng đối chiếu bộ tiến độ mẫu, BOQ mẫu v�
 
 ## 1. Cách đọc trạng thái
 
-- **Hiện có:** đã có model/API/UI tương ứng trong mã nguồn. Chức năng chỉ được
-  coi là sẵn sàng bàn giao khi môi trường triển khai và kiểm thử liên quan cũng
-  đạt yêu cầu.
-- **Một phần:** đã có lõi nhưng còn thiếu một phần của quy trình NICON.
-- **Mục tiêu:** yêu cầu nghiệp vụ đã ghi nhận nhưng chưa có đủ bằng chứng triển
-  khai end-to-end.
-- **Cần chốt:** còn thiếu quyết định của NICON; không được tự biến thành quy tắc
-  phần mềm.
+- **Implemented:** có persistence, API authorization, UI và test phù hợp với
+  phạm vi được nêu; không tự chứng minh đã triển khai hoặc nghiệm thu tại NICON.
+- **Partial:** đã có lát cắt sử dụng được; phải nêu rõ phần còn thiếu.
+- **Target:** yêu cầu mục tiêu chưa có đủ bằng chứng triển khai end-to-end.
+- **Open decision:** còn thiếu quyết định hoặc đầu vào nghiệp vụ có thẩm quyền;
+  phương án kỹ thuật không tự trở thành quy tắc đã nghiệm thu.
 
 `Dự án` trong tài liệu này mặc định là **Operational Project** dùng chung. Các
 `DesignProjectId` còn tồn tại trong Thiết kế, Pháp lý và một phần Thi công là

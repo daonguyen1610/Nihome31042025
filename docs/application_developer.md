@@ -2467,7 +2467,7 @@ business contract.
 
 | Decision | Current implementation assumption |
 | --- | --- |
-| D-01 | The seed defines CRM, Procurement, Construction Management, Design, and Accounting–Finance–HR. This conflicts with the 03/10 five-department baseline; Procurement/Legal placement and an independent Administration/HR group remain Q-04. |
+| D-01 | The seed defines six functional permission groups: CRM, HR, Procurement, Construction, Design, and Finance. HR is separate from Finance; Legal currently uses the Construction permission group. These are technical access baselines, not an approved six-department organization chart. The 03/10 five-department structure and Procurement/Legal placement remain Q-04. |
 | D-02 | The latest approved execution BOQ is selected atomically as final when the Operational Project completes. VOs affect it only through an explicitly approved BOQ revision. |
 | D-03 | Verified Punch Items with confirmed Design root cause count equally against the responsible designer; severity is evidence, not a KPI weight. The fixer is not automatically the responsible designer. |
 | D-04 | Confirmed HSE violations count equally against the responsible site user. Draft, Reported, Rejected and Cancelled records and diary text do not count. |
@@ -2530,7 +2530,9 @@ preparations are superseded by a new draft rather than overwritten.
 
 QA/QC dossiers require a published multilingual template, a same-project
 released IFC packet, valid checklist JSON and active same-project Project
-Documents. QS validates contract direction, dates, quantity-line totals,
+Documents. Each evidence document retains its explicit classification; legacy
+document-ID payloads remain accepted without inferring a type from the file name.
+QS validates contract direction, dates, quantity-line totals,
 milestone/appendix/approved BOQ references, and governed superseding or reversal
 references. Submitted records are immutable except through the documented
 review/correction lifecycle.

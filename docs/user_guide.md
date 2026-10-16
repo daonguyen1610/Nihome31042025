@@ -178,18 +178,18 @@ The platform is being developed incrementally. The following components are curr
 | Quotations, capability documents, and tenders | Implemented, including governed material-rate pricing, localized Excel quotation workbooks, and versioned Tender estimates |
 | Site survey digitization | Implemented, including project routing, structured conditions, CSV import, media/geolocation, Drive sync, and PDF export |
 | Customer contracts, appendices, attachments, and variation orders | Implemented |
-| Design management | Implemented: projects, Concept/Basic/Shop/IFC, Project Documents with Drive sync, linked Team/Schedule, one-approver task completion, CC, internal comment-only circulation, Design Manager consolidation and client decision gates. Concept markup and full MS Project import remain planned |
-| Permitting checklists | Core checklist implemented: owner/deadline, lifecycle, submitted/issued documents and risk filters. Project-type templates, work packages and construction-readiness integration remain planned/open |
-| Construction management (tasks/Gantt and site diaries) | Core functions implemented; the expanded CM preparation, BCH resource/QA-QC/QS portals, S-Curve threshold control, and Budget Baseline workflow are planned |
-| Acceptance and handover | Core records implemented; upstream/downstream QS payment linkage and the expanded two-level CM review are planned |
-| Punchlist management | Core functions implemented; CM overdue supervision and expanded field evidence are planned |
-| HSE violations | Operational-Project-scoped lifecycle, evidence paths, correction, confirmation/closure and concurrency are implemented; the final BCH-versus-CM approval/delegation matrix remains open |
+| Design management | Partial — projects, Concept/Basic/Shop/IFC, Project Documents with Drive sync, linked Team/Schedule, one-approver task completion, CC, internal comment-only circulation, Design Manager consolidation and client decision gates are delivered; per-file markup and full MS Project import remain target work |
+| Permitting checklists | Partial — owner/deadline, lifecycle, submitted/issued documents, risk filters and a manual activation wizard are delivered; project-type permit templates and automatic applicable-list creation remain target work |
+| Construction management (tasks/Gantt and site diaries) | Partial — core tasks/diaries plus CM preparation/readiness, BCH resource/QA-QC/QS workspaces and Budget Baseline references are delivered; editable WBS/S-Curve baseline, reproducible delay alert, portfolio review and offline/reconnect remain target work |
+| Acceptance and handover | Partial — core records and CM review of QA/QC/QS are delivered; upstream/downstream QS payment eligibility, three-section dossier and complete handover gate remain target work |
+| Punchlist management | Partial — core records are delivered; CM overdue supervision and expanded field evidence remain target work |
+| HSE violations | Partial — Operational-Project-scoped lifecycle, evidence paths, correction, confirmation/closure and concurrency are delivered; the BCH-versus-CM approval/delegation matrix remains open |
 | Procurement vendor management | Implemented |
 | Procurement BOQ, material requests, and warehouse | Implemented for connected use — BOQ, Material Request, warehouse list/create/edit/detail, stock, allocation, posting, and reversal are live; offline queue/synchronization remains a cross-cutting platform dependency |
-| Finance module | Partially implemented — contracts and variation orders are live; cash flow and P&L are pending |
+| Finance module | Partial — shared contracts, variation orders, receivables, downstream payment requests and accounting-period corrections are delivered; two-direction payment dossiers and complete cash-flow/P&L reporting remain target work |
 | Google Drive integration | Implemented for current Operational Project file sources; deployment activation and live credentials are required. Survey and CRM Pre-Design remain separate configurable categories pending an approved topology migration |
-| Dashboard and analytics | Partially implemented — operational dashboard exists; full cross-module reporting is pending |
-| KPI | 19 metrics across six current scorecard groups are implemented; the complete NICON 11-position framework is not yet delivered |
+| Dashboard and analytics | Partial — operational dashboard exists; full cross-module reporting remains target work |
+| KPI | Partial — 19 metrics across six current scorecard groups are delivered; the complete NICON 11-position framework is not yet delivered |
 
 BGD or SUPER_ADMIN can permanently delete only a failed/cancelled design
 dossier. Open the deletion impact dialog, resolve every file, IFC or shared

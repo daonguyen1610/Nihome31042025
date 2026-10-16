@@ -35,7 +35,7 @@ Tuy nhiên chưa thể tuyên bố toàn bộ yêu cầu 03/10 là business-read
 | Implemented | CRM lõi, mã Dự án và cổng Báo giá → Hợp đồng Upstream; Thiết kế khởi tạo từ Cơ hội trước hợp đồng; kiểm soát Cung ứng/Tài chính trước hợp đồng; Đấu thầu |
 | Partial | RBAC theo phòng; nhóm công việc dùng chung; BOQ; Thiết kế chi tiết; Pháp lý; Thi công CM/BCH; Tài chính |
 | Target | Host/UAT và chuyển kết nối Drive sang tài khoản NICON |
-| Open decision | Cơ cấu tổ chức, Q-01–Q-11, biểu mẫu ISO/CM/thanh toán, công thức S-Curve và ma trận phê duyệt |
+| Open decision | Cơ cấu tổ chức, các tham số Q-01–Q-11 chưa có hiện vật nguồn/quyết định truy vết, biểu mẫu ISO/CM/thanh toán, công thức S-Curve và ma trận phê duyệt |
 
 `Implemented` trong báo cáo này chỉ có nghĩa là mã nguồn hiện có persistence,
 API, UI và test phù hợp với yêu cầu được nêu. Nó không xác nhận đã deploy hoặc
@@ -403,10 +403,12 @@ Bằng chứng chính:
 ## 5. Phương án thiết kế để triển khai và đối chiếu UAT
 
 Các câu trả lời dưới đây là **đề xuất thiết kế theo yêu cầu hiện tại của người
-dùng**, dựa trên biên bản 03/10, codebase và nguyên tắc kiểm soát nội bộ. Chúng
-giúp triển khai từng lát cắt và chuẩn bị UAT, **không phải xác nhận rằng NICON
-đã phê duyệt**. Những chỗ cần sơ đồ tổ chức, biểu mẫu ISO, mẫu BOQ, hồ sơ pháp
-lý, chính sách lưu trữ hoặc cấu hình môi trường thật vẫn cần đầu vào từ NICON.
+dùng**, dựa trên biên bản 03/10, codebase và nguyên tắc kiểm soát nội bộ. Người
+dùng cho biết NICON đã ủy quyền mình quyết định hướng thực hiện; điều đó cho
+phép chọn phương án triển khai, nhưng không phải bằng chứng NICON đã nghiệm thu
+hoặc từng quyết định đã được ghi nhận với ID/phạm vi/ngày hiệu lực. Những chỗ
+cần sơ đồ tổ chức, biểu mẫu ISO, mẫu BOQ, hồ sơ pháp lý, chính sách lưu trữ
+hoặc cấu hình môi trường thật vẫn cần đầu vào từ NICON.
 Không coi phương án trong mục này là tính năng `Implemented` khi chưa có đủ
 persistence, API authorization, UI và test tương ứng.
 
@@ -947,6 +949,11 @@ khi cam kết không bao giờ tái sử dụng alias.
 | Bộ ISO BCH/QA-QC/HSE | Chưa chốt phạm vi rút gọn | Form/checklist và gate áp dụng |
 | Hồ sơ thanh toán | Chưa chốt ba phần | Chứng từ, role, transition và matching |
 
+Ngày 16/10/2026, người dùng xác nhận **chưa có môi trường UAT**; bộ biểu mẫu
+ISO/QA-QC/HSE/thanh toán và ma trận giấy phép sẽ được cung cấp sau. Do đó không
+thể xác nhận các luồng phụ thuộc những đầu vào này đã business-ready hoặc chạy
+deployed smoke trên môi trường NICON trong đợt hiện tại.
+
 ## 7. Kế hoạch thực thi và trạng thái ngày 16/10/2026
 
 | Thứ tự | Workstream | Trạng thái | Bằng chứng/kết quả | Bước tiếp theo |
@@ -955,12 +962,12 @@ khi cam kết không bao giờ tái sử dụng alias.
 | 2 | Route RBAC BCH/CM và tài khoản seed cho mọi business role | Implemented | Commit `65bea63d`; Tier-1 route-discovery chạy lại ngày 16/10: `1 passed`; unit test tập trung gồm `DbSeederTests`: `92 passed` | Chạy deployed RBAC matrix khi Docker/UAT khả dụng |
 | 3 | Nhóm quyền chức năng và mapping role | Partial | Đề xuất seed sáu group tách HR khỏi Finance; unit/integration RBAC tập trung đã pass. Biên bản vẫn nêu năm phòng, nên đây không phải sơ đồ tổ chức đã duyệt | NICON xác nhận Role × Department × Permission matrix trước rollout dữ liệu thật; rehearsal migration và kiểm tra quyền runtime |
 | 4 | Ownership/liên kết nhóm việc | Partial | Task Dự án nay cần xác nhận độc lập kể cả khi không gắn KPI; task nội bộ không KPI giữ đường hoàn tất trực tiếp. Q-01–Q-03 vẫn chưa được NICON phê duyệt toàn bộ | Chốt ownership, cardinality, KPI kỳ/trọng số và quyền giao việc trước migration dữ liệu thật |
-| 5 | BOQ đa mẫu và provenance từng dòng | Open decision | Có import/mapping nhiều sheet nhưng chưa có schema được duyệt cho hierarchy, formula và provenance | NICON duyệt mapping theo bộ workbook đại diện; sau đó thiết kế import contract và regression fixtures |
-| 6 | Thiết kế chi tiết, MPP, review và hard-delete | Open decision | Phần lõi đã có; Q-06–Q-08, Q-10–Q-11 ảnh hưởng trực tiếp lifecycle và schema | Chốt các câu hỏi rồi triển khai theo từng lát persistence → API → UI → test |
-| 7 | Tự sinh hồ sơ Pháp lý | Open decision | Wizard idempotent đã có nhưng permit áp dụng theo loại/quy mô chưa được duyệt | NICON cung cấp permit matrix Q-09; sau đó tự sinh idempotent và giữ bước PM phân công |
-| 8 | CM/BCH, S-Curve và ISO | Open decision | Lát cắt readiness/resource/QA-QC/QS đã có; công thức, checklist và approval matrix còn mở | Nhận ISO/rules; triển khai versioned baseline, gate và test SoD/duplicate/reconnect |
-| 9 | Hồ sơ thanh toán ba phần | Open decision | Payment Request hiện có nhưng chưa đủ dossier hai chiều và matching | Chốt Q-FIN-01 trước khi thiết kế aggregate, trạng thái và tolerance |
-| 10 | Drive/UAT/host | Open decision | Repository chỉ chứng minh capability, không chứng minh cấu hình hoặc deploy NICON | Nhận OAuth/root folder/UAT URL và tiêu chí bàn giao; chạy deployed smoke trên commit công bố |
+| 5 | BOQ đa mẫu và provenance từng dòng | Partial | Có import/mapping nhiều sheet; chưa có schema được duyệt cho hierarchy, formula và provenance | Duyệt mapping theo bộ workbook đại diện; sau đó thiết kế import contract và regression fixtures |
+| 6 | Thiết kế chi tiết, MPP, review và hard-delete | Partial | Phần lõi đã có; Q-06–Q-08, Q-10–Q-11 ảnh hưởng trực tiếp lifecycle và schema | Ghi nhận quyết định có thẩm quyền rồi triển khai theo từng lát persistence → API → UI → test |
+| 7 | Tự sinh hồ sơ Pháp lý | Partial | Wizard idempotent đã có; chưa có matrix permit áp dụng theo loại/quy mô | Nhận permit matrix Q-09; sau đó tự sinh idempotent và giữ bước PM phân công |
+| 8 | CM/BCH, S-Curve và ISO | Partial | Lát cắt readiness/resource/QA-QC/QS đã có; công thức, checklist và approval matrix còn mở | Nhận ISO/rules; triển khai baseline cấu trúc, cảnh báo và test SoD/duplicate/reconnect |
+| 9 | Hồ sơ thanh toán ba phần | Partial | Payment Request hiện có nhưng chưa đủ dossier hai chiều và matching | Ghi nhận Q-FIN-01 trước khi thiết kế aggregate, trạng thái và tolerance |
+| 10 | Drive/UAT/host | Target | Repository chỉ chứng minh capability, không chứng minh cấu hình hoặc deploy NICON | Nhận OAuth/root folder/UAT URL và tiêu chí bàn giao; chạy deployed smoke trên commit công bố |
 
 Nguyên tắc thực thi sau mỗi quyết định được phê duyệt: cập nhật canonical docs → cập nhật
 code/migration → unit/integration test đúng layer → E2E hành trình trình duyệt
@@ -988,9 +995,10 @@ concurrency token stale.
 ## 9. BA/QA verdict
 
 **BA verdict: Blocked cho việc tuyên bố toàn bộ yêu cầu 03/10 là hoàn tất.**
-Hai hướng tạo Hợp đồng đã được xác nhận và không còn là sai lệch. Blocker còn
-lại là cơ cấu role group Q-04, các quyết định Q-01–Q-11/biểu mẫu nghiệp vụ và
-đầu vào môi trường chưa có chủ sở hữu xác nhận. Các năng lực ghi `Implemented`
+Hai hướng tạo Hợp đồng đã được xác nhận và không còn là sai lệch. Người dùng
+được NICON ủy quyền chọn hướng triển khai nhưng chưa có hiện vật nguồn cho cơ
+cấu role group Q-04, một số tham số Q-01–Q-11 và biểu mẫu nghiệp vụ; môi trường
+UAT cũng chưa tồn tại. Các năng lực ghi `Implemented`
 có đủ bằng chứng tĩnh để đưa vào phạm vi QA tập trung, nhưng chưa phải xác nhận
 UAT.
 
