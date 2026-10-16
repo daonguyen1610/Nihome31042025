@@ -560,6 +560,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<MaterialRateCatalog>(b =>
         {
             b.ToTable("material_rate_catalogs");
+            b.Property(catalog => catalog.BoqConfigurationJson).HasColumnType("nvarchar(max)");
             b.HasKey(catalog => catalog.Id);
             b.Property(catalog => catalog.Code).HasMaxLength(50).IsRequired();
             b.Property(catalog => catalog.CatalogType).HasConversion<string>().HasMaxLength(30);
@@ -574,6 +575,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<MaterialRateRevision>(b =>
         {
             b.ToTable("material_rate_revisions");
+            b.Property(revision => revision.BoqRowsJson).HasColumnType("nvarchar(max)");
             b.HasKey(revision => revision.Id);
             b.Property(revision => revision.Status).HasConversion<string>().HasMaxLength(20);
             b.Property(revision => revision.Note).HasMaxLength(1000);

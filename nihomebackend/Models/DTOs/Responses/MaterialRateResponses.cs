@@ -5,6 +5,8 @@ namespace NihomeBackend.Models.DTOs.Responses;
 
 public sealed class MaterialRateCatalogResponse
 {
+    public BoqConfiguration? BoqConfiguration { get; init; }
+    public string? BoqConfigurationHash { get; init; }
     public int Id { get; init; }
     public MaterialRateCatalogType CatalogType { get; init; }
     public string Code { get; init; } = string.Empty;
@@ -19,6 +21,7 @@ public sealed class MaterialRateCatalogResponse
 
 public sealed class MaterialRateRevisionResponse
 {
+    public List<BoqEntryRow> BoqRows { get; init; } = [];
     public int Id { get; init; }
     public int CatalogId { get; init; }
     public string CatalogCode { get; init; } = string.Empty;

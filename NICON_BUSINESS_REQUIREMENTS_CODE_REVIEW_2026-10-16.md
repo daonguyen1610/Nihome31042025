@@ -12,11 +12,13 @@ Nguồn nghiệp vụ điều khiển:
 
 ## 1. Kết luận điều hành
 
-**Chưa thực hiện toàn bộ.** Rà soát lại cả BR-01–BR-12 và các phương án tại
-mục 5 không tìm thấy bằng chứng để nâng các mục `Partial` lên `Implemented`.
-Đặc biệt, có nhiều danh mục đơn giá BOQ và nhiều mẫu mapping không đồng nghĩa
-với có nhiều loại BOQ với bộ trường cấu hình riêng. Khả năng sau chưa được
-triển khai; hướng này được ghi `Target` theo yêu cầu người dùng ngày 17/10.
+**Chưa thực hiện toàn bộ.** Các nhóm BR-01–BR-12 vẫn giữ phạm vi đánh giá
+trong review gốc; không nâng toàn bộ BOQ hoặc các module Partial chỉ vì đã
+giao thêm một lát cắt nhập liệu.
+Đối chiếu gốc phân biệt nhiều catalog/mapping với bộ trường theo danh mục.
+Lát cắt cấu hình nhập liệu theo danh mục đã được triển khai tiếp theo yêu cầu
+17/10 (chi tiết Q-BOQ-01); điều này không hoàn tất BOQ nâng cao hoặc các module
+khác. Cách làm được thu gọn về danh mục hiện có, không tạo thêm module loại BOQ.
 Mục 3 dưới đây mô tả phần đã giao; mục 5 là phương án triển khai, không phải
 danh sách tính năng đã hoàn thành. Ma trận mục 7 đối chiếu từng phương án.
 
@@ -70,10 +72,11 @@ API, UI và test phù hợp với yêu cầu được nêu. Nó không xác nh�
   đại diện để so sánh mô hình. Không mở liên kết ngoài, chạy macro, tính lại
   formula hay sửa file nguồn. SHA-256 và trích xuất nằm trong artifact kiểm tra,
   không đặt dưới `docs/Nicon/`.
-- Lượt này là review tĩnh và cập nhật tài liệu, không chạy lại build, unit,
-  integration hoặc E2E. Kết quả test ngày 16/10 ở mục 9 là bằng chứng lịch sử,
-  không phải kết quả chạy mới. Không kết luận mọi payload, thiết bị hoặc trạng
-  thái runtime đều đã pass. Review do cùng agent thực hiện, không độc lập.
+- Lượt audit ban đầu chỉ review tĩnh. Lượt triển khai BOQ tiếp theo đã chạy
+  kiểm thử tập trung: 58 unit, 10 integration mới, 32 integration hồi quy và
+  một E2E qua bốn viewport. Build backend/frontend, format, lint và TypeScript
+  đã pass. Đây là bằng chứng cho lát cắt BOQ theo danh mục, không phải kiểm thử
+  lại toàn hệ thống. BA/QA do cùng agent thực hiện, không độc lập.
 - Kiểm tra tài liệu: `git diff --check`, 73 tham chiếu đường dẫn source đầy đủ
   đều tồn tại, root `docs/` đúng allowlist và SHA-256 cả 6 workbook không đổi.
   Hai JPG khách hàng có sẵn ở root `docs/Nicon/` vẫn ngoài cấu trúc định dạng
@@ -239,12 +242,13 @@ Khoảng trống còn lại:
 - Workbook import chưa chứng minh giữ đầy đủ hierarchy/merged cells/formula và
   provenance từng dòng cho mọi BOQ mẫu; không được coi các file mẫu là một schema
   đã duyệt.
-- `BoqImportTemplate` chỉ là tên + header row + vị trí 5 cột; không có danh mục
-  loại BOQ, field definition, field value, schema version hoặc form riêng theo
-  loại. `MaterialRateCatalogType` chỉ phân biệt `InvestmentRate` và `Boq`.
-- `MaterialRateLine` và `ProjectBoqLine` vẫn là dòng cố định. Import giữ tên
-  file/hash/mapping tại revision nhưng không lưu sheet/row/cell/formula theo
-  dòng, cây nhóm hay các cột kỹ thuật ngoài 5 cột chuẩn.
+- `BoqImportTemplate` cũ vẫn là mapping 5 cột. Luồng mới gắn cấu hình sheet và
+  trường trực tiếp vào MaterialRateCatalog loại Boq, lưu giá trị từng field
+  trong revision và tạo canonical priced lines. Không thêm enum loại nội dung
+  vào InvestmentRate/Boq hoặc coi nội dung là lifecycle. Xem Q-BOQ-01.
+- `MaterialRateLine` và `ProjectBoqLine` vẫn là projection cố định cho tiền/hạn
+  mức. Luồng cấu hình lưu thêm sheetKey/field values trong BoqRowsJson, nhưng
+  chưa có hierarchy/provenance từng cell hoặc giữ formula gốc theo từng dòng.
 - Đường import workbook hiện đọc bytes để parse/hash nhưng không lưu bản upload
   bất biến qua document storage; metadata filename/hash không thay thế file
   nguồn có thể truy xuất. Việc giữ 6 file mẫu trong Git không giải quyết lưu
@@ -275,22 +279,30 @@ bằng Excel và không phải lỗi do hệ thống Nicon tạo ra.
    trực tiếp cả 6 file nguồn. Đây là giới hạn an toàn hiện hành, không đề nghị
    bỏ chặn. Cần giữ nguyên bản gốc và một bản dẫn xuất được kiểm soát nếu muốn
    loại link ngoài; kiểm tra lỗi công thức và đối soát trước khi duyệt số liệu.
-2. **High — Requirement gap / Target:** chưa có cơ chế loại BOQ → schema trường
-   → form/import/export theo schema. Thêm danh mục có tên khác hoặc lưu thêm mẫu
-   mapping hiện tại không giải quyết khoảng trống này.
-3. **High — Coverage / data risk:** `ImportAsync` bỏ dòng `Structural`, gom detail
+2. **Implemented cho lát cắt nhập theo danh mục:** có cấu hình sheet/trường,
+   form, mẫu tải xuống và import đúng danh mục, với validation chung trên
+   server. Cấu hình khóa từ revision đầu; không tuyên bố đã có generic formula
+   engine, tự nâng schema hoặc import nguyên trạng mọi file nguồn.
+3. **High — Coverage / data risk của importer cũ:** `ImportAsync` bỏ dòng `Structural`, gom detail
    của mọi sheet thành một list và chỉ truyền code/name/unit/quantity/price.
    `ReplaceBoqLinesAsync` yêu cầu code duy nhất trên cả revision. Nếu dùng STT
    bắt đầu lại ở mỗi sheet/nhóm làm code, import có thể bị trùng; chưa có quy tắc
-   định danh theo sheet/nhóm và lineage được duyệt. Không tự sửa mã khách hàng.
-4. **High — Usability / data risk:** detector chọn một hàng header tốt nhất và
+   định danh theo sheet/nhóm và lineage được duyệt cho importer nguồn. Luồng
+   mẫu mới giữ mã nguồn trong field và dùng sheetKey.code cho canonical line;
+   mã trùng khác sheet được chấp nhận, trong cùng sheet bị từ chối.
+4. **High — Usability / data risk của importer cũ:** detector chọn một hàng header tốt nhất và
    cột khớp alias đầu tiên. Với header ghép nhiều hàng, giá thành phần/tổng và
    quantity thành phần/tổng, mapping gợi ý chưa đủ để bảo đảm chọn đúng số.
    Cần người xác nhận và test theo từng vùng bảng, không auto-approve kết quả.
-5. **Medium — Data / operational risk:** `TryDecimal` có fallback bỏ dấu phẩy
+   Luồng mới chọn danh mục trước và đối chiếu chính xác sheet/field/header,
+   không dùng heuristic để đoán giá thành phần hoặc tổng giá.
+5. **Medium — Data / operational risk của importer cũ:** `TryDecimal` có fallback bỏ dấu phẩy
    rồi parse invariant. Text dạng `1,5` có nguy cơ thành `15`; số typed-numeric
    của Excel đi qua nhánh khác. Locale/text-number cần được quyết định và test
-   rõ; `free`, giá trống, lỗi formula không được tự quy về 0.
+   rõ; `free`, giá trống, lỗi formula không được tự quy về 0. Luồng mới chỉ
+   nhận ô Excel typed numeric và chặn formula/text-number; không dùng fallback
+   này. Nhập tay dùng shared numeric parser của frontend và decimal invariant
+   strings khi gửi API.
 6. **Medium — Requirement / coverage gap:** catalog hiện duyệt trực tiếp từ
    Draft, không có bước Submitted; `MaterialRateService.DecideAsync` chưa chặn
    người lập tự duyệt. Permission approve có ở controller nhưng không thay
@@ -497,7 +509,7 @@ Bằng chứng chính:
 | Medium | Wizard Pháp lý cần chọn thủ công | Không đạt yêu cầu tự sinh khi Hợp đồng chạy | Chốt permit matrix; tự tạo idempotent và giữ bước PM phân công |
 | Medium | Quy tắc package/assignment đang đi trước quyết định | Có thể phải migrate liên kết và quyền sau khi NICON trả lời | Đóng Q-01–Q-03 trước khi mở rộng dữ liệu thật |
 | Medium | Chặn xóa sau trình khách là giả định kỹ thuật | Có thể lệch thẩm quyền/lưu trữ hồ sơ NICON | Giữ chặn an toàn cho tới khi Q-08 được trả lời |
-| High | BOQ chưa có schema trường theo loại; importer cố định không tương thích trực tiếp 4 workbook chứa external links | Không giữ đủ cấu trúc/semantics và chưa chứng minh dùng đúng bộ mẫu thực tế | Thực hiện Q-BOQ-01 đa schema; giữ nguyên nguồn, xử lý bản dẫn xuất và đối soát; không bỏ chặn an toàn |
+| High cho import nguồn đầy đủ | Importer nguồn không tương thích trực tiếp 4 workbook chứa external links; nhập theo danh mục mới đã có | Không giữ đủ cấu trúc/semantics và chưa chứng minh dùng đúng bộ mẫu thực tế | Thực hiện Q-BOQ-01 đa schema; giữ nguyên nguồn, xử lý bản dẫn xuất và đối soát; không bỏ chặn an toàn |
 
 ## 5. Phương án thiết kế để triển khai và đối chiếu UAT
 
@@ -841,84 +853,55 @@ khi cam kết không bao giờ tái sử dụng alias.
 
 **Phương án Q-BOQ-01:**
 
-**Target, cập nhật theo yêu cầu người dùng 17/10/2026:** cho phép quản lý nhiều
-danh mục/loại BOQ và bộ trường phù hợp từng loại, có thể sử dụng lại. Chưa có
-persistence/API/UI/test cho khả năng này. Bộ trường dưới đây là thiết kế đề
-xuất từ workbook, chưa phải taxonomy hoặc công thức đã được NICON duyệt.
+**Implemented cho phạm vi được người dùng chốt 17/10/2026:** kiểm tra từng file
+→ nhóm cấu trúc khác nhau thành danh mục → cấu hình trường của từng sheet →
+ADMIN chọn danh mục, tải mẫu, điền và import; thêm dòng trực tiếp dùng đúng bộ
+trường đó. Không xây thêm module taxonomy/schema engine tổng quát.
 
-1. Tách **mục đích/lifecycle** khỏi **danh mục nội dung và schema**. BOQ sơ bộ/
-   Quote, Tender Estimate, Design quantity takeoff, Execution BOQ và Final BOQ
-   không phải năm kiểu bảng Excel cố định. Suất đầu tư là cách lập giá/catalog
-   riêng. Một lifecycle có thể dùng nhiều schema nội dung; cùng schema CSA/MEP
-   có thể được dùng ở dự thầu và thực hiện nhưng không tự chuyển hiệu lực.
-2. Danh mục/loại BOQ có mã ổn định, tên VI/EN/ZH/JA, mô tả, active state và
-   schema version. Một schema khai báo field key ổn định, nhãn đa ngôn ngữ,
-   data type, đơn vị/precision, required/optional, default, thứ tự, nhóm, phạm vi
-   header/line/breakdown, điều kiện hiển thị và validation. Select/reference
-   lấy từ master data được quản lý, không hardcode danh mục trong React.
-3. Lõi business ID, project, lifecycle, revision, source và trạng thái duyệt
-   được bảo vệ; field mở rộng không được ghi đè quantity/currency/approval hoặc
-   biến BOQ báo giá thành allowance. Dòng có giá dùng canonical quantity/rate/
-   amount để tổng hợp; field kỹ thuật là dữ liệu typed theo schema version.
-   Không bắt mọi dòng/sheet vật tư tham khảo phải có đơn giá và khối lượng.
-   Section/summary/note/takeoff component/detail phải phân biệt để không tính
-   tổng hai lần. Tên cột Excel không được dùng làm field ID bền vững.
-4. Snapshot schema version trên revision. Sửa schema không thay bản Draft cũ
-   âm thầm, càng không thay revision Approved; nâng version có preview đổi
-   trường, mất dữ liệu và mapping, được xác nhận/audit. Không xóa field/category
-   đang được dùng; retire hoặc tuân thủ deletion-impact policy.
-5. Import profile độc lập với loại BOQ. Một workbook được chọn nhiều sheet,
-   mỗi sheet có thể có nhiều table region; từng region chọn schema và mapping
-   header nhiều hàng, code/nhóm/parent, canonical fields và field mở rộng.
-   Cho phép bỏ qua cover hoặc giữ summary để đối soát; sheet summary không tự
-   tạo allowance. Một hạng mục có thể ở nhiều sheet và một sheet có nhiều vùng
-   nghiệp vụ; không lấy tên sheet làm danh mục cố định.
-6. Giữ file gốc bất biến/hash và metadata từng dòng/cell: sheet, region, source
-   row, raw/formatted/cached value, formula text, mapping/schema version và actor.
-   STT nguồn được giữ riêng với stable line ID; cần quyết định uniqueness theo
-   document/section và cách re-import giữ link Quote/MR/VO. Không dùng mã tăng
-   theo vị trí làm khóa merge lịch sử. Bản dẫn xuất bỏ external link phải có
-   lineage và đối soát; không ghi đè 6 workbook nguồn hay bỏ kiểm tra an toàn.
-7. Công thức nghiệp vụ dùng tập phép tính được kiểm soát và version, không chạy
-   code tùy ý từ người dùng/Excel. Preview phân biệt formula gốc, cached value
-   và giá trị tính lại; lỗi/unsupported formula/external reference phải được
-   công bố. Locale text-number, đơn vị, phép quy đổi và làm tròn được cấu hình/
-   duyệt; không âm thầm đổi `free`, trống hoặc `#REF!` thành số 0. Chưa chọn
-   engine hay mặc định công thức kích thước trước khi owner xác nhận.
-8. Import atomic theo revision và xác nhận preview; lỗi định kiểu/required/
-   công thức ở field bắt buộc chặn commit, trả sheet/region/row/cell/field. Với
-   dòng không có giá, áp validation đúng schema, không ép vào rate catalog.
-   Server kiểm tra field lạ, presence, format, length, range, precision, enum,
-   normalization và cross-field relationships; frontend phản hồi cùng rule.
-9. Permission riêng cho quản lý danh mục/schema, import, submit và approve;
-   maker/checker áp trên server theo matrix được duyệt. Draft sửa/import lại;
-   submitted/approved bất biến theo lifecycle tương ứng. Chỉ applicable approved
-   Execution BOQ gắn Hợp đồng/Dự án hợp lệ làm allowance. VO tạo revision có
-   lineage; Final BOQ là chốt có thẩm quyền, không suy từ filename/sheet.
+1. Tái sử dụng MaterialRateCatalog loại Boq làm danh mục. Manifest
+   Data/Seeds/boq-categories.json rút sáu profile từ sáu workbook có bố cục khác
+   nhau; field definitions trùng được dùng lại trong manifest. Các sheet/vùng
+   quy mô, detail và tham khảo được tách để nhập đúng nghĩa; cover/summary
+   không trở thành dòng giá. Không mang dự án/giá mẫu sang dữ liệu vận hành.
+2. Danh mục mới có thể sao chép cấu hình đã có rồi chỉnh sheet/key/nhãn VI/EN/
+   ZH/JA, thêm/bỏ trường phụ, kiểu Text/Number, required/length/precision.
+   Người dùng làm bước này trước revision đầu. Sau đó cấu hình khóa; thay đổi
+   cấu trúc cần catalog mới. Existing null-config catalogs giữ nguyên luồng
+   5 cột; không backfill hoặc tự diễn giải lại dữ liệu đã có.
+3. Chọn catalog → Draft revision → sheet rồi thêm/sửa/bỏ dòng. Đổi danh mục,
+   revision hoặc sheet reset ngữ cảnh nhập; response load/save muộn bị bỏ qua
+   nếu không khớp context đang xem. Server kiểm tra đúng nested catalog/
+   revision, sheetKey và whitelist field keys, không dựa vào UI hiding.
+4. Download .xlsx giữ catalog ID, hash cấu hình và ngôn ngữ trong marker, row 1
+   là field keys ẩn, row 2 là nhãn, data từ row 3. Preview kiểm tra đúng marker,
+   sheet set, thứ tự/nhãn cột, typed numeric và required fields; không ghi DB.
+   Xác nhận import mới revalidate/hash file rồi thay atomic toàn bộ Draft.
+   File trống, formula, macro, external link, trường sai và stale timestamp bị
+   từ chối. API trả 409 khi phiên bản đã đổi, không silent overwrite.
+5. Priced row tạo canonical code sheetKey.code và Quantity × UnitPrice để Quote
+   snapshot hiện tại sử dụng. Cùng code ở sheet khác không xung đột; cùng
+   sheet bị chặn. Sheet tham khảo lưu values riêng trong revision, không cộng
+   tiền hoặc allowance. Dimension và component rate là thông tin nhập đã kiểm
+   tra, không tự suy công thức hoặc cộng thành total unit price.
+6. Quyền dùng crm.material-rates.view/manage/approve hiện có. Không thay gate
+   duyệt hoặc tự promote sang Execution BOQ. Configured category không được
+   hard-delete qua đường cũ; deactivate để giữ cấu hình. Hai cột nullable mới
+   không đổi dữ liệu lịch sử; rollback cần backup dữ liệu mở rộng trước.
 
-**Nhóm trường ứng viên từ mẫu (không phải bộ danh mục bắt buộc):**
+**Bằng chứng triển khai:** Models/BoqConfiguration.cs,
+Services/BoqConfigurationRules.cs, Services/BoqConfiguredWorkbookService.cs,
+Services/MaterialRateService.ConfiguredBoq.cs, Controllers/BoqConfiguredWorkbooksController.cs,
+Data/BoqCategorySeeder.cs và migration AddConfiguredBoqEntries trong backend;
+BoqConfiguredEntry.tsx và MaterialRates.tsx trên frontend. BoqCategorySeederTests,
+ConfiguredBoqControllerTests và boq-configured-entry.spec.ts kiểm tra profile,
+round-trip và việc không trộn dữ liệu giữa danh mục/sheet.
 
-| Nhóm nội dung | Trường có bằng chứng nguồn | Trường hợp cần làm rõ |
-|---|---|---|
-| Thiết kế/xin phép/dịch vụ | Nội dung VI/EN, scope, diện tích đất/sàn/hạ tầng, chiều cao, đơn vị, khối lượng, phí, note | Một sheet có vùng quy mô và vùng phí; `free`/included có phải giá 0 hay trạng thái thương mại riêng? |
-| Xây dựng/CSA và takeoff | Nhóm/parent, standard, SL, dài/rộng/cao/hệ số, quantity thành phần/tổng, đơn giá vật tư/nhân công/máy, profit/remark | Công thức và đơn vị theo dòng, trừ lỗ mở/điều chỉnh, không mặc định mọi quantity = SL×D×R×C×HS. |
-| MEP/PCCC/HVAC/Plumbing | Specification, brand/origin, vị trí, unit/quantity, vật tư/nhân công/thiết bị và tổng giá | Có bảng phân bổ số lượng theo nhiều vị trí; cần breakdown theo location, không một cột cứng cho từng tên xưởng. |
-| Danh mục vật tư/đề xuất kỹ thuật | Specification yêu cầu và đề xuất, supplier/origin, remark | Đây có thể là phụ lục tham khảo, không tự coi là BOQ có giá hoặc nguồn hạn mức kho. |
-
-**Acceptance criteria để đánh dấu Implemented:** CRUD danh mục/schema đúng quyền
-và đủ bốn ngôn ngữ; tạo cùng lifecycle với ít nhất hai schema khác nhau; form,
-API, import/export round-trip giữ field values và schema version; xử lý workbook
-nhiều sheet/nhiều vùng, trùng STT khác section, giá thành phần/tổng, formula lỗi,
-locale text-number, stale/concurrent re-import, approval bất biến và từ chối
-promote sai loại; kiểm tra toàn bộ 6 file nguồn hoặc báo rõ giới hạn theo file
-và bản dẫn xuất được duyệt. Migration cần backfill schema mặc định cho dữ liệu
-cũ, rehearsal, rollback và không làm đứt stable IDs của Quote/MR/warehouse.
-
-**Open decision:** owner BOQ/QS và Product Owner chốt taxonomy ban đầu,
-required fields theo schema, scope của phụ lục vật tư, công thức/precision,
-re-import/uniqueness, approval matrix và import source-versus-derived policy.
-Không chặn việc thiết kế capability cấu hình bằng lý do “chưa có một template
-Excel chuẩn duy nhất”; điều cần chốt là semantics của field và các gate nghiệp vụ.
+**Partial cho BOQ nâng cao:** không giữ toàn bộ layout/formula/merge của file
+nguồn, không import nguyên trạng 4 file chứa external links, không có tính lại
+công thức Excel, re-import merge theo UID, chuyển schema tự động hoặc hierarchy/
+provenance từng cell. Các template tải xuống là mẫu nhập an toàn chuẩn hóa theo
+cấu hình, không phải bản sao workbook gốc. Các rule ISO/approval/payment còn mở
+không được tự chốt bởi lát cắt này.
 
 #### Q-CM-01 — Danh mục việc và quyền Phòng CM
 
@@ -1135,7 +1118,7 @@ lát cắt đã pass làm bằng chứng cho toàn module.
 | Q-09 — Pháp lý tự sinh | Partial | Có wizard transaction/idempotency tạo permit/task theo lựa chọn. Chưa có template/matrix theo loại, quy mô, địa phương để tự suy danh sách áp dụng. | LegalActivationService.ActivateContractAsync; LegalActivationWizard; LegalActivationControllerTests |
 | Q-10 — Design Lead/Manager | Partial | Có team role, một approver, assignee khác approver, phase/client/IFC gate. Chưa chứng minh toàn bộ quyền reopen/reassign, delegation và phạm vi discipline của phương án. | DetailDesignScheduleService; DesignReviewService; IfcReleaseService; design tests |
 | Q-11 — Team/tiến độ/MS Project | Partial | Có parent, predecessor, planned/actual dates, critical/milestone flags, resource summary, vendor/downstream link. Chưa có import/re-import MPP với UID, lag, calendar, baseline và conflict policy đầy đủ; critical flag không chứng minh CPM engine. | Models/DetailDesignSchedule.cs; DetailDesignScheduleService; DesignScheduleTimeline.tsx |
-| Q-BOQ-01 — Đa loại và trường | Partial cho importer hiện tại; Target cho schema cấu hình | Có nhiều catalog/mapping nhưng chỉ dòng/cột cố định; 4 file nguồn chứa external-link parts bị chặn; thiếu hierarchy/provenance từng dòng, schema version và dynamic field form. | MaterialRateCatalog.cs; BoqCatalogWorkbookService; MaterialRateService; ma trận workbook tại BR-06 |
+| Q-BOQ-01 — Nhập theo danh mục | Implemented cho chọn danh mục/trường/mẫu/import; Partial cho BOQ nâng cao | Có sáu cấu hình nguồn, form đúng sheet, download/preview/import atomic và chặn nhầm category/field/stale; chưa có import nguyên trạng mọi file, hierarchy/formula engine hoặc tự nâng schema. | BoqConfiguredWorkbookService; BoqConfigurationRules; BoqConfiguredEntry; ConfiguredBoqControllerTests |
 | Q-CM-01 — Portfolio, CM templates, delegation | Partial | Có CM/BCH roles/routes và kiểm tra tác giả khác reviewer. Chưa có catalog CM, delegate có hiệu lực/SLA và portfolio exception đầy đủ. Equipment/Labour chỉ đánh dấu ReadyForProcurementAndFinance, chưa tạo hồ sơ downstream thực tế. | ConstructionOperationsService.CreateResourceHandoff; ConstructionWorkspaceShell.tsx; ConstructionOperationsControllerTests |
 | Q-CM-02 — Baseline/S-Curve | Partial | Có preparation Version/Supersedes và snapshot readiness; WBS/Schedule/S-Curve/Budget là reference/document IDs. Chưa có published time-series baseline/actual engine, phép variance, kỳ chốt và recovery workflow như phương án. | Models/ConstructionOperations.cs; ConstructionOperationsService.BuildReadinessSnapshot; KpiService.SiteProgressVarianceAsync |
 | Q-CM-03 — ISO/offline | Partial | Có readiness server gate, evidence và QA/QC schema version/type, HSE/punch/acceptance records. Chưa có ISO applicability chuẩn và local outbox/reconnect conflict flow đầy đủ; idempotency middleware không đồng nghĩa có offline queue. | ConstructionOperationsService; QaQcWorkspacePage.tsx; SiteDiaryPage.tsx; ConstructionOperations tests |
@@ -1161,9 +1144,10 @@ lát cắt đã pass làm bằng chứng cho toàn module.
 
 ### Thứ tự thực hiện còn lại
 
-1. BOQ: thống nhất semantics đa loại/field và stage, profile mapping; lưu nguồn,
-   hierarchy và schema version; migration tương thích; rồi import/re-import,
-   approval, Quote snapshot và Execution allowance regression.
+1. BOQ: duy trì luồng nhập theo danh mục đã triển khai; phần còn lại là lưu
+   nguyên bản nguồn, hierarchy, diễn giải công thức, nâng cấp schema và
+   re-import giữ stable IDs. Không tự quảng bá BOQ sơ bộ thành Execution BOQ;
+   cần contract riêng và regression Quote snapshot/Execution allowance.
 2. Các quyết định ownership/quyền, design review/CC/delete và MPP được đóng theo
    từng contract có thể kiểm thử; không gọi cả phương án là đã hoàn tất khi chỉ
    có một endpoint hoặc role.
@@ -1195,12 +1179,13 @@ concurrency token stale.
 
 ## 9. BA/QA verdict
 
-**Rà soát lại 17/10/2026:** kết luận vẫn chưa hoàn tất toàn bộ. Hướng BOQ nhiều
-loại/trường được ghi `Target`, chưa có feature business-ready để QA nghiệm thu.
+**Rà soát và triển khai tiếp 17/10/2026:** vẫn chưa hoàn tất toàn bộ hệ thống.
+Lát cắt chọn danh mục/trường/mẫu/import BOQ đã được triển khai và có QA tập trung;
+không còn ghi khả năng nhập theo danh mục là Target. BOQ nâng cao vẫn Partial.
 Các High findings của BR-06 và khoảng trống mục 7 phải được xử lý/ra quyết định.
-Không có build/test runtime mới trong lượt review tài liệu này. Các số liệu
-pass và giới hạn môi trường bên dưới thuộc các lượt kiểm tra trước, được giữ
-để truy vết, không tái sử dụng thành kết quả ngày 17/10.
+Kết quả chạy mới cho lát cắt này được ghi trong task response/artifact; các
+số liệu ngày 16/10 bên dưới vẫn là bằng chứng lịch sử, không phải kết quả
+test lại toàn hệ thống.
 
 **BA verdict: Blocked cho việc tuyên bố toàn bộ yêu cầu 03/10 là hoàn tất.**
 Hai hướng tạo Hợp đồng đã được xác nhận và không còn là sai lệch. Người dùng

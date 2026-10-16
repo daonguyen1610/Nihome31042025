@@ -1600,6 +1600,60 @@ import, and only BOQ revisions in `Draft` are mutable. Source filename, hash,
 mapping JSON, actor, and timestamp are retained on the revision. Quotes continue
 to consume only an approved effective catalog revision.
 
+### 7.10.3 Configured BOQ category entry
+
+Use the existing MaterialRateCatalog with CatalogType=Boq as the category.
+BoqConfigurationJson stores immutable-after-first-revision sheet/field settings;
+BoqRowsJson stores all typed entry values per revision. Priced entries project
+into existing MaterialRateLine records in the same transaction; reference sheets
+never become quote prices. Legacy catalogs have null configuration and retain
+existing behavior. Six source-derived profiles are seeded only when their code
+is absent; restart never overwrites user settings or creates pricing revisions.
+
+Routes below are relative to /api/material-rate-catalogs (also /api/v1):
+
+| Method / route | Permission | Contract |
+|---|---|---|
+| PUT {id}/boq-configuration | crm.material-rates.manage | configuration + expectedUpdatedAt; rejects any existing revision |
+| GET {id}/configured-boq-template?language=vi | crm.material-rates.view | Localized .xlsx, hidden catalog/hash/language marker, row 1 keys, row 2 labels, data from row 3 |
+| POST {id}/configured-boq-preview | crm.material-rates.manage | Multipart file; returns sourceHash/configurationHash/validated rows without persistence |
+| PUT {id}/revisions/{revisionId}/configured-boq-rows | crm.material-rates.manage | rows + configurationHash + expectedUpdatedAt; Draft only |
+| POST {id}/revisions/{revisionId}/configured-boq-import | crm.material-rates.manage | Multipart file + sourceHash + expectedUpdatedAt; revalidates, confirms replacement atomically |
+
+Schema limits: version 1; 1–40 sheets; each sheet 2–40 fields; lowercase stable
+keys (sheet <=20, field <=40); four nonblank names <=120 characters. Text values
+are trimmed, capped by MaxLength (1–2000); core code <=38, name <=300, unit <=30.
+Number values are invariant decimal strings in JSON, nonnegative, <=999999999999,
+with 0–4 decimal places (unit price <=2). Quantity of priced rows is positive;
+code matches letters/digits/dot/dash/underscore. A priced sheet must bind exactly
+one required Code/Name/Unit/Quantity/UnitPrice; reference sheets require Code/Name
+and cannot bind pricing quantity/unit price. Unknown fields/sheets are rejected.
+These rules are enforced by BoqConfigurationRules and the canonical line validator
+in MaterialRateService; the UI uses the same limits and shared number helpers.
+
+Workbook upload: <=20 MB, <=500 ZIP parts, <=200 MB expanded, <=10000 entries.
+Exact catalog marker/hash, sheet set and ordered field keys/localized labels
+must match. Numeric entry cells must be numeric; formulas, Excel errors, macro,
+external links and data connections are rejected. No formula evaluation or
+external fetching is needed. Component rates/dimensions remain entry fields;
+canonical totals use explicitly entered Quantity × UnitPrice. An empty workbook
+is rejected. Preview is not a save; import recomputes its checksum and validates
+again. A stale timestamp returns 409. SQL Server uses the existing revision
+application lock for writes; configuration changes use a serializable transaction.
+Legacy CSV/fixed-column/manual endpoints reject configured categories.
+
+Migration AddConfiguredBoqEntries adds only two nullable nvarchar(max) columns;
+old rows need no backfill. The schema is immutable from the first revision, so
+no implicit schema migration can reinterpret existing data. Configured roots
+cannot use the legacy delete path; deactivate instead. Down removes configuration
+and extra/reference data, so export/backup these columns before rollback; priced
+line projections remain. Rehearse on a copy before production rollout.
+
+Regression coverage: BoqCategorySeederTests, ConfiguredBoqControllerTests,
+MaterialRateServiceTests and boq-configured-entry.spec.ts. Browser tests isolate
+UI writes, while integration tests own real HTTP/auth/persistence and rejection
+integrity. Keep Playwright output outside the watched frontend directory.
+
 ### 7.11 BOQ Quotation Integrity
 
 Material-rate catalogs are discriminated as `InvestmentRate` or `Boq`; existing

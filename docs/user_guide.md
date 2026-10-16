@@ -447,7 +447,7 @@ not itself a CRM customer quotation.
 
 Create quotations using an approved material-rate revision or a preliminary
 BOQ. **Material norms & rates** has separate **Investment rate** and **BOQ**
-pages. Download the localized Excel form from the intended page, open the
+pages. For catalogs without category field settings, download the localized Excel form from the intended page, open the
 **Entry** sheet, and retain its column names and order. Investment-rate forms
 use material code/name, unit, norm per m², unit rate, and waste percentage; BOQ
 forms use item code/name, unit, quantity, and unit price. The workbook provides
@@ -462,7 +462,37 @@ manual rows. These actions recalculate the revision total immediately, avoiding
 a full-file re-import for small corrections. Approved, Rejected, and Retired
 revisions remain read-only. Approve non-overlapping effective revisions before
 use.
-Authorized users can select one or more catalogs for permanent deletion. This
+**BOQ with category-specific fields.** Six initial category forms are based on
+customer workbooks: Design/Permit, Factory/MEP/Fire, Serviced Apartment Fire,
+CSA/Building Systems, Integrated Factory and Turnkey (manifest:
+`nihomebackend/Data/Seeds/boq-categories.json`). Select the intended category
+before entering data. For a new category, open **Configure fields** before its
+first revision, copy an existing structure and adjust sheet/field names, text
+or number types, required values, length and decimal limits. Core pricing fields
+remain protected. All names require Vietnamese, English, Chinese and Japanese.
+Once a revision exists, changing the field set requires another category.
+
+Create a Draft revision, choose a sheet and use **Add / edit sheet entry**, or
+**Download category template**. Fill data from row 3 of that downloaded workbook;
+retain sheet names, visible headers and hidden markers. Enter numeric Excel
+cells rather than numeric text or formulas. **Validate file** shows the entries;
+**Confirm Draft replacement** replaces all rows only after confirmation. An
+empty file, wrong category/sheet/columns, invalid number, formula or stale
+revision is rejected. Reload a stale revision instead of overwriting it.
+The configured form cannot accept the old generic CSV/five-column workbook.
+
+Different sheets may reuse a line code; the code must be unique within its
+sheet. Fields shown and saved always belong to the selected category and sheet.
+Reference sheets (such as project scale/material specifications) do not feed
+prices. Enter checked total quantity and total unit price explicitly; stored
+component prices and dimensions do not automatically calculate them. Approved
+catalog prices continue to feed Quote snapshots; this does not turn a Quote BOQ
+into an approved Execution BOQ allowance. Configured catalogs are deactivated
+rather than permanently deleted. The source workbooks are discovery evidence;
+the new downloads are normalized safe entry templates, not copies of their
+external links, formulas or full presentation layout.
+
+For unconfigured legacy catalogs, authorized users can select one or more catalogs for permanent deletion. This
 irreversible action removes every revision and rate line in each selected
 catalog. A catalog already used by a Quote or Quote version history cannot be
 deleted, preserving the quotation's pricing source and audit trail. If only

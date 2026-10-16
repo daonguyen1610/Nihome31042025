@@ -1,0 +1,402 @@
+[
+  {
+    "key": "boqConfigured.title",
+    "category": "materialRates",
+    "vi": "Biểu mẫu theo danh mục BOQ",
+    "en": "Category BOQ form",
+    "zh": "按类别的工程量表模板",
+    "ja": "カテゴリ別BOQ様式"
+  },
+  {
+    "key": "boqConfigured.configuredHint",
+    "category": "materialRates",
+    "vi": "Thêm dòng và import dùng cùng bộ trường của danh mục. Cấu hình khóa từ phiên bản đầu tiên; muốn đổi bộ trường, tạo danh mục mới.",
+    "en": "Manual entry and import use this category’s fields. Configuration locks at the first revision; create a new category to change fields.",
+    "zh": "手动录入和导入使用此类别的字段。首次创建修订后配置锁定；更改字段请新建类别。",
+    "ja": "手入力と取込は同じカテゴリ項目を使用します。初回改訂作成後は設定を固定し、項目変更時は新カテゴリを作成します。"
+  },
+  {
+    "key": "boqConfigured.setupHint",
+    "category": "materialRates",
+    "vi": "Có thể sao chép và chỉnh mẫu trước khi tạo phiên bản đầu tiên. Danh mục chưa cấu hình tiếp tục dùng mẫu 5 cột hiện có.",
+    "en": "Copy and adjust a form before the first revision. Unconfigured categories retain the existing five-column form.",
+    "zh": "首次修订前可复制并调整模板。未配置的类别沿用现有五列模板。",
+    "ja": "初回改訂の前に様式を複製・編集できます。未設定カテゴリでは既存の5列様式を使用します。"
+  },
+  {
+    "key": "boqConfigured.download",
+    "category": "materialRates",
+    "vi": "Tải mẫu đúng danh mục",
+    "en": "Download category template",
+    "zh": "下载类别模板",
+    "ja": "カテゴリ様式をダウンロード"
+  },
+  {
+    "key": "boqConfigured.configure",
+    "category": "materialRates",
+    "vi": "Thiết lập bộ trường",
+    "en": "Configure fields",
+    "zh": "配置字段",
+    "ja": "項目設定"
+  },
+  {
+    "key": "boqConfigured.copy",
+    "category": "materialRates",
+    "vi": "Sao chép cấu trúc từ danh mục",
+    "en": "Copy structure from category",
+    "zh": "从类别复制结构",
+    "ja": "カテゴリから構成を複製"
+  },
+  {
+    "key": "boqConfigured.choose",
+    "category": "materialRates",
+    "vi": "Chọn danh mục mẫu",
+    "en": "Choose a source category",
+    "zh": "选择模板类别",
+    "ja": "元のカテゴリを選択"
+  },
+  {
+    "key": "boqConfigured.priced",
+    "category": "materialRates",
+    "vi": "Dòng có giá",
+    "en": "Priced entries",
+    "zh": "计价项目",
+    "ja": "価格明細"
+  },
+  {
+    "key": "boqConfigured.reference",
+    "category": "materialRates",
+    "vi": "Thông tin tham khảo, không cộng giá",
+    "en": "Reference data, excluded from prices",
+    "zh": "参考资料，不计入价格",
+    "ja": "参考情報・価格集計対象外"
+  },
+  {
+    "key": "boqConfigured.sheetCode",
+    "category": "materialRates",
+    "vi": "Mã sheet trong mẫu (chữ thường, số, _)",
+    "en": "Template sheet code (lowercase, digits, _)",
+    "zh": "模板工作表代码（小写字母、数字、_）",
+    "ja": "シートコード（英小文字・数字・_）"
+  },
+  {
+    "key": "boqConfigured.fieldCode",
+    "category": "materialRates",
+    "vi": "Mã trường (chữ thường, số, _)",
+    "en": "Field code (lowercase, digits, _)",
+    "zh": "字段代码（小写字母、数字、_）",
+    "ja": "項目コード（英小文字・数字・_）"
+  },
+  {
+    "key": "boqConfigured.type",
+    "category": "materialRates",
+    "vi": "Kiểu dữ liệu",
+    "en": "Data type",
+    "zh": "数据类型",
+    "ja": "データ型"
+  },
+  {
+    "key": "boqConfigured.text",
+    "category": "materialRates",
+    "vi": "Văn bản",
+    "en": "Text",
+    "zh": "文本",
+    "ja": "テキスト"
+  },
+  {
+    "key": "boqConfigured.number",
+    "category": "materialRates",
+    "vi": "Số",
+    "en": "Number",
+    "zh": "数字",
+    "ja": "数値"
+  },
+  {
+    "key": "boqConfigured.required",
+    "category": "materialRates",
+    "vi": "Bắt buộc",
+    "en": "Required",
+    "zh": "必填",
+    "ja": "必須"
+  },
+  {
+    "key": "boqConfigured.precision",
+    "category": "materialRates",
+    "vi": "Số chữ số thập phân",
+    "en": "Decimal places",
+    "zh": "小数位数",
+    "ja": "小数桁数"
+  },
+  {
+    "key": "boqConfigured.maxLength",
+    "category": "materialRates",
+    "vi": "Độ dài tối đa",
+    "en": "Maximum length",
+    "zh": "最大长度",
+    "ja": "最大文字数"
+  },
+  {
+    "key": "boqConfigured.removeField",
+    "category": "materialRates",
+    "vi": "Bỏ trường phụ",
+    "en": "Remove additional field",
+    "zh": "移除附加字段",
+    "ja": "追加項目を除去"
+  },
+  {
+    "key": "boqConfigured.addField",
+    "category": "materialRates",
+    "vi": "Thêm trường",
+    "en": "Add field",
+    "zh": "添加字段",
+    "ja": "項目追加"
+  },
+  {
+    "key": "boqConfigured.removeSheet",
+    "category": "materialRates",
+    "vi": "Bỏ sheet",
+    "en": "Remove sheet",
+    "zh": "移除工作表",
+    "ja": "シート除去"
+  },
+  {
+    "key": "boqConfigured.addSheet",
+    "category": "materialRates",
+    "vi": "Nhân bản sheet",
+    "en": "Duplicate sheet",
+    "zh": "复制工作表",
+    "ja": "シート複製"
+  },
+  {
+    "key": "boqConfigured.rowsHint",
+    "category": "materialRates",
+    "vi": "Chọn sheet rồi thêm dòng hoặc tải mẫu, điền và import. Chỉ dòng có giá tham gia tổng và Báo giá; các cột giá thành phần được giữ để đối chiếu, không tự suy ra tổng giá.",
+    "en": "Select a sheet to add entries or fill and import the template. Only priced entries feed totals and quotes; component prices are retained for comparison and do not calculate the total unit price.",
+    "zh": "选择工作表添加明细，或填写并导入模板。仅计价明细用于汇总和报价；分项价格仅作核对，不自动计算总单价。",
+    "ja": "シートを選択して入力するか、様式に記入して取り込んでください。価格明細のみ集計・見積に使用します。内訳価格から合計単価を自動算出しません。"
+  },
+  {
+    "key": "boqConfigured.addRow",
+    "category": "materialRates",
+    "vi": "Thêm / sửa dòng theo sheet",
+    "en": "Add / edit sheet entry",
+    "zh": "添加／编辑工作表明细",
+    "ja": "シート明細追加・編集"
+  },
+  {
+    "key": "boqConfigured.file",
+    "category": "materialRates",
+    "vi": "File Excel theo danh mục",
+    "en": "Category Excel file",
+    "zh": "类别Excel文件",
+    "ja": "カテゴリExcelファイル"
+  },
+  {
+    "key": "boqConfigured.preview",
+    "category": "materialRates",
+    "vi": "Kiểm tra file",
+    "en": "Validate file",
+    "zh": "校验文件",
+    "ja": "ファイル検証"
+  },
+  {
+    "key": "boqConfigured.replaceWarning",
+    "category": "materialRates",
+    "vi": "Có {count} dòng hợp lệ. Xác nhận import sẽ thay toàn bộ dòng của phiên bản Nháp đang chọn.",
+    "en": "{count} valid entries. Confirming import replaces all entries in the selected Draft revision.",
+    "zh": "共{count}条有效明细。确认导入将替换所选草稿修订中的全部明细。",
+    "ja": "有効な明細は{count}件です。取込を確定すると選択中の下書き改訂の全明細を置き換えます。"
+  },
+  {
+    "key": "boqConfigured.import",
+    "category": "materialRates",
+    "vi": "Xác nhận thay dữ liệu Nháp",
+    "en": "Confirm Draft replacement",
+    "zh": "确认替换草稿数据",
+    "ja": "下書きデータ置換を確定"
+  },
+  {
+    "key": "boqConfigured.sheet",
+    "category": "materialRates",
+    "vi": "Sheet đang nhập / xem",
+    "en": "Entry / viewing sheet",
+    "zh": "录入／查看工作表",
+    "ja": "入力・表示シート"
+  },
+  {
+    "key": "boqConfigured.empty",
+    "category": "materialRates",
+    "vi": "Chưa có dòng trong sheet này.",
+    "en": "No entries in this sheet.",
+    "zh": "此工作表暂无明细。",
+    "ja": "このシートに明細はありません。"
+  },
+  {
+    "key": "boqConfigured.removeRow",
+    "category": "materialRates",
+    "vi": "Bỏ dòng Nháp",
+    "en": "Remove Draft entry",
+    "zh": "移除草稿明细",
+    "ja": "下書き明細を除去"
+  },
+  {
+    "key": "boqConfigured.rules",
+    "category": "materialRates",
+    "vi": "Điền đủ trường bắt buộc. Mã dòng tối đa 38 ký tự chữ/số/dấu chấm/gạch; số không âm và đúng số lẻ cấu hình; khối lượng có giá phải lớn hơn 0.",
+    "en": "Complete required fields. Line codes use up to 38 letters/digits/dots/dashes; numbers must be nonnegative with the configured decimal places; priced quantities must be positive.",
+    "zh": "请填写必填项。行代码最多38个字母、数字、点或连字符；数值非负并符合小数位配置；计价数量须大于0。",
+    "ja": "必須項目を入力してください。行コードは英数字・点・ハイフンで38文字以内、数値は非負・設定小数桁以内、計価数量は正数です。"
+  },
+  {
+    "key": "boqConfigured.error.configuration",
+    "category": "materialRates",
+    "vi": "Cấu hình không hợp lệ: cần 1–40 sheet, mỗi sheet 2–40 trường, mã không trùng và đủ các trường lõi phù hợp.",
+    "en": "Invalid configuration: use 1–40 sheets with 2–40 fields each, unique codes and the required core fields.",
+    "zh": "配置无效：应有1–40个工作表，各含2–40个字段，代码唯一且核心字段完整。",
+    "ja": "設定が無効です。シート1～40枚、各項目2～40個、コード重複なし・必要な基本項目を設定してください。"
+  },
+  {
+    "key": "boqConfigured.error.names",
+    "category": "materialRates",
+    "vi": "Tên sheet/trường phải có đủ VI/EN/ZH/JA, mỗi tên 1–120 ký tự.",
+    "en": "Sheet/field names require VI/EN/ZH/JA, each 1–120 characters.",
+    "zh": "工作表／字段名称须包含VI/EN/ZH/JA，各为1–120个字符。",
+    "ja": "シート・項目名はVI/EN/ZH/JAすべてに1～120文字で入力してください。"
+  },
+  {
+    "key": "boqConfigured.error.categoryLocked",
+    "category": "materialRates",
+    "vi": "Danh mục đã có phiên bản: không thể đổi bộ trường hoặc loại. Hãy tạo danh mục mới.",
+    "en": "This category already has a revision. Create another category to change its fields or type.",
+    "zh": "此类别已有修订，不能更改字段或类型，请新建类别。",
+    "ja": "改訂が存在するため項目・種類を変更できません。新カテゴリを作成してください。"
+  },
+  {
+    "key": "boqConfigured.error.configuredOnly",
+    "category": "materialRates",
+    "vi": "Danh mục này chỉ nhận dòng và mẫu Excel đúng bộ trường đã chọn.",
+    "en": "This category accepts only entries and Excel templates matching its configured fields.",
+    "zh": "此类别仅接受符合所配置字段的明细和Excel模板。",
+    "ja": "設定項目と一致する明細・Excel様式のみ受け付けます。"
+  },
+  {
+    "key": "boqConfigured.error.rowLimit",
+    "category": "materialRates",
+    "vi": "Tối đa 10.000 dòng cho một phiên bản.",
+    "en": "A revision supports up to 10,000 entries.",
+    "zh": "每个修订最多10,000条明细。",
+    "ja": "1改訂あたり最大10,000明細です。"
+  },
+  {
+    "key": "boqConfigured.error.wrongFields",
+    "category": "materialRates",
+    "vi": "Dòng hoặc sheet có trường không thuộc cấu hình danh mục. Tải lại đúng mẫu.",
+    "en": "An entry or sheet has fields outside this category. Download the correct template.",
+    "zh": "明细或工作表含有不属于此类别的字段，请下载正确模板。",
+    "ja": "カテゴリにない項目があります。正しい様式をダウンロードしてください。"
+  },
+  {
+    "key": "boqConfigured.error.required",
+    "category": "materialRates",
+    "vi": "Thiếu giá trị trường bắt buộc.",
+    "en": "A required field is missing.",
+    "zh": "缺少必填字段值。",
+    "ja": "必須項目が未入力です。"
+  },
+  {
+    "key": "boqConfigured.error.length",
+    "category": "materialRates",
+    "vi": "Giá trị vượt độ dài tối đa của trường.",
+    "en": "A value exceeds the field’s maximum length.",
+    "zh": "值超过字段最大长度。",
+    "ja": "項目の最大文字数を超えています。"
+  },
+  {
+    "key": "boqConfigured.error.number",
+    "category": "materialRates",
+    "vi": "Số phải không âm, tối đa 999999999999 và đúng số lẻ cấu hình. Trong Excel phải nhập ô dạng số, không phải text.",
+    "en": "Use nonnegative numbers up to 999999999999 with the configured decimal places. Excel cells must be numeric, not text.",
+    "zh": "数值须非负、不超过999999999999并符合小数位设置。Excel须使用数值单元格而非文本。",
+    "ja": "非負・999999999999以下・設定小数桁以内で入力してください。Excelでは文字列ではなく数値セルを使用してください。"
+  },
+  {
+    "key": "boqConfigured.error.code",
+    "category": "materialRates",
+    "vi": "Mã dòng cần 1–38 ký tự chữ/số, dấu chấm, gạch ngang hoặc gạch dưới; ví dụ VT-001.",
+    "en": "Line codes require 1–38 letters/digits/dots/dashes/underscores, e.g. VT-001.",
+    "zh": "行代码须为1–38个字母、数字、点、连字符或下划线，例如VT-001。",
+    "ja": "行コードは英数字・点・ハイフン・下線で1～38文字です。例：VT-001。"
+  },
+  {
+    "key": "boqConfigured.error.duplicate",
+    "category": "materialRates",
+    "vi": "Mã dòng trùng trong cùng sheet. Khác sheet có thể dùng cùng mã nguồn.",
+    "en": "Duplicate line code within a sheet. Other sheets may reuse the source code.",
+    "zh": "同一工作表内行代码重复，其他工作表可重复使用来源代码。",
+    "ja": "同一シート内で行コードが重複しています。別シートでは同じ元コードを使用できます。"
+  },
+  {
+    "key": "boqConfigured.error.quantity",
+    "category": "materialRates",
+    "vi": "Khối lượng dòng có giá phải lớn hơn 0.",
+    "en": "Priced entry quantities must be positive.",
+    "zh": "计价明细数量必须大于0。",
+    "ja": "計価明細の数量は0より大きくしてください。"
+  },
+  {
+    "key": "boqConfigured.error.draftOnly",
+    "category": "materialRates",
+    "vi": "Chỉ được thay dữ liệu của phiên bản Nháp.",
+    "en": "Only Draft revision entries can be changed.",
+    "zh": "只能修改草稿修订明细。",
+    "ja": "下書き改訂のみ変更できます。"
+  },
+  {
+    "key": "boqConfigured.error.wrongCategory",
+    "category": "materialRates",
+    "vi": "File hoặc bộ trường không đúng danh mục đang chọn. Tải lại mẫu của danh mục này.",
+    "en": "The file or field set belongs to a different category. Download this category’s template.",
+    "zh": "文件或字段集与所选类别不符，请下载此类别模板。",
+    "ja": "選択中のカテゴリとファイル・項目構成が一致しません。このカテゴリの様式をダウンロードしてください。"
+  },
+  {
+    "key": "boqConfigured.error.file",
+    "category": "materialRates",
+    "vi": "Cần file .xlsx từ mẫu đã tải, tối đa 20 MB; không hỗ trợ macro, liên kết ngoài hoặc kết nối dữ liệu.",
+    "en": "Use a downloaded .xlsx template up to 20 MB without macros, external links or data connections.",
+    "zh": "请使用下载的.xlsx模板，最大20 MB，不支持宏、外部链接或数据连接。",
+    "ja": "ダウンロードした.xlsx様式を使用してください。最大20 MB、マクロ・外部リンク・データ接続は非対応です。"
+  },
+  {
+    "key": "boqConfigured.error.formula",
+    "category": "materialRates",
+    "vi": "Ô nhập không nhận công thức hoặc lỗi Excel. Nhập giá trị số/văn bản đã kiểm tra.",
+    "en": "Entry cells cannot contain formulas or Excel errors. Enter verified numeric/text values.",
+    "zh": "录入单元格不接受公式或Excel错误，请输入已核实的数值或文本。",
+    "ja": "入力セルは数式・Excelエラーに対応しません。確認済みの数値・テキストを入力してください。"
+  },
+  {
+    "key": "boqConfigured.error.changedFile",
+    "category": "materialRates",
+    "vi": "File đã đổi sau khi kiểm tra. Hãy kiểm tra file lại trước khi import.",
+    "en": "The file changed after validation. Validate it again before import.",
+    "zh": "文件在校验后发生变化，请重新校验后导入。",
+    "ja": "検証後にファイルが変更されました。再検証してから取り込んでください。"
+  },
+  {
+    "key": "boqConfigured.error.conflict",
+    "category": "materialRates",
+    "vi": "Dữ liệu đã thay đổi ở phiên khác. Tải lại trước khi lưu/import, không ghi đè.",
+    "en": "Data changed in another session. Reload before saving/importing.",
+    "zh": "其他会话已更改数据，请刷新后再保存／导入。",
+    "ja": "別のセッションで変更されました。再読み込み後に保存・取込してください。"
+  },
+  {
+    "key": "boqConfigured.error.noRows",
+    "category": "materialRates",
+    "vi": "File chưa có dòng dữ liệu. Hãy điền mẫu trước khi import.",
+    "en": "The file has no entries. Fill the template before importing.",
+    "zh": "文件没有明细，请先填写模板再导入。",
+    "ja": "明細がありません。様式に入力してから取り込んでください。"
+  }
+]
