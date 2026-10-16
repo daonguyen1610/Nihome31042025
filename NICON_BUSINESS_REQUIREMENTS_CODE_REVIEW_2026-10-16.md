@@ -1006,3 +1006,8 @@ isolation và API shape, **chưa** chứng minh migration dữ liệu hiện h�
 sao NICON hoặc đúng cơ cấu phòng ban khách hàng. EF CLI chưa cài trong backend
 container nên chưa tạo được migration script bằng `dotnet ef`; không áp dụng
 migration trên database đang chạy chỉ để thử.
+
+Kiểm tra Q-05 bổ sung: `OperationalProjectServiceTests` `31/31` và integration
+`OperationalProjectsControllerTests.RenameCode*` `2/2`. Phạm vi đã chứng minh
+tìm bằng mã cũ có scope và chặn đổi mã ở trạng thái đóng; chưa chứng minh
+unique alias xuyên lịch sử hay Drive rename trên môi trường NICON.
