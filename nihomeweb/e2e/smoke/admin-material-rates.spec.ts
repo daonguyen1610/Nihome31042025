@@ -360,6 +360,24 @@ test.describe("Material rate customer import workflow", () => {
     let revisionId: number | null = null;
     let raceCatalogId: number | null = null;
 
+    const reloadCatalog = async () => {
+      await page.reload({ waitUntil: "networkidle" });
+      // Reload resets in-memory search/selection; seeded BOQs may sort first.
+      const catalogSearch = page.waitForResponse((response) => {
+        const url = new URL(response.url());
+        return (
+          response.request().method() === "GET" &&
+          url.pathname === "/api/material-rate-catalogs" &&
+          url.searchParams.get("catalogType") === "Boq" &&
+          url.searchParams.get("search") === catalogCode
+        );
+      });
+      await page.getByPlaceholder(/Search catalog code or name/i).fill(catalogCode);
+      expect((await catalogSearch).ok()).toBeTruthy();
+      await page.getByRole("button", { name: new RegExp(catalogCode) }).click();
+      await expect(page.getByRole("heading", { name: catalogName, exact: true })).toBeVisible();
+    };
+
     const replaceRevisionLines = async (
       lines: Array<{
         itemCode: string;
@@ -582,7 +600,7 @@ test.describe("Material rate customer import workflow", () => {
         ).unitRate,
       ).toBe("99999999999999.99");
 
-      await page.reload({ waitUntil: "networkidle" });
+      await reloadCatalog();
       await page.getByTestId(`material-rates-line-edit-${exactPriceLineId}`).click();
       await expect(page.getByTestId("material-rates-line-price")).toHaveValue("99999999999999.99");
       await page
@@ -787,7 +805,7 @@ test.describe("Material rate customer import workflow", () => {
           unitPrice: "1500000.25",
         },
       ]);
-      await page.reload({ waitUntil: "networkidle" });
+      await reloadCatalog();
       await expect(
         page
           .locator("tbody")
