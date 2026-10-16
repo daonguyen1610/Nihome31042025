@@ -421,6 +421,38 @@ public class OperationalProjectServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task ListAsync_FindsRenamedProjectByOldCode_WithinViewerScope()
+    {
+        var request = ValidCreate("Dự án dùng mã lịch sử");
+        request.Code = "PJ-OLD-SEARCH";
+        var created = await _service.CreateAsync(request, _managerId, false);
+        var project = await _db.OperationalProjects.SingleAsync(item => item.Id == created.Id);
+        project.RowVersion = BitConverter.GetBytes(1L);
+        await _db.SaveChangesAsync();
+
+        await _service.RenameCodeAsync(created.Id, new RenameOperationalProjectRequest
+        {
+            NewCode = "PJ-NEW-SEARCH",
+            Reason = "Đổi mã theo quy ước của NICON",
+            RowVersion = CrmConcurrency.Encode(project.RowVersion),
+        }, _managerId, false);
+
+        var ownResults = await _service.ListAsync(new OperationalProjectListParams
+        {
+            Search = "PJ-OLD-SEARCH",
+        }, _managerId, false);
+        var otherResults = await _service.ListAsync(new OperationalProjectListParams
+        {
+            Search = "PJ-OLD-SEARCH",
+        }, _otherUserId, false);
+
+        Assert.Single(ownResults.Items);
+        Assert.Equal(created.Id, ownResults.Items[0].Id);
+        Assert.Equal("PJ-NEW-SEARCH", ownResults.Items[0].Code);
+        Assert.Empty(otherResults.Items);
+    }
+
+    [Fact]
     public async Task RenameCodeAsync_DuplicateCodeLeavesProjectUnchanged()
     {
         var first = ValidCreate("First project");

@@ -64,6 +64,7 @@ public class OperationalProjectService(
             var term = $"%{parameters.Search.Trim()}%";
             query = query.Where(project =>
                 EF.Functions.Like(project.Code, term) ||
+                project.CodeChanges.Any(change => EF.Functions.Like(change.OldCode, term)) ||
                 EF.Functions.Like(project.Name, term) ||
                 EF.Functions.Like(project.Customer.Name, term));
         }

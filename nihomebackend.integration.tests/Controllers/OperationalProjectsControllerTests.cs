@@ -227,6 +227,14 @@ public class OperationalProjectsControllerTests : IntegrationTestBase
         history.Reason.Should().Be("Chuẩn hóa theo quy ước mã dự án đã phê duyệt");
         history.ChangedByUserId.Should().BeGreaterThan(0);
 
+        var oldCodeSearch = await Client.GetAsync(
+            $"/api/operational-projects?search={Uri.EscapeDataString(oldCode!)}");
+        oldCodeSearch.StatusCode.Should().Be(HttpStatusCode.OK);
+        var searchBody = await ReadJsonAsync(oldCodeSearch);
+        searchBody.GetProperty("items").EnumerateArray()
+            .Select(item => item.GetProperty("id").GetInt32())
+            .Should().Contain(projectId);
+
         var staleResponse = await Client.PatchAsJsonAsync(
             $"/api/operational-projects/{projectId}/code",
             new
