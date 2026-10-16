@@ -330,9 +330,9 @@ Development and integration seeders provide deterministic accounts for the syste
 
 The development seed now provides a deterministic login for every declared
 business role: `SALE`, `SALES_MANAGER`, `DESIGN`, `DESIGN_LEAD`, `ARCHITECT`,
-`MEP_ENGINEER`, `STRUCT_ENGINEER`, `PM`, `LEGAL_OFFICER`, `QS`, `PROCUREMENT`,
-`ACCOUNTANT`, `HR`, `WAREHOUSE`, and `BGD`. Integration tests additionally provide a
-deterministic `USER` account.
+`MEP_ENGINEER`, `STRUCT_ENGINEER`, `PM`, `SITE_COMMANDER`, `SITE_QAQC`,
+`LEGAL_OFFICER`, `QS`, `PROCUREMENT`, `ACCOUNTANT`, `HR`, `WAREHOUSE`, and
+`BGD`. Integration tests additionally provide a deterministic `USER` account.
 
 System roles are stored using the legacy `UserRole` enum; business-role users carry `Role = USER` and the real role link via `RoleEntityId`. `PermissionService` reads `RoleEntityId` first, so the business-role permission matrix from `rbac-defaults.json` applies as-is.
 

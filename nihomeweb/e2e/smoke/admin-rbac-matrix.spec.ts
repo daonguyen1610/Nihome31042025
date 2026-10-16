@@ -10,7 +10,7 @@ const __dirname = dirname(__filename);
 /**
  * Phase 6 — full RBAC matrix smoke against the live stack at $BASE_URL.
  *
- * Drives both system admins and all 14 seeded business-role accounts
+ * Drives both system admins and all 17 seeded business-role accounts
  * through every admin route surface and asserts:
  *  - allowed paths render without the inline 403 screen
  *  - denied paths render Forbidden (`<RequirePermission>` blocks)
@@ -60,6 +60,10 @@ const ALL_ADMIN_PATHS = [
   "/admin/construction/asbuilt",
   "/admin/construction/asbuilt-categories",
   "/admin/construction/handover",
+  "/admin/construction/bch/resource-requests",
+  "/admin/construction/bch/qa-qc",
+  "/admin/construction/bch/qs",
+  "/admin/construction/cm",
   "/admin/activities",
   "/admin/news",
   "/admin/projects",
@@ -237,6 +241,46 @@ const matrix: RoleExpectation[] = [
       "/admin/construction/asbuilt",
       "/admin/construction/asbuilt-categories",
       "/admin/construction/handover",
+      "/admin/construction/bch/resource-requests",
+      "/admin/construction/bch/qa-qc",
+      "/admin/construction/bch/qs",
+      "/admin/construction/cm",
+    ],
+  },
+  {
+    // SITE_COMMANDER authors all three BCH record types but cannot perform
+    // the independent CM review of those same records.
+    user: TEST_USERS.siteCommander,
+    allowed: [
+      "/admin",
+      "/admin/notifications",
+      "/admin/operational-projects",
+      "/admin/reports/projects",
+      "/admin/construction/tasks",
+      "/admin/construction/diary",
+      "/admin/construction/punchlist",
+      "/admin/construction/hse",
+      "/admin/construction/acceptance",
+      "/admin/construction/bch/resource-requests",
+      "/admin/construction/bch/qa-qc",
+      "/admin/construction/bch/qs",
+    ],
+  },
+  {
+    // SITE_QAQC records field quality evidence and resource requests. It has
+    // no Site-QS authoring or independent CM-review permission.
+    user: TEST_USERS.siteQaQc,
+    allowed: [
+      "/admin",
+      "/admin/notifications",
+      "/admin/operational-projects",
+      "/admin/construction/tasks",
+      "/admin/construction/diary",
+      "/admin/construction/punchlist",
+      "/admin/construction/hse",
+      "/admin/construction/acceptance",
+      "/admin/construction/bch/resource-requests",
+      "/admin/construction/bch/qa-qc",
     ],
   },
   {
@@ -329,6 +373,8 @@ const matrix: RoleExpectation[] = [
       "/admin/processes/general",
       "/admin/master-data",
       "/admin/workflows",
+      "/admin/construction/bch/resource-requests",
+      "/admin/construction/bch/qs",
     ],
   },
   {
@@ -369,6 +415,17 @@ const matrix: RoleExpectation[] = [
       "/admin/activity-log",
       "/admin/master-data",
       "/admin/workflows",
+    ],
+  },
+  {
+    user: TEST_USERS.hr,
+    allowed: [
+      "/admin",
+      "/admin/notifications",
+      "/admin/contacts",
+      "/admin/recruitment",
+      "/admin/recruitment/employment-types",
+      "/admin/master-data",
     ],
   },
   {
