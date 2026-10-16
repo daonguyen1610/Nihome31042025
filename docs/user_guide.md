@@ -2,7 +2,7 @@
 
 Version 1.1
 
-Last Updated: 6 October 2026
+Last Updated: 16 October 2026
 
 ---
 
@@ -45,6 +45,11 @@ specifications and user workflows. The API section is a curated operator-facing
 reference for public/content endpoints, not a complete OpenAPI contract; use the
 running Swagger document and controller/DTO source for the authoritative current
 endpoint shape.
+
+The controlling business baseline for this guide is
+`docs/Nicon/MoMs/2026-10-06/NICON_Meeting_2026-10-03_Tom-tat-yeu-cau-moi.md`.
+Where current behavior differs, this guide labels the difference as an
+implementation gap rather than treating it as a changed customer requirement.
 
 For development setup, database management, build procedures, and deployment instructions, refer to `application_developer.md`.
 
@@ -1232,9 +1237,11 @@ Manage primary contracts linked to projects and customers. Define contract value
 | Contract master maintenance | Create and edit the shared Upstream Contract only in CRM > Contract registry; Finance does not duplicate this form | Implemented |
 | Contract detail | A Finance row opens the one canonical Contract record and preserves a return link to the filtered Receivables workspace; no second Finance detail form exists | Implemented |
 
-Sales may create a customer contract directly from an Opportunity when the
-value has already been agreed; a quotation is optional. If the customer needs
-a quote, approve it internally, have Finance record and approve the commercial
+The current screen allows Sales to create an Upstream customer contract directly
+from an Opportunity and treats a quotation as optional. This is an implementation
+gap against the controlling 03/10 baseline, which requires a quotation before
+every Upstream contract. Until the product flow is corrected, users should
+approve the quotation internally, have Finance record and approve the commercial
 review of contract conditions, guarantees, and payment terms on the quotation's
 Operational Project work package, then open **Send to customer**, check or enter
 the customer email address, review the subject and message, then send. Users with
@@ -1492,8 +1499,8 @@ The seeded role catalog is implemented and can be adjusted through **Admin > Rol
 |------|------------|---------------|
 | `SALE`, `SALES_MANAGER` | CRM, quotations, tenders, surveys, and contracts according to assigned permissions |
 | `DESIGN`, `DESIGN_LEAD`, `ARCHITECT`, `MEP_ENGINEER`, `STRUCT_ENGINEER` | Design projects and discipline workflows |
-| `PM`, `LEGAL_OFFICER` | Project, permitting, and construction workflows |
-| `QS`, `PROCUREMENT`, `ACCOUNTANT`, `WAREHOUSE` | Tendering, procurement, finance-adjacent, and operational access currently present in the catalog |
+| `PM`, `SITE_COMMANDER`, `SITE_QAQC`, `LEGAL_OFFICER` | CM preparation/review, BCH site operations, QA/QC, permitting, and construction workflows according to assigned permissions |
+| `QS`, `PROCUREMENT`, `ACCOUNTANT`, `WAREHOUSE` | Site QS/tendering, procurement, finance-adjacent, and operational access currently present in the catalog |
 | `HR` | Recruitment applications, positions, recruitment options, contacts, and shared master data; no Finance payment or approval permission |
 | `BGD` | Broad read-oriented management access |
 
@@ -1504,8 +1511,8 @@ model. They are business responsibilities, not permission-code aliases:
 
 | Target position | Primary responsibility | Current catalog note |
 |---|---|---|
-| PM Phòng CM | Portfolio schedule, budget, QA/QC, HSE, QS and VO control | Uses project/PM permissions today; dedicated CM boundary is planned |
-| Chỉ huy trưởng BCH | Coordinate one assigned construction site | Dedicated BCH duty separation is planned |
+| PM Phòng CM | Portfolio schedule, budget, QA/QC, HSE, QS and VO control | First CM preparation/review slice is delivered under `PM`; full portfolio/baseline scope remains partial |
+| Chỉ huy trưởng BCH | Coordinate one assigned construction site | `SITE_COMMANDER` and BCH routes are delivered; full offline/site scope remains partial |
 | Kỹ sư hiện trường / QA-QC | Daily field evidence, QA/QC and Punchlist | Map through explicit construction permissions, not role name alone |
 | Kỹ sư QS hiện trường | Upstream and Downstream quantity acceptance | Existing `QS` must not automatically imply both site and tendering duties |
 | Nhân viên Cung ứng | RFQ, award, procurement and vendor performance | `PROCUREMENT` capability must remain distinct from warehouse custody |

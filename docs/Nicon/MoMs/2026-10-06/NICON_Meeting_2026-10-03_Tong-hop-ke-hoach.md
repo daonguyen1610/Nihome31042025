@@ -9,6 +9,11 @@ status: "Bản nháp — chờ NICON xác nhận các mục ở Phần 6"
 
 # NICON — Tổng hợp cuộc họp demo 03/10/2026 và kế hoạch triển khai tiếp theo
 
+> **Baseline điều khiển:** Bản tóm tắt
+> `NICON_Meeting_2026-10-03_Tom-tat-yeu-cau-moi.md` là nguồn ưu tiên khi hai bản
+> diễn giải khác nhau. Trạng thái/kế hoạch trong tài liệu này là snapshot ngày
+> 04/10/2026; không dùng để suy ra trạng thái mã nguồn hiện tại.
+
 > **Lưu ý:** Tài liệu này được tổng hợp từ bản chép lời tự động, vốn có nhiều lỗi nhận dạng giọng nói. Mốc thời gian `[h:mm:ss]` trỏ về đoạn gốc để đối chiếu. Mục nào còn mơ hồ được ghi ở **Phần 6 – Câu hỏi cần NICON xác nhận** chứ không tự suy diễn thành yêu cầu.
 >
 > **Đầu mối phía NICON:** chị **Huỳnh Anh** — mọi trao đổi, xác nhận và mẫu dữ liệu gửi qua chị Huỳnh Anh `[3:02:56]`.

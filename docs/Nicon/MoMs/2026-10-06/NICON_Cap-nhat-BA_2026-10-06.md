@@ -8,6 +8,11 @@ status: "Bản làm việc — cần NICON xác nhận các câu hỏi mở trư
 
 # NICON — Cập nhật tình hình dự án và định hướng phát triển
 
+> **Baseline điều khiển:** Khi có khác biệt, dùng
+> `NICON_Meeting_2026-10-03_Tom-tat-yeu-cau-moi.md`. Các mô tả “đã có trong mã
+> nguồn” bên dưới là snapshot ngày 06/10/2026, không phải trạng thái triển khai
+> hiện tại và không tự đóng Q-01 đến Q-11.
+
 ## 1. Mục đích và cách sử dụng
 
 Tài liệu chuyển nội dung cuộc họp demo ngày 03/10/2026 thành bản cập nhật để

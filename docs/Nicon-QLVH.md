@@ -13,6 +13,12 @@ mô tả trong `user_guide.md` và `application_developer.md`; yêu cầu xuất
 
 ### 1.1. Nguyên tắc nguồn
 
+Baseline nghiệp vụ điều khiển cho lần rà soát này là
+`docs/Nicon/MoMs/2026-10-06/NICON_Meeting_2026-10-03_Tom-tat-yeu-cau-moi.md`.
+Nếu tài liệu hoặc giả định triển khai về sau mâu thuẫn với baseline này mà chưa
+có xác nhận bằng văn bản của NICON, baseline ngày 03/10/2026 được ưu tiên và
+điểm mâu thuẫn phải được giữ ở trạng thái `Open decision`.
+
 1. Yêu cầu trực tiếp hiện tại của NICON.
 2. Quyết định họp mới nhất đã được xác nhận.
 3. Tài liệu canonical này và `Nicon-workflow.md`.
@@ -51,9 +57,10 @@ tên sheet, màu sắc, ngày và tên khách hàng trong file không phải quy
 ### 2.2. Quyền và phân tách nhiệm vụ
 
 - Hệ thống dùng permission; role là bộ permission có thể quản trị.
-- Vai trò nghiệp vụ được NICON phân vào năm nhóm theo sơ đồ tổ chức cập nhật:
-  `Phát triển kinh doanh/CRM`, `Cung ứng`, `Quản lý dự án – Kỹ thuật thi công`,
-  `Thiết kế` và `Kế toán – Tài chính – Nhân sự`. Mỗi nhóm có
+- Baseline 03/10 xác định năm nhóm/phòng: `Kinh doanh/CRM`,
+  `Hành chính nhân sự`, `Thiết kế`, `Quản lý thi công` và
+  `Tài chính kế toán`. Vị trí tổ chức của Cung ứng và Pháp lý chưa được chốt.
+  Mỗi nhóm có
   bộ quyền mẫu do quản trị viên cấu hình; khi tạo vai trò, quản trị viên có thể
   sao chép bộ quyền mẫu rồi chỉnh độc lập. Thay đổi quyền mẫu không hồi tố vào
   vai trò đã tạo và không được vượt quá quyền hiện có của người thao tác.
@@ -67,7 +74,7 @@ tên sheet, màu sắc, ngày và tên khách hàng trong file không phải quy
 - Backend phải kiểm tra quyền, scope Dự án, trạng thái và concurrency; ẩn nút ở
   frontend không phải biện pháp bảo mật.
 
-### 2.2.1. Nhóm công việc liên phòng ban — Implemented
+### 2.2.1. Nhóm công việc liên phòng ban — Partial
 
 - Kinh doanh phụ trách Cơ hội hoặc PM của Operational Project tạo một nhóm công
   việc cho phòng nhận; quản trị viên có quyền ngoại lệ. Nhóm theo Dự án luôn giữ
@@ -89,6 +96,10 @@ tên sheet, màu sắc, ngày và tên khách hàng trong file không phải quy
   người thực hiện; chỉ đầu việc đã hoàn thành và được xác nhận mới được tính.
 - Xóa Dự án xóa các nhóm việc thuộc Dự án theo deletion-impact. Xóa Hợp đồng
   hoặc Cơ hội chỉ gỡ liên kết tùy chọn và giữ nguyên nhóm việc dưới Dự án.
+
+Các quy tắc giữ nhóm ở Dự án khi có hợp đồng, người được quyền khởi tạo giao
+việc liên phòng và việc duyệt/KPI của công việc nội bộ là hành vi triển khai hiện
+tại, chưa phải quyết định đã được NICON chốt (Q-01 đến Q-03).
 
 ### 2.2.2. Liên phòng ban ở giai đoạn trước hợp đồng — Implemented
 
@@ -168,12 +179,11 @@ và hợp đồng mà không nhập lại dữ liệu.
   sau đó người dùng chủ động lập hợp đồng.
 - Khảo sát mobile ghi điều kiện hiện trường, tọa độ, ảnh/video/file và checklist;
   đồng bộ có trạng thái, retry và xung đột rõ ràng.
-- Quy tắc "báo giá trước hợp đồng" có điều kiện và do Kinh doanh quyết định theo
-  từng lô: nếu lô dùng báo giá thì báo giá phải được duyệt trước khi lập hợp
-  đồng; nếu khách đã thống nhất giá trị trực tiếp thì chỉ cần hợp đồng. NICON
-  xác nhận ngày 2026-10-11.
-- Hợp đồng Upstream có thể lập trực tiếp từ Cơ hội khi khách đã thống nhất giá
-  trị, không bắt buộc có báo giá. Nếu cần báo giá, Kinh doanh duyệt nội bộ rồi
+- **Báo giá luôn đi trước Hợp đồng Upstream.** Kinh doanh lập báo giá theo suất
+  đầu tư hoặc BOQ, hoàn tất duyệt nội bộ và rà soát Tài chính trước khi lập hợp
+  đồng. Mã nguồn hiện vẫn cho phép tạo Hợp đồng Upstream với `QuoteId = null`;
+  đây là khoảng trống triển khai, không phải ngoại lệ nghiệp vụ đã được duyệt.
+- Kinh doanh duyệt nội bộ báo giá rồi
   xem trước email, chọn địa chỉ khách và gửi; báo giá được gắn vào hợp đồng phải
   đã duyệt, còn hiệu lực khi gắn và đúng khách hàng/Dự án. Hợp đồng Downstream
   với NCC/thầu phụ không dùng báo giá CRM đầu ra.
@@ -223,15 +233,18 @@ trong khi media/feedback theo file của Concept và review markup vẫn là m�
   Thi công chỉ sử dụng IFC ở trạng thái Released.
 - Tài liệu trình phải là Project Document đúng Dự án và đúng category giai đoạn;
   tab Tài liệu hỗ trợ upload, trạng thái đồng bộ và liên kết Google Drive.
-- Chỉ quyền `design.records.hard-delete`, mặc định cấp BGD và SUPER_ADMIN, được
+- Baseline chỉ xác nhận rằng quyền xóa hồ sơ không đạt phải dành cho cấp quyền
+  cao nhất. Cơ chế hiện tại dùng `design.records.hard-delete`, mặc định cấp BGD
+  và SUPER_ADMIN, để
   xóa vĩnh viễn hồ sơ không đạt (`Discarded`, `Rejected` hoặc `Cancelled`).
   Người xóa phải xem trước ảnh hưởng, nhập đúng mã hồ sơ và dùng plan token còn
   hiệu lực. Hệ thống chặn xóa khi tệp chưa dọn an toàn, Shop Drawing còn nằm
   trong gói IFC hoặc đợt trình dùng chung với hồ sơ khác; đợt trình chỉ thuộc
   riêng hồ sơ được xóa cùng lịch sử liên quan.
-- Sau khi một đợt review đã ghi nhận `ClientSubmittedAt`, hồ sơ nguồn không còn
-  được hard delete ở bất kỳ trạng thái nào. Sửa sai phải dùng revision thay thế
-  và quyết định khách hàng có lý do để giữ đầy đủ lịch sử trình khách.
+- Sau khi một đợt review đã ghi nhận `ClientSubmittedAt`, cơ chế hiện tại chặn
+  hard delete và yêu cầu revision thay thế. Đây là mặc định an toàn kỹ thuật;
+  NICON vẫn phải chốt Q-08 về thẩm quyền xóa và việc hồ sơ đã trình khách có bao
+  giờ được phép xóa hay không.
 
 Vai trò `PM` thuộc nhóm `CONSTRUCTION` hiện là đại diện kỹ thuật cho người nhận
 Phòng CM trong luồng trình nội bộ. Việc tách thêm chức danh PM Phòng CM/BCH chi
@@ -259,7 +272,11 @@ Bảo đảm hồ sơ pháp lý đúng loại công trình, đúng hạn và đ�
 - Cảnh báo quá hạn, sắp đến hạn và sắp hết hạn.
 - Permit bắt buộc chưa Issued hoặc đã Expired phải chặn cổng khởi công liên quan.
 
-**Implemented:** Hợp đồng Upstream loại Design, Construction hoặc
+**Yêu cầu mục tiêu:** Khi hợp đồng chuyển sang `InProgress`, hệ thống tự sinh
+danh sách thủ tục pháp lý áp dụng và PM phân công từng thủ tục ngay từ đầu.
+Danh mục áp dụng theo loại/quy mô dự án vẫn cần NICON chốt tại Q-09.
+
+**Hiện trạng triển khai:** Hợp đồng Upstream loại Design, Construction hoặc
 DesignAndBuild chỉ chuyển từ `Signed` sang `InProgress` qua wizard Pháp lý do PM
 của Operational Project hoặc Admin xác nhận. Wizard đề xuất các `permit_type`
 đang hoạt động để PM chọn thủ công, chọn chủ trì Pháp lý, người thực hiện/người
@@ -479,8 +496,25 @@ bằng 100% trước khi khóa kỳ.
 
 ## 12. Các quyết định bắt buộc còn mở
 
-Q-01–Q-03 về nhóm công việc đã được NICON xác nhận và triển khai theo mục 2.2.1.
-Các quyết định Q-04–Q-11 và phụ thuộc chi tiết nằm trong MoM ngày 03–06/10/2026.
+Theo baseline 03/10/2026, Q-01 đến Q-11 đều cần NICON xác nhận bằng văn bản:
+
+1. Nhóm việc trước hợp đồng được giữ ở Dự án hay chuyển/gắn sang Hợp đồng; cách
+   xử lý khi một Dự án có nhiều Hợp đồng.
+2. Công việc nội bộ có bắt buộc duyệt không; điều kiện và trọng số tính KPI.
+3. Ai được khởi tạo giao việc liên phòng: PM Dự án, người phụ trách Cơ hội hay cả
+   hai; phạm vi ngoại lệ của quản trị viên.
+4. Cung ứng và Pháp lý là phòng độc lập hay trực thuộc phòng nào trong năm nhóm.
+5. Quy ước mã Dự án: định dạng, thành phần, thời điểm khóa và xử lý trùng mã.
+6. Người nhận trình nội bộ chỉ bình luận hay phải đồng ý trước khi trình khách.
+7. Trưởng/phó phòng Thiết kế có được CC mặc định cho mọi Dự án không.
+8. Cấp quyền nào được xóa hồ sơ không đạt; hồ sơ đã trình khách có được xóa
+   không và điều kiện/bằng chứng bắt buộc.
+9. Danh mục giấy phép dùng chung hay phụ thuộc loại/quy mô Dự án.
+10. Ranh giới Design Lead duyệt đầu việc và Design Manager chốt phương án/chuyển
+    giai đoạn.
+11. Đội ngũ và Tiến độ Thiết kế dùng một màn hình hay hai tab liên kết; phạm vi
+    import MS Project.
+
 Ngoài ra, NICON cần chốt:
 
 1. Cổng khởi công và checklist ISO theo loại công trình.
@@ -499,15 +533,15 @@ tới khi chủ sở hữu nghiệp vụ chấp thuận các quyết định tư
 
 | Mục | Năng lực | Trạng thái | Bằng chứng triển khai hoặc khoảng trống |
 |---:|---|---|---|
-| 1 | Nhóm quyền/phòng ban | Partial | Đã có role HR độc lập với quyền tuyển dụng và không có quyền tài chính; ma trận phòng ban cuối cùng vẫn cần NICON xác nhận. |
-| 2 | CRM và mã dự án | Implemented | Dự án → Cơ hội → Hợp đồng và luồng đổi mã có quyền riêng, lý do, concurrency, audit, Drive rename/retry đã có persistence/API/UI/test. |
-| 3 | Dự án dùng chung | Implemented | Operational Project, work package, task, dependency, CC và thông báo đã có persistence/API/UI/test. |
+| 1 | Nhóm quyền/phòng ban | Partial | Có role/group/editor, nhưng năm group seed hiện tại không khớp baseline 03/10; HR đang nằm trong FINANCE và thiếu group Hành chính nhân sự độc lập. |
+| 2 | CRM và mã dự án | Partial | Lead/Cơ hội/Dự án và đổi mã đã có; Hợp đồng Upstream vẫn tạo được khi không có báo giá, trái baseline. |
+| 3 | Dự án dùng chung | Partial | Operational Project, work package, task, dependency, CC và thông báo đã có; Q-01 đến Q-03 còn mở. |
 | 4 | Thiết kế trước hợp đồng | Implemented | Design Project và công việc thiết kế không phụ thuộc hợp đồng đã ký. |
 | 5 | Liên phòng ban trước hợp đồng | Implemented | Procurement input, Finance review và gate báo giá/nộp thầu đã có. |
 | 6 | BOQ | Partial | Có preview/mapping nhiều sheet; persistence chưa giữ hierarchy và provenance từng dòng. |
 | 7 | Đấu thầu | Implemented | Kế hoạch, hồ sơ, năng lực, estimate, review, submission snapshot và kết quả đã có. |
 | 8 | Thiết kế chi tiết | Partial | Schedule/review/Drive và liên kết Vendor/HĐ Downstream bằng stable ID đã có; nhập `.mpp` đầy đủ và markup theo file còn là mục tiêu. |
-| 9 | Pháp lý | Partial | Có activation wizard, permit workflow và risk view; template loại/quy mô công trình là Q-09. |
+| 9 | Pháp lý | Partial | Có activation wizard, permit workflow và risk view; chưa tự sinh danh sách áp dụng vì template loại/quy mô công trình là Q-09. |
 | 10 | Thi công | Partial | Có CM/BCH, resource request, QA/QC và QS; baseline cấu trúc, handoff và portfolio còn thiếu. |
 | 11 | Tài chính kế toán | Partial | Có Payment Request Downstream; chưa có dossier hai chiều và ba section chứng từ. |
 | 12 | Host và Drive NICON | Target | Chỉ công nhận sau deployment, OAuth NICON, health check và smoke test có bằng chứng. |

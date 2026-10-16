@@ -2,7 +2,7 @@
 
 Version 1.1
 
-Last Updated: 13 October 2026
+Last Updated: 16 October 2026
 
 ---
 
@@ -1892,6 +1892,10 @@ Any review with `ClientSubmittedAt` blocks hard delete regardless of its later
 decision; corrections use the recorded client decision and a replacement
 revision instead. Bulk Shop Drawing deletion is intentionally disabled
 because every root requires an individual impact plan and typed confirmation.
+This is the implemented safety policy, not a confirmed resolution of NICON
+question Q-08. The controlling 03/10 baseline only confirms that failed-record
+deletion belongs to the highest permission tier and explicitly leaves deletion
+after client submission open.
 
 #### Actors and Permissions
 
@@ -2454,13 +2458,15 @@ KPI sources must satisfy these rules:
     corrected. Recalculation of locked periods requires a separately approved
     reopen workflow.
 
-The approved source decisions are retained below. Earlier design proposals and
-pre-delivery inventories are not an alternative API specification; consult the
-current controllers/DTOs and the module contracts in this guide.
+The implementation assumptions retained below describe the current code. They
+must not be presented as NICON-approved business decisions when they are absent
+from or conflict with the controlling 03/10 baseline. Consult the current
+controllers/DTOs for actual API behavior and `docs/Nicon-QLVH.md` for the target
+business contract.
 
-| Decision | Approved contract |
+| Decision | Current implementation assumption |
 | --- | --- |
-| D-01 | The organization chart supplied 11/10/2026 defines five active groups: Business Development/CRM, Procurement, Construction Management, Design, and Accounting–Finance–HR. `PROCUREMENT` is a distinct business role and KPI position; `QS` remains Tendering, `WAREHOUSE` remains a Procurement control role, and Legal sits under Construction Management. Scheduled KPI eligibility must include Procurement. |
+| D-01 | The seed defines CRM, Procurement, Construction Management, Design, and Accounting–Finance–HR. This conflicts with the 03/10 five-department baseline; Procurement/Legal placement and an independent Administration/HR group remain Q-04. |
 | D-02 | The latest approved execution BOQ is selected atomically as final when the Operational Project completes. VOs affect it only through an explicitly approved BOQ revision. |
 | D-03 | Verified Punch Items with confirmed Design root cause count equally against the responsible designer; severity is evidence, not a KPI weight. The fixer is not automatically the responsible designer. |
 | D-04 | Confirmed HSE violations count equally against the responsible site user. Draft, Reported, Rejected and Cancelled records and diary text do not count. |
@@ -2497,9 +2503,11 @@ targets, weights, precision and Vietnam-time boundaries belong in unit tests.
 
 ### 7.20 Module 4 Target Integration Contract
 
-This section records the customer-approved target for the expanded Construction
-and Acceptance module. It is a delivery contract, not a claim that every item
-below exists in the current API.
+This section records the target contract synthesized for the expanded
+Construction and Acceptance module. The 03/10 baseline confirms the CM/BCH
+split, resource requests, QA/QC and QS; detailed gates, matrices and templates
+remain subject to the open decisions in `docs/Nicon-QLVH.md`. It is not a claim
+that every item below is customer-approved or exists in the current API.
 
 #### Delivered CM/BCH workflow slice
 
@@ -2665,8 +2673,10 @@ operation; a Drive failure must not falsely mark a dossier synchronized.
   eleven target positions, KPI weights, Drive tree, and UI expectations;
 - the workflow DOCX is historical context and is superseded where the canonical
   `docs/Nicon-workflow.md` reflects later meeting decisions;
-- `MoMs/2026-10-06/` records confirmed decisions, open questions, priorities,
-  and the distinction between current code and target scope;
+- `MoMs/2026-10-06/NICON_Meeting_2026-10-03_Tom-tat-yeu-cau-moi.md` is the
+  controlling business baseline for the current alignment. Other files in that
+  dated folder are supporting synthesis/snapshots and cannot silently close its
+  open questions;
 - schedule PDFs demonstrate real WBS hierarchies, durations, start/finish,
   predecessors, parallel permit/design activities, milestones, and baselines;
 - `BOQ/` contains heterogeneous one-sheet and multi-sheet workbooks used to
