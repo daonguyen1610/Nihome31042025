@@ -98,5 +98,11 @@
   {"key":"kpi.definition.DESIGN_VERIFIED_WORK","category":"kpi","vi":"Đầu việc Thiết kế được xác nhận","en":"Verified design work tasks","zh":"已确认的设计任务","ja":"確認済み設計タスク"},
   {"key":"kpi.definition.SITE_VERIFIED_WORK","category":"kpi","vi":"Đầu việc Thi công được xác nhận","en":"Verified site work tasks","zh":"已确认的施工任务","ja":"確認済み現場タスク"},
   {"key":"kpi.definition.PROCUREMENT_VERIFIED_WORK","category":"kpi","vi":"Đầu việc Cung ứng được xác nhận","en":"Verified procurement work tasks","zh":"已确认的采购任务","ja":"確認済み調達タスク"},
-  {"key":"kpi.definition.ACCOUNTING_VERIFIED_WORK","category":"kpi","vi":"Đầu việc Kế toán được xác nhận","en":"Verified accounting work tasks","zh":"已确认的会计任务","ja":"確認済み会計タスク"}
+  {"key":"kpi.definition.ACCOUNTING_VERIFIED_WORK","category":"kpi","vi":"Đầu việc Kế toán được xác nhận","en":"Verified accounting work tasks","zh":"已确认的会计任务","ja":"確認済み会計タスク"},
+  {"key":"kpi.role.DESIGN","category":"kpi","vi":"Thiết kế","en":"Design","zh":"设计","ja":"設計"},
+  {"key":"kpi.role.PROCUREMENT","category":"kpi","vi":"Cung ứng","en":"Procurement","zh":"采购","ja":"調達"},
+  {"key":"kpi.role.PROJECT_ACCOUNTING","category":"kpi","vi":"Kế toán dự án","en":"Project accounting","zh":"项目会计","ja":"プロジェクト会計"},
+  {"key":"kpi.role.SALES","category":"kpi","vi":"Kinh doanh","en":"Sales","zh":"销售","ja":"営業"},
+  {"key":"kpi.role.SITE","category":"kpi","vi":"Công trường","en":"Site","zh":"现场","ja":"現場"},
+  {"key":"kpi.role.TENDERING","category":"kpi","vi":"Đấu thầu","en":"Tendering","zh":"投标","ja":"入札"}
 ]

@@ -83,10 +83,14 @@ const Contact = () => {
               <form onSubmit={submit} className="space-y-5">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div>
-                    <label className="text-xs uppercase tracking-wider font-bold text-foreground/70 mb-2 block">
+                    <label
+                      htmlFor="contact-name"
+                      className="text-xs uppercase tracking-wider font-bold text-foreground/70 mb-2 block"
+                    >
                       {t("contact.form.name")}
                     </label>
                     <input
+                      id="contact-name"
                       required
                       value={form.name}
                       onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -95,10 +99,16 @@ const Contact = () => {
                     />
                   </div>
                   <div>
-                    <label className="text-xs uppercase tracking-wider font-bold text-foreground/70 mb-2 block">
+                    <label
+                      htmlFor="contact-phone"
+                      className="text-xs uppercase tracking-wider font-bold text-foreground/70 mb-2 block"
+                    >
                       {t("contact.form.phone")}
                     </label>
                     <input
+                      id="contact-phone"
+                      type="tel"
+                      autoComplete="tel"
                       value={form.phone}
                       onChange={(e) => setForm({ ...form, phone: e.target.value })}
                       className="w-full bg-secondary rounded-2xl px-5 py-3.5 text-sm border border-transparent focus:border-primary focus:bg-background outline-none transition"
@@ -107,10 +117,14 @@ const Contact = () => {
                   </div>
                 </div>
                 <div>
-                  <label className="text-xs uppercase tracking-wider font-bold text-foreground/70 mb-2 block">
+                  <label
+                    htmlFor="contact-email"
+                    className="text-xs uppercase tracking-wider font-bold text-foreground/70 mb-2 block"
+                  >
                     {t("contact.form.email")}
                   </label>
                   <input
+                    id="contact-email"
                     required
                     type="email"
                     value={form.email}
@@ -120,10 +134,14 @@ const Contact = () => {
                   />
                 </div>
                 <div>
-                  <label className="text-xs uppercase tracking-wider font-bold text-foreground/70 mb-2 block">
+                  <label
+                    htmlFor="contact-subject"
+                    className="text-xs uppercase tracking-wider font-bold text-foreground/70 mb-2 block"
+                  >
                     {t("contact.form.subject")}
                   </label>
                   <select
+                    id="contact-subject"
                     value={form.subject}
                     onChange={(e) => setForm({ ...form, subject: e.target.value })}
                     className="w-full bg-secondary rounded-2xl px-5 py-3.5 text-sm border border-transparent focus:border-primary focus:bg-background outline-none transition"
@@ -137,10 +155,14 @@ const Contact = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs uppercase tracking-wider font-bold text-foreground/70 mb-2 block">
+                  <label
+                    htmlFor="contact-message"
+                    className="text-xs uppercase tracking-wider font-bold text-foreground/70 mb-2 block"
+                  >
                     {t("contact.form.message")}
                   </label>
                   <textarea
+                    id="contact-message"
                     required
                     rows={5}
                     value={form.message}

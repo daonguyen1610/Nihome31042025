@@ -802,18 +802,30 @@ const TranslationsPage = () => {
 
               {/* Pagination */}
               {totalPages > 1 && (
-                <div className="flex items-center justify-between border-t px-4 py-3">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-t px-4 py-3">
                   <span className="text-xs text-muted-foreground">
                     {t("translations.pageInfo")
                       .replace("{count}", String(pairs.length))
                       .replace("{page}", String(page))
                       .replace("{total}", String(totalPages))}
                   </span>
-                  <div className="flex gap-1">
-                    {Array.from({ length: Math.min(totalPages, 10) }, (_, i) => i + 1).map((p) => (
+                  <div className="flex flex-wrap items-center gap-1">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={page <= 1}
+                      onClick={() => setPage(page - 1)}
+                    >
+                      {t("common.pagination.prev")}
+                    </Button>
+                    {Array.from(
+                      { length: Math.min(totalPages, 3) },
+                      (_, i) => Math.max(1, Math.min(page - 1, totalPages - 2)) + i,
+                    ).map((p) => (
                       <Button
                         key={p}
                         size="sm"
+                        aria-current={p === page ? "page" : undefined}
                         variant={p === page ? "default" : "ghost"}
                         className="h-8 w-8 p-0"
                         onClick={() => setPage(p)}
@@ -821,9 +833,14 @@ const TranslationsPage = () => {
                         {p}
                       </Button>
                     ))}
-                    {totalPages > 10 && (
-                      <span className="px-2 py-1 text-xs text-muted-foreground">…</span>
-                    )}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={page >= totalPages}
+                      onClick={() => setPage(page + 1)}
+                    >
+                      {t("common.pagination.next")}
+                    </Button>
                   </div>
                 </div>
               )}

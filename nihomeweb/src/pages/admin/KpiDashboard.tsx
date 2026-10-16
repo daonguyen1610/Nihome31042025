@@ -468,7 +468,7 @@ const KpiDashboard = ({ mode = "evaluation" }: KpiDashboardProps) => {
                     </span>
                   </div>
                   <p className="mt-3 min-h-8 text-xs font-semibold leading-4">
-                    {item.roleCode.replace(/_/g, " ")}
+                    {t(`kpi.role.${item.roleCode}`)}
                   </p>
                   <p className="mt-1 text-xs leading-5 text-muted-foreground">
                     {t("kpi.guide.config.readiness", {
@@ -496,8 +496,8 @@ const KpiDashboard = ({ mode = "evaluation" }: KpiDashboardProps) => {
               ))}
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[1200px] text-sm">
-                <thead>
+              <table className="block w-full text-sm xl:table xl:min-w-[1200px]">
+                <thead className="hidden xl:table-header-group">
                   <tr className="border-b text-left text-xs uppercase text-muted-foreground">
                     <th className="px-3 py-3">{t("kpi.metric")}</th>
                     <th className="px-3 py-3">{t("kpi.role")}</th>
@@ -510,13 +510,30 @@ const KpiDashboard = ({ mode = "evaluation" }: KpiDashboardProps) => {
                     <th />
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="grid gap-4 md:grid-cols-2 xl:table-row-group">
                   {definitions.map((definition) => (
-                    <tr key={definition.id} className="border-b">
-                      <td className="px-3 py-3">{t(definition.nameKey)}</td>
-                      <td className="px-3 py-3">{definition.roleCode}</td>
-                      <td className="px-3 py-3">
+                    <tr
+                      key={definition.id}
+                      className="grid min-w-0 gap-1 rounded-lg border bg-card p-3 xl:table-row xl:rounded-none xl:border-0 xl:border-b xl:bg-transparent xl:p-0"
+                    >
+                      <td className="flex min-w-0 items-center justify-between gap-3 px-3 py-2 xl:table-cell xl:py-3">
+                        <span className="text-xs text-muted-foreground xl:hidden">
+                          {t("kpi.metric")}
+                        </span>
+                        {t(definition.nameKey)}
+                      </td>
+                      <td className="flex min-w-0 items-center justify-between gap-3 px-3 py-2 xl:table-cell xl:py-3">
+                        <span className="text-xs text-muted-foreground xl:hidden">
+                          {t("kpi.role")}
+                        </span>
+                        {t(`kpi.role.${definition.roleCode}`)}
+                      </td>
+                      <td className="flex min-w-0 items-center justify-between gap-3 px-3 py-2 xl:table-cell xl:py-3">
+                        <span className="text-xs text-muted-foreground xl:hidden">
+                          {t("kpi.weight")}
+                        </span>
                         <Input
+                          aria-label={t(definition.nameKey) + " — " + t("kpi.weight")}
                           className="w-24"
                           type="number"
                           min={0.01}
@@ -534,8 +551,12 @@ const KpiDashboard = ({ mode = "evaluation" }: KpiDashboardProps) => {
                           }
                         />
                       </td>
-                      <td className="px-3 py-3">
+                      <td className="flex min-w-0 items-center justify-between gap-3 px-3 py-2 xl:table-cell xl:py-3">
+                        <span className="text-xs text-muted-foreground xl:hidden">
+                          {t("kpi.target")}
+                        </span>
                         <Input
+                          aria-label={t(definition.nameKey) + " — " + t("kpi.target")}
                           className="w-36"
                           type="number"
                           min={0}
@@ -557,7 +578,10 @@ const KpiDashboard = ({ mode = "evaluation" }: KpiDashboardProps) => {
                           }
                         />
                       </td>
-                      <td className="px-3 py-3">
+                      <td className="flex min-w-0 items-center justify-between gap-3 px-3 py-2 xl:table-cell xl:py-3">
+                        <span className="text-xs text-muted-foreground xl:hidden">
+                          {t("kpi.direction")}
+                        </span>
                         <Select
                           value={definition.targetDirection}
                           onValueChange={(value) =>
@@ -574,7 +598,10 @@ const KpiDashboard = ({ mode = "evaluation" }: KpiDashboardProps) => {
                             )
                           }
                         >
-                          <SelectTrigger className="w-44">
+                          <SelectTrigger
+                            aria-label={t(definition.nameKey) + " — " + t("kpi.direction")}
+                            className="w-44"
+                          >
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -587,8 +614,12 @@ const KpiDashboard = ({ mode = "evaluation" }: KpiDashboardProps) => {
                           </SelectContent>
                         </Select>
                       </td>
-                      <td className="px-3 py-3">
+                      <td className="flex min-w-0 items-center justify-between gap-3 px-3 py-2 xl:table-cell xl:py-3">
+                        <span className="text-xs text-muted-foreground xl:hidden">
+                          {t("kpi.threshold")}
+                        </span>
                         <Input
+                          aria-label={t(definition.nameKey) + " — " + t("kpi.threshold")}
                           className="w-28"
                           type="number"
                           min={0}
@@ -611,8 +642,12 @@ const KpiDashboard = ({ mode = "evaluation" }: KpiDashboardProps) => {
                           }
                         />
                       </td>
-                      <td className="px-3 py-3">
+                      <td className="flex min-w-0 items-center justify-between gap-3 px-3 py-2 xl:table-cell xl:py-3">
+                        <span className="text-xs text-muted-foreground xl:hidden">
+                          {t("kpi.active")}
+                        </span>
                         <Checkbox
+                          aria-label={t(definition.nameKey) + " — " + t("kpi.active")}
                           checked={definition.isActive}
                           onCheckedChange={(value) =>
                             setDefinitions((current) =>
@@ -625,8 +660,13 @@ const KpiDashboard = ({ mode = "evaluation" }: KpiDashboardProps) => {
                           }
                         />
                       </td>
-                      <td className="px-3 py-3">v{definition.version}</td>
-                      <td className="px-3 py-3 text-right">
+                      <td className="flex min-w-0 items-center justify-between gap-3 px-3 py-2 xl:table-cell xl:py-3">
+                        <span className="text-xs text-muted-foreground xl:hidden">
+                          {t("kpi.version")}
+                        </span>
+                        v{definition.version}
+                      </td>
+                      <td className="block px-3 py-3 text-right xl:table-cell">
                         <Button
                           size="sm"
                           variant="ghost"

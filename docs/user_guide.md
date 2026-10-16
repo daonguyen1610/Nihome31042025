@@ -1610,6 +1610,17 @@ The client sends the refresh token to the logout endpoint. The refresh token is 
 | My Profile         | `/my-profile`          | Authenticated profile, password, and personal document management |
 | Forbidden          | `/forbidden`           | Permission-denied result                                         |
 
+The homepage project search uses current API categories, exact published scale
+labels and locations. Submitting opens Projects with category, scale and
+location query parameters; filters combine with status and text search. Remove
+an individual filter using its chip. Refresh and shared URLs retain these filters.
+The footer links to Contact; it does not collect newsletter subscriptions.
+
+Translation management uses Previous/Next and a moving page window, including
+pages after page 10. KPI configuration uses labelled cards below the desktop
+breakpoint and a comparison table on desktop. Dialogs scroll within the visible
+viewport on short screens.
+
 ### 6.2 Language Selection
 
 Visitors can switch between four supported languages using the language toggle in the navigation. The selected language applies to all UI text and, where available, content translations.

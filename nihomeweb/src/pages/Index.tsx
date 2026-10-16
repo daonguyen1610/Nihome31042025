@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
 import {
   ArrowRight,
@@ -12,14 +12,23 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
+import { resolveCategoryLabel } from "@/lib/category";
 import Layout from "@/components/layout/Layout";
 import { useI18n } from "@/lib/i18n";
-import { useActivities, useProjects, useSlideshow } from "@/hooks/useContentApi";
+import {
+  useActivities,
+  useProjects,
+  useProjectCategories,
+  useSlideshow,
+} from "@/hooks/useContentApi";
 
 const isVideoUrl = (url: string) => /\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(url);
 
 const Index = () => {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
+  const navigate = useNavigate();
+  const [projectSearch, setProjectSearch] = useState({ category: "", scale: "", location: "" });
+  const { data: categoryList } = useProjectCategories();
   const [slide, setSlide] = useState(0);
   const { data: projectsData } = useProjects();
   const { data: activitiesData } = useActivities();
@@ -296,51 +305,86 @@ const Index = () => {
 
             {/* Floating search pill */}
             <div className="mt-16 lg:mt-20 max-w-5xl fade-in-up" style={{ animationDelay: "0.6s" }}>
-              <div className="bg-white/95 backdrop-blur-xl rounded-3xl md:rounded-full p-3 md:p-2 shadow-elegant flex flex-col md:flex-row md:items-center gap-2 md:gap-2">
-                <div className="flex-1 min-w-0 md:min-w-[180px] px-5 py-2.5">
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-0.5">
-                    {t("home.search.type")}
-                  </p>
-                  <select className="w-full bg-transparent text-sm font-semibold focus:outline-none cursor-pointer">
-                    <option>{t("home.search.typeAll")}</option>
-                    <option>{t("home.search.typeFactory")}</option>
-                    <option>{t("home.search.typeWorkshop")}</option>
-                    <option>{t("home.search.typeOffice")}</option>
+              <form
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  const params = new URLSearchParams();
+                  Object.entries(projectSearch).forEach(([key, value]) => {
+                    if (value) params.set(key, value);
+                  });
+                  navigate("/projects?" + params.toString());
+                }}
+                className="bg-white/95 backdrop-blur-xl rounded-3xl p-3 shadow-elegant grid gap-3 md:grid-cols-[1fr_1fr_1fr_auto]"
+              >
+                <label className="min-w-0 px-3 py-2 text-xs font-bold text-foreground">
+                  <span>{t("home.search.type")}</span>
+                  <select
+                    className="mt-1 w-full bg-transparent text-sm font-normal"
+                    value={projectSearch.category}
+                    onChange={(event) =>
+                      setProjectSearch((current) => ({ ...current, category: event.target.value }))
+                    }
+                  >
+                    <option value="">{t("home.search.typeAll")}</option>
+                    {(categoryList ?? []).map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {resolveCategoryLabel(
+                          category.id,
+                          category.name,
+                          new Map((categoryList ?? []).map((c) => [c.id, c])),
+                          lang,
+                        )}
+                      </option>
+                    ))}
                   </select>
-                </div>
-                <div className="hidden md:block w-px h-10 bg-border" />
-                <div className="md:hidden h-px w-full bg-border" />
-                <div className="flex-1 min-w-0 md:min-w-[180px] px-5 py-2.5">
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-0.5">
-                    {t("home.search.scale")}
-                  </p>
-                  <select className="w-full bg-transparent text-sm font-semibold focus:outline-none cursor-pointer">
-                    <option>{t("home.search.scaleAll")}</option>
-                    <option>{"< 5.000 m²"}</option>
-                    <option>5.000 – 20.000 m²</option>
-                    <option>{"> 20.000 m²"}</option>
+                </label>
+                <label className="min-w-0 px-3 py-2 text-xs font-bold text-foreground">
+                  <span>{t("home.search.scale")}</span>
+                  <select
+                    className="mt-1 w-full bg-transparent text-sm font-normal"
+                    value={projectSearch.scale}
+                    onChange={(event) =>
+                      setProjectSearch((current) => ({ ...current, scale: event.target.value }))
+                    }
+                  >
+                    <option value="">{t("home.search.scaleAll")}</option>
+                    {Array.from(new Set(projects.map((p) => p.scale).filter(Boolean))).map(
+                      (value) => (
+                        <option key={value} value={value}>
+                          {value}
+                        </option>
+                      ),
+                    )}
                   </select>
-                </div>
-                <div className="hidden md:block w-px h-10 bg-border" />
-                <div className="md:hidden h-px w-full bg-border" />
-                <div className="flex-1 min-w-0 md:min-w-[180px] px-5 py-2.5">
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-0.5">
-                    {t("home.search.location")}
-                  </p>
-                  <select className="w-full bg-transparent text-sm font-semibold focus:outline-none cursor-pointer">
-                    <option>{t("home.search.locationAll")}</option>
-                    <option>TP. HCM</option>
-                    <option>{t("home.proj.lhh.loc")}</option>
-                    <option>{t("home.proj.bma.loc")}</option>
+                </label>
+                <label className="min-w-0 px-3 py-2 text-xs font-bold text-foreground">
+                  <span>{t("home.search.location")}</span>
+                  <select
+                    className="mt-1 w-full bg-transparent text-sm font-normal"
+                    value={projectSearch.location}
+                    onChange={(event) =>
+                      setProjectSearch((current) => ({ ...current, location: event.target.value }))
+                    }
+                  >
+                    <option value="">{t("home.search.locationAll")}</option>
+                    {Array.from(new Set(projects.map((p) => p.location).filter(Boolean))).map(
+                      (value) => (
+                        <option key={value} value={value}>
+                          {value}
+                        </option>
+                      ),
+                    )}
                   </select>
-                </div>
-                <button className="btn-gradient text-white w-full md:w-14 h-12 md:h-14 rounded-2xl md:rounded-full flex items-center justify-center gap-2 shrink-0 hover:scale-[1.02] md:hover:scale-105 transition-transform">
+                </label>
+                <button
+                  type="submit"
+                  aria-label={t("home.search.button")}
+                  className="btn-gradient text-white h-12 px-5 rounded-2xl self-center flex items-center justify-center gap-2"
+                >
                   <Search className="w-5 h-5" />
-                  <span className="md:hidden text-sm font-bold uppercase tracking-wider">
-                    {t("home.search.button")}
-                  </span>
+                  <span className="md:sr-only">{t("home.search.button")}</span>
                 </button>
-              </div>
+              </form>
             </div>
           </div>
         </div>
