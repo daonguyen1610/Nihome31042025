@@ -501,7 +501,11 @@ bằng 100% trước khi khóa kỳ.
 
 ## 12. Các quyết định bắt buộc còn mở
 
-Theo baseline 03/10/2026, Q-01 đến Q-11 đều cần NICON xác nhận bằng văn bản:
+Theo baseline 03/10/2026, Q-01 đến Q-11 cần quyết định có thẩm quyền và có
+thể truy vết. Người dùng cho biết NICON đã ủy quyền mình quyết định hướng triển
+khai; các phương án trong báo cáo đối chiếu là đầu vào để người được ủy quyền
+chốt từng rule, không phải bằng chứng rằng code đã giao hoặc NICON đã nghiệm thu.
+Biểu mẫu, danh mục và tham số chỉ có NICON nắm giữ vẫn cần hiện vật nguồn:
 
 1. Nhóm việc trước hợp đồng được giữ ở Dự án hay chuyển/gắn sang Hợp đồng; cách
    xử lý khi một Dự án có nhiều Hợp đồng.
