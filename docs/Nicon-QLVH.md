@@ -534,7 +534,7 @@ tới khi chủ sở hữu nghiệp vụ chấp thuận các quyết định tư
 
 | Mục | Năng lực | Trạng thái | Bằng chứng triển khai hoặc khoảng trống |
 |---:|---|---|---|
-| 1 | Nhóm quyền/phòng ban | Partial | Có role/group/editor, nhưng năm group seed hiện tại không khớp baseline 03/10; HR đang nằm trong FINANCE và thiếu group Hành chính nhân sự độc lập. |
+| 1 | Nhóm quyền/phòng ban | Partial | Có role/group/editor và sáu group chức năng trong seed, gồm HR riêng khỏi FINANCE. Đây chưa phải cơ cấu năm phòng được NICON xác nhận; vị trí tổ chức Cung ứng/Pháp lý và mapping quyền chính thức còn mở. |
 | 2 | CRM và mã dự án | Implemented | Lead/Cơ hội/Dự án và đổi mã đã có; Hợp đồng Upstream hỗ trợ đúng hai hướng: từ Báo giá đã duyệt hoặc tạo trực tiếp khi khách hàng đã thống nhất giá trị. |
 | 3 | Dự án dùng chung | Partial | Operational Project, work package, task, dependency, CC và thông báo đã có; Q-01 đến Q-03 còn mở. |
 | 4 | Thiết kế trước hợp đồng | Implemented | Design Project và công việc thiết kế không phụ thuộc hợp đồng đã ký. |
