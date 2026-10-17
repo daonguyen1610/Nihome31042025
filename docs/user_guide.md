@@ -702,6 +702,17 @@ Every Survey persists an Operational Project and stores media in that project's 
 
 #### 3.1.7 Customer Contract Management
 
+In an Upstream Contract's information tab, **Source leads** shows the Leads
+converted into its source Opportunity. Select a Lead name to open its detail;
+the conversion date is displayed in Vietnam time. Only Leads within your Lead
+viewing scope appear. Contract access alone does not grant Lead access. An empty
+result does not mean there are no other permission-restricted Leads.
+
+Direct Contracts without a source Opportunity explain that no source can be
+traced. The system never guesses a Lead from the customer or project, and this
+panel does not add or change links. If loading fails, use **Retry**. Existing
+Opportunity, Quote and Project links keep their current behavior.
+
 Create contracts or generate from approved quotations. Manage contract value, scope, and terms. Track payment milestones (advance, stage-based, completion). Manage appendices and variation orders. Track contract status: in-progress, paused, completed. Manage customer care history and contract renewal.
 
 Every new or edited contract must belong to one Operational Project. The

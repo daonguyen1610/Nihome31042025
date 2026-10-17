@@ -1833,6 +1833,12 @@ export interface ProjectDocumentResponse {
   updatedAt: string;
 }
 
+export interface ContractSourceLeadResponse {
+  id: number;
+  name: string;
+  convertedAt: string;
+}
+
 export interface ContractResponse {
   id: number;
   contractNumber: string;
@@ -7901,6 +7907,8 @@ export const adminApi = {
   getContract: (id: number, direction?: ContractDirection) =>
     api.get<ContractResponse>(`/contracts/${id}`, { params: { direction } }),
   previewNextContractNumber: () => api.get<{ contractNumber: string }>("/contracts/next-number"),
+  getContractSourceLeads: (id: number, signal?: AbortSignal) =>
+    api.get<ContractSourceLeadResponse[]>(`/contracts/${id}/source-leads`, { signal }),
   createContract: (body: UpsertContractRequest) => api.post<ContractResponse>("/contracts", body),
   updateContract: (id: number, body: UpsertContractRequest) =>
     api.put<ContractResponse>(`/contracts/${id}`, body),

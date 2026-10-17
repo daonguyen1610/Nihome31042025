@@ -197,6 +197,19 @@ public class ContractsController(
         return Ok(new { contractNumber });
     }
 
+    [HttpGet("{id:int}/source-leads")]
+    [RequirePermission("crm.contracts", "view")]
+    [RequirePermission("crm.leads", "view")]
+    public async Task<ActionResult<IReadOnlyList<ContractSourceLeadResponse>>> SourceLeads(int id, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        var canSeeAllContracts = await CanReadContractAcrossOwnersAsync(userId.Value, id, ct);
+        var canSeeAllLeads = await permissions.HasAsync(userId.Value, "crm.leads.view.all", ct);
+        var result = await svc.GetSourceLeadsAsync(id, userId.Value, canSeeAllContracts, canSeeAllLeads, ct);
+        return result is null ? NotFound() : Ok(result);
+    }
+
     [HttpPost]
     [RequirePermission("crm.contracts", "manage")]
     [Idempotency("crm.contracts.create")]

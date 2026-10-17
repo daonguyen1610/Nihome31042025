@@ -1859,4 +1859,45 @@
   { "key": "contracts.legal.error.selfApproval", "category": "contracts", "vi": "Người thực hiện không được tự duyệt công việc của mình.", "en": "An assignee cannot approve their own work.", "zh": "执行人不得审批自己的工作。", "ja": "担当者は自分の作業を承認できません。" },
   { "key": "contracts.legal.error.taskDates", "category": "contracts", "vi": "Kế hoạch từng giấy phép phải nằm trong thời gian gói và ngày kết thúc không trước ngày bắt đầu.", "en": "Each permit schedule must fall within the package and end on or after its start.", "zh": "每项许可证计划必须在工作包周期内，且结束日期不得早于开始日期。", "ja": "各許認可の日程はパッケージ期間内で、終了日は開始日以降にしてください。" },
   { "key": "contracts.legal.error.concurrency", "category": "contracts", "vi": "Hợp đồng đã được người khác cập nhật. Dữ liệu bạn nhập vẫn được giữ; hãy kiểm tra lại trước khi thử lại.", "en": "Someone updated the contract. Your entries are preserved; review them before retrying.", "zh": "合同已被他人更新。您的输入已保留，请检查后重试。", "ja": "契約が別のユーザーにより更新されました。入力内容は保持されています。確認して再試行してください。" }
+,
+  {
+    "key": "contracts.sourceLeads.title",
+    "category": "contracts",
+    "vi": "Lead nguồn",
+    "en": "Source leads",
+    "zh": "来源线索",
+    "ja": "元のリード"
+  },
+  {
+    "key": "contracts.sourceLeads.description",
+    "category": "contracts",
+    "vi": "Truy vết qua Cơ hội nguồn. Chỉ hiển thị Lead đã chuyển đổi mà bạn có quyền xem.",
+    "en": "Traced through the source opportunity. Only converted leads you can view are shown.",
+    "zh": "通过来源商机追溯，仅显示您有权查看的已转化线索。",
+    "ja": "元の商談から追跡します。閲覧権限のある変換済みリードのみ表示します。"
+  },
+  {
+    "key": "contracts.sourceLeads.noOpportunity",
+    "category": "contracts",
+    "vi": "Hợp đồng chưa gắn Cơ hội nguồn; không suy diễn Lead từ khách hàng hoặc dự án.",
+    "en": "No source opportunity is linked. Leads are not inferred from the customer or project.",
+    "zh": "合同尚未关联来源商机，不根据客户或项目推断线索。",
+    "ja": "元の商談が未設定です。顧客やプロジェクトからリードを推測しません。"
+  },
+  {
+    "key": "contracts.sourceLeads.empty",
+    "category": "contracts",
+    "vi": "Không có Lead đã chuyển đổi trong phạm vi bạn được xem.",
+    "en": "No converted source leads within your viewing scope.",
+    "zh": "您的查看范围内没有已转化的来源线索。",
+    "ja": "閲覧範囲に変換済みの元リードはありません。"
+  },
+  {
+    "key": "contracts.sourceLeads.converted",
+    "category": "contracts",
+    "vi": "Chuyển đổi ngày",
+    "en": "Converted on",
+    "zh": "转化日期",
+    "ja": "変換日"
+  }
 ]

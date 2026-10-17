@@ -229,6 +229,31 @@ public class ContractService(
 
     private const int EndingSoonDays = 30;
 
+    public async Task<IReadOnlyList<ContractSourceLeadResponse>?> GetSourceLeadsAsync(
+        int id, int callerUserId, bool canSeeAllContracts, bool canSeeAllLeads, CancellationToken ct = default)
+    {
+        var contract = await db.Contracts.AsNoTracking()
+            .Where(item => item.Id == id && (canSeeAllContracts || item.OwnerUserId == callerUserId))
+            .Select(item => new { item.Direction, item.OpportunityId, item.CustomerId })
+            .SingleOrDefaultAsync(ct);
+        if (contract is null) return null;
+        if (contract.Direction != ContractDirection.Upstream || contract.OpportunityId is null) return [];
+
+        // Match the conversion relationship, never infer provenance from a shared customer/project.
+        // More than one Lead can be converted into the same existing Opportunity.
+        return await db.Leads.AsNoTracking()
+            .Where(item => item.Status == LeadStatus.Converted && item.ConvertedAt != null &&
+                item.ConvertedOpportunityId == contract.OpportunityId && item.ConvertedCustomerId == contract.CustomerId &&
+                (canSeeAllLeads || item.OwnerUserId == callerUserId))
+            .OrderBy(item => item.ConvertedAt).ThenBy(item => item.Id)
+            .Select(item => new ContractSourceLeadResponse
+            {
+                Id = item.Id,
+                Name = item.Name,
+                ConvertedAt = item.ConvertedAt!.Value,
+            }).ToListAsync(ct);
+    }
+
     public async Task<ContractFilterOptionsResponse> GetFilterOptionsAsync(
         int callerUserId,
         bool canSeeAll,

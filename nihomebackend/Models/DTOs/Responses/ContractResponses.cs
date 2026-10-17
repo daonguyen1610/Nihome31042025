@@ -2,6 +2,13 @@ using NihomeBackend.Models;
 
 namespace NihomeBackend.Models.DTOs.Responses;
 
+public class ContractSourceLeadResponse
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public DateTime ConvertedAt { get; set; }
+}
+
 public class ContractResponse
 {
     public int Id { get; set; }

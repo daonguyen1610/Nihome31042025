@@ -125,6 +125,11 @@ Lead sau chuyển đổi bị khóa theo hợp đồng hiện tại; Customer, O
 Operational Project được tạo/liên kết có kiểm soát. Việc hủy chuyển đổi chỉ được
 thực hiện theo quyền và điều kiện an toàn dữ liệu hiện có.
 
+Hợp đồng Upstream → Cơ hội nguồn → danh sách Lead đã chuyển đổi vào Cơ hội đó,
+khớp khách hàng. Người xem chỉ thấy Lead thuộc phạm vi quyền riêng của mình và
+mở được chi tiết từ link nguồn. Hợp đồng trực tiếp không có Cơ hội không tự gán
+Lead; nhiều Lead đã chuyển đổi vào cùng Cơ hội được hiển thị đầy đủ trong phạm vi.
+
 ## 4. Các cổng kiểm soát chính
 
 ### G0 — Khởi tạo Dự án
