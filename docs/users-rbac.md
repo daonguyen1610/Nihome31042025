@@ -15,6 +15,10 @@ They do not inherit own-scope restrictions from the separate KPI workspace.
 
 ### System roles
 
+Contract source-Lead traceability requires both `crm.contracts.view` and
+`crm.leads.view`. Contract owner/project/portfolio access and Lead owner/all
+access are applied independently; seeing a Contract never expands Lead scope.
+
 | Role | Source of truth | Customisable? |
 |---|---|---|
 | `SUPER_ADMIN` | Force-synced to the full catalog on every boot. Lockout safety net. | No |

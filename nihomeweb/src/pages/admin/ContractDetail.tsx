@@ -25,6 +25,7 @@ import {
 import AdminLayout from "@/components/layout/AdminLayout";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import QuoteContractLinkDialog from "@/components/admin/QuoteContractLinkDialog";
+import ContractSourceLeads from "@/components/admin/ContractSourceLeads";
 import LegalActivationWizard from "@/components/admin/LegalActivationWizard";
 import { useI18n } from "@/lib/i18n";
 import { formatVnd, formatVndWithSymbol } from "@/lib/numberFormat";
@@ -421,6 +422,7 @@ interface InfoTabProps {
   onEnsureDesignProject?: () => void;
   ensuringDesignProject: boolean;
   canViewDesignProject: boolean;
+  canViewLeads: boolean;
   /** Set when the caller may attach an approved quote to this contract. */
   onLinkQuote?: () => void;
 }
@@ -430,6 +432,7 @@ const InfoTab = ({
   onEnsureDesignProject,
   ensuringDesignProject,
   canViewDesignProject,
+  canViewLeads,
   onLinkQuote,
 }: InfoTabProps) => {
   const { t } = useI18n();
@@ -477,7 +480,10 @@ const InfoTab = ({
         </dl>
       </div>
 
-      {contract.quoteId != null || contract.opportunityId != null || onLinkQuote ? (
+      {contract.direction === "Upstream" ||
+      contract.quoteId != null ||
+      contract.opportunityId != null ||
+      onLinkQuote ? (
         <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="text-xs font-medium uppercase tracking-wide text-slate-500">
@@ -510,7 +516,6 @@ const InfoTab = ({
               <div>
                 <dt className="text-xs text-slate-500">{t("contracts.field.sourceOpportunity")}</dt>
                 <dd className="mt-0.5 text-sm">
-                  {/* Route added by plan two task three; until then this lands on 404. */}
                   <Link className="underline" to={`/admin/opportunities/${contract.opportunityId}`}>
                     {contract.opportunityTitle ?? `#${contract.opportunityId}`}
                   </Link>
@@ -518,6 +523,9 @@ const InfoTab = ({
               </div>
             ) : null}
           </dl>
+          {contract.direction === "Upstream" && canViewLeads && (
+            <ContractSourceLeads contract={contract} />
+          )}
         </div>
       ) : null}
 
@@ -2578,6 +2586,7 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
                 }
                 ensuringDesignProject={ensuringDesignProject}
                 canViewDesignProject={has(ADMIN_PERMS.designProjects)}
+                canViewLeads={has(ADMIN_PERMS.leads)}
                 onLinkQuote={canLinkQuote ? () => setLinkQuoteOpen(true) : undefined}
               />
             )}

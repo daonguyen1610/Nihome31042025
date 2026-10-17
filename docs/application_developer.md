@@ -1038,6 +1038,32 @@ migrated separately before the repository-wide hard-delete rollout is complete.
 
 ### 7.8 Customer Documents and Contract Ownership
 
+#### Contract source Lead traceability
+
+`GET /api/contracts/{id}/source-leads` (also `/api/v1/contracts/{id}/source-leads`)
+requires both `crm.contracts.view` and `crm.leads.view`. Existing Contract
+owner/project/direction access still applies; inaccessible or missing Contracts
+return `404`. Lead scope is checked independently: without `crm.leads.view.all`,
+only Leads assigned to the caller are returned. Contract portfolio or project
+access does not widen Lead access.
+
+The response is an ordered array of `{ id, name, convertedAt }`. For Upstream
+Contracts, trace `Contract.OpportunityId` to converted Leads whose
+`ConvertedOpportunityId` and `ConvertedCustomerId` match and whose `ConvertedAt`
+is present. Return every visible match, ordered by conversion timestamp and ID;
+never pick an arbitrary first Lead or infer a source from a shared customer or
+project. Downstream Contracts and direct Contracts without a source Opportunity
+return an empty array. No new editable Lead field, schema, or backfill is needed.
+Unconversion/unlinking is reflected on the next read; existing conversion and
+deletion safeguards remain authoritative. The DTO excludes contact details and
+internal notes. No email, notification or other write side effect is introduced.
+
+The Contract information tab displays source Lead links, conversion dates,
+loading/retry and a scope-aware empty state only for users with Lead view
+permission. Link navigation remains protected by the existing Lead detail API.
+Focused verification: `ContractSourceLeadsTests` and
+`admin-contract-source-leads.spec.ts`.
+
 Legal-representative assignments through the Customer contact upsert are
 serialized per Customer aggregate. An in-process gate covers concurrent
 requests handled by one application instance, while a transaction-owned SQL

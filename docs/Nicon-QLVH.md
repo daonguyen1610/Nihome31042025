@@ -160,6 +160,10 @@ và hợp đồng mà không nhập lại dữ liệu.
 - Lead: nguồn, phân khúc, người phụ trách, lịch sử tương tác và deadline phản hồi.
 - Chuyển Lead tạo/liên kết Customer, Opportunity và Operational Project một cách
   idempotent; Lead sau chuyển đổi bị khóa.
+  Trên Hợp đồng Upstream, truy vết Lead đã chuyển đổi qua đúng Cơ hội nguồn và
+  khách hàng; hiển thị link theo quyền xem Lead độc lập. Không thêm trường chọn
+  Lead trực tiếp, không suy diễn từ khách hàng/Dự án và không bắt buộc Hợp đồng
+  tạo trực tiếp phải có Lead nguồn.
 - Pipeline chuẩn: Tiếp cận → Khảo sát → Báo giá/Đấu thầu → Thương thảo → Ký HĐ.
 - Báo giá trực tiếp hỗ trợ suất đầu tư và BOQ sơ bộ, tính VAT/chiết khấu/tổng,
   version và duyệt nội bộ/khách hàng. Báo giá xuất và gửi khách dưới dạng file
