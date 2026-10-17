@@ -1,4 +1,5 @@
 import { test, expect, TEST_USERS } from "../fixtures/auth";
+import type { ContractExecutionProgressResponse } from "../../src/services/adminApi";
 
 test("signed upstream contract uses the editable legal activation wizard", async ({
   page,
@@ -8,6 +9,8 @@ test("signed upstream contract uses the editable legal activation wizard", async
   const contractId = 8123;
   const projectId = 456;
   let activationPosts = 0;
+  const pageErrors: string[] = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
   let status = "Signed";
   const contract = () => ({
     id: contractId,
@@ -54,6 +57,22 @@ test("signed upstream contract uses the editable legal activation wizard", async
   await page.route(new RegExp(`/api/(?:v1/)?contracts/${contractId}(?:/.*)?$`), async (route) => {
     const request = route.request();
     const path = new URL(request.url()).pathname;
+    if (request.method() === "GET" && path.endsWith("/execution-progress")) {
+      const progress: ContractExecutionProgressResponse = {
+        calculatedAt: "2026-10-01T00:00:00Z",
+        work: null,
+        qs: null,
+        payment: {
+          milestoneCount: 0,
+          paidCount: 0,
+          requestedCount: 0,
+          scheduledAmount: 0,
+          paidScheduledAmount: 0,
+        },
+      };
+      await route.fulfill({ json: progress });
+      return;
+    }
     if (request.method() === "GET" && path.endsWith("/legal-activation-preview")) {
       await route.fulfill({
         status: 200,
@@ -148,11 +167,11 @@ test("signed upstream contract uses the editable legal activation wizard", async
       await route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
       return;
     }
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify(contract()),
-    });
+    if (request.method() === "GET" && /\/contracts\/\d+$/.test(path)) {
+      await route.fulfill({ json: contract() });
+      return;
+    }
+    await route.fallback();
   });
 
   await page.setViewportSize({ width: 390, height: 844 });
@@ -207,6 +226,7 @@ test("signed upstream contract uses the editable legal activation wizard", async
   await expect(page).toHaveURL(new RegExp(`/admin/contracts/${contractId}$`));
   await expect(page.getByText(/Đang thực hiện|In progress|进行中|進行中/i).first()).toBeVisible();
   expect(activationPosts).toBe(1);
+  expect(pageErrors).toEqual([]);
 });
 
 test("legal workspace updates progress and preserves input on concurrency conflict", async ({
