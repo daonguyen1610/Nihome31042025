@@ -8,6 +8,11 @@ The admin Users section is backed by the ASP.NET Core `/api/users` endpoints. Au
 
 Roles are still seeded from the JSON bundle (`nihomebackend/Data/Rbac/rbac-defaults.json`), but controllers no longer name roles directly. Instead they declare the permission codes they need; what each role can do is derived from the role × permission matrix in the DB.
 
+Tender statistics, report customer/preparer options and report drill-down use
+`crm.tenders.view`, with the same cross-record scope as the Tender list. These
+read-only endpoints do not require `users.view` or Tender management permission.
+They do not inherit own-scope restrictions from the separate KPI workspace.
+
 ### System roles
 
 | Role | Source of truth | Customisable? |

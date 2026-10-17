@@ -321,10 +321,9 @@ public sealed class KpiService(AppDbContext db, INotificationService notificatio
 
     private async Task<MetricResult> TenderWinRateAsync(int userId, KpiPeriod period, CancellationToken ct)
     {
-        var tenders = await db.TenderSubmissions.AsNoTracking()
-            .Where(item => item.Tender.PreparerUserId == userId &&
-                item.Sequence == 1 &&
-                item.SubmittedAt >= period.PeriodStartUtc && item.SubmittedAt < period.PeriodEndUtc)
+        var tenders = await TenderReporting.FirstSubmissions(db.TenderSubmissions.AsNoTracking(),
+                period.PeriodStartUtc, period.PeriodEndUtc)
+            .Where(item => item.Tender.PreparerUserId == userId)
             .Select(item => new { item.TenderId, item.Tender.Status })
             .ToListAsync(ct);
         return Ratio("Tender", tenders.Select(item => item.TenderId),

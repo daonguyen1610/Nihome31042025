@@ -18,6 +18,22 @@ public class SampleCrmDataSeederTests : IDisposable
     public void Dispose() => _db.Dispose();
 
     [Fact]
+    public void Seed_WonTenderHasExplicitDemoSubmissionWithoutDuplicatingHistory()
+    {
+        var won = _db.Tenders.Single(item => item.Status == TenderStatus.Won);
+        var first = Assert.Single(_db.TenderSubmissions.Where(item => item.TenderId == won.Id));
+        Assert.Equal(won.SubmittedAt, first.SubmittedAt);
+        Assert.Equal(1, first.Sequence);
+        Assert.True(first.LegacyUnknown);
+        Assert.Equal("Sample", first.SubmissionChannel);
+        Assert.True(first.SubmittedAt <= won.ClosedAt);
+        SampleCrmDataSeeder.Seed(_db);
+        Assert.Equal(first.Id, Assert.Single(_db.TenderSubmissions.Where(item => item.TenderId == won.Id)).Id);
+        var preparingId = _db.Tenders.Single(item => item.Status == TenderStatus.Preparing).Id;
+        Assert.DoesNotContain(_db.TenderSubmissions, item => item.TenderId == preparingId);
+    }
+
+    [Fact]
     public void Seed_UsesCompactLinkedBusinessScenarios()
     {
         Assert.Equal(2, _db.Leads.Count());

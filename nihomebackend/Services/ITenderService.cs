@@ -25,6 +25,10 @@ public sealed record TenderChecklistFileReference(
 /// </summary>
 public interface ITenderService
 {
+    Task<TenderStatisticsResponse> StatisticsAsync(TenderStatisticsParams parameters, CancellationToken ct = default);
+    Task<IReadOnlyList<TenderAssigneeOptionResponse>> ListReportPreparersAsync(CancellationToken ct = default);
+    Task<IReadOnlyList<TenderCustomerOptionResponse>> ListReportCustomersAsync(CancellationToken ct = default);
+
     Task<TenderListResponse> ListAsync(TenderListParams parameters, CancellationToken ct = default);
 
     Task<TenderResponse?> GetAsync(int id, CancellationToken ct = default);

@@ -38,6 +38,47 @@ public class TenderService(
 
     // ------------------------------ List / Get ------------------------------
 
+    public async Task<IReadOnlyList<TenderCustomerOptionResponse>> ListReportCustomersAsync(CancellationToken ct = default)
+        => await db.Tenders.AsNoTracking()
+            .Select(item => new { Id = item.CustomerId, item.Customer.Name })
+            .Distinct().OrderBy(item => item.Name)
+            .Select(item => new TenderCustomerOptionResponse { Id = item.Id, Name = item.Name })
+            .ToListAsync(ct);
+
+    public async Task<IReadOnlyList<TenderAssigneeOptionResponse>> ListReportPreparersAsync(CancellationToken ct = default)
+        => await db.Tenders.AsNoTracking().Where(item => item.PreparerUserId != null)
+            .Select(item => new { Id = item.PreparerUserId!.Value, FullName = item.Preparer!.FullName ?? string.Empty })
+            .Distinct().OrderBy(item => item.FullName)
+            .Select(item => new TenderAssigneeOptionResponse { Id = item.Id, FullName = item.FullName })
+            .ToListAsync(ct);
+
+    public async Task<TenderStatisticsResponse> StatisticsAsync(TenderStatisticsParams p, CancellationToken ct = default)
+    {
+        var scoped = db.Tenders.AsNoTracking().AsQueryable();
+        if (p.CustomerId.HasValue) scoped = scoped.Where(item => item.CustomerId == p.CustomerId.Value);
+        if (p.PreparerUserId.HasValue) scoped = scoped.Where(item => item.PreparerUserId == p.PreparerUserId.Value);
+        var first = TenderReporting.FirstSubmissions(db.TenderSubmissions.AsNoTracking(), p.StartUtc, p.EndUtc);
+        var counts = await scoped.Where(item => first.Any(submission => submission.TenderId == item.Id))
+            .GroupBy(item => item.Status)
+            .Select(group => new { Status = group.Key, Count = group.Count() }).ToListAsync(ct);
+        var total = counts.Sum(item => item.Count);
+        var won = counts.Where(item => item.Status == TenderStatus.Won).Sum(item => item.Count);
+        return new TenderStatisticsResponse
+        {
+            SubmittedCount = total,
+            WonCount = won,
+            LostCount = counts.Where(item => item.Status == TenderStatus.Lost).Sum(item => item.Count),
+            PendingCount = counts.Where(item => item.Status == TenderStatus.Submitted).Sum(item => item.Count),
+            CancelledCount = counts.Where(item => item.Status == TenderStatus.Cancelled).Sum(item => item.Count),
+            WinRate = total == 0 ? null : Math.Round(100m * won / total, 2),
+            MissingSubmissionCount = await scoped.CountAsync(item =>
+                (item.Status == TenderStatus.Submitted || item.Status == TenderStatus.Won || item.Status == TenderStatus.Lost ||
+                    item.Status == TenderStatus.Cancelled && item.SubmittedAt != null) &&
+                !db.TenderSubmissions.Any(submission => submission.TenderId == item.Id && submission.Sequence == 1), ct),
+            CalculatedAt = DateTime.UtcNow,
+        };
+    }
+
     public async Task<TenderListResponse> ListAsync(TenderListParams p, CancellationToken ct = default)
     {
         var page = p.Page < 1 ? 1 : p.Page;
@@ -64,6 +105,11 @@ public class TenderService(
         }
         if (p.CustomerId.HasValue) q = q.Where(t => t.CustomerId == p.CustomerId.Value);
         if (p.PreparerUserId.HasValue) q = q.Where(t => t.PreparerUserId == p.PreparerUserId.Value);
+        if (p.SubmittedOnly || p.FromDate.HasValue || p.ToDate.HasValue)
+        {
+            var first = TenderReporting.FirstSubmissions(db.TenderSubmissions.AsNoTracking(), p.StartUtc, p.EndUtc);
+            q = q.Where(t => first.Any(submission => submission.TenderId == t.Id));
+        }
         if (p.OpeningMonth.HasValue) q = q.Where(t => t.OpeningDate != null && t.OpeningDate!.Value.Month == p.OpeningMonth.Value);
         if (p.OpeningYear.HasValue) q = q.Where(t => t.OpeningDate != null && t.OpeningDate!.Value.Year == p.OpeningYear.Value);
         if (!string.IsNullOrWhiteSpace(p.Search))

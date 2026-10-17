@@ -2929,10 +2929,27 @@ export interface UpdateTenderRequest {
   note?: string | null;
 }
 
-export interface TenderListParams {
-  status?: string;
+export interface TenderStatisticsParams {
+  fromDate?: string;
+  toDate?: string;
   customerId?: number;
   preparerUserId?: number;
+}
+
+export interface TenderStatisticsResponse {
+  submittedCount: number;
+  wonCount: number;
+  lostCount: number;
+  pendingCount: number;
+  cancelledCount: number;
+  winRate: number | null;
+  missingSubmissionCount: number;
+  calculatedAt: string;
+}
+
+export interface TenderListParams extends TenderStatisticsParams {
+  submittedOnly?: boolean;
+  status?: string;
   openingMonth?: number;
   openingYear?: number;
   search?: string;
@@ -6205,6 +6222,12 @@ export const adminApi = {
     api.post<Blob>(`/capability-documents/download-zip`, { ids }, { responseType: "blob" }),
 
   // Tenders (NIH-85 / NIH-95 / NIH-96)
+  getTenderStatistics: (params: TenderStatisticsParams, signal?: AbortSignal) =>
+    api.get<TenderStatisticsResponse>("/tenders/statistics", { params, signal }),
+  getTenderReportPreparers: () =>
+    api.get<{ id: number; fullName: string }[]>("/tenders/report-preparers"),
+  getTenderReportCustomers: () =>
+    api.get<{ id: number; name: string }[]>("/tenders/report-customers"),
   listTenders: (params: TenderListParams = {}) => {
     const q = new URLSearchParams();
     if (params.status) q.append("status", params.status);
@@ -6213,6 +6236,9 @@ export const adminApi = {
     if (params.openingMonth != null) q.append("openingMonth", String(params.openingMonth));
     if (params.openingYear != null) q.append("openingYear", String(params.openingYear));
     if (params.search) q.append("search", params.search);
+    if (params.fromDate) q.append("fromDate", params.fromDate);
+    if (params.toDate) q.append("toDate", params.toDate);
+    if (params.submittedOnly) q.append("submittedOnly", "true");
     if (params.page) q.append("page", String(params.page));
     if (params.pageSize) q.append("pageSize", String(params.pageSize));
     const qs = q.toString();

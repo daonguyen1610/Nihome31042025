@@ -239,4 +239,165 @@
   ,{"key":"tenders.detail.checklist.documentKind.Drawings","category":"tenders","vi":"Bản vẽ dự thầu","en":"Tender drawings","zh":"投标图纸","ja":"入札図面"}
   ,{"key":"tenders.detail.checklist.documentKind.Schedule","category":"tenders","vi":"Tiến độ","en":"Schedule","zh":"进度计划","ja":"工程表"}
   ,{"key":"tenders.detail.checklist.documentKind.Custom","category":"tenders","vi":"Khác theo HSMT","en":"Other invitation requirement","zh":"其他招标要求","ja":"その他の入札要件"}
+,
+  {
+    "key": "tenders.stats.title",
+    "category": "tenders",
+    "vi": "Tỷ lệ trúng thầu",
+    "en": "Tender win rate",
+    "zh": "投标中标率",
+    "ja": "入札受注率"
+  },
+  {
+    "key": "tenders.stats.explanation",
+    "category": "tenders",
+    "vi": "Số gói trúng / tổng gói đã nộp. Chọn kỳ theo ngày nộp đầu tiên (giờ Việt Nam); nộp bổ sung không tính thêm.",
+    "en": "Won tenders / all submitted tenders. Filter by first submission date (Vietnam time); resubmissions count once.",
+    "zh": "中标数 / 已提交投标总数。按首次提交日期（越南时间）筛选；补充提交不重复计数。",
+    "ja": "受注件数 / 提出済み入札総数。初回提出日（ベトナム時間）で絞り込み、再提出は重複計上しません。"
+  },
+  {
+    "key": "tenders.stats.from",
+    "category": "tenders",
+    "vi": "Nộp từ ngày",
+    "en": "Submitted from",
+    "zh": "提交开始日期",
+    "ja": "提出開始日"
+  },
+  {
+    "key": "tenders.stats.to",
+    "category": "tenders",
+    "vi": "Đến hết ngày",
+    "en": "Through date",
+    "zh": "提交结束日期（含）",
+    "ja": "提出終了日（当日含む）"
+  },
+  {
+    "key": "tenders.stats.allPreparers",
+    "category": "tenders",
+    "vi": "Tất cả người phụ trách",
+    "en": "All preparers",
+    "zh": "所有负责人",
+    "ja": "すべての担当者"
+  },
+  {
+    "key": "tenders.stats.apply",
+    "category": "tenders",
+    "vi": "Áp dụng",
+    "en": "Apply",
+    "zh": "应用",
+    "ja": "適用"
+  },
+  {
+    "key": "tenders.stats.refresh",
+    "category": "tenders",
+    "vi": "Làm mới thống kê",
+    "en": "Refresh statistics",
+    "zh": "刷新统计",
+    "ja": "統計を更新"
+  },
+  {
+    "key": "tenders.stats.invalidDates",
+    "category": "tenders",
+    "vi": "Chọn đủ ngày bắt đầu và kết thúc; ngày kết thúc không được trước ngày bắt đầu.",
+    "en": "Select both dates; the end date must be on or after the start date.",
+    "zh": "请选择开始及结束日期；结束日期不得早于开始日期。",
+    "ja": "開始日と終了日を選択し、終了日は開始日以降にしてください。"
+  },
+  {
+    "key": "tenders.stats.unapplied",
+    "category": "tenders",
+    "vi": "Bộ lọc đã thay đổi. Bấm Áp dụng để cập nhật kết quả.",
+    "en": "Filters changed. Select Apply to update the results.",
+    "zh": "筛选条件已更改，请点击应用以更新结果。",
+    "ja": "条件が変更されました。「適用」で結果を更新してください。"
+  },
+  {
+    "key": "tenders.stats.optionsError",
+    "category": "tenders",
+    "vi": "Không tải được bộ lọc khách hàng/người phụ trách. Bấm Làm mới để thử lại.",
+    "en": "Could not load customer/preparer filters. Select Refresh to retry.",
+    "zh": "无法加载客户/负责人筛选项，请刷新重试。",
+    "ja": "顧客・担当者の選択肢を読み込めません。「更新」で再試行してください。"
+  },
+  {
+    "key": "tenders.stats.rate",
+    "category": "tenders",
+    "vi": "Tỷ lệ trúng",
+    "en": "Win rate",
+    "zh": "中标率",
+    "ja": "受注率"
+  },
+  {
+    "key": "tenders.stats.total",
+    "category": "tenders",
+    "vi": "Tổng gói đã nộp",
+    "en": "Total submitted tenders",
+    "zh": "已提交投标总数",
+    "ja": "提出済み入札総数"
+  },
+  {
+    "key": "tenders.stats.inspect",
+    "category": "tenders",
+    "vi": "Xem các gói được tính",
+    "en": "View included tenders",
+    "zh": "查看计入的投标",
+    "ja": "集計対象の入札を見る"
+  },
+  {
+    "key": "tenders.stats.empty",
+    "category": "tenders",
+    "vi": "Chưa có gói đã nộp trong kỳ và phạm vi đã chọn.",
+    "en": "No submitted tenders in the selected period and scope.",
+    "zh": "所选期间及范围内无已提交投标。",
+    "ja": "選択した期間・範囲に提出済み入札はありません。"
+  },
+  {
+    "key": "tenders.stats.missing",
+    "category": "tenders",
+    "vi": "Hồ sơ thiếu bằng chứng nộp lần đầu trong phạm vi khách hàng/người phụ trách (không xác định được kỳ, không tính vào tỷ lệ):",
+    "en": "Records missing first-submission evidence in this customer/preparer scope (period unknown, excluded from the rate):",
+    "zh": "当前客户/负责人范围内缺少首次提交凭证的记录（无法确定期间，不计入比率）：",
+    "ja": "この顧客・担当者範囲で初回提出の証跡がない記録（期間不明のため集計対象外）："
+  },
+  {
+    "key": "tenders.stats.currentResults",
+    "category": "tenders",
+    "vi": "Kết quả hiện tại, gồm cả gói chờ kết quả và gói đã nộp rồi hủy trong mẫu số. Báo cáo kỳ cũ có thể thay đổi khi có kết quả mới.",
+    "en": "Current results. Pending tenders and tenders cancelled after submission remain in the denominator. Past periods may change as results arrive.",
+    "zh": "使用当前结果。待定及提交后取消的投标仍计入分母。新结果可能改变历史期间的比率。",
+    "ja": "現在の結果を表示します。結果待ちと提出後の取消も分母に含まれます。新しい結果により過去期間の比率が変わることがあります。"
+  },
+  {
+    "key": "tenders.stats.updated",
+    "category": "tenders",
+    "vi": "Cập nhật:",
+    "en": "Updated:",
+    "zh": "更新时间：",
+    "ja": "更新日時："
+  },
+  {
+    "key": "tenders.stats.list",
+    "category": "tenders",
+    "vi": "Danh sách gói thầu",
+    "en": "Tender list",
+    "zh": "投标列表",
+    "ja": "入札一覧"
+  },
+  {
+    "key": "tenders.stats.scoped",
+    "category": "tenders",
+    "vi": "Đang đối chiếu các gói nộp lần đầu trong kỳ:",
+    "en": "Reviewing tenders first submitted in:",
+    "zh": "正在核对首次提交期间：",
+    "ja": "初回提出期間で照合中："
+  },
+  {
+    "key": "tenders.stats.clearScope",
+    "category": "tenders",
+    "vi": "Bỏ lọc đối chiếu",
+    "en": "Clear report filter",
+    "zh": "清除核对筛选",
+    "ja": "照合フィルターを解除"
+  }
 ]

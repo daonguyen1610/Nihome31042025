@@ -98,12 +98,11 @@ public class SubmitTenderRequest
     public string? RowVersion { get; set; }
 }
 
-public class TenderListParams
+public class TenderListParams : TenderStatisticsParams
 {
     /// <summary>Multi-select status filter — comma-separated names, e.g. "Preparing,Submitted".</summary>
     public string? Status { get; set; }
-    public int? CustomerId { get; set; }
-    public int? PreparerUserId { get; set; }
+    public bool SubmittedOnly { get; set; }
 
     /// <summary>Filter by month of <c>OpeningDate</c> — 1-12.</summary>
     public int? OpeningMonth { get; set; }
