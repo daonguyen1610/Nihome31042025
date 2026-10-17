@@ -1169,6 +1169,45 @@ If a direct upload cannot be attached because the Tender or row is missing,
 terminal, persistence fails, or the physical copy is interrupted, the newly
 written or partial file is removed.
 
+#### Tender win-rate reporting
+
+`GET /api/tenders/statistics` (also `/api/v1/tenders/statistics`) requires
+`crm.tenders.view`, matching the existing cross-record Tender list scope.
+`GET /api/tenders/report-customers` and `report-preparers` use the same
+permission and return distinct options referenced by Tenders, including
+historical preparers, without requiring user-management permission.
+
+Optional `fromDate` and `toDate` must be supplied together as ordered ISO dates
+(for example `2026-08-01` and `2026-08-31`), inclusive in Vietnam time (UTC+7).
+`fromDate` must be after `0001-01-01`. Optional `customerId`/`preparerUserId`
+must be positive integers. Invalid filters return `400`; omitting both dates
+reports all periods. The list accepts these filters and `submittedOnly=true`
+for paginated reconciliation, preserving its normal behavior when omitted.
+
+`TenderReporting.FirstSubmissions` selects `TenderSubmission.Sequence == 1`
+within the UTC half-open period. Count each Tender once, including auditable
+`LegacyUnknown` submissions. Rate is `100 * Won / submitted cohort`, rounded
+to two decimal places, null when empty. Pending results and cancellations after
+submission remain in the denominator; cancellations before submission do not.
+List status/search/pagination filters never change the report denominator.
+Use current status: older cohorts may change when results arrive. KPI uses the
+same submission selector for its employee/period; locked snapshots do not change.
+
+The response has `submittedCount`, `wonCount`, `lostCount`, `pendingCount`,
+`cancelledCount`, nullable percentage `winRate`, UTC `calculatedAt`, and
+`missingSubmissionCount`. The latter is independent of dates, scoped by customer
+and preparer: Submitted/Won/Lost records, or cancelled records with `SubmittedAt`,
+lacking a first-submission event cannot be assigned to a period. Exclude and
+disclose them; never invent production dates. Marked synthetic demo Tenders have
+idempotent `Sample`/`LegacyUnknown` evidence; this does not backfill user records.
+No schema migration is required.
+
+Focused checks: `TenderStatisticsControllerTests` (permission, validation,
+Vietnam boundaries, resubmission, current results, zero/empty, missing evidence
+and drill-down), `SampleCrmDataSeederTests` (demo idempotency), and
+`admin-tender-statistics.spec.ts` (browser filters, reconciliation, recovery,
+localization and responsive rendering).
+
 Every new Tender requires an existing `OperationalProjectId` belonging to the
 same Customer. Tender planning reuses `DepartmentWorkPackage` with
 `SourceTenderId`, `Purpose=TenderPlanning`, and one Project work package per
@@ -2467,7 +2506,7 @@ frontend does not duplicate formula rules.
 | Sales | Lead-to-contract conversion | 40% | Lead owner, creation and conversion events | Implemented |
 | Sales | New signed contract revenue | 40% | Upstream customer Contract owner, signed date and value | Implemented; target required |
 | Sales | First customer interaction time | 20% | Lead creation and first non-note activity | Implemented; target required |
-| Tendering | Tender win rate | 40% | Tender preparer, close date and result | Implemented |
+| Tendering | Tender win rate | 40% | Tender preparer, first submission date and current result | Implemented |
 | Tendering | On-time tender preparation | 30% | Tender checklist owner/deadline/completion | Implemented |
 | Tendering | Tender estimate accuracy | 30% | Approved tender estimate versus final execution BOQ | Implemented |
 | Design | On-time drawing delivery | 40% | Design schedule task assignee, planned/actual end | Implemented |

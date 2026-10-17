@@ -56,6 +56,22 @@ public class TendersController(
         return found is null ? NotFound() : Ok(found);
     }
 
+    [HttpGet("statistics")]
+    [RequirePermission("crm.tenders", "view")]
+    public async Task<ActionResult<TenderStatisticsResponse>> Statistics(
+        [FromQuery] TenderStatisticsParams parameters, CancellationToken ct)
+        => Ok(await svc.StatisticsAsync(parameters, ct));
+
+    [HttpGet("report-preparers")]
+    [RequirePermission("crm.tenders", "view")]
+    public async Task<ActionResult<IReadOnlyList<TenderAssigneeOptionResponse>>> ReportPreparers(CancellationToken ct)
+        => Ok(await svc.ListReportPreparersAsync(ct));
+
+    [HttpGet("report-customers")]
+    [RequirePermission("crm.tenders", "view")]
+    public async Task<ActionResult<IReadOnlyList<TenderCustomerOptionResponse>>> ReportCustomers(CancellationToken ct)
+        => Ok(await svc.ListReportCustomersAsync(ct));
+
     [HttpGet("{id:int}/readiness")]
     [RequirePermission("crm.tenders", "view")]
     public async Task<ActionResult<TenderReadinessResponse>> Readiness(int id, CancellationToken ct)

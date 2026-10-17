@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { AlertTriangle, Loader2, Pencil, Plus, RefreshCcw, Search, Trash2 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
+import TenderStatistics from "./TenderStatistics";
 import {
   Dialog,
   DialogContent,
@@ -43,6 +44,7 @@ import {
   type TenderListParams,
   type TenderResponse,
   type TenderStatus,
+  type TenderStatisticsParams,
   type UserListItemResponse,
 } from "@/services/adminApi";
 
@@ -112,6 +114,23 @@ const AdminTenders = () => {
   });
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
+  const [reportScope, setReportScope] = useState<TenderStatisticsParams | null>(null);
+  const [statisticsRevision, setStatisticsRevision] = useState(0);
+  const [reportCustomer, setReportCustomer] = useState<{ id: number; name: string } | null>(null);
+  const inspectReport = useCallback(
+    (params: TenderStatisticsParams | null, customer?: { id: number; name: string }) => {
+      if (customer) setReportCustomer(customer);
+      setReportScope(params);
+      setPage(1);
+      if (params) {
+        setStatusFilter("");
+        setCustomerFilter(params.customerId ?? null);
+        setSearchInput("");
+        setSearch("");
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     const h = window.setTimeout(() => {
@@ -121,23 +140,28 @@ const AdminTenders = () => {
     return () => window.clearTimeout(h);
   }, [searchInput]);
 
+  const listRequest = useRef(0);
   const fetchList = useCallback(async () => {
+    const requestId = ++listRequest.current;
     setLoading(true);
     setError(null);
     try {
       const params: TenderListParams = { page, pageSize };
+      if (reportScope) Object.assign(params, reportScope, { submittedOnly: true });
       if (statusFilter) params.status = statusFilter;
       if (customerFilter) params.customerId = customerFilter;
       if (search.trim()) params.search = search.trim();
       const { data } = await adminApi.listTenders(params);
+      if (requestId !== listRequest.current) return;
       setRows(data.items);
       setTotal(data.total);
     } catch (err) {
+      if (requestId !== listRequest.current) return;
       setError(extractApiError(err));
     } finally {
-      setLoading(false);
+      if (requestId === listRequest.current) setLoading(false);
     }
-  }, [page, statusFilter, customerFilter, search]);
+  }, [page, statusFilter, customerFilter, search, reportScope]);
 
   useEffect(() => {
     void fetchList();
@@ -145,6 +169,10 @@ const AdminTenders = () => {
 
   // -------- customers for filter + form --------
   const [customers, setCustomers] = useState<CustomerResponse[]>([]);
+  const filterCustomers =
+    reportCustomer && !customers.some((item) => item.id === reportCustomer.id)
+      ? [...customers, reportCustomer]
+      : customers;
   const [projects, setProjects] = useState<OperationalProjectListItemResponse[]>([]);
   const [preparers, setPreparers] = useState<UserListItemResponse[]>([]);
   useEffect(() => {
@@ -301,6 +329,7 @@ const AdminTenders = () => {
       }
       setDialogOpen(false);
       setEditingDetail(null);
+      setStatisticsRevision((value) => value + 1);
       await fetchList();
     } catch (err) {
       setFormError(extractApiError(err));
@@ -354,6 +383,7 @@ const AdminTenders = () => {
     setDeleteImpact(null);
     setDeleteError(null);
     toast({ title: t("tenders.deleted") });
+    setStatisticsRevision((value) => value + 1);
     await fetchList();
   };
 
@@ -403,7 +433,10 @@ const AdminTenders = () => {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => void fetchList()}
+              onClick={() => {
+                setStatisticsRevision((value) => value + 1);
+                void fetchList();
+              }}
               disabled={loading}
               className="flex-1 md:flex-none"
             >
@@ -418,6 +451,23 @@ const AdminTenders = () => {
             )}
           </div>
         </header>
+
+        <TenderStatistics onInspect={inspectReport} refreshToken={statisticsRevision} />
+
+        <h2 className="text-lg font-semibold">{t("tenders.stats.list")}</h2>
+        {reportScope && (
+          <div
+            className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm"
+            role="status"
+          >
+            <span>
+              {t("tenders.stats.scoped")} {reportScope.fromDate} – {reportScope.toDate}
+            </span>
+            <Button variant="outline" size="sm" onClick={() => inspectReport(null)}>
+              {t("tenders.stats.clearScope")}
+            </Button>
+          </div>
+        )}
 
         {/* Filter bar */}
         <div className="grid gap-2 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]">
@@ -452,6 +502,7 @@ const AdminTenders = () => {
           <Select
             value={customerFilter ? String(customerFilter) : ALL_VALUE}
             onValueChange={(v) => {
+              setReportScope(null);
               setCustomerFilter(v === ALL_VALUE ? null : Number(v));
               setPage(1);
             }}
@@ -461,7 +512,7 @@ const AdminTenders = () => {
             </SelectTrigger>
             <SelectContent className="max-h-64">
               <SelectItem value={ALL_VALUE}>{t("tenders.filter.allCustomers")}</SelectItem>
-              {customers.map((c) => (
+              {filterCustomers.map((c) => (
                 <SelectItem key={c.id} value={String(c.id)}>
                   {c.name}
                 </SelectItem>

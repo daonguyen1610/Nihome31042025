@@ -400,6 +400,13 @@ external write thành công; lỗi phải retry được và không tạo thành
 
 ## 8. Dashboard và KPI
 
+Thống kê trúng thầu tại danh sách Gói thầu: chọn kỳ nộp lần đầu (giờ Việt Nam),
+khách hàng/người phụ trách → Áp dụng → xem số gói trúng trên toàn bộ gói đã nộp
+→ mở danh sách đối chiếu. Nộp bổ sung không tăng số gói; chờ kết quả và hủy sau
+nộp vẫn ở mẫu số. Dùng kết quả hiện tại nên kỳ cũ có thể thay đổi; KPI đã khóa
+giữ nguyên snapshot. Hồ sơ thiếu bằng chứng nộp được cảnh báo riêng, không gán
+ngày nộp giả. Quyền xem thống kê theo quyền xem Gói thầu hiện hữu.
+
 Khung mục tiêu có 11 vị trí NICON. Mã nguồn hiện có 19 định nghĩa cho sáu nhóm
 scorecard: Sales, Tendering, Design, Site, Procurement và Project Accounting.
 Các vị trí mục tiêu PM CM, Chỉ huy trưởng, Field/QA-QC, Site QS, Legal và HR chưa

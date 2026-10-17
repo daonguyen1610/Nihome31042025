@@ -180,6 +180,11 @@ và hợp đồng mà không nhập lại dữ liệu.
   lập thành lần nộp mới, không ghi đè lịch sử; kết quả cuối khóa chỉnh sửa.
   Trúng thầu mở Cơ hội ở `Negotiation` trên đúng Dự án hiện có,
   sau đó người dùng chủ động lập hợp đồng.
+  Thống kê tỷ lệ trúng = số gói trúng / tổng gói đã nộp, mỗi gói tính một lần
+  theo ngày nộp đầu tiên trong kỳ giờ Việt Nam. Mẫu số gồm gói chờ kết quả và
+  gói đã nộp rồi hủy; không gồm gói chưa nộp. Báo cáo dùng kết quả hiện tại,
+  lọc khách hàng/người phụ trách và mở danh sách đối chiếu. Thiếu bằng chứng
+  nộp lần đầu phải cảnh báo và loại khỏi kỳ; không tự suy diễn lịch sử.
 - Khảo sát mobile ghi điều kiện hiện trường, tọa độ, ảnh/video/file và checklist;
   đồng bộ có trạng thái, retry và xung đột rõ ràng.
 - Hợp đồng Upstream có hai hướng tạo đã được xác nhận ngày 16/10/2026: (1) tạo

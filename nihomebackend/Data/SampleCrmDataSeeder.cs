@@ -1523,6 +1523,7 @@ public static class SampleCrmDataSeeder
                     }
                     db.SaveChanges();
                     SeedTenderChecklistItems(db, existingTender, templates, libraryDoc, owner.Id, now, richChecklist);
+                    SeedSampleTenderSubmission(db, existingTender, owner.Id);
                 }
                 i++;
                 continue;
@@ -1572,8 +1573,32 @@ public static class SampleCrmDataSeeder
             db.Tenders.Add(tender);
             db.SaveChanges();
             SeedTenderChecklistItems(db, tender, templates, libraryDoc, owner.Id, now, richChecklist);
+            SeedSampleTenderSubmission(db, tender, owner.Id);
             i++;
         }
+    }
+
+    private static void SeedSampleTenderSubmission(AppDbContext db, Tender tender, int ownerId)
+    {
+        if (tender.Status is not (TenderStatus.Submitted or TenderStatus.Won or TenderStatus.Lost)
+            || db.TenderSubmissions.Any(item => item.TenderId == tender.Id)) return;
+        // Synthetic demo evidence only; never reconstruct user history from a deadline.
+        var submittedAt = tender.SubmittedAt ?? tender.SubmissionDeadline.AddDays(-1);
+        tender.SubmittedAt = submittedAt;
+        db.TenderSubmissions.Add(new TenderSubmission
+        {
+            TenderId = tender.Id,
+            Sequence = 1,
+            SubmittedAt = submittedAt,
+            SubmittedByUserId = ownerId,
+            SubmissionChannel = "Sample",
+            LegacyUnknown = true,
+            ReceiptReference = "DEMO-" + tender.Code,
+            PlanningSnapshotJson = "{\"sample\":true}",
+            EstimateSnapshotJson = "{}",
+            FinanceReviewSnapshotJson = "{}",
+        });
+        db.SaveChanges();
     }
 
     private static void SeedTenderChecklistItems(AppDbContext db, Tender tender,

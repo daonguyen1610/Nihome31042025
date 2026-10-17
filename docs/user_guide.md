@@ -582,6 +582,27 @@ directly.
 Manage tender packages with deadlines and preparation status. First record the
 invitation receipt date (before the submission deadline), invitation source,
 receiving user, and, when available, its customer reference and portal URL.
+
+The **Tender win rate** panel above the list shows wins divided by all Tenders
+first submitted in the chosen period. Select inclusive submission dates (Vietnam
+time), Customer and Preparer, then **Apply**. It starts with the current Vietnam
+calendar year. Supplementary submissions count once; pending results and
+cancellations after submission stay in the denominator. For example, 3 wins out
+of 10 submitted Tenders is 30%, even if 5 still await a result. No submissions
+shows an empty state, distinct from a measured 0%.
+
+**View included tenders** opens the matching paginated list below. Its banner
+identifies the period. List status/search filters may narrow those rows without
+changing the chart. **Clear report filter** removes the submission-period and
+preparer restriction. Changing the list Customer also leaves reconciliation
+mode. Report filters are independent of normal list filters and change results
+only after **Apply**; **Refresh** reloads the applied report. Results use current
+outcomes, so older periods may change when results arrive. Update time is UTC+7.
+An amber notice discloses records without first-submission evidence across the
+selected Customer/Preparer regardless of period; they are excluded until their
+history is verified. View permission matches Tenders; locked KPI snapshots are
+separate and remain unchanged.
+
 Invitation files can be uploaded from the Tender detail page. The checklist starts with seven standard dossier rows;
 tender drawings are optional by default. Users may add package-specific rows,
 choose whether each row is mandatory under the invitation, or mark an optional
@@ -1445,14 +1466,18 @@ and concurrent edits preserve both versions for confirmation.
 
 #### 3.8.1 Executive Dashboard
 
-Overview of leads, opportunities, contracts, and projects. Construction progress tracking. Financial summary. Procurement status. Lead funnel chart (Lead to Opportunity to Quotation to Contract with conversion rates). Project progress bars with schedule overrun alerts. Tender win-rate visualization.
+Target executive scope includes leads, opportunities, contracts, projects,
+construction progress, financial/procurement summaries, lead funnel and schedule
+alerts. The general admin Dashboard currently covers website content and
+recruitment; this target scope does not claim delivered executive analytics.
+Tender win-rate reporting is available above the **Tenders** list.
 
 | Page | Functions |
 |------|-----------|
 | Executive Dashboard | Multi-module overview with charts and widgets |
 | Lead Funnel Chart | Funnel visualization with conversion rates |
 | Project Progress Widget | Progress bars with overrun alerts |
-| Tender Win-Rate Chart | Donut/pie chart with period filtering |
+| Tender Win-Rate Chart | Implemented in Tenders: donut, first-submission dates, Customer/Preparer filters and list reconciliation |
 
 #### 3.8.2 Reports
 
