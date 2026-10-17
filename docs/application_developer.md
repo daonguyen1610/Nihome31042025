@@ -3090,8 +3090,15 @@ BASE_URL=http://localhost:5043 npx playwright test e2e/smoke/admin-handover.spec
 Backend:
 
 ```bash
-docker exec nihome31042025-backend dotnet format --verify-no-changes
+docker exec nihome31042025-backend dotnet format --no-restore --verify-no-changes
 ```
+
+Run after dependencies have been restored in the backend container. Compose
+allocates 1 GB of shared memory to this service because Roslyn's temporary
+memory-mapped storage can exhaust Docker's default 64 MB and crash with an
+`AccessViolationException`. After changing `shm_size`, recreate the backend with
+`docker compose up -d --no-deps nihomeBackend`; restarting it does not apply the
+new allocation.
 
 Frontend:
 
