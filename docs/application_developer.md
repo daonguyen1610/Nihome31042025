@@ -1063,6 +1063,8 @@ predecessors and reversal records do not count as effective approvals. Preview
 the ten most recently updated sources; do not sum certified amounts or infer a
 completion rate. QS links select the project, filter by Contract and anchor the
 source dossier in the existing QS workspace. Changing projects clears that filter.
+Source anchoring runs when the dossier mounts, including when the project list
+loads after the QS records; regression coverage delays that project response.
 
 `payment` uses the same Contract-visible schedule as the detail page: milestone
 count, Paid/Requested counts, scheduled amount and amount of Paid milestones.

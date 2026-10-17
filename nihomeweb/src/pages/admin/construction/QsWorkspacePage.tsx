@@ -1,5 +1,5 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useLocation, useSearchParams } from "react-router-dom";
 import { CircleDollarSign, Plus, Send, Trash2 } from "lucide-react";
 import { ConstructionWorkspaceShell } from "./ConstructionWorkspaceShell";
 import { PageEmpty, PageError, PageLoading } from "@/components/PageState";
@@ -50,6 +50,13 @@ export default function QsWorkspacePage() {
   const { toast } = useToast();
   const { has } = usePermissions();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { hash } = useLocation();
+  const scrollToSource = useCallback(
+    (node: HTMLElement | null) => {
+      if (node && hash === `#${node.id}`) node.scrollIntoView({ block: "center" });
+    },
+    [hash],
+  );
   const requestedProject = Number(searchParams.get("projectId"));
   const requestedContract = Number(searchParams.get("contractId"));
   const projectId =
@@ -67,11 +74,6 @@ export default function QsWorkspacePage() {
     (row) => contractFilter == null || row.contractId === contractFilter,
   );
   const [loading, setLoading] = useState(false);
-  useEffect(() => {
-    if (!loading && rows.length > 0 && window.location.hash.startsWith("#qs-")) {
-      document.getElementById(window.location.hash.slice(1))?.scrollIntoView({ block: "center" });
-    }
-  }, [rows, loading]);
   const [error, setError] = useState<string | null>(null);
   const [reload, setReload] = useState(0);
   const [open, setOpen] = useState(false);
@@ -251,6 +253,7 @@ export default function QsWorkspacePage() {
           <div className="grid gap-3 lg:grid-cols-2">
             {visibleRows.map((row) => (
               <article
+                ref={scrollToSource}
                 id={`qs-${row.id}`}
                 key={row.id}
                 className="space-y-3 rounded-xl border bg-card p-4 shadow-sm"

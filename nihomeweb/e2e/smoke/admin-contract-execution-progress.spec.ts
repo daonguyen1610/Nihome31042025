@@ -150,8 +150,13 @@ test("execution panel handles restricted, empty, retry and translated source pre
   );
   const projectA = contract.operationalProjectId;
   const projectB = projectA + 100000;
-  await page.route("**/api/operational-projects?*", (route) =>
-    route.fulfill({
+  let releaseProjects!: () => void;
+  const projectsReady = new Promise<void>((resolve) => {
+    releaseProjects = resolve;
+  });
+  await page.route("**/api/operational-projects?*", async (route) => {
+    await projectsReady;
+    await route.fulfill({
       json: {
         items: [
           { id: projectA, code: "PJ-FACTORY", name: "Factory construction" },
@@ -159,8 +164,8 @@ test("execution panel handles restricted, empty, retry and translated source pre
         ],
         totalCount: 2,
       },
-    }),
-  );
+    });
+  });
   await page.route("**/construction/qs-references", (route) =>
     route.fulfill({ json: { contracts: [], approvedBoqRevisions: [] } }),
   );
@@ -183,7 +188,28 @@ test("execution panel handles restricted, empty, retry and translated source pre
       ],
     });
   });
+  await page.evaluate(() => {
+    const original = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = function (options) {
+      this.setAttribute("data-scrolled-to-source", "true");
+      original.call(this, options);
+    };
+  });
+  const qsLoaded = page.waitForResponse((response) =>
+    response.url().includes(`/operational-projects/${projectA}/construction/qs-batches`),
+  );
   await panel.getByRole("link", { name: /QS-STRUCTURE-01/ }).click();
+  await qsLoaded;
+  // Let the QS response render while the shell still waits for its project list.
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      ),
+  );
+  await expect(page.getByTestId("qs-row-92")).toHaveCount(0);
+  releaseProjects();
+  await expect(page.getByTestId("qs-row-92")).toHaveAttribute("data-scrolled-to-source", "true");
   await expect(page.getByTestId("qs-row-92")).toBeInViewport();
   await page.getByTestId("qs-page-project").click();
   await page.getByRole("option", { name: /PJ-WAREHOUSE/ }).click();
