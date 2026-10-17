@@ -1899,5 +1899,237 @@
     "en": "Converted on",
     "zh": "转化日期",
     "ja": "変換日"
+  },
+  {
+    "key": "contracts.progress.title",
+    "category": "contracts",
+    "vi": "Tiến độ thực hiện hợp đồng",
+    "en": "Contract execution progress",
+    "zh": "合同履约进度",
+    "ja": "契約履行の進捗"
+  },
+  {
+    "key": "contracts.progress.description",
+    "category": "contracts",
+    "vi": "Các chỉ số độc lập từ hồ sơ gắn trực tiếp Hợp đồng, trong phạm vi được xem. Không gộp thành một tỷ lệ hoàn thành.",
+    "en": "Independent measures from records directly linked to this contract, within your viewing scope. No combined completion percentage.",
+    "zh": "仅统计您有权查看且直接关联此合同的记录，各指标独立，不合并为完成百分比。",
+    "ja": "閲覧範囲内で契約に直接紐づく記録を別々に表示します。総合完了率は算出しません。"
+  },
+  {
+    "key": "contracts.progress.refresh",
+    "category": "contracts",
+    "vi": "Làm mới tiến độ",
+    "en": "Refresh execution progress",
+    "zh": "刷新履约进度",
+    "ja": "履行進捗を更新"
+  },
+  {
+    "key": "contracts.progress.work",
+    "category": "contracts",
+    "vi": "Công việc",
+    "en": "Work",
+    "zh": "工作",
+    "ja": "業務"
+  },
+  {
+    "key": "contracts.progress.workHint",
+    "category": "contracts",
+    "vi": "Đếm đầu việc trong nhóm công việc chưa hủy. Hoàn thành và xác nhận là hai trạng thái riêng.",
+    "en": "Tasks in non-cancelled work packages. Completed and independently verified are separate states.",
+    "zh": "统计未取消工作包中的任务，完成与独立确认分开显示。",
+    "ja": "取消されていない業務グループのタスクです。完了と独立確認を区別します。"
+  },
+  {
+    "key": "contracts.progress.qs",
+    "category": "contracts",
+    "vi": "Nghiệm thu / QS",
+    "en": "Acceptance / QS",
+    "zh": "验收 / QS",
+    "ja": "検収 / QS"
+  },
+  {
+    "key": "contracts.progress.qsHint",
+    "category": "contracts",
+    "vi": "Hồ sơ QS theo đúng chiều Hợp đồng. Duyệt còn hiệu lực loại hồ sơ bị thay thế, đảo và chứng từ đảo.",
+    "en": "QS dossiers match the contract direction. Active approvals exclude superseded, reversed and reversal records.",
+    "zh": "QS记录须与合同方向一致，有效审批不含已替代、已冲销及冲销记录。",
+    "ja": "契約方向に一致するQS記録です。有効な承認から差替済み・取消済み・取消記録を除きます。"
+  },
+  {
+    "key": "contracts.progress.payment",
+    "category": "contracts",
+    "vi": "Thanh toán",
+    "en": "Payment",
+    "zh": "付款",
+    "ja": "支払"
+  },
+  {
+    "key": "contracts.progress.paymentHint",
+    "category": "contracts",
+    "vi": "Theo lịch và trạng thái mốc thanh toán; không phải sổ thực thu/thực chi. Giá trị tính trên giá gốc Hợp đồng.",
+    "en": "Payment schedule and milestone statuses, not a cash ledger. Amounts use the base contract value.",
+    "zh": "根据付款计划与节点状态统计，并非现金收支账簿，金额按合同基础价值计算。",
+    "ja": "支払予定とマイルストーンの状態です。入出金台帳ではなく契約基本額に基づきます。"
+  },
+  {
+    "key": "contracts.progress.restricted",
+    "category": "contracts",
+    "vi": "Chưa có quyền xem nguồn hoặc thiếu Dự án hợp lệ; không hiển thị số liệu.",
+    "en": "Source access or a valid project is unavailable; figures are not disclosed.",
+    "zh": "无来源查看权限或缺少有效项目，不显示数据。",
+    "ja": "参照権限または有効なプロジェクトがないため、数値を表示しません。"
+  },
+  {
+    "key": "contracts.progress.packages",
+    "category": "contracts",
+    "vi": "Nhóm công việc",
+    "en": "Work packages",
+    "zh": "工作包",
+    "ja": "業務グループ"
+  },
+  {
+    "key": "contracts.progress.cancelledPackages",
+    "category": "contracts",
+    "vi": "Nhóm đã hủy",
+    "en": "Cancelled packages",
+    "zh": "已取消工作包",
+    "ja": "取消済みグループ"
+  },
+  {
+    "key": "contracts.progress.tasks",
+    "category": "contracts",
+    "vi": "Tổng đầu việc",
+    "en": "Total tasks",
+    "zh": "任务总数",
+    "ja": "タスク総数"
+  },
+  {
+    "key": "contracts.progress.completed",
+    "category": "contracts",
+    "vi": "Hoàn thành, chưa xác nhận",
+    "en": "Completed, not verified",
+    "zh": "已完成待确认",
+    "ja": "完了・未確認"
+  },
+  {
+    "key": "contracts.progress.verified",
+    "category": "contracts",
+    "vi": "Đã xác nhận",
+    "en": "Verified",
+    "zh": "已确认",
+    "ja": "確認済み"
+  },
+  {
+    "key": "contracts.progress.cancelledTasks",
+    "category": "contracts",
+    "vi": "Đầu việc đã hủy",
+    "en": "Cancelled tasks",
+    "zh": "已取消任务",
+    "ja": "取消済みタスク"
+  },
+  {
+    "key": "contracts.progress.dossiers",
+    "category": "contracts",
+    "vi": "Tổng hồ sơ, gồm lịch sử",
+    "en": "All dossiers, including history",
+    "zh": "全部记录（含历史）",
+    "ja": "履歴を含む記録総数"
+  },
+  {
+    "key": "contracts.progress.activeApproved",
+    "category": "contracts",
+    "vi": "Duyệt còn hiệu lực",
+    "en": "Active approved dossiers",
+    "zh": "有效审批记录",
+    "ja": "有効な承認済み記録"
+  },
+  {
+    "key": "contracts.progress.pending",
+    "category": "contracts",
+    "vi": "Chờ CM thẩm định",
+    "en": "Awaiting CM review",
+    "zh": "待CM审核",
+    "ja": "CM審査待ち"
+  },
+  {
+    "key": "contracts.progress.milestones",
+    "category": "contracts",
+    "vi": "Mốc thanh toán",
+    "en": "Payment milestones",
+    "zh": "付款节点",
+    "ja": "支払マイルストーン"
+  },
+  {
+    "key": "contracts.progress.paid",
+    "category": "contracts",
+    "vi": "Mốc đã thanh toán",
+    "en": "Paid milestones",
+    "zh": "已付款节点",
+    "ja": "支払済み"
+  },
+  {
+    "key": "contracts.progress.requested",
+    "category": "contracts",
+    "vi": "Mốc đã đề nghị",
+    "en": "Requested milestones",
+    "zh": "已申请节点",
+    "ja": "申請済み"
+  },
+  {
+    "key": "contracts.progress.scheduled",
+    "category": "contracts",
+    "vi": "Tổng giá trị theo lịch",
+    "en": "Scheduled amount",
+    "zh": "计划总金额",
+    "ja": "予定総額"
+  },
+  {
+    "key": "contracts.progress.paidScheduled",
+    "category": "contracts",
+    "vi": "Giá trị mốc đã thanh toán",
+    "en": "Amount of paid milestones",
+    "zh": "已付款节点金额",
+    "ja": "支払済みマイルストーン額"
+  },
+  {
+    "key": "contracts.progress.viewSchedule",
+    "category": "contracts",
+    "vi": "Đối chiếu lịch thanh toán",
+    "en": "View payment schedule",
+    "zh": "查看付款计划",
+    "ja": "支払予定を照合"
+  },
+  {
+    "key": "contracts.progress.latestSources",
+    "category": "contracts",
+    "vi": "Hồ sơ nguồn gần nhất",
+    "en": "Latest source records",
+    "zh": "最近来源记录",
+    "ja": "最新の参照記録"
+  },
+  {
+    "key": "contracts.progress.emptyWork",
+    "category": "contracts",
+    "vi": "Chưa có nhóm công việc gắn trực tiếp trong phạm vi được xem.",
+    "en": "No directly linked work packages within your viewing scope.",
+    "zh": "查看范围内无直接关联的工作包。",
+    "ja": "閲覧範囲に直接紐づく業務グループはありません。"
+  },
+  {
+    "key": "contracts.progress.emptyQs",
+    "category": "contracts",
+    "vi": "Chưa có hồ sơ QS gắn trực tiếp Hợp đồng.",
+    "en": "No QS dossiers directly linked to this contract.",
+    "zh": "无直接关联合同的QS记录。",
+    "ja": "契約に直接紐づくQS記録はありません。"
+  },
+  {
+    "key": "contracts.progress.updated",
+    "category": "contracts",
+    "vi": "Cập nhật:",
+    "en": "Updated:",
+    "zh": "更新时间：",
+    "ja": "更新日時："
   }
 ]

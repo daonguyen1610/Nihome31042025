@@ -201,6 +201,12 @@ và hợp đồng mà không nhập lại dữ liệu.
   đã duyệt, còn hiệu lực khi gắn và đúng khách hàng/Dự án. Hợp đồng Downstream
   với NCC/thầu phụ không dùng báo giá CRM đầu ra.
 
+Theo dõi thực hiện Hợp đồng hiển thị riêng công việc, nghiệm thu/QS và trạng
+thái lịch thanh toán; chưa gộp thành một phần trăm hoàn thành. Chỉ lấy nguồn gắn
+trực tiếp Hợp đồng, theo quyền module nguồn độc lập, có link đối chiếu. Không gán
+toàn bộ công việc/nghiệm thu cấp Dự án cho một Hợp đồng. Mốc thanh toán không
+đồng nghĩa sổ thực thu/thực chi; hồ sơ QS lịch sử/đảo không tính là duyệt còn hiệu lực.
+
 ### Điểm mở
 
 Quy ước mã Dự án và các field CRM NICON muốn bỏ cần được xác nhận bằng văn bản.

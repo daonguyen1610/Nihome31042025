@@ -38,6 +38,7 @@ public class ContractsController(
     ILegalActivationService legalActivation,
     IProjectAccessService projectAccess,
     IPermissionService permissions,
+    ContractExecutionProgressService executionProgress,
     IWebHostEnvironment env,
     AppDbContext db,
     IAuditLogger audit) : ControllerBase
@@ -195,6 +196,16 @@ public class ContractsController(
     {
         var contractNumber = await svc.PreviewNextNumberAsync(ct);
         return Ok(new { contractNumber });
+    }
+
+    [HttpGet("{id:int}/execution-progress")]
+    [RequirePermission("crm.contracts", "view")]
+    public async Task<ActionResult<ContractExecutionProgressResponse>> ExecutionProgress(int id, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        var contract = await svc.GetAsync(id, userId.Value, await CanReadContractAcrossOwnersAsync(userId.Value, id, ct), ct);
+        return contract is null ? NotFound() : Ok(await executionProgress.GetAsync(contract, userId.Value, ct));
     }
 
     [HttpGet("{id:int}/source-leads")]
