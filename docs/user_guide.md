@@ -128,19 +128,22 @@ Additionally, the system includes cross-cutting capabilities:
 | Multi-Language | Vietnamese, English, Chinese, and Japanese across the current interface; the original BreakTask only requested Vietnamese and English |
 | Responsive Design | Support for desktop and mobile devices |
 | Role-Based Access | User creation, role assignment, and menu-level permission control |
-| Workflow Approval | Configurable approval flows for quotations, documents, material requests, and variation orders |
+| Workflow Approval | Selected approval flows exist; a unified NICON-approved matrix for all dossier types remains open |
 | Notifications | In-app and email notifications triggered by system events |
-| Audit Log | History tracking for all create, update, delete, approve, and file download actions |
-| Global Search | Cross-module search with advanced filtering and saved filter presets |
-| Master Data | Configurable reference data (statuses, lead sources, contract types, material types, checklist templates) |
+| Audit Log | History for key workflows; complete coverage of file downloads and actions remains target work |
+| Global Search | Module-level search and filters exist; cross-module search and saved presets remain target work |
+| Master Data | Configurable shared references exist; project-specific templates and the approval matrix remain open |
 
 ### 2.3 Customer Task Breakdown Baseline
 
 `Nicon_BreakTask_v1.xlsx` is retained as customer planning evidence, not as an
-automatically current delivery estimate. Its **Tiến độ hiện tại** sheet contains
-107 numbered work items at the time of this review: 48 `Done`, 11 `In Progress`,
-and 48 `Not Implement`. The workbook's main requirement sheet marks 291 entries
-`Chưa thực hiện`, but does not provide a complete numeric manday column.
+automatically current delivery estimate. The repository review on 17 October
+2026 refreshed every numbered item in **Tiến độ hiện tại** (`H2:H108`) and each
+task in the **Nicon** requirement sheet (`B4:B348`, excluding section headings).
+The corresponding **Ghi chú** cells name the remaining work for every partially
+delivered item. These classifications describe the current repository, not
+customer deployment or UAT; the workbook still does not provide a complete
+numeric manday column.
 
 The previously published task-count and frontend-effort totals cannot be
 reconciled to the current workbook and are therefore withdrawn. Do not use a task
