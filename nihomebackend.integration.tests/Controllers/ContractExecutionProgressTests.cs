@@ -111,25 +111,75 @@ public class ContractExecutionProgressTests(NihomeWebApplicationFactory factory)
         db.Customers.Add(customer); await db.SaveChangesAsync();
         var project = new OperationalProject { Code = $"PJ-{Guid.NewGuid():N}"[..24], Name = "Nhà máy Long Thành", CustomerId = customer.Id };
         db.OperationalProjects.Add(project); await db.SaveChangesAsync();
-        Contract NewContract() => new() { ContractNumber = $"HD-{Guid.NewGuid():N}"[..28], CustomerId = customer.Id, OperationalProjectId = project.Id,
-            OwnerUserId = owner, Direction = ContractDirection.Upstream, Type = ContractType.Construction, Value = 1000000000m };
+        Contract NewContract() => new()
+        {
+            ContractNumber = $"HD-{Guid.NewGuid():N}"[..28],
+            CustomerId = customer.Id,
+            OperationalProjectId = project.Id,
+            OwnerUserId = owner,
+            Direction = ContractDirection.Upstream,
+            Type = ContractType.Construction,
+            Value = 1000000000m
+        };
         var contract = NewContract(); var other = NewContract(); db.Contracts.AddRange(contract, other); await db.SaveChangesAsync();
         var group = await db.RoleGroups.Select(item => item.Id).FirstAsync();
-        var packages = Enumerable.Range(1, 13).Select(i => new DepartmentWorkPackage { Code = $"WP-{i}", Name = $"Gói công việc {i}",
-            ContractId = contract.Id, OperationalProjectId = project.Id, Kind = WorkPackageKind.Project, DepartmentRoleGroupId = group,
-            LeadUserId = owner, CreatedByUserId = owner, UpdatedByUserId = owner, Status = i == 13 ? WorkPackageStatus.Cancelled : WorkPackageStatus.Active }).ToList();
+        var packages = Enumerable.Range(1, 13).Select(i => new DepartmentWorkPackage
+        {
+            Code = $"WP-{i}",
+            Name = $"Gói công việc {i}",
+            ContractId = contract.Id,
+            OperationalProjectId = project.Id,
+            Kind = WorkPackageKind.Project,
+            DepartmentRoleGroupId = group,
+            LeadUserId = owner,
+            CreatedByUserId = owner,
+            UpdatedByUserId = owner,
+            Status = i == 13 ? WorkPackageStatus.Cancelled : WorkPackageStatus.Active
+        }).ToList();
         db.DepartmentWorkPackages.AddRange(packages);
-        db.DepartmentWorkPackages.Add(new DepartmentWorkPackage { Code = "OTHER-CONTRACT", Name = "Gói riêng cùng dự án", ContractId = other.Id,
-            OperationalProjectId = project.Id, DepartmentRoleGroupId = group, LeadUserId = owner, CreatedByUserId = owner, UpdatedByUserId = owner });
+        db.DepartmentWorkPackages.Add(new DepartmentWorkPackage
+        {
+            Code = "OTHER-CONTRACT",
+            Name = "Gói riêng cùng dự án",
+            ContractId = other.Id,
+            OperationalProjectId = project.Id,
+            DepartmentRoleGroupId = group,
+            LeadUserId = owner,
+            CreatedByUserId = owner,
+            UpdatedByUserId = owner
+        });
         await db.SaveChangesAsync();
         foreach (var status in new[] { WorkTaskStatus.Planned, WorkTaskStatus.Completed, WorkTaskStatus.Verified, WorkTaskStatus.Cancelled })
-            db.DepartmentWorkTasks.Add(new DepartmentWorkTask { WorkPackageId = packages[0].Id, Title = status.ToString(), WbsCode = status.ToString(),
-                DepartmentRoleGroupId = group, AssigneeUserId = owner, Status = status, PlannedStart = new DateTime(2026, 10, 1), PlannedEnd = new DateTime(2026, 10, 31), CreatedByUserId = owner, UpdatedByUserId = owner });
+            db.DepartmentWorkTasks.Add(new DepartmentWorkTask
+            {
+                WorkPackageId = packages[0].Id,
+                Title = status.ToString(),
+                WbsCode = status.ToString(),
+                DepartmentRoleGroupId = group,
+                AssigneeUserId = owner,
+                Status = status,
+                PlannedStart = new DateTime(2026, 10, 1),
+                PlannedEnd = new DateTime(2026, 10, 31),
+                CreatedByUserId = owner,
+                UpdatedByUserId = owner
+            });
         db.DepartmentWorkTasks.Add(new DepartmentWorkTask { WorkPackageId = packages[12].Id, Title = "Không tính nhóm hủy", WbsCode = "CANCELLED", DepartmentRoleGroupId = group, AssigneeUserId = owner, Status = WorkTaskStatus.Verified, CreatedByUserId = owner, UpdatedByUserId = owner });
         ConstructionQsBatch Qs(string code, ConstructionReviewStatus status, ConstructionQsRecordState state = ConstructionQsRecordState.Active, ConstructionQsAdjustmentKind kind = ConstructionQsAdjustmentKind.Original)
-            => new() { Code = code, ContractId = contract.Id, OperationalProjectId = project.Id, Direction = ConstructionQsDirection.Upstream,
-                Status = status, RecordState = state, AdjustmentKind = kind, IsActiveLineage = status == ConstructionReviewStatus.CmApproved,
-                WbsCode = "1.1", PeriodFrom = new DateTime(2026, 10, 1), PeriodTo = new DateTime(2026, 10, 31), CreatedByUserId = owner };
+            => new()
+            {
+                Code = code,
+                ContractId = contract.Id,
+                OperationalProjectId = project.Id,
+                Direction = ConstructionQsDirection.Upstream,
+                Status = status,
+                RecordState = state,
+                AdjustmentKind = kind,
+                IsActiveLineage = status == ConstructionReviewStatus.CmApproved,
+                WbsCode = "1.1",
+                PeriodFrom = new DateTime(2026, 10, 1),
+                PeriodTo = new DateTime(2026, 10, 31),
+                CreatedByUserId = owner
+            };
         db.ConstructionQsBatches.AddRange(Qs("CURRENT", ConstructionReviewStatus.CmApproved),
             Qs("CORRECTION", ConstructionReviewStatus.CmApproved, kind: ConstructionQsAdjustmentKind.SupersedingCorrection),
             Qs("OLD", ConstructionReviewStatus.CmApproved, ConstructionQsRecordState.Superseded),
