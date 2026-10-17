@@ -702,6 +702,23 @@ Every Survey persists an Operational Project and stores media in that project's 
 
 #### 3.1.7 Customer Contract Management
 
+The information tab includes **Contract execution progress** with three separate
+sections. **Work** counts directly linked work packages and their tasks within
+your viewing scope; Completed and Verified are separate states, and cancelled
+packages do not contribute tasks. **Acceptance / QS** shows directly linked QS
+dossiers for the Contract's direction, including separate history, pending CM
+review and effective approval counts. Superseded/reversed records are not current
+approvals. These counts are not a combined Contract completion percentage.
+
+Select a recent source to inspect its work package or QS dossier. A preview lists
+up to ten recent sources; totals include all visible qualifying records. The QS
+workspace shows the selected project and Contract filter; Reset removes that
+filter, and changing project clears it. **Payment** reports the existing schedule
+and milestone statuses using the base Contract value, not cash actually received
+or spent. **View payment schedule** opens the existing payment tab. Restricted
+sources display an access/context message rather than misleading zero counts.
+Use **Refresh** to reload current source states or **Retry** after an error.
+
 In an Upstream Contract's information tab, **Source leads** shows the Leads
 converted into its source Opportunity. Select a Lead name to open its detail;
 the conversion date is displayed in Vietnam time. Only Leads within your Lead

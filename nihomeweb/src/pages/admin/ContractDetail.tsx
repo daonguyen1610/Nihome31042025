@@ -26,6 +26,7 @@ import AdminLayout from "@/components/layout/AdminLayout";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import QuoteContractLinkDialog from "@/components/admin/QuoteContractLinkDialog";
 import ContractSourceLeads from "@/components/admin/ContractSourceLeads";
+import ContractExecutionProgress from "@/components/admin/ContractExecutionProgress";
 import LegalActivationWizard from "@/components/admin/LegalActivationWizard";
 import { useI18n } from "@/lib/i18n";
 import { formatVnd, formatVndWithSymbol } from "@/lib/numberFormat";
@@ -2575,20 +2576,32 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
                 />
               </div>
             ) : (
-              <InfoTab
-                contract={contract}
-                onEnsureDesignProject={
-                  !isFinanceWorkspace &&
-                  has(ADMIN_PERMS.opportunitiesManage) &&
-                  has(ADMIN_PERMS.operationalProjectsManage)
-                    ? () => void handleEnsureDesignProject()
-                    : undefined
-                }
-                ensuringDesignProject={ensuringDesignProject}
-                canViewDesignProject={has(ADMIN_PERMS.designProjects)}
-                canViewLeads={has(ADMIN_PERMS.leads)}
-                onLinkQuote={canLinkQuote ? () => setLinkQuoteOpen(true) : undefined}
-              />
+              <>
+                <InfoTab
+                  contract={contract}
+                  onEnsureDesignProject={
+                    !isFinanceWorkspace &&
+                    has(ADMIN_PERMS.opportunitiesManage) &&
+                    has(ADMIN_PERMS.operationalProjectsManage)
+                      ? () => void handleEnsureDesignProject()
+                      : undefined
+                  }
+                  ensuringDesignProject={ensuringDesignProject}
+                  canViewDesignProject={has(ADMIN_PERMS.designProjects)}
+                  canViewLeads={has(ADMIN_PERMS.leads)}
+                  onLinkQuote={canLinkQuote ? () => setLinkQuoteOpen(true) : undefined}
+                />
+                <ContractExecutionProgress
+                  contract={contract}
+                  onPayment={() => {
+                    setTab("schedule");
+                    setSearchParams((current) => {
+                      current.set("tab", "schedule");
+                      return current;
+                    });
+                  }}
+                />
+              </>
             )}
           </TabsContent>
           <TabsContent value="schedule" className="mt-4">

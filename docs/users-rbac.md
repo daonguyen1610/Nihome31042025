@@ -13,11 +13,18 @@ Tender statistics, report customer/preparer options and report drill-down use
 read-only endpoints do not require `users.view` or Tender management permission.
 They do not inherit own-scope restrictions from the separate KPI workspace.
 
-### System roles
+Contract execution progress first enforces Contract read scope. Work summaries
+add `work.packages.view` and the existing package visibility rules. QS summaries
+add `construction.qs.view` and Operational Project access. Restricted sections
+return null without exposing counts or source IDs; payment uses existing
+Contract-visible schedule data. Contract portfolio access does not widen source
+module access.
 
 Contract source-Lead traceability requires both `crm.contracts.view` and
 `crm.leads.view`. Contract owner/project/portfolio access and Lead owner/all
 access are applied independently; seeing a Contract never expands Lead scope.
+
+### System roles
 
 | Role | Source of truth | Customisable? |
 |---|---|---|

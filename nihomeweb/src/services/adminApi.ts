@@ -1839,6 +1839,38 @@ export interface ContractSourceLeadResponse {
   convertedAt: string;
 }
 
+export interface ContractProgressSource {
+  id: number;
+  code: string;
+  name: string;
+  status: string;
+}
+export interface ContractExecutionProgressResponse {
+  calculatedAt: string;
+  work: {
+    packageCount: number;
+    cancelledPackageCount: number;
+    taskCount: number;
+    completedTaskCount: number;
+    verifiedTaskCount: number;
+    cancelledTaskCount: number;
+    sources: ContractProgressSource[];
+  } | null;
+  qs: {
+    dossierCount: number;
+    activeApprovedCount: number;
+    pendingReviewCount: number;
+    sources: ContractProgressSource[];
+  } | null;
+  payment: {
+    milestoneCount: number;
+    paidCount: number;
+    requestedCount: number;
+    scheduledAmount: number;
+    paidScheduledAmount: number;
+  };
+}
+
 export interface ContractResponse {
   id: number;
   contractNumber: string;
@@ -7909,6 +7941,8 @@ export const adminApi = {
   previewNextContractNumber: () => api.get<{ contractNumber: string }>("/contracts/next-number"),
   getContractSourceLeads: (id: number, signal?: AbortSignal) =>
     api.get<ContractSourceLeadResponse[]>(`/contracts/${id}/source-leads`, { signal }),
+  getContractExecutionProgress: (id: number, signal?: AbortSignal) =>
+    api.get<ContractExecutionProgressResponse>(`/contracts/${id}/execution-progress`, { signal }),
   createContract: (body: UpsertContractRequest) => api.post<ContractResponse>("/contracts", body),
   updateContract: (id: number, body: UpsertContractRequest) =>
     api.put<ContractResponse>(`/contracts/${id}`, body),

@@ -132,6 +132,11 @@ Lead; nhiều Lead đã chuyển đổi vào cùng Cơ hội được hiển th�
 
 ## 4. Các cổng kiểm soát chính
 
+Đối chiếu thực hiện Hợp đồng: mở thông tin Hợp đồng → xem riêng công việc gắn
+ContractId, hồ sơ QS đúng chiều/gắn ContractId và lịch thanh toán → mở hồ sơ nguồn
+hoặc tab thanh toán. Giữ phạm vi quyền nguồn, phân biệt dữ liệu rỗng và bị hạn chế.
+Không tính phần trăm hoàn thành chung và không suy diễn nguồn từ Dự án dùng chung.
+
 ### G0 — Khởi tạo Dự án
 
 - Có khách hàng, mã/tên dự án và người phụ trách hợp lệ.

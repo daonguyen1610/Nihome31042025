@@ -1038,6 +1038,44 @@ migrated separately before the repository-wide hard-delete rollout is complete.
 
 ### 7.8 Customer Documents and Contract Ownership
 
+#### Contract execution progress
+
+`GET /api/contracts/{id}/execution-progress` (also `/api/v1/...`) requires
+`crm.contracts.view` and the existing Contract owner/project/direction read
+scope. Inaccessible or missing Contracts return `404`. The response deliberately
+has no combined completion percentage. It contains independent `work`, `qs`,
+`payment` measures and UTC `calculatedAt`.
+
+`work` is null without `work.packages.view`; otherwise it reuses the work-package
+list's owner/creator/assignee/approver/CC/project/admin visibility rules.
+Only `DepartmentWorkPackage.ContractId == contract.Id` qualifies. Package counts
+include cancellations, reported separately; task counts exclude cancelled
+packages and split Completed, Verified and Cancelled tasks. Completed and Verified
+are disjoint. Counts cover all qualifying records; only the ten most recently
+updated package links are previewed. This is not a WBS-weighted progress measure.
+
+`qs` is null without `construction.qs.view` or access to the Contract's
+Operational Project. Count only dossiers matching Contract ID, Operational
+Project ID and Upstream/Downstream direction. All-history count is separate from
+pending CM review and current approved count. Current approved means CmApproved,
+Active record state, active lineage and not a Reversal record; replaced/reversed
+predecessors and reversal records do not count as effective approvals. Preview
+the ten most recently updated sources; do not sum certified amounts or infer a
+completion rate. QS links select the project, filter by Contract and anchor the
+source dossier in the existing QS workspace. Changing projects clears that filter.
+
+`payment` uses the same Contract-visible schedule as the detail page: milestone
+count, Paid/Requested counts, scheduled amount and amount of Paid milestones.
+Each line uses rounded `Contract.Value * PercentValue / 100`, matching the base
+Contract schedule. It is not a cash ledger, does not claim actual receipts or
+disbursements, and excludes VO adjustments handled outside this schedule.
+
+No schema/write contract changes, notifications or lifecycle transitions are
+introduced. Project-only Construction Tasks/Acceptance records are not attributed
+to a Contract. Null restricted-source states differ from authorized empty counts.
+Sources refresh on Contract changes and manual refresh. Verification lives in
+`ContractExecutionProgressTests` and `admin-contract-execution-progress.spec.ts`.
+
 #### Contract source Lead traceability
 
 `GET /api/contracts/{id}/source-leads` (also `/api/v1/contracts/{id}/source-leads`)

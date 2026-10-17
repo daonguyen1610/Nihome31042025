@@ -1,4 +1,5 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { CircleDollarSign, Plus, Send, Trash2 } from "lucide-react";
 import { ConstructionWorkspaceShell } from "./ConstructionWorkspaceShell";
 import { PageEmpty, PageError, PageLoading } from "@/components/PageState";
@@ -48,10 +49,29 @@ export default function QsWorkspacePage() {
   const { t, lang } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
-  const [projectId, setProjectId] = useState<number | null>(null);
-  const selectProject = useCallback((id: number) => setProjectId(id), []);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedProject = Number(searchParams.get("projectId"));
+  const requestedContract = Number(searchParams.get("contractId"));
+  const projectId =
+    Number.isInteger(requestedProject) && requestedProject > 0 ? requestedProject : null;
+  const selectProject = useCallback(
+    (id: number) => {
+      setSearchParams({ projectId: String(id) });
+    },
+    [setSearchParams],
+  );
+  const contractFilter =
+    Number.isInteger(requestedContract) && requestedContract > 0 ? requestedContract : null;
   const [rows, setRows] = useState<ConstructionQsBatchResponse[]>([]);
+  const visibleRows = rows.filter(
+    (row) => contractFilter == null || row.contractId === contractFilter,
+  );
   const [loading, setLoading] = useState(false);
+  useEffect(() => {
+    if (!loading && rows.length > 0 && window.location.hash.startsWith("#qs-")) {
+      document.getElementById(window.location.hash.slice(1))?.scrollIntoView({ block: "center" });
+    }
+  }, [rows, loading]);
   const [error, setError] = useState<string | null>(null);
   const [reload, setReload] = useState(0);
   const [open, setOpen] = useState(false);
@@ -199,6 +219,20 @@ export default function QsWorkspacePage() {
       testId="qs-page"
     >
       <section className="space-y-4">
+        {contractFilter != null && (
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-muted/30 p-3 text-sm">
+            <span>
+              {t("construction.qs.contract")} #{contractFilter}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSearchParams(projectId ? { projectId: String(projectId) } : {})}
+            >
+              {t("common.reset")}
+            </Button>
+          </div>
+        )}
         <div className="flex justify-end">
           {has(ADMIN_PERMS.constructionQsCreate) && (
             <Button onClick={() => setOpen(true)} data-testid="qs-new">
@@ -211,12 +245,13 @@ export default function QsWorkspacePage() {
           <PageLoading />
         ) : error ? (
           <PageError message={error} onRetry={() => setReload((value) => value + 1)} />
-        ) : rows.length === 0 ? (
+        ) : visibleRows.length === 0 ? (
           <PageEmpty message={t("construction.qs.empty")} />
         ) : (
           <div className="grid gap-3 lg:grid-cols-2">
-            {rows.map((row) => (
+            {visibleRows.map((row) => (
               <article
+                id={`qs-${row.id}`}
                 key={row.id}
                 className="space-y-3 rounded-xl border bg-card p-4 shadow-sm"
                 data-testid={`qs-row-${row.id}`}

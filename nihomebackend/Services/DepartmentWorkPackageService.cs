@@ -26,16 +26,7 @@ public sealed partial class DepartmentWorkPackageService(
     {
         var page = Math.Max(query.Page, 1);
         var pageSize = Math.Clamp(query.PageSize, 1, MaxPageSize);
-        var packages = BaseQuery();
-        if (!canViewAll && !await IsAdministratorAsync(callerUserId, ct))
-        {
-            var projectIds = await projectAccess.GetAccessibleOperationalProjectIdsAsync(callerUserId, ct);
-            packages = packages.Where(item =>
-                item.CreatedByUserId == callerUserId || item.LeadUserId == callerUserId ||
-                item.Tasks.Any(task => task.AssigneeUserId == callerUserId ||
-                    task.ApproverUserId == callerUserId || task.CcUsers.Any(cc => cc.UserId == callerUserId)) ||
-                item.OperationalProjectId.HasValue && projectIds.Contains(item.OperationalProjectId.Value));
-        }
+        var packages = await ApplyViewScopeAsync(BaseQuery(), callerUserId, canViewAll, ct);
         if (!string.IsNullOrWhiteSpace(query.Kind) && Enum.TryParse<WorkPackageKind>(query.Kind, true, out var kind))
             packages = packages.Where(item => item.Kind == kind);
         if (query.OperationalProjectId.HasValue)
@@ -68,6 +59,39 @@ public sealed partial class DepartmentWorkPackageService(
             TotalCount = total,
             Items = rows.Select(item => MapPackage(item, callerUserId, admin)).ToList(),
         };
+    }
+
+    private async Task<IQueryable<DepartmentWorkPackage>> ApplyViewScopeAsync(
+        IQueryable<DepartmentWorkPackage> packages, int callerUserId, bool canViewAll, CancellationToken ct)
+    {
+        if (!canViewAll && !await IsAdministratorAsync(callerUserId, ct))
+        {
+            var projectIds = await projectAccess.GetAccessibleOperationalProjectIdsAsync(callerUserId, ct);
+            packages = packages.Where(item =>
+                item.CreatedByUserId == callerUserId || item.LeadUserId == callerUserId ||
+                item.Tasks.Any(task => task.AssigneeUserId == callerUserId ||
+                    task.ApproverUserId == callerUserId || task.CcUsers.Any(cc => cc.UserId == callerUserId)) ||
+                item.OperationalProjectId.HasValue && projectIds.Contains(item.OperationalProjectId.Value));
+        }
+        return packages;
+    }
+
+    public async Task<ContractWorkProgress> GetContractProgressAsync(int contractId, int callerUserId, bool canViewAll, CancellationToken ct = default)
+    {
+        var packages = await ApplyViewScopeAsync(db.DepartmentWorkPackages.AsNoTracking()
+            .Where(item => item.ContractId == contractId), callerUserId, canViewAll, ct);
+        var packageCount = await packages.CountAsync(ct);
+        var cancelled = await packages.CountAsync(item => item.Status == WorkPackageStatus.Cancelled, ct);
+        var tasks = db.DepartmentWorkTasks.AsNoTracking().Where(item =>
+            packages.Any(package => package.Id == item.WorkPackageId && package.Status != WorkPackageStatus.Cancelled));
+        var counts = await tasks.GroupBy(item => item.Status).Select(group => new { Status = group.Key, Count = group.Count() }).ToListAsync(ct);
+        var sources = await packages.OrderByDescending(item => item.UpdatedAt).ThenByDescending(item => item.Id).Take(10)
+            .Select(item => new { item.Id, item.Code, item.Name, item.Status }).ToListAsync(ct);
+        return new(packageCount, cancelled, counts.Sum(item => item.Count),
+            counts.Where(item => item.Status == WorkTaskStatus.Completed).Sum(item => item.Count),
+            counts.Where(item => item.Status == WorkTaskStatus.Verified).Sum(item => item.Count),
+            counts.Where(item => item.Status == WorkTaskStatus.Cancelled).Sum(item => item.Count),
+            sources.Select(item => new ContractProgressSource(item.Id, item.Code, item.Name, item.Status.ToString())).ToList());
     }
 
     public async Task<DepartmentWorkPackageResponse?> GetAsync(
