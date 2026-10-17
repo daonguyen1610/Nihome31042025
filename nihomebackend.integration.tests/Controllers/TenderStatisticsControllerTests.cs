@@ -111,21 +111,40 @@ public class TenderStatisticsControllerTests(NihomeWebApplicationFactory factory
         {
             var tender = new Tender
             {
-                Code = $"TD-STAT-{Guid.NewGuid():N}"[..25], Name = name, CustomerId = customer.Id,
-                OperationalProjectId = project.Id, PreparerUserId = userId ?? owner.Id,
-                InvitationReceivedByUserId = owner.Id, InvitationSource = "Email chủ đầu tư",
-                InvitationReceivedAt = new DateTime(2026, 7, 1), SubmissionDeadline = new DateTime(2026, 8, 15),
-                Status = status, SubmittedAt = first,
+                Code = $"TD-STAT-{Guid.NewGuid():N}"[..25],
+                Name = name,
+                CustomerId = customer.Id,
+                OperationalProjectId = project.Id,
+                PreparerUserId = userId ?? owner.Id,
+                InvitationReceivedByUserId = owner.Id,
+                InvitationSource = "Email chủ đầu tư",
+                InvitationReceivedAt = new DateTime(2026, 7, 1),
+                SubmissionDeadline = new DateTime(2026, 8, 15),
+                Status = status,
+                SubmittedAt = first,
                 ClosedAt = status is TenderStatus.Won or TenderStatus.Lost ? new DateTime(2026, 10, 1) : null,
             };
             db.Tenders.Add(tender);
             await db.SaveChangesAsync();
             if (first.HasValue)
             {
-                db.TenderSubmissions.Add(new TenderSubmission { TenderId = tender.Id, Sequence = 1, SubmittedAt = first.Value,
-                    SubmittedByUserId = owner.Id, SubmissionChannel = "Email", LegacyUnknown = status == TenderStatus.Lost });
-                if (second) db.TenderSubmissions.Add(new TenderSubmission { TenderId = tender.Id, Sequence = 2,
-                    SubmittedAt = new DateTime(2026, 8, 20), SubmittedByUserId = owner.Id, SubmissionChannel = "Email" });
+                db.TenderSubmissions.Add(new TenderSubmission
+                {
+                    TenderId = tender.Id,
+                    Sequence = 1,
+                    SubmittedAt = first.Value,
+                    SubmittedByUserId = owner.Id,
+                    SubmissionChannel = "Email",
+                    LegacyUnknown = status == TenderStatus.Lost
+                });
+                if (second) db.TenderSubmissions.Add(new TenderSubmission
+                {
+                    TenderId = tender.Id,
+                    Sequence = 2,
+                    SubmittedAt = new DateTime(2026, 8, 20),
+                    SubmittedByUserId = owner.Id,
+                    SubmissionChannel = "Email"
+                });
                 await db.SaveChangesAsync();
             }
             return tender;

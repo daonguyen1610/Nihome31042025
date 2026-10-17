@@ -79,8 +79,12 @@ public class ContractSourceLeadsTests(NihomeWebApplicationFactory factory) : Int
         var contractResponse = await Client.PostAsJsonAsync("/api/contracts", new
         {
             customerId = converted.GetProperty("convertedCustomerId").GetInt32(),
-            opportunityId, operationalProjectId = projectId, ownerUserId = ownerId,
-            direction = "Upstream", type = "DesignAndBuild", value = 1500000000m,
+            opportunityId,
+            operationalProjectId = projectId,
+            ownerUserId = ownerId,
+            direction = "Upstream",
+            type = "DesignAndBuild",
+            value = 1500000000m,
         });
         contractResponse.EnsureSuccessStatusCode();
         var contractId = (await ReadJsonAsync(contractResponse)).GetProperty("id").GetInt32();
@@ -111,8 +115,14 @@ public class ContractSourceLeadsTests(NihomeWebApplicationFactory factory) : Int
         var permissionIds = await db.Permissions.Where(item => grants.Contains(item.Module + "." + item.Action)).Select(item => item.Id).ToListAsync();
         permissionIds.Count.Should().Be(grants.Length);
         db.RolePermissions.AddRange(permissionIds.Select(id => new RolePermission { RoleId = role.Id, PermissionId = id }));
-        var user = new ApplicationUser { PhoneNumber = "09" + Random.Shared.Next(10000000, 99999999),
-            FullName = "Kinh doanh dự án Long Thành", Role = UserRole.USER, RoleEntityId = role.Id, IsActive = true };
+        var user = new ApplicationUser
+        {
+            PhoneNumber = "09" + Random.Shared.Next(10000000, 99999999),
+            FullName = "Kinh doanh dự án Long Thành",
+            Role = UserRole.USER,
+            RoleEntityId = role.Id,
+            IsActive = true
+        };
         user.PasswordHash = new PasswordService().Hash(user, TestDataSeeder.DefaultPassword);
         db.Users.Add(user);
         await db.SaveChangesAsync();
@@ -133,8 +143,17 @@ public class ContractSourceLeadsTests(NihomeWebApplicationFactory factory) : Int
         await db.SaveChangesAsync();
         var time = new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc);
         Lead Lead(string name, int leadOwner, int? opportunityId, int? customerId, LeadStatus status = LeadStatus.Converted, DateTime? convertedAt = null)
-            => new() { Name = name, OwnerUserId = leadOwner, SourceCode = "referral", Email = $"{Guid.NewGuid():N}@example.test",
-                Status = status, ConvertedAt = convertedAt ?? time, ConvertedOpportunityId = opportunityId, ConvertedCustomerId = customerId };
+            => new()
+            {
+                Name = name,
+                OwnerUserId = leadOwner,
+                SourceCode = "referral",
+                Email = $"{Guid.NewGuid():N}@example.test",
+                Status = status,
+                ConvertedAt = convertedAt ?? time,
+                ConvertedOpportunityId = opportunityId,
+                ConvertedCustomerId = customerId
+            };
         db.Leads.AddRange(
             Lead("Đầu mối nhà máy Long Thành", owner, opportunity.Id, customer.Id),
             Lead("Đầu mối kỹ thuật Long Thành", other, opportunity.Id, customer.Id, convertedAt: time.AddDays(1)),
@@ -144,9 +163,17 @@ public class ContractSourceLeadsTests(NihomeWebApplicationFactory factory) : Int
         var missingTimestamp = Lead("Thiếu thời điểm chuyển đổi", owner, opportunity.Id, customer.Id);
         missingTimestamp.ConvertedAt = null;
         db.Leads.Add(missingTimestamp);
-        Contract Contract(ContractDirection direction, int? source) => new() { ContractNumber = $"HD-{Guid.NewGuid():N}"[..28], CustomerId = customer.Id,
-            OperationalProjectId = project.Id, OpportunityId = source, OwnerUserId = owner, Direction = direction,
-            Type = direction == ContractDirection.Upstream ? ContractType.DesignAndBuild : ContractType.Subcontract, Value = 1500000000m };
+        Contract Contract(ContractDirection direction, int? source) => new()
+        {
+            ContractNumber = $"HD-{Guid.NewGuid():N}"[..28],
+            CustomerId = customer.Id,
+            OperationalProjectId = project.Id,
+            OpportunityId = source,
+            OwnerUserId = owner,
+            Direction = direction,
+            Type = direction == ContractDirection.Upstream ? ContractType.DesignAndBuild : ContractType.Subcontract,
+            Value = 1500000000m
+        };
         var contract = Contract(ContractDirection.Upstream, opportunity.Id);
         var direct = Contract(ContractDirection.Upstream, null);
         var downstream = Contract(ContractDirection.Downstream, opportunity.Id);
