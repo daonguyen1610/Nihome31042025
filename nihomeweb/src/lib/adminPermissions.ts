@@ -75,6 +75,8 @@ export const ADMIN_PERMS = {
   vendorsManage: "proc.vendors.manage",
   vendorsExport: "proc.vendors.export",
   procurement: "proc.boq.view",
+  procurementResources: "proc.resource-requests.view",
+  procurementResourcesManage: "proc.resource-requests.manage",
   procurementManage: "proc.boq.manage",
   procurementApprove: "proc.boq.approve",
   procurementMaterialRequests: "proc.material-requests.view",

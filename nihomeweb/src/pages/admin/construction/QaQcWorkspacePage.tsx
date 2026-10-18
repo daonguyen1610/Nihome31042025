@@ -188,6 +188,11 @@ export default function QaQcWorkspacePage() {
             {rows.map((row) => (
               <article
                 key={row.id}
+                id={`qa-qc-${row.id}`}
+                ref={(element) => {
+                  if (element && window.location.hash === `#qa-qc-${row.id}`)
+                    element.scrollIntoView({ block: "center" });
+                }}
                 className="space-y-3 rounded-xl border bg-card p-4 shadow-sm"
                 data-testid={`qa-qc-row-${row.id}`}
               >

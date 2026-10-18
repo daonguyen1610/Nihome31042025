@@ -18,6 +18,22 @@ public class SampleCrmDataSeederTests : IDisposable
     public void Dispose() => _db.Dispose();
 
     [Fact]
+    public void ResourceHandoffSamples_AreMeaningfulIndependentAndIdempotentWithoutFabricatedSupply()
+    {
+        var rows = _db.ConstructionResourceRequests.Where(x => x.Code.StartsWith("RR-SAMPLE-ANPHU-")).ToList();
+        Assert.Equal(2, rows.Count);
+        var approved = Assert.Single(rows.Where(x => x.Status == ConstructionReviewStatus.CmApproved));
+        Assert.NotEqual(approved.CreatedByUserId, approved.CmReviewedByUserId);
+        Assert.Equal(ConstructionResourceType.Equipment, approved.Type);
+        Assert.Null(approved.ProcurementContractId);
+        Assert.Null(approved.SuppliedAt);
+        Assert.Equal(nameof(ConstructionResourceRequest), approved.HandoffEntityType);
+        Assert.Equal((long)approved.Id, approved.HandoffEntityId);
+        SampleCrmDataSeeder.Seed(_db);
+        Assert.Equal(2, _db.ConstructionResourceRequests.Count(x => x.Code.StartsWith("RR-SAMPLE-ANPHU-")));
+    }
+
+    [Fact]
     public void Seed_WonTenderHasExplicitDemoSubmissionWithoutDuplicatingHistory()
     {
         var won = _db.Tenders.Single(item => item.Status == TenderStatus.Won);

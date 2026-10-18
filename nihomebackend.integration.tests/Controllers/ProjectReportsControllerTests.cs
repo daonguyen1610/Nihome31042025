@@ -33,6 +33,12 @@ public sealed class ProjectReportsControllerTests : IntegrationTestBase
         body.GetProperty("projects").EnumerateArray()
             .Select(item => item.GetProperty("project").GetProperty("operationalProjectId").GetInt32())
             .Should().Contain(fixture.AccessibleProjectId).And.NotContain(fixture.InaccessibleProjectId);
+        var cm = body.GetProperty("projects").EnumerateArray()
+            .Single(item => item.GetProperty("project").GetProperty("operationalProjectId").GetInt32() == fixture.AccessibleProjectId)
+            .GetProperty("cmControl");
+        cm.GetProperty("periodPolicy").GetString().Should().Be("CurrentState");
+        cm.GetProperty("budget").GetProperty("availability").GetString().Should().Be("Unavailable");
+        cm.GetProperty("budget").GetProperty("count").ValueKind.Should().Be(JsonValueKind.Null);
 
         var inaccessible = await Client.GetAsync($"/api/reports/projects?projectId={fixture.InaccessibleProjectId}");
         inaccessible.StatusCode.Should().Be(HttpStatusCode.NotFound);

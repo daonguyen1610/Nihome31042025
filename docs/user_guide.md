@@ -1037,7 +1037,7 @@ After CM approves equipment/labour, Procurement contracts and supplies the site,
 then FA processes payment. Templates and package-specific payment documents come
 from the ISO pack NICON already sent; identify missing forms individually, with
 payment-document gaps referred to FA (chị K/Kiara). These confirmed requirements
-do not mean the portfolio, ISO content or downstream handoff is delivered.
+do not mean the complete portfolio, ISO content or Finance handoff is delivered.
 
 **Current implementation boundary:** The split menu now provides BCH Resource,
 QA/QC, Site QS and CM Control workspaces. It delivers versioned CM preparation
@@ -1046,8 +1046,29 @@ published multilingual QA/QC templates and IFC-linked dossiers; explicit
 Upstream/Downstream QS batches; CM review; row-version concurrency;
 idempotency; and server-side author/reviewer separation. Material approval
 creates and submits the existing Material Request aggregate atomically.
-Equipment/labour approval currently exposes a stable handoff state only; it
-does not create a Procurement or Finance contract. QA/QC evidence must already
+**Partial — Procurement handoff:** open Procurement Control, choose the project
+and **Approved equipment and labour**. Filter by resource type or supply state.
+Procurement can draft a Downstream contract by choosing its vendor, business
+type and value; the existing contract service validates it. The draft is not
+automatically linked or signed. Select/save its link on the approved request;
+an authorized contract manager completes the existing signing workflow.
+Multiple requests may use one contract, while each request has one contract.
+Relinking is allowed only before supply confirmation. Select an active project
+document to confirm supply; the server records actor, time and history. An
+unsigned/on-hold/cancelled/closed contract cannot authorize a new confirmation.
+Supply recording does not approve QS or payment and creates no Payment Request.
+Evidence cannot be deleted while referenced; failed document uploads remain
+retryable from project documents. Contract deletion impact discloses blocking
+resource links/history. Read-only users have no write controls.
+
+CM can open **CM control from source records** from the CM workspace or project
+reports. It separates active approved Upstream/Downstream QS, QA/QC and HSE
+source records with drill-down and source permission checks. This section is
+current state even when the surrounding report has date filters; it is not a
+historical snapshot or a sum of quantities. Budget comparison remains explicitly
+unavailable until its sources and calculation contract are confirmed.
+
+QA/QC evidence must already
 be an active Project Document, so durable Drive synchronization and retry state
 remain owned by the existing document workflow.
 

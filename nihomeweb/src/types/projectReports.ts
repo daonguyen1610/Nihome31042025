@@ -10,6 +10,15 @@ export interface ProjectReportResponse {
 }
 
 export interface ProjectOperationalReportResponse {
+  cmControl?: {
+    generatedAtUtc: string;
+    periodPolicy: "CurrentState";
+    upstream: CmPortfolioSection;
+    downstream: CmPortfolioSection;
+    qaQc: CmPortfolioSection;
+    safety: CmPortfolioSection;
+    budget: CmPortfolioSection;
+  } | null;
   project: ProjectReportIdentityResponse;
   design: ProjectReportDesignResponse;
   construction: ProjectReportConstructionResponse;
@@ -17,6 +26,13 @@ export interface ProjectOperationalReportResponse {
   permits: ProjectReportPermitResponse;
   contractualFinance: ProjectReportContractualFinanceResponse;
   unavailableMetrics: ProjectReportUnavailableMetricResponse[];
+}
+
+export interface CmPortfolioSection {
+  availability: ProjectReportAvailability;
+  reasonCode: string | null;
+  count: number | null;
+  sources: { id: number; code: string; status: string; route: string }[];
 }
 
 export interface ProjectReportIdentityResponse {

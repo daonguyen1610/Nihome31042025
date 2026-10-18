@@ -1,4 +1,5 @@
 import { ReactNode, useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { PageError, PageLoading } from "@/components/PageState";
 import { Label } from "@/components/ui/label";
@@ -31,6 +32,8 @@ export function ConstructionWorkspaceShell({
   testId,
 }: ConstructionWorkspaceShellProps) {
   const { t } = useI18n();
+  const [searchParams] = useSearchParams();
+  const requestedProjectId = Number(searchParams.get("projectId"));
   const [projects, setProjects] = useState<OperationalProjectListItemResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -42,10 +45,19 @@ export function ConstructionWorkspaceShell({
     setError(null);
     void adminApi
       .listOperationalProjects({ pageSize: 200 })
-      .then(({ data }) => {
+      .then(async ({ data }) => {
         if (!active) return;
-        setProjects(data.items);
-        if (projectId == null && data.items.length > 0) onProjectChange(data.items[0].id);
+        const items = [...data.items];
+        if (requestedProjectId > 0 && !items.some((project) => project.id === requestedProjectId)) {
+          const requested = await adminApi.getOperationalProject(requestedProjectId);
+          if (!active) return;
+          items.push(requested.data);
+        }
+        setProjects(items);
+        if (projectId == null && items.length > 0) {
+          const requested = items.find((project) => project.id === requestedProjectId);
+          onProjectChange(requested?.id ?? items[0].id);
+        }
       })
       .catch((cause) => {
         if (active) setError(extractApiError(cause, t("construction.common.projectsLoadError")));
@@ -56,7 +68,7 @@ export function ConstructionWorkspaceShell({
     return () => {
       active = false;
     };
-  }, [onProjectChange, projectId, reloadKey, t]);
+  }, [onProjectChange, projectId, reloadKey, requestedProjectId, t]);
 
   return (
     <AdminLayout>

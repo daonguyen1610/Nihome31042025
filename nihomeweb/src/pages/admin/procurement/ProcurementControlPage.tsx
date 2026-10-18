@@ -74,6 +74,7 @@ import { useAppSelector } from "@/store";
 import MaterialRequestListToolbar from "./MaterialRequestListToolbar";
 import MaterialAlertsWorkspace from "./MaterialAlertsWorkspace";
 import WarehouseWorkspace from "./WarehouseWorkspace";
+import ConstructionResourcesWorkspace from "./ConstructionResourcesWorkspace";
 
 type DialogKind = "boq" | "request" | "contract" | "receipt" | "issue" | "rating" | null;
 type DecisionKind = "boq" | "request" | "rating";
@@ -92,7 +93,15 @@ type ReceiptLineDraft = {
   receivedQuantity: number;
 };
 type IssueLineDraft = { projectBoqLineId: number; issuedQuantity: number };
-const procurementTabs = ["boq", "alerts", "requests", "contracts", "warehouse", "ratings"] as const;
+const procurementTabs = [
+  "boq",
+  "alerts",
+  "requests",
+  "resources",
+  "contracts",
+  "warehouse",
+  "ratings",
+] as const;
 
 const emptyBoqLine = (): BoqLineDraft => ({
   itemCode: "",
@@ -135,6 +144,7 @@ const ProcurementControlPage = () => {
   const { toast } = useToast();
   const currentUser = useAppSelector((state) => state.auth.user);
   const canViewBoq = has(ADMIN_PERMS.procurement);
+  const canViewResources = has(ADMIN_PERMS.procurementResources);
   const canManageBoq = has(ADMIN_PERMS.procurementManage);
   const canApproveBoq = has(ADMIN_PERMS.procurementApprove);
   const canViewRequests = has(ADMIN_PERMS.procurementMaterialRequests);
@@ -158,6 +168,7 @@ const ProcurementControlPage = () => {
   const availableTabs = procurementTabs.filter(
     (tab) =>
       (tab === "alerts" && canViewAlerts) ||
+      (tab === "resources" && canViewResources) ||
       (tab === "boq" && canViewBoq) ||
       (tab === "requests" && canViewRequests) ||
       (tab === "contracts" && canViewContracts) ||
@@ -1097,6 +1108,9 @@ const ProcurementControlPage = () => {
           >
             <div className="overflow-x-auto pb-1 [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-track]:bg-transparent">
               <TabsList className="h-auto w-max min-w-full justify-start">
+                {canViewResources && (
+                  <TabsTrigger value="resources">{t("construction.handoff.title")}</TabsTrigger>
+                )}
                 {canViewAlerts && (
                   <TabsTrigger value="alerts">
                     <TriangleAlert className="mr-2 h-4 w-4" />
@@ -1136,6 +1150,11 @@ const ProcurementControlPage = () => {
               </TabsList>
             </div>
 
+            {canViewResources && (
+              <TabsContent value="resources">
+                <ConstructionResourcesWorkspace key={projectId} projectId={projectId} />
+              </TabsContent>
+            )}
             {canViewAlerts && (
               <TabsContent value="alerts">
                 <MaterialAlertsWorkspace

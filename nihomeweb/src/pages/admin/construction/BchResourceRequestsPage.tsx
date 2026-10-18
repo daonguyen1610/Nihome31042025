@@ -214,7 +214,11 @@ export default function BchResourceRequestsPage() {
                   </div>
                   <div>
                     <dt className="text-muted-foreground">{t("construction.resource.handoff")}</dt>
-                    <dd>{t(`construction.handoff.${row.handoffStatus}`)}</dd>
+                    <dd>
+                      {t(
+                        `construction.handoff.${row.suppliedAt ? "Supplied" : row.procurementContractId ? "ContractLinked" : row.handoffStatus}`,
+                      )}
+                    </dd>
                   </div>
                 </dl>
                 <p className="text-sm">{row.reason}</p>

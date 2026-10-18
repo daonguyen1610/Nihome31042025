@@ -339,6 +339,11 @@ export default function CmConstructionWorkspacePage() {
       onProjectChange={selectProject}
       testId="cm-construction-page"
     >
+      {has(ADMIN_PERMS.projectReports) && (
+        <Button asChild variant="outline">
+          <Link to="/admin/reports/projects">{t("construction.portfolio.title")}</Link>
+        </Button>
+      )}
       {loading ? (
         <PageLoading />
       ) : error ? (
@@ -522,7 +527,7 @@ export default function CmConstructionWorkspacePage() {
                   code={row.code}
                   title={`${t(`construction.resource.type.${row.type}`)} · ${row.quantity.toLocaleString(lang)} ${row.unit}`}
                   status={row.status}
-                  detail={`${row.wbsCode} · ${row.reason}`}
+                  detail={`${row.wbsCode} · ${row.reason}${row.suppliedAt ? ` · ${t("construction.handoff.Supplied")}` : row.procurementContractId ? ` · ${t("construction.handoff.ContractLinked")}` : ""}`}
                 >
                   <ReviewButtons
                     target={{ kind: "resource", row }}

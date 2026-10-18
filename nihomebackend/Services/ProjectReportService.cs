@@ -72,7 +72,8 @@ public static class ProjectReportCalculations
 public sealed class ProjectReportService(
     AppDbContext db,
     IProjectAccessService projectAccess,
-    ILogger<ProjectReportService> logger) : IProjectReportService
+    ILogger<ProjectReportService> logger,
+    CmPortfolioService cmPortfolio) : IProjectReportService
 {
     private const int PermitWarningWindowDays = 30;
 
@@ -136,6 +137,7 @@ public sealed class ProjectReportService(
             .Where(milestone => contractIds.Contains(milestone.ContractId))
             .ToListAsync(ct);
 
+        var cmControl = await cmPortfolio.GetAsync(projectIds, callerUserId, ct);
         var response = new ProjectReportResponse
         {
             GeneratedAtUtc = generatedAtUtc,
@@ -151,6 +153,7 @@ public sealed class ProjectReportService(
             var designProjectId = designProject?.Id;
             response.Projects.Add(new ProjectOperationalReportResponse
             {
+                CmControl = cmControl[project.Id],
                 Project = MapProject(project),
                 Design = BuildDesign(
                     designPhases.Where(item => item.OperationalProjectId == project.Id).ToList(),

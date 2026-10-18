@@ -141,6 +141,8 @@ public sealed class ProjectDocumentService(
             throw new ProjectDocumentConflictException("Tệp đang được đồng bộ. Vui lòng chờ lần xử lý hiện tại hoàn tất trước khi xoá.");
         if (document is null || document.DesiredOperation == ProjectDocumentDesiredOperation.Delete ||
             document.SyncStatus == ProjectDocumentSyncStatus.Deleted) return document is not null;
+        if (await db.ConstructionResourceRequests.AnyAsync(x => x.SupplyDocumentId == document.Id, ct))
+            throw new ProjectDocumentValidationException("This document is supply evidence for a construction resource request and cannot be deleted.");
         document.DesiredOperation = ProjectDocumentDesiredOperation.Delete;
         document.SyncStatus = ProjectDocumentSyncStatus.Pending;
         document.SyncAttemptCount = 0;
@@ -309,6 +311,8 @@ public sealed class ProjectDocumentService(
         if (!await CanAccessProjectAsync(projectId, callerUserId, canSeeAll, ct)) return false;
         var document = await FindAsync(projectId, documentId, ct);
         if (document is null) return false;
+        if (await db.ConstructionResourceRequests.AnyAsync(x => x.SupplyDocumentId == documentId, ct))
+            throw new ProjectDocumentValidationException("This document is supply evidence for a construction resource request and cannot be deleted.");
         if (await db.RfqDocuments.AnyAsync(link => link.ProjectDocumentId == documentId, ct))
             throw new ProjectDocumentValidationException("Tệp là bằng chứng RFQ/báo giá; không thể xoá tài liệu đã liên kết.");
         if (document.SourceType == ProjectDocumentSourceType.ExistingManagedFile)

@@ -22,3 +22,7 @@ và luồng chi tiết tại [Nicon-workflow.md](../../../Nicon-workflow.md).
 NICON xác nhận đã gửi bộ ISO; chưa tìm thấy bộ biểu mẫu được nhận diện trong
 repository tại lần rà soát này. Cần đối chiếu kho hồ sơ đã nhận trước khi gửi
 danh sách thiếu, không kết luận NICON chưa gửi hoặc yêu cầu gửi lại toàn bộ.
+
+Trong lượt triển khai tiếp theo, người dùng xác nhận chưa có kho ISO để cung
+cấp truy cập và sẽ cập nhật sau. Đây là đầu vào đang chờ; chưa có thêm xác nhận
+về nội dung từng mẫu hoặc công thức báo cáo CM/FA.

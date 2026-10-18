@@ -20,7 +20,8 @@ public sealed record ConstructionResourceRequestResponse(
     int? ProjectBoqLineId, int? ResponsibleSiteUserId, int? AssignedProcurementUserId,
     int CreatedByUserId, string? CmDecisionReason,
     string? HandoffEntityType, long? HandoffEntityId, ConstructionHandoffStatus HandoffStatus,
-    string RowVersion);
+    string RowVersion, int? ProcurementContractId = null, DateTime? SuppliedAt = null,
+    int? SuppliedByUserId = null, long? SupplyDocumentId = null);
 
 public sealed record ConstructionResourceReferenceDataResponse(
     IReadOnlyList<ConstructionResourceBoqLineReferenceResponse> BoqLines,

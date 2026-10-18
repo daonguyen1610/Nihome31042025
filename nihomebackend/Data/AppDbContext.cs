@@ -1858,10 +1858,23 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.Property(x => x.WbsCode).HasMaxLength(100).IsRequired(); b.Property(x => x.Quantity).HasPrecision(18, 6);
             b.Property(x => x.Unit).HasMaxLength(50).IsRequired(); b.Property(x => x.Reason).HasMaxLength(2000).IsRequired();
             b.Property(x => x.CmDecisionReason).HasMaxLength(2000); b.Property(x => x.HandoffEntityType).HasMaxLength(100);
+            b.HasOne(x => x.ProcurementContract).WithMany().HasForeignKey(x => x.ProcurementContractId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(x => x.SupplyDocument).WithMany().HasForeignKey(x => x.SupplyDocumentId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne<ApplicationUser>().WithMany().HasForeignKey(x => x.SuppliedByUserId).OnDelete(DeleteBehavior.NoAction);
             b.Property(x => x.RowVersion).IsRowVersion();
             b.HasOne(x => x.OperationalProject).WithMany().HasForeignKey(x => x.OperationalProjectId).OnDelete(DeleteBehavior.Restrict);
             b.HasIndex(x => new { x.OperationalProjectId, x.Code }).IsUnique();
             b.HasIndex(x => new { x.OperationalProjectId, x.Status });
+        });
+
+        modelBuilder.Entity<ConstructionResourceHandoffEvent>(b =>
+        {
+            b.ToTable("construction_resource_handoff_events");
+            b.HasKey(x => x.Id);
+            b.HasOne(x => x.ConstructionResourceRequest).WithMany(x => x.HandoffEvents)
+                .HasForeignKey(x => x.ConstructionResourceRequestId).OnDelete(DeleteBehavior.Cascade);
+            b.HasOne<ApplicationUser>().WithMany().HasForeignKey(x => x.ActorUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasIndex(x => new { x.ConstructionResourceRequestId, x.CreatedAt });
         });
 
         modelBuilder.Entity<QaQcTemplate>(b =>

@@ -397,6 +397,8 @@ trình/bước áp dụng và điều kiện bắt buộc; giữ phiên bản m�
 Repository hiện chưa có bộ biểu mẫu ISO được nhận diện để kiểm kê. Đây là
 khoảng trống hiện vật/mapping, không phải quyết định còn mở về chọn bộ ISO.
 Sau đối chiếu bộ đã gửi, báo riêng từng form thiếu để NICON cung cấp bổ sung.
+Trong lượt triển khai, người dùng xác nhận hiện chưa có kho ISO để truy cập và
+sẽ cập nhật sau. Chưa thể lập danh sách form thiếu hoặc mở gate chứng từ ISO.
 
 ### 6.4. QS, nghiệm thu và thanh toán
 
@@ -424,13 +426,24 @@ Construction Task, Diary, Punch, Acceptance, As-built và Handover hiện dùng
 
 **Partial:** CM Preparation hiện lưu các baseline chính dưới dạng document
 reference và readiness snapshot, chưa có WBS/Gantt/S-Curve/Budget Baseline dạng
-dữ liệu có cấu trúc. Đề xuất vật tư đã tạo được Material Request; đề xuất máy và
-nhân công mới dừng ở trạng thái sẵn sàng chuyển tiếp, chưa có handoff mua/thuê và
-liên kết HĐ Downstream hoàn chỉnh. QA/QC đã lưu loại minh chứng theo từng
+dữ liệu có cấu trúc. Đề xuất vật tư đã tạo được Material Request. Máy/nhân công
+CM đã duyệt có inbox Cung ứng, lọc loại/trạng thái, lập HĐ Downstream nháp bằng
+service hợp đồng hiện có, liên kết/đổi một HĐ trước cung cấp và xác nhận cung cấp
+thủ công bằng tài liệu cùng Dự án. Có concurrency, idempotency, lịch sử và chặn
+xóa bằng chứng/HĐ đã có liên kết hoặc lịch sử. Chưa có cung cấp từng phần hoặc
+gate thanh toán ISO. QA/QC đã lưu loại minh chứng theo từng
 tài liệu; nội dung ISO/checklist bắt buộc vẫn thiếu hiện vật nguồn và mapping
 đã đối chiếu theo từng loại công trình.
 QS đã tách Upstream/Downstream, có contract/BOQ/
 milestone và correction lineage, nhưng CM approval chưa tạo hồ sơ thanh toán.
+
+**Partial:** báo cáo Dự án có phần kiểm soát CM theo trạng thái hiện tại: hồ sơ
+QS đầu ra/đầu vào CM đã duyệt còn hiệu lực, QA/QC và an toàn với link nguồn;
+kiểm tra quyền nguồn riêng, thiếu quyền không trả số đếm hoặc link. Tiến độ
+tiếp tục dùng số công việc/trạng thái hiện có. Chưa có snapshot theo kỳ, tổng
+khối lượng quy đổi, S-Curve hoặc giá trị thực hiện so với dự toán; hiển thị
+chưa khả dụng thay vì suy diễn bằng số 0. Các phần mới này chưa là bằng chứng
+triển khai trên host hoặc NICON UAT.
 
 Mọi mở rộng tiếp theo tiếp tục dùng Operational Project. Migration các aggregate
 cũ cần giữ API tương thích, có backfill, rehearsal và rollback; không đổi khóa
@@ -631,7 +644,7 @@ tới khi chủ sở hữu nghiệp vụ chấp thuận các quyết định tư
 | 7 | Đấu thầu | Implemented | Kế hoạch, hồ sơ, năng lực, estimate, review, submission snapshot và kết quả đã có. |
 | 8 | Thiết kế chi tiết | Partial | Schedule/review/Drive và liên kết Vendor/HĐ Downstream bằng stable ID đã có; nhập `.mpp` đầy đủ và markup theo file còn là mục tiêu. |
 | 9 | Pháp lý | Partial | Có activation wizard, permit workflow và risk view; chưa tự sinh danh sách áp dụng vì template loại/quy mô công trình là Q-09. |
-| 10 | Thi công | Partial | Có CM/BCH, resource request, QA/QC và QS; baseline cấu trúc, handoff và portfolio còn thiếu. |
+| 10 | Thi công | Partial | Có CM/BCH, resource request, QA/QC, QS; có liên kết HĐ/xác nhận cung cấp máy-nhân công và nguồn báo cáo CM; còn thiếu baseline cấu trúc, gate ISO/Finance và chỉ số portfolio nâng cao. |
 | 11 | Tài chính kế toán | Partial | Có Payment Request Downstream; chưa có dossier hai chiều và ba section chứng từ. |
 | 12 | Host và Drive NICON | Target | Chỉ công nhận sau deployment, OAuth NICON, health check và smoke test có bằng chứng. |
 | 13 | Đầu vào NICON | Open decision | Nguồn ISO, luồng CM → Cung ứng → FA, danh sách kiểm soát CM và nhân sự BCH đa dự án đã xác nhận qua phản hồi được cung cấp 18/10/2026; còn thiếu hiện vật/mapping ISO, permit matrix và quy ước mã dự án. |

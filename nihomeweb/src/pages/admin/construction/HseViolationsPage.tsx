@@ -1,4 +1,5 @@
 import { useDeferredValue, useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   AlertTriangle,
   Check,
@@ -140,6 +141,9 @@ const dateTime = (value: string | null | undefined, lang: string) =>
   value ? new Date(value).toLocaleString(lang) : "-";
 
 const HseViolationsPage = () => {
+  const [searchParams] = useSearchParams();
+  const sourceProjectId = Number(searchParams.get("projectId"));
+  const sourceViolationId = Number(searchParams.get("violationId"));
   const { t, lang } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
@@ -148,7 +152,10 @@ const HseViolationsPage = () => {
   const canClose = has(ADMIN_PERMS.constructionHseClose);
 
   const [projects, setProjects] = useState<OperationalProjectListItemResponse[]>([]);
-  const [projectId, setProjectId] = useState<number | null>(null);
+  const [projectId, setProjectId] = useState<number | null>(() => {
+    const value = sourceProjectId;
+    return Number.isInteger(value) && value > 0 ? value : null;
+  });
   const [users, setUsers] = useState<UserOption[]>([]);
   const [rows, setRows] = useState<HseViolationResponse[]>([]);
   const [statusCounts, setStatusCounts] = useState<Partial<Record<HseViolationStatus, number>>>({});
@@ -158,6 +165,25 @@ const HseViolationsPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [detail, setDetail] = useState<HseViolationResponse | null>(null);
+  useEffect(() => {
+    setDetail(null);
+    const sourceProject = sourceProjectId;
+    const sourceId = sourceViolationId;
+    if (!projectId || projectId !== sourceProject || !Number.isInteger(sourceId) || sourceId <= 0)
+      return;
+    let active = true;
+    void adminApi
+      .getHseViolation(projectId, sourceId)
+      .then(({ data }) => {
+        if (active) setDetail(data);
+      })
+      .catch((cause) => {
+        if (active) setError(extractApiError(cause));
+      });
+    return () => {
+      active = false;
+    };
+  }, [projectId, sourceProjectId, sourceViolationId]);
 
   const [formOpen, setFormOpen] = useState(false);
   const [formMode, setFormMode] = useState<FormMode>("create");
@@ -176,11 +202,18 @@ const HseViolationsPage = () => {
     let active = true;
     void adminApi
       .listOperationalProjects({ pageSize: 200 })
-      .then(({ data }) => {
+      .then(async ({ data }) => {
         if (!active) return;
         const available = data.items ?? [];
+        if (sourceProjectId > 0 && !available.some((project) => project.id === sourceProjectId)) {
+          const source = await adminApi.getOperationalProject(sourceProjectId);
+          if (!active) return;
+          available.push(source.data);
+        }
         setProjects(available);
-        setProjectId((current) => current ?? available[0]?.id ?? null);
+        setProjectId((current) =>
+          sourceProjectId > 0 ? sourceProjectId : (current ?? available[0]?.id ?? null),
+        );
       })
       .catch((requestError) => {
         if (active) setError(extractApiError(requestError));
@@ -188,7 +221,7 @@ const HseViolationsPage = () => {
     return () => {
       active = false;
     };
-  }, []);
+  }, [sourceProjectId]);
 
   useEffect(() => {
     if (!projectId) {

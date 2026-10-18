@@ -525,6 +525,11 @@ public class ContractService(
             ct);
         var hasPaymentRequests = await db.PaymentRequests.AsNoTracking()
             .AnyAsync(item => item.ContractId == id, ct);
+        var hasResourceRequests = await db.ConstructionResourceRequests.AsNoTracking()
+            .AnyAsync(item => item.ProcurementContractId == id, ct);
+        if (hasResourceRequests && (req.Direction != entity.Direction || req.Type != entity.Type ||
+            req.VendorId != entity.VendorId || operationalProjectId != entity.OperationalProjectId))
+            throw new ContractValidationException("A contract linked to construction resource requests cannot change direction, type, vendor or project.");
         if (hasPaymentRequests &&
             (req.Direction != entity.Direction || req.VendorId != entity.VendorId ||
              operationalProjectId != entity.OperationalProjectId))

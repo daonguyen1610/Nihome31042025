@@ -290,8 +290,12 @@ Server kiểm tra Dự án, quyền, baseline và hạn mức
 
 Hiện tại phần mềm đã có đề xuất Material/Equipment/Labour và CM level-2 review.
 Material đã tạo được MR vật tư và chặn khi vượt allowance còn lại. Equipment và
-Labour mới dừng ở handoff `ReadyForProcurementAndFinance`; quy trình mua/thuê,
-liên kết HĐ Downstream và hoàn tất handoff vẫn là **mục tiêu**.
+Labour giữ handoff `ReadyForProcurementAndFinance` để tương thích API cũ.
+**Partial:** inbox Cung ứng đã bổ sung lập HĐ Downstream nháp, liên kết một HĐ
+cho mỗi đề xuất (một HĐ nhận nhiều đề xuất), đổi liên kết trước cung cấp và xác
+nhận cung cấp bằng tài liệu cùng Dự án. Sau xác nhận không đổi liên kết. Lập
+nháp không tự liên kết hoặc ký HĐ; người có quyền HĐ tiếp tục quy trình ký hiện
+có. Chưa có cung cấp từng phần hoặc tạo Payment Request/gate ISO tự động.
 Chuỗi CM → Cung ứng → FA đã được NICON xác nhận trong phản hồi do người dùng
 cung cấp 18/10/2026; chưa xác định ngày trả lời gốc. Mỗi bước giữ stable ID,
 actor và lịch sử; không tự coi CM duyệt là đã cung cấp hoặc đã thanh toán.
@@ -336,7 +340,7 @@ cầu không phải bằng chứng chức năng đã triển khai.
 | As-built | Hiện có category, workflow và completeness | `DesignProjectId` |
 | Handover | Hiện có readiness, commissioning, checklist, signatory và row version | `DesignProjectId` |
 | CM preparation/BCH organization/Budget Baseline | Có aggregate versioned và readiness snapshot; baseline vẫn là document reference, chưa có dữ liệu cấu trúc/S-Curve engine | `OperationalProjectId` |
-| Resource request | Có Material/Equipment/Labour và CM review; Material tạo MR, hai loại còn lại chưa có procurement handoff hoàn chỉnh | `OperationalProjectId` + WBS/BOQ |
+| Resource request | Partial: Material tạo MR; Equipment/Labour có inbox, lập HĐ nháp/liên kết HĐ và xác nhận cung cấp kèm lịch sử; chưa có Finance/ISO gate | `OperationalProjectId` + WBS/BOQ |
 | QA/QC dossier | Có template snapshot, checklist, IFC và loại minh chứng theo từng tài liệu; checklist ISO bắt buộc theo loại công trình chưa chốt | `OperationalProjectId` + WBS |
 | Site QS hai hướng | Có Upstream/Downstream, contract/BOQ/milestone, evidence và correction lineage; chưa handoff Finance | `OperationalProjectId` + WBS/contract/BOQ |
 

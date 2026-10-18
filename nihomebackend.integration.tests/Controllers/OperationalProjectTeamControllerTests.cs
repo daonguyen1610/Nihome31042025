@@ -36,6 +36,24 @@ public sealed class OperationalProjectTeamControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task SamePerson_CanJoinTwoProjectsButCannotDuplicateOrReadUnassignedThirdProject()
+    {
+        var manager = await UserIdAsync("DESIGN_LEAD");
+        var person = await UserIdAsync("SITE_COMMANDER");
+        var first = await CreateProjectAsync(manager);
+        var second = await CreateProjectAsync(manager);
+        var third = await CreateProjectAsync(manager);
+        await AuthenticateAsync("SUPER_ADMIN");
+        (await PostMemberAsync(first, person, "Site command coordinator", "Observer")).StatusCode.Should().Be(HttpStatusCode.Created);
+        (await PostMemberAsync(second, person, "Site command coordinator", "Observer")).StatusCode.Should().Be(HttpStatusCode.Created);
+        (await PostMemberAsync(first, person, "Duplicate site assignment", "Observer")).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        await AuthenticateAsync("SITE_COMMANDER");
+        (await Client.GetAsync($"/api/operational-projects/{first}/team")).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await Client.GetAsync($"/api/operational-projects/{second}/team")).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await Client.GetAsync($"/api/operational-projects/{third}/team")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
     public async Task Get_NonmemberCrossProject_ReturnsNotFound()
     {
         var designLeadId = await UserIdAsync("DESIGN_LEAD");
