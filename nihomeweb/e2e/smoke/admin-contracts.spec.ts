@@ -629,10 +629,22 @@ test("mobile contract card opens the complete contract detail", async ({
   await expect(card).toBeVisible();
   const contractId = await card.getAttribute("data-testid");
   const cardLink = card.locator(":scope > a");
-  const cardBox = await card.boundingBox();
-  const linkBox = await cardLink.boundingBox();
-  expect(Math.abs((linkBox?.width ?? 0) - (cardBox?.width ?? 0))).toBeLessThanOrEqual(2);
-  expect(Math.abs((linkBox?.height ?? 0) - (cardBox?.height ?? 0))).toBeLessThanOrEqual(2);
+  // Compare the same layout frame: translations/sidebar reflow can occur
+  // between two separate boundingBox protocol calls.
+  await expect
+    .poll(() =>
+      card.evaluate((element) => {
+        const link = element.querySelector(":scope > a");
+        if (!link) return Number.POSITIVE_INFINITY;
+        const cardBox = element.getBoundingClientRect();
+        const linkBox = link.getBoundingClientRect();
+        return Math.max(
+          Math.abs(linkBox.width - cardBox.width),
+          Math.abs(linkBox.height - cardBox.height),
+        );
+      }),
+    )
+    .toBeLessThanOrEqual(2);
   await card.getByRole("button", { name: /Sửa|Edit|编辑|編集/i }).hover();
   expect(await cardLink.evaluate((element) => element.matches(":hover"))).toBe(false);
   const detailResponse = page.waitForResponse(
