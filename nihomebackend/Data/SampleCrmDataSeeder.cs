@@ -96,6 +96,67 @@ public static class SampleCrmDataSeeder
         SeedHandoverRecords(db, projectManager, now);
         RepairSampleRelationships(db, owner);
         LinkOperationalProjectRelationships(db, owner);
+        SeedConstructionResourceHandoff(db, owner, projectManager, now);
+    }
+
+    private static void SeedConstructionResourceHandoff(AppDbContext db, ApplicationUser fallback, ApplicationUser cm, DateTime now)
+    {
+        var project = db.OperationalProjects.FirstOrDefault(x => x.Code == "PJ-SAMPLE-003");
+        if (project is null) return;
+        var bch = ResolveRoleUser(db, "QS", fallback);
+        var procurement = ResolveRoleUser(db, "PROCUREMENT", fallback);
+        if (bch.Id == cm.Id) return;
+        foreach (var user in new[] { bch, procurement }.DistinctBy(x => x.Id))
+        {
+            if (!db.OperationalProjectMembers.Any(x => x.OperationalProjectId == project.Id && x.UserId == user.Id))
+                db.OperationalProjectMembers.Add(new OperationalProjectMember
+                {
+                    OperationalProjectId = project.Id, UserId = user.Id,
+                    Position = user.Id == procurement.Id ? "Cung ứng công trình nhà máy" : "QS công trường nhà máy",
+                    StartedAt = now.AddDays(-7), CreatedByUserId = cm.Id, UpdatedByUserId = cm.Id,
+                });
+        }
+        var samples = new[]
+        {
+            new ConstructionResourceRequest
+            {
+                Code = "RR-SAMPLE-ANPHU-CRANE", Type = ConstructionResourceType.Equipment,
+                WbsCode = "STRUCTURE-02", Quantity = 2, Unit = "bộ",
+                Reason = "[SAMPLE_RESOURCE] Thuê cần cẩu phục vụ lắp dựng kết cấu nhà máy An Phú; chờ Cung ứng lựa chọn hợp đồng.",
+                Status = ConstructionReviewStatus.CmApproved, SubmittedAt = now.AddDays(-3),
+                CmReviewedAt = now.AddDays(-2), CmReviewedByUserId = cm.Id,
+                CmDecisionReason = "Đã đối chiếu nhu cầu lắp dựng kết cấu và kế hoạch nguồn lực mẫu.",
+                HandoffStatus = ConstructionHandoffStatus.ReadyForProcurementAndFinance,
+            },
+            new ConstructionResourceRequest
+            {
+                Code = "RR-SAMPLE-ANPHU-CREW", Type = ConstructionResourceType.Labour,
+                WbsCode = "STRUCTURE-03", Quantity = 12, Unit = "người",
+                Reason = "[SAMPLE_RESOURCE] Tổ đội lắp dựng kết cấu nhà máy An Phú; chờ CM thẩm định nhu cầu.",
+                Status = ConstructionReviewStatus.PendingCmReview, SubmittedAt = now.AddDays(-1),
+            },
+        };
+        var added = new List<ConstructionResourceRequest>();
+        foreach (var sample in samples)
+        {
+            if (db.ConstructionResourceRequests.Any(x => x.Code == sample.Code && x.OperationalProjectId == project.Id)) continue;
+            sample.OperationalProjectId = project.Id;
+            sample.NeedByDate = now.Date.AddDays(14);
+            sample.CreatedByUserId = bch.Id;
+            sample.ResponsibleSiteUserId = bch.Id;
+            sample.AssignedProcurementUserId = procurement.Id;
+            sample.CreatedAt = now.AddDays(-4);
+            sample.UpdatedAt = now.AddDays(-1);
+            db.ConstructionResourceRequests.Add(sample);
+            added.Add(sample);
+        }
+        db.SaveChanges();
+        foreach (var sample in added.Where(x => x.HandoffStatus == ConstructionHandoffStatus.ReadyForProcurementAndFinance))
+        {
+            sample.HandoffEntityType = nameof(ConstructionResourceRequest);
+            sample.HandoffEntityId = sample.Id;
+        }
+        db.SaveChanges();
     }
 
     private static void SeedLeads(AppDbContext db, ApplicationUser owner, DateTime now)

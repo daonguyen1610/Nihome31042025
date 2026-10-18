@@ -68,12 +68,31 @@ public sealed class ConstructionResourceRequest : IConcurrencyTracked
     public string? HandoffEntityType { get; set; }
     public long? HandoffEntityId { get; set; }
     public ConstructionHandoffStatus HandoffStatus { get; set; } = ConstructionHandoffStatus.NotReady;
+    public int? ProcurementContractId { get; set; }
+    public Contract? ProcurementContract { get; set; }
+    public DateTime? SuppliedAt { get; set; }
+    public int? SuppliedByUserId { get; set; }
+    public long? SupplyDocumentId { get; set; }
+    public ProjectDocument? SupplyDocument { get; set; }
+    public List<ConstructionResourceHandoffEvent> HandoffEvents { get; set; } = [];
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public byte[] RowVersion { get; set; } = [];
 }
 
 public enum ConstructionResourceType { Material, Equipment, Labour }
+
+public sealed class ConstructionResourceHandoffEvent
+{
+    public long Id { get; set; }
+    public int ConstructionResourceRequestId { get; set; }
+    public ConstructionResourceRequest ConstructionResourceRequest { get; set; } = null!;
+    public int? PreviousContractId { get; set; }
+    public int ContractId { get; set; }
+    public long? SupplyDocumentId { get; set; }
+    public int ActorUserId { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
 public enum ConstructionReviewStatus { Draft, PendingCmReview, CmApproved, CmRejected }
 public enum ConstructionHandoffStatus { NotReady, ReadyForProcurementAndFinance, MaterialRequestCreated }
 

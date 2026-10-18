@@ -253,6 +253,7 @@ const App = () => (
                         code={[
                           ADMIN_PERMS.procurement,
                           ADMIN_PERMS.procurementMaterialRequests,
+                          ADMIN_PERMS.procurementResources,
                           ADMIN_PERMS.procurementWarehouse,
                           ADMIN_PERMS.procurementMaterialAlerts,
                         ]}

@@ -1524,6 +1524,41 @@ namespace nihomebackend.Migrations
                     b.ToTable("construction_qs_batch_lines", (string)null);
                 });
 
+            modelBuilder.Entity("NihomeBackend.Models.ConstructionResourceHandoffEvent", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<int>("ActorUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ConstructionResourceRequestId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ContractId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("PreviousContractId")
+                        .HasColumnType("int");
+
+                    b.Property<long?>("SupplyDocumentId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ActorUserId");
+
+                    b.HasIndex("ConstructionResourceRequestId", "CreatedAt");
+
+                    b.ToTable("construction_resource_handoff_events", (string)null);
+                });
+
             modelBuilder.Entity("NihomeBackend.Models.ConstructionResourceRequest", b =>
                 {
                     b.Property<int>("Id")
@@ -1574,6 +1609,9 @@ namespace nihomebackend.Migrations
                     b.Property<int>("OperationalProjectId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("ProcurementContractId")
+                        .HasColumnType("int");
+
                     b.Property<int?>("ProjectBoqLineId")
                         .HasColumnType("int");
 
@@ -1603,6 +1641,15 @@ namespace nihomebackend.Migrations
                     b.Property<DateTime?>("SubmittedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("SuppliedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("SuppliedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<long?>("SupplyDocumentId")
+                        .HasColumnType("bigint");
+
                     b.Property<string>("Type")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -1622,6 +1669,12 @@ namespace nihomebackend.Migrations
                         .HasColumnType("nvarchar(100)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ProcurementContractId");
+
+                    b.HasIndex("SuppliedByUserId");
+
+                    b.HasIndex("SupplyDocumentId");
 
                     b.HasIndex("OperationalProjectId", "Code")
                         .IsUnique();
@@ -11171,6 +11224,23 @@ namespace nihomebackend.Migrations
                     b.Navigation("ConstructionQsBatch");
                 });
 
+            modelBuilder.Entity("NihomeBackend.Models.ConstructionResourceHandoffEvent", b =>
+                {
+                    b.HasOne("NihomeBackend.Models.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("ActorUserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("NihomeBackend.Models.ConstructionResourceRequest", "ConstructionResourceRequest")
+                        .WithMany("HandoffEvents")
+                        .HasForeignKey("ConstructionResourceRequestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ConstructionResourceRequest");
+                });
+
             modelBuilder.Entity("NihomeBackend.Models.ConstructionResourceRequest", b =>
                 {
                     b.HasOne("NihomeBackend.Models.OperationalProject", "OperationalProject")
@@ -11179,7 +11249,26 @@ namespace nihomebackend.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("NihomeBackend.Models.Contract", "ProcurementContract")
+                        .WithMany()
+                        .HasForeignKey("ProcurementContractId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NihomeBackend.Models.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("SuppliedByUserId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("NihomeBackend.Models.ProjectDocument", "SupplyDocument")
+                        .WithMany()
+                        .HasForeignKey("SupplyDocumentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("OperationalProject");
+
+                    b.Navigation("ProcurementContract");
+
+                    b.Navigation("SupplyDocument");
                 });
 
             modelBuilder.Entity("NihomeBackend.Models.ConstructionTask", b =>
@@ -13951,6 +14040,11 @@ namespace nihomebackend.Migrations
                     b.Navigation("Evidence");
 
                     b.Navigation("Lines");
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.ConstructionResourceRequest", b =>
+                {
+                    b.Navigation("HandoffEvents");
                 });
 
             modelBuilder.Entity("NihomeBackend.Models.ConstructionTask", b =>

@@ -1284,6 +1284,33 @@ export type ConstructionQsDirection = "Upstream" | "Downstream";
 export type ConstructionQsAdjustmentKind = "Original" | "SupersedingCorrection" | "Reversal";
 export type ConstructionQsRecordState = "Active" | "Superseded" | "Reversed";
 
+export interface ConstructionProcurementResponse {
+  id: number;
+  operationalProjectId: number;
+  code: string;
+  type: "Equipment" | "Labour";
+  wbsCode: string;
+  needByDate: string;
+  quantity: number;
+  unit: string;
+  reason: string;
+  contractId: number | null;
+  contractNumber: string | null;
+  contractValid: boolean;
+  suppliedAt: string | null;
+  suppliedByUserId: number | null;
+  supplyDocumentId: number | null;
+  rowVersion: string;
+  history: {
+    id: number;
+    previousContractId: number | null;
+    contractId: number;
+    supplyDocumentId: number | null;
+    actorUserId: number;
+    createdAt: string;
+  }[];
+}
+
 export interface ConstructionResourceRequestResponse {
   id: number;
   code: string;
@@ -1302,6 +1329,10 @@ export interface ConstructionResourceRequestResponse {
   handoffEntityType?: string | null;
   handoffEntityId?: number | null;
   handoffStatus: "NotReady" | "ReadyForProcurementAndFinance" | "MaterialRequestCreated";
+  procurementContractId?: number | null;
+  suppliedAt?: string | null;
+  suppliedByUserId?: number | null;
+  supplyDocumentId?: number | null;
   rowVersion: string;
 }
 
@@ -7565,6 +7596,49 @@ export const adminApi = {
   listConstructionResourceRequests: (projectId: number) =>
     api.get<ConstructionResourceRequestResponse[]>(
       `/operational-projects/${projectId}/construction/resource-requests`,
+    ),
+  listConstructionProcurement: (projectId: number, params?: { type?: string; state?: string }) =>
+    api.get<ConstructionProcurementResponse[]>(
+      `/operational-projects/${projectId}/procurement/construction-resources`,
+      { params },
+    ),
+  listConstructionProcurementContracts: (projectId: number) =>
+    api.get<{ id: number; contractNumber: string; status: string }[]>(
+      `/operational-projects/${projectId}/procurement/construction-resources/contracts`,
+    ),
+  listConstructionSupplyDocuments: (projectId: number) =>
+    api.get<{ id: number; originalFileName: string }[]>(
+      `/operational-projects/${projectId}/procurement/construction-resources/documents`,
+    ),
+  createConstructionProcurementContract: (
+    projectId: number,
+    body: { vendorId: number; type: ContractType; value: number; scopeOfWork: string | null },
+    idempotencyKey: string,
+  ) =>
+    api.post<ContractResponse>(
+      `/operational-projects/${projectId}/procurement/construction-resources/contracts`,
+      body,
+      withIdempotencyKey(idempotencyKey),
+    ),
+  linkConstructionProcurementContract: (
+    projectId: number,
+    id: number,
+    contractId: number,
+    rowVersion: string,
+  ) =>
+    postIdempotent<ConstructionProcurementResponse>(
+      `/operational-projects/${projectId}/procurement/construction-resources/${id}/contract`,
+      { contractId, rowVersion },
+    ),
+  confirmConstructionSupply: (
+    projectId: number,
+    id: number,
+    documentId: number,
+    rowVersion: string,
+  ) =>
+    postIdempotent<ConstructionProcurementResponse>(
+      `/operational-projects/${projectId}/procurement/construction-resources/${id}/supply`,
+      { documentId, rowVersion },
     ),
   getConstructionResourceReferenceData: (projectId: number) =>
     api.get<ConstructionResourceReferenceDataResponse>(

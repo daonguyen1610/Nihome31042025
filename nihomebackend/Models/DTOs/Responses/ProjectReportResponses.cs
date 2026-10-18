@@ -31,6 +31,7 @@ public sealed class ProjectReportResponse
 
 public sealed class ProjectOperationalReportResponse
 {
+    public CmPortfolioResponse? CmControl { get; set; }
     public ProjectReportIdentityResponse Project { get; set; } = new();
     public ProjectReportDesignResponse Design { get; set; } = new();
     public ProjectReportConstructionResponse Construction { get; set; } = new();
@@ -154,3 +155,10 @@ public sealed class ProjectReportDrillDownResponse
     public string Route { get; set; } = string.Empty;
     public string? Query { get; set; }
 }
+
+public sealed record CmPortfolioSource(int Id, string Code, string Status, string Route);
+public sealed record CmPortfolioSection(string Availability, string? ReasonCode, int? Count,
+    IReadOnlyList<CmPortfolioSource> Sources);
+public sealed record CmPortfolioResponse(DateTime GeneratedAtUtc, string PeriodPolicy,
+    CmPortfolioSection Upstream, CmPortfolioSection Downstream, CmPortfolioSection QaQc,
+    CmPortfolioSection Safety, CmPortfolioSection Budget);

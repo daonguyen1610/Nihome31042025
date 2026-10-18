@@ -193,6 +193,8 @@
     { "module": "construction.cm-preparation", "action": "view" },
     { "module": "construction.cm-preparation", "action": "manage" },
     { "module": "construction.cm-preparation", "action": "start" },
+    { "module": "proc.resource-requests", "action": "view" },
+    { "module": "proc.resource-requests", "action": "manage" },
     { "module": "construction.resource-request", "action": "view" },
     { "module": "construction.resource-request", "action": "create" },
     { "module": "construction.resource-request", "action": "cm-review" },
@@ -258,7 +260,7 @@
         "dashboard.view", "master-data.view", "workflow.view", "operations.projects.view",
         "work.packages.view", "work.packages.progress", "analytics.kpi.view", "profile.me.*",
         "crm.contracts.view", "proc.vendors.view", "proc.boq.view", "proc.rfqs.view",
-        "proc.material-requests.view", "proc.contract-lines.view", "proc.warehouse.view",
+        "proc.material-requests.view", "proc.resource-requests.view", "proc.contract-lines.view", "proc.warehouse.view",
         "proc.material-alerts.view", "proc.vendor-ratings.view"
       ]
     },
@@ -616,6 +618,7 @@
         "proc.rfqs.view", "proc.rfqs.manage", "proc.rfqs.export",
         "proc.material-requests.*",
         "proc.contract-lines.*",
+        "proc.resource-requests.*",
         "proc.warehouse.view",
         "proc.material-alerts.*",
         "proc.vendor-ratings.view", "proc.vendor-ratings.manage",

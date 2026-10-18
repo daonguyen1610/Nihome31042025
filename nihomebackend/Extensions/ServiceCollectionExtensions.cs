@@ -171,6 +171,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IDesignReviewService, DesignReviewService>();
         services.AddScoped<IDesignRecordDeletionService, DesignRecordDeletionService>();
         services.AddScoped<IProjectReportService, ProjectReportService>();
+        services.AddScoped<CmPortfolioService>();
         services.AddScoped<ProjectDocumentService>();
         services.AddScoped<IProjectDocumentService>(provider => provider.GetRequiredService<ProjectDocumentService>());
         services.AddScoped<IProjectDocumentStagingService>(provider => provider.GetRequiredService<ProjectDocumentService>());
@@ -189,6 +190,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IPunchItemService, PunchItemService>();
         services.AddScoped<IHseViolationService, HseViolationService>();
         services.AddScoped<IConstructionOperationsService, ConstructionOperationsService>();
+        services.AddScoped<ConstructionProcurementService>();
         services.AddScoped<IProcurementService, ProcurementService>();
         services.AddScoped<RfqService>();
         services.AddScoped<RfqIdempotencyGuard>();

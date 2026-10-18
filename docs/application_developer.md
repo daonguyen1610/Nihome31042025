@@ -2699,10 +2699,66 @@ review/correction lifecycle.
 This is a partial delivery of the target below. WBS/Gantt/S-Curve and Budget
 Baseline are reference-backed rather than dedicated editable aggregates; the
 reproducible greater-than-5% variance alert is not implemented; equipment and
-labour do not yet create Procurement/Finance transactions; and actual NICON ISO
+labour now support the Procurement slice below but no Finance eligibility gate;
+and actual NICON ISO
 template content is not seeded without an approved source pack. The legacy
 Design Project construction aggregates and offline/reconnect behavior also
 remain outside this migration.
+
+#### Procurement resource handoff API — Partial
+
+Both `/api` and `/api/v1` expose the following under
+`/operational-projects/{projectId}/procurement/construction-resources`:
+
+| Method/path | Permission | Contract |
+|---|---|---|
+| `GET /` | `proc.resource-requests.view` | CM-approved Equipment/Labour only; optional `type=Equipment|Labour` and `state=AwaitingContract|ContractLinked|Supplied`; project scope enforced |
+| `GET /contracts` | same view permission | Minimal same-project Downstream Supply/Subcontract references in Draft/Signed/InProgress |
+| `GET /documents` | `proc.resource-requests.manage` | Active same-project document IDs/names; pending deletion excluded |
+| `POST /contracts` | same manage permission | VendorId, Type, Value, optional ScopeOfWork; reuses ContractService and creates only a Downstream Draft owned by the actor, using the project's customer; requires an approved equipment/labour request |
+| `POST /{id}/contract` | same manage permission | ContractId and RowVersion; one contract per request, many requests per contract; relinking forbidden after supply |
+| `POST /{id}/supply` | same manage permission | DocumentId and RowVersion; requires Signed/InProgress contract, records server UTC time, actor and evidence |
+
+All POST operations require `Idempotency-Key`; link/supply accept the existing
+body/If-Match concurrency convention. Positive IDs, enum values and token format
+are validated; invalid transitions/references return 400, inaccessible projects
+or requests return 404, missing permissions return 403, stale versions return
+409. Draft Value is a non-negative decimal up to 9,007,199,254,740,991 (the web
+client's safe numeric range); optional scope is trimmed, max 20,000 characters.
+No supplied timestamp, actor, customer, project or direction is accepted from
+the draft/supply body. Contract identity cannot move while resource links exist.
+
+The original `HandoffStatus` remains compatible. New typed contract/supply
+fields and append-only handoff events are authoritative for this slice. A single
+SaveChanges writes each mutation and event within a relational serializable
+transaction; failed decisions do not create supply or Finance state. The web
+draft form retains its idempotency key when retrying the same payload after a
+lost response. Supply evidence deletion is blocked without blocking Drive retry;
+contract/project deletion impact includes the new resource blockers.
+
+`GET /reports/projects` adds `cmControl` per project: separate active approved QS
+directions, QA/QC and HSE counts/statuses/source links, generation timestamp and
+`periodPolicy=CurrentState`. Counts are records, not physical quantities or
+percent completion. These sources are not historical date-filter snapshots.
+Source-permission denial returns Unavailable, a null count and no links. Budget
+comparison remains Unavailable; no new financial formula is inferred.
+
+Migration `20261018063226_AddConstructionProcurementHandoff` adds nullable
+contract/supply fields, restrictive evidence/contract FKs and the history table.
+No existing request is backfilled as supplied. Inspect/generate its SQL and apply
+through the actual backend container before using the new API. A code rollback
+should retain the additive schema; `Down` drops supply/history data and requires
+backup and explicit operational approval once real records exist. SQL Server
+application/rollback rehearsal is still required when the Docker stack is
+available. Sample An Phu crane/crew requests demonstrate approved/pending work
+without fabricating supplied documents, payments or ISO templates.
+
+**Open decision / input gate:** during implementation the user confirmed that
+the ISO repository is not yet available and will be supplied later. No approved
+ISO mapping, payment-package exceptions, executed-value formula or reporting
+period has been supplied for this slice. Do not publish production ISO templates
+or enable Phase 3/4 financial/baseline calculations until CM/FA/Product confirm
+those inputs. No fallback document list or formula is seeded.
 
 #### Kế hoạch hoàn thiện theo phản hồi NICON
 

@@ -190,6 +190,24 @@ Equipment/labour requests go from CM approval to Procurement for contracting
 and site supply, then to FA for payment under the applicable ISO dossier.
 This clarification does not expand any role's currently delivered permissions.
 
+**Partial — Procurement resource handoff:** the seeded `PROCUREMENT` role now
+receives `proc.resource-requests.view` and `proc.resource-requests.manage`.
+The first reads CM-approved equipment/labour and minimal contract references;
+the second links/relinks a same-project Downstream contract, records supply
+evidence/history, and drafts a same-project Downstream contract through the
+existing contract service. It does not grant `crm.contracts.manage`, signing,
+Upstream management, CM review, or Finance approval/payment. The draft endpoint
+fixes direction, project/customer and owner server-side; callers cannot reassign
+them. Custom roles also need `operations.projects.view` to discover projects in
+the shared Procurement workspace and `crm.contracts.view` to load the existing
+contract classification/vendor picker when drafting. Evidence options for
+link/supply use the scoped handoff API and do not require global document access.
+
+The additive `cmControl` report section checks `construction.qs.view`,
+`construction.qa-qc.view` and `construction.hse.view` independently, in addition
+to report/project scope. Without the source permission, its count is null and
+links are empty. It does not change the existing report projection permissions.
+
 The expanded workflow has separate BCH field duties and CM office review
 duties. The first delivered slice uses action-specific permissions and project
 scope; legacy construction screens retain their existing permission families.

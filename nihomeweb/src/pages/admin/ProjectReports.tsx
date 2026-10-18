@@ -38,7 +38,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { extractApiError } from "@/lib/apiError";
 import { useI18n, type Lang } from "@/lib/i18n";
-import { formatVndWithSymbol } from "@/lib/numberFormat";
+import { formatVnd, formatVndWithSymbol } from "@/lib/numberFormat";
 import { adminApi } from "@/services/adminApi";
 import type {
   ProjectOperationalReportResponse,
@@ -295,6 +295,59 @@ function ProjectReportCard({ report }: { report: ProjectOperationalReportRespons
           </Link>
         )}
 
+        {report.cmControl && (
+          <section className="space-y-3 rounded-lg border p-4" data-testid="cm-portfolio">
+            <h3 className="font-semibold">{t("construction.portfolio.title")}</h3>
+            <p className="text-sm text-muted-foreground">
+              {t("construction.portfolio.currentState")} ·{" "}
+              {new Intl.DateTimeFormat(lang, { dateStyle: "short", timeStyle: "short" }).format(
+                new Date(report.cmControl.generatedAtUtc),
+              )}
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              {(["upstream", "downstream", "qaQc", "safety", "budget"] as const).map((key) => {
+                const section = report.cmControl![key];
+                return (
+                  <div key={key} className="min-w-0 space-y-2 rounded-md border p-3">
+                    <h4 className="font-medium">{t(`construction.portfolio.${key}`)}</h4>
+                    {section.availability === "Available" ? (
+                      <>
+                        <p>
+                          {formatVnd(section.count ?? 0)} {t("construction.portfolio.records")}
+                        </p>
+                        <ul className="space-y-1">
+                          {section.sources.map((source) => (
+                            <li key={source.id}>
+                              <Link
+                                className="break-words text-sm text-primary hover:underline"
+                                to={source.route}
+                              >
+                                {source.code}
+                              </Link>
+                              <span className="ml-2 text-xs text-muted-foreground">
+                                {t(
+                                  `${key === "safety" ? "hse" : "construction"}.status.${source.status}`,
+                                )}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        {t(
+                          section.reasonCode === "SOURCE_PERMISSION_REQUIRED"
+                            ? "construction.portfolio.restricted"
+                            : "construction.portfolio.unavailable",
+                        )}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
         <div className="grid gap-4 xl:grid-cols-2">
           <ReportSection title={t("projectReports.design.title")} icon={ChartNoAxesCombined}>
             <AvailabilityNotice
