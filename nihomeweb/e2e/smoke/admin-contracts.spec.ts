@@ -659,6 +659,8 @@ test("collected milestone date is suggested, customizable, and displayed", async
   baseURL,
 }) => {
   const contractId = 455100;
+  const jsErrors: string[] = [];
+  page.on("pageerror", (error) => jsErrors.push(error.message));
   let actualPaymentDate: string | null = null;
   let status = "Pending";
   const contract = () => ({
@@ -730,6 +732,25 @@ test("collected milestone date is suggested, customizable, and displayed", async
   await page.route(new RegExp(`/api/(?:v1/)?contracts/${contractId}(?:/.*)?$`), async (route) => {
     const request = route.request();
     const path = new URL(request.url()).pathname;
+    if (request.method() === "GET" && path.endsWith("/execution-progress")) {
+      // The info tab loads this projection before the schedule tab is opened.
+      // Returning the contract here breaks rendering because payment is required.
+      await route.fulfill({
+        json: {
+          calculatedAt: "2026-08-30T00:00:00Z",
+          work: null,
+          qs: null,
+          payment: {
+            milestoneCount: 1,
+            paidCount: status === "Paid" ? 1 : 0,
+            requestedCount: status === "Requested" ? 1 : 0,
+            scheduledAmount: 100_000_000,
+            paidScheduledAmount: status === "Paid" ? 100_000_000 : 0,
+          },
+        },
+      });
+      return;
+    }
     if (request.method() === "PATCH" && path.endsWith("/milestones/1/status")) {
       const payload = request.postDataJSON() as {
         status: string;
@@ -766,6 +787,9 @@ test("collected milestone date is suggested, customizable, and displayed", async
   });
 
   await page.goto(`${baseURL}/admin/contracts/${contractId}`, { waitUntil: "domcontentloaded" });
+  await expect(
+    page.getByTestId("contract-execution-progress").locator('[aria-busy="false"]'),
+  ).toBeVisible();
   await page
     .getByRole("tab", { name: /Lịch phải thu|Receivable schedule|应收计划|入金予定/i })
     .click();
@@ -818,6 +842,7 @@ test("collected milestone date is suggested, customizable, and displayed", async
       name: /Trả về Chưa yêu cầu|Revert to Pending|退回为待处理|未請求に戻す/i,
     }),
   ).toHaveCount(0);
+  expect(jsErrors, `Unexpected JS errors: ${jsErrors.join("\n")}`).toEqual([]);
 });
 
 test("contract documents accept and upload multiple local files", async ({
