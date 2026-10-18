@@ -44,6 +44,15 @@ for (const width of [390, 768, 1440]) {
           roleId: 2,
           isActive: true,
         };
+      else if (endpoint === "/users/me")
+        body = {
+          id: 1,
+          phoneNumber: "0911000010",
+          fullName: "Nicon Tender Manager",
+          role: "SALES_MANAGER",
+          roleId: 2,
+          isActive: true,
+        };
       else if (endpoint === "/users/me/permissions")
         body = { role: "SALES_MANAGER", roleId: 2, permissions: ["crm.tenders.view"] };
       else if (endpoint.startsWith("/translations/")) {
