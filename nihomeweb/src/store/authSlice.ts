@@ -260,6 +260,10 @@ export const refreshThunk = createAsyncThunk(
       // Reload/navigation can safely interrupt this request without losing it.
       try {
         const { data } = await meApi.getMe();
+        if (!data.isActive) {
+          clearTokens();
+          return rejectWithValue({ message: "", invalidSession: true });
+        }
         return {
           ...data,
           userId: data.id,

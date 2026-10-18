@@ -87,3 +87,19 @@ test("invalid access and refresh tokens return to login", async ({ page, baseURL
     (await page.context().cookies()).some((cookie) => cookie.name === "nicon_refresh_token"),
   ).toBe(false);
 });
+
+test("an inactive account cannot restore a session with a valid access token", async ({
+  page,
+  loginInBrowserAs,
+}) => {
+  await loginInBrowserAs(page, TEST_USERS.superAdmin);
+  await page.route("**/api/users/me", async (route) => {
+    const response = await route.fetch();
+    await route.fulfill({ json: { ...(await response.json()), isActive: false } });
+  });
+  await page.goto("/admin/contracts");
+  await expect(page).toHaveURL(/\/login/);
+  expect(
+    (await page.context().cookies()).some((cookie) => cookie.name === "nicon_access_token"),
+  ).toBe(false);
+});
