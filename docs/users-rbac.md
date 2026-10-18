@@ -181,6 +181,15 @@ Scoped access includes records created by or assigned to the caller and projects
 
 ### Module 4 CM/BCH duty separation
 
+**Target — customer clarification received 18 October 2026:** each project has
+its own BCH, and one person may serve on multiple project BCH teams concurrently.
+“One assigned site” below describes the scope of a particular assignment, not
+a global one-project-per-person restriction. Check permissions and membership
+for each project; CM approval remains independent from the record's author.
+Equipment/labour requests go from CM approval to Procurement for contracting
+and site supply, then to FA for payment under the applicable ISO dossier.
+This clarification does not expand any role's currently delivered permissions.
+
 The expanded workflow has separate BCH field duties and CM office review
 duties. The first delivered slice uses action-specific permissions and project
 scope; legacy construction screens retain their existing permission families.
