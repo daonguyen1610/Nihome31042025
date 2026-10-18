@@ -1029,6 +1029,16 @@ Signed Downstream Contract
 Eligibility does not mean automatic payment. Missing, mismatched, reversed, or
 superseded evidence blocks the handoff and must leave financial state unchanged.
 
+**Target — NICON clarification received 18 October 2026:** each project has a
+separate BCH, while a person may participate in multiple projects concurrently.
+CM's portfolio covers schedule, completed quantities (separate output/input
+acceptance), executed value versus estimate, QA/QC acceptance dossiers and safety.
+After CM approves equipment/labour, Procurement contracts and supplies the site,
+then FA processes payment. Templates and package-specific payment documents come
+from the ISO pack NICON already sent; identify missing forms individually, with
+payment-document gaps referred to FA (chị K/Kiara). These confirmed requirements
+do not mean the portfolio, ISO content or downstream handoff is delivered.
+
 **Current implementation boundary:** The split menu now provides BCH Resource,
 QA/QC, Site QS and CM Control workspaces. It delivers versioned CM preparation
 references and a server start gate; typed material/equipment/labour requests;

@@ -349,6 +349,19 @@ template dự án sau khi NICON chốt bộ hồ sơ ISO.
 - **Phòng CM:** thẩm định chất lượng, kiểm soát S-Curve, HSE, ngân sách, MR, QS
   và VO trên nhiều công trình.
 
+Theo phản hồi NICON do người dùng cung cấp ngày 18/10/2026 (không xác định ngày
+NICON trả lời), mỗi Dự án có một BCH riêng; một nhân sự được tham gia BCH của
+nhiều Dự án cùng thời điểm. Phân quyền và trách nhiệm vẫn theo từng Dự án,
+không suy ra quyền trên Dự án khác từ việc cùng nhân sự.
+Nguồn phản hồi được lưu tại
+[NICON CM/ISO](Nicon/MoMs/2026-10-18/NICON_Phan-hoi_CM_ISO.md).
+
+**Target:** màn hình tổng hợp CM theo dõi tiến độ; khối lượng hoàn thành với
+nghiệm thu đầu ra Upstream và đầu vào Downstream tách biệt; ngân sách so sánh
+giá trị thực hiện với dự toán; hồ sơ nghiệm thu chất lượng QA/QC; và an toàn.
+Danh sách này đã được NICON xác nhận. Công thức giá trị thực hiện, kỳ báo cáo,
+nguồn số liệu và baseline so sánh vẫn phải được thống nhất trước khi tính toán.
+
 Trễ tiến độ **lớn hơn 5%** so với baseline tạo cảnh báo đỏ, giải trình và kế
 hoạch phục hồi. Công thức, kỳ chốt và nguồn progress phải lưu được để tái lập.
 
@@ -360,6 +373,11 @@ hoạch phục hồi. Công thức, kỳ chốt và nguồn progress phải lưu
   trên 100% đỏ/chặn chỉ triển khai sau khi chốt công thức và VO behavior.
 - Đề xuất ngoài kế hoạch/vượt hạn mức cần CM level-2 review độc lập trước khi
   chuyển Procurement.
+- **Target:** sau CM duyệt đề xuất máy/thiết bị hoặc nhân công, hồ sơ chuyển
+  phòng Cung ứng để lập hợp đồng đặt mua/cung cấp cho công trình, sau đó phòng
+  FA xử lý thanh toán theo hồ sơ hợp lệ. CM duyệt không đồng nghĩa đã mua,
+  đã cung cấp hoặc đã thanh toán; giữ liên kết đề xuất, HĐ Downstream và hồ sơ
+  thanh toán bằng stable ID. Không suy diễn mọi loại máy đều là mua tài sản.
 
 ### 6.3. Chất lượng, an toàn và nhật ký
 
@@ -371,6 +389,15 @@ hoạch phục hồi. Công thức, kỳ chốt và nguồn progress phải lưu
   confirmation độc lập, correction và close.
 - Draft/offline chưa đồng bộ không phải bằng chứng duyệt hoặc KPI.
 
+**Target:** dùng biểu mẫu trong bộ hồ sơ ISO NICON đã gửi làm nguồn chuẩn cho
+từng quy trình và từng bước, bao gồm nghiệm thu, lấy mẫu, thí nghiệm, chứng chỉ
+vật liệu và nhật ký khi áp dụng theo ISO. Không tự tạo mã mẫu hoặc suy luận một
+mẫu áp dụng cho mọi công việc. Cần kiểm kê file nguồn, mã/phiên bản mẫu, quy
+trình/bước áp dụng và điều kiện bắt buộc; giữ phiên bản mẫu trong hồ sơ đã lập.
+Repository hiện chưa có bộ biểu mẫu ISO được nhận diện để kiểm kê. Đây là
+khoảng trống hiện vật/mapping, không phải quyết định còn mở về chọn bộ ISO.
+Sau đối chiếu bộ đã gửi, báo riêng từng form thiếu để NICON cung cấp bổ sung.
+
 ### 6.4. QS, nghiệm thu và thanh toán
 
 - Upstream QS liên kết HĐ Upstream, CĐT/TVGS, WBS, BOQ/VO và milestone phải thu.
@@ -378,7 +405,8 @@ hoạch phục hồi. Công thức, kỳ chốt và nguồn progress phải lưu
   trả.
 - Khối lượng đã duyệt bất biến; correction dùng version thay thế hoặc reversal.
 - Payment review Downstream dùng HĐ hợp lệ + QS được duyệt + warehouse receipt
-  posted khi gói có vật tư. Ma trận theo loại package vẫn cần NICON chốt.
+  posted khi gói có vật tư. Thành phần chứng từ theo loại package phải được
+  đối chiếu bộ ISO NICON đã gửi; phần thiếu chuyển FA, chị K/Kiara, bổ sung.
 
 ### 6.5. Hoàn công và bàn giao
 
@@ -399,7 +427,8 @@ reference và readiness snapshot, chưa có WBS/Gantt/S-Curve/Budget Baseline d�
 dữ liệu có cấu trúc. Đề xuất vật tư đã tạo được Material Request; đề xuất máy và
 nhân công mới dừng ở trạng thái sẵn sàng chuyển tiếp, chưa có handoff mua/thuê và
 liên kết HĐ Downstream hoàn chỉnh. QA/QC đã lưu loại minh chứng theo từng
-tài liệu; hồ sơ ISO/checklist bắt buộc theo từng loại công trình vẫn chưa chốt.
+tài liệu; nội dung ISO/checklist bắt buộc vẫn thiếu hiện vật nguồn và mapping
+đã đối chiếu theo từng loại công trình.
 QS đã tách Upstream/Downstream, có contract/BOQ/
 milestone và correction lineage, nhưng CM approval chưa tạo hồ sơ thanh toán.
 
@@ -480,7 +509,12 @@ Kiểm soát hợp đồng hai chiều, phải thu/phải trả, dòng tiền v�
 vendor, invoice và attachment chung. Hệ thống chưa có Payment Dossier hai chiều,
 chưa lưu ba section Công trường/CM/Kế toán và chưa có ma trận chứng từ theo loại
 Supply, Labour, Equipment hoặc Mixed Subcontract. Bộ ISO NICON và mapping biểu
-mẫu là đầu vào bắt buộc trước khi publish template sản xuất.
+mẫu là đầu vào bắt buộc trước khi publish template sản xuất. NICON xác nhận
+chứng từ thanh toán cho bốn loại chỉ vật tư, chỉ nhân công, thuê máy/thiết bị và
+hỗn hợp nằm trong bộ ISO đã gửi. Đội triển khai phải đối chiếu từng loại, bước
+và chứng từ với file/mã/phiên bản ISO; chỉ yêu cầu FA (chị K/Kiara) bổ sung những
+mục còn thiếu. Không tự quy định danh sách chứng từ hay bắt gói không có vật tư
+tạo phiếu kho để qua gate.
 
 ## 9. Module 7 — Tài liệu và Google Drive
 
@@ -570,10 +604,12 @@ Biểu mẫu, danh mục và tham số chỉ có NICON nắm giữ vẫn cần h
 
 Ngoài ra, NICON cần chốt:
 
-1. Cổng khởi công và checklist ISO theo loại công trình.
+1. Đối chiếu bộ ISO đã gửi để map checklist/cổng khởi công theo loại công trình;
+   báo NICON từng form thiếu. Nguồn chuẩn ISO đã được xác nhận.
 2. Công thức/kỳ chốt S-Curve và quyền publish/unlock baseline.
 3. Approval/delegation matrix cho MR, QA/QC, HSE, QS và VO.
-4. Hồ sơ thanh toán và three-way matching theo loại Downstream package.
+4. Đối chiếu chứng từ thanh toán theo bốn loại Downstream package với ISO;
+   FA (chị K/Kiara) bổ sung phần thiếu và xác nhận mapping/ngoại lệ chưa rõ.
 5. Công thức dải BOQ 85/95/>100 và xử lý zero allowance/reversal/conversion.
 6. Migration `DesignProjectId` → `OperationalProjectId` cho Module 2/3/4.
 7. Migration cây Drive cho `01_Khao_sat`.
@@ -598,7 +634,7 @@ tới khi chủ sở hữu nghiệp vụ chấp thuận các quyết định tư
 | 10 | Thi công | Partial | Có CM/BCH, resource request, QA/QC và QS; baseline cấu trúc, handoff và portfolio còn thiếu. |
 | 11 | Tài chính kế toán | Partial | Có Payment Request Downstream; chưa có dossier hai chiều và ba section chứng từ. |
 | 12 | Host và Drive NICON | Target | Chỉ công nhận sau deployment, OAuth NICON, health check và smoke test có bằng chứng. |
-| 13 | Đầu vào NICON | Open decision | Thiếu ISO/mapping, permit matrix, danh sách kiểm soát CM và quy ước mã dự án. |
+| 13 | Đầu vào NICON | Open decision | Nguồn ISO, luồng CM → Cung ứng → FA, danh sách kiểm soát CM và nhân sự BCH đa dự án đã xác nhận qua phản hồi được cung cấp 18/10/2026; còn thiếu hiện vật/mapping ISO, permit matrix và quy ước mã dự án. |
 | 14 | Điểm chưa chắc chắn | Open decision | Công thức S-Curve, approval matrix và payment matrix chỉ được cấu hình sau xác nhận nghiệp vụ. |
 
 `Implemented` yêu cầu đồng thời có persistence, API authorization, UI và test phù

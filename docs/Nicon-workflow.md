@@ -260,7 +260,7 @@ hợp. Công thức S-Curve, kỳ chốt và thẩm quyền mở khóa vẫn c�
 
 | Luồng | BCH tại hiện trường | Phòng CM tại văn phòng | Đầu ra/liên kết |
 |---|---|---|---|
-| Nguồn lực | Gửi đề xuất vật tư, thiết bị/máy hoặc nhân công theo WBS và ngày cần | Duyệt tầng 2 khi ngoài kế hoạch/vượt hạn mức | Vật tư chuyển MR Module 5; loại khác chuyển đúng quy trình mua/thuê/nhân lực |
+| Nguồn lực | Gửi đề xuất vật tư, thiết bị/máy hoặc nhân công theo WBS và ngày cần | Duyệt tầng 2 khi ngoài kế hoạch/vượt hạn mức | Vật tư chuyển MR Module 5; máy/nhân công sau CM duyệt chuyển Cung ứng lập hợp đồng và cung cấp cho công trình, sau đó FA thanh toán theo hồ sơ hợp lệ |
 | Nhật ký | Ghi thời tiết, tổ đội, nhân sự, thiết bị, vật tư, công việc, sự cố và ảnh | Kiểm tra thiếu dữ liệu và đối soát với tiến độ | Bằng chứng ngày; không tự coi Draft/offline là số liệu KPI |
 | QA/QC | Lập biên bản lấy mẫu, thí nghiệm, chứng chỉ, checklist kiểm tra theo IFC | Thẩm định hồ sơ và kiểm tra đột xuất | Metadata/audit ở Nicon, file đồng bộ `04_Thi_cong_Nghiem_thu` |
 | Punchlist | Ghi lỗi, vị trí, ảnh, nguyên nhân, người xử lý và hạn | Giám sát lỗi quá hạn, xác nhận đóng/mở lại | Lỗi chặn tham gia điều kiện nghiệm thu/bàn giao |
@@ -282,13 +282,19 @@ Server kiểm tra Dự án, quyền, baseline và hạn mức
   ├─ Trong kế hoạch/hạn mức → luồng duyệt thông thường
   └─ Ngoài kế hoạch/vượt hạn mức → CM review độc lập
        ├─ Từ chối → không tạo commitment hoặc chứng từ downstream
-       └─ Duyệt → chuyển Module 5/đơn vị liên quan bằng stable ID
+       └─ Duyệt
+            ├─ Vật tư → MR Module 5 theo Execution BOQ được duyệt
+            └─ Máy/nhân công → Cung ứng lập hợp đồng, cung cấp cho công trình
+                                  → FA xử lý thanh toán theo hồ sơ ISO hợp lệ
 ```
 
 Hiện tại phần mềm đã có đề xuất Material/Equipment/Labour và CM level-2 review.
 Material đã tạo được MR vật tư và chặn khi vượt allowance còn lại. Equipment và
 Labour mới dừng ở handoff `ReadyForProcurementAndFinance`; quy trình mua/thuê,
 liên kết HĐ Downstream và hoàn tất handoff vẫn là **mục tiêu**.
+Chuỗi CM → Cung ứng → FA đã được NICON xác nhận trong phản hồi do người dùng
+cung cấp 18/10/2026; chưa xác định ngày trả lời gốc. Mỗi bước giữ stable ID,
+actor và lịch sử; không tự coi CM duyệt là đã cung cấp hoặc đã thanh toán.
 Các dải 85% vàng, 95% cam và trên 100% đỏ/chặn chưa thay thế validation hiện có
 cho đến khi chốt mẫu số, quy đổi đơn vị, làm tròn, reversal và BOQ bằng 0.
 
@@ -305,8 +311,18 @@ Downstream QS được duyệt
 ```
 
 `Đủ điều kiện review` không phải tự động thanh toán. Supply-only, labour-only,
-equipment và mixed subcontract cần ma trận chứng từ riêng; không tạo chứng từ
-giả để đủ three-way matching.
+equipment và mixed subcontract đối chiếu ma trận chứng từ trong bộ ISO NICON
+đã gửi; thiếu mục nào yêu cầu FA, chị K/Kiara, bổ sung riêng mục đó. Không tạo
+chứng từ giả để đủ three-way matching. Chưa tìm thấy bộ biểu mẫu ISO được nhận
+diện trong repository; chưa thể khẳng định danh mục chứng từ đã đầy đủ.
+
+**Target — ISO, BCH và tổng hợp CM đã xác nhận:** mỗi Dự án có BCH riêng,
+nhưng một nhân sự có thể tham gia nhiều Dự án đồng thời; quyền vẫn theo từng
+Dự án. Mẫu cho từng quy trình/bước lấy từ bộ ISO đã gửi, kiểm kê và báo riêng
+form thiếu cho NICON. Màn hình CM tổng hợp tiến độ, khối lượng hoàn thành
+(nghiệm thu đầu ra/đầu vào tách biệt), giá trị thực hiện so với dự toán, QA/QC
+và an toàn. Công thức/kỳ báo cáo và mapping ISO còn cần đối chiếu; xác nhận yêu
+cầu không phải bằng chứng chức năng đã triển khai.
 
 ### 5.5. Hiện trạng Module 4 trong mã nguồn
 
@@ -442,9 +458,11 @@ khóa là snapshot bất biến.
 8. Q-11: hợp đồng import MS Project đầy đủ gồm calendar, baseline và dữ liệu
    phân cấp; Team và Tiến độ hiện được tách thành hai tab liên kết.
 9. Công thức/kỳ chốt S-Curve; quyền publish/unlock baseline; điều kiện VO.
-10. Checklist QA/QC, hồ sơ ISO và cổng khởi công theo từng loại công trình.
-11. Thành phần hồ sơ thanh toán Upstream/Downstream và ma trận three-way matching
-   cho supply, labour, equipment và mixed package.
+10. Kiểm kê và map bộ ISO đã gửi vào QA/QC/cổng khởi công theo loại công trình;
+    NICON bổ sung riêng form thiếu, không cần chọn lại bộ mẫu chuẩn.
+11. Đối chiếu chứng từ ISO cho supply, labour, equipment và mixed package;
+    FA (chị K/Kiara) bổ sung mục thiếu, xác nhận ngoại lệ và mapping chưa rõ.
+    Giữ riêng luồng Upstream/Downstream và ma trận three-way matching.
 12. Quy tắc dải BOQ 85/95/>100: mẫu số, commitment, issue, reversal, conversion,
    precision và zero allowance.
 13. Kế hoạch migration các record Module 2/3/4 từ `DesignProjectId` sang

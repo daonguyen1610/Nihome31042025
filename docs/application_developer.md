@@ -2704,7 +2704,44 @@ template content is not seeded without an approved source pack. The legacy
 Design Project construction aggregates and offline/reconnect behavior also
 remain outside this migration.
 
+#### Kế hoạch hoàn thiện theo phản hồi NICON
+
+Các bước dưới đây là **Target**, không phải cam kết thời gian hoặc tuyên bố
+đã triển khai. Thứ tự phản ánh phụ thuộc kỹ thuật; không thay đổi ưu tiên giao
+hàng CRM/Thiết kế đã thống nhất. Chỉ ước lượng sau khi có mapping ISO và phạm vi
+được chủ nghiệp vụ duyệt. Phản hồi nguồn được ghi nhận ngày 18/10/2026.
+
+| Bước | Công việc và đầu ra | Phụ thuộc / điều kiện hoàn thành |
+|---|---|---|
+| P1 — BA + NICON/CM/FA | Kiểm kê bộ ISO đã nhận; map mã/phiên bản/file nguồn → quy trình → bước → công việc → điều kiện bắt buộc; map chứng từ cho Supply, Labour, Equipment và Mixed. Báo riêng form thiếu cho NICON; chứng từ thanh toán thiếu cho FA, chị K/Kiara. | Đối chiếu kho hồ sơ thực tế; CM/FA xác nhận mapping và các ngoại lệ. Chưa có hiện vật thì phần template tương ứng chưa đủ điều kiện publish. |
+| P2 — Nhân sự BCH | Rà soát membership/assignment và các write path; giữ BCH riêng theo Operational Project, cho một người tham gia nhiều dự án, quyền và trách nhiệm theo từng dự án. Chỉ sửa schema nếu hiện trạng không đáp ứng. | Không áp uniqueness toàn cục theo người. Integration chứng minh tham gia hai dự án hợp lệ, từ chối truy cập dự án thứ ba và không tự duyệt hồ sơ mình tạo. |
+| P3 — Handoff nguồn lực | Nối Equipment/Labour từ CM approval sang Cung ứng lập HĐ Downstream và cung cấp công trình; giữ Material theo MR/Execution BOQ hiện có. Liên kết đề xuất, hợp đồng và bằng chứng cung cấp; hỗ trợ retry không tạo trùng, concurrency và audit. | Dùng lại service/contract hiện có, không tạo aggregate mới trên DesignProjectId. Integration kiểm tra approve/reject, sai dự án/loại HĐ, thiếu quyền, gửi trùng và lỗi giữa các bước không tạo kết quả giả. |
+| P4 — ISO và hồ sơ thanh toán | Dùng template có phiên bản cho QA/QC/nhật ký và chứng từ từng package; nối hồ sơ Downstream sang FA. Tách Upstream/Downstream; giữ template snapshot và kiểm tra chứng từ server-side. | P1 và liên kết P3 cho luồng máy/nhân công. Test đủ/thiếu/sai phiên bản hoặc sai dự án, bốn loại package, không ép phiếu kho cho gói không có vật tư; lịch sử hồ sơ không đổi khi template đổi. |
+| P5 — CM portfolio | Tổng hợp tiến độ, nghiệm thu đầu ra/đầu vào, giá trị thực hiện so với dự toán, QA/QC và an toàn; có drill-down, nguồn/kỳ dữ liệu và trạng thái thiếu dữ liệu. | Chốt định nghĩa giá trị thực hiện, kỳ chốt, baseline và nguồn dữ liệu; không suy diễn công thức từ câu trả lời. Unit cho tính toán đã chốt; integration cho phạm vi nhiều dự án, số liệu hai chiều và thiếu nguồn; E2E hẹp cho màn hình desktop/tablet. |
+| P6 — Xác nhận nghiệp vụ | BA rà lại năm phản hồi, QA chạy các luồng rủi ro cao và NICON UAT theo ISO thực tế. Cập nhật seed demo có tên nghiệp vụ và các hướng dẫn hiện hành. | Chỉ ghi Implemented khi đủ persistence/API authorization/UI/tests; ghi rõ phần Partial và quyết định còn mở. Không coi tài liệu hoặc bộ test có sẵn là bằng chứng nghiệm thu. |
+
+P2 có thể khảo sát song song P1; P3 có thể chuẩn bị phần liên kết đã rõ, nhưng
+không tự thiết kế gate thanh toán trước P1. P5 có thể dựng hợp đồng đọc theo
+nguồn đã xác minh; phần tính toán chưa chốt vẫn là **Open decision**, chủ quyết
+định là CM/FA và Product Owner. Mỗi thay đổi code phải đọc lại nghiệp vụ, cập
+nhật migration nếu cần, chạy test đúng tầng và kiểm tra hồi quy luồng hiện hữu.
+
 #### Aggregate and ownership boundaries
+
+Customer clarification received on 18 October 2026 is retained in
+[NICON CM/ISO response](Nicon/MoMs/2026-10-18/NICON_Phan-hoi_CM_ISO.md).
+Each Operational Project has its own BCH; a person may concurrently belong to
+multiple project BCH teams. Membership never grants access to another project
+without that project's authorization. After CM approves an equipment/labour
+request, Procurement prepares the contract and supplies the site, then FA
+processes payment against the applicable dossier. These are confirmed target
+rules, not evidence that the downstream handoff is implemented.
+
+The existing NICON ISO pack is the confirmed template source for every process
+and step. Inventory the received files before asking for individual missing
+forms; payment-document gaps go to FA (chị K/Kiara). The repository currently
+has no identified ISO form pack to inspect. Do not invent form codes, mandatory
+documents, package-specific exceptions or payment gates from these answers.
 
 - An executed Upstream D&B/construction Contract starts CM preparation on the
   existing Operational Project; it must not create a duplicate project.
@@ -2744,6 +2781,12 @@ remain outside this migration.
 8. Completion/handover consumes approved acceptance, QA/QC, as-built,
    commissioning, and blocking-Punchlist state; it never trusts a client-only
    readiness flag.
+
+The confirmed CM portfolio scope is schedule, completed quantities with separate
+Upstream/Downstream acceptance, executed value versus estimate, QA/QC acceptance
+dossiers and safety. Reporting periods, executed-value definitions and calculation
+sources still need an agreed contract; do not combine accepted, committed and
+paid values into one undocumented metric.
 
 The target frontend separates three BCH work areas without creating three data
 silos:
