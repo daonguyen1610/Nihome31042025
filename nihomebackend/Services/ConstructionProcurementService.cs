@@ -105,10 +105,17 @@ public sealed class ConstructionProcurementService(AppDbContext db)
         if (item.SuppliedAt.HasValue) throw new ConstructionOperationException("Supply has already been confirmed.");
         if (!ValidContract(item.ProcurementContract, projectId, allowDraft: false))
             throw new ConstructionOperationException("Supply requires a signed or active Downstream contract for this project.");
-        if (!await db.ProjectDocuments.AsNoTracking().AnyAsync(x => x.Id == request.DocumentId &&
+        var evidence = await db.ProjectDocuments.SingleOrDefaultAsync(x => x.Id == request.DocumentId &&
             x.OperationalProjectId == projectId && x.DeletedAt == null &&
-            x.DesiredOperation != ProjectDocumentDesiredOperation.Delete && x.SyncStatus != ProjectDocumentSyncStatus.Deleted, ct))
+            x.DesiredOperation != ProjectDocumentDesiredOperation.Delete && x.SyncStatus != ProjectDocumentSyncStatus.Deleted, ct);
+        if (evidence is null)
             throw new ConstructionOperationException("Supply evidence must be an active document in this project.");
+        // Advance the document row version atomically with the supply link. A delete
+        // staged before confirmation must fail its optimistic concurrency check,
+        // including managed-file callers that save after their reference check.
+        evidence.UpdatedAt = DateTime.UtcNow;
+        evidence.UpdatedByUserId = actor;
+        db.Entry(evidence).Property(x => x.UpdatedAt).IsModified = true;
         item.SuppliedAt = DateTime.UtcNow;
         item.SuppliedByUserId = actor;
         item.SupplyDocumentId = request.DocumentId;

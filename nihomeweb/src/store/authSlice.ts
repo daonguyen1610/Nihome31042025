@@ -3,6 +3,7 @@ import { authApi, type AuthResponse } from "@/services/authApi";
 import { newIdempotencyKey } from "@/lib/api";
 import { queryClient } from "@/lib/queryClient";
 import { isAxiosError } from "axios";
+import { meApi } from "@/services/meApi";
 
 // --- State types ---
 
@@ -255,14 +256,33 @@ export const refreshThunk = createAsyncThunk(
     const token = state.auth.refreshToken;
     if (!token) return rejectWithValue("No refresh token");
     try {
+      // Reading the current user does not rotate a single-use refresh token.
+      // Reload/navigation can safely interrupt this request without losing it.
+      try {
+        const { data } = await meApi.getMe();
+        return {
+          ...data,
+          userId: data.id,
+          fullName: data.fullName ?? "",
+          accessToken: state.auth.accessToken!,
+          refreshToken: token,
+          expiresAt: "",
+        } satisfies AuthResponse;
+      } catch (err) {
+        if (!isAxiosError(err) || err.response?.status !== 401) throw err;
+      }
       const { data } = await authApi.refresh(token);
       persistTokens(data.accessToken, data.refreshToken);
       return data;
     } catch (err) {
-      clearTokens();
-      return rejectWithValue(extractError(err));
+      // A network failure is retryable; it does not invalidate the session.
+      const invalidSession =
+        isAxiosError(err) && [401, 403, 404].includes(err.response?.status ?? 0);
+      if (invalidSession) clearTokens();
+      return rejectWithValue({ message: extractError(err), invalidSession });
     }
   },
+  { condition: (_, { getState }) => !(getState() as { auth: AuthState }).auth.loading },
 );
 
 export const logoutThunk = createAsyncThunk("auth/logout", async (_, { getState }) => {
@@ -468,15 +488,26 @@ const authSlice = createSlice({
     });
 
     // Refresh
+    builder.addCase(refreshThunk.pending, (state) => {
+      state.loading = true;
+      state.error = null;
+    });
     builder.addCase(refreshThunk.fulfilled, (state, { payload }) => {
+      state.loading = false;
+      state.error = null;
       state.user = userFromAuth(payload);
       state.accessToken = payload.accessToken;
       state.refreshToken = payload.refreshToken;
     });
-    builder.addCase(refreshThunk.rejected, (state) => {
-      state.user = null;
-      state.accessToken = null;
-      state.refreshToken = null;
+    builder.addCase(refreshThunk.rejected, (state, { payload }) => {
+      state.loading = false;
+      const failure = payload as { message: string; invalidSession: boolean } | undefined;
+      state.error = failure?.message ?? null;
+      if (failure?.invalidSession) {
+        state.user = null;
+        state.accessToken = null;
+        state.refreshToken = null;
+      }
     });
 
     // Logout

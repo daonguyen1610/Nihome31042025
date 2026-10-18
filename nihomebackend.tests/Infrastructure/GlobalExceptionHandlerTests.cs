@@ -11,6 +11,28 @@ namespace nihomebackend.tests.Infrastructure;
 
 public class GlobalExceptionHandlerTests
 {
+    [Theory]
+    [InlineData(400)]
+    [InlineData(409)]
+    public async Task DocumentDomainErrors_ReturnActionableClientErrors(int status)
+    {
+        var (handler, context) = Create(aborted: false);
+        Exception error = status == 400
+            ? new NihomeBackend.Services.ProjectDocumentValidationException("Supply evidence cannot be deleted.")
+            : new NihomeBackend.Services.ProjectDocumentConflictException("Document sync is in progress.");
+        await handler.TryHandleAsync(context, error, CancellationToken.None);
+        Assert.Equal(status, context.Response.StatusCode);
+        context.Response.Body.Position = 0;
+        Assert.Contains(error.Message, await new StreamReader(context.Response.Body).ReadToEndAsync());
+    }
+
+    [Fact]
+    public async Task StaleDocumentWrite_ReturnsConflict()
+    {
+        var (handler, context) = Create(aborted: false);
+        await handler.TryHandleAsync(context, new Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException(), CancellationToken.None);
+        Assert.Equal(409, context.Response.StatusCode);
+    }
     private static (GlobalExceptionHandler Handler, DefaultHttpContext Context) Create(bool aborted)
     {
         var context = new DefaultHttpContext { Response = { Body = new MemoryStream() } };

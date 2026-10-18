@@ -70,6 +70,7 @@ async function prepare(
     const path = new URL(request.url()).pathname.replace("/api/v1/", "/api/");
     let json: unknown = [];
     if (path === "/api/auth/refresh") json = user;
+    else if (path === "/api/users/me") json = { ...user, id: user.userId };
     else if (path === "/api/users/me/permissions")
       json = { role: user.role, roleId: null, permissions };
     else if (path.startsWith("/api/translations/")) json = { languageCode: "en", translations };
