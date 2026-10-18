@@ -24,9 +24,15 @@ public sealed class ConstructionProcurementService(AppDbContext db)
         // Reuse the canonical contract lifecycle and validation; never grant upstream management.
         return await contracts.CreateAsync(new UpsertContractRequest
         {
-            OperationalProjectId = projectId, CustomerId = customerId, Direction = ContractDirection.Downstream,
-            Status = ContractStatus.Draft, Type = request.Type, VendorId = request.VendorId,
-            Value = request.Value!.Value, ScopeOfWork = request.ScopeOfWork?.Trim(), OwnerUserId = actor,
+            OperationalProjectId = projectId,
+            CustomerId = customerId,
+            Direction = ContractDirection.Downstream,
+            Status = ContractStatus.Draft,
+            Type = request.Type,
+            VendorId = request.VendorId,
+            Value = request.Value!.Value,
+            ScopeOfWork = request.ScopeOfWork?.Trim(),
+            OwnerUserId = actor,
         }, actor, canReassignOwner: true, ct);
     }
     private IQueryable<ConstructionResourceRequest> Requests(int projectId) => db.ConstructionResourceRequests
@@ -74,7 +80,9 @@ public sealed class ConstructionProcurementService(AppDbContext db)
         {
             item.HandoffEvents.Add(new ConstructionResourceHandoffEvent
             {
-                PreviousContractId = item.ProcurementContractId, ContractId = request.ContractId, ActorUserId = actor,
+                PreviousContractId = item.ProcurementContractId,
+                ContractId = request.ContractId,
+                ActorUserId = actor,
             });
             item.ProcurementContract = contract;
             item.ProcurementContractId = request.ContractId;
@@ -107,8 +115,10 @@ public sealed class ConstructionProcurementService(AppDbContext db)
         item.UpdatedAt = item.SuppliedAt.Value;
         item.HandoffEvents.Add(new ConstructionResourceHandoffEvent
         {
-            PreviousContractId = item.ProcurementContractId, ContractId = item.ProcurementContractId!.Value,
-            SupplyDocumentId = request.DocumentId, ActorUserId = actor,
+            PreviousContractId = item.ProcurementContractId,
+            ContractId = item.ProcurementContractId!.Value,
+            SupplyDocumentId = request.DocumentId,
+            ActorUserId = actor,
         });
         // A single SaveChanges atomically persists confirmation and its history.
         await CrmConcurrency.SaveChangesAsync(db, ct);

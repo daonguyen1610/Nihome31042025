@@ -15,10 +15,16 @@ public sealed class ConstructionProcurementControllerTests(NihomeWebApplicationF
             var original = await db.ConstructionResourceRequests.FindAsync(f.RequestId);
             var row = new ConstructionResourceRequest
             {
-                OperationalProjectId = f.ProjectId, Code = $"RR-{f.ProjectId}-CREW",
-                Type = ConstructionResourceType.Labour, Status = ConstructionReviewStatus.CmApproved,
-                CreatedByUserId = original!.CreatedByUserId, WbsCode = "STRUCTURE-03", Quantity = 12,
-                Unit = "person", Reason = "Structural assembly crew for crane lifting operations", NeedByDate = original.NeedByDate,
+                OperationalProjectId = f.ProjectId,
+                Code = $"RR-{f.ProjectId}-CREW",
+                Type = ConstructionResourceType.Labour,
+                Status = ConstructionReviewStatus.CmApproved,
+                CreatedByUserId = original!.CreatedByUserId,
+                WbsCode = "STRUCTURE-03",
+                Quantity = 12,
+                Unit = "person",
+                Reason = "Structural assembly crew for crane lifting operations",
+                NeedByDate = original.NeedByDate,
             };
             db.ConstructionResourceRequests.Add(row); await db.SaveChangesAsync(); return row.Id;
         });
@@ -70,8 +76,18 @@ public sealed class ConstructionProcurementControllerTests(NihomeWebApplicationF
         var payload = await WithDbAsync(async db =>
         {
             var contract = await db.Contracts.FindAsync(f.ContractId);
-            return new { customerId = contract!.CustomerId, direction = "Downstream", type = "Supply", vendorId = contract.VendorId,
-                operationalProjectId = f.ProjectId, status = "Signed", signedDate = contract.SignedDate, value = contract.Value, rowVersion = Convert.ToBase64String(contract.RowVersion) };
+            return new
+            {
+                customerId = contract!.CustomerId,
+                direction = "Downstream",
+                type = "Supply",
+                vendorId = contract.VendorId,
+                operationalProjectId = f.ProjectId,
+                status = "Signed",
+                signedDate = contract.SignedDate,
+                value = contract.Value,
+                rowVersion = Convert.ToBase64String(contract.RowVersion)
+            };
         });
         await Login("SUPER_ADMIN");
         using var message = new HttpRequestMessage(HttpMethod.Put, $"/api/contracts/{f.ContractId}") { Content = JsonContent.Create(payload) };
@@ -150,9 +166,16 @@ public sealed class ConstructionProcurementControllerTests(NihomeWebApplicationF
         var second = await WithDbAsync(async db =>
         {
             var original = await db.Contracts.FindAsync(f.ContractId);
-            var next = new Contract { CustomerId = original!.CustomerId, OperationalProjectId = f.ProjectId,
-                ContractNumber = $"HD-MACHINE-{Guid.NewGuid():N}"[..35], Direction = ContractDirection.Downstream,
-                Type = ContractType.Subcontract, VendorId = original.VendorId, Status = ContractStatus.Draft };
+            var next = new Contract
+            {
+                CustomerId = original!.CustomerId,
+                OperationalProjectId = f.ProjectId,
+                ContractNumber = $"HD-MACHINE-{Guid.NewGuid():N}"[..35],
+                Direction = ContractDirection.Downstream,
+                Type = ContractType.Subcontract,
+                VendorId = original.VendorId,
+                Status = ContractStatus.Draft
+            };
             db.Contracts.Add(next); await db.SaveChangesAsync(); return next.Id;
         });
         using var relink = await Post($"{Path(f.ProjectId)}/{f.RequestId}/contract", new { contractId = second, rowVersion = await Version(f.RequestId) });
@@ -248,9 +271,21 @@ public sealed class ConstructionProcurementControllerTests(NihomeWebApplicationF
         async Task<int> User(string role) => (await db.Users.SingleAsync(x => x.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode[role])).Id;
         var pm = await User("PM"); var procurement = await User("PROCUREMENT"); var qs = await User("QS");
         var customerNumber = await db.Customers.CountAsync() + 1;
-        var project = new OperationalProject { Code = $"PJ-CRANE-{Guid.NewGuid():N}"[..30], Name = "NICON tower crane and structural workforce", ProjectManagerUserId = pm, CreatedByUserId = pm,
-            Customer = new Customer { Name = "NICON industrial construction client", Type = CustomerType.Company, SourceCode = "referral", TaxId = $"010{customerNumber:D7}",
-                Contacts = [new CustomerContact { FullName = "An Phu legal representative", Position = "Director", Phone = "0901234567", Email = "representative@example.com", IsPrimary = true, IsLegalRepresentative = true, LegalRepresentativeSince = DateTime.UtcNow.AddYears(-1) }] } };
+        var project = new OperationalProject
+        {
+            Code = $"PJ-CRANE-{Guid.NewGuid():N}"[..30],
+            Name = "NICON tower crane and structural workforce",
+            ProjectManagerUserId = pm,
+            CreatedByUserId = pm,
+            Customer = new Customer
+            {
+                Name = "NICON industrial construction client",
+                Type = CustomerType.Company,
+                SourceCode = "referral",
+                TaxId = $"010{customerNumber:D7}",
+                Contacts = [new CustomerContact { FullName = "An Phu legal representative", Position = "Director", Phone = "0901234567", Email = "representative@example.com", IsPrimary = true, IsLegalRepresentative = true, LegalRepresentativeSince = DateTime.UtcNow.AddYears(-1) }]
+            }
+        };
         db.OperationalProjects.Add(project); await db.SaveChangesAsync();
         db.OperationalProjectMembers.Add(new OperationalProjectMember { OperationalProjectId = project.Id, UserId = procurement, Position = "Site procurement coordinator", StartedAt = DateTime.UtcNow, CreatedByUserId = pm, UpdatedByUserId = pm });
         var vendor = new Vendor { VendorCode = $"V-{Guid.NewGuid():N}"[..25], CompanyName = "NICON structural equipment and labour partner", VendorType = VendorType.Both, CreatedByUserId = procurement };

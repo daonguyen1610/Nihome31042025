@@ -111,9 +111,12 @@ public static class SampleCrmDataSeeder
             if (!db.OperationalProjectMembers.Any(x => x.OperationalProjectId == project.Id && x.UserId == user.Id))
                 db.OperationalProjectMembers.Add(new OperationalProjectMember
                 {
-                    OperationalProjectId = project.Id, UserId = user.Id,
+                    OperationalProjectId = project.Id,
+                    UserId = user.Id,
                     Position = user.Id == procurement.Id ? "Cung ứng công trình nhà máy" : "QS công trường nhà máy",
-                    StartedAt = now.AddDays(-7), CreatedByUserId = cm.Id, UpdatedByUserId = cm.Id,
+                    StartedAt = now.AddDays(-7),
+                    CreatedByUserId = cm.Id,
+                    UpdatedByUserId = cm.Id,
                 });
         }
         var samples = new[]
