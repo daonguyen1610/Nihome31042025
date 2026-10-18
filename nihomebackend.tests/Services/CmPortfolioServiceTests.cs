@@ -55,7 +55,12 @@ public sealed class CmPortfolioServiceTests
         ConstructionQsRecordState state = ConstructionQsRecordState.Active,
         ConstructionReviewStatus status = ConstructionReviewStatus.CmApproved) => new()
         {
-            Id = id, OperationalProjectId = project, Code = $"QS-STRUCTURE-{id}", Direction = direction,
-            Status = status, RecordState = state, IsActiveLineage = true,
+            Id = id,
+            OperationalProjectId = project,
+            Code = $"QS-STRUCTURE-{id}",
+            Direction = direction,
+            Status = status,
+            RecordState = state,
+            IsActiveLineage = true,
         };
 }

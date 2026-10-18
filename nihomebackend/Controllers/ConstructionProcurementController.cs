@@ -30,8 +30,14 @@ public sealed class ConstructionProcurementController(ConstructionProcurementSer
         Run(projectId, async uid =>
         {
             var created = await service.CreateContractAsync(projectId, request, uid, contracts, ct);
-            audit.Log(new AuditEvent { Action = "contract.create", ResourceType = EntityTypes.Contract,
-                ResourceId = created.Id.ToString(), Message = $"Downstream contract {created.ContractNumber} drafted from approved construction resources.", NewValue = created });
+            audit.Log(new AuditEvent
+            {
+                Action = "contract.create",
+                ResourceType = EntityTypes.Contract,
+                ResourceId = created.Id.ToString(),
+                Message = $"Downstream contract {created.ContractNumber} drafted from approved construction resources.",
+                NewValue = created
+            });
             CrmConcurrency.SetResponseEntityTag(Response, created.RowVersion);
             return created;
         });
