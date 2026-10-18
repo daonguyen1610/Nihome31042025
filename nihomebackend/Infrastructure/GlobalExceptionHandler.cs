@@ -114,6 +114,21 @@ public sealed class GlobalExceptionHandler(
     private static (int Status, string Title, string Detail) MapException(Exception exception) =>
         exception switch
         {
+            ProjectDocumentValidationException documentEx => (
+                StatusCodes.Status400BadRequest,
+                "Invalid document operation.",
+                documentEx.Message),
+
+            ProjectDocumentConflictException documentEx => (
+                StatusCodes.Status409Conflict,
+                "Document operation conflict.",
+                documentEx.Message),
+
+            DbUpdateConcurrencyException => (
+                StatusCodes.Status409Conflict,
+                "Concurrent update conflict.",
+                "The record changed. Reload it before trying again."),
+
             IdempotencyConflictException idempotencyEx => (
                 StatusCodes.Status409Conflict,
                 "Idempotency key conflict.",

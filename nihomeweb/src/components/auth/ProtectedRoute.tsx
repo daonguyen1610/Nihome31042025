@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
-import { PageLoading } from "@/components/PageState";
+import { PageError, PageLoading } from "@/components/PageState";
 import { isAdminRole } from "@/lib/auth";
 import { refreshThunk } from "@/store/authSlice";
 import { useAppDispatch, useAppSelector } from "@/store";
@@ -14,7 +14,7 @@ const normalizeRole = (role: string) => role.toUpperCase();
 export default function ProtectedRoute({ roles }: ProtectedRouteProps) {
   const dispatch = useAppDispatch();
   const location = useLocation();
-  const { user, accessToken, refreshToken } = useAppSelector((state) => state.auth);
+  const { user, accessToken, refreshToken, error, loading } = useAppSelector((state) => state.auth);
   const [refreshAttempted, setRefreshAttempted] = useState(false);
 
   useEffect(() => {
@@ -29,6 +29,8 @@ export default function ProtectedRoute({ roles }: ProtectedRouteProps) {
   }
 
   if (!user) {
+    if (error && !loading)
+      return <PageError message={error} onRetry={() => void dispatch(refreshThunk())} />;
     return <PageLoading />;
   }
 

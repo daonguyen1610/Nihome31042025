@@ -256,6 +256,34 @@ public sealed class ConstructionProcurementControllerTests(NihomeWebApplicationF
         (await WithDbAsync(db => db.Set<ConstructionResourceHandoffEvent>().CountAsync(x => x.ConstructionResourceRequestId == f.RequestId))).Should().Be(0);
     }
 
+
+    [Fact]
+    public async Task SupplyEvidenceAttachmentDelete_ReturnsActionableRejection()
+    {
+        var f = await SeedAsync();
+        var attachmentId = await WithDbAsync(async db =>
+        {
+            var a = new ContractAttachment { ContractId = f.ContractId, FilePath = "/files/contracts/review-evidence.pdf", OriginalFileName = "review-evidence.pdf", ContentType = "application/pdf" };
+            db.ContractAttachments.Add(a); await db.SaveChangesAsync();
+            var d = await db.ProjectDocuments.FindAsync(f.DocumentId);
+            d!.SourceType = ProjectDocumentSourceType.ExistingManagedFile;
+            d.SourceModule = ProjectDocumentSourceModule.Crm;
+            d.SourceEntityType = nameof(ContractAttachment); d.SourceSlot = "file";
+            d.SourceRecordId = a.Id; d.LocalPath = a.FilePath;
+            await db.SaveChangesAsync(); return a.Id;
+        });
+        await Login("PROCUREMENT");
+        using var link = await Post($"{Path(f.ProjectId)}/{f.RequestId}/contract", new { contractId = f.ContractId, rowVersion = await Version(f.RequestId) });
+        link.EnsureSuccessStatusCode();
+        using var supply = await Post($"{Path(f.ProjectId)}/{f.RequestId}/supply", new { documentId = f.DocumentId, rowVersion = await Version(f.RequestId) });
+        supply.EnsureSuccessStatusCode();
+        await Login("SUPER_ADMIN");
+        using var deletion = await Client.DeleteAsync($"/api/contracts/{f.ContractId}/attachments/{attachmentId}");
+        (await WithDbAsync(db => db.ContractAttachments.AnyAsync(x => x.Id == attachmentId))).Should().BeTrue();
+        (await WithDbAsync(db => db.ProjectDocuments.Where(x => x.Id == f.DocumentId).Select(x => x.DeletedAt).SingleAsync())).Should().BeNull();
+        deletion.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
     private Task Login(string role) => AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, role));
     private static string Path(int projectId) => $"/api/operational-projects/{projectId}/procurement/construction-resources";
     private Task<string> Version(int id) => WithDbAsync(db => db.ConstructionResourceRequests.Where(x => x.Id == id).Select(x => Convert.ToBase64String(x.RowVersion)).SingleAsync());

@@ -2733,8 +2733,14 @@ fields and append-only handoff events are authoritative for this slice. A single
 SaveChanges writes each mutation and event within a relational serializable
 transaction; failed decisions do not create supply or Finance state. The web
 draft form retains its idempotency key when retrying the same payload after a
-lost response. Supply evidence deletion is blocked without blocking Drive retry;
-contract/project deletion impact includes the new resource blockers.
+lost response. Supply confirmation advances the evidence document's existing
+row version in the same transaction. A manual or managed-file deletion staged
+against its previous version fails with HTTP 409, rolling back the source
+metadata removal before physical cleanup. Existing references reject deletion
+with HTTP 400; Drive retry remains available. Contract/project deletion impact
+includes the new resource blockers. SQL concurrency regressions use
+`NICON_SQL_TEST_CONNECTION` to create and clean only generated
+`NiconEvidenceTest_<GUID>` databases; they never use the supplied catalog.
 
 `GET /reports/projects` adds `cmControl` per project: separate active approved QS
 directions, QA/QC and HSE counts/statuses/source links, generation timestamp and
@@ -3485,6 +3491,11 @@ When a web root is available, the seeder materializes small placeholder PDFs ben
 - Use the refresh endpoint to obtain a new access token.
 - Ensure the JWT `Issuer` and `Audience` settings match between token generation and validation.
 - If signing keys were rotated, ensure the `ActiveKeyId` matches a valid key in the configuration.
+
+The SPA restores its current user through `GET /users/me` on reload, retaining
+the existing tokens. It rotates the refresh token only after an access-token
+401. A transient profile/refresh failure preserves the tokens and offers retry;
+an invalid session returns to login. Refresh-token rotation remains single-use.
 
 ### 11.6 Docker Volume Issues
 
