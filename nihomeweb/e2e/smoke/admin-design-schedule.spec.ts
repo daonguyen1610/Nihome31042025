@@ -230,7 +230,13 @@ test.describe("Detail Design Schedule — assigned Design Lead flow", () => {
       `competing update (${competingUpdate.status()}): ${await competingUpdate.text()}`,
     ).toBeTruthy();
     await dialog.locator("#schedule-task-name").fill(`Stale edit ${suffix}`);
+    const staleSave = page.waitForResponse(
+      (response) =>
+        response.request().method() === "PUT" &&
+        response.url().includes(`/design-schedule/tasks/${currentTask!.id}`),
+    );
     await dialog.getByRole("button", { name: /Lưu|Save/i }).click();
+    expect((await staleSave).status()).toBe(409);
     await expect(dialog.getByRole("alert")).toContainText(
       /người khác cập nhật|Someone else updated/i,
     );
