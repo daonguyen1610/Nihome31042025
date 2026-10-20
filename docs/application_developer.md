@@ -2986,6 +2986,31 @@ The file-level ISO cross-check gives these source-to-workflow anchors:
 | `C.2` internal audit and `C.3` improvement | Audit schedule/findings/corrective actions and nonconformity handling, with accompanying `BM` files | Confirm current ownership, severity and closure rules; these are source processes, not delivered audit modules |
 | `D.9`–`D.11` HR (`NS1`–`NS3`) | Recruitment/training, work reporting, leave and resignation records. `NS2` calls for daily/weekly/monthly reports reviewed by department heads and summarized for management; `NS2-M01` has 11 scored individual criteria | `NS1-M05`/`NS1-M06` are referenced for training but absent; `NS1-M03`/`NS1-M04` are PDFs without extensions. `NS2` does not define approval of each internal task or the software KPI calculation. Confirm current HR policy and access before mapping personal records |
 
+The next mapping level is the **observed process step**, not a publishable
+checklist. References below are to the [TC construction procedure](<Nicon/ISO/D.Quy trình chi tiết/D.4. Quy trình thi công lắp đặt/Quy trình thi công lắp đặt.doc>),
+the [TQT payment procedure](<Nicon/ISO/D.Quy trình chi tiết/D.6. Quy trình thanh toán, quyết toán công trình/Quy trình thanh quyết toán.doc>)
+and the [MH purchasing procedure](<Nicon/ISO/D.Quy trình chi tiết/D.7. Quy trình mua hàng, đánh giá nhà cung ứng, thầu phụ- co chinh sua/Quy trình mua hàng, đánh giá NCC.doc>).
+The process documents name historical owners; they do not set current CM/FA
+approval permissions.
+
+| Source step | Files/records the procedure names | Mapping boundary to confirm |
+|---|---|---|
+| TC 1–4, preparation | `DT-M09`, `NS1-M01`, `TC-M02`, `TC-M01`, `TC-M04`–`TC-M06`, `TC-M25`; schedule, site survey, BCH structure, method and safety measures | `TC-M02` file is absent; `NS1-M01` file is a recruitment request. Identify the approved BCH, method and HSE evidence and project-type applicability before making a start gate mandatory. Current signed-contract/IFC/baseline/budget gate still governs. |
+| TC 8, field operation | `TC-M07`–`TC-M13`, `TC-M15`, `TC-M18`, `TC-M20`; the text also requires approved shop drawing, method and material sample before each work stage | Map each existing diary/QA/HSE record to one source step and released IFC revision; resolve the duplicate `TC-M15` code. No ISO S-Curve formula appears here. |
+| TC 10/12, acceptance | `TC-M28` internal work-stage sheets, `TC-M23` invitation, `TC-M24` acceptance and `TC-M22` defects | `TC-M23` file is absent; the `TC-M24` files are filled/different records. CM must select current blank forms and define which of the 19 `TC-M28` work types apply. |
+| TC 11/13 and TQT 5.1–5.3, settlement | `TQT-M00`, `MH-M04`, `TQT-M01`–`TQT-M06`, `TC-M14`, `TC-M27`, `TC-M29`; signed quantity, invoice and contract evidence are described at different stages | `TQT-M00` and `TC-M00` files are absent. Keep Upstream and Downstream separate; TQT 5.2 cites `TQT-M02` for subcontractor settlement although the received file is labeled customer payment request. Confirm code/version and three-section dossier ownership. |
+| MH 1–6, purchase | `MH-M01` request, `MH-M02` quotation, `MH-M03` order, `MH-M04` payment request and receipt/invoice when goods arrive | The procedure allows payment request before receipt when the order requires it. Confirm advance authorization separately from accepted-quantity payment; current Procurement handoff supersedes the older Accounting-ordering role. |
+
+For the four Downstream package types, the ISO supports these **discovery
+candidates**, not a mandatory document matrix:
+
+| Package | Candidate evidence found | Remaining FA/CM decision |
+|---|---|---|
+| Supply | `MH-M01`–`MH-M04`, order, received-goods record and invoice in MH/TQT; warehouse receipt applies to goods actually received | Required set by payment stage, approved quantity source, advance/retention and exceptions. |
+| Labour | `TC-M27`, `TC-M29`, `TQT-M05`/`TQT-M06` and approved site quantity in TC/TQT | Distinguish labour team from subcontractor and identify contract, payroll/attendance or acceptance evidence actually required. |
+| Equipment | `LK-M01`–`LK-M08` cover equipment handover, stock and maintenance; MH describes purchase/order | Decide purchase versus rental, supply period/usage evidence, ownership and which LK records apply; none alone proves payment eligibility. |
+| Mixed subcontract | TC/TQT contain work acceptance and subcontract settlement forms, but no separate mixed-package rule | Identify line-level material/labour/equipment evidence, allocation and payment gate without requiring a fake warehouse receipt. |
+
 The `TC` and `TQT` source procedures show effective dates in 2016 and 2020
 respectively. Their role names, submission weekdays and retention periods are
 historical source content, not automatically approved current product rules.
