@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Check, Loader2, Pencil, Plus, Send, Sparkles, Trash2, Undo2 } from "lucide-react";
+import { Check, Loader2, Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
+import { ConceptDossierPanel } from "./ConceptDossierPanel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,9 +59,6 @@ const formatDate = (iso?: string | null, lang: string = "vi"): string => {
   }
 };
 
-const toDateInputValue = (iso?: string | null) => (iso ? iso.slice(0, 10) : "");
-const toUtcMidnight = (yyyyMmDd: string): string => (yyyyMmDd ? `${yyyyMmDd}T00:00:00.000Z` : "");
-
 interface UserOption {
   id: number;
   fullName: string;
@@ -71,7 +69,6 @@ interface FormState {
   description: string;
   internalNote: string;
   ownerUserId: number | null;
-  presentedAt: string;
 }
 
 const emptyForm = (): FormState => ({
@@ -79,7 +76,6 @@ const emptyForm = (): FormState => ({
   description: "",
   internalNote: "",
   ownerUserId: null,
-  presentedAt: "",
 });
 
 interface Props {
@@ -108,6 +104,7 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged }: Props) =
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [users, setUsers] = useState<UserOption[]>([]);
+  const [expandedId, setExpandedId] = useState<number | null>(null);
 
   const fetchRows = useCallback(async () => {
     setLoading(true);
@@ -182,7 +179,6 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged }: Props) =
       description: row.description ?? "",
       internalNote: row.internalNote ?? "",
       ownerUserId: row.ownerUserId ?? null,
-      presentedAt: toDateInputValue(row.presentedAt),
     });
     setFormError(null);
     setDialogOpen(true);
@@ -202,7 +198,6 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged }: Props) =
           description: form.description.trim() || null,
           internalNote: form.internalNote.trim() || null,
           ownerUserId: form.ownerUserId ?? null,
-          presentedAt: form.presentedAt ? toUtcMidnight(form.presentedAt) : null,
         });
         toast({ title: t("concepts.updated") });
       } else {
@@ -212,7 +207,6 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged }: Props) =
           description: form.description.trim() || null,
           internalNote: form.internalNote.trim() || null,
           ownerUserId: form.ownerUserId ?? null,
-          presentedAt: form.presentedAt ? toUtcMidnight(form.presentedAt) : null,
         };
         await adminApi.createConceptOption(payload);
         toast({ title: t("concepts.created") });
@@ -422,6 +416,25 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged }: Props) =
                   {t("concepts.action.delete")}
                 </Button>
               ) : null}
+              {project.operationalProjectId ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="mt-3"
+                  onClick={() => setExpandedId(expandedId === row.id ? null : row.id)}
+                >
+                  {t("concepts.dossier.open")}
+                </Button>
+              ) : null}
+              {expandedId === row.id && project.operationalProjectId ? (
+                <ConceptDossierPanel
+                  projectId={project.operationalProjectId}
+                  optionId={row.id}
+                  canManage={canManage}
+                  locked={isLocked || row.status === "Finalized" || row.status === "Discarded"}
+                  onChanged={fetchRows}
+                />
+              ) : null}
             </article>
           ))}
         </div>
@@ -471,14 +484,6 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged }: Props) =
                 />
               </div>
             ) : null}
-            <div>
-              <Label>{t("concepts.field.presentedAt")}</Label>
-              <Input
-                type="date"
-                value={form.presentedAt}
-                onChange={(e) => setForm((f) => ({ ...f, presentedAt: e.target.value }))}
-              />
-            </div>
           </div>
           {formError ? <p className="text-sm text-rose-600">{formError}</p> : null}
           <DialogFooter>
@@ -569,52 +574,15 @@ const RowActions = ({
             <Pencil className="mr-1 h-3.5 w-3.5" />
             {t("common.edit")}
           </Button>
-          <Button
-            size="sm"
-            variant="secondary"
-            className={btn}
-            disabled={busy}
-            onClick={() => onTransition("PendingInternalReview")}
-          >
-            <Send className="mr-1 h-3.5 w-3.5" />
-            {t("concepts.action.sendReview")}
-          </Button>
         </>
       )}
       {s === "PendingInternalReview" && (
         <>
-          <Button size="sm" variant="outline" className={btn} onClick={onEdit}>
-            <Pencil className="mr-1 h-3.5 w-3.5" />
-            {t("common.edit")}
-          </Button>
-          <Button
-            size="sm"
-            variant="secondary"
-            className={btn}
-            disabled={busy}
-            onClick={() => onTransition("PresentedToClient")}
-          >
-            <Send className="mr-1 h-3.5 w-3.5" />
-            {t("concepts.action.markPresented")}
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            className={btn}
-            disabled={busy}
-            onClick={() => onTransition("Drafting")}
-          >
-            <Undo2 className="mr-1 h-3.5 w-3.5" />
-            {t("concepts.action.backToDraft")}
-          </Button>
+          <span className="text-xs text-slate-500">{t("concepts.dossier.frozen")}</span>
         </>
       )}
       {s === "PresentedToClient" && (
         <>
-          <Button size="sm" variant="outline" className={btn} onClick={onEdit}>
-            <Pencil className="mr-1 h-3.5 w-3.5" />
-            {t("common.edit")}
-          </Button>
           {canFinalize ? (
             <Button
               size="sm"
@@ -627,15 +595,6 @@ const RowActions = ({
           ) : null}
           <Button
             size="sm"
-            variant="secondary"
-            className={btn}
-            disabled={busy}
-            onClick={() => onTransition("ClientRequestedChanges")}
-          >
-            {t("concepts.action.markRevision")}
-          </Button>
-          <Button
-            size="sm"
             variant="ghost"
             className={btn}
             disabled={busy}
@@ -646,22 +605,7 @@ const RowActions = ({
         </>
       )}
       {s === "ClientRequestedChanges" && (
-        <>
-          <Button size="sm" variant="outline" className={btn} onClick={onEdit}>
-            <Pencil className="mr-1 h-3.5 w-3.5" />
-            {t("common.edit")}
-          </Button>
-          <Button
-            size="sm"
-            variant="secondary"
-            className={btn}
-            disabled={busy}
-            onClick={() => onTransition("Drafting")}
-          >
-            <Undo2 className="mr-1 h-3.5 w-3.5" />
-            {t("concepts.action.backToDraft")}
-          </Button>
-        </>
+        <span className="text-xs text-amber-700">{t("concepts.dossier.newRevision")}</span>
       )}
       {s === "Finalized" && (
         <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700">

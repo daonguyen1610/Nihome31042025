@@ -60,13 +60,6 @@ test.describe("NIH-116 — Detail Design (real-user flow)", () => {
     });
     expect(optCreate.ok(), await optCreate.text()).toBeTruthy();
     const optId = (await optCreate.json()).id as number;
-    for (const status of ["PendingInternalReview", "PresentedToClient"]) {
-      const t = await api.post(`/api/concept-options/${optId}/status`, {
-        headers: authHeader,
-        data: { status },
-      });
-      expect(t.ok(), `${status}: ${await t.text()}`).toBeTruthy();
-    }
     await approveDesignStage(api, {
       headers: authHeader,
       projectId,
@@ -270,13 +263,6 @@ test.describe("NIH-116 — Detail Design (real-user flow)", () => {
     });
     expect(option.ok(), await option.text()).toBeTruthy();
     const optionId = (await option.json()).id as number;
-    for (const status of ["PendingInternalReview", "PresentedToClient"]) {
-      const transition = await api.post(`/api/concept-options/${optionId}/status`, {
-        headers: authHeader,
-        data: { status },
-      });
-      expect(transition.ok(), `${status}: ${await transition.text()}`).toBeTruthy();
-    }
     await approveDesignStage(api, {
       headers: authHeader,
       projectId,

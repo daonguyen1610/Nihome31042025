@@ -194,7 +194,15 @@ Không tính phần trăm hoàn thành chung và không suy diễn nguồn từ 
 - Mã nguồn hiện chặn xóa vật lý hồ sơ đã ghi nhận trình khách và dùng revision
   thay thế. Đây là mặc định an toàn trong khi NICON chưa chốt Q-08, không phải
   kết luận nghiệp vụ cuối cùng.
-- Concept chỉ được chốt khi revision Concept mới nhất là `ClientApproved`.
+- Concept: Design Manager tạo từng phương án và revision R00; gắn mô hình 3D,
+  phối cảnh, mặt bằng tổng thể/mái, mặt bằng từng tầng, mặt cắt, PDF trình bày.
+  Kiểm checklist hoặc ghi lý do không áp dụng, chờ file đồng bộ, rồi trình nội
+  bộ. Hệ thống khóa revision đã trình. Sau khi tổng hợp, Design Manager ghi
+  nhận trình khách, ý kiến khách và phản hồi xử lý. Quyết định yêu cầu sửa/từ
+  chối mở R tiếp theo; phải phản hồi các ý kiến cũ trước khi trình bản mới.
+  Quyết định duyệt khách cần biên bản TK-M03 đã ký riêng với hồ sơ trình, người
+  ký và ngày ký. Chỉ chốt một phương án khi revision mới nhất được duyệt cùng
+  biên bản đó; các phương án còn lại bị loại.
 - Basic Design chỉ mở Shop Drawing khi đủ điều kiện nội bộ/pháp lý và revision
   Basic Design mới nhất là `ClientApproved`.
 - Shop/Detailed Drawing được duyệt, đưa vào gói IFC và phát hành phiên bản cụ

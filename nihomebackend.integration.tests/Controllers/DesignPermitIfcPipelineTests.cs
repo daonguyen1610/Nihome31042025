@@ -109,19 +109,13 @@ public sealed class DesignPermitIfcPipelineTests(NihomeWebApplicationFactory fac
         var concept = await PostAsync("/api/concept-options", new { designProjectId = projectId, name = "Factory layout with separated loading access" });
         var alternative = await PostAsync("/api/concept-options", new { designProjectId = projectId, name = "Alternative central loading access" });
         var conceptPath = $"/api/concept-options/{Id(concept)}";
-        await StatusAsync(conceptPath, "PendingInternalReview");
-        await StatusAsync(conceptPath, "PresentedToClient");
         if (needsCorrection)
         {
-            await StatusAsync(conceptPath, "ClientRequestedChanges");
-            await StatusAsync(conceptPath, "Drafting");
             var response = await Client.PutAsJsonAsync(conceptPath, new { name = "Factory layout with revised fire access", description = "Client requested a separate emergency entrance." });
             response.EnsureSuccessStatusCode();
-            await StatusAsync(conceptPath, "PendingInternalReview");
-            await StatusAsync(conceptPath, "PresentedToClient");
         }
         await RejectAsync(conceptPath + "/status", new { status = "Finalized" }, HttpStatusCode.NotFound);
-        (await GetAsync(conceptPath)).GetProperty("status").GetString().Should().Be("PresentedToClient");
+        (await GetAsync(conceptPath)).GetProperty("status").GetString().Should().Be("Drafting");
         await AssertStageAsync(projectId, DesignProjectStage.Concept);
         await ApproveReviewAsync(projectId, DesignReviewStage.Concept, Id(concept));
         await LoginAsync("DESIGN_LEAD");
@@ -286,65 +280,8 @@ public sealed class DesignPermitIfcPipelineTests(NihomeWebApplicationFactory fac
         (await WithDbAsync(db => db.DesignProjects.SingleAsync(p => p.Id == projectId))).CurrentStage.Should().Be(stage);
 
     private Task ApproveReviewAsync(int projectId, DesignReviewStage stage, params int[] sourceRecordIds) =>
-        WithDbAsync(async db =>
-        {
-            var sourceEntityType = stage switch
-            {
-                DesignReviewStage.Concept => nameof(ConceptOption),
-                DesignReviewStage.BasicDesign => nameof(BasicDesignDoc),
-                _ => nameof(ShopDrawing),
-            };
-            var category = stage switch
-            {
-                DesignReviewStage.Concept => ProjectDocumentCategory.DesignConcept,
-                DesignReviewStage.BasicDesign => ProjectDocumentCategory.DesignBasic,
-                _ => ProjectDocumentCategory.DesignShopDrawing,
-            };
-            var project = await db.DesignProjects.AsNoTracking().SingleAsync(item => item.Id == projectId);
-            var managerId = await db.Users.Where(user =>
-                    user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["DESIGN"])
-                .Select(user => user.Id).SingleAsync();
-            var documents = sourceRecordIds.Select(id => new ProjectDocument
-            {
-                OperationalProjectId = project.OperationalProjectId!.Value,
-                Category = category,
-                SourceModule = ProjectDocumentSourceModule.Design,
-                SourceEntityType = sourceEntityType,
-                SourceRecordId = id,
-                LocalPath = $"/files/project-documents/{sourceEntityType}-{id}.pdf",
-                OriginalFileName = $"{sourceEntityType}-{id}.pdf",
-                ContentType = "application/pdf",
-                Sha256 = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
-                    System.Text.Encoding.UTF8.GetBytes($"{sourceEntityType}:{id}"))).ToLowerInvariant(),
-                SyncStatus = ProjectDocumentSyncStatus.Synced,
-                CreatedByUserId = managerId,
-                UpdatedByUserId = managerId,
-            }).ToList();
-            db.ProjectDocuments.AddRange(documents);
-            await db.SaveChangesAsync();
-            var revision = await db.DesignReviews.Where(review =>
-                    review.DesignProjectId == projectId && review.Stage == stage)
-                .Select(review => (int?)review.RevisionNumber).MaxAsync() ?? 0;
-            db.DesignReviews.Add(new DesignReview
-            {
-                DesignProjectId = projectId,
-                Stage = stage,
-                RevisionNumber = revision + 1,
-                Title = $"{stage} client approval",
-                Status = DesignReviewStatus.ClientApproved,
-                DesignManagerUserId = managerId,
-                CreatedByUserId = managerId,
-                UpdatedByUserId = managerId,
-                Documents = documents.Select(document => new DesignReviewDocument
-                {
-                    ProjectDocumentId = document.Id,
-                    SourceEntityTypeSnapshot = sourceEntityType,
-                    SourceRecordIdSnapshot = document.SourceRecordId!.Value,
-                    Sha256Snapshot = document.Sha256,
-                }).ToList(),
-            });
-            await db.SaveChangesAsync();
-        });
+        CreateClientApprovedDesignReviewAsync(projectId, stage, sourceRecordIds);
+
     private async Task UploadAsync(string path, string contents, string? kind = null)
     {
         using var form = new MultipartFormDataContent();

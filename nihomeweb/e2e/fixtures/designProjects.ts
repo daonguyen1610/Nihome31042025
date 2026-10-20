@@ -273,6 +273,84 @@ export async function approveDesignStage(
     documentIds.push(uploaded.id);
   }
 
+  let conceptRevisionId: number | undefined;
+  let acceptanceDocumentId: number | undefined;
+  if (options.stage === "Concept") {
+    if (options.sourceRecordIds.length !== 1) {
+      throw new Error("Concept review must select exactly one option.");
+    }
+    const optionId = options.sourceRecordIds[0];
+    const revisions = await json<Array<{ id: number; number: number }>>(
+      await api.get(`/api/concept-options/${optionId}/revisions`, { headers: options.headers }),
+      "load Concept revisions",
+    );
+    conceptRevisionId = revisions[0]?.id;
+    if (!conceptRevisionId) throw new Error("Concept R00 was not created.");
+    const perspective = await json<{ id: number }>(
+      await api.post(`/api/operational-projects/${project.operationalProjectId}/documents`, {
+        headers: { ...options.headers, "Idempotency-Key": `review-perspective-${unique}` },
+        multipart: {
+          file: {
+            name: `Concept-${optionId}-perspective.png`,
+            mimeType: "image/png",
+            buffer: Buffer.from(
+              "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO5Wl1sAAAAASUVORK5CYII=",
+              "base64",
+            ),
+          },
+          category: options.category,
+          sourceModule: "Design",
+          sourceEntityType: "ConceptOption",
+          sourceRecordId: String(optionId),
+        },
+      }),
+      "upload Concept perspective",
+    );
+    documentIds.push(perspective.id);
+    for (const [documentId, kind] of [
+      [documentIds[0], "Presentation"],
+      [perspective.id, "Perspective"],
+    ] as const) {
+      await json(
+        await api.post(
+          `/api/concept-options/${optionId}/revisions/${conceptRevisionId}/artifacts`,
+          {
+            headers: { ...options.headers, "Idempotency-Key": `review-artifact-${kind}-${unique}` },
+            data: { projectDocumentId: documentId, kind },
+          },
+        ),
+        `attach Concept ${kind}`,
+      );
+    }
+    for (const kind of ["SiteRoofPlan", "FloorPlan", "Section"]) {
+      await json(
+        await api.post(`/api/concept-options/${optionId}/revisions/${conceptRevisionId}/waivers`, {
+          headers: { ...options.headers, "Idempotency-Key": `review-waiver-${kind}-${unique}` },
+          data: { kind, reason: "Không áp dụng trong hồ sơ thử nghiệm này." },
+        }),
+        `waive Concept ${kind}`,
+      );
+    }
+    const acceptance = await json<{ id: number }>(
+      await api.post(`/api/operational-projects/${project.operationalProjectId}/documents`, {
+        headers: { ...options.headers, "Idempotency-Key": `review-acceptance-${unique}` },
+        multipart: {
+          file: {
+            name: `TK-M03-Concept-${optionId}-signed.pdf`,
+            mimeType: "application/pdf",
+            buffer: Buffer.from(`%PDF-1.4 NICON signed Concept ${optionId}`),
+          },
+          category: options.category,
+          sourceModule: "Design",
+          sourceEntityType: "ConceptOption",
+          sourceRecordId: String(optionId),
+        },
+      }),
+      "upload signed Concept acceptance",
+    );
+    acceptanceDocumentId = acceptance.id;
+  }
+
   for (let attempt = 0; attempt < 30; attempt += 1) {
     const documents = await json<Array<{ id: number; syncStatus: string }>>(
       await api.get(`/api/operational-projects/${project.operationalProjectId}/documents`, {
@@ -281,7 +359,7 @@ export async function approveDesignStage(
       "poll design review evidence",
     );
     if (
-      documentIds.every((id) =>
+      [...documentIds, ...(acceptanceDocumentId ? [acceptanceDocumentId] : [])].every((id) =>
         documents.some((document) => document.id === id && document.syncStatus === "Synced"),
       )
     )
@@ -298,6 +376,7 @@ export async function approveDesignStage(
         title: `Hồ sơ ${options.stage} trình khách`,
         recipientUserIds: [recipient.id],
         projectDocumentIds: documentIds,
+        ...(conceptRevisionId ? { conceptRevisionId } : {}),
       },
     }),
     "create design review",
@@ -327,6 +406,13 @@ export async function approveDesignStage(
     {
       decision: "ClientApproved",
       note: "Khách hàng xác nhận hồ sơ.",
+      ...(acceptanceDocumentId
+        ? {
+            clientAcceptanceDocumentId: acceptanceDocumentId,
+            clientAcceptanceSignedBy: "Đại diện chủ đầu tư NICON E2E",
+            clientAcceptanceSignedAt: new Date().toISOString(),
+          }
+        : {}),
       rowVersion: review.rowVersion,
     },
     "record client approval",

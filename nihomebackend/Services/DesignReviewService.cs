@@ -23,6 +23,7 @@ public interface IDesignReviewService
 
 public sealed class DesignReviewService(
     AppDbContext db,
+    IConceptDossierService dossier,
     IProjectAccessService access,
     INotificationService notifications,
     ILogger<DesignReviewService> logger) : IDesignReviewService
@@ -83,6 +84,19 @@ public sealed class DesignReviewService(
         if (documentIds.Count == 0) throw new DesignReviewOperationException("Phải đính kèm ít nhất một tài liệu dự án.");
         await ValidateRecipientsAsync(recipientIds, callerUserId, ct);
         var documents = await ValidateDocumentsAsync(project, stage, documentIds, ct);
+        if (stage == DesignReviewStage.Concept)
+        {
+            if (!request.ConceptRevisionId.HasValue)
+                throw new DesignReviewOperationException("Hồ sơ Concept phải chọn revision của một phương án.");
+            var optionId = await db.ConceptRevisions.AsNoTracking()
+                .Where(item => item.Id == request.ConceptRevisionId.Value)
+                .Select(item => (int?)item.ConceptOptionId).SingleOrDefaultAsync(ct);
+            if (!optionId.HasValue || documents.Any(item => item.SourceRecordId != optionId.Value))
+                throw new DesignReviewOperationException("Hồ sơ trình chỉ được chứa một phương án Concept đúng revision.");
+            await dossier.ValidateForReviewAsync(request.ConceptRevisionId.Value, documentIds, ct);
+        }
+        else if (request.ConceptRevisionId.HasValue)
+            throw new DesignReviewOperationException("Revision Concept chỉ áp dụng cho giai đoạn Concept.");
 
         var revision = await db.DesignReviews
             .Where(item => item.DesignProjectId == projectId && item.Stage == stage)
@@ -92,6 +106,7 @@ public sealed class DesignReviewService(
         {
             DesignProjectId = projectId,
             Stage = stage,
+            ConceptRevisionId = request.ConceptRevisionId,
             RevisionNumber = revision + 1,
             Title = title,
             DesignManagerUserId = callerUserId,
@@ -126,6 +141,17 @@ public sealed class DesignReviewService(
             throw new DesignReviewOperationException("Hồ sơ trình phải có người nhận và tài liệu.");
         await EnsureStageTasksApprovedAsync(project, review.Stage, ct);
         await EnsureEvidenceUnchangedAsync(review, ct);
+        if (review.ConceptRevisionId.HasValue)
+        {
+            await dossier.ValidateForReviewAsync(review.ConceptRevisionId.Value,
+                review.Documents.Select(item => item.ProjectDocumentId).ToArray(), ct);
+            var revision = await db.ConceptRevisions.SingleAsync(item => item.Id == review.ConceptRevisionId.Value, ct);
+            revision.FrozenAt = DateTime.UtcNow;
+            var option = await db.ConceptOptions.SingleAsync(item => item.Id == revision.ConceptOptionId, ct);
+            option.Status = ConceptOptionStatus.PendingInternalReview;
+            option.UpdatedAt = DateTime.UtcNow;
+            option.UpdatedByUserId = callerUserId;
+        }
         ApplyVersion(review, rowVersion);
         review.Status = DesignReviewStatus.InternalReview;
         review.InternalSubmittedAt = DateTime.UtcNow;
@@ -194,6 +220,16 @@ public sealed class DesignReviewService(
         ApplyVersion(review, rowVersion);
         review.Status = DesignReviewStatus.SubmittedToClient;
         review.ClientSubmittedAt = DateTime.UtcNow;
+        if (review.ConceptRevisionId.HasValue)
+        {
+            var option = await db.ConceptOptions.SingleAsync(item =>
+                db.ConceptRevisions.Any(revision => revision.Id == review.ConceptRevisionId &&
+                    revision.ConceptOptionId == item.Id), ct);
+            option.Status = ConceptOptionStatus.PresentedToClient;
+            option.PresentedAt = review.ClientSubmittedAt;
+            option.UpdatedAt = DateTime.UtcNow;
+            option.UpdatedByUserId = callerUserId;
+        }
         Touch(review, callerUserId);
         await CrmConcurrency.SaveChangesAsync(db, ct);
         return Map(await LoadAsync(projectId, reviewId, ct), callerUserId, true);
@@ -215,11 +251,49 @@ public sealed class DesignReviewService(
         var note = string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim();
         if (decision != DesignReviewStatus.ClientApproved && note is null)
             throw new DesignReviewOperationException("Phải ghi lý do khi khách hàng yêu cầu sửa hoặc từ chối.");
+        if (review.Stage == DesignReviewStage.Concept && decision == DesignReviewStatus.ClientApproved)
+        {
+            if (!review.ConceptRevisionId.HasValue || !request.ClientAcceptanceDocumentId.HasValue)
+                throw new DesignReviewOperationException("Duyệt Concept cần revision và biên bản TK-M03 đã ký.");
+            var signer = request.ClientAcceptanceSignedBy?.Trim() ?? string.Empty;
+            if (signer.Length == 0 || request.ClientAcceptanceSignedAt is null ||
+                request.ClientAcceptanceSignedAt.Value > DateTime.UtcNow.AddMinutes(5))
+                throw new DesignReviewOperationException("Biên bản TK-M03 cần tên người ký và ngày ký hợp lệ.");
+            var optionId = await db.ConceptRevisions.AsNoTracking()
+                .Where(item => item.Id == review.ConceptRevisionId.Value)
+                .Select(item => item.ConceptOptionId).SingleAsync(ct);
+            var acceptance = await db.ProjectDocuments.AsNoTracking().SingleOrDefaultAsync(item =>
+                item.Id == request.ClientAcceptanceDocumentId &&
+                item.OperationalProjectId == project.OperationalProjectId &&
+                item.Category == ProjectDocumentCategory.DesignConcept &&
+                item.SourceModule == ProjectDocumentSourceModule.Design &&
+                item.SourceEntityType == nameof(ConceptOption) && item.SourceRecordId == optionId &&
+                item.DeletedAt == null && item.SyncStatus == ProjectDocumentSyncStatus.Synced &&
+                (item.ContentType == "application/pdf" || item.ContentType == "image/jpeg" ||
+                 item.ContentType == "image/png"), ct);
+            if (acceptance is null)
+                throw new DesignReviewOperationException("Biên bản TK-M03 phải là PDF hoặc ảnh đã đồng bộ, thuộc đúng phương án.");
+            if (review.Documents.Any(item => item.ProjectDocumentId == acceptance.Id))
+                throw new DesignReviewOperationException("Biên bản TK-M03 phải là file nghiệm thu riêng, không phải file phương án đã trình.");
+            review.ClientAcceptanceDocumentId = acceptance.Id;
+            review.ClientAcceptanceSignedBy = signer;
+            review.ClientAcceptanceSignedAt = request.ClientAcceptanceSignedAt.Value.ToUniversalTime();
+        }
         ApplyVersion(review, request.RowVersion!);
         review.Status = decision;
         review.ClientDecisionNote = note;
         review.ClientDecidedAt = DateTime.UtcNow;
         review.ClientDecisionRecordedByUserId = callerUserId;
+        if (review.ConceptRevisionId.HasValue && decision == DesignReviewStatus.ClientChangesRequested)
+        {
+            var optionId = await db.ConceptRevisions.AsNoTracking()
+                .Where(item => item.Id == review.ConceptRevisionId.Value)
+                .Select(item => item.ConceptOptionId).SingleAsync(ct);
+            var option = await db.ConceptOptions.SingleAsync(item => item.Id == optionId, ct);
+            option.Status = ConceptOptionStatus.ClientRequestedChanges;
+            option.UpdatedAt = DateTime.UtcNow;
+            option.UpdatedByUserId = callerUserId;
+        }
         Touch(review, callerUserId);
         await CrmConcurrency.SaveChangesAsync(db, ct);
         await NotifyAsync(review.Recipients.Select(item => item.UserId), "design-review.client-decision", review, ct);
@@ -304,6 +378,7 @@ public sealed class DesignReviewService(
     private IQueryable<DesignReview> Query(int projectId) => db.DesignReviews.AsNoTracking()
         .Where(item => item.DesignProjectId == projectId)
         .Include(item => item.DesignManager)
+        .Include(item => item.ConceptRevision)
         .Include(item => item.Recipients).ThenInclude(item => item.User)
         .Include(item => item.Comments).ThenInclude(item => item.Author)
         .Include(item => item.Documents).ThenInclude(item => item.ProjectDocument);
@@ -311,6 +386,7 @@ public sealed class DesignReviewService(
     private IQueryable<DesignReview> QueryTracked(int projectId) => db.DesignReviews
         .Where(item => item.DesignProjectId == projectId)
         .Include(item => item.Recipients)
+        .Include(item => item.ConceptRevision)
         .Include(item => item.Comments)
         .Include(item => item.Documents).ThenInclude(item => item.ProjectDocument);
 
@@ -410,6 +486,11 @@ public sealed class DesignReviewService(
         ClientSubmittedAt = item.ClientSubmittedAt,
         ClientDecisionNote = item.ClientDecisionNote,
         ClientDecidedAt = item.ClientDecidedAt,
+        ConceptRevisionId = item.ConceptRevisionId,
+        ConceptOptionId = item.ConceptRevision?.ConceptOptionId,
+        ClientAcceptanceDocumentId = item.ClientAcceptanceDocumentId,
+        ClientAcceptanceSignedBy = item.ClientAcceptanceSignedBy,
+        ClientAcceptanceSignedAt = item.ClientAcceptanceSignedAt,
         CanManage = canManage,
         CanComment = item.Status == DesignReviewStatus.InternalReview &&
             (canManage || item.Recipients.Any(recipient => recipient.UserId == callerUserId)),

@@ -208,13 +208,13 @@ public class ConceptOptionServiceTests : IDisposable
 
     private async Task MoveToPresentedAsync(int id)
     {
-        await _sut.TransitionStatusAsync(id,
-            new TransitionConceptOptionStatusRequest { Status = "PendingInternalReview" }, _userId);
-        await _sut.TransitionStatusAsync(id,
-            new TransitionConceptOptionStatusRequest { Status = "PresentedToClient" }, _userId);
-        if (!await _db.DesignReviews.AnyAsync(review => review.DesignProjectId == _projectId &&
-            review.Stage == DesignReviewStage.Concept))
-        {
+        // Simulate the DesignReviewService handoff, then exercise the option
+        // finalization service against the persisted approval evidence.
+        var option = await _db.ConceptOptions.SingleAsync(item => item.Id == id);
+        option.Status = ConceptOptionStatus.PresentedToClient;
+        var revision = await _db.ConceptRevisions.SingleAsync(item => item.ConceptOptionId == id);
+        revision.FrozenAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
             var operationalProjectId = await _db.DesignProjects.Where(project => project.Id == _projectId)
                 .Select(project => project.OperationalProjectId!.Value).SingleAsync();
             var document = new ProjectDocument
@@ -230,13 +230,32 @@ public class ConceptOptionServiceTests : IDisposable
                 Sha256 = new string('c', 64),
                 SyncStatus = ProjectDocumentSyncStatus.Synced,
             };
-            _db.ProjectDocuments.Add(document);
+            var acceptance = new ProjectDocument
+            {
+                OperationalProjectId = operationalProjectId,
+                Category = ProjectDocumentCategory.DesignConcept,
+                SourceModule = ProjectDocumentSourceModule.Design,
+                SourceEntityType = nameof(ConceptOption),
+                SourceRecordId = id,
+                LocalPath = $"/files/project-documents/TK-M03-{id}.pdf",
+                OriginalFileName = $"TK-M03-{id}-signed.pdf",
+                ContentType = "application/pdf",
+                Sha256 = new string('d', 64),
+                SyncStatus = ProjectDocumentSyncStatus.Synced,
+            };
+            _db.ProjectDocuments.AddRange(document, acceptance);
             await _db.SaveChangesAsync();
+            var reviewNumber = await _db.DesignReviews.Where(item => item.DesignProjectId == _projectId &&
+                item.Stage == DesignReviewStage.Concept).Select(item => (int?)item.RevisionNumber).MaxAsync() ?? 0;
             _db.DesignReviews.Add(new DesignReview
             {
                 DesignProjectId = _projectId,
                 Stage = DesignReviewStage.Concept,
-                RevisionNumber = 1,
+                RevisionNumber = reviewNumber + 1,
+                ConceptRevisionId = revision.Id,
+                ClientAcceptanceDocumentId = acceptance.Id,
+                ClientAcceptanceSignedBy = "Đại diện khách hàng",
+                ClientAcceptanceSignedAt = DateTime.UtcNow,
                 Title = "Concept client approval",
                 Status = DesignReviewStatus.ClientApproved,
                 DesignManagerUserId = _userId,
@@ -254,6 +273,5 @@ public class ConceptOptionServiceTests : IDisposable
                 ],
             });
             await _db.SaveChangesAsync();
-        }
     }
 }

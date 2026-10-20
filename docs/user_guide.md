@@ -184,7 +184,7 @@ The platform is being developed incrementally. The following components are curr
 | Quotations, capability documents, and tenders | Implemented, including governed material-rate pricing, localized Excel quotation workbooks, and versioned Tender estimates |
 | Site survey digitization | Implemented, including project routing, structured conditions, CSV import, media/geolocation, Drive sync, and PDF export |
 | Customer contracts, appendices, attachments, and variation orders | Implemented |
-| Design management | Partial — projects, Concept/Basic/Shop/IFC, Project Documents with Drive sync, linked Team/Schedule, one-approver task completion, CC, internal comments linked to a dossier or one submitted file, Design Manager consolidation and client decision gates are delivered; in-drawing markup and full MS Project import remain target work |
+| Design management | Partial — projects, Concept options with typed revisions, files, client feedback and signed acceptance; Basic/Shop/IFC, Project Documents with Drive sync, linked Team/Schedule, one-approver task completion, CC, internal comments linked to a dossier or one submitted file, Design Manager consolidation and client decision gates are delivered; native 3D viewing, in-drawing markup and full MS Project import remain target work |
 | Permitting checklists | Partial — owner/deadline, lifecycle, submitted/issued documents, risk filters and a manual activation wizard are delivered; project-type permit templates and automatic applicable-list creation remain target work |
 | Construction management (tasks/Gantt and site diaries) | Partial — core tasks/diaries plus CM preparation/readiness, BCH resource/QA-QC/QS workspaces and Budget Baseline references are delivered; editable WBS/S-Curve baseline, reproducible delay alert, portfolio review and offline/reconnect remain target work |
 | Acceptance and handover | Partial — core records and CM review of QA/QC/QS are delivered; upstream/downstream QS payment eligibility, three-section dossier and complete handover gate remain target work |
@@ -891,13 +891,21 @@ Manage detailed construction drawings separated by discipline (Architecture, Str
 The current implementation manages drawing metadata, workflow status, revision
 reasons, and IFC distribution records. Basic Design and Shop Drawing records
 support managed binary upload plus authorized preview/download, and the
-Documents tab exposes those files. Concept options remain metadata-only: media,
-walkthrough video and Concept-option feedback are deferred. In the Reviews tab,
-an assigned recipient may comment on the whole submitted dossier or select one
+Documents tab exposes those files. For each Concept option, use the dossier
+panel to upload a 3D source model, perspective, site/roof plan, floor plans
+with floor names, section and presentation PDF. Images and PDFs can be previewed;
+source models can be downloaded. Correct a draft by detaching an incorrect file
+or checklist exception; the stored Project Document remains available. Record
+client feedback after submission to the client, then record a response before
+submitting a replacement R01+ revision. Submitted revisions stay frozen.
+In the Reviews tab, select the latest revision; the review uses exactly its
+files. After client approval, select a separate synced signed TK-M03 file and
+enter the client signatory and signing date. Finalize only that approved option.
+Native 3D viewing, walkthrough video and page/drawing markup remain target work.
+An assigned review recipient may comment on the whole submitted dossier or select one
 of its attached Project Documents. The selected file is recorded with the
 comment; other project files cannot be attached to that review. Existing
-general comments remain available. Page/drawing markup, immutable revision-file
-snapshots and a generated IFC package export are still deferred. DWG is not
+general comments remain available. A generated IFC package export is deferred. DWG is not
 rendered natively; preview depends on the supported managed
 file type and the server content endpoint.
 

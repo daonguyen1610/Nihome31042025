@@ -1,5 +1,5 @@
 import type { BoqConfiguration, BoqEntryRow } from "@/components/admin/BoqConfiguredEntry";
-import api, { withIdempotencyKey, withIfMatch } from "@/lib/api";
+import api, { newIdempotencyKey, withIdempotencyKey, withIfMatch } from "@/lib/api";
 
 const postIdempotent = <T>(url: string, body: unknown) =>
   api.post<T>(url, body, withIdempotencyKey(crypto.randomUUID()));
@@ -3643,6 +3643,11 @@ export interface DesignReviewResponse {
   designProjectId: number;
   stage: DesignReviewStage;
   revisionNumber: number;
+  conceptRevisionId?: number | null;
+  conceptOptionId?: number | null;
+  clientAcceptanceDocumentId?: number | null;
+  clientAcceptanceSignedBy?: string | null;
+  clientAcceptanceSignedAt?: string | null;
   title: string;
   status: DesignReviewStatus;
   designManagerUserId: number;
@@ -4039,6 +4044,36 @@ export interface ConceptOptionResponse {
   status: ConceptOptionStatus;
   createdAt: string;
   updatedAt: string;
+}
+
+export type ConceptArtifactKind =
+  "Model3D" | "Perspective" | "SiteRoofPlan" | "FloorPlan" | "Section" | "Presentation" | "Other";
+
+export interface ConceptRevisionResponse {
+  id: number;
+  conceptOptionId: number;
+  number: number;
+  createdAt: string;
+  frozenAt?: string | null;
+  artifacts: {
+    id: number;
+    projectDocumentId: number;
+    fileName: string;
+    kind: ConceptArtifactKind;
+    floorLabel?: string | null;
+    syncStatus: string;
+  }[];
+  waivers: { kind: ConceptArtifactKind; reason: string; createdAt: string }[];
+  feedback: {
+    id: number;
+    projectDocumentId?: number | null;
+    customerName: string;
+    channel: string;
+    occurredAt: string;
+    comment: string;
+    response?: string | null;
+    respondedAt?: string | null;
+  }[];
 }
 
 export interface ConceptOptionListResponse {
@@ -6693,6 +6728,7 @@ export const adminApi = {
       title: string;
       recipientUserIds: number[];
       projectDocumentIds: number[];
+      conceptRevisionId?: number | null;
     },
     key: string,
   ) =>
@@ -6754,10 +6790,18 @@ export const adminApi = {
     note: string | null,
     rowVersion: string,
     key: string,
+    acceptance?: { documentId: number; signedBy: string; signedAt: string },
   ) =>
     api.post<DesignReviewResponse>(
       `/design-projects/${projectId}/reviews/${reviewId}/client-decision`,
-      { decision, note, rowVersion },
+      {
+        decision,
+        note,
+        rowVersion,
+        clientAcceptanceDocumentId: acceptance?.documentId,
+        clientAcceptanceSignedBy: acceptance?.signedBy,
+        clientAcceptanceSignedAt: acceptance?.signedAt,
+      },
       { headers: { ...withIdempotencyKey(key).headers, ...withIfMatch(rowVersion).headers } },
     ),
 
@@ -6820,6 +6864,64 @@ export const adminApi = {
     api.delete(`/concept-options/${id}`, { data: body }),
   transitionConceptOption: (id: number, body: TransitionConceptOptionStatusRequest) =>
     api.post<ConceptOptionResponse>(`/concept-options/${id}/status`, body),
+  listConceptRevisions: (id: number) =>
+    api.get<ConceptRevisionResponse[]>(`/concept-options/${id}/revisions`),
+  createConceptRevision: (id: number) =>
+    api.post<ConceptRevisionResponse>(
+      `/concept-options/${id}/revisions`,
+      {},
+      withIdempotencyKey(newIdempotencyKey()),
+    ),
+  addConceptArtifact: (
+    id: number,
+    revisionId: number,
+    body: { projectDocumentId: number; kind: ConceptArtifactKind; floorLabel?: string | null },
+  ) =>
+    api.post<ConceptRevisionResponse>(
+      `/concept-options/${id}/revisions/${revisionId}/artifacts`,
+      body,
+      withIdempotencyKey(newIdempotencyKey()),
+    ),
+  removeConceptArtifact: (id: number, revisionId: number, artifactId: number) =>
+    api.delete<ConceptRevisionResponse>(
+      `/concept-options/${id}/revisions/${revisionId}/artifacts/${artifactId}`,
+    ),
+  waiveConceptChecklist: (
+    id: number,
+    revisionId: number,
+    body: { kind: ConceptArtifactKind; reason: string },
+  ) =>
+    api.post<ConceptRevisionResponse>(
+      `/concept-options/${id}/revisions/${revisionId}/waivers`,
+      body,
+      withIdempotencyKey(newIdempotencyKey()),
+    ),
+  removeConceptWaiver: (id: number, revisionId: number, kind: ConceptArtifactKind) =>
+    api.delete<ConceptRevisionResponse>(
+      `/concept-options/${id}/revisions/${revisionId}/waivers/${kind}`,
+    ),
+  addConceptFeedback: (
+    id: number,
+    revisionId: number,
+    body: {
+      customerName: string;
+      channel: string;
+      occurredAt: string;
+      comment: string;
+      projectDocumentId?: number | null;
+    },
+  ) =>
+    api.post<ConceptRevisionResponse>(
+      `/concept-options/${id}/revisions/${revisionId}/feedback`,
+      body,
+      withIdempotencyKey(newIdempotencyKey()),
+    ),
+  respondConceptFeedback: (id: number, revisionId: number, feedbackId: number, response: string) =>
+    api.post<ConceptRevisionResponse>(
+      `/concept-options/${id}/revisions/${revisionId}/feedback/${feedbackId}/response`,
+      { response },
+      withIdempotencyKey(newIdempotencyKey()),
+    ),
 
   // Basic Design docs (NIH-115)
   listBasicDesignDocs: (params: BasicDesignDocListParams = {}) => {

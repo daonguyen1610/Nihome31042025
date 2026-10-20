@@ -8,6 +8,64 @@ public sealed class DesignReviewsControllerTests : IntegrationTestBase
     public DesignReviewsControllerTests(NihomeWebApplicationFactory factory) : base(factory) { }
 
     [Fact]
+    public async Task ConceptDraft_CanCorrectFileAndWaiver_ButFrozenRevisionCannotChange()
+    {
+        var fixture = await CreateFixtureAsync();
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "DESIGN"));
+        using var revisions = await Client.GetAsync($"/api/concept-options/{fixture.ConceptOptionId}/revisions");
+        revisions.StatusCode.Should().Be(HttpStatusCode.OK);
+        var artifactId = (await ReadJsonAsync(revisions))[0].GetProperty("artifacts")
+            .EnumerateArray().Single(item => item.GetProperty("projectDocumentId").GetInt64() == fixture.DocumentId)
+            .GetProperty("id").GetInt32();
+        using var removed = await Client.DeleteAsync(
+            $"/api/concept-options/{fixture.ConceptOptionId}/revisions/{fixture.ConceptRevisionId}/artifacts/{artifactId}");
+        removed.StatusCode.Should().Be(HttpStatusCode.OK, await removed.Content.ReadAsStringAsync());
+        (await ReadJsonAsync(removed)).GetProperty("artifacts").GetArrayLength().Should().Be(1);
+
+        using var invalidFloor = await SendWithKeyAsync(HttpMethod.Post,
+            $"/api/concept-options/{fixture.ConceptOptionId}/revisions/{fixture.ConceptRevisionId}/artifacts", new
+            {
+                projectDocumentId = fixture.DocumentId,
+                kind = "FloorPlan",
+            });
+        invalidFloor.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        using var floor = await SendWithKeyAsync(HttpMethod.Post,
+            $"/api/concept-options/{fixture.ConceptOptionId}/revisions/{fixture.ConceptRevisionId}/artifacts", new
+            {
+                projectDocumentId = fixture.DocumentId,
+                kind = "FloorPlan",
+                floorLabel = "Tầng trệt",
+            });
+        floor.StatusCode.Should().Be(HttpStatusCode.BadRequest); // waiver must be removed first
+        using var removeWaiver = await Client.DeleteAsync(
+            $"/api/concept-options/{fixture.ConceptOptionId}/revisions/{fixture.ConceptRevisionId}/waivers/FloorPlan");
+        removeWaiver.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var addFloor = await SendWithKeyAsync(HttpMethod.Post,
+            $"/api/concept-options/{fixture.ConceptOptionId}/revisions/{fixture.ConceptRevisionId}/artifacts", new
+            {
+                projectDocumentId = fixture.DocumentId,
+                kind = "FloorPlan",
+                floorLabel = "Tầng trệt",
+            });
+        addFloor.StatusCode.Should().Be(HttpStatusCode.OK, await addFloor.Content.ReadAsStringAsync());
+        (await ReadJsonAsync(addFloor)).GetProperty("artifacts").EnumerateArray()
+            .Should().ContainSingle(item => item.GetProperty("floorLabel").GetString() == "Tầng trệt");
+
+        await WithDbAsync(async db =>
+        {
+            var revision = await db.ConceptRevisions.SingleAsync(item => item.Id == fixture.ConceptRevisionId);
+            revision.FrozenAt = DateTime.UtcNow;
+            await db.SaveChangesAsync();
+        });
+        using var afterFreeze = await Client.DeleteAsync(
+            $"/api/concept-options/{fixture.ConceptOptionId}/revisions/{fixture.ConceptRevisionId}/waivers/Section");
+        afterFreeze.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.ConceptChecklistWaivers.CountAsync(item =>
+            item.ConceptRevisionId == fixture.ConceptRevisionId && item.Kind == ConceptArtifactKind.Section)))
+            .Should().Be(1);
+    }
+
+    [Fact]
     public async Task Lifecycle_EnforcesApprovedTaskAndRecipientScopedCommenting()
     {
         var fixture = await CreateFixtureAsync();
@@ -19,7 +77,8 @@ public sealed class DesignReviewsControllerTests : IntegrationTestBase
                 stage = "Concept",
                 title = "Phương án Concept nhà máy NICON R01",
                 recipientUserIds = new[] { fixture.RecipientUserId },
-                projectDocumentIds = new[] { fixture.DocumentId },
+                projectDocumentIds = new[] { fixture.DocumentId, fixture.PerspectiveDocumentId },
+                conceptRevisionId = fixture.ConceptRevisionId,
             });
         create.StatusCode.Should().Be(HttpStatusCode.Created, await create.Content.ReadAsStringAsync());
         var created = await ReadJsonAsync(create);
@@ -54,7 +113,7 @@ public sealed class DesignReviewsControllerTests : IntegrationTestBase
             $"/api/design-projects/{fixture.DesignProjectId}/reviews/{reviewId}/comments", new
             {
                 body = "Không được gắn sang tài liệu ngoài đợt trình.",
-                projectDocumentId = fixture.DocumentId + 1,
+                projectDocumentId = fixture.AcceptanceDocumentId,
             });
         invalidDocument.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         (await WithDbAsync(db => db.DesignReviewComments.CountAsync(item =>
@@ -86,7 +145,8 @@ public sealed class DesignReviewsControllerTests : IntegrationTestBase
                 stage = "Concept",
                 title = "Concept R01 kiểm tra tính bất biến",
                 recipientUserIds = new[] { fixture.RecipientUserId },
-                projectDocumentIds = new[] { fixture.DocumentId },
+                projectDocumentIds = new[] { fixture.DocumentId, fixture.PerspectiveDocumentId },
+                conceptRevisionId = fixture.ConceptRevisionId,
             });
         create.EnsureSuccessStatusCode();
         var created = await ReadJsonAsync(create);
@@ -107,6 +167,100 @@ public sealed class DesignReviewsControllerTests : IntegrationTestBase
         submit.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         (await WithDbAsync(db => db.DesignReviews.Where(item => item.Id == reviewId)
             .Select(item => item.Status).SingleAsync())).Should().Be(DesignReviewStatus.Draft);
+    }
+
+    [Fact]
+    public async Task ConceptDecision_RequiresSignedAcceptanceAndPreservesRejectedState()
+    {
+        var fixture = await CreateFixtureAsync();
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "DESIGN"));
+        using var create = await SendWithKeyAsync(HttpMethod.Post,
+            $"/api/design-projects/{fixture.DesignProjectId}/reviews", new
+            {
+                stage = "Concept",
+                title = "Phương án kiến trúc NICON trình chủ đầu tư",
+                recipientUserIds = new[] { fixture.RecipientUserId },
+                projectDocumentIds = new[] { fixture.DocumentId, fixture.PerspectiveDocumentId },
+                conceptRevisionId = fixture.ConceptRevisionId,
+            });
+        create.StatusCode.Should().Be(HttpStatusCode.Created);
+        var review = await ReadJsonAsync(create);
+        var reviewId = review.GetProperty("id").GetInt32();
+        foreach (var action in new[] { "submit-internal", "consolidate", "submit-client" })
+        {
+            object body = action == "consolidate"
+                ? new { internalSummary = "Đã tổng hợp góp ý Kinh doanh.", rowVersion = review.GetProperty("rowVersion").GetString() }
+                : new { rowVersion = review.GetProperty("rowVersion").GetString() };
+            using var response = await SendWithKeyAsync(HttpMethod.Post,
+                $"/api/design-projects/{fixture.DesignProjectId}/reviews/{reviewId}/{action}", body);
+            response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
+            review = await ReadJsonAsync(response);
+        }
+
+        using var missing = await SendWithKeyAsync(HttpMethod.Post,
+            $"/api/design-projects/{fixture.DesignProjectId}/reviews/{reviewId}/client-decision", new
+            {
+                decision = "ClientApproved",
+                rowVersion = review.GetProperty("rowVersion").GetString(),
+            });
+        missing.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.DesignReviews.Where(item => item.Id == reviewId)
+            .Select(item => item.Status).SingleAsync())).Should().Be(DesignReviewStatus.SubmittedToClient);
+
+        using var feedback = await SendWithKeyAsync(HttpMethod.Post,
+            $"/api/concept-options/{fixture.ConceptOptionId}/revisions/{fixture.ConceptRevisionId}/feedback", new
+            {
+                customerName = "Ông Trần Minh",
+                channel = "Họp trực tiếp với chủ đầu tư",
+                occurredAt = DateTime.UtcNow,
+                comment = "Cần làm rõ lối tiếp cận sảnh chính.",
+                projectDocumentId = fixture.PerspectiveDocumentId,
+            });
+        feedback.StatusCode.Should().Be(HttpStatusCode.OK, await feedback.Content.ReadAsStringAsync());
+        var feedbackId = (await ReadJsonAsync(feedback)).GetProperty("feedback")[0].GetProperty("id").GetInt32();
+        using var responseToCustomer = await SendWithKeyAsync(HttpMethod.Post,
+            $"/api/concept-options/{fixture.ConceptOptionId}/revisions/{fixture.ConceptRevisionId}/feedback/{feedbackId}/response", new
+            {
+                response = "Đã bổ sung lối tiếp cận và gửi bản phối cảnh cập nhật để xác nhận.",
+            });
+        responseToCustomer.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var duplicateResponse = await SendWithKeyAsync(HttpMethod.Post,
+            $"/api/concept-options/{fixture.ConceptOptionId}/revisions/{fixture.ConceptRevisionId}/feedback/{feedbackId}/response", new
+            {
+                response = "Không được ghi đè lịch sử phản hồi.",
+            });
+        duplicateResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        using var approved = await SendWithKeyAsync(HttpMethod.Post,
+            $"/api/design-projects/{fixture.DesignProjectId}/reviews/{reviewId}/client-decision", new
+            {
+                decision = "ClientApproved",
+                clientAcceptanceDocumentId = fixture.AcceptanceDocumentId,
+                clientAcceptanceSignedBy = "Ông Trần Minh, đại diện chủ đầu tư",
+                clientAcceptanceSignedAt = DateTime.UtcNow,
+                rowVersion = review.GetProperty("rowVersion").GetString(),
+            });
+        approved.StatusCode.Should().Be(HttpStatusCode.OK, await approved.Content.ReadAsStringAsync());
+        (await ReadJsonAsync(approved)).GetProperty("clientAcceptanceDocumentId").GetInt64()
+            .Should().Be(fixture.AcceptanceDocumentId);
+    }
+
+    [Fact]
+    public async Task ConceptReview_RejectsUnselectedRevisionAndKeepsState()
+    {
+        var fixture = await CreateFixtureAsync();
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "DESIGN"));
+        using var create = await SendWithKeyAsync(HttpMethod.Post,
+            $"/api/design-projects/{fixture.DesignProjectId}/reviews", new
+            {
+                stage = "Concept",
+                title = "Không xác định phương án được duyệt",
+                recipientUserIds = new[] { fixture.RecipientUserId },
+                projectDocumentIds = new[] { fixture.DocumentId, fixture.PerspectiveDocumentId },
+            });
+        create.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.DesignReviews.CountAsync(item =>
+            item.DesignProjectId == fixture.DesignProjectId))).Should().Be(0);
     }
 
     private async Task<Fixture> CreateFixtureAsync() => await WithDbAsync(async db =>
@@ -143,7 +297,19 @@ public sealed class DesignReviewsControllerTests : IntegrationTestBase
         };
         db.DesignProjects.Add(designProject);
         var assignee = Member(operational.Id, manager.Id, manager.Id, "Kiến trúc sư");
+        assignee.Roles.Add(new OperationalProjectMemberRole
+        {
+            RoleCode = ProjectTeamRoleCode.Architect,
+            Scope = ProjectRoleScope.Project,
+            StartedAt = assignee.StartedAt,
+        });
         var approver = Member(operational.Id, lead.Id, manager.Id, "Design Lead");
+        approver.Roles.Add(new OperationalProjectMemberRole
+        {
+            RoleCode = ProjectTeamRoleCode.DesignLead,
+            Scope = ProjectRoleScope.Project,
+            StartedAt = approver.StartedAt,
+        });
         db.OperationalProjectMembers.AddRange(assignee, approver);
         await db.SaveChangesAsync();
         var phase = new DesignSchedulePhase
@@ -163,7 +329,7 @@ public sealed class DesignReviewsControllerTests : IntegrationTestBase
         {
             DesignProjectId = designProject.Id,
             Name = "Phương án Concept R01",
-            Status = ConceptOptionStatus.PresentedToClient,
+            Status = ConceptOptionStatus.Drafting,
             CreatedByUserId = manager.Id,
             UpdatedByUserId = manager.Id,
         };
@@ -206,7 +372,61 @@ public sealed class DesignReviewsControllerTests : IntegrationTestBase
         };
         db.ProjectDocuments.Add(document);
         await db.SaveChangesAsync();
-        return new Fixture(designProject.Id, recipient.Id, document.Id);
+        var perspective = new ProjectDocument
+        {
+            OperationalProjectId = operational.Id,
+            Category = ProjectDocumentCategory.DesignConcept,
+            SourceModule = ProjectDocumentSourceModule.Design,
+            SourceEntityType = nameof(ConceptOption),
+            SourceRecordId = concept.Id,
+            LocalPath = $"/files/project-documents/concept-perspective-{Guid.NewGuid():N}.jpg",
+            OriginalFileName = "NICON-Concept-phoi-canh.jpg",
+            ContentType = "image/jpeg",
+            Sha256 = new string('b', 64),
+            SyncStatus = ProjectDocumentSyncStatus.Synced,
+            CreatedByUserId = manager.Id,
+            UpdatedByUserId = manager.Id,
+        };
+        db.ProjectDocuments.Add(perspective);
+        await db.SaveChangesAsync();
+        var acceptance = new ProjectDocument
+        {
+            OperationalProjectId = operational.Id,
+            Category = ProjectDocumentCategory.DesignConcept,
+            SourceModule = ProjectDocumentSourceModule.Design,
+            SourceEntityType = nameof(ConceptOption),
+            SourceRecordId = concept.Id,
+            LocalPath = $"/files/project-documents/TK-M03-{Guid.NewGuid():N}.pdf",
+            OriginalFileName = "TK-M03-Concept-NICON-da-ky.pdf",
+            ContentType = "application/pdf",
+            Sha256 = new string('c', 64),
+            SyncStatus = ProjectDocumentSyncStatus.Synced,
+            CreatedByUserId = manager.Id,
+            UpdatedByUserId = manager.Id,
+        };
+        db.ProjectDocuments.Add(acceptance);
+        await db.SaveChangesAsync();
+        var revision = new ConceptRevision
+        {
+            ConceptOptionId = concept.Id,
+            Number = 0,
+            CreatedByUserId = manager.Id,
+            Artifacts =
+            [
+                new ConceptArtifact { ProjectDocumentId = document.Id, Kind = ConceptArtifactKind.Presentation, CreatedByUserId = manager.Id },
+                new ConceptArtifact { ProjectDocumentId = perspective.Id, Kind = ConceptArtifactKind.Perspective, CreatedByUserId = manager.Id },
+            ],
+            Waivers =
+            [
+                new ConceptChecklistWaiver { Kind = ConceptArtifactKind.SiteRoofPlan, Reason = "Không áp dụng trong fixture review", CreatedByUserId = manager.Id },
+                new ConceptChecklistWaiver { Kind = ConceptArtifactKind.FloorPlan, Reason = "Không áp dụng trong fixture review", CreatedByUserId = manager.Id },
+                new ConceptChecklistWaiver { Kind = ConceptArtifactKind.Section, Reason = "Không áp dụng trong fixture review", CreatedByUserId = manager.Id },
+            ],
+        };
+        db.ConceptRevisions.Add(revision);
+        await db.SaveChangesAsync();
+        return new Fixture(designProject.Id, concept.Id, recipient.Id, document.Id, perspective.Id,
+            acceptance.Id, revision.Id);
     });
 
     private static OperationalProjectMember Member(int projectId, int userId, int actorId, string position) => new()
@@ -229,5 +449,6 @@ public sealed class DesignReviewsControllerTests : IntegrationTestBase
         return await Client.SendAsync(request);
     }
 
-    private sealed record Fixture(int DesignProjectId, int RecipientUserId, long DocumentId);
+    private sealed record Fixture(int DesignProjectId, int ConceptOptionId, int RecipientUserId, long DocumentId,
+        long PerspectiveDocumentId, long AcceptanceDocumentId, int ConceptRevisionId);
 }

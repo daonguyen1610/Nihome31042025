@@ -18,6 +18,9 @@ public sealed class DesignReviewServiceTests : IDisposable
     private readonly int recipientId;
     private readonly int projectId;
     private readonly long documentId;
+    private readonly long perspectiveDocumentId;
+    private readonly long acceptanceDocumentId;
+    private readonly int conceptRevisionId;
 
     public DesignReviewServiceTests()
     {
@@ -46,7 +49,7 @@ public sealed class DesignReviewServiceTests : IDisposable
         {
             DesignProjectId = project.Id,
             Name = "Phương án kiến trúc NICON R01",
-            Status = ConceptOptionStatus.PresentedToClient,
+            Status = ConceptOptionStatus.Drafting,
         };
         var assignee = new OperationalProjectMember
         {
@@ -117,17 +120,66 @@ public sealed class DesignReviewServiceTests : IDisposable
             SyncStatus = ProjectDocumentSyncStatus.Synced,
         };
         db.Add(document);
+        var perspective = new ProjectDocument
+        {
+            OperationalProjectId = operational.Id,
+            Category = ProjectDocumentCategory.DesignConcept,
+            SourceModule = ProjectDocumentSourceModule.Design,
+            SourceEntityType = nameof(ConceptOption),
+            SourceRecordId = concept.Id,
+            LocalPath = "/files/project-documents/concept-perspective.jpg",
+            OriginalFileName = "Phối cảnh văn phòng NICON.jpg",
+            ContentType = "image/jpeg",
+            Sha256 = new string('b', 64),
+            SyncStatus = ProjectDocumentSyncStatus.Synced,
+        };
+        var acceptance = new ProjectDocument
+        {
+            OperationalProjectId = operational.Id,
+            Category = ProjectDocumentCategory.DesignConcept,
+            SourceModule = ProjectDocumentSourceModule.Design,
+            SourceEntityType = nameof(ConceptOption),
+            SourceRecordId = concept.Id,
+            LocalPath = "/files/project-documents/TK-M03.pdf",
+            OriginalFileName = "TK-M03-NICON-da-ky.pdf",
+            ContentType = "application/pdf",
+            Sha256 = new string('c', 64),
+            SyncStatus = ProjectDocumentSyncStatus.Synced,
+        };
+        db.AddRange(perspective, acceptance);
+        db.SaveChanges();
+        var revision = new ConceptRevision
+        {
+            ConceptOptionId = concept.Id,
+            Number = 0,
+            CreatedByUserId = manager.Id,
+            Artifacts =
+            [
+                new ConceptArtifact { ProjectDocumentId = document.Id, Kind = ConceptArtifactKind.Presentation, CreatedByUserId = manager.Id },
+                new ConceptArtifact { ProjectDocumentId = perspective.Id, Kind = ConceptArtifactKind.Perspective, CreatedByUserId = manager.Id },
+            ],
+            Waivers =
+            [
+                new ConceptChecklistWaiver { Kind = ConceptArtifactKind.SiteRoofPlan, Reason = "Không áp dụng cho hồ sơ thử nghiệm", CreatedByUserId = manager.Id },
+                new ConceptChecklistWaiver { Kind = ConceptArtifactKind.FloorPlan, Reason = "Không áp dụng cho hồ sơ thử nghiệm", CreatedByUserId = manager.Id },
+                new ConceptChecklistWaiver { Kind = ConceptArtifactKind.Section, Reason = "Không áp dụng cho hồ sơ thử nghiệm", CreatedByUserId = manager.Id },
+            ],
+        };
+        db.Add(revision);
         db.SaveChanges();
         managerId = manager.Id;
         recipientId = recipient.Id;
         projectId = project.Id;
         documentId = document.Id;
+        perspectiveDocumentId = perspective.Id;
+        acceptanceDocumentId = acceptance.Id;
+        conceptRevisionId = revision.Id;
         var access = new Mock<IProjectAccessService>();
         access.Setup(item => item.CanViewDesignProjectAsync(It.IsAny<int>(), projectId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
         access.Setup(item => item.HasAdministrativeBypassAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
-        service = new DesignReviewService(db, access.Object, new Mock<INotificationService>().Object,
+        service = new DesignReviewService(db, new ConceptDossierService(db), access.Object, new Mock<INotificationService>().Object,
             NullLogger<DesignReviewService>.Instance);
     }
 
@@ -139,7 +191,8 @@ public sealed class DesignReviewServiceTests : IDisposable
             Stage = "Concept",
             Title = "Phương án Concept R01",
             RecipientUserIds = [recipientId],
-            ProjectDocumentIds = [documentId],
+            ProjectDocumentIds = [documentId, perspectiveDocumentId],
+            ConceptRevisionId = conceptRevisionId,
         }, managerId, default);
         Assert.Equal("Draft", created.Status);
 
@@ -160,7 +213,13 @@ public sealed class DesignReviewServiceTests : IDisposable
         var clientSubmitted = await service.SubmitClientAsync(projectId, created.Id, "", managerId, default);
         Assert.Equal("SubmittedToClient", clientSubmitted!.Status);
         var approved = await service.RecordClientDecisionAsync(projectId, created.Id,
-            new RecordDesignClientDecisionRequest { Decision = "ClientApproved", RowVersion = "" }, managerId, default);
+            new RecordDesignClientDecisionRequest
+            {
+                Decision = "ClientApproved", RowVersion = "",
+                ClientAcceptanceDocumentId = acceptanceDocumentId,
+                ClientAcceptanceSignedBy = "Đại diện chủ đầu tư",
+                ClientAcceptanceSignedAt = DateTime.UtcNow,
+            }, managerId, default);
         Assert.Equal("ClientApproved", approved!.Status);
     }
 
@@ -225,7 +284,8 @@ public sealed class DesignReviewServiceTests : IDisposable
             Stage = "Concept",
             Title = "Phương án Concept R01",
             RecipientUserIds = [recipientId],
-            ProjectDocumentIds = [documentId],
+            ProjectDocumentIds = [documentId, perspectiveDocumentId],
+            ConceptRevisionId = conceptRevisionId,
         }, managerId, default);
 
     private ApplicationUser User(string email, string name, Role? role = null)

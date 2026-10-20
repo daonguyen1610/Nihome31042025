@@ -1112,6 +1112,139 @@ namespace nihomebackend.Migrations
                     b.ToTable("client_logos", (string)null);
                 });
 
+            modelBuilder.Entity("NihomeBackend.Models.ConceptArtifact", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ConceptRevisionId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("FloorLabel")
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<long>("ProjectDocumentId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProjectDocumentId")
+                        .IsUnique();
+
+                    b.HasIndex("ConceptRevisionId", "ProjectDocumentId")
+                        .IsUnique();
+
+                    b.ToTable("concept_artifacts", (string)null);
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.ConceptChecklistWaiver", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ConceptRevisionId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConceptRevisionId", "Kind")
+                        .IsUnique();
+
+                    b.ToTable("concept_checklist_waivers", (string)null);
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.ConceptFeedback", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Channel")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<string>("Comment")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<int>("ConceptRevisionId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CustomerName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime>("OccurredAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long?>("ProjectDocumentId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime?>("RespondedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("RespondedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Response")
+                        .IsConcurrencyToken()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProjectDocumentId");
+
+                    b.HasIndex("ConceptRevisionId", "CreatedAt");
+
+                    b.ToTable("concept_feedback", (string)null);
+                });
+
             modelBuilder.Entity("NihomeBackend.Models.ConceptOption", b =>
                 {
                     b.Property<int>("Id")
@@ -1161,13 +1294,46 @@ namespace nihomebackend.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("DesignProjectId");
+                    b.HasIndex("DesignProjectId")
+                        .IsUnique()
+                        .HasFilter("[Status] = 'Finalized'");
 
                     b.HasIndex("OwnerUserId");
 
                     b.HasIndex("Status");
 
                     b.ToTable("concept_options", (string)null);
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.ConceptRevision", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ConceptOptionId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("FrozenAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Number")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConceptOptionId", "Number")
+                        .IsUnique();
+
+                    b.ToTable("concept_revisions", (string)null);
                 });
 
             modelBuilder.Entity("NihomeBackend.Models.ConstructionPreparation", b =>
@@ -3134,6 +3300,16 @@ namespace nihomebackend.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<long?>("ClientAcceptanceDocumentId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime?>("ClientAcceptanceSignedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ClientAcceptanceSignedBy")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
                     b.Property<DateTime?>("ClientDecidedAt")
                         .HasColumnType("datetime2");
 
@@ -3146,6 +3322,9 @@ namespace nihomebackend.Migrations
 
                     b.Property<DateTime?>("ClientSubmittedAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<int?>("ConceptRevisionId")
+                        .HasColumnType("int");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -3197,6 +3376,10 @@ namespace nihomebackend.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ClientAcceptanceDocumentId");
+
+                    b.HasIndex("ConceptRevisionId");
 
                     b.HasIndex("DesignManagerUserId");
 
@@ -11235,6 +11418,54 @@ namespace nihomebackend.Migrations
                     b.Navigation("UploadedBy");
                 });
 
+            modelBuilder.Entity("NihomeBackend.Models.ConceptArtifact", b =>
+                {
+                    b.HasOne("NihomeBackend.Models.ConceptRevision", "ConceptRevision")
+                        .WithMany("Artifacts")
+                        .HasForeignKey("ConceptRevisionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("NihomeBackend.Models.ProjectDocument", "ProjectDocument")
+                        .WithMany()
+                        .HasForeignKey("ProjectDocumentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ConceptRevision");
+
+                    b.Navigation("ProjectDocument");
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.ConceptChecklistWaiver", b =>
+                {
+                    b.HasOne("NihomeBackend.Models.ConceptRevision", "ConceptRevision")
+                        .WithMany("Waivers")
+                        .HasForeignKey("ConceptRevisionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ConceptRevision");
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.ConceptFeedback", b =>
+                {
+                    b.HasOne("NihomeBackend.Models.ConceptRevision", "ConceptRevision")
+                        .WithMany("Feedback")
+                        .HasForeignKey("ConceptRevisionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("NihomeBackend.Models.ProjectDocument", "ProjectDocument")
+                        .WithMany()
+                        .HasForeignKey("ProjectDocumentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("ConceptRevision");
+
+                    b.Navigation("ProjectDocument");
+                });
+
             modelBuilder.Entity("NihomeBackend.Models.ConceptOption", b =>
                 {
                     b.HasOne("NihomeBackend.Models.DesignProject", "DesignProject")
@@ -11251,6 +11482,17 @@ namespace nihomebackend.Migrations
                     b.Navigation("DesignProject");
 
                     b.Navigation("Owner");
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.ConceptRevision", b =>
+                {
+                    b.HasOne("NihomeBackend.Models.ConceptOption", "ConceptOption")
+                        .WithMany()
+                        .HasForeignKey("ConceptOptionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ConceptOption");
                 });
 
             modelBuilder.Entity("NihomeBackend.Models.ConstructionPreparation", b =>
@@ -11984,6 +12226,16 @@ namespace nihomebackend.Migrations
 
             modelBuilder.Entity("NihomeBackend.Models.DesignReview", b =>
                 {
+                    b.HasOne("NihomeBackend.Models.ProjectDocument", "ClientAcceptanceDocument")
+                        .WithMany()
+                        .HasForeignKey("ClientAcceptanceDocumentId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("NihomeBackend.Models.ConceptRevision", "ConceptRevision")
+                        .WithMany()
+                        .HasForeignKey("ConceptRevisionId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
                     b.HasOne("NihomeBackend.Models.ApplicationUser", "DesignManager")
                         .WithMany()
                         .HasForeignKey("DesignManagerUserId")
@@ -11995,6 +12247,10 @@ namespace nihomebackend.Migrations
                         .HasForeignKey("DesignProjectId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("ClientAcceptanceDocument");
+
+                    b.Navigation("ConceptRevision");
 
                     b.Navigation("DesignManager");
 
@@ -14230,6 +14486,15 @@ namespace nihomebackend.Migrations
             modelBuilder.Entity("NihomeBackend.Models.CapabilityDocument", b =>
                 {
                     b.Navigation("Versions");
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.ConceptRevision", b =>
+                {
+                    b.Navigation("Artifacts");
+
+                    b.Navigation("Feedback");
+
+                    b.Navigation("Waivers");
                 });
 
             modelBuilder.Entity("NihomeBackend.Models.ConstructionQsBatch", b =>
