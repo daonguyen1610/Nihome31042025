@@ -643,6 +643,38 @@ Biểu mẫu, danh mục và tham số chỉ có NICON nắm giữ vẫn cần h
 11. Đội ngũ và Tiến độ Thiết kế dùng một màn hình hay hai tab liên kết; phạm vi
     import MS Project.
 
+**Đối chiếu Q-01–Q-11 với ISO nhận ngày 20/10/2026.** Các file nguồn liên quan:
+[KH](<Nicon/ISO/D.Quy trình chi tiết/D.1. Quy trình phát triển và chăm sóc khách hàng/Quy trinh phat trien va cham soc khach hang.doc>),
+[DT-M06](<Nicon/ISO/D.Quy trình chi tiết/D.2. Quy trình đấu thầu/DT-M06-Giay giao viec.doc>),
+[TK](<Nicon/ISO/D.Quy trình chi tiết/D.3. Quy trình thiết kế/Quy trình thiết kế.doc>),
+[TC](<Nicon/ISO/D.Quy trình chi tiết/D.4. Quy trình thi công lắp đặt/Quy trình thi công lắp đặt.doc>),
+[MH](<Nicon/ISO/D.Quy trình chi tiết/D.7. Quy trình mua hàng, đánh giá nhà cung ứng, thầu phụ- co chinh sua/Quy trình mua hàng, đánh giá NCC.doc>),
+[NS2](<Nicon/ISO/D.Quy trình chi tiết/D.10. Quy trình QLNS 2-Báo cáo và đánh giá công việc/Quy trình báo cáo công việc.doc>)
+và [NS2-M01](<Nicon/ISO/D.Quy trình chi tiết/D.10. Quy trình QLNS 2-Báo cáo và đánh giá công việc/NS2-M01.xlsx>).
+ISO ghi luồng tác nghiệp lịch sử và biểu mẫu, không tự phê duyệt các quyền, cấu
+hình hay trạng thái số hóa trong câu hỏi dưới đây. Cột cuối là phần còn cần
+người được NICON ủy quyền quyết định, không phải kết luận rằng chưa có nghiệp
+vụ tương ứng.
+
+| Câu hỏi | Bằng chứng ISO đã thấy | Phần ISO chưa chốt cho sản phẩm |
+|---|---|---|
+| Q-01 | KH chuyển từ TKSB/báo giá sang thương thảo rồi ký hợp đồng. | Chuyển/gắn nhóm việc đã tạo trước hợp đồng và phân bổ khi nhiều hợp đồng. |
+| Q-02 | NS2 yêu cầu báo cáo ngày/tuần/tháng; trưởng bộ phận đánh giá, tổng hợp gửi BGĐ. NS2-M01 có 11 tiêu chí chấm 1–5 và ô tổng KPI. | Có bắt buộc duyệt từng việc nội bộ không; cách tính, trọng số, kỳ khóa và liên kết điểm với KPI phần mềm. |
+| Q-03 | DT-M06 có người đề nghị giao việc và ý kiến trưởng các phòng/BGĐ. | Ai được tạo giao việc liên phòng trên Dự án/Cơ hội và ngoại lệ của admin. |
+| Q-04 | MH nhắc Kế toán đặt hàng, đồng thời nhắc bộ phận mua hàng trong HCNS; đó là tổ chức của quy trình cũ. | Vị trí Cung ứng và Pháp lý trong năm phòng baseline mới. |
+| Q-05 | Không thấy quy ước cấp mã Dự án trong bộ ISO. | Cú pháp, thành phần, thời điểm khóa và xử lý trùng. |
+| Q-06 | TK có các bước trình TKSB/TKCS/TKKTTC cho khách hoặc cơ quan, kèm bàn giao/nghiệm thu. | Quyền bình luận và yêu cầu đồng ý ở vòng trình **nội bộ** trên hệ thống. |
+| Q-07 | Không thấy quy tắc CC trưởng/phó phòng TK cho mọi Dự án. | CC mặc định, phạm vi và quyền xem tương ứng. |
+| Q-08 | Quy trình kiểm soát tài liệu có phát hành/sửa đổi/lưu hồ sơ; không thấy quyền xóa hồ sơ bị bác. | Người được xóa, hồ sơ đã trình khách và bằng chứng/xử lý bản đã phát hành. |
+| Q-09 | KH nói mẫu xin phép theo quy định từng loại giấy phép; TK nêu XD, PCCC, môi trường. | Ma trận bắt buộc theo loại/quy mô dự án và điều kiện miễn/ngoại lệ. |
+| Q-10 | TK giao trách nhiệm theo phòng KD/TK, không tách Design Lead và Design Manager. | Quyền duyệt đầu việc so với quyền chốt phương án/chuyển giai đoạn. |
+| Q-11 | Không thấy quy tắc UI hay định dạng MS Project trong ISO. | Thiết kế tab và hợp đồng import calendar, baseline, WBS, predecessor, resource. |
+
+Q-06 đã có định hướng **xem và bình luận khi được chỉ định** ở biên bản
+03/10/2026; phần chưa chốt là liệu mọi người nhận trình có phải đồng ý trước
+khi Design Manager trình khách hay không. Không dùng bước trình khách trong TK
+để suy ra một vòng duyệt nội bộ mới.
+
 Ngoài ra, NICON cần chốt:
 
 1. Hoàn tất mapping bộ ISO đã nhận trong `docs/Nicon/ISO/` cho checklist/cổng
@@ -658,6 +690,24 @@ Ngoài ra, NICON cần chốt:
 6. Migration `DesignProjectId` → `OperationalProjectId` cho Module 2/3/4.
 7. Migration cây Drive cho `01_Khao_sat`.
 8. KPI definition, target và source cho các vị trí còn thiếu.
+
+**Đối chiếu các đầu vào còn lại:** TC có BCH, trình shop/vật liệu, nhật ký và
+nghiệm thu nội bộ, nhưng không cung cấp ma trận checklist theo loại công trình,
+toàn bộ form được dẫn chiếu hoặc gate khởi công hiện hành. Biểu mẫu
+[TC-M07](<Nicon/ISO/D.Quy trình chi tiết/D.4. Quy trình thi công lắp đặt/TC-M07-Bao cao cong truong.doc>)
+ghi tỷ lệ hoàn thành so với toàn công trình, không có công thức/kỳ chốt
+Baseline S-Curve hay ngưỡng trễ 5%; con số 5% trong mẫu thanh toán là khoản giữ
+lại bảo hành hoặc điều khoản hợp đồng mẫu, không phải ngưỡng tiến độ. TC, MH và
+[TQT](<Nicon/ISO/D.Quy trình chi tiết/D.6. Quy trình thanh toán, quyết toán công trình/Quy trình thanh quyết toán.doc>)
+có các bước ký duyệt và chứng từ cho vật tư, thầu phụ, tạm ứng và thanh toán
+theo khối lượng; chưa có ma trận thẩm quyền hiện hành cho MR/QA/HSE/QS/VO hoặc
+ma trận chứng từ đủ bốn loại Downstream package. TQT phân biệt tạm ứng theo
+điều khoản hợp đồng với đợt thanh toán khối lượng; MH cho phép yêu cầu trả
+trước khi nhận hàng. Không áp gate nghiệm thu khối lượng cho tạm ứng chỉ vì có
+mẫu chung. ISO không định nghĩa dải BOQ 85/95/>100, migration ID, migration
+Drive hay cấu hình KPI cho đủ vị trí. NS2-M01 là nguồn **11 tiêu chí đánh giá cá
+nhân** lịch sử, không phải khung **11 vị trí KPI** trong PRD; không đồng nhất
+hai bộ 11 này.
 
 Không khóa thiết kế dữ liệu hoặc tuyên bố business-ready cho phần phụ thuộc cho
 tới khi chủ sở hữu nghiệp vụ chấp thuận các quyết định tương ứng.

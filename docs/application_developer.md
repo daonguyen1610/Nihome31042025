@@ -2977,11 +2977,17 @@ The file-level ISO cross-check gives these source-to-workflow anchors:
 | `D.7` purchasing (`MH`) and `D.8` equipment (`LK`) | `MH-M01`–`MH-M08` for requests, quotations, orders and supplier review; `LK-M01`–`LK-M08` for equipment receipt, issue and maintenance | `MH-M03` contains proposal/order sheets and a completed example. `MH-M04` payment request prints `MH-BM02` inside, the same internal code as `MH-M02` quotation request. The procedure permits a supplier payment request before receipt against an order; FA/CM must resolve that case separately from accepted-quantity matching |
 | `C.1` document control (`QTC-KSTLHS`) | Document issue, revision and record control with `BM 01`–`BM 07` files | Confirm authorized release, supersession, retention and current ISO revision before publishing templates |
 | `C.2` internal audit and `C.3` improvement | Audit schedule/findings/corrective actions and nonconformity handling, with accompanying `BM` files | Confirm current ownership, severity and closure rules; these are source processes, not delivered audit modules |
-| `D.9`–`D.11` HR (`NS1`–`NS3`) | Recruitment/training, work reporting, leave and resignation records | `NS1-M05`/`NS1-M06` are referenced for training but absent; `NS1-M03`/`NS1-M04` are PDFs without extensions. Confirm current HR policy and access before mapping personal records |
+| `D.9`–`D.11` HR (`NS1`–`NS3`) | Recruitment/training, work reporting, leave and resignation records. `NS2` calls for daily/weekly/monthly reports reviewed by department heads and summarized for management; `NS2-M01` has 11 scored individual criteria | `NS1-M05`/`NS1-M06` are referenced for training but absent; `NS1-M03`/`NS1-M04` are PDFs without extensions. `NS2` does not define approval of each internal task or the software KPI calculation. Confirm current HR policy and access before mapping personal records |
 
 The `TC` and `TQT` source procedures show effective dates in 2016 and 2020
 respectively. Their role names, submission weekdays and retention periods are
 historical source content, not automatically approved current product rules.
+The ISO answer-by-question review is recorded in `Nicon-QLVH.md` section 12:
+its historical process steps answer parts of the handoff, reporting and payment
+questions, while product permissions, matrices, formulas and migration rules
+remain open. In particular, the 11 individual scoring criteria in `NS2-M01`
+are distinct from the PRD's 11 target KPI positions, and the 5% retention or
+contract-example figures do not specify a schedule-variance alert formula.
 The older construction procedure starts from a tender result/approved price,
 while the current contract requires a signed Upstream contract and a separate
 server start gate; the older purchasing procedure assigns ordering to Accounting,
