@@ -147,7 +147,15 @@ public sealed class DesignReviewService(
             throw new DesignReviewOperationException("Chỉ bình luận được khi hồ sơ đang trình nội bộ.");
         var body = request.Body?.Trim() ?? string.Empty;
         if (body.Length == 0) throw new DesignReviewOperationException("Nội dung bình luận là bắt buộc.");
-        review.Comments.Add(new DesignReviewComment { AuthorUserId = callerUserId, Body = body });
+        if (request.ProjectDocumentId.HasValue &&
+            !review.Documents.Any(document => document.ProjectDocumentId == request.ProjectDocumentId.Value))
+            throw new DesignReviewOperationException("Tài liệu bình luận phải thuộc hồ sơ trình nội bộ này.");
+        review.Comments.Add(new DesignReviewComment
+        {
+            AuthorUserId = callerUserId,
+            Body = body,
+            ProjectDocumentId = request.ProjectDocumentId,
+        });
         Touch(review, callerUserId);
         await db.SaveChangesAsync(ct);
         return Map(await LoadAsync(projectId, reviewId, ct), callerUserId, canManage);
@@ -413,6 +421,7 @@ public sealed class DesignReviewService(
         Comments = item.Comments.OrderBy(comment => comment.CreatedAt).Select(comment => new DesignReviewCommentResponse
         {
             Id = comment.Id,
+            ProjectDocumentId = comment.ProjectDocumentId,
             AuthorUserId = comment.AuthorUserId,
             AuthorName = comment.Author.FullName ?? comment.Author.Email,
             Body = comment.Body,

@@ -42,6 +42,7 @@ public sealed class DesignReviewRecipientResponse
 public sealed class DesignReviewCommentResponse
 {
     public long Id { get; set; }
+    public long? ProjectDocumentId { get; set; }
     public int AuthorUserId { get; set; }
     public string AuthorName { get; set; } = string.Empty;
     public string Body { get; set; } = string.Empty;

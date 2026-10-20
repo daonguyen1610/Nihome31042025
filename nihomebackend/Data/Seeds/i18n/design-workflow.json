@@ -30,6 +30,8 @@
   {"key":"designProjects.reviews.notePlaceholder","category":"design-projects","vi":"Bình luận, nội dung tổng hợp hoặc lý do quyết định","en":"Comment, consolidated summary, or decision reason","zh":"评论、汇总内容或决定理由","ja":"コメント、集約内容、決定理由"},
   {"key":"designProjects.reviews.submitInternal","category":"design-projects","vi":"Trình nội bộ","en":"Circulate internally","zh":"内部评审","ja":"社内回覧"},
   {"key":"designProjects.reviews.comment","category":"design-projects","vi":"Gửi bình luận","en":"Post comment","zh":"发表评论","ja":"コメント送信"},
+  {"key":"designProjects.reviews.commentTarget","category":"design-projects","vi":"Bình luận cho","en":"Comment on","zh":"评论对象","ja":"コメント対象"},
+  {"key":"designProjects.reviews.generalComment","category":"design-projects","vi":"Toàn bộ hồ sơ","en":"Whole dossier","zh":"整套文件","ja":"書類全体"},
   {"key":"designProjects.reviews.consolidate","category":"design-projects","vi":"Tổng hợp ý kiến","en":"Consolidate feedback","zh":"汇总意见","ja":"意見を集約"},
   {"key":"designProjects.reviews.submitClient","category":"design-projects","vi":"Ghi nhận đã trình khách","en":"Mark submitted to client","zh":"标记已提交客户","ja":"顧客提出済みにする"},
   {"key":"designProjects.reviews.approve","category":"design-projects","vi":"Khách duyệt","en":"Client approved","zh":"客户批准","ja":"顧客承認"},

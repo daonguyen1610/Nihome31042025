@@ -2036,8 +2036,15 @@ Design dossier circulation is exposed at
 `/api/design-projects/{projectId}/reviews`. A Design Manager creates a revision
 with designated internal recipients and Project Document IDs from the matching
 Design category. Recipients can only list their assigned reviews and comment
-while the review is internal. The Design Manager consolidates feedback, records
-submission to the client, and records the client decision. Concept finalization,
+while the review is internal. `POST .../{reviewId}/comments` accepts an optional
+`projectDocumentId`; when present it must be one of that review's submitted
+documents. A missing/null ID keeps the existing dossier-level comment behavior.
+The response returns the ID with each comment. The nullable column and composite
+foreign key in `LinkDesignReviewCommentsToDocuments` retain old comments and
+prevent a file link to another review. Rehearse this migration against existing
+review data before deployment; rollback drops only the new file links. The
+Design Manager consolidates feedback, records submission to the client, and
+records the client decision. Concept finalization,
 Basic-to-Shop unlock, and IFC release require the latest matching review to be
 `ClientApproved`.
 

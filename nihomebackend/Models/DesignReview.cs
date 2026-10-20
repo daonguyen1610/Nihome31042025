@@ -58,6 +58,7 @@ public class DesignReviewComment
     public long Id { get; set; }
     public int DesignReviewId { get; set; }
     public DesignReview DesignReview { get; set; } = null!;
+    public long? ProjectDocumentId { get; set; }
     public int AuthorUserId { get; set; }
     public ApplicationUser Author { get; set; } = null!;
     public string Body { get; set; } = string.Empty;

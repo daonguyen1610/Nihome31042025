@@ -68,6 +68,7 @@ export const DesignReviewsTab = ({ project }: Props) => {
   const [recipientIds, setRecipientIds] = useState<number[]>([]);
   const [documentIds, setDocumentIds] = useState<number[]>([]);
   const [notes, setNotes] = useState<Record<number, string>>({});
+  const [commentDocumentIds, setCommentDocumentIds] = useState<Record<number, string>>({});
   const createKey = useRef(newIdempotencyKey());
 
   const load = useCallback(async () => {
@@ -180,7 +181,15 @@ export const DesignReviewsTab = ({ project }: Props) => {
       if (action === "internal")
         await adminApi.submitDesignReviewInternal(project.id, review.id, review.rowVersion, key);
       else if (action === "comment")
-        await adminApi.commentDesignReview(project.id, review.id, note, key);
+        await adminApi.commentDesignReview(
+          project.id,
+          review.id,
+          note,
+          commentDocumentIds[review.id] && commentDocumentIds[review.id] !== "general"
+            ? Number(commentDocumentIds[review.id])
+            : null,
+          key,
+        );
       else if (action === "consolidate")
         await adminApi.consolidateDesignReview(project.id, review.id, note, review.rowVersion, key);
       else if (action === "client")
@@ -199,6 +208,8 @@ export const DesignReviewsTab = ({ project }: Props) => {
           key,
         );
       setNotes((current) => ({ ...current, [review.id]: "" }));
+      if (action === "comment")
+        setCommentDocumentIds((current) => ({ ...current, [review.id]: "general" }));
       await load();
     } catch (reason) {
       setError(extractApiError(reason));
@@ -291,6 +302,13 @@ export const DesignReviewsTab = ({ project }: Props) => {
                       <span>{comment.authorName}</span>
                       <time>{new Date(comment.createdAt).toLocaleString(lang)}</time>
                     </div>
+                    <p className="mt-1 text-xs font-medium text-slate-600">
+                      {comment.projectDocumentId
+                        ? review.documents.find(
+                            (document) => document.projectDocumentId === comment.projectDocumentId,
+                          )?.originalFileName
+                        : t("designProjects.reviews.generalComment")}
+                    </p>
                     <p className="mt-1 whitespace-pre-wrap break-words">{comment.body}</p>
                   </div>
                 ))}
@@ -313,6 +331,34 @@ export const DesignReviewsTab = ({ project }: Props) => {
                   setNotes((current) => ({ ...current, [review.id]: event.target.value }))
                 }
               />
+            ) : null}
+            {review.canComment && review.status === "InternalReview" ? (
+              <div className="mt-3 max-w-sm">
+                <Label>{t("designProjects.reviews.commentTarget")}</Label>
+                <Select
+                  value={commentDocumentIds[review.id] ?? "general"}
+                  onValueChange={(value) =>
+                    setCommentDocumentIds((current) => ({ ...current, [review.id]: value }))
+                  }
+                >
+                  <SelectTrigger className="mt-1 min-h-11">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="general">
+                      {t("designProjects.reviews.generalComment")}
+                    </SelectItem>
+                    {review.documents.map((document) => (
+                      <SelectItem
+                        key={document.projectDocumentId}
+                        value={String(document.projectDocumentId)}
+                      >
+                        {document.originalFileName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             ) : null}
             <div className="mt-3 flex flex-wrap gap-2">
               {review.canManage && review.status === "Draft" ? (

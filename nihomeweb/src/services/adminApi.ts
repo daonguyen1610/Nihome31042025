@@ -3611,6 +3611,7 @@ export interface DesignReviewResponse {
   recipients: { userId: number; name: string }[];
   comments: {
     id: number;
+    projectDocumentId?: number | null;
     authorUserId: number;
     authorName: string;
     body: string;
@@ -6621,10 +6622,16 @@ export const adminApi = {
       { rowVersion },
       { headers: { ...withIdempotencyKey(key).headers, ...withIfMatch(rowVersion).headers } },
     ),
-  commentDesignReview: (projectId: number, reviewId: number, body: string, key: string) =>
+  commentDesignReview: (
+    projectId: number,
+    reviewId: number,
+    body: string,
+    projectDocumentId: number | null,
+    key: string,
+  ) =>
     api.post<DesignReviewResponse>(
       `/design-projects/${projectId}/reviews/${reviewId}/comments`,
-      { body },
+      { body, projectDocumentId },
       withIdempotencyKey(key),
     ),
   consolidateDesignReview: (
