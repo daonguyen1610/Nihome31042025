@@ -515,7 +515,9 @@ public sealed class FinanceService(AppDbContext db, IProjectAccessService projec
             throw new FinanceOperationException("Số hóa đơn nhà cung cấp đã tồn tại.");
         if (request.ReceivedAt!.Value.ToUniversalTime() > DateTime.UtcNow.AddMinutes(5))
             throw new FinanceOperationException("Thời điểm nhận hóa đơn không được ở tương lai.");
-        if (request.InvoiceDate!.Value > DateOnly.FromDateTime(request.ReceivedAt.Value))
+        var receivedDateInVietnam = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(
+            request.ReceivedAt.Value.ToUniversalTime(), TimeZoneInfo.FindSystemTimeZoneById("Asia/Ho_Chi_Minh")));
+        if (request.InvoiceDate!.Value > receivedDateInVietnam)
             throw new FinanceOperationException("Ngày hóa đơn không được sau thời điểm nhận.");
         foreach (var attachment in request.Attachments)
             ValidateAttachment(attachment);

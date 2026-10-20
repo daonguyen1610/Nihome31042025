@@ -1442,7 +1442,9 @@ valid for advances or other stages whose document rules are still to be agreed;
 this link alone does not certify an ISO payment dossier or authorize payment.
 The Finance screen uses the authorized `PUT /finance/payment-requests/{id}` for
 Draft edits with the current row version and preserves attachment, milestone
-and QS selections. A superseded QS is shown as unavailable in the editor.
+and QS selections. Invoice date validation compares the date of `ReceivedAt`
+in the `Asia/Ho_Chi_Minh` business timezone, including when the UTC timestamp
+falls on the preceding day. A superseded QS is shown as unavailable in the editor.
 `POST /finance/payment-requests/{id}/revise` requires `finance.payments.manage`,
 a reason, idempotency key and current row version. It applies to submitted,
 rejected or approved but unpaid requests. Submitted and approved requests can
