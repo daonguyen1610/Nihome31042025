@@ -20,6 +20,13 @@ return null without exposing counts or source IDs; payment uses existing
 Contract-visible schedule data. Contract portfolio access does not widen source
 module access.
 
+Contract customer-care history uses the existing Contract read scope and
+`crm.contracts.view`. Adding an entry requires `crm.contracts.manage` and
+Contract ownership or `crm.contracts.view.all`. Project membership and Finance
+portfolio read permissions alone never grant customer-care writes. Retry
+replays recheck ownership. Only Upstream contracts expose this append-only
+history; contract deletion includes its entries in the confirmed aggregate plan.
+
 Contract source-Lead traceability requires both `crm.contracts.view` and
 `crm.leads.view`. Contract owner/project/portfolio access and Lead owner/all
 access are applied independently; seeing a Contract never expands Lead scope.

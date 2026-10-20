@@ -135,6 +135,23 @@ public class SampleContractSeederTests : IDisposable
     }
 
     [Fact]
+    public void Seed_ContractCareReflectsOwnerFollowUpWithoutChangingTerms()
+    {
+        SampleCrmDataSeeder.Seed(_db);
+        var contract = _db.Contracts.Single(item => item.ContractNumber == "HD-SAMPLE-003");
+        var entries = _db.ContractCareActivities.Where(item => item.ContractId == contract.Id).ToList();
+        Assert.Equal(2, entries.Count);
+        Assert.Contains(entries, item => item.Type == CustomerActivityType.Call && item.Content.Contains("An Phú"));
+        Assert.Contains(entries, item => item.Type == CustomerActivityType.Meeting && item.Content.Contains("VO"));
+        Assert.All(entries, item => Assert.Equal(contract.OwnerUserId, item.CreatedByUserId));
+        Assert.False(_db.ContractCareActivities.Any(item => item.Contract.Direction == ContractDirection.Downstream));
+        var value = contract.Value;
+        SampleCrmDataSeeder.Seed(_db);
+        Assert.Equal(2, _db.ContractCareActivities.Count(item => item.ContractId == contract.Id));
+        Assert.Equal(value, contract.Value);
+    }
+
+    [Fact]
     public void Seed_AsBuiltCategoriesHaveCompleteTranslations()
     {
         SampleCrmDataSeeder.Seed(_db);
@@ -430,6 +447,7 @@ public class SampleContractSeederTests : IDisposable
     private int[] RepresentativeCounts() =>
     [
         _db.Contracts.Count(),
+        _db.ContractCareActivities.Count(),
         _db.DesignProjects.Count(),
         _db.PermitChecklistItems.Count(),
         _db.ConceptOptions.Count(),

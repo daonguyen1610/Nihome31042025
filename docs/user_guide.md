@@ -730,7 +730,20 @@ traced. The system never guesses a Lead from the customer or project, and this
 panel does not add or change links. If loading fails, use **Retry**. Existing
 Opportunity, Quote and Project links keep their current behavior.
 
-Create contracts or generate from approved quotations. Manage contract value, scope, and terms. Track payment milestones (advance, stage-based, completion). Manage appendices and variation orders. Track contract status: in-progress, paused, completed. Manage customer care history and contract renewal.
+Create contracts or generate from approved quotations. Manage contract value, scope, and terms. Track payment milestones (advance, stage-based, completion). Manage appendices and variation orders. Track contract status: in-progress, paused, completed.
+
+For a customer (Upstream) contract, open **Customer care** in the Contract
+registry to read calls, emails, meetings and notes for that contract. Users with
+Contract manage permission and owner/CRM manager scope can add an entry with
+1–4,000 characters. The app records the author and time and lists the newest
+interactions first; use Previous/Next to read older entries. A failed save keeps
+the draft for retry. These entries are separate from the audit Timeline and
+Customer-wide history. They do not change contract terms, approve variations,
+mark payments or schedule renewal reminders. Finance views can read this history
+within their existing Contract scope. Permanent contract deletion includes this
+history in its confirmation preview and preserves other contracts' notes.
+After the first customer-care entry, the contract's Upstream/Downstream direction
+cannot be changed. Keep its current direction to preserve access to its history.
 
 Every new or edited contract must belong to one Operational Project. The
 selected project must belong to the same customer as the contract; contracts

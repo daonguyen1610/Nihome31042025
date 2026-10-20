@@ -309,6 +309,9 @@ public sealed class BusinessRootHardDeletePlanService(
         var milestones = await db.ContractPaymentMilestones.AsNoTracking()
             .Where(item => item.ContractId == id).OrderBy(item => item.Id)
             .Select(item => item.Id).ToListAsync(ct);
+        var careActivities = await db.ContractCareActivities.AsNoTracking()
+            .Where(item => item.ContractId == id).OrderBy(item => item.Id)
+            .Select(item => item.Id).ToListAsync(ct);
         var attachments = await db.ContractAttachments.AsNoTracking()
             .Where(item => item.ContractId == id).OrderBy(item => item.Id)
             .Select(item => new { item.Id, item.FilePath, item.OriginalFileName }).ToListAsync(ct);
@@ -450,6 +453,8 @@ public sealed class BusinessRootHardDeletePlanService(
         Add(items, "contract.rfqs", rfqs.Select(Id).ToList(), DeletionImpactActions.Block,
             "/admin/procurement-control/rfqs", [Link(root.ContractNumber, detail)]);
         Add(items, "contract.paymentMilestones", milestones.Select(Id).ToList(), DeletionImpactActions.Delete, detail, [Link(root.ContractNumber, detail)]);
+        Add(items, "contract.careActivities", careActivities.Select(Id).ToList(), DeletionImpactActions.Delete,
+            detail + "?tab=care", [Link(root.ContractNumber, detail + "?tab=care")]);
         Add(items, "contract.attachments", attachments.Select(item => Id(item.Id)).ToList(), DeletionImpactActions.Delete, detail, [Link(root.ContractNumber, detail)]);
         Add(items, "contract.appendices", appendices.Select(item => Id(item.Id)).ToList(), DeletionImpactActions.Delete, detail, [Link(root.ContractNumber, detail)]);
         Add(items, "contract.localFiles", localPaths, DeletionImpactActions.Delete, detail, [Link(root.ContractNumber, detail)]);
@@ -479,6 +484,7 @@ public sealed class BusinessRootHardDeletePlanService(
         var identities = new[]
         {
             Part("milestones", milestones), Part("attachments", attachments.Select(item => item.Id)),
+            Part("care-activities", careActivities),
             Part("appendices", appendices.Select(item => item.Id)), Part("paths", localPaths),
             Part("file-blockers", blockers), Part("projects", projects.Select(item => item.Id)),
             Part("lifecycle", lifecycleBlockers.Select(item => item.Id)), $"drive-instance:{driveOptions.InstanceId}",
@@ -852,6 +858,8 @@ public sealed class ContractHardDeleteHandler(
     protected override async Task FinalizeRootAsync(int id, int requestedBy, CancellationToken ct)
     {
         var root = await Db.Contracts.SingleAsync(item => item.Id == id, ct);
+        Db.ContractCareActivities.RemoveRange(
+            await Db.ContractCareActivities.Where(item => item.ContractId == id).ToListAsync(ct));
         Db.ContractLegalActivations.RemoveRange(
             await Db.ContractLegalActivations.Where(item => item.ContractId == id).ToListAsync(ct));
         foreach (var workPackage in await Db.DepartmentWorkPackages.Where(item => item.ContractId == id).ToListAsync(ct))

@@ -1468,6 +1468,52 @@ and the distinct signature positions on [MH-M04](<Nicon/ISO/D.Quy trình chi ti�
 It does not establish the still-open four-package document matrix or
 delegated-approver policy.
 
+#### Contract customer-care history
+
+The customer-care slice implements `Nicon_BreakTask_v1.xlsx`, `Nicon!A62:D62`.
+It is distinct from the Contract audit timeline and the Customer-wide activity
+history: entries belong to exactly one Upstream Contract and are never inferred
+from another Contract belonging to the same Customer.
+
+`GET /api/contracts/{id}/care-activities?page=1&pageSize=20` requires
+`crm.contracts.view` and the existing Contract read scope. It returns
+`total`, `page`, `pageSize` and `items`, ordered by occurrence descending and ID
+descending. Page size is clamped to 1–100. Each item includes Contract ID,
+interaction type, content, UTC occurrence time, server-recorded creator and
+creation time. Project and Finance read scopes do not grant write authority.
+
+`POST /api/contracts/{id}/care-activities` requires `crm.contracts.manage`,
+Contract ownership or `crm.contracts.view.all`, and an `Idempotency-Key`.
+The body contains required `type` (`Call`, `Email`, `Meeting`, `Note`), required
+`content` (1–4,000 characters, trimmed), and optional `occurredAt` (an ISO
+timestamp normalized to UTC; defaults to server UTC now). Other Customer activity
+types are rejected. Replays recheck current ownership before returning cached
+data. Missing/inaccessible Contracts return 404; Downstream Contracts return
+400. The Contract registry exposes an append-only Customer care tab; the
+Finance projection remains read-only. Entries do not change Contract terms,
+VOs, milestones or payment state, and do not schedule renewal reminders.
+As confirmed by the user on 20 October 2026, Contract direction cannot change
+once customer-care history exists. The Contract update endpoint enforces this
+inside its serializable transaction and returns HTTP 400 with
+`CONTRACT_CARE_DIRECTION_LOCKED`; rejected updates preserve the Contract and
+its readable history. Adding an entry rechecks direction and owner scope in
+a serializable transaction. Contracts without care history retain their
+existing reclassification rules.
+
+Migration `AddContractCareActivities` adds an indexed, Contract-owned table.
+There is no historical backfill because Customer-wide notes cannot safely be
+attributed to one Contract. Permanent deletion discloses and deletes these
+entries in the existing aggregate transaction; adding an entry invalidates an
+older deletion plan. The Customer and other Contracts' histories are preserved.
+Rollback is blocked while the table contains history; export and resolve that
+history through an approved data-retention plan before rollback. Sample
+`HD-SAMPLE-003` demonstrates owner follow-up for the An Phú factory; other
+sample Contracts retain the empty state.
+
+Focused API coverage: `ContractCareActivitiesTests`. Seed and cleanup regression
+coverage: `SampleContractSeederTests`, `BusinessRootHardDeleteHandlerTests`.
+Browser coverage: `admin-contract-care.spec.ts` (requires the live Compose stack).
+
 ### 7.9 Operational Business Documents
 
 Permit, procurement vendor, partial acceptance, as-built dossier, and project handover forms support local document selection in addition to their existing external URL fields. Managed files are stored under `wwwroot/files/business-documents/{area}/` with generated names. Each file is limited to 20 MB and must use `.pdf`, `.doc`, `.docx`, `.xls`, `.xlsx`, `.png`, `.jpg`, or `.jpeg`.

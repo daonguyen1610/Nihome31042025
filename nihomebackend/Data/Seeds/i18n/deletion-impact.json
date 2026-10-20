@@ -134,5 +134,6 @@
   {"key":"deletionImpact.item.design.reviewDocuments","category":"deletionImpact","vi":"Liên kết tài liệu trong đợt trình","en":"Review document links","zh":"评审文档链接","ja":"レビュー文書リンク"},
   {"key":"deletionImpact.item.design.reviewComments","category":"deletionImpact","vi":"Bình luận trong đợt trình","en":"Review comments","zh":"评审评论","ja":"レビューコメント"},
   {"key":"deletionImpact.item.design.reviewRecipients","category":"deletionImpact","vi":"Người nhận trong đợt trình","en":"Review recipients","zh":"评审接收人","ja":"レビュー受信者"},
-  {"key":"deletionImpact.item.design.sharedReviewEvidence","category":"deletionImpact","vi":"Đợt trình dùng chung với hồ sơ khác","en":"Review evidence shared with another record","zh":"与其他记录共享的评审证据","ja":"他のレコードと共有されているレビュー証跡"}
+  {"key":"deletionImpact.item.design.sharedReviewEvidence","category":"deletionImpact","vi":"Đợt trình dùng chung với hồ sơ khác","en":"Review evidence shared with another record","zh":"与其他记录共享的评审证据","ja":"他のレコードと共有されているレビュー証跡"},
+  {"key":"deletionImpact.item.contract.careActivities","category":"deletionImpact","vi":"Lịch sử chăm sóc khách hàng theo hợp đồng","en":"Contract customer-care history","zh":"合同客户维护记录","ja":"契約の顧客フォロー履歴"}
 ]

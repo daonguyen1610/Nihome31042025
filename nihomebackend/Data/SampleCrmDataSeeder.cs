@@ -75,6 +75,7 @@ public static class SampleCrmDataSeeder
         SeedQuotes(db, owner, now);
         SeedOperationalProjects(db, owner, projectManager, now);
         SeedContracts(db, owner, now, webRootPath);
+        SeedContractCareActivities(db, owner, now);
         SeedCapabilityDocuments(db, owner, now, webRootPath);
         SeedTenders(db, owner, now);
         SeedSurveys(db, owner, now);
@@ -913,6 +914,34 @@ public static class SampleCrmDataSeeder
     }
 
     private const string SampleContractMarker = "[SAMPLE_CONTRACT]";
+
+    private static void SeedContractCareActivities(AppDbContext db, ApplicationUser owner, DateTime now)
+    {
+        var contract = db.Contracts.SingleOrDefault(item => item.ContractNumber == "HD-SAMPLE-003"
+            && item.Direction == ContractDirection.Upstream && item.Note != null
+            && item.Note.StartsWith(SampleContractMarker));
+        if (contract is null || db.ContractCareActivities.Any(item => item.ContractId == contract.Id)) return;
+        db.ContractCareActivities.AddRange(
+            new ContractCareActivity
+            {
+                ContractId = contract.Id,
+                Type = CustomerActivityType.Call,
+                Content = "Trao đổi với đại diện May mặc An Phú về lịch kiểm tra tiến độ thi công nhà máy và các hồ sơ cần chuẩn bị.",
+                OccurredAt = now.AddDays(-3),
+                CreatedAt = now.AddDays(-3),
+                CreatedByUserId = owner.Id,
+            },
+            new ContractCareActivity
+            {
+                ContractId = contract.Id,
+                Type = CustomerActivityType.Meeting,
+                Content = "Họp cùng Chủ đầu tư tại công trường An Phú; ghi nhận yêu cầu phối hợp bàn giao khu vực lắp đặt thiết bị. Nội dung thay đổi phạm vi phải xử lý qua VO.",
+                OccurredAt = now.AddDays(-1),
+                CreatedAt = now.AddDays(-1),
+                CreatedByUserId = owner.Id,
+            });
+        db.SaveChanges();
+    }
 
     /// <summary>
     /// Seeds a curated set of sample contracts spanning every

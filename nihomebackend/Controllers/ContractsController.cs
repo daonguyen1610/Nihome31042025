@@ -39,6 +39,7 @@ public class ContractsController(
     IProjectAccessService projectAccess,
     IPermissionService permissions,
     ContractExecutionProgressService executionProgress,
+    ContractCareActivityService careActivities,
     IWebHostEnvironment env,
     AppDbContext db,
     IAuditLogger audit) : ControllerBase
@@ -293,7 +294,7 @@ public class ContractsController(
         }
         catch (ContractValidationException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(new { code = ex.Code, message = ex.Message });
         }
     }
 
@@ -934,6 +935,57 @@ public class ContractsController(
             Message = $"Contract #{id} attachment #{attachmentId} deleted.",
         });
         return NoContent();
+    }
+
+    // -------- customer care --------
+
+    [HttpGet("{id:int}/care-activities")]
+    [RequirePermission("crm.contracts", "view")]
+    public async Task<ActionResult<ContractCareActivityListResponse>> CareActivities(
+        int id, [FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        var contract = await svc.GetAsync(id, userId.Value,
+            await CanReadContractAcrossOwnersAsync(userId.Value, id, ct), ct);
+        if (contract is null) return NotFound();
+        if (contract.Direction != ContractDirection.Upstream) return BadRequest(new { message = "Customer care requires an Upstream contract." });
+        return Ok(await careActivities.ListAsync(id, page, pageSize, ct));
+    }
+
+    [HttpPost("{id:int}/care-activities")]
+    [RequirePermission("crm.contracts", "manage")]
+    [Idempotency("crm.contracts.care.create", typeof(ContractCareIdempotencyGuard), requireKey: true)]
+    public async Task<ActionResult<ContractCareActivityResponse>> AddCareActivity(
+        int id, [FromBody] ContractCareActivityRequest request, CancellationToken ct = default)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        // Contract writes retain owner / CRM manager scope; project read access
+        // and Finance portfolio permissions never grant customer-care writes.
+        var canSeeAll = await permissions.HasAsync(userId.Value, "crm.contracts.view.all", ct);
+        var contract = await svc.GetAsync(id, userId.Value,
+            canSeeAll, ct);
+        if (contract is null) return NotFound();
+        if (contract.Direction != ContractDirection.Upstream) return BadRequest(new { message = "Customer care requires an Upstream contract." });
+        ContractCareActivityResponse? activity;
+        try
+        {
+            activity = await careActivities.AddAsync(id, request, userId.Value, canSeeAll, ct);
+        }
+        catch (ArgumentException error)
+        {
+            return BadRequest(new { message = error.Message });
+        }
+        if (activity is null) return NotFound();
+        audit.Log(new AuditEvent
+        {
+            Action = "contract.care.create",
+            ResourceType = EntityTypes.Contract,
+            ResourceId = id.ToString(),
+            Message = $"Customer-care activity #{activity.Id} ({activity.Type}) recorded.",
+        });
+        return StatusCode(StatusCodes.Status201Created, activity);
     }
 
     // -------- timeline --------

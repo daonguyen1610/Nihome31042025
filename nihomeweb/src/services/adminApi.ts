@@ -631,6 +631,22 @@ export interface CustomerActivityResponse {
   createdAt: string;
 }
 
+export type ContractCareActivityType = Extract<
+  CustomerActivityType,
+  "Call" | "Email" | "Meeting" | "Note"
+>;
+
+export interface ContractCareActivityResponse extends CustomerActivityResponse {
+  contractId: number;
+}
+
+export interface ContractCareActivityListResponse {
+  total: number;
+  page: number;
+  pageSize: number;
+  items: ContractCareActivityResponse[];
+}
+
 export interface CustomerDocumentResponse {
   id: number;
   customerId: number;
@@ -5945,6 +5961,20 @@ export const adminApi = {
     return api.get<CustomerListResponse>(`/customers${qs ? `?${qs}` : ""}`);
   },
   getCustomer: (id: number) => api.get<CustomerResponse>(`/customers/${id}`),
+  listContractCareActivities: (id: number, page = 1) =>
+    api.get<ContractCareActivityListResponse>(`/contracts/${id}/care-activities`, {
+      params: { page, pageSize: 20 },
+    }),
+  addContractCareActivity: (
+    id: number,
+    body: { type: ContractCareActivityType; content: string },
+    idempotencyKey: string,
+  ) =>
+    api.post<ContractCareActivityResponse>(
+      `/contracts/${id}/care-activities`,
+      body,
+      withIdempotencyKey(idempotencyKey),
+    ),
   createCustomer: (body: CreateCustomerRequest) => api.post<CustomerResponse>("/customers", body),
   updateCustomer: (id: number, body: UpdateCustomerRequest) =>
     api.put<CustomerResponse>(`/customers/${id}`, body),

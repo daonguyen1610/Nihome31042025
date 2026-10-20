@@ -502,6 +502,13 @@ public class ContractService(
         }
 
         CrmConcurrency.Apply(db, entity, req.RowVersion);
+        if (req.Direction != entity.Direction && await db.ContractCareActivities.AsNoTracking()
+            .AnyAsync(activity => activity.ContractId == id, ct))
+        {
+            throw new ContractValidationException(
+                "Contract direction cannot change after customer-care history has been recorded.",
+                "CONTRACT_CARE_DIRECTION_LOCKED");
+        }
         if (req.PaymentMilestones is not null)
         {
             ValidatePaymentMilestones(req.PaymentMilestones);

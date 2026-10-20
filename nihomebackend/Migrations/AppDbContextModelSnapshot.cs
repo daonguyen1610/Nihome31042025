@@ -2039,6 +2039,45 @@ namespace nihomebackend.Migrations
                     b.ToTable("contract_appendices", (string)null);
                 });
 
+            modelBuilder.Entity("NihomeBackend.Models.ContractCareActivity", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<int>("ContractId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("OccurredAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("ContractId", "OccurredAt", "Id");
+
+                    b.ToTable("contract_care_activities", (string)null);
+                });
+
             modelBuilder.Entity("NihomeBackend.Models.ContractAttachment", b =>
                 {
                     b.Property<int>("Id")
@@ -11417,6 +11456,25 @@ namespace nihomebackend.Migrations
                     b.Navigation("Contract");
 
                     b.Navigation("UploadedBy");
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.ContractCareActivity", b =>
+                {
+                    b.HasOne("NihomeBackend.Models.Contract", "Contract")
+                        .WithMany()
+                        .HasForeignKey("ContractId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("NihomeBackend.Models.ApplicationUser", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Contract");
+
+                    b.Navigation("CreatedBy");
                 });
 
             modelBuilder.Entity("NihomeBackend.Models.ContractLegalActivation", b =>

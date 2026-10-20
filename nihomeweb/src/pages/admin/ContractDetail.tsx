@@ -27,6 +27,7 @@ import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import QuoteContractLinkDialog from "@/components/admin/QuoteContractLinkDialog";
 import ContractSourceLeads from "@/components/admin/ContractSourceLeads";
 import ContractExecutionProgress from "@/components/admin/ContractExecutionProgress";
+import ContractCareActivities from "@/components/admin/ContractCareActivities";
 import LegalActivationWizard from "@/components/admin/LegalActivationWizard";
 import { useI18n } from "@/lib/i18n";
 import { formatVnd, formatVndWithSymbol } from "@/lib/numberFormat";
@@ -80,6 +81,7 @@ import {
 } from "@/services/adminApi";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
+import { useAppSelector } from "@/store";
 
 // -------- shared helpers --------
 
@@ -1910,6 +1912,7 @@ const TimelineTab = ({ events }: { events: ContractTimelineEvent[] }) => {
   const { t } = useI18n();
   const actionKeys: Record<string, string> = {
     "contract.create": "contracts.timeline.action.create",
+    "contract.care.create": "contracts.timeline.action.careCreate",
     "contract.update": "contracts.timeline.action.update",
     "contract.delete": "contracts.timeline.action.delete",
     "contract.transition": "contracts.timeline.action.transition",
@@ -1967,13 +1970,14 @@ const TimelineTab = ({ events }: { events: ContractTimelineEvent[] }) => {
 
 // -------- main page --------
 
-type TabId = "info" | "schedule" | "appendices" | "documents" | "timeline";
+type TabId = "info" | "schedule" | "appendices" | "documents" | "timeline" | "care";
 
 const isContractTab = (value: string | null): value is TabId =>
   value === "info" ||
   value === "schedule" ||
   value === "appendices" ||
   value === "documents" ||
+  value === "care" ||
   value === "timeline";
 
 type ContractDetailProps = {
@@ -1984,6 +1988,7 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
   const { t } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
+  const currentUserId = useAppSelector((state) => state.auth.user?.userId);
   const params = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -2451,7 +2456,12 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
       toast({ title: t("form.updated") });
       await refreshContract();
     } catch (err) {
-      setFormError(getErrorMessage(err) ?? t("common.error"));
+      const code = (err as { response?: { data?: { code?: string } } })?.response?.data?.code;
+      setFormError(
+        code === "CONTRACT_CARE_DIRECTION_LOCKED"
+          ? t("contracts.care.directionLocked")
+          : (getErrorMessage(err) ?? t("common.error")),
+      );
       if (isConcurrencyConflict(err)) await refreshContract();
     } finally {
       setSaving(false);
@@ -2527,7 +2537,7 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
         )}
 
         <Tabs value={tab} onValueChange={(v) => setTab(v as TabId)}>
-          {/* Horizontal scroll on narrow viewports keeps the 5 tabs in one
+          {/* Horizontal scroll on narrow viewports keeps the tabs in one
               readable row instead of wrapping onto two rows with awkward
               orphan groups. The container hides the scrollbar visually but
               stays swipeable on touch devices. */}
@@ -2559,6 +2569,9 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
                 ) : null}
               </TabsTrigger>
               <TabsTrigger value="timeline">{t("contracts.detail.tab.timeline")}</TabsTrigger>
+              {contract.direction === "Upstream" ? (
+                <TabsTrigger value="care">{t("contracts.care.title")}</TabsTrigger>
+              ) : null}
             </TabsList>
           </div>
 
@@ -2684,6 +2697,18 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
           <TabsContent value="timeline" className="mt-4">
             <TimelineTab events={timeline} />
           </TabsContent>
+          {contract.direction === "Upstream" ? (
+            <TabsContent value="care" className="mt-4">
+              <ContractCareActivities
+                key={contract.id}
+                contractId={contract.id}
+                canManage={
+                  canManageMaster &&
+                  (has(ADMIN_PERMS.contractsViewAll) || contract.ownerUserId === currentUserId)
+                }
+              />
+            </TabsContent>
+          ) : null}
         </Tabs>
 
         <Dialog
