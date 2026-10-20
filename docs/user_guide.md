@@ -137,13 +137,16 @@ Additionally, the system includes cross-cutting capabilities:
 ### 2.3 Customer Task Breakdown Baseline
 
 `Nicon_BreakTask_v1.xlsx` is retained as customer planning evidence, not as an
-automatically current delivery estimate. The repository review on 17 October
-2026 refreshed every numbered item in **Tiến độ hiện tại** (`H2:H108`) and each
-task in the **Nicon** requirement sheet (`B4:B348`, excluding section headings).
-The corresponding **Ghi chú** cells name the remaining work for every partially
-delivered item. These classifications describe the current repository, not
-customer deployment or UAT; the workbook still does not provide a complete
-numeric manday column.
+automatically current delivery estimate. The progress review on 20 October 2026
+uses source revision `d884b3c6`. **Tiến độ hiện tại** (`H2:H108`) and **Nicon**
+(`B4:B348`, excluding section headings) use `Implemented`, `Partial`, `Target`
+and `Open decision`, with their status dropdowns aligned. Their **Ghi chú** cells
+identify the delivered subset and remaining gaps. **Cập nhật Demo Ngày 2506**
+now records the current assessment of its original requests without rewriting
+those requests. The source-scope sheets, estimates, formulas and workbook layout
+are preserved. These classifications describe repository delivery, not customer
+deployment or UAT; the workbook still does not provide a complete numeric manday
+column.
 
 The previously published task-count and frontend-effort totals cannot be
 reconciled to the current workbook and are therefore withdrawn. Do not use a task
