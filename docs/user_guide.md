@@ -767,6 +767,10 @@ The screen lists the newest 100 schedules and their delivery states. If delivery
 is uncertain, consult the mail administrator before scheduling another email;
 automatic retries are disabled to prevent duplicate customer messages. A Sending
 entry that persists after a service interruption requires operational review.
+After the first reminder delivery attempt starts, the contract direction is
+locked, including an uncertain SMTP outcome. A schedule that has not started
+delivery does not create this lock. This preserves access to email care history
+while SMTP is in flight and after reconciliation.
 
 Every new or edited contract must belong to one Operational Project. The
 selected project must belong to the same customer as the contract; contracts

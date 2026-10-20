@@ -12,6 +12,8 @@ permission and owner/view-all scope before claiming a delivery. Templates at
 `/admin/email-templates` use `system.settings.view` for GET and
 `system.settings.manage` for PUT. Contract staff cannot override email bodies
 or select addresses outside the customer's stored contacts.
+No role may change a contract's direction after reminder delivery has started,
+even when its SMTP outcome remains uncertain (owner decision 21/10/2026).
 
 The admin Users section is backed by the ASP.NET Core `/api/users` endpoints. Authorization is now permission-based, enforced globally by `PermissionAuthorizationFilter` (registered in `Program.cs`) which reads `[RequirePermission(module, action)]` attributes off the class and the action. All requirements must match (AND semantics); `[AllowAnonymous]` short-circuits the check.
 

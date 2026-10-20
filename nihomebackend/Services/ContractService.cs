@@ -502,6 +502,13 @@ public class ContractService(
         }
 
         CrmConcurrency.Apply(db, entity, req.RowVersion);
+        if (req.Direction != entity.Direction && await db.ContractReminders.AsNoTracking()
+            .AnyAsync(reminder => reminder.ContractId == id && reminder.AttemptedAt != null, ct))
+        {
+            throw new ContractValidationException(
+                "Contract direction cannot change after a customer reminder email delivery has started.",
+                "CONTRACT_REMINDER_DIRECTION_LOCKED");
+        }
         if (req.Direction != entity.Direction && await db.ContractCareActivities.AsNoTracking()
             .AnyAsync(activity => activity.ContractId == id, ct))
         {

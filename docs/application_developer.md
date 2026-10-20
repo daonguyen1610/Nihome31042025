@@ -1215,6 +1215,11 @@ Stop the sender during manual reconciliation; preserve the original snapshot,
 attempt timestamps and audit evidence. Scheduled cancellation never retracts an
 email already handed to SMTP. Permanent deletion discloses schedules/history,
 invalidates stale plans on state changes, and blocks Sending records.
+Contract direction changes also check persisted `ContractReminder.AttemptedAt`:
+any non-null attempt locks direction permanently, including Sending or uncertain
+delivery. The existing serializable contract update and reminder claim serialize
+that boundary; no new schema is required. A rejected direction edit returns
+`CONTRACT_REMINDER_DIRECTION_LOCKED` and preserves the row/version/history.
 
 Focused validation: `ContractReminderServiceTests`, `ContractRemindersTests`,
 and `e2e/smoke/contract-reminder-email.spec.ts` (live Compose SQL/SMTP, opt in with
