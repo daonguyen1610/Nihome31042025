@@ -470,6 +470,9 @@ Khoảng trống:
 - Chưa có ba phần chứng từ Công trường → CM → Kế toán theo mẫu NICON.
 - Chưa chốt thành phần bắt buộc và three-way matching cho supply, labour,
   equipment và mixed package.
+- QS bị thay thế sau khi Payment Request đã gửi sẽ chặn xác nhận/phê duyệt,
+  nhưng hồ sơ không sửa được và invoice đã dùng không tạo lại được. Cần FA/CM
+  chốt luồng trả lại/revision cùng quy tắc chống trùng invoice.
 - Dashboard cashflow/P&L/KPI chưa thể coi là hoàn chỉnh nếu nguồn dữ liệu hoặc
   target còn `MissingData`.
 

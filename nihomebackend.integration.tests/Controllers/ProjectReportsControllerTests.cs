@@ -422,6 +422,19 @@ public sealed class ProjectReportsControllerTests : IntegrationTestBase
             };
             db.Contracts.Add(contract);
             await db.SaveChangesAsync();
+            var milestone = new ContractPaymentMilestone
+            {
+                ContractId = contract.Id,
+                Order = 1,
+                Name = "Contractual schedule milestone",
+                PercentValue = 50m,
+                DueDate = today.ToDateTime(TimeOnly.MinValue),
+                Status = PaymentMilestoneStatus.Pending,
+            };
+            db.ContractPaymentMilestones.Add(milestone);
+            await db.SaveChangesAsync();
+            var siteQsUserId = await db.Users.Where(user => user.PhoneNumber ==
+                TestDataSeeder.BusinessRolePhonesByCode["QS"]).Select(user => user.Id).SingleAsync();
             db.ConstructionQsBatches.Add(new ConstructionQsBatch
             {
                 OperationalProjectId = accessible.Id,
@@ -431,10 +444,28 @@ public sealed class ProjectReportsControllerTests : IntegrationTestBase
                 RecordState = ConstructionQsRecordState.Active,
                 IsActiveLineage = true,
                 ContractId = contract.Id,
+                ContractPaymentMilestoneId = milestone.Id,
+                WbsCode = "STRUCTURE-01",
                 PeriodFrom = new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc),
                 PeriodTo = new DateTime(2026, 10, 7, 0, 0, 0, DateTimeKind.Utc),
                 CertifiedAmount = 1_250_000m,
-                CreatedByUserId = pmId,
+                Description = "Certified structural work for the first October period",
+                CreatedByUserId = siteQsUserId,
+                SubmittedAt = now.AddDays(-3),
+                CmReviewedByUserId = pmId,
+                CmReviewedAt = now.AddDays(-2),
+                Lines =
+                [
+                    new ConstructionQsBatchLine
+                    {
+                        ItemCode = "STRUCTURE-CONCRETE",
+                        Description = "Accepted concrete works",
+                        Unit = "m3",
+                        Quantity = 25m,
+                        UnitPrice = 50_000m,
+                        Amount = 1_250_000m,
+                    },
+                ],
             });
             db.ContractAppendices.Add(new ContractAppendix
             {
@@ -446,15 +477,6 @@ public sealed class ProjectReportsControllerTests : IntegrationTestBase
                 Status = ContractAppendixStatus.Approved,
                 DecidedAt = now,
                 UpdatedAt = now,
-            });
-            db.ContractPaymentMilestones.Add(new ContractPaymentMilestone
-            {
-                ContractId = contract.Id,
-                Order = 1,
-                Name = "Contractual schedule milestone",
-                PercentValue = 50m,
-                DueDate = today.ToDateTime(TimeOnly.MinValue),
-                Status = PaymentMilestoneStatus.Pending,
             });
             await db.SaveChangesAsync();
             return new ReportFixture(accessible.Id, inaccessible.Id, today);
