@@ -110,6 +110,11 @@ public sealed class FinanceControllerTests : IntegrationTestBase
                 $"/api/finance/payment-requests/{existingPayment.GetProperty("id").GetInt32()}/submit",
                 new { rowVersion = existingPayment.GetProperty("rowVersion").GetString() });
             rejectedTransition.StatusCode.Should().Be(HttpStatusCode.NotFound);
+            using var rejectedRevision = await SendAsync(
+                HttpMethod.Post,
+                $"/api/finance/payment-requests/{existingPayment.GetProperty("id").GetInt32()}/revise",
+                new { reason = "Project scope check", rowVersion = existingPayment.GetProperty("rowVersion").GetString() });
+            rejectedRevision.StatusCode.Should().Be(HttpStatusCode.NotFound);
             var ownedContract = await ReadJsonAsync(await Client.GetAsync($"/api/contracts/{fixture.ContractId}"));
             using var rejectedSchedule = await Client.PutAsJsonAsync(
                 $"/api/contracts/{fixture.ContractId}/milestones",
@@ -353,6 +358,230 @@ public sealed class FinanceControllerTests : IntegrationTestBase
         blockedApproval.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         (await WithDbAsync(db => db.PaymentRequests.SingleAsync(item => item.Id == created.GetProperty("id").GetInt32())))
             .Status.Should().Be(PaymentRequestStatus.ReadyForApproval);
+
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "SALE"));
+        using var forbiddenRevision = await SendAsync(HttpMethod.Post,
+            $"/api/finance/payment-requests/{created.GetProperty("id").GetInt32()}/revise",
+            new { reason = "QS correction", rowVersion = ready.GetProperty("rowVersion").GetString() });
+        forbiddenRevision.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "ACCOUNTANT"));
+        using var revisedResponse = await SendAsync(HttpMethod.Post,
+            $"/api/finance/payment-requests/{created.GetProperty("id").GetInt32()}/revise",
+            new { reason = "QS correction", rowVersion = ready.GetProperty("rowVersion").GetString() });
+        revisedResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var revised = await ReadJsonAsync(revisedResponse);
+        revised.GetProperty("status").GetString().Should().Be("Draft");
+        revised.GetProperty("revisionNumber").GetInt32().Should().Be(2);
+        revised.GetProperty("revisions").EnumerateArray().Single()
+            .GetProperty("constructionQsBatchId").GetInt32().Should().Be(qsId);
+    }
+
+    [Fact]
+    public async Task DraftPayment_CanReplaceSupersededQsWithoutDuplicatingInvoice()
+    {
+        var fixture = await CreateFixtureAsync();
+        var originalId = await WithDbAsync(async db =>
+        {
+            var siteQsUserId = await db.Users.Where(user => user.PhoneNumber ==
+                TestDataSeeder.BusinessRolePhonesByCode["QS"]).Select(user => user.Id).SingleAsync();
+            var original = new ConstructionQsBatch
+            {
+                OperationalProjectId = fixture.ProjectId,
+                ContractId = fixture.ContractId,
+                Code = $"QS-PAY-{Guid.NewGuid():N}"[..30],
+                Direction = ConstructionQsDirection.Downstream,
+                Status = ConstructionReviewStatus.CmApproved,
+                RecordState = ConstructionQsRecordState.Active,
+                IsActiveLineage = true,
+                WbsCode = "STRUCTURE-01",
+                PeriodFrom = new DateTime(2026, 8, 1),
+                PeriodTo = new DateTime(2026, 8, 31),
+                CertifiedAmount = 1_000m,
+                Description = "Accepted subcontract works before correction",
+                CreatedByUserId = siteQsUserId,
+                Lines = [new ConstructionQsBatchLine
+                {
+                    ItemCode = "STRUCTURE-CONCRETE", Description = "Concrete works", Unit = "m3",
+                    Quantity = 1m, UnitPrice = 1_000m, Amount = 1_000m,
+                }],
+            };
+            db.ConstructionQsBatches.Add(original);
+            await db.SaveChangesAsync();
+            return original.Id;
+        });
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "ACCOUNTANT"));
+        using var createdResponse = await SendAsync(HttpMethod.Post, "/api/finance/payment-requests",
+            ValidPayment(fixture.ContractId, fixture.VendorId, fixture.AccountantId, qsBatchId: originalId));
+        createdResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var created = await ReadJsonAsync(createdResponse);
+
+        var replacementId = await WithDbAsync(async db =>
+        {
+            var siteQsUserId = await db.Users.Where(user => user.PhoneNumber ==
+                TestDataSeeder.BusinessRolePhonesByCode["QS"]).Select(user => user.Id).SingleAsync();
+            var original = await db.ConstructionQsBatches.SingleAsync(item => item.Id == originalId);
+            original.RecordState = ConstructionQsRecordState.Superseded;
+            original.IsActiveLineage = false;
+            var replacement = new ConstructionQsBatch
+            {
+                OperationalProjectId = fixture.ProjectId,
+                ContractId = fixture.ContractId,
+                Code = $"QS-PAY-{Guid.NewGuid():N}"[..30],
+                Direction = ConstructionQsDirection.Downstream,
+                Status = ConstructionReviewStatus.CmApproved,
+                RecordState = ConstructionQsRecordState.Active,
+                IsActiveLineage = true,
+                SupersedesBatchId = original.Id,
+                AdjustmentKind = ConstructionQsAdjustmentKind.SupersedingCorrection,
+                WbsCode = "STRUCTURE-01",
+                PeriodFrom = new DateTime(2026, 8, 1),
+                PeriodTo = new DateTime(2026, 8, 31),
+                CertifiedAmount = 1_100m,
+                Description = "Corrected accepted subcontract works",
+                CreatedByUserId = siteQsUserId,
+                Lines = [new ConstructionQsBatchLine
+                {
+                    ItemCode = "STRUCTURE-CONCRETE", Description = "Concrete works", Unit = "m3",
+                    Quantity = 1m, UnitPrice = 1_100m, Amount = 1_100m,
+                }],
+            };
+            db.ConstructionQsBatches.Add(replacement);
+            await db.SaveChangesAsync();
+            return replacement.Id;
+        });
+        using var updatedResponse = await SendAsync(HttpMethod.Put,
+            $"/api/finance/payment-requests/{created.GetProperty("id").GetInt32()}",
+            ValidPayment(fixture.ContractId, fixture.VendorId, fixture.AccountantId,
+                created.GetProperty("rowVersion").GetString(), qsBatchId: replacementId));
+        updatedResponse.StatusCode.Should().Be(HttpStatusCode.OK, await updatedResponse.Content.ReadAsStringAsync());
+        var updated = await ReadJsonAsync(updatedResponse);
+        updated.GetProperty("constructionQsBatchId").GetInt32().Should().Be(replacementId);
+        updated.GetProperty("supplierInvoiceNumber").GetString().Should().Be("INV-2026-001");
+        (await WithDbAsync(db => db.PaymentRequests.AsNoTracking().SingleAsync(item =>
+            item.Id == created.GetProperty("id").GetInt32()))).ConstructionQsBatchId.Should().Be(replacementId);
+    }
+
+    [Fact]
+    public async Task ApprovedPayment_StaleQsBlocksPayUntilSameRequestRevisionIsApproved()
+    {
+        var fixture = await CreateFixtureAsync();
+        var originalQsId = await CreateApprovedDownstreamQsAsync(fixture);
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "ACCOUNTANT"));
+        using var createResponse = await SendAsync(HttpMethod.Post, "/api/finance/payment-requests",
+            ValidPayment(fixture.ContractId, fixture.VendorId, fixture.AccountantId, qsBatchId: originalQsId));
+        createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var draft = await ReadJsonAsync(createResponse);
+        var submitted = await TransitionAsync("payment-requests", draft, "submit");
+        var ready = await TransitionAsync("payment-requests", submitted, "validate");
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "BGD"));
+        var approved = await TransitionAsync("payment-requests", ready, "decision", new
+        {
+            approved = true,
+            rowVersion = ready.GetProperty("rowVersion").GetString(),
+        });
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "ACCOUNTANT"));
+        using var prematureRevision = await SendAsync(HttpMethod.Post,
+            $"/api/finance/payment-requests/{draft.GetProperty("id").GetInt32()}/revise",
+            new { reason = "No QS correction", rowVersion = approved.GetProperty("rowVersion").GetString() });
+        prematureRevision.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        await WithDbAsync(async db =>
+        {
+            var qs = await db.ConstructionQsBatches.SingleAsync(item => item.Id == originalQsId);
+            qs.IsActiveLineage = false;
+            qs.RecordState = ConstructionQsRecordState.Superseded;
+            await db.SaveChangesAsync();
+        });
+
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "ACCOUNTANT"));
+        using var blockedPay = await SendAsync(HttpMethod.Post,
+            $"/api/finance/payment-requests/{draft.GetProperty("id").GetInt32()}/pay",
+            new { rowVersion = approved.GetProperty("rowVersion").GetString() });
+        blockedPay.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var unchanged = await WithDbAsync(db => db.PaymentRequests.AsNoTracking().SingleAsync(item =>
+            item.Id == draft.GetProperty("id").GetInt32()));
+        unchanged.Status.Should().Be(PaymentRequestStatus.Approved);
+        unchanged.PaidAt.Should().BeNull();
+        (await WithDbAsync(db => db.PaymentRequestEvents.CountAsync(item =>
+            item.PaymentRequestId == draft.GetProperty("id").GetInt32()))).Should().Be(4);
+
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "ADMIN"));
+        using var revisedResponse = await SendAsync(HttpMethod.Post,
+            $"/api/finance/payment-requests/{draft.GetProperty("id").GetInt32()}/revise",
+            new { reason = "QS corrected by CM", rowVersion = approved.GetProperty("rowVersion").GetString() });
+        revisedResponse.StatusCode.Should().Be(HttpStatusCode.OK, await revisedResponse.Content.ReadAsStringAsync());
+        var revised = await ReadJsonAsync(revisedResponse);
+        revised.GetProperty("id").GetInt32().Should().Be(draft.GetProperty("id").GetInt32());
+        revised.GetProperty("supplierInvoiceNumber").GetString().Should().Be("INV-2026-001");
+        revised.GetProperty("revisionNumber").GetInt32().Should().Be(2);
+        revised.GetProperty("status").GetString().Should().Be("Draft");
+        revised.GetProperty("approvedAt").ValueKind.Should().Be(JsonValueKind.Null);
+        var prior = revised.GetProperty("revisions").EnumerateArray().Single();
+        prior.GetProperty("revisionNumber").GetInt32().Should().Be(1);
+        prior.GetProperty("status").GetString().Should().Be("Approved");
+        prior.GetProperty("constructionQsBatchId").GetInt32().Should().Be(originalQsId);
+        prior.GetProperty("supplierInvoiceNumber").GetString().Should().Be("INV-2026-001");
+        prior.GetProperty("attachments").GetArrayLength().Should().Be(1);
+
+        using var staleRevision = await SendAsync(HttpMethod.Post,
+            $"/api/finance/payment-requests/{draft.GetProperty("id").GetInt32()}/revise",
+            new { reason = "Duplicate revision", rowVersion = approved.GetProperty("rowVersion").GetString() });
+        staleRevision.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        var replacementQsId = await CreateApprovedDownstreamQsAsync(fixture, originalQsId);
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "ACCOUNTANT"));
+        using var updateResponse = await SendAsync(HttpMethod.Put,
+            $"/api/finance/payment-requests/{draft.GetProperty("id").GetInt32()}",
+            ValidPayment(fixture.ContractId, fixture.VendorId, fixture.AccountantId,
+                revised.GetProperty("rowVersion").GetString(), qsBatchId: replacementQsId));
+        updateResponse.StatusCode.Should().Be(HttpStatusCode.OK, await updateResponse.Content.ReadAsStringAsync());
+        var updated = await ReadJsonAsync(updateResponse);
+        var resubmitted = await TransitionAsync("payment-requests", updated, "submit");
+        var revalidated = await TransitionAsync("payment-requests", resubmitted, "validate");
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "ADMIN"));
+        using var selfApproval = await SendAsync(HttpMethod.Post,
+            $"/api/finance/payment-requests/{draft.GetProperty("id").GetInt32()}/decision",
+            new { approved = true, rowVersion = revalidated.GetProperty("rowVersion").GetString() });
+        selfApproval.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "BGD"));
+        var reapproved = await TransitionAsync("payment-requests", revalidated, "decision", new
+        {
+            approved = true,
+            rowVersion = revalidated.GetProperty("rowVersion").GetString(),
+        });
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "ACCOUNTANT"));
+        var paid = await TransitionAsync("payment-requests", reapproved, "pay");
+        paid.GetProperty("status").GetString().Should().Be("Paid");
+        paid.GetProperty("revisionNumber").GetInt32().Should().Be(2);
+        paid.GetProperty("revisions").EnumerateArray().Single()
+            .GetProperty("constructionQsBatchId").GetInt32().Should().Be(originalQsId);
+    }
+
+    [Fact]
+    public async Task RejectedPayment_CanReviseWithoutReusingInvoiceInAnotherRequest()
+    {
+        var fixture = await CreateFixtureAsync();
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "ACCOUNTANT"));
+        var draft = await CreatePaymentAsync(fixture);
+        var submitted = await TransitionAsync("payment-requests", draft, "submit");
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "BGD"));
+        var rejected = await TransitionAsync("payment-requests", submitted, "decision", new
+        {
+            approved = false,
+            reason = "Invoice attachment needs correction",
+            rowVersion = submitted.GetProperty("rowVersion").GetString(),
+        });
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "ACCOUNTANT"));
+        using var duplicate = await SendAsync(HttpMethod.Post, "/api/finance/payment-requests",
+            ValidPayment(fixture.ContractId, fixture.VendorId, fixture.AccountantId));
+        duplicate.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        using var revisedResponse = await SendAsync(HttpMethod.Post,
+            $"/api/finance/payment-requests/{draft.GetProperty("id").GetInt32()}/revise",
+            new { reason = "Correct rejected attachment", rowVersion = rejected.GetProperty("rowVersion").GetString() });
+        revisedResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var revised = await ReadJsonAsync(revisedResponse);
+        revised.GetProperty("supplierInvoiceNumber").GetString().Should().Be("INV-2026-001");
+        revised.GetProperty("revisions").EnumerateArray().Single()
+            .GetProperty("status").GetString().Should().Be("Rejected");
+        revised.GetProperty("rejectedAt").ValueKind.Should().Be(JsonValueKind.Null);
     }
 
     [Theory]
@@ -697,6 +926,39 @@ public sealed class FinanceControllerTests : IntegrationTestBase
     private static Task<int> UserIdAsync(NihomeBackend.Data.AppDbContext db, string roleCode) => db.Users
         .Where(user => user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode[roleCode])
         .Select(user => user.Id).SingleAsync();
+
+    private Task<int> CreateApprovedDownstreamQsAsync(FinanceFixture fixture, int? supersedesId = null) =>
+        WithDbAsync(async db =>
+        {
+            var qsUserId = await UserIdAsync(db, "QS");
+            var qs = new ConstructionQsBatch
+            {
+                OperationalProjectId = fixture.ProjectId,
+                ContractId = fixture.ContractId,
+                Code = $"QS-PAY-{Guid.NewGuid():N}"[..30],
+                Direction = ConstructionQsDirection.Downstream,
+                Status = ConstructionReviewStatus.CmApproved,
+                RecordState = ConstructionQsRecordState.Active,
+                IsActiveLineage = true,
+                SupersedesBatchId = supersedesId,
+                AdjustmentKind = supersedesId.HasValue
+                    ? ConstructionQsAdjustmentKind.SupersedingCorrection : ConstructionQsAdjustmentKind.Original,
+                WbsCode = "STRUCTURE-01",
+                PeriodFrom = new DateTime(2026, 8, 1),
+                PeriodTo = new DateTime(2026, 8, 31),
+                CertifiedAmount = 1_000m,
+                Description = "CM-approved downstream structural works",
+                CreatedByUserId = qsUserId,
+                Lines = [new ConstructionQsBatchLine
+                {
+                    ItemCode = "STRUCTURE-CONCRETE", Description = "Concrete works", Unit = "m3",
+                    Quantity = 1m, UnitPrice = 1_000m, Amount = 1_000m,
+                }],
+            };
+            db.ConstructionQsBatches.Add(qs);
+            await db.SaveChangesAsync();
+            return qs.Id;
+        });
 
     private sealed record FinanceFixture(int ProjectId, int ContractId, int VendorId, int AccountantId);
 }

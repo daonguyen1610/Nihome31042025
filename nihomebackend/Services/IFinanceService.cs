@@ -11,6 +11,7 @@ public interface IFinanceService
     Task<IReadOnlyList<AccountingCorrectionResponse>> ListCorrectionsAsync(CancellationToken ct = default);
     Task<PaymentRequestResponse> CreatePaymentRequestAsync(PaymentRequestUpsertRequest request, int userId, CancellationToken ct = default);
     Task<PaymentRequestResponse?> UpdatePaymentRequestAsync(int id, PaymentRequestUpsertRequest request, int userId, CancellationToken ct = default);
+    Task<PaymentRequestResponse?> RevisePaymentRequestAsync(int id, FinanceTransitionRequest request, int userId, CancellationToken ct = default);
     Task<PaymentRequestResponse?> SubmitPaymentRequestAsync(int id, FinanceTransitionRequest request, int userId, CancellationToken ct = default);
     Task<PaymentRequestResponse?> ValidatePaymentRequestAsync(int id, FinanceTransitionRequest request, int userId, CancellationToken ct = default);
     Task<PaymentRequestResponse?> DecidePaymentRequestAsync(int id, FinanceDecisionRequest request, int userId, CancellationToken ct = default);

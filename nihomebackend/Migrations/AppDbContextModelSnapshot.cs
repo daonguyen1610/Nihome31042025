@@ -6314,6 +6314,18 @@ namespace nihomebackend.Migrations
                     b.Property<DateTime>("ReceivedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<int?>("RevisionCreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("RevisionHistoryJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasDefaultValue("[]");
+
+                    b.Property<int>("RevisionNumber")
+                        .HasColumnType("int")
+                        .HasDefaultValue(1);
+
                     b.Property<DateTime?>("RejectedAt")
                         .HasColumnType("datetime2");
 

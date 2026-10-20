@@ -1742,6 +1742,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.Property(item => item.InvoiceAmount).HasPrecision(18, 2);
             b.Property(item => item.Currency).HasMaxLength(3).IsRequired();
             b.Property(item => item.Status).HasConversion<string>().HasMaxLength(30);
+            b.Property(item => item.RevisionNumber).HasDefaultValue(1);
+            b.Property(item => item.RevisionHistoryJson).HasColumnType("nvarchar(max)").HasDefaultValue("[]");
             b.Property(item => item.DecisionReason).HasMaxLength(2000);
             b.Property(item => item.RowVersion).IsRowVersion();
             b.HasOne(item => item.Contract).WithMany().HasForeignKey(item => item.ContractId).OnDelete(DeleteBehavior.Restrict);

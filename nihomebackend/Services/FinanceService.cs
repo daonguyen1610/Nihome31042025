@@ -1,4 +1,5 @@
 using System.Data;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
@@ -108,6 +109,79 @@ public sealed class FinanceService(AppDbContext db, IProjectAccessService projec
         int id, FinanceTransitionRequest request, int userId, CancellationToken ct = default) =>
         TransitionPaymentAsync(id, request, userId, PaymentRequestStatus.UnderValidation, ct);
 
+    public async Task<PaymentRequestResponse?> RevisePaymentRequestAsync(
+        int id, FinanceTransitionRequest request, int userId, CancellationToken ct = default)
+    {
+        var accessibleProjectIds = (await projectAccess.GetAccessibleOperationalProjectIdsAsync(userId, ct)).ToArray();
+        var entity = await db.PaymentRequests.Include(item => item.Attachments).SingleOrDefaultAsync(item =>
+            item.Id == id && item.Contract.OperationalProjectId.HasValue &&
+            accessibleProjectIds.Contains(item.Contract.OperationalProjectId.Value), ct);
+        if (entity is null) return null;
+        CrmConcurrency.EnsureMatches(entity.RowVersion, request.RowVersion);
+        if (entity.Status is PaymentRequestStatus.Draft or PaymentRequestStatus.Paid or PaymentRequestStatus.Cancelled)
+            throw new FinanceOperationException("Chỉ hồ sơ đã gửi và chưa chi hoặc hủy mới được tạo revision.");
+        if (string.IsNullOrWhiteSpace(request.Reason) || request.Reason.Trim().Length < 3)
+            throw new FinanceOperationException("Lý do tạo revision phải có ít nhất 3 ký tự.");
+        if (entity.Status != PaymentRequestStatus.Rejected &&
+            (!entity.ConstructionQsBatchId.HasValue || await ValidPaymentQsAsync(
+                entity.ConstructionQsBatchId.Value, entity.ContractId, ct)))
+            throw new FinanceOperationException("Hồ sơ đã gửi chỉ được tạo revision khi QS liên kết không còn hiệu lực.");
+
+        CrmConcurrency.Apply(db, entity, request.RowVersion);
+        var now = DateTime.UtcNow;
+        var history = JsonSerializer.Deserialize<List<PaymentRequestRevisionResponse>>(entity.RevisionHistoryJson) ?? [];
+        history.Add(new PaymentRequestRevisionResponse
+        {
+            RevisionNumber = entity.RevisionNumber,
+            Status = entity.Status.ToString(),
+            ContractId = entity.ContractId,
+            VendorId = entity.VendorId,
+            ContractPaymentMilestoneId = entity.ContractPaymentMilestoneId,
+            ConstructionQsBatchId = entity.ConstructionQsBatchId,
+            SupplierInvoiceNumber = entity.SupplierInvoiceNumber,
+            InvoiceDate = entity.InvoiceDate,
+            InvoiceAmount = entity.InvoiceAmount,
+            Currency = entity.Currency,
+            ReceivedAt = entity.ReceivedAt,
+            AssignedAccountantUserId = entity.AssignedAccountantUserId,
+            SubmittedAt = entity.SubmittedAt,
+            SubmittedByUserId = entity.SubmittedByUserId,
+            ValidatedAt = entity.ValidatedAt,
+            ValidatedByUserId = entity.ValidatedByUserId,
+            ApprovedAt = entity.ApprovedAt,
+            ApprovedByUserId = entity.ApprovedByUserId,
+            RejectedAt = entity.RejectedAt,
+            DecisionReason = entity.DecisionReason,
+            CapturedByUserId = userId,
+            CapturedAt = now,
+            RevisionReason = request.Reason.Trim(),
+            Attachments = entity.Attachments.Select(item => new PaymentAttachmentResponse
+            {
+                Id = item.Id,
+                FileName = item.FileName,
+                FilePath = item.FilePath,
+            }).ToList(),
+        });
+        entity.RevisionHistoryJson = JsonSerializer.Serialize(history);
+        var from = entity.Status;
+        entity.RevisionNumber++;
+        entity.RevisionCreatedByUserId = userId;
+        entity.Status = PaymentRequestStatus.Draft;
+        entity.SubmittedAt = null;
+        entity.SubmittedByUserId = null;
+        entity.ValidatedAt = null;
+        entity.ValidatedByUserId = null;
+        entity.ApprovedAt = null;
+        entity.ApprovedByUserId = null;
+        entity.RejectedAt = null;
+        entity.RejectedByUserId = null;
+        entity.DecisionReason = null;
+        entity.UpdatedAt = now;
+        entity.Events.Add(NewPaymentEvent(from, PaymentRequestStatus.Draft, userId, request.Reason, now));
+        await CrmConcurrency.SaveChangesAsync(db, ct);
+        return await GetPaymentAsync(id, ct);
+    }
+
     public Task<PaymentRequestResponse?> ValidatePaymentRequestAsync(
         int id, FinanceTransitionRequest request, int userId, CancellationToken ct = default) =>
         TransitionPaymentAsync(id, request, userId, PaymentRequestStatus.ReadyForApproval, ct);
@@ -124,8 +198,9 @@ public sealed class FinanceService(AppDbContext db, IProjectAccessService projec
             if (entity.Status != PaymentRequestStatus.ReadyForApproval)
                 throw new FinanceOperationException("Chỉ đề nghị đã sẵn sàng mới được phê duyệt.");
             if (entity.CreatedByUserId == userId || entity.SubmittedByUserId == userId ||
+                entity.RevisionCreatedByUserId == userId ||
                 entity.ValidatedByUserId == userId || entity.AssignedAccountantUserId == userId)
-                throw new FinanceOperationException("Người lập, gửi hoặc kiểm tra hồ sơ không được tự phê duyệt đề nghị thanh toán.");
+                throw new FinanceOperationException("Người lập, tạo revision, gửi hoặc kiểm tra hồ sơ không được tự phê duyệt đề nghị thanh toán.");
             if (entity.ConstructionQsBatchId.HasValue && !await ValidPaymentQsAsync(
                     entity.ConstructionQsBatchId.Value, entity.ContractId, ct))
                 throw new FinanceOperationException("QS phải trả đã liên kết không còn được CM duyệt hoặc không thuộc hợp đồng.");
@@ -154,11 +229,15 @@ public sealed class FinanceService(AppDbContext db, IProjectAccessService projec
     public async Task<PaymentRequestResponse?> PayPaymentRequestAsync(
         int id, FinanceTransitionRequest request, int userId, CancellationToken ct = default)
     {
+        await using var transaction = await BeginSerializableAsync(ct);
         var entity = await ScopedPaymentRequestAsync(id, userId, ct);
         if (entity is null) return null;
         if (entity.Status == PaymentRequestStatus.Paid) return await GetPaymentAsync(id, ct);
         if (entity.Status != PaymentRequestStatus.Approved)
             throw new FinanceOperationException("Chỉ đề nghị đã phê duyệt mới được xác nhận thanh toán.");
+        if (entity.ConstructionQsBatchId.HasValue && !await ValidPaymentQsAsync(
+                entity.ConstructionQsBatchId.Value, entity.ContractId, ct))
+            throw new FinanceOperationException("QS phải trả đã thay thế hoặc không còn hiệu lực; cần tạo và duyệt revision mới trước khi chi.");
         CrmConcurrency.Apply(db, entity, request.RowVersion);
         var from = entity.Status;
         entity.Status = PaymentRequestStatus.Paid;
@@ -167,6 +246,7 @@ public sealed class FinanceService(AppDbContext db, IProjectAccessService projec
         entity.UpdatedAt = entity.PaidAt.Value;
         entity.Events.Add(NewPaymentEvent(from, PaymentRequestStatus.Paid, userId, request.Reason, entity.PaidAt));
         await CrmConcurrency.SaveChangesAsync(db, ct);
+        if (transaction is not null) await transaction.CommitAsync(ct);
         return await GetPaymentAsync(id, ct);
     }
 
@@ -592,6 +672,8 @@ public sealed class FinanceService(AppDbContext db, IProjectAccessService projec
         InvoiceAmount = item.InvoiceAmount,
         Currency = item.Currency,
         Status = item.Status.ToString(),
+        RevisionNumber = item.RevisionNumber,
+        Revisions = JsonSerializer.Deserialize<List<PaymentRequestRevisionResponse>>(item.RevisionHistoryJson) ?? [],
         ReceivedAt = item.ReceivedAt,
         ValidatedAt = item.ValidatedAt,
         AssignedAccountantUserId = item.AssignedAccountantUserId,

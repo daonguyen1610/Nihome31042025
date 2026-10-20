@@ -532,6 +532,10 @@ Kiểm soát hợp đồng hai chiều, phải thu/phải trả, dòng tiền v�
 - VO được version, submit, approve/reject và không sửa ngầm baseline/BOQ gốc.
 - Payment Request: Draft → Under Validation → Ready for Approval → Approved →
   Paid, với Rejected/Cancelled; actor và reference bắt buộc theo loại chứng từ.
+- Nếu QS liên kết bị thay thế sau khi trình, FA tạo revision trong cùng Payment
+  Request và giữ số hóa đơn; bản đã trình được lưu bất biến. Revision trở về Draft
+  và phải qua kiểm tra, phê duyệt độc lập lại. Nếu QS bị thay thế sau duyệt, chặn
+  chi tiền đến khi revision mới được duyệt (NICON xác nhận 20/10/2026).
 - Hồ sơ thanh toán mục tiêu tách Upstream/Downstream, liên kết QS/milestone và có
   ba phần Công trường, CM, Kế toán theo template chứng từ đã được NICON duyệt.
 - Accounting Period: Open → Closing → Closed; post-close correction có lifecycle

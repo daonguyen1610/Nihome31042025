@@ -5153,6 +5153,8 @@ export interface PaymentRequestResponse {
   invoiceAmount: number;
   currency: string;
   status: string;
+  revisionNumber: number;
+  revisions: PaymentRequestRevisionResponse[];
   receivedAt: string;
   validatedAt?: string | null;
   assignedAccountantUserId: number;
@@ -5169,6 +5171,17 @@ export interface PaymentRequestResponse {
   rowVersion: string;
   attachments: PaymentAttachmentResponse[];
   events: PaymentRequestEventResponse[];
+}
+export interface PaymentRequestRevisionResponse {
+  revisionNumber: number;
+  status: string;
+  constructionQsBatchId?: number | null;
+  supplierInvoiceNumber: string;
+  invoiceAmount: number;
+  currency: string;
+  capturedAt: string;
+  revisionReason: string;
+  attachments: PaymentAttachmentResponse[];
 }
 export interface PaymentRequestUpsertRequest {
   contractId: number;
@@ -7159,6 +7172,13 @@ export const adminApi = {
   listPaymentRequests: () => api.get<PaymentRequestResponse[]>("/finance/payment-requests"),
   createPaymentRequest: (body: PaymentRequestUpsertRequest) =>
     postIdempotent<PaymentRequestResponse>("/finance/payment-requests", body),
+  updatePaymentRequest: (id: number, body: PaymentRequestUpsertRequest) =>
+    api.put<PaymentRequestResponse>(`/finance/payment-requests/${id}`, body),
+  revisePaymentRequest: (id: number, rowVersion: string, reason: string) =>
+    postIdempotent<PaymentRequestResponse>(`/finance/payment-requests/${id}/revise`, {
+      rowVersion,
+      reason,
+    }),
   submitPaymentRequest: (id: number, rowVersion: string, reason?: string) =>
     postIdempotent<PaymentRequestResponse>(`/finance/payment-requests/${id}/submit`, {
       rowVersion,

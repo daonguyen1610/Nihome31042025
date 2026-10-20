@@ -15,7 +15,7 @@ public sealed class FinancePaymentReferencesTests(NihomeWebApplicationFactory fa
         using var response = await Client.GetAsync("/api/finance/payment-references");
         response.IsSuccessStatusCode.Should().BeTrue(await response.Content.ReadAsStringAsync());
         var references = await ReadJsonAsync(response);
-        Fields(references).Should().BeEquivalentTo("contracts", "vendors", "accountants");
+        Fields(references).Should().BeEquivalentTo("contracts", "vendors", "accountants", "qsBatches");
         var contracts = references.GetProperty("contracts").EnumerateArray().ToArray();
         var contract = contracts.Single(x => Id(x) == fixture.SignedId);
         Fields(contract).Should().BeEquivalentTo("id", "contractNumber", "vendorId", "vendorName", "paymentMilestones");
@@ -38,6 +38,12 @@ public sealed class FinancePaymentReferencesTests(NihomeWebApplicationFactory fa
         foreach (var accountant in accountants) Fields(accountant).Should().BeEquivalentTo("id", "fullName");
         var allowedAccountants = await WithDbAsync(db => db.Users.Where(x => x.IsActive && x.RoleEntity != null && x.RoleEntity.Code == "ACCOUNTANT").Select(x => x.Id).ToListAsync());
         accountants.Select(Id).Should().BeEquivalentTo(allowedAccountants);
+        var qsBatches = references.GetProperty("qsBatches").EnumerateArray().ToArray();
+        foreach (var batch in qsBatches)
+        {
+            Fields(batch).Should().BeEquivalentTo("id", "contractId", "code", "certifiedAmount");
+            contracts.Select(Id).Should().Contain(batch.GetProperty("contractId").GetInt32());
+        }
 
         // The narrow financial lookup must not expose customer data, negotiated
         // values, or vendor/user contact details. NIH-188 separately grants
