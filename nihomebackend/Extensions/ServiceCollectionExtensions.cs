@@ -123,6 +123,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IContractService, ContractService>();
         services.AddScoped<ContractExecutionProgressService>();
         services.AddScoped<ContractCareActivityService>();
+        services.AddScoped<ContractReminderService>();
+        services.AddHostedService<ContractReminderWorker>();
         services.AddScoped<ContractCareIdempotencyGuard>();
         services.AddScoped<ContractMilestoneNotificationService>();
         services.AddHostedService<ContractMilestoneDueWorker>();

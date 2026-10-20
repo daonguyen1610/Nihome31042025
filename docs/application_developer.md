@@ -1169,6 +1169,58 @@ request. A durable email outbox is not yet part of this workflow, so an
 external delivery followed by a concurrent status conflict still needs manual
 reconciliation.
 
+Contract renewal/end-date emails use a separate durable schedule, not the
+internal payment-milestone notifications. Migration
+`20261020162316_AddContractReminderEmails` adds `contract_reminders` and four
+nullable template columns on `site_settings`; existing data is unchanged.
+Rollback is blocked while schedules/history or edited templates exist; export
+and explicitly remove that data before an intentional downgrade. Do not remove
+a migration already applied to an environment.
+
+| Method | Route | Contract |
+| --- | --- | --- |
+| GET | `/api/contracts/{id}/reminders` | Existing Contract view scope; newest 100 records |
+| POST | `/api/contracts/{id}/reminders/preview` | Contract manage + owner/view-all; `{kind: "Renewal" or "End", reminderDate: "yyyy-MM-dd", contactId?: positive integer}` |
+| POST | `/api/contracts/{id}/reminders` | Same write scope; `{previewToken}` confirms the rendered preview |
+| POST | `/api/contracts/{id}/reminders/{reminderId}/cancel` | Same write scope; only Scheduled can be cancelled |
+| GET/PUT | `/api/site-settings/contract-reminder-templates` | Settings view/manage; `renewalSubject`, `renewalBody`, `endSubject`, `endBody` |
+
+Reminder dates are Vietnam calendar dates, today or later. Preview requires an
+Upstream contract in Signed/InProgress/OnHold with an end date and a valid stored
+customer-contact email (maximum 254 characters). The primary contact is suggested
+first. Preview tokens are protected, bound to actor/contract/recipient/date and
+rendered content, and expire in 15 minutes. Scheduling revalidates the context
+and templates. Replaying the same accepted token returns its existing record;
+only one Scheduled/Sending reminder per contract/type is allowed. A serializable
+transaction covers scheduling/cancellation and claiming a due delivery.
+
+Template subjects contain 1–200 characters on one line; HTML bodies contain
+1–8,000 characters, use the same safe HTML allowlist as quotation emails, and
+must contain `{{contractNumber}}` and `{{endDate}}`. Supported variables are
+`{{customerName}}` (customer display name), `{{contractNumber}}` and `{{endDate}}`
+(`dd/MM/yyyy`). Unknown/malformed variables are rejected. Body values are HTML
+encoded server-side. Rendered subject/body limits are 200/16,000 characters.
+Saved schedules retain the approved rendered content when templates change.
+
+`ContractReminderWorker` polls every five minutes, including overdue schedules
+after downtime. Before SMTP it rechecks contract eligibility, unchanged customer,
+contract number/end date/contact email, scheduler account/permissions/scope, and
+pending aggregate deletion. Changed context becomes NeedsReview without sending.
+The worker commits Sending before SMTP, then saves Sent and a customer-care Email
+entry together after SMTP acceptance. Sent means SMTP acceptance, not inbox
+delivery. SMTP errors become NeedsReview/DELIVERY_UNCERTAIN; neither that state nor
+Sending is automatically retried. A crash after claiming or SMTP acceptance can
+leave Sending: an operator must reconcile SMTP logs before any new delivery.
+Stop the sender during manual reconciliation; preserve the original snapshot,
+attempt timestamps and audit evidence. Scheduled cancellation never retracts an
+email already handed to SMTP. Permanent deletion discloses schedules/history,
+invalidates stale plans on state changes, and blocks Sending records.
+
+Focused validation: `ContractReminderServiceTests`, `ContractRemindersTests`,
+and `e2e/smoke/contract-reminder-email.spec.ts` (live Compose SQL/SMTP, opt in with
+`MAIL_SINK_URL=http://127.0.0.1:8025`; no real customer mail). Use headed slow mode
+with `PLAYWRIGHT_SLOW_MO=1500` and `--headed --workers=1` for visual review.
+
 The browser-to-SMTP delivery E2E uses an opt-in, non-relaying local mailbox.
 `docker-compose-dev.yaml` overlays `docker-compose.yaml` and adds the
 `smtpSink` service, so one file starts the whole stack with the backend email

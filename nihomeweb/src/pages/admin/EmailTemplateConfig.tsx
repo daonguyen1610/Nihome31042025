@@ -10,6 +10,7 @@ import {
   FileText,
 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
+import ContractReminderTemplateConfig from "@/components/admin/ContractReminderTemplateConfig";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -224,6 +225,7 @@ const EmailTemplateConfig = () => {
           </div>
         </header>
 
+        <ContractReminderTemplateConfig />
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
           {/* Left: form */}
           <div className="space-y-4">

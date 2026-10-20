@@ -36,6 +36,11 @@ public class SiteSettings
 
     public string? QuoteEmailBodyTemplate { get; set; }
 
+    public string? ContractRenewalEmailSubjectTemplate { get; set; }
+    public string? ContractRenewalEmailBodyTemplate { get; set; }
+    public string? ContractEndEmailSubjectTemplate { get; set; }
+    public string? ContractEndEmailBodyTemplate { get; set; }
+
     public string? NotificationEmail { get; set; }
 
     public int AuditLogRetentionMinutes { get; set; } = 43200;

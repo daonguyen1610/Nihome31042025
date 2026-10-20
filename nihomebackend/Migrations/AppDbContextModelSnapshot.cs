@@ -2039,45 +2039,6 @@ namespace nihomebackend.Migrations
                     b.ToTable("contract_appendices", (string)null);
                 });
 
-            modelBuilder.Entity("NihomeBackend.Models.ContractCareActivity", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Content")
-                        .IsRequired()
-                        .HasMaxLength(4000)
-                        .HasColumnType("nvarchar(4000)");
-
-                    b.Property<int>("ContractId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("CreatedByUserId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("OccurredAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Type")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CreatedByUserId");
-
-                    b.HasIndex("ContractId", "OccurredAt", "Id");
-
-                    b.ToTable("contract_care_activities", (string)null);
-                });
-
             modelBuilder.Entity("NihomeBackend.Models.ContractAttachment", b =>
                 {
                     b.Property<int>("Id")
@@ -2131,6 +2092,45 @@ namespace nihomebackend.Migrations
                     b.HasIndex("UploadedByUserId");
 
                     b.ToTable("contract_attachments", (string)null);
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.ContractCareActivity", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<int>("ContractId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("OccurredAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("ContractId", "OccurredAt", "Id");
+
+                    b.ToTable("contract_care_activities", (string)null);
                 });
 
             modelBuilder.Entity("NihomeBackend.Models.ContractLegalActivation", b =>
@@ -2327,6 +2327,86 @@ namespace nihomebackend.Migrations
                     b.HasIndex("ContractPaymentMilestoneId", "ChangedAt");
 
                     b.ToTable("contract_payment_milestone_events", (string)null);
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.ContractReminder", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("AttemptedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(16000)
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("ContactId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ContextHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<int>("ContractId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ErrorCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("PreviewHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime>("ReminderDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("SentAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("ToEmail")
+                        .IsRequired()
+                        .HasMaxLength(254)
+                        .HasColumnType("nvarchar(254)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PreviewHash")
+                        .IsUnique();
+
+                    b.HasIndex("Status", "ReminderDate");
+
+                    b.HasIndex("ContractId", "Kind", "Status");
+
+                    b.ToTable("contract_reminders", (string)null);
                 });
 
             modelBuilder.Entity("NihomeBackend.Models.Customer", b =>
@@ -6313,13 +6393,13 @@ namespace nihomebackend.Migrations
                         .HasMaxLength(60)
                         .HasColumnType("nvarchar(60)");
 
+                    b.Property<int?>("ConstructionQsBatchId")
+                        .HasColumnType("int");
+
                     b.Property<int>("ContractId")
                         .HasColumnType("int");
 
                     b.Property<int?>("ContractPaymentMilestoneId")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("ConstructionQsBatchId")
                         .HasColumnType("int");
 
                     b.Property<DateTime>("CreatedAt")
@@ -6353,23 +6433,25 @@ namespace nihomebackend.Migrations
                     b.Property<DateTime>("ReceivedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<int?>("RevisionCreatedByUserId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("RevisionHistoryJson")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)")
-                        .HasDefaultValue("[]");
-
-                    b.Property<int>("RevisionNumber")
-                        .HasColumnType("int")
-                        .HasDefaultValue(1);
-
                     b.Property<DateTime?>("RejectedAt")
                         .HasColumnType("datetime2");
 
                     b.Property<int?>("RejectedByUserId")
                         .HasColumnType("int");
+
+                    b.Property<int?>("RevisionCreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("RevisionHistoryJson")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("nvarchar(max)")
+                        .HasDefaultValue("[]");
+
+                    b.Property<int>("RevisionNumber")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(1);
 
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
@@ -6414,11 +6496,11 @@ namespace nihomebackend.Migrations
                     b.HasIndex("Code")
                         .IsUnique();
 
+                    b.HasIndex("ConstructionQsBatchId");
+
                     b.HasIndex("ContractId");
 
                     b.HasIndex("ContractPaymentMilestoneId");
-
-                    b.HasIndex("ConstructionQsBatchId");
 
                     b.HasIndex("CreatedByUserId");
 
@@ -9216,6 +9298,18 @@ namespace nihomebackend.Migrations
                     b.Property<int>("AuditLogRetentionMinutes")
                         .HasColumnType("int");
 
+                    b.Property<string>("ContractEndEmailBodyTemplate")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ContractEndEmailSubjectTemplate")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ContractRenewalEmailBodyTemplate")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ContractRenewalEmailSubjectTemplate")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -11576,6 +11670,17 @@ namespace nihomebackend.Migrations
                     b.Navigation("Milestone");
                 });
 
+            modelBuilder.Entity("NihomeBackend.Models.ContractReminder", b =>
+                {
+                    b.HasOne("NihomeBackend.Models.Contract", "Contract")
+                        .WithMany()
+                        .HasForeignKey("ContractId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Contract");
+                });
+
             modelBuilder.Entity("NihomeBackend.Models.Customer", b =>
                 {
                     b.HasOne("NihomeBackend.Models.ApplicationUser", "Owner")
@@ -12726,6 +12831,11 @@ namespace nihomebackend.Migrations
                         .HasForeignKey("CancelledByUserId")
                         .OnDelete(DeleteBehavior.NoAction);
 
+                    b.HasOne("NihomeBackend.Models.ConstructionQsBatch", "ConstructionQsBatch")
+                        .WithMany()
+                        .HasForeignKey("ConstructionQsBatchId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("NihomeBackend.Models.Contract", "Contract")
                         .WithMany()
                         .HasForeignKey("ContractId")
@@ -12735,11 +12845,6 @@ namespace nihomebackend.Migrations
                     b.HasOne("NihomeBackend.Models.ContractPaymentMilestone", "ContractPaymentMilestone")
                         .WithMany()
                         .HasForeignKey("ContractPaymentMilestoneId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("NihomeBackend.Models.ConstructionQsBatch", "ConstructionQsBatch")
-                        .WithMany()
-                        .HasForeignKey("ConstructionQsBatchId")
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NihomeBackend.Models.ApplicationUser", "CreatedBy")
@@ -12780,11 +12885,11 @@ namespace nihomebackend.Migrations
 
                     b.Navigation("CancelledBy");
 
+                    b.Navigation("ConstructionQsBatch");
+
                     b.Navigation("Contract");
 
                     b.Navigation("ContractPaymentMilestone");
-
-                    b.Navigation("ConstructionQsBatch");
 
                     b.Navigation("CreatedBy");
 

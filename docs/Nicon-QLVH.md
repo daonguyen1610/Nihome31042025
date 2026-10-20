@@ -213,6 +213,12 @@ dùng ngày 20/10/2026, khi đã có lịch sử chăm sóc thì không được
 đồng; kiểm tra server-side phải giữ nguyên Hợp đồng và lịch sử khi từ chối.
 Hợp đồng chưa có lịch sử vẫn theo quy tắc đổi phân loại hiện hành.
 
+Theo xác nhận người dùng ngày 20/10/2026, email nhắc gia hạn/kết thúc gửi tự
+động theo ngày nhắc được cấu hình riêng cho từng Hợp đồng. Người nhận là người
+liên hệ của Khách hàng; tiêu đề và nội dung quản lý tại `/admin/email-templates`.
+Nhân viên xem trước email thực tế rồi xác nhận lịch gửi. Email chỉ thông báo,
+không tự gia hạn, thanh lý hoặc đổi trạng thái Hợp đồng.
+
 ### Điểm mở
 
 Quy ước mã Dự án và các field CRM NICON muốn bỏ cần được xác nhận bằng văn bản.

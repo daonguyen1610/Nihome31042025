@@ -327,6 +327,36 @@ export interface EmailTemplatesResponse {
   quoteEmailBodyTemplate: string | null;
 }
 
+export interface ContractReminderTemplates {
+  renewalSubject: string;
+  renewalBody: string;
+  endSubject: string;
+  endBody: string;
+}
+export interface ContractReminder {
+  id: number;
+  kind: "Renewal" | "End";
+  reminderDate: string;
+  toEmail: string;
+  subject: string;
+  body: string;
+  status: "Scheduled" | "Sending" | "Sent" | "Cancelled" | "NeedsReview";
+  errorCode: string | null;
+  createdAt: string;
+  attemptedAt: string | null;
+  sentAt: string | null;
+}
+export interface ContractReminderPreview {
+  kind: "Renewal" | "End";
+  reminderDate: string;
+  previewToken: string;
+  contactId: number;
+  toEmail: string;
+  subject: string;
+  body: string;
+  contacts: { id: number; name: string; email: string }[];
+}
+
 export interface UpdateEmailTemplatesRequest {
   newApplicationEmailSubjectTemplate?: string | null;
   newApplicationEmailBodyTemplate?: string | null;
@@ -5875,6 +5905,19 @@ export const adminApi = {
 
   // Email templates
   getEmailTemplates: () => api.get<EmailTemplatesResponse>("/site-settings/email-templates"),
+  getContractReminderTemplates: () =>
+    api.get<ContractReminderTemplates>("/site-settings/contract-reminder-templates"),
+  updateContractReminderTemplates: (data: ContractReminderTemplates) =>
+    api.put<ContractReminderTemplates>("/site-settings/contract-reminder-templates", data),
+  listContractReminders: (id: number) => api.get<ContractReminder[]>(`/contracts/${id}/reminders`),
+  previewContractReminder: (
+    id: number,
+    data: { kind: "Renewal" | "End"; reminderDate: string; contactId?: number },
+  ) => api.post<ContractReminderPreview>(`/contracts/${id}/reminders/preview`, data),
+  scheduleContractReminder: (id: number, previewToken: string) =>
+    api.post<ContractReminder>(`/contracts/${id}/reminders`, { previewToken }),
+  cancelContractReminder: (id: number, reminderId: number) =>
+    api.post(`/contracts/${id}/reminders/${reminderId}/cancel`),
   updateEmailTemplates: (data: UpdateEmailTemplatesRequest) =>
     api.put<EmailTemplatesResponse>("/site-settings/email-templates", data),
 
