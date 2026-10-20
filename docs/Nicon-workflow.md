@@ -317,13 +317,20 @@ Downstream QS được duyệt
 `Đủ điều kiện review` không phải tự động thanh toán. Supply-only, labour-only,
 equipment và mixed subcontract đối chiếu ma trận chứng từ trong bộ ISO NICON
 đã gửi; thiếu mục nào yêu cầu FA, chị K/Kiara, bổ sung riêng mục đó. Không tạo
-chứng từ giả để đủ three-way matching. Chưa tìm thấy bộ biểu mẫu ISO được nhận
-diện trong repository; chưa thể khẳng định danh mục chứng từ đã đầy đủ.
+chứng từ giả để đủ three-way matching. Bộ nguồn `docs/Nicon/ISO/` đã được nhận
+ngày 20/10/2026: quy trình `TQT` có thanh toán, quyết toán thầu phụ và khách
+hàng; quy trình `MH` có đề nghị mua, báo giá, đặt hàng, đề nghị thanh toán;
+quy trình `LK` có nhập/xuất kho và theo dõi thiết bị. Chưa có ma trận chứng từ
+được FA/CM xác nhận cho bốn loại package, nên chưa thể khẳng định hồ sơ đủ để
+mở gate thanh toán. Xem [quy trình TQT](<Nicon/ISO/D.Quy trình chi tiết/D.6. Quy trình thanh toán, quyết toán công trình/Quy trình thanh quyết toán.doc>).
 
 **Target — ISO, BCH và tổng hợp CM đã xác nhận:** mỗi Dự án có BCH riêng,
 nhưng một nhân sự có thể tham gia nhiều Dự án đồng thời; quyền vẫn theo từng
 Dự án. Mẫu cho từng quy trình/bước lấy từ bộ ISO đã gửi, kiểm kê và báo riêng
-form thiếu cho NICON. Màn hình CM tổng hợp tiến độ, khối lượng hoàn thành
+form thiếu cho NICON. Bộ nguồn đã nhận có `TC-M01`, `TC-M04`–`TC-M09`,
+`TC-M24` và 19 workbook nghiệm thu nội bộ `TC-M28`. Quy trình dẫn chiếu
+`TC-M02`, `TC-M23`, `TC-M00` nhưng chưa thấy file cùng mã; cần NICON xác minh.
+Màn hình CM tổng hợp tiến độ, khối lượng hoàn thành
 (nghiệm thu đầu ra/đầu vào tách biệt), giá trị thực hiện so với dự toán, QA/QC
 và an toàn. Công thức/kỳ báo cáo và mapping ISO còn cần đối chiếu; xác nhận yêu
 cầu không phải bằng chứng chức năng đã triển khai.
@@ -462,8 +469,9 @@ khóa là snapshot bất biến.
 8. Q-11: hợp đồng import MS Project đầy đủ gồm calendar, baseline và dữ liệu
    phân cấp; Team và Tiến độ hiện được tách thành hai tab liên kết.
 9. Công thức/kỳ chốt S-Curve; quyền publish/unlock baseline; điều kiện VO.
-10. Kiểm kê và map bộ ISO đã gửi vào QA/QC/cổng khởi công theo loại công trình;
-    NICON bổ sung riêng form thiếu, không cần chọn lại bộ mẫu chuẩn.
+10. Hoàn tất mapping bộ ISO trong `docs/Nicon/ISO/` vào QA/QC/cổng khởi công
+    theo loại công trình; NICON xác minh `TC-M02`, `TC-M23`, `TC-M00` và bổ sung
+    riêng form còn thiếu. Không cần chọn lại bộ mẫu chuẩn.
 11. Đối chiếu chứng từ ISO cho supply, labour, equipment và mixed package;
     FA (chị K/Kiara) bổ sung mục thiếu, xác nhận ngoại lệ và mapping chưa rõ.
     Giữ riêng luồng Upstream/Downstream và ma trận three-way matching.
