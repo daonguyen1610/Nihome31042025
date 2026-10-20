@@ -2759,12 +2759,13 @@ application/rollback rehearsal is still required when the Docker stack is
 available. Sample An Phu crane/crew requests demonstrate approved/pending work
 without fabricating supplied documents, payments or ISO templates.
 
-**Open decision / input gate:** during implementation the user confirmed that
-the ISO repository is not yet available and will be supplied later. No approved
-ISO mapping, payment-package exceptions, executed-value formula or reporting
-period has been supplied for this slice. Do not publish production ISO templates
-or enable Phase 3/4 financial/baseline calculations until CM/FA/Product confirm
-those inputs. No fallback document list or formula is seeded.
+**Open decision / input gate:** the ISO pack was subsequently uploaded to
+`docs/Nicon/ISO/` on 20 October 2026. The earlier absence of source files is
+resolved; approved process/step mapping, package-specific payment exceptions,
+executed-value formula and reporting period are still missing. Do not publish
+production ISO templates or enable Phase 3/4 financial/baseline calculations
+until CM/FA/Product confirm those inputs. No fallback document list or formula
+is seeded.
 
 #### Kế hoạch hoàn thiện theo phản hồi NICON
 
@@ -2799,11 +2800,12 @@ request, Procurement prepares the contract and supplies the site, then FA
 processes payment against the applicable dossier. These are confirmed target
 rules, not evidence that the downstream handoff is implemented.
 
-The existing NICON ISO pack is the confirmed template source for every process
-and step. Inventory the received files before asking for individual missing
-forms; payment-document gaps go to FA (chị K/Kiara). The repository currently
-has no identified ISO form pack to inspect. Do not invent form codes, mandatory
-documents, package-specific exceptions or payment gates from these answers.
+The NICON ISO pack is the confirmed template source for every process and step.
+The received source files are in `docs/Nicon/ISO/`; the inventory below is a
+source check, not an approved mandatory-form matrix. Ask NICON about individual
+missing forms and FA (chị K/Kiara) about payment-document gaps. Do not invent
+mandatory documents, package-specific exceptions or payment gates from file
+names alone.
 
 - An executed Upstream D&B/construction Contract starts CM preparation on the
   existing Operational Project; it must not create a duplicate project.
@@ -2947,7 +2949,38 @@ operation; a Drive failure must not falsely mark a dossier synchronized.
 - schedule PDFs demonstrate real WBS hierarchies, durations, start/finish,
   predecessors, parallel permit/design activities, milestones, and baselines;
 - `BOQ/` contains heterogeneous one-sheet and multi-sheet workbooks used to
-  discover import variability.
+  discover import variability;
+- `ISO/` contains the customer-uploaded common document control, internal audit
+  and improvement processes plus detailed customer, tender, design,
+  construction, payment, purchasing, equipment and HR processes. The folder
+  has 170 files as received on 20 October 2026, including 17 Office lock or
+  temporary files and two RAR archives. These counts describe the upload,
+  not approved or usable template versions.
+
+The first ISO cross-check gives these source-to-workflow anchors:
+
+| Source | Observed evidence | Mapping still needed |
+|---|---|---|
+| `D.1` customer (`KH`) | Customer list, customer information/confirmation, contract and complaint records | Reconcile `KH-M02`'s process label with its file name; align pre-contract customer and design handoff |
+| `D.2` tender (`DT`) | Competitive quotation and tender paths, bid work assignment, supplier quotations and contract handoff | `DT-M02` is cited as a quotation but its file is named handoff record; referenced `DT-M03` is absent. Reconcile current tender gates with the older source |
+| `D.3` design (`TK`) | Preliminary, basic and technical design handoffs; `TK-M01`–`TK-M03` and appendices | Match current design stage gates and released IFC rules; the source's permit references do not settle the current permit matrix |
+| `D.4` construction (`TC`) | Preparation `TC-M01`, shop/material submittals `TC-M04`–`TC-M06`, site diary `TC-M08`/`TC-M09`, acceptance `TC-M24`, 19 internal-acceptance workbooks under `TC-M28` | Confirm work-type applicability, reviewers, version and required evidence; referenced `TC-M02`/`TC-M23` files are absent, `TC-M15` is duplicated and `TC-M21`/`TC-M22` labels conflict |
+| `D.6` payment (`TQT`) | Separate payment, subcontractor settlement and customer settlement; `TQT-M01`–`TQT-M09` and references to `MH`/`TC` forms | FA/CM must approve the four-package document matrix; referenced `TC-M00` has no matching source file |
+| `D.7` purchasing (`MH`) and `D.8` equipment (`LK`) | `MH-M01`–`MH-M08` for requests, quotations, orders and supplier review; `LK-M01`–`LK-M08` for equipment receipt, issue and maintenance | Align current Procurement/warehouse roles and typed Material, Equipment and Labour handoff |
+| `C.1` document control (`QTC-KSTLHS`) | Document issue, revision and record control with `BM 01`–`BM 07` files | Confirm authorized release, supersession, retention and current ISO revision before publishing templates |
+| `C.2` internal audit and `C.3` improvement | Audit schedule/findings/corrective actions and nonconformity handling, with accompanying `BM` files | Confirm current ownership, severity and closure rules; these are source processes, not delivered audit modules |
+| `D.9`–`D.11` HR (`NS1`–`NS3`) | Recruitment/training, work reporting, leave and resignation records | `NS1-M05`/`NS1-M06` are referenced for training but not present; confirm current HR policy and access before mapping personal records |
+
+The `TC` and `TQT` source procedures show effective dates in 2016 and 2020
+respectively. Their role names, submission weekdays and retention periods are
+historical source content, not automatically approved current product rules.
+The pack does not itself resolve the four-package payment matrix, the
+project-specific QA/QC checklist or current template versions. Keep the
+existing document workflow and snapshot/version boundaries until the business
+owners confirm the mapping. Source examples:
+[construction](<Nicon/ISO/D.Quy trình chi tiết/D.4. Quy trình thi công lắp đặt/Quy trình thi công lắp đặt.doc>),
+[payment](<Nicon/ISO/D.Quy trình chi tiết/D.6. Quy trình thanh toán, quyết toán công trình/Quy trình thanh quyết toán.doc>),
+[purchasing](<Nicon/ISO/D.Quy trình chi tiết/D.7. Quy trình mua hàng, đánh giá nhà cung ứng, thầu phụ- co chinh sua/Quy trình mua hàng, đánh giá NCC.doc>).
 
 Source files are read-only evidence. Never rewrite, normalize, translate, or
 re-export them as an implementation side effect. Canonical docs summarize the
