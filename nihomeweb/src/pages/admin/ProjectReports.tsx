@@ -329,6 +329,19 @@ function ProjectReportCard({ report }: { report: ProjectOperationalReportRespons
                                   `${key === "safety" ? "hse" : "construction"}.status.${source.status}`,
                                 )}
                               </span>
+                              {source.certifiedAmount != null && (
+                                <p className="text-xs text-muted-foreground">
+                                  {t("construction.portfolio.certifiedAmount")}:{" "}
+                                  {formatVndWithSymbol(source.certifiedAmount)}
+                                  {source.periodFrom && source.periodTo && (
+                                    <>
+                                      {" · "}
+                                      {formatReportDate(source.periodFrom, lang)}–
+                                      {formatReportDate(source.periodTo, lang)}
+                                    </>
+                                  )}
+                                </p>
+                              )}
                             </li>
                           ))}
                         </ul>

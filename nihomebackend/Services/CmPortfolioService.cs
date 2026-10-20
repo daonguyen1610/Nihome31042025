@@ -17,7 +17,8 @@ public sealed class CmPortfolioService(AppDbContext db, IPermissionService permi
         var qs = canQs ? await db.ConstructionQsBatches.AsNoTracking()
             .Where(x => projectIds.Contains(x.OperationalProjectId) && x.Status == ConstructionReviewStatus.CmApproved &&
                 x.RecordState == ConstructionQsRecordState.Active && x.IsActiveLineage)
-            .Select(x => new { x.Id, x.OperationalProjectId, x.Code, x.Direction, x.Status }).ToListAsync(ct) : [];
+            .Select(x => new { x.Id, x.OperationalProjectId, x.Code, x.Direction, x.Status,
+                x.CertifiedAmount, x.PeriodFrom, x.PeriodTo }).ToListAsync(ct) : [];
         var qa = canQa ? await db.QaQcDossiers.AsNoTracking().Where(x => projectIds.Contains(x.OperationalProjectId))
             .Select(x => new { x.Id, x.OperationalProjectId, x.Code, x.Status }).ToListAsync(ct) : [];
         var hse = canHse ? await db.HseViolations.AsNoTracking().Where(x => projectIds.Contains(x.OperationalProjectId))
@@ -29,7 +30,8 @@ public sealed class CmPortfolioService(AppDbContext db, IPermissionService permi
             CmPortfolioSection Qs(ConstructionQsDirection direction) => Section(canQs, qs
                 .Where(x => x.OperationalProjectId == projectId && x.Direction == direction)
                 .Select(x => new CmPortfolioSource(x.Id, x.Code, x.Status.ToString(),
-                    $"/admin/construction/bch/qs?projectId={projectId}#qs-{x.Id}")));
+                    $"/admin/construction/bch/qs?projectId={projectId}#qs-{x.Id}",
+                    x.CertifiedAmount, x.PeriodFrom, x.PeriodTo)));
             result[projectId] = new(generated, "CurrentState", Qs(ConstructionQsDirection.Upstream),
                 Qs(ConstructionQsDirection.Downstream),
                 Section(canQa, qa.Where(x => x.OperationalProjectId == projectId).Select(x => new CmPortfolioSource(

@@ -2767,6 +2767,8 @@ includes the new resource blockers. SQL concurrency regressions use
 directions, QA/QC and HSE counts/statuses/source links, generation timestamp and
 `periodPolicy=CurrentState`. Counts are records, not physical quantities or
 percent completion. These sources are not historical date-filter snapshots.
+Each approved, active QS source also carries its own certified amount and
+period; these are individual record facts, not an executed-value aggregate.
 Source-permission denial returns Unavailable, a null count and no links. Budget
 comparison remains Unavailable; no new financial formula is inferred.
 

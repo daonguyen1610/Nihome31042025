@@ -156,7 +156,8 @@ public sealed class ProjectReportDrillDownResponse
     public string? Query { get; set; }
 }
 
-public sealed record CmPortfolioSource(int Id, string Code, string Status, string Route);
+public sealed record CmPortfolioSource(int Id, string Code, string Status, string Route,
+    decimal? CertifiedAmount = null, DateTime? PeriodFrom = null, DateTime? PeriodTo = null);
 public sealed record CmPortfolioSection(string Availability, string? ReasonCode, int? Count,
     IReadOnlyList<CmPortfolioSource> Sources);
 public sealed record CmPortfolioResponse(DateTime GeneratedAtUtc, string PeriodPolicy,

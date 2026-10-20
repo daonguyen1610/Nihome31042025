@@ -26,6 +26,7 @@
   { "key": "construction.portfolio.safety", "category": "construction", "vi": "Hồ sơ an toàn", "en": "Safety records", "zh": "安全记录", "ja": "安全記録" },
   { "key": "construction.portfolio.budget", "category": "construction", "vi": "Giá trị thực hiện so với dự toán", "en": "Executed value versus estimate", "zh": "实际完成价值与预算比较", "ja": "実行価額と予算の比較" },
   { "key": "construction.portfolio.records", "category": "construction", "vi": "hồ sơ", "en": "records", "zh": "条记录", "ja": "件" },
+  { "key": "construction.portfolio.certifiedAmount", "category": "construction", "vi": "Giá trị QS đã xác nhận", "en": "Certified QS amount", "zh": "已确认工程量金额", "ja": "承認済みQS金額" },
   { "key": "construction.portfolio.restricted", "category": "construction", "vi": "Chưa có quyền xem hồ sơ nguồn", "en": "Source-record permission required", "zh": "需要源记录查看权限", "ja": "元記録の閲覧権限が必要です" },
   { "key": "construction.portfolio.unavailable", "category": "construction", "vi": "Chưa đủ nguồn dữ liệu và công thức được xác nhận", "en": "Verified data sources and agreed calculations are not yet available", "zh": "尚无已验证数据源及已确认计算规则", "ja": "検証済みデータと合意済み計算式が未整備です" },
   { "key": "rbac.perm.proc.resource-requests.view.label", "category": "rbac", "vi": "Xem đề xuất máy và nhân công đã duyệt", "en": "View approved equipment and labour requests", "zh": "查看已批准的设备和劳务申请", "ja": "承認済み機材・労務申請を表示" },
