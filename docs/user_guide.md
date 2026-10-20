@@ -1448,7 +1448,9 @@ permission in addition to the relevant Finance permission.
 When creating a Downstream Payment Request, Finance may select an approved
 Downstream QS batch from the chosen Contract. Leave QS unselected for an advance
 or request without accepted quantity. If a linked QS batch is later
-superseded, validation or approval stops until the request is corrected. The
+superseded, validation or approval stops. A submitted request cannot currently
+be edited, and rejecting it does not free its invoice number for a replacement;
+escalate the case to Finance/CM rather than creating a duplicate invoice. The
 QS link records provenance; it does not replace the invoice, attachment,
 Contract or eventual ISO dossier checks. A user who prepared, submitted or
 validated a Payment Request cannot approve the same request.

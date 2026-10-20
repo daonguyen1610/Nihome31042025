@@ -1440,6 +1440,10 @@ The service rechecks the QS direction, CM approval, active lineage, Contract and
 project at create/update, validation and approval. An absent QS link remains
 valid for advances or other stages whose document rules are still to be agreed;
 this link alone does not certify an ISO payment dossier or authorize payment.
+If the linked QS is superseded after submission, the current request cannot be
+edited; rejection also retains the unique vendor/invoice number. A correction
+or revision path needs an approved Finance/CM decision before the workflow can
+recover without weakening duplicate-invoice protection.
 For approval, the service also rejects an actor who created, submitted,
 validated, or was assigned as accountant on the same Payment Request, even if
 that actor has `finance.payments.approve`. This follows the separate maker,
