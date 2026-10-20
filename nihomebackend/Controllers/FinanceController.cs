@@ -67,6 +67,12 @@ public sealed class FinanceController(IFinanceService service, IAuditLogger audi
     public Task<ActionResult<PaymentRequestResponse>> SubmitPayment(int id, [FromBody] FinanceTransitionRequest request, CancellationToken ct) =>
         PaymentTransition(id, request, "submit", userId => service.SubmitPaymentRequestAsync(id, request, userId, ct));
 
+    [HttpPost("payment-requests/{id:int}/revise")]
+    [RequirePermission("finance.payments", "manage")]
+    [Idempotency("finance.payments.revise", requireKey: true)]
+    public Task<ActionResult<PaymentRequestResponse>> RevisePayment(int id, [FromBody] FinanceTransitionRequest request, CancellationToken ct) =>
+        PaymentTransition(id, request, "revise", userId => service.RevisePaymentRequestAsync(id, request, userId, ct));
+
     [HttpPost("payment-requests/{id:int}/validate")]
     [RequirePermission("finance.payments", "manage")]
     [Idempotency("finance.payments.validate", requireKey: true)]

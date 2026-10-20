@@ -17,6 +17,9 @@ public sealed class PaymentRequest : IConcurrencyTracked
     public decimal InvoiceAmount { get; set; }
     public string Currency { get; set; } = "VND";
     public PaymentRequestStatus Status { get; set; } = PaymentRequestStatus.Draft;
+    public int RevisionNumber { get; set; } = 1;
+    public string RevisionHistoryJson { get; set; } = "[]";
+    public int? RevisionCreatedByUserId { get; set; }
     public DateTime ReceivedAt { get; set; }
     public DateTime? ValidatedAt { get; set; }
     public int? ValidatedByUserId { get; set; }

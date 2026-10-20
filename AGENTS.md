@@ -42,6 +42,10 @@ For every non-trivial task:
    a product defect. For documentation-only or other non-code changes that
    cannot affect build/runtime behavior, use document-focused checks only; do
    not run code builds or automated test suites.
+   Every new or changed integration or E2E test must be executed after its final
+   edit and pass before declaring the task complete. If its required environment
+   is unavailable, report the test as not run and the work as unverified; do not
+   claim a passing result from compilation, test listing, or an earlier version.
 6. Review the final diff for scope, security, compatibility, and accidental changes.
 7. Update documentation and seed data when required. The Seed data must quality, the data is crucial to reflect the business flow, as well as get the real context when look at the system. The name must be meaningful, and reflect to the business of Nicon.
 8. Commit the completed change using the Git rules below.

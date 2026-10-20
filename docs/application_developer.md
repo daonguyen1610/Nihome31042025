@@ -1440,10 +1440,24 @@ The service rechecks the QS direction, CM approval, active lineage, Contract and
 project at create/update, validation and approval. An absent QS link remains
 valid for advances or other stages whose document rules are still to be agreed;
 this link alone does not certify an ISO payment dossier or authorize payment.
-If the linked QS is superseded after submission, the current request cannot be
-edited; rejection also retains the unique vendor/invoice number. A correction
-or revision path needs an approved Finance/CM decision before the workflow can
-recover without weakening duplicate-invoice protection.
+The Finance screen uses the authorized `PUT /finance/payment-requests/{id}` for
+Draft edits with the current row version and preserves attachment, milestone
+and QS selections. A superseded QS is shown as unavailable in the editor.
+`POST /finance/payment-requests/{id}/revise` requires `finance.payments.manage`,
+a reason, idempotency key and current row version. It applies to submitted,
+rejected or approved but unpaid requests. Submitted and approved requests can
+be revised when their linked QS is no longer eligible; rejected requests can
+be revised to correct their dossier. The operation snapshots the prior
+revision and attachments, increments the revision number on the same request,
+keeps the invoice identity, clears previous review/approval actors and returns
+the current version to Draft. The new Draft must be edited and pass submission,
+accounting validation and independent approval again. The pay endpoint checks
+QS eligibility inside a serializable transaction and blocks payment when the
+linked QS has been superseded. Historical revisions are returned read-only in
+the Payment Request response; the vendor/invoice uniqueness rule remains global.
+Migration `AddPaymentRequestRevisions` backfills existing requests as revision 1
+and refuses rollback after revision history exists, so audit data is not dropped
+silently.
 For approval, the service also rejects an actor who created, submitted,
 validated, or was assigned as accountant on the same Payment Request, even if
 that actor has `finance.payments.approve`. This follows the separate maker,

@@ -1447,13 +1447,21 @@ assigned projects; portfolio finance users require the global project-view
 permission in addition to the relevant Finance permission.
 When creating a Downstream Payment Request, Finance may select an approved
 Downstream QS batch from the chosen Contract. Leave QS unselected for an advance
-or request without accepted quantity. If a linked QS batch is later
-superseded, validation or approval stops. A submitted request cannot currently
-be edited, and rejecting it does not free its invoice number for a replacement;
-escalate the case to Finance/CM rather than creating a duplicate invoice. The
-QS link records provenance; it does not replace the invoice, attachment,
-Contract or eventual ISO dossier checks. A user who prepared, submitted or
-validated a Payment Request cannot approve the same request.
+or request without accepted quantity. A Draft request can be reopened from the
+Finance list to correct its Contract, QS and documents before submission; a
+stale QS is marked in the selector. Review whether an eligible replacement QS
+is needed or the request is a legitimate advance without QS. If a linked QS is
+later superseded, validation, approval and payment stop. Use **Create revision**
+with a reason on the same request; the earlier version and its documents remain
+visible in revision history, and the invoice number stays with that request.
+Edit the new Draft to select the corrected QS when applicable and update its
+documents, then submit it for accounting validation and independent approval
+again. Submitted or approved requests can be revised when their linked QS is no
+longer eligible; rejected requests can be revised to correct their dossier.
+The QS link records provenance;
+it does not replace invoice, attachment, Contract or eventual ISO dossier checks.
+A user who prepared, revised, submitted or validated a Payment Request cannot
+approve the same request.
 
 #### 3.6.3 Variation Order (VO) Management
 

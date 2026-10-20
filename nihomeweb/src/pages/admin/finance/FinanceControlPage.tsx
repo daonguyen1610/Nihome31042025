@@ -6,6 +6,7 @@ import {
   CircleDollarSign,
   FileClock,
   Landmark,
+  Pencil,
   Plus,
   RefreshCw,
   RotateCcw,
@@ -57,6 +58,7 @@ import { useAppSelector } from "@/store";
 type Translate = (key: string, params?: Record<string, string | number>) => string;
 type CreateDialog = "payment" | "period" | "correction" | null;
 type ActionKind =
+  | "paymentRevise"
   | "paymentApprove"
   | "paymentReject"
   | "paymentPay"
@@ -72,6 +74,12 @@ const currentLocalDateTime = () => {
   const now = new Date();
   now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
   return now.toISOString().slice(0, 16);
+};
+
+const toLocalDateTime = (value: string) => {
+  const date = new Date(value);
+  date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+  return date.toISOString().slice(0, 16);
 };
 
 const emptyAttachment = (): PaymentAttachmentRequest => ({ fileName: "", filePath: "" });
@@ -164,6 +172,7 @@ const FinanceControlPage = () => {
   const [reason, setReason] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const [paymentForm, setPaymentForm] = useState(emptyPayment);
+  const [editingPayment, setEditingPayment] = useState<PaymentRequestResponse | null>(null);
   const [periodForm, setPeriodForm] = useState({
     year: new Date().getFullYear(),
     month: new Date().getMonth() + 1,
@@ -293,14 +302,39 @@ const FinanceControlPage = () => {
 
   const openCreate = (kind: Exclude<CreateDialog, null>) => {
     setFormError(null);
-    if (kind === "payment") setPaymentForm(emptyPayment());
+    if (kind === "payment") {
+      setEditingPayment(null);
+      setPaymentForm(emptyPayment());
+    }
     if (kind === "period")
       setPeriodForm({ year: new Date().getFullYear(), month: new Date().getMonth() + 1 });
     if (kind === "correction") setCorrectionForm(emptyCorrection());
     setDialog(kind);
   };
 
-  const createPayment = () => {
+  const openEditPayment = (row: PaymentRequestResponse) => {
+    setFormError(null);
+    setEditingPayment(row);
+    setPaymentForm({
+      contractId: row.contractId,
+      vendorId: row.vendorId,
+      contractPaymentMilestoneId: row.contractPaymentMilestoneId ?? 0,
+      constructionQsBatchId: row.constructionQsBatchId ?? 0,
+      supplierInvoiceNumber: row.supplierInvoiceNumber,
+      invoiceDate: row.invoiceDate.slice(0, 10),
+      invoiceAmount: row.invoiceAmount,
+      currency: row.currency,
+      receivedAt: toLocalDateTime(row.receivedAt),
+      assignedAccountantUserId: row.assignedAccountantUserId,
+      attachments: row.attachments.map((item) => ({
+        fileName: item.fileName,
+        filePath: item.filePath,
+      })),
+    });
+    setDialog("payment");
+  };
+
+  const savePayment = () => {
     const attachments = paymentForm.attachments.filter(
       (item) => item.fileName.trim() || item.filePath.trim(),
     );
@@ -320,20 +354,26 @@ const FinanceControlPage = () => {
       setFormError(t("finance.validation.payment"));
       return;
     }
+    const payload = {
+      ...paymentForm,
+      supplierInvoiceNumber: paymentForm.supplierInvoiceNumber.trim(),
+      receivedAt: new Date(paymentForm.receivedAt).toISOString(),
+      contractPaymentMilestoneId: paymentForm.contractPaymentMilestoneId || null,
+      constructionQsBatchId: paymentForm.constructionQsBatchId || null,
+      attachments: attachments.map((item) => ({
+        fileName: item.fileName.trim(),
+        filePath: item.filePath.trim(),
+      })),
+    };
     void runMutation(
       () =>
-        adminApi.createPaymentRequest({
-          ...paymentForm,
-          supplierInvoiceNumber: paymentForm.supplierInvoiceNumber.trim(),
-          receivedAt: new Date(paymentForm.receivedAt).toISOString(),
-          contractPaymentMilestoneId: paymentForm.contractPaymentMilestoneId || null,
-          constructionQsBatchId: paymentForm.constructionQsBatchId || null,
-          attachments: attachments.map((item) => ({
-            fileName: item.fileName.trim(),
-            filePath: item.filePath.trim(),
-          })),
-        }),
-      "finance.success.paymentCreated",
+        editingPayment
+          ? adminApi.updatePaymentRequest(editingPayment.id, {
+              ...payload,
+              rowVersion: editingPayment.rowVersion,
+            })
+          : adminApi.createPaymentRequest(payload),
+      editingPayment ? "finance.success.paymentUpdated" : "finance.success.paymentCreated",
     );
   };
 
@@ -389,6 +429,7 @@ const FinanceControlPage = () => {
     const reasonRequired = [
       "paymentReject",
       "paymentCancel",
+      "paymentRevise",
       "periodClose",
       "correctionReject",
       "correctionReverse",
@@ -398,6 +439,8 @@ const FinanceControlPage = () => {
       return;
     }
     const operations: Record<ActionKind, () => Promise<unknown>> = {
+      paymentRevise: () =>
+        adminApi.revisePaymentRequest(action.id, action.rowVersion, reasonValue ?? ""),
       paymentApprove: () =>
         adminApi.decidePaymentRequest(action.id, true, action.rowVersion, reasonValue),
       paymentReject: () =>
@@ -486,6 +529,7 @@ const FinanceControlPage = () => {
                   formatDate={formatDate}
                   t={t}
                   onCreate={() => openCreate("payment")}
+                  onEdit={openEditPayment}
                   onSubmit={(row) =>
                     void runMutation(
                       () => adminApi.submitPaymentRequest(row.id, row.rowVersion),
@@ -564,7 +608,13 @@ const FinanceControlPage = () => {
       >
         <DialogContent className="max-h-[92vh] w-[95vw] max-w-3xl overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{dialog ? t(`finance.dialog.${dialog}.title`) : ""}</DialogTitle>
+            <DialogTitle>
+              {dialog === "payment" && editingPayment
+                ? t("finance.dialog.payment.editTitle")
+                : dialog
+                  ? t(`finance.dialog.${dialog}.title`)
+                  : ""}
+            </DialogTitle>
             <DialogDescription>
               {dialog ? t(`finance.dialog.${dialog}.description`) : ""}
             </DialogDescription>
@@ -587,6 +637,7 @@ const FinanceControlPage = () => {
                 vendors={paymentReferences.vendors}
                 accountants={paymentReferences.accountants}
                 qsBatches={paymentReferences.qsBatches}
+                unavailableQsCode={editingPayment?.constructionQsCode}
                 t={t}
               />
             ))}
@@ -616,7 +667,7 @@ const FinanceControlPage = () => {
             <Button
               onClick={
                 dialog === "payment"
-                  ? createPayment
+                  ? savePayment
                   : dialog === "period"
                     ? createPeriod
                     : createCorrection
@@ -627,7 +678,11 @@ const FinanceControlPage = () => {
                   (!paymentReferences?.contracts.length || !paymentReferences.accountants.length))
               }
             >
-              {busy ? t("common.saving") : t("finance.action.create")}
+              {busy
+                ? t("common.saving")
+                : dialog === "payment" && editingPayment
+                  ? t("finance.action.save")
+                  : t("finance.action.create")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -735,6 +790,7 @@ const PaymentsPanel = ({
   formatDate,
   t,
   onCreate,
+  onEdit,
   onSubmit,
   onValidate,
   onAction,
@@ -750,6 +806,7 @@ const PaymentsPanel = ({
   formatDate: (value?: string | null) => string;
   t: Translate;
   onCreate: () => void;
+  onEdit: (row: PaymentRequestResponse) => void;
   onSubmit: (row: PaymentRequestResponse) => void;
   onValidate: (row: PaymentRequestResponse) => void;
   onAction: (target: ActionTarget) => void;
@@ -777,6 +834,9 @@ const PaymentsPanel = ({
               <div>
                 <h3 className="font-semibold">{row.code}</h3>
                 <p className="text-sm text-muted-foreground">{row.supplierInvoiceNumber}</p>
+                <p className="text-xs text-muted-foreground">
+                  {t("finance.field.revision")} {row.revisionNumber ?? 1}
+                </p>
               </div>
               {status(row.status)}
             </div>
@@ -817,6 +877,42 @@ const PaymentsPanel = ({
                 </div>
               </div>
             )}
+            {(row.revisions?.length ?? 0) > 0 && (
+              <details className="mt-4 border-t pt-3">
+                <summary className="cursor-pointer text-sm font-medium">
+                  {t("finance.field.priorRevisions")} ({row.revisions.length})
+                </summary>
+                <ol className="mt-3 space-y-3">
+                  {row.revisions.map((revision) => (
+                    <li className="rounded border p-3 text-sm" key={revision.revisionNumber}>
+                      <p className="font-medium">
+                        {t("finance.field.revision")} {revision.revisionNumber} ·{" "}
+                        {t(`finance.status.${revision.status}`)}
+                      </p>
+                      <p>{revision.supplierInvoiceNumber}</p>
+                      <p>
+                        {money.format(revision.invoiceAmount)} {revision.currency} · QS #
+                        {revision.constructionQsBatchId ?? "-"}
+                      </p>
+                      <p className="text-muted-foreground">
+                        {formatDate(revision.capturedAt)} · {revision.revisionReason}
+                      </p>
+                      {revision.attachments.map((attachment) => (
+                        <a
+                          key={attachment.id}
+                          href={attachment.filePath}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="mr-3 text-primary underline-offset-4 hover:underline"
+                        >
+                          {attachment.fileName}
+                        </a>
+                      ))}
+                    </li>
+                  ))}
+                </ol>
+              </details>
+            )}
             <details className="mt-4 border-t pt-3">
               <summary className="cursor-pointer text-sm font-medium">
                 {t("finance.field.timeline")} ({row.events.length})
@@ -845,6 +941,31 @@ const PaymentsPanel = ({
               <p className="mt-3 border-l-2 border-amber-400 pl-3 text-sm">{row.decisionReason}</p>
             )}
             <div className="mt-4 flex flex-wrap gap-2 border-t pt-3">
+              {canManage && row.status === "Draft" && (
+                <ActionButton
+                  variant="outline"
+                  disabled={busy}
+                  onClick={() => onEdit(row)}
+                  icon={<Pencil className="mr-2 h-4 w-4" />}
+                >
+                  {t("finance.action.edit")}
+                </ActionButton>
+              )}
+              {canManage &&
+                (row.status === "Rejected" ||
+                  (Boolean(row.constructionQsBatchId) &&
+                    ["UnderValidation", "ReadyForApproval", "Approved"].includes(row.status))) && (
+                  <ActionButton
+                    variant="outline"
+                    disabled={busy}
+                    onClick={() =>
+                      onAction({ kind: "paymentRevise", id: row.id, rowVersion: row.rowVersion })
+                    }
+                    icon={<RotateCcw className="mr-2 h-4 w-4" />}
+                  >
+                    {t("finance.action.paymentRevise")}
+                  </ActionButton>
+                )}
               {canManage && row.status === "Draft" && (
                 <ActionButton
                   variant="outline"
@@ -1234,6 +1355,7 @@ const PaymentForm = ({
   vendors,
   accountants,
   qsBatches,
+  unavailableQsCode,
   t,
 }: {
   form: ReturnType<typeof emptyPayment>;
@@ -1242,6 +1364,7 @@ const PaymentForm = ({
   vendors: PaymentReferencesResponse["vendors"];
   accountants: PaymentReferencesResponse["accountants"];
   qsBatches: PaymentReferencesResponse["qsBatches"];
+  unavailableQsCode?: string | null;
   t: Translate;
 }) => {
   const selectedContract = contracts.find((contract) => contract.id === form.contractId);
@@ -1330,6 +1453,16 @@ const PaymentForm = ({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="none">{t("finance.lookup.noDownstreamQs")}</SelectItem>
+              {form.constructionQsBatchId &&
+                !qsBatches.some(
+                  (item) =>
+                    item.id === form.constructionQsBatchId && item.contractId === form.contractId,
+                ) && (
+                  <SelectItem value={String(form.constructionQsBatchId)} disabled>
+                    {unavailableQsCode ?? `#${form.constructionQsBatchId}`} ·{" "}
+                    {t("finance.lookup.qsUnavailable")}
+                  </SelectItem>
+                )}
               {qsBatches
                 .filter((item) => item.contractId === form.contractId)
                 .map((item) => (

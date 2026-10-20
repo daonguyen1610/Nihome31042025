@@ -320,6 +320,9 @@ Downstream QS được duyệt
 lập/sửa, xác nhận hồ sơ và phê duyệt; UI chỉ liệt kê QS phù hợp với HĐ đã chọn.
 Liên kết là tùy chọn để giữ luồng tạm ứng/trả trước; chưa có ma trận ISO chứng từ
 theo loại package, đối soát khoản tiền với QS hoặc tự động tạo Payment Request.
+Khi QS bị thay thế sau khi trình, tạo revision của cùng Payment Request, lưu bản
+đã trình, giữ số hóa đơn và duyệt lại từ Draft. Nếu QS bị thay thế sau duyệt,
+không chi tiền đến khi revision mới được duyệt (quyết định NICON 20/10/2026).
 
 `Đủ điều kiện review` không phải tự động thanh toán. Supply-only, labour-only,
 equipment và mixed subcontract đối chiếu ma trận chứng từ trong bộ ISO NICON

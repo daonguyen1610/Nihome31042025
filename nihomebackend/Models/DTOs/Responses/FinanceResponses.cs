@@ -16,6 +16,8 @@ public sealed class PaymentRequestResponse
     public decimal InvoiceAmount { get; set; }
     public string Currency { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
+    public int RevisionNumber { get; set; }
+    public List<PaymentRequestRevisionResponse> Revisions { get; set; } = [];
     public DateTime ReceivedAt { get; set; }
     public DateTime? ValidatedAt { get; set; }
     public int AssignedAccountantUserId { get; set; }
@@ -32,6 +34,34 @@ public sealed class PaymentRequestResponse
     public string RowVersion { get; set; } = string.Empty;
     public List<PaymentAttachmentResponse> Attachments { get; set; } = [];
     public List<PaymentRequestEventResponse> Events { get; set; } = [];
+}
+
+public sealed class PaymentRequestRevisionResponse
+{
+    public int RevisionNumber { get; set; }
+    public string Status { get; set; } = string.Empty;
+    public int ContractId { get; set; }
+    public int VendorId { get; set; }
+    public int? ContractPaymentMilestoneId { get; set; }
+    public int? ConstructionQsBatchId { get; set; }
+    public string SupplierInvoiceNumber { get; set; } = string.Empty;
+    public DateOnly InvoiceDate { get; set; }
+    public decimal InvoiceAmount { get; set; }
+    public string Currency { get; set; } = string.Empty;
+    public DateTime ReceivedAt { get; set; }
+    public int AssignedAccountantUserId { get; set; }
+    public DateTime? SubmittedAt { get; set; }
+    public int? SubmittedByUserId { get; set; }
+    public DateTime? ValidatedAt { get; set; }
+    public int? ValidatedByUserId { get; set; }
+    public DateTime? ApprovedAt { get; set; }
+    public int? ApprovedByUserId { get; set; }
+    public DateTime? RejectedAt { get; set; }
+    public string? DecisionReason { get; set; }
+    public int CapturedByUserId { get; set; }
+    public DateTime CapturedAt { get; set; }
+    public string RevisionReason { get; set; } = string.Empty;
+    public List<PaymentAttachmentResponse> Attachments { get; set; } = [];
 }
 
 public sealed class PaymentRequestEventResponse
