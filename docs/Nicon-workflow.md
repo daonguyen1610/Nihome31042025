@@ -492,5 +492,13 @@ khóa là snapshot bất biến.
    `OperationalProjectId`, gồm compatibility API và rollback.
 14. Cây Drive đích và migration `01_Khao_sat` vào `01_CRM_PreDesign`.
 
+Đã đối chiếu từng câu Q-01–Q-11 và các đầu vào bổ sung với ISO tại
+`Nicon-QLVH.md` Mục 12. Riêng `NS2-M01` có 11 tiêu chí chấm điểm cá nhân và
+quy trình `NS2` nêu trưởng bộ phận đánh giá, BGĐ dùng báo cáo cho quyết định
+nhân sự; đây là nguồn tham chiếu cho Q-02, chưa định nghĩa quyền duyệt việc nội
+bộ hoặc công thức KPI số hóa. Quy trình TK liệt kê bước trình khách/cơ quan,
+không bổ sung yêu cầu đồng ý ở vòng trình nội bộ Q-06. Các tỷ lệ 5% trong mẫu
+thanh toán không phải công thức cảnh báo trễ S-Curve.
+
 Các điểm trên là blocker cho phần kiến trúc/dữ liệu tương ứng. Chỉ Product Owner
 hoặc đại diện nghiệp vụ NICON được chấp nhận rủi ro yêu cầu.
