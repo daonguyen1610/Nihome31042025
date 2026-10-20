@@ -244,7 +244,9 @@ trong khi media/feedback theo file của Concept và review markup vẫn là m�
 - Hoàn thành đầu việc tự động gửi Design Lead/người duyệt đã chỉ định. CC chỉ
   nhận thông tin, không có quyền phê duyệt.
 - Mỗi revision hồ sơ Concept, Basic Design hoặc Shop Drawing có danh sách người
-  nhận nội bộ cụ thể. Người nhận chỉ xem và bình luận. Design Manager tổng hợp,
+  nhận nội bộ cụ thể. Người nhận chỉ xem và bình luận chung hoặc gắn bình luận
+  vào một Project Document thuộc đúng đợt trình; chưa có markup theo trang/nét
+  vẽ. Design Manager tổng hợp,
   ghi nhận đã trình khách và quyết định `ClientApproved`,
   `ClientChangesRequested` hoặc `Rejected`; quyết định không đạt bắt buộc lý do.
 - Cổng chuyển giai đoạn yêu cầu revision mới nhất của đúng giai đoạn đã được

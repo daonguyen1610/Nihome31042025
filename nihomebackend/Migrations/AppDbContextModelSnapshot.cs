@@ -3111,11 +3111,16 @@ namespace nihomebackend.Migrations
                     b.Property<int>("DesignReviewId")
                         .HasColumnType("int");
 
+                    b.Property<long?>("ProjectDocumentId")
+                        .HasColumnType("bigint");
+
                     b.HasKey("Id");
 
                     b.HasIndex("AuthorUserId");
 
                     b.HasIndex("DesignReviewId", "CreatedAt");
+
+                    b.HasIndex("DesignReviewId", "ProjectDocumentId");
 
                     b.ToTable("design_review_comments", (string)null);
                 });
@@ -11829,6 +11834,11 @@ namespace nihomebackend.Migrations
                         .HasForeignKey("DesignReviewId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("NihomeBackend.Models.DesignReviewDocument", null)
+                        .WithMany()
+                        .HasForeignKey("DesignReviewId", "ProjectDocumentId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Author");
 

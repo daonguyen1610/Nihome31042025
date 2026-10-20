@@ -18,6 +18,7 @@ public sealed class SubmitDesignReviewRequest
 public sealed class AddDesignReviewCommentRequest
 {
     [Required, MaxLength(4000)] public string Body { get; set; } = string.Empty;
+    public long? ProjectDocumentId { get; set; }
 }
 
 public sealed class ConsolidateDesignReviewRequest

@@ -181,7 +181,7 @@ The platform is being developed incrementally. The following components are curr
 | Quotations, capability documents, and tenders | Implemented, including governed material-rate pricing, localized Excel quotation workbooks, and versioned Tender estimates |
 | Site survey digitization | Implemented, including project routing, structured conditions, CSV import, media/geolocation, Drive sync, and PDF export |
 | Customer contracts, appendices, attachments, and variation orders | Implemented |
-| Design management | Partial — projects, Concept/Basic/Shop/IFC, Project Documents with Drive sync, linked Team/Schedule, one-approver task completion, CC, internal comment-only circulation, Design Manager consolidation and client decision gates are delivered; per-file markup and full MS Project import remain target work |
+| Design management | Partial — projects, Concept/Basic/Shop/IFC, Project Documents with Drive sync, linked Team/Schedule, one-approver task completion, CC, internal comments linked to a dossier or one submitted file, Design Manager consolidation and client decision gates are delivered; in-drawing markup and full MS Project import remain target work |
 | Permitting checklists | Partial — owner/deadline, lifecycle, submitted/issued documents, risk filters and a manual activation wizard are delivered; project-type permit templates and automatic applicable-list creation remain target work |
 | Construction management (tasks/Gantt and site diaries) | Partial — core tasks/diaries plus CM preparation/readiness, BCH resource/QA-QC/QS workspaces and Budget Baseline references are delivered; editable WBS/S-Curve baseline, reproducible delay alert, portfolio review and offline/reconnect remain target work |
 | Acceptance and handover | Partial — core records and CM review of QA/QC/QS are delivered; upstream/downstream QS payment eligibility, three-section dossier and complete handover gate remain target work |
@@ -852,9 +852,13 @@ The current implementation manages drawing metadata, workflow status, revision
 reasons, and IFC distribution records. Basic Design and Shop Drawing records
 support managed binary upload plus authorized preview/download, and the
 Documents tab exposes those files. Concept options remain metadata-only: media,
-walkthrough video and per-file feedback are deferred. In-drawing markup,
-immutable revision-file snapshots and a generated IFC package export are also
-deferred. DWG is not rendered natively; preview depends on the supported managed
+walkthrough video and Concept-option feedback are deferred. In the Reviews tab,
+an assigned recipient may comment on the whole submitted dossier or select one
+of its attached Project Documents. The selected file is recorded with the
+comment; other project files cannot be attached to that review. Existing
+general comments remain available. Page/drawing markup, immutable revision-file
+snapshots and a generated IFC package export are still deferred. DWG is not
+rendered natively; preview depends on the supported managed
 file type and the server content endpoint.
 
 Once a design dossier has been submitted to the client, it cannot be

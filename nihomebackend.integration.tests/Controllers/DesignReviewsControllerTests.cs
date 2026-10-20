@@ -43,8 +43,31 @@ public sealed class DesignReviewsControllerTests : IntegrationTestBase
             $"/api/design-projects/{fixture.DesignProjectId}/reviews/{reviewId}/comments", new
             {
                 body = "Kinh doanh đề nghị xác nhận vật liệu hoàn thiện theo brief khách hàng.",
+                projectDocumentId = fixture.DocumentId,
             });
         comment.StatusCode.Should().Be(HttpStatusCode.OK, await comment.Content.ReadAsStringAsync());
+        var commented = await ReadJsonAsync(comment);
+        commented.GetProperty("comments")[0].GetProperty("projectDocumentId").GetInt64()
+            .Should().Be(fixture.DocumentId);
+
+        using var invalidDocument = await SendWithKeyAsync(HttpMethod.Post,
+            $"/api/design-projects/{fixture.DesignProjectId}/reviews/{reviewId}/comments", new
+            {
+                body = "Không được gắn sang tài liệu ngoài đợt trình.",
+                projectDocumentId = fixture.DocumentId + 1,
+            });
+        invalidDocument.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.DesignReviewComments.CountAsync(item =>
+            item.DesignReviewId == reviewId))).Should().Be(1);
+
+        using var generalComment = await SendWithKeyAsync(HttpMethod.Post,
+            $"/api/design-projects/{fixture.DesignProjectId}/reviews/{reviewId}/comments", new
+            {
+                body = "Lưu ý chung cho bộ hồ sơ.",
+            });
+        generalComment.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await ReadJsonAsync(generalComment)).GetProperty("comments")[1]
+            .GetProperty("projectDocumentId").ValueKind.Should().Be(System.Text.Json.JsonValueKind.Null);
 
         await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "ACCOUNTANT"));
         using var unrelated = await Client.GetAsync($"/api/design-projects/{fixture.DesignProjectId}/reviews");

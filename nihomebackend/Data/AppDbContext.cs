@@ -2447,6 +2447,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .HasForeignKey(item => item.DesignReviewId).OnDelete(DeleteBehavior.Cascade);
             b.HasOne(item => item.Author).WithMany()
                 .HasForeignKey(item => item.AuthorUserId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne<DesignReviewDocument>().WithMany()
+                .HasForeignKey(item => new { item.DesignReviewId, item.ProjectDocumentId })
+                .OnDelete(DeleteBehavior.Restrict);
             b.HasIndex(item => new { item.DesignReviewId, item.CreatedAt });
         });
 
