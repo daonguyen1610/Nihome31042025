@@ -28,6 +28,25 @@ public sealed class FinanceControllerTests : IntegrationTestBase
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
+    [Theory]
+    [InlineData(16, false)] // 23:30 on August 1 in Vietnam
+    [InlineData(17, true)]  // 00:30 on August 2 in Vietnam
+    public async Task PaymentInvoiceDate_UsesVietnamReceiptDayAtUtcMidnightBoundary(int utcHour, bool accepted)
+    {
+        var fixture = await CreateFixtureAsync();
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "ACCOUNTANT"));
+        var receivedAt = new DateTime(2026, 8, 1, utcHour, 30, 0, DateTimeKind.Utc);
+
+        using var response = await SendAsync(HttpMethod.Post, "/api/finance/payment-requests",
+            ValidPayment(fixture.ContractId, fixture.VendorId, fixture.AccountantId,
+                invoiceDate: "2026-08-02", receivedAt: receivedAt));
+
+        response.StatusCode.Should().Be(accepted ? HttpStatusCode.Created : HttpStatusCode.BadRequest);
+        var count = await WithDbAsync(db => db.PaymentRequests.CountAsync(item =>
+            item.ContractId == fixture.ContractId));
+        count.Should().Be(accepted ? 1 : 0);
+    }
+
     [Fact]
     public async Task PaymentWorkflow_EnforcesOperationalProjectScope()
     {
@@ -850,15 +869,16 @@ public sealed class FinanceControllerTests : IntegrationTestBase
     }
 
     private static object ValidPayment(int contractId, int vendorId, int accountantId,
-        string? rowVersion = null, int? qsBatchId = null) => new
+        string? rowVersion = null, int? qsBatchId = null, string invoiceDate = "2026-08-01",
+        DateTime? receivedAt = null) => new
         {
             contractId,
             vendorId,
             supplierInvoiceNumber = "INV-2026-001",
-            invoiceDate = "2026-08-01",
+            invoiceDate,
             invoiceAmount = 1000m,
             currency = "VND",
-            receivedAt = new DateTime(2026, 8, 2, 1, 0, 0, DateTimeKind.Utc),
+            receivedAt = receivedAt ?? new DateTime(2026, 8, 2, 1, 0, 0, DateTimeKind.Utc),
             assignedAccountantUserId = accountantId,
             constructionQsBatchId = qsBatchId,
             attachments = new[] { new { fileName = "invoice.pdf", filePath = "/files/finance/invoice.pdf" } },
