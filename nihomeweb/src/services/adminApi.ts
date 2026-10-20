@@ -5136,6 +5136,7 @@ export interface PaymentReferencesResponse {
   }>;
   vendors: Array<{ id: number; vendorCode: string; companyName: string }>;
   accountants: Array<{ id: number; fullName: string | null }>;
+  qsBatches: Array<{ id: number; contractId: number; code: string; certifiedAmount: number }>;
 }
 export interface PaymentRequestResponse {
   id: number;
@@ -5145,6 +5146,8 @@ export interface PaymentRequestResponse {
   vendorId: number;
   vendorName: string;
   contractPaymentMilestoneId?: number | null;
+  constructionQsBatchId?: number | null;
+  constructionQsCode?: string | null;
   supplierInvoiceNumber: string;
   invoiceDate: string;
   invoiceAmount: number;
@@ -5171,6 +5174,7 @@ export interface PaymentRequestUpsertRequest {
   contractId: number;
   vendorId: number;
   contractPaymentMilestoneId?: number | null;
+  constructionQsBatchId?: number | null;
   supplierInvoiceNumber: string;
   invoiceDate: string;
   invoiceAmount: number;

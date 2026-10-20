@@ -1444,6 +1444,13 @@ Payment Request contract choices, request lists, and every workflow action are
 limited to the caller's Operational Project scope. Project members see their
 assigned projects; portfolio finance users require the global project-view
 permission in addition to the relevant Finance permission.
+When creating a Downstream Payment Request, Finance may select an approved
+Downstream QS batch from the chosen Contract. Leave QS unselected for an advance
+or request without accepted quantity. If a linked QS batch is later
+superseded, validation or approval stops until the request is corrected. The
+QS link records provenance; it does not replace the invoice, attachment,
+Contract or eventual ISO dossier checks. A user who prepared, submitted or
+validated a Payment Request cannot approve the same request.
 
 #### 3.6.3 Variation Order (VO) Management
 

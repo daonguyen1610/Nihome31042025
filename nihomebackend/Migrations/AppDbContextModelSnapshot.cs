@@ -6280,6 +6280,9 @@ namespace nihomebackend.Migrations
                     b.Property<int?>("ContractPaymentMilestoneId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("ConstructionQsBatchId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -6363,6 +6366,8 @@ namespace nihomebackend.Migrations
                     b.HasIndex("ContractId");
 
                     b.HasIndex("ContractPaymentMilestoneId");
+
+                    b.HasIndex("ConstructionQsBatchId");
 
                     b.HasIndex("CreatedByUserId");
 
@@ -12662,6 +12667,11 @@ namespace nihomebackend.Migrations
                         .HasForeignKey("ContractPaymentMilestoneId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("NihomeBackend.Models.ConstructionQsBatch", "ConstructionQsBatch")
+                        .WithMany()
+                        .HasForeignKey("ConstructionQsBatchId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("NihomeBackend.Models.ApplicationUser", "CreatedBy")
                         .WithMany()
                         .HasForeignKey("CreatedByUserId")
@@ -12703,6 +12713,8 @@ namespace nihomebackend.Migrations
                     b.Navigation("Contract");
 
                     b.Navigation("ContractPaymentMilestone");
+
+                    b.Navigation("ConstructionQsBatch");
 
                     b.Navigation("CreatedBy");
 

@@ -540,6 +540,9 @@ Kiểm soát hợp đồng hai chiều, phải thu/phải trả, dòng tiền v�
 
 **Partial:** `PaymentRequest` hiện thực hiện luồng phải trả Downstream, yêu cầu
 vendor, invoice và attachment chung. Hệ thống chưa có Payment Dossier hai chiều,
+nhưng có thể gắn QS phải trả đã CM duyệt và còn hiệu lực cùng HĐ/Dự án. Liên kết
+này được kiểm tra server-side khi lập, xác nhận và phê duyệt; vẫn tùy chọn để
+không chặn tạm ứng theo hợp đồng trước khi có khối lượng nghiệm thu. Hệ thống
 chưa lưu ba section Công trường/CM/Kế toán và chưa có ma trận chứng từ theo loại
 Supply, Labour, Equipment hoặc Mixed Subcontract. Bộ ISO NICON và mapping biểu
 mẫu là đầu vào bắt buộc trước khi publish template sản xuất. NICON xác nhận

@@ -1433,6 +1433,13 @@ submit, validate, decide, pay, and cancel recheck the selected Contract's actual
 project before mutation. A scoped finance permission therefore requires active
 project membership (or project manager/creator scope), while
 `operations.projects.view.all` enables the authorized finance portfolio.
+Payment creation may link one approved, active Downstream QS batch to the same
+Contract and Operational Project through `ConstructionQsBatchId`. The finance
+reference response lists eligible QS batches for accessible Downstream contracts.
+The service rechecks the QS direction, CM approval, active lineage, Contract and
+project at create/update, validation and approval. An absent QS link remains
+valid for advances or other stages whose document rules are still to be agreed;
+this link alone does not certify an ISO payment dossier or authorize payment.
 For approval, the service also rejects an actor who created, submitted,
 validated, or was assigned as accountant on the same Payment Request, even if
 that actor has `finance.payments.approve`. This follows the separate maker,

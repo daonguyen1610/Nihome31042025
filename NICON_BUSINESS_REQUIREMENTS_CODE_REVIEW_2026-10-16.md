@@ -458,11 +458,15 @@ Bằng chứng chính:
   cùng Contract, không tạo master trùng.
 - Có receivable milestones, nhắc hạn, Payment Request Downstream, phân tách người
   lập/người duyệt, chống invoice trùng, Paid immutability.
+- Payment Request có thể gắn một Downstream QS batch đã CM duyệt, đang hiệu lực,
+  cùng HĐ/Dự án; kiểm tra lại trước xác nhận hồ sơ và phê duyệt. Không bắt QS cho
+  tạm ứng/trả trước khi chưa có khối lượng nghiệm thu.
 - Có Accounting Period và correction/reversal workflow.
 
 Khoảng trống:
 
-- Chưa có một payment dossier hoàn chỉnh hai chiều gắn QS/milestone.
+- Chưa có một payment dossier hoàn chỉnh hai chiều; liên kết QS phải trả hiện có
+  chưa phải đối soát giá trị hoặc ma trận chứng từ.
 - Chưa có ba phần chứng từ Công trường → CM → Kế toán theo mẫu NICON.
 - Chưa chốt thành phần bắt buộc và three-way matching cho supply, labour,
   equipment và mixed package.
@@ -1119,10 +1123,10 @@ lát cắt đã pass làm bằng chứng cho toàn module.
 | Q-10 — Design Lead/Manager | Partial | Có team role, một approver, assignee khác approver, phase/client/IFC gate. Chưa chứng minh toàn bộ quyền reopen/reassign, delegation và phạm vi discipline của phương án. | DetailDesignScheduleService; DesignReviewService; IfcReleaseService; design tests |
 | Q-11 — Team/tiến độ/MS Project | Partial | Có parent, predecessor, planned/actual dates, critical/milestone flags, resource summary, vendor/downstream link. Chưa có import/re-import MPP với UID, lag, calendar, baseline và conflict policy đầy đủ; critical flag không chứng minh CPM engine. | Models/DetailDesignSchedule.cs; DetailDesignScheduleService; DesignScheduleTimeline.tsx |
 | Q-BOQ-01 — Nhập theo danh mục | Implemented cho chọn danh mục/trường/mẫu/import; Partial cho BOQ nâng cao | Có sáu cấu hình nguồn, form đúng sheet, download/preview/import atomic và chặn nhầm category/field/stale; chưa có import nguyên trạng mọi file, hierarchy/formula engine hoặc tự nâng schema. | BoqConfiguredWorkbookService; BoqConfigurationRules; BoqConfiguredEntry; ConfiguredBoqControllerTests |
-| Q-CM-01 — Portfolio, CM templates, delegation | Partial | Có CM/BCH roles/routes và kiểm tra tác giả khác reviewer. Chưa có catalog CM, delegate có hiệu lực/SLA và portfolio exception đầy đủ. Equipment/Labour chỉ đánh dấu ReadyForProcurementAndFinance, chưa tạo hồ sơ downstream thực tế. | ConstructionOperationsService.CreateResourceHandoff; ConstructionWorkspaceShell.tsx; ConstructionOperationsControllerTests |
+| Q-CM-01 — Portfolio, CM templates, delegation | Partial | Có CM/BCH roles/routes, kiểm tra tác giả khác reviewer, BCH đa dự án theo membership và handoff Equipment/Labour sang Cung ứng lập/liên kết HĐ, xác nhận cung cấp. Chưa có catalog CM, delegate có hiệu lực/SLA và portfolio exception đầy đủ. | ConstructionOperationsService; ConstructionProcurementService; OperationalProjectTeamControllerTests; ConstructionProcurementControllerTests |
 | Q-CM-02 — Baseline/S-Curve | Partial | Có preparation Version/Supersedes và snapshot readiness; WBS/Schedule/S-Curve/Budget là reference/document IDs. Chưa có published time-series baseline/actual engine, phép variance, kỳ chốt và recovery workflow như phương án. | Models/ConstructionOperations.cs; ConstructionOperationsService.BuildReadinessSnapshot; KpiService.SiteProgressVarianceAsync |
 | Q-CM-03 — ISO/offline | Partial | Có readiness server gate, evidence và QA/QC schema version/type, HSE/punch/acceptance records. Chưa có ISO applicability chuẩn và local outbox/reconnect conflict flow đầy đủ; idempotency middleware không đồng nghĩa có offline queue. | ConstructionOperationsService; QaQcWorkspacePage.tsx; SiteDiaryPage.tsx; ConstructionOperations tests |
-| Q-FIN-01 — Dossier ba phần | Partial | Có PaymentRequest, milestone, invoice, SoD, Paid immutability và correction. Chưa có dossier Site/CM/Accounting, section approval/version, QS→Finance handoff và matching matrix hoàn chỉnh. | Models/Finance.cs; Models/ConstructionOperations.cs; FinanceService; FinanceControllerTests |
+| Q-FIN-01 — Dossier ba phần | Partial | Có PaymentRequest, milestone, invoice, SoD, Paid immutability, correction và liên kết Downstream QS tùy chọn được kiểm tra server-side. Chưa có dossier Site/CM/Accounting, section approval/version, Upstream QS handoff hay matching matrix hoàn chỉnh. | Models/Finance.cs; Models/ConstructionOperations.cs; FinanceService; FinanceControllerTests |
 | Q-OPS-01 — Drive topology/account | Partial cho capability; Target cho chuyển tài khoản/topology | Có OAuth/configuration/durable sync. Survey và CrmPreDesign vẫn là hai binding; chưa có migration topology reversible và verify file lịch sử trên tài khoản NICON. | GoogleDriveOptions; GoogleDriveSettingsStore; ProjectDriveSyncService |
 | Q-OPS-02 — Host/UAT | Target | Không có URL/commit deployment/sign-off mới trong lượt này. Local Docker hoặc test pass không chứng minh host NICON. | Yêu cầu môi trường tại mục 6; repository không cung cấp chứng nhận vận hành. |
 | Q-GOV-01 — Quyết định và thẩm quyền | Open decision | Có đề xuất decision record ở mục 5; chưa có hồ sơ xác nhận đủ owner/approver/phạm vi cho mọi câu hỏi. Hướng nhiều loại BOQ của người dùng không tự chốt công thức, ISO hay approval matrix khác. | Biên bản 03/10; canonical docs; yêu cầu người dùng 17/10 |
