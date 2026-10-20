@@ -1007,9 +1007,11 @@ site diary, or other evidence. The same document can appear only once in a
 dossier. Older integrations that send document IDs without a type remain
 supported. New IDs from those integrations are stored as **Other**, while
 updates retain an existing classification for unchanged IDs. Classification
-is not inferred from a filename. The published ISO template and released IFC
-still apply. Each dossier card shows the document IDs and classifications for
-review.
+is not inferred from a filename. The published project QA/QC template and
+released IFC still apply. Mapping the newly received NICON ISO forms into
+mandatory project-type checklists remains pending CM approval; a file in the
+source pack is not automatically a published template. Each dossier card shows
+the document IDs and classifications for review.
 
 Material requests use the target BOQ warning bands from the customer PRD:
 yellow at 85%, orange at 95%, and red above 100%. The red state blocks ordering
@@ -1017,17 +1019,19 @@ and requires an approved VO. These bands are planned until the denominator,
 rounding, zero-allowance behavior, and server workflow are approved and
 implemented; the current material-request behavior remains the product truth.
 
-For Downstream payment, the target control is three-way matching:
+For Downstream payment, the target evidence gate is:
 
 ```text
 Signed Downstream Contract
-  + valid posted Warehouse Receipt
+  + valid posted Warehouse Receipt when the package includes material
   + approved Downstream QS acceptance
   = eligible for Accounting payment review
 ```
 
 Eligibility does not mean automatic payment. Missing, mismatched, reversed, or
 superseded evidence blocks the handoff and must leave financial state unchanged.
+Material packages require three-way matching; the document matrix for the four
+package types still requires FA/CM confirmation.
 
 **Target — NICON clarification received 18 October 2026:** each project has a
 separate BCH, while a person may participate in multiple projects concurrently.
@@ -1036,8 +1040,10 @@ acceptance), executed value versus estimate, QA/QC acceptance dossiers and safet
 After CM approves equipment/labour, Procurement contracts and supplies the site,
 then FA processes payment. Templates and package-specific payment documents come
 from the ISO pack NICON already sent; identify missing forms individually, with
-payment-document gaps referred to FA (chị K/Kiara). These confirmed requirements
-do not mean the complete portfolio, ISO content or Finance handoff is delivered.
+payment-document gaps referred to FA (chị K/Kiara). The source pack is now in
+`docs/Nicon/ISO/`, but its forms have not been approved as product checklists or
+a four-package payment matrix. These confirmed requirements do not mean the
+complete portfolio or Finance handoff is delivered.
 
 **Current implementation boundary:** The split menu now provides BCH Resource,
 QA/QC, Site QS and CM Control workspaces. It delivers versioned CM preparation
@@ -1076,7 +1082,8 @@ Construction Tasks, Site Diaries, Punchlist, Partial Acceptance, As-Built and
 Handover still persist against a Design Project and have not been migrated to
 the Operational Project aggregates in this slice. Editable WBS/Gantt/S-Curve
 baseline data, the reproducible greater-than-5% variance alert, offline queues,
-actual NICON ISO checklist content, automatic contract-triggered preparation,
+NICON ISO checklists mapped and approved for each project type, automatic
+contract-triggered preparation,
 and payment eligibility/handoff remain target work pending the documented
 business decisions and controlled compatibility migration.
 
