@@ -164,6 +164,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<ContractLegalActivation> ContractLegalActivations => Set<ContractLegalActivation>();
 
     public DbSet<ConceptOption> ConceptOptions => Set<ConceptOption>();
+    public DbSet<ConceptRevision> ConceptRevisions => Set<ConceptRevision>();
+    public DbSet<ConceptArtifact> ConceptArtifacts => Set<ConceptArtifact>();
+    public DbSet<ConceptChecklistWaiver> ConceptChecklistWaivers => Set<ConceptChecklistWaiver>();
+    public DbSet<ConceptFeedback> ConceptFeedback => Set<ConceptFeedback>();
 
     public DbSet<BasicDesignDoc> BasicDesignDocs => Set<BasicDesignDoc>();
 
@@ -2436,12 +2440,18 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.Property(item => item.Title).HasMaxLength(300).IsRequired();
             b.Property(item => item.InternalSummary).HasMaxLength(4000);
             b.Property(item => item.ClientDecisionNote).HasMaxLength(4000);
+            b.Property(item => item.ClientAcceptanceSignedBy).HasMaxLength(200);
             b.Property(item => item.RowVersion).IsRowVersion();
             b.HasOne(item => item.DesignProject).WithMany()
                 .HasForeignKey(item => item.DesignProjectId).OnDelete(DeleteBehavior.Cascade);
             b.HasOne(item => item.DesignManager).WithMany()
                 .HasForeignKey(item => item.DesignManagerUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(item => item.ConceptRevision).WithMany()
+                .HasForeignKey(item => item.ConceptRevisionId).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(item => item.ClientAcceptanceDocument).WithMany()
+                .HasForeignKey(item => item.ClientAcceptanceDocumentId).OnDelete(DeleteBehavior.NoAction);
             b.HasIndex(item => new { item.DesignProjectId, item.Stage, item.RevisionNumber }).IsUnique();
+            b.HasIndex(item => item.ConceptRevisionId);
             b.HasIndex(item => new { item.DesignProjectId, item.Status });
         });
 
@@ -2672,6 +2682,57 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
             b.HasIndex(c => c.DesignProjectId);
             b.HasIndex(c => c.Status);
+            b.HasIndex(c => c.DesignProjectId).IsUnique()
+                .HasFilter("[Status] = 'Finalized'");
+        });
+
+        modelBuilder.Entity<ConceptRevision>(b =>
+        {
+            b.ToTable("concept_revisions");
+            b.HasKey(item => item.Id);
+            b.HasOne(item => item.ConceptOption).WithMany()
+                .HasForeignKey(item => item.ConceptOptionId).OnDelete(DeleteBehavior.Cascade);
+            b.HasIndex(item => new { item.ConceptOptionId, item.Number }).IsUnique();
+        });
+
+        modelBuilder.Entity<ConceptArtifact>(b =>
+        {
+            b.ToTable("concept_artifacts");
+            b.HasKey(item => item.Id);
+            b.Property(item => item.Kind).HasConversion<string>().HasMaxLength(30).IsRequired();
+            b.Property(item => item.FloorLabel).HasMaxLength(80);
+            b.HasOne(item => item.ConceptRevision).WithMany(item => item.Artifacts)
+                .HasForeignKey(item => item.ConceptRevisionId).OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(item => item.ProjectDocument).WithMany()
+                .HasForeignKey(item => item.ProjectDocumentId).OnDelete(DeleteBehavior.Restrict);
+            b.HasIndex(item => new { item.ConceptRevisionId, item.ProjectDocumentId }).IsUnique();
+            b.HasIndex(item => item.ProjectDocumentId).IsUnique();
+        });
+
+        modelBuilder.Entity<ConceptFeedback>(b =>
+        {
+            b.ToTable("concept_feedback");
+            b.HasKey(item => item.Id);
+            b.Property(item => item.CustomerName).HasMaxLength(200).IsRequired();
+            b.Property(item => item.Channel).HasMaxLength(80).IsRequired();
+            b.Property(item => item.Comment).HasMaxLength(4000).IsRequired();
+            b.Property(item => item.Response).HasMaxLength(4000).IsConcurrencyToken();
+            b.HasOne(item => item.ConceptRevision).WithMany(item => item.Feedback)
+                .HasForeignKey(item => item.ConceptRevisionId).OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(item => item.ProjectDocument).WithMany()
+                .HasForeignKey(item => item.ProjectDocumentId).OnDelete(DeleteBehavior.Restrict);
+            b.HasIndex(item => new { item.ConceptRevisionId, item.CreatedAt });
+        });
+
+        modelBuilder.Entity<ConceptChecklistWaiver>(b =>
+        {
+            b.ToTable("concept_checklist_waivers");
+            b.HasKey(item => item.Id);
+            b.Property(item => item.Kind).HasConversion<string>().HasMaxLength(30).IsRequired();
+            b.Property(item => item.Reason).HasMaxLength(1000).IsRequired();
+            b.HasOne(item => item.ConceptRevision).WithMany(item => item.Waivers)
+                .HasForeignKey(item => item.ConceptRevisionId).OnDelete(DeleteBehavior.Cascade);
+            b.HasIndex(item => new { item.ConceptRevisionId, item.Kind }).IsUnique();
         });
 
         modelBuilder.Entity<BasicDesignDoc>(b =>

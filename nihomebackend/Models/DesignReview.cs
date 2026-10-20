@@ -25,6 +25,12 @@ public class DesignReview : IConcurrencyTracked
     public DesignProject DesignProject { get; set; } = null!;
     public DesignReviewStage Stage { get; set; }
     public int RevisionNumber { get; set; }
+    public int? ConceptRevisionId { get; set; }
+    public ConceptRevision? ConceptRevision { get; set; }
+    public long? ClientAcceptanceDocumentId { get; set; }
+    public ProjectDocument? ClientAcceptanceDocument { get; set; }
+    public string? ClientAcceptanceSignedBy { get; set; }
+    public DateTime? ClientAcceptanceSignedAt { get; set; }
     public string Title { get; set; } = string.Empty;
     public DesignReviewStatus Status { get; set; } = DesignReviewStatus.Draft;
     public int DesignManagerUserId { get; set; }

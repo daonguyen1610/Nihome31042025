@@ -102,14 +102,22 @@ public class ConceptOptionService(
             Description = TrimOrNull(request.Description),
             InternalNote = TrimOrNull(request.InternalNote),
             OwnerUserId = request.OwnerUserId,
-            PresentedAt = request.PresentedAt,
+            PresentedAt = null,
             Status = ConceptOptionStatus.Drafting,
             CreatedByUserId = callerUserId,
             UpdatedByUserId = callerUserId,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
         };
+        if (request.PresentedAt.HasValue)
+            throw new ConceptOptionOperationException("Ngày trình khách do sự kiện trình hồ sơ ghi nhận, không nhập tay.");
         db.ConceptOptions.Add(entity);
+        db.ConceptRevisions.Add(new ConceptRevision
+        {
+            ConceptOption = entity,
+            Number = 0,
+            CreatedByUserId = callerUserId,
+        });
         await db.SaveChangesAsync(ct);
         logger.LogInformation("ConceptOption {Id} created for project {ProjectId} by user {UserId}",
             entity.Id, request.DesignProjectId, callerUserId);
@@ -135,6 +143,9 @@ public class ConceptOptionService(
             throw new ConceptOptionOperationException(
                 "Phương án đã chốt / loại bỏ không thể chỉnh sửa.");
         }
+        if (request.PresentedAt.HasValue || await db.ConceptRevisions.AnyAsync(item =>
+            item.ConceptOptionId == id && item.FrozenAt != null, ct))
+            throw new ConceptOptionOperationException("Hồ sơ đã trình được giữ bất biến; hãy tạo revision mới.");
 
         if (request.OwnerUserId.HasValue &&
             !await db.Users.AnyAsync(u => u.Id == request.OwnerUserId.Value, ct))
@@ -146,7 +157,6 @@ public class ConceptOptionService(
         entity.Description = TrimOrNull(request.Description);
         entity.InternalNote = TrimOrNull(request.InternalNote);
         entity.OwnerUserId = request.OwnerUserId;
-        entity.PresentedAt = request.PresentedAt;
         entity.UpdatedByUserId = callerUserId;
         entity.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(ct);
@@ -184,12 +194,25 @@ public class ConceptOptionService(
 
         if (next == ConceptOptionStatus.Finalized)
         {
+            var latestRevisionId = await db.ConceptRevisions.AsNoTracking()
+                .Where(item => item.ConceptOptionId == id)
+                .OrderByDescending(item => item.Number)
+                .Select(item => (int?)item.Id).FirstOrDefaultAsync(ct);
+            if (!latestRevisionId.HasValue || await db.ConceptFeedback.AsNoTracking().AnyAsync(item =>
+                item.ConceptRevisionId == latestRevisionId.Value && item.Response == null, ct))
+                throw new ConceptOptionOperationException("Phải phản hồi mọi ý kiến khách trước khi chốt phương án.");
             var clientApproved = await db.DesignReviews.AsNoTracking()
                 .Where(review => review.DesignProjectId == entity.DesignProjectId &&
                     review.Stage == DesignReviewStage.Concept &&
-                    review.Documents.Any(document =>
-                        document.SourceEntityTypeSnapshot == nameof(ConceptOption) &&
-                        document.SourceRecordIdSnapshot == entity.Id &&
+                    review.ConceptRevisionId == latestRevisionId &&
+                    review.ClientAcceptanceDocumentId != null &&
+                    review.ClientAcceptanceSignedBy != null &&
+                    review.ClientAcceptanceSignedAt != null &&
+                    review.ClientAcceptanceDocument!.DeletedAt == null &&
+                    review.ClientAcceptanceDocument.SyncStatus == ProjectDocumentSyncStatus.Synced &&
+                    review.ClientAcceptanceDocument.SourceEntityType == nameof(ConceptOption) &&
+                    review.ClientAcceptanceDocument.SourceRecordId == id &&
+                    review.Documents.All(document =>
                         document.ProjectDocument.DeletedAt == null &&
                         document.ProjectDocument.SyncStatus == ProjectDocumentSyncStatus.Synced &&
                         document.ProjectDocument.Sha256 == document.Sha256Snapshot))
@@ -241,12 +264,21 @@ public class ConceptOptionService(
         }
         else
         {
+            if (next != ConceptOptionStatus.Discarded && next != entity.Status)
+                throw new ConceptOptionOperationException("Trạng thái trình duyệt do hồ sơ và revision Concept ghi nhận.");
             entity.Status = next;
             entity.UpdatedAt = now;
             entity.UpdatedByUserId = callerUserId;
         }
 
-        await db.SaveChangesAsync(ct);
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException) when (next == ConceptOptionStatus.Finalized)
+        {
+            throw new ConceptOptionOperationException("Dự án đã có phương án Concept được chốt.");
+        }
         logger.LogInformation(
             "ConceptOption {Id} transitioned to {Status} by user {UserId}", id, next, callerUserId);
         return await GetAsync(id, ct);

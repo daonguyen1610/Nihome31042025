@@ -113,6 +113,46 @@ public abstract class IntegrationTestBase : IClassFixture<NihomeWebApplicationFa
             db.ProjectDocuments.AddRange(documents);
             await db.SaveChangesAsync();
 
+            ConceptRevision? conceptRevision = null;
+            ProjectDocument? acceptance = null;
+            if (stage == DesignReviewStage.Concept)
+            {
+                sourceRecordIds.Should().ContainSingle();
+                var sourceId = sourceRecordIds.Single();
+                var option = await db.ConceptOptions.SingleAsync(item => item.Id == sourceId);
+                option.Status = ConceptOptionStatus.PresentedToClient;
+                option.PresentedAt = DateTime.UtcNow;
+                conceptRevision = await db.ConceptRevisions
+                    .Where(item => item.ConceptOptionId == sourceId)
+                    .OrderByDescending(item => item.Number).FirstOrDefaultAsync();
+                if (conceptRevision is null)
+                {
+                    conceptRevision = new ConceptRevision
+                    {
+                        ConceptOptionId = sourceId, Number = 0, CreatedByUserId = managerId,
+                    };
+                    db.ConceptRevisions.Add(conceptRevision);
+                }
+                conceptRevision.FrozenAt = DateTime.UtcNow;
+                acceptance = new ProjectDocument
+                {
+                    OperationalProjectId = project.OperationalProjectId!.Value,
+                    Category = ProjectDocumentCategory.DesignConcept,
+                    SourceModule = ProjectDocumentSourceModule.Design,
+                    SourceEntityType = nameof(ConceptOption),
+                    SourceRecordId = sourceId,
+                    LocalPath = $"/files/project-documents/TK-M03-{sourceId}.pdf",
+                    OriginalFileName = $"TK-M03-{sourceId}-signed.pdf",
+                    ContentType = "application/pdf",
+                    Sha256 = new string('d', 64),
+                    SyncStatus = ProjectDocumentSyncStatus.Synced,
+                    CreatedByUserId = managerId,
+                    UpdatedByUserId = managerId,
+                };
+                db.ProjectDocuments.Add(acceptance);
+                await db.SaveChangesAsync();
+            }
+
             var revision = await db.DesignReviews
                 .Where(review => review.DesignProjectId == projectId && review.Stage == stage)
                 .Select(review => (int?)review.RevisionNumber)
@@ -121,6 +161,10 @@ public abstract class IntegrationTestBase : IClassFixture<NihomeWebApplicationFa
             {
                 DesignProjectId = projectId,
                 Stage = stage,
+                ConceptRevisionId = conceptRevision?.Id,
+                ClientAcceptanceDocumentId = acceptance?.Id,
+                ClientAcceptanceSignedBy = acceptance is null ? null : "Đại diện chủ đầu tư",
+                ClientAcceptanceSignedAt = acceptance is null ? null : DateTime.UtcNow,
                 RevisionNumber = revision + 1,
                 Title = $"{stage} client approval",
                 Status = DesignReviewStatus.ClientApproved,

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NihomeBackend.Authorization;
 using NihomeBackend.Constants;
+using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Models.DTOs.Responses;
 using NihomeBackend.Services;
@@ -10,22 +11,103 @@ using NihomeBackend.Services.Audit;
 
 namespace NihomeBackend.Controllers;
 
-/// <summary>
-/// M2 Concept option endpoints (NIH-114). Slice 1: metadata + status
-/// transitions + finalize workflow. Feedback + media endpoints ship in
-/// slice 2.
-/// </summary>
+/// <summary>Concept option, revision, evidence and decision endpoints.</summary>
 [ApiController]
 [Route("api/concept-options")]
 [Route("api/v1/concept-options")]
 [Authorize]
 public class ConceptOptionsController(
     IConceptOptionService svc,
+    IConceptDossierService dossier,
     IDesignRecordDeletionService deletion,
     IPermissionService permissions,
     IProjectAccessService projectAccess,
     IAuditLogger audit) : ControllerBase
 {
+    [HttpGet("{id:int}/revisions")]
+    [RequirePermission("design.concepts", "view")]
+    public async Task<ActionResult<IReadOnlyList<ConceptRevisionResponse>>> Revisions(int id, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        if (!await CanAccessAsync(userId.Value, id, manage: false, ct)) return NotFound();
+        return Ok(await dossier.ListAsync(id, ct));
+    }
+
+    [HttpPost("{id:int}/revisions")]
+    [RequirePermission("design.concepts", "manage")]
+    [Idempotency("design.concept.revision", requireKey: true)]
+    public Task<ActionResult<ConceptRevisionResponse>> CreateRevision(int id, CancellationToken ct) =>
+        ChangeDossier(id, (userId) => dossier.CreateRevisionAsync(id, userId, ct), ct);
+
+    [HttpPost("{id:int}/revisions/{revisionId:int}/artifacts")]
+    [RequirePermission("design.concepts", "manage")]
+    [Idempotency("design.concept.artifact", requireKey: true)]
+    public Task<ActionResult<ConceptRevisionResponse>> AddArtifact(
+        int id, int revisionId, [FromBody] AddConceptArtifactRequest request, CancellationToken ct) =>
+        ChangeDossier(id, (userId) => dossier.AddArtifactAsync(id, revisionId, request, userId, ct), ct);
+
+    [HttpDelete("{id:int}/revisions/{revisionId:int}/artifacts/{artifactId:int}")]
+    [RequirePermission("design.concepts", "manage")]
+    public Task<ActionResult<ConceptRevisionResponse>> RemoveArtifact(
+        int id, int revisionId, int artifactId, CancellationToken ct) =>
+        ChangeDossier(id, (userId) => dossier.RemoveArtifactAsync(id, revisionId, artifactId, userId, ct), ct);
+
+    [HttpPost("{id:int}/revisions/{revisionId:int}/waivers")]
+    [RequirePermission("design.concepts", "manage")]
+    [Idempotency("design.concept.waiver", requireKey: true)]
+    public Task<ActionResult<ConceptRevisionResponse>> Waive(
+        int id, int revisionId, [FromBody] WaiveConceptChecklistRequest request, CancellationToken ct) =>
+        ChangeDossier(id, (userId) => dossier.WaiveAsync(id, revisionId, request, userId, ct), ct);
+
+    [HttpDelete("{id:int}/revisions/{revisionId:int}/waivers/{kind}")]
+    [RequirePermission("design.concepts", "manage")]
+    public Task<ActionResult<ConceptRevisionResponse>> RemoveWaiver(
+        int id, int revisionId, string kind, CancellationToken ct)
+    {
+        if (!Enum.TryParse<ConceptArtifactKind>(kind, true, out var parsed) || !Enum.IsDefined(parsed))
+            return Task.FromResult<ActionResult<ConceptRevisionResponse>>(BadRequest(new { message = "Hạng mục checklist không hợp lệ." }));
+        return ChangeDossier(id, (userId) => dossier.RemoveWaiverAsync(id, revisionId, parsed, userId, ct), ct);
+    }
+
+    [HttpPost("{id:int}/revisions/{revisionId:int}/feedback")]
+    [RequirePermission("design.concepts", "manage")]
+    [Idempotency("design.concept.feedback", requireKey: true)]
+    public Task<ActionResult<ConceptRevisionResponse>> Feedback(
+        int id, int revisionId, [FromBody] AddConceptFeedbackRequest request, CancellationToken ct) =>
+        ChangeDossier(id, (userId) => dossier.AddFeedbackAsync(id, revisionId, request, userId, ct), ct);
+
+    [HttpPost("{id:int}/revisions/{revisionId:int}/feedback/{feedbackId:int}/response")]
+    [RequirePermission("design.concepts", "manage")]
+    [Idempotency("design.concept.feedback-response", requireKey: true)]
+    public Task<ActionResult<ConceptRevisionResponse>> Respond(
+        int id, int revisionId, int feedbackId, [FromBody] RespondConceptFeedbackRequest request, CancellationToken ct) =>
+        ChangeDossier(id, (userId) => dossier.RespondAsync(id, revisionId, feedbackId, request, userId, ct), ct);
+
+    private async Task<ActionResult<ConceptRevisionResponse>> ChangeDossier(
+        int id, Func<int, Task<ConceptRevisionResponse>> action, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        if (!await CanAccessAsync(userId.Value, id, manage: true, ct)) return NotFound();
+        try
+        {
+            var result = await action(userId.Value);
+            audit.Log(new AuditEvent
+            {
+                Action = "concept.dossier.change",
+                ResourceType = EntityTypes.ConceptOption,
+                ResourceId = id.ToString(),
+                Message = $"Concept revision R{result.Number:00} changed by user {userId.Value}.",
+                NewValue = result,
+            });
+            return Ok(result);
+        }
+        catch (ConceptOptionOperationException exception)
+        {
+            return BadRequest(new { message = exception.Message });
+        }
+    }
     [HttpGet]
     [RequirePermission("design.concepts", "view")]
     public async Task<ActionResult<ConceptOptionListResponse>> List(

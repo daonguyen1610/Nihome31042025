@@ -30,6 +30,8 @@ import {
   type DesignProjectResponse,
   type DesignReviewResponse,
   type DesignReviewStage,
+  type ConceptRevisionResponse,
+  type ConceptOptionResponse,
   type ProjectDocumentResponse,
 } from "@/services/adminApi";
 
@@ -59,6 +61,13 @@ export const DesignReviewsTab = ({ project }: Props) => {
     Array<{ userId: number; name: string }>
   >([]);
   const [documents, setDocuments] = useState<ProjectDocumentResponse[]>([]);
+  const [conceptOptions, setConceptOptions] = useState<ConceptOptionResponse[]>([]);
+  const [conceptRevisions, setConceptRevisions] = useState<ConceptRevisionResponse[]>([]);
+  const [conceptRevisionId, setConceptRevisionId] = useState("");
+  const [acceptanceDocumentIds, setAcceptanceDocumentIds] = useState<Record<number, string>>({});
+  const [acceptanceFiles, setAcceptanceFiles] = useState<Record<number, File | null>>({});
+  const [signedBy, setSignedBy] = useState<Record<number, string>>({});
+  const [signedAt, setSignedAt] = useState<Record<number, string>>({});
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -91,6 +100,16 @@ export const DesignReviewsTab = ({ project }: Props) => {
       setReviews(reviewResponse.data);
       setRecipientCandidates(teamResponse.data);
       setDocuments(documentResponse.data);
+      if (canCreate) {
+        const options = (
+          await adminApi.listConceptOptions({ designProjectId: project.id, pageSize: 100 })
+        ).data.items;
+        setConceptOptions(options);
+        const revisionResults = await Promise.all(
+          options.map((option) => adminApi.listConceptRevisions(option.id)),
+        );
+        setConceptRevisions(revisionResults.flatMap((result) => result.data));
+      }
     } catch (reason) {
       setError(extractApiError(reason));
     } finally {
@@ -103,14 +122,23 @@ export const DesignReviewsTab = ({ project }: Props) => {
 
   const eligibleDocuments = useMemo(
     () =>
-      documents.filter(
-        (item) =>
-          item.category === categoryByStage[stage] &&
-          item.sourceEntityType === sourceTypeByStage[stage] &&
-          item.sourceRecordId &&
-          item.syncStatus === "Synced",
-      ),
-    [documents, stage],
+      documents
+        .filter(
+          (item) =>
+            item.category === categoryByStage[stage] &&
+            item.sourceEntityType === sourceTypeByStage[stage] &&
+            item.sourceRecordId &&
+            item.syncStatus === "Synced",
+        )
+        .filter(
+          (item) =>
+            stage !== "Concept" ||
+            !conceptRevisionId ||
+            conceptRevisions
+              .find((revision) => revision.id === Number(conceptRevisionId))
+              ?.artifacts.some((artifact) => artifact.projectDocumentId === item.id),
+        ),
+    [documents, stage, conceptRevisionId, conceptRevisions],
   );
   const recipients = recipientCandidates;
   const toggle = <T extends number>(items: T[], value: T, checked: boolean) =>
@@ -139,7 +167,12 @@ export const DesignReviewsTab = ({ project }: Props) => {
   };
 
   const create = async () => {
-    if (!title.trim() || recipientIds.length === 0 || documentIds.length === 0) {
+    if (
+      !title.trim() ||
+      recipientIds.length === 0 ||
+      documentIds.length === 0 ||
+      (stage === "Concept" && !conceptRevisionId)
+    ) {
       setError(t("designProjects.reviews.validation.create"));
       return;
     }
@@ -153,6 +186,7 @@ export const DesignReviewsTab = ({ project }: Props) => {
           title: title.trim(),
           recipientUserIds: recipientIds,
           projectDocumentIds: documentIds,
+          conceptRevisionId: stage === "Concept" ? Number(conceptRevisionId) : null,
         },
         createKey.current,
       );
@@ -161,6 +195,7 @@ export const DesignReviewsTab = ({ project }: Props) => {
       setTitle("");
       setRecipientIds([]);
       setDocumentIds([]);
+      setConceptRevisionId("");
       await load();
     } catch (reason) {
       setError(extractApiError(reason));
@@ -206,6 +241,15 @@ export const DesignReviewsTab = ({ project }: Props) => {
           note || null,
           review.rowVersion,
           key,
+          action === "approve" && review.stage === "Concept"
+            ? {
+                documentId: Number(acceptanceDocumentIds[review.id]),
+                signedBy: signedBy[review.id]?.trim() ?? "",
+                signedAt: signedAt[review.id]
+                  ? new Date(`${signedAt[review.id]}T00:00:00`).toISOString()
+                  : "",
+              }
+            : undefined,
         );
       setNotes((current) => ({ ...current, [review.id]: "" }));
       if (action === "comment")
@@ -319,6 +363,109 @@ export const DesignReviewsTab = ({ project }: Props) => {
                 {t("designProjects.reviews.clientNote")}: {review.clientDecisionNote}
               </p>
             ) : null}
+            {review.clientAcceptanceDocumentId ? (
+              <p className="mt-2 text-xs text-emerald-700">
+                {t("concepts.dossier.acceptanceRecorded")}: {review.clientAcceptanceSignedBy} ·{" "}
+                {review.clientAcceptanceSignedAt?.slice(0, 10)}
+              </p>
+            ) : null}
+            {review.canManage &&
+            review.stage === "Concept" &&
+            review.status === "SubmittedToClient" &&
+            review.conceptOptionId ? (
+              <div className="mt-3 space-y-2 rounded border p-3">
+                <Label>{t("concepts.dossier.acceptance")}</Label>
+                <Input
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  onChange={(event) =>
+                    setAcceptanceFiles((current) => ({
+                      ...current,
+                      [review.id]: event.target.files?.[0] ?? null,
+                    }))
+                  }
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={busy === review.id || !acceptanceFiles[review.id]}
+                  onClick={() =>
+                    void (async () => {
+                      const file = acceptanceFiles[review.id];
+                      if (!file || !project.operationalProjectId || !review.conceptOptionId) return;
+                      setBusy(review.id);
+                      try {
+                        const uploaded = await adminApi.uploadProjectDocument(
+                          project.operationalProjectId,
+                          file,
+                          "DesignConcept",
+                          newIdempotencyKey(),
+                          {
+                            module: "Design",
+                            entityType: "ConceptOption",
+                            recordId: review.conceptOptionId,
+                          },
+                        );
+                        setAcceptanceDocumentIds((current) => ({
+                          ...current,
+                          [review.id]: String(uploaded.data.id),
+                        }));
+                        await load();
+                      } catch (reason) {
+                        setError(extractApiError(reason));
+                      } finally {
+                        setBusy(null);
+                      }
+                    })()
+                  }
+                >
+                  {t("concepts.dossier.uploadAcceptance")}
+                </Button>
+                <Select
+                  value={acceptanceDocumentIds[review.id] ?? ""}
+                  onValueChange={(value) =>
+                    setAcceptanceDocumentIds((current) => ({ ...current, [review.id]: value }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={t("concepts.dossier.selectAcceptance")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {documents
+                      .filter(
+                        (item) =>
+                          item.sourceEntityType === "ConceptOption" &&
+                          item.sourceRecordId === review.conceptOptionId &&
+                          item.category === "DesignConcept" &&
+                          ["application/pdf", "image/jpeg", "image/png"].includes(
+                            item.contentType,
+                          ) &&
+                          item.syncStatus === "Synced",
+                      )
+                      .map((item) => (
+                        <SelectItem key={item.id} value={String(item.id)}>
+                          {item.originalFileName}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+                <Input
+                  maxLength={200}
+                  value={signedBy[review.id] ?? ""}
+                  placeholder={t("concepts.dossier.signedBy")}
+                  onChange={(event) =>
+                    setSignedBy((current) => ({ ...current, [review.id]: event.target.value }))
+                  }
+                />
+                <Input
+                  type="date"
+                  value={signedAt[review.id] ?? ""}
+                  onChange={(event) =>
+                    setSignedAt((current) => ({ ...current, [review.id]: event.target.value }))
+                  }
+                />
+              </div>
+            ) : null}
             {review.canComment ||
             (review.canManage &&
               ["InternalReview", "SubmittedToClient"].includes(review.status)) ? (
@@ -394,7 +541,16 @@ export const DesignReviewsTab = ({ project }: Props) => {
               ) : null}
               {review.canManage && review.status === "SubmittedToClient" ? (
                 <>
-                  <Button disabled={busy === review.id} onClick={() => void act(review, "approve")}>
+                  <Button
+                    disabled={
+                      busy === review.id ||
+                      (review.stage === "Concept" &&
+                        (!acceptanceDocumentIds[review.id] ||
+                          !signedBy[review.id]?.trim() ||
+                          !signedAt[review.id]))
+                    }
+                    onClick={() => void act(review, "approve")}
+                  >
                     {t("designProjects.reviews.approve")}
                   </Button>
                   <Button
@@ -455,6 +611,37 @@ export const DesignReviewsTab = ({ project }: Props) => {
                 onChange={(event) => setTitle(event.target.value)}
               />
             </div>
+            {stage === "Concept" ? (
+              <div className="mb-4">
+                <Label>{t("concepts.dossier.revision")}</Label>
+                <Select
+                  value={conceptRevisionId}
+                  onValueChange={(value) => {
+                    setConceptRevisionId(value);
+                    setDocumentIds(
+                      conceptRevisions
+                        .find((item) => item.id === Number(value))
+                        ?.artifacts.map((item) => item.projectDocumentId) ?? [],
+                    );
+                  }}
+                >
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder={t("concepts.dossier.selectRevision")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {conceptRevisions
+                      .filter((item) => !item.frozenAt)
+                      .map((item) => (
+                        <SelectItem key={item.id} value={String(item.id)}>
+                          {conceptOptions.find((option) => option.id === item.conceptOptionId)
+                            ?.name ?? `#${item.conceptOptionId}`}{" "}
+                          · R{String(item.number).padStart(2, "0")}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : null}
             <fieldset>
               <legend className="text-sm font-medium">
                 {t("designProjects.reviews.recipients")}
@@ -484,6 +671,7 @@ export const DesignReviewsTab = ({ project }: Props) => {
                   <label key={document.id} className="flex min-h-11 items-center gap-3 px-2">
                     <Checkbox
                       checked={documentIds.includes(document.id)}
+                      disabled={stage === "Concept"}
                       onCheckedChange={(checked) =>
                         setDocumentIds((items) => toggle(items, document.id, checked === true))
                       }

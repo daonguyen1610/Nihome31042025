@@ -236,8 +236,19 @@ Kiểm soát độ chín, version và người chịu trách nhiệm của hồ 
    nhận; hủy gói không được làm mất lịch sử.
 
 Thiết kế có thể bắt đầu trước hợp đồng nhưng luôn thuộc Dự án. Team và tiến độ
-Thiết kế sử dụng Operational Project; file Basic/Shop hiện có upload/preview,
-trong khi media/feedback theo file của Concept và review markup vẫn là mục tiêu.
+Thiết kế sử dụng Operational Project. Concept quản lý từng phương án với revision
+R00, R01... và bộ tài liệu phân loại: mô hình 3D gốc, phối cảnh, mặt bằng
+tổng thể/mái, mặt bằng từng tầng có tên tầng, mặt cắt và PDF trình bày. File gốc
+được tải xuống; ảnh/PDF có preview. Người phụ trách có thể gỡ liên kết file hoặc
+ngoại lệ checklist khi revision còn nháp, không xóa file gốc. Checklist bắt buộc
+trước khi trình có thể ghi không áp dụng kèm lý do; vẫn phải có mô hình 3D hoặc
+phối cảnh thực. Mọi file trình phải thuộc đúng phương án/revision và đã đồng bộ.
+Nhận xét khách hàng ghi tên, kênh, thời điểm, nội dung và tùy chọn file liên quan;
+phản hồi được ghi một lần. Chỉ tạo revision mới sau quyết định yêu cầu sửa/từ
+chối; bản đã trình giữ nguyên. Trước khi trình revision mới phải xử lý hết ý kiến
+chưa phản hồi. Chốt đúng một phương án chỉ khi revision mới nhất được khách duyệt
+và có biên bản nghiệm thu TK-M03 đã ký, người ký, ngày ký. Review markup theo
+trang/nét vẽ vẫn là mục tiêu.
 
 ### 4.2. Luồng duyệt và điều hành — Implemented
 

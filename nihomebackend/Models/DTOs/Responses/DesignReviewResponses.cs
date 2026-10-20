@@ -6,6 +6,11 @@ public sealed class DesignReviewResponse
     public int DesignProjectId { get; set; }
     public string Stage { get; set; } = string.Empty;
     public int RevisionNumber { get; set; }
+    public int? ConceptRevisionId { get; set; }
+    public int? ConceptOptionId { get; set; }
+    public long? ClientAcceptanceDocumentId { get; set; }
+    public string? ClientAcceptanceSignedBy { get; set; }
+    public DateTime? ClientAcceptanceSignedAt { get; set; }
     public string Title { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
     public int DesignManagerUserId { get; set; }

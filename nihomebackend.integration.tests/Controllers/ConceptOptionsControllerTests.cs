@@ -90,8 +90,6 @@ public class ConceptOptionsControllerTests : IntegrationTestBase
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
         var projectId = await CreateDesignProjectAsync();
         var id = await CreateOptionAsync(projectId);
-        await Transition(id, "PendingInternalReview");
-        await Transition(id, "PresentedToClient");
         await CreateClientApprovedDesignReviewAsync(projectId, DesignReviewStage.Concept, id);
         var final = await Client.PostAsJsonAsync($"/api/concept-options/{id}/status", new { status = "Finalized" });
         final.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -117,16 +115,16 @@ public class ConceptOptionsControllerTests : IntegrationTestBase
     {
         // DESIGN has design.concepts.{view|manage} but NOT
         // design.concepts.finalize (per rbac-defaults). Non-Finalize
-        // transitions must pass; approval access is project-masked with 404.
+        // approval access is project-masked with 404.
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
         var projectId = await CreateDesignProjectAsync();
         var id = await CreateOptionAsync(projectId);
 
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "DESIGN"));
         var toReview = await Client.PostAsJsonAsync($"/api/concept-options/{id}/status", new { status = "PendingInternalReview" });
-        toReview.StatusCode.Should().Be(HttpStatusCode.OK);
+        toReview.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         var toPresented = await Client.PostAsJsonAsync($"/api/concept-options/{id}/status", new { status = "PresentedToClient" });
-        toPresented.StatusCode.Should().Be(HttpStatusCode.OK);
+        toPresented.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         var toFinal = await Client.PostAsJsonAsync($"/api/concept-options/{id}/status", new { status = "Finalized" });
         toFinal.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
@@ -137,8 +135,6 @@ public class ConceptOptionsControllerTests : IntegrationTestBase
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
         var projectId = await CreateDesignProjectAsync();
         var id = await CreateOptionAsync(projectId);
-        await Transition(id, "PendingInternalReview");
-        await Transition(id, "PresentedToClient");
         await Transition(id, "Discarded");
         (await DeleteWithImpactAsync($"/api/concept-options/{id}"))
             .StatusCode.Should().Be(HttpStatusCode.NoContent);

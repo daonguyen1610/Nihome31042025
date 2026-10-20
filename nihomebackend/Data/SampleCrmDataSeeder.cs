@@ -2261,12 +2261,12 @@ public static class SampleCrmDataSeeder
         {
             if (db.ConceptOptions.Any(option => option.DesignProjectId == project.Id
                 && option.Name == name)) continue;
-            db.ConceptOptions.Add(new ConceptOption
+            var option = new ConceptOption
             {
                 DesignProjectId = project.Id,
                 Name = name,
                 Description = description,
-                InternalNote = "Sample option — theo dõi demo.",
+                InternalNote = "Phòng Thiết kế đang đối chiếu yêu cầu lấy sáng, thông gió và công năng từ brief khách hàng.",
                 OwnerUserId = owner.Id,
                 PresentedAt = presented ? now.AddDays(-daysAgo) : null,
                 Status = status,
@@ -2274,6 +2274,15 @@ public static class SampleCrmDataSeeder
                 UpdatedByUserId = owner.Id,
                 CreatedAt = now.AddDays(-daysAgo - 3),
                 UpdatedAt = now.AddDays(-daysAgo),
+            };
+            db.ConceptOptions.Add(option);
+            db.ConceptRevisions.Add(new ConceptRevision
+            {
+                ConceptOption = option,
+                Number = 0,
+                CreatedAt = option.CreatedAt,
+                CreatedByUserId = owner.Id,
+                FrozenAt = presented ? option.PresentedAt : null,
             });
         }
         db.SaveChanges();
@@ -2423,7 +2432,7 @@ public static class SampleCrmDataSeeder
         if (!db.ConceptOptions.Any(item => item.DesignProjectId == project.Id
                         && item.Name == "Phương án tổng mặt bằng Nhà máy may An Phú"))
         {
-            db.ConceptOptions.Add(new ConceptOption
+            var option = new ConceptOption
             {
                 DesignProjectId = project.Id,
                 Name = "Phương án tổng mặt bằng Nhà máy may An Phú",
@@ -2436,6 +2445,15 @@ public static class SampleCrmDataSeeder
                 UpdatedByUserId = owner.Id,
                 CreatedAt = now.AddDays(-115),
                 UpdatedAt = now.AddDays(-99),
+            };
+            db.ConceptOptions.Add(option);
+            db.ConceptRevisions.Add(new ConceptRevision
+            {
+                ConceptOption = option,
+                Number = 0,
+                CreatedAt = option.CreatedAt,
+                CreatedByUserId = owner.Id,
+                FrozenAt = option.PresentedAt,
             });
         }
 

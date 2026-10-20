@@ -73,13 +73,6 @@ test.describe("NIH-115 — Basic Design + Detail Design unlock (real-user flow)"
     });
     expect(optCreate.ok(), await optCreate.text()).toBeTruthy();
     const optId = (await optCreate.json()).id as number;
-    for (const status of ["PendingInternalReview", "PresentedToClient"]) {
-      const t = await api.post(`/api/concept-options/${optId}/status`, {
-        headers: authHeader,
-        data: { status },
-      });
-      expect(t.ok(), `${status}: ${await t.text()}`).toBeTruthy();
-    }
     await approveDesignStage(api, {
       headers: authHeader,
       projectId,

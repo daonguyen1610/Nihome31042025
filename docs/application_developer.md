@@ -2128,6 +2128,20 @@ records the client decision. Concept finalization,
 Basic-to-Shop unlock, and IFC release require the latest matching review to be
 `ClientApproved`.
 
+Concept options additionally expose `GET/POST /api/concept-options/{id}/revisions`,
+artifact and checklist-waiver `POST/DELETE` under a revision, and feedback plus
+one-time response `POST` endpoints. Revision R00 is created with a new option.
+The draft binds typed Project Documents owned by that option; removing a binding
+does not delete the Project Document. Submission requires a synced, exact file
+set and the applicable checklist, then freezes the revision. Client feedback is
+attached only after client submission; a replacement revision follows a
+changes-requested or rejected decision. Concept `ClientApproved` requires a
+separate synced signed TK-M03 Project Document, signer and signing date.
+Finalization checks that evidence on the latest revision and a filtered unique
+index permits only one finalized option per Design Project. Migration
+`AddConceptDossierRevisions` backfills R00 and retains legacy review history;
+rehearse it against production-like data before deployment.
+
 Permanent deletion of Concept, Basic Design, Shop Drawing and IFC records uses
 `GET /api/<resource>/{id}/deletion-impact` followed by `DELETE` with
 `ConfirmDeletionRequest`. The server recomputes the deterministic plan inside a
