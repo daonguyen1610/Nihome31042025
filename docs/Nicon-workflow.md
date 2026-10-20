@@ -329,7 +329,9 @@ nhưng một nhân sự có thể tham gia nhiều Dự án đồng thời; quy�
 Dự án. Mẫu cho từng quy trình/bước lấy từ bộ ISO đã gửi, kiểm kê và báo riêng
 form thiếu cho NICON. Bộ nguồn đã nhận có `TC-M01`, `TC-M04`–`TC-M09`,
 `TC-M24` và 19 workbook nghiệm thu nội bộ `TC-M28`. Quy trình dẫn chiếu
-`TC-M02`, `TC-M23`, `TC-M00` nhưng chưa thấy file cùng mã; cần NICON xác minh.
+`TC-M02`, `TC-M23`, `TQT-M00`, `TC-M00` nhưng chưa thấy file cùng mã; `TC-M15`
+và `TC-M24` còn có nhiều nội dung dưới cùng mã. Cần NICON xác minh phiên bản
+và điều kiện áp dụng từng mẫu.
 Màn hình CM tổng hợp tiến độ, khối lượng hoàn thành
 (nghiệm thu đầu ra/đầu vào tách biệt), giá trị thực hiện so với dự toán, QA/QC
 và an toàn. Công thức/kỳ báo cáo và mapping ISO còn cần đối chiếu; xác nhận yêu
@@ -470,11 +472,13 @@ khóa là snapshot bất biến.
    phân cấp; Team và Tiến độ hiện được tách thành hai tab liên kết.
 9. Công thức/kỳ chốt S-Curve; quyền publish/unlock baseline; điều kiện VO.
 10. Hoàn tất mapping bộ ISO trong `docs/Nicon/ISO/` vào QA/QC/cổng khởi công
-    theo loại công trình; NICON xác minh `TC-M02`, `TC-M23`, `TC-M00` và bổ sung
-    riêng form còn thiếu. Không cần chọn lại bộ mẫu chuẩn.
+    theo loại công trình; NICON xác minh `TC-M02`, `TC-M23`, `TQT-M00`, `TC-M00`
+    và các mã dùng cho nhiều nội dung, rồi bổ sung riêng form còn thiếu. Không
+    cần chọn lại bộ mẫu chuẩn.
 11. Đối chiếu chứng từ ISO cho supply, labour, equipment và mixed package;
     FA (chị K/Kiara) bổ sung mục thiếu, xác nhận ngoại lệ và mapping chưa rõ.
-    Giữ riêng luồng Upstream/Downstream và ma trận three-way matching.
+    Giữ riêng luồng Upstream/Downstream; áp dụng three-way matching khi gói có
+    vật tư và đối chiếu chứng từ phù hợp cho các gói còn lại.
 12. Quy tắc dải BOQ 85/95/>100: mẫu số, commitment, issue, reversal, conversion,
    precision và zero allowance.
 13. Kế hoạch migration các record Module 2/3/4 từ `DesignProjectId` sang

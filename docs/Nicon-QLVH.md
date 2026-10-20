@@ -400,13 +400,19 @@ quy trình và biểu mẫu; việc thiếu kho ISO ghi nhận ngày 18/10/2026 
 nguồn: 01/01/2016) thấy hồ sơ chuẩn bị `TC-M01`, lịch trình shop drawing
 `TC-M04`, vật liệu `TC-M05`/`TC-M06`, nhật ký `TC-M08`/`TC-M09`, nghiệm thu
 `TC-M24` và 19 workbook nghiệm thu nội bộ trong thư mục `TC-M28`. Quy trình
-tham chiếu `TC-M02` (khảo sát), `TC-M23` (thư mời nghiệm thu) nhưng chưa thấy
-file tương ứng; `TC-M00` xuất hiện trong quy trình thanh quyết toán nhưng chưa
-thấy file cùng mã. Đây là danh sách cần NICON kiểm tra/bổ sung, chưa kết luận
-mọi form khác đã đủ. `TC-M15` có hai file tên khác nhau; `TC-M21`/`TC-M22`
-trong diễn giải và danh mục quy trình không khớp hoàn toàn với tên file. Phải
+tham chiếu `TC-M02` (khảo sát), `TC-M23` (thư mời nghiệm thu) và `TQT-M00`
+nhưng chưa thấy file cùng mã; quy trình thanh quyết toán còn dẫn `TC-M00`
+không có file đối ứng. Đây là danh sách cần NICON kiểm tra/bổ sung, chưa kết
+luận mọi form khác đã đủ. Hai file `TC-M15` dùng cùng mã cho bàn giao công việc
+và bàn giao tài sản; `TC-M21`/`TC-M22` bị đảo giữa danh mục trong quy trình và
+tên file. `TC-M24` có bản nghiệm thu đã điền và bản nghiệm thu bàn giao khác
+nội dung ở hai thư mục. Bước thành lập BCH dẫn `NS1-M01`, trong khi file đó là
+phiếu yêu cầu tuyển dụng. Không mặc nhiên coi các hồ sơ đã điền là template. Phải
 chốt mã, phiên bản, điều kiện áp dụng và chủ phê duyệt theo loại công trình
-trước khi publish checklist hoặc gate bắt buộc. Xem
+trước khi publish checklist hoặc gate bắt buộc. Trong bộ đã nhận chưa nhận diện
+biểu mẫu riêng cho lấy mẫu, kết quả thí nghiệm, chứng chỉ vật liệu, biện pháp
+thi công hoặc kế hoạch HSE; `TC-M01` chỉ liệt kê một số hồ sơ chuẩn bị. NICON
+cần xác nhận file nguồn hoặc bổ sung từng mục áp dụng. Xem
 [nguồn ISO thi công](<Nicon/ISO/D.Quy trình chi tiết/D.4. Quy trình thi công lắp đặt/Quy trình thi công lắp đặt.doc>)
 và [thanh quyết toán](<Nicon/ISO/D.Quy trình chi tiết/D.6. Quy trình thanh toán, quyết toán công trình/Quy trình thanh quyết toán.doc>).
 
@@ -441,9 +447,9 @@ CM đã duyệt có inbox Cung ứng, lọc loại/trạng thái, lập HĐ Down
 service hợp đồng hiện có, liên kết/đổi một HĐ trước cung cấp và xác nhận cung cấp
 thủ công bằng tài liệu cùng Dự án. Có concurrency, idempotency, lịch sử và chặn
 xóa bằng chứng/HĐ đã có liên kết hoặc lịch sử. Chưa có cung cấp từng phần hoặc
-gate thanh toán ISO. QA/QC đã lưu loại minh chứng theo từng
-tài liệu; nội dung ISO/checklist bắt buộc vẫn thiếu hiện vật nguồn và mapping
-đã đối chiếu theo từng loại công trình.
+gate thanh toán ISO. QA/QC đã lưu loại minh chứng theo từng tài liệu; nguồn
+ISO đã có, nhưng checklist bắt buộc và phiên bản mẫu chưa được đối chiếu, duyệt
+theo từng loại công trình.
 QS đã tách Upstream/Downstream, có contract/BOQ/
 milestone và correction lineage, nhưng CM approval chưa tạo hồ sơ thanh toán.
 
@@ -634,8 +640,9 @@ Biểu mẫu, danh mục và tham số chỉ có NICON nắm giữ vẫn cần h
 Ngoài ra, NICON cần chốt:
 
 1. Hoàn tất mapping bộ ISO đã nhận trong `docs/Nicon/ISO/` cho checklist/cổng
-   khởi công theo loại công trình; xác nhận các mã `TC-M02`, `TC-M23`, `TC-M00`
-   chưa có file đối ứng và các mã/nhãn xung đột. Nguồn chuẩn ISO đã xác nhận.
+   khởi công theo loại công trình; xác nhận các mã `TC-M02`, `TC-M23`,
+   `TQT-M00`, `TC-M00` chưa có file đối ứng và các mã/nhãn xung đột. Nguồn
+   chuẩn ISO đã xác nhận.
 2. Công thức/kỳ chốt S-Curve và quyền publish/unlock baseline.
 3. Approval/delegation matrix cho MR, QA/QC, HSE, QS và VO.
 4. Đối chiếu chứng từ thanh toán theo bốn loại Downstream package với ISO;
