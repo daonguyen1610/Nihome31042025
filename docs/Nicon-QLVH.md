@@ -218,6 +218,10 @@ Theo xác nhận người dùng ngày 20/10/2026, email nhắc gia hạn/kết t
 liên hệ của Khách hàng; tiêu đề và nội dung quản lý tại `/admin/email-templates`.
 Nhân viên xem trước email thực tế rồi xác nhận lịch gửi. Email chỉ thông báo,
 không tự gia hạn, thanh lý hoặc đổi trạng thái Hợp đồng.
+Theo xác nhận người dùng ngày 21/10/2026, từ lần đầu bắt đầu gửi email nhắc
+khách hàng (`AttemptedAt` có giá trị), không được đổi chiều Hợp đồng, kể cả
+khi kết quả SMTP chưa xác định. Lịch chưa gửi hoặc bị chặn trước khi gửi
+không tự tạo ràng buộc này.
 
 ### Điểm mở
 

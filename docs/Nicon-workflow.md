@@ -176,6 +176,9 @@ Không tính phần trăm hoàn thành chung và không suy diễn nguồn từ 
   Hợp đồng/người nhận hoặc quyền người lập lịch không còn hợp lệ thì yêu cầu
   kiểm tra lại; kết quả SMTP không xác định không được tự gửi lại. Email không
   thực hiện chuyển trạng thái Hợp đồng (xác nhận người dùng 20/10/2026).
+  Từ lần bắt đầu gửi đầu tiên, khóa chiều Hợp đồng vĩnh viễn, kể cả khi kết
+  quả gửi chưa xác định; lịch chỉ chờ gửi/chưa có lần thử không tạo khóa này
+  (xác nhận người dùng 21/10/2026).
 
 ### G2 — Phát hành hồ sơ thi công
 

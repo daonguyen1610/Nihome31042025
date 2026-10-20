@@ -1,7 +1,11 @@
 using System.Net;
 using System.Text.Json;
+using System.Text.Json.Nodes;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Services;
 
@@ -9,6 +13,121 @@ namespace NihomeBackend.IntegrationTests.Controllers;
 
 public sealed class ContractRemindersTests(NihomeWebApplicationFactory factory) : IntegrationTestBase(factory)
 {
+    [Fact]
+    public async Task InFlightEmailLocksDirectionBeforeHistoryExists()
+    {
+        var held = new HeldReminderEmail();
+        using var app = Factory.WithWebHostBuilder(builder => builder.ConfigureTestServices(services =>
+        {
+            services.RemoveAll<IEmailService>();
+            services.AddSingleton<IEmailService>(held);
+        }));
+        using var client = app.CreateClient();
+        await AuthTestHelper.AuthenticateAsync(client, AuthTestHelper.LoginAsSuperAdminAsync);
+        int contractId, vendorId;
+        using (var seedScope = app.Services.CreateScope())
+        {
+            var db = seedScope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var owner = await db.Users.SingleAsync(item => item.PhoneNumber == TestDataSeeder.SuperAdminPhone);
+            var customer = new Customer
+            {
+                Name = "An Phú held SMTP owner",
+                SourceCode = "marketing",
+                OwnerUserId = owner.Id,
+                Contacts = [new() { FullName = "Mai Anh", Email = "held@example.test", IsPrimary = true }]
+            };
+            var project = new OperationalProject { Code = $"HELD-{Guid.NewGuid():N}", Name = "An Phú held SMTP review", Customer = customer, CreatedByUserId = owner.Id };
+            var vendor = new Vendor { VendorCode = $"HELD-{Guid.NewGuid():N}"[..30], CompanyName = "An Phú electrical supplier", VendorType = VendorType.Supplier, Email = "supplier@example.test", CreatedByUserId = owner.Id };
+            var contract = new Contract
+            {
+                ContractNumber = $"HELD-{Guid.NewGuid():N}",
+                Customer = customer,
+                OperationalProject = project,
+                OwnerUserId = owner.Id,
+                Direction = ContractDirection.Upstream,
+                Type = ContractType.DesignAndBuild,
+                Status = ContractStatus.Signed,
+                SignedDate = ContractReminderService.Today.AddDays(-30),
+                EndDate = ContractReminderService.Today.AddDays(30)
+            };
+            db.AddRange(contract, vendor); await db.SaveChangesAsync(); contractId = contract.Id; vendorId = vendor.Id;
+        }
+        var preview = await client.PostAsJsonAsync($"/api/contracts/{contractId}/reminders/preview", new { kind = "Renewal", reminderDate = DateOnly.FromDateTime(ContractReminderService.Today).ToString("yyyy-MM-dd") });
+        preview.EnsureSuccessStatusCode();
+        var token = (await ReadJsonAsync(preview)).GetProperty("previewToken").GetString();
+        (await client.PostAsJsonAsync($"/api/contracts/{contractId}/reminders", new { previewToken = token })).EnsureSuccessStatusCode();
+        using var workerScope = app.Services.CreateScope();
+        var send = workerScope.ServiceProvider.GetRequiredService<ContractReminderService>().SendDueAsync();
+        try
+        {
+            await held.Entered.Task.WaitAsync(TimeSpan.FromSeconds(20));
+            using (var inspectScope = app.Services.CreateScope())
+            {
+                var db = inspectScope.ServiceProvider.GetRequiredService<AppDbContext>();
+                (await db.ContractCareActivities.CountAsync(item => item.ContractId == contractId)).Should().Be(0);
+                (await db.ContractReminders.SingleAsync(item => item.ContractId == contractId)).Status.Should().Be("Sending");
+            }
+            var before = await ReadJsonAsync(await client.GetAsync($"/api/contracts/{contractId}"));
+            var payload = JsonNode.Parse(before.GetRawText())!.AsObject();
+            payload["direction"] = "Downstream"; payload["type"] = "Supply"; payload["vendorId"] = vendorId;
+            var update = await client.PutAsJsonAsync($"/api/contracts/{contractId}", payload);
+            update.StatusCode.Should().Be(HttpStatusCode.BadRequest, await update.Content.ReadAsStringAsync());
+            (await ReadJsonAsync(update)).GetProperty("code").GetString().Should().Be("CONTRACT_REMINDER_DIRECTION_LOCKED");
+            var after = await ReadJsonAsync(await client.GetAsync($"/api/contracts/{contractId}"));
+            foreach (var field in new[] { "direction", "type", "vendorId", "rowVersion" }) after.GetProperty(field).GetRawText().Should().Be(before.GetProperty(field).GetRawText());
+        }
+        finally { held.Release.TrySetResult(); await send; }
+        var history = await client.GetAsync($"/api/contracts/{contractId}/care-activities");
+        history.EnsureSuccessStatusCode();
+        (await ReadJsonAsync(history)).GetProperty("total").GetInt32().Should().Be(1);
+        held.Calls.Should().Be(1);
+    }
+
+    [Theory]
+    [InlineData("Sending", true, true)]
+    [InlineData("Sent", true, true)]
+    [InlineData("NeedsReview", true, true)]
+    [InlineData("NeedsReview", false, false)]
+    [InlineData("Scheduled", false, false)]
+    [InlineData("Cancelled", false, false)]
+    public async Task DirectionLockDependsOnDeliveryAttempt_NotCurrentStatus(string status, bool attempted, bool locked)
+    {
+        var id = await SeedAsync(); await LoginAsync("SUPER_ADMIN");
+        var vendorId = await WithDbAsync(async db =>
+        {
+            var contract = await db.Contracts.SingleAsync(item => item.Id == id);
+            var project = new OperationalProject { Code = $"REM-{Guid.NewGuid():N}", Name = "An Phú direction test", CustomerId = contract.CustomerId, CreatedByUserId = contract.OwnerUserId!.Value };
+            var vendor = new Vendor { VendorCode = $"REM-{Guid.NewGuid():N}"[..30], CompanyName = "An Phú equipment", VendorType = VendorType.Supplier, Email = "supplier@example.test", CreatedByUserId = contract.OwnerUserId.Value };
+            db.AddRange(project, vendor); await db.SaveChangesAsync(); contract.OperationalProjectId = project.Id;
+            db.ContractReminders.Add(new ContractReminder
+            {
+                ContractId = id,
+                Status = status,
+                AttemptedAt = attempted ? DateTime.UtcNow : null,
+                CreatedByUserId = contract.OwnerUserId.Value,
+                PreviewHash = Guid.NewGuid().ToString("N"),
+                ToEmail = "test@example.test",
+                Subject = "Test",
+                Body = "<p>Test</p>"
+            });
+            await db.SaveChangesAsync(); return vendor.Id;
+        });
+        var before = await ReadJsonAsync(await Client.GetAsync($"/api/contracts/{id}"));
+        var payload = JsonNode.Parse(before.GetRawText())!.AsObject(); payload["direction"] = "Downstream"; payload["type"] = "Supply"; payload["vendorId"] = vendorId;
+        var update = await Client.PutAsJsonAsync($"/api/contracts/{id}", payload);
+        update.StatusCode.Should().Be(locked ? HttpStatusCode.BadRequest : HttpStatusCode.OK, await update.Content.ReadAsStringAsync());
+        if (locked) (await ReadJsonAsync(update)).GetProperty("code").GetString().Should().Be("CONTRACT_REMINDER_DIRECTION_LOCKED");
+    }
+
+    private sealed class HeldReminderEmail : IEmailService
+    {
+        public readonly TaskCompletionSource Entered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public readonly TaskCompletionSource Release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public int Calls;
+        public async Task SendEmailAsync(string to, string subject, string body)
+        { Interlocked.Increment(ref Calls); Entered.TrySetResult(); await Release.Task; }
+        public Task SendEmailWithAttachmentAsync(string to, string subject, string body, EmailAttachment attachment, CancellationToken ct = default) => throw new NotSupportedException();
+    }
     private Task<int> SeedAsync(string role = "SALE", ContractStatus status = ContractStatus.Signed,
         ContractDirection direction = ContractDirection.Upstream) => WithDbAsync(async db =>
     {
@@ -16,7 +135,7 @@ public sealed class ContractRemindersTests(NihomeWebApplicationFactory factory) 
         var owner = await db.Users.SingleAsync(item => item.PhoneNumber == phone);
         var contract = new Contract
         {
-            ContractNumber = $"REMINDER-{Guid.NewGuid():N}",
+            ContractNumber = $"REM-{Guid.NewGuid():N}",
             OwnerUserId = owner.Id,
             Customer = new Customer
             {

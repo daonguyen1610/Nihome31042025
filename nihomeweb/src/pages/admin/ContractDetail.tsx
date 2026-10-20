@@ -2459,9 +2459,11 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
     } catch (err) {
       const code = (err as { response?: { data?: { code?: string } } })?.response?.data?.code;
       setFormError(
-        code === "CONTRACT_CARE_DIRECTION_LOCKED"
-          ? t("contracts.care.directionLocked")
-          : (getErrorMessage(err) ?? t("common.error")),
+        code === "CONTRACT_REMINDER_DIRECTION_LOCKED"
+          ? t("contractReminder.directionLocked")
+          : code === "CONTRACT_CARE_DIRECTION_LOCKED"
+            ? t("contracts.care.directionLocked")
+            : (getErrorMessage(err) ?? t("common.error")),
       );
       if (isConcurrencyConflict(err)) await refreshContract();
     } finally {
