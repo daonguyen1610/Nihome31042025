@@ -4,6 +4,15 @@ Date: 2026-05-16 (updated 2026-10-15 for NICON role groups)
 
 ## Overview
 
+Contract reminder list access follows Contract viewing scope. Preview,
+scheduling and cancellation require `crm.contracts.manage` and owner scope
+or `crm.contracts.view.all`; Finance/project read access grants no sending
+authority. The worker rechecks the scheduler's active account, current manage
+permission and owner/view-all scope before claiming a delivery. Templates at
+`/admin/email-templates` use `system.settings.view` for GET and
+`system.settings.manage` for PUT. Contract staff cannot override email bodies
+or select addresses outside the customer's stored contacts.
+
 The admin Users section is backed by the ASP.NET Core `/api/users` endpoints. Authorization is now permission-based, enforced globally by `PermissionAuthorizationFilter` (registered in `Program.cs`) which reads `[RequirePermission(module, action)]` attributes off the class and the action. All requirements must match (AND semantics); `[AllowAnonymous]` short-circuits the check.
 
 Roles are still seeded from the JSON bundle (`nihomebackend/Data/Rbac/rbac-defaults.json`), but controllers no longer name roles directly. Instead they declare the permission codes they need; what each role can do is derived from the role × permission matrix in the DB.

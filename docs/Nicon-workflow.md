@@ -169,6 +169,13 @@ Không tính phần trăm hoàn thành chung và không suy diễn nguồn từ 
   nhận đầu tiên, không được đổi chiều Hợp đồng (xác nhận người dùng 20/10/2026).
   API từ chối thay đổi và giữ nguyên lịch sử; không chặn đổi chiều chỉ vì chưa
   có ghi nhận chăm sóc, ngoài các ràng buộc hiện hành khác.
+- Nhắc gia hạn/kết thúc: Kinh doanh chọn loại thông báo, ngày gửi riêng cho Hợp
+  đồng (ngày Việt Nam) và người liên hệ của Khách hàng → xem trước email → xác
+  nhận lịch tự động. Quản trị sửa mẫu tại `/admin/email-templates`. Worker gửi
+  khi đến hạn, lưu kết quả và ghi lịch sử chăm sóc khi SMTP tiếp nhận. Thông tin
+  Hợp đồng/người nhận hoặc quyền người lập lịch không còn hợp lệ thì yêu cầu
+  kiểm tra lại; kết quả SMTP không xác định không được tự gửi lại. Email không
+  thực hiện chuyển trạng thái Hợp đồng (xác nhận người dùng 20/10/2026).
 
 ### G2 — Phát hành hồ sơ thi công
 

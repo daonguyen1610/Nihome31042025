@@ -748,6 +748,26 @@ history in its confirmation preview and preserves other contracts' notes.
 After the first customer-care entry, the contract's Upstream/Downstream direction
 cannot be changed. Keep its current direction to preserve access to its history.
 
+**Automatic renewal/end-date email:** in the same Customer care tab, choose
+Renewal or End-date notice, a send date (Vietnam calendar date, today or later),
+then **Preview email**. Select a customer contact with a valid email; the primary
+contact is suggested first. Confirm the preview to schedule automatic delivery.
+The contract must be Upstream, have an end date, and be Signed, InProgress or
+OnHold. Contract manage permission plus owner/CRM manager scope is required.
+There is one pending schedule per type; cancel a Scheduled entry before replacing
+it. The worker checks due/overdue schedules every five minutes while the app runs.
+This notice does not renew, terminate or change the contract's business status.
+
+The approved recipient, subject and HTML body are saved with the schedule.
+Administrators edit both templates under `/admin/email-templates`; changes apply
+to new schedules. If contract identity, end date, recipient or scheduler access
+changes, delivery requires review and a fresh preview. A successful SMTP handoff
+adds an Email entry to contract customer care; it does not prove inbox delivery.
+The screen lists the newest 100 schedules and their delivery states. If delivery
+is uncertain, consult the mail administrator before scheduling another email;
+automatic retries are disabled to prevent duplicate customer messages. A Sending
+entry that persists after a service interruption requires operational review.
+
 Every new or edited contract must belong to one Operational Project. The
 selected project must belong to the same customer as the contract; contracts
 created from an opportunity or quotation inherit that source project's identity.

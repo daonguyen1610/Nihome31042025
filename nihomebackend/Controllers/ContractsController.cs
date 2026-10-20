@@ -40,6 +40,7 @@ public class ContractsController(
     IPermissionService permissions,
     ContractExecutionProgressService executionProgress,
     ContractCareActivityService careActivities,
+    ContractReminderService reminders,
     IWebHostEnvironment env,
     AppDbContext db,
     IAuditLogger audit) : ControllerBase
@@ -938,6 +939,77 @@ public class ContractsController(
     }
 
     // -------- customer care --------
+
+    [HttpGet("{id:int}/reminders")]
+    [RequirePermission("crm.contracts", "view")]
+    public async Task<IActionResult> Reminders(int id, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        if (await svc.GetAsync(id, userId.Value, await CanReadContractAcrossOwnersAsync(userId.Value, id, ct), ct) is null)
+            return NotFound();
+        return Ok(await reminders.ListAsync(id, ct));
+    }
+
+    [HttpPost("{id:int}/reminders/preview")]
+    [RequirePermission("crm.contracts", "manage")]
+    public async Task<IActionResult> PreviewReminder(int id, ContractReminderPreviewRequest request, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        try
+        {
+            var result = await reminders.PreviewAsync(id, request, userId.Value,
+                await permissions.HasAsync(userId.Value, "crm.contracts.view.all", ct), ct);
+            return result is null ? NotFound() : Ok(result);
+        }
+        catch (ArgumentException error) { return BadRequest(new { message = error.Message }); }
+    }
+
+    [HttpPost("{id:int}/reminders")]
+    [RequirePermission("crm.contracts", "manage")]
+    public async Task<IActionResult> ScheduleReminder(int id, ScheduleContractReminderRequest request, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        try
+        {
+            var result = await reminders.ScheduleAsync(id, request.PreviewToken, userId.Value,
+                await permissions.HasAsync(userId.Value, "crm.contracts.view.all", ct), ct);
+            if (result is null) return NotFound();
+            audit.Log(new AuditEvent
+            {
+                Action = "contract.reminder.schedule",
+                ResourceType = EntityTypes.Contract,
+                ResourceId = id.ToString(),
+                Message = $"Reminder #{result.Id} scheduled."
+            });
+            return Ok(result);
+        }
+        catch (ArgumentException error) { return BadRequest(new { message = error.Message }); }
+    }
+
+    [HttpPost("{id:int}/reminders/{reminderId:int}/cancel")]
+    [RequirePermission("crm.contracts", "manage")]
+    public async Task<IActionResult> CancelReminder(int id, int reminderId, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        try
+        {
+            if (!await reminders.CancelAsync(id, reminderId, userId.Value,
+                await permissions.HasAsync(userId.Value, "crm.contracts.view.all", ct), ct)) return NotFound();
+            audit.Log(new AuditEvent
+            {
+                Action = "contract.reminder.cancel",
+                ResourceType = EntityTypes.Contract,
+                ResourceId = id.ToString(),
+                Message = $"Reminder #{reminderId} cancelled."
+            });
+            return NoContent();
+        }
+        catch (ArgumentException error) { return BadRequest(new { message = error.Message }); }
+    }
 
     [HttpGet("{id:int}/care-activities")]
     [RequirePermission("crm.contracts", "view")]

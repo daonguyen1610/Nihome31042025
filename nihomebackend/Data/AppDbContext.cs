@@ -61,6 +61,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<CustomerContact> CustomerContacts => Set<CustomerContact>();
     public DbSet<CustomerActivity> CustomerActivities => Set<CustomerActivity>();
     public DbSet<ContractCareActivity> ContractCareActivities => Set<ContractCareActivity>();
+    public DbSet<ContractReminder> ContractReminders => Set<ContractReminder>();
     public DbSet<CustomerDocument> CustomerDocuments => Set<CustomerDocument>();
     public DbSet<VendorDocumentUpload> VendorDocumentUploads => Set<VendorDocumentUpload>();
     public DbSet<Opportunity> Opportunities => Set<Opportunity>();
@@ -737,6 +738,25 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasOne(activity => activity.CreatedBy).WithMany().HasForeignKey(activity => activity.CreatedByUserId)
                 .OnDelete(DeleteBehavior.Restrict);
             b.HasIndex(activity => new { activity.ContractId, activity.OccurredAt, activity.Id });
+        });
+
+        modelBuilder.Entity<ContractReminder>(b =>
+        {
+            b.ToTable("contract_reminders");
+            b.HasKey(item => item.Id);
+            b.Property(item => item.Kind).HasMaxLength(20);
+            b.Property(item => item.Status).HasMaxLength(30);
+            b.Property(item => item.ErrorCode).HasMaxLength(100);
+            b.Property(item => item.ToEmail).HasMaxLength(254);
+            b.Property(item => item.Subject).HasMaxLength(200);
+            b.Property(item => item.Body).HasMaxLength(16000);
+            b.Property(item => item.ContextHash).HasMaxLength(64);
+            b.Property(item => item.PreviewHash).HasMaxLength(64);
+            b.HasIndex(item => item.PreviewHash).IsUnique();
+            b.HasIndex(item => new { item.ContractId, item.Kind, item.Status });
+            b.HasIndex(item => new { item.Status, item.ReminderDate });
+            b.HasOne(item => item.Contract).WithMany().HasForeignKey(item => item.ContractId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<CustomerDocument>(b =>
