@@ -315,6 +315,12 @@ Downstream QS được duyệt
   → đủ điều kiện để Kế toán review Payment Request
 ```
 
+**Partial:** Payment Request phải trả nay có thể liên kết một Downstream QS batch
+đã CM duyệt, đang hiệu lực, cùng HĐ và Dự án. API kiểm tra lại liên kết tại lúc
+lập/sửa, xác nhận hồ sơ và phê duyệt; UI chỉ liệt kê QS phù hợp với HĐ đã chọn.
+Liên kết là tùy chọn để giữ luồng tạm ứng/trả trước; chưa có ma trận ISO chứng từ
+theo loại package, đối soát khoản tiền với QS hoặc tự động tạo Payment Request.
+
 `Đủ điều kiện review` không phải tự động thanh toán. Supply-only, labour-only,
 equipment và mixed subcontract đối chiếu ma trận chứng từ trong bộ ISO NICON
 đã gửi; thiếu mục nào yêu cầu FA, chị K/Kiara, bổ sung riêng mục đó. Không tạo

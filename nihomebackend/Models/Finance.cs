@@ -10,6 +10,8 @@ public sealed class PaymentRequest : IConcurrencyTracked
     public Vendor Vendor { get; set; } = null!;
     public int? ContractPaymentMilestoneId { get; set; }
     public ContractPaymentMilestone? ContractPaymentMilestone { get; set; }
+    public int? ConstructionQsBatchId { get; set; }
+    public ConstructionQsBatch? ConstructionQsBatch { get; set; }
     public string SupplierInvoiceNumber { get; set; } = string.Empty;
     public DateOnly InvoiceDate { get; set; }
     public decimal InvoiceAmount { get; set; }

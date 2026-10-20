@@ -79,6 +79,7 @@ const emptyPayment = () => ({
   contractId: 0,
   vendorId: 0,
   contractPaymentMilestoneId: 0,
+  constructionQsBatchId: 0,
   supplierInvoiceNumber: "",
   invoiceDate: new Date().toISOString().slice(0, 10),
   invoiceAmount: 0,
@@ -326,6 +327,7 @@ const FinanceControlPage = () => {
           supplierInvoiceNumber: paymentForm.supplierInvoiceNumber.trim(),
           receivedAt: new Date(paymentForm.receivedAt).toISOString(),
           contractPaymentMilestoneId: paymentForm.contractPaymentMilestoneId || null,
+          constructionQsBatchId: paymentForm.constructionQsBatchId || null,
           attachments: attachments.map((item) => ({
             fileName: item.fileName.trim(),
             filePath: item.filePath.trim(),
@@ -584,6 +586,7 @@ const FinanceControlPage = () => {
                 contracts={paymentReferences.contracts}
                 vendors={paymentReferences.vendors}
                 accountants={paymentReferences.accountants}
+                qsBatches={paymentReferences.qsBatches}
                 t={t}
               />
             ))}
@@ -779,6 +782,11 @@ const PaymentsPanel = ({
             </div>
             <dl className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
               <Data label={t("finance.field.contract")}>{row.contractNumber}</Data>
+              {row.constructionQsBatchId && (
+                <Data label={t("finance.field.downstreamQs")}>
+                  {row.constructionQsCode ?? `#${row.constructionQsBatchId}`}
+                </Data>
+              )}
               <Data label={t("finance.field.vendor")}>{row.vendorName}</Data>
               <Data label={t("finance.field.amount")}>
                 {money.format(row.invoiceAmount)} {row.currency}
@@ -1225,6 +1233,7 @@ const PaymentForm = ({
   contracts,
   vendors,
   accountants,
+  qsBatches,
   t,
 }: {
   form: ReturnType<typeof emptyPayment>;
@@ -1232,6 +1241,7 @@ const PaymentForm = ({
   contracts: PaymentReferencesResponse["contracts"];
   vendors: PaymentReferencesResponse["vendors"];
   accountants: PaymentReferencesResponse["accountants"];
+  qsBatches: PaymentReferencesResponse["qsBatches"];
   t: Translate;
 }) => {
   const selectedContract = contracts.find((contract) => contract.id === form.contractId);
@@ -1259,6 +1269,7 @@ const PaymentForm = ({
               contractId: value,
               vendorId: contract?.vendorId ?? 0,
               contractPaymentMilestoneId: 0,
+              constructionQsBatchId: 0,
             }));
           }}
         />
@@ -1303,6 +1314,32 @@ const PaymentForm = ({
             </Select>
           </div>
         ) : null}
+        <div className="space-y-2">
+          <Label htmlFor="finance-downstream-qs">{t("finance.field.downstreamQs")}</Label>
+          <Select
+            value={form.constructionQsBatchId ? String(form.constructionQsBatchId) : "none"}
+            onValueChange={(value) =>
+              setForm((current) => ({
+                ...current,
+                constructionQsBatchId: value === "none" ? 0 : Number(value),
+              }))
+            }
+          >
+            <SelectTrigger id="finance-downstream-qs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">{t("finance.lookup.noDownstreamQs")}</SelectItem>
+              {qsBatches
+                .filter((item) => item.contractId === form.contractId)
+                .map((item) => (
+                  <SelectItem key={item.id} value={String(item.id)}>
+                    {item.code} · {item.certifiedAmount.toLocaleString()}
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+        </div>
         <div className="space-y-2">
           <Label htmlFor="finance-invoice-number">{t("finance.field.invoiceNumber")}</Label>
           <Input

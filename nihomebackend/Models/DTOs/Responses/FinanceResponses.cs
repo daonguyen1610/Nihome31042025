@@ -9,6 +9,8 @@ public sealed class PaymentRequestResponse
     public int VendorId { get; set; }
     public string VendorName { get; set; } = string.Empty;
     public int? ContractPaymentMilestoneId { get; set; }
+    public int? ConstructionQsBatchId { get; set; }
+    public string? ConstructionQsCode { get; set; }
     public string SupplierInvoiceNumber { get; set; } = string.Empty;
     public DateOnly InvoiceDate { get; set; }
     public decimal InvoiceAmount { get; set; }
@@ -102,9 +104,11 @@ public sealed class FinanceWorkspaceResponse
 public sealed record PaymentReferencesResponse(
     IReadOnlyList<PaymentContractOption> Contracts,
     IReadOnlyList<PaymentVendorOption> Vendors,
-    IReadOnlyList<PaymentAccountantOption> Accountants);
+    IReadOnlyList<PaymentAccountantOption> Accountants,
+    IReadOnlyList<PaymentQsOption> QsBatches);
 public sealed record PaymentContractOption(int Id, string ContractNumber, int VendorId,
     string VendorName, IReadOnlyList<PaymentMilestoneOption> PaymentMilestones);
 public sealed record PaymentMilestoneOption(int Id, int Order, string Name);
+public sealed record PaymentQsOption(int Id, int ContractId, string Code, decimal CertifiedAmount);
 public sealed record PaymentVendorOption(int Id, string VendorCode, string CompanyName);
 public sealed record PaymentAccountantOption(int Id, string? FullName);

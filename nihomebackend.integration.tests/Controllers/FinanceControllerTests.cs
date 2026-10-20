@@ -274,6 +274,148 @@ public sealed class FinanceControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task DownstreamQsLink_RoundTripsAndRejectsInvalidOrSupersededEvidence()
+    {
+        var fixture = await CreateFixtureAsync();
+        var qsId = await WithDbAsync(async db =>
+        {
+            var siteQsUserId = await db.Users.Where(user => user.PhoneNumber ==
+                TestDataSeeder.BusinessRolePhonesByCode["QS"]).Select(user => user.Id).SingleAsync();
+            var qs = new ConstructionQsBatch
+            {
+                OperationalProjectId = fixture.ProjectId,
+                ContractId = fixture.ContractId,
+                Code = $"QS-PAY-{Guid.NewGuid():N}"[..30],
+                Direction = ConstructionQsDirection.Downstream,
+                Status = ConstructionReviewStatus.CmApproved,
+                RecordState = ConstructionQsRecordState.Active,
+                IsActiveLineage = true,
+                WbsCode = "STRUCTURE-01",
+                PeriodFrom = new DateTime(2026, 8, 1),
+                PeriodTo = new DateTime(2026, 8, 31),
+                CertifiedAmount = 1_000m,
+                Description = "Accepted structural subcontract quantity for August",
+                CreatedByUserId = siteQsUserId,
+            };
+            db.ConstructionQsBatches.Add(qs);
+            await db.SaveChangesAsync();
+            return qs.Id;
+        });
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "ACCOUNTANT"));
+
+        var references = await ReadJsonAsync(await Client.GetAsync("/api/finance/payment-references"));
+        references.GetProperty("qsBatches").EnumerateArray().Should().Contain(item =>
+            item.GetProperty("id").GetInt32() == qsId &&
+            item.GetProperty("contractId").GetInt32() == fixture.ContractId);
+        using var createdResponse = await SendAsync(HttpMethod.Post, "/api/finance/payment-requests",
+            ValidPayment(fixture.ContractId, fixture.VendorId, fixture.AccountantId, qsBatchId: qsId));
+        createdResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var created = await ReadJsonAsync(createdResponse);
+        created.GetProperty("constructionQsBatchId").GetInt32().Should().Be(qsId);
+        created.GetProperty("constructionQsCode").GetString().Should().StartWith("QS-PAY-");
+        (await WithDbAsync(db => db.PaymentRequests.SingleAsync(item => item.Id == created.GetProperty("id").GetInt32())))
+            .ConstructionQsBatchId.Should().Be(qsId);
+
+        await WithDbAsync(async db =>
+        {
+            var qs = await db.ConstructionQsBatches.FindAsync(qsId);
+            qs!.IsActiveLineage = false;
+            qs.RecordState = ConstructionQsRecordState.Superseded;
+            await db.SaveChangesAsync();
+        });
+        var submitted = await TransitionAsync("payment-requests", created, "submit");
+        using var rejected = await SendAsync(HttpMethod.Post,
+            $"/api/finance/payment-requests/{created.GetProperty("id").GetInt32()}/validate",
+            new { rowVersion = submitted.GetProperty("rowVersion").GetString() });
+        rejected.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.PaymentRequests.SingleAsync(item => item.Id == created.GetProperty("id").GetInt32())))
+            .Status.Should().Be(PaymentRequestStatus.UnderValidation);
+
+        await WithDbAsync(async db =>
+        {
+            var qs = await db.ConstructionQsBatches.FindAsync(qsId);
+            qs!.IsActiveLineage = true;
+            qs.RecordState = ConstructionQsRecordState.Active;
+            await db.SaveChangesAsync();
+        });
+        var ready = await TransitionAsync("payment-requests", submitted, "validate");
+        await WithDbAsync(async db =>
+        {
+            var qs = await db.ConstructionQsBatches.FindAsync(qsId);
+            qs!.IsActiveLineage = false;
+            qs.RecordState = ConstructionQsRecordState.Superseded;
+            await db.SaveChangesAsync();
+        });
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "BGD"));
+        using var blockedApproval = await SendAsync(HttpMethod.Post,
+            $"/api/finance/payment-requests/{created.GetProperty("id").GetInt32()}/decision",
+            new { approved = true, rowVersion = ready.GetProperty("rowVersion").GetString() });
+        blockedApproval.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.PaymentRequests.SingleAsync(item => item.Id == created.GetProperty("id").GetInt32())))
+            .Status.Should().Be(PaymentRequestStatus.ReadyForApproval);
+    }
+
+    [Theory]
+    [InlineData("Upstream")]
+    [InlineData("Pending")]
+    [InlineData("OtherContract")]
+    public async Task InvalidDownstreamQs_CannotBeLinkedToPayment(string scenario)
+    {
+        var fixture = await CreateFixtureAsync();
+        var qsId = await WithDbAsync(async db =>
+        {
+            var siteQsUserId = await db.Users.Where(user => user.PhoneNumber ==
+                TestDataSeeder.BusinessRolePhonesByCode["QS"]).Select(user => user.Id).SingleAsync();
+            var qs = new ConstructionQsBatch
+            {
+                OperationalProjectId = fixture.ProjectId,
+                ContractId = fixture.ContractId,
+                Code = $"QS-BAD-{Guid.NewGuid():N}"[..30],
+                Direction = scenario == "Upstream" ? ConstructionQsDirection.Upstream : ConstructionQsDirection.Downstream,
+                Status = scenario == "Pending" ? ConstructionReviewStatus.PendingCmReview : ConstructionReviewStatus.CmApproved,
+                RecordState = ConstructionQsRecordState.Active,
+                IsActiveLineage = true,
+                WbsCode = "STRUCTURE-01",
+                PeriodFrom = new DateTime(2026, 8, 1),
+                PeriodTo = new DateTime(2026, 8, 31),
+                CertifiedAmount = 1_000m,
+                Description = "Subcontract quantity awaiting validation",
+                CreatedByUserId = siteQsUserId,
+            };
+            db.ConstructionQsBatches.Add(qs);
+            await db.SaveChangesAsync();
+            return qs.Id;
+        });
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "ACCOUNTANT"));
+        var contractId = scenario == "OtherContract"
+            ? await WithDbAsync(async db =>
+            {
+                var original = await db.Contracts.SingleAsync(item => item.Id == fixture.ContractId);
+                var other = new Contract
+                {
+                    ContractNumber = $"HD-QS-{Guid.NewGuid():N}"[..35],
+                    CustomerId = original.CustomerId,
+                    OperationalProjectId = fixture.ProjectId,
+                    VendorId = fixture.VendorId,
+                    Direction = ContractDirection.Downstream,
+                    Type = ContractType.Subcontract,
+                    Status = ContractStatus.Signed,
+                    SignedDate = new DateTime(2026, 7, 1),
+                    Value = 100_000m,
+                };
+                db.Contracts.Add(other);
+                await db.SaveChangesAsync();
+                return other.Id;
+            })
+            : fixture.ContractId;
+        using var response = await SendAsync(HttpMethod.Post, "/api/finance/payment-requests",
+            ValidPayment(contractId, fixture.VendorId, fixture.AccountantId, qsBatchId: qsId));
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.PaymentRequests.CountAsync(item => item.VendorId == fixture.VendorId)))
+            .Should().Be(0);
+    }
+
+    [Fact]
     public async Task DuplicateSupplierInvoice_PerVendor_IsRejectedWithoutSecondRow()
     {
         var fixture = await CreateFixtureAsync();
@@ -478,19 +620,21 @@ public sealed class FinanceControllerTests : IntegrationTestBase
         return await ReadJsonAsync(response);
     }
 
-    private static object ValidPayment(int contractId, int vendorId, int accountantId, string? rowVersion = null) => new
-    {
-        contractId,
-        vendorId,
-        supplierInvoiceNumber = "INV-2026-001",
-        invoiceDate = "2026-08-01",
-        invoiceAmount = 1000m,
-        currency = "VND",
-        receivedAt = new DateTime(2026, 8, 2, 1, 0, 0, DateTimeKind.Utc),
-        assignedAccountantUserId = accountantId,
-        attachments = new[] { new { fileName = "invoice.pdf", filePath = "/files/finance/invoice.pdf" } },
-        rowVersion,
-    };
+    private static object ValidPayment(int contractId, int vendorId, int accountantId,
+        string? rowVersion = null, int? qsBatchId = null) => new
+        {
+            contractId,
+            vendorId,
+            supplierInvoiceNumber = "INV-2026-001",
+            invoiceDate = "2026-08-01",
+            invoiceAmount = 1000m,
+            currency = "VND",
+            receivedAt = new DateTime(2026, 8, 2, 1, 0, 0, DateTimeKind.Utc),
+            assignedAccountantUserId = accountantId,
+            constructionQsBatchId = qsBatchId,
+            attachments = new[] { new { fileName = "invoice.pdf", filePath = "/files/finance/invoice.pdf" } },
+            rowVersion,
+        };
 
     private async Task<int> SeedPaidPaymentAsync(FinanceFixture fixture) => await WithDbAsync(async db =>
     {

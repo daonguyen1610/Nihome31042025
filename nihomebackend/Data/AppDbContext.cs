@@ -1747,6 +1747,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasOne(item => item.Contract).WithMany().HasForeignKey(item => item.ContractId).OnDelete(DeleteBehavior.Restrict);
             b.HasOne(item => item.Vendor).WithMany().HasForeignKey(item => item.VendorId).OnDelete(DeleteBehavior.Restrict);
             b.HasOne(item => item.ContractPaymentMilestone).WithMany().HasForeignKey(item => item.ContractPaymentMilestoneId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(item => item.ConstructionQsBatch).WithMany().HasForeignKey(item => item.ConstructionQsBatchId).OnDelete(DeleteBehavior.Restrict);
             b.HasOne(item => item.AssignedAccountant).WithMany().HasForeignKey(item => item.AssignedAccountantUserId).OnDelete(DeleteBehavior.NoAction);
             b.HasOne(item => item.ValidatedBy).WithMany().HasForeignKey(item => item.ValidatedByUserId).OnDelete(DeleteBehavior.NoAction);
             b.HasOne(item => item.SubmittedBy).WithMany().HasForeignKey(item => item.SubmittedByUserId).OnDelete(DeleteBehavior.NoAction);
@@ -1757,6 +1758,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasOne(item => item.CreatedBy).WithMany().HasForeignKey(item => item.CreatedByUserId).OnDelete(DeleteBehavior.NoAction);
             b.HasIndex(item => item.Code).IsUnique();
             b.HasIndex(item => new { item.VendorId, item.SupplierInvoiceNumber }).IsUnique();
+            b.HasIndex(item => item.ConstructionQsBatchId);
             b.HasIndex(item => new { item.AssignedAccountantUserId, item.PaidAt, item.Status });
         });
 

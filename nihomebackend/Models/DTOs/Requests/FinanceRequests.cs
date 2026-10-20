@@ -7,6 +7,7 @@ public sealed class PaymentRequestUpsertRequest : IConcurrencyRequest
     [Range(1, int.MaxValue)] public int ContractId { get; set; }
     [Range(1, int.MaxValue)] public int VendorId { get; set; }
     [Range(1, int.MaxValue)] public int? ContractPaymentMilestoneId { get; set; }
+    [Range(1, int.MaxValue)] public int? ConstructionQsBatchId { get; set; }
     [Required, MaxLength(120)] public string SupplierInvoiceNumber { get; set; } = string.Empty;
     [Required] public DateOnly? InvoiceDate { get; set; }
     [Range(typeof(decimal), "0.01", "9999999999999999.99")] public decimal InvoiceAmount { get; set; }

@@ -35,7 +35,18 @@ public sealed class FinanceService(AppDbContext db, IProjectAccessService projec
         var accountants = await db.Users.AsNoTracking().Where(user => user.IsActive && user.RoleEntity != null && user.RoleEntity.Code.ToUpper() == AccountantRole)
             .OrderBy(user => user.FullName).ThenBy(user => user.Id)
             .Select(user => new PaymentAccountantOption(user.Id, user.FullName)).ToListAsync(ct);
-        return new(contracts, vendors, accountants);
+        var contractIds = contracts.Select(contract => contract.Id).ToArray();
+        var qsBatches = await db.ConstructionQsBatches.AsNoTracking()
+            .Where(item => contractIds.Contains(item.ContractId) &&
+                db.Contracts.Any(contract => contract.Id == item.ContractId &&
+                    contract.OperationalProjectId == item.OperationalProjectId) &&
+                item.Direction == ConstructionQsDirection.Downstream &&
+                item.Status == ConstructionReviewStatus.CmApproved && item.RecordState == ConstructionQsRecordState.Active &&
+                item.IsActiveLineage)
+            .OrderBy(item => item.Code).ThenBy(item => item.Id)
+            .Select(item => new PaymentQsOption(item.Id, item.ContractId, item.Code, item.CertifiedAmount))
+            .ToListAsync(ct);
+        return new(contracts, vendors, accountants, qsBatches);
     }
 
     public async Task<IReadOnlyList<PaymentRequestResponse>> ListPaymentRequestsAsync(int userId, CancellationToken ct = default)
@@ -115,6 +126,9 @@ public sealed class FinanceService(AppDbContext db, IProjectAccessService projec
             if (entity.CreatedByUserId == userId || entity.SubmittedByUserId == userId ||
                 entity.ValidatedByUserId == userId || entity.AssignedAccountantUserId == userId)
                 throw new FinanceOperationException("Người lập, gửi hoặc kiểm tra hồ sơ không được tự phê duyệt đề nghị thanh toán.");
+            if (entity.ConstructionQsBatchId.HasValue && !await ValidPaymentQsAsync(
+                    entity.ConstructionQsBatchId.Value, entity.ContractId, ct))
+                throw new FinanceOperationException("QS phải trả đã liên kết không còn được CM duyệt hoặc không thuộc hợp đồng.");
         }
         else if (entity.Status is not (PaymentRequestStatus.UnderValidation or PaymentRequestStatus.ReadyForApproval))
         {
@@ -376,6 +390,9 @@ public sealed class FinanceService(AppDbContext db, IProjectAccessService projec
                 throw new FinanceOperationException("Chỉ kế toán được phân công mới được xác nhận hồ sơ.");
             if (entity.Attachments.Count == 0)
                 throw new FinanceOperationException("Đề nghị phải có ít nhất một chứng từ trước khi xác nhận hợp lệ.");
+            if (entity.ConstructionQsBatchId.HasValue && !await ValidPaymentQsAsync(
+                    entity.ConstructionQsBatchId.Value, entity.ContractId, ct))
+                throw new FinanceOperationException("QS phải trả đã liên kết không còn được CM duyệt hoặc không thuộc hợp đồng.");
         }
         CrmConcurrency.Apply(db, entity, request.RowVersion);
         var now = DateTime.UtcNow;
@@ -408,6 +425,9 @@ public sealed class FinanceService(AppDbContext db, IProjectAccessService projec
         if (request.ContractPaymentMilestoneId.HasValue && !await db.ContractPaymentMilestones.AsNoTracking().AnyAsync(item =>
                 item.Id == request.ContractPaymentMilestoneId && item.ContractId == request.ContractId, ct))
             throw new FinanceOperationException("Mốc thanh toán không thuộc hợp đồng đã chọn.");
+        if (request.ConstructionQsBatchId.HasValue && !await ValidPaymentQsAsync(
+                request.ConstructionQsBatchId.Value, request.ContractId, ct))
+            throw new FinanceOperationException("QS phải trả phải được CM duyệt, còn hiệu lực và thuộc đúng hợp đồng, Dự án.");
         await ValidateAccountantAsync(request.AssignedAccountantUserId, ct);
         var invoice = request.SupplierInvoiceNumber.Trim();
         if (await db.PaymentRequests.AsNoTracking().AnyAsync(item => item.VendorId == request.VendorId &&
@@ -422,6 +442,13 @@ public sealed class FinanceService(AppDbContext db, IProjectAccessService projec
         if (request.Attachments.Select(item => item.FilePath).Distinct(StringComparer.OrdinalIgnoreCase).Count() != request.Attachments.Count)
             throw new FinanceOperationException("Đường dẫn chứng từ không được trùng lặp.");
     }
+
+    private Task<bool> ValidPaymentQsAsync(int qsBatchId, int contractId, CancellationToken ct) =>
+        db.ConstructionQsBatches.AsNoTracking().AnyAsync(item => item.Id == qsBatchId &&
+            item.ContractId == contractId && db.Contracts.Any(contract => contract.Id == contractId &&
+                contract.OperationalProjectId == item.OperationalProjectId) &&
+            item.Direction == ConstructionQsDirection.Downstream && item.Status == ConstructionReviewStatus.CmApproved &&
+            item.RecordState == ConstructionQsRecordState.Active && item.IsActiveLineage, ct);
 
     private async Task ValidateCorrectionAsync(AccountingCorrectionUpsertRequest request, CancellationToken ct)
     {
@@ -469,6 +496,7 @@ public sealed class FinanceService(AppDbContext db, IProjectAccessService projec
         entity.ContractId = request.ContractId;
         entity.VendorId = request.VendorId;
         entity.ContractPaymentMilestoneId = request.ContractPaymentMilestoneId;
+        entity.ConstructionQsBatchId = request.ConstructionQsBatchId;
         entity.SupplierInvoiceNumber = request.SupplierInvoiceNumber.Trim();
         entity.InvoiceDate = request.InvoiceDate!.Value;
         entity.InvoiceAmount = request.InvoiceAmount;
@@ -521,6 +549,7 @@ public sealed class FinanceService(AppDbContext db, IProjectAccessService projec
 
     private IQueryable<PaymentRequest> PaymentQuery() => db.PaymentRequests.AsNoTracking()
         .Include(item => item.Contract).Include(item => item.Vendor).Include(item => item.AssignedAccountant)
+        .Include(item => item.ConstructionQsBatch)
         .Include(item => item.Attachments)
         .Include(item => item.Events.OrderBy(entry => entry.ChangedAt)).ThenInclude(entry => entry.ChangedByUser);
 
@@ -556,6 +585,8 @@ public sealed class FinanceService(AppDbContext db, IProjectAccessService projec
         VendorId = item.VendorId,
         VendorName = item.Vendor.CompanyName,
         ContractPaymentMilestoneId = item.ContractPaymentMilestoneId,
+        ConstructionQsBatchId = item.ConstructionQsBatchId,
+        ConstructionQsCode = item.ConstructionQsBatch?.Code,
         SupplierInvoiceNumber = item.SupplierInvoiceNumber,
         InvoiceDate = item.InvoiceDate,
         InvoiceAmount = item.InvoiceAmount,
