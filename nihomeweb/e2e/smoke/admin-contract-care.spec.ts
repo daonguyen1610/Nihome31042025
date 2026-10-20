@@ -123,7 +123,13 @@ for (const width of [375, 768]) {
     const errors: string[] = [];
     page.on("pageerror", (error) => errors.push(error.message));
     page.on("console", (message) => {
-      if (message.type() === "error") errors.push(message.text());
+      const text = message.text();
+      // Compose exposes HTTP but not the development browser-reload socket.
+      const isDevSocketConnectionRefused =
+        /^WebSocket connection to 'wss?:\/\/(?:localhost|127\.0\.0\.1):\d+\/' failed: .*net::ERR_CONNECTION_REFUSED$/.test(
+          text,
+        );
+      if (message.type() === "error" && !isDevSocketConnectionRefused) errors.push(text);
     });
     try {
       const customer = await api.post("/api/customers", {
