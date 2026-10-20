@@ -459,6 +459,7 @@ milestone và correction lineage, nhưng CM approval chưa tạo hồ sơ thanh 
 
 **Partial:** báo cáo Dự án có phần kiểm soát CM theo trạng thái hiện tại: hồ sơ
 QS đầu ra/đầu vào CM đã duyệt còn hiệu lực, QA/QC và an toàn với link nguồn;
+giá trị xác nhận và kỳ hiển thị riêng theo từng QS, không cộng thành ngân sách;
 kiểm tra quyền nguồn riêng, thiếu quyền không trả số đếm hoặc link. Tiến độ
 tiếp tục dùng số công việc/trạng thái hiện có. Chưa có snapshot theo kỳ, tổng
 khối lượng quy đổi, S-Curve hoặc giá trị thực hiện so với dự toán; hiển thị

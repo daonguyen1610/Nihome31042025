@@ -1078,7 +1078,8 @@ CM can open **CM control from source records** from the CM workspace or project
 reports. It separates active approved Upstream/Downstream QS, QA/QC and HSE
 source records with drill-down and source permission checks. This section is
 current state even when the surrounding report has date filters; it is not a
-historical snapshot or a sum of quantities. Budget comparison remains explicitly
+historical snapshot or a sum of quantities. Each approved QS source shows its
+own certified amount and period. Budget comparison remains explicitly
 unavailable until its sources and calculation contract are confirmed.
 
 QA/QC evidence must already

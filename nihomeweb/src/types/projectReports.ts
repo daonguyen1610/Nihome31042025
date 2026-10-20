@@ -32,7 +32,15 @@ export interface CmPortfolioSection {
   availability: ProjectReportAvailability;
   reasonCode: string | null;
   count: number | null;
-  sources: { id: number; code: string; status: string; route: string }[];
+  sources: {
+    id: number;
+    code: string;
+    status: string;
+    route: string;
+    certifiedAmount?: number | null;
+    periodFrom?: string | null;
+    periodTo?: string | null;
+  }[];
 }
 
 export interface ProjectReportIdentityResponse {

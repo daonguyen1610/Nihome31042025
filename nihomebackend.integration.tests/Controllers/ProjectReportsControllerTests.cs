@@ -44,6 +44,32 @@ public sealed class ProjectReportsControllerTests : IntegrationTestBase
         inaccessible.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
+    [Fact]
+    public async Task CmPortfolio_ExposesCertifiedQsFactsOnlyWithSourcePermission()
+    {
+        var fixture = await SeedFixtureAsync();
+        await AuthenticateAsync("PM");
+
+        var permitted = await Client.GetAsync($"/api/reports/projects?projectId={fixture.AccessibleProjectId}");
+        permitted.StatusCode.Should().Be(HttpStatusCode.OK);
+        var qs = (await ReadJsonAsync(permitted)).GetProperty("projects")[0]
+            .GetProperty("cmControl").GetProperty("upstream");
+        qs.GetProperty("availability").GetString().Should().Be("Available");
+        var source = qs.GetProperty("sources")[0];
+        source.GetProperty("certifiedAmount").GetDecimal().Should().Be(1_250_000m);
+        source.GetProperty("periodFrom").GetDateTime().Should().Be(new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc));
+        source.GetProperty("periodTo").GetDateTime().Should().Be(new DateTime(2026, 10, 7, 0, 0, 0, DateTimeKind.Utc));
+        source.GetProperty("route").GetString().Should().Contain($"projectId={fixture.AccessibleProjectId}");
+
+        await AuthenticateAsync("ACCOUNTANT");
+        var restricted = await Client.GetAsync($"/api/reports/projects?projectId={fixture.AccessibleProjectId}");
+        restricted.StatusCode.Should().Be(HttpStatusCode.OK);
+        var hidden = (await ReadJsonAsync(restricted)).GetProperty("projects")[0]
+            .GetProperty("cmControl").GetProperty("upstream");
+        hidden.GetProperty("availability").GetString().Should().Be("Unavailable");
+        hidden.GetProperty("sources").GetArrayLength().Should().Be(0);
+    }
+
     [Theory]
     [InlineData("BGD")]
     [InlineData("ACCOUNTANT")]
@@ -396,6 +422,20 @@ public sealed class ProjectReportsControllerTests : IntegrationTestBase
             };
             db.Contracts.Add(contract);
             await db.SaveChangesAsync();
+            db.ConstructionQsBatches.Add(new ConstructionQsBatch
+            {
+                OperationalProjectId = accessible.Id,
+                Code = $"QS-RPT-{suffix}",
+                Direction = ConstructionQsDirection.Upstream,
+                Status = ConstructionReviewStatus.CmApproved,
+                RecordState = ConstructionQsRecordState.Active,
+                IsActiveLineage = true,
+                ContractId = contract.Id,
+                PeriodFrom = new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc),
+                PeriodTo = new DateTime(2026, 10, 7, 0, 0, 0, DateTimeKind.Utc),
+                CertifiedAmount = 1_250_000m,
+                CreatedByUserId = pmId,
+            });
             db.ContractAppendices.Add(new ContractAppendix
             {
                 ContractId = contract.Id,

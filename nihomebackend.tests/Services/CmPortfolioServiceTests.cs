@@ -47,6 +47,10 @@ public sealed class CmPortfolioServiceTests
         Assert.Equal(1, Assert.Single(result.Upstream.Sources).Id);
         Assert.Equal(2, Assert.Single(result.Downstream.Sources).Id);
         Assert.Contains("projectId=41", result.Upstream.Sources[0].Route);
+        Assert.Equal(1_250_000m, result.Upstream.Sources[0].CertifiedAmount);
+        Assert.Equal(new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc), result.Upstream.Sources[0].PeriodFrom);
+        Assert.Equal(new DateTime(2026, 10, 7, 0, 0, 0, DateTimeKind.Utc), result.Upstream.Sources[0].PeriodTo);
+        Assert.Equal(2_500_000m, result.Downstream.Sources[0].CertifiedAmount);
         Assert.Equal("Available", result.QaQc.Availability);
         Assert.Equal(0, result.QaQc.Count);
     }
@@ -62,5 +66,8 @@ public sealed class CmPortfolioServiceTests
             Status = status,
             RecordState = state,
             IsActiveLineage = true,
+            CertifiedAmount = id == 1 ? 1_250_000m : 2_500_000m,
+            PeriodFrom = new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc),
+            PeriodTo = new DateTime(2026, 10, 7, 0, 0, 0, DateTimeKind.Utc),
         };
 }
