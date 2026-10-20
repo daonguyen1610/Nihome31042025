@@ -259,7 +259,8 @@ Choose the lowest test layer that can prove the behavior. Do not duplicate the s
 
 - Unit tests ('nihomebackend.tests'): isolated services, validation, branching, JSON handling, cache invalidation, and file-resolution helpers. Use InMemory EF and Moq where appropriate; no HTTP or Docker.
 - Integration tests ('nihomebackend.integration.tests'): the real ASP.NET pipeline through 'WebApplicationFactory', including middleware, auth, model binding, EF persistence, API contracts, CRUD, validation, and authorization.
-- E2E tests ('nihomeweb/e2e/smoke'): narrow real-browser rendering, SPA mounting, JavaScript errors, route rendering, and deployed-stack wiring such as CORS and health checks. API-only behavior belongs in integration tests.
+- E2E tests ('nihomeweb/e2e/smoke'): live browser tests against the running Docker Compose environment, using its served frontend, backend API, SQL Server, configuration, and seeded accounts. Cover browser rendering, SPA mounting, JavaScript errors, route rendering, and deployed-stack wiring such as CORS and health checks. API-only behavior belongs in integration tests.
+- Start Docker Compose and confirm its services and application endpoint are ready before running E2E. Set `BASE_URL` to the Compose-served application. A Vite dev server, mocked/intercepted API responses, or an in-memory backend may support a separate UI test, but its result does not count as a live E2E pass. Report mock-based and live-stack results separately.
 - E2E and Integration tests validate fully business pipeline test. Not only feature level.
 - Covers Happy path, Negative path testing. Ensure all test cases to cover business scenarios of the customers.
 - Use high quality data for testing with the real use cases.
@@ -342,9 +343,15 @@ E2E, when required:
 
 ```bash
 docker compose up -d --build
+docker compose ps
+curl -f http://localhost:5043/
 cd nihomeweb
 BASE_URL=http://localhost:5043 npx playwright test
 ```
+
+Run the affected E2E spec after its final edit. If Compose or the application
+cannot start, report the E2E check as blocked with the startup error; do not
+substitute a mock-based browser result for live-stack validation.
 
 Verify affected screens at mobile and tablet widths, including spacing, readable states, and regression-free navigation.
 
