@@ -244,6 +244,36 @@ public sealed class FinanceControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task PaymentCreator_WithApprovalPermission_CannotApproveOwnRequest()
+    {
+        var fixture = await CreateFixtureAsync();
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "ADMIN"));
+        var draft = await CreatePaymentAsync(fixture);
+
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "ACCOUNTANT"));
+        var submitted = await TransitionAsync("payment-requests", draft, "submit");
+        var ready = await TransitionAsync("payment-requests", submitted, "validate");
+
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "ADMIN"));
+        using var response = await SendAsync(HttpMethod.Post,
+            $"/api/finance/payment-requests/{ready.GetProperty("id").GetInt32()}/decision",
+            new { approved = true, rowVersion = ready.GetProperty("rowVersion").GetString() });
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.PaymentRequests.Include(item => item.Events)
+            .SingleAsync(item => item.Id == ready.GetProperty("id").GetInt32())))
+            .Should().Match<PaymentRequest>(item => item.Status == PaymentRequestStatus.ReadyForApproval &&
+                item.ApprovedByUserId == null && item.Events.Count == 3);
+
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "BGD"));
+        var approved = await TransitionAsync("payment-requests", ready, "decision", new
+        {
+            approved = true,
+            rowVersion = ready.GetProperty("rowVersion").GetString(),
+        });
+        approved.GetProperty("status").GetString().Should().Be("Approved");
+    }
+
+    [Fact]
     public async Task DuplicateSupplierInvoice_PerVendor_IsRejectedWithoutSecondRow()
     {
         var fixture = await CreateFixtureAsync();
