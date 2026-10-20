@@ -60,6 +60,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<CustomerContact> CustomerContacts => Set<CustomerContact>();
     public DbSet<CustomerActivity> CustomerActivities => Set<CustomerActivity>();
+    public DbSet<ContractCareActivity> ContractCareActivities => Set<ContractCareActivity>();
     public DbSet<CustomerDocument> CustomerDocuments => Set<CustomerDocument>();
     public DbSet<VendorDocumentUpload> VendorDocumentUploads => Set<VendorDocumentUpload>();
     public DbSet<Opportunity> Opportunities => Set<Opportunity>();
@@ -723,6 +724,19 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .OnDelete(DeleteBehavior.Restrict);
             b.HasIndex(a => a.CustomerId);
             b.HasIndex(a => a.OccurredAt);
+        });
+
+        modelBuilder.Entity<ContractCareActivity>(b =>
+        {
+            b.ToTable("contract_care_activities");
+            b.HasKey(activity => activity.Id);
+            b.Property(activity => activity.Type).HasConversion<string>().HasMaxLength(30);
+            b.Property(activity => activity.Content).HasMaxLength(4000).IsRequired();
+            b.HasOne(activity => activity.Contract).WithMany().HasForeignKey(activity => activity.ContractId)
+                .OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(activity => activity.CreatedBy).WithMany().HasForeignKey(activity => activity.CreatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            b.HasIndex(activity => new { activity.ContractId, activity.OccurredAt, activity.Id });
         });
 
         modelBuilder.Entity<CustomerDocument>(b =>

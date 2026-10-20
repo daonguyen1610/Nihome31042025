@@ -2125,6 +2125,78 @@
     "ja": "契約に直接紐づくQS記録はありません。"
   },
   {
+    "key": "contracts.care.title",
+    "category": "contracts",
+    "vi": "Chăm sóc khách hàng",
+    "en": "Customer care",
+    "zh": "客户维护",
+    "ja": "顧客フォロー"
+  },
+  {
+    "key": "contracts.care.hint",
+    "category": "contracts",
+    "vi": "Ghi nhận trao đổi dành riêng cho hợp đồng này. Các ghi nhận không thay đổi điều khoản, VO hoặc trạng thái thanh toán.",
+    "en": "Record interactions for this contract. Entries do not change contract terms, variations or payment status.",
+    "zh": "记录本合同的沟通。记录不会更改合同条款、变更或付款状态。",
+    "ja": "この契約に関するやり取りを記録します。契約条件、変更契約、支払状況は変更されません。"
+  },
+  {
+    "key": "contracts.care.empty",
+    "category": "contracts",
+    "vi": "Hợp đồng này chưa có lịch sử chăm sóc khách hàng.",
+    "en": "No customer-care entries for this contract yet.",
+    "zh": "本合同暂无客户维护记录。",
+    "ja": "この契約の顧客フォロー記録はまだありません。"
+  },
+  {
+    "key": "contracts.care.type",
+    "category": "contracts",
+    "vi": "Hình thức trao đổi",
+    "en": "Interaction type",
+    "zh": "沟通方式",
+    "ja": "やり取りの種類"
+  },
+  {
+    "key": "contracts.care.content",
+    "category": "contracts",
+    "vi": "Nội dung trao đổi",
+    "en": "Interaction details",
+    "zh": "沟通内容",
+    "ja": "やり取りの内容"
+  },
+  {
+    "key": "contracts.care.contentRule",
+    "category": "contracts",
+    "vi": "Nội dung cần từ 1 đến 4.000 ký tự sau khi bỏ khoảng trắng đầu/cuối. Ví dụ: Đã gọi Chủ đầu tư để xác nhận lịch họp tiến độ.",
+    "en": "Details must contain 1–4,000 characters after trimming. Example: Called the owner to confirm the progress meeting.",
+    "zh": "去除首尾空格后，内容须为1至4,000个字符。例如：致电业主确认进度会议。",
+    "ja": "前後の空白を除いて1〜4,000文字で入力してください。例：施主に電話し、工程会議の日程を確認。"
+  },
+  {
+    "key": "contracts.care.saved",
+    "category": "contracts",
+    "vi": "Đã lưu ghi nhận chăm sóc khách hàng",
+    "en": "Customer-care entry saved",
+    "zh": "客户维护记录已保存",
+    "ja": "顧客フォロー記録を保存しました"
+  },
+  {
+    "key": "contracts.care.directionLocked",
+    "category": "contracts",
+    "vi": "Không thể đổi chiều hợp đồng vì đã có lịch sử chăm sóc khách hàng. Hãy giữ nguyên chiều hợp đồng để bảo toàn lịch sử.",
+    "en": "Contract direction cannot change because customer-care history exists. Keep the current direction to preserve that history.",
+    "zh": "合同已有客户维护记录，无法更改合同方向。请保留当前方向以保存历史记录。",
+    "ja": "顧客フォロー履歴があるため、契約の方向は変更できません。履歴を保持するため現在の方向を維持してください。"
+  },
+  {
+    "key": "contracts.timeline.action.careCreate",
+    "category": "contracts",
+    "vi": "Ghi nhận chăm sóc khách hàng",
+    "en": "Customer-care entry recorded",
+    "zh": "已记录客户维护",
+    "ja": "顧客フォローを記録"
+  },
+  {
     "key": "contracts.progress.updated",
     "category": "contracts",
     "vi": "Cập nhật:",

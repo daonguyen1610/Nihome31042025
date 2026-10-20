@@ -207,6 +207,12 @@ trực tiếp Hợp đồng, theo quyền module nguồn độc lập, có link 
 toàn bộ công việc/nghiệm thu cấp Dự án cho một Hợp đồng. Mốc thanh toán không
 đồng nghĩa sổ thực thu/thực chi; hồ sơ QS lịch sử/đảo không tính là duyệt còn hiệu lực.
 
+Lịch sử chăm sóc khách hàng được ghi riêng theo Hợp đồng Upstream, không suy
+ra từ lịch sử chung của Khách hàng hoặc Hợp đồng khác. Theo xác nhận của người
+dùng ngày 20/10/2026, khi đã có lịch sử chăm sóc thì không được đổi chiều Hợp
+đồng; kiểm tra server-side phải giữ nguyên Hợp đồng và lịch sử khi từ chối.
+Hợp đồng chưa có lịch sử vẫn theo quy tắc đổi phân loại hiện hành.
+
 ### Điểm mở
 
 Quy ước mã Dự án và các field CRM NICON muốn bỏ cần được xác nhận bằng văn bản.

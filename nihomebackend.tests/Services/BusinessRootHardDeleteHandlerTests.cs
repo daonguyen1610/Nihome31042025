@@ -107,6 +107,13 @@ public sealed class BusinessRootHardDeleteHandlerTests : IDisposable
         };
         db.AddRange(project, contract);
         await db.SaveChangesAsync();
+        var retainedContract = new Contract { ContractNumber = "HD-RETAIN-CARE", Customer = customer };
+        db.Contracts.Add(retainedContract);
+        await db.SaveChangesAsync();
+        db.ContractCareActivities.AddRange(
+            new ContractCareActivity { ContractId = contract.Id, Content = "Owner progress meeting", CreatedByUserId = 42 },
+            new ContractCareActivity { ContractId = retainedContract.Id, Content = "Independent contract follow-up", CreatedByUserId = 42 });
+        await db.SaveChangesAsync();
         var attachment = new ContractAttachment
         {
             ContractId = contract.Id,
@@ -148,6 +155,9 @@ public sealed class BusinessRootHardDeleteHandlerTests : IDisposable
         await handler.FinalizeAsync(context);
 
         Assert.False(await db.Contracts.AnyAsync(item => item.Id == contract.Id));
+        Assert.False(await db.ContractCareActivities.AnyAsync(item => item.ContractId == contract.Id));
+        Assert.Single(await db.ContractCareActivities.Where(item => item.ContractId == retainedContract.Id).ToListAsync());
+        Assert.True(await db.Customers.AnyAsync(item => item.Id == customer.Id));
         var retainedSidecar = await db.ProjectDocuments.SingleAsync(item => item.Id == sidecar.Id);
         Assert.Equal(ProjectDocumentSyncStatus.Deleted, retainedSidecar.SyncStatus);
         Assert.Equal(ProjectDocumentDesiredOperation.None, retainedSidecar.DesiredOperation);

@@ -165,6 +165,10 @@ Không tính phần trăm hoàn thành chung và không suy diễn nguồn từ 
 - Hợp đồng xác định rõ hướng `Upstream` hoặc `Downstream` và loại Design,
   Construction, Design & Build, Supply hoặc Subcontract.
 - Một Dự án có thể có nhiều hợp đồng; không gộp chúng thành một bản ghi.
+- Kinh doanh ghi lịch sử chăm sóc riêng cho Hợp đồng Upstream. Sau khi có ghi
+  nhận đầu tiên, không được đổi chiều Hợp đồng (xác nhận người dùng 20/10/2026).
+  API từ chối thay đổi và giữ nguyên lịch sử; không chặn đổi chiều chỉ vì chưa
+  có ghi nhận chăm sóc, ngoài các ràng buộc hiện hành khác.
 
 ### G2 — Phát hành hồ sơ thi công
 

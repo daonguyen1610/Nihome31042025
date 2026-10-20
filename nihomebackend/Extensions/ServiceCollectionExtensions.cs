@@ -122,6 +122,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<BoqConfiguredWorkbookService>();
         services.AddScoped<IContractService, ContractService>();
         services.AddScoped<ContractExecutionProgressService>();
+        services.AddScoped<ContractCareActivityService>();
+        services.AddScoped<ContractCareIdempotencyGuard>();
         services.AddScoped<ContractMilestoneNotificationService>();
         services.AddHostedService<ContractMilestoneDueWorker>();
         services.AddScoped<IContractAppendixService, ContractAppendixService>();
