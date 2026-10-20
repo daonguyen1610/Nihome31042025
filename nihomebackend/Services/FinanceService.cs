@@ -112,8 +112,9 @@ public sealed class FinanceService(AppDbContext db, IProjectAccessService projec
         {
             if (entity.Status != PaymentRequestStatus.ReadyForApproval)
                 throw new FinanceOperationException("Chỉ đề nghị đã sẵn sàng mới được phê duyệt.");
-            if (entity.AssignedAccountantUserId == userId)
-                throw new FinanceOperationException("Kế toán được phân công không được tự phê duyệt đề nghị thanh toán.");
+            if (entity.CreatedByUserId == userId || entity.SubmittedByUserId == userId ||
+                entity.ValidatedByUserId == userId || entity.AssignedAccountantUserId == userId)
+                throw new FinanceOperationException("Người lập, gửi hoặc kiểm tra hồ sơ không được tự phê duyệt đề nghị thanh toán.");
         }
         else if (entity.Status is not (PaymentRequestStatus.UnderValidation or PaymentRequestStatus.ReadyForApproval))
         {

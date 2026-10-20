@@ -1433,6 +1433,13 @@ submit, validate, decide, pay, and cancel recheck the selected Contract's actual
 project before mutation. A scoped finance permission therefore requires active
 project membership (or project manager/creator scope), while
 `operations.projects.view.all` enables the authorized finance portfolio.
+For approval, the service also rejects an actor who created, submitted,
+validated, or was assigned as accountant on the same Payment Request, even if
+that actor has `finance.payments.approve`. This follows the separate maker,
+accounting-check, and approval steps in [ISO `TQT` 5.1](<Nicon/ISO/D.Quy trình chi tiết/D.6. Quy trình thanh toán, quyết toán công trình/Quy trình thanh quyết toán.doc>)
+and the distinct signature positions on [MH-M04](<Nicon/ISO/D.Quy trình chi tiết/D.7. Quy trình mua hàng, đánh giá nhà cung ứng, thầu phụ- co chinh sua/MH-M04-DE NGHI THANH TOAN.xlsx>).
+It does not establish the still-open four-package document matrix or
+delegated-approver policy.
 
 ### 7.9 Operational Business Documents
 
