@@ -422,9 +422,11 @@ và [thanh quyết toán](<Nicon/ISO/D.Quy trình chi tiết/D.6. Quy trình tha
 - Downstream QS liên kết HĐ Downstream, NCC/thầu phụ/tổ đội, WBS và dossier phải
   trả.
 - Khối lượng đã duyệt bất biến; correction dùng version thay thế hoặc reversal.
-- Payment review Downstream dùng HĐ hợp lệ + QS được duyệt + warehouse receipt
-  posted khi gói có vật tư. Thành phần chứng từ theo loại package phải được
-  đối chiếu bộ ISO NICON đã gửi; phần thiếu chuyển FA, chị K/Kiara, bổ sung.
+- Với thanh toán theo khối lượng đã nghiệm thu, Payment review Downstream dùng
+  HĐ hợp lệ + QS được duyệt + warehouse receipt posted khi gói có vật tư. Thành
+  phần chứng từ theo loại package phải được đối chiếu bộ ISO NICON đã gửi; phần
+  thiếu chuyển FA, chị K/Kiara, bổ sung. Điều kiện tạm ứng/trả trước là quyết
+  định riêng, chưa được gate này xác định.
 
 ### 6.5. Hoàn công và bàn giao
 
@@ -545,8 +547,12 @@ và chứng từ với file/mã/phiên bản ISO; chỉ yêu cầu FA (chị K/K
 mục còn thiếu. Đối chiếu bước đầu cho thấy quy trình `TQT` tách thanh toán,
 quyết toán thầu phụ và khách hàng; có `TQT-M01`–`TQT-M09`, cùng biểu mẫu liên
 quan `MH-M04`, `TC-M14`, `TC-M24`, `TC-M27`, `TC-M29`. Quy trình mua hàng `MH`
-có `MH-M01`–`MH-M08`; lưu kho/thiết bị `LK` có `LK-M01`–`LK-M08`. Các nguồn
-này chưa trình bày ma trận bắt buộc/ngoại lệ riêng cho cả bốn loại package.
+có `MH-M01`–`MH-M08`; lưu kho/thiết bị `LK` có `LK-M01`–`LK-M08`. Quy trình
+`MH` nêu trường hợp NCC yêu cầu trả trước theo đơn đặt hàng; `TQT-M07` là mẫu
+đề nghị tạm ứng nhưng không tự xác định điều kiện cho từng loại package. Bản
+`MH-M04` in mã `MH-BM02` bên trong, trùng mã in trên `MH-M02` yêu cầu báo giá.
+Các nguồn này chưa trình bày ma trận bắt buộc/ngoại lệ riêng cho cả bốn loại
+package hoặc gate tạm ứng/trả trước.
 Không tự quy định danh sách chứng từ hay bắt gói không có vật tư tạo phiếu kho
 để qua gate. Lịch nộp/chi trả và vai trò trong file ISO cũ cần FA/CM xác nhận
 trước khi coi là quy tắc hiện hành.
@@ -646,7 +652,8 @@ Ngoài ra, NICON cần chốt:
 2. Công thức/kỳ chốt S-Curve và quyền publish/unlock baseline.
 3. Approval/delegation matrix cho MR, QA/QC, HSE, QS và VO.
 4. Đối chiếu chứng từ thanh toán theo bốn loại Downstream package với ISO;
-   FA (chị K/Kiara) bổ sung phần thiếu và xác nhận mapping/ngoại lệ chưa rõ.
+   FA (chị K/Kiara) bổ sung phần thiếu, xác nhận mapping/ngoại lệ chưa rõ và
+   điều kiện tạm ứng/trả trước trước khi áp dụng gate chứng từ.
 5. Công thức dải BOQ 85/95/>100 và xử lý zero allowance/reversal/conversion.
 6. Migration `DesignProjectId` → `OperationalProjectId` cho Module 2/3/4.
 7. Migration cây Drive cho `01_Khao_sat`.

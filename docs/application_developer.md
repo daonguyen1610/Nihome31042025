@@ -2900,8 +2900,9 @@ to display the target bands.
 | QA/QC document accepted | Synchronize the managed file to `04_Thi_cong_Nghiem_thu` and retain application metadata |
 | Progress variance over 5% | Create one deduplicated red alert per project/baseline/period until resolved or superseded |
 
-Downstream payment eligibility uses three-way matching against the same vendor,
-contract, project, currency/amount basis, and covered quantity/period:
+For Downstream payments against accepted quantities, the target eligibility
+check matches the same vendor, contract, project, currency/amount basis, and
+covered quantity/period:
 
 1. a signed Downstream Contract or authorized appendix;
 2. a valid posted Warehouse Receipt, net of reversals, when the payable concerns
@@ -2909,8 +2910,13 @@ contract, project, currency/amount basis, and covered quantity/period:
 3. an approved Downstream QS acceptance batch for performed/accepted quantity.
 
 The exact applicability matrix for supply-only, labour-only, equipment, and
-mixed subcontract packages remains a product decision. Do not invent a dummy
-receipt or QS record to satisfy matching. A failed match returns actionable
+mixed subcontract packages remains a product decision. The received purchasing
+procedure allows a supplier payment request before receipt against an order;
+the payment procedure and `TQT-M07` also contain advance requests. Whether,
+when and with which authorization/evidence these advances can enter Finance is
+an open FA/CM decision. Do not apply the accepted-quantity gate to them by
+default or treat missing receipt/QS as an automatic exemption. Do not invent a
+dummy receipt or QS record to satisfy matching. A failed match returns actionable
 differences and preserves Payment Request, ledger, notification, and audit state
 apart from the allowed rejection/audit record.
 
@@ -2936,7 +2942,7 @@ operation; a Drive failure must not falsely mark a dossier synchronized.
 
 #### Source inventory and precedence
 
-`docs/Nicon/` is the version-controlled customer-evidence pack:
+`docs/Nicon/` is the customer-evidence location:
 
 - the full PRD defines the eight-module scope, cross-functional handoffs,
   eleven target positions, KPI weights, Drive tree, and UI expectations;
@@ -2968,7 +2974,7 @@ The file-level ISO cross-check gives these source-to-workflow anchors:
 | `D.3` design (`TK`) | Preliminary, basic and technical design handoffs; `TK-M01`–`TK-M03` and appendices | Procedure also cites `TK-BM02`/`TK-BM03` or `KT-BM03` where files use `TK-M02`/`TK-M03`. Several `TK-M02` files are completed project handoffs, not blank templates. Match current design gates and released IFC rules; permit references do not settle the permit matrix |
 | `D.4` construction (`TC`) | Preparation `TC-M01`, shop/material submittals `TC-M04`–`TC-M06`, diary `TC-M08`/`TC-M09`, acceptance `TC-M24`, 19 workbooks under `TC-M28` | Referenced `TC-M02`, `TC-M23` and `TQT-M00` are absent. `NS1-M01` is cited for forming BCH but its file is a recruitment request. `TC-M15` names two different handoffs; the procedure's `TC-M21`/`TC-M22` labels are reversed in filenames. The `TC-M24` file here is a completed acceptance record. No separate sampling, lab-result, material-certificate, method-statement or HSE-plan form was identified; confirm applicability and source with NICON |
 | `D.6` payment (`TQT`) | Separate payment, subcontractor settlement and customer settlement; `TQT-M01`–`TQT-M09` and references to `MH`/`TC` forms | FA/CM must approve the four-package document matrix. Referenced `TC-M00` is absent; this folder's `TC-M24` is a different handover form under the same code. `TC-M14`, `TC-M27` and `TC-M29` also appear in `D.4`. Conversion of `TQT-M04` exposes `=#REF!+C13` in `MAU GIA TRI PS!C20`; verify in Excel before reuse |
-| `D.7` purchasing (`MH`) and `D.8` equipment (`LK`) | `MH-M01`–`MH-M08` for requests, quotations, orders and supplier review; `LK-M01`–`LK-M08` for equipment receipt, issue and maintenance | `MH-M03` contains proposal/order sheets and a completed example. Align current Procurement/warehouse roles and typed Material, Equipment and Labour handoff |
+| `D.7` purchasing (`MH`) and `D.8` equipment (`LK`) | `MH-M01`–`MH-M08` for requests, quotations, orders and supplier review; `LK-M01`–`LK-M08` for equipment receipt, issue and maintenance | `MH-M03` contains proposal/order sheets and a completed example. `MH-M04` payment request prints `MH-BM02` inside, the same internal code as `MH-M02` quotation request. The procedure permits a supplier payment request before receipt against an order; FA/CM must resolve that case separately from accepted-quantity matching |
 | `C.1` document control (`QTC-KSTLHS`) | Document issue, revision and record control with `BM 01`–`BM 07` files | Confirm authorized release, supersession, retention and current ISO revision before publishing templates |
 | `C.2` internal audit and `C.3` improvement | Audit schedule/findings/corrective actions and nonconformity handling, with accompanying `BM` files | Confirm current ownership, severity and closure rules; these are source processes, not delivered audit modules |
 | `D.9`–`D.11` HR (`NS1`–`NS3`) | Recruitment/training, work reporting, leave and resignation records | `NS1-M05`/`NS1-M06` are referenced for training but absent; `NS1-M03`/`NS1-M04` are PDFs without extensions. Confirm current HR policy and access before mapping personal records |

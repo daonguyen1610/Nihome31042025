@@ -308,6 +308,7 @@ cho đến khi chốt mẫu số, quy đổi đơn vị, làm tròn, reversal v�
 Upstream QS được duyệt
   → cung cấp bằng chứng cho mốc phải thu Module 6
 
+Thanh toán Downstream theo khối lượng đã nghiệm thu:
 Downstream QS được duyệt
   + HĐ Downstream đã ký/phụ lục hợp lệ
   + Phiếu nhập kho Posted, trừ reversal (khi gói có vật tư)
@@ -322,7 +323,12 @@ ngày 20/10/2026: quy trình `TQT` có thanh toán, quyết toán thầu phụ v
 hàng; quy trình `MH` có đề nghị mua, báo giá, đặt hàng, đề nghị thanh toán;
 quy trình `LK` có nhập/xuất kho và theo dõi thiết bị. Chưa có ma trận chứng từ
 được FA/CM xác nhận cho bốn loại package, nên chưa thể khẳng định hồ sơ đủ để
-mở gate thanh toán. Xem [quy trình TQT](<Nicon/ISO/D.Quy trình chi tiết/D.6. Quy trình thanh toán, quyết toán công trình/Quy trình thanh quyết toán.doc>).
+mở gate thanh toán. Quy trình `MH` còn nêu đề nghị trả trước theo đơn đặt hàng,
+và `TQT-M07` là mẫu tạm ứng; hai trường hợp này chưa có điều kiện riêng được
+duyệt nên gate khối lượng/phiếu nhập kho ở trên không quyết định điều kiện cho
+chúng. Xem
+[quy trình TQT](<Nicon/ISO/D.Quy trình chi tiết/D.6. Quy trình thanh toán, quyết toán công trình/Quy trình thanh quyết toán.doc>)
+và [quy trình MH](<Nicon/ISO/D.Quy trình chi tiết/D.7. Quy trình mua hàng, đánh giá nhà cung ứng, thầu phụ- co chinh sua/Quy trình mua hàng, đánh giá NCC.doc>).
 
 **Target — ISO, BCH và tổng hợp CM đã xác nhận:** mỗi Dự án có BCH riêng,
 nhưng một nhân sự có thể tham gia nhiều Dự án đồng thời; quyền vẫn theo từng
@@ -478,7 +484,8 @@ khóa là snapshot bất biến.
 11. Đối chiếu chứng từ ISO cho supply, labour, equipment và mixed package;
     FA (chị K/Kiara) bổ sung mục thiếu, xác nhận ngoại lệ và mapping chưa rõ.
     Giữ riêng luồng Upstream/Downstream; áp dụng three-way matching khi gói có
-    vật tư và đối chiếu chứng từ phù hợp cho các gói còn lại.
+    vật tư đã nghiệm thu và đối chiếu chứng từ phù hợp cho các gói còn lại.
+    Chốt riêng điều kiện cho tạm ứng/trả trước trước khi mở gate tương ứng.
 12. Quy tắc dải BOQ 85/95/>100: mẫu số, commitment, issue, reversal, conversion,
    precision và zero allowance.
 13. Kế hoạch migration các record Module 2/3/4 từ `DesignProjectId` sang

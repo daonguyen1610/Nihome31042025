@@ -1019,7 +1019,7 @@ and requires an approved VO. These bands are planned until the denominator,
 rounding, zero-allowance behavior, and server workflow are approved and
 implemented; the current material-request behavior remains the product truth.
 
-For Downstream payment, the target evidence gate is:
+For Downstream payment against accepted quantities, the target evidence gate is:
 
 ```text
 Signed Downstream Contract
@@ -1030,8 +1030,11 @@ Signed Downstream Contract
 
 Eligibility does not mean automatic payment. Missing, mismatched, reversed, or
 superseded evidence blocks the handoff and must leave financial state unchanged.
-Material packages require three-way matching; the document matrix for the four
-package types still requires FA/CM confirmation.
+Material packages in that flow require three-way matching; the document matrix
+for the four package types still requires FA/CM confirmation. The received ISO
+sources also describe supplier requests before receipt and advances. Their
+eligibility, evidence and approvals are separate open decisions; this diagram
+does not define their future gate.
 
 **Target — NICON clarification received 18 October 2026:** each project has a
 separate BCH, while a person may participate in multiple projects concurrently.
