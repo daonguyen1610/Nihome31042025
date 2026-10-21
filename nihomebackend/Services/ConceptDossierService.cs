@@ -169,13 +169,15 @@ public sealed class ConceptDossierService(AppDbContext db) : IConceptDossierServ
             throw new ConceptOptionOperationException("File góp ý phải thuộc revision này.");
         var name = request.CustomerName?.Trim() ?? string.Empty;
         var channel = request.Channel?.Trim() ?? string.Empty;
-        var comment = request.Comment?.Trim() ?? string.Empty;
-        if (name.Length == 0 || channel.Length == 0 || comment.Length == 0 ||
+        var comment = request.Comment ?? string.Empty;
+        var evidenceSource = request.EvidenceSource?.Trim() ?? string.Empty;
+        if (name.Length == 0 || channel.Length == 0 || string.IsNullOrWhiteSpace(comment) ||
+            evidenceSource.Length == 0 || evidenceSource.Length > 1000 ||
             request.OccurredAt == default || request.OccurredAt > DateTime.UtcNow.AddMinutes(5))
-            throw new ConceptOptionOperationException("Ý kiến khách cần tên, kênh, thời điểm hợp lệ và nội dung.");
+            throw new ConceptOptionOperationException("Ý kiến khách cần tên, kênh, thời điểm hợp lệ, nội dung và nguồn bằng chứng (ví dụ: biên bản họp).");
         revision.Feedback.Add(new ConceptFeedback
         {
-            CustomerName = name, Channel = channel, Comment = comment,
+            CustomerName = name, Channel = channel, Comment = comment, EvidenceSource = evidenceSource,
             OccurredAt = request.OccurredAt.ToUniversalTime(),
             ProjectDocumentId = request.ProjectDocumentId,
             CreatedByUserId = userId,
@@ -195,7 +197,11 @@ public sealed class ConceptDossierService(AppDbContext db) : IConceptDossierServ
             throw new ConceptOptionOperationException("Phản hồi đã ghi nhận không thể ghi đè.");
         var response = request.Response?.Trim() ?? string.Empty;
         if (response.Length == 0) throw new ConceptOptionOperationException("Nội dung phản hồi là bắt buộc.");
+        var outcome = request.Outcome?.Trim() ?? string.Empty;
+        if (outcome.Length == 0 || outcome.Length > 2000)
+            throw new ConceptOptionOperationException("Kết quả xử lý là bắt buộc, tối đa 2000 ký tự.");
         feedback.Response = response;
+        feedback.Outcome = outcome;
         feedback.RespondedAt = DateTime.UtcNow;
         feedback.RespondedByUserId = userId;
         try
@@ -300,9 +306,9 @@ public sealed class ConceptDossierService(AppDbContext db) : IConceptDossierServ
         Feedback = item.Feedback.OrderBy(feedback => feedback.OccurredAt).Select(feedback => new ConceptFeedbackResponse
         {
             Id = feedback.Id, ProjectDocumentId = feedback.ProjectDocumentId,
-            CustomerName = feedback.CustomerName, Channel = feedback.Channel,
+            CustomerName = feedback.CustomerName, Channel = feedback.Channel, EvidenceSource = feedback.EvidenceSource,
             OccurredAt = feedback.OccurredAt, Comment = feedback.Comment,
-            Response = feedback.Response, RespondedAt = feedback.RespondedAt,
+            Response = feedback.Response, Outcome = feedback.Outcome, RespondedAt = feedback.RespondedAt,
         }).ToList(),
     };
 }

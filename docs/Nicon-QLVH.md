@@ -243,12 +243,19 @@ tổng thể/mái, mặt bằng từng tầng có tên tầng, mặt cắt và P
 ngoại lệ checklist khi revision còn nháp, không xóa file gốc. Checklist bắt buộc
 trước khi trình có thể ghi không áp dụng kèm lý do; vẫn phải có mô hình 3D hoặc
 phối cảnh thực. Mọi file trình phải thuộc đúng phương án/revision và đã đồng bộ.
-Nhận xét khách hàng ghi tên, kênh, thời điểm, nội dung và tùy chọn file liên quan;
-phản hồi được ghi một lần. Chỉ tạo revision mới sau quyết định yêu cầu sửa/từ
+Nhận xét khách hàng ghi nguyên văn nội dung, tên người góp ý, kênh, thời điểm,
+nguồn bằng chứng và tùy chọn file liên quan; phản hồi và kết quả xử lý được ghi
+một lần, tách khỏi bình luận nội bộ. Chỉ tạo revision mới sau quyết định yêu cầu
+sửa/từ
 chối; bản đã trình giữ nguyên. Trước khi trình revision mới phải xử lý hết ý kiến
 chưa phản hồi. Chốt đúng một phương án chỉ khi revision mới nhất được khách duyệt
-và có biên bản nghiệm thu TK-M03 đã ký, người ký, ngày ký. Review markup theo
-trang/nét vẽ vẫn là mục tiêu.
+và có biên bản nghiệm thu TK-M03 đã ký, người ký, ngày ký. TK-M02 chỉ là bằng
+chứng bàn giao, không thay TK-M03. Kinh doanh trình khách
+theo ISO; Design Manager ghi nhận việc trình và quyết định. Không bắt buộc khách
+đăng nhập hoặc ký qua cổng, không lấy trình xem 3D chuyên dụng làm cổng hoàn thành.
+Không cố định số phương án, số tầng hoặc số ảnh theo mẫu ISO cũ. Review markup
+theo trang/nét vẽ vẫn là mục tiêu. Trạng thái năm mục Concept trong BreakTask
+giữ `Partial` cho đến khi có đủ bằng chứng mã nguồn và kiểm thử.
 
 ### 4.2. Luồng duyệt và điều hành — Implemented
 

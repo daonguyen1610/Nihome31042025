@@ -19,6 +19,7 @@ public sealed class AddConceptFeedbackRequest
 {
     [Required, MaxLength(200)] public string CustomerName { get; set; } = string.Empty;
     [Required, MaxLength(80)] public string Channel { get; set; } = string.Empty;
+    [Required, MaxLength(1000)] public string EvidenceSource { get; set; } = string.Empty;
     [Required] public DateTime OccurredAt { get; set; }
     [Required, MaxLength(4000)] public string Comment { get; set; } = string.Empty;
     public long? ProjectDocumentId { get; set; }
@@ -27,4 +28,5 @@ public sealed class AddConceptFeedbackRequest
 public sealed class RespondConceptFeedbackRequest
 {
     [Required, MaxLength(4000)] public string Response { get; set; } = string.Empty;
+    [Required, MaxLength(2000)] public string Outcome { get; set; } = string.Empty;
 }

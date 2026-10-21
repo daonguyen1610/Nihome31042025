@@ -177,6 +177,60 @@ public class ConceptOptionServiceTests : IDisposable
                 new TransitionConceptOptionStatusRequest { Status = "Finalized" }, _userId));
     }
 
+    [Fact]
+    public async Task Finalize_ApprovalForAnotherOption_DoesNotUnlockProject()
+    {
+        var selected = await _sut.CreateAsync(ValidCreate("Selected"), _userId);
+        var other = await _sut.CreateAsync(ValidCreate("Other"), _userId);
+        await MoveToPresentedAsync(other.Id);
+        var option = await _db.ConceptOptions.FindAsync(selected.Id);
+        option!.Status = ConceptOptionStatus.PresentedToClient;
+        await _db.SaveChangesAsync();
+
+        await Assert.ThrowsAsync<ConceptOptionOperationException>(() =>
+            _sut.TransitionStatusAsync(selected.Id,
+                new TransitionConceptOptionStatusRequest { Status = "Finalized" }, _userId));
+        Assert.Equal(DesignProjectStage.Concept, (await _db.DesignProjects.FindAsync(_projectId))!.CurrentStage);
+        Assert.Equal(ConceptOptionStatus.PresentedToClient, option.Status);
+    }
+
+    [Fact]
+    public async Task Finalize_ApprovalForPreviousRevision_DoesNotUnlockProject()
+    {
+        var selected = await _sut.CreateAsync(ValidCreate(), _userId);
+        await MoveToPresentedAsync(selected.Id);
+        _db.ConceptRevisions.Add(new ConceptRevision { ConceptOptionId = selected.Id, Number = 1 });
+        await _db.SaveChangesAsync();
+
+        await Assert.ThrowsAsync<ConceptOptionOperationException>(() =>
+            _sut.TransitionStatusAsync(selected.Id,
+                new TransitionConceptOptionStatusRequest { Status = "Finalized" }, _userId));
+        Assert.Equal(DesignProjectStage.Concept, (await _db.DesignProjects.FindAsync(_projectId))!.CurrentStage);
+    }
+
+    [Theory]
+    [InlineData(DesignReviewStatus.ClientChangesRequested)]
+    [InlineData(DesignReviewStatus.ClientApproved)]
+    public async Task Finalize_NewerReviewWithoutAcceptance_DoesNotReuseOldApproval(DesignReviewStatus status)
+    {
+        var selected = await _sut.CreateAsync(ValidCreate(), _userId);
+        await MoveToPresentedAsync(selected.Id);
+        var revisionId = await _db.ConceptRevisions.Where(item => item.ConceptOptionId == selected.Id)
+            .Select(item => item.Id).SingleAsync();
+        _db.DesignReviews.Add(new DesignReview
+        {
+            DesignProjectId = _projectId, Stage = DesignReviewStage.Concept,
+            ConceptRevisionId = revisionId, RevisionNumber = 2, Status = status,
+            Title = "Latest review has no signed acceptance", DesignManagerUserId = _userId,
+        });
+        await _db.SaveChangesAsync();
+
+        await Assert.ThrowsAsync<ConceptOptionOperationException>(() =>
+            _sut.TransitionStatusAsync(selected.Id,
+                new TransitionConceptOptionStatusRequest { Status = "Finalized" }, _userId));
+        Assert.Equal(DesignProjectStage.Concept, (await _db.DesignProjects.FindAsync(_projectId))!.CurrentStage);
+    }
+
     // ---------------- Update / Delete ----------------
 
     [Fact]

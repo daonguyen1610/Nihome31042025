@@ -311,6 +311,12 @@ public sealed class ProjectDocumentService(
         if (!await CanAccessProjectAsync(projectId, callerUserId, canSeeAll, ct)) return false;
         var document = await FindAsync(projectId, documentId, ct);
         if (document is null) return false;
+        if (await db.ConceptArtifacts.AnyAsync(item => item.ProjectDocumentId == documentId &&
+                item.ConceptRevision.FrozenAt != null, ct) ||
+            await db.DesignReviews.AnyAsync(review => review.Stage == DesignReviewStage.Concept &&
+                (review.ClientAcceptanceDocumentId == documentId ||
+                 review.ClientSubmittedAt != null && review.Documents.Any(item => item.ProjectDocumentId == documentId)), ct))
+            throw new ProjectDocumentValidationException("Hồ sơ Concept đã trình và biên bản nghiệm thu phải được giữ nguyên; hãy tạo revision mới.");
         if (await db.ConstructionResourceRequests.AnyAsync(x => x.SupplyDocumentId == documentId, ct))
             throw new ProjectDocumentValidationException("This document is supply evidence for a construction resource request and cannot be deleted.");
         if (await db.RfqDocuments.AnyAsync(link => link.ProjectDocumentId == documentId, ct))

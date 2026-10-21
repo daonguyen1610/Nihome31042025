@@ -60,6 +60,8 @@ export const ConceptDossierPanel = ({
   const [waiverReason, setWaiverReason] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [channel, setChannel] = useState("");
+  const [evidenceSource, setEvidenceSource] = useState("");
+  const [outcomes, setOutcomes] = useState<Record<number, string>>({});
   const [occurredAt, setOccurredAt] = useState("");
   const [comment, setComment] = useState("");
   const [commentDocumentId, setCommentDocumentId] = useState("");
@@ -366,6 +368,16 @@ export const ConceptDossierPanel = ({
                   {new Date(item.occurredAt).toLocaleString(lang)}
                 </p>
                 <p className="whitespace-pre-wrap">{item.comment}</p>
+                {item.evidenceSource ? (
+                  <p className="whitespace-pre-wrap">
+                    {t("concepts.dossier.evidenceSource")}: {item.evidenceSource}
+                  </p>
+                ) : null}
+                {item.outcome ? (
+                  <p className="whitespace-pre-wrap">
+                    {t("concepts.dossier.outcome")}: {item.outcome}
+                  </p>
+                ) : null}
                 {item.response ? (
                   <p className="whitespace-pre-wrap text-emerald-800">{item.response}</p>
                 ) : null}
@@ -380,9 +392,18 @@ export const ConceptDossierPanel = ({
                         setResponses((current) => ({ ...current, [item.id]: event.target.value }))
                       }
                     />
+                    <Input
+                      className="min-w-40 flex-1"
+                      maxLength={2000}
+                      value={outcomes[item.id] ?? ""}
+                      placeholder={t("concepts.dossier.outcome")}
+                      onChange={(event) =>
+                        setOutcomes((current) => ({ ...current, [item.id]: event.target.value }))
+                      }
+                    />
                     <Button
                       size="sm"
-                      disabled={busy || !responses[item.id]?.trim()}
+                      disabled={busy || !responses[item.id]?.trim() || !outcomes[item.id]?.trim()}
                       onClick={() =>
                         void run(() =>
                           adminApi.respondConceptFeedback(
@@ -390,6 +411,7 @@ export const ConceptDossierPanel = ({
                             revision.id,
                             item.id,
                             responses[item.id].trim(),
+                            outcomes[item.id].trim(),
                           ),
                         )
                       }
@@ -413,6 +435,12 @@ export const ConceptDossierPanel = ({
                   value={channel}
                   placeholder={t("concepts.dossier.channel")}
                   onChange={(event) => setChannel(event.target.value)}
+                />
+                <Textarea
+                  maxLength={1000}
+                  value={evidenceSource}
+                  placeholder={t("concepts.dossier.evidenceSource")}
+                  onChange={(event) => setEvidenceSource(event.target.value)}
                 />
                 <Input
                   type="datetime-local"
@@ -449,6 +477,7 @@ export const ConceptDossierPanel = ({
                     busy ||
                     !customerName.trim() ||
                     !channel.trim() ||
+                    !evidenceSource.trim() ||
                     !occurredAt ||
                     !comment.trim()
                   }
@@ -457,8 +486,9 @@ export const ConceptDossierPanel = ({
                       await adminApi.addConceptFeedback(optionId, revision.id, {
                         customerName: customerName.trim(),
                         channel: channel.trim(),
+                        evidenceSource: evidenceSource.trim(),
                         occurredAt: new Date(occurredAt).toISOString(),
-                        comment: comment.trim(),
+                        comment,
                         projectDocumentId: commentDocumentId ? Number(commentDocumentId) : null,
                       });
                       setComment("");

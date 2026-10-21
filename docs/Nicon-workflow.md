@@ -188,11 +188,14 @@ Không tính phần trăm hoàn thành chung và không suy diễn nguồn từ 
   phối cảnh, mặt bằng tổng thể/mái, mặt bằng từng tầng, mặt cắt, PDF trình bày.
   Kiểm checklist hoặc ghi lý do không áp dụng, chờ file đồng bộ, rồi trình nội
   bộ. Hệ thống khóa revision đã trình. Sau khi tổng hợp, Design Manager ghi
-  nhận trình khách, ý kiến khách và phản hồi xử lý. Quyết định yêu cầu sửa/từ
+  nhận việc Kinh doanh trình khách theo ISO, ý kiến nguyên văn của khách, nguồn
+  bằng chứng, phản hồi và kết quả xử lý riêng với bình luận nội bộ. Quyết định yêu
+  cầu sửa/từ
   chối mở R tiếp theo; phải phản hồi các ý kiến cũ trước khi trình bản mới.
   Quyết định duyệt khách cần biên bản TK-M03 đã ký riêng với hồ sơ trình, người
   ký và ngày ký. Chỉ chốt một phương án khi revision mới nhất được duyệt cùng
-  biên bản đó; các phương án còn lại bị loại.
+  biên bản đó; các phương án còn lại bị loại. TK-M02 không thay TK-M03; không
+  yêu cầu khách đăng nhập/ký qua cổng hoặc trình xem 3D chuyên dụng để chốt.
 - Basic Design chỉ mở Shop Drawing khi đủ điều kiện nội bộ/pháp lý và revision
   Basic Design mới nhất là `ClientApproved`.
 - Shop/Detailed Drawing được duyệt, đưa vào gói IFC và phát hành phiên bản cụ

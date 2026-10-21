@@ -235,6 +235,30 @@ public sealed class ProjectDocumentServiceTests : IDisposable
         Assert.Equal(ProjectDocumentSyncStatus.Synced, remoteCopy.SyncStatus);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task DeleteAsync_ConceptSubmissionOrAcceptance_PreservesEvidence(bool acceptance)
+    {
+        var document = AddDocument(ProjectDocumentCategory.DesignConcept);
+        var review = new DesignReview
+        {
+            DesignProjectId = 42, Stage = DesignReviewStage.Concept,
+            Title = "Hồ sơ Concept đã trình", ClientSubmittedAt = DateTime.UtcNow,
+            ClientAcceptanceDocumentId = acceptance ? document.Id : null,
+        };
+        if (!acceptance)
+            review.Documents.Add(new DesignReviewDocument { ProjectDocumentId = document.Id });
+        db.DesignReviews.Add(review);
+        await db.SaveChangesAsync();
+
+        await Assert.ThrowsAsync<ProjectDocumentValidationException>(() =>
+            service.DeleteAsync(project.Id, document.Id, 7, false));
+        Assert.Null(document.DeletedAt);
+        Assert.NotEqual(ProjectDocumentDesiredOperation.Delete, document.DesiredOperation);
+        storage.Verify(item => item.DeleteOwned(It.IsAny<int>(), It.IsAny<string>()), Times.Never);
+    }
+
     [Fact]
     public async Task DeleteAsync_ExistingManagedFile_RejectsWithoutChangingSidecar()
     {
