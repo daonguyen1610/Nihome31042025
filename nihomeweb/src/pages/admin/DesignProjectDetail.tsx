@@ -61,7 +61,13 @@ const formatDateTime = (iso?: string | null, lang: string = "vi"): string => {
 const AdminDesignProjectDetail = () => {
   const { t, lang } = useI18n();
   const { id: idParam } = useParams<{ id: string }>();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectTab = (tab: string) =>
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      next.set("tab", tab);
+      return next;
+    });
   const requestedTab = searchParams.get("tab");
   const initialTab = [
     "overview",
@@ -246,7 +252,7 @@ const AdminDesignProjectDetail = () => {
           </div>
         </header>
 
-        <Tabs defaultValue={initialTab}>
+        <Tabs value={initialTab} onValueChange={selectTab}>
           <TabsList className="h-auto w-full justify-start overflow-x-auto whitespace-nowrap">
             <TabsTrigger value="overview">{t("designProjects.detail.tab.overview")}</TabsTrigger>
             <TabsTrigger value="concept">{t("designProjects.detail.tab.concept")}</TabsTrigger>
@@ -285,7 +291,11 @@ const AdminDesignProjectDetail = () => {
           ).map((tab) => (
             <TabsContent key={tab} value={tab}>
               {tab === "concept" ? (
-                <ConceptOptionsTab project={project} onProjectMayHaveChanged={fetchProject} />
+                <ConceptOptionsTab
+                  project={project}
+                  onProjectMayHaveChanged={fetchProject}
+                  onOpenReviews={() => selectTab("reviews")}
+                />
               ) : tab === "basic" ? (
                 <BasicDesignTab project={project} onProjectMayHaveChanged={fetchProject} />
               ) : tab === "shop" ? (

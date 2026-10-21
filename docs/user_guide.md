@@ -876,6 +876,17 @@ client feedback verbatim after submission to the client, with the representative
 channel, time and an evidence reference (meeting minutes, email or document).
 Record both a response and its resolution outcome before
 submitting a replacement R01+ revision. Submitted revisions stay frozen.
+The expanded dossier uses the full available width. Its checklist shows attached
+documents, recorded exceptions and missing components; sync status remains
+visible for each file. Refreshing or saving feedback keeps the revision and
+in-progress form context. Customer feedback becomes available after client
+submission; a revised-version action appears only when the latest review permits
+it. Finalize remains disabled until client approval and signed acceptance are
+recorded. Internal submission numbers are labelled separately from option
+revisions in Reviews. Discarding an option requires confirmation and preserves
+submitted documents and history. The Concept header links directly to Reviews.
+The selected design-project tab is reflected in the URL and survives refresh
+and browser back/forward navigation.
 In the Reviews tab, select the latest revision; the review uses exactly its
 files. After client approval, select a separate synced signed TK-M03 file and
 enter the client signatory and signing date. Finalize only that approved option.

@@ -1,5 +1,14 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Check, Loader2, Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Check,
+  ChevronDown,
+  ChevronUp,
+  Loader2,
+  Pencil,
+  Plus,
+  Sparkles,
+  Trash2,
+} from "lucide-react";
 import { ConceptDossierPanel } from "./ConceptDossierPanel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -39,6 +48,7 @@ import {
   type CreateConceptOptionRequest,
   type DesignProjectResponse,
   type DeletionImpactResponse,
+  type DesignReviewResponse,
 } from "@/services/adminApi";
 
 const STATUS_BADGE: Record<ConceptOptionStatus, string> = {
@@ -80,6 +90,7 @@ const emptyForm = (): FormState => ({
 
 interface Props {
   project: DesignProjectResponse;
+  onOpenReviews: () => void;
   /** Called after every mutation so the parent can refresh its own cache
    * (stage may have shifted to BasicDesign after a finalize). */
   onProjectMayHaveChanged: () => void | Promise<void>;
@@ -91,7 +102,7 @@ interface Props {
  * confirmation) · discard · delete. The parent detail page mounts this
  * inside its "Concept" tab.
  */
-export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged }: Props) => {
+export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged, onOpenReviews }: Props) => {
   const { t, lang } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
@@ -105,22 +116,51 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged }: Props) =
   const [error, setError] = useState<string | null>(null);
   const [users, setUsers] = useState<UserOption[]>([]);
   const [expandedId, setExpandedId] = useState<number | null>(null);
-
-  const fetchRows = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const { data } = await adminApi.listConceptOptions({
-        designProjectId: project.id,
-        pageSize: 100,
-      });
-      setRows(data.items ?? []);
-    } catch (err) {
-      setError(extractApiError(err));
-    } finally {
-      setLoading(false);
+  const [reviews, setReviews] = useState<DesignReviewResponse[]>([]);
+  const confirmationTrigger = useRef<HTMLButtonElement | null>(null);
+  const restoreConfirmationFocus = (event: Event) => {
+    if (confirmationTrigger.current?.isConnected) {
+      event.preventDefault();
+      confirmationTrigger.current.focus();
     }
-  }, [project.id]);
+  };
+
+  const fetchRows = useCallback(
+    async (refresh = false) => {
+      if (!refresh) setLoading(true);
+      setError(null);
+      try {
+        const [options, reviewResult] = await Promise.allSettled([
+          adminApi.listConceptOptions({ designProjectId: project.id, pageSize: 100 }),
+          adminApi.listDesignReviews(project.id),
+        ]);
+        if (options.status === "fulfilled") setRows(options.value.data.items ?? []);
+        if (reviewResult.status === "fulfilled") setReviews(reviewResult.value.data);
+        else setReviews([]);
+        if (options.status === "rejected") setError(extractApiError(options.reason));
+        else if (reviewResult.status === "rejected") setError(extractApiError(reviewResult.reason));
+      } catch (err) {
+        setError(extractApiError(err));
+      } finally {
+        setLoading(false);
+      }
+    },
+    [project.id],
+  );
+
+  const refreshRows = useCallback(() => fetchRows(true), [fetchRows]);
+  const latestReviews = useMemo(() => {
+    const latest = new Map<number, DesignReviewResponse>();
+    for (const review of reviews) {
+      if (
+        review.conceptOptionId &&
+        review.revisionNumber > (latest.get(review.conceptOptionId)?.revisionNumber ?? -1)
+      ) {
+        latest.set(review.conceptOptionId, review);
+      }
+    }
+    return latest;
+  }, [reviews]);
 
   useEffect(() => {
     void fetchRows();
@@ -296,18 +336,21 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged }: Props) =
 
   // -------- generic status transition --------
   const [transitioning, setTransitioning] = useState<number | null>(null);
+  const [discarding, setDiscarding] = useState<ConceptOptionResponse | null>(null);
   const transition = async (row: ConceptOptionResponse, next: ConceptOptionStatus) => {
     setTransitioning(row.id);
     try {
       await adminApi.transitionConceptOption(row.id, { status: next });
       toast({ title: t("concepts.transitioned") });
-      await fetchRows();
+      await refreshRows();
+      return true;
     } catch (err) {
       toast({
         title: t("common.error"),
         description: extractApiError(err),
         variant: "destructive",
       });
+      return false;
     } finally {
       setTransitioning(null);
     }
@@ -315,50 +358,64 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged }: Props) =
 
   if (loading) {
     return (
-      <div className="rounded-lg border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
-        <Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin" />
+      <div
+        role="status"
+        className="rounded-lg border border-slate-200 bg-white p-8 text-center text-sm text-slate-500"
+      >
+        <Loader2 aria-hidden="true" className="mx-auto mb-2 h-5 w-5 animate-spin" />
+        {t("common.loading")}
       </div>
     );
   }
-  if (error) {
-    return (
-      <div className="rounded-lg border border-rose-200 bg-rose-50/60 p-4 text-sm text-rose-700">
-        {error}
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-3">
+      {error ? (
+        <div
+          role="alert"
+          className="rounded-lg border border-rose-200 bg-rose-50/60 p-4 text-sm text-rose-700"
+        >
+          <p>{error}</p>
+          <Button className="mt-2 min-h-11" variant="outline" onClick={() => void refreshRows()}>
+            {t("common.retry")}
+          </Button>
+        </div>
+      ) : null}
       {isLocked ? (
         <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
           {t("concepts.locked")}
         </p>
       ) : null}
 
-      <header className="flex items-center justify-between gap-2">
+      <header className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-base font-semibold text-slate-900">{t("concepts.title")}</h2>
-        {canManage && !isLocked ? (
-          <Button size="sm" onClick={openCreate}>
-            <Plus className="mr-1 h-4 w-4" />
-            {t("concepts.new")}
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" className="min-h-11" onClick={onOpenReviews}>
+            {t("designProjects.detail.tab.reviews")}
           </Button>
-        ) : null}
+          {canManage && !isLocked ? (
+            <Button className="min-h-11" onClick={openCreate}>
+              <Plus className="mr-1 h-4 w-4" />
+              {t("concepts.new")}
+            </Button>
+          ) : null}
+        </div>
       </header>
 
-      {rows.length === 0 ? (
+      {rows.length === 0 && !error ? (
         <div className="rounded-md border border-dashed p-10 text-center text-sm text-muted-foreground">
           {t("concepts.empty")}
         </div>
-      ) : (
+      ) : null}
+      {rows.length > 0 ? (
         <div className="grid gap-3 md:grid-cols-2">
           {rows.map((row) => (
             <article
               key={row.id}
               className={cn(
-                "rounded-lg border bg-white p-3 shadow-sm",
+                "min-w-0 rounded-lg border bg-white p-4 shadow-sm",
+                expandedId === row.id && "md:col-span-2",
                 row.status === "Finalized" && "border-emerald-300 ring-1 ring-emerald-200",
-                row.status === "Discarded" && "opacity-70",
+                row.status === "Discarded" && "border-slate-200 bg-slate-50/40",
               )}
             >
               <header className="flex items-start justify-between gap-2">
@@ -396,12 +453,24 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged }: Props) =
                     row={row}
                     t={t}
                     canFinalize={canFinalize}
+                    finalizeReady={
+                      latestReviews.get(row.id)?.status === "ClientApproved" &&
+                      !!latestReviews.get(row.id)?.clientAcceptanceDocumentId &&
+                      !!latestReviews.get(row.id)?.clientAcceptanceSignedBy &&
+                      !!latestReviews.get(row.id)?.clientAcceptanceSignedAt
+                    }
                     canHardDelete={canHardDelete}
                     busy={transitioning === row.id}
                     onEdit={() => openEdit(row)}
                     onDelete={() => setDeleting(row)}
-                    onFinalize={() => setFinalizing(row)}
-                    onTransition={(next) => void transition(row, next)}
+                    onFinalize={(trigger) => {
+                      confirmationTrigger.current = trigger;
+                      setFinalizing(row);
+                    }}
+                    onDiscard={(trigger) => {
+                      confirmationTrigger.current = trigger;
+                      setDiscarding(row);
+                    }}
                   />
                 </div>
               ) : null}
@@ -420,25 +489,33 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged }: Props) =
                 <Button
                   size="sm"
                   variant="outline"
-                  className="mt-3"
+                  className="mt-3 min-h-11"
+                  aria-expanded={expandedId === row.id}
+                  aria-controls={`concept-dossier-${row.id}`}
                   onClick={() => setExpandedId(expandedId === row.id ? null : row.id)}
                 >
                   {t("concepts.dossier.open")}
+                  {expandedId === row.id ? (
+                    <ChevronUp className="ml-2 h-4 w-4" />
+                  ) : (
+                    <ChevronDown className="ml-2 h-4 w-4" />
+                  )}
                 </Button>
               ) : null}
               {expandedId === row.id && project.operationalProjectId ? (
                 <ConceptDossierPanel
                   projectId={project.operationalProjectId}
                   optionId={row.id}
+                  reviews={reviews.filter((review) => review.conceptOptionId === row.id)}
                   canManage={canManage}
                   locked={isLocked || row.status === "Finalized" || row.status === "Discarded"}
-                  onChanged={fetchRows}
+                  onChanged={refreshRows}
                 />
               ) : null}
             </article>
           ))}
         </div>
-      )}
+      ) : null}
 
       {/* create / edit dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -449,24 +526,30 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged }: Props) =
           </DialogHeader>
           <div className="grid gap-3">
             <div>
-              <Label>{t("concepts.field.name")}</Label>
+              <Label htmlFor="concept-name">{t("concepts.field.name")}</Label>
               <Input
+                id="concept-name"
+                maxLength={200}
                 autoFocus
                 value={form.name}
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
               />
             </div>
             <div>
-              <Label>{t("concepts.field.description")}</Label>
+              <Label htmlFor="concept-description">{t("concepts.field.description")}</Label>
               <Textarea
+                id="concept-description"
+                maxLength={4000}
                 rows={3}
                 value={form.description}
                 onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
               />
             </div>
             <div>
-              <Label>{t("concepts.field.internalNote")}</Label>
+              <Label htmlFor="concept-note">{t("concepts.field.internalNote")}</Label>
               <Textarea
+                id="concept-note"
+                maxLength={4000}
                 rows={2}
                 value={form.internalNote}
                 onChange={(e) => setForm((f) => ({ ...f, internalNote: e.target.value }))}
@@ -514,8 +597,40 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged }: Props) =
       />
 
       {/* finalize confirmation */}
+      <AlertDialog
+        open={!!discarding}
+        onOpenChange={(open) => {
+          if (!open && transitioning === null) setDiscarding(null);
+        }}
+      >
+        <AlertDialogContent onCloseAutoFocus={restoreConfirmationFocus}>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("concepts.discard.confirmTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("concepts.discard.confirmBody").replace("{name}", discarding?.name ?? "")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={transitioning !== null}>
+              {t("common.cancel")}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={transitioning !== null}
+              onClick={(event) => {
+                event.preventDefault();
+                if (discarding)
+                  void transition(discarding, "Discarded").then((success) => {
+                    if (success) setDiscarding(null);
+                  });
+              }}
+            >
+              {t("concepts.discard.confirm")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <AlertDialog open={!!finalizing} onOpenChange={(o) => (!o ? setFinalizing(null) : undefined)}>
-        <AlertDialogContent>
+        <AlertDialogContent onCloseAutoFocus={restoreConfirmationFocus}>
           <AlertDialogHeader>
             <AlertDialogTitle>{t("concepts.finalize.confirmTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
@@ -547,25 +662,27 @@ const RowActions = ({
   row,
   t,
   canFinalize,
+  finalizeReady,
   canHardDelete,
   busy,
   onEdit,
   onDelete,
   onFinalize,
-  onTransition,
+  onDiscard,
 }: {
   row: ConceptOptionResponse;
   t: (key: string) => string;
   canFinalize: boolean;
+  finalizeReady: boolean;
   canHardDelete: boolean;
   busy: boolean;
   onEdit: () => void;
   onDelete: () => void;
-  onFinalize: () => void;
-  onTransition: (next: ConceptOptionStatus) => void;
+  onFinalize: (trigger: HTMLButtonElement) => void;
+  onDiscard: (trigger: HTMLButtonElement) => void;
 }) => {
   const s = row.status;
-  const btn = "h-8 text-xs";
+  const btn = "min-h-11 text-sm";
   return (
     <>
       {s === "Drafting" && (
@@ -587,18 +704,28 @@ const RowActions = ({
             <Button
               size="sm"
               className={cn(btn, "bg-emerald-600 hover:bg-emerald-700")}
-              onClick={onFinalize}
+              onClick={(event) => onFinalize(event.currentTarget)}
+              disabled={busy || !finalizeReady}
+              aria-describedby={!finalizeReady ? `concept-finalize-hint-${row.id}` : undefined}
             >
               <Sparkles className="mr-1 h-3.5 w-3.5" />
               {t("concepts.action.finalize")}
             </Button>
+          ) : null}
+          {canFinalize && !finalizeReady ? (
+            <p
+              id={`concept-finalize-hint-${row.id}`}
+              className="w-full text-sm text-muted-foreground"
+            >
+              {t("concepts.dossier.finalizeHint")}
+            </p>
           ) : null}
           <Button
             size="sm"
             variant="ghost"
             className={btn}
             disabled={busy}
-            onClick={() => onTransition("Discarded")}
+            onClick={(event) => onDiscard(event.currentTarget)}
           >
             {t("concepts.action.discard")}
           </Button>
