@@ -154,6 +154,7 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged, onOpenRevi
     for (const review of reviews) {
       if (
         review.conceptOptionId &&
+        review.status !== "Draft" &&
         review.revisionNumber > (latest.get(review.conceptOptionId)?.revisionNumber ?? -1)
       ) {
         latest.set(review.conceptOptionId, review);

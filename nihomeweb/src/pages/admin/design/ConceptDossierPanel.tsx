@@ -117,17 +117,8 @@ export const ConceptDossierPanel = ({
   const revision = revisions.find((item) => item.id === selectedRevisionId);
   const editable =
     canManage && !locked && !!revision && !revision.frozenAt && revision.id === revisions[0]?.id;
-  const latestReview = reviews
-    .filter((review) => review.conceptRevisionId === revisions[0]?.id)
-    .sort((a, b) => b.revisionNumber - a.revisionNumber)[0];
   const canCreateRevision =
-    canManage &&
-    !locked &&
-    revision?.id === revisions[0]?.id &&
-    !!revision?.frozenAt &&
-    !!latestReview &&
-    (["ClientChangesRequested", "Rejected"].includes(latestReview.status) ||
-      (latestReview.status === "ClientApproved" && !latestReview.clientAcceptanceDocumentId));
+    canManage && !locked && revision?.id === revisions[0]?.id && !!revision?.canCreateRevision;
   const hasClientSubmission = reviews.some(
     (review) => review.conceptRevisionId === revision?.id && !!review.clientSubmittedAt,
   );

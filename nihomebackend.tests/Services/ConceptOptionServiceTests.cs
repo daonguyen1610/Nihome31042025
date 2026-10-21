@@ -178,6 +178,30 @@ public class ConceptOptionServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Finalize_NewerUnsubmittedDraft_DoesNotHideApprovedRevision()
+    {
+        var option = await _sut.CreateAsync(ValidCreate(), _userId);
+        await MoveToPresentedAsync(option.Id);
+        var revisionId = await _db.ConceptRevisions.Where(item => item.ConceptOptionId == option.Id)
+            .Select(item => item.Id).SingleAsync();
+        _db.DesignReviews.Add(new DesignReview
+        {
+            DesignProjectId = _projectId,
+            Stage = DesignReviewStage.Concept,
+            ConceptRevisionId = revisionId,
+            RevisionNumber = 2,
+            Status = DesignReviewStatus.Draft,
+            Title = "Nháp chưa trình",
+            DesignManagerUserId = _userId,
+        });
+        await _db.SaveChangesAsync();
+        var finalized = await _sut.TransitionStatusAsync(option.Id,
+            new TransitionConceptOptionStatusRequest { Status = "Finalized" }, _userId);
+        Assert.Equal("Finalized", finalized!.Status);
+        Assert.Equal(DesignProjectStage.BasicDesign, (await _db.DesignProjects.FindAsync(_projectId))!.CurrentStage);
+    }
+
+    [Fact]
     public async Task Finalize_ApprovalForAnotherOption_DoesNotUnlockProject()
     {
         var selected = await _sut.CreateAsync(ValidCreate("Selected"), _userId);
@@ -219,9 +243,13 @@ public class ConceptOptionServiceTests : IDisposable
             .Select(item => item.Id).SingleAsync();
         _db.DesignReviews.Add(new DesignReview
         {
-            DesignProjectId = _projectId, Stage = DesignReviewStage.Concept,
-            ConceptRevisionId = revisionId, RevisionNumber = 2, Status = status,
-            Title = "Latest review has no signed acceptance", DesignManagerUserId = _userId,
+            DesignProjectId = _projectId,
+            Stage = DesignReviewStage.Concept,
+            ConceptRevisionId = revisionId,
+            RevisionNumber = 2,
+            Status = status,
+            Title = "Latest review has no signed acceptance",
+            DesignManagerUserId = _userId,
         });
         await _db.SaveChangesAsync();
 
@@ -269,55 +297,55 @@ public class ConceptOptionServiceTests : IDisposable
         var revision = await _db.ConceptRevisions.SingleAsync(item => item.ConceptOptionId == id);
         revision.FrozenAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
-            var operationalProjectId = await _db.DesignProjects.Where(project => project.Id == _projectId)
-                .Select(project => project.OperationalProjectId!.Value).SingleAsync();
-            var document = new ProjectDocument
-            {
-                OperationalProjectId = operationalProjectId,
-                Category = ProjectDocumentCategory.DesignConcept,
-                SourceModule = ProjectDocumentSourceModule.Design,
-                SourceEntityType = nameof(ConceptOption),
-                SourceRecordId = id,
-                LocalPath = $"/files/project-documents/concept-{id}.pdf",
-                OriginalFileName = $"concept-{id}.pdf",
-                ContentType = "application/pdf",
-                Sha256 = new string('c', 64),
-                SyncStatus = ProjectDocumentSyncStatus.Synced,
-            };
-            var acceptance = new ProjectDocument
-            {
-                OperationalProjectId = operationalProjectId,
-                Category = ProjectDocumentCategory.DesignConcept,
-                SourceModule = ProjectDocumentSourceModule.Design,
-                SourceEntityType = nameof(ConceptOption),
-                SourceRecordId = id,
-                LocalPath = $"/files/project-documents/TK-M03-{id}.pdf",
-                OriginalFileName = $"TK-M03-{id}-signed.pdf",
-                ContentType = "application/pdf",
-                Sha256 = new string('d', 64),
-                SyncStatus = ProjectDocumentSyncStatus.Synced,
-            };
-            _db.ProjectDocuments.AddRange(document, acceptance);
-            await _db.SaveChangesAsync();
-            var reviewNumber = await _db.DesignReviews.Where(item => item.DesignProjectId == _projectId &&
-                item.Stage == DesignReviewStage.Concept).Select(item => (int?)item.RevisionNumber).MaxAsync() ?? 0;
-            _db.DesignReviews.Add(new DesignReview
-            {
-                DesignProjectId = _projectId,
-                Stage = DesignReviewStage.Concept,
-                RevisionNumber = reviewNumber + 1,
-                ConceptRevisionId = revision.Id,
-                ClientAcceptanceDocumentId = acceptance.Id,
-                ClientAcceptanceSignedBy = "Đại diện khách hàng",
-                ClientAcceptanceSignedAt = DateTime.UtcNow,
-                Title = "Concept client approval",
-                Status = DesignReviewStatus.ClientApproved,
-                DesignManagerUserId = _userId,
-                CreatedByUserId = _userId,
-                UpdatedByUserId = _userId,
-                Documents =
-                [
-                    new DesignReviewDocument
+        var operationalProjectId = await _db.DesignProjects.Where(project => project.Id == _projectId)
+            .Select(project => project.OperationalProjectId!.Value).SingleAsync();
+        var document = new ProjectDocument
+        {
+            OperationalProjectId = operationalProjectId,
+            Category = ProjectDocumentCategory.DesignConcept,
+            SourceModule = ProjectDocumentSourceModule.Design,
+            SourceEntityType = nameof(ConceptOption),
+            SourceRecordId = id,
+            LocalPath = $"/files/project-documents/concept-{id}.pdf",
+            OriginalFileName = $"concept-{id}.pdf",
+            ContentType = "application/pdf",
+            Sha256 = new string('c', 64),
+            SyncStatus = ProjectDocumentSyncStatus.Synced,
+        };
+        var acceptance = new ProjectDocument
+        {
+            OperationalProjectId = operationalProjectId,
+            Category = ProjectDocumentCategory.DesignConcept,
+            SourceModule = ProjectDocumentSourceModule.Design,
+            SourceEntityType = nameof(ConceptOption),
+            SourceRecordId = id,
+            LocalPath = $"/files/project-documents/TK-M03-{id}.pdf",
+            OriginalFileName = $"TK-M03-{id}-signed.pdf",
+            ContentType = "application/pdf",
+            Sha256 = new string('d', 64),
+            SyncStatus = ProjectDocumentSyncStatus.Synced,
+        };
+        _db.ProjectDocuments.AddRange(document, acceptance);
+        await _db.SaveChangesAsync();
+        var reviewNumber = await _db.DesignReviews.Where(item => item.DesignProjectId == _projectId &&
+            item.Stage == DesignReviewStage.Concept).Select(item => (int?)item.RevisionNumber).MaxAsync() ?? 0;
+        _db.DesignReviews.Add(new DesignReview
+        {
+            DesignProjectId = _projectId,
+            Stage = DesignReviewStage.Concept,
+            RevisionNumber = reviewNumber + 1,
+            ConceptRevisionId = revision.Id,
+            ClientAcceptanceDocumentId = acceptance.Id,
+            ClientAcceptanceSignedBy = "Đại diện khách hàng",
+            ClientAcceptanceSignedAt = DateTime.UtcNow,
+            Title = "Concept client approval",
+            Status = DesignReviewStatus.ClientApproved,
+            DesignManagerUserId = _userId,
+            CreatedByUserId = _userId,
+            UpdatedByUserId = _userId,
+            Documents =
+            [
+                new DesignReviewDocument
                     {
                         ProjectDocumentId = document.Id,
                         SourceEntityTypeSnapshot = nameof(ConceptOption),
@@ -325,7 +353,7 @@ public class ConceptOptionServiceTests : IDisposable
                         Sha256Snapshot = document.Sha256,
                     },
                 ],
-            });
-            await _db.SaveChangesAsync();
+        });
+        await _db.SaveChangesAsync();
     }
 }

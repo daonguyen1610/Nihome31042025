@@ -106,6 +106,40 @@ public sealed class ProjectDocumentServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task UploadAsync_MultipleConceptFiles_UseDistinctSourceSlots()
+    {
+        var design = new DesignProject { OperationalProjectId = project.Id, CustomerId = 10, Name = "Nhà phố sân trong", ProjectCode = "DP-CONCEPT-UPLOAD" };
+        db.DesignProjects.Add(design);
+        await db.SaveChangesAsync();
+        var option = new ConceptOption { DesignProjectId = design.Id, Name = "Phương án lấy sáng sân trong" };
+        db.ConceptOptions.Add(option);
+        await db.SaveChangesAsync();
+        storage.Setup(item => item.InspectUploadAsync(It.IsAny<IFormFile>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new StoredProjectDocument(string.Empty, "ho-so.pdf", "application/pdf", 7, new string('a', 64)));
+        drive.Setup(item => item.UploadAsync("folder-DesignConcept", It.IsAny<string>(), 1, "ho-so.pdf",
+                "application/pdf", It.IsAny<Stream>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => new DriveUpload(Guid.NewGuid().ToString()));
+        for (var index = 0; index < 3; index++)
+            await service.UploadAsync(project.Id, new ProjectDocumentUploadRequest
+            {
+                File = FormFile("drawing", "ho-so.pdf"),
+                Category = ProjectDocumentCategory.DesignConcept,
+                SourceModule = ProjectDocumentSourceModule.Design,
+                SourceEntityType = nameof(ConceptOption),
+                SourceRecordId = option.Id,
+            }, 7, false);
+        var documents = await db.ProjectDocuments.ToListAsync();
+        Assert.Equal(3, documents.Count);
+        Assert.Equal(3, documents.Select(item => item.SourceSlot).Distinct().Count());
+        Assert.All(documents, item =>
+        {
+            Assert.Equal(string.Empty, item.LocalPath);
+            Assert.Equal(option.Id, item.SourceRecordId);
+            Assert.Equal(ProjectDocumentSyncStatus.Synced, item.SyncStatus);
+        });
+    }
+
+    [Fact]
     public async Task RetryAsync_FailedBeforeMaximum_QueuesSameGeneration()
     {
         var document = AddDocument(ProjectDocumentCategory.DesignBasic);
@@ -243,8 +277,10 @@ public sealed class ProjectDocumentServiceTests : IDisposable
         var document = AddDocument(ProjectDocumentCategory.DesignConcept);
         var review = new DesignReview
         {
-            DesignProjectId = 42, Stage = DesignReviewStage.Concept,
-            Title = "Hồ sơ Concept đã trình", ClientSubmittedAt = DateTime.UtcNow,
+            DesignProjectId = 42,
+            Stage = DesignReviewStage.Concept,
+            Title = "Hồ sơ Concept đã trình",
+            ClientSubmittedAt = DateTime.UtcNow,
             ClientAcceptanceDocumentId = acceptance ? document.Id : null,
         };
         if (!acceptance)

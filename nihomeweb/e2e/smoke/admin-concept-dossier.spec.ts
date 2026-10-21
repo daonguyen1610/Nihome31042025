@@ -1,6 +1,11 @@
+import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { execSql } from "../fixtures/db";
 import { expect, test, TEST_USERS } from "../fixtures/auth";
 import { createDesignProject, createOwnCustomer } from "../fixtures/designProjects";
+
+test.use({ timezoneId: "Asia/Ho_Chi_Minh" });
 
 test("Concept dossier preserves context and supports accessible responsive forms", async ({
   api,
@@ -9,7 +14,7 @@ test("Concept dossier preserves context and supports accessible responsive forms
   loginInBrowserAs,
   baseURL,
 }, testInfo) => {
-  test.setTimeout(60000);
+  test.setTimeout(120000);
   const browserErrors: string[] = [];
   page.on("pageerror", (error) => browserErrors.push(error.message));
   const token = await loginAs(TEST_USERS.superAdmin);
@@ -65,6 +70,83 @@ test("Concept dossier preserves context and supports accessible responsive forms
     });
   }
 
+  const project = (await (
+    await api.get(`/api/design-projects/${projectId}`, { headers })
+  ).json()) as { operationalProjectId: number };
+  const operationalId = project.operationalProjectId;
+  const backend = process.env.E2E_BACKEND_CONTAINER ?? "nihome31042025-backend";
+  const revisionId = (
+    (await (
+      await api.get(`/api/concept-options/${optionId}/revisions`, { headers })
+    ).json()) as Array<{ id: number }>
+  )[0].id;
+  const image = readFileSync(
+    new URL(
+      "../../../nihomebackend/wwwroot/images/news/xay-dung-concept-san-pham-cho-du-an-thiet-ke/img-11.jpg",
+      import.meta.url,
+    ),
+  );
+  const pdf = readFileSync(
+    new URL("../../../nihomebackend/wwwroot/files/design/basic/kt-bd-001.pdf", import.meta.url),
+  );
+  const fixtureFiles = [
+    {
+      name: `concept-${optionId}-perspective.jpg`,
+      bytes: image,
+      contentType: "image/jpeg",
+      kind: "Perspective",
+    },
+    {
+      name: `concept-${optionId}-presentation.pdf`,
+      bytes: pdf,
+      contentType: "application/pdf",
+      kind: "Presentation",
+    },
+    {
+      name: `concept-${optionId}-TK-M03.pdf`,
+      bytes: pdf,
+      contentType: "application/pdf",
+      kind: null,
+    },
+  ];
+  const fixtureIds: number[] = [];
+  for (const fixture of fixtureFiles) {
+    const path = `/files/project-documents/${operationalId}/${fixture.name}`;
+    execFileSync(
+      "docker",
+      [
+        "exec",
+        "-i",
+        backend,
+        "sh",
+        "-c",
+        `mkdir -p /app/wwwroot/files/project-documents/${operationalId} && cat > /app/wwwroot${path}`,
+      ],
+      { input: fixture.bytes },
+    );
+    const digest = createHash("sha256").update(fixture.bytes).digest("hex");
+    const output = execSql(`SET NOCOUNT ON; SET QUOTED_IDENTIFIER ON; SET ANSI_NULLS ON;
+      INSERT INTO project_documents
+        (OperationalProjectId, Category, SourceModule, SourceType, SourceEntityType, SourceRecordId,
+         LocalPath, OriginalFileName, ContentType, Size, Sha256, Origin, Generation, DesiredOperation,
+         SyncStatus, SyncAttemptCount, IsDownloadable, ConflictState, CreatedAt, UpdatedAt)
+      OUTPUT INSERTED.Id
+      VALUES (${operationalId}, 'DesignConcept', 'Design', 'ManualUpload', 'ConceptOption', ${optionId},
+        '${path}', '${fixture.name}', '${fixture.contentType}', ${fixture.bytes.length}, '${digest}', 'Nicon', 1, 'None',
+        'Synced', 0, 1, 'None', SYSUTCDATETIME(), SYSUTCDATETIME());`);
+    const documentId = Number(output.trim());
+    fixtureIds.push(documentId);
+    if (fixture.kind) {
+      const attached = await api.post(
+        `/api/concept-options/${optionId}/revisions/${revisionId}/artifacts`,
+        {
+          headers: { ...headers, "Idempotency-Key": `preview-${documentId}` },
+          data: { projectDocumentId: documentId, kind: fixture.kind },
+        },
+      );
+      expect(attached.ok(), await attached.text()).toBeTruthy();
+    }
+  }
   // Set up a submitted dossier as the precondition for the browser feedback
   // journey. API lifecycle and evidence rules are covered by integration tests.
   try {
@@ -89,6 +171,25 @@ test("Concept dossier preserves context and supports accessible responsive forms
   }
   await page.reload({ waitUntil: "networkidle" });
   await page.getByRole("button", { name: /Hồ sơ và ý kiến|Files and feedback/i }).click();
+  for (const [index, selector] of [
+    [0, "img"],
+    [1, "iframe"],
+  ] as const) {
+    await dossier.getByRole("button", { name: new RegExp(fixtureFiles[index].name) }).click();
+    const preview = page.getByRole("dialog");
+    await expect(preview.locator(selector)).toBeVisible();
+    if (selector === "img")
+      await expect
+        .poll(() => preview.locator("img").evaluate((img: HTMLImageElement) => img.naturalWidth))
+        .toBe(1000);
+    await page.screenshot({
+      path: testInfo.outputPath(`concept-preview-${index}.png`),
+      fullPage: true,
+      animations: "disabled",
+    });
+    await page.keyboard.press("Escape");
+    await expect(preview).toHaveCount(0);
+  }
   const discard = page.getByRole("button", { name: /^Loại bỏ$|^Discard$/i });
   await discard.click();
   const discardDialog = page.getByRole("alertdialog");
@@ -241,6 +342,17 @@ test("Concept dossier preserves context and supports accessible responsive forms
       animations: "disabled",
     });
   }
+  execSql(`SET QUOTED_IDENTIFIER ON; SET ANSI_NULLS ON;
+    UPDATE design_reviews SET Status='ClientApproved', ClientAcceptanceDocumentId=${fixtureIds[2]},
+      ClientAcceptanceSignedBy=N'Đại diện chủ đầu tư', ClientAcceptanceSignedAt='2026-10-19T17:00:00'
+    WHERE DesignProjectId=${projectId} AND ConceptRevisionId=${revisionId};`);
+  await page.reload({ waitUntil: "networkidle" });
+  const expectedDate = await page.evaluate(() =>
+    new Date("2026-10-19T17:00:00Z").toLocaleDateString("ja"),
+  );
+  await expect(
+    page.getByText(new RegExp(`Đại diện chủ đầu tư.*${expectedDate.replaceAll("/", "\\/")}`)),
+  ).toBeVisible();
   await page.goto(`${baseURL}/admin/design-projects/${projectId}?tab=concept`, {
     waitUntil: "networkidle",
   });

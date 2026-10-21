@@ -7,6 +7,7 @@ public sealed class ConceptRevisionResponse
     public int Number { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? FrozenAt { get; set; }
+    public bool CanCreateRevision { get; set; }
     public List<ConceptArtifactResponse> Artifacts { get; set; } = new();
     public List<ConceptChecklistWaiverResponse> Waivers { get; set; } = new();
     public List<ConceptFeedbackResponse> Feedback { get; set; } = new();

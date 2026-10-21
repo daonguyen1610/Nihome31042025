@@ -4055,6 +4055,7 @@ export interface ConceptRevisionResponse {
   number: number;
   createdAt: string;
   frozenAt?: string | null;
+  canCreateRevision: boolean;
   artifacts: {
     id: number;
     projectDocumentId: number;

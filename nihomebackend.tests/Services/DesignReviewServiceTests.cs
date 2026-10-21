@@ -215,7 +215,8 @@ public sealed class DesignReviewServiceTests : IDisposable
         var approved = await service.RecordClientDecisionAsync(projectId, created.Id,
             new RecordDesignClientDecisionRequest
             {
-                Decision = "ClientApproved", RowVersion = "",
+                Decision = "ClientApproved",
+                RowVersion = "",
                 ClientAcceptanceDocumentId = acceptanceDocumentId,
                 ClientAcceptanceSignedBy = "Đại diện chủ đầu tư",
                 ClientAcceptanceSignedAt = DateTime.UtcNow,

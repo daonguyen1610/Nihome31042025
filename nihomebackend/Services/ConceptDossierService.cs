@@ -30,12 +30,19 @@ public sealed class ConceptDossierService(AppDbContext db) : IConceptDossierServ
         ConceptArtifactKind.Presentation,
     ];
 
-    public async Task<IReadOnlyList<ConceptRevisionResponse>> ListAsync(int optionId, CancellationToken ct) =>
-        (await Query().Where(item => item.ConceptOptionId == optionId)
-            .OrderByDescending(item => item.Number).ToListAsync(ct)).Select(Map).ToList();
+    public async Task<IReadOnlyList<ConceptRevisionResponse>> ListAsync(int optionId, CancellationToken ct)
+    {
+        var revisions = await Query().Where(item => item.ConceptOptionId == optionId)
+            .OrderByDescending(item => item.Number).ToListAsync(ct);
+        var responses = revisions.Select(Map).ToList();
+        if (revisions.Count > 0)
+            responses[0].CanCreateRevision = await CanCreateRevisionAsync(revisions[0], ct);
+        return responses;
+    }
 
     public async Task<ConceptRevisionResponse> CreateRevisionAsync(int optionId, int userId, CancellationToken ct)
     {
+        await using var transaction = await ConceptDossierTransaction.BeginAsync(db, optionId, ct);
         var option = await RequireManagerAsync(optionId, userId, ct);
         if (option.Status is ConceptOptionStatus.Finalized or ConceptOptionStatus.Discarded)
             throw new ConceptOptionOperationException("Không thể tạo revision cho phương án đã chốt hoặc loại bỏ.");
@@ -43,15 +50,7 @@ public sealed class ConceptDossierService(AppDbContext db) : IConceptDossierServ
             .OrderByDescending(item => item.Number).FirstOrDefaultAsync(ct);
         if (last is null || last.FrozenAt is null)
             throw new ConceptOptionOperationException("Revision hiện tại còn là bản nháp.");
-        var lastReview = await db.DesignReviews.AsNoTracking()
-            .Where(item => item.ConceptRevisionId == last.Id)
-            .OrderByDescending(item => item.RevisionNumber)
-            .Select(item => new { item.Status, item.ClientAcceptanceDocumentId })
-            .FirstOrDefaultAsync(ct);
-        if (lastReview is null || lastReview.Status is not
-            (DesignReviewStatus.ClientChangesRequested or DesignReviewStatus.Rejected) &&
-            !(lastReview.Status == DesignReviewStatus.ClientApproved &&
-              lastReview.ClientAcceptanceDocumentId is null))
+        if (!await CanCreateRevisionAsync(last, ct))
             throw new ConceptOptionOperationException("Chỉ tạo revision mới sau khi khách yêu cầu sửa hoặc từ chối.");
         var next = new ConceptRevision
         {
@@ -64,12 +63,14 @@ public sealed class ConceptDossierService(AppDbContext db) : IConceptDossierServ
         option.UpdatedAt = DateTime.UtcNow;
         option.UpdatedByUserId = userId;
         await db.SaveChangesAsync(ct);
+        if (transaction is not null) await transaction.CommitAsync(ct);
         return Map(await Query().SingleAsync(item => item.Id == next.Id, ct));
     }
 
     public async Task<ConceptRevisionResponse> AddArtifactAsync(
         int optionId, int revisionId, AddConceptArtifactRequest request, int userId, CancellationToken ct)
     {
+        await using var transaction = await ConceptDossierTransaction.BeginAsync(db, optionId, ct);
         var (option, revision) = await RequireEditableAsync(optionId, revisionId, userId, ct);
         if (!Enum.TryParse<ConceptArtifactKind>(request.Kind, true, out var kind) || !Enum.IsDefined(kind))
             throw new ConceptOptionOperationException("Loại tài liệu Concept không hợp lệ.");
@@ -105,12 +106,14 @@ public sealed class ConceptDossierService(AppDbContext db) : IConceptDossierServ
             CreatedByUserId = userId,
         });
         await db.SaveChangesAsync(ct);
+        if (transaction is not null) await transaction.CommitAsync(ct);
         return Map(await Query().SingleAsync(item => item.Id == revisionId, ct));
     }
 
     public async Task<ConceptRevisionResponse> WaiveAsync(
         int optionId, int revisionId, WaiveConceptChecklistRequest request, int userId, CancellationToken ct)
     {
+        await using var transaction = await ConceptDossierTransaction.BeginAsync(db, optionId, ct);
         var (_, revision) = await RequireEditableAsync(optionId, revisionId, userId, ct);
         if (!Enum.TryParse<ConceptArtifactKind>(request.Kind, true, out var kind) ||
             !RequiredKinds.Contains(kind))
@@ -124,39 +127,47 @@ public sealed class ConceptDossierService(AppDbContext db) : IConceptDossierServ
             throw new ConceptOptionOperationException("Hạng mục này đã có tài liệu, không thể đánh dấu không áp dụng.");
         revision.Waivers.Add(new ConceptChecklistWaiver
         {
-            Kind = kind, Reason = reason, CreatedByUserId = userId,
+            Kind = kind,
+            Reason = reason,
+            CreatedByUserId = userId,
         });
         await db.SaveChangesAsync(ct);
+        if (transaction is not null) await transaction.CommitAsync(ct);
         return Map(await Query().SingleAsync(item => item.Id == revisionId, ct));
     }
 
     public async Task<ConceptRevisionResponse> RemoveArtifactAsync(
         int optionId, int revisionId, int artifactId, int userId, CancellationToken ct)
     {
+        await using var transaction = await ConceptDossierTransaction.BeginAsync(db, optionId, ct);
         await RequireEditableAsync(optionId, revisionId, userId, ct);
         var artifact = await db.ConceptArtifacts.SingleOrDefaultAsync(item =>
             item.Id == artifactId && item.ConceptRevisionId == revisionId, ct)
             ?? throw new ConceptOptionOperationException("File không thuộc revision Concept này.");
         db.ConceptArtifacts.Remove(artifact);
         await db.SaveChangesAsync(ct);
+        if (transaction is not null) await transaction.CommitAsync(ct);
         return Map(await Query().SingleAsync(item => item.Id == revisionId, ct));
     }
 
     public async Task<ConceptRevisionResponse> RemoveWaiverAsync(
         int optionId, int revisionId, ConceptArtifactKind kind, int userId, CancellationToken ct)
     {
+        await using var transaction = await ConceptDossierTransaction.BeginAsync(db, optionId, ct);
         await RequireEditableAsync(optionId, revisionId, userId, ct);
         var waiver = await db.ConceptChecklistWaivers.SingleOrDefaultAsync(item =>
             item.ConceptRevisionId == revisionId && item.Kind == kind, ct)
             ?? throw new ConceptOptionOperationException("Ngoại lệ không thuộc revision Concept này.");
         db.ConceptChecklistWaivers.Remove(waiver);
         await db.SaveChangesAsync(ct);
+        if (transaction is not null) await transaction.CommitAsync(ct);
         return Map(await Query().SingleAsync(item => item.Id == revisionId, ct));
     }
 
     public async Task<ConceptRevisionResponse> AddFeedbackAsync(
         int optionId, int revisionId, AddConceptFeedbackRequest request, int userId, CancellationToken ct)
     {
+        await using var transaction = await ConceptDossierTransaction.BeginAsync(db, optionId, ct);
         await RequireManagerAsync(optionId, userId, ct);
         var revision = await db.ConceptRevisions.SingleOrDefaultAsync(item =>
             item.Id == revisionId && item.ConceptOptionId == optionId, ct)
@@ -177,18 +188,23 @@ public sealed class ConceptDossierService(AppDbContext db) : IConceptDossierServ
             throw new ConceptOptionOperationException("Ý kiến khách cần tên, kênh, thời điểm hợp lệ, nội dung và nguồn bằng chứng (ví dụ: biên bản họp).");
         revision.Feedback.Add(new ConceptFeedback
         {
-            CustomerName = name, Channel = channel, Comment = comment, EvidenceSource = evidenceSource,
+            CustomerName = name,
+            Channel = channel,
+            Comment = comment,
+            EvidenceSource = evidenceSource,
             OccurredAt = request.OccurredAt.ToUniversalTime(),
             ProjectDocumentId = request.ProjectDocumentId,
             CreatedByUserId = userId,
         });
         await db.SaveChangesAsync(ct);
+        if (transaction is not null) await transaction.CommitAsync(ct);
         return Map(await Query().SingleAsync(item => item.Id == revisionId, ct));
     }
 
     public async Task<ConceptRevisionResponse> RespondAsync(
         int optionId, int revisionId, int feedbackId, RespondConceptFeedbackRequest request, int userId, CancellationToken ct)
     {
+        await using var transaction = await ConceptDossierTransaction.BeginAsync(db, optionId, ct);
         await RequireManagerAsync(optionId, userId, ct);
         var feedback = await db.ConceptFeedback.SingleOrDefaultAsync(item => item.Id == feedbackId &&
             item.ConceptRevisionId == revisionId && item.ConceptRevision.ConceptOptionId == optionId, ct)
@@ -212,6 +228,7 @@ public sealed class ConceptDossierService(AppDbContext db) : IConceptDossierServ
         {
             throw new ConceptOptionOperationException("Phản hồi đã được ghi bởi phiên làm việc khác.");
         }
+        if (transaction is not null) await transaction.CommitAsync(ct);
         return Map(await Query().SingleAsync(item => item.Id == revisionId, ct));
     }
 
@@ -246,6 +263,28 @@ public sealed class ConceptDossierService(AppDbContext db) : IConceptDossierServ
         var expected = revision.Artifacts.Select(item => item.ProjectDocumentId).OrderBy(id => id).ToArray();
         if (!expected.SequenceEqual(documentIds.OrderBy(id => id)))
             throw new DesignReviewOperationException("Hồ sơ trình phải chứa đúng các file của revision Concept.");
+    }
+
+    private async Task<bool> CanCreateRevisionAsync(ConceptRevision revision, CancellationToken ct)
+    {
+        if (revision.FrozenAt is null) return false;
+        var optionOpen = await db.ConceptOptions.AsNoTracking().AnyAsync(item =>
+            item.Id == revision.ConceptOptionId && item.DesignProject.CurrentStage == DesignProjectStage.Concept &&
+            item.Status != ConceptOptionStatus.Finalized && item.Status != ConceptOptionStatus.Discarded, ct);
+        if (!optionOpen) return false;
+        // Legacy shared submissions have no selected revision. Use their source
+        // snapshots only to permit reissue, never as approval for finalization.
+        var lastReview = await db.DesignReviews.AsNoTracking()
+            .Where(item => item.Stage == DesignReviewStage.Concept && item.Status != DesignReviewStatus.Draft &&
+                (item.ConceptRevisionId == revision.Id ||
+                 revision.Number == 0 && item.ConceptRevisionId == null && item.Documents.Any(document =>
+                     document.SourceEntityTypeSnapshot == nameof(ConceptOption) &&
+                     document.SourceRecordIdSnapshot == revision.ConceptOptionId)))
+            .OrderByDescending(item => item.RevisionNumber)
+            .Select(item => new { item.Status, item.ClientAcceptanceDocumentId }).FirstOrDefaultAsync(ct);
+        return lastReview is not null &&
+            (lastReview.Status is DesignReviewStatus.ClientChangesRequested or DesignReviewStatus.Rejected ||
+             lastReview.Status == DesignReviewStatus.ClientApproved && lastReview.ClientAcceptanceDocumentId == null);
     }
 
     private async Task<ConceptOption> RequireManagerAsync(int optionId, int userId, CancellationToken ct)
@@ -288,8 +327,8 @@ public sealed class ConceptDossierService(AppDbContext db) : IConceptDossierServ
         Id = item.Id,
         ConceptOptionId = item.ConceptOptionId,
         Number = item.Number,
-        CreatedAt = item.CreatedAt,
-        FrozenAt = item.FrozenAt,
+        CreatedAt = DateTime.SpecifyKind(item.CreatedAt, DateTimeKind.Utc),
+        FrozenAt = item.FrozenAt.HasValue ? DateTime.SpecifyKind(item.FrozenAt.Value, DateTimeKind.Utc) : null,
         Artifacts = item.Artifacts.OrderBy(artifact => artifact.Id).Select(artifact => new ConceptArtifactResponse
         {
             Id = artifact.Id,
@@ -301,14 +340,22 @@ public sealed class ConceptDossierService(AppDbContext db) : IConceptDossierServ
         }).ToList(),
         Waivers = item.Waivers.Select(waiver => new ConceptChecklistWaiverResponse
         {
-            Kind = waiver.Kind.ToString(), Reason = waiver.Reason, CreatedAt = waiver.CreatedAt,
+            Kind = waiver.Kind.ToString(),
+            Reason = waiver.Reason,
+            CreatedAt = DateTime.SpecifyKind(waiver.CreatedAt, DateTimeKind.Utc),
         }).ToList(),
         Feedback = item.Feedback.OrderBy(feedback => feedback.OccurredAt).Select(feedback => new ConceptFeedbackResponse
         {
-            Id = feedback.Id, ProjectDocumentId = feedback.ProjectDocumentId,
-            CustomerName = feedback.CustomerName, Channel = feedback.Channel, EvidenceSource = feedback.EvidenceSource,
-            OccurredAt = feedback.OccurredAt, Comment = feedback.Comment,
-            Response = feedback.Response, Outcome = feedback.Outcome, RespondedAt = feedback.RespondedAt,
+            Id = feedback.Id,
+            ProjectDocumentId = feedback.ProjectDocumentId,
+            CustomerName = feedback.CustomerName,
+            Channel = feedback.Channel,
+            EvidenceSource = feedback.EvidenceSource,
+            OccurredAt = DateTime.SpecifyKind(feedback.OccurredAt, DateTimeKind.Utc),
+            Comment = feedback.Comment,
+            Response = feedback.Response,
+            Outcome = feedback.Outcome,
+            RespondedAt = feedback.RespondedAt.HasValue ? DateTime.SpecifyKind(feedback.RespondedAt.Value, DateTimeKind.Utc) : null,
         }).ToList(),
     };
 }

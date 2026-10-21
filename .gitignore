@@ -39,6 +39,9 @@ nihomebackend/wwwroot/files/contracts/
 # Quote documents are user uploads at runtime.
 nihomebackend/wwwroot/files/quotes/
 
+# Private managed project files and local browser-test fixtures.
+nihomebackend/wwwroot/files/project-documents/
+
 # Managed operational business documents are user uploads at runtime.
 nihomebackend/wwwroot/files/business-documents/
 
