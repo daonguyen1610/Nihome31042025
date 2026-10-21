@@ -53,7 +53,7 @@ test.describe("NIH-144 — Project handover", () => {
 
     await expect(page.getByTestId("handover-page")).toBeVisible();
     await expect(page.locator("body")).not.toContainText("handover.title");
-    await Promise.all([
+    const [filteredResponse] = await Promise.all([
       page.waitForResponse((response) => {
         const url = new URL(response.url());
         return (
@@ -64,6 +64,14 @@ test.describe("NIH-144 — Project handover", () => {
       }),
       page.getByTestId("handover-search").fill(title),
     ]);
+    const filtered = (await filteredResponse.json()) as {
+      total: number;
+      readyCount: number;
+      statusCounts: Record<string, number>;
+    };
+    expect(filtered.total).toBe(1);
+    expect(filtered.readyCount).toBe(0);
+    expect(filtered.statusCounts).toEqual({ Draft: 1 });
     const row = page.getByTestId(`handover-row-${handoverId}`);
     await expect(row).toBeVisible({ timeout: 10_000 });
     await expect(row).toContainText(title);

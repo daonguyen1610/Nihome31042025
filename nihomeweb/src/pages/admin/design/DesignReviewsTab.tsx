@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { LocalizedDateInput, LocalizedFileInput } from "@/components/ui/localized-inputs";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -419,12 +420,11 @@ export const DesignReviewsTab = ({ project }: Props) => {
                 <Label className="block" htmlFor={`review-${review.id}-file`}>
                   {t("concepts.dossier.acceptance")}
                 </Label>
-                <Input
+                <LocalizedFileInput
                   id={`review-${review.id}-file`}
                   disabled={busy === review.id}
-                  className="min-h-11"
-                  type="file"
                   accept=".pdf,.jpg,.jpeg,.png"
+                  selectedFileName={acceptanceFiles[review.id]?.name}
                   onChange={(event) =>
                     setAcceptanceFiles((current) => ({
                       ...current,
@@ -528,11 +528,10 @@ export const DesignReviewsTab = ({ project }: Props) => {
                 <Label className="block" htmlFor={`review-${review.id}-signed-at`}>
                   {t("concepts.dossier.signedAt")}
                 </Label>
-                <Input
+                <LocalizedDateInput
                   id={`review-${review.id}-signed-at`}
                   disabled={busy === review.id}
                   className="min-h-11"
-                  type="date"
                   value={signedAt[review.id] ?? ""}
                   onChange={(event) =>
                     setSignedAt((current) => ({ ...current, [review.id]: event.target.value }))

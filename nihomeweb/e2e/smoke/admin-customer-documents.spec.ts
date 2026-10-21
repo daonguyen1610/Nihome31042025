@@ -178,7 +178,7 @@ test("customer related records, documents, and contract owner inheritance work i
     const previewDialog = page.getByRole("dialog", { name: /Xem trước tài liệu|File preview/i });
     await expect(previewDialog).toBeVisible();
     await expect(previewDialog).toContainText(fileName);
-    await expect(previewDialog.locator("iframe")).toBeVisible();
+    await expect(previewDialog.locator("canvas")).toBeVisible();
     await previewDialog
       .getByRole("button", { name: /Đóng|Close|关闭|閉じる/i })
       .first()

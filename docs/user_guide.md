@@ -893,8 +893,10 @@ reasons, and IFC distribution records. Basic Design and Shop Drawing records
 support managed binary upload plus authorized preview/download, and the
 Documents tab exposes those files. For each Concept option, use the dossier
 panel to upload a 3D source model, perspective, site/roof plan, floor plans
-with floor names, section and presentation PDF. Images and PDFs can be previewed;
-source models can be downloaded. Correct a draft by detaching an incorrect file
+with floor names, section and presentation PDF. Images and PDFs can be previewed
+inside Nicon with page navigation for PDFs; source models can be downloaded.
+File selection and signed dates follow the active interface language. Correct a
+draft by detaching an incorrect file
 or checklist exception; the stored Project Document remains available. Record
 client feedback verbatim after submission to the client, with the representative,
 channel, time and an evidence reference (meeting minutes, email or document).

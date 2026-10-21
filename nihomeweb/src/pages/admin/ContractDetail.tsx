@@ -42,7 +42,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollableTabsList } from "@/components/ui/scrollable-tabs-list";
 import {
   Select,
   SelectContent,
@@ -2540,43 +2541,37 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
         )}
 
         <Tabs value={tab} onValueChange={(v) => setTab(v as TabId)}>
-          {/* Horizontal scroll on narrow viewports keeps the tabs in one
-              readable row instead of wrapping onto two rows with awkward
-              orphan groups. The container hides the scrollbar visually but
-              stays swipeable on touch devices. */}
-          <div className="overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            <TabsList className="inline-flex w-max min-w-full justify-start">
-              <TabsTrigger value="info">{t("contracts.detail.tab.info")}</TabsTrigger>
-              <TabsTrigger value="schedule">
-                {t(
-                  contract.direction === "Upstream"
-                    ? "contracts.detail.tab.receivableSchedule"
-                    : "contracts.detail.tab.payableSchedule",
-                )}
-                {contract.paymentMilestones.length > 0 ? (
-                  <span className="ml-1 text-xs text-slate-400">
-                    ({contract.paymentMilestones.length})
-                  </span>
-                ) : null}
-              </TabsTrigger>
-              <TabsTrigger value="appendices">
-                {t("contracts.detail.tab.appendices")}
-                {appendices.length > 0 ? (
-                  <span className="ml-1 text-xs text-slate-400">({appendices.length})</span>
-                ) : null}
-              </TabsTrigger>
-              <TabsTrigger value="documents">
-                {t("contracts.detail.tab.documents")}
-                {attachments.length > 0 ? (
-                  <span className="ml-1 text-xs text-slate-400">({attachments.length})</span>
-                ) : null}
-              </TabsTrigger>
-              <TabsTrigger value="timeline">{t("contracts.detail.tab.timeline")}</TabsTrigger>
-              {contract.direction === "Upstream" ? (
-                <TabsTrigger value="care">{t("contracts.care.title")}</TabsTrigger>
+          <ScrollableTabsList previousLabel={t("common.prev")} nextLabel={t("common.next")}>
+            <TabsTrigger value="info">{t("contracts.detail.tab.info")}</TabsTrigger>
+            <TabsTrigger value="schedule">
+              {t(
+                contract.direction === "Upstream"
+                  ? "contracts.detail.tab.receivableSchedule"
+                  : "contracts.detail.tab.payableSchedule",
+              )}
+              {contract.paymentMilestones.length > 0 ? (
+                <span className="ml-1 text-xs text-slate-400">
+                  ({contract.paymentMilestones.length})
+                </span>
               ) : null}
-            </TabsList>
-          </div>
+            </TabsTrigger>
+            <TabsTrigger value="appendices">
+              {t("contracts.detail.tab.appendices")}
+              {appendices.length > 0 ? (
+                <span className="ml-1 text-xs text-slate-400">({appendices.length})</span>
+              ) : null}
+            </TabsTrigger>
+            <TabsTrigger value="documents">
+              {t("contracts.detail.tab.documents")}
+              {attachments.length > 0 ? (
+                <span className="ml-1 text-xs text-slate-400">({attachments.length})</span>
+              ) : null}
+            </TabsTrigger>
+            <TabsTrigger value="timeline">{t("contracts.detail.tab.timeline")}</TabsTrigger>
+            {contract.direction === "Upstream" ? (
+              <TabsTrigger value="care">{t("contracts.care.title")}</TabsTrigger>
+            ) : null}
+          </ScrollableTabsList>
 
           <TabsContent value="info" className="mt-4">
             {editing && form ? (

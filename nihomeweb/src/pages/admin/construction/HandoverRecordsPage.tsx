@@ -32,6 +32,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { LocalizedDateInput } from "@/components/ui/localized-inputs";
 import { Label } from "@/components/ui/label";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
@@ -720,8 +721,7 @@ export default function HandoverRecordsPage() {
             </div>
             <div className="space-y-1.5">
               <Label>{t("handover.filter.plannedFrom")}</Label>
-              <Input
-                type="date"
+              <LocalizedDateInput
                 value={plannedFrom}
                 onChange={(event) => {
                   setPlannedFrom(event.target.value);
@@ -731,8 +731,7 @@ export default function HandoverRecordsPage() {
             </div>
             <div className="space-y-1.5">
               <Label>{t("handover.filter.plannedTo")}</Label>
-              <Input
-                type="date"
+              <LocalizedDateInput
                 value={plannedTo}
                 onChange={(event) => {
                   setPlannedTo(event.target.value);
@@ -1279,8 +1278,7 @@ export default function HandoverRecordsPage() {
             </div>
             <div className="space-y-1.5">
               <Label>{t("handover.field.plannedDate")}</Label>
-              <Input
-                type="date"
+              <LocalizedDateInput
                 value={form.plannedHandoverDate}
                 onChange={(event) =>
                   setForm((current) => ({ ...current, plannedHandoverDate: event.target.value }))

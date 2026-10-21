@@ -14,6 +14,8 @@ import {
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { resolveSafeLinkUrl } from "@/lib/url";
+import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+import type { PDFDocumentProxy } from "pdfjs-dist";
 
 type PreviewKind = "docx" | "image" | "pdf" | "text" | "unsupported";
 
@@ -151,6 +153,135 @@ function DocxPreview({ blob, testId }: { blob: Blob; testId?: string }) {
   );
 }
 
+function PdfPreview({ blob, testId }: { blob: Blob; testId?: string }) {
+  const { t } = useI18n();
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [document, setDocument] = useState<PDFDocumentProxy | null>(null);
+  const [pageNumber, setPageNumber] = useState(1);
+  const [rendering, setRendering] = useState(true);
+  const [renderFailed, setRenderFailed] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    let loadedDocument: PDFDocumentProxy | null = null;
+    setDocument(null);
+    setPageNumber(1);
+    setRendering(true);
+    setRenderFailed(false);
+
+    void import("pdfjs-dist")
+      .then(async (pdfjs) => {
+        pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
+        const bytes = await blob.arrayBuffer();
+        loadedDocument = await pdfjs.getDocument({ data: bytes }).promise;
+        if (!cancelled) setDocument(loadedDocument);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setRendering(false);
+          setRenderFailed(true);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+      void loadedDocument?.destroy();
+    };
+  }, [blob]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!document || !canvas) return;
+    let cancelled = false;
+    setRendering(true);
+    setRenderFailed(false);
+
+    void document
+      .getPage(pageNumber)
+      .then((page) => {
+        if (cancelled) return;
+        const viewport = page.getViewport({ scale: 1.4 });
+        const ratio = window.devicePixelRatio || 1;
+        canvas.width = Math.floor(viewport.width * ratio);
+        canvas.height = Math.floor(viewport.height * ratio);
+        canvas.style.width = `${Math.floor(viewport.width)}px`;
+        canvas.style.height = `${Math.floor(viewport.height)}px`;
+        const context = canvas.getContext("2d");
+        if (!context) throw new Error("Canvas is unavailable");
+        return page.render({
+          canvas,
+          canvasContext: context,
+          viewport,
+          transform: ratio === 1 ? undefined : [ratio, 0, 0, ratio, 0, 0],
+        }).promise;
+      })
+      .then(() => {
+        if (!cancelled) setRendering(false);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setRendering(false);
+          setRenderFailed(true);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [document, pageNumber]);
+
+  if (renderFailed) {
+    return (
+      <div className="flex h-[70vh] items-center justify-center p-8 text-center text-sm text-muted-foreground">
+        <div>
+          <FileWarning className="mx-auto mb-3 h-10 w-10" />
+          <p>{t("common.previewUnavailable")}</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-[70vh] w-full flex-col overflow-hidden bg-muted/50">
+      <div className="flex items-center justify-center gap-2 border-b bg-background p-2">
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={pageNumber <= 1}
+          onClick={() => setPageNumber((current) => current - 1)}
+        >
+          {t("common.prev")}
+        </Button>
+        <span className="min-w-28 text-center text-sm text-muted-foreground">
+          {t("common.pdf.page", { page: pageNumber, total: document?.numPages ?? 0 })}
+        </span>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={!document || pageNumber >= document.numPages}
+          onClick={() => setPageNumber((current) => current + 1)}
+        >
+          {t("common.next")}
+        </Button>
+      </div>
+      <div className="relative flex flex-1 justify-center overflow-auto p-3 sm:p-6">
+        {rendering ? (
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-muted/50">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : null}
+        <canvas
+          ref={canvasRef}
+          className="h-max max-w-full bg-white shadow"
+          data-testid={testId ? `${testId}-pdf` : undefined}
+        />
+      </div>
+    </div>
+  );
+}
+
 export default function AdminFilePreview({
   url,
   fileName,
@@ -185,8 +316,14 @@ export default function AdminFilePreview({
 
   const handleOpenChange = async (nextOpen: boolean) => {
     setOpen(nextOpen);
-    const shouldFetchDirectDocx = previewKind === "docx" && href && !fetchFile;
-    if (!nextOpen || (!fetchFile && !shouldFetchDirectDocx) || blobHrefRef.current || fileLoading)
+    const shouldFetchDirectPreview =
+      (previewKind === "docx" || previewKind === "pdf") && href && !fetchFile;
+    if (
+      !nextOpen ||
+      (!fetchFile && !shouldFetchDirectPreview) ||
+      blobHrefRef.current ||
+      fileLoading
+    )
       return;
 
     setFileLoading(true);
@@ -289,13 +426,17 @@ export default function AdminFilePreview({
         <div className="flex min-h-[50vh] flex-1 items-center justify-center overflow-auto rounded-md border bg-muted/30">
           {fileLoading ? (
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          ) : fileLoadFailed || !effectiveHref || (previewKind === "docx" && !fileBlob) ? (
+          ) : fileLoadFailed ||
+            !effectiveHref ||
+            ((previewKind === "docx" || previewKind === "pdf") && !fileBlob) ? (
             <div className="max-w-md p-8 text-center text-sm text-muted-foreground">
               <FileWarning className="mx-auto mb-3 h-10 w-10" />
               <p>{t("common.previewUnavailable")}</p>
             </div>
           ) : previewKind === "docx" ? (
             <DocxPreview blob={fileBlob!} testId={testId} />
+          ) : previewKind === "pdf" ? (
+            <PdfPreview blob={fileBlob!} testId={testId} />
           ) : previewKind === "image" ? (
             <img
               src={effectiveHref}
@@ -303,7 +444,7 @@ export default function AdminFilePreview({
               className="max-h-[70vh] max-w-full object-contain"
               data-testid={testId ? `${testId}-image` : undefined}
             />
-          ) : previewKind === "pdf" || previewKind === "text" ? (
+          ) : previewKind === "text" ? (
             <iframe
               src={effectiveHref}
               title={`${t("common.filePreviewTitle")}: ${displayName}`}

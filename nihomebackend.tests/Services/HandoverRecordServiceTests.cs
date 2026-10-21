@@ -378,6 +378,46 @@ public class HandoverRecordServiceTests : IDisposable
         Assert.NotNull(await _sut.GetAsync(own.Id, outsider.Id, true));
     }
 
+    [Fact]
+    public async Task ListAsync_summary_counts_match_the_active_filters()
+    {
+        SeedReadyUpstream();
+        var matching = await _sut.CreateAsync(Request(complete: true), _userId, false);
+        var otherUser = AddUser("0900000150", "summary.other@example.com");
+        var otherCustomer = new Customer { Name = "Summary Other", Type = CustomerType.Company };
+        _db.Customers.Add(otherCustomer);
+        await _db.SaveChangesAsync();
+        var otherProject = new DesignProject
+        {
+            ProjectCode = "DP-2026-HO-B",
+            Name = "Unrelated handover",
+            CustomerId = otherCustomer.Id,
+            ProjectManagerUserId = otherUser.Id,
+            CurrentStage = DesignProjectStage.Completed,
+        };
+        _db.DesignProjects.Add(otherProject);
+        await _db.SaveChangesAsync();
+        _db.HandoverRecords.Add(new HandoverRecord
+        {
+            DesignProjectId = otherProject.Id,
+            HandoverCode = "HO-9999",
+            Title = "Unrelated record",
+            PlannedHandoverDate = new DateOnly(2026, 9, 1),
+            ResponsibleUserId = otherUser.Id,
+            Status = HandoverStatus.HandedOver,
+        });
+        await _db.SaveChangesAsync();
+
+        var result = await _sut.ListAsync(
+            new HandoverRecordListParams { Search = matching.HandoverCode }, _userId, true);
+
+        Assert.Single(result.Items);
+        Assert.Equal(1, result.Total);
+        Assert.Equal(1, result.ReadyCount);
+        Assert.Equal(1, result.StatusCounts[nameof(HandoverStatus.Draft)]);
+        Assert.DoesNotContain(nameof(HandoverStatus.HandedOver), result.StatusCounts.Keys);
+    }
+
     private ApplicationUser AddUser(string phone, string email)
     {
         var user = new ApplicationUser

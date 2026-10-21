@@ -12,7 +12,7 @@ test("approved opportunity quote sends the edited preview through SMTP before cu
 }) => {
   test.skip(
     !mailSinkUrl,
-    "Run with docker-compose-dev.yaml and MAIL_SINK_URL=http://127.0.0.1:8025",
+    "Run with docker-compose-e2e.yaml and MAIL_SINK_URL=http://127.0.0.1:8025",
   );
 
   const headers = { Authorization: `Bearer ${await loginAs(TEST_USERS.salesManager)}` };

@@ -7,7 +7,8 @@ import { cn } from "@/lib/utils";
 import { extractApiError } from "@/lib/apiError";
 import { PageLoading, PageError } from "@/components/PageState";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollableTabsList } from "@/components/ui/scrollable-tabs-list";
 import {
   adminApi,
   type DesignProjectResponse,
@@ -253,7 +254,11 @@ const AdminDesignProjectDetail = () => {
         </header>
 
         <Tabs value={initialTab} onValueChange={selectTab}>
-          <TabsList className="h-auto w-full justify-start overflow-x-auto whitespace-nowrap">
+          <ScrollableTabsList
+            previousLabel={t("common.prev")}
+            nextLabel={t("common.next")}
+            className="whitespace-nowrap"
+          >
             <TabsTrigger value="overview">{t("designProjects.detail.tab.overview")}</TabsTrigger>
             <TabsTrigger value="concept">{t("designProjects.detail.tab.concept")}</TabsTrigger>
             <TabsTrigger value="basic">{t("designProjects.detail.tab.basic")}</TabsTrigger>
@@ -263,7 +268,7 @@ const AdminDesignProjectDetail = () => {
             <TabsTrigger value="schedule">{t("designProjects.detail.tab.schedule")}</TabsTrigger>
             <TabsTrigger value="reviews">{t("designProjects.detail.tab.reviews")}</TabsTrigger>
             <TabsTrigger value="docs">{t("designProjects.detail.tab.docs")}</TabsTrigger>
-          </TabsList>
+          </ScrollableTabsList>
 
           <TabsContent value="overview">
             <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">

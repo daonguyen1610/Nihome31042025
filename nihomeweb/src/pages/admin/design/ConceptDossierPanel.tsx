@@ -4,6 +4,7 @@ import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { LocalizedFileInput } from "@/components/ui/localized-inputs";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -453,12 +454,11 @@ export const ConceptDossierPanel = ({
                   ) : null}
                   <div className="space-y-1.5">
                     <Label htmlFor={`${prefix}-file`}>{t("concepts.dossier.chooseFile")}</Label>
-                    <Input
+                    <LocalizedFileInput
                       ref={fileInput}
                       id={`${prefix}-file`}
-                      type="file"
                       accept={accept}
-                      className="min-h-11"
+                      selectedFileName={file?.name}
                       aria-describedby={`${prefix}-file-hint`}
                       onChange={(event) => {
                         setFile(event.target.files?.[0] ?? null);

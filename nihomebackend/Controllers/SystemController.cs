@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Reflection;
 using NihomeBackend.Authorization;
 using NihomeBackend.Models;
 using NihomeBackend.Services;
@@ -34,6 +35,9 @@ public class SystemController(
                 .GetRequiredService<IHostEnvironment>()
                 .EnvironmentName,
             Status = "Healthy",
+            BuildSha = Assembly.GetExecutingAssembly()
+                .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
+                .InformationalVersion ?? "unknown",
             TimestampUtc = timeService.GetUtcNow()
         });
     }

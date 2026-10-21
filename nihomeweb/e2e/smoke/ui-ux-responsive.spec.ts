@@ -79,3 +79,38 @@ test("homepage search retains filters through reload and clears them", async ({ 
   await page.getByRole("button", { name: /Clear search/ }).click();
   await expect(page).not.toHaveURL(/location=/);
 });
+
+test("long detail tabs expose keyboard-operable mobile scroll controls", async ({
+  api,
+  page,
+  loginAs,
+  loginInBrowserAs,
+}) => {
+  const headers = { Authorization: `Bearer ${await loginAs(TEST_USERS.superAdmin)}` };
+  const [projectsResponse, contractsResponse] = await Promise.all([
+    api.get("/api/design-projects?page=1&pageSize=1", { headers }),
+    api.get("/api/contracts?page=1&pageSize=1", { headers }),
+  ]);
+  expect(projectsResponse.ok()).toBeTruthy();
+  expect(contractsResponse.ok()).toBeTruthy();
+  const projectId = ((await projectsResponse.json()).items as Array<{ id: number }>)[0]?.id;
+  const contractId = ((await contractsResponse.json()).items as Array<{ id: number }>)[0]?.id;
+  expect(projectId).toBeGreaterThan(0);
+  expect(contractId).toBeGreaterThan(0);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript(() => localStorage.setItem("nicon_lang", "en"));
+  await loginInBrowserAs(page, TEST_USERS.superAdmin);
+
+  for (const route of [`/admin/design-projects/${projectId}`, `/admin/contracts/${contractId}`]) {
+    await page.goto(route, { waitUntil: "networkidle" });
+    const next = page.getByTestId("scrollable-tabs-next");
+    await expect(next).toBeVisible();
+    await next.focus();
+    await page.keyboard.press("Enter");
+    await expect(page.getByTestId("scrollable-tabs-previous")).toBeVisible();
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+    ).toBeTruthy();
+  }
+});
