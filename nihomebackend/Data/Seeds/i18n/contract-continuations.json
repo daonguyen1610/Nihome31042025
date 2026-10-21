@@ -110,5 +110,21 @@
     "en": "Follow-on opportunity source contract (history retained)",
     "zh": "后续商机的来源合同（保留历史）",
     "ja": "後続商談の元契約（履歴を保持）"
+  },
+  {
+    "key": "continuation.refreshSource",
+    "category": "contracts",
+    "vi": "Cập nhật hợp đồng nguồn",
+    "en": "Refresh source contract",
+    "zh": "刷新来源合同",
+    "ja": "元契約を再読込"
+  },
+  {
+    "key": "continuation.referenceLoadError",
+    "category": "contracts",
+    "vi": "Chưa tải đủ khách hàng hoặc dự án. Kiểm tra kết nối rồi thử lại.",
+    "en": "Customers or projects could not be loaded. Check your connection and retry.",
+    "zh": "客户或项目未能加载。请检查连接后重试。",
+    "ja": "顧客またはプロジェクトを読み込めませんでした。接続を確認して再試行してください。"
   }
 ]

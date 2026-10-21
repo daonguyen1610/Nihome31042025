@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { adminApi, type ContractResponse } from "@/services/adminApi";
 import { extractApiError } from "@/lib/apiError";
 
@@ -10,6 +10,8 @@ export function useContractContinuation(sourceId: number | null, opportunityId?:
   const [inherited, setInherited] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [revision, setRevision] = useState(0);
+  const generation = useRef(0);
   useEffect(() => {
     let active = true;
     setSource(null);
@@ -47,8 +49,29 @@ export function useContractContinuation(sourceId: number | null, opportunityId?:
     })();
     return () => {
       active = false;
+      generation.current += 1;
     };
-  }, [sourceId, opportunityId]);
+  }, [sourceId, opportunityId, revision]);
+
+  // Refresh only the source snapshot. Keep entered terms and purpose intact so
+  // a stale-version conflict can be reviewed without discarding the draft.
+  const refresh = async () => {
+    if (!source) {
+      setRevision((value) => value + 1);
+      return;
+    }
+    setLoading(true);
+    setError("");
+    const currentGeneration = generation.current;
+    try {
+      const { data } = await adminApi.getContract(source.id);
+      if (generation.current === currentGeneration) setSource(data);
+    } catch (e) {
+      if (generation.current === currentGeneration) setError(extractApiError(e));
+    } finally {
+      if (generation.current === currentGeneration) setLoading(false);
+    }
+  };
   return {
     source,
     kind,
@@ -59,6 +82,7 @@ export function useContractContinuation(sourceId: number | null, opportunityId?:
     setReason,
     loading,
     error,
+    refresh,
     payload: source
       ? {
           sourceContractId: source.id,

@@ -6,7 +6,7 @@ import { extractApiError } from "@/lib/apiError";
 import { useContractContinuation } from "@/hooks/useContractContinuation";
 import { usePermissions } from "@/hooks/usePermissions";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 
 export function ContinuationFields({
@@ -15,7 +15,17 @@ export function ContinuationFields({
   context: ReturnType<typeof useContractContinuation>;
 }) {
   const { t } = useI18n();
-  if (context.error) return <p role="alert">{context.error}</p>;
+  if (context.error)
+    return (
+      <div className="space-y-2">
+        <p role="alert" className="text-destructive">
+          {context.error}
+        </p>
+        <Button variant="outline" onClick={() => void context.refresh()}>
+          {t("common.refresh")}
+        </Button>
+      </div>
+    );
   if (context.loading) return <p role="status">{t("common.loading")}</p>;
   if (!context.source) return null;
   return (
@@ -38,14 +48,19 @@ export function ContinuationFields({
         ))}
       </select>
       <Label htmlFor="continuation-reason">{t("continuation.reason")}</Label>
-      <Input
+      <Textarea
         id="continuation-reason"
+        rows={3}
+        aria-required="true"
         value={context.reason}
         maxLength={2000}
         readOnly={context.inherited}
         onChange={(e) => context.setReason(e.target.value)}
       />
       <p className="text-sm text-muted-foreground">{t("continuation.help")}</p>
+      <Button variant="outline" onClick={() => void context.refresh()}>
+        {t("continuation.refreshSource")}
+      </Button>
     </section>
   );
 }
