@@ -124,7 +124,9 @@ test("Concept dossier preserves context and supports accessible responsive forms
   await expect(
     dossier.getByText("Giữ sân trong để lấy sáng tự nhiên.", { exact: true }),
   ).toBeVisible();
-  await expect(dossier.getByText(/Biên bản họp Concept, mục 3/)).toBeVisible();
+  await expect(
+    dossier.getByRole("definition").filter({ hasText: "Biên bản họp Concept, mục 3" }),
+  ).toBeVisible();
   await expect(dossier.getByRole("status")).toHaveText(/Đã lưu thay đổi|Changes saved/i);
   await expect(dossier.getByLabel(/Tên người góp ý|Client representative name/i)).toHaveValue(
     "Ông Nguyễn Minh - Chủ đầu tư",
