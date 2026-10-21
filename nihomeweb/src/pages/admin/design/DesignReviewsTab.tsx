@@ -6,6 +6,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -69,6 +70,7 @@ export const DesignReviewsTab = ({ project }: Props) => {
   const [signedBy, setSignedBy] = useState<Record<number, string>>({});
   const [signedAt, setSignedAt] = useState<Record<number, string>>({});
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [busy, setBusy] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
@@ -79,13 +81,14 @@ export const DesignReviewsTab = ({ project }: Props) => {
   const [notes, setNotes] = useState<Record<number, string>>({});
   const [commentDocumentIds, setCommentDocumentIds] = useState<Record<number, string>>({});
   const createKey = useRef(newIdempotencyKey());
+  const createTrigger = useRef<HTMLButtonElement>(null);
 
   const load = useCallback(async () => {
     if (!project.operationalProjectId) {
       setLoading(false);
       return;
     }
-    setLoading(true);
+    setRefreshing(true);
     setError(null);
     try {
       const [reviewResponse, teamResponse, documentResponse] = await Promise.all([
@@ -114,6 +117,7 @@ export const DesignReviewsTab = ({ project }: Props) => {
       setError(extractApiError(reason));
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, [canCreate, project.id, project.operationalProjectId]);
   useEffect(() => {
@@ -133,7 +137,6 @@ export const DesignReviewsTab = ({ project }: Props) => {
         .filter(
           (item) =>
             stage !== "Concept" ||
-            !conceptRevisionId ||
             conceptRevisions
               .find((revision) => revision.id === Number(conceptRevisionId))
               ?.artifacts.some((artifact) => artifact.projectDocumentId === item.id),
@@ -276,15 +279,39 @@ export const DesignReviewsTab = ({ project }: Props) => {
             <h2 className="font-semibold text-slate-900">{t("designProjects.reviews.title")}</h2>
             <p className="mt-1 text-sm text-slate-500">{t("designProjects.reviews.description")}</p>
           </div>
-          {canCreate ? (
-            <Button className="min-h-11" onClick={() => setOpen(true)}>
-              <Plus className="mr-1 h-4 w-4" />
-              {t("designProjects.reviews.create")}
+          <div className="flex flex-wrap gap-2">
+            <Button
+              className="min-h-11"
+              variant="outline"
+              disabled={refreshing || busy !== null}
+              onClick={() => void load()}
+            >
+              <RefreshCw
+                aria-hidden="true"
+                className={refreshing ? "mr-1 h-4 w-4 animate-spin" : "mr-1 h-4 w-4"}
+              />
+              {t("common.refresh")}
             </Button>
-          ) : null}
+            {canCreate ? (
+              <Button
+                ref={createTrigger}
+                className="min-h-11"
+                onClick={() => {
+                  setError(null);
+                  setOpen(true);
+                }}
+              >
+                <Plus className="mr-1 h-4 w-4" />
+                {t("designProjects.reviews.create")}
+              </Button>
+            ) : null}
+          </div>
         </div>
-        {error ? (
-          <div className="mt-3 rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
+        {error && !open ? (
+          <div
+            role="alert"
+            className="mt-3 rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700"
+          >
             <p>{error}</p>
             <Button variant="outline" size="sm" className="mt-2" onClick={() => void load()}>
               <RefreshCw className="mr-1 h-4 w-4" />
@@ -307,8 +334,18 @@ export const DesignReviewsTab = ({ project }: Props) => {
               <div className="min-w-0">
                 <h3 className="break-words font-semibold">{review.title}</h3>
                 <p className="text-xs text-slate-500">
-                  {t(`designProjects.stage.${review.stage}`)} / R{review.revisionNumber}
+                  {t(`designProjects.stage.${review.stage}`)} · {t("concepts.dossier.reviewRound")}{" "}
+                  {review.revisionNumber.toLocaleString(lang)}
                 </p>
+                {review.conceptRevisionId &&
+                conceptRevisions.some((item) => item.id === review.conceptRevisionId) ? (
+                  <p className="mt-1 text-sm text-slate-600">
+                    {conceptOptions.find((item) => item.id === review.conceptOptionId)?.name} · R
+                    {String(
+                      conceptRevisions.find((item) => item.id === review.conceptRevisionId)?.number,
+                    ).padStart(2, "0")}
+                  </p>
+                ) : null}
               </div>
               <Badge variant="outline">{t(`designProjects.reviews.status.${review.status}`)}</Badge>
             </div>
@@ -323,13 +360,16 @@ export const DesignReviewsTab = ({ project }: Props) => {
                   type="button"
                   size="sm"
                   variant="outline"
+                  className="h-auto min-h-11 max-w-full py-2"
                   disabled={busy === review.id}
                   onClick={() =>
                     void download(review, document.projectDocumentId, document.originalFileName)
                   }
                 >
                   <Download className="mr-1 h-4 w-4" />
-                  {document.originalFileName}
+                  <span className="min-w-0 break-all whitespace-normal text-left">
+                    {document.originalFileName}
+                  </span>
                 </Button>
               ))}
             </div>
@@ -374,8 +414,13 @@ export const DesignReviewsTab = ({ project }: Props) => {
             review.status === "SubmittedToClient" &&
             review.conceptOptionId ? (
               <div className="mt-3 space-y-2 rounded border p-3">
-                <Label>{t("concepts.dossier.acceptance")}</Label>
+                <Label className="block" htmlFor={`review-${review.id}-file`}>
+                  {t("concepts.dossier.acceptance")}
+                </Label>
                 <Input
+                  id={`review-${review.id}-file`}
+                  disabled={busy === review.id}
+                  className="min-h-11"
                   type="file"
                   accept=".pdf,.jpg,.jpeg,.png"
                   onChange={(event) =>
@@ -421,13 +466,17 @@ export const DesignReviewsTab = ({ project }: Props) => {
                 >
                   {t("concepts.dossier.uploadAcceptance")}
                 </Button>
+                <Label className="block" htmlFor={`review-${review.id}-acceptance`}>
+                  {t("concepts.dossier.selectAcceptance")}
+                </Label>
                 <Select
+                  disabled={busy === review.id}
                   value={acceptanceDocumentIds[review.id] ?? ""}
                   onValueChange={(value) =>
                     setAcceptanceDocumentIds((current) => ({ ...current, [review.id]: value }))
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger id={`review-${review.id}-acceptance`} className="min-h-11">
                     <SelectValue placeholder={t("concepts.dossier.selectAcceptance")} />
                   </SelectTrigger>
                   <SelectContent>
@@ -437,6 +486,7 @@ export const DesignReviewsTab = ({ project }: Props) => {
                           item.sourceEntityType === "ConceptOption" &&
                           item.sourceRecordId === review.conceptOptionId &&
                           item.category === "DesignConcept" &&
+                          !review.projectDocumentIds.includes(item.id) &&
                           ["application/pdf", "image/jpeg", "image/png"].includes(
                             item.contentType,
                           ) &&
@@ -449,7 +499,23 @@ export const DesignReviewsTab = ({ project }: Props) => {
                       ))}
                   </SelectContent>
                 </Select>
+                {acceptanceDocumentIds[review.id] &&
+                documents.some(
+                  (item) =>
+                    item.id === Number(acceptanceDocumentIds[review.id]) &&
+                    item.syncStatus !== "Synced",
+                ) ? (
+                  <p role="status" className="text-sm text-amber-800">
+                    {t("concepts.dossier.awaitingSync")}
+                  </p>
+                ) : null}
+                <Label className="block" htmlFor={`review-${review.id}-signer`}>
+                  {t("concepts.dossier.signedBy")}
+                </Label>
                 <Input
+                  id={`review-${review.id}-signer`}
+                  disabled={busy === review.id}
+                  className="min-h-11"
                   maxLength={200}
                   value={signedBy[review.id] ?? ""}
                   placeholder={t("concepts.dossier.signedBy")}
@@ -457,7 +523,13 @@ export const DesignReviewsTab = ({ project }: Props) => {
                     setSignedBy((current) => ({ ...current, [review.id]: event.target.value }))
                   }
                 />
+                <Label className="block" htmlFor={`review-${review.id}-signed-at`}>
+                  {t("concepts.dossier.signedAt")}
+                </Label>
                 <Input
+                  id={`review-${review.id}-signed-at`}
+                  disabled={busy === review.id}
+                  className="min-h-11"
                   type="date"
                   value={signedAt[review.id] ?? ""}
                   onChange={(event) =>
@@ -469,26 +541,37 @@ export const DesignReviewsTab = ({ project }: Props) => {
             {review.canComment ||
             (review.canManage &&
               ["InternalReview", "SubmittedToClient"].includes(review.status)) ? (
-              <Textarea
-                className="mt-3"
-                maxLength={4000}
-                value={notes[review.id] ?? ""}
-                placeholder={t("designProjects.reviews.notePlaceholder")}
-                onChange={(event) =>
-                  setNotes((current) => ({ ...current, [review.id]: event.target.value }))
-                }
-              />
+              <div className="mt-3 space-y-1.5">
+                <Label htmlFor={`review-${review.id}-note`}>
+                  {t("designProjects.reviews.notePlaceholder")}
+                </Label>
+                <Textarea
+                  id={`review-${review.id}-note`}
+                  disabled={busy === review.id}
+                  maxLength={4000}
+                  value={notes[review.id] ?? ""}
+                  placeholder={t("designProjects.reviews.notePlaceholder")}
+                  onChange={(event) =>
+                    setNotes((current) => ({ ...current, [review.id]: event.target.value }))
+                  }
+                />
+              </div>
             ) : null}
             {review.canComment && review.status === "InternalReview" ? (
               <div className="mt-3 max-w-sm">
-                <Label>{t("designProjects.reviews.commentTarget")}</Label>
+                <Label htmlFor={`review-${review.id}-comment-target`}>
+                  {t("designProjects.reviews.commentTarget")}
+                </Label>
                 <Select
                   value={commentDocumentIds[review.id] ?? "general"}
                   onValueChange={(value) =>
                     setCommentDocumentIds((current) => ({ ...current, [review.id]: value }))
                   }
                 >
-                  <SelectTrigger className="mt-1 min-h-11">
+                  <SelectTrigger
+                    id={`review-${review.id}-comment-target`}
+                    className="mt-1 min-h-11"
+                  >
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -546,6 +629,12 @@ export const DesignReviewsTab = ({ project }: Props) => {
                       busy === review.id ||
                       (review.stage === "Concept" &&
                         (!acceptanceDocumentIds[review.id] ||
+                          !documents.some(
+                            (item) =>
+                              item.id === Number(acceptanceDocumentIds[review.id]) &&
+                              item.syncStatus === "Synced" &&
+                              !review.projectDocumentIds.includes(item.id),
+                          ) ||
                           !signedBy[review.id]?.trim() ||
                           !signedAt[review.id]))
                     }
@@ -574,21 +663,31 @@ export const DesignReviewsTab = ({ project }: Props) => {
         ))
       )}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-h-[94vh] overflow-y-auto sm:max-w-2xl">
+        <DialogContent
+          className="max-h-[94vh] overflow-y-auto sm:max-w-2xl"
+          onCloseAutoFocus={(event) => {
+            if (createTrigger.current) {
+              event.preventDefault();
+              createTrigger.current.focus();
+            }
+          }}
+        >
           <DialogHeader>
             <DialogTitle>{t("designProjects.reviews.create")}</DialogTitle>
+            <DialogDescription>{t("designProjects.reviews.description")}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label>{t("designProjects.reviews.stage")}</Label>
+              <Label htmlFor="review-stage">{t("designProjects.reviews.stage")}</Label>
               <Select
                 value={stage}
                 onValueChange={(value) => {
                   setStage(value as DesignReviewStage);
                   setDocumentIds([]);
+                  setConceptRevisionId("");
                 }}
               >
-                <SelectTrigger className="mt-1 min-h-11">
+                <SelectTrigger id="review-stage" className="mt-1 min-h-11">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -603,8 +702,9 @@ export const DesignReviewsTab = ({ project }: Props) => {
               </Select>
             </div>
             <div>
-              <Label>{t("designProjects.reviews.reviewTitle")}</Label>
+              <Label htmlFor="review-title">{t("designProjects.reviews.reviewTitle")}</Label>
               <Input
+                id="review-title"
                 className="mt-1 min-h-11"
                 maxLength={300}
                 value={title}
@@ -613,7 +713,7 @@ export const DesignReviewsTab = ({ project }: Props) => {
             </div>
             {stage === "Concept" ? (
               <div className="mb-4">
-                <Label>{t("concepts.dossier.revision")}</Label>
+                <Label htmlFor="review-concept-revision">{t("concepts.dossier.revision")}</Label>
                 <Select
                   value={conceptRevisionId}
                   onValueChange={(value) => {
@@ -625,12 +725,25 @@ export const DesignReviewsTab = ({ project }: Props) => {
                     );
                   }}
                 >
-                  <SelectTrigger className="mt-1">
+                  <SelectTrigger id="review-concept-revision" className="mt-1 min-h-11">
                     <SelectValue placeholder={t("concepts.dossier.selectRevision")} />
                   </SelectTrigger>
                   <SelectContent>
                     {conceptRevisions
-                      .filter((item) => !item.frozenAt)
+                      .filter(
+                        (item) =>
+                          !item.frozenAt &&
+                          !conceptRevisions.some(
+                            (other) =>
+                              other.conceptOptionId === item.conceptOptionId &&
+                              other.number > item.number,
+                          ) &&
+                          conceptOptions.some(
+                            (option) =>
+                              option.id === item.conceptOptionId &&
+                              !["Finalized", "Discarded"].includes(option.status),
+                          ),
+                      )
                       .map((item) => (
                         <SelectItem key={item.id} value={String(item.id)}>
                           {conceptOptions.find((option) => option.id === item.conceptOptionId)
@@ -681,17 +794,35 @@ export const DesignReviewsTab = ({ project }: Props) => {
                 ))}
                 {eligibleDocuments.length === 0 ? (
                   <p className="p-3 text-sm text-slate-500">
-                    {t("designProjects.reviews.noDocuments")}
+                    {t(
+                      stage === "Concept" && !conceptRevisionId
+                        ? "concepts.dossier.selectRevision"
+                        : "designProjects.reviews.noDocuments",
+                    )}
                   </p>
                 ) : null}
               </div>
             </fieldset>
           </div>
+          {error ? (
+            <p role="alert" className="text-sm text-rose-700">
+              {error}
+            </p>
+          ) : null}
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>
               {t("common.cancel")}
             </Button>
-            <Button disabled={busy === 0} onClick={() => void create()}>
+            <Button
+              disabled={
+                busy === 0 ||
+                !title.trim() ||
+                !recipientIds.length ||
+                !documentIds.length ||
+                (stage === "Concept" && !conceptRevisionId)
+              }
+              onClick={() => void create()}
+            >
               {busy === 0 ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : null}
               {t("common.save")}
             </Button>
