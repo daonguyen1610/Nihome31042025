@@ -1617,6 +1617,11 @@ outgoing continuation opportunities as Block. Continuation opportunity deletion
 is also Block; plan fingerprints include the new edges. No related root is
 cascaded or silently unlinked. The demo seeds An Phú's expansion pursuit and
 independent draft `HD-SAMPLE-CONT-001` without modifying existing user records.
+The unique draft contract number identifies this seeded pair on reruns; pursuit
+names are neither unique keys nor evidence of seed ownership. Renaming the
+seeded pursuit or creating another pursuit with the same name must not recreate
+the pair or stop startup. New pairs are persisted together in one SaveChanges,
+after the source's operational-project relationships have been linked.
 
 Focused regression: `ContractContinuationsTests`, `ContractsControllerTests`,
 `ContractQuoteLinkTests`, `OpportunitiesControllerTests`, and the live Compose

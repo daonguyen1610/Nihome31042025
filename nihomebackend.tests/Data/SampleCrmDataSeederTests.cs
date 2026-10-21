@@ -17,6 +17,71 @@ public class SampleCrmDataSeederTests : IDisposable
 
     public void Dispose() => _db.Dispose();
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ContinuationSeed_PreservesExistingIdentityAfterDuplicateNameOrRename(bool rename)
+    {
+        var contract = _db.Contracts.Single(x => x.ContractNumber == "HD-SAMPLE-CONT-001");
+        var opportunity = _db.Opportunities.Single(x => x.Id == contract.OpportunityId);
+        if (rename)
+            opportunity.Name = "An Phú – thương lượng giai đoạn ba";
+        else
+            _db.Opportunities.Add(new Opportunity
+            {
+                Name = opportunity.Name,
+                CustomerId = opportunity.CustomerId,
+                OperationalProjectId = opportunity.OperationalProjectId,
+                OwnerUserId = opportunity.OwnerUserId,
+                SourceContractId = opportunity.SourceContractId,
+                ContinuationKind = "Expansion",
+                ContinuationReason = "Lần đàm phán độc lập do người dùng tạo.",
+                Note = "Nội dung của người dùng cần giữ nguyên.",
+            });
+        _db.SaveChanges();
+        var before = _db.Opportunities.OrderBy(x => x.Id)
+            .Select(x => new { x.Id, x.Name, x.Note, x.SourceContractId }).ToList();
+
+        SampleCrmDataSeeder.Seed(_db);
+        SampleCrmDataSeeder.Seed(_db);
+
+        Assert.Equal(before, _db.Opportunities.OrderBy(x => x.Id)
+            .Select(x => new { x.Id, x.Name, x.Note, x.SourceContractId }).ToList());
+        Assert.Equal(opportunity.Id, contract.OpportunityId);
+    }
+
+    [Fact]
+    public void ContinuationSeed_DoesNotAdoptUnrelatedPursuitsWithTheSameName()
+    {
+        var contract = _db.Contracts.Single(x => x.ContractNumber == "HD-SAMPLE-CONT-001");
+        var original = _db.Opportunities.Single(x => x.Id == contract.OpportunityId);
+        var name = original.Name;
+        _db.Contracts.Remove(contract);
+        _db.Opportunities.Remove(original);
+        var userPursuits = Enumerable.Range(0, 2).Select(index => new Opportunity
+        {
+            Name = name,
+            CustomerId = original.CustomerId,
+            OperationalProjectId = original.OperationalProjectId,
+            OwnerUserId = original.OwnerUserId,
+            SourceContractId = original.SourceContractId,
+            ContinuationKind = "Expansion",
+            ContinuationReason = $"Đàm phán độc lập lần {index + 1}.",
+            Note = "Nội dung do người dùng tạo.",
+        }).ToList();
+        _db.Opportunities.AddRange(userPursuits);
+        _db.SaveChanges();
+
+        SampleCrmDataSeeder.Seed(_db);
+        SampleCrmDataSeeder.Seed(_db);
+
+        var seeded = _db.Contracts.Single(x => x.ContractNumber == "HD-SAMPLE-CONT-001");
+        Assert.DoesNotContain(userPursuits, x => x.Id == seeded.OpportunityId);
+        Assert.Equal(original.SourceContractId, seeded.SourceContractId);
+        Assert.Equal(3, _db.Opportunities.Count(x => x.SourceContractId == original.SourceContractId));
+        Assert.All(userPursuits, x => Assert.Equal("Nội dung do người dùng tạo.", x.Note));
+    }
+
     [Fact]
     public void ResourceHandoffSamples_AreMeaningfulIndependentAndIdempotentWithoutFabricatedSupply()
     {
@@ -54,7 +119,7 @@ public class SampleCrmDataSeederTests : IDisposable
     {
         Assert.Equal(2, _db.Leads.Count());
         Assert.Equal(5, _db.Customers.Count());
-        Assert.Equal(6, _db.Opportunities.Count());
+        Assert.Equal(7, _db.Opportunities.Count());
         Assert.Equal(8, _db.Quotes.Count());
         Assert.Equal(5, _db.OperationalProjects.Count());
         Assert.Equal(3, _db.DesignProjects.Count());
@@ -182,7 +247,7 @@ public class SampleCrmDataSeederTests : IDisposable
         var before = CaptureFingerprint();
         SampleCrmDataSeeder.Seed(_db);
         Assert.Equal(before, CaptureFingerprint());
-        Assert.Equal(6, _db.Opportunities.Count());
+        Assert.Equal(7, _db.Opportunities.Count());
     }
 
     [Fact]
