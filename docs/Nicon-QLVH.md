@@ -223,6 +223,31 @@ khách hàng (`AttemptedAt` có giá trị), không được đổi chiều Hợ
 khi kết quả SMTP chưa xác định. Lịch chưa gửi hoặc bị chặn trước khi gửi
 không tự tạo ràng buộc này.
 
+Theo chỉ đạo người dùng ngày 22/10/2026, triển khai tái ký/phát triển Hợp đồng
+theo quy tắc sau, không chờ xác nhận nghiệp vụ bổ sung từ NICON. Đây là quyết
+định triển khai của người dùng, không được ghi thành biên bản xác nhận NICON:
+
+- Hợp đồng nguồn phải là Upstream, có ngày ký và ở Signed, InProgress, OnHold
+  hoặc Completed. Không bắt buộc chờ hết hạn. Một nguồn có nhiều lần tiếp nối;
+  mỗi Cơ hội/Hợp đồng mới có tối đa một nguồn trực tiếp, mục đích Renewal hoặc
+  Expansion và lý do 1–2.000 ký tự. Quan hệ nguồn được giữ bất biến.
+- Giữ cùng Khách hàng; được chọn Dự án vận hành khác của Khách hàng theo quyền
+  hiện có. Không tự tạo aggregate trên DesignProjectId. Không tự suy diễn giá,
+  lịch hoặc yêu cầu ngày bắt đầu tiếp nối phải sau ngày kết thúc nguồn.
+- Có thể lập Hợp đồng nháp trực tiếp khi đã thống nhất giá trị, hoặc theo Cơ
+  hội/Báo giá đã duyệt hiện có. Không tái sử dụng ngầm Báo giá của Hợp đồng cũ.
+  Cơ hội tiếp nối dùng lifecycle đàm phán/Won/Lost hiện có; Lost bắt buộc lý do
+  và không lập Hợp đồng từ lần theo đuổi đã mất. Khởi tạo lần theo đuổi mới nếu
+  khách quay lại. Hợp đồng lập từ Cơ hội tiếp nối kế thừa nguồn/mục đích/lý do.
+- Hợp đồng mới luôn Draft, số riêng. Không sao chép ngày ký, thanh toán, VO,
+  QS, tệp đã ký, email nhắc hay lịch sử chăm sóc; không đổi trạng thái nguồn.
+  Thay đổi thời hạn của chính Hợp đồng cũ là nghiệp vụ phụ lục, không phải tạo
+  Hợp đồng tiếp nối.
+- Quyền nguồn Hợp đồng và nguồn Cơ hội được kiểm tra độc lập. Tạo tiếp nối
+  yêu cầu phiên bản Hợp đồng nguồn và idempotency key; xóa Hợp đồng hoặc Cơ hội
+  có quan hệ tiếp nối bị chặn để bảo toàn lịch sử/root liên quan. Không đổi Khách hàng/chiều của
+  Hợp đồng có quan hệ; không đổi Khách hàng của Cơ hội tiếp nối.
+
 ### Điểm mở
 
 Quy ước mã Dự án và các field CRM NICON muốn bỏ cần được xác nhận bằng văn bản.

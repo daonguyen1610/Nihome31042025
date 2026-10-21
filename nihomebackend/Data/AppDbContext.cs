@@ -784,6 +784,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         modelBuilder.Entity<Opportunity>(b =>
         {
+            b.HasOne<Contract>().WithMany().HasForeignKey(x => x.SourceContractId).OnDelete(DeleteBehavior.Restrict);
+            b.Property(x => x.ContinuationKind).HasMaxLength(20);
+            b.Property(x => x.ContinuationReason).HasMaxLength(2000);
+
             b.ToTable("opportunities");
             b.HasKey(o => o.Id);
             b.Property(o => o.Name).HasMaxLength(200).IsRequired();
@@ -973,6 +977,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         modelBuilder.Entity<Contract>(b =>
         {
+            b.HasOne<Contract>().WithMany().HasForeignKey(x => x.SourceContractId).OnDelete(DeleteBehavior.Restrict);
+            b.Property(x => x.ContinuationKind).HasMaxLength(20);
+            b.Property(x => x.ContinuationReason).HasMaxLength(2000);
+
             b.ToTable("contracts");
             b.HasKey(c => c.Id);
             b.Property(c => c.ContractNumber).HasMaxLength(40).IsRequired();

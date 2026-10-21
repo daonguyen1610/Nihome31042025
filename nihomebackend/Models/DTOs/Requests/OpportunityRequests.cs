@@ -4,6 +4,16 @@ namespace NihomeBackend.Models.DTOs.Requests;
 
 public class CreateOpportunityRequest
 {
+    [Range(1, int.MaxValue)]
+    public int? SourceContractId { get; set; }
+    [RegularExpression("^(Renewal|Expansion)$")]
+    public string? ContinuationKind { get; set; }
+    [StringLength(2000, MinimumLength = 1)]
+    public string? ContinuationReason { get; set; }
+    [StringLength(24)]
+    public string? SourceContractRowVersion { get; set; }
+
+
     [Required]
     [StringLength(200, MinimumLength = 1)]
     public string Name { get; set; } = string.Empty;

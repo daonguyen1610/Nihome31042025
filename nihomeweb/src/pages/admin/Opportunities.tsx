@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ContinuationFields } from "@/components/admin/ContractContinuations";
+import { useContractContinuation } from "@/hooks/useContractContinuation";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   AlertTriangle,
@@ -133,6 +135,8 @@ const contractFormPath = (opportunity: OpportunityResponse, quote?: QuoteListIte
     params.set("operationalProjectId", String(opportunity.operationalProjectId));
   if (quote) params.set("fromQuote", String(quote.id));
   params.set("opportunityId", String(opportunity.id));
+  if (opportunity.sourceContractId)
+    params.set("sourceContractId", String(opportunity.sourceContractId));
   if (quote && quote.grandTotal > 0) params.set("value", String(quote.grandTotal));
   return `/admin/contracts?${params.toString()}`;
 };
@@ -289,10 +293,24 @@ const AdminOpportunities = () => {
   // ---------- create ----------
   const [creating, setCreating] = useState(false);
   const [createForm, setCreateForm] = useState<CreateOpportunityRequest>(emptyCreate());
+  const sourceContractId = Number(searchParams.get("sourceContractId")) || null;
+  const continuation = useContractContinuation(sourceContractId);
+  const createAttempt = useRef({ body: "", key: "" });
+  useEffect(() => {
+    if (!continuation.source) return;
+    setCreateForm({
+      ...emptyCreate(),
+      customerId: continuation.source.customerId,
+      operationalProjectId: continuation.source.operationalProjectId,
+      name: continuation.source.contractNumber,
+    });
+    setCreating(true);
+  }, [continuation.source]);
   const [saving, setSaving] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
 
   const openCreate = () => {
+    createAttempt.current = { body: "", key: "" };
     setCreateForm(emptyCreate());
     setCreateError(null);
     setCreating(true);
@@ -304,14 +322,35 @@ const AdminOpportunities = () => {
       setCreateError(t("opportunities.validation.missingFields"));
       return;
     }
+    if (saving) return;
+    if (
+      continuation.loading ||
+      continuation.error ||
+      (sourceContractId && !continuation.source) ||
+      (continuation.source &&
+        (!continuation.reason.trim() || continuation.reason.trim().length > 2000))
+    ) {
+      setCreateError(continuation.error || t("continuation.validation"));
+      return;
+    }
     setSaving(true);
     try {
-      await adminApi.createOpportunity({
+      const payload = {
+        ...continuation.payload,
         ...createForm,
         name: createForm.name.trim(),
         note: createForm.note?.trim() || undefined,
         expectedCloseDate: createForm.expectedCloseDate || null,
-      });
+      };
+      const serialized = JSON.stringify(payload);
+      if (createAttempt.current.body !== serialized)
+        createAttempt.current = { body: serialized, key: crypto.randomUUID() };
+      const created = await adminApi.createOpportunity(payload, createAttempt.current.key);
+      if (continuation.source) {
+        setCreating(false);
+        navigate(`/admin/opportunities/${created.data.id}`);
+        return;
+      }
       toast({ title: t("opportunities.created") });
       setCreating(false);
       await fetchList();
@@ -1154,6 +1193,7 @@ const AdminOpportunities = () => {
             <DialogDescription>{t("opportunities.subtitle")}</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
+            <ContinuationFields context={continuation} />
             <div>
               <Label>{t("opportunities.field.name")}</Label>
               <Input
@@ -1164,6 +1204,7 @@ const AdminOpportunities = () => {
             <div>
               <Label>{t("opportunities.field.customer")}</Label>
               <Select
+                disabled={!!continuation.source}
                 value={createForm.customerId ? String(createForm.customerId) : ""}
                 onValueChange={(v) =>
                   setCreateForm({
@@ -1342,6 +1383,14 @@ const AdminOpportunities = () => {
                     </span>
                   </DialogTitle>
                   <DialogDescription>
+                    {detail.sourceContractId && canViewContracts && (
+                      <Link
+                        className="mr-2 underline"
+                        to={`/admin/contracts/${detail.sourceContractId}`}
+                      >
+                        {t("continuation.source")}
+                      </Link>
+                    )}
                     {detail.customerName ??
                       customerLabel.get(detail.customerId) ??
                       `#${detail.customerId}`}

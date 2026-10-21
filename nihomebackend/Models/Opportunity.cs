@@ -9,6 +9,11 @@ public class Opportunity : IConcurrencyTracked
 {
     public int Id { get; set; }
 
+    public int? SourceContractId { get; set; }
+    public string? ContinuationKind { get; set; }
+    public string? ContinuationReason { get; set; }
+
+
     /// <summary>Display name of the opportunity, e.g. "Nhà máy Alpha giai đoạn 2".</summary>
     public string Name { get; set; } = string.Empty;
 

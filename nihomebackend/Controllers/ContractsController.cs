@@ -225,13 +225,17 @@ public class ContractsController(
 
     [HttpPost]
     [RequirePermission("crm.contracts", "manage")]
-    [Idempotency("crm.contracts.create")]
+    [Idempotency("crm.contracts.create", typeof(ContinuationCreateIdempotencyGuard))]
     public async Task<ActionResult<ContractResponse>> Create(
         [FromBody] UpsertContractRequest req, CancellationToken ct)
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
 
+        if ((req.SourceContractId.HasValue || req.OpportunityId.HasValue && await db.Opportunities.AnyAsync(x => x.Id == req.OpportunityId && x.SourceContractId != null, ct) ||
+            req.QuoteId.HasValue && await db.Quotes.AnyAsync(x => x.Id == req.QuoteId && x.Opportunity.SourceContractId != null, ct)) &&
+            !IdempotencyService.IsValidKey(Request.Headers["Idempotency-Key"].FirstOrDefault()))
+            return BadRequest(new { message = "Idempotency-Key is required for a continuation." });
         // Only manager-tier callers (crm.contracts.view.all) can pin the
         // owner to a different user on create; sales users always own what
         // they create so they can still see it.

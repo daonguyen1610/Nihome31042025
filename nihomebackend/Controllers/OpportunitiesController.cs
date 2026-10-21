@@ -116,7 +116,7 @@ public class OpportunitiesController(
 
     [HttpPost]
     [RequirePermission("crm.opportunities", "manage")]
-    [Idempotency("crm.opportunities.create")]
+    [Idempotency("crm.opportunities.create", typeof(ContinuationCreateIdempotencyGuard))]
     public async Task<ActionResult<OpportunityResponse>> Create(
         [FromBody] CreateOpportunityRequest request,
         CancellationToken ct)
@@ -125,6 +125,8 @@ public class OpportunitiesController(
         if (userId is null) return Unauthorized();
 
         var canManage = await permissions.HasAsync(userId.Value, "crm.opportunities.manage", ct);
+        if (request.SourceContractId.HasValue && !IdempotencyService.IsValidKey(Request.Headers["Idempotency-Key"].FirstOrDefault()))
+            return BadRequest(new { message = "Idempotency-Key is required for a continuation." });
         var canSeeAll = await permissions.HasAsync(userId.Value, "crm.opportunities.view.all", ct);
         var canSeeAllCustomers = await permissions.HasAsync(userId.Value, "crm.customers.view.all", ct);
         try

@@ -76,6 +76,7 @@ public static class SampleCrmDataSeeder
         SeedOperationalProjects(db, owner, projectManager, now);
         SeedContracts(db, owner, now, webRootPath);
         SeedContractCareActivities(db, owner, now);
+        SeedContractContinuations(db, owner, now);
         SeedCapabilityDocuments(db, owner, now, webRootPath);
         SeedTenders(db, owner, now);
         SeedSurveys(db, owner, now);
@@ -914,6 +915,59 @@ public static class SampleCrmDataSeeder
     }
 
     private const string SampleContractMarker = "[SAMPLE_CONTRACT]";
+
+    private static void SeedContractContinuations(AppDbContext db, ApplicationUser owner, DateTime now)
+    {
+        var source = db.Contracts.SingleOrDefault(x => x.ContractNumber == "HD-SAMPLE-003" && x.Direction == ContractDirection.Upstream &&
+            x.Note != null && x.Note.StartsWith(SampleContractMarker));
+        if (source is null || source.SignedDate is null || source.Status is ContractStatus.Draft or ContractStatus.Cancelled) return;
+        const string name = "An Phú – mở rộng thiết kế nhà điều hành";
+        var opportunity = db.Opportunities.SingleOrDefault(x => x.SourceContractId == source.Id && x.Name == name);
+        if (opportunity is null)
+        {
+            opportunity = new Opportunity
+            {
+                Name = name,
+                CustomerId = source.CustomerId,
+                OperationalProjectId = source.OperationalProjectId,
+                OwnerUserId = owner.Id,
+                SourceContractId = source.Id,
+                ContinuationKind = "Expansion",
+                ContinuationReason = "Chủ đầu tư An Phú trao đổi thiết kế thêm khu nhà điều hành; cần thương lượng phạm vi và ngân sách riêng.",
+                Stage = OpportunityStage.Prospecting,
+                EstimatedValue = 350000000,
+                WinProbability = 20,
+                ExpectedCloseDate = now.AddDays(30),
+                CreatedByUserId = owner.Id,
+                UpdatedByUserId = owner.Id,
+            };
+            db.Opportunities.Add(opportunity);
+            db.SaveChanges();
+        }
+        if (!db.Contracts.Any(x => x.ContractNumber == "HD-SAMPLE-CONT-001"))
+        {
+            db.Contracts.Add(new Contract
+            {
+                ContractNumber = "HD-SAMPLE-CONT-001",
+                CustomerId = source.CustomerId,
+                OperationalProjectId = source.OperationalProjectId,
+                OpportunityId = opportunity.Id,
+                OwnerUserId = owner.Id,
+                SourceContractId = source.Id,
+                ContinuationKind = "Expansion",
+                ContinuationReason = opportunity.ContinuationReason,
+                Direction = ContractDirection.Upstream,
+                Type = ContractType.Design,
+                Status = ContractStatus.Draft,
+                Value = 350000000,
+                ScopeOfWork = "Thiết kế khu nhà điều hành mở rộng Nhà máy may An Phú – dự thảo, chưa ký.",
+                Note = "[SAMPLE] Hợp đồng phát triển mới từ quan hệ khách hàng An Phú.",
+                CreatedByUserId = owner.Id,
+                UpdatedByUserId = owner.Id,
+            });
+            db.SaveChanges();
+        }
+    }
 
     private static void SeedContractCareActivities(AppDbContext db, ApplicationUser owner, DateTime now)
     {

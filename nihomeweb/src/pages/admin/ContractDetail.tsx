@@ -28,6 +28,7 @@ import QuoteContractLinkDialog from "@/components/admin/QuoteContractLinkDialog"
 import ContractSourceLeads from "@/components/admin/ContractSourceLeads";
 import ContractExecutionProgress from "@/components/admin/ContractExecutionProgress";
 import ContractCareActivities from "@/components/admin/ContractCareActivities";
+import ContractContinuations from "@/components/admin/ContractContinuations";
 import ContractReminders from "@/components/admin/ContractReminders";
 import LegalActivationWizard from "@/components/admin/LegalActivationWizard";
 import { useI18n } from "@/lib/i18n";
@@ -2697,6 +2698,13 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
           </TabsContent>
           {contract.direction === "Upstream" ? (
             <TabsContent value="care" className="mt-4">
+              <ContractContinuations
+                contract={contract}
+                canManage={
+                  canManageMaster &&
+                  (has(ADMIN_PERMS.contractsViewAll) || contract.ownerUserId === currentUserId)
+                }
+              />
               <ContractReminders
                 key={`reminders-${contract.id}`}
                 contractId={contract.id}

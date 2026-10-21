@@ -1,0 +1,114 @@
+[
+  {
+    "key": "continuation.title",
+    "category": "contracts",
+    "vi": "Tái ký / Phát triển hợp đồng",
+    "en": "Renewal / Contract development",
+    "zh": "续签 / 合同拓展",
+    "ja": "更新・契約拡大"
+  },
+  {
+    "key": "continuation.source",
+    "category": "contracts",
+    "vi": "Hợp đồng nguồn",
+    "en": "Source contract",
+    "zh": "来源合同",
+    "ja": "元契約"
+  },
+  {
+    "key": "continuation.kind",
+    "category": "contracts",
+    "vi": "Mục đích",
+    "en": "Purpose",
+    "zh": "目的",
+    "ja": "目的"
+  },
+  {
+    "key": "continuation.Renewal",
+    "category": "contracts",
+    "vi": "Tái ký",
+    "en": "Renewal",
+    "zh": "续签",
+    "ja": "契約更新"
+  },
+  {
+    "key": "continuation.Expansion",
+    "category": "contracts",
+    "vi": "Phát triển mới",
+    "en": "New business",
+    "zh": "新业务拓展",
+    "ja": "新規案件"
+  },
+  {
+    "key": "continuation.reason",
+    "category": "contracts",
+    "vi": "Lý do / Mục tiêu hợp tác (1–2.000 ký tự)",
+    "en": "Reason / Business objective (1–2,000 characters)",
+    "zh": "原因 / 合作目标（1–2,000字符）",
+    "ja": "理由・取引目的（1～2,000文字）"
+  },
+  {
+    "key": "continuation.help",
+    "category": "contracts",
+    "vi": "Tạo hợp đồng nháp mới hoặc theo dõi đàm phán qua Cơ hội. Giữ riêng hợp đồng cũ, thanh toán và hồ sơ đã ký. Thay đổi thời hạn của hợp đồng hiện tại thực hiện qua phụ lục.",
+    "en": "Create a new draft contract or track negotiations through an opportunity. The original contract, payments and signed evidence remain separate. Amend an existing contract to change its term.",
+    "zh": "创建新合同草稿或通过商机跟踪谈判。原合同、付款和签署凭证独立保留。现有合同的期限变更应使用补充协议。",
+    "ja": "新しい契約下書きを作成するか、商談で交渉を管理します。元契約・支払・署名済み証跡は別に保持します。既存契約の期間変更には変更契約を使用します。"
+  },
+  {
+    "key": "continuation.createContract",
+    "category": "contracts",
+    "vi": "Lập hợp đồng tiếp nối",
+    "en": "Create follow-on contract",
+    "zh": "创建后续合同",
+    "ja": "後続契約を作成"
+  },
+  {
+    "key": "continuation.createOpportunity",
+    "category": "contracts",
+    "vi": "Theo dõi cơ hội tái ký / phát triển",
+    "en": "Track follow-on opportunity",
+    "zh": "跟踪后续商机",
+    "ja": "後続商談を管理"
+  },
+  {
+    "key": "continuation.empty",
+    "category": "contracts",
+    "vi": "Chưa có hợp đồng hoặc cơ hội tiếp nối trong phạm vi truy cập.",
+    "en": "No follow-on contracts or opportunities in your access scope.",
+    "zh": "访问范围内暂无后续合同或商机。",
+    "ja": "閲覧範囲に後続契約・商談はありません。"
+  },
+  {
+    "key": "continuation.validation",
+    "category": "contracts",
+    "vi": "Chọn mục đích và nhập lý do từ 1 đến 2.000 ký tự; tải lại nếu hợp đồng nguồn đã thay đổi.",
+    "en": "Choose a purpose and enter a reason of 1–2,000 characters; reload if the source contract changed.",
+    "zh": "请选择目的并输入1–2,000字符的原因；来源合同变更后请刷新。",
+    "ja": "目的と1～2,000文字の理由を入力してください。元契約が変更された場合は再読込してください。"
+  },
+  {
+    "key": "deletionImpact.item.contract.continuationContracts",
+    "category": "deletionImpact",
+    "vi": "Quan hệ hợp đồng tiếp nối (giữ nguyên hợp đồng liên quan)",
+    "en": "Follow-on contract relationships (related contracts preserved)",
+    "zh": "后续合同关系（保留相关合同）",
+    "ja": "後続契約の関係（関連契約を保持）"
+  },
+  {
+    "key": "deletionImpact.item.contract.continuationOpportunities",
+    "category": "deletionImpact",
+    "vi": "Cơ hội tái ký / phát triển hợp đồng",
+    "en": "Renewal / Contract development opportunities",
+    "zh": "续签 / 合同拓展商机",
+    "ja": "契約更新・拡大の商談"
+  },
+  {
+    "key": "deletionImpact.item.opportunity.continuationSource",
+    "category": "deletionImpact",
+    "vi": "Hợp đồng nguồn của cơ hội tiếp nối (bảo toàn lịch sử)",
+    "en": "Follow-on opportunity source contract (history retained)",
+    "zh": "后续商机的来源合同（保留历史）",
+    "ja": "後続商談の元契約（履歴を保持）"
+  }
+]

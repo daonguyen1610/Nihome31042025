@@ -14,6 +14,11 @@ public class Contract : IConcurrencyTracked
 {
     public int Id { get; set; }
 
+    public int? SourceContractId { get; set; }
+    public string? ContinuationKind { get; set; }
+    public string? ContinuationReason { get; set; }
+
+
     /// <summary>Human-friendly contract number (e.g. HD-2026-0001) — unique.</summary>
     public string ContractNumber { get; set; } = string.Empty;
 

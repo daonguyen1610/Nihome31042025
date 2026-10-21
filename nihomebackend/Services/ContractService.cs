@@ -20,7 +20,8 @@ public class ContractService(
     ILogger<ContractService> logger,
     IProjectDocumentStagingService projectDocuments,
     IOpportunityClosureInvariantService closureInvariant,
-    IWebHostEnvironment? env = null) : IContractService
+    IWebHostEnvironment? env = null, IPermissionService? permissions = null,
+    IProjectAccessService? projectAccess = null) : IContractService
 {
     private const int MaxPageSize = 100;
     private readonly string _contentRoot = env?.ContentRootPath ?? Directory.GetCurrentDirectory();
@@ -377,6 +378,32 @@ public class ContractService(
         await using var transaction = db.Database.IsRelational()
             ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct)
             : null;
+        var continuationOpportunityId = req.OpportunityId;
+        if (!continuationOpportunityId.HasValue && req.QuoteId.HasValue)
+            continuationOpportunityId = await db.Quotes.AsNoTracking().Where(x => x.Id == req.QuoteId)
+                .Select(x => (int?)x.OpportunityId).SingleOrDefaultAsync(ct);
+        if (continuationOpportunityId.HasValue)
+        {
+            var opportunity = await db.Opportunities.AsNoTracking().SingleOrDefaultAsync(x => x.Id == continuationOpportunityId, ct);
+            if (opportunity?.SourceContractId is not null)
+            {
+                if (permissions is null || !await permissions.HasAsync(callerUserId, "crm.opportunities.view", ct) ||
+                    opportunity.OwnerUserId != callerUserId && !await permissions.HasAsync(callerUserId, "crm.opportunities.view.all", ct))
+                    throw new ContractValidationException("Source opportunity is unavailable in your access scope.");
+                if (opportunity.Stage == OpportunityStage.Lost)
+                    throw new ContractValidationException("A lost continuation opportunity cannot create a contract. Start a new pursuit.");
+                if (req.SourceContractId.HasValue && req.SourceContractId != opportunity.SourceContractId)
+                    throw new ContractValidationException("Contract continuation must match its source opportunity.");
+                req.SourceContractId = opportunity.SourceContractId;
+                req.OpportunityId = opportunity.Id;
+                req.ContinuationKind = opportunity.ContinuationKind;
+                req.ContinuationReason = opportunity.ContinuationReason;
+            }
+        }
+        if (req.SourceContractId.HasValue && req.Direction != ContractDirection.Upstream)
+            throw new ContractValidationException("Only Upstream contracts support continuation.");
+        await ContractContinuationRules.ValidateAsync(db, permissions, req.SourceContractId, req.ContinuationKind,
+            req.ContinuationReason, req.SourceContractRowVersion, req.CustomerId, callerUserId, ct);
         var customerOwnerUserId = await ValidateReferencesAsync(req, ct);
         if (req.QuoteId.HasValue)
         {
@@ -384,6 +411,9 @@ public class ContractService(
             await EnsureQuoteAvailableForContractAsync(quote, null, ct);
         }
         var operationalProjectId = await ResolveOperationalProjectIdAsync(req, null, ct);
+        if (req.SourceContractId.HasValue && operationalProjectId.HasValue &&
+            (projectAccess is null || !await projectAccess.CanViewOperationalProjectAsync(callerUserId, operationalProjectId.Value, ct)))
+            throw new ContractValidationException("Selected project is unavailable in your access scope.");
 
         // A supplied number is the caller's to own; generated numbers are
         // serialized on SQL Server before reading the current maximum.
@@ -420,6 +450,9 @@ public class ContractService(
 
         var entity = new Contract
         {
+            SourceContractId = req.SourceContractId,
+            ContinuationKind = req.ContinuationKind,
+            ContinuationReason = req.ContinuationReason?.Trim(),
             ContractNumber = number,
             CustomerId = req.CustomerId,
             Direction = req.Direction,
@@ -526,6 +559,26 @@ public class ContractService(
             entity, req.OpportunityId, req.CustomerId, req.Status, req.SignedDate, deleting: false, ct: ct);
 
         var customerOwnerUserId = await ValidateReferencesAsync(req, ct);
+        if ((entity.SourceContractId.HasValue || await db.Contracts.AnyAsync(x => x.SourceContractId == id, ct) ||
+            await db.Opportunities.AnyAsync(x => x.SourceContractId == id, ct)) &&
+            (req.CustomerId != entity.CustomerId || req.Direction != entity.Direction))
+            throw new ContractValidationException("Contracts with continuation history cannot change customer or direction.");
+        if (req.SourceContractId.HasValue && (req.SourceContractId != entity.SourceContractId ||
+            req.ContinuationKind != entity.ContinuationKind || req.ContinuationReason?.Trim() != entity.ContinuationReason))
+            throw new ContractValidationException("Continuation provenance is immutable.");
+        if (req.OpportunityId.HasValue && await db.Opportunities.AnyAsync(x => x.Id == req.OpportunityId &&
+            x.SourceContractId != null && (x.SourceContractId != entity.SourceContractId || x.ContinuationKind != entity.ContinuationKind), ct))
+            throw new ContractValidationException("Contract continuation must match its source opportunity.");
+        if (req.QuoteId.HasValue && await db.Quotes.AnyAsync(x => x.Id == req.QuoteId &&
+            x.Opportunity.SourceContractId != null && (x.Opportunity.SourceContractId != entity.SourceContractId || x.Opportunity.ContinuationKind != entity.ContinuationKind), ct))
+            throw new ContractValidationException("Contract continuation must match its quotation's source opportunity.");
+        if (req.OpportunityId.HasValue && req.OpportunityId != entity.OpportunityId)
+            await ValidateContinuationAssociationAsync(req.OpportunityId.Value, entity, callerUserId, ct);
+        if (req.QuoteId.HasValue && req.QuoteId != entity.QuoteId)
+        {
+            var sourceOpportunityId = await db.Quotes.Where(x => x.Id == req.QuoteId).Select(x => x.OpportunityId).SingleAsync(ct);
+            await ValidateContinuationAssociationAsync(sourceOpportunityId, entity, callerUserId, ct);
+        }
         // Only a newly attached quote must be approved; one linked earlier may
         // have expired since, and that must not block editing other terms.
         if (req.QuoteId.HasValue && req.QuoteId != entity.QuoteId)
@@ -537,6 +590,9 @@ public class ContractService(
             req,
             entity.OperationalProjectId,
             ct);
+        if (entity.SourceContractId.HasValue && operationalProjectId != entity.OperationalProjectId && operationalProjectId.HasValue &&
+            (projectAccess is null || !await projectAccess.CanViewOperationalProjectAsync(callerUserId, operationalProjectId.Value, ct)))
+            throw new ContractValidationException("Selected project is unavailable in your access scope.");
         var hasPaymentRequests = await db.PaymentRequests.AsNoTracking()
             .AnyAsync(item => item.ContractId == id, ct);
         var hasResourceRequests = await db.ConstructionResourceRequests.AsNoTracking()
@@ -750,6 +806,10 @@ public class ContractService(
         }
 
         var quote = await EnsureQuoteReadyForContractAsync(quoteId, ct);
+        await ValidateContinuationAssociationAsync(quote.OpportunityId, entity, callerUserId, ct);
+        if (await db.Opportunities.AnyAsync(x => x.Id == quote.OpportunityId && x.SourceContractId != null &&
+            (x.SourceContractId != entity.SourceContractId || x.ContinuationKind != entity.ContinuationKind), ct))
+            throw new ContractValidationException("Contract continuation must match its quotation's source opportunity.");
         if (entity.QuoteId.HasValue)
         {
             var currentCode = await db.Quotes.AsNoTracking()
@@ -788,6 +848,18 @@ public class ContractService(
         await CrmConcurrency.SaveChangesAsync(db, ct);
         if (transaction is not null) await transaction.CommitAsync(ct);
         return await GetAsync(id, callerUserId, canSeeAll: true, ct);
+    }
+
+    private async Task ValidateContinuationAssociationAsync(int opportunityId, Contract contract, int userId, CancellationToken ct)
+    {
+        var opportunity = await db.Opportunities.AsNoTracking().SingleAsync(x => x.Id == opportunityId, ct);
+        if (opportunity.SourceContractId is null) return;
+        if (permissions is null || !await permissions.HasAsync(userId, "crm.opportunities.view", ct) ||
+            opportunity.OwnerUserId != userId && !await permissions.HasAsync(userId, "crm.opportunities.view.all", ct))
+            throw new ContractValidationException("Source opportunity is unavailable in your access scope.");
+        if (opportunity.Stage == OpportunityStage.Lost || opportunity.SourceContractId != contract.SourceContractId ||
+            opportunity.ContinuationKind != contract.ContinuationKind)
+            throw new ContractValidationException("A continuation association requires a matching, accessible opportunity that is not Lost.");
     }
 
     private static readonly QuoteStatus[] ContractReadyQuoteStatuses =
@@ -1615,6 +1687,9 @@ public class ContractService(
         return new ContractResponse
         {
             Id = entity.Id,
+            SourceContractId = entity.SourceContractId,
+            ContinuationKind = entity.ContinuationKind,
+            ContinuationReason = entity.ContinuationReason,
             ContractNumber = entity.ContractNumber,
             CustomerId = entity.CustomerId,
             CustomerName = customerName,

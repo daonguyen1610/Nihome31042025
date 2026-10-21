@@ -180,6 +180,16 @@ Không tính phần trăm hoàn thành chung và không suy diễn nguồn từ 
   quả gửi chưa xác định; lịch chỉ chờ gửi/chưa có lần thử không tạo khóa này
   (xác nhận người dùng 21/10/2026).
 
+Luồng tái ký/phát triển Hợp đồng (chỉ đạo người dùng 22/10/2026): Kinh doanh
+mở Hợp đồng Upstream đã ký → chọn lập Hợp đồng tiếp nối hoặc theo dõi Cơ hội →
+chọn Renewal/Expansion, nhập lý do, xác nhận cùng Khách hàng và Dự án phù hợp →
+lưu. Hướng trực tiếp tạo Hợp đồng Draft; hướng Cơ hội bắt đầu Prospecting và
+tiếp tục đàm phán/Báo giá/ký theo CRM hiện có. Lần theo đuổi Lost lưu lý do và
+không lập Hợp đồng; khi khách quay lại lập Cơ hội mới. Cả hai hướng giữ liên kết
+nguồn, không sao chép nghĩa vụ/bằng chứng đã thực hiện. Tạo từ Cơ hội tiếp nối
+kế thừa nguồn/mục đích/lý do; Hợp đồng mới vẫn phải đi qua gate ký/Pháp lý hiện
+có. Email nhắc gia hạn không tự khởi tạo luồng này.
+
 ### G2 — Phát hành hồ sơ thi công
 
 - Nhân viên hoàn thành đầu việc Thiết kế → hệ thống tự chuyển cho đúng một

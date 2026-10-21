@@ -1569,6 +1569,55 @@ Focused API coverage: `ContractCareActivitiesTests`. Seed and cleanup regression
 coverage: `SampleContractSeederTests`, `BusinessRootHardDeleteHandlerTests`.
 Browser coverage: `admin-contract-care.spec.ts` (requires the live Compose stack).
 
+#### Contract continuation provenance
+
+User-authorized policy dated 22/10/2026 supports Renewal and Expansion from an
+Upstream contract with a signed date and status Signed/InProgress/OnHold/Completed.
+This is an implementation decision delegated by the user, not a NICON meeting
+confirmation. See the CRM contract in `Nicon-QLVH.md`.
+
+Migration `20261021171128_AddContractContinuations` adds nullable
+`SourceContractId`, `ContinuationKind` (20) and `ContinuationReason` (2000) to
+Contracts and Opportunities. Foreign keys restrict source deletion. Existing
+records remain unlinked; do not infer provenance from names, customer or dates.
+Rollback refuses to remove populated relationships: export and explicitly
+reconcile them before any intentional downgrade. Rehearse migration against a
+copy before production deployment; no production execution is implied here.
+
+Existing create routes accept optional continuation fields plus
+`sourceContractRowVersion`. Source requires contracts view and owner/view-all
+scope independently of opportunity permissions. An opportunity-derived contract
+also requires opportunity view and owner/view-all scope. Kind is Renewal or
+Expansion, reason is trimmed and required (1–2000 characters), and source is
+same-customer. A quote-only create resolves the source opportunity too. Existing
+quote approval, exclusivity, project and customer checks still apply. The new
+contract inherits provenance from a continuation opportunity and always starts
+Draft; Lost pursuits cannot generate a contract. No signed evidence, payment,
+VO, QS, care or reminder records are copied. Provenance cannot be changed in
+update/link-quote paths. Relations also prevent changing contract customer or
+direction and prevent changing a continuation opportunity's customer.
+
+Continuation creates require `Idempotency-Key`. Serializable transactions
+protect source-version/eligibility/deletion checks and persistence. The create
+idempotency guard rechecks source visibility before replay. The browser retains
+the key for an unchanged payload after an uncertain request failure; changed
+payloads use a new key. Creating a second pursuit intentionally uses a new key.
+
+`GET /api/contracts/{id}/continuations` requires contracts view and owner/view-all
+scope. It returns accessible source/successor contracts and successor
+opportunities, with each module's permission and ownership checked separately,
+newest 100 per collection, plus supported kinds. It does not disclose hidden
+record names or totals. Negotiation/loss uses the existing opportunity lifecycle.
+Contract deletion impact includes both directions of contract provenance and
+outgoing continuation opportunities as Block. Continuation opportunity deletion
+is also Block; plan fingerprints include the new edges. No related root is
+cascaded or silently unlinked. The demo seeds An Phú's expansion pursuit and
+independent draft `HD-SAMPLE-CONT-001` without modifying existing user records.
+
+Focused regression: `ContractContinuationsTests`, `ContractsControllerTests`,
+`ContractQuoteLinkTests`, `OpportunitiesControllerTests`, and the live Compose
+browser spec `contract-continuations.spec.ts`.
+
 ### 7.9 Operational Business Documents
 
 Permit, procurement vendor, partial acceptance, as-built dossier, and project handover forms support local document selection in addition to their existing external URL fields. Managed files are stored under `wwwroot/files/business-documents/{area}/` with generated names. Each file is limited to 20 MB and must use `.pdf`, `.doc`, `.docx`, `.xls`, `.xlsx`, `.png`, `.jpg`, or `.jpeg`.
