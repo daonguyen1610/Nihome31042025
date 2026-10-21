@@ -180,6 +180,7 @@ public class ConceptOptionService(
     public async Task<ConceptOptionResponse?> TransitionStatusAsync(int id,
         TransitionConceptOptionStatusRequest request, int callerUserId, CancellationToken ct = default)
     {
+        await using var transaction = await ConceptDossierTransaction.BeginAsync(db, id, ct);
         if (!Enum.TryParse<ConceptOptionStatus>(request.Status, true, out var next) || !Enum.IsDefined(next))
         {
             throw new ConceptOptionOperationException($"Trạng thái '{request.Status}' không hợp lệ.");
@@ -204,7 +205,7 @@ public class ConceptOptionService(
             var clientApproved = await db.DesignReviews.AsNoTracking()
                 .Where(review => review.DesignProjectId == entity.DesignProjectId &&
                     review.Stage == DesignReviewStage.Concept &&
-                    review.ConceptRevisionId == latestRevisionId)
+                    review.ConceptRevisionId == latestRevisionId && review.Status != DesignReviewStatus.Draft)
                 .OrderByDescending(review => review.RevisionNumber)
                 .Select(review => review.Status == DesignReviewStatus.ClientApproved &&
                     review.ClientAcceptanceDocumentId != null &&
@@ -279,6 +280,7 @@ public class ConceptOptionService(
         {
             throw new ConceptOptionOperationException("Dự án đã có phương án Concept được chốt.");
         }
+        if (transaction is not null) await transaction.CommitAsync(ct);
         logger.LogInformation(
             "ConceptOption {Id} transitioned to {Status} by user {UserId}", id, next, callerUserId);
         return await GetAsync(id, ct);

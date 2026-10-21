@@ -406,7 +406,9 @@ export const DesignReviewsTab = ({ project }: Props) => {
             {review.clientAcceptanceDocumentId ? (
               <p className="mt-2 text-xs text-emerald-700">
                 {t("concepts.dossier.acceptanceRecorded")}: {review.clientAcceptanceSignedBy} ·{" "}
-                {review.clientAcceptanceSignedAt?.slice(0, 10)}
+                {review.clientAcceptanceSignedAt
+                  ? new Date(review.clientAcceptanceSignedAt).toLocaleDateString(lang)
+                  : null}
               </p>
             ) : null}
             {review.canManage &&
@@ -592,10 +594,27 @@ export const DesignReviewsTab = ({ project }: Props) => {
             ) : null}
             <div className="mt-3 flex flex-wrap gap-2">
               {review.canManage && review.status === "Draft" ? (
-                <Button disabled={busy === review.id} onClick={() => void act(review, "internal")}>
-                  <Send className="mr-1 h-4 w-4" />
-                  {t("designProjects.reviews.submitInternal")}
-                </Button>
+                <div className="space-y-2">
+                  <Button
+                    disabled={
+                      busy === review.id ||
+                      (review.stage === "Concept" &&
+                        !!conceptRevisions.find((item) => item.id === review.conceptRevisionId)
+                          ?.frozenAt)
+                    }
+                    onClick={() => void act(review, "internal")}
+                  >
+                    <Send className="mr-1 h-4 w-4" />
+                    {t("designProjects.reviews.submitInternal")}
+                  </Button>
+                  {review.stage === "Concept" &&
+                  conceptRevisions.find((item) => item.id === review.conceptRevisionId)
+                    ?.frozenAt ? (
+                    <p className="text-sm text-muted-foreground">
+                      {t("concepts.dossier.supersededDraft")}
+                    </p>
+                  ) : null}
+                </div>
               ) : null}
               {review.canComment && review.status === "InternalReview" ? (
                 <Button

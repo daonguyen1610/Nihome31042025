@@ -129,7 +129,9 @@ public abstract class IntegrationTestBase : IClassFixture<NihomeWebApplicationFa
                 {
                     conceptRevision = new ConceptRevision
                     {
-                        ConceptOptionId = sourceId, Number = 0, CreatedByUserId = managerId,
+                        ConceptOptionId = sourceId,
+                        Number = 0,
+                        CreatedByUserId = managerId,
                     };
                     db.ConceptRevisions.Add(conceptRevision);
                 }

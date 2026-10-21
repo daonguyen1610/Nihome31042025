@@ -55,7 +55,9 @@ public sealed class ProjectDocumentService(
             document.SourceEntityType = string.IsNullOrWhiteSpace(request.SourceEntityType)
                 ? null
                 : request.SourceEntityType.Trim();
-            document.SourceSlot = document.SourceEntityType is null ? null : "review-evidence";
+            // A manual upload is a distinct file, even when several files share
+            // one source record and have no local path (Drive-only storage).
+            document.SourceSlot = $"manual-upload:{Guid.NewGuid():N}";
             document.DriveFileId = upload.FileId;
             document.DriveFolderId = folder.DriveFolderId;
             document.DriveWebViewLink = upload.Link;
@@ -309,6 +311,12 @@ public sealed class ProjectDocumentService(
         int projectId, long documentId, int callerUserId, bool canSeeAll, CancellationToken ct = default)
     {
         if (!await CanAccessProjectAsync(projectId, callerUserId, canSeeAll, ct)) return false;
+        var optionId = await db.ProjectDocuments.AsNoTracking()
+            .Where(item => item.Id == documentId && item.OperationalProjectId == projectId &&
+                item.SourceEntityType == nameof(ConceptOption))
+            .Select(item => item.SourceRecordId).SingleOrDefaultAsync(ct);
+        await using var transaction = optionId.HasValue
+            ? await ConceptDossierTransaction.BeginAsync(db, checked((int)optionId.Value), ct) : null;
         var document = await FindAsync(projectId, documentId, ct);
         if (document is null) return false;
         if (await db.ConceptArtifacts.AnyAsync(item => item.ProjectDocumentId == documentId &&
@@ -336,6 +344,7 @@ public sealed class ProjectDocumentService(
         document.UpdatedAt = DateTime.UtcNow;
         document.UpdatedByUserId = callerUserId;
         await db.SaveChangesAsync(ct);
+        if (transaction is not null) await transaction.CommitAsync(ct);
         return true;
     }
 

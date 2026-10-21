@@ -73,6 +73,12 @@ public sealed class DesignReviewService(
     public async Task<DesignReviewResponse> CreateAsync(
         int projectId, CreateDesignReviewRequest request, int callerUserId, CancellationToken ct)
     {
+        var conceptOptionId = request.ConceptRevisionId.HasValue
+            ? await db.ConceptRevisions.AsNoTracking().Where(item => item.Id == request.ConceptRevisionId.Value)
+                .Select(item => (int?)item.ConceptOptionId).SingleOrDefaultAsync(ct)
+            : null;
+        await using var transaction = conceptOptionId.HasValue
+            ? await ConceptDossierTransaction.BeginAsync(db, conceptOptionId.Value, ct) : null;
         var project = await RequireManagerAsync(projectId, callerUserId, ct);
         if (!Enum.TryParse<DesignReviewStage>(request.Stage?.Trim(), true, out var stage) || !Enum.IsDefined(stage))
             throw new DesignReviewOperationException("Giai đoạn trình duyệt không hợp lệ.");
@@ -125,12 +131,14 @@ public sealed class DesignReviewService(
         };
         db.DesignReviews.Add(review);
         await db.SaveChangesAsync(ct);
+        if (transaction is not null) await transaction.CommitAsync(ct);
         return Map(await LoadAsync(projectId, review.Id, ct), callerUserId, true);
     }
 
     public async Task<DesignReviewResponse?> SubmitInternalAsync(
         int projectId, int reviewId, string rowVersion, int callerUserId, CancellationToken ct)
     {
+        await using var transaction = await ConceptDossierTransaction.BeginForReviewAsync(db, projectId, reviewId, ct);
         var project = await RequireManagerAsync(projectId, callerUserId, ct);
         var review = await QueryTracked(projectId).SingleOrDefaultAsync(item => item.Id == reviewId, ct);
         if (review is null) return null;
@@ -157,6 +165,7 @@ public sealed class DesignReviewService(
         review.InternalSubmittedAt = DateTime.UtcNow;
         Touch(review, callerUserId);
         await CrmConcurrency.SaveChangesAsync(db, ct);
+        if (transaction is not null) await transaction.CommitAsync(ct);
         await NotifyAsync(review.Recipients.Select(item => item.UserId), "design-review.internal", review, ct);
         return Map(await LoadAsync(projectId, reviewId, ct), callerUserId, true);
     }
@@ -210,6 +219,7 @@ public sealed class DesignReviewService(
     public async Task<DesignReviewResponse?> SubmitClientAsync(
         int projectId, int reviewId, string rowVersion, int callerUserId, CancellationToken ct)
     {
+        await using var transaction = await ConceptDossierTransaction.BeginForReviewAsync(db, projectId, reviewId, ct);
         var project = await RequireManagerAsync(projectId, callerUserId, ct);
         var review = await QueryTracked(projectId).SingleOrDefaultAsync(item => item.Id == reviewId, ct);
         if (review is null) return null;
@@ -232,12 +242,14 @@ public sealed class DesignReviewService(
         }
         Touch(review, callerUserId);
         await CrmConcurrency.SaveChangesAsync(db, ct);
+        if (transaction is not null) await transaction.CommitAsync(ct);
         return Map(await LoadAsync(projectId, reviewId, ct), callerUserId, true);
     }
 
     public async Task<DesignReviewResponse?> RecordClientDecisionAsync(
         int projectId, int reviewId, RecordDesignClientDecisionRequest request, int callerUserId, CancellationToken ct)
     {
+        await using var transaction = await ConceptDossierTransaction.BeginForReviewAsync(db, projectId, reviewId, ct);
         var project = await RequireManagerAsync(projectId, callerUserId, ct);
         var review = await QueryTracked(projectId).SingleOrDefaultAsync(item => item.Id == reviewId, ct);
         if (review is null) return null;
@@ -297,6 +309,7 @@ public sealed class DesignReviewService(
         }
         Touch(review, callerUserId);
         await CrmConcurrency.SaveChangesAsync(db, ct);
+        if (transaction is not null) await transaction.CommitAsync(ct);
         await NotifyAsync(review.Recipients.Select(item => item.UserId), "design-review.client-decision", review, ct);
         return Map(await LoadAsync(projectId, reviewId, ct), callerUserId, true);
     }
@@ -491,7 +504,8 @@ public sealed class DesignReviewService(
         ConceptOptionId = item.ConceptRevision?.ConceptOptionId,
         ClientAcceptanceDocumentId = item.ClientAcceptanceDocumentId,
         ClientAcceptanceSignedBy = item.ClientAcceptanceSignedBy,
-        ClientAcceptanceSignedAt = item.ClientAcceptanceSignedAt,
+        ClientAcceptanceSignedAt = item.ClientAcceptanceSignedAt.HasValue
+            ? DateTime.SpecifyKind(item.ClientAcceptanceSignedAt.Value, DateTimeKind.Utc) : null,
         CanManage = canManage,
         CanComment = item.Status == DesignReviewStatus.InternalReview &&
             (canManage || item.Recipients.Any(recipient => recipient.UserId == callerUserId)),

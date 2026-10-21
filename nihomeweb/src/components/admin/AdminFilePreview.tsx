@@ -172,7 +172,7 @@ export default function AdminFilePreview({
   const [fileLoadFailed, setFileLoadFailed] = useState(false);
   const blobHrefRef = useRef<string | null>(null);
   const displayName = getDisplayName(url ?? "", fileName);
-  const previewKind = href ? getPreviewKind(href, fileName, contentType) : "unsupported";
+  const previewKind = getPreviewKind(href ?? "", fileName, contentType ?? fileBlob?.type);
   const triggerLabel = label ?? t("common.previewFile");
   const effectiveHref = fetchFile ? blobHref : href;
 

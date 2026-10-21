@@ -2153,6 +2153,32 @@ winner of a competing finalization. Migration
 `AddConceptDossierRevisions` backfills R00 and retains legacy review history;
 rehearse it against production-like data before deployment.
 
+Concept dossier edits, submission, client decisions, option transitions and
+manual document deletion use a transaction-owned SQL Server application lock
+(`concept-dossier-{optionId}`) acquired before reading the write guards. Keep new
+write paths on the same lock so a stale edit cannot change a frozen file set.
+Manual uploads receive distinct source slots, including Drive-only uploads
+whose local path is empty; several files can belong to the same option.
+Unsubmitted drafts do not supersede a submitted review for revision creation or
+finalization. A draft whose revision was already submitted elsewhere remains
+read-only reference history. The revision response includes `canCreateRevision`
+for the latest revision. For legacy R00 shared submissions without a selected
+revision, the service uses source snapshots and a changes/rejected decision (or
+legacy approval without signed acceptance) to permit a fresh revision. This
+does not convert historical shared approval into approval of an option: the new
+revision must complete the current submission and signed TK-M03 gates.
+Acceptance timestamps are returned with their UTC offset and displayed in the
+browser's local calendar. These corrections do not require a schema migration.
+
+Run `ConceptDossierConcurrencyTests` with `NICON_SQL_TEST_CONNECTION` set inside
+the backend container. Each case creates and deletes its own generated
+`NiconConceptTest_<guid>` database; the supplied catalog is never used for test
+data or cleanup. The Concept browser spec also uses `E2E_BACKEND_CONTAINER`
+(default `nihome31042025-backend`) alongside `E2E_SQL_CONTAINER` to prepare real
+local image/PDF fixtures. It exercises authorized downloads through the live
+Compose API without intercepting document responses; it does not prove live
+Google Drive availability.
+
 Permanent deletion of Concept, Basic Design, Shop Drawing and IFC records uses
 `GET /api/<resource>/{id}/deletion-impact` followed by `DELETE` with
 `ConfirmDeletionRequest`. The server recomputes the deterministic plan inside a

@@ -885,6 +885,12 @@ it. Finalize remains disabled until client approval and signed acceptance are
 recorded. Internal submission numbers are labelled separately from option
 revisions in Reviews. Discarding an option requires confirmation and preserves
 submitted documents and history. The Concept header links directly to Reviews.
+An unsubmitted draft does not replace a submitted client decision. If another
+review already submitted the same revision, the unused draft remains visible
+for reference and its submission button is disabled. For a historical shared
+submission, an eligible client decision opens a new revision from the Concept
+dossier; the old submission remains unchanged and cannot finalize an option.
+Signing dates are displayed in the browser's local calendar.
 The selected design-project tab is reflected in the URL and survives refresh
 and browser back/forward navigation.
 In the Reviews tab, select the latest revision; the review uses exactly its
