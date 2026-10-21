@@ -780,6 +780,14 @@ characters). The customer stays the same; select an accessible project of that
 customer, or use the existing project-creation flow. Confirm all new values and
 dates. The contract starts as a separate Draft; the source is unchanged.
 
+If loading the source fails, use **Refresh** in the open form. If the source
+changes before saving, review it with **Refresh source contract**, then retry;
+entered deal terms and the reason remain in the form. Cancelling with Cancel,
+the close button or Escape ends the continuation flow. A subsequent New action
+opens an independent form with an editable customer. These recovery actions
+require the application page to have loaded; opening uncached pages fully
+offline is not supported.
+
 An opportunity-derived contract carries its original source/purpose/reason and
 may use an eligible approved quotation. A Lost pursuit keeps its reason and
 cannot create a contract; start a new opportunity if the customer returns.

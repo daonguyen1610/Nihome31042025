@@ -1602,6 +1602,10 @@ protect source-version/eligibility/deletion checks and persistence. The create
 idempotency guard rechecks source visibility before replay. The browser retains
 the key for an unchanged payload after an uncertain request failure; changed
 payloads use a new key. Creating a second pursuit intentionally uses a new key.
+Closing the create dialog consumes its initiation query parameters. The source
+form opens before source loading completes, exposes a retry on failure, and
+supports explicit source-version refresh without replacing entered deal terms.
+Validation errors are announced and focused. The reason uses a multiline field.
 
 `GET /api/contracts/{id}/continuations` requires contracts view and owner/view-all
 scope. It returns accessible source/successor contracts and successor
@@ -1617,6 +1621,10 @@ independent draft `HD-SAMPLE-CONT-001` without modifying existing user records.
 Focused regression: `ContractContinuationsTests`, `ContractsControllerTests`,
 `ContractQuoteLinkTests`, `OpportunitiesControllerTests`, and the live Compose
 browser spec `contract-continuations.spec.ts`.
+The browser spec covers 390/768/1440px, cancel/reopen, keyboard navigation,
+source-data failure/retry on an already loaded route, stale-source recovery,
+money formatting, long reasons and vi/en/zh/ja rendering. It does not establish
+offline availability for uncached application bundles.
 
 ### 7.9 Operational Business Documents
 

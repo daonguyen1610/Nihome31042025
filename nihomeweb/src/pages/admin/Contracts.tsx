@@ -445,6 +445,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
     }
   }, [classification, directionFilter, fixedDirection, t]);
 
+  const [referenceRevision, setReferenceRevision] = useState(0);
   useEffect(() => {
     if (!canManageMaster || customers.length > 0) return;
     const loadCreateReferences = async () => {
@@ -479,11 +480,11 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
         setProjects(allProjects);
       } catch {
         // Reference-data failure must not blank the read-only contract list.
-        setReferenceError(t("contracts.referenceLoadError"));
+        setReferenceError(t("continuation.referenceLoadError"));
       }
     };
     void loadCreateReferences();
-  }, [canManageMaster, canViewOperationalProjects, customers.length, t]);
+  }, [canManageMaster, canViewOperationalProjects, customers.length, referenceRevision, t]);
 
   useEffect(() => {
     if (mode === "all") return;
@@ -576,6 +577,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
   const [form, setForm] = useState<FormData>(emptyForm);
   const sourceContractId = Number(searchParams.get("sourceContractId")) || null;
   const continuation = useContractContinuation(sourceContractId, form.opportunityId);
+  const initializedContinuation = useRef("");
   const createAttempt = useRef({ body: "", key: "" });
   const [suggestedContractNumber, setSuggestedContractNumber] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -587,6 +589,10 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
     [projects, form.customerId],
   );
   const [formError, setFormError] = useState<string | null>(null);
+  const formErrorRef = useRef<HTMLParagraphElement>(null);
+  useEffect(() => {
+    if (formError) formErrorRef.current?.focus();
+  }, [formError]);
 
   const loadSuggestedContractNumber = useCallback(async () => {
     setSuggestedContractNumber(null);
@@ -604,7 +610,15 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
   }, []);
 
   useEffect(() => {
+    if (sourceContractId && mode === "all") setDialogOpen(true);
+  }, [sourceContractId, mode]);
+
+  useEffect(() => {
+    if (!sourceContractId) initializedContinuation.current = "";
     if (!sourceContractId || !continuation.source || mode !== "all") return;
+    const key = `${sourceContractId}:${prefillOpportunityId}`;
+    if (initializedContinuation.current === key) return;
+    initializedContinuation.current = key;
     setForm((current) => ({
       ...(prefillOpportunityId ? current : emptyForm),
       direction: "Upstream",
@@ -626,7 +640,36 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
     loadSuggestedContractNumber,
   ]);
 
+  const clearCreateParams = () => {
+    if (!sourceContractId && !prefillOpportunityId) return;
+    setSearchParams(
+      (current) => {
+        const next = new URLSearchParams(current);
+        for (const key of [
+          "sourceContractId",
+          "opportunityId",
+          "fromQuote",
+          "customerId",
+          "operationalProjectId",
+          "value",
+        ])
+          next.delete(key);
+        return next;
+      },
+      { replace: true },
+    );
+  };
+
+  const closeCreate = () => {
+    if (saving) return;
+    setDialogOpen(false);
+    clearCreateParams();
+    setFormError(null);
+    setSuggestedContractNumber(null);
+  };
+
   const openCreate = () => {
+    clearCreateParams();
     createAttempt.current = { body: "", key: "" };
     const selectedProject =
       projectFilter === "all"
@@ -985,7 +1028,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
     }
   };
 
-  if (!initialLoaded && loading) {
+  if (!initialLoaded && loading && !sourceContractId && !prefillOpportunityId) {
     return (
       <AdminLayout>
         <div className="p-4 sm:p-6">
@@ -994,7 +1037,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
       </AdminLayout>
     );
   }
-  if (error) {
+  if (error && !dialogOpen && !sourceContractId && !prefillOpportunityId) {
     return (
       <AdminLayout>
         <div className="p-4 sm:p-6">
@@ -1904,11 +1947,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
       <Dialog
         open={dialogOpen}
         onOpenChange={(open) => {
-          setDialogOpen(open);
-          if (!open) {
-            setFormError(null);
-            setSuggestedContractNumber(null);
-          }
+          if (!open) closeCreate();
         }}
       >
         <DialogContent className="w-[95vw] max-w-xl max-h-[90vh] overflow-y-auto sm:w-full">
@@ -1918,6 +1957,11 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
           </DialogHeader>
 
           <div className="space-y-3">
+            {formError && (
+              <p ref={formErrorRef} tabIndex={-1} role="alert" className="text-sm text-destructive">
+                {formError}
+              </p>
+            )}
             <ContinuationFields context={continuation} />
             {referenceError && (
               <div
@@ -1925,6 +1969,13 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                 className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800"
               >
                 {referenceError}
+                <Button
+                  variant="outline"
+                  className="ml-2"
+                  onClick={() => setReferenceRevision((value) => value + 1)}
+                >
+                  {t("common.retry")}
+                </Button>
               </div>
             )}
             <div className="grid gap-3 sm:grid-cols-2">
@@ -2428,12 +2479,10 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                 </>
               )}
             </div>
-
-            {formError && <p className="text-sm text-destructive">{formError}</p>}
           </div>
 
           <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
-            <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>
+            <Button variant="outline" onClick={closeCreate} disabled={saving}>
               {t("common.cancel")}
             </Button>
             <Button onClick={() => void submit()} disabled={saving}>

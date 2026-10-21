@@ -295,9 +295,16 @@ const AdminOpportunities = () => {
   const [createForm, setCreateForm] = useState<CreateOpportunityRequest>(emptyCreate());
   const sourceContractId = Number(searchParams.get("sourceContractId")) || null;
   const continuation = useContractContinuation(sourceContractId);
+  const initializedContinuation = useRef<number | null>(null);
   const createAttempt = useRef({ body: "", key: "" });
   useEffect(() => {
+    if (!sourceContractId) initializedContinuation.current = null;
+    if (sourceContractId) setCreating(true);
+  }, [sourceContractId]);
+  useEffect(() => {
     if (!continuation.source) return;
+    if (initializedContinuation.current === continuation.source.id) return;
+    initializedContinuation.current = continuation.source.id;
     setCreateForm({
       ...emptyCreate(),
       customerId: continuation.source.customerId,
@@ -308,8 +315,31 @@ const AdminOpportunities = () => {
   }, [continuation.source]);
   const [saving, setSaving] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const createErrorRef = useRef<HTMLParagraphElement>(null);
+  useEffect(() => {
+    if (createError) createErrorRef.current?.focus();
+  }, [createError]);
+
+  const clearCreateParams = () => {
+    if (!sourceContractId) return;
+    setSearchParams(
+      (current) => {
+        const next = new URLSearchParams(current);
+        next.delete("sourceContractId");
+        return next;
+      },
+      { replace: true },
+    );
+  };
+  const closeCreate = () => {
+    if (saving) return;
+    setCreating(false);
+    clearCreateParams();
+    setCreateError(null);
+  };
 
   const openCreate = () => {
+    clearCreateParams();
     createAttempt.current = { body: "", key: "" };
     setCreateForm(emptyCreate());
     setCreateError(null);
@@ -1186,13 +1216,23 @@ const AdminOpportunities = () => {
       </div>
 
       {/* ---------- Create dialog ---------- */}
-      <Dialog open={creating} onOpenChange={(o) => !o && setCreating(false)}>
+      <Dialog open={creating} onOpenChange={(o) => !o && closeCreate()}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>{t("opportunities.new")}</DialogTitle>
             <DialogDescription>{t("opportunities.subtitle")}</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
+            {createError && (
+              <p
+                ref={createErrorRef}
+                tabIndex={-1}
+                role="alert"
+                className="text-destructive text-sm"
+              >
+                {createError}
+              </p>
+            )}
             <ContinuationFields context={continuation} />
             <div>
               <Label>{t("opportunities.field.name")}</Label>
@@ -1331,10 +1371,9 @@ const AdminOpportunities = () => {
                 onChange={(e) => setCreateForm({ ...createForm, note: e.target.value })}
               />
             </div>
-            {createError && <p className="text-destructive text-sm">{createError}</p>}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCreating(false)} disabled={saving}>
+            <Button variant="outline" onClick={closeCreate} disabled={saving}>
               {t("common.cancel")}
             </Button>
             <Button onClick={() => void handleCreate()} disabled={saving}>
