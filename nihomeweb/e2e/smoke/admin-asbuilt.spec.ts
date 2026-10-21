@@ -110,10 +110,11 @@ test.describe("NIH-145 — As-built dossier (real-user flow)", () => {
     // Edit the draft and verify the list reflects the saved value.
     await row.locator('[data-testid^="asbuilt-row-view-"]').click();
     await page.getByTestId("asbuilt-detail-file-preview").click();
-    await expect(page.getByTestId("asbuilt-detail-file-preview-frame")).toHaveAttribute(
-      "src",
-      new RegExp(documentPath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "$"),
-    );
+    const preview = page.getByTestId("asbuilt-detail-file-preview-pdf");
+    await expect(preview).toBeVisible();
+    await expect
+      .poll(() => preview.evaluate((canvas: HTMLCanvasElement) => canvas.width))
+      .toBeGreaterThan(0);
     await page.getByTestId("asbuilt-detail-file-preview-close").click();
     await expect(page.getByTestId("asbuilt-detail-file-preview-dialog")).toHaveCount(0);
     await page.getByTestId("asbuilt-edit").click();

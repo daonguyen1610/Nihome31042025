@@ -216,10 +216,9 @@ jobs:
       matrix:
         shard: [1, 2]
     env:
-      # Compose the base stack with the dev overlay that adds the non-relaying
-      # local mailbox. Keeping the overlay separate avoids Docker Compose's
-      # imported-resource conflict on GitHub's runner version.
-      COMPOSE_FILE: docker-compose.yaml:docker-compose-dev.yaml
+      # Use the binary E2E image plus a non-relaying local mailbox.
+      COMPOSE_FILE: docker-compose.yaml:docker-compose-e2e.yaml
+      BUILD_SHA: ${{ github.sha }}
 
     steps:
       - uses: actions/checkout@v4
@@ -260,14 +259,15 @@ jobs:
           attempt=0
           while (( SECONDS < deadline )); do
             attempt=$((attempt + 1))
-            http_status=$(curl --silent --output /dev/null --write-out '%{http_code}' \
-              --max-time 5 http://localhost:5043/api/system/health || true)
-            if [[ "$http_status" == "200" ]]; then
-              echo "Backend is up"
+            health=$(curl --silent --fail --max-time 5 \
+              http://localhost:5043/api/system/health || true)
+            build_sha=$(jq -r '.buildSha // empty' <<< "$health")
+            if [[ "$build_sha" == "$BUILD_SHA" ]]; then
+              echo "Backend binary is ready at commit $build_sha"
               exit 0
             fi
             if (( attempt % 12 == 0 )); then
-              echo "Still waiting for backend readiness (${attempt} attempts, HTTP ${http_status:-000})..."
+              echo "Still waiting for backend binary (${attempt} attempts, build ${build_sha:-unknown})..."
               docker compose ps
             fi
             sleep 5

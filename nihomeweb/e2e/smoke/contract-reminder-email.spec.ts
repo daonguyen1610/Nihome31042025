@@ -27,7 +27,7 @@ for (const width of [375, 768]) {
   }, testInfo) => {
     test.setTimeout(480_000);
     const sink = process.env.MAIL_SINK_URL;
-    test.skip(!sink, "Run with docker-compose-dev.yaml and MAIL_SINK_URL=http://127.0.0.1:8025");
+    test.skip(!sink, "Run with docker-compose-e2e.yaml and MAIL_SINK_URL=http://127.0.0.1:8025");
     const headers = { Authorization: `Bearer ${await loginAs(TEST_USERS.superAdmin)}` };
     const suffix = randomUUID();
     const recipient = `reminder-${suffix}@example.test`;

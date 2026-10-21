@@ -7,3 +7,8 @@ node_modules
 **/obj
 **/out
 **/.DS_Store
+docs
+**/playwright-report
+**/test-results
+.codex
+.agents

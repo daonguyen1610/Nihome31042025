@@ -42,6 +42,7 @@ public class SystemControllerTests
         Assert.Equal("Nihome Backend", response.Name);
         Assert.Equal("Testing", response.Environment);
         Assert.Equal("Healthy", response.Status);
+        Assert.False(string.IsNullOrWhiteSpace(response.BuildSha));
     }
 
     [Fact]

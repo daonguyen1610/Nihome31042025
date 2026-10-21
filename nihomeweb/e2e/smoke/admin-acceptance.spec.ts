@@ -120,10 +120,11 @@ test.describe("NIH-143 — Partial acceptance (real-user flow)", () => {
     await expect(page.getByText(taskName, { exact: true })).toBeVisible();
     await page.getByTestId("acceptance-document-preview-0").click();
     const blobUrlPattern = new RegExp(`^${escapeRegExp(`blob:${new URL(page.url()).origin}/`)}`);
-    await expect(page.getByTestId("acceptance-document-preview-0-frame")).toHaveAttribute(
-      "src",
-      blobUrlPattern,
-    );
+    const preview = page.getByTestId("acceptance-document-preview-0-pdf");
+    await expect(preview).toBeVisible();
+    await expect
+      .poll(() => preview.evaluate((canvas: HTMLCanvasElement) => canvas.width))
+      .toBeGreaterThan(0);
     await expect(
       page
         .getByTestId("acceptance-document-preview-0-dialog")

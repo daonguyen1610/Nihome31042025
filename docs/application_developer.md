@@ -92,7 +92,7 @@ This guide covers development setup, configuration, database management, build a
 ```
 Nihome31042025/
   docker-compose.yaml          -- Container orchestration
-  docker-compose-dev.yaml      -- Dev/E2E stack with a local mail sink
+  docker-compose-e2e.yaml      -- E2E overlay with a local mail sink
   nihomebackend/               -- ASP.NET Core 8 Web API
     Controllers/               -- API endpoint controllers (thin)
     Data/                      -- Database context, migrations, seeders
@@ -155,7 +155,11 @@ Services started:
 | Backend API      | nihome31042025-backend      | 5043  |
 | SQL Server       | nihome31042025-sqlserver    | 1433  |
 
-The backend runs with `dotnet watch` for hot-reload and builds the Vite application through the backend project. There is no separate frontend Compose service: port `5043` serves both the SPA and API. Port `8080` is used only when running Vite separately on the host.
+Docker builds the Vite application and the ASP.NET release binary in separate
+stages, then runs the published binary from the ASP.NET runtime image. There is
+no separate frontend Compose service: port `5043` serves both the SPA and API.
+Rebuild the image after source changes. Port `8080` is used only when running
+Vite separately on the host.
 
 To stop all services:
 
@@ -362,9 +366,7 @@ by a client correlation id. The frontend API error logger reuses the request or
 response correlation id so browser and backend failures can be queried
 together. Background logs use a process-scoped correlation fallback when no
 request or activity exists. Deployment log collectors should parse one JSON
-object per console line. Supervisor output such as `dotnet watch` status
-messages is outside the application logging provider and is not part of this
-contract.
+object per console line.
 
 ### 5.2 Docker Compose Environment Variables
 
@@ -374,27 +376,23 @@ The following environment variables are set in `docker-compose.yaml`:
 |---------------------------------------|--------------------------------|--------------------------------------|
 | `ASPNETCORE_ENVIRONMENT`              | Development                    | Runtime environment profile          |
 | `ASPNETCORE_URLS`                     | http://0.0.0.0:5043            | Kestrel binding address              |
-| `DOTNET_USE_POLLING_FILE_WATCHER`     | 1                              | Enables file polling for hot-reload  |
 | `ConnectionStrings__DefaultConnection`| SQL Server connection string   | Database connection (container name) |
 
-`docker-compose-dev.yaml` overlays `docker-compose.yaml` and starts the whole
-stack plus the non-relaying `smtpSink`, and overrides `EmailSettings__*` so the
-backend sends there instead of the configured mail server. Use it deliberately
-instead of the plain command; section 7.8 has the E2E command and the restore
-step.
+The backend image builds the frontend and publishes the ASP.NET application in
+multi-stage Docker builds. Compose runs that immutable published assembly. The
+health response exposes `buildSha`; CI accepts readiness only when it matches
+the checked-out commit, preventing an old process from passing E2E readiness.
+`docker-compose-e2e.yaml` adds the non-relaying `smtpSink` and overrides
+`EmailSettings__*` for browser delivery tests.
 
 ### 5.3 Docker Compose Volumes
 
-Named volumes are used to isolate build artifacts and package caches:
+Named volumes preserve application keys and SQL Server data:
 
 | Volume                  | Mount Point          | Purpose                                     |
 |-------------------------|----------------------|---------------------------------------------|
-| `nihomebackend_bin`     | `/app/bin`           | Isolate compiled output from host            |
-| `nihomebackend_obj`     | `/app/obj`           | Isolate build intermediates from host        |
-| `nihomeweb_node_modules`| `/nihomeweb/node_modules` | Isolate npm packages from host          |
-| `nihomeweb_dist`        | `/nihomeweb/dist`    | Frontend build output                        |
-| `nuget_packages`        | `/root/.nuget/packages` | NuGet package cache                       |
-| `sqlserver_data`        | `/var/opt/mssql`     | Persistent database storage                  |
+| `data_protection_keys`  | `/root/.aspnet/DataProtection-Keys` | Preserve ASP.NET data-protection keys |
+| `sqlserver_data`        | `/var/opt/mssql`     | Preserve SQL Server data                      |
 
 ---
 
@@ -1227,13 +1225,13 @@ and `e2e/smoke/contract-reminder-email.spec.ts` (live Compose SQL/SMTP, opt in w
 with `PLAYWRIGHT_SLOW_MO=1500` and `--headed --workers=1` for visual review.
 
 The browser-to-SMTP delivery E2E uses an opt-in, non-relaying local mailbox.
-`docker-compose-dev.yaml` overlays `docker-compose.yaml` and adds the
+`docker-compose-e2e.yaml` overlays `docker-compose.yaml` and adds the
 `smtpSink` service, so one file starts the whole stack with the backend email
-settings pointed at the mailbox (this uses the Compose `include` feature and
-needs Docker Compose v2.20 or newer):
+settings pointed at the mailbox:
 
 ```bash
-docker compose -f docker-compose.yaml -f docker-compose-dev.yaml up -d --build
+BUILD_SHA=$(git rev-parse HEAD) docker compose \
+  -f docker-compose.yaml -f docker-compose-e2e.yaml up -d --build
 cd nihomeweb
 BASE_URL=http://localhost:5043 MAIL_SINK_URL=http://127.0.0.1:8025 \
   npx playwright test e2e/smoke/direct-contract-from-opportunity.spec.ts \
@@ -1244,10 +1242,10 @@ The test uses a unique `example.test` recipient and verifies the captured
 message and persisted quote status. Do not use production SMTP settings for
 this test. When finished, restore the normal backend configuration with
 `docker compose up -d --force-recreate nihomeBackend`; then stop and remove the
-test-only mailbox with `docker compose -f docker-compose.yaml -f docker-compose-dev.yaml stop smtpSink`
-and `docker compose -f docker-compose.yaml -f docker-compose-dev.yaml rm -f smtpSink`.
+test-only mailbox with `docker compose -f docker-compose.yaml -f docker-compose-e2e.yaml stop smtpSink`
+and `docker compose -f docker-compose.yaml -f docker-compose-e2e.yaml rm -f smtpSink`.
 
-The CI `e2e` job sets `COMPOSE_FILE=docker-compose.yaml:docker-compose-dev.yaml` and
+The CI `e2e` job sets `COMPOSE_FILE=docker-compose.yaml:docker-compose-e2e.yaml` and
 `MAIL_SINK_URL=http://127.0.0.1:8025`, so `quote-email-delivery.spec.ts` runs
 there instead of skipping, and no customer address is ever mailed from CI.
 
@@ -3783,17 +3781,17 @@ an invalid session returns to login. Refresh-token rotation remains single-use.
 **Symptom**: Code changes are not reflected in the running container.
 
 **Resolution**:
-- Verify that volumes are correctly mounted in `docker-compose.yaml`.
-- For persistent issues, remove named volumes and rebuild: `docker compose down -v && docker compose up --build`
-- The `bin`, `obj`, and `node_modules` directories use named volumes to avoid host/container conflicts.
+- Rebuild the immutable image with `docker compose up -d --build`.
+- Check `/api/system/health` and confirm `buildSha` matches the expected source revision.
+- Do not remove `sqlserver_data` to refresh application code; that volume contains business data.
 
-### 11.7 Hot-Reload Not Working
+### 11.7 Running an old binary
 
-**Symptom**: Backend does not recompile after file changes.
+**Symptom**: The health endpoint reports a different `buildSha` than the source
+revision selected for E2E.
 
 **Resolution**:
-- Confirm `DOTNET_USE_POLLING_FILE_WATCHER` is set to `1` in the Docker Compose environment.
-- Confirm the backend is started with `dotnet watch run`.
-- Restart the container: `docker compose restart nihomeBackend`
+- Rebuild and recreate the backend with `BUILD_SHA=$(git rev-parse HEAD) docker compose up -d --build --force-recreate nihomeBackend`.
+- Confirm the new `buildSha` before starting Playwright.
 
 ---

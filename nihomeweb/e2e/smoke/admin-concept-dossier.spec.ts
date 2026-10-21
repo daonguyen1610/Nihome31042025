@@ -173,7 +173,7 @@ test("Concept dossier preserves context and supports accessible responsive forms
   await page.getByRole("button", { name: /Hồ sơ và ý kiến|Files and feedback/i }).click();
   for (const [index, selector] of [
     [0, "img"],
-    [1, "iframe"],
+    [1, "canvas"],
   ] as const) {
     await dossier.getByRole("button", { name: new RegExp(fixtureFiles[index].name) }).click();
     const preview = page.getByRole("dialog");

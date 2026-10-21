@@ -42,23 +42,20 @@ public class HandoverRecordService(
             .ToListAsync(ct);
         var readiness = await GetReadinessAsync(rows.Select(row => row.DesignProjectId), rows, ct);
 
-        var scope = ApplyScope(db.HandoverRecords.AsNoTracking(), callerUserId, canSeeAll);
-        if (parameters.DesignProjectId.HasValue)
-            scope = scope.Where(row => row.DesignProjectId == parameters.DesignProjectId.Value);
-        var statusCounts = await scope.GroupBy(row => row.Status)
+        var statusCounts = await query.GroupBy(row => row.Status)
             .Select(group => new { group.Key, Count = group.Count() })
             .ToDictionaryAsync(item => item.Key.ToString(), item => item.Count, ct);
-        var scopedRows = await scope.Select(row => new
+        var summaryRows = await query.Select(row => new
         {
             row.DesignProjectId,
             row.CommissioningCompleted,
             row.ChecklistCompleted,
         }).ToListAsync(ct);
-        var scopedReadiness = await GetReadinessAsync(
-            scopedRows.Select(row => row.DesignProjectId), null, ct);
-        var readyCount = scopedRows.Count(row => row.CommissioningCompleted
+        var summaryReadiness = await GetReadinessAsync(
+            summaryRows.Select(row => row.DesignProjectId), null, ct);
+        var readyCount = summaryRows.Count(row => row.CommissioningCompleted
             && row.ChecklistCompleted
-            && scopedReadiness.GetValueOrDefault(row.DesignProjectId)?.IsReady == true);
+            && summaryReadiness.GetValueOrDefault(row.DesignProjectId)?.IsReady == true);
 
         return new HandoverRecordListResponse
         {
