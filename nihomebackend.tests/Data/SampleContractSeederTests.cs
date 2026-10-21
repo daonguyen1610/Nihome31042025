@@ -47,7 +47,7 @@ public class SampleContractSeederTests : IDisposable
         Assert.Contains(ContractStatus.InProgress, statuses);
         Assert.Contains(ContractStatus.OnHold, statuses);
         Assert.Contains(ContractStatus.Completed, statuses);
-        Assert.Equal(7, contracts.Count);
+        Assert.Equal(8, contracts.Count);
         var downstreamContract = Assert.Single(contracts, contract =>
             contract.Direction == ContractDirection.Downstream);
         Assert.Equal(ContractType.Supply, downstreamContract.Type);
@@ -56,7 +56,8 @@ public class SampleContractSeederTests : IDisposable
             .Single(item => item.Id == downstreamContract.OperationalProjectId);
         Assert.Contains("An Phú", financeDemoProject.Name);
 
-        var upstreamContracts = contracts.Where(contract => contract.Direction == ContractDirection.Upstream).ToList();
+        var upstreamContracts = contracts.Where(contract => contract.Direction == ContractDirection.Upstream &&
+            contract.SourceContractId == null).ToList();
         Assert.Equal(upstreamContracts.Count, upstreamContracts.Select(contract => contract.QuoteId).Distinct().Count());
         var upstreamDesignBuild = Assert.Single(upstreamContracts, contract =>
             contract.OperationalProjectId == financeDemoProject.Id &&
