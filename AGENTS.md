@@ -39,9 +39,15 @@ For every non-trivial task:
 4. Add or update tests at the lowest appropriate test layer when executable
    behavior changes.
 5. Run relevant checks and investigate failures to distinguish a bad test from
-   a product defect. For documentation-only or other non-code changes that
-   cannot affect build/runtime behavior, use document-focused checks only; do
-   not run code builds or automated test suites.
+   a product defect. For every .NET source or test change, run `dotnet format`
+   in the backend container for the affected projects, then run
+   `dotnet format --no-restore --verify-no-changes` for the solution, matching
+   CI. Include unit and integration test projects; a passing build or test run
+   does not replace format verification. Fix format failures and rerun the
+   affected tests after their final edit. For documentation-only or other
+   non-code changes that cannot affect build/runtime behavior, use
+   document-focused checks only; do not run code builds or automated test
+   suites.
    Every new or changed integration or E2E test must be executed after its final
    edit and pass before declaring the task complete. If its required environment
    is unavailable, report the test as not run and the work as unverified; do not
