@@ -2689,7 +2689,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.Property(c => c.Name).HasMaxLength(200).IsRequired();
             b.Property(c => c.Description).HasMaxLength(4000);
             b.Property(c => c.InternalNote).HasMaxLength(4000);
-            b.Property(c => c.Status).HasConversion<string>().HasMaxLength(30);
+            b.Property(c => c.Status).HasConversion<string>().HasMaxLength(30).IsConcurrencyToken();
 
             b.HasOne(c => c.DesignProject)
                 .WithMany()
@@ -2735,6 +2735,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasKey(item => item.Id);
             b.Property(item => item.CustomerName).HasMaxLength(200).IsRequired();
             b.Property(item => item.Channel).HasMaxLength(80).IsRequired();
+            b.Property(item => item.EvidenceSource).HasMaxLength(1000);
+            b.Property(item => item.Outcome).HasMaxLength(2000);
             b.Property(item => item.Comment).HasMaxLength(4000).IsRequired();
             b.Property(item => item.Response).HasMaxLength(4000).IsConcurrencyToken();
             b.HasOne(item => item.ConceptRevision).WithMany(item => item.Feedback)

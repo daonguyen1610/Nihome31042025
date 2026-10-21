@@ -257,6 +257,7 @@ public sealed class DesignReviewService(
                 throw new DesignReviewOperationException("Duyệt Concept cần revision và biên bản TK-M03 đã ký.");
             var signer = request.ClientAcceptanceSignedBy?.Trim() ?? string.Empty;
             if (signer.Length == 0 || request.ClientAcceptanceSignedAt is null ||
+                request.ClientAcceptanceSignedAt.Value == default ||
                 request.ClientAcceptanceSignedAt.Value > DateTime.UtcNow.AddMinutes(5))
                 throw new DesignReviewOperationException("Biên bản TK-M03 cần tên người ký và ngày ký hợp lệ.");
             var optionId = await db.ConceptRevisions.AsNoTracking()

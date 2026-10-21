@@ -4069,9 +4069,11 @@ export interface ConceptRevisionResponse {
     projectDocumentId?: number | null;
     customerName: string;
     channel: string;
+    evidenceSource?: string | null;
     occurredAt: string;
     comment: string;
     response?: string | null;
+    outcome?: string | null;
     respondedAt?: string | null;
   }[];
 }
@@ -6906,6 +6908,7 @@ export const adminApi = {
     body: {
       customerName: string;
       channel: string;
+      evidenceSource: string;
       occurredAt: string;
       comment: string;
       projectDocumentId?: number | null;
@@ -6916,10 +6919,16 @@ export const adminApi = {
       body,
       withIdempotencyKey(newIdempotencyKey()),
     ),
-  respondConceptFeedback: (id: number, revisionId: number, feedbackId: number, response: string) =>
+  respondConceptFeedback: (
+    id: number,
+    revisionId: number,
+    feedbackId: number,
+    response: string,
+    outcome: string,
+  ) =>
     api.post<ConceptRevisionResponse>(
       `/concept-options/${id}/revisions/${revisionId}/feedback/${feedbackId}/response`,
-      { response },
+      { response, outcome },
       withIdempotencyKey(newIdempotencyKey()),
     ),
 

@@ -81,5 +81,7 @@
   { "key": "concepts.dossier.kind.Presentation", "category": "concepts", "vi": "PDF trình bày", "en": "Presentation PDF", "zh": "展示PDF", "ja": "提案PDF" },
   { "key": "concepts.dossier.kind.Other", "category": "concepts", "vi": "Tài liệu khác", "en": "Other document", "zh": "其他文件", "ja": "その他の資料" },
   { "key": "concepts.dossier.detach", "category": "concepts", "vi": "Gỡ file khỏi bản nháp", "en": "Detach from draft", "zh": "从草稿解除关联", "ja": "下書きから解除" },
-  { "key": "concepts.dossier.removeWaiver", "category": "concepts", "vi": "Gỡ ngoại lệ", "en": "Remove exception", "zh": "删除例外", "ja": "例外を削除" }
+  { "key": "concepts.dossier.removeWaiver", "category": "concepts", "vi": "Gỡ ngoại lệ", "en": "Remove exception", "zh": "删除例外", "ja": "例外を削除" },
+  { "key": "concepts.dossier.evidenceSource", "category": "concepts", "vi": "Nguồn bằng chứng (biên bản, email hoặc tham chiếu)", "en": "Evidence source (minutes, email or reference)", "zh": "证据来源（纪要、邮件或引用）", "ja": "証拠の出典（議事録、メール、参照）" },
+  { "key": "concepts.dossier.outcome", "category": "concepts", "vi": "Kết quả xử lý", "en": "Resolution outcome", "zh": "处理结果", "ja": "対応結果" }
 ]

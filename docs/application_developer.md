@@ -2191,11 +2191,22 @@ one-time response `POST` endpoints. Revision R00 is created with a new option.
 The draft binds typed Project Documents owned by that option; removing a binding
 does not delete the Project Document. Submission requires a synced, exact file
 set and the applicable checklist, then freezes the revision. Client feedback is
-attached only after client submission; a replacement revision follows a
+attached only after client submission. New feedback requires `evidenceSource`
+(1–1000 characters); its verbatim comment is preserved. A response requires
+`outcome` (1–2000 characters) as well as the response text. Both are immutable
+after recording. Existing rows retain null source/outcome rather than invented
+evidence. Migration `AddConceptFeedbackEvidence` adds these nullable columns;
+new writes enforce the required fields at the API and service boundary.
+Rollback is blocked once evidence/outcome values exist. Concept evidence already
+frozen or submitted and recorded acceptance files cannot be queued for deletion
+through Project Documents; retain them and create a replacement revision.
+A replacement revision follows a
 changes-requested or rejected decision. Concept `ClientApproved` requires a
 separate synced signed TK-M03 Project Document, signer and signing date.
 Finalization checks that evidence on the latest revision and a filtered unique
-index permits only one finalized option per Design Project. Migration
+index permits only one finalized option per Design Project. Option status is
+also an optimistic concurrency token: a stale sibling update cannot discard the
+winner of a competing finalization. Migration
 `AddConceptDossierRevisions` backfills R00 and retains legacy review history;
 rehearse it against production-like data before deployment.
 

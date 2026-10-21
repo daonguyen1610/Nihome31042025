@@ -207,27 +207,51 @@ public sealed class DesignReviewsControllerTests : IntegrationTestBase
         (await WithDbAsync(db => db.DesignReviews.Where(item => item.Id == reviewId)
             .Select(item => item.Status).SingleAsync())).Should().Be(DesignReviewStatus.SubmittedToClient);
 
+        using var missingSource = await SendWithKeyAsync(HttpMethod.Post,
+            $"/api/concept-options/{fixture.ConceptOptionId}/revisions/{fixture.ConceptRevisionId}/feedback", new
+            {
+                customerName = "Ông Trần Minh", channel = "Họp", occurredAt = DateTime.UtcNow,
+                comment = "Cần làm rõ lối tiếp cận sảnh chính.",
+            });
+        missingSource.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.ConceptFeedback.CountAsync(item =>
+            item.ConceptRevisionId == fixture.ConceptRevisionId))).Should().Be(0);
+
         using var feedback = await SendWithKeyAsync(HttpMethod.Post,
             $"/api/concept-options/{fixture.ConceptOptionId}/revisions/{fixture.ConceptRevisionId}/feedback", new
             {
                 customerName = "Ông Trần Minh",
                 channel = "Họp trực tiếp với chủ đầu tư",
+                evidenceSource = "Biên bản họp Concept ngày 21/10, mục 3",
                 occurredAt = DateTime.UtcNow,
                 comment = "Cần làm rõ lối tiếp cận sảnh chính.",
                 projectDocumentId = fixture.PerspectiveDocumentId,
             });
         feedback.StatusCode.Should().Be(HttpStatusCode.OK, await feedback.Content.ReadAsStringAsync());
         var feedbackId = (await ReadJsonAsync(feedback)).GetProperty("feedback")[0].GetProperty("id").GetInt32();
+        using var missingOutcome = await SendWithKeyAsync(HttpMethod.Post,
+            $"/api/concept-options/{fixture.ConceptOptionId}/revisions/{fixture.ConceptRevisionId}/feedback/{feedbackId}/response", new
+            {
+                response = "Đã bổ sung lối tiếp cận.",
+            });
+        missingOutcome.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.ConceptFeedback.Where(item => item.Id == feedbackId)
+            .Select(item => item.Response).SingleAsync())).Should().BeNull();
         using var responseToCustomer = await SendWithKeyAsync(HttpMethod.Post,
             $"/api/concept-options/{fixture.ConceptOptionId}/revisions/{fixture.ConceptRevisionId}/feedback/{feedbackId}/response", new
             {
                 response = "Đã bổ sung lối tiếp cận và gửi bản phối cảnh cập nhật để xác nhận.",
+                outcome = "Chủ đầu tư xác nhận lối tiếp cận phù hợp.",
             });
         responseToCustomer.StatusCode.Should().Be(HttpStatusCode.OK);
+        var recordedFeedback = (await ReadJsonAsync(responseToCustomer)).GetProperty("feedback")[0];
+        recordedFeedback.GetProperty("evidenceSource").GetString().Should().Be("Biên bản họp Concept ngày 21/10, mục 3");
+        recordedFeedback.GetProperty("outcome").GetString().Should().Be("Chủ đầu tư xác nhận lối tiếp cận phù hợp.");
         using var duplicateResponse = await SendWithKeyAsync(HttpMethod.Post,
             $"/api/concept-options/{fixture.ConceptOptionId}/revisions/{fixture.ConceptRevisionId}/feedback/{feedbackId}/response", new
             {
                 response = "Không được ghi đè lịch sử phản hồi.",
+                outcome = "Không thay đổi.",
             });
         duplicateResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
@@ -261,6 +285,68 @@ public sealed class DesignReviewsControllerTests : IntegrationTestBase
         create.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         (await WithDbAsync(db => db.DesignReviews.CountAsync(item =>
             item.DesignProjectId == fixture.DesignProjectId))).Should().Be(0);
+    }
+
+    [Fact]
+    public async Task ClientChanges_CreateR01_PreservesR00AndRejectsIncompleteSubmission()
+    {
+        var fixture = await CreateFixtureAsync();
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "DESIGN"));
+        using var create = await SendWithKeyAsync(HttpMethod.Post,
+            $"/api/design-projects/{fixture.DesignProjectId}/reviews", new
+            {
+                stage = "Concept", title = "Phương án sân trong trình khách",
+                recipientUserIds = new[] { fixture.RecipientUserId },
+                projectDocumentIds = new[] { fixture.DocumentId, fixture.PerspectiveDocumentId },
+                conceptRevisionId = fixture.ConceptRevisionId,
+            });
+        create.EnsureSuccessStatusCode();
+        var review = await ReadJsonAsync(create);
+        var reviewId = review.GetProperty("id").GetInt32();
+        foreach (var action in new[] { "submit-internal", "consolidate", "submit-client" })
+        {
+            using var step = await SendWithKeyAsync(HttpMethod.Post,
+                $"/api/design-projects/{fixture.DesignProjectId}/reviews/{reviewId}/{action}", new
+                {
+                    internalSummary = "Kinh doanh tổng hợp để trình chủ đầu tư.",
+                    rowVersion = review.GetProperty("rowVersion").GetString(),
+                });
+            step.EnsureSuccessStatusCode();
+            review = await ReadJsonAsync(step);
+        }
+        using var decision = await SendWithKeyAsync(HttpMethod.Post,
+            $"/api/design-projects/{fixture.DesignProjectId}/reviews/{reviewId}/client-decision", new
+            {
+                decision = "ClientChangesRequested", note = "Chủ đầu tư yêu cầu điều chỉnh sảnh.",
+                rowVersion = review.GetProperty("rowVersion").GetString(),
+            });
+        decision.EnsureSuccessStatusCode();
+        using var next = await SendWithKeyAsync(HttpMethod.Post,
+            $"/api/concept-options/{fixture.ConceptOptionId}/revisions", new { });
+        next.StatusCode.Should().Be(HttpStatusCode.OK, await next.Content.ReadAsStringAsync());
+        var nextRevision = await ReadJsonAsync(next);
+        nextRevision.GetProperty("number").GetInt32().Should().Be(1);
+        nextRevision.GetProperty("artifacts").GetArrayLength().Should().Be(0);
+        using var duplicate = await SendWithKeyAsync(HttpMethod.Post,
+            $"/api/concept-options/{fixture.ConceptOptionId}/revisions", new { });
+        duplicate.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        using var incomplete = await SendWithKeyAsync(HttpMethod.Post,
+            $"/api/design-projects/{fixture.DesignProjectId}/reviews", new
+            {
+                stage = "Concept", title = "R01 chưa đủ hồ sơ",
+                recipientUserIds = new[] { fixture.RecipientUserId },
+                projectDocumentIds = new[] { fixture.DocumentId, fixture.PerspectiveDocumentId },
+                conceptRevisionId = nextRevision.GetProperty("id").GetInt32(),
+            });
+        incomplete.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        using var history = await Client.GetAsync($"/api/concept-options/{fixture.ConceptOptionId}/revisions");
+        var revisions = await ReadJsonAsync(history);
+        revisions.GetArrayLength().Should().Be(2);
+        var original = revisions.EnumerateArray().Single(item => item.GetProperty("id").GetInt32() == fixture.ConceptRevisionId);
+        original.GetProperty("frozenAt").ValueKind.Should().Be(System.Text.Json.JsonValueKind.String);
+        original.GetProperty("artifacts").GetArrayLength().Should().Be(2);
+        (await WithDbAsync(db => db.DesignReviews.CountAsync(item => item.DesignProjectId == fixture.DesignProjectId)))
+            .Should().Be(1);
     }
 
     private async Task<Fixture> CreateFixtureAsync() => await WithDbAsync(async db =>

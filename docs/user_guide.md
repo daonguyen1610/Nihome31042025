@@ -896,7 +896,9 @@ panel to upload a 3D source model, perspective, site/roof plan, floor plans
 with floor names, section and presentation PDF. Images and PDFs can be previewed;
 source models can be downloaded. Correct a draft by detaching an incorrect file
 or checklist exception; the stored Project Document remains available. Record
-client feedback after submission to the client, then record a response before
+client feedback verbatim after submission to the client, with the representative,
+channel, time and an evidence reference (meeting minutes, email or document).
+Record both a response and its resolution outcome before
 submitting a replacement R01+ revision. Submitted revisions stay frozen.
 In the Reviews tab, select the latest revision; the review uses exactly its
 files. After client approval, select a separate synced signed TK-M03 file and

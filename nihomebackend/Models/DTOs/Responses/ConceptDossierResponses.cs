@@ -35,8 +35,10 @@ public sealed class ConceptFeedbackResponse
     public long? ProjectDocumentId { get; set; }
     public string CustomerName { get; set; } = string.Empty;
     public string Channel { get; set; } = string.Empty;
+    public string? EvidenceSource { get; set; }
     public DateTime OccurredAt { get; set; }
     public string Comment { get; set; } = string.Empty;
     public string? Response { get; set; }
+    public string? Outcome { get; set; }
     public DateTime? RespondedAt { get; set; }
 }

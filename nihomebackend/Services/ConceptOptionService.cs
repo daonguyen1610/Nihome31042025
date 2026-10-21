@@ -180,7 +180,7 @@ public class ConceptOptionService(
     public async Task<ConceptOptionResponse?> TransitionStatusAsync(int id,
         TransitionConceptOptionStatusRequest request, int callerUserId, CancellationToken ct = default)
     {
-        if (!Enum.TryParse<ConceptOptionStatus>(request.Status, true, out var next))
+        if (!Enum.TryParse<ConceptOptionStatus>(request.Status, true, out var next) || !Enum.IsDefined(next))
         {
             throw new ConceptOptionOperationException($"Trạng thái '{request.Status}' không hợp lệ.");
         }
@@ -204,7 +204,9 @@ public class ConceptOptionService(
             var clientApproved = await db.DesignReviews.AsNoTracking()
                 .Where(review => review.DesignProjectId == entity.DesignProjectId &&
                     review.Stage == DesignReviewStage.Concept &&
-                    review.ConceptRevisionId == latestRevisionId &&
+                    review.ConceptRevisionId == latestRevisionId)
+                .OrderByDescending(review => review.RevisionNumber)
+                .Select(review => review.Status == DesignReviewStatus.ClientApproved &&
                     review.ClientAcceptanceDocumentId != null &&
                     review.ClientAcceptanceSignedBy != null &&
                     review.ClientAcceptanceSignedAt != null &&
@@ -216,8 +218,6 @@ public class ConceptOptionService(
                         document.ProjectDocument.DeletedAt == null &&
                         document.ProjectDocument.SyncStatus == ProjectDocumentSyncStatus.Synced &&
                         document.ProjectDocument.Sha256 == document.Sha256Snapshot))
-                .OrderByDescending(review => review.RevisionNumber)
-                .Select(review => review.Status == DesignReviewStatus.ClientApproved)
                 .FirstOrDefaultAsync(ct);
             if (!clientApproved)
                 throw new ConceptOptionOperationException(
