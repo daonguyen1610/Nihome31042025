@@ -11,6 +11,11 @@ public class ContractSourceLeadResponse
 
 public class ContractResponse
 {
+    public int? SourceContractId { get; set; }
+    public string? ContinuationKind { get; set; }
+    public string? ContinuationReason { get; set; }
+
+
     public int Id { get; set; }
     public string ContractNumber { get; set; } = string.Empty;
 

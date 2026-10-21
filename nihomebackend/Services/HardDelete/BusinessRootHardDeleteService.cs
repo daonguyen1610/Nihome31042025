@@ -161,7 +161,7 @@ public sealed class BusinessRootHardDeletePlanService(
     {
         var root = await db.Opportunities.AsNoTracking()
             .Where(item => item.Id == id)
-            .Select(item => new { item.Id, item.Name, item.RowVersion })
+            .Select(item => new { item.Id, item.Name, item.RowVersion, item.SourceContractId })
             .SingleOrDefaultAsync(ct);
         if (root is null) return null;
 
@@ -187,6 +187,8 @@ public sealed class BusinessRootHardDeletePlanService(
 
         var detail = $"/admin/opportunities/{id}";
         var items = new List<DeletionImpactItemResponse>();
+        Add(items, "opportunity.continuationSource", root.SourceContractId.HasValue ? [Id(root.SourceContractId.Value)] : [],
+            DeletionImpactActions.Block, null, []);
         Add(items, "opportunity.activities", activities.Select(Id).ToList(), DeletionImpactActions.Delete,
             detail, [Link(root.Name, detail)]);
         Add(items, "opportunity.translations", translations.Select(Id).ToList());
@@ -205,6 +207,7 @@ public sealed class BusinessRootHardDeletePlanService(
 
         var identities = new[]
         {
+            $"continuation-source:{root.SourceContractId}",
             Part("activities", activities), Part("translations", translations),
             Part("quotes", quotes.Select(item => item.Id)), Part("contracts", contracts.Select(item => item.Id)),
             Part("surveys", surveys.Select(item => item.Id)), Part("leads", leads.Select(item => item.Id)),
@@ -212,7 +215,7 @@ public sealed class BusinessRootHardDeletePlanService(
             Part("work-packages", workPackages.Select(item => item.Id)),
         };
         return Plan(EntityTypes.Opportunity, id, root.Name, $"OPPORTUNITY-{id}",
-            root.RowVersion, quotes.Count == 0, items, identities, []);
+            root.RowVersion, quotes.Count == 0 && root.SourceContractId is null, items, identities, []);
     }
 
     public async Task<BusinessRootHardDeletePlan?> ForVendorAsync(int id, CancellationToken ct = default)
@@ -337,6 +340,11 @@ public sealed class BusinessRootHardDeletePlanService(
             .OrderBy(item => item.Id).Select(item => item.Id).ToListAsync(ct);
         var workPackages = await db.DepartmentWorkPackages.AsNoTracking().Where(item => item.ContractId == id)
             .OrderBy(item => item.Id).Select(item => new { item.Id, item.Code }).ToListAsync(ct);
+        var continuationContracts = await db.Contracts.AsNoTracking().Where(x => x.SourceContractId == id ||
+            db.Contracts.Any(source => source.Id == id && source.SourceContractId == x.Id))
+            .OrderBy(x => x.Id).Select(x => x.Id).ToListAsync(ct);
+        var continuationOpportunities = await db.Opportunities.AsNoTracking().Where(x => x.SourceContractId == id)
+            .OrderBy(x => x.Id).Select(x => x.Id).ToListAsync(ct);
         var legalActivations = await db.ContractLegalActivations.AsNoTracking().Where(item => item.ContractId == id)
             .OrderBy(item => item.Id).Select(item => item.Id).ToListAsync(ct);
 
@@ -487,8 +495,13 @@ public sealed class BusinessRootHardDeletePlanService(
         Add(items, "contract.legalActivations", legalActivations.Select(Id).ToList(), DeletionImpactActions.Delete,
             detail, [Link(root.ContractNumber, detail)]);
 
+        Add(items, "contract.continuationContracts", continuationContracts.Select(Id).ToList(), DeletionImpactActions.Block,
+            null, []);
+        Add(items, "contract.continuationOpportunities", continuationOpportunities.Select(Id).ToList(), DeletionImpactActions.Block,
+            null, []);
         var identities = new[]
         {
+            Part("continuation-contracts", continuationContracts), Part("continuation-opportunities", continuationOpportunities),
             Part("milestones", milestones), Part("attachments", attachments.Select(item => item.Id)),
             Part("care-activities", careActivities),
             Part("reminders", reminders),
@@ -510,7 +523,7 @@ public sealed class BusinessRootHardDeletePlanService(
         return Plan(EntityTypes.Contract, id, root.ContractNumber, root.ContractNumber,
             root.RowVersion, rfqs.Count == 0 && blockers.Count == 0 && lifecycleBlockers.Count == 0 && sidecarBlockers.Count == 0 &&
                 procurementLines.Count == 0 && vendorRatings.Count == 0 && committedPayments.Count == 0 && boqRevisions.Count == 0 && constructionResources.Count == 0 &&
-                !reminders.Any(item => item.Status == "Sending"),
+                !reminders.Any(item => item.Status == "Sending") && continuationContracts.Count == 0 && continuationOpportunities.Count == 0,
             items, identities, definitions);
     }
 

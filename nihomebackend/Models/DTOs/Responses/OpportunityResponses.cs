@@ -22,6 +22,11 @@ public class OpportunityContractLinkResponse
 
 public class OpportunityResponse
 {
+    public int? SourceContractId { get; set; }
+    public string? ContinuationKind { get; set; }
+    public string? ContinuationReason { get; set; }
+
+
     public int Id { get; set; }
     public string Name { get; set; } = string.Empty;
     public int CustomerId { get; set; }

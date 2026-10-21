@@ -16,7 +16,7 @@ public class OpportunityService(
     IProjectDocumentStagingService projectDocuments,
     IOpportunityClosureInvariantService closureInvariant,
     IDesignProjectService designProjects,
-    IProjectAccessService projectAccess) : IOpportunityService
+    IProjectAccessService projectAccess, IPermissionService? permissions = null) : IOpportunityService
 {
     private const int MaxPageSize = 100;
     private const string LostReasonMasterDataCategory = "opportunity_lost_reason";
@@ -247,6 +247,14 @@ public class OpportunityService(
             "Cơ hội mới phải bắt đầu ở giai đoạn Tiếp cận.");
         }
 
+        await using var transaction = request.SourceContractId.HasValue && db.Database.IsRelational()
+            ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct) : null;
+        try
+        {
+            await ContractContinuationRules.ValidateAsync(db, permissions, request.SourceContractId, request.ContinuationKind,
+                request.ContinuationReason, request.SourceContractRowVersion, request.CustomerId, callerUserId, ct);
+        }
+        catch (ContractValidationException ex) { throw new OpportunityOperationException(ex.Message); }
         var customer = await db.Customers.AsNoTracking()
             .FirstOrDefaultAsync(c => c.Id == request.CustomerId, ct)
             ?? throw new OpportunityOperationException($"Không tìm thấy khách hàng #{request.CustomerId}.");
@@ -269,6 +277,9 @@ public class OpportunityService(
 
         var op = new Opportunity
         {
+            SourceContractId = request.SourceContractId,
+            ContinuationKind = request.ContinuationKind,
+            ContinuationReason = request.ContinuationReason?.Trim(),
             Name = request.Name.Trim(),
             CustomerId = request.CustomerId,
             OperationalProjectId = request.OperationalProjectId,
@@ -286,6 +297,8 @@ public class OpportunityService(
 
         db.Opportunities.Add(op);
         await db.SaveChangesAsync(ct);
+
+        if (transaction is not null) await transaction.CommitAsync(ct);
 
         if (ownerId != callerUserId)
         {
@@ -316,6 +329,8 @@ public class OpportunityService(
                 "Cơ hội đã kết thúc, không thể chỉnh sửa thông tin.");
         }
 
+        if (op.SourceContractId.HasValue && request.CustomerId != op.CustomerId)
+            throw new OpportunityOperationException("A continuation opportunity cannot change customer.");
         CrmConcurrency.Apply(db, op, request.RowVersion);
 
         var customer = await db.Customers.AsNoTracking()
@@ -810,6 +825,9 @@ public class OpportunityService(
     {
         return new OpportunityResponse
         {
+            SourceContractId = op.SourceContractId,
+            ContinuationKind = op.ContinuationKind,
+            ContinuationReason = op.ContinuationReason,
             Id = op.Id,
             Name = op.Name,
             CustomerId = op.CustomerId,

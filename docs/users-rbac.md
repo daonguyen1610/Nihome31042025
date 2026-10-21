@@ -4,6 +4,15 @@ Date: 2026-05-16 (updated 2026-10-15 for NICON role groups)
 
 ## Overview
 
+Contract continuation reads require `crm.contracts.view` and Contract
+owner/`crm.contracts.view.all` scope. Creating a follow-on Contract additionally
+requires `crm.contracts.manage`; starting a pursuit requires
+`crm.opportunities.manage`, independently of Contract manage. Source Contract
+and Opportunity view/all scopes are checked independently, including cached
+create-response replay. Related records outside scope are omitted. Continuation
+history blocks permanent deletion; no new permission or default role grant is
+introduced.
+
 Contract reminder list access follows Contract viewing scope. Preview,
 scheduling and cancellation require `crm.contracts.manage` and owner scope
 or `crm.contracts.view.all`; Finance/project read access grants no sending

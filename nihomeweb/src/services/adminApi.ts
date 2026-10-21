@@ -1949,6 +1949,10 @@ export interface ContractExecutionProgressResponse {
 }
 
 export interface ContractResponse {
+  sourceContractId?: number | null;
+  continuationKind?: string | null;
+  continuationReason?: string | null;
+
   id: number;
   contractNumber: string;
   customerId: number;
@@ -2078,6 +2082,11 @@ export interface ContractListParams {
 }
 
 export interface UpsertContractRequest {
+  sourceContractId?: number | null;
+  continuationKind?: string | null;
+  continuationReason?: string | null;
+  sourceContractRowVersion?: string;
+
   rowVersion?: string;
   contractNumber?: string | null;
   customerId: number;
@@ -2214,6 +2223,10 @@ export interface OpportunityContractLinkResponse {
 }
 
 export interface OpportunityResponse {
+  sourceContractId?: number | null;
+  continuationKind?: string | null;
+  continuationReason?: string | null;
+
   id: number;
   name: string;
   customerId: number;
@@ -2279,6 +2292,11 @@ export interface OpportunityPipelineResponse {
 }
 
 export interface CreateOpportunityRequest {
+  sourceContractId?: number | null;
+  continuationKind?: string | null;
+  continuationReason?: string | null;
+  sourceContractRowVersion?: string;
+
   name: string;
   customerId: number;
   operationalProjectId?: number | null;
@@ -6149,8 +6167,8 @@ export const adminApi = {
     api.get<OpportunityOwnerOption[]>("/opportunities/owner-options"),
   getOpportunityHistory: (id: number) =>
     api.get<OpportunityHistoryItem[]>(`/opportunities/${id}/history`),
-  createOpportunity: (body: CreateOpportunityRequest) =>
-    api.post<OpportunityResponse>("/opportunities", body),
+  createOpportunity: (body: CreateOpportunityRequest, key?: string) =>
+    api.post<OpportunityResponse>("/opportunities", body, withIdempotencyKey(key)),
   updateOpportunity: (id: number, body: UpdateOpportunityRequest) =>
     api.put<OpportunityResponse>(`/opportunities/${id}`, body),
   changeOpportunityStage: (id: number, body: ChangeOpportunityStageRequest) =>
@@ -8233,7 +8251,28 @@ export const adminApi = {
     api.get<ContractSourceLeadResponse[]>(`/contracts/${id}/source-leads`, { signal }),
   getContractExecutionProgress: (id: number, signal?: AbortSignal) =>
     api.get<ContractExecutionProgressResponse>(`/contracts/${id}/execution-progress`, { signal }),
-  createContract: (body: UpsertContractRequest) => api.post<ContractResponse>("/contracts", body),
+  getContractContinuations: (id: number) =>
+    api.get<{
+      kinds: string[];
+      contracts: {
+        id: number;
+        contractNumber: string;
+        status: string;
+        continuationKind: string | null;
+        continuationReason: string | null;
+        isSource: boolean;
+      }[];
+      opportunities: {
+        id: number;
+        name: string;
+        stage: string;
+        continuationKind: string;
+        continuationReason: string;
+        lostNote: string | null;
+      }[];
+    }>(`/contracts/${id}/continuations`),
+  createContract: (body: UpsertContractRequest, key?: string) =>
+    api.post<ContractResponse>("/contracts", body, withIdempotencyKey(key)),
   updateContract: (id: number, body: UpsertContractRequest) =>
     api.put<ContractResponse>(`/contracts/${id}`, body),
   getContractDeletionImpact: (id: number) =>

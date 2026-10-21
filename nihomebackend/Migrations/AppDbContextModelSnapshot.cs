@@ -2016,6 +2016,14 @@ namespace nihomebackend.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("ContinuationKind")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("ContinuationReason")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
                     b.Property<string>("ContractNumber")
                         .IsRequired()
                         .HasMaxLength(40)
@@ -2068,6 +2076,9 @@ namespace nihomebackend.Migrations
                     b.Property<DateTime?>("SignedDate")
                         .HasColumnType("datetime2");
 
+                    b.Property<int?>("SourceContractId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime?>("StartDate")
                         .HasColumnType("datetime2");
 
@@ -2113,6 +2124,8 @@ namespace nihomebackend.Migrations
                     b.HasIndex("QuoteId");
 
                     b.HasIndex("SignedDate");
+
+                    b.HasIndex("SourceContractId");
 
                     b.HasIndex("Status");
 
@@ -6435,6 +6448,14 @@ namespace nihomebackend.Migrations
                     b.Property<DateTime?>("ClosedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("ContinuationKind")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("ContinuationReason")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -6479,6 +6500,9 @@ namespace nihomebackend.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
 
+                    b.Property<int?>("SourceContractId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Stage")
                         .IsRequired()
                         .HasMaxLength(30)
@@ -6510,6 +6534,8 @@ namespace nihomebackend.Migrations
                     b.HasIndex("OperationalProjectId");
 
                     b.HasIndex("OwnerUserId");
+
+                    b.HasIndex("SourceContractId");
 
                     b.HasIndex("Stage");
 
@@ -11742,6 +11768,11 @@ namespace nihomebackend.Migrations
                         .HasForeignKey("QuoteId")
                         .OnDelete(DeleteBehavior.SetNull);
 
+                    b.HasOne("NihomeBackend.Models.Contract", null)
+                        .WithMany()
+                        .HasForeignKey("SourceContractId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("NihomeBackend.Models.Vendor", "Vendor")
                         .WithMany()
                         .HasForeignKey("VendorId")
@@ -13051,6 +13082,11 @@ namespace nihomebackend.Migrations
                         .WithMany()
                         .HasForeignKey("OwnerUserId")
                         .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("NihomeBackend.Models.Contract", null)
+                        .WithMany()
+                        .HasForeignKey("SourceContractId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Customer");
 

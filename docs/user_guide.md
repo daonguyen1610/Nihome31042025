@@ -772,6 +772,23 @@ locked, including an uncertain SMTP outcome. A schedule that has not started
 delivery does not create this lock. This preserves access to email care history
 while SMTP is in flight and after reconciliation.
 
+**Renewal / contract development:** open an eligible Upstream contract's
+Customer care tab. Choose **Create follow-on contract** when a new deal value
+is agreed, or **Track follow-on opportunity** to manage negotiation and loss
+through CRM. Select Renewal or New business and enter a reason (1–2000
+characters). The customer stays the same; select an accessible project of that
+customer, or use the existing project-creation flow. Confirm all new values and
+dates. The contract starts as a separate Draft; the source is unchanged.
+
+An opportunity-derived contract carries its original source/purpose/reason and
+may use an eligible approved quotation. A Lost pursuit keeps its reason and
+cannot create a contract; start a new opportunity if the customer returns.
+Links on contract care and opportunity detail let authorized users trace the
+relationship. The contract view lists the newest 100 accessible records per
+collection. Related contracts and continuation opportunities cannot be permanently
+deleted; their source history is retained. Existing-contract term changes use
+an appendix instead. Email reminders do not initiate renewal automatically.
+
 Every new or edited contract must belong to one Operational Project. The
 selected project must belong to the same customer as the contract; contracts
 created from an opportunity or quotation inherit that source project's identity.

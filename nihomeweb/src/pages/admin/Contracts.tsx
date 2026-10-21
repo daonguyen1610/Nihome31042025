@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ContinuationFields } from "@/components/admin/ContractContinuations";
+import { useContractContinuation } from "@/hooks/useContractContinuation";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Plus,
@@ -572,6 +574,9 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
   // -------- dialog / form --------
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState<FormData>(emptyForm);
+  const sourceContractId = Number(searchParams.get("sourceContractId")) || null;
+  const continuation = useContractContinuation(sourceContractId, form.opportunityId);
+  const createAttempt = useRef({ body: "", key: "" });
   const [suggestedContractNumber, setSuggestedContractNumber] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   // null = the quick-create row is closed; a string is the draft project name.
@@ -598,7 +603,31 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
     }
   }, []);
 
+  useEffect(() => {
+    if (!sourceContractId || !continuation.source || mode !== "all") return;
+    setForm((current) => ({
+      ...(prefillOpportunityId ? current : emptyForm),
+      direction: "Upstream",
+      type: continuation.source!.type === "Unclassified" ? current.type : continuation.source!.type,
+      customerId: continuation.source!.customerId,
+      operationalProjectId:
+        (prefillOpportunityId ? current.operationalProjectId : null) ??
+        continuation.source!.operationalProjectId ??
+        null,
+      scopeOfWork: continuation.source!.scopeOfWork ?? "",
+    }));
+    setDialogOpen(true);
+    void loadSuggestedContractNumber();
+  }, [
+    sourceContractId,
+    continuation.source,
+    mode,
+    prefillOpportunityId,
+    loadSuggestedContractNumber,
+  ]);
+
   const openCreate = () => {
+    createAttempt.current = { body: "", key: "" };
     const selectedProject =
       projectFilter === "all"
         ? null
@@ -733,6 +762,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
   };
 
   const submit = async () => {
+    if (saving) return;
     setFormError(null);
     const effectiveDirection = fixedDirection ?? form.direction;
     if (form.customerId == null) {
@@ -782,7 +812,18 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
       note: m.note.trim() || null,
     }));
     const enteredContractNumber = form.contractNumber.trim();
+    if (
+      continuation.loading ||
+      continuation.error ||
+      (sourceContractId && !continuation.source) ||
+      (continuation.source &&
+        (!continuation.reason.trim() || continuation.reason.trim().length > 2000))
+    ) {
+      setFormError(continuation.error || t("continuation.validation"));
+      return;
+    }
     const payload: UpsertContractRequest = {
+      ...continuation.payload,
       contractNumber:
         enteredContractNumber === suggestedContractNumber ? null : enteredContractNumber || null,
       customerId: form.customerId,
@@ -806,7 +847,14 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
     };
     setSaving(true);
     try {
-      await adminApi.createContract(payload);
+      const serialized = JSON.stringify(payload);
+      if (createAttempt.current.body !== serialized)
+        createAttempt.current = { body: serialized, key: crypto.randomUUID() };
+      const created = await adminApi.createContract(payload, createAttempt.current.key);
+      if (continuation.source) {
+        navigate(`/admin/contracts/${created.data.id}`);
+        return;
+      }
       toast({ title: t("form.created") });
       setDialogOpen(false);
       await load();
@@ -1870,6 +1918,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
           </DialogHeader>
 
           <div className="space-y-3">
+            <ContinuationFields context={continuation} />
             {referenceError && (
               <div
                 role="alert"
@@ -1905,6 +1954,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                 {t("contracts.field.customer")} *
               </Label>
               <Select
+                disabled={!!continuation.source}
                 value={form.customerId != null ? String(form.customerId) : ""}
                 onValueChange={(v) => {
                   const customerId = Number(v);

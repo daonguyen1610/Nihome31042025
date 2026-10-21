@@ -7,6 +7,16 @@ namespace NihomeBackend.Models.DTOs.Requests;
 /// create (server auto-generates) but must round-trip on update.</summary>
 public class UpsertContractRequest : IConcurrencyRequest
 {
+    [Range(1, int.MaxValue)]
+    public int? SourceContractId { get; set; }
+    [RegularExpression("^(Renewal|Expansion)$")]
+    public string? ContinuationKind { get; set; }
+    [StringLength(2000, MinimumLength = 1)]
+    public string? ContinuationReason { get; set; }
+    [StringLength(24)]
+    public string? SourceContractRowVersion { get; set; }
+
+
     public string? RowVersion { get; set; }
 
     /// <summary>Human-friendly contract number. Optional on create — the
