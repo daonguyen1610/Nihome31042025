@@ -119,5 +119,13 @@
   ,{"key":"workPackages.reject.title","category":"work-packages","vi":"Trả lại công việc Pháp lý","en":"Return legal task","zh":"退回法务任务","ja":"法務タスクを差し戻す"}
   ,{"key":"workPackages.reject.taskTitle","category":"work-packages","vi":"Trả lại đầu việc","en":"Return task","zh":"退回任务","ja":"タスクを差し戻す"}
   ,{"key":"workPackages.reject.reason","category":"work-packages","vi":"Lý do trả lại","en":"Return reason","zh":"退回原因","ja":"差し戻し理由"}
-  ,{"key":"workPackages.toast.returned","category":"work-packages","vi":"Đã trả công việc về Đang thực hiện","en":"Task returned to In progress","zh":"任务已退回进行中","ja":"タスクを進行中に差し戻しました"}
+  ,{"key":"workPackages.toast.returned","category":"work-packages","vi":"Đã trả công việc về Đang thực hiện","en":"Task returned to In progress","zh":"任务已退回进行中","ja":"タスクを進行中に差し戻しました"},
+  {"key": "workPackages.filters.title", "category": "work-packages", "vi": "Bộ lọc nhóm công việc", "en": "Work package filters", "zh": "工作包筛选", "ja": "作業パッケージの絞り込み"},
+  {"key": "workPackages.filters.search", "category": "work-packages", "vi": "Tìm nhóm công việc", "en": "Search work packages", "zh": "搜索工作包", "ja": "作業パッケージを検索"},
+  {"key": "workPackages.filters.allDepartments", "category": "work-packages", "vi": "Tất cả phòng ban", "en": "All departments", "zh": "所有部门", "ja": "すべての部門"},
+  {"key": "workPackages.filters.status", "category": "work-packages", "vi": "Trạng thái", "en": "Status", "zh": "状态", "ja": "状態"},
+  {"key": "workPackages.filters.allStatuses", "category": "work-packages", "vi": "Tất cả trạng thái", "en": "All statuses", "zh": "所有状态", "ja": "すべての状態"},
+  {"key": "workPackages.filters.allProjects", "category": "work-packages", "vi": "Tất cả dự án", "en": "All projects", "zh": "所有项目", "ja": "すべてのプロジェクト"},
+  {"key": "workPackages.filters.allPurposes", "category": "work-packages", "vi": "Tất cả nghiệp vụ", "en": "All purposes", "zh": "所有业务", "ja": "すべての業務"},
+  {"key": "workPackages.filters.clear", "category": "work-packages", "vi": "Xóa bộ lọc", "en": "Clear filters", "zh": "清除筛选", "ja": "絞り込みを解除"}
 ]

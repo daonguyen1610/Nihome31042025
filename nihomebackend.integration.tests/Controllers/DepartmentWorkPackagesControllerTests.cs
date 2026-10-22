@@ -12,6 +12,14 @@ public sealed class DepartmentWorkPackagesControllerTests(NihomeWebApplicationFa
     public async Task List_WithoutAuthentication_IsUnauthorized()
     {
         (await Client.GetAsync("/api/work-packages")).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        (await Client.GetAsync("/api/work-packages/departments")).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task Departments_WithoutViewPermission_IsForbidden()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsCustomerAsync);
+        (await Client.GetAsync("/api/work-packages/departments")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Fact]
@@ -21,6 +29,17 @@ public sealed class DepartmentWorkPackagesControllerTests(NihomeWebApplicationFa
 
         (await Client.GetAsync("/api/work-packages")).StatusCode.Should().Be(HttpStatusCode.OK);
         (await Client.GetAsync("/api/work-packages/options")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        var departmentsResponse = await Client.GetAsync("/api/work-packages/departments");
+        departmentsResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var departments = await ReadJsonAsync(departmentsResponse);
+        departments.EnumerateArray().Should().NotBeEmpty();
+        foreach (var department in departments.EnumerateArray())
+        {
+            department.TryGetProperty("labelKey", out _).Should().BeTrue();
+            department.TryGetProperty("users", out _).Should().BeFalse();
+            department.TryGetProperty("vendors", out _).Should().BeFalse();
+            department.TryGetProperty("baselinePermissions", out _).Should().BeFalse();
+        }
         var create = await SendAsync(HttpMethod.Post, "/api/work-packages", new
         {
             kind = "Internal",
