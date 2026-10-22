@@ -130,6 +130,8 @@ const OperationalProjects = () => {
   const [customers, setCustomers] = useState<CustomerResponse[]>([]);
   const [users, setUsers] = useState<UserListItemResponse[]>([]);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const requestSequence = useRef(0);
   const [status, setStatus] = useState<OperationalProjectStatus | "">("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -173,7 +175,13 @@ const OperationalProjects = () => {
     };
   }, [canListUsers]);
 
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedSearch(search), 300);
+    return () => window.clearTimeout(timer);
+  }, [search]);
+
   const load = useCallback(async () => {
+    const request = ++requestSequence.current;
     setLoading(true);
     setError(null);
     try {
@@ -182,6 +190,7 @@ const OperationalProjects = () => {
           adminApi.getOperationalProject(projectId),
           adminApi.getOperationalProjectTimeline(projectId),
         ]);
+        if (request !== requestSequence.current) return;
         setDetail(detailResponse.data);
         setTimeline(timelineResponse.data ?? []);
       } else {
@@ -189,23 +198,28 @@ const OperationalProjects = () => {
         setTimeline([]);
         const response = await adminApi.listOperationalProjects({
           customerId: customerFilter,
-          search: search.trim() || undefined,
+          search: debouncedSearch.trim() || undefined,
           status: status || undefined,
           page: 1,
           pageSize: 100,
         });
+        if (request !== requestSequence.current) return;
         setRows(response.data.items ?? []);
         setTotal(response.data.total ?? 0);
       }
     } catch (reason) {
-      setError(extractApiError(reason));
+      if (request === requestSequence.current) setError(extractApiError(reason));
     } finally {
-      setLoading(false);
+      if (request === requestSequence.current) setLoading(false);
     }
-  }, [customerFilter, projectId, search, status]);
+  }, [customerFilter, projectId, debouncedSearch, status]);
 
   useEffect(() => {
+    const sequence = requestSequence;
     void load();
+    return () => {
+      sequence.current++;
+    };
   }, [load]);
 
   const openCreate = useCallback(async () => {
@@ -425,11 +439,11 @@ const OperationalProjects = () => {
 
   return (
     <AdminLayout>
-      {loading ? (
+      {projectId != null && loading ? (
         <PageLoading />
-      ) : error ? (
+      ) : projectId != null && error ? (
         <PageError message={error} onRetry={() => void load()} />
-      ) : detail ? (
+      ) : projectId != null && detail ? (
         <div className="space-y-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
@@ -1212,7 +1226,11 @@ const OperationalProjects = () => {
           <p className="text-sm text-muted-foreground">
             {t("operationalProjects.total", { count: total })}
           </p>
-          {rows.length === 0 ? (
+          {loading ? (
+            <PageLoading />
+          ) : error ? (
+            <PageError message={error} onRetry={() => void load()} />
+          ) : rows.length === 0 ? (
             <div className="rounded-lg border border-dashed p-10 text-center text-muted-foreground">
               {t("operationalProjects.empty")}
             </div>

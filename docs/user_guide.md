@@ -217,6 +217,10 @@ working across modules. The list shows customer, lifecycle status, and counts
 of linked opportunities, quotations, and contracts. The detail view provides
 direct links to those records and to the design workflow.
 
+Search by project code or name updates results automatically after a short
+pause in typing. The search field retains focus while results load, and the
+status filter remains available even when a search fails or returns no matches.
+
 The detail view also includes a **Payment timeline**. It combines payment
 milestones from every Contract linked to the same operational project and shows
 the Contract number on each entry so similarly named milestones remain
