@@ -12,7 +12,7 @@ namespace NihomeBackend.Services;
 /// in the predecessor graph, planned-vs-actual date rules and the
 /// overdue roll-up used by the Gantt list header.
 /// </summary>
-public class ConstructionTaskService(
+public partial class ConstructionTaskService(
     AppDbContext db,
     ILogger<ConstructionTaskService> logger) : IConstructionTaskService
 {
@@ -285,6 +285,10 @@ public class ConstructionTaskService(
     {
         var entity = await db.ConstructionTasks.FirstOrDefaultAsync(t => t.Id == id, ct);
         if (entity is null) return false;
+
+        var drawingLinks = await db.ConstructionTaskDrawings
+            .Where(link => link.ConstructionTaskId == id).ToListAsync(ct);
+        db.ConstructionTaskDrawings.RemoveRange(drawingLinks);
 
         var dependencyEdges = await db.ConstructionTaskDependencies
             .Where(d => d.TaskId == id || d.PredecessorTaskId == id)

@@ -2924,6 +2924,48 @@ split, resource requests, QA/QC and QS; detailed gates, matrices and templates
 remain subject to the open decisions in `docs/Nicon-QLVH.md`. It is not a claim
 that every item below is customer-approved or exists in the current API.
 
+#### Construction task drawing links
+
+`GET /api/construction-tasks/{id}/drawings` returns `version`, `linked` and
+`available`. Both this route and its `/api/v1` alias require
+`construction.tasks.view` and access to the task's project. Candidates are
+same-project Shop Drawings in a `Released` IFC packet with a release date;
+the drawing itself must still be `Released`. No draft drawing is returned.
+
+`PUT /api/construction-tasks/{id}/drawings` requires
+`construction.tasks.manage` and accepts
+`{ "version": "<GUID from GET>", "ifcReleaseItemIds": [123] }`.
+The list is required, may be empty to unlink, and permits at most 200 distinct
+positive IDs. Validation rejects missing, duplicate, foreign-project or
+unreleased IDs with 400 without changing links. A stale version returns 409;
+retrying the already-persisted desired set returns 200. EF checks the task's
+concurrency token and saves the link changes and actor/timestamps atomically.
+
+`GET /api/construction-tasks/{id}/drawings/{itemId}/content` uses construction
+view permission and project scope, and serves only a linked, released drawing
+through the existing managed-file resolver. Missing/unlinked files return 404.
+This does not grant access to draft design documents or design-management APIs.
+
+Links are children of the existing compatibility `ConstructionTask`, whose
+`DesignProjectId` resolves project access through its Operational Project; no
+new project aggregate is introduced. An IFC item is referenced by stable ID.
+The displayed R number is the last immutable drawing-revision metadata created
+on or before the IFC release date (R0 when none exists); it is not a file diff
+or a new versioned-file repository. Released Shop Drawing files remain locked
+by the existing design workflow. Removing a link does not delete its drawing,
+IFC packet or file. Project aggregate deletion includes the owned links in the
+impact plan and removes them before IFC items.
+
+Shop Drawing upload now rejects both `Released` status and membership in a
+released IFC packet. Status and file path are EF concurrency tokens, so an
+upload racing with IFC release cannot silently replace the issued file; the
+losing write returns 409 and upload cleanup preserves the original file.
+
+Migration `AddConstructionTaskDrawingLinks` adds the link table and a task
+concurrency token. Existing tasks start with no links; no label-based backfill
+is attempted. Rollback drops link data and the token, preserving tasks and
+drawings; export links before rollback if they must be retained.
+
 #### Delivered CM/BCH workflow slice
 
 The Operational Project route family

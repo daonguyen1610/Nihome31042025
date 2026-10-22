@@ -506,6 +506,11 @@ public class ShopDrawingService(
             throw new ShopDrawingOperationException(
                 "Chỉ tải file Shop Drawing khi dự án đang ở giai đoạn Shop Drawing.");
         }
+        if (entity.Status == ShopDrawingStatus.Released ||
+            await db.IfcReleaseItems.AnyAsync(item => item.ShopDrawingId == id &&
+                item.IfcRelease.Status == IfcReleaseStatus.Released, ct))
+            throw new ShopDrawingOperationException(
+                "Bản vẽ đã phát hành IFC không được thay tệp. Hãy lập bản vẽ mới cho lần phát hành tiếp theo.");
 
         var now = DateTime.UtcNow;
         var previousPath = entity.FilePath;

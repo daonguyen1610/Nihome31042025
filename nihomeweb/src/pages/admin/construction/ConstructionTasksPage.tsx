@@ -12,6 +12,7 @@ import {
   Trash2,
 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
+import ConstructionTaskDrawings from "./ConstructionTaskDrawings";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -1355,6 +1356,11 @@ const AdminConstructionTasks = () => {
                       )}
                     </div>
                   </div>
+                  <ConstructionTaskDrawings
+                    key={detail.id}
+                    taskId={detail.id}
+                    canManage={canManage}
+                  />
                   {detailError && <div className="text-sm text-rose-600">{detailError}</div>}
                   <div className="flex items-center justify-between pt-2">
                     {canManage ? (

@@ -181,6 +181,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<IfcReleaseRecipient> IfcReleaseRecipients => Set<IfcReleaseRecipient>();
 
     public DbSet<ConstructionTask> ConstructionTasks => Set<ConstructionTask>();
+    public DbSet<ConstructionTaskDrawing> ConstructionTaskDrawings => Set<ConstructionTaskDrawing>();
     public DbSet<ConstructionTaskDependency> ConstructionTaskDependencies => Set<ConstructionTaskDependency>();
     public DbSet<AcceptanceRecord> AcceptanceRecords => Set<AcceptanceRecord>();
 
@@ -2804,10 +2805,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.Property(d => d.Title).HasMaxLength(300).IsRequired();
             b.Property(d => d.Description).HasMaxLength(4000);
             b.Property(d => d.Note).HasMaxLength(4000);
-            b.Property(d => d.FilePath).HasMaxLength(500);
+            b.Property(d => d.FilePath).HasMaxLength(500).IsConcurrencyToken();
             b.Property(d => d.OriginalFileName).HasMaxLength(255);
             b.Property(d => d.ContentType).HasMaxLength(100);
-            b.Property(d => d.Status).HasConversion<string>().HasMaxLength(30);
+            b.Property(d => d.Status).HasConversion<string>().HasMaxLength(30).IsConcurrencyToken();
 
             b.HasOne(d => d.DesignProject)
                 .WithMany()
@@ -2901,6 +2902,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         {
             b.ToTable("construction_tasks");
             b.HasKey(t => t.Id);
+            b.Property(t => t.DrawingLinksVersion).IsConcurrencyToken();
             b.Property(t => t.TaskCode).HasMaxLength(60).IsRequired();
             b.Property(t => t.Wbs).HasMaxLength(60);
             b.Property(t => t.Name).HasMaxLength(300).IsRequired();
@@ -2919,6 +2921,17 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasIndex(t => t.DesignProjectId);
             b.HasIndex(t => new { t.DesignProjectId, t.TaskCode }).IsUnique();
             b.HasIndex(t => t.Status);
+        });
+
+        modelBuilder.Entity<ConstructionTaskDrawing>(b =>
+        {
+            b.ToTable("construction_task_drawings");
+            b.HasKey(x => x.Id);
+            b.HasOne(x => x.ConstructionTask).WithMany()
+                .HasForeignKey(x => x.ConstructionTaskId).OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(x => x.IfcReleaseItem).WithMany()
+                .HasForeignKey(x => x.IfcReleaseItemId).OnDelete(DeleteBehavior.NoAction);
+            b.HasIndex(x => new { x.ConstructionTaskId, x.IfcReleaseItemId }).IsUnique();
         });
 
         modelBuilder.Entity<ConstructionTaskDependency>(b =>

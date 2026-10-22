@@ -17,6 +17,23 @@ public class SampleCrmDataSeederTests : IDisposable
 
     public void Dispose() => _db.Dispose();
 
+    [Fact]
+    public void ConstructionDrawingSeed_UsesReleasedLightingAndPreservesUnlink()
+    {
+        var link = Assert.Single(_db.ConstructionTaskDrawings);
+        var task = _db.ConstructionTasks.Single(x => x.Id == link.ConstructionTaskId);
+        var item = _db.IfcReleaseItems.Single(x => x.Id == link.IfcReleaseItemId);
+        var drawing = _db.ShopDrawings.Single(x => x.Id == item.ShopDrawingId);
+        Assert.Equal("T-004", task.TaskCode);
+        Assert.Equal("MEP-SD-002", drawing.DrawingCode);
+        Assert.Equal(task.DesignProjectId, drawing.DesignProjectId);
+        Assert.Equal(ShopDrawingStatus.Released, drawing.Status);
+        _db.ConstructionTaskDrawings.Remove(link);
+        _db.SaveChanges();
+        SampleCrmDataSeeder.Seed(_db);
+        Assert.Empty(_db.ConstructionTaskDrawings);
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]

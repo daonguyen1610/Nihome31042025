@@ -4443,6 +4443,26 @@ export interface AcknowledgeIfcReleaseRecipientRequest {
 }
 
 // --- Construction schedule (NIH-141) -----------------------------------
+export interface ConstructionDrawingResponse {
+  ifcReleaseItemId: number;
+  ifcReleaseId: number;
+  releaseNumber: string;
+  releaseDate?: string | null;
+  shopDrawingId: number;
+  drawingCode: string;
+  title: string;
+  constructionItem: string;
+  revisionNumber: number;
+  hasFile: boolean;
+  fileName?: string | null;
+  contentType?: string | null;
+}
+
+export interface ConstructionTaskDrawingsResponse {
+  version: string;
+  linked: ConstructionDrawingResponse[];
+  available: ConstructionDrawingResponse[];
+}
 
 export type ConstructionTaskStatus =
   "Planned" | "InProgress" | "Completed" | "Cancelled" | "OnHold" | "WaitingForDepartment";
@@ -7093,6 +7113,14 @@ export const adminApi = {
     const qs = q.toString();
     return api.get<ConstructionTaskListResponse>(`/construction-tasks${qs ? `?${qs}` : ""}`);
   },
+  getConstructionTaskDrawings: (id: number) =>
+    api.get<ConstructionTaskDrawingsResponse>(`/construction-tasks/${id}/drawings`),
+  setConstructionTaskDrawings: (
+    id: number,
+    body: { version: string; ifcReleaseItemIds: number[] },
+  ) => api.put<ConstructionTaskDrawingsResponse>(`/construction-tasks/${id}/drawings`, body),
+  getConstructionTaskDrawingContent: (id: number, itemId: number) =>
+    api.get<Blob>(`/construction-tasks/${id}/drawings/${itemId}/content`, { responseType: "blob" }),
   getConstructionTask: (id: number) =>
     api.get<ConstructionTaskResponse>(`/construction-tasks/${id}`),
   createConstructionTask: (body: CreateConstructionTaskRequest) =>
