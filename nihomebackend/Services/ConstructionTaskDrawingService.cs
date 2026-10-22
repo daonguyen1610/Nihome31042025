@@ -1,3 +1,4 @@
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
@@ -59,7 +60,17 @@ public partial class ConstructionTaskService
         task.DrawingLinksVersion = Guid.NewGuid();
         task.UpdatedAt = DateTime.UtcNow;
         task.UpdatedByUserId = callerUserId;
-        await CrmConcurrency.SaveChangesAsync(db, ct);
+        try
+        {
+            await CrmConcurrency.SaveChangesAsync(db, ct);
+        }
+        catch (DbUpdateException exception) when (SequentialCodes.IsUniqueViolation(exception) ||
+            exception.InnerException is SqlException { Number: 547 })
+        {
+            // SQL may insert child links before checking the parent's version.
+            // A competing add or principal deletion follows the stale-write contract.
+            throw new CrmConcurrencyException("Liên kết bản vẽ đã thay đổi. Vui lòng tải lại trước khi lưu.");
+        }
         return await GetDrawingsAsync(id, ct);
     }
 
