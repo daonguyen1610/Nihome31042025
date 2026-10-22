@@ -68,7 +68,7 @@ public sealed class OperationalProjectDocumentsControllerTests(
     }
 
     [Fact]
-    public async Task SuperAdmin_UploadsListsAndDownloadsPdf_FromDriveWithoutHostCopy()
+    public async Task SuperAdmin_UploadsListsAndDownloadsPdf_FromHostWhileSyncIsPending()
     {
         await AuthenticateAsAsync("SUPER_ADMIN");
         var projectId = await CreateProjectAsync();
@@ -82,8 +82,8 @@ public sealed class OperationalProjectDocumentsControllerTests(
         body.GetProperty("category").GetString().Should().Be("DesignBasic");
         body.GetProperty("sourceType").GetString().Should().Be("ManualUpload");
         body.GetProperty("origin").GetString().Should().Be("Nicon");
-        body.GetProperty("desiredOperation").GetString().Should().Be("None");
-        body.GetProperty("syncStatus").GetString().Should().Be("Synced");
+        body.GetProperty("desiredOperation").GetString().Should().Be("Upsert");
+        body.GetProperty("syncStatus").GetString().Should().Be("Pending");
         body.GetProperty("isDownloadable").GetBoolean().Should().BeTrue();
         body.GetProperty("size").GetInt64().Should().Be(PdfBytes.Length);
         body.GetProperty("sha256").GetString().Should().Be(Convert.ToHexString(SHA256.HashData(PdfBytes)).ToLowerInvariant());
@@ -91,23 +91,127 @@ public sealed class OperationalProjectDocumentsControllerTests(
 
         var documentId = body.GetProperty("id").GetInt64();
         var persisted = await LoadDocumentAsync(documentId);
-        persisted.LocalPath.Should().BeEmpty();
-        persisted.SyncStatus.Should().Be(ProjectDocumentSyncStatus.Synced);
-        persisted.DesiredOperation.Should().Be(ProjectDocumentDesiredOperation.None);
-        persisted.DriveFileId.Should().NotBeNullOrWhiteSpace();
-        ProjectFiles(projectId).Should().BeEmpty();
+        persisted.LocalPath.Should().NotBeEmpty();
+        persisted.SyncStatus.Should().Be(ProjectDocumentSyncStatus.Pending);
+        persisted.DesiredOperation.Should().Be(ProjectDocumentDesiredOperation.Upsert);
+        persisted.DriveFileId.Should().BeNull();
+        ProjectFiles(projectId).Should().ContainSingle();
 
         var list = await Client.GetAsync($"/api/operational-projects/{projectId}/documents");
         list.StatusCode.Should().Be(HttpStatusCode.OK);
         var listed = (await ReadJsonAsync(list)).EnumerateArray().Should().ContainSingle().Subject;
         listed.GetProperty("id").GetInt64().Should().Be(documentId);
-        listed.GetProperty("syncStatus").GetString().Should().Be("Synced");
+        listed.GetProperty("syncStatus").GetString().Should().Be("Pending");
 
         var download = await Client.GetAsync($"/api/operational-projects/{projectId}/documents/{documentId}/content");
         download.StatusCode.Should().Be(HttpStatusCode.OK);
         download.Content.Headers.ContentType!.MediaType.Should().Be("application/pdf");
         download.Content.Headers.ContentDisposition!.FileNameStar.Should().Be("private-plan.pdf");
         (await download.Content.ReadAsByteArrayAsync()).Should().Equal(PdfBytes);
+    }
+
+    [Fact]
+    public async Task DeletionImpact_WithEnumFolderCategory_TranslatesOnRelationalProvider()
+    {
+        await AuthenticateAsAsync("SUPER_ADMIN");
+        var projectId = await CreateProjectAsync();
+        await WithDbAsync(async db =>
+        {
+            db.ProjectDriveFolders.Add(new ProjectDriveFolder
+            {
+                OperationalProjectId = projectId,
+                Category = ProjectDocumentCategory.DesignBasic,
+                DriveFolderId = "unverified-folder",
+            });
+            await db.SaveChangesAsync();
+        });
+        var response = await Client.GetAsync($"/api/operational-projects/{projectId}/deletion-impact");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var impact = await ReadJsonAsync(response);
+        impact.GetProperty("canDelete").GetBoolean().Should().BeFalse();
+        impact.GetProperty("items").EnumerateArray().Should().Contain(item =>
+            item.GetProperty("key").GetString() == "operations.driveFolders" &&
+            item.GetProperty("action").GetString() == "Block");
+    }
+
+    [Fact]
+    public async Task SourceOwnedSync_PreservesOriginalHostFile()
+    {
+        await AuthenticateAsAsync("SUPER_ADMIN");
+        var projectId = await CreateProjectAsync();
+        var source = await AddDocumentAsync(projectId, ProjectDocumentCategory.DesignBasic);
+        await WithDbAsync(async db =>
+        {
+            var document = await db.ProjectDocuments.SingleAsync(item => item.Id == source.Id);
+            document.SourceType = ProjectDocumentSourceType.ExistingManagedFile;
+            foreach (var other in await db.ProjectDocuments.Where(item => item.Id != source.Id).ToListAsync())
+                other.NextSyncAttemptAt = DateTime.UtcNow.AddDays(1);
+            await db.SaveChangesAsync();
+        });
+        using var scope = Factory.Services.CreateScope();
+        (await scope.ServiceProvider.GetRequiredService<IProjectDriveSyncProcessor>()
+            .ProcessNextOutboundAsync()).Should().BeTrue();
+        var synced = await LoadDocumentAsync(source.Id);
+        synced.SyncStatus.Should().Be(ProjectDocumentSyncStatus.Synced);
+        synced.LocalPath.Should().Be(source.LocalPath);
+        File.Exists(FullPath(source.LocalPath)).Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task OfflineUpload_ReconnectVerifiesContentBeforeRemovingHostCopy(bool mismatch)
+    {
+        await AuthenticateAsAsync("SUPER_ADMIN");
+        var projectId = await CreateProjectAsync();
+        factory.DriveOptions.Enabled = false;
+        try
+        {
+            using var content = CreateUploadContent("DesignBasic", "offline-evidence.pdf", PdfBytes);
+            var uploaded = await SendUploadAsync(projectId, content);
+            uploaded.StatusCode.Should().Be(HttpStatusCode.Created);
+            var documentId = (await ReadJsonAsync(uploaded)).GetProperty("id").GetInt64();
+            var staged = await LoadDocumentAsync(documentId);
+            staged.SyncStatus.Should().Be(ProjectDocumentSyncStatus.Pending);
+            File.Exists(FullPath(staged.LocalPath)).Should().BeTrue();
+            await WithDbAsync(async db =>
+            {
+                foreach (var other in await db.ProjectDocuments.Where(item => item.Id != documentId).ToListAsync())
+                    other.NextSyncAttemptAt = DateTime.UtcNow.AddDays(1);
+                await db.SaveChangesAsync();
+            });
+            using (var scope = Factory.Services.CreateScope())
+                (await scope.ServiceProvider.GetRequiredService<IProjectDriveSyncProcessor>()
+                    .ProcessNextOutboundAsync()).Should().BeFalse();
+            (await LoadDocumentAsync(documentId)).SyncAttemptCount.Should().Be(0);
+            factory.DriveOptions.Enabled = true;
+            factory.CorruptDownloads = mismatch;
+            using (var scope = Factory.Services.CreateScope())
+                (await scope.ServiceProvider.GetRequiredService<IProjectDriveSyncProcessor>()
+                    .ProcessNextOutboundAsync()).Should().BeTrue();
+            var synced = await LoadDocumentAsync(documentId);
+            if (mismatch)
+            {
+                synced.SyncStatus.Should().Be(ProjectDocumentSyncStatus.Pending);
+                synced.SyncAttemptCount.Should().Be(1);
+                synced.SyncError.Should().NotBeNullOrWhiteSpace();
+                File.Exists(FullPath(staged.LocalPath)).Should().BeTrue();
+                factory.CorruptDownloads = false;
+                var retry = await Client.PostAsync($"/api/operational-projects/{projectId}/documents/{documentId}/retry", null);
+                retry.StatusCode.Should().Be(HttpStatusCode.OK);
+                using var retryScope = Factory.Services.CreateScope();
+                (await retryScope.ServiceProvider.GetRequiredService<IProjectDriveSyncProcessor>()
+                    .ProcessNextOutboundAsync()).Should().BeTrue();
+                synced = await LoadDocumentAsync(documentId);
+            }
+            synced.SyncStatus.Should().Be(ProjectDocumentSyncStatus.Synced);
+            synced.LocalPath.Should().BeEmpty();
+            File.Exists(FullPath(staged.LocalPath)).Should().BeFalse();
+            ProjectFiles(projectId).Should().BeEmpty();
+            var downloaded = await Client.GetAsync($"/api/operational-projects/{projectId}/documents/{documentId}/content");
+            (await downloaded.Content.ReadAsByteArrayAsync()).Should().Equal(PdfBytes);
+        }
+        finally { factory.DriveOptions.Enabled = true; factory.CorruptDownloads = false; }
     }
 
     [Fact]
@@ -139,7 +243,7 @@ public sealed class OperationalProjectDocumentsControllerTests(
         replay.Headers.GetValues("Idempotency-Replayed").Should().ContainSingle("true");
         replayBody.GetProperty("id").GetInt64().Should().Be(firstBody.GetProperty("id").GetInt64());
         (await CountDocumentsAsync(projectId)).Should().Be(1);
-        factory.DriveFileCount.Should().Be(driveFilesBefore + 1);
+        factory.DriveFileCount.Should().Be(driveFilesBefore);
     }
 
     [Fact]
@@ -184,7 +288,7 @@ public sealed class OperationalProjectDocumentsControllerTests(
         replay.Headers.Should().NotContain(header => header.Key == "Idempotency-Replayed");
         changed.Headers.Should().NotContain(header => header.Key == "Idempotency-Replayed");
         (await CountDocumentsAsync(projectId)).Should().Be(1);
-        factory.DriveFileCount.Should().Be(driveFilesBefore + 1);
+        factory.DriveFileCount.Should().Be(driveFilesBefore);
     }
 
     [Fact]
@@ -223,7 +327,7 @@ public sealed class OperationalProjectDocumentsControllerTests(
         first.StatusCode.Should().Be(HttpStatusCode.Created);
         changed.StatusCode.Should().Be(HttpStatusCode.Conflict);
         (await CountDocumentsAsync(projectId)).Should().Be(1);
-        factory.DriveFileCount.Should().Be(driveFilesBefore + 1);
+        factory.DriveFileCount.Should().Be(driveFilesBefore);
     }
 
     [Fact]
@@ -248,7 +352,7 @@ public sealed class OperationalProjectDocumentsControllerTests(
         responses.Count(response => response.StatusCode == HttpStatusCode.Created &&
             !response.Headers.Contains("Idempotency-Replayed")).Should().Be(1);
         (await CountDocumentsAsync(projectId)).Should().Be(1);
-        factory.DriveFileCount.Should().Be(driveFilesBefore + 1);
+        factory.DriveFileCount.Should().Be(driveFilesBefore);
         foreach (var response in responses) response.Dispose();
     }
 
@@ -412,7 +516,7 @@ public sealed class OperationalProjectDocumentsControllerTests(
     }
 
     [Fact]
-    public async Task Delete_QueuesDeleteAndKeepsPendingRowAndManagedFileUntilDriveWorkerCompletes()
+    public async Task Delete_HostOnlyDocument_RemovesFileWithoutWaitingForDrive()
     {
         await AuthenticateAsAsync("SUPER_ADMIN");
         var projectId = await CreateProjectAsync();
@@ -424,22 +528,14 @@ public sealed class OperationalProjectDocumentsControllerTests(
 
         response.StatusCode.Should().Be(HttpStatusCode.NoContent);
         var persisted = await LoadDocumentAsync(document.Id);
-        persisted.DesiredOperation.Should().Be(ProjectDocumentDesiredOperation.Delete);
-        persisted.SyncStatus.Should().Be(ProjectDocumentSyncStatus.Pending);
-        persisted.SyncAttemptCount.Should().Be(0);
+        persisted.DesiredOperation.Should().Be(ProjectDocumentDesiredOperation.None);
+        persisted.SyncStatus.Should().Be(ProjectDocumentSyncStatus.Deleted);
         persisted.DeletedAt.Should().NotBeNull();
-        File.Exists(fullPath).Should().BeTrue();
-
+        File.Exists(fullPath).Should().BeFalse();
         var list = await Client.GetAsync($"/api/operational-projects/{projectId}/documents");
-        list.StatusCode.Should().Be(HttpStatusCode.OK);
-        var listed = (await ReadJsonAsync(list)).EnumerateArray().Should().ContainSingle().Subject;
-        listed.GetProperty("id").GetInt64().Should().Be(document.Id);
-        listed.GetProperty("desiredOperation").GetString().Should().Be("Delete");
-        listed.GetProperty("syncStatus").GetString().Should().Be("Pending");
-
+        (await ReadJsonAsync(list)).EnumerateArray().Should().BeEmpty();
         var content = await Client.GetAsync($"/api/operational-projects/{projectId}/documents/{document.Id}/content");
-        content.StatusCode.Should().Be(HttpStatusCode.OK);
-        (await content.Content.ReadAsByteArrayAsync()).Should().Equal(PdfBytes);
+        content.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
@@ -471,7 +567,7 @@ public sealed class OperationalProjectDocumentsControllerTests(
     }
 
     [Fact]
-    public async Task Retry_PendingBackoffQueuesImmediately_AndTerminalFailureIsUnchanged()
+    public async Task Retry_PendingBackoffAndTerminalFailure_StartNewManualBudget()
     {
         await AuthenticateAsAsync("SUPER_ADMIN");
         var projectId = await CreateProjectAsync();
@@ -482,7 +578,6 @@ public sealed class OperationalProjectDocumentsControllerTests(
             syncStatus: ProjectDocumentSyncStatus.Failed,
             syncAttemptCount: ProjectDocumentService.MaxSyncAttempts,
             nextSyncAttemptAt: DateTime.UtcNow.AddHours(2));
-        var failedBefore = Snapshot(failed);
         var requestStartedAt = DateTime.UtcNow;
 
         var pendingResponse = await Client.PostAsync(
@@ -493,13 +588,14 @@ public sealed class OperationalProjectDocumentsControllerTests(
         pendingResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         var pendingBody = await ReadJsonAsync(pendingResponse);
         pendingBody.GetProperty("syncStatus").GetString().Should().Be("Pending");
-        pendingBody.GetProperty("syncAttemptCount").GetInt32().Should().Be(2);
+        pendingBody.GetProperty("syncAttemptCount").GetInt32().Should().Be(0);
         pendingBody.GetProperty("nextSyncAttemptAt").GetDateTime().Should().BeOnOrAfter(requestStartedAt);
         pendingBody.GetProperty("nextSyncAttemptAt").GetDateTime().Should().BeOnOrBefore(DateTime.UtcNow);
 
-        failedResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        (await ReadJsonAsync(failedResponse)).GetProperty("message").GetString().Should().NotBeNullOrWhiteSpace();
-        Snapshot(await LoadDocumentAsync(failed.Id)).Should().Be(failedBefore);
+        failedResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var retried = await LoadDocumentAsync(failed.Id);
+        retried.SyncStatus.Should().Be(ProjectDocumentSyncStatus.Pending);
+        retried.SyncAttemptCount.Should().Be(0);
     }
 
     [Fact]
@@ -867,6 +963,9 @@ public sealed class OperationalProjectDocumentsWebApplicationFactory : NihomeWeb
         Path.GetTempPath(), $"nihome-project-documents-{Guid.NewGuid():N}.db");
     private readonly InMemoryGoogleDriveAdapter driveAdapter = new();
 
+    public GoogleDriveOptions DriveOptions { get; } = new()
+    { Enabled = true, InstanceId = "integration-tests", RootFolderId = "root" };
+    public bool CorruptDownloads { get => driveAdapter.CorruptDownloads; set => driveAdapter.CorruptDownloads = value; }
     public int DriveFileCount => driveAdapter.ActiveFileCount;
 
     public void FailDriveUploadFor(long documentId) =>
@@ -880,12 +979,7 @@ public sealed class OperationalProjectDocumentsWebApplicationFactory : NihomeWeb
             foreach (var descriptor in services.Where(descriptor => descriptor.ServiceType == typeof(IHostedService) &&
                 descriptor.ImplementationType == typeof(ProjectDriveSyncService)).ToList())
                 services.Remove(descriptor);
-            var driveOptions = new GoogleDriveOptions
-            {
-                Enabled = true,
-                InstanceId = "integration-tests",
-                RootFolderId = "root",
-            };
+            var driveOptions = DriveOptions;
             services.RemoveAll<IGoogleDriveSettingsStore>();
             services.AddSingleton<IGoogleDriveSettingsStore>(new ConfiguredSettingsStore(driveOptions));
             services.RemoveAll<IGoogleDriveAdapter>();
@@ -966,6 +1060,8 @@ public sealed class OperationalProjectDocumentsWebApplicationFactory : NihomeWeb
         private readonly ConcurrentDictionary<string, DriveEntry> files = new();
         private string? failedReplicaKey;
 
+        public bool CorruptDownloads { get; set; }
+
         public int ActiveFileCount => files.Count(entry => !entry.Value.IsTrashed);
 
         public void FailUploadFor(string replicaKey) =>
@@ -1008,7 +1104,9 @@ public sealed class OperationalProjectDocumentsWebApplicationFactory : NihomeWeb
         public async Task DownloadAsync(string fileId, Stream destination, CancellationToken ct = default)
         {
             if (!files.TryGetValue(fileId, out var entry) || entry.IsTrashed) throw new FileNotFoundException();
-            await destination.WriteAsync(entry.Content, ct);
+            var bytes = entry.Content.ToArray();
+            if (CorruptDownloads && bytes.Length > 0) bytes[0] ^= 1;
+            await destination.WriteAsync(bytes, ct);
         }
 
         public Task<DriveItem?> GetMetadataAsync(string fileId, CancellationToken ct = default) =>

@@ -30,23 +30,10 @@ public sealed class ProjectDocumentService(
         int projectId, ProjectDocumentUploadRequest request, int callerUserId, bool canSeeAll, CancellationToken ct = default)
     {
         if (!await CanAccessProjectAsync(projectId, callerUserId, canSeeAll, ct)) return null;
-        if (!(await driveSettings.GetRuntimeAsync(ct)).Enabled)
-            throw new ProjectDocumentValidationException("Google Drive chưa được bật; không thể tải tệp dự án lên.");
         ValidateCategory(request.Category, allowUnclassified: false);
         await ValidateMetadataAsync(projectId, request.SourceModule, request.SourceRecordId, request.CustomerId, request.ContractId, ct);
         await ValidateManualDesignSourceAsync(projectId, request, ct);
-        var stored = await storage.InspectUploadAsync(request.File, ct);
-        var project = await db.OperationalProjects.SingleAsync(item => item.Id == projectId, ct);
-        var folder = await folders.EnsureAsync(project, request.Category, callerUserId, ct);
-        await using var content = request.File!.OpenReadStream();
-        var upload = await drive.UploadAsync(
-            folder.DriveFolderId,
-            $"nicon-project-upload:{Guid.NewGuid():N}",
-            1,
-            stored.OriginalFileName,
-            stored.ContentType,
-            content,
-            ct);
+        var stored = await storage.StoreAsync(projectId, request.File, ct);
         try
         {
             var document = CreateDocument(projectId, request.Category, request.SourceModule,
@@ -58,21 +45,14 @@ public sealed class ProjectDocumentService(
             // A manual upload is a distinct file, even when several files share
             // one source record and have no local path (Drive-only storage).
             document.SourceSlot = $"manual-upload:{Guid.NewGuid():N}";
-            document.DriveFileId = upload.FileId;
-            document.DriveFolderId = folder.DriveFolderId;
-            document.DriveWebViewLink = upload.Link;
-            document.DriveVersion = upload.Version;
-            document.DriveModifiedAt = upload.ModifiedAt;
-            document.DesiredOperation = ProjectDocumentDesiredOperation.None;
-            document.SyncStatus = ProjectDocumentSyncStatus.Synced;
-            document.NextSyncAttemptAt = null;
+            document.NextSyncAttemptAt = (await driveSettings.GetRuntimeAsync(ct)).Enabled ? DateTime.UtcNow : null;
             db.ProjectDocuments.Add(document);
             await db.SaveChangesAsync(ct);
             return Map(document);
         }
         catch
         {
-            await drive.DeleteAsync(upload.FileId, CancellationToken.None);
+            storage.DeleteOwned(projectId, stored.LocalPath);
             throw;
         }
     }
@@ -345,6 +325,27 @@ public sealed class ProjectDocumentService(
         document.UpdatedByUserId = callerUserId;
         await db.SaveChangesAsync(ct);
         if (transaction is not null) await transaction.CommitAsync(ct);
+        if (string.IsNullOrWhiteSpace(document.DriveFileId))
+        {
+            try
+            {
+                storage.DeleteOwned(projectId, document.LocalPath);
+                document.LocalPath = string.Empty;
+                document.SyncStatus = ProjectDocumentSyncStatus.Deleted;
+                document.DesiredOperation = ProjectDocumentDesiredOperation.None;
+                document.NextSyncAttemptAt = null;
+                await db.SaveChangesAsync(ct);
+            }
+            catch
+            {
+                // Keep the durable delete intent visible and retryable.
+                document.SyncStatus = ProjectDocumentSyncStatus.Failed;
+                document.DesiredOperation = ProjectDocumentDesiredOperation.Delete;
+                document.SyncError = "Không xóa được bản lưu trên host; hãy thử xóa lại.";
+                await db.SaveChangesAsync(CancellationToken.None);
+                throw;
+            }
+        }
         return true;
     }
 
@@ -356,12 +357,11 @@ public sealed class ProjectDocumentService(
         if (document is null) return null;
         if (document.SyncStatus == ProjectDocumentSyncStatus.Processing)
             throw new ProjectDocumentConflictException("Tệp đang được đồng bộ. Vui lòng chờ trước khi thử lại.");
-        var retryingDelete = document.DesiredOperation == ProjectDocumentDesiredOperation.Delete;
-        if ((!retryingDelete && document.SyncAttemptCount >= MaxSyncAttempts) || document.SyncStatus is not
+        if (document.SyncStatus is not
             (ProjectDocumentSyncStatus.Failed or ProjectDocumentSyncStatus.Pending))
-            throw new ProjectDocumentValidationException("Chỉ tệp đang chờ hoặc đồng bộ lỗi còn lượt thử mới có thể thử lại.");
+            throw new ProjectDocumentValidationException("Chỉ tệp đang chờ hoặc đồng bộ lỗi mới có thể gửi lại.");
         document.SyncStatus = ProjectDocumentSyncStatus.Pending;
-        if (retryingDelete) document.SyncAttemptCount = 0;
+        document.SyncAttemptCount = 0;
         document.NextSyncAttemptAt = DateTime.UtcNow;
         document.SyncError = null;
         document.ClaimToken = null;

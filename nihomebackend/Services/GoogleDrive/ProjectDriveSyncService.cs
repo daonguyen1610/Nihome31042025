@@ -129,6 +129,30 @@ public sealed class ProjectDriveSyncProcessor(
         var options = await settingsStore.GetRuntimeAsync(ct);
         currentInstanceId = options.InstanceId;
         if (!options.Enabled) return false;
+        var localReplica = await db.ProjectDocuments.AsNoTracking()
+            .Where(item => item.SourceType == ProjectDocumentSourceType.ManualUpload &&
+                item.Origin == ProjectDocumentOrigin.Nicon && item.SyncStatus == ProjectDocumentSyncStatus.Synced &&
+                item.LocalPath != "" && item.DriveFileId != null &&
+                (!item.NextSyncAttemptAt.HasValue || item.NextSyncAttemptAt <= DateTime.UtcNow))
+            .OrderBy(item => item.Id).FirstOrDefaultAsync(ct);
+        if (localReplica is not null && await HasWritableConnectionAsync(ct))
+        {
+            try
+            {
+                await VerifyRemoteContentAsync(localReplica, localReplica.DriveFileId!, ct);
+                await PurgeLocalReplicaAsync(localReplica, ct);
+                return true;
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                logger.LogWarning(exception, "Local replica cleanup deferred for document {DocumentId}", localReplica.Id);
+                await db.ProjectDocuments.Where(item => item.Id == localReplica.Id &&
+                    item.Generation == localReplica.Generation && item.SyncStatus == ProjectDocumentSyncStatus.Synced)
+                    .ExecuteUpdateAsync(setters => setters
+                        .SetProperty(item => item.NextSyncAttemptAt, DateTime.UtcNow.AddMinutes(5))
+                        .SetProperty(item => item.SyncError, "operationalProjects.documents.cleanupDeferred"), ct);
+            }
+        }
         var now = DateTime.UtcNow;
         var candidates = await db.ProjectDocuments.AsNoTracking().Where(IsDueForClaim(now))
             .OrderBy(document => document.NextSyncAttemptAt ?? document.CreatedAt)
@@ -394,6 +418,36 @@ public sealed class ProjectDriveSyncProcessor(
         return affected == 1 ? generation : null;
     }
 
+    private async Task VerifyRemoteContentAsync(ProjectDocument document, string fileId, CancellationToken ct)
+    {
+        var readback = await storage.StoreDriveImportAsync(document.OperationalProjectId,
+            document.OriginalFileName, document.ContentType, document.Size,
+            (destination, token) => drive.DownloadAsync(fileId, destination, token), ct);
+        try
+        {
+            if (readback.Size != document.Size ||
+                !string.Equals(readback.Sha256, document.Sha256, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("Nội dung trên Drive chưa khớp tệp gốc; giữ nguyên tệp trên host để thử lại.");
+        }
+        finally { storage.DeleteOwned(document.OperationalProjectId, readback.LocalPath); }
+    }
+
+    private async Task PurgeLocalReplicaAsync(ProjectDocument document, CancellationToken ct)
+    {
+        await using var transaction = db.Database.IsRelational()
+            ? await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct) : null;
+        var current = await db.ProjectDocuments.SingleOrDefaultAsync(item => item.Id == document.Id &&
+            item.Generation == document.Generation && item.SyncStatus == ProjectDocumentSyncStatus.Synced &&
+            item.LocalPath == document.LocalPath, ct);
+        if (current is null) return;
+        storage.DeleteOwned(current.OperationalProjectId, current.LocalPath);
+        current.LocalPath = string.Empty;
+        current.SyncError = null;
+        current.NextSyncAttemptAt = null;
+        await db.SaveChangesAsync(ct);
+        if (transaction is not null) await transaction.CommitAsync(ct);
+    }
+
     private async Task ProcessClaimAsync(long documentId, Guid token, long generation, CancellationToken ct)
     {
         var document = await db.ProjectDocuments.AsNoTracking().Include(item => item.OperationalProject)
@@ -423,6 +477,8 @@ public sealed class ProjectDriveSyncProcessor(
             var upload = await claimLease.RunAsync(documentId, token, generation,
                 operationCt => drive.UploadAsync(folder.DriveFolderId, ReplicaKey(document.Id), generation,
                     document.OriginalFileName, document.ContentType, content, operationCt), ct);
+            if (document.SourceType == ProjectDocumentSourceType.ManualUpload)
+                await VerifyRemoteContentAsync(document, upload.FileId, ct);
             var completedAt = DateTime.UtcNow;
             await using var completionTransaction = db.Database.IsRelational()
                 ? await db.Database.BeginTransactionAsync(ct)
@@ -446,13 +502,19 @@ public sealed class ProjectDriveSyncProcessor(
             else
             {
                 await PropagateSurveySuccessAsync(document, folder, upload, completedAt, ct);
-                if (completionTransaction is not null) await completionTransaction.CommitAsync(ct);
+                if (completionTransaction is not null)
+                {
+                    await completionTransaction.CommitAsync(ct);
+                    await completionTransaction.DisposeAsync();
+                }
                 if (document.Origin == ProjectDocumentOrigin.GoogleDrive &&
                     !string.IsNullOrWhiteSpace(document.DriveFileId) &&
                     !string.Equals(document.DriveFileId, upload.FileId, StringComparison.Ordinal) &&
                     !await db.ProjectDocuments.AsNoTracking().AnyAsync(item =>
                         item.ConflictWithDocumentId == document.Id && item.DriveFileId == document.DriveFileId, ct))
                     await drive.DeleteAsync(document.DriveFileId, ct);
+                if (document.SourceType == ProjectDocumentSourceType.ManualUpload)
+                    await PurgeLocalReplicaAsync(document, ct);
                 audit.Log(new AuditEvent
                 {
                     Action = "project-document.sync_success",

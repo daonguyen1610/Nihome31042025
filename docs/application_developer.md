@@ -969,8 +969,15 @@ that the root has been deleted until its status is `Completed`.
   Failed Drive-delete sidecars remain blockers and can be manually retried by
   an authorized Operational Project manager even after automatic retries are
   exhausted.
-- Existing domain flows continue to unlink external Google Drive folder
-  bindings until they are migrated to the durable operation foundation.
+- Operational Project deletion includes the application's verified project
+  folder tree in the durable plan after source-file cleanup. It inventories all
+  children (including trashed items), deletes empty path folders before their
+  project root, and rechecks emptiness at execution. Unknown/imported/shared
+  contents and folders with independent CRM files block deletion. A Drive outage
+  remains visible and retryable; the database root survives until cleanup is
+  complete. Stored operation items preserve the original plan across partial
+  remote deletion. Design-only deletion preserves the shared Operational Project
+  folder; non-migrated Survey bindings retain their existing unlink behavior.
 - A migrated plan may permanently delete a Drive file or folder only when its
   metadata proves current Nicon `InstanceId` ownership, every caller-supplied
   expected app property matches, the expected parent matches when supplied,
@@ -1943,9 +1950,21 @@ Survey retains a required `OperationalProjectId`. Project reassignment queues
 old replicas for deletion and stages media in the destination project's Survey
 category. This event-driven behavior does not scan unrelated source records.
 
+Manual catalog uploads first persist their validated bytes in private host
+storage and a durable `Pending` record, including when Drive is disabled or
+unavailable. They remain downloadable through the authorized content endpoint.
+The worker pauses without consuming attempts until a writable Drive connection
+exists. After uploading a manual file, it reads the remote content back and
+compares byte count and SHA-256 before committing the fenced sync receipt. Only
+then does it remove the owned host copy and clear its path. Failed cleanup is
+retried from the synced record; mismatched content retains the original host
+file. Legacy source-managed files retain their source-module copy and lifecycle.
+Manual retry resets the bounded automatic retry budget for a failed/pending
+record; processing records and protected/frozen evidence remain guarded.
+
 The worker uses durable desired operations, bounded retries, claim tokens,
-generation fencing, SQL rowversion, and per-folder reconciliation leases for
-legacy source-owned sidecars. Drive is authoritative for manual catalog uploads
+generation fencing, SQL rowversion, and per-folder reconciliation leases.
+Drive is authoritative for successfully synchronized manual catalog uploads
 and files created directly in managed folders: reconciliation catalogs them in
 their current category without downloading host copies, reflects remote edits,
 and marks remotely trashed files deleted. Native Google Workspace files remain

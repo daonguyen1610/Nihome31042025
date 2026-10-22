@@ -52,6 +52,8 @@ public interface IGoogleDriveAdapter
         Stream content,
         CancellationToken ct = default);
     Task<IReadOnlyList<DriveItem>> ListChildrenAsync(string folderId, CancellationToken ct = default);
+    Task<IReadOnlyList<DriveItem>> ListDeletionChildrenAsync(string folderId, CancellationToken ct = default)
+        => throw new NotSupportedException("Deletion inventory is not supported by this adapter.");
     Task DownloadAsync(string fileId, Stream destination, CancellationToken ct = default);
     Task<DriveItem?> GetMetadataAsync(string fileId, CancellationToken ct = default);
     Task UpdateFileNameAsync(string fileId, string fileName, CancellationToken ct = default);
@@ -173,14 +175,20 @@ public sealed class GoogleDriveAdapter(
         return ToUpload(request.ResponseBody);
     }
 
-    public async Task<IReadOnlyList<DriveItem>> ListChildrenAsync(string folderId, CancellationToken ct = default)
+    public Task<IReadOnlyList<DriveItem>> ListChildrenAsync(string folderId, CancellationToken ct = default)
+        => ListChildrenCoreAsync(folderId, false, ct);
+
+    public Task<IReadOnlyList<DriveItem>> ListDeletionChildrenAsync(string folderId, CancellationToken ct = default)
+        => ListChildrenCoreAsync(folderId, true, ct);
+
+    private async Task<IReadOnlyList<DriveItem>> ListChildrenCoreAsync(string folderId, bool includeTrashed, CancellationToken ct)
     {
         var items = new List<DriveItem>();
         string? pageToken = null;
         do
         {
             var request = (await GetServiceAsync(ct)).Files.List();
-            request.Q = $"'{EscapeQueryValue(folderId)}' in parents and trashed = false";
+            request.Q = $"'{EscapeQueryValue(folderId)}' in parents" + (includeTrashed ? "" : " and trashed = false");
             request.Fields = $"nextPageToken,files({ItemFields})";
             request.PageSize = 1000;
             request.PageToken = pageToken;
@@ -312,6 +320,11 @@ public sealed class GoogleDriveAdapter(
         if (metadata is null) return;
         DrivePermanentDeletePolicy.EnsureOwned(
             metadata, options.InstanceId, request.ExpectedAppProperties, request.ExpectedParentId);
+
+        if (metadata.MimeType == "application/vnd.google-apps.folder" &&
+            (await ListDeletionChildrenAsync(request.FileId, ct)).Count != 0)
+            throw new DrivePermanentDeleteRejectedException("drive_folder_not_empty",
+                "Thư mục Drive còn nội dung mới hoặc chưa xử lý; hãy kiểm tra trước khi thử xóa lại.");
 
         var delete = (await GetServiceAsync(ct)).Files.Delete(request.FileId);
         delete.SupportsAllDrives = options.SupportsAllDrives;

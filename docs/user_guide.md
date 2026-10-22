@@ -1675,10 +1675,16 @@ in the current release.
 
 #### 3.7.2 Document Digitization
 
-Google Drive stores the content of manual project uploads; Nicon stores the
-catalog, access rules, and workflow metadata. Uploads go directly to the chosen
-project category without creating a second host copy, while authenticated
-downloads are proxied by Nicon. Files added or edited directly in a managed
+Upload remains available when Google Drive is disconnected: Nicon temporarily
+stores the file on the host and displays Pending. Once connected, the worker
+uploads it, verifies its contents and removes the temporary host copy. Downloads
+remain authorized through Nicon. For failed files, use Send to Drive again;
+manual retry is available even after automatic attempts are exhausted. Delete
+removes an unlinked host-only upload immediately or queues its Drive deletion.
+Files owned by another business module must be removed through that module.
+Deleting an Operational Project also deletes its verified empty Nicon folder
+tree on Drive after dependent-file cleanup. Unknown/shared files and independent
+CRM documents block deletion and must be handled explicitly first. Files added or edited directly in a managed
 Drive category are reflected in the catalog, and files moved to Drive trash are
 marked deleted. Native Google Docs, Sheets, and Slides can be opened through
 their Drive link but cannot be downloaded through the binary-content action.

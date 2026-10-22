@@ -1,8 +1,10 @@
 using System.Globalization;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Constants;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
+using NihomeBackend.Services.GoogleDrive;
 using NihomeBackend.Models.DTOs.Responses;
 
 namespace NihomeBackend.Services.HardDelete;
@@ -17,7 +19,7 @@ public interface IProjectHardDeletePlanService
     Task<ProjectHardDeletePlan?> ForOperationalProjectAsync(int projectId, CancellationToken ct = default);
 }
 
-public sealed class ProjectHardDeletePlanService(AppDbContext db) : IProjectHardDeletePlanService
+public sealed class ProjectHardDeletePlanService(AppDbContext db, IGoogleDriveAdapter drive, IGoogleDriveSettingsStore settingsStore) : IProjectHardDeletePlanService
 {
     public async Task<ProjectHardDeletePlan?> ForDesignProjectAsync(
         int projectId, CancellationToken ct = default)
@@ -84,6 +86,7 @@ public sealed class ProjectHardDeletePlanService(AppDbContext db) : IProjectHard
         CancellationToken ct)
     {
         var identities = new List<string>();
+        IReadOnlyList<HardDeleteItemDefinition> folderDeletes = [];
         var documents = await db.ProjectDocuments.AsNoTracking()
             .Where(item => documentIds.Contains(item.Id))
             .OrderBy(item => item.Id)
@@ -127,6 +130,37 @@ public sealed class ProjectHardDeletePlanService(AppDbContext db) : IProjectHard
                 .Select(folder =>
                     $"preserved-folder:{folder.Id}:{folder.Category}:{folder.DriveFolderId}"));
 
+            var bindings = await db.ProjectDriveFolders.AsNoTracking()
+                .Where(item => item.OperationalProjectId == impact.ResourceId)
+                .Select(item => item.DriveFolderId).ToListAsync(ct);
+            if (bindings.Count > 0)
+            {
+                var folderImpact = impact.Items.Single(item => item.Key == "operations.driveFolders");
+                try
+                {
+                    var activeItems = await db.HardDeleteItems.AsNoTracking()
+                        .Where(item => item.Operation.ResourceType == EntityTypes.OperationalProject &&
+                            item.Operation.ResourceId == impact.ResourceId.ToString() &&
+                            item.Operation.Status != HardDeleteOperationStatus.Completed &&
+                            item.Kind == HardDeleteItemKind.DriveFolder)
+                        .OrderBy(item => item.Sequence).ToListAsync(ct);
+                    folderDeletes = activeItems.Count > 0
+                        ? activeItems.Select(item => new HardDeleteItemDefinition(item.Kind,
+                            item.ActionIdentifier, item.Sequence,
+                            JsonSerializer.Deserialize<Dictionary<string, string>>(item.ExpectedAppPropertiesJson!)!,
+                            item.ExpectedParentId)).ToList()
+                        : await ProjectDriveDeletionPlanner.BuildAsync(impact.ResourceId,
+                            bindings, drive, await settingsStore.GetRuntimeAsync(ct), ct);
+                    impact.Items.Remove(folderImpact);
+                }
+                catch (Exception exception) when (exception is not OperationCanceledException)
+                {
+                    folderImpact.Action = DeletionImpactActions.Block;
+                    folderImpact.Examples = ["Kết nối Drive và dọn nội dung thư mục tại phân hệ nguồn trước khi xóa dự án."];
+                    identities.Add("drive-folders:verification-blocked");
+                }
+            }
+
             var surveyMediaLinks = await db.SurveyMedia.AsNoTracking()
                 .Where(item => item.Survey.OperationalProjectId == impact.ResourceId)
                 .Select(item => new DeletionImpactLinkResponse
@@ -147,16 +181,16 @@ public sealed class ProjectHardDeletePlanService(AppDbContext db) : IProjectHard
             SetResolutionLinks(impact, "operations.surveyDriveFolders", surveyLinks);
         }
 
-        DeletionImpactPlanner.ApplyDurableFileEvidence(impact, identities, blockers, []);
+        DeletionImpactPlanner.ApplyDurableFileEvidence(impact, identities, blockers, folderDeletes);
         var blocker = impact.Items.SingleOrDefault(item => item.Key is
             "design.filesPendingCleanup" or "operations.pendingDocuments");
         if (blocker is not null)
             blocker.ResolutionLinks = resolutionLinks;
-        return new ProjectHardDeletePlan(impact,
+        return new ProjectHardDeletePlan(impact, folderDeletes.Concat(
         [
             new HardDeleteItemDefinition(
-                HardDeleteItemKind.DatabaseAggregate, "delete-database-aggregate", 0),
-        ]);
+                HardDeleteItemKind.DatabaseAggregate, "delete-database-aggregate", folderDeletes.Count),
+        ]).ToList());
     }
 
     private static void SetResolutionLinks(
