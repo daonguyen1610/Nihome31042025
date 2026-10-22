@@ -1,0 +1,26 @@
+using NihomeBackend.Models.DTOs.Requests;
+
+namespace NihomeBackend.Models.DTOs.Responses;
+
+public sealed class LegalChecklistTemplateResponse
+{
+    public int Id { get; set; }
+    public string Code { get; set; } = string.Empty;
+    public int Version { get; set; }
+    public string NameVi { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string NameZh { get; set; } = string.Empty;
+    public string NameJa { get; set; } = string.Empty;
+    public string ScopeVi { get; set; } = string.Empty;
+    public string Scope { get; set; } = string.Empty;
+    public string ScopeZh { get; set; } = string.Empty;
+    public string ScopeJa { get; set; } = string.Empty;
+    public string Status { get; set; } = string.Empty;
+    public List<LegalChecklistTemplateItem> Items { get; set; } = new();
+    public int CreatedByUserId { get; set; }
+    public int UpdatedByUserId { get; set; }
+    public int? PublishedByUserId { get; set; }
+    public DateTime? PublishedAt { get; set; }
+    public string? ApprovalReference { get; set; }
+    public string RowVersion { get; set; } = string.Empty;
+}

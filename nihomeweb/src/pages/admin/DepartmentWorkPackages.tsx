@@ -234,12 +234,18 @@ const DepartmentWorkPackages = () => {
       const quote = Number(params.get("quoteId"));
       const tender = Number(params.get("tenderId"));
       const requestedPurpose = params.get("purpose") as WorkPackagePurpose | null;
+      if (requestedPurpose === "LegalPermitting") {
+        navigate(
+          project > 0 ? `/admin/permits?operationalProjectId=${project}` : "/admin/permits",
+          { replace: true },
+        );
+        return;
+      }
       const purpose: WorkPackagePurpose = [
         "ProcurementInputPricing",
         "FinanceCommercialReview",
         "FinanceTenderReview",
         "TenderPlanning",
-        "LegalPermitting",
       ].includes(requestedPurpose ?? "")
         ? requestedPurpose!
         : tender > 0
@@ -265,7 +271,7 @@ const DepartmentWorkPackages = () => {
       }));
       setPackageOpen(true);
     }
-  }, [canManage, options.departments, packageId, params]);
+  }, [canManage, navigate, options.departments, packageId, params]);
   useEffect(() => {
     if (!detail?.financeReview) return;
     setReviewForm({

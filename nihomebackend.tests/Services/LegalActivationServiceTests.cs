@@ -23,6 +23,7 @@ public sealed class LegalActivationServiceTests : IDisposable
     private readonly ApplicationUser _assignee;
     private readonly OperationalProject _project;
     private readonly Customer _customer;
+    private readonly LegalChecklistTemplate _template;
 
     public LegalActivationServiceTests()
     {
@@ -49,6 +50,24 @@ public sealed class LegalActivationServiceTests : IDisposable
             new MasterDataOption { Category = "permit_type", Code = "gpxd", Name = "Giấy phép xây dựng", IsActive = true },
             new MasterDataOption { Category = "permit_type", Code = "pccc", Name = "Thẩm duyệt PCCC", IsActive = true },
             new MasterDataOption { Category = "permit_type", Code = "retired", Name = "Đã ngừng", IsActive = false });
+        _db.SaveChanges();
+
+        _template = new LegalChecklistTemplate
+        {
+            Code = "NICON-LEGAL-TEST",
+            Name = "Factory permit checklist",
+            NameVi = "Checklist pháp lý nhà máy",
+            NameZh = "工厂许可清单",
+            NameJa = "工場許可一覧",
+            Scope = "Approved test fixture",
+            ScopeVi = "Mẫu kiểm thử",
+            ScopeZh = "测试模板",
+            ScopeJa = "テスト用",
+            Status = LegalChecklistTemplateStatus.Published,
+            RowVersion = new byte[8],
+            ItemsJson = "[{\"PermitTypeCode\":\"gpxd\",\"IsRequired\":true}]",
+        };
+        _db.LegalChecklistTemplates.Add(_template);
         _db.SaveChanges();
 
         _contracts.Setup(service => service.GetAsync(
@@ -228,6 +247,86 @@ public sealed class LegalActivationServiceTests : IDisposable
 
     public void Dispose() => _db.Dispose();
 
+    [Fact]
+    public async Task ApplyingTemplateToLegacyPackagePreservesScheduleFilesAndCompletedWork()
+    {
+        var contract = AddEligibleContract("HD-LEGACY-SNAPSHOT");
+        await _service.ActivateContractAsync(contract.Id, ValidRequest(), _pm.Id);
+        var package = await _db.DepartmentWorkPackages.SingleAsync();
+        var task = await _db.DepartmentWorkTasks.SingleAsync();
+        var permit = await _db.PermitChecklistItems.SingleAsync();
+        package.LegalChecklistTemplateId = null; package.LegalChecklistSnapshotJson = null;
+        package.RowVersion = new byte[8]; permit.IsRequired = false;
+        task.Status = WorkTaskStatus.Verified;
+        permit.Status = PermitStatus.Issued; permit.IssuedAt = DateTime.UtcNow;
+        permit.IssuedFilePath = "/files/business-documents/permits/legacy-issued.pdf";
+        var start = package.PlannedStart; var end = package.PlannedEnd; var lead = package.LeadUserId;
+        await _db.SaveChangesAsync();
+        var request = ProjectSetup(); request.WorkPackageRowVersion = Convert.ToBase64String(package.RowVersion);
+        request.LegalLeadUserId = _legalLead.Id;
+        request.PlannedEnd = request.PlannedEnd.AddMonths(2);
+        await _service.SetupProjectAsync(_project.Id, request, _pm.Id);
+        Assert.Equal(start, package.PlannedStart); Assert.Equal(end, package.PlannedEnd); Assert.Equal(lead, package.LeadUserId);
+        Assert.Equal(WorkTaskStatus.Verified, task.Status);
+        Assert.Equal(PermitStatus.Issued, permit.Status);
+        Assert.Equal("/files/business-documents/permits/legacy-issued.pdf", permit.IssuedFilePath);
+        Assert.True(permit.IsRequired);
+        Assert.Single(_db.PermitChecklistItems);
+        Assert.Single(_db.DepartmentWorkTasks);
+    }
+
+    [Fact]
+    public async Task ApplyingTemplateCannotCreateTaskOutsidePreservedLegacyPackageSchedule()
+    {
+        var contract = AddEligibleContract("HD-LEGACY-BOUNDS");
+        await _service.ActivateContractAsync(contract.Id, ValidRequest(), _pm.Id);
+        var package = await _db.DepartmentWorkPackages.SingleAsync();
+        package.LegalChecklistTemplateId = null; package.LegalChecklistSnapshotJson = null;
+        package.RowVersion = new byte[8];
+        await _db.SaveChangesAsync();
+        var request = ProjectSetup(); request.WorkPackageRowVersion = Convert.ToBase64String(package.RowVersion);
+        request.PlannedEnd = request.PlannedEnd.AddMonths(3);
+        var added = Permit("pccc", _assignee.Id, _legalLead.Id);
+        added.PlannedEnd = request.PlannedEnd;
+        request.Permits.Add(added);
+        var error = await Assert.ThrowsAsync<LegalActivationException>(() => _service.SetupProjectAsync(_project.Id, request, _pm.Id));
+        Assert.Equal("LEGAL_TASK_DATES_INVALID", error.Code);
+        Assert.Null(package.LegalChecklistTemplateId);
+        Assert.Single(_db.DepartmentWorkTasks);
+    }
+
+    [Fact]
+    public async Task Activate_MissingRequiredPermitRejectsBeforeCreatingAnyPackage()
+    {
+        var contract = AddEligibleContract("HD-MISSING-REQUIRED");
+        var request = ValidRequest();
+        request.Permits = [Permit("pccc", _assignee.Id, _legalLead.Id)];
+        var error = await Assert.ThrowsAsync<LegalActivationException>(() => _service.ActivateContractAsync(contract.Id, request, _pm.Id));
+        Assert.Equal("LEGAL_REQUIRED_PERMITS_MISSING", error.Code);
+        Assert.Empty(_db.DepartmentWorkPackages);
+        Assert.Empty(_db.PermitChecklistItems);
+        Assert.Equal(ContractStatus.Signed, contract.Status);
+    }
+
+    [Fact]
+    public async Task AppliedSnapshotSurvivesRetirement_AndBlocksSwitchingTemplates()
+    {
+        var contract = AddEligibleContract("HD-SNAPSHOT");
+        await _service.ActivateContractAsync(contract.Id, ValidRequest(), _pm.Id);
+        var package = await _db.DepartmentWorkPackages.SingleAsync();
+        var snapshot = package.LegalChecklistSnapshotJson;
+        Assert.True((await _db.PermitChecklistItems.SingleAsync()).IsRequired);
+        _template.Status = LegalChecklistTemplateStatus.Retired;
+        await _db.SaveChangesAsync();
+        var preview = await _service.PreviewProjectAsync(_project.Id, _pm.Id);
+        Assert.Empty(preview!.Templates);
+        Assert.Equal(_template.Id, preview.AppliedTemplate!.Id);
+        var request = ProjectSetup(); request.TemplateId = _template.Id + 100;
+        var error = await Assert.ThrowsAsync<LegalActivationException>(() => _service.SetupProjectAsync(_project.Id, request, _pm.Id));
+        Assert.Equal("LEGAL_TEMPLATE_CHANGE_BLOCKED", error.Code);
+        Assert.Equal(snapshot, package.LegalChecklistSnapshotJson);
+    }
+
     private RoleGroup AddGroup(string code)
     {
         var group = new RoleGroup { Code = code, LabelKey = $"group.{code}" };
@@ -306,6 +405,8 @@ public sealed class LegalActivationServiceTests : IDisposable
 
     private ActivateContractWithLegalRequest ValidRequest() => new()
     {
+        TemplateId = _template.Id,
+        TemplateRowVersion = Convert.ToBase64String(_template.RowVersion),
         LegalLeadUserId = _legalLead.Id,
         PlannedStart = DateTime.UtcNow.Date,
         PlannedEnd = DateTime.UtcNow.Date.AddMonths(6),
@@ -315,6 +416,8 @@ public sealed class LegalActivationServiceTests : IDisposable
 
     private SetupProjectLegalRequest ProjectSetup() => new()
     {
+        TemplateId = _template.Id,
+        TemplateRowVersion = Convert.ToBase64String(_template.RowVersion),
         LegalLeadUserId = _legalLead.Id,
         PlannedStart = DateTime.UtcNow.Date,
         PlannedEnd = DateTime.UtcNow.Date.AddMonths(6),

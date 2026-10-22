@@ -19,6 +19,7 @@ public class PermitChecklistItem
 
     /// <summary>Master-data code from category <c>permit_type</c>.</summary>
     public string PermitTypeCode { get; set; } = string.Empty;
+    public bool IsRequired { get; set; }
 
     /// <summary>Issuing authority (free text — Sở Xây dựng, Cảnh sát PCCC …).</summary>
     public string? IssuingAgency { get; set; }

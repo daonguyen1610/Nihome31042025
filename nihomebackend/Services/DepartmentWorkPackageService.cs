@@ -188,6 +188,8 @@ public sealed partial class DepartmentWorkPackageService(
             throw Error("Loại nhóm công việc không hợp lệ. Giá trị hợp lệ: Project hoặc Internal.");
         if (!Enum.TryParse<WorkPackagePurpose>(request.Purpose, true, out var purpose))
             throw Error("Mục đích nhóm công việc không hợp lệ.");
+        if (purpose == WorkPackagePurpose.LegalPermitting)
+            throw Error("Gói Pháp lý phải được tạo qua Thiết lập Pháp lý cùng mẫu checklist đã xuất bản.");
         ValidateDates(request.PlannedStart, request.PlannedEnd);
         var admin = await IsAdministratorAsync(callerUserId, ct);
         await ValidateDepartmentLeadAsync(request.LeadUserId, request.DepartmentRoleGroupId, ct);

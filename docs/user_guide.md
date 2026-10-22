@@ -185,7 +185,7 @@ The platform is being developed incrementally. The following components are curr
 | Site survey digitization | Implemented, including project routing, structured conditions, CSV import, media/geolocation, Drive sync, and PDF export |
 | Customer contracts, appendices, attachments, and variation orders | Implemented |
 | Design management | Partial — projects, Concept options with typed revisions, files, client feedback and signed acceptance; Basic/Shop/IFC, Project Documents with Drive sync, linked Team/Schedule, one-approver task completion, CC, internal comments linked to a dossier or one submitted file, Design Manager consolidation and client decision gates are delivered; native 3D viewing, in-drawing markup and full MS Project import remain target work |
-| Permitting checklists | Partial — owner/deadline, lifecycle, submitted/issued documents, risk filters and a manual activation wizard are delivered; project-type permit templates and automatic applicable-list creation remain target work |
+| Permitting checklists | Partial — lifecycle, documents, risk filters, versioned template authoring/independent review and manual application with mandatory items are delivered; CM/NICON approval of actual type/scale catalogues and automatic template matching remain open |
 | Construction management (tasks/Gantt and site diaries) | Partial — core tasks/diaries plus CM preparation/readiness, BCH resource/QA-QC/QS workspaces and Budget Baseline references are delivered; editable WBS/S-Curve baseline, reproducible delay alert, portfolio review and offline/reconnect remain target work |
 | Acceptance and handover | Partial — core records and CM review of QA/QC/QS are delivered; upstream/downstream QS payment eligibility, three-section dossier and complete handover gate remain target work |
 | Punchlist management | Partial — core records are delivered; CM overdue supervision and expanded field evidence remain target work |
@@ -999,8 +999,10 @@ Design, Construction, or Design & Build Contract is moved from **Signed** to
 wizard on the Contract detail page:
 
 1. Check the Contract and Operational Project.
-2. Select from the active permit types proposed by the system. The proposal is
-   editable because NICON has not yet approved a project-type template.
+2. Select a Published legal checklist template by its scope and version. Required
+   items cannot be unchecked; choose optional items and additional active permit
+   types as applicable. A new package cannot be confirmed without a published
+   template. If none exists, ask Legal/CM to author and independently approve one.
 3. Select the Legal lead, assignee, independent approver, dates, and predecessor
    for each permit. Assignees and approvers must be active members of that
    Operational Project and may belong to different departments.
@@ -1012,6 +1014,29 @@ Project. Later eligible Contracts for the same project reuse that package and
 do not duplicate permits. Legacy projects or already-active Contracts use
 **Set up Legal** from the Permit workspace; legacy Design Project links remain
 available for compatibility.
+
+Expand **Legal checklist templates** in the Permit workspace. Legal/Admin can
+draft a code, names and applicable scope in Vietnamese, English, Chinese and
+Japanese, then select permit types in checklist order and mark required items.
+CM/Admin reviewers check every item and scope, enter the CM/NICON approval
+reference and choose **Approve and publish**. A creator or editor cannot publish
+their own version, even as Admin. The development example stays Draft until a
+real independent approval; it is not an approved NICON legal matrix.
+
+Published definitions cannot be edited. **Draft a new version** prepares a new
+draft; **Retire from new use** preserves earlier project snapshots. The PM
+selects a template manually; the system does not infer project type or scale.
+
+Existing projects without a template remain usable. PM/Admin can choose one
+through **Set up Legal**, review existing items versus new items and confirm.
+Existing files, task progress and package schedule remain unchanged; missing
+items are linked/created. Applied templates cannot be switched or waived in
+this release. A required checklist item is not automatically a prerequisite for
+every construction stage; stage-specific construction gates keep their rules.
+
+After a stale-data error, refresh to inspect the latest version while retaining
+your input. In the template editor, review the current definition and explicitly
+confirm the latest version before saving your draft again.
 
 Track construction permits (GPXD), fire safety (PCCC), electrical supply, water supply, sidewalk permits, completion certificates, and other configured types. Record status, issuing agency, responsible person, submission and issue dates, expiry, target deadline, and notes. Risk cards and filters highlight overdue, due-soon, and expiring items.
 

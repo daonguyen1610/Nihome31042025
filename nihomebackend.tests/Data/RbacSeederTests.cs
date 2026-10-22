@@ -18,6 +18,29 @@ public class RbacSeederTests : IDisposable
     public void Dispose() => _db.Dispose();
 
     [Fact]
+    public void NewLegalTemplatePermissionsBackfillExistingRolesOnceAndPreserveRevocation()
+    {
+        RbacSeeder.Seed(_db);
+        var permissionIds = _db.Permissions.Where(x => x.Module == "permit.templates").Select(x => x.Id).ToList();
+        _db.RolePermissions.RemoveRange(_db.RolePermissions.Where(x => permissionIds.Contains(x.PermissionId)));
+        _db.RoleGroupPermissions.RemoveRange(_db.RoleGroupPermissions.Where(x => permissionIds.Contains(x.PermissionId)));
+        _db.Permissions.RemoveRange(_db.Permissions.Where(x => permissionIds.Contains(x.Id)));
+        _db.SaveChanges();
+        RbacSeeder.Seed(_db);
+        var pm = _db.Roles.Single(x => x.Code == "PM");
+        var legal = _db.Roles.Single(x => x.Code == "LEGAL_OFFICER");
+        var publish = _db.Permissions.Single(x => x.Module == "permit.templates" && x.Action == "publish");
+        var manage = _db.Permissions.Single(x => x.Module == "permit.templates" && x.Action == "manage");
+        Assert.Contains(_db.RolePermissions, x => x.RoleId == pm.Id && x.PermissionId == publish.Id);
+        Assert.Contains(_db.RolePermissions, x => x.RoleId == legal.Id && x.PermissionId == manage.Id);
+        Assert.DoesNotContain(_db.RolePermissions, x => x.RoleId == legal.Id && x.PermissionId == publish.Id);
+        _db.RolePermissions.Remove(_db.RolePermissions.Single(x => x.RoleId == pm.Id && x.PermissionId == publish.Id));
+        _db.SaveChanges();
+        RbacSeeder.Seed(_db);
+        Assert.DoesNotContain(_db.RolePermissions, x => x.RoleId == pm.Id && x.PermissionId == publish.Id);
+    }
+
+    [Fact]
     public void Seed_PopulatesEntireCatalog()
     {
         RbacSeeder.Seed(_db);

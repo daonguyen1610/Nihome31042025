@@ -169,8 +169,11 @@ public sealed class CrmBusinessPipelineTests(NihomeWebApplicationFactory factory
             contract = await ReadAsync($"/api/contracts/{Id(contract)}");
             var executeKey = Guid.NewGuid().ToString();
             var legalUsers = await ConfigureLegalActivationTeamAsync(projectId);
+            var legalTemplate = await SeedPublishedLegalTemplateAsync();
             var execute = new
             {
+                templateId = legalTemplate.Id,
+                templateRowVersion = legalTemplate.RowVersion,
                 legalLeadUserId = legalUsers.LegalLeadUserId,
                 plannedStart = DateTime.UtcNow.Date,
                 plannedEnd = DateTime.UtcNow.Date.AddMonths(6),

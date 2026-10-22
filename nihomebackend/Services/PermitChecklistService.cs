@@ -524,6 +524,7 @@ public class PermitChecklistService(
             DesignProjectCode = entity.DesignProject?.ProjectCode,
             DesignProjectName = entity.DesignProject?.Name,
             PermitTypeCode = entity.PermitTypeCode,
+            IsRequired = entity.IsRequired,
             PermitTypeLabel = labelByCode.TryGetValue(entity.PermitTypeCode, out var label) ? label : null,
             IssuingAgency = entity.IssuingAgency,
             OwnerUserId = entity.WorkTask?.AssigneeUserId ?? entity.OwnerUserId,

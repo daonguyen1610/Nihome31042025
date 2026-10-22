@@ -70,8 +70,11 @@ public sealed class DesignPermitIfcPipelineTests(NihomeWebApplicationFactory fac
             await db.SaveChangesAsync();
         });
         await LoginAsync("PM");
+        var legalTemplate = await SeedPublishedLegalTemplateAsync();
         contract = await PostWithIdempotencyAsync($"/api/contracts/{Id(contract)}/activate-with-legal", new
         {
+            templateId = legalTemplate.Id,
+            templateRowVersion = legalTemplate.RowVersion,
             legalLeadUserId = legalUsers.LegalLeadId,
             plannedStart = DateTime.UtcNow.Date,
             plannedEnd = DateTime.UtcNow.Date.AddMonths(6),

@@ -18,6 +18,7 @@ import AdminLayout from "@/components/layout/AdminLayout";
 import AdminDocumentUpload from "@/components/admin/AdminDocumentUpload";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import LegalActivationWizard from "@/components/admin/LegalActivationWizard";
+import LegalChecklistTemplates from "@/components/admin/LegalChecklistTemplates";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -612,6 +613,7 @@ const AdminPermits = () => {
         </header>
 
         {/* Risk register */}
+        {has("permit.templates.view") ? <LegalChecklistTemplates /> : null}
         <section className="grid gap-2 md:grid-cols-4">
           <RiskCard
             title={t("permits.risk.overdue")}
@@ -802,6 +804,11 @@ const AdminPermits = () => {
                     <div className="min-w-0">
                       <h3 className="break-words text-sm font-semibold leading-tight">
                         {r.permitTypeLabel ?? r.permitTypeCode}
+                        {r.isRequired ? (
+                          <Badge variant="outline" className="ml-2">
+                            {t("legalTemplates.required")}
+                          </Badge>
+                        ) : null}
                       </h3>
                       <p className="mt-0.5 break-words text-xs text-muted-foreground">
                         {r.operationalProjectCode ? `${r.operationalProjectCode} — ` : ""}
@@ -890,6 +897,11 @@ const AdminPermits = () => {
                       </td>
                       <td className="px-3 py-2 font-medium text-slate-900">
                         {r.permitTypeLabel ?? r.permitTypeCode}
+                        {r.isRequired ? (
+                          <Badge variant="outline" className="ml-2">
+                            {t("legalTemplates.required")}
+                          </Badge>
+                        ) : null}
                       </td>
                       <td className="px-3 py-2 text-slate-700">{r.issuingAgency ?? "—"}</td>
                       <td className="px-3 py-2 text-slate-700">{r.ownerName ?? "—"}</td>

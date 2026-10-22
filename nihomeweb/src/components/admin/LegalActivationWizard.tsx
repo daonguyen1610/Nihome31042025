@@ -62,7 +62,7 @@ export default function LegalActivationWizard({
   onOpenChange,
   onActivated,
 }: Props) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const [preview, setPreview] = useState<LegalActivationPreview | null>(null);
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -70,10 +70,21 @@ export default function LegalActivationWizard({
   const [error, setError] = useState<string | null>(null);
   const [permitErrors, setPermitErrors] = useState<Record<string, string>>({});
   const [concurrency, setConcurrency] = useState(false);
+  const [contractRowVersion, setContractRowVersion] = useState(contract?.rowVersion ?? "");
   const [leadUserId, setLeadUserId] = useState(0);
   const [packageStart, setPackageStart] = useState("");
   const [packageEnd, setPackageEnd] = useState("");
   const [permits, setPermits] = useState<PermitDraft[]>([]);
+  const [templateId, setTemplateId] = useState(0);
+  const template =
+    preview?.appliedTemplate ?? preview?.templates?.find((item) => item.id === templateId);
+  const requiredCodes = useMemo(
+    () =>
+      new Set(
+        template?.items.filter((item) => item.isRequired).map((item) => item.permitTypeCode) ?? [],
+      ),
+    [template],
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -89,14 +100,21 @@ export default function LegalActivationWizard({
     void request
       .then(({ data }) => {
         if (cancelled) return;
-        const start = datePart(contract?.startDate) || today();
-        const end = datePart(contract?.endDate) || plusDays(start, 180);
-        const lead = data.projectMembers.find((member) => member.canLeadLegal)?.userId ?? 0;
+        const start =
+          datePart(data.existingPlannedStart) || datePart(contract?.startDate) || today();
+        const end =
+          datePart(data.existingPlannedEnd) || datePart(contract?.endDate) || plusDays(start, 180);
+        const lead =
+          data.existingLegalLeadUserId ??
+          data.projectMembers.find((member) => member.canLeadLegal)?.userId ??
+          0;
         const firstAssignee =
           data.projectMembers.find((member) => member.userId !== lead)?.userId ?? lead;
         const approverFor = (assignee: number) =>
           lead && lead !== assignee ? lead : data.projectManagerUserId;
         setPreview(data);
+        setContractRowVersion(contract?.rowVersion ?? "");
+        setTemplateId(data.appliedTemplate?.id ?? 0);
         setLeadUserId(lead);
         setPackageStart(start);
         setPackageEnd(end);
@@ -105,7 +123,10 @@ export default function LegalActivationWizard({
             code: permit.code,
             name: permit.name,
             selected:
-              permit.requiresSetup || (!permit.alreadyExists && !data.existingWorkPackageId),
+              permit.requiresSetup ||
+              !!data.appliedTemplate?.items.some(
+                (item) => item.permitTypeCode === permit.code && item.isRequired,
+              ),
             alreadyExists: permit.alreadyExists,
             requiresSetup: permit.requiresSetup,
             issuingAgency: "",
@@ -152,6 +173,8 @@ export default function LegalActivationWizard({
 
   const validateStep = () => {
     if (!preview?.eligible) return preview?.message ?? t("contracts.legal.error.ineligible");
+    if (step === 1 && !preview.existingWorkPackageId && !template)
+      return t("legalTemplates.chooseRequired");
     if (step === 1 && selected.length === 0 && !hasConfiguredPermit)
       return t("contracts.legal.error.permitRequired");
     if (step === 2) {
@@ -160,7 +183,10 @@ export default function LegalActivationWizard({
         return t("contracts.legal.error.packageDates");
       const nextPermitErrors: Record<string, string> = {};
       for (const permit of selected) {
-        if (!permit.assigneeUserId || !permit.approverUserId)
+        if (
+          !preview.projectMembers.some((member) => member.userId === permit.assigneeUserId) ||
+          !preview.projectMembers.some((member) => member.userId === permit.approverUserId)
+        )
           nextPermitErrors[permit.code] = t("contracts.legal.error.assignmentRequired");
         else if (permit.assigneeUserId === permit.approverUserId)
           nextPermitErrors[permit.code] = t("contracts.legal.error.selfApproval");
@@ -191,6 +217,49 @@ export default function LegalActivationWizard({
     setStep((current) => Math.min(3, current + 1));
   };
 
+  const reloadPreserving = async () => {
+    setLoading(true);
+    try {
+      const { data } = contract
+        ? await adminApi.getContractLegalActivationPreview(contract.id)
+        : await adminApi.getProjectLegalSetupPreview(operationalProjectId!);
+      if (contract)
+        setContractRowVersion((await adminApi.getContract(contract.id)).data.rowVersion);
+      setPreview(data);
+      if (data.appliedTemplate) setTemplateId(data.appliedTemplate.id);
+      setPermits((current) =>
+        data.permitTypes.map((type) => {
+          const previous = current.find((item) => item.code === type.code);
+          return {
+            code: type.code,
+            name: type.name,
+            alreadyExists: type.alreadyExists,
+            requiresSetup: type.requiresSetup,
+            selected:
+              previous?.selected ||
+              type.requiresSetup ||
+              !!data.appliedTemplate?.items.some(
+                (item) => item.permitTypeCode === type.code && item.isRequired,
+              ),
+            issuingAgency: previous?.issuingAgency ?? "",
+            assigneeUserId: previous?.assigneeUserId ?? 0,
+            approverUserId: previous?.approverUserId ?? 0,
+            plannedStart: previous?.plannedStart ?? packageStart,
+            plannedEnd: previous?.plannedEnd ?? packageEnd,
+            predecessors: previous?.predecessors ?? [],
+          };
+        }),
+      );
+      setConcurrency(false);
+      setError(null);
+      setStep(1);
+    } catch (reason) {
+      setError(extractApiError(reason));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const submit = async () => {
     setError(null);
     setConcurrency(false);
@@ -202,6 +271,9 @@ export default function LegalActivationWizard({
     setSaving(true);
     try {
       const request = {
+        templateId: template?.id,
+        templateRowVersion: template?.rowVersion,
+        workPackageRowVersion: preview?.workPackageRowVersion ?? undefined,
         legalLeadUserId: leadUserId,
         plannedStart: isoDate(packageStart),
         plannedEnd: isoDate(packageEnd),
@@ -218,7 +290,7 @@ export default function LegalActivationWizard({
       if (contract)
         await adminApi.activateContractWithLegal(contract.id, {
           ...request,
-          rowVersion: contract.rowVersion,
+          rowVersion: contractRowVersion,
         });
       else await adminApi.setupProjectLegal(operationalProjectId!, request);
       await onActivated();
@@ -274,9 +346,17 @@ export default function LegalActivationWizard({
             </div>
           ) : null}
           {concurrency ? (
-            <p className="mb-4 text-sm font-medium text-amber-700">
+            <div className="mb-4 space-y-2 text-sm font-medium text-amber-700">
               {t("contracts.legal.error.concurrency")}
-            </p>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={loading || saving}
+                onClick={() => void reloadPreserving()}
+              >
+                {t("legalTemplates.reloadPreserving")}
+              </Button>
+            </div>
           ) : null}
 
           {!loading && preview && step === 0 ? (
@@ -309,17 +389,83 @@ export default function LegalActivationWizard({
 
           {!loading && preview && step === 1 ? (
             <div className="space-y-2">
+              <Label htmlFor="legal-template-select">{t("legalTemplates.title")}</Label>
+              <select
+                id="legal-template-select"
+                className="w-full rounded-md border bg-background p-2"
+                value={templateId}
+                disabled={!!preview.appliedTemplate}
+                onChange={(event) => {
+                  const id = Number(event.target.value);
+                  setTemplateId(id);
+                  const chosen = preview.templates.find((item) => item.id === id);
+                  setPermits((current) =>
+                    current.map((permit) => ({
+                      ...permit,
+                      selected:
+                        permit.requiresSetup ||
+                        !!chosen?.items.some((item) => item.permitTypeCode === permit.code),
+                    })),
+                  );
+                }}
+              >
+                <option value={0}>{t("legalTemplates.notApplied")}</option>
+                {(preview.appliedTemplate
+                  ? [preview.appliedTemplate]
+                  : (preview.templates ?? [])
+                ).map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.code} · {item.version} ·{" "}
+                    {lang === "vi"
+                      ? item.nameVi
+                      : lang === "zh"
+                        ? item.nameZh
+                        : lang === "ja"
+                          ? item.nameJa
+                          : item.name}
+                  </option>
+                ))}
+              </select>
+              {template ? (
+                <p className="whitespace-pre-wrap text-sm text-muted-foreground">
+                  {lang === "vi"
+                    ? template.scopeVi
+                    : lang === "zh"
+                      ? template.scopeZh
+                      : lang === "ja"
+                        ? template.scopeJa
+                        : template.scope}
+                </p>
+              ) : (
+                <p className="text-sm text-amber-700">{t("legalTemplates.chooseRequired")}</p>
+              )}
+              {preview.templateAppliedAt ? (
+                <p className="text-xs text-muted-foreground">
+                  {new Date(preview.templateAppliedAt).toLocaleString()} · #
+                  {preview.templateAppliedByUserId}
+                </p>
+              ) : null}
               {permits.map((permit) => (
                 <label key={permit.code} className="flex items-start gap-3 rounded-lg border p-3">
                   <Checkbox
                     checked={permit.selected || (permit.alreadyExists && !permit.requiresSetup)}
-                    disabled={permit.alreadyExists && !permit.requiresSetup}
+                    disabled={
+                      requiredCodes.has(permit.code) ||
+                      (permit.alreadyExists && !permit.requiresSetup)
+                    }
                     onCheckedChange={(checked) =>
                       updatePermit(permit.code, { selected: checked === true })
                     }
                   />
                   <span className="min-w-0 flex-1">
                     <span className="block font-medium">{permit.name}</span>
+                    <span className="text-xs">
+                      {t(
+                        requiredCodes.has(permit.code)
+                          ? "legalTemplates.required"
+                          : "legalTemplates.optional",
+                      )}
+                    </span>
                     <span className="text-xs text-muted-foreground">{permit.code}</span>
                   </span>
                   {permit.alreadyExists && !permit.requiresSetup ? (
@@ -337,6 +483,9 @@ export default function LegalActivationWizard({
               <div className="grid gap-3 rounded-lg border p-3 sm:grid-cols-3">
                 <Field label={t("contracts.legal.lead")}>
                   <MemberSelect
+                    disabled={
+                      !!preview.existingWorkPackageId && !preview.appliedTemplate && !!template
+                    }
                     value={leadUserId}
                     members={preview.projectMembers.filter((member) => member.canLeadLegal)}
                     onChange={setLeadUserId}
@@ -345,6 +494,9 @@ export default function LegalActivationWizard({
                 <Field label={t("contracts.legal.start")}>
                   <Input
                     type="date"
+                    disabled={
+                      !!preview.existingWorkPackageId && !preview.appliedTemplate && !!template
+                    }
                     value={packageStart}
                     onChange={(event) => setPackageStart(event.target.value)}
                   />
@@ -352,6 +504,9 @@ export default function LegalActivationWizard({
                 <Field label={t("contracts.legal.end")}>
                   <Input
                     type="date"
+                    disabled={
+                      !!preview.existingWorkPackageId && !preview.appliedTemplate && !!template
+                    }
                     value={packageEnd}
                     onChange={(event) => setPackageEnd(event.target.value)}
                   />
@@ -475,16 +630,22 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 function MemberSelect({
+  disabled,
   value,
   members,
   onChange,
 }: {
+  disabled?: boolean;
   value: number;
   members: LegalActivationPreview["projectMembers"];
   onChange: (id: number) => void;
 }) {
   return (
-    <Select value={value ? String(value) : ""} onValueChange={(next) => onChange(Number(next))}>
+    <Select
+      disabled={disabled}
+      value={value ? String(value) : ""}
+      onValueChange={(next) => onChange(Number(next))}
+    >
       <SelectTrigger>
         <SelectValue />
       </SelectTrigger>

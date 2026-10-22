@@ -170,6 +170,19 @@ one Contract aggregate and ID.
 
 ### Legal activation and permit scope
 
+Legal checklist template permissions are separate from project setup:
+`permit.templates.view`, `permit.templates.manage`, and
+`permit.templates.publish`. The Legal Officer defaults to view/manage; PM
+(the current CM representative) defaults to view/publish. System Admin roles
+receive all three. New template permissions are introduced once for existing
+PM/Legal roles; subsequent administrator revocations remain revoked.
+
+Publication requires CM/NICON approval evidence and a reviewer who has never
+authored or edited that version, including an Admin. Published definitions are
+immutable; only a new Draft version can be edited. Retirement blocks new use
+without altering project snapshots. PM/Admin project scope is still required
+to apply a template; template permissions alone do not authorize project writes.
+
 `permit.checklists.view` permits reading only records within the caller's
 Operational Project scope. Portfolio visibility does not grant mutation outside
 that scope. `permit.checklists.manage` exposes the Legal setup/workspace, while
