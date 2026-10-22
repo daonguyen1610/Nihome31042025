@@ -1,5 +1,74 @@
 import { test, expect, TEST_USERS } from "../fixtures/auth";
 
+for (const width of [390, 768]) {
+  test(`renamed translated role remains visible after reload at ${width}px`, async ({
+    page,
+    api,
+    loginAs,
+    loginInBrowserAs,
+  }) => {
+    const token = await loginAs(TEST_USERS.superAdmin);
+    const headers = { Authorization: `Bearer ${token}` };
+    const code = `RENAME_E2E_${Date.now()}_${width}`;
+    const renamed = "Điều phối thi công NICON";
+    const created = await api.post("/api/admin/rbac/roles", {
+      headers,
+      data: {
+        code,
+        // Also cover repairing a previously saved name hidden by its label key.
+        name: renamed,
+        labelKey: "rbac.role.SALE.label",
+        permissions: ["dashboard.view"],
+      },
+    });
+    expect(created.status()).toBe(201);
+    const { id } = await created.json();
+    try {
+      await page.setViewportSize({ width, height: 844 });
+      await loginInBrowserAs(page, TEST_USERS.superAdmin);
+      await page.goto("/admin/roles");
+      const role = page.getByTestId(`rbac-role-${code}`);
+      await expect(role).toBeVisible();
+      await expect(role).toContainText("Kinh doanh");
+      await role.click();
+      await page.getByTestId(`rbac-edit-${code}`).click();
+      await expect(page.getByTestId("rbac-edit-name")).toHaveValue("Kinh doanh");
+      await page.getByTestId("rbac-edit-submit").click();
+      await expect(page.getByRole("dialog")).toHaveCount(0);
+      const unchanged = await api.get(`/api/admin/rbac/roles/${id}`, { headers });
+      expect((await unchanged.json()).labelKey).toBe("rbac.role.SALE.label");
+      await page.getByTestId(`rbac-edit-${code}`).click();
+      await page.getByTestId("rbac-edit-name").fill(" ");
+      await expect(page.getByTestId("rbac-edit-submit")).toBeDisabled();
+      await page.getByTestId("rbac-edit-name").fill(renamed);
+      await page.getByTestId("rbac-edit-submit").click();
+      await expect(page.getByRole("dialog")).toHaveCount(0);
+      await expect(role).toContainText(renamed);
+      await page.reload();
+      await expect(role).toContainText(renamed);
+      await role.click();
+      await page.getByTestId(`rbac-edit-${code}`).click();
+      await expect(page.getByTestId("rbac-edit-name")).toHaveValue(renamed);
+      const secondName = "Điều phối MEP NICON";
+      await page.getByTestId("rbac-edit-name").fill(secondName);
+      await page.getByTestId("rbac-edit-submit").click();
+      await expect(page.getByRole("dialog")).toHaveCount(0);
+      await page.reload();
+      await expect(role).toContainText(secondName);
+      const permissions = await api.get(`/api/admin/rbac/roles/${id}/permissions`, { headers });
+      expect((await permissions.json()).permissions).toEqual(["dashboard.view"]);
+      const dimensions = await page.locator("html").evaluate((element) => ({
+        clientWidth: element.clientWidth,
+        scrollWidth: element.scrollWidth,
+      }));
+      expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth);
+    } finally {
+      const deleted = await api.delete(`/api/admin/rbac/roles/${id}`, { headers });
+      expect(deleted.status()).toBe(200);
+    }
+  });
+}
+
 /**
  * Browser-side smoke for the focused role editor and comparison matrix.
  *
