@@ -297,10 +297,8 @@ export default function ProjectDocumentsPanel({
   };
 
   const canRetry = (document: ProjectDocumentResponse) =>
-    (document.desiredOperation === "Delete" ||
-      document.syncAttemptCount < document.maxSyncAttempts) &&
-    (document.syncStatus === "Failed" ||
-      (document.syncStatus === "Pending" && Boolean(document.nextSyncAttemptAt)));
+    document.syncStatus === "Failed" ||
+    (document.syncStatus === "Pending" && Boolean(document.nextSyncAttemptAt));
 
   const categoryLabel = (value: string) => {
     if (value === "Unclassified") return t("operationalProjects.documents.category.Unclassified");
@@ -542,7 +540,7 @@ export default function ProjectDocumentsPanel({
                 {documentDetails(document)}
                 {document.syncError && (
                   <p className="break-words rounded bg-destructive/5 p-2 text-xs text-destructive">
-                    {document.syncError}
+                    {t(document.syncError)}
                   </p>
                 )}
                 {document.unsupportedReason && (
@@ -607,7 +605,7 @@ export default function ProjectDocumentsPanel({
                       {document.originalFileName}
                       {document.syncError && (
                         <p className="mt-1 break-words text-xs font-normal text-destructive">
-                          {document.syncError}
+                          {t(document.syncError)}
                         </p>
                       )}
                       {document.unsupportedReason && (

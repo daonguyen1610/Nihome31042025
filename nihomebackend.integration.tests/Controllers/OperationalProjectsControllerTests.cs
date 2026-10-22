@@ -1245,7 +1245,7 @@ public class OperationalProjectsControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task Delete_WithDriveFolder_UnlinksBindingWithoutSchedulingFolderDelete()
+    public async Task Delete_WithUnverifiedDriveFolder_BlocksAndPreservesBinding()
     {
         await AuthTestHelper.AuthenticateAsync(
             Client,
@@ -1253,7 +1253,7 @@ public class OperationalProjectsControllerTests : IntegrationTestBase
         var customerId = await CreateCustomerAsync();
         var create = await Client.PostAsJsonAsync("/api/operational-projects", new
         {
-            name = $"Drive folder unlink {Guid.NewGuid():N}",
+            name = $"Unverified Drive folder {Guid.NewGuid():N}",
             customerId,
         });
         create.EnsureSuccessStatusCode();
@@ -1274,16 +1274,16 @@ public class OperationalProjectsControllerTests : IntegrationTestBase
         var impact = await ReadJsonAsync(
             await Client.GetAsync($"/api/operational-projects/{projectId}/deletion-impact"));
 
-        impact.GetProperty("canDelete").GetBoolean().Should().BeTrue();
+        impact.GetProperty("canDelete").GetBoolean().Should().BeFalse();
         impact.GetProperty("items").EnumerateArray().Should().Contain(item =>
             item.GetProperty("key").GetString() == "operations.driveFolders" &&
-            item.GetProperty("action").GetString() == "Unlink" &&
+            item.GetProperty("action").GetString() == "Block" &&
             item.GetProperty("count").GetInt32() == 1);
         var delete = await ConfirmDeleteAsync(projectId, project, impact);
 
-        delete.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        delete.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         (await WithDbAsync(db => db.ProjectDriveFolders
-            .AnyAsync(folder => folder.DriveFolderId == externalFolderId))).Should().BeFalse();
+            .AnyAsync(folder => folder.DriveFolderId == externalFolderId))).Should().BeTrue();
     }
 
     [Fact]

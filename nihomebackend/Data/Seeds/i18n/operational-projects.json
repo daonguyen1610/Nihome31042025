@@ -63,10 +63,10 @@
   {"key":"operationalProjects.timeline.source.ContractPaymentMilestone","category":"operationalProjects","vi":"Mốc thanh toán hợp đồng","en":"Contract payment milestone","zh":"合同付款里程碑","ja":"契約支払マイルストーン"},
   {"key":"operationalProjects.timeline.percent","category":"operationalProjects","vi":"{percent}% giá trị hợp đồng","en":"{percent}% of contract value","zh":"合同金额的 {percent}%","ja":"契約金額の {percent}%"},
   {"key":"operationalProjects.documents.title","category":"operationalProjects","vi":"Tài liệu dự án","en":"Project documents","zh":"项目文档","ja":"プロジェクト文書"},
-  {"key":"operationalProjects.documents.description","category":"operationalProjects","vi":"Quản lý tài liệu dự án trực tiếp trên Google Drive theo thư mục Nicon.","en":"Manage project documents directly in Nicon's Google Drive folders.","zh":"直接在 Nicon 的 Google Drive 文件夹中管理项目文档。","ja":"Nicon の Google Drive フォルダーでプロジェクト文書を直接管理します。"},
+  {"key":"operationalProjects.documents.description","category":"operationalProjects","vi":"Tệp được lưu tạm trên host khi chưa kết nối Drive. Khi đồng bộ và kiểm chứng thành công, bản tạm sẽ được xóa.","en":"Files are staged on the host while Drive is unavailable. The temporary copy is removed after synchronization and content verification.","zh":"Drive 不可用时文件暂存于服务器。同步并验证内容成功后删除临时副本。","ja":"Drive が利用できない間はサーバーに一時保存します。同期と内容の検証が完了すると一時コピーを削除します。"},
   {"key":"operationalProjects.documents.file","category":"operationalProjects","vi":"Tệp tải lên","en":"File to upload","zh":"上传文件","ja":"アップロードするファイル"},
   {"key":"operationalProjects.documents.upload","category":"operationalProjects","vi":"Tải lên","en":"Upload","zh":"上传","ja":"アップロード"},
-  {"key":"operationalProjects.documents.uploaded","category":"operationalProjects","vi":"Đã tải tài liệu lên Google Drive","en":"Document uploaded to Google Drive","zh":"文档已上传到 Google Drive","ja":"文書を Google Drive にアップロードしました"},
+  {"key":"operationalProjects.documents.uploaded","category":"operationalProjects","vi":"Đã lưu tài liệu và đưa vào hàng đợi đồng bộ Drive","en":"Document saved and queued for Drive synchronization","zh":"文档已保存并加入 Drive 同步队列","ja":"文書を保存し、Drive 同期キューに追加しました"},
   {"key":"operationalProjects.documents.selectCategory","category":"operationalProjects","vi":"Chọn danh mục","en":"Select a category","zh":"选择类别","ja":"カテゴリを選択"},
   {"key":"operationalProjects.documents.loading","category":"operationalProjects","vi":"Đang tải tài liệu...","en":"Loading documents...","zh":"正在加载文档...","ja":"文書を読み込み中..."},
   {"key":"operationalProjects.documents.loadError","category":"operationalProjects","vi":"Không thể tải tài liệu dự án","en":"Could not load project documents","zh":"无法加载项目文档","ja":"プロジェクト文書を読み込めませんでした"},
@@ -106,7 +106,7 @@
   {"key":"operationalProjects.documents.category.FinanceContracts","category":"operationalProjects","vi":"Tài chính và hợp đồng","en":"Finance and contracts","zh":"财务与合同","ja":"財務・契約"},
   {"key":"operationalProjects.documents.download","category":"operationalProjects","vi":"Tải xuống","en":"Download","zh":"下载","ja":"ダウンロード"},
   {"key":"operationalProjects.documents.openDrive","category":"operationalProjects","vi":"Mở Drive","en":"Open Drive","zh":"打开 Drive","ja":"Drive を開く"},
-  {"key":"operationalProjects.documents.retry","category":"operationalProjects","vi":"Thử lại","en":"Retry","zh":"重试","ja":"再試行"},
+  {"key":"operationalProjects.documents.retry","category":"operationalProjects","vi":"Gửi lại lên Drive","en":"Send to Drive again","zh":"重新同步到 Drive","ja":"Drive に再送信"},
   {"key":"operationalProjects.documents.classify","category":"operationalProjects","vi":"Phân loại","en":"Classify","zh":"分类","ja":"分類"},
   {"key":"operationalProjects.documents.keepBoth","category":"operationalProjects","vi":"Giữ cả hai","en":"Keep both","zh":"两者都保留","ja":"両方を保持"},
   {"key":"operationalProjects.documents.retrySuccess","category":"operationalProjects","vi":"Đã đưa tài liệu vào hàng đợi thử lại","en":"Document queued for retry","zh":"文档已加入重试队列","ja":"文書を再試行キューに追加しました"},
@@ -142,5 +142,6 @@
   {"key":"operationalProjects.rename.status.Processing","category":"operationalProjects","vi":"Đang đồng bộ","en":"Processing","zh":"正在同步","ja":"同期中"},
   {"key":"operationalProjects.rename.status.Succeeded","category":"operationalProjects","vi":"Đã đồng bộ","en":"Succeeded","zh":"同步成功","ja":"同期済み"},
   {"key":"operationalProjects.rename.status.Failed","category":"operationalProjects","vi":"Đồng bộ thất bại","en":"Failed","zh":"同步失败","ja":"同期失敗"},
-  {"key":"operationalProjects.rename.status.NotRequired","category":"operationalProjects","vi":"Không cần đồng bộ","en":"Not required","zh":"无需同步","ja":"同期不要"}
+  {"key":"operationalProjects.rename.status.NotRequired","category":"operationalProjects","vi":"Không cần đồng bộ","en":"Not required","zh":"无需同步","ja":"同期不要"},
+  {"key":"operationalProjects.documents.cleanupDeferred","category":"operationalProjects","vi":"Đã đồng bộ Drive; chưa dọn được bản host. Hệ thống sẽ thử lại.","en":"Synced to Drive; host cleanup is pending and will be retried.","zh":"已同步到 Drive；服务器副本清理待处理，系统将重试。","ja":"Drive に同期済みです。サーバーの一時コピー削除は後で再試行します。"}
 ]

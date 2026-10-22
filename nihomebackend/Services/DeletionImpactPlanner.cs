@@ -447,7 +447,8 @@ internal static class DeletionImpactPlanner
     {
         var ids = await query.AsNoTracking().Select(idSelector).OrderBy(id => id).ToListAsync(ct);
         if (ids.Count == 0) return;
-        var labels = await query.AsNoTracking().Select(labelSelector).OrderBy(label => label).Take(3).ToListAsync(ct);
+        var labels = (await query.AsNoTracking().Select(labelSelector).ToListAsync(ct))
+            .OrderBy(label => label, StringComparer.Ordinal).Take(3).ToList();
         var existing = items.FirstOrDefault(item => item.Key == key && item.Action == action);
         if (existing is null)
         {

@@ -59,11 +59,11 @@ public sealed class ProjectDocumentServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task UploadAsync_MetadataSaveFails_TrashUploadedDriveFile()
+    public async Task UploadAsync_MetadataSaveFails_RemovesStagedHostFile()
     {
         var stored = new StoredProjectDocument(
-            string.Empty, "drawing.pdf", "application/pdf", 7, new string('a', 64));
-        storage.Setup(item => item.InspectUploadAsync(It.IsAny<IFormFile>(), It.IsAny<CancellationToken>()))
+            "/files/project-documents/1/drawing.pdf", "drawing.pdf", "application/pdf", 7, new string('a', 64));
+        storage.Setup(item => item.StoreAsync(project.Id, It.IsAny<IFormFile>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(stored);
         drive.Setup(item => item.UploadAsync("folder-DesignBasic", It.IsAny<string>(), 1, "drawing.pdf",
                 "application/pdf", It.IsAny<Stream>(), It.IsAny<CancellationToken>()))
@@ -74,15 +74,15 @@ public sealed class ProjectDocumentServiceTests : IDisposable
             new ProjectDocumentUploadRequest { File = FormFile("drawing", "drawing.pdf"), Category = ProjectDocumentCategory.DesignBasic },
             7, false));
 
-        drive.Verify(item => item.DeleteAsync("drive-file", CancellationToken.None), Times.Once);
+        storage.Verify(item => item.DeleteOwned(project.Id, stored.LocalPath), Times.Once);
     }
 
     [Fact]
-    public async Task UploadAndDownloadAsync_UsesDriveWithoutCreatingHostPath()
+    public async Task UploadAndDownloadAsync_StagesHostFileWithoutCallingDrive()
     {
         var bytes = System.Text.Encoding.UTF8.GetBytes("drawing");
-        storage.Setup(item => item.InspectUploadAsync(It.IsAny<IFormFile>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new StoredProjectDocument(string.Empty, "drawing.pdf", "application/pdf", bytes.Length, new string('a', 64)));
+        storage.Setup(item => item.StoreAsync(project.Id, It.IsAny<IFormFile>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new StoredProjectDocument("/files/project-documents/1/drawing.pdf", "drawing.pdf", "application/pdf", bytes.Length, new string('a', 64)));
         drive.Setup(item => item.UploadAsync("folder-DesignBasic", It.IsAny<string>(), 1, "drawing.pdf",
                 "application/pdf", It.IsAny<Stream>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new DriveUpload("drive-file", "1", DateTime.UtcNow, "https://drive.test/drive-file"));
@@ -93,16 +93,12 @@ public sealed class ProjectDocumentServiceTests : IDisposable
         var uploaded = await service.UploadAsync(project.Id,
             new ProjectDocumentUploadRequest { File = FormFile("drawing", "drawing.pdf"), Category = ProjectDocumentCategory.DesignBasic },
             7, false);
-        var download = await service.DownloadAsync(project.Id, uploaded!.Id, 7, false);
-        await using var destination = new MemoryStream();
-        await download!.WriteToAsync(destination, CancellationToken.None);
-
         Assert.Equal("Nicon", uploaded.Origin);
-        Assert.Equal("Synced", uploaded.SyncStatus);
-        Assert.Equal("None", uploaded.DesiredOperation);
-        Assert.Equal(bytes, destination.ToArray());
-        Assert.Equal(string.Empty, (await db.ProjectDocuments.SingleAsync()).LocalPath);
-        storage.Verify(item => item.StoreAsync(It.IsAny<int>(), It.IsAny<IFormFile>(), It.IsAny<CancellationToken>()), Times.Never);
+        Assert.Equal("Pending", uploaded.SyncStatus);
+        Assert.Equal("Upsert", uploaded.DesiredOperation);
+        Assert.NotEmpty((await db.ProjectDocuments.SingleAsync()).LocalPath);
+        drive.Verify(item => item.UploadAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<long>(),
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Stream>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -114,8 +110,8 @@ public sealed class ProjectDocumentServiceTests : IDisposable
         var option = new ConceptOption { DesignProjectId = design.Id, Name = "Phương án lấy sáng sân trong" };
         db.ConceptOptions.Add(option);
         await db.SaveChangesAsync();
-        storage.Setup(item => item.InspectUploadAsync(It.IsAny<IFormFile>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new StoredProjectDocument(string.Empty, "ho-so.pdf", "application/pdf", 7, new string('a', 64)));
+        storage.Setup(item => item.StoreAsync(project.Id, It.IsAny<IFormFile>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new StoredProjectDocument("/files/project-documents/1/ho-so.pdf", "ho-so.pdf", "application/pdf", 7, new string('a', 64)));
         drive.Setup(item => item.UploadAsync("folder-DesignConcept", It.IsAny<string>(), 1, "ho-so.pdf",
                 "application/pdf", It.IsAny<Stream>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(() => new DriveUpload(Guid.NewGuid().ToString()));
@@ -133,9 +129,9 @@ public sealed class ProjectDocumentServiceTests : IDisposable
         Assert.Equal(3, documents.Select(item => item.SourceSlot).Distinct().Count());
         Assert.All(documents, item =>
         {
-            Assert.Equal(string.Empty, item.LocalPath);
+            Assert.NotEmpty(item.LocalPath);
             Assert.Equal(option.Id, item.SourceRecordId);
-            Assert.Equal(ProjectDocumentSyncStatus.Synced, item.SyncStatus);
+            Assert.Equal(ProjectDocumentSyncStatus.Pending, item.SyncStatus);
         });
     }
 
@@ -171,15 +167,16 @@ public sealed class ProjectDocumentServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task RetryAsync_TerminalFailure_RemainsNonRetryable()
+    public async Task RetryAsync_TerminalFailure_ResetsBudgetForManualRetry()
     {
         var document = AddDocument(ProjectDocumentCategory.DesignBasic);
         document.SyncStatus = ProjectDocumentSyncStatus.Failed;
         document.SyncAttemptCount = ProjectDocumentService.MaxSyncAttempts;
         await db.SaveChangesAsync();
 
-        await Assert.ThrowsAsync<ProjectDocumentValidationException>(() =>
-            service.RetryAsync(project.Id, document.Id, 7, false));
+        var result = await service.RetryAsync(project.Id, document.Id, 7, false);
+        Assert.Equal("Pending", result!.SyncStatus);
+        Assert.Equal(0, document.SyncAttemptCount);
     }
 
     [Fact]
