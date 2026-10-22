@@ -2940,6 +2940,19 @@ positive IDs. Validation rejects missing, duplicate, foreign-project or
 unreleased IDs with 400 without changing links. A stale version returns 409;
 retrying the already-persisted desired set returns 200. EF checks the task's
 concurrency token and saves the link changes and actor/timestamps atomically.
+Concurrent additions that hit the unique link index and referenced records
+deleted during a save also return 409; SQL can insert link rows before checking
+the parent's version. Retrying the persisted selection returns 200 without
+duplicating links or changing the winning version.
+
+`ConstructionDrawingConcurrencyTests` exercises these interleavings on SQL Server
+using a generated `NiconDrawingTest_<GUID>` database and a save barrier. Set
+`NICON_SQL_TEST_CONNECTION` in an SDK container to a SQL Server connection with
+permission to create/drop test databases, then run
+`dotnet test nihomebackend.integration.tests/nihomebackend.integration.tests.csproj --filter FullyQualifiedName~ConstructionDrawingConcurrencyTests`.
+The fixture replaces the supplied database name and only cleans up its generated
+catalog. Without the connection variable this SQL-specific test is skipped;
+InMemory tests do not establish SQL unique-index concurrency behavior.
 
 `GET /api/construction-tasks/{id}/drawings/{itemId}/content` uses construction
 view permission and project scope, and serves only a linked, released drawing
