@@ -2946,15 +2946,39 @@ public static class SampleCrmDataSeeder
         };
 
         var tasks = new[] { mobilization, foundation, superstructure, mepRoughIn };
+        var newMepTask = false;
         foreach (var task in tasks)
         {
             if (!db.ConstructionTasks.Any(existing => existing.DesignProjectId == project.Id
                 && existing.TaskCode == task.TaskCode))
             {
                 db.ConstructionTasks.Add(task);
+                if (task == mepRoughIn) newMepTask = true;
             }
         }
         db.SaveChanges();
+
+        // Only initialize a newly-created demo task; never restore a user's removed links.
+        if (newMepTask)
+        {
+            var lightingItem = db.IfcReleaseItems.FirstOrDefault(item =>
+                item.IfcRelease.DesignProjectId == project.Id &&
+                item.IfcRelease.Status == IfcReleaseStatus.Released &&
+                item.IfcRelease.ReleaseNumber == "IFC-SAMPLE-001" &&
+                item.ShopDrawing.DrawingCode == "MEP-SD-002" &&
+                item.ShopDrawing.Status == ShopDrawingStatus.Released);
+            if (lightingItem is not null)
+            {
+                db.ConstructionTaskDrawings.Add(new ConstructionTaskDrawing
+                {
+                    ConstructionTaskId = mepRoughIn.Id,
+                    IfcReleaseItemId = lightingItem.Id,
+                    CreatedByUserId = owner.Id,
+                    CreatedAt = now,
+                });
+                db.SaveChanges();
+            }
+        }
 
         var tasksByCode = db.ConstructionTasks
             .Where(task => task.DesignProjectId == project.Id

@@ -21,6 +21,8 @@ public class ConstructionTask
 {
     public int Id { get; set; }
 
+    public Guid DrawingLinksVersion { get; set; } = Guid.NewGuid();
+
     public int DesignProjectId { get; set; }
     public DesignProject DesignProject { get; set; } = null!;
 

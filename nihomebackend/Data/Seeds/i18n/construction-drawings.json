@@ -1,0 +1,58 @@
+[
+  {
+    "key": "constructionTasks.drawings.title",
+    "category": "constructionTasks",
+    "vi": "Bản vẽ thi công",
+    "en": "Construction drawings",
+    "zh": "施工图纸",
+    "ja": "施工図面"
+  },
+  {
+    "key": "constructionTasks.drawings.help",
+    "category": "constructionTasks",
+    "vi": "Chọn tối đa 200 bản vẽ trong IFC đã phát hành của dự án. Lưu liên kết riêng với thông tin công việc.",
+    "en": "Select up to 200 drawings from released project IFC packages. Save links separately from task details.",
+    "zh": "选择项目已发布 IFC 包中的最多 200 张图纸。图纸关联与任务详情分别保存。",
+    "ja": "案件の発行済みIFCから最大200件の図面を選択します。関連付けはタスク情報と別に保存します。"
+  },
+  {
+    "key": "constructionTasks.drawings.empty",
+    "category": "constructionTasks",
+    "vi": "Chưa liên kết bản vẽ nào.",
+    "en": "No drawings linked.",
+    "zh": "尚未关联图纸。",
+    "ja": "関連する図面はありません。"
+  },
+  {
+    "key": "constructionTasks.drawings.noneAvailable",
+    "category": "constructionTasks",
+    "vi": "Chưa có bản vẽ IFC đã phát hành để chọn.",
+    "en": "No released IFC drawings available.",
+    "zh": "没有可选的已发布 IFC 图纸。",
+    "ja": "選択できる発行済みIFC図面はありません。"
+  },
+  {
+    "key": "constructionTasks.drawings.save",
+    "category": "constructionTasks",
+    "vi": "Lưu liên kết bản vẽ",
+    "en": "Save drawing links",
+    "zh": "保存图纸关联",
+    "ja": "図面の関連付けを保存"
+  },
+  {
+    "key": "constructionTasks.drawings.saved",
+    "category": "constructionTasks",
+    "vi": "Đã lưu liên kết bản vẽ.",
+    "en": "Drawing links saved.",
+    "zh": "图纸关联已保存。",
+    "ja": "図面の関連付けを保存しました。"
+  },
+  {
+    "key": "deletionImpact.item.design.taskDrawings",
+    "category": "deletionImpact",
+    "vi": "Liên kết bản vẽ thi công",
+    "en": "Construction drawing links",
+    "zh": "施工图纸关联",
+    "ja": "施工図面の関連付け"
+  }
+]

@@ -159,6 +159,62 @@ public class ConstructionTasksController(
         }
     }
 
+    [HttpGet("{id:int}/drawings")]
+    [RequirePermission("construction.tasks", "view")]
+    public async Task<ActionResult<ConstructionTaskDrawingsResponse>> GetDrawings(int id, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (!userId.HasValue || !await CanAccessResourceAsync(userId.Value, id, ct)) return NotFound();
+        var response = await svc.GetDrawingsAsync(id, ct);
+        return response is null ? NotFound() : Ok(response);
+    }
+
+    [HttpPut("{id:int}/drawings")]
+    [RequirePermission("construction.tasks", "manage")]
+    public async Task<ActionResult<ConstructionTaskDrawingsResponse>> SetDrawings(int id,
+        [FromBody] SetConstructionTaskDrawingsRequest request, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (!userId.HasValue || !await CanAccessResourceAsync(userId.Value, id, ct)) return NotFound();
+        try
+        {
+            var response = await svc.SetDrawingsAsync(id, request, userId.Value, ct);
+            if (response is null) return NotFound();
+            audit.Log(new AuditEvent
+            {
+                Action = "construction-task.drawings",
+                ResourceType = EntityTypes.ConstructionTask,
+                ResourceId = id.ToString(),
+                NewValue = response.Linked,
+                Message = $"Construction task #{id} drawing links updated.",
+            });
+            return Ok(response);
+        }
+        catch (ConstructionTaskOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (CrmConcurrencyException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+    }
+
+    [HttpGet("{id:int}/drawings/{itemId:int}/content")]
+    [RequirePermission("construction.tasks", "view")]
+    public async Task<IActionResult> GetDrawingContent(int id, int itemId,
+        [FromServices] IShopDrawingService drawings, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (!userId.HasValue || !await CanAccessResourceAsync(userId.Value, id, ct)) return NotFound();
+        var links = await svc.GetDrawingsAsync(id, ct);
+        var drawing = links?.Linked.FirstOrDefault(x => x.IfcReleaseItemId == itemId);
+        if (drawing is null) return NotFound();
+        var content = await drawings.GetContentAsync(drawing.ShopDrawingId, ct);
+        return content is null ? NotFound() :
+            PhysicalFile(content.FullPath, content.ContentType, content.OriginalFileName, enableRangeProcessing: true);
+    }
+
     [HttpDelete("{id:int}")]
     [RequirePermission("construction.tasks", "manage")]
     public async Task<IActionResult> Delete(int id, CancellationToken ct)

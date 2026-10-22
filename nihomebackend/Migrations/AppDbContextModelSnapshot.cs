@@ -1886,6 +1886,10 @@ namespace nihomebackend.Migrations
                     b.Property<int>("DesignProjectId")
                         .HasColumnType("int");
 
+                    b.Property<Guid>("DrawingLinksVersion")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(300)
@@ -1959,6 +1963,36 @@ namespace nihomebackend.Migrations
                         .IsUnique();
 
                     b.ToTable("construction_task_dependencies", (string)null);
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.ConstructionTaskDrawing", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ConstructionTaskId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("IfcReleaseItemId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IfcReleaseItemId");
+
+                    b.HasIndex("ConstructionTaskId", "IfcReleaseItemId")
+                        .IsUnique();
+
+                    b.ToTable("construction_task_drawings", (string)null);
                 });
 
             modelBuilder.Entity("NihomeBackend.Models.ContactMessage", b =>
@@ -9352,6 +9386,7 @@ namespace nihomebackend.Migrations
                         .HasColumnType("nvarchar(60)");
 
                     b.Property<string>("FilePath")
+                        .IsConcurrencyToken()
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
@@ -9370,6 +9405,7 @@ namespace nihomebackend.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("Status")
+                        .IsConcurrencyToken()
                         .IsRequired()
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
@@ -11738,6 +11774,25 @@ namespace nihomebackend.Migrations
                     b.Navigation("PredecessorTask");
 
                     b.Navigation("Task");
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.ConstructionTaskDrawing", b =>
+                {
+                    b.HasOne("NihomeBackend.Models.ConstructionTask", "ConstructionTask")
+                        .WithMany()
+                        .HasForeignKey("ConstructionTaskId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("NihomeBackend.Models.IfcReleaseItem", "IfcReleaseItem")
+                        .WithMany()
+                        .HasForeignKey("IfcReleaseItemId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("ConstructionTask");
+
+                    b.Navigation("IfcReleaseItem");
                 });
 
             modelBuilder.Entity("NihomeBackend.Models.Contract", b =>

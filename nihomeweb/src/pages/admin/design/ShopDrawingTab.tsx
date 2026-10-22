@@ -818,7 +818,7 @@ const DisciplineSection = ({
                                 }
                                 className="max-w-xs"
                               />
-                              {canManage && isShopStage ? (
+                              {canManage && isShopStage && row.status !== "Released" ? (
                                 <FileUploadButton
                                   label={t("shopDrawing.replaceFile")}
                                   busy={uploadingId === row.id}
@@ -826,7 +826,7 @@ const DisciplineSection = ({
                                 />
                               ) : null}
                             </div>
-                          ) : canManage && isShopStage ? (
+                          ) : canManage && isShopStage && row.status !== "Released" ? (
                             <div className="mt-2">
                               <FileUploadButton
                                 label={t("shopDrawing.uploadFile")}

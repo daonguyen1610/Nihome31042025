@@ -158,6 +158,9 @@ internal static class DeletionImpactPlanner
             db.ConstructionTaskDependencies.Where(item => constructionTaskIds.Contains(item.TaskId) ||
                 constructionTaskIds.Contains(item.PredecessorTaskId)),
             item => item.Id, item => item.Task.Name, ct);
+        await AddAsync(items, "design.taskDrawings", DeletionImpactActions.Delete,
+            db.ConstructionTaskDrawings.Where(item => constructionTaskIds.Contains(item.ConstructionTaskId)),
+            item => item.Id, item => item.IfcReleaseItem.ShopDrawing.DrawingCode, ct);
         await AddAsync(items, "design.scheduleTaskDependencies", DeletionImpactActions.Delete,
             db.DesignScheduleTaskDependencies.Where(item => scheduleTaskIds.Contains(item.TaskId) ||
                 scheduleTaskIds.Contains(item.PredecessorTaskId)),

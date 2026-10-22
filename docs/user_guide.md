@@ -1200,6 +1200,22 @@ Create construction schedules with phases and work items (WBS). Assign responsib
 | Gantt Chart Detail | Interactive Gantt, dependencies, personnel assignment, alerts |
 | Interactive Gantt UI | Drag-drop, resize, zoom, dependency lines |
 
+##### Construction drawings
+
+To link drawings, open a task at **Admin > Construction > Construction
+schedule** and find **Construction drawings** in its detail panel. Users with
+task management permission can select up to 200 released IFC drawings from
+the same project and click **Save drawing links**. This saves independently
+from task dates/progress. Clearing the selection removes links only.
+
+The linked list identifies the drawing code, title, IFC release and revision
+at release. Use the file preview when a file is attached. View-only users can
+read linked drawings but cannot change links. If no candidates appear, the
+design team must first release the relevant IFC packet. After a conflict,
+refresh the drawing section and reapply the selection; an unsent/offline change
+is not saved. This screen does not implement automatic revision replacement or
+offline synchronization.
+
 #### 3.4.2 Electronic Site Log
 
 Open **Admin > Construction > Site Diary** to record daily weather, workforce, equipment, materials, completed work, incidents, and internal notes. The list provides explicit View, Edit, and Delete actions on desktop and mobile, plus multi-select deletion.

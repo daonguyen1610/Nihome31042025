@@ -146,6 +146,9 @@ internal static class AggregateDeletionService
         var releaseRecipients = await db.IfcReleaseRecipients
             .Where(item => ifcReleaseIds.Contains(item.IfcReleaseId))
             .ToListAsync(ct);
+        var taskDrawings = await db.ConstructionTaskDrawings
+            .Where(item => taskIds.Contains(item.ConstructionTaskId)).ToListAsync(ct);
+        db.ConstructionTaskDrawings.RemoveRange(taskDrawings);
         var taskDependencies = await db.ConstructionTaskDependencies
             .Where(dependency => taskIds.Contains(dependency.TaskId)
                 || taskIds.Contains(dependency.PredecessorTaskId))

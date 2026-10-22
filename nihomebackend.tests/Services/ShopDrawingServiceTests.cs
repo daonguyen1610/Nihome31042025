@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NihomeBackend.Data;
@@ -386,6 +387,65 @@ public class ShopDrawingServiceTests : IDisposable
 
         await Assert.ThrowsAsync<ShopDrawingOperationException>(() =>
             _sut.UploadFileAsync(created.Id, FormFile("blocked", "blocked.pdf"), _userId));
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task UploadFileAsync_ReleasedIfc_PreservesOriginalFile(bool releasedStatus)
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        var original = await _sut.UploadFileAsync(created.Id, FormFile("issued-content", "issued.pdf"), _userId);
+        var entity = await _db.ShopDrawings.SingleAsync(x => x.Id == created.Id);
+        if (releasedStatus) entity.Status = ShopDrawingStatus.Released;
+        else _db.IfcReleaseItems.Add(new IfcReleaseItem
+        {
+            ShopDrawingId = entity.Id,
+            IfcRelease = new IfcRelease
+            {
+                DesignProjectId = _projectId,
+                ReleaseNumber = "IFC-MONG-F1",
+                Status = IfcReleaseStatus.Released,
+                ReleaseDate = DateTime.UtcNow,
+            },
+        });
+        await _db.SaveChangesAsync();
+        var path = Path.Combine(_contentRoot, "wwwroot", original!.FilePath!.TrimStart('/'));
+        await Assert.ThrowsAsync<ShopDrawingOperationException>(() =>
+            _sut.UploadFileAsync(created.Id, FormFile("unissued-change", "replacement.pdf"), _userId));
+        Assert.Equal("issued-content", await File.ReadAllTextAsync(path));
+        Assert.Equal(original.FilePath, entity.FilePath);
+        Assert.Single(Directory.GetFiles(Path.GetDirectoryName(path)!));
+    }
+
+    [Fact]
+    public async Task UploadFileAsync_ConcurrentRelease_RejectsStaleUploadAndKeepsIssuedFile()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        var original = await _sut.UploadFileAsync(created.Id, FormFile("issued-content", "issued.pdf"), _userId);
+        await using var stale = new AppDbContext((DbContextOptions<AppDbContext>)_db.GetService<IDbContextOptions>());
+        await stale.ShopDrawings.Include(x => x.DesignProject).SingleAsync(x => x.Id == created.Id);
+        var entity = await _db.ShopDrawings.SingleAsync(x => x.Id == created.Id);
+        entity.Status = ShopDrawingStatus.Released;
+        await _db.SaveChangesAsync();
+        var environment = new Mock<IWebHostEnvironment>();
+        environment.SetupGet(x => x.ContentRootPath).Returns(_contentRoot);
+        var service = new ShopDrawingService(stale, NullLogger<ShopDrawingService>.Instance, _projectDocuments.Object, environment.Object);
+        await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() =>
+            service.UploadFileAsync(created.Id, FormFile("stale", "stale.pdf"), _userId));
+        Assert.Equal("issued-content", await File.ReadAllTextAsync(ManagedPath(original!.FilePath!)));
+        Assert.Single(Directory.GetFiles(Path.GetDirectoryName(ManagedPath(original.FilePath!))!));
+    }
+
+    [Fact]
+    public async Task Release_ConcurrentFileReplacement_RejectsStaleDrawing()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        await using var release = new AppDbContext((DbContextOptions<AppDbContext>)_db.GetService<IDbContextOptions>());
+        var stale = await release.ShopDrawings.SingleAsync(x => x.Id == created.Id);
+        await _sut.UploadFileAsync(created.Id, FormFile("new-content", "new.pdf"), _userId);
+        stale.Status = ShopDrawingStatus.Released;
+        await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() => release.SaveChangesAsync());
     }
 
     [Fact]
