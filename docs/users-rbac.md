@@ -410,8 +410,13 @@ The same endpoints are also exposed below `/api/v1/handover-records`. Unauthoriz
   non-system roles plus editing their permissions. The default workspace focuses
   on one role at a time, organizes the list by NICON department group, groups
   permissions by functional module, and provides role and permission search.
-  The group workspace edits permission baselines and the creation dialog can
-  import one as an editable starting point. Administrators can switch to the
+  The group workspace exposes a View/edit baseline permissions button for the
+  group's common permission set. It opens a dialog with visible permission
+  rows, search by name/code, a module filter, reset and save. View-only actors
+  can inspect the same list with editing disabled. Closing a dirty dialog
+  requires an explicit discard; failed saves retain the draft for retry.
+  Saving a baseline does not change existing roles. The creation dialog can
+  import it as an editable starting point. Administrators can switch to the
   comparison matrix when they need to inspect several roles together. System
   roles remain read-only in all views. The route requires `rbac.roles.view`;
   each operation is gated by its corresponding RBAC permission.

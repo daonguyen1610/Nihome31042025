@@ -14,6 +14,7 @@ import {
   Trash2,
   Users,
 } from "lucide-react";
+import RoleGroupPermissionsDialog from "./RoleGroupPermissionsDialog";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { Can } from "@/components/auth/Can";
 import { PageError, PageLoading } from "@/components/PageState";
@@ -377,7 +378,6 @@ export default function RoleList() {
   }, [perms]);
 
   const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
-  const [baselineDraft, setBaselineDraft] = useState<Set<string>>(new Set());
   const selectedGroup =
     roleGroups.find((group) => group.id === selectedGroupId) ?? roleGroups[0] ?? null;
   const selectedGroupRoles = selectedGroup
@@ -386,34 +386,6 @@ export default function RoleList() {
   useEffect(() => {
     if (selectedGroup && selectedGroup.id !== selectedGroupId) setSelectedGroupId(selectedGroup.id);
   }, [selectedGroup, selectedGroupId]);
-  useEffect(() => {
-    setBaselineDraft(new Set(selectedGroup?.baselinePermissions ?? []));
-  }, [selectedGroup]);
-  const baselineDirty = selectedGroup
-    ? !setsEqual(baselineDraft, new Set(selectedGroup.baselinePermissions))
-    : false;
-  const toggleBaselinePermission = (code: string) => {
-    setBaselineDraft((current) => {
-      const next = new Set(current);
-      if (next.has(code)) next.delete(code);
-      else next.add(code);
-      return next;
-    });
-  };
-  const saveBaselineMutation = useMutation({
-    mutationFn: async () => {
-      if (!selectedGroup) return;
-      await rbacApi.updateRoleGroupBaseline(selectedGroup.id, {
-        permissions: Array.from(baselineDraft),
-      });
-    },
-    onSuccess: async () => {
-      await invalidateAll();
-      toast({ title: t("adminRbac.toast.baselineSaved") });
-    },
-    onError: (err) => reportError(err, "adminRbac.toast.baselineSaveFailed"),
-  });
-
   const toggleRoleVisible = (id: number) =>
     setHiddenRoleIds((prev) => {
       const next = new Set(prev);
@@ -883,26 +855,13 @@ export default function RoleList() {
                             {t("adminRbac.groups.baselineHelp")}
                           </p>
                         </div>
-                        <Can permission={PERM_MANAGE}>
-                          <div className="flex gap-2">
-                            <Button
-                              variant="outline"
-                              disabled={!baselineDirty}
-                              onClick={() =>
-                                setBaselineDraft(new Set(selectedGroup.baselinePermissions))
-                              }
-                            >
-                              {t("adminRbac.reset")}
-                            </Button>
-                            <Button
-                              disabled={!baselineDirty || saveBaselineMutation.isPending}
-                              onClick={() => saveBaselineMutation.mutate()}
-                              data-testid="rbac-save-baseline"
-                            >
-                              {t("adminRbac.groups.saveBaseline")}
-                            </Button>
-                          </div>
-                        </Can>
+                        <RoleGroupPermissionsDialog
+                          key={selectedGroup.id}
+                          group={selectedGroup}
+                          permissions={allPerms}
+                          canManage={canManage}
+                          onSaved={invalidateAll}
+                        />
                       </div>
                     </div>
 
@@ -946,62 +905,6 @@ export default function RoleList() {
                           ))}
                         </div>
                       )}
-                    </div>
-
-                    <div className="space-y-3">
-                      {modules.map((module) => {
-                        const modulePermissions = allPerms.filter((permission) =>
-                          permission.code.startsWith(`${module}.`),
-                        );
-                        const granted = modulePermissions.filter((permission) =>
-                          baselineDraft.has(permission.code),
-                        ).length;
-                        return (
-                          <details
-                            key={module}
-                            className="group overflow-hidden rounded-xl border bg-card"
-                          >
-                            <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 hover:bg-muted/40 [&::-webkit-details-marker]:hidden">
-                              <span>
-                                <span className="block text-sm font-semibold">
-                                  {t(`adminRbac.module.${module}`)}
-                                </span>
-                                <span className="block text-xs text-muted-foreground">
-                                  {granted}/{modulePermissions.length}{" "}
-                                  {t("adminRbac.permissionsGranted")}
-                                </span>
-                              </span>
-                              <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-180" />
-                            </summary>
-                            <div className="grid gap-px border-t bg-border sm:grid-cols-2">
-                              {modulePermissions.map((permission) => (
-                                <label
-                                  key={permission.id}
-                                  className="flex cursor-pointer items-start gap-3 bg-background p-4 hover:bg-muted/50"
-                                >
-                                  <Checkbox
-                                    className="mt-0.5"
-                                    checked={baselineDraft.has(permission.code)}
-                                    disabled={!canManage}
-                                    onCheckedChange={() =>
-                                      toggleBaselinePermission(permission.code)
-                                    }
-                                    aria-label={`${selectedGroup.code} ${permission.code}`}
-                                  />
-                                  <span className="min-w-0">
-                                    <span className="block text-sm font-medium">
-                                      {t(`rbac.perm.${permission.code}.label`)}
-                                    </span>
-                                    <span className="mt-1 block break-all font-mono text-[10px] text-muted-foreground">
-                                      {permission.code}
-                                    </span>
-                                  </span>
-                                </label>
-                              ))}
-                            </div>
-                          </details>
-                        );
-                      })}
                     </div>
                   </section>
                 )}
