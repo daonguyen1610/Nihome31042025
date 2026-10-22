@@ -832,11 +832,25 @@ Activation/setup preview now includes `Templates`, `AppliedTemplate`,
 `WorkPackageRowVersion`, existing package lead/dates, and template application
 actor/time. Both writes accept `TemplateId`, `TemplateRowVersion`, and
 `WorkPackageRowVersion`. New packages require a Published template and matching
-template version. Applying the first template to an existing package also
-requires its row version. A project with a snapshot keeps using it, including
+template version. Every setup/activation that reuses an existing package
+requires its matching row version, including packages with an applied snapshot.
+Stale requests return HTTP `409` without changing the dossier or activating
+another contract (`CONCURRENCY_CONFLICT` for contract activation;
+`crm_concurrency_conflict` from the global handler for project setup).
+Confirmed schedule/lead changes record
+`UpdatedByLegalSetup` history with before/after values and actor. A project with a snapshot keeps using it, including
 after template retirement; another template is rejected. Required items must
 already have a linked task or be included for creation/linking in the request.
 Omission returns `LEGAL_REQUIRED_PERMITS_MISSING` before any write.
+
+Setup cannot modify a Completed or Cancelled package (`LEGAL_PACKAGE_CLOSED`).
+A second contract may reuse a Completed package read-only when its snapshot is
+already applied, required items are linked and the request changes neither the
+template, lead, dates nor task set. This records only the new contract activation;
+it does not reopen or touch the legal dossier. Cancelled packages cannot be reused.
+New tasks may depend on an existing configured permit from the same Operational
+Project without resubmitting that permit. Unknown, unlinked and other-project
+predecessors are rejected; new-task dependency cycles remain invalid.
 
 The Legal package stores the immutable template snapshot and application audit;
 permit responses expose `IsRequired`. Existing projects are not assigned a
@@ -3328,6 +3342,12 @@ operation; a Drive failure must not falsely mark a dossier synchronized.
   or usable template versions. The pack has no `D.5` folder; ask NICON whether
   one is expected before calling the process set complete.
 
+Receipt and source mapping do not establish current ISO certification,
+conformity, signed release authorization or business acceptance. The source
+review does not verify signatures or certificates. Preserve customer originals;
+do not rename conflicting form codes or publish completed examples as blank
+production templates without the authorized NICON owner's confirmation.
+
 The file-level ISO cross-check gives these source-to-workflow anchors:
 
 | Source | Observed evidence | Mapping still needed |
@@ -3335,10 +3355,10 @@ The file-level ISO cross-check gives these source-to-workflow anchors:
 | `D.1` customer (`KH`) | Customer list, customer information/confirmation, contract and complaint records | `KH-M01` labels both a client-list workbook here and an information-collection form in `D.2`; `KH-M02`'s process label differs from its file name. Confirm codes and pre-contract handoff |
 | `D.2` tender (`DT`) | Competitive quotation and tender paths, bid work assignment, supplier quotations and contract handoff | `DT-M02` is cited as a quotation but its file is named handoff record; referenced `DT-M03` is absent. Reconcile current tender gates with the older source |
 | `D.3` design (`TK`) | Preliminary, basic and technical design handoffs; `TK-M01`–`TK-M03` and appendices | Procedure also cites `TK-BM02`/`TK-BM03` or `KT-BM03` where files use `TK-M02`/`TK-M03`. Several `TK-M02` files are completed project handoffs, not blank templates. Match current design gates and released IFC rules; permit references do not settle the permit matrix |
-| `D.4` construction (`TC`) | Preparation `TC-M01`, shop/material submittals `TC-M04`–`TC-M06`, diary `TC-M08`/`TC-M09`, acceptance `TC-M24`, 19 workbooks under `TC-M28` | Referenced `TC-M02`, `TC-M23` and `TQT-M00` are absent. `NS1-M01` is cited for forming BCH but its file is a recruitment request. `TC-M15` names two different handoffs; the procedure's `TC-M21`/`TC-M22` labels are reversed in filenames. The `TC-M24` file here is a completed acceptance record. No separate sampling, lab-result, material-certificate, method-statement or HSE-plan form was identified; confirm applicability and source with NICON |
-| `D.6` payment (`TQT`) | Separate payment, subcontractor settlement and customer settlement; `TQT-M01`–`TQT-M09` and references to `MH`/`TC` forms | FA/CM must approve the four-package document matrix. Referenced `TC-M00` is absent; this folder's `TC-M24` is a different handover form under the same code. `TC-M14`, `TC-M27` and `TC-M29` also appear in `D.4`. Conversion of `TQT-M04` exposes `=#REF!+C13` in `MAU GIA TRI PS!C20`; verify in Excel before reuse |
+| `D.4` construction (`TC`) | Preparation `TC-M01`, shop/material submittals `TC-M04`–`TC-M06`, diary `TC-M08`/`TC-M09`, acceptance `TC-M24`, 19 workbooks under `TC-M28` | No counterparts were identified under referenced codes `TC-M02`, `TC-M23` and `TQT-M00` in the received files/archive entries; NICON must confirm equivalents or renamed forms. `NS1-M01` is cited for forming BCH but its file is a recruitment request. `TC-M15` names two different handoffs; the procedure's `TC-M21`/`TC-M22` labels are reversed in filenames. The `TC-M24` file here is a completed acceptance record. No separate sampling, lab-result, material-certificate, method-statement or HSE-plan form was identified; confirm applicability and source with NICON |
+| `D.6` payment (`TQT`) | Separate payment, subcontractor settlement and customer settlement; `TQT-M01`–`TQT-M09` and references to `MH`/`TC` forms | FA/CM must approve the four-package document matrix. No counterpart was identified under code `TC-M00`; NICON must confirm an equivalent or renamed form; this folder's `TC-M24` is a different handover form under the same code. `TC-M14`, `TC-M27` and `TC-M29` also appear in `D.4`. Conversion of `TQT-M04` exposes `=#REF!+C13` in `MAU GIA TRI PS!C20`; verify in Excel before reuse |
 | `D.7` purchasing (`MH`) and `D.8` equipment (`LK`) | `MH-M01`–`MH-M08` for requests, quotations, orders and supplier review; `LK-M01`–`LK-M08` for equipment receipt, issue and maintenance | `MH-M03` contains proposal/order sheets and a completed example. `MH-M04` payment request prints `MH-BM02` inside, the same internal code as `MH-M02` quotation request. The procedure permits a supplier payment request before receipt against an order; FA/CM must resolve that case separately from accepted-quantity matching |
-| `C.1` document control (`QTC-KSTLHS`) | Document issue, revision and record control with `BM 01`–`BM 07` files | Confirm authorized release, supersession, retention and current ISO revision before publishing templates |
+| `C.1` document control (`QTC-KSTLHS`) | §5.1: PTBP → ĐDCL → GĐ approval; TKISO identifies, distributes and retrieves superseded documents. §5.3: custodians and retention lists BM05/BM06. §5.4: GĐ authorizes destruction recorded in BM07 | Open decision — GĐ/ĐDCL/TKISO must confirm electronic delegation to CM/Admin, release/supersession and records retention/destruction policy. Product-level legal checklist publication does not implement or certify the full QTC workflow |
 | `C.2` internal audit and `C.3` improvement | Audit schedule/findings/corrective actions and nonconformity handling, with accompanying `BM` files | Confirm current ownership, severity and closure rules; these are source processes, not delivered audit modules |
 | `D.9`–`D.11` HR (`NS1`–`NS3`) | Recruitment/training, work reporting, leave and resignation records. `NS2` calls for daily/weekly/monthly reports reviewed by department heads and summarized for management; `NS2-M01` has 11 scored individual criteria | `NS1-M05`/`NS1-M06` are referenced for training but absent; `NS1-M03`/`NS1-M04` are PDFs without extensions. `NS2` does not define approval of each internal task or the software KPI calculation. Confirm current HR policy and access before mapping personal records |
 
@@ -3351,10 +3371,10 @@ approval permissions.
 
 | Source step | Files/records the procedure names | Mapping boundary to confirm |
 |---|---|---|
-| TC 1–4, preparation | `DT-M09`, `NS1-M01`, `TC-M02`, `TC-M01`, `TC-M04`–`TC-M06`, `TC-M25`; schedule, site survey, BCH structure, method and safety measures | `TC-M02` file is absent; `NS1-M01` file is a recruitment request. Identify the approved BCH, method and HSE evidence and project-type applicability before making a start gate mandatory. Current signed-contract/IFC/baseline/budget gate still governs. |
+| TC 1–4, preparation | `DT-M09`, `NS1-M01`, `TC-M02`, `TC-M01`, `TC-M04`–`TC-M06`, `TC-M25`; schedule, site survey, BCH structure, method and safety measures | No counterpart was identified under code `TC-M02`; confirm equivalents with NICON; `NS1-M01` file is a recruitment request. Identify the approved BCH, method and HSE evidence and project-type applicability before making a start gate mandatory. Current signed-contract/IFC/baseline/budget gate still governs. |
 | TC 8, field operation | `TC-M07`–`TC-M13`, `TC-M15`, `TC-M18`, `TC-M20`; the text also requires approved shop drawing, method and material sample before each work stage | Map each existing diary/QA/HSE record to one source step and released IFC revision; resolve the duplicate `TC-M15` code. No ISO S-Curve formula appears here. |
-| TC 10/12, acceptance | `TC-M28` internal work-stage sheets, `TC-M23` invitation, `TC-M24` acceptance and `TC-M22` defects | `TC-M23` file is absent; the `TC-M24` files are filled/different records. CM must select current blank forms and define which of the 19 `TC-M28` work types apply. |
-| TC 11/13 and TQT 5.1–5.3, settlement | `TQT-M00`, `MH-M04`, `TQT-M01`–`TQT-M06`, `TC-M14`, `TC-M27`, `TC-M29`; signed quantity, invoice and contract evidence are described at different stages | `TQT-M00` and `TC-M00` files are absent. Keep Upstream and Downstream separate; TQT 5.2 cites `TQT-M02` for subcontractor settlement although the received file is labeled customer payment request. Confirm code/version and three-section dossier ownership. |
+| TC 10/12, acceptance | `TC-M28` internal work-stage sheets, `TC-M23` invitation, `TC-M24` acceptance and `TC-M22` defects | No counterpart was identified under code `TC-M23`; confirm equivalents with NICON; the `TC-M24` files are filled/different records. CM must select current blank forms and define which of the 19 `TC-M28` work types apply. |
+| TC 11/13 and TQT 5.1–5.3, settlement | `TQT-M00`, `MH-M04`, `TQT-M01`–`TQT-M06`, `TC-M14`, `TC-M27`, `TC-M29`; signed quantity, invoice and contract evidence are described at different stages | No counterparts were identified under codes `TQT-M00` and `TC-M00`; NICON must confirm equivalents or renamed forms. Keep Upstream and Downstream separate; TQT 5.2 cites `TQT-M02` for subcontractor settlement although the received file is labeled customer payment request. Confirm code/version and three-section dossier ownership. |
 | MH 1–6, purchase | `MH-M01` request, `MH-M02` quotation, `MH-M03` order, `MH-M04` payment request and receipt/invoice when goods arrive | The procedure allows payment request before receipt when the order requires it. Confirm advance authorization separately from accepted-quantity payment; current Procurement handoff supersedes the older Accounting-ordering role. |
 
 For the four Downstream package types, the ISO supports these **discovery

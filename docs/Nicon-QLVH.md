@@ -372,6 +372,14 @@ mẫu tiếp tục vận hành; PM/Admin áp dụng chủ động qua preview, g
 và lịch gói hiện có, thêm permit/task thiếu. Bản đầu không đổi mẫu đã áp dụng,
 không miễn mục bắt buộc và không tự gán mẫu cho dữ liệu cũ.
 
+Mọi lần dùng lại gói phải kiểm tra phiên bản gói; request cũ bị từ chối và không
+ghi đè lịch/chủ trì. Thay đổi lịch/chủ trì được xác nhận phải lưu lịch sử trước/sau
+và người thực hiện. Không setup hoặc thêm việc vào gói Completed/Cancelled.
+Hợp đồng khác được dùng lại gói Completed có snapshot theo chế độ chỉ đọc khi
+không đổi mẫu, chủ trì, lịch hoặc thêm/liên kết task; gói Cancelled không được
+dùng lại. Permit đã có task trong cùng dự án được chọn làm công tác trước cho
+permit mới mà không phải gửi lại để tạo.
+
 Mỗi Operational Project có tối đa một work package `LegalPermitting`; nhiều hợp
 đồng cùng dự án dùng chung package nhưng có activation audit riêng. Mỗi permit
 có một `DepartmentWorkTask` để quản lý WBS, assignee, approver, lịch, tiến độ và
@@ -760,7 +768,8 @@ Ngoài ra, NICON cần chốt:
 
 1. Hoàn tất mapping bộ ISO đã nhận trong `docs/Nicon/ISO/` cho checklist/cổng
    khởi công theo loại công trình; xác nhận các mã `TC-M02`, `TC-M23`,
-   `TQT-M00`, `TC-M00` chưa có file đối ứng và các mã/nhãn xung đột. Nguồn
+   `TQT-M00`, `TC-M00` chưa nhận diện file đối ứng theo mã trong bộ đã nhận,
+   kể cả danh sách archive; NICON xác nhận file tương đương/đổi tên và các mã/nhãn xung đột. Nguồn
    chuẩn ISO đã xác nhận.
 2. Công thức/kỳ chốt S-Curve và quyền publish/unlock baseline.
 3. Approval/delegation matrix cho MR, QA/QC, HSE, QS và VO.
@@ -771,6 +780,10 @@ Ngoài ra, NICON cần chốt:
 6. Migration `DesignProjectId` → `OperationalProjectId` cho Module 2/3/4.
 7. Migration cây Drive cho `01_Khao_sat`.
 8. KPI definition, target và source cho các vị trí còn thiếu.
+9. **Open decision — GĐ/ĐDCL/TKISO:** xác nhận ủy quyền phát hành điện tử sang
+   CM/Admin, thu hồi phiên bản cũ, người/thời hạn lưu và thẩm quyền hủy hồ sơ
+   theo QTC-KSTLHS. Quyền xuất bản checklist hiện tại là hành vi sản phẩm đã
+   thống nhất, chưa phải xác nhận triển khai đầy đủ quy trình kiểm soát tài liệu ISO.
 
 **Đối chiếu các đầu vào còn lại:** TC có BCH, trình shop/vật liệu, nhật ký và
 nghiệm thu nội bộ, nhưng không cung cấp ma trận checklist theo loại công trình,
