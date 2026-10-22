@@ -415,6 +415,10 @@ The same endpoints are also exposed below `/api/v1/handover-records`. Unauthoriz
   comparison matrix when they need to inspect several roles together. System
   roles remain read-only in all views. The route requires `rbac.roles.view`;
   each operation is gated by its corresponding RBAC permission.
+  Editing a non-system role opens its current displayed name. Saving a changed
+  name replaces the default translation label with that custom name across the
+  role editor and user-management screens; the role code and permissions stay
+  unchanged. Saving without changing the displayed name preserves its label.
 - Admin route protection lives in `nihomeweb/src/components/auth/ProtectedRoute.tsx`. Frontend permission gates improve navigation and action UX; the API remains authoritative using the permission set returned by `/api/users/me/permissions`.
 
 ## Seeded test users (dev + integration tests)

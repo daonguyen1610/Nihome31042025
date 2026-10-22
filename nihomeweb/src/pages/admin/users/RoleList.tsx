@@ -250,14 +250,18 @@ export default function RoleList() {
   const [editActive, setEditActive] = useState(true);
   const openEditRole = (role: RoleResponse) => {
     setEditTarget(role);
-    setEditName(role.name);
+    setEditName(role.labelKey ? t(role.labelKey) : role.name);
     setEditActive(role.isActive);
   };
   const updateRoleMutation = useMutation({
     mutationFn: async () => {
       if (!editTarget) return;
+      const displayedName = editTarget.labelKey ? t(editTarget.labelKey) : editTarget.name;
+      const nameChanged = editName.trim() !== displayedName;
       await rbacApi.updateRole(editTarget.id, {
-        name: editName.trim(),
+        name: nameChanged ? editName.trim() : undefined,
+        // A custom name replaces the translated default across role/user screens.
+        labelKey: nameChanged ? "" : undefined,
         isActive: editActive,
       });
     },
