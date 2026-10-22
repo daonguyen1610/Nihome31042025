@@ -179,6 +179,13 @@ test("live legal draft, independent approval and mandatory project setup", async
   await next.click();
   const agency = dialog.locator("input:not([type]):visible").first();
   await agency.fill(`CM retained agency ${code}`);
+  // The configured GPXD remains selectable as predecessor of the new PCCC task.
+  const predecessor = dialog.locator('[role="checkbox"]:visible');
+  await expect(predecessor).toHaveCount(1);
+  await predecessor.check();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(predecessor).toBeChecked();
+  await page.setViewportSize({ width: 768, height: 1024 });
   await next.click();
   execSql(
     `SET QUOTED_IDENTIFIER ON; UPDATE department_work_packages SET UpdatedAt=SYSUTCDATETIME() WHERE Id=${Number(configuredPackage.workPackageId)};`,
@@ -199,6 +206,7 @@ test("live legal draft, independent approval and mandatory project setup", async
   await expect(required).toBeDisabled();
   await next.click();
   await expect(agency).toHaveValue(`CM retained agency ${code}`);
+  await expect(predecessor).toBeChecked();
   await next.click();
   const retried = page.waitForResponse(
     (response) =>
@@ -206,7 +214,11 @@ test("live legal draft, independent approval and mandatory project setup", async
       response.request().method() === "POST",
   );
   await page.getByTestId("legal-activation-confirm").click();
-  expect((await retried).ok()).toBeTruthy();
+  const retryResponse = await retried;
+  expect(retryResponse.ok(), await retryResponse.text()).toBeTruthy();
+  expect(retryResponse.request().postDataJSON().permits[0].predecessorPermitTypeCodes).toEqual([
+    "gpxd",
+  ]);
   await expect(dialog).toHaveCount(0);
   const retired = await api.post(`/api/legal-checklist-templates/${template.id}/retire`, {
     headers: { Authorization: `Bearer ${reviewer}`, "Idempotency-Key": crypto.randomUUID() },

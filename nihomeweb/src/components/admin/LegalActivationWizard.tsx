@@ -529,7 +529,9 @@ export default function LegalActivationWizard({
                       <PermitRow
                         key={permit.code}
                         permit={permit}
-                        all={selected}
+                        all={permits.filter(
+                          (item) => item.selected || (item.alreadyExists && !item.requiresSetup),
+                        )}
                         preview={preview}
                         update={updatePermit}
                         error={permitErrors[permit.code]}
@@ -543,7 +545,9 @@ export default function LegalActivationWizard({
                   <PermitCard
                     key={permit.code}
                     permit={permit}
-                    all={selected}
+                    all={permits.filter(
+                      (item) => item.selected || (item.alreadyExists && !item.requiresSetup),
+                    )}
                     preview={preview}
                     update={updatePermit}
                     error={permitErrors[permit.code]}

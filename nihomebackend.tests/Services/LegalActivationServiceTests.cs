@@ -133,7 +133,11 @@ public sealed class LegalActivationServiceTests : IDisposable
         var initial = await _service.ActivateContractAsync(first.Id, firstRequest, _pm.Id);
         var retry = await _service.ActivateContractAsync(first.Id, firstRequest, _pm.Id);
         var second = AddEligibleContract("HD-REUSE-02");
+        var package = await _db.DepartmentWorkPackages.SingleAsync();
+        package.RowVersion = new byte[8];
+        await _db.SaveChangesAsync();
         var reuseRequest = ValidRequest();
+        reuseRequest.WorkPackageRowVersion = Convert.ToBase64String((await _db.DepartmentWorkPackages.SingleAsync()).RowVersion);
         reuseRequest.Permits.Clear();
 
         var reused = await _service.ActivateContractAsync(second.Id, reuseRequest, _pm.Id);
@@ -315,6 +319,7 @@ public sealed class LegalActivationServiceTests : IDisposable
         await _service.ActivateContractAsync(contract.Id, ValidRequest(), _pm.Id);
         var package = await _db.DepartmentWorkPackages.SingleAsync();
         var snapshot = package.LegalChecklistSnapshotJson;
+        package.RowVersion = new byte[8];
         Assert.True((await _db.PermitChecklistItems.SingleAsync()).IsRequired);
         _template.Status = LegalChecklistTemplateStatus.Retired;
         await _db.SaveChangesAsync();
@@ -322,6 +327,7 @@ public sealed class LegalActivationServiceTests : IDisposable
         Assert.Empty(preview!.Templates);
         Assert.Equal(_template.Id, preview.AppliedTemplate!.Id);
         var request = ProjectSetup(); request.TemplateId = _template.Id + 100;
+        request.WorkPackageRowVersion = Convert.ToBase64String(package.RowVersion);
         var error = await Assert.ThrowsAsync<LegalActivationException>(() => _service.SetupProjectAsync(_project.Id, request, _pm.Id));
         Assert.Equal("LEGAL_TEMPLATE_CHANGE_BLOCKED", error.Code);
         Assert.Equal(snapshot, package.LegalChecklistSnapshotJson);

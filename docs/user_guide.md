@@ -1015,6 +1015,13 @@ do not duplicate permits. Legacy projects or already-active Contracts use
 **Set up Legal** from the Permit workspace; legacy Design Project links remain
 available for compatibility.
 
+Existing configured permits remain available as predecessors when adding a new
+permit; they are not created again. Setup requires the latest package version.
+Confirmed changes to package dates or Legal lead are recorded in history.
+Completed and Cancelled packages cannot receive setup changes. Another contract
+may reuse a Completed package with an applied checklist without changing its
+template, lead, dates or tasks; a Cancelled package cannot be reused.
+
 Expand **Legal checklist templates** in the Permit workspace. Legal/Admin can
 draft a code, names and applicable scope in Vietnamese, English, Chinese and
 Japanese, then select permit types in checklist order and mark required items.

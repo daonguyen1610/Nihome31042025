@@ -76,7 +76,7 @@ public sealed class LegalActivationService(
             Permits = request.Permits,
         };
         var (package, reused) = await CreateOrExtendPackageAsync(
-            contract.OperationalProjectId.Value, setup, callerUserId, ct);
+            contract.OperationalProjectId.Value, setup, callerUserId, ct, allowCompletedReuse: true);
 
         await closureInvariant.EnsureContractMutationPreservesWonAsync(
             contract, contract.OpportunityId, contract.CustomerId, ContractStatus.InProgress,
@@ -131,9 +131,14 @@ public sealed class LegalActivationService(
         int projectId,
         SetupProjectLegalRequest request,
         int callerUserId,
-        CancellationToken ct)
+        CancellationToken ct,
+        bool allowCompletedReuse = false)
     {
-        ValidateRequest(request);
+        var existing = await db.PermitChecklistItems
+            .Where(item => item.OperationalProjectId == projectId)
+            .ToDictionaryAsync(item => item.PermitTypeCode, StringComparer.OrdinalIgnoreCase, ct);
+        ValidateRequest(request, existing.Values.Where(item => item.WorkTaskId.HasValue)
+            .Select(item => item.PermitTypeCode));
         var project = await db.OperationalProjects.AsNoTracking()
             .SingleAsync(item => item.Id == projectId, ct);
         var members = await LoadActiveMembersAsync(projectId, ct);
@@ -157,13 +162,15 @@ public sealed class LegalActivationService(
         var typeNameByCode = validTypes.ToDictionary(item => item.Code, item => item.Name,
             StringComparer.OrdinalIgnoreCase);
 
-        var existing = await db.PermitChecklistItems
-            .Where(item => item.OperationalProjectId == projectId)
-            .ToDictionaryAsync(item => item.PermitTypeCode, StringComparer.OrdinalIgnoreCase, ct);
         var package = await db.DepartmentWorkPackages
             .Include(item => item.ParticipantGroups)
             .SingleOrDefaultAsync(item => item.OperationalProjectId == projectId &&
                 item.Purpose == WorkPackagePurpose.LegalPermitting, ct);
+        if (package is not null)
+        {
+            CrmConcurrency.EnsureMatches(package.RowVersion, request.WorkPackageRowVersion);
+            CrmConcurrency.Apply(db, package, request.WorkPackageRowVersion);
+        }
         LegalChecklistTemplateResponse? template = null;
         var applyingTemplate = false;
         if (package?.LegalChecklistSnapshotJson is not null)
@@ -180,11 +187,6 @@ public sealed class LegalActivationService(
             CrmConcurrency.EnsureMatches(selectedTemplate.RowVersion, request.TemplateRowVersion);
             template = LegalChecklistTemplateService.Map(selectedTemplate);
             applyingTemplate = true;
-            if (package is not null)
-            {
-                CrmConcurrency.EnsureMatches(package.RowVersion, request.WorkPackageRowVersion);
-                CrmConcurrency.Apply(db, package, request.WorkPackageRowVersion);
-            }
         }
         else if (package is null)
             throw Error("LEGAL_TEMPLATE_REQUIRED", "Phải chọn mẫu checklist Pháp lý đã xuất bản trước khi tạo gói mới.");
@@ -205,6 +207,18 @@ public sealed class LegalActivationService(
         }
         if (request.Permits.Count == 0 && existing.Count == 0)
             throw Error("LEGAL_PERMITS_REQUIRED", "Phải chọn ít nhất một giấy phép.");
+
+        if (package?.Status is WorkPackageStatus.Completed or WorkPackageStatus.Cancelled)
+        {
+            if (allowCompletedReuse && package.Status == WorkPackageStatus.Completed &&
+                package.LegalChecklistSnapshotJson is not null && !applyingTemplate &&
+                package.LeadUserId == request.LegalLeadUserId &&
+                package.PlannedStart == request.PlannedStart.ToUniversalTime() &&
+                package.PlannedEnd == request.PlannedEnd.ToUniversalTime() &&
+                request.Permits.All(item => existing.TryGetValue(item.PermitTypeCode.Trim(), out var permit) && permit.WorkTaskId.HasValue))
+                return (package, true);
+            throw Error("LEGAL_PACKAGE_CLOSED", "Gói Pháp lý đã kết thúc; không được thiết lập hoặc bổ sung công việc.");
+        }
 
         var constructionGroup = await db.RoleGroups.AsNoTracking()
             .SingleOrDefaultAsync(item => item.Code == "CONSTRUCTION" && item.IsActive, ct)
@@ -234,6 +248,28 @@ public sealed class LegalActivationService(
         }
         else if (!applyingTemplate)
         {
+            if (package.LeadUserId != request.LegalLeadUserId ||
+                package.PlannedStart != request.PlannedStart.ToUniversalTime() ||
+                package.PlannedEnd != request.PlannedEnd.ToUniversalTime())
+                db.DepartmentWorkPackageHistory.Add(new DepartmentWorkPackageHistory
+                {
+                    WorkPackageId = package.Id,
+                    EntityType = "Package",
+                    EntityId = package.Id,
+                    Action = "UpdatedByLegalSetup",
+                    SnapshotJson = JsonSerializer.Serialize(new
+                    {
+                        Before = new { package.LeadUserId, package.PlannedStart, package.PlannedEnd },
+                        After = new
+                        {
+                            LeadUserId = request.LegalLeadUserId,
+                            PlannedStart = request.PlannedStart.ToUniversalTime(),
+                            PlannedEnd = request.PlannedEnd.ToUniversalTime(),
+                        },
+                    }),
+                    ChangedAt = DateTime.UtcNow,
+                    ChangedByUserId = callerUserId,
+                });
             package.LeadUserId = request.LegalLeadUserId;
             package.PlannedStart = request.PlannedStart.ToUniversalTime();
             package.PlannedEnd = request.PlannedEnd.ToUniversalTime();
@@ -509,11 +545,12 @@ public sealed class LegalActivationService(
             throw Error("LEGAL_ACTIVATION_FORBIDDEN", "Chỉ PM của Dự án hoặc Admin được thiết lập Pháp lý.");
     }
 
-    private static void ValidateRequest(SetupProjectLegalRequest request)
+    private static void ValidateRequest(SetupProjectLegalRequest request, IEnumerable<string> configuredPermitCodes)
     {
         if (request.PlannedEnd < request.PlannedStart)
             throw Error("LEGAL_PACKAGE_DATES_INVALID", "Ngày kết thúc gói Pháp lý không được trước ngày bắt đầu.");
         var codes = request.Permits.Select(item => item.PermitTypeCode.Trim()).ToList();
+        var predecessorCodes = codes.Concat(configuredPermitCodes).ToHashSet(StringComparer.OrdinalIgnoreCase);
         if (codes.Any(string.IsNullOrWhiteSpace) || codes.Distinct(StringComparer.OrdinalIgnoreCase).Count() != codes.Count)
             throw Error("LEGAL_PERMIT_DUPLICATE", "Mỗi loại giấy phép chỉ được chọn một lần.");
         foreach (var item in request.Permits)
@@ -521,7 +558,7 @@ public sealed class LegalActivationService(
             if (item.PlannedEnd < item.PlannedStart || item.PlannedStart < request.PlannedStart || item.PlannedEnd > request.PlannedEnd)
                 throw Error("LEGAL_TASK_DATES_INVALID", "Thời gian từng giấy phép phải hợp lệ và nằm trong thời gian của gói Pháp lý.");
             foreach (var predecessor in item.PredecessorPermitTypeCodes)
-                if (!codes.Contains(predecessor.Trim(), StringComparer.OrdinalIgnoreCase) ||
+                if (!predecessorCodes.Contains(predecessor.Trim()) ||
                     string.Equals(predecessor.Trim(), item.PermitTypeCode.Trim(), StringComparison.OrdinalIgnoreCase))
                     throw Error("LEGAL_PREDECESSOR_INVALID", "Công tác trước phải là một giấy phép khác trong cùng cấu hình.");
         }
@@ -531,6 +568,7 @@ public sealed class LegalActivationService(
         var done = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         bool Visit(string code)
         {
+            if (!map.ContainsKey(code)) return false;
             if (!active.Add(code)) return true;
             if (done.Contains(code)) { active.Remove(code); return false; }
             if (map[code].Any(Visit)) return true;

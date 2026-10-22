@@ -1,5 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Models;
 using NihomeBackend.Services;
@@ -77,9 +79,11 @@ public sealed class LegalActivationControllerTests : IntegrationTestBase
         first.EnsureSuccessStatusCode();
         var firstPackageId = (await ReadJsonAsync(first)).GetProperty("workPackageId").GetInt32();
         var second = await SeedContractAsync(fixture.ProjectId, fixture.CustomerId, "HD-LEGAL-SECOND");
+        var reusePreview = await ReadJsonAsync(await Client.GetAsync($"/api/contracts/{second.ContractId}/legal-activation-preview"));
 
         var reused = await PostActivationAsync(second.ContractId,
-            ActivationRequest(fixture with { ContractId = second.ContractId, RowVersion = second.RowVersion }, includePermit: false),
+            ActivationRequest(fixture with { ContractId = second.ContractId, RowVersion = second.RowVersion }, includePermit: false,
+                workPackageRowVersion: reusePreview.GetProperty("workPackageRowVersion").GetString()),
             Guid.NewGuid().ToString("N"));
 
         reused.StatusCode.Should().Be(HttpStatusCode.OK, await reused.Content.ReadAsStringAsync());
@@ -295,6 +299,238 @@ public sealed class LegalActivationControllerTests : IntegrationTestBase
         (await CountsAsync(fixture.ProjectId)).Should().Be(before);
     }
 
+    [Theory]
+    [InlineData(WorkPackageStatus.Completed)]
+    [InlineData(WorkPackageStatus.Cancelled)]
+    public async Task ClosedLegalPackageRejectsSetupAndSecondContractWithoutWrites(WorkPackageStatus status)
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsSuperAdminAsync);
+        var fixture = await SeedFixtureAsync();
+        (await PostActivationAsync(fixture.ContractId, ActivationRequest(fixture, true), Guid.NewGuid().ToString("N"))).EnsureSuccessStatusCode();
+        await WithDbAsync(async db =>
+        {
+            var package = await db.DepartmentWorkPackages.SingleAsync(x => x.OperationalProjectId == fixture.ProjectId);
+            package.Status = status;
+            package.LegalChecklistTemplateId = null;
+            package.LegalChecklistSnapshotJson = null;
+            (await db.DepartmentWorkTasks.SingleAsync(x => x.WorkPackageId == package.Id)).Status = WorkTaskStatus.Verified;
+            await db.SaveChangesAsync();
+        });
+        var second = await SeedContractAsync(fixture.ProjectId, fixture.CustomerId, "HD-CLOSED-LEGAL");
+        var before = await LegalStateAsync(fixture.ProjectId);
+        var body = await ExistingSetupBodyAsync(fixture);
+        var extra = body["permits"]![0]!.DeepClone();
+        extra["permitTypeCode"] = "pccc";
+        body["permits"]!.AsArray().Add(extra);
+        var response = await PostSetupAsync(fixture.ProjectId, body);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await ReadJsonAsync(response)).GetProperty("code").GetString().Should().Be("LEGAL_PACKAGE_CLOSED");
+        body["rowVersion"] = second.RowVersion;
+        response = await PostActivationAsync(second.ContractId, body, Guid.NewGuid().ToString("N"));
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await ReadJsonAsync(response)).GetProperty("code").GetString().Should().Be("LEGAL_PACKAGE_CLOSED");
+        (await LegalStateAsync(fixture.ProjectId)).Should().Be(before);
+        await WithDbAsync(async db => (await db.Contracts.FindAsync(second.ContractId))!.Status.Should().Be(ContractStatus.Signed));
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task StalePackageRejectsSetupAndActivationWithoutOverwritingHistory(bool legacy, bool activate)
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsSuperAdminAsync);
+        var fixture = await SeedFixtureAsync();
+        (await PostActivationAsync(fixture.ContractId, ActivationRequest(fixture, true), Guid.NewGuid().ToString("N"))).EnsureSuccessStatusCode();
+        if (legacy)
+            await WithDbAsync(async db =>
+            {
+                var package = await db.DepartmentWorkPackages.SingleAsync(x => x.OperationalProjectId == fixture.ProjectId);
+                package.LegalChecklistTemplateId = null;
+                package.LegalChecklistSnapshotJson = null;
+                await db.SaveChangesAsync();
+            });
+        var body = await ExistingSetupBodyAsync(fixture);
+        await WithDbAsync(async db =>
+        {
+            var package = await db.DepartmentWorkPackages.SingleAsync(x => x.OperationalProjectId == fixture.ProjectId);
+            package.PlannedEnd = package.PlannedEnd!.Value.AddMonths(2);
+            await db.SaveChangesAsync();
+        });
+        var second = await SeedContractAsync(fixture.ProjectId, fixture.CustomerId, "HD-STALE-LEGAL");
+        body["rowVersion"] = second.RowVersion;
+        var before = await LegalStateAsync(fixture.ProjectId);
+        var response = activate
+            ? await PostActivationAsync(second.ContractId, body, Guid.NewGuid().ToString("N"))
+            : await PostSetupAsync(fixture.ProjectId, body);
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict, await response.Content.ReadAsStringAsync());
+        (await ReadJsonAsync(response)).GetProperty("code").GetString().Should()
+            .Be(activate ? "CONCURRENCY_CONFLICT" : "crm_concurrency_conflict");
+        (await LegalStateAsync(fixture.ProjectId)).Should().Be(before);
+        await WithDbAsync(async db => (await db.Contracts.FindAsync(second.ContractId))!.Status.Should().Be(ContractStatus.Signed));
+    }
+
+    [Fact]
+    public async Task ExistingPackageRequiresTokenAndAuditsConfirmedScheduleChanges()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsSuperAdminAsync);
+        var fixture = await SeedFixtureAsync();
+        (await PostActivationAsync(fixture.ContractId, ActivationRequest(fixture, true), Guid.NewGuid().ToString("N"))).EnsureSuccessStatusCode();
+        var body = await ExistingSetupBodyAsync(fixture);
+        var token = body["workPackageRowVersion"]!.DeepClone();
+        body.Remove("workPackageRowVersion");
+        var before = await LegalStateAsync(fixture.ProjectId);
+        (await PostSetupAsync(fixture.ProjectId, body)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await LegalStateAsync(fixture.ProjectId)).Should().Be(before);
+        body["workPackageRowVersion"] = token;
+        var newEnd = DateTime.UtcNow.Date.AddMonths(8);
+        body["plannedEnd"] = JsonValue.Create(newEnd);
+        var response = await PostSetupAsync(fixture.ProjectId, body);
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
+        await WithDbAsync(async db =>
+        {
+            var package = await db.DepartmentWorkPackages.SingleAsync(x => x.OperationalProjectId == fixture.ProjectId);
+            package.PlannedEnd.Should().Be(newEnd);
+            var history = await db.DepartmentWorkPackageHistory.SingleAsync(x => x.WorkPackageId == package.Id && x.Action == "UpdatedByLegalSetup");
+            var snapshot = JsonDocument.Parse(history.SnapshotJson).RootElement;
+            snapshot.GetProperty("Before").GetProperty("PlannedEnd").GetDateTime().Should().Be(DateTime.UtcNow.Date.AddMonths(6));
+            snapshot.GetProperty("After").GetProperty("PlannedEnd").GetDateTime().Should().Be(newEnd);
+            history.ChangedByUserId.Should().BeGreaterThan(0);
+        });
+        // A fresh retry with unchanged configuration must not add a second change event.
+        (await PostSetupAsync(fixture.ProjectId, await ExistingSetupBodyAsync(fixture, newEnd))).EnsureSuccessStatusCode();
+        await WithDbAsync(async db =>
+            (await db.DepartmentWorkPackageHistory.CountAsync(x => x.WorkPackage.OperationalProjectId == fixture.ProjectId && x.Action == "UpdatedByLegalSetup"))
+                .Should().Be(1));
+    }
+
+    [Fact]
+    public async Task NewPermitCanDependOnConfiguredPermitButNotUnconfiguredOrOtherProjectPermit()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsSuperAdminAsync);
+        var fixture = await SeedFixtureAsync();
+        (await PostActivationAsync(fixture.ContractId, ActivationRequest(fixture, true), Guid.NewGuid().ToString("N"))).EnsureSuccessStatusCode();
+        await WithDbAsync(async db =>
+        {
+            db.PermitChecklistItems.Add(new PermitChecklistItem
+            {
+                OperationalProjectId = fixture.ProjectId,
+                PermitTypeCode = "unconfigured",
+                CreatedByUserId = fixture.LegalLeadUserId,
+                UpdatedByUserId = fixture.LegalLeadUserId,
+            });
+            var otherProject = new OperationalProject
+            {
+                Code = UniqueSlug("OP-OTHER-LEGAL").ToUpperInvariant(),
+                Name = "NICON independent factory legal dossier",
+                CustomerId = fixture.CustomerId,
+            };
+            var package = new DepartmentWorkPackage
+            {
+                Code = UniqueSlug("LEGAL-OTHER"),
+                Name = "Separate factory permitting",
+                OperationalProject = otherProject,
+                Purpose = WorkPackagePurpose.LegalPermitting,
+                DepartmentRoleGroupId = await db.RoleGroups.Where(x => x.Code == "CONSTRUCTION").Select(x => x.Id).SingleAsync(),
+                LeadUserId = fixture.LegalLeadUserId,
+            };
+            var task = new DepartmentWorkTask { WorkPackage = package, WbsCode = "L-01", Title = "Other factory permit", AssigneeUserId = fixture.AssigneeUserId, ApproverUserId = fixture.LegalLeadUserId };
+            db.PermitChecklistItems.Add(new PermitChecklistItem
+            {
+                OperationalProject = otherProject,
+                PermitTypeCode = "other-project-permit",
+                WorkTask = task,
+                CreatedByUserId = fixture.LegalLeadUserId,
+                UpdatedByUserId = fixture.LegalLeadUserId,
+            });
+            await db.SaveChangesAsync();
+        });
+        var body = await ExistingSetupBodyAsync(fixture);
+        var added = body["permits"]![0]!;
+        added["permitTypeCode"] = "pccc";
+        var before = await LegalStateAsync(fixture.ProjectId);
+        foreach (var code in new[] { "unknown-permit", "unconfigured", "other-project-permit" })
+        {
+            added["predecessorPermitTypeCodes"] = new JsonArray(code);
+            var rejected = await PostSetupAsync(fixture.ProjectId, body);
+            rejected.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            (await ReadJsonAsync(rejected)).GetProperty("code").GetString().Should().Be("LEGAL_PREDECESSOR_INVALID");
+            (await LegalStateAsync(fixture.ProjectId)).Should().Be(before);
+        }
+        added["predecessorPermitTypeCodes"] = new JsonArray("gpxd");
+        var response = await PostSetupAsync(fixture.ProjectId, body);
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
+        await WithDbAsync(async db =>
+        {
+            var permits = await db.PermitChecklistItems.Where(x => x.OperationalProjectId == fixture.ProjectId).ToDictionaryAsync(x => x.PermitTypeCode);
+            var link = await db.DepartmentWorkTaskDependencies.SingleAsync(x => x.WorkTaskId == permits["pccc"].WorkTaskId);
+            link.PredecessorTaskId.Should().Be(permits["gpxd"].WorkTaskId);
+            permits.Count.Should().Be(3);
+        });
+    }
+
+    [Fact]
+    public async Task SecondContractCanReuseCompletedLegalPackageWithoutMutatingItsDossier()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsSuperAdminAsync);
+        var fixture = await SeedFixtureAsync();
+        (await PostActivationAsync(fixture.ContractId, ActivationRequest(fixture, true), Guid.NewGuid().ToString("N"))).EnsureSuccessStatusCode();
+        await WithDbAsync(async db =>
+        {
+            var package = await db.DepartmentWorkPackages.SingleAsync(x => x.OperationalProjectId == fixture.ProjectId);
+            package.Status = WorkPackageStatus.Completed;
+            (await db.DepartmentWorkTasks.SingleAsync(x => x.WorkPackageId == package.Id)).Status = WorkTaskStatus.Verified;
+            var permit = await db.PermitChecklistItems.SingleAsync(x => x.OperationalProjectId == fixture.ProjectId);
+            permit.Status = PermitStatus.Issued;
+            permit.IssuedAt = DateTime.UtcNow;
+            permit.IssuedFilePath = "/files/business-documents/permits/nicon-factory-issued.pdf";
+            await db.SaveChangesAsync();
+        });
+        var second = await SeedContractAsync(fixture.ProjectId, fixture.CustomerId, "HD-COMPLETED-LEGAL");
+        var body = await ExistingSetupBodyAsync(fixture);
+        body["permits"] = new JsonArray();
+        body["rowVersion"] = second.RowVersion;
+        var before = await LegalStateAsync(fixture.ProjectId, includeActivations: false);
+        var response = await PostActivationAsync(second.ContractId, body, Guid.NewGuid().ToString("N"));
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
+        (await LegalStateAsync(fixture.ProjectId, includeActivations: false)).Should().Be(before);
+        await WithDbAsync(async db =>
+        {
+            (await db.Contracts.FindAsync(second.ContractId))!.Status.Should().Be(ContractStatus.InProgress);
+            (await db.ContractLegalActivations.CountAsync(x => x.OperationalProjectId == fixture.ProjectId)).Should().Be(2);
+        });
+    }
+
+    private async Task<JsonObject> ExistingSetupBodyAsync(LegalFixture fixture, DateTime? end = null)
+    {
+        var preview = await ReadJsonAsync(await Client.GetAsync($"/api/operational-projects/{fixture.ProjectId}/legal-setup"));
+        var body = JsonSerializer.SerializeToNode(ActivationRequest(fixture, true,
+            workPackageRowVersion: preview.GetProperty("workPackageRowVersion").GetString()))!.AsObject();
+        if (end.HasValue) body["plannedEnd"] = JsonValue.Create(end.Value);
+        return body;
+    }
+
+    private async Task<HttpResponseMessage> PostSetupAsync(int projectId, object body)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"/api/operational-projects/{projectId}/legal-setup") { Content = JsonContent.Create(body) };
+        request.Headers.Add("Idempotency-Key", Guid.NewGuid().ToString("N"));
+        return await Client.SendAsync(request);
+    }
+
+    private Task<string> LegalStateAsync(int projectId, bool includeActivations = true) => WithDbAsync(async db =>
+    {
+        var package = await db.DepartmentWorkPackages.AsNoTracking().SingleAsync(x => x.OperationalProjectId == projectId);
+        return JsonSerializer.Serialize(new
+        {
+            package,
+            Tasks = await db.DepartmentWorkTasks.AsNoTracking().Where(x => x.WorkPackageId == package.Id).OrderBy(x => x.Id).ToListAsync(),
+            Permits = await db.PermitChecklistItems.AsNoTracking().Where(x => x.OperationalProjectId == projectId).OrderBy(x => x.Id).ToListAsync(),
+            History = await db.DepartmentWorkPackageHistory.AsNoTracking().Where(x => x.WorkPackageId == package.Id).OrderBy(x => x.Id).ToListAsync(),
+            Activations = includeActivations ? await db.ContractLegalActivations.AsNoTracking().CountAsync(x => x.OperationalProjectId == projectId) : 0,
+        });
+    });
+
     private async Task<LegalFixture> SeedFixtureAsync()
     {
         var fixture = await WithDbAsync(async db =>
@@ -389,10 +625,11 @@ public sealed class LegalActivationControllerTests : IntegrationTestBase
             return (contract.Id, CrmConcurrency.Encode(contract.RowVersion));
         });
 
-    private static object ActivationRequest(LegalFixture fixture, bool includePermit, bool selfApprove = false) => new
+    private static object ActivationRequest(LegalFixture fixture, bool includePermit, bool selfApprove = false, string? workPackageRowVersion = null) => new
     {
         templateId = fixture.TemplateId,
         templateRowVersion = fixture.TemplateRowVersion,
+        workPackageRowVersion,
         legalLeadUserId = fixture.LegalLeadUserId,
         plannedStart = DateTime.UtcNow.Date,
         plannedEnd = DateTime.UtcNow.Date.AddMonths(6),
