@@ -2972,6 +2972,18 @@ namespace nihomebackend.Migrations
                     b.Property<int>("LeadUserId")
                         .HasColumnType("int");
 
+                    b.Property<DateTime?>("LegalChecklistAppliedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("LegalChecklistAppliedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("LegalChecklistSnapshotJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("LegalChecklistTemplateId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(300)
@@ -3027,6 +3039,8 @@ namespace nihomebackend.Migrations
                     b.HasIndex("DepartmentRoleGroupId");
 
                     b.HasIndex("LeadUserId");
+
+                    b.HasIndex("LegalChecklistTemplateId");
 
                     b.HasIndex("SourceOpportunityId");
 
@@ -5296,6 +5310,107 @@ namespace nihomebackend.Migrations
                     b.ToTable("lead_activities", (string)null);
                 });
 
+            modelBuilder.Entity("NihomeBackend.Models.LegalChecklistTemplate", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ApprovalReference")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ItemsJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("NameJa")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("NameVi")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("NameZh")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime?>("PublishedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("PublishedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("Scope")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("ScopeJa")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("ScopeVi")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("ScopeZh")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("UpdatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code", "Version")
+                        .IsUnique();
+
+                    b.ToTable("legal_checklist_templates", (string)null);
+                });
+
             modelBuilder.Entity("NihomeBackend.Models.MasterDataOption", b =>
                 {
                     b.Property<int>("Id")
@@ -6906,6 +7021,9 @@ namespace nihomebackend.Migrations
 
                     b.Property<DateTime?>("ExpiresAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsRequired")
+                        .HasColumnType("bit");
 
                     b.Property<DateTime?>("IssuedAt")
                         .HasColumnType("datetime2");
@@ -12118,6 +12236,11 @@ namespace nihomebackend.Migrations
                         .HasForeignKey("LeadUserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("NihomeBackend.Models.LegalChecklistTemplate", null)
+                        .WithMany()
+                        .HasForeignKey("LegalChecklistTemplateId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NihomeBackend.Models.OperationalProject", "OperationalProject")
                         .WithMany()

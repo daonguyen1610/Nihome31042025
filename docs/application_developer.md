@@ -806,6 +806,57 @@ Activation/setup routes:
 | `GET` | `/api/operational-projects/{id}/legal-setup` | `permit.checklists.manage`; project PM/Admin | Preview setup for legacy/already-active projects |
 | `POST` | `/api/operational-projects/{id}/legal-setup` | `permit.checklists.manage`; project PM/Admin; idempotency key | Create/reuse package and link legacy permits without changing Contract status |
 
+Legal checklist template routes:
+
+| Method | Route | Permission | Purpose |
+|--------|-------|------------|---------|
+| `GET` | `/api/legal-checklist-templates?publishedOnly=true` | `permit.templates.view` | List definitions; omit filter for all versions |
+| `GET` | `/api/legal-checklist-templates/{id}` | `permit.templates.view` | Read definition, items, authors, reviewer, approval reference and row version |
+| `POST` | `/api/legal-checklist-templates` | `permit.templates.manage` | Create Draft; required idempotency key |
+| `PUT` | `/api/legal-checklist-templates/{id}` | `permit.templates.manage` | Edit Draft with row version |
+| `POST` | `/api/legal-checklist-templates/{id}/versions` | `permit.templates.manage` | Clone a Published/Retired version into a new Draft; row version and idempotency key |
+| `POST` | `/api/legal-checklist-templates/{id}/publish` | `permit.templates.publish` | Independent CM/Admin review; row version, approval reference and idempotency key |
+| `POST` | `/api/legal-checklist-templates/{id}/retire` | `permit.templates.publish` | Stop new application without changing project snapshots; row version and idempotency key |
+
+Template input includes an immutable ASCII `Code` (1–60 letters/digits/`-`/`_`,
+starting with a letter/digit), required `NameVi/Name/NameZh/NameJa` (200 characters)
+and `ScopeVi/Scope/ScopeZh/ScopeJa` (2,000 characters). The ordered `Items` list
+contains 1–100 unique active `permit_type` codes and `IsRequired`; at least one
+item must be required. Publication requires a nonblank `ApprovalReference` of
+at most 1,000 characters. The creator and every editor of that version cannot
+publish it. Contributor IDs are retained with the JSON definition independently
+of general audit-log retention. `Draft → Published → Retired` is server-enforced; published content
+is immutable. There is no template hard-delete endpoint.
+
+Activation/setup preview now includes `Templates`, `AppliedTemplate`,
+`WorkPackageRowVersion`, existing package lead/dates, and template application
+actor/time. Both writes accept `TemplateId`, `TemplateRowVersion`, and
+`WorkPackageRowVersion`. New packages require a Published template and matching
+template version. Applying the first template to an existing package also
+requires its row version. A project with a snapshot keeps using it, including
+after template retirement; another template is rejected. Required items must
+already have a linked task or be included for creation/linking in the request.
+Omission returns `LEGAL_REQUIRED_PERMITS_MISSING` before any write.
+
+The Legal package stores the immutable template snapshot and application audit;
+permit responses expose `IsRequired`. Existing projects are not assigned a
+template by migration. Applying one preserves existing package schedule/lead,
+permit state, files and tasks; newly linked/created tasks must fit the existing
+package schedule. Existing untemplated packages can continue to operate. The
+Generic `/api/work-packages` creation rejects `LegalPermitting`, preventing a
+new untemplated package from bypassing the specialist setup workflow. The
+flag controls checklist inclusion, not the construction gate's stage-specific
+permit requirements. Q-09/D-04 remain CM/NICON-owned decisions; demo templates
+are Draft only. After a concurrency conflict, refresh keeps local draft input;
+users review current data before confirming a retry.
+
+Migration `20261022111459_AddLegalChecklistTemplates` is additive: nullable
+package snapshot/source columns, a template table and `IsRequired=false` for
+legacy permits. It does not backfill business classifications. Before rollback,
+back up new template/snapshot data and stop application writes; `Down` removes
+the new feature data/columns, retaining the original permit/task/file records.
+Do not roll back after real template usage without a reviewed preservation plan.
+
 Both `/api/permits` and `/api/v1/permits` expose the same controller:
 
 | Method | Route | Permission | Purpose |

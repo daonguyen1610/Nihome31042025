@@ -6,6 +6,7 @@ namespace NihomeBackend.Data;
 
 public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
+    public DbSet<LegalChecklistTemplate> LegalChecklistTemplates => Set<LegalChecklistTemplate>();
     public DbSet<ApplicationUser> Users => Set<ApplicationUser>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<RegistrationOtp> RegistrationOtps => Set<RegistrationOtp>();
@@ -2621,6 +2622,27 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .HasForeignKey(item => item.UserId).OnDelete(DeleteBehavior.Restrict);
             b.HasIndex(item => new { item.KpiPeriodId, item.KpiDefinitionId, item.UserId }).IsUnique();
             b.HasIndex(item => new { item.UserId, item.CalculatedAt });
+        });
+
+        modelBuilder.Entity<LegalChecklistTemplate>(b =>
+        {
+            b.ToTable("legal_checklist_templates");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Code).HasMaxLength(60).IsRequired();
+            foreach (var name in new[] { "Name", "NameVi", "NameZh", "NameJa" })
+                b.Property<string>(name).HasMaxLength(200).IsRequired();
+            foreach (var scope in new[] { "Scope", "ScopeVi", "ScopeZh", "ScopeJa" })
+                b.Property<string>(scope).HasMaxLength(2000).IsRequired();
+            b.Property(x => x.ItemsJson).IsRequired();
+            b.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
+            b.Property(x => x.ApprovalReference).HasMaxLength(1000);
+            b.Property(x => x.RowVersion).IsRowVersion();
+            b.HasIndex(x => new { x.Code, x.Version }).IsUnique();
+        });
+        modelBuilder.Entity<DepartmentWorkPackage>(b =>
+        {
+            b.HasOne<LegalChecklistTemplate>().WithMany()
+                .HasForeignKey(x => x.LegalChecklistTemplateId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<PermitChecklistItem>(b =>

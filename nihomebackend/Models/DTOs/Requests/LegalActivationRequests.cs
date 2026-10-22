@@ -4,6 +4,9 @@ namespace NihomeBackend.Models.DTOs.Requests;
 
 public sealed class ActivateContractWithLegalRequest : IConcurrencyRequest
 {
+    public string? WorkPackageRowVersion { get; set; }
+    [Range(1, int.MaxValue)] public int? TemplateId { get; set; }
+    public string? TemplateRowVersion { get; set; }
     [Range(1, int.MaxValue)]
     public int LegalLeadUserId { get; set; }
 
@@ -21,6 +24,9 @@ public sealed class ActivateContractWithLegalRequest : IConcurrencyRequest
 
 public sealed class SetupProjectLegalRequest
 {
+    [Range(1, int.MaxValue)] public int? TemplateId { get; set; }
+    public string? TemplateRowVersion { get; set; }
+    public string? WorkPackageRowVersion { get; set; }
     [Range(1, int.MaxValue)]
     public int LegalLeadUserId { get; set; }
 

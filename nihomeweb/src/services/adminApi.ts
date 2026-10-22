@@ -1,4 +1,5 @@
 import type { BoqConfiguration, BoqEntryRow } from "@/components/admin/BoqConfiguredEntry";
+import type { LegalChecklistTemplate, SaveLegalChecklistTemplate } from "./legalChecklistTypes";
 import api, { newIdempotencyKey, withIdempotencyKey, withIfMatch } from "@/lib/api";
 
 const postIdempotent = <T>(url: string, body: unknown) =>
@@ -3869,6 +3870,7 @@ export const PERMIT_STATUSES: PermitStatus[] = [
 ];
 
 export interface PermitChecklistItemResponse {
+  isRequired?: boolean;
   id: number;
   operationalProjectId: number;
   operationalProjectCode?: string | null;
@@ -3968,6 +3970,14 @@ export interface LegalProjectMemberOption {
 }
 
 export interface LegalActivationPreview {
+  existingLegalLeadUserId?: number | null;
+  existingPlannedStart?: string | null;
+  existingPlannedEnd?: string | null;
+  templates: LegalChecklistTemplate[];
+  appliedTemplate?: LegalChecklistTemplate | null;
+  templateAppliedAt?: string | null;
+  templateAppliedByUserId?: number | null;
+  workPackageRowVersion?: string | null;
   contractId: number;
   operationalProjectId: number;
   projectCode: string;
@@ -3998,6 +4008,9 @@ export interface LegalPermitSetupItemRequest {
 }
 
 export interface ActivateContractWithLegalRequest {
+  templateId?: number;
+  templateRowVersion?: string;
+  workPackageRowVersion?: string;
   rowVersion: string;
   legalLeadUserId: number;
   plannedStart: string;
@@ -8316,6 +8329,17 @@ export const adminApi = {
     postIdempotent<ContractResponse>(`/contracts/${id}/link-quote`, { quoteId, rowVersion }),
   transitionContract: (id: number, newStatus: ContractStatus, rowVersion?: string) =>
     api.post<ContractResponse>(`/contracts/${id}/transition`, { newStatus, rowVersion }),
+  listLegalChecklistTemplates: () =>
+    api.get<LegalChecklistTemplate[]>("/legal-checklist-templates"),
+  saveLegalChecklistTemplate: (id: number | null, body: SaveLegalChecklistTemplate) =>
+    id
+      ? api.put<LegalChecklistTemplate>(`/legal-checklist-templates/${id}`, body)
+      : postIdempotent<LegalChecklistTemplate>("/legal-checklist-templates", body),
+  decideLegalChecklistTemplate: (
+    id: number,
+    action: "publish" | "retire" | "versions",
+    body: { rowVersion: string; approvalReference?: string },
+  ) => postIdempotent<LegalChecklistTemplate>(`/legal-checklist-templates/${id}/${action}`, body),
   getContractLegalActivationPreview: (id: number) =>
     api.get<LegalActivationPreview>(`/contracts/${id}/legal-activation-preview`),
   activateContractWithLegal: (id: number, body: ActivateContractWithLegalRequest) =>

@@ -49,6 +49,27 @@ public abstract class IntegrationTestBase : IClassFixture<NihomeWebApplicationFa
         return JsonDocument.Parse(body).RootElement.Clone();
     }
 
+    protected Task<(int Id, string RowVersion)> SeedPublishedLegalTemplateAsync() => WithDbAsync(async db =>
+    {
+        var template = new LegalChecklistTemplate
+        {
+            Code = $"TEST-LEGAL-{Guid.NewGuid():N}",
+            NameVi = "Checklist nhà máy",
+            Name = "Factory checklist",
+            NameZh = "工厂清单",
+            NameJa = "工場一覧",
+            ScopeVi = "Mẫu kiểm thử",
+            Scope = "Test fixture",
+            ScopeZh = "测试模板",
+            ScopeJa = "テスト用",
+            Status = LegalChecklistTemplateStatus.Published,
+            ItemsJson = "[{\"PermitTypeCode\":\"gpxd\",\"IsRequired\":true}]",
+        };
+        db.LegalChecklistTemplates.Add(template);
+        await db.SaveChangesAsync();
+        return (template.Id, Convert.ToBase64String(template.RowVersion));
+    });
+
     /// <summary>
     /// Exercises the permanent-delete contract after obtaining the current
     /// impact plan and its typed confirmation value.

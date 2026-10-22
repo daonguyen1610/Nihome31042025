@@ -97,6 +97,30 @@ test("signed upstream contract uses the editable legal activation wizard", async
             },
             { code: "pccc", name: "Thẩm duyệt PCCC", alreadyExists: false, requiresSetup: false },
           ],
+          templates: [
+            {
+              id: 77,
+              code: "LEGAL-FACTORY",
+              version: 1,
+              status: "Published",
+              nameVi: "Pháp lý nhà máy",
+              name: "Factory permits",
+              nameZh: "工厂许可",
+              nameJa: "工場許可",
+              scopeVi: "Mẫu kiểm thử",
+              scope: "Test fixture",
+              scopeZh: "测试模板",
+              scopeJa: "テスト用",
+              items: [
+                { permitTypeCode: "gpxd", isRequired: true },
+                { permitTypeCode: "pccc", isRequired: false },
+              ],
+              rowVersion: "AAAAAAAAAAE=",
+              createdByUserId: 22,
+              updatedByUserId: 22,
+              publishedByUserId: 11,
+            },
+          ],
           projectMembers: [
             {
               userId: 22,
@@ -188,15 +212,14 @@ test("signed upstream contract uses the editable legal activation wizard", async
   await next.click();
   const permitChecks = page.getByRole("dialog").getByRole("checkbox");
   await expect(permitChecks).toHaveCount(2);
-  await permitChecks.nth(0).click();
-  await permitChecks.nth(1).click();
   await next.click();
-  await expect(
-    page.getByText(/ít nhất một giấy phép|at least one permit|至少选择一个|少なくとも1つ/i),
-  ).toBeVisible();
+  await expect(page.getByRole("alert")).toBeVisible();
   expect(activationPosts).toBe(0);
 
-  await permitChecks.nth(0).click();
+  await page.locator("#legal-template-select").selectOption("77");
+  await expect(permitChecks.nth(0)).toBeChecked();
+  await expect(permitChecks.nth(0)).toBeDisabled();
+  await permitChecks.nth(1).click();
   await next.click();
   const agency = page.getByRole("dialog").locator("input:not([type]):visible").first();
   await agency.fill("Sở Xây dựng TP.HCM");

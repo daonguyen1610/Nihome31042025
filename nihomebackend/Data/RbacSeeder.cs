@@ -37,6 +37,9 @@ public static class RbacSeeder
         var bundle = seedData ?? RbacSeedData.Default;
         var discovered = PermissionDiscovery.Discover(assemblies);
         var catalog = PermissionCatalog.Resolve(bundle.BaseCatalog, discovered);
+        var newLegalTemplateActions = catalog.Where(entry => entry.Module == "permit.templates")
+            .Select(entry => entry.Action).Except(db.Permissions.Where(permission => permission.Module == "permit.templates")
+                .Select(permission => permission.Action)).ToHashSet();
 
         SeedPermissions(db, catalog);
         SeedRoleGroups(db, bundle);
@@ -45,7 +48,23 @@ public static class RbacSeeder
         SeedInitialBusinessRoleGroupsIfMissing(db, bundle);
         ForceSyncSystemRolePermissions(db, catalog, bundle);
         SeedInitialBusinessRolePermissionsIfMissing(db, catalog, bundle);
+        SeedNewLegalTemplatePermissions(db, newLegalTemplateActions);
         BackfillUserRoleEntityIds(db);
+    }
+
+    private static void SeedNewLegalTemplatePermissions(AppDbContext db, HashSet<string> newActions)
+    {
+        // Introduce only newly discovered permissions once. Later administrator revocations stay revoked.
+        if (newActions.Count == 0) return;
+        var permissions = db.Permissions.Where(x => x.Module == "permit.templates").ToList();
+        foreach (var role in db.Roles.Where(x => x.Code == "PM" || x.Code == "LEGAL_OFFICER").ToList())
+        {
+            var actions = role.Code == "PM" ? new[] { "view", "publish" } : new[] { "view", "manage" };
+            foreach (var permission in permissions.Where(x => newActions.Contains(x.Action) && actions.Contains(x.Action)))
+                if (!db.RolePermissions.Any(x => x.RoleId == role.Id && x.PermissionId == permission.Id))
+                    db.RolePermissions.Add(new RolePermission { RoleId = role.Id, PermissionId = permission.Id, CreatedAt = DateTime.UtcNow });
+        }
+        db.SaveChanges();
     }
 
     private static void SeedRoleGroups(AppDbContext db, RbacSeedData.Bundle bundle)
@@ -342,6 +361,9 @@ public static class RbacSeeder
                     .Select(rp => rp.PermissionId)
                     .ToHashSet();
                 var toAdd = declaredCodes
+                    // Legal template grants are introduced once by SeedNewLegalTemplatePermissions.
+                    // Do not re-grant them after an administrator explicitly revokes them.
+                    .Where(code => !code.StartsWith("permit.templates.", StringComparison.OrdinalIgnoreCase))
                     .Select(c => permissionIdByCode[c])
                     .Where(id => !existingIds.Contains(id))
                     .Select(id => new RolePermission

@@ -10,6 +10,14 @@ public sealed class LegalActivationPreviewResponse
     public bool Eligible { get; set; }
     public bool AlreadyActivated { get; set; }
     public int? ExistingWorkPackageId { get; set; }
+    public string? WorkPackageRowVersion { get; set; }
+    public int? ExistingLegalLeadUserId { get; set; }
+    public DateTime? ExistingPlannedStart { get; set; }
+    public DateTime? ExistingPlannedEnd { get; set; }
+    public LegalChecklistTemplateResponse? AppliedTemplate { get; set; }
+    public DateTime? TemplateAppliedAt { get; set; }
+    public int? TemplateAppliedByUserId { get; set; }
+    public List<LegalChecklistTemplateResponse> Templates { get; set; } = new();
     public string? ReasonCode { get; set; }
     public string? Message { get; set; }
     public List<LegalPermitTypeOptionResponse> PermitTypes { get; set; } = new();

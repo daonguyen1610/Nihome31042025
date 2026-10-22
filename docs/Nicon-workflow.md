@@ -239,8 +239,16 @@ có. Email nhắc gia hạn không tự khởi tạo luồng này.
   và hồ sơ được cấp mới cho assignee trình task `Completed`; approver duyệt sang
   `Verified` hoặc trả về `InProgress` kèm lý do.
 - Giấy phép có ngày hết hạn phải còn hiệu lực tại thời điểm sử dụng.
-- Q-09 về template giấy phép theo loại/quy mô công trình vẫn là Open decision;
-  hiện wizard chỉ đề xuất `permit_type` đang hoạt động và PM chọn/bỏ chọn.
+- Pháp lý/Admin soạn phiên bản mẫu nháp; CM/Admin có quyền xuất bản duyệt độc
+  lập và ghi nguồn xác nhận. Người từng soạn/chỉnh sửa không tự xuất bản. Mẫu
+  Published bất biến; bản mới bắt đầu từ Draft, Retired chỉ ngừng áp dụng mới.
+- PM chọn mẫu Published khi tạo gói; server chặn thiếu mục bắt buộc. Mẫu có tên
+  và mô tả phạm vi bốn ngôn ngữ, chưa tự khớp loại/quy mô. Dự án lưu snapshot,
+  người/thời điểm áp dụng, không bị đổi khi mẫu được nâng phiên bản hoặc retire.
+- Dự án cũ áp dụng chủ động qua preview, giữ lịch gói, hồ sơ và tiến độ sẵn có;
+  chỉ thêm/liên kết permit/task thiếu. Bản đầu không đổi mẫu hay miễn mục bắt buộc.
+- Q-09/D-04 về danh mục thực tế theo loại/quy mô vẫn là Open decision do
+  CM/NICON chốt. Cờ bắt buộc checklist không tự thay đổi gate khởi công hiện có.
 
 ### G4 — Đủ điều kiện khởi công
 

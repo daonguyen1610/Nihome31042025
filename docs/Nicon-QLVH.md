@@ -358,9 +358,19 @@ Danh mục áp dụng theo loại/quy mô dự án vẫn cần NICON chốt tạ
 
 **Hiện trạng triển khai:** Hợp đồng Upstream loại Design, Construction hoặc
 DesignAndBuild chỉ chuyển từ `Signed` sang `InProgress` qua wizard Pháp lý do PM
-của Operational Project hoặc Admin xác nhận. Wizard đề xuất các `permit_type`
-đang hoạt động để PM chọn thủ công, chọn chủ trì Pháp lý, người thực hiện/người
-duyệt, lịch và predecessor. Không tạo permit ngầm khi tạo `DesignProject`.
+của Operational Project hoặc Admin xác nhận. Gói mới yêu cầu PM chọn phiên bản
+mẫu checklist đã xuất bản; mục bắt buộc không được bỏ chọn, mục tùy chọn và
+giấy phép bổ sung lấy từ `permit_type` đang hoạt động. Pháp lý/Admin soạn mẫu
+với tên và phạm vi bốn ngôn ngữ; CM/Admin có quyền xuất bản duyệt độc lập và ghi
+nguồn phê duyệt. Người từng soạn/chỉnh sửa không tự xuất bản. Không tạo permit
+ngầm khi tạo `DesignProject`.
+
+Mẫu đã xuất bản bất biến, chỉnh sửa bằng phiên bản nháp mới. Dự án giữ snapshot,
+người và thời điểm áp dụng; mẫu ngừng sử dụng không thay đổi dự án đã áp dụng.
+PM chọn thủ công theo phạm vi mô tả, chưa tự khớp loại/quy mô. Dự án cũ chưa có
+mẫu tiếp tục vận hành; PM/Admin áp dụng chủ động qua preview, giữ hồ sơ, tiến độ
+và lịch gói hiện có, thêm permit/task thiếu. Bản đầu không đổi mẫu đã áp dụng,
+không miễn mục bắt buộc và không tự gán mẫu cho dữ liệu cũ.
 
 Mỗi Operational Project có tối đa một work package `LegalPermitting`; nhiều hợp
 đồng cùng dự án dùng chung package nhưng có activation audit riêng. Mỗi permit
@@ -372,8 +382,10 @@ là `Issued`, đã có ngày cấp và hồ sơ giấy phép. Duyệt nội bộ
 không thay đổi trạng thái cơ quan.
 
 **Partial:** Workspace `/admin/permits`, tài liệu nguồn `Legal`, risk filters,
-history và cổng kiểm tra permit đã có. Việc xác định permit nào là bắt buộc cho
-từng mốc khởi công vẫn phụ thuộc cấu hình dự án.
+history, cấu hình/duyệt mẫu có phiên bản và snapshot dự án đã có. Danh mục thực
+tế theo loại/quy mô vẫn chờ CM/NICON duyệt; demo chỉ có mẫu nháp. Việc xác định
+permit nào chặn từng mốc khởi công vẫn theo cấu hình gate dự án, không tự suy
+từ cờ bắt buộc của checklist (ví dụ hoàn công không mặc nhiên chặn khởi công).
 
 **Open decision (Q-09):** NICON chưa chốt template giấy phép theo loại/quy mô
 công trình; hệ thống không tự suy đoán quy tắc này.

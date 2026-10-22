@@ -170,6 +170,8 @@ public sealed class LegalActivationControllerTests : IntegrationTestBase
             Content = JsonContent.Create(new
             {
                 legalLeadUserId = fixture.LegalLeadUserId,
+                templateId = fixture.TemplateId,
+                templateRowVersion = fixture.TemplateRowVersion,
                 plannedStart = DateTime.UtcNow.Date,
                 plannedEnd = DateTime.UtcNow.Date.AddMonths(6),
                 permits = new[]
@@ -203,6 +205,94 @@ public sealed class LegalActivationControllerTests : IntegrationTestBase
                 item.OperationalProjectId == fixture.ProjectId && item.Purpose == WorkPackagePurpose.LegalPermitting))
                 .Should().Be(1);
         });
+    }
+
+    [Fact]
+    public async Task MissingRequiredPermitAndUnpublishedTemplateDoNotActivateContract()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsSuperAdminAsync);
+        var fixture = await SeedFixtureAsync();
+        var before = await CountsAsync(fixture.ProjectId);
+        var missing = await PostActivationAsync(fixture.ContractId, ActivationRequest(fixture, false), Guid.NewGuid().ToString("N"));
+        missing.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await ReadJsonAsync(missing)).GetProperty("code").GetString().Should().Be("LEGAL_REQUIRED_PERMITS_MISSING");
+        (await CountsAsync(fixture.ProjectId)).Should().Be(before);
+        await WithDbAsync(async db =>
+        {
+            (await db.LegalChecklistTemplates.FindAsync(fixture.TemplateId))!.Status = LegalChecklistTemplateStatus.Draft;
+            await db.SaveChangesAsync();
+        });
+        var draft = await PostActivationAsync(fixture.ContractId, ActivationRequest(fixture, true), Guid.NewGuid().ToString("N"));
+        draft.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await ReadJsonAsync(draft)).GetProperty("code").GetString().Should().Be("LEGAL_TEMPLATE_NOT_PUBLISHED");
+        (await CountsAsync(fixture.ProjectId)).Should().Be(before);
+    }
+
+    [Fact]
+    public async Task ContractActivationCanApplyTemplateToExistingLegacyPackage()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsSuperAdminAsync);
+        var fixture = await SeedFixtureAsync();
+        (await PostActivationAsync(fixture.ContractId, ActivationRequest(fixture, true), Guid.NewGuid().ToString("N"))).EnsureSuccessStatusCode();
+        var original = await WithDbAsync(async db =>
+        {
+            var package = await db.DepartmentWorkPackages.SingleAsync(x => x.OperationalProjectId == fixture.ProjectId);
+            package.LegalChecklistTemplateId = null; package.LegalChecklistSnapshotJson = null;
+            var permit = await db.PermitChecklistItems.SingleAsync(x => x.OperationalProjectId == fixture.ProjectId);
+            permit.IsRequired = false; permit.Note = "Legacy permit evidence retained";
+            await db.SaveChangesAsync();
+            return (package.Id, package.PlannedStart, package.PlannedEnd);
+        });
+        var second = await SeedContractAsync(fixture.ProjectId, fixture.CustomerId, "HD-LEGACY-TEMPLATE");
+        var preview = await ReadJsonAsync(await Client.GetAsync($"/api/contracts/{second.ContractId}/legal-activation-preview"));
+        var response = await PostActivationAsync(second.ContractId, new
+        {
+            templateId = fixture.TemplateId,
+            templateRowVersion = fixture.TemplateRowVersion,
+            workPackageRowVersion = preview.GetProperty("workPackageRowVersion").GetString(),
+            rowVersion = second.RowVersion,
+            legalLeadUserId = fixture.LegalLeadUserId,
+            plannedStart = DateTime.UtcNow.Date,
+            plannedEnd = DateTime.UtcNow.Date.AddMonths(9),
+            permits = Array.Empty<object>(),
+        }, Guid.NewGuid().ToString("N"));
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
+        await WithDbAsync(async db =>
+        {
+            var package = await db.DepartmentWorkPackages.SingleAsync(x => x.Id == original.Id);
+            package.LegalChecklistTemplateId.Should().Be(fixture.TemplateId);
+            package.PlannedStart.Should().Be(original.PlannedStart); package.PlannedEnd.Should().Be(original.PlannedEnd);
+            var permit = await db.PermitChecklistItems.SingleAsync(x => x.OperationalProjectId == fixture.ProjectId);
+            permit.IsRequired.Should().BeTrue(); permit.Note.Should().Be("Legacy permit evidence retained");
+            (await db.DepartmentWorkTasks.CountAsync(x => x.WorkPackageId == package.Id)).Should().Be(1);
+        });
+    }
+
+    [Fact]
+    public async Task GenericWorkPackageEndpointCannotBypassLegalTemplateSetup()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsSuperAdminAsync);
+        var fixture = await SeedFixtureAsync();
+        var before = await CountsAsync(fixture.ProjectId);
+        var groupId = await WithDbAsync(db => db.RoleGroups.Where(x => x.Code == "CONSTRUCTION").Select(x => x.Id).SingleAsync());
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/work-packages")
+        {
+            Content = JsonContent.Create(new
+            {
+                kind = "Project",
+                purpose = "LegalPermitting",
+                name = "NICON legal template bypass attempt",
+                operationalProjectId = fixture.ProjectId,
+                departmentRoleGroupId = groupId,
+                leadUserId = fixture.LegalLeadUserId,
+                plannedStart = DateTime.UtcNow.Date,
+                plannedEnd = DateTime.UtcNow.Date.AddMonths(6),
+            }),
+        };
+        request.Headers.Add("Idempotency-Key", Guid.NewGuid().ToString("N"));
+        var response = await Client.SendAsync(request);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await CountsAsync(fixture.ProjectId)).Should().Be(before);
     }
 
     private async Task<LegalFixture> SeedFixtureAsync()
@@ -247,7 +337,24 @@ public sealed class LegalActivationControllerTests : IntegrationTestBase
                     ],
                 });
             await db.SaveChangesAsync();
-            return new LegalFixture(project.Id, customer.Id, 0, string.Empty, legal.Id, assignee.Id);
+            var template = new LegalChecklistTemplate
+            {
+                Code = UniqueSlug("LEGAL-TEMPLATE"),
+                NameVi = "Mẫu pháp lý nhà máy",
+                Name = "Factory permits",
+                NameZh = "工厂许可",
+                NameJa = "工場許可",
+                ScopeVi = "Mẫu kiểm thử",
+                Scope = "Test fixture",
+                ScopeZh = "测试",
+                ScopeJa = "テスト",
+                Status = LegalChecklistTemplateStatus.Published,
+                ItemsJson = "[{\"PermitTypeCode\":\"gpxd\",\"IsRequired\":true}]",
+            };
+            db.LegalChecklistTemplates.Add(template);
+            await db.SaveChangesAsync();
+            return new LegalFixture(project.Id, customer.Id, 0, string.Empty, legal.Id, assignee.Id,
+                template.Id, CrmConcurrency.Encode(template.RowVersion));
         });
         var contract = await SeedContractAsync(fixture.ProjectId, fixture.CustomerId, "HD-LEGAL-FIRST");
         return fixture with { ContractId = contract.ContractId, RowVersion = contract.RowVersion };
@@ -284,6 +391,8 @@ public sealed class LegalActivationControllerTests : IntegrationTestBase
 
     private static object ActivationRequest(LegalFixture fixture, bool includePermit, bool selfApprove = false) => new
     {
+        templateId = fixture.TemplateId,
+        templateRowVersion = fixture.TemplateRowVersion,
         legalLeadUserId = fixture.LegalLeadUserId,
         plannedStart = DateTime.UtcNow.Date,
         plannedEnd = DateTime.UtcNow.Date.AddMonths(6),
@@ -326,5 +435,7 @@ public sealed class LegalActivationControllerTests : IntegrationTestBase
         int ContractId,
         string RowVersion,
         int LegalLeadUserId,
-        int AssigneeUserId);
+        int AssigneeUserId,
+        int TemplateId,
+        string TemplateRowVersion);
 }

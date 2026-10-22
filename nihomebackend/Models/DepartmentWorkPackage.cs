@@ -8,6 +8,10 @@ public class DepartmentWorkPackage : IConcurrencyTracked
     public string Code { get; set; } = string.Empty;
     public WorkPackageKind Kind { get; set; }
     public WorkPackagePurpose Purpose { get; set; } = WorkPackagePurpose.General;
+    public int? LegalChecklistTemplateId { get; set; }
+    public string? LegalChecklistSnapshotJson { get; set; }
+    public int? LegalChecklistAppliedByUserId { get; set; }
+    public DateTime? LegalChecklistAppliedAt { get; set; }
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }
     public int? OperationalProjectId { get; set; }

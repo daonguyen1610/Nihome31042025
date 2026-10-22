@@ -67,6 +67,9 @@ public sealed class LegalActivationService(
 
         var setup = new SetupProjectLegalRequest
         {
+            TemplateId = request.TemplateId,
+            TemplateRowVersion = request.TemplateRowVersion,
+            WorkPackageRowVersion = request.WorkPackageRowVersion,
             LegalLeadUserId = request.LegalLeadUserId,
             PlannedStart = request.PlannedStart,
             PlannedEnd = request.PlannedEnd,
@@ -157,16 +160,55 @@ public sealed class LegalActivationService(
         var existing = await db.PermitChecklistItems
             .Where(item => item.OperationalProjectId == projectId)
             .ToDictionaryAsync(item => item.PermitTypeCode, StringComparer.OrdinalIgnoreCase, ct);
+        var package = await db.DepartmentWorkPackages
+            .Include(item => item.ParticipantGroups)
+            .SingleOrDefaultAsync(item => item.OperationalProjectId == projectId &&
+                item.Purpose == WorkPackagePurpose.LegalPermitting, ct);
+        LegalChecklistTemplateResponse? template = null;
+        var applyingTemplate = false;
+        if (package?.LegalChecklistSnapshotJson is not null)
+        {
+            template = JsonSerializer.Deserialize<LegalChecklistTemplateResponse>(package.LegalChecklistSnapshotJson)!;
+            if (request.TemplateId.HasValue && request.TemplateId != template.Id)
+                throw Error("LEGAL_TEMPLATE_CHANGE_BLOCKED", "Không được đổi mẫu đã áp dụng cho dự án.");
+        }
+        else if (request.TemplateId.HasValue)
+        {
+            var selectedTemplate = await db.LegalChecklistTemplates.AsNoTracking()
+                .SingleOrDefaultAsync(x => x.Id == request.TemplateId && x.Status == LegalChecklistTemplateStatus.Published, ct)
+                ?? throw Error("LEGAL_TEMPLATE_NOT_PUBLISHED", "Chọn một mẫu Pháp lý đã được xuất bản.");
+            CrmConcurrency.EnsureMatches(selectedTemplate.RowVersion, request.TemplateRowVersion);
+            template = LegalChecklistTemplateService.Map(selectedTemplate);
+            applyingTemplate = true;
+            if (package is not null)
+            {
+                CrmConcurrency.EnsureMatches(package.RowVersion, request.WorkPackageRowVersion);
+                CrmConcurrency.Apply(db, package, request.WorkPackageRowVersion);
+            }
+        }
+        else if (package is null)
+            throw Error("LEGAL_TEMPLATE_REQUIRED", "Phải chọn mẫu checklist Pháp lý đã xuất bản trước khi tạo gói mới.");
+
+        if (template is not null)
+        {
+            if (applyingTemplate && package is not null && request.Permits.Any(item =>
+                    (!existing.TryGetValue(item.PermitTypeCode.Trim(), out var existingPermit) || !existingPermit.WorkTaskId.HasValue) &&
+                    (package.PlannedStart.HasValue && item.PlannedStart < package.PlannedStart ||
+                     package.PlannedEnd.HasValue && item.PlannedEnd > package.PlannedEnd)))
+                throw Error("LEGAL_TASK_DATES_INVALID", "Thời gian giấy phép mới phải nằm trong lịch gói Pháp lý hiện có; áp dụng mẫu không thay đổi lịch gói.");
+            var missing = template.Items.Where(x => x.IsRequired &&
+                !request.Permits.Any(p => string.Equals(p.PermitTypeCode.Trim(), x.PermitTypeCode, StringComparison.OrdinalIgnoreCase)) &&
+                (!existing.TryGetValue(x.PermitTypeCode, out var permit) || !permit.WorkTaskId.HasValue))
+                .Select(x => x.PermitTypeCode).ToList();
+            if (missing.Count > 0)
+                throw Error("LEGAL_REQUIRED_PERMITS_MISSING", $"Thiếu mục Pháp lý bắt buộc: {string.Join(", ", missing)}.");
+        }
         if (request.Permits.Count == 0 && existing.Count == 0)
             throw Error("LEGAL_PERMITS_REQUIRED", "Phải chọn ít nhất một giấy phép.");
 
         var constructionGroup = await db.RoleGroups.AsNoTracking()
             .SingleOrDefaultAsync(item => item.Code == "CONSTRUCTION" && item.IsActive, ct)
             ?? throw Error("LEGAL_DEPARTMENT_MISSING", "Nhóm phòng ban CONSTRUCTION chưa được cấu hình.");
-        var package = await db.DepartmentWorkPackages
-            .Include(item => item.ParticipantGroups)
-            .SingleOrDefaultAsync(item => item.OperationalProjectId == projectId &&
-                item.Purpose == WorkPackagePurpose.LegalPermitting, ct);
         var reused = package is not null;
         if (package is null)
         {
@@ -190,13 +232,36 @@ public sealed class LegalActivationService(
             db.DepartmentWorkPackages.Add(package);
             await db.SaveChangesAsync(ct);
         }
-        else
+        else if (!applyingTemplate)
         {
             package.LeadUserId = request.LegalLeadUserId;
             package.PlannedStart = request.PlannedStart.ToUniversalTime();
             package.PlannedEnd = request.PlannedEnd.ToUniversalTime();
             package.UpdatedAt = DateTime.UtcNow;
             package.UpdatedByUserId = callerUserId;
+        }
+
+        if (applyingTemplate)
+        {
+            package.LegalChecklistTemplateId = template!.Id;
+            package.LegalChecklistSnapshotJson = JsonSerializer.Serialize(template);
+            package.LegalChecklistAppliedByUserId = callerUserId;
+            package.LegalChecklistAppliedAt = DateTime.UtcNow;
+            package.UpdatedAt = DateTime.UtcNow;
+            package.UpdatedByUserId = callerUserId;
+            foreach (var permit in existing.Values)
+                permit.IsRequired = template.Items.Any(x => x.IsRequired &&
+                    string.Equals(x.PermitTypeCode, permit.PermitTypeCode, StringComparison.OrdinalIgnoreCase));
+            db.DepartmentWorkPackageHistory.Add(new DepartmentWorkPackageHistory
+            {
+                WorkPackageId = package.Id,
+                EntityType = "Package",
+                EntityId = package.Id,
+                Action = "LegalChecklistTemplateApplied",
+                SnapshotJson = package.LegalChecklistSnapshotJson,
+                ChangedAt = DateTime.UtcNow,
+                ChangedByUserId = callerUserId,
+            });
         }
 
         var designProjectId = await db.DesignProjects.AsNoTracking()
@@ -250,6 +315,8 @@ public sealed class LegalActivationService(
                     DesignProjectId = designProjectId,
                     WorkTaskId = task.Id,
                     PermitTypeCode = code,
+                    IsRequired = template?.Items.Any(x => x.IsRequired &&
+                        string.Equals(x.PermitTypeCode, code, StringComparison.OrdinalIgnoreCase)) == true,
                     IssuingAgency = TrimOrNull(item.IssuingAgency),
                     OwnerUserId = item.AssigneeUserId,
                     TargetDeadline = item.PlannedEnd.ToUniversalTime(),
@@ -365,9 +432,9 @@ public sealed class LegalActivationService(
         var existingPermits = await db.PermitChecklistItems.AsNoTracking()
             .Where(item => item.OperationalProjectId == projectId)
             .Select(item => new { item.PermitTypeCode, item.WorkTaskId }).ToListAsync(ct);
-        var packageId = await db.DepartmentWorkPackages.AsNoTracking()
+        var package = await db.DepartmentWorkPackages.AsNoTracking()
             .Where(item => item.OperationalProjectId == projectId && item.Purpose == WorkPackagePurpose.LegalPermitting)
-            .Select(item => (int?)item.Id).SingleOrDefaultAsync(ct);
+            .SingleOrDefaultAsync(ct);
         var activated = contract is not null && await db.ContractLegalActivations.AsNoTracking()
             .AnyAsync(item => item.ContractId == contract.Id, ct);
         var eligible = contract is null || IsEligibleContract(contract) || activated;
@@ -380,7 +447,16 @@ public sealed class LegalActivationService(
             ProjectManagerUserId = project.ProjectManagerUserId.Value,
             Eligible = eligible,
             AlreadyActivated = activated,
-            ExistingWorkPackageId = packageId,
+            ExistingWorkPackageId = package?.Id,
+            WorkPackageRowVersion = package is null ? null : CrmConcurrency.Encode(package.RowVersion),
+            ExistingLegalLeadUserId = package?.LeadUserId,
+            ExistingPlannedStart = package?.PlannedStart,
+            ExistingPlannedEnd = package?.PlannedEnd,
+            AppliedTemplate = package?.LegalChecklistSnapshotJson is null ? null :
+                JsonSerializer.Deserialize<LegalChecklistTemplateResponse>(package.LegalChecklistSnapshotJson),
+            TemplateAppliedAt = package?.LegalChecklistAppliedAt,
+            TemplateAppliedByUserId = package?.LegalChecklistAppliedByUserId,
+            Templates = await new LegalChecklistTemplateService(db).ListAsync(true, ct),
             ReasonCode = eligible ? null : "LEGAL_CONTRACT_NOT_ELIGIBLE",
             Message = eligible ? null : "Chỉ hợp đồng Upstream loại Thiết kế, Thi công hoặc D&B ở trạng thái Đã ký mới kích hoạt Pháp lý.",
             PermitTypes = (await db.MasterDataOptions.AsNoTracking()

@@ -13,6 +13,7 @@ public class PermitChecklistItemResponse
     public string? DesignProjectName { get; set; }
 
     public string PermitTypeCode { get; set; } = string.Empty;
+    public bool IsRequired { get; set; }
     /// <summary>Localised label resolved from master data (VD "Giấy phép xây dựng (GPXD)").</summary>
     public string? PermitTypeLabel { get; set; }
 

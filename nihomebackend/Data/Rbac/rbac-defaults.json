@@ -224,6 +224,9 @@
     { "module": "construction.handover", "action": "manage.all" },
     { "module": "construction.handover", "action": "complete" },
 
+    { "module": "permit.templates", "action": "view" },
+    { "module": "permit.templates", "action": "manage" },
+    { "module": "permit.templates", "action": "publish" },
     { "module": "permit.checklists", "action": "view" },
     { "module": "permit.checklists", "action": "manage" },
     { "module": "permit.checklists", "action": "mark-issued" }
@@ -501,6 +504,7 @@
 
     "PM": {
       "patterns": [
+        "permit.templates.view", "permit.templates.publish",
         "dashboard.view",
         "content.projects.*",
         "processes.*",
@@ -567,6 +571,7 @@
     },
     "LEGAL_OFFICER": {
       "patterns": [
+        "permit.templates.view", "permit.templates.manage",
         "dashboard.view",
         "master-data.view",
         "workflow.view",
