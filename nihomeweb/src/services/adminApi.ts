@@ -7641,6 +7641,8 @@ export const adminApi = {
   listWorkPackages: (params: DepartmentWorkPackageQuery = {}) =>
     api.get<DepartmentWorkPackageListResponse>("/work-packages", { params }),
   getWorkPackage: (id: number) => api.get<DepartmentWorkPackageResponse>(`/work-packages/${id}`),
+  getWorkPackageDepartments: () =>
+    api.get<DepartmentWorkPackageOptionsResponse["departments"]>("/work-packages/departments"),
   getWorkPackageOptions: () =>
     api.get<DepartmentWorkPackageOptionsResponse>("/work-packages/options"),
   createWorkPackage: (body: CreateDepartmentWorkPackageRequest, idempotencyKey: string) =>

@@ -105,11 +105,9 @@ public sealed partial class DepartmentWorkPackageService(
         return MapPackage(item, callerUserId, await IsAdministratorAsync(callerUserId, ct));
     }
 
-    public async Task<DepartmentWorkPackageOptionsResponse> OptionsAsync(
-        int callerUserId,
-        CancellationToken ct = default)
+    public async Task<List<DepartmentOptionResponse>> DepartmentsAsync(CancellationToken ct = default)
     {
-        var departments = await db.RoleGroups.AsNoTracking().Where(item => item.IsActive)
+        return await db.RoleGroups.AsNoTracking().Where(item => item.IsActive)
             .OrderBy(item => item.SortOrder).ThenBy(item => item.Code)
             .Select(item => new DepartmentOptionResponse
             {
@@ -119,6 +117,13 @@ public sealed partial class DepartmentWorkPackageService(
                 CanReceiveProjectPackage = GenericProjectDepartmentCodes.Contains(item.Code),
             })
             .ToListAsync(ct);
+    }
+
+    public async Task<DepartmentWorkPackageOptionsResponse> OptionsAsync(
+        int callerUserId,
+        CancellationToken ct = default)
+    {
+        var departments = await DepartmentsAsync(ct);
         var users = await db.Users.AsNoTracking()
             .Where(item => item.IsActive && item.RoleEntity != null && item.RoleEntity.IsActive && item.RoleEntity.RoleGroupId != null)
             .OrderBy(item => item.FullName ?? item.Email)

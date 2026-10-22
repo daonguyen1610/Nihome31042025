@@ -316,6 +316,19 @@ receive the new grants through `AddOperationalProjects`; fresh databases use
 
 ### Department work-package permissions
 
+The work-package list combines search, receiving department, status, purpose
+and (for project work) operational project filters. Departments come from the
+backend options catalog. The department filter matches the package's primary
+receiving department, including internal packages with several participants.
+Filters are stored in the URL for reload/share. Switching work type retains
+common filters and clears the project filter; Clear filters retains work type.
+All filters are applied server-side within the caller's existing view scope.
+`GET /api/work-packages/departments` requires `work.packages.view` and returns
+only department identifiers, labels and receiving capability. Assignment
+options (users, vendors and KPI definitions) remain restricted to manage/assign
+actors through the existing `/options` endpoint. The project filter loads all
+pages of the project catalog only when the caller has `operations.projects.view`.
+
 | Permission | Scope |
 |---|---|
 | `work.packages.view` | Read work packages visible through project scope or direct participation. |

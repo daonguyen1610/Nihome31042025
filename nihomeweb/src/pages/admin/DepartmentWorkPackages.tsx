@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -93,6 +93,7 @@ const DepartmentWorkPackages = () => {
   const { has } = usePermissions();
   const packageId = id && /^\d+$/.test(id) ? Number(id) : null;
   const kind: WorkPackageKind = params.get("kind") === "Internal" ? "Internal" : "Project";
+  const canViewProjects = has(ADMIN_PERMS.operationalProjects);
   const canManage = has(ADMIN_PERMS.workPackagesManage);
   const canAssign = has(ADMIN_PERMS.workPackagesAssign);
   const canProgress = has(ADMIN_PERMS.workPackagesProgress);
@@ -104,7 +105,23 @@ const DepartmentWorkPackages = () => {
   const [options, setOptions] = useState(emptyOptions);
   const [projects, setProjects] = useState<OperationalProjectListItemResponse[]>([]);
   const [contracts, setContracts] = useState<ContractResponse[]>([]);
-  const [search, setSearch] = useState("");
+  const search = params.get("search") ?? "";
+  const departmentFilter = params.get("departmentId") ?? "";
+  const statusFilter = params.get("status") ?? "";
+  const purposeFilter = params.get("purpose") ?? "";
+  const projectFilter = kind === "Project" ? (params.get("projectId") ?? "") : "";
+  const updateFilter = (key: string, value: string) => {
+    setParams(
+      (current) => {
+        const next = new URLSearchParams(current);
+        if (value) next.set(key, value);
+        else next.delete(key);
+        return next;
+      },
+      { replace: true },
+    );
+  };
+  const requestSequence = useRef(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [packageOpen, setPackageOpen] = useState(false);
@@ -169,30 +186,38 @@ const DepartmentWorkPackages = () => {
   });
 
   const load = useCallback(async () => {
+    const request = ++requestSequence.current;
     setLoading(true);
     setError(null);
     try {
       if (packageId) {
         const response = await adminApi.getWorkPackage(packageId);
+        if (request !== requestSequence.current) return;
         setDetail(response.data);
       } else {
         setDetail(null);
-        const projectFilter = Number(params.get("projectId"));
+        const projectIdFilter = Number(projectFilter);
         const response = await adminApi.listWorkPackages({
           kind,
           search: search || undefined,
           operationalProjectId:
-            Number.isFinite(projectFilter) && projectFilter > 0 ? projectFilter : undefined,
+            Number.isFinite(projectIdFilter) && projectIdFilter > 0 ? projectIdFilter : undefined,
+          departmentRoleGroupId:
+            Number(departmentFilter) > 0 ? Number(departmentFilter) : undefined,
+          status: (statusFilter || undefined) as WorkPackageStatus | undefined,
+          purpose: (purposeFilter || undefined) as WorkPackagePurpose | undefined,
           pageSize: 100,
         });
+        if (request !== requestSequence.current) return;
         setRows(response.data.items);
       }
     } catch (cause) {
-      setError(extractApiError(cause, t("workPackages.error.load")));
+      if (request === requestSequence.current)
+        setError(extractApiError(cause, t("workPackages.error.load")));
     } finally {
-      setLoading(false);
+      if (request === requestSequence.current) setLoading(false);
     }
-  }, [kind, packageId, params, search, t]);
+  }, [kind, packageId, projectFilter, departmentFilter, statusFilter, purposeFilter, search, t]);
 
   useEffect(() => {
     void load();
@@ -206,16 +231,30 @@ const DepartmentWorkPackages = () => {
         ?.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [detail, params]);
   useEffect(() => {
-    Promise.all([
-      adminApi.getWorkPackageOptions(),
-      adminApi.listOperationalProjects({ pageSize: 100 }),
-    ])
-      .then(([optionResponse, projectResponse]) => {
-        setOptions(optionResponse.data);
-        setProjects(projectResponse.data.items);
-      })
+    adminApi
+      .getWorkPackageDepartments()
+      .then((response) => setOptions((current) => ({ ...current, departments: response.data })))
       .catch(() => undefined);
-  }, []);
+    if (canManage || canAssign)
+      adminApi
+        .getWorkPackageOptions()
+        .then((response) => setOptions(response.data))
+        .catch(() => undefined);
+    if (canViewProjects) {
+      const loadProjects = async () => {
+        const allProjects: OperationalProjectListItemResponse[] = [];
+        let page = 1;
+        while (true) {
+          const { data } = await adminApi.listOperationalProjects({ page, pageSize: 100 });
+          allProjects.push(...data.items);
+          if (allProjects.length >= data.totalCount || data.items.length === 0) break;
+          page += 1;
+        }
+        setProjects(allProjects);
+      };
+      void loadProjects().catch(() => undefined);
+    }
+  }, [canViewProjects, canManage, canAssign]);
   useEffect(() => {
     const projectIdValue = packageForm.operationalProjectId;
     if (!projectIdValue) {
@@ -701,7 +740,7 @@ const DepartmentWorkPackages = () => {
     }
   };
 
-  if (loading)
+  if (loading && packageId)
     return (
       <AdminLayout>
         <PageLoading />
@@ -1130,8 +1169,9 @@ const DepartmentWorkPackages = () => {
             <Tabs
               value={kind}
               onValueChange={(value) => {
-                const next = new URLSearchParams();
+                const next = new URLSearchParams(params);
                 next.set("kind", value);
+                next.delete("projectId");
                 setParams(next);
               }}
             >
@@ -1140,46 +1180,148 @@ const DepartmentWorkPackages = () => {
                 <TabsTrigger value="Internal">{t("workPackages.tab.internal")}</TabsTrigger>
               </TabsList>
             </Tabs>
-            <div className="relative max-w-xl">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder={t("workPackages.search")}
-                className="pl-9"
-              />
-            </div>
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {rows.map((item) => (
-                <button
-                  key={item.id}
-                  data-testid="work-package-card"
-                  type="button"
-                  className="rounded-xl border bg-card p-5 text-left transition hover:border-primary/50 hover:shadow-sm"
-                  onClick={() => navigate(`/admin/work-packages/${item.id}`)}
+            <section
+              className="grid gap-3 rounded-xl border bg-card p-4 sm:grid-cols-2 xl:grid-cols-4"
+              aria-label={t("workPackages.filters.title")}
+            >
+              <div className="space-y-1 sm:col-span-2">
+                <Label htmlFor="wp-search">{t("workPackages.filters.search")}</Label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="wp-search"
+                    value={search}
+                    onChange={(event) => updateFilter("search", event.target.value)}
+                    placeholder={t("workPackages.search")}
+                    className="pl-9"
+                  />
+                </div>
+              </div>
+              <div className="min-w-0 space-y-1">
+                <Label htmlFor="wp-department">{t("workPackages.field.department")}</Label>
+                <select
+                  id="wp-department"
+                  className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                  value={departmentFilter}
+                  onChange={(event) => updateFilter("departmentId", event.target.value)}
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <Badge variant="outline">{item.code}</Badge>
-                    <Badge className={statusTone[item.status]} variant="outline">
-                      {t(`workPackages.status.${item.status}`)}
-                    </Badge>
-                  </div>
-                  <h2 className="mt-4 font-semibold">{item.name}</h2>
-                  <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
-                    {item.kind === "Project"
-                      ? `${item.operationalProjectCode} · ${item.operationalProjectName}`
-                      : t("workPackages.kind.Internal")}
-                  </p>
-                  <div className="mt-4 flex items-center justify-between text-sm">
-                    <span>
-                      {t(item.departmentLabelKey)} · {item.leadUserName}
-                    </span>
-                    <strong>{item.progressPercent}%</strong>
-                  </div>
-                  <Progress value={item.progressPercent} className="mt-2" />
-                </button>
-              ))}
-              {rows.length === 0 && (
+                  <option value="">{t("workPackages.filters.allDepartments")}</option>
+                  {options.departments.map((department) => (
+                    <option key={department.id} value={department.id}>
+                      {t(department.labelKey)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="min-w-0 space-y-1">
+                <Label htmlFor="wp-status">{t("workPackages.filters.status")}</Label>
+                <select
+                  id="wp-status"
+                  className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                  value={statusFilter}
+                  onChange={(event) => updateFilter("status", event.target.value)}
+                >
+                  <option value="">{t("workPackages.filters.allStatuses")}</option>
+                  {(Object.keys(statusTone) as WorkPackageStatus[]).map((status) => (
+                    <option key={status} value={status}>
+                      {t(`workPackages.status.${status}`)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {kind === "Project" && canViewProjects && (
+                <div className="min-w-0 space-y-1 sm:col-span-2">
+                  <Label htmlFor="wp-project">{t("workPackages.field.project")}</Label>
+                  <select
+                    id="wp-project"
+                    className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                    value={projectFilter}
+                    onChange={(event) => updateFilter("projectId", event.target.value)}
+                  >
+                    <option value="">{t("workPackages.filters.allProjects")}</option>
+                    {projects.map((project) => (
+                      <option key={project.id} value={project.id}>
+                        {project.code} · {project.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              <div className="min-w-0 space-y-1">
+                <Label htmlFor="wp-purpose">{t("workPackages.field.purpose")}</Label>
+                <select
+                  id="wp-purpose"
+                  className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                  value={purposeFilter}
+                  onChange={(event) => updateFilter("purpose", event.target.value)}
+                >
+                  <option value="">{t("workPackages.filters.allPurposes")}</option>
+                  {(
+                    [
+                      "General",
+                      "ProcurementInputPricing",
+                      "FinanceCommercialReview",
+                      "FinanceTenderReview",
+                      "TenderPlanning",
+                      "LegalPermitting",
+                    ] as WorkPackagePurpose[]
+                  ).map((purpose) => (
+                    <option key={purpose} value={purpose}>
+                      {t(`workPackages.purpose.${purpose}`)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex items-end">
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  disabled={
+                    !search &&
+                    !departmentFilter &&
+                    !statusFilter &&
+                    !purposeFilter &&
+                    !projectFilter
+                  }
+                  onClick={() => setParams(kind === "Internal" ? { kind } : {})}
+                >
+                  {t("workPackages.filters.clear")}
+                </Button>
+              </div>
+            </section>
+            {loading && <PageLoading />}
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {!loading &&
+                rows.map((item) => (
+                  <button
+                    key={item.id}
+                    data-testid="work-package-card"
+                    type="button"
+                    className="rounded-xl border bg-card p-5 text-left transition hover:border-primary/50 hover:shadow-sm"
+                    onClick={() => navigate(`/admin/work-packages/${item.id}`)}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <Badge variant="outline">{item.code}</Badge>
+                      <Badge className={statusTone[item.status]} variant="outline">
+                        {t(`workPackages.status.${item.status}`)}
+                      </Badge>
+                    </div>
+                    <h2 className="mt-4 font-semibold">{item.name}</h2>
+                    <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
+                      {item.kind === "Project"
+                        ? `${item.operationalProjectCode} · ${item.operationalProjectName}`
+                        : t("workPackages.kind.Internal")}
+                    </p>
+                    <div className="mt-4 flex items-center justify-between text-sm">
+                      <span>
+                        {t(item.departmentLabelKey)} · {item.leadUserName}
+                      </span>
+                      <strong>{item.progressPercent}%</strong>
+                    </div>
+                    <Progress value={item.progressPercent} className="mt-2" />
+                  </button>
+                ))}
+              {!loading && rows.length === 0 && (
                 <div className="col-span-full rounded-xl border border-dashed p-12 text-center text-muted-foreground">
                   {t("workPackages.empty")}
                 </div>

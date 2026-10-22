@@ -32,6 +32,11 @@ public sealed class DepartmentWorkPackagesController(
             : Ok(await service.ListAsync(query, scope.Value.UserId, scope.Value.CanViewAll, ct));
     }
 
+    [HttpGet("departments")]
+    [RequirePermission("work.packages", "view")]
+    public async Task<ActionResult<List<DepartmentOptionResponse>>> Departments(CancellationToken ct)
+        => Ok(await service.DepartmentsAsync(ct));
+
     [HttpGet("options")]
     [RequirePermission("work.packages", "view")]
     public async Task<ActionResult<DepartmentWorkPackageOptionsResponse>> Options(CancellationToken ct)
