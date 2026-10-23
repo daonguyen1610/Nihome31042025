@@ -198,7 +198,10 @@ public sealed class ProjectDocumentService(
         if (!await CanAccessProjectAsync(projectId, callerUserId, canSeeAll, ct)) return null;
         var document = await FindAsync(projectId, documentId, ct);
         if (document is null || !document.IsDownloadable) return null;
-        if (!string.IsNullOrWhiteSpace(document.DriveFileId))
+        var stagedManualUpload = document.SourceType == ProjectDocumentSourceType.ManualUpload &&
+            document.DesiredOperation == ProjectDocumentDesiredOperation.Upsert &&
+            !string.IsNullOrWhiteSpace(document.LocalPath);
+        if (!stagedManualUpload && !string.IsNullOrWhiteSpace(document.DriveFileId))
         {
             return new ProjectDocumentDownload(
                 document.OriginalFileName,

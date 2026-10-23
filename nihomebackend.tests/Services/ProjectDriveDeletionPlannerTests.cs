@@ -50,6 +50,42 @@ public sealed class ProjectDriveDeletionPlannerTests
         drive.Verify(item => item.PermanentDeleteOwnedAsync(It.IsAny<DrivePermanentDeleteRequest>(), default), Times.Never);
     }
 
+    [Theory]
+    [InlineData(true, true, "nicon-test", "1", true)]
+    [InlineData(false, true, "nicon-test", "1", false)]
+    [InlineData(true, false, "nicon-test", "1", false)]
+    [InlineData(true, true, "foreign", "1", false)]
+    [InlineData(true, true, "nicon-test", "2", false)]
+    public async Task Plan_OnlyPurgesTrashedReplicasOfDeletedDocuments(
+        bool trashed, bool known, string instance, string generation, bool allowed)
+    {
+        var drive = new Mock<IGoogleDriveAdapter>();
+        var root = Folder("project", "root", ProjectDriveFolderService.CreateProjectIdentity(options.InstanceId, 7));
+        var replica = new DriveItem("deleted-file", "NICON nghiệm thu.pdf", "application/pdf", 10, "1",
+            null, null, new Dictionary<string, string>
+            {
+                ["niconInstance"] = instance,
+                ["niconReplicaKey"] = "project-document:42",
+                ["niconGeneration"] = generation,
+            }, trashed, [root.Id], true, true);
+        drive.Setup(item => item.GetMetadataAsync(root.Id, default)).ReturnsAsync(root);
+        drive.Setup(item => item.ListDeletionChildrenAsync("root", default)).ReturnsAsync([]);
+        drive.Setup(item => item.ListDeletionChildrenAsync(root.Id, default)).ReturnsAsync([replica]);
+        var deleted = new Dictionary<string, long>();
+        if (known) deleted["project-document:42"] = 1;
+        var build = () => ProjectDriveDeletionPlanner.BuildAsync(7, [root.Id], drive.Object, options, default, deleted);
+        if (!allowed)
+        {
+            await Assert.ThrowsAnyAsync<Exception>(build);
+            return;
+        }
+        var plan = await build();
+        Assert.Equal(new[] { "deleted-file", "project" }, plan.Select(item => item.ActionIdentifier));
+        Assert.Equal(HardDeleteItemKind.DriveFile, plan[0].Kind);
+        Assert.Equal(root.Id, plan[0].ExpectedParentId);
+        Assert.Equal("1", plan[0].ExpectedAppProperties!["niconGeneration"]);
+    }
+
     [Fact]
     public async Task Plan_OfflineWithBindings_RequiresConnection()
     {
@@ -91,15 +127,38 @@ public sealed class ProjectDriveDeletionPlannerTests
         await db.SaveChangesAsync();
         var drive = new Mock<IGoogleDriveAdapter>();
         drive.Setup(item => item.ListDeletionChildrenAsync("root", default)).ReturnsAsync([]);
-        var remote = new Dictionary<string, DriveItem> { [root.Id] = root, [child.Id] = child };
+        var deletedDocument = new ProjectDocument
+        {
+            OperationalProjectId = project.Id,
+            OriginalFileName = "NICON-nghiem-thu.pdf",
+            SyncStatus = ProjectDocumentSyncStatus.Deleted,
+            DesiredOperation = ProjectDocumentDesiredOperation.None,
+            Generation = 1,
+        };
+        db.ProjectDocuments.Add(deletedDocument);
+        await db.SaveChangesAsync();
+        var replica = new DriveItem("deleted-file", deletedDocument.OriginalFileName, "application/pdf", 10,
+            "1", null, null, new Dictionary<string, string>
+            {
+                ["niconInstance"] = options.InstanceId,
+                ["niconReplicaKey"] = ProjectDriveSyncProcessor.ReplicaKey(deletedDocument.Id),
+                ["niconGeneration"] = "1",
+            }, true, [child.Id], true, true);
+        var remote = new Dictionary<string, DriveItem>
+        {
+            [root.Id] = root,
+            [child.Id] = child,
+            [replica.Id] = replica,
+        };
         drive.Setup(item => item.GetMetadataAsync(It.IsAny<string>(), default))
             .ReturnsAsync((string id, CancellationToken _) => remote.GetValueOrDefault(id));
         drive.Setup(item => item.ListDeletionChildrenAsync("project", default)).ReturnsAsync([child]);
-        drive.Setup(item => item.ListDeletionChildrenAsync("design", default)).ReturnsAsync([]);
+        drive.Setup(item => item.ListDeletionChildrenAsync("design", default)).ReturnsAsync([replica]);
         var attempts = 0;
         drive.Setup(item => item.PermanentDeleteOwnedAsync(It.IsAny<DrivePermanentDeleteRequest>(), default))
             .Returns((DrivePermanentDeleteRequest request, CancellationToken _) =>
             {
+                if (request.FileId == replica.Id) Assert.True(request.RequireTrashed);
                 if (request.FileId == root.Id && ++attempts == 1) throw new IOException("Drive unavailable");
                 remote.Remove(request.FileId);
                 return Task.CompletedTask;
@@ -118,6 +177,7 @@ public sealed class ProjectDriveDeletionPlannerTests
             plan.Impact.PlanToken, project.Code, "7", plan.Items));
         var interrupted = await operations.ProcessAsync(operation.OperationId);
         Assert.NotEqual(HardDeleteOperationStatus.Completed, interrupted.Status);
+        Assert.False(remote.ContainsKey(replica.Id));
         Assert.False(remote.ContainsKey(child.Id));
         Assert.True(await db.OperationalProjects.AnyAsync(item => item.Id == project.Id));
         var completed = await operations.ProcessAsync(operation.OperationId);

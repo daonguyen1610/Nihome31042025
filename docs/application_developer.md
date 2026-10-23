@@ -971,9 +971,12 @@ that the root has been deleted until its status is `Completed`.
   exhausted.
 - Operational Project deletion includes the application's verified project
   folder tree in the durable plan after source-file cleanup. It inventories all
-  children (including trashed items), deletes empty path folders before their
-  project root, and rechecks emptiness at execution. Unknown/imported/shared
-  contents and folders with independent CRM files block deletion. A Drive outage
+  children (including trashed items). Trashed replicas matching a deleted owned
+  document's instance, replica key and generation enter the durable file plan
+  before their parent folders; execution rejects replicas restored from trash.
+  Empty path folders are deleted before their project root, with emptiness
+  rechecked at execution. Unknown/imported/shared contents and folders with
+  independent CRM files block deletion. A Drive outage
   remains visible and retryable; the database root survives until cleanup is
   complete. Stored operation items preserve the original plan across partial
   remote deletion. Design-only deletion preserves the shared Operational Project
@@ -1975,10 +1978,14 @@ storage and a durable `Pending` record, including when Drive is disabled or
 unavailable. They remain downloadable through the authorized content endpoint.
 The worker pauses without consuming attempts until a writable Drive connection
 exists. After uploading a manual file, it reads the remote content back and
-compares byte count and SHA-256 before committing the fenced sync receipt. Only
-then does it remove the owned host copy and clear its path. Failed cleanup is
-retried from the synced record; mismatched content retains the original host
-file. Legacy source-managed files retain their source-module copy and lifecycle.
+compares byte count and SHA-256 before marking synchronization successful. The
+fenced remote receipt is retained before readback so a failed verification can
+still be followed by deletion of the remote replica. Downloads continue serving
+the staged source while verification is pending. After successful verification
+and synchronization, it removes the owned host copy and clears its path. Failed
+cleanup is retried from the synced record; mismatched content retains the
+original host file. Legacy source-managed files retain their source-module copy
+and lifecycle.
 Manual retry resets the bounded automatic retry budget for a failed/pending
 record; processing records and protected/frozen evidence remain guarded.
 

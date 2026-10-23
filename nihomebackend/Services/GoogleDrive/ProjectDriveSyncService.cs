@@ -461,12 +461,12 @@ public sealed class ProjectDriveSyncProcessor(
                 await using var deleteTransaction = db.Database.IsRelational()
                     ? await db.Database.BeginTransactionAsync(ct)
                     : null;
+                if (!string.IsNullOrWhiteSpace(document.LocalPath) &&
+                    document.SourceType != ProjectDocumentSourceType.ExistingManagedFile)
+                    storage.DeleteOwned(document.OperationalProjectId, document.LocalPath);
                 var deleted = await CompleteDeleteAsync(document, token, generation, ct);
                 if (deleted) await PropagateSurveyDeleteAsync(document, ct);
                 if (deleteTransaction is not null) await deleteTransaction.CommitAsync(ct);
-                if (deleted && !string.IsNullOrWhiteSpace(document.LocalPath) &&
-                    document.SourceType != ProjectDocumentSourceType.ExistingManagedFile)
-                    storage.DeleteOwned(document.OperationalProjectId, document.LocalPath);
                 return;
             }
 
@@ -478,7 +478,20 @@ public sealed class ProjectDriveSyncProcessor(
                 operationCt => drive.UploadAsync(folder.DriveFolderId, ReplicaKey(document.Id), generation,
                     document.OriginalFileName, document.ContentType, content, operationCt), ct);
             if (document.SourceType == ProjectDocumentSourceType.ManualUpload)
+            {
+                // Keep the remote receipt even if readback fails, so a later delete
+                // can clean the replica without discarding the staged source.
+                var recorded = await db.ProjectDocuments.Where(MatchesFence(documentId, token, generation))
+                    .Where(item => item.SyncStatus == ProjectDocumentSyncStatus.Processing)
+                    .ExecuteUpdateAsync(setters => setters
+                        .SetProperty(item => item.DriveFileId, upload.FileId)
+                        .SetProperty(item => item.DriveFolderId, folder.DriveFolderId)
+                        .SetProperty(item => item.DriveWebViewLink, upload.Link)
+                        .SetProperty(item => item.DriveVersion, upload.Version)
+                        .SetProperty(item => item.DriveModifiedAt, upload.ModifiedAt), ct);
+                if (recorded == 0) return;
                 await VerifyRemoteContentAsync(document, upload.FileId, ct);
+            }
             var completedAt = DateTime.UtcNow;
             await using var completionTransaction = db.Database.IsRelational()
                 ? await db.Database.BeginTransactionAsync(ct)
@@ -570,6 +583,8 @@ public sealed class ProjectDriveSyncProcessor(
                 .SetProperty(item => item.SyncStatus, ProjectDocumentSyncStatus.Deleted)
                 .SetProperty(item => item.DesiredOperation, ProjectDocumentDesiredOperation.None)
                 .SetProperty(item => item.DriveFileId, (string?)null)
+                .SetProperty(item => item.LocalPath, item =>
+                    item.SourceType == ProjectDocumentSourceType.ExistingManagedFile ? item.LocalPath : string.Empty)
                 .SetProperty(item => item.ClaimToken, (Guid?)null)
                 .SetProperty(item => item.ClaimExpiresAt, (DateTime?)null)
                 .SetProperty(item => item.UpdatedAt, now), ct) == 1;
