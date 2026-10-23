@@ -16,6 +16,18 @@ public sealed class DrivePermanentDeletePolicyTests
     }
 
     [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void EnsureOwned_TrashRequired_RejectsRestoredReplica(bool trashed)
+    {
+        var item = Item() with { IsTrashed = trashed };
+        var validate = () => DrivePermanentDeletePolicy.EnsureOwned(
+            item, "nicon-production", ExpectedProperties, "parent-1", requireTrashed: true);
+        if (trashed) validate();
+        else Assert.Equal("drive_file_restored", Assert.Throws<DrivePermanentDeleteRejectedException>(validate).Code);
+    }
+
+    [Theory]
     [InlineData("other-instance", "drive_instance_mismatch")]
     [InlineData("nicon-production", "drive_properties_mismatch")]
     public void EnsureOwned_MismatchedIdentity_IsRejected(string instanceId, string expectedCode)

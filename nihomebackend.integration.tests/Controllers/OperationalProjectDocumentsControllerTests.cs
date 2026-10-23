@@ -215,6 +215,51 @@ public sealed class OperationalProjectDocumentsControllerTests(
     }
 
     [Fact]
+    public async Task Upload_FailedReadbackThenDelete_TrashesReplicaAndRemovesStagedFile()
+    {
+        await AuthenticateAsAsync("SUPER_ADMIN");
+        var projectId = await CreateProjectAsync();
+        using var content = CreateUploadContent("DesignBasic", "NICON-nghiem-thu.pdf", PdfBytes);
+        var uploaded = await SendUploadAsync(projectId, content);
+        uploaded.StatusCode.Should().Be(HttpStatusCode.Created);
+        var documentId = (await ReadJsonAsync(uploaded)).GetProperty("id").GetInt64();
+        await WithDbAsync(async db =>
+        {
+            foreach (var other in await db.ProjectDocuments.Where(item => item.Id != documentId).ToListAsync())
+                other.NextSyncAttemptAt = DateTime.UtcNow.AddDays(1);
+            await db.SaveChangesAsync();
+        });
+        factory.CorruptDownloads = true;
+        try
+        {
+            using (var scope = Factory.Services.CreateScope())
+                (await scope.ServiceProvider.GetRequiredService<IProjectDriveSyncProcessor>()
+                    .ProcessNextOutboundAsync()).Should().BeTrue();
+            var pending = await LoadDocumentAsync(documentId);
+            pending.SyncStatus.Should().Be(ProjectDocumentSyncStatus.Pending);
+            pending.DriveFileId.Should().NotBeNullOrWhiteSpace();
+            File.Exists(FullPath(pending.LocalPath)).Should().BeTrue();
+            var download = await Client.GetAsync($"/api/operational-projects/{projectId}/documents/{documentId}/content");
+            (await download.Content.ReadAsByteArrayAsync()).Should().Equal(PdfBytes);
+
+            var deleted = await Client.DeleteAsync($"/api/operational-projects/{projectId}/documents/{documentId}");
+            deleted.StatusCode.Should().Be(HttpStatusCode.NoContent);
+            (await LoadDocumentAsync(documentId)).DesiredOperation.Should().Be(ProjectDocumentDesiredOperation.Delete);
+            using var deleteScope = Factory.Services.CreateScope();
+            (await deleteScope.ServiceProvider.GetRequiredService<IProjectDriveSyncProcessor>()
+                .ProcessNextOutboundAsync()).Should().BeTrue();
+            var remote = await deleteScope.ServiceProvider.GetRequiredService<IGoogleDriveAdapter>()
+                .GetMetadataAsync(pending.DriveFileId!);
+            remote!.IsTrashed.Should().BeTrue();
+            var removed = await LoadDocumentAsync(documentId);
+            removed.SyncStatus.Should().Be(ProjectDocumentSyncStatus.Deleted);
+            removed.LocalPath.Should().BeEmpty();
+            File.Exists(FullPath(pending.LocalPath)).Should().BeFalse();
+        }
+        finally { factory.CorruptDownloads = false; }
+    }
+
+    [Fact]
     public async Task Upload_SameIdempotencyKeyAndPayload_ReplaysWithoutDuplicate()
     {
         await AuthenticateAsAsync("SUPER_ADMIN");

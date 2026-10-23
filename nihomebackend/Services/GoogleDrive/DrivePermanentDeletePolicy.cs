@@ -3,7 +3,8 @@ namespace NihomeBackend.Services.GoogleDrive;
 public sealed record DrivePermanentDeleteRequest(
     string FileId,
     IReadOnlyDictionary<string, string> ExpectedAppProperties,
-    string? ExpectedParentId = null);
+    string? ExpectedParentId = null,
+    bool RequireTrashed = false);
 
 public sealed class DrivePermanentDeleteRejectedException(string code, string message) : Exception(message)
 {
@@ -16,8 +17,11 @@ internal static class DrivePermanentDeletePolicy
         DriveItem item,
         string instanceId,
         IReadOnlyDictionary<string, string> expectedAppProperties,
-        string? expectedParentId)
+        string? expectedParentId,
+        bool requireTrashed = false)
     {
+        if (requireTrashed && !item.IsTrashed)
+            throw Rejected("drive_file_restored");
         if (string.IsNullOrWhiteSpace(instanceId) || expectedAppProperties.Count == 0)
             throw Rejected("drive_ownership_unknown");
         if (item.IsOwnedByMe != true || item.CanDelete != true)

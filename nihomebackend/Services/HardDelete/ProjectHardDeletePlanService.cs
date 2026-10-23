@@ -142,7 +142,7 @@ public sealed class ProjectHardDeletePlanService(AppDbContext db, IGoogleDriveAd
                         .Where(item => item.Operation.ResourceType == EntityTypes.OperationalProject &&
                             item.Operation.ResourceId == impact.ResourceId.ToString() &&
                             item.Operation.Status != HardDeleteOperationStatus.Completed &&
-                            item.Kind == HardDeleteItemKind.DriveFolder)
+                            (item.Kind == HardDeleteItemKind.DriveFolder || item.Kind == HardDeleteItemKind.DriveFile))
                         .OrderBy(item => item.Sequence).ToListAsync(ct);
                     folderDeletes = activeItems.Count > 0
                         ? activeItems.Select(item => new HardDeleteItemDefinition(item.Kind,
@@ -150,7 +150,10 @@ public sealed class ProjectHardDeletePlanService(AppDbContext db, IGoogleDriveAd
                             JsonSerializer.Deserialize<Dictionary<string, string>>(item.ExpectedAppPropertiesJson!)!,
                             item.ExpectedParentId)).ToList()
                         : await ProjectDriveDeletionPlanner.BuildAsync(impact.ResourceId,
-                            bindings, drive, await settingsStore.GetRuntimeAsync(ct), ct);
+                            bindings, drive, await settingsStore.GetRuntimeAsync(ct), ct,
+                            documents.Where(item => item.SyncStatus == ProjectDocumentSyncStatus.Deleted &&
+                                item.DesiredOperation == ProjectDocumentDesiredOperation.None)
+                                .ToDictionary(item => ProjectDriveSyncProcessor.ReplicaKey(item.Id), item => item.Generation));
                     impact.Items.Remove(folderImpact);
                 }
                 catch (Exception exception) when (exception is not OperationCanceledException)

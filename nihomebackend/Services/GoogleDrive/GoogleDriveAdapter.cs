@@ -319,7 +319,8 @@ public sealed class GoogleDriveAdapter(
         var metadata = await GetMetadataAsync(request.FileId, ct);
         if (metadata is null) return;
         DrivePermanentDeletePolicy.EnsureOwned(
-            metadata, options.InstanceId, request.ExpectedAppProperties, request.ExpectedParentId);
+            metadata, options.InstanceId, request.ExpectedAppProperties, request.ExpectedParentId,
+            request.RequireTrashed);
 
         if (metadata.MimeType == "application/vnd.google-apps.folder" &&
             (await ListDeletionChildrenAsync(request.FileId, ct)).Count != 0)

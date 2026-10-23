@@ -204,7 +204,9 @@ public sealed class HardDeleteOperationService(
                 ? new Dictionary<string, string>()
                 : JsonSerializer.Deserialize<Dictionary<string, string>>(item.ExpectedAppPropertiesJson) ?? [];
             await drive.PermanentDeleteOwnedAsync(new DrivePermanentDeleteRequest(
-                item.ActionIdentifier, properties, item.ExpectedParentId), ct);
+                item.ActionIdentifier, properties, item.ExpectedParentId,
+                RequireTrashed: operation.ResourceType == EntityTypes.OperationalProject &&
+                    item.Kind == HardDeleteItemKind.DriveFile), ct);
             operation.HasIrreversibleStep = true;
             item.Status = HardDeleteItemStatus.Completed;
             item.CompletedAt = DateTime.UtcNow;

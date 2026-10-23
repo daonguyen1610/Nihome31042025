@@ -3,13 +3,14 @@ using NihomeBackend.Services.GoogleDrive;
 
 namespace NihomeBackend.Services.HardDelete;
 
-// Only empty, application-owned folder trees are eligible. Document cleanup
-// remains in the owning module, so independent CRM and unknown Drive files block.
+// Source-deleted replicas may be purged before their application-owned folders.
+// Independent CRM, live and unknown Drive files remain blockers.
 internal static class ProjectDriveDeletionPlanner
 {
     public static async Task<IReadOnlyList<HardDeleteItemDefinition>> BuildAsync(
         int projectId, IReadOnlyCollection<string> bindings, IGoogleDriveAdapter drive,
-        GoogleDriveOptions options, CancellationToken ct)
+        GoogleDriveOptions options, CancellationToken ct,
+        IReadOnlyDictionary<string, long>? deletedReplicas = null)
     {
         if (bindings.Count == 0) return [];
         if (!options.Enabled) throw new InvalidOperationException("Kết nối Drive để xác minh thư mục trước khi xóa dự án.");
@@ -64,14 +65,29 @@ internal static class ProjectDriveDeletionPlanner
         {
             if (depth > 16 || visited.Count >= 2000 || !visited.Add(folder.Id))
                 throw new InvalidOperationException("Cây thư mục Drive vượt giới hạn hoặc có liên kết trùng; cần kiểm tra thủ công.");
+            if (folder.MimeType != "application/vnd.google-apps.folder")
+            {
+                if (!folder.IsTrashed || deletedReplicas is null ||
+                    !folder.AppProperties.TryGetValue("niconReplicaKey", out var replicaKey) ||
+                    !deletedReplicas.TryGetValue(replicaKey, out var generation))
+                    throw new InvalidOperationException("Thư mục Drive còn tệp; hãy dọn tệp tại phân hệ nguồn trước khi xóa dự án.");
+                var fileIdentity = new Dictionary<string, string>
+                {
+                    ["niconInstance"] = options.InstanceId,
+                    ["niconReplicaKey"] = replicaKey,
+                    ["niconGeneration"] = generation.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                };
+                DrivePermanentDeletePolicy.EnsureOwned(folder, options.InstanceId, fileIdentity, parent);
+                definitions.Add(new HardDeleteItemDefinition(HardDeleteItemKind.DriveFile, folder.Id,
+                    definitions.Count, fileIdentity, parent));
+                return;
+            }
             var expected = depth == 0 ? projectIdentity : new Dictionary<string, string>
             {
                 ["niconInstance"] = options.InstanceId,
                 ["niconProjectId"] = projectId.ToString(System.Globalization.CultureInfo.InvariantCulture),
                 ["niconFolderKind"] = "project-path",
             };
-            if (folder.MimeType != "application/vnd.google-apps.folder")
-                throw new InvalidOperationException("Thư mục Drive còn tệp; hãy dọn tệp tại phân hệ nguồn trước khi xóa dự án.");
             DrivePermanentDeletePolicy.EnsureOwned(folder, options.InstanceId, expected, parent);
             foreach (var child in (await drive.ListDeletionChildrenAsync(folder.Id, ct)).OrderBy(item => item.Id, StringComparer.Ordinal))
                 await VisitAsync(child, folder.Id, depth + 1);
