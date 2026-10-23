@@ -285,6 +285,18 @@ For internal work, select the lead department and every additional
 participating department. Each task then selects its responsible department;
 the assignee list is limited to active members of that department.
 
+An authorized package manager can select **Reopen: In progress** on a Completed
+package to add work again. Existing task completion, verified KPI and approved
+finance checklists stay intact and retain their individual edit guards.
+Cancelled packages cannot be reopened.
+
+**Delete** opens the shared permanent-deletion preview. Inspect Delete, Unlink
+and Block groups, then type the package code. Parent Projects and Contracts are
+preserved; independent permit/tender checklists are unlinked. Used pricing or
+finance evidence, legal activation and remaining files must be resolved first.
+Deleting verified tasks also removes their contribution to task-based KPI
+calculations; review the preview carefully before confirming.
+
 The receiving department lead opens the package and creates tasks. Enter a WBS
 code, assignee from the same department, dates, inputs/resources, optional
 predecessors and CC followers. If the task should contribute to KPI, select an

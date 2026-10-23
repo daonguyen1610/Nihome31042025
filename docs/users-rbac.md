@@ -338,6 +338,13 @@ pages of the project catalog only when the caller has `operations.projects.view`
 | `work.packages.progress` | Update progress; server requires the task assignee or administrator and an Active package. |
 | `work.packages.verify` | Verify a KPI-linked completed task; server requires the independent configured verifier or administrator. |
 
+`work.packages.manage` plus existing package-management scope authorizes
+Completed → Active and permanent-deletion preview/execution. View-all alone
+grants neither action. Reopening preserves verified KPI and approved reviews;
+assign/progress/verify permissions still apply to subsequent task operations.
+Delete requires a current rowVersion, matching plan and typed package code;
+file/evidence blockers cannot be bypassed.
+
 Permission grants never replace the contextual checks above. Project packages
 use one receiving group and are limited to the generic Procurement/Finance
 handoff; Design and Construction keep their dedicated aggregates. An internal

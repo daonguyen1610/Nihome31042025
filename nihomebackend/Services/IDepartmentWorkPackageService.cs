@@ -8,6 +8,8 @@ public sealed class DepartmentWorkPackageScopeException(string message) : Except
 
 public interface IDepartmentWorkPackageService
 {
+    Task<DeletionImpactResponse?> GetDeletionImpactAsync(int id, int callerUserId, CancellationToken ct = default);
+    Task<bool> DeleteAsync(int id, ConfirmDeletionRequest request, int callerUserId, CancellationToken ct = default);
     Task<List<DepartmentOptionResponse>> DepartmentsAsync(CancellationToken ct = default);
     Task<ContractWorkProgress> GetContractProgressAsync(int contractId, int callerUserId, bool canViewAll, CancellationToken ct = default);
     Task<DepartmentWorkPackageListResponse> ListAsync(DepartmentWorkPackageQuery query, int callerUserId, bool canViewAll, CancellationToken ct = default);

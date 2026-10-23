@@ -7640,6 +7640,13 @@ export const adminApi = {
   // Central operational projects (NIH-460)
   listWorkPackages: (params: DepartmentWorkPackageQuery = {}) =>
     api.get<DepartmentWorkPackageListResponse>("/work-packages", { params }),
+  getWorkPackageDeletionImpact: (id: number) =>
+    api.get<DeletionImpactResponse>(`/work-packages/${id}/deletion-impact`),
+  deleteWorkPackage: (id: number, body: ConfirmDeletionRequest, idempotencyKey: string) =>
+    api.delete<void>(`/work-packages/${id}`, {
+      data: body,
+      headers: { "Idempotency-Key": idempotencyKey },
+    }),
   getWorkPackage: (id: number) => api.get<DepartmentWorkPackageResponse>(`/work-packages/${id}`),
   getWorkPackageDepartments: () =>
     api.get<DepartmentWorkPackageOptionsResponse["departments"]>("/work-packages/departments"),

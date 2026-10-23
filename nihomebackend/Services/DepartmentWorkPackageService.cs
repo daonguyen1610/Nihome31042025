@@ -292,6 +292,7 @@ public sealed partial class DepartmentWorkPackageService(
         if (!Enum.TryParse<WorkPackageStatus>(request.Status, true, out var status))
             throw Error("Trạng thái nhóm công việc không hợp lệ.");
         ValidatePackageTransition(entity, status);
+        var reopening = entity.Status == WorkPackageStatus.Completed && status == WorkPackageStatus.Active;
         ValidateDates(request.PlannedStart, request.PlannedEnd);
         if (entity.Kind == WorkPackageKind.Internal && request.ContractId.HasValue)
             throw Error("Công việc nội bộ không được gắn Hợp đồng.");
@@ -310,7 +311,7 @@ public sealed partial class DepartmentWorkPackageService(
         entity.UpdatedByUserId = callerUserId;
         await CrmConcurrency.SaveChangesAsync(db, ct);
         var response = await LoadAndMapAsync(id, callerUserId, admin, ct);
-        await AddHistoryAsync(id, "Package", id, "Updated", response, callerUserId, ct);
+        await AddHistoryAsync(id, "Package", id, reopening ? "Reopened" : "Updated", response, callerUserId, ct);
         await CommitAsync(transaction, ct);
         return response;
     }
@@ -811,12 +812,13 @@ public sealed partial class DepartmentWorkPackageService(
     private static void ValidatePackageTransition(DepartmentWorkPackage package, WorkPackageStatus status)
     {
         if (status == package.Status) return;
-        if (package.Status is WorkPackageStatus.Completed or WorkPackageStatus.Cancelled)
-            throw Error("Nhóm công việc đã kết thúc và không thể chuyển trạng thái.");
+        if (package.Status == WorkPackageStatus.Cancelled)
+            throw Error("Nhóm công việc đã hủy và không thể chuyển trạng thái.");
         var transitionAllowed = package.Status switch
         {
             WorkPackageStatus.Planned => status is WorkPackageStatus.Active or WorkPackageStatus.Cancelled,
             WorkPackageStatus.Active => status is WorkPackageStatus.Completed or WorkPackageStatus.Cancelled,
+            WorkPackageStatus.Completed => status == WorkPackageStatus.Active,
             _ => false,
         };
         if (!transitionAllowed)

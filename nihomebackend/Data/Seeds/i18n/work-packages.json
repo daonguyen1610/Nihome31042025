@@ -127,5 +127,6 @@
   {"key": "workPackages.filters.allStatuses", "category": "work-packages", "vi": "Tất cả trạng thái", "en": "All statuses", "zh": "所有状态", "ja": "すべての状態"},
   {"key": "workPackages.filters.allProjects", "category": "work-packages", "vi": "Tất cả dự án", "en": "All projects", "zh": "所有项目", "ja": "すべてのプロジェクト"},
   {"key": "workPackages.filters.allPurposes", "category": "work-packages", "vi": "Tất cả nghiệp vụ", "en": "All purposes", "zh": "所有业务", "ja": "すべての業務"},
-  {"key": "workPackages.filters.clear", "category": "work-packages", "vi": "Xóa bộ lọc", "en": "Clear filters", "zh": "清除筛选", "ja": "絞り込みを解除"}
+  {"key": "workPackages.filters.clear", "category": "work-packages", "vi": "Xóa bộ lọc", "en": "Clear filters", "zh": "清除筛选", "ja": "絞り込みを解除"},
+  {"key":"workPackages.action.reopen","category":"work-packages","vi":"Mở lại: Đang thực hiện","en":"Reopen: In progress","zh":"重新打开：进行中","ja":"再開：進行中"}
 ]

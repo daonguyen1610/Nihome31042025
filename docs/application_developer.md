@@ -1803,6 +1803,8 @@ and `/api/v1/work-packages`:
 | `GET` | `/api/work-packages/{id}/history` | `work.packages.view` | Read immutable package/task change snapshots |
 | `POST` | `/api/work-packages` | `work.packages.manage` | Create a project or internal package |
 | `PUT` | `/api/work-packages/{id}` | `work.packages.manage` | Update metadata, optional contract, or lifecycle |
+| `GET` | `/api/work-packages/{id}/deletion-impact` | `work.packages.manage` + management scope | Preview deletion, unlinking and blockers |
+| `DELETE` | `/api/work-packages/{id}` | Same management scope | Hard delete with code, planToken, rowVersion and idempotency key |
 | `POST` | `/api/work-packages/{id}/tasks` | `work.packages.assign` | Add a department task with WBS, dependencies, CC, and optional KPI |
 | `PUT` | `/api/work-packages/{id}/tasks/{taskId}` | `work.packages.assign` | Edit a non-terminal assignment |
 | `PUT` | `/api/work-packages/{id}/tasks/{taskId}/progress` | `work.packages.progress` | Record monotonic assignee progress |
@@ -1814,6 +1816,24 @@ and `/api/v1/work-packages`:
 | `PUT` | `/api/work-packages/{id}/finance-review` | `work.packages.progress` | Save the Finance – Accounting checklist (commercial or tender review) |
 | `POST` | `/api/work-packages/{id}/finance-review/submit` | `work.packages.progress` | Submit the finance review for independent approval |
 | `POST` | `/api/work-packages/{id}/finance-review/decision` | `work.packages.verify` | Approve or reject a submitted finance review |
+
+Completed packages can return to `Active` through PUT. This clears package
+`CompletedAt` and records a `Reopened` history snapshot. Existing task progress,
+KPI verification and approved business records remain intact; their individual
+edit guards still apply. Cancelled packages remain terminal.
+
+Package deletion recomputes its plan in a serializable transaction. It deletes
+owned tasks, CC/dependencies, participants, history, input offers/lines, finance
+reviews and translations. Independent permit/tender checklist records survive
+with task links cleared; parent Project, Contract, Opportunity, Quote and Tender
+records survive. Used input pricing (including quotation version snapshots),
+sent quotations consuming commercial review, tender submissions using finance
+approval/planning, contract legal activations and
+remaining source files block deletion. Files must be cleaned in their owning
+module; this API deletes no local or Drive content. Cleaned document metadata
+survives with source entity/id cleared. Wrong code, missing/stale rowVersion,
+changed plans and blockers reject without partial writes. Success returns 204.
+No schema migration is required.
 
 All writes require an idempotency key. Updates, progress, and verification also
 require `rowversion` through `If-Match` or the request body. Contextual actor

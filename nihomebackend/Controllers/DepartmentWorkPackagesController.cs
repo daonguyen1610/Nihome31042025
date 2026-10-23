@@ -109,6 +109,44 @@ public sealed class DepartmentWorkPackagesController(
         });
     }
 
+    [HttpGet("{id:int}/deletion-impact")]
+    [RequirePermission("work.packages", "manage")]
+    public async Task<ActionResult<DeletionImpactResponse>> DeletionImpact(int id, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        return await ExecuteAsync<DeletionImpactResponse>("work-package.deletion-preview", id, async () =>
+        {
+            var result = await service.GetDeletionImpactAsync(id, userId.Value, ct);
+            return result is null ? NotFound() : Ok(result);
+        });
+    }
+
+    [HttpDelete("{id:int}")]
+    [RequirePermission("work.packages", "manage")]
+    [Idempotency("work.packages.delete", requireKey: true)]
+    public async Task<IActionResult> Delete(int id, [FromBody] ConfirmDeletionRequest request, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        request.RowVersion = CrmConcurrency.ResolveRequiredRequestToken(Request, request.RowVersion);
+        try
+        {
+            if (!await service.DeleteAsync(id, request, userId.Value, ct)) return NotFound();
+            audit.Log(new AuditEvent
+            {
+                Action = "work-package.delete",
+                ResourceType = EntityTypes.DepartmentWorkPackage,
+                ResourceId = id.ToString(),
+                Message = $"Work package #{id} permanently deleted."
+            });
+            return NoContent();
+        }
+        catch (DepartmentWorkPackageScopeException) { return NotFound(); }
+        catch (DepartmentWorkPackageOperationException exception) { return BadRequest(new { message = exception.Message }); }
+        catch (DeletionPlanChangedException exception) { return Conflict(new { message = exception.Message }); }
+    }
+
     [HttpPost("{id:int}/tasks")]
     [RequirePermission("work.packages", "assign")]
     [Idempotency("work.packages.tasks.create", requireKey: true)]
