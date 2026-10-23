@@ -221,3 +221,30 @@ test("department filter works without project-catalog permission", async ({
     expect((await api.delete(`/api/admin/rbac/roles/${roleId}`, { headers })).status()).toBe(200);
   }
 });
+
+test("project filter loads all catalog pages without requesting an extra page", async ({
+  page,
+  api,
+  loginAs,
+  loginInBrowserAs,
+}) => {
+  const headers = { Authorization: `Bearer ${await loginAs(TEST_USERS.superAdmin)}` };
+  const response = await api.get("/api/operational-projects?page=1&pageSize=100", { headers });
+  expect(response.status()).toBe(200);
+  const catalog = await response.json();
+  expect(Number.isInteger(catalog.total)).toBe(true);
+  const requestedPages: number[] = [];
+  page.on("request", (request) => {
+    const url = new URL(request.url());
+    if (url.pathname === "/api/operational-projects" && url.searchParams.get("pageSize") === "100")
+      requestedPages.push(Number(url.searchParams.get("page")));
+  });
+  await loginInBrowserAs(page, TEST_USERS.superAdmin);
+  await page.goto("/admin/work-packages");
+  await expect(page.locator("#wp-project option")).toHaveCount(catalog.total + 1);
+  const expectedPages = Array.from(
+    { length: Math.max(1, Math.ceil(catalog.total / 100)) },
+    (_, index) => index + 1,
+  );
+  expect(requestedPages).toEqual(expectedPages);
+});

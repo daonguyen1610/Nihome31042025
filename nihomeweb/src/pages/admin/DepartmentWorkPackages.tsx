@@ -256,7 +256,7 @@ const DepartmentWorkPackages = () => {
         while (true) {
           const { data } = await adminApi.listOperationalProjects({ page, pageSize: 100 });
           allProjects.push(...data.items);
-          if (allProjects.length >= data.totalCount || data.items.length === 0) break;
+          if (allProjects.length >= data.total || data.items.length === 0) break;
           page += 1;
         }
         setProjects(allProjects);
