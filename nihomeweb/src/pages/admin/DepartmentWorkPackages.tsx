@@ -7,8 +7,12 @@ import {
   ClipboardList,
   Plus,
   Search,
+  RotateCcw,
+  Trash2,
   Users,
 } from "lucide-react";
+import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
+import type { DeletionImpactResponse } from "@/services/adminApi";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { PageError, PageLoading } from "@/components/PageState";
 import { Badge } from "@/components/ui/badge";
@@ -128,6 +132,11 @@ const DepartmentWorkPackages = () => {
   const [taskOpen, setTaskOpen] = useState(false);
   const [progressOpen, setProgressOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteImpact, setDeleteImpact] = useState<DeletionImpactResponse | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [taskEditing, setTaskEditing] = useState<DepartmentWorkTaskResponse | null>(null);
   const [progressTaskEditing, setProgressTaskEditing] = useState<DepartmentWorkTaskResponse | null>(
     null,
@@ -436,6 +445,40 @@ const DepartmentWorkPackages = () => {
           },
     );
     setTaskOpen(true);
+  };
+
+  const previewDelete = async () => {
+    if (!detail) return;
+    setDeleteOpen(true);
+    setDeleteLoading(true);
+    setDeleteError(null);
+    setDeleteImpact(null);
+    try {
+      setDeleteImpact((await adminApi.getWorkPackageDeletionImpact(detail.id)).data);
+    } catch (cause) {
+      setDeleteError(extractApiError(cause));
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  const confirmDelete = async (confirmation: string) => {
+    if (!detail || !deleteImpact) return null;
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      await adminApi.deleteWorkPackage(
+        detail.id,
+        { confirmation, planToken: deleteImpact.planToken, rowVersion: detail.rowVersion },
+        newIdempotencyKey(),
+      );
+      return null;
+    } catch (cause) {
+      setDeleteError(extractApiError(cause));
+      throw cause;
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const saveTask = async () => {
@@ -755,6 +798,19 @@ const DepartmentWorkPackages = () => {
 
   return (
     <AdminLayout>
+      <DeletionImpactDialog
+        open={deleteOpen}
+        impact={deleteImpact}
+        loading={deleteLoading}
+        deleting={deleting}
+        error={deleteError}
+        onOpenChange={setDeleteOpen}
+        onConfirm={confirmDelete}
+        onCompleted={() => {
+          setDeleteOpen(false);
+          navigate("/admin/work-packages");
+        }}
+      />
       <div className="space-y-6" data-testid="work-packages-page">
         {detail ? (
           <>
@@ -779,7 +835,19 @@ const DepartmentWorkPackages = () => {
                   {detail.description || t("workPackages.noDescription")}
                 </p>
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
+                {canManage && detail.canManagePackage && detail.status === "Completed" && (
+                  <Button onClick={() => void transitionPackage("Active")}>
+                    <RotateCcw className="mr-2 h-4 w-4" />
+                    {t("workPackages.action.reopen")}
+                  </Button>
+                )}
+                {canManage && detail.canManagePackage && (
+                  <Button variant="destructive" onClick={() => void previewDelete()}>
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    {t("common.delete")}
+                  </Button>
+                )}
                 {detail.canManagePackage && detail.status === "Planned" && (
                   <Button onClick={() => void transitionPackage("Active")}>
                     {t("workPackages.action.start")}

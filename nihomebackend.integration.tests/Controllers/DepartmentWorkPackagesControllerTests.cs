@@ -356,6 +356,296 @@ public sealed class DepartmentWorkPackagesControllerTests(NihomeWebApplicationFa
             .Should().BeFalse();
     }
 
+    [Fact]
+    public async Task CompletedPackage_ReopensWithoutRevokingVerifiedTasksOrFinanceApproval()
+    {
+        var seed = await SeedProjectScopeAsync();
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var packageId = await SeedLifecyclePackageAsync(seed, WorkPackageStatus.Completed);
+        var before = await ReadJsonAsync(await Client.GetAsync($"/api/work-packages/{packageId}"));
+        var reopened = await SendAsync(HttpMethod.Put, $"/api/work-packages/{packageId}", new
+        {
+            name = before.GetProperty("name").GetString(),
+            status = "Active",
+            rowVersion = before.GetProperty("rowVersion").GetString(),
+        });
+        reopened.StatusCode.Should().Be(HttpStatusCode.OK);
+        var after = await ReadJsonAsync(reopened);
+        after.GetProperty("status").GetString().Should().Be("Active");
+        after.GetProperty("completedAt").ValueKind.Should().Be(System.Text.Json.JsonValueKind.Null);
+        after.GetProperty("tasks")[0].GetProperty("status").GetString().Should().Be("Verified");
+        after.GetProperty("financeReview").GetProperty("status").GetString().Should().Be("Approved");
+        (await SendAsync(HttpMethod.Post, $"/api/work-packages/{packageId}/tasks", new
+        {
+            wbsCode = "SUP-REOPEN",
+            title = "Bổ sung kiểm tra vật tư sau mở lại",
+            assigneeUserId = seed.DepartmentStaffId,
+            plannedStart = "2026-10-23T00:00:00Z",
+            plannedEnd = "2026-10-24T00:00:00Z",
+        })).StatusCode.Should().Be(HttpStatusCode.Created);
+        (await WithDbAsync(db => db.DepartmentWorkPackageHistory.AnyAsync(item => item.WorkPackageId == packageId && item.Action == "Reopened"))).Should().BeTrue();
+        var stale = await SendAsync(HttpMethod.Put, $"/api/work-packages/{packageId}", new
+        {
+            name = "Không được ghi đè",
+            status = "Active",
+            rowVersion = before.GetProperty("rowVersion").GetString(),
+        });
+        stale.StatusCode.Should().Be(HttpStatusCode.Conflict);
+    }
+
+    [Fact]
+    public async Task CancelledPackage_CannotReopen()
+    {
+        var seed = await SeedProjectScopeAsync();
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var id = await SeedLifecyclePackageAsync(seed, WorkPackageStatus.Cancelled);
+        var package = await ReadJsonAsync(await Client.GetAsync($"/api/work-packages/{id}"));
+        (await SendAsync(HttpMethod.Put, $"/api/work-packages/{id}", new
+        { name = "Không mở lại nhóm đã hủy", status = "Active", rowVersion = package.GetProperty("rowVersion").GetString() }))
+            .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.DepartmentWorkPackages.Where(item => item.Id == id).Select(item => item.Status).SingleAsync())).Should().Be(WorkPackageStatus.Cancelled);
+    }
+
+    [Fact]
+    public async Task HardDelete_RemovesOwnedGraphUnlinksPermitAndPreservesProject()
+    {
+        var seed = await SeedProjectScopeAsync();
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var id = await SeedLifecyclePackageAsync(seed, WorkPackageStatus.Completed);
+        var taskId = await WithDbAsync(db => db.DepartmentWorkTasks.Where(item => item.WorkPackageId == id).Select(item => item.Id).SingleAsync());
+        var permitId = await WithDbAsync(async db =>
+        {
+            var permit = new PermitChecklistItem { OperationalProjectId = seed.ProjectId, WorkTaskId = taskId, PermitTypeCode = "building-permit" };
+            db.PermitChecklistItems.Add(permit);
+            db.DepartmentWorkTaskCcUsers.Add(new DepartmentWorkTaskCc { WorkTaskId = taskId, UserId = seed.DepartmentLeadId });
+            await db.SaveChangesAsync();
+            return permit.Id;
+        });
+        var package = await ReadJsonAsync(await Client.GetAsync($"/api/work-packages/{id}"));
+        var impactResponse = await Client.GetAsync($"/api/work-packages/{id}/deletion-impact");
+        impactResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var impact = await ReadJsonAsync(impactResponse);
+        impact.GetProperty("canDelete").GetBoolean().Should().BeTrue();
+        impact.GetProperty("items").EnumerateArray().Should().Contain(item => item.GetProperty("key").GetString() == "workPackages.permits" && item.GetProperty("action").GetString() == "Unlink");
+        var delete = await SendAsync(HttpMethod.Delete, $"/api/work-packages/{id}", new
+        { planToken = impact.GetProperty("planToken").GetString(), confirmation = impact.GetProperty("requiredConfirmation").GetString(), rowVersion = package.GetProperty("rowVersion").GetString() });
+        delete.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await WithDbAsync(db => db.DepartmentWorkPackages.AnyAsync(item => item.Id == id))).Should().BeFalse();
+        (await WithDbAsync(db => db.DepartmentWorkTasks.AnyAsync(item => item.WorkPackageId == id))).Should().BeFalse();
+        (await WithDbAsync(db => db.DepartmentFinanceReviews.AnyAsync(item => item.WorkPackageId == id))).Should().BeFalse();
+        (await WithDbAsync(db => db.DepartmentWorkTaskCcUsers.AnyAsync(item => item.WorkTaskId == taskId))).Should().BeFalse();
+        (await WithDbAsync(db => db.PermitChecklistItems.Where(item => item.Id == permitId).Select(item => item.WorkTaskId).SingleAsync())).Should().BeNull();
+        (await WithDbAsync(db => db.OperationalProjects.AnyAsync(item => item.Id == seed.ProjectId))).Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData("confirmation")]
+    [InlineData("changed-plan")]
+    [InlineData("stale-version")]
+    [InlineData("missing-version")]
+    [InlineData("file-blocker")]
+    public async Task HardDelete_RejectionPreservesRootAndDependencies(string scenario)
+    {
+        var seed = await SeedProjectScopeAsync();
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var id = await SeedLifecyclePackageAsync(seed, WorkPackageStatus.Completed);
+        if (scenario == "file-blocker") await WithDbAsync(async db =>
+        {
+            db.ProjectDocuments.Add(new ProjectDocument { OperationalProjectId = seed.ProjectId, SourceEntityType = "DepartmentWorkPackage", SourceRecordId = id, OriginalFileName = "bien-ban.pdf", LocalPath = "/files/project-documents/pending.pdf" });
+            await db.SaveChangesAsync();
+        });
+        var package = await ReadJsonAsync(await Client.GetAsync($"/api/work-packages/{id}"));
+        var impact = await ReadJsonAsync(await Client.GetAsync($"/api/work-packages/{id}/deletion-impact"));
+        if (scenario == "changed-plan") await WithDbAsync(async db =>
+        {
+            var taskId = await db.DepartmentWorkTasks.Where(item => item.WorkPackageId == id).Select(item => item.Id).SingleAsync();
+            db.DepartmentWorkTaskCcUsers.Add(new DepartmentWorkTaskCc { WorkTaskId = taskId, UserId = seed.DepartmentLeadId });
+            await db.SaveChangesAsync();
+        });
+        var response = await SendAsync(HttpMethod.Delete, $"/api/work-packages/{id}", new
+        {
+            planToken = impact.GetProperty("planToken").GetString(),
+            confirmation = scenario == "confirmation" ? "WRONG" : impact.GetProperty("requiredConfirmation").GetString(),
+            rowVersion = scenario == "missing-version" ? null : scenario == "stale-version" ? Convert.ToBase64String(new byte[8]) : package.GetProperty("rowVersion").GetString(),
+        });
+        response.StatusCode.Should().Be(scenario is "changed-plan" or "stale-version" ? HttpStatusCode.Conflict : HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.DepartmentWorkPackages.AnyAsync(item => item.Id == id))).Should().BeTrue();
+        (await WithDbAsync(db => db.DepartmentWorkTasks.CountAsync(item => item.WorkPackageId == id))).Should().Be(1);
+        (await WithDbAsync(db => db.DepartmentFinanceReviews.CountAsync(item => item.WorkPackageId == id))).Should().Be(1);
+    }
+
+    [Fact]
+    public async Task HardDelete_AndReopen_RequireManagementPermission()
+    {
+        var seed = await SeedProjectScopeAsync();
+        var id = await SeedLifecyclePackageAsync(seed, WorkPackageStatus.Completed);
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "WAREHOUSE"));
+        (await Client.GetAsync($"/api/work-packages/{id}/deletion-impact")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await SendAsync(HttpMethod.Delete, $"/api/work-packages/{id}", new { planToken = new string('a', 64), confirmation = "WP", rowVersion = Convert.ToBase64String(new byte[8]) })).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await SendAsync(HttpMethod.Put, $"/api/work-packages/{id}", new { name = "Mở lại trái quyền", status = "Active", rowVersion = Convert.ToBase64String(new byte[8]) })).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await WithDbAsync(db => db.DepartmentWorkPackages.AnyAsync(item => item.Id == id))).Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task HardDelete_UsedPricingEvidenceBlocksAndPreservesQuotation(bool snapshot)
+    {
+        var seed = await SeedProjectScopeAsync();
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var id = await SeedLifecyclePackageAsync(seed, WorkPackageStatus.Completed);
+        var quoteId = await WithDbAsync(async db =>
+        {
+            var customerId = await db.OperationalProjects.Where(item => item.Id == seed.ProjectId).Select(item => item.CustomerId).SingleAsync();
+            var quote = new Quote
+            {
+                Code = $"QT-NICON-{id}",
+                OperationalProjectId = seed.ProjectId,
+                Opportunity = new Opportunity { Name = "Cung cấp vật tư công trường NICON", CustomerId = customerId, OperationalProjectId = seed.ProjectId }
+            };
+            var vendor = new Vendor { VendorCode = $"NCC-NICON-{id}", CompanyName = "Nhà cung cấp vật tư NICON", CreatedByUserId = seed.DepartmentStaffId };
+            db.AddRange(quote, vendor);
+            await db.SaveChangesAsync();
+            var offer = new ProcurementInputPriceOffer
+            {
+                WorkPackageId = id,
+                VendorId = vendor.Id,
+                SupplierReference = "NICON-STEEL-REVIEW",
+                ValidUntil = DateTime.UtcNow.AddDays(30),
+                Status = InputPriceOfferStatus.Approved,
+                CreatedByUserId = seed.DepartmentStaffId,
+                UpdatedByUserId = seed.DepartmentStaffId
+            };
+            db.ProcurementInputPriceOffers.Add(offer);
+            await db.SaveChangesAsync();
+            if (snapshot) db.QuoteVersionSnapshots.Add(new QuoteVersionSnapshot { QuoteId = quote.Id, VersionNumber = 999, InputPriceOfferId = offer.Id });
+            else quote.InputPriceOfferId = offer.Id;
+            await db.SaveChangesAsync();
+            return quote.Id;
+        });
+        var package = await ReadJsonAsync(await Client.GetAsync($"/api/work-packages/{id}"));
+        var impact = await ReadJsonAsync(await Client.GetAsync($"/api/work-packages/{id}/deletion-impact"));
+        impact.GetProperty("canDelete").GetBoolean().Should().BeFalse();
+        (await SendAsync(HttpMethod.Delete, $"/api/work-packages/{id}", new
+        { planToken = impact.GetProperty("planToken").GetString(), confirmation = impact.GetProperty("requiredConfirmation").GetString(), rowVersion = package.GetProperty("rowVersion").GetString() }))
+            .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.Quotes.AnyAsync(item => item.Id == quoteId))).Should().BeTrue();
+        (await WithDbAsync(db => db.ProcurementInputPriceOffers.AnyAsync(item => item.WorkPackageId == id))).Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData("sent-quote")]
+    [InlineData("submission")]
+    [InlineData("legal-activation")]
+    public async Task HardDelete_ConsumedApprovalEvidenceRemainsProtected(string kind)
+    {
+        var seed = await SeedProjectScopeAsync();
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var id = await SeedLifecyclePackageAsync(seed, WorkPackageStatus.Completed);
+        await WithDbAsync(async db =>
+        {
+            var package = await db.DepartmentWorkPackages.SingleAsync(item => item.Id == id);
+            var customerId = await db.OperationalProjects.Where(item => item.Id == seed.ProjectId).Select(item => item.CustomerId).SingleAsync();
+            if (kind == "sent-quote")
+            {
+                var quote = new Quote
+                {
+                    Code = $"QT-SENT-{id}",
+                    Status = QuoteStatus.SentToCustomer,
+                    OperationalProjectId = seed.ProjectId,
+                    Opportunity = new Opportunity { Name = "Báo giá vật tư đã gửi", CustomerId = customerId, OperationalProjectId = seed.ProjectId }
+                };
+                db.Quotes.Add(quote); await db.SaveChangesAsync();
+                package.SourceQuoteId = quote.Id; package.Purpose = WorkPackagePurpose.FinanceCommercialReview;
+            }
+            else if (kind == "submission")
+            {
+                var tender = new Tender
+                {
+                    Code = $"TD-NICON-{id}",
+                    Name = "Hồ sơ nhà máy NICON",
+                    CustomerId = customerId,
+                    OperationalProjectId = seed.ProjectId,
+                    InvitationReceivedByUserId = seed.DepartmentLeadId
+                };
+                db.Tenders.Add(tender); await db.SaveChangesAsync();
+                package.SourceTenderId = tender.Id; package.Purpose = WorkPackagePurpose.TenderPlanning;
+                db.TenderSubmissions.Add(new TenderSubmission
+                {
+                    TenderId = tender.Id,
+                    Sequence = 1,
+                    SubmittedAt = DateTime.UtcNow,
+                    SubmittedByUserId = seed.DepartmentLeadId,
+                    FinanceReviewWorkPackageId = id,
+                    SubmissionChannel = "Customer portal"
+                });
+            }
+            else
+            {
+                var contract = new Contract { ContractNumber = $"HD-NICON-{id}", CustomerId = customerId, OperationalProjectId = seed.ProjectId };
+                db.Contracts.Add(contract); await db.SaveChangesAsync();
+                db.ContractLegalActivations.Add(new ContractLegalActivation
+                {
+                    ContractId = contract.Id,
+                    OperationalProjectId = seed.ProjectId,
+                    WorkPackageId = id,
+                    ConfigurationJson = "{}",
+                    ActivatedByUserId = seed.DepartmentLeadId
+                });
+            }
+            await db.SaveChangesAsync();
+        });
+        var packageResponse = await ReadJsonAsync(await Client.GetAsync($"/api/work-packages/{id}"));
+        var impact = await ReadJsonAsync(await Client.GetAsync($"/api/work-packages/{id}/deletion-impact"));
+        impact.GetProperty("canDelete").GetBoolean().Should().BeFalse();
+        (await SendAsync(HttpMethod.Delete, $"/api/work-packages/{id}", new
+        {
+            planToken = impact.GetProperty("planToken").GetString(),
+            confirmation = impact.GetProperty("requiredConfirmation").GetString(),
+            rowVersion = packageResponse.GetProperty("rowVersion").GetString()
+        }))
+            .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.DepartmentWorkPackages.AnyAsync(item => item.Id == id))).Should().BeTrue();
+        (await WithDbAsync(db => db.DepartmentFinanceReviews.AnyAsync(item => item.WorkPackageId == id))).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task ManagerOutsidePackageScope_CannotPreviewDeleteOrReopen()
+    {
+        var seed = await SeedProjectScopeAsync();
+        var id = await SeedLifecyclePackageAsync(seed, WorkPackageStatus.Completed);
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
+        (await Client.GetAsync($"/api/work-packages/{id}/deletion-impact")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await SendAsync(HttpMethod.Delete, $"/api/work-packages/{id}", new { planToken = new string('a', 64), confirmation = "WP", rowVersion = Convert.ToBase64String(new byte[8]) })).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await SendAsync(HttpMethod.Put, $"/api/work-packages/{id}", new { name = "Mở lại ngoài phạm vi", status = "Active", rowVersion = Convert.ToBase64String(new byte[8]) })).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await WithDbAsync(db => db.DepartmentWorkPackages.AnyAsync(item => item.Id == id))).Should().BeTrue();
+    }
+
+    private Task<int> SeedLifecyclePackageAsync((int ProjectId, int DepartmentGroupId, int DepartmentLeadId, int DepartmentStaffId, int KpiDefinitionId) seed, WorkPackageStatus status) => WithDbAsync(async db =>
+    {
+        var admin = await db.Users.Where(item => item.RoleEntity != null && item.RoleEntity.Code == "SUPER_ADMIN").Select(item => item.Id).SingleAsync();
+        var package = new DepartmentWorkPackage
+        {
+            Code = $"WP-REVIEW-{Guid.NewGuid():N}",
+            Name = "Rà soát giao nhận vật tư NICON",
+            OperationalProjectId = seed.ProjectId,
+            DepartmentRoleGroupId = seed.DepartmentGroupId,
+            LeadUserId = seed.DepartmentLeadId,
+            Status = status,
+            CreatedByUserId = admin,
+            UpdatedByUserId = admin,
+            CompletedAt = status == WorkPackageStatus.Completed ? DateTime.UtcNow : null,
+            FinanceReview = new DepartmentFinanceReview { Status = FinanceReviewStatus.Approved, CreatedByUserId = admin, UpdatedByUserId = admin, ReviewedByUserId = seed.DepartmentLeadId, ReviewedAt = DateTime.UtcNow },
+            Tasks = [new DepartmentWorkTask { WbsCode = "SUP-01", Title = "Xác nhận giao nhận vật tư", DepartmentRoleGroupId = seed.DepartmentGroupId,
+                AssigneeUserId = seed.DepartmentStaffId, ApproverUserId = seed.DepartmentLeadId, KpiDefinitionId = seed.KpiDefinitionId,
+                Status = WorkTaskStatus.Verified, ProgressPercent = 100, VerifiedByUserId = seed.DepartmentLeadId, VerifiedAt = DateTime.UtcNow,
+                PlannedStart = DateTime.UtcNow, PlannedEnd = DateTime.UtcNow.AddDays(1), CreatedByUserId = admin, UpdatedByUserId = admin }],
+        };
+        db.DepartmentWorkPackages.Add(package);
+        await db.SaveChangesAsync();
+        return package.Id;
+    });
+
     private async Task<HttpResponseMessage> SendAsync(HttpMethod method, string path, object body, string? etag = null)
     {
         using var request = new HttpRequestMessage(method, path) { Content = JsonContent.Create(body) };

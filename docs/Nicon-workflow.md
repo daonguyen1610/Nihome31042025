@@ -60,6 +60,17 @@ customer hoặc contract. Khi không chọn KPI, hoàn thành không cần bư�
 Khi chọn KPI, người xác nhận phải khác người thực hiện và sự kiện `Verified` mới
 là bằng chứng chấm KPI.
 
+**Implemented — mở lại và xóa nhóm việc:** Theo xác nhận của người dùng trong
+phiên làm việc 23/10/2026, người có quyền quản lý và đúng phạm vi được mở nhóm
+`Completed → Active` để bổ sung công việc; không thu hồi xác nhận KPI hoặc duyệt
+tài chính cũ, không mở khóa riêng các đầu việc/hồ sơ đã chốt. Nhóm `Cancelled`
+không mở lại. Xóa vĩnh viễn yêu cầu xem trước ảnh hưởng, nhập đúng mã nhóm và
+kiểm tra phiên bản/kế hoạch trên server. Dữ liệu con thuộc nhóm bị xóa; bản ghi
+cha và checklist độc lập được giữ, gỡ liên kết khi phù hợp. Hồ sơ đã sử dụng
+bằng chứng giá/duyệt/kế hoạch, kích hoạt pháp lý và tệp chưa dọn vẫn chặn xóa.
+Chi tiết API và kiểm thử tại `application_developer.md`, mục Department work
+packages; thao tác người dùng tại `user_guide.md` §3.0.1.
+
 ### 2.2. Liên phòng ban trước hợp đồng — Hiện có
 
 Ba luồng dưới đây dùng lại nhóm công việc dự án, không có tab riêng. Nhóm việc

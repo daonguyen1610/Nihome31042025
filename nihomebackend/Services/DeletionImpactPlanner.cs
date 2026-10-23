@@ -53,6 +53,65 @@ internal static class DeletionImpactPlanner
             $"{impact.PlanToken}:{source}"))).ToLowerInvariant();
     }
 
+    public static async Task<DeletionImpactResponse?> ForWorkPackageAsync(AppDbContext db, int id, CancellationToken ct)
+    {
+        var package = await db.DepartmentWorkPackages.AsNoTracking().SingleOrDefaultAsync(item => item.Id == id, ct);
+        if (package is null) return null;
+        var items = new List<PlanItem>();
+        var tasks = db.DepartmentWorkTasks.Where(item => item.WorkPackageId == id);
+        var taskIds = tasks.Select(item => item.Id);
+        var offers = db.ProcurementInputPriceOffers.Where(item => item.WorkPackageId == id);
+        var offerIds = offers.Select(item => item.Id);
+        await AddAsync(items, "workPackages.tasks", DeletionImpactActions.Delete, tasks, item => item.Id, item => item.Title, ct);
+        var cc = await db.DepartmentWorkTaskCcUsers.AsNoTracking().Where(item => taskIds.Contains(item.WorkTaskId)).Select(item => new { item.WorkTaskId, item.UserId }).ToListAsync(ct);
+        AddRaw(items, "workPackages.cc", DeletionImpactActions.Delete, cc.Select(item => $"{item.WorkTaskId}:{item.UserId}"), []);
+        var dependencies = await db.DepartmentWorkTaskDependencies.AsNoTracking().Where(item => taskIds.Contains(item.WorkTaskId) || taskIds.Contains(item.PredecessorTaskId)).Select(item => new { item.WorkTaskId, item.PredecessorTaskId }).ToListAsync(ct);
+        AddRaw(items, "workPackages.dependencies", DeletionImpactActions.Delete, dependencies.Select(item => $"{item.WorkTaskId}:{item.PredecessorTaskId}"), []);
+        var groups = await db.DepartmentWorkPackageParticipantGroups.AsNoTracking().Where(item => item.WorkPackageId == id).Select(item => item.RoleGroupId).ToListAsync(ct);
+        AddRaw(items, "workPackages.groups", DeletionImpactActions.Delete, groups.Select(item => item.ToString()), []);
+        await AddAsync(items, "workPackages.history", DeletionImpactActions.Delete, db.DepartmentWorkPackageHistory.Where(item => item.WorkPackageId == id), item => item.Id, item => item.Action, ct);
+        await AddAsync(items, "workPackages.offers", DeletionImpactActions.Delete, offers, item => item.Id, item => item.SupplierReference, ct);
+        await AddAsync(items, "workPackages.offerLines", DeletionImpactActions.Delete, db.ProcurementInputPriceLines.Where(item => offerIds.Contains(item.OfferId)), item => item.Id, item => item.Description, ct);
+        await AddAsync(items, "workPackages.financeReview", DeletionImpactActions.Delete, db.DepartmentFinanceReviews.Where(item => item.WorkPackageId == id), item => item.Id, item => item.Status.ToString(), ct);
+        await AddAsync(items, "workPackages.permits", DeletionImpactActions.Unlink, db.PermitChecklistItems.Where(item => item.WorkTaskId.HasValue && taskIds.Contains(item.WorkTaskId.Value)), item => item.Id, item => item.PermitTypeCode, ct);
+        await AddAsync(items, "workPackages.tenderChecklist", DeletionImpactActions.Unlink, db.TenderChecklistItems.Where(item => item.WorkTaskId.HasValue && taskIds.Contains(item.WorkTaskId.Value)), item => item.Id, item => item.Title, ct);
+        await AddAsync(items, "workPackages.quoteOffers", DeletionImpactActions.Block, db.Quotes.Where(item => item.InputPriceOfferId.HasValue && offerIds.Contains(item.InputPriceOfferId.Value)), item => item.Id, item => item.Code, ct);
+        await AddAsync(items, "workPackages.quoteSnapshots", DeletionImpactActions.Block, db.QuoteVersionSnapshots.Where(item => item.InputPriceOfferId.HasValue && offerIds.Contains(item.InputPriceOfferId.Value)), item => item.Id, item => item.Id.ToString(), ct);
+        await AddAsync(items, "workPackages.submissions", DeletionImpactActions.Block, db.TenderSubmissions.Where(item => item.FinanceReviewWorkPackageId == id), item => item.Id, item => item.Id.ToString(), ct);
+        await AddAsync(items, "workPackages.legalActivations", DeletionImpactActions.Block, db.ContractLegalActivations.Where(item => item.WorkPackageId == id), item => item.Id, item => item.Id.ToString(), ct);
+        if (package.SourceQuoteId.HasValue && package.Purpose == WorkPackagePurpose.FinanceCommercialReview)
+            await AddAsync(items, "workPackages.sentQuotes", DeletionImpactActions.Block, db.Quotes.Where(item => item.Id == package.SourceQuoteId &&
+                (item.Status == QuoteStatus.SentToCustomer || item.Status == QuoteStatus.CustomerApproved ||
+                 db.QuoteApprovalLogs.Any(log => log.QuoteId == item.Id && log.Action == QuoteWorkflowAction.Send))), item => item.Id, item => item.Code, ct);
+        if (package.SourceTenderId.HasValue && package.Purpose is WorkPackagePurpose.TenderPlanning or WorkPackagePurpose.General)
+            await AddAsync(items, "workPackages.submittedPlanning", DeletionImpactActions.Block, db.TenderSubmissions.Where(item => item.TenderId == package.SourceTenderId), item => item.Id, item => item.Id.ToString(), ct);
+        var documents = WorkPackageDocuments(db, id);
+        await AddAsync(items, "workPackages.files", DeletionImpactActions.Block, documents.Where(item => item.SyncStatus != ProjectDocumentSyncStatus.Deleted || item.LocalPath != "" || item.DesiredOperation != ProjectDocumentDesiredOperation.None), item => item.Id, item => item.OriginalFileName, ct);
+        await AddAsync(items, "workPackages.documentLinks", DeletionImpactActions.Unlink, documents, item => item.Id, item => item.OriginalFileName, ct);
+        await AddTranslationsAsync(items, db, EntityTypes.DepartmentWorkPackage, db.DepartmentWorkPackages.Where(item => item.Id == id).Select(item => item.Id), ct, "workPackages.translations");
+        await AddTranslationsAsync(items, db, EntityTypes.DepartmentWorkTask, taskIds, ct, "workPackages.translations");
+        AddRaw(items, "workPackages.parents", DeletionImpactActions.Unlink, new[] {
+            package.OperationalProjectId.HasValue ? $"project:{package.OperationalProjectId}" : null,
+            package.ContractId.HasValue ? $"contract:{package.ContractId}" : null,
+            package.SourceOpportunityId.HasValue ? $"opportunity:{package.SourceOpportunityId}" : null,
+            package.SourceQuoteId.HasValue ? $"quote:{package.SourceQuoteId}" : null,
+            package.SourceTenderId.HasValue ? $"tender:{package.SourceTenderId}" : null,
+        }.OfType<string>(), []);
+        return Build(EntityTypes.DepartmentWorkPackage, id, $"{package.Code} · {package.Name}", package.Code, items);
+    }
+
+    internal static IQueryable<ProjectDocument> WorkPackageDocuments(AppDbContext db, int id)
+    {
+        var taskIds = db.DepartmentWorkTasks.Where(item => item.WorkPackageId == id).Select(item => item.Id);
+        var offerIds = db.ProcurementInputPriceOffers.Where(item => item.WorkPackageId == id).Select(item => item.Id);
+        var sourceTypes = new[] { EntityTypes.DepartmentWorkPackage, EntityTypes.DepartmentWorkTask, nameof(ProcurementInputPriceOffer), nameof(DepartmentFinanceReview) };
+        return db.ProjectDocuments.Where(item => sourceTypes.Contains(item.SourceEntityType!) &&
+            ((item.SourceEntityType == EntityTypes.DepartmentWorkPackage && item.SourceRecordId == id) ||
+             (item.SourceEntityType == EntityTypes.DepartmentWorkTask && item.SourceRecordId.HasValue && taskIds.Select(value => (long)value).Contains(item.SourceRecordId.Value)) ||
+             (item.SourceEntityType == nameof(ProcurementInputPriceOffer) && item.SourceRecordId.HasValue && offerIds.Select(value => (long)value).Contains(item.SourceRecordId.Value)) ||
+             (item.SourceEntityType == nameof(DepartmentFinanceReview) && db.DepartmentFinanceReviews.Where(review => review.WorkPackageId == id).Select(review => (long)review.Id).Contains(item.SourceRecordId ?? 0))));
+    }
+
     public static async Task<DeletionImpactResponse?> ForDesignProjectAsync(
         AppDbContext db, int projectId, CancellationToken ct)
     {
