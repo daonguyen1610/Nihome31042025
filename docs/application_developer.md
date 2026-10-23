@@ -1940,10 +1940,10 @@ Calls are naturally idempotent, and projects outside the caller's scope return
 `404` without disclosing their existence.
 
 `ProjectDocument` is the project-scoped catalog and synchronization sidecar.
-Manual catalog uploads stream directly into the configured Google Drive
-category folder; SQL stores catalog, permission, workflow, and Drive metadata,
-and no duplicate file is written under the application web root. Authenticated
-content requests proxy the Drive bytes so OAuth credentials and raw Drive
+Manual catalog uploads enter private host storage and the durable sync queue.
+SQL stores catalog, permission, workflow and Drive metadata. Authenticated
+content requests serve the staged host file until upload succeeds, then proxy
+Drive bytes after verified local-copy cleanup. OAuth credentials and raw Drive
 permissions are not exposed to the browser. Source-owned files retain their
 existing module storage and lifecycle as a compatibility bridge. Quote,
 Contract attachment/appendix, Basic Design, Shop
@@ -3862,7 +3862,16 @@ To use another account, select **Disconnect** and then **Connect Google Drive**,
 
 The migration intentionally leaves upgraded installations disabled with empty deployment-specific fields. During a planned maintenance window, an administrator must save the former business configuration on the Admin page and reconnect before synchronization resumes. Although the existing encrypted refresh-token column is preserved, the first Client ID assignment clears that token because the application cannot prove it belongs to the newly entered OAuth client. For later topology changes, first disable synchronization and wait for active `Processing` records to finish, then change the root folder, deployment identity, or business folder paths and re-enable. Nicon invalidates cached project-folder bindings so future operations resolve beneath the new topology. Existing catalog rows and Drive files are retained; the application does not move or delete historical files automatically.
 
-Project document storage is Drive-primary. Nicon uploads manual project files directly to their configured Drive category, proxies authenticated downloads, and moves deleted files to Drive trash rather than permanently erasing them. SQL remains authoritative for catalog metadata, application authorization, claims, and workflow state, while Drive is authoritative for file content. Reconciliation catalogs unknown files without a host copy and reflects remote changes. Existing source-module files use a compatibility sidecar until those modules migrate their own storage contracts. Drive sharing and permission synchronization are intentionally disabled until IT supplies approved group mappings.
+Project document storage is Drive-primary after synchronization. Manual uploads
+are queued in private host storage while Drive is unavailable; the worker
+verifies the remote byte count and SHA-256 before removing the staged copy.
+Authenticated downloads serve host or Drive content according to sync state.
+Document deletion through Nicon moves its Drive replica to trash. SQL remains
+authoritative for catalog, authorization, claims and workflow state.
+Reconciliation catalogs unknown files without a host copy and reflects remote
+changes. Source-module files retain their compatibility storage and lifecycle.
+Drive sharing and permission synchronization remain disabled until IT supplies
+approved group mappings.
 
 Manual project uploads require an `Idempotency-Key`. Nicon fingerprints multipart
 fields and file bytes independently from the browser-generated boundary, so a
