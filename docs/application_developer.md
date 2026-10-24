@@ -3729,6 +3729,13 @@ Unit tests cover isolated service logic, validation, branching, helpers, and map
 
 Frontend behavior is validated through Playwright against the integrated Docker stack. Pure service logic and HTTP contracts belong in backend unit and integration tests respectively.
 
+The focused `admin-navigation.spec.ts` checks client-side navigation from Roles,
+browser Back/Forward and unsaved permission drafts across refetches. Verify
+rendered destination content as well as the URL: a changed URL alone does not
+prove navigation completed. The Roles editor combines query data with a stable
+function before synchronizing drafts; do not depend on the raw `useQueries`
+result array in a state-writing effect, because its identity changes per render.
+
 ```bash
 docker compose up -d --build
 cd nihomeweb
