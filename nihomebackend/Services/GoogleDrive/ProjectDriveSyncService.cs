@@ -60,11 +60,40 @@ public sealed class ProjectDriveSyncProcessor(
             return false;
         }
 
+        var claimedAttempt = candidate.DriveRenameAttemptCount;
+        await using var renameTransaction = db.Database.IsRelational()
+            ? await db.Database.BeginTransactionAsync(ct) : null;
+        if (db.Database.IsSqlServer())
+        {
+            var resource = $"project-drive-rename-{candidate.OperationalProjectId}";
+            await db.Database.ExecuteSqlInterpolatedAsync($"""
+                DECLARE @result int;
+                EXEC @result = sys.sp_getapplock @Resource={resource},
+                    @LockMode='Exclusive', @LockOwner='Transaction', @LockTimeout=15000;
+                IF @result < 0 THROW 51000, 'Project Drive rename is already running.', 1;
+                """, ct);
+        }
         var change = await db.OperationalProjectCodeChanges
             .Include(item => item.OperationalProject)
             .SingleAsync(item => item.Id == candidate.Id, ct);
+        await db.Entry(change).ReloadAsync(ct);
+        if (change.DriveRenameStatus != ProjectDriveRenameStatus.Processing ||
+            change.DriveRenameAttemptCount != claimedAttempt) return true;
         try
         {
+            // A retry for an older code must not rename the current folder
+            // back after a more recent change has already been synchronized.
+            var currentCode = await db.OperationalProjects.AsNoTracking()
+                .Where(item => item.Id == change.OperationalProjectId)
+                .Select(item => item.Code).SingleAsync(ct);
+            if (!string.Equals(currentCode, change.NewCode, StringComparison.Ordinal))
+            {
+                change.DriveRenameStatus = ProjectDriveRenameStatus.NotRequired;
+                change.NextDriveRenameAttemptAt = null;
+                await db.SaveChangesAsync(ct);
+                if (renameTransaction is not null) await renameTransaction.CommitAsync(ct);
+                return true;
+            }
             var folderId = await FindProjectRootFolderIdAsync(change.OperationalProjectId, ct);
             if (folderId is null)
             {
@@ -100,6 +129,7 @@ public sealed class ProjectDriveSyncProcessor(
             logger.LogWarning(exception,
                 "Project Drive rename {CodeChangeId} failed and will be retried", change.Id);
         }
+        if (renameTransaction is not null) await renameTransaction.CommitAsync(ct);
         return true;
     }
 

@@ -899,6 +899,12 @@ to the same Operational Project and match the selected vendor; selecting only
 one field is rejected. This reference does not copy vendor or contract master
 data into the Design module.
 
+Use **Complete** to submit a task automatically to its single designated
+approver. Generic task editing cannot mark work complete. Pending and approved
+tasks cannot be edited; a rejected task can be corrected and resubmitted. Both
+the assignee and approver must retain an effective project assignment when
+submitting or reviewing.
+
 | Page | Functions |
 |------|-----------|
 | Design Project List | All design projects |
@@ -1675,6 +1681,10 @@ are not imported automatically.
 Changing the root folder, deployment identity, or business folder paths affects
 new folder resolution after the change. Nicon retains historical catalog rows
 and Drive files and does not automatically move or delete them.
+For existing folder bindings, first save synchronization as disabled, wait for
+Processing files to finish, then save the changed topology while still
+disabled. Re-enable it after checking the intended paths. The server rejects a
+topology change while processing is active or existing bindings are enabled.
 
 #### 3.7.1 Automated Project Folder Structure
 
@@ -1698,6 +1708,9 @@ remain authorized through Nicon. For failed files, use Send to Drive again;
 manual retry is available even after automatic attempts are exhausted. Delete
 removes an unlinked host-only upload immediately or queues its Drive deletion.
 Files owned by another business module must be removed through that module.
+Files referenced by QA/QC or QS dossiers cannot be deleted through the catalog
+or through their source module while those links remain. Resolve the evidence
+at its source dossier first; approved records retain their evidence.
 Deleting an Operational Project also deletes its verified empty Nicon folder
 tree on Drive after dependent-file cleanup. Unknown/shared files and independent
 CRM documents block deletion and must be handled explicitly first. Files added or edited directly in a managed

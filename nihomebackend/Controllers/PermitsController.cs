@@ -101,6 +101,7 @@ public class PermitsController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
+        if (!await db.PermitChecklistItems.AsNoTracking().AnyAsync(item => item.Id == id, ct)) return NotFound();
         if (!await CanOperateResourceAsync(userId.Value, id, ct)) return Forbid();
         if (string.Equals(request.Status, nameof(PermitStatus.Issued), StringComparison.OrdinalIgnoreCase) &&
             !await permissions.HasAsync(userId.Value, "permit.checklists.mark-issued", ct))
@@ -144,6 +145,7 @@ public class PermitsController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
+        if (!await db.PermitChecklistItems.AsNoTracking().AnyAsync(item => item.Id == id, ct)) return NotFound();
         if (!await CanOperateResourceAsync(userId.Value, id, ct)) return Forbid();
         if (kind == PermitDocumentKind.IssuedPermit &&
             !await permissions.HasAsync(userId.Value, "permit.checklists.mark-issued", ct))
@@ -226,6 +228,7 @@ public class PermitsController(
 
     private async Task<bool> CanOperateResourceAsync(int userId, int resourceId, CancellationToken ct)
     {
+        if (!await CanAccessResourceAsync(userId, resourceId, ct)) return false;
         if (await db.Users.AsNoTracking().AnyAsync(item => item.Id == userId && item.IsActive &&
                 (item.Role == UserRole.ADMIN || item.Role == UserRole.SUPER_ADMIN ||
                  item.RoleEntity != null && item.RoleEntity.IsActive && item.RoleEntity.IsSystem &&

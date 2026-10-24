@@ -49,6 +49,63 @@ public sealed class ProjectDriveSyncProcessorTests : IDisposable
     }
 
     [Fact]
+    public async Task ProjectRename_OlderRetryDoesNotRevertLatestCode()
+    {
+        project.Code = "NIC-CURRENT-C";
+        project.Name = "NICON Factory";
+        var rootName = "NIC-CURRENT-C_NICON Factory";
+        var earlier = new OperationalProjectCodeChange
+        {
+            OperationalProjectId = project.Id,
+            OldCode = "NIC-INITIAL-A",
+            NewCode = "NIC-INTERMEDIATE-B",
+            Reason = "Earlier confirmed project code change",
+            ChangedByUserId = 7,
+            ChangedAt = DateTime.UtcNow.AddHours(-2),
+            DriveRenameStatus = ProjectDriveRenameStatus.Failed,
+            DriveRenameAttemptCount = 1,
+            NextDriveRenameAttemptAt = DateTime.UtcNow.AddMinutes(-1),
+        };
+        db.OperationalProjectCodeChanges.Add(earlier);
+        db.OperationalProjectCodeChanges.Add(new OperationalProjectCodeChange
+        {
+            OperationalProjectId = project.Id,
+            OldCode = "NIC-INTERMEDIATE-B",
+            NewCode = project.Code,
+            Reason = "Later confirmed project code change already synchronized",
+            ChangedByUserId = 7,
+            ChangedAt = DateTime.UtcNow.AddHours(-1),
+            DriveRenameStatus = ProjectDriveRenameStatus.Succeeded,
+            DriveRenameAttemptCount = 1,
+            DriveRenamedAt = DateTime.UtcNow.AddMinutes(-30),
+        });
+        db.SaveChanges();
+        drive.Setup(item => item.GetMetadataAsync("folder-design", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new DriveItem("folder-design", "02_Thiet_ke",
+                "application/vnd.google-apps.folder", null, null, null, null,
+                new Dictionary<string, string>(), false, ["project-root"]));
+        drive.Setup(item => item.GetMetadataAsync("project-root", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new DriveItem("project-root", rootName,
+                "application/vnd.google-apps.folder", null, null, null, null,
+                new Dictionary<string, string>
+                {
+                    ["niconFolderKind"] = "project",
+                    ["niconProjectId"] = project.Id.ToString(),
+                }, false));
+        drive.Setup(item => item.UpdateFileNameAsync("project-root",
+                It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback<string, string, CancellationToken>((_, name, _) => rootName = name)
+            .Returns(Task.CompletedTask);
+
+        await processor.ProcessNextProjectRenameAsync();
+
+        Assert.True(rootName == "NIC-CURRENT-C_NICON Factory",
+            $"Old retry must preserve the latest confirmed project code. " +
+            $"Database code={project.Code}; actual Drive root name={rootName}; " +
+            $"earlier job status={earlier.DriveRenameStatus}.");
+    }
+
+    [Fact]
     public async Task Disabled_ClaimsAndReconciliationDoNothing()
     {
         var disabled = new ProjectDriveSyncProcessor(db, storage.Object, drive.Object, folders.Object,
@@ -76,6 +133,7 @@ public sealed class ProjectDriveSyncProcessorTests : IDisposable
             DriveRenameStatus = ProjectDriveRenameStatus.Pending,
         };
         db.OperationalProjectCodeChanges.Add(change);
+        project.Code = change.NewCode;
         db.SaveChanges();
         drive.Setup(item => item.GetMetadataAsync("folder-design", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new DriveItem(

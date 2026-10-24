@@ -39,6 +39,38 @@ const connectedStatus = (accountEmail: string) => ({
   error: null,
 });
 
+test("disabled Drive configuration rejects an external return URL before saving", async ({
+  page,
+  loginInBrowserAs,
+}) => {
+  await loginInBrowserAs(page, TEST_USERS.superAdmin);
+  let saveRequests = 0;
+  await page.route(/\/api\/(?:v1\/)?site-settings\/google-drive\/configuration$/, async (route) => {
+    if (route.request().method() === "PUT") saveRequests++;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ ...configuration, enabled: false }),
+    });
+  });
+  await page.route(/\/api\/(?:v1\/)?site-settings\/google-drive\/status$/, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ ...connectedStatus(""), status: "Disabled" }),
+    }),
+  );
+  await page.goto("/admin/settings?tab=drive");
+  await page.locator("#drive-return").fill("https://external.example/phishing");
+  await page
+    .getByRole("button", { name: /Save configuration|Lưu cấu hình|保存配置|設定を保存/i })
+    .click();
+  await expect(
+    page.getByRole("region", { name: "Notifications (F8)", exact: true }).getByText(/\/admin\//),
+  ).toBeVisible();
+  expect(saveRequests).toBe(0);
+});
+
 test("first-time setup enables and saves configuration before connection", async ({
   page,
   loginInBrowserAs,

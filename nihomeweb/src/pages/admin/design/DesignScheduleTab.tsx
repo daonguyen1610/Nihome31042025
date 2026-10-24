@@ -675,7 +675,9 @@ export const DesignScheduleTab = ({ project }: Props) => {
                         {task.code} / {t(`designProjects.stage.${task.phaseCode}`)}
                       </p>
                     </div>
-                    {schedule.canManage ? (
+                    {schedule.canManage &&
+                    task.approvalStatus !== "Pending" &&
+                    task.approvalStatus !== "Approved" ? (
                       <Button
                         variant="ghost"
                         size="icon"

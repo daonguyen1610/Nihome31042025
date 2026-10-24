@@ -327,7 +327,7 @@ public class OperationalProjectsController(
 
     [HttpPost("{id:int}/documents")]
     [Consumes("multipart/form-data")]
-    [RequirePermission("operations.projects", "manage")]
+    // Either operations management or scoped Design management is checked below.
     [Idempotency(
         "operations.projects.documents.upload",
         typeof(OperationalProjectIdempotencyGuard))]

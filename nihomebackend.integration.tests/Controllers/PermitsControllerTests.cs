@@ -198,6 +198,98 @@ public class PermitsControllerTests : IntegrationTestBase
 
     // -------- helpers --------
 
+    [Fact]
+    public async Task EndedLegalAssignee_CannotMutateHiddenPermit()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client,
+            c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var designProjectId = await CreateDesignProjectAsync();
+        var permitId = await SeedPermitAsync(designProjectId);
+        var memberId = await WithDbAsync(async db =>
+        {
+            var permit = await db.PermitChecklistItems.SingleAsync(x => x.Id == permitId);
+            var legal = await db.Users.SingleAsync(x => x.PhoneNumber ==
+                TestDataSeeder.BusinessRolePhonesByCode["LEGAL_OFFICER"]);
+            var admin = await db.Users.SingleAsync(x =>
+                x.PhoneNumber == TestDataSeeder.SuperAdminPhone);
+            var groupId = await db.RoleGroups.Where(x => x.Code == "CONSTRUCTION")
+                .Select(x => x.Id).SingleAsync();
+            var member = new OperationalProjectMember
+            {
+                OperationalProjectId = permit.OperationalProjectId,
+                UserId = legal.Id,
+                Position = "NICON permit dossier officer",
+                StartedAt = DateTime.UtcNow.AddDays(-7),
+                CreatedByUserId = admin.Id,
+                UpdatedByUserId = admin.Id,
+            };
+            db.OperationalProjectMembers.Add(member);
+            var task = new DepartmentWorkTask
+            {
+                WbsCode = "L-01",
+                Title = "Prepare NICON factory construction permit",
+                DepartmentRoleGroupId = groupId,
+                AssigneeUserId = legal.Id,
+                ApproverUserId = admin.Id,
+                PlannedStart = DateTime.UtcNow.AddDays(-7),
+                PlannedEnd = DateTime.UtcNow.AddDays(30),
+                Status = WorkTaskStatus.InProgress,
+                ProgressPercent = 25,
+                CreatedByUserId = admin.Id,
+                UpdatedByUserId = admin.Id,
+            };
+            db.DepartmentWorkPackages.Add(new DepartmentWorkPackage
+            {
+                Code = $"LEGAL-AUDIT-{Guid.NewGuid():N}"[..35],
+                Name = "NICON factory legal permitting",
+                Kind = WorkPackageKind.Project,
+                Purpose = WorkPackagePurpose.LegalPermitting,
+                OperationalProjectId = permit.OperationalProjectId,
+                DepartmentRoleGroupId = groupId,
+                LeadUserId = admin.Id,
+                Status = WorkPackageStatus.Active,
+                PlannedStart = DateTime.UtcNow.AddDays(-7),
+                PlannedEnd = DateTime.UtcNow.AddDays(30),
+                CreatedByUserId = admin.Id,
+                UpdatedByUserId = admin.Id,
+                Tasks = [task],
+            });
+            permit.WorkTask = task;
+            permit.OwnerUserId = legal.Id;
+            permit.IssuingAgency = "Original NICON permit authority";
+            await db.SaveChangesAsync();
+            return member.Id;
+        });
+
+        await AuthTestHelper.AuthenticateAsync(Client,
+            c => AuthTestHelper.LoginAsRoleAsync(c, "LEGAL_OFFICER"));
+        (await Client.GetAsync($"/api/permits/{permitId}"))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+
+        // Simulate the persisted result of ending the project membership.
+        // Global Legal permission and the historical assignee link remain.
+        await WithDbAsync(async db =>
+        {
+            var member = await db.OperationalProjectMembers.SingleAsync(x => x.Id == memberId);
+            member.EndedAt = DateTime.UtcNow.AddMinutes(-1);
+            await db.SaveChangesAsync();
+        });
+        (await Client.GetAsync($"/api/permits/{permitId}"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+        var response = await Client.PatchAsJsonAsync($"/api/permits/{permitId}", new
+        {
+            issuingAgency = "Mutation by removed NICON project member",
+        });
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.True(response.StatusCode is HttpStatusCode.Forbidden or HttpStatusCode.NotFound,
+            $"Removed legal assignee must not mutate a project record hidden by GET. " +
+            $"Actual PATCH status={(int)response.StatusCode}; body={body}");
+        (await WithDbAsync(db => db.PermitChecklistItems.Where(x => x.Id == permitId)
+            .Select(x => x.IssuingAgency).SingleAsync()))
+            .Should().Be("Original NICON permit authority");
+    }
+
     private async Task<int> CreateDesignProjectAsync()
     {
         var customerId = await FirstCustomerIdAsync();

@@ -219,12 +219,10 @@ public sealed class GoogleDriveOAuthService(
     public async Task<GoogleDriveAdminStatusResponse> GetStatusAsync(CancellationToken ct = default)
     {
         var metadata = await settingsStore.GetAdminAsync(ct);
-        var options = await settingsStore.GetRuntimeAsync(ct);
-        var configured = options.Enabled &&
-            !string.IsNullOrWhiteSpace(options.ClientId) &&
-            !string.IsNullOrWhiteSpace(options.ClientSecret) &&
-            !string.IsNullOrWhiteSpace(options.OAuthRedirectUri);
-        if (!options.Enabled)
+        var configured = metadata.Enabled &&
+            !string.IsNullOrWhiteSpace(metadata.ClientId) && metadata.HasClientSecret &&
+            !string.IsNullOrWhiteSpace(metadata.OAuthRedirectUri);
+        if (!metadata.Enabled)
             return new("Disabled", configured, metadata.HasRefreshToken,
                 metadata.AccountEmail, metadata.ConnectedAt, null, null, null);
         if (!metadata.HasRefreshToken)
@@ -233,6 +231,9 @@ public sealed class GoogleDriveOAuthService(
 
         try
         {
+            // Key-ring failures must produce the same actionable status as a
+            // revoked credential; never disclose ciphertext or provider errors.
+            await settingsStore.GetRuntimeAsync(ct);
             var connection = await drive.CheckConnectionAsync(ct);
             var status = !connection.IsFolder || connection.IsTrashed
                 ? "InvalidRoot"
@@ -275,10 +276,12 @@ public sealed class GoogleDriveOAuthService(
             GoogleDriveOAuthResult.ConfigurationChanged => "configuration_changed",
             _ => "failed",
         };
-        var options = await settingsStore.GetRuntimeAsync(ct);
-        var returnUrl = string.IsNullOrWhiteSpace(options.FrontendReturnUrl)
-            ? "/admin/settings?tab=drive"
-            : options.FrontendReturnUrl;
+        // Redirects need only public configuration, even if encrypted secrets
+        // cannot be recovered. Revalidate legacy drafts saved before this rule.
+        var metadata = await settingsStore.GetAdminAsync(ct);
+        var returnUrl = GoogleDriveSettingsStore.IsValidFrontendReturnUrl(metadata.FrontendReturnUrl)
+            ? metadata.FrontendReturnUrl
+            : "/admin/settings?tab=drive";
         return Microsoft.AspNetCore.WebUtilities.QueryHelpers.AddQueryString(
             returnUrl, "driveOAuth", resultValue);
     }

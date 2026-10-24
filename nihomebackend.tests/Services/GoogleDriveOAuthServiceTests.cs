@@ -175,6 +175,9 @@ public sealed class GoogleDriveOAuthServiceTests
         await db.SaveChangesAsync();
         var update = ValidConfiguration();
         update.RowVersion = current.RowVersion;
+        update.Enabled = false;
+        current = await store.UpdateAsync(update, 8);
+        update.RowVersion = current.RowVersion;
         update.RootFolderId = "0987654321root";
 
         await store.UpdateAsync(update, 8);
@@ -196,9 +199,47 @@ public sealed class GoogleDriveOAuthServiceTests
         await db.SaveChangesAsync();
         var store = new GoogleDriveSettingsStore(db, new EphemeralDataProtectionProvider());
 
-        await store.UpdateAsync(ValidConfiguration("client-secret-value"), 7);
+        var configuration = ValidConfiguration("client-secret-value");
+        configuration.Enabled = false;
+        await store.UpdateAsync(configuration, 7);
 
         Assert.Empty(db.ProjectDriveFolders);
+    }
+
+    [Theory]
+    [InlineData(true, false, false)]
+    [InlineData(false, true, false)]
+    [InlineData(false, false, true)]
+    public async Task SettingsStore_TopologyChangeRequiresPausedAndDrainedWorkers(
+        bool currentlyEnabled, bool requestedEnabled, bool processing)
+    {
+        await using var db = CreateDb();
+        var store = new GoogleDriveSettingsStore(db, new EphemeralDataProtectionProvider());
+        var initial = ValidConfiguration("client-secret-value");
+        initial.Enabled = currentlyEnabled;
+        var current = await store.UpdateAsync(initial, 7);
+        db.ProjectDriveFolders.Add(new NihomeBackend.Models.ProjectDriveFolder
+        {
+            OperationalProjectId = 42,
+            Category = NihomeBackend.Models.ProjectDocumentCategory.DesignConcept,
+            DriveFolderId = "existing-concept-folder",
+        });
+        if (processing) db.ProjectDocuments.Add(new NihomeBackend.Models.ProjectDocument
+        {
+            OperationalProjectId = 42,
+            OriginalFileName = "NICON-Concept-R01.pdf",
+            SyncStatus = NihomeBackend.Models.ProjectDocumentSyncStatus.Processing,
+        });
+        await db.SaveChangesAsync();
+        var update = ValidConfiguration();
+        update.Enabled = requestedEnabled;
+        update.RootFolderId = "0987654321root";
+        update.RowVersion = current.RowVersion;
+
+        await Assert.ThrowsAsync<GoogleDriveSettingsValidationException>(() => store.UpdateAsync(update, 8));
+        Assert.Equal(current.RootFolderId, (await store.GetAdminAsync()).RootFolderId);
+        Assert.Equal(currentlyEnabled, (await store.GetAdminAsync()).Enabled);
+        Assert.Equal("existing-concept-folder", (await db.ProjectDriveFolders.SingleAsync()).DriveFolderId);
     }
 
     [Theory]
@@ -609,6 +650,106 @@ public sealed class GoogleDriveOAuthServiceTests
         Assert.Equal("ReconnectRequired", status.Status);
         Assert.Equal("owner@example.com", status.AccountEmail);
         Assert.DoesNotContain("client-secret", status.Error ?? string.Empty);
+    }
+
+    [Fact]
+    public async Task GetStatusAsync_UndecryptableCredential_ReturnsReconnectRequired()
+    {
+        var options = new GoogleDriveOptions
+        {
+            Enabled = true,
+            ClientId = "123.apps.googleusercontent.com",
+            OAuthRedirectUri = "https://nicon.example/api/site-settings/google-drive/oauth/callback",
+            RootFolderId = "1234567890root",
+            InstanceId = "nicon-audit",
+        };
+        var settings = new Mock<IGoogleDriveSettingsStore>();
+        settings.Setup(store => store.GetAdminAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new GoogleDriveAdminConfigurationResponse(
+                true, options.ClientId, true, true, options.OAuthRedirectUri,
+                options.FrontendReturnUrl, options.RootFolderId, options.InstanceId,
+                options.ApplicationName, options.Folders, true, 15,
+                "drive-audit@example.com", DateTime.UtcNow, "row-version"));
+        settings.Setup(store => store.GetRuntimeAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new GoogleDriveReconnectRequiredException(
+                "Cannot decrypt stored credential: synthetic-secret-not-for-response"));
+        var drive = new Mock<IGoogleDriveAdapter>();
+        var service = new GoogleDriveOAuthService(
+            new EphemeralDataProtectionProvider(), settings.Object,
+            Mock.Of<IHttpClientFactory>(), drive.Object,
+            Mock.Of<IPermissionService>(), NullLogger<GoogleDriveOAuthService>.Instance);
+
+        // Status must remain an actionable sanitized health response even when
+        // the stored ciphertext cannot be read with the current key ring.
+        var status = await service.GetStatusAsync();
+
+        Assert.Equal("ReconnectRequired", status.Status);
+        Assert.Equal("drive-audit@example.com", status.AccountEmail);
+        Assert.True(status.HasStoredCredential);
+        Assert.DoesNotContain("synthetic-secret-not-for-response", status.Error ?? string.Empty);
+        drive.Verify(adapter => adapter.CheckConnectionAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task SettingsStore_DisabledConfiguration_RejectsExternalFrontendReturnUrl()
+    {
+        await using var db = CreateDb();
+        var store = new GoogleDriveSettingsStore(db, new EphemeralDataProtectionProvider());
+        var request = ValidConfiguration("synthetic-client-secret");
+        request.Enabled = false;
+        request.FrontendReturnUrl = "https://external.example/phishing";
+
+        // Disabled draft is still read by the anonymous OAuth callback's
+        // result redirect, so the internal-only rule must apply while disabled.
+        await Assert.ThrowsAsync<GoogleDriveSettingsValidationException>(() =>
+            store.UpdateAsync(request, 7));
+        Assert.Empty(await db.GoogleDriveCredentials.ToListAsync());
+    }
+
+    [Theory]
+    [InlineData("https://external.example/phishing")]
+    [InlineData("//external.example/phishing")]
+    [InlineData("/admin/\\external.example")]
+    [InlineData("/admin/settings\r\nLocation: https://external.example")]
+    [InlineData("")]
+    public async Task CallbackResult_LegacyInvalidReturnUrl_UsesSafeAdminFallback(string returnUrl)
+    {
+        await using var db = CreateDb();
+        db.GoogleDriveCredentials.Add(new NihomeBackend.Models.GoogleDriveCredential
+        {
+            Id = 1,
+            Enabled = false,
+            FrontendReturnUrl = returnUrl,
+            // Redirect must work without trying to decrypt a legacy token.
+            ProtectedRefreshToken = "unreadable-old-key-ring-value",
+        });
+        await db.SaveChangesAsync();
+        var service = new GoogleDriveOAuthService(new EphemeralDataProtectionProvider(),
+            new GoogleDriveSettingsStore(db, new EphemeralDataProtectionProvider()),
+            Mock.Of<IHttpClientFactory>(), Mock.Of<IGoogleDriveAdapter>(),
+            Mock.Of<IPermissionService>(), NullLogger<GoogleDriveOAuthService>.Instance);
+
+        var redirect = await service.BuildFrontendResultUrlAsync(GoogleDriveOAuthResult.InvalidState);
+
+        Assert.Equal("/admin/settings?tab=drive&driveOAuth=invalid_state", redirect);
+    }
+
+    [Fact]
+    public async Task CallbackResult_ValidInternalReturnUrl_PreservesQuery()
+    {
+        await using var db = CreateDb();
+        var store = new GoogleDriveSettingsStore(db, new EphemeralDataProtectionProvider());
+        var request = ValidConfiguration("test-client-secret");
+        request.Enabled = false;
+        request.FrontendReturnUrl = "/admin/settings?tab=drive&view=configuration";
+        await store.UpdateAsync(request, 7);
+        var service = new GoogleDriveOAuthService(new EphemeralDataProtectionProvider(), store,
+            Mock.Of<IHttpClientFactory>(), Mock.Of<IGoogleDriveAdapter>(),
+            Mock.Of<IPermissionService>(), NullLogger<GoogleDriveOAuthService>.Instance);
+
+        var redirect = await service.BuildFrontendResultUrlAsync(GoogleDriveOAuthResult.Success);
+
+        Assert.Equal("/admin/settings?tab=drive&view=configuration&driveOAuth=success", redirect);
     }
 
     private static AppDbContext CreateDb() => new(new DbContextOptionsBuilder<AppDbContext>()

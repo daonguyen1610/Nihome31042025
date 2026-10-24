@@ -169,7 +169,15 @@ public sealed class GoogleDriveSettingsStore(
             !FolderPathsEqual(settings, normalized.Folders);
 
         if (folderTopologyChanged)
+        {
+            var hasBindings = await db.ProjectDriveFolders.AnyAsync(ct);
+            var hasProcessingDocuments = await db.ProjectDocuments.AnyAsync(item =>
+                item.SyncStatus == ProjectDocumentSyncStatus.Processing, ct);
+            if (hasProcessingDocuments || hasBindings && (settings.Enabled || normalized.Enabled))
+                throw new GoogleDriveSettingsValidationException(
+                    "Hãy tắt đồng bộ, chờ mọi tệp đang xử lý hoàn tất rồi lưu thay đổi thư mục khi Google Drive vẫn tắt.");
             db.ProjectDriveFolders.RemoveRange(await db.ProjectDriveFolders.ToListAsync(ct));
+        }
 
         settings.Enabled = normalized.Enabled;
         settings.ClientId = normalized.ClientId;
@@ -334,6 +342,8 @@ public sealed class GoogleDriveSettingsStore(
             throw new GoogleDriveSettingsValidationException(
                 "PollIntervalSeconds phải từ 5 đến 300 giây. Ví dụ: 15.");
         ValidateOptionalDraft(normalized);
+        if (!string.IsNullOrEmpty(normalized.FrontendReturnUrl))
+            ValidateFrontendReturnUrl(normalized.FrontendReturnUrl);
         if (!normalized.Enabled) return normalized;
         if (!ClientIdPattern.IsMatch(normalized.ClientId))
             throw new GoogleDriveSettingsValidationException(
@@ -364,10 +374,13 @@ public sealed class GoogleDriveSettingsStore(
                 "OAuthRedirectUri phải là URL HTTPS callback hợp lệ; localhost được phép dùng HTTP. Ví dụ: https://nicon.vn/api/site-settings/google-drive/oauth/callback.");
     }
 
+    internal static bool IsValidFrontendReturnUrl(string value) =>
+        value.Length <= 2048 && value.StartsWith("/admin/", StringComparison.Ordinal) &&
+        !value.Contains('\\') && !value.Contains('#') && !HasControlCharacters(value);
+
     private static void ValidateFrontendReturnUrl(string value)
     {
-        if (value.Length > 2048 || !value.StartsWith("/admin/", StringComparison.Ordinal) ||
-            value.StartsWith("//", StringComparison.Ordinal) || value.Contains('\\') || value.Contains('#'))
+        if (!IsValidFrontendReturnUrl(value))
             throw new GoogleDriveSettingsValidationException(
                 "FrontendReturnUrl phải là đường dẫn Admin nội bộ. Ví dụ: /admin/settings?tab=drive.");
     }
@@ -418,9 +431,15 @@ public sealed class GoogleDriveSettingsStore(
 
     private static string[] FolderValues(GoogleDriveFolderOptions folders) =>
     [
-        folders.SurveyMedia, folders.CrmPreDesign, folders.DesignConcept,
-        folders.DesignBasic, folders.DesignShopDrawing, folders.LegalPermits,
-        folders.ConstructionAcceptance, folders.Procurement, folders.FinanceContracts,
+        folders.SurveyMedia,
+        folders.CrmPreDesign,
+        folders.DesignConcept,
+        folders.DesignBasic,
+        folders.DesignShopDrawing,
+        folders.LegalPermits,
+        folders.ConstructionAcceptance,
+        folders.Procurement,
+        folders.FinanceContracts,
     ];
 
     private static bool FolderPathsEqual(GoogleDriveCredential settings, GoogleDriveFolderOptions folders) =>

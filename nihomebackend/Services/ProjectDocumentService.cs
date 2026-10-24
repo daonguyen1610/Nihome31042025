@@ -123,6 +123,7 @@ public sealed class ProjectDocumentService(
             throw new ProjectDocumentConflictException("Tệp đang được đồng bộ. Vui lòng chờ lần xử lý hiện tại hoàn tất trước khi xoá.");
         if (document is null || document.DesiredOperation == ProjectDocumentDesiredOperation.Delete ||
             document.SyncStatus == ProjectDocumentSyncStatus.Deleted) return document is not null;
+        await EnsureConstructionEvidenceIsUnlinkedAsync(document.Id, ct);
         if (await db.ConstructionResourceRequests.AnyAsync(x => x.SupplyDocumentId == document.Id, ct))
             throw new ProjectDocumentValidationException("This document is supply evidence for a construction resource request and cannot be deleted.");
         document.DesiredOperation = ProjectDocumentDesiredOperation.Delete;
@@ -302,6 +303,7 @@ public sealed class ProjectDocumentService(
             ? await ConceptDossierTransaction.BeginAsync(db, checked((int)optionId.Value), ct) : null;
         var document = await FindAsync(projectId, documentId, ct);
         if (document is null) return false;
+        await EnsureConstructionEvidenceIsUnlinkedAsync(documentId, ct);
         if (await db.ConceptArtifacts.AnyAsync(item => item.ProjectDocumentId == documentId &&
                 item.ConceptRevision.FrozenAt != null, ct) ||
             await db.DesignReviews.AnyAsync(review => review.Stage == DesignReviewStage.Concept &&
@@ -373,6 +375,14 @@ public sealed class ProjectDocumentService(
         document.UpdatedByUserId = callerUserId;
         await db.SaveChangesAsync(ct);
         return Map(document);
+    }
+
+    private async Task EnsureConstructionEvidenceIsUnlinkedAsync(long documentId, CancellationToken ct)
+    {
+        if (await db.QaQcDossierEvidence.AnyAsync(item => item.ProjectDocumentId == documentId, ct) ||
+            await db.ConstructionQsBatchEvidence.AnyAsync(item => item.ProjectDocumentId == documentId, ct))
+            throw new ProjectDocumentValidationException(
+                "Tệp là bằng chứng QA/QC hoặc nghiệm thu khối lượng; hãy xử lý liên kết tại hồ sơ nguồn trước khi xóa.");
     }
 
     private async Task<bool> CanAccessProjectAsync(int projectId, int callerUserId, bool canSeeAll, CancellationToken ct) =>
