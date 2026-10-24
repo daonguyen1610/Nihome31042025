@@ -308,7 +308,9 @@ Cổng G4 kiểm tra điều kiện khởi công
 
 Baseline đã công bố không bị ghi đè. Mỗi lần điều chỉnh tạo version, lý do,
 người duyệt và lịch sử; thay đổi phạm vi/giá trị hợp đồng phải liên kết VO phù
-hợp. Công thức S-Curve, kỳ chốt và thẩm quyền mở khóa vẫn cần NICON xác nhận.
+hợp. Người dùng xác nhận ngày 24/10/2026: độ chậm S-Curve là `% kế hoạch −
+% thực tế` theo điểm phần trăm; kỳ linh hoạt ngày/tháng/năm. Nguồn % thực tế,
+cách tổng hợp theo kỳ và thẩm quyền publish/mở khóa vẫn cần NICON xác nhận.
 
 ### 5.2. Giai đoạn 2 — BCH thực hiện, Phòng CM kiểm soát chéo
 
@@ -319,7 +321,7 @@ hợp. Công thức S-Curve, kỳ chốt và thẩm quyền mở khóa vẫn c�
 | QA/QC | Lập biên bản lấy mẫu, thí nghiệm, chứng chỉ, checklist kiểm tra theo IFC | Thẩm định hồ sơ và kiểm tra đột xuất | Metadata/audit ở Nicon, file đồng bộ `04_Thi_cong_Nghiem_thu` |
 | Punchlist | Ghi lỗi, vị trí, ảnh, nguyên nhân, người xử lý và hạn | Giám sát lỗi quá hạn, xác nhận đóng/mở lại | Lỗi chặn tham gia điều kiện nghiệm thu/bàn giao |
 | HSE | Báo cáo vi phạm và bằng chứng, thực hiện khắc phục | Xác nhận độc lập, theo dõi hạn và đóng vi phạm | Sự kiện HSE xác nhận mới là bằng chứng KPI |
-| Tiến độ | Cập nhật tiến độ và bằng chứng thực tế | So với Baseline S-Curve | Trễ **lớn hơn 5%** tạo cảnh báo đỏ và yêu cầu giải trình/kế hoạch phục hồi |
+| Tiến độ | Cập nhật tiến độ và bằng chứng thực tế | So với Baseline S-Curve, kỳ linh hoạt ngày/tháng/năm | `% kế hoạch − % thực tế` **lớn hơn 5 điểm phần trăm** tạo cảnh báo đỏ và yêu cầu giải trình/kế hoạch phục hồi; đúng 5 điểm chưa vượt ngưỡng |
 | QS Upstream | Đo và lập đợt nghiệm thu với CĐT/TVGS | Duyệt tầng 2 | Liên kết HĐ Upstream, WBS, BOQ/VO và mốc phải thu |
 | QS Downstream | Đo khối lượng tổ đội/thầu phụ | Duyệt tầng 2 | Liên kết HĐ Downstream và hồ sơ phải trả |
 
@@ -539,7 +541,9 @@ khóa là snapshot bất biến.
 7. Q-09: template giấy phép theo loại/quy mô Dự án.
 8. Q-11: hợp đồng import MS Project đầy đủ gồm calendar, baseline và dữ liệu
    phân cấp; Team và Tiến độ hiện được tách thành hai tab liên kết.
-9. Công thức/kỳ chốt S-Curve; quyền publish/unlock baseline; điều kiện VO.
+9. Nguồn actual/cách tổng hợp S-Curve theo kỳ linh hoạt ngày/tháng/năm;
+   quyền publish/unlock baseline; điều kiện VO. Công thức điểm phần trăm đã
+   được người dùng xác nhận ngày 24/10/2026.
 10. Hoàn tất mapping bộ ISO trong `docs/Nicon/ISO/` vào QA/QC/cổng khởi công
     theo loại công trình; NICON xác minh `TC-M02`, `TC-M23`, `TQT-M00`, `TC-M00`
     và các mã dùng cho nhiều nội dung, rồi bổ sung riêng form còn thiếu. Không
