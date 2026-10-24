@@ -7,6 +7,7 @@ using NihomeBackend.Models.DTOs.Responses;
 namespace NihomeBackend.Services;
 
 public sealed class DesignReviewOperationException(string message) : Exception(message);
+public sealed record DesignReviewDocumentAccess(int OperationalProjectId, string Sha256);
 
 public interface IDesignReviewService
 {
@@ -17,7 +18,7 @@ public interface IDesignReviewService
     Task<DesignReviewResponse?> ConsolidateAsync(int projectId, int reviewId, ConsolidateDesignReviewRequest request, int callerUserId, CancellationToken ct);
     Task<DesignReviewResponse?> SubmitClientAsync(int projectId, int reviewId, string rowVersion, int callerUserId, CancellationToken ct);
     Task<DesignReviewResponse?> RecordClientDecisionAsync(int projectId, int reviewId, RecordDesignClientDecisionRequest request, int callerUserId, CancellationToken ct);
-    Task<int?> ResolveAccessibleDocumentProjectAsync(int projectId, int reviewId, long documentId, int callerUserId, CancellationToken ct);
+    Task<DesignReviewDocumentAccess?> ResolveAccessibleDocumentAsync(int projectId, int reviewId, long documentId, int callerUserId, CancellationToken ct);
     Task<IReadOnlyList<DesignReviewRecipientResponse>> ListRecipientCandidatesAsync(int projectId, int callerUserId, CancellationToken ct);
 }
 
@@ -45,7 +46,7 @@ public sealed class DesignReviewService(
             }).ToListAsync(ct);
     }
 
-    public async Task<int?> ResolveAccessibleDocumentProjectAsync(
+    public async Task<DesignReviewDocumentAccess?> ResolveAccessibleDocumentAsync(
         int projectId, int reviewId, long documentId, int callerUserId, CancellationToken ct)
     {
         var canManage = await CanManageAsync(projectId, callerUserId, ct);
@@ -54,7 +55,9 @@ public sealed class DesignReviewService(
                 review.DesignProject.OperationalProjectId != null &&
                 review.Documents.Any(document => document.ProjectDocumentId == documentId) &&
                 (canManage || review.Recipients.Any(recipient => recipient.UserId == callerUserId)))
-            .Select(review => review.DesignProject.OperationalProjectId)
+            .Select(review => new DesignReviewDocumentAccess(review.DesignProject.OperationalProjectId!.Value,
+                review.Documents.Where(document => document.ProjectDocumentId == documentId)
+                    .Select(document => document.Sha256Snapshot).Single()))
             .SingleOrDefaultAsync(ct);
     }
 

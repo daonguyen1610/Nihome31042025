@@ -2377,6 +2377,18 @@ require the full Design Project response, recipient directory or project-wide
 document catalog. Legacy `?tab=reviews` links fall back to the same scoped view
 when project access is denied. Other project tabs retain their permission
 guard, and review access grants no additional project permission.
+Review-specific content downloads verify the actual bytes against that review's
+`Sha256Snapshot` before sending headers or file bytes. They buffer up to 64 KiB
+in memory, spill larger files into the non-public ASP.NET temporary directory,
+enforce the existing 100 MiB document limit and dispose the buffer on success,
+failure or cancellation. Changed bytes return `409 Conflict` even if catalog
+metadata has not yet reconciled; missing/invalid snapshot hashes, empty content
+and incomplete/unverifiable downloads also fail closed. An unassigned caller
+still gets `404` before storage is read. A mismatch never rewrites the snapshot,
+approval state or source file. Restore the reviewed content or create the
+appropriate new revision through the owning workflow. This integrity guard is
+Partial protection: it does not archive or recover historical bytes, and the
+historical storage/retention policy remains an open decision.
 `POST .../{reviewId}/comments` accepts an optional
 `projectDocumentId`; when present it must be one of that review's submitted
 documents. A missing/null ID keeps the existing dossier-level comment behavior.

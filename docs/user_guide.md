@@ -964,6 +964,10 @@ general or file-specific comments while internal review is open. This page
 does not grant access to other project tabs or documents. Older notification
 links to the Reviews tab also open the assigned-review view when full project
 access is unavailable.
+Downloads from a review check that the file still matches the submitted
+version. If it has changed, the download is blocked with an explanation;
+contact the Design Manager to check the version. The system preserves the
+submitted record and does not automatically replace it with the changed file.
 An unsubmitted draft does not replace a submitted client decision. If another
 review already submitted the same revision, the unused draft remains visible
 for reference and its submission button is disabled. For a historical shared
