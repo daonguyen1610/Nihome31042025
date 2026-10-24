@@ -41,19 +41,27 @@ public sealed class DesignReviewsController(
     {
         var userId = UserId();
         if (userId is null) return Unauthorized();
-        var operationalProjectId = await service.ResolveAccessibleDocumentProjectAsync(
+        var documentAccess = await service.ResolveAccessibleDocumentAsync(
             projectId, reviewId, documentId, userId.Value, ct);
-        if (!operationalProjectId.HasValue) return NotFound();
+        if (documentAccess is null) return NotFound();
         var content = await documents.DownloadAsync(
-            operationalProjectId.Value, documentId, userId.Value, canSeeAll: true, ct);
+            documentAccess.OperationalProjectId, documentId, userId.Value, canSeeAll: true, ct);
         if (content is null) return NotFound();
-        Response.ContentType = content.ContentType;
-        Response.Headers.ContentDisposition = new System.Net.Http.Headers.ContentDispositionHeaderValue("attachment")
+        try
         {
-            FileNameStar = content.OriginalFileName,
-        }.ToString();
-        await content.WriteToAsync(Response.Body, ct);
-        return new EmptyResult();
+            await using var verified = await VerifiedProjectDocumentDownload.CreateAsync(content, documentAccess.Sha256, ct);
+            Response.ContentType = content.ContentType;
+            Response.Headers.ContentDisposition = new System.Net.Http.Headers.ContentDispositionHeaderValue("attachment")
+            {
+                FileNameStar = content.OriginalFileName,
+            }.ToString();
+            await verified.WriteToAsync(Response.Body, ct);
+            return new EmptyResult();
+        }
+        catch (ProjectDocumentConflictException exception)
+        {
+            return Conflict(new { message = exception.Message });
+        }
     }
 
     [HttpGet]
