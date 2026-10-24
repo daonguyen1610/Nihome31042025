@@ -37,9 +37,10 @@ import {
   type ProjectDocumentResponse,
 } from "@/services/adminApi";
 
-interface Props {
-  project: DesignProjectResponse;
-}
+type Props = (
+  | { project: DesignProjectResponse; recipientProjectId?: never }
+  | { project?: never; recipientProjectId: number }
+) & { focusedReviewId?: number };
 const categoryByStage: Record<DesignReviewStage, string> = {
   Concept: "DesignConcept",
   BasicDesign: "DesignBasic",
@@ -51,13 +52,16 @@ const sourceTypeByStage: Record<DesignReviewStage, string> = {
   ShopDrawing: "ShopDrawing",
 };
 
-export const DesignReviewsTab = ({ project }: Props) => {
+export const DesignReviewsTab = ({ project, recipientProjectId, focusedReviewId }: Props) => {
+  const projectId = project?.id ?? recipientProjectId ?? 0;
+  const operationalProjectId = project?.operationalProjectId;
   const { t, lang } = useI18n();
   const currentUserId = useAppSelector((state) => state.auth.user?.userId ?? null);
   const { has } = usePermissions();
   const canCreate =
-    currentUserId === (project.designManagerUserId ?? project.projectManagerUserId) ||
-    has("operations.projects.view.all");
+    Boolean(project) &&
+    (currentUserId === (project?.designManagerUserId ?? project?.projectManagerUserId) ||
+      has("operations.projects.view.all"));
   const [reviews, setReviews] = useState<DesignReviewResponse[]>([]);
   const [recipientCandidates, setRecipientCandidates] = useState<
     Array<{ userId: number; name: string }>
@@ -85,7 +89,7 @@ export const DesignReviewsTab = ({ project }: Props) => {
   const createTrigger = useRef<HTMLButtonElement>(null);
 
   const load = useCallback(async () => {
-    if (!project.operationalProjectId) {
+    if (!projectId) {
       setLoading(false);
       return;
     }
@@ -93,12 +97,12 @@ export const DesignReviewsTab = ({ project }: Props) => {
     setError(null);
     try {
       const [reviewResponse, teamResponse, documentResponse] = await Promise.all([
-        adminApi.listDesignReviews(project.id),
+        adminApi.listDesignReviews(projectId),
         canCreate
-          ? adminApi.listDesignReviewRecipientCandidates(project.id)
+          ? adminApi.listDesignReviewRecipientCandidates(projectId)
           : Promise.resolve({ data: [] }),
-        canCreate
-          ? adminApi.listProjectDocuments(project.operationalProjectId)
+        canCreate && operationalProjectId
+          ? adminApi.listProjectDocuments(operationalProjectId)
           : Promise.resolve({ data: [] }),
       ]);
       setReviews(reviewResponse.data);
@@ -106,7 +110,7 @@ export const DesignReviewsTab = ({ project }: Props) => {
       setDocuments(documentResponse.data);
       if (canCreate) {
         const options = (
-          await adminApi.listConceptOptions({ designProjectId: project.id, pageSize: 100 })
+          await adminApi.listConceptOptions({ designProjectId: projectId, pageSize: 100 })
         ).data.items;
         setConceptOptions(options);
         const revisionResults = await Promise.all(
@@ -120,10 +124,18 @@ export const DesignReviewsTab = ({ project }: Props) => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [canCreate, project.id, project.operationalProjectId]);
+  }, [canCreate, projectId, operationalProjectId]);
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (!loading && focusedReviewId && reviews.some((review) => review.id === focusedReviewId)) {
+      const card = document.getElementById(`design-review-${focusedReviewId}`);
+      card?.scrollIntoView({ block: "start" });
+      card?.focus({ preventScroll: true });
+    }
+  }, [focusedReviewId, loading, reviews]);
 
   const eligibleDocuments = useMemo(
     () =>
@@ -153,7 +165,7 @@ export const DesignReviewsTab = ({ project }: Props) => {
     setError(null);
     try {
       const response = await adminApi.downloadDesignReviewDocument(
-        project.id,
+        projectId,
         review.id,
         documentId,
       );
@@ -184,7 +196,7 @@ export const DesignReviewsTab = ({ project }: Props) => {
     setError(null);
     try {
       await adminApi.createDesignReview(
-        project.id,
+        projectId,
         {
           stage,
           title: title.trim(),
@@ -218,10 +230,10 @@ export const DesignReviewsTab = ({ project }: Props) => {
     try {
       const key = newIdempotencyKey();
       if (action === "internal")
-        await adminApi.submitDesignReviewInternal(project.id, review.id, review.rowVersion, key);
+        await adminApi.submitDesignReviewInternal(projectId, review.id, review.rowVersion, key);
       else if (action === "comment")
         await adminApi.commentDesignReview(
-          project.id,
+          projectId,
           review.id,
           note,
           commentDocumentIds[review.id] && commentDocumentIds[review.id] !== "general"
@@ -230,12 +242,12 @@ export const DesignReviewsTab = ({ project }: Props) => {
           key,
         );
       else if (action === "consolidate")
-        await adminApi.consolidateDesignReview(project.id, review.id, note, review.rowVersion, key);
+        await adminApi.consolidateDesignReview(projectId, review.id, note, review.rowVersion, key);
       else if (action === "client")
-        await adminApi.submitDesignReviewClient(project.id, review.id, review.rowVersion, key);
+        await adminApi.submitDesignReviewClient(projectId, review.id, review.rowVersion, key);
       else
         await adminApi.recordDesignClientDecision(
-          project.id,
+          projectId,
           review.id,
           action === "approve"
             ? "ClientApproved"
@@ -329,6 +341,8 @@ export const DesignReviewsTab = ({ project }: Props) => {
         reviews.map((review) => (
           <article
             key={review.id}
+            id={`design-review-${review.id}`}
+            tabIndex={-1}
             className="overflow-hidden rounded-lg border bg-white p-4 shadow-sm"
           >
             <div className="flex flex-wrap items-start justify-between gap-2">
@@ -412,7 +426,8 @@ export const DesignReviewsTab = ({ project }: Props) => {
                   : null}
               </p>
             ) : null}
-            {review.canManage &&
+            {canCreate &&
+            review.canManage &&
             review.stage === "Concept" &&
             review.status === "SubmittedToClient" &&
             review.conceptOptionId ? (
@@ -439,11 +454,11 @@ export const DesignReviewsTab = ({ project }: Props) => {
                   onClick={() =>
                     void (async () => {
                       const file = acceptanceFiles[review.id];
-                      if (!file || !project.operationalProjectId || !review.conceptOptionId) return;
+                      if (!file || !operationalProjectId || !review.conceptOptionId) return;
                       setBusy(review.id);
                       try {
                         const uploaded = await adminApi.uploadProjectDocument(
-                          project.operationalProjectId,
+                          operationalProjectId,
                           file,
                           "DesignConcept",
                           newIdempotencyKey(),
@@ -540,7 +555,8 @@ export const DesignReviewsTab = ({ project }: Props) => {
               </div>
             ) : null}
             {review.canComment ||
-            (review.canManage &&
+            (canCreate &&
+              review.canManage &&
               ["InternalReview", "SubmittedToClient"].includes(review.status)) ? (
               <div className="mt-3 space-y-1.5">
                 <Label htmlFor={`review-${review.id}-note`}>
@@ -592,7 +608,7 @@ export const DesignReviewsTab = ({ project }: Props) => {
               </div>
             ) : null}
             <div className="mt-3 flex flex-wrap gap-2">
-              {review.canManage && review.status === "Draft" ? (
+              {canCreate && review.canManage && review.status === "Draft" ? (
                 <div className="space-y-2">
                   <Button
                     disabled={
@@ -625,7 +641,7 @@ export const DesignReviewsTab = ({ project }: Props) => {
                   {t("designProjects.reviews.comment")}
                 </Button>
               ) : null}
-              {review.canManage && review.status === "InternalReview" ? (
+              {canCreate && review.canManage && review.status === "InternalReview" ? (
                 <Button
                   disabled={busy === review.id || !notes[review.id]?.trim()}
                   onClick={() => void act(review, "consolidate")}
@@ -634,13 +650,13 @@ export const DesignReviewsTab = ({ project }: Props) => {
                   {t("designProjects.reviews.consolidate")}
                 </Button>
               ) : null}
-              {review.canManage && review.status === "ReadyForClient" ? (
+              {canCreate && review.canManage && review.status === "ReadyForClient" ? (
                 <Button disabled={busy === review.id} onClick={() => void act(review, "client")}>
                   <Send className="mr-1 h-4 w-4" />
                   {t("designProjects.reviews.submitClient")}
                 </Button>
               ) : null}
-              {review.canManage && review.status === "SubmittedToClient" ? (
+              {canCreate && review.canManage && review.status === "SubmittedToClient" ? (
                 <>
                   <Button
                     disabled={

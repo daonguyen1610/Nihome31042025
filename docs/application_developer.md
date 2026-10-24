@@ -2350,7 +2350,14 @@ Design dossier circulation is exposed at
 `/api/design-projects/{projectId}/reviews`. A Design Manager creates a revision
 with designated internal recipients and Project Document IDs from the matching
 Design category. Recipients can only list their assigned reviews and comment
-while the review is internal. `POST .../{reviewId}/comments` accepts an optional
+while the review is internal. Notifications open
+`/admin/design-reviews/{projectId}?reviewId={reviewId}`. This recipient workspace
+loads only the scoped review API and review-specific downloads; it does not
+require the full Design Project response, recipient directory or project-wide
+document catalog. Legacy `?tab=reviews` links fall back to the same scoped view
+when project access is denied. Other project tabs retain their permission
+guard, and review access grants no additional project permission.
+`POST .../{reviewId}/comments` accepts an optional
 `projectDocumentId`; when present it must be one of that review's submitted
 documents. A missing/null ID keeps the existing dossier-level comment behavior.
 The response returns the ID with each comment. The nullable column and composite

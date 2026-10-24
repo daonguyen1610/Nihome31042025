@@ -477,7 +477,7 @@ public sealed class DesignReviewService(
                     ["title"] = review.Title,
                     ["stage"] = review.Stage.ToString(),
                     ["status"] = review.Status.ToString(),
-                }, "DesignReview", review.Id, $"/admin/design-projects/{review.DesignProjectId}?tab=reviews");
+                }, "DesignReview", review.Id, $"/admin/design-reviews/{review.DesignProjectId}?reviewId={review.Id}");
         }
         catch (Exception exception)
         {

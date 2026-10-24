@@ -33,7 +33,7 @@ test.describe("NIH-115 — Basic Design + Detail Design unlock (real-user flow)"
     loginInBrowserAs,
     baseURL,
   }) => {
-    test.slow(); // this flow does ~15 HTTP round-trips
+    test.setTimeout(240_000); // real Drive sync and multiple approval round-trips
 
     // ---------- 1. Set up a fresh project via the API ----------
     const token = await loginAs(TEST_USERS.superAdmin);
@@ -187,10 +187,12 @@ test.describe("NIH-115 — Basic Design + Detail Design unlock (real-user flow)"
     await expect(
       teamTab.getByText(/^(Chủ nhiệm thiết kế|Design manager|设计经理|デザインマネージャー)/),
     ).toHaveCount(2);
-    await page
+    const documentsTab = page
       .locator('button[role="tab"]')
-      .filter({ hasText: /^Tài liệu$|^Documents$/i })
-      .click({ force: true });
+      .filter({ hasText: /^Tài liệu$|^Documents$/i });
+    await documentsTab.scrollIntoViewIfNeeded();
+    await documentsTab.click();
+    await expect(documentsTab).toHaveAttribute("aria-selected", "true");
     await expect(page.getByTestId("design-project-documents-tab")).toBeVisible();
     await expect(page.getByText(/NIH-114\.\.118/)).toHaveCount(0);
 
@@ -222,6 +224,8 @@ test.describe("NIH-115 — Basic Design + Detail Design unlock (real-user flow)"
       { waitUntil: "networkidle" },
     );
     await expect(page.locator(`#basic-design-doc-${documentIds[0]}`)).toHaveClass(/ring-amber-300/);
-    await expect(page.getByTestId(`basic-design-delete-${documentIds[0]}`)).toBeVisible();
+    // Internally approved evidence remains read-only after the stage handoff.
+    // Highest-tier deletion is available for rejected records, not this one.
+    await expect(page.getByTestId(`basic-design-delete-${documentIds[0]}`)).toHaveCount(0);
   });
 });

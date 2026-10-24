@@ -958,6 +958,12 @@ it. Finalize remains disabled until client approval and signed acceptance are
 recorded. Internal submission numbers are labelled separately from option
 revisions in Reviews. Discarding an option requires confirmation and preserves
 submitted documents and history. The Concept header links directly to Reviews.
+Design circulation notifications open the specific assigned review, including
+for recipients outside the project team. Read its submitted files and add
+general or file-specific comments while internal review is open. This page
+does not grant access to other project tabs or documents. Older notification
+links to the Reviews tab also open the assigned-review view when full project
+access is unavailable.
 An unsubmitted draft does not replace a submitted client decision. If another
 review already submitted the same revision, the unused draft remains visible
 for reference and its submission button is disabled. For a historical shared

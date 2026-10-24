@@ -89,6 +89,7 @@ const AdminDesignProjectDetail = () => {
   const [project, setProject] = useState<DesignProjectResponse | null>(null);
   const [loading, setLoading] = useState(isValidId);
   const [error, setError] = useState<string | null>(null);
+  const [recipientOnly, setRecipientOnly] = useState(false);
 
   const fetchProject = useCallback(async () => {
     if (!isValidId) return;
@@ -97,12 +98,16 @@ const AdminDesignProjectDetail = () => {
     // content on screen so the Tabs component doesn't remount and reset
     // the selected tab back to Overview.
     setError(null);
+    setRecipientOnly(false);
     try {
       const { data } = await adminApi.getDesignProject(numericId);
       setProject(data);
     } catch (err) {
       const status = (err as { response?: { status?: number } })?.response?.status;
-      if (status === 404) {
+      if ((status === 403 || status === 404) && requestedTab === "reviews") {
+        setProject(null);
+        setRecipientOnly(true);
+      } else if (status === 404) {
         setProject(null);
       } else {
         setError(extractApiError(err));
@@ -110,7 +115,7 @@ const AdminDesignProjectDetail = () => {
     } finally {
       setLoading(false);
     }
-  }, [isValidId, numericId]);
+  }, [isValidId, numericId, requestedTab]);
 
   useEffect(() => {
     void fetchProject();
@@ -160,6 +165,16 @@ const AdminDesignProjectDetail = () => {
       <AdminLayout>
         <div className="p-4">
           <PageLoading />
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  if (recipientOnly) {
+    return (
+      <AdminLayout>
+        <div className="p-4">
+          <DesignReviewsTab recipientProjectId={numericId} />
         </div>
       </AdminLayout>
     );

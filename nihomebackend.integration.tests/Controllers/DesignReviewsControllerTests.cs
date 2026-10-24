@@ -90,8 +90,14 @@ public sealed class DesignReviewsControllerTests : IntegrationTestBase
                 rowVersion = created.GetProperty("rowVersion").GetString(),
             });
         submit.StatusCode.Should().Be(HttpStatusCode.OK, await submit.Content.ReadAsStringAsync());
+        (await WithDbAsync(db => db.Notifications.Where(item => item.UserId == fixture.RecipientUserId &&
+            item.RefEntityType == "DesignReview" && item.RefEntityId == reviewId &&
+            item.TemplateCode == "design-review.internal").Select(item => item.LinkUrl).SingleAsync()))
+            .Should().Be($"/admin/design-reviews/{fixture.DesignProjectId}?reviewId={reviewId}");
 
         await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "SALE"));
+        (await Client.GetAsync($"/api/design-projects/{fixture.DesignProjectId}"))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
         using var list = await Client.GetAsync($"/api/design-projects/{fixture.DesignProjectId}/reviews");
         list.StatusCode.Should().Be(HttpStatusCode.OK);
         var recipientReview = (await ReadJsonAsync(list)).EnumerateArray().Single();

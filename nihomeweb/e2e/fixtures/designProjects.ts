@@ -82,6 +82,7 @@ interface ApproveDesignStageOptions {
   category: "DesignConcept" | "DesignBasic" | "DesignShopDrawing";
   sourceEntityType: "ConceptOption" | "BasicDesignDoc" | "ShopDrawing";
   sourceRecordIds: number[];
+  stopAfterInternal?: boolean;
 }
 
 export async function isGoogleDriveConnected(
@@ -351,7 +352,7 @@ export async function approveDesignStage(
     acceptanceDocumentId = acceptance.id;
   }
 
-  for (let attempt = 0; attempt < 30; attempt += 1) {
+  for (let attempt = 0; attempt < 90; attempt += 1) {
     const documents = await json<Array<{ id: number; syncStatus: string }>>(
       await api.get(`/api/operational-projects/${project.operationalProjectId}/documents`, {
         headers: options.headers,
@@ -364,8 +365,17 @@ export async function approveDesignStage(
       )
     )
       break;
-    if (attempt === 29) throw new Error("Design review evidence did not reach Synced state.");
-    await new Promise((resolve) => setTimeout(resolve, 200));
+    if (attempt === 89)
+      throw new Error(
+        `Design review evidence did not reach Synced state: ${JSON.stringify(
+          documents.filter((document) =>
+            [...documentIds, ...(acceptanceDocumentId ? [acceptanceDocumentId] : [])].includes(
+              document.id,
+            ),
+          ),
+        )}`,
+      );
+    await new Promise((resolve) => setTimeout(resolve, 1000));
   }
 
   let review = await json<{ id: number; rowVersion: string }>(
@@ -392,6 +402,7 @@ export async function approveDesignStage(
     review = await json(response, label);
   };
   await advance("submit-internal", { rowVersion: review.rowVersion }, "submit internal review");
+  if (options.stopAfterInternal) return;
   await advance(
     "consolidate",
     {
