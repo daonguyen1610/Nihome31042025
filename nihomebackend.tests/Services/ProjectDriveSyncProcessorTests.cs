@@ -739,6 +739,124 @@ public sealed class ProjectDriveSyncProcessorTests : IDisposable
     }
 
     [Fact]
+    public async Task ReconcileBoundProjectsAsync_FailedFirstBatchDoesNotStarveLaterProjects()
+    {
+        var bindings = AddReconciliationQueue(12);
+        var visited = new List<string>();
+        drive.Setup(item => item.ListChildrenAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback<string, CancellationToken>((id, _) => visited.Add(id))
+            .ThrowsAsync(new IOException("Remote folder temporarily unavailable"));
+
+        await processor.ReconcileBoundProjectsAsync();
+
+        Assert.Equal(bindings.Take(10).Select(item => item.DriveFolderId), visited);
+        Assert.All(bindings.Take(10), item =>
+        {
+            Assert.Null(item.LastReconciledAt);
+            Assert.Null(item.ReconciliationClaimToken);
+            Assert.True(item.UpdatedAt > bindings[10].UpdatedAt);
+        });
+        visited.Clear();
+
+        await processor.ReconcileBoundProjectsAsync();
+
+        Assert.Equal(bindings.Skip(10).Select(item => item.DriveFolderId), visited.Take(2));
+        Assert.Equal(10, visited.Count);
+        Assert.Empty(db.ProjectDocuments);
+        drive.Verify(item => item.DeleteAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ReconcileBoundProjectsAsync_ActiveLeasesDoNotConsumeBatchCapacity()
+    {
+        var bindings = AddReconciliationQueue(12);
+        var tokens = new Dictionary<long, Guid>();
+        foreach (var binding in bindings.Take(10))
+        {
+            var token = Guid.NewGuid();
+            tokens[binding.Id] = token;
+            binding.ReconciliationClaimToken = token;
+            binding.ReconciliationClaimExpiresAt = DateTime.UtcNow.AddMinutes(2);
+        }
+        db.SaveChanges();
+        var visited = new List<string>();
+        drive.Setup(item => item.ListChildrenAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback<string, CancellationToken>((id, _) => visited.Add(id))
+            .ReturnsAsync([]);
+
+        await processor.ReconcileBoundProjectsAsync();
+
+        Assert.Equal(bindings.Skip(10).Select(item => item.DriveFolderId), visited);
+        Assert.All(bindings.Take(10), item => Assert.Equal(tokens[item.Id], item.ReconciliationClaimToken));
+        Assert.All(bindings.Skip(10), item => Assert.NotNull(item.LastReconciledAt));
+    }
+
+    [Fact]
+    public async Task ReconcileBoundProjectsAsync_SuccessfulBatchMovesToRemainingFolders()
+    {
+        var bindings = AddReconciliationQueue(12);
+        var visited = new List<string>();
+        drive.Setup(item => item.ListChildrenAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback<string, CancellationToken>((id, _) => visited.Add(id))
+            .ReturnsAsync([]);
+
+        await processor.ReconcileBoundProjectsAsync();
+        await processor.ReconcileBoundProjectsAsync();
+
+        Assert.Equal(bindings.Select(item => item.DriveFolderId), visited);
+        Assert.All(bindings, item => Assert.NotNull(item.LastReconciledAt));
+        Assert.All(bindings, item => Assert.Null(item.ReconciliationClaimToken));
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task ReconcileBoundProjectsAsync_ExpiredOrIncompleteLeaseCanRecover(bool hasExpiry)
+    {
+        folder.ReconciliationClaimToken = Guid.NewGuid();
+        folder.ReconciliationClaimExpiresAt = hasExpiry ? DateTime.UtcNow.AddMinutes(-1) : null;
+        db.SaveChanges();
+        drive.Setup(item => item.ListChildrenAsync(folder.DriveFolderId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+
+        await processor.ReconcileBoundProjectsAsync();
+
+        Assert.NotNull(folder.LastReconciledAt);
+        Assert.Null(folder.ReconciliationClaimToken);
+        Assert.Null(folder.ReconciliationClaimExpiresAt);
+        drive.Verify(item => item.ListChildrenAsync(folder.DriveFolderId, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    private List<ProjectDriveFolder> AddReconciliationQueue(int count)
+    {
+        var touchedAt = DateTime.UtcNow.AddHours(-1);
+        folder.UpdatedAt = touchedAt;
+        var bindings = new List<ProjectDriveFolder> { folder };
+        for (var index = 1; index < count; index++)
+        {
+            var queuedProject = new OperationalProject
+            {
+                Code = $"NICON-DRIVE-QUEUE-{index:00}",
+                Name = $"NICON Drive reconciliation project {index:00}",
+                CustomerId = project.CustomerId,
+            };
+            db.OperationalProjects.Add(queuedProject);
+            db.SaveChanges();
+            var binding = new ProjectDriveFolder
+            {
+                OperationalProjectId = queuedProject.Id,
+                Category = ProjectDocumentCategory.DesignConcept,
+                DriveFolderId = $"nicon-drive-queue-{index:00}",
+                UpdatedAt = touchedAt.AddSeconds(index),
+            };
+            db.ProjectDriveFolders.Add(binding);
+            bindings.Add(binding);
+        }
+        db.SaveChanges();
+        return bindings;
+    }
+
+    [Fact]
     public async Task ReconcileProjectAsync_ActiveFolderLease_SkipsRemoteIo()
     {
         var token = Guid.NewGuid();
