@@ -70,6 +70,8 @@ internal static class DeletionImpactPlanner
         var groups = await db.DepartmentWorkPackageParticipantGroups.AsNoTracking().Where(item => item.WorkPackageId == id).Select(item => item.RoleGroupId).ToListAsync(ct);
         AddRaw(items, "workPackages.groups", DeletionImpactActions.Delete, groups.Select(item => item.ToString()), []);
         await AddAsync(items, "workPackages.history", DeletionImpactActions.Delete, db.DepartmentWorkPackageHistory.Where(item => item.WorkPackageId == id), item => item.Id, item => item.Action, ct);
+        await AddAsync(items, "workPackages.approvalEmails", DeletionImpactActions.Delete, db.WorkPackageApprovalEmails.Where(item => item.WorkPackageId == id && item.Status != "Sending"), item => item.Id, item => item.Status, ct);
+        await AddAsync(items, "workPackages.sendingEmails", DeletionImpactActions.Block, db.WorkPackageApprovalEmails.Where(item => item.WorkPackageId == id && item.Status == "Sending"), item => item.Id, item => item.Status, ct);
         await AddAsync(items, "workPackages.offers", DeletionImpactActions.Delete, offers, item => item.Id, item => item.SupplierReference, ct);
         await AddAsync(items, "workPackages.offerLines", DeletionImpactActions.Delete, db.ProcurementInputPriceLines.Where(item => offerIds.Contains(item.OfferId)), item => item.Id, item => item.Description, ct);
         await AddAsync(items, "workPackages.financeReview", DeletionImpactActions.Delete, db.DepartmentFinanceReviews.Where(item => item.WorkPackageId == id), item => item.Id, item => item.Status.ToString(), ct);

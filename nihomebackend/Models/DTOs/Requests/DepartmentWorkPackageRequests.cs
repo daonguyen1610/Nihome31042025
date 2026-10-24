@@ -175,9 +175,20 @@ public sealed class UpsertInputPriceOfferRequest : IConcurrencyRequest
     public string? RowVersion { get; set; }
 }
 
+public sealed class WorkPackageApprovalRecipientsRequest
+{
+    [StringLength(150)]
+    public string? ToEmail { get; set; }
+
+    [MaxLength(20)]
+    public List<string> CcEmails { get; set; } = new();
+}
+
 public sealed class SubmitBusinessRecordRequest : IConcurrencyRequest
 {
     public string? RowVersion { get; set; }
+    [StringLength(32768)]
+    public string? PreviewToken { get; set; }
 }
 
 public sealed class DecideBusinessRecordRequest : IConcurrencyRequest

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -16,6 +17,8 @@ public sealed class DepartmentWorkPackageServiceTests : IDisposable
     private readonly Mock<IProjectAccessService> _access = new();
     private readonly Mock<INotificationService> _notifications = new();
     private readonly DepartmentWorkPackageService _service;
+    private readonly Mock<IEmailService> _email = new();
+    private readonly WorkPackageApprovalEmailService _approvalEmails;
     private readonly RoleGroup _procurementGroup;
     private readonly RoleGroup _crmGroup;
     private readonly RoleGroup _financeGroup;
@@ -65,8 +68,11 @@ public sealed class DepartmentWorkPackageServiceTests : IDisposable
                 It.IsAny<int>(), It.IsAny<string>(), It.IsAny<IDictionary<string, string>>(),
                 It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync((NihomeBackend.Models.DTOs.Responses.NotificationResponse?)null);
+        var permissions = new Mock<IPermissionService>();
+        permissions.Setup(item => item.HasAsync(It.IsAny<int>(), "work.packages.verify", It.IsAny<CancellationToken>())).ReturnsAsync(true);
+        _approvalEmails = new WorkPackageApprovalEmailService(_db, new EphemeralDataProtectionProvider(), permissions.Object, _email.Object, NullLogger<WorkPackageApprovalEmailService>.Instance);
         _service = new DepartmentWorkPackageService(
-            _db, _access.Object, _notifications.Object, NullLogger<DepartmentWorkPackageService>.Instance);
+            _db, _access.Object, _notifications.Object, NullLogger<DepartmentWorkPackageService>.Instance, _approvalEmails);
     }
 
     [Fact]
@@ -542,9 +548,23 @@ public sealed class DepartmentWorkPackageServiceTests : IDisposable
                 new() { ItemCode = "MEP-CABLE-01", Description = "Cáp điện chống cháy", Unit = "m", Quantity = 1200, UnitPrice = 85000, VatPercent = 10, SortOrder = 1 },
             ],
         }, _procurementLead.Id);
+        package.LeadUserId = _admin.Id;
+        var storedOffer = await _db.ProcurementInputPriceOffers.SingleAsync(item => item.Id == offer.Id);
+        storedOffer.RowVersion = BitConverter.GetBytes(1L);
+        offer.RowVersion = Convert.ToBase64String(storedOffer.RowVersion);
+        await _db.SaveChangesAsync();
+        var preview = await _service.PreviewApprovalEmailAsync(package.Id, offer.Id, _procurementLead.Id);
         offer = (await _service.SubmitInputPriceOfferAsync(package.Id, offer.Id,
-            new SubmitBusinessRecordRequest { RowVersion = offer.RowVersion }, _procurementLead.Id))!;
+            new SubmitBusinessRecordRequest { RowVersion = offer.RowVersion, PreviewToken = preview.PreviewToken }, _procurementLead.Id))!;
+        Assert.Single(await _db.WorkPackageApprovalEmails.ToListAsync());
+        await _approvalEmails.SendPendingAsync(default);
+        _email.Verify(item => item.SendEmailAsync(_admin.Email, preview.Subject, preview.Body), Times.Once);
+        await _service.SubmitInputPriceOfferAsync(package.Id, offer.Id,
+            new SubmitBusinessRecordRequest { RowVersion = offer.RowVersion, PreviewToken = preview.PreviewToken }, _procurementLead.Id);
+        Assert.Single(await _db.WorkPackageApprovalEmails.ToListAsync());
 
+        package.LeadUserId = _procurementLead.Id;
+        await _db.SaveChangesAsync();
         var selfApproval = await Assert.ThrowsAsync<DepartmentWorkPackageOperationException>(() =>
             _service.DecideInputPriceOfferAsync(package.Id, offer.Id,
                 new DecideBusinessRecordRequest { Approved = true, RowVersion = offer.RowVersion }, _procurementLead.Id));
@@ -607,8 +627,13 @@ public sealed class DepartmentWorkPackageServiceTests : IDisposable
             Findings = "Đủ điều kiện trình duyệt.",
             RowVersion = review.RowVersion,
         }, _accountantStaff.Id);
+        var storedReview = await _db.DepartmentFinanceReviews.SingleAsync(item => item.Id == review.Id);
+        storedReview.RowVersion = BitConverter.GetBytes(1L);
+        review.RowVersion = Convert.ToBase64String(storedReview.RowVersion);
+        await _db.SaveChangesAsync();
+        var preview = await _service.PreviewApprovalEmailAsync(package.Id, null, _accountantStaff.Id);
         review = (await _service.SubmitFinanceReviewAsync(package.Id,
-            new SubmitBusinessRecordRequest { RowVersion = review.RowVersion }, _accountantStaff.Id))!;
+            new SubmitBusinessRecordRequest { RowVersion = review.RowVersion, PreviewToken = preview.PreviewToken }, _accountantStaff.Id))!;
         var approved = await _service.DecideFinanceReviewAsync(package.Id,
             new DecideBusinessRecordRequest { Approved = true, RowVersion = review.RowVersion }, _accountantLead.Id);
 

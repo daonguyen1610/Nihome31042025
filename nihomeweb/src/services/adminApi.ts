@@ -328,6 +328,13 @@ export interface EmailTemplatesResponse {
   quoteEmailBodyTemplate: string | null;
 }
 
+export interface WorkPackageApprovalPreview {
+  previewToken: string;
+  toEmail: string;
+  subject: string;
+  body: string;
+  ccEmails: string[];
+}
 export interface ContractReminderTemplates {
   renewalSubject: string;
   renewalBody: string;
@@ -1012,6 +1019,16 @@ export interface DepartmentWorkPackageResponse {
   tasks: DepartmentWorkTaskResponse[];
   inputPriceOffers: InputPriceOfferResponse[];
   financeReview?: FinanceReviewResponse | null;
+  approvalEmails: {
+    id: number;
+    recordType: string;
+    recordId: number;
+    toEmail: string;
+    ccEmails: string[];
+    status: string;
+    createdAt: string;
+    sentAt: string | null;
+  }[];
 }
 
 export type BusinessReviewStatus = "Draft" | "Submitted" | "Approved" | "Rejected";
@@ -5997,6 +6014,24 @@ export const adminApi = {
 
   // Email templates
   getEmailTemplates: () => api.get<EmailTemplatesResponse>("/site-settings/email-templates"),
+  getWorkPackageApprovalTemplate: () =>
+    api.get<{ subject: string; body: string }>("/site-settings/work-package-approval-template"),
+  updateWorkPackageApprovalTemplate: (data: { subject: string; body: string }) =>
+    api.put<{ subject: string; body: string }>(
+      "/site-settings/work-package-approval-template",
+      data,
+    ),
+  previewWorkPackageApprovalEmail: (
+    packageId: number,
+    offerId?: number,
+    recipients?: { toEmail: string; ccEmails: string[] },
+  ) =>
+    api.post<WorkPackageApprovalPreview>(
+      offerId
+        ? `/work-packages/${packageId}/input-price-offers/${offerId}/approval-email-preview`
+        : `/work-packages/${packageId}/finance-review/approval-email-preview`,
+      recipients,
+    ),
   getContractReminderTemplates: () =>
     api.get<ContractReminderTemplates>("/site-settings/contract-reminder-templates"),
   updateContractReminderTemplates: (data: ContractReminderTemplates) =>
@@ -7765,10 +7800,11 @@ export const adminApi = {
     offerId: number,
     rowVersion: string,
     idempotencyKey: string,
+    previewToken: string,
   ) =>
     api.post<InputPriceOfferResponse>(
       `/work-packages/${packageId}/input-price-offers/${offerId}/submit`,
-      { rowVersion },
+      { rowVersion, previewToken },
       {
         headers: {
           ...withIdempotencyKey(idempotencyKey).headers,
@@ -7805,10 +7841,15 @@ export const adminApi = {
         ...(body.rowVersion ? withIfMatch(body.rowVersion).headers : {}),
       },
     }),
-  submitFinanceReview: (packageId: number, rowVersion: string, idempotencyKey: string) =>
+  submitFinanceReview: (
+    packageId: number,
+    rowVersion: string,
+    idempotencyKey: string,
+    previewToken: string,
+  ) =>
     api.post<FinanceReviewResponse>(
       `/work-packages/${packageId}/finance-review/submit`,
-      { rowVersion },
+      { rowVersion, previewToken },
       {
         headers: {
           ...withIdempotencyKey(idempotencyKey).headers,

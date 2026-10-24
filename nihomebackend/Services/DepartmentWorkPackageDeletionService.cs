@@ -50,6 +50,7 @@ public sealed partial class DepartmentWorkPackageService
             (item.EntityType == EntityTypes.DepartmentWorkPackage && item.EntityId == id) ||
             (item.EntityType == EntityTypes.DepartmentWorkTask && taskIds.Contains(item.EntityId))).ToListAsync(ct));
         db.DepartmentWorkPackages.Remove(entity);
+        db.WorkPackageApprovalEmails.RemoveRange(await db.WorkPackageApprovalEmails.Where(item => item.WorkPackageId == id).ToListAsync(ct));
         await CrmConcurrency.SaveChangesAsync(db, ct);
         if (transaction is not null) await transaction.CommitAsync(ct);
         return true;

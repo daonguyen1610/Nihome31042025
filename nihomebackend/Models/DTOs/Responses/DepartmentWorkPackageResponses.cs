@@ -44,7 +44,11 @@ public sealed class DepartmentWorkPackageResponse
     public List<DepartmentWorkTaskResponse> Tasks { get; set; } = new();
     public List<InputPriceOfferResponse> InputPriceOffers { get; set; } = new();
     public FinanceReviewResponse? FinanceReview { get; set; }
+    public List<WorkPackageApprovalEmailResponse> ApprovalEmails { get; set; } = new();
 }
+
+public sealed record WorkPackageApprovalEmailResponse(int Id, string RecordType, int RecordId,
+    string ToEmail, string Status, DateTime CreatedAt, DateTime? SentAt, IReadOnlyList<string> CcEmails);
 
 public sealed class InputPriceOfferResponse
 {

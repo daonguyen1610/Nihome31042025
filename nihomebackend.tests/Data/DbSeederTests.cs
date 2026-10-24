@@ -44,6 +44,9 @@ public class DbSeederTests : IDisposable
         var settings = _db.SiteSettings.Single();
         Assert.Equal("NICON", settings.SiteName);
         Assert.Contains("thi công trọn gói", settings.SiteDescription);
+        Assert.Equal(ContractReminderTemplates.RenewalBody, settings.ContractRenewalEmailBodyTemplate);
+        Assert.Equal(ContractReminderTemplates.EndBody, settings.ContractEndEmailBodyTemplate);
+        Assert.Equal(WorkPackageApprovalEmailTemplates.DefaultBody, settings.WorkPackageApprovalEmailBodyTemplate);
 
         var businessRoles = _db.Roles.Where(role => !role.IsSystem).ToList();
         Assert.NotEmpty(businessRoles);
@@ -247,6 +250,96 @@ public class DbSeederTests : IDisposable
         Assert.Empty(_db.AcceptanceRecords);
         Assert.Empty(_db.AsBuiltDocuments);
         Assert.Empty(_db.HandoverRecords);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData(" ")]
+    [InlineData("legacy")]
+    public void Seed_UpgradesOnlyMissingOrLegacyBusinessEmailTemplates(string? body)
+    {
+        var settings = CreateSettings(EmailTemplateFormatter.DefaultOtpBody);
+        settings.ContractRenewalEmailBodyTemplate = body == "legacy" ? ContractReminderTemplates.LegacyRenewalBody : body;
+        settings.ContractEndEmailBodyTemplate = body == "legacy" ? ContractReminderTemplates.LegacyEndBody : body;
+        settings.WorkPackageApprovalEmailBodyTemplate = body == "legacy" ? WorkPackageApprovalEmailTemplates.LegacyDefaultBody : body;
+        _db.SiteSettings.Add(settings);
+        _db.SaveChanges();
+
+        DbSeeder.Seed(_db);
+
+        Assert.Equal(ContractReminderTemplates.RenewalSubject, settings.ContractRenewalEmailSubjectTemplate);
+        Assert.Equal(ContractReminderTemplates.RenewalBody, settings.ContractRenewalEmailBodyTemplate);
+        Assert.Equal(ContractReminderTemplates.EndSubject, settings.ContractEndEmailSubjectTemplate);
+        Assert.Equal(ContractReminderTemplates.EndBody, settings.ContractEndEmailBodyTemplate);
+        Assert.Equal(WorkPackageApprovalEmailTemplates.DefaultSubject, settings.WorkPackageApprovalEmailSubjectTemplate);
+        Assert.Equal(WorkPackageApprovalEmailTemplates.DefaultBody, settings.WorkPackageApprovalEmailBodyTemplate);
+        var updatedAt = settings.UpdatedAt;
+        DbSeeder.Seed(_db);
+        Assert.Equal(updatedAt, settings.UpdatedAt);
+    }
+
+    [Fact]
+    public void Seed_PreservesCustomizedBusinessEmailTemplatesAndConfirmedContent()
+    {
+        var settings = CreateSettings(EmailTemplateFormatter.DefaultOtpBody);
+        settings.ContractRenewalEmailSubjectTemplate = "Gia hạn riêng {{contractNumber}}";
+        settings.ContractRenewalEmailBodyTemplate = ContractReminderTemplates.LegacyRenewalBody.Replace("Trân trọng,", "Cảm ơn Quý khách,");
+        settings.ContractEndEmailSubjectTemplate = "Thời hạn riêng {{contractNumber}}";
+        settings.ContractEndEmailBodyTemplate = ContractReminderTemplates.LegacyEndBody.Replace("Trân trọng,", "Cảm ơn Quý khách,");
+        settings.WorkPackageApprovalEmailSubjectTemplate = "Duyệt riêng {{workPackageCode}}";
+        settings.WorkPackageApprovalEmailBodyTemplate = WorkPackageApprovalEmailTemplates.LegacyDefaultBody.Replace("#ed1c24", "#7c3aed");
+        var before = (settings.ContractRenewalEmailSubjectTemplate, settings.ContractRenewalEmailBodyTemplate,
+            settings.ContractEndEmailSubjectTemplate, settings.ContractEndEmailBodyTemplate,
+            settings.WorkPackageApprovalEmailSubjectTemplate, settings.WorkPackageApprovalEmailBodyTemplate);
+        _db.SiteSettings.Add(settings);
+        var author = new ApplicationUser { FullName = "Mai Anh", Email = "mai.anh@example.test", PhoneNumber = "0901234567" };
+        var lead = new ApplicationUser { FullName = "Trần An", Email = "tran.an@example.test", PhoneNumber = "0901234568" };
+        var contract = new Contract
+        {
+            ContractNumber = "HD-ANPHU-2026-01",
+            Customer = new Customer { Name = "Nhà máy An Phú", SourceCode = "marketing" },
+            Owner = author,
+            Direction = ContractDirection.Upstream,
+            Type = ContractType.DesignAndBuild,
+            Status = ContractStatus.Signed,
+            SignedDate = new DateTime(2026, 10, 1),
+            EndDate = new DateTime(2026, 11, 30)
+        };
+        var package = new DepartmentWorkPackage { Code = "WP-ANPHU-MEP-01", Name = "Mua sắm thiết bị MEP An Phú", LeadUser = lead };
+        _db.AddRange(author, lead, contract, package);
+        _db.SaveChanges();
+        var snapshot = new ContractReminder
+        {
+            ContractId = contract.Id,
+            CreatedByUserId = author.Id,
+            ToEmail = "customer@example.test",
+            ReminderDate = new DateTime(2026, 11, 1),
+            Subject = "Lịch đã xác nhận",
+            Body = ContractReminderTemplates.LegacyRenewalBody
+        };
+        _db.ContractReminders.Add(snapshot);
+        var approvalSnapshot = new WorkPackageApprovalEmail
+        {
+            WorkPackageId = package.Id,
+            AuthorUserId = author.Id,
+            RecipientUserId = lead.Id,
+            ToEmail = lead.Email!,
+            RecordType = "InputPriceOffer",
+            RecordId = 1,
+            Subject = "Hồ sơ đã gửi duyệt",
+            Body = WorkPackageApprovalEmailTemplates.LegacyDefaultBody
+        };
+        _db.WorkPackageApprovalEmails.Add(approvalSnapshot);
+        _db.SaveChanges();
+
+        DbSeeder.Seed(_db);
+
+        Assert.Equal(before, (settings.ContractRenewalEmailSubjectTemplate, settings.ContractRenewalEmailBodyTemplate,
+            settings.ContractEndEmailSubjectTemplate, settings.ContractEndEmailBodyTemplate,
+            settings.WorkPackageApprovalEmailSubjectTemplate, settings.WorkPackageApprovalEmailBodyTemplate));
+        Assert.Equal(ContractReminderTemplates.LegacyRenewalBody, snapshot.Body);
+        Assert.Equal(WorkPackageApprovalEmailTemplates.LegacyDefaultBody, approvalSnapshot.Body);
     }
 
     private static SiteSettings CreateSettings(string otpEmailBodyTemplate)

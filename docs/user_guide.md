@@ -2316,6 +2316,19 @@ The platform sends automated emails or lets authorized staff send them for the f
 
 OTP, job application notification, and CRM quote emails use configurable templates with `{{tokenName}}` substitution. The default OTP and CRM quote templates use branded HTML. Open `/admin/email-templates` and choose **Báo giá** to edit the subject and HTML body; the right pane previews its layout. Keep `{{quoteLines}}` and `{{grandTotal}}` in the body. Only basic HTML and safe inline styles are accepted; scripts, event attributes, and plain-text quote bodies are rejected. Saving requires `system.settings.manage`. When sending an approved quote, check the recipient and the rendered preview in the send dialog; only users with `crm.quotes.manage` may edit the subject or body.
 
+All five tabs share the HTML editor, clickable variable chips, live subject/body
+preview and fullscreen preview (press Escape to close). **Khôi phục** reloads
+saved configuration; **Lưu thay đổi** is in the page header. In the contract
+template tab, choose **Nhắc gia hạn** or **Thông báo kết thúc**; saving updates
+both contract templates. Switching types or tabs preserves unsaved drafts.
+Contract and work package approval previews keep variables visible until actual
+business data is rendered in the corresponding send/scheduling workflow.
+
+The default renewal, end-date and work package approval emails use the same
+NICON red header, white message card and highlighted details as quote emails.
+Startup upgrades only missing bodies or exact previous defaults; customized
+templates and already confirmed/queued message snapshots retain their content.
+
 **OTP Template Placeholders:**
 
 | Placeholder   | Substituted Value                |
@@ -2332,6 +2345,35 @@ OTP, job application notification, and CRM quote emails use configurable templat
 | `{{positionTitle}}`  | The job position title           |
 
 **Quote template placeholders:** `{{customerName}}`, `{{quoteCode}}`, `{{opportunityName}}`, `{{quoteLines}}`, `{{discountPercent}}`, `{{vatPercent}}`, `{{grandTotal}}`, and `{{validUntil}}`. The body must retain `{{quoteLines}}` and `{{grandTotal}}` so the customer sees priced items and the total. Variables are HTML-encoded before rendering; use the preview to check the final layout and figures before sending.
+
+Contract renewal/end-date templates share their own tab immediately beside
+**Báo giá**, rather than appearing above the editor. Switching template tabs
+preserves unsaved drafts. Use the shared **Lưu thay đổi** button in the page header.
+
+Choose **Duyệt nhóm công việc** to edit the approval notification subject and
+HTML. The variable guide explains the supported tokens; the layout preview keeps
+placeholders, while the submission dialog shows the actual rendered email.
+
+For Procurement input prices and Finance commercial/tender reviews, **Gửi duyệt**
+opens the email preview. To is prefilled with the assigned lead’s email and
+can be edited. Optional CC accepts up to 20 email addresses separated by commas,
+semicolons or newlines (150 characters per address). Duplicates and To/CC overlap
+are removed when the preview is updated. Editing recipients does not grant
+approval rights. Choose **Cập nhật xem trước** after editing To/CC; check the
+normalized recipients, subject and content, then choose
+**Gửi duyệt và thông báo**. Cancel leaves the dossier unchanged. The assigned
+lead must be active, have approval permission and a valid email, and be different
+from the dossier author. Correct the lead assignment before retrying if blocked.
+Changed dossier/template/recipient data requires a fresh preview.
+
+After submission, a persistent confirmation and toast report that the dossier
+was submitted and email queued. The screen follows delivery for up to two minutes
+and reports successful SMTP acceptance or a needs-review outcome automatically.
+**Email thông báo gửi duyệt** retains the To/CC recipients and queued, sending, sent or
+needs-review status. Use Refresh to check the result. If Sending persists or
+NeedsReview appears, ask an administrator to check SMTP and the recipient;
+uncertain delivery is not retried automatically, preventing duplicate emails.
+The email is a notification; approval/rejection still happens in the system.
 
 Templates are configured through the admin panel at `/admin/email-templates` or via the Site Settings API.
 

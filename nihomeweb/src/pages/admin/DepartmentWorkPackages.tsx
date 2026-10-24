@@ -12,7 +12,7 @@ import {
   Users,
 } from "lucide-react";
 import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
-import type { DeletionImpactResponse } from "@/services/adminApi";
+import type { WorkPackageApprovalPreview, DeletionImpactResponse } from "@/services/adminApi";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { PageError, PageLoading } from "@/components/PageState";
 import { Badge } from "@/components/ui/badge";
@@ -45,6 +45,7 @@ import { newIdempotencyKey } from "@/lib/api";
 import { extractApiError } from "@/lib/apiError";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { useI18n } from "@/lib/i18n";
+import { isValidEmail } from "@/lib/validation";
 import {
   adminApi,
   type ContractResponse,
@@ -136,6 +137,33 @@ const DepartmentWorkPackages = () => {
   const [progressOpen, setProgressOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [approvalPreview, setApprovalPreview] = useState<
+    | (WorkPackageApprovalPreview & {
+        packageId: number;
+        offerId?: number;
+        rowVersion: string;
+        idempotencyKey: string;
+      })
+    | null
+  >(null);
+  const [approvalBusy, setApprovalBusy] = useState(false);
+  const [approvalTo, setApprovalTo] = useState("");
+  const [approvalCc, setApprovalCc] = useState("");
+  const [approvalDirty, setApprovalDirty] = useState(false);
+  const [approvalError, setApprovalError] = useState("");
+  const [approvalFeedback, setApprovalFeedback] = useState<{
+    message: string;
+    failed: boolean;
+  } | null>(null);
+  const [approvalTracking, setApprovalTracking] = useState<{
+    packageId: number;
+    recordId: number;
+    type: string;
+  } | null>(null);
+  const [approvalDeliveries, setApprovalDeliveries] = useState<
+    DepartmentWorkPackageResponse["approvalEmails"]
+  >([]);
+  const approvalNoticeRef = useRef<HTMLDivElement>(null);
   const [deleteImpact, setDeleteImpact] = useState<DeletionImpactResponse | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -206,6 +234,7 @@ const DepartmentWorkPackages = () => {
         const response = await adminApi.getWorkPackage(packageId);
         if (request !== requestSequence.current) return;
         setDetail(response.data);
+        setApprovalDeliveries(response.data.approvalEmails ?? []);
       } else {
         setDetail(null);
         const projectIdFilter = Number(projectFilter);
@@ -234,6 +263,44 @@ const DepartmentWorkPackages = () => {
   useEffect(() => {
     void load();
   }, [load]);
+  useEffect(() => {
+    setApprovalTracking(null);
+    setApprovalFeedback(null);
+  }, [packageId]);
+  useEffect(() => {
+    if (!approvalTracking || approvalTracking.packageId !== packageId) return;
+    let active = true;
+    let timer: ReturnType<typeof setTimeout>;
+    const deadline = Date.now() + 120_000;
+    const check = async () => {
+      try {
+        const { data } = await adminApi.getWorkPackage(approvalTracking.packageId);
+        if (!active) return;
+        setApprovalDeliveries(data.approvalEmails);
+        const message = data.approvalEmails.find(
+          (item) =>
+            item.recordType === approvalTracking.type &&
+            item.recordId === approvalTracking.recordId,
+        );
+        if (message?.status === "Sent" || message?.status === "NeedsReview") {
+          const failed = message.status === "NeedsReview";
+          const title = t(failed ? "approvalEmail.deliveryFailed" : "approvalEmail.delivered");
+          setApprovalFeedback({ message: title, failed });
+          toast({ title, variant: failed ? "destructive" : "default" });
+          return;
+        }
+      } catch {
+        // Keep the queued confirmation visible; the delivery list can be refreshed
+        // if connectivity is unavailable during this short polling window.
+      }
+      if (active && Date.now() < deadline) timer = setTimeout(() => void check(), 3000);
+    };
+    void check();
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [approvalTracking, packageId, t, toast]);
   useEffect(() => {
     if (!detail) return;
     const taskId = params.get("taskId");
@@ -711,16 +778,90 @@ const DepartmentWorkPackages = () => {
     }
   };
 
-  const submitPriceOffer = async (offerId: number, rowVersion: string) => {
-    if (!detail) return;
+  const previewApproval = async (rowVersion: string, offerId?: number) => {
+    if (!detail || approvalBusy) return;
+    setApprovalBusy(true);
     try {
-      await adminApi.submitInputPriceOffer(detail.id, offerId, rowVersion, newIdempotencyKey());
-      await load();
+      const { data } = await adminApi.previewWorkPackageApprovalEmail(detail.id, offerId);
+      setApprovalPreview({
+        ...data,
+        packageId: detail.id,
+        offerId,
+        rowVersion,
+        idempotencyKey: newIdempotencyKey(),
+      });
+      setApprovalTo(data.toEmail);
+      setApprovalCc((data.ccEmails ?? []).join(", "));
+      setApprovalDirty(false);
+      setApprovalError("");
     } catch (cause) {
       toast({
         variant: "destructive",
         title: extractApiError(cause, t("workPackages.error.save")),
       });
+    } finally {
+      setApprovalBusy(false);
+    }
+  };
+  const submitPriceOffer = (offerId: number, rowVersion: string) =>
+    previewApproval(rowVersion, offerId);
+  const ccAddresses = approvalCc
+    .split(/[;,\n]+/)
+    .map((address) => address.trim())
+    .filter(Boolean);
+  const recipientsValid =
+    Boolean(approvalTo.trim()) &&
+    isValidEmail(approvalTo) &&
+    ccAddresses.length <= 20 &&
+    ccAddresses.every((address) => isValidEmail(address));
+  const refreshApprovalPreview = async () => {
+    if (!approvalPreview || approvalBusy || !recipientsValid) return;
+    setApprovalBusy(true);
+    setApprovalError("");
+    try {
+      const { data } = await adminApi.previewWorkPackageApprovalEmail(
+        approvalPreview.packageId,
+        approvalPreview.offerId,
+        { toEmail: approvalTo.trim(), ccEmails: ccAddresses },
+      );
+      setApprovalPreview({ ...approvalPreview, ...data, idempotencyKey: newIdempotencyKey() });
+      setApprovalTo(data.toEmail);
+      setApprovalCc((data.ccEmails ?? []).join(", "));
+      setApprovalDirty(false);
+    } catch (cause) {
+      setApprovalError(extractApiError(cause, t("workPackages.error.save")));
+    } finally {
+      setApprovalBusy(false);
+    }
+  };
+  const confirmApproval = async () => {
+    if (!approvalPreview || approvalBusy || approvalDirty || !recipientsValid) return;
+    setApprovalBusy(true);
+    try {
+      const { packageId: id, offerId, rowVersion, previewToken, idempotencyKey } = approvalPreview;
+      if (offerId)
+        await adminApi.submitInputPriceOffer(id, offerId, rowVersion, idempotencyKey, previewToken);
+      else await adminApi.submitFinanceReview(id, rowVersion, idempotencyKey, previewToken);
+      setApprovalPreview(null);
+      setApprovalFeedback({ message: t("approvalEmail.queued"), failed: false });
+      setApprovalTracking({
+        packageId: id,
+        recordId: offerId ?? detail!.financeReview!.id,
+        type: offerId ? "InputPriceOffer" : "FinanceReview",
+      });
+      toast({ title: t("approvalEmail.queued") });
+      await load();
+      requestAnimationFrame(() =>
+        approvalNoticeRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }),
+      );
+    } catch (cause) {
+      setApprovalError(extractApiError(cause, t("workPackages.error.save")));
+      toast({
+        variant: "destructive",
+        title: extractApiError(cause, t("workPackages.error.save")),
+      });
+    } finally {
+      setApprovalBusy(false);
     }
   };
   const decidePriceOffer = async (offerId: number, approved: boolean, rowVersion: string) => {
@@ -757,20 +898,7 @@ const DepartmentWorkPackages = () => {
     }
   };
   const submitFinanceReview = async () => {
-    if (!detail?.financeReview) return;
-    try {
-      await adminApi.submitFinanceReview(
-        detail.id,
-        detail.financeReview.rowVersion,
-        newIdempotencyKey(),
-      );
-      await load();
-    } catch (cause) {
-      toast({
-        variant: "destructive",
-        title: extractApiError(cause, t("workPackages.error.save")),
-      });
-    }
+    if (detail?.financeReview) await previewApproval(detail.financeReview.rowVersion);
   };
   const decideFinanceReview = async (approved: boolean) => {
     if (!detail?.financeReview) return;
@@ -822,6 +950,16 @@ const DepartmentWorkPackages = () => {
         }}
       />
       <div className="space-y-6" data-testid="work-packages-page">
+        {approvalFeedback && (
+          <div
+            ref={approvalNoticeRef}
+            role={approvalFeedback.failed ? "alert" : "status"}
+            data-testid="approval-email-feedback"
+            className={`rounded-lg border p-4 text-sm ${approvalFeedback.failed ? "border-destructive text-destructive" : "border-emerald-300 bg-emerald-50 text-emerald-900"}`}
+          >
+            {approvalFeedback.message}
+          </div>
+        )}
         {detail ? (
           <>
             <div className="flex min-w-0 flex-col gap-4" data-testid="work-package-detail-header">
@@ -1663,6 +1801,138 @@ const DepartmentWorkPackages = () => {
         </DialogContent>
       </Dialog>
 
+      {detail && approvalDeliveries.length > 0 && (
+        <section className="mx-4 space-y-3 rounded-lg border bg-background p-4 sm:mx-6">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="font-semibold">{t("approvalEmail.delivery")}</h2>
+            <Button variant="outline" size="sm" onClick={() => void load()}>
+              {t("common.refresh")}
+            </Button>
+          </div>
+          {approvalDeliveries.map((email) => (
+            <div
+              key={email.id}
+              className="flex flex-wrap items-center justify-between gap-2 rounded border p-3 text-sm"
+            >
+              <div className="min-w-0 space-y-1">
+                <p className="break-words font-medium">
+                  {email.recordType === "InputPriceOffer"
+                    ? detail.inputPriceOffers.find((offer) => offer.id === email.recordId)
+                        ?.supplierReference
+                    : t(`workPackages.purpose.${detail.purpose}`)}
+                </p>
+                <p className="break-all text-muted-foreground">{email.toEmail}</p>
+                {(email.ccEmails?.length ?? 0) > 0 && (
+                  <p className="break-all text-muted-foreground">CC: {email.ccEmails.join(", ")}</p>
+                )}
+              </div>
+              <Badge variant={email.status === "NeedsReview" ? "destructive" : "secondary"}>
+                {t(`approvalEmail.status.${email.status}`)}
+              </Badge>
+            </div>
+          ))}
+          {approvalDeliveries.some(
+            (email) => email.status === "Sending" || email.status === "NeedsReview",
+          ) && <p className="text-sm text-muted-foreground">{t("approvalEmail.reviewHint")}</p>}
+        </section>
+      )}
+      <Dialog
+        open={!!approvalPreview}
+        onOpenChange={(open) => {
+          if (!open && !approvalBusy) setApprovalPreview(null);
+        }}
+      >
+        <DialogContent className="flex max-h-[92dvh] w-[calc(100%_-_2rem)] max-w-4xl flex-col overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>{t("approvalEmail.preview")}</DialogTitle>
+            <DialogDescription>{t("approvalEmail.confirmHint")}</DialogDescription>
+          </DialogHeader>
+          {approvalPreview && (
+            <div className="min-h-0 space-y-3 overflow-y-auto">
+              <div className="space-y-2">
+                <Label htmlFor="approval-to">{t("approvalEmail.recipient")}</Label>
+                <Input
+                  id="approval-to"
+                  type="email"
+                  maxLength={150}
+                  value={approvalTo}
+                  disabled={approvalBusy}
+                  onChange={(event) => {
+                    setApprovalTo(event.target.value);
+                    setApprovalDirty(true);
+                    setApprovalError("");
+                  }}
+                />
+                <Label htmlFor="approval-cc">{t("approvalEmail.cc")}</Label>
+                <Textarea
+                  id="approval-cc"
+                  rows={2}
+                  maxLength={4000}
+                  value={approvalCc}
+                  disabled={approvalBusy}
+                  placeholder="cm@nicon.vn, qs@nicon.vn"
+                  aria-describedby="approval-recipient-hint"
+                  onChange={(event) => {
+                    setApprovalCc(event.target.value);
+                    setApprovalDirty(true);
+                    setApprovalError("");
+                  }}
+                />
+                <p id="approval-recipient-hint" className="text-xs text-muted-foreground">
+                  {t("approvalEmail.recipientHint")}
+                </p>
+                {!recipientsValid && (
+                  <p role="alert" className="text-sm text-destructive">
+                    {t("approvalEmail.invalidRecipients")}
+                  </p>
+                )}
+                {approvalDirty && (
+                  <p className="text-sm text-muted-foreground">
+                    {t("approvalEmail.refreshRequired")}
+                  </p>
+                )}
+                {approvalError && (
+                  <p role="alert" className="text-sm text-destructive">
+                    {approvalError}
+                  </p>
+                )}
+                <Button
+                  variant="outline"
+                  disabled={approvalBusy || !recipientsValid}
+                  onClick={() => void refreshApprovalPreview()}
+                >
+                  {t("approvalEmail.refreshPreview")}
+                </Button>
+              </div>
+              <p className="break-words text-sm">
+                <strong>{t("contractReminder.subject")}: </strong>
+                {approvalPreview.subject}
+              </p>
+              <iframe
+                title={t("approvalEmail.preview")}
+                srcDoc={approvalPreview.body}
+                sandbox=""
+                className="h-96 w-full rounded border bg-white"
+              />
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              disabled={approvalBusy}
+              onClick={() => setApprovalPreview(null)}
+            >
+              {t("common.cancel")}
+            </Button>
+            <Button
+              disabled={approvalBusy || approvalDirty || !recipientsValid}
+              onClick={() => void confirmApproval()}
+            >
+              {t("approvalEmail.confirm")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <PriceOfferDialog
         open={priceOpen}
         onOpenChange={(value) => {

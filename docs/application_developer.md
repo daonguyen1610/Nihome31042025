@@ -210,6 +210,25 @@ integration projects for whole-solution format verification. Use the Compose
 network for SQL tests and isolated test databases; the runtime container is
 not an SDK substitute.
 
+For source-watching development, use the standalone `docker-compose-dev.yaml`
+instead of the runtime Compose file. It builds `nihomebackend/Dockerfile.dev`
+with .NET SDK 8, Node 22 and PDF fonts, mounts the repository at `/src`, and
+runs `dotnet watch` from `/src/nihomebackend`. Linux dependency/build caches,
+managed files, uploaded/process images and file quarantine use named volumes;
+frontend changes are rebuilt and served by ASP.NET. The image supplies the
+tracked design/as-built sample PDFs to initialize a new managed-file volume.
+Run `docker compose -f docker-compose-dev.yaml up -d --build`. The development
+connection string and SQL `MSSQL_SA_PASSWORD` use the same fixed local password
+as the standard Compose setup. An existing SQL volume must already use that
+password; changing environment settings does not reset a persisted login. Both Compose
+files use the same application/container ports and SQL/key volumes by default,
+so stop the runtime stack before starting the development stack. The dev image
+has a separate tag and does not replace the published runtime image.
+When reusing a database with uploads, back up and copy its matching managed
+files/images into the development volumes before startup. Database metadata
+and file storage must belong to the same dataset. A fresh project/database must
+use fresh file volumes; never expose a different dataset's uploads to cleanup.
+
 ### 4.2.1 Swagger Access
 
 Swagger is enabled only when the backend runs in the `Development` environment.
@@ -1238,6 +1257,15 @@ structural tags and safe inline styles; dynamic values are HTML-encoded.
 Quote email bodies must use valid safe HTML. The send dialog previews the
 rendered message in an isolated iframe, and the submitted body is validated
 before SMTP delivery.
+
+Contract renewal/end-date and work package approval defaults use the same
+600px NICON card, red header and safe inline HTML styles as quote emails.
+`DbSeeder` persists these defaults for new settings and upgrades each missing
+or exact legacy body independently on startup. Custom subjects/bodies are
+preserved; confirmed contract reminders and queued approval messages are not
+rewritten. Reverting the code does not revert a body already saved in settings;
+restore its previous HTML through the authorized template settings API if needed.
+
 `GET /api/quotes/{id}/export.xlsx?lang=vi` (`crm.quotes.view`) returns the
 localized quotation workbook. Supported languages are `vi`, `en`, `zh`, and
 `ja`. The workbook contains typed date and numeric cells for the quote header,
@@ -1853,11 +1881,78 @@ test quote to `SentToCustomer` in SQL; it does not test email delivery.
 | `POST` | `/api/work-packages/{id}/tasks/{taskId}/verify` | `work.packages.verify` | Independently verify a completed KPI task |
 | `POST` | `/api/work-packages/{id}/input-price-offers` | `work.packages.progress` | Add a supplier/subcontractor input price offer to a Procurement pricing package |
 | `PUT` | `/api/work-packages/{id}/input-price-offers/{offerId}` | `work.packages.progress` | Edit a Draft/Rejected input price offer |
+| `POST` | `/api/work-packages/{id}/input-price-offers/{offerId}/approval-email-preview` | `work.packages.progress` + department scope | Render the approval email and issue a 15-minute confirmation token |
+| `POST` | `/api/work-packages/{id}/finance-review/approval-email-preview` | Same permission and scope | Render the finance approval email |
 | `POST` | `/api/work-packages/{id}/input-price-offers/{offerId}/submit` | `work.packages.progress` | Submit an input price offer for independent approval |
 | `POST` | `/api/work-packages/{id}/input-price-offers/{offerId}/decision` | `work.packages.verify` | Approve or reject a submitted input price offer |
 | `PUT` | `/api/work-packages/{id}/finance-review` | `work.packages.progress` | Save the Finance – Accounting checklist (commercial or tender review) |
 | `POST` | `/api/work-packages/{id}/finance-review/submit` | `work.packages.progress` | Submit the finance review for independent approval |
 | `POST` | `/api/work-packages/{id}/finance-review/decision` | `work.packages.verify` | Approve or reject a submitted finance review |
+
+Approval notification email contract (user decision, 25 October 2026): both
+input-price and finance-review submissions require a server-rendered preview.
+POST the corresponding `approval-email-preview` endpoint, display `toEmail`,
+`subject` and sandboxed HTML `body`, then submit `previewToken` with the existing
+`rowVersion` and `Idempotency-Key`. Old clients must add this preview step.
+The token is bound to the submitting user, package context, record/version,
+recipient list (To/CC) and rendered template; it expires after 15 minutes. Changed content
+requires a new preview. A repeated submission of an already Submitted record
+returns the record without enqueuing another email.
+
+The assigned department lead must be active, independent of the record author,
+have `work.packages.verify` and a valid email per `ContactValidation`; otherwise
+submission is blocked without a state transition. Template editing requires
+`system.settings.manage`, separate from submission permission. GET/PUT
+`/api/site-settings/work-package-approval-template` uses settings view/manage.
+The editor is the **Duyệt nhóm công việc** tab beside **Báo giá** and the
+contract reminder tab at `/admin/email-templates`.
+
+Supported variables: `recipientName` (lead), `workPackageCode`,
+`workPackageName`, `recordType`, `recordReference` (supplier reference for
+input pricing; package code for finance), and `senderName`. Use
+`{{variableName}}`; the HTML must include `{{workPackageCode}}` and
+`{{recordReference}}`. Subject: 1–200 characters, no newlines. HTML: 1–8,000
+characters, the shared safe basic HTML/style allowlist, no unknown variables.
+Rendered subjects retain the 200-character limit; bodies allow up to 16,000.
+Dynamic body values are HTML-encoded on the server. Confirmed content is frozen.
+
+Migration `20261024174814_AddWorkPackageApprovalEmails` adds nullable settings
+columns and the owned `work_package_approval_emails` table. Submission, queued
+email and business history commit in one transaction. The 15-second worker
+claims before SMTP and checks the current recipient and submission generation.
+Delivery states: Pending, Sending, Sent, NeedsReview. Package detail returns
+`approvalEmails` (latest 50), allowing refresh to inspect delivery. Sending
+blocks permanent deletion; other email records are disclosed as owned deletes.
+An SMTP failure or context change is visible as NeedsReview. A crash after claim
+can leave Sending: inspect SMTP logs before any manual recovery. There is no
+automatic retry after a delivery attempt, since SMTP cannot prove exactly-once
+delivery after a disconnect. Do not reset Sending/NeedsReview blindly.
+Existing Submitted records are not retroactively mailed.
+
+Recipient selection (confirmed 25 October 2026): preview POST accepts optional
+`{ toEmail, ccEmails }`. An empty request defaults To to the assigned lead and
+CC to an empty array. To may be edited; this changes delivery only, not the
+approval actor or independent-lead eligibility. Every address is required when
+present, trimmed, limited to 150 characters, checked by ContactValidation and
+parsed as one mailbox. CC permits up to 20 addresses; duplicates (case-insensitive)
+and addresses equal to To are removed. The server returns the normalized list
+and binds it into previewToken. Submission cannot override the token recipients.
+After editing To/CC, update the preview before confirming.
+
+Migration `20261024183305_AddWorkPackageEmailRecipients` adds CcEmailsJson
+(default `[]`) and LeadEmail (backfilled from historical ToEmail). The worker
+rechecks the independent lead against LeadEmail, not the editable To address,
+and sends one SMTP message with To and CC headers/envelope recipients. Detail
+responses include ccEmails. The page shows a persistent queued confirmation and
+polls delivery for up to two minutes, showing Sent/NeedsReview with a toast and
+inline feedback. This does not equate SMTP acceptance with inbox delivery.
+Rollback of this migration loses CC and lead snapshots: stop the worker, export
+pending recipient lists and review them before deploying the old sender.
+
+Rollback: stop the approval worker before deploying the previous assembly.
+Downgrading the migration drops queued messages/delivery history and the new
+custom template fields, so export this evidence first. Existing quotation and
+contract reminder templates are unaffected. Never roll back by dropping volumes.
 
 Completed packages can return to `Active` through PUT. This clears package
 `CompletedAt` and records a `Reopened` history snapshot. Existing task progress,

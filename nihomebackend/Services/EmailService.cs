@@ -19,8 +19,12 @@ public class EmailService : IEmailService
 
     public async Task SendEmailAsync(string toEmail, string subject, string htmlBody)
     {
-        await SendAsync(toEmail, subject, htmlBody, null, CancellationToken.None);
+        await SendAsync(toEmail, subject, htmlBody, null, CancellationToken.None, []);
     }
+
+    public Task SendEmailWithCcAsync(string toEmail, IReadOnlyCollection<string> ccEmails,
+        string subject, string htmlBody, CancellationToken ct = default) =>
+        SendAsync(toEmail, subject, htmlBody, null, ct, ccEmails);
 
     public async Task SendEmailWithAttachmentAsync(
         string toEmail,
@@ -30,7 +34,7 @@ public class EmailService : IEmailService
         CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(attachment);
-        await SendAsync(toEmail, subject, htmlBody, attachment, ct);
+        await SendAsync(toEmail, subject, htmlBody, attachment, ct, []);
     }
 
     private async Task SendAsync(
@@ -38,7 +42,8 @@ public class EmailService : IEmailService
         string subject,
         string htmlBody,
         EmailAttachment? attachment,
-        CancellationToken ct)
+        CancellationToken ct,
+        IReadOnlyCollection<string> ccEmails)
     {
         var username = _emailSettings.Username?.Trim();
         var password = _emailSettings.Password?.Trim();
@@ -51,6 +56,7 @@ public class EmailService : IEmailService
         var message = new MimeMessage();
         message.From.Add(new MailboxAddress(_emailSettings.FromName, _emailSettings.FromEmail));
         message.To.Add(MailboxAddress.Parse(toEmail));
+        foreach (var address in ccEmails) message.Cc.Add(MailboxAddress.Parse(address));
         message.Subject = subject;
         var body = new BodyBuilder { HtmlBody = htmlBody };
         if (attachment is not null)

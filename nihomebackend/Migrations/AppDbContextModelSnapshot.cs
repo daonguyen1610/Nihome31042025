@@ -9738,6 +9738,12 @@ namespace nihomebackend.Migrations
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("WorkPackageApprovalEmailBodyTemplate")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("WorkPackageApprovalEmailSubjectTemplate")
+                        .HasColumnType("nvarchar(max)");
+
                     b.HasKey("Id");
 
                     b.ToTable("site_settings", (string)null);
@@ -11327,6 +11333,87 @@ namespace nihomebackend.Migrations
                         .IsUnique();
 
                     b.ToTable("warehouse_receipt_lines", (string)null);
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.WorkPackageApprovalEmail", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("AttemptedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("AuthorUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(16000)
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("CcEmailsJson")
+                        .IsRequired()
+                        .HasMaxLength(20000)
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("LeadEmail")
+                        .IsRequired()
+                        .HasMaxLength(254)
+                        .HasColumnType("nvarchar(254)");
+
+                    b.Property<string>("PreviewHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<int>("RecipientUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("RecordId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("RecordType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<DateTime?>("SentAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("ToEmail")
+                        .IsRequired()
+                        .HasMaxLength(254)
+                        .HasColumnType("nvarchar(254)");
+
+                    b.Property<int>("WorkPackageId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PreviewHash")
+                        .IsUnique();
+
+                    b.HasIndex("WorkPackageId");
+
+                    b.HasIndex("Status", "CreatedAt");
+
+                    b.ToTable("work_package_approval_emails", (string)null);
                 });
 
             modelBuilder.Entity("NihomeBackend.Models.WorkflowConfig", b =>
@@ -14685,6 +14772,17 @@ namespace nihomebackend.Migrations
                     b.Navigation("MaterialRequestLine");
 
                     b.Navigation("WarehouseReceipt");
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.WorkPackageApprovalEmail", b =>
+                {
+                    b.HasOne("NihomeBackend.Models.DepartmentWorkPackage", "WorkPackage")
+                        .WithMany()
+                        .HasForeignKey("WorkPackageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("WorkPackage");
                 });
 
             modelBuilder.Entity("NihomeBackend.Models.AccountingPeriod", b =>

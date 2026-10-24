@@ -13,7 +13,8 @@ public sealed partial class DepartmentWorkPackageService(
     AppDbContext db,
     IProjectAccessService projectAccess,
     INotificationService notifications,
-    ILogger<DepartmentWorkPackageService> logger) : IDepartmentWorkPackageService
+    ILogger<DepartmentWorkPackageService> logger,
+    WorkPackageApprovalEmailService approvalEmails) : IDepartmentWorkPackageService
 {
     private const int MaxPageSize = 100;
     private static readonly string[] GenericProjectDepartmentCodes = ["PROCUREMENT", "FINANCE"];
@@ -102,7 +103,24 @@ public sealed partial class DepartmentWorkPackageService(
     {
         var item = await BaseQuery().SingleOrDefaultAsync(package => package.Id == id, ct);
         if (item is null || !await CanViewAsync(item, callerUserId, canViewAll, ct)) return null;
-        return MapPackage(item, callerUserId, await IsAdministratorAsync(callerUserId, ct));
+        var response = MapPackage(item, callerUserId, await IsAdministratorAsync(callerUserId, ct));
+        var emails = await db.WorkPackageApprovalEmails.AsNoTracking()
+            .Where(email => email.WorkPackageId == id).OrderByDescending(email => email.Id).Take(50)
+            .Select(email => new
+            {
+                email.Id,
+                email.RecordType,
+                email.RecordId,
+                email.ToEmail,
+                email.Status,
+                email.CreatedAt,
+                email.SentAt,
+                email.CcEmailsJson
+            }).ToListAsync(ct);
+        response.ApprovalEmails = emails.Select(email => new WorkPackageApprovalEmailResponse(email.Id,
+            email.RecordType, email.RecordId, email.ToEmail, email.Status, email.CreatedAt, email.SentAt,
+            JsonSerializer.Deserialize<string[]>(email.CcEmailsJson) ?? [])).ToList();
+        return response;
     }
 
     public async Task<List<DepartmentOptionResponse>> DepartmentsAsync(CancellationToken ct = default)

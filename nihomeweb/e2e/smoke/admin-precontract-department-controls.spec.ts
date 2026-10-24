@@ -31,6 +31,9 @@ type DepartmentMember = {
   canLead: boolean;
   account: keyof typeof TEST_USERS;
 };
+test.beforeEach(() => {
+  test.skip(!process.env.MAIL_SINK_URL, "Approval submissions require the isolated SMTP sink");
+});
 const shotDir = process.env.E2E_SHOT_DIR;
 const tomorrow = (days: number) =>
   new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10);
@@ -229,7 +232,7 @@ test.describe("MoM §5 pre-contract department controls", () => {
     const priceDialog = page.getByRole("dialog");
     await priceDialog.getByRole("combobox").first().click();
     await page.getByRole("option", { name: new RegExp(vendor.code) }).click();
-    await priceDialog.locator('input[maxlength="120"]').fill(`BG-${suffix}`);
+    await priceDialog.getByLabel("Số báo giá nhà cung cấp", { exact: true }).fill(`BG-${suffix}`);
     await priceDialog.locator('input[type="date"]').fill(tomorrow(30));
     await priceDialog.getByPlaceholder("Mã hạng mục").fill("KC-THEP-01");
     await priceDialog.getByPlaceholder("Mô tả").fill("Kết cấu thép mạ kẽm nhúng nóng");
@@ -252,6 +255,10 @@ test.describe("MoM §5 pre-contract department controls", () => {
     ).toBeVisible();
 
     await offerCard.getByRole("button", { name: "Gửi duyệt" }).click();
+    await page
+      .getByRole("dialog")
+      .getByRole("button", { name: "Gửi duyệt và thông báo", exact: true })
+      .click();
     await expect(offerCard.getByText("Chờ duyệt")).toBeVisible();
     await shot("s5-03-cho-duyet-gia-dau-vao.png");
 
@@ -411,12 +418,18 @@ test.describe("MoM §5 pre-contract department controls", () => {
         ],
       },
     );
+    const approvalPreview = await call(
+      priceMaker.account,
+      "post",
+      `/api/work-packages/${pricePackageId}/input-price-offers/${offer.id}/approval-email-preview`,
+    );
     offer = await call(
       priceMaker.account,
       "post",
       `/api/work-packages/${pricePackageId}/input-price-offers/${offer.id}/submit`,
       {
         rowVersion: offer.rowVersion,
+        previewToken: approvalPreview.previewToken,
       },
     );
     const approvedOffer = await call(
@@ -493,7 +506,9 @@ test.describe("MoM §5 pre-contract department controls", () => {
     await expect(page).toHaveURL(/\/admin\/work-packages\/\d+$/);
     const reviewPackageId = Number(page.url().split("/").pop());
 
-    await loginInBrowserAs(page, TEST_USERS[accountant.account]);
+    // An administrator prepares the fixture dossier; the assigned finance lead
+    // remains independent of its author and reviews it below.
+    await loginInBrowserAs(page, TEST_USERS.superAdmin);
     await page.goto(`/admin/work-packages/${reviewPackageId}`, { waitUntil: "networkidle" });
     await expect(
       page.getByRole("heading", { name: "Rà soát điều kiện hợp đồng và thanh toán" }),
@@ -511,12 +526,16 @@ test.describe("MoM §5 pre-contract department controls", () => {
     await page.getByRole("button", { name: "Lưu thay đổi" }).click();
     await shot("s5-07-ra-soat-thuong-mai.png");
     await page.getByRole("button", { name: "Gửi duyệt" }).click();
+    await page
+      .getByRole("dialog")
+      .getByRole("button", { name: "Gửi duyệt và thông báo", exact: true })
+      .click();
     await expect(page.getByText("Chờ duyệt").first()).toBeVisible();
 
     // The maker cannot approve their own review; an independent approver must.
     await expect(page.getByRole("button", { name: "Phê duyệt" })).toBeVisible();
 
-    await loginInBrowserAs(page, TEST_USERS.superAdmin);
+    await loginInBrowserAs(page, TEST_USERS[accountant.account]);
     await page.goto(`/admin/work-packages/${reviewPackageId}`, { waitUntil: "networkidle" });
     await page.getByRole("button", { name: "Phê duyệt" }).click();
     await expect(page.getByText("Đã duyệt").first()).toBeVisible();

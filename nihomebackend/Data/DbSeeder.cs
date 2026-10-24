@@ -45,6 +45,12 @@ public static class DbSeeder
                 NewApplicationEmailBodyTemplate = NihomeBackend.Services.EmailTemplateFormatter.DefaultNewApplicationBody,
                 QuoteEmailSubjectTemplate = EmailTemplateFormatter.DefaultQuoteSubject,
                 QuoteEmailBodyTemplate = EmailTemplateFormatter.DefaultQuoteBody,
+                ContractRenewalEmailSubjectTemplate = ContractReminderTemplates.RenewalSubject,
+                ContractRenewalEmailBodyTemplate = ContractReminderTemplates.RenewalBody,
+                ContractEndEmailSubjectTemplate = ContractReminderTemplates.EndSubject,
+                ContractEndEmailBodyTemplate = ContractReminderTemplates.EndBody,
+                WorkPackageApprovalEmailSubjectTemplate = WorkPackageApprovalEmailTemplates.DefaultSubject,
+                WorkPackageApprovalEmailBodyTemplate = WorkPackageApprovalEmailTemplates.DefaultBody,
                 NotificationEmail = "nihome@nihome.vn",
                 CreatedAt = now,
                 UpdatedAt = now
@@ -132,6 +138,45 @@ public static class DbSeeder
             if (string.IsNullOrWhiteSpace(existingSettings.QuoteEmailBodyTemplate))
             {
                 existingSettings.QuoteEmailBodyTemplate = EmailTemplateFormatter.DefaultQuoteBody;
+                updated = true;
+            }
+
+            if (string.IsNullOrWhiteSpace(existingSettings.ContractRenewalEmailSubjectTemplate))
+            {
+                existingSettings.ContractRenewalEmailSubjectTemplate = ContractReminderTemplates.RenewalSubject;
+                updated = true;
+            }
+
+            if (string.IsNullOrWhiteSpace(existingSettings.ContractRenewalEmailBodyTemplate) ||
+                existingSettings.ContractRenewalEmailBodyTemplate == ContractReminderTemplates.LegacyRenewalBody)
+            {
+                existingSettings.ContractRenewalEmailBodyTemplate = ContractReminderTemplates.RenewalBody;
+                updated = true;
+            }
+
+            if (string.IsNullOrWhiteSpace(existingSettings.ContractEndEmailSubjectTemplate))
+            {
+                existingSettings.ContractEndEmailSubjectTemplate = ContractReminderTemplates.EndSubject;
+                updated = true;
+            }
+
+            if (string.IsNullOrWhiteSpace(existingSettings.ContractEndEmailBodyTemplate) ||
+                existingSettings.ContractEndEmailBodyTemplate == ContractReminderTemplates.LegacyEndBody)
+            {
+                existingSettings.ContractEndEmailBodyTemplate = ContractReminderTemplates.EndBody;
+                updated = true;
+            }
+
+            if (string.IsNullOrWhiteSpace(existingSettings.WorkPackageApprovalEmailSubjectTemplate))
+            {
+                existingSettings.WorkPackageApprovalEmailSubjectTemplate = WorkPackageApprovalEmailTemplates.DefaultSubject;
+                updated = true;
+            }
+
+            if (string.IsNullOrWhiteSpace(existingSettings.WorkPackageApprovalEmailBodyTemplate) ||
+                existingSettings.WorkPackageApprovalEmailBodyTemplate == WorkPackageApprovalEmailTemplates.LegacyDefaultBody)
+            {
+                existingSettings.WorkPackageApprovalEmailBodyTemplate = WorkPackageApprovalEmailTemplates.DefaultBody;
                 updated = true;
             }
 

@@ -63,6 +63,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<CustomerActivity> CustomerActivities => Set<CustomerActivity>();
     public DbSet<ContractCareActivity> ContractCareActivities => Set<ContractCareActivity>();
     public DbSet<ContractReminder> ContractReminders => Set<ContractReminder>();
+    public DbSet<WorkPackageApprovalEmail> WorkPackageApprovalEmails => Set<WorkPackageApprovalEmail>();
     public DbSet<CustomerDocument> CustomerDocuments => Set<CustomerDocument>();
     public DbSet<VendorDocumentUpload> VendorDocumentUploads => Set<VendorDocumentUpload>();
     public DbSet<Opportunity> Opportunities => Set<Opportunity>();
@@ -2365,6 +2366,15 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .HasForeignKey(item => item.PredecessorTaskId).OnDelete(DeleteBehavior.NoAction);
             b.ToTable(table => table.HasCheckConstraint(
                 "CK_department_work_task_dependencies_not_self", "[WorkTaskId] <> [PredecessorTaskId]"));
+        });
+
+        modelBuilder.Entity<WorkPackageApprovalEmail>(b =>
+        {
+            b.ToTable("work_package_approval_emails");
+            b.HasIndex(item => item.PreviewHash).IsUnique();
+            b.HasIndex(item => new { item.Status, item.CreatedAt });
+            b.HasOne(item => item.WorkPackage).WithMany().HasForeignKey(item => item.WorkPackageId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<DepartmentWorkPackageHistory>(b =>
