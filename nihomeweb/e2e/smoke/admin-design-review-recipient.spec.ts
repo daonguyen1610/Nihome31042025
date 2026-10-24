@@ -5,6 +5,7 @@ import {
   approveDesignStage,
   createDesignProject,
   createOwnCustomer,
+  isGoogleDriveConnected,
 } from "../fixtures/designProjects";
 
 test("design notification opens recipient evidence and comments without project-wide access", async ({
@@ -15,6 +16,10 @@ test("design notification opens recipient evidence and comments without project-
 }) => {
   test.setTimeout(240_000);
   const adminHeaders = { Authorization: `Bearer ${await loginAs(TEST_USERS.superAdmin)}` };
+  test.skip(
+    !(await isGoogleDriveConnected(api, adminHeaders)),
+    "Requires a connected Google Drive because approved design evidence must be durably synced.",
+  );
   const customerId = await createOwnCustomer(api, adminHeaders, "NICON Concept recipient");
   let operationalProjectId: number | undefined;
   try {

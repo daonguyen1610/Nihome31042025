@@ -11,6 +11,7 @@
     "format:check": "prettier . --check",
     "lint": "eslint .",
     "preview": "vite preview",
+    "test:unit": "node --test tests/apiError.test.mjs",
     "test:e2e": "playwright test",
     "test:e2e:smoke": "PLAYWRIGHT_SUITE=smoke playwright test",
     "test:e2e:full": "PLAYWRIGHT_SUITE=full playwright test",
@@ -71,8 +72,7 @@
     "recharts": "^3.8.1",
     "sonner": "^1.7.4",
     "tailwind-merge": "^2.6.0",
-    "vaul": "^0.9.9",
-    "zod": "^3.25.76"
+    "vaul": "^0.9.9"
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",

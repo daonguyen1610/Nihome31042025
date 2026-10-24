@@ -18,6 +18,32 @@ public class RbacSeederTests : IDisposable
     public void Dispose() => _db.Dispose();
 
     [Fact]
+    public void PermanentDesignDeletion_ExcludesOrdinaryDefaultsAndCorrectsExistingLeadGrant()
+    {
+        RbacSeeder.Seed(_db);
+        var permission = _db.Permissions.Single(item => item.Module == "design.records" && item.Action == "hard-delete");
+        var lead = _db.Roles.Single(item => item.Code == "DESIGN_LEAD");
+        Assert.DoesNotContain(_db.RolePermissions, item => item.PermissionId == permission.Id &&
+            (item.Role.Code == "DESIGN_LEAD" || item.Role.Code == "ADMIN"));
+        foreach (var code in new[] { "BGD", "SUPER_ADMIN" })
+            Assert.Contains(_db.RolePermissions, item => item.PermissionId == permission.Id && item.Role.Code == code);
+
+        var custom = new Role { Code = "NICON_DIRECTOR", Name = "NICON director", IsActive = true };
+        _db.Add(custom);
+        _db.RolePermissions.AddRange(
+            new RolePermission { RoleId = lead.Id, PermissionId = permission.Id },
+            new RolePermission { Role = custom, PermissionId = permission.Id });
+        _db.SaveChanges();
+        RbacSeeder.Seed(_db);
+        RbacSeeder.Seed(_db);
+
+        Assert.DoesNotContain(_db.RolePermissions, item => item.RoleId == lead.Id && item.PermissionId == permission.Id);
+        Assert.Contains(_db.RolePermissions, item => item.RoleId == custom.Id && item.PermissionId == permission.Id);
+        Assert.Contains(_db.RolePermissions, item => item.RoleId == lead.Id && item.Permission.Module == "design.projects" &&
+            item.Permission.Action == "manage");
+    }
+
+    [Fact]
     public void NewLegalTemplatePermissionsBackfillExistingRolesOnceAndPreserveRevocation()
     {
         RbacSeeder.Seed(_db);

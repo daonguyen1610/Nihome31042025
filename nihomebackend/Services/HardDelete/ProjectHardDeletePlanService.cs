@@ -289,6 +289,8 @@ public sealed class DesignProjectHardDeleteHandler(
         var exists = await db.DesignProjects.AsNoTracking().AnyAsync(item => item.Id == projectId, ct);
         if (!exists || !await projectAccess.CanManageDesignProjectAsync(requestedBy, projectId, ct))
             throw ProjectAuthorizationChanged();
+        await RequireRecordDeletionPermissionAsync(db, permissions,
+            db.DesignProjects.Where(item => item.Id == projectId).Select(item => item.Id), requestedBy, ct);
         var current = await plans.ForDesignProjectAsync(projectId, ct)
             ?? throw PlanChanged();
         EnsurePlan(context.PlanToken, current.Impact.PlanToken);
@@ -333,6 +335,19 @@ public sealed class DesignProjectHardDeleteHandler(
                 "Dữ liệu liên quan đã thay đổi. Vui lòng xem lại danh sách ảnh hưởng trước khi xoá.");
     }
 
+    internal static async Task RequireRecordDeletionPermissionAsync(
+        AppDbContext db, IPermissionService permissions, IQueryable<int> designProjectIds,
+        int userId, CancellationToken ct)
+    {
+        if (await permissions.HasAsync(userId, "design.records.hard-delete", ct)) return;
+        // Deleting a parent must not bypass the stricter child-dossier gate.
+        if (await db.ConceptOptions.AnyAsync(item => designProjectIds.Contains(item.DesignProjectId), ct) ||
+            await db.BasicDesignDocs.AnyAsync(item => designProjectIds.Contains(item.DesignProjectId), ct) ||
+            await db.ShopDrawings.AnyAsync(item => designProjectIds.Contains(item.DesignProjectId), ct) ||
+            await db.IfcReleases.AnyAsync(item => designProjectIds.Contains(item.DesignProjectId), ct))
+            throw new HardDeleteAuthorizationException("Xóa dự án chứa hồ sơ Thiết kế cần quyền xóa vĩnh viễn hồ sơ Thiết kế.");
+    }
+
     internal static void DetachRolledBackDomainEntries(AppDbContext db)
     {
         foreach (var entry in db.ChangeTracker.Entries().Where(entry =>
@@ -370,6 +385,8 @@ public sealed class OperationalProjectHardDeleteHandler(
             project.Id == projectId &&
             (canSeeAll || project.ProjectManagerUserId == requestedBy || project.CreatedByUserId == requestedBy), ct);
         if (!canManage) throw ProjectAuthorizationChanged();
+        await DesignProjectHardDeleteHandler.RequireRecordDeletionPermissionAsync(db, permissions,
+            db.DesignProjects.Where(item => item.OperationalProjectId == projectId).Select(item => item.Id), requestedBy, ct);
         var current = await plans.ForOperationalProjectAsync(projectId, ct)
             ?? throw PlanChanged();
         DesignProjectHardDeleteHandler.EnsurePlan(context.PlanToken, current.Impact.PlanToken);

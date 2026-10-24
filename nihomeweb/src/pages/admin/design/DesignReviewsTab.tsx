@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { newIdempotencyKey } from "@/lib/api";
-import { extractApiError } from "@/lib/apiError";
+import { extractApiError, extractDownloadError } from "@/lib/apiError";
 import { useI18n } from "@/lib/i18n";
 import { useAppSelector } from "@/store";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -176,7 +176,7 @@ export const DesignReviewsTab = ({ project, recipientProjectId, focusedReviewId 
       anchor.click();
       window.URL.revokeObjectURL(url);
     } catch (reason) {
-      setError(extractApiError(reason));
+      setError(await extractDownloadError(reason));
     } finally {
       setBusy(null);
     }

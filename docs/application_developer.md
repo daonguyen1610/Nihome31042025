@@ -1981,6 +1981,46 @@ expanded customer-wide Google Drive contract. Validate live upload, download,
 reconciliation, ownership and cleanup against the configured environment before
 claiming external transport works; metadata or mocked tests are insufficient.
 
+Design workspace persistence is also the durable folder-initialization intent:
+the Drive worker selects workspaces with missing Concept/Basic/Shop bindings,
+five projects per pass, rotating its cursor past failures. After reaching the
+end it wraps; a restart rediscovers missing bindings from SQL. No Drive call
+occurs inside the handoff transaction and no file/contract is required. Existing
+folder identities, configured paths and bindings are reused; initialization
+does not migrate Survey/CRM topology. Disabled/unwritable Drive pauses work.
+Failures are logged by project and missing bindings remain retryable. The
+cursor is an optimization; SQL workspace/binding state determines completion.
+
+Catalog list/download now admit active, started project members through a
+shared filtered query. Category permissions follow the owning modules:
+Concept/Basic/Shop use their corresponding `design.*.view`, permits use
+`permit.checklists.view`, construction evidence uses Acceptance/QA-QC/QS view,
+Survey uses `crm.surveys.view`, pre-design uses `crm.opportunities.view`,
+Procurement uses material/resource-request view, Finance uses
+`finance.payments.view`. Source-module permission is also required, except
+General which relies on category permission. Unclassified files remain outside
+member-only reads. Creator/PM/view-all behavior is preserved; membership does
+not widen mutation authorization. List and binary download apply the same
+predicate, including after assignment ends.
+
+Internal Design recipient eligibility uses `design.reviews.receive` on an
+active user/role, including custom roles; assignment to an individual review
+still controls access. Defaults and four-language labels are seeded through
+the normal RBAC catalog. Download UI parses bounded JSON error Blobs using
+the shared asynchronous helper so integrity conflicts retain server guidance.
+Pure helper regression tests run with `cd nihomeweb && npm run test:unit`.
+
+Both .NET test projects exclude `**/TestResults/**` from default MSBuild items.
+Generated `.cs` probes retained as test artifacts must not become compiled
+tests or inputs to solution format verification. Keep executable regressions
+under the normal tracked test directories.
+
+New tender submissions retain versioned JSON snapshots of plan metadata and
+task WBS/content/resources/actors/dates/progress/verification/CC/dependencies,
+plus Finance checklist/findings/decision/actors and concurrency versions.
+Snapshot fields are additive to existing submission JSON; old sparse snapshots
+remain historical evidence and are not backfilled using current source data.
+
 Relationship changes are reconciled only on an explicit update that changes the
 resolved Operational Project. Linking or reassigning an Opportunity, Contract,
 or Design Project stages its currently supported source files in the destination
@@ -3706,6 +3746,13 @@ cd nihomeweb
 CI=1 BASE_URL=http://localhost:5043 npx playwright test --shard=1/2
 CI=1 BASE_URL=http://localhost:5043 npx playwright test --shard=2/2
 ```
+
+Design browser flows that approve durable evidence, including Basic Design
+and recipient review, require a connected Google Drive. They check the live
+Drive status before creating test data and report a skip when it is not
+connected; a failed status request remains a test failure. A skipped run is
+not evidence of a passing Drive workflow. Run these specs against a connected
+Compose stack to validate synchronization, recipient access and file downloads.
 
 ### 9.3 Manual As-Built Smoke Test
 

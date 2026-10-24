@@ -29,7 +29,7 @@ public sealed class DesignReviewService(
     INotificationService notifications,
     ILogger<DesignReviewService> logger) : IDesignReviewService
 {
-    private static readonly string[] AllowedRecipientRoles = ["SALE", "SALES_MANAGER", "PM", "BGD"];
+    private const string RecipientPermissionModule = "design.reviews";
 
     public async Task<IReadOnlyList<DesignReviewRecipientResponse>> ListRecipientCandidatesAsync(
         int projectId, int callerUserId, CancellationToken ct)
@@ -37,7 +37,8 @@ public sealed class DesignReviewService(
         await RequireManagerAsync(projectId, callerUserId, ct);
         return await db.Users.AsNoTracking()
             .Where(item => item.IsActive && item.Id != callerUserId &&
-                item.RoleEntity != null && AllowedRecipientRoles.Contains(item.RoleEntity.Code))
+                item.RoleEntity != null && item.RoleEntity.IsActive && item.RoleEntity.RolePermissions.Any(grant =>
+                    grant.Permission.IsActive && grant.Permission.Module == RecipientPermissionModule && grant.Permission.Action == "receive"))
             .OrderBy(item => item.FullName).ThenBy(item => item.Email)
             .Select(item => new DesignReviewRecipientResponse
             {
@@ -348,8 +349,9 @@ public sealed class DesignReviewService(
         if (ids.Contains(managerId)) throw new DesignReviewOperationException("Chủ nhiệm thiết kế không cần nằm trong danh sách người nhận.");
         var count = await db.Users.AsNoTracking().CountAsync(item =>
             ids.Contains(item.Id) && item.IsActive &&
-            item.RoleEntity != null && AllowedRecipientRoles.Contains(item.RoleEntity.Code), ct);
-        if (count != ids.Count) throw new DesignReviewOperationException("Danh sách người nhận chứa người dùng không tồn tại hoặc ngừng hoạt động.");
+            item.RoleEntity != null && item.RoleEntity.IsActive && item.RoleEntity.RolePermissions.Any(grant =>
+                grant.Permission.IsActive && grant.Permission.Module == RecipientPermissionModule && grant.Permission.Action == "receive"), ct);
+        if (count != ids.Count) throw new DesignReviewOperationException("Người nhận phải đang hoạt động và có quyền nhận hồ sơ trình nội bộ Thiết kế.");
     }
 
     private async Task<List<ProjectDocument>> ValidateDocumentsAsync(

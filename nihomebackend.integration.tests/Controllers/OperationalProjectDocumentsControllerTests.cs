@@ -30,6 +30,62 @@ public sealed class OperationalProjectDocumentsControllerTests(
     private static readonly byte[] PdfBytes = Encoding.ASCII.GetBytes("%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\n%%EOF");
     private readonly HashSet<int> projectIdsToClean = [];
 
+    [Theory]
+    [InlineData("SITE_QAQC", ProjectDocumentCategory.ConstructionAcceptance)]
+    [InlineData("QS", ProjectDocumentCategory.ConstructionAcceptance)]
+    [InlineData("LEGAL_OFFICER", ProjectDocumentCategory.LegalPermits)]
+    public async Task ActiveMember_ReadsPermittedEvidenceWithoutFinanceAccessOrMutationRights(
+        string role, ProjectDocumentCategory category)
+    {
+        var projectId = await CreateProjectAsync();
+        var allowed = await AddDocumentAsync(projectId, category);
+        var financial = await AddDocumentAsync(projectId, ProjectDocumentCategory.FinanceContracts);
+        var outsideProjectId = await CreateProjectAsync();
+        var outside = await AddDocumentAsync(outsideProjectId, category);
+        var memberId = await WithDbAsync(async db =>
+        {
+            var userId = await db.Users.Where(user => user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode[role])
+                .Select(user => user.Id).SingleAsync();
+            var member = new OperationalProjectMember
+            {
+                OperationalProjectId = projectId,
+                UserId = userId,
+                Position = "NICON evidence reviewer",
+                StartedAt = DateTime.UtcNow.AddDays(-1),
+                CreatedByUserId = userId,
+                UpdatedByUserId = userId,
+            };
+            db.Add(member);
+            await db.SaveChangesAsync();
+            return member.Id;
+        });
+        await AuthenticateAsAsync(role);
+        (await Client.GetAsync($"/api/operational-projects/{projectId}")).StatusCode.Should().Be(HttpStatusCode.OK);
+        using var list = await Client.GetAsync($"/api/operational-projects/{projectId}/documents");
+        list.StatusCode.Should().Be(HttpStatusCode.OK, await list.Content.ReadAsStringAsync());
+        (await ReadJsonAsync(list)).EnumerateArray().Select(item => item.GetProperty("id").GetInt64())
+            .Should().Equal(allowed.Id);
+        using var download = await Client.GetAsync($"/api/operational-projects/{projectId}/documents/{allowed.Id}/content");
+        download.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await download.Content.ReadAsByteArrayAsync()).Should().Equal(PdfBytes);
+        (await Client.GetAsync($"/api/operational-projects/{projectId}/documents/{financial.Id}/content"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await Client.GetAsync($"/api/operational-projects/{outsideProjectId}/documents/{outside.Id}/content"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+        using var deletion = await Client.DeleteAsync($"/api/operational-projects/{projectId}/documents/{allowed.Id}");
+        deletion.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        await WithDbAsync(async db =>
+        {
+            (await db.OperationalProjectMembers.SingleAsync(item => item.Id == memberId)).EndedAt = DateTime.UtcNow;
+            await db.SaveChangesAsync();
+        });
+        (await Client.GetAsync($"/api/operational-projects/{projectId}/documents"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await Client.GetAsync($"/api/operational-projects/{projectId}/documents/{allowed.Id}/content"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await LoadDocumentAsync(allowed.Id)).DeletedAt.Should().BeNull();
+    }
+
     [Fact]
     public async Task DocumentCategories_RequiresAuthentication_AndReturnsOrderedSupportedCatalog()
     {

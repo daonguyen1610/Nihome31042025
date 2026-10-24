@@ -160,6 +160,7 @@
     { "module": "design.projects", "action": "manage" },
     { "module": "design.schedule", "action": "manage" },
     { "module": "design.records", "action": "hard-delete" },
+    { "module": "design.reviews", "action": "receive" },
     { "module": "design.concepts", "action": "view" },
     { "module": "design.concepts", "action": "manage" },
     { "module": "design.concepts", "action": "finalize" },
@@ -242,7 +243,7 @@
         "work.packages.view", "work.packages.progress", "analytics.kpi.view", "profile.me.*",
         "crm.leads.view", "crm.customers.view", "crm.opportunities.view", "crm.quotes.view",
         "crm.material-rates.view", "crm.tenders.view", "crm.capability-docs.view",
-        "crm.surveys.view", "crm.contracts.view"
+        "crm.surveys.view", "crm.contracts.view", "design.reviews.receive"
       ]
     },
     {
@@ -283,7 +284,7 @@
         "construction.qa-qc.view", "construction.qs.view",
         "construction.acceptance.view", "construction.asbuilt.view",
         "construction.asbuilt-categories.view", "construction.handover.view",
-        "permit.checklists.view"
+        "permit.checklists.view", "design.reviews.receive"
       ]
     },
     {
@@ -331,11 +332,12 @@
 
   "rolePermissions": {
     "SUPER_ADMIN": { "patterns": ["**"] },
-    "ADMIN":       { "patterns": ["**"], "deny": ["users.manage", "system.audit.manage"] },
+    "ADMIN":       { "patterns": ["**"], "deny": ["users.manage", "system.audit.manage", "design.records.hard-delete"] },
     "USER":        { "patterns": ["profile.me.*"] },
 
     "SALE": {
       "patterns": [
+        "design.reviews.receive",
         "dashboard.view",
         "contacts.*",
         "recruitment.applications.view",
@@ -361,6 +363,7 @@
     },
     "SALES_MANAGER": {
       "patterns": [
+        "design.reviews.receive",
         "dashboard.view",
         "contacts.*",
         "recruitment.applications.view",
@@ -406,6 +409,7 @@
       ]
     },
     "DESIGN_LEAD": {
+      "deny": ["design.records.hard-delete", "design.reviews.receive"],
       "patterns": [
         "dashboard.view",
         "content.**",
@@ -504,6 +508,7 @@
 
     "PM": {
       "patterns": [
+        "design.reviews.receive",
         "permit.templates.view", "permit.templates.publish",
         "dashboard.view",
         "content.projects.*",
@@ -667,7 +672,7 @@
       "patterns": ["dashboard.view", "processes.view", "master-data.view", "workflow.view", "operations.projects.view", "work.packages.view", "work.packages.progress", "work.packages.verify", "proc.vendors.view", "proc.boq.view", "proc.material-requests.view", "proc.warehouse.*", "proc.material-alerts.view", "profile.me.*"]
     },
     "BGD": {
-      "patterns": ["dashboard.view", "**.view", "**.view.all", "operations.projects.rename", "analytics.kpi.manage", "analytics.kpi.export", "reports.projects.export", "proc.rfqs.award", "proc.rfqs.export", "crm.tenders.approve-estimate", "proc.boq.approve", "proc.material-requests.approve", "proc.vendor-ratings.approve", "finance.payments.approve", "finance.periods.close", "finance.corrections.approve", "finance.corrections.reverse", "design.records.hard-delete", "system.audit.view", "profile.me.*"]
+      "patterns": ["dashboard.view", "**.view", "**.view.all", "operations.projects.rename", "analytics.kpi.manage", "analytics.kpi.export", "reports.projects.export", "proc.rfqs.award", "proc.rfqs.export", "crm.tenders.approve-estimate", "proc.boq.approve", "proc.material-requests.approve", "proc.vendor-ratings.approve", "finance.payments.approve", "finance.periods.close", "finance.corrections.approve", "finance.corrections.reverse", "design.records.hard-delete", "design.reviews.receive", "system.audit.view", "profile.me.*"]
     }
   }
 }

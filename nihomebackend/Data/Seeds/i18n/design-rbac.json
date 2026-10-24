@@ -1,5 +1,29 @@
 [
   {
+    "key": "rbac.perm.design.reviews.receive",
+    "category": "rbac",
+    "vi": "Cho phép được chỉ định nhận hồ sơ để xem và bình luận; không cấp quyền xem toàn dự án hoặc phê duyệt.",
+    "en": "Allows assignment to view and comment on a review; does not grant project-wide access or approval.",
+    "zh": "允许被指定查看和评论审查资料；不授予整个项目的访问或审批权限。",
+    "ja": "指定されたレビューの閲覧とコメントを許可します。プロジェクト全体の閲覧権限や承認権限は付与しません。"
+  },
+  {
+    "key": "rbac.perm.design.reviews.receive.label",
+    "category": "rbac",
+    "vi": "Nhận hồ sơ trình nội bộ Thiết kế",
+    "en": "Receive internal design reviews",
+    "zh": "接收内部设计审查资料",
+    "ja": "社内設計レビューを受け取る"
+  },
+  {
+    "key": "rbac.perm.design.reviews.receive.description",
+    "category": "rbac",
+    "vi": "Cho phép được chỉ định nhận hồ sơ để xem và bình luận; không cấp quyền xem toàn dự án hoặc phê duyệt.",
+    "en": "Allows assignment to view and comment on a review; does not grant project-wide access or approval.",
+    "zh": "允许被指定查看和评论审查资料；不授予整个项目的访问或审批权限。",
+    "ja": "指定されたレビューの閲覧とコメントを許可します。プロジェクト全体の閲覧権限や承認権限は付与しません。"
+  },
+  {
     "key": "rbac.perm.design.records.hard-delete.label",
     "category": "rbac",
     "vi": "Xóa vĩnh viễn hồ sơ thiết kế",

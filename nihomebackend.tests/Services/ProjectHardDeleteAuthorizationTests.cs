@@ -13,6 +13,41 @@ public sealed class ProjectHardDeleteAuthorizationTests : IDisposable
     private readonly NihomeBackend.Data.AppDbContext db = DbContextFactory.Create();
     private readonly Mock<IPermissionService> permissions = new();
 
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public async Task ParentDeletion_CannotBypassDesignRecordPermission(bool operationalRoot, bool granted)
+    {
+        const int actor = 11;
+        permissions.Setup(item => item.HasAsync(actor, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((int _, string code, CancellationToken _) =>
+                code is "design.projects.manage" or "operations.projects.manage" ||
+                granted && code == "design.records.hard-delete");
+        var root = new OperationalProject { Code = "NIC-DELETE-AUTH", Name = "NICON deletion boundary", CustomerId = 1, CreatedByUserId = actor };
+        var design = new DesignProject { OperationalProject = root, ProjectCode = "DP-DELETE-AUTH", Name = root.Name, CustomerId = 1 };
+        var concept = new ConceptOption { DesignProject = design, Name = "Phương án không đạt NICON", Status = ConceptOptionStatus.Discarded };
+        db.Add(concept);
+        await db.SaveChangesAsync();
+        var plans = new Mock<IProjectHardDeletePlanService>();
+        var plan = new ProjectHardDeletePlan(new DeletionImpactResponse { PlanToken = new string('a', 64) }, []);
+        plans.Setup(item => item.ForDesignProjectAsync(design.Id, It.IsAny<CancellationToken>())).ReturnsAsync(plan);
+        plans.Setup(item => item.ForOperationalProjectAsync(root.Id, It.IsAny<CancellationToken>())).ReturnsAsync(plan);
+        var access = new Mock<IProjectAccessService>();
+        access.Setup(item => item.CanManageDesignProjectAsync(actor, design.Id, It.IsAny<CancellationToken>(), null)).ReturnsAsync(true);
+        var staging = new Mock<IProjectDocumentStagingService>();
+        IHardDeleteResourceHandler handler = operationalRoot
+            ? new OperationalProjectHardDeleteHandler(db, plans.Object, staging.Object, permissions.Object)
+            : new DesignProjectHardDeleteHandler(db, plans.Object, staging.Object, permissions.Object, access.Object);
+        if (granted) await handler.AuthorizeAsync(Context(operationalRoot ? root.Id : design.Id, actor));
+        else await Assert.ThrowsAsync<HardDeleteAuthorizationException>(() =>
+            handler.AuthorizeAsync(Context(operationalRoot ? root.Id : design.Id, actor)));
+        Assert.True(await db.ConceptOptions.AnyAsync(item => item.Id == concept.Id));
+        Assert.True(await db.OperationalProjects.AnyAsync(item => item.Id == root.Id));
+        staging.VerifyNoOtherCalls();
+    }
+
     [Fact]
     public async Task DesignHandler_WhenProjectScopeWasRevoked_RejectsProcessing()
     {

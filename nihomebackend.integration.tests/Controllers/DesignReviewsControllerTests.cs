@@ -5,6 +5,88 @@ namespace NihomeBackend.IntegrationTests.Controllers;
 
 public sealed class DesignReviewsControllerTests : IntegrationTestBase
 {
+    [Theory]
+    [InlineData("ADMIN")]
+    [InlineData("DESIGN_LEAD")]
+    public async Task OrdinaryDefaultRole_CannotPreviewPermanentDesignDeletion(string role)
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, role));
+        using var response = await Client.GetAsync("/api/concept-options/2147483647/deletion-impact");
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task CustomRole_ReceivesReviewOnlyWithExplicitCapability(bool granted)
+    {
+        var fixture = await CreateFixtureAsync();
+        var recipient = await WithDbAsync(async db =>
+        {
+            var original = await UserAsync(db, "SALE");
+            var role = new NihomeBackend.Models.Rbac.Role
+            {
+                Code = $"NIC-CM-{Guid.NewGuid():N}",
+                Name = "NICON CM review recipient",
+                IsActive = true,
+            };
+            if (granted)
+                role.RolePermissions.Add(new NihomeBackend.Models.Rbac.RolePermission
+                {
+                    PermissionId = await db.Permissions.Where(item => item.Module == "design.reviews" && item.Action == "receive")
+                        .Select(item => item.Id).SingleAsync(),
+                });
+            var user = new ApplicationUser
+            {
+                PhoneNumber = $"098{Random.Shared.Next(1000000, 9999999)}",
+                FullName = "CM góp ý nhà xưởng NICON",
+                Email = $"cm-{Guid.NewGuid():N}@example.test",
+                PasswordHash = original.PasswordHash,
+                RoleEntity = role,
+                Role = UserRole.USER,
+                IsActive = true,
+            };
+            db.Add(user);
+            await db.SaveChangesAsync();
+            return new { user.Id, user.PhoneNumber };
+        });
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "DESIGN"));
+        using var candidates = await Client.GetAsync($"/api/design-projects/{fixture.DesignProjectId}/reviews/recipient-candidates");
+        candidates.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await ReadJsonAsync(candidates)).EnumerateArray().Any(item => item.GetProperty("userId").GetInt32() == recipient.Id)
+            .Should().Be(granted);
+        using var created = await SendWithKeyAsync(HttpMethod.Post, $"/api/design-projects/{fixture.DesignProjectId}/reviews", new
+        {
+            stage = "Concept",
+            title = "NICON custom CM recipient",
+            recipientUserIds = new[] { recipient.Id },
+            projectDocumentIds = new[] { fixture.DocumentId, fixture.PerspectiveDocumentId },
+            conceptRevisionId = fixture.ConceptRevisionId,
+        });
+        created.StatusCode.Should().Be(granted ? HttpStatusCode.Created : HttpStatusCode.BadRequest,
+            await created.Content.ReadAsStringAsync());
+        if (!granted)
+        {
+            (await WithDbAsync(db => db.DesignReviews.CountAsync(item => item.DesignProjectId == fixture.DesignProjectId)))
+                .Should().Be(0);
+            return;
+        }
+        var body = await ReadJsonAsync(created);
+        var reviewId = body.GetProperty("id").GetInt32();
+        using var submitted = await SendWithKeyAsync(HttpMethod.Post,
+            $"/api/design-projects/{fixture.DesignProjectId}/reviews/{reviewId}/submit-internal",
+            new { rowVersion = body.GetProperty("rowVersion").GetString() });
+        submitted.StatusCode.Should().Be(HttpStatusCode.OK, await submitted.Content.ReadAsStringAsync());
+        await AuthTestHelper.AuthenticateAsync(Client,
+            client => AuthTestHelper.LoginAsync(client, recipient.PhoneNumber, TestDataSeeder.DefaultPassword));
+        (await Client.GetAsync($"/api/design-projects/{fixture.DesignProjectId}/reviews"))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+        (await Client.GetAsync($"/api/design-projects/{fixture.DesignProjectId}"))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        using var comment = await SendWithKeyAsync(HttpMethod.Post,
+            $"/api/design-projects/{fixture.DesignProjectId}/reviews/{reviewId}/comments", new { body = "CM đã xem hồ sơ NICON." });
+        comment.StatusCode.Should().Be(HttpStatusCode.OK, await comment.Content.ReadAsStringAsync());
+    }
     public DesignReviewsControllerTests(NihomeWebApplicationFactory factory) : base(factory) { }
 
     [Fact]

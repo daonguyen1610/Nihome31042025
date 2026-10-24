@@ -36,6 +36,24 @@ export function extractApiError(err: unknown, fallback?: string): string {
   return anyErr.message ?? fallback ?? String(err);
 }
 
+/** Download requests return Blob bodies even when the server sends JSON errors. */
+export async function extractDownloadError(err: unknown, fallback?: string): Promise<string> {
+  if (typeof err !== "object" || err === null) return extractApiError(err, fallback);
+  const response = (err as { response?: { data?: unknown } }).response;
+  if (response?.data instanceof Blob && response.data.size <= 64 * 1024) {
+    try {
+      const data: unknown = JSON.parse(await response.data.text());
+      return extractApiError(
+        { response: { data }, message: extractApiError(err, fallback) },
+        fallback,
+      );
+    } catch {
+      // Non-JSON/provider failures retain the original safe fallback.
+    }
+  }
+  return extractApiError(err, fallback);
+}
+
 export function isConcurrencyConflict(err: unknown): boolean {
   if (typeof err !== "object" || err === null) return false;
   const response = (err as { response?: { status?: number; data?: unknown } }).response;

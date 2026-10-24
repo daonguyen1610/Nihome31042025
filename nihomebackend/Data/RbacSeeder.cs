@@ -48,8 +48,21 @@ public static class RbacSeeder
         SeedInitialBusinessRoleGroupsIfMissing(db, bundle);
         ForceSyncSystemRolePermissions(db, catalog, bundle);
         SeedInitialBusinessRolePermissionsIfMissing(db, catalog, bundle);
+        RemoveAccidentalDesignLeadDeletionGrant(db);
         SeedNewLegalTemplatePermissions(db, newLegalTemplateActions);
         BackfillUserRoleEntityIds(db);
+    }
+
+    private static void RemoveAccidentalDesignLeadDeletionGrant(AppDbContext db)
+    {
+        // Earlier design.** defaults granted this destructive capability to
+        // existing Design Lead roles. Correct that specific unsafe default;
+        // preserve every other grant and explicitly configured custom role.
+        var grants = db.RolePermissions.Where(item => item.Role.Code == "DESIGN_LEAD" &&
+            item.Permission.Module == "design.records" && item.Permission.Action == "hard-delete").ToList();
+        if (grants.Count == 0) return;
+        db.RolePermissions.RemoveRange(grants);
+        db.SaveChanges();
     }
 
     private static void SeedNewLegalTemplatePermissions(AppDbContext db, HashSet<string> newActions)
