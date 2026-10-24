@@ -346,6 +346,14 @@ the quotation's own Operational Project can be chosen as the quotation's input
 price; once chosen, the accepted total is snapshotted onto the quotation, so
 editing the offer afterwards does not change what was quoted.
 
+The input-price dialog expands on desktop and stacks fields on smaller screens.
+Every line keeps its labels visible: item code, description, unit, quantity,
+unit price, VAT and calculated amount before VAT. Enter grouped Vietnamese
+numbers such as `12.500` and decimal quantities such as `0,001`; the amount is
+read-only. Scroll the form body on mobile while Save and Cancel remain visible.
+Quotation and work-package titles wrap above their actions, including after a
+quotation is sent to the customer.
+
 **Tài chính – Kế toán — commercial review.** After Sales approves the quotation,
 Finance reviews contract conditions, guarantees, and payment terms. The purpose
 is **Tài chính rà soát thương mại** (Finance commercial review), linked to that

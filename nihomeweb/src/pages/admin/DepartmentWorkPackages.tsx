@@ -27,6 +27,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { MoneyInput } from "@/components/ui/money-input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -71,6 +72,8 @@ const emptyOptions: DepartmentWorkPackageOptionsResponse = {
 };
 const money = (value: number, currency: string) =>
   `${new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 2 }).format(value)} ${currency}`;
+const formatPriceNumber = (value: number) =>
+  new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 4 }).format(value);
 const newPriceLine = () => ({
   itemCode: "",
   description: "",
@@ -667,8 +670,15 @@ const DepartmentWorkPackages = () => {
           !line.itemCode.trim() ||
           !line.description.trim() ||
           !line.unit.trim() ||
-          line.quantity <= 0 ||
-          line.unitPrice < 0,
+          !Number.isFinite(line.quantity) ||
+          line.quantity < 0.0001 ||
+          line.quantity > 999999999999 ||
+          !Number.isFinite(line.unitPrice) ||
+          line.unitPrice < 0 ||
+          line.unitPrice > 999999999999 ||
+          !Number.isFinite(line.vatPercent) ||
+          line.vatPercent < 0 ||
+          line.vatPercent > 100,
       )
     ) {
       toast({ variant: "destructive", title: t("workPackages.inputPrice.validation") });
@@ -814,8 +824,8 @@ const DepartmentWorkPackages = () => {
       <div className="space-y-6" data-testid="work-packages-page">
         {detail ? (
           <>
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div className="space-y-2">
+            <div className="flex min-w-0 flex-col gap-4" data-testid="work-package-detail-header">
+              <div className="min-w-0 w-full space-y-2">
                 <Button variant="ghost" asChild className="-ml-3">
                   <Link data-testid="work-package-back" to="/admin/work-packages">
                     <ArrowLeft className="mr-2 h-4 w-4" />
@@ -823,7 +833,7 @@ const DepartmentWorkPackages = () => {
                   </Link>
                 </Button>
                 <div className="flex flex-wrap items-center gap-2">
-                  <h1 className="text-2xl font-bold">
+                  <h1 className="min-w-0 max-w-full text-2xl font-bold [overflow-wrap:anywhere]">
                     {detail.code} · {detail.name}
                   </h1>
                   <Badge className={statusTone[detail.status]} variant="outline">
@@ -835,7 +845,7 @@ const DepartmentWorkPackages = () => {
                   {detail.description || t("workPackages.noDescription")}
                 </p>
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex min-w-0 flex-wrap gap-2 [&_button]:h-auto [&_button]:min-h-10 [&_button]:whitespace-normal">
                 {canManage && detail.canManagePackage && detail.status === "Completed" && (
                   <Button onClick={() => void transitionPackage("Active")}>
                     <RotateCcw className="mr-2 h-4 w-4" />
@@ -1954,13 +1964,15 @@ const Field = ({
   label,
   children,
   className = "",
+  htmlFor,
 }: {
   label: string;
   children: React.ReactNode;
   className?: string;
+  htmlFor?: string;
 }) => (
-  <div className={`space-y-2 ${className}`}>
-    <Label>{label}</Label>
+  <div className={`min-w-0 space-y-2 ${className}`}>
+    <Label htmlFor={htmlFor}>{label}</Label>
     {children}
   </div>
 );
@@ -2015,6 +2027,158 @@ const ReviewCheck = ({
   </label>
 );
 
+type InputPriceLine = UpsertInputPriceOfferRequest["lines"][number];
+
+const InputPriceNumberField = ({
+  id,
+  label,
+  value,
+  min,
+  max,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  onChange: (value: number) => void;
+}) => {
+  const invalid = !Number.isFinite(value) || value < min || value > max;
+  return (
+    <Field label={label} htmlFor={id}>
+      <MoneyInput
+        id={id}
+        value={value}
+        decimalScale={4}
+        formatValue={formatPriceNumber}
+        preferDecimalComma
+        aria-invalid={invalid || undefined}
+        aria-describedby={invalid ? `${id}-error` : undefined}
+        onChange={onChange}
+      />
+      {invalid && (
+        <p id={`${id}-error`} role="alert" className="break-words text-xs text-destructive">
+          {formatPriceNumber(min)} ≤ {label} ≤ {formatPriceNumber(max)}
+        </p>
+      )}
+    </Field>
+  );
+};
+
+const InputPriceLineEditor = ({
+  line,
+  index,
+  currency,
+  canRemove,
+  onChange,
+  onRemove,
+  t,
+}: {
+  line: InputPriceLine;
+  index: number;
+  currency: string;
+  canRemove: boolean;
+  onChange: (patch: Partial<InputPriceLine>) => void;
+  onRemove: () => void;
+  t: (key: string) => string;
+}) => {
+  const id = (field: string) => `input-price-${index}-${field}`;
+  return (
+    <fieldset
+      className="min-w-0 rounded-xl border bg-card p-4"
+      data-testid={`input-price-line-${index}`}
+    >
+      <legend className="px-2 text-sm font-semibold">
+        {t("workPackages.inputPrice.item")} {index + 1}
+      </legend>
+      <div className="grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-[minmax(0,3fr)_minmax(5rem,0.75fr)_minmax(7rem,1fr)_minmax(9rem,1.25fr)_minmax(10rem,1.25fr)]">
+        <div className="min-w-0 space-y-4 sm:col-span-2 xl:col-span-1">
+          <Field label={t("workPackages.inputPrice.itemCode")} htmlFor={id("code")}>
+            <Input
+              id={id("code")}
+              maxLength={120}
+              placeholder={t("workPackages.inputPrice.itemCode")}
+              value={line.itemCode}
+              onChange={(event) => onChange({ itemCode: event.target.value })}
+            />
+          </Field>
+          <Field label={t("workPackages.inputPrice.description")} htmlFor={id("description")}>
+            <Textarea
+              id={id("description")}
+              maxLength={500}
+              className="min-h-20"
+              placeholder={t("workPackages.inputPrice.description")}
+              value={line.description}
+              onChange={(event) => onChange({ description: event.target.value })}
+            />
+          </Field>
+        </div>
+        <Field label={t("workPackages.inputPrice.unit")} htmlFor={id("unit")}>
+          <Input
+            id={id("unit")}
+            maxLength={30}
+            placeholder={t("workPackages.inputPrice.unit")}
+            value={line.unit}
+            onChange={(event) => onChange({ unit: event.target.value })}
+          />
+        </Field>
+        <InputPriceNumberField
+          label={t("workPackages.inputPrice.quantity")}
+          id={id("quantity")}
+          value={line.quantity}
+          min={0.0001}
+          max={999999999999}
+          onChange={(quantity) => onChange({ quantity })}
+        />
+        <div className="min-w-0 space-y-4">
+          <InputPriceNumberField
+            label={t("workPackages.inputPrice.unitPrice")}
+            id={id("price")}
+            value={line.unitPrice}
+            min={0}
+            max={999999999999}
+            onChange={(unitPrice) => onChange({ unitPrice })}
+          />
+          <InputPriceNumberField
+            label={t("quotes.field.vatPercent")}
+            id={id("vat")}
+            value={line.vatPercent}
+            min={0}
+            max={100}
+            onChange={(vatPercent) => onChange({ vatPercent })}
+          />
+        </div>
+        <div className="min-w-0 space-y-4">
+          <Field label={t("workPackages.inputPrice.amount")} htmlFor={id("amount")}>
+            <output
+              id={id("amount")}
+              htmlFor={`${id("quantity")} ${id("price")}`}
+              className="block min-h-10 break-words rounded-md border bg-muted/40 px-3 py-2 text-right font-semibold tabular-nums"
+              data-testid={`input-price-amount-${index}`}
+            >
+              {Number.isFinite(line.quantity * line.unitPrice)
+                ? money(line.quantity * line.unitPrice, currency)
+                : "—"}
+            </output>
+          </Field>
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full whitespace-normal"
+            disabled={!canRemove}
+            onClick={onRemove}
+            aria-label={`${t("common.delete")} ${index + 1}`}
+          >
+            <Trash2 className="mr-2 h-4 w-4 shrink-0" />
+            {t("common.delete")}
+          </Button>
+        </div>
+      </div>
+    </fieldset>
+  );
+};
+
 const PriceOfferDialog = ({
   open,
   onOpenChange,
@@ -2037,196 +2201,130 @@ const PriceOfferDialog = ({
   t: (key: string) => string;
 }) => (
   <Dialog open={open} onOpenChange={onOpenChange}>
-    <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-4xl">
-      <DialogHeader>
+    <DialogContent
+      className="flex max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-[90rem] flex-col gap-0 overflow-hidden p-0 sm:max-w-[90rem]"
+      data-testid="input-price-dialog"
+    >
+      <DialogHeader className="shrink-0 border-b p-4 pr-12 sm:p-6 sm:pr-12">
         <DialogTitle>
           {t(editing ? "workPackages.inputPrice.edit" : "workPackages.inputPrice.add")}
         </DialogTitle>
         <DialogDescription>{t("workPackages.inputPrice.formHelp")}</DialogDescription>
       </DialogHeader>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field label={t("workPackages.inputPrice.vendor")}>
-          <Select
-            value={form.vendorId ? String(form.vendorId) : ""}
-            onValueChange={(value) =>
-              setForm((current) => ({ ...current, vendorId: Number(value) }))
-            }
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {vendors.length === 0 && (
-                <div className="px-2 py-1.5 text-sm text-muted-foreground">
-                  {t("common.noData")}
-                </div>
-              )}
-              {vendors.map((vendor) => (
-                <SelectItem key={vendor.id} value={String(vendor.id)}>
-                  {vendor.code} · {vendor.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </Field>
-        <Field label={t("workPackages.inputPrice.reference")}>
-          <Input
-            maxLength={120}
-            value={form.supplierReference}
-            onChange={(event) =>
-              setForm((current) => ({ ...current, supplierReference: event.target.value }))
-            }
-          />
-        </Field>
-        <Field label={t("workPackages.inputPrice.currency")}>
-          <Input
-            maxLength={3}
-            value={form.currency}
-            onChange={(event) =>
-              setForm((current) => ({ ...current, currency: event.target.value.toUpperCase() }))
-            }
-          />
-        </Field>
-        <Field label={t("workPackages.inputPrice.validUntil")}>
-          <Input
-            type="date"
-            value={form.validUntil}
-            onChange={(event) =>
-              setForm((current) => ({ ...current, validUntil: event.target.value }))
-            }
-          />
-        </Field>
-        <div className="space-y-3 sm:col-span-2">
-          <div className="flex items-center justify-between">
-            <Label>{t("workPackages.inputPrice.lines")}</Label>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={() =>
-                setForm((current) => ({ ...current, lines: [...current.lines, newPriceLine()] }))
+      <div
+        className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6"
+        data-testid="input-price-dialog-body"
+      >
+        <div className="grid min-w-0 gap-5 sm:grid-cols-2">
+          <Field label={t("workPackages.inputPrice.vendor")} htmlFor="input-price-vendor">
+            <Select
+              value={form.vendorId ? String(form.vendorId) : ""}
+              onValueChange={(value) =>
+                setForm((current) => ({ ...current, vendorId: Number(value) }))
               }
             >
-              <Plus className="mr-1 h-4 w-4" />
-              {t("workPackages.inputPrice.addLine")}
-            </Button>
-          </div>
-          {form.lines.map((line, index) => (
-            <div key={index} className="grid gap-2 rounded-lg border p-3 sm:grid-cols-12">
-              <Input
-                className="sm:col-span-2"
-                placeholder={t("workPackages.inputPrice.itemCode")}
-                value={line.itemCode}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    lines: current.lines.map((item, i) =>
-                      i === index ? { ...item, itemCode: event.target.value } : item,
-                    ),
-                  }))
-                }
-              />
-              <Input
-                className="sm:col-span-3"
-                placeholder={t("workPackages.inputPrice.description")}
-                value={line.description}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    lines: current.lines.map((item, i) =>
-                      i === index ? { ...item, description: event.target.value } : item,
-                    ),
-                  }))
-                }
-              />
-              <Input
-                className="sm:col-span-1"
-                placeholder={t("workPackages.inputPrice.unit")}
-                value={line.unit}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    lines: current.lines.map((item, i) =>
-                      i === index ? { ...item, unit: event.target.value } : item,
-                    ),
-                  }))
-                }
-              />
-              <Input
-                className="sm:col-span-2"
-                type="number"
-                min="0.0001"
-                step="0.0001"
-                aria-label={t("workPackages.inputPrice.quantity")}
-                value={line.quantity}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    lines: current.lines.map((item, i) =>
-                      i === index ? { ...item, quantity: Number(event.target.value) } : item,
-                    ),
-                  }))
-                }
-              />
-              <Input
-                className="sm:col-span-2"
-                type="number"
-                min="0"
-                step="1000"
-                aria-label={t("workPackages.inputPrice.unitPrice")}
-                value={line.unitPrice}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    lines: current.lines.map((item, i) =>
-                      i === index ? { ...item, unitPrice: Number(event.target.value) } : item,
-                    ),
-                  }))
-                }
-              />
-              <Input
-                className="sm:col-span-1"
-                type="number"
-                min="0"
-                max="100"
-                aria-label="VAT"
-                value={line.vatPercent}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    lines: current.lines.map((item, i) =>
-                      i === index ? { ...item, vatPercent: Number(event.target.value) } : item,
-                    ),
-                  }))
-                }
-              />
+              <SelectTrigger id="input-price-vendor" className="min-w-0 [&>span]:truncate">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {vendors.length === 0 && (
+                  <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                    {t("common.noData")}
+                  </div>
+                )}
+                {vendors.map((vendor) => (
+                  <SelectItem key={vendor.id} value={String(vendor.id)}>
+                    {vendor.code} · {vendor.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field label={t("workPackages.inputPrice.reference")} htmlFor="input-price-reference">
+            <Input
+              id="input-price-reference"
+              maxLength={120}
+              value={form.supplierReference}
+              onChange={(event) =>
+                setForm((current) => ({ ...current, supplierReference: event.target.value }))
+              }
+            />
+          </Field>
+          <Field label={t("workPackages.inputPrice.currency")} htmlFor="input-price-currency">
+            <Input
+              id="input-price-currency"
+              maxLength={3}
+              value={form.currency}
+              onChange={(event) =>
+                setForm((current) => ({ ...current, currency: event.target.value.toUpperCase() }))
+              }
+            />
+          </Field>
+          <Field label={t("workPackages.inputPrice.validUntil")} htmlFor="input-price-valid-until">
+            <Input
+              id="input-price-valid-until"
+              type="date"
+              value={form.validUntil}
+              onChange={(event) =>
+                setForm((current) => ({ ...current, validUntil: event.target.value }))
+              }
+            />
+          </Field>
+          <div className="space-y-3 sm:col-span-2">
+            <div className="flex items-center justify-between">
+              <Label>{t("workPackages.inputPrice.lines")}</Label>
               <Button
-                className="sm:col-span-1"
                 type="button"
-                size="icon"
-                variant="ghost"
-                disabled={form.lines.length === 1}
+                size="sm"
+                variant="outline"
                 onClick={() =>
+                  setForm((current) => ({ ...current, lines: [...current.lines, newPriceLine()] }))
+                }
+              >
+                <Plus className="mr-1 h-4 w-4" />
+                {t("workPackages.inputPrice.addLine")}
+              </Button>
+            </div>
+            {form.lines.map((line, index) => (
+              <InputPriceLineEditor
+                key={index}
+                line={line}
+                index={index}
+                currency={form.currency}
+                canRemove={form.lines.length > 1}
+                t={t}
+                onChange={(patch) =>
+                  setForm((current) => ({
+                    ...current,
+                    lines: current.lines.map((item, i) =>
+                      i === index ? { ...item, ...patch } : item,
+                    ),
+                  }))
+                }
+                onRemove={() =>
                   setForm((current) => ({
                     ...current,
                     lines: current.lines.filter((_, i) => i !== index),
                   }))
                 }
-              >
-                ×
-              </Button>
-            </div>
-          ))}
+              />
+            ))}
+          </div>
+          <Field
+            label={t("workPackages.field.description")}
+            className="sm:col-span-2"
+            htmlFor="input-price-note"
+          >
+            <Textarea
+              id="input-price-note"
+              maxLength={2000}
+              value={form.note ?? ""}
+              onChange={(event) => setForm((current) => ({ ...current, note: event.target.value }))}
+            />
+          </Field>
         </div>
-        <Field label={t("workPackages.field.description")} className="sm:col-span-2">
-          <Textarea
-            maxLength={2000}
-            value={form.note ?? ""}
-            onChange={(event) => setForm((current) => ({ ...current, note: event.target.value }))}
-          />
-        </Field>
       </div>
-      <DialogFooter>
+      <DialogFooter className="shrink-0 border-t bg-background p-4 sm:p-6">
         <Button variant="outline" onClick={() => onOpenChange(false)}>
           {t("common.cancel")}
         </Button>

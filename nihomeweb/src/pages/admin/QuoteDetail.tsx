@@ -647,8 +647,8 @@ const AdminQuoteDetail = () => {
   return (
     <AdminLayout>
       {/* ---------- Header ---------- */}
-      <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
+      <div className="mb-3 flex min-w-0 flex-col gap-4" data-testid="quote-detail-header">
+        <div className="min-w-0 w-full">
           <div className="mb-1 flex items-center gap-2 text-sm text-muted-foreground">
             <Button variant="ghost" size="sm" asChild className="h-7 px-2">
               <Link to="/admin/quotes">
@@ -660,10 +660,10 @@ const AdminQuoteDetail = () => {
             </span>
           </div>
           <h1 className="flex flex-wrap items-center gap-3 text-2xl font-semibold tracking-tight">
-            {quote.code}
+            <span className="min-w-0 max-w-full break-all">{quote.code}</span>
             <Badge
               variant="outline"
-              className={cn("whitespace-nowrap text-xs", STATUS_STYLES[quote.status])}
+              className={cn("max-w-full whitespace-normal text-xs", STATUS_STYLES[quote.status])}
             >
               {t(`quotes.status.${quote.status}`)}
             </Badge>
@@ -677,7 +677,7 @@ const AdminQuoteDetail = () => {
           )}
         </div>
 
-        <div className="flex flex-wrap gap-1.5">
+        <div className="grid w-full min-w-0 gap-2 sm:flex sm:flex-wrap [&_button]:h-auto [&_button]:min-h-10 [&_button]:whitespace-normal [&_svg]:shrink-0">
           {!editing && canManageWorkPackages && quote.operationalProjectId && (
             <>
               <Button variant="outline" asChild>
