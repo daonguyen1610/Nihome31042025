@@ -1825,6 +1825,18 @@ aggregates instead of creating duplicate project wrappers. Their `ContractId` an
 three business-root references. Endpoints are available at `/api/work-packages`
 and `/api/v1/work-packages`:
 
+The input-price editor uses persistent, associated labels and a responsive
+five-column desktop layout with stacked mobile fields. The dialog body scrolls
+independently of its header/footer. Its read-only line amount uses the existing
+pre-VAT quantity × unit-price display; the server remains authoritative for
+persisted decimal rounding and tax totals. Numeric ranges match
+`InputPriceLineRequest`; invalid values are identified next to the field.
+`MoneyInput` accepts an optional formatter and decimal-comma preference for
+these localized fields. Existing callers retain the default currency parsing.
+`quote-pricing-responsive-live.spec.ts` covers real offer persistence and layout
+at 320/390/768/1440px. Its sent-quotation rendering fixture sets only its own
+test quote to `SentToCustomer` in SQL; it does not test email delivery.
+
 | Method | Path | Permission | Purpose |
 |---|---|---|---|
 | `GET` | `/api/work-packages` | `work.packages.view` | List scoped project/internal packages with server filters |

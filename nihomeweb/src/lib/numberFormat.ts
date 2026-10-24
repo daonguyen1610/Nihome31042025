@@ -68,8 +68,14 @@ export function parseVnd(input: string): number {
  * Both Vietnamese ("85.000,50") and English ("85,000.50") separators are
  * accepted. A single three-digit suffix remains a thousands group, so the
  * established "85.000" currency entry continues to mean 85,000.
+ * Localized quantity editors can opt into decimal commas to round-trip
+ * three-digit fractions such as "0,001" without interpreting them as groups.
  */
-export function parseVndDecimal(input: string, decimalScale = 2): number {
+export function parseVndDecimal(
+  input: string,
+  decimalScale = 2,
+  preferDecimalComma = false,
+): number {
   const compact = input.trim().replace(/[\s₫đ]/gi, "");
   if (!compact) return 0;
   if (!/^\d+(?:[.,]\d+)*$/.test(compact)) return Number.NaN;
@@ -88,7 +94,7 @@ export function parseVndDecimal(input: string, decimalScale = 2): number {
     (occurrences === 1 &&
       fractionLength > 0 &&
       fractionLength <= decimalScale &&
-      fractionLength !== 3);
+      (fractionLength !== 3 || (preferDecimalComma && separator === ",")));
 
   if (isDecimal && fractionLength > decimalScale) return Number.NaN;
 

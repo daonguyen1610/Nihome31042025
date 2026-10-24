@@ -10,6 +10,10 @@ type MoneyInputProps = {
   disabled?: boolean;
   className?: string;
   decimalScale?: number;
+  formatValue?: (value: number) => string;
+  preferDecimalComma?: boolean;
+  "aria-invalid"?: boolean;
+  "aria-describedby"?: string;
   "data-testid"?: string;
 };
 
@@ -29,11 +33,15 @@ export const MoneyInput = ({
   disabled,
   className,
   decimalScale = 0,
+  formatValue = formatVnd,
+  preferDecimalComma = false,
+  "aria-invalid": ariaInvalid,
+  "aria-describedby": ariaDescribedBy,
   "data-testid": testId,
 }: MoneyInputProps) => {
   // formatVnd renders an em dash for null/NaN, which suits a display but not a
   // field — nobody can backspace a dash away. Empty stays empty here.
-  const display = (amount: number) => (amount ? formatVnd(amount) : "");
+  const display = (amount: number) => (amount ? formatValue(amount) : "");
 
   const [text, setText] = useState(() => display(value));
   const [focused, setFocused] = useState(false);
@@ -41,19 +49,22 @@ export const MoneyInput = ({
   useEffect(() => {
     if (focused) return;
     setText(display(value));
-  }, [value, focused]);
+  }, [value, focused, formatValue]);
 
   // Existing integer-currency fields retain their established 0 fallback.
   // Decimal-aware fields preserve NaN so the quote validator can reject an
   // unreadable BOQ price instead of silently changing it to zero.
   const read = (raw: string): number => {
-    const parsed = decimalScale > 0 ? parseVndDecimal(raw, decimalScale) : parseVnd(raw);
+    const parsed =
+      decimalScale > 0 ? parseVndDecimal(raw, decimalScale, preferDecimalComma) : parseVnd(raw);
     return Number.isFinite(parsed) ? parsed : decimalScale > 0 ? Number.NaN : 0;
   };
 
   return (
     <Input
       id={id}
+      aria-invalid={ariaInvalid}
+      aria-describedby={ariaDescribedBy}
       disabled={disabled}
       inputMode={decimalScale > 0 ? "decimal" : "numeric"}
       className={cn("text-right tabular-nums", className)}
