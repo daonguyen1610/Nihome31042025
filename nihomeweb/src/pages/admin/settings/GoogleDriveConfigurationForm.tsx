@@ -79,6 +79,19 @@ function validate(
     return "settings.drive.validation.folderPath";
   if (hasAnyPath && new Set(paths.map((path) => path.toLowerCase())).size !== paths.length)
     return "settings.drive.validation.folderDuplicate";
+  const returnUrl = form.frontendReturnUrl.trim();
+  if (
+    returnUrl &&
+    (returnUrl.length > 2048 ||
+      !returnUrl.startsWith("/admin/") ||
+      returnUrl.includes("\\") ||
+      returnUrl.includes("#") ||
+      Array.from(returnUrl).some((character) => {
+        const code = character.charCodeAt(0);
+        return code < 32 || code === 127;
+      }))
+  )
+    return "settings.drive.validation.returnUrl";
   if (!form.enabled) return null;
   if (!CLIENT_ID_PATTERN.test(form.clientId.trim())) return "settings.drive.validation.clientId";
   if (form.clientId.trim() !== originalClientId && clientSecret.trim().length < 8)
@@ -103,7 +116,6 @@ function validate(
   } catch {
     return "settings.drive.validation.redirectUri";
   }
-  const returnUrl = form.frontendReturnUrl.trim();
   if (
     !returnUrl.startsWith("/admin/") ||
     returnUrl.startsWith("//") ||

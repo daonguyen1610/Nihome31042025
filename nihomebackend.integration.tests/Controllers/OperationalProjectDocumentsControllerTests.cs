@@ -292,6 +292,56 @@ public sealed class OperationalProjectDocumentsControllerTests(
     }
 
     [Fact]
+    public async Task Upload_PermissionRevokedBeforeReplay_RejectsCachedResponseWhileProjectScopeRemains()
+    {
+        var originalUser = await WithDbAsync(db => db.Users.AsNoTracking().Where(item =>
+            item.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["SALE"])
+            .Select(item => new { item.Id, item.RoleEntityId }).SingleAsync());
+        var projectId = await CreateProjectAsync(originalUser.Id);
+        await AuthenticateAsAsync("SALE");
+        var key = $"revoked-upload-{Guid.NewGuid():N}";
+        using var firstContent = CreateUploadContent("DesignBasic", "NICON-Basic-R01.pdf", PdfBytes);
+        using var firstRequest = CreateUploadRequest(projectId, firstContent, key);
+        (await Client.SendAsync(firstRequest)).StatusCode.Should().Be(HttpStatusCode.Created);
+        var restrictedRoleId = await WithDbAsync(async db =>
+        {
+            var role = new NihomeBackend.Models.Rbac.Role
+            {
+                Code = $"REVOKED-{Guid.NewGuid():N}",
+                Name = "NICON upload permission revoked",
+                IsActive = true,
+                InitialPermissionsSeeded = true,
+            };
+            db.Roles.Add(role);
+            await db.SaveChangesAsync();
+            (await db.Users.SingleAsync(item => item.Id == originalUser.Id)).RoleEntityId = role.Id;
+            await db.SaveChangesAsync();
+            return role.Id;
+        });
+        try
+        {
+            using var replayContent = CreateUploadContent("DesignBasic", "NICON-Basic-R01.pdf", PdfBytes);
+            using var replayRequest = CreateUploadRequest(projectId, replayContent, key);
+            var replay = await Client.SendAsync(replayRequest);
+            replay.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+            replay.Headers.Should().NotContain(header => header.Key == "Idempotency-Replayed");
+            (await CountDocumentsAsync(projectId)).Should().Be(1);
+            (await WithDbAsync(db => db.OperationalProjects.Where(item => item.Id == projectId)
+                .Select(item => item.ProjectManagerUserId).SingleAsync())).Should().Be(originalUser.Id);
+        }
+        finally
+        {
+            await WithDbAsync(async db =>
+            {
+                (await db.Users.SingleAsync(item => item.Id == originalUser.Id)).RoleEntityId = originalUser.RoleEntityId;
+                await db.SaveChangesAsync();
+                db.Roles.Remove(await db.Roles.SingleAsync(item => item.Id == restrictedRoleId));
+                await db.SaveChangesAsync();
+            });
+        }
+    }
+
+    [Fact]
     public async Task Upload_AccessRevokedBeforeReplay_ReturnsNotFoundWithoutDisclosureOrDuplicate()
     {
         var saleUserId = await WithDbAsync(async db =>

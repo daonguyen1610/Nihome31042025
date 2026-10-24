@@ -391,6 +391,195 @@ public sealed class DesignReviewsControllerTests : IntegrationTestBase
             .Should().Be(newerDraft ? 2 : 1);
     }
 
+    [Theory]
+    [InlineData(DesignTaskApprovalStatus.Pending)]
+    [InlineData(DesignTaskApprovalStatus.Approved)]
+    public async Task UpdateTask_SubmittedScopeIsImmutable(DesignTaskApprovalStatus approvalStatus)
+    {
+        var fixture = await CreateFixtureAsync();
+        await AuthTestHelper.AuthenticateAsync(Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "DESIGN"));
+
+        await WithDbAsync(async db =>
+        {
+            var task = await db.DesignScheduleTasks.SingleAsync(item => item.DesignProjectId == fixture.DesignProjectId);
+            task.ApprovalStatus = approvalStatus;
+            await db.SaveChangesAsync();
+        });
+        var original = await WithDbAsync(db => db.DesignScheduleTasks.AsNoTracking()
+            .SingleAsync(task => task.DesignProjectId == fixture.DesignProjectId));
+        original.Status.Should().Be(DesignScheduleStatus.Completed);
+        original.ApprovalStatus.Should().Be(approvalStatus);
+        var originalHistoryCount = await WithDbAsync(db => db.DesignScheduleHistory.CountAsync(item =>
+            item.OperationalProjectId == original.OperationalProjectId));
+        var replacementScope = "Revised scope: coordinate structural design for an additional production floor";
+
+        using var updatedResponse = await SendWithKeyAsync(HttpMethod.Put,
+            $"/api/operational-projects/{original.OperationalProjectId}/design-schedule/tasks/{original.Id}", new
+            {
+                code = original.Code,
+                name = replacementScope,
+                description = "Scope changed after Design Lead approval; the previous approval cannot cover this work.",
+                departmentCode = "design",
+                assigneeMemberId = original.AssigneeMemberId,
+                approverMemberId = original.ApproverMemberId,
+                parentTaskId = original.ParentTaskId,
+                resourceSummary = original.ResourceSummary,
+                vendorId = original.VendorId,
+                downstreamContractId = original.DownstreamContractId,
+                isCritical = original.IsCritical,
+                isMilestone = original.IsMilestone,
+                plannedStart = original.PlannedStart,
+                plannedEnd = original.PlannedEnd,
+                actualStart = original.PlannedStart,
+                actualEnd = original.PlannedEnd,
+                status = "Completed",
+                progressPercent = 100,
+                weight = original.Weight,
+                predecessorTaskIds = Array.Empty<int>(),
+                ccMemberIds = Array.Empty<int>(),
+                rowVersion = Convert.ToBase64String(original.RowVersion),
+            });
+        updatedResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest,
+            await updatedResponse.Content.ReadAsStringAsync());
+
+        var persisted = await WithDbAsync(db => db.DesignScheduleTasks.AsNoTracking()
+            .SingleAsync(task => task.Id == original.Id));
+        persisted.Name.Should().Be(original.Name);
+        persisted.ApprovalStatus.Should().Be(approvalStatus);
+        persisted.RowVersion.Should().Equal(original.RowVersion);
+        (await WithDbAsync(db => db.DesignScheduleHistory.CountAsync(item =>
+            item.OperationalProjectId == original.OperationalProjectId))).Should().Be(originalHistoryCount);
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task TaskApproval_EndedAssignmentCannotSubmitOrReview(bool reviewing, bool endApprover)
+    {
+        var fixture = await CreateFixtureAsync();
+        var task = await WithDbAsync(async db =>
+        {
+            var item = await db.DesignScheduleTasks.Include(x => x.AssigneeMember)
+                .Include(x => x.ApproverMember).SingleAsync(x => x.DesignProjectId == fixture.DesignProjectId);
+            item.Status = reviewing ? DesignScheduleStatus.Completed : DesignScheduleStatus.InProgress;
+            item.ApprovalStatus = reviewing ? DesignTaskApprovalStatus.Pending : DesignTaskApprovalStatus.NotSubmitted;
+            item.ProgressPercent = reviewing ? 100 : 90;
+            if (endApprover) item.ApproverMember.EndedAt = DateTime.UtcNow.AddMinutes(-1);
+            else item.AssigneeMember.EndedAt = DateTime.UtcNow.AddMinutes(-1);
+            await db.SaveChangesAsync();
+            return item;
+        });
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client,
+            reviewing ? "DESIGN_LEAD" : "DESIGN"));
+        var uri = $"/api/operational-projects/{task.OperationalProjectId}/design-schedule/tasks/{task.Id}";
+        using var response = await SendWithKeyAsync(HttpMethod.Post, uri + (reviewing ? "/review" : "/complete"),
+            new { decision = "Approve", rowVersion = Convert.ToBase64String(task.RowVersion) });
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest, await response.Content.ReadAsStringAsync());
+        var persisted = await WithDbAsync(db => db.DesignScheduleTasks.AsNoTracking().SingleAsync(x => x.Id == task.Id));
+        persisted.Status.Should().Be(task.Status);
+        persisted.ApprovalStatus.Should().Be(task.ApprovalStatus);
+        persisted.RowVersion.Should().Equal(task.RowVersion);
+    }
+
+    [Fact]
+    public async Task TaskApproval_RevokedDesignLeadCannotReviewWhileProjectMembershipRemains()
+    {
+        var fixture = await CreateFixtureAsync();
+        var task = await WithDbAsync(async db =>
+        {
+            var item = await db.DesignScheduleTasks.Include(x => x.ApproverMember).ThenInclude(x => x.Roles)
+                .SingleAsync(x => x.DesignProjectId == fixture.DesignProjectId);
+            item.ApprovalStatus = DesignTaskApprovalStatus.Pending;
+            foreach (var role in item.ApproverMember.Roles) role.EndedAt = DateTime.UtcNow.AddMinutes(-1);
+            (await db.DesignProjects.SingleAsync(x => x.Id == fixture.DesignProjectId)).DesignLeadUserId = null;
+            await db.SaveChangesAsync();
+            return item;
+        });
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "DESIGN_LEAD"));
+        using var response = await SendWithKeyAsync(HttpMethod.Post,
+            $"/api/operational-projects/{task.OperationalProjectId}/design-schedule/tasks/{task.Id}/review",
+            new { decision = "Approve", rowVersion = Convert.ToBase64String(task.RowVersion) });
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest, await response.Content.ReadAsStringAsync());
+        (await WithDbAsync(db => db.DesignScheduleTasks.AsNoTracking().SingleAsync(x => x.Id == task.Id)))
+            .ApprovalStatus.Should().Be(DesignTaskApprovalStatus.Pending);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task DesignManagerUpload_RequiresCurrentProjectAssignment(bool assigned)
+    {
+        var fixture = await CreateFixtureAsync();
+        var project = await WithDbAsync(db => db.DesignProjects.AsNoTracking()
+            .SingleAsync(item => item.Id == fixture.DesignProjectId));
+        var manager = await WithDbAsync(db => db.Users.AsNoTracking()
+            .Where(item => item.Id == project.ProjectManagerUserId)
+            .Select(item => new { item.Id, item.IsActive, RoleCode = item.RoleEntity!.Code })
+            .SingleAsync());
+        manager.IsActive.Should().BeTrue();
+        manager.RoleCode.Should().Be("DESIGN");
+        (await WithDbAsync(db => db.OperationalProjectMembers.AnyAsync(member =>
+            member.OperationalProjectId == project.OperationalProjectId &&
+            member.UserId == manager.Id && member.EndedAt == null))).Should().BeTrue();
+        var originalCount = await WithDbAsync(db => db.ProjectDocuments.CountAsync(item =>
+            item.OperationalProjectId == project.OperationalProjectId));
+        if (!assigned)
+        {
+            await WithDbAsync(async db =>
+            {
+                (await db.DesignProjects.SingleAsync(item => item.Id == project.Id)).ProjectManagerUserId = null;
+                (await db.OperationalProjects.SingleAsync(item => item.Id == project.OperationalProjectId)).ProjectManagerUserId = null;
+                foreach (var member in await db.OperationalProjectMembers.Where(item =>
+                    item.OperationalProjectId == project.OperationalProjectId && item.UserId == manager.Id).ToListAsync())
+                    member.EndedAt = DateTime.UtcNow.AddMinutes(-1);
+                await db.SaveChangesAsync();
+            });
+        }
+
+        await AuthTestHelper.AuthenticateAsync(Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "DESIGN"));
+
+        using var content = new MultipartFormDataContent();
+        var pdfBytes = System.Text.Encoding.ASCII.GetBytes(
+            "%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\n%%EOF\n");
+        var file = new ByteArrayContent(pdfBytes);
+        file.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/pdf");
+        content.Add(file, "file", "NICON-Concept-Architecture-Review.pdf");
+        content.Add(new StringContent("DesignConcept"), "category");
+        content.Add(new StringContent("Design"), "sourceModule");
+        content.Add(new StringContent("ConceptOption"), "sourceEntityType");
+        content.Add(new StringContent(fixture.ConceptOptionId.ToString(
+            System.Globalization.CultureInfo.InvariantCulture)), "sourceRecordId");
+
+        using var request = new HttpRequestMessage(HttpMethod.Post,
+            $"/api/operational-projects/{project.OperationalProjectId}/documents")
+        {
+            Content = content,
+        };
+        request.Headers.Add("Idempotency-Key", $"design-upload-audit-{Guid.NewGuid():N}");
+        using var response = await Client.SendAsync(request);
+
+        if (!assigned)
+        {
+            response.StatusCode.Should().BeOneOf(HttpStatusCode.Forbidden, HttpStatusCode.NotFound);
+            (await WithDbAsync(db => db.ProjectDocuments.CountAsync(item =>
+                item.OperationalProjectId == project.OperationalProjectId))).Should().Be(originalCount);
+            return;
+        }
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created,
+            "the active assigned Design Manager with design.projects.manage must reach the design upload fallback; " +
+            await response.Content.ReadAsStringAsync());
+        var uploaded = await ReadJsonAsync(response);
+        uploaded.GetProperty("sourceModule").GetString().Should().Be("Design");
+        uploaded.GetProperty("sourceEntityType").GetString().Should().Be("ConceptOption");
+        uploaded.GetProperty("sourceRecordId").GetInt64().Should().Be(fixture.ConceptOptionId);
+        uploaded.GetProperty("category").GetString().Should().Be("DesignConcept");
+    }
+
     private async Task<Fixture> CreateFixtureAsync() => await WithDbAsync(async db =>
     {
         var manager = await UserAsync(db, "DESIGN");

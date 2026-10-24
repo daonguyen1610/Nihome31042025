@@ -289,11 +289,26 @@ public sealed partial class DepartmentWorkPackageService(
         if (entity is null) return null;
         var admin = await IsAdministratorAsync(callerUserId, ct);
         if (!await CanManagePackageAsync(entity, callerUserId, admin, ct)) throw ScopeError();
+        await EnsureTenderIsMutableAsync(entity, ct);
         if (!Enum.TryParse<WorkPackageStatus>(request.Status, true, out var status))
             throw Error("Trạng thái nhóm công việc không hợp lệ.");
         ValidatePackageTransition(entity, status);
         var reopening = entity.Status == WorkPackageStatus.Completed && status == WorkPackageStatus.Active;
         ValidateDates(request.PlannedStart, request.PlannedEnd);
+        if (IsTenderPlanningPackage(entity))
+        {
+            if (!request.PlannedStart.HasValue || !request.PlannedEnd.HasValue)
+                throw Error("Kế hoạch đấu thầu phải có ngày bắt đầu và ngày kết thúc.");
+            var deadline = await db.Tenders.AsNoTracking()
+                .Where(item => item.Id == entity.SourceTenderId)
+                .Select(item => item.SubmissionDeadline).SingleAsync(ct);
+            if (request.PlannedEnd.Value.ToUniversalTime() > deadline)
+                throw Error("Ngày kết thúc nhóm hồ sơ không được sau hạn nộp thầu.");
+            if (entity.Tasks.Any(task => task.Status != WorkTaskStatus.Cancelled &&
+                    (task.PlannedStart < request.PlannedStart.Value.ToUniversalTime() ||
+                     task.PlannedEnd > request.PlannedEnd.Value.ToUniversalTime())))
+                throw Error("Khoảng thời gian kế hoạch phải bao gồm các đầu việc đang có.");
+        }
         if (entity.Kind == WorkPackageKind.Internal && request.ContractId.HasValue)
             throw Error("Công việc nội bộ không được gắn Hợp đồng.");
         if (request.ContractId.HasValue)
@@ -325,6 +340,7 @@ public sealed partial class DepartmentWorkPackageService(
         var package = await db.DepartmentWorkPackages.SingleOrDefaultAsync(item => item.Id == packageId, ct)
             ?? throw Error("Không tìm thấy nhóm công việc.");
         await EnsureCanAssignAsync(package, callerUserId, ct);
+        await EnsureTenderIsMutableAsync(package, ct);
         if (package.Purpose == WorkPackagePurpose.LegalPermitting)
             throw Error("Đầu việc Pháp lý phải được tạo cùng giấy phép qua bước Thiết lập Pháp lý.");
         if (package.Status is WorkPackageStatus.Completed or WorkPackageStatus.Cancelled)
@@ -418,6 +434,7 @@ public sealed partial class DepartmentWorkPackageService(
         var admin = await IsAdministratorAsync(callerUserId, ct);
         if (!admin && task.AssigneeUserId != callerUserId)
             throw Error("Chỉ người phụ trách đầu việc mới được cập nhật tiến độ.");
+        await EnsureTenderIsMutableAsync(task.WorkPackage, ct);
         if (task.WorkPackage.Status != WorkPackageStatus.Active)
             throw Error("Nhóm công việc phải ở trạng thái Đang thực hiện trước khi cập nhật tiến độ.");
         if (!Enum.TryParse<WorkTaskStatus>(request.Status, true, out var status) ||
@@ -479,6 +496,7 @@ public sealed partial class DepartmentWorkPackageService(
         var expectedVerifier = task.ApproverUserId ?? task.WorkPackage.LeadUserId;
         if (!admin && expectedVerifier != callerUserId)
             throw Error("Chỉ người duyệt được chỉ định hoặc người chủ trì phòng mới được xác nhận đầu việc.");
+        await EnsureTenderIsMutableAsync(task.WorkPackage, ct);
         if (task.AssigneeUserId == callerUserId)
             throw Error("Người thực hiện không được tự xác nhận đầu việc của chính mình.");
         if (task.WorkPackage.Status != WorkPackageStatus.Active)
@@ -665,6 +683,7 @@ public sealed partial class DepartmentWorkPackageService(
         UpsertDepartmentWorkTaskRequest request,
         CancellationToken ct)
     {
+        await EnsureTenderIsMutableAsync(package, ct);
         var taskGroupId = ResolveTaskDepartmentRoleGroupId(package, request);
         if (package.Kind == WorkPackageKind.Internal)
         {
@@ -809,6 +828,15 @@ public sealed partial class DepartmentWorkPackageService(
             throw Error("Tiến độ đầu việc không được giảm.");
     }
 
+    private async Task EnsureTenderIsMutableAsync(DepartmentWorkPackage package, CancellationToken ct)
+    {
+        if (package.SourceTenderId.HasValue && await db.Tenders.AsNoTracking().AnyAsync(item =>
+                item.Id == package.SourceTenderId &&
+                (item.Status == TenderStatus.Won || item.Status == TenderStatus.Lost ||
+                 item.Status == TenderStatus.Cancelled), ct))
+            throw Error("Gói thầu đã có kết quả cuối hoặc đã hủy; không thể sửa kế hoạch và đầu việc.");
+    }
+
     private static void ValidatePackageTransition(DepartmentWorkPackage package, WorkPackageStatus status)
     {
         if (status == package.Status) return;
@@ -938,7 +966,8 @@ public sealed partial class DepartmentWorkPackageService(
     private async Task<DepartmentWorkTaskResponse> LoadTaskAsync(int taskId, int callerUserId, bool admin, CancellationToken ct)
     {
         var task = await db.DepartmentWorkTasks.AsNoTracking()
-            .Include(item => item.WorkPackage).Include(item => item.AssigneeUser).Include(item => item.ApproverUser)
+            .Include(item => item.WorkPackage).ThenInclude(item => item.SourceTender)
+            .Include(item => item.AssigneeUser).Include(item => item.ApproverUser)
             .Include(item => item.DepartmentRoleGroup).Include(item => item.KpiDefinition)
             .Include(item => item.CcUsers).Include(item => item.Predecessors)
             .SingleAsync(item => item.Id == taskId, ct);
@@ -986,14 +1015,14 @@ public sealed partial class DepartmentWorkPackageService(
             PlannedEnd = item.PlannedEnd,
             CompletedAt = item.CompletedAt,
             ProgressPercent = activeTasks.Count == 0 ? 0 : (int)Math.Round(activeTasks.Average(task => task.ProgressPercent)),
-            CanManagePackage = admin ||
+            CanManagePackage = IsTenderMutable(item) && (admin ||
                 (item.Kind == WorkPackageKind.Internal && item.CreatedByUserId == callerUserId &&
                     item.LeadUserId == callerUserId) ||
                 item.OperationalProject?.ProjectManagerUserId == callerUserId ||
                 item.SourceOpportunity?.OwnerUserId == callerUserId ||
                 item.SourceTender != null &&
-                    (item.SourceTender.PreparerUserId == callerUserId || item.SourceTender.CreatedByUserId == callerUserId),
-            CanAssignTasks = admin || item.LeadUserId == callerUserId,
+                    (item.SourceTender.PreparerUserId == callerUserId || item.SourceTender.CreatedByUserId == callerUserId)),
+            CanAssignTasks = IsTenderMutable(item) && (admin || item.LeadUserId == callerUserId),
             RowVersion = CrmConcurrency.Encode(item.RowVersion),
             Tasks = item.Tasks.OrderBy(task => task.WbsCode).ThenBy(task => task.Id)
                 .Select(task => MapTask(task, callerUserId, admin, item.LeadUserId)).ToList(),
@@ -1037,13 +1066,16 @@ public sealed partial class DepartmentWorkPackageService(
             VerifiedByUserId = task.VerifiedByUserId,
             CcUserIds = task.CcUsers.Select(item => item.UserId).ToList(),
             PredecessorTaskIds = task.Predecessors.Select(item => item.PredecessorTaskId).ToList(),
-            CanUpdateProgress = admin || task.AssigneeUserId == callerUserId,
-            CanVerify = RequiresIndependentVerification(task.WorkPackage, task.KpiDefinitionId) &&
+            CanUpdateProgress = IsTenderMutable(task.WorkPackage) && (admin || task.AssigneeUserId == callerUserId),
+            CanVerify = IsTenderMutable(task.WorkPackage) && RequiresIndependentVerification(task.WorkPackage, task.KpiDefinitionId) &&
                 task.Status == WorkTaskStatus.Completed &&
                 task.AssigneeUserId != callerUserId && (admin || verifier == callerUserId),
             RowVersion = CrmConcurrency.Encode(task.RowVersion),
         };
     }
+
+    private static bool IsTenderMutable(DepartmentWorkPackage package) =>
+        package.SourceTender?.Status is not (TenderStatus.Won or TenderStatus.Lost or TenderStatus.Cancelled);
 
     private static bool IsTenderPlanningPackage(DepartmentWorkPackage package) =>
         package.SourceTenderId.HasValue &&

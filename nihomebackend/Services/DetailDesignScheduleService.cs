@@ -370,6 +370,9 @@ public sealed class DetailDesignScheduleService(
             .Include(item => item.CcMembers).SingleOrDefaultAsync(item =>
             item.Id == taskId && item.OperationalProjectId == projectId, ct);
         if (task is null) return null;
+        if (task.ApprovalStatus is DesignTaskApprovalStatus.Pending or DesignTaskApprovalStatus.Approved)
+            throw new DesignScheduleOperationException(
+                "Đầu việc đang chờ duyệt hoặc đã duyệt không được sửa nội dung.");
         var status = await ValidateTaskAsync(projectId, taskId, request, ct);
         DesignScheduleRules.ValidateTransition(task.Status, status);
         var predecessorIds = NormalizePredecessors(request.PredecessorTaskIds);
@@ -420,6 +423,7 @@ public sealed class DetailDesignScheduleService(
         if (task is null) return null;
         if (task.AssigneeMember.UserId != callerUserId)
             throw new DesignScheduleOperationException("Chỉ người phụ trách được đánh dấu hoàn thành đầu việc thiết kế.");
+        await EnsureActiveAssignmentAsync(task, ct);
         if (task.ApprovalStatus == DesignTaskApprovalStatus.Pending)
             throw new DesignScheduleOperationException("Đầu việc đã được gửi duyệt.");
         if (task.ApprovalStatus == DesignTaskApprovalStatus.Approved)
@@ -470,6 +474,7 @@ public sealed class DetailDesignScheduleService(
         if (task is null) return null;
         if (task.ApproverMember.UserId != callerUserId)
             throw new DesignScheduleOperationException("Chỉ người duyệt đã được chỉ định được duyệt đầu việc này.");
+        await EnsureActiveAssignmentAsync(task, ct);
         if (task.AssigneeMember.UserId == callerUserId)
             throw new DesignScheduleOperationException("Người thực hiện không được tự duyệt đầu việc của mình.");
         if (task.ApprovalStatus != DesignTaskApprovalStatus.Pending)
@@ -507,6 +512,36 @@ public sealed class DetailDesignScheduleService(
         return await MapTaskAsync(task.Id, ct);
     }
 
+    private async Task EnsureActiveAssignmentAsync(DesignScheduleTask task, CancellationToken ct)
+    {
+        var now = DateTime.UtcNow;
+        var activeMembers = await db.OperationalProjectMembers.AsNoTracking()
+            .Where(member => (member.Id == task.AssigneeMemberId || member.Id == task.ApproverMemberId) &&
+                member.OperationalProjectId == task.OperationalProjectId && member.User.IsActive &&
+                member.StartedAt <= now && (!member.EndedAt.HasValue || member.EndedAt > now))
+            .Select(member => new
+            {
+                member.Id,
+                IsDesignLead = member.Roles.Any(role => role.StartedAt <= now &&
+                    (!role.EndedAt.HasValue || role.EndedAt > now) && role.RoleCode == ProjectTeamRoleCode.DesignLead &&
+                    (role.Scope == ProjectRoleScope.Project ||
+                     role.Scope == ProjectRoleScope.Module && role.ScopeValue == "Design" ||
+                     role.Scope == ProjectRoleScope.Discipline)),
+                member.UserId,
+            }).ToListAsync(ct);
+        if (activeMembers.All(member => member.Id != task.AssigneeMemberId) ||
+            activeMembers.All(member => member.Id != task.ApproverMemberId))
+            throw new DesignScheduleOperationException(
+                "Người phụ trách và người duyệt phải còn phân công hiệu lực trong Dự án.");
+        var approver = activeMembers.Single(member => member.Id == task.ApproverMemberId);
+        var assignedLead = await db.DesignProjects.AsNoTracking()
+            .Where(project => project.Id == task.DesignProjectId)
+            .Select(project => project.DesignLeadUserId).SingleAsync(ct);
+        if (!approver.IsDesignLead && approver.UserId != assignedLead)
+            throw new DesignScheduleOperationException(
+                "Người duyệt phải còn được phân công Design Lead của Dự án hoặc bộ môn.");
+    }
+
     private async Task<DesignScheduleStatus> ValidateTaskAsync(
         int projectId,
         int? taskId,
@@ -516,6 +551,9 @@ public sealed class DetailDesignScheduleService(
         if (string.IsNullOrWhiteSpace(request.Code) || string.IsNullOrWhiteSpace(request.Name))
             throw new DesignScheduleOperationException("Mã và tên công việc là bắt buộc.");
         var status = DesignScheduleRules.ParseStatus(request.Status);
+        if (status == DesignScheduleStatus.Completed)
+            throw new DesignScheduleOperationException(
+                "Dùng thao tác Hoàn thành để tự động gửi đầu việc đến đúng người duyệt.");
         var plannedStart = RequireDate(request.PlannedStart, "Ngày bắt đầu kế hoạch");
         var plannedEnd = RequireDate(request.PlannedEnd, "Ngày kết thúc kế hoạch");
         DesignScheduleRules.ValidateDatesAndStatus(plannedStart, plannedEnd,

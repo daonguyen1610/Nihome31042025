@@ -1417,6 +1417,11 @@ cannot become `Completed` until every task is `Verified`; a Tender cannot become
 package is complete. This is the server-side gate for planning, dossier
 preparation and internal review; the Tender checklist remains the authoritative
 file/dossier checklist rather than a second planning model.
+Updating a Tender plan preserves the required start/end dates, the submission
+deadline and every non-cancelled task's date range. Final `Won`, `Lost` and
+`Cancelled` results also lock package edits/reopening, task assignment, progress
+and verification through the generic work-package APIs. Response capability
+flags expose these records as read-only.
 The checklist row with `TemplateCode=capability` must reference a
 `CapabilityDocumentId`; direct upload is rejected and submission rechecks this
 invariant. Other project-specific checklist rows require direct uploads and
@@ -3117,6 +3122,13 @@ QS validates contract direction, dates, quantity-line totals,
 milestone/appendix/approved BOQ references, and governed superseding or reversal
 references. Submitted records are immutable except through the documented
 review/correction lifecycle.
+Generic and source-managed document deletion reject QA/QC and QS evidence
+links, including draft links. Creating or editing either dossier pins each
+active document's row version in the same transaction as its evidence links;
+a delete staged before that link commits fails concurrency rather than removing
+the file or its source record. Deleted or delete-pending documents cannot be
+newly attached. SQL Server regression tests cover both winning orders for
+create/update and manual/source-managed deletion.
 
 This is a partial delivery of the target below. WBS/Gantt/S-Curve and Budget
 Baseline are reference-backed rather than dedicated editable aggregates; the
@@ -3855,7 +3867,16 @@ To use another account, select **Disconnect** and then **Connect Google Drive**,
 
 `InstanceId` must be stable and unique per deployment; it prevents one Nicon environment from claiming another environment's Drive replicas. Folder paths form the centralized registry beneath `RootFolderId` and are resolved segment by segment. Google Drive settings are intentionally not bound from `appsettings.json` or `GoogleDrive__*` environment variables. Only the Data Protection key-ring path remains deployment infrastructure because storing it in the encrypted database would create a decryption bootstrap cycle.
 
-The migration intentionally leaves upgraded installations disabled with empty deployment-specific fields. During a planned maintenance window, an administrator must save the former business configuration on the Admin page and reconnect before synchronization resumes. Although the existing encrypted refresh-token column is preserved, the first Client ID assignment clears that token because the application cannot prove it belongs to the newly entered OAuth client. For later topology changes, first disable synchronization and wait for active `Processing` records to finish, then change the root folder, deployment identity, or business folder paths and re-enable. Nicon invalidates cached project-folder bindings so future operations resolve beneath the new topology. Existing catalog rows and Drive files are retained; the application does not move or delete historical files automatically.
+`FrontendReturnUrl` must remain an internal `/admin/` path, without backslashes,
+fragments or control characters, including when saving disabled drafts. The
+OAuth result redirect revalidates persisted legacy values and falls back to
+`/admin/settings?tab=drive`. Health and redirect construction read public
+configuration independently of secret decryption; an unreadable stored
+credential returns `ReconnectRequired` rather than an unhandled health error.
+Restore the correct Data Protection keys or re-enter the OAuth secret before
+reconnecting if the key ring was lost.
+
+The migration intentionally leaves upgraded installations disabled with empty deployment-specific fields. During a planned maintenance window, an administrator must save the former business configuration on the Admin page and reconnect before synchronization resumes. Although the existing encrypted refresh-token column is preserved, the first Client ID assignment clears that token because the application cannot prove it belongs to the newly entered OAuth client. For later topology changes with existing bindings, first save synchronization as disabled and wait for active `Processing` records to finish. Save the new root folder, deployment identity or business paths while still disabled, then re-enable in a separate save. The server rejects topology changes while processing is active or existing bindings are enabled. Nicon invalidates cached project-folder bindings so future operations resolve beneath the new topology. Existing catalog rows and Drive files are retained; the application does not move or delete historical files automatically.
 
 Project document storage is Drive-primary after synchronization. Manual uploads
 are queued in private host storage while Drive is unavailable; the worker
@@ -3893,7 +3914,10 @@ Connection statuses have the following meanings:
 - `ReconnectRequired`: the refresh token is missing, expired, or revoked; an administrator must reconnect once in Settings.
 - `Unavailable`: authentication or folder access failed.
 
-Each project document permits at most three worker claims. During backoff after a failed claim, an authorized user can select **Retry** to make the next remaining claim eligible immediately. After the third failed claim the row is terminal; correct the Drive configuration before replacing or restaging the source file.
+Each project document permits at most three automatic worker claims per retry
+cycle. An authorized user can select **Retry**, including after attempt three,
+to reset the attempt count and queue a new cycle after correcting the cause.
+`Processing` rows reject retry until the active claim completes or is recovered.
 
 While a legacy sidecar upload is running, a separate scoped database heartbeat renews its claim every five minutes. Losing claim ownership cancels the Drive request and SQL generation fencing rejects stale completion. If a crash or network race still leaves multiple remote files with the same Nicon replica key and generation, reconciliation preserves the SQL-bound replica and moves the extras to Drive trash.
 
@@ -3903,7 +3927,10 @@ Retry and deletion are rejected while a row is `Processing`. This preserves the 
 
 The response includes only safe identity/folder metadata and never includes the credential path, client secret, refresh token, or private key.
 
-For Docker development, provide client ID, client secret, localhost callback URI, root folder, and instance ID through local ignored configuration or environment variables, then recreate the backend. Compose persists the Data Protection key ring in the `data_protection_keys` volume.
+For Docker development, save the OAuth configuration through **Settings >
+Google Drive**, using the exact loopback callback registered with Google.
+Compose persists the Data Protection key ring in the `data_protection_keys`
+volume; business OAuth settings are read from the encrypted database row.
 
 ```bash
 docker compose up -d --build --force-recreate nihomeBackend

@@ -482,16 +482,27 @@ public sealed class DetailDesignScheduleControllerTests : IntegrationTestBase
                 Weight = 40,
             });
         using var second = await CreateTaskAsync(fixture, phaseId,
-            TaskPayload("FILTER-B", fixture.MemberId, 100, "Completed",
+            TaskPayload("FILTER-B", fixture.MemberId, 99, "InProgress",
                 new DateOnly(2026, 9, 2)) with
             {
                 PlannedStart = new DateOnly(2026, 9, 2),
                 PlannedEnd = new DateOnly(2026, 9, 2),
-                ActualEnd = new DateOnly(2026, 9, 2),
                 Weight = 60,
             });
         first.StatusCode.Should().Be(HttpStatusCode.Created);
         second.StatusCode.Should().Be(HttpStatusCode.Created);
+        // This is a read/filter fixture; completion itself is exercised by the
+        // dedicated submit/review journey rather than the generic create API.
+        await WithDbAsync(async db =>
+        {
+            var completed = await db.DesignScheduleTasks.SingleAsync(item =>
+                item.OperationalProjectId == fixture.ProjectId && item.Code == "FILTER-B");
+            completed.Status = DesignScheduleStatus.Completed;
+            completed.ProgressPercent = 100;
+            completed.ActualEnd = new DateOnly(2026, 9, 2);
+            completed.ApprovalStatus = DesignTaskApprovalStatus.Approved;
+            await db.SaveChangesAsync();
+        });
 
         using var baselineResponse = await Client.GetAsync(
             $"/api/operational-projects/{fixture.ProjectId}/design-schedule?page=1&pageSize=1");
@@ -592,11 +603,10 @@ public sealed class DetailDesignScheduleControllerTests : IntegrationTestBase
             Weight = 1,
             PlannedEnd = new DateOnly(2026, 9, 1),
         };
-        var validMaximum = TaskPayload(new string('C', 80), fixture.MemberId, 100, "Completed",
+        var validMaximum = TaskPayload(new string('C', 80), fixture.MemberId, 100, "InProgress",
             new DateOnly(2026, 9, 1)) with
         {
             Name = new string('N', 300),
-            ActualEnd = new DateOnly(2026, 9, 3),
             Weight = 100,
         };
 
@@ -622,6 +632,8 @@ public sealed class DetailDesignScheduleControllerTests : IntegrationTestBase
             TaskPayload("BAD-WEIGHT-HIGH", fixture.MemberId, 0) with { Weight = 101 },
             TaskPayload("BAD-ASSIGNEE", 0, 0),
             TaskPayload("BAD-STATUS", fixture.MemberId, 0, "Unsupported"),
+            TaskPayload("BYPASS-APPROVAL", fixture.MemberId, 100, "Completed",
+                new DateOnly(2026, 9, 1)) with { ActualEnd = new DateOnly(2026, 9, 3) },
             TaskPayload("BAD-ORDER", fixture.MemberId, 0) with
             {
                 PlannedStart = new DateOnly(2026, 9, 3),

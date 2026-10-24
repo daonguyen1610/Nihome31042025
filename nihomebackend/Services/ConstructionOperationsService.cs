@@ -255,7 +255,10 @@ public sealed class ConstructionOperationsService(AppDbContext db, IProcurementS
     public async Task<QaQcDossierResponse> CreateDossierAsync(int projectId, CreateQaQcDossierRequest request, int userId, CancellationToken ct)
     {
         await using var tx = db.Database.IsRelational() ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct) : null;
-        var template = await ValidateDossier(projectId, request, ct); var next = await db.QaQcDossiers.CountAsync(x => x.OperationalProjectId == projectId, ct) + 1;
+        var template = await ValidateDossier(projectId, request, ct);
+        await PinEvidenceAsync(projectId, request.Evidence.Count > 0
+            ? request.Evidence.Select(x => x.ProjectDocumentId).ToList() : request.EvidenceDocumentIds, userId, ct);
+        var next = await db.QaQcDossiers.CountAsync(x => x.OperationalProjectId == projectId, ct) + 1;
         var item = new QaQcDossier { OperationalProjectId = projectId, Code = $"QA-{projectId:D4}-{next:D4}", CreatedByUserId = userId };
         Apply(item, request, template); db.QaQcDossiers.Add(item); await CrmConcurrency.SaveChangesAsync(db, ct);
         if (tx is not null) await tx.CommitAsync(ct);
@@ -263,9 +266,15 @@ public sealed class ConstructionOperationsService(AppDbContext db, IProcurementS
     }
     public async Task<QaQcDossierResponse?> UpdateDossierAsync(int projectId, int id, CreateQaQcDossierRequest request, string rowVersion, int userId, CancellationToken ct)
     {
+        await using var tx = db.Database.IsRelational() ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct) : null;
         var item = await Dossiers().SingleOrDefaultAsync(x => x.OperationalProjectId == projectId && x.Id == id, ct); if (item is null) return null;
-        EnsureDraftOwner(item.Status, item.CreatedByUserId, userId); var template = await ValidateDossier(projectId, request, ct); CrmConcurrency.Apply(db, item, rowVersion); Apply(item, request, template);
-        await CrmConcurrency.SaveChangesAsync(db, ct); return Map(item);
+        EnsureDraftOwner(item.Status, item.CreatedByUserId, userId); var template = await ValidateDossier(projectId, request, ct);
+        await PinEvidenceAsync(projectId, request.Evidence.Count > 0
+            ? request.Evidence.Select(x => x.ProjectDocumentId).ToList() : request.EvidenceDocumentIds, userId, ct);
+        CrmConcurrency.Apply(db, item, rowVersion); Apply(item, request, template);
+        await CrmConcurrency.SaveChangesAsync(db, ct);
+        if (tx is not null) await tx.CommitAsync(ct);
+        return Map(item);
     }
     public Task<QaQcDossierResponse?> SubmitDossierAsync(int projectId, int id, string rowVersion, int userId, CancellationToken ct) => TransitionDossier(projectId, id, rowVersion, userId, null, ct);
     public Task<QaQcDossierResponse?> DecideDossierAsync(int projectId, int id, CmDecisionRequest request, int userId, CancellationToken ct) => TransitionDossier(projectId, id, request.RowVersion!, userId, request, ct);
@@ -297,7 +306,9 @@ public sealed class ConstructionOperationsService(AppDbContext db, IProcurementS
     public async Task<ConstructionQsBatchResponse> CreateQsAsync(int projectId, CreateConstructionQsBatchRequest request, int userId, CancellationToken ct)
     {
         await using var tx = db.Database.IsRelational() ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct) : null;
-        await ValidateQs(projectId, request, ct); var next = await db.ConstructionQsBatches.CountAsync(x => x.OperationalProjectId == projectId, ct) + 1;
+        await ValidateQs(projectId, request, ct);
+        await PinEvidenceAsync(projectId, request.EvidenceDocumentIds, userId, ct);
+        var next = await db.ConstructionQsBatches.CountAsync(x => x.OperationalProjectId == projectId, ct) + 1;
         var item = new ConstructionQsBatch { OperationalProjectId = projectId, Code = $"QS-{projectId:D4}-{next:D4}", CreatedByUserId = userId }; Apply(item, request);
         db.ConstructionQsBatches.Add(item); await CrmConcurrency.SaveChangesAsync(db, ct);
         if (tx is not null) await tx.CommitAsync(ct);
@@ -305,9 +316,14 @@ public sealed class ConstructionOperationsService(AppDbContext db, IProcurementS
     }
     public async Task<ConstructionQsBatchResponse?> UpdateQsAsync(int projectId, int id, CreateConstructionQsBatchRequest request, string rowVersion, int userId, CancellationToken ct)
     {
+        await using var tx = db.Database.IsRelational() ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct) : null;
         var item = await Qs().SingleOrDefaultAsync(x => x.OperationalProjectId == projectId && x.Id == id, ct); if (item is null) return null;
-        EnsureDraftOwner(item.Status, item.CreatedByUserId, userId); await ValidateQs(projectId, request, ct); CrmConcurrency.Apply(db, item, rowVersion); Apply(item, request);
-        await CrmConcurrency.SaveChangesAsync(db, ct); return Map(item);
+        EnsureDraftOwner(item.Status, item.CreatedByUserId, userId); await ValidateQs(projectId, request, ct);
+        await PinEvidenceAsync(projectId, request.EvidenceDocumentIds, userId, ct);
+        CrmConcurrency.Apply(db, item, rowVersion); Apply(item, request);
+        await CrmConcurrency.SaveChangesAsync(db, ct);
+        if (tx is not null) await tx.CommitAsync(ct);
+        return Map(item);
     }
     public Task<ConstructionQsBatchResponse?> SubmitQsAsync(int projectId, int id, string rowVersion, int userId, CancellationToken ct) => TransitionQs(projectId, id, rowVersion, userId, null, ct);
     public Task<ConstructionQsBatchResponse?> DecideQsAsync(int projectId, int id, CmDecisionRequest request, int userId, CancellationToken ct) => TransitionQs(projectId, id, request.RowVersion!, userId, request, ct);
@@ -400,6 +416,24 @@ public sealed class ConstructionOperationsService(AppDbContext db, IProcurementS
             (db.OperationalProjects.Any(project => project.Id == projectId && project.ProjectManagerUserId == userId) ||
              db.OperationalProjectMembers.Any(member => member.OperationalProjectId == projectId &&
                  member.UserId == userId && member.EndedAt == null)), ct);
+
+    private async Task PinEvidenceAsync(int projectId, IReadOnlyCollection<long> documentIds, int actor, CancellationToken ct)
+    {
+        var documents = await db.ProjectDocuments.Where(item => documentIds.Contains(item.Id) &&
+            item.OperationalProjectId == projectId && item.DeletedAt == null &&
+            item.DesiredOperation != ProjectDocumentDesiredOperation.Delete &&
+            item.SyncStatus != ProjectDocumentSyncStatus.Deleted).ToListAsync(ct);
+        if (documents.Count != documentIds.Count)
+            throw new ConstructionOperationException("Every evidence document must remain active in this project.");
+        foreach (var document in documents)
+        {
+            // Fence deletes that passed their reference check before this link
+            // was committed, including source-managed file removal.
+            document.UpdatedAt = DateTime.UtcNow;
+            document.UpdatedByUserId = actor;
+            db.Entry(document).Property(item => item.UpdatedAt).IsModified = true;
+        }
+    }
 
     private async Task<QaQcTemplate> ValidateDossier(int projectId, CreateQaQcDossierRequest request, CancellationToken ct)
     {
@@ -513,11 +547,25 @@ public sealed class ConstructionOperationsService(AppDbContext db, IProcurementS
             x.DesiredOperation != ProjectDocumentDesiredOperation.Delete && x.SyncStatus != ProjectDocumentSyncStatus.Deleted)
             .Select(x => x.Id).ToListAsync(ct)).ToHashSet();
     private static IEnumerable<long?> PreparationDocumentIds(ConstructionPreparation x) =>
-        [x.WbsBaselineDocumentId, x.ScheduleBaselineDocumentId, x.SCurveBaselineDocumentId, x.BchOrganizationDocumentId,
-            x.ResourcePlanDocumentId, x.BudgetBaselineDocumentId, x.SiteHandoverDocumentId, x.MethodStatementDocumentId, x.HsePlanDocumentId];
+        [x.WbsBaselineDocumentId,
+            x.ScheduleBaselineDocumentId,
+            x.SCurveBaselineDocumentId,
+            x.BchOrganizationDocumentId,
+            x.ResourcePlanDocumentId,
+            x.BudgetBaselineDocumentId,
+            x.SiteHandoverDocumentId,
+            x.MethodStatementDocumentId,
+            x.HsePlanDocumentId];
     private static IEnumerable<long?> PreparationDocumentIds(UpsertConstructionPreparationRequest x) =>
-        [x.WbsBaselineDocumentId, x.ScheduleBaselineDocumentId, x.SCurveBaselineDocumentId, x.BchOrganizationDocumentId,
-            x.ResourcePlanDocumentId, x.BudgetBaselineDocumentId, x.SiteHandoverDocumentId, x.MethodStatementDocumentId, x.HsePlanDocumentId];
+        [x.WbsBaselineDocumentId,
+            x.ScheduleBaselineDocumentId,
+            x.SCurveBaselineDocumentId,
+            x.BchOrganizationDocumentId,
+            x.ResourcePlanDocumentId,
+            x.BudgetBaselineDocumentId,
+            x.SiteHandoverDocumentId,
+            x.MethodStatementDocumentId,
+            x.HsePlanDocumentId];
     private static bool HasEvidence(long? id, IReadOnlySet<long> activeIds) => id.HasValue && activeIds.Contains(id.Value);
     private async Task<ConstructionPreparation> LatestPreparation(int projectId, CancellationToken ct) => await db.ConstructionPreparations.Where(x => x.OperationalProjectId == projectId).OrderByDescending(x => x.Version).FirstOrDefaultAsync(ct) ?? throw new ConstructionOperationException("Construction preparation has not been created.");
     private static void EnsureRequiredReferences(UpsertConstructionPreparationRequest x) { if (new[] { x.WbsBaselineReference, x.ScheduleBaselineReference, x.SCurveBaselineReference, x.BchOrganizationReference, x.ResourcePlanReference, x.BudgetBaselineReference }.Any(string.IsNullOrWhiteSpace)) throw new ConstructionOperationException("WBS, schedule, S-curve, BCH organization, resource, and budget baseline references are required."); }

@@ -84,7 +84,8 @@ public sealed class GoogleDriveOptionsTests
         });
         var uploaded = entries.Single(entry =>
             entry.GetProperty("key").GetString() == "operationalProjects.documents.uploaded");
-        Assert.Contains("Google Drive", uploaded.GetProperty("en").GetString());
+        Assert.Contains("queued", uploaded.GetProperty("en").GetString());
+        Assert.Contains("Drive", uploaded.GetProperty("en").GetString());
     }
 
 }

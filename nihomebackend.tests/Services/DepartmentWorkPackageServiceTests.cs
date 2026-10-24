@@ -736,6 +736,128 @@ public sealed class DepartmentWorkPackageServiceTests : IDisposable
         return package;
     }
 
+    [Theory]
+    [InlineData("clear-both-dates")]
+    [InlineData("clear-end-date")]
+    [InlineData("after-tender-deadline")]
+    public async Task TenderPlanningUpdate_RejectsInvalidDatesAndPreservesPlan(string scenario)
+    {
+        var tender = new Tender
+        {
+            Code = "TD-AUDIT-DATES-001",
+            Name = "Goi thau nha may NICON - kiem tra ke hoach",
+            CustomerId = _project.CustomerId,
+            OperationalProjectId = _project.Id,
+            SubmissionDeadline = DateTime.UtcNow.Date.AddDays(30),
+            Status = TenderStatus.Preparing,
+        };
+        _db.Tenders.Add(tender);
+        await _db.SaveChangesAsync();
+        var create = ProjectRequest();
+        create.Purpose = "TenderPlanning";
+        create.SourceTenderId = tender.Id;
+        var package = await _service.CreateAsync(create, _pm.Id);
+        var originalStart = package.PlannedStart;
+        var originalEnd = package.PlannedEnd;
+        var originalHistoryCount = await _db.DepartmentWorkPackageHistory.CountAsync();
+        var update = new UpdateDepartmentWorkPackageRequest
+        {
+            Name = package.Name,
+            Status = package.Status,
+            PlannedStart = scenario == "clear-both-dates" ? null : package.PlannedStart,
+            PlannedEnd = scenario == "after-tender-deadline" ? tender.SubmissionDeadline.AddDays(1) : null,
+            RowVersion = package.RowVersion,
+        };
+
+        // POST requires both dates and an end on/before the tender deadline.
+        // PUT must enforce the same business invariant and preserve rejected data.
+        await Assert.ThrowsAsync<DepartmentWorkPackageOperationException>(() =>
+            _service.UpdateAsync(package.Id, update, _pm.Id));
+        var persisted = await _db.DepartmentWorkPackages.AsNoTracking().SingleAsync(item => item.Id == package.Id);
+        Assert.Equal(originalStart, persisted.PlannedStart);
+        Assert.Equal(originalEnd, persisted.PlannedEnd);
+        Assert.Equal(originalHistoryCount, await _db.DepartmentWorkPackageHistory.CountAsync());
+    }
+
+    [Theory]
+    [InlineData(TenderStatus.Won)]
+    [InlineData(TenderStatus.Lost)]
+    [InlineData(TenderStatus.Cancelled)]
+    public async Task TerminalTender_RejectsReopeningCompletedPlanAndPreservesHistory(TenderStatus terminalStatus)
+    {
+        var tender = new Tender
+        {
+            Code = "TD-AUDIT-TERMINAL-001",
+            Name = "Goi thau nha may NICON - ket qua cuoi",
+            CustomerId = _project.CustomerId,
+            OperationalProjectId = _project.Id,
+            SubmissionDeadline = DateTime.UtcNow.Date.AddDays(30),
+            Status = TenderStatus.Preparing,
+        };
+        _db.Tenders.Add(tender);
+        await _db.SaveChangesAsync();
+        var create = ProjectRequest();
+        create.Purpose = "TenderPlanning";
+        create.SourceTenderId = tender.Id;
+        var package = await _service.CreateAsync(create, _pm.Id);
+        var started = await _service.UpdateAsync(package.Id, new UpdateDepartmentWorkPackageRequest
+        {
+            Name = package.Name,
+            Status = "Active",
+            PlannedStart = package.PlannedStart,
+            PlannedEnd = package.PlannedEnd,
+            RowVersion = package.RowVersion,
+        }, _pm.Id);
+        var task = await _service.AddTaskAsync(package.Id,
+            TaskRequest(_warehouseStaff.Id, _procurementLead.Id), _procurementLead.Id);
+        var completedTask = await _service.UpdateProgressAsync(package.Id, task.Id,
+            new UpdateDepartmentWorkTaskProgressRequest
+            {
+                Status = "Completed",
+                ProgressPercent = 100,
+                RowVersion = task.RowVersion,
+            }, _warehouseStaff.Id);
+        await _service.VerifyTaskAsync(package.Id, task.Id,
+            new VerifyDepartmentWorkTaskRequest { Confirm = true, RowVersion = completedTask!.RowVersion },
+            _procurementLead.Id);
+        var closed = await _service.UpdateAsync(package.Id, new UpdateDepartmentWorkPackageRequest
+        {
+            Name = started!.Name,
+            Status = "Completed",
+            PlannedStart = started.PlannedStart,
+            PlannedEnd = started.PlannedEnd,
+            RowVersion = (await _service.GetAsync(package.Id, _pm.Id, canViewAll: true))!.RowVersion,
+        }, _pm.Id);
+        tender.Status = terminalStatus;
+        await _db.SaveChangesAsync();
+        var originalHistoryCount = await _db.DepartmentWorkPackageHistory.CountAsync();
+
+        // Nicon-QLVH: a final tender result locks editing. Reopening its plan
+        // through the generic work-package endpoint must not bypass that lock.
+        await Assert.ThrowsAsync<DepartmentWorkPackageOperationException>(() =>
+            _service.UpdateAsync(package.Id, new UpdateDepartmentWorkPackageRequest
+            {
+                Name = closed!.Name,
+                Status = "Active",
+                PlannedStart = closed.PlannedStart,
+                PlannedEnd = closed.PlannedEnd,
+                RowVersion = closed.RowVersion,
+            }, _pm.Id));
+        Assert.Equal(WorkPackageStatus.Completed,
+            (await _db.DepartmentWorkPackages.AsNoTracking().SingleAsync(item => item.Id == package.Id)).Status);
+        Assert.Equal(terminalStatus,
+            (await _db.Tenders.AsNoTracking().SingleAsync(item => item.Id == tender.Id)).Status);
+        Assert.Equal(originalHistoryCount, await _db.DepartmentWorkPackageHistory.CountAsync());
+        var readOnly = (await _service.GetAsync(package.Id, _procurementLead.Id, canViewAll: true))!;
+        Assert.False(readOnly.CanManagePackage);
+        Assert.False(readOnly.CanAssignTasks);
+        Assert.All(readOnly.Tasks, item =>
+        {
+            Assert.False(item.CanUpdateProgress);
+            Assert.False(item.CanVerify);
+        });
+    }
+
     private CreateDepartmentWorkPackageRequest ProjectRequest() => new()
     {
         Kind = "Project",

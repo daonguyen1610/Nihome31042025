@@ -388,6 +388,134 @@ public sealed class ProjectDocumentServiceTests : IDisposable
         storage.Verify(item => item.DeleteOwned(It.IsAny<int>(), It.IsAny<string>()), Times.Never);
     }
 
+    [Theory]
+    [InlineData(false, false, false)]
+    [InlineData(false, true, false)]
+    [InlineData(true, false, false)]
+    [InlineData(true, true, false)]
+    [InlineData(false, false, true)]
+    [InlineData(false, true, true)]
+    [InlineData(true, false, true)]
+    [InlineData(true, true, true)]
+    public async Task ApprovedConstructionEvidence_CannotBeDeleted(
+        bool quantitySurvey, bool synchronizedToDrive, bool sourceManaged)
+    {
+        var document = AddDocument(ProjectDocumentCategory.ConstructionAcceptance);
+        document.SourceType = ProjectDocumentSourceType.ManualUpload;
+        document.SourceModule = ProjectDocumentSourceModule.General;
+        if (sourceManaged)
+        {
+            document.SourceType = ProjectDocumentSourceType.ExistingManagedFile;
+            document.SourceModule = ProjectDocumentSourceModule.Construction;
+            document.SourceEntityType = "ConstructionAcceptance";
+            document.SourceSlot = "signed-record";
+            document.SourceRecordId = 42;
+        }
+        if (synchronizedToDrive)
+        {
+            document.DriveFileId = "nicon-approved-evidence-drive-file";
+            document.SyncStatus = ProjectDocumentSyncStatus.Synced;
+            document.DesiredOperation = ProjectDocumentDesiredOperation.None;
+        }
+        var originalPath = document.LocalPath;
+        var originalSyncStatus = document.SyncStatus;
+        var originalOperation = document.DesiredOperation;
+
+        if (quantitySurvey)
+        {
+            var batch = new ConstructionQsBatch
+            {
+                OperationalProjectId = project.Id,
+                Code = "QS-NICON-ACCEPTED-CONCRETE-001",
+                ContractId = 42,
+                Direction = ConstructionQsDirection.Downstream,
+                Status = ConstructionReviewStatus.CmApproved,
+                RecordState = ConstructionQsRecordState.Active,
+                IsActiveLineage = true,
+                WbsCode = "TC.02.01",
+                PeriodFrom = new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc),
+                PeriodTo = new DateTime(2026, 10, 15, 0, 0, 0, DateTimeKind.Utc),
+                CertifiedAmount = 120000000m,
+                Description = "NICON approved subcontractor concrete quantity certificate",
+                CreatedByUserId = 8,
+                CmReviewedByUserId = 7,
+                CmDecisionReason = "Quantity and acceptance evidence independently checked",
+                Lines = [new ConstructionQsBatchLine
+                {
+                    ItemCode = "BT-MONG-M300",
+                    Description = "Foundation concrete grade M300",
+                    Unit = "m3",
+                    Quantity = 100m,
+                    UnitPrice = 1200000m,
+                    Amount = 120000000m,
+                }],
+                Evidence = [new ConstructionQsBatchEvidence
+                {
+                    ProjectDocumentId = document.Id,
+                    ProjectDocument = document,
+                }],
+            };
+            db.ConstructionQsBatches.Add(batch);
+        }
+        else
+        {
+            var template = new QaQcTemplate
+            {
+                Code = "NICON-CONCRETE-QUALITY",
+                NameVi = "Ho so chat luong be tong mong",
+                Name = "Foundation concrete quality dossier",
+                NameZh = "Foundation concrete quality dossier zh",
+                NameJa = "Foundation concrete quality dossier ja",
+                IsPublished = true,
+                CreatedByUserId = 7,
+            };
+            db.QaQcTemplates.Add(template);
+            db.QaQcDossiers.Add(new QaQcDossier
+            {
+                OperationalProjectId = project.Id,
+                Code = "QA-NICON-CONCRETE-001",
+                QaQcTemplate = template,
+                TemplateVersion = 1,
+                TemplateSnapshotJson = "{}",
+                ChecklistResultsJson = "[]",
+                WbsCode = "TC.02.01",
+                Title = "NICON approved foundation concrete laboratory results",
+                Status = ConstructionReviewStatus.CmApproved,
+                CreatedByUserId = 8,
+                CmReviewedByUserId = 7,
+                CmDecisionReason = "Laboratory and material evidence independently checked",
+                Evidence = [new QaQcDossierEvidence
+                {
+                    ProjectDocumentId = document.Id,
+                    ProjectDocument = document,
+                    EvidenceType = QaQcEvidenceType.LaboratoryResult,
+                }],
+            });
+        }
+        await db.SaveChangesAsync();
+
+        bool? deleted = null;
+        var failure = await Record.ExceptionAsync(async () =>
+        {
+            deleted = sourceManaged
+                ? await service.StageExistingManagedFileDeleteAsync(project.Id, document.SourceModule,
+                    document.SourceEntityType!, document.SourceSlot!, document.SourceRecordId!.Value, document.LocalPath, 7)
+                : await service.DeleteAsync(project.Id, document.Id, 7, false);
+        });
+
+        Assert.True(failure is ProjectDocumentValidationException,
+            $"Approved {(quantitySurvey ? "QS" : "QA/QC")} evidence must reject deletion. " +
+            $"Actual: returned={deleted}, exception={failure?.GetType().Name ?? "none"}, " +
+            $"DeletedAt={document.DeletedAt:O}, SyncStatus={document.SyncStatus}, " +
+            $"DesiredOperation={document.DesiredOperation}, LocalPath='{document.LocalPath}', " +
+            $"DriveFileId='{document.DriveFileId}'.");
+        Assert.Null(document.DeletedAt);
+        Assert.Equal(originalPath, document.LocalPath);
+        Assert.Equal(originalSyncStatus, document.SyncStatus);
+        Assert.Equal(originalOperation, document.DesiredOperation);
+        storage.Verify(item => item.DeleteOwned(It.IsAny<int>(), It.IsAny<string>()), Times.Never);
+    }
+
     private ProjectDocument AddDocument(ProjectDocumentCategory category)
     {
         var document = new ProjectDocument
