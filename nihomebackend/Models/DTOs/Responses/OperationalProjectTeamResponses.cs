@@ -78,6 +78,9 @@ public sealed class OperationalProjectTeamHistoryResponse
     public DateTime ChangedAt { get; set; }
     public int ChangedByUserId { get; set; }
     public string ChangedByName { get; set; } = string.Empty;
+    public string? OldCode { get; set; }
+    public string? NewCode { get; set; }
+    public string? Reason { get; set; }
 }
 
 public sealed class ProjectMemberCandidateResponse

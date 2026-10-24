@@ -1483,6 +1483,15 @@ without replacing its Drive ID; status and failure details are returned in
 `latestCodeChange`, and `POST .../{id}/code/drive-retry` safely requeues the
 latest failed job.
 
+`GET /api/operational-projects/{id}/team/history` combines team events with
+persisted code changes, newest first, under the existing project-view check.
+Code entries use `entityType=ProjectCode`, `action=Renamed`, and typed
+`oldCode`, `newCode`, `reason` fields, plus the original actor and timestamp.
+Entry IDs are scoped by entity type; clients must use both for identity.
+Existing code changes appear without backfill or duplicate audit writes.
+The shared team panel displays these entries and refreshes after a successful
+code change on the Operational Project detail page.
+
 `POST /api/contracts/{id}/link-quote` (`crm.contracts.manage`, idempotent,
 concurrency-checked) attaches an `Approved`, `SentToCustomer`, or
 `CustomerApproved` quote to an upstream contract that is not cancelled or

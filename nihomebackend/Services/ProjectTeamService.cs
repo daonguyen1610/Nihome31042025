@@ -58,7 +58,7 @@ public sealed class ProjectTeamService(
         CancellationToken ct = default)
     {
         if (!await access.CanViewOperationalProjectAsync(callerUserId, projectId, ct)) return null;
-        return await db.OperationalProjectTeamHistory.AsNoTracking()
+        var teamHistory = await db.OperationalProjectTeamHistory.AsNoTracking()
             .Where(item => item.OperationalProjectId == projectId)
             .OrderByDescending(item => item.ChangedAt)
             .ThenByDescending(item => item.Id)
@@ -74,6 +74,29 @@ public sealed class ProjectTeamService(
                 ChangedByName = item.ChangedByUser.FullName ?? item.ChangedByUser.Email,
             })
             .ToListAsync(ct);
+        var codeHistory = await (
+            from change in db.OperationalProjectCodeChanges.AsNoTracking()
+            where change.OperationalProjectId == projectId
+            join user in db.Users.AsNoTracking() on change.ChangedByUserId equals user.Id into actors
+            from actor in actors.DefaultIfEmpty()
+            select new OperationalProjectTeamHistoryResponse
+            {
+                Id = change.Id,
+                EntityType = "ProjectCode",
+                EntityId = projectId,
+                Action = "Renamed",
+                ChangedAt = change.ChangedAt,
+                ChangedByUserId = change.ChangedByUserId,
+                ChangedByName = actor == null ? change.ChangedByUserId.ToString() : actor.FullName ?? actor.Email,
+                OldCode = change.OldCode,
+                NewCode = change.NewCode,
+                Reason = change.Reason,
+            }).ToListAsync(ct);
+        return teamHistory.Concat(codeHistory)
+            .OrderByDescending(item => item.ChangedAt)
+            .ThenByDescending(item => item.Id)
+            .ThenBy(item => item.EntityType, StringComparer.Ordinal)
+            .ToList();
     }
 
     public async Task<IReadOnlyList<ProjectMemberCandidateResponse>?> GetCandidatesAsync(

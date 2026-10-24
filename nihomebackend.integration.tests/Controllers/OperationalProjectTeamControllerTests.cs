@@ -33,6 +33,37 @@ public sealed class OperationalProjectTeamControllerTests : IntegrationTestBase
 
         (await Client.GetAsync($"/api/operational-projects/{projectId}/team"))
             .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await Client.GetAsync($"/api/operational-projects/{projectId}/team/history"))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task History_IncludesPreviouslyPersistedCodeChangesWithoutWritingDuplicateAuditRows()
+    {
+        await AuthenticateAsync("SUPER_ADMIN");
+        var projectId = await CreateProjectAsync();
+        var otherProjectId = await CreateProjectAsync();
+        var now = DateTime.UtcNow;
+        await WithDbAsync(async db =>
+        {
+            var actor = await db.Users.FirstAsync();
+            db.OperationalProjectCodeChanges.AddRange(
+                new OperationalProjectCodeChange { OperationalProjectId = projectId, OldCode = "NICON-A", NewCode = "NICON-B", Reason = "Chuẩn hóa mã hồ sơ", ChangedAt = now.AddMinutes(-2), ChangedByUserId = actor.Id },
+                new OperationalProjectCodeChange { OperationalProjectId = projectId, OldCode = "NICON-B", NewCode = "NICON-C", Reason = "Cập nhật mã được duyệt", ChangedAt = now, ChangedByUserId = actor.Id },
+                new OperationalProjectCodeChange { OperationalProjectId = otherProjectId, OldCode = "OTHER-A", NewCode = "OTHER-B", Reason = "Other project", ChangedAt = now.AddMinutes(1), ChangedByUserId = actor.Id });
+            await db.SaveChangesAsync();
+        });
+        var originalTeamCount = await WithDbAsync(db => db.OperationalProjectTeamHistory.CountAsync());
+        for (var attempt = 0; attempt < 2; attempt++)
+        {
+            var response = await Client.GetAsync($"/api/operational-projects/{projectId}/team/history");
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+            var body = await ReadJsonAsync(response);
+            var codes = body.EnumerateArray().Where(item => item.GetProperty("entityType").GetString() == "ProjectCode").ToList();
+            codes.Should().HaveCount(2);
+            codes.Select(item => item.GetProperty("newCode").GetString()).Should().Equal("NICON-C", "NICON-B");
+        }
+        (await WithDbAsync(db => db.OperationalProjectTeamHistory.CountAsync())).Should().Be(originalTeamCount);
     }
 
     [Fact]
