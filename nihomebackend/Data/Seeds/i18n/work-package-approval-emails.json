@@ -1,0 +1,186 @@
+[
+  {
+    "key": "approvalEmail.tab",
+    "category": "workPackages",
+    "vi": "Duyệt nhóm công việc",
+    "en": "Work package approval",
+    "zh": "工作组审批",
+    "ja": "業務グループ承認"
+  },
+  {
+    "key": "approvalEmail.preview",
+    "category": "workPackages",
+    "vi": "Xem trước email gửi duyệt",
+    "en": "Approval email preview",
+    "zh": "审批邮件预览",
+    "ja": "承認依頼メールのプレビュー"
+  },
+  {
+    "key": "approvalEmail.templatePreview",
+    "category": "workPackages",
+    "vi": "Xem trước mẫu (biến chưa thay thế)",
+    "en": "Template preview (unresolved variables)",
+    "zh": "模板预览（变量未替换）",
+    "ja": "テンプレート表示（変数未置換）"
+  },
+  {
+    "key": "approvalEmail.confirmHint",
+    "category": "workPackages",
+    "vi": "Xác nhận người nhận và nội dung. Email được xếp hàng cùng lần gửi duyệt; email không tự phê duyệt hồ sơ.",
+    "en": "Confirm recipient and content. Email is queued with submission; email does not approve the record.",
+    "zh": "请确认收件人和内容。邮件随提交排队，不会自动批准记录。",
+    "ja": "宛先と内容を確認してください。提出時に送信予約されます。メールによる自動承認は行いません。"
+  },
+  {
+    "key": "approvalEmail.recipient",
+    "category": "workPackages",
+    "vi": "Người nhận",
+    "en": "Recipient",
+    "zh": "收件人",
+    "ja": "宛先"
+  },
+  {
+    "key": "approvalEmail.confirm",
+    "category": "workPackages",
+    "vi": "Gửi duyệt và thông báo",
+    "en": "Submit and notify",
+    "zh": "提交并通知",
+    "ja": "提出して通知"
+  },
+  {
+    "key": "approvalEmail.queued",
+    "category": "workPackages",
+    "vi": "Đã gửi duyệt và xếp hàng email thông báo",
+    "en": "Submitted; notification email queued",
+    "zh": "已提交审批，通知邮件已排队",
+    "ja": "承認依頼を提出し、通知メールを送信予約しました"
+  },
+  {
+    "key": "approvalEmail.delivery",
+    "category": "workPackages",
+    "vi": "Email thông báo gửi duyệt",
+    "en": "Approval notification emails",
+    "zh": "审批通知邮件",
+    "ja": "承認通知メール"
+  },
+  {
+    "key": "approvalEmail.status.Pending",
+    "category": "workPackages",
+    "vi": "Đang chờ gửi",
+    "en": "Queued",
+    "zh": "等待发送",
+    "ja": "送信待ち"
+  },
+  {
+    "key": "approvalEmail.status.Sending",
+    "category": "workPackages",
+    "vi": "Đã bắt đầu gửi – cần kiểm tra nếu kéo dài",
+    "en": "Delivery started – check if prolonged",
+    "zh": "已开始发送，长时间未完成请检查",
+    "ja": "送信開始済み（長時間続く場合は要確認）"
+  },
+  {
+    "key": "approvalEmail.status.Sent",
+    "category": "workPackages",
+    "vi": "Đã gửi",
+    "en": "Sent",
+    "zh": "已发送",
+    "ja": "送信済み"
+  },
+  {
+    "key": "approvalEmail.status.NeedsReview",
+    "category": "workPackages",
+    "vi": "Cần kiểm tra gửi email",
+    "en": "Delivery requires review",
+    "zh": "发送需要检查",
+    "ja": "送信状況の確認が必要"
+  },
+  {
+    "key": "approvalEmail.reviewHint",
+    "category": "workPackages",
+    "vi": "Nếu trạng thái gửi kéo dài hoặc cần kiểm tra, liên hệ quản trị để kiểm tra SMTP và người nhận. Không tự gửi lại khi chưa xác định kết quả, tránh gửi trùng.",
+    "en": "If delivery is prolonged or needs review, ask an administrator to check SMTP and the recipient. Uncertain deliveries are not retried automatically to avoid duplicates.",
+    "zh": "若发送时间过长或需要检查，请联系管理员检查SMTP和收件人。结果不确定时不会自动重试，以免重复。",
+    "ja": "送信が長時間続く、または確認が必要な場合は管理者にSMTPと宛先の確認を依頼してください。重複防止のため結果不明のメールは自動再送しません。"
+  },
+  {
+    "key": "approvalEmail.tokens",
+    "category": "workPackages",
+    "vi": "Biến hỗ trợ: {{recipientName}} — người chủ trì; {{workPackageCode}} — mã nhóm; {{workPackageName}} — tên nhóm; {{recordType}} — loại hồ sơ; {{recordReference}} — số báo giá hoặc mã nhóm; {{senderName}} — người gửi. HTML phải có {{workPackageCode}} và {{recordReference}}. Xem trước email thực tế trước khi gửi duyệt.",
+    "en": "Variables: {{recipientName}}, {{workPackageCode}}, {{workPackageName}}, {{recordType}}, {{recordReference}} (supplier reference or package code), {{senderName}}. HTML must include {{workPackageCode}} and {{recordReference}}. Preview rendered content before submission.",
+    "zh": "变量：{{recipientName}}、{{workPackageCode}}、{{workPackageName}}、{{recordType}}、{{recordReference}}（报价编号或组代码）、{{senderName}}。HTML必须包含{{workPackageCode}}和{{recordReference}}。提交前预览实际邮件。",
+    "ja": "変数：{{recipientName}}、{{workPackageCode}}、{{workPackageName}}、{{recordType}}、{{recordReference}}（見積番号またはグループコード）、{{senderName}}。HTMLには{{workPackageCode}}と{{recordReference}}が必須です。提出前に実際のメールを確認します。"
+  },
+  {
+    "key": "deletionImpact.item.workPackages.approvalEmails",
+    "category": "deletionImpact",
+    "vi": "Email thông báo gửi duyệt",
+    "en": "Approval notification emails",
+    "zh": "审批通知邮件",
+    "ja": "承認通知メール"
+  },
+  {
+    "key": "deletionImpact.item.workPackages.sendingEmails",
+    "category": "deletionImpact",
+    "vi": "Email đang gửi (kiểm tra trước khi xóa)",
+    "en": "Emails being sent (review before deleting)",
+    "zh": "正在发送的邮件（删除前检查）",
+    "ja": "送信中メール（削除前に要確認）"
+  },
+  {
+    "key": "approvalEmail.cc",
+    "category": "workPackages",
+    "vi": "CC (không bắt buộc)",
+    "en": "CC (optional)",
+    "zh": "抄送（可选）",
+    "ja": "CC（任意）"
+  },
+  {
+    "key": "approvalEmail.recipientHint",
+    "category": "workPackages",
+    "vi": "To mặc định là email người chủ trì; có thể sửa địa chỉ nhận. CC tối đa 20 email, cách nhau bằng dấu phẩy, dấu chấm phẩy hoặc xuống dòng. Mỗi email tối đa 150 ký tự, ví dụ: ten@nicon.vn. Đổi địa chỉ nhận không đổi quyền duyệt.",
+    "en": "To defaults to the assigned lead and can be edited. Add up to 20 CC emails separated by commas, semicolons or new lines. Each email allows up to 150 characters, e.g. name@nicon.vn. Recipients do not change approval authority.",
+    "zh": "To默认填入负责人邮箱，可修改。最多20个抄送地址，用逗号、分号或换行分隔。每个地址不超过150字符，例如name@nicon.vn。修改收件人不会改变审批权限。",
+    "ja": "Toには担当責任者のメールが初期入力され、変更できます。CCは最大20件、カンマ・セミコロン・改行で区切ります。各アドレスは150文字以内（例：name@nicon.vn）。宛先変更は承認権限を変更しません。"
+  },
+  {
+    "key": "approvalEmail.invalidRecipients",
+    "category": "workPackages",
+    "vi": "Nhập To và CC là email hợp lệ, tối đa 150 ký tự mỗi địa chỉ (ví dụ: ten@nicon.vn); CC tối đa 20 địa chỉ.",
+    "en": "Enter valid To/CC emails of up to 150 characters each (e.g. name@nicon.vn); at most 20 CC addresses.",
+    "zh": "请输入有效的To/抄送邮箱，每个不超过150字符（例：name@nicon.vn）；抄送最多20个。",
+    "ja": "有効なTo/CCメールを入力してください（各150文字以内、例：name@nicon.vn）。CCは最大20件です。"
+  },
+  {
+    "key": "approvalEmail.refreshRequired",
+    "category": "workPackages",
+    "vi": "Địa chỉ nhận đã thay đổi. Cập nhật xem trước trước khi xác nhận gửi.",
+    "en": "Recipients changed. Update the preview before confirming submission.",
+    "zh": "收件人已更改，请更新预览后再确认提交。",
+    "ja": "宛先が変更されました。プレビューを更新してから提出を確定してください。"
+  },
+  {
+    "key": "approvalEmail.refreshPreview",
+    "category": "workPackages",
+    "vi": "Cập nhật xem trước",
+    "en": "Update preview",
+    "zh": "更新预览",
+    "ja": "プレビューを更新"
+  },
+  {
+    "key": "approvalEmail.delivered",
+    "category": "workPackages",
+    "vi": "Đã gửi thành công email thông báo gửi duyệt.",
+    "en": "Approval notification email sent successfully.",
+    "zh": "审批通知邮件已成功发送。",
+    "ja": "承認通知メールを送信しました。"
+  },
+  {
+    "key": "approvalEmail.deliveryFailed",
+    "category": "workPackages",
+    "vi": "Hồ sơ đã gửi duyệt; email thông báo cần kiểm tra. Vui lòng xem trạng thái email hoặc liên hệ quản trị.",
+    "en": "The record was submitted; email delivery needs review. Check the delivery status or contact an administrator.",
+    "zh": "记录已提交审批，邮件发送需要检查。请查看状态或联系管理员。",
+    "ja": "承認依頼は提出済みですが、メール送信状況の確認が必要です。状態を確認するか管理者に連絡してください。"
+  }
+]

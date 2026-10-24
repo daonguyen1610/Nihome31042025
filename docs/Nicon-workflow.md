@@ -116,6 +116,16 @@ Kinh doanh chuẩn bị hồ sơ dự thầu (gói thầu đã gắn Dự án v�
   → sau thương thảo, người dùng chủ động tạo Hợp đồng Upstream
 ```
 
+Theo xác nhận người dùng ngày 25/10/2026, khi gửi duyệt báo giá đầu vào hoặc
+hồ sơ rà soát tài chính, người gửi xem trước email thực tế rồi xác nhận gửi duyệt
+và thông báo. To điền sẵn email người chủ trì phòng đã phân công; theo xác nhận
+bổ sung cùng ngày, người gửi có thể sửa To và thêm người liên quan vào CC. Phải
+cập nhật xem trước sau khi sửa địa chỉ. Thay To/CC không thay người có quyền duyệt.
+Màn hình thông báo đã xếp hàng, sau đó cập nhật kết quả gửi hoặc cần kiểm tra. Chặn gửi duyệt nếu
+người chủ trì trùng người lập hồ sơ, không hoạt động, thiếu quyền duyệt hoặc email
+không hợp lệ; phải chọn người chủ trì độc lập hợp lệ trước khi gửi. Mẫu email
+quản lý tại `/admin/email-templates`, cùng khu vực mẫu báo giá và hợp đồng.
+
 Hai hồ sơ dùng chung checklist và chung nguyên tắc "người lập không tự duyệt".
 Hồ sơ đã gửi duyệt hoặc đã duyệt thì không sửa được nữa. Hồ sơ thương mại gắn
 với phiên bản báo giá đã rà soát: báo giá thay đổi giá trị làm tăng phiên bản và

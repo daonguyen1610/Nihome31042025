@@ -17,6 +17,7 @@ createTcpServer((socket) => {
   let pending = "";
   let mode = "command";
   let recipient = "";
+  let recipients = [];
   let lines = [];
   socket.setEncoding("utf8");
   socket.write("220 E2E SMTP sink ready\r\n");
@@ -29,7 +30,11 @@ createTcpServer((socket) => {
       pending = pending.slice(lineEnd + 2);
       if (mode === "data") {
         if (line === ".") {
-          messages.push({ recipient, raw: `${lines.join("\r\n")}\r\n` });
+          messages.push({
+            recipient: recipients[0] ?? recipient,
+            recipients: [...recipients],
+            raw: `${lines.join("\r\n")}\r\n`,
+          });
           lines = [];
           mode = "command";
           socket.write("250 Message accepted\r\n");
@@ -53,16 +58,24 @@ createTcpServer((socket) => {
         socket.write("334 VXNlcm5hbWU6\r\n");
       } else if (/^MAIL FROM:/i.test(line)) {
         recipient = "";
+        recipients = [];
         lines = [];
         socket.write("250 Sender accepted\r\n");
       } else if (/^RCPT TO:/i.test(line)) {
         recipient = line.slice(8).trim().replace(/[<>]/g, "");
+        // Explicit failure address for live approval error-notification coverage.
+        if (recipient.startsWith("reject-approval-")) {
+          socket.write("550 Test recipient rejected\r\n");
+          continue;
+        }
+        recipients.push(recipient);
         socket.write("250 Recipient accepted\r\n");
       } else if (/^DATA$/i.test(line)) {
         mode = "data";
         socket.write("354 End data with <CRLF>.<CRLF>\r\n");
       } else if (/^RSET$/i.test(line)) {
         recipient = "";
+        recipients = [];
         lines = [];
         socket.write("250 Reset\r\n");
       } else if (/^QUIT$/i.test(line)) {

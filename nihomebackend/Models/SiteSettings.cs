@@ -40,6 +40,8 @@ public class SiteSettings
     public string? ContractRenewalEmailBodyTemplate { get; set; }
     public string? ContractEndEmailSubjectTemplate { get; set; }
     public string? ContractEndEmailBodyTemplate { get; set; }
+    public string? WorkPackageApprovalEmailSubjectTemplate { get; set; }
+    public string? WorkPackageApprovalEmailBodyTemplate { get; set; }
 
     public string? NotificationEmail { get; set; }
 

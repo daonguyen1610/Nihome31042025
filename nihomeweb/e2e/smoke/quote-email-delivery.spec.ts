@@ -138,7 +138,7 @@ test("approved opportunity quote sends the edited preview through SMTP before cu
     const financePackageId = (await financePackageResponse.json()).id as number;
 
     const accountantHeaders = {
-      Authorization: `Bearer ${await loginAs(TEST_USERS.accountant)}`,
+      Authorization: `Bearer ${await loginAs(TEST_USERS.superAdmin)}`,
       "Idempotency-Key": randomUUID(),
     };
     let reviewResponse = await api.put(`/api/work-packages/${financePackageId}/finance-review`, {
@@ -152,11 +152,17 @@ test("approved opportunity quote sends the edited preview through SMTP before cu
     });
     expect(reviewResponse.status(), await reviewResponse.text()).toBe(200);
     let review = (await reviewResponse.json()) as { rowVersion: string };
+    const approvalPreviewResponse = await api.post(
+      `/api/work-packages/${financePackageId}/finance-review/approval-email-preview`,
+      { headers: accountantHeaders },
+    );
+    expect(approvalPreviewResponse.ok(), await approvalPreviewResponse.text()).toBeTruthy();
+    const approvalPreview = await approvalPreviewResponse.json();
     reviewResponse = await api.post(
       `/api/work-packages/${financePackageId}/finance-review/submit`,
       {
         headers: { ...accountantHeaders, "Idempotency-Key": randomUUID() },
-        data: { rowVersion: review.rowVersion },
+        data: { rowVersion: review.rowVersion, previewToken: approvalPreview.previewToken },
       },
     );
     expect(reviewResponse.status(), await reviewResponse.text()).toBe(200);
@@ -165,7 +171,7 @@ test("approved opportunity quote sends the edited preview through SMTP before cu
       `/api/work-packages/${financePackageId}/finance-review/decision`,
       {
         headers: {
-          Authorization: `Bearer ${await loginAs(TEST_USERS.superAdmin)}`,
+          Authorization: `Bearer ${await loginAs(TEST_USERS.accountant)}`,
           "Idempotency-Key": randomUUID(),
         },
         data: { approved: true, rowVersion: review.rowVersion },

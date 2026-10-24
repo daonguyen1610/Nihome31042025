@@ -74,6 +74,8 @@ public class NihomeWebApplicationFactory : WebApplicationFactory<Program>
 internal sealed class NoOpTestEmailService : IEmailService
 {
     public Task SendEmailAsync(string toEmail, string subject, string htmlBody) => Task.CompletedTask;
+    public Task SendEmailWithCcAsync(string toEmail, IReadOnlyCollection<string> ccEmails,
+        string subject, string htmlBody, CancellationToken ct = default) => Task.CompletedTask;
 
     public Task SendEmailWithAttachmentAsync(
         string toEmail,

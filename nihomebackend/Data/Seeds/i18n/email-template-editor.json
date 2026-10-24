@@ -1,0 +1,138 @@
+[
+  {
+    "key": "emailTemplate.editor.subject",
+    "category": "emailTemplates",
+    "vi": "Tiêu đề email",
+    "en": "Email subject",
+    "zh": "邮件主题",
+    "ja": "メール件名"
+  },
+  {
+    "key": "emailTemplate.editor.body",
+    "category": "emailTemplates",
+    "vi": "Nội dung HTML email",
+    "en": "Email HTML body",
+    "zh": "邮件HTML正文",
+    "ja": "メールHTML本文"
+  },
+  {
+    "key": "emailTemplate.editor.tokens",
+    "category": "emailTemplates",
+    "vi": "Biến có sẵn (click để chèn)",
+    "en": "Available variables (click to insert)",
+    "zh": "可用变量（点击插入）",
+    "ja": "利用可能な変数（クリックして挿入）"
+  },
+  {
+    "key": "emailTemplate.editor.preview",
+    "category": "emailTemplates",
+    "vi": "Xem trước",
+    "en": "Preview",
+    "zh": "预览",
+    "ja": "プレビュー"
+  },
+  {
+    "key": "emailTemplate.editor.fullscreen",
+    "category": "emailTemplates",
+    "vi": "Toàn màn hình",
+    "en": "Fullscreen",
+    "zh": "全屏",
+    "ja": "全画面"
+  },
+  {
+    "key": "emailTemplate.editor.minimize",
+    "category": "emailTemplates",
+    "vi": "Thu nhỏ",
+    "en": "Minimize",
+    "zh": "缩小",
+    "ja": "縮小"
+  },
+  {
+    "key": "emailTemplate.editor.reset",
+    "category": "emailTemplates",
+    "vi": "Khôi phục",
+    "en": "Restore",
+    "zh": "恢复",
+    "ja": "復元"
+  },
+  {
+    "key": "emailTemplate.editor.save",
+    "category": "emailTemplates",
+    "vi": "Lưu thay đổi",
+    "en": "Save changes",
+    "zh": "保存更改",
+    "ja": "変更を保存"
+  },
+  {
+    "key": "emailTemplate.editor.token.customerName",
+    "category": "emailTemplates",
+    "vi": "Tên khách hàng",
+    "en": "Customer name",
+    "zh": "客户名称",
+    "ja": "顧客名"
+  },
+  {
+    "key": "emailTemplate.editor.token.contractNumber",
+    "category": "emailTemplates",
+    "vi": "Số hợp đồng",
+    "en": "Contract number",
+    "zh": "合同编号",
+    "ja": "契約番号"
+  },
+  {
+    "key": "emailTemplate.editor.token.endDate",
+    "category": "emailTemplates",
+    "vi": "Ngày kết thúc (dd/MM/yyyy)",
+    "en": "End date (dd/MM/yyyy)",
+    "zh": "结束日期（dd/MM/yyyy）",
+    "ja": "終了日（dd/MM/yyyy）"
+  },
+  {
+    "key": "emailTemplate.editor.token.recipientName",
+    "category": "emailTemplates",
+    "vi": "Người chủ trì",
+    "en": "Assigned lead",
+    "zh": "负责人",
+    "ja": "担当責任者"
+  },
+  {
+    "key": "emailTemplate.editor.token.workPackageCode",
+    "category": "emailTemplates",
+    "vi": "Mã nhóm công việc",
+    "en": "Work package code",
+    "zh": "工作组代码",
+    "ja": "業務グループコード"
+  },
+  {
+    "key": "emailTemplate.editor.token.workPackageName",
+    "category": "emailTemplates",
+    "vi": "Tên nhóm công việc",
+    "en": "Work package name",
+    "zh": "工作组名称",
+    "ja": "業務グループ名"
+  },
+  {
+    "key": "emailTemplate.editor.token.recordType",
+    "category": "emailTemplates",
+    "vi": "Loại hồ sơ",
+    "en": "Record type",
+    "zh": "记录类型",
+    "ja": "書類の種類"
+  },
+  {
+    "key": "emailTemplate.editor.token.recordReference",
+    "category": "emailTemplates",
+    "vi": "Số báo giá hoặc mã nhóm",
+    "en": "Supplier reference or package code",
+    "zh": "报价编号或组代码",
+    "ja": "見積番号またはグループコード"
+  },
+  {
+    "key": "emailTemplate.editor.token.senderName",
+    "category": "emailTemplates",
+    "vi": "Người gửi",
+    "en": "Sender",
+    "zh": "发件人",
+    "ja": "送信者"
+  }
+]

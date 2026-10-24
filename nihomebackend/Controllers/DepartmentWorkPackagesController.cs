@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using NihomeBackend.Authorization;
 using NihomeBackend.Constants;
 using NihomeBackend.Models;
@@ -255,6 +256,28 @@ public sealed class DepartmentWorkPackagesController(
         });
     }
 
+    [HttpPost("{id:int}/input-price-offers/{offerId:int}/approval-email-preview")]
+    [RequirePermission("work.packages", "progress")]
+    public async Task<ActionResult<WorkPackageApprovalPreview>> PreviewInputPriceOffer(int id, int offerId,
+        [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] WorkPackageApprovalRecipientsRequest? request, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        return await ExecuteBusinessAsync<WorkPackageApprovalPreview>(async () =>
+            Ok(await service.PreviewApprovalEmailAsync(id, offerId, userId.Value, ct, request)));
+    }
+
+    [HttpPost("{id:int}/finance-review/approval-email-preview")]
+    [RequirePermission("work.packages", "progress")]
+    public async Task<ActionResult<WorkPackageApprovalPreview>> PreviewFinanceReview(int id,
+        [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] WorkPackageApprovalRecipientsRequest? request, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        return await ExecuteBusinessAsync<WorkPackageApprovalPreview>(async () =>
+            Ok(await service.PreviewApprovalEmailAsync(id, null, userId.Value, ct, request)));
+    }
+
     [HttpPost("{id:int}/input-price-offers/{offerId:int}/submit")]
     [RequirePermission("work.packages", "progress")]
     [Idempotency("work.packages.input-prices.submit", requireKey: true)]
@@ -350,6 +373,10 @@ public sealed class DepartmentWorkPackagesController(
         try { return await operation(); }
         catch (DepartmentWorkPackageScopeException) { return new NotFoundResult(); }
         catch (DepartmentWorkPackageOperationException exception)
+        {
+            return new BadRequestObjectResult(new { message = exception.Message });
+        }
+        catch (ArgumentException exception)
         {
             return new BadRequestObjectResult(new { message = exception.Message });
         }

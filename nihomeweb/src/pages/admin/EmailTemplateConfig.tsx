@@ -1,15 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  Save,
-  Eye,
-  Maximize2,
-  Minimize2,
-  RotateCcw,
-  Mail,
-  ShieldCheck,
-  FileText,
-} from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { Save, RotateCcw, Mail, ShieldCheck, FileText } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
+import WorkPackageApprovalTemplateConfig from "@/components/admin/WorkPackageApprovalTemplateConfig";
 import ContractReminderTemplateConfig from "@/components/admin/ContractReminderTemplateConfig";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -19,9 +11,9 @@ import { adminApi } from "@/services/adminApi";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import EmailTemplateEditor from "@/components/admin/EmailTemplateEditor";
 
-type TabType = "application" | "otp" | "quote";
+type TabType = "application" | "otp" | "quote" | "contract" | "approval";
 
 const APPLICATION_TOKENS = [
   { token: "{{siteName}}", desc: "Tên website" },
@@ -55,7 +47,7 @@ const QUOTE_TOKENS = [
 const EmailTemplateConfig = () => {
   const { t } = useI18n();
   const { toast } = useToast();
-  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [actionsContainer, setActionsContainer] = useState<HTMLDivElement | null>(null);
 
   const [activeTab, setActiveTab] = useState<TabType>("application");
   const [subject, setSubject] = useState("");
@@ -67,7 +59,6 @@ const EmailTemplateConfig = () => {
   const [quoteBody, setQuoteBody] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [fullscreen, setFullscreen] = useState(false);
 
   const loadTemplates = useCallback(async () => {
     setLoading(true);
@@ -95,25 +86,9 @@ const EmailTemplateConfig = () => {
     loadTemplates();
   }, [loadTemplates]);
 
-  // Update iframe preview whenever body or tab changes
   const activeBody = activeTab === "application" ? body : activeTab === "otp" ? otpBody : quoteBody;
   const activeSubject =
     activeTab === "application" ? subject : activeTab === "otp" ? otpSubject : quoteSubject;
-  useEffect(() => {
-    const iframe = iframeRef.current;
-    if (!iframe) return;
-    const doc = iframe.contentDocument;
-    if (!doc) return;
-    if (activeTab !== "quote") {
-      doc.open();
-      doc.write(
-        activeBody ||
-          "<p style='color:#999;padding:20px;font-family:sans-serif;'>Chưa có nội dung template</p>",
-      );
-      doc.close();
-    }
-  }, [activeBody, activeTab]);
-
   const handleSave = async () => {
     const normalizedQuoteBody = quoteBody.toLowerCase();
     if (
@@ -179,16 +154,6 @@ const EmailTemplateConfig = () => {
     toast({ title: "Đã khôi phục", description: "Đã tải lại cấu hình từ server." });
   };
 
-  const insertToken = (token: string) => {
-    if (activeTab === "application") {
-      setBody((prev) => prev + token);
-    } else if (activeTab === "otp") {
-      setOtpBody((prev) => prev + token);
-    } else {
-      setQuoteBody((prev) => prev + token);
-    }
-  };
-
   const currentTokens =
     activeTab === "application"
       ? APPLICATION_TOKENS
@@ -215,7 +180,12 @@ const EmailTemplateConfig = () => {
       <div className="space-y-4 p-4 sm:p-6">
         <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h1 className="text-2xl font-semibold">Cấu hình Email Template</h1>
-          <div className="flex items-center gap-2">
+          <div
+            className={cn(
+              "flex items-center gap-2",
+              (activeTab === "contract" || activeTab === "approval") && "hidden",
+            )}
+          >
             <Button type="button" variant="outline" onClick={handleReset} disabled={saving}>
               <RotateCcw className="mr-1.5 h-4 w-4" /> Khôi phục
             </Button>
@@ -223,175 +193,128 @@ const EmailTemplateConfig = () => {
               <Save className="mr-1.5 h-4 w-4" /> {saving ? "Đang lưu..." : "Lưu thay đổi"}
             </Button>
           </div>
+          <div
+            ref={setActionsContainer}
+            className={cn(
+              "flex items-center gap-2",
+              activeTab !== "contract" && activeTab !== "approval" && "hidden",
+            )}
+          />
         </header>
 
-        <ContractReminderTemplateConfig />
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-          {/* Left: form */}
-          <div className="space-y-4">
-            {/* Tabs */}
-            <div className="flex flex-wrap gap-1 border-b">
-              <button
-                type="button"
-                onClick={() => setActiveTab("application")}
-                className={cn(
-                  "-mb-px inline-flex items-center gap-2 border-b-2 px-4 py-2 text-sm font-medium transition",
-                  activeTab === "application"
-                    ? "border-primary text-primary"
-                    : "border-transparent text-muted-foreground hover:text-foreground",
-                )}
-              >
-                <Mail className="h-4 w-4" /> Thông báo ứng tuyển
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab("otp")}
-                className={cn(
-                  "-mb-px inline-flex items-center gap-2 border-b-2 px-4 py-2 text-sm font-medium transition",
-                  activeTab === "otp"
-                    ? "border-primary text-primary"
-                    : "border-transparent text-muted-foreground hover:text-foreground",
-                )}
-              >
-                <ShieldCheck className="h-4 w-4" /> OTP xác thực
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab("quote")}
-                className={cn(
-                  "-mb-px inline-flex items-center gap-2 border-b-2 px-4 py-2 text-sm font-medium transition",
-                  activeTab === "quote"
-                    ? "border-primary text-primary"
-                    : "border-transparent text-muted-foreground hover:text-foreground",
-                )}
-              >
-                <FileText className="h-4 w-4" /> {t("emailTemplate.quote.tab")}
-              </button>
-            </div>
-
-            {/* Notification email — shown only on application tab */}
-            {activeTab === "application" && (
-              <div className="space-y-1.5">
-                <Label className="text-xs" htmlFor="notification-email">
-                  Email nhận thông báo
-                </Label>
-                <Input
-                  id="notification-email"
-                  type="email"
-                  value={notificationEmail}
-                  onChange={(e) => setNotificationEmail(e.target.value)}
-                  placeholder="hr@nihome.vn"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Email sẽ nhận thông báo khi có đơn ứng tuyển mới.
-                </p>
-              </div>
+        <div className="flex flex-wrap gap-1 border-b">
+          <button
+            type="button"
+            onClick={() => setActiveTab("application")}
+            className={cn(
+              "-mb-px inline-flex items-center gap-2 border-b-2 px-4 py-2 text-sm font-medium transition",
+              activeTab === "application"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground",
             )}
-
-            {/* Subject */}
-            <div className="space-y-1.5">
-              <Label className="text-xs" htmlFor="email-subject">
-                Tiêu đề email
-              </Label>
-              <Input
-                id="email-subject"
-                value={activeSubject}
-                onChange={(e) =>
-                  activeTab === "application"
-                    ? setSubject(e.target.value)
-                    : activeTab === "otp"
-                      ? setOtpSubject(e.target.value)
-                      : setQuoteSubject(e.target.value)
-                }
-                placeholder={
-                  activeTab === "application"
-                    ? "[{{siteName}}] Ứng viên mới: {{candidateName}} – {{positionTitle}}"
-                    : activeTab === "otp"
-                      ? "[{{siteName}}] Mã xác thực của bạn"
-                      : "Báo giá {{quoteCode}} – {{opportunityName}}"
-                }
-                maxLength={activeTab === "quote" ? 200 : 255}
-              />
-            </div>
-
-            {/* Body */}
-            <div className="space-y-1.5">
-              <Label className="text-xs" htmlFor="email-body">
-                {activeTab === "quote" ? t("emailTemplate.quote.bodyLabel") : "Nội dung HTML"}
-              </Label>
-              <Textarea
-                id="email-body"
-                className="font-mono text-xs"
-                rows={18}
-                value={activeBody}
-                onChange={(e) =>
-                  activeTab === "application"
-                    ? setBody(e.target.value)
-                    : activeTab === "otp"
-                      ? setOtpBody(e.target.value)
-                      : setQuoteBody(e.target.value)
-                }
-                placeholder="<div>...</div>"
-                maxLength={activeTab === "quote" ? 8000 : undefined}
-              />
-              {activeTab === "quote" && (
-                <p className="text-xs text-muted-foreground">{t("emailTemplate.quote.hint")}</p>
+          >
+            <Mail className="h-4 w-4" /> Thông báo ứng tuyển
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("otp")}
+            className={cn(
+              "-mb-px inline-flex items-center gap-2 border-b-2 px-4 py-2 text-sm font-medium transition",
+              activeTab === "otp"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground",
+            )}
+          >
+            <ShieldCheck className="h-4 w-4" /> OTP xác thực
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("quote")}
+            className={cn(
+              "-mb-px inline-flex items-center gap-2 border-b-2 px-4 py-2 text-sm font-medium transition",
+              activeTab === "quote"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground",
+            )}
+          >
+            <FileText className="h-4 w-4" /> {t("emailTemplate.quote.tab")}
+          </button>
+          {(["contract", "approval"] as const).map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => setActiveTab(tab)}
+              aria-pressed={activeTab === tab}
+              className={cn(
+                "-mb-px inline-flex items-center gap-2 border-b-2 px-4 py-2 text-sm font-medium transition",
+                activeTab === tab
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground",
               )}
-            </div>
-
-            {/* Available tokens */}
-            <div className="rounded-lg border bg-muted/50 p-4">
-              <p className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Biến có sẵn (click để chèn)
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {currentTokens.map(({ token, desc }) => (
-                  <button
-                    key={token}
-                    type="button"
-                    onClick={() => insertToken(token)}
-                    className="inline-flex items-center gap-1.5 rounded-md border bg-background px-2.5 py-1.5 text-xs transition hover:border-primary hover:text-primary"
-                    title={desc}
-                  >
-                    <code className="font-mono">{token}</code>
-                    <span className="text-muted-foreground">– {desc}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Right: preview */}
-          <div className={fullscreen ? "fixed inset-0 z-50 bg-background p-6" : ""}>
-            <div className="mb-3 flex items-center justify-between">
-              <div className="flex items-center gap-2 text-sm font-medium">
-                <Eye className="h-4 w-4" /> Xem trước
-              </div>
-              <Button variant="outline" size="sm" onClick={() => setFullscreen(!fullscreen)}>
-                {fullscreen ? (
-                  <Minimize2 className="mr-1.5 h-3.5 w-3.5" />
-                ) : (
-                  <Maximize2 className="mr-1.5 h-3.5 w-3.5" />
-                )}
-                {fullscreen ? "Thu nhỏ" : "Toàn màn hình"}
-              </Button>
-            </div>
-            <div className="overflow-hidden rounded-lg border bg-white">
-              <div className="truncate border-b bg-muted/50 px-4 py-2 font-mono text-xs text-muted-foreground">
-                Subject: {activeSubject || "(trống)"}
-              </div>
-              <iframe
-                key={activeTab}
-                ref={iframeRef}
-                title="Email preview"
-                srcDoc={activeTab === "quote" ? activeBody : undefined}
-                className="w-full bg-white"
-                style={{ height: fullscreen ? "calc(100vh - 140px)" : "500px", border: "none" }}
-                sandbox={activeTab === "quote" ? "" : "allow-same-origin"}
-              />
-            </div>
-          </div>
+            >
+              <FileText className="h-4 w-4 shrink-0" />
+              {t(tab === "contract" ? "contractReminder.templates" : "approvalEmail.tab")}
+            </button>
+          ))}
         </div>
+
+        <div hidden={activeTab !== "contract"}>
+          <ContractReminderTemplateConfig
+            active={activeTab === "contract"}
+            actionsContainer={actionsContainer}
+          />
+        </div>
+        <div hidden={activeTab !== "approval"}>
+          <WorkPackageApprovalTemplateConfig
+            active={activeTab === "approval"}
+            actionsContainer={actionsContainer}
+          />
+        </div>
+        {activeTab !== "contract" && activeTab !== "approval" && (
+          <EmailTemplateEditor
+            key={activeTab}
+            id="email"
+            subject={activeSubject}
+            body={activeBody}
+            onSubjectChange={
+              activeTab === "application"
+                ? setSubject
+                : activeTab === "otp"
+                  ? setOtpSubject
+                  : setQuoteSubject
+            }
+            onBodyChange={
+              activeTab === "application"
+                ? setBody
+                : activeTab === "otp"
+                  ? setOtpBody
+                  : setQuoteBody
+            }
+            subjectMaxLength={activeTab === "quote" ? 200 : 255}
+            bodyMaxLength={activeTab === "quote" ? 8000 : undefined}
+            hint={activeTab === "quote" ? t("emailTemplate.quote.hint") : undefined}
+            tokens={currentTokens}
+            beforeSubject={
+              activeTab === "application" ? (
+                <div className="space-y-1.5">
+                  <Label className="text-xs" htmlFor="notification-email">
+                    Email nhận thông báo
+                  </Label>
+                  <Input
+                    id="notification-email"
+                    type="email"
+                    value={notificationEmail}
+                    onChange={(event) => setNotificationEmail(event.target.value)}
+                    placeholder="hr@nihome.vn"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Email sẽ nhận thông báo khi có đơn ứng tuyển mới.
+                  </p>
+                </div>
+              ) : undefined
+            }
+          />
+        )}
       </div>
     </AdminLayout>
   );

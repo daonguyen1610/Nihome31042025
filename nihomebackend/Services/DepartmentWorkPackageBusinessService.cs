@@ -7,6 +7,34 @@ namespace NihomeBackend.Services;
 
 public sealed partial class DepartmentWorkPackageService
 {
+    public async Task<WorkPackageApprovalPreview> PreviewApprovalEmailAsync(
+        int packageId, int? offerId, int callerUserId, CancellationToken ct = default,
+        WorkPackageApprovalRecipientsRequest? recipients = null)
+    {
+        var package = offerId.HasValue
+            ? await RequireBusinessPackageAsync(packageId, WorkPackagePurpose.ProcurementInputPricing, ct)
+            : await RequireFinancePackageAsync(packageId, ct);
+        await EnsureCanWorkInDepartmentAsync(package, callerUserId, ct);
+        if (offerId.HasValue)
+        {
+            var offer = await db.ProcurementInputPriceOffers.Include(item => item.Lines)
+                .SingleOrDefaultAsync(item => item.Id == offerId && item.WorkPackageId == packageId, ct)
+                ?? throw Error("Không tìm thấy báo giá đầu vào.");
+            if (offer.Status is not (InputPriceOfferStatus.Draft or InputPriceOfferStatus.Rejected) ||
+                offer.ValidUntil <= DateTime.UtcNow || offer.Lines.Count == 0)
+                throw Error("Báo giá phải ở trạng thái Nháp/Bị từ chối, còn hiệu lực và có chi tiết trước khi gửi duyệt.");
+            return await approvalEmails.PreviewAsync(package, "InputPriceOffer", offer.Id, offer.SupplierReference,
+                offer.CreatedByUserId, CrmConcurrency.Encode(offer.RowVersion), callerUserId, ct, recipients);
+        }
+        var review = await db.DepartmentFinanceReviews.SingleOrDefaultAsync(item => item.WorkPackageId == packageId, ct)
+            ?? throw Error("Không tìm thấy hồ sơ rà soát tài chính.");
+        if (review.Status is not (FinanceReviewStatus.Draft or FinanceReviewStatus.Rejected))
+            throw Error("Hồ sơ phải ở trạng thái Nháp hoặc Bị từ chối trước khi gửi duyệt.");
+        ValidateReviewChecklist(package.Purpose, review);
+        return await approvalEmails.PreviewAsync(package, "FinanceReview", review.Id, package.Code,
+            review.CreatedByUserId, CrmConcurrency.Encode(review.RowVersion), callerUserId, ct, recipients);
+    }
+
     public async Task<InputPriceOfferResponse> AddInputPriceOfferAsync(
         int packageId, UpsertInputPriceOfferRequest request, int callerUserId, CancellationToken ct = default)
     {
@@ -73,9 +101,13 @@ public sealed partial class DepartmentWorkPackageService
             throw Error("Giá đầu vào không thể gửi duyệt từ trạng thái hiện tại.");
         if (offer.ValidUntil <= DateTime.UtcNow || offer.Lines.Count == 0)
             throw Error("Giá đầu vào phải còn hiệu lực và có ít nhất một dòng trước khi gửi duyệt.");
+        await using var transaction = await BeginTransactionAsync(ct);
+        CrmConcurrency.EnsureMatches(offer.RowVersion, request.RowVersion);
+        var submittedAt = await approvalEmails.QueueAsync(package, "InputPriceOffer", offer.Id, offer.SupplierReference,
+            offer.CreatedByUserId, CrmConcurrency.Encode(offer.RowVersion), callerUserId, request.PreviewToken, ct);
         CrmConcurrency.Apply(db, offer, request.RowVersion);
         offer.Status = InputPriceOfferStatus.Submitted;
-        offer.SubmittedAt = DateTime.UtcNow;
+        offer.SubmittedAt = submittedAt;
         offer.DecisionReason = null;
         offer.UpdatedAt = DateTime.UtcNow;
         offer.UpdatedByUserId = callerUserId;
@@ -83,6 +115,7 @@ public sealed partial class DepartmentWorkPackageService
         await CrmConcurrency.SaveChangesAsync(db, ct);
         var response = await LoadOfferAsync(packageId, offerId, ct);
         await AddHistoryAsync(packageId, "InputPriceOffer", offerId, "Submitted", response, callerUserId, ct);
+        await CommitAsync(transaction, ct);
         return response;
     }
 
@@ -173,9 +206,13 @@ public sealed partial class DepartmentWorkPackageService
         if (review.Status is not (FinanceReviewStatus.Draft or FinanceReviewStatus.Rejected))
             throw Error("Hồ sơ rà soát không thể gửi từ trạng thái hiện tại.");
         ValidateReviewChecklist(package.Purpose, review);
+        await using var transaction = await BeginTransactionAsync(ct);
+        CrmConcurrency.EnsureMatches(review.RowVersion, request.RowVersion);
+        var submittedAt = await approvalEmails.QueueAsync(package, "FinanceReview", review.Id, package.Code,
+            review.CreatedByUserId, CrmConcurrency.Encode(review.RowVersion), callerUserId, request.PreviewToken, ct);
         CrmConcurrency.Apply(db, review, request.RowVersion);
         review.Status = FinanceReviewStatus.Submitted;
-        review.SubmittedAt = DateTime.UtcNow;
+        review.SubmittedAt = submittedAt;
         review.DecisionReason = null;
         review.UpdatedAt = DateTime.UtcNow;
         review.UpdatedByUserId = callerUserId;
@@ -183,6 +220,7 @@ public sealed partial class DepartmentWorkPackageService
         await CrmConcurrency.SaveChangesAsync(db, ct);
         var response = await LoadReviewAsync(packageId, ct);
         await AddHistoryAsync(packageId, "FinanceReview", review.Id, "Submitted", response, callerUserId, ct);
+        await CommitAsync(transaction, ct);
         return response;
     }
 

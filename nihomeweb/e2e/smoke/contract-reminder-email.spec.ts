@@ -162,7 +162,11 @@ test("Live admin shows both editable contract email templates", async ({
     if (window === window.top) localStorage.setItem("nicon_lang", "vi");
   });
   await page.goto("/admin/email-templates");
+  await page
+    .getByRole("button", { name: "Mẫu email gia hạn và kết thúc hợp đồng", exact: true })
+    .click();
   await expect(page.locator("#renewal-subject")).toHaveValue(/\{\{contractNumber\}\}/);
+  await page.getByRole("button", { name: "Thông báo kết thúc", exact: true }).click();
   await expect(page.locator("#end-body")).toHaveValue(/\{\{endDate\}\}/);
   for (const width of [375, 768]) {
     await page.setViewportSize({ width, height: 900 });
