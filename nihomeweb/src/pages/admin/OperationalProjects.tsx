@@ -584,7 +584,10 @@ const OperationalProjects = () => {
                 </div>
               </AccordionTrigger>
               <AccordionContent className="pb-4">
-                <OperationalProjectTeamPanel operationalProjectId={detail.id} />
+                <OperationalProjectTeamPanel
+                  operationalProjectId={detail.id}
+                  refreshKey={detail.code}
+                />
               </AccordionContent>
             </AccordionItem>
             <AccordionItem

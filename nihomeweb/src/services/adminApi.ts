@@ -3807,6 +3807,9 @@ export interface OperationalProjectTeamHistoryResponse {
   changedAt: string;
   changedByUserId: number;
   changedByName: string;
+  oldCode?: string | null;
+  newCode?: string | null;
+  reason?: string | null;
 }
 
 export interface ProjectMemberCandidateResponse {

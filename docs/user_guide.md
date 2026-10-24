@@ -217,6 +217,12 @@ working across modules. The list shows customer, lifecycle status, and counts
 of linked opportunities, quotations, and contracts. The detail view provides
 direct links to those records and to the design workflow.
 
+Users with **Change project code** permission can enter a new code and the
+reason for the change. The **Change history** in the team section shows the
+old code → new code, reason, person responsible and original change time.
+Each successful change appears immediately; earlier saved code changes remain
+visible alongside member and assignment events, newest first.
+
 Search by project code or name updates results automatically after a short
 pause in typing. The search field retains focus while results load, and the
 status filter remains available even when a search fails or returns no matches.

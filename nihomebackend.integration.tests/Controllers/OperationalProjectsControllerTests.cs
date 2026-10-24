@@ -226,6 +226,16 @@ public class OperationalProjectsControllerTests : IntegrationTestBase
         history.NewCode.Should().Be(newCode.ToUpperInvariant());
         history.Reason.Should().Be("Chuẩn hóa theo quy ước mã dự án đã phê duyệt");
         history.ChangedByUserId.Should().BeGreaterThan(0);
+        var timelineResponse = await Client.GetAsync($"/api/operational-projects/{projectId}/team/history");
+        timelineResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var timeline = await ReadJsonAsync(timelineResponse);
+        var codeEntry = timeline.EnumerateArray().Single(item => item.GetProperty("entityType").GetString() == "ProjectCode");
+        codeEntry.GetProperty("oldCode").GetString().Should().Be(oldCode);
+        codeEntry.GetProperty("newCode").GetString().Should().Be(newCode.ToUpperInvariant());
+        codeEntry.GetProperty("reason").GetString().Should().Be(history.Reason);
+        codeEntry.GetProperty("changedByUserId").GetInt32().Should().Be(history.ChangedByUserId);
+        codeEntry.GetProperty("changedByName").GetString().Should().NotBeNullOrWhiteSpace();
+        codeEntry.GetProperty("changedAt").GetDateTime().Should().Be(history.ChangedAt);
 
         var oldCodeSearch = await Client.GetAsync(
             $"/api/operational-projects?search={Uri.EscapeDataString(oldCode!)}");
@@ -244,6 +254,8 @@ public class OperationalProjectsControllerTests : IntegrationTestBase
                 rowVersion = created.GetProperty("rowVersion").GetString(),
             });
         staleResponse.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        var rejectedTimeline = await ReadJsonAsync(await Client.GetAsync($"/api/operational-projects/{projectId}/team/history"));
+        rejectedTimeline.EnumerateArray().Count(item => item.GetProperty("entityType").GetString() == "ProjectCode").Should().Be(1);
         (await WithDbAsync(db => db.OperationalProjectCodeChanges.CountAsync(item =>
             item.OperationalProjectId == projectId))).Should().Be(1);
     }

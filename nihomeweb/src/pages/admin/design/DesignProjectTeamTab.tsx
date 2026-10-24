@@ -52,6 +52,7 @@ import {
 
 interface Props {
   operationalProjectId?: number | null;
+  refreshKey?: string;
 }
 type MemberDialogMode = "add" | "edit" | "end";
 type AssignmentDialogMode = "add" | "edit";
@@ -97,7 +98,7 @@ const assignmentBadge: Record<ProjectAssignmentStatus, string> = {
   Cancelled: "border-rose-200 bg-rose-50 text-rose-700",
 };
 
-export const OperationalProjectTeamPanel = ({ operationalProjectId }: Props) => {
+export const OperationalProjectTeamPanel = ({ operationalProjectId, refreshKey }: Props) => {
   const { t, lang } = useI18n();
   const { toast } = useToast();
   const [team, setTeam] = useState<OperationalProjectTeamResponse | null>(null);
@@ -149,7 +150,7 @@ export const OperationalProjectTeamPanel = ({ operationalProjectId }: Props) => 
 
   useEffect(() => {
     void load();
-  }, [load]);
+  }, [load, refreshKey]);
   const activeMembers = useMemo(
     () => team?.members.filter((member) => member.isActive) ?? [],
     [team],
@@ -843,14 +844,30 @@ export const OperationalProjectTeamPanel = ({ operationalProjectId }: Props) => 
           <ol className="mt-4 space-y-2">
             {history.map((item) => (
               <li
-                key={item.id}
+                key={`${item.entityType}:${item.id}`}
+                data-testid={`project-history-${item.entityType}-${item.id}`}
                 className="flex flex-col justify-between gap-1 rounded-md border border-slate-100 bg-slate-50 p-3 text-sm sm:flex-row sm:items-center"
               >
-                <span>
+                <div className="min-w-0 break-words">
                   <strong>{item.changedByName}</strong> ·{" "}
                   {t(`designProjects.team.history.entity.${item.entityType}`)} ·{" "}
                   {t(`designProjects.team.history.action.${item.action}`)}
-                </span>
+                  {item.entityType === "ProjectCode" && (
+                    <>
+                      <p className="mt-1 font-medium">
+                        {t("designProjects.team.history.codeChange", {
+                          oldCode: item.oldCode ?? "",
+                          newCode: item.newCode ?? "",
+                        })}
+                      </p>
+                      <p className="mt-1 text-slate-600">
+                        {t("designProjects.team.history.codeChangeReason", {
+                          reason: item.reason ?? "",
+                        })}
+                      </p>
+                    </>
+                  )}
+                </div>
                 <span className="shrink-0 text-xs text-slate-500">
                   {formatDate(item.changedAt, true)}
                 </span>
