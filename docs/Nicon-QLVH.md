@@ -443,8 +443,16 @@ giá trị thực hiện với dự toán; hồ sơ nghiệm thu chất lượng
 Danh sách này đã được NICON xác nhận. Công thức giá trị thực hiện, kỳ báo cáo,
 nguồn số liệu và baseline so sánh vẫn phải được thống nhất trước khi tính toán.
 
-Trễ tiến độ **lớn hơn 5%** so với baseline tạo cảnh báo đỏ, giải trình và kế
-hoạch phục hồi. Công thức, kỳ chốt và nguồn progress phải lưu được để tái lập.
+**Target; công thức đã xác nhận ngày 24/10/2026:** độ chậm S-Curve bằng
+`% kế hoạch − % thực tế`, tính theo **điểm phần trăm**, không chia cho % kế
+hoạch. Chỉ khi độ chậm **lớn hơn 5 điểm phần trăm** mới tạo cảnh báo đỏ, yêu
+cầu giải trình và kế hoạch phục hồi. Kế hoạch 50%, thực tế 46% là chậm 4 điểm;
+50% so với 45% chưa vượt ngưỡng; 50% so với 44% vượt ngưỡng.
+Theo xác nhận tiếp của người dùng ngày 24/10/2026, kỳ xem/chốt không set cứng,
+cần linh hoạt theo ngày/tháng/năm. Lưu inputs, baseline version, kỳ và kết quả
+để tái lập; nguồn % thực tế, cách tổng hợp theo kỳ và thẩm quyền publish/unlock
+baseline vẫn là **Open decision** của NICON/CM. Xác nhận công thức và kỳ xem
+không phải bằng chứng engine S-Curve đã được triển khai.
 
 ### 6.2. Nguồn lực và BOQ
 
@@ -771,7 +779,9 @@ Ngoài ra, NICON cần chốt:
    `TQT-M00`, `TC-M00` chưa nhận diện file đối ứng theo mã trong bộ đã nhận,
    kể cả danh sách archive; NICON xác nhận file tương đương/đổi tên và các mã/nhãn xung đột. Nguồn
    chuẩn ISO đã xác nhận.
-2. Công thức/kỳ chốt S-Curve và quyền publish/unlock baseline.
+2. Nguồn % thực tế, cách tổng hợp S-Curve theo kỳ linh hoạt ngày/tháng/năm và
+   quyền publish/unlock baseline. Công thức điểm phần trăm đã được người dùng
+   xác nhận ngày 24/10/2026 tại mục 6.1.
 3. Approval/delegation matrix cho MR, QA/QC, HSE, QS và VO.
 4. Đối chiếu chứng từ thanh toán theo bốn loại Downstream package với ISO;
    FA (chị K/Kiara) bổ sung phần thiếu, xác nhận mapping/ngoại lệ chưa rõ và
@@ -823,7 +833,7 @@ tới khi chủ sở hữu nghiệp vụ chấp thuận các quyết định tư
 | 11 | Tài chính kế toán | Partial | Có Payment Request Downstream; chưa có dossier hai chiều và ba section chứng từ. |
 | 12 | Host và Drive NICON | Target | Chỉ công nhận sau deployment, OAuth NICON, health check và smoke test có bằng chứng. |
 | 13 | Đầu vào NICON | Open decision | Nguồn ISO đã có trong `docs/Nicon/ISO/` từ 20/10/2026; luồng CM → Cung ứng → FA, danh sách kiểm soát CM và nhân sự BCH đa dự án đã xác nhận qua phản hồi được cung cấp 18/10/2026. Còn thiếu mapping ISO được CM/FA duyệt, form được dẫn chiếu nhưng chưa thấy file, permit matrix và quy ước mã dự án. |
-| 14 | Điểm chưa chắc chắn | Open decision | Công thức S-Curve, approval matrix và payment matrix chỉ được cấu hình sau xác nhận nghiệp vụ. |
+| 14 | Điểm chưa chắc chắn | Open decision | S-Curve đã chốt chênh lệch điểm phần trăm và kỳ linh hoạt ngày/tháng/năm; nguồn actual, tổng hợp theo kỳ, quyền baseline, approval matrix và payment matrix còn cần xác nhận. |
 
 `Implemented` yêu cầu đồng thời có persistence, API authorization, UI và test phù
 hợp. Bảng này mô tả branch hiện tại, không phải bằng chứng trạng thái môi trường
