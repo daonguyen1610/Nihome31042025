@@ -11,8 +11,14 @@ public static partial class EmailTemplateFormatter
     private static partial Regex TokenRegex();
 
     private static readonly HashSet<string> QuoteTokenNames = new(
-        ["customerName", "quoteCode", "opportunityName", "quoteLines",
-         "discountPercent", "vatPercent", "grandTotal", "validUntil"],
+        ["customerName",
+            "quoteCode",
+            "opportunityName",
+            "quoteLines",
+            "discountPercent",
+            "vatPercent",
+            "grandTotal",
+            "validUntil"],
         StringComparer.OrdinalIgnoreCase);
 
     public static bool HasInvalidQuoteTokens(string template) =>

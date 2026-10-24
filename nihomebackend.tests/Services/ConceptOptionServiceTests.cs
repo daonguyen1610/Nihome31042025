@@ -346,13 +346,13 @@ public class ConceptOptionServiceTests : IDisposable
             Documents =
             [
                 new DesignReviewDocument
-                    {
-                        ProjectDocumentId = document.Id,
-                        SourceEntityTypeSnapshot = nameof(ConceptOption),
-                        SourceRecordIdSnapshot = id,
-                        Sha256Snapshot = document.Sha256,
-                    },
-                ],
+                {
+                    ProjectDocumentId = document.Id,
+                    SourceEntityTypeSnapshot = nameof(ConceptOption),
+                    SourceRecordIdSnapshot = id,
+                    Sha256Snapshot = document.Sha256,
+                },
+            ],
         });
         await _db.SaveChangesAsync();
     }

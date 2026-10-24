@@ -594,10 +594,22 @@ public sealed class RfqsControllerTests(NihomeWebApplicationFactory factory) : I
             RowVersion = detail.Header.RowVersion,
             Lines =
             [
-                new() { BidId = detail.Bids.Single(x => x.VendorId == fixture.VendorId).Id, RfqLineId = detail.Lines[0].Id, Quantity = 1.25m,
-                    ContractType = ContractType.Supply, MaterialRequestAllocations = [new() { MaterialRequestLineId = materialRequestLineIds[0], Quantity = 1.25m }] },
-                new() { BidId = detail.Bids.Single(x => x.VendorId == fixture.VendorId).Id, RfqLineId = detail.Lines[1].Id, Quantity = 2m,
-                    ContractType = ContractType.Supply, MaterialRequestAllocations = [new() { MaterialRequestLineId = materialRequestLineIds[1], Quantity = 2m }] },
+                new()
+                {
+                    BidId = detail.Bids.Single(x => x.VendorId == fixture.VendorId).Id,
+                    RfqLineId = detail.Lines[0].Id,
+                    Quantity = 1.25m,
+                    ContractType = ContractType.Supply,
+                    MaterialRequestAllocations = [new() { MaterialRequestLineId = materialRequestLineIds[0], Quantity = 1.25m }]
+                },
+                new()
+                {
+                    BidId = detail.Bids.Single(x => x.VendorId == fixture.VendorId).Id,
+                    RfqLineId = detail.Lines[1].Id,
+                    Quantity = 2m,
+                    ContractType = ContractType.Supply,
+                    MaterialRequestAllocations = [new() { MaterialRequestLineId = materialRequestLineIds[1], Quantity = 2m }]
+                },
             ],
         };
         await LoginAsync("BGD");
@@ -625,12 +637,30 @@ public sealed class RfqsControllerTests(NihomeWebApplicationFactory factory) : I
             RowVersion = detail.Header.RowVersion,
             Lines =
             [
-                new() { BidId = vendorBid.Id, RfqLineId = detail.Lines[0].Id, Quantity = .5m,
-                    ContractType = ContractType.Supply, MaterialRequestAllocations = [new() { MaterialRequestLineId = materialRequestLineIds[0], Quantity = .5m }] },
-                new() { BidId = otherBid.Id, RfqLineId = detail.Lines[0].Id, Quantity = .75m,
-                    ContractType = ContractType.Supply, MaterialRequestAllocations = [new() { MaterialRequestLineId = materialRequestLineIds[0], Quantity = .75m }] },
-                new() { BidId = vendorBid.Id, RfqLineId = detail.Lines[1].Id, Quantity = 2m,
-                    ContractType = ContractType.Supply, MaterialRequestAllocations = [new() { MaterialRequestLineId = materialRequestLineIds[1], Quantity = 2m }] },
+                new()
+                {
+                    BidId = vendorBid.Id,
+                    RfqLineId = detail.Lines[0].Id,
+                    Quantity = .5m,
+                    ContractType = ContractType.Supply,
+                    MaterialRequestAllocations = [new() { MaterialRequestLineId = materialRequestLineIds[0], Quantity = .5m }]
+                },
+                new()
+                {
+                    BidId = otherBid.Id,
+                    RfqLineId = detail.Lines[0].Id,
+                    Quantity = .75m,
+                    ContractType = ContractType.Supply,
+                    MaterialRequestAllocations = [new() { MaterialRequestLineId = materialRequestLineIds[0], Quantity = .75m }]
+                },
+                new()
+                {
+                    BidId = vendorBid.Id,
+                    RfqLineId = detail.Lines[1].Id,
+                    Quantity = 2m,
+                    ContractType = ContractType.Supply,
+                    MaterialRequestAllocations = [new() { MaterialRequestLineId = materialRequestLineIds[1], Quantity = 2m }]
+                },
             ],
         };
 
@@ -787,7 +817,7 @@ public sealed class RfqsControllerTests(NihomeWebApplicationFactory factory) : I
                 MaterialRequestAllocations =
                 [
                     new() { MaterialRequestLineId = materialRequestLineIds[index], Quantity = line.Quantity },
-            ],
+                ],
             }).ToList(),
         };
 

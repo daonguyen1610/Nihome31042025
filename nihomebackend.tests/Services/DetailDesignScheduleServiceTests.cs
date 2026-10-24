@@ -16,17 +16,23 @@ public sealed class DetailDesignScheduleRulesTests
         var allowed = new Dictionary<DesignScheduleStatus, DesignScheduleStatus[]>
         {
             [DesignScheduleStatus.NotStarted] =
-                [DesignScheduleStatus.NotStarted, DesignScheduleStatus.InProgress,
-                    DesignScheduleStatus.OnHold, DesignScheduleStatus.WaitingForDepartment],
+                [DesignScheduleStatus.NotStarted,
+                    DesignScheduleStatus.InProgress,
+                    DesignScheduleStatus.OnHold,
+                    DesignScheduleStatus.WaitingForDepartment],
             [DesignScheduleStatus.InProgress] =
-                [DesignScheduleStatus.InProgress, DesignScheduleStatus.Completed,
-                    DesignScheduleStatus.OnHold, DesignScheduleStatus.WaitingForDepartment],
+                [DesignScheduleStatus.InProgress,
+                    DesignScheduleStatus.Completed,
+                    DesignScheduleStatus.OnHold,
+                    DesignScheduleStatus.WaitingForDepartment],
             [DesignScheduleStatus.Completed] = [DesignScheduleStatus.Completed],
             [DesignScheduleStatus.OnHold] =
-                [DesignScheduleStatus.OnHold, DesignScheduleStatus.InProgress,
+                [DesignScheduleStatus.OnHold,
+                    DesignScheduleStatus.InProgress,
                     DesignScheduleStatus.WaitingForDepartment],
             [DesignScheduleStatus.WaitingForDepartment] =
-                [DesignScheduleStatus.WaitingForDepartment, DesignScheduleStatus.InProgress,
+                [DesignScheduleStatus.WaitingForDepartment,
+                    DesignScheduleStatus.InProgress,
                     DesignScheduleStatus.OnHold],
         };
         return from current in Enum.GetValues<DesignScheduleStatus>()

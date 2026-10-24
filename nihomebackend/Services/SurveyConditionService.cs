@@ -25,8 +25,14 @@ public sealed partial class SurveyConditionService(AppDbContext db, IUtf8CsvPars
     public const string InfrastructureTypeCategory = "survey_infrastructure_type";
     public static readonly IReadOnlyList<string> CsvHeaders =
     [
-        "Category", "Code", "StatusCode", "NumericValue", "UnitCode",
-        "ReferenceCode", "Description", "Note",
+        "Category",
+        "Code",
+        "StatusCode",
+        "NumericValue",
+        "UnitCode",
+        "ReferenceCode",
+        "Description",
+        "Note",
     ];
 
     private static readonly HashSet<string> UnitCodes =
