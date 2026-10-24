@@ -10,5 +10,7 @@ node_modules
 docs
 **/playwright-report
 **/test-results
+TestResults
+**/TestResults
 .codex
 .agents

@@ -161,6 +161,10 @@ stages, then runs the published binary from the ASP.NET runtime image. There is
 no separate frontend Compose service: port `5043` serves both the SPA and API.
 Rebuild the image after source changes. Port `8080` is used only when running
 Vite separately on the host.
+`.dockerignore` excludes both `test-results` and `TestResults` directories,
+including nested .NET test output and audit harness artifacts. Keep run output
+outside the build context so it neither invalidates source layers nor enters
+the intermediate image's `COPY . .` step.
 
 To stop all services:
 
@@ -192,11 +196,19 @@ docker compose up --build -d
 
 ### 4.2 Running Backend Commands
 
-Repository backend and database commands run inside the Docker Compose environment. The backend container starts with file watching enabled, so edits under `nihomebackend/` are rebuilt automatically.
+Repository backend and database commands run in Docker. The Compose backend
+uses the ASP.NET runtime image and has no SDK or file watcher; source edits
+require an image rebuild. Compile the application through its build stage:
 
 ```bash
-docker exec nihome31042025-backend dotnet build
+docker compose build nihomeBackend
 ```
+
+Run formatting, focused tests and EF tooling in a separate .NET SDK container
+with the repository mounted/copied at the solution root. Include the unit and
+integration projects for whole-solution format verification. Use the Compose
+network for SQL tests and isolated test databases; the runtime container is
+not an SDK substitute.
 
 ### 4.2.1 Swagger Access
 
@@ -3765,7 +3777,7 @@ exit code, so a failed check retains the complete actionable list.
 
 | Check              | Command                              |
 |--------------------|--------------------------------------|
-| Backend build      | `docker exec nihome31042025-backend dotnet build` |
+| Backend build      | `docker compose build nihomeBackend` (runtime image has no SDK) |
 | Frontend build     | `npm run build`                      |
 | Backend tests      | `dotnet test nihomebackend.tests/nihomebackend.tests.csproj` in CI or an SDK test environment |
 | Backend integration tests | `dotnet test nihomebackend.integration.tests/nihomebackend.integration.tests.csproj` |
