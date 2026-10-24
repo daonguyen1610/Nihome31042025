@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NihomeBackend.Models;
@@ -994,6 +995,81 @@ public sealed class ProjectDriveSyncProcessorTests : IDisposable
         db.ProjectDocuments.Add(document);
         db.SaveChanges();
         return (survey, media, document);
+    }
+
+    [Fact]
+    public async Task DesignFolderInitialization_RequiresNoFileOrContractAndResumesMissingBindings()
+    {
+        db.DesignProjects.Add(new DesignProject
+        {
+            OperationalProjectId = project.Id,
+            ProjectCode = "DP-NICON-ZERO-FILE",
+            Name = "Concept nhà xưởng trước hợp đồng",
+            CustomerId = project.CustomerId,
+        });
+        await db.SaveChangesAsync();
+        folders.Setup(item => item.EnsureAsync(It.IsAny<OperationalProject>(), It.IsAny<ProjectDocumentCategory>(),
+                It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            .Returns((OperationalProject root, ProjectDocumentCategory category, int? actor, CancellationToken ct) =>
+                EnsureBindingAsync(root, category, ct));
+
+        var cursor = await processor.InitializeDesignFoldersAsync(0);
+        Assert.Equal(project.Id, cursor);
+        Assert.Equal(3, await db.ProjectDriveFolders.CountAsync(item => item.OperationalProjectId == project.Id));
+        Assert.Empty(db.ProjectDocuments);
+        Assert.Null((await db.DesignProjects.SingleAsync()).ContractId);
+        Assert.Equal(0, await processor.InitializeDesignFoldersAsync(cursor));
+        Assert.Equal(0, await processor.InitializeDesignFoldersAsync(0));
+        folders.Verify(item => item.EnsureAsync(It.IsAny<OperationalProject>(), It.IsAny<ProjectDocumentCategory>(),
+            It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Exactly(3));
+    }
+
+    [Fact]
+    public async Task DesignFolderInitialization_RotatesFailuresAndRetriesAfterWrap()
+    {
+        var roots = new List<OperationalProject>();
+        for (var index = 0; index < 7; index++)
+        {
+            var root = new OperationalProject { Code = $"NIC-FOLDER-{index}", Name = "NICON handoff", CustomerId = 10 };
+            root.DesignProject = new DesignProject { ProjectCode = $"DP-FOLDER-{index}", Name = root.Name, CustomerId = 10 };
+            roots.Add(root);
+        }
+        db.AddRange(roots);
+        await db.SaveChangesAsync();
+        folders.Setup(item => item.EnsureAsync(It.IsAny<OperationalProject>(), It.IsAny<ProjectDocumentCategory>(),
+                It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new IOException("Temporary Drive outage"));
+
+        var cursor = await processor.InitializeDesignFoldersAsync(0);
+        Assert.Equal(roots[4].Id, cursor);
+        var next = await processor.InitializeDesignFoldersAsync(cursor);
+        Assert.Equal(roots[6].Id, next);
+        Assert.Equal(0, await processor.InitializeDesignFoldersAsync(next));
+        Assert.Equal(roots[4].Id, await processor.InitializeDesignFoldersAsync(0));
+        folders.Verify(item => item.EnsureAsync(It.Is<OperationalProject>(root => root.Id == roots[6].Id),
+            ProjectDocumentCategory.DesignConcept, It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
+        Assert.Equal(7, await db.DesignProjects.CountAsync());
+    }
+
+    [Fact]
+    public async Task DesignFolderInitialization_DisabledDriveDoesNotCallProviderOrChangeCursor()
+    {
+        options.Enabled = false;
+        Assert.Equal(123, await processor.InitializeDesignFoldersAsync(123));
+        drive.VerifyNoOtherCalls();
+        folders.VerifyNoOtherCalls();
+    }
+
+    private async Task<ProjectDriveFolder> EnsureBindingAsync(
+        OperationalProject root, ProjectDocumentCategory category, CancellationToken ct)
+    {
+        var binding = await db.ProjectDriveFolders.SingleOrDefaultAsync(item =>
+            item.OperationalProjectId == root.Id && item.Category == category, ct);
+        if (binding is not null) return binding;
+        binding = new ProjectDriveFolder { OperationalProjectId = root.Id, Category = category, DriveFolderId = $"folder-{category}" };
+        db.Add(binding);
+        await db.SaveChangesAsync(ct);
+        return binding;
     }
 
     private static DriveItem Remote(string id, string version, DateTime modifiedAt) => new(

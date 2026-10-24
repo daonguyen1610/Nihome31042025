@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NihomeBackend.Data;
@@ -25,6 +26,10 @@ public sealed class DesignReviewServiceTests : IDisposable
     public DesignReviewServiceTests()
     {
         var saleRole = new Role { Code = "SALE", Name = "Kinh doanh", IsActive = true };
+        saleRole.RolePermissions.Add(new RolePermission
+        {
+            Permission = new Permission { Module = "design.reviews", Action = "receive", IsActive = true },
+        });
         db.Add(saleRole);
         var manager = User("design.manager@example.test", "Chủ nhiệm thiết kế");
         var recipient = User("sales.reviewer@example.test", "Kinh doanh góp ý", saleRole);
@@ -278,6 +283,30 @@ public sealed class DesignReviewServiceTests : IDisposable
     }
 
     public void Dispose() => db.Dispose();
+
+    [Theory]
+    [InlineData(true, true)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    public async Task RecipientEligibility_UsesCapabilityAndActiveRoleInsteadOfRoleCode(bool granted, bool activeRole)
+    {
+        var recipient = await db.Users.Include(item => item.RoleEntity).ThenInclude(role => role!.RolePermissions)
+            .SingleAsync(item => item.Id == recipientId);
+        recipient.RoleEntity!.Code = "NICON_CM_REVIEWER";
+        recipient.RoleEntity.IsActive = activeRole;
+        if (!granted) db.RolePermissions.RemoveRange(recipient.RoleEntity.RolePermissions);
+        await db.SaveChangesAsync();
+
+        var candidates = await service.ListRecipientCandidatesAsync(projectId, managerId, default);
+        Assert.Equal(granted && activeRole, candidates.Any(item => item.UserId == recipientId));
+        if (granted && activeRole)
+            Assert.Equal("Draft", (await CreateReviewAsync()).Status);
+        else
+        {
+            await Assert.ThrowsAsync<DesignReviewOperationException>(CreateReviewAsync);
+            Assert.Empty(db.DesignReviews);
+        }
+    }
 
     private Task<DesignReviewResponse> CreateReviewAsync() => service.CreateAsync(projectId,
         new CreateDesignReviewRequest

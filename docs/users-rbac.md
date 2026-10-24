@@ -56,7 +56,7 @@ access are applied independently; seeing a Contract never expands Lead scope.
 | Role | Source of truth | Customisable? |
 |---|---|---|
 | `SUPER_ADMIN` | Force-synced to the full catalog on every boot. Lockout safety net. | No |
-| `ADMIN` | Force-synced on every boot via the bundle pattern (`**` minus `users.manage`, `system.audit.manage`). | No |
+| `ADMIN` | Force-synced on every boot via the bundle pattern (`**` minus `users.manage`, `system.audit.manage`, `design.records.hard-delete`). | No |
 | `USER` | Force-synced on every boot via the bundle pattern (`profile.me.*`). | No |
 | Business roles (`SALE`, `DESIGN`, …) | Seeded once via `Role.InitialPermissionsSeeded`; subsequent edits in the admin matrix editor are preserved on restart. | Yes |
 
@@ -110,19 +110,33 @@ IFC, vendor and downstream-contract access needed to coordinate design
 subcontractors. Task approval is not implied by that role: the API compares the
 current user to the task's single assigned approver. Internal review recipients
 receive record-scoped view/comment access only when explicitly listed.
+Recipient candidates require the active capability `design.reviews.receive`,
+not a fixed role code. Defaults grant it to SALE, SALES_MANAGER, PM and BGD;
+new CRM/Construction group baselines include it. A custom role can receive the
+same capability without gaining project-wide view or approval. Existing edited
+group baselines are preserved and must be configured explicitly if required.
 
 Permanent deletion of failed design records is separated into
 `design.records.hard-delete`. It is seeded only to `BGD` and the full
 `SUPER_ADMIN` catalog; ordinary Design Manager/Design Lead permissions do not
 grant it. The server additionally restricts deletion to failed/terminal
 `Discarded`, `Rejected`, or `Cancelled` records.
+Startup also removes the earlier accidental hard-delete grant from existing
+DESIGN_LEAD roles; ADMIN is corrected by system-role synchronization. Other
+grants and explicitly configured custom roles are preserved. Inventory custom
+hard-delete grants against the approved authority policy before production use.
+The durable delete worker also requires this capability before deleting a
+Design/Operational Project containing design dossiers, preventing a parent
+aggregate delete from bypassing the dossier permission. Revoked permission
+blocks cleanup and requires an authorized operator to review the operation.
 
 ## Access Rules
 
 - `SUPER_ADMIN` can list, create, update, deactivate, and soft-delete users; manage role × permission matrix; manage audit retention.
-- `ADMIN` has every permission in the catalog **except** `users.manage` and `system.audit.manage`. Concretely:
+- `ADMIN` has every permission in the catalog **except** `users.manage`, `system.audit.manage`, and `design.records.hard-delete`. Concretely:
   - Can list/view users (`users.view`) but cannot create, update, toggle-active, or delete them.
   - Can view audit logs (`system.audit.view`) but cannot mutate retention config.
+  - Cannot permanently delete failed design dossiers by default.
   - Can manage all content, processes, mail, recruitment, translations, and site settings.
 - `USER` has only `profile.me.view` / `profile.me.update` — they can read/update their own profile and nothing else.
 

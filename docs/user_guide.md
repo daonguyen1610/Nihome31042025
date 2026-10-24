@@ -964,6 +964,9 @@ general or file-specific comments while internal review is open. This page
 does not grant access to other project tabs or documents. Older notification
 links to the Reviews tab also open the assigned-review view when full project
 access is unavailable.
+Administrators can allow an active custom role to receive these reviews using
+the **Receive internal design reviews** permission. The Design Manager must
+still select each recipient; this permission does not expose other reviews.
 Downloads from a review check that the file still matches the submitted
 version. If it has changed, the download is blocked with an explanation;
 contact the Design Manager to check the version. The system preserves the
@@ -1677,6 +1680,18 @@ Aggregate revenue by project. Aggregate material and subcontractor costs. Calcul
 | P&L Chart | Stacked bar chart with project drill-down |
 
 ### 3.7 Module 7: Digital Assets (Google Drive Integration)
+
+Creating a Design workspace also schedules its Concept, Basic Design and Shop
+Drawing folders, even before a contract or file exists. When Drive is disabled
+or unavailable, creation remains pending and resumes after connection recovery.
+Existing linked Design workspaces receive missing folders through the same
+process; historical bindings are preserved.
+
+Active project members can read documents for modules/categories they have
+permission to view. Membership alone does not expose Finance documents or
+grant upload, delete or retry rights. Ending membership removes this read
+access; project owners/managers and explicit view-all access retain their
+existing scope.
 
 **Objective**: Organize, secure, and provide rapid access to all project files.
 

@@ -7,6 +7,7 @@
 
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+    <DefaultItemExcludes>$(DefaultItemExcludes);**/TestResults/**</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>

@@ -1218,6 +1218,48 @@ public class TenderServiceTests : IDisposable
                 UpdatedByUserId = _userId,
             },
         };
+        var tenderTask = new DepartmentWorkTask
+        {
+            WbsCode = "1.1",
+            Title = "Hoàn thiện bản vẽ dự thầu NICON",
+            Description = "Bản vẽ nhà xưởng được xác nhận trước khi nộp",
+            Resources = "Nhóm thiết kế kiến trúc",
+            DepartmentRoleGroup = group,
+            AssigneeUserId = _userId,
+            ApproverUserId = verifier.Id,
+            PlannedStart = plan.PlannedStart!.Value,
+            PlannedEnd = plan.PlannedEnd!.Value,
+            Status = WorkTaskStatus.Verified,
+            ProgressPercent = 100,
+            CompletedAt = DateTime.UtcNow,
+            VerifiedByUserId = verifier.Id,
+            VerifiedAt = DateTime.UtcNow,
+            CreatedByUserId = _userId,
+            UpdatedByUserId = _userId,
+        };
+        var predecessor = new DepartmentWorkTask
+        {
+            WbsCode = "1.0",
+            Title = "Đối chiếu yêu cầu bản vẽ HSMT NICON",
+            DepartmentRoleGroup = group,
+            AssigneeUserId = _userId,
+            ApproverUserId = verifier.Id,
+            PlannedStart = plan.PlannedStart.Value,
+            PlannedEnd = plan.PlannedEnd.Value,
+            Status = WorkTaskStatus.Verified,
+            ProgressPercent = 100,
+            CompletedAt = DateTime.UtcNow,
+            VerifiedByUserId = verifier.Id,
+            VerifiedAt = DateTime.UtcNow,
+            CreatedByUserId = _userId,
+            UpdatedByUserId = _userId,
+        };
+        tenderTask.CcUsers.Add(new DepartmentWorkTaskCc { UserId = verifier.Id });
+        tenderTask.Predecessors.Add(new DepartmentWorkTaskDependency { PredecessorTask = predecessor });
+        plan.Tasks.Add(predecessor);
+        plan.Tasks.Add(tenderTask);
+        finance.FinanceReview!.Findings = "Đã đối chiếu bảo lãnh dự thầu NICON";
+        finance.FinanceReview.DecisionReason = "Đủ điều kiện nộp";
         _db.DepartmentWorkPackages.AddRange(plan, finance);
         _db.TenderEstimateRevisions.Add(new TenderEstimateRevision
         {
@@ -1243,6 +1285,28 @@ public class TenderServiceTests : IDisposable
         Assert.Equal(_userId, snapshot.SubmittedByUserId);
         Assert.Equal(4, snapshot.Items.Count);
         Assert.Contains(snapshot.Items, item => item.Title == "Bản vẽ dự thầu kiến trúc" && !item.IsRequired);
+        var persisted = await _db.TenderSubmissions.SingleAsync(item => item.TenderId == created.Id);
+        var planningJson = persisted.PlanningSnapshotJson;
+        var financeJson = persisted.FinanceReviewSnapshotJson;
+        using var planning = System.Text.Json.JsonDocument.Parse(planningJson);
+        var retainedTask = planning.RootElement[0].GetProperty("Tasks").EnumerateArray()
+            .Single(item => item.GetProperty("Id").GetInt32() == tenderTask.Id);
+        Assert.Equal(tenderTask.Title, retainedTask.GetProperty("Title").GetString());
+        Assert.Equal(verifier.Id, retainedTask.GetProperty("ApproverUserId").GetInt32());
+        Assert.Equal(tenderTask.PlannedEnd, retainedTask.GetProperty("PlannedEnd").GetDateTime());
+        Assert.Equal(verifier.Id, retainedTask.GetProperty("CcUserIds")[0].GetInt32());
+        Assert.Equal(predecessor.Id, retainedTask.GetProperty("PredecessorIds")[0].GetInt32());
+        using var retainedFinance = System.Text.Json.JsonDocument.Parse(financeJson);
+        Assert.Equal(finance.FinanceReview.Findings, retainedFinance.RootElement.GetProperty("Findings").GetString());
+        Assert.True(retainedFinance.RootElement.GetProperty("FinancialDossierReviewed").GetBoolean());
+        tenderTask.Title = "Nội dung chỉnh sửa sau khi nộp";
+        tenderTask.PlannedEnd = tenderTask.PlannedEnd.AddDays(1);
+        finance.FinanceReview.Findings = "Ghi chú nguồn đã thay đổi";
+        await _db.SaveChangesAsync();
+        _db.ChangeTracker.Clear();
+        var unchanged = await _db.TenderSubmissions.AsNoTracking().SingleAsync(item => item.TenderId == created.Id);
+        Assert.Equal(planningJson, unchanged.PlanningSnapshotJson);
+        Assert.Equal(financeJson, unchanged.FinanceReviewSnapshotJson);
     }
 
     [Fact]

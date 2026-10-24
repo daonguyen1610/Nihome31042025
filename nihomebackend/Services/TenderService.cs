@@ -1108,14 +1108,85 @@ public class TenderService(
         var planSnapshot = await db.DepartmentWorkPackages.AsNoTracking()
             .Where(item => item.SourceTenderId == tenderId && item.Status != WorkPackageStatus.Cancelled &&
                 (item.Purpose == WorkPackagePurpose.TenderPlanning || item.Purpose == WorkPackagePurpose.General))
-            .Select(item => new { item.Id, item.Code, item.Name, item.Status, item.CompletedAt })
+            .Select(item => new
+            {
+                SchemaVersion = 1,
+                item.Id,
+                item.Code,
+                item.Name,
+                item.Description,
+                item.Status,
+                item.CompletedAt,
+                item.OperationalProjectId,
+                item.ContractId,
+                item.DepartmentRoleGroupId,
+                item.LeadUserId,
+                item.PlannedStart,
+                item.PlannedEnd,
+                item.UpdatedAt,
+                item.UpdatedByUserId,
+                item.RowVersion,
+                Tasks = item.Tasks.OrderBy(task => task.Id).Select(task => new
+                {
+                    task.Id,
+                    task.WbsCode,
+                    task.Title,
+                    task.Description,
+                    task.Resources,
+                    task.DepartmentRoleGroupId,
+                    task.AssigneeUserId,
+                    task.ApproverUserId,
+                    task.Status,
+                    task.ProgressPercent,
+                    task.PlannedStart,
+                    task.PlannedEnd,
+                    task.ActualStart,
+                    task.CompletedAt,
+                    task.VerifiedAt,
+                    task.VerifiedByUserId,
+                    task.UpdatedAt,
+                    task.UpdatedByUserId,
+                    task.RowVersion,
+                    CcUserIds = task.CcUsers.OrderBy(cc => cc.UserId).Select(cc => cc.UserId).ToArray(),
+                    PredecessorIds = task.Predecessors.OrderBy(link => link.PredecessorTaskId)
+                        .Select(link => link.PredecessorTaskId).ToArray(),
+                }).ToArray(),
+            })
             .ToListAsync(ct);
         var finance = await db.DepartmentWorkPackages.AsNoTracking()
             .Where(item => item.SourceTenderId == tenderId && item.OperationalProjectId == tender.OperationalProjectId &&
                 item.Purpose == WorkPackagePurpose.FinanceTenderReview && item.FinanceReview != null &&
                 item.FinanceReview.Status == FinanceReviewStatus.Approved)
             .OrderByDescending(item => item.Id)
-            .Select(item => new { item.Id, item.Code, item.FinanceReview!.Status, item.FinanceReview.ReviewedAt, item.FinanceReview.ReviewedByUserId })
+            .Select(item => new
+            {
+                SchemaVersion = 1,
+                item.Id,
+                item.Code,
+                item.Name,
+                item.DepartmentRoleGroupId,
+                item.LeadUserId,
+                item.OperationalProjectId,
+                item.ContractId,
+                item.SourceTenderId,
+                item.UpdatedAt,
+                item.UpdatedByUserId,
+                item.RowVersion,
+                item.FinanceReview!.Status,
+                item.FinanceReview.ReviewedAt,
+                item.FinanceReview.ReviewedByUserId,
+                ReviewId = item.FinanceReview.Id,
+                item.FinanceReview.ContractConditionsReviewed,
+                item.FinanceReview.GuaranteesReviewed,
+                item.FinanceReview.PaymentTermsReviewed,
+                item.FinanceReview.FinancialDossierReviewed,
+                item.FinanceReview.Findings,
+                item.FinanceReview.DecisionReason,
+                item.FinanceReview.SubmittedAt,
+                ReviewUpdatedAt = item.FinanceReview.UpdatedAt,
+                ReviewUpdatedByUserId = item.FinanceReview.UpdatedByUserId,
+                ReviewRowVersion = item.FinanceReview.RowVersion,
+            })
             .FirstAsync(ct);
         var submittedAt = DateTime.UtcNow;
         var submission = new TenderSubmission

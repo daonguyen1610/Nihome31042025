@@ -93,6 +93,7 @@ public sealed class ProjectDocumentServiceTests : IDisposable
         var uploaded = await service.UploadAsync(project.Id,
             new ProjectDocumentUploadRequest { File = FormFile("drawing", "drawing.pdf"), Category = ProjectDocumentCategory.DesignBasic },
             7, false);
+        Assert.NotNull(uploaded);
         Assert.Equal("Nicon", uploaded.Origin);
         Assert.Equal("Pending", uploaded.SyncStatus);
         Assert.Equal("Upsert", uploaded.DesiredOperation);

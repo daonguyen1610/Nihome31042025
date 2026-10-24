@@ -12,16 +12,18 @@ public sealed class ProjectDocumentService(
     IProjectDocumentStorageService storage,
     IGoogleDriveAdapter drive,
     IProjectDriveFolderService folders,
-    IGoogleDriveSettingsStore driveSettings) : IProjectDocumentService, IProjectDocumentStagingService
+    IGoogleDriveSettingsStore driveSettings,
+    IPermissionService? permissions = null) : IProjectDocumentService, IProjectDocumentStagingService
 {
     public const int MaxSyncAttempts = 3;
+    private readonly IPermissionService permissionService = permissions ?? new PermissionService(db);
 
     public async Task<IReadOnlyList<ProjectDocumentResponse>?> ListAsync(
         int projectId, int callerUserId, bool canSeeAll, CancellationToken ct = default)
     {
-        if (!await CanAccessProjectAsync(projectId, callerUserId, canSeeAll, ct)) return null;
-        return await db.ProjectDocuments.AsNoTracking()
-            .Where(document => document.OperationalProjectId == projectId && document.SyncStatus != ProjectDocumentSyncStatus.Deleted)
+        var readable = await ReadableDocumentsAsync(projectId, callerUserId, canSeeAll, ct);
+        if (readable is null) return null;
+        return await readable
             .OrderBy(document => document.Category).ThenByDescending(document => document.UpdatedAt)
             .Select(document => Map(document)).ToListAsync(ct);
     }
@@ -196,8 +198,9 @@ public sealed class ProjectDocumentService(
     public async Task<ProjectDocumentDownload?> DownloadAsync(
         int projectId, long documentId, int callerUserId, bool canSeeAll, CancellationToken ct = default)
     {
-        if (!await CanAccessProjectAsync(projectId, callerUserId, canSeeAll, ct)) return null;
-        var document = await FindAsync(projectId, documentId, ct);
+        var readable = await ReadableDocumentsAsync(projectId, callerUserId, canSeeAll, ct);
+        if (readable is null) return null;
+        var document = await readable.SingleOrDefaultAsync(item => item.Id == documentId, ct);
         if (document is null || !document.IsDownloadable) return null;
         var stagedManualUpload = document.SourceType == ProjectDocumentSourceType.ManualUpload &&
             document.DesiredOperation == ProjectDocumentDesiredOperation.Upsert &&
@@ -388,6 +391,43 @@ public sealed class ProjectDocumentService(
     private async Task<bool> CanAccessProjectAsync(int projectId, int callerUserId, bool canSeeAll, CancellationToken ct) =>
         await db.OperationalProjects.AsNoTracking().AnyAsync(project => project.Id == projectId &&
             (canSeeAll || project.ProjectManagerUserId == callerUserId || project.CreatedByUserId == callerUserId), ct);
+
+    private async Task<IQueryable<ProjectDocument>?> ReadableDocumentsAsync(
+        int projectId, int userId, bool canSeeAll, CancellationToken ct)
+    {
+        var query = db.ProjectDocuments.AsNoTracking().Where(item => item.OperationalProjectId == projectId &&
+            item.SyncStatus != ProjectDocumentSyncStatus.Deleted);
+        if (await CanAccessProjectAsync(projectId, userId, canSeeAll, ct)) return query;
+        var now = DateTime.UtcNow;
+        if (!await db.OperationalProjectMembers.AsNoTracking().AnyAsync(item =>
+                item.OperationalProjectId == projectId && item.UserId == userId && item.User.IsActive &&
+                item.StartedAt <= now && item.EndedAt == null, ct)) return null;
+
+        var codes = await permissionService.GetForUserAsync(userId, ct);
+        bool Has(params string[] required) => required.Any(codes.Contains);
+        var categories = new List<ProjectDocumentCategory>();
+        if (Has("crm.opportunities.view")) categories.Add(ProjectDocumentCategory.CrmPreDesign);
+        if (Has("crm.surveys.view")) categories.Add(ProjectDocumentCategory.Survey);
+        if (Has("design.concepts.view")) categories.Add(ProjectDocumentCategory.DesignConcept);
+        if (Has("design.basic.view")) categories.Add(ProjectDocumentCategory.DesignBasic);
+        if (Has("design.shop.view")) categories.Add(ProjectDocumentCategory.DesignShopDrawing);
+        if (Has("permit.checklists.view")) categories.Add(ProjectDocumentCategory.LegalPermits);
+        if (Has("construction.acceptance.view", "construction.qa-qc.view", "construction.qs.view"))
+            categories.Add(ProjectDocumentCategory.ConstructionAcceptance);
+        if (Has("proc.material-requests.view", "proc.resource-requests.view")) categories.Add(ProjectDocumentCategory.Procurement);
+        if (Has("finance.payments.view")) categories.Add(ProjectDocumentCategory.FinanceContracts);
+
+        var sources = new List<ProjectDocumentSourceModule> { ProjectDocumentSourceModule.General };
+        if (Has("crm.opportunities.view", "crm.contracts.view")) sources.Add(ProjectDocumentSourceModule.Crm);
+        if (Has("crm.surveys.view")) sources.Add(ProjectDocumentSourceModule.Survey);
+        if (Has("design.concepts.view", "design.basic.view", "design.shop.view")) sources.Add(ProjectDocumentSourceModule.Design);
+        if (Has("permit.checklists.view")) sources.Add(ProjectDocumentSourceModule.Legal);
+        if (Has("construction.qa-qc.view", "construction.qs.view", "construction.diary.view"))
+            sources.Add(ProjectDocumentSourceModule.Construction);
+        if (Has("construction.acceptance.view")) sources.Add(ProjectDocumentSourceModule.Acceptance);
+        if (Has("construction.handover.view")) sources.Add(ProjectDocumentSourceModule.Handover);
+        return query.Where(item => categories.Contains(item.Category) && sources.Contains(item.SourceModule));
+    }
 
     private async Task ValidateMetadataAsync(int projectId, ProjectDocumentSourceModule sourceModule,
         long? sourceRecordId, int? customerId, int? contractId, CancellationToken ct)

@@ -13,6 +13,7 @@ public interface IProjectDriveSyncProcessor
     Task<bool> ProcessNextOutboundAsync(CancellationToken ct = default);
     Task ReconcileProjectAsync(int projectId, CancellationToken ct = default);
     Task ReconcileBoundProjectsAsync(CancellationToken ct = default);
+    Task<int> InitializeDesignFoldersAsync(int afterProjectId, CancellationToken ct = default);
 }
 
 public sealed class ProjectDriveSyncProcessor(
@@ -29,6 +30,39 @@ public sealed class ProjectDriveSyncProcessor(
     private const string NativeMimePrefix = "application/vnd.google-apps.";
     private const string UnsupportedNativeReason = "Tệp Google Workspace gốc chưa hỗ trợ tải xuống; có thể mở bằng liên kết Google Drive.";
     private string currentInstanceId = string.Empty;
+
+    public async Task<int> InitializeDesignFoldersAsync(int afterProjectId, CancellationToken ct = default)
+    {
+        var options = await settingsStore.GetRuntimeAsync(ct);
+        if (!options.Enabled) return afterProjectId;
+        var categories = new[] { ProjectDocumentCategory.DesignConcept, ProjectDocumentCategory.DesignBasic,
+            ProjectDocumentCategory.DesignShopDrawing };
+        // The persisted Design workspace is the durable initialization intent:
+        // missing category bindings survive crashes/disabled Drive without a
+        // remote call inside the sales handoff transaction. Include old workspaces.
+        var projects = await db.OperationalProjects.AsNoTracking().Include(project => project.DesignProject)
+            .Where(project => project.Id > afterProjectId && project.DesignProject != null &&
+                db.ProjectDriveFolders.Count(folder => folder.OperationalProjectId == project.Id &&
+                    categories.Contains(folder.Category)) < categories.Length)
+            .OrderBy(project => project.Id).Take(5).ToListAsync(ct);
+        if (projects.Count == 0) return 0;
+        if (!await HasWritableConnectionAsync(ct)) return afterProjectId;
+        foreach (var project in projects)
+        {
+            try
+            {
+                foreach (var category in categories)
+                    await folderService.EnsureAsync(project, category, project.DesignProject?.CreatedByUserId, ct);
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                logger.LogWarning(exception, "Design Drive folders for project {ProjectId} remain pending and will retry", project.Id);
+            }
+        }
+        // Rotate past failures as well, so an inaccessible project cannot starve
+        // later handoffs. Missing bindings remain eligible on the next pass.
+        return projects[^1].Id;
+    }
 
     public async Task<bool> ProcessNextProjectRenameAsync(CancellationToken ct = default)
     {
@@ -969,6 +1003,7 @@ public sealed class ProjectDriveSyncService(
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        var designFolderCursor = 0;
         while (!stoppingToken.IsCancellationRequested)
         {
             var delay = TimeSpan.FromSeconds(15);
@@ -984,6 +1019,7 @@ public sealed class ProjectDriveSyncService(
                     continue;
                 }
                 var processor = scope.ServiceProvider.GetRequiredService<IProjectDriveSyncProcessor>();
+                designFolderCursor = await processor.InitializeDesignFoldersAsync(designFolderCursor, stoppingToken);
                 var renamed = await processor.ProcessNextProjectRenameAsync(stoppingToken);
                 var processed = await processor.ProcessNextOutboundAsync(stoppingToken);
                 await processor.ReconcileBoundProjectsAsync(stoppingToken);
