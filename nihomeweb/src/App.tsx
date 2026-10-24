@@ -1,6 +1,14 @@
 import { lazy, Suspense } from "react";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Navigate, Route, Routes, useLocation, useParams } from "react-router-dom";
+import {
+  BrowserRouter,
+  Navigate,
+  Outlet,
+  Route,
+  Routes,
+  useLocation,
+  useParams,
+} from "react-router-dom";
 import { Provider } from "react-redux";
 import { store } from "@/store";
 import { queryClient } from "@/lib/queryClient";
@@ -101,6 +109,7 @@ const KpiConfiguration = lazy(() => import("./pages/admin/KpiConfiguration.tsx")
 const ProjectReports = lazy(() => import("@/pages/admin/ProjectReports"));
 const AdminDesignProjects = lazy(() => import("./pages/admin/DesignProjects.tsx"));
 const AdminDesignProjectDetail = lazy(() => import("./pages/admin/DesignProjectDetail.tsx"));
+const AdminDesignReviewInbox = lazy(() => import("./pages/admin/DesignReviewInbox.tsx"));
 const AdminPermits = lazy(() => import("./pages/admin/Permits.tsx"));
 const AdminConstructionTasks = lazy(
   () => import("./pages/admin/construction/ConstructionTasksPage.tsx"),
@@ -146,6 +155,12 @@ const LegacyFinanceContractRedirect = ({ direction }: { direction: "Upstream" | 
     );
   }
   return <Navigate to={`/admin/contracts/${id ?? ""}?${search.toString()}`} replace />;
+};
+
+const DesignProjectDetailAccess = () => {
+  const location = useLocation();
+  if (new URLSearchParams(location.search).get("tab") === "reviews") return <Outlet />;
+  return <RequirePermission code={ADMIN_PERMS.designProjects} />;
 };
 
 const App = () => (
@@ -407,11 +422,14 @@ const App = () => (
                   </Route>
                   <Route element={<RequirePermission code={ADMIN_PERMS.designProjects} />}>
                     <Route path="/admin/design-projects" element={<AdminDesignProjects />} />
+                  </Route>
+                  <Route element={<DesignProjectDetailAccess />}>
                     <Route
                       path="/admin/design-projects/:id"
                       element={<AdminDesignProjectDetail />}
                     />
                   </Route>
+                  <Route path="/admin/design-reviews/:id" element={<AdminDesignReviewInbox />} />
                   <Route element={<RequirePermission code={ADMIN_PERMS.permits} />}>
                     <Route path="/admin/permits" element={<AdminPermits />} />
                   </Route>
