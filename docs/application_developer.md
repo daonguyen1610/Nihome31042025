@@ -2,7 +2,7 @@
 
 Version 1.1
 
-Last Updated: 16 October 2026
+Last Updated: 24 October 2026
 
 ---
 
@@ -19,6 +19,7 @@ Last Updated: 16 October 2026
 9. [Testing](#9-testing)
 10. [Deployment](#10-deployment)
 11. [Troubleshooting](#11-troubleshooting)
+12. [Kế hoạch hoàn thiện theo yêu cầu NICON](#12-kế-hoạch-hoàn-thiện-theo-yêu-cầu-nicon)
 
 ---
 
@@ -3192,25 +3193,12 @@ is seeded.
 
 #### Kế hoạch hoàn thiện theo phản hồi NICON
 
-Các bước dưới đây là **Target**, không phải cam kết thời gian hoặc tuyên bố
-đã triển khai. Thứ tự phản ánh phụ thuộc kỹ thuật; không thay đổi ưu tiên giao
-hàng CRM/Thiết kế đã thống nhất. Chỉ ước lượng sau khi có mapping ISO và phạm vi
-được chủ nghiệp vụ duyệt. Phản hồi nguồn được ghi nhận ngày 18/10/2026.
-
-| Bước | Công việc và đầu ra | Phụ thuộc / điều kiện hoàn thành |
-|---|---|---|
-| P1 — BA + NICON/CM/FA | Kiểm kê bộ ISO đã nhận; map mã/phiên bản/file nguồn → quy trình → bước → công việc → điều kiện bắt buộc; map chứng từ cho Supply, Labour, Equipment và Mixed. Báo riêng form thiếu cho NICON; chứng từ thanh toán thiếu cho FA, chị K/Kiara. | Đối chiếu kho hồ sơ thực tế; CM/FA xác nhận mapping và các ngoại lệ. Chưa có hiện vật thì phần template tương ứng chưa đủ điều kiện publish. |
-| P2 — Nhân sự BCH | Rà soát membership/assignment và các write path; giữ BCH riêng theo Operational Project, cho một người tham gia nhiều dự án, quyền và trách nhiệm theo từng dự án. Chỉ sửa schema nếu hiện trạng không đáp ứng. | Không áp uniqueness toàn cục theo người. Integration chứng minh tham gia hai dự án hợp lệ, từ chối truy cập dự án thứ ba và không tự duyệt hồ sơ mình tạo. |
-| P3 — Handoff nguồn lực | Nối Equipment/Labour từ CM approval sang Cung ứng lập HĐ Downstream và cung cấp công trình; giữ Material theo MR/Execution BOQ hiện có. Liên kết đề xuất, hợp đồng và bằng chứng cung cấp; hỗ trợ retry không tạo trùng, concurrency và audit. | Dùng lại service/contract hiện có, không tạo aggregate mới trên DesignProjectId. Integration kiểm tra approve/reject, sai dự án/loại HĐ, thiếu quyền, gửi trùng và lỗi giữa các bước không tạo kết quả giả. |
-| P4 — ISO và hồ sơ thanh toán | Dùng template có phiên bản cho QA/QC/nhật ký và chứng từ từng package; nối hồ sơ Downstream sang FA. Tách Upstream/Downstream; giữ template snapshot và kiểm tra chứng từ server-side. | P1 và liên kết P3 cho luồng máy/nhân công. Test đủ/thiếu/sai phiên bản hoặc sai dự án, bốn loại package, không ép phiếu kho cho gói không có vật tư; lịch sử hồ sơ không đổi khi template đổi. |
-| P5 — CM portfolio | Tổng hợp tiến độ, nghiệm thu đầu ra/đầu vào, giá trị thực hiện so với dự toán, QA/QC và an toàn; có drill-down, nguồn/kỳ dữ liệu và trạng thái thiếu dữ liệu. | Chốt định nghĩa giá trị thực hiện, kỳ chốt, baseline và nguồn dữ liệu; không suy diễn công thức từ câu trả lời. Unit cho tính toán đã chốt; integration cho phạm vi nhiều dự án, số liệu hai chiều và thiếu nguồn; E2E hẹp cho màn hình desktop/tablet. |
-| P6 — Xác nhận nghiệp vụ | BA rà lại năm phản hồi, QA chạy các luồng rủi ro cao và NICON UAT theo ISO thực tế. Cập nhật seed demo có tên nghiệp vụ và các hướng dẫn hiện hành. | Chỉ ghi Implemented khi đủ persistence/API authorization/UI/tests; ghi rõ phần Partial và quyết định còn mở. Không coi tài liệu hoặc bộ test có sẵn là bằng chứng nghiệm thu. |
-
-P2 có thể khảo sát song song P1; P3 có thể chuẩn bị phần liên kết đã rõ, nhưng
-không tự thiết kế gate thanh toán trước P1. P5 có thể dựng hợp đồng đọc theo
-nguồn đã xác minh; phần tính toán chưa chốt vẫn là **Open decision**, chủ quyết
-định là CM/FA và Product Owner. Mỗi thay đổi code phải đọc lại nghiệp vụ, cập
-nhật migration nếu cần, chạy test đúng tầng và kiểm tra hồi quy luồng hiện hữu.
+Kế hoạch được hợp nhất tại [mục 12](#12-kế-hoạch-hoàn-thiện-theo-yêu-cầu-nicon)
+để dùng chung phụ thuộc, điều kiện nghiệm thu và migration với CRM, Thiết kế,
+Drive và Tài chính. Các gói ISO/CM/BCH/FA tại đó là **Target**; các ma trận và
+công thức chưa được xác nhận vẫn là **Open decision**. Phản hồi nguồn tiếp nhận
+18/10/2026 và bộ ISO nhận 20/10/2026 tiếp tục là đầu vào; không coi việc lập kế
+hoạch là bằng chứng đã triển khai hoặc NICON đã nghiệm thu.
 
 #### Aggregate and ownership boundaries
 
@@ -4038,3 +4026,267 @@ revision selected for E2E.
 - Confirm the new `buildSha` before starting Playwright.
 
 ---
+
+## 12. Kế hoạch hoàn thiện theo yêu cầu NICON
+
+### 12.1 Phạm vi và nguyên tắc triển khai
+
+Kế hoạch bao phủ toàn bộ 14 mục của
+[baseline họp 03/10/2026](Nicon/MoMs/2026-10-06/NICON_Meeting_2026-10-03_Tom-tat-yeu-cau-moi.md),
+đọc cùng [yêu cầu hiện hành](Nicon-QLVH.md),
+[workflow](Nicon-workflow.md), `Nicon_BreakTask_v1.xlsx` và hiện vật khách hàng
+liên quan. Giữ các xác nhận mới hơn: hai hướng HĐ Upstream ngày 16/10, BOQ cấu
+hình ngày 17/10, phản hồi CM tiếp nhận 18/10 và ISO nhận 20/10. Không quay lại
+quy tắc cũ đã được thay thế, cũng không suy code hiện tại thành quyết định mới.
+
+Mọi gói trong mục này là **Target**. Chỉ một phần đã có bằng chứng thì ghi
+**Partial** kèm khoảng trống trong các mục mô tả năng lực; nhánh chưa có quyết
+định có thẩm quyền giữ **Open decision**. Không đánh dấu **Implemented** từ kế
+hoạch, endpoint, menu hoặc test file chưa chạy. Trước từng gói, rà lại source và
+test mới nhất; lỗi đã sửa ở nhánh khác phải kiểm chứng trước khi làm trùng.
+
+Đích bàn giao là luồng nghiệp vụ đầy đủ qua persistence, API có authorization,
+UI, tài liệu, seed và kiểm thử phù hợp. Ưu tiên CRM + Thiết kế; sửa quyền và bảo
+toàn bằng chứng xuyên module trước để không mở rộng workflow trên dữ liệu thiếu
+an toàn. Không tự mở rộng sang ERP, arbitrary Excel fidelity, full `.mpp`
+import hay Drive ACL ngoài phạm vi đã được NICON xác nhận. Các đầu việc Target
+trong BreakTask, gồm báo cáo tài chính/kho và chức năng chung, vẫn phải được map
+và xếp đợt; chưa được duyệt thì giữ quyết định/phạm vi rõ, không âm thầm loại bỏ.
+
+Đây là kế hoạch triển khai, chưa phải thay đổi business contract. Không tự đặt
+ngày hoàn thành hoặc effort khi chưa chốt đầu vào, năng lực đội và đối chiếu
+BreakTask. Sau discovery, đội phát triển và Product Owner phân bổ từng gói theo
+capacity thực tế; mọi mốc phải có đầu ra và điều kiện thoát dưới đây.
+
+Workbook được đối chiếu ở chế độ chỉ đọc: `Nicon!A1:D1` ghi lần rà source
+`7813bc5d`, không chạy lại test/không xác nhận host; các đầu việc Drive/project
+reports tại `'Cập nhật Demo Ngày 2506'!A17:C19` và chức năng chung tại
+`'Tiến độ hiện tại'!A102:H102` cần được giữ trong traceability. Không dùng cột
+estimate/status của workbook làm lịch cam kết hoặc bằng chứng nghiệm thu mới.
+
+### 12.2 Quyết định nghiệp vụ và đầu vào bắt buộc
+
+Ghi quyết định ngay tại [mục 12 của yêu cầu](Nicon-QLVH.md#12-các-quyết-định-bắt-buộc-còn-mở),
+kèm người có thẩm quyền, ngày/nguồn, phương án được chọn, actor, lifecycle,
+data/API contract, acceptance criteria và tác động dữ liệu cũ. Huỳnh Anh là đầu
+mối khách hàng; Product Owner/người được NICON ủy quyền chốt rule, CM/FA/Thiết
+kế xác nhận nội dung chuyên môn. Việc giao xử lý quyết định không tự có nghĩa
+người đó đã chấp thuận phương án.
+
+| Quyết định / đầu vào | Cần chốt cụ thể | Gói phụ thuộc |
+|---|---|---|
+| Q-01 | Giữ/chuyển/gắn nhóm tiền hợp đồng; cách phân bổ khi một dự án có nhiều HĐ; contract link ở từng purpose có được thay đổi không | ROOT-01, WORK-01, COMM-01 |
+| Q-02 | Việc nội bộ có cần duyệt; metric, trọng số, kỳ khóa và điều kiện tính KPI | WORK-01, REPORT-01 |
+| Q-03 / Q-04 | Ai khởi tạo giao liên phòng, ngoại lệ admin; cơ cấu năm phòng và vị trí Cung ứng/Pháp lý; bộ quyền mẫu | RBAC-01, ROOT-01, WORK-01 |
+| Q-05 | Quy ước mã, normalization, uniqueness, alias và thời điểm được đổi/khóa | CRM-01; sửa stale Drive rename không cần đợi quy ước mới |
+| Q-06 / Q-07 / Q-10 | Recipient chỉ bình luận hay cần đồng thuận; CC mặc định; ranh giới Lead duyệt việc và Manager chốt giai đoạn | DESIGN-01, DESIGN-02 |
+| Q-08 | Cấp quyền xóa hồ sơ không đạt; hồ sơ từng trình khách; retention, bản phát hành và evidence liên quan | SAFE-02, RBAC-01, DRIVE-03; ngăn wildcard cấp nhầm quyền có thể làm trước |
+| Q-09 | Permit applicability theo loại/quy mô, mandatory/exemption và template version | LEGAL-01 |
+| Q-11 | Màn hình Đội ngũ/Tiến độ; WBS/calendar/baseline/import scope; mốc Project/Kinh doanh ban hành và mốc Design đề xuất | DESIGN-03; không coi có file `.mpp` là đã duyệt import contract |
+| ISO / CM / FA | Map quy trình → bước → mã/phiên bản/file nguồn → form/checklist; xử lý mã thiếu/trùng; Supply/Labour/Equipment/Mixed, advance/prepayment và chứng từ áp dụng | ISO-01, CM-01, FIELD-01, FIELD-02, QS-01, FIN-01 |
+| Approval / calculation | Delegation và independent review; baseline publish/unlock; công thức/kỳ S-Curve; executed value; BOQ allowance/zero/reversal/conversion; KPI còn thiếu | CM-01, SUPPLY-01, REPORT-01 |
+| Approval hiệu lực | Cancel/withdraw nhóm Finance có thu hồi approval không; nội dung/phiên bản nào thay đổi thì phải rà lại | COMM-01, TENDER-01 |
+| Nguồn báo cáo / chức năng chung | Actual cashflow, cost/P&L/inventory sources, kỳ đối chiếu; phạm vi global search/saved filters và data source KPI còn thiếu | FIN-02, REPORT-01, COMMON-01 |
+| Document policy | Actor × source/category × action; historical approved bytes/retention; import-to-dossier; IFC-specific upload; phạm vi scan/native export và migration Survey. Giữ sharing/ACL tắt theo quyết định hiện tại; chỉ mở lại khi có yêu cầu mới được duyệt | SAFE-01, SAFE-02, DRIVE-02, DRIVE-03 |
+
+Các rule đã rõ được làm trước; không chờ toàn bộ bảng mới sửa quyền, evidence,
+task approval bypass, tender terminal guard hoặc stale rename. Phần chưa chốt
+không được publish thành template bắt buộc hay silently chọn giá trị mặc định.
+Không yêu cầu gửi lại toàn bộ ISO/BOQ/MS Project đã nhận; đọc hiện vật và hỏi
+đúng phần còn thiếu. Mẫu/giá trị/màu/ngày/tên khách trong evidence không tự
+trở thành business rule.
+
+### 12.3 Thứ tự, phụ thuộc và mốc bàn giao
+
+| Đợt | Gói | Đầu ra để chuyển đợt |
+|---|---|---|
+| 0 — Chốt contract và tái hiện | PLAN-01, ISO-01 discovery | Traceability từng bullet, phân biệt lỗi/gap/open decision, actor/state matrix; đưa probe cần thiết vào regression đúng tầng; quyết định có owner |
+| 1 — Bảo vệ luồng đang có | SAFE-01/02/03, DRIVE-01, TENDER-01 guards, QA-01 | Không còn bypass đã xác nhận về quyền, xóa evidence, approval cũ, sửa terminal plan; health/redirect/rename an toàn; các test nền liên quan xanh |
+| 2 — CRM và công việc chung | RBAC-01, ROOT-01, WORK-01, CRM-01, COMMON-01 discovery | Một root dự án; role/department đúng quyết định; giao việc và notification mở đúng scope; nội bộ tách riêng; dữ liệu cũ tương thích |
+| 3 — Thiết kế và Drive | DESIGN-01/02/03/04, DRIVE-02/03 | Business journey từ Opportunity đến Concept/Basic/Shop/IFC, recipient, tài liệu/phiên bản và folder-init có bằng chứng; không chỉ upload General |
+| 4 — Thương mại và đấu thầu | COMM-01, BOQ-01, TENDER-01 hoàn chỉnh | Giá đầu vào → báo giá/Finance → HĐ; tender plan/dossier/submit/result có snapshot bất biến; BOQ đúng phạm vi được duyệt |
+| 5 — Pháp lý và ISO áp dụng | LEGAL-01, ISO-01 publish theo quyết định | Permit/task/applicability/activation không trùng; form/checklist có nguồn và phiên bản được duyệt |
+| 6 — CM, BCH và cung ứng | CM-01, FIELD-01/02, SUPPLY-01, QS-01 | Readiness gate và baseline cấu trúc; typed resource handoff, QA/QC/HSE/QS độc lập; evidence và offline/reconnect an toàn |
+| 7 — Hồ sơ tài chính và báo cáo | FIN-01/02, REPORT-01, COMMON-01 hoàn chỉnh | Hai hướng hồ sơ, đủ ba phần và chứng từ áp dụng mới gửi/chi; KPI/portfolio/báo cáo tài chính-kho có nguồn và phạm vi đã chốt |
+| 8 — Chuyển dữ liệu và nghiệm thu | MIG-01, RELEASE-01 | Rehearsal/rollback, docs/demo, BA → QA → NICON UAT trên bản deploy xác định; không còn High/Critical mở |
+
+Đây là thứ tự bàn giao; không phải phải chờ hết một đợt mới discovery đợt sau.
+Contract QS/Finance và template phải thiết kế thống nhất trước code liên kết.
+Phần TC–KT tiền hợp đồng nằm ở COMM-01, không chờ đợt 7 hoặc bàn giao công trình.
+LEGAL-01 và IFC của Design cấp bằng chứng cho CM-01; published baseline và
+approved Execution BOQ cấp giới hạn cho SUPPLY-01. DRIVE và SAFE áp dụng xuyên
+mọi đợt. Discovery ISO/BOQ/schedule và thiết kế read contract có thể tiến hành
+khi chờ quyết định, nhưng không bật tính toán/gate chưa được duyệt.
+
+### 12.4 Backlog tính năng và tiêu chí hoàn thành
+
+Các đường code nêu dưới đây là điểm mở rộng cần khảo sát lại, không phải cam
+kết tên endpoint/schema mới. Mỗi gói phải chốt DTO/validation/state/concurrency
+và migration trước khi code; ưu tiên reuse controller/service/UI đang có.
+
+| Gói | Thêm/cập nhật đầy đủ | Điều kiện nghiệm thu và kiểm thử chính |
+|---|---|---|
+| PLAN-01 — Contract và truy vết | Map từng bullet MoM và BreakTask liên quan → actor/rule/lifecycle → persistence/API/UI/seed → AC/test; giữ current subset và target tách biệt | Không bỏ mục nhỏ vì module đã có menu; mỗi gap/finding có gói xử lý, mỗi quyết định có owner; BA xác nhận test basis trước QA |
+| SAFE-01 — Authorization thống nhất | `ProjectAccessService`, `ProjectDocumentService`, Design/Permits controllers và task mutation: permission + active project/source scope; sửa Design Manager upload fallback bị filter chặn và member đọc evidence bị 404 | Assigned Design upload được; QAQC/QS/Legal đọc đúng evidence; ngoài dự án/ended membership/CC không có quyền mutation bị chặn; list/count/download không leak Finance hoặc tài liệu nguồn ngoài quyền. Integration qua API, có negative source-permission cases; không cấp blanket view-all |
+| SAFE-02 — Bảo toàn evidence và xóa | Dùng document/deletion services bảo vệ QA/QC/QS, review/submission và consumer tài chính; kiểm mọi generic delete, managed-source replacement/delete, remote edit/trash và aggregate deletion | Từ chối không đổi DB/file/history/job; approved dossier không âm thầm trỏ bytes mới. Chốt reject/version/archive và retention trước triển khai lưu bytes lịch sử; mọi hard delete có impact, typed code, plan token, concurrency, ownership/cleanup. SQL race và file/Drive tests, không chỉ FK/InMemory |
+| SAFE-03 — Approval đúng nội dung | `DetailDesignScheduleService` và workflow consumers: API update không hoàn thành lách Pending; approval gắn revision/nội dung, không giữ Approved cho scope/người/lịch/dependency đã thay | Complete → Pending và notification; đúng một independent assigned approver; CC không approve; reject có lý do, resubmit đúng revision. Edit approved bị chặn hoặc tạo revision theo contract đã chốt; stage gate không nhận approval cũ. Unit rules + HTTP bypass/concurrency tests |
+| QA-01 — Test foundation | Chuyển probe tái hiện thành regression tracked; sửa translation assertion lỗi thời, SQL fixture thiếu storage collaborator; SDK test runtime đủ fonts; live smoke thiếu credentials phải skip rõ | Các test hiện hữu đã sửa chạy pass trên final tracked source. Không thay wording staged/Pending thành synced để làm test xanh; không dùng fixture audit hoặc silent-return live test thay execution thật |
+| RBAC-01 — Phòng ban và bộ quyền | Role/group editor, baseline import snapshot, editable labels qua translations, design approve/transition/read-only scope; reconcile wildcard hard-delete và default grants có kiểm soát | Role mới nhận bộ quyền phòng theo lựa chọn đã chốt; không escalation/retroactive reset; DESIGN_LEAD không vô tình được highest-tier delete. Q-04/Q-08 chi phối cơ cấu/thẩm quyền; inventory custom grants trước migration, không ghi đè role người dùng. API matrix và UI bốn tiếng |
+| ROOT-01 — Dự án chung và entry points | OperationalProject là root; Kinh doanh tạo; phòng nhận workspace/gói việc sẵn, thông tin liên kết bằng stable ID; entry từ Project/Opportunity dùng chung rules | Không tạo lại customer/project theo phòng; không tự gắn việc vào HĐ đầu tiên. Nhiều HĐ theo Q-01, scope theo Q-03; Design/Construction giữ lifecycle chuyên môn. Integration cross-project/cross-contract và browser handoff |
+| WORK-01 — Việc phòng ban/nội bộ | `DepartmentWorkPackageService`, UI và notifications: chủ trì giao đúng người/phòng, lịch/WBS/dependency/progress; tab nội bộ không customer/project/HĐ; KPI theo Q-02; thống nhất create/update/import | Giao trùng/stale edit/reconnect không tạo record/notification trùng; dependency và lifecycle được server enforce; kết thúc assignment chặn thao tác cũ. Notification lỗi có durable retry/dedup và deep link đúng task theo quyền hiện tại; không resend lịch sử hàng loạt chưa kiểm chứng |
+| CRM-01 — CRM và mã dự án | Giữ thứ tự Project/Opportunity/Contract; Lead riêng, converted khóa; cá nhân không bắt TaxId; rename theo quy ước đã duyệt, history/unique/stable links; hai hướng Upstream được xác nhận | Validate format/length/range/normalization ở FE và server; duplicate/concurrent rename không mất liên kết. Hướng quote dùng approved/version/đúng project; direct agreed-value vẫn hợp lệ. Unit/HTTP, SQL unique/concurrency và live browser |
+| DESIGN-01 — Từ Cơ hội và phân vai | Kinh doanh handoff trước HĐ vào Concept; Manager điều phối nhiều nhóm, Lead chia subtask/duyệt trực tiếp, người khác CC; sửa complete/review kiểm active assignment | Opportunity → Design idempotent; Design không tạo business root. Full role/state journey complete/reject/resubmit/approve, author không tự duyệt, người bị thu hồi scope không xử lý. Không đồng nhất Design Manager với PM toàn dự án |
+| DESIGN-02 — Trình nội bộ/khách | Recipient-scoped entry point và download/comment, Manager tổng hợp → trình khách → record decision → stage gate; review evidence đúng revision/hash | Người ngoài project được chỉ định mở đúng review và file, không được đọc toàn project/dossier khác; comment không biến thành approve. Gate client acceptance/bước kế tiếp đúng contract Q-06/Q-10; test entry notification, replay/stale/negative decision, remote bytes thay đổi |
+| DESIGN-03 — Tiến độ và đội ngũ | WBS hierarchy, mô tả, planned/actual dates, assignee/approver/CC, predecessor/successor, relation/lag/calendar/resource/milestone/critical path; nguồn mốc Project/Kinh doanh và Design đề xuất | Source-derived schedule fixtures giữ hierarchy/dependency/duration/critical/baseline theo import scope đã duyệt. Không flatten PDF/MPP thành checklist. Pagination đủ mọi task/member/source, không mất dữ liệu trên 100 records; UI WBS/Gantt liên kết đội ngũ, mobile/tablet. Q-11 trước import/approval provenance mới |
+| DESIGN-04 — Thầu phụ, hồ sơ và IFC | Task gắn Vendor/HĐ Downstream đúng project; shortcut NCC/HĐ đã lọc; nhiều file mỗi option/stage; tab Documents tổng hợp đủ trang; upload IFC-specific theo contract; released IFC tới Construction | Manager dùng đúng supplier/RFQ/contract quyền được cấp; kết quả vào source/stage đúng. Draft/unreleased IFC không dùng thi công; không copy master data hoặc mở supplier data ngoài scope. HTTP source/vendor/contract validation và live journey Design → IFC → Construction |
+| DRIVE-01 — Độ tin cậy và cấu hình | `GoogleDriveOAuthService/SettingsStore/ProjectDriveSyncService`: health khi decrypt lỗi, return URL an toàn cả disabled/callback, stale rename ordering, topology drain guard; đồng bộ docs retry | Unit và API phân biệt Disabled/Connected/ReadOnly/InvalidRoot/ReconnectRequired; cũ A→B retry không ghi đè C; stale config/Processing không mất binding. Secret write-only, PKCE/state/actor/concurrency giữ nguyên; không log token hoặc thử outage bằng cách phá kết nối người dùng |
+| DRIVE-02 — Folder-init và catalog | Durable intent tạo cây Design khi handoff trước HĐ, kể cả zero file; reuse folder identity; upload mọi stage/source, checksum readback, verified host cleanup; retry/lease/fencing/import/conflict/native metadata | Drive lỗi không rollback business handoff hay báo folder đã có; Pending/Failed/retry nhìn thấy và phục hồi không trùng folder/file. Live kiểm đúng source workflow, không chỉ 9 General uploads; remote move/edit/trash/reconnect và mobile weak-network có bằng chứng. Scope scan/native export không tự mở rộng; sharing/ACL giữ tắt theo quyết định hiện tại và không là blocker nghiệm thu sync |
+| DRIVE-03 — Document coverage và lịch sử | Inventory Quote/Contract/Survey/Design/Permit/Acceptance/As-built/Handover bridges; bổ sung contract còn thiếu cho Tender, Finance, diary/Punch, QA/QS ISO export; source binding cho imports theo quyết định | Source owns lifecycle, managed file phải tồn tại/đúng project/permission; upload/replacement/delete cùng metadata/durable side effect, rollback không orphan. Drive-import không tự thành approved Design evidence; legacy backfill riêng, history không tự tạo từ dữ liệu hiện tại; giữ Survey/CRM bindings đến migration duyệt |
+| COMM-01 — Giá đầu vào và Finance tiền HĐ | Input offer independent lifecycle/expiry, quote snapshot; Finance đúng quote/tender content version; gate send/submit; thống nhất cancellation/withdrawal/material change và ContractId trên mọi write path | Sai purpose/project, expired/unapproved offer, self-review, stale content và bypass bị từ chối; rejected operation không side effect. Chỉ bật cancellation semantics đã chốt; input pricing/preliminary BOQ không thành Execution BOQ allowance. HTTP + live Procurement → Quote → Finance → Send |
+| BOQ-01 — Giá và workbook | UnitCost/BOQ, quote version, một current approved version, totals/rounding/VAT/discount; multi-sheet/configured catalog chuẩn, preview/mapping/revision/hash; nâng hierarchy/provenance/re-import nếu được duyệt | Đọc sample single/multi-sheet/cover/bilingual/merged/formula trước import contract; import lỗi không partial write. Giữ original workbook; typed numeric/formula restrictions hiện hành không tự đổi. Khi nâng model giữ parent/sheet/row/cell/UID phù hợp quyết định; không bịa provenance cũ hoặc hứa arbitrary Excel recalculation |
+| TENDER-01 — Kế hoạch tới kết quả | Full invitation → phòng lập plan → dossier/library/estimate/Finance → submit → result; khóa mọi edit/reopen/task/dependency sau terminal, dates không mất/qua deadline; full immutable submission snapshot | Snapshot tái dựng plan/tasks/actor/dates/dependencies, evidence revision/hash, estimate, Finance checklist/findings/decision/version, receipt/channel/time. Check gate và snapshot nhất quán trong transaction; source thay không đổi lần nộp cũ; resubmit thêm lần, retry không trùng. Unit/HTTP/SQL race; Won → Negotiation → HĐ đúng root |
+| ISO-01 — Form/template được duyệt | Đọc ISO thực tế, map process/step/source version/field/checklist/applicability; báo riêng file thiếu/trùng mã; quản trị/publish độc lập và retention theo thẩm quyền | CM/FA/NICON chấp thuận mapping, required/optional/exemption và form UI có validation đầy đủ; raw schema/results JSON không thay form nghiệp vụ. Published version/snapshot bất biến; template mới không sửa dossier lịch sử; các required language fields đầy đủ trên mọi write path |
+| LEGAL-01 — Pháp lý theo từng permit | Giữ Published-template wizard tương thích; sau Q-09 thêm applicability/tự sinh khi activation; PM phân ban đầu, chủ trì phân từng permit cho active member dù khác phòng; task/lịch/duyệt/evidence riêng | Activation atomic/idempotent, không permit/task trùng; không phụ thuộc phải tạo Design project. Permit nội bộ và kết quả cơ quan giữ lifecycle đã chốt; missing/expired/invalid evidence chặn gate. Tests applicability/legacy/mandatory/revocation/concurrency; snapshot mẫu và dữ liệu cũ giữ nguyên |
+| CM-01 — Chuẩn bị và baseline | Structured WBS/Gantt/calendar/critical path/S-Curve, BCH organization/resource plan và locked Budget Baseline có version; signed Upstream D&B/construction chỉ cho chuẩn bị | Start gate kiểm released IFC, permit hợp lệ bắt buộc, published schedule, approved BCH/resource và locked budget; handover/method/HSE theo approved profile. Lưu input/version/actor; không overwrite published baseline, scope/budget changes theo VO. Tests bypass/stale evidence/version/concurrency; không tự derive baseline từ free text |
+| FIELD-01 — BCH/CM và QA/QC/HSE | Tách field author và CM independent review; ISO forms cho acceptance/sample/lab/CO-CQ/material cert/diary theo applicability; project/WBS/evidence/timestamps/audit | Một người được tham gia nhiều BCH nhưng scope từng dự án độc lập; author không review hồ sơ mình. Mobile-first draft/pending/error/conflict, retry/offline không tạo trùng và không tự merge approved data. SQL/API file integrity; live BCH submit → CM review trên mobile/tablet/desktop |
+| FIELD-02 — Nghiệm thu tới bàn giao | QA/QC/HSE/Punch/diary/acceptance/as-built/handover giữ record/lifecycle riêng, source document links và checklist ISO; tiếp tục existing gate/correction/reopen audit | Completion không bỏ mandatory acceptance/as-built hoặc unresolved blockers theo contract; hard delete vẫn theo aggregate policy. Test source revision/dependency/state/reconnect và browser handover journey; không coi một checklist generic là thay mọi record |
+| SUPPLY-01 — Nguồn lực tới FA | Material/Equipment/Labour có WBS/quantity/unit/date/reason; Material reuse MR/applicable approved Execution BOQ, over-limit/unplanned independent CM level-2; máy/nhân công → Procurement → HĐ Downstream/supply → FA | Không suy CM Approved là đã mua/cung cấp/chi; wrong project/vendor/direction/contract/allowance và self-approval bị chặn. Retry handoff không tạo HĐ/payment trùng; source links bền. Nonmaterial không ép warehouse receipt; partial supply/cancel/amend chỉ sau rule được chốt |
+| QS-01 — Hai hướng khối lượng | Upstream gắn Owner contract/receivable milestone; Downstream gắn NCC/thầu phụ/tổ đội/payable dossier; stable WBS/BOQ/VO/evidence; approved quantity immutable, correction/reversal lineage | Không suy hướng từ dấu tiền, không double-count superseded/reversed batch; downstream consumer nhận source không còn hiệu lực. HTTP/SQL direction/project/milestone/totals/concurrency; retry CM approval không sinh duplicate payment |
+| FIN-01 — Dossier thanh toán hai chiều | Mở rộng tương thích PaymentRequest Downstream, thêm Upstream dossier; ba phần Công trường/CM/Kế toán có actor/evidence/status/version theo matrix duyệt; chạy song song vòng đời | Đủ ba phần và chứng từ áp dụng mới gửi khách/chi; Supply/Labour/Equipment/Mixed, advance/prepayment theo quyết định, không fake receipt. Giữ invoice uniqueness, independent approval, same-request revision khi QS superseded. API validation/authorization/file ownership; live một Upstream send và một Downstream pay |
+| FIN-02 — Nguồn tài chính và báo cáo kho | Chốt với FA nguồn thực thu/thực chi/chi phí, P&L và kho theo dự án/kỳ; hoàn thiện phần Target còn thiếu bằng liên kết nguồn chuẩn, không dựng sổ kế toán hoặc tích hợp ngân hàng chưa được yêu cầu | Approved dossier/milestone không tự bằng cash received/paid. Báo cáo tách kế hoạch/certified/posted/actual theo contract đã chốt; receipt/issue/reversal và package allocation đối chiếu đúng kỳ, currency/unit. Thiếu nguồn không báo số 0 hoặc lãi giả; API source permissions, unit reconciliation và live report/export |
+| REPORT-01 — CM/Finance/KPI | Portfolio progress, QS hai hướng, executed-vs-budget, QA/QC/HSE có source/period/baseline và drill-down; S-Curve và KPI theo definition/target đã duyệt | Delay strictly >5% tạo red alert cho Site Manager và explanation/recovery; exact 5% không bị xử lý như >5%. Lưu inputs/version/kỳ để tái tính. Missing source hiển thị unavailable; chỉ terminal approved/posted/paid/verified source phù hợp tính KPI, không tính offline draft; unit boundary + API scope + desktop/tablet |
+| COMMON-01 — Chức năng chung trong BreakTask | Kiểm kê và map master data, translations, notification/audit, exports, tìm kiếm/filter từng module; chốt phạm vi global search/saved filters còn Target và reuse query/UI hiện có | Tìm kiếm/lưu filter giữ đúng ownership/project/source permission và pagination, không trả record/count ngoài scope. Export phản ánh đúng tập/kỳ/quyền; không mất filter khi reload/back navigation. Các vị trí/KPI được canonical xác nhận có metric/source/target hoặc MissingData rõ ràng; chưa có nguồn HR/budget không tự tạo điểm |
+| MIG-01 — Compatibility/backfill | Inventory IDs/versions/bindings/custom grants/legacy documents; kế hoạch additive migration cho model mới, root ID migration và Drive topology là các thay đổi riêng có decision | Dry-run counts/uniqueness/conflict/orphan/checksum, resume/checkpoint, rollback và rehearsal SQL. Không reset dữ liệu user; legacy thiếu evidence ghi rõ incomplete, không tái tạo submitted snapshot/approval/ISO completion bằng dữ liệu hiện tại |
+| RELEASE-01 — Giao hàng và UAT | Cập nhật guides/RBAC/seed/translations, deploy revision xác định, smoke/UAT theo actor và scenario; bàn giao PDF quy trình kịch bản A có screenshot và hỗ trợ phản hồi NICON qua Sheet | `buildSha`/migration/version khớp; mọi High/Critical đóng, affected tests bản cuối pass; deployment/UAT/Drive NICON và việc bàn giao PDF có bằng chứng riêng. Chỉ miễn/đổi định dạng hướng dẫn khi NICON xác nhận. Gửi tài liệu/thông báo chỉ theo kênh và ủy quyền đã có, không đánh đồng local pass với host đã deploy |
+
+Role custom hợp lệ phải tham gia workflow theo permission và assignment nghiệp
+vụ tương ứng; không hardcode chỉ các role mẫu SALE/PM/DESIGN trong selection,
+recipient eligibility hoặc mutation. Negative tests phải chứng minh role custom
+không được nâng quyền, nhảy phòng, đọc source ngoài scope hoặc tự duyệt.
+
+### 12.5 Kiến trúc, hợp đồng và thay đổi dữ liệu
+
+- Giữ ASP.NET services/EF/React và durable workflow hiện có; không thêm broker,
+  microservice hay dependency khi database intent/outbox đủ đáp ứng. Business
+  write + intent cần atomic; worker chạy ngoài transaction dài gọi Google,
+  có idempotency, generation/token fence, retry và observable failure.
+- `OperationalProject` là business root. DesignProjectId của record cũ là
+  compatibility boundary; giữ adapter/lookup và có migration riêng, không tạo
+  aggregate liên module mới trên ID cũ hoặc đổi displayed code thành FK.
+- API dùng DTO; xác định required/nullable/enum/length/format/range/normalization,
+  cross-field/scope/source version, pagination và response/error contract cho
+  mọi create/update/import/transition. Reuse shared contact validators; 409 cho
+  stale version/plan theo convention, 403/404 theo permission/resource privacy.
+  Không phát minh route hoặc state công khai trước khi duyệt hợp đồng gói đó.
+- So sánh status quo và mở rộng tối thiểu: giữ module workspace và bổ sung shared
+  root links thay vì viết lại mọi module thành generic tasks; giữ snapshot JSON
+  có schema version nếu đủ thay vì thêm bảng không cần thiết; cần structured
+  baseline/BOQ provenance/payment sections thì migration additive rõ ràng.
+- Approval và submission là bằng chứng của đúng revision. Với bytes lịch sử,
+  so sánh pinned remote revision và app-owned immutable copy theo khả năng giữ
+  version, retention, chi phí/quota và quyền truy cập thực tế; owner chốt chính
+  sách trước implementation. Chưa có quyết định thì phát hiện/chặn mismatch,
+  không stream bytes mới dưới danh nghĩa evidence cũ đã duyệt.
+- Document/notification retry không làm replay business transition hoặc gửi
+  trùng. Mọi side effect cần event/source identity và audit; không xem log-only
+  catch là đã phục hồi notification, cũng không dùng Drive queue cho mọi event.
+- Form hiển thị loading/empty/error/success/conflict và responsive; mọi số nhập
+  có format đọc được như `100.000`. Dùng master data API/config đã duyệt, i18n
+  `/admin/translations` vi/en/zh/ja. Required multilingual entity fields được ghi
+  đủ ở create/import/seed/migration/legacy auto-create, không read-time fallback.
+- Bất kỳ email ứng dụng mới/thay đổi phải có template editable tại
+  `/admin/email-templates`, variable contract, preview thực trước gửi, server
+  render/HTML encoding/validation và send/edit permissions; thêm rendered-content
+  tests, giữ template đang dùng. Notification nội bộ không tự cần email mới.
+
+### 12.6 Ma trận kiểm thử và điều kiện nghiệm thu từng gói
+
+| Rủi ro / hành trình | Tầng chứng minh thấp nhất | Bằng chứng bắt buộc |
+|---|---|---|
+| Validation, version/hash/fingerprint, calculations đã chốt, stale rename ordering | Unit | Boundary/missing/malformed/duplicate; exact thresholds; không chấp nhận approval hoặc kết quả của revision khác |
+| Role × project/source × action; assignment revoked; approver/CC/author | Integration qua HTTP | Authenticated/unauthenticated, assigned/outside/ended, đúng/sai permission; list/count/content/mutation không leak; rejection giữ nguyên DB/file/history/notification |
+| Rowversion, unique code/invoice, gate-snapshot race, evidence delete/approve, idempotency reservation | SQL integration cô lập | Hai thao tác cạnh tranh, một kết quả hợp lệ, stale action bị từ chối; transaction rollback và related roots không đổi; không thay bằng EF InMemory |
+| BOQ/schedule/ISO import và migration | Source-derived fixture + integration | Mẫu được chấp nhận có expected mapping/totals/hierarchy/precision/evidence; lỗi không partial write; original source nguyên vẹn; rehearsal/backfill/rollback có đối chiếu |
+| Lead → Opportunity/Project → Design/input price → Quote/Finance → HĐ | Integration business pipeline + browser hẹp | Handoff/source links và negative gates ở API; browser đúng role, deep link, forms và SPA trên Compose |
+| Tender invitation → departmental plan/dossier/review → submission → Won → HĐ | Integration/SQL + browser hẹp | Snapshot cũ bất biến sau thay nguồn; terminal lock; duplicate/re-submit đúng contract; user thực hiện được journey |
+| Design complete → Lead review → assigned internal recipients → client decision → IFC → Construction | Integration + live browser | Một approver/CC, reviewer ngoài project chỉ đọc phiên được chỉ định, đúng file revision; missing/negative/stale decision không qua gate |
+| Contract activation → permit task → readiness; BCH resource/QA/QS → CM → Procurement/FA → handover | Integration/SQL + live browser | Independent review, applicability/evidence/version đúng; wrong direction/project/source và reconnect bị xử lý an toàn |
+| Upstream dossier gửi khách và Downstream dossier chi | Unit package rules + integration + live browser | Đủ ba phần/chứng từ; invoice/QS/revision/advance exceptions đúng rule; render email/preview khi gửi thật; không giả receipt |
+| Drive upload/source replacement/import/edit/move/trash/retry/delete | Unit/fake-provider integration và live Drive tách riêng | Checksum/parent/ownership/version/verified host cleanup; outage/expired lease/duplicate/stale plan; mock pass không tính live OAuth/Drive |
+| BCH mobile và CM desktop/tablet; bốn ngôn ngữ | Live E2E Compose | 390/768/1440px phù hợp màn hình, không overflow/JS error; duplicate submit/lost response/reconnect; labels và lỗi rõ, không mất draft |
+
+Chạy nhóm liên quan sau **final edit**, không full suite theo mặc định. Với .NET,
+format các project bị ảnh hưởng trong backend/SDK container và verify solution
+`dotnet format --no-restore --verify-no-changes` gồm unit/integration, rồi chạy
+lại affected tests sau sửa cuối. Với frontend chạy `npm run format`,
+`format:check`, lint/build theo scope; E2E phải là Compose-served application đã
+ready. Test môi trường thiếu thì ghi Not Run/unverified, không lấy build/test
+listing/kết quả phiên bản trước thay pass. Planning/docs-only chỉ kiểm tài liệu,
+không khởi động/rebuild Docker hay chạy code suites.
+
+Mỗi gói qua `.github/skills/senior-business-analyst/SKILL.md` rồi
+`.github/skills/business-functional-qa/SKILL.md`, ưu tiên reviewer độc lập.
+BA approval là test basis, không phải feature đã business-ready. Mọi critical
+contract cần rõ; requirement risk chỉ Product/business owner được chấp nhận.
+Không có ngoại lệ ngầm vì lịch giao hoặc test happy path đã xanh.
+
+### 12.7 Migration, rollout, rollback và tài liệu
+
+1. Inventory/dry-run trước thay đổi schema/grants/IDs/topology; backup dữ liệu,
+   key-ring và manifest tệp/binding/checksum phù hợp, không xuất secrets vào Git.
+   Đọc generated EF migration rồi rehearsal trên SQL clone độc lập; xác định
+   uniqueness/conflict/legacy compatibility và đối chiếu business records.
+2. Triển khai additive schema/backend có compatibility trước; backfill theo
+   eligibility/checkpoint, kiểm chứng rồi mới bật UI/worker/gate tương ứng.
+   Feature flag chỉ dùng khi cần rollout an toàn; không bật gate còn thiếu
+   quyết định hoặc tự đánh dấu dữ liệu cũ đã đủ hồ sơ.
+3. Đổi Drive root/instance/path phải có maintenance window, dừng phát sinh intent
+   liên quan và drain Processing; giữ bindings hiện hữu đến bước rebind được
+   duyệt. Survey topology chỉ migrate khi có kế hoạch move/rebind/reverse và
+   verify historical files; lưu config mới không tương đương đã migrate dữ liệu.
+4. Rollback tắt feature/worker mới và giữ immutable evidence/history; schema
+   rollback chỉ khi backward-compatible và đã rehearsal. Không hứa undo được
+   email đã gửi, payment posted hay file permanently deleted; những bước đó
+   cần gate riêng và phương án recovery/retention được owner chấp nhận.
+5. Seed/demo dùng tình huống NICON có tên có nghĩa, đúng contact/numeric rules và
+   bốn ngôn ngữ; normal/empty/error/edge/legacy states không giả approval hay
+   bằng chứng. Seed bổ sung idempotent, không reset free text, quyền hoặc
+   translations do admin chỉnh.
+6. Cập nhật `user_guide.md`, `users-rbac.md`, guide này khi behavior/API/ops đổi.
+   Chỉ cập nhật `Nicon-QLVH.md`/`Nicon-workflow.md` khi requirement được xác nhận;
+   không sửa customer evidence thành implementation history. Báo cáo mỗi run và
+   screenshots/logs ở test artifacts/PR, không thêm report vào `docs/Nicon/`.
+   Kho evidence hiện có ISO/JPG và một số tệp tạm không khớp strict allowlist
+   của AGENTS; xử lý bằng quyết định tổ chức nguồn/cập nhật allowlist có thẩm
+   quyền, không tự xóa hiện vật khách hàng để làm layout check xanh.
+7. Task branch/commit focused từng gói, stage explicit paths, review diff/secrets,
+   không sửa history. Mỗi PR nêu problem/behavior/AC/test/migration/residual risk.
+   Deploy ghi revision/buildSha và migration version, smoke rồi NICON UAT theo
+   actor qua đầu mối được chỉ định; host status không suy từ local branch.
+
+### 12.8 Bao phủ toàn bộ baseline và trách nhiệm
+
+| Mục MoM | Gói chịu trách nhiệm | Điều kiện đóng phạm vi |
+|---|---|---|
+| 1 — Quyền/vai trò | RBAC-01, SAFE-01/02 | Cơ cấu/baseline theo quyết định, permission/scope đúng server, không wildcard xóa nhầm |
+| 2 — CRM | CRM-01, ROOT-01 | Menu, Lead conversion/lock, mã editable/unique và hai hướng HĐ đúng contract hiện hành |
+| 3 — Dự án/việc chung | ROOT-01, WORK-01, REPORT-01 | Shared root, việc nội bộ, assignment/notification/KPI và multi-contract theo quyết định |
+| 4 — Design trước HĐ | DESIGN-01, DRIVE-02 | Kinh doanh handoff từ Opportunity/Project, Concept không đòi HĐ và folder intent có thể phục hồi |
+| 5 — Liên phòng tiền HĐ | COMM-01, SUPPLY-01 | Input pricing khác Execution BOQ, Finance commercial/tender gate đúng phiên bản, nhãn Cung ứng |
+| 6 — Quote/BOQ | BOQ-01 | Hai mode/version, template/import đúng phạm vi được xác nhận; fidelity nâng cao chỉ đóng khi được duyệt và test |
+| 7 — Đấu thầu | TENDER-01, COMM-01, WORK-01 | Plan theo phòng, dossier/library/review/submission/result, snapshot bất biến và terminal lock |
+| 8 — Design | DESIGN-01/02/03/04, SAFE, DRIVE | Actor/approver/CC/review/client/stage/schedule/subcontractor/docs/IFC/delete đủ AC và negative cases |
+| 9 — Pháp lý | LEGAL-01, ISO-01, SAFE-01 | Permit applicability/activation/task/approval/progress và revoked access được chứng minh |
+| 10 — Thi công | CM-01, FIELD-01/02, SUPPLY-01, QS-01 | CM/BCH, readiness/baselines, resource/QAQC/HSE/QS/ISO và handover, không chỉ có menu |
+| 11 — Tài chính | COMM-01, FIN-01/02, QS-01, REPORT-01 | Hoạt động song song, hai hướng, ba phần hồ sơ và đúng package evidence trước send/pay; báo cáo có nguồn thực tế |
+| 12 — Giao hàng/Drive | DRIVE-01/02/03, RELEASE-01 | Account/config/recovery/document sources đúng, deployment/UAT/PDF hướng dẫn có bằng chứng |
+| 13 — Hiện vật NICON | PLAN-01, ISO-01, BOQ-01, DESIGN-03, LEGAL-01 | Kiểm kê inputs đã nhận, chỉ rõ phần thiếu, quyết định có owner; không coi file mẫu là rule |
+| 14 — Điểm chưa rõ | Bảng 12.2 và gói bị ảnh hưởng | Có xác nhận hoặc giữ Open decision; không đóng nghiệm thu bằng giả định của dev |
+
+Đội BE/FE/Data chịu implementation/compatibility của từng gói; QA chuẩn bị dữ
+liệu và thực thi theo risk, reviewer BA/Architecture kiểm contract và boundaries.
+Product Owner/người được ủy quyền chịu quyết định phạm vi/rule; CM/FA/Thiết kế
+xác nhận mapping chuyên môn, IT xác nhận deployment/Drive/retention. Chỉ đóng
+toàn kế hoạch khi mọi AC trong phạm vi được xác nhận đã có bằng chứng, quyết
+định còn mở được xử lý đúng thẩm quyền và NICON hoàn tất UAT; không dùng số test
+pass hay trạng thái Connected thay cho điều kiện này.
