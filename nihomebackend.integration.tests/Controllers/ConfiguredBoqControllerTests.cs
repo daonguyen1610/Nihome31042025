@@ -23,10 +23,26 @@ public class ConfiguredBoqControllerTests(NihomeWebApplicationFactory factory) :
     };
     private static BoqConfiguration Config() => new()
     {
-        Sheets = [new() { Key = "work", NameVi = "Xây dựng", Name = "Construction", NameZh = "施工", NameJa = "工事", Fields =
-            [Field("code", "Code"), Field("name", "Name"), Field("unit", "Unit"), Field("quantity", "Quantity", true), Field("price", "UnitPrice", true), Field("length", "None", true)] },
-            new() { Key = "reference", NameVi = "Tham khảo", Name = "Reference", NameZh = "参考", NameJa = "参考", IsPriced = false,
-                Fields = [Field("code", "Code"), Field("name", "Name"), Field("spec", "None")] }]
+        Sheets = [new()
+        {
+            Key = "work",
+            NameVi = "Xây dựng",
+            Name = "Construction",
+            NameZh = "施工",
+            NameJa = "工事",
+            Fields =
+            [Field("code", "Code"), Field("name", "Name"), Field("unit", "Unit"), Field("quantity", "Quantity", true), Field("price", "UnitPrice", true), Field("length", "None", true)]
+        },
+            new()
+            {
+                Key = "reference",
+                NameVi = "Tham khảo",
+                Name = "Reference",
+                NameZh = "参考",
+                NameJa = "参考",
+                IsPriced = false,
+                Fields = [Field("code", "Code"), Field("name", "Name"), Field("spec", "None")]
+            }]
     };
 
     private async Task<(int Catalog, JsonElement Revision, string Hash)> CreateAsync()

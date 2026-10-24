@@ -420,8 +420,12 @@ public sealed class FinanceControllerTests : IntegrationTestBase
                 CreatedByUserId = siteQsUserId,
                 Lines = [new ConstructionQsBatchLine
                 {
-                    ItemCode = "STRUCTURE-CONCRETE", Description = "Concrete works", Unit = "m3",
-                    Quantity = 1m, UnitPrice = 1_000m, Amount = 1_000m,
+                    ItemCode = "STRUCTURE-CONCRETE",
+                    Description = "Concrete works",
+                    Unit = "m3",
+                    Quantity = 1m,
+                    UnitPrice = 1_000m,
+                    Amount = 1_000m,
                 }],
             };
             db.ConstructionQsBatches.Add(original);
@@ -460,8 +464,12 @@ public sealed class FinanceControllerTests : IntegrationTestBase
                 CreatedByUserId = siteQsUserId,
                 Lines = [new ConstructionQsBatchLine
                 {
-                    ItemCode = "STRUCTURE-CONCRETE", Description = "Concrete works", Unit = "m3",
-                    Quantity = 1m, UnitPrice = 1_100m, Amount = 1_100m,
+                    ItemCode = "STRUCTURE-CONCRETE",
+                    Description = "Concrete works",
+                    Unit = "m3",
+                    Quantity = 1m,
+                    UnitPrice = 1_100m,
+                    Amount = 1_100m,
                 }],
             };
             db.ConstructionQsBatches.Add(replacement);
@@ -971,8 +979,12 @@ public sealed class FinanceControllerTests : IntegrationTestBase
                 CreatedByUserId = qsUserId,
                 Lines = [new ConstructionQsBatchLine
                 {
-                    ItemCode = "STRUCTURE-CONCRETE", Description = "Concrete works", Unit = "m3",
-                    Quantity = 1m, UnitPrice = 1_000m, Amount = 1_000m,
+                    ItemCode = "STRUCTURE-CONCRETE",
+                    Description = "Concrete works",
+                    Unit = "m3",
+                    Quantity = 1m,
+                    UnitPrice = 1_000m,
+                    Amount = 1_000m,
                 }],
             };
             db.ConstructionQsBatches.Add(qs);

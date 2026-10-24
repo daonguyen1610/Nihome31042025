@@ -640,8 +640,10 @@ public class QuoteService(
     public Task<QuoteResponse?> CancelAsync(int id, QuoteWorkflowRequest req, int caller, bool canManage, bool canSeeAll, CancellationToken ct = default) =>
         TransitionAsync(id, caller, canSeeAll,
             allowedFrom: [
-                QuoteStatus.Draft, QuoteStatus.PendingApproval,
-                QuoteStatus.Approved, QuoteStatus.SentToCustomer,
+                QuoteStatus.Draft,
+                QuoteStatus.PendingApproval,
+                QuoteStatus.Approved,
+                QuoteStatus.SentToCustomer,
                 QuoteStatus.Expired,
             ],
             to: QuoteStatus.Cancelled,

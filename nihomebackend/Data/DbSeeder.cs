@@ -208,29 +208,29 @@ public static class DbSeeder
     // tests can always log in as any role.
     private static readonly (string RoleCode, string Phone, string FullName, string Email, string? LegacyName, string? LegacyEmail)[] _businessRoleUsers =
     [
-        ("SALE",            "0911000003", "Nguyễn Minh Anh",  "minh.anh.sale@nihome.vn",       "Sale Tester",          "sale.test@nihome.vn"),
-        ("SALES_MANAGER",   "0911000010", "Trần Quốc Huy",    "quoc.huy.sales@nihome.vn",      "Sales Manager Tester", "sales.manager.test@nihome.vn"),
-        ("DESIGN",          "0911000004", "Lê Hoàng Nam",     "hoang.nam.design@nihome.vn",    "Design Tester",        "design.test@nihome.vn"),
-        ("DESIGN_LEAD",     "0911000011", "Phạm Thu Hà",      "thu.ha.design@nihome.vn",       null,                   null),
-        ("ARCHITECT",       "0911000012", "Vũ Đức Long",      "duc.long.architect@nihome.vn",  null,                   null),
-        ("MEP_ENGINEER",    "0911000013", "Đỗ Thành Công",    "thanh.cong.mep@nihome.vn",      null,                   null),
-        ("STRUCT_ENGINEER", "0911000014", "Bùi Quang Khải",   "quang.khai.struct@nihome.vn",   null,                   null),
-        ("PM",              "0911000005", "Ngô Tuấn Kiệt",    "tuan.kiet.pm@nihome.vn",        "PM Tester",            "pm.test@nihome.vn"),
-        ("LEGAL_OFFICER",   "0911000015", "Đặng Ngọc Mai",    "ngoc.mai.legal@nihome.vn",      null,                   null),
-        ("QS",              "0911000006", "Hoàng Gia Bảo",    "gia.bao.qs@nihome.vn",          "QS Tester",            "qs.test@nihome.vn"),
-        ("PROCUREMENT",     "0911000016", "Đinh Hải Yến",      "hai.yen.procurement@nihome.vn", null,                   null),
-        ("ACCOUNTANT",      "0911000007", "Nguyễn Thùy Linh", "thuy.linh.accounting@nihome.vn", "Accountant Tester",    "accountant.test@nihome.vn"),
-        ("HR",              "0911000018", "Võ Thanh Hương",   "thanh.huong.hr@nihome.vn",       null,                   null),
-        ("WAREHOUSE",       "0911000008", "Trịnh Văn Sơn",    "van.son.warehouse@nihome.vn",   "Warehouse Tester",     "warehouse.test@nihome.vn"),
-        ("BGD",             "0911000009", "Phan Anh Dũng",    "anh.dung.bgd@nihome.vn",        "BGD Tester",           "bgd.test@nihome.vn"),
-        ("SITE_COMMANDER",  "0911000019", "Trần Quốc Khánh",  "quoc.khanh.site@nihome.vn",     null,                   null),
-        ("SITE_QAQC",       "0911000020", "Nguyễn Hữu Phúc",  "huu.phuc.qaqc@nihome.vn",       null,                   null),
+        ("SALE", "0911000003", "Nguyễn Minh Anh", "minh.anh.sale@nihome.vn", "Sale Tester", "sale.test@nihome.vn"),
+        ("SALES_MANAGER", "0911000010", "Trần Quốc Huy", "quoc.huy.sales@nihome.vn", "Sales Manager Tester", "sales.manager.test@nihome.vn"),
+        ("DESIGN", "0911000004", "Lê Hoàng Nam", "hoang.nam.design@nihome.vn", "Design Tester", "design.test@nihome.vn"),
+        ("DESIGN_LEAD", "0911000011", "Phạm Thu Hà", "thu.ha.design@nihome.vn", null, null),
+        ("ARCHITECT", "0911000012", "Vũ Đức Long", "duc.long.architect@nihome.vn", null, null),
+        ("MEP_ENGINEER", "0911000013", "Đỗ Thành Công", "thanh.cong.mep@nihome.vn", null, null),
+        ("STRUCT_ENGINEER", "0911000014", "Bùi Quang Khải", "quang.khai.struct@nihome.vn", null, null),
+        ("PM", "0911000005", "Ngô Tuấn Kiệt", "tuan.kiet.pm@nihome.vn", "PM Tester", "pm.test@nihome.vn"),
+        ("LEGAL_OFFICER", "0911000015", "Đặng Ngọc Mai", "ngoc.mai.legal@nihome.vn", null, null),
+        ("QS", "0911000006", "Hoàng Gia Bảo", "gia.bao.qs@nihome.vn", "QS Tester", "qs.test@nihome.vn"),
+        ("PROCUREMENT", "0911000016", "Đinh Hải Yến", "hai.yen.procurement@nihome.vn", null, null),
+        ("ACCOUNTANT", "0911000007", "Nguyễn Thùy Linh", "thuy.linh.accounting@nihome.vn", "Accountant Tester", "accountant.test@nihome.vn"),
+        ("HR", "0911000018", "Võ Thanh Hương", "thanh.huong.hr@nihome.vn", null, null),
+        ("WAREHOUSE", "0911000008", "Trịnh Văn Sơn", "van.son.warehouse@nihome.vn", "Warehouse Tester", "warehouse.test@nihome.vn"),
+        ("BGD", "0911000009", "Phan Anh Dũng", "anh.dung.bgd@nihome.vn", "BGD Tester", "bgd.test@nihome.vn"),
+        ("SITE_COMMANDER", "0911000019", "Trần Quốc Khánh", "quoc.khanh.site@nihome.vn", null, null),
+        ("SITE_QAQC", "0911000020", "Nguyễn Hữu Phúc", "huu.phuc.qaqc@nihome.vn", null, null),
         // Cung ứng needs two officers: one records supplier offers, a different
         // one chairs the work package and decides them. With a single
         // procurement account the four-eyes control cannot be exercised by two
         // people, so the demo data contradicted the business rule. Appended last
         // so existing seeded accounts keep their identifiers.
-        ("PROCUREMENT",     "0911000017", "Lý Thanh Tùng",    "thanh.tung.procurement@nihome.vn", null,                null),
+        ("PROCUREMENT", "0911000017", "Lý Thanh Tùng", "thanh.tung.procurement@nihome.vn", null, null),
     ];
 
     private static void SeedBusinessRoleUsers(AppDbContext db)

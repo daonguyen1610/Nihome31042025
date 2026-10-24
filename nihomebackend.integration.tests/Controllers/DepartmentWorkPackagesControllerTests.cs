@@ -636,10 +636,23 @@ public sealed class DepartmentWorkPackagesControllerTests(NihomeWebApplicationFa
             UpdatedByUserId = admin,
             CompletedAt = status == WorkPackageStatus.Completed ? DateTime.UtcNow : null,
             FinanceReview = new DepartmentFinanceReview { Status = FinanceReviewStatus.Approved, CreatedByUserId = admin, UpdatedByUserId = admin, ReviewedByUserId = seed.DepartmentLeadId, ReviewedAt = DateTime.UtcNow },
-            Tasks = [new DepartmentWorkTask { WbsCode = "SUP-01", Title = "Xác nhận giao nhận vật tư", DepartmentRoleGroupId = seed.DepartmentGroupId,
-                AssigneeUserId = seed.DepartmentStaffId, ApproverUserId = seed.DepartmentLeadId, KpiDefinitionId = seed.KpiDefinitionId,
-                Status = WorkTaskStatus.Verified, ProgressPercent = 100, VerifiedByUserId = seed.DepartmentLeadId, VerifiedAt = DateTime.UtcNow,
-                PlannedStart = DateTime.UtcNow, PlannedEnd = DateTime.UtcNow.AddDays(1), CreatedByUserId = admin, UpdatedByUserId = admin }],
+            Tasks = [new DepartmentWorkTask
+            {
+                WbsCode = "SUP-01",
+                Title = "Xác nhận giao nhận vật tư",
+                DepartmentRoleGroupId = seed.DepartmentGroupId,
+                AssigneeUserId = seed.DepartmentStaffId,
+                ApproverUserId = seed.DepartmentLeadId,
+                KpiDefinitionId = seed.KpiDefinitionId,
+                Status = WorkTaskStatus.Verified,
+                ProgressPercent = 100,
+                VerifiedByUserId = seed.DepartmentLeadId,
+                VerifiedAt = DateTime.UtcNow,
+                PlannedStart = DateTime.UtcNow,
+                PlannedEnd = DateTime.UtcNow.AddDays(1),
+                CreatedByUserId = admin,
+                UpdatedByUserId = admin
+            }],
         };
         db.DepartmentWorkPackages.Add(package);
         await db.SaveChangesAsync();

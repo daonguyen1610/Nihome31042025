@@ -392,8 +392,14 @@ public sealed class PrecontractCrossDepartmentControlsTests(NihomeWebApplication
         var path = $"/api/operational-projects/{scope.ProjectId}/procurement/boq-revisions";
         object[] lines =
         [
-            new { itemCode = "MEP-CABLE-01", description = "Cáp điện Cu/XLPE 4x25mm2", unit = "m",
-                approvedQuantity = 320m, budgetUnitPrice = 415_000m },
+            new
+            {
+                itemCode = "MEP-CABLE-01",
+                description = "Cáp điện Cu/XLPE 4x25mm2",
+                unit = "m",
+                approvedQuantity = 320m,
+                budgetUnitPrice = 415_000m
+            },
         ];
 
         // No contract reference at all.

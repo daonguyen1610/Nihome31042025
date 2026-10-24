@@ -120,8 +120,14 @@ public sealed class ProjectReportsControllerTests : IntegrationTestBase
         finance.GetProperty("milestoneLabel").GetString().Should().Be("Contractual schedule");
         project.GetProperty("unavailableMetrics").EnumerateArray()
             .Select(item => item.GetProperty("metricCode").GetString())
-            .Should().Contain(["historicalSCurve", "weightedConstructionProgress", "acceptanceRatios",
-                "actualCashflow", "profitAndLoss", "inventory", "boqUsage", "vendorPerformance"]);
+            .Should().Contain(["historicalSCurve",
+                "weightedConstructionProgress",
+                "acceptanceRatios",
+                "actualCashflow",
+                "profitAndLoss",
+                "inventory",
+                "boqUsage",
+                "vendorPerformance"]);
     }
 
     [Fact]
