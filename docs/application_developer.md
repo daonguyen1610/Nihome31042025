@@ -1997,6 +1997,14 @@ record; processing records and protected/frozen evidence remain guarded.
 
 The worker uses durable desired operations, bounded retries, claim tokens,
 generation fencing, SQL rowversion, and per-folder reconciliation leases.
+Automatic reconciliation selects up to ten due folder bindings per pass,
+ordered by their oldest `UpdatedAt` touch then ID, excluding active leases.
+Lease acquisition/release updates that touch even after a remote failure,
+so failed folders rotate behind waiting folders instead of repeatedly taking
+the first ten project slots. Successful folders retain the one-minute scan
+interval. Explicit project reconciliation still visits all its bindings.
+This changes scheduling only; category topology, permissions, file ownership
+and the existing per-folder lease/concurrency rules remain unchanged.
 Drive is authoritative for successfully synchronized manual catalog uploads
 and files created directly in managed folders: reconciliation catalogs them in
 their current category without downloading host copies, reflects remote edits,

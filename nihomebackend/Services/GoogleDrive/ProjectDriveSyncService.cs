@@ -227,10 +227,16 @@ public sealed class ProjectDriveSyncProcessor(
         var options = await settingsStore.GetRuntimeAsync(ct);
         currentInstanceId = options.InstanceId;
         if (!options.Enabled) return;
-        var projectIds = await db.ProjectDriveFolders.AsNoTracking()
-            .Where(folder => !folder.LastReconciledAt.HasValue || folder.LastReconciledAt < DateTime.UtcNow.AddMinutes(-1))
-            .Select(folder => folder.OperationalProjectId).Distinct().OrderBy(projectId => projectId).Take(10).ToListAsync(ct);
-        foreach (var projectId in projectIds) await ReconcileProjectAsync(projectId, ct);
+        var now = DateTime.UtcNow;
+        // Lease acquisition/release touches UpdatedAt even when remote I/O fails.
+        // Oldest-touch ordering rotates failed folders behind waiting work.
+        var folders = await db.ProjectDriveFolders
+            .Where(folder => (!folder.LastReconciledAt.HasValue || folder.LastReconciledAt < now.AddMinutes(-1)) &&
+                (!folder.ReconciliationClaimToken.HasValue ||
+                 !folder.ReconciliationClaimExpiresAt.HasValue || folder.ReconciliationClaimExpiresAt <= now))
+            .OrderBy(folder => folder.UpdatedAt).ThenBy(folder => folder.Id)
+            .Take(10).ToListAsync(ct);
+        foreach (var folder in folders) await ReconcileFolderWithLeaseAsync(folder, ct);
     }
 
     public async Task ReconcileProjectAsync(int projectId, CancellationToken ct = default)
@@ -240,24 +246,26 @@ public sealed class ProjectDriveSyncProcessor(
         if (!options.Enabled) return;
         var folders = await db.ProjectDriveFolders.Where(folder => folder.OperationalProjectId == projectId)
             .OrderBy(folder => folder.Category).ThenBy(folder => folder.Id).ToListAsync(ct);
-        foreach (var folder in folders)
+        foreach (var folder in folders) await ReconcileFolderWithLeaseAsync(folder, ct);
+    }
+
+    private async Task ReconcileFolderWithLeaseAsync(ProjectDriveFolder folder, CancellationToken ct)
+    {
+        var leaseToken = Guid.NewGuid();
+        if (!await TryAcquireReconciliationLeaseAsync(folder, leaseToken, ct)) return;
+        var completed = false;
+        try
         {
-            var leaseToken = Guid.NewGuid();
-            if (!await TryAcquireReconciliationLeaseAsync(folder, leaseToken, ct)) continue;
-            var completed = false;
-            try
-            {
-                await ReconcileFolderAsync(projectId, folder, ct);
-                completed = true;
-            }
-            catch (Exception exception)
-            {
-                logger.LogWarning(exception, "Project Drive folder {FolderId} reconciliation failed; remaining folders will continue", folder.Id);
-            }
-            finally
-            {
-                await ReleaseReconciliationLeaseAsync(folder, leaseToken, completed, ct);
-            }
+            await ReconcileFolderAsync(folder.OperationalProjectId, folder, ct);
+            completed = true;
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            logger.LogWarning(exception, "Project Drive folder {FolderId} reconciliation failed; remaining folders will continue", folder.Id);
+        }
+        finally
+        {
+            await ReleaseReconciliationLeaseAsync(folder, leaseToken, completed, ct);
         }
     }
 
