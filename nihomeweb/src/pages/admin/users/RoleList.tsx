@@ -58,6 +58,14 @@ const ROLE_CODE_RE = /^[A-Z][A-Z0-9_]{1,49}$/;
 
 type DirtyMap = Record<number, Set<string>>;
 
+// useQueries returns a new result array on each render. Only combine its
+// data, so structural sharing keeps the draft-sync dependency stable.
+function combineRolePermissionData(
+  results: readonly { data: RolePermissionsResponse | undefined }[],
+) {
+  return results.map((result) => result.data);
+}
+
 function setsEqual(a: Set<string>, b: Set<string>) {
   if (a.size !== b.size) return false;
   for (const v of a) if (!b.has(v)) return false;
@@ -85,22 +93,22 @@ export default function RoleList() {
   });
 
   const roleIds = rolesQuery.data?.map((r) => r.id) ?? [];
-  const rolePermQueries = useQueries({
+  const rolePermissionData = useQueries({
     queries: roleIds.map((id) => ({
       queryKey: ["rbac", "rolePermissions", id],
       queryFn: async () => (await rbacApi.getRolePermissions(id)).data,
       enabled: roleIds.length > 0,
     })),
+    combine: combineRolePermissionData,
   });
 
   const serverMap = useMemo<DirtyMap>(() => {
     const out: DirtyMap = {};
-    rolePermQueries.forEach((q) => {
-      const data = q.data as RolePermissionsResponse | undefined;
+    rolePermissionData.forEach((data) => {
       if (data) out[data.role.id] = new Set(data.permissions);
     });
     return out;
-  }, [rolePermQueries]);
+  }, [rolePermissionData]);
 
   const [draft, setDraft] = useState<DirtyMap>({});
   // Tracks the server snapshot we last reconciled against, so we can tell
