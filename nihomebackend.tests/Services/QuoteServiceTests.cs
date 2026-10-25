@@ -144,6 +144,16 @@ public class QuoteServiceTests : IDisposable
     public async Task BasicDraft_SelectsOutputMethodAfterApprovedProcurementOffer()
     {
         var (owner, opportunity) = await SeedOpportunityAsync();
+        var draft = await _sut.CreateAsync(new CreateQuoteRequest
+        {
+            OpportunityId = opportunity.Id,
+            DraftOnly = true,
+        }, owner.Id, canManage: true);
+        var otherDraft = await _sut.CreateAsync(new CreateQuoteRequest
+        {
+            OpportunityId = opportunity.Id,
+            DraftOnly = true,
+        }, owner.Id, canManage: true);
         var procurementLead = await SeedUserAsync();
         var group = new RoleGroup { Code = "PROCUREMENT", LabelKey = "rbac.group.procurement" };
         var vendor = new Vendor
@@ -161,6 +171,7 @@ public class QuoteServiceTests : IDisposable
             Name = "Giá đầu vào vật tư dự án NICON",
             OperationalProjectId = opportunity.OperationalProjectId,
             SourceOpportunityId = opportunity.Id,
+            SourceQuoteId = draft.Id,
             DepartmentRoleGroup = group,
             LeadUserId = procurementLead.Id,
             Status = WorkPackageStatus.Active,
@@ -190,11 +201,19 @@ public class QuoteServiceTests : IDisposable
         _db.ProcurementInputPriceOffers.Add(offer);
         await _db.SaveChangesAsync();
 
-        var draft = await _sut.CreateAsync(new CreateQuoteRequest
-        {
-            OpportunityId = opportunity.Id,
-            DraftOnly = true,
-        }, owner.Id, canManage: true);
+        var wrongQuote = await Assert.ThrowsAsync<QuoteOperationException>(() => _sut.UpdateAsync(
+            otherDraft.Id, new UpdateQuoteRequest
+            {
+                RowVersion = otherDraft.RowVersion,
+                Method = QuoteMethod.Boq,
+                InputPriceOfferId = offer.Id,
+                Items =
+                [
+                    new QuoteItemInput { Name = "Thép kết cấu", Unit = "kg", Quantity = 100, UnitPrice = 30_000 },
+                ],
+            }, owner.Id, canManage: true, canSeeAll: true));
+        Assert.Contains("Báo giá khác", wrongQuote.Message);
+        Assert.Null((await _db.Quotes.SingleAsync(item => item.Id == otherDraft.Id)).InputPriceOfferId);
         await Assert.ThrowsAsync<QuoteOperationException>(() => _sut.UpdateAsync(draft.Id,
             new UpdateQuoteRequest
             {

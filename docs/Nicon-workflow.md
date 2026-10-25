@@ -81,7 +81,7 @@ tiền hợp đồng không được gắn `ContractId`.
 ```text
 Kinh doanh (người phụ trách Cơ hội) hoặc PM Dự án
   → Kinh doanh tạo Báo giá nháp từ Cơ hội đã gắn Dự án, chỉ nhập thông tin cơ bản
-  → giao nhóm việc "Giá đầu vào" cho phòng Cung ứng, gắn Dự án + Cơ hội
+  → giao nhóm việc "Giá đầu vào" cho phòng Cung ứng, gắn Báo giá nháp + Dự án + Cơ hội
   → Cung ứng nhập chào giá NCC/thầu phụ (Draft)
   → Cung ứng gửi duyệt (Submitted)
   → người duyệt khác người lập: Approved hoặc Rejected kèm lý do
@@ -92,6 +92,10 @@ Kinh doanh (người phụ trách Cơ hội) hoặc PM Dự án
 Chỉ sửa được chào giá ở `Draft`/`Rejected`; chào giá đã bị báo giá tham chiếu thì
 khoá lại. Báo giá lưu bản chụp giá đầu vào tại thời điểm gắn. Giá hết hiệu lực,
 chưa duyệt, khác Dự án hoặc khác nhóm việc Cung ứng đều bị từ chối.
+Một nhóm việc giá đầu vào có thể nhận nhiều chào giá nhà cung cấp, mỗi giá có
+trạng thái duyệt riêng. Từ chi tiết Báo giá, yêu cầu đã gắn được mở lại thay vì
+tạo thêm nhóm trùng; màn Báo giá hiển thị từng giá và trạng thái của chúng.
+Trạng thái đóng/mở nhóm việc không thay thế trạng thái duyệt của từng chào giá.
 
 Kiểm soát **BOQ đã ký** của Cung ứng là bước **sau** hợp đồng và tách biệt: chỉ
 BOQ thực hiện gắn hợp đồng đầu ra đã ký, còn hiệu lực, đúng Dự án mới được lập.

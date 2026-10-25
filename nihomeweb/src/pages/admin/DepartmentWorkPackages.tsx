@@ -982,6 +982,14 @@ const DepartmentWorkPackages = () => {
                 <p className="text-sm text-muted-foreground">
                   {detail.description || t("workPackages.noDescription")}
                 </p>
+                {detail.sourceQuoteId && (
+                  <Link
+                    className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+                    to={`/admin/quotes/${detail.sourceQuoteId}`}
+                  >
+                    {t("workPackages.field.sourceQuote")}: {detail.sourceQuoteCode}
+                  </Link>
+                )}
               </div>
               <div className="flex min-w-0 flex-wrap gap-2 [&_button]:h-auto [&_button]:min-h-10 [&_button]:whitespace-normal">
                 {canManage && detail.canManagePackage && detail.status === "Completed" && (
@@ -1600,9 +1608,21 @@ const DepartmentWorkPackages = () => {
       <Dialog open={packageOpen} onOpenChange={setPackageOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>{t("workPackages.create.title")}</DialogTitle>
+            <DialogTitle>
+              {packageForm.sourceQuoteId && packageForm.purpose === "ProcurementInputPricing"
+                ? t("workPackages.create.inputPriceForQuote", { quote: packageForm.sourceQuoteId })
+                : t("workPackages.create.title")}
+            </DialogTitle>
             <DialogDescription>{t("workPackages.create.help")}</DialogDescription>
           </DialogHeader>
+          {packageForm.sourceQuoteId && (
+            <p
+              className="rounded-lg border bg-muted p-3 text-sm"
+              data-testid="work-package-source-quote"
+            >
+              {t("workPackages.field.sourceQuote")}: #{packageForm.sourceQuoteId}
+            </p>
+          )}
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label={t("workPackages.field.type")}>
               <Select
@@ -1637,7 +1657,7 @@ const DepartmentWorkPackages = () => {
             {packageForm.kind === "Project" && (
               <Field label={t("workPackages.field.purpose")}>
                 <Select
-                  disabled={packageForm.sourceTenderId != null}
+                  disabled={packageForm.sourceTenderId != null || packageForm.sourceQuoteId != null}
                   value={packageForm.purpose}
                   onValueChange={(purpose: WorkPackagePurpose) => {
                     const code =
@@ -1682,7 +1702,7 @@ const DepartmentWorkPackages = () => {
             {packageForm.kind === "Project" && (
               <Field label={t("workPackages.field.project")}>
                 <Select
-                  disabled={packageForm.sourceTenderId != null}
+                  disabled={packageForm.sourceTenderId != null || packageForm.sourceQuoteId != null}
                   value={packageForm.operationalProjectId?.toString() ?? ""}
                   onValueChange={(value) =>
                     setPackageForm((current) => ({
@@ -1732,6 +1752,7 @@ const DepartmentWorkPackages = () => {
             )}
             <Field label={t("workPackages.field.name")} className="sm:col-span-2">
               <Input
+                data-testid="work-package-name"
                 maxLength={300}
                 value={packageForm.name}
                 onChange={(event) =>
@@ -1778,7 +1799,7 @@ const DepartmentWorkPackages = () => {
                   setPackageForm((current) => ({ ...current, leadUserId: Number(value) }))
                 }
               >
-                <SelectTrigger>
+                <SelectTrigger data-testid="work-package-lead">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

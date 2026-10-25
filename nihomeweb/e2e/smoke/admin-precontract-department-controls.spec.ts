@@ -391,7 +391,7 @@ test.describe("MoM §5 pre-contract department controls", () => {
     });
     const quoteId = quote.id as number;
 
-    // Cung ứng supplies an approved input price on the shared project.
+    // The quote owns a Procurement request with independently approved offers.
     const procurement = await resolveDepartment(call, "PROCUREMENT");
     const finance = await resolveDepartment(call, "FINANCE");
     const { lead: procurementLead, maker: priceMaker } = await pickLeadAndMaker(
@@ -407,16 +407,23 @@ test.describe("MoM §5 pre-contract department controls", () => {
       { phoneNumber: TEST_USERS[accountant.account].phoneNumber, position: "Kế toán dự án" },
     ]);
 
-    const pricePackage = await call("salesManager", "post", "/api/work-packages", {
-      kind: "Project",
-      purpose: "ProcurementInputPricing",
-      name: `Giá đầu vào kết cấu thép Vina ${suffix}`,
-      operationalProjectId: projectId,
-      sourceOpportunityId: opportunityId,
-      departmentRoleGroupId: procurement.department.id,
-      leadUserId: procurementLead.userId,
-    });
-    const pricePackageId = pricePackage.id as number;
+    await loginInBrowserAs(page, TEST_USERS.salesManager);
+    await page.addInitScript(() => localStorage.setItem("nicon_lang", "vi"));
+    await page.goto(`/admin/quotes/${quoteId}`, { waitUntil: "networkidle" });
+    await page.getByRole("link", { name: "Yêu cầu giá đầu vào" }).click();
+    await expect(page.getByTestId("work-package-source-quote")).toContainText(`#${quoteId}`);
+    await page.getByTestId("work-package-name").fill(`Giá đầu vào kết cấu thép Vina ${suffix}`);
+    await page.getByTestId("work-package-lead").click();
+    await page.getByRole("option", { name: procurementLead.name }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "Lưu" }).click();
+    await expect(page).toHaveURL(/\/admin\/work-packages\/\d+$/);
+    const pricePackageId = Number(new URL(page.url()).pathname.split("/").pop());
+    await expect(
+      page.getByRole("link", { name: new RegExp(`Báo giá nguồn.*${quote.code}`) }),
+    ).toHaveAttribute("href", `/admin/quotes/${quoteId}`);
+    const pricePackage = await call("salesManager", "get", `/api/work-packages/${pricePackageId}`);
+    expect(pricePackage.sourceQuoteId).toBe(quoteId);
+    expect(pricePackage.sourceOpportunityId).toBe(opportunityId);
     let offer = await call(
       priceMaker.account,
       "post",
@@ -463,10 +470,49 @@ test.describe("MoM §5 pre-contract department controls", () => {
     );
     expect(approvedOffer.status).toBe("Approved");
 
+    const secondOffer = await call(
+      priceMaker.account,
+      "post",
+      `/api/work-packages/${pricePackageId}/input-price-offers`,
+      {
+        vendorId: vendor.id,
+        supplierReference: `BG-VINA-OPTION-${suffix}`,
+        currency: "VND",
+        validUntil: `${tomorrow(30)}T23:59:59.000Z`,
+        lines: [
+          {
+            itemCode: "KC-THEP-02",
+            description: "Phương án thép dự phòng",
+            unit: "kg",
+            quantity: 10_000,
+            unitPrice: 22_000,
+            vatPercent: 8,
+          },
+        ],
+      },
+    );
+    expect(secondOffer.status).toBe("Draft");
+
     // ---- The approved input price is offered to Kinh doanh on the quote.
     await loginInBrowserAs(page, TEST_USERS.salesManager);
     await page.addInitScript(() => localStorage.setItem("nicon_lang", "vi"));
     await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(`/admin/quotes/${quoteId}`, { waitUntil: "networkidle" });
+    const requests = page.getByTestId("quote-input-requests");
+    await expect(requests).toContainText(`BG-VINA-${suffix}`);
+    await expect(requests).toContainText(`BG-VINA-OPTION-${suffix}`);
+    await expect(requests).toContainText("Đã duyệt: 1");
+    await expect(requests).toContainText("Bản nháp: 1");
+    for (const width of [390, 768]) {
+      await page.setViewportSize({ width, height: 900 });
+      await expect(requests.getByRole("link", { name: /WP-2026-/ })).toBeVisible();
+      const requestBounds = await requests.boundingBox();
+      expect(requestBounds?.x).toBeGreaterThanOrEqual(0);
+      expect((requestBounds?.x ?? 0) + (requestBounds?.width ?? 0)).toBeLessThanOrEqual(width);
+    }
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.getByRole("link", { name: "Xem yêu cầu giá đầu vào" }).click();
+    await expect(page).toHaveURL(new RegExp(`/admin/work-packages/${pricePackageId}$`));
     await page.goto(`/admin/quotes/${quoteId}`, { waitUntil: "networkidle" });
     await page.getByTestId("quote-edit").click();
     await expect(page.getByTestId("quote-output-method")).toBeVisible();

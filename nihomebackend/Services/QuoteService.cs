@@ -201,7 +201,7 @@ public class QuoteService(
         var boqRevision = !request.DraftOnly && method == QuoteMethod.Boq
             ? await ResolveBoqRevisionAsync(request.MaterialRateCatalogId, request.PricingEffectiveDate, required: false, ct)
             : null;
-        var inputPriceOffer = await ResolveInputPriceOfferAsync(request.InputPriceOfferId, opportunity.OperationalProjectId, ct);
+        var inputPriceOffer = await ResolveInputPriceOfferAsync(request.InputPriceOfferId, opportunity.OperationalProjectId, null, ct);
         var appliedUnitPrice = rate?.AppliedUnitPrice ?? request.UnitPricePerSqm;
         if (!request.DraftOnly)
             ValidateMethodPayload(method, request.AreaSqm, appliedUnitPrice, request.Items,
@@ -325,7 +325,7 @@ public class QuoteService(
             !await db.Users.AsNoTracking().AnyAsync(user => user.Id == request.OwnerUserId.Value && user.IsActive, ct))
             throw new QuoteOperationException($"Người phụ trách #{request.OwnerUserId} không tồn tại hoặc đã ngừng hoạt động.");
 
-        var inputPriceOffer = await ResolveInputPriceOfferAsync(request.InputPriceOfferId, quote.OperationalProjectId, ct);
+        var inputPriceOffer = await ResolveInputPriceOfferAsync(request.InputPriceOfferId, quote.OperationalProjectId, quote.Id, ct);
         var isBasicDraft = quote.Status == QuoteStatus.Draft && quote.GrandTotal == 0;
         if (request.Method.HasValue && !Enum.IsDefined(request.Method.Value))
             throw new QuoteOperationException("Phương thức báo giá không hợp lệ.");
@@ -1250,7 +1250,7 @@ public class QuoteService(
     private readonly record struct QuoteChangeSet(bool Any, bool Material);
 
     private async Task<ProcurementInputPriceOffer?> ResolveInputPriceOfferAsync(
-        int? offerId, int? projectId, CancellationToken ct)
+        int? offerId, int? projectId, int? quoteId, CancellationToken ct)
     {
         if (!offerId.HasValue) return null;
         if (!projectId.HasValue)
@@ -1263,6 +1263,8 @@ public class QuoteService(
         if (offer.WorkPackage.OperationalProjectId != projectId ||
             offer.WorkPackage.Purpose != WorkPackagePurpose.ProcurementInputPricing)
             throw new QuoteOperationException("Giá đầu vào phải thuộc đúng Dự án và nhóm việc Cung ứng tiền hợp đồng.");
+        if (offer.WorkPackage.SourceQuoteId.HasValue && offer.WorkPackage.SourceQuoteId != quoteId)
+            throw new QuoteOperationException("Giá đầu vào đã gắn với Báo giá khác và không thể dùng cho Báo giá này.");
         if (offer.Status != InputPriceOfferStatus.Approved)
             throw new QuoteOperationException("Chỉ giá đầu vào đã duyệt mới được dùng cho báo giá đầu ra.");
         if (offer.ValidUntil <= DateTime.UtcNow)
