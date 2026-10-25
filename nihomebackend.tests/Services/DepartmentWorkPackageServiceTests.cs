@@ -606,6 +606,97 @@ public sealed class DepartmentWorkPackageServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task QuoteLinkedInputPricing_RejectsDuplicateActiveRequest_ButAllowsReplacementAfterCancellation()
+    {
+        var opportunity = new Opportunity
+        {
+            Name = "Cơ hội mở rộng nhà máy NICON",
+            CustomerId = _project.CustomerId,
+            OperationalProjectId = _project.Id,
+            OwnerUserId = _sales.Id,
+            Stage = OpportunityStage.Proposal,
+        };
+        var quote = new Quote
+        {
+            Code = "QT-2026-INPUT-01",
+            Opportunity = opportunity,
+            OperationalProjectId = _project.Id,
+            OwnerUserId = _sales.Id,
+            Status = QuoteStatus.Draft,
+            CreatedByUserId = _sales.Id,
+            UpdatedByUserId = _sales.Id,
+        };
+        _db.Quotes.Add(quote);
+        await _db.SaveChangesAsync();
+        var request = ProjectRequest();
+        request.Purpose = "ProcurementInputPricing";
+        request.Name = "Yêu cầu giá đầu vào cho báo giá nhà máy NICON";
+        request.SourceOpportunityId = opportunity.Id;
+        request.SourceQuoteId = quote.Id;
+
+        var first = await _service.CreateAsync(request, _sales.Id);
+
+        Assert.Equal(quote.Id, first.SourceQuoteId);
+        Assert.Equal(opportunity.Id, first.SourceOpportunityId);
+        var duplicate = await Assert.ThrowsAsync<DepartmentWorkPackageOperationException>(() =>
+            _service.CreateAsync(request, _sales.Id));
+        Assert.Contains("đã có một yêu cầu giá đầu vào", duplicate.Message);
+        Assert.Single(await _db.DepartmentWorkPackages.Where(item => item.SourceQuoteId == quote.Id).ToListAsync());
+
+        var storedFirst = await _db.DepartmentWorkPackages.SingleAsync(item => item.Id == first.Id);
+        storedFirst.Status = WorkPackageStatus.Cancelled;
+        await _db.SaveChangesAsync();
+
+        var replacement = await _service.CreateAsync(request, _sales.Id);
+
+        Assert.NotEqual(first.Id, replacement.Id);
+        Assert.Equal(2, await _db.DepartmentWorkPackages.CountAsync(item => item.SourceQuoteId == quote.Id));
+    }
+
+    [Fact]
+    public async Task QuoteLinkedInputPricing_RejectsMismatchedOpportunityWithoutPersistence()
+    {
+        var sourceOpportunity = new Opportunity
+        {
+            Name = "Cơ hội nguồn của báo giá NICON",
+            CustomerId = _project.CustomerId,
+            OperationalProjectId = _project.Id,
+            OwnerUserId = _sales.Id,
+            Stage = OpportunityStage.Proposal,
+        };
+        var otherOpportunity = new Opportunity
+        {
+            Name = "Cơ hội khác trong cùng dự án NICON",
+            CustomerId = _project.CustomerId,
+            OperationalProjectId = _project.Id,
+            OwnerUserId = _sales.Id,
+            Stage = OpportunityStage.Proposal,
+        };
+        var quote = new Quote
+        {
+            Code = "QT-2026-INPUT-02",
+            Opportunity = sourceOpportunity,
+            OperationalProjectId = _project.Id,
+            OwnerUserId = _sales.Id,
+            Status = QuoteStatus.Draft,
+            CreatedByUserId = _sales.Id,
+            UpdatedByUserId = _sales.Id,
+        };
+        _db.AddRange(otherOpportunity, quote);
+        await _db.SaveChangesAsync();
+        var request = ProjectRequest();
+        request.Purpose = "ProcurementInputPricing";
+        request.SourceOpportunityId = otherOpportunity.Id;
+        request.SourceQuoteId = quote.Id;
+
+        var error = await Assert.ThrowsAsync<DepartmentWorkPackageOperationException>(() =>
+            _service.CreateAsync(request, _sales.Id));
+
+        Assert.Contains("đúng Dự án và Cơ hội", error.Message);
+        Assert.False(await _db.DepartmentWorkPackages.AnyAsync(item => item.SourceQuoteId == quote.Id));
+    }
+
+    [Fact]
     public async Task FinanceReview_UsesPurposeSpecificChecklist_AndIndependentApproval()
     {
         var package = AddBusinessPackage(WorkPackagePurpose.FinanceCommercialReview, _financeGroup, _accountantLead);

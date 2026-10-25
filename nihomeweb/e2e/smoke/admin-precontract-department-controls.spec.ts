@@ -493,6 +493,90 @@ test.describe("MoM §5 pre-contract department controls", () => {
     );
     expect(secondOffer.status).toBe("Draft");
 
+    let submittedOffer = await call(
+      priceMaker.account,
+      "post",
+      `/api/work-packages/${pricePackageId}/input-price-offers`,
+      {
+        vendorId: vendor.id,
+        supplierReference: `BG-VINA-PENDING-${suffix}`,
+        currency: "VND",
+        validUntil: `${tomorrow(30)}T23:59:59.000Z`,
+        lines: [
+          {
+            itemCode: "KC-THEP-03",
+            description: "Phương án thép đang chờ duyệt",
+            unit: "kg",
+            quantity: 9_000,
+            unitPrice: 22_500,
+            vatPercent: 8,
+          },
+        ],
+      },
+    );
+    const submittedPreview = await call(
+      priceMaker.account,
+      "post",
+      `/api/work-packages/${pricePackageId}/input-price-offers/${submittedOffer.id}/approval-email-preview`,
+    );
+    submittedOffer = await call(
+      priceMaker.account,
+      "post",
+      `/api/work-packages/${pricePackageId}/input-price-offers/${submittedOffer.id}/submit`,
+      {
+        rowVersion: submittedOffer.rowVersion,
+        previewToken: submittedPreview.previewToken,
+      },
+    );
+    expect(submittedOffer.status).toBe("Submitted");
+
+    let rejectedOffer = await call(
+      priceMaker.account,
+      "post",
+      `/api/work-packages/${pricePackageId}/input-price-offers`,
+      {
+        vendorId: vendor.id,
+        supplierReference: `BG-VINA-REJECTED-${suffix}`,
+        currency: "VND",
+        validUntil: `${tomorrow(30)}T23:59:59.000Z`,
+        lines: [
+          {
+            itemCode: "KC-THEP-04",
+            description: "Phương án thép không đạt yêu cầu",
+            unit: "kg",
+            quantity: 8_000,
+            unitPrice: 24_000,
+            vatPercent: 8,
+          },
+        ],
+      },
+    );
+    const rejectedPreview = await call(
+      priceMaker.account,
+      "post",
+      `/api/work-packages/${pricePackageId}/input-price-offers/${rejectedOffer.id}/approval-email-preview`,
+    );
+    rejectedOffer = await call(
+      priceMaker.account,
+      "post",
+      `/api/work-packages/${pricePackageId}/input-price-offers/${rejectedOffer.id}/submit`,
+      {
+        rowVersion: rejectedOffer.rowVersion,
+        previewToken: rejectedPreview.previewToken,
+      },
+    );
+    rejectedOffer = await call(
+      procurementLead.account,
+      "post",
+      `/api/work-packages/${pricePackageId}/input-price-offers/${rejectedOffer.id}/decision`,
+      {
+        approved: false,
+        reason: "Đơn giá vượt ngân sách đầu vào.",
+        rowVersion: rejectedOffer.rowVersion,
+      },
+    );
+    expect(rejectedOffer.status).toBe("Rejected");
+
     // ---- The approved input price is offered to Kinh doanh on the quote.
     await loginInBrowserAs(page, TEST_USERS.salesManager);
     await page.addInitScript(() => localStorage.setItem("nicon_lang", "vi"));
@@ -501,8 +585,12 @@ test.describe("MoM §5 pre-contract department controls", () => {
     const requests = page.getByTestId("quote-input-requests");
     await expect(requests).toContainText(`BG-VINA-${suffix}`);
     await expect(requests).toContainText(`BG-VINA-OPTION-${suffix}`);
+    await expect(requests).toContainText(`BG-VINA-PENDING-${suffix}`);
+    await expect(requests).toContainText(`BG-VINA-REJECTED-${suffix}`);
     await expect(requests).toContainText("Đã duyệt: 1");
     await expect(requests).toContainText("Bản nháp: 1");
+    await expect(requests).toContainText("Chờ duyệt: 1");
+    await expect(requests).toContainText("Từ chối: 1");
     for (const width of [390, 768]) {
       await page.setViewportSize({ width, height: 900 });
       await expect(requests.getByRole("link", { name: /WP-2026-/ })).toBeVisible();
