@@ -23,9 +23,16 @@ public sealed class PrecontractCrossDepartmentControlsTests(NihomeWebApplication
     {
         var scope = await SeedScopeAsync();
 
-        // Sales routes a pre-contract work package to the Procurement department
-        // as the opportunity owner — no separate screen, just the project group.
+        // Sales creates the basic quote first, then routes its input-pricing
+        // request to Procurement from the quote detail.
         await LoginAsync("SALES_MANAGER");
+        var draft = await PostAsync("/api/quotes", new
+        {
+            opportunityId = scope.OpportunityId,
+            draftOnly = true,
+            note = "Chờ Cung ứng cung cấp giá đầu vào.",
+        });
+        var quoteId = Id(draft);
         var package = await PostAsync("/api/work-packages", new
         {
             kind = "Project",
@@ -33,11 +40,32 @@ public sealed class PrecontractCrossDepartmentControlsTests(NihomeWebApplication
             name = "Báo giá đầu vào gói cơ điện nhà máy",
             operationalProjectId = scope.ProjectId,
             sourceOpportunityId = scope.OpportunityId,
+            sourceQuoteId = quoteId,
             departmentRoleGroupId = scope.ProcurementGroupId,
             leadUserId = scope.ProcurementLeadUserId,
         });
         var packageId = Id(package);
         package.GetProperty("purpose").GetString().Should().Be("ProcurementInputPricing");
+        package.GetProperty("sourceQuoteId").GetInt32().Should().Be(quoteId);
+
+        // Repeating the API request must not create a second active request for
+        // the same quote, even if a client retries or bypasses the UI guard.
+        var duplicatePackage = await SendAsync(HttpMethod.Post, "/api/work-packages", new
+        {
+            kind = "Project",
+            purpose = "ProcurementInputPricing",
+            name = "Yêu cầu giá đầu vào trùng cho cùng báo giá",
+            operationalProjectId = scope.ProjectId,
+            sourceOpportunityId = scope.OpportunityId,
+            sourceQuoteId = quoteId,
+            departmentRoleGroupId = scope.ProcurementGroupId,
+            leadUserId = scope.ProcurementLeadUserId,
+        });
+        duplicatePackage.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await duplicatePackage.Content.ReadAsStringAsync()).Should().Contain("đã có một yêu cầu giá đầu vào");
+        (await WithDbAsync(db => db.DepartmentWorkPackages.CountAsync(item =>
+            item.SourceQuoteId == quoteId && item.Purpose == WorkPackagePurpose.ProcurementInputPricing)))
+            .Should().Be(1);
 
         // Procurement captures supplier input prices.
         await LoginAsync("PROCUREMENT");
@@ -100,12 +128,12 @@ public sealed class PrecontractCrossDepartmentControlsTests(NihomeWebApplication
             new { approved = true, rowVersion = Version(offer) });
         offer.GetProperty("status").GetString().Should().Be("Approved");
 
-        // Sales now builds the output quote on the approved input price, and the
-        // quote keeps a snapshot of it for later traceability.
+        // Sales now completes the existing basic draft from the approved input
+        // price, and the quote keeps a snapshot for later traceability.
         await LoginAsync("SALES_MANAGER");
-        var quote = await PostAsync("/api/quotes", new
+        var quote = await WriteAsync(HttpMethod.Put, $"/api/quotes/{quoteId}", new
         {
-            opportunityId = scope.OpportunityId,
+            rowVersion = draft.GetProperty("rowVersion").GetString(),
             method = "Boq",
             packageDescription = "Gói cơ điện nhà máy theo giá đầu vào Cung ứng",
             inputPriceOfferId = offerId,
@@ -125,9 +153,9 @@ public sealed class PrecontractCrossDepartmentControlsTests(NihomeWebApplication
         // A price that has not been released by the independent approver is not
         // usable for an output quote.
         var pendingOfferId = await AddPendingOfferAsync(packageId, scope.VendorId);
-        var rejected = await SendAsync(HttpMethod.Post, "/api/quotes", new
+        var rejected = await SendAsync(HttpMethod.Put, $"/api/quotes/{quoteId}", new
         {
-            opportunityId = scope.OpportunityId,
+            rowVersion = quote.GetProperty("rowVersion").GetString(),
             method = "Boq",
             inputPriceOfferId = pendingOfferId,
             items = new[]
@@ -138,6 +166,9 @@ public sealed class PrecontractCrossDepartmentControlsTests(NihomeWebApplication
         });
         rejected.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         (await rejected.Content.ReadAsStringAsync()).Should().Contain("giá đầu vào");
+        var unchanged = await ReadAsync($"/api/quotes/{quoteId}");
+        unchanged.GetProperty("inputPriceOfferId").GetInt32().Should().Be(offerId);
+        unchanged.GetProperty("rowVersion").GetString().Should().Be(quote.GetProperty("rowVersion").GetString());
     }
 
     [Fact]

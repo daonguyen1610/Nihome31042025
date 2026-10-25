@@ -216,6 +216,9 @@ public sealed partial class DepartmentWorkPackageService(
         ValidateDates(request.PlannedStart, request.PlannedEnd);
         var admin = await IsAdministratorAsync(callerUserId, ct);
         await ValidateDepartmentLeadAsync(request.LeadUserId, request.DepartmentRoleGroupId, ct);
+        await using var transaction = db.Database.IsRelational()
+            ? await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct)
+            : null;
 
         if (kind == WorkPackageKind.Internal)
         {
@@ -261,7 +264,6 @@ public sealed partial class DepartmentWorkPackageService(
             UpdatedByUserId = callerUserId,
         };
         entity.ParticipantGroups = await BuildParticipantGroupsAsync(request, kind, ct);
-        await using var transaction = await BeginTransactionAsync(ct);
         db.DepartmentWorkPackages.Add(entity);
         await db.SaveChangesAsync(ct);
         var response = await LoadAndMapAsync(entity.Id, callerUserId, admin, ct);
@@ -641,6 +643,12 @@ public sealed partial class DepartmentWorkPackageService(
             throw Error("Rà soát hồ sơ tài chính dự thầu phải gắn với một Gói thầu.");
         if (purpose == WorkPackagePurpose.ProcurementInputPricing && !request.SourceOpportunityId.HasValue)
             throw Error("Yêu cầu giá đầu vào phải gắn với Cơ hội của Dự án.");
+        if (purpose == WorkPackagePurpose.ProcurementInputPricing && request.SourceQuoteId.HasValue &&
+            await db.DepartmentWorkPackages.AsNoTracking().AnyAsync(item =>
+                item.Purpose == WorkPackagePurpose.ProcurementInputPricing &&
+                item.SourceQuoteId == request.SourceQuoteId &&
+                item.Status != WorkPackageStatus.Cancelled, ct))
+            throw Error("Báo giá này đã có một yêu cầu giá đầu vào đang hoạt động.");
     }
 
     private async Task ValidateProjectScopeAsync(
