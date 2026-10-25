@@ -29,13 +29,16 @@ public class QuoteItemInput
 
 public class CreateQuoteRequest
 {
+    /// <summary>Create an unpriced draft for the Procurement handoff.</summary>
+    public bool DraftOnly { get; set; }
+
     [Required]
     public int OpportunityId { get; set; }
 
     public int? OwnerUserId { get; set; }
 
-    [Required]
-    public QuoteMethod Method { get; set; } = QuoteMethod.UnitCost;
+    // Basic drafts omit the output method; legacy priced creates default to UnitCost.
+    public QuoteMethod? Method { get; set; }
 
     // --- Unit-cost mode (required when Method=UnitCost) ---
     [Range(0, double.MaxValue)]
@@ -76,7 +79,10 @@ public class UpdateQuoteRequest : IConcurrencyRequest
 
     public int? OwnerUserId { get; set; }
 
-    // Method is immutable after create — spec NIH-93 step 1.
+    // A basic, unpriced draft selects its output method on the first pricing update.
+    // Once priced, the method remains immutable for compatibility with quote versions.
+    public QuoteMethod? Method { get; set; }
+
     public decimal? AreaSqm { get; set; }
     public decimal? UnitPricePerSqm { get; set; }
     public int? MaterialRateCatalogId { get; set; }

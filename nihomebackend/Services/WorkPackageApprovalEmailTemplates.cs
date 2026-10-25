@@ -10,7 +10,9 @@ public sealed record WorkPackageApprovalPreview(string PreviewToken, string ToEm
 
 public static class WorkPackageApprovalEmailTemplates
 {
-    public static readonly string[] Tokens = ["recipientName", "workPackageCode", "workPackageName", "recordType", "recordReference", "senderName"];
+    public static readonly string[] Tokens = ["recipientName", "workPackageCode", "workPackageName", "recordType", "recordReference", "senderName", "workPackageUrl"];
+    private const string LinkOpenTag = "<a href=\"{{workPackageUrl}}\">";
+    private const string LinkMarkup = "<p style=\"margin:16px 0 0;font-size:14px;line-height:22px\"><a href=\"{{workPackageUrl}}\">Mở nhóm công việc trong NICON</a></p>";
     public const string DefaultSubject = "NICON – Yêu cầu duyệt {{workPackageCode}}";
     public const string LegacyDefaultBody = "<div style='font-family:Arial,sans-serif;max-width:640px;margin:auto;padding:24px;color:#17233b'><p style='color:#ed1c24;font-size:20px'><strong>NICON – Yêu cầu phê duyệt</strong></p><p>Kính gửi {{recipientName}},</p><p>{{senderName}} đã gửi hồ sơ để anh/chị kiểm tra và phê duyệt.</p><p><strong>Nhóm công việc:</strong> {{workPackageCode}} · {{workPackageName}}</p><p><strong>Loại hồ sơ:</strong> {{recordType}}</p><p><strong>Hồ sơ:</strong> {{recordReference}}</p><p>Vui lòng đăng nhập hệ thống NICON và mở nhóm công việc trên để xem chi tiết. Email này chỉ thông báo; quyết định phê duyệt được thực hiện trong hệ thống.</p></div>";
     public const string DefaultBody = """
@@ -33,6 +35,7 @@ public static class WorkPackageApprovalEmailTemplates
                 <p style="margin:4px 0 0;font-size:14px;font-weight:700;line-height:22px">{{recordReference}}</p>
               </div>
               <div style="margin:18px 0 0;padding:16px;background:#fff1f2;color:#9f1239;font-size:14px;line-height:22px">Vui lòng đăng nhập hệ thống NICON và mở nhóm công việc trên để xem chi tiết.</div>
+              <p style="margin:16px 0 0;font-size:14px;line-height:22px"><a href="{{workPackageUrl}}">Mở nhóm công việc trong NICON</a></p>
               <p style="margin:16px 0 0;font-size:13px;line-height:20px;color:#64748b">Email này chỉ thông báo; quyết định phê duyệt được thực hiện trong hệ thống.</p>
               <p style="margin:22px 0 0;font-size:14px;line-height:22px">Trân trọng,<br /><strong>NICON</strong></p>
             </td></tr>
@@ -41,9 +44,17 @@ public static class WorkPackageApprovalEmailTemplates
         </div>
         """;
 
-    public static WorkPackageApprovalTemplate Get(SiteSettings? settings) => new(
-        settings?.WorkPackageApprovalEmailSubjectTemplate ?? DefaultSubject,
-        settings?.WorkPackageApprovalEmailBodyTemplate ?? DefaultBody);
+    public static WorkPackageApprovalTemplate Get(SiteSettings? settings)
+    {
+        var body = settings?.WorkPackageApprovalEmailBodyTemplate ?? DefaultBody;
+        // Existing customized templates gain the required link without losing their content.
+        if (!body.Contains(LinkOpenTag, StringComparison.OrdinalIgnoreCase)) body += LinkMarkup;
+        return new(settings?.WorkPackageApprovalEmailSubjectTemplate ?? DefaultSubject, body);
+    }
+
+    public static bool IsSafeApprovalHtml(string body) => EmailTemplateFormatter.IsSafeQuoteHtml(
+        body.Replace(LinkOpenTag, "<span>", StringComparison.OrdinalIgnoreCase)
+            .Replace("</a>", "</span>", StringComparison.OrdinalIgnoreCase));
 
     public static string Validate(string value, bool body)
     {
@@ -54,10 +65,11 @@ public static class WorkPackageApprovalEmailTemplates
             (!body && (text.Contains('\r') || text.Contains('\n'))) ||
             matches.Any(match => !Tokens.Contains(match.Groups[1].Value, StringComparer.OrdinalIgnoreCase)) ||
             remainder.Contains("{{") || remainder.Contains("}}") ||
-            body && (!EmailTemplateFormatter.IsSafeQuoteHtml(text) ||
+            body && (!IsSafeApprovalHtml(text) ||
                 !text.Contains("{{workPackageCode}}", StringComparison.OrdinalIgnoreCase) ||
-                !text.Contains("{{recordReference}}", StringComparison.OrdinalIgnoreCase)))
-            throw new ArgumentException("Use a subject of 1–200 characters and safe HTML of 1–8,000 characters. Use supported variables; the body must include {{workPackageCode}} and {{recordReference}}.");
+                !text.Contains("{{recordReference}}", StringComparison.OrdinalIgnoreCase) ||
+                !text.Contains(LinkOpenTag, StringComparison.OrdinalIgnoreCase)))
+            throw new ArgumentException("Use a subject of 1–200 characters and safe HTML of 1–8,000 characters. Use supported variables; the body must include {{workPackageCode}}, {{recordReference}} and a link using <a href=\"{{workPackageUrl}}\">.");
         return text;
     }
 

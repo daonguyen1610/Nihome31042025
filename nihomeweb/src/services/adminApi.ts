@@ -2558,10 +2558,11 @@ export interface QuoteVersionsResponse {
 }
 
 export interface CreateQuoteRequest {
+  draftOnly?: boolean;
   opportunityId: number;
   ownerUserId?: number | null;
   inputPriceOfferId?: number | null;
-  method: QuoteMethod;
+  method?: QuoteMethod;
   areaSqm?: number | null;
   unitPricePerSqm?: number | null;
   materialRateCatalogId?: number | null;
@@ -2577,6 +2578,7 @@ export interface CreateQuoteRequest {
 
 export interface UpdateQuoteRequest {
   rowVersion?: string;
+  method?: QuoteMethod | null;
   ownerUserId?: number | null;
   inputPriceOfferId?: number | null;
   areaSqm?: number | null;

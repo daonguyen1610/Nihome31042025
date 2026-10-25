@@ -4,7 +4,6 @@ import {
   AlertTriangle,
   CheckCheck,
   Ban,
-  ListPlus,
   Loader2,
   Pencil,
   Plus,
@@ -16,9 +15,6 @@ import {
 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
-import BoqBulkEntryDialog from "@/components/admin/BoqBulkEntryDialog";
-import QuoteRateFields from "@/components/admin/QuoteRateFields";
-import BoqCatalogFields from "@/components/admin/BoqCatalogFields";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -26,14 +22,6 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { extractApiError } from "@/lib/apiError";
 import { formatVnd, parseVnd } from "@/lib/numberFormat";
-import {
-  calculateQuoteLineAmount,
-  calculateQuoteTotals,
-  MAX_QUOTE_QUANTITY,
-  validateQuoteValues,
-} from "@/lib/quoteTotals";
-import { isValidVietnameseOverrideReason } from "@/lib/quoteRate";
-import { normalizeBoqSortOrder } from "@/lib/boqItems";
 import { PageLoading, PageError } from "@/components/PageState";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -61,12 +49,9 @@ import {
   QUOTE_STATUSES,
   type CreateQuoteRequest,
   type OpportunityResponse,
-  type QuoteItemInput,
   type QuoteListItemResponse,
   type QuoteListParams,
-  type QuoteMethod,
   type QuoteStatus,
-  type MaterialRateRevisionResponse,
   type DeletionImpactResponse,
 } from "@/services/adminApi";
 
@@ -95,24 +80,17 @@ const ACTIONS_BY_STATUS: Record<QuoteStatus, Array<"submit" | "approve" | "send"
   Cancelled: [],
 };
 
-const emptyCreate = (): CreateQuoteRequest => ({
+type BasicQuoteDraft = Pick<CreateQuoteRequest, "opportunityId" | "note">;
+
+const emptyCreate = (): BasicQuoteDraft => ({
   opportunityId: 0,
-  method: "UnitCost",
-  areaSqm: null,
-  unitPricePerSqm: null,
-  materialRateCatalogId: null,
-  pricingEffectiveDate: new Date().toISOString().slice(0, 10),
-  rateOverrideReason: null,
-  packageDescription: "",
-  items: [],
-  discountPercent: 0,
-  vatPercent: 8,
-  validUntil: null,
   note: "",
 });
 
 const canRaiseQuote = (opportunity: OpportunityResponse) =>
-  opportunity.stage !== "Lost" && !(opportunity.stage === "Won" && opportunity.wonQuoteId != null);
+  opportunity.operationalProjectId != null &&
+  opportunity.stage !== "Lost" &&
+  !(opportunity.stage === "Won" && opportunity.wonQuoteId != null);
 
 // -------- Component --------
 
@@ -126,7 +104,6 @@ const AdminQuotes = () => {
   const canManage = has(ADMIN_PERMS.quotesManage);
   const canApprove = has(ADMIN_PERMS.quotesApprove);
   const canSend = has(ADMIN_PERMS.quotesSend);
-  const canOverrideRate = has(ADMIN_PERMS.quotesRateOverride);
 
   // ---------- list state ----------
   const [rows, setRows] = useState<QuoteListItemResponse[]>([]);
@@ -180,13 +157,9 @@ const AdminQuotes = () => {
 
   // ---------- create dialog ----------
   const [creating, setCreating] = useState(false);
-  const [createForm, setCreateForm] = useState<CreateQuoteRequest>(emptyCreate());
+  const [createForm, setCreateForm] = useState<BasicQuoteDraft>(emptyCreate());
   const [saving, setSaving] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
-  const [effectiveRevision, setEffectiveRevision] = useState<MaterialRateRevisionResponse | null>(
-    null,
-  );
-  const [boqBulkEntryOpen, setBoqBulkEntryOpen] = useState(false);
 
   // ---------- server-backed opportunity picker ----------
   const [opportunities, setOpportunities] = useState<OpportunityResponse[]>([]);
@@ -234,17 +207,11 @@ const AdminQuotes = () => {
     };
   }, [creating, opportunitySearch, createForm.opportunityId]);
 
-  const createTotals = useMemo(
-    () => calculateQuoteTotals(createForm.method, createForm),
-    [createForm],
-  );
-
   const openedFromQuery = useRef(false);
   const openCreate = (opportunityId = 0) => {
     setCreateForm({ ...emptyCreate(), opportunityId });
     setOpportunitySearch("");
     setCreateError(null);
-    setEffectiveRevision(null);
     setCreating(true);
   };
 
@@ -258,127 +225,30 @@ const AdminQuotes = () => {
     openCreate(Number.isInteger(opportunityId) && opportunityId > 0 ? opportunityId : 0);
   }, [searchParams]);
 
-  const updateBoqItem = (index: number, patch: Partial<QuoteItemInput>) => {
-    const items = [...(createForm.items ?? [])];
-    items[index] = { ...items[index], ...patch };
-    setCreateForm({ ...createForm, items });
-  };
-
-  const addBoqItem = () => {
-    const item: QuoteItemInput = { name: "", unit: "", quantity: 1, unitPrice: 0 };
-    setCreateForm({ ...createForm, items: [...(createForm.items ?? []), item] });
-  };
-
-  const removeBoqItem = (index: number) => {
-    setCreateForm({
-      ...createForm,
-      items: normalizeBoqSortOrder(
-        (createForm.items ?? []).filter((_, itemIndex) => itemIndex !== index),
-      ),
-    });
-  };
-
-  const appendBulkBoqItems = (items: QuoteItemInput[]) => {
-    const existingItems = createForm.items ?? [];
-    setCreateForm({
-      ...createForm,
-      items: normalizeBoqSortOrder([...existingItems, ...items]),
-    });
-    toast({ title: t("quotes.bulk.ok"), description: `+${items.length}` });
-  };
-
-  const changeCreateMethod = (method: QuoteMethod) => {
-    if (method === createForm.method) return;
-    if (
-      createForm.method === "Boq" &&
-      method === "UnitCost" &&
-      (createForm.items?.length ?? 0) > 0 &&
-      !window.confirm(t("quotes.boq.switchConfirm"))
-    ) {
-      return;
-    }
-    setCreateForm((current) => ({
-      ...current,
-      method,
-      items: method === "UnitCost" ? [] : current.items,
-      materialRateCatalogId: null,
-      pricingEffectiveDate: method === "UnitCost" ? new Date().toISOString().slice(0, 10) : null,
-      unitPricePerSqm: null,
-      rateOverrideReason: null,
-    }));
-  };
-
-  const applyBoqCatalog = (revision: MaterialRateRevisionResponse, pricingDate: string) => {
-    if (
-      (createForm.items?.length ?? 0) > 0 &&
-      !window.confirm(t("quotes.boqCatalog.replaceConfirm"))
-    )
-      return;
-    setCreateForm((current) => ({
-      ...current,
-      materialRateCatalogId: revision.catalogId,
-      pricingEffectiveDate: pricingDate,
-      unitPricePerSqm: null,
-      rateOverrideReason: null,
-      items: revision.lines.map((line, index) => ({
-        itemCode: line.materialCode,
-        name: line.materialName,
-        unit: line.unit,
-        quantity: line.quantity,
-        unitPrice: line.unitRate,
-        sortOrder: index + 1,
-      })),
-    }));
-  };
-
   const handleCreate = async () => {
     setCreateError(null);
     if (!createForm.opportunityId) {
       setCreateError(t("quotes.validation.pickOpportunity"));
       return;
     }
-    if (createForm.method === "UnitCost") {
-      if (!createForm.materialRateCatalogId || !createForm.pricingEffectiveDate) {
-        setCreateError(t("quotes.validation.rateSelectionRequired"));
-        return;
-      }
-      if (!effectiveRevision) {
-        setCreateError(t("quotes.validation.noEffectiveRate"));
-        return;
-      }
-      const isOverride = createForm.unitPricePerSqm !== Number(effectiveRevision.totalRatePerSqm);
-      if (isOverride && !canOverrideRate) {
-        setCreateError(t("quotes.validation.overridePermission"));
-        return;
-      }
-      if (isOverride && !isValidVietnameseOverrideReason(createForm.rateOverrideReason)) {
-        setCreateError(t("quotes.validation.overrideReason"));
-        return;
-      }
-    }
-    const validationIssue = validateQuoteValues(createForm.method, createForm);
-    if (validationIssue) {
-      setCreateError(t(`quotes.validation.${validationIssue}`));
-      return;
-    }
     setSaving(true);
     try {
-      await adminApi.createQuote({
-        ...createForm,
-        packageDescription: createForm.packageDescription?.trim() || undefined,
+      const { data } = await adminApi.createQuote({
+        opportunityId: createForm.opportunityId,
         note: createForm.note?.trim() || undefined,
-        validUntil: createForm.validUntil || null,
+        discountPercent: 0,
+        vatPercent: 8,
+        draftOnly: true,
       });
       toast({ title: t("quotes.created") });
       setCreating(false);
-      await fetchList();
+      navigate(`/admin/quotes/${data.id}`);
     } catch (err) {
       setCreateError(extractApiError(err));
     } finally {
       setSaving(false);
     }
   };
-
   // ---------- inline workflow actions ----------
   const [pendingAction, setPendingAction] = useState<number | null>(null);
 
@@ -598,7 +468,9 @@ const AdminQuotes = () => {
                       <Td>{r.opportunityName ?? "—"}</Td>
                       <Td>{r.customerName ?? "—"}</Td>
                       <Td className="whitespace-nowrap text-right font-medium">
-                        {formatVnd(r.grandTotal)} ₫
+                        {r.status === "Draft" && r.grandTotal === 0
+                          ? t("quotes.inputPrice.pricePending")
+                          : `${formatVnd(r.grandTotal)} ₫`}
                       </Td>
                       <Td>
                         <StatusCell status={r.status} expiring={r.isExpiringSoon} t={t} />
@@ -661,7 +533,9 @@ const AdminQuotes = () => {
                   <div className="mb-2 flex items-center justify-between gap-2">
                     <StatusCell status={r.status} expiring={r.isExpiringSoon} t={t} />
                     <div className="whitespace-nowrap text-sm font-semibold">
-                      {formatVnd(r.grandTotal)} ₫
+                      {r.status === "Draft" && r.grandTotal === 0
+                        ? t("quotes.inputPrice.pricePending")
+                        : `${formatVnd(r.grandTotal)} ₫`}
                     </div>
                   </div>
                   <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
@@ -722,41 +596,29 @@ const AdminQuotes = () => {
         </div>
       )}
 
-      {/* Create dialog — both pricing methods validate before the request leaves. */}
-      <Dialog open={creating} onOpenChange={(o) => !o && setCreating(false)}>
+      {/* Start with the Opportunity; output pricing belongs in detail after Procurement. */}
+      <Dialog open={creating} onOpenChange={(open) => !open && setCreating(false)}>
         <DialogContent
-          className="left-2 right-2 max-h-[90vh] min-w-0 w-auto max-w-5xl translate-x-0 overflow-x-hidden overflow-y-auto p-4 sm:p-6 xl:left-1/2 xl:right-auto xl:w-full xl:-translate-x-1/2"
+          className="min-w-0 w-[calc(100vw-1rem)] max-w-xl overflow-x-hidden"
           data-testid="quote-create-dialog"
         >
           <DialogHeader className="min-w-0">
             <DialogTitle>{t("quotes.new")}</DialogTitle>
-            <DialogDescription>{t("quotes.subtitle")}</DialogDescription>
+            <DialogDescription>{t("quotes.createBasicHint")}</DialogDescription>
           </DialogHeader>
-          <div className="min-w-0 space-y-3">
+          <div className="min-w-0 space-y-4">
             <div className="min-w-0">
               <Label>{t("quotes.field.opportunity")}</Label>
               <SearchableSelect
                 className="min-w-0"
                 value={createForm.opportunityId ? String(createForm.opportunityId) : null}
-                onChange={(v) => setCreateForm({ ...createForm, opportunityId: Number(v) })}
-                options={opportunities.map((o) => ({
-                  value: String(o.id),
-                  label: `#${o.id} · ${o.name}`,
-                  hint: [
-                    o.customerName,
-                    t(`opportunities.stage.${o.stage}`),
-                    `${formatVnd(o.estimatedValue)} ₫`,
-                    o.expectedCloseDate
-                      ? t("quotes.opportunityPicker.expectedClose", {
-                          date: new Date(o.expectedCloseDate).toLocaleDateString(lang),
-                        })
-                      : null,
-                    o.ownerName,
-                  ]
+                onChange={(value) => setCreateForm({ ...createForm, opportunityId: Number(value) })}
+                options={opportunities.map((opportunity) => ({
+                  value: String(opportunity.id),
+                  label: `#${opportunity.id} · ${opportunity.name}`,
+                  hint: [opportunity.customerName, opportunity.ownerName]
                     .filter(Boolean)
                     .join(" · "),
-                  keywords: `${o.customerName ?? ""} ${o.ownerName ?? ""} ${o.stage} ${o.id}`,
-                  hintClassName: "whitespace-normal leading-4",
                 }))}
                 placeholder={t("quotes.opportunityPicker.placeholder")}
                 searchPlaceholder={t("quotes.opportunityPicker.search")}
@@ -777,270 +639,12 @@ const AdminQuotes = () => {
               </p>
             </div>
             <div>
-              <Label>{t("quotes.field.method")}</Label>
-              <Select
-                value={createForm.method}
-                onValueChange={(value) => changeCreateMethod(value as QuoteMethod)}
-              >
-                <SelectTrigger data-testid="quote-method">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="UnitCost">{t("quotes.method.UnitCost")}</SelectItem>
-                  <SelectItem value="Boq">{t("quotes.method.Boq")}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {createForm.method === "UnitCost" ? (
-              <>
-                <div>
-                  <Label>{t("quotes.field.areaSqm")}</Label>
-                  <Input
-                    inputMode="decimal"
-                    data-testid="quote-area"
-                    value={createForm.areaSqm ?? ""}
-                    onChange={(e) =>
-                      setCreateForm((current) => ({
-                        ...current,
-                        areaSqm: e.target.value ? Number(e.target.value) : null,
-                      }))
-                    }
-                  />
-                </div>
-                <QuoteRateFields
-                  catalogId={createForm.materialRateCatalogId}
-                  pricingDate={createForm.pricingEffectiveDate}
-                  unitPrice={createForm.unitPricePerSqm}
-                  overrideReason={createForm.rateOverrideReason}
-                  canOverride={canOverrideRate}
-                  onEffectiveRevisionChange={setEffectiveRevision}
-                  onChange={(patch) => setCreateForm((current) => ({ ...current, ...patch }))}
-                />
-                <div>
-                  <Label>{t("quotes.field.packageDescription")}</Label>
-                  <Textarea
-                    rows={2}
-                    value={createForm.packageDescription ?? ""}
-                    onChange={(e) =>
-                      setCreateForm({
-                        ...createForm,
-                        packageDescription: e.target.value,
-                      })
-                    }
-                  />
-                </div>
-              </>
-            ) : (
-              <div className="min-w-0 space-y-3 rounded-md border p-3">
-                <BoqCatalogFields
-                  key={`${createForm.materialRateCatalogId ?? "manual"}:${createForm.pricingEffectiveDate ?? "none"}`}
-                  catalogId={createForm.materialRateCatalogId}
-                  pricingDate={createForm.pricingEffectiveDate}
-                  onApply={applyBoqCatalog}
-                />
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <Label>{t("quotes.boq.title")}</Label>
-                  <div className="grid grid-cols-2 gap-1.5 sm:flex">
-                    <Button
-                      className="min-w-0"
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      data-testid="quote-create-boq-bulk-entry"
-                      onClick={() => setBoqBulkEntryOpen(true)}
-                    >
-                      <ListPlus className="mr-1 h-3.5 w-3.5" />
-                      {t("quotes.boq.bulkEntry")}
-                    </Button>
-                    <Button
-                      className="min-w-0"
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      onClick={addBoqItem}
-                    >
-                      <Plus className="mr-1 h-3.5 w-3.5" />
-                      {t("quotes.boq.addRow")}
-                    </Button>
-                  </div>
-                </div>
-                <div className="rounded-md bg-sky-50 p-2 text-xs leading-relaxed text-sky-900">
-                  {t("quotes.boq.materialRateHint")}{" "}
-                  <button
-                    type="button"
-                    data-testid="quote-switch-unit-cost"
-                    className="font-medium underline underline-offset-2"
-                    onClick={() => changeCreateMethod("UnitCost")}
-                  >
-                    {t("quotes.boq.switchToUnitCost")}
-                  </button>
-                </div>
-                {(createForm.items ?? []).length === 0 ? (
-                  <p className="text-xs text-muted-foreground">
-                    {t("quotes.validation.boqRequired")}
-                  </p>
-                ) : (
-                  <div className="space-y-3">
-                    {(createForm.items ?? []).map((item, index) => (
-                      <div key={index} className="rounded-lg border bg-muted/30 p-3">
-                        <div className="mb-2 flex items-center justify-between">
-                          <span className="text-xs font-medium text-muted-foreground">
-                            {t("quotes.boq.itemNumber", { n: index + 1 })}
-                          </span>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="ghost"
-                            className="h-7 text-destructive hover:text-destructive"
-                            aria-label={t("common.delete")}
-                            onClick={() => removeBoqItem(index)}
-                          >
-                            <Trash2 className="mr-1 h-3.5 w-3.5" />
-                            {t("common.delete")}
-                          </Button>
-                        </div>
-                        <div className="grid gap-3">
-                          <div>
-                            <Label className="text-xs">{t("quotes.boq.name")}</Label>
-                            <Input
-                              data-testid={`quote-create-boq-name-${index}`}
-                              placeholder={t("quotes.boq.namePlaceholder")}
-                              value={item.name}
-                              onChange={(event) =>
-                                updateBoqItem(index, { name: event.target.value })
-                              }
-                            />
-                          </div>
-                          <div className="grid gap-3 sm:grid-cols-3">
-                            <div>
-                              <Label className="text-xs">{t("quotes.boq.unit")}</Label>
-                              <Input
-                                placeholder="m², m³, kg..."
-                                value={item.unit}
-                                onChange={(event) =>
-                                  updateBoqItem(index, { unit: event.target.value })
-                                }
-                              />
-                            </div>
-                            <div>
-                              <Label className="text-xs">{t("quotes.boq.qty")}</Label>
-                              <Input
-                                type="number"
-                                min={0.01}
-                                max={MAX_QUOTE_QUANTITY}
-                                step="any"
-                                placeholder="0"
-                                value={item.quantity}
-                                onChange={(event) =>
-                                  updateBoqItem(index, { quantity: Number(event.target.value) })
-                                }
-                              />
-                            </div>
-                            <div>
-                              <Label className="text-xs">{t("quotes.boq.unitPrice")}</Label>
-                              <Input
-                                type="number"
-                                inputMode="decimal"
-                                min={0}
-                                step={0.01}
-                                data-testid={`quote-create-boq-price-${index}`}
-                                placeholder="0 ₫"
-                                value={item.unitPrice || ""}
-                                onChange={(event) =>
-                                  updateBoqItem(index, { unitPrice: Number(event.target.value) })
-                                }
-                              />
-                            </div>
-                          </div>
-                          {Number(item.quantity) > 0 && Number(item.unitPrice) > 0 && (
-                            <div className="text-right text-sm font-medium">
-                              {t("quotes.boq.amount")}:{" "}
-                              {formatVnd(calculateQuoteLineAmount(item.quantity, item.unitPrice))} ₫
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div>
-                <Label>{t("quotes.field.discountPercent")}</Label>
-                <Input
-                  type="number"
-                  data-testid="quote-discount"
-                  min={0}
-                  max={100}
-                  value={createForm.discountPercent}
-                  onChange={(e) =>
-                    setCreateForm({
-                      ...createForm,
-                      discountPercent: Number(e.target.value),
-                    })
-                  }
-                />
-              </div>
-              <div>
-                <Label>{t("quotes.field.vatPercent")}</Label>
-                <Input
-                  type="number"
-                  data-testid="quote-vat"
-                  min={0}
-                  max={100}
-                  value={createForm.vatPercent}
-                  onChange={(e) =>
-                    setCreateForm({
-                      ...createForm,
-                      vatPercent: Number(e.target.value),
-                    })
-                  }
-                />
-              </div>
-            </div>
-            <div className="space-y-2 rounded-md border bg-muted/30 p-3 text-sm">
-              <p className="text-xs text-muted-foreground">{t("quotes.preview.unsaved")}</p>
-              <div className="flex justify-between gap-3">
-                <span>{t("quotes.field.subtotal")}</span>
-                <strong>{formatVnd(createTotals.subtotal)} ₫</strong>
-              </div>
-              <div className="flex justify-between gap-3">
-                <span>
-                  {t("quotes.field.discountPercent")} ({createForm.discountPercent}%)
-                </span>
-                <span>-{formatVnd(createTotals.discountAmount)} ₫</span>
-              </div>
-              <div className="flex justify-between gap-3">
-                <span>
-                  {t("quotes.field.vatPercent")} ({createForm.vatPercent}%)
-                </span>
-                <span>{formatVnd(createTotals.vatAmount)} ₫</span>
-              </div>
-              <div className="flex justify-between gap-3 border-t pt-2 text-base">
-                <span>{t("quotes.field.grandTotal")}</span>
-                <strong>{formatVnd(createTotals.grandTotal)} ₫</strong>
-              </div>
-            </div>
-            <div>
-              <Label>{t("quotes.field.validUntil")}</Label>
-              <Input
-                type="date"
-                value={createForm.validUntil?.slice(0, 10) ?? ""}
-                onChange={(e) =>
-                  setCreateForm({
-                    ...createForm,
-                    validUntil: e.target.value ? `${e.target.value}T23:59:59Z` : null,
-                  })
-                }
-              />
-            </div>
-            <div>
               <Label>{t("quotes.field.note")}</Label>
               <Textarea
-                rows={2}
+                rows={3}
+                maxLength={4000}
                 value={createForm.note ?? ""}
-                onChange={(e) => setCreateForm({ ...createForm, note: e.target.value })}
+                onChange={(event) => setCreateForm({ ...createForm, note: event.target.value })}
               />
             </div>
             {createError && <p className="text-sm text-destructive">{createError}</p>}
@@ -1060,13 +664,6 @@ const AdminQuotes = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      <BoqBulkEntryDialog
-        open={boqBulkEntryOpen}
-        onOpenChange={setBoqBulkEntryOpen}
-        onConfirm={appendBulkBoqItems}
-      />
-
       <DeletionImpactDialog
         open={deletingQuote !== null}
         impact={deleteImpact}
@@ -1139,7 +736,9 @@ const RowActions = ({
   t,
   compact,
 }: RowActionsProps) => {
-  const actions = ACTIONS_BY_STATUS[row.status];
+  const actions = ACTIONS_BY_STATUS[row.status].filter(
+    (action) => action !== "submit" || row.grandTotal > 0,
+  );
   const btn = (
     label: string,
     icon: React.ReactNode,

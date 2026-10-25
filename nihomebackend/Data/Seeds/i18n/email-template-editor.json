@@ -134,5 +134,13 @@
     "en": "Sender",
     "zh": "发件人",
     "ja": "送信者"
+  },
+  {
+    "key": "emailTemplate.editor.token.workPackageUrl",
+    "category": "emailTemplates",
+    "vi": "Link mở nhóm công việc",
+    "en": "Work package link",
+    "zh": "打开工作组的链接",
+    "ja": "業務グループを開くリンク"
   }
 ]

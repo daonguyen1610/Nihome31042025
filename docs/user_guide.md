@@ -332,6 +332,15 @@ screen. Set the package's **Business purpose** to the one that matches the
 department's job; the purpose ties the package to the source quotation or
 tender and controls which actions the page offers.
 
+**Bắt đầu báo giá đầu ra.** Kinh doanh tạo Báo giá mới bằng Cơ hội đã gắn
+Dự án và ghi chú cơ bản. Hệ thống tạo bản nháp chưa có
+giá và mở trang chi tiết. Tại đây chọn **Yêu cầu giá đầu vào** để giao nhóm
+công việc cho Cung ứng. Sau khi Cung ứng gửi duyệt và có báo giá đầu vào
+`Approved` còn hiệu lực, chọn **Lập báo giá đầu ra**, chọn phương thức
+**Suất đầu tư** hoặc **BOQ**, gắn nguồn giá đầu vào, nhập diện tích/đơn giá
+hoặc BOQ rồi lưu. Chỉ bản nháp có giá trị hợp lệ mới
+được gửi duyệt nội bộ; yêu cầu Tài chính rà soát sau khi báo giá đã duyệt.
+
 **Cung ứng (Procurement) — input prices.** Procurement runs first and supplies
 the supplier and subcontractor prices that Sales needs to build the customer
 quotation. The purpose is **Cung ứng báo giá đầu vào** (Procurement input
@@ -375,6 +384,10 @@ an **Approved** Finance tender review.
 The signed-BOQ control that Procurement performs is a separate, post-contract
 step and does not replace input pricing. The department label shown for
 Procurement in the platform is **Cung ứng**.
+
+When submitting an input price or Finance review, inspect the approval email
+preview before confirming. The lead and any CC recipients receive the same
+direct link to the work package; changing To or CC requires a fresh preview.
 
 ### 3.1 Module 1: CRM / Sale / Contract
 

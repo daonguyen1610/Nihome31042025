@@ -1938,6 +1938,14 @@ parsed as one mailbox. CC permits up to 20 addresses; duplicates (case-insensiti
 and addresses equal to To are removed. The server returns the normalized list
 and binds it into previewToken. Submission cannot override the token recipients.
 After editing To/CC, update the preview before confirming.
+The editable approval-email body must include a link using
+`<a href="{{workPackageUrl}}">...</a>` alongside `{{workPackageCode}}` and
+`{{recordReference}}`. Preview and queued To/CC email share the rendered
+`/admin/work-packages/{id}` URL. Set `Frontend:PublicBaseUrl` to the public
+HTTPS origin in deployed environments; localhost HTTP is accepted for local
+Compose. Without this setting, only a configured allowed frontend origin or
+a loopback request origin can supply the link. Older customized templates
+receive the link in memory when loaded, preserving their original content.
 
 Migration `20261024183305_AddWorkPackageEmailRecipients` adds CcEmailsJson
 (default `[]`) and LeadEmail (backfilled from historical ToEmail). The worker
@@ -2037,6 +2045,15 @@ Server-side gates that consume these records:
 - `QuoteService` resolves `inputPriceOfferId` only when the offer is `Approved`,
   still valid, and belongs to a `ProcurementInputPricing` package of the quote's
   project; the quote stores `InputPriceSnapshotJson` at link time.
+- `POST /api/quotes` accepts `draftOnly: true` for the current Sales creation
+  flow. The Opportunity must belong to an Operational Project, and the payload
+  contains only basic quote fields and omits `method`; the persisted method
+  uses an internal default until output pricing is prepared. It creates a
+  zero-value Draft. On its first pricing update, `PUT /api/quotes/{id}` requires
+  a selected `method` and an approved, unexpired input offer on the same
+  project; normal quote validation and the existing Draft to
+  PendingApproval submit gate then apply. The older priced-create contract is
+  retained for existing integrations and historical tests.
 - `TenderService` submission requires an `OperationalProjectId`, at least one
   completed `TenderPlanning` package, and an `Approved` `FinanceTenderReview`
   package linked by `SourceTenderId`. Legacy Tender plans stored as `General`

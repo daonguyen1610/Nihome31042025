@@ -6,7 +6,7 @@ import { hardDeleteBusinessRoot } from "../fixtures/hardDelete";
 /**
  * Demo path Lead → Opportunity → Quote. Conversion opens the operational
  * project, the opportunity offers "Create quote" while it is still open, and a
- * quote form with no rate catalog sends the user to set one up and back.
+ * basic quote draft leads to the Procurement input-price handoff.
  */
 
 interface ConvertedLead {
@@ -79,31 +79,63 @@ test.describe("CRM quote entry", () => {
     }
   });
 
-  test("quote form without a rate catalog links to catalog setup and back", async ({
+  test("creates a basic draft before requesting Procurement input pricing", async ({
+    api,
+    loginAs,
     loginInBrowserAs,
     page,
   }) => {
-    await loginInBrowserAs(page, TEST_USERS.salesManager);
-    // Simulate a fresh installation: no active catalog of either type.
-    await page.route(/\/api\/material-rate-catalogs\?/, (route) =>
-      route.fulfill({ status: 200, contentType: "application/json", body: "[]" }),
-    );
+    const token = await loginAs(TEST_USERS.salesManager);
+    const lead = await convertLead(api, token);
+    let quoteId = 0;
+    try {
+      await loginInBrowserAs(page, TEST_USERS.salesManager);
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.goto(`/admin/quotes?create=1&opportunityId=${lead.convertedOpportunityId}`);
+      const dialog = page.getByTestId("quote-create-dialog");
+      await expect(dialog).toBeVisible();
+      await expect(dialog.getByTestId("quote-method")).toHaveCount(0);
+      await expect(dialog.getByTestId("quote-area")).toHaveCount(0);
+      await expect(dialog.getByTestId("quote-rate-catalog")).toHaveCount(0);
+      expect(await dialog.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(
+        true,
+      );
 
-    await page.goto("/admin/quotes");
-    await page.getByRole("button", { name: /báo giá mới|new quote/i }).click();
-    const emptyState = page.getByTestId("quote-catalog-empty-InvestmentRate");
-    await expect(emptyState).toBeVisible();
-    await page.getByTestId("quote-catalog-setup-InvestmentRate").click();
-
-    await expect(page).toHaveURL(/\/admin\/material-rates\/investment\?returnTo=/);
-    await expect(page.getByRole("dialog")).toBeVisible();
-    await page.keyboard.press("Escape");
-    const back = page.getByTestId("material-rates-quote-return").getByRole("link");
-    await expect(back).toHaveAttribute("href", "/admin/quotes?create=1");
-
-    await page.unroute(/\/api\/material-rate-catalogs\?/);
-    await back.click();
-    await expect(page).toHaveURL(/\/admin\/quotes\?create=1$/);
+      const createResponse = page.waitForResponse(
+        (response) =>
+          new URL(response.url()).pathname === "/api/quotes" &&
+          response.request().method() === "POST",
+      );
+      await page.getByTestId("quote-create-save").click();
+      const response = await createResponse;
+      expect(response.status(), await response.text()).toBe(201);
+      expect(response.request().postDataJSON()).toMatchObject({
+        draftOnly: true,
+        opportunityId: lead.convertedOpportunityId,
+      });
+      expect(response.request().postDataJSON()).not.toHaveProperty("method");
+      const quote = await response.json();
+      quoteId = quote.id as number;
+      expect(quote.grandTotal).toBe(0);
+      await expect(page).toHaveURL(new RegExp(`/admin/quotes/${quoteId}$`));
+      await expect(page.getByText(/bước 1:|step 1:/i)).toBeVisible();
+      await expect(page.getByTestId("quote-edit")).toHaveCount(0);
+      await expect(page.getByRole("button", { name: /gửi duyệt|submit/i })).toHaveCount(0);
+      await expect(
+        page.getByRole("link", { name: /yêu cầu giá đầu vào|request input pricing/i }),
+      ).toHaveAttribute(
+        "href",
+        new RegExp(`projectId=\\d+&opportunityId=${lead.convertedOpportunityId}`),
+      );
+    } finally {
+      if (quoteId)
+        await hardDeleteBusinessRoot(
+          api,
+          { Authorization: `Bearer ${token}` },
+          `/api/quotes/${quoteId}`,
+        );
+      await cleanup(api, token, lead);
+    }
   });
 
   test("catalog screen ignores a return target outside the quote screens", async ({

@@ -117,8 +117,12 @@ Yêu cầu MoM §5. Cả ba điểm giao việc dưới đây đều chạy trê
 - **Vòng đời giá đầu vào.** `Draft → Submitted → Approved | Rejected`. Chỉ sửa
   được ở `Draft`/`Rejected`; người lập không được tự duyệt hoặc từ chối. Giá đã
   được báo giá tham chiếu không sửa nữa.
-- **Kinh doanh làm báo giá đầu ra từ giá đầu vào.** Báo giá có thể chọn một giá
-  đầu vào `Approved`, còn hiệu lực, thuộc đúng Dự án và đúng nhóm việc Cung ứng.
+- **Kinh doanh làm báo giá đầu ra từ giá đầu vào.** Theo xác nhận người dùng ngày
+  25/10/2026, màn tạo Báo giá mới chỉ nhận Cơ hội thuộc Dự án và
+  ghi chú cơ bản. Sau khi tạo bản nháp, Kinh doanh vào chi tiết để yêu cầu giá
+  đầu vào Cung ứng. Chỉ sau khi có chào giá `Approved`, còn hiệu lực, Kinh doanh
+  mới chọn phương thức Suất đầu tư/BOQ, nguồn giá và nhập nội dung báo giá đầu
+  ra. Nguồn giá phải thuộc đúng Dự án và đúng nhóm việc Cung ứng.
   Báo giá lưu bản chụp (`InputPriceSnapshotJson`) tại thời điểm gắn để truy vết;
   đổi giá đầu vào không làm đổi báo giá đã phát hành.
 - **Kiểm soát BOQ đã ký là việc sau hợp đồng.** Đây là bước tách biệt với giá đầu

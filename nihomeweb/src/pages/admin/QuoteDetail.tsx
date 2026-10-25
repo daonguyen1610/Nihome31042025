@@ -73,6 +73,7 @@ import {
   type QuoteDocumentResponse,
   type QuoteEmailPreviewResponse,
   type QuoteItemInput,
+  type QuoteMethod,
   type QuoteResponse,
   type QuoteStatus,
   type QuoteVersionResponse,
@@ -125,6 +126,7 @@ const WORKFLOW_BY_STATUS: Record<QuoteStatus, WorkflowKind[]> = {
 function toFormState(q: QuoteResponse): UpdateQuoteRequest {
   return {
     rowVersion: q.rowVersion,
+    method: q.status === "Draft" && q.grandTotal === 0 ? null : q.method,
     ownerUserId: q.ownerUserId ?? null,
     inputPriceOfferId: q.inputPriceOfferId ?? null,
     areaSqm: q.areaSqm ?? null,
@@ -182,6 +184,7 @@ const AdminQuoteDetail = () => {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<UpdateQuoteRequest | null>(null);
   const [approvedInputOffers, setApprovedInputOffers] = useState<InputPriceOfferResponse[]>([]);
+  const [inputOffersUnavailable, setInputOffersUnavailable] = useState(false);
   const [saving, setSaving] = useState(false);
   const [effectiveRevision, setEffectiveRevision] = useState<MaterialRateRevisionResponse | null>(
     null,
@@ -223,18 +226,26 @@ const AdminQuoteDetail = () => {
       const { data } = await adminApi.getQuote(quoteId);
       setQuote(data);
       setForm(toFormState(data));
-      // Looks up Procurement's approved input prices from the shared project's
-      // work packages. It is an optional convenience: a failure here must not
-      // hide the quote, so it is handled separately and degrades to no offers.
+      setInputOffersUnavailable(false);
+      // Read every Procurement package on the shared project. A lookup failure
+      // keeps the quote visible but blocks first pricing with a clear message.
       if (data.operationalProjectId && canViewWorkPackages) {
         try {
-          const packages = await adminApi.listWorkPackages({
-            purpose: "ProcurementInputPricing",
-            operationalProjectId: data.operationalProjectId,
-            pageSize: 100,
-          });
+          const packages = [];
+          let page = 1;
+          while (true) {
+            const response = await adminApi.listWorkPackages({
+              purpose: "ProcurementInputPricing",
+              operationalProjectId: data.operationalProjectId,
+              page,
+              pageSize: 100,
+            });
+            packages.push(...response.data.items);
+            if (page * response.data.pageSize >= response.data.totalCount) break;
+            page += 1;
+          }
           setApprovedInputOffers(
-            packages.data.items
+            packages
               .flatMap((item) => item.inputPriceOffers)
               .filter(
                 (offer) => offer.status === "Approved" && new Date(offer.validUntil) >= new Date(),
@@ -242,9 +253,11 @@ const AdminQuoteDetail = () => {
           );
         } catch {
           setApprovedInputOffers([]);
+          setInputOffersUnavailable(true);
         }
       } else {
         setApprovedInputOffers([]);
+        setInputOffersUnavailable(!canViewWorkPackages);
       }
     } catch (err) {
       setError(extractApiError(err));
@@ -348,7 +361,23 @@ const AdminQuoteDetail = () => {
 
   const handleSave = async () => {
     if (!quote || !form) return;
-    const validationIssue = validateQuoteValues(quote.method, form);
+    if (!form.method) {
+      toast({
+        title: t("common.error"),
+        description: t("quotes.validation.methodRequired"),
+        variant: "destructive",
+      });
+      return;
+    }
+    if (quote.grandTotal === 0 && !form.inputPriceOfferId) {
+      toast({
+        title: t("common.error"),
+        description: t("quotes.validation.inputPriceRequired"),
+        variant: "destructive",
+      });
+      return;
+    }
+    const validationIssue = validateQuoteValues(form.method, form);
     if (validationIssue) {
       toast({
         title: t("common.error"),
@@ -357,7 +386,7 @@ const AdminQuoteDetail = () => {
       });
       return;
     }
-    if (quote.method === "UnitCost") {
+    if (form.method === "UnitCost") {
       if (!form.materialRateCatalogId || !form.pricingEffectiveDate) {
         toast({
           title: t("common.error"),
@@ -593,8 +622,8 @@ const AdminQuoteDetail = () => {
   };
 
   const preview = useMemo(() => {
-    if (!quote || !form) return null;
-    return computePreview(quote.method, form);
+    if (!quote || !form?.method) return null;
+    return computePreview(form.method, form);
   }, [quote, form]);
 
   // -------- render --------
@@ -620,11 +649,13 @@ const AdminQuoteDetail = () => {
   if (!quote || !form) return null;
 
   const workflowKinds = WORKFLOW_BY_STATUS[quote.status];
+  const awaitingInputPrice = quote.status === "Draft" && quote.grandTotal === 0;
   const isTerminal =
     quote.status === "CustomerApproved" ||
     quote.status === "Rejected" ||
     quote.status === "Cancelled";
-  const showEditToggle = canManage && !editing && !isTerminal;
+  const showEditToggle =
+    canManage && !editing && !isTerminal && (!awaitingInputPrice || approvedInputOffers.length > 0);
 
   // A quote the customer or an approver has signed off on is the point where a
   // contract can be raised from it.
@@ -680,25 +711,29 @@ const AdminQuoteDetail = () => {
         <div className="grid w-full min-w-0 gap-2 sm:flex sm:flex-wrap [&_button]:h-auto [&_button]:min-h-10 [&_button]:whitespace-normal [&_svg]:shrink-0">
           {!editing && canManageWorkPackages && quote.operationalProjectId && (
             <>
-              <Button variant="outline" asChild>
-                <Link
-                  to={`/admin/work-packages?create=1&purpose=ProcurementInputPricing&projectId=${quote.operationalProjectId}&opportunityId=${quote.opportunityId}`}
-                >
-                  <Plus className="mr-1.5 h-4 w-4" />
-                  {t("quotes.action.requestInputPrice")}
-                </Link>
-              </Button>
-              <Button variant="outline" asChild>
-                <Link
-                  to={`/admin/work-packages?create=1&purpose=FinanceCommercialReview&projectId=${quote.operationalProjectId}&opportunityId=${quote.opportunityId}&quoteId=${quote.id}`}
-                >
-                  <CheckCheck className="mr-1.5 h-4 w-4" />
-                  {t("quotes.action.requestFinanceReview")}
-                </Link>
-              </Button>
+              {quote.status === "Draft" && (
+                <Button variant="outline" asChild>
+                  <Link
+                    to={`/admin/work-packages?create=1&purpose=ProcurementInputPricing&projectId=${quote.operationalProjectId}&opportunityId=${quote.opportunityId}`}
+                  >
+                    <Plus className="mr-1.5 h-4 w-4" />
+                    {t("quotes.action.requestInputPrice")}
+                  </Link>
+                </Button>
+              )}
+              {quote.status === "Approved" && (
+                <Button variant="outline" asChild>
+                  <Link
+                    to={`/admin/work-packages?create=1&purpose=FinanceCommercialReview&projectId=${quote.operationalProjectId}&opportunityId=${quote.opportunityId}&quoteId=${quote.id}`}
+                  >
+                    <CheckCheck className="mr-1.5 h-4 w-4" />
+                    {t("quotes.action.requestFinanceReview")}
+                  </Link>
+                </Button>
+              )}
             </>
           )}
-          {!editing && (
+          {!editing && !awaitingInputPrice && (
             <Button
               variant="outline"
               data-testid="quote-download-excel"
@@ -716,7 +751,7 @@ const AdminQuoteDetail = () => {
           {showEditToggle && (
             <Button variant="outline" data-testid="quote-edit" onClick={() => setEditing(true)}>
               <Pencil className="mr-1.5 h-4 w-4" />
-              {t("common.edit")}
+              {t(awaitingInputPrice ? "quotes.action.prepareOutput" : "common.edit")}
             </Button>
           )}
           {editing && (
@@ -738,28 +773,30 @@ const AdminQuoteDetail = () => {
             </>
           )}
           {!editing &&
-            workflowKinds.map((k) => (
-              <Button
-                key={k}
-                variant={
-                  k === "rejectInternal" || k === "customerReject" || k === "cancel"
-                    ? "outline"
-                    : "default"
-                }
-                onClick={() => handleWorkflowClick(k)}
-                disabled={
-                  workflowBusy ||
-                  (k === "approve" || k === "rejectInternal"
-                    ? !canApprove
-                    : k === "send"
-                      ? !canSend || quote.isExpired
-                      : !canManage)
-                }
-              >
-                {workflowIcon(k)}
-                {t(`quotes.action.${k}`)}
-              </Button>
-            ))}
+            workflowKinds
+              .filter((kind) => kind !== "submit" || !awaitingInputPrice)
+              .map((k) => (
+                <Button
+                  key={k}
+                  variant={
+                    k === "rejectInternal" || k === "customerReject" || k === "cancel"
+                      ? "outline"
+                      : "default"
+                  }
+                  onClick={() => handleWorkflowClick(k)}
+                  disabled={
+                    workflowBusy ||
+                    (k === "approve" || k === "rejectInternal"
+                      ? !canApprove
+                      : k === "send"
+                        ? !canSend || quote.isExpired
+                        : !canManage)
+                  }
+                >
+                  {workflowIcon(k)}
+                  {t(`quotes.action.${k}`)}
+                </Button>
+              ))}
           {canRaiseContract && (
             <Button variant="outline" onClick={goToContractForm}>
               <FileText className="mr-1.5 h-4 w-4" />
@@ -788,6 +825,18 @@ const AdminQuoteDetail = () => {
           )}
         </div>
       </div>
+
+      {awaitingInputPrice && !editing && (
+        <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+          {t(
+            inputOffersUnavailable
+              ? "quotes.inputPrice.unavailable"
+              : approvedInputOffers.length > 0
+                ? "quotes.inputPrice.readyForOutput"
+                : "quotes.inputPrice.awaitingApproval",
+          )}
+        </div>
+      )}
 
       {/* ---------- Meta strip ---------- */}
       {/* At-a-glance summary so the key numbers stay visible without scrolling
@@ -829,7 +878,11 @@ const AdminQuoteDetail = () => {
           <dt className="text-xs uppercase tracking-wide text-muted-foreground">
             {t("quotes.field.method")}
           </dt>
-          <dd className="truncate">{t(`quotes.method.${quote.method}`)}</dd>
+          <dd className="truncate">
+            {awaitingInputPrice
+              ? t("quotes.method.notSelected")
+              : t(`quotes.method.${quote.method}`)}
+          </dd>
         </div>
       </dl>
 
@@ -897,7 +950,37 @@ const AdminQuoteDetail = () => {
                 </FormField>
                 <p className="mt-2 text-xs text-muted-foreground">{t("quotes.inputPrice.hint")}</p>
               </div>
-              {quote.method === "UnitCost" ? (
+              {editing && awaitingInputPrice && (
+                <div className="rounded-lg border bg-card p-4">
+                  <FormField label={t("quotes.field.method")}>
+                    <Select
+                      value={form.method ?? undefined}
+                      onValueChange={(value) =>
+                        setForm({
+                          ...form,
+                          method: value as QuoteMethod,
+                          areaSqm: null,
+                          unitPricePerSqm: null,
+                          materialRateCatalogId: null,
+                          pricingEffectiveDate: null,
+                          rateOverrideReason: null,
+                          packageDescription: "",
+                          items: [],
+                        })
+                      }
+                    >
+                      <SelectTrigger data-testid="quote-output-method">
+                        <SelectValue placeholder={t("quotes.method.notSelected")} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="UnitCost">{t("quotes.method.UnitCost")}</SelectItem>
+                        <SelectItem value="Boq">{t("quotes.method.Boq")}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </FormField>
+                </div>
+              )}
+              {awaitingInputPrice && !form.method ? null : form.method === "UnitCost" ? (
                 <div className="space-y-3 rounded-lg border bg-card p-4">
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <FormField label={t("quotes.field.areaSqm")}>

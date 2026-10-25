@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NihomeBackend.Data;
@@ -70,7 +72,9 @@ public sealed class DepartmentWorkPackageServiceTests : IDisposable
             .ReturnsAsync((NihomeBackend.Models.DTOs.Responses.NotificationResponse?)null);
         var permissions = new Mock<IPermissionService>();
         permissions.Setup(item => item.HasAsync(It.IsAny<int>(), "work.packages.verify", It.IsAny<CancellationToken>())).ReturnsAsync(true);
-        _approvalEmails = new WorkPackageApprovalEmailService(_db, new EphemeralDataProtectionProvider(), permissions.Object, _email.Object, NullLogger<WorkPackageApprovalEmailService>.Instance);
+        _approvalEmails = new WorkPackageApprovalEmailService(_db, new EphemeralDataProtectionProvider(), permissions.Object,
+            _email.Object, NullLogger<WorkPackageApprovalEmailService>.Instance,
+            new ConfigurationManager { ["Frontend:PublicBaseUrl"] = "https://nicon.example.test" }, new HttpContextAccessor());
         _service = new DepartmentWorkPackageService(
             _db, _access.Object, _notifications.Object, NullLogger<DepartmentWorkPackageService>.Instance, _approvalEmails);
     }

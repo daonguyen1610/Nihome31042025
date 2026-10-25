@@ -14,6 +14,7 @@ public sealed class WorkPackageApprovalEmailsTests(NihomeWebApplicationFactory f
         var seed = await SeedAsync(finance);
         await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsSuperAdminAsync);
         var preview = await Preview(seed);
+        preview.GetProperty("body").GetString().Should().Contain($"/admin/work-packages/{seed.PackageId}");
         var submit = await Post(seed.Path + "/submit", new { rowVersion = seed.Version, previewToken = preview.GetProperty("previewToken").GetString() });
         submit.StatusCode.Should().Be(HttpStatusCode.OK, await submit.Content.ReadAsStringAsync());
         var record = await ReadJsonAsync(submit);
@@ -108,7 +109,7 @@ public sealed class WorkPackageApprovalEmailsTests(NihomeWebApplicationFactory f
         await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsSuperAdminAsync);
         var path = "/api/site-settings/work-package-approval-template";
         (await Client.PutAsJsonAsync(path, new { subject = "Invalid\nHeader", body = "<script>bad</script>" })).StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        var content = new { subject = "Review {{workPackageCode}}", body = "<p>{{recipientName}}: {{workPackageCode}} / {{recordReference}}</p>" };
+        var content = new { subject = "Review {{workPackageCode}}", body = "<p>{{recipientName}}: {{workPackageCode}} / {{recordReference}}</p><p><a href=\"{{workPackageUrl}}\">Open</a></p>" };
         (await Client.PutAsJsonAsync(path, content)).StatusCode.Should().Be(HttpStatusCode.OK);
         var saved = await ReadJsonAsync(await Client.GetAsync(path));
         saved.GetProperty("subject").GetString().Should().Be(content.subject);
