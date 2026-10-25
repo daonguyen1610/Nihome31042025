@@ -48,7 +48,7 @@ test("template tabs preserve drafts and submission delivers the confirmed approv
     await page
       .locator("#approval-email-body")
       .fill(
-        `<div><p>${marker}</p><p>{{recipientName}} – {{senderName}}</p><p>{{workPackageCode}} {{workPackageName}}</p><p>{{recordType}} {{recordReference}}</p></div>`,
+        `<div><p>${marker}</p><p>{{recipientName}} – {{senderName}}</p><p>{{workPackageCode}} {{workPackageName}}</p><p>{{recordType}} {{recordReference}}</p><p><a href="{{workPackageUrl}}">Mở nhóm công việc</a></p></div>`,
       );
     await page.getByRole("button", { name: "Lưu thay đổi", exact: true }).click();
     await expect(page.getByRole("status").filter({ hasText: "Đã lưu" })).toBeVisible();
