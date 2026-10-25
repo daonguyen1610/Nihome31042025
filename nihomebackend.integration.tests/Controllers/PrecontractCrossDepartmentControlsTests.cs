@@ -4,6 +4,7 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
+using NihomeBackend.Services;
 
 namespace NihomeBackend.IntegrationTests.Controllers;
 
@@ -33,7 +34,7 @@ public sealed class PrecontractCrossDepartmentControlsTests(NihomeWebApplication
             operationalProjectId = scope.ProjectId,
             sourceOpportunityId = scope.OpportunityId,
             departmentRoleGroupId = scope.ProcurementGroupId,
-            leadUserId = scope.ProcurementUserId,
+            leadUserId = scope.ProcurementLeadUserId,
         });
         var packageId = Id(package);
         package.GetProperty("purpose").GetString().Should().Be("ProcurementInputPricing");
@@ -83,12 +84,13 @@ public sealed class PrecontractCrossDepartmentControlsTests(NihomeWebApplication
         offer.GetProperty("lines").GetArrayLength().Should().Be(2);
         offer.GetProperty("grandTotal").GetDecimal().Should().Be(195_523_200m);
 
-        offer = await MoveAsync($"{offerPath}/{offerId}", offer, "submit");
+        offer = await SubmitForApprovalAsync($"{offerPath}/{offerId}", offer);
         offer.GetProperty("status").GetString().Should().Be("Submitted");
 
-        // The author cannot approve their own input price.
+        // The author is not the assigned lead, so the approval-scope guard
+        // conceals the decision endpoint and leaves the submitted price intact.
         await RejectAsync($"{offerPath}/{offerId}/decision",
-            new { approved = true, rowVersion = Version(offer) }, HttpStatusCode.BadRequest);
+            new { approved = true, rowVersion = Version(offer) }, HttpStatusCode.NotFound);
         (await WithDbAsync(db => db.ProcurementInputPriceOffers.AsNoTracking().SingleAsync(item => item.Id == offerId)))
             .Status.Should().Be(InputPriceOfferStatus.Submitted);
 
@@ -168,7 +170,7 @@ public sealed class PrecontractCrossDepartmentControlsTests(NihomeWebApplication
             sourceOpportunityId = scope.OpportunityId,
             sourceQuoteId = quoteId,
             departmentRoleGroupId = scope.FinanceGroupId,
-            leadUserId = scope.AccountantUserId,
+            leadUserId = scope.FinanceLeadUserId,
         });
         var packageId = Id(package);
         var reviewPath = $"/api/work-packages/{packageId}/finance-review";
@@ -181,7 +183,7 @@ public sealed class PrecontractCrossDepartmentControlsTests(NihomeWebApplication
             financialDossierReviewed = false,
             findings = "Điều kiện thanh toán 3 đợt theo tiến độ thi công đã thống nhất.",
         });
-        review = await MoveAsync(reviewPath, review, "submit");
+        review = await SubmitForApprovalAsync(reviewPath, review);
         review.GetProperty("status").GetString().Should().Be("Submitted");
 
         // Submitted but not yet approved still blocks the customer send.
@@ -253,7 +255,7 @@ public sealed class PrecontractCrossDepartmentControlsTests(NihomeWebApplication
             sourceOpportunityId = scope.OpportunityId,
             sourceQuoteId = quoteId,
             departmentRoleGroupId = scope.FinanceGroupId,
-            leadUserId = scope.AccountantUserId,
+            leadUserId = scope.FinanceLeadUserId,
         });
         var reviewPath = $"/api/work-packages/{Id(package)}/finance-review";
         await LoginAsync("ACCOUNTANT");
@@ -265,7 +267,7 @@ public sealed class PrecontractCrossDepartmentControlsTests(NihomeWebApplication
             financialDossierReviewed = false,
             findings = "Điều kiện thanh toán và bảo lãnh đã đối chiếu.",
         });
-        review = await MoveAsync(reviewPath, review, "submit");
+        review = await SubmitForApprovalAsync(reviewPath, review);
         await LoginAsync("SUPER_ADMIN");
         await PostAsync($"{reviewPath}/decision", new { approved = true, rowVersion = Version(review) });
 
@@ -355,7 +357,7 @@ public sealed class PrecontractCrossDepartmentControlsTests(NihomeWebApplication
             operationalProjectId = scope.ProjectId,
             sourceTenderId = tenderId,
             departmentRoleGroupId = scope.FinanceGroupId,
-            leadUserId = scope.AccountantUserId,
+            leadUserId = scope.FinanceLeadUserId,
         });
         var packageId = Id(package);
         var reviewPath = $"/api/work-packages/{packageId}/finance-review";
@@ -368,7 +370,7 @@ public sealed class PrecontractCrossDepartmentControlsTests(NihomeWebApplication
             paymentTermsReviewed = false,
             financialDossierReviewed = true,
         });
-        review = await MoveAsync(reviewPath, review, "submit");
+        review = await SubmitForApprovalAsync(reviewPath, review);
         review.GetProperty("status").GetString().Should().Be("Submitted");
 
         await LoginAsync("SUPER_ADMIN");
@@ -422,7 +424,7 @@ public sealed class PrecontractCrossDepartmentControlsTests(NihomeWebApplication
 
     private sealed record Scope(
         int ProjectId, int OpportunityId, int CustomerId, int VendorId, string VendorName,
-        int ProcurementGroupId, int FinanceGroupId, int ProcurementUserId, int AccountantUserId);
+        int ProcurementGroupId, int FinanceGroupId, int ProcurementLeadUserId, int FinanceLeadUserId);
 
     private Task<Scope> SeedScopeAsync() => WithDbAsync(async db =>
     {
@@ -441,6 +443,13 @@ public sealed class PrecontractCrossDepartmentControlsTests(NihomeWebApplication
             .Select(item => item.Id).SingleAsync();
         var financeGroupId = await db.RoleGroups.Where(item => item.Code == "FINANCE")
             .Select(item => item.Id).SingleAsync();
+
+        // The existing role accounts remain the dossier authors. Notification
+        // leads must be separate, active users in the receiving department.
+        var procurementLeadId = await SeedDepartmentLeadAsync(db, "PROCUREMENT", "0971000016",
+            "Trần Minh Khoa — Trưởng nhóm Cung ứng", "procurement.lead@nicon.example.com");
+        var financeLeadId = await SeedDepartmentLeadAsync(db, "ACCOUNTANT", "0971000007",
+            "Nguyễn Thu Hà — Trưởng nhóm Tài chính", "finance.lead@nicon.example.com");
 
         var customer = new Customer
         {
@@ -484,6 +493,8 @@ public sealed class PrecontractCrossDepartmentControlsTests(NihomeWebApplication
                  {
                      (procurementUserId, "PROCUREMENT"),
                      (accountantUserId, "ACCOUNTANT"),
+                     (procurementLeadId, "PROCUREMENT"),
+                     (financeLeadId, "ACCOUNTANT"),
                  })
             db.OperationalProjectMembers.Add(new OperationalProjectMember
             {
@@ -496,8 +507,29 @@ public sealed class PrecontractCrossDepartmentControlsTests(NihomeWebApplication
             });
         await db.SaveChangesAsync();
         return new Scope(project.Id, opportunity.Id, customer.Id, vendor.Id, vendor.CompanyName,
-            procurementGroupId, financeGroupId, procurementUserId, accountantUserId);
+            procurementGroupId, financeGroupId, procurementLeadId, financeLeadId);
     });
+
+    private static async Task<int> SeedDepartmentLeadAsync(
+        AppDbContext db, string roleCode, string phoneNumber, string fullName, string email)
+    {
+        var existing = await db.Users.SingleOrDefaultAsync(item => item.PhoneNumber == phoneNumber);
+        if (existing is not null) return existing.Id;
+
+        var lead = new ApplicationUser
+        {
+            PhoneNumber = phoneNumber,
+            FullName = fullName,
+            Email = email,
+            Role = UserRole.USER,
+            RoleEntityId = await db.Roles.Where(item => item.Code == roleCode).Select(item => item.Id).SingleAsync(),
+            IsActive = true,
+        };
+        lead.PasswordHash = new PasswordService().Hash(lead, TestDataSeeder.DefaultPassword);
+        db.Users.Add(lead);
+        await db.SaveChangesAsync();
+        return lead.Id;
+    }
 
     private Task<int> AddContractAsync(Scope scope, ContractStatus status) => WithDbAsync(async db =>
     {
@@ -614,8 +646,15 @@ public sealed class PrecontractCrossDepartmentControlsTests(NihomeWebApplication
         return await ReadJsonAsync(response);
     }
 
-    private async Task<JsonElement> MoveAsync(string recordPath, JsonElement record, string action) =>
-        await PostAsync($"{recordPath}/{action}", new { rowVersion = Version(record) });
+    private async Task<JsonElement> SubmitForApprovalAsync(string recordPath, JsonElement record)
+    {
+        var preview = await PostAsync($"{recordPath}/approval-email-preview", new { });
+        return await PostAsync($"{recordPath}/submit", new
+        {
+            rowVersion = Version(record),
+            previewToken = preview.GetProperty("previewToken").GetString(),
+        });
+    }
 
     private async Task RejectAsync(string path, object body, HttpStatusCode expected)
     {
