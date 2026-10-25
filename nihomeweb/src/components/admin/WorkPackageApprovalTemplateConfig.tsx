@@ -105,6 +105,7 @@ export default function WorkPackageApprovalTemplateConfig({
               "recordType",
               "recordReference",
               "senderName",
+              "workPackageUrl",
             ].map((name) => ({
               token: `{{${name}}}`,
               desc: t(`emailTemplate.editor.token.${name}`),

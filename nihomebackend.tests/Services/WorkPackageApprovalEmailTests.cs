@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NihomeBackend.Data;
@@ -28,7 +30,9 @@ public sealed class WorkPackageApprovalEmailTests : IDisposable
         db.Add(package);
         db.SaveChanges();
         permissions.Setup(item => item.HasAsync(lead.Id, "work.packages.verify", It.IsAny<CancellationToken>())).ReturnsAsync(true);
-        service = new(db, new EphemeralDataProtectionProvider(), permissions.Object, email.Object, NullLogger<WorkPackageApprovalEmailService>.Instance);
+        service = new(db, new EphemeralDataProtectionProvider(), permissions.Object, email.Object,
+            NullLogger<WorkPackageApprovalEmailService>.Instance,
+            new ConfigurationManager { ["Frontend:PublicBaseUrl"] = "https://nicon.example.test" }, new HttpContextAccessor());
     }
 
     [Theory]
@@ -54,6 +58,7 @@ public sealed class WorkPackageApprovalEmailTests : IDisposable
     {
         var preview = await Preview();
         Assert.Contains("&lt;An Ph", preview.Body);
+        Assert.Contains($"href=\"https://nicon.example.test/admin/work-packages/{package.Id}\"", preview.Body);
         Assert.DoesNotContain("<An Phú>", preview.Body);
         Assert.DoesNotContain("{{", preview.Body);
         await Queue(preview.PreviewToken);
@@ -115,6 +120,8 @@ public sealed class WorkPackageApprovalEmailTests : IDisposable
     [InlineData("<script>alert(1)</script>")]
     [InlineData("<p>{{unknown}}</p>")]
     [InlineData("<p>{{workPackageCode}}</p>")]
+    [InlineData("<p>{{workPackageCode}} {{recordReference}} {{workPackageUrl}}</p>")]
+    [InlineData("<p>{{workPackageCode}} {{recordReference}} <a href=\"javascript:alert(1)\">Open</a></p>")]
     [InlineData("<p onclick='alert(1)'>{{workPackageCode}} {{recordReference}}</p>")]
     public void Template_RejectsUnsafeOrIncompleteHtml(string html) =>
         Assert.Throws<ArgumentException>(() => WorkPackageApprovalEmailTemplates.Validate(html, true));
@@ -124,6 +131,16 @@ public sealed class WorkPackageApprovalEmailTests : IDisposable
     {
         Assert.Equal(WorkPackageApprovalEmailTemplates.DefaultSubject, WorkPackageApprovalEmailTemplates.Validate(WorkPackageApprovalEmailTemplates.DefaultSubject, false));
         Assert.Equal(WorkPackageApprovalEmailTemplates.DefaultBody, WorkPackageApprovalEmailTemplates.Validate(WorkPackageApprovalEmailTemplates.DefaultBody, true));
+    }
+
+    [Fact]
+    public void OlderCustomTemplate_GainsRequiredLinkWithoutLosingItsText()
+    {
+        var oldBody = "<p>{{workPackageCode}} / {{recordReference}}</p>";
+        var template = WorkPackageApprovalEmailTemplates.Get(new SiteSettings { WorkPackageApprovalEmailBodyTemplate = oldBody });
+        Assert.StartsWith(oldBody, template.Body);
+        Assert.Contains("<a href=\"{{workPackageUrl}}\">", template.Body);
+        Assert.Equal(template.Body, WorkPackageApprovalEmailTemplates.Validate(template.Body, true));
     }
 
     [Fact]

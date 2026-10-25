@@ -255,8 +255,25 @@ test.describe("MoM §5 pre-contract department controls", () => {
     ).toBeVisible();
 
     await offerCard.getByRole("button", { name: "Gửi duyệt" }).click();
-    await page
-      .getByRole("dialog")
+    const approvalDialog = page.getByRole("dialog");
+    const toField = approvalDialog.locator("#approval-to");
+    await toField.focus();
+    const focusSpace = await toField.evaluate((element) => {
+      const scrollArea = element.closest(".overflow-y-auto")!;
+      const input = element.getBoundingClientRect();
+      const area = scrollArea.getBoundingClientRect();
+      return { left: input.left - area.left, right: area.right - input.right };
+    });
+    expect(focusSpace.left).toBeGreaterThanOrEqual(4);
+    expect(focusSpace.right).toBeGreaterThanOrEqual(4);
+    await approvalDialog.locator("#approval-cc").fill("cm@example.test");
+    await approvalDialog.getByRole("button", { name: "Cập nhật xem trước" }).click();
+    await expect(
+      approvalDialog
+        .frameLocator("iframe")
+        .getByRole("link", { name: "Mở nhóm công việc trong NICON" }),
+    ).toHaveAttribute("href", `${new URL(page.url()).origin}/admin/work-packages/${packageId}`);
+    await approvalDialog
       .getByRole("button", { name: "Gửi duyệt và thông báo", exact: true })
       .click();
     await expect(offerCard.getByText("Chờ duyệt")).toBeVisible();
@@ -284,14 +301,27 @@ test.describe("MoM §5 pre-contract department controls", () => {
     const approved = await call("salesManager", "get", `/api/work-packages/${packageId}`);
     expect((approved.inputPriceOffers as Body[])[0].status as string).toBe("Approved");
 
-    // The screen stays usable on the BCH-style narrow viewport.
-    await page.setViewportSize({ width: 390, height: 844 });
-    await page.reload({ waitUntil: "networkidle" });
-    const dimensions = await page.locator("html").evaluate((element) => ({
-      clientWidth: element.clientWidth,
-      scrollWidth: element.scrollWidth,
-    }));
-    expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth);
+    // The delivery card stays aligned with the task card at tablet and mobile widths.
+    for (const width of [768, 390]) {
+      await page.setViewportSize({ width, height: 844 });
+      await page.reload({ waitUntil: "networkidle" });
+      const taskCard = page
+        .locator("section")
+        .filter({ has: page.getByText("Đầu việc của phòng") });
+      const deliveryCard = page.getByTestId("approval-email-history");
+      await expect(deliveryCard).toBeVisible();
+      const taskBox = await taskCard.boundingBox();
+      const deliveryBox = await deliveryCard.boundingBox();
+      expect(taskBox).not.toBeNull();
+      expect(deliveryBox).not.toBeNull();
+      expect(Math.abs(deliveryBox!.x - taskBox!.x)).toBeLessThan(2);
+      expect(Math.abs(deliveryBox!.width - taskBox!.width)).toBeLessThan(2);
+      const dimensions = await page.locator("html").evaluate((element) => ({
+        clientWidth: element.clientWidth,
+        scrollWidth: element.scrollWidth,
+      }));
+      expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth);
+    }
   });
 
   test("a quote can only use an approved input price and cannot be sent before Finance signs off", async ({
@@ -356,18 +386,8 @@ test.describe("MoM §5 pre-contract department controls", () => {
 
     const quote = await call("salesManager", "post", "/api/quotes", {
       opportunityId,
-      method: "Boq",
-      packageDescription: `Kết cấu thép nhà xưởng Vina ${suffix}`,
-      items: [
-        {
-          itemCode: "KC-THEP-01",
-          name: "Kết cấu thép mạ kẽm nhúng nóng",
-          unit: "kg",
-          quantity: 12_500,
-          unitPrice: 28_900,
-        },
-      ],
-      vatPercent: 8,
+      draftOnly: true,
+      note: `Chờ giá đầu vào kết cấu thép nhà xưởng Vina ${suffix}`,
     });
     const quoteId = quote.id as number;
 
@@ -446,13 +466,25 @@ test.describe("MoM §5 pre-contract department controls", () => {
     // ---- The approved input price is offered to Kinh doanh on the quote.
     await loginInBrowserAs(page, TEST_USERS.salesManager);
     await page.addInitScript(() => localStorage.setItem("nicon_lang", "vi"));
+    await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto(`/admin/quotes/${quoteId}`, { waitUntil: "networkidle" });
     await page.getByTestId("quote-edit").click();
+    await expect(page.getByTestId("quote-output-method")).toBeVisible();
     await page
       .getByRole("combobox")
       .filter({ hasText: /Chưa gắn báo giá đầu vào/ })
       .click();
     await page.getByRole("option", { name: new RegExp(`BG-VINA-${suffix}`) }).click();
+    await page.getByTestId("quote-output-method").click();
+    await page.getByRole("option", { name: /BOQ|Bảng khối lượng/i }).click();
+    await page.getByRole("button", { name: /Thêm dòng/i }).click();
+    const outputLine = page.getByRole("table").first().locator("tbody tr").first();
+    const outputFields = outputLine.locator("input");
+    await outputFields.nth(0).fill("KC-THEP-01");
+    await outputFields.nth(1).fill("Kết cấu thép mạ kẽm nhúng nóng");
+    await outputFields.nth(2).fill("kg");
+    await outputFields.nth(3).fill("12500");
+    await outputFields.nth(4).fill("28900");
     await shot("s5-05-bao-gia-chon-gia-dau-vao.png");
     await page.getByRole("button", { name: "Lưu thay đổi" }).first().click();
     await expect

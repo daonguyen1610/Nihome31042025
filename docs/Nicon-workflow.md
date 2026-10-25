@@ -80,11 +80,13 @@ tiền hợp đồng không được gắn `ContractId`.
 
 ```text
 Kinh doanh (người phụ trách Cơ hội) hoặc PM Dự án
+  → Kinh doanh tạo Báo giá nháp từ Cơ hội đã gắn Dự án, chỉ nhập thông tin cơ bản
   → giao nhóm việc "Giá đầu vào" cho phòng Cung ứng, gắn Dự án + Cơ hội
   → Cung ứng nhập chào giá NCC/thầu phụ (Draft)
   → Cung ứng gửi duyệt (Submitted)
   → người duyệt khác người lập: Approved hoặc Rejected kèm lý do
-  → Kinh doanh chọn giá Approved còn hiệu lực khi lập báo giá Boq đầu ra
+  → Kinh doanh chọn giá Approved còn hiệu lực, nhập giá đầu ra Suất đầu tư/BOQ
+  → gửi duyệt báo giá đầu ra khi đã có nội dung và tổng giá trị hợp lệ
 ```
 
 Chỉ sửa được chào giá ở `Draft`/`Rejected`; chào giá đã bị báo giá tham chiếu thì
@@ -121,6 +123,8 @@ hồ sơ rà soát tài chính, người gửi xem trước email thực tế r�
 và thông báo. To điền sẵn email người chủ trì phòng đã phân công; theo xác nhận
 bổ sung cùng ngày, người gửi có thể sửa To và thêm người liên quan vào CC. Phải
 cập nhật xem trước sau khi sửa địa chỉ. Thay To/CC không thay người có quyền duyệt.
+Email gửi cho To và CC cùng chứa link mở trực tiếp nhóm công việc; bản xem trước
+hiển thị đúng link sẽ được xếp hàng gửi.
 Màn hình thông báo đã xếp hàng, sau đó cập nhật kết quả gửi hoặc cần kiểm tra. Chặn gửi duyệt nếu
 người chủ trì trùng người lập hồ sơ, không hoạt động, thiếu quyền duyệt hoặc email
 không hợp lệ; phải chọn người chủ trì độc lập hợp lệ trước khi gửi. Mẫu email

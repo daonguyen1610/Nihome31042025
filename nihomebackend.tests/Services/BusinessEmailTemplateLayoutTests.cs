@@ -46,7 +46,8 @@ public sealed class BusinessEmailTemplateLayoutTests
             ["workPackageCode"] = "WP-ANPHU-MEP-01",
             ["workPackageName"] = "Cung cấp thiết bị MEP <Nhà máy An Phú>",
             ["recordType"] = "Báo giá đầu vào",
-            ["recordReference"] = "BG-MEP-2026-01"
+            ["recordReference"] = "BG-MEP-2026-01",
+            ["workPackageUrl"] = "https://nicon.example.test/admin/work-packages/42"
         };
 
         var rendered = WorkPackageApprovalEmailTemplates.Render(template, tokens);
@@ -55,7 +56,8 @@ public sealed class BusinessEmailTemplateLayoutTests
         Assert.All(tokens.Values, value => Assert.Contains(WebUtility.HtmlEncode(value), rendered.Body));
         Assert.Contains("quyết định phê duyệt được thực hiện trong hệ thống", rendered.Body);
         Assert.DoesNotContain("{{", rendered.Body);
-        Assert.True(EmailTemplateFormatter.IsSafeQuoteHtml(rendered.Body));
+        Assert.True(WorkPackageApprovalEmailTemplates.IsSafeApprovalHtml(template.Body));
+        Assert.Equal(tokens["workPackageUrl"], XDocument.Parse(rendered.Body).Descendants("a").Single().Attribute("href")!.Value);
     }
 
     private static void AssertLayout(string html)

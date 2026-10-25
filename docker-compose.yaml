@@ -16,6 +16,7 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://0.0.0.0:5043
+      Frontend__PublicBaseUrl: ${FRONTEND_PUBLIC_BASE_URL:-}
       ConnectionStrings__DefaultConnection: Server=sqlserver,1433;Database=NihomeDB;User Id=sa;Password=Nihome@31042025;TrustServerCertificate=True;
       DataProtection__KeysPath: /root/.aspnet/DataProtection-Keys
     volumes:

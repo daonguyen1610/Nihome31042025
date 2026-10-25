@@ -1367,6 +1367,56 @@ const DepartmentWorkPackages = () => {
                 )}
               </div>
             </section>
+
+            {approvalDeliveries.length > 0 && (
+              <section
+                data-testid="approval-email-history"
+                className="min-w-0 overflow-hidden rounded-xl border bg-card"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b p-4">
+                  <h2 className="font-semibold">{t("approvalEmail.delivery")}</h2>
+                  <Button variant="outline" size="sm" onClick={() => void load()}>
+                    {t("common.refresh")}
+                  </Button>
+                </div>
+                <div className="divide-y">
+                  {approvalDeliveries.map((email) => (
+                    <div
+                      key={email.id}
+                      className="flex min-w-0 flex-col gap-2 p-4 text-sm sm:flex-row sm:items-start sm:justify-between sm:gap-4"
+                    >
+                      <div className="min-w-0 space-y-1">
+                        <p className="break-words font-medium">
+                          {email.recordType === "InputPriceOffer"
+                            ? detail.inputPriceOffers.find((offer) => offer.id === email.recordId)
+                                ?.supplierReference
+                            : t(`workPackages.purpose.${detail.purpose}`)}
+                        </p>
+                        <p className="break-all text-muted-foreground">{email.toEmail}</p>
+                        {(email.ccEmails?.length ?? 0) > 0 && (
+                          <p className="break-all text-muted-foreground">
+                            CC: {email.ccEmails.join(", ")}
+                          </p>
+                        )}
+                      </div>
+                      <Badge
+                        className="w-fit shrink-0"
+                        variant={email.status === "NeedsReview" ? "destructive" : "secondary"}
+                      >
+                        {t(`approvalEmail.status.${email.status}`)}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+                {approvalDeliveries.some(
+                  (email) => email.status === "Sending" || email.status === "NeedsReview",
+                ) && (
+                  <p className="border-t p-4 text-sm text-muted-foreground">
+                    {t("approvalEmail.reviewHint")}
+                  </p>
+                )}
+              </section>
+            )}
           </>
         ) : (
           <>
@@ -1801,41 +1851,6 @@ const DepartmentWorkPackages = () => {
         </DialogContent>
       </Dialog>
 
-      {detail && approvalDeliveries.length > 0 && (
-        <section className="mx-4 space-y-3 rounded-lg border bg-background p-4 sm:mx-6">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="font-semibold">{t("approvalEmail.delivery")}</h2>
-            <Button variant="outline" size="sm" onClick={() => void load()}>
-              {t("common.refresh")}
-            </Button>
-          </div>
-          {approvalDeliveries.map((email) => (
-            <div
-              key={email.id}
-              className="flex flex-wrap items-center justify-between gap-2 rounded border p-3 text-sm"
-            >
-              <div className="min-w-0 space-y-1">
-                <p className="break-words font-medium">
-                  {email.recordType === "InputPriceOffer"
-                    ? detail.inputPriceOffers.find((offer) => offer.id === email.recordId)
-                        ?.supplierReference
-                    : t(`workPackages.purpose.${detail.purpose}`)}
-                </p>
-                <p className="break-all text-muted-foreground">{email.toEmail}</p>
-                {(email.ccEmails?.length ?? 0) > 0 && (
-                  <p className="break-all text-muted-foreground">CC: {email.ccEmails.join(", ")}</p>
-                )}
-              </div>
-              <Badge variant={email.status === "NeedsReview" ? "destructive" : "secondary"}>
-                {t(`approvalEmail.status.${email.status}`)}
-              </Badge>
-            </div>
-          ))}
-          {approvalDeliveries.some(
-            (email) => email.status === "Sending" || email.status === "NeedsReview",
-          ) && <p className="text-sm text-muted-foreground">{t("approvalEmail.reviewHint")}</p>}
-        </section>
-      )}
       <Dialog
         open={!!approvalPreview}
         onOpenChange={(open) => {
@@ -1848,7 +1863,7 @@ const DepartmentWorkPackages = () => {
             <DialogDescription>{t("approvalEmail.confirmHint")}</DialogDescription>
           </DialogHeader>
           {approvalPreview && (
-            <div className="min-h-0 space-y-3 overflow-y-auto">
+            <div className="min-h-0 space-y-3 overflow-y-auto p-1.5">
               <div className="space-y-2">
                 <Label htmlFor="approval-to">{t("approvalEmail.recipient")}</Label>
                 <Input

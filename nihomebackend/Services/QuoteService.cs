@@ -152,6 +152,14 @@ public class QuoteService(
     {
         if (!canManage) throw new QuoteOperationException("Không có quyền tạo báo giá.");
         request.Items ??= new List<QuoteItemInput>();
+        if (request.Method.HasValue && !Enum.IsDefined(request.Method.Value))
+            throw new QuoteOperationException("Phương thức báo giá không hợp lệ.");
+        if (request.DraftOnly && (request.Method.HasValue || request.AreaSqm.HasValue || request.UnitPricePerSqm.HasValue ||
+            request.MaterialRateCatalogId.HasValue || request.InputPriceOfferId.HasValue ||
+            request.PricingEffectiveDate.HasValue || !string.IsNullOrWhiteSpace(request.RateOverrideReason) ||
+            !string.IsNullOrWhiteSpace(request.PackageDescription) || request.Items.Count > 0 ||
+            request.DiscountPercent != 0 || request.VatPercent != 8))
+            throw new QuoteOperationException("Báo giá mới chỉ nhận thông tin cơ bản; hãy yêu cầu giá đầu vào trước khi lập giá đầu ra.");
 
         var opportunity = await db.Opportunities
             .FirstOrDefaultAsync(o => o.Id == request.OpportunityId, ct)
@@ -160,6 +168,8 @@ public class QuoteService(
         {
             throw new QuoteOperationException("Không tìm thấy Cơ hội trong phạm vi được phân công.");
         }
+        if (request.DraftOnly && !opportunity.OperationalProjectId.HasValue)
+            throw new QuoteOperationException("Cơ hội phải gắn Dự án trước khi yêu cầu giá đầu vào Cung ứng.");
         if (!canSeeAll && request.OwnerUserId.HasValue && request.OwnerUserId.Value != callerUserId)
             throw new QuoteOperationException("Bạn không có quyền gán báo giá cho người khác.");
         if (request.OwnerUserId.HasValue &&
@@ -183,17 +193,19 @@ public class QuoteService(
         }
 
         var now = DateTime.UtcNow;
-        var rate = request.Method == QuoteMethod.UnitCost
+        var method = request.Method ?? QuoteMethod.UnitCost;
+        var rate = !request.DraftOnly && method == QuoteMethod.UnitCost
             ? await ResolveNewRateAsync(request.MaterialRateCatalogId, request.PricingEffectiveDate,
                 request.UnitPricePerSqm, request.RateOverrideReason, callerUserId, canOverrideRate, ct)
             : null;
-        var boqRevision = request.Method == QuoteMethod.Boq
+        var boqRevision = !request.DraftOnly && method == QuoteMethod.Boq
             ? await ResolveBoqRevisionAsync(request.MaterialRateCatalogId, request.PricingEffectiveDate, required: false, ct)
             : null;
         var inputPriceOffer = await ResolveInputPriceOfferAsync(request.InputPriceOfferId, opportunity.OperationalProjectId, ct);
         var appliedUnitPrice = rate?.AppliedUnitPrice ?? request.UnitPricePerSqm;
-        ValidateMethodPayload(request.Method, request.AreaSqm, appliedUnitPrice, request.Items,
-            request.DiscountPercent, request.VatPercent);
+        if (!request.DraftOnly)
+            ValidateMethodPayload(method, request.AreaSqm, appliedUnitPrice, request.Items,
+                request.DiscountPercent, request.VatPercent);
 
         var ownerId = request.OwnerUserId ?? opportunity.OwnerUserId ?? callerUserId;
         var validUntil = request.ValidUntil ?? now.AddDays(DefaultValidityDays);
@@ -220,11 +232,11 @@ public class QuoteService(
             OpportunityId = request.OpportunityId,
             OperationalProjectId = opportunity.OperationalProjectId,
             OwnerUserId = ownerId,
-            Method = request.Method,
+            Method = method,
             Version = 1,
-            AreaSqm = request.Method == QuoteMethod.UnitCost ? request.AreaSqm : null,
-            UnitPricePerSqm = request.Method == QuoteMethod.UnitCost ? appliedUnitPrice : null,
-            PackageDescription = request.Method == QuoteMethod.UnitCost
+            AreaSqm = method == QuoteMethod.UnitCost ? request.AreaSqm : null,
+            UnitPricePerSqm = method == QuoteMethod.UnitCost ? appliedUnitPrice : null,
+            PackageDescription = method == QuoteMethod.UnitCost
                 ? request.PackageDescription?.Trim()
                 : null,
             MaterialRateRevisionId = rate?.Revision.Id ?? boqRevision?.Revision.Id,
@@ -233,7 +245,7 @@ public class QuoteService(
             PricingEffectiveDate = rate?.EffectiveDate ?? boqRevision?.EffectiveDate,
             CatalogUnitPricePerSqm = rate?.CatalogUnitPrice,
             RateSource = rate?.Source ?? (boqRevision is not null ? QuoteRateSource.CatalogReference : QuoteRateSource.Override),
-            RateOverrideReason = request.Method == QuoteMethod.UnitCost && rate is null
+            RateOverrideReason = !request.DraftOnly && method == QuoteMethod.UnitCost && rate is null
                 ? "Giá nhập trực tiếp theo quy trình hiện hành."
                 : rate?.OverrideReason,
             RateOverrideByUserId = rate?.OverrideByUserId,
@@ -249,7 +261,7 @@ public class QuoteService(
             UpdatedByUserId = callerUserId,
         };
 
-        ApplyItems(quote, request.Method, request.Items);
+        ApplyItems(quote, method, request.Items);
         RecomputeTotals(quote);
 
         db.Quotes.Add(quote);
@@ -313,19 +325,37 @@ public class QuoteService(
             !await db.Users.AsNoTracking().AnyAsync(user => user.Id == request.OwnerUserId.Value && user.IsActive, ct))
             throw new QuoteOperationException($"Người phụ trách #{request.OwnerUserId} không tồn tại hoặc đã ngừng hoạt động.");
 
-        var rate = quote.Method == QuoteMethod.UnitCost
+        var inputPriceOffer = await ResolveInputPriceOfferAsync(request.InputPriceOfferId, quote.OperationalProjectId, ct);
+        var isBasicDraft = quote.Status == QuoteStatus.Draft && quote.GrandTotal == 0;
+        if (request.Method.HasValue && !Enum.IsDefined(request.Method.Value))
+            throw new QuoteOperationException("Phương thức báo giá không hợp lệ.");
+        if (!isBasicDraft && request.Method.HasValue && request.Method.Value != quote.Method)
+            throw new QuoteOperationException("Không thể đổi phương thức của báo giá đã lập giá đầu ra.");
+        if (isBasicDraft && request.Method.HasValue && inputPriceOffer is null)
+            throw new QuoteOperationException("Cần báo giá đầu vào đã duyệt trước khi chọn phương thức báo giá đầu ra.");
+        if (isBasicDraft && inputPriceOffer is not null && !request.Method.HasValue)
+            throw new QuoteOperationException("Hãy chọn phương thức báo giá đầu ra.");
+        var method = request.Method ?? quote.Method;
+        if (isBasicDraft && inputPriceOffer is null &&
+            (request.AreaSqm.HasValue || request.UnitPricePerSqm.HasValue ||
+             request.MaterialRateCatalogId.HasValue || request.PricingEffectiveDate.HasValue ||
+             !string.IsNullOrWhiteSpace(request.PackageDescription) ||
+             !string.IsNullOrWhiteSpace(request.RateOverrideReason) ||
+             request.Items.Count > 0 || request.DiscountPercent != 0 || request.VatPercent != 8))
+            throw new QuoteOperationException("Cần chọn báo giá đầu vào đã duyệt trước khi nhập giá đầu ra.");
+        var rate = method == QuoteMethod.UnitCost && (!isBasicDraft || inputPriceOffer is not null)
             ? await ResolveUpdatedRateAsync(quote, request, callerUserId, canOverrideRate, ct)
             : null;
-        var boqRevision = quote.Method == QuoteMethod.Boq
+        var boqRevision = method == QuoteMethod.Boq && (!isBasicDraft || inputPriceOffer is not null)
             ? await ResolveUpdatedBoqRevisionAsync(quote, request, ct)
             : null;
-        var inputPriceOffer = await ResolveInputPriceOfferAsync(request.InputPriceOfferId, quote.OperationalProjectId, ct);
         var appliedUnitPrice = rate?.AppliedUnitPrice ?? request.UnitPricePerSqm;
-        ValidateMethodPayload(quote.Method, request.AreaSqm, appliedUnitPrice, request.Items,
-            request.DiscountPercent, request.VatPercent);
-        if (quote.Method == QuoteMethod.UnitCost) request.UnitPricePerSqm = appliedUnitPrice;
+        if (!isBasicDraft || inputPriceOffer is not null)
+            ValidateMethodPayload(method, request.AreaSqm, appliedUnitPrice, request.Items,
+                request.DiscountPercent, request.VatPercent);
+        if (method == QuoteMethod.UnitCost) request.UnitPricePerSqm = appliedUnitPrice;
 
-        var changes = DetectChanges(quote, request);
+        var changes = DetectChanges(quote, request, method);
         if (rate is not null && (quote.MaterialRateRevisionId != rate.Revision.Id ||
             quote.PricingEffectiveDate != rate.EffectiveDate ||
             quote.CatalogUnitPricePerSqm != rate.CatalogUnitPrice ||
@@ -383,6 +413,7 @@ public class QuoteService(
         }
 
         quote.OwnerUserId = request.OwnerUserId ?? quote.OwnerUserId;
+        quote.Method = method;
         quote.AreaSqm = quote.Method == QuoteMethod.UnitCost ? request.AreaSqm : null;
         quote.UnitPricePerSqm = quote.Method == QuoteMethod.UnitCost ? request.UnitPricePerSqm : null;
         quote.PackageDescription = quote.Method == QuoteMethod.UnitCost
@@ -901,8 +932,8 @@ public class QuoteService(
         }
 
         var from = quote.Status;
-        quote.Status = to;
         beforeSave(quote);
+        quote.Status = to;
 
         var now = DateTime.UtcNow;
         quote.UpdatedAt = now;
@@ -1263,16 +1294,16 @@ public class QuoteService(
         }),
     });
 
-    private static QuoteChangeSet DetectChanges(Quote quote, UpdateQuoteRequest request)
+    private static QuoteChangeSet DetectChanges(Quote quote, UpdateQuoteRequest request, QuoteMethod method)
     {
         // Normalise null to zero before comparing: the frontend sends 0 for a blank
         // field, and without this every save would look like a change.
         static decimal N(decimal? value) => value ?? 0m;
         static string? S(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
-        var material = false;
+        var material = quote.Method != method;
 
-        if (quote.Method == QuoteMethod.UnitCost)
+        if (method == QuoteMethod.UnitCost)
         {
             material |= N(quote.AreaSqm) != N(request.AreaSqm);
             material |= N(quote.UnitPricePerSqm) != N(request.UnitPricePerSqm);

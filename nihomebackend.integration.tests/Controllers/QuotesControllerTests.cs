@@ -63,6 +63,70 @@ public class QuotesControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task BasicDraft_CannotPriceOrSubmitBeforeApprovedInputOffer()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
+        var opportunityId = await CreateOpportunityAsync();
+        await WithDbAsync(async db =>
+        {
+            var opportunity = await db.Opportunities.SingleAsync(item => item.Id == opportunityId);
+            var project = new OperationalProject
+            {
+                Code = $"DB-Q-{Guid.NewGuid():N}"[..18],
+                Name = "Dự án báo giá NICON",
+                CustomerId = opportunity.CustomerId,
+                ProjectManagerUserId = opportunity.OwnerUserId,
+            };
+            db.OperationalProjects.Add(project);
+            await db.SaveChangesAsync();
+            opportunity.OperationalProjectId = project.Id;
+            await db.SaveChangesAsync();
+        });
+
+        var prematureOutputMethod = await Client.PostAsJsonAsync("/api/quotes", new
+        {
+            opportunityId,
+            method = "UnitCost",
+            draftOnly = true,
+            note = "Chờ Cung ứng chào giá đầu vào",
+        });
+        prematureOutputMethod.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        var create = await Client.PostAsJsonAsync("/api/quotes", new
+        {
+            opportunityId,
+            draftOnly = true,
+            note = "Chờ Cung ứng chào giá đầu vào",
+        });
+        create.StatusCode.Should().Be(HttpStatusCode.Created);
+        var draft = await ReadJsonAsync(create);
+        draft.GetProperty("grandTotal").GetDecimal().Should().Be(0);
+        draft.GetProperty("status").GetString().Should().Be("Draft");
+        var quoteId = draft.GetProperty("id").GetInt32();
+        var rowVersion = draft.GetProperty("rowVersion").GetString();
+
+        var prematurePrice = await Client.PutAsJsonAsync($"/api/quotes/{quoteId}", new
+        {
+            rowVersion,
+            areaSqm = 100,
+            unitPricePerSqm = 10_000_000,
+            discountPercent = 0,
+            vatPercent = 8,
+        });
+        prematurePrice.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var prematureMethod = await Client.PutAsJsonAsync($"/api/quotes/{quoteId}", new
+        {
+            rowVersion,
+            method = "Boq",
+        });
+        prematureMethod.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var prematureSubmit = await Client.PostAsJsonAsync($"/api/quotes/{quoteId}/submit", new { rowVersion });
+        prematureSubmit.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await ReadJsonAsync(await Client.GetAsync($"/api/quotes/{quoteId}")))
+            .GetProperty("status").GetString().Should().Be("Draft");
+    }
+
+    [Fact]
     public async Task Create_Concurrently_AssignsDistinctCodes()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));

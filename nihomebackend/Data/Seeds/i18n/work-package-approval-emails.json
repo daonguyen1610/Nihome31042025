@@ -106,10 +106,10 @@
   {
     "key": "approvalEmail.tokens",
     "category": "workPackages",
-    "vi": "Biến hỗ trợ: {{recipientName}} — người chủ trì; {{workPackageCode}} — mã nhóm; {{workPackageName}} — tên nhóm; {{recordType}} — loại hồ sơ; {{recordReference}} — số báo giá hoặc mã nhóm; {{senderName}} — người gửi. HTML phải có {{workPackageCode}} và {{recordReference}}. Xem trước email thực tế trước khi gửi duyệt.",
-    "en": "Variables: {{recipientName}}, {{workPackageCode}}, {{workPackageName}}, {{recordType}}, {{recordReference}} (supplier reference or package code), {{senderName}}. HTML must include {{workPackageCode}} and {{recordReference}}. Preview rendered content before submission.",
-    "zh": "变量：{{recipientName}}、{{workPackageCode}}、{{workPackageName}}、{{recordType}}、{{recordReference}}（报价编号或组代码）、{{senderName}}。HTML必须包含{{workPackageCode}}和{{recordReference}}。提交前预览实际邮件。",
-    "ja": "変数：{{recipientName}}、{{workPackageCode}}、{{workPackageName}}、{{recordType}}、{{recordReference}}（見積番号またはグループコード）、{{senderName}}。HTMLには{{workPackageCode}}と{{recordReference}}が必須です。提出前に実際のメールを確認します。"
+    "vi": "Biến hỗ trợ: {{recipientName}} — người chủ trì; {{workPackageCode}} — mã nhóm; {{workPackageName}} — tên nhóm; {{recordType}} — loại hồ sơ; {{recordReference}} — số báo giá hoặc mã nhóm; {{senderName}} — người gửi; {{workPackageUrl}} — link mở nhóm. HTML phải có mã nhóm, hồ sơ và link dạng <a href=\"{{workPackageUrl}}\">Mở nhóm công việc</a>. Xem trước email thực tế trước khi gửi duyệt.",
+    "en": "Variables: {{recipientName}}, {{workPackageCode}}, {{workPackageName}}, {{recordType}}, {{recordReference}}, {{senderName}}, {{workPackageUrl}}. HTML must contain the package code, record reference, and a link in the form <a href=\"{{workPackageUrl}}\">Open work package</a>. Preview rendered content before submission.",
+    "zh": "变量：{{recipientName}}、{{workPackageCode}}、{{workPackageName}}、{{recordType}}、{{recordReference}}、{{senderName}}、{{workPackageUrl}}。HTML 必须包含组代码、记录编号和 <a href=\"{{workPackageUrl}}\">打开工作组</a> 链接。提交前预览实际邮件。",
+    "ja": "変数：{{recipientName}}、{{workPackageCode}}、{{workPackageName}}、{{recordType}}、{{recordReference}}、{{senderName}}、{{workPackageUrl}}。HTML にはグループコード、書類番号、<a href=\"{{workPackageUrl}}\">業務グループを開く</a> を含めてください。送信前にプレビューを確認してください。"
   },
   {
     "key": "deletionImpact.item.workPackages.approvalEmails",

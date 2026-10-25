@@ -84,6 +84,159 @@ public class QuoteServiceTests : IDisposable
     // ---------------- Create ----------------
 
     [Fact]
+    public async Task BasicDraft_WaitsForApprovedInputPriceBeforeOutputPricing()
+    {
+        var (user, opportunity) = await SeedOpportunityAsync();
+        var created = await _sut.CreateAsync(new CreateQuoteRequest
+        {
+            OpportunityId = opportunity.Id,
+            DraftOnly = true,
+            Note = "Chờ Cung ứng báo giá vật tư cho dự án NICON",
+        }, user.Id, canManage: true);
+
+        Assert.Equal("Draft", created.Status);
+        Assert.Equal(0, created.GrandTotal);
+        Assert.Null(created.InputPriceOfferId);
+        Assert.Null(created.RateOverrideReason);
+
+        await Assert.ThrowsAsync<QuoteOperationException>(() => _sut.UpdateAsync(
+            created.Id, new UpdateQuoteRequest
+            {
+                RowVersion = created.RowVersion,
+                Method = QuoteMethod.Boq,
+                AreaSqm = 100,
+                UnitPricePerSqm = 10_000_000,
+                MaterialRateCatalogId = _rateCatalogId,
+                PricingEffectiveDate = _pricingDate,
+            }, user.Id, canManage: true, canSeeAll: true));
+
+        await Assert.ThrowsAsync<QuoteOperationException>(() => _sut.SubmitAsync(
+            created.Id, new QuoteWorkflowRequest { RowVersion = created.RowVersion },
+            user.Id, canManage: true, canSeeAll: true));
+        Assert.Equal(QuoteStatus.Draft, (await _db.Quotes.SingleAsync(q => q.Id == created.Id)).Status);
+    }
+
+    [Fact]
+    public async Task BasicDraft_RejectsPricingInCreatePayload()
+    {
+        var (user, opportunity) = await SeedOpportunityAsync();
+
+        await Assert.ThrowsAsync<QuoteOperationException>(() => _sut.CreateAsync(
+            new CreateQuoteRequest
+            {
+                OpportunityId = opportunity.Id,
+                DraftOnly = true,
+                AreaSqm = 100,
+            }, user.Id, canManage: true));
+
+        await Assert.ThrowsAsync<QuoteOperationException>(() => _sut.CreateAsync(
+            new CreateQuoteRequest
+            {
+                OpportunityId = opportunity.Id,
+                DraftOnly = true,
+                Method = QuoteMethod.Boq,
+            }, user.Id, canManage: true));
+
+        Assert.Empty(_db.Quotes);
+    }
+
+    [Fact]
+    public async Task BasicDraft_SelectsOutputMethodAfterApprovedProcurementOffer()
+    {
+        var (owner, opportunity) = await SeedOpportunityAsync();
+        var procurementLead = await SeedUserAsync();
+        var group = new RoleGroup { Code = "PROCUREMENT", LabelKey = "rbac.group.procurement" };
+        var vendor = new Vendor
+        {
+            VendorCode = "NICON-SUPPLIER-01",
+            CompanyName = "Công ty Vật liệu Xây dựng NICON",
+            VendorType = VendorType.Supplier,
+            CreatedByUserId = procurementLead.Id,
+        };
+        var package = new DepartmentWorkPackage
+        {
+            Code = "WP-NICON-INPUT-01",
+            Kind = WorkPackageKind.Project,
+            Purpose = WorkPackagePurpose.ProcurementInputPricing,
+            Name = "Giá đầu vào vật tư dự án NICON",
+            OperationalProjectId = opportunity.OperationalProjectId,
+            SourceOpportunityId = opportunity.Id,
+            DepartmentRoleGroup = group,
+            LeadUserId = procurementLead.Id,
+            Status = WorkPackageStatus.Active,
+            CreatedByUserId = owner.Id,
+            UpdatedByUserId = owner.Id,
+        };
+        var offer = new ProcurementInputPriceOffer
+        {
+            WorkPackage = package,
+            Vendor = vendor,
+            SupplierReference = "BG-NICON-INPUT-01",
+            ValidUntil = DateTime.UtcNow.AddDays(30),
+            Status = InputPriceOfferStatus.Approved,
+            CreatedByUserId = procurementLead.Id,
+            UpdatedByUserId = procurementLead.Id,
+            ApprovedByUserId = owner.Id,
+            Lines =
+            [
+                new ProcurementInputPriceLine
+                {
+                    ItemCode = "THEP-01", Description = "Thép kết cấu",
+                    Unit = "kg", Quantity = 100, UnitPrice = 25_000,
+                    Amount = 2_500_000, SortOrder = 1,
+                },
+            ],
+        };
+        _db.ProcurementInputPriceOffers.Add(offer);
+        await _db.SaveChangesAsync();
+
+        var draft = await _sut.CreateAsync(new CreateQuoteRequest
+        {
+            OpportunityId = opportunity.Id,
+            DraftOnly = true,
+        }, owner.Id, canManage: true);
+        await Assert.ThrowsAsync<QuoteOperationException>(() => _sut.UpdateAsync(draft.Id,
+            new UpdateQuoteRequest
+            {
+                RowVersion = draft.RowVersion,
+                InputPriceOfferId = offer.Id,
+                Items =
+                [
+                    new QuoteItemInput { Name = "Thép kết cấu", Unit = "kg", Quantity = 100, UnitPrice = 30_000 },
+                ],
+            }, owner.Id, canManage: true, canSeeAll: true));
+        var priced = await _sut.UpdateAsync(draft.Id, new UpdateQuoteRequest
+        {
+            RowVersion = draft.RowVersion,
+            Method = QuoteMethod.Boq,
+            InputPriceOfferId = offer.Id,
+            Items =
+            [
+                new QuoteItemInput
+                {
+                    ItemCode = "THEP-01", Name = "Thép kết cấu", Unit = "kg",
+                    Quantity = 100, UnitPrice = 30_000,
+                },
+            ],
+        }, owner.Id, canManage: true, canSeeAll: true);
+
+        Assert.Equal(offer.Id, priced!.InputPriceOfferId);
+        Assert.Equal("Boq", priced.Method);
+        Assert.Equal(3_240_000, priced.GrandTotal);
+        Assert.Contains("BG-NICON-INPUT-01", priced.InputPriceSnapshotJson);
+
+        await Assert.ThrowsAsync<QuoteOperationException>(() => _sut.UpdateAsync(draft.Id,
+            new UpdateQuoteRequest
+            {
+                RowVersion = priced.RowVersion,
+                Method = QuoteMethod.UnitCost,
+                InputPriceOfferId = offer.Id,
+                AreaSqm = 100,
+                UnitPricePerSqm = 10_000_000,
+            }, owner.Id, canManage: true, canSeeAll: true));
+    }
+
+    [Fact]
     public async Task CreateAsync_RejectsQuoteOnLostOpportunity()
     {
         var (user, opp) = await SeedOpportunityAsync(OpportunityStage.Lost);
