@@ -11,6 +11,7 @@ test("new quote picker searches all eligible opportunities and shows identifying
   const suffix = Math.random().toString(36).slice(2, 10);
   const marker = `Picker ${suffix}`;
   let customerId = 0;
+  let projectId = 0;
   let opportunityId = 0;
 
   try {
@@ -29,11 +30,21 @@ test("new quote picker searches all eligible opportunities and shows identifying
     });
     expect(customerResponse.status(), await customerResponse.text()).toBe(201);
     customerId = (await customerResponse.json()).id as number;
+    const projectResponse = await api.post("/api/operational-projects", {
+      headers: { ...headers, "Idempotency-Key": crypto.randomUUID() },
+      data: {
+        name: `Dự án cải tạo văn phòng ${marker}`,
+        customerId,
+      },
+    });
+    expect(projectResponse.status(), await projectResponse.text()).toBe(201);
+    projectId = (await projectResponse.json()).id as number;
     const opportunityResponse = await api.post("/api/opportunities", {
       headers,
       data: {
         name: `Cải tạo văn phòng ${marker}`,
         customerId,
+        operationalProjectId: projectId,
         estimatedValue: 2_500_000_000,
         winProbability: 45,
       },
@@ -64,13 +75,15 @@ test("new quote picker searches all eligible opportunities and shows identifying
     const option = page.getByRole("option").filter({ hasText: marker });
     await expect(option).toContainText(`#${opportunityId} · Cải tạo văn phòng ${marker}`);
     await expect(option).toContainText("Khách hàng");
-    await expect(option).toContainText("2.500.000.000 ₫");
+    await expect(option).toContainText("Super Admin");
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
       390,
     );
   } finally {
     if (opportunityId)
       await hardDeleteBusinessRoot(api, headers, `/api/opportunities/${opportunityId}`);
+    if (projectId)
+      await hardDeleteBusinessRoot(api, headers, `/api/operational-projects/${projectId}`);
     if (customerId) await hardDeleteBusinessRoot(api, headers, `/api/customers/${customerId}`);
   }
 });
