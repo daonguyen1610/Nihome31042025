@@ -110,13 +110,17 @@ Yêu cầu MoM §5. Cả ba điểm giao việc dưới đây đều chạy trê
 án" hiện có, không thêm tab hay màn hình riêng.
 
 - **Cung ứng cung cấp giá đầu vào.** Kinh doanh giao nhóm việc mục đích
-  `ProcurementInputPricing` cho phòng Cung ứng, gắn Cơ hội và Dự án dùng chung.
+  `ProcurementInputPricing` cho phòng Cung ứng, gắn Báo giá nháp, Cơ hội và Dự án dùng chung.
   Cung ứng nhập chào giá nhà cung cấp/thầu phụ (dòng hạng mục, số lượng, đơn
   giá, VAT, hiệu lực). Trước hợp đồng Cung ứng chỉ cần thông tin Dự án; hợp đồng
   chưa bắt buộc.
 - **Vòng đời giá đầu vào.** `Draft → Submitted → Approved | Rejected`. Chỉ sửa
   được ở `Draft`/`Rejected`; người lập không được tự duyệt hoặc từ chối. Giá đã
   được báo giá tham chiếu không sửa nữa.
+  Một yêu cầu có thể chứa nhiều chào giá, mỗi chào giá giữ trạng thái duyệt
+  riêng. Trên Báo giá phải xem được yêu cầu đã gắn và trạng thái từng chào giá;
+  quay lại yêu cầu hiện có không tạo nhóm công việc trùng. Trạng thái nhóm việc
+  chỉ biểu thị vòng đời giao việc, không thay thế trạng thái duyệt giá.
 - **Kinh doanh làm báo giá đầu ra từ giá đầu vào.** Theo xác nhận người dùng ngày
   25/10/2026, màn tạo Báo giá mới chỉ nhận Cơ hội thuộc Dự án và
   ghi chú cơ bản. Sau khi tạo bản nháp, Kinh doanh vào chi tiết để yêu cầu giá

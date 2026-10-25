@@ -335,8 +335,11 @@ tender and controls which actions the page offers.
 **Bắt đầu báo giá đầu ra.** Kinh doanh tạo Báo giá mới bằng Cơ hội đã gắn
 Dự án và ghi chú cơ bản. Hệ thống tạo bản nháp chưa có
 giá và mở trang chi tiết. Tại đây chọn **Yêu cầu giá đầu vào** để giao nhóm
-công việc cho Cung ứng. Sau khi Cung ứng gửi duyệt và có báo giá đầu vào
-`Approved` còn hiệu lực, chọn **Lập báo giá đầu ra**, chọn phương thức
+công việc cho Cung ứng. Bấm **Xem yêu cầu giá đầu vào** để mở lại nhóm đã
+liên kết; một nhóm có thể chứa nhiều chào giá nhà cung cấp với trạng thái duyệt
+riêng. Báo giá hiển thị các chào giá này và trạng thái của chúng. Sau khi Cung
+ứng gửi duyệt và có giá đầu vào `Approved` còn hiệu lực, chọn **Lập báo giá đầu
+ra**, chọn phương thức
 **Suất đầu tư** hoặc **BOQ**, gắn nguồn giá đầu vào, nhập diện tích/đơn giá
 hoặc BOQ rồi lưu. Chỉ bản nháp có giá trị hợp lệ mới
 được gửi duyệt nội bộ; yêu cầu Tài chính rà soát sau khi báo giá đã duyệt.

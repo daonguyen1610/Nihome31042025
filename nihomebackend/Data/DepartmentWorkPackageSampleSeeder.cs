@@ -217,15 +217,14 @@ public static class DepartmentWorkPackageSampleSeeder
     {
         const string code = "WP-DEMO-INPUT-PRICE";
         if (db.DepartmentWorkPackages.Any(item => item.Code == code)) return;
-        var project = db.OperationalProjects.OrderBy(item => item.Id).FirstOrDefault();
-        if (project is null) return;
-        var opportunityId = db.Opportunities.Where(item => item.OperationalProjectId == project.Id)
-            .OrderBy(item => item.Id).Select(item => (int?)item.Id).FirstOrDefault();
+        var quote = db.Quotes.Where(item => item.OperationalProjectId != null)
+            .OrderBy(item => item.Id).FirstOrDefault();
+        if (quote?.OperationalProjectId is null) return;
         var groupId = db.RoleGroups.Where(item => item.Code == "PROCUREMENT" && item.IsActive)
             .Select(item => item.Id).FirstOrDefault();
         var leadId = ActiveUserForRole(db, "PROCUREMENT");
         var vendor = db.Vendors.Where(item => item.IsActive).OrderBy(item => item.Id).FirstOrDefault();
-        if (opportunityId is null || groupId == 0 || leadId == 0 || vendor is null) return;
+        if (groupId == 0 || leadId == 0 || vendor is null) return;
 
         var now = DateTime.UtcNow;
         db.DepartmentWorkPackages.Add(new DepartmentWorkPackage
@@ -233,10 +232,11 @@ public static class DepartmentWorkPackageSampleSeeder
             Code = code,
             Kind = WorkPackageKind.Project,
             Purpose = WorkPackagePurpose.ProcurementInputPricing,
-            Name = "Cung ứng giá đầu vào – dự án văn phòng NICON",
+            Name = $"Cung ứng giá đầu vào cho báo giá {quote.Code}",
             Description = "Thu thập và duyệt giá nhà cung cấp/thầu phụ trước khi Kinh doanh lập báo giá đầu ra.",
-            OperationalProjectId = project.Id,
-            SourceOpportunityId = opportunityId,
+            OperationalProjectId = quote.OperationalProjectId,
+            SourceOpportunityId = quote.OpportunityId,
+            SourceQuoteId = quote.Id,
             DepartmentRoleGroupId = groupId,
             LeadUserId = leadId,
             Status = WorkPackageStatus.Active,
@@ -266,6 +266,23 @@ public static class DepartmentWorkPackageSampleSeeder
                     [
                         new ProcurementInputPriceLine { ItemCode = "MEP-CABLE-01", Description = "Cáp điện chống cháy", Unit = "m", Quantity = 1200, UnitPrice = 85000, VatPercent = 10, Amount = 102000000, SortOrder = 1 },
                         new ProcurementInputPriceLine { ItemCode = "MEP-TRAY-01", Description = "Máng cáp mạ kẽm", Unit = "m", Quantity = 350, UnitPrice = 240000, VatPercent = 10, Amount = 84000000, SortOrder = 2 },
+                    ],
+                },
+                new ProcurementInputPriceOffer
+                {
+                    VendorId = vendor.Id,
+                    SupplierReference = "NCC-NICON-2026-043",
+                    Currency = "VND",
+                    ValidUntil = now.AddDays(25),
+                    Status = InputPriceOfferStatus.Draft,
+                    Note = "Phương án cáp và máng cáp thay thế đang được Cung ứng hoàn thiện trước khi gửi duyệt.",
+                    CreatedAt = now.AddDays(-1),
+                    CreatedByUserId = actorId,
+                    UpdatedAt = now.AddDays(-1),
+                    UpdatedByUserId = actorId,
+                    Lines =
+                    [
+                        new ProcurementInputPriceLine { ItemCode = "MEP-CABLE-ALT-01", Description = "Cáp chống cháy phương án thay thế", Unit = "m", Quantity = 1200, UnitPrice = 82000, VatPercent = 10, Amount = 98400000, SortOrder = 1 },
                     ],
                 },
             ],

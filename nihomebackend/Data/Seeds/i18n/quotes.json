@@ -233,6 +233,9 @@
   {"key":"quotes.email.attachment","category":"quotes","vi":"File Excel đính kèm","en":"Excel attachment","zh":"Excel 附件","ja":"Excel 添付ファイル"},
   {"key":"quotes.action.downloadExcel","category":"quotes","vi":"Tải Excel báo giá","en":"Download quote Excel","zh":"下载报价 Excel","ja":"見積Excelをダウンロード"}
   ,{"key":"quotes.action.requestInputPrice","category":"quotes","vi":"Yêu cầu giá đầu vào","en":"Request input pricing","zh":"请求输入报价","ja":"原価見積を依頼"}
+  ,{"key":"quotes.action.viewInputPriceRequest","category":"quotes","vi":"Xem yêu cầu giá đầu vào","en":"View input pricing request","zh":"查看输入报价请求","ja":"原価見積依頼を表示"}
+  ,{"key":"quotes.inputPrice.requests","category":"quotes","vi":"Yêu cầu giá đầu vào của báo giá","en":"Input pricing requests for this quote","zh":"本报价的输入报价请求","ja":"この見積の原価見積依頼"}
+  ,{"key":"quotes.inputPrice.requestHelp","category":"quotes","vi":"Mỗi yêu cầu có thể có nhiều chào giá nhà cung cấp với trạng thái duyệt riêng.","en":"Each request may have multiple supplier offers with separate approval statuses.","zh":"每个请求可包含多个供应商报价，各有独立的审批状态。","ja":"各依頼には承認状態が異なる複数の仕入先見積を登録できます。"}
   ,{"key":"quotes.action.requestFinanceReview","category":"quotes","vi":"Yêu cầu Tài chính rà soát","en":"Request finance review","zh":"请求财务审查","ja":"財務レビューを依頼"}
   ,{"key":"quotes.field.inputPriceOffer","category":"quotes","vi":"Nguồn giá đầu vào đã duyệt","en":"Approved input price source","zh":"已批准的输入价格来源","ja":"承認済み原価ソース"}
   ,{"key":"quotes.inputPrice.none","category":"quotes","vi":"Chưa gắn báo giá đầu vào","en":"No input offer linked","zh":"未关联输入报价","ja":"原価見積未連携"}

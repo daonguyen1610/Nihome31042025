@@ -82,6 +82,7 @@ import {
   type MaterialRateRevisionResponse,
   type DeletionImpactResponse,
   type InputPriceOfferResponse,
+  type DepartmentWorkPackageResponse,
 } from "@/services/adminApi";
 
 const STATUS_STYLES: Record<QuoteStatus, string> = {
@@ -184,6 +185,7 @@ const AdminQuoteDetail = () => {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<UpdateQuoteRequest | null>(null);
   const [approvedInputOffers, setApprovedInputOffers] = useState<InputPriceOfferResponse[]>([]);
+  const [inputPricePackages, setInputPricePackages] = useState<DepartmentWorkPackageResponse[]>([]);
   const [inputOffersUnavailable, setInputOffersUnavailable] = useState(false);
   const [saving, setSaving] = useState(false);
   const [effectiveRevision, setEffectiveRevision] = useState<MaterialRateRevisionResponse | null>(
@@ -227,8 +229,8 @@ const AdminQuoteDetail = () => {
       setQuote(data);
       setForm(toFormState(data));
       setInputOffersUnavailable(false);
-      // Read every Procurement package on the shared project. A lookup failure
-      // keeps the quote visible but blocks first pricing with a clear message.
+      // Show requests tied to this quote. Keep legacy opportunity-level offers
+      // selectable so existing quotes can still be priced after this change.
       if (data.operationalProjectId && canViewWorkPackages) {
         try {
           const packages = [];
@@ -244,18 +246,29 @@ const AdminQuoteDetail = () => {
             if (page * response.data.pageSize >= response.data.totalCount) break;
             page += 1;
           }
+          const linkedPackages = packages.filter(
+            (item) => item.sourceQuoteId === data.id && item.status !== "Cancelled",
+          );
+          setInputPricePackages(linkedPackages);
           setApprovedInputOffers(
             packages
+              .filter(
+                (item) =>
+                  item.sourceQuoteId === data.id ||
+                  (item.sourceQuoteId == null && item.sourceOpportunityId === data.opportunityId),
+              )
               .flatMap((item) => item.inputPriceOffers)
               .filter(
                 (offer) => offer.status === "Approved" && new Date(offer.validUntil) >= new Date(),
               ),
           );
         } catch {
+          setInputPricePackages([]);
           setApprovedInputOffers([]);
           setInputOffersUnavailable(true);
         }
       } else {
+        setInputPricePackages([]);
         setApprovedInputOffers([]);
         setInputOffersUnavailable(!canViewWorkPackages);
       }
@@ -656,6 +669,8 @@ const AdminQuoteDetail = () => {
     quote.status === "Cancelled";
   const showEditToggle =
     canManage && !editing && !isTerminal && (!awaitingInputPrice || approvedInputOffers.length > 0);
+  const primaryInputPackage =
+    inputPricePackages.find((item) => item.status !== "Completed") ?? inputPricePackages[0];
 
   // A quote the customer or an approver has signed off on is the point where a
   // contract can be raised from it.
@@ -714,10 +729,22 @@ const AdminQuoteDetail = () => {
               {quote.status === "Draft" && (
                 <Button variant="outline" asChild>
                   <Link
-                    to={`/admin/work-packages?create=1&purpose=ProcurementInputPricing&projectId=${quote.operationalProjectId}&opportunityId=${quote.opportunityId}`}
+                    to={
+                      primaryInputPackage
+                        ? `/admin/work-packages/${primaryInputPackage.id}`
+                        : `/admin/work-packages?create=1&purpose=ProcurementInputPricing&projectId=${quote.operationalProjectId}&opportunityId=${quote.opportunityId}&quoteId=${quote.id}`
+                    }
                   >
-                    <Plus className="mr-1.5 h-4 w-4" />
-                    {t("quotes.action.requestInputPrice")}
+                    {primaryInputPackage ? (
+                      <Link2 className="mr-1.5 h-4 w-4" />
+                    ) : (
+                      <Plus className="mr-1.5 h-4 w-4" />
+                    )}
+                    {t(
+                      primaryInputPackage
+                        ? "quotes.action.viewInputPriceRequest"
+                        : "quotes.action.requestInputPrice",
+                    )}
                   </Link>
                 </Button>
               )}
@@ -836,6 +863,68 @@ const AdminQuoteDetail = () => {
                 : "quotes.inputPrice.awaitingApproval",
           )}
         </div>
+      )}
+
+      {inputPricePackages.length > 0 && (
+        <section
+          className="mb-4 overflow-hidden rounded-xl border bg-card"
+          data-testid="quote-input-requests"
+        >
+          <div className="border-b p-4">
+            <h2 className="font-semibold">{t("quotes.inputPrice.requests")}</h2>
+            <p className="text-sm text-muted-foreground">{t("quotes.inputPrice.requestHelp")}</p>
+          </div>
+          <div className="divide-y">
+            {inputPricePackages.map((item) => (
+              <div key={item.id} className="space-y-3 p-4" data-testid="quote-input-request">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <Link
+                    className="min-w-0 font-medium text-primary hover:underline"
+                    to={`/admin/work-packages/${item.id}`}
+                  >
+                    {item.code} · {item.name}
+                  </Link>
+                  <Badge variant="outline">{t(`workPackages.status.${item.status}`)}</Badge>
+                </div>
+                {item.inputPriceOffers.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    {t("workPackages.inputPrice.empty")}
+                  </p>
+                ) : (
+                  <>
+                    <div className="flex flex-wrap gap-2 text-xs">
+                      {(["Draft", "Submitted", "Approved", "Rejected"] as const).map((status) => {
+                        const count = item.inputPriceOffers.filter(
+                          (offer) => offer.status === status,
+                        ).length;
+                        return count > 0 ? (
+                          <Badge key={status} variant="secondary">
+                            {t(`workPackages.businessStatus.${status}`)}: {count}
+                          </Badge>
+                        ) : null;
+                      })}
+                    </div>
+                    <div className="divide-y rounded-lg border text-sm">
+                      {item.inputPriceOffers.map((offer) => (
+                        <div
+                          key={offer.id}
+                          className="flex flex-col gap-1 p-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3"
+                        >
+                          <span className="min-w-0 break-words">
+                            {offer.vendorName} · {offer.supplierReference}
+                          </span>
+                          <Badge className="w-fit shrink-0" variant="outline">
+                            {t(`workPackages.businessStatus.${offer.status}`)}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
       )}
 
       {/* ---------- Meta strip ---------- */}
