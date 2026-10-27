@@ -2376,6 +2376,22 @@
     "ja": "営業チームを統括し、見積・契約を承認し、顧客パイプラインを管理します。"
   },
   {
+    "key": "rbac.role.DESIGN_MANAGER.label",
+    "category": "rbac",
+    "vi": "Chủ nhiệm thiết kế",
+    "en": "Design Manager",
+    "zh": "设计经理",
+    "ja": "デザインマネージャー"
+  },
+  {
+    "key": "rbac.role.DESIGN_MANAGER.description",
+    "category": "rbac",
+    "vi": "Quản lý nhiều nhóm thiết kế, điều phối hồ sơ, nhà cung cấp và hợp đồng thầu phụ thiết kế.",
+    "en": "Leads multiple design teams and coordinates design dossiers, vendors, and design subcontractor contracts.",
+    "zh": "管理多个设计团队，并协调设计档案、供应商和设计分包合同。",
+    "ja": "複数の設計チームを統括し、設計資料、取引先、設計下請契約を調整します。"
+  },
+  {
     "key": "rbac.role.DESIGN_LEAD.label",
     "category": "rbac",
     "vi": "Trưởng phòng Thiết kế",

@@ -10,6 +10,11 @@ export const TEST_USERS = {
   sale: { phoneNumber: "0911000003", password: "Admin@123", role: "SALE" },
   salesManager: { phoneNumber: "0911000010", password: "Admin@123", role: "SALES_MANAGER" },
   design: { phoneNumber: "0911000004", password: "Admin@123", role: "DESIGN" },
+  designManager: {
+    phoneNumber: "0911000021",
+    password: "Admin@123",
+    role: "DESIGN_MANAGER",
+  },
   designLead: { phoneNumber: "0911000011", password: "Admin@123", role: "DESIGN_LEAD" },
   architect: { phoneNumber: "0911000012", password: "Admin@123", role: "ARCHITECT" },
   mepEngineer: { phoneNumber: "0911000013", password: "Admin@123", role: "MEP_ENGINEER" },

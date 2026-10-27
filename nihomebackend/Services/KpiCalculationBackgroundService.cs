@@ -77,6 +77,6 @@ public sealed class KpiCalculationBackgroundService(
 
     internal static bool HasKpiPosition(string roleCode) => roleCode is
         "SALE" or "SALES_MANAGER" or
-        "DESIGN" or "DESIGN_LEAD" or "ARCHITECT" or "MEP_ENGINEER" or "STRUCT_ENGINEER" or
+        "DESIGN" or "DESIGN_MANAGER" or "DESIGN_LEAD" or "ARCHITECT" or "MEP_ENGINEER" or "STRUCT_ENGINEER" or
         "PM" or "QS" or "PROCUREMENT" or "ACCOUNTANT";
 }

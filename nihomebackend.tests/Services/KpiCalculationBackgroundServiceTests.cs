@@ -18,6 +18,7 @@ public class KpiCalculationBackgroundServiceTests
     }
 
     [Theory]
+    [InlineData("DESIGN_MANAGER", "DESIGN")]
     [InlineData("PROCUREMENT", "PROCUREMENT")]
     [InlineData("QS", "TENDERING")]
     public void KpiPosition_MapsApprovedBusinessRoles(string roleCode, string expectedPosition)

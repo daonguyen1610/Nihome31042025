@@ -81,6 +81,7 @@ public class RbacControllerTests : IntegrationTestBase
         codes.Should().Contain("SUPER_ADMIN");
         codes.Should().Contain("ADMIN");
         codes.Should().Contain("USER");
+        codes.Should().Contain("DESIGN_MANAGER");
     }
 
     [Fact]
@@ -96,7 +97,7 @@ public class RbacControllerTests : IntegrationTestBase
         groups.Select(group => group.GetProperty("code").GetString())
             .Should().Equal("CRM", "HR", "PROCUREMENT", "CONSTRUCTION", "DESIGN", "FINANCE");
         groups.Select(group => group.GetProperty("roleCount").GetInt32())
-            .Should().Equal(2, 1, 2, 5, 5, 1);
+            .Should().Equal(2, 1, 2, 5, 6, 1);
     }
 
     [Fact]

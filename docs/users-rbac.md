@@ -1,6 +1,6 @@
 # Users Section RBAC
 
-Date: 2026-05-16 (updated 2026-10-15 for NICON role groups)
+Date: 2026-05-16 (updated 2026-10-27 for Design Manager)
 
 ## Overview
 
@@ -61,7 +61,7 @@ access are applied independently; seeing a Contract never expands Lead scope.
 | Business roles (`SALE`, `DESIGN`, …) | Seeded once via `Role.InitialPermissionsSeeded`; subsequent edits in the admin matrix editor are preserved on restart. | Yes |
 
 The current business-role catalog contains `SALE`, `SALES_MANAGER`, `DESIGN`,
-`DESIGN_LEAD`, `ARCHITECT`, `MEP_ENGINEER`, `STRUCT_ENGINEER`, `PM`,
+`DESIGN_MANAGER`, `DESIGN_LEAD`, `ARCHITECT`, `MEP_ENGINEER`, `STRUCT_ENGINEER`, `PM`,
 `SITE_COMMANDER`, `SITE_QAQC`, `LEGAL_OFFICER`, `QS`, `PROCUREMENT`,
 `ACCOUNTANT`, `HR`, `WAREHOUSE`, and `BGD`.
 Authorized administrators may also create or delete non-system roles and edit
@@ -97,7 +97,7 @@ role writes use the same anti-escalation rule: the actor cannot grant a
 permission they do not currently hold. System roles cannot be assigned to a
 business group.
 
-These 17 role codes are access-control bundles, not the NICON 11-position KPI
+These 18 role codes are access-control bundles, not the NICON 11-position KPI
 framework. The current KPI service maps several roles into six broad scorecards;
 that does not prove distinct PM CM, BCH, Field/QA-QC or Site QS responsibilities.
 Do not infer role semantics from KPI mapping or merge roles merely to make the
@@ -105,10 +105,12 @@ counts equal.
 
 ### Design approval and deletion permissions
 
-`DESIGN` is the seeded Design Manager baseline and includes project/schedule,
-IFC, vendor and downstream-contract access needed to coordinate design
-subcontractors. Task approval is not implied by that role: the API compares the
-current user to the task's single assigned approver. Internal review recipients
+`DESIGN_MANAGER` is the seeded Chủ nhiệm thiết kế role. It strictly includes
+the default `DESIGN_LEAD` permission set and adds vendor management, RFQ
+negotiation/export, downstream-contract visibility, and permanent deletion of
+failed design records. The legacy `DESIGN` role remains a general design role.
+Task approval is not implied by either role: the API compares the current user
+to the task's single assigned approver. Internal review recipients
 receive record-scoped view/comment access only when explicitly listed.
 Recipient candidates require the active capability `design.reviews.receive`,
 not a fixed role code. Defaults grant it to SALE, SALES_MANAGER, PM and BGD;
@@ -117,9 +119,9 @@ same capability without gaining project-wide view or approval. Existing edited
 group baselines are preserved and must be configured explicitly if required.
 
 Permanent deletion of failed design records is separated into
-`design.records.hard-delete`. It is seeded only to `BGD` and the full
-`SUPER_ADMIN` catalog; ordinary Design Manager/Design Lead permissions do not
-grant it. The server additionally restricts deletion to failed/terminal
+`design.records.hard-delete`. It is seeded to `DESIGN_MANAGER`, `BGD`, and the
+full `SUPER_ADMIN` catalog; `DESIGN_LEAD` and the legacy `DESIGN` role do not
+receive it. The server additionally restricts deletion to failed/terminal
 `Discarded`, `Rejected`, or `Cancelled` records.
 Startup also removes the earlier accidental hard-delete grant from existing
 DESIGN_LEAD roles; ADMIN is corrected by system-role synchronization. Other
@@ -465,7 +467,7 @@ The same endpoints are also exposed below `/api/v1/handover-records`. Unauthoriz
 Development and integration seeders provide deterministic accounts for the system and business roles used by manual smoke, integration, and Playwright tests. Account identifiers and development credentials are defined in `DbSeeder`, `BusinessRoleUserSeeder`, integration `TestDataSeeder`, and `nihomeweb/e2e/fixtures/auth.ts`; keep those sources aligned rather than duplicating secrets here.
 
 The development seed now provides a deterministic login for every declared
-business role: `SALE`, `SALES_MANAGER`, `DESIGN`, `DESIGN_LEAD`, `ARCHITECT`,
+business role: `SALE`, `SALES_MANAGER`, `DESIGN`, `DESIGN_MANAGER`, `DESIGN_LEAD`, `ARCHITECT`,
 `MEP_ENGINEER`, `STRUCT_ENGINEER`, `PM`, `SITE_COMMANDER`, `SITE_QAQC`,
 `LEGAL_OFFICER`, `QS`, `PROCUREMENT`, `ACCOUNTANT`, `HR`, `WAREHOUSE`, and
 `BGD`. Integration tests additionally provide a deterministic `USER` account.

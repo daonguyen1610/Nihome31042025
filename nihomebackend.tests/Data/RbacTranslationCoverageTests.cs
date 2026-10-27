@@ -51,6 +51,15 @@ public sealed class RbacTranslationCoverageTests : IDisposable
         Assert.Empty(missing);
     }
 
+    [Fact]
+    public void Seed_EveryBusinessRoleHasLabelAndDescriptionInAllLanguages()
+    {
+        var missing = RequiredKeysMissingTranslations(RbacSeedData.Default.BusinessRoles
+            .SelectMany(role => new[] { role.LabelKey, role.DescriptionKey }));
+
+        Assert.Empty(missing);
+    }
+
     private static IReadOnlyList<PermissionCatalog.Entry> Catalog() =>
         PermissionCatalog.Resolve(RbacSeedData.Default.BaseCatalog, PermissionDiscovery.Discover());
 
