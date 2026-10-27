@@ -184,5 +184,14 @@ public sealed class TranslationSeederTests : IDisposable
         }
     }
 
+    [Fact]
+    public void Seed_DesignLead_UsesTeamLeadTerminologyInVietnamese()
+    {
+        TranslationSeeder.Seed(_db);
+
+        Assert.Equal("Trưởng nhóm thiết kế", _db.Translations.Single(item =>
+            item.Key == "rbac.role.DESIGN_LEAD.label" && item.LanguageCode == "vi").Value);
+    }
+
     public void Dispose() => _db.Dispose();
 }

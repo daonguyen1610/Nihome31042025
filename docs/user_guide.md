@@ -1901,7 +1901,7 @@ The seeded role catalog is implemented and can be adjusted through **Admin > Rol
 | Role | Module Access |
 |------|---------------|
 | `SALE`, `SALES_MANAGER` | CRM, quotations, tenders, surveys, and contracts according to assigned permissions |
-| `DESIGN_MANAGER` | All default Design Lead access, plus vendor/RFQ coordination, downstream subcontract visibility, and permanent deletion of failed design records |
+| `DESIGN_MANAGER` | All default Design Lead access, plus vendor/RFQ coordination and downstream subcontract visibility; permanent design-record deletion remains restricted pending Q-08 |
 | `DESIGN`, `DESIGN_LEAD`, `ARCHITECT`, `MEP_ENGINEER`, `STRUCT_ENGINEER` | Design projects and discipline workflows according to assigned permissions |
 | `PM`, `SITE_COMMANDER`, `SITE_QAQC`, `LEGAL_OFFICER` | CM preparation/review, BCH site operations, QA/QC, permitting, and construction workflows according to assigned permissions |
 | `QS`, `PROCUREMENT`, `ACCOUNTANT`, `WAREHOUSE` | Site QS/tendering, procurement, finance-adjacent, and operational access currently present in the catalog |

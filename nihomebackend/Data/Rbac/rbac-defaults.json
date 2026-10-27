@@ -434,7 +434,7 @@
       ]
     },
     "DESIGN_MANAGER": {
-      "deny": ["design.reviews.receive"],
+      "deny": ["design.records.hard-delete", "design.reviews.receive"],
       "patterns": [
         "dashboard.view",
         "content.**",
