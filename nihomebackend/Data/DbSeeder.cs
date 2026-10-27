@@ -256,6 +256,7 @@ public static class DbSeeder
         ("SALE", "0911000003", "Nguyễn Minh Anh", "minh.anh.sale@nihome.vn", "Sale Tester", "sale.test@nihome.vn"),
         ("SALES_MANAGER", "0911000010", "Trần Quốc Huy", "quoc.huy.sales@nihome.vn", "Sales Manager Tester", "sales.manager.test@nihome.vn"),
         ("DESIGN", "0911000004", "Lê Hoàng Nam", "hoang.nam.design@nihome.vn", "Design Tester", "design.test@nihome.vn"),
+        ("DESIGN_MANAGER", "0911000021", "Nguyễn Hoàng Yến", "hoang.yen.design.manager@nihome.vn", null, null),
         ("DESIGN_LEAD", "0911000011", "Phạm Thu Hà", "thu.ha.design@nihome.vn", null, null),
         ("ARCHITECT", "0911000012", "Vũ Đức Long", "duc.long.architect@nihome.vn", null, null),
         ("MEP_ENGINEER", "0911000013", "Đỗ Thành Công", "thanh.cong.mep@nihome.vn", null, null),

@@ -739,7 +739,7 @@ public sealed class KpiService(AppDbContext db, INotificationService notificatio
     internal static string KpiPosition(string roleCode) => roleCode switch
     {
         "SALE" or "SALES_MANAGER" => "SALES",
-        "DESIGN" or "DESIGN_LEAD" or "ARCHITECT" or "MEP_ENGINEER" or "STRUCT_ENGINEER" => "DESIGN",
+        "DESIGN" or "DESIGN_MANAGER" or "DESIGN_LEAD" or "ARCHITECT" or "MEP_ENGINEER" or "STRUCT_ENGINEER" => "DESIGN",
         "PM" => "SITE",
         "QS" => "TENDERING",
         "PROCUREMENT" => "PROCUREMENT",

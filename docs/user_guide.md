@@ -1852,7 +1852,7 @@ The current seed contains 19 metrics across six scorecard groups:
 |---|---|
 | Sales | `SALE`, `SALES_MANAGER` |
 | Tendering | `QS` |
-| Design | `DESIGN`, `DESIGN_LEAD`, `ARCHITECT`, `MEP_ENGINEER`, `STRUCT_ENGINEER` |
+| Design | `DESIGN`, `DESIGN_MANAGER`, `DESIGN_LEAD`, `ARCHITECT`, `MEP_ENGINEER`, `STRUCT_ENGINEER` |
 | Site | `PM` |
 | Procurement | `PROCUREMENT` |
 | Project Accounting | `ACCOUNTANT` |
@@ -1901,7 +1901,8 @@ The seeded role catalog is implemented and can be adjusted through **Admin > Rol
 | Role | Module Access |
 |------|---------------|
 | `SALE`, `SALES_MANAGER` | CRM, quotations, tenders, surveys, and contracts according to assigned permissions |
-| `DESIGN`, `DESIGN_LEAD`, `ARCHITECT`, `MEP_ENGINEER`, `STRUCT_ENGINEER` | Design projects and discipline workflows |
+| `DESIGN_MANAGER` | All default Design Lead access, plus vendor/RFQ coordination, downstream subcontract visibility, and permanent deletion of failed design records |
+| `DESIGN`, `DESIGN_LEAD`, `ARCHITECT`, `MEP_ENGINEER`, `STRUCT_ENGINEER` | Design projects and discipline workflows according to assigned permissions |
 | `PM`, `SITE_COMMANDER`, `SITE_QAQC`, `LEGAL_OFFICER` | CM preparation/review, BCH site operations, QA/QC, permitting, and construction workflows according to assigned permissions |
 | `QS`, `PROCUREMENT`, `ACCOUNTANT`, `WAREHOUSE` | Site QS/tendering, procurement, finance-adjacent, and operational access currently present in the catalog |
 | `HR` | Recruitment applications, positions, recruitment options, contacts, and shared master data; no Finance payment or approval permission |

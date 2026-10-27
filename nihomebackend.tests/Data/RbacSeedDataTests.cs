@@ -85,7 +85,7 @@ public class RbacSeedDataTests
     public static readonly TheoryData<string> NiconBusinessRoles = new()
     {
         "SALE", "SALES_MANAGER",
-        "DESIGN", "DESIGN_LEAD",
+        "DESIGN", "DESIGN_MANAGER", "DESIGN_LEAD",
         "ARCHITECT", "MEP_ENGINEER", "STRUCT_ENGINEER",
         "PM", "LEGAL_OFFICER",
         "QS", "PROCUREMENT", "ACCOUNTANT", "HR", "WAREHOUSE", "BGD",
@@ -195,6 +195,26 @@ public class RbacSeedDataTests
         Assert.Contains("design.shop.approve", expanded);
         Assert.Contains("design.ifc.release", expanded);
         Assert.Contains("design.schedule.manage", expanded);
+    }
+
+    [Fact]
+    public void DesignManager_StrictlyIncludesDesignLeadPermissionsAndManagesDesignSubcontractors()
+    {
+        var bundle = RbacSeedData.Default;
+        var allCodes = bundle.BaseCatalog.Select(entry => entry.Code).ToList();
+        var managerDefaults = bundle.RolePermissions["DESIGN_MANAGER"];
+        var leadDefaults = bundle.RolePermissions["DESIGN_LEAD"];
+        var manager = PermissionCatalog.ExpandPatterns(
+            managerDefaults.Patterns, allCodes, managerDefaults.Deny);
+        var lead = PermissionCatalog.ExpandPatterns(
+            leadDefaults.Patterns, allCodes, leadDefaults.Deny);
+
+        Assert.True(manager.IsProperSupersetOf(lead));
+        Assert.Contains("proc.vendors.manage", manager);
+        Assert.Contains("proc.rfqs.manage", manager);
+        Assert.Contains("crm.contracts.view.downstream.all", manager);
+        Assert.Contains("design.records.hard-delete", manager);
+        Assert.DoesNotContain("design.reviews.receive", manager);
     }
 
     [Fact]

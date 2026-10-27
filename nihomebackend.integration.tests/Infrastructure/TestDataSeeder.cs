@@ -29,6 +29,7 @@ public static class TestDataSeeder
             ["SALE"] = "0911000003",
             ["SALES_MANAGER"] = "0911000010",
             ["DESIGN"] = "0911000004",
+            ["DESIGN_MANAGER"] = "0911000021",
             ["DESIGN_LEAD"] = "0911000011",
             ["ARCHITECT"] = "0911000012",
             ["MEP_ENGINEER"] = "0911000013",

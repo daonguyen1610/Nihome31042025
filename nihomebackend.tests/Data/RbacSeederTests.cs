@@ -104,6 +104,7 @@ public class RbacSeederTests : IDisposable
 
         Assert.Equal("CRM", groupByRole["SALE"]);
         Assert.Equal("CONSTRUCTION", groupByRole["LEGAL_OFFICER"]);
+        Assert.Equal("DESIGN", groupByRole["DESIGN_MANAGER"]);
         Assert.Equal("DESIGN", groupByRole["DESIGN_LEAD"]);
         Assert.Equal("PROCUREMENT", groupByRole["WAREHOUSE"]);
         Assert.Equal("PROCUREMENT", groupByRole["PROCUREMENT"]);
