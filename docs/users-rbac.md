@@ -107,8 +107,8 @@ counts equal.
 
 `DESIGN_MANAGER` is the seeded Chủ nhiệm thiết kế role. It strictly includes
 the default `DESIGN_LEAD` permission set and adds vendor management, RFQ
-negotiation/export, downstream-contract visibility, and permanent deletion of
-failed design records. The legacy `DESIGN` role remains a general design role.
+negotiation/export, and downstream-contract visibility. The legacy `DESIGN`
+role remains a general design role.
 Task approval is not implied by either role: the API compares the current user
 to the task's single assigned approver. Internal review recipients
 receive record-scoped view/comment access only when explicitly listed.
@@ -119,9 +119,10 @@ same capability without gaining project-wide view or approval. Existing edited
 group baselines are preserved and must be configured explicitly if required.
 
 Permanent deletion of failed design records is separated into
-`design.records.hard-delete`. It is seeded to `DESIGN_MANAGER`, `BGD`, and the
-full `SUPER_ADMIN` catalog; `DESIGN_LEAD` and the legacy `DESIGN` role do not
-receive it. The server additionally restricts deletion to failed/terminal
+`design.records.hard-delete`. It is seeded only to `BGD` and the full
+`SUPER_ADMIN` catalog; `DESIGN_MANAGER`, `DESIGN_LEAD`, and the legacy `DESIGN`
+role do not receive it while Q-08 in the 03/10 meeting plan remains open. The
+server additionally restricts deletion to failed/terminal
 `Discarded`, `Rejected`, or `Cancelled` records.
 Startup also removes the earlier accidental hard-delete grant from existing
 DESIGN_LEAD roles; ADMIN is corrected by system-role synchronization. Other

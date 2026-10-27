@@ -205,15 +205,15 @@ public class RbacSeedDataTests
         var managerDefaults = bundle.RolePermissions["DESIGN_MANAGER"];
         var leadDefaults = bundle.RolePermissions["DESIGN_LEAD"];
         var manager = PermissionCatalog.ExpandPatterns(
-            managerDefaults.Patterns, allCodes, managerDefaults.Deny);
+            managerDefaults.Patterns, allCodes, managerDefaults.Deny).ToHashSet();
         var lead = PermissionCatalog.ExpandPatterns(
-            leadDefaults.Patterns, allCodes, leadDefaults.Deny);
+            leadDefaults.Patterns, allCodes, leadDefaults.Deny).ToHashSet();
 
         Assert.True(manager.IsProperSupersetOf(lead));
         Assert.Contains("proc.vendors.manage", manager);
         Assert.Contains("proc.rfqs.manage", manager);
         Assert.Contains("crm.contracts.view.downstream.all", manager);
-        Assert.Contains("design.records.hard-delete", manager);
+        Assert.DoesNotContain("design.records.hard-delete", manager);
         Assert.DoesNotContain("design.reviews.receive", manager);
     }
 

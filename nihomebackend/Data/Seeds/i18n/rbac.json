@@ -2394,7 +2394,7 @@
   {
     "key": "rbac.role.DESIGN_LEAD.label",
     "category": "rbac",
-    "vi": "Trưởng phòng Thiết kế",
+    "vi": "Trưởng nhóm thiết kế",
     "en": "Design Lead",
     "zh": "设计主管",
     "ja": "設計リーダー"
