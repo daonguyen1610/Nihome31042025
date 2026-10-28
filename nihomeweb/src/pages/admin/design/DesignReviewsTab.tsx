@@ -166,15 +166,14 @@ export const DesignReviewsTab = ({ project, recipientProjectId, focusedReviewId 
     }
   }, [focusedReviewId, loading, reviews]);
 
-  const eligibleDocuments = useMemo(
+  const stageDocuments = useMemo(
     () =>
       documents
         .filter(
           (item) =>
             item.category === categoryByStage[stage] &&
             item.sourceEntityType === sourceTypeByStage[stage] &&
-            item.sourceRecordId &&
-            item.syncStatus === "Synced",
+            item.sourceRecordId,
         )
         .filter(
           (item) =>
@@ -185,6 +184,13 @@ export const DesignReviewsTab = ({ project, recipientProjectId, focusedReviewId 
         ),
     [documents, stage, conceptRevisionId, conceptRevisions],
   );
+  useEffect(() => {
+    setDocumentIds((selected) =>
+      selected.filter((id) =>
+        stageDocuments.some((document) => document.id === id && document.syncStatus === "Synced"),
+      ),
+    );
+  }, [stageDocuments]);
   const recipients = recipientCandidates;
   const toggle = <T extends number>(items: T[], value: T, checked: boolean) =>
     checked ? [...items, value] : items.filter((item) => item !== value);
@@ -879,20 +885,59 @@ export const DesignReviewsTab = ({ project, recipientProjectId, focusedReviewId 
               <legend className="text-sm font-medium">
                 {t("designProjects.reviews.documents")}
               </legend>
+              <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
+                <p className="text-xs text-slate-500">
+                  {t("designProjects.reviews.documentsHelp")}
+                </p>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={refreshing}
+                  onClick={() => void load()}
+                >
+                  <RefreshCw
+                    aria-hidden="true"
+                    className={refreshing ? "mr-1 h-4 w-4 animate-spin" : "mr-1 h-4 w-4"}
+                  />
+                  {t("designProjects.reviews.refreshDocuments")}
+                </Button>
+              </div>
               <div className="mt-1 max-h-44 overflow-y-auto rounded-md border p-2">
-                {eligibleDocuments.map((document) => (
-                  <label key={document.id} className="flex min-h-11 items-center gap-3 px-2">
+                {stageDocuments.map((document) => (
+                  <label
+                    key={document.id}
+                    data-testid={`review-document-${document.id}`}
+                    className="flex min-h-11 items-start gap-3 rounded px-2 py-2"
+                  >
                     <Checkbox
+                      className="mt-0.5"
                       checked={documentIds.includes(document.id)}
-                      disabled={stage === "Concept"}
+                      disabled={stage === "Concept" || document.syncStatus !== "Synced"}
                       onCheckedChange={(checked) =>
                         setDocumentIds((items) => toggle(items, document.id, checked === true))
                       }
                     />
-                    <span className="min-w-0 break-all text-sm">{document.originalFileName}</span>
+                    <span className="min-w-0 space-y-0.5 text-sm">
+                      <span className="block break-all text-slate-900">
+                        {document.originalFileName}
+                      </span>
+                      <span className="block text-xs text-slate-500">
+                        {t(`operationalProjects.documents.syncStatus.${document.syncStatus}`)}
+                      </span>
+                      {document.syncStatus !== "Synced" ? (
+                        <span className="block text-xs text-amber-700">
+                          {t(
+                            ["Pending", "Processing"].includes(document.syncStatus)
+                              ? "designProjects.reviews.documentWaiting"
+                              : "designProjects.reviews.documentUnavailable",
+                          )}
+                        </span>
+                      ) : null}
+                    </span>
                   </label>
                 ))}
-                {eligibleDocuments.length === 0 ? (
+                {stageDocuments.length === 0 ? (
                   <p className="p-3 text-sm text-slate-500">
                     {t(
                       stage === "Concept" && !conceptRevisionId
