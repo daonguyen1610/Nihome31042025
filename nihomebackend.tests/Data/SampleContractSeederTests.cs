@@ -297,11 +297,11 @@ public class SampleContractSeederTests : IDisposable
             && project.ContractId.HasValue);
         var linkedContract = _db.Contracts.Single(contract => contract.Id == linkedProject.ContractId);
         Assert.Equal(linkedContract.CustomerId, linkedProject.CustomerId);
-        var projectManagerRoleId = _db.Roles.Single(role => role.Code == "PM").Id;
+        var designManagerRoleId = _db.Roles.Single(role => role.Code == "DESIGN_MANAGER").Id;
         var designLeadRoleId = _db.Roles.Single(role => role.Code == "DESIGN_LEAD").Id;
         Assert.All(_db.DesignProjects.Where(project => sampleProjectIds.Contains(project.Id)), project =>
         {
-            Assert.Equal(projectManagerRoleId,
+            Assert.Equal(designManagerRoleId,
                 _db.Users.Single(user => user.Id == project.ProjectManagerUserId).RoleEntityId);
             Assert.Equal(designLeadRoleId,
                 _db.Users.Single(user => user.Id == project.DesignLeadUserId).RoleEntityId);

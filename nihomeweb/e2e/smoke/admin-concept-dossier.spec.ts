@@ -310,7 +310,12 @@ test("Concept dossier preserves context and supports accessible responsive forms
   const reviewDialog = page.getByRole("dialog");
   await expect(reviewDialog.getByLabel(/Giai đoạn|Stage/i)).toBeVisible();
   await expect(reviewDialog.getByLabel(/Tiêu đề|Title/i)).toBeVisible();
-  await expect(reviewDialog.getByRole("button", { name: /Lưu|Save/i, exact: true })).toBeDisabled();
+  await expect(
+    reviewDialog.getByRole("button", {
+      name: /Tạo hồ sơ nháp|Create draft dossier/i,
+      exact: true,
+    }),
+  ).toBeDisabled();
   await page.screenshot({
     path: testInfo.outputPath("concept-review-dialog-390.png"),
     fullPage: true,
