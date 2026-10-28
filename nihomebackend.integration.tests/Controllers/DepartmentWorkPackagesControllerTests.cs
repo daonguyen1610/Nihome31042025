@@ -51,6 +51,36 @@ public sealed class DepartmentWorkPackagesControllerTests(NihomeWebApplicationFa
     }
 
     [Fact]
+    public async Task GeneralProjectPackage_CanBeAssignedToAnyActiveDepartment()
+    {
+        var seed = await SeedProjectScopeAsync();
+        var receiving = await WithDbAsync(async db => await db.Users.AsNoTracking()
+            .Where(user => user.IsActive && user.RoleEntity != null && user.RoleEntity.IsActive &&
+                user.RoleEntity.RoleGroup != null && user.RoleEntity.RoleGroup.IsActive &&
+                user.RoleEntity.RoleGroup.Code != "PROCUREMENT" && user.RoleEntity.RoleGroup.Code != "FINANCE" &&
+                user.RoleEntity.RolePermissions.Any(permission => permission.Permission.IsActive &&
+                    permission.Permission.Module == "work.packages" && permission.Permission.Action == "assign"))
+            .Select(user => new { GroupId = user.RoleEntity!.RoleGroupId, LeadId = user.Id })
+            .FirstAsync());
+
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var response = await SendAsync(HttpMethod.Post, "/api/work-packages", new
+        {
+            kind = "Project",
+            purpose = "General",
+            name = "Phối hợp hồ sơ dự án NICON",
+            operationalProjectId = seed.ProjectId,
+            departmentRoleGroupId = receiving.GroupId,
+            leadUserId = receiving.LeadId,
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        var package = await ReadJsonAsync(response);
+        package.GetProperty("departmentRoleGroupId").GetInt32().Should().Be(receiving.GroupId);
+        package.GetProperty("operationalProjectId").GetInt32().Should().Be(seed.ProjectId);
+    }
+
+    [Fact]
     public async Task ProjectPackage_FollowsDepartmentAssignmentProgressAndIndependentKpiVerification()
     {
         var seed = await SeedProjectScopeAsync();

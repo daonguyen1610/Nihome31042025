@@ -17,7 +17,6 @@ public sealed partial class DepartmentWorkPackageService(
     WorkPackageApprovalEmailService approvalEmails) : IDepartmentWorkPackageService
 {
     private const int MaxPageSize = 100;
-    private static readonly string[] GenericProjectDepartmentCodes = ["PROCUREMENT", "FINANCE"];
 
     public async Task<DepartmentWorkPackageListResponse> ListAsync(
         DepartmentWorkPackageQuery query,
@@ -132,7 +131,7 @@ public sealed partial class DepartmentWorkPackageService(
                 Id = item.Id,
                 Code = item.Code,
                 LabelKey = item.LabelKey,
-                CanReceiveProjectPackage = GenericProjectDepartmentCodes.Contains(item.Code),
+                CanReceiveProjectPackage = true,
             })
             .ToListAsync(ct);
     }
@@ -668,9 +667,6 @@ public sealed partial class DepartmentWorkPackageService(
             .SingleOrDefaultAsync(ct);
         if (receivingGroupCode is null)
             throw Error("Phòng ban nhận việc không tồn tại hoặc đã ngừng hoạt động.");
-        if (purpose is not WorkPackagePurpose.TenderPlanning and not WorkPackagePurpose.LegalPermitting &&
-            !GenericProjectDepartmentCodes.Contains(receivingGroupCode, StringComparer.OrdinalIgnoreCase))
-            throw Error("Phòng ban này đã có không gian công việc chuyên môn. Hãy tạo công việc trong module tương ứng để tránh dữ liệu trùng.");
         var isOpportunityOwner = false;
         var isTenderOwner = false;
         if (request.SourceOpportunityId.HasValue)
@@ -1032,7 +1028,7 @@ public sealed partial class DepartmentWorkPackageService(
                     Id = participant.RoleGroupId,
                     Code = participant.RoleGroup.Code,
                     LabelKey = participant.RoleGroup.LabelKey,
-                    CanReceiveProjectPackage = GenericProjectDepartmentCodes.Contains(participant.RoleGroup.Code),
+                    CanReceiveProjectPackage = participant.RoleGroup.IsActive,
                 }).ToList(),
             LeadUserId = item.LeadUserId,
             LeadUserName = item.LeadUser.FullName ?? item.LeadUser.Email,

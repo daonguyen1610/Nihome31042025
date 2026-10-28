@@ -58,6 +58,7 @@ import {
   type UpsertInputPriceOfferRequest,
   type OperationalProjectListItemResponse,
   type UpsertDepartmentWorkTaskRequest,
+  type UpdateDepartmentWorkPackageRequest,
   type WorkPackageKind,
   type WorkPackagePurpose,
   type WorkPackageStatus,
@@ -133,6 +134,10 @@ const DepartmentWorkPackages = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [packageOpen, setPackageOpen] = useState(false);
+  const [packageEditOpen, setPackageEditOpen] = useState(false);
+  const [packageEditForm, setPackageEditForm] = useState<UpdateDepartmentWorkPackageRequest | null>(
+    null,
+  );
   const [taskOpen, setTaskOpen] = useState(false);
   const [progressOpen, setProgressOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -224,6 +229,22 @@ const DepartmentWorkPackages = () => {
     ccUserIds: [],
     predecessorTaskIds: [],
   });
+  const unavailablePredecessorIds = useMemo(() => {
+    if (!taskEditing) return new Set<number>();
+    const unavailable = new Set([taskEditing.id]);
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const task of detail?.tasks ?? []) {
+        if (unavailable.has(task.id)) continue;
+        if (task.predecessorTaskIds.some((id) => unavailable.has(id))) {
+          unavailable.add(task.id);
+          changed = true;
+        }
+      }
+    }
+    return unavailable;
+  }, [detail?.tasks, taskEditing]);
 
   const load = useCallback(async () => {
     const request = ++requestSequence.current;
@@ -469,6 +490,66 @@ const DepartmentWorkPackages = () => {
       setPackageOpen(false);
       toast({ title: t("workPackages.toast.created") });
       navigate(`/admin/work-packages/${response.data.id}`);
+    } catch (cause) {
+      toast({
+        variant: "destructive",
+        title: extractApiError(cause, t("workPackages.error.save")),
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const openEditPackage = async () => {
+    if (!detail) return;
+    setPackageEditForm({
+      name: detail.name,
+      description: detail.description,
+      contractId: detail.contractId,
+      status: detail.status,
+      plannedStart: detail.plannedStart,
+      plannedEnd: detail.plannedEnd,
+      rowVersion: detail.rowVersion,
+    });
+    setPackageEditOpen(true);
+    if (detail.kind === "Project" && detail.purpose === "General" && detail.operationalProjectId) {
+      setContracts([]);
+      try {
+        const response = await adminApi.listContracts({
+          operationalProjectId: detail.operationalProjectId,
+          pageSize: 100,
+        });
+        setContracts(response.data.items);
+      } catch (cause) {
+        toast({
+          variant: "destructive",
+          title: extractApiError(cause, t("workPackages.error.load")),
+        });
+      }
+    }
+  };
+
+  const saveEditedPackage = async () => {
+    if (!detail || !packageEditForm) return;
+    if (
+      packageEditForm.name.trim().length < 2 ||
+      packageEditForm.name.length > 300 ||
+      (packageEditForm.description?.length ?? 0) > 4000 ||
+      (packageEditForm.plannedStart &&
+        packageEditForm.plannedEnd &&
+        packageEditForm.plannedEnd < packageEditForm.plannedStart) ||
+      (detail.purpose === "TenderPlanning" &&
+        (!packageEditForm.plannedStart || !packageEditForm.plannedEnd))
+    ) {
+      toast({ variant: "destructive", title: t("workPackages.validation.editPackage") });
+      return;
+    }
+    setSaving(true);
+    try {
+      await adminApi.updateWorkPackage(detail.id, packageEditForm, newIdempotencyKey());
+      setPackageEditOpen(false);
+      await load();
+      toast({ title: t("workPackages.toast.updated") });
     } catch (cause) {
       toast({
         variant: "destructive",
@@ -992,6 +1073,15 @@ const DepartmentWorkPackages = () => {
                 )}
               </div>
               <div className="flex min-w-0 flex-wrap gap-2 [&_button]:h-auto [&_button]:min-h-10 [&_button]:whitespace-normal">
+                {canManage && detail.canManagePackage && detail.status !== "Cancelled" && (
+                  <Button
+                    data-testid="work-package-edit"
+                    variant="outline"
+                    onClick={() => void openEditPackage()}
+                  >
+                    {t("common.edit")}
+                  </Button>
+                )}
                 {canManage && detail.canManagePackage && detail.status === "Completed" && (
                   <Button onClick={() => void transitionPackage("Active")}>
                     <RotateCcw className="mr-2 h-4 w-4" />
@@ -1872,6 +1962,113 @@ const DepartmentWorkPackages = () => {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={packageEditOpen} onOpenChange={setPackageEditOpen}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>{t("workPackages.edit.title")}</DialogTitle>
+            <DialogDescription>{t("workPackages.edit.help")}</DialogDescription>
+          </DialogHeader>
+          {detail && packageEditForm && (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label={t("workPackages.field.name")} className="sm:col-span-2">
+                <Input
+                  maxLength={300}
+                  value={packageEditForm.name}
+                  onChange={(event) =>
+                    setPackageEditForm((current) =>
+                      current ? { ...current, name: event.target.value } : current,
+                    )
+                  }
+                />
+              </Field>
+              {detail.kind === "Project" && detail.purpose === "General" && (
+                <Field label={t("workPackages.field.contract")} className="sm:col-span-2">
+                  <Select
+                    value={packageEditForm.contractId?.toString() ?? "none"}
+                    onValueChange={(value) =>
+                      setPackageEditForm((current) =>
+                        current
+                          ? { ...current, contractId: value === "none" ? null : Number(value) }
+                          : current,
+                      )
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">{t("workPackages.contract.none")}</SelectItem>
+                      {detail.contractId &&
+                        !contracts.some((contract) => contract.id === detail.contractId) && (
+                          <SelectItem value={String(detail.contractId)}>
+                            {detail.contractNumber}
+                          </SelectItem>
+                        )}
+                      {contracts.map((contract) => (
+                        <SelectItem key={contract.id} value={String(contract.id)}>
+                          {contract.contractNumber}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
+              )}
+              <Field label={t("workPackages.field.start")}>
+                <Input
+                  type="date"
+                  value={dateValue(packageEditForm.plannedStart)}
+                  onChange={(event) =>
+                    setPackageEditForm((current) =>
+                      current
+                        ? {
+                            ...current,
+                            plannedStart: event.target.value ? apiDate(event.target.value) : null,
+                          }
+                        : current,
+                    )
+                  }
+                />
+              </Field>
+              <Field label={t("workPackages.field.end")}>
+                <Input
+                  type="date"
+                  value={dateValue(packageEditForm.plannedEnd)}
+                  onChange={(event) =>
+                    setPackageEditForm((current) =>
+                      current
+                        ? {
+                            ...current,
+                            plannedEnd: event.target.value ? apiDate(event.target.value) : null,
+                          }
+                        : current,
+                    )
+                  }
+                />
+              </Field>
+              <Field label={t("workPackages.field.description")} className="sm:col-span-2">
+                <Textarea
+                  maxLength={4000}
+                  value={packageEditForm.description ?? ""}
+                  onChange={(event) =>
+                    setPackageEditForm((current) =>
+                      current ? { ...current, description: event.target.value } : current,
+                    )
+                  }
+                />
+              </Field>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPackageEditOpen(false)}>
+              {t("common.cancel")}
+            </Button>
+            <Button disabled={saving || !packageEditForm} onClick={() => void saveEditedPackage()}>
+              {t("common.save")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog
         open={!!approvalPreview}
         onOpenChange={(open) => {
@@ -2139,15 +2336,24 @@ const DepartmentWorkPackages = () => {
             </Field>
             <Field label={t("workPackages.field.predecessors")} className="sm:col-span-2">
               <ChoiceGrid
-                emptyLabel={t("workPackages.predecessors.none")}
+                emptyLabel={
+                  taskEditing
+                    ? t("workPackages.predecessors.noneEligible")
+                    : t("workPackages.predecessors.none")
+                }
                 items={(detail?.tasks ?? [])
-                  .filter((task) => task.id !== taskEditing?.id)
+                  .filter((task) => !unavailablePredecessorIds.has(task.id))
                   .map((task) => ({ id: task.id, label: `${task.wbsCode} · ${task.title}` }))}
                 selected={taskForm.predecessorTaskIds}
                 onChange={(predecessorTaskIds) =>
                   setTaskForm((current) => ({ ...current, predecessorTaskIds }))
                 }
               />
+              {taskEditing && (
+                <p className="text-sm text-muted-foreground">
+                  {t("workPackages.predecessors.cycleHelp")}
+                </p>
+              )}
             </Field>
             <Field label={t("workPackages.field.cc")} className="sm:col-span-2">
               <ChoiceGrid

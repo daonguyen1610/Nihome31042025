@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { expect, test, TEST_USERS } from "../fixtures/auth";
 import { execSql } from "../fixtures/db";
 
@@ -22,6 +23,121 @@ test("shared-project and internal work package tabs render without browser error
   await expect(page).toHaveURL(/kind=Internal/);
   await expect(page.getByTestId("work-packages-page")).toBeVisible();
   expect(errors).toEqual([]);
+});
+
+test("project package picker offers every active receiving department", async ({
+  page,
+  api,
+  loginAs,
+  loginInBrowserAs,
+}) => {
+  const headers = { Authorization: `Bearer ${await loginAs(TEST_USERS.superAdmin)}` };
+  const response = await api.get("/api/work-packages/departments", { headers });
+  expect(response.status()).toBe(200);
+  const departments: { id: number; code: string }[] = await response.json();
+  expect(departments.length).toBeGreaterThan(2);
+
+  await loginInBrowserAs(page, TEST_USERS.superAdmin);
+  await page.addInitScript(() => localStorage.setItem("nicon_lang", "vi"));
+  await page.goto("/admin/work-packages");
+  await page.getByRole("button", { name: "Tạo nhóm công việc" }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByTestId("work-package-department").click();
+  await expect(page.getByRole("option")).toHaveCount(departments.length);
+});
+
+test("package manager can edit package metadata in the browser", async ({
+  page,
+  api,
+  loginAs,
+  loginInBrowserAs,
+}) => {
+  const headers = { Authorization: `Bearer ${await loginAs(TEST_USERS.superAdmin)}` };
+  const list = await api.get("/api/work-packages?purpose=LegalPermitting&pageSize=100", {
+    headers,
+  });
+  expect(list.status()).toBe(200);
+  const { items } = await list.json();
+  const packageId = items.find((item: { status: string }) => item.status === "Active")?.id;
+  expect(packageId, "active seeded legal package required").toBeTruthy();
+  const currentResponse = await api.get(`/api/work-packages/${packageId}`, { headers });
+  expect(currentResponse.status()).toBe(200);
+  const original = await currentResponse.json();
+  const updatedName = `${original.name} - kiểm thử sửa`;
+
+  try {
+    await loginInBrowserAs(page, TEST_USERS.superAdmin);
+    await page.addInitScript(() => localStorage.setItem("nicon_lang", "vi"));
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`/admin/work-packages/${packageId}`);
+    await page.getByTestId("work-package-edit").click();
+    const dialog = page.getByRole("dialog");
+    await dialog.locator('input[maxlength="300"]').fill(updatedName);
+    await dialog.getByRole("button", { name: "Lưu thay đổi" }).click();
+    await expect(dialog).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: updatedName })).toBeVisible();
+    const saved = await api.get(`/api/work-packages/${packageId}`, { headers });
+    expect((await saved.json()).name).toBe(updatedName);
+  } finally {
+    const latestResponse = await api.get(`/api/work-packages/${packageId}`, { headers });
+    if (latestResponse.ok()) {
+      const latest = await latestResponse.json();
+      if (latest.name !== original.name) {
+        const restored = await api.put(`/api/work-packages/${packageId}`, {
+          headers: { ...headers, "Idempotency-Key": randomUUID() },
+          data: {
+            name: original.name,
+            description: original.description,
+            contractId: original.contractId,
+            status: original.status,
+            plannedStart: original.plannedStart,
+            plannedEnd: original.plannedEnd,
+            rowVersion: latest.rowVersion,
+          },
+        });
+        expect(restored.status()).toBe(200);
+      }
+    }
+  }
+});
+
+test("editing a task excludes descendants from predecessor choices", async ({
+  page,
+  api,
+  loginAs,
+  loginInBrowserAs,
+}) => {
+  const headers = { Authorization: `Bearer ${await loginAs(TEST_USERS.superAdmin)}` };
+  const list = await api.get("/api/work-packages?purpose=LegalPermitting&pageSize=100", {
+    headers,
+  });
+  expect(list.status()).toBe(200);
+  const { items } = await list.json();
+  const packageId = items.find((item: { status: string }) => item.status === "Active")?.id;
+  expect(packageId, "active seeded legal package required").toBeTruthy();
+  const detailResponse = await api.get(`/api/work-packages/${packageId}`, { headers });
+  expect(detailResponse.status()).toBe(200);
+  const detail = await detailResponse.json();
+  const task = detail.tasks.find(
+    (candidate: { id: number; status: string }) =>
+      ["Planned", "InProgress"].includes(candidate.status) &&
+      detail.tasks.some((other: { predecessorTaskIds: number[] }) =>
+        other.predecessorTaskIds.includes(candidate.id),
+      ),
+  );
+  expect(task, "an editable task with a dependent task is required").toBeTruthy();
+  const descendant = detail.tasks.find((candidate: { predecessorTaskIds: number[] }) =>
+    candidate.predecessorTaskIds.includes(task.id),
+  );
+
+  await loginInBrowserAs(page, TEST_USERS.superAdmin);
+  await page.addInitScript(() => localStorage.setItem("nicon_lang", "vi"));
+  await page.setViewportSize({ width: 768, height: 900 });
+  await page.goto(`/admin/work-packages/${packageId}`);
+  await page.locator(`#task-${task.id}`).getByRole("button", { name: "Sửa" }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByText(`${descendant.wbsCode} · ${descendant.title}`)).toHaveCount(0);
+  await expect(dialog.getByText("Người theo dõi (CC)")).toBeVisible();
 });
 
 test("work package workspace remains usable at mobile and tablet widths", async ({
