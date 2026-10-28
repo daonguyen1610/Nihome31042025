@@ -182,7 +182,15 @@ public sealed class ProjectTeamService(
             : null;
         CrmConcurrency.Apply(db, member, request.RowVersion);
         var now = DateTime.UtcNow;
-        foreach (var role in member.Roles.Where(role => role.EndedAt == null)) role.EndedAt = now;
+        var requestedRoles = ParseRoles(request.Roles, now, request.EndedAt);
+        foreach (var role in member.Roles.Where(role => role.EndedAt == null))
+        {
+            var matchingRole = requestedRoles.FirstOrDefault(candidate =>
+                candidate.RoleCode == role.RoleCode && candidate.Scope == role.Scope &&
+                string.Equals(candidate.ScopeValue, role.ScopeValue, StringComparison.OrdinalIgnoreCase));
+            if (request.EndedAt.HasValue || matchingRole is null) role.EndedAt = now;
+            else requestedRoles.Remove(matchingRole);
+        }
         member.UserId = request.UserId;
         member.Position = request.Position.Trim();
         member.ReportsToMemberId = request.ReportsToMemberId;
@@ -190,7 +198,7 @@ public sealed class ProjectTeamService(
         member.EndedAt = request.EndedAt?.ToUniversalTime();
         member.UpdatedAt = now;
         member.UpdatedByUserId = callerUserId;
-        member.Roles.AddRange(ParseRoles(request.Roles, now, member.EndedAt));
+        if (!request.EndedAt.HasValue) member.Roles.AddRange(requestedRoles);
         await CrmConcurrency.SaveChangesAsync(db, ct);
         var response = MapMember(await MemberQuery(projectId).SingleAsync(item => item.Id == member.Id, ct));
         await AddHistoryAsync(projectId, "Member", member.Id,

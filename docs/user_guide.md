@@ -928,6 +928,12 @@ for that Operational Project is added; creating from the contract does not
 make a duplicate. Sales must have Opportunity and Operational Project manage
 permissions, plus authority to manage the project team, to initiate this flow.
 
+In the Design Project **Team** tab, assign a member's role for the current
+Design project. New roles use the Design module automatically; no RACI scope
+selection is needed. Existing shared-project roles remain visible and unchanged
+when editing from this tab. The Operational Project team screen retains its
+broader scope controls.
+
 In the project **Design schedule**, every task keeps an internal NICON assignee
 and an independent Design Lead approver. For outsourced work, select both the
 vendor and its Downstream Design/Subcontract contract. The contract must belong

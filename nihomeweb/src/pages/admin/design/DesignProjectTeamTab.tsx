@@ -53,6 +53,7 @@ import {
 interface Props {
   operationalProjectId?: number | null;
   refreshKey?: string;
+  designProjectContext?: boolean;
 }
 type MemberDialogMode = "add" | "edit" | "end";
 type AssignmentDialogMode = "add" | "edit";
@@ -98,7 +99,11 @@ const assignmentBadge: Record<ProjectAssignmentStatus, string> = {
   Cancelled: "border-rose-200 bg-rose-50 text-rose-700",
 };
 
-export const OperationalProjectTeamPanel = ({ operationalProjectId, refreshKey }: Props) => {
+export const OperationalProjectTeamPanel = ({
+  operationalProjectId,
+  refreshKey,
+  designProjectContext = false,
+}: Props) => {
   const { t, lang } = useI18n();
   const { toast } = useToast();
   const [team, setTeam] = useState<OperationalProjectTeamResponse | null>(null);
@@ -175,6 +180,8 @@ export const OperationalProjectTeamPanel = ({ operationalProjectId, refreshKey }
       ? t("designProjects.team.role.DesignManager")
       : t(`designProjects.team.role.${code}`);
   const scopeLabel = (scope: string) => t(`designProjects.team.scope.${scope}`);
+  const isDesignRole = (role: ProjectMemberRoleRequest) =>
+    role.scope === "Module" && role.scopeValue === "Design";
 
   const createsReportingCycle = (memberId: number, managerId: number | null | undefined) => {
     let current = managerId ?? null;
@@ -192,7 +199,13 @@ export const OperationalProjectTeamPanel = ({ operationalProjectId, refreshKey }
     const form = emptyMemberForm();
     if (definition)
       form.roles = [
-        { roleCode: definition.code, scope: definition.allowedScopes[0] ?? "", scopeValue: null },
+        designProjectContext
+          ? { roleCode: "", scope: "Module", scopeValue: "Design" }
+          : {
+              roleCode: definition.code,
+              scope: definition.allowedScopes[0] ?? "",
+              scopeValue: null,
+            },
       ];
     setEditingMember(null);
     setMemberForm(form);
@@ -247,6 +260,17 @@ export const OperationalProjectTeamPanel = ({ operationalProjectId, refreshKey }
     for (const role of memberForm.roles) {
       const definition = team?.roleDefinitions.find((item) => item.code === role.roleCode);
       if (!definition || !definition.allowedScopes.includes(role.scope))
+        return t("designProjects.team.validation.roleInvalid");
+      if (
+        designProjectContext &&
+        !isDesignRole(role) &&
+        !editingMember?.roles.some(
+          (existing) =>
+            existing.roleCode === role.roleCode &&
+            existing.scope === role.scope &&
+            existing.scopeValue === role.scopeValue,
+        )
+      )
         return t("designProjects.team.validation.roleInvalid");
       const scopeValue = role.scopeValue?.trim() ?? "";
       if (role.scope === "Project" && scopeValue)
@@ -610,7 +634,13 @@ export const OperationalProjectTeamPanel = ({ operationalProjectId, refreshKey }
                   <tr>
                     <th className="px-3 py-2">{t("designProjects.team.field.user")}</th>
                     <th className="px-3 py-2">{t("designProjects.team.field.position")}</th>
-                    <th className="px-3 py-2">{t("designProjects.team.field.roles")}</th>
+                    <th className="px-3 py-2">
+                      {t(
+                        designProjectContext
+                          ? "designProjects.team.field.designRoles"
+                          : "designProjects.team.field.roles",
+                      )}
+                    </th>
                     <th className="px-3 py-2">{t("designProjects.team.field.reportsTo")}</th>
                     <th className="px-3 py-2">{t("designProjects.team.field.memberDates")}</th>
                     {team.canManage ? (
@@ -884,7 +914,11 @@ export const OperationalProjectTeamPanel = ({ operationalProjectId, refreshKey }
               {t(`designProjects.team.dialog.member.${memberDialog ?? "add"}.title`)}
             </DialogTitle>
             <DialogDescription>
-              {t(`designProjects.team.dialog.member.${memberDialog ?? "add"}.description`)}
+              {t(
+                designProjectContext && memberDialog !== "end"
+                  ? `designProjects.team.dialog.member.design.${memberDialog ?? "add"}.description`
+                  : `designProjects.team.dialog.member.${memberDialog ?? "add"}.description`,
+              )}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -978,7 +1012,14 @@ export const OperationalProjectTeamPanel = ({ operationalProjectId, refreshKey }
             </div>
             <div className="space-y-3 sm:col-span-2">
               <div className="flex items-center justify-between">
-                <Label>{t("designProjects.team.field.roles")} *</Label>
+                <Label>
+                  {t(
+                    designProjectContext
+                      ? "designProjects.team.field.designRoles"
+                      : "designProjects.team.field.roles",
+                  )}{" "}
+                  *
+                </Label>
                 {memberDialog !== "end" ? (
                   <Button
                     type="button"
@@ -992,9 +1033,11 @@ export const OperationalProjectTeamPanel = ({ operationalProjectId, refreshKey }
                           roles: [
                             ...current.roles,
                             {
-                              roleCode: definition.code,
-                              scope: definition.allowedScopes[0] ?? "",
-                              scopeValue: null,
+                              roleCode: designProjectContext ? "" : definition.code,
+                              scope: designProjectContext
+                                ? "Module"
+                                : (definition.allowedScopes[0] ?? ""),
+                              scopeValue: designProjectContext ? "Design" : null,
                             },
                           ],
                         }));
@@ -1007,73 +1050,98 @@ export const OperationalProjectTeamPanel = ({ operationalProjectId, refreshKey }
               </div>
               {memberForm.roles.map((role, index) => {
                 const definition = team.roleDefinitions.find((item) => item.code === role.roleCode);
+                const preservedRole = designProjectContext && !isDesignRole(role);
                 const scopeOptions =
                   role.scope === "Module" ? team.moduleOptions : team.disciplineOptions;
                 return (
                   <div
                     key={index}
-                    className="grid gap-2 rounded-md border p-3 sm:grid-cols-[1fr_1fr_1fr_auto]"
+                    data-testid="design-team-role-row"
+                    className={`grid gap-2 rounded-md border p-3 ${designProjectContext ? "sm:grid-cols-[1fr_auto_auto]" : "sm:grid-cols-[1fr_1fr_1fr_auto]"}`}
                   >
-                    <Select
-                      disabled={memberDialog === "end"}
-                      value={role.roleCode}
-                      onValueChange={(value) => {
-                        const next = team.roleDefinitions.find((item) => item.code === value);
-                        updateRole(index, {
-                          roleCode: value,
-                          scope: next?.allowedScopes[0] ?? "",
-                          scopeValue: null,
-                        });
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {team.roleDefinitions.map((item) => (
-                          <SelectItem key={item.code} value={item.code}>
-                            {roleLabel(item.code, role.scope, role.scopeValue)} · {item.raci}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select
-                      disabled={memberDialog === "end"}
-                      value={role.scope}
-                      onValueChange={(value) =>
-                        updateRole(index, { scope: value, scopeValue: null })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {definition?.allowedScopes.map((scope) => (
-                          <SelectItem key={scope} value={scope}>
-                            {scopeLabel(scope)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select
-                      disabled={memberDialog === "end" || role.scope === "Project"}
-                      value={role.scopeValue ?? ""}
-                      onValueChange={(value) => updateRole(index, { scopeValue: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue
-                          placeholder={t("designProjects.team.placeholder.scopeValue")}
-                        />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {scopeOptions.map((option) => (
-                          <SelectItem key={option} value={option}>
-                            {option}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {memberDialog !== "end" ? (
+                    {preservedRole ? (
+                      <div className="text-sm">
+                        {roleLabel(role.roleCode, role.scope, role.scopeValue)} ·{" "}
+                        {scopeLabel(role.scope)}
+                        {role.scopeValue ? `: ${role.scopeValue}` : ""}
+                      </div>
+                    ) : (
+                      <Select
+                        disabled={memberDialog === "end"}
+                        value={role.roleCode}
+                        onValueChange={(value) => {
+                          const next = team.roleDefinitions.find((item) => item.code === value);
+                          updateRole(index, {
+                            roleCode: value,
+                            scope: designProjectContext ? "Module" : (next?.allowedScopes[0] ?? ""),
+                            scopeValue: designProjectContext ? "Design" : null,
+                          });
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue
+                            placeholder={
+                              designProjectContext
+                                ? t("designProjects.team.placeholder.role")
+                                : undefined
+                            }
+                          />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {team.roleDefinitions.map((item) => (
+                            <SelectItem key={item.code} value={item.code}>
+                              {roleLabel(item.code, role.scope, role.scopeValue)} · {item.raci}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                    {designProjectContext && !preservedRole ? (
+                      <span className="self-center text-sm text-muted-foreground">
+                        {t("designProjects.team.scope.designModule")}
+                      </span>
+                    ) : null}
+                    {!designProjectContext && (
+                      <Select
+                        disabled={memberDialog === "end"}
+                        value={role.scope}
+                        onValueChange={(value) =>
+                          updateRole(index, { scope: value, scopeValue: null })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {definition?.allowedScopes.map((scope) => (
+                            <SelectItem key={scope} value={scope}>
+                              {scopeLabel(scope)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                    {!designProjectContext && (
+                      <Select
+                        disabled={memberDialog === "end" || role.scope === "Project"}
+                        value={role.scopeValue ?? ""}
+                        onValueChange={(value) => updateRole(index, { scopeValue: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue
+                            placeholder={t("designProjects.team.placeholder.scopeValue")}
+                          />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {scopeOptions.map((option) => (
+                            <SelectItem key={option} value={option}>
+                              {option}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                    {memberDialog !== "end" && !preservedRole ? (
                       <Button
                         type="button"
                         size="icon"
