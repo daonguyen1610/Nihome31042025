@@ -319,6 +319,38 @@ public class BasicDesignDocsControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task UnlockShopDrawing_AllDisciplinesApprovedWithoutClientReview_ReportsBlockedAndPreservesStage()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var projectId = await CreateBasicStageProjectAsync();
+        foreach (var discipline in new[] { "architecture", "structure", "mep" })
+        {
+            var documentId = await CreateDocAsync(projectId, discipline);
+            (await Client.PostAsJsonAsync($"/api/basic-design-docs/{documentId}/status", new { status = "SubmittedForReview" }))
+                .EnsureSuccessStatusCode();
+            (await Client.PostAsJsonAsync($"/api/basic-design-docs/{documentId}/status", new { status = "InternallyApproved" }))
+                .EnsureSuccessStatusCode();
+        }
+
+        var readinessResponse = await Client.GetAsync($"/api/basic-design-docs?designProjectId={projectId}");
+        readinessResponse.EnsureSuccessStatusCode();
+        var readiness = (await ReadJsonAsync(readinessResponse)).GetProperty("readiness");
+        readiness.GetProperty("readyForShopDrawing").GetBoolean().Should().BeTrue();
+        readiness.GetProperty("hasClientApprovedReview").GetBoolean().Should().BeFalse();
+        readiness.GetProperty("readyForDetailDesign").GetBoolean().Should().BeFalse();
+
+        var unlockResponse = await Client.PostAsync(
+            $"/api/basic-design-docs/design-project/{projectId}/unlock-shop-drawing", null);
+        unlockResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await ReadJsonAsync(unlockResponse)).GetProperty("message").GetString()
+            .Should().Contain("chưa được khách hàng duyệt");
+
+        var projectResponse = await Client.GetAsync($"/api/design-projects/{projectId}");
+        projectResponse.EnsureSuccessStatusCode();
+        (await ReadJsonAsync(projectResponse)).GetProperty("currentStage").GetString().Should().Be("BasicDesign");
+    }
+
+    [Fact]
     public async Task UnlockShopDrawing_NotReady_IsBadRequest()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
