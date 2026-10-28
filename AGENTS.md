@@ -29,6 +29,32 @@ When repository instructions conflict, use the more specific and recent instruct
   `npm run format:check` before committing.
 - Record meaningful trade-offs, assumptions, blocked checks, and residual risks.
 
+## Issue-report workflow
+
+For every reported defect, establish evidence before changing product code:
+
+1. Record the reported symptom, expected behavior, affected actor/data, and
+   environment. Check the current business contract and clarify ambiguity that
+   could change the expected outcome.
+2. Reproduce the issue on the unchanged implementation. Write and run the
+   smallest regression test at the appropriate layer first. For browser issues,
+   also exercise the real UI manually in the live Docker Compose application;
+   use a live Playwright test when the behavior can be automated. Capture the
+   exact failing assertion or manual steps and observed result. A test that
+   fails for setup, permissions, or missing fixtures does not prove the defect.
+3. Use that failure to define the issue precisely. Investigate the relevant
+   UI, API, validation, persistence, data, permissions, and history until the
+   root cause is understood. Then choose the smallest complete fix.
+4. Run the same reproduction after the fix and relevant nearby regression
+   checks, including negative paths. Report before/after evidence and any
+   reproduction or validation blocked by the environment. Do not call an issue
+   fixed when its original symptom has not been verified.
+
+If automation is impractical, perform and record a manual reproduction before
+editing, then add an executable regression test for changed behavior where
+feasible. Do not change a failing test merely to make it pass without proving
+whether the failure is in the test or the product.
+
 ## Task lifecycle
 
 For every non-trivial task:
