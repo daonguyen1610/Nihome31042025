@@ -130,14 +130,13 @@ public sealed class ProjectAccessService(AppDbContext db, IPermissionService per
             })
             .SingleOrDefaultAsync(ct);
         if (project is null) return false;
+        if (project.ProjectManagerUserId == userId || project.DesignLeadUserId == userId) return true;
         if (project.OperationalProjectId.HasValue)
         {
             return await CanViewOperationalProjectAsync(userId, project.OperationalProjectId.Value, ct);
         }
 
-        return await HasAdministrativeBypassAsync(userId, ct) ||
-            project.ProjectManagerUserId == userId ||
-            project.DesignLeadUserId == userId;
+        return await HasAdministrativeBypassAsync(userId, ct);
     }
 
     public Task<bool> CanManageDesignProjectAsync(

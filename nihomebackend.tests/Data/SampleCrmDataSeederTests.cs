@@ -176,6 +176,10 @@ public class SampleCrmDataSeederTests : IDisposable
             _db.Opportunities.Single(item => item.Id == wonTender.WonOpportunityId).CustomerId);
 
         var anPhuDesign = _db.DesignProjects.Single(item => item.ProjectCode == "DP-SAMPLE-003");
+        Assert.Equal("DESIGN_MANAGER", _db.Users
+            .Where(item => item.Id == anPhuDesign.ProjectManagerUserId)
+            .Select(item => item.RoleEntity!.Code)
+            .Single());
         Assert.Contains("Nhà máy may An Phú", anPhuDesign.Name);
         Assert.Equal("Công ty Cổ phần May mặc An Phú",
             _db.Customers.Single(item => item.Id == anPhuDesign.CustomerId).Name);

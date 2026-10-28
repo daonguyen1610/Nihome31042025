@@ -8,6 +8,55 @@ import {
   isGoogleDriveConnected,
 } from "../fixtures/designProjects";
 
+test("design review UI explains task approval and dossier responsibilities", async ({
+  page,
+  api,
+  loginAs,
+  loginInBrowserAs,
+}) => {
+  const managerHeaders = { Authorization: `Bearer ${await loginAs(TEST_USERS.designManager)}` };
+  const projects = await api.get("/api/design-projects?search=DP-SAMPLE-003&pageSize=10", {
+    headers: managerHeaders,
+  });
+  expect(projects.ok(), await projects.text()).toBeTruthy();
+  const project = (await projects.json()).items.find(
+    (item: { projectCode: string }) => item.projectCode === "DP-SAMPLE-003",
+  ) as { id: number } | undefined;
+  expect(project).toBeTruthy();
+
+  const forbiddenResponses: string[] = [];
+  page.on("response", (response) => {
+    if (response.status() === 403) forbiddenResponses.push(response.url());
+  });
+  await loginInBrowserAs(page, TEST_USERS.designManager);
+  await page.goto(`/admin/design-projects/${project!.id}?tab=reviews`);
+  await expect(page.getByTestId("design-review-role-guide")).toContainText(
+    /Người duyệt duy nhất|sole approver/i,
+  );
+  await expect(page.getByTestId("design-review-role-guide")).toContainText(
+    /Chủ nhiệm thiết kế|Design Manager/i,
+  );
+  await expect(page.getByTestId("create-design-review")).toBeVisible();
+
+  for (const width of [390, 768, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await expect(page.getByTestId("design-review-role-guide")).toBeVisible();
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+        ),
+      )
+      .toBe(true);
+  }
+  expect(forbiddenResponses).toEqual([]);
+
+  await loginInBrowserAs(page, TEST_USERS.designLead);
+  await page.goto(`/admin/design-projects/${project!.id}?tab=reviews`);
+  await expect(page.getByTestId("design-review-role-guide")).toBeVisible();
+  await expect(page.getByTestId("create-design-review")).toHaveCount(0);
+});
+
 test("design notification opens recipient evidence and comments without project-wide access", async ({
   page,
   api,

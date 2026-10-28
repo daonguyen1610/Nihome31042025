@@ -96,8 +96,25 @@ Reports. Permissions hide items that the current user cannot access.
 
 Within a Design project, the design-specific manager is labelled **Design
 Manager** (**Chủ nhiệm thiết kế**). This role is distinct from the Project
-Manager of the shared Operational Project; existing access rules remain
-unchanged.
+Manager of the shared Operational Project. The assigned Design Manager and
+Design Lead can open the Design project even when they are not the Operational
+Project Manager.
+
+The two approval surfaces serve different decisions:
+
+1. In **Schedule**, the assignee completes the task and the task's one assigned
+   approver—normally the Design Lead—approves or returns that work. CC recipients
+   are informed but cannot decide it.
+2. In **Reviews**, only the Design Manager creates the internal circulation and
+   consolidates comments. Named recipients can view the included evidence and
+   comment only.
+3. The Design Manager records that the dossier was submitted to the client and
+   records the client's decision. This is not a second approval of each task.
+
+If Reviews reports an access error, first confirm that the account assigned as
+**Chủ nhiệm thiết kế** has the `DESIGN_MANAGER` role and reload the project. A
+recipient who was not named on the circulation must contact the Design Manager
+to be added; retrying alone does not grant access.
 
 #### 2.2.1 Customer Reference Pack and Status Labels
 

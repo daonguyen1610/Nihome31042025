@@ -1,5 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Check, Download, Loader2, MessageSquare, Plus, RefreshCw, Send } from "lucide-react";
+import {
+  AlertCircle,
+  Check,
+  Download,
+  FileCheck2,
+  Loader2,
+  MessageSquare,
+  Plus,
+  RefreshCw,
+  Send,
+  UserCheck,
+  Users,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -58,7 +70,7 @@ export const DesignReviewsTab = ({ project, recipientProjectId, focusedReviewId 
   const { t, lang } = useI18n();
   const currentUserId = useAppSelector((state) => state.auth.user?.userId ?? null);
   const { has } = usePermissions();
-  const canCreate =
+  const isDesignManager =
     Boolean(project) &&
     (currentUserId === (project?.designManagerUserId ?? project?.projectManagerUserId) ||
       has("operations.projects.view.all"));
@@ -76,6 +88,7 @@ export const DesignReviewsTab = ({ project, recipientProjectId, focusedReviewId 
   const [signedAt, setSignedAt] = useState<Record<number, string>>({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [managerToolsReady, setManagerToolsReady] = useState(false);
   const [busy, setBusy] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
@@ -88,6 +101,22 @@ export const DesignReviewsTab = ({ project, recipientProjectId, focusedReviewId 
   const createKey = useRef(newIdempotencyKey());
   const createTrigger = useRef<HTMLButtonElement>(null);
 
+  const actionableError = useCallback(
+    (reason: unknown) => {
+      const status =
+        typeof reason === "object" && reason !== null
+          ? (reason as { response?: { status?: number } }).response?.status
+          : undefined;
+      if (status === 401) return t("designProjects.reviews.error.sessionExpired");
+      if (status === 403) return t("designProjects.reviews.error.forbidden");
+      if (status === 404) return t("designProjects.reviews.error.notFound");
+      if (status === 409) return t("designProjects.reviews.error.conflict");
+      if (status && status >= 500) return t("designProjects.reviews.error.server");
+      return extractApiError(reason, t("designProjects.reviews.error.generic"));
+    },
+    [t],
+  );
+
   const load = useCallback(async () => {
     if (!projectId) {
       setLoading(false);
@@ -95,20 +124,19 @@ export const DesignReviewsTab = ({ project, recipientProjectId, focusedReviewId 
     }
     setRefreshing(true);
     setError(null);
+    setManagerToolsReady(false);
     try {
-      const [reviewResponse, teamResponse, documentResponse] = await Promise.all([
-        adminApi.listDesignReviews(projectId),
-        canCreate
-          ? adminApi.listDesignReviewRecipientCandidates(projectId)
-          : Promise.resolve({ data: [] }),
-        canCreate && operationalProjectId
-          ? adminApi.listProjectDocuments(operationalProjectId)
-          : Promise.resolve({ data: [] }),
-      ]);
+      const reviewResponse = await adminApi.listDesignReviews(projectId);
       setReviews(reviewResponse.data);
-      setRecipientCandidates(teamResponse.data);
-      setDocuments(documentResponse.data);
-      if (canCreate) {
+      if (isDesignManager) {
+        const [teamResponse, documentResponse] = await Promise.all([
+          adminApi.listDesignReviewRecipientCandidates(projectId),
+          operationalProjectId
+            ? adminApi.listProjectDocuments(operationalProjectId)
+            : Promise.resolve({ data: [] }),
+        ]);
+        setRecipientCandidates(teamResponse.data);
+        setDocuments(documentResponse.data);
         const options = (
           await adminApi.listConceptOptions({ designProjectId: projectId, pageSize: 100 })
         ).data.items;
@@ -117,14 +145,15 @@ export const DesignReviewsTab = ({ project, recipientProjectId, focusedReviewId 
           options.map((option) => adminApi.listConceptRevisions(option.id)),
         );
         setConceptRevisions(revisionResults.flatMap((result) => result.data));
+        setManagerToolsReady(true);
       }
     } catch (reason) {
-      setError(extractApiError(reason));
+      setError(actionableError(reason));
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [canCreate, projectId, operationalProjectId]);
+  }, [actionableError, isDesignManager, projectId, operationalProjectId]);
   useEffect(() => {
     void load();
   }, [load]);
@@ -214,7 +243,7 @@ export const DesignReviewsTab = ({ project, recipientProjectId, focusedReviewId 
       setConceptRevisionId("");
       await load();
     } catch (reason) {
-      setError(extractApiError(reason));
+      setError(actionableError(reason));
     } finally {
       setBusy(null);
     }
@@ -272,7 +301,7 @@ export const DesignReviewsTab = ({ project, recipientProjectId, focusedReviewId 
         setCommentDocumentIds((current) => ({ ...current, [review.id]: "general" }));
       await load();
     } catch (reason) {
-      setError(extractApiError(reason));
+      setError(actionableError(reason));
     } finally {
       setBusy(null);
     }
@@ -305,10 +334,13 @@ export const DesignReviewsTab = ({ project, recipientProjectId, focusedReviewId 
               />
               {t("common.refresh")}
             </Button>
-            {canCreate ? (
+            {isDesignManager ? (
               <Button
                 ref={createTrigger}
+                data-testid="create-design-review"
                 className="min-h-11"
+                disabled={!managerToolsReady || refreshing}
+                aria-describedby="design-review-role-guide"
                 onClick={() => {
                   setError(null);
                   setOpen(true);
@@ -320,12 +352,39 @@ export const DesignReviewsTab = ({ project, recipientProjectId, focusedReviewId 
             ) : null}
           </div>
         </div>
+        <div
+          id="design-review-role-guide"
+          data-testid="design-review-role-guide"
+          className="mt-4 rounded-lg bg-slate-50 p-3 text-sm text-slate-700"
+        >
+          <p className="font-medium text-slate-900">{t("designProjects.reviews.guide.title")}</p>
+          <ol className="mt-2 grid gap-3 md:grid-cols-3">
+            <li className="flex gap-2">
+              <UserCheck aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-sky-700" />
+              <span>{t("designProjects.reviews.guide.taskApproval")}</span>
+            </li>
+            <li className="flex gap-2">
+              <Users aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-violet-700" />
+              <span>{t("designProjects.reviews.guide.internalReview")}</span>
+            </li>
+            <li className="flex gap-2">
+              <FileCheck2 aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" />
+              <span>{t("designProjects.reviews.guide.clientDecision")}</span>
+            </li>
+          </ol>
+        </div>
         {error && !open ? (
           <div
             role="alert"
             className="mt-3 rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700"
           >
-            <p>{error}</p>
+            <div className="flex items-start gap-2">
+              <AlertCircle aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
+              <div>
+                <p className="font-medium">{t("designProjects.reviews.error.title")}</p>
+                <p className="mt-0.5">{error}</p>
+              </div>
+            </div>
             <Button variant="outline" size="sm" className="mt-2" onClick={() => void load()}>
               <RefreshCw className="mr-1 h-4 w-4" />
               {t("common.retry")}
@@ -335,7 +394,14 @@ export const DesignReviewsTab = ({ project, recipientProjectId, focusedReviewId 
       </div>
       {reviews.length === 0 ? (
         <div className="rounded-lg border border-dashed bg-white p-10 text-center text-sm text-slate-500">
-          {t("designProjects.reviews.empty")}
+          <p className="font-medium text-slate-700">{t("designProjects.reviews.emptyTitle")}</p>
+          <p className="mx-auto mt-1 max-w-xl">
+            {t(
+              isDesignManager
+                ? "designProjects.reviews.emptyManager"
+                : "designProjects.reviews.emptyRecipient",
+            )}
+          </p>
         </div>
       ) : (
         reviews.map((review) => (
@@ -426,7 +492,7 @@ export const DesignReviewsTab = ({ project, recipientProjectId, focusedReviewId 
                   : null}
               </p>
             ) : null}
-            {canCreate &&
+            {isDesignManager &&
             review.canManage &&
             review.stage === "Concept" &&
             review.status === "SubmittedToClient" &&
@@ -474,7 +540,7 @@ export const DesignReviewsTab = ({ project, recipientProjectId, focusedReviewId 
                         }));
                         await load();
                       } catch (reason) {
-                        setError(extractApiError(reason));
+                        setError(actionableError(reason));
                       } finally {
                         setBusy(null);
                       }
@@ -555,7 +621,7 @@ export const DesignReviewsTab = ({ project, recipientProjectId, focusedReviewId 
               </div>
             ) : null}
             {review.canComment ||
-            (canCreate &&
+            (isDesignManager &&
               review.canManage &&
               ["InternalReview", "SubmittedToClient"].includes(review.status)) ? (
               <div className="mt-3 space-y-1.5">
@@ -608,7 +674,7 @@ export const DesignReviewsTab = ({ project, recipientProjectId, focusedReviewId 
               </div>
             ) : null}
             <div className="mt-3 flex flex-wrap gap-2">
-              {canCreate && review.canManage && review.status === "Draft" ? (
+              {isDesignManager && review.canManage && review.status === "Draft" ? (
                 <div className="space-y-2">
                   <Button
                     disabled={
@@ -641,7 +707,7 @@ export const DesignReviewsTab = ({ project, recipientProjectId, focusedReviewId 
                   {t("designProjects.reviews.comment")}
                 </Button>
               ) : null}
-              {canCreate && review.canManage && review.status === "InternalReview" ? (
+              {isDesignManager && review.canManage && review.status === "InternalReview" ? (
                 <Button
                   disabled={busy === review.id || !notes[review.id]?.trim()}
                   onClick={() => void act(review, "consolidate")}
@@ -650,13 +716,13 @@ export const DesignReviewsTab = ({ project, recipientProjectId, focusedReviewId 
                   {t("designProjects.reviews.consolidate")}
                 </Button>
               ) : null}
-              {canCreate && review.canManage && review.status === "ReadyForClient" ? (
+              {isDesignManager && review.canManage && review.status === "ReadyForClient" ? (
                 <Button disabled={busy === review.id} onClick={() => void act(review, "client")}>
                   <Send className="mr-1 h-4 w-4" />
                   {t("designProjects.reviews.submitClient")}
                 </Button>
               ) : null}
-              {canCreate && review.canManage && review.status === "SubmittedToClient" ? (
+              {isDesignManager && review.canManage && review.status === "SubmittedToClient" ? (
                 <>
                   <Button
                     disabled={
@@ -708,7 +774,7 @@ export const DesignReviewsTab = ({ project, recipientProjectId, focusedReviewId 
         >
           <DialogHeader>
             <DialogTitle>{t("designProjects.reviews.create")}</DialogTitle>
-            <DialogDescription>{t("designProjects.reviews.description")}</DialogDescription>
+            <DialogDescription>{t("designProjects.reviews.createDescription")}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
@@ -858,7 +924,7 @@ export const DesignReviewsTab = ({ project, recipientProjectId, focusedReviewId 
               onClick={() => void create()}
             >
               {busy === 0 ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : null}
-              {t("common.save")}
+              {t("designProjects.reviews.createDraft")}
             </Button>
           </DialogFooter>
         </DialogContent>
