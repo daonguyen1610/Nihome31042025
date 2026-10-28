@@ -1976,7 +1976,8 @@ public static class SampleCrmDataSeeder
         var sampleCustomers = GetCoreCustomers(db);
         if (sampleCustomers.All(customer => customer is null)) return;
 
-        var projectManager = ResolveRoleUser(db, "PM", owner);
+        var legacyProjectManager = ResolveRoleUser(db, "PM", owner);
+        var designManager = ResolveRoleUser(db, "DESIGN_MANAGER", ResolveRoleUser(db, "DESIGN", owner));
         var designLead = ResolveRoleUser(db, "DESIGN_LEAD", ResolveRoleUser(db, "DESIGN", owner));
         var deletedProjectCodes = db.SeededRootDeletions
             .Where(item => item.ResourceType == EntityTypes.DesignProject)
@@ -2011,9 +2012,18 @@ public static class SampleCrmDataSeeder
             var projectCode = $"DP-SAMPLE-{index + 1:D3}";
             if (deletedProjectCodes.Contains(projectCode)) continue;
             var sampleName = name;
-            if (db.DesignProjects.Any(project => project.ProjectCode == projectCode
+            var existing = db.DesignProjects.FirstOrDefault(project => project.ProjectCode == projectCode
                 || (project.Note != null && project.Note.StartsWith(SampleDesignProjectMarker)
-                    && project.Name == sampleName))) continue;
+                    && project.Name == sampleName));
+            if (existing is not null)
+            {
+                // Earlier demo data incorrectly reused the construction PM as
+                // the Design Manager. Repair only that known seeded default so
+                // later administrator assignments remain untouched.
+                if (existing.ProjectManagerUserId == legacyProjectManager.Id)
+                    existing.ProjectManagerUserId = designManager.Id;
+                continue;
+            }
             var dp = new DesignProject
             {
                 ProjectCode = projectCode,
@@ -2021,7 +2031,7 @@ public static class SampleCrmDataSeeder
                 CustomerId = customerId,
                 ContractId = contract?.Id,
                 OperationalProjectId = operationalProjectId,
-                ProjectManagerUserId = projectManager.Id,
+                ProjectManagerUserId = designManager.Id,
                 DesignLeadUserId = designLead.Id,
                 StartDate = now.AddDays(-startDaysAgo),
                 Deadline = now.AddDays(deadlineDaysAhead),

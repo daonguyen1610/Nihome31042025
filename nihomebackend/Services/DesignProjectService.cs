@@ -41,11 +41,8 @@ public class DesignProjectService(
 
         if (!await projectAccess.HasAdministrativeBypassAsync(callerUserId, ct))
         {
-            var accessibleProjectIds = await projectAccess.GetAccessibleOperationalProjectIdsAsync(callerUserId, ct);
-            q = q.Where(dp =>
-                dp.OperationalProjectId.HasValue && accessibleProjectIds.Contains(dp.OperationalProjectId.Value) ||
-                !dp.OperationalProjectId.HasValue &&
-                (dp.ProjectManagerUserId == callerUserId || dp.DesignLeadUserId == callerUserId));
+            var accessibleProjectIds = await projectAccess.GetAccessibleDesignProjectIdsAsync(callerUserId, ct);
+            q = q.Where(dp => accessibleProjectIds.Contains(dp.Id));
         }
 
         if (p.CustomerId.HasValue) q = q.Where(dp => dp.CustomerId == p.CustomerId.Value);

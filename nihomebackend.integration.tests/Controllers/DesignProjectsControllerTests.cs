@@ -51,6 +51,50 @@ public class DesignProjectsControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task AssignedDesignManager_CanListAndOpenLinkedProjectWithoutOperationalMembership()
+    {
+        var fixture = await WithDbAsync(async db =>
+        {
+            var manager = await db.Users.SingleAsync(user =>
+                user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["DESIGN_MANAGER"]);
+            var customer = new Customer
+            {
+                Name = $"Chủ đầu tư phân công Chủ nhiệm {Guid.NewGuid():N}",
+                Type = CustomerType.Company,
+                SourceCode = "referral",
+            };
+            var operational = new OperationalProject
+            {
+                Code = $"OP-DM-{Guid.NewGuid():N}"[..30].ToUpperInvariant(),
+                Name = "Dự án vận hành do PM toàn dự án quản lý",
+                Customer = customer,
+            };
+            var design = new DesignProject
+            {
+                ProjectCode = $"DP-DM-{Guid.NewGuid():N}"[..30].ToUpperInvariant(),
+                Name = "Hồ sơ thiết kế do Chủ nhiệm thiết kế phụ trách",
+                Customer = customer,
+                OperationalProject = operational,
+                ProjectManagerUserId = manager.Id,
+                CurrentStage = DesignProjectStage.Concept,
+                Status = DesignProjectStatus.Active,
+            };
+            db.Add(design);
+            await db.SaveChangesAsync();
+            return design.Id;
+        });
+        await AuthTestHelper.AuthenticateAsync(Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "DESIGN_MANAGER"));
+
+        using var list = await Client.GetAsync("/api/design-projects?pageSize=100");
+        list.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await ReadJsonAsync(list)).GetProperty("items").EnumerateArray()
+            .Should().Contain(item => item.GetProperty("id").GetInt32() == fixture);
+        (await Client.GetAsync($"/api/design-projects/{fixture}"))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
     public async Task Pm_CannotCreate()
     {
         // PM has view but not manage.

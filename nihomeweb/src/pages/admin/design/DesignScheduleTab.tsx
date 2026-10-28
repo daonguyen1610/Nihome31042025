@@ -617,6 +617,9 @@ export const DesignScheduleTab = ({ project }: Props) => {
             <p className="text-sm text-slate-500">
               {t("designProjects.schedule.tasks.total", { count: schedule.tasks.totalCount })}
             </p>
+            <p className="mt-1 max-w-3xl text-sm text-slate-600">
+              {t("designProjects.schedule.tasks.approvalGuide")}
+            </p>
           </div>
           {loading ? <Loader2 className="h-5 w-5 animate-spin text-slate-400" /> : null}
         </div>
@@ -776,7 +779,17 @@ export const DesignScheduleTab = ({ project }: Props) => {
                   ) : null}
                   {isApprover && task.approvalStatus === "Pending" ? (
                     <div className="mt-3 space-y-2 rounded-md border bg-slate-50 p-3">
+                      <p className="font-medium text-slate-900">
+                        {t("designProjects.schedule.review.title")}
+                      </p>
+                      <p className="text-sm text-slate-600">
+                        {t("designProjects.schedule.review.help")}
+                      </p>
+                      <Label htmlFor={`task-${task.id}-review-reason`}>
+                        {t("designProjects.schedule.review.comment")}
+                      </Label>
                       <Input
+                        id={`task-${task.id}-review-reason`}
                         value={reviewReasons[task.id] ?? ""}
                         maxLength={2000}
                         placeholder={t("designProjects.schedule.placeholder.reviewReason")}
