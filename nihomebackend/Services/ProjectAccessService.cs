@@ -338,6 +338,8 @@ public sealed class ProjectAccessService(AppDbContext db, IPermissionService per
             .Select(project => new
             {
                 project.OperationalProjectId,
+                project.ProjectManagerUserId,
+                project.DesignLeadUserId,
                 OperationalProjectManagerUserId = project.OperationalProject != null
                     ? project.OperationalProject.ProjectManagerUserId
                     : null,
@@ -347,7 +349,8 @@ public sealed class ProjectAccessService(AppDbContext db, IPermissionService per
             })
             .SingleOrDefaultAsync(ct);
         if (project is null || !project.OperationalProjectId.HasValue) return null;
-        if (project.OperationalProjectManagerUserId == userId ||
+        if (project.ProjectManagerUserId == userId || project.DesignLeadUserId == userId ||
+            project.OperationalProjectManagerUserId == userId ||
             project.OperationalProjectCreatedByUserId == userId) return null;
 
         var roles = await db.OperationalProjectMemberRoles.AsNoTracking()

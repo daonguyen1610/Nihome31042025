@@ -2012,15 +2012,19 @@ public static class SampleCrmDataSeeder
             var projectCode = $"DP-SAMPLE-{index + 1:D3}";
             if (deletedProjectCodes.Contains(projectCode)) continue;
             var sampleName = name;
+            var sampleNote = $"{SampleDesignProjectMarker} Hồ sơ thiết kế {name} gắn với dự án vận hành và khách hàng chủ đầu tư.";
             var existing = db.DesignProjects.FirstOrDefault(project => project.ProjectCode == projectCode
                 || (project.Note != null && project.Note.StartsWith(SampleDesignProjectMarker)
                     && project.Name == sampleName));
             if (existing is not null)
             {
                 // Earlier demo data incorrectly reused the construction PM as
-                // the Design Manager. Repair only that known seeded default so
-                // later administrator assignments remain untouched.
-                if (existing.ProjectManagerUserId == legacyProjectManager.Id)
+                // the Design Manager. Repair only the complete untouched legacy
+                // signature so a later administrator assignment remains intact.
+                if (existing.ProjectManagerUserId == legacyProjectManager.Id &&
+                    existing.Note == sampleNote &&
+                    existing.CreatedByUserId == owner.Id &&
+                    existing.UpdatedByUserId == owner.Id)
                     existing.ProjectManagerUserId = designManager.Id;
                 continue;
             }
@@ -2037,7 +2041,7 @@ public static class SampleCrmDataSeeder
                 Deadline = now.AddDays(deadlineDaysAhead),
                 CurrentStage = stage,
                 Status = status,
-                Note = $"{SampleDesignProjectMarker} Hồ sơ thiết kế {name} gắn với dự án vận hành và khách hàng chủ đầu tư.",
+                Note = sampleNote,
                 CreatedByUserId = owner.Id,
                 UpdatedByUserId = owner.Id,
                 CreatedAt = now.AddDays(-startDaysAgo),
