@@ -217,6 +217,9 @@ runs `dotnet watch` from `/src/nihomebackend`. Linux dependency/build caches,
 managed files, uploaded/process images and file quarantine use named volumes;
 frontend changes are rebuilt and served by ASP.NET. The image supplies the
 tracked design/as-built sample PDFs to initialize a new managed-file volume.
+Startup removes only obsolete mixed-case NuGet import files left in the
+persistent backend `obj` volume by the former `NihomeBackend.csproj` name; this
+prevents duplicate `MSB4011` imports without discarding the remaining cache.
 Run `docker compose -f docker-compose-dev.yaml up -d --build`. The development
 connection string and SQL `MSSQL_SA_PASSWORD` use the same fixed local password
 as the standard Compose setup. An existing SQL volume must already use that
