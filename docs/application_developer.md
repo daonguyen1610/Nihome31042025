@@ -1551,7 +1551,11 @@ and `sortDirection`. Supported sort fields are `signedDate` (default),
 back to signed date, and direction defaults to descending. Value filters and
 the `value` sort use current value (`Value + approved VO deltas`). The response
 adds portfolio totals, direction-neutral overdue/due-soon milestone counts,
-and each row's next unpaid milestone and scheduled outstanding amount. In an
+and each row's next unpaid milestone and scheduled outstanding amount. List and
+detail responses expose nullable `sourceTenderId`, `sourceTenderCode`, and
+`sourceTenderName` fields when the linked opportunity came from a won tender;
+the values are derived from `Opportunity.WonTenderId` rather than duplicated on
+the Contract record. In an
 Upstream scope these amounts are receivables; in a Downstream scope they are
 payment obligations. `GET /api/contracts/filter-options`
 returns complete owner, customer, and Operational Project choices from the

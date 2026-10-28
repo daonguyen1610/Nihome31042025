@@ -109,6 +109,73 @@ public class ContractsControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task GetAndList_ContractCreatedFromWonTender_ReturnSourceTenderLink()
+    {
+        await AuthTestHelper.AuthenticateAsync(
+            Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "SUPER_ADMIN"));
+        var seeded = await WithDbAsync(async db =>
+        {
+            var customer = new Customer
+            {
+                Type = CustomerType.Individual,
+                Name = $"Tender contract customer {Guid.NewGuid():N}",
+            };
+            var tender = new Tender
+            {
+                Code = $"TD-{Guid.NewGuid():N}"[..18],
+                Name = "Gói thầu nhà máy nguồn",
+                Customer = customer,
+                InvitationSource = "Direct",
+                InvitationReceivedByUserId = 1,
+                SubmissionDeadline = DateTime.UtcNow.AddDays(30),
+                Status = TenderStatus.Won,
+            };
+            var opportunity = new Opportunity
+            {
+                Name = "Cơ hội thương thảo sau trúng thầu",
+                Customer = customer,
+                WonTenderId = tender.Id,
+            };
+            db.Tenders.Add(tender);
+            await db.SaveChangesAsync();
+            opportunity.WonTenderId = tender.Id;
+            var contract = new Contract
+            {
+                ContractNumber = $"HD-{Guid.NewGuid():N}"[..18],
+                Customer = customer,
+                Opportunity = opportunity,
+                Direction = ContractDirection.Upstream,
+                Type = ContractType.DesignAndBuild,
+                Status = ContractStatus.Draft,
+                Value = 100_000_000,
+            };
+            db.Contracts.Add(contract);
+            await db.SaveChangesAsync();
+            return (contract.Id, contract.ContractNumber);
+        });
+        var (contractId, contractNumber) = seeded;
+
+        var response = await Client.GetAsync($"/api/contracts/{contractId}");
+
+        response.EnsureSuccessStatusCode();
+        var body = await ReadJsonAsync(response);
+        body.GetProperty("sourceTenderId").GetInt32().Should().BeGreaterThan(0);
+        body.GetProperty("sourceTenderCode").GetString().Should().StartWith("TD-");
+        body.GetProperty("sourceTenderName").GetString().Should().Be("Gói thầu nhà máy nguồn");
+
+        var listResponse = await Client.GetAsync($"/api/contracts?search={contractNumber}");
+        listResponse.EnsureSuccessStatusCode();
+        var listedContract = (await ReadJsonAsync(listResponse))
+            .GetProperty("items")
+            .EnumerateArray()
+            .Single(item => item.GetProperty("id").GetInt32() == contractId);
+        listedContract.GetProperty("sourceTenderId").GetInt32().Should().BeGreaterThan(0);
+        listedContract.GetProperty("sourceTenderCode").GetString().Should().StartWith("TD-");
+        listedContract.GetProperty("sourceTenderName").GetString().Should().Be("Gói thầu nhà máy nguồn");
+    }
+
+    [Fact]
     public async Task List_AsAccountant_ReturnsContractsAcrossSalesOwners()
     {
         await AuthTestHelper.AuthenticateAsync(

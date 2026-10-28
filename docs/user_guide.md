@@ -838,7 +838,9 @@ An opportunity-derived contract carries its original source/purpose/reason and
 may use an eligible approved quotation. A Lost pursuit keeps its reason and
 cannot create a contract; start a new opportunity if the customer returns.
 Links on contract care and opportunity detail let authorized users trace the
-relationship. The contract view lists the newest 100 accessible records per
+relationship. When the opportunity came from a won tender, the contract Source
+section identifies it by code and name and links back for users with tender
+view permission. The contract view lists the newest 100 accessible records per
 collection. Related contracts and continuation opportunities cannot be permanently
 deleted; their source history is retained. Existing-contract term changes use
 an appendix instead. Email reminders do not initiate renewal automatically.

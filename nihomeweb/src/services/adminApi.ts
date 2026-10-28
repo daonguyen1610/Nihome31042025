@@ -1982,6 +1982,9 @@ export interface ContractResponse {
   vendorName?: string | null;
   opportunityId?: number | null;
   opportunityTitle?: string | null;
+  sourceTenderId?: number | null;
+  sourceTenderCode?: string | null;
+  sourceTenderName?: string | null;
   quoteId?: number | null;
   operationalProjectId?: number | null;
   operationalProjectCode?: string | null;
