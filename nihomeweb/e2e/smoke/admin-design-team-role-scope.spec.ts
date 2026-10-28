@@ -140,6 +140,12 @@ test("design team saves a role scoped to its current design project", async ({
       ]),
     );
     expect(member.roles.some((role: { scope: string }) => role.scope === "Project")).toBe(false);
+    await expect(
+      page
+        .locator("li")
+        .filter({ hasText: candidate.email })
+        .getByRole("button", { name: "End member assignment" }),
+    ).toBeVisible();
 
     const team = await api.get(`/api/operational-projects/${operationalProjectId}/team`, {
       headers,
@@ -150,6 +156,12 @@ test("design team saves a role scoped to its current design project", async ({
         item.roles.some((role) => role.scope === "Project"),
     );
     expect(sharedMember, "the shared project manager role must remain").toBeTruthy();
+    await expect(
+      page
+        .locator("li")
+        .filter({ hasText: sharedMember.email })
+        .getByRole("button", { name: "End member assignment" }),
+    ).toHaveCount(0);
     await page
       .locator("li")
       .filter({ hasText: sharedMember.email })
@@ -176,6 +188,44 @@ test("design team saves a role scoped to its current design project", async ({
     expect(retained.roles).toEqual(
       expect.arrayContaining([expect.objectContaining({ scope: "Project", scopeValue: null })]),
     );
+    const sharedMemberRow = page.locator("li").filter({ hasText: sharedMember.email });
+    await sharedMemberRow.getByRole("button", { name: "Edit member" }).click();
+    const addDesignRoleDialog = page.getByRole("dialog");
+    await addDesignRoleDialog.getByRole("button", { name: "Add role" }).click();
+    await addDesignRoleDialog
+      .getByTestId("design-team-role-row")
+      .last()
+      .getByRole("combobox")
+      .click();
+    await page.getByRole("option", { name: /Architect.*R/ }).click();
+    await addDesignRoleDialog.getByRole("button", { name: "Save changes" }).click();
+    await expect(addDesignRoleDialog).toHaveCount(0);
+    await expect(
+      sharedMemberRow.getByRole("button", { name: "End member assignment" }),
+    ).toHaveCount(0);
+    await sharedMemberRow.getByRole("button", { name: "Edit member" }).click();
+    const removeDesignRoleDialog = page.getByRole("dialog");
+    await removeDesignRoleDialog
+      .getByTestId("design-team-role-row")
+      .filter({ hasText: "Architect" })
+      .getByRole("button", { name: "Remove role" })
+      .click();
+    await removeDesignRoleDialog.getByRole("button", { name: "Save changes" }).click();
+    await expect(removeDesignRoleDialog).toHaveCount(0);
+    const afterRemoval = await api.get(`/api/operational-projects/${operationalProjectId}/team`, {
+      headers,
+    });
+    expect(afterRemoval.status()).toBe(200);
+    const finalMember = (await afterRemoval.json()).members.find(
+      (item: { id: number }) => item.id === sharedMember.id,
+    );
+    expect(finalMember.isActive).toBe(true);
+    expect(finalMember.roles).toEqual(
+      expect.arrayContaining([expect.objectContaining({ scope: "Project", scopeValue: null })]),
+    );
+    expect(
+      finalMember.roles.some((role: { roleCode: string }) => role.roleCode === "Architect"),
+    ).toBe(false);
   } finally {
     if (designProjectId)
       await hardDeleteBusinessRoot(api, headers, `/api/design-projects/${designProjectId}`);

@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { expect, test, TEST_USERS } from "../fixtures/auth";
 import { execSql } from "../fixtures/db";
+import { hardDeleteBusinessRoot } from "../fixtures/hardDelete";
 
 test("shared-project and internal work package tabs render without browser errors", async ({
   page,
@@ -98,6 +99,73 @@ test("package manager can edit package metadata in the browser", async ({
         expect(restored.status()).toBe(200);
       }
     }
+  }
+});
+
+test("general project package can link and unlink its contract from the edit dialog", async ({
+  page,
+  api,
+  loginAs,
+  loginInBrowserAs,
+}) => {
+  const headers = { Authorization: `Bearer ${await loginAs(TEST_USERS.superAdmin)}` };
+  const contractsResponse = await api.get("/api/contracts?direction=Upstream&pageSize=100", {
+    headers,
+  });
+  expect(contractsResponse.status()).toBe(200);
+  const contracts = (await contractsResponse.json()).items as {
+    id: number;
+    contractNumber: string;
+    operationalProjectId: number | null;
+  }[];
+  const contract = contracts.find((item) => item.operationalProjectId);
+  expect(contract, "a seeded upstream contract linked to a project is required").toBeTruthy();
+  const optionsResponse = await api.get("/api/work-packages/options", { headers });
+  expect(optionsResponse.status()).toBe(200);
+  const options = await optionsResponse.json();
+  const lead = options.users.find(
+    (user: { canLead: boolean; roleGroupId: number }) => user.canLead && user.roleGroupId,
+  );
+  expect(lead, "an active department lead is required").toBeTruthy();
+  const created = await api.post("/api/work-packages", {
+    headers: { ...headers, "Idempotency-Key": randomUUID() },
+    data: {
+      kind: "Project",
+      purpose: "General",
+      name: `Phối hợp hồ sơ hợp đồng dự án NICON ${Date.now()}`,
+      operationalProjectId: contract!.operationalProjectId,
+      departmentRoleGroupId: lead.roleGroupId,
+      leadUserId: lead.userId,
+    },
+  });
+  expect(created.status(), await created.text()).toBe(201);
+  const packageId = (await created.json()).id as number;
+
+  try {
+    await loginInBrowserAs(page, TEST_USERS.superAdmin);
+    await page.addInitScript(() => localStorage.setItem("nicon_lang", "en"));
+    await page.goto(`/admin/work-packages/${packageId}`);
+    await page.getByTestId("work-package-edit").click();
+    let dialog = page.getByRole("dialog");
+    await dialog.getByRole("combobox").click();
+    await page.getByRole("option", { name: contract!.contractNumber }).click();
+    await dialog.getByRole("button", { name: "Save changes" }).click();
+    await expect(dialog).toHaveCount(0);
+    let saved = await api.get(`/api/work-packages/${packageId}`, { headers });
+    expect(saved.status()).toBe(200);
+    expect((await saved.json()).contractId).toBe(contract!.id);
+
+    await page.getByTestId("work-package-edit").click();
+    dialog = page.getByRole("dialog");
+    await dialog.getByRole("combobox").click();
+    await page.getByRole("option", { name: "No contract" }).click();
+    await dialog.getByRole("button", { name: "Save changes" }).click();
+    await expect(dialog).toHaveCount(0);
+    saved = await api.get(`/api/work-packages/${packageId}`, { headers });
+    expect(saved.status()).toBe(200);
+    expect((await saved.json()).contractId).toBeNull();
+  } finally {
+    await hardDeleteBusinessRoot(api, headers, `/api/work-packages/${packageId}`);
   }
 });
 

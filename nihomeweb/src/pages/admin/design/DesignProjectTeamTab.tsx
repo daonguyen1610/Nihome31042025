@@ -608,14 +608,17 @@ export const OperationalProjectTeamPanel = ({
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          aria-label={t("designProjects.team.action.endMember")}
-                          onClick={() => openMember(member, "end")}
-                        >
-                          <UserRoundX className="h-4 w-4 text-rose-600" />
-                        </Button>
+                        {(!designProjectContext ||
+                          (member.roles.length > 0 && member.roles.every(isDesignRole))) && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label={t("designProjects.team.action.endMember")}
+                            onClick={() => openMember(member, "end")}
+                          >
+                            <UserRoundX className="h-4 w-4 text-rose-600" />
+                          </Button>
+                        )}
                       </div>
                     ) : null}
                   </div>
@@ -721,14 +724,17 @@ export const OperationalProjectTeamPanel = ({
                             >
                               <Pencil className="h-4 w-4" />
                             </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              aria-label={t("designProjects.team.action.endMember")}
-                              onClick={() => openMember(member, "end")}
-                            >
-                              <UserRoundX className="h-4 w-4 text-rose-600" />
-                            </Button>
+                            {(!designProjectContext ||
+                              (member.roles.length > 0 && member.roles.every(isDesignRole))) && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                aria-label={t("designProjects.team.action.endMember")}
+                                onClick={() => openMember(member, "end")}
+                              >
+                                <UserRoundX className="h-4 w-4 text-rose-600" />
+                              </Button>
+                            )}
                           </div>
                         </td>
                       ) : null}
