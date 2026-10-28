@@ -37,7 +37,8 @@ public class ContractResponse
 
     /// <summary>
     /// Tender that produced the linked opportunity, when the contract follows a won tender.
-    /// Derived from Opportunity.WonTenderId; no duplicate relationship is persisted on Contract.
+    /// Derived from Tender.WonOpportunityId; no duplicate relationship is persisted on Contract.
+    /// The most recently closed tender wins when legacy data contains multiple matches.
     /// </summary>
     public int? SourceTenderId { get; set; }
     public string? SourceTenderCode { get; set; }

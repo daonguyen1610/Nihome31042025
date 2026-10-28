@@ -165,3 +165,42 @@ test("source lead panel handles direct contracts, multiple leads, languages and 
   await expect(page.getByTestId("contract-source-leads")).toHaveCount(0);
   expect(sourceRequests).toBe(beforeDirect);
 });
+
+test("contract detail shows and links the won source tender", async ({
+  page,
+  api,
+  loginAs,
+  loginInBrowserAs,
+}) => {
+  const token = await loginAs(TEST_USERS.superAdmin);
+  const headers = { Authorization: `Bearer ${token}` };
+  const response = await api.get("/api/contracts?pageSize=100", { headers });
+  expect(response.ok()).toBe(true);
+  const linked = (await response.json()).items.find(
+    (item) => item.direction === "Upstream" && item.opportunityId != null,
+  );
+  expect(linked).toBeTruthy();
+  const detailResponse = await api.get(`/api/contracts/${linked.id}`, { headers });
+  expect(detailResponse.ok()).toBe(true);
+  const detail = await detailResponse.json();
+
+  await loginInBrowserAs(page, TEST_USERS.superAdmin);
+  await page.addInitScript(() => localStorage.setItem("nicon_lang", "vi"));
+  await page.route(new RegExp(`/api/(?:v1/)?contracts/${linked.id}$`), (route) =>
+    route.fulfill({
+      json: {
+        ...detail,
+        sourceTenderId: 991,
+        sourceTenderCode: "TD-2026-0991",
+        sourceTenderName: "Gói thầu nhà máy nguồn",
+      },
+    }),
+  );
+
+  await page.goto(`/admin/contracts/${linked.id}`);
+  const tenderLink = page.locator('a[href="/admin/tenders/991"]');
+  await expect(tenderLink).toHaveText("TD-2026-0991");
+  await expect(page.getByText("Gói thầu nhà máy nguồn", { exact: false })).toBeVisible();
+  await tenderLink.click();
+  await expect(page).toHaveURL(/\/admin\/tenders\/991$/);
+});

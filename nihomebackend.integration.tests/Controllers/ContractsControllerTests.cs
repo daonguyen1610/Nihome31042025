@@ -121,7 +121,18 @@ public class ContractsControllerTests : IntegrationTestBase
                 Type = CustomerType.Individual,
                 Name = $"Tender contract customer {Guid.NewGuid():N}",
             };
-            var tender = new Tender
+            var olderTender = new Tender
+            {
+                Code = $"TD-{Guid.NewGuid():N}"[..18],
+                Name = "Gói thầu cũ cùng cơ hội",
+                Customer = customer,
+                InvitationSource = "Direct",
+                InvitationReceivedByUserId = 1,
+                SubmissionDeadline = DateTime.UtcNow.AddDays(20),
+                Status = TenderStatus.Won,
+                ClosedAt = DateTime.UtcNow.AddDays(-1),
+            };
+            var sourceTender = new Tender
             {
                 Code = $"TD-{Guid.NewGuid():N}"[..18],
                 Name = "Gói thầu nhà máy nguồn",
@@ -130,16 +141,17 @@ public class ContractsControllerTests : IntegrationTestBase
                 InvitationReceivedByUserId = 1,
                 SubmissionDeadline = DateTime.UtcNow.AddDays(30),
                 Status = TenderStatus.Won,
+                ClosedAt = DateTime.UtcNow,
             };
             var opportunity = new Opportunity
             {
                 Name = "Cơ hội thương thảo sau trúng thầu",
                 Customer = customer,
-                WonTenderId = tender.Id,
             };
-            db.Tenders.Add(tender);
+            db.AddRange(olderTender, sourceTender, opportunity);
             await db.SaveChangesAsync();
-            opportunity.WonTenderId = tender.Id;
+            olderTender.WonOpportunityId = opportunity.Id;
+            sourceTender.WonOpportunityId = opportunity.Id;
             var contract = new Contract
             {
                 ContractNumber = $"HD-{Guid.NewGuid():N}"[..18],
@@ -152,16 +164,16 @@ public class ContractsControllerTests : IntegrationTestBase
             };
             db.Contracts.Add(contract);
             await db.SaveChangesAsync();
-            return (contract.Id, contract.ContractNumber);
+            return (contract.Id, contract.ContractNumber, sourceTender.Id, sourceTender.Code);
         });
-        var (contractId, contractNumber) = seeded;
+        var (contractId, contractNumber, sourceTenderId, sourceTenderCode) = seeded;
 
         var response = await Client.GetAsync($"/api/contracts/{contractId}");
 
         response.EnsureSuccessStatusCode();
         var body = await ReadJsonAsync(response);
-        body.GetProperty("sourceTenderId").GetInt32().Should().BeGreaterThan(0);
-        body.GetProperty("sourceTenderCode").GetString().Should().StartWith("TD-");
+        body.GetProperty("sourceTenderId").GetInt32().Should().Be(sourceTenderId);
+        body.GetProperty("sourceTenderCode").GetString().Should().Be(sourceTenderCode);
         body.GetProperty("sourceTenderName").GetString().Should().Be("Gói thầu nhà máy nguồn");
 
         var listResponse = await Client.GetAsync($"/api/contracts?search={contractNumber}");
@@ -170,8 +182,8 @@ public class ContractsControllerTests : IntegrationTestBase
             .GetProperty("items")
             .EnumerateArray()
             .Single(item => item.GetProperty("id").GetInt32() == contractId);
-        listedContract.GetProperty("sourceTenderId").GetInt32().Should().BeGreaterThan(0);
-        listedContract.GetProperty("sourceTenderCode").GetString().Should().StartWith("TD-");
+        listedContract.GetProperty("sourceTenderId").GetInt32().Should().Be(sourceTenderId);
+        listedContract.GetProperty("sourceTenderCode").GetString().Should().Be(sourceTenderCode);
         listedContract.GetProperty("sourceTenderName").GetString().Should().Be("Gói thầu nhà máy nguồn");
     }
 
