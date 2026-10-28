@@ -1070,6 +1070,7 @@ export interface FinanceReviewResponse {
   id: number;
   workPackageId: number;
   status: BusinessReviewStatus;
+  reviewedQuoteVersion: number | null;
   contractConditionsReviewed: boolean;
   guaranteesReviewed: boolean;
   paymentTermsReviewed: boolean;

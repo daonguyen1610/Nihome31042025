@@ -186,6 +186,9 @@ const AdminQuoteDetail = () => {
   const [form, setForm] = useState<UpdateQuoteRequest | null>(null);
   const [approvedInputOffers, setApprovedInputOffers] = useState<InputPriceOfferResponse[]>([]);
   const [inputPricePackages, setInputPricePackages] = useState<DepartmentWorkPackageResponse[]>([]);
+  const [financeReviewPackages, setFinanceReviewPackages] = useState<
+    DepartmentWorkPackageResponse[]
+  >([]);
   const [inputOffersUnavailable, setInputOffersUnavailable] = useState(false);
   const [saving, setSaving] = useState(false);
   const [effectiveRevision, setEffectiveRevision] = useState<MaterialRateRevisionResponse | null>(
@@ -271,6 +274,24 @@ const AdminQuoteDetail = () => {
         setInputPricePackages([]);
         setApprovedInputOffers([]);
         setInputOffersUnavailable(!canViewWorkPackages);
+      }
+      if (data.status === "Approved" && data.operationalProjectId && canViewWorkPackages) {
+        const linkedPackages: DepartmentWorkPackageResponse[] = [];
+        let page = 1;
+        while (true) {
+          const response = await adminApi.listWorkPackages({
+            purpose: "FinanceCommercialReview",
+            sourceQuoteId: data.id,
+            page,
+            pageSize: 100,
+          });
+          linkedPackages.push(...response.data.items);
+          if (page * response.data.pageSize >= response.data.totalCount) break;
+          page += 1;
+        }
+        setFinanceReviewPackages(linkedPackages);
+      } else {
+        setFinanceReviewPackages([]);
       }
     } catch (err) {
       setError(extractApiError(err));
@@ -671,6 +692,15 @@ const AdminQuoteDetail = () => {
     canManage && !editing && !isTerminal && (!awaitingInputPrice || approvedInputOffers.length > 0);
   const primaryInputPackage =
     inputPricePackages.find((item) => item.status !== "Completed") ?? inputPricePackages[0];
+  const primaryFinancePackage = financeReviewPackages.find(
+    (item) =>
+      item.status !== "Cancelled" &&
+      (item.financeReview?.reviewedQuoteVersion === quote.version ||
+        (item.status !== "Completed" &&
+          (!item.financeReview ||
+            item.financeReview.status === "Draft" ||
+            item.financeReview.status === "Rejected"))),
+  );
 
   // A quote the customer or an approver has signed off on is the point where a
   // contract can be raised from it.
@@ -751,10 +781,22 @@ const AdminQuoteDetail = () => {
               {quote.status === "Approved" && (
                 <Button variant="outline" asChild>
                   <Link
-                    to={`/admin/work-packages?create=1&purpose=FinanceCommercialReview&projectId=${quote.operationalProjectId}&opportunityId=${quote.opportunityId}&quoteId=${quote.id}`}
+                    to={
+                      primaryFinancePackage
+                        ? `/admin/work-packages/${primaryFinancePackage.id}`
+                        : `/admin/work-packages?create=1&purpose=FinanceCommercialReview&projectId=${quote.operationalProjectId}&opportunityId=${quote.opportunityId}&quoteId=${quote.id}`
+                    }
                   >
-                    <CheckCheck className="mr-1.5 h-4 w-4" />
-                    {t("quotes.action.requestFinanceReview")}
+                    {primaryFinancePackage ? (
+                      <Link2 className="mr-1.5 h-4 w-4" />
+                    ) : (
+                      <CheckCheck className="mr-1.5 h-4 w-4" />
+                    )}
+                    {t(
+                      primaryFinancePackage
+                        ? "quotes.action.viewFinanceReview"
+                        : "quotes.action.requestFinanceReview",
+                    )}
                   </Link>
                 </Button>
               )}

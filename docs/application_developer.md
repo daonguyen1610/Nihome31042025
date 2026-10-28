@@ -2052,6 +2052,10 @@ Server-side gates that consume these records:
   `OperationalProjectId` so the review has a project to live under. The review
   pins `ReviewedQuoteVersion` when Finance saves it, so a quote re-versioned
   after a material post-approval edit needs a fresh review before it can be sent.
+  Finance review responses, including reviews nested in `GET /api/work-packages`
+  and `GET /api/work-packages/{id}`, expose nullable `reviewedQuoteVersion`.
+  The quotation screen filters packages by `sourceQuoteId` and uses that value
+  to open a reusable review or offer a new request for a changed quotation.
 - `QuoteService` resolves `inputPriceOfferId` only when the offer is `Approved`,
   still valid, and belongs to a `ProcurementInputPricing` package of the quote's
   project; the quote stores `InputPriceSnapshotJson` at link time.

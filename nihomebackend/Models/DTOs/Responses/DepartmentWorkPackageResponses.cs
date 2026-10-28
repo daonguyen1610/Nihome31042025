@@ -90,6 +90,7 @@ public sealed class FinanceReviewResponse
     public int Id { get; set; }
     public int WorkPackageId { get; set; }
     public string Status { get; set; } = string.Empty;
+    public int? ReviewedQuoteVersion { get; set; }
     public bool ContractConditionsReviewed { get; set; }
     public bool GuaranteesReviewed { get; set; }
     public bool PaymentTermsReviewed { get; set; }
