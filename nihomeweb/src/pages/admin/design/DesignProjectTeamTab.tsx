@@ -559,20 +559,47 @@ export const OperationalProjectTeamPanel = ({
             <ul className="mt-4 grid grid-cols-1 gap-3 lg:hidden">
               {activeMembers.map((member) => (
                 <li key={member.id} className="rounded-lg border border-slate-200 p-4">
-                  <div className="flex items-start justify-between gap-3">
+                  <div
+                    className={
+                      designProjectContext
+                        ? "flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between"
+                        : "flex items-start justify-between gap-3"
+                    }
+                  >
                     <div className="flex min-w-0 items-start gap-3">
                       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-600">
                         <UserRound className="h-4 w-4" />
                       </div>
                       <div className="min-w-0">
-                        <p className="truncate font-semibold text-slate-900">{member.userName}</p>
-                        <p className="truncate text-sm text-slate-500">
-                          {member.position} · {member.email}
+                        <p
+                          className={
+                            designProjectContext
+                              ? "break-words font-semibold text-slate-900"
+                              : "truncate font-semibold text-slate-900"
+                          }
+                        >
+                          {member.userName}
                         </p>
+                        {designProjectContext ? (
+                          <>
+                            <p className="break-words text-sm text-slate-500">{member.position}</p>
+                            <p className="break-all text-xs text-slate-500">{member.email}</p>
+                          </>
+                        ) : (
+                          <p className="truncate text-sm text-slate-500">
+                            {member.position} · {member.email}
+                          </p>
+                        )}
                       </div>
                     </div>
                     {team.canManage ? (
-                      <div className="flex shrink-0 gap-1">
+                      <div
+                        className={
+                          designProjectContext
+                            ? "flex shrink-0 justify-end gap-1"
+                            : "flex shrink-0 gap-1"
+                        }
+                      >
                         <Button
                           variant="ghost"
                           size="icon"
@@ -967,22 +994,27 @@ export const OperationalProjectTeamPanel = ({
                 }
               />
             </div>
-            <div>
-              <Label>
-                {t("designProjects.team.field.endedAt")}
-                {memberDialog === "end" ? " *" : ""}
-              </Label>
-              <Input
-                className="mt-1"
-                type="date"
-                min={memberForm.startedAt}
-                disabled={memberDialog !== "end"}
-                value={memberForm.endedAt ?? ""}
-                onChange={(event) =>
-                  setMemberForm((current) => ({ ...current, endedAt: event.target.value || null }))
-                }
-              />
-            </div>
+            {(!designProjectContext || memberDialog === "end") && (
+              <div>
+                <Label>
+                  {t("designProjects.team.field.endedAt")}
+                  {memberDialog === "end" ? " *" : ""}
+                </Label>
+                <Input
+                  className="mt-1"
+                  type="date"
+                  min={memberForm.startedAt}
+                  disabled={memberDialog !== "end"}
+                  value={memberForm.endedAt ?? ""}
+                  onChange={(event) =>
+                    setMemberForm((current) => ({
+                      ...current,
+                      endedAt: event.target.value || null,
+                    }))
+                  }
+                />
+              </div>
+            )}
             <div className="sm:col-span-2">
               <Label>{t("designProjects.team.field.reportsTo")}</Label>
               <Select
@@ -1011,7 +1043,13 @@ export const OperationalProjectTeamPanel = ({
               </Select>
             </div>
             <div className="space-y-3 sm:col-span-2">
-              <div className="flex items-center justify-between">
+              <div
+                className={
+                  designProjectContext
+                    ? "flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
+                    : "flex items-center justify-between"
+                }
+              >
                 <Label>
                   {t(
                     designProjectContext
@@ -1057,7 +1095,7 @@ export const OperationalProjectTeamPanel = ({
                   <div
                     key={index}
                     data-testid="design-team-role-row"
-                    className={`grid gap-2 rounded-md border p-3 ${designProjectContext ? "sm:grid-cols-[1fr_auto_auto]" : "sm:grid-cols-[1fr_1fr_1fr_auto]"}`}
+                    className={`grid gap-2 rounded-md border p-3 ${designProjectContext ? "grid-cols-[minmax(0,1fr)_auto] items-center sm:grid-cols-[minmax(0,1fr)_auto_auto]" : "sm:grid-cols-[1fr_1fr_1fr_auto]"}`}
                   >
                     {preservedRole ? (
                       <div className="text-sm">
@@ -1097,7 +1135,7 @@ export const OperationalProjectTeamPanel = ({
                       </Select>
                     )}
                     {designProjectContext && !preservedRole ? (
-                      <span className="self-center text-sm text-muted-foreground">
+                      <span className="col-start-1 row-start-2 text-sm text-muted-foreground sm:col-start-2 sm:row-start-1">
                         {t("designProjects.team.scope.designModule")}
                       </span>
                     ) : null}
@@ -1146,6 +1184,11 @@ export const OperationalProjectTeamPanel = ({
                         type="button"
                         size="icon"
                         variant="ghost"
+                        className={
+                          designProjectContext
+                            ? "col-start-2 row-start-1 sm:col-start-3"
+                            : undefined
+                        }
                         aria-label={t("designProjects.team.action.removeRole")}
                         onClick={() =>
                           setMemberForm((current) => ({

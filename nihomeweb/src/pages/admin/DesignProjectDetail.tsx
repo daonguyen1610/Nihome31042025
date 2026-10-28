@@ -272,6 +272,7 @@ const AdminDesignProjectDetail = () => {
           <ScrollableTabsList
             previousLabel={t("common.prev")}
             nextLabel={t("common.next")}
+            centerActiveTab
             className="whitespace-nowrap"
           >
             <TabsTrigger value="overview">{t("designProjects.detail.tab.overview")}</TabsTrigger>
