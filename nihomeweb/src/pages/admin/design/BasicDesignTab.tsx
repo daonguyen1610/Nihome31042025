@@ -99,14 +99,15 @@ const emptyForm = (): FormState => ({
 interface Props {
   project: DesignProjectResponse;
   onProjectMayHaveChanged: () => void | Promise<void>;
+  onOpenReviews: () => void;
 }
 
 /**
  * NIH-115 Basic Design tab. Renders per-discipline docs, exposes the
- * status state-machine actions, and surfaces the 3-discipline readiness
- * gate with a one-click "Unlock Shop Drawing" button when green.
+ * status state-machine actions, and surfaces the internal-discipline and
+ * client-review gates before enabling the Detail Design transition.
  */
-export const BasicDesignTab = ({ project, onProjectMayHaveChanged }: Props) => {
+export const BasicDesignTab = ({ project, onProjectMayHaveChanged, onOpenReviews }: Props) => {
   const { t, lang } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
@@ -129,9 +130,19 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged }: Props) => {
     requiredDisciplineCodes: [],
     internallyApprovedDisciplineCodes: [],
     readyForShopDrawing: false,
+    clientApprovedDisciplineCodes: [],
+    hasClientApprovedReview: false,
+    readyForDetailDesign: false,
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const clientReviewReady =
+    readiness.hasClientApprovedReview &&
+    readiness.requiredDisciplineCodes.every((code) =>
+      readiness.clientApprovedDisciplineCodes.some(
+        (approvedCode) => approvedCode.toLowerCase() === code.toLowerCase(),
+      ),
+    );
 
   const [disciplines, setDisciplines] = useState<MasterDataOption[]>([]);
   const [users, setUsers] = useState<UserOption[]>([]);
@@ -433,7 +444,7 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged }: Props) => {
         <section
           className={cn(
             "rounded-lg border p-3 shadow-sm",
-            readiness.readyForShopDrawing
+            readiness.readyForDetailDesign
               ? "border-emerald-200 bg-emerald-50/60"
               : "border-slate-200 bg-slate-50",
           )}
@@ -442,7 +453,9 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged }: Props) => {
             <div>
               <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-900">
                 <ShieldCheck className="h-4 w-4" />
-                {t("basicDesign.readiness.title")}
+                {readiness.readyForDetailDesign
+                  ? t("basicDesign.readiness.readyTitle")
+                  : t("basicDesign.readiness.title")}
               </p>
               <p className="mt-0.5 text-xs text-slate-600">{t("basicDesign.readiness.hint")}</p>
               <div className="mt-2 flex flex-wrap gap-1.5">
@@ -479,13 +492,37 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged }: Props) => {
                 size="sm"
                 className={cn(
                   "gap-1.5",
-                  readiness.readyForShopDrawing ? "bg-emerald-600 hover:bg-emerald-700" : "",
+                  readiness.readyForDetailDesign ? "bg-emerald-600 hover:bg-emerald-700" : "",
                 )}
-                disabled={!readiness.readyForShopDrawing || busyUnlock}
+                disabled={!readiness.readyForDetailDesign || busyUnlock}
                 onClick={() => void doUnlock()}
               >
                 <ChevronsRight className="h-4 w-4" />
                 {t("basicDesign.readiness.unlock")}
+              </Button>
+            ) : null}
+          </div>
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-3">
+            <div className="flex min-w-0 items-start gap-2">
+              {clientReviewReady ? (
+                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+              ) : (
+                <Circle className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+              )}
+              <div>
+                <p className="text-xs font-medium text-slate-800">
+                  {t("basicDesign.readiness.clientTitle")}
+                </p>
+                <p className="mt-0.5 max-w-3xl text-xs text-slate-600">
+                  {clientReviewReady
+                    ? t("basicDesign.readiness.clientApproved")
+                    : t("basicDesign.readiness.clientMissing")}
+                </p>
+              </div>
+            </div>
+            {isBasicStage && !readiness.readyForDetailDesign ? (
+              <Button size="sm" variant="outline" onClick={onOpenReviews}>
+                {t("basicDesign.readiness.openReviews")}
               </Button>
             ) : null}
           </div>

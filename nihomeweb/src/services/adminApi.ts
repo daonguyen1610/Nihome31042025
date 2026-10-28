@@ -4211,6 +4211,9 @@ export interface BasicDesignReadiness {
   requiredDisciplineCodes: string[];
   internallyApprovedDisciplineCodes: string[];
   readyForShopDrawing: boolean;
+  clientApprovedDisciplineCodes: string[];
+  hasClientApprovedReview: boolean;
+  readyForDetailDesign: boolean;
 }
 
 export interface BasicDesignDocListResponse {

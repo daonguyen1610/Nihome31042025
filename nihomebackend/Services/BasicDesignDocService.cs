@@ -101,8 +101,13 @@ public class BasicDesignDocService(
                 .Where(accessibleDisciplines.Contains).ToList();
             readiness.InternallyApprovedDisciplineCodes = readiness.InternallyApprovedDisciplineCodes
                 .Where(accessibleDisciplines.Contains).ToList();
+            readiness.ClientApprovedDisciplineCodes = readiness.ClientApprovedDisciplineCodes
+                .Where(accessibleDisciplines.Contains).ToList();
             readiness.ReadyForShopDrawing = readiness.RequiredDisciplineCodes.Count > 0 &&
                 readiness.RequiredDisciplineCodes.All(readiness.InternallyApprovedDisciplineCodes.Contains);
+            readiness.ReadyForDetailDesign = readiness.ReadyForShopDrawing &&
+                readiness.HasClientApprovedReview &&
+                readiness.RequiredDisciplineCodes.All(readiness.ClientApprovedDisciplineCodes.Contains);
         }
 
         return new BasicDesignDocListResponse
@@ -493,28 +498,10 @@ public class BasicDesignDocService(
                 $"Chưa đủ hồ sơ duyệt nội bộ cho các bộ môn: {string.Join(", ", missing)}.");
         }
 
-        var review = await db.DesignReviews.AsNoTracking()
-            .Where(item => item.DesignProjectId == designProjectId &&
-                item.Stage == DesignReviewStage.BasicDesign)
-            .Include(item => item.Documents).ThenInclude(item => item.ProjectDocument)
-            .OrderByDescending(item => item.RevisionNumber)
-            .FirstOrDefaultAsync(ct);
-        var validDocumentIds = review?.Documents.Where(document =>
-                document.SourceEntityTypeSnapshot == nameof(BasicDesignDoc) &&
-                document.ProjectDocument.DeletedAt == null &&
-                document.ProjectDocument.SyncStatus == ProjectDocumentSyncStatus.Synced &&
-                document.ProjectDocument.Sha256 == document.Sha256Snapshot)
-            .Select(document => (int)document.SourceRecordIdSnapshot).Distinct().ToList() ?? [];
-        var clientApprovedDisciplines = await db.BasicDesignDocs.AsNoTracking()
-            .Where(item => validDocumentIds.Contains(item.Id) &&
-                item.DesignProjectId == designProjectId &&
-                (item.Status == BasicDesignDocStatus.InternallyApproved ||
-                 item.Status == BasicDesignDocStatus.SubmittedForPermit ||
-                 item.Status == BasicDesignDocStatus.PermitApproved))
-            .Select(item => item.DisciplineCode).Distinct().ToListAsync(ct);
-        if (review?.Status != DesignReviewStatus.ClientApproved ||
-            readiness.RequiredDisciplineCodes.Any(code =>
-                !clientApprovedDisciplines.Contains(code, StringComparer.OrdinalIgnoreCase)))
+        if (!readiness.HasClientApprovedReview)
+            throw new BasicDesignDocOperationException(
+                "Phiên trình Basic Design mới nhất chưa được khách hàng duyệt.");
+        if (!readiness.ReadyForDetailDesign)
             throw new BasicDesignDocOperationException(
                 "Hồ sơ khách duyệt phải bao phủ đúng tài liệu Basic Design đã duyệt nội bộ của mọi bộ môn bắt buộc.");
 
@@ -571,12 +558,41 @@ public class BasicDesignDocService(
             .Distinct()
             .ToListAsync(ct);
 
+        var review = await db.DesignReviews.AsNoTracking()
+            .Where(item => item.DesignProjectId == designProjectId &&
+                item.Stage == DesignReviewStage.BasicDesign)
+            .Include(item => item.Documents).ThenInclude(item => item.ProjectDocument)
+            .OrderByDescending(item => item.RevisionNumber)
+            .FirstOrDefaultAsync(ct);
+        var hasClientApprovedReview = review?.Status == DesignReviewStatus.ClientApproved;
+        var validDocumentIds = review?.Documents.Where(document =>
+                document.SourceEntityTypeSnapshot == nameof(BasicDesignDoc) &&
+                document.ProjectDocument.DeletedAt == null &&
+                document.ProjectDocument.SyncStatus == ProjectDocumentSyncStatus.Synced &&
+                document.ProjectDocument.Sha256 == document.Sha256Snapshot)
+            .Select(document => (int)document.SourceRecordIdSnapshot).Distinct().ToList() ?? [];
+        var clientApprovedDisciplines = hasClientApprovedReview
+            ? await db.BasicDesignDocs.AsNoTracking()
+                .Where(item => validDocumentIds.Contains(item.Id) &&
+                    item.DesignProjectId == designProjectId &&
+                    (item.Status == BasicDesignDocStatus.InternallyApproved ||
+                     item.Status == BasicDesignDocStatus.SubmittedForPermit ||
+                     item.Status == BasicDesignDocStatus.PermitApproved))
+                .Select(item => item.DisciplineCode).Distinct().ToListAsync(ct)
+            : [];
+        var internallyReady = RequiredDisciplines.All(code =>
+            approvedDisciplines.Contains(code, StringComparer.OrdinalIgnoreCase));
+        var clientReady = hasClientApprovedReview && RequiredDisciplines.All(code =>
+            clientApprovedDisciplines.Contains(code, StringComparer.OrdinalIgnoreCase));
+
         return new BasicDesignReadiness
         {
             RequiredDisciplineCodes = RequiredDisciplines.ToList(),
             InternallyApprovedDisciplineCodes = approvedDisciplines,
-            ReadyForShopDrawing = RequiredDisciplines.All(rd =>
-                approvedDisciplines.Contains(rd, StringComparer.OrdinalIgnoreCase)),
+            ReadyForShopDrawing = internallyReady,
+            ClientApprovedDisciplineCodes = clientApprovedDisciplines,
+            HasClientApprovedReview = hasClientApprovedReview,
+            ReadyForDetailDesign = internallyReady && clientReady,
         };
     }
 
