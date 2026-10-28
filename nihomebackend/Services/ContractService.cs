@@ -166,8 +166,10 @@ public class ContractService(
                 OpportunityTitle = c.Opportunity != null ? c.Opportunity.Name : null,
                 SourceTender = db.Tenders
                     .Where(tender => c.Opportunity != null &&
-                        c.Opportunity.WonTenderId != null &&
-                        tender.Id == c.Opportunity.WonTenderId)
+                        tender.Status == TenderStatus.Won &&
+                        tender.WonOpportunityId == c.OpportunityId)
+                    .OrderByDescending(tender => tender.ClosedAt)
+                    .ThenByDescending(tender => tender.Id)
                     .Select(tender => new { tender.Id, tender.Code, tender.Name })
                     .FirstOrDefault(),
                 QuoteCode = c.Quote != null ? c.Quote.Code : null,
@@ -315,8 +317,10 @@ public class ContractService(
                 OpportunityTitle = c.Opportunity != null ? c.Opportunity.Name : null,
                 SourceTender = db.Tenders
                     .Where(tender => c.Opportunity != null &&
-                        c.Opportunity.WonTenderId != null &&
-                        tender.Id == c.Opportunity.WonTenderId)
+                        tender.Status == TenderStatus.Won &&
+                        tender.WonOpportunityId == c.OpportunityId)
+                    .OrderByDescending(tender => tender.ClosedAt)
+                    .ThenByDescending(tender => tender.Id)
                     .Select(tender => new { tender.Id, tender.Code, tender.Name })
                     .FirstOrDefault(),
                 QuoteCode = c.Quote != null ? c.Quote.Code : null,

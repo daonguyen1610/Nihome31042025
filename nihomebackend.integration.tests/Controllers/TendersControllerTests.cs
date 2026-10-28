@@ -1317,7 +1317,23 @@ public class TendersControllerTests : IntegrationTestBase
             scopeOfWork = "Thiết kế và thi công nhà xưởng theo hồ sơ dự thầu",
         });
         contract.StatusCode.Should().Be(HttpStatusCode.Created, await contract.Content.ReadAsStringAsync());
-        (await ReadJsonAsync(contract)).GetProperty("operationalProjectId").GetInt32().Should().Be(projectId);
+        var createdContract = await ReadJsonAsync(contract);
+        var contractId = createdContract.GetProperty("id").GetInt32();
+        createdContract.GetProperty("operationalProjectId").GetInt32().Should().Be(projectId);
+        createdContract.GetProperty("sourceTenderId").GetInt32().Should().Be(tenderId);
+        createdContract.GetProperty("sourceTenderCode").GetString().Should().StartWith("TD-");
+        createdContract.GetProperty("sourceTenderName").GetString()
+            .Should().Be("Gói thầu nhà xưởng KCN Tân Uyên");
+
+        var contractDetail = await Client.GetAsync($"/api/contracts/{contractId}");
+        contractDetail.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await ReadJsonAsync(contractDetail)).GetProperty("sourceTenderId").GetInt32().Should().Be(tenderId);
+
+        var contractList = await Client.GetAsync($"/api/contracts?search={createdContract.GetProperty("contractNumber").GetString()}");
+        contractList.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await ReadJsonAsync(contractList)).GetProperty("items").EnumerateArray()
+            .Single(item => item.GetProperty("id").GetInt32() == contractId)
+            .GetProperty("sourceTenderId").GetInt32().Should().Be(tenderId);
     }
 
     [Fact]

@@ -1557,8 +1557,10 @@ adds portfolio totals, direction-neutral overdue/due-soon milestone counts,
 and each row's next unpaid milestone and scheduled outstanding amount. List and
 detail responses expose nullable `sourceTenderId`, `sourceTenderCode`, and
 `sourceTenderName` fields when the linked opportunity came from a won tender;
-the values are derived from `Opportunity.WonTenderId` rather than duplicated on
-the Contract record. In an
+the values are derived from a won Tender's `WonOpportunityId` rather than
+duplicated on the Contract record. If legacy data links multiple won tenders to
+the same opportunity, the most recently closed tender is returned.
+In an
 Upstream scope these amounts are receivables; in a Downstream scope they are
 payment obligations. `GET /api/contracts/filter-options`
 returns complete owner, customer, and Operational Project choices from the
