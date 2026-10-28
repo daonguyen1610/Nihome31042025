@@ -397,6 +397,7 @@ public sealed partial class DepartmentWorkPackageService
         Id = review.Id,
         WorkPackageId = review.WorkPackageId,
         Status = review.Status.ToString(),
+        ReviewedQuoteVersion = review.ReviewedQuoteVersion,
         ContractConditionsReviewed = review.ContractConditionsReviewed,
         GuaranteesReviewed = review.GuaranteesReviewed,
         PaymentTermsReviewed = review.PaymentTermsReviewed,

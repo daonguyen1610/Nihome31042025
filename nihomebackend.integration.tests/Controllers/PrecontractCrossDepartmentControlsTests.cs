@@ -298,6 +298,10 @@ public sealed class PrecontractCrossDepartmentControlsTests(NihomeWebApplication
             financialDossierReviewed = false,
             findings = "Điều kiện thanh toán và bảo lãnh đã đối chiếu.",
         });
+        review.GetProperty("reviewedQuoteVersion").GetInt32().Should().Be(1);
+        var listedPackages = await ReadAsync($"/api/work-packages?purpose=FinanceCommercialReview&sourceQuoteId={quoteId}");
+        listedPackages.GetProperty("items")[0].GetProperty("financeReview")
+            .GetProperty("reviewedQuoteVersion").GetInt32().Should().Be(1);
         review = await SubmitForApprovalAsync(reviewPath, review);
         await LoginAsync("SUPER_ADMIN");
         await PostAsync($"{reviewPath}/decision", new { approved = true, rowVersion = Version(review) });
