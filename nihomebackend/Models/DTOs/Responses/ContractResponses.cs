@@ -35,6 +35,14 @@ public class ContractResponse
     public int? OpportunityId { get; set; }
     public string? OpportunityTitle { get; set; }
 
+    /// <summary>
+    /// Tender that produced the linked opportunity, when the contract follows a won tender.
+    /// Derived from Opportunity.WonTenderId; no duplicate relationship is persisted on Contract.
+    /// </summary>
+    public int? SourceTenderId { get; set; }
+    public string? SourceTenderCode { get; set; }
+    public string? SourceTenderName { get; set; }
+
     public int? QuoteId { get; set; }
     public string? QuoteCode { get; set; }
 

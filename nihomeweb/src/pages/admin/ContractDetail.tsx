@@ -429,6 +429,7 @@ interface InfoTabProps {
   ensuringDesignProject: boolean;
   canViewDesignProject: boolean;
   canViewLeads: boolean;
+  canViewTender: boolean;
   /** Set when the caller may attach an approved quote to this contract. */
   onLinkQuote?: () => void;
 }
@@ -439,6 +440,7 @@ const InfoTab = ({
   ensuringDesignProject,
   canViewDesignProject,
   canViewLeads,
+  canViewTender,
   onLinkQuote,
 }: InfoTabProps) => {
   const { t } = useI18n();
@@ -525,6 +527,29 @@ const InfoTab = ({
                   <Link className="underline" to={`/admin/opportunities/${contract.opportunityId}`}>
                     {contract.opportunityTitle ?? `#${contract.opportunityId}`}
                   </Link>
+                </dd>
+              </div>
+            ) : null}
+            {contract.sourceTenderId != null ? (
+              <div>
+                <dt className="text-xs text-slate-500">{t("contracts.field.sourceTender")}</dt>
+                <dd className="mt-0.5 break-words text-sm">
+                  {canViewTender ? (
+                    <Link className="underline" to={`/admin/tenders/${contract.sourceTenderId}`}>
+                      {contract.sourceTenderCode ??
+                        contract.sourceTenderName ??
+                        `#${contract.sourceTenderId}`}
+                    </Link>
+                  ) : (
+                    <span>
+                      {contract.sourceTenderCode ??
+                        contract.sourceTenderName ??
+                        `#${contract.sourceTenderId}`}
+                    </span>
+                  )}
+                  {contract.sourceTenderCode && contract.sourceTenderName ? (
+                    <span className="ml-1 text-slate-500">· {contract.sourceTenderName}</span>
+                  ) : null}
                 </dd>
               </div>
             ) : null}
@@ -2601,6 +2626,7 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
                   ensuringDesignProject={ensuringDesignProject}
                   canViewDesignProject={has(ADMIN_PERMS.designProjects)}
                   canViewLeads={has(ADMIN_PERMS.leads)}
+                  canViewTender={has(ADMIN_PERMS.tenders)}
                   onLinkQuote={canLinkQuote ? () => setLinkQuoteOpen(true) : undefined}
                 />
                 <ContractExecutionProgress

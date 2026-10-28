@@ -1580,6 +1580,14 @@
     "ja": "元の商談"
   },
   {
+    "key": "contracts.field.sourceTender",
+    "category": "contracts",
+    "vi": "Gói thầu nguồn",
+    "en": "Source tender",
+    "zh": "来源投标项目",
+    "ja": "元の入札案件"
+  },
+  {
     "key": "contracts.selectOperationalProject",
     "category": "contracts",
     "vi": "Chọn dự án vận hành",

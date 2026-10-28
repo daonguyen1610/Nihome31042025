@@ -164,6 +164,12 @@ public class ContractService(
                 VendorCode = c.Vendor != null ? c.Vendor.VendorCode : null,
                 VendorName = c.Vendor != null ? c.Vendor.CompanyName : null,
                 OpportunityTitle = c.Opportunity != null ? c.Opportunity.Name : null,
+                SourceTender = db.Tenders
+                    .Where(tender => c.Opportunity != null &&
+                        c.Opportunity.WonTenderId != null &&
+                        tender.Id == c.Opportunity.WonTenderId)
+                    .Select(tender => new { tender.Id, tender.Code, tender.Name })
+                    .FirstOrDefault(),
                 QuoteCode = c.Quote != null ? c.Quote.Code : null,
                 OwnerName = c.Owner != null ? c.Owner.FullName : null,
                 OperationalProjectCode = c.OperationalProject != null ? c.OperationalProject.Code : null,
@@ -210,6 +216,9 @@ public class ContractService(
                 r.Contract, r.CustomerName, r.VendorCode, r.VendorName,
                 r.OpportunityTitle, r.QuoteCode, r.OwnerName,
                 r.OperationalProjectCode, r.OperationalProjectName,
+                sourceTenderId: r.SourceTender != null ? r.SourceTender.Id : null,
+                sourceTenderCode: r.SourceTender != null ? r.SourceTender.Code : null,
+                sourceTenderName: r.SourceTender != null ? r.SourceTender.Name : null,
                 milestones: null,
                 approvedVoTotal: r.ApprovedVoTotal,
                 hasSignedScan: r.HasSignedScan,
@@ -304,6 +313,12 @@ public class ContractService(
                 VendorCode = c.Vendor != null ? c.Vendor.VendorCode : null,
                 VendorName = c.Vendor != null ? c.Vendor.CompanyName : null,
                 OpportunityTitle = c.Opportunity != null ? c.Opportunity.Name : null,
+                SourceTender = db.Tenders
+                    .Where(tender => c.Opportunity != null &&
+                        c.Opportunity.WonTenderId != null &&
+                        tender.Id == c.Opportunity.WonTenderId)
+                    .Select(tender => new { tender.Id, tender.Code, tender.Name })
+                    .FirstOrDefault(),
                 QuoteCode = c.Quote != null ? c.Quote.Code : null,
                 OwnerName = c.Owner != null ? c.Owner.FullName : null,
                 OperationalProjectCode = c.OperationalProject != null ? c.OperationalProject.Code : null,
@@ -355,7 +370,10 @@ public class ContractService(
             designProjectId: row.DesignProject?.Id,
             designProjectCode: row.DesignProject?.ProjectCode,
             designProjectName: row.DesignProject?.Name,
-            designProjectStage: row.DesignProject?.CurrentStage);
+            designProjectStage: row.DesignProject?.CurrentStage,
+            sourceTenderId: row.SourceTender?.Id,
+            sourceTenderCode: row.SourceTender?.Code,
+            sourceTenderName: row.SourceTender?.Name);
     }
 
     public Task<string> PreviewNextNumberAsync(CancellationToken ct = default) =>
@@ -1660,7 +1678,10 @@ public class ContractService(
         DateTime? nextPaymentDueDate = null,
         decimal? nextPaymentAmount = null,
         decimal outstandingScheduledAmount = 0m,
-        int overduePaymentMilestoneCount = 0)
+        int overduePaymentMilestoneCount = 0,
+        int? sourceTenderId = null,
+        string? sourceTenderCode = null,
+        string? sourceTenderName = null)
     {
         // CurrentValue = base value + approved VO deltas. Milestone Amount
         // still divides the base <c>entity.Value</c> — % refer to the
@@ -1703,6 +1724,9 @@ public class ContractService(
             OperationalProjectName = operationalProjectName,
             OpportunityId = entity.OpportunityId,
             OpportunityTitle = opportunityTitle,
+            SourceTenderId = sourceTenderId,
+            SourceTenderCode = sourceTenderCode,
+            SourceTenderName = sourceTenderName,
             QuoteId = entity.QuoteId,
             QuoteCode = quoteCode,
             DesignProjectId = designProjectId,
