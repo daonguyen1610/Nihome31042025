@@ -8,7 +8,13 @@ services:
     stdin_open: true
     tty: true
     working_dir: /app
-    command: dotnet watch --non-interactive run --urls=http://0.0.0.0:5043
+    # Remove artifacts left by the former mixed-case project name. NuGet imports
+    # both files on Linux and otherwise emits duplicate MSB4011 warnings forever
+    # because /app/obj is a persistent development volume.
+    command: >-
+      sh -c 'rm -f /app/obj/NihomeBackend.csproj.nuget.g.props
+      /app/obj/NihomeBackend.csproj.nuget.g.targets &&
+      exec dotnet watch --non-interactive run --urls=http://0.0.0.0:5043'
     ports:
       - "5043:5043"
     restart: unless-stopped
