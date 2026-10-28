@@ -327,7 +327,10 @@ const AdminDesignProjectDetail = () => {
               ) : tab === "ifc" ? (
                 <IfcReleasesTab project={project} />
               ) : tab === "team" ? (
-                <OperationalProjectTeamPanel operationalProjectId={project.operationalProjectId} />
+                <OperationalProjectTeamPanel
+                  operationalProjectId={project.operationalProjectId}
+                  designProjectContext
+                />
               ) : tab === "schedule" ? (
                 <DesignScheduleTab project={project} />
               ) : tab === "reviews" ? (

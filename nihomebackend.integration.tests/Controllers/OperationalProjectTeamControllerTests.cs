@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Models;
+using NihomeBackend.Services;
 
 namespace NihomeBackend.IntegrationTests.Controllers;
 
@@ -23,6 +24,48 @@ public sealed class OperationalProjectTeamControllerTests : IntegrationTestBase
         body.GetProperty("operationalProjectId").GetInt32().Should().Be(projectId);
         body.GetProperty("canManage").GetBoolean().Should().BeTrue();
         body.GetProperty("roleDefinitions").GetArrayLength().Should().BeGreaterThan(0);
+    }
+
+    [Fact]
+    public async Task EditingMember_KeepsUnchangedProjectRoleAndItsSource()
+    {
+        await AuthenticateAsync("SUPER_ADMIN");
+        var projectId = await CreateProjectAsync();
+        var architectId = await UserIdAsync("ARCHITECT");
+        using var createdResponse = await PostMemberAsync(projectId, architectId, "Architect", "Architect");
+        createdResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var member = await ReadJsonAsync(createdResponse);
+        var memberId = member.GetProperty("id").GetInt32();
+        var originalRoleId = await WithDbAsync(async db =>
+        {
+            var role = await db.OperationalProjectMemberRoles.SingleAsync(item => item.MemberId == memberId);
+            role.Source = LegacyProjectTeamSyncService.BackfillSource;
+            role.SourceReference = "ExistingProjectRole";
+            await db.SaveChangesAsync();
+            return role.Id;
+        });
+
+        using var update = await SendJsonWithKeyAsync(
+            HttpMethod.Put,
+            $"/api/operational-projects/{projectId}/team/members/{memberId}",
+            new
+            {
+                userId = architectId,
+                position = "Architectural concept coordinator",
+                startedAt = member.GetProperty("startedAt").GetString(),
+                roles = new[] { new { roleCode = "Architect", scope = "Project" } },
+                rowVersion = member.GetProperty("rowVersion").GetString(),
+            },
+            $"team-member-update-{Guid.NewGuid():N}");
+        update.StatusCode.Should().Be(HttpStatusCode.OK, await update.Content.ReadAsStringAsync());
+        var activeRoles = await WithDbAsync(db => db.OperationalProjectMemberRoles.AsNoTracking()
+            .Where(item => item.MemberId == memberId && item.EndedAt == null)
+            .Select(item => new { item.Id, item.Source, item.SourceReference })
+            .ToListAsync());
+        activeRoles.Should().ContainSingle();
+        activeRoles[0].Id.Should().Be(originalRoleId);
+        activeRoles[0].Source.Should().Be(LegacyProjectTeamSyncService.BackfillSource);
+        activeRoles[0].SourceReference.Should().Be("ExistingProjectRole");
     }
 
     [Fact]

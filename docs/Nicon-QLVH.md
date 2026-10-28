@@ -280,7 +280,12 @@ Kiểm soát độ chín, version và người chịu trách nhiệm của hồ 
    nhận; hủy gói không được làm mất lịch sử.
 
 Thiết kế có thể bắt đầu trước hợp đồng nhưng luôn thuộc Dự án. Team và tiến độ
-Thiết kế sử dụng Operational Project. Concept quản lý từng phương án với revision
+Thiết kế sử dụng Operational Project. Theo xác nhận của chủ sản phẩm ngày
+29/10/2026, khi phân vai trong tab Đội ngũ của Dự án thiết kế, vai trò mới
+áp dụng cho Module Thiết kế của Dự án thiết kế đang mở; người dùng không phải
+chọn phạm vi RACI. Vai trò toàn Dự án đã lưu trước đó được giữ nguyên.
+
+Concept quản lý từng phương án với revision
 R00, R01... và bộ tài liệu phân loại: mô hình 3D gốc, phối cảnh, mặt bằng
 tổng thể/mái, mặt bằng từng tầng có tên tầng, mặt cắt và PDF trình bày. File gốc
 được tải xuống; ảnh/PDF có preview. Người phụ trách có thể gỡ liên kết file hoặc
