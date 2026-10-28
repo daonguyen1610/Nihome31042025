@@ -343,7 +343,9 @@ public class BasicDesignDocsControllerTests : IntegrationTestBase
             $"/api/basic-design-docs/design-project/{projectId}/unlock-shop-drawing", null);
         unlockResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         (await ReadJsonAsync(unlockResponse)).GetProperty("message").GetString()
-            .Should().Contain("chưa được khách hàng duyệt");
+            .Should().Be(
+                "Chưa thể chuyển sang Thiết kế chi tiết vì hồ sơ trình Basic Design mới nhất chưa được khách hàng duyệt. " +
+                "Hãy mở tab Trình duyệt, tạo hoặc mở hồ sơ Basic Design, rồi ghi nhận quyết định khách hàng duyệt.");
 
         var projectResponse = await Client.GetAsync($"/api/design-projects/{projectId}");
         projectResponse.EnsureSuccessStatusCode();

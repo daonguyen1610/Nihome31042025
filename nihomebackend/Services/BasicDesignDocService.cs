@@ -27,6 +27,13 @@ public class BasicDesignDocService(
     /// </summary>
     private static readonly string[] RequiredDisciplines = new[] { "architecture", "structure", "mep" };
 
+    private static readonly Dictionary<string, string> DisciplineDisplayNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["architecture"] = "Kiến trúc",
+        ["structure"] = "Kết cấu",
+        ["mep"] = "MEP",
+    };
+
     /// <summary>Human-friendly prefixes used when auto-generating <c>DocumentCode</c>.</summary>
     private static readonly Dictionary<string, string> CodePrefix = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -485,7 +492,8 @@ public class BasicDesignDocService(
         if (project.CurrentStage != DesignProjectStage.BasicDesign)
         {
             throw new BasicDesignDocOperationException(
-                "Dự án không ở giai đoạn Basic Design nên không thể mở khoá Shop Drawing.");
+                "Không thể chuyển sang Thiết kế chi tiết vì dự án không còn ở giai đoạn Thiết kế cơ sở. " +
+                "Hãy tải lại trang và kiểm tra giai đoạn hiện tại.");
         }
 
         var readiness = await ComputeReadinessAsync(designProjectId, ct);
@@ -495,15 +503,25 @@ public class BasicDesignDocService(
                 .Except(readiness.InternallyApprovedDisciplineCodes, StringComparer.OrdinalIgnoreCase)
                 .ToList();
             throw new BasicDesignDocOperationException(
-                $"Chưa đủ hồ sơ duyệt nội bộ cho các bộ môn: {string.Join(", ", missing)}.");
+                $"Chưa thể chuyển sang Thiết kế chi tiết vì các bộ môn sau chưa có hồ sơ duyệt nội bộ: " +
+                $"{FormatDisciplineNames(missing)}. " +
+                "Hãy duyệt ít nhất 1 hồ sơ cho từng bộ môn này rồi thử lại.");
         }
 
         if (!readiness.HasClientApprovedReview)
             throw new BasicDesignDocOperationException(
-                "Phiên trình Basic Design mới nhất chưa được khách hàng duyệt.");
+                "Chưa thể chuyển sang Thiết kế chi tiết vì hồ sơ trình Basic Design mới nhất chưa được khách hàng duyệt. " +
+                "Hãy mở tab Trình duyệt, tạo hoặc mở hồ sơ Basic Design, rồi ghi nhận quyết định khách hàng duyệt.");
         if (!readiness.ReadyForDetailDesign)
+        {
+            var missing = readiness.RequiredDisciplineCodes
+                .Except(readiness.ClientApprovedDisciplineCodes, StringComparer.OrdinalIgnoreCase)
+                .ToList();
             throw new BasicDesignDocOperationException(
-                "Hồ sơ khách duyệt phải bao phủ đúng tài liệu Basic Design đã duyệt nội bộ của mọi bộ môn bắt buộc.");
+                $"Chưa thể chuyển sang Thiết kế chi tiết vì hồ sơ khách hàng đã duyệt chưa bao gồm tài liệu của các bộ môn: " +
+                $"{FormatDisciplineNames(missing)}. " +
+                "Hãy tạo hồ sơ trình mới từ đúng các tài liệu đã duyệt nội bộ, đồng bộ lên Drive, rồi ghi nhận khách hàng duyệt.");
+        }
 
         project.CurrentStage = DesignProjectStage.ShopDrawing;
         project.UpdatedAt = DateTime.UtcNow;
@@ -595,6 +613,10 @@ public class BasicDesignDocService(
             ReadyForDetailDesign = internallyReady && clientReady,
         };
     }
+
+    private static string FormatDisciplineNames(IEnumerable<string> disciplineCodes) =>
+        string.Join(", ", disciplineCodes.Select(code =>
+            DisciplineDisplayNames.GetValueOrDefault(code, code)));
 
     private async Task<string> AllocateDocumentCodeAsync(int designProjectId, string discipline, CancellationToken ct)
     {
