@@ -952,6 +952,11 @@ Design project. New roles use the Design module automatically; no RACI scope
 selection is needed. Existing shared-project roles remain visible and unchanged
 when editing from this tab. The Operational Project team screen retains its
 broader scope controls.
+The end-member action is available here only when every role belongs to the
+Design module. For a member who also has a shared-project role, use **Edit
+member** to remove the Design role; the shared-project role and membership
+remain active. End the whole project membership from the Operational Project
+team screen when that is intended.
 
 In the project **Design schedule**, every task keeps an internal NICON assignee
 and an independent Design Lead approver. For outsourced work, select both the

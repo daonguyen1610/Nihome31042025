@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { expect, type APIRequestContext, type APIResponse } from "@playwright/test";
 
 interface DeletionImpact {
@@ -33,7 +34,7 @@ export async function hardDeleteBusinessRoot(
     const detail = (await detailResponse.json()) as ResourceDetail;
     const impact = (await impactResponse.json()) as DeletionImpact;
     deleteResponse = await api.delete(resourcePath, {
-      headers,
+      headers: { ...headers, "Idempotency-Key": randomUUID() },
       data: {
         planToken: impact.planToken,
         confirmation: impact.requiredConfirmation,
