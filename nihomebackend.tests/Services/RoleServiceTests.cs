@@ -115,7 +115,7 @@ public class RoleServiceTests : IDisposable
         Assert.Equal(new[] { "CRM", "HR", "PROCUREMENT", "CONSTRUCTION", "DESIGN", "FINANCE" },
             groups.Select(group => group.Code));
         Assert.All(groups, group => Assert.NotEmpty(group.BaselinePermissions));
-        Assert.Equal(new[] { 2, 1, 2, 5, 5, 1 }, groups.Select(group => group.RoleCount));
+        Assert.Equal(new[] { 2, 1, 2, 5, 6, 1 }, groups.Select(group => group.RoleCount));
     }
 
     // ---------- UpdateRole ----------
