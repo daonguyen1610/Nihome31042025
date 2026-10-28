@@ -51,12 +51,14 @@ public class DesignProjectsControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task AssignedDesignManager_CanListAndOpenLinkedProjectWithoutOperationalMembership()
+    public async Task DirectDesignAssignees_CanUseLinkedProjectWithoutOperationalMembership()
     {
         var fixture = await WithDbAsync(async db =>
         {
             var manager = await db.Users.SingleAsync(user =>
                 user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["DESIGN_MANAGER"]);
+            var lead = await db.Users.SingleAsync(user =>
+                user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["DESIGN_LEAD"]);
             var customer = new Customer
             {
                 Name = $"Chủ đầu tư phân công Chủ nhiệm {Guid.NewGuid():N}",
@@ -76,12 +78,54 @@ public class DesignProjectsControllerTests : IntegrationTestBase
                 Customer = customer,
                 OperationalProject = operational,
                 ProjectManagerUserId = manager.Id,
+                DesignLeadUserId = lead.Id,
                 CurrentStage = DesignProjectStage.Concept,
                 Status = DesignProjectStatus.Active,
             };
             db.Add(design);
             await db.SaveChangesAsync();
-            return design.Id;
+            var basic = new BasicDesignDoc
+            {
+                DesignProjectId = design.Id,
+                DisciplineCode = "ARCH",
+                DocumentCode = "KT-BD-DIRECT",
+                Title = "Hồ sơ cơ sở cho Chủ nhiệm trực tiếp",
+            };
+            var shop = new ShopDrawing
+            {
+                DesignProjectId = design.Id,
+                DisciplineCode = "ARCH",
+                DrawingCode = "KT-SD-DIRECT",
+                Title = "Bản vẽ thi công cho Chủ trì trực tiếp",
+                ConstructionItem = "Kiến trúc",
+            };
+            db.AddRange(basic, shop);
+            db.ProjectDocuments.AddRange(
+                new ProjectDocument
+                {
+                    OperationalProjectId = operational.Id,
+                    Category = ProjectDocumentCategory.DesignBasic,
+                    SourceModule = ProjectDocumentSourceModule.Design,
+                    SourceType = ProjectDocumentSourceType.ExistingManagedFile,
+                    LocalPath = "/files/business-documents/basic-design/direct-manager.pdf",
+                    OriginalFileName = "direct-manager.pdf",
+                    Sha256 = new string('a', 64),
+                    SyncStatus = ProjectDocumentSyncStatus.Synced,
+                },
+                new ProjectDocument
+                {
+                    OperationalProjectId = operational.Id,
+                    Category = ProjectDocumentCategory.CrmPreDesign,
+                    SourceModule = ProjectDocumentSourceModule.Crm,
+                    SourceType = ProjectDocumentSourceType.ExistingManagedFile,
+                    LocalPath = "/files/business-documents/crm/private-commercial.pdf",
+                    OriginalFileName = "private-commercial.pdf",
+                    Sha256 = new string('b', 64),
+                    SyncStatus = ProjectDocumentSyncStatus.Synced,
+                });
+            await db.SaveChangesAsync();
+            return (DesignId: design.Id, OperationalId: operational.Id,
+                BasicId: basic.Id, ShopId: shop.Id);
         });
         await AuthTestHelper.AuthenticateAsync(Client,
             client => AuthTestHelper.LoginAsRoleAsync(client, "DESIGN_MANAGER"));
@@ -89,8 +133,53 @@ public class DesignProjectsControllerTests : IntegrationTestBase
         using var list = await Client.GetAsync("/api/design-projects?pageSize=100");
         list.StatusCode.Should().Be(HttpStatusCode.OK);
         (await ReadJsonAsync(list)).GetProperty("items").EnumerateArray()
-            .Should().Contain(item => item.GetProperty("id").GetInt32() == fixture);
-        (await Client.GetAsync($"/api/design-projects/{fixture}"))
+            .Should().Contain(item => item.GetProperty("id").GetInt32() == fixture.DesignId);
+        (await Client.GetAsync($"/api/design-projects/{fixture.DesignId}"))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var documentsResponse = await Client.GetAsync(
+            $"/api/operational-projects/{fixture.OperationalId}/documents");
+        documentsResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var documents = (await ReadJsonAsync(documentsResponse)).EnumerateArray().ToList();
+        documents.Should().Contain(item =>
+            item.GetProperty("originalFileName").GetString() == "direct-manager.pdf");
+        documents.Should().NotContain(item =>
+            item.GetProperty("originalFileName").GetString() == "private-commercial.pdf");
+
+        var basicResponse = await Client.GetAsync(
+            $"/api/basic-design-docs?designProjectId={fixture.DesignId}");
+        basicResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await ReadJsonAsync(basicResponse)).GetProperty("items").EnumerateArray()
+            .Should().Contain(item => item.GetProperty("id").GetInt32() == fixture.BasicId);
+        (await Client.GetAsync($"/api/basic-design-docs/{fixture.BasicId}"))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var shopResponse = await Client.GetAsync(
+            $"/api/shop-drawings?designProjectId={fixture.DesignId}");
+        shopResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await ReadJsonAsync(shopResponse)).GetProperty("items").EnumerateArray()
+            .Should().Contain(item => item.GetProperty("id").GetInt32() == fixture.ShopId);
+        (await Client.GetAsync($"/api/shop-drawings/{fixture.ShopId}"))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+        (await Client.GetAsync($"/api/design-projects/{fixture.DesignId}/reviews"))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+        (await Client.GetAsync(
+            $"/api/design-projects/{fixture.DesignId}/reviews/recipient-candidates"))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+
+        await AuthTestHelper.AuthenticateAsync(Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "DESIGN_LEAD"));
+        var leadDocumentsResponse = await Client.GetAsync(
+            $"/api/operational-projects/{fixture.OperationalId}/documents");
+        leadDocumentsResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var leadDocuments = await ReadJsonAsync(leadDocumentsResponse);
+        leadDocuments.EnumerateArray().Should().Contain(item =>
+            item.GetProperty("originalFileName").GetString() == "direct-manager.pdf");
+        leadDocuments.EnumerateArray().Should().NotContain(item =>
+            item.GetProperty("originalFileName").GetString() == "private-commercial.pdf");
+        (await Client.GetAsync($"/api/basic-design-docs/{fixture.BasicId}"))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+        (await Client.GetAsync($"/api/shop-drawings/{fixture.ShopId}"))
             .StatusCode.Should().Be(HttpStatusCode.OK);
     }
 

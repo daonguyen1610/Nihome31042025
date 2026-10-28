@@ -499,6 +499,29 @@ public class SampleCrmDataSeederTests : IDisposable
     }
 
     [Fact]
+    public void Seed_RepairsOnlyUntouchedLegacyDesignManagerAssignments()
+    {
+        var legacyProjectManager = _db.Users.Where(item => item.RoleEntity!.Code == "PM")
+            .OrderBy(item => item.Id).First();
+        var designManager = _db.Users.Where(item => item.RoleEntity!.Code == "DESIGN_MANAGER")
+            .OrderBy(item => item.Id).First();
+        var admin = _db.Users.Where(item => item.RoleEntity!.Code == "ADMIN")
+            .OrderBy(item => item.Id).First();
+        var untouchedLegacy = _db.DesignProjects.Single(item => item.ProjectCode == "DP-SAMPLE-001");
+        var adminAssigned = _db.DesignProjects.Single(item => item.ProjectCode == "DP-SAMPLE-002");
+        untouchedLegacy.ProjectManagerUserId = legacyProjectManager.Id;
+        adminAssigned.ProjectManagerUserId = legacyProjectManager.Id;
+        adminAssigned.UpdatedByUserId = admin.Id;
+        adminAssigned.UpdatedAt = DateTime.UtcNow;
+        _db.SaveChanges();
+
+        SampleCrmDataSeeder.Seed(_db);
+
+        Assert.Equal(designManager.Id, untouchedLegacy.ProjectManagerUserId);
+        Assert.Equal(legacyProjectManager.Id, adminAssigned.ProjectManagerUserId);
+    }
+
+    [Fact]
     public void Seed_AdminManagedRelationshipsAndLeadLifecycle_PreservesChangesOnRerun()
     {
         var contract = _db.Contracts.Single(item => item.ContractNumber == "HD-SAMPLE-003");

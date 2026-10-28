@@ -399,9 +399,21 @@ public sealed class ProjectDocumentService(
             item.SyncStatus != ProjectDocumentSyncStatus.Deleted);
         if (await CanAccessProjectAsync(projectId, userId, canSeeAll, ct)) return query;
         var now = DateTime.UtcNow;
-        if (!await db.OperationalProjectMembers.AsNoTracking().AnyAsync(item =>
-                item.OperationalProjectId == projectId && item.UserId == userId && item.User.IsActive &&
-                item.StartedAt <= now && item.EndedAt == null, ct)) return null;
+        var isOperationalMember = await db.OperationalProjectMembers.AsNoTracking().AnyAsync(item =>
+            item.OperationalProjectId == projectId && item.UserId == userId && item.User.IsActive &&
+            item.StartedAt <= now && item.EndedAt == null, ct);
+        if (!isOperationalMember)
+        {
+            var isDirectDesignAssignee = await db.DesignProjects.AsNoTracking().AnyAsync(item =>
+                item.OperationalProjectId == projectId &&
+                (item.ProjectManagerUserId == userId || item.DesignLeadUserId == userId), ct);
+            if (!isDirectDesignAssignee) return null;
+
+            return query.Where(item => item.SourceModule == ProjectDocumentSourceModule.Design &&
+                (item.Category == ProjectDocumentCategory.DesignConcept ||
+                 item.Category == ProjectDocumentCategory.DesignBasic ||
+                 item.Category == ProjectDocumentCategory.DesignShopDrawing));
+        }
 
         var codes = await permissionService.GetForUserAsync(userId, ct);
         bool Has(params string[] required) => required.Any(codes.Contains);
