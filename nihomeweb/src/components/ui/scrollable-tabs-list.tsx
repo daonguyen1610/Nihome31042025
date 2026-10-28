@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 type ScrollableTabsListProps = React.ComponentPropsWithoutRef<typeof TabsList> & {
   previousLabel: string;
   nextLabel: string;
+  centerActiveTab?: boolean;
 };
 
 export function ScrollableTabsList({
@@ -14,6 +15,7 @@ export function ScrollableTabsList({
   className,
   previousLabel,
   nextLabel,
+  centerActiveTab = false,
   ...props
 }: ScrollableTabsListProps) {
   const viewportRef = React.useRef<HTMLDivElement>(null);
@@ -35,10 +37,10 @@ export function ScrollableTabsList({
     observer.observe(viewport);
     viewport.querySelector<HTMLElement>("[data-state='active']")?.scrollIntoView({
       block: "nearest",
-      inline: "nearest",
+      inline: centerActiveTab ? "center" : "nearest",
     });
     return () => observer.disconnect();
-  }, [children, updateScrollState]);
+  }, [centerActiveTab, children, updateScrollState]);
 
   const scroll = (direction: number) => {
     viewportRef.current?.scrollBy({ left: direction * 240, behavior: "smooth" });

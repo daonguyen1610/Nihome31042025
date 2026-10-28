@@ -22,6 +22,14 @@ test("design team assigns roles in the current design project without a scope pi
   await page.addInitScript(() => localStorage.setItem("nicon_lang", "en"));
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`/admin/design-projects/${projectId}?tab=team`);
+  const teamTab = page.getByRole("tab", { name: "Team" });
+  await expect(teamTab).toHaveAttribute("data-state", "active");
+  const nextTabArrow = page.getByTestId("scrollable-tabs-next");
+  const teamTabBounds = await teamTab.boundingBox();
+  const nextArrowBounds = await nextTabArrow.boundingBox();
+  expect(teamTabBounds).not.toBeNull();
+  expect(nextArrowBounds).not.toBeNull();
+  expect(teamTabBounds!.x + teamTabBounds!.width).toBeLessThanOrEqual(nextArrowBounds!.x);
   await page.getByRole("button", { name: "Add member" }).click();
 
   const dialog = page.getByRole("dialog");
@@ -30,16 +38,32 @@ test("design team assigns roles in the current design project without a scope pi
   ).toBeVisible();
   await expect(dialog.getByText("Roles in this design project")).toBeVisible();
   await expect(dialog.getByText("Design module")).toBeVisible();
+  await expect(dialog.getByText("End date")).toHaveCount(0);
   await expect(dialog.getByText("Roles / RACI / scope")).toHaveCount(0);
   await expect(dialog.getByTestId("design-team-role-row").getByRole("combobox")).toHaveCount(1);
   await expect(dialog.getByTestId("design-team-role-row").getByRole("combobox")).toHaveText(
     "Select a role",
   );
+  const roleSelect = await dialog
+    .getByTestId("design-team-role-row")
+    .getByRole("combobox")
+    .boundingBox();
+  const removeRole = await dialog.getByRole("button", { name: "Remove role" }).boundingBox();
+  expect(roleSelect).not.toBeNull();
+  expect(removeRole).not.toBeNull();
+  expect(removeRole!.x).toBeGreaterThan(roleSelect!.x + roleSelect!.width - 10);
+  expect(removeRole!.y).toBeLessThan(roleSelect!.y + roleSelect!.height);
   await page.screenshot({ path: testInfo.outputPath("design-team-role-mobile.png") });
   await page.setViewportSize({ width: 768, height: 900 });
   const dialogBounds = await dialog.boundingBox();
   expect(dialogBounds?.width).toBeLessThanOrEqual(768);
   await dialog.getByRole("button", { name: "Cancel" }).click();
+  await expect(
+    page.getByTestId("design-project-team-tab").locator("ul li p.font-semibold").first(),
+  ).toHaveCSS("text-overflow", "clip");
+  await expect(
+    page.getByTestId("design-project-team-tab").locator("ul li p").filter({ hasText: "@" }).first(),
+  ).not.toContainText(" · ");
   await page.setViewportSize({ width: 1440, height: 900 });
   await expect(
     page.getByRole("columnheader", { name: "Roles in this design project" }),
