@@ -242,8 +242,29 @@ public class BasicDesignDocServiceTests : IDisposable
     {
         await ApproveDocAsync("architecture");
         await ApproveDocAsync("structure");
-        await Assert.ThrowsAsync<BasicDesignDocOperationException>(() =>
+        var exception = await Assert.ThrowsAsync<BasicDesignDocOperationException>(() =>
             _sut.UnlockShopDrawingAsync(_projectId, _userId));
+        Assert.Equal(
+            "Chưa thể chuyển sang Thiết kế chi tiết vì các bộ môn sau chưa có hồ sơ duyệt nội bộ: MEP. " +
+            "Hãy duyệt ít nhất 1 hồ sơ cho từng bộ môn này rồi thử lại.",
+            exception.Message);
+    }
+
+    [Fact]
+    public async Task UnlockShopDrawing_Blocked_WhenClientReviewDoesNotCoverEveryDiscipline()
+    {
+        var architecture = await ApproveDocAsync("architecture");
+        var structure = await ApproveDocAsync("structure");
+        await ApproveDocAsync("mep");
+        await AddClientApprovedReviewAsync(architecture, structure);
+
+        var exception = await Assert.ThrowsAsync<BasicDesignDocOperationException>(() =>
+            _sut.UnlockShopDrawingAsync(_projectId, _userId));
+
+        Assert.Equal(
+            "Chưa thể chuyển sang Thiết kế chi tiết vì hồ sơ khách hàng đã duyệt chưa bao gồm tài liệu của các bộ môn: MEP. " +
+            "Hãy tạo hồ sơ trình mới từ đúng các tài liệu đã duyệt nội bộ, đồng bộ lên Drive, rồi ghi nhận khách hàng duyệt.",
+            exception.Message);
     }
 
     [Fact]
@@ -267,8 +288,12 @@ public class BasicDesignDocServiceTests : IDisposable
         var dp = await _db.DesignProjects.FirstAsync(x => x.Id == _projectId);
         dp.CurrentStage = DesignProjectStage.Concept;
         await _db.SaveChangesAsync();
-        await Assert.ThrowsAsync<BasicDesignDocOperationException>(() =>
+        var exception = await Assert.ThrowsAsync<BasicDesignDocOperationException>(() =>
             _sut.UnlockShopDrawingAsync(_projectId, _userId));
+        Assert.Equal(
+            "Không thể chuyển sang Thiết kế chi tiết vì dự án không còn ở giai đoạn Thiết kế cơ sở. " +
+            "Hãy tải lại trang và kiểm tra giai đoạn hiện tại.",
+            exception.Message);
     }
 
     // ---------------- Delete ----------------

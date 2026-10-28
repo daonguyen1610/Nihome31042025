@@ -403,7 +403,7 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged, onOpenReviews
       await Promise.all([fetchRows(), onProjectMayHaveChanged()]);
     } catch (err) {
       toast({
-        title: t("common.error"),
+        title: t("basicDesign.readiness.unlockFailed"),
         description: extractApiError(err),
         variant: "destructive",
       });

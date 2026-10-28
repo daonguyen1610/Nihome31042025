@@ -54,6 +54,7 @@
   { "key": "basicDesign.readiness.approved", "category": "basicDesign", "vi": "Đã duyệt", "en": "Approved", "zh": "已批准", "ja": "承認済" },
   { "key": "basicDesign.readiness.missing", "category": "basicDesign", "vi": "Chưa duyệt", "en": "Missing", "zh": "未批准", "ja": "未承認" },
   { "key": "basicDesign.readiness.unlock", "category": "basicDesign", "vi": "Mở khoá Thiết kế chi tiết", "en": "Unlock Detail Design", "zh": "解锁详细设计", "ja": "詳細設計を解放" },
+  { "key": "basicDesign.readiness.unlockFailed", "category": "basicDesign", "vi": "Chưa thể chuyển sang Thiết kế chi tiết", "en": "Could not move to Detail Design", "zh": "无法转入详细设计", "ja": "詳細設計へ移行できませんでした" },
   { "key": "basicDesign.readiness.unlocked", "category": "basicDesign", "vi": "Đã mở khoá Thiết kế chi tiết. Dự án đã chuyển giai đoạn.", "en": "Detail Design unlocked. Project stage advanced.", "zh": "已解锁详细设计，项目阶段已更新。", "ja": "詳細設計が解放され、案件段階が進みました。" },
   { "key": "basicDesign.readiness.clientTitle", "category": "basicDesign", "vi": "Khách hàng duyệt hồ sơ trình Basic Design", "en": "Client approval of the Basic Design review", "zh": "客户批准基本设计审查", "ja": "基本設計審査の顧客承認" },
   { "key": "basicDesign.readiness.clientApproved", "category": "basicDesign", "vi": "Phiên trình mới nhất đã được khách duyệt và bao phủ các bộ môn bắt buộc.", "en": "The latest review is client-approved and covers every required discipline.", "zh": "最新审查已获客户批准，并涵盖所有必需专业。", "ja": "最新の審査が顧客承認済みで、必須分野をすべて含んでいます。" },
