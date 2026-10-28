@@ -1846,9 +1846,10 @@ in [Operational Project Historical Migration](#67-operational-project-historical
 ### 7.10.1 Department work-package API
 
 `DepartmentWorkPackage` is the cross-department assignment aggregate. Project
-packages require an `OperationalProjectId` and are available for the generic
-Procurement/Finance handoff; Design and Construction keep their specialist
-aggregates instead of creating duplicate project wrappers. Their `ContractId` and
+packages require an `OperationalProjectId`. General packages can target any
+active department (product-owner decision, 29 October 2026). Design and
+Construction keep their specialist aggregates for specialist records; a general
+package does not create a duplicate project wrapper. Their `ContractId` and
 `SourceOpportunityId` are optional references. Internal packages reject all
 three business-root references. Endpoints are available at `/api/work-packages`
 and `/api/v1/work-packages`:

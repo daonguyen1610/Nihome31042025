@@ -281,11 +281,14 @@ to the shared Operational Project, or **Internal work** for activities such as
 company training that have no customer, project, or contract.
 
 For project work, the Opportunity owner or Project PM selects the shared
-project, optional contract, receiving Procurement/Finance department,
-department lead, and planned dates. Design and Construction work stays in its
-specialist screen rather than creating another project wrapper. The Project
-and Opportunity screens also provide **Assign department work** shortcuts.
+project, optional contract, any active receiving department, department lead,
+and planned dates. Design and Construction specialist records stay in their
+specialist screens; a general package can coordinate work for those departments.
+The Project and Opportunity screens also provide **Assign department work** shortcuts.
 Adding a contract later does not create or move the Project.
+On the package detail page, **Edit** changes the name, description and planned
+dates. General Project packages may also change the optional same-project
+contract. The shared Project and receiving department stay fixed.
 
 For internal work, select the lead department and every additional
 participating department. Each task then selects its responsible department;
@@ -309,6 +312,9 @@ predecessors and CC followers. If the task should contribute to KPI, select an
 active compatible KPI definition. Every Project task and every KPI-linked task
 needs a verifier different from the assignee; the department lead is the
 default when no approver is selected.
+When editing a task, the predecessor picker excludes that task and any task
+that depends on it, directly or through other tasks, to prevent a dependency
+cycle. CC followers are selected independently.
 Start the package before assignees update progress. A dependent task cannot
 start until every selected predecessor is complete.
 

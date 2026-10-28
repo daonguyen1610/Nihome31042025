@@ -80,9 +80,10 @@ tên sheet, màu sắc, ngày và tên khách hàng trong file không phải quy
   việc cho phòng nhận; quản trị viên có quyền ngoại lệ. Nhóm theo Dự án luôn giữ
   `OperationalProjectId`; `ContractId` chỉ là liên kết tùy chọn và không làm đổi
   gốc dữ liệu khi ký hợp đồng.
-- Design và Construction tiếp tục vận hành trên các aggregate chuyên môn hiện
-  có; nhóm việc Dự án dùng chung chỉ nhận việc tổng quát cho Cung ứng hoặc Tài
-  chính để tránh tạo thêm một bản sao Dự án theo phòng.
+- Theo xác nhận của chủ sản phẩm ngày 29/10/2026, nhóm việc Dự án mục đích
+  `General` có thể giao cho mọi phòng ban đang hoạt động. Design và Construction
+  vẫn vận hành hồ sơ chuyên môn trên aggregate hiện có; nhóm việc dùng chung
+  không thay thế các hồ sơ đó hoặc tạo bản sao Dự án theo phòng.
 - Người chủ trì phòng nhận chỉ giao đầu việc cho nhân sự đang hoạt động thuộc
   cùng nhóm phòng ban. Mỗi đầu việc có WBS, thời gian, nguồn lực, người phụ
   trách, công tác tiên quyết và người theo dõi CC.
