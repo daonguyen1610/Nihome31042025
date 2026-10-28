@@ -48,12 +48,17 @@
   { "key": "basicDesign.filter.allStatuses", "category": "basicDesign", "vi": "Tất cả trạng thái", "en": "All statuses", "zh": "全部状态", "ja": "すべての状態" },
   { "key": "basicDesign.filter.search", "category": "basicDesign", "vi": "Tìm mã hoặc tên bản vẽ...", "en": "Search by code or title...", "zh": "按编号或标题搜索...", "ja": "番号またはタイトルで検索..." },
 
-  { "key": "basicDesign.readiness.title", "category": "basicDesign", "vi": "Sẵn sàng chuyển Thiết kế chi tiết", "en": "Ready for Detail Design", "zh": "准备转详细设计", "ja": "詳細設計移行の準備" },
+  { "key": "basicDesign.readiness.title", "category": "basicDesign", "vi": "Điều kiện chuyển Thiết kế chi tiết", "en": "Detail Design transition requirements", "zh": "转入详细设计的条件", "ja": "詳細設計への移行条件" },
+  { "key": "basicDesign.readiness.readyTitle", "category": "basicDesign", "vi": "Đã đủ điều kiện chuyển Thiết kế chi tiết", "en": "Ready to move to Detail Design", "zh": "已具备转入详细设计的条件", "ja": "詳細設計へ移行できます" },
   { "key": "basicDesign.readiness.hint", "category": "basicDesign", "vi": "Cần ≥1 hồ sơ được duyệt nội bộ cho mỗi bộ môn: Kiến trúc · Kết cấu · MEP.", "en": "Requires ≥1 Internally Approved document per discipline: Architecture · Structure · MEP.", "zh": "每个专业需 ≥1 份内部已批准文档：建筑·结构·机电。", "ja": "分野ごと（建築・構造・MEP）に社内承認済みドキュメントが 1 件以上必要です。" },
   { "key": "basicDesign.readiness.approved", "category": "basicDesign", "vi": "Đã duyệt", "en": "Approved", "zh": "已批准", "ja": "承認済" },
   { "key": "basicDesign.readiness.missing", "category": "basicDesign", "vi": "Chưa duyệt", "en": "Missing", "zh": "未批准", "ja": "未承認" },
   { "key": "basicDesign.readiness.unlock", "category": "basicDesign", "vi": "Mở khoá Thiết kế chi tiết", "en": "Unlock Detail Design", "zh": "解锁详细设计", "ja": "詳細設計を解放" },
   { "key": "basicDesign.readiness.unlocked", "category": "basicDesign", "vi": "Đã mở khoá Thiết kế chi tiết. Dự án đã chuyển giai đoạn.", "en": "Detail Design unlocked. Project stage advanced.", "zh": "已解锁详细设计，项目阶段已更新。", "ja": "詳細設計が解放され、案件段階が進みました。" },
+  { "key": "basicDesign.readiness.clientTitle", "category": "basicDesign", "vi": "Khách hàng duyệt hồ sơ trình Basic Design", "en": "Client approval of the Basic Design review", "zh": "客户批准基本设计审查", "ja": "基本設計審査の顧客承認" },
+  { "key": "basicDesign.readiness.clientApproved", "category": "basicDesign", "vi": "Phiên trình mới nhất đã được khách duyệt và bao phủ các bộ môn bắt buộc.", "en": "The latest review is client-approved and covers every required discipline.", "zh": "最新审查已获客户批准，并涵盖所有必需专业。", "ja": "最新の審査が顧客承認済みで、必須分野をすべて含んでいます。" },
+  { "key": "basicDesign.readiness.clientMissing", "category": "basicDesign", "vi": "Tạo hồ sơ trình từ các tài liệu đã duyệt nội bộ, đồng bộ Drive và ghi nhận quyết định duyệt của khách hàng.", "en": "Create a review from the internally approved documents, sync them to Drive, and record the client's approval decision.", "zh": "使用内部已批准的文档创建审查，同步到 Drive，并记录客户的批准决定。", "ja": "社内承認済み文書から審査を作成し、Drive に同期して顧客の承認決定を記録してください。" },
+  { "key": "basicDesign.readiness.openReviews", "category": "basicDesign", "vi": "Mở Trình duyệt", "en": "Open Reviews", "zh": "打开审查", "ja": "審査を開く" },
 
   { "key": "basicDesign.delete.confirmTitle", "category": "basicDesign", "vi": "Xoá bản vẽ?", "en": "Delete document?", "zh": "删除文档？", "ja": "ドキュメントを削除しますか？" },
   { "key": "basicDesign.delete.confirmBody", "category": "basicDesign", "vi": "Xóa vĩnh viễn hồ sơ \"{code}\" và lịch sử phiên bản liên quan? Hành động này không thể hoàn tác.", "en": "Permanently delete document \"{code}\" and its revision history? This cannot be undone.", "zh": "永久删除文档“{code}”及其修订历史？此操作无法撤销。", "ja": "文書「{code}」と改訂履歴を完全に削除しますか？元に戻せません。" },

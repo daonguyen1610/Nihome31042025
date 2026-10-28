@@ -218,6 +218,23 @@ public class BasicDesignDocServiceTests : IDisposable
         await ApproveDocAsync("mep");
         var list = await _sut.ListAsync(new BasicDesignDocListParams { DesignProjectId = _projectId });
         Assert.True(list.Readiness.ReadyForShopDrawing);
+        Assert.False(list.Readiness.HasClientApprovedReview);
+        Assert.False(list.Readiness.ReadyForDetailDesign);
+    }
+
+    [Fact]
+    public async Task Readiness_ReadyForDetailDesign_WhenLatestReviewCoversAllRequiredDisciplines()
+    {
+        var architecture = await ApproveDocAsync("architecture");
+        var structure = await ApproveDocAsync("structure");
+        var mep = await ApproveDocAsync("mep");
+        await AddClientApprovedReviewAsync(architecture, structure, mep);
+
+        var list = await _sut.ListAsync(new BasicDesignDocListParams { DesignProjectId = _projectId });
+
+        Assert.True(list.Readiness.HasClientApprovedReview);
+        Assert.True(list.Readiness.ReadyForDetailDesign);
+        Assert.Equal(3, list.Readiness.ClientApprovedDisciplineCodes.Count);
     }
 
     [Fact]

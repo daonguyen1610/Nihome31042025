@@ -961,6 +961,13 @@ Manage drawings for construction permit applications. Maintain technical descrip
 | Basic Design Create/Edit | Create and update documents |
 | Basic Design Detail | Drawing catalog, descriptions, file upload, approval status |
 
+The **Basic Design** tab shows both gates for moving to Detail Design. First,
+Architecture, Structure and MEP must each have an internally approved document.
+Then create a Basic Design review from those synced documents and record the
+client-approved decision in **Reviews**. **Unlock Detail Design** remains disabled
+until the latest review covers all three required disciplines; use **Open Reviews**
+to complete the missing review step.
+
 #### 3.2.4 Phase 3: Detail Design
 
 Manage detailed construction drawings separated by discipline (Architecture, Structure, MEP, Interior). Catalog drawings by construction work item. Link drawings to construction tasks. Manage drawing versions. Submit for review and approval.

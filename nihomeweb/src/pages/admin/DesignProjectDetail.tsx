@@ -317,7 +317,11 @@ const AdminDesignProjectDetail = () => {
                   onOpenReviews={() => selectTab("reviews")}
                 />
               ) : tab === "basic" ? (
-                <BasicDesignTab project={project} onProjectMayHaveChanged={fetchProject} />
+                <BasicDesignTab
+                  project={project}
+                  onProjectMayHaveChanged={fetchProject}
+                  onOpenReviews={() => selectTab("reviews")}
+                />
               ) : tab === "shop" ? (
                 <ShopDrawingTab project={project} onProjectMayHaveChanged={fetchProject} />
               ) : tab === "ifc" ? (

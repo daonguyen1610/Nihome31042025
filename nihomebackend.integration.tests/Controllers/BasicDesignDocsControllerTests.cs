@@ -303,6 +303,12 @@ public class BasicDesignDocsControllerTests : IntegrationTestBase
         await CreateClientApprovedDesignReviewAsync(
             projectId, DesignReviewStage.BasicDesign, documentIds.ToArray());
 
+        var readinessResponse = await Client.GetAsync($"/api/basic-design-docs?designProjectId={projectId}");
+        readinessResponse.EnsureSuccessStatusCode();
+        var readiness = (await ReadJsonAsync(readinessResponse)).GetProperty("readiness");
+        readiness.GetProperty("hasClientApprovedReview").GetBoolean().Should().BeTrue();
+        readiness.GetProperty("readyForDetailDesign").GetBoolean().Should().BeTrue();
+
         var res = await Client.PostAsync($"/api/basic-design-docs/design-project/{projectId}/unlock-shop-drawing", null);
         res.StatusCode.Should().Be(HttpStatusCode.OK);
         (await ReadJsonAsync(res)).GetProperty("currentStage").GetString().Should().Be("ShopDrawing");
@@ -326,6 +332,11 @@ public class BasicDesignDocsControllerTests : IntegrationTestBase
             (await Client.PostAsJsonAsync($"/api/basic-design-docs/{id}/status", new { status = "InternallyApproved" }))
                 .EnsureSuccessStatusCode();
         }
+
+        var readinessResponse = await Client.GetAsync($"/api/basic-design-docs?designProjectId={projectId}");
+        readinessResponse.EnsureSuccessStatusCode();
+        var readiness = (await ReadJsonAsync(readinessResponse)).GetProperty("readiness");
+        readiness.GetProperty("readyForDetailDesign").GetBoolean().Should().BeFalse();
 
         var res = await Client.PostAsync($"/api/basic-design-docs/design-project/{projectId}/unlock-shop-drawing", null);
         res.StatusCode.Should().Be(HttpStatusCode.BadRequest);

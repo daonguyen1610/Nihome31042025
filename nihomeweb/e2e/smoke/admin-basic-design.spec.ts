@@ -15,9 +15,10 @@ import {
  *   3. The Basic Design tab renders + accepts the create-doc dialog.
  *   4. Status transitions (submit review → internally approved) move a
  *      row through the state machine.
- *   5. The 3-discipline readiness gate + Unlock Detail Design button:
- *      the button is disabled until all 3 disciplines have ≥1 approved
- *      doc; clicking it flips the header stage to Detail Design.
+ *   5. The internal-discipline and client-review readiness gates + Unlock
+ *      Detail Design button: the button stays disabled until the latest
+ *      client-approved review covers all 3 approved disciplines; clicking it
+ *      flips the header stage to Detail Design.
  *
  * This spec exercises the exact flow a Design Lead would run when
  * pushing a project from kick-off to Detail Design.
@@ -171,6 +172,11 @@ test.describe("NIH-115 — Basic Design + Detail Design unlock (real-user flow)"
         readiness.getByText(new RegExp(`${label}.*(Đã duyệt|Approved|已批准|承認済)`, "i")),
       ).toBeVisible();
     }
+    await expect(
+      readiness.getByText(
+        /Phiên trình mới nhất đã được khách duyệt|latest review is client-approved/i,
+      ),
+    ).toBeVisible();
 
     // Team and Documents are real API-backed rollups, not follow-up placeholders.
     await page

@@ -54,4 +54,19 @@ public class BasicDesignReadiness
 
     /// <summary>True when every required discipline has ≥1 InternallyApproved doc.</summary>
     public bool ReadyForShopDrawing { get; set; }
+
+    /// <summary>
+    /// Required disciplines covered by the latest client-approved Basic Design review using
+    /// the same synced document bytes that were approved internally.
+    /// </summary>
+    public List<string> ClientApprovedDisciplineCodes { get; set; } = new();
+
+    /// <summary>True when the latest Basic Design review has a client-approved decision.</summary>
+    public bool HasClientApprovedReview { get; set; }
+
+    /// <summary>
+    /// True only when both the internal discipline gate and the client-approved review gate
+    /// match the server-side transition requirements.
+    /// </summary>
+    public bool ReadyForDetailDesign { get; set; }
 }
