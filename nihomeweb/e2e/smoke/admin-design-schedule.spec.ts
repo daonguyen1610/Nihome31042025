@@ -55,18 +55,6 @@ test.describe("Detail Design Schedule — assigned Design Lead flow", () => {
       }),
       "create operational project",
     )) as { id: number };
-    const architectMember = (await expectOk(
-      await api.post(`/api/operational-projects/${operationalProject.id}/team/members`, {
-        headers: { ...adminHeaders, "Idempotency-Key": `e2e-schedule-architect-${suffix}` },
-        data: {
-          userId: architect!.id,
-          position: "Kiến trúc sư chủ trì phương án",
-          startedAt: "2026-04-01T00:00:00Z",
-          roles: [{ roleCode: "Architect", scope: "Discipline", scopeValue: "architecture" }],
-        },
-      }),
-      "add architect member",
-    )) as { id: number };
     const designProject = (await expectOk(
       await api.post("/api/design-projects", {
         headers: adminHeaders,
@@ -82,6 +70,20 @@ test.describe("Detail Design Schedule — assigned Design Lead flow", () => {
       "create design project",
     )) as { id: number };
 
+    const architectMember = (await expectOk(
+      await api.post(`/api/operational-projects/${operationalProject.id}/team/members`, {
+        headers: { ...adminHeaders, "Idempotency-Key": `e2e-schedule-architect-${suffix}` },
+        data: {
+          designProjectId: designProject.id,
+          userId: architect!.id,
+          position: "Kiến trúc sư chủ trì phương án",
+          startedAt: "2026-04-01T00:00:00Z",
+          roles: [{ roleCode: "Architect", scope: "Discipline", scopeValue: "architecture" }],
+        },
+      }),
+      "add architect member",
+    )) as { id: number };
+
     const designLeadToken = await loginAs(TEST_USERS.designLead);
     const designLeadHeaders = {
       Authorization: `Bearer ${designLeadToken}`,
@@ -92,6 +94,7 @@ test.describe("Detail Design Schedule — assigned Design Lead flow", () => {
       {
         headers: designLeadHeaders,
         data: {
+          designProjectId: designProject.id,
           phases: [
             { code: "Concept", weight: 34 },
             { code: "BasicDesign", weight: 33 },
@@ -119,10 +122,23 @@ test.describe("Detail Design Schedule — assigned Design Lead flow", () => {
     await expect(createTaskButton).toBeVisible();
 
     await createTaskButton.click();
-    const dialog = page.getByRole("dialog");
+    const dialog = page.getByRole("dialog").filter({ has: page.locator("#schedule-task-code") });
     await expect(dialog).toBeVisible();
     await dialog.locator("#schedule-task-code").fill(`ARC-${suffix}`);
     await dialog.locator("#schedule-task-name").fill(`Architecture coordination ${suffix}`);
+
+    const cc = dialog.getByTestId("people-checklist");
+    await cc
+      .locator("label")
+      .filter({ hasText: architect!.fullName })
+      .getByRole("checkbox")
+      .check();
+    await cc
+      .locator("label")
+      .filter({ hasText: designLead!.fullName })
+      .getByRole("checkbox")
+      .check();
+    await expect(cc.getByRole("button")).toHaveCount(2);
 
     const selectTriggers = dialog.locator('button[role="combobox"]');
     await selectTriggers.nth(4).click();
@@ -132,7 +148,11 @@ test.describe("Detail Design Schedule — assigned Design Lead flow", () => {
       .getByRole("option", { name: /Kiến trúc sư chủ trì phương án|Architecture lead/i })
       .click();
     await selectTriggers.nth(6).click();
-    await page.getByRole("option", { name: designLead!.fullName }).click();
+    await page
+      .locator('[data-people-picker="true"][data-state="open"]')
+      .getByRole("option", { name: designLead!.fullName })
+      .click();
+    await expect(cc.getByRole("button")).toHaveCount(0);
     await dialog.locator("#task-planned-start").fill("2026-04-01");
     await dialog.locator("#task-planned-end").fill("2026-04-15");
     await dialog.getByRole("button", { name: /Lưu|Save/i }).click();

@@ -139,7 +139,7 @@ public sealed class OperationalProjectTeamControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task ProjectManagerWithGlobalManageCanMutate_DesignLeadWithoutItIsForbidden()
+    public async Task ProjectManagerCanMutateRootTeam_OtherRolesCannotMutate()
     {
         var projectManagerId = await UserIdAsync("PM");
         var designLeadId = await UserIdAsync("DESIGN_LEAD");
@@ -155,16 +155,19 @@ public sealed class OperationalProjectTeamControllerTests : IntegrationTestBase
         (await PostMemberAsync(projectId, architectId, "Architect", "Architect"))
             .StatusCode.Should().Be(HttpStatusCode.Created);
 
+        var memberCount = await WithDbAsync(db => db.OperationalProjectMembers.CountAsync(member => member.OperationalProjectId == projectId));
         await AuthenticateAsync("DESIGN_LEAD");
         (await PostMemberAsync(projectId, mepId, "MEP Engineer", "MepEngineer"))
-            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
 
         await AuthenticateAsync("DESIGN");
         var team = await Client.GetAsync($"/api/operational-projects/{projectId}/team");
         team.StatusCode.Should().Be(HttpStatusCode.OK);
         (await ReadJsonAsync(team)).GetProperty("canManage").GetBoolean().Should().BeFalse();
         (await PostMemberAsync(projectId, structuralId, "Structural Engineer", "StructuralEngineer"))
-            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await WithDbAsync(db => db.OperationalProjectMembers.CountAsync(member => member.OperationalProjectId == projectId)))
+            .Should().Be(memberCount);
     }
 
     [Fact]

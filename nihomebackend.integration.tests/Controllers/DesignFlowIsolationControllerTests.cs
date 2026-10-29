@@ -27,8 +27,10 @@ public sealed class DesignFlowIsolationControllerTests(NihomeWebApplicationFacto
             var root = new OperationalProject { Code = $"OP-ISOLATE-{Guid.NewGuid():N}"[..30], Name = customer.Name, Customer = customer };
             var flows = new[] { "Nhà máy", "Văn phòng" }.Select((name, index) => new DesignProject
             {
-                OperationalProject = root, Customer = customer,
-                ProjectCode = $"DP-ISOLATE-{Guid.NewGuid():N}"[..30], Name = $"NICON – {name}",
+                OperationalProject = root,
+                Customer = customer,
+                ProjectCode = $"DP-ISOLATE-{Guid.NewGuid():N}"[..30],
+                Name = $"NICON – {name}",
                 ProjectManagerUserId = index == 0 ? manager.Id : null,
                 DesignLeadUserId = lead.Id,
                 StartDate = new DateTime(2026, 11, 1, 0, 0, 0, DateTimeKind.Utc),
@@ -44,11 +46,16 @@ public sealed class DesignFlowIsolationControllerTests(NihomeWebApplicationFacto
                 await db.SaveChangesAsync();
                 var document = new ProjectDocument
                 {
-                    OperationalProjectId = root.Id, SourceModule = ProjectDocumentSourceModule.Design,
-                    SourceEntityType = nameof(BasicDesignDoc), SourceRecordId = source.Id,
-                    SourceType = ProjectDocumentSourceType.ManualUpload, Category = ProjectDocumentCategory.DesignBasic,
-                    OriginalFileName = $"nicon-{flow.Id}.pdf", Sha256 = new string('a', 64),
-                    SyncStatus = ProjectDocumentSyncStatus.Failed, SyncAttemptCount = 3,
+                    OperationalProjectId = root.Id,
+                    SourceModule = ProjectDocumentSourceModule.Design,
+                    SourceEntityType = nameof(BasicDesignDoc),
+                    SourceRecordId = source.Id,
+                    SourceType = ProjectDocumentSourceType.ManualUpload,
+                    Category = ProjectDocumentCategory.DesignBasic,
+                    OriginalFileName = $"nicon-{flow.Id}.pdf",
+                    Sha256 = new string('a', 64),
+                    SyncStatus = ProjectDocumentSyncStatus.Failed,
+                    SyncAttemptCount = 3,
                 };
                 db.ProjectDocuments.Add(document);
                 await db.SaveChangesAsync();
@@ -71,7 +78,9 @@ public sealed class DesignFlowIsolationControllerTests(NihomeWebApplicationFacto
             {
                 var created = await SendAsync($"{teamPath}/members", new
                 {
-                    designProjectId = flow, userId = user, position = $"NICON {role}",
+                    designProjectId = flow,
+                    userId = user,
+                    position = $"NICON {role}",
                     startedAt = DateTime.UtcNow.AddDays(-1),
                     roles = new[] { new { roleCode = role, scope = "Module", scopeValue = "Design" } },
                 });
@@ -145,10 +154,17 @@ public sealed class DesignFlowIsolationControllerTests(NihomeWebApplicationFacto
 
     private static object TaskPayload(int member, int approver, int? predecessor = null, int? parent = null, int? cc = null, string code = "ARCH-001") => new
     {
-        code, name = "NICON – Triển khai mặt bằng", departmentCode = "design",
-        assigneeMemberId = member, approverMemberId = approver, parentTaskId = parent,
-        plannedStart = new DateOnly(2026, 11, 1), plannedEnd = new DateOnly(2026, 11, 2),
-        status = "NotStarted", progressPercent = 0, weight = 100,
+        code,
+        name = "NICON – Triển khai mặt bằng",
+        departmentCode = "design",
+        assigneeMemberId = member,
+        approverMemberId = approver,
+        parentTaskId = parent,
+        plannedStart = new DateOnly(2026, 11, 1),
+        plannedEnd = new DateOnly(2026, 11, 2),
+        status = "NotStarted",
+        progressPercent = 0,
+        weight = 100,
         predecessorTaskIds = predecessor.HasValue ? new[] { predecessor.Value } : Array.Empty<int>(),
         ccMemberIds = cc.HasValue ? new[] { cc.Value } : Array.Empty<int>(),
     };

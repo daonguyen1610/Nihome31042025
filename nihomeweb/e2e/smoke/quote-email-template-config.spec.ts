@@ -23,7 +23,7 @@ test("email template settings expose the quote template and its required variabl
     await expect(page.frameLocator('iframe[title="Email preview"]').locator("body")).toContainText(
       "Tổng giá trị",
     );
-    await expect(page.getByTitle("Hạn hiệu lực")).toBeVisible();
+    await expect(page.getByTitle("Hạn hiệu lực").locator("visible=true")).toHaveCount(1);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
       width,
     );

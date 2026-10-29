@@ -203,6 +203,7 @@ public sealed class PrecontractCrossDepartmentControlsTests(NihomeWebApplication
             departmentRoleGroupId = scope.FinanceGroupId,
             leadUserId = scope.FinanceLeadUserId,
         });
+        package.GetProperty("sourceQuoteVersion").GetInt32().Should().Be((await ReadAsync($"/api/quotes/{quoteId}")).GetProperty("version").GetInt32());
         var packageId = Id(package);
         var reviewPath = $"/api/work-packages/{packageId}/finance-review";
         await LoginAsync("ACCOUNTANT");
@@ -691,9 +692,14 @@ public sealed class PrecontractCrossDepartmentControlsTests(NihomeWebApplication
         return Id(quote);
     }
 
-    private async Task MoveQuoteAsync(int quoteId, string action) =>
-        await PostAsync($"/api/quotes/{quoteId}/{action}",
-            new { rowVersion = await VersionAsync($"/api/quotes/{quoteId}") });
+    private async Task MoveQuoteAsync(int quoteId, string action)
+    {
+        var version = await VersionAsync($"/api/quotes/{quoteId}");
+        using var response = action == "submit"
+            ? await QuoteApprovalTestHelper.SubmitAsync(Client, quoteId, version)
+            : await QuoteApprovalTestHelper.ApproveAsync(Client, quoteId, version);
+        response.IsSuccessStatusCode.Should().BeTrue(await response.Content.ReadAsStringAsync());
+    }
 
     private async Task<HttpResponseMessage> SendQuoteAsync(int quoteId) =>
         await SendAsync(HttpMethod.Post, $"/api/quotes/{quoteId}/send", new

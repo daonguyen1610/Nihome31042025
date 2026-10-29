@@ -66,6 +66,9 @@ async function loadEntityRegistry(page: Page) {
 }
 
 async function openEntityType(page: Page, entityType: string) {
+  // Finish the previous registry/list load before arming a same-endpoint
+  // listener; navigation otherwise can match a response from the old page.
+  await page.waitForLoadState("networkidle");
   const responsePromise = page.waitForResponse(
     (response) =>
       response.url().includes(`/api/translations/entity/${entityType}`) &&

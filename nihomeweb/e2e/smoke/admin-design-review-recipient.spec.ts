@@ -137,7 +137,7 @@ test("design evidence becomes selectable automatically after Drive sync without 
     await expect(documentRow.getByRole("checkbox")).toBeDisabled({ timeout: 12_000 });
     await expect(documentRow.getByRole("checkbox")).not.toBeChecked();
     await expect(titleField).toHaveValue(`Basic design review ${unique}`);
-    await dialog.getByRole("button", { name: /^(Hủy|Cancel)$/i }).click();
+    await dialog.getByRole("button", { name: /^(Huỷ|Hủy|Cancel)$/i }).click();
     execSql(`SET QUOTED_IDENTIFIER ON; UPDATE project_documents SET SyncStatus='Pending',
       SyncError=NULL, DesiredOperation='Upsert' WHERE Id=${documentId};`);
     await page.goto(`/admin/design-projects/${project!.id}?tab=docs`);
@@ -154,12 +154,15 @@ test("design evidence becomes selectable automatically after Drive sync without 
         expect(bounds!.x).toBeGreaterThanOrEqual(0);
         expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width);
       }
-      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+      ).toBe(true);
     }
     execSql(`SET QUOTED_IDENTIFIER ON; UPDATE project_documents SET SyncStatus='Synced',
       DesiredOperation='None' WHERE Id=${documentId};`);
     await expect(catalog.locator("article").filter({ hasText: fileName })).toContainText(
-      /Đã đồng bộ|Synced/i, { timeout: 12_000 },
+      /Đã đồng bộ|Synced/i,
+      { timeout: 12_000 },
     );
   } finally {
     execSql(`SET QUOTED_IDENTIFIER ON; SET ANSI_NULLS ON;

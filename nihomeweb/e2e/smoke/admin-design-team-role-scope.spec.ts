@@ -104,7 +104,7 @@ test("design team saves a role scoped to its current design project", async ({
     );
     expect(architect?.id).toBeGreaterThan(0);
     const candidates = await api.get(
-      `/api/operational-projects/${operationalProjectId}/team/candidates`,
+      `/api/operational-projects/${operationalProjectId}/team/candidates?designProjectId=${designProjectId}`,
       { headers },
     );
     expect(candidates.status()).toBe(200);
@@ -120,7 +120,9 @@ test("design team saves a role scoped to its current design project", async ({
     await page.getByRole("button", { name: "Add member" }).click();
     const dialog = page.getByRole("dialog");
     await dialog.getByRole("combobox").first().click();
-    await page.getByRole("option").filter({ hasText: candidate.email }).click();
+    const peoplePicker = page.locator('[data-people-picker="true"]');
+    await peoplePicker.locator("input[cmdk-input]").fill(candidate.email);
+    await peoplePicker.locator("[cmdk-item]").filter({ hasText: candidate.name }).click();
     await dialog.locator('input[maxlength="150"]').fill("Architectural concept coordinator");
     await dialog.getByTestId("design-team-role-row").getByRole("combobox").click();
     await page.getByRole("option").filter({ hasText: "Architect · R" }).click();
@@ -156,76 +158,38 @@ test("design team saves a role scoped to its current design project", async ({
         item.roles.some((role) => role.scope === "Project"),
     );
     expect(sharedMember, "the shared project manager role must remain").toBeTruthy();
-    await expect(
-      page
-        .locator("li")
-        .filter({ hasText: sharedMember.email })
-        .getByRole("button", { name: "End member assignment" }),
-    ).toHaveCount(0);
-    await page
-      .locator("li")
-      .filter({ hasText: sharedMember.email })
-      .getByRole("button", { name: "Edit member" })
-      .click();
+    expect(member.designProjectId).toBe(designProjectId);
+    expect(member.id).not.toBe(sharedMember.id);
+    const memberRow = page.locator("li").filter({ hasText: candidate.email });
+    await memberRow.getByRole("button", { name: "Edit member" }).click();
     const editDialog = page.getByRole("dialog");
     await expect(editDialog.getByText("Update roles in this design project.")).toBeVisible();
-    const sharedRole = editDialog
-      .getByTestId("design-team-role-row")
-      .filter({ hasText: "Project" });
-    await expect(sharedRole.getByRole("combobox")).toHaveCount(0);
-    await editDialog
-      .locator('input[maxlength="150"]')
-      .fill("Project manager for design coordination");
+    const currentUser = editDialog.getByRole("combobox", { name: "User", exact: true });
+    await expect(currentUser).toBeDisabled();
+    await expect(currentUser).toContainText(candidate.name);
+    await editDialog.locator('input[maxlength="150"]').fill("Concept design coordinator");
     await editDialog.getByRole("button", { name: "Save changes" }).click();
     await expect(editDialog).toHaveCount(0);
+    await expect(memberRow).toContainText("Concept design coordinator");
+    const scopedResponse = await api.get(
+      `/api/operational-projects/${operationalProjectId}/team?designProjectId=${designProjectId}`,
+      { headers },
+    );
+    expect(scopedResponse.ok(), await scopedResponse.text()).toBeTruthy();
+    const scoped = await scopedResponse.json();
+    expect(
+      scoped.members.every(
+        (item: { designProjectId: number }) => item.designProjectId === designProjectId,
+      ),
+    ).toBe(true);
+    expect(scoped.members.find((item: { id: number }) => item.id === member.id).position).toBe(
+      "Concept design coordinator",
+    );
     const afterEdit = await api.get(`/api/operational-projects/${operationalProjectId}/team`, {
       headers,
     });
-    expect(afterEdit.status()).toBe(200);
-    const retained = (await afterEdit.json()).members.find(
-      (item: { id: number }) => item.id === sharedMember.id,
-    );
-    expect(retained.roles).toEqual(
-      expect.arrayContaining([expect.objectContaining({ scope: "Project", scopeValue: null })]),
-    );
-    const sharedMemberRow = page.locator("li").filter({ hasText: sharedMember.email });
-    await sharedMemberRow.getByRole("button", { name: "Edit member" }).click();
-    const addDesignRoleDialog = page.getByRole("dialog");
-    await addDesignRoleDialog.getByRole("button", { name: "Add role" }).click();
-    await addDesignRoleDialog
-      .getByTestId("design-team-role-row")
-      .last()
-      .getByRole("combobox")
-      .click();
-    await page.getByRole("option", { name: /Architect.*R/ }).click();
-    await addDesignRoleDialog.getByRole("button", { name: "Save changes" }).click();
-    await expect(addDesignRoleDialog).toHaveCount(0);
-    await expect(
-      sharedMemberRow.getByRole("button", { name: "End member assignment" }),
-    ).toHaveCount(0);
-    await sharedMemberRow.getByRole("button", { name: "Edit member" }).click();
-    const removeDesignRoleDialog = page.getByRole("dialog");
-    await removeDesignRoleDialog
-      .getByTestId("design-team-role-row")
-      .filter({ hasText: "Architect" })
-      .getByRole("button", { name: "Remove role" })
-      .click();
-    await removeDesignRoleDialog.getByRole("button", { name: "Save changes" }).click();
-    await expect(removeDesignRoleDialog).toHaveCount(0);
-    const afterRemoval = await api.get(`/api/operational-projects/${operationalProjectId}/team`, {
-      headers,
-    });
-    expect(afterRemoval.status()).toBe(200);
-    const finalMember = (await afterRemoval.json()).members.find(
-      (item: { id: number }) => item.id === sharedMember.id,
-    );
-    expect(finalMember.isActive).toBe(true);
-    expect(finalMember.roles).toEqual(
-      expect.arrayContaining([expect.objectContaining({ scope: "Project", scopeValue: null })]),
-    );
-    expect(
-      finalMember.roles.some((role: { roleCode: string }) => role.roleCode === "Architect"),
-    ).toBe(false);
+    expect(afterEdit.ok(), await afterEdit.text()).toBeTruthy();
+    expect((await afterEdit.json()).members).toEqual((await team.json()).members);
   } finally {
     if (designProjectId)
       await hardDeleteBusinessRoot(api, headers, `/api/design-projects/${designProjectId}`);
