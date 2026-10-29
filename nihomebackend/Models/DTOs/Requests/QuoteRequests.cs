@@ -115,6 +115,14 @@ public class QuoteWorkflowRequest : IConcurrencyRequest
 
     [StringLength(2000)]
     public string? Note { get; set; }
+    public int? ApproverUserId { get; set; }
+    public string? PreviewToken { get; set; }
+}
+
+public sealed class QuoteApprovalPreviewRequest
+{
+    [Required] public int? ApproverUserId { get; set; }
+    public string? RowVersion { get; set; }
 }
 
 public class SendQuoteEmailRequest : QuoteWorkflowRequest

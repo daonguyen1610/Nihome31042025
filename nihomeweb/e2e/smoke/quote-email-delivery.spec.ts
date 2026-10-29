@@ -9,7 +9,8 @@ test("approved opportunity quote sends the edited preview through SMTP before cu
   loginAs,
   loginInBrowserAs,
   page,
-}) => {
+}, testInfo) => {
+  test.setTimeout(90_000);
   test.skip(
     !mailSinkUrl,
     "Run with docker-compose-e2e.yaml and MAIL_SINK_URL=http://127.0.0.1:8025",
@@ -95,14 +96,72 @@ test("approved opportunity quote sends the edited preview through SMTP before cu
       status: string;
     };
     quoteId = quote.id;
-    const submitted = await api.post(`/api/quotes/${quoteId}/submit`, {
+    const candidateResponse = await api.get(`/api/quotes/${quoteId}/approval-candidates`, {
       headers,
-      data: { rowVersion: quote.rowVersion },
     });
-    expect(submitted.status(), await submitted.text()).toBe(200);
-    quote = await submitted.json();
+    expect(candidateResponse.status(), await candidateResponse.text()).toBe(200);
+    const approver = (
+      (await candidateResponse.json()) as { id: number; name: string; email: string }[]
+    ).find((candidate) => candidate.name === "Super Admin")!;
+    expect(approver).toBeTruthy();
+    const beforeMailResponse = await api.get(`${mailSinkUrl}/messages`);
+    expect(beforeMailResponse.status()).toBe(200);
+    const approverMailCountBefore = (
+      (await beforeMailResponse.json()) as Array<{ recipient: string }>
+    ).filter((message) => message.recipient === approver.email).length;
+    await loginInBrowserAs(page, TEST_USERS.salesManager);
+    await page.addInitScript(() => localStorage.setItem("nicon_lang", "vi"));
+    await page.goto(`/admin/quotes/${quoteId}`, { waitUntil: "networkidle" });
+    await page.getByRole("button", { name: "Gửi duyệt" }).click();
+    const approvalDialog = page.getByRole("dialog");
+    await expect(approvalDialog.getByTestId("quote-approval-approver")).toBeVisible();
+    await expect(approvalDialog.getByRole("button", { name: "Gửi duyệt" })).toBeDisabled();
+    await approvalDialog.getByTestId("quote-approval-approver").click();
+    await page.getByRole("option", { name: /Super Admin/ }).click();
+    await approvalDialog.getByRole("button", { name: "Xem trước email" }).click();
+    const internalPreview = approvalDialog.getByTestId("quote-approval-preview");
+    await expect(internalPreview).toContainText(quote.code);
+    await expect(internalPreview.frameLocator("iframe").locator("body")).toContainText(quote.code);
+    await expect(internalPreview).toContainText(approver.email);
+    for (const width of [390, 768, 1280]) {
+      await page.setViewportSize({ width, height: 900 });
+      await expect(approvalDialog).toBeVisible();
+      const bounds = await approvalDialog.boundingBox();
+      expect(bounds).toBeTruthy();
+      expect(bounds!.x).toBeGreaterThanOrEqual(0);
+      expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width);
+      await page.screenshot({ path: testInfo.outputPath(`quote-approval-preview-${width}.png`) });
+    }
+    await approvalDialog.getByRole("button", { name: "Gửi duyệt" }).click();
+    await expect(approvalDialog).not.toBeVisible();
+    await expect(page.getByTestId("quote-approval-email-status")).toContainText("Super Admin");
+    await expect
+      .poll(
+        async () => {
+          const response = await api.get(`${mailSinkUrl}/messages`);
+          const messages = (await response.json()) as Array<{ recipient: string; raw: string }>;
+          const toApprover = messages.filter((message) => message.recipient === approver.email);
+          return toApprover.length - approverMailCountBefore;
+        },
+        { timeout: 20_000 },
+      )
+      .toBe(1);
+    const delivered = (await (await api.get(`${mailSinkUrl}/messages`)).json()) as Array<{
+      recipient: string;
+      raw: string;
+    }>;
+    expect(
+      delivered.filter((message) => message.recipient === approver.email).at(-1)?.raw,
+    ).toContain(quote.code);
+    const submittedResponse = await api.get(`/api/quotes/${quoteId}`, { headers });
+    quote = await submittedResponse.json();
+    expect(quote.status).toBe("PendingApproval");
+    await loginInBrowserAs(page, TEST_USERS.superAdmin);
+    await page.goto(`/admin/quotes/${quoteId}`, { waitUntil: "networkidle" });
+    await expect(page.getByRole("heading", { name: new RegExp(quote.code) })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Duyệt", exact: true })).toBeEnabled();
     const approved = await api.post(`/api/quotes/${quoteId}/approve`, {
-      headers,
+      headers: { Authorization: `Bearer ${await loginAs(TEST_USERS.superAdmin)}` },
       data: { rowVersion: quote.rowVersion },
     });
     expect(approved.status(), await approved.text()).toBe(200);
@@ -158,6 +217,9 @@ test("approved opportunity quote sends the edited preview through SMTP before cu
     );
     expect(approvalPreviewResponse.ok(), await approvalPreviewResponse.text()).toBeTruthy();
     const approvalPreview = await approvalPreviewResponse.json();
+    const financeMailBefore = (
+      (await (await api.get(`${mailSinkUrl}/messages`)).json()) as Array<{ recipient: string }>
+    ).filter((message) => message.recipient === approvalPreview.toEmail).length;
     reviewResponse = await api.post(
       `/api/work-packages/${financePackageId}/finance-review/submit`,
       {
@@ -167,6 +229,20 @@ test("approved opportunity quote sends the edited preview through SMTP before cu
     );
     expect(reviewResponse.status(), await reviewResponse.text()).toBe(200);
     review = await reviewResponse.json();
+    await expect
+      .poll(
+        async () => {
+          const response = await api.get(`${mailSinkUrl}/messages`);
+          expect(response.status()).toBe(200);
+          const messages = (await response.json()) as Array<{ recipient: string; raw: string }>;
+          return (
+            messages.filter((message) => message.recipient === approvalPreview.toEmail).length -
+            financeMailBefore
+          );
+        },
+        { timeout: 20_000 },
+      )
+      .toBe(1);
     reviewResponse = await api.post(
       `/api/work-packages/${financePackageId}/finance-review/decision`,
       {
@@ -245,7 +321,7 @@ test("approved opportunity quote sends the edited preview through SMTP before cu
     await page.getByTestId("opportunity-create-contract").click();
     await expect(page).toHaveURL(new RegExp(`fromQuote=${quoteId}`));
     const contractDialog = page.getByRole("dialog");
-    await expect(contractDialog.getByText(`#${quoteId}`)).toBeVisible();
+    await expect(contractDialog.getByText(`#${quoteId}`, { exact: true })).toBeVisible();
     // The contract dialog prefills the project the quote already belongs to.
     // Contract, Opportunity and quote must share one project, so this step links
     // that project instead of creating a second one for the same customer.

@@ -18,6 +18,7 @@ public class QuoteServiceTests : IDisposable
     private readonly AppDbContext _db;
     private readonly Mock<INotificationService> _notifications;
     private readonly Mock<IEmailService> _email;
+    private readonly Mock<IQuoteApprovalEmailService> _approvalEmails;
     private readonly Mock<IQuoteSpreadsheetService> _quoteSpreadsheet;
     private readonly QuoteService _sut;
     private readonly ICrmHardDeletePlanService _hardDeletePlans;
@@ -29,6 +30,15 @@ public class QuoteServiceTests : IDisposable
         _db = DbContextFactory.Create();
         _notifications = new Mock<INotificationService>();
         _email = new Mock<IEmailService>();
+        _approvalEmails = new Mock<IQuoteApprovalEmailService>();
+        _approvalEmails.Setup(service => service.QueueAsync(
+                It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string?>(), It.IsAny<string?>(),
+                It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+            .Returns<int, int, string?, string?, int, bool, CancellationToken>((id, approver, version, preview, caller, scope, ct) =>
+            {
+                _db.Quotes.Single(q => q.Id == id).ApprovalApproverUserId = caller + 1;
+                return Task.CompletedTask;
+            });
         _quoteSpreadsheet = new Mock<IQuoteSpreadsheetService>();
         _quoteSpreadsheet
             .Setup(service => service.CreateAsync(
@@ -44,6 +54,7 @@ public class QuoteServiceTests : IDisposable
             _notifications.Object,
             _quoteSpreadsheet.Object,
             _email.Object,
+            _approvalEmails.Object,
             NullLogger<QuoteService>.Instance,
             hardDelete.CrmPlans,
             hardDelete.Operations);
@@ -716,7 +727,7 @@ public class QuoteServiceTests : IDisposable
         var (user, quote) = await SeedApprovedReadyQuoteAsync();
 
         await _sut.SubmitAsync(quote.Id, new(), user.Id, true, true);
-        await _sut.ApproveAsync(quote.Id, new(), user.Id, canApprove: true);
+        await _sut.ApproveAsync(quote.Id, new(), user.Id + 1, canApprove: true);
         var preview = await _sut.GetEmailPreviewAsync(quote.Id, user.Id, canSeeAll: true, canEdit: true);
         Assert.NotNull(preview);
         Assert.Contains("Tổng giá trị:", preview!.Body);
@@ -754,7 +765,7 @@ public class QuoteServiceTests : IDisposable
         _db.DepartmentWorkPackages.RemoveRange(_db.DepartmentWorkPackages.Where(item => item.SourceQuoteId == quote.Id));
         await _db.SaveChangesAsync();
         await _sut.SubmitAsync(quote.Id, new(), user.Id, true, true);
-        await _sut.ApproveAsync(quote.Id, new(), user.Id, true);
+        await _sut.ApproveAsync(quote.Id, new(), user.Id + 1, true);
         var preview = (await _sut.GetEmailPreviewAsync(quote.Id, user.Id, true, true))!;
         var rowVersion = (await _sut.GetAsync(quote.Id, user.Id, true))!.RowVersion;
 
@@ -780,7 +791,7 @@ public class QuoteServiceTests : IDisposable
         await _db.SaveChangesAsync();
 
         await _sut.SubmitAsync(quote.Id, new(), user.Id, true, true);
-        await _sut.ApproveAsync(quote.Id, new(), user.Id, true);
+        await _sut.ApproveAsync(quote.Id, new(), user.Id + 1, true);
 
         var preview = await _sut.GetEmailPreviewAsync(quote.Id, user.Id, true, false);
 
@@ -811,7 +822,7 @@ public class QuoteServiceTests : IDisposable
     {
         var (user, quote) = await SeedApprovedReadyQuoteAsync();
         await _sut.SubmitAsync(quote.Id, new(), user.Id, true, true);
-        await _sut.ApproveAsync(quote.Id, new(), user.Id, true);
+        await _sut.ApproveAsync(quote.Id, new(), user.Id + 1, true);
         var preview = (await _sut.GetEmailPreviewAsync(quote.Id, user.Id, true, false))!;
         var rowVersion = (await _sut.GetAsync(quote.Id, user.Id, true))!.RowVersion;
         Assert.False(preview.CanEdit);
@@ -832,7 +843,7 @@ public class QuoteServiceTests : IDisposable
     {
         var (user, quote) = await SeedApprovedReadyQuoteAsync();
         await _sut.SubmitAsync(quote.Id, new(), user.Id, true, true);
-        await _sut.ApproveAsync(quote.Id, new(), user.Id, true);
+        await _sut.ApproveAsync(quote.Id, new(), user.Id + 1, true);
         var preview = (await _sut.GetEmailPreviewAsync(quote.Id, user.Id, true, true))!;
         var rowVersion = (await _sut.GetAsync(quote.Id, user.Id, true))!.RowVersion;
 
@@ -856,7 +867,7 @@ public class QuoteServiceTests : IDisposable
     {
         var (user, quote) = await SeedApprovedReadyQuoteAsync();
         await _sut.SubmitAsync(quote.Id, new(), user.Id, true, true);
-        await _sut.ApproveAsync(quote.Id, new(), user.Id, true);
+        await _sut.ApproveAsync(quote.Id, new(), user.Id + 1, true);
         var preview = (await _sut.GetEmailPreviewAsync(quote.Id, user.Id, true, true))!;
         var rowVersion = (await _sut.GetAsync(quote.Id, user.Id, true))!.RowVersion;
         _email.Setup(email => email.SendEmailWithAttachmentAsync(
@@ -876,7 +887,7 @@ public class QuoteServiceTests : IDisposable
     {
         var (user, quote) = await SeedApprovedReadyQuoteAsync();
         await _sut.SubmitAsync(quote.Id, new(), user.Id, true, true);
-        await _sut.ApproveAsync(quote.Id, new(), user.Id, canApprove: true);
+        await _sut.ApproveAsync(quote.Id, new(), user.Id + 1, canApprove: true);
 
         var updated = await _sut.UpdateAsync(quote.Id, new UpdateQuoteRequest
         {

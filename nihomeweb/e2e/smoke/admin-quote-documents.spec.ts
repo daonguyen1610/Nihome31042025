@@ -3,6 +3,7 @@ import { test, expect, TEST_USERS } from "../fixtures/auth";
 import JSZip from "jszip";
 import { createApprovedInvestmentRate, retireInvestmentRate } from "../fixtures/materialRate";
 import { hardDeleteBusinessRoot } from "../fixtures/hardDelete";
+import { submitAndApproveQuote } from "../fixtures/quoteApproval";
 
 const DOCX_CONTENT = "NIH-430 DOCX preview evidence";
 const UNSAFE_LINK_TEXT = "Unsafe DOCX link";
@@ -126,17 +127,13 @@ test.describe.serial("quote document management", () => {
       quoteId = quote.id as number;
       quoteCode = quote.code as string;
 
-      const submitResponse = await api.post(`/api/quotes/${quoteId}/submit`, {
+      await submitAndApproveQuote(
+        api,
         headers,
-        data: {},
-      });
-      expect(submitResponse.status(), await submitResponse.text()).toBe(200);
-
-      const approveResponse = await api.post(`/api/quotes/${quoteId}/approve`, {
-        headers,
-        data: {},
-      });
-      expect(approveResponse.status(), await approveResponse.text()).toBe(200);
+        { Authorization: `Bearer ${await loginAs(TEST_USERS.superAdmin)}` },
+        quoteId,
+        quote.rowVersion,
+      );
 
       const updateResponse = await api.put(`/api/quotes/${quoteId}`, {
         headers,
@@ -342,12 +339,13 @@ test.describe.serial("quote document management", () => {
       quoteId = quote.id as number;
       const quoteCode = quote.code as string;
 
-      expect(
-        (await api.post(`/api/quotes/${quoteId}/submit`, { headers, data: {} })).status(),
-      ).toBe(200);
-      expect(
-        (await api.post(`/api/quotes/${quoteId}/approve`, { headers, data: {} })).status(),
-      ).toBe(200);
+      await submitAndApproveQuote(
+        api,
+        headers,
+        { Authorization: `Bearer ${await loginAs(TEST_USERS.superAdmin)}` },
+        quoteId,
+        quote.rowVersion,
+      );
 
       const updateResponse = await api.put(`/api/quotes/${quoteId}`, {
         headers,

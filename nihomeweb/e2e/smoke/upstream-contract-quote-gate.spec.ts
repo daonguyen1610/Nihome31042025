@@ -1,5 +1,6 @@
 import { expect, test, TEST_USERS } from "../fixtures/auth";
 import { hardDeleteBusinessRoot } from "../fixtures/hardDelete";
+import { submitAndApproveQuote } from "../fixtures/quoteApproval";
 
 test("customer contract form permits an agreed value without a quote", async ({
   loginInBrowserAs,
@@ -105,17 +106,13 @@ test("Opportunity offers a direct contract and optionally prefills an approved q
     expect(quoteResponse.status(), await quoteResponse.text()).toBe(201);
     let quote = (await quoteResponse.json()) as { id: number; rowVersion: string };
     quoteId = quote.id;
-    const submitted = await api.post(`/api/quotes/${quoteId}/submit`, {
+    quote = await submitAndApproveQuote(
+      api,
       headers,
-      data: { rowVersion: quote.rowVersion },
-    });
-    expect(submitted.status(), await submitted.text()).toBe(200);
-    quote = (await submitted.json()) as { id: number; rowVersion: string };
-    const approved = await api.post(`/api/quotes/${quoteId}/approve`, {
-      headers,
-      data: { rowVersion: quote.rowVersion },
-    });
-    expect(approved.status(), await approved.text()).toBe(200);
+      { Authorization: `Bearer ${await loginAs(TEST_USERS.superAdmin)}` },
+      quoteId,
+      quote.rowVersion,
+    );
 
     await page.goto(`/admin/quotes/${quoteId}`, { waitUntil: "networkidle" });
     await page.getByRole("button", { name: "Gửi khách" }).click();

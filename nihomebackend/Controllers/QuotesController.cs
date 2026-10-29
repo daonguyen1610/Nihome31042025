@@ -25,6 +25,7 @@ namespace NihomeBackend.Controllers;
 public class QuotesController(
     IQuoteService svc,
     IQuoteDocumentService documentSvc,
+    QuoteApprovalEmailService approvalEmails,
     IPermissionService permissions,
     IAuditLogger audit) : ControllerBase
 {
@@ -250,6 +251,32 @@ public class QuotesController(
         Workflow(id, body, ct, "submit",
             async (uid, sa) => await svc.SubmitAsync(id, body, uid,
                 await permissions.HasAsync(uid, "crm.quotes.manage", ct), sa, ct));
+
+    [HttpGet("{id:int}/approval-candidates")]
+    [RequirePermission("crm.quotes", "manage")]
+    public async Task<IActionResult> ApprovalCandidates(int id, CancellationToken ct)
+    {
+        var uid = GetUserId();
+        if (uid is null) return Unauthorized();
+        var canSeeAll = await permissions.HasAsync(uid.Value, "crm.quotes.view.all", ct);
+        if (await svc.GetAsync(id, uid.Value, canSeeAll, ct) is null) return NotFound();
+        return Ok(await approvalEmails.CandidatesAsync(uid.Value, ct));
+    }
+
+    [HttpPost("{id:int}/approval-email-preview")]
+    [RequirePermission("crm.quotes", "manage")]
+    public async Task<IActionResult> ApprovalEmailPreview(int id, QuoteApprovalPreviewRequest request, CancellationToken ct)
+    {
+        var uid = GetUserId();
+        if (uid is null) return Unauthorized();
+        try
+        {
+            var canSeeAll = await permissions.HasAsync(uid.Value, "crm.quotes.view.all", ct);
+            return Ok(await approvalEmails.PreviewAsync(id, request.ApproverUserId ?? 0,
+                request.RowVersion, uid.Value, canSeeAll, ct));
+        }
+        catch (QuoteOperationException error) { return BadRequest(new { message = error.Message }); }
+    }
 
     [HttpPost("{id:int}/approve")]
     [RequirePermission("crm.quotes", "approve")]

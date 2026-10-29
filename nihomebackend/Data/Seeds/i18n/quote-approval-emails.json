@@ -1,0 +1,23 @@
+[
+  {"key":"quotes.approval.templateTab","category":"quotes","vi":"Email duyệt Báo giá","en":"Quote approval email","zh":"报价审批邮件","ja":"見積承認メール"},
+  {"key":"quotes.approval.templateHint","category":"quotes","vi":"Mẫu phải có mã báo giá và liên kết đến báo giá. Email thực tế được xem trước khi gửi duyệt.","en":"Include the quote code and link. Preview the rendered message before submission.","zh":"模板须包含报价编号和链接。提交前预览实际邮件。","ja":"見積番号とリンクを含め、提出前に実際のメールを確認してください。"},
+  {"key":"quotes.approval.recipient","category":"quotes","vi":"Người duyệt được chọn","en":"Selected approver","zh":"指定审批人","ja":"指定承認者"},
+  {"key":"quotes.approval.to","category":"quotes","vi":"Email người duyệt","en":"Approver email","zh":"审批人邮箱","ja":"承認者のメール"},
+  {"key":"quotes.approval.selectApprover","category":"quotes","vi":"Chọn người có quyền duyệt","en":"Choose an authorized approver","zh":"选择有权限的审批人","ja":"承認権限を持つ担当者を選択"},
+  {"key":"quotes.approval.noCandidates","category":"quotes","vi":"Chưa có người duyệt phù hợp. Quản trị viên cần cấp quyền xem/duyệt và email hợp lệ cho một người khác người gửi.","en":"No eligible approver. Ask an administrator to grant view/approve access and a valid email to someone other than the sender.","zh":"暂无合适审批人。请管理员为非提交人设置查看、审批权限及有效邮箱。","ja":"対象の承認者がいません。管理者は提出者以外に閲覧・承認権限と有効なメールを設定してください。"},
+  {"key":"quotes.approval.previewHint","category":"quotes","vi":"Chọn một người duyệt, xem email thực tế rồi xác nhận gửi duyệt. Chỉ người được chọn mới có thể quyết định.","en":"Choose one approver, inspect the rendered email, then submit. Only that person can decide.","zh":"选择一名审批人，预览实际邮件后提交。只有指定人员可审批。","ja":"承認者を一名選び、実際のメールを確認して提出します。決裁できるのは指定者のみです。"},
+  {"key":"quotes.approval.preview","category":"quotes","vi":"Xem trước email","en":"Preview email","zh":"预览邮件","ja":"メールをプレビュー"},
+  {"key":"quotes.approval.queuedHint","category":"quotes","vi":"Xác nhận sẽ chuyển Báo giá sang Chờ duyệt và xếp email vào hàng gửi. Trạng thái gửi sẽ hiện trên trang Báo giá.","en":"Confirmation moves the quote to Pending approval and queues this email. Delivery status appears on the quote page.","zh":"确认后报价进入待审批并排队发送邮件；发送状态显示在报价页面。","ja":"確認すると見積が承認待ちとなりメールが送信待ちになります。送信状況は見積ページに表示されます。"},
+  {"key":"quotes.approval.status.Pending","category":"quotes","vi":"Email đang chờ gửi.","en":"Email queued for delivery.","zh":"邮件等待发送。","ja":"メールは送信待ちです。"},
+  {"key":"quotes.approval.status.Sending","category":"quotes","vi":"Email đang được gửi.","en":"Email delivery in progress.","zh":"邮件正在发送。","ja":"メールを送信中です。"},
+  {"key":"quotes.approval.status.Sent","category":"quotes","vi":"Email đã gửi thành công.","en":"Email sent successfully.","zh":"邮件已成功发送。","ja":"メールを送信しました。"},
+  {"key":"quotes.approval.status.NeedsReview","category":"quotes","vi":"Chưa xác nhận được email đã tới người duyệt.","en":"Email delivery could not be confirmed.","zh":"无法确认邮件是否送达审批人。","ja":"承認者へのメール送信を確認できません。"},
+  {"key":"quotes.approval.needsReviewAction","category":"quotes","vi":"Liên hệ quản trị viên kiểm tra cấu hình/gửi thư và thông báo trực tiếp cho người duyệt. Không bấm gửi lại khi chưa xác minh để tránh email trùng.","en":"Ask an administrator to check mail delivery and contact the approver directly. Verify the outcome before retrying to avoid duplicates.","zh":"请管理员检查邮件发送情况并直接联系审批人；重试前先核实，避免重复邮件。","ja":"管理者に送信状況を確認し、承認者へ直接連絡してください。重複を避けるため再送前に結果を確認してください。"},
+  {"key":"emailTemplate.editor.token.quoteCode","category":"emailTemplates","vi":"Mã báo giá","en":"Quote code","zh":"报价编号","ja":"見積番号"},
+  {"key":"emailTemplate.editor.token.quoteVersion","category":"emailTemplates","vi":"Phiên bản báo giá","en":"Quote version","zh":"报价版本","ja":"見積バージョン"},
+  {"key":"emailTemplate.editor.token.grandTotal","category":"emailTemplates","vi":"Tổng giá trị","en":"Grand total","zh":"总金额","ja":"合計金額"},
+  {"key":"emailTemplate.editor.token.validUntil","category":"emailTemplates","vi":"Hạn hiệu lực","en":"Valid until","zh":"有效期","ja":"有効期限"},
+  {"key":"emailTemplate.editor.token.quoteUrl","category":"emailTemplates","vi":"Liên kết báo giá","en":"Quote link","zh":"报价链接","ja":"見積リンク"}
+  ,{"key":"deletionImpact.item.quote.approvalEmails","category":"deletionImpact","vi":"Email duyệt Báo giá đã xử lý","en":"Processed quote approval emails","zh":"已处理的报价审批邮件","ja":"処理済みの見積承認メール"}
+  ,{"key":"deletionImpact.item.quote.pendingApprovalEmails","category":"deletionImpact","vi":"Email duyệt Báo giá đang chờ gửi (cần xử lý trước khi xóa)","en":"Queued quote approval emails (resolve before deletion)","zh":"待发送的报价审批邮件（删除前需处理）","ja":"送信待ちの見積承認メール（削除前に処理が必要）"}
+]

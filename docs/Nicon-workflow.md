@@ -89,6 +89,15 @@ Kinh doanh (người phụ trách Cơ hội) hoặc PM Dự án
   → gửi duyệt báo giá đầu ra khi đã có nội dung và tổng giá trị hợp lệ
 ```
 
+Khi gửi duyệt Báo giá đầu ra, Kinh doanh chọn đúng một người đang hoạt động có
+quyền xem và duyệt Báo giá, khác người gửi. Người gửi xem trước email đã điền
+dữ liệu rồi xác nhận; hệ thống chuyển Báo giá sang `PendingApproval` và xếp
+email vào hàng gửi trong cùng lần lưu. Chỉ người được chọn có thể duyệt hoặc
+từ chối trên hệ thống. Quy trình duyệt nội bộ có một bước; email là thông báo,
+không tự phê duyệt. Màn hình Báo giá hiển thị người duyệt và kết quả gửi email;
+nếu kết quả chưa xác định, người dùng liên hệ quản trị viên kiểm tra trước khi
+gửi lại. Quy tắc này được người dùng chốt ngày 29/10/2026.
+
 Chỉ sửa được chào giá ở `Draft`/`Rejected`; chào giá đã bị báo giá tham chiếu thì
 khoá lại. Báo giá lưu bản chụp giá đầu vào tại thời điểm gắn. Giá hết hiệu lực,
 chưa duyệt, khác Dự án hoặc khác nhóm việc Cung ứng đều bị từ chối.

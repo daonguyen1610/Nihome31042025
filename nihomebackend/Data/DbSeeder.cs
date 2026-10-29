@@ -45,6 +45,8 @@ public static class DbSeeder
                 NewApplicationEmailBodyTemplate = NihomeBackend.Services.EmailTemplateFormatter.DefaultNewApplicationBody,
                 QuoteEmailSubjectTemplate = EmailTemplateFormatter.DefaultQuoteSubject,
                 QuoteEmailBodyTemplate = EmailTemplateFormatter.DefaultQuoteBody,
+                QuoteApprovalEmailSubjectTemplate = QuoteApprovalEmailTemplates.DefaultSubject,
+                QuoteApprovalEmailBodyTemplate = QuoteApprovalEmailTemplates.DefaultBody,
                 ContractRenewalEmailSubjectTemplate = ContractReminderTemplates.RenewalSubject,
                 ContractRenewalEmailBodyTemplate = ContractReminderTemplates.RenewalBody,
                 ContractEndEmailSubjectTemplate = ContractReminderTemplates.EndSubject,
@@ -138,6 +140,16 @@ public static class DbSeeder
             if (string.IsNullOrWhiteSpace(existingSettings.QuoteEmailBodyTemplate))
             {
                 existingSettings.QuoteEmailBodyTemplate = EmailTemplateFormatter.DefaultQuoteBody;
+                updated = true;
+            }
+            if (string.IsNullOrWhiteSpace(existingSettings.QuoteApprovalEmailSubjectTemplate))
+            {
+                existingSettings.QuoteApprovalEmailSubjectTemplate = QuoteApprovalEmailTemplates.DefaultSubject;
+                updated = true;
+            }
+            if (string.IsNullOrWhiteSpace(existingSettings.QuoteApprovalEmailBodyTemplate))
+            {
+                existingSettings.QuoteApprovalEmailBodyTemplate = QuoteApprovalEmailTemplates.DefaultBody;
                 updated = true;
             }
 

@@ -19,6 +19,7 @@ import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useAppSelector } from "@/store";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { extractApiError } from "@/lib/apiError";
 import { formatVnd, parseVnd } from "@/lib/numberFormat";
@@ -98,6 +99,7 @@ const AdminQuotes = () => {
   const { t, lang } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
+  const currentUserId = useAppSelector((state) => state.auth.user?.userId ?? null);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -270,18 +272,8 @@ const AdminQuotes = () => {
   };
 
   const rowVersionFor = (id: number) => rows.find((row) => row.id === id)?.rowVersion;
-  const handleSubmit = (id: number) =>
-    runAction(
-      id,
-      () => adminApi.submitQuote(id, { rowVersion: rowVersionFor(id) }),
-      "quotes.updated",
-    );
-  const handleApprove = (id: number) =>
-    runAction(
-      id,
-      () => adminApi.approveQuote(id, { rowVersion: rowVersionFor(id) }),
-      "quotes.updated",
-    );
+  const handleSubmit = (id: number) => navigate(`/admin/quotes/${id}`);
+  const handleApprove = (id: number) => navigate(`/admin/quotes/${id}`);
   const handleSend = (id: number) => navigate(`/admin/quotes/${id}`);
   const handleCancel = (id: number) =>
     runAction(
@@ -484,7 +476,7 @@ const AdminQuotes = () => {
                         <RowActions
                           row={r}
                           canManage={canManage}
-                          canApprove={canApprove}
+                          canApprove={canApprove && r.approvalApproverUserId === currentUserId}
                           canSend={canSend}
                           pending={isPending}
                           onSubmit={handleSubmit}
@@ -551,7 +543,7 @@ const AdminQuotes = () => {
                     <RowActions
                       row={r}
                       canManage={canManage}
-                      canApprove={canApprove}
+                      canApprove={canApprove && r.approvalApproverUserId === currentUserId}
                       canSend={canSend}
                       pending={isPending}
                       onSubmit={handleSubmit}

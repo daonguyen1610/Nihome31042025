@@ -36,6 +36,7 @@ import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useAppSelector } from "@/store";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { extractApiError, isConcurrencyConflict } from "@/lib/apiError";
 import { formatFileSize, formatVnd } from "@/lib/numberFormat";
@@ -72,6 +73,8 @@ import {
   adminApi,
   type QuoteDocumentResponse,
   type QuoteEmailPreviewResponse,
+  type QuoteApprovalCandidate,
+  type QuoteApprovalPreview,
   type QuoteItemInput,
   type QuoteMethod,
   type QuoteResponse,
@@ -168,6 +171,7 @@ const AdminQuoteDetail = () => {
   const { t, lang } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
+  const currentUserId = useAppSelector((state) => state.auth.user?.userId);
 
   const canManage = has(ADMIN_PERMS.quotesManage);
   const canViewWorkPackages = has(ADMIN_PERMS.workPackages);
@@ -215,6 +219,10 @@ const AdminQuoteDetail = () => {
   const [workflowBusy, setWorkflowBusy] = useState(false);
   const [sendPreview, setSendPreview] = useState<QuoteEmailPreviewResponse | null>(null);
   const [sendDraft, setSendDraft] = useState<QuoteEmailPreviewResponse | null>(null);
+  const [approvalCandidates, setApprovalCandidates] = useState<QuoteApprovalCandidate[]>([]);
+  const [selectedApproverId, setSelectedApproverId] = useState<number | null>(null);
+  const [approvalPreview, setApprovalPreview] = useState<QuoteApprovalPreview | null>(null);
+  const [approvalError, setApprovalError] = useState("");
   const [deleteImpact, setDeleteImpact] = useState<DeletionImpactResponse | null>(null);
   const [deleteImpactLoading, setDeleteImpactLoading] = useState(false);
   const [deleteBusy, setDeleteBusy] = useState(false);
@@ -510,7 +518,12 @@ const AdminQuoteDetail = () => {
     try {
       const body = { note: workflowNote.trim() || undefined, rowVersion: quote.rowVersion };
       const fn: Record<WorkflowKind, () => Promise<{ data: QuoteResponse }>> = {
-        submit: () => adminApi.submitQuote(quote.id, body),
+        submit: () =>
+          adminApi.submitQuote(quote.id, {
+            ...body,
+            approverUserId: selectedApproverId!,
+            previewToken: approvalPreview!.previewToken,
+          }),
         approve: () => adminApi.approveQuote(quote.id, body),
         rejectInternal: () => adminApi.rejectQuoteInternal(quote.id, body),
         send: () =>
@@ -531,6 +544,7 @@ const AdminQuoteDetail = () => {
       setWorkflow(null);
       setSendPreview(null);
       setSendDraft(null);
+      setApprovalPreview(null);
       setWorkflowNote("");
       toast({ title: t(`quotes.action.${targetWorkflow}`) });
     } catch (err) {
@@ -546,9 +560,30 @@ const AdminQuoteDetail = () => {
   };
 
   // Actions that can run directly without a dialog (note is optional)
-  const directActions: WorkflowKind[] = ["submit", "approve", "rejectInternal", "customerApprove"];
+  const directActions: WorkflowKind[] = ["approve", "rejectInternal", "customerApprove"];
 
   const handleWorkflowClick = async (k: WorkflowKind) => {
+    if (k === "submit" && quote) {
+      setWorkflowBusy(true);
+      setApprovalError("");
+      setApprovalPreview(null);
+      setSelectedApproverId(null);
+      try {
+        const { data } = await adminApi.getQuoteApprovalCandidates(quote.id);
+        setApprovalCandidates(data);
+        setWorkflowNote("");
+        setWorkflow(k);
+      } catch (err) {
+        toast({
+          title: t("common.error"),
+          description: extractApiError(err),
+          variant: "destructive",
+        });
+      } finally {
+        setWorkflowBusy(false);
+      }
+      return;
+    }
     if (k === "send" && quote) {
       setWorkflowBusy(true);
       try {
@@ -573,6 +608,24 @@ const AdminQuoteDetail = () => {
     } else {
       setWorkflowNote("");
       setWorkflow(k);
+    }
+  };
+
+  const previewApprovalEmail = async () => {
+    if (!quote || !selectedApproverId) return;
+    setWorkflowBusy(true);
+    setApprovalError("");
+    setApprovalPreview(null);
+    try {
+      const { data } = await adminApi.previewQuoteApprovalEmail(quote.id, {
+        approverUserId: selectedApproverId,
+        rowVersion: quote.rowVersion,
+      });
+      setApprovalPreview(data);
+    } catch (err) {
+      setApprovalError(extractApiError(err));
+    } finally {
+      setWorkflowBusy(false);
     }
   };
 
@@ -856,7 +909,7 @@ const AdminQuoteDetail = () => {
                   disabled={
                     workflowBusy ||
                     (k === "approve" || k === "rejectInternal"
-                      ? !canApprove
+                      ? !canApprove || quote.approvalApproverUserId !== currentUserId
                       : k === "send"
                         ? !canSend || quote.isExpired
                         : !canManage)
@@ -894,6 +947,28 @@ const AdminQuoteDetail = () => {
           )}
         </div>
       </div>
+
+      {quote.approvalApproverUserId && (
+        <section
+          className="mb-4 rounded-lg border bg-card p-4 text-sm"
+          data-testid="quote-approval-email-status"
+        >
+          <p className="font-medium">
+            {t("quotes.approval.recipient")}: {quote.approvalApproverName ?? "—"}
+          </p>
+          <p className="mt-1 text-muted-foreground">
+            {t(`quotes.approval.status.${quote.approvalEmailStatus ?? "Pending"}`)}
+          </p>
+          {quote.approvalEmailStatus === "NeedsReview" && (
+            <p className="mt-1 text-destructive">{t("quotes.approval.needsReviewAction")}</p>
+          )}
+          {(quote.approvalEmailStatus === "Pending" || quote.approvalEmailStatus === "Sending") && (
+            <Button variant="outline" size="sm" className="mt-2" onClick={() => void load()}>
+              {t("common.refresh")}
+            </Button>
+          )}
+        </section>
+      )}
 
       {awaitingInputPrice && !editing && (
         <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
@@ -1461,15 +1536,85 @@ const AdminQuoteDetail = () => {
       <Dialog open={!!workflow} onOpenChange={(o) => !o && setWorkflow(null)}>
         <DialogContent
           className={
-            workflow === "send" ? "sm:max-w-2xl max-h-[90vh] overflow-y-auto" : "sm:max-w-md"
+            workflow === "send" || workflow === "submit"
+              ? "sm:max-w-2xl max-h-[90vh] overflow-y-auto"
+              : "sm:max-w-md"
           }
         >
           <DialogHeader>
             <DialogTitle>{workflow && t(`quotes.action.${workflow}`)}</DialogTitle>
             <DialogDescription>
-              {t(workflow === "send" ? "quotes.email.previewHint" : "quotes.action.noteOptional")}
+              {t(
+                workflow === "submit"
+                  ? "quotes.approval.previewHint"
+                  : workflow === "send"
+                    ? "quotes.email.previewHint"
+                    : "quotes.action.noteOptional",
+              )}
             </DialogDescription>
           </DialogHeader>
+          {workflow === "submit" && (
+            <div className="space-y-3">
+              <Label htmlFor="quote-approval-approver">{t("quotes.approval.recipient")}</Label>
+              <Select
+                value={selectedApproverId?.toString()}
+                onValueChange={(value) => {
+                  setSelectedApproverId(Number(value));
+                  setApprovalPreview(null);
+                  setApprovalError("");
+                }}
+              >
+                <SelectTrigger id="quote-approval-approver" data-testid="quote-approval-approver">
+                  <SelectValue placeholder={t("quotes.approval.selectApprover")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {approvalCandidates.map((candidate) => (
+                    <SelectItem key={candidate.id} value={candidate.id.toString()}>
+                      {candidate.name} · {candidate.email}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {approvalCandidates.length === 0 && (
+                <p role="alert" className="text-sm text-destructive">
+                  {t("quotes.approval.noCandidates")}
+                </p>
+              )}
+              <Button
+                type="button"
+                variant="outline"
+                disabled={!selectedApproverId || workflowBusy}
+                onClick={() => void previewApprovalEmail()}
+              >
+                {t("quotes.approval.preview")}
+              </Button>
+              {approvalError && (
+                <p role="alert" className="text-sm text-destructive">
+                  {approvalError}
+                </p>
+              )}
+              {approvalPreview && (
+                <div
+                  className="space-y-2 rounded-md border p-3"
+                  data-testid="quote-approval-preview"
+                >
+                  <p>
+                    <strong>{t("quotes.approval.to")}:</strong> {approvalPreview.toEmail}
+                  </p>
+                  <p>
+                    <strong>{t("quotes.email.subject")}:</strong> {approvalPreview.subject}
+                  </p>
+                  <iframe
+                    title={t("quotes.approval.preview")}
+                    srcDoc={approvalPreview.body}
+                    sandbox=""
+                    className="h-64 w-full rounded-md border bg-white"
+                  />
+                  <p className="text-xs text-muted-foreground">{t("quotes.approval.queuedHint")}</p>
+                </div>
+              )}
+            </div>
+          )}
           {workflow === "send" && sendDraft && (
             <div className="space-y-3">
               <div className="space-y-1">
@@ -1543,7 +1688,7 @@ const AdminQuoteDetail = () => {
               placeholder={t("quotes.field.note")}
             />
           )}
-          <DialogFooter>
+          <DialogFooter className="sticky bottom-0 z-10 border-t bg-background pt-3">
             <Button variant="outline" onClick={() => setWorkflow(null)}>
               {t("common.cancel")}
             </Button>
@@ -1551,6 +1696,7 @@ const AdminQuoteDetail = () => {
               onClick={() => void runWorkflow()}
               disabled={
                 workflowBusy ||
+                (workflow === "submit" && !approvalPreview) ||
                 (workflow === "send" &&
                   (!sendDraft ||
                     !isValidEmail(sendDraft.toEmail) ||
@@ -1561,7 +1707,11 @@ const AdminQuoteDetail = () => {
               }
             >
               {workflowBusy && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
-              {t(workflow === "send" ? "quotes.action.send" : "common.save")}
+              {t(
+                workflow === "send" || workflow === "submit"
+                  ? `quotes.action.${workflow}`
+                  : "common.save",
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -630,11 +630,27 @@ test.describe("MoM §5 pre-contract department controls", () => {
     await expect(page.getByText(`BG-VINA-${suffix}`).first()).toBeVisible();
 
     // ---- The quote still cannot reach the customer: Finance has not reviewed.
-    await call("salesManager", "post", `/api/quotes/${quoteId}/submit`, {
-      rowVersion: (await call("salesManager", "get", `/api/quotes/${quoteId}`)).rowVersion,
+    const quoteBeforeSubmit = await call("salesManager", "get", `/api/quotes/${quoteId}`);
+    const quoteApprovers = (await call(
+      "salesManager",
+      "get",
+      `/api/quotes/${quoteId}/approval-candidates`,
+    )) as unknown as { id: number; name: string }[];
+    const quoteApprover = quoteApprovers.find((candidate) => candidate.name === "Super Admin")!;
+    expect(quoteApprover).toBeTruthy();
+    const quotePreview = await call(
+      "salesManager",
+      "post",
+      `/api/quotes/${quoteId}/approval-email-preview`,
+      { approverUserId: quoteApprover.id, rowVersion: quoteBeforeSubmit.rowVersion },
+    );
+    const submittedQuote = await call("salesManager", "post", `/api/quotes/${quoteId}/submit`, {
+      approverUserId: quoteApprover.id,
+      previewToken: quotePreview.previewToken,
+      rowVersion: quoteBeforeSubmit.rowVersion,
     });
-    await call("salesManager", "post", `/api/quotes/${quoteId}/approve`, {
-      rowVersion: (await call("salesManager", "get", `/api/quotes/${quoteId}`)).rowVersion,
+    await call("superAdmin", "post", `/api/quotes/${quoteId}/approve`, {
+      rowVersion: submittedQuote.rowVersion,
     });
     await page.reload({ waitUntil: "networkidle" });
     await page.getByRole("button", { name: "Gửi khách" }).click();

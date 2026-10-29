@@ -122,6 +122,10 @@ public class QuoteResponse
     public string? Note { get; set; }
 
     public DateTime? SubmittedAt { get; set; }
+    public int? ApprovalApproverUserId { get; set; }
+    public string? ApprovalApproverName { get; set; }
+    public string? ApprovalEmailStatus { get; set; }
+    public DateTime? ApprovalEmailSentAt { get; set; }
     public DateTime? ApprovedAt { get; set; }
     public DateTime? SentAt { get; set; }
     public DateTime? ClosedAt { get; set; }
@@ -144,6 +148,11 @@ public class QuoteEmailPreviewResponse
     public string AttachmentContentType { get; set; } = string.Empty;
 }
 
+public sealed record QuoteApprovalPreviewResponse(string PreviewToken, int ApproverUserId,
+    string ApproverName, string ToEmail, string Subject, string Body);
+
+public sealed record QuoteApprovalCandidateResponse(int Id, string Name, string Email);
+
 public class QuoteListItemResponse
 {
     public int Id { get; set; }
@@ -154,6 +163,7 @@ public class QuoteListItemResponse
     public int? OperationalProjectId { get; set; }
     public int? OwnerUserId { get; set; }
     public string? OwnerName { get; set; }
+    public int? ApprovalApproverUserId { get; set; }
     public int Version { get; set; }
     public string Method { get; set; } = string.Empty;
     public decimal GrandTotal { get; set; }

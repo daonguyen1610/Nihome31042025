@@ -63,6 +63,8 @@ public class Quote : IConcurrencyTracked
     // --- Workflow timestamps ---
     public DateTime? SubmittedAt { get; set; }
     public int? SubmittedByUserId { get; set; }
+    public int? ApprovalApproverUserId { get; set; }
+    public ApplicationUser? ApprovalApprover { get; set; }
     public DateTime? ApprovedAt { get; set; }
     public int? ApprovedByUserId { get; set; }
     public DateTime? SentAt { get; set; }
@@ -79,6 +81,7 @@ public class Quote : IConcurrencyTracked
 
     public List<QuoteItem> Items { get; set; } = new();
     public List<QuoteApprovalLog> ApprovalLogs { get; set; } = new();
+    public List<QuoteApprovalEmail> ApprovalEmails { get; set; } = new();
     public List<QuoteVersionSnapshot> VersionSnapshots { get; set; } = new();
     public List<QuoteDocument> Documents { get; set; } = new();
 }

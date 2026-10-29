@@ -115,6 +115,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IQuoteDocumentService, QuoteDocumentService>();
         services.AddScoped<IQuoteSpreadsheetService, QuoteSpreadsheetService>();
         services.AddScoped<IQuoteService, QuoteService>();
+        services.AddScoped<QuoteApprovalEmailService>();
+        services.AddScoped<IQuoteApprovalEmailService>(provider => provider.GetRequiredService<QuoteApprovalEmailService>());
+        services.AddHostedService<QuoteApprovalEmailWorker>();
         services.AddSingleton<IUtf8CsvParser, Utf8CsvParser>();
         services.AddSingleton<IMaterialRateSpreadsheetService, MaterialRateSpreadsheetService>();
         services.AddScoped<IMaterialRateService, MaterialRateService>();

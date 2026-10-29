@@ -1295,16 +1295,29 @@ public class TendersControllerTests : IntegrationTestBase
         quoteResponse.StatusCode.Should().Be(HttpStatusCode.Created, await quoteResponse.Content.ReadAsStringAsync());
         var quote = await ReadJsonAsync(quoteResponse);
         var quoteId = quote.GetProperty("id").GetInt32();
+        var approverId = await WithDbAsync(db => db.Users.Where(user => user.Email == "superadmin@nihome.test")
+            .Select(user => user.Id).SingleAsync());
+        var approvalPreview = await Client.PostAsJsonAsync($"/api/quotes/{quoteId}/approval-email-preview", new
+        {
+            approverUserId = approverId,
+            rowVersion = quote.GetProperty("rowVersion").GetString(),
+        });
+        approvalPreview.EnsureSuccessStatusCode();
         var submitted = await Client.PostAsJsonAsync($"/api/quotes/{quoteId}/submit", new
         {
+            approverUserId = approverId,
+            previewToken = (await ReadJsonAsync(approvalPreview)).GetProperty("previewToken").GetString(),
             rowVersion = quote.GetProperty("rowVersion").GetString(),
         });
         submitted.StatusCode.Should().Be(HttpStatusCode.OK, await submitted.Content.ReadAsStringAsync());
+        var previousAuthorization = Client.DefaultRequestHeaders.Authorization;
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsSuperAdminAsync);
         var approved = await Client.PostAsJsonAsync($"/api/quotes/{quoteId}/approve", new
         {
             rowVersion = (await ReadJsonAsync(submitted)).GetProperty("rowVersion").GetString(),
         });
         approved.StatusCode.Should().Be(HttpStatusCode.OK, await approved.Content.ReadAsStringAsync());
+        Client.DefaultRequestHeaders.Authorization = previousAuthorization;
 
         var contract = await Client.PostAsJsonAsync("/api/contracts", new
         {
