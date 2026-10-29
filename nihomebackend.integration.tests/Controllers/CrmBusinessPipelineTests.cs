@@ -271,6 +271,14 @@ public sealed class CrmBusinessPipelineTests(NihomeWebApplicationFactory factory
     private static string Version(JsonElement value) => value.GetProperty("rowVersion").GetString()!;
     private async Task<JsonElement> MoveQuoteAsync(JsonElement quote, string action)
     {
+        if (action is "submit" or "approve")
+        {
+            using var response = action == "submit"
+                ? await QuoteApprovalTestHelper.SubmitAsync(Client, Id(quote), Version(quote))
+                : await QuoteApprovalTestHelper.ApproveAsync(Client, Id(quote), Version(quote));
+            response.IsSuccessStatusCode.Should().BeTrue(await response.Content.ReadAsStringAsync());
+            return await ReadJsonAsync(response);
+        }
         if (action != "send")
             return await WriteAsync(HttpMethod.Post, $"/api/quotes/{Id(quote)}/{action}", new { rowVersion = Version(quote) });
         var preview = await ReadAsync($"/api/quotes/{Id(quote)}/email-preview");

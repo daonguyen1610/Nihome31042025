@@ -361,6 +361,7 @@ public class DrawingRevisionsControllerTests : IntegrationTestBase
             db.OperationalProjectMembers.Add(new OperationalProjectMember
             {
                 OperationalProjectId = operationalProjectId,
+                DesignProjectId = designProjectId,
                 UserId = userId,
                 Position = "Architect",
                 StartedAt = DateTime.UtcNow.AddDays(-1),

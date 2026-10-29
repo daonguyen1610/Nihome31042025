@@ -68,6 +68,7 @@ public class BasicDesignDocsControllerTests : IntegrationTestBase
             var member = new OperationalProjectMember
             {
                 OperationalProjectId = operationalProjectId,
+                DesignProjectId = projectId,
                 UserId = designUserId,
                 Position = "Architect",
                 StartedAt = DateTime.UtcNow.AddDays(-1),
