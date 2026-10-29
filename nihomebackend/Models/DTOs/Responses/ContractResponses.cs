@@ -142,6 +142,12 @@ public class ContractFilterOptionsResponse
 
 public class ContractFilterOwnerOption
 {
+    public string RoleCode { get; set; } = string.Empty;
+    public string RoleName { get; set; } = string.Empty;
+    public string? RoleLabelKey { get; set; }
+    public int? DepartmentId { get; set; }
+    public string? DepartmentLabelKey { get; set; }
+
     public int Id { get; set; }
     public string Name { get; set; } = string.Empty;
 }

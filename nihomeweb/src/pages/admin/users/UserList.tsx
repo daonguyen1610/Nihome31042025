@@ -18,7 +18,8 @@ import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
-import { useI18n } from "@/lib/i18n";
+import { useI18n, translateError } from "@/lib/i18n";
+import { extractApiError } from "@/lib/apiError";
 import {
   adminApi,
   type CreateUserRequest,
@@ -26,7 +27,7 @@ import {
   type UserDetailResponse,
   type UserListItemResponse,
 } from "@/services/adminApi";
-import { rbacApi, type RoleResponse } from "@/services/rbacApi";
+import { rbacApi, type RoleResponse, type RoleGroupResponse } from "@/services/rbacApi";
 import { BulkActionBar } from "@/components/admin/BulkActionBar";
 import { newIdempotencyKey } from "@/lib/api";
 import UserFormModal from "./UserFormModal";
@@ -39,7 +40,7 @@ const ROLE_STYLES: Record<string, string> = {
   USER: "border-emerald-200 bg-emerald-50 text-emerald-700",
 };
 
-const getErrorMessage = (error: unknown) => {
+const getErrorMessage = (error: unknown, t: (key: string) => string) => {
   if (
     typeof error === "object" &&
     error !== null &&
@@ -50,12 +51,19 @@ const getErrorMessage = (error: unknown) => {
     typeof error.response.data === "object" &&
     error.response.data !== null
   ) {
-    const data = error.response.data as { detail?: unknown; message?: unknown };
+    const data = error.response.data as {
+      detail?: unknown;
+      message?: unknown;
+      code?: unknown;
+      errors?: Record<string, unknown>;
+    };
+    if (data.code === "PEOPLE_DEPARTMENT_FILTER_INVALID" || data.errors?.departmentId)
+      return t("people.invalidDepartment");
     if (typeof data.detail === "string") return data.detail;
     if (typeof data.message === "string") return data.message;
   }
 
-  return undefined;
+  return translateError(t, extractApiError(error, t("common.error")));
 };
 
 export default function UserList() {
@@ -66,9 +74,11 @@ export default function UserList() {
   // Full RBAC catalog (system + custom). Inactive roles are filtered out below
   // before being handed to the form so the dropdown only shows assignable roles.
   const [allRoles, setAllRoles] = useState<RoleResponse[]>([]);
+  const [departments, setDepartments] = useState<RoleGroupResponse[]>([]);
   const [searchText, setSearchText] = useState("");
   const [search, setSearch] = useState("");
   const [role, setRole] = useState("");
+  const [department, setDepartment] = useState("all");
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -78,6 +88,18 @@ export default function UserList() {
   const [busyUserId, setBusyUserId] = useState<number | null>(null);
 
   const roles = useMemo(() => allRoles.filter((item) => item.isActive), [allRoles]);
+  const filterRoles = useMemo(
+    () =>
+      allRoles.filter(
+        (item) =>
+          item.isActive &&
+          (department === "all" ||
+            String(
+              departments.some((group) => group.id === item.roleGroupId) ? item.roleGroupId : 0,
+            ) === department),
+      ),
+    [allRoles, department, departments],
+  );
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   // Build a code -> display label map for the user-list role chip. Prefer the
@@ -96,24 +118,27 @@ export default function UserList() {
     setLoading(true);
     setError(null);
     try {
-      const [usersRes, rolesRes] = await Promise.all([
+      const [usersRes, rolesRes, groupsRes] = await Promise.all([
         adminApi.getUsers({
           skip: (page - 1) * PAGE_SIZE,
           take: PAGE_SIZE,
           search: search || undefined,
           role: role || undefined,
+          departmentId: department === "all" ? undefined : Number(department),
         }),
         rbacApi.listRoles(),
+        rbacApi.listRoleGroups(),
       ]);
       setItems(usersRes.data.items);
       setTotal(usersRes.data.total);
       setAllRoles(rolesRes.data);
+      setDepartments(groupsRes.data);
     } catch (err) {
-      setError(getErrorMessage(err) ?? t("common.error"));
+      setError(getErrorMessage(err, t) ?? t("common.error"));
     } finally {
       setLoading(false);
     }
-  }, [page, role, search, t]);
+  }, [page, role, search, department, t]);
 
   useEffect(() => {
     void loadData();
@@ -133,7 +158,7 @@ export default function UserList() {
     } catch (err) {
       toast({
         title: t("common.error"),
-        description: getErrorMessage(err),
+        description: getErrorMessage(err, t),
         variant: "destructive",
       });
     } finally {
@@ -158,7 +183,7 @@ export default function UserList() {
     } catch (err) {
       toast({
         title: t("common.error"),
-        description: getErrorMessage(err),
+        description: getErrorMessage(err, t),
         variant: "destructive",
       });
     } finally {
@@ -175,7 +200,7 @@ export default function UserList() {
     } catch (err) {
       toast({
         title: t("common.error"),
-        description: getErrorMessage(err),
+        description: getErrorMessage(err, t),
         variant: "destructive",
       });
     } finally {
@@ -194,7 +219,7 @@ export default function UserList() {
     } catch (err) {
       toast({
         title: t("common.error"),
-        description: getErrorMessage(err),
+        description: getErrorMessage(err, t),
         variant: "destructive",
       });
     } finally {
@@ -221,7 +246,7 @@ export default function UserList() {
   });
   useEffect(() => {
     clearSelection();
-  }, [page, role, search, clearSelection]);
+  }, [page, role, search, department, clearSelection]);
 
   const applySearch = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -264,6 +289,32 @@ export default function UserList() {
             </div>
           </div>
           <div className="w-full sm:w-[220px]">
+            <Label className="text-xs" htmlFor="user-department">
+              {t("people.departmentFilter")}
+            </Label>
+            <Select
+              value={department}
+              onValueChange={(value) => {
+                setDepartment(value);
+                setRole("");
+                setPage(1);
+              }}
+            >
+              <SelectTrigger id="user-department" className="h-11">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t("people.allDepartments")}</SelectItem>
+                <SelectItem value="0">{t("people.departmentUnassigned")}</SelectItem>
+                {departments.map((item) => (
+                  <SelectItem key={item.id} value={String(item.id)}>
+                    {t(item.labelKey)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="w-full sm:w-[220px]">
             <Label className="text-xs" htmlFor="user-role">
               {t("adminUsers.role")}
             </Label>
@@ -274,12 +325,12 @@ export default function UserList() {
                 setRole(v === "__all" ? "" : v);
               }}
             >
-              <SelectTrigger id="user-role" className="h-9">
+              <SelectTrigger id="user-role" className="h-11">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__all">{t("adminUsers.allRoles")}</SelectItem>
-                {roles.map((item) => (
+                {filterRoles.map((item) => (
                   <SelectItem key={item.code} value={item.code}>
                     {roleLabelMap.get(item.code) ?? item.name}
                   </SelectItem>
@@ -358,6 +409,11 @@ export default function UserList() {
                           >
                             {roleLabelMap.get(user.role) ?? user.role}
                           </Badge>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {user.departmentLabelKey
+                              ? t(user.departmentLabelKey)
+                              : t("people.departmentUnassigned")}
+                          </p>
                         </div>
 
                         <dl className="mt-3 grid grid-cols-1 gap-y-2 text-xs sm:grid-cols-2 sm:gap-x-3">
@@ -501,6 +557,11 @@ export default function UserList() {
                               >
                                 {roleLabelMap.get(user.role) ?? user.role}
                               </Badge>
+                              <p className="mt-1 text-xs text-muted-foreground">
+                                {user.departmentLabelKey
+                                  ? t(user.departmentLabelKey)
+                                  : t("people.departmentUnassigned")}
+                              </p>
                             </td>
                             <td className="whitespace-nowrap px-3 py-3">
                               <div className="flex items-center gap-2">

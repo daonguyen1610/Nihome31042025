@@ -1,4 +1,5 @@
 import type { BoqConfiguration, BoqEntryRow } from "@/components/admin/BoqConfiguredEntry";
+import { collectPeoplePages, type PersonIdentity } from "@/lib/people";
 import type { LegalChecklistTemplate, SaveLegalChecklistTemplate } from "./legalChecklistTypes";
 import api, { newIdempotencyKey, withIdempotencyKey, withIfMatch } from "@/lib/api";
 
@@ -995,6 +996,7 @@ export interface DepartmentWorkPackageResponse {
   sourceOpportunityName?: string | null;
   sourceQuoteId?: number | null;
   sourceQuoteCode?: string | null;
+  sourceQuoteVersion?: number | null;
   sourceTenderId?: number | null;
   sourceTenderCode?: string | null;
   departmentRoleGroupId: number;
@@ -1092,7 +1094,17 @@ export interface DepartmentWorkPackageListResponse {
 
 export interface DepartmentWorkPackageOptionsResponse {
   departments: { id: number; code: string; labelKey: string; canReceiveProjectPackage: boolean }[];
-  users: { userId: number; name: string; email: string; roleGroupId: number; canLead: boolean }[];
+  users: {
+    userId: number;
+    name: string;
+    email: string;
+    roleGroupId: number;
+    canLead: boolean;
+    roleCode: string;
+    roleName: string;
+    roleLabelKey?: string | null;
+    departmentLabelKey?: string | null;
+  }[];
   kpiDefinitions: { id: number; code: string; nameKey: string }[];
   vendors: { id: number; code: string; name: string; type: string }[];
 }
@@ -1421,8 +1433,24 @@ export interface ConstructionResourceReferenceDataResponse {
     approvedQuantity: number;
     remainingQuantity: number;
   }>;
-  siteUsers: Array<{ userId: number; userName: string }>;
-  procurementUsers: Array<{ userId: number; userName: string }>;
+  siteUsers: Array<{
+    userId: number;
+    userName: string;
+    roleCode: string;
+    roleName: string;
+    roleLabelKey?: string | null;
+    departmentId?: number | null;
+    departmentLabelKey?: string | null;
+  }>;
+  procurementUsers: Array<{
+    userId: number;
+    userName: string;
+    roleCode: string;
+    roleName: string;
+    roleLabelKey?: string | null;
+    departmentId?: number | null;
+    departmentLabelKey?: string | null;
+  }>;
 }
 
 export interface CreateConstructionResourceRequest {
@@ -1690,6 +1718,11 @@ export interface KpiDefinitionResponse {
 }
 
 export interface KpiUserOptionResponse {
+  roleCode: string;
+  roleName: string;
+  roleLabelKey?: string | null;
+  departmentId?: number | null;
+  departmentLabelKey?: string | null;
   userId: number;
   userName: string;
   positionCode: string;
@@ -2084,7 +2117,7 @@ export interface ContractListResponse {
 }
 
 export interface ContractFilterOptionsResponse {
-  owners: { id: number; name: string }[];
+  owners: (PersonIdentity & { id: number; name: string })[];
   customers: { id: number; name: string }[];
   projects: { id: number; code: string; name: string; customerId: number }[];
 }
@@ -2287,7 +2320,7 @@ export interface OpportunityDesignStartResponse {
   designProject: DesignProjectResponse;
 }
 
-export interface OpportunityOwnerOption {
+export interface OpportunityOwnerOption extends PersonIdentity {
   id: number;
   fullName: string;
 }
@@ -2619,6 +2652,11 @@ export interface QuoteApprovalCandidate {
   id: number;
   name: string;
   email: string;
+  roleCode: string;
+  roleName: string;
+  roleLabelKey?: string | null;
+  departmentId?: number | null;
+  departmentLabelKey?: string | null;
 }
 
 export interface QuoteApprovalPreview {
@@ -2909,7 +2947,7 @@ export const TENDER_STATUSES: TenderStatus[] = [
 export type TenderChecklistItemStatus =
   "NotStarted" | "Preparing" | "Done" | "Submitted" | "NotApplicable";
 
-export interface TenderAssigneeOptionResponse {
+export interface TenderAssigneeOptionResponse extends PersonIdentity {
   id: number;
   fullName: string;
 }
@@ -3730,7 +3768,15 @@ export interface DesignReviewResponse {
   clientDecidedAt?: string | null;
   canManage: boolean;
   canComment: boolean;
-  recipients: { userId: number; name: string }[];
+  recipients: {
+    userId: number;
+    name: string;
+    roleCode?: string;
+    roleName?: string;
+    roleLabelKey?: string | null;
+    departmentId?: number | null;
+    departmentLabelKey?: string | null;
+  }[];
   comments: {
     id: number;
     projectDocumentId?: number | null;
@@ -3804,6 +3850,11 @@ export interface ProjectMemberRoleResponse {
 }
 
 export interface OperationalProjectMemberResponse {
+  roleCode: string;
+  roleName: string;
+  roleLabelKey?: string | null;
+  departmentId?: number | null;
+  departmentLabelKey?: string | null;
   designProjectId?: number | null;
   id: number;
   userId: number;
@@ -3869,6 +3920,11 @@ export interface ProjectMemberCandidateResponse {
   userId: number;
   name: string;
   email: string;
+  roleCode: string;
+  roleName: string;
+  roleLabelKey?: string | null;
+  departmentId?: number | null;
+  departmentLabelKey?: string | null;
 }
 
 export interface ProjectMemberRoleRequest {
@@ -4018,7 +4074,7 @@ export interface CreatePermitChecklistItemRequest {
   note?: string | null;
 }
 
-export interface LegalProjectMemberOption {
+export interface LegalProjectMemberOption extends PersonIdentity {
   userId: number;
   name: string;
   email: string;
@@ -5331,7 +5387,15 @@ export interface PaymentReferencesResponse {
     paymentMilestones: Array<{ id: number; order: number; name: string }>;
   }>;
   vendors: Array<{ id: number; vendorCode: string; companyName: string }>;
-  accountants: Array<{ id: number; fullName: string | null }>;
+  accountants: Array<{
+    id: number;
+    fullName: string | null;
+    roleCode: string;
+    roleName: string;
+    roleLabelKey?: string | null;
+    departmentId?: number | null;
+    departmentLabelKey?: string | null;
+  }>;
   qsBatches: Array<{ id: number; contractId: number; code: string; certifiedAmount: number }>;
 }
 export interface PaymentRequestResponse {
@@ -5773,6 +5837,9 @@ export interface UserListItemResponse {
   roleId?: number | null;
   /** Human-readable role name from the `roles` table. Null for legacy users. */
   roleName?: string | null;
+  roleLabelKey?: string | null;
+  departmentId?: number | null;
+  departmentLabelKey?: string | null;
   isActive: boolean;
   avatarUrl?: string;
 }
@@ -6563,7 +6630,7 @@ export const adminApi = {
   getTenderStatistics: (params: TenderStatisticsParams, signal?: AbortSignal) =>
     api.get<TenderStatisticsResponse>("/tenders/statistics", { params, signal }),
   getTenderReportPreparers: () =>
-    api.get<{ id: number; fullName: string }[]>("/tenders/report-preparers"),
+    api.get<TenderAssigneeOptionResponse[]>("/tenders/report-preparers"),
   getTenderReportCustomers: () =>
     api.get<{ id: number; name: string }[]>("/tenders/report-customers"),
   listTenders: (params: TenderListParams = {}) => {
@@ -6856,9 +6923,17 @@ export const adminApi = {
   listDesignReviews: (projectId: number) =>
     api.get<DesignReviewResponse[]>(`/design-projects/${projectId}/reviews`),
   listDesignReviewRecipientCandidates: (projectId: number) =>
-    api.get<Array<{ userId: number; name: string }>>(
-      `/design-projects/${projectId}/reviews/recipient-candidates`,
-    ),
+    api.get<
+      Array<{
+        userId: number;
+        name: string;
+        roleCode: string;
+        roleName: string;
+        roleLabelKey?: string | null;
+        departmentId?: number | null;
+        departmentLabelKey?: string | null;
+      }>
+    >(`/design-projects/${projectId}/reviews/recipient-candidates`),
   downloadDesignReviewDocument: (projectId: number, reviewId: number, documentId: number) =>
     api.get<Blob>(
       `/design-projects/${projectId}/reviews/${reviewId}/documents/${documentId}/content`,
@@ -8141,14 +8216,19 @@ export const adminApi = {
   getOperationalProjectTimeline: (id: number) =>
     api.get<OperationalProjectTimelineItem[]>(`/operational-projects/${id}/timeline`),
   getOperationalProjectTeam: (projectId: number, designProjectId?: number) =>
-    api.get<OperationalProjectTeamResponse>(`/operational-projects/${projectId}/team`, { params: { designProjectId } }),
+    api.get<OperationalProjectTeamResponse>(`/operational-projects/${projectId}/team`, {
+      params: { designProjectId },
+    }),
   getOperationalProjectTeamHistory: (projectId: number, designProjectId?: number) =>
     api.get<OperationalProjectTeamHistoryResponse[]>(
       `/operational-projects/${projectId}/team/history`,
       { params: { designProjectId } },
     ),
   getOperationalProjectTeamCandidates: (projectId: number, designProjectId?: number) =>
-    api.get<ProjectMemberCandidateResponse[]>(`/operational-projects/${projectId}/team/candidates`, { params: { designProjectId } }),
+    api.get<ProjectMemberCandidateResponse[]>(
+      `/operational-projects/${projectId}/team/candidates`,
+      { params: { designProjectId } },
+    ),
   listHseViolations: (projectId: number, params: HseViolationListParams = {}) =>
     api.get<HseViolationListResponse>(`/operational-projects/${projectId}/hse-violations`, {
       params,
@@ -8547,8 +8627,28 @@ export const adminApi = {
     }),
 
   // Users / RBAC
-  getUsers: (params: { skip?: number; take?: number; search?: string; role?: string }) =>
-    api.get<UserListResponse>("/users", { params }),
+  getUsers: (params: {
+    skip?: number;
+    take?: number;
+    search?: string;
+    role?: string;
+    departmentId?: number;
+  }) => api.get<UserListResponse>("/users", { params }),
+  getPeopleDirectory: async (params: { role?: string } = {}) => {
+    const first = await api.get<UserListResponse>("/users", { params: { ...params, take: 100 } });
+    const items = await collectPeoplePages(
+      first.data,
+      async (skip, take) =>
+        (await api.get<UserListResponse>("/users", { params: { ...params, skip, take } })).data,
+    );
+    return {
+      ...first,
+      data: {
+        items,
+        total: first.data.total,
+      },
+    };
+  },
   getUser: (id: number) => api.get<UserDetailResponse>(`/users/${id}`),
   createUser: (data: CreateUserRequest, idempotencyKey?: string) =>
     api.post<UserDetailResponse>("/users", data, withIdempotencyKey(idempotencyKey)),

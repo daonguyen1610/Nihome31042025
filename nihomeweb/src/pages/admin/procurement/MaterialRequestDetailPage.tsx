@@ -1,3 +1,5 @@
+import { personOption, mergePeople, type PersonIdentity } from "@/lib/people";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Ban, Check, Edit3, Plus, Send, Trash2, X } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
@@ -38,7 +40,7 @@ import {
 } from "@/services/adminApi";
 import { useAppSelector } from "@/store";
 
-type UserOption = { userId: number; userName: string };
+type UserOption = PersonIdentity & { userId: number; userName: string };
 type RequestLineDraft = MaterialRequestUpsertRequest["lines"][number] & { draftId: string };
 type Decision = { approved: boolean } | null;
 
@@ -115,10 +117,12 @@ const MaterialRequestDetailPage = () => {
       setBoqLines(contextResult.data.currentApprovedBoq?.lines ?? []);
       const activeMembers = (teamResult.data?.members ?? []).filter((member) => member.isActive);
       const teamUsers: UserOption[] = activeMembers.map((member) => ({
+        ...member,
         userId: member.userId,
         userName: member.userName,
       }));
       const fallbackUsers = kpiUsersResult.data.map((user) => ({
+        ...user,
         userId: user.userId,
         userName: user.userName,
       }));
@@ -134,13 +138,7 @@ const MaterialRequestDetailPage = () => {
       ];
       if (currentUser)
         relatedUsers.push({ userId: currentUser.userId, userName: currentUser.fullName });
-      setUsers(
-        Array.from(
-          new Map(
-            [...teamUsers, ...fallbackUsers, ...relatedUsers].map((user) => [user.userId, user]),
-          ).values(),
-        ),
-      );
+      setUsers(mergePeople([...teamUsers, ...fallbackUsers, ...relatedUsers]));
       const procurementCandidates: UserOption[] = [
         ...activeMembers
           .filter(
@@ -148,10 +146,10 @@ const MaterialRequestDetailPage = () => {
               member.position.toUpperCase() === "PROCUREMENT" ||
               member.roles.some((role) => role.roleCode === "PROCUREMENT" && !role.endedAt),
           )
-          .map((member) => ({ userId: member.userId, userName: member.userName })),
+          .map((member) => ({ ...member, userId: member.userId, userName: member.userName })),
         ...kpiUsersResult.data
           .filter((user) => user.positionCode === "PROCUREMENT")
-          .map((user) => ({ userId: user.userId, userName: user.userName })),
+          .map((user) => ({ ...user, userId: user.userId, userName: user.userName })),
         {
           userId: detail.assignedProcurementUserId,
           userName: detail.assignedProcurementUserName ?? `#${detail.assignedProcurementUserId}`,
@@ -159,9 +157,7 @@ const MaterialRequestDetailPage = () => {
       ];
       if (currentUser?.role === "PROCUREMENT")
         procurementCandidates.push({ userId: currentUser.userId, userName: currentUser.fullName });
-      setProcurementUsers(
-        Array.from(new Map(procurementCandidates.map((user) => [user.userId, user])).values()),
-      );
+      setProcurementUsers(mergePeople(procurementCandidates));
     } catch (reason) {
       setError(extractApiError(reason));
     } finally {
@@ -804,18 +800,13 @@ const UserField = ({
 }) => (
   <div className="space-y-2">
     <Label htmlFor={id}>{label}</Label>
-    <Select value={value ? String(value) : ""} onValueChange={(next) => onChange(Number(next))}>
-      <SelectTrigger id={id}>
-        <SelectValue placeholder={t("procurement.lookup.userPlaceholder")} />
-      </SelectTrigger>
-      <SelectContent>
-        {users.map((user) => (
-          <SelectItem value={String(user.userId)} key={user.userId}>
-            {user.userName}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    <SearchableSelect
+      value={value ? String(value) : ""}
+      onChange={(next) => onChange(Number(next))}
+      id={id}
+      ariaLabel={t("people.select")}
+      options={[...users.map((user) => personOption(user, t))]}
+    />
   </div>
 );
 

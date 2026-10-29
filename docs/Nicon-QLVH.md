@@ -34,7 +34,9 @@ tên sheet, màu sắc, ngày và tên khách hàng trong file không phải quy
 - **Upstream:** hợp đồng, nghiệm thu, phải thu với Chủ đầu tư/khách hàng.
 - **Downstream:** hợp đồng, nghiệm thu, phải trả với NCC/thầu phụ/tổ đội.
 - **Design Project:** aggregate chuyên môn Thiết kế; phải thuộc một Operational
-  Project, không thay thế Dự án dùng chung.
+  Project, không thay thế Dự án dùng chung. Theo quyết định review 30/10/2026,
+  một Operational Project có thể có nhiều luồng Design với đội ngũ và tiến độ
+  riêng; không dùng chung thành viên/phân công giữa các luồng một cách ngầm định.
 - **BCH:** Ban Chỉ huy Công trình tại hiện trường.
 - **Phòng CM:** Phòng Quản lý Thi công tại văn phòng, thực hiện quản lý danh mục
   dự án và kiểm soát chéo.
@@ -280,7 +282,9 @@ Kiểm soát độ chín, version và người chịu trách nhiệm của hồ 
    nhận; hủy gói không được làm mất lịch sử.
 
 Thiết kế có thể bắt đầu trước hợp đồng nhưng luôn thuộc Dự án. Team và tiến độ
-Thiết kế sử dụng Operational Project. Theo xác nhận của chủ sản phẩm ngày
+Thiết kế giữ `OperationalProjectId` để truy vết business root, đồng thời được
+tách theo `DesignProjectId` của từng luồng; không dùng đội ngũ/tiến độ chung
+giữa các luồng Design. Theo xác nhận của chủ sản phẩm ngày
 29/10/2026, khi phân vai trong tab Đội ngũ của Dự án thiết kế, vai trò mới
 áp dụng cho Module Thiết kế của Dự án thiết kế đang mở; người dùng không phải
 chọn phạm vi RACI. Vai trò toàn Dự án đã lưu trước đó được giữ nguyên.
@@ -308,7 +312,8 @@ giữ `Partial` cho đến khi có đủ bằng chứng mã nguồn và kiểm t
 
 ### 4.2. Luồng duyệt và điều hành — Implemented
 
-- Tiến độ và Đội ngũ là hai tab liên kết trên cùng Operational Project. Đầu việc
+- Tiến độ và Đội ngũ là hai tab liên kết trong từng luồng Design, giữ liên kết
+  về cùng Operational Project. Đầu việc
   có mô tả, ngày kế hoạch/thực tế, người phụ trách, đúng một người duyệt, CC,
   đầu việc cha, tiền nhiệm, nguồn lực/thầu phụ và cờ công tác găng.
 - Công việc thuê ngoài liên kết bằng `VendorId` và `DownstreamContractId`; hợp

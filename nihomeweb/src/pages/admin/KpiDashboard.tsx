@@ -1,3 +1,5 @@
+import { personOption } from "@/lib/people";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
@@ -311,21 +313,12 @@ const KpiDashboard = ({ mode = "evaluation" }: KpiDashboardProps) => {
               {canViewAll && (
                 <div className="sm:col-span-2">
                   <Label>{t("kpi.user")}</Label>
-                  <Select
+                  <SearchableSelect
                     value={String(userId)}
-                    onValueChange={(value) => setUserId(Number(value))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-72">
-                      {users.map((user) => (
-                        <SelectItem key={user.userId} value={String(user.userId)}>
-                          {user.userName} · {user.positionCode}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    onChange={(value) => setUserId(Number(value))}
+                    ariaLabel={t("people.select")}
+                    options={[...users.map((user) => personOption(user, t))]}
+                  />
                 </div>
               )}
             </section>

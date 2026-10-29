@@ -1,3 +1,5 @@
+import { personOption, type PersonIdentity } from "@/lib/people";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { useCallback, useEffect, useState } from "react";
 import { ArrowDown, ArrowUp, Download, Eye, RefreshCw, Search, TriangleAlert } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -22,7 +24,7 @@ import {
   type MaterialAlertType,
 } from "@/services/adminApi";
 
-type UserOption = { userId: number; userName: string };
+type UserOption = PersonIdentity & { userId: number; userName: string };
 type Translate = (key: string, params?: Record<string, string | number>) => string;
 
 interface MaterialAlertsWorkspaceProps {
@@ -289,19 +291,15 @@ const MaterialAlertsWorkspace = ({
             ))}
           </SelectContent>
         </Select>
-        <Select value={assignee} onValueChange={(value) => resetPage(() => setAssignee(value))}>
-          <SelectTrigger aria-label={t("procurement.alerts.assignee")}>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t("procurement.alerts.allAssignees")}</SelectItem>
-            {users.map((user) => (
-              <SelectItem key={user.userId} value={String(user.userId)}>
-                {user.userName}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <SearchableSelect
+          value={assignee}
+          onChange={(value) => resetPage(() => setAssignee(value))}
+          ariaLabel={t("procurement.alerts.assignee")}
+          options={[
+            { value: "all", label: t("procurement.alerts.allAssignees") },
+            ...users.map((user) => personOption(user, t)),
+          ]}
+        />
         <Select
           value={sortBy}
           onValueChange={(value) =>

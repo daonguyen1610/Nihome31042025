@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { personOption } from "@/lib/people";
+import type { SearchableSelectOption } from "@/components/ui/searchable-select";
 import { useSearchParams } from "react-router-dom";
 import {
   CalendarDays,
@@ -185,7 +187,7 @@ export default function HandoverRecordsPage() {
     let cancelled = false;
     void Promise.allSettled([
       adminApi.listDesignProjects({ pageSize: 200 }),
-      adminApi.getUsers({ take: 200 }),
+      adminApi.getPeopleDirectory(),
     ]).then(([projectResult, userResult]) => {
       if (cancelled) return;
       if (projectResult.status === "fulfilled") setProjects(projectResult.value.data.items ?? []);
@@ -204,17 +206,51 @@ export default function HandoverRecordsPage() {
   );
 
   const userOptions = useMemo(() => {
-    const options = new Map<number, string>();
-    users.forEach((user) => options.set(user.id, user.fullName || user.phoneNumber));
+    const options = new Map<number, SearchableSelectOption>();
+    users.forEach((user) => options.set(user.id, personOption(user, t)));
     projects.forEach((project) => {
-      if (project.projectManagerUserId && project.projectManagerName)
-        options.set(project.projectManagerUserId, project.projectManagerName);
-      if (project.designLeadUserId && project.designLeadName)
-        options.set(project.designLeadUserId, project.designLeadName);
+      if (
+        project.projectManagerUserId &&
+        project.projectManagerName &&
+        !options.has(project.projectManagerUserId)
+      )
+        options.set(
+          project.projectManagerUserId,
+          personOption(
+            {
+              id: project.projectManagerUserId,
+              name: project.projectManagerName,
+              roleLabelKey: "designProjects.team.role.ProjectManager",
+            },
+            t,
+          ),
+        );
+      if (
+        project.designLeadUserId &&
+        project.designLeadName &&
+        !options.has(project.designLeadUserId)
+      )
+        options.set(
+          project.designLeadUserId,
+          personOption(
+            {
+              id: project.designLeadUserId,
+              name: project.designLeadName,
+              roleLabelKey: "designProjects.team.role.DesignLead",
+            },
+            t,
+          ),
+        );
     });
-    rows.forEach((row) => options.set(row.responsibleUserId, row.responsibleUserName));
-    return Array.from(options, ([value, label]) => ({ value: String(value), label }));
-  }, [projects, rows, users]);
+    rows.forEach((row) => {
+      if (!options.has(row.responsibleUserId))
+        options.set(
+          row.responsibleUserId,
+          personOption({ id: row.responsibleUserId, name: row.responsibleUserName }, t),
+        );
+    });
+    return Array.from(options.values());
+  }, [projects, rows, users, t]);
 
   const currentParams = useCallback(
     (includePage = true): HandoverRecordListParams => {
@@ -662,6 +698,7 @@ export default function HandoverRecordsPage() {
             <div className="space-y-1.5">
               <Label>{t("handover.field.responsible")}</Label>
               <SearchableSelect
+                ariaLabel={t("handover.field.responsible")}
                 value={responsibleUserId ? String(responsibleUserId) : null}
                 onChange={(value) => {
                   setResponsibleUserId(value ? Number(value) : undefined);
@@ -1246,6 +1283,7 @@ export default function HandoverRecordsPage() {
             <div className="space-y-1.5">
               <Label>{t("handover.field.responsible")}</Label>
               <SearchableSelect
+                ariaLabel={t("handover.field.responsible")}
                 value={form.responsibleUserId || null}
                 onChange={(value) =>
                   setForm((current) => ({ ...current, responsibleUserId: value }))

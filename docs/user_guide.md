@@ -100,6 +100,20 @@ Manager of the shared Operational Project. The assigned Design Manager and
 Design Lead can open the Design project even when they are not the Operational
 Project Manager.
 
+An Operational Project can contain several Design flows. Open the intended
+flow before changing its Team or Schedule: membership, reporting lines, task
+assignees, approvers and CC belong to that flow. The Operational Project remains
+the shared business root; membership in one flow does not grant access to its
+siblings.
+
+People selectors show the person's name, organizational role and department.
+Use **Department / Group** to narrow the eligible candidates, then search by
+name, role or email. Filtering does not grant assignment rights or remove a
+chosen person. Multi-recipient lists retain selected people as removable chips
+when filters hide their rows. Project-team selectors also show project roles
+and position. In **Users**, department and role filters apply together across
+the paginated directory.
+
 The two approval surfaces serve different decisions:
 
 1. In **Schedule**, the assignee completes the task and the task's one assigned

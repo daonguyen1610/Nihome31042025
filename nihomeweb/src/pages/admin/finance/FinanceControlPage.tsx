@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { personOption } from "@/lib/people";
+import { SearchableSelect, type SearchableSelectOption } from "@/components/ui/searchable-select";
 import {
   Banknote,
   CalendarClock,
@@ -227,7 +229,7 @@ const FinanceControlPage = () => {
         .then((response) => response.data.items)
         .catch(() => null),
       adminApi
-        .getUsers({ skip: 0, take: 200, role: "ACCOUNTANT" })
+        .getPeopleDirectory({ role: "ACCOUNTANT" })
         .then((response) => response.data.items.filter((user) => user.isActive))
         .catch(() => null),
     ]).then(([contractRows, projectRows, userRows]) => {
@@ -1313,28 +1315,26 @@ const IdChoice = ({
   value: number;
   onChange: (value: number) => void;
   available: boolean;
-  options: Array<{ id: number; label: string }>;
+  options: Array<{
+    id: number;
+    label: string;
+    hint?: string;
+    department?: SearchableSelectOption["department"];
+  }>;
   placeholder: string;
   fallbackPlaceholder: string;
 }) => (
   <div className="space-y-2">
     <Label htmlFor={id}>{label}</Label>
     {available ? (
-      <Select
+      <SearchableSelect
+        id={id}
+        ariaLabel={label}
         value={value ? String(value) : undefined}
-        onValueChange={(next) => onChange(Number(next))}
-      >
-        <SelectTrigger id={id}>
-          <SelectValue placeholder={placeholder} />
-        </SelectTrigger>
-        <SelectContent>
-          {options.map((option) => (
-            <SelectItem key={option.id} value={String(option.id)}>
-              {option.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+        onChange={(next) => onChange(Number(next))}
+        placeholder={placeholder}
+        options={options.map((option) => ({ ...option, value: String(option.id) }))}
+      />
     ) : (
       <Input
         id={id}
@@ -1537,7 +1537,7 @@ const PaymentForm = ({
           available={true}
           options={accountants.map((user) => ({
             id: user.id,
-            label: user.fullName ?? `#${user.id}`,
+            ...personOption(user, t),
           }))}
           placeholder={t("finance.lookup.accountant")}
           fallbackPlaceholder={t("finance.lookup.userId")}
@@ -1787,7 +1787,7 @@ const CorrectionForm = ({
         available={lookupAvailable.users}
         options={accountants.map((user) => ({
           id: user.id,
-          label: user.fullName ?? user.email ?? `#${user.id}`,
+          ...personOption(user, t),
         }))}
         placeholder={t("finance.lookup.accountant")}
         fallbackPlaceholder={t("finance.lookup.userId")}

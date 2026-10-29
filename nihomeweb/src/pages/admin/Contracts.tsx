@@ -1,3 +1,5 @@
+import { SearchableSelect } from "@/components/ui/searchable-select";
+import { personOption } from "@/lib/people";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ContinuationFields } from "@/components/admin/ContractContinuations";
 import { useContractContinuation } from "@/hooks/useContractContinuation";
@@ -1254,25 +1256,19 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
             <Label className="text-xs" htmlFor="c-owner">
               {t("contracts.field.owner")}
             </Label>
-            <Select
+            <SearchableSelect
               value={ownerFilter === "all" ? "all" : String(ownerFilter)}
-              onValueChange={(value) => {
+              onChange={(value) => {
                 setOwnerFilter(value === "all" ? "all" : Number(value));
                 setPage(1);
               }}
-            >
-              <SelectTrigger id="c-owner" className="h-9">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="max-h-72">
-                <SelectItem value="all">{t("contracts.filter.allOwners")}</SelectItem>
-                {filterOptions.owners.map((owner) => (
-                  <SelectItem key={owner.id} value={String(owner.id)}>
-                    {owner.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              id="c-owner"
+              ariaLabel={t("people.select")}
+              options={[
+                { value: "all", label: t("contracts.filter.allOwners") },
+                ...filterOptions.owners.map((person) => personOption(person, t)),
+              ]}
+            />
           </div>
           <div className="min-w-0 space-y-1 sm:col-span-2">
             <Label className="text-xs">{t("contracts.filter.endRange")}</Label>

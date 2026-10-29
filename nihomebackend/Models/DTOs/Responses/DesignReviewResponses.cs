@@ -42,6 +42,11 @@ public sealed class DesignReviewRecipientResponse
 {
     public int UserId { get; set; }
     public string Name { get; set; } = string.Empty;
+    public string RoleCode { get; set; } = string.Empty;
+    public string RoleName { get; set; } = string.Empty;
+    public string? RoleLabelKey { get; set; }
+    public int? DepartmentId { get; set; }
+    public string? DepartmentLabelKey { get; set; }
 }
 
 public sealed class DesignReviewCommentResponse

@@ -286,6 +286,11 @@ public class ContractService(
                 {
                     Id = c.OwnerUserId!.Value,
                     Name = c.Owner != null ? c.Owner.FullName ?? c.Owner.Email ?? "" : "",
+                    RoleCode = c.Owner!.RoleEntity != null ? c.Owner!.RoleEntity.Code : c.Owner!.Role.ToString(),
+                    RoleName = c.Owner!.RoleEntity != null ? c.Owner!.RoleEntity.Name : c.Owner!.Role.ToString(),
+                    RoleLabelKey = c.Owner!.RoleEntity != null ? c.Owner!.RoleEntity.LabelKey : null,
+                    DepartmentId = c.Owner!.RoleEntity != null && c.Owner!.RoleEntity.RoleGroup != null && c.Owner!.RoleEntity.RoleGroup.IsActive ? c.Owner!.RoleEntity.RoleGroupId : null,
+                    DepartmentLabelKey = c.Owner!.RoleEntity != null && c.Owner!.RoleEntity.RoleGroup != null && c.Owner!.RoleEntity.RoleGroup.IsActive ? c.Owner!.RoleEntity.RoleGroup.LabelKey : null,
                 })
                 .Distinct().OrderBy(option => option.Name).ToListAsync(ct),
             Customers = await query.Select(c => new ContractFilterCustomerOption

@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { expect, test, TEST_USERS } from "../fixtures/auth";
+import { execSql } from "../fixtures/db";
 import { hardDeleteBusinessRoot } from "../fixtures/hardDelete";
 
 const mailSinkUrl = process.env.MAIL_SINK_URL;
@@ -118,7 +119,15 @@ test("approved opportunity quote sends the edited preview through SMTP before cu
     await expect(approvalDialog.getByRole("button", { name: "Gửi duyệt" })).toBeDisabled();
     await approvalDialog.getByTestId("quote-approval-approver").click();
     await page.getByRole("option", { name: /Super Admin/ }).click();
+    const previewResponsePromise = page.waitForResponse(
+      (response) =>
+        response.url().endsWith(`/api/quotes/${quoteId}/approval-email-preview`) &&
+        response.request().method() === "POST",
+      { timeout: 30_000 },
+    );
     await approvalDialog.getByRole("button", { name: "Xem trước email" }).click();
+    const previewResponse = await previewResponsePromise;
+    expect(previewResponse.ok(), await previewResponse.text()).toBeTruthy();
     const internalPreview = approvalDialog.getByTestId("quote-approval-preview");
     await expect(internalPreview).toContainText(quote.code);
     await expect(internalPreview.frameLocator("iframe").locator("body")).toContainText(quote.code);
@@ -344,6 +353,36 @@ test("approved opportunity quote sends the edited preview through SMTP before cu
     expect(contract.quoteId).toBe(quoteId);
     expect(contract.opportunityId).toBe(opportunityId);
     expect(contract.value).toBe(810_000_000);
+    // An obsolete approved dossier can have newer package metadata. Both
+    // quote and contract navigation must still choose the current version.
+    const staleResponse = await api.post("/api/work-packages", {
+      headers: { ...headers, "Idempotency-Key": randomUUID() },
+      data: {
+        kind: "Project",
+        purpose: "FinanceCommercialReview",
+        name: `Old Finance review ${quote.code}`,
+        operationalProjectId: projectId,
+        sourceOpportunityId: opportunityId,
+        sourceQuoteId: quoteId,
+        departmentRoleGroupId: financeGroup.id,
+        leadUserId: accountant.userId,
+      },
+    });
+    expect(staleResponse.status(), await staleResponse.text()).toBe(201);
+    const staleId = (await staleResponse.json()).id as number;
+    const staleReview = await api.put(`/api/work-packages/${staleId}/finance-review`, {
+      headers: { ...accountantHeaders, "Idempotency-Key": randomUUID() },
+      data: {
+        contractConditionsReviewed: true,
+        guaranteesReviewed: true,
+        paymentTermsReviewed: true,
+        findings: "Historical review fixture",
+      },
+    });
+    expect(staleReview.ok(), await staleReview.text()).toBeTruthy();
+    execSql(`SET QUOTED_IDENTIFIER ON;
+      UPDATE department_finance_reviews SET Status='Approved', ReviewedQuoteVersion=0 WHERE WorkPackageId=${staleId};
+      UPDATE department_work_packages SET Status='Completed', UpdatedAt=DATEADD(day,1,SYSUTCDATETIME()) WHERE Id=${staleId};`);
     await page.goto(`/admin/contracts/${contractId}`);
     const financeLink = page.getByTestId("contract-finance-review-link");
     await expect(financeLink).toHaveAttribute("href", `/admin/work-packages/${financePackageId}`);

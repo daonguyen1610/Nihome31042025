@@ -1,0 +1,98 @@
+[
+  {
+    "key": "people.select",
+    "category": "common",
+    "vi": "Chọn người",
+    "en": "Select person",
+    "zh": "选择人员",
+    "ja": "担当者を選択"
+  },
+  {
+    "key": "people.deselect",
+    "category": "common",
+    "vi": "Bỏ chọn",
+    "en": "Deselect",
+    "zh": "取消选择",
+    "ja": "選択を解除"
+  },
+  {
+    "key": "people.departmentFilter",
+    "category": "common",
+    "vi": "Phòng ban / Nhóm",
+    "en": "Department / Group",
+    "zh": "部门 / 团队",
+    "ja": "部署 / グループ"
+  },
+  {
+    "key": "people.allDepartments",
+    "category": "common",
+    "vi": "Tất cả phòng ban / nhóm",
+    "en": "All departments / groups",
+    "zh": "所有部门 / 团队",
+    "ja": "すべての部署 / グループ"
+  },
+  {
+    "key": "people.departmentUnassigned",
+    "category": "common",
+    "vi": "Chưa thuộc phòng ban",
+    "en": "No department assigned",
+    "zh": "未分配部门",
+    "ja": "部署未割当"
+  },
+  {
+    "key": "people.roleUnassigned",
+    "category": "common",
+    "vi": "Chưa có thông tin vai trò",
+    "en": "Role information unavailable",
+    "zh": "暂无角色信息",
+    "ja": "役割情報なし"
+  },
+  {
+    "key": "people.search",
+    "category": "common",
+    "vi": "Tìm tên, vai trò hoặc email…",
+    "en": "Search name, role or email…",
+    "zh": "搜索姓名、角色或邮箱…",
+    "ja": "氏名・役割・メールで検索…"
+  },
+  {
+    "key": "people.noResults",
+    "category": "common",
+    "vi": "Không có người phù hợp. Hãy đổi bộ lọc hoặc từ khóa.",
+    "en": "No matching people. Change the filter or search.",
+    "zh": "没有匹配人员。请更改筛选或搜索。",
+    "ja": "該当する人がいません。絞り込みや検索を変更してください。"
+  },
+  {
+    "key": "people.selected",
+    "category": "common",
+    "vi": "Đã chọn",
+    "en": "Selected",
+    "zh": "已选择",
+    "ja": "選択済み"
+  },
+  {
+    "key": "people.resultCount",
+    "category": "common",
+    "vi": "Hiển thị {count} người · Đã chọn {selected}",
+    "en": "Showing {count} people · Selected {selected}",
+    "zh": "显示 {count} 人 · 已选 {selected} 人",
+    "ja": "{count} 人を表示 · {selected} 人を選択"
+  },
+  {
+    "key": "people.departmentUnknown",
+    "category": "common",
+    "vi": "Chưa có thông tin phòng ban",
+    "en": "Department information unavailable",
+    "zh": "暂无部门信息",
+    "ja": "部署情報なし"
+  },
+  {
+    "key": "people.invalidDepartment",
+    "category": "common",
+    "vi": "Phòng ban/nhóm không hợp lệ. Chọn một nhóm trong danh sách hoặc xóa bộ lọc.",
+    "en": "The department/group filter is invalid. Select a group from the list or clear the filter.",
+    "zh": "部门/团队筛选无效。请选择列表中的团队或清除筛选。",
+    "ja": "部署・グループの絞り込みが無効です。一覧から選択するか、絞り込みを解除してください。"
+  }
+]

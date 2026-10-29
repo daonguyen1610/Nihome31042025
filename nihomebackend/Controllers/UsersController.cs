@@ -23,8 +23,18 @@ public class UsersController(UserService svc) : ControllerBase
         [FromQuery] int skip = 0,
         [FromQuery] int take = 20,
         [FromQuery] string? search = null,
-        [FromQuery] string? role = null)
-        => Ok(await svc.GetListAsync(skip, take, search, role));
+        [FromQuery] string? role = null,
+        [FromQuery] int? departmentId = null)
+    {
+        if (departmentId < 0)
+            return BadRequest(new
+            {
+                code = "PEOPLE_DEPARTMENT_FILTER_INVALID",
+                field = "departmentId",
+                message = "Phòng ban/nhóm không hợp lệ. Chọn một nhóm trong danh sách hoặc xóa bộ lọc.",
+            });
+        return Ok(await svc.GetListAsync(skip, take, search, role, departmentId));
+    }
 
     [HttpGet("{id:int}")]
     public async Task<ActionResult<UserDetailResponse>> GetById(int id)

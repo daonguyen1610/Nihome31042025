@@ -5,6 +5,24 @@ namespace NihomeBackend.IntegrationTests.Controllers;
 
 public sealed class DesignReviewsControllerTests : IntegrationTestBase
 {
+    [Fact]
+    public async Task RecipientCandidates_IdentifyRoleAndDepartmentWithoutWideningEligibility()
+    {
+        var fixture = await CreateFixtureAsync();
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "DESIGN"));
+        var response = await Client.GetAsync($"/api/design-projects/{fixture.DesignProjectId}/reviews/recipient-candidates");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var candidates = (await ReadJsonAsync(response)).EnumerateArray().ToList();
+        candidates.Should().NotBeEmpty();
+        foreach (var candidate in candidates)
+        {
+            candidate.GetProperty("roleName").GetString().Should().NotBeNullOrWhiteSpace();
+            candidate.GetProperty("roleCode").GetString().Should().NotBeNullOrWhiteSpace();
+            candidate.TryGetProperty("departmentId", out _).Should().BeTrue();
+            candidate.TryGetProperty("departmentLabelKey", out _).Should().BeTrue();
+        }
+    }
+
     [Theory]
     [InlineData("ADMIN")]
     [InlineData("DESIGN_LEAD")]

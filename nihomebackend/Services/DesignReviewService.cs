@@ -44,6 +44,11 @@ public sealed class DesignReviewService(
             {
                 UserId = item.Id,
                 Name = item.FullName ?? item.Email,
+                RoleCode = item.RoleEntity!.Code,
+                RoleName = item.RoleEntity.Name,
+                RoleLabelKey = item.RoleEntity.LabelKey,
+                DepartmentId = item.RoleEntity.RoleGroup != null && item.RoleEntity.RoleGroup.IsActive ? item.RoleEntity.RoleGroupId : null,
+                DepartmentLabelKey = item.RoleEntity.RoleGroup != null && item.RoleEntity.RoleGroup.IsActive ? item.RoleEntity.RoleGroup.LabelKey : null,
             }).ToListAsync(ct);
     }
 
@@ -398,7 +403,7 @@ public sealed class DesignReviewService(
         .Where(item => item.DesignProjectId == projectId)
         .Include(item => item.DesignManager)
         .Include(item => item.ConceptRevision)
-        .Include(item => item.Recipients).ThenInclude(item => item.User)
+        .Include(item => item.Recipients).ThenInclude(item => item.User).ThenInclude(user => user.RoleEntity).ThenInclude(role => role!.RoleGroup)
         .Include(item => item.Comments).ThenInclude(item => item.Author)
         .Include(item => item.Documents).ThenInclude(item => item.ProjectDocument);
 
@@ -518,6 +523,11 @@ public sealed class DesignReviewService(
         {
             UserId = recipient.UserId,
             Name = recipient.User.FullName ?? recipient.User.Email,
+            RoleCode = recipient.User.RoleEntity?.Code ?? recipient.User.Role.ToString(),
+            RoleName = recipient.User.RoleEntity?.Name ?? recipient.User.Role.ToString(),
+            RoleLabelKey = recipient.User.RoleEntity?.LabelKey,
+            DepartmentId = recipient.User.RoleEntity?.RoleGroup is { IsActive: true } group ? group.Id : null,
+            DepartmentLabelKey = recipient.User.RoleEntity?.RoleGroup is { IsActive: true } department ? department.LabelKey : null,
         }).ToList(),
         Comments = item.Comments.OrderBy(comment => comment.CreatedAt).Select(comment => new DesignReviewCommentResponse
         {

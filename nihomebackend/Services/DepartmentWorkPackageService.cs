@@ -150,6 +150,10 @@ public sealed partial class DepartmentWorkPackageService(
                 Name = item.FullName ?? item.Email,
                 Email = item.Email,
                 RoleGroupId = item.RoleEntity!.RoleGroupId!.Value,
+                RoleCode = item.RoleEntity.Code,
+                RoleName = item.RoleEntity.Name,
+                RoleLabelKey = item.RoleEntity.LabelKey,
+                DepartmentLabelKey = item.RoleEntity.RoleGroup!.LabelKey,
                 CanLead = item.RoleEntity.RolePermissions.Any(rolePermission =>
                     rolePermission.Permission.IsActive &&
                     rolePermission.Permission.Module == "work.packages" &&
@@ -1016,6 +1020,7 @@ public sealed partial class DepartmentWorkPackageService(
             SourceOpportunityName = item.SourceOpportunity?.Name,
             SourceQuoteId = item.SourceQuoteId,
             SourceQuoteCode = item.SourceQuote?.Code,
+            SourceQuoteVersion = item.SourceQuote?.Version,
             SourceTenderId = item.SourceTenderId,
             SourceTenderCode = item.SourceTender?.Code,
             DepartmentRoleGroupId = item.DepartmentRoleGroupId,

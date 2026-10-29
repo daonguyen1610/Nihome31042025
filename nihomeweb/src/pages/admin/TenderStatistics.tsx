@@ -1,3 +1,4 @@
+import { personOption, type PersonIdentity } from "@/lib/people";
 import { useEffect, useState } from "react";
 import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
 import { AlertCircle, ArrowDown, RefreshCcw } from "lucide-react";
@@ -43,7 +44,9 @@ export default function TenderStatistics({ onInspect, refreshToken }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [revision, setRevision] = useState(0);
-  const [preparers, setPreparers] = useState<{ id: number; fullName: string }[]>([]);
+  const [preparers, setPreparers] = useState<(PersonIdentity & { id: number; fullName: string })[]>(
+    [],
+  );
   const [customers, setCustomers] = useState<{ id: number; name: string }[]>([]);
   const [optionsError, setOptionsError] = useState(false);
 
@@ -191,7 +194,7 @@ export default function TenderStatistics({ onInspect, refreshToken }: Props) {
             onChange={(preparerUserId) => setDraft({ ...draft, preparerUserId })}
             options={[
               { value: "", label: t("tenders.stats.allPreparers") },
-              ...preparers.map((p) => ({ value: String(p.id), label: p.fullName })),
+              ...preparers.map((p) => personOption(p, t)),
             ]}
             placeholder={t("tenders.stats.allPreparers")}
           />

@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { SearchableSelect } from "@/components/ui/searchable-select";
+import { personOption } from "@/lib/people";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   ArrowDownToLine,
@@ -159,7 +161,7 @@ const OperationalProjects = () => {
     void Promise.all([
       adminApi.listCustomers({ pageSize: 200 }),
       canListUsers
-        ? adminApi.getUsers({ take: 200 })
+        ? adminApi.getPeopleDirectory()
         : Promise.resolve({ data: { items: [], total: 0 } }),
     ])
       .then(([customerResponse, userResponse]) => {
@@ -530,11 +532,16 @@ const OperationalProjects = () => {
               value={`${formatDate(detail.startDate)} – ${formatDate(detail.endDate)}`}
             />
             <div className="min-w-0 rounded-lg border bg-card p-3">
-              <p className="text-xs text-muted-foreground">{t("operationalProjects.field.designProject")}</p>
+              <p className="text-xs text-muted-foreground">
+                {t("operationalProjects.field.designProject")}
+              </p>
               <ul className="mt-1 space-y-2 text-sm">
                 {(detail.designProjects ?? []).map((design) => (
                   <li key={design.id}>
-                    <Link className="break-words text-primary underline underline-offset-4" to={`/admin/design-projects/${design.id}`}>
+                    <Link
+                      className="break-words text-primary underline underline-offset-4"
+                      to={`/admin/design-projects/${design.id}`}
+                    >
                       {design.projectCode} · {design.name}
                     </Link>
                   </li>
@@ -1345,27 +1352,20 @@ const OperationalProjects = () => {
             </div>
             <div>
               <Label>{t("operationalProjects.field.manager")}</Label>
-              <Select
+              <SearchableSelect
+                ariaLabel={t("operationalProjects.field.manager")}
                 value={form.projectManagerUserId ? String(form.projectManagerUserId) : "self"}
-                onValueChange={(value) =>
+                onChange={(value) =>
                   setForm((current) => ({
                     ...current,
                     projectManagerUserId: value === "self" ? null : Number(value),
                   }))
                 }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="self">{t("operationalProjects.managerSelf")}</SelectItem>
-                  {users.map((user) => (
-                    <SelectItem key={user.id} value={String(user.id)}>
-                      {user.fullName || user.email || user.phoneNumber}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                options={[
+                  { value: "self", label: t("operationalProjects.managerSelf") },
+                  ...users.map((user) => personOption(user, t)),
+                ]}
+              />
             </div>
             {detail && (
               <div className="sm:col-span-2">

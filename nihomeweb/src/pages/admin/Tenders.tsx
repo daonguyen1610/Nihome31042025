@@ -1,3 +1,4 @@
+import { personOption } from "@/lib/people";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { AlertTriangle, Loader2, Pencil, Plus, RefreshCcw, Search, Trash2 } from "lucide-react";
@@ -192,7 +193,7 @@ const AdminTenders = () => {
       }
       if (canPickPreparer) {
         try {
-          const { data } = await adminApi.getUsers({ take: 200 });
+          const { data } = await adminApi.getPeopleDirectory();
           if (!cancelled) setPreparers(data.items.filter((u) => u.isActive));
         } catch {
           /* non-fatal — preparer field will be hidden */
@@ -862,24 +863,13 @@ const AdminTenders = () => {
               <div className="space-y-1">
                 <Label>{t("tenders.field.preparer")}</Label>
                 {canPickPreparer ? (
-                  <Select
+                  <SearchableSelect
                     value={form.preparerUserId ? String(form.preparerUserId) : ""}
-                    onValueChange={(v) =>
-                      setForm({ ...form, preparerUserId: v ? Number(v) : null })
-                    }
+                    onChange={(v) => setForm({ ...form, preparerUserId: v ? Number(v) : null })}
                     disabled={editLocked}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder={t("tenders.form.preparerPlaceholder")} />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-64">
-                      {preparers.map((u) => (
-                        <SelectItem key={u.id} value={String(u.id)}>
-                          {u.fullName || u.phoneNumber}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    ariaLabel={t("people.select")}
+                    options={[...preparers.map((user) => personOption(user, t))]}
+                  />
                 ) : (
                   <Input
                     value={editingDetail?.preparerName ?? t("tenders.form.preparerReadOnlyHint")}

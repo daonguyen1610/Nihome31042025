@@ -47,9 +47,17 @@ public class TenderService(
 
     public async Task<IReadOnlyList<TenderAssigneeOptionResponse>> ListReportPreparersAsync(CancellationToken ct = default)
         => await db.Tenders.AsNoTracking().Where(item => item.PreparerUserId != null)
-            .Select(item => new { Id = item.PreparerUserId!.Value, FullName = item.Preparer!.FullName ?? string.Empty })
-            .Distinct().OrderBy(item => item.FullName)
-            .Select(item => new TenderAssigneeOptionResponse { Id = item.Id, FullName = item.FullName })
+            .Select(item => new TenderAssigneeOptionResponse
+            {
+                Id = item.PreparerUserId!.Value,
+                FullName = item.Preparer!.FullName ?? string.Empty,
+                RoleCode = item.Preparer!.RoleEntity != null ? item.Preparer!.RoleEntity.Code : item.Preparer!.Role.ToString(),
+                RoleName = item.Preparer!.RoleEntity != null ? item.Preparer!.RoleEntity.Name : item.Preparer!.Role.ToString(),
+                RoleLabelKey = item.Preparer!.RoleEntity != null ? item.Preparer!.RoleEntity.LabelKey : null,
+                DepartmentId = item.Preparer!.RoleEntity != null && item.Preparer!.RoleEntity.RoleGroup != null && item.Preparer!.RoleEntity.RoleGroup.IsActive ? item.Preparer!.RoleEntity.RoleGroupId : null,
+                DepartmentLabelKey = item.Preparer!.RoleEntity != null && item.Preparer!.RoleEntity.RoleGroup != null && item.Preparer!.RoleEntity.RoleGroup.IsActive ? item.Preparer!.RoleEntity.RoleGroup.LabelKey : null,
+            })
+.Distinct().OrderBy(item => item.FullName)
             .ToListAsync(ct);
 
     public async Task<TenderStatisticsResponse> StatisticsAsync(TenderStatisticsParams p, CancellationToken ct = default)
@@ -215,6 +223,11 @@ public class TenderService(
             {
                 Id = user.Id,
                 FullName = user.FullName ?? user.Email,
+                RoleCode = user.RoleEntity != null ? user.RoleEntity.Code : user.Role.ToString(),
+                RoleName = user.RoleEntity != null ? user.RoleEntity.Name : user.Role.ToString(),
+                RoleLabelKey = user.RoleEntity != null ? user.RoleEntity.LabelKey : null,
+                DepartmentId = user.RoleEntity != null && user.RoleEntity.RoleGroup != null && user.RoleEntity.RoleGroup.IsActive ? user.RoleEntity.RoleGroupId : null,
+                DepartmentLabelKey = user.RoleEntity != null && user.RoleEntity.RoleGroup != null && user.RoleEntity.RoleGroup.IsActive ? user.RoleEntity.RoleGroup.LabelKey : null,
             })
             .ToListAsync(ct);
 

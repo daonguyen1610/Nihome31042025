@@ -1,4 +1,6 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
+import { personOption, type PersonIdentity } from "@/lib/people";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Boxes, Plus, Send } from "lucide-react";
 import { ConstructionWorkspaceShell } from "./ConstructionWorkspaceShell";
 import { PageEmpty, PageError, PageLoading } from "@/components/PageState";
@@ -34,7 +36,7 @@ import {
 } from "@/services/adminApi";
 
 const TYPES: ConstructionResourceType[] = ["Material", "Equipment", "Labour"];
-type UserOption = { userId: number; userName: string };
+type UserOption = PersonIdentity & { userId: number; userName: string };
 type BoqLineOption = ConstructionResourceReferenceDataResponse["boqLines"][number];
 
 export default function BchResourceRequestsPage() {
@@ -386,21 +388,20 @@ function UserSelect({
   users: UserOption[];
   onChange: (value: string) => void;
 }) {
+  const { t } = useI18n();
   return (
     <div className="space-y-1.5">
       <Label htmlFor={id}>{label}</Label>
-      <Select required value={value} onValueChange={onChange}>
-        <SelectTrigger id={id} data-testid={id}>
-          <SelectValue placeholder={label} />
-        </SelectTrigger>
-        <SelectContent>
-          {users.map((user) => (
-            <SelectItem key={user.userId} value={String(user.userId)}>
-              {user.userName}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <SearchableSelect
+        required
+        id={id}
+        data-testid={id}
+        ariaLabel={label}
+        value={value}
+        onChange={onChange}
+        placeholder={label}
+        options={users.map((user) => personOption(user, t))}
+      />
     </div>
   );
 }

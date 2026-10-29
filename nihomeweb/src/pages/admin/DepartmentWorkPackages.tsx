@@ -1,3 +1,6 @@
+import { personOption } from "@/lib/people";
+import { SearchableSelect } from "@/components/ui/searchable-select";
+import { PeopleChecklist } from "@/components/admin/PeopleChecklist";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
@@ -1883,23 +1886,16 @@ const DepartmentWorkPackages = () => {
               </Select>
             </Field>
             <Field label={t("workPackages.field.lead")}>
-              <Select
-                value={packageForm.leadUserId ? String(packageForm.leadUserId) : ""}
-                onValueChange={(value) =>
-                  setPackageForm((current) => ({ ...current, leadUserId: Number(value) }))
-                }
-              >
-                <SelectTrigger data-testid="work-package-lead">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {departmentUsers.map((user) => (
-                    <SelectItem key={user.userId} value={String(user.userId)}>
-                      {user.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div data-testid="work-package-lead">
+                <SearchableSelect
+                  value={packageForm.leadUserId ? String(packageForm.leadUserId) : ""}
+                  onChange={(value) =>
+                    setPackageForm((current) => ({ ...current, leadUserId: Number(value) }))
+                  }
+                  ariaLabel={t("workPackages.field.lead")}
+                  options={departmentUsers.map((user) => personOption(user, t))}
+                />
+              </div>
             </Field>
             {packageForm.kind === "Internal" && (
               <Field label={t("workPackages.field.participants")} className="sm:col-span-2">
@@ -2236,9 +2232,9 @@ const DepartmentWorkPackages = () => {
               </Field>
             )}
             <Field label={t("workPackages.field.assignee")}>
-              <Select
+              <SearchableSelect
                 value={taskForm.assigneeUserId ? String(taskForm.assigneeUserId) : ""}
-                onValueChange={(value) =>
+                onChange={(value) =>
                   setTaskForm((current) => ({
                     ...current,
                     assigneeUserId: Number(value),
@@ -2247,18 +2243,9 @@ const DepartmentWorkPackages = () => {
                       current.approverUserId === Number(value) ? null : current.approverUserId,
                   }))
                 }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {taskUsers.map((user) => (
-                    <SelectItem key={user.userId} value={String(user.userId)}>
-                      {user.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                ariaLabel={t("workPackages.field.assignee")}
+                options={taskUsers.map((user) => personOption(user, t))}
+              />
             </Field>
             <Field
               label={t(
@@ -2267,31 +2254,24 @@ const DepartmentWorkPackages = () => {
                   : "workPackages.field.approver",
               )}
             >
-              <Select
+              <SearchableSelect
                 value={taskForm.approverUserId?.toString() ?? "lead"}
-                onValueChange={(value) =>
+                onChange={(value) =>
                   setTaskForm((current) => ({
                     ...current,
                     approverUserId: value === "lead" ? null : Number(value),
                   }))
                 }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {detail?.leadUserId !== taskForm.assigneeUserId && (
-                    <SelectItem value="lead">{t("workPackages.approver.lead")}</SelectItem>
-                  )}
-                  {taskUsers
+                ariaLabel={t("workPackages.field.approver")}
+                options={[
+                  ...(detail?.leadUserId !== taskForm.assigneeUserId
+                    ? [{ value: "lead", label: t("workPackages.approver.lead") }]
+                    : []),
+                  ...taskUsers
                     .filter((user) => user.userId !== taskForm.assigneeUserId)
-                    .map((user) => (
-                      <SelectItem key={user.userId} value={String(user.userId)}>
-                        {user.name}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
+                    .map((user) => personOption(user, t)),
+                ]}
+              />
             </Field>
             <Field label={t("workPackages.field.start")}>
               <Input
@@ -2356,11 +2336,8 @@ const DepartmentWorkPackages = () => {
               )}
             </Field>
             <Field label={t("workPackages.field.cc")} className="sm:col-span-2">
-              <ChoiceGrid
-                emptyLabel={t("workPackages.cc.none")}
-                items={taskUsers
-                  .filter((user) => user.userId !== taskForm.assigneeUserId)
-                  .map((user) => ({ id: user.userId, label: user.name }))}
+              <PeopleChecklist
+                people={taskUsers.filter((user) => user.userId !== taskForm.assigneeUserId)}
                 selected={taskForm.ccUserIds}
                 onChange={(ccUserIds) => setTaskForm((current) => ({ ...current, ccUserIds }))}
               />

@@ -1,4 +1,6 @@
 import { useState, type FormEvent, type ReactNode } from "react";
+import { personOption } from "@/lib/people";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -145,19 +147,14 @@ export function RfqDraftForm({
             </select>
           </RfqField>
           <RfqField label={t("rfq.field.owner")}>
-            <select
+            <SearchableSelect
               required
-              className={rfqSelectClass}
-              value={ownerId || ""}
-              onChange={(e) => setOwnerId(Number(e.target.value))}
-            >
-              <option value="">{t("rfq.choose")}</option>
-              {references.owners.map((x) => (
-                <option key={x.id} value={x.id}>
-                  {x.name}
-                </option>
-              ))}
-            </select>
+              ariaLabel={t("rfq.field.owner")}
+              value={ownerId ? String(ownerId) : ""}
+              onChange={(value) => setOwnerId(Number(value))}
+              placeholder={t("rfq.choose")}
+              options={references.owners.map((person) => personOption(person, t))}
+            />
           </RfqField>
           <RfqField label={t("rfq.field.due")}>
             <Input

@@ -85,11 +85,16 @@ public class OpportunityPipelineColumn
     public List<OpportunityResponse> Items { get; set; } = new();
 }
 
-/// <summary>A salesperson who can own an opportunity (id and name only).</summary>
+/// <summary>A salesperson who can own an opportunity, with organizational identity.</summary>
 public class OpportunityOwnerOptionResponse
 {
     public int Id { get; set; }
     public string FullName { get; set; } = string.Empty;
+    public string RoleCode { get; set; } = string.Empty;
+    public string RoleName { get; set; } = string.Empty;
+    public string? RoleLabelKey { get; set; }
+    public int? DepartmentId { get; set; }
+    public string? DepartmentLabelKey { get; set; }
 }
 
 /// <summary>

@@ -2108,6 +2108,47 @@ Module 4 construction tasks. Its lifecycle, validation, weighted roll-up,
 filter, concurrency, migration, and deletion contracts are documented in
 [Detail Design Schedule](#716-detail-design-schedule).
 
+An Operational Project supports multiple Design Projects. The collection is
+authoritative; singular legacy `designProjectId`/code fields return the oldest
+flow deterministically. A Contract retains at most one Design Project. Contract
+reads prefer the exact Contract link and only use an unbound same-project flow
+when it is unique. They never borrow another Contract's flow.
+
+`AllowMultipleDesignFlows` removes only the unique Operational Project/Design
+index. `ScopeDesignFlowTeamsAndSchedules` adds nullable member `DesignProjectId`
+and separates active membership and task-code uniqueness per flow. Root team
+members have a null flow ID. For a sole legacy Design, the migration clones
+Design participants into that flow, remaps schedule assignee/approver/CC and
+Design assignments, and retains root roles/history. Ambiguous existing multiple
+flows abort the backfill. Rehearse against a restored backup before deployment;
+take a fresh backup before applying. Down refuses scoped members or conflicting
+task codes, so rollback after use needs an explicit reconciliation or a backup
+restore rather than merging teams automatically.
+
+Personnel-option DTOs carry organizational role code/name/translation key and
+department ID/translation key from the same authorized query. The shared
+frontend `personOption`, `SearchableSelect` and `PeopleChecklist` render and
+filter that identity; project members retain member IDs rather than user IDs
+for schedule fields. Global directory pickers paginate `/api/users` in batches
+of at most 100. Optional nonnegative `departmentId` filters that API on the
+server (`0`: no active department), intersecting with existing role/search.
+Narrow candidate endpoints preserve their existing eligibility and permissions.
+The Contract Finance action reuses the quotation's version-aware dossier
+selection (`selectQuoteFinanceReview`); package metadata recency cannot select
+an obsolete approved quote version. Package responses include
+`sourceQuoteVersion`, and Contract navigation reads all matching pages before
+selecting. If no eligible dossier remains, the action returns to the source
+quotation. This navigation does not authorize sending: the server's latest
+Finance-review/version gate remains authoritative.
+Historical directory options retain inactive users so existing assignments and
+owner filters remain identifiable; write services still enforce assignment
+eligibility. Unknown fallback identity uses unavailable-information copy rather
+than claiming an unassigned department. User department menus use the active
+role-group catalogue, matching the API's `departmentId=0` semantics. A negative
+department filter returns HTTP `400`, code `PEOPLE_DEPARTMENT_FILTER_INVALID`
+and field `departmentId`; the client asks the user to select a listed group or
+clear the filter.
+
 The aggregate migration is incomplete by design. Construction Task, Site Diary,
 Punch Item, Acceptance, As-Built, Handover and Permit still persist
 `DesignProjectId`; HSE, Procurement, RFQ, Finance and project documents persist
@@ -2520,7 +2561,7 @@ owned aggregate data.
 
 #### Business Objective
 
-The detail-design schedule provides a project-scoped plan for the three design
+The detail-design schedule provides a Design-flow-scoped plan for the three design
 phases without changing or reusing Module 4 construction tasks. It records
 planned and actual dates, ownership, department, progress, milestones, and
 Finish-to-Start predecessor relationships, then derives traceable weighted
@@ -2760,6 +2801,13 @@ results.
 
 Both `/api/operational-projects/{projectId}/design-schedule` and its `/api/v1`
 alias expose the same controller.
+
+Supply `designProjectId` on schedule reads and in initialization requests.
+Omission is accepted only when the Operational Project has a single Design
+flow; multiple flows require explicit selection. Team list/history/candidate
+reads accept the same optional flow ID. Task parents, predecessors, assignee,
+approver and CC must belong to the selected flow. A sibling flow's task or
+member is rejected even when both share an Operational Project.
 
 | Method | Relative route | Permission | Purpose |
 |---|---|---|---|

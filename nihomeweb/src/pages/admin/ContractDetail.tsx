@@ -1,3 +1,5 @@
+import { SearchableSelect } from "@/components/ui/searchable-select";
+import { personOption } from "@/lib/people";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
@@ -2551,7 +2553,9 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
           onTransition={handleTransition}
           transitionBusy={transitionBusy}
         />
-        {contract.direction === "Upstream" && <ContractFinanceReviewLink quoteId={contract.quoteId} />}
+        {contract.direction === "Upstream" && (
+          <ContractFinanceReviewLink quoteId={contract.quoteId} />
+        )}
         <LegalActivationWizard
           contract={contract}
           open={legalWizardOpen}
@@ -2783,29 +2787,20 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
             <div className="space-y-3 py-2">
               <div className="space-y-1.5">
                 <Label>{t("contracts.milestone.responsibleAccountant")} *</Label>
-                <Select
+                <SearchableSelect
                   value={
                     milestoneActionDraft?.accountantUserId
                       ? String(milestoneActionDraft.accountantUserId)
                       : ""
                   }
-                  onValueChange={(value) =>
+                  onChange={(value) =>
                     setMilestoneActionDraft((current) =>
                       current ? { ...current, accountantUserId: Number(value) } : current,
                     )
                   }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="—" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {accountants.map((accountant) => (
-                      <SelectItem key={accountant.userId} value={String(accountant.userId)}>
-                        {accountant.userName}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  ariaLabel={t("people.select")}
+                  options={[...accountants.map((person) => personOption(person, t))]}
+                />
               </div>
               {milestoneActionDraft?.status === "Paid" && (
                 <div className="space-y-1.5">

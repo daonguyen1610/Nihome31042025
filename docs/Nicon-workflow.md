@@ -37,6 +37,14 @@ Khách hàng
 Các module dùng chung ID Dự án, không tạo lại dự án theo từng phòng ban. Team,
 giao việc, hợp đồng, BOQ, tài liệu và bằng chứng KPI phải truy vết về cùng Dự án.
 
+Theo quyết định của chủ sản phẩm trong review ngày 30/10/2026, một Operational
+Project được có nhiều luồng Design; mỗi luồng có đội ngũ và tiến độ riêng.
+Thành viên, phân công và tài liệu nguồn phải xác định đúng luồng; không suy
+ra quyền truy cập luồng khác chỉ vì cùng Dự án vận hành. Finance trên Hợp đồng
+đi về hồ sơ rà soát của Báo giá nguồn, không tạo vòng phê duyệt Hợp đồng riêng.
+Danh sách chọn nhân sự phải hiển thị tên, vai trò và cho lọc theo phòng ban/nhóm
+trong phạm vi ứng viên mà người dùng được quyền chọn.
+
 ### 2.1. Nhóm công việc của phòng ban — Hiện có
 
 ```text

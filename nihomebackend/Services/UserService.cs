@@ -26,12 +26,17 @@ public class UserService(AppDbContext db, PasswordService passwordService, INoti
     private const int DefaultTake = 20;
     private const int MaxTake = 100;
 
-    public async Task<UserListResponse> GetListAsync(int skip, int take, string? search, string? role)
+    public async Task<UserListResponse> GetListAsync(int skip, int take, string? search, string? role, int? departmentId = null)
     {
         skip = Math.Max(0, skip);
         take = take <= 0 ? DefaultTake : Math.Min(take, MaxTake);
 
         var query = db.Users.AsNoTracking();
+        if (departmentId.HasValue)
+            query = departmentId == 0
+                ? query.Where(user => user.RoleEntity == null || user.RoleEntity.RoleGroup == null || !user.RoleEntity.RoleGroup.IsActive)
+                : query.Where(user => user.RoleEntity != null && user.RoleEntity.RoleGroup != null &&
+                    user.RoleEntity.RoleGroup.IsActive && user.RoleEntity.RoleGroupId == departmentId);
 
         if (!string.IsNullOrWhiteSpace(role))
         {
@@ -79,6 +84,9 @@ public class UserService(AppDbContext db, PasswordService passwordService, INoti
                 Role = u.RoleEntity != null ? u.RoleEntity.Code : u.Role.ToString(),
                 RoleId = u.RoleEntityId,
                 RoleName = u.RoleEntity != null ? u.RoleEntity.Name : null,
+                RoleLabelKey = u.RoleEntity != null ? u.RoleEntity.LabelKey : null,
+                DepartmentId = u.RoleEntity != null && u.RoleEntity.RoleGroup != null && u.RoleEntity.RoleGroup.IsActive ? u.RoleEntity.RoleGroupId : null,
+                DepartmentLabelKey = u.RoleEntity != null && u.RoleEntity.RoleGroup != null && u.RoleEntity.RoleGroup.IsActive ? u.RoleEntity.RoleGroup.LabelKey : null,
                 IsActive = u.IsActive,
                 AvatarUrl = u.AvatarUrl,
             })
@@ -91,7 +99,7 @@ public class UserService(AppDbContext db, PasswordService passwordService, INoti
     {
         var user = await db.Users
             .AsNoTracking()
-            .Include(u => u.RoleEntity)
+            .Include(u => u.RoleEntity).ThenInclude(role => role!.RoleGroup)
             .Include(u => u.RefreshTokens)
             .FirstOrDefaultAsync(u => u.Id == id);
 
@@ -457,6 +465,9 @@ public class UserService(AppDbContext db, PasswordService passwordService, INoti
         Role = user.RoleEntity != null ? user.RoleEntity.Code : user.Role.ToString(),
         RoleId = user.RoleEntityId,
         RoleName = user.RoleEntity?.Name,
+        RoleLabelKey = user.RoleEntity?.LabelKey,
+        DepartmentId = user.RoleEntity?.RoleGroup is { IsActive: true } group ? group.Id : null,
+        DepartmentLabelKey = user.RoleEntity?.RoleGroup is { IsActive: true } department ? department.LabelKey : null,
         IsActive = user.IsActive,
         AvatarUrl = user.AvatarUrl,
         RefreshTokenCount = user.RefreshTokens?.Count ?? 0,

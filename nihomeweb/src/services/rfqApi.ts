@@ -1,4 +1,5 @@
 import api from "@/lib/api";
+import type { PersonIdentity } from "@/lib/people";
 
 export type RfqStatus = "Draft" | "Issued" | "UnderEvaluation" | "Awarded" | "Closed" | "Cancelled";
 export interface RfqHeader {
@@ -157,7 +158,7 @@ export interface RfqReferences {
     lines: { id: number; itemCode: string; description: string; unit: string; quantity: number }[];
   }[];
   vendors: RfqVendor[];
-  owners: { id: number; name: string }[];
+  owners: (PersonIdentity & { id: number; name: string })[];
   documents: RfqFile[];
 }
 export interface RfqDraft {

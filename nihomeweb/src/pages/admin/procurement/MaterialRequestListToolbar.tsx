@@ -1,3 +1,5 @@
+import { personOption, type PersonIdentity } from "@/lib/people";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { ArrowDownAZ, ArrowUpAZ, Search } from "lucide-react";
 import AdminExportButton from "@/components/admin/AdminExportButton";
 import { Button } from "@/components/ui/button";
@@ -11,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-type UserOption = { userId: number; userName: string };
+type UserOption = PersonIdentity & { userId: number; userName: string };
 type Translate = (key: string, params?: Record<string, string | number>) => string;
 
 type MaterialRequestListToolbarProps = {
@@ -98,19 +100,15 @@ export default function MaterialRequestListToolbar({
             ))}
           </SelectContent>
         </Select>
-        <Select value={owner} onValueChange={onOwner}>
-          <SelectTrigger aria-label={t("procurement.field.procurementOwner")} className="h-11">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t("procurement.request.filter.allOwners")}</SelectItem>
-            {users.map((user) => (
-              <SelectItem key={user.userId} value={String(user.userId)}>
-                {user.userName}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <SearchableSelect
+          value={owner}
+          onChange={onOwner}
+          ariaLabel={t("procurement.field.procurementOwner")}
+          options={[
+            { value: "all", label: t("procurement.request.filter.allOwners") },
+            ...users.map((user) => personOption(user, t)),
+          ]}
+        />
         <div className="space-y-1.5">
           <Label htmlFor="request-required-from" className="text-xs text-muted-foreground">
             {t("procurement.request.filter.requiredFrom")}

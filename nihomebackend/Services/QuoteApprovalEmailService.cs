@@ -31,7 +31,16 @@ public sealed class QuoteApprovalEmailService(AppDbContext db, IDataProtectionPr
         var users = await db.Users.AsNoTracking().Where(u => u.IsActive && u.Id != callerId)
             .Select(u => new { u.Id, u.FullName, u.Email, u.Role, u.RoleEntityId }).ToListAsync(ct);
         var roles = await db.Roles.AsNoTracking().Where(r => r.IsActive)
-            .Select(r => new { r.Id, r.Code, r.IsSystem }).ToListAsync(ct);
+            .Select(r => new
+            {
+                r.Id,
+                r.Code,
+                r.Name,
+                r.LabelKey,
+                r.IsSystem,
+                DepartmentId = r.RoleGroup != null && r.RoleGroup.IsActive ? r.RoleGroupId : null,
+                DepartmentLabelKey = r.RoleGroup != null && r.RoleGroup.IsActive ? r.RoleGroup.LabelKey : null
+            }).ToListAsync(ct);
         var permissionsByRole = (await db.RolePermissions.AsNoTracking()
             .Where(rp => rp.Permission.IsActive && rp.Permission.Module == "crm.quotes" &&
                 (rp.Permission.Action == "approve" || rp.Permission.Action == "view"))
@@ -46,7 +55,12 @@ public sealed class QuoteApprovalEmailService(AppDbContext db, IDataProtectionPr
                 (u.RoleEntityId is int roleId
                     ? roleById.ContainsKey(roleId) && HasApproverAccess(roleId)
                     : systemRoleByCode.TryGetValue(UserRoleCodeMapper.ToCode(u.Role), out var role) && HasApproverAccess(role.Id)))
-            .Select(u => new QuoteApprovalCandidateResponse(u.Id, u.FullName ?? u.Email, u.Email))
+            .Select(u =>
+            {
+                var role = u.RoleEntityId is int roleId ? roleById[roleId] : systemRoleByCode[UserRoleCodeMapper.ToCode(u.Role)];
+                return new QuoteApprovalCandidateResponse(u.Id, u.FullName ?? u.Email, u.Email,
+                    role.Code, role.Name, role.LabelKey, role.DepartmentId, role.DepartmentLabelKey);
+            })
             .OrderBy(u => u.Name).ToList();
     }
 

@@ -1,3 +1,4 @@
+import { personOption, type PersonIdentity } from "@/lib/people";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
@@ -108,7 +109,7 @@ const SEVERITY_BADGE: Record<PunchSeverity, string> = {
 
 const OVERDUE_BADGE = "border-amber-300 bg-amber-50 text-amber-800";
 
-interface UserOption {
+interface UserOption extends PersonIdentity {
   id: number;
   fullName: string;
 }
@@ -231,10 +232,11 @@ const AdminPunchList = () => {
       }
       if (canListUsers) {
         try {
-          const { data } = await adminApi.getUsers({ take: 200 });
+          const { data } = await adminApi.getPeopleDirectory();
           if (!cancelled) {
             setUsers(
               (data.items ?? []).map((u) => ({
+                ...u,
                 id: u.id,
                 fullName: u.fullName ?? u.email ?? `#${u.id}`,
               })),
@@ -320,14 +322,11 @@ const AdminPunchList = () => {
   const userFilterOptions = useMemo(
     () => [
       { value: "", label: t("punch.filter.allAssignees") },
-      ...users.map((u) => ({ value: String(u.id), label: u.fullName })),
+      ...users.map((u) => personOption(u, t)),
     ],
     [users, t],
   );
-  const userFormOptions = useMemo(
-    () => users.map((u) => ({ value: String(u.id), label: u.fullName })),
-    [users],
-  );
+  const userFormOptions = useMemo(() => users.map((u) => personOption(u, t)), [users, t]);
 
   const hasActiveFilter =
     projectId != null ||
@@ -522,7 +521,10 @@ const AdminPunchList = () => {
     const project = projects.find((item) => item.id === row.designProjectId);
     if (project?.operationalProjectId) {
       try {
-        const { data } = await adminApi.getOperationalProjectTeam(project.operationalProjectId);
+        const { data } = await adminApi.getOperationalProjectTeam(
+          project.operationalProjectId,
+          row.designProjectId,
+        );
         setVerifyCandidates(
           data.members
             .filter(
@@ -530,7 +532,7 @@ const AdminPunchList = () => {
                 member.isActive &&
                 member.roles.some((role) => !role.endedAt && DESIGN_TEAM_ROLES.has(role.roleCode)),
             )
-            .map((member) => ({ id: member.userId, fullName: member.userName })),
+            .map((member) => ({ ...member, id: member.userId, fullName: member.userName })),
         );
       } catch {
         /* server validation remains authoritative */

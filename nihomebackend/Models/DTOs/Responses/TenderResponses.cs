@@ -2,6 +2,12 @@ namespace NihomeBackend.Models.DTOs.Responses;
 
 public class TenderAssigneeOptionResponse
 {
+    public string RoleCode { get; set; } = string.Empty;
+    public string RoleName { get; set; } = string.Empty;
+    public string? RoleLabelKey { get; set; }
+    public int? DepartmentId { get; set; }
+    public string? DepartmentLabelKey { get; set; }
+
     public int Id { get; set; }
     public string FullName { get; set; } = string.Empty;
 }

@@ -1,3 +1,4 @@
+import { personOption, type PersonIdentity } from "@/lib/people";
 import { useCallback, useEffect, useMemo, useRef, useState, Fragment } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
@@ -90,7 +91,7 @@ const STATUS_BADGE: Record<ConstructionTaskStatus, string> = {
 
 const OVERDUE_BADGE = "border-amber-300 bg-amber-50 text-amber-800";
 
-interface UserOption {
+interface UserOption extends PersonIdentity {
   id: number;
   fullName: string;
 }
@@ -272,10 +273,11 @@ const AdminConstructionTasks = () => {
       }
       if (canListUsers) {
         try {
-          const { data } = await adminApi.getUsers({ take: 200 });
+          const { data } = await adminApi.getPeopleDirectory();
           if (!cancelled) {
             setUsers(
               (data.items ?? []).map((u) => ({
+                ...u,
                 id: u.id,
                 fullName: u.fullName ?? u.email ?? `#${u.id}`,
               })),
@@ -348,7 +350,7 @@ const AdminConstructionTasks = () => {
   const userOptions = useMemo(
     () => [
       { value: "", label: t("constructionTasks.filter.allOwners") },
-      ...users.map((u) => ({ value: String(u.id), label: u.fullName })),
+      ...users.map((u) => personOption(u, t)),
     ],
     [users, t],
   );
@@ -734,6 +736,7 @@ const AdminConstructionTasks = () => {
               <Label className="text-xs text-slate-500">{t("constructionTasks.field.owner")}</Label>
               {canListUsers ? (
                 <SearchableSelect
+                  ariaLabel={t("constructionTasks.field.owner")}
                   value={ownerUserId == null ? "" : String(ownerUserId)}
                   onChange={(v) => {
                     setOwnerUserId(v ? Number(v) : null);
@@ -1146,6 +1149,7 @@ const AdminConstructionTasks = () => {
                 <Label>{t("constructionTasks.field.owner")}</Label>
                 {canListUsers ? (
                   <SearchableSelect
+                    ariaLabel={t("constructionTasks.field.owner")}
                     value={createForm.ownerUserId == null ? "" : String(createForm.ownerUserId)}
                     onChange={(v) =>
                       setCreateForm((f) => ({ ...f, ownerUserId: v ? Number(v) : null }))
@@ -1309,6 +1313,7 @@ const AdminConstructionTasks = () => {
                     <Label>{t("constructionTasks.field.owner")}</Label>
                     {canListUsers ? (
                       <SearchableSelect
+                        ariaLabel={t("constructionTasks.field.owner")}
                         value={detailForm.ownerUserId == null ? "" : String(detailForm.ownerUserId)}
                         onChange={(v) =>
                           setDetailForm((f) => f && { ...f, ownerUserId: v ? Number(v) : null })

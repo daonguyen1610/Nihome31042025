@@ -20,6 +20,10 @@ public sealed class KpiService(AppDbContext db, INotificationService notificatio
                 user.Id,
                 Name = user.FullName ?? user.Email,
                 RoleCode = user.RoleEntity != null ? user.RoleEntity.Code : user.Role.ToString(),
+                RoleName = user.RoleEntity != null ? user.RoleEntity.Name : user.Role.ToString(),
+                RoleLabelKey = user.RoleEntity != null ? user.RoleEntity.LabelKey : null,
+                DepartmentId = user.RoleEntity != null && user.RoleEntity.RoleGroup != null && user.RoleEntity.RoleGroup.IsActive ? user.RoleEntity.RoleGroupId : null,
+                DepartmentLabelKey = user.RoleEntity != null && user.RoleEntity.RoleGroup != null && user.RoleEntity.RoleGroup.IsActive ? user.RoleEntity.RoleGroup.LabelKey : null,
             })
             .OrderBy(user => user.Name)
             .ToListAsync(ct);
@@ -34,6 +38,11 @@ public sealed class KpiService(AppDbContext db, INotificationService notificatio
                 UserId = user.Id,
                 UserName = user.Name,
                 PositionCode = KpiPosition(user.RoleCode),
+                RoleCode = user.RoleCode,
+                RoleName = user.RoleName,
+                RoleLabelKey = user.RoleLabelKey,
+                DepartmentId = user.DepartmentId,
+                DepartmentLabelKey = user.DepartmentLabelKey,
             })
             .Where(user => activePositions.Contains(user.PositionCode))
             .ToList();
