@@ -42,6 +42,7 @@ public class QuoteService(
     INotificationService notifications,
     IQuoteSpreadsheetService quoteSpreadsheet,
     IEmailService emailService,
+    IQuoteApprovalEmailService approvalEmails,
     ILogger<QuoteService> logger,
     ICrmHardDeletePlanService hardDeletePlans,
     IHardDeleteOperationService hardDeleteOperations) : IQuoteService
@@ -111,6 +112,7 @@ public class QuoteService(
                 OperationalProjectId = r.Quote.OperationalProjectId,
                 OwnerUserId = r.Quote.OwnerUserId,
                 OwnerName = r.OwnerName,
+                ApprovalApproverUserId = r.Quote.ApprovalApproverUserId,
                 Version = r.Quote.Version,
                 Method = r.Quote.Method.ToString(),
                 GrandTotal = r.Quote.GrandTotal,
@@ -128,15 +130,20 @@ public class QuoteService(
     {
         var quote = await db.Quotes
             .AsNoTracking()
+            .AsSplitQuery()
             .Include(q => q.Opportunity).ThenInclude(o => o.Customer)
             .Include(q => q.Owner)
             .Include(q => q.MaterialRateRevision).ThenInclude(revision => revision!.Catalog)
             .Include(q => q.InputPriceOffer).ThenInclude(offer => offer!.Vendor)
             .Include(q => q.Items)
             .Include(q => q.ApprovalLogs).ThenInclude(l => l.By)
+            .Include(q => q.ApprovalApprover)
+            .Include(q => q.ApprovalEmails)
             .FirstOrDefaultAsync(q => q.Id == id, ct);
         if (quote is null) return null;
-        if (!canSeeAll && quote.OwnerUserId != callerUserId) return null;
+        if (!canSeeAll && quote.OwnerUserId != callerUserId &&
+            quote.ApprovalApproverUserId != callerUserId)
+            return null;
         return Map(quote);
     }
 
@@ -395,6 +402,7 @@ public class QuoteService(
             quote.Status = QuoteStatus.Draft;
             quote.SubmittedAt = null;
             quote.SubmittedByUserId = null;
+            quote.ApprovalApproverUserId = null;
             quote.ApprovedAt = null;
             quote.ApprovedByUserId = null;
             quote.SentAt = null;
@@ -476,8 +484,12 @@ public class QuoteService(
 
     // ------------------------------ Workflow transitions ------------------------------
 
-    public Task<QuoteResponse?> SubmitAsync(int id, QuoteWorkflowRequest req, int caller, bool canManage, bool canSeeAll, CancellationToken ct = default) =>
-        TransitionAsync(id, caller, canSeeAll,
+    public async Task<QuoteResponse?> SubmitAsync(int id, QuoteWorkflowRequest req, int caller, bool canManage, bool canSeeAll, CancellationToken ct = default)
+    {
+        if (!canManage) throw new QuoteOperationException("Không có quyền gửi duyệt báo giá.");
+        await approvalEmails.QueueAsync(id, req.ApproverUserId ?? 0, req.RowVersion,
+            req.PreviewToken, caller, canSeeAll, ct);
+        return await TransitionAsync(id, caller, canSeeAll,
             allowedFrom: [QuoteStatus.Draft],
             to: QuoteStatus.PendingApproval,
             action: QuoteWorkflowAction.Submit,
@@ -495,6 +507,7 @@ public class QuoteService(
                 q.SubmittedAt = DateTime.UtcNow;
                 q.SubmittedByUserId = caller;
             }, ct, requireOpenOpportunity: true);
+    }
 
     public Task<QuoteResponse?> ApproveAsync(int id, QuoteWorkflowRequest req, int caller, bool canApprove, CancellationToken ct = default) =>
         TransitionAsync(id, caller, canSeeAll: true,
@@ -504,7 +517,13 @@ public class QuoteService(
             permitted: canApprove,
             note: req.Note,
             rowVersion: req.RowVersion,
-            beforeSave: q => { q.ApprovedAt = DateTime.UtcNow; q.ApprovedByUserId = caller; },
+            beforeSave: q =>
+            {
+                if (q.ApprovalApproverUserId != caller || q.SubmittedByUserId == caller)
+                    throw new QuoteOperationException("Chỉ người được chọn, khác người gửi duyệt, mới được duyệt báo giá.");
+                q.ApprovedAt = DateTime.UtcNow;
+                q.ApprovedByUserId = caller;
+            },
             ct: ct);
 
     public Task<QuoteResponse?> RejectInternalAsync(int id, QuoteWorkflowRequest req, int caller, bool canApprove, CancellationToken ct = default) =>
@@ -517,8 +536,11 @@ public class QuoteService(
             rowVersion: req.RowVersion,
             beforeSave: q =>
             {
+                if (q.ApprovalApproverUserId != caller || q.SubmittedByUserId == caller)
+                    throw new QuoteOperationException("Chỉ người được chọn, khác người gửi duyệt, mới được từ chối báo giá.");
                 q.SubmittedAt = null;
                 q.SubmittedByUserId = null;
+                q.ApprovalApproverUserId = null;
             }, ct);
 
     public async Task<QuoteEmailPreviewResponse?> GetEmailPreviewAsync(
@@ -1025,7 +1047,8 @@ public class QuoteService(
         decimal? minValue, decimal? maxValue, string? search)
     {
         var q = db.Quotes.AsNoTracking().AsQueryable();
-        if (!canSeeAll) q = q.Where(x => x.OwnerUserId == callerUserId);
+        if (!canSeeAll) q = q.Where(x => x.OwnerUserId == callerUserId ||
+            x.ApprovalApproverUserId == callerUserId);
         else if (ownerUserId.HasValue) q = q.Where(x => x.OwnerUserId == ownerUserId.Value);
 
         if (status.HasValue) q = q.Where(x => x.Status == status.Value);
@@ -1578,6 +1601,10 @@ public class QuoteService(
         IsExpired = IsNonTerminal(q.Status) && q.ValidUntil < DateTime.UtcNow,
         Note = q.Note,
         SubmittedAt = q.SubmittedAt,
+        ApprovalApproverUserId = q.ApprovalApproverUserId,
+        ApprovalApproverName = q.ApprovalApprover?.FullName,
+        ApprovalEmailStatus = q.ApprovalEmails?.OrderByDescending(e => e.Id).FirstOrDefault()?.Status,
+        ApprovalEmailSentAt = q.ApprovalEmails?.OrderByDescending(e => e.Id).FirstOrDefault()?.SentAt,
         ApprovedAt = q.ApprovedAt,
         SentAt = q.SentAt,
         ClosedAt = q.ClosedAt,

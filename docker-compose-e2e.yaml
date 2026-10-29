@@ -15,6 +15,7 @@ services:
       EmailSettings__Username: e2e
       EmailSettings__Password: e2e-only
       EmailSettings__FromEmail: quotes@example.test
+      Frontend__PublicBaseUrl: http://localhost:5043
 
   smtpSink:
     image: node:22-bullseye-slim

@@ -2508,6 +2508,10 @@ export interface QuoteResponse {
   isExpired: boolean;
   note?: string;
   submittedAt?: string;
+  approvalApproverUserId?: number | null;
+  approvalApproverName?: string | null;
+  approvalEmailStatus?: "Pending" | "Sending" | "Sent" | "NeedsReview" | null;
+  approvalEmailSentAt?: string | null;
   approvedAt?: string;
   sentAt?: string;
   closedAt?: string;
@@ -2539,6 +2543,7 @@ export interface QuoteListItemResponse {
   customerName?: string;
   ownerUserId?: number;
   ownerName?: string;
+  approvalApproverUserId?: number | null;
   version: number;
   method: QuoteMethod;
   grandTotal: number;
@@ -2601,6 +2606,21 @@ export interface UpdateQuoteRequest {
 export interface QuoteWorkflowRequest {
   rowVersion?: string;
   note?: string;
+}
+
+export interface QuoteApprovalCandidate {
+  id: number;
+  name: string;
+  email: string;
+}
+
+export interface QuoteApprovalPreview {
+  previewToken: string;
+  approverUserId: number;
+  approverName: string;
+  toEmail: string;
+  subject: string;
+  body: string;
 }
 
 export interface QuoteEmailPreviewResponse {
@@ -6030,6 +6050,10 @@ export const adminApi = {
       "/site-settings/work-package-approval-template",
       data,
     ),
+  getQuoteApprovalTemplate: () =>
+    api.get<{ subject: string; body: string }>("/site-settings/quote-approval-template"),
+  updateQuoteApprovalTemplate: (data: { subject: string; body: string }) =>
+    api.put<{ subject: string; body: string }>("/site-settings/quote-approval-template", data),
   previewWorkPackageApprovalEmail: (
     packageId: number,
     offerId?: number,
@@ -6286,8 +6310,14 @@ export const adminApi = {
   createQuote: (body: CreateQuoteRequest) => api.post<QuoteResponse>("/quotes", body),
   updateQuote: (id: number, body: UpdateQuoteRequest) =>
     api.put<QuoteResponse>(`/quotes/${id}`, body),
-  submitQuote: (id: number, body: QuoteWorkflowRequest = {}) =>
-    api.post<QuoteResponse>(`/quotes/${id}/submit`, body),
+  getQuoteApprovalCandidates: (id: number) =>
+    api.get<QuoteApprovalCandidate[]>(`/quotes/${id}/approval-candidates`),
+  previewQuoteApprovalEmail: (id: number, body: { approverUserId: number; rowVersion: string }) =>
+    api.post<QuoteApprovalPreview>(`/quotes/${id}/approval-email-preview`, body),
+  submitQuote: (
+    id: number,
+    body: QuoteWorkflowRequest & { approverUserId: number; previewToken: string },
+  ) => api.post<QuoteResponse>(`/quotes/${id}/submit`, body),
   approveQuote: (id: number, body: QuoteWorkflowRequest = {}) =>
     api.post<QuoteResponse>(`/quotes/${id}/approve`, body),
   rejectQuoteInternal: (id: number, body: QuoteWorkflowRequest = {}) =>

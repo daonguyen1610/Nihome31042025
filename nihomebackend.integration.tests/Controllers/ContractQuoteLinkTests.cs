@@ -126,8 +126,23 @@ public sealed class ContractQuoteLinkTests(NihomeWebApplicationFactory factory) 
 
     private async Task<JsonElement> ApproveAsync(JsonElement quote)
     {
-        quote = await WriteAsync(HttpMethod.Post, $"/api/quotes/{Id(quote)}/submit", new { rowVersion = Version(quote) });
-        return await WriteAsync(HttpMethod.Post, $"/api/quotes/{Id(quote)}/approve", new { rowVersion = Version(quote) });
+        var previousAuthorization = Client.DefaultRequestHeaders.Authorization;
+        await LoginAsync("SALES_MANAGER");
+        var approverId = await WithDbAsync(db => db.Users.Where(user => user.Email == "superadmin@nihome.test")
+            .Select(user => user.Id).SingleAsync());
+        var preview = await WriteAsync(HttpMethod.Post, $"/api/quotes/{Id(quote)}/approval-email-preview",
+            new { approverUserId = approverId, rowVersion = Version(quote) });
+        quote = await WriteAsync(HttpMethod.Post, $"/api/quotes/{Id(quote)}/submit", new
+        {
+            approverUserId = approverId,
+            rowVersion = Version(quote),
+            previewToken = preview.GetProperty("previewToken").GetString(),
+        });
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsSuperAdminAsync);
+        var approved = await WriteAsync(HttpMethod.Post, $"/api/quotes/{Id(quote)}/approve",
+            new { rowVersion = Version(quote) });
+        Client.DefaultRequestHeaders.Authorization = previousAuthorization;
+        return approved;
     }
 
     private Task LoginAsync(string role) =>

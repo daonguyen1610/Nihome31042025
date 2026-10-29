@@ -473,6 +473,11 @@ public sealed class CrmHardDeletePlanService(
             .OrderBy(item => item.Id)
             .Select(item => item.Id)
             .ToListAsync(ct);
+        var approvalEmails = await db.QuoteApprovalEmails.AsNoTracking()
+            .Where(item => item.QuoteId == quoteId)
+            .OrderBy(item => item.Id)
+            .Select(item => new { item.Id, item.Status })
+            .ToListAsync(ct);
         var snapshotIds = await db.QuoteVersionSnapshots.AsNoTracking()
             .Where(item => item.QuoteId == quoteId)
             .OrderBy(item => item.Id)
@@ -605,6 +610,10 @@ public sealed class CrmHardDeletePlanService(
         var itemIdentifiers = itemIds.Select(Identifier).ToList();
         var documentIdentifiers = documents.Select(item => Identifier(item.Id)).ToList();
         var approvalLogIdentifiers = approvalLogIds.Select(Identifier).ToList();
+        var approvalEmailIdentifiers = approvalEmails.Where(item => item.Status is not ("Pending" or "Sending"))
+            .Select(item => Identifier(item.Id)).ToList();
+        var pendingApprovalEmailIdentifiers = approvalEmails.Where(item => item.Status is "Pending" or "Sending")
+            .Select(item => Identifier(item.Id)).ToList();
         var snapshotIdentifiers = snapshotIds.Select(Identifier).ToList();
         var translationIdentifiers = translationIds.Select(Identifier).ToList();
         var opportunityIdentifiers = opportunityRecords.Select(item => Identifier(item.Id)).ToList();
@@ -617,6 +626,9 @@ public sealed class CrmHardDeletePlanService(
         AddImpact(impactItems, "quote.items", itemIdentifiers, resolutionUrl: quoteDetail, resolutionLinks: quoteLinks);
         AddImpact(impactItems, "quote.documents", documentIdentifiers, resolutionUrl: quoteDetail, resolutionLinks: quoteLinks);
         AddImpact(impactItems, "quote.approvalLogs", approvalLogIdentifiers, resolutionUrl: quoteDetail, resolutionLinks: quoteLinks);
+        AddImpact(impactItems, "quote.approvalEmails", approvalEmailIdentifiers, resolutionUrl: quoteDetail, resolutionLinks: quoteLinks);
+        AddImpact(impactItems, "quote.pendingApprovalEmails", pendingApprovalEmailIdentifiers,
+            DeletionImpactActions.Block, quoteDetail, quoteLinks);
         AddImpact(impactItems, "quote.versionSnapshots", snapshotIdentifiers, resolutionUrl: quoteDetail, resolutionLinks: quoteLinks);
         AddImpact(impactItems, "quote.translations", translationIdentifiers);
         AddImpact(impactItems, "quote.localFiles", localPaths, resolutionUrl: quoteDetail, resolutionLinks: quoteLinks);
@@ -635,6 +647,8 @@ public sealed class CrmHardDeletePlanService(
             $"quote.items:{string.Join(',', itemIdentifiers)}",
             $"quote.documents:{string.Join(',', documentIdentifiers)}",
             $"quote.approvalLogs:{string.Join(',', approvalLogIdentifiers)}",
+            $"quote.approvalEmails:{string.Join(',', approvalEmailIdentifiers)}",
+            $"quote.pendingApprovalEmails:{string.Join(',', pendingApprovalEmailIdentifiers)}",
             $"quote.versionSnapshots:{string.Join(',', snapshotIdentifiers)}",
             $"quote.translations:{string.Join(',', translationIdentifiers)}",
             $"quote.localFiles:{string.Join(',', localPaths)}",
@@ -654,9 +668,11 @@ public sealed class CrmHardDeletePlanService(
             ResourceLabel = quote.Code,
             RequiredConfirmation = quote.Code,
             PlanToken = token,
-            CanDelete = fileBlockers.Count == 0 && sidecarBlockers.Count == 0 && contractIdentifiers.Count == 0,
+            CanDelete = fileBlockers.Count == 0 && sidecarBlockers.Count == 0 &&
+                contractIdentifiers.Count == 0 && pendingApprovalEmailIdentifiers.Count == 0,
             TotalAffected = 1 + itemIdentifiers.Count + documentIdentifiers.Count +
-                approvalLogIdentifiers.Count + snapshotIdentifiers.Count + translationIdentifiers.Count +
+                approvalLogIdentifiers.Count + approvalEmailIdentifiers.Count + pendingApprovalEmailIdentifiers.Count +
+                snapshotIdentifiers.Count + translationIdentifiers.Count +
                 localPaths.Count + fileBlockers.Count + driveIdentifiers.Count +
                 sidecarIdentifiers.Count + sidecarBlockers.Count +
                 opportunityIdentifiers.Count + contractIdentifiers.Count,
@@ -1058,6 +1074,7 @@ public sealed class QuoteHardDeleteHandler(
             await db.QuoteItems.Where(item => item.QuoteId == quoteId).ExecuteDeleteOrRemoveAsync(db, ct);
             await db.QuoteDocuments.Where(item => item.QuoteId == quoteId).ExecuteDeleteOrRemoveAsync(db, ct);
             await db.QuoteApprovalLogs.Where(item => item.QuoteId == quoteId).ExecuteDeleteOrRemoveAsync(db, ct);
+            await db.QuoteApprovalEmails.Where(item => item.QuoteId == quoteId).ExecuteDeleteOrRemoveAsync(db, ct);
             await db.QuoteVersionSnapshots.Where(item => item.QuoteId == quoteId).ExecuteDeleteOrRemoveAsync(db, ct);
             await db.EntityTranslations
                 .Where(item => item.EntityType == EntityTypes.Quote && item.EntityId == quoteId)

@@ -1261,6 +1261,26 @@ Quote email bodies must use valid safe HTML. The send dialog previews the
 rendered message in an isolated iframe, and the submitted body is validated
 before SMTP delivery.
 
+Internal quote approval (user decision, 29 October 2026) is one step with one
+selected approver. `GET /api/quotes/{id}/approval-candidates` returns active
+users other than the caller with `crm.quotes.approve`, `view` and a
+valid email. `POST /api/quotes/{id}/approval-email-preview` accepts
+`approverUserId` and current `rowVersion`; it returns To, rendered subject/HTML
+and a protected 15-minute `previewToken`. `POST /api/quotes/{id}/submit`
+requires the same approver, row version and token. The server rerenders and
+checks the quote, recipient, template and token before changing Draft to
+PendingApproval and queuing a `quote_approval_emails` row in one save. Only
+that approver, and never the submitter, may call `approve` or
+`reject-internal`. The worker sends pending snapshots through `IEmailService`
+and records `Sent` or `NeedsReview`; the quote response exposes the approver
+and latest delivery state. A failed/uncertain send is not called successful.
+Template GET/PUT is `/api/site-settings/quote-approval-template` under
+`system.settings.view/manage`, on the **Email duyệt Báo giá** tab. Supported
+variables: `recipientName`, `senderName`, `quoteCode`, `quoteVersion`,
+`grandTotal`, `validUntil`, `quoteUrl`. The body must include `quoteCode` and
+`<a href="{{quoteUrl}}">`; values are HTML-encoded. Existing pending quotes
+without an approver need manual business reconciliation before a decision.
+
 Contract renewal/end-date and work package approval defaults use the same
 600px NICON card, red header and safe inline HTML styles as quote emails.
 `DbSeeder` persists these defaults for new settings and upgrades each missing

@@ -8129,6 +8129,9 @@ namespace nihomebackend.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int?>("ApprovalApproverUserId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime?>("ApprovedAt")
                         .HasColumnType("datetime2");
 
@@ -8258,6 +8261,8 @@ namespace nihomebackend.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ApprovalApproverUserId");
+
                     b.HasIndex("Code")
                         .IsUnique();
 
@@ -8278,6 +8283,58 @@ namespace nihomebackend.Migrations
                     b.HasIndex("ValidUntil");
 
                     b.ToTable("quotes", (string)null);
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.QuoteApprovalEmail", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ApproverUserId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("AttemptedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(16000)
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("QuoteId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("SentAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("ToEmail")
+                        .IsRequired()
+                        .HasMaxLength(254)
+                        .HasColumnType("nvarchar(254)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("QuoteId", "CreatedAt");
+
+                    b.ToTable("quote_approval_emails", (string)null);
                 });
 
             modelBuilder.Entity("NihomeBackend.Models.QuoteApprovalLog", b =>
@@ -9714,6 +9771,12 @@ namespace nihomebackend.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("PrimaryPhone")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("QuoteApprovalEmailBodyTemplate")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("QuoteApprovalEmailSubjectTemplate")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("QuoteEmailBodyTemplate")
@@ -13788,6 +13851,11 @@ namespace nihomebackend.Migrations
 
             modelBuilder.Entity("NihomeBackend.Models.Quote", b =>
                 {
+                    b.HasOne("NihomeBackend.Models.ApplicationUser", "ApprovalApprover")
+                        .WithMany()
+                        .HasForeignKey("ApprovalApproverUserId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
                     b.HasOne("NihomeBackend.Models.ProcurementInputPriceOffer", "InputPriceOffer")
                         .WithMany()
                         .HasForeignKey("InputPriceOfferId")
@@ -13814,6 +13882,8 @@ namespace nihomebackend.Migrations
                         .HasForeignKey("OwnerUserId")
                         .OnDelete(DeleteBehavior.SetNull);
 
+                    b.Navigation("ApprovalApprover");
+
                     b.Navigation("InputPriceOffer");
 
                     b.Navigation("MaterialRateRevision");
@@ -13823,6 +13893,17 @@ namespace nihomebackend.Migrations
                     b.Navigation("Opportunity");
 
                     b.Navigation("Owner");
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.QuoteApprovalEmail", b =>
+                {
+                    b.HasOne("NihomeBackend.Models.Quote", "Quote")
+                        .WithMany("ApprovalEmails")
+                        .HasForeignKey("QuoteId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Quote");
                 });
 
             modelBuilder.Entity("NihomeBackend.Models.QuoteApprovalLog", b =>
@@ -15040,6 +15121,8 @@ namespace nihomebackend.Migrations
 
             modelBuilder.Entity("NihomeBackend.Models.Quote", b =>
                 {
+                    b.Navigation("ApprovalEmails");
+
                     b.Navigation("ApprovalLogs");
 
                     b.Navigation("Documents");

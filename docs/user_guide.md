@@ -2375,18 +2375,20 @@ The platform sends automated emails or lets authorized staff send them for the f
 | Password Reset OTP       | Account holder         | User initiates password reset (OTP enabled)|
 | New Application Notice   | Notification address   | Candidate submits a job application         |
 | Contact Reply            | Contact message sender | Administrator replies to a contact message  |
+| CRM Quote Approval       | Selected approver       | Sales submits a draft quote for internal approval |
+| Finance Review Approval  | Assigned package lead   | Finance submits commercial review for approval |
 | Approved CRM Quote       | Selected customer email | Sales sends an approved, valid quote          |
 
 ### 12.2 Email Templates
 
 OTP, job application notification, and CRM quote emails use configurable templates with `{{tokenName}}` substitution. The default OTP and CRM quote templates use branded HTML. Open `/admin/email-templates` and choose **Báo giá** to edit the subject and HTML body; the right pane previews its layout. Keep `{{quoteLines}}` and `{{grandTotal}}` in the body. Only basic HTML and safe inline styles are accepted; scripts, event attributes, and plain-text quote bodies are rejected. Saving requires `system.settings.manage`. When sending an approved quote, check the recipient and the rendered preview in the send dialog; only users with `crm.quotes.manage` may edit the subject or body.
 
-All five tabs share the HTML editor, clickable variable chips, live subject/body
+All six tabs share the HTML editor, clickable variable chips, live subject/body
 preview and fullscreen preview (press Escape to close). **Khôi phục** reloads
 saved configuration; **Lưu thay đổi** is in the page header. In the contract
 template tab, choose **Nhắc gia hạn** or **Thông báo kết thúc**; saving updates
 both contract templates. Switching types or tabs preserves unsaved drafts.
-Contract and work package approval previews keep variables visible until actual
+Contract, quote approval, and work package approval previews keep variables visible until actual
 business data is rendered in the corresponding send/scheduling workflow.
 
 The default renewal, end-date and work package approval emails use the same
@@ -2410,6 +2412,23 @@ templates and already confirmed/queued message snapshots retain their content.
 | `{{positionTitle}}`  | The job position title           |
 
 **Quote template placeholders:** `{{customerName}}`, `{{quoteCode}}`, `{{opportunityName}}`, `{{quoteLines}}`, `{{discountPercent}}`, `{{vatPercent}}`, `{{grandTotal}}`, and `{{validUntil}}`. The body must retain `{{quoteLines}}` and `{{grandTotal}}` so the customer sees priced items and the total. Variables are HTML-encoded before rendering; use the preview to check the final layout and figures before sending.
+
+**Internal quote approval:** From a Draft quote, choose **Gửi duyệt**, select one
+active approver with quote view and approval rights, then inspect the actual
+rendered To/subject/HTML preview before confirming. The approver must differ
+from the sender; only the selected person may approve or reject. The quote
+page shows the selected approver and delivery state: queued, sending, sent, or
+needs review. A needs-review result does not prove delivery; ask an
+administrator to inspect SMTP delivery and contact the approver before any
+retry. Approval remains one step in the application. The email only links to
+the decision page. Configure its editable subject and body under **Email duyệt
+Báo giá** at `/admin/email-templates` (`system.settings.manage`). Supported
+variables: `{{recipientName}}`, `{{senderName}}`, `{{quoteCode}}`,
+`{{quoteVersion}}`, `{{grandTotal}}`, `{{validUntil}}`, `{{quoteUrl}}`. The body
+must include the quote code and a link using `<a href="{{quoteUrl}}">`; dynamic
+values are HTML-encoded. The submitted message is queued as a snapshot and
+sent by the background worker. Existing Pending approval quotes without a
+selected approver require business reconciliation before a decision.
 
 Contract renewal/end-date templates share their own tab immediately beside
 **Báo giá**, rather than appearing above the editor. Switching template tabs

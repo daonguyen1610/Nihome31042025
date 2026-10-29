@@ -35,6 +35,8 @@ public class SiteSettings
     public string? QuoteEmailSubjectTemplate { get; set; }
 
     public string? QuoteEmailBodyTemplate { get; set; }
+    public string? QuoteApprovalEmailSubjectTemplate { get; set; }
+    public string? QuoteApprovalEmailBodyTemplate { get; set; }
 
     public string? ContractRenewalEmailSubjectTemplate { get; set; }
     public string? ContractRenewalEmailBodyTemplate { get; set; }

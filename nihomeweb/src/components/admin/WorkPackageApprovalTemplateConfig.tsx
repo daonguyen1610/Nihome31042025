@@ -9,9 +9,11 @@ import EmailTemplateEditor, { EmailTemplateActions } from "./EmailTemplateEditor
 export default function WorkPackageApprovalTemplateConfig({
   active,
   actionsContainer,
+  kind = "workPackage",
 }: {
   active: boolean;
   actionsContainer: HTMLDivElement | null;
+  kind?: "workPackage" | "quote";
 }) {
   const { t } = useI18n();
   const { has } = usePermissions();
@@ -24,8 +26,10 @@ export default function WorkPackageApprovalTemplateConfig({
   useEffect(() => {
     let active = true;
     setLoading(true);
-    adminApi
-      .getWorkPackageApprovalTemplate()
+    (kind === "quote"
+      ? adminApi.getQuoteApprovalTemplate()
+      : adminApi.getWorkPackageApprovalTemplate()
+    )
       .then(({ data: result }) => {
         if (active) {
           setData(result);
@@ -42,14 +46,16 @@ export default function WorkPackageApprovalTemplateConfig({
     return () => {
       active = false;
     };
-  }, [reload]);
+  }, [reload, kind]);
   const save = async () => {
     if (!data) return;
     setBusy(true);
     setError("");
     setSaved(false);
     try {
-      const result = await adminApi.updateWorkPackageApprovalTemplate(data);
+      const result = await (kind === "quote"
+        ? adminApi.updateQuoteApprovalTemplate(data)
+        : adminApi.updateWorkPackageApprovalTemplate(data));
       setData(result.data);
       setSaved(true);
     } catch (cause) {
@@ -59,7 +65,10 @@ export default function WorkPackageApprovalTemplateConfig({
     }
   };
   return (
-    <section className="min-w-0 space-y-4" aria-label={t("approvalEmail.tab")}>
+    <section
+      className="min-w-0 space-y-4"
+      aria-label={t(kind === "quote" ? "quotes.approval.templateTab" : "approvalEmail.tab")}
+    >
       {active && (
         <EmailTemplateActions
           container={actionsContainer}
@@ -84,7 +93,7 @@ export default function WorkPackageApprovalTemplateConfig({
       ) : (
         <>
           <EmailTemplateEditor
-            id="approval-email"
+            id={kind === "quote" ? "quote-approval-email" : "approval-email"}
             previewTitle={t("approvalEmail.templatePreview")}
             subject={data.subject}
             body={data.body}
@@ -98,19 +107,30 @@ export default function WorkPackageApprovalTemplateConfig({
               setData({ ...data, body });
               setSaved(false);
             }}
-            tokens={[
-              "recipientName",
-              "workPackageCode",
-              "workPackageName",
-              "recordType",
-              "recordReference",
-              "senderName",
-              "workPackageUrl",
-            ].map((name) => ({
+            tokens={(kind === "quote"
+              ? [
+                  "recipientName",
+                  "senderName",
+                  "quoteCode",
+                  "quoteVersion",
+                  "grandTotal",
+                  "validUntil",
+                  "quoteUrl",
+                ]
+              : [
+                  "recipientName",
+                  "workPackageCode",
+                  "workPackageName",
+                  "recordType",
+                  "recordReference",
+                  "senderName",
+                  "workPackageUrl",
+                ]
+            ).map((name) => ({
               token: `{{${name}}}`,
               desc: t(`emailTemplate.editor.token.${name}`),
             }))}
-            hint={t("approvalEmail.tokens")}
+            hint={t(kind === "quote" ? "quotes.approval.templateHint" : "approvalEmail.tokens")}
           />
           {saved && <p role="status">{t("form.saved")}</p>}
         </>

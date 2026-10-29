@@ -71,6 +71,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Quote> Quotes => Set<Quote>();
     public DbSet<QuoteItem> QuoteItems => Set<QuoteItem>();
     public DbSet<QuoteApprovalLog> QuoteApprovalLogs => Set<QuoteApprovalLog>();
+    public DbSet<QuoteApprovalEmail> QuoteApprovalEmails => Set<QuoteApprovalEmail>();
     public DbSet<QuoteVersionSnapshot> QuoteVersionSnapshots => Set<QuoteVersionSnapshot>();
     public DbSet<QuoteDocument> QuoteDocuments => Set<QuoteDocument>();
     public DbSet<MaterialRateCatalog> MaterialRateCatalogs => Set<MaterialRateCatalog>();
@@ -873,6 +874,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .WithMany()
                 .HasForeignKey(q => q.OwnerUserId)
                 .OnDelete(DeleteBehavior.SetNull);
+            b.HasOne(q => q.ApprovalApprover)
+                .WithMany()
+                .HasForeignKey(q => q.ApprovalApproverUserId)
+                .OnDelete(DeleteBehavior.NoAction);
             b.HasOne(q => q.MaterialRateRevision)
                 .WithMany()
                 .HasForeignKey(q => q.MaterialRateRevisionId)
@@ -947,6 +952,16 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .OnDelete(DeleteBehavior.SetNull);
             b.HasIndex(l => l.QuoteId);
             b.HasIndex(l => l.CreatedAt);
+        });
+
+        modelBuilder.Entity<QuoteApprovalEmail>(b =>
+        {
+            b.ToTable("quote_approval_emails");
+            b.HasKey(e => e.Id);
+            b.HasOne(e => e.Quote).WithMany(q => q.ApprovalEmails)
+                .HasForeignKey(e => e.QuoteId).OnDelete(DeleteBehavior.Cascade);
+            b.HasIndex(e => new { e.QuoteId, e.CreatedAt });
+            b.HasIndex(e => e.Status);
         });
 
         modelBuilder.Entity<QuoteVersionSnapshot>(b =>

@@ -1,6 +1,7 @@
 import { test, expect, TEST_USERS } from "../fixtures/auth";
 import type { APIRequestContext } from "@playwright/test";
 import { createApprovedInvestmentRate, retireInvestmentRate } from "../fixtures/materialRate";
+import { submitAndApproveQuote } from "../fixtures/quoteApproval";
 
 /**
  * Full CRM pipeline E2E test: Lead → Customer + Opportunity → Quote → Contract
@@ -160,15 +161,16 @@ test.describe("CRM Pipeline: Lead → Opportunity → Quote → Contract", () =>
 
       // ====== STEP 7: Submit Quote for Approval ======
       console.log("Step 7: Submitting quote...");
-      const submitRes = await c.post(`/api/quotes/${quoteId}/submit`, {});
-      expect(submitRes.status(), await submitRes.text()).toBe(200);
-      expect((await submitRes.json()).status).toBe("PendingApproval");
+      const approvedQuote = await submitAndApproveQuote(
+        api,
+        { Authorization: `Bearer ${token}` },
+        { Authorization: `Bearer ${await loginAs(TEST_USERS.superAdmin)}` },
+        quoteId,
+        quote.rowVersion,
+      );
 
       // ====== STEP 8: Approve Quote ======
-      console.log("Step 8: Approving quote...");
-      const approveRes = await c.post(`/api/quotes/${quoteId}/approve`, {});
-      expect(approveRes.status(), await approveRes.text()).toBe(200);
-      const approvedQuote = await approveRes.json();
+      console.log("Step 8: Approved by selected approver.");
       expect(approvedQuote.status).toBe("Approved");
 
       // ====== STEP 9: Move Opportunity to Negotiation ======
