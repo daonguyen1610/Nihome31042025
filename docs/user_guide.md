@@ -395,10 +395,11 @@ is **Tài chính rà soát thương mại** (Finance commercial review), linked 
 quotation. The reviewer ticks the checklists, records findings, and a different
 user performs the independent approval. Sales can open **Send to customer** only
 after the quotation belongs to a shared Operational Project and its Finance
-commercial review is **Approved**; a quotation with no project is asked to be
-attached to one first. The review records which quotation version it covers, so
-changing a price after approval returns the quotation to **Draft** and it must
-be re-approved by Sales and reviewed again by Finance before it can be sent.
+commercial review is **Approved** in a non-cancelled work package. A quotation
+with no project is asked to be attached to one first. The review records which
+quotation version it covers, so changing a price after approval returns the
+quotation to **Draft**. Sales must re-approve it and Finance must review it
+again before it can be sent.
 On an approved quotation, **Request finance review** creates a linked work
 package when none is usable. If a current review package already exists, the
 action opens it. An approved review for an older quotation version remains

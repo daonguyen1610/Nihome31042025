@@ -554,20 +554,26 @@ public class QuoteService(
             throw new QuoteOperationException("Gắn Dự án vận hành cho báo giá để Tài chính – Kế toán rà soát trước khi gửi khách hàng.");
         // Only the most recent review of this quote speaks for Finance: an older
         // one may have been approved for a version that has since changed.
-        var financeReview = await db.DepartmentWorkPackages.AsNoTracking()
+        var financePackage = await db.DepartmentWorkPackages.AsNoTracking()
             .Where(package => package.SourceQuoteId == quote.Id &&
                 package.Purpose == WorkPackagePurpose.FinanceCommercialReview &&
                 package.FinanceReview != null)
-            .Select(package => package.FinanceReview!)
-            .OrderByDescending(review => review.ReviewedAt ?? review.UpdatedAt)
+            .OrderByDescending(package => package.FinanceReview!.ReviewedAt ?? package.FinanceReview!.UpdatedAt)
+            .Select(package => new
+            {
+                package.Status,
+                ReviewStatus = package.FinanceReview!.Status,
+                package.FinanceReview!.ReviewedQuoteVersion,
+            })
             .FirstOrDefaultAsync(ct);
-        if (financeReview is null || financeReview.Status != FinanceReviewStatus.Approved)
+        if (financePackage is null || financePackage.Status == WorkPackageStatus.Cancelled ||
+            financePackage.ReviewStatus != FinanceReviewStatus.Approved)
             throw new QuoteOperationException("Báo giá phải được Tài chính – Kế toán rà soát và phê duyệt trước khi gửi khách hàng.");
         // A quote re-versioned after a material edit resets to Draft and is
         // re-approved, but the earlier review only covers its own version.
-        if (financeReview.ReviewedQuoteVersion != quote.Version)
+        if (financePackage.ReviewedQuoteVersion != quote.Version)
             throw new QuoteOperationException(
-                $"Tài chính – Kế toán đã rà soát phiên bản {financeReview.ReviewedQuoteVersion?.ToString() ?? "trước"}; "
+                $"Tài chính – Kế toán đã rà soát phiên bản {financePackage.ReviewedQuoteVersion?.ToString() ?? "trước"}; "
                 + $"báo giá nay là phiên bản {quote.Version} nên cần rà soát lại trước khi gửi khách hàng.");
         if (quote.RowVersion.Length > 0)
             CrmConcurrency.EnsureMatches(quote.RowVersion, req.RowVersion);

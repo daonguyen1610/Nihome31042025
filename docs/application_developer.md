@@ -2048,10 +2048,11 @@ an idempotency key plus `If-Match`/body `rowVersion`.
 Server-side gates that consume these records:
 
 - `QuoteService` send-to-customer requires an `Approved` `FinanceCommercialReview`
-  package linked by `SourceQuoteId`, and the quote must carry an
-  `OperationalProjectId` so the review has a project to live under. The review
-  pins `ReviewedQuoteVersion` when Finance saves it, so a quote re-versioned
-  after a material post-approval edit needs a fresh review before it can be sent.
+  review in a non-cancelled package linked by `SourceQuoteId`, and the quote
+  must carry an `OperationalProjectId` so the review has a project to live
+  under. The review pins `ReviewedQuoteVersion` when Finance saves it, so a
+  quote re-versioned after a material post-approval edit needs a fresh review
+  before it can be sent.
   Finance review responses, including reviews nested in `GET /api/work-packages`
   and `GET /api/work-packages/{id}`, expose nullable `reviewedQuoteVersion`.
   The quotation screen filters packages by `sourceQuoteId` and uses that value
