@@ -334,6 +334,62 @@ public sealed class PrecontractCrossDepartmentControlsTests(NihomeWebApplication
     }
 
     [Fact]
+    public async Task QuoteSend_RejectsReviewFromCancelledFinancePackage()
+    {
+        var scope = await SeedScopeAsync();
+        await LoginAsync("SALES_MANAGER");
+        var quoteId = await CreateQuoteAsync(scope);
+        await MoveQuoteAsync(quoteId, "submit");
+        await MoveQuoteAsync(quoteId, "approve");
+        var package = await PostAsync("/api/work-packages", new
+        {
+            kind = "Project",
+            purpose = "FinanceCommercialReview",
+            name = "Rà soát thương mại báo giá cơ điện nhà máy",
+            operationalProjectId = scope.ProjectId,
+            sourceOpportunityId = scope.OpportunityId,
+            sourceQuoteId = quoteId,
+            departmentRoleGroupId = scope.FinanceGroupId,
+            leadUserId = scope.FinanceLeadUserId,
+        });
+        var packageId = Id(package);
+        var reviewPath = $"/api/work-packages/{packageId}/finance-review";
+        await LoginAsync("ACCOUNTANT");
+        var review = await WriteAsync(HttpMethod.Put, reviewPath, new
+        {
+            contractConditionsReviewed = true,
+            guaranteesReviewed = true,
+            paymentTermsReviewed = true,
+            financialDossierReviewed = false,
+            findings = "Đã đối chiếu điều kiện thanh toán và bảo lãnh.",
+        });
+        review = await SubmitForApprovalAsync(reviewPath, review);
+        await LoginAsync("SUPER_ADMIN");
+        await PostAsync($"{reviewPath}/decision", new { approved = true, rowVersion = Version(review) });
+
+        await LoginAsync("SALES_MANAGER");
+        await WriteAsync(HttpMethod.Put, $"/api/work-packages/{packageId}", new
+        {
+            name = package.GetProperty("name").GetString(),
+            status = "Cancelled",
+            rowVersion = await VersionAsync($"/api/work-packages/{packageId}"),
+        });
+        var preview = await ReadAsync($"/api/quotes/{quoteId}/email-preview");
+        using var blocked = await SendAsync(HttpMethod.Post, $"/api/quotes/{quoteId}/send", new
+        {
+            rowVersion = await VersionAsync($"/api/quotes/{quoteId}"),
+            toEmail = "khachhang@nicon.example.com",
+            subject = preview.GetProperty("subject").GetString(),
+            body = preview.GetProperty("body").GetString(),
+        });
+        blocked.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await blocked.Content.ReadAsStringAsync()).Should().Contain("Tài chính");
+        var unchanged = await ReadAsync($"/api/quotes/{quoteId}");
+        unchanged.GetProperty("status").GetString().Should().Be("Approved");
+        unchanged.GetProperty("sentAt").ValueKind.Should().Be(System.Text.Json.JsonValueKind.Null);
+    }
+
+    [Fact]
     public async Task TenderSubmission_RequiresSharedProjectAndApprovedFinanceTenderReview()
     {
         var scope = await SeedScopeAsync();
